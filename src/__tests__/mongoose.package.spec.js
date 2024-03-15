@@ -1,5 +1,11 @@
-// eslint-disable-next-line no-unused-vars
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 
 // Subject
 import { connectFromSecretEnv, disconnect } from "../mongoose.package.js";
@@ -25,6 +31,7 @@ beforeEach(() => {
 });
 afterEach(() => {
   process.env = DEFAULT_ENV;
+  vi.clearAllMocks();
 });
 
 //
@@ -36,5 +43,15 @@ describe("Mongoose Package", () => {
   it("Works", () => {
     expect(connectFromSecretEnv).toBeFunction();
     expect(disconnect).toBeFunction();
+  });
+  describe("Error Handling", () => {
+    it("Throws a configuration error if Mongoose is not installed", async () => {
+      try {
+        await connectFromSecretEnv();
+      } catch (error) {
+        expect(error.isProjectError).toBeTrue();
+      }
+      expect.assertions(1);
+    });
   });
 });
