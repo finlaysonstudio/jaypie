@@ -1,0 +1,55 @@
+name: NPM Deploy
+
+on:
+  push:
+    tags: 
+      - v*
+
+env:
+  PROJECT_ENV: meta
+  PROJECT_SERVICE: libraries
+
+jobs:
+  deploy:
+    name: NPM Deploy
+    permissions:
+      id-token: write # for aws-actions/configure-aws-credentials
+      contents: read # for actions/checkout
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      - name: NPM Install (`npm install`)
+        run: npm install
+      - name: NPM Deploy
+        run: |
+          npm config set //registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}
+          npm publish --access public
+  lint:
+    name: Lint (in parallel)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install dependencies
+        run: npm ci
+      - name: Run ESLint
+        run: npm run lint
+        # run: npx eslint . --max-warnings=0
+  test:
+    name: Unit Test (in parallel)
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+        # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
+    steps:
+    - uses: actions/checkout@v4
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+    - run: npm ci
+    - run: |
+        npm test
