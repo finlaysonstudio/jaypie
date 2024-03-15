@@ -73,5 +73,9 @@ describe("Mongoose Package", () => {
       await connectFromSecretEnv();
       expect(mockConnectFromSecretEnv).toHaveBeenCalled();
     });
+    it("Calls @jaypie/mongoose for disconnect", async () => {
+      await disconnect();
+      expect(mockDisconnect).toHaveBeenCalled();
+    });
   });
 });
