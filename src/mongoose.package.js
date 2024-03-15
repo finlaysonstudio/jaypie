@@ -5,20 +5,20 @@ import { ConfigurationError, moduleLogger, PROJECT } from "@jaypie/core";
 // Helper Functions
 //
 
-let _importedMongoose;
-async function importMongoose() {
+let _importedModule;
+async function dynamicImport(module) {
   const log = moduleLogger.with({ lib: PROJECT.SPONSOR.JAYPIE });
-  if (!_importedMongoose) {
+  if (!_importedModule) {
     try {
       // eslint-disable-next-line import/no-unresolved
-      _importedMongoose = await import("@jaypie/mongoose");
+      _importedModule = await import(module);
     } catch (error) {
-      log.error("[jaypie] @jaypie/mongoose could not be imported");
+      log.error(`[jaypie] ${module} could not be imported`);
       if (process.env.NODE_ENV === "test") {
-        if (!_importedMongoose) {
+        if (!_importedModule) {
           // eslint-disable-next-line no-console
           console.warn(
-            "Caught error importing @jaypie/mongoose -- Is it installed?",
+            `[jaypie] Caught error importing ${module} -- Is it installed?`,
           );
         }
         // eslint-disable-next-line no-console
@@ -27,7 +27,7 @@ async function importMongoose() {
       throw new ConfigurationError();
     }
   }
-  return _importedMongoose;
+  return _importedModule;
 }
 
 //
@@ -35,17 +35,14 @@ async function importMongoose() {
 // Main
 //
 
-function init() {
-  return {
-    connectFromSecretEnv: async () => {
-      const mongoose = await importMongoose();
-      return await mongoose.connectFromSecretEnv();
-    },
-    disconnect: async () => {
-      const mongoose = await importMongoose();
-      return await mongoose.disconnect();
-    },
-  };
+function init(exports, fromModule) {
+  return exports.reduce((acc, key) => {
+    acc[key] = async () => {
+      const module = await dynamicImport(fromModule);
+      return await module[key]();
+    };
+    return acc;
+  }, {});
 }
 
 //
@@ -53,4 +50,7 @@ function init() {
 // Export
 //
 
-export const { connectFromSecretEnv, disconnect } = init();
+export const { connectFromSecretEnv, disconnect } = init(
+  ["connectFromSecretEnv", "disconnect"],
+  "@jaypie/mongoose",
+);
