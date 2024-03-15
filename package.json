@@ -12,7 +12,8 @@
     "lint": "eslint .",
     "new": "hygen jaypie vite",
     "test": "vitest",
-    "test:spec:index": "vitest run ./src/__tests__/index.spec.js"
+    "test:spec:index": "vitest run ./src/__tests__/index.spec.js",
+    "test:spec:mongoose.package": "vitest run ./src/__tests__/mongoose.package.spec.js"
   },
   "dependencies": {
     "@jaypie/core": "^0.3.3"
