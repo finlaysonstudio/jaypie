@@ -1,5 +1,6 @@
 import {
   afterEach,
+  beforeAll,
   beforeEach,
   describe,
   expect,
@@ -52,6 +53,25 @@ describe("Mongoose Package", () => {
         expect(error.isProjectError).toBeTrue();
       }
       expect.assertions(1);
+    });
+  });
+  describe("Features", () => {
+    const mockConnectFromSecretEnv = vi.fn();
+    const mockDisconnect = vi.fn();
+    beforeAll(() => {
+      vi.doMock("@jaypie/mongoose", () => {
+        return {
+          connectFromSecretEnv: mockConnectFromSecretEnv,
+          disconnect: mockDisconnect,
+          mongoose: {
+            disconnect: mockDisconnect,
+          },
+        };
+      });
+    });
+    it("Calls @jaypie/mongoose for connectFromSecretEnv", async () => {
+      await connectFromSecretEnv();
+      expect(mockConnectFromSecretEnv).toHaveBeenCalled();
     });
   });
 });

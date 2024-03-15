@@ -17,16 +17,20 @@ import { ConfigurationError, moduleLogger, PROJECT } from "@jaypie/core";
 
 const connectFromSecretEnv = async () => {
   const log = moduleLogger.with({ lib: PROJECT.SPONSOR.JAYPIE });
+  let mongoose;
   try {
     // eslint-disable-next-line import/no-unresolved
-    const mongoose = await import("@jaypie/mongoose");
+    mongoose = await import("@jaypie/mongoose");
+    return await mongoose.connectFromSecretEnv();
   } catch (error) {
     log.error("[jaypie] @jaypie/mongoose is not installed");
     if (process.env.NODE_ENV === "test") {
-      // eslint-disable-next-line no-console
-      console.warn(
-        "Caught error importing @jaypie/mongoose -- Is it installed?",
-      );
+      if (!mongoose) {
+        // eslint-disable-next-line no-console
+        console.warn(
+          "Caught error importing @jaypie/mongoose -- Is it installed?",
+        );
+      }
       // eslint-disable-next-line no-console
       console.error(error);
     }
