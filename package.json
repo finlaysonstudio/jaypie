@@ -14,6 +14,9 @@
     "test": "vitest",
     "test:spec:index": "vitest run ./src/__tests__/index.spec.js"
   },
+  "dependencies": {
+    "@jaypie/core": "^0.3.3"
+  },
   "devDependencies": {
     "eslint": "^8.57.0",
     "eslint-config-prettier": "^9.1.0",
