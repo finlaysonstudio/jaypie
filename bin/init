@@ -1,0 +1,41 @@
+#!/bin/bash
+
+# Determine the project name
+basename=$(basename "$(pwd)")
+basename=${basename:-root}
+echo -n "Project name [$basename]: "
+read PROJECT_NAME
+PROJECT_NAME=${PROJECT_NAME:-$basename}
+
+# The path to this script
+THIS_SCRIPT=${BASH_SOURCE[0]}
+
+# Set the project path and go!
+PROJECT_PATH="$( cd "$( dirname "$THIS_SCRIPT" )/.." && pwd )"
+echo "Running one-time init for $PROJECT_NAME in $PROJECT_PATH"
+
+# Create a repo in the folder
+git init $PROJECT_PATH
+
+# Replace unknown-project with the project name in package.json
+sed -i "" "s/unknown-project/$PROJECT_NAME/g" $PROJECT_PATH/package.json
+
+npm --prefix $PROJECT_PATH install --save-dev \
+  eslint \
+  eslint-config-prettier \
+  eslint-plugin-import \
+  eslint-plugin-prettier \
+  eslint-plugin-vitest \
+  hygen \
+  jest-extended \
+  prettier \
+  sort-package-json \
+  vitest \
+  # END npm install --save-dev
+npm --prefix $PROJECT_PATH --git-tag-version=false version "0.0.1"
+
+# Format package.json files
+npm --prefix $PROJECT_PATH run format:package
+
+# Clean up
+rm $THIS_SCRIPT

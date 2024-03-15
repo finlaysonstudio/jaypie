@@ -1,0 +1,17 @@
+{
+  "name": "unknown-project",
+  "version": "0.0.1",
+  "author": "Finlayson Studio",
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "format": "npm run format:package && npm run format:lint",
+    "format:lint": "eslint --fix .",
+    "format:package": "sort-package-json ./package.json",
+    "init:deploy": "hygen jaypie workflow-npm",
+    "lint": "eslint .",
+    "new": "hygen jaypie vite",
+    "test": "vitest",
+    "test:spec:index": "vitest run ./src/__tests__/index.spec.js"
+  }
+}
