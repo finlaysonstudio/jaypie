@@ -3,4 +3,4 @@
 // Export
 //
 
-export default {};
+export * from "@jaypie/core";
