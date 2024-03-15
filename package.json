@@ -12,6 +12,7 @@
     "lint": "eslint .",
     "new": "hygen jaypie vite",
     "test": "vitest",
+    "test:spec:dynamicExport.function": "vitest run ./src/__tests__/dynamicExport.function.spec.js",
     "test:spec:index": "vitest run ./src/__tests__/index.spec.js",
     "test:spec:mongoose.package": "vitest run ./src/__tests__/mongoose.package.spec.js"
   },
