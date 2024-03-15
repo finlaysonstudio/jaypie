@@ -24,19 +24,19 @@ Jaypie is suited for applications that require custom infrastructure beyond HTTP
 
 ### Philosophy
 
-Jaypie is for JavaScript developers building fullstack applications. 
+Jaypie is for building fullstack JavaScript applications. 
 
-#### JavaScript Only
+#### JavaScript Only 💛
 
 Jaypie uses the AWS Cloud Development Kit (CDK) to manage infrastructure, which is written in Node.js. This makes managing infrastructure accessible to the fullstack developer without learning a new syntax and living without language constructs like loops and inheritance.
 
 Does NOT use Kubernetes, Docker, Terraform, or the "Serverless" framework. 
 
-#### Eject Anything
+#### Eject Anything ⏏️
 
 Jaypie embraces "ejectability," the philosophy that any part of the framework can be removed (and therefore replaced) without disturbing the whole.
 
-#### Mockable Everywhere
+#### Mock Everywhere 🎴
 
 Jaypie strives to be "mockable-first" meaning all components should be easily tested via default or provided mocks.
 
