@@ -8,7 +8,7 @@ Event-driven fullstack architecture centered around JavaScript, AWS, and the JSO
 
 Jaypie is an opinionated approach to application development centered around JavaScript and the JSON:API specification in an event-driven architecture.
 
-Jaypie is suited for applications that need custom infrastructure to generate and response to events beyond HTTP requests (e.g., message queue). If no custom infrastructure is needed, fullstack hosts like Vercel or Netlify are recommended.
+Jaypie is suited for applications that require custom infrastructure beyond HTTP requests (e.g., message queues). Without custom infrastructure, fullstack hosts like Vercel or Netlify are recommended.
 
 ### "Jaypie Stack"
 
@@ -30,7 +30,7 @@ Jaypie is for JavaScript developers building fullstack applications.
 
 Jaypie uses the AWS Cloud Development Kit (CDK) to manage infrastructure, which is written in Node.js. This makes managing infrastructure accessible to the fullstack developer without learning a new syntax and living without language constructs like loops and inheritance.
 
-Does NOT use Kubernetes, Docker, Terraform, or the "Serverless" framework. These are powerful tools in the hands of a specialist but require too much mental overhead for a fullstack developer making occasional changes.
+Does NOT use Kubernetes, Docker, Terraform, or the "Serverless" framework. 
 
 #### Eject Anything
 
