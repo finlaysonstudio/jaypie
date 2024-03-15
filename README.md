@@ -34,7 +34,7 @@ Does NOT use Kubernetes, Docker, Terraform, or the "Serverless" framework.
 
 #### Eject Anything ⏏️
 
-Jaypie embraces "ejectability," the philosophy that any part of the framework can be removed (and therefore replaced) without disturbing the whole.
+Jaypie embraces "ejectability," the philosophy that any part of the code can be removed (and therefore replaced) without disturbing the whole.
 
 #### Mock Everywhere 🎴
 
