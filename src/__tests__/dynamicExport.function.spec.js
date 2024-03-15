@@ -1,4 +1,12 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 
 // Subject
 import dynamicExport from "../dynamicExport.function.js";
@@ -65,6 +73,32 @@ describe("Dynamic Export Function", () => {
       const exports = ["default"];
       const result = dynamicExport({ exports, moduleImport: MOCK.MODULE });
       await expect(result.default()).rejects.toThrow();
+    });
+  });
+  describe("Features", () => {
+    const mockDefaultFunction = vi.fn();
+    const mockNamedFunction = vi.fn();
+    const mockScalar = "scalar";
+    beforeAll(() => {
+      vi.doMock(MOCK.MODULE, () => {
+        return {
+          default: mockDefaultFunction,
+          named: mockNamedFunction,
+          scalar: mockScalar,
+        };
+      });
+    });
+    it("Calls the default function", async () => {
+      const exports = ["default", "named"];
+      const result = dynamicExport({ exports, moduleImport: MOCK.MODULE });
+      await result.default();
+      expect(mockDefaultFunction).toHaveBeenCalled();
+    });
+    it("Calls the named function", async () => {
+      const exports = ["default", "named"];
+      const result = dynamicExport({ exports, moduleImport: MOCK.MODULE });
+      await result.named();
+      expect(mockNamedFunction).toHaveBeenCalled();
     });
   });
 });
