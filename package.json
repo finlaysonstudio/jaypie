@@ -28,5 +28,17 @@
     "prettier": "^3.2.5",
     "sort-package-json": "^2.8.0",
     "vitest": "^1.4.0"
+  },
+  "peerDependencies": {
+    "@jaypie/aws": "^0.1.1",
+    "@jaypie/mongoose": "^0.1.1"
+  },
+  "peerDependenciesMeta": {
+    "@jaypie/aws": {
+      "optional": true
+    },
+    "@jaypie/mongoose": {
+      "optional": true
+    }
   }
 }
