@@ -100,5 +100,11 @@ describe("Dynamic Export Function", () => {
       await result.named();
       expect(mockNamedFunction).toHaveBeenCalled();
     });
+    it.todo("Returns the scalar", async () => {
+      const exports = ["scalar"];
+      const result = dynamicExport({ exports, moduleImport: MOCK.MODULE });
+      expect(result.scalar).not.toBeFunction();
+      expect(result.scalar).toBe(mockScalar);
+    });
   });
 });
