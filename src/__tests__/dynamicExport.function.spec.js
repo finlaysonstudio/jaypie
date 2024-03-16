@@ -73,13 +73,12 @@ describe("Dynamic Export Function", () => {
     it("Returns an object", () => {
       expect(dynamicExport({ moduleImport: MOCK.MODULE })).toBeObject();
     });
-    it.skip("Scalars are undefined when module is not found", async () => {
-      const functions = ["scalar"];
+    it("Scalars are undefined when module is not found", async () => {
+      const vars = ["scalar"];
       const result = await dynamicExport({
-        functions,
+        vars,
         moduleImport: MOCK.MODULE,
       });
-      console.log("result :>> ", result);
       expect(result.scalar).toBeUndefined();
     });
     it("Exported functions throw if the real module is not installed", async () => {
@@ -94,13 +93,14 @@ describe("Dynamic Export Function", () => {
   describe("Features", () => {
     const mockDefaultFunction = vi.fn();
     const mockNamedFunction = vi.fn();
-    const mockScalar = "scalar";
+    const mockVarName = "scalar";
+    const mockVarValue = "value";
     beforeAll(() => {
       vi.doMock(MOCK.MODULE, () => {
         return {
           default: mockDefaultFunction,
           named: mockNamedFunction,
-          scalar: mockScalar,
+          [mockVarName]: mockVarValue,
         };
       });
     });
@@ -122,14 +122,14 @@ describe("Dynamic Export Function", () => {
       await result.named();
       expect(mockNamedFunction).toHaveBeenCalled();
     });
-    it.skip("Returns the scalar", async () => {
-      const functions = [mockScalar];
+    it("Returns the scalar", async () => {
+      const vars = [mockVarName];
       const result = await dynamicExport({
-        functions,
+        vars,
         moduleImport: MOCK.MODULE,
       });
-      expect(result.scalar).not.toBeFunction();
-      expect(result.scalar).toBe(mockScalar);
+      expect(result[mockVarName]).not.toBeFunction();
+      expect(result[mockVarName]).toBe(mockVarValue);
     });
     it("Returns an object with the functions", async () => {
       const functions = ["default", "named"];

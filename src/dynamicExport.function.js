@@ -65,6 +65,17 @@ export default async ({
       return await imported[key]();
     };
   }
+  let imported = {};
+  try {
+    imported = await dynamicImport(moduleImport);
+  } catch (error) {
+    moduleLogger.trace(
+      `[jaypie] ${moduleImport} could not be imported; continuing`,
+    );
+  }
+  for (const key of vars) {
+    returning[key] = imported[key];
+  }
   // Return
   return returning;
 };
