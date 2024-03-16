@@ -1,6 +1,6 @@
 {
   "name": "jaypie",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "author": "Finlayson Studio",
   "type": "module",
   "main": "src/index.js",
