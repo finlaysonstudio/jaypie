@@ -36,20 +36,35 @@ async function dynamicImport(module) {
 // Main
 //
 
-export default ({ exports = ["default"], moduleImport } = {}) => {
+export default async ({
+  functions = ["default"],
+  moduleImport,
+  vars = [],
+} = {}) => {
   // Validate
-  if (Array.isArray(exports) && !exports.length) {
-    throw new ConfigurationError();
-  }
   if (!moduleImport || typeof moduleImport !== "string") {
-    throw new ConfigurationError();
+    throw new ConfigurationError("`moduleImport` must be a string");
+  }
+  if (!Array.isArray(functions)) {
+    throw new ConfigurationError("`functions` must be an array");
+  }
+  if (!Array.isArray(vars)) {
+    throw new ConfigurationError("`vars` must be an array");
+  }
+  if (!functions.length && !vars.length) {
+    throw new ConfigurationError(
+      "Either `functions` or `vars` must be provided",
+    );
   }
   // Setup
-  return exports.reduce((acc, key) => {
-    acc[key] = async () => {
+  const returning = {};
+  // Process
+  for (const key of functions) {
+    returning[key] = async () => {
       const imported = await dynamicImport(moduleImport);
       return await imported[key]();
     };
-    return acc;
-  }, {});
+  }
+  // Return
+  return returning;
 };

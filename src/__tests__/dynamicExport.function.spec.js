@@ -44,34 +44,50 @@ describe("Dynamic Export Function", () => {
     expect(dynamicExport).toBeFunction();
   });
   describe("Error Handling", () => {
-    it("Throws if exports is not an array", () => {
-      expect(() => dynamicExport({ exports: "string" })).toThrow();
+    it("Throws if functions is not an array", async () => {
+      try {
+        await dynamicExport({ functions: "default" });
+      } catch (error) {
+        expect(error).toBeJaypieError();
+      }
+      expect.assertions(1);
     });
-    it("Throws if exports is an empty array", () => {
-      expect(() => dynamicExport({ exports: [] })).toThrow();
+    it("Throws if functions is an empty array", async () => {
+      try {
+        await dynamicExport({ functions: [] });
+      } catch (error) {
+        expect(error).toBeJaypieError();
+      }
+      expect.assertions(1);
     });
-    it("Throws if moduleImport is not a string", () => {
-      expect(() => dynamicExport({ moduleImport: 123 })).toThrow();
+    it("Throws if moduleImport is not a string", async () => {
+      try {
+        await dynamicExport({ moduleImport: 12 });
+      } catch (error) {
+        expect(error).toBeJaypieError();
+      }
+      expect.assertions(1);
     });
   });
   describe("Happy Path", () => {
     it("Returns an object", () => {
       expect(dynamicExport({ moduleImport: MOCK.MODULE })).toBeObject();
     });
-    it("Returns an object with the exports", () => {
-      const exports = ["default", "named"];
-      const result = dynamicExport({ exports, moduleImport: MOCK.MODULE });
-      expect(result).toContainKeys(exports);
-    });
-    it("Returns an object with the exports as functions", () => {
-      const exports = ["default", "named"];
-      const result = dynamicExport({ exports, moduleImport: MOCK.MODULE });
-      expect(result.default).toBeFunction();
-      expect(result.named).toBeFunction();
+    it.skip("Scalars are undefined when module is not found", async () => {
+      const functions = ["scalar"];
+      const result = await dynamicExport({
+        functions,
+        moduleImport: MOCK.MODULE,
+      });
+      console.log("result :>> ", result);
+      expect(result.scalar).toBeUndefined();
     });
     it("Exported functions throw if the real module is not installed", async () => {
-      const exports = ["default"];
-      const result = dynamicExport({ exports, moduleImport: MOCK.MODULE });
+      const functions = ["default"];
+      const result = await dynamicExport({
+        functions,
+        moduleImport: MOCK.MODULE,
+      });
       await expect(result.default()).rejects.toThrow();
     });
   });
@@ -89,22 +105,48 @@ describe("Dynamic Export Function", () => {
       });
     });
     it("Calls the default function", async () => {
-      const exports = ["default", "named"];
-      const result = dynamicExport({ exports, moduleImport: MOCK.MODULE });
+      const functions = ["default", "named"];
+      const result = await dynamicExport({
+        functions,
+        moduleImport: MOCK.MODULE,
+      });
       await result.default();
       expect(mockDefaultFunction).toHaveBeenCalled();
     });
     it("Calls the named function", async () => {
-      const exports = ["default", "named"];
-      const result = dynamicExport({ exports, moduleImport: MOCK.MODULE });
+      const functions = ["default", "named"];
+      const result = await dynamicExport({
+        functions,
+        moduleImport: MOCK.MODULE,
+      });
       await result.named();
       expect(mockNamedFunction).toHaveBeenCalled();
     });
-    it.todo("Returns the scalar", async () => {
-      const exports = ["scalar"];
-      const result = dynamicExport({ exports, moduleImport: MOCK.MODULE });
+    it.skip("Returns the scalar", async () => {
+      const functions = [mockScalar];
+      const result = await dynamicExport({
+        functions,
+        moduleImport: MOCK.MODULE,
+      });
       expect(result.scalar).not.toBeFunction();
       expect(result.scalar).toBe(mockScalar);
+    });
+    it("Returns an object with the functions", async () => {
+      const functions = ["default", "named"];
+      const result = await dynamicExport({
+        functions,
+        moduleImport: MOCK.MODULE,
+      });
+      expect(result).toContainKeys(functions);
+    });
+    it("Returns an object with the functions as functions", async () => {
+      const functions = ["default", "named"];
+      const result = await dynamicExport({
+        functions,
+        moduleImport: MOCK.MODULE,
+      });
+      expect(result.default).toBeFunction();
+      expect(result.named).toBeFunction();
     });
   });
 });

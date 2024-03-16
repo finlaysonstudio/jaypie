@@ -6,7 +6,7 @@ import dynamicExport from "./dynamicExport.function.js";
 // Export
 //
 
-export const { lambdaHandler } = dynamicExport({
-  exports: ["lambdaHandler"],
+export const { lambdaHandler } = await dynamicExport({
+  functions: ["lambdaHandler"],
   moduleImport: JAYPIE.LIB.LAMBDA,
 });
