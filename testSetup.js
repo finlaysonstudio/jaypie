@@ -1,3 +1,6 @@
+import { matchers as jaypieMatchers } from "@jaypie/testkit";
+import * as extendedMatchers from "jest-extended";
 import { expect } from "vitest";
-import * as matchers from "jest-extended";
-expect.extend(matchers);
+
+expect.extend(extendedMatchers);
+expect.extend(jaypieMatchers);

@@ -14,6 +14,7 @@
     "oidc",
     "pinia",
     "roboto",
+    "testkit",
     "unplugin",
     "vendia",
     "vuekit",
