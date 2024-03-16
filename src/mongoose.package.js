@@ -1,3 +1,4 @@
+import { JAYPIE } from "@jaypie/core";
 import dynamicExport from "./dynamicExport.function.js";
 
 //
@@ -7,5 +8,5 @@ import dynamicExport from "./dynamicExport.function.js";
 
 export const { connectFromSecretEnv, disconnect } = dynamicExport({
   exports: ["connectFromSecretEnv", "disconnect"],
-  moduleImport: "@jaypie/mongoose",
+  moduleImport: JAYPIE.LIB.MONGOOSE,
 });
