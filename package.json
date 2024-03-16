@@ -33,10 +33,14 @@
   },
   "peerDependencies": {
     "@jaypie/aws": "^0.1.1",
+    "@jaypie/lambda": "^0.1.1",
     "@jaypie/mongoose": "^0.1.1"
   },
   "peerDependenciesMeta": {
     "@jaypie/aws": {
+      "optional": true
+    },
+    "@jaypie/lambda": {
       "optional": true
     },
     "@jaypie/mongoose": {
