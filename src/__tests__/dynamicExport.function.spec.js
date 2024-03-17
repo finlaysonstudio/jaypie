@@ -87,7 +87,7 @@ describe("Dynamic Export Function", () => {
         functions,
         moduleImport: MOCK.MODULE,
       });
-      await expect(result.default()).rejects.toThrow();
+      await expect(result.default).toThrow();
     });
   });
   describe("Features", () => {

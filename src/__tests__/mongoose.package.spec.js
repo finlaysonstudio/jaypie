@@ -9,7 +9,7 @@ import {
 } from "vitest";
 
 // Subject
-import { connectFromSecretEnv, disconnect } from "../mongoose.package.js";
+// * Subject is imported dynamically to allow `vi.resetModules()` to apply different mocks
 
 //
 //
@@ -41,6 +41,16 @@ afterEach(() => {
 //
 
 describe("Mongoose Package", () => {
+  let connectFromSecretEnv;
+  let disconnect;
+  beforeAll(async () => {
+    const {
+      connectFromSecretEnv: _connectFromSecretEnv,
+      disconnect: _disconnect,
+    } = await import("../mongoose.package.js");
+    connectFromSecretEnv = _connectFromSecretEnv;
+    disconnect = _disconnect;
+  });
   it("Works", () => {
     expect(connectFromSecretEnv).toBeFunction();
     expect(disconnect).toBeFunction();
@@ -58,7 +68,8 @@ describe("Mongoose Package", () => {
   describe("Features", () => {
     const mockConnectFromSecretEnv = vi.fn();
     const mockDisconnect = vi.fn();
-    beforeAll(() => {
+    beforeAll(async () => {
+      // Setup mock of mongoose
       vi.doMock("@jaypie/mongoose", () => {
         return {
           connectFromSecretEnv: mockConnectFromSecretEnv,
@@ -68,6 +79,15 @@ describe("Mongoose Package", () => {
           },
         };
       });
+      // Preprocess
+      vi.resetModules();
+      const {
+        connectFromSecretEnv: _connectFromSecretEnv,
+        disconnect: _disconnect,
+      } = await import("../mongoose.package.js");
+      // Return
+      connectFromSecretEnv = _connectFromSecretEnv;
+      disconnect = _disconnect;
     });
     it("Calls @jaypie/mongoose for connectFromSecretEnv", async () => {
       await connectFromSecretEnv();

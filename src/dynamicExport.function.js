@@ -57,15 +57,9 @@ export default async ({
     );
   }
   // Setup
+  let imported;
   const returning = {};
-  // Process
-  for (const key of functions) {
-    returning[key] = async () => {
-      const imported = await dynamicImport(moduleImport);
-      return await imported[key]();
-    };
-  }
-  let imported = {};
+  // Preprocess
   try {
     imported = await dynamicImport(moduleImport);
   } catch (error) {
@@ -73,8 +67,25 @@ export default async ({
       `[jaypie] ${moduleImport} could not be imported; continuing`,
     );
   }
+  // Process
+  for (const key of functions) {
+    if (imported) {
+      returning[key] = imported[key];
+    } else {
+      returning[key] = () => {
+        throw new ConfigurationError(
+          `Function ${key} cannot be called because ${moduleImport} is not installed`,
+        );
+      };
+    }
+  }
   for (const key of vars) {
-    returning[key] = imported[key];
+    if (imported) {
+      returning[key] = imported[key];
+    } else {
+      // TODO: make the not found vars throw only _when accessed_
+      returning[key] = undefined;
+    }
   }
   // Return
   return returning;
