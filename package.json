@@ -17,7 +17,7 @@
     "test:spec:mongoose.package": "vitest run ./src/__tests__/mongoose.package.spec.js"
   },
   "dependencies": {
-    "@jaypie/core": "^0.4.0"
+    "@jaypie/core": "^0.4.1"
   },
   "devDependencies": {
     "@jaypie/testkit": "^1.0.0",
