@@ -56,37 +56,28 @@ export default async ({
       "Either `functions` or `vars` must be provided",
     );
   }
-  // Setup
-  let imported;
-  const returning = {};
-  // Preprocess
+  // Process
   try {
-    imported = await dynamicImport(moduleImport);
+    // Attempt to import the module
+    return await dynamicImport(moduleImport);
   } catch (error) {
     moduleLogger.trace(
       `[jaypie] ${moduleImport} could not be imported; continuing`,
     );
   }
-  // Process
-  for (const key of functions) {
-    if (imported) {
-      returning[key] = imported[key];
-    } else {
-      returning[key] = () => {
-        throw new ConfigurationError(
-          `Function ${key} cannot be called because ${moduleImport} is not installed`,
-        );
-      };
-    }
-  }
-  for (const key of vars) {
-    if (imported) {
-      returning[key] = imported[key];
-    } else {
-      // TODO: make the not found vars throw only _when accessed_
-      returning[key] = undefined;
-    }
-  }
   // Return
-  return returning;
+  // * Returns a proxy that throws if you call a functions or get a vars
+  return new Proxy(
+    {},
+    {
+      get: (target, prop) => {
+        if (functions.includes(prop) || vars.includes(prop)) {
+          throw new ConfigurationError(
+            `Attempted to access ${prop} from ${moduleImport}, but it is not installed`,
+          );
+        }
+        return undefined;
+      },
+    },
+  );
 };
