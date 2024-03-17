@@ -73,25 +73,6 @@ describe("Dynamic Export Function", () => {
     it("Returns an object", () => {
       expect(dynamicExport({ moduleImport: MOCK.MODULE })).toBeObject();
     });
-    it("If module is not found and you try to get a scalar it will throw", async () => {
-      const vars = ["scalar"];
-      const result = await dynamicExport({
-        vars,
-        moduleImport: MOCK.MODULE,
-      });
-      await expect(() => {
-        console.log("result.scalar :>> ", result.scalar);
-        try {
-          console.log("result.scalar.taco :>> ", result.scalar.taco);
-        } catch (error) {
-          console.log("error :>> ", error);
-        }
-        if (result.scalar) {
-          return true;
-        }
-        return false;
-      }).toThrow();
-    });
     it("Exported functions throw if the real module is not installed", async () => {
       const functions = ["default"];
       const result = await dynamicExport({
@@ -102,7 +83,15 @@ describe("Dynamic Export Function", () => {
         result.default();
       }).toThrow();
     });
-    it("Scalars that never existed are undefined", async () => {
+    it("Vars return null if the real module is not installed", async () => {
+      const vars = ["scalar"];
+      const result = await dynamicExport({
+        vars,
+        moduleImport: MOCK.MODULE,
+      });
+      expect(result.scalar).toBeNull();
+    });
+    it("Vars that never existed are undefined", async () => {
       const vars = ["scalar"];
       const result = await dynamicExport({
         vars,

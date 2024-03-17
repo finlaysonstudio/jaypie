@@ -66,18 +66,14 @@ export default async ({
     );
   }
   // Return
-  // * Returns a proxy that throws if you call a functions or get a vars
-  return new Proxy(
-    {},
-    {
-      get: (target, prop) => {
-        if (functions.includes(prop) || vars.includes(prop)) {
-          throw new ConfigurationError(
-            `Attempted to access ${prop} from ${moduleImport}, but it is not installed`,
-          );
-        }
-        return undefined;
-      },
-    },
-  );
+  const result = {};
+  functions.forEach((func) => {
+    result[func] = () => {
+      throw new ConfigurationError(`${moduleImport}.${func} is not available`);
+    };
+  });
+  vars.forEach((variable) => {
+    result[variable] = null;
+  });
+  return result;
 };
