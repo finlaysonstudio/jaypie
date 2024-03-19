@@ -1,4 +1,4 @@
-import { ConfigurationError, JAYPIE, moduleLogger } from "@jaypie/core";
+import { ConfigurationError, JAYPIE, log } from "@jaypie/core";
 
 //
 //
@@ -12,9 +12,6 @@ async function dynamicImport(module) {
       // eslint-disable-next-line import/no-unresolved
       _importedModule = await import(module);
     } catch (error) {
-      moduleLogger
-        .with({ lib: JAYPIE.LIB.JAYPIE })
-        .error(`[jaypie] ${module} could not be imported`);
       if (process.env.NODE_ENV === "test") {
         if (!_importedModule) {
           // eslint-disable-next-line no-console
@@ -61,9 +58,9 @@ export default async ({
     // Attempt to import the module
     return await dynamicImport(moduleImport);
   } catch (error) {
-    moduleLogger.trace(
-      `[jaypie] ${moduleImport} could not be imported; continuing`,
-    );
+    log
+      .lib({ lib: JAYPIE.LIB.JAYPIE })
+      .trace(`[jaypie] ${moduleImport} could not be imported; continuing`);
   }
   // Return
   const result = {};
