@@ -19,8 +19,6 @@ async function dynamicImport(module) {
             `[jaypie] Caught error importing ${module} -- Is it installed?`,
           );
         }
-        // eslint-disable-next-line no-console
-        console.error(error);
       }
       throw new ConfigurationError();
     }
