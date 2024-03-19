@@ -17,10 +17,10 @@
     "test:spec:mongoose.package": "vitest run ./src/__tests__/mongoose.package.spec.js"
   },
   "dependencies": {
-    "@jaypie/core": "^0.4.2"
+    "@jaypie/core": "^0.5.2"
   },
   "devDependencies": {
-    "@jaypie/testkit": "^1.0.0",
+    "@jaypie/testkit": "^1.0.1",
     "eslint": "^8.57.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-import": "^2.29.1",
@@ -33,9 +33,9 @@
     "vitest": "^1.4.0"
   },
   "peerDependencies": {
-    "@jaypie/aws": "^0.1.1",
-    "@jaypie/lambda": "^0.1.4",
-    "@jaypie/mongoose": "^0.1.1"
+    "@jaypie/aws": "^0.1.2",
+    "@jaypie/lambda": "^0.1.6",
+    "@jaypie/mongoose": "^0.1.2"
   },
   "peerDependenciesMeta": {
     "@jaypie/aws": {
