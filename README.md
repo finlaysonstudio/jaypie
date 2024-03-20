@@ -345,7 +345,7 @@ The code for placeholders was written by Chris Ferdinandi and distributed under 
 import { validate, VALIDATE } from "jaypie";
 
 validate(argument, {
-  type: TYPE.ANY,
+  type: VALIDATE.ANY,
   falsy: false,     // When `true`, allows "falsy" values that match the type (e.g., `0`, `""`)
   required: true,   // When `false`, allows `undefined` as a valid value
   throws: true      // When `false`, returns `false` instead of throwing error
@@ -409,7 +409,7 @@ Returns `true` to validate the request. Throw an error or return `false` to reje
 
 Called before the handler (e.g., connect to a database). Throw an error to halt execution.
 
-#### `handler: async Function`
+##### `handler: async Function`
 
 The main function to handle the request. Throw an error to halt execution.
 
