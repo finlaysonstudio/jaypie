@@ -50,7 +50,7 @@ Jaypie strives to be "mockable-first" meaning all components should be easily te
 npm install jaypie
 ```
 
-`@jaypie/core` is part of `jaypie` and almost any Jaypie package.
+`@jaypie/core` is included in `jaypie`.  Almost every Jaypie package requires core.
 
 #### Peer Dependencies
 
@@ -77,10 +77,13 @@ npm install jaypie @jaypie/lambda
 ```
 
 ```javascript
-const { lambdaHandler, log, NotFoundError } = require("jaypie");
+const { InternalError, lambdaHandler, log } = require("jaypie");
 
 export const handler = lambdaHandler(async({event}) => {
   // await new Promise(r => setTimeout(r, 2000));
+  if (event.something === "problem") {
+    throw new InternalError();
+  }
   // log.debug("Hello World");
   return "Hello World";
 }, { name: "example"});
@@ -103,11 +106,116 @@ const secret = await getSecret("MongoConnectionStringN0NC3-nSg1bR1sh");
 
 ### Constants
 
-TODO: Complete list of constants in the package
+```javascript
+import { 
+  CDK,
+  LOG,
+} from "jaypie";
+```
+
+#### `CDK`
+
+* `CDK.ACCOUNT`
+* `CDK.ENV`
+* `CDK.ROLE`
+* `CDK.SERVICE`
+* `CDK.TAG`
+
+See [constants.js in @jaypie/core](https://github.com/finlaysonstudio/jaypie-core/blob/main/src/core/constants.js).
+
+#### `LOG`
+
+* `LOG.FORMAT`
+* `LOG.LEVEL`
+
+#### Internal Constants
+
+* `JAYPIE` - for consistency across Jaypie
+* `PROJECT` - for consistency across projects
 
 ### Errors
 
-TODO: Complete list of errors in the package
+#### Throwing/Catching Errors
+
+``` javascript
+// See `Error Reference` for full list
+const { InternalError } = require("@knowdev/errors");
+
+try {
+  // Code happens...
+  throw InternalError("Oh, I am slain!");
+} catch (error) {
+  // Is this from a jaypie project?
+  if(error.isProjectError) {
+    {
+      name,   // ProjectError
+      title,  // "Internal Server Error"
+      detail, // "Oh, I am slain"
+      status, // 500 (HTTP code)
+    } = error;
+  } else {
+    // Not from jaypie
+    throw error;
+  }
+}
+```
+
+#### Format Error
+
+``` javascript
+if(error.isProjectError) {
+  return error.json();
+}
+```
+
+#### Multi-Error Usage
+
+``` javascript
+const errors = [];
+errors.push(BadGatewayError());
+errors.push(NotFoundError());
+throw MultiError(errors);
+```
+
+#### Error Reference
+
+| Error                   | Status | Notes |
+| ----------------------- | ------ | ----- |
+| `BadGatewayError`       | 502    | Something I need gave me an error |
+| `BadRequestError`       | 400    | You did something wrong |
+| `ConfigurationError`    | 500    | "The developer" (probably you) or an associate did something wrong |
+| `ForbiddenError`        | 403    | You are not allowed |
+| `GatewayTimeoutError`   | 504    | Something I need is taking too long |
+| `GoneError`             | 410    | The thing you are looking for was here but is now gone forever |
+| `IllogicalError`        | 500    | Code is in a state that "should never happen" |
+| `InternalError`         | 500    | General "something went wrong" |
+| `MethodNotAllowedError` | 405    | You tried a good path but the wrong method |
+| `MultiError`            | Varies | Takes an array of errors |
+| `NotFoundError`         | 404    | The thing you are looking for is not here and maybe never was |
+| `NotImplementedError`   | 400    | "The developer" (you again?) didn't finish this part yet - hopefully a temporary message |
+| `RejectedError`         | 403    | Request filtered prior to processing |
+| `TeapotError`           | 418    | RFC 2324 section-2.3.2 |
+| `UnavailableError`      | 503    | The thing you are looking for cannot come to the phone right now |
+| `UnhandledError`        | 500    | An error that should have been handled wasn't |
+| `UnreachableCodeError`  | 500    |
+
+##### Special Errors
+
+ALWAYS internal to the app, NEVER something the client did
+
+* Configuration
+    * "The person writing the code did something wrong" like forgot to pass or passed bad arguments
+    * "The person who configured the application made a mistake" like set mutually exclusive settings to true
+* Illogical
+    * A combination of truth conditions occurred that should not be able to occur at the same time
+* Not Implemented
+    * A marker to come back and finish this, but allows stubbing out HTTP endpoints
+* Unhandled
+    * Internal to Jaypie, should not be thrown directly
+    * Jaypie expects code in handlers to handler errors and re-throw a Jaypie error
+    * If an unexpected error escapes the handler, Jaypie returns this when it is caught
+* Unreachable
+    * In theory the block is literally not reachable and we want to put something there to make sure it stays that way
 
 ### Functions
 
