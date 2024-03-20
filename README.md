@@ -297,6 +297,7 @@ if (envBoolean("AWESOME", { defaultValue: true })) {
 #### `force`
 
 Coerce a value into a type or throw an error.
+Forcing arrays is the primary use case.
 
 ```javascript
 import { force } from "jaypie";
@@ -306,10 +307,9 @@ argument = force([thing], Array);
 // argument = [thing]
 ```
 
-Forcing arrays is the primary use case.
+`force` supports Array, Object, and String.
 
 ```javascript
-// force supports Array, Object, and String
 argument = force(argument, Array);
 argument = force(argument, Object, "key");
 argument = force(argument, String, "default");
