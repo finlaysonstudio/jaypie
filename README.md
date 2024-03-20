@@ -232,7 +232,7 @@ throw MultiError(errors);
 | `TeapotError`           | 418    | RFC 2324 section-2.3.2 |
 | `UnavailableError`      | 503    | The thing you are looking for cannot come to the phone right now |
 | `UnhandledError`        | 500    | An error that should have been handled wasn't |
-| `UnreachableCodeError`  | 500    |
+| `UnreachableCodeError`  | 500    | Should not be possible |
 
 ##### Special Errors
 
@@ -251,6 +251,8 @@ ALWAYS internal to the app, NEVER something the client did
     * If an unexpected error escapes the handler, Jaypie returns this when it is caught
 * Unreachable
     * In theory the block is literally not reachable and we want to put something there to make sure it stays that way
+    * For example, a complicated chain of `if`/`else` that should always return and cover all cases, may throw this as the last `else`
+    * A configuration error means what happened was possible but should not have happened, an unreachable error means it should not have been possible
 
 ### Functions
 
