@@ -128,7 +128,23 @@ See [constants.js in @jaypie/core](https://github.com/finlaysonstudio/jaypie-cor
 
 #### `ERROR`
 
+Default messages and titles for Jaypie errors.
+
+* `ERROR.MESSAGE`
+* `ERROR.TITLE`
+
+See `HTTP` for status codes.
+
 #### `HTTP`
+
+* `HTTP.ALLOW.ANY`
+* `HTTP.CODE`: `OK`, `CREATED`, ...
+* `HTTP.CONTENT.ANY`
+* `HTTP.CONTENT.HTML`
+* `HTTP.CONTENT.JSON`
+* `HTTP.CONTENT.TEXT`
+* `HTTP.HEADER`: ...
+* `HTTP.METHOD`: `GET`, `POST`, ...
 
 #### `LOG`
 
@@ -319,7 +335,7 @@ const string = placeholders("Hello, {name}!", { name: "World" });
 // string = "Hello, World!"
 ```
 
-(c) 2018-2019 Chris Ferdinandi, MIT License, https://gomakethings.com
+The code for placeholders was written by Chris Ferdinandi and distributed under the MIT License in 2018-2019. Their web site is https://gomakethings.com
 
 #### `validate`
 
@@ -367,9 +383,41 @@ validate(argument, {
 
 ### Jaypie Handler
 
-TODO: The Jaypie handler
+The Jaypie handler can be used directly but is more likely to be wrapped in a more specific handler. The Jaypie handler will call lifecycle methods and provide logging. Unhandled errors will be thrown as `UnhandledError`.
+
+```javascript
+import { jaypieHandler } from "jaypie";
+
+const handler = jaypieHandler(async(...args) => {
+  // await new Promise(r => setTimeout(r, 2000));
+  // log.var({ args });
+  return "Hello World";
+}, { name: "jaypieReference"});
+```
+
+#### Jaypie Lifecycle Methods
+
+Each function receives the same arguments as the handler.
+
+##### `validate: [async Function]`
+
+Returns `true` to validate the request. Throw an error or return `false` to reject the request.
+
+##### `setup: [async Function]`
+
+Called before the handler (e.g., connect to a database). Throw an error to halt execution.
+
+#### `handler: async Function`
+
+The main function to handle the request. Throw an error to halt execution.
+
+##### `teardown: [async Function]`
+
+Called after the handler (e.g., disconnect from a database). Runs even if setup or handler throws errors.
 
 ### Lambda Handler
+
+The Lambda handler wraps the Jaypie handler that is specifically for AWS Lambda. It will call lifecycle methods and provide logging. Unhandled errors will be thrown as `UnhandledError`.
 
 ```javascript
 const { lambdaHandler } = require("jaypie");
@@ -378,7 +426,7 @@ const handler = lambdaHandler(async({event}) => {
   // await new Promise(r => setTimeout(r, 2000));
   // log.debug("Hello World");
   return "Hello World";
-}, { name: "reference"});
+}, { name: "lambdaReference"});
 ```
 
 ### Logging
