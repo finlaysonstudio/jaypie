@@ -109,7 +109,10 @@ const secret = await getSecret("MongoConnectionStringN0NC3-nSg1bR1sh");
 ```javascript
 import { 
   CDK,
+  ERROR,
+  HTTP,
   LOG,
+  VALIDATE,
 } from "jaypie";
 ```
 
@@ -123,10 +126,26 @@ import {
 
 See [constants.js in @jaypie/core](https://github.com/finlaysonstudio/jaypie-core/blob/main/src/core/constants.js).
 
+#### `ERROR`
+
+#### `HTTP`
+
 #### `LOG`
 
 * `LOG.FORMAT`
 * `LOG.LEVEL`
+
+#### `VALIDATE`
+
+* `VALIDATE.ANY` - Default
+* `VALIDATE.ARRAY`
+* `VALIDATE.CLASS`
+* `VALIDATE.FUNCTION`
+* `VALIDATE.NUMBER`
+* `VALIDATE.NULL`
+* `VALIDATE.OBJECT`
+* `VALIDATE.STRING`
+* `VALIDATE.UNDEFINED`
 
 #### Internal Constants
 
@@ -219,7 +238,132 @@ ALWAYS internal to the app, NEVER something the client did
 
 ### Functions
 
-TODO: Complete list of utility functions in the package
+#### `cloneDeep`
+
+`lodash.clonedeep` from [NPM](https://www.npmjs.com/package/lodash.clonedeep)
+
+```javascript
+import { cloneDeep } from "jaypie";
+
+const original = { a: 1, b: { c: 2 }};
+const clone = cloneDeep(original);
+```
+
+#### `envBoolean`
+
+Look up a key in `process.env` and coerce it into a boolean.
+Returns `true` for `true` (case-insensitive) and `1` for string, boolean, and numeric types.
+Returns `false` for `false` (case-insensitive) and `0` for string, boolean, and numeric types.
+Returns `undefined` otherwise.
+
+``` javascript
+const { envBoolean } = require("@knowdev/functions");
+
+process.env.AWESOME = true;
+
+if (envBoolean("AWESOME")) {
+  console.log("Awesome!");
+}
+```
+
+##### `envBoolean`: `defaultValue`
+
+``` javascript
+const { envBoolean } = require("@knowdev/functions");
+
+if (envBoolean("AWESOME", { defaultValue: true })) {
+  console.log("Awesome!");
+}
+```
+
+#### `force`
+
+Coerce a value into a type or throw an error.
+
+```javascript
+import { force } from "jaypie";
+
+argument = force(thing, Array);
+argument = force([thing], Array);
+// argument = [thing]
+```
+
+Forcing arrays is the primary use case.
+
+```javascript
+// force supports Array, Object, and String
+argument = force(argument, Array);
+argument = force(argument, Object, "key");
+argument = force(argument, String, "default");
+
+// Convenience functions
+argument = force.array(argument);
+argument = force.object(argument, "key");
+argument = force.string(argument);
+```
+
+#### `getHeaderFrom`
+
+`getHeaderFrom(headerKey:string, searchObject:object)`
+
+Case-insensitive search inside `searchObject` for `headerKey`.  Also looks in `header` and `headers` child object of `searchObject`, if `headerKey` not found at top-level.
+
+#### `placeholders`
+
+Lightweight string interpolation
+
+```javascript
+import { placeholders } from "jaypie";
+
+const string = placeholders("Hello, {name}!", { name: "World" });
+// string = "Hello, World!"
+```
+
+(c) 2018-2019 Chris Ferdinandi, MIT License, https://gomakethings.com
+
+#### `validate`
+
+```javascript
+import { validate, VALIDATE } from "jaypie";
+
+validate(argument, {
+  type: TYPE.ANY,
+  falsy: false,     // When `true`, allows "falsy" values that match the type (e.g., `0`, `""`)
+  required: true,   // When `false`, allows `undefined` as a valid value
+  throws: true      // When `false`, returns `false` instead of throwing error
+});
+```
+
+##### Validate Convenience Functions
+
+``` javascript
+import { validate } from "jaypie";
+
+validate.array(argument);
+validate.class(argument);
+validate.function(argument);
+validate.null(argument);
+validate.number(argument);
+validate.object(argument);
+validate.string(argument);
+validate.undefined(argument);
+```
+
+##### Intuitive Validate Types
+
+_Does not include any, class, or undefined_
+
+``` javascript
+validate(argument, {
+  // One of:
+  type: Array,
+  type: Function,
+  type: Number,
+  type: null,
+  type: Object,
+  type: String,
+})
+```
 
 ### Jaypie Handler
 
@@ -306,6 +450,7 @@ TODO: The TestKit package
 
 * `@jaypie/cdk` - CDK package
 * `@jaypie/express` - Express package
+* ...Nicely organized VitePress documentation 😅
 
 ## 📝 Changelog
 
