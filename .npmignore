@@ -1,0 +1,9 @@
+__tests__
+_templates
+.eslintrc.cjs
+.github
+.jaypie
+.vscode
+test
+testSetup.js
+vite.config.js
