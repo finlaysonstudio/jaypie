@@ -464,6 +464,28 @@ log.lib().trace();
 log.lib({ lib: "myLib" }).trace();
 ```
 
+##### log.tag(key, value) or log.tag({ key: value })
+
+Permanently add the key-value pair to the logger's tags, or at least until `log.untag(key)` is called.
+
+```javascript
+import { log } from "jaypie";
+
+log.tag("myTag", "myValue");
+log.tag({ myTag: "myValue" });
+```
+
+##### log.untag(key) or log.untag([key1, key2, ...])
+
+Remove the key-value pair from the logger's tags.
+
+```javascript
+import { log } from "jaypie";
+
+log.untag("myTag");
+log.untag(["myTag1", "myTag2"]);
+```
+
 ##### log.var(key, value) or log.var({ key: value })
 
 Log a key-value pair. In the `json` format, the key will be tagged as `var` and the value will be the value. Logging marker variables this way can be useful for debugging.
