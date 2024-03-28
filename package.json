@@ -35,7 +35,7 @@
   "peerDependencies": {
     "@jaypie/aws": "^1.0.1",
     "@jaypie/lambda": "^1.0.1",
-    "@jaypie/mongoose": "^1.0.0"
+    "@jaypie/mongoose": "^1.0.1"
   },
   "peerDependenciesMeta": {
     "@jaypie/aws": {
