@@ -7,6 +7,6 @@ import dynamicExport from "./dynamicExport.function.js";
 //
 
 export const { getSecret } = await dynamicExport({
-  functions: ["getSecret"],
+  functions: ["getMessages", "getSecret", "sendBatchMessages", "sendMessage"],
   moduleImport: JAYPIE.LIB.AWS,
 });
