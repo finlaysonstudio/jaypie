@@ -98,11 +98,80 @@ _A `@jaypie/cdk` package is intended_
 ### AWS
 
 ```javascript
+import { 
+  getMessages,
+  getSecret,
+  sendBatchMessages,
+  sendMessage,
+} from "jaypie";
+```
+
+#### `getMessages(event)`
+
+Return an array of message bodies from an SQS event.
+
+```javascript
+import { getMessages } from '@jaypie/aws';
+
+const messages = getMessages(event);
+// messages = [{ salutation: "Hello, world!" }, { salutation: "Hola, dushi!" }]
+```
+
+#### `getSecret(secretName: string)`
+
+Retrieve a secret from AWS Secrets Manager using the secret name.
+
+```javascript
 import { getSecret } from '@jaypie/aws';
 
 const secret = await getSecret("MongoConnectionStringN0NC3-nSg1bR1sh");
 // secret = "mongodb+srv://username:password@env-project.n0nc3.mongodb.net/app?retryWrites=true&w=majority";
 ```
+
+#### `sendBatchMessages({ messages, queueUrl })`
+
+Batch and send messages to an SQS queue. If more than ten messages are provided, the function will batch them into groups of ten or less (per AWS).
+
+```javascript
+import { sendBatchMessages } from '@jaypie/aws';
+
+const messages = [
+  { salutation: "Hello, world!" },
+  { salutation: "Hola, dushi!" },
+];
+const queueUrl = "https://sqs.us-east-1.amazonaws.com/123456789012/MyQueue";
+
+await sendBatchMessages({ messages, queueUrl });
+```
+
+| Parameter | Type | Required | Description |
+| --------- | ---- | -------- | ----------- |
+| `delaySeconds` | `number` | No | Seconds to delay message delivery; default `0` |
+| `messages` | `Array` | Yes | Array of message objects (or strings) |
+| `messageAttributes` | `object` | No | Message attributes |
+| `messageGroupId` | `string` | No | Custom message group for FIFO queues; default provided |
+| `queueUrl` | `string` | Yes | URL of the SQS queue |
+
+#### `sendMessage({ body, queueUrl })`
+
+Send a single message to an SQS queue.
+
+```javascript
+import { sendMessage } from '@jaypie/aws';
+
+const body = "Hello, world!";
+const queueUrl = "https://sqs.us-east-1.amazonaws.com/123456789012/MyQueue";
+
+const response = await sendMessage({ body, queueUrl });
+```
+
+| Parameter | Type | Required | Description |
+| --------- | ---- | -------- | ----------- |
+| `body` | `string` | Yes | Message body |
+| `delaySeconds` | `number` | No | Seconds to delay message delivery; default `0` |
+| `messageAttributes` | `object` | No | Message attributes |
+| `messageGroupId` | `string` | No | Custom message group for FIFO queues; default provided |
+| `queueUrl` | `string` | Yes | URL of the SQS queue |
 
 ### Constants
 
