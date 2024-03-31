@@ -42,6 +42,9 @@
     "@jaypie/aws": {
       "optional": true
     },
+    "@jaypie/cdk": {
+      "optional": true
+    },
     "@jaypie/lambda": {
       "optional": true
     },
