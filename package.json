@@ -19,7 +19,7 @@
     "test:spec:mongoose.package": "vitest run ./src/__tests__/mongoose.package.spec.js"
   },
   "dependencies": {
-    "@jaypie/core": "^1.0.2"
+    "@jaypie/core": "^1.0.4"
   },
   "devDependencies": {
     "@babel/cli": "^7.24.1",
@@ -39,7 +39,7 @@
   },
   "peerDependencies": {
     "@jaypie/aws": "^1.0.1",
-    "@jaypie/cdk": "^1.0.0",
+    "@jaypie/cdk": "^1.0.1",
     "@jaypie/lambda": "^1.0.1",
     "@jaypie/mongoose": "^1.0.1"
   },
