@@ -1,6 +1,6 @@
 {
   "name": "jaypie",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "author": "Finlayson Studio",
   "type": "module",
   "main": "dist/cjs/index.js",
