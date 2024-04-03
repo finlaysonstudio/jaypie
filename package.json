@@ -6,7 +6,6 @@
   "main": "dist/cjs/index.js",
   "module": "src/index.js",
   "scripts": {
-    "build": "BABEL_ENV=commonjs babel src --out-dir dist/cjs",
     "format": "npm run format:package && npm run format:lint",
     "format:lint": "eslint --fix .",
     "format:package": "sort-package-json ./package.json",
@@ -22,9 +21,6 @@
     "@jaypie/core": "^1.0.4"
   },
   "devDependencies": {
-    "@babel/cli": "^7.24.1",
-    "@babel/core": "^7.24.3",
-    "@babel/preset-env": "^7.24.3",
     "@jaypie/testkit": "^1.0.4",
     "eslint": "^8.57.0",
     "eslint-config-prettier": "^9.1.0",
@@ -39,15 +35,11 @@
   },
   "peerDependencies": {
     "@jaypie/aws": "^1.0.1",
-    "@jaypie/cdk": "^1.0.1",
     "@jaypie/lambda": "^1.0.1",
     "@jaypie/mongoose": "^1.0.1"
   },
   "peerDependenciesMeta": {
     "@jaypie/aws": {
-      "optional": true
-    },
-    "@jaypie/cdk": {
       "optional": true
     },
     "@jaypie/lambda": {
