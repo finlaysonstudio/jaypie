@@ -2,7 +2,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // Subject
-import { PROJECT } from "../index.js";
+import { JAYPIE, PROJECT, uuid } from "../index.js";
 
 //
 //
@@ -33,9 +33,15 @@ afterEach(() => {
 //
 
 describe("Index", () => {
-  it("Works", () => {
-    expect(PROJECT).not.toBeUndefined();
-    expect(PROJECT.SPONSOR).not.toBeUndefined();
-    expect(PROJECT.SPONSOR.JAYPIE).toBeString();
+  describe("@jaypie/core", () => {
+    it("Exports constants", () => {
+      expect(JAYPIE).not.toBeUndefined();
+      expect(PROJECT).not.toBeUndefined();
+      expect(PROJECT.SPONSOR).not.toBeUndefined();
+      expect(PROJECT.SPONSOR.JAYPIE).toBeString();
+    });
+    it("Exports functions", () => {
+      expect(uuid).toBeFunction();
+    });
   });
 });
