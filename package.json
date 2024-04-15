@@ -3,14 +3,23 @@
   "version": "1.0.10",
   "author": "Finlayson Studio",
   "type": "module",
-  "main": "src/index.js",
+  "exports": {
+    ".": {
+      "import": "./dist/esm/index.js",
+      "require": "./dist/cjs/index.js"
+    }
+  },
+  "main": "dist/cjs/index.js",
+  "module": "dist/esm/index.js",
   "scripts": {
+    "build": "babel src --out-dir dist/esm --extensions \".js\" --config-file ./babel.esm.config.json && babel src --out-dir dist/cjs --extensions \".js\" --config-file ./babel.cjs.config.json",
     "format": "npm run format:package && npm run format:lint",
     "format:lint": "eslint --fix .",
     "format:package": "sort-package-json ./package.json",
     "init:deploy": "hygen jaypie workflow-npm",
     "lint": "eslint .",
     "new": "hygen jaypie vite",
+    "prepublish": "npm run build",
     "test": "vitest",
     "test:spec:dynamicExport.function": "vitest run ./src/__tests__/dynamicExport.function.spec.js",
     "test:spec:index": "vitest run ./src/__tests__/index.spec.js",
