@@ -20,6 +20,10 @@
     "@jaypie/core": "^1.0.8"
   },
   "devDependencies": {
+    "@babel/cli": "^7.24.1",
+    "@babel/core": "^7.24.4",
+    "@babel/plugin-transform-modules-commonjs": "^7.24.1",
+    "@babel/preset-env": "^7.24.4",
     "@jaypie/testkit": "^1.0.4",
     "eslint": "^8.57.0",
     "eslint-config-prettier": "^9.1.0",
