@@ -180,7 +180,6 @@ import {
   CDK,
   ERROR,
   HTTP,
-  LOG,
   VALIDATE,
 } from "jaypie";
 ```
@@ -215,10 +214,6 @@ See `HTTP` for status codes.
 * `HTTP.HEADER`: ...
 * `HTTP.METHOD`: `GET`, `POST`, ...
 
-#### `LOG`
-
-* `LOG.FORMAT`
-* `LOG.LEVEL`
 
 #### `VALIDATE`
 
@@ -505,7 +500,6 @@ const handler = lambdaHandler(async({event}) => {
 ```javascript
 import { 
   log,
-  LOG, // LOG.FORMAT, LOG.LEVEL
 } from "jaypie";
 ```
 
