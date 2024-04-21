@@ -4,6 +4,7 @@ _templates
 .github
 .jaypie
 .vscode
+rollup.config.js
 test
 testSetup.js
 vite.config.js

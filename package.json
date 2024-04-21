@@ -2,16 +2,10 @@
   "name": "jaypie",
   "version": "1.0.14",
   "author": "Finlayson Studio",
-  "exports": {
-    ".": {
-      "import": "./dist/esm/index.js",
-      "require": "./dist/cjs/index.js"
-    }
-  },
-  "main": "dist/cjs/index.js",
-  "module": "dist/esm/index.js",
+  "main": "dist/jaypie.cjs.js",
+  "module": "dist/jaypie.esm.js",
   "scripts": {
-    "build": "babel src --out-dir dist/esm --extensions \".js\" --config-file ./babel.esm.config.json && babel src --out-dir dist/cjs --extensions \".js\" --config-file ./babel.cjs.config.json",
+    "build": "rollup --config",
     "format": "npm run format:package && npm run format:lint",
     "format:lint": "eslint --fix .",
     "format:package": "sort-package-json ./package.json",
@@ -25,14 +19,12 @@
     "test:spec:mongoose.package": "vitest run ./src/__tests__/mongoose.package.spec.js"
   },
   "dependencies": {
-    "@jaypie/core": "^1.0.18"
+    "@jaypie/core": "^1.0.19"
   },
   "devDependencies": {
-    "@babel/cli": "^7.24.1",
-    "@babel/core": "^7.24.4",
-    "@babel/plugin-transform-modules-commonjs": "^7.24.1",
-    "@babel/preset-env": "^7.24.4",
     "@jaypie/testkit": "^1.0.15",
+    "@rollup/plugin-commonjs": "^25.0.7",
+    "@rollup/plugin-node-resolve": "^15.2.3",
     "eslint": "^8.57.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-import": "^2.29.1",
@@ -41,6 +33,8 @@
     "hygen": "^6.2.11",
     "jest-extended": "^4.0.2",
     "prettier": "^3.2.5",
+    "rollup": "^4.16.1",
+    "rollup-plugin-auto-external": "^2.0.0",
     "sort-package-json": "^2.10.0",
     "vitest": "^1.4.0"
   },
