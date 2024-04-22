@@ -5,15 +5,15 @@ import { ConfigurationError, JAYPIE, log } from "@jaypie/core";
 // Helper Functions
 //
 
-let _importedModule;
+const _importedModule = {};
 async function dynamicImport(module) {
-  if (!_importedModule) {
+  if (!_importedModule[module]) {
     try {
       // eslint-disable-next-line import/no-unresolved
-      _importedModule = await import(module);
+      _importedModule[module] = await import(module);
     } catch (error) {
       if (process.env.NODE_ENV === "test") {
-        if (!_importedModule) {
+        if (!_importedModule[module]) {
           // eslint-disable-next-line no-console
           console.warn(
             `[jaypie] Caught error importing ${module} -- Is it installed?`,
@@ -23,7 +23,7 @@ async function dynamicImport(module) {
       throw new ConfigurationError();
     }
   }
-  return _importedModule;
+  return _importedModule[module];
 }
 
 //
