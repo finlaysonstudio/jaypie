@@ -27,7 +27,10 @@
     "test:spec:mongoose.package": "vitest run ./src/__tests__/mongoose.package.spec.js"
   },
   "dependencies": {
-    "@jaypie/core": "^1.0.21"
+    "@jaypie/aws": "^1.0.5",
+    "@jaypie/core": "^1.0.21",
+    "@jaypie/lambda": "^1.0.4",
+    "@jaypie/mongoose": "^1.0.6"
   },
   "devDependencies": {
     "@jaypie/testkit": "^1.0.15",
@@ -45,11 +48,6 @@
     "rollup-plugin-auto-external": "^2.0.0",
     "sort-package-json": "^2.10.0",
     "vitest": "^1.4.0"
-  },
-  "peerDependencies": {
-    "@jaypie/aws": "^1.0.4",
-    "@jaypie/lambda": "^1.0.3",
-    "@jaypie/mongoose": "^1.0.5"
   },
   "peerDependenciesMeta": {
     "@jaypie/aws": {
