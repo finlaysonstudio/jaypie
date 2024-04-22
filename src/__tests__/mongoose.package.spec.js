@@ -47,7 +47,7 @@ describe("Mongoose Package", () => {
     const {
       connectFromSecretEnv: _connectFromSecretEnv,
       disconnect: _disconnect,
-    } = await import("../mongoose.package.js");
+    } = await import("../index.js");
     connectFromSecretEnv = _connectFromSecretEnv;
     disconnect = _disconnect;
   });
@@ -84,7 +84,7 @@ describe("Mongoose Package", () => {
       const {
         connectFromSecretEnv: _connectFromSecretEnv,
         disconnect: _disconnect,
-      } = await import("../mongoose.package.js");
+      } = await import("../index.js");
       // Return
       connectFromSecretEnv = _connectFromSecretEnv;
       disconnect = _disconnect;
