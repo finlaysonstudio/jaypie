@@ -89,9 +89,7 @@ export const handler = lambdaHandler(async({event}) => {
 }, { name: "example"});
 ```
 
-This example would then be deployed to AWS via CDK or similar orchestration.
-
-_A `@jaypie/cdk` package is intended_
+This example would then be deployed to AWS via CDK or similar orchestration. See [@jaypie/cdk](https://github.com/finlaysonstudio/jaypie-cdk).
 
 ## 📖 Reference
 
@@ -213,7 +211,6 @@ See `HTTP` for status codes.
 * `HTTP.CONTENT.TEXT`
 * `HTTP.HEADER`: ...
 * `HTTP.METHOD`: `GET`, `POST`, ...
-
 
 #### `VALIDATE`
 
@@ -402,6 +399,26 @@ const string = placeholders("Hello, {name}!", { name: "World" });
 ```
 
 The code for placeholders was written by Chris Ferdinandi and distributed under the MIT License in 2018-2019. Their web site is https://gomakethings.com
+
+#### `sleep`
+
+`sleep` is a promise-based `setTimeout` that resolves after a specified number of milliseconds. It will NOT run when `NODE_ENV` is `test`. See `sleepAlways` for a version that will run in tests.
+
+```javascript
+import { sleep } from "jaypie";
+
+await sleep(2000);
+```
+
+#### `sleepAlways`
+
+`sleepAlways` is a promise-based `setTimeout` that resolves after a specified number of milliseconds. It will run even when `NODE_ENV` is `test`. See `sleep` for a version that will NOT run in tests.
+
+```javascript
+import { sleepAlways } from "jaypie";
+
+await sleepAlways(2000);
+```
 
 #### `validate`
 
