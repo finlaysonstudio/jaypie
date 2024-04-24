@@ -28,12 +28,12 @@
   },
   "dependencies": {
     "@jaypie/aws": "^1.0.5",
-    "@jaypie/core": "^1.0.23",
+    "@jaypie/core": "^1.0.24",
     "@jaypie/lambda": "^1.0.4",
     "@jaypie/mongoose": "^1.0.6"
   },
   "devDependencies": {
-    "@jaypie/testkit": "^1.0.17",
+    "@jaypie/testkit": "^1.0.18",
     "@rollup/plugin-commonjs": "^25.0.7",
     "@rollup/plugin-node-resolve": "^15.2.3",
     "eslint": "^8.57.0",
