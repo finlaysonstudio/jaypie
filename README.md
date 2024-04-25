@@ -235,7 +235,7 @@ See `HTTP` for status codes.
 
 ``` javascript
 // See `Error Reference` for full list
-const { InternalError } = require("@knowdev/errors");
+const { InternalError } = require("jaypie");
 
 try {
   // Code happens...
@@ -336,7 +336,7 @@ Returns `false` for `false` (case-insensitive) and `0` for string, boolean, and 
 Returns `undefined` otherwise.
 
 ``` javascript
-const { envBoolean } = require("@knowdev/functions");
+const { envBoolean } = require("jaypie");
 
 process.env.AWESOME = true;
 
@@ -348,7 +348,7 @@ if (envBoolean("AWESOME")) {
 ##### `envBoolean`: `defaultValue`
 
 ``` javascript
-const { envBoolean } = require("@knowdev/functions");
+const { envBoolean } = require("jaypie");
 
 if (envBoolean("AWESOME", { defaultValue: true })) {
   console.log("Awesome!");
@@ -368,15 +368,19 @@ argument = force([thing], Array);
 // argument = [thing]
 ```
 
-`force` supports Array, Object, and String.
+`force` supports Array, Boolean, Number, Object, and String.
 
 ```javascript
 argument = force(argument, Array);
+argument = force(argument, Boolean, "true");
+argument = force(argument, Number, "12");
 argument = force(argument, Object, "key");
 argument = force(argument, String, "default");
 
 // Convenience functions
 argument = force.array(argument);
+argument = force.boolean(argument);
+argument = force.number(argument);
 argument = force.object(argument, "key");
 argument = force.string(argument);
 ```
@@ -411,16 +415,6 @@ await sleep(2000);
 ```
 
 _This is "bad code" because it checks `NODE_ENV` during runtime. The "right way" is to let sleep run and mock it in tests, in practice this is needless boilerplate. A fair compromise would be to mock `sleep` with `@jaypie/testkit` but not all projects include that dependency. Jaypie will trade academically incorrect for human convenience and simplicity._
-
-#### `sleepAlways`
-
-`sleepAlways` is a promise-based `setTimeout` that resolves after a specified number of milliseconds. It will run even when `NODE_ENV` is `test`. See `sleep` for a version that will NOT run in tests.
-
-```javascript
-import { sleepAlways } from "jaypie";
-
-await sleepAlways(2000);
-```
 
 #### `validate`
 
