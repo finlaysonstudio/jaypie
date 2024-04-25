@@ -410,6 +410,8 @@ import { sleep } from "jaypie";
 await sleep(2000);
 ```
 
+_This is "bad code" because it checks `NODE_ENV` during runtime. The "right way" is to let sleep run and mock it in tests, in practice this is needless boilerplate. A fair compromise would be to mock `sleep` with `@jaypie/testkit` but not all projects include that dependency. Jaypie will trade academically incorrect for human convenience and simplicity._
+
 #### `sleepAlways`
 
 `sleepAlways` is a promise-based `setTimeout` that resolves after a specified number of milliseconds. It will run even when `NODE_ENV` is `test`. See `sleep` for a version that will NOT run in tests.
