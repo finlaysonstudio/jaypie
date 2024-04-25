@@ -18,7 +18,7 @@ export default [
     ],
   },
   {
-    input: "src/index.cjs", // Path to your main JavaScript file
+    input: "src/index.js", // Path to the CommonJS file
     output: [
       {
         file: "dist/jaypie.cjs.js", // Output file for CommonJS
