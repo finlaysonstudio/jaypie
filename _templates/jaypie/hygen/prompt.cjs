@@ -19,7 +19,7 @@ module.exports = [
     message: "Hygen generator directory (e.g., 'jaypie'):",
     onSubmit: (name, value, input) => {
       // Remove leading './' and trailing '/'
-      value = value.replace(/^\.?\/|\/$/g, "");
+      value = value.replace(/^\.\//, "").replace(/\/$/, "");
       input.state.answers.generator = value;
     },
   },
@@ -30,7 +30,7 @@ module.exports = [
     message: "Hygen template directory (always '_templates'):",
     onSubmit: (name, value, input) => {
       // Remove leading './' and trailing '/'
-      value = value.replace(/^\.?\/|\/$/g, "");
+      value = value.replace(/^\.\//, "").replace(/\/$/, "");
       input.state.answers.hygen = value;
     },
   },

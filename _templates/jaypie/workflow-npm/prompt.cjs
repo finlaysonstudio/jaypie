@@ -17,6 +17,8 @@ module.exports = [
     initial: ".github/workflows",
     message: "Path (always '.github/workflows'):",
     onSubmit: (name, value, input) => {
+      // Remove leading './' and trailing '/'
+      value = value.replace(/^\.\//, "").replace(/\/$/, "");
       input.state.answers.path = value;
     },
   },

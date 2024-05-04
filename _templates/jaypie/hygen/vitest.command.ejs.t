@@ -1,5 +1,5 @@
 ---
-to: <%= hygen %>/<%= generator %>/<%= action %>/jest.command.ejs.t
+to: <%= hygen %>/<%= generator %>/<%= action %>/vitest.command.ejs.t
 ---
 ---
 inject: true

@@ -16,7 +16,7 @@ to: <%= path %>/<%= name %><%= dotSubtype %>.js
 // Main
 //
 
-const <%= name %> = () => {
+const <%= name %> = async () => {
   //
 };
 
