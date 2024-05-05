@@ -52,15 +52,16 @@ npm install jaypie
 
 `@jaypie/core` is included in `jaypie`.  Almost every Jaypie package requires core.
 
-#### Peer Dependencies
+#### Peer Packages
 
-You must install peer dependencies for your project.
+These packages are included in `jaypie`. They may be installed separately in the future.
 
 | Package | Exports | Description |
 | ------- | ------- | ----------- |
-| `@jaypie/aws` | `getSecret` | AWS helpers |
+| `@jaypie/aws` | `getMessages`, `getSecret`, `sendBatchMessages`, `sendMessage` | AWS helpers |
+| `@jaypie/datadog | `submitMetric`, `submitMetricSet` | Datadog helpers |
 | `@jaypie/lambda` | `lambdaHandler` | Lambda entry point |
-| `@jaypie/mongoose` | `connectFromSecretEnv`, `disconnect`, `mongoose` | MongoDB management |
+| `@jaypie/mongoose` | `connect`, `connectFromSecretEnv`, `disconnect`, `mongoose` | MongoDB management |
 
 #### TestKit
 
@@ -176,6 +177,7 @@ const response = await sendMessage({ body, queueUrl });
 ```javascript
 import { 
   CDK,
+  DATADOG,
   ERROR,
   HTTP,
   VALIDATE,
@@ -191,6 +193,13 @@ import {
 * `CDK.TAG`
 
 See [constants.js in @jaypie/core](https://github.com/finlaysonstudio/jaypie-core/blob/main/src/core/constants.js).
+
+#### `DATADOG`
+
+* `DATADOG.METRIC.TYPE.UNKNOWN`
+* `DATADOG.METRIC.TYPE.COUNT`
+* `DATADOG.METRIC.TYPE.RATE`
+* `DATADOG.METRIC.TYPE.GAUGE`
 
 #### `ERROR`
 
@@ -228,6 +237,62 @@ See `HTTP` for status codes.
 
 * `JAYPIE` - for consistency across Jaypie
 * `PROJECT` - for consistency across projects
+
+### Datadog
+
+```javascript
+const { 
+  submitMetric, 
+  submitMetricSet 
+} = require("jaypie");
+```
+
+#### `submitMetric({ name, tags, type, value })`
+
+```javascript
+import { submitMetric } from "jaypie";
+
+await submitMetric({
+  name: "jaypie.metric",
+  type: DATADOG.METRIC.TYPE.COUNT,
+  value: 1,
+});
+```
+
+| Parameter | Type | Required | Description |
+| --------- | ---- | -------- | ----------- |
+| apiKey | `string` | No | Datadog API key; checks `process.env.DATADOG_API_KEY` |
+| apiSecret | `string` | No | AWS Secret name holding Datadog API key; checks `process.env.SECRET_DATADOG_API_KEY`. Preferred method of retrieving key |
+| name | `string` | Yes | Name of the metric |
+| type | `string` | No | Defaults to `DATADOG.METRIC.TYPE.UNKNOWN` |
+| value | `number` | Yes | Value of the metric |
+| tags | `array`, `object` | No | Tags for the metric. Accepts arrays `["key:value"]` or objects `{"key":"value"}` |
+| timestamp | `number` | No | Unix timestamp; defaults to `Date.now()` |
+
+#### `submitMetricSet({ tags, type, valueSet })`
+
+```javascript
+import { submitMetricSet } from "jaypie";
+
+await submitMetricSet({
+  type: DATADOG.METRIC.TYPE.GAUGE,
+  valueSet: {
+    "jaypie.metric.a": 1,
+    "jaypie.metric.b": 2,
+    "jaypie.metric.c": 3,
+  },
+});
+```
+
+
+| Parameter | Type | Required | Description |
+| --------- | ---- | -------- | ----------- |
+| apiKey | `string` | No | Datadog API key; checks `process.env.DATADOG_API_KEY` |
+| apiSecret | `string` | No | AWS Secret name holding Datadog API key; checks `process.env.SECRET_DATADOG_API_KEY`. Preferred method of retrieving key |
+| type | `string` | No | Defaults to `DATADOG.METRIC.TYPE.UNKNOWN` |
+| valueSet | `object` | Yes | Key-value pairs where the key is the metric name and the value is the metric value (number) |
+| tags | `array`, `object` | No | Tags for the metric. Accepts arrays `["key:value"]` or objects `{"key":"value"}` |
+| timestamp | `number` | No | Unix timestamp; defaults to `Date.now()` |
 
 ### Errors
 
@@ -590,10 +655,28 @@ const log = defaultLogger.with({ customProperty: "customValue" });
 
 ```javascript
 import { 
+  connect,
   connectFromSecretEnv, 
   disconnect, 
   mongoose,
 } from "jaypie";
+```
+
+#### `connect`
+
+Jaypie lifecycle method to connect to MongoDB. Uses `process.env.SECRET_MONGODB_URI` AWS Secret or `process.env.MONGODB_URI` string to connect.
+
+```javascript
+import { connect, disconnect, lambdaHandler, mongoose } from "jaypie";
+
+const handler = lambdaHandler(async({event}) => {
+  // mongoose is already connected
+  return "Hello World";
+}, { 
+  name: "lambdaReference"
+  setup: [connect],
+  teardown: [disconnect],
+});
 ```
 
 #### `connectFromSecretEnv`
