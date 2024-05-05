@@ -31,7 +31,7 @@
     "@jaypie/core": "^1.0.28",
     "@jaypie/datadog": "^1.0.0",
     "@jaypie/lambda": "^1.0.4",
-    "@jaypie/mongoose": "^1.0.6"
+    "@jaypie/mongoose": "^1.0.7"
   },
   "devDependencies": {
     "@jaypie/testkit": "^1.0.18",
