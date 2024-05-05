@@ -901,7 +901,6 @@ test("log", () => {
 
 ## 🌠 Wishlist
 
-* `@jaypie/cdk` - CDK package
 * `@jaypie/express` - Express package
 * ...Nicely organized VitePress documentation 😅
 
@@ -909,6 +908,7 @@ test("log", () => {
 
 | Date       | Version | Summary        |
 | ---------- | ------- | -------------- |
+|   5/4/2024 |  1.0.24 | Adds `@jaypie/datadog` |
 |  3/19/2024 |   1.0.0 | First publish with `@jaypie/core@1.0.0` |
 |  3/15/2024 |   0.1.0 | Initial deploy |
 |  3/15/2024 |   0.0.1 | Initial commit |
