@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 // Subject
-import { getSecret, JAYPIE, PROJECT, uuid } from "../index.js";
+import { getSecret, JAYPIE, PROJECT, submitMetric, uuid } from "../index.js";
 
 //
 //
@@ -18,6 +18,7 @@ describe("Index", () => {
     });
     it("Exports functions", () => {
       expect(getSecret).toBeFunction();
+      expect(submitMetric).toBeFunction();
       expect(uuid).toBeFunction();
     });
   });
