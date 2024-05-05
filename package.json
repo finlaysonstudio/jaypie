@@ -29,6 +29,7 @@
   "dependencies": {
     "@jaypie/aws": "^1.0.5",
     "@jaypie/core": "^1.0.28",
+    "@jaypie/datadog": "^1.0.0",
     "@jaypie/lambda": "^1.0.4",
     "@jaypie/mongoose": "^1.0.6"
   },
