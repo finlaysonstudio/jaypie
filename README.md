@@ -681,7 +681,7 @@ const handler = lambdaHandler(async({event}) => {
 
 #### `connectFromSecretEnv`
 
-Jaypie lifecycle method to connect to MongoDB using `process.env.MONGO_CONNECTION_STRING`.
+Jaypie lifecycle method to connect to MongoDB using `process.env.MONGO_CONNECTION_STRING`. Using the newer `connect` is generally preferred.
 
 ```javascript
 import { connectFromSecretEnv, disconnect, lambdaHandler, mongoose } from "jaypie";
