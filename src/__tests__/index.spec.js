@@ -1,7 +1,14 @@
 import { describe, expect, it } from "vitest";
 
 // Subject
-import { getSecret, JAYPIE, PROJECT, submitMetric, uuid } from "../index.js";
+import {
+  expressHandler,
+  getSecret,
+  JAYPIE,
+  PROJECT,
+  submitMetric,
+  uuid,
+} from "../index.js";
 
 //
 //
@@ -17,6 +24,7 @@ describe("Index", () => {
       expect(PROJECT.SPONSOR.JAYPIE).toBeString();
     });
     it("Exports functions", () => {
+      expect(expressHandler).toBeFunction();
       expect(getSecret).toBeFunction();
       expect(submitMetric).toBeFunction();
       expect(uuid).toBeFunction();
