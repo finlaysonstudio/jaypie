@@ -60,6 +60,7 @@ These packages are included in `jaypie`. They may be installed separately in the
 | ------- | ------- | ----------- |
 | `@jaypie/aws` | `getMessages`, `getSecret`, `sendBatchMessages`, `sendMessage` | AWS helpers |
 | `@jaypie/datadog | `submitMetric`, `submitMetricSet` | Datadog helpers |
+| `@jaypie/express` | `expressHandler` | Express entry point |
 | `@jaypie/lambda` | `lambdaHandler` | Lambda entry point |
 | `@jaypie/mongoose` | `connect`, `connectFromSecretEnv`, `disconnect`, `mongoose` | MongoDB management |
 
@@ -179,6 +180,7 @@ import {
   CDK,
   DATADOG,
   ERROR,
+  EXPRESS,
   HTTP,
   VALIDATE,
 } from "jaypie";
@@ -209,6 +211,11 @@ Default messages and titles for Jaypie errors.
 * `ERROR.TITLE`
 
 See `HTTP` for status codes.
+
+#### `EXPRESS`
+
+* `EXPRESS.PATH.ANY` - String `*` for any path
+* `EXPRESS.PATH.ROOT` - Regular expression for root path
 
 #### `HTTP`
 
@@ -283,7 +290,6 @@ await submitMetricSet({
   },
 });
 ```
-
 
 | Parameter | Type | Required | Description |
 | --------- | ---- | -------- | ----------- |
@@ -379,6 +385,76 @@ ALWAYS internal to the app, NEVER something the client did
     * In theory the block is literally not reachable and we want to put something there to make sure it stays that way
     * For example, a complicated chain of `if`/`else` that should always return and cover all cases, may throw this as the last `else`
     * A configuration error means what happened was possible but should not have happened, an unreachable error means it should not have been possible
+
+### Express
+
+The Express handler wraps the Jaypie handler for Express running on AWS Lambda. It will call lifecycle methods and provide logging. Unhandled errors will be thrown as `UnhandledError`. It adds the `locals` lifecycle call. It extends `jaypieHandler`, not the lambda handler.
+
+```javascript
+const { expressHandler } = require("jaypie");
+
+const handler = expressHandler(async(req, res) => {
+  // await new Promise(r => setTimeout(r, 2000));
+  // log.debug("Hello World");
+  return { message: "Hello World" };
+}, { name: "lambdaReference"});
+```
+
+#### Return Types
+
+Do not use `res.send` or `res.json` in the handler. The return value of the handler is the response body. The status code is determined by the error thrown or the return value. Custom status codes can be set by calling `res.status` in the handler.
+
+| Return Type | Status Code | Content-Type |
+| ----------- | ----------- | ------------ |
+| Object, Array | 200 OK | `application/json` |
+| String | 200 OK | `text/html` |
+| `true` | 201 Created | None |
+| Falsy values | 204 No Content | None |
+
+Errors can be returned by throwing the appropriate Jaypie error.
+
+#### Lifecycle Methods
+
+In addition to the Jaypie lifecycle methods, `expressHandler` adds `locals`, an object of scalars or functions that will be called at the end of `setup` and available to the handler as `req.locals`.
+
+```javascript
+const handler = expressHandler(async(req) => {
+  // req.locals.asyncFn = "async"
+  // req.locals.fn = "function"
+  // req.locals.key = "static"
+  return { message: "Hello World" };
+}, { 
+  name: "lambdaReference",
+  locals: { 
+    asyncFn: async() => "async",
+    fn: () => "function",
+    key: "static"
+  },
+});
+```
+
+#### Convenience Routes
+
+_A "handler" returns a function that can be used as an Express route. A "route" does not require instantiation._
+
+```javascript
+import { 
+  echoRoute,
+  EXPRESS,
+  forbiddenRoute,
+  goneRoute,
+  noContentRoute,
+  notFoundRoute,
+  notImplementedRoute,
+} from "jaypie";
+
+app.get(EXPRESS.PATH.ROOT, noContentRoute); // 204 No Content
+app.get(EXPRESS.PATH.ANY, echoRoute); // 200 OK returning the request
+app.post(EXPRESS.PATH.ANY, forbiddenRoute); // 403 Forbidden
+app.any("/future", notImplementedRoute); // 400 Bad Request
+```
+
+`notImplementedRoute` returns "400 Bad Request" as a placeholder for future functionality. In this regard, calling it is a "user error." The "501 Not Implemented" status code is reserved for the server not supporting parts of the HTTP protocol such as `POST` or `PUT`.
 
 ### Functions
 
@@ -561,7 +637,7 @@ Called after the handler (e.g., disconnect from a database). Runs even if setup 
 
 ### Lambda Handler
 
-The Lambda handler wraps the Jaypie handler that is specifically for AWS Lambda. It will call lifecycle methods and provide logging. Unhandled errors will be thrown as `UnhandledError`.
+The Lambda handler wraps the Jaypie handler for AWS Lambda. It will call lifecycle methods and provide logging. Unhandled errors will be thrown as `UnhandledError`.
 
 ```javascript
 const { lambdaHandler } = require("jaypie");
