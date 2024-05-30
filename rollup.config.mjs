@@ -21,7 +21,7 @@ export default [
     input: "src/index.js", // Path to the CommonJS file
     output: [
       {
-        file: "dist/jaypie.cjs.js", // Output file for CommonJS
+        file: "dist/jaypie.cjs", // Output file for CommonJS
         format: "cjs", // CommonJS format
       },
     ],
