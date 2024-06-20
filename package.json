@@ -6,7 +6,7 @@
   "exports": {
     ".": {
       "default": {
-        "require": "./dist/jaypie.cjs.js",
+        "require": "./dist/jaypie.cjs",
         "default": "./src/index.js"
       }
     }
