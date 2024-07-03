@@ -36,7 +36,7 @@
   },
   "devDependencies": {
     "@jaypie/testkit": "^1.0.19",
-    "@rollup/plugin-commonjs": "^25.0.7",
+    "@rollup/plugin-commonjs": "^26.0.1",
     "@rollup/plugin-node-resolve": "^15.2.3",
     "eslint": "^8.57.0",
     "eslint-config-jaypie": "^1.0.7",
