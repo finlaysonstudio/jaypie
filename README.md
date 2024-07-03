@@ -977,7 +977,7 @@ test("log", () => {
 
 ## 🌠 Wishlist
 
-* `@jaypie/express` - Express package
+* Optional loading of Jaypie side packages
 * ...Nicely organized VitePress documentation 😅
 
 ## 📝 Changelog
