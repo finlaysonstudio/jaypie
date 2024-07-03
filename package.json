@@ -27,11 +27,11 @@
     "test:spec:mongoose.package": "vitest run ./src/__tests__/mongoose.package.spec.js"
   },
   "dependencies": {
-    "@jaypie/aws": "^1.0.7",
+    "@jaypie/aws": "^1.0.8",
     "@jaypie/core": "^1.0.37",
     "@jaypie/datadog": "^1.0.3",
     "@jaypie/express": "^1.0.4",
-    "@jaypie/lambda": "^1.0.6",
+    "@jaypie/lambda": "^1.0.7",
     "@jaypie/mongoose": "^1.0.9"
   },
   "devDependencies": {
