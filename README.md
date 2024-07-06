@@ -532,6 +532,10 @@ argument = force.string(argument);
 
 Case-insensitive search inside `searchObject` for `headerKey`.  Also looks in `header` and `headers` child object of `searchObject`, if `headerKey` not found at top-level.
 
+#### `getObjectKeyCaseInsensitive(object:object, key:string)`
+
+Case-insensitive search for `key` in `object`.  Returns the value of the key or `undefined`.
+
 #### `placeholders`
 
 Lightweight string interpolation
@@ -545,6 +549,10 @@ const string = placeholders("Hello, {name}!", { name: "World" });
 
 The code for placeholders was written by Chris Ferdinandi and distributed under the MIT License in 2018-2019. Their web site is https://gomakethings.com
 
+#### `safeParseFloat`
+
+`parseFloat` that returns `0` for `NaN`
+
 #### `sleep`
 
 `sleep` is a promise-based `setTimeout` that resolves after a specified number of milliseconds. It will NOT run when `NODE_ENV` is `test`. See `sleepAlways` for a version that will run in tests.
@@ -556,6 +564,16 @@ await sleep(2000);
 ```
 
 _This is "bad code" because it checks `NODE_ENV` during runtime. The "right way" is to let sleep run and mock it in tests, in practice this is needless boilerplate. A fair compromise would be to mock `sleep` with `@jaypie/testkit` but not all projects include that dependency. Jaypie will trade academically incorrect for human convenience and simplicity._
+
+#### `uuid`
+
+The `v4` function from the `uuid` package
+
+```javascript
+import { uuid } from "jaypie";
+
+const id = uuid();
+```
 
 #### `validate`
 
