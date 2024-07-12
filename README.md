@@ -59,7 +59,7 @@ These packages are included in `jaypie`. They may be installed separately in the
 | Package | Exports | Description |
 | ------- | ------- | ----------- |
 | `@jaypie/aws` | `getMessages`, `getSecret`, `sendBatchMessages`, `sendMessage` | AWS helpers |
-| `@jaypie/datadog | `submitMetric`, `submitMetricSet` | Datadog helpers |
+| `@jaypie/datadog` | `submitMetric`, `submitMetricSet` | Datadog helpers |
 | `@jaypie/express` | `expressHandler` | Express entry point |
 | `@jaypie/lambda` | `lambdaHandler` | Lambda entry point |
 | `@jaypie/mongoose` | `connect`, `connectFromSecretEnv`, `disconnect`, `mongoose` | MongoDB management |
