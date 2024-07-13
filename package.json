@@ -30,7 +30,7 @@
     "@jaypie/aws": "^1.0.8",
     "@jaypie/core": "^1.0.41",
     "@jaypie/datadog": "^1.0.3",
-    "@jaypie/express": "^1.0.11",
+    "@jaypie/express": "^1.0.12",
     "@jaypie/lambda": "^1.0.12",
     "@jaypie/mongoose": "^1.0.9"
   },
