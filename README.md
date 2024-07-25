@@ -496,6 +496,34 @@ if (envBoolean("AWESOME", { defaultValue: true })) {
 }
 ```
 
+#### `envsKey`
+
+`envsKey(key:string, { env:string = process.env.PROJECT_ENV || process.env.DEFAULT_ENV })`
+
+return `process.env.${KEY} || ENV_${ENV}_${KEY} || false`
+
+```bash
+DEFAULT_ENV=sandbox
+
+MONGODB_URI=...
+ENV_SANDBOX_MONGODB_URI=...
+ENV_DEVELOPMENT_MONGODB_URI=...
+
+PROJECT_ENV=development
+```
+
+Return order:
+1. `MONGODB_URI` - the exact key always takes precedence, if set
+2. `ENV_DEVELOPMENT_MONGODB_URI` - the `PROJECT_ENV`, if set. Usually this is set in the deploy workflow
+3. `ENV_SANDBOX_MONGODB_URI` - the `DEFAULT_ENV`, if set. Usually this is set in the local environment
+4. `false`
+
+```javascript
+import { envsKey } from "jaypie";
+
+const url = envsKey("MONGODB_URI");
+```
+
 #### `force`
 
 Coerce a value into a type or throw an error.
