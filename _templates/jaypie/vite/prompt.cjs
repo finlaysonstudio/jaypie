@@ -23,7 +23,6 @@ module.exports = [
     name: "subtype",
     message: "Subtype (optional; e.g., 'function'):",
     onSubmit: (name, value, input) => {
-      // eslint-disable-next-line no-param-reassign
       input.state.answers.dotSubtype = value ? `.${value}` : "";
     },
   },
@@ -33,7 +32,6 @@ module.exports = [
     message:
       "Sub-spec test, for `npm run test:spec:SUBSPEC:sum.function` command (e.g., 'express'):",
     onSubmit: (name, value, input) => {
-      // eslint-disable-next-line no-param-reassign
       input.state.answers.colonSubspec = value ? `:${value}` : "";
     },
   },

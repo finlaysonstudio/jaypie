@@ -9,8 +9,8 @@ const _importedModule = {};
 async function dynamicImport(module) {
   if (!_importedModule[module]) {
     try {
-      // eslint-disable-next-line import/no-unresolved
       _importedModule[module] = await import(module);
+      // eslint-disable-next-line no-unused-vars
     } catch (error) {
       if (process.env.NODE_ENV === "test") {
         if (!_importedModule[module]) {
@@ -55,6 +55,7 @@ export default async ({
   try {
     // Attempt to import the module
     return await dynamicImport(moduleImport);
+    // eslint-disable-next-line no-unused-vars
   } catch (error) {
     log
       .lib({ lib: JAYPIE.LIB.JAYPIE })
