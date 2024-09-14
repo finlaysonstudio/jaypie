@@ -363,6 +363,7 @@ throw MultiError(errors);
 | `NotImplementedError`   | 400    | "The developer" (you again?) didn't finish this part yet - hopefully a temporary message |
 | `RejectedError`         | 403    | Request filtered prior to processing |
 | `TeapotError`           | 418    | RFC 2324 section-2.3.2 |
+| `UnauthorizedError`     | 401    | You need to log in |
 | `UnavailableError`      | 503    | The thing you are looking for cannot come to the phone right now |
 | `UnhandledError`        | 500    | An error that should have been handled wasn't |
 | `UnreachableCodeError`  | 500    | Should not be possible |
