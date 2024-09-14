@@ -215,6 +215,7 @@ See `HTTP` for status codes.
 #### `EXPRESS`
 
 * `EXPRESS.PATH.ANY` - String `*` for any path
+* `EXPRESS.PATH.ID` - String `/:id` for an ID path
 * `EXPRESS.PATH.ROOT` - Regular expression for root path
 
 #### `HTTP`
@@ -400,6 +401,20 @@ const handler = expressHandler(async(req, res) => {
 }, { name: "lambdaReference"});
 ```
 
+The order of options and handler may be swapped to improve readability. Having lifecycle methods listed before the handler may read more intuitively.
+
+```javascript
+const handler = expressHandler({ 
+  name: "expressOptions",
+  setup: [connect],
+  teardown: [disconnect],
+}, async(req, res) => {
+  // await new Promise(r => setTimeout(r, 2000));
+  // log.debug("Hello World");
+  return { message: "Hello World" };
+});
+```
+
 #### Return Types
 
 Do not use `res.send` or `res.json` in the handler. The return value of the handler is the response body. The status code is determined by the error thrown or the return value. Custom status codes can be set by calling `res.status` in the handler.
@@ -424,7 +439,7 @@ const handler = expressHandler(async(req) => {
   // req.locals.key = "static"
   return { message: "Hello World" };
 }, { 
-  name: "lambdaReference",
+  name: "expressReference",
   locals: { 
     asyncFn: async() => "async",
     fn: () => "function",
