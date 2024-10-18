@@ -3,6 +3,9 @@
   "version": "1.0.50",
   "author": "Finlayson Studio",
   "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
   "exports": {
     ".": {
       "default": {
