@@ -3,9 +3,6 @@
   "version": "1.0.50",
   "author": "Finlayson Studio",
   "type": "module",
-  "workspaces": [
-    "packages/*"
-  ],
   "exports": {
     ".": {
       "default": {
@@ -50,16 +47,5 @@
     "rollup-plugin-auto-external": "^2.0.0",
     "sort-package-json": "^2.10.0",
     "vitest": "^1.4.0"
-  },
-  "peerDependenciesMeta": {
-    "@jaypie/aws": {
-      "optional": true
-    },
-    "@jaypie/lambda": {
-      "optional": true
-    },
-    "@jaypie/mongoose": {
-      "optional": true
-    }
   }
 }
