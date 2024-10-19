@@ -9,7 +9,7 @@
   "scripts": {
     "format:package": "sort-package-json ./package.json",
     "lint": "eslint .",
-    "test": "vitest ."
+    "test": "vitest run ."
   },
   "devDependencies": {
     "@jaypie/eslint": "^1.0.0",

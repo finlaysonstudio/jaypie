@@ -10,7 +10,7 @@
   "scripts": {
     "format:package": "sort-package-json ./package.json",
     "lint": "eslint .",
-    "test": "vitest .",
+    "test": "vitest run .",
     "test:spec:index": "vitest run ./index.spec.js"
   },
   "devDependencies": {
