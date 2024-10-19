@@ -1,5 +1,6 @@
 import js from "@eslint/js";
 import pluginPrettierRecommended from "eslint-plugin-prettier/recommended";
+import globals from "globals";
 
 export default [
   //
@@ -15,4 +16,13 @@ export default [
   //
   // Project Overrides
   //
+  {
+    // Global Ignore
+    ignores: ["**/dist/**", "dist/"],
+  },
+  {
+    languageOptions: {
+      globals: globals.node,
+    },
+  },
 ];
