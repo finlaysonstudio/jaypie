@@ -11,6 +11,7 @@ import logger from "../logger.module.js";
 beforeEach(() => {
   process.env.PROJECT_ENV = "";
   process.env.PROJECT_SERVICE = "";
+  process.env.PROJECT_VERSION = "1.0.0";
 });
 
 afterEach(() => {
