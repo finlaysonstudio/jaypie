@@ -10,7 +10,7 @@ export default [
   // TODO: plugins import pluginNoAutofix/
   // ...pluginVue.configs["flat/essential"],
   pluginPrettierRecommended, // Prettier wants to always be the last plugin
-  
+
   //
   //
   // Project Overrides
