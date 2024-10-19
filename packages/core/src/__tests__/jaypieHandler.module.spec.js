@@ -99,6 +99,7 @@ describe("Jaypie Handler Module", () => {
       // Act
       try {
         await handler();
+        // eslint-disable-next-line no-unused-vars
       } catch (error) {
         // Assert
         expect(log.debug).toHaveBeenCalledTimes(1);
@@ -113,6 +114,7 @@ describe("Jaypie Handler Module", () => {
       // Act
       try {
         await handler();
+        // eslint-disable-next-line no-unused-vars
       } catch (error) {
         // Assert
         expect(log.fatal).toHaveBeenCalledTimes(1);
@@ -395,6 +397,7 @@ describe("Jaypie Handler Module", () => {
           // Act
           try {
             await handler();
+            // eslint-disable-next-line no-unused-vars
           } catch (error) {
             // Assert
             expect(mockTeardown1).toHaveBeenCalledTimes(1);
@@ -417,6 +420,7 @@ describe("Jaypie Handler Module", () => {
           // Act
           try {
             await handler();
+            // eslint-disable-next-line no-unused-vars
           } catch (error) {
             // Assert
             expect(mockTeardown1).toHaveBeenCalledTimes(1);
@@ -439,6 +443,7 @@ describe("Jaypie Handler Module", () => {
           // Act
           try {
             await handler();
+            // eslint-disable-next-line no-unused-vars
           } catch (error) {
             // Assert
             expect(mockTeardown1).not.toHaveBeenCalled();

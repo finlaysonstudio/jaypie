@@ -74,15 +74,15 @@ describe("GetHeaderFrom function", () => {
     const response = await getHeaderFrom("bogus", event);
     expect(response).toBeUndefined();
   });
-  // eslint-disable-next-line vitest/expect-expect
+
   it("Won't crash if searchObject is missing (undefined)", () => {
     getHeaderFrom("bogus");
   });
-  // eslint-disable-next-line vitest/expect-expect
+
   it("Won't crash if searchObject is not an object", () => {
     getHeaderFrom("bogus", 12);
   });
-  // eslint-disable-next-line vitest/expect-expect
+
   it("Won't crash if searchObject is null", () => {
     getHeaderFrom("bogus", null);
   });

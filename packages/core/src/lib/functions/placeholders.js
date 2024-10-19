@@ -1,4 +1,4 @@
-/* eslint-disable no-plusplus, no-shadow, no-param-reassign */
+/* eslint-disable no-shadow */
 
 //
 //

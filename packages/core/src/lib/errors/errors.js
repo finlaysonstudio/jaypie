@@ -1,4 +1,3 @@
-/* eslint-disable max-classes-per-file */
 import HTTP from "../http.lib.js";
 import formatError from "./formatError.js";
 
@@ -8,9 +7,7 @@ import formatError from "./formatError.js";
 //
 
 const proxyClassAsFunction = {
-  apply: (target, thisArgument, argumentsList) =>
-    // eslint-disable-next-line new-cap
-    new target(...argumentsList),
+  apply: (target, thisArgument, argumentsList) => new target(...argumentsList),
 };
 
 //
@@ -127,7 +124,6 @@ export class ProjectMultiError extends Error {
     this.status = status;
     this._type = ERROR.TYPE.MULTI_ERROR;
     this.json = () => {
-      // eslint-disable-next-line no-shadow
       const { data } = formatError(this);
       return data;
     };

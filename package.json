@@ -7,9 +7,14 @@
     "packages/*"
   ],
   "scripts": {
+    "format": "npm run format:package && npm run format:lint",
+    "format:lint": "eslint --fix .",
     "format:package": "sort-package-json ./package.json",
     "lint": "eslint .",
     "test": "vitest run ."
+  },
+  "dependencies": {
+    "@jaypie/testkit": "^1.0.29"
   },
   "devDependencies": {
     "@jaypie/eslint": "^1.0.0",
@@ -23,8 +28,5 @@
     "rollup-plugin-auto-external": "^2.0.0",
     "sort-package-json": "^2.10.1",
     "vitest": "^2.1.3"
-  },
-  "dependencies": {
-    "@jaypie/testkit": "^1.0.29"
   }
 }

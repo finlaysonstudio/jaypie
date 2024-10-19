@@ -11,7 +11,7 @@ const getHeaderFrom = (headerKey, searchObject) => {
 
   try {
     const searchKey = headerKey.toLowerCase();
-    // eslint-disable-next-line no-param-reassign
+
     searchObject = cloneDeep(searchObject);
 
     // See if we find the key
@@ -34,6 +34,7 @@ const getHeaderFrom = (headerKey, searchObject) => {
       const response = getHeaderFrom(headerKey, searchObject.headers);
       if (response !== undefined) return response;
     }
+    // eslint-disable-next-line no-unused-vars
   } catch (error) {
     //
   }

@@ -55,6 +55,7 @@ function parse(message) {
   // Now we know message is a string
   try {
     return JSON.parse(message);
+    // eslint-disable-next-line no-unused-vars
   } catch (error) {
     return message;
   }
@@ -79,6 +80,7 @@ function parsesTo(message) {
       parses: true,
       message: JSON.parse(message),
     };
+    // eslint-disable-next-line no-unused-vars
   } catch (error) {
     return {
       parses: false,
@@ -188,10 +190,8 @@ class Logger {
 
           // If passing two params
           if (typeof messageObject !== "object") {
-            /* eslint-disable no-param-reassign */
             if (messageValue === undefined) messageValue = "undefined";
             messageObject = { [messageObject]: messageValue };
-            /* eslint-enable no-param-reassign */
           }
 
           //* At this point we know this is an object or null
@@ -259,7 +259,6 @@ class Logger {
   // * Helps with autocomplete in IDEs
   // All these methods are overwritten in the constructor
 
-  /* eslint-disable class-methods-use-this */
   trace() {}
 
   debug() {}
@@ -273,7 +272,6 @@ class Logger {
   fatal() {}
 
   var() {}
-  /* eslint-enable class-methods-use-this */
 
   //
   //

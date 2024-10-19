@@ -18,7 +18,6 @@ export default (
   // Validate
 
   if (typeof line !== "string") {
-    // eslint-disable-next-line no-param-reassign
     line = stringify(line);
   }
 
@@ -58,7 +57,6 @@ export default (
     try {
       console.warn(error);
       outputFunction(line);
-
       // eslint-disable-next-line no-shadow
     } catch (error) {
       console.warn(error);

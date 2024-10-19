@@ -11,7 +11,7 @@
 const logTags = (withTags) => {
   // Validate
   if (withTags && typeof withTags !== "object") {
-    withTags = {}; // eslint-disable-line no-param-reassign
+    withTags = {};
   }
 
   // Setup

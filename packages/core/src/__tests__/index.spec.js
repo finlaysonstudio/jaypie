@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 
 // Subject
-// eslint-disable-next-line import/default
 import index from "../index.js";
 import {
   BadGatewayError,
@@ -23,7 +22,7 @@ import {
   log,
   MethodNotAllowedError,
   MultiError,
-  NAME, // eslint-disable-line import/named
+  NAME,
   NotFoundError,
   NotImplementedError,
   optional,

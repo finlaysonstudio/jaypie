@@ -14,6 +14,7 @@ const formatAsJsonString = (subject) => {
       // See if we can parse and re-stringify a JSON string
       try {
         return JSON.stringify(JSON.parse(subject), UNUSED_PARAM, SPACES);
+        // eslint-disable-next-line no-unused-vars
       } catch (error) {
         // Oops, I guess not
         return subject;

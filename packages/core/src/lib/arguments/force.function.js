@@ -17,7 +17,6 @@ const force = (value, type, options) => {
     }
   }
 
-  // eslint-disable-next-line no-autofix/prefer-const
   let { key, maximum, minimum, nan } = options;
   if (nan === undefined) nan = false;
 
@@ -60,11 +59,12 @@ const force = (value, type, options) => {
       }
       return number;
     case TYPE.OBJECT:
-      if (!key) key = "value"; // eslint-disable-line no-param-reassign
+      if (!key) key = "value";
       // If it is a string, try parsing as JSON but catch errors
       if (typeof value === "string") {
         try {
-          value = JSON.parse(value); // eslint-disable-line no-param-reassign
+          value = JSON.parse(value);
+          // eslint-disable-next-line no-unused-vars
         } catch (error) {
           // Do nothing
         }
