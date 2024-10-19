@@ -30,6 +30,70 @@ export default [
 
   //
   //
+  // Rules
+  //
+  {
+    rules: {
+      "no-console": "warn",
+      "no-fallthrough": "error",
+      "no-shadow": "error",
+      "no-shadow-restricted-names": "error",
+      "no-unused-vars": "warn",
+      "no-use-before-define": [
+        "error",
+        { functions: true, classes: true, variables: true },
+      ],
+      "object-shorthand": ["error", "always"],
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: "CallExpression[callee.name='require']",
+          message: "Unexpected require, use import instead.",
+        },
+        {
+          selector:
+            "MemberExpression[object.name='module'][property.name='exports']",
+          message: "Unexpected module.exports, use export instead.",
+        },
+        {
+          selector: "MemberExpression[object.name='exports']",
+          message: "Unexpected exports, use export instead.",
+        },
+      ],
+    },
+  },
+
+  //
+  //
+  // CommonJS
+  //
+  {
+    files: ["**/*.cjs"],
+    languageOptions: {
+      ecmaVersion: "latest",
+      sourceType: "script",
+    },
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: "ImportDeclaration",
+          message: "Unexpected import, use require instead.",
+        },
+        {
+          selector: "ExportNamedDeclaration",
+          message: "Unexpected export, use module.exports instead.",
+        },
+        {
+          selector: "ExportDefaultDeclaration",
+          message: "Unexpected export, use module.exports instead.",
+        },
+      ],
+    },
+  },
+
+  //
+  //
   // Vitest
   //
   {
