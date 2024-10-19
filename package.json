@@ -8,9 +8,11 @@
   ],
   "scripts": {
     "format:package": "sort-package-json ./package.json",
+    "lint": "eslint .",
     "test": "vitest ."
   },
   "devDependencies": {
+    "@jaypie/eslint": "^1.0.0",
     "@rollup/plugin-commonjs": "^28.0.1",
     "@rollup/plugin-node-resolve": "^15.3.0",
     "eslint": "^9.12.0",
