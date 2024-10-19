@@ -58,21 +58,5 @@
     "jsonapi-serializer": "^3.6.9",
     "lodash.clonedeep": "^4.5.0",
     "uuid": "^10.0.0"
-  },
-  "devDependencies": {
-    "@jaypie/testkit": "^1.0.26",
-    "@rollup/plugin-commonjs": "^26.0.1",
-    "@rollup/plugin-node-resolve": "^15.2.3",
-    "eslint": "^8.57.0",
-    "eslint-config-jaypie": "^1.0.17",
-    "hygen": "^6.2.11",
-    "jest-extended": "^4.0.2",
-    "jest-json-schema": "^6.1.0",
-    "mock-express-response": "^0.3.0",
-    "prettier": "^3.2.5",
-    "rollup": "^4.16.1",
-    "rollup-plugin-auto-external": "^2.0.0",
-    "sort-package-json": "^2.8.0",
-    "vitest": "^2.1.1"
   }
 }
