@@ -13,13 +13,6 @@
     "test": "vitest run .",
     "test:spec:index": "vitest run ./index.spec.js"
   },
-  "devDependencies": {
-    "eslint": "^9.0.0",
-    "vitest": "^2.0.0"
-  },
-  "peerDependencies": {
-    "eslint": "^9.0.0"
-  },
   "dependencies": {
     "@vitest/eslint-plugin": "^1.1.7",
     "eslint-config-prettier": "^9.1.0",
@@ -28,5 +21,12 @@
     "eslint-plugin-prettier-vue": "^5.0.0",
     "eslint-plugin-vue": "^9.29.0",
     "prettier": "^3.3.3"
+  },
+  "devDependencies": {
+    "eslint": "^9.0.0",
+    "vitest": "^2.0.0"
+  },
+  "peerDependencies": {
+    "eslint": "^9.0.0"
   }
 }
