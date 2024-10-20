@@ -1,7 +1,10 @@
+import { matchers as jaypieMatchers } from "@jaypie/testkit";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 // Subject
 import optional from "../optional.function.js";
+
+expect.extend(jaypieMatchers);
 
 //
 //

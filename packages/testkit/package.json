@@ -1,0 +1,46 @@
+{
+  "name": "@jaypie/testkit",
+  "version": "1.0.29",
+  "license": "MIT",
+  "author": "Finlayson Studio",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.js",
+    "./mock": "./src/jaypie.mock.js"
+  },
+  "main": "src/index.js",
+  "scripts": {
+    "format": "npm run format:package && npm run format:lint",
+    "format:lint": "eslint --fix .",
+    "format:package": "sort-package-json ./package.json",
+    "lint": "eslint .",
+    "test": "vitest run .",
+    "test:spec:constants": "vitest run ./src/__tests__/constants.spec.js",
+    "test:spec:expressHandler.mock": "vitest run ./src/__tests__/expressHandler-supertest.mock.spec.js",
+    "test:spec:index": "vitest run ./src/__tests__/index.spec.js",
+    "test:spec:jaypie.mock": "vitest run ./src/__tests__/jaypie.mock.spec.js",
+    "test:spec:jsonApiSchema.module": "vitest run ./src/__tests__/jsonApiSchema.module.spec.js",
+    "test:spec:matchers.module": "vitest run ./src/__tests__/matchers.module.spec.js",
+    "test:spec:mockLog.module": "vitest run ./src/__tests__/mockLog.module.spec.js",
+    "test:spec:sqsTestRecords.function": "vitest run ./src/__tests__/sqsTestRecords.function.spec.js",
+    "test:spec:toBeCalledAboveTrace.matcher": "vitest run ./src/matchers/__tests__/toBeCalledAboveTrace.matcher.spec.js",
+    "test:spec:toBeCalledWithInitialParams.matcher": "vitest run ./src/matchers/__tests__/toBeCalledWithInitialParams.matcher.spec.js",
+    "test:spec:toBeClass.matcher": "vitest run ./src/matchers/__tests__/toBeClass.matcher.spec.js",
+    "test:spec:toBeJaypieError.matcher": "vitest run ./src/matchers/__tests__/toBeJaypieError.matcher.spec.js",
+    "test:spec:toMatch.matcher": "vitest run ./src/matchers/__tests__/toMatch.matcher.spec.js",
+    "test:spec:toThrowJaypieError.matcher": "vitest run ./src/matchers/__tests__/toThrowJaypieError.matcher.spec.js"
+  },
+  "dependencies": {
+    "@jaypie/core": "^1.0.33",
+    "jaypie": "^1.0.44",
+    "jest-json-schema": "^6.1.0",
+    "lodash.isequal": "^4.5.0",
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "express": "^4.21.1"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

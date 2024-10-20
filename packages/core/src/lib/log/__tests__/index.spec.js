@@ -1,6 +1,9 @@
+import { matchers as jaypieMatchers } from "@jaypie/testkit";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import log from "../index.js";
+
+expect.extend(jaypieMatchers);
 
 //
 //

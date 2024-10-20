@@ -1,7 +1,10 @@
+import { matchers as jaypieMatchers } from "@jaypie/testkit";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // Subject
 import envsKey from "../envsKey.js";
+
+expect.extend(jaypieMatchers);
 
 //
 //
