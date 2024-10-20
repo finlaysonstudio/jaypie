@@ -1,6 +1,7 @@
 {
   "name": "@jaypie/eslint",
   "version": "1.0.0",
+  "license": "MIT",
   "author": "Finlayson Studio",
   "type": "module",
   "exports": {
