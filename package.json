@@ -1,62 +1,33 @@
 {
-  "name": "jaypie",
-  "version": "1.0.50",
+  "name": "@jaypie/monorepo",
+  "version": "1.0.0",
+  "private": true,
   "author": "Finlayson Studio",
   "type": "module",
-  "exports": {
-    ".": {
-      "default": {
-        "require": "./dist/jaypie.cjs",
-        "default": "./src/index.js"
-      }
-    }
-  },
-  "main": "src/index.js",
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
-    "build": "rollup --config",
+    "build:core": "npm run build --workspace packages/core",
     "format": "npm run format:package && npm run format:lint",
     "format:lint": "eslint --fix .",
     "format:package": "sort-package-json ./package.json",
-    "init:deploy": "hygen jaypie workflow-npm",
     "lint": "eslint .",
-    "new": "hygen jaypie vite",
-    "prepublish": "npm run build",
-    "test": "vitest",
-    "test:spec:dynamicExport.function": "vitest run ./src/__tests__/dynamicExport.function.spec.js",
-    "test:spec:index": "vitest run ./src/__tests__/index.spec.js",
-    "test:spec:mongoose.package": "vitest run ./src/__tests__/mongoose.package.spec.js"
-  },
-  "dependencies": {
-    "@jaypie/aws": "^1.0.8",
-    "@jaypie/core": "^1.0.44",
-    "@jaypie/datadog": "^1.0.3",
-    "@jaypie/express": "^1.0.15",
-    "@jaypie/lambda": "^1.0.13",
-    "@jaypie/mongoose": "^1.0.9"
+    "test": "vitest run ."
   },
   "devDependencies": {
+    "@jaypie/eslint": "^1.0.0",
     "@jaypie/testkit": "^1.0.29",
-    "@rollup/plugin-commonjs": "^26.0.1",
-    "@rollup/plugin-node-resolve": "^15.2.3",
-    "eslint": "^9.7.0",
-    "eslint-config-jaypie": "^1.0.17",
+    "@rollup/plugin-commonjs": "^28.0.1",
+    "@rollup/plugin-node-resolve": "^15.3.0",
+    "eslint": "^9.12.0",
     "hygen": "^6.2.11",
     "jest-extended": "^4.0.2",
-    "prettier": "^3.2.5",
-    "rollup": "^4.16.1",
+    "lerna": "^8.1.8",
+    "prettier": "^3.3.3",
+    "rollup": "^4.24.0",
     "rollup-plugin-auto-external": "^2.0.0",
-    "sort-package-json": "^2.10.0",
-    "vitest": "^1.4.0"
-  },
-  "peerDependenciesMeta": {
-    "@jaypie/aws": {
-      "optional": true
-    },
-    "@jaypie/lambda": {
-      "optional": true
-    },
-    "@jaypie/mongoose": {
-      "optional": true
-    }
+    "sort-package-json": "^2.10.1",
+    "vitest": "^2.1.3"
   }
 }

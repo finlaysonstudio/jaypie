@@ -1,2 +1,3 @@
-import jaypie from "eslint-config-jaypie/flat";
+import jaypie from "@jaypie/eslint";
+
 export default [...jaypie];

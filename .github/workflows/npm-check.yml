@@ -9,7 +9,6 @@ on:
       - check-*
 
 env:
-  NPM_INSTALL_FLAGS: --force
   PROJECT_ENV: meta
   PROJECT_SERVICE: libraries
 
@@ -19,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: npm install ${{ env.NPM_INSTALL_FLAGS }}
+      - run: npm install
       - run: npm run lint
   test:
     name: Unit Test (in parallel)
@@ -34,12 +33,12 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
           cache: 'npm'
-      - run: npm install ${{ env.NPM_INSTALL_FLAGS }}
+      - run: npm install
       - name: Vitest with Optional Datadog Tracing
         run: |
           if [[ -n "${{ secrets.DATADOG_CICD_API_KEY }}" ]]; then
             echo "Run tests with Datadog tracing"
-            npm install dd-trace --save-dev ${{ env.NPM_INSTALL_FLAGS }}
+            npm install dd-trace --save-dev
             export DD_CIVISIBILITY_AGENTLESS_ENABLED=true
             export DD_API_KEY=${{ secrets.DATADOG_CICD_API_KEY }}
             export DD_SITE=datadoghq.com

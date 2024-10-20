@@ -1,0 +1,32 @@
+{
+  "name": "@jaypie/eslint",
+  "version": "1.0.0",
+  "author": "Finlayson Studio",
+  "type": "module",
+  "exports": {
+    ".": "./index.js"
+  },
+  "main": "index.js",
+  "scripts": {
+    "format:package": "sort-package-json ./package.json",
+    "lint": "eslint .",
+    "test": "vitest run .",
+    "test:spec:index": "vitest run ./index.spec.js"
+  },
+  "devDependencies": {
+    "eslint": "^9.0.0",
+    "vitest": "^2.0.0"
+  },
+  "peerDependencies": {
+    "eslint": "^9.0.0"
+  },
+  "dependencies": {
+    "@vitest/eslint-plugin": "^1.1.7",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-import-x": "^4.3.1",
+    "eslint-plugin-prettier": "^5.2.1",
+    "eslint-plugin-prettier-vue": "^5.0.0",
+    "eslint-plugin-vue": "^9.29.0",
+    "prettier": "^3.3.3"
+  }
+}

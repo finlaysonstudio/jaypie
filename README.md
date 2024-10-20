@@ -1037,15 +1037,22 @@ test("log", () => {
 });
 ```
 
-## 🌠 Wishlist
+## 🛣️ Roadmap
 
-* Optional loading of Jaypie side packages
-* ...Nicely organized VitePress documentation 😅
+Structural Changes:
+
+* 1.1.0 - Deploy Jaypie from monorepo
+* 1.2.0 - Optional loading of Jaypie side packages
+
+### Wishlist 🌠
+
+* Nicely organized VitePress documentation 😅
 
 ## 📝 Changelog
 
 | Date       | Version | Summary        |
 | ---------- | ------- | -------------- |
+| 10/16/2024 |  1.0.50 | Last 1.0.x release |
 |   5/4/2024 |  1.0.24 | Adds `@jaypie/datadog` |
 |  3/19/2024 |   1.0.0 | First publish with `@jaypie/core@1.0.0` |
 |  3/15/2024 |   0.1.0 | Initial deploy |
