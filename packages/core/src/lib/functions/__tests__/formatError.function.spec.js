@@ -1,44 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { InternalError } from "../../errors.lib.js";
-import { matchers } from "jest-json-schema";
 import formatError from "../formatError.function.js";
-
-//
-//
-// Configuration
-//
-
-expect.extend(matchers);
-
-const jsonApiErrorSchema = {
-  type: "object",
-  properties: {
-    errors: {
-      type: "array",
-      items: {
-        type: "object",
-        properties: {
-          status: { type: "number" },
-          title: { type: "string" },
-          detail: { type: "string" },
-        },
-        required: ["status", "title"],
-      },
-    },
-  },
-  required: ["errors"],
-};
-
-//
-//
-// Mock constants
-//
-
-//
-//
-// Mock modules
-//
 
 //
 //
@@ -63,6 +26,6 @@ describe("FormatError function", () => {
     const response = formatError(new InternalError());
     expect(response).toBeObject();
     expect(response.status).toBeNumber();
-    expect(response.data).toMatchSchema(jsonApiErrorSchema);
+    expect(response.data).toBeJaypieError();
   });
 });
