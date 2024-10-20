@@ -23,4 +23,4 @@ See [Jaypie](../../README.md) for usage.
 
 ## 📜 License
 
-Published by Finlayson Studio. All rights reserved
+[MIT License](./LICENSE.txt). Published by Finlayson Studio

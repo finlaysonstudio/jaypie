@@ -1,6 +1,7 @@
 {
   "name": "@jaypie/core",
   "version": "1.0.44",
+  "license": "MIT",
   "author": "Finlayson Studio",
   "type": "module",
   "exports": {
