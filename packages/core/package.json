@@ -59,5 +59,8 @@
     "jsonapi-serializer": "^3.6.9",
     "lodash.clonedeep": "^4.5.0",
     "uuid": "^10.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }
