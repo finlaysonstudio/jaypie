@@ -2,8 +2,10 @@ name: NPM Deploy
 
 on:
   push:
+    branches:
+      - main
     tags: 
-      - v*
+      - deploy-*
 
 env:
   PROJECT_ENV: meta
