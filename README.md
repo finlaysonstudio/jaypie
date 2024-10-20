@@ -1047,6 +1047,10 @@ Structural Changes:
 ### Wishlist 🌠
 
 * Nicely organized VitePress documentation 😅
+* More testing and mocking conveniences
+* Additional utility functions
+* Auth0
+* Mongoose project schema
 
 ## 📝 Changelog
 
@@ -1057,6 +1061,10 @@ Structural Changes:
 |  3/19/2024 |   1.0.0 | First publish with `@jaypie/core@1.0.0` |
 |  3/15/2024 |   0.1.0 | Initial deploy |
 |  3/15/2024 |   0.0.1 | Initial commit |
+
+## 🖇️ Footnotes
+
+* Keep `chalk` at `4`; `chalk` moves to ESM only in `5`
 
 ## 📜 License
 
