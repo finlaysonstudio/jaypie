@@ -1,9 +1,5 @@
 __tests__
-_templates
-.eslintrc.cjs
-.github
 .jaypie
-.vscode
 rollup.config.js
 test
 testSetup.js
