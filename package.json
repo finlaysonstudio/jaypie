@@ -1,6 +1,7 @@
 {
   "name": "@jaypie/monorepo",
   "version": "1.0.0",
+  "private": true,
   "author": "Finlayson Studio",
   "type": "module",
   "workspaces": [
