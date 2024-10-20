@@ -1,7 +1,10 @@
+import { matchers as jaypieMatchers } from "@jaypie/testkit";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { InternalError } from "../../errors.lib.js";
 import formatError from "../formatError.function.js";
+
+expect.extend(jaypieMatchers);
 
 //
 //
