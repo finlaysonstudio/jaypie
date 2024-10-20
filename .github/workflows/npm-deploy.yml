@@ -22,7 +22,7 @@ jobs:
       - name: NPM Deploy
         run: |
           npm config set //registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}
-          npm publish --access public
+          lerna publish from-package --yes
   lint:
     name: Lint (in parallel)
     runs-on: ubuntu-latest
