@@ -1,6 +1,6 @@
 {
   "name": "jaypie",
-  "version": "1.0.50",
+  "version": "1.1.0",
   "author": "Finlayson Studio",
   "license": "MIT",
   "type": "module",
@@ -26,12 +26,12 @@
     "test:spec:mongoose.package": "vitest run ./src/__tests__/mongoose.package.spec.js"
   },
   "dependencies": {
-    "@jaypie/aws": "^1.0.8",
-    "@jaypie/core": "^1.0.44",
-    "@jaypie/datadog": "^1.0.3",
-    "@jaypie/express": "^1.0.15",
-    "@jaypie/lambda": "^1.0.13",
-    "@jaypie/mongoose": "^1.0.9"
+    "@jaypie/aws": "^1.1.0",
+    "@jaypie/core": "^1.1.0",
+    "@jaypie/datadog": "^1.1.0",
+    "@jaypie/express": "^1.1.0",
+    "@jaypie/lambda": "^1.1.0",
+    "@jaypie/mongoose": "^1.1.0"
   },
   "publishConfig": {
     "access": "public"
