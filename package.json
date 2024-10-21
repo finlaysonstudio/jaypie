@@ -19,7 +19,8 @@
     "format:lint": "eslint --fix .",
     "format:package": "sort-package-json ./package.json",
     "lint": "eslint .",
-    "test": "vitest run ."
+    "test": "vitest run .",
+    "test:cdk": "npm run test --workspace packages/cdk"
   },
   "devDependencies": {
     "@jaypie/eslint": "^1.0.0",

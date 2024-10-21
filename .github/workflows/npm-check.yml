@@ -42,7 +42,8 @@ jobs:
             export DD_CIVISIBILITY_AGENTLESS_ENABLED=true
             export DD_API_KEY=${{ secrets.DATADOG_CICD_API_KEY }}
             export DD_SITE=datadoghq.com
-            NODE_OPTIONS='--import dd-trace/register.js -r dd-trace/ci/init' DD_ENV=${{ env.PROJECT_ENV }} DD_SERVICE=${{ env.PROJECT_SERVICE }} npm run test 
+            NODE_OPTIONS='--import dd-trace/register.js -r dd-trace/ci/init' DD_ENV=${{ env.PROJECT_ENV }} DD_SERVICE=${{ env.PROJECT_SERVICE }} npm run test
+            NODE_OPTIONS='--import dd-trace/register.js -r dd-trace/ci/init' DD_ENV=${{ env.PROJECT_ENV }} DD_SERVICE=${{ env.PROJECT_SERVICE }} npm run test:cdk
           else
             npm test
           fi
