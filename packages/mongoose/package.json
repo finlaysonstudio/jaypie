@@ -1,0 +1,37 @@
+{
+  "name": "@jaypie/mongoose",
+  "version": "1.0.9",
+  "license": "MIT",
+  "author": "Finlayson Studio",
+  "type": "module",
+  "exports": {
+    ".": {
+      "default": {
+        "require": "./dist/jaypie-mongoose.cjs",
+        "default": "./src/index.js"
+      }
+    }
+  },
+  "main": "src/index.js",
+  "scripts": {
+    "build": "rollup --config",
+    "format": "npm run format:package && npm run format:lint",
+    "format:lint": "eslint --fix .",
+    "format:package": "sort-package-json ./package.json",
+    "lint": "eslint .",
+    "prepublish": "npm run build",
+    "test": "vitest run .",
+    "test:spec:connect.function": "vitest run ./src/__tests__/connect.function.spec.js",
+    "test:spec:connectFromSecretEnv.function": "vitest run ./src/__tests__/connectFromSecretEnv.function.spec.js",
+    "test:spec:index": "vitest run ./src/__tests__/index.spec.js"
+  },
+  "dependencies": {
+    "@jaypie/aws": "^1.0.5",
+    "@jaypie/core": "^1.0.29",
+    "@jaypie/testkit": "^1.0.18",
+    "mongoose": "^8.3.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

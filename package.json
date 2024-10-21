@@ -14,6 +14,7 @@
     "build:datadog": "npm run build --workspace packages/datadog",
     "build:express": "npm run build --workspace packages/express",
     "build:lambda": "npm run build --workspace packages/lambda",
+    "build:mongoose": "npm run build --workspace packages/mongoose",
     "format": "npm run format:package && npm run format:lint",
     "format:lint": "eslint --fix .",
     "format:package": "sort-package-json ./package.json",

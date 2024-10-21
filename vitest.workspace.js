@@ -8,5 +8,6 @@ export default defineWorkspace([
   "packages/express",
   "packages/jaypie",
   "packages/lambda",
+  "packages/mongoose",
   "packages/testkit",
 ]);
