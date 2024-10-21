@@ -9,6 +9,7 @@
     "packages/*"
   ],
   "scripts": {
+    "build:aws": "npm run build --workspace packages/aws",
     "build:core": "npm run build --workspace packages/core",
     "format": "npm run format:package && npm run format:lint",
     "format:lint": "eslint --fix .",

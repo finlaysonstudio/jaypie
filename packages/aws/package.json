@@ -1,0 +1,39 @@
+{
+  "name": "@jaypie/aws",
+  "version": "1.0.8",
+  "license": "MIT",
+  "author": "Finlayson Studio",
+  "type": "module",
+  "exports": {
+    ".": {
+      "default": {
+        "require": "./dist/jaypie-aws.cjs",
+        "default": "./src/index.js"
+      }
+    }
+  },
+  "main": "src/index.js",
+  "scripts": {
+    "build": "rollup --config",
+    "format": "npm run format:package && npm run format:lint",
+    "format:lint": "eslint --fix .",
+    "format:package": "sort-package-json ./package.json",
+    "lint": "eslint .",
+    "prepublish": "npm run build",
+    "test": "vitest run .",
+    "test:spec:getMessages.function": "vitest run ./src/__tests__/getMessages.function.spec.js",
+    "test:spec:getSecret.function": "vitest run ./src/__tests__/getSecret.function.spec.js",
+    "test:spec:index": "vitest run ./src/__tests__/index.spec.js",
+    "test:spec:sendBatchMessages.function": "vitest run ./src/__tests__/sendBatchMessages.function.spec.js",
+    "test:spec:sendMessage.function": "vitest run ./src/__tests__/sendMessage.function.spec.js",
+    "test:spec:validateQueueUrl.util": "vitest run ./src/__tests__/validateQueueUrl.util.spec.js"
+  },
+  "dependencies": {
+    "@aws-sdk/client-sqs": "^3.540.0",
+    "@jaypie/core": "^1.0.37",
+    "axios": "^1.6.8"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
