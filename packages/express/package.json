@@ -1,0 +1,43 @@
+{
+  "name": "@jaypie/express",
+  "version": "1.0.15",
+  "license": "MIT",
+  "author": "Finlayson Studio",
+  "type": "module",
+  "exports": {
+    ".": {
+      "default": {
+        "require": "./dist/module.cjs",
+        "default": "./src/index.js"
+      }
+    }
+  },
+  "main": "src/index.js",
+  "scripts": {
+    "build": "rollup --config",
+    "format": "npm run format:package && npm run format:lint",
+    "format:lint": "eslint --fix .",
+    "format:package": "sort-package-json ./package.json",
+    "lint": "eslint .",
+    "prepublish": "npm run build",
+    "test": "vitest run .",
+    "test:spec:constants": "vitest run ./src/__tests__/constants.spec.js",
+    "test:spec:decorateResponse.helper": "vitest run ./src/__tests__/decorateResponse.helper.spec.js",
+    "test:spec:echo.handler": "vitest run ./src/__tests__/echo.handler.spec.js",
+    "test:spec:expressHandler": "vitest run ./src/__tests__/expressHandler.spec.js",
+    "test:spec:getCurrentInvokeUuid.adapter": "vitest run ./src/__tests__/getCurrentInvokeUuid.adapter.spec.js",
+    "test:spec:http.handler": "vitest run ./src/__tests__/http.handler.spec.js",
+    "test:spec:index": "vitest run ./src/__tests__/index.spec.js",
+    "test:spec:routes": "vitest run ./src/__tests__/routes.spec.js",
+    "test:spec:summarizeRequest.helper": "vitest run ./src/__tests__/summarizeRequest.helper.spec.js",
+    "test:spec:summarizeResponse.helper": "vitest run ./src/__tests__/summarizeResponse.helper.spec.js",
+    "test:spec:supertest": "vitest run ./src/__tests__/supertest.spec.js"
+  },
+  "dependencies": {
+    "@codegenie/serverless-express": "^4.15.0",
+    "@jaypie/core": "^1.0.44"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

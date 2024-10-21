@@ -5,6 +5,7 @@ export default defineWorkspace([
   "packages/core",
   "packages/datadog",
   "packages/eslint",
+  "packages/express",
   "packages/jaypie",
   "packages/testkit",
 ]);
