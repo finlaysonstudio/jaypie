@@ -39,28 +39,28 @@ const decorateResponse = (
 
     // X-Project-Environment
     if (process.env.PROJECT_ENV) {
-      res.setHeader(HTTP.HEADER.PROJECT.ENVIRONMENT, process.env.PROJECT_ENV);
+      res.set(HTTP.HEADER.PROJECT.ENVIRONMENT, process.env.PROJECT_ENV);
     }
 
     // X-Project-Handler
     if (handler) {
-      res.setHeader(HTTP.HEADER.PROJECT.HANDLER, handler);
+      res.set(HTTP.HEADER.PROJECT.HANDLER, handler);
     }
 
     // X-Project-Invocation
     const currentInvoke = getCurrentInvokeUuid();
     if (currentInvoke) {
-      res.setHeader(HTTP.HEADER.PROJECT.INVOCATION, currentInvoke);
+      res.set(HTTP.HEADER.PROJECT.INVOCATION, currentInvoke);
     }
 
     // X-Project-Key
     if (process.env.PROJECT_KEY) {
-      res.setHeader(HTTP.HEADER.PROJECT.KEY, process.env.PROJECT_KEY);
+      res.set(HTTP.HEADER.PROJECT.KEY, process.env.PROJECT_KEY);
     }
 
     // X-Project-Version
     if (version) {
-      res.setHeader(HTTP.HEADER.PROJECT.VERSION, version);
+      res.set(HTTP.HEADER.PROJECT.VERSION, version);
     }
 
     //
