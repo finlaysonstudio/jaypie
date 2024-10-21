@@ -7,5 +7,6 @@ export default defineWorkspace([
   "packages/eslint",
   "packages/express",
   "packages/jaypie",
+  "packages/lambda",
   "packages/testkit",
 ]);
