@@ -7,10 +7,10 @@ module.exports = ({ CfnOutput, output, stack } = {}) => {
         typeof value === "string" &&
         value.length > 0
       ) {
-        // eslint-disable-next-line no-new
         new CfnOutput(stack, key, { value });
       }
     });
+    // eslint-disable-next-line no-unused-vars
   } catch (error) {
     return false;
   }
