@@ -1,6 +1,6 @@
 {
   "name": "@jaypie/testkit",
-  "version": "1.0.29",
+  "version": "1.1.0",
   "license": "MIT",
   "author": "Finlayson Studio",
   "type": "module",
@@ -31,7 +31,7 @@
     "test:spec:toThrowJaypieError.matcher": "vitest run ./src/matchers/__tests__/toThrowJaypieError.matcher.spec.js"
   },
   "dependencies": {
-    "@jaypie/core": "^1.0.33",
+    "@jaypie/core": "^1.1.0",
     "jaypie": "^1.0.44",
     "jest-json-schema": "^6.1.0",
     "lodash.isequal": "^4.5.0",
