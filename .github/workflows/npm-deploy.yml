@@ -55,7 +55,9 @@ jobs:
             export DD_API_KEY=${{ secrets.DATADOG_CICD_API_KEY }}
             export DD_SITE=datadoghq.com
             NODE_OPTIONS='--import dd-trace/register.js -r dd-trace/ci/init' DD_ENV=${{ env.PROJECT_ENV }} DD_SERVICE=${{ env.PROJECT_SERVICE }} npm run test
-            NODE_OPTIONS='--import dd-trace/register.js -r dd-trace/ci/init' DD_ENV=${{ env.PROJECT_ENV }} DD_SERVICE=${{ env.PROJECT_SERVICE }} npm run test:cdk
+            # Additional steps to test CDK, still using CommonJS :(
+            npm --prefix packages/cdk install
+            NODE_OPTIONS='--import dd-trace/register.js -r dd-trace/ci/init' DD_ENV=${{ env.PROJECT_ENV }} DD_SERVICE=${{ env.PROJECT_SERVICE }} npm --prefix packages/cdk run test
           else
             npm test
           fi
