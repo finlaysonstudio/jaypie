@@ -1,5 +1,4 @@
 import { HTTP, JAYPIE } from "@jaypie/core";
-import MockExpressResponse from "mock-express-response";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import getCurrentInvokeUuid from "../getCurrentInvokeUuid.adapter.js";
@@ -35,6 +34,20 @@ beforeEach(() => {
 afterEach(() => {
   vi.clearAllMocks();
 });
+
+class MockExpressResponse {
+  constructor() {
+    this._headers = {};
+  }
+
+  get(key) {
+    return this._headers[key.toLowerCase()];
+  }
+
+  set(key, value) {
+    this._headers[key.toLowerCase()] = value;
+  }
+}
 
 //
 //
