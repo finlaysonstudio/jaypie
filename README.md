@@ -1041,7 +1041,6 @@ test("log", () => {
 
 Structural Changes:
 
-* 1.1.0 - Deploy Jaypie from monorepo
 * 1.2.0 - Optional loading of Jaypie side packages
 
 ### Wishlist 🌠
@@ -1056,15 +1055,27 @@ Structural Changes:
 
 | Date       | Version | Summary        |
 | ---------- | ------- | -------------- |
+| 10/21/2024 |  1.1.0  | Jaypie 1.1.0 release |
 | 10/16/2024 |  1.0.50 | Last 1.0.x release |
 |   5/4/2024 |  1.0.24 | Adds `@jaypie/datadog` |
-|  3/19/2024 |   1.0.0 | First publish with `@jaypie/core@1.0.0` |
-|  3/15/2024 |   0.1.0 | Initial deploy |
-|  3/15/2024 |   0.0.1 | Initial commit |
+|  3/19/2024 |  1.0.0  | First publish with `@jaypie/core@1.0.0` |
+|  3/15/2024 |  0.1.0  | Initial deploy |
+|  3/15/2024 |  0.0.1  | Initial commit |
 
 ## 🖇️ Footnotes
 
-* Keep `chalk` at `4`; `chalk` moves to ESM only in `5`
+Keep `chalk` at `4`; `chalk` moves to ESM only in `5`
+
+Packages receive patch releases as needed. Jaypie
+
+Process for minor releases:
+
+* Update core, eslint (no internal dependencies)
+* Update aws, cdk, express, lambda (depend on core)
+* Update datadog, mongoose (depend on aws)
+* Update jaypie (depends on above)
+* Update testkit (depends on jaypie)
+* Update outer repo (private management monorepo)
 
 ## 📜 License
 
