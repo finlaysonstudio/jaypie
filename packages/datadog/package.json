@@ -1,0 +1,38 @@
+{
+  "name": "@jaypie/datadog",
+  "version": "1.0.3",
+  "license": "MIT",
+  "author": "Finlayson Studio",
+  "type": "module",
+  "exports": {
+    ".": {
+      "default": {
+        "require": "./dist/module.cjs",
+        "default": "./src/index.js"
+      }
+    }
+  },
+  "main": "src/index.js",
+  "scripts": {
+    "build": "rollup --config",
+    "format": "npm run format:package && npm run format:lint",
+    "format:lint": "eslint --fix .",
+    "format:package": "sort-package-json ./package.json",
+    "lint": "eslint .",
+    "prepublish": "npm run build",
+    "test": "vitest run .",
+    "test:spec:constants": "vitest run ./src/__tests__/constants.spec.js",
+    "test:spec:index": "vitest run ./src/__tests__/index.spec.js",
+    "test:spec:objectToKeyValueArray.pipeline": "vitest run ./src/__tests__/objectToKeyValueArray.pipeline.spec.js",
+    "test:spec:submitMetric.adapter": "vitest run ./src/__tests__/submitMetric.adapter.spec.js",
+    "test:spec:submitMetricSet.adapter": "vitest run ./src/__tests__/submitMetricSet.adapter.spec.js"
+  },
+  "dependencies": {
+    "@datadog/datadog-api-client": "^1.24.0",
+    "@jaypie/aws": "^1.0.5",
+    "@jaypie/core": "^1.0.29"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

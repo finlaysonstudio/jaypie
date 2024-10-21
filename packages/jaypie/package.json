@@ -2,6 +2,7 @@
   "name": "jaypie",
   "version": "1.0.50",
   "author": "Finlayson Studio",
+  "license": "MIT",
   "type": "module",
   "exports": {
     ".": {

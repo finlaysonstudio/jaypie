@@ -1,0 +1,33 @@
+{
+  "name": "@jaypie/lambda",
+  "version": "1.0.13",
+  "license": "MIT",
+  "author": "Finlayson Studio",
+  "type": "module",
+  "exports": {
+    ".": {
+      "default": {
+        "require": "./dist/jaypie-lambda.cjs",
+        "default": "./src/index.js"
+      }
+    }
+  },
+  "main": "src/index.js",
+  "scripts": {
+    "build": "rollup --config",
+    "format": "npm run format:package && npm run format:lint",
+    "format:lint": "eslint --fix .",
+    "format:package": "sort-package-json ./package.json",
+    "lint": "eslint .",
+    "prepublish": "npm run build",
+    "test": "vitest run .",
+    "test:spec:index": "vitest run ./src/__tests__/index.spec.js",
+    "test:spec:lambdaHandler": "vitest run ./src/__tests__/lambdaHandler.spec.js"
+  },
+  "dependencies": {
+    "@jaypie/core": "^1.0.41"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

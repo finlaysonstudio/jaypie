@@ -1,0 +1,27 @@
+{
+  "name": "@jaypie/cdk",
+  "version": "1.0.26",
+  "license": "MIT",
+  "author": "Finlayson Studio",
+  "main": "src/index.js",
+  "scripts": {
+    "format": "npm run format:package && npm run format:lint",
+    "format:lint": "eslint --fix .",
+    "format:package": "sort-package-json ./package.json",
+    "lint": "eslint .",
+    "test": "jest .",
+    "test:spec:cfnOutput.function": "jest ./src/__tests__/cfnOutput.function.spec.js",
+    "test:spec:constants": "jest ./src/__tests__/constants.spec.js",
+    "test:spec:index": "jest ./src/__tests__/index.spec.js",
+    "test:spec:isValidHostname.function": "jest ./src/__tests__/isValidHostname.function.spec.js",
+    "test:spec:isValidSubdomain.function": "jest ./src/__tests__/isValidSubdomain.function.spec.js",
+    "test:spec:mergeDomain.function": "jest ./src/__tests__/mergeDomain.function.spec.js",
+    "test:spec:projectTagger.function": "jest ./src/__tests__/projectTagger.function.spec.js"
+  },
+  "dependencies": {
+    "@jaypie/core": "^1.0.41"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
