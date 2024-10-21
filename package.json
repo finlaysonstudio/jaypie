@@ -11,6 +11,7 @@
   "scripts": {
     "build:aws": "npm run build --workspace packages/aws",
     "build:core": "npm run build --workspace packages/core",
+    "build:datadog": "npm run build --workspace packages/datadog",
     "format": "npm run format:package && npm run format:lint",
     "format:lint": "eslint --fix .",
     "format:package": "sort-package-json ./package.json",
