@@ -2,7 +2,7 @@
 
 Express Jaypie handler for AWS Lambda
 
-See [Jaypie](../../README.md) for usage.
+See [Jaypie](https://github.com/finlaysonstudio/jaypie) for usage.
 
 ## 📝 Changelog
 

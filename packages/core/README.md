@@ -2,7 +2,7 @@
 
 Utility package with constants, errors, functions and logging
 
-See [Jaypie](../../README.md) for usage.
+See [Jaypie](https://github.com/finlaysonstudio/jaypie) for usage.
 
 ## 📝 Changelog
 

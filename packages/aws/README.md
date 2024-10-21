@@ -2,7 +2,7 @@
 
 Jaypie access to AWS resources
 
-See [Jaypie](../../README.md) for usage.
+See [Jaypie](https://github.com/finlaysonstudio/jaypie) for usage.
 
 ## 📝 Changelog
 
