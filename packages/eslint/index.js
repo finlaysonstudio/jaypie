@@ -136,8 +136,5 @@ export default [
       "vue/**/*.mjs",
       "vue/**/*.vue",
     ],
-    rules: {
-      taco: "error",
-    },
   },
 ];
