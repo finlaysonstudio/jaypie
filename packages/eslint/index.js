@@ -122,7 +122,7 @@ export default [
     },
   },
   {
-    files: [
+    ignores: [
       "packages/*-vue/**/*.js",
       "packages/*-vue/**/*.mjs",
       "packages/*-vue/**/*.vue",
