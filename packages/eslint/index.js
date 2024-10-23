@@ -10,8 +10,7 @@ export default [
   //
   // Configs and Plugins
   //
-  js.configs.recommended, // Recommended config applied to all files
-  ...pluginVue.configs["flat/essential"],
+  js.configs.recommended, // Recommended config applied to all files=
   pluginPrettierRecommended, // Prettier wants to always be the last plugin
 
   //
@@ -111,29 +110,37 @@ export default [
   //
   // Vue
   //
-  {
-    files: ["**/*.vue"],
-    plugins: {
-      "prettier-vue": pluginPrettierVue,
-    },
-    rules: {
-      "prettier/prettier": "off",
-      "prettier-vue/prettier": "error",
-    },
-  },
+  // {
+  //   files: ["**/*.vue"],
+  //   plugins: {
+  //     "prettier-vue": pluginPrettierVue,
+  //   },
+  //   rules: {
+  //     "prettier/prettier": "off",
+  //     "prettier-vue/prettier": "error",
+  //   },
+  // },
   {
     ignores: [
       "packages/*-vue/**/*.js",
       "packages/*-vue/**/*.mjs",
+      "packages/*-vue/**/*.mts",
+      "packages/*-vue/**/*.ts",
       "packages/*-vue/**/*.vue",
       "packages/vue/**/*.js",
       "packages/vue/**/*.mjs",
+      "packages/vue/**/*.mts",
+      "packages/vue/**/*.ts",
       "packages/vue/**/*.vue",
       "packages/vue-*/**/*.js",
       "packages/vue-*/**/*.mjs",
+      "packages/vue-*/**/*.mts",
+      "packages/vue-*/**/*.ts",
       "packages/vue-*/**/*.vue",
       "vue/**/*.js",
       "vue/**/*.mjs",
+      "vue/**/*.mts",
+      "vue/**/*.ts",
       "vue/**/*.vue",
     ],
   },
