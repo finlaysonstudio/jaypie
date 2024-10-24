@@ -1,17 +1,14 @@
 import js from "@eslint/js";
 import vitest from "@vitest/eslint-plugin";
-import pluginPrettierRecommended from "eslint-plugin-prettier/recommended";
-import pluginPrettierVue from "eslint-plugin-prettier-vue";
 import globals from "globals";
-import pluginVue from "eslint-plugin-vue";
+// import pluginVue from "eslint-plugin-vue";
 
 export default [
   //
   //
   // Configs and Plugins
   //
-  js.configs.recommended, // Recommended config applied to all files=
-  pluginPrettierRecommended, // Prettier wants to always be the last plugin
+  js.configs.recommended, // Recommended config applied to all files
 
   //
   //
@@ -110,16 +107,6 @@ export default [
   //
   // Vue
   //
-  // {
-  //   files: ["**/*.vue"],
-  //   plugins: {
-  //     "prettier-vue": pluginPrettierVue,
-  //   },
-  //   rules: {
-  //     "prettier/prettier": "off",
-  //     "prettier-vue/prettier": "error",
-  //   },
-  // },
   {
     ignores: [
       "packages/*-vue/**/*.js",
