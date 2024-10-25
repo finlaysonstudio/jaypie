@@ -1,24 +1,30 @@
 import js from "@eslint/js";
 import vitest from "@vitest/eslint-plugin";
-import pluginPrettierRecommended from "eslint-plugin-prettier/recommended";
-import pluginPrettierVue from "eslint-plugin-prettier-vue";
+import stylistic from "@stylistic/eslint-plugin";
 import globals from "globals";
-import pluginVue from "eslint-plugin-vue";
 
 export default [
   //
   //
   // Configs and Plugins
   //
-  js.configs.recommended, // Recommended config applied to all files=
-  pluginPrettierRecommended, // Prettier wants to always be the last plugin
+  js.configs.recommended, // Recommended config applied to all files
+
+  stylistic.configs.customize({
+    // the following options are the default values
+    braceStyle: "1tbs",
+    indent: 2,
+    quotes: "double",
+    semi: true,
+    jsx: false,
+  }),
 
   //
   //
-  // Project Overrides
+  // Jaypie General
   //
   {
-    // Global Ignore
+    // Always ignore dist (build) folders
     ignores: ["**/dist/**", "dist/"],
   },
   {
@@ -26,23 +32,10 @@ export default [
       globals: globals.node,
     },
   },
-
-  //
-  //
-  // Rules
-  //
   {
     rules: {
       "no-console": "warn",
       "no-fallthrough": "error",
-      "no-shadow": "error",
-      "no-shadow-restricted-names": "error",
-      "no-unused-vars": "warn",
-      "no-use-before-define": [
-        "error",
-        { functions: true, classes: true, variables: true },
-      ],
-      "object-shorthand": ["error", "always"],
       "no-restricted-syntax": [
         "error",
         {
@@ -59,6 +52,14 @@ export default [
           message: "Unexpected exports, use export instead.",
         },
       ],
+      "no-shadow": "error",
+      "no-shadow-restricted-names": "error",
+      "no-unused-vars": "warn",
+      "no-use-before-define": [
+        "error",
+        { functions: true, classes: true, variables: true },
+      ],
+      "object-shorthand": ["error", "always"],
     },
   },
 
@@ -93,6 +94,15 @@ export default [
 
   //
   //
+  // Nuxt
+  //
+  {
+    // Ignore auto-generated Nuxt folders
+    ignores: ["**/.nuxt/**", ".nuxt/"],
+  },
+
+  //
+  //
   // Vitest
   //
   {
@@ -110,16 +120,6 @@ export default [
   //
   // Vue
   //
-  // {
-  //   files: ["**/*.vue"],
-  //   plugins: {
-  //     "prettier-vue": pluginPrettierVue,
-  //   },
-  //   rules: {
-  //     "prettier/prettier": "off",
-  //     "prettier-vue/prettier": "error",
-  //   },
-  // },
   {
     ignores: [
       "packages/*-vue/**/*.js",
