@@ -28,7 +28,7 @@ module.exports = (hostname) => {
   const validParts = parts.map(validPart);
 
   // Confirm all parts are valid
-  if (!validParts.every((part) => part)) return false;
+  if (!validParts.every(part => part)) return false;
 
   // Confirm last part is at least 2 characters
   const lastPart = parts[parts.length - 1];

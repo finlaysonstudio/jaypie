@@ -32,7 +32,7 @@ describe("ObjectToKeyValueArray Pipeline", () => {
   });
   it("Casts object values to JSON", () => {
     const response = objectToKeyValueArray({ a: { project: "mayhem" } });
-    expect(response).toEqual(['a:{"project":"mayhem"}']);
+    expect(response).toEqual(["a:{\"project\":\"mayhem\"}"]);
   });
   it("Returns non-object argument unaltered", () => {
     const item = [1, 2, 3];

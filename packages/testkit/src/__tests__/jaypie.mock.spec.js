@@ -439,7 +439,7 @@ describe("Jaypie Mock", () => {
             // Arrange
             const handler = jaypieHandler(async () => {
               // 200ms is unnoticeable to us, but will catch anything that tries to log after the fact
-              await new Promise((resolve) => setTimeout(resolve, 200));
+              await new Promise(resolve => setTimeout(resolve, 200));
             });
             // Act
             const start = Date.now();
@@ -452,7 +452,7 @@ describe("Jaypie Mock", () => {
             // Arrange
             const handler = jaypieHandler(async () => {
               // 200ms is unnoticeable to us, but will catch anything that tries to log after the fact
-              await new Promise((resolve) => setTimeout(resolve, 200));
+              await new Promise(resolve => setTimeout(resolve, 200));
               throw new Error("Sorpresa!");
             });
             // Act

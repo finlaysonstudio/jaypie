@@ -31,8 +31,8 @@ const decorateResponse = (
 
     // X-Powered-By, override "Express" but nothing else
     if (
-      !res.get(HTTP.HEADER.POWERED_BY) ||
-      res.get(HTTP.HEADER.POWERED_BY) === "Express"
+      !res.get(HTTP.HEADER.POWERED_BY)
+      || res.get(HTTP.HEADER.POWERED_BY) === "Express"
     ) {
       res.set(HTTP.HEADER.POWERED_BY, JAYPIE.LIB.EXPRESS);
     }

@@ -151,7 +151,7 @@ describe("Force function", () => {
       expect(response).toBe(taco);
     });
     it("Parses JSON", () => {
-      const response = force('{"taco":"beef"}', Object);
+      const response = force("{\"taco\":\"beef\"}", Object);
       expect(response).toBeObject();
       expect(response).toEqual({ taco: "beef" });
     });
@@ -164,7 +164,7 @@ describe("Force function", () => {
     it("Converts objects to JSON", () => {
       const response = force({ taco: "beef" }, String);
       expect(response).toBeString();
-      expect(response).toBe('{"taco":"beef"}');
+      expect(response).toBe("{\"taco\":\"beef\"}");
     });
     it("Runs everything else through toString()", () => {
       const response = force(42, String);

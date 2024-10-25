@@ -17,7 +17,7 @@ const DEFAULT = {
   VAR_LEVEL: "debug",
 };
 
-const ERROR_PREFIX = '{ "lib": "@knowdev/log" }:';
+const ERROR_PREFIX = "{ \"lib\": \"@knowdev/log\" }:";
 const ERROR = {
   VAR: {
     EMPTY_OBJECT: `${ERROR_PREFIX} Logger.var() called with empty object`,
