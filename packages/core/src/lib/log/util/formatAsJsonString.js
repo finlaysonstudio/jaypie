@@ -25,12 +25,12 @@ const formatAsJsonString = (subject) => {
         // Special instance for instance objects outside of arrays
         // If it has a constructor and a toString method, call it
         if (
-          subject &&
-          subject instanceof Object &&
-          !Array.isArray(subject) &&
-          subject.constructor &&
-          subject.constructor !== Object &&
-          subject.toString
+          subject
+          && subject instanceof Object
+          && !Array.isArray(subject)
+          && subject.constructor
+          && subject.constructor !== Object
+          && subject.toString
         ) {
           return subject.toString();
         }

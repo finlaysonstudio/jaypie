@@ -281,9 +281,9 @@ export const expressHandler = vi.fn((handler, props = {}) => {
     let response;
     let supertestMode = false;
     if (
-      res &&
-      typeof res.socket === "object" &&
-      res.constructor.name === "ServerResponse"
+      res
+      && typeof res.socket === "object"
+      && res.constructor.name === "ServerResponse"
     ) {
       // Use the response object in supertest mode
       supertestMode = true;

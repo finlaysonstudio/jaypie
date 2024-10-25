@@ -27,7 +27,7 @@ module.exports = (subdomain) => {
   const validParts = parts.map(validPart);
 
   // Confirm all parts are valid
-  if (!validParts.every((part) => part)) return false;
+  if (!validParts.every(part => part)) return false;
 
   // Do not care if last part is at least 2 characters
   // Do not care if last part is all letters

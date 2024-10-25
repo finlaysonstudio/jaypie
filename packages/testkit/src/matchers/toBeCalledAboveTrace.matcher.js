@@ -8,11 +8,11 @@ const calledAboveTrace = (log) => {
 
   try {
     if (
-      log.debug.mock.calls.length > 0 ||
-      log.info.mock.calls.length > 0 ||
-      log.warn.mock.calls.length > 0 ||
-      log.error.mock.calls.length > 0 ||
-      log.fatal.mock.calls.length > 0
+      log.debug.mock.calls.length > 0
+      || log.info.mock.calls.length > 0
+      || log.warn.mock.calls.length > 0
+      || log.error.mock.calls.length > 0
+      || log.fatal.mock.calls.length > 0
     ) {
       return {
         message: () => `expected log not to have been called above trace`,

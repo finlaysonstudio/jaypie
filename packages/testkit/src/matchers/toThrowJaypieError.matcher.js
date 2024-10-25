@@ -17,9 +17,9 @@ import {
 //
 
 const toThrowJaypieError = async (received, expected) => {
-  const isAsync =
-    received.constructor.name === "AsyncFunction" ||
-    received.constructor.name === "Promise";
+  const isAsync
+    = received.constructor.name === "AsyncFunction"
+    || received.constructor.name === "Promise";
 
   // If expected is a function, call it
   if (typeof expected === "function") {
@@ -72,23 +72,23 @@ const toThrowJaypieError = async (received, expected) => {
 // Convenience Methods
 //
 
-const toThrowBadGatewayError = (received) =>
+const toThrowBadGatewayError = received =>
   toThrowJaypieError(received, BadGatewayError);
-const toThrowBadRequestError = (received) =>
+const toThrowBadRequestError = received =>
   toThrowJaypieError(received, BadRequestError);
-const toThrowConfigurationError = (received) =>
+const toThrowConfigurationError = received =>
   toThrowJaypieError(received, ConfigurationError);
-const toThrowForbiddenError = (received) =>
+const toThrowForbiddenError = received =>
   toThrowJaypieError(received, ForbiddenError);
-const toThrowGatewayTimeoutError = (received) =>
+const toThrowGatewayTimeoutError = received =>
   toThrowJaypieError(received, GatewayTimeoutError);
-const toThrowInternalError = (received) =>
+const toThrowInternalError = received =>
   toThrowJaypieError(received, InternalError);
-const toThrowNotFoundError = (received) =>
+const toThrowNotFoundError = received =>
   toThrowJaypieError(received, NotFoundError);
-const toThrowUnauthorizedError = (received) =>
+const toThrowUnauthorizedError = received =>
   toThrowJaypieError(received, UnauthorizedError);
-const toThrowUnavailableError = (received) =>
+const toThrowUnavailableError = received =>
   toThrowJaypieError(received, UnavailableError);
 
 //

@@ -63,15 +63,19 @@ class JaypieLogger {
   debug(...args) {
     return this._logger.debug(...args);
   }
+
   error(...args) {
     return this._logger.error(...args);
   }
+
   fatal(...args) {
     return this._logger.fatal(...args);
   }
+
   info(...args) {
     return this._logger.info(...args);
   }
+
   tag(tags) {
     for (const logger of this._loggers) {
       logger.tag(tags);
@@ -79,9 +83,11 @@ class JaypieLogger {
     // Add args to this._tags
     Object.assign(this._tags, tags);
   }
+
   trace(...args) {
     return this._logger.trace(...args);
   }
+
   untag(...args) {
     for (const logger of this._loggers) {
       logger.untag(...args);
@@ -91,12 +97,15 @@ class JaypieLogger {
       delete this._tags[key];
     }
   }
+
   var(...args) {
     return this._logger.var(logVar(...args));
   }
+
   warn(...args) {
     return this._logger.warn(...args);
   }
+
   with(...args) {
     if (!args || typeof args !== "object") {
       throw new ConfigurationError();

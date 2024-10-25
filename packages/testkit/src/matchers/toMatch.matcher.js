@@ -35,32 +35,32 @@ function forSubjectToMatchPattern(
 // Main
 //
 
-export const toMatchBase64 = (subject) =>
+export const toMatchBase64 = subject =>
   forSubjectToMatchPattern(subject, RE_BASE64_PATTERN, {
     patternName: "Base64",
   });
 
-export const toMatchJwt = (subject) =>
+export const toMatchJwt = subject =>
   forSubjectToMatchPattern(subject, RE_JWT_PATTERN, {
     patternName: "JWT",
   });
 
-export const toMatchMongoId = (subject) =>
+export const toMatchMongoId = subject =>
   forSubjectToMatchPattern(subject, RE_MONGO_ID_PATTERN, {
     patternName: "MongoDbId",
   });
 
-export const toMatchSignedCookie = (subject) =>
+export const toMatchSignedCookie = subject =>
   forSubjectToMatchPattern(subject, RE_SIGNED_COOKIE_PATTERN, {
     patternName: "Signed-Cookie",
   });
 
-export const toMatchUuid4 = (subject) =>
+export const toMatchUuid4 = subject =>
   forSubjectToMatchPattern(subject, RE_UUID_4_PATTERN, {
     patternName: "UUIDv4",
   });
 
-export const toMatchUuid5 = (subject) =>
+export const toMatchUuid5 = subject =>
   forSubjectToMatchPattern(subject, RE_UUID_5_PATTERN, {
     patternName: "UUIDv5",
   });
@@ -70,7 +70,7 @@ export const toMatchUuid5 = (subject) =>
  * Does _NOT_ check if the UUID is valid.
  * @param {String} subject
  */
-export const toMatchUuid = (subject) =>
+export const toMatchUuid = subject =>
   forSubjectToMatchPattern(subject, RE_UUID_PATTERN, {
     patternName: "UUID",
   });
