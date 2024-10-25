@@ -1,7 +1,7 @@
 import js from "@eslint/js";
 import vitest from "@vitest/eslint-plugin";
+import stylistic from "@stylistic/eslint-plugin";
 import globals from "globals";
-// import pluginVue from "eslint-plugin-vue";
 
 export default [
   //
@@ -10,12 +10,21 @@ export default [
   //
   js.configs.recommended, // Recommended config applied to all files
 
+  stylistic.configs.customize({
+    // the following options are the default values
+    braceStyle: "1tbs",
+    indent: 2,
+    quotes: "double",
+    semi: true,
+    jsx: false,
+  }),
+
   //
   //
-  // Project Overrides
+  // Jaypie General
   //
   {
-    // Global Ignore
+    // Always ignore dist (build) folders
     ignores: ["**/dist/**", "dist/"],
   },
   {
@@ -23,23 +32,10 @@ export default [
       globals: globals.node,
     },
   },
-
-  //
-  //
-  // Rules
-  //
   {
     rules: {
       "no-console": "warn",
       "no-fallthrough": "error",
-      "no-shadow": "error",
-      "no-shadow-restricted-names": "error",
-      "no-unused-vars": "warn",
-      "no-use-before-define": [
-        "error",
-        { functions: true, classes: true, variables: true },
-      ],
-      "object-shorthand": ["error", "always"],
       "no-restricted-syntax": [
         "error",
         {
@@ -56,6 +52,14 @@ export default [
           message: "Unexpected exports, use export instead.",
         },
       ],
+      "no-shadow": "error",
+      "no-shadow-restricted-names": "error",
+      "no-unused-vars": "warn",
+      "no-use-before-define": [
+        "error",
+        { functions: true, classes: true, variables: true },
+      ],
+      "object-shorthand": ["error", "always"],
     },
   },
 
@@ -86,6 +90,15 @@ export default [
         },
       ],
     },
+  },
+
+  //
+  //
+  // Nuxt
+  //
+  {
+    // Ignore auto-generated Nuxt folders
+    ignores: ["**/.nuxt/**", ".nuxt/"],
   },
 
   //
