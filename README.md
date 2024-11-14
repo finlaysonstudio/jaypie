@@ -1074,7 +1074,11 @@ Structural Changes:
 
 Keep `chalk` at `4`; `chalk` moves to ESM only in `5`
 
-Packages receive patch releases as needed. Jaypie
+Packages receive patch releases as needed. The main Jaypie package must be patched to include the updated packages if applicable. E.g.,
+* `npm -w packages/core version patch`
+* (push deploy)
+* `npm -w packages/jaypie install @jaypie/core@latest`
+* `npm -w packages/jaypie version patch`
 
 Process for minor releases:
 
