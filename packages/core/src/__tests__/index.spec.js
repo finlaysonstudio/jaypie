@@ -9,6 +9,7 @@ import {
   ConfigurationError,
   envBoolean,
   ERROR,
+  errorFromStatusCode,
   ForbiddenError,
   force,
   GatewayTimeoutError,
@@ -67,6 +68,7 @@ describe("Jaypie Core", () => {
       expect(BadGatewayError).toBeFunction();
       expect(BadRequestError).toBeFunction();
       expect(ConfigurationError).toBeFunction();
+      expect(errorFromStatusCode).toBeFunction();
       expect(ForbiddenError).toBeFunction();
       expect(GatewayTimeoutError).toBeFunction();
       expect(GoneError).toBeFunction();
