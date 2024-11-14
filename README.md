@@ -328,6 +328,14 @@ try {
 }
 ```
 
+#### Error from Status Code
+
+```javascript
+import { errorFromStatusCode } from "jaypie";
+
+const error = errorFromStatusCode(404, "The requested resource was unable to be located");
+```
+
 #### Format Error
 
 ``` javascript
