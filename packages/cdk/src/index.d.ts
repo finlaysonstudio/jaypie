@@ -37,6 +37,15 @@ declare module '@jaypie/cdk' {
         VERSION: string;
     }
 
+    export interface CDKPrincipalType {
+        GROUP: string;
+        USER: string;
+    }
+
+    export interface CDKTargetType {
+        AWS_ACCOUNT: string;
+    }
+
     export interface CDK {
         ACCOUNT: CDKAccount;
         BUILD: {
@@ -91,6 +100,10 @@ declare module '@jaypie/cdk' {
             LOG_RETENTION: number;
             MEMORY_SIZE: number;
         };
+        PRINCIPAL: {
+            ROUTE53: string;
+        };
+        PRINCIPAL_TYPE: CDKPrincipalType;
         PROJECT: {
             INFRASTRUCTURE: string;
         };
@@ -111,9 +124,11 @@ declare module '@jaypie/cdk' {
             INFRASTRUCTURE: string;
             LIBRARIES: string;
             NONE: string;
+            SSO: string;
             TRACE: string;
         };
         TAG: CDKTAG;
+        TARGET_TYPE: CDKTargetType;
         VENDOR: {
             DATADOG: string;
         };

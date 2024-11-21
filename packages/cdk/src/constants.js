@@ -70,6 +70,13 @@ const CDK = {
     LOG_RETENTION: 90,
     MEMORY_SIZE: 1024,
   },
+  PRINCIPAL: {
+    ROUTE53: "route53.amazonaws.com",
+  },
+  PRINCIPAL_TYPE: {
+    GROUP: "GROUP",
+    USER: "USER",
+  },
   PROJECT: {
     INFRASTRUCTURE: "infrastructure",
   },
@@ -90,6 +97,7 @@ const CDK = {
     INFRASTRUCTURE: "infrastructure",
     LIBRARIES: "libraries",
     NONE: "none",
+    SSO: "sso",
     TRACE: "trace",
   },
   TAG: {
@@ -110,6 +118,9 @@ const CDK = {
     STACK_SHA: "stackSha",
     VENDOR: "vendor",
     VERSION: "version",
+  },
+  TARGET_TYPE: {
+    AWS_ACCOUNT: "AWS_ACCOUNT",
   },
   VENDOR: {
     DATADOG: "datadog",
