@@ -129,7 +129,7 @@ declare module '@jaypie/cdk' {
     export function isValidHostname(hostname: string): boolean;
     export function isValidSubdomain(subdomain: string): boolean;
     export function mergeDomain(params: { subdomain: string; domain: string }): string;
-    export function projectTagger(params: { project: string; stack: any }): void;
+    export function projectTagger(params: { cdk?: any; stack?: any; stackName?: string }): void;
 
     export const CDK: CDK;
 
