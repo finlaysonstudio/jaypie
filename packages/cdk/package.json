@@ -4,6 +4,7 @@
   "license": "MIT",
   "author": "Finlayson Studio",
   "main": "src/index.js",
+  "types": "src/index.d.ts",
   "scripts": {
     "format": "npm run format:package && npm run format:lint",
     "format:lint": "eslint --fix .",
