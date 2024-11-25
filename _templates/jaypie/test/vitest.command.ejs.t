@@ -1,6 +1,6 @@
 ---
 inject: true
-to: package.json
+to: <%= workspace %>/package.json
 after: scripts
 skip_if: spec<%= colonSubspec %>.+<%= path %>/__tests__/<%= name %><%= dotSubtype %>.spec.js
 sh: |

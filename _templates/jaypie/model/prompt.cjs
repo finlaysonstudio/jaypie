@@ -4,6 +4,18 @@
 module.exports = [
   {
     type: "input",
+    name: "workspaceInput",
+    initial: "packages/models",
+    message: "Workspace Path (e.g., '.'):",
+    onSubmit: (name, value, input) => {
+      // Remove leading './' and trailing '/'
+      value = value.replace(/^\.\//, "").replace(/\/$/, "");
+      if (value === "") value = ".";
+      input.state.answers.workspace = value;
+    },
+  },
+  {
+    type: "input",
     name: "nameInput",
     message: "Model name, singular (e.g., 'user'):",
     onSubmit: (name, value, input) => {
@@ -13,11 +25,12 @@ module.exports = [
   {
     type: "input",
     name: "pathInput",
-    initial: "src/models",
-    message: "Path (e.g., 'express/models'):",
+    initial: "src",
+    message: "Workspace Path (e.g., 'src/models'):",
     onSubmit: (name, value, input) => {
       // Remove leading './' and trailing '/'
       value = value.replace(/^\.\//, "").replace(/\/$/, "");
+      if (value === "") value = ".";
       input.state.answers.path = value;
     },
   },
@@ -43,8 +56,8 @@ module.exports = [
   {
     type: "input",
     name: "subspecInput",
-    initial: "model",
-    message: "Sub-spec test command (e.g., 'express:model'):",
+    initial: "models",
+    message: "Sub-spec test command (e.g., 'models'):",
     onSubmit: (name, value, input) => {
       input.state.answers.subspec = value;
       input.state.answers.colonSubspec = value ? `:${value}` : "";

@@ -4,6 +4,18 @@
 module.exports = [
   {
     type: "input",
+    name: "workspaceInput",
+    initial: "packages/express",
+    message: "Workspace Path (e.g., '.'):",
+    onSubmit: (name, value, input) => {
+      // Remove leading './' and trailing '/'
+      value = value.replace(/^\.\//, "").replace(/\/$/, "");
+      if (value === "") value = ".";
+      input.state.answers.workspace = value;
+    },
+  },
+  {
+    type: "input",
     name: "path",
     initial: "src",
     message: "Path (e.g., 'src/util'):",
@@ -29,8 +41,7 @@ module.exports = [
   {
     type: "input",
     name: "subspec",
-    message:
-      "Sub-spec test, for `npm run test:spec:SUBSPEC:sum.function` command (e.g., 'express'):",
+    message: "Sub-spec test (optional; usually empty in workspaces):",
     onSubmit: (name, value, input) => {
       input.state.answers.colonSubspec = value ? `:${value}` : "";
     },

@@ -4,6 +4,18 @@
 module.exports = [
   {
     type: "input",
+    name: "workspaceInput",
+    initial: "packages/models",
+    message: "Workspace Path (e.g., '.'):",
+    onSubmit: (name, value, input) => {
+      // Remove leading './' and trailing '/'
+      value = value.replace(/^\.\//, "").replace(/\/$/, "");
+      if (value === "") value = ".";
+      input.state.answers.workspace = value;
+    },
+  },
+  {
+    type: "input",
     name: "pathInput",
     initial: "src",
     message: "Path (e.g., 'src/util'):",
