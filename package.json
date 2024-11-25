@@ -21,6 +21,8 @@
     "format:lint": "eslint --fix .",
     "format:package": "sort-package-json ./package.json",
     "lint": "eslint .",
+    "new": "hygen jaypie new",
+    "new:test": "hygen jaypie test",
     "test": "vitest run .",
     "test:cdk": "npm run test --workspace packages/cdk"
   },
