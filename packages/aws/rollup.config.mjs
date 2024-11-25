@@ -1,6 +1,7 @@
 import autoExternal from "rollup-plugin-auto-external";
 import commonjs from "@rollup/plugin-commonjs";
 import resolve from "@rollup/plugin-node-resolve";
+import json from "@rollup/plugin-json";
 
 export default {
   input: "src/index.js", // Path to your main JavaScript file
@@ -18,5 +19,6 @@ export default {
     autoExternal(), // Automatically exclude dependencies from the bundle
     resolve(), // Tells Rollup how to find node modules
     commonjs(), // Converts CommonJS modules to ES6
+    json(),
   ],
 };
