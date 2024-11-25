@@ -58,7 +58,7 @@ These packages are included in `jaypie`. They may be installed separately in the
 
 | Package | Exports | Description |
 | ------- | ------- | ----------- |
-| `@jaypie/aws` | `getMessages`, `getSecret`, `sendBatchMessages`, `sendMessage` | AWS helpers |
+| `@jaypie/aws` | `getMessages`, `getSecret`, `getSingletonMessage`, `sendBatchMessages`, `sendMessage` | AWS helpers |
 | `@jaypie/datadog` | `submitMetric`, `submitMetricSet` | Datadog helpers |
 | `@jaypie/express` | `expressHandler` | Express entry point |
 | `@jaypie/lambda` | `lambdaHandler` | Lambda entry point |
@@ -101,6 +101,7 @@ This example would then be deployed to AWS via CDK or similar orchestration. See
 import { 
   getMessages,
   getSecret,
+  getSingletonMessage,
   sendBatchMessages,
   sendMessage,
 } from "jaypie";
@@ -126,6 +127,17 @@ import { getSecret } from '@jaypie/aws';
 
 const secret = await getSecret("MongoConnectionStringN0NC3-nSg1bR1sh");
 // secret = "mongodb+srv://username:password@env-project.n0nc3.mongodb.net/app?retryWrites=true&w=majority";
+```
+
+#### `getSingletonMessage(event)`
+
+Return the single message from an SQS event. Throws a `BadGatewayError` if more than one message is found.
+
+```javascript
+import { getSingletonMessage } from '@jaypie/aws';
+
+const message = await getSingletonMessage(event);
+// message = { salutation: "Hello, world!" }
 ```
 
 #### `sendBatchMessages({ messages, queueUrl })`
