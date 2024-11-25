@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { HTTP, jaypieHandler, log } from "@jaypie/core";
+import { HTTP, jaypieHandler, log, ProjectError } from "@jaypie/core";
 import { restoreLog, spyLog } from "@jaypie/testkit";
 
 // Subject
@@ -105,6 +105,29 @@ describe("Lambda Handler Module", () => {
       // Assert
       expect(result).toBeJaypieError();
       expect(result.errors[0].status).toBe(HTTP.CODE.UNAVAILABLE);
+    });
+  });
+  describe("Parameter Order", () => {
+    it("Accepts handler as first parameter and options as second parameter", async () => {
+      const mockFunction = vi.fn();
+      const options = { name: "test" };
+      const handler = lambdaHandler(mockFunction, options);
+      await handler({}, {});
+      expect(mockFunction).toHaveBeenCalledTimes(1);
+    });
+
+    it("Swaps parameters if handler is an object and options is a function", async () => {
+      const mockFunction = vi.fn();
+      const options = { name: "test" };
+      const handler = lambdaHandler(options, mockFunction);
+      await handler({}, {});
+      expect(mockFunction).toHaveBeenCalledTimes(1);
+      expect(jaypieHandler).toHaveBeenCalledWith(mockFunction, expect.objectContaining(options));
+    });
+
+    it("Throws if not passed a function after parameter swap", () => {
+      const options = { name: "test" };
+      expect(() => lambdaHandler(options, {})).toThrow(ProjectError);
     });
   });
   describe("Observability", () => {

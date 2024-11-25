@@ -11,10 +11,16 @@ import {
 // Main
 //
 
-const lambdaHandler = (
-  handler,
-  { name, setup, teardown, unavailable, validate } = {},
-) => {
+const lambdaHandler = function (handler, options = {}) {
+  // If handler is an object and options is a function, swap them
+  if (typeof handler === "object" && typeof options === "function") {
+    const temp = handler;
+    handler = options;
+    options = temp;
+  }
+
+  let { name, setup, teardown, unavailable, validate } = options;
+
   //
   //
   // Validate
