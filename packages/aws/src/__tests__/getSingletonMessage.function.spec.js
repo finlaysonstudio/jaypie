@@ -21,12 +21,6 @@ afterEach(() => {
 //
 
 describe("GetSingletonMessage Function", () => {
-  it("returns null when no messages are found", () => {
-    getMessages.mockReturnValue([]);
-    const response = getSingletonMessage({});
-    expect(response).toBeNull();
-  });
-
   it("returns the single message when exactly one message exists", () => {
     const mockMessage = { id: 1, content: "test message" };
     getMessages.mockReturnValue([mockMessage]);
@@ -45,9 +39,15 @@ describe("GetSingletonMessage Function", () => {
     expect(getSingletonMessage).toThrowBadGatewayError();
   });
 
-  it("passes the event object to getMessages", () => {
-    const mockEvent = { Records: [] };
+  it("throws BadGatewayError when no messages are found", () => {
     getMessages.mockReturnValue([]);
+
+    expect(getSingletonMessage).toThrowBadGatewayError();
+  });
+
+  it("passes the event object to getMessages", () => {
+    const mockEvent = { Records: [{}] };
+    getMessages.mockReturnValue([{}]);
 
     getSingletonMessage(mockEvent);
     expect(getMessages).toHaveBeenCalledWith(mockEvent);
