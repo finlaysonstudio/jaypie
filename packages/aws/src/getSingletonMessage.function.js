@@ -6,7 +6,7 @@ import getMessages from "./getMessages.function.js";
 // Main
 //
 
-const getSingletonMessage = async (event) => {
+const getSingletonMessage = (event) => {
   const messages = getMessages(event);
 
   if (messages.length === 0) {
