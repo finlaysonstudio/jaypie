@@ -1,5 +1,4 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { BadGatewayError } from "jaypie";
 
 // Subject
 import getSingletonMessage from "../getSingletonMessage.function.js";
