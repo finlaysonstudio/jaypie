@@ -1,5 +1,5 @@
 import { BadGatewayError } from "@jaypie/core";
-import getMessages from "./getMessages.function";
+import getMessages from "./getMessages.function.js";
 
 //
 //
