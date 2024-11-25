@@ -1,5 +1,5 @@
 ---
-to: <%= path %>/__tests__/<%= name %><%= dotSubtype %>.spec.js
+to: <%= workspace %>/<%= path %>/__tests__/<%= name %><%= dotSubtype %>.spec.js
 ---
 import { afterEach, describe, expect, it, vi } from "vitest";
 

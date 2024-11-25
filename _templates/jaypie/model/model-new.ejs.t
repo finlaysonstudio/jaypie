@@ -1,6 +1,6 @@
 ---
 inject: true
-to: <%= path %>/<%= exportFile %>
+to: <%= workspace %>/<%= path %>/<%= exportFile %>
 before: \#hygen-jaypie-model-new
 skip_if: '<%= name %>Schema\),'
 ---

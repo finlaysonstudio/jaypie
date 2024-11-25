@@ -1,5 +1,5 @@
 ---
-to: <%= path %>/<%= name %><%= dotSubtype %>.js
+to: <%= workspace %>/<%= path %>/<%= name %><%= dotSubtype %>.js
 ---
 //
 //
