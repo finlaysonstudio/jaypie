@@ -19,7 +19,7 @@
     "clean": "rimraf ./packages/*/dist",
     "format": "npm run format:package && npm run format:lint",
     "format:lint": "eslint --fix .",
-    "format:package": "sort-package-json ./package.json",
+    "format:package": "sort-package-json ./package.json ./packages/*/package.json",
     "lint": "eslint .",
     "new": "hygen jaypie new",
     "new:test": "hygen jaypie test",
