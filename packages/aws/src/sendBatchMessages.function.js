@@ -1,4 +1,5 @@
 import {
+  BadGatewayError,
   ConfigurationError,
   force,
   JAYPIE,
@@ -98,8 +99,23 @@ export default async ({
       QueueUrl: queueUrl,
     };
 
-    const response = await client.send(new SendMessageBatchCommand(command));
-    log.trace.var({ sqsSendMessageResponse: response });
+    try {
+      const response = await client.send(new SendMessageBatchCommand(command));
+      log.trace.var({ sqsSendMessageResponse: response });
+    } catch (error) {
+      // Handle forbidden/authorization errors differently
+      if (error.name === "AccessDeniedException"
+        || error.name === "NotAuthorized"
+        || error.name === "MissingAuthenticationToken") {
+        log.error("[@jaypie/aws] Authorization error sending batch messages to SQS");
+        log.debug(`Does handler have grantSendMessages on "${queueUrl}"?`);
+      } else {
+        // Log all other errors (service errors, throttling, network issues etc)
+        log.error("[@jaypie/aws] Error sending batch messages to SQS");
+      }
+      log.debug({ error });
+      throw new BadGatewayError();
+    }
   }
 
   //

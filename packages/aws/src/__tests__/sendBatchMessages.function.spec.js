@@ -56,11 +56,56 @@ describe("Send Batch Messages Function", () => {
     });
     expect(response).not.toBeUndefined();
   });
-  describe("Error Handling", () => {
+  describe("Error Cases", () => {
     it("Throws if messages is not an array", async () => {
       await expect(
         sendBatchMessages({ messages: "MOCK_MESSAGES" }),
       ).rejects.toThrow();
+    });
+
+    it("Handles authorization errors appropriately", async () => {
+      const authError = new Error("Access Denied");
+      authError.name = "AccessDeniedException";
+      mockSqsClientSend.mockRejectedValueOnce(authError);
+
+      try {
+        await sendBatchMessages({
+          messages: [MOCK.MESSAGE],
+          queueUrl: MOCK.QUEUE_URL,
+        });
+      } catch (error) {
+        expect(error).toBeJaypieError();
+      }
+      expect.assertions(1);
+    });
+
+    it("Handles general SQS errors appropriately", async () => {
+      const sqsError = new Error("Service Unavailable");
+      sqsError.name = "ServiceUnavailable";
+      mockSqsClientSend.mockRejectedValueOnce(sqsError);
+
+      try {
+        await sendBatchMessages({
+          messages: [MOCK.MESSAGE],
+          queueUrl: MOCK.QUEUE_URL,
+        });
+      } catch (error) {
+        expect(error).toBeJaypieError();
+      }
+      expect.assertions(1);
+    });
+
+    it("Throws if delaySeconds is not number", async () => {
+      try {
+        await sendBatchMessages({
+          messages: [MOCK.MESSAGE],
+          delaySeconds: "string",
+          queueUrl: MOCK.QUEUE_URL,
+        });
+      } catch (error) {
+        expect(error).toBeJaypieError();
+      }
+      expect.assertions(1);
     });
   });
   describe("Features", () => {

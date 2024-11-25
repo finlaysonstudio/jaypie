@@ -80,6 +80,36 @@ describe("Send Message Function", () => {
       }
       expect.assertions(1);
     });
+    it("Handles authorization errors appropriately", async () => {
+      const authError = new Error("Access Denied");
+      authError.name = "AccessDeniedException";
+      mockSqsClientSend.mockRejectedValueOnce(authError);
+
+      try {
+        await sendMessage({
+          body: MOCK.MESSAGE,
+          queueUrl: MOCK.QUEUE_URL,
+        });
+      } catch (error) {
+        expect(error).toBeJaypieError();
+      }
+      expect.assertions(1);
+    });
+    it("Handles general SQS errors appropriately", async () => {
+      const sqsError = new Error("Service Unavailable");
+      sqsError.name = "ServiceUnavailable";
+      mockSqsClientSend.mockRejectedValueOnce(sqsError);
+
+      try {
+        await sendMessage({
+          body: MOCK.MESSAGE,
+          queueUrl: MOCK.QUEUE_URL,
+        });
+      } catch (error) {
+        expect(error).toBeJaypieError();
+      }
+      expect.assertions(1);
+    });
   });
   describe("Features", () => {
     it("Sends a standard message by default", async () => {
