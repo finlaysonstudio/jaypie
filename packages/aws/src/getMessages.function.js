@@ -1,3 +1,5 @@
+import { ConfigurationError } from "jaypie";
+
 //
 //
 // Main
@@ -6,8 +8,13 @@
 export default (event) => {
   const messages = [];
 
-  if (!event || typeof event !== "object") {
+  if (event === undefined) {
     return messages;
+  }
+
+  // Throw ConfigurationError if event is not an object
+  if (!event || typeof event !== "object") {
+    throw new ConfigurationError("Event must be an object");
   }
 
   // Handle SQS events
@@ -26,7 +33,7 @@ export default (event) => {
         }
       }
     });
-  // Handle EventBridge events
+  // Handle array of events
   } else if (Array.isArray(event)) {
     event.forEach((record) => {
       if (record && record.body) {
@@ -42,6 +49,9 @@ export default (event) => {
         }
       }
     });
+  // Handle single object event
+  } else {
+    messages.push(event);
   }
 
   return messages;

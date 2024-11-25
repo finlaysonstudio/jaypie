@@ -80,6 +80,7 @@ describe("Get Messages Function", () => {
   it("Returns an array", () => {
     const response = getMessages();
     expect(response).toBeArray();
+    expect(response).toHaveLength(0);
   });
   it("Parses SQS events", () => {
     const response = getMessages(MOCK.SQS.EVENT);
@@ -100,5 +101,17 @@ describe("Get Messages Function", () => {
     expect(response).toBeArray();
     expect(response).toHaveLength(1);
     expect(response[0]).toBe("hello world");
+  });
+  it("Handles a single object event", () => {
+    const singleEvent = { project: "mayhem", data: "hello world" };
+    const response = getMessages(singleEvent);
+    expect(response).toBeArray();
+    expect(response).toHaveLength(1);
+    expect(response[0]).toEqual(singleEvent);
+  });
+  it("Throws ConfigurationError when event is not an object", () => {
+    expect(() => getMessages("not an object")).toThrowConfigurationError();
+    expect(() => getMessages(null)).toThrowConfigurationError();
+    expect(() => getMessages(123)).toThrowConfigurationError();
   });
 });
