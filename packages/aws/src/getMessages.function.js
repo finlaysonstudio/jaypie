@@ -2,6 +2,20 @@ import { ConfigurationError } from "jaypie";
 
 //
 //
+// Helpers
+//
+
+const parseMessageBody = (body) => {
+  try {
+    return JSON.parse(body);
+  // eslint-disable-next-line no-unused-vars
+  } catch (error) {
+    return body;
+  }
+};
+
+//
+//
 // Main
 //
 
@@ -21,13 +35,7 @@ export default (event) => {
   if (Array.isArray(event.Records)) {
     event.Records.forEach((record) => {
       if (record && record.body) {
-        let message;
-        try {
-          message = JSON.parse(record.body);
-        // eslint-disable-next-line no-unused-vars
-        } catch (error) {
-          message = record.body;
-        }
+        const message = parseMessageBody(record.body);
         if (message) {
           messages.push(message);
         }
@@ -37,13 +45,7 @@ export default (event) => {
   } else if (Array.isArray(event)) {
     event.forEach((record) => {
       if (record && record.body) {
-        let message;
-        try {
-          message = JSON.parse(record.body);
-          // eslint-disable-next-line no-unused-vars
-        } catch (error) {
-          message = record.body;
-        }
+        const message = parseMessageBody(record.body);
         if (message) {
           messages.push(message);
         }
@@ -51,19 +53,9 @@ export default (event) => {
     });
   // Handle single object event
   } else {
-    if (event && event.body) {
-      let message;
-      try {
-        message = JSON.parse(event.body);
-      // eslint-disable-next-line no-unused-vars
-      } catch (error) {
-        message = event.body;
-      }
-      if (message) {
-        messages.push(message);
-      }
-    } else {
-      messages.push(event);
+    const message = parseMessageBody(event.body);
+    if (message) {
+      messages.push(message);
     }
   }
 
