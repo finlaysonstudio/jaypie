@@ -51,7 +51,20 @@ export default (event) => {
     });
   // Handle single object event
   } else {
-    messages.push(event);
+    if (event && event.body) {
+      let message;
+      try {
+        message = JSON.parse(event.body);
+      // eslint-disable-next-line no-unused-vars
+      } catch (error) {
+        message = event.body;
+      }
+      if (message) {
+        messages.push(message);
+      }
+    } else {
+      messages.push(event);
+    }
   }
 
   return messages;
