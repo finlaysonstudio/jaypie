@@ -10,8 +10,8 @@ import getMessages from "../getMessages.function.js";
 //
 
 const MOCK = {
-  EVENT: {
-    Records: [
+  BRIDGE: {
+    EVENT: [
       {
         messageId: "14023f22-fa41-441e-9179-41295baaf5fa",
         receiptHandle:
@@ -20,13 +20,32 @@ const MOCK = {
         attributes: {
           // ...
         },
-        messageAttributes: {},
         md5OfBody: "1234567890abcdef1234567890abcdef",
         eventSource: "aws:sqs",
         eventSourceARN: "arn:aws:sqs:us-east-1:123456789012:MyQueue",
         awsRegion: "MOCK-REGION-1",
       },
     ],
+  },
+  SQS: {
+    EVENT: {
+      Records: [
+        {
+          messageId: "14023f22-fa41-441e-9179-41295baaf5fa",
+          receiptHandle:
+          "AQEBISZwmX7RjTLZMDuazzYBUzpBTy+gH+3vFFeQLs1PmWpmcMQ98eO0T5ODWQB9adY9Dm4aL+7OL9zjB9Lfwn2sXG50IQoz0SwBXut6r3tDYFtNnhgmzuYeXrxdyKojA8NfDuu+X02HKA/Cn9RJNBCh7vVD8WDYzD1DQMIbNHCCJ645bXFNEgicjFzgW/cl0g07jnND9KYYjYnYewxC8ei8QKDbL4gKDOoz/AQB3kG6zlybB+EkLBAeQXSH7YaVtYFdvjq1mem0kHylZ2ciHouQk+c2c0NZpeXPAEGIY2sXGKxJTV2nyOWGGbx4yXRCYJfTE9NoYy89/Oz7ytb8Tg/yaeoF+zgOkUtO1xKGu8xfuLIkk7WirYcObed+sMuO1wr+",
+          body: "{\"project\":\"mayhem\",\"data\":\"hello world\"}",
+          attributes: {
+          // ...
+          },
+          messageAttributes: {},
+          md5OfBody: "1234567890abcdef1234567890abcdef",
+          eventSource: "aws:sqs",
+          eventSourceARN: "arn:aws:sqs:us-east-1:123456789012:MyQueue",
+          awsRegion: "MOCK-REGION-1",
+        },
+      ],
+    },
   },
 };
 
@@ -62,8 +81,15 @@ describe("Get Messages Function", () => {
     const response = getMessages();
     expect(response).toBeArray();
   });
-  it("Parses the event", () => {
-    const response = getMessages(MOCK.EVENT);
+  it("Parses SQS events", () => {
+    const response = getMessages(MOCK.SQS.EVENT);
+    expect(response).toBeArray();
+    expect(response).toHaveLength(1);
+    expect(response[0]).toBeObject();
+    expect(response[0]).toContainKeys(["project", "data"]);
+  });
+  it("Parses event bridge events", () => {
+    const response = getMessages(MOCK.BRIDGE.EVENT);
     expect(response).toBeArray();
     expect(response).toHaveLength(1);
     expect(response[0]).toBeObject();
