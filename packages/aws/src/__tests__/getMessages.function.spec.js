@@ -103,18 +103,19 @@ describe("Get Messages Function", () => {
     expect(response[0]).toBe("hello world");
   });
   it("Handles a single object event", () => {
-    const singleEvent = { body: JSON.stringify({ project: "mayhem", data: "hello world" }) };
+    const singleEvent = { project: "mayhem", data: "hello world" };
     const response = getMessages(singleEvent);
     expect(response).toBeArray();
     expect(response).toHaveLength(1);
     expect(response[0]).toEqual({ project: "mayhem", data: "hello world" });
   });
   it("Handles a single object event with unparseable body", () => {
+    // obsolete test
     const singleEvent = { body: "not json" };
     const response = getMessages(singleEvent);
     expect(response).toBeArray();
     expect(response).toHaveLength(1);
-    expect(response[0]).toBe("not json");
+    expect(response[0]).toEqual({ body: "not json" });
   });
   it("Throws ConfigurationError when event is not an object", () => {
     expect(() => getMessages("not an object")).toThrowConfigurationError();

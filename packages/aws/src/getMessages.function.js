@@ -53,10 +53,7 @@ export default (event) => {
     });
   // Handle single object event
   } else {
-    const message = parseMessageBody(event.body);
-    if (message) {
-      messages.push(message);
-    }
+    messages.push(event);
   }
 
   return messages;
