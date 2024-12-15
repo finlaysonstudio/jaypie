@@ -16,6 +16,7 @@
     "build:express": "npm run build --workspace packages/express",
     "build:lambda": "npm run build --workspace packages/lambda",
     "build:mongoose": "npm run build --workspace packages/mongoose",
+    "build:webkit": "npm run build --workspace packages/webkit",
     "clean": "rimraf ./packages/*/dist",
     "format": "npm run format:package && npm run format:lint",
     "format:lint": "eslint --fix .",
@@ -24,7 +25,8 @@
     "new": "hygen jaypie new",
     "new:test": "hygen jaypie test",
     "test": "vitest run .",
-    "test:cdk": "npm run test --workspace packages/cdk"
+    "test:cdk": "npm run test --workspace packages/cdk",
+    "test:webkit": "npm run test --workspace packages/webkit"
   },
   "devDependencies": {
     "@jaypie/eslint": "^1.1.0",
