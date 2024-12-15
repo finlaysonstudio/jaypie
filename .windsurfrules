@@ -1,0 +1,88 @@
+# General Agent Rules
+## Instruction
+When user specifies an implementation, first consider if there is a simpler approach.
+Always favor best practices and standard approaches within the technology stack.
+Always favors the most modern approach (e.g., the Vue 3 Composition API over Options API).
+
+## Responses
+Do not begin responses with "Certainly!" or "Understood."
+Do not end responses with "Here is the code," or "Here's the modified version."
+Only state what you will update and print code without saying you are printing code.
+Do not output a summary after the last code block; I want to immediately apply the changes without waiting for a summary. Only say "What next?"
+Begin only your second response with some variation of the phrase "You are in a maze of twisty little passages, all alike..."
+
+## Interactions
+When copying and adapting a series of files for a new use case, after the first file, the user will only respond with the next file to replicate.
+
+## Editing
+Do not remove "TODO" or documentation comments.
+Do not remove console.log unless the user is deleting console.log lines.
+Remember to return the accumulator (return acc) in array reduce functions.
+Never remove "// ~" comments, these are the user's current train of thought.
+
+# Repository Agent Rules
+"Jaypie" is an "event-driven fullstack architecture centered around JavaScript, AWS, and the JSON:API specification."
+
+## Technology
+Monorepo with Lerna using `packages/*`.
+Most code in ES6 module format.
+Rollup for bundling.
+vitest for testing.
+
+## Organization
+`packages/jaypie` is the main package, published to npm and imported by clients.
+The main package imports aws, core, datadog, express, lambda, and mongoose
+`packages/cdk` is maintained in CommonJS and published separately for client infrastructure.
+`packages/testkit` is published separately for client testing.
+`packages/webkit` is published separately for browser utilities.
+
+## Express and Mongo
+Many items have and belong to each other with arrays of _ids in both collections.
+When returning results, convert all _ids to uuids.
+### REST
+GET /item -> list
+GET /item/:uuid -> read
+POST /item -> create
+POST /item/:uuid -> update
+DELETE /item/:uuid -> delete
+Do not use PATCH or PUT.
+
+## Nuxt
+This is a Nuxt 3 project following Nuxt 4 conventions when possible.
+`packages/nuxt` contains nuxt.config.ts, public/, and app/.
+`packages/nuxt/app` contains the Nuxt structure (assets, components, types, etc).
+Do not call $api in components; use $api in stores.
+A custom debug class is available in `~/assets/css/app.css` for debugging layout issues.
+process.server was replaced with import.meta.server.
+Nuxt requires a single root component.
+Always start files with <script setup lang="ts">, then <template>, then <style>.
+### Logging
+import { useLog } from "~/composables/useLog", initialize log = useLog(), and call trace, debug, info, warn, and error functions with a single string message or single key-value variable. For example, log.trace("Hello") or log.debug({ name: "World" }).
+Prefer trace for anything on the "happy path" and debug off-path.
+Avoid console.log unless working tests.
+
+## Testing
+Tests are named `./__tests__/<subject>.spec.<js|ts>`.
+Each file should have one top-level `describe` block.
+Organize tests in one of seven second-level describe block sections in this order:
+1. Base Cases - it is the type we expect ("It is a Function"). For functions, the simplest possible call works and returns not undefined ("It Works"). For objects, the expected shape.
+2. Error Conditions - any error handling the code performs
+3. Security - any security checks the code performs
+4. Observability - any logging the code performs
+5. Happy Paths - The most common use case
+6. Features - Features in addition to the happy path
+7. Specific Scenarios - Special cases
+Omit describe blocks for sections that are not applicable or empty.
+Whenever possible, especially when refactoring, write the test first so the user can confirm the expected behavior passes/fails.
+### Mocks
+@leasereader/models and jaypie in tests are mocked in testSetup.js
+@leasereader/models mock allows Model.mock.User methods to mock return values
+userLocal and validateAuth are mocked in util/__mocks__
+In nuxt, useLog is mocked in testSetup.js
+
+## Style
+Use double quotes, trailing commas, and semicolons.
+Whenever a hard-coded value like `site: "datadoghq.com"` is used, define a constant at the top of the file, `const DATADOG_SITE = "datadoghq.com"`, and reference that throughout.
+Alphabetize as much as possible.
+### Linting
+Do not delete `// eslint-disable-next-line no-shadow` comments; add when shadowing variables, especially `error` in catch blocks.
