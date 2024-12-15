@@ -1,3 +1,5 @@
 // Framework-agnostic frontend utilities
 
-export const VERSION = "0.1.0";
+import { v4 } from "uuid";
+
+export const uuid = (): string => v4();

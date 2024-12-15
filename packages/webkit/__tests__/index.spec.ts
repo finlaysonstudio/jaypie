@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { VERSION } from "../src";
+import { uuid } from "../src";
 
 describe("webkit", () => {
   describe("Base Cases", () => {
-    it("exports VERSION", () => {
-      expect(VERSION).toBe("0.1.0");
+    it("exports uuid function", () => {
+      expect(typeof uuid).toBe("function");
     });
   });
 });
