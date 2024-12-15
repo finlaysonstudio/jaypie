@@ -1,12 +1,15 @@
 {
   "name": "@jaypie/webkit",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "license": "MIT",
   "author": "Finlayson Studio",
   "type": "module",
   "description": "Framework-agnostic frontend utilities for Jaypie",
   "exports": {
-    ".": "./dist/index.js"
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
   },
   "main": "dist/index.js",
   "module": "dist/index.js",
