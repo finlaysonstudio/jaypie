@@ -72,11 +72,15 @@ Matchers, mocks, and utilities to test Jaypie projects.
 npm install --save-dev @jaypie/testkit
 ```
 
-### Example
+#### WebKit
+
+Frontend utilities for Jaypie.
 
 ```bash
-npm install jaypie @jaypie/lambda
+npm install @jaypie/webkit
 ```
+
+### Example
 
 ```javascript
 const { InternalError, lambdaHandler, log } = require("jaypie");
@@ -1207,6 +1211,26 @@ const event = sqsTestRecords(
 );
 ```
 
+### WebKit
+
+Browser-optimized, framework-agnostic frontend utilities for Jaypie.
+
+```bash
+npm install @jaypie/webkit
+```
+
+#### WebKit Reference
+
+```
+import { 
+  uuid
+} from '@jaypie/webkit'
+```
+
+##### `uuid`
+
+The `v4` function from the `uuid` package
+
 ## 🛣️ Roadmap
 
 Structural Changes:
@@ -1216,8 +1240,8 @@ Structural Changes:
 ### Wishlist 🌠
 
 * Nicely organized VitePress documentation 😅
-* More testing and mocking conveniences
 * Additional utility functions
+* VueKit or NuxtKit
 * Auth0
 * Mongoose project schema
 
