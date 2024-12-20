@@ -10,8 +10,9 @@ module.exports = ({ CfnOutput, output, stack } = {}) => {
         new CfnOutput(stack, key, { value });
       }
     });
-    // eslint-disable-next-line no-unused-vars
   } catch (error) {
+    // eslint-disable-next-line no-console
+    console.warn(error);
     return false;
   }
   return true;
