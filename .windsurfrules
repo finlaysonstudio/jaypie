@@ -36,31 +36,6 @@ The main package imports aws, core, datadog, express, lambda, and mongoose
 `packages/testkit` is published separately for client testing.
 `packages/webkit` is published separately for browser utilities.
 
-## Express and Mongo
-Many items have and belong to each other with arrays of _ids in both collections.
-When returning results, convert all _ids to uuids.
-### REST
-GET /item -> list
-GET /item/:uuid -> read
-POST /item -> create
-POST /item/:uuid -> update
-DELETE /item/:uuid -> delete
-Do not use PATCH or PUT.
-
-## Nuxt
-This is a Nuxt 3 project following Nuxt 4 conventions when possible.
-`packages/nuxt` contains nuxt.config.ts, public/, and app/.
-`packages/nuxt/app` contains the Nuxt structure (assets, components, types, etc).
-Do not call $api in components; use $api in stores.
-A custom debug class is available in `~/assets/css/app.css` for debugging layout issues.
-process.server was replaced with import.meta.server.
-Nuxt requires a single root component.
-Always start files with <script setup lang="ts">, then <template>, then <style>.
-### Logging
-import { useLog } from "~/composables/useLog", initialize log = useLog(), and call trace, debug, info, warn, and error functions with a single string message or single key-value variable. For example, log.trace("Hello") or log.debug({ name: "World" }).
-Prefer trace for anything on the "happy path" and debug off-path.
-Avoid console.log unless working tests.
-
 ## Testing
 Tests are named `./__tests__/<subject>.spec.<js|ts>`.
 Each file should have one top-level `describe` block.
@@ -74,11 +49,6 @@ Organize tests in one of seven second-level describe block sections in this orde
 7. Specific Scenarios - Special cases
 Omit describe blocks for sections that are not applicable or empty.
 Whenever possible, especially when refactoring, write the test first so the user can confirm the expected behavior passes/fails.
-### Mocks
-@leasereader/models and jaypie in tests are mocked in testSetup.js
-@leasereader/models mock allows Model.mock.User methods to mock return values
-userLocal and validateAuth are mocked in util/__mocks__
-In nuxt, useLog is mocked in testSetup.js
 
 ## Style
 Use double quotes, trailing commas, and semicolons.
