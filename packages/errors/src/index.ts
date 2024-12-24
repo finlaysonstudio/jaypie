@@ -1,4 +1,4 @@
-export { errorFromStatusCode } from "./errorFromStatusCode";
+export { jaypieErrorFromStatus } from "./jaypieErrorFromStatus";
 export { isJaypieError } from "./isJaypieError";
 export * from "./errors";
 
