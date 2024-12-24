@@ -3,7 +3,7 @@ import { JaypieError } from "./baseErrors";
 type ErrorConstructor = new (message?: string) => JaypieError;
 
 const proxyClassAsFunction = {
-  apply: (target: ErrorConstructor, _thisArgument: any, argumentsList: any[]) => 
+  apply: (target: ErrorConstructor, _thisArgument: any, argumentsList: any[]) =>
     new target(...argumentsList),
 };
 
@@ -11,7 +11,7 @@ export function createErrorClass(
   defaultMessage: string,
   status: number,
   title: string,
-  type: string
+  type: string,
 ): ErrorConstructor {
   return new Proxy(
     class extends JaypieError {
@@ -19,6 +19,6 @@ export function createErrorClass(
         super(message, { status, title }, { _type: type });
       }
     },
-    proxyClassAsFunction
+    proxyClassAsFunction,
   );
-} 
+}

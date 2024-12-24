@@ -42,4 +42,4 @@ describe("errorFromStatusCode", () => {
       expect(errorFromStatusCode(503).title).toBe("Service Unavailable");
     });
   });
-}); 
+});

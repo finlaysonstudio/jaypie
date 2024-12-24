@@ -18,21 +18,29 @@ export const ERROR = {
   MESSAGE: {
     BAD_GATEWAY: "An unexpected error occurred on an upstream resource",
     BAD_REQUEST: "The request was not properly formatted",
-    CONFIGURATION_ERROR: "The application responding to the request encountered a configuration error",
+    CONFIGURATION_ERROR:
+      "The application responding to the request encountered a configuration error",
     FORBIDDEN: "Access to this resource is not authorized",
-    GATEWAY_TIMEOUT: "The connection timed out waiting for an upstream resource",
+    GATEWAY_TIMEOUT:
+      "The connection timed out waiting for an upstream resource",
     GONE: "The requested resource is no longer available",
-    ILLOGICAL: "The application encountered an illogical condition while processing the request",
-    INTERNAL_ERROR: "An unexpected error occurred and the request was unable to complete",
+    ILLOGICAL:
+      "The application encountered an illogical condition while processing the request",
+    INTERNAL_ERROR:
+      "An unexpected error occurred and the request was unable to complete",
     METHOD_NOT_ALLOWED: "The requested method is not allowed",
     NOT_FOUND: "The requested resource was not found",
-    NOT_IMPLEMENTED: "The request was understood but the resource is not implemented",
+    NOT_IMPLEMENTED:
+      "The request was understood but the resource is not implemented",
     REJECTED: "The request was rejected prior to processing",
     TEAPOT: "This resource is a teapot incapable of processing the request",
-    UNAUTHORIZED: "The request did not include valid authentication credentials",
+    UNAUTHORIZED:
+      "The request did not include valid authentication credentials",
     UNAVAILABLE: "The requested resource is temporarily unavailable",
-    UNHANDLED: "An unhandled error occurred and the request was unable to complete",
-    UNREACHABLE_CODE: "The application encountered an unreachable condition while processing the request",
+    UNHANDLED:
+      "An unhandled error occurred and the request was unable to complete",
+    UNREACHABLE_CODE:
+      "The application encountered an unreachable condition while processing the request",
   },
   TITLE: {
     BAD_GATEWAY: "Bad Gateway",

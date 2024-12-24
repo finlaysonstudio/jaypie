@@ -12,7 +12,10 @@ import {
   UnavailableError,
 } from "./errors";
 
-export function errorFromStatusCode(statusCode: number, message?: string): JaypieError {
+export function errorFromStatusCode(
+  statusCode: number,
+  message?: string,
+): JaypieError {
   switch (statusCode) {
     case HTTP.CODE.BAD_REQUEST:
       return new BadRequestError(message);
