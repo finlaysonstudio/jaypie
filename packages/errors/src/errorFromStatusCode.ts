@@ -1,4 +1,4 @@
-import { HTTP } from "./types";
+import { HTTP, JaypieError } from "./types";
 import {
   BadGatewayError,
   BadRequestError,
@@ -12,7 +12,7 @@ import {
   UnavailableError,
 } from "./errors";
 
-export function errorFromStatusCode(statusCode: number, message?: string) {
+export function errorFromStatusCode(statusCode: number, message?: string): JaypieError {
   switch (statusCode) {
     case HTTP.CODE.BAD_REQUEST:
       return new BadRequestError(message);

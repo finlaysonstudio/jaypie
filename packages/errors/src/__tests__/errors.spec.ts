@@ -86,7 +86,7 @@ describe("JSON:API HTTP Error", () => {
 
     it("Works without new", () => {
       try {
-        throw UnreachableCodeError();
+        throw (UnreachableCodeError as unknown as () => JaypieError)();
       } catch (error) {
         expect((error as JaypieError).isProjectError).toBe(true);
       }
