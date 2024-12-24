@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { BadRequestError, errorFromStatusCode, isJaypieError } from "..";
+import { BadRequestError, isJaypieError, jaypieErrorFromStatus } from "..";
 
 describe("errors/index", () => {
   describe("Base Cases", () => {
-    it("exports errorFromStatusCode function", () => {
-      expect(typeof errorFromStatusCode).toBe("function");
+    it("exports jaypieErrorFromStatus function", () => {
+      expect(typeof jaypieErrorFromStatus).toBe("function");
     });
 
     it("exports isJaypieError function", () => {

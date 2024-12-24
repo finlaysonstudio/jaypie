@@ -12,7 +12,7 @@ import {
   UnavailableError,
 } from "./errors";
 
-export function errorFromStatusCode(
+export function jaypieErrorFromStatus(
   statusCode: number,
   message?: string,
 ): JaypieError {
