@@ -1244,6 +1244,7 @@ Structural Changes:
 * VueKit or NuxtKit
 * Auth0
 * Mongoose project schema
+* Better mocking of Mongoose
 
 ## 📝 Changelog
 
