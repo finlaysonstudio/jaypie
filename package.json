@@ -13,6 +13,7 @@
     "build:aws": "npm run build --workspace packages/aws",
     "build:core": "npm run build --workspace packages/core",
     "build:datadog": "npm run build --workspace packages/datadog",
+    "build:errors": "npm run build --workspace packages/errors",
     "build:express": "npm run build --workspace packages/express",
     "build:lambda": "npm run build --workspace packages/lambda",
     "build:mongoose": "npm run build --workspace packages/mongoose",
@@ -26,6 +27,7 @@
     "new:test": "hygen jaypie test",
     "test": "vitest run .",
     "test:cdk": "npm run test --workspace packages/cdk",
+    "test:errors": "npm run test --workspace packages/errors",
     "test:webkit": "npm run test --workspace packages/webkit"
   },
   "devDependencies": {

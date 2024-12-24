@@ -1,0 +1,123 @@
+import { ERROR, HTTP } from "./types";
+import { createErrorClass } from "./errorFactory";
+
+// Standard HTTP Errors
+export const BadGatewayError = createErrorClass(
+  ERROR.MESSAGE.BAD_GATEWAY,
+  HTTP.CODE.BAD_GATEWAY,
+  ERROR.TITLE.BAD_GATEWAY,
+  ERROR.TYPE.BAD_GATEWAY
+);
+
+export const BadRequestError = createErrorClass(
+  ERROR.MESSAGE.BAD_REQUEST,
+  HTTP.CODE.BAD_REQUEST,
+  ERROR.TITLE.BAD_REQUEST,
+  ERROR.TYPE.BAD_REQUEST
+);
+
+export const ForbiddenError = createErrorClass(
+  ERROR.MESSAGE.FORBIDDEN,
+  HTTP.CODE.FORBIDDEN,
+  ERROR.TITLE.FORBIDDEN,
+  ERROR.TYPE.FORBIDDEN
+);
+
+export const GatewayTimeoutError = createErrorClass(
+  ERROR.MESSAGE.GATEWAY_TIMEOUT,
+  HTTP.CODE.GATEWAY_TIMEOUT,
+  ERROR.TITLE.GATEWAY_TIMEOUT,
+  ERROR.TYPE.GATEWAY_TIMEOUT
+);
+
+export const GoneError = createErrorClass(
+  ERROR.MESSAGE.GONE,
+  HTTP.CODE.GONE,
+  ERROR.TITLE.GONE,
+  ERROR.TYPE.GONE
+);
+
+export const InternalError = createErrorClass(
+  ERROR.MESSAGE.INTERNAL_ERROR,
+  HTTP.CODE.INTERNAL_ERROR,
+  ERROR.TITLE.INTERNAL_ERROR,
+  ERROR.TYPE.INTERNAL_ERROR
+);
+
+export const MethodNotAllowedError = createErrorClass(
+  ERROR.MESSAGE.METHOD_NOT_ALLOWED,
+  HTTP.CODE.METHOD_NOT_ALLOWED,
+  ERROR.TITLE.METHOD_NOT_ALLOWED,
+  ERROR.TYPE.METHOD_NOT_ALLOWED
+);
+
+export const NotFoundError = createErrorClass(
+  ERROR.MESSAGE.NOT_FOUND,
+  HTTP.CODE.NOT_FOUND,
+  ERROR.TITLE.NOT_FOUND,
+  ERROR.TYPE.NOT_FOUND
+);
+
+export const TeapotError = createErrorClass(
+  ERROR.MESSAGE.TEAPOT,
+  HTTP.CODE.TEAPOT,
+  ERROR.TITLE.TEAPOT,
+  ERROR.TYPE.TEAPOT
+);
+
+export const UnauthorizedError = createErrorClass(
+  ERROR.MESSAGE.UNAUTHORIZED,
+  HTTP.CODE.UNAUTHORIZED,
+  ERROR.TITLE.UNAUTHORIZED,
+  ERROR.TYPE.UNAUTHORIZED
+);
+
+export const UnavailableError = createErrorClass(
+  ERROR.MESSAGE.UNAVAILABLE,
+  HTTP.CODE.UNAVAILABLE,
+  ERROR.TITLE.UNAVAILABLE,
+  ERROR.TYPE.UNAVAILABLE
+);
+
+// Special Errors
+export const ConfigurationError = createErrorClass(
+  ERROR.MESSAGE.CONFIGURATION_ERROR,
+  HTTP.CODE.INTERNAL_ERROR,
+  ERROR.TITLE.CONFIGURATION_ERROR,
+  ERROR.TYPE.CONFIGURATION_ERROR
+);
+
+export const IllogicalError = createErrorClass(
+  ERROR.MESSAGE.ILLOGICAL,
+  HTTP.CODE.INTERNAL_ERROR,
+  ERROR.TITLE.INTERNAL_ERROR,
+  ERROR.TYPE.ILLOGICAL
+);
+
+export const NotImplementedError = createErrorClass(
+  ERROR.MESSAGE.NOT_IMPLEMENTED,
+  HTTP.CODE.BAD_REQUEST,
+  ERROR.TITLE.NOT_IMPLEMENTED,
+  ERROR.TYPE.NOT_IMPLEMENTED
+);
+
+export const RejectedError = createErrorClass(
+  ERROR.MESSAGE.REJECTED,
+  HTTP.CODE.FORBIDDEN,
+  ERROR.TITLE.REJECTED,
+  ERROR.TYPE.REJECTED
+);
+
+export const UnhandledError = createErrorClass(
+  ERROR.MESSAGE.UNHANDLED,
+  HTTP.CODE.INTERNAL_ERROR,
+  ERROR.TITLE.INTERNAL_ERROR,
+  ERROR.TYPE.UNHANDLED
+);
+
+export const UnreachableCodeError = createErrorClass(
+  ERROR.MESSAGE.UNREACHABLE_CODE,
+  HTTP.CODE.INTERNAL_ERROR,
+  ERROR.TITLE.INTERNAL_ERROR,
+  ERROR.TYPE.UNREACHABLE_CODE
+);
