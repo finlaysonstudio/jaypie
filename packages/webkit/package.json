@@ -24,6 +24,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@jaypie/errors": "^1.1.0",
     "uuid": "^9.0.1"
   },
   "devDependencies": {
