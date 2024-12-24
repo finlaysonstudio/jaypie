@@ -4,10 +4,12 @@ export default defineWorkspace([
   "packages/aws",
   "packages/core",
   "packages/datadog",
+  "packages/errors",
   "packages/eslint",
   "packages/express",
   "packages/jaypie",
   "packages/lambda",
   "packages/mongoose",
   "packages/testkit",
+  "packages/webkit",
 ]);
