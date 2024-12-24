@@ -21,7 +21,7 @@ describe("isJaypieError", () => {
 
     it("returns true for legacy ProjectError instances", () => {
       const error = new JaypieError("test error");
-      delete (error as any).isJaypieError;  // Simulate legacy error
+      delete (error as any).isJaypieError; // Simulate legacy error
       expect(isJaypieError(error)).toBe(true);
     });
   });
@@ -47,4 +47,4 @@ describe("isJaypieError", () => {
       expect(isJaypieError({ json: () => ({}) })).toBe(false);
     });
   });
-}); 
+});

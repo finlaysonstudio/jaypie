@@ -110,4 +110,4 @@ describe("JSON:API HTTP Error", () => {
       expect(error._type).toBe(ERROR.TYPE.UNREACHABLE_CODE);
     });
   });
-}); 
+});
