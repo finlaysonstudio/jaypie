@@ -31,144 +31,88 @@ declare module "@jaypie/core" {
   export function uuid(): string;
 
   // Error Classes
-  export class BadGatewayError extends Error {
-    constructor(...args: any[]);
-    status: number;
-    _type: string;
-    json(): object;
-  }
-
-  export class BadRequestError extends Error {
-    constructor(...args: any[]);
-    status: number;
-    _type: string;
-    json(): object;
-  }
-
-  export class ConfigurationError extends Error {
-    constructor(...args: any[]);
-    status: number;
-    _type: string;
-    json(): object;
-  }
-
-  export class ForbiddenError extends Error {
-    constructor(...args: any[]);
-    status: number;
-    _type: string;
-    json(): object;
-  }
-
-  export class GatewayTimeoutError extends Error {
-    constructor(...args: any[]);
-    status: number;
-    _type: string;
-    json(): object;
-  }
-
-  export class GoneError extends Error {
-    constructor(...args: any[]);
-    status: number;
-    _type: string;
-    json(): object;
-  }
-
-  export class IllogicalError extends Error {
-    constructor(...args: any[]);
-    status: number;
-    _type: string;
-    json(): object;
-  }
-
-  export class InternalError extends Error {
-    constructor(...args: any[]);
-    status: number;
-    _type: string;
-    json(): object;
-  }
-
-  export class MethodNotAllowedError extends Error {
-    constructor(...args: any[]);
-    status: number;
-    _type: string;
-    json(): object;
-  }
-
-  export class MultiError extends Error {
-    constructor(...args: any[]);
-    status: number;
-    _type: string;
-    json(): object;
-  }
-
-  export class NotFoundError extends Error {
-    constructor(...args: any[]);
-    status: number;
-    _type: string;
-    json(): object;
-  }
-
-  export class NotImplementedError extends Error {
-    constructor(...args: any[]);
-    status: number;
-    _type: string;
-    json(): object;
-  }
-
   export class ProjectError extends Error {
     constructor(...args: any[]);
     status: number;
     _type: string;
     json(): object;
+    [key: string]: unknown;
   }
 
-  export class ProjectMultiError extends Error {
+  export class BadGatewayError extends ProjectError {
     constructor(...args: any[]);
-    status: number;
-    _type: string;
-    json(): object;
   }
 
-  export class RejectedError extends Error {
+  export class BadRequestError extends ProjectError {
     constructor(...args: any[]);
-    status: number;
-    _type: string;
-    json(): object;
   }
 
-  export class TeapotError extends Error {
+  export class ConfigurationError extends ProjectError {
     constructor(...args: any[]);
-    status: number;
-    _type: string;
-    json(): object;
   }
 
-  export class UnauthorizedError extends Error {
+  export class ForbiddenError extends ProjectError {
     constructor(...args: any[]);
-    status: number;
-    _type: string;
-    json(): object;
   }
 
-  export class UnavailableError extends Error {
+  export class GatewayTimeoutError extends ProjectError {
     constructor(...args: any[]);
-    status: number;
-    _type: string;
-    json(): object;
   }
 
-  export class UnhandledError extends Error {
+  export class GoneError extends ProjectError {
     constructor(...args: any[]);
-    status: number;
-    _type: string;
-    json(): object;
   }
 
-  export class UnreachableCodeError extends Error {
+  export class IllogicalError extends ProjectError {
     constructor(...args: any[]);
-    status: number;
-    _type: string;
-    json(): object;
+  }
+
+  export class InternalError extends ProjectError {
+    constructor(...args: any[]);
+  }
+
+  export class MethodNotAllowedError extends ProjectError {
+    constructor(...args: any[]);
+  }
+
+  export class MultiError extends ProjectError {
+    constructor(...args: any[]);
+  }
+
+  export class NotFoundError extends ProjectError {
+    constructor(...args: any[]);
+  }
+
+  export class NotImplementedError extends ProjectError {
+    constructor(...args: any[]);
+  }
+
+  export class ProjectMultiError extends ProjectError {
+    constructor(...args: any[]);
+  }
+
+  export class RejectedError extends ProjectError {
+    constructor(...args: any[]);
+  }
+
+  export class TeapotError extends ProjectError {
+    constructor(...args: any[]);
+  }
+
+  export class UnauthorizedError extends ProjectError {
+    constructor(...args: any[]);
+  }
+
+  export class UnavailableError extends ProjectError {
+    constructor(...args: any[]);
+  }
+
+  export class UnhandledError extends ProjectError {
+    constructor(...args: any[]);
+  }
+
+  export class UnreachableCodeError extends ProjectError {
+    constructor(...args: any[]);
   }
 
   // Error Type Guard

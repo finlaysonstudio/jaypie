@@ -7,10 +7,11 @@ import {
   InternalError,
   isJaypieError,
   NotFoundError,
+  ProjectError,
   UnauthorizedError,
   UnavailableError,
 } from "@jaypie/core";
-import { JaypieErrorConstructor, MatcherResult } from "../types.js";
+import type { MatcherResult } from "../types.js";
 
 //
 //
@@ -18,18 +19,34 @@ import { JaypieErrorConstructor, MatcherResult } from "../types.js";
 //
 
 type ReceivedFunction = () => unknown | Promise<unknown>;
+type ErrorConstructor = new () => ProjectError;
+
+function isErrorConstructor(value: unknown): value is ErrorConstructor {
+  return typeof value === "function" && "prototype" in value;
+}
 
 const toThrowJaypieError = async (
   received: ReceivedFunction,
-  expected?: JaypieErrorConstructor | (() => unknown),
+  expected?: ProjectError | (() => ProjectError) | ErrorConstructor,
 ): Promise<MatcherResult> => {
   const isAsync =
     received.constructor.name === "AsyncFunction" ||
     received.constructor.name === "Promise";
 
-  // If expected is a function, call it
+  let expectedError: ProjectError | undefined = undefined;
+
+  // Handle constructor, function, or instance
   if (typeof expected === "function") {
-    expected = expected();
+    if (isErrorConstructor(expected)) {
+      // It's a constructor
+      expectedError = new expected();
+    } else {
+      // It's a regular function
+      expectedError = expected();
+    }
+  } else if (expected) {
+    // It's an instance
+    expectedError = expected;
   }
 
   try {
@@ -48,13 +65,13 @@ const toThrowJaypieError = async (
   } catch (error) {
     if (isJaypieError(error)) {
       // If expected is also a JaypieError, check if the error matches
-      if (isJaypieError(expected)) {
+      if (expectedError && isJaypieError(expectedError)) {
         // If the error does not match, fail the test
-        if (error._type !== expected._type) {
+        if (error._type !== expectedError._type) {
           return {
             pass: false,
             message: () =>
-              `Expected function to throw "${expected._type}", but it threw "${error._type}"`,
+              `Expected function to throw "${expectedError._type}", but it threw "${error._type}"`,
           };
         }
       }

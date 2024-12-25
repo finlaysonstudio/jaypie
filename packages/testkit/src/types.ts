@@ -1,4 +1,3 @@
-import { ProjectError } from "@jaypie/core";
 import { Mock } from "vitest";
 
 export interface JsonApiError {
@@ -24,11 +23,6 @@ export interface JsonApiData {
 export interface MatcherResult {
   message: () => string;
   pass: boolean;
-}
-
-export interface JaypieErrorConstructor {
-  new (...args: any[]): ProjectError;
-  (...args: any[]): ProjectError;
 }
 
 export interface LogMock {
