@@ -41,10 +41,10 @@ export interface LogMock {
 }
 
 export interface JaypieHandlerOptions {
-  setup?: Array<(...args: any[]) => any>;
-  teardown?: Array<(...args: any[]) => any>;
+  setup?: Array<(...args: any[]) => Promise<void> | void>;
+  teardown?: Array<(...args: any[]) => Promise<void> | void>;
   unavailable?: boolean;
-  validate?: Array<(...args: any[]) => any>;
+  validate?: Array<(...args: any[]) => Promise<boolean> | boolean>;
 }
 
 export interface ExpressHandlerOptions extends JaypieHandlerOptions {
