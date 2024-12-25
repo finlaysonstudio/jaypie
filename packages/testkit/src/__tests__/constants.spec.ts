@@ -10,7 +10,7 @@ import {
   RE_UUID_4_PATTERN,
   RE_UUID_5_PATTERN,
   RE_UUID_PATTERN,
-} from "../constants.js";
+} from "../constants";
 
 //
 //

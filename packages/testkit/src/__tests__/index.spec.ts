@@ -9,7 +9,7 @@ import {
   restoreLog,
   spyLog,
   sqsTestRecords,
-} from "../index.js";
+} from "../index";
 
 //
 //

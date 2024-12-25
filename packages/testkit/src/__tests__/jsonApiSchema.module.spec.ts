@@ -1,8 +1,7 @@
-// eslint-disable-next-line no-unused-vars
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 // Subject
-import { jsonApiErrorSchema, jsonApiSchema } from "../jsonApiSchema.module.js";
+import { jsonApiErrorSchema, jsonApiSchema } from "../jsonApiSchema.module";
 
 //
 //
