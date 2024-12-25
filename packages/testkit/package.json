@@ -5,30 +5,38 @@
   "author": "Finlayson Studio",
   "type": "module",
   "exports": {
-    ".": "./src/index.js",
-    "./mock": "./src/jaypie.mock.js"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./mock": {
+      "types": "./dist/jaypie.mock.d.ts", 
+      "import": "./dist/jaypie.mock.js"
+    }
   },
-  "main": "src/index.js",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "scripts": {
+    "build": "tsc",
     "format": "npm run format:package && npm run format:lint",
     "format:lint": "eslint --fix .",
     "format:package": "sort-package-json ./package.json",
     "lint": "eslint .",
     "test": "vitest run .",
-    "test:spec:constants": "vitest run ./src/__tests__/constants.spec.js",
-    "test:spec:expressHandler.mock": "vitest run ./src/__tests__/expressHandler-supertest.mock.spec.js",
-    "test:spec:index": "vitest run ./src/__tests__/index.spec.js",
-    "test:spec:jaypie.mock": "vitest run ./src/__tests__/jaypie.mock.spec.js",
-    "test:spec:jsonApiSchema.module": "vitest run ./src/__tests__/jsonApiSchema.module.spec.js",
-    "test:spec:matchers.module": "vitest run ./src/__tests__/matchers.module.spec.js",
-    "test:spec:mockLog.module": "vitest run ./src/__tests__/mockLog.module.spec.js",
-    "test:spec:sqsTestRecords.function": "vitest run ./src/__tests__/sqsTestRecords.function.spec.js",
-    "test:spec:toBeCalledAboveTrace.matcher": "vitest run ./src/matchers/__tests__/toBeCalledAboveTrace.matcher.spec.js",
-    "test:spec:toBeCalledWithInitialParams.matcher": "vitest run ./src/matchers/__tests__/toBeCalledWithInitialParams.matcher.spec.js",
-    "test:spec:toBeClass.matcher": "vitest run ./src/matchers/__tests__/toBeClass.matcher.spec.js",
-    "test:spec:toBeJaypieError.matcher": "vitest run ./src/matchers/__tests__/toBeJaypieError.matcher.spec.js",
-    "test:spec:toMatch.matcher": "vitest run ./src/matchers/__tests__/toMatch.matcher.spec.js",
-    "test:spec:toThrowJaypieError.matcher": "vitest run ./src/matchers/__tests__/toThrowJaypieError.matcher.spec.js"
+    "test:spec:constants": "vitest run ./src/__tests__/constants.spec.ts",
+    "test:spec:expressHandler.mock": "vitest run ./src/__tests__/expressHandler-supertest.mock.spec.ts",
+    "test:spec:index": "vitest run ./src/__tests__/index.spec.ts",
+    "test:spec:jaypie.mock": "vitest run ./src/__tests__/jaypie.mock.spec.ts",
+    "test:spec:jsonApiSchema.module": "vitest run ./src/__tests__/jsonApiSchema.module.spec.ts",
+    "test:spec:matchers.module": "vitest run ./src/__tests__/matchers.module.spec.ts",
+    "test:spec:mockLog.module": "vitest run ./src/__tests__/mockLog.module.spec.ts",
+    "test:spec:sqsTestRecords.function": "vitest run ./src/__tests__/sqsTestRecords.function.spec.ts",
+    "test:spec:toBeCalledAboveTrace.matcher": "vitest run ./src/matchers/__tests__/toBeCalledAboveTrace.matcher.spec.ts",
+    "test:spec:toBeCalledWithInitialParams.matcher": "vitest run ./src/matchers/__tests__/toBeCalledWithInitialParams.matcher.spec.ts",
+    "test:spec:toBeClass.matcher": "vitest run ./src/matchers/__tests__/toBeClass.matcher.spec.ts",
+    "test:spec:toBeJaypieError.matcher": "vitest run ./src/matchers/__tests__/toBeJaypieError.matcher.spec.ts",
+    "test:spec:toMatch.matcher": "vitest run ./src/matchers/__tests__/toMatch.matcher.spec.ts",
+    "test:spec:toThrowJaypieError.matcher": "vitest run ./src/matchers/__tests__/toThrowJaypieError.matcher.spec.ts"
   },
   "dependencies": {
     "@jaypie/core": "^1.1.0",
@@ -38,7 +46,10 @@
     "uuid": "^9.0.1"
   },
   "devDependencies": {
-    "express": "^4.21.1"
+    "@types/lodash.isequal": "^4.5.8",
+    "@types/node": "^20.0.0",
+    "express": "^4.21.1",
+    "typescript": "^5.0.0"
   },
   "publishConfig": {
     "access": "public"
