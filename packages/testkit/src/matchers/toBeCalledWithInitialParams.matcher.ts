@@ -1,4 +1,5 @@
 import isEqual from "lodash.isequal";
+import { Mock } from "vitest";
 import { MatcherResult } from "../types.js";
 
 //
@@ -7,7 +8,7 @@ import { MatcherResult } from "../types.js";
 //
 
 const toBeCalledWithInitialParams = (
-  received: jest.Mock,
+  received: Mock,
   ...passed: unknown[]
 ): MatcherResult => {
   let pass: boolean | undefined;
