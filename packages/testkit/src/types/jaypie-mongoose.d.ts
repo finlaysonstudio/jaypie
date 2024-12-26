@@ -1,4 +1,6 @@
 declare module "@jaypie/mongoose" {
+  import { default as mongooseDefaultExport } from "mongoose";
+
   export interface MongooseConnectionOptions {
     autoIndex?: boolean;
     dbName?: string;
@@ -24,7 +26,10 @@ declare module "@jaypie/mongoose" {
   ): Promise<boolean>;
 
   /**
-   * Disconnect from MongoDB
+   * Disconnects from MongoDB; Jaypie wrap of `mongoose.disconnect()`
    */
-  export function disconnect(): Promise<boolean>;
+  export function disconnect(): Promise<void>;
+
+  // Export mongoose as a pass-through
+  export const mongoose: typeof mongooseDefaultExport;
 } 
