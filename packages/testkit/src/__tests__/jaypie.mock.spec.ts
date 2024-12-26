@@ -2,8 +2,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { mongoose as expectedMongoose } from "@jaypie/mongoose";
 
-import matchers from "../matchers.module.js";
-import sqsTestRecords from "../sqsTestRecords.function.js";
+import matchers from "../matchers.module";
+import sqsTestRecords from "../sqsTestRecords.function";
 
 // Subject
 import {
@@ -23,10 +23,13 @@ import {
   sendBatchMessages,
   sendMessage,
   sleep,
+  SQSMessage,
   submitMetric,
   submitMetricSet,
   uuid,
-} from "../jaypie.mock.js";
+} from "../jaypie.mock";
+
+import { isJaypieError } from "@jaypie/core";
 
 // Add custom matchers
 expect.extend(matchers);
@@ -75,7 +78,7 @@ describe("Jaypie Mock", () => {
         expect(testRecords.Records).toBeArray();
         expect(testRecords.Records[0].body).toBeString();
         // Act
-        const messages = getMessages(testRecords);
+        const messages = getMessages(testRecords) as Array<SQSMessage>;
         // Assert
         expect(getMessages).toHaveBeenCalled();
         expect(messages).toBeArray();
@@ -143,8 +146,9 @@ describe("Jaypie Mock", () => {
             try {
               await handler();
             } catch (error) {
-              // Assert
-              expect(error.message).toBe("Sorpresa!");
+              if (error instanceof Error) {
+                expect(error.message).toBe("Sorpresa!");
+              }
             }
             expect.assertions(1);
           });
@@ -195,9 +199,10 @@ describe("Jaypie Mock", () => {
                 try {
                   await handler();
                 } catch (error) {
-                  // Assert
-                  expect(error.isProjectError).toBeTrue();
-                  expect(error.status).toBe(HTTP.CODE.UNAVAILABLE);
+                  if (isJaypieError(error)) {
+                    expect(error.isProjectError).toBeTrue();
+                    expect(error.status).toBe(HTTP.CODE.UNAVAILABLE);
+                  }
                 }
                 expect.assertions(2);
                 delete process.env.PROJECT_UNAVAILABLE;
@@ -209,9 +214,10 @@ describe("Jaypie Mock", () => {
                 try {
                   await handler();
                 } catch (error) {
-                  // Assert
-                  expect(error.isProjectError).toBeTrue();
-                  expect(error.status).toBe(HTTP.CODE.UNAVAILABLE);
+                  if (isJaypieError(error)) {
+                    expect(error.isProjectError).toBeTrue();
+                    expect(error.status).toBe(HTTP.CODE.UNAVAILABLE);
+                  }
                 }
                 expect.assertions(2);
               });
@@ -244,9 +250,10 @@ describe("Jaypie Mock", () => {
                 try {
                   await handler();
                 } catch (error) {
-                  // Assert
-                  expect(error.isProjectError).toBeUndefined();
-                  expect(error.status).toBeUndefined();
+                  if (isJaypieError(error)) {
+                    expect(error.isProjectError).toBeUndefined();
+                    expect(error.status).toBeUndefined();
+                  }
                 }
                 expect.assertions(2);
               });
@@ -263,9 +270,10 @@ describe("Jaypie Mock", () => {
                 try {
                   await handler();
                 } catch (error) {
-                  // Assert
-                  expect(error.isProjectError).toBeTrue();
-                  expect(error.status).toBe(HTTP.CODE.BAD_REQUEST);
+                  if (isJaypieError(error)) {
+                    expect(error.isProjectError).toBeTrue();
+                    expect(error.status).toBe(HTTP.CODE.BAD_REQUEST);
+                  }
                 }
                 expect.assertions(2);
               });
@@ -306,10 +314,11 @@ describe("Jaypie Mock", () => {
                 try {
                   await handler();
                 } catch (error) {
-                  // Assert
-                  expect(error.isProjectError).toBeUndefined();
-                  expect(error.status).toBeUndefined();
-                  expect(error.message).toBe("Sorpresa!");
+                  if (isJaypieError(error)) {
+                    expect(error.isProjectError).toBeUndefined();
+                    expect(error.status).toBeUndefined();
+                    expect(error.message).toBe("Sorpresa!");
+                  }
                 }
                 expect.assertions(3);
               });
@@ -459,8 +468,9 @@ describe("Jaypie Mock", () => {
             try {
               await handler();
             } catch (error) {
-              // Assert
-              expect(error.isProjectError).toBeUndefined();
+              if (isJaypieError(error)) {
+                expect(error.isProjectError).toBeUndefined();
+              }
             }
             expect.assertions(1);
           });
@@ -485,20 +495,24 @@ describe("Jaypie Mock", () => {
         try {
           throw new ConfigurationError("Sorpresa!");
         } catch (error) {
-          expect(error.isProjectError).toBeTrue();
-          expect(error.status).toBeNumber();
-          expect(error.message).toBeString();
-          expect(error.detail).toBeString();
-          expect(error.detail).toBe("Sorpresa!");
+          if (isJaypieError(error)) {
+            expect(error.isProjectError).toBeTrue();
+            expect(error.status).toBeNumber();
+            expect(error.message).toBeString();
+            expect(error.detail).toBeString();
+            expect(error.detail).toBe("Sorpresa!");
+          }
         }
         try {
           throw ConfigurationError("Sorpresa!");
         } catch (error) {
-          expect(error.isProjectError).toBeTrue();
-          expect(error.status).toBeNumber();
-          expect(error.message).toBeString();
-          expect(error.detail).toBeString();
-          expect(error.detail).toBe("Sorpresa!");
+          if (isJaypieError(error)) {
+            expect(error.isProjectError).toBeTrue();
+            expect(error.status).toBeNumber();
+            expect(error.message).toBeString();
+            expect(error.detail).toBeString();
+            expect(error.detail).toBe("Sorpresa!");
+          }
         }
         expect.assertions(13);
       });
@@ -587,7 +601,9 @@ describe("Jaypie Mock", () => {
             try {
               await handler(req);
             } catch (error) {
-              expect(error.isProjectError).not.toBeTrue();
+              if (isJaypieError(error)) {
+                expect(error.isProjectError).not.toBeTrue();
+              }
             }
             expect.assertions(1);
           });
@@ -600,7 +616,9 @@ describe("Jaypie Mock", () => {
             try {
               await handler(req);
             } catch (error) {
-              expect(error.isProjectError).not.toBeTrue();
+              if (isJaypieError(error)) {
+                expect(error.isProjectError).not.toBeTrue();
+              }
             }
             expect.assertions(1);
           });
@@ -616,8 +634,10 @@ describe("Jaypie Mock", () => {
             try {
               await handler(req, res);
             } catch (error) {
-              expect(error.message).toBe("Sorpresa!");
-              expect(error.isProjectError).not.toBeTrue();
+              if (isJaypieError(error)) {
+                expect(error.message).toBe("Sorpresa!");
+                expect(error.isProjectError).not.toBeTrue();
+              }
             }
             expect.assertions(2);
           });
@@ -644,8 +664,9 @@ describe("Jaypie Mock", () => {
             try {
               await handler();
             } catch (error) {
-              // Assert
-              expect(error.message).toBe("Sorpresa!");
+              if (isJaypieError(error)) {
+                expect(error.message).toBe("Sorpresa!");
+              }
             }
             expect.assertions(1);
           });
@@ -754,9 +775,10 @@ describe("Jaypie Mock", () => {
               try {
                 await handler(req, res, next);
               } catch (error) {
-                // Assert
-                expect(error.isProjectError).toBeTrue();
-                expect(error.status).toBe(HTTP.CODE.UNAVAILABLE);
+                if (isJaypieError(error)) {
+                  expect(error.isProjectError).toBeTrue();
+                  expect(error.status).toBe(HTTP.CODE.UNAVAILABLE);
+                }
               }
               expect.assertions(2);
             });
@@ -785,9 +807,10 @@ describe("Jaypie Mock", () => {
               try {
                 await handler();
               } catch (error) {
-                // Assert
-                expect(error.isProjectError).toBeTrue();
-                expect(error.status).toBe(HTTP.CODE.UNAVAILABLE);
+                if (isJaypieError(error)) {
+                  expect(error.isProjectError).toBeTrue();
+                  expect(error.status).toBe(HTTP.CODE.UNAVAILABLE);
+                }
               }
               expect.assertions(2);
               delete process.env.PROJECT_UNAVAILABLE;
@@ -799,9 +822,10 @@ describe("Jaypie Mock", () => {
               try {
                 await handler();
               } catch (error) {
-                // Assert
-                expect(error.isProjectError).toBeTrue();
-                expect(error.status).toBe(HTTP.CODE.UNAVAILABLE);
+                if (isJaypieError(error)) {
+                  expect(error.isProjectError).toBeTrue();
+                  expect(error.status).toBe(HTTP.CODE.UNAVAILABLE);
+                }
               }
               expect.assertions(2);
             });
@@ -871,7 +895,9 @@ describe("Jaypie Mock", () => {
             try {
               await handler(event, context);
             } catch (error) {
-              expect(error.isProjectError).not.toBeTrue();
+              if (isJaypieError(error)) {
+                expect(error.isProjectError).not.toBeTrue();
+              }
             }
             expect.assertions(1);
           });
@@ -885,7 +911,9 @@ describe("Jaypie Mock", () => {
             try {
               await handler(event, context);
             } catch (error) {
-              expect(error.isProjectError).not.toBeTrue();
+              if (isJaypieError(error)) {
+                expect(error.isProjectError).not.toBeTrue();
+              }
             }
             expect.assertions(1);
           });
@@ -905,9 +933,10 @@ describe("Jaypie Mock", () => {
               try {
                 await handler(event, context);
               } catch (error) {
-                // Assert
-                expect(error.isProjectError).toBeTrue();
-                expect(error.status).toBe(HTTP.CODE.UNAVAILABLE);
+                if (isJaypieError(error)) {
+                  expect(error.isProjectError).toBeTrue();
+                  expect(error.status).toBe(HTTP.CODE.UNAVAILABLE);
+                }
               }
               expect.assertions(2);
             });
