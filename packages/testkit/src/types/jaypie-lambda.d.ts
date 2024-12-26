@@ -29,7 +29,7 @@ declare module "@jaypie/lambda" {
 
   // Main Function
   export function lambdaHandler<TEvent = unknown, TResult = unknown>(
-    handler: LambdaHandler<TEvent, TResult>,
-    options?: LambdaHandlerOptions
+    handlerOrOptions: LambdaHandler<TEvent, TResult> | LambdaHandlerOptions,
+    optionsOrHandler?: LambdaHandlerOptions | LambdaHandler<TEvent, TResult>
   ): LambdaHandler<TEvent, TResult>;
 } 

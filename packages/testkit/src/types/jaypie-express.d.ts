@@ -17,13 +17,13 @@ declare module "@jaypie/express" {
   }
 
   // Handler Types
-  export type ExpressHandler = (
+  export type ExpressHandler<TLocals = unknown> = (
     req: Request,
     res: Response,
     ...args: unknown[]
   ) => Promise<unknown>;
 
-  export interface ExpressHandlerOptions {
+  export interface ExpressHandlerOptions<TLocals = unknown> {
     locals?: {
       [key: string]: unknown | ((req: Request, res: Response) => Promise<unknown>);
     };
@@ -33,11 +33,11 @@ declare module "@jaypie/express" {
     validate?: Array<(req: Request, res: Response, ...args: unknown[]) => Promise<boolean>>;
   }
 
-  export type ExpressHandlerProps = ExpressHandlerOptions;
+  export type ExpressHandlerProps<TLocals = unknown> = ExpressHandlerOptions<TLocals>;
 
   // Main Function
-  export function expressHandler(
-    handlerOrProps: ExpressHandler | ExpressHandlerOptions,
-    propsOrHandler?: ExpressHandlerProps | ExpressHandler
-  ): ExpressHandler;
+  export function expressHandler<TLocals = unknown>(
+    handlerOrOptions: ExpressHandler<TLocals> | ExpressHandlerOptions<TLocals>,
+    optionsOrHandler?: ExpressHandlerOptions<TLocals> | ExpressHandler<TLocals>
+  ): ExpressHandler<TLocals>;
 } 

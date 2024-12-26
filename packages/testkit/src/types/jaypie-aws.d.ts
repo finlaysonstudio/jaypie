@@ -17,14 +17,9 @@ declare module "@jaypie/aws" {
   }
 
   // Function Types
-  export function getMessages(
-    queueUrl: string,
-    options?: {
-      maxNumberOfMessages?: number;
-      visibilityTimeout?: number;
-      waitTimeSeconds?: number;
-    }
-  ): Promise<SQSMessage[]>;
+  export function getMessages(event?: {
+    Records?: Array<{ body: string }>;
+  } | Array<{ body: string }> | Record<string, unknown>): Array<SQSMessage | string | Record<string, unknown>>;
 
   export function getSecret(
     secretId: string,

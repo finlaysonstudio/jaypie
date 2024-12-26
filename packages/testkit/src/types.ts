@@ -63,7 +63,7 @@ export interface JaypieHandlerOptions {
   setup?: Array<(...args: any[]) => Promise<void> | void>;
   teardown?: Array<(...args: any[]) => Promise<void> | void>;
   unavailable?: boolean;
-  validate?: Array<(...args: any[]) => Promise<boolean> | boolean>;
+  validate?: Array<(...args: any[]) => Promise<boolean | void> | boolean>;
 }
 
 export interface ExpressHandlerOptions extends JaypieHandlerOptions {
