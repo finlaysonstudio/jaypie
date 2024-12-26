@@ -17,12 +17,27 @@ declare module "@jaypie/core" {
     };
   };
 
-  export const log: {
-    debug: (...args: any[]) => void;
-    error: (...args: any[]) => void;
-    info: (...args: any[]) => void;
-    warn: (...args: any[]) => void;
-  };
+  export interface LogMethod {
+    (...args: any[]): void;
+    var: (...args: any[]) => void;
+  }
+
+  export interface Log {
+    debug: LogMethod;
+    error: LogMethod;
+    fatal: LogMethod;
+    info: LogMethod;
+    init: (...args: any[]) => void;
+    lib: (name: string) => Log;
+    tag: (key: string | string[] | Record<string, string> | null, value?: string) => void;
+    trace: LogMethod;
+    untag: (key: string | string[] | Record<string, string> | null) => void;
+    var: (...args: any[]) => void;
+    warn: LogMethod;
+    with: (key: string | Record<string, string>, value?: string) => Log;
+  }
+
+  export const log: Log;
 
   export const force: {
     boolean: (value: unknown) => boolean;

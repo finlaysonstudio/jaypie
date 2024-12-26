@@ -1,3 +1,4 @@
+import { Log } from "@jaypie/core";
 import { Mock } from "vitest";
 
 export interface JsonApiError {
@@ -25,18 +26,36 @@ export interface MatcherResult {
   pass: boolean;
 }
 
-export interface LogMock {
-  debug: Mock;
-  error: Mock;
-  fatal: Mock;
-  info: Mock;
+export interface MockLogMethod extends Mock {
+  var: Mock;
+}
+
+export interface LogMock extends Log {
+  debug: MockLogMethod;
+  error: MockLogMethod;
+  fatal: MockLogMethod;
+  info: MockLogMethod;
   init: Mock;
   lib: Mock;
+  mock: {
+    debug: MockLogMethod;
+    error: MockLogMethod;
+    fatal: MockLogMethod;
+    info: MockLogMethod;
+    init: Mock;
+    lib: Mock;
+    tag: Mock;
+    trace: MockLogMethod;
+    untag: Mock;
+    var: Mock;
+    warn: MockLogMethod;
+    with: Mock;
+  };
   tag: Mock;
-  trace: Mock;
+  trace: MockLogMethod;
   untag: Mock;
   var: Mock;
-  warn: Mock;
+  warn: MockLogMethod;
   with: Mock;
 }
 
