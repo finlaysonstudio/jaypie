@@ -10,7 +10,7 @@
       "import": "./dist/index.js"
     },
     "./mock": {
-      "types": "./dist/jaypie.mock.d.ts", 
+      "types": "./dist/jaypie.mock.d.ts",
       "import": "./dist/jaypie.mock.js"
     }
   },
@@ -46,8 +46,10 @@
     "uuid": "^9.0.1"
   },
   "devDependencies": {
+    "@types/express": "^5.0.0",
     "@types/lodash.isequal": "^4.5.8",
     "@types/node": "^20.0.0",
+    "@types/supertest": "^6.0.2",
     "express": "^4.21.1",
     "typescript": "^5.0.0"
   },
