@@ -1,9 +1,3 @@
-interface SQSRecord {
-  body: string;
-  messageId?: string | number;
-  [key: string]: unknown;
-}
-
 interface SQSEvent {
   Records: Array<{
     body: string;
@@ -17,7 +11,7 @@ interface SQSEvent {
  * @param records - Array of records or individual records to include in the event
  * @returns SQS event object with Records array
  */
-const sqsTestRecords = (...records: Array<SQSRecord | string | number | boolean | null | undefined>): SQSEvent => {
+const sqsTestRecords = (...records: Array<unknown>): SQSEvent => {
   // If first argument is an array, use that as records
   const recordsArray = Array.isArray(records[0]) ? records[0] : records;
 
@@ -26,9 +20,9 @@ const sqsTestRecords = (...records: Array<SQSRecord | string | number | boolean 
     if (typeof record === "object" && record !== null) {
       return {
         ...record,
-        body: typeof record.body === "string" 
-          ? record.body 
-          : JSON.stringify(record.body ?? record),
+        body: typeof (record as { body?: unknown }).body === "string" 
+          ? (record as { body: string }).body 
+          : JSON.stringify((record as { body?: unknown }).body ?? record),
       };
     }
     return {

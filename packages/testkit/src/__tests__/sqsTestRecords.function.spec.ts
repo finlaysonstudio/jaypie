@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 // Subject
-import sqsTestRecords from "../sqsTestRecords.function.js";
+import sqsTestRecords from "../sqsTestRecords.function";
 
 //
 //
