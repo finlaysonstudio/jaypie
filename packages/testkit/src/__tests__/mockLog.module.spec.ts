@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { log } from "@jaypie/core";
 
 // Subject
-import { mockLogFactory, restoreLog, spyLog } from "../mockLog.module.js";
+import { mockLogFactory, restoreLog, spyLog } from "../mockLog.module";
 
 //
 //
