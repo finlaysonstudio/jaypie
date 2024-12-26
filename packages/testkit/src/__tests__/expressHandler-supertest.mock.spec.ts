@@ -1,24 +1,15 @@
 import express from "express";
-import { HTTP, NotFoundError } from "jaypie";
+import { HTTP, NotFoundError } from "@jaypie/core";
 import request from "supertest";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
-import matchers from "../matchers.module.js";
+import matchers from "../matchers.module";
 
 // Subject
-import { expressHandler } from "../jaypie.mock.js";
+import { expressHandler } from "../jaypie.mock";
 
 // Add custom matchers
 expect.extend(matchers);
-
-//
-//
-// Mock modules
-//
-
-afterEach(() => {
-  vi.clearAllMocks();
-});
 
 //
 //
