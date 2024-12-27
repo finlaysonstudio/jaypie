@@ -29,7 +29,8 @@ import {
 } from "@jaypie/core";
 import { beforeAll, vi } from "vitest";
 
-import { ExpressHandlerOptions, ExpressHandlerProps, JaypieHandlerOptions, SQSMessageResponse } from "./types/jaypie-testkit";
+import { ExpressHandlerOptions, ExpressHandlerProps, JaypieHandlerOptions, JaypieHandlerProps } from "./types/jaypie-testkit";
+import type { SQSMessageResponse } from "@jaypie/aws";
 import { spyLog } from "./mockLog.module.js";
 
 //
@@ -398,7 +399,7 @@ export const UnreachableCodeError = vi.fn(
 );
 
 // @jaypie/lambda
-export const lambdaHandler = vi.fn((handler: (...args: any[]) => any, props: JaypieHandlerOptions = {}) => {
+export const lambdaHandler = vi.fn((handler: JaypieHandlerProps, props: JaypieHandlerProps = {}) => {
   // If handler is an object and options is a function, swap them
   if (typeof handler === "object" && typeof props === "function") {
     const temp = handler;

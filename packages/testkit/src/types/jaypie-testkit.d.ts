@@ -1,5 +1,6 @@
 import { Log } from "@jaypie/core";
 import { Mock } from "vitest";
+import { SQSMessageResponse } from "@jaypie/aws";
 
 export interface JsonApiError {
   errors: Array<{
@@ -59,19 +60,20 @@ export interface LogMock extends Log {
   with: Mock;
 }
 
+export type AnyFunction = (...args: any[]) => Promise<any> | any;
+export type JaypieLifecycleFunction = Array<AnyFunction> | AnyFunction;
+
 export interface JaypieHandlerOptions {
-  setup?: Array<(...args: any[]) => Promise<void> | void>;
-  teardown?: Array<(...args: any[]) => Promise<void> | void>;
+  setup?: JaypieLifecycleFunction;
+  teardown?: JaypieLifecycleFunction;
   unavailable?: boolean;
-  validate?: Array<(...args: any[]) => Promise<boolean | void> | boolean>;
+  validate?: JaypieLifecycleFunction;
 }
 
+export type JaypieHandlerProps = JaypieHandlerOptions | ((...args: any[]) => any) | undefined;
+
 export interface ExpressHandlerOptions extends JaypieHandlerOptions {
-  locals?: Record<string, unknown | ((...args: any[]) => any)>;
+  locals?: Record<string, AnyFunction | unknown>;
 }
 
 export type ExpressHandlerProps = ExpressHandlerOptions | ((...args: any[]) => any) | undefined;
-
-export interface SQSMessageResponse {
-  value: string;
-} 
