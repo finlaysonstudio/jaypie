@@ -700,7 +700,7 @@ describe("Jaypie Mock", () => {
         });
         describe("Features", () => {
           describe("Locals", () => {
-            it("Sets values in res.locals by running functions during setup", async () => {
+            it("Sets values in req.locals by running functions during setup", async () => {
               // Arrange
               const mockFunction = vi.fn();
               const mockLocalFunction = vi.fn();
@@ -714,7 +714,7 @@ describe("Jaypie Mock", () => {
                   asyncFn: mockLocalAsyncFunction,
                 },
               });
-              const req = {};
+              const req = {} as { locals: { key: string, fn: Function, asyncFn: Function } };
               const res = {
                 on: vi.fn(),
               };
