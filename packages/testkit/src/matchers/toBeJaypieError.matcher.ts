@@ -1,6 +1,6 @@
 import { matchers as jsonSchemaMatchers } from "jest-json-schema";
 import { jsonApiErrorSchema } from "../jsonApiSchema.module";
-import { MatcherResult } from "../types.js";
+import { MatcherResult } from "../types/jaypie-testkit";
 
 //
 //

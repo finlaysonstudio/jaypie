@@ -7,7 +7,7 @@ import {
   RE_UUID_5_PATTERN,
   RE_UUID_PATTERN,
 } from "../constants.js";
-import { MatcherResult } from "../types.js";
+import { MatcherResult } from "../types/jaypie-testkit";
 
 //
 //

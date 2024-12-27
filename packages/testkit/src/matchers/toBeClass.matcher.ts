@@ -1,4 +1,4 @@
-import { MatcherResult } from "../types.js";
+import { MatcherResult } from "../types/jaypie-testkit";
 
 //
 //

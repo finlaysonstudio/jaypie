@@ -1,6 +1,6 @@
 import isEqual from "lodash.isequal";
 import { Mock } from "vitest";
-import { MatcherResult } from "../types.js";
+import { MatcherResult } from "../types/jaypie-testkit";
 
 //
 //

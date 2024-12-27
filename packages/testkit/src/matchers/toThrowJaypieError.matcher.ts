@@ -11,7 +11,7 @@ import {
   UnauthorizedError,
   UnavailableError,
 } from "@jaypie/core";
-import type { MatcherResult } from "../types.js";
+import { MatcherResult } from "../types/jaypie-testkit";
 
 //
 //

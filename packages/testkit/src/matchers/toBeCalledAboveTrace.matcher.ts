@@ -1,4 +1,4 @@
-import { LogMock, MatcherResult } from "../types.js";
+import { LogMock, MatcherResult } from "../types/jaypie-testkit";
 
 //
 //
