@@ -1,6 +1,6 @@
 import { Log } from "@jaypie/core";
 import { vi } from "vitest";
-import { LogMock } from "./types.js";
+import { LogMock } from "./types/jaypie-testkit";
 
 export function mockLogFactory(): LogMock {
   // Create skeleton of mock objects

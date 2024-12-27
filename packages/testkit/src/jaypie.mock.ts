@@ -29,7 +29,7 @@ import {
 } from "@jaypie/core";
 import { beforeAll, vi } from "vitest";
 
-import { ExpressHandlerOptions, ExpressHandlerProps, JaypieHandlerOptions, SQSMessageResponse } from "./types.js";
+import { ExpressHandlerOptions, ExpressHandlerProps, JaypieHandlerOptions, SQSMessageResponse } from "./types/jaypie-testkit";
 import { spyLog } from "./mockLog.module.js";
 
 //
