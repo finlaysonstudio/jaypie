@@ -280,6 +280,7 @@ describe("Jaypie Mock", () => {
               it("Will skip any validate functions that are not functions", async () => {
                 // Arrange
                 const handler = jaypieHandler(() => {}, {
+                  // @ts-expect-error
                   validate: [null, undefined, 42, "string", {}, []],
                 });
                 // Act
@@ -324,7 +325,8 @@ describe("Jaypie Mock", () => {
               });
               it("Will skip any setup functions that are not functions", async () => {
                 // Arrange
-                const handler = jaypieHandler(() => {}, {
+                const handler = jaypieHandler(() => { }, {
+                // @ts-expect-error
                   setup: [null, undefined, 42, "string", {}, []],
                 });
                 // Act
@@ -434,7 +436,8 @@ describe("Jaypie Mock", () => {
               });
               it("Will skip any teardown functions that are not functions", async () => {
                 // Arrange
-                const handler = jaypieHandler(() => {}, {
+                const handler = jaypieHandler(() => { }, {
+                // @ts-expect-error
                   teardown: [null, undefined, 42, "string", {}, []],
                 });
                 // Act
@@ -564,12 +567,18 @@ describe("Jaypie Mock", () => {
             // Arrange
             // Act
             // Assert
-            expect(() => expressHandler()).toThrow();
-            expect(() => expressHandler(42)).toThrow();
-            expect(() => expressHandler("string")).toThrow();
             expect(() => expressHandler({})).toThrow();
+            // @ts-expect-error
+            expect(() => expressHandler()).toThrow();
+            // @ts-expect-error
+            expect(() => expressHandler(42)).toThrow();
+            // @ts-expect-error
+            expect(() => expressHandler("string")).toThrow();
+            // @ts-expect-error
             expect(() => expressHandler([])).toThrow();
+            // @ts-expect-error
             expect(() => expressHandler(null)).toThrow();
+            // @ts-expect-error
             expect(() => expressHandler(undefined)).toThrow();
           });
           it("Throws if passed an invalid locals object", async () => {
@@ -577,18 +586,23 @@ describe("Jaypie Mock", () => {
             const mockFunction = vi.fn();
             // Act
             expect(async () => {
+            // @ts-expect-error
               expressHandler(mockFunction, { locals: true });
             }).toThrowJaypieError();
             expect(async () => {
+            // @ts-expect-error
               expressHandler(mockFunction, { locals: 42 });
             }).toThrowJaypieError();
             expect(async () => {
+            // @ts-expect-error
               expressHandler(mockFunction, { locals: "string" });
             }).toThrowJaypieError();
             expect(async () => {
+            // @ts-expect-error
               expressHandler(mockFunction, { locals: [] });
             }).toThrowJaypieError();
             expect(async () => {
+            // @ts-expect-error
               expressHandler(mockFunction, { locals: null });
             }).toThrowJaypieError();
           });
@@ -740,6 +754,7 @@ describe("Jaypie Mock", () => {
                   key: "value",
                   fn: mockLocalFunction,
                 },
+                // TODO: Fix this
                 setup: mockSetupFunction,
               });
               const req = {};
@@ -924,6 +939,7 @@ describe("Jaypie Mock", () => {
               // Arrange
               const mockFunction = vi.fn();
               const handler = lambdaHandler(
+                // TODO: Fix this
                 { unavailable: true },
                 mockFunction,
               );
