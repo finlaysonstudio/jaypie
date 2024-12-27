@@ -61,19 +61,39 @@ export interface LogMock extends Log {
 }
 
 export type AnyFunction = (...args: any[]) => Promise<any> | any;
-export type JaypieLifecycleFunction = Array<AnyFunction> | AnyFunction;
+export type JaypieHandlerFunction = (...args: any[]) => Promise<any> | any;
+export type JaypieLifecycleOption = Array<AnyFunction> | AnyFunction;
 
 export interface JaypieHandlerOptions {
-  setup?: JaypieLifecycleFunction;
-  teardown?: JaypieLifecycleFunction;
+  setup?: JaypieLifecycleOption;
+  teardown?: JaypieLifecycleOption;
   unavailable?: boolean;
-  validate?: JaypieLifecycleFunction;
+  validate?: JaypieLifecycleOption;
 }
+export type JaypieHandlerParameter = JaypieHandlerOptions | JaypieHandlerFunction;
 
-export type JaypieHandlerProps = JaypieHandlerOptions | ((...args: any[]) => any) | undefined;
+export type JsonValue = 
+  | { [key: string]: JsonValue }
+  | boolean 
+  | JsonValue[] 
+  | null 
+  | number 
+  | string;
+export type JsonObject = { [key: string]: JsonValue } | Array<JsonObject>;
 
+export type ExpressResponsePartial = { 
+  status: (code: number) => any 
+};
+export type ExpressHandlerReturn = 
+  | { json(): JsonObject }
+  | boolean 
+  | JsonObject
+  | null 
+  | number 
+  | string
+  | undefined;
+export type ExpressHandlerFunction = (req: Request, res: ExpressResponsePartial) => Promise<ExpressHandlerReturn | void> | ExpressHandlerReturn | void;
 export interface ExpressHandlerOptions extends JaypieHandlerOptions {
   locals?: Record<string, AnyFunction | unknown>;
 }
-
-export type ExpressHandlerProps = ExpressHandlerOptions | ((...args: any[]) => any) | undefined;
+export type ExpressHandlerParameter = ExpressHandlerOptions | ExpressHandlerFunction;

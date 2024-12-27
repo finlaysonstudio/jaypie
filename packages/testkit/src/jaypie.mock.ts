@@ -29,7 +29,7 @@ import {
 } from "@jaypie/core";
 import { beforeAll, vi } from "vitest";
 
-import { ExpressHandlerOptions, ExpressHandlerProps, JaypieHandlerOptions, JaypieHandlerProps } from "./types/jaypie-testkit";
+import { ExpressHandlerOptions, ExpressHandlerParameter, JaypieHandlerFunction, JaypieHandlerOptions, JaypieHandlerParameter, JaypieLifecycleOption } from "./types/jaypie-testkit";
 import type { SQSMessageResponse } from "@jaypie/aws";
 import { spyLog } from "./mockLog.module.js";
 
@@ -101,18 +101,19 @@ export const envBoolean = vi.fn((): boolean => {
 
 export const jaypieHandler = vi.fn(
   (
-    handler: (...args: any[]) => any,
+    handler: JaypieHandlerFunction,
     {
-      setup = [] as Array<(...args: any[]) => Promise<void> | void>,
-      teardown = [] as Array<(...args: any[]) => Promise<void> | void>,
+      setup = [] as JaypieLifecycleOption,
+      teardown = [] as JaypieLifecycleOption,
       unavailable = force.boolean(process.env.PROJECT_UNAVAILABLE),
-      validate = [] as Array<(...args: any[]) => Promise<boolean> | boolean>,
+      validate = [] as JaypieLifecycleOption,
     }: JaypieHandlerOptions = {},
   ) => {
     return async (...args: any[]) => {
       let result;
       let thrownError;
       if (unavailable) throw UnavailableError();
+      validate = force.array(validate);
       for (const validator of validate) {
         if (typeof validator === "function") {
           const valid = await validator(...args);
@@ -122,6 +123,7 @@ export const jaypieHandler = vi.fn(
         }
       }
       try {
+        setup = force.array(setup);
         for (const setupFunction of setup) {
           if (typeof setupFunction === "function") {
             await setupFunction(...args);
@@ -131,6 +133,7 @@ export const jaypieHandler = vi.fn(
       } catch (error) {
         thrownError = error;
       }
+      teardown = force.array(teardown);
       for (const teardownFunction of teardown) {
         if (typeof teardownFunction === "function") {
           try {
@@ -166,8 +169,8 @@ export const submitMetricSet = vi.fn((): boolean => {
 
 // @jaypie/express
 export const expressHandler = vi.fn((
-  handlerOrProps: ((...args: any[]) => any) | ExpressHandlerOptions,
-  propsOrHandler?: ExpressHandlerProps,
+  handlerOrProps: ExpressHandlerParameter,
+  propsOrHandler?: ExpressHandlerParameter,
 ) => {
   let handler: (...args: any[]) => any;
   let props: ExpressHandlerOptions;
@@ -186,6 +189,7 @@ export const expressHandler = vi.fn((
   if (props.locals && typeof props.locals === "object") {
     const keys = Object.keys(props.locals);
     if (!props.setup) props.setup = [];
+    props.setup = force.array(props.setup);
     props.setup.unshift((req: { locals?: Record<string, unknown> }) => {
       if (!req || typeof req !== "object") {
         throw new BadRequestError("req must be an object");
@@ -399,7 +403,7 @@ export const UnreachableCodeError = vi.fn(
 );
 
 // @jaypie/lambda
-export const lambdaHandler = vi.fn((handler: JaypieHandlerProps, props: JaypieHandlerProps = {}) => {
+export const lambdaHandler = vi.fn((handler: JaypieHandlerParameter, props: JaypieHandlerParameter = {}) => {
   // If handler is an object and options is a function, swap them
   if (typeof handler === "object" && typeof props === "function") {
     const temp = handler;
@@ -407,7 +411,7 @@ export const lambdaHandler = vi.fn((handler: JaypieHandlerProps, props: JaypieHa
     props = temp;
   }
   return async (event: unknown, context: unknown, ...extra: unknown[]) => {
-    return jaypieHandler(handler, props)(event, context, ...extra);
+    return jaypieHandler(handler as JaypieHandlerFunction, props as JaypieHandlerOptions)(event, context, ...extra);
   };
 });
 

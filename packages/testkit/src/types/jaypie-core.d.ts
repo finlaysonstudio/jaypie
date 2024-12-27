@@ -40,6 +40,7 @@ declare module "@jaypie/core" {
   export const log: Log;
 
   export const force: {
+    array: (value: unknown) => Array<any>;
     boolean: (value: unknown) => boolean;
   };
 
