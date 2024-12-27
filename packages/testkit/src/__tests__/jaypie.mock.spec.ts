@@ -754,7 +754,6 @@ describe("Jaypie Mock", () => {
                   key: "value",
                   fn: mockLocalFunction,
                 },
-                // TODO: Fix this
                 setup: mockSetupFunction,
               });
               const req = {};
@@ -939,7 +938,6 @@ describe("Jaypie Mock", () => {
               // Arrange
               const mockFunction = vi.fn();
               const handler = lambdaHandler(
-                // TODO: Fix this
                 { unavailable: true },
                 mockFunction,
               );
