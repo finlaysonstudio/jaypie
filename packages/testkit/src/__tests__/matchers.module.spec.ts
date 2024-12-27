@@ -12,20 +12,30 @@ describe("Matchers Module", () => {
   it("Is an object", () => {
     expect(matchers).toBeObject();
   });
-  it("Contains matchers we expect", () => {
+  
+  it("Contains all expected matchers", () => {
     expect(matchers).toContainKeys([
+      "toBeCalledAboveTrace",
       "toBeCalledWithInitialParams",
       "toBeClass",
       "toBeJaypieError",
-      "toBeValidSchema",
-      "toMatchSchema",
+      "toMatchBase64",
+      "toMatchJwt",
+      "toMatchMongoId",
+      "toMatchSignedCookie",
+      "toMatchUuid",
+      "toMatchUuid4",
+      "toMatchUuid5",
+      "toThrowBadGatewayError",
       "toThrowBadRequestError",
       "toThrowConfigurationError",
       "toThrowForbiddenError",
+      "toThrowGatewayTimeoutError",
       "toThrowInternalError",
       "toThrowJaypieError",
       "toThrowNotFoundError",
       "toThrowUnauthorizedError",
+      "toThrowUnavailableError"
     ]);
   });
 });
