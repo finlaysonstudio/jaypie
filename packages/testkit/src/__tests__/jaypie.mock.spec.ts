@@ -576,7 +576,7 @@ describe("Jaypie Mock", () => {
             // @ts-expect-error
             expect(() => expressHandler(undefined)).toThrow();
           });
-          it.skip("Throws if passed an invalid locals object", async () => {
+          it("Throws if passed an invalid locals object", async () => {
             // Arrange
             const mockFunction = vi.fn();
             // Act

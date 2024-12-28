@@ -186,7 +186,7 @@ export const expressHandler = vi.fn((
   }
 
   // Add locals setup if needed
-  if (props.locals && typeof props.locals === "object") {
+  if (props.locals && typeof props.locals === "object" && !Array.isArray(props.locals)) {
     const keys = Object.keys(props.locals);
     if (!props.setup) props.setup = [];
     props.setup = force.array(props.setup);
@@ -218,6 +218,15 @@ export const expressHandler = vi.fn((
       }
     };
     props.setup.push(localsSetup);
+  }
+  if (props.locals && typeof props.locals !== "object") {
+    throw new BadRequestError("props.locals must be an object");
+  }
+  if (props.locals && Array.isArray(props.locals)) {
+    throw new BadRequestError("props.locals must be an object");
+  }
+  if (props.locals === null) {
+    throw new BadRequestError("props.locals must be an object");
   }
 
   const jaypieFunction = jaypieHandler(handler, props);

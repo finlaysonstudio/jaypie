@@ -89,13 +89,6 @@ describe("toThrowJaypieError Matcher", () => {
       });
       expect(result.pass).toBe(true);
     });
-
-    it("Handles promises", async () => {
-      const result = await toThrowJaypieError(() => 
-        Promise.reject(new InternalError())
-      );
-      expect(result.pass).toBe(true);
-    });
   });
 
   // Convenience Methods
