@@ -147,6 +147,7 @@ export const jaypieHandler = vi.fn(
             await setupFunction(...args);
           }
         }
+        // @ts-expect-error TODO: cannot resolve; fix when JaypieHandler moves to TypeScript
         result = handler(...args);
       } catch (error) {
         thrownError = error;
@@ -215,6 +216,7 @@ export const expressHandler = vi.fn(
       const keys = Object.keys(props.locals);
       if (!props.setup) props.setup = [];
       props.setup = force.array(props.setup);
+      // @ts-expect-error TODO: cannot resolve; fix when JaypieHandler moves to TypeScript
       props.setup.unshift((req: { locals?: Record<string, unknown> }) => {
         if (!req || typeof req !== "object") {
           throw new BadRequestError("req must be an object");
@@ -242,6 +244,7 @@ export const expressHandler = vi.fn(
           }
         }
       };
+      // @ts-expect-error TODO: cannot resolve; fix when JaypieHandler moves to TypeScript
       props.setup.push(localsSetup);
     }
     if (props.locals && typeof props.locals !== "object") {
