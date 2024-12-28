@@ -1,27 +1,44 @@
-import globals from "globals";
-import pluginJs from "@eslint/js";
-import tsEslint from "typescript-eslint";
-import stylistic from "@stylistic/eslint-plugin";
-import prettier from "eslint-config-prettier";
-import pluginPrettier from "eslint-plugin-prettier";
+import vitest from "eslint-plugin-vitest";
+import tsPlugin from "@typescript-eslint/eslint-plugin";
+import tsParser from "@typescript-eslint/parser";
+import prettierPlugin from "eslint-plugin-prettier";
 
-/** @type {import('eslint').Linter.Config[]} */
 export default [
-  { files: ["**/*.{js,mjs,cjs,ts}"] },
-  { languageOptions: { globals: globals.browser } },
-  pluginJs.configs.recommended,
-  ...tsEslint.configs.recommended,
   {
+    ignores: ["dist/**"],
+    files: ["**/*.ts", "**/*.tsx"],
+    languageOptions: {
+      parser: tsParser,
+      parserOptions: {
+        project: "./tsconfig.json",
+      },
+    },
     plugins: {
-      "@stylistic": stylistic,
-      "prettier": pluginPrettier,
+      "@typescript-eslint": tsPlugin,
+      "prettier": prettierPlugin,
     },
     rules: {
-      // Keep only the rules that don't conflict with Prettier
-      "@stylistic/comma-dangle": ["error", "always-multiline"],
-      // Enable Prettier as an ESLint rule
-      "prettier/prettier": "error",
+      ...tsPlugin.configs.recommended.rules,
+      "prettier/prettier": "warn",
     },
   },
-  prettier, // This should be last to override other style rules
+  {
+    files: ["src/__tests__/**/*.spec.ts"],
+    languageOptions: {
+      globals: {
+        describe: true,
+        it: true,
+        expect: true,
+        beforeEach: true,
+        afterEach: true,
+        vi: true,
+      },
+    },
+    plugins: {
+      vitest,
+    },
+    rules: {
+      ...vitest.configs.recommended.rules,
+    },
+  },
 ];
