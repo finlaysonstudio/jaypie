@@ -1,4 +1,4 @@
-import { JsonApiData, JsonApiError } from "./types.js";
+import { JsonApiData, JsonApiError } from "./types/jaypie-testkit";
 
 export const jsonApiErrorSchema = {
   type: "object",
