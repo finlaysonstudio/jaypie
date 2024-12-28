@@ -21,17 +21,19 @@ describe("expressHandler", () => {
     expect(expressHandler).toBeFunction();
   });
   describe("supertest", () => {
-    it("Works when we have a simple json response handler (supertest return style)", () => {
+    it("Works when we have a simple json response handler (supertest return style)", async () => {
       const route = express();
       route.get(
         "/",
         expressHandler(() => ({ message: "Hello" })),
       );
-      return request(route)
+      const response = await request(route)
         .get("/")
         .expect("Content-Type", /json/)
         .expect(200)
         .expect({ message: "Hello" });
+      expect(response.statusCode).toEqual(HTTP.CODE.OK);
+      expect(response.body.message).toEqual("Hello");
     });
     it("Works when we have a simple json response handler (await response style)", async () => {
       const route = express();
