@@ -11,6 +11,7 @@ import {
   toMatchUuid4,
   toMatchUuid5,
 } from "./matchers/toMatch.matcher.js";
+import toThrowError from "./matchers/toThrowError.matcher.js";
 import toThrowJaypieError, {
   toThrowBadGatewayError,
   toThrowBadRequestError,
@@ -38,6 +39,7 @@ const matchers = {
   toThrowBadGatewayError,
   toThrowBadRequestError,
   toThrowConfigurationError,
+  toThrowError,
   toThrowForbiddenError,
   toThrowGatewayTimeoutError,
   toThrowInternalError,
