@@ -26,8 +26,9 @@ Never remove "// ~" comments, these are the user's current train of thought.
 ## Technology
 Monorepo with Lerna using `packages/*`.
 Most code in ES6 module format.
+Eslint 9 "flat config" with Prettier.
 Rollup for bundling.
-vitest for testing.
+Vitest for testing.
 
 ## Organization
 `packages/jaypie` is the main package, published to npm and imported by clients.
