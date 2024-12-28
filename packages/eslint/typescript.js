@@ -9,9 +9,6 @@ export default [
     files: ["**/*.ts", "**/*.tsx"],
     languageOptions: {
       parser: tsParser,
-      parserOptions: {
-        project: "./tsconfig.json",
-      },
     },
     plugins: {
       "@typescript-eslint": tsPlugin,
@@ -23,7 +20,7 @@ export default [
     },
   },
   {
-    files: ["src/__tests__/**/*.spec.ts"],
+    files: ["**/*.spec.ts", "**/*.test.ts"],
     languageOptions: {
       globals: {
         describe: true,

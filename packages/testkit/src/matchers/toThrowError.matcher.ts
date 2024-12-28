@@ -8,9 +8,9 @@ import { MatcherResult } from "../types/jaypie-testkit";
 type ReceivedFunction = () => unknown | Promise<unknown>;
 
 const toThrowError = async (
-  received: ReceivedFunction
+  received: ReceivedFunction,
 ): Promise<MatcherResult> => {
-  const isAsync = 
+  const isAsync =
     received.constructor.name === "AsyncFunction" ||
     received.constructor.name === "Promise";
 
@@ -23,12 +23,13 @@ const toThrowError = async (
 
     return {
       pass: false,
-      message: () => "Expected function to throw an error, but it did not throw.",
+      message: () =>
+        "Expected function to throw an error, but it did not throw.",
     };
   } catch (error) {
     return {
       pass: true,
-      message: () => 
+      message: () =>
         `Expected function not to throw an error, but it threw ${error}`,
     };
   }
@@ -39,4 +40,4 @@ const toThrowError = async (
 // Export
 //
 
-export default toThrowError; 
+export default toThrowError;

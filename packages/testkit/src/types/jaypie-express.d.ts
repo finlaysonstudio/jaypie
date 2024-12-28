@@ -17,27 +17,35 @@ declare module "@jaypie/express" {
   }
 
   // Handler Types
-  export type ExpressHandler<TLocals = unknown> = (
+  export type ExpressHandler = (
     req: Request,
     res: Response,
     ...args: unknown[]
   ) => Promise<unknown>;
 
-  export interface ExpressHandlerOptions<TLocals = unknown> {
+  export interface ExpressHandlerOptions {
     locals?: {
-      [key: string]: unknown | ((req: Request, res: Response) => Promise<unknown>);
+      [key: string]:
+        | unknown
+        | ((req: Request, res: Response) => Promise<unknown>);
     };
-    setup?: Array<(req: Request, res: Response, ...args: unknown[]) => Promise<void>>;
-    teardown?: Array<(req: Request, res: Response, ...args: unknown[]) => Promise<void>>;
+    setup?: Array<
+      (req: Request, res: Response, ...args: unknown[]) => Promise<void>
+    >;
+    teardown?: Array<
+      (req: Request, res: Response, ...args: unknown[]) => Promise<void>
+    >;
     unavailable?: boolean;
-    validate?: Array<(req: Request, res: Response, ...args: unknown[]) => Promise<boolean>>;
+    validate?: Array<
+      (req: Request, res: Response, ...args: unknown[]) => Promise<boolean>
+    >;
   }
 
-  export type ExpressHandlerProps<TLocals = unknown> = ExpressHandlerOptions<TLocals>;
+  export type ExpressHandlerProps = ExpressHandlerOptions;
 
   // Main Function
-  export function expressHandler<TLocals = unknown>(
-    handlerOrOptions: ExpressHandler<TLocals> | ExpressHandlerOptions<TLocals>,
-    optionsOrHandler?: ExpressHandlerOptions<TLocals> | ExpressHandler<TLocals>
-  ): ExpressHandler<TLocals>;
-} 
+  export function expressHandler(
+    handlerOrOptions: ExpressHandler | ExpressHandlerOptions,
+    optionsOrHandler?: ExpressHandlerOptions | ExpressHandler,
+  ): ExpressHandler;
+}

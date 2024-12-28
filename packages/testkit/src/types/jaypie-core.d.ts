@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 declare module "@jaypie/core" {
   // Core utilities
   export const HTTP: {
@@ -29,7 +30,10 @@ declare module "@jaypie/core" {
     info: LogMethod;
     init: (...args: any[]) => void;
     lib: (name: string) => Log;
-    tag: (key: string | string[] | Record<string, string> | null, value?: string) => void;
+    tag: (
+      key: string | string[] | Record<string, string> | null,
+      value?: string,
+    ) => void;
     trace: LogMethod;
     untag: (key: string | string[] | Record<string, string> | null) => void;
     var: (...args: any[]) => void;
@@ -138,4 +142,4 @@ declare module "@jaypie/core" {
     json(): object;
     [key: string]: unknown;
   };
-} 
+}

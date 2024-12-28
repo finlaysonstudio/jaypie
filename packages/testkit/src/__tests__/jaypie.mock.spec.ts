@@ -86,7 +86,6 @@ describe("Jaypie Mock", () => {
         expect(messages[0].Body).toBe("Hello, World!");
         expect(messages[1].MessageId).toBe(2);
       });
-      // it("Utility functions remain unaltered", () => {});
     });
     describe("Jaypie Core Utilities", () => {
       it("Mocks expected function", () => {
@@ -251,7 +250,9 @@ describe("Jaypie Mock", () => {
                 try {
                   await handler();
                 } catch (error) {
-                  expect((error as ProjectError).isProjectError).toBeUndefined();
+                  expect(
+                    (error as ProjectError).isProjectError,
+                  ).toBeUndefined();
                   expect((error as ProjectError).status).toBeUndefined();
                 }
                 expect.assertions(2);
@@ -279,7 +280,7 @@ describe("Jaypie Mock", () => {
               it("Will skip any validate functions that are not functions", async () => {
                 // Arrange
                 const handler = jaypieHandler(() => {}, {
-                  // @ts-expect-error
+                  // @ts-expect-error intentionally passing invalid inputs
                   validate: [null, undefined, 42, "string", {}, []],
                 });
                 // Act
@@ -314,7 +315,9 @@ describe("Jaypie Mock", () => {
                 try {
                   await handler();
                 } catch (error) {
-                  expect((error as ProjectError).isProjectError).toBeUndefined();
+                  expect(
+                    (error as ProjectError).isProjectError,
+                  ).toBeUndefined();
                   expect((error as ProjectError).status).toBeUndefined();
                   expect((error as ProjectError).message).toBe("Sorpresa!");
                 }
@@ -322,8 +325,8 @@ describe("Jaypie Mock", () => {
               });
               it("Will skip any setup functions that are not functions", async () => {
                 // Arrange
-                const handler = jaypieHandler(() => { }, {
-                // @ts-expect-error
+                const handler = jaypieHandler(() => {}, {
+                  // @ts-expect-error intentionally passing invalid inputs
                   setup: [null, undefined, 42, "string", {}, []],
                 });
                 // Act
@@ -377,7 +380,7 @@ describe("Jaypie Mock", () => {
                 // Act
                 try {
                   await handler();
-                  // eslint-disable-next-line no-unused-vars
+                  // eslint-disable-next-line @typescript-eslint/no-unused-vars
                 } catch (error) {
                   // Assert
                   expect(mockTeardown1).toHaveBeenCalledTimes(1);
@@ -400,7 +403,7 @@ describe("Jaypie Mock", () => {
                 // Act
                 try {
                   await handler();
-                  // eslint-disable-next-line no-unused-vars
+                  // eslint-disable-next-line @typescript-eslint/no-unused-vars
                 } catch (error) {
                   // Assert
                   expect(mockTeardown1).toHaveBeenCalledTimes(1);
@@ -423,7 +426,7 @@ describe("Jaypie Mock", () => {
                 // Act
                 try {
                   await handler();
-                  // eslint-disable-next-line no-unused-vars
+                  // eslint-disable-next-line @typescript-eslint/no-unused-vars
                 } catch (error) {
                   // Assert
                   expect(mockTeardown1).not.toHaveBeenCalled();
@@ -433,8 +436,8 @@ describe("Jaypie Mock", () => {
               });
               it("Will skip any teardown functions that are not functions", async () => {
                 // Arrange
-                const handler = jaypieHandler(() => { }, {
-                // @ts-expect-error
+                const handler = jaypieHandler(() => {}, {
+                  // @ts-expect-error intentionally passing invalid inputs
                   teardown: [null, undefined, 42, "string", {}, []],
                 });
                 // Act
@@ -448,7 +451,7 @@ describe("Jaypie Mock", () => {
             // Arrange
             const handler = jaypieHandler(async () => {
               // 200ms is unnoticeable to us, but will catch anything that tries to log after the fact
-              await new Promise(resolve => setTimeout(resolve, 200));
+              await new Promise((resolve) => setTimeout(resolve, 200));
             });
             // Act
             const start = Date.now();
@@ -461,7 +464,7 @@ describe("Jaypie Mock", () => {
             // Arrange
             const handler = jaypieHandler(async () => {
               // 200ms is unnoticeable to us, but will catch anything that tries to log after the fact
-              await new Promise(resolve => setTimeout(resolve, 200));
+              await new Promise((resolve) => setTimeout(resolve, 200));
               throw new Error("Sorpresa!");
             });
             // Act
@@ -563,17 +566,17 @@ describe("Jaypie Mock", () => {
             // Act
             // Assert
             expect(() => expressHandler({})).toThrow();
-            // @ts-expect-error
+            // @ts-expect-error intentionally passing invalid inputs
             expect(() => expressHandler()).toThrow();
-            // @ts-expect-error
+            // @ts-expect-error intentionally passing invalid inputs
             expect(() => expressHandler(42)).toThrow();
-            // @ts-expect-error
+            // @ts-expect-error intentionally passing invalid inputs
             expect(() => expressHandler("string")).toThrow();
-            // @ts-expect-error
+            // @ts-expect-error intentionally passing invalid inputs
             expect(() => expressHandler([])).toThrow();
-            // @ts-expect-error
+            // @ts-expect-error intentionally passing invalid inputs
             expect(() => expressHandler(null)).toThrow();
-            // @ts-expect-error
+            // @ts-expect-error intentionally passing invalid inputs
             expect(() => expressHandler(undefined)).toThrow();
           });
           it("Throws if passed an invalid locals object", async () => {
@@ -581,23 +584,23 @@ describe("Jaypie Mock", () => {
             const mockFunction = vi.fn();
             // Act
             expect(async () => {
-            // @ts-expect-error
+              // @ts-expect-error intentionally passing invalid inputs
               expressHandler(mockFunction, { locals: true });
             }).toThrowJaypieError();
             expect(async () => {
-            // @ts-expect-error
+              // @ts-expect-error intentionally passing invalid inputs
               expressHandler(mockFunction, { locals: 42 });
             }).toThrowJaypieError();
             expect(async () => {
-            // @ts-expect-error
+              // @ts-expect-error intentionally passing invalid inputs
               expressHandler(mockFunction, { locals: "string" });
             }).toThrowJaypieError();
             expect(async () => {
-            // @ts-expect-error
+              // @ts-expect-error intentionally passing invalid inputs
               expressHandler(mockFunction, { locals: [] });
             }).toThrowJaypieError();
             expect(async () => {
-            // @ts-expect-error
+              // @ts-expect-error intentionally passing invalid inputs
               expressHandler(mockFunction, { locals: null });
             }).toThrowJaypieError();
           });
@@ -704,10 +707,10 @@ describe("Jaypie Mock", () => {
             it("Sets values in req.locals by running functions during setup", async () => {
               // Arrange
               const mockFunction = vi.fn();
-              const mockLocalFunction = vi.fn();
-              const mockLocalAsyncFunction = vi.fn();
-              mockLocalFunction.mockReturnValue("function");
-              mockLocalAsyncFunction.mockResolvedValue("async/await");
+              const mockLocalFunction = vi.fn(() => "function");
+              const mockLocalAsyncFunction = vi.fn(() =>
+                Promise.resolve("async/await"),
+              );
               const handler = expressHandler(mockFunction, {
                 locals: {
                   key: "value",
@@ -715,7 +718,13 @@ describe("Jaypie Mock", () => {
                   asyncFn: mockLocalAsyncFunction,
                 },
               });
-              const req = {} as { locals: { key: string, fn: Function, asyncFn: Function } };
+              const req = {} as {
+                locals: {
+                  key: string;
+                  fn: () => string;
+                  asyncFn: () => Promise<string>;
+                };
+              };
               const res = {
                 on: vi.fn(),
               };
@@ -732,10 +741,8 @@ describe("Jaypie Mock", () => {
             it("Sets locals after setup functions are called", async () => {
               // Arrange
               const mockFunction = vi.fn();
-              const mockLocalFunction = vi.fn();
+              const mockLocalFunction = vi.fn(() => "function");
               const mockSetupFunction = vi.fn();
-              mockLocalFunction.mockReturnValue("function");
-              mockSetupFunction.mockReturnValue("setup");
               const handler = expressHandler(mockFunction, {
                 locals: {
                   key: "value",
@@ -931,7 +938,9 @@ describe("Jaypie Mock", () => {
                 await handler(event, context);
               } catch (error) {
                 expect((error as ProjectError).isProjectError).toBeTrue();
-                expect((error as ProjectError).status).toBe(HTTP.CODE.UNAVAILABLE);
+                expect((error as ProjectError).status).toBe(
+                  HTTP.CODE.UNAVAILABLE,
+                );
               }
               expect.assertions(2);
             });

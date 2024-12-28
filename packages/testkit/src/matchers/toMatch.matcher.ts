@@ -77,4 +77,4 @@ export const toMatchUuid5 = (subject: string): MatcherResult =>
 export const toMatchUuid = (subject: string): MatcherResult =>
   forSubjectToMatchPattern(subject, RE_UUID_PATTERN, {
     patternName: "UUID",
-  }); 
+  });

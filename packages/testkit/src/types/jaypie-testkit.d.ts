@@ -1,6 +1,6 @@
 import { Log } from "@jaypie/core";
 import { Mock } from "vitest";
-import { SQSMessageResponse } from "@jaypie/aws";
+import type { Request, Response } from "express";
 
 export interface JsonApiError {
   errors: Array<{
@@ -60,9 +60,11 @@ export interface LogMock extends Log {
   with: Mock;
 }
 
-export type AnyFunction = (...args: any[]) => Promise<any> | any;
-export type JaypieHandlerFunction = (...args: any[]) => Promise<any> | any;
-export type JaypieLifecycleOption = Array<AnyFunction> | AnyFunction;
+export type GenericArgs = Array<unknown>;
+export type GenericFunction<T = unknown> = (
+  ...args: T[]
+) => Promise<unknown> | unknown;
+export type JaypieLifecycleOption = Array<GenericFunction> | GenericFunction;
 
 export interface JaypieHandlerOptions {
   setup?: JaypieLifecycleOption;
@@ -70,30 +72,41 @@ export interface JaypieHandlerOptions {
   unavailable?: boolean;
   validate?: JaypieLifecycleOption;
 }
-export type JaypieHandlerParameter = JaypieHandlerOptions | JaypieHandlerFunction;
 
-export type JsonValue = 
+export type JaypieHandlerParameter<T = unknown> =
+  | JaypieHandlerOptions
+  | GenericFunction<T>;
+
+export type JsonValue =
   | { [key: string]: JsonValue }
-  | boolean 
-  | JsonValue[] 
-  | null 
-  | number 
+  | boolean
+  | JsonValue[]
+  | null
+  | number
   | string;
 export type JsonObject = { [key: string]: JsonValue } | Array<JsonObject>;
 
-export type ExpressResponsePartial = { 
-  status: (code: number) => any 
-};
-export type ExpressHandlerReturn = 
+export type ExpressHandlerReturn =
   | { json(): JsonObject }
-  | boolean 
+  | boolean
   | JsonObject
-  | null 
-  | number 
+  | null
+  | number
   | string
   | undefined;
-export type ExpressHandlerFunction = (req: Request, res: ExpressResponsePartial) => Promise<ExpressHandlerReturn | void> | ExpressHandlerReturn | void;
+export type ExpressHandlerFunction = (
+  req: Request,
+  res: Response,
+) => Promise<ExpressHandlerReturn | void> | ExpressHandlerReturn | void;
 export interface ExpressHandlerOptions extends JaypieHandlerOptions {
-  locals?: Record<string, AnyFunction | unknown>;
+  locals?: Record<string, GenericFunction | unknown>;
 }
-export type ExpressHandlerParameter = ExpressHandlerOptions | ExpressHandlerFunction;
+export type ExpressHandlerParameter =
+  | ExpressHandlerOptions
+  | ExpressHandlerFunction;
+
+export type JaypieHandlerFunction = GenericFunction | ExpressHandlerFunction;
+
+export interface WithJsonFunction {
+  json: () => unknown;
+}

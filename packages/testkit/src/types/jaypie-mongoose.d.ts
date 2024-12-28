@@ -15,14 +15,14 @@ declare module "@jaypie/mongoose" {
    */
   export function connect(
     uri: string,
-    options?: MongooseConnectionOptions
+    options?: MongooseConnectionOptions,
   ): Promise<boolean>;
 
   /**
    * Connect to MongoDB using connection details from environment variables
    */
   export function connectFromSecretEnv(
-    options?: MongooseConnectionOptions
+    options?: MongooseConnectionOptions,
   ): Promise<boolean>;
 
   /**
@@ -32,4 +32,4 @@ declare module "@jaypie/mongoose" {
 
   // Export mongoose as a pass-through
   export const mongoose: typeof mongooseDefaultExport;
-} 
+}

@@ -26,7 +26,11 @@ interface CustomMatchers<R = unknown> {
   toThrowUnavailableError(): R;
 }
 
-declare module 'vitest' {
-  interface Assertion<T = any> extends CustomMatchers<T> {}
-  interface AsymmetricMatchersContaining extends CustomMatchers {}
-} 
+declare module "vitest" {
+  interface Assertion<T = unknown> extends CustomMatchers<T> {
+    not: Assertion<T>;
+  }
+  interface AsymmetricMatchersContaining extends CustomMatchers {
+    not: AsymmetricMatchersContaining;
+  }
+}

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Log } from "@jaypie/core";
 import { vi } from "vitest";
 import { LogMock } from "./types/jaypie-testkit";
@@ -72,7 +73,7 @@ export function spyLog(log: Log): void {
   if (!originalLogMethods.has(log)) {
     const mockLog = mockLogFactory();
     const originalMethods: Partial<Log> = {};
-    
+
     LOG_METHOD_NAMES.forEach((method) => {
       originalMethods[method] = log[method] as any;
       log[method] = mockLog[method] as any;
@@ -92,4 +93,4 @@ export function restoreLog(log: Log): void {
     });
     originalLogMethods.delete(log);
   }
-} 
+}

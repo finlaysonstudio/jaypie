@@ -21,15 +21,33 @@ declare module "@jaypie/lambda" {
   ) => Promise<TResult>;
 
   export interface LambdaHandlerOptions {
-    setup?: Array<(event: unknown, context: LambdaContext, ...args: unknown[]) => Promise<void>>;
-    teardown?: Array<(event: unknown, context: LambdaContext, ...args: unknown[]) => Promise<void>>;
+    setup?: Array<
+      (
+        event: unknown,
+        context: LambdaContext,
+        ...args: unknown[]
+      ) => Promise<void>
+    >;
+    teardown?: Array<
+      (
+        event: unknown,
+        context: LambdaContext,
+        ...args: unknown[]
+      ) => Promise<void>
+    >;
     unavailable?: boolean;
-    validate?: Array<(event: unknown, context: LambdaContext, ...args: unknown[]) => Promise<boolean>>;
+    validate?: Array<
+      (
+        event: unknown,
+        context: LambdaContext,
+        ...args: unknown[]
+      ) => Promise<boolean>
+    >;
   }
 
   // Main Function
   export function lambdaHandler<TEvent = unknown, TResult = unknown>(
     handlerOrOptions: LambdaHandler<TEvent, TResult> | LambdaHandlerOptions,
-    optionsOrHandler?: LambdaHandlerOptions | LambdaHandler<TEvent, TResult>
+    optionsOrHandler?: LambdaHandlerOptions | LambdaHandler<TEvent, TResult>,
   ): LambdaHandler<TEvent, TResult>;
-} 
+}

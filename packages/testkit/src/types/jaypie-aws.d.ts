@@ -17,9 +17,14 @@ declare module "@jaypie/aws" {
   }
 
   // Function Types
-  export function getMessages(event?: {
-    Records?: Array<{ body: string }>;
-  } | Array<{ body: string }> | Record<string, unknown>): Array<SQSMessage | string | Record<string, unknown>>;
+  export function getMessages(
+    event?:
+      | {
+          Records?: Array<{ body: string }>;
+        }
+      | Array<{ body: string }>
+      | Record<string, unknown>,
+  ): Array<SQSMessage | string | Record<string, unknown>>;
 
   export function getSecret(
     secretId: string,
@@ -27,7 +32,7 @@ declare module "@jaypie/aws" {
       region?: string;
       versionId?: string;
       versionStage?: string;
-    }
+    },
   ): Promise<string>;
 
   export function sendBatchMessages(
@@ -36,7 +41,7 @@ declare module "@jaypie/aws" {
     options?: {
       delaySeconds?: number;
       messageAttributes?: Record<string, unknown>;
-    }
+    },
   ): Promise<SQSMessageResponse>;
 
   export function sendMessage(
@@ -45,6 +50,6 @@ declare module "@jaypie/aws" {
     options?: {
       delaySeconds?: number;
       messageAttributes?: Record<string, unknown>;
-    }
+    },
   ): Promise<SQSMessageResponse>;
-} 
+}
