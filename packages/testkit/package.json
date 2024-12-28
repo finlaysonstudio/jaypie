@@ -15,28 +15,17 @@
     }
   },
   "main": "./dist/index.js",
+  "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
   "scripts": {
-    "build": "tsc",
-    "format": "npm run format:package && npm run format:lint",
-    "format:lint": "eslint --fix .",
-    "format:package": "sort-package-json ./package.json",
+    "build": "rollup --config",
+    "format": "eslint --fix .",
     "lint": "eslint .",
     "test": "vitest run .",
-    "test:spec:constants": "vitest run ./src/__tests__/constants.spec.ts",
-    "test:spec:expressHandler.mock": "vitest run ./src/__tests__/expressHandler-supertest.mock.spec.ts",
-    "test:spec:index": "vitest run ./src/__tests__/index.spec.ts",
-    "test:spec:jaypie.mock": "vitest run ./src/__tests__/jaypie.mock.spec.ts",
-    "test:spec:jsonApiSchema.module": "vitest run ./src/__tests__/jsonApiSchema.module.spec.ts",
-    "test:spec:matchers.module": "vitest run ./src/__tests__/matchers.module.spec.ts",
-    "test:spec:mockLog.module": "vitest run ./src/__tests__/mockLog.module.spec.ts",
-    "test:spec:sqsTestRecords.function": "vitest run ./src/__tests__/sqsTestRecords.function.spec.ts",
-    "test:spec:toBeCalledAboveTrace.matcher": "vitest run ./src/matchers/__tests__/toBeCalledAboveTrace.matcher.spec.ts",
-    "test:spec:toBeCalledWithInitialParams.matcher": "vitest run ./src/matchers/__tests__/toBeCalledWithInitialParams.matcher.spec.ts",
-    "test:spec:toBeClass.matcher": "vitest run ./src/matchers/__tests__/toBeClass.matcher.spec.ts",
-    "test:spec:toBeJaypieError.matcher": "vitest run ./src/matchers/__tests__/toBeJaypieError.matcher.spec.ts",
-    "test:spec:toMatch.matcher": "vitest run ./src/matchers/__tests__/toMatch.matcher.spec.ts",
-    "test:spec:toThrowJaypieError.matcher": "vitest run ./src/matchers/__tests__/toThrowJaypieError.matcher.spec.ts"
+    "test:watch": "vitest watch ."
   },
   "dependencies": {
     "@jaypie/core": "^1.1.0",
@@ -51,7 +40,9 @@
     "@types/node": "^20.0.0",
     "@types/supertest": "^6.0.2",
     "express": "^4.21.1",
-    "typescript": "^5.0.0"
+    "rollup": "^4.29.1",
+    "typescript": "^5.0.0",
+    "vitest": "^2.1.8"
   },
   "publishConfig": {
     "access": "public"
