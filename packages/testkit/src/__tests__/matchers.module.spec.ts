@@ -12,7 +12,7 @@ describe("Matchers Module", () => {
   it("Is an object", () => {
     expect(matchers).toBeObject();
   });
-  
+
   it("Contains all expected matchers", () => {
     expect(matchers).toContainKeys([
       "toBeCalledAboveTrace",
@@ -35,7 +35,7 @@ describe("Matchers Module", () => {
       "toThrowJaypieError",
       "toThrowNotFoundError",
       "toThrowUnauthorizedError",
-      "toThrowUnavailableError"
+      "toThrowUnavailableError",
     ]);
   });
 });

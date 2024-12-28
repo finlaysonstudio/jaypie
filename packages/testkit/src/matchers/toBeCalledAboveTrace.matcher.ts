@@ -34,4 +34,4 @@ const calledAboveTrace = (log: LogMock): MatcherResult => {
 // Export
 //
 
-export default calledAboveTrace; 
+export default calledAboveTrace;

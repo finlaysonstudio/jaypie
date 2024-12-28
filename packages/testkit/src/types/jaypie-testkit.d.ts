@@ -70,30 +70,37 @@ export interface JaypieHandlerOptions {
   unavailable?: boolean;
   validate?: JaypieLifecycleOption;
 }
-export type JaypieHandlerParameter = JaypieHandlerOptions | JaypieHandlerFunction;
+export type JaypieHandlerParameter =
+  | JaypieHandlerOptions
+  | JaypieHandlerFunction;
 
-export type JsonValue = 
+export type JsonValue =
   | { [key: string]: JsonValue }
-  | boolean 
-  | JsonValue[] 
-  | null 
-  | number 
+  | boolean
+  | JsonValue[]
+  | null
+  | number
   | string;
 export type JsonObject = { [key: string]: JsonValue } | Array<JsonObject>;
 
-export type ExpressResponsePartial = { 
-  status: (code: number) => any 
+export type ExpressResponsePartial = {
+  status: (code: number) => any;
 };
-export type ExpressHandlerReturn = 
+export type ExpressHandlerReturn =
   | { json(): JsonObject }
-  | boolean 
+  | boolean
   | JsonObject
-  | null 
-  | number 
+  | null
+  | number
   | string
   | undefined;
-export type ExpressHandlerFunction = (req: Request, res: ExpressResponsePartial) => Promise<ExpressHandlerReturn | void> | ExpressHandlerReturn | void;
+export type ExpressHandlerFunction = (
+  req: Request,
+  res: ExpressResponsePartial,
+) => Promise<ExpressHandlerReturn | void> | ExpressHandlerReturn | void;
 export interface ExpressHandlerOptions extends JaypieHandlerOptions {
   locals?: Record<string, AnyFunction | unknown>;
 }
-export type ExpressHandlerParameter = ExpressHandlerOptions | ExpressHandlerFunction;
+export type ExpressHandlerParameter =
+  | ExpressHandlerOptions
+  | ExpressHandlerFunction;

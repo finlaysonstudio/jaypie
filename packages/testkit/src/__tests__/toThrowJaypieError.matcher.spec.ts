@@ -3,14 +3,14 @@ import {
   BadRequestError,
   ConfigurationError,
   InternalError,
-  ProjectError
+  ProjectError,
 } from "@jaypie/core";
 
 // Subject
 import toThrowJaypieError, {
   toThrowBadRequestError,
   toThrowConfigurationError,
-  toThrowInternalError
+  toThrowInternalError,
 } from "../matchers/toThrowJaypieError.matcher";
 
 describe("toThrowJaypieError Matcher", () => {
@@ -34,7 +34,7 @@ describe("toThrowJaypieError Matcher", () => {
       const result = await toThrowJaypieError(() => {});
       expect(result.pass).toBe(false);
       expect(result.message()).toBe(
-        "Expected function to throw a JaypieError, but it did not throw."
+        "Expected function to throw a JaypieError, but it did not throw.",
       );
     });
 
@@ -43,7 +43,9 @@ describe("toThrowJaypieError Matcher", () => {
         throw new Error("Regular error");
       });
       expect(result.pass).toBe(false);
-      expect(result.message()).toInclude("Expected function to throw a JaypieError");
+      expect(result.message()).toInclude(
+        "Expected function to throw a JaypieError",
+      );
     });
 
     it("Fails when wrong type of Jaypie error is thrown", async () => {
@@ -51,7 +53,9 @@ describe("toThrowJaypieError Matcher", () => {
         throw new BadRequestError();
       }, ConfigurationError);
       expect(result.pass).toBe(false);
-      expect(result.message()).toInclude("Expected function to throw \"CONFIGURATION_ERROR\"");
+      expect(result.message()).toInclude(
+        'Expected function to throw "CONFIGURATION_ERROR"',
+      );
     });
   });
 
@@ -114,4 +118,4 @@ describe("toThrowJaypieError Matcher", () => {
       expect(result.pass).toBe(true);
     });
   });
-}); 
+});

@@ -251,7 +251,9 @@ describe("Jaypie Mock", () => {
                 try {
                   await handler();
                 } catch (error) {
-                  expect((error as ProjectError).isProjectError).toBeUndefined();
+                  expect(
+                    (error as ProjectError).isProjectError,
+                  ).toBeUndefined();
                   expect((error as ProjectError).status).toBeUndefined();
                 }
                 expect.assertions(2);
@@ -314,7 +316,9 @@ describe("Jaypie Mock", () => {
                 try {
                   await handler();
                 } catch (error) {
-                  expect((error as ProjectError).isProjectError).toBeUndefined();
+                  expect(
+                    (error as ProjectError).isProjectError,
+                  ).toBeUndefined();
                   expect((error as ProjectError).status).toBeUndefined();
                   expect((error as ProjectError).message).toBe("Sorpresa!");
                 }
@@ -322,8 +326,8 @@ describe("Jaypie Mock", () => {
               });
               it("Will skip any setup functions that are not functions", async () => {
                 // Arrange
-                const handler = jaypieHandler(() => { }, {
-                // @ts-expect-error
+                const handler = jaypieHandler(() => {}, {
+                  // @ts-expect-error
                   setup: [null, undefined, 42, "string", {}, []],
                 });
                 // Act
@@ -377,7 +381,6 @@ describe("Jaypie Mock", () => {
                 // Act
                 try {
                   await handler();
-                  // eslint-disable-next-line no-unused-vars
                 } catch (error) {
                   // Assert
                   expect(mockTeardown1).toHaveBeenCalledTimes(1);
@@ -400,7 +403,6 @@ describe("Jaypie Mock", () => {
                 // Act
                 try {
                   await handler();
-                  // eslint-disable-next-line no-unused-vars
                 } catch (error) {
                   // Assert
                   expect(mockTeardown1).toHaveBeenCalledTimes(1);
@@ -423,7 +425,6 @@ describe("Jaypie Mock", () => {
                 // Act
                 try {
                   await handler();
-                  // eslint-disable-next-line no-unused-vars
                 } catch (error) {
                   // Assert
                   expect(mockTeardown1).not.toHaveBeenCalled();
@@ -433,8 +434,8 @@ describe("Jaypie Mock", () => {
               });
               it("Will skip any teardown functions that are not functions", async () => {
                 // Arrange
-                const handler = jaypieHandler(() => { }, {
-                // @ts-expect-error
+                const handler = jaypieHandler(() => {}, {
+                  // @ts-expect-error
                   teardown: [null, undefined, 42, "string", {}, []],
                 });
                 // Act
@@ -448,7 +449,7 @@ describe("Jaypie Mock", () => {
             // Arrange
             const handler = jaypieHandler(async () => {
               // 200ms is unnoticeable to us, but will catch anything that tries to log after the fact
-              await new Promise(resolve => setTimeout(resolve, 200));
+              await new Promise((resolve) => setTimeout(resolve, 200));
             });
             // Act
             const start = Date.now();
@@ -461,7 +462,7 @@ describe("Jaypie Mock", () => {
             // Arrange
             const handler = jaypieHandler(async () => {
               // 200ms is unnoticeable to us, but will catch anything that tries to log after the fact
-              await new Promise(resolve => setTimeout(resolve, 200));
+              await new Promise((resolve) => setTimeout(resolve, 200));
               throw new Error("Sorpresa!");
             });
             // Act
@@ -581,23 +582,23 @@ describe("Jaypie Mock", () => {
             const mockFunction = vi.fn();
             // Act
             expect(async () => {
-            // @ts-expect-error
+              // @ts-expect-error
               expressHandler(mockFunction, { locals: true });
             }).toThrowJaypieError();
             expect(async () => {
-            // @ts-expect-error
+              // @ts-expect-error
               expressHandler(mockFunction, { locals: 42 });
             }).toThrowJaypieError();
             expect(async () => {
-            // @ts-expect-error
+              // @ts-expect-error
               expressHandler(mockFunction, { locals: "string" });
             }).toThrowJaypieError();
             expect(async () => {
-            // @ts-expect-error
+              // @ts-expect-error
               expressHandler(mockFunction, { locals: [] });
             }).toThrowJaypieError();
             expect(async () => {
-            // @ts-expect-error
+              // @ts-expect-error
               expressHandler(mockFunction, { locals: null });
             }).toThrowJaypieError();
           });
@@ -715,7 +716,9 @@ describe("Jaypie Mock", () => {
                   asyncFn: mockLocalAsyncFunction,
                 },
               });
-              const req = {} as { locals: { key: string, fn: Function, asyncFn: Function } };
+              const req = {} as {
+                locals: { key: string; fn: Function; asyncFn: Function };
+              };
               const res = {
                 on: vi.fn(),
               };
@@ -931,7 +934,9 @@ describe("Jaypie Mock", () => {
                 await handler(event, context);
               } catch (error) {
                 expect((error as ProjectError).isProjectError).toBeTrue();
-                expect((error as ProjectError).status).toBe(HTTP.CODE.UNAVAILABLE);
+                expect((error as ProjectError).status).toBe(
+                  HTTP.CODE.UNAVAILABLE,
+                );
               }
               expect.assertions(2);
             });

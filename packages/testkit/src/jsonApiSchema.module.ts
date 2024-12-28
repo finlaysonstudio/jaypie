@@ -49,4 +49,4 @@ export const isJsonApiError = (obj: unknown): obj is JsonApiError => {
 export const isJsonApiData = (obj: unknown): obj is JsonApiData => {
   if (!obj || typeof obj !== "object") return false;
   return "data" in obj && typeof (obj as JsonApiData).data === "object";
-}; 
+};

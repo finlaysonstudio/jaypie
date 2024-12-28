@@ -63,9 +63,7 @@ describe("toThrowError", () => {
     });
 
     it("fails when a promise resolves", async () => {
-      const result = await toThrowError(() => 
-        Promise.resolve("no error")
-      );
+      const result = await toThrowError(() => Promise.resolve("no error"));
       expect(result.pass).toBe(false);
     });
 
@@ -79,8 +77,8 @@ describe("toThrowError", () => {
     it("provides appropriate error message when test fails", async () => {
       const result = await toThrowError(() => "no error");
       expect(result.message()).toBe(
-        "Expected function to throw an error, but it did not throw."
+        "Expected function to throw an error, but it did not throw.",
       );
     });
   });
-}); 
+});

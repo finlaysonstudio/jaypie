@@ -20,9 +20,10 @@ const sqsTestRecords = (...records: Array<unknown>): SQSEvent => {
     if (typeof record === "object" && record !== null) {
       return {
         ...record,
-        body: typeof (record as { body?: unknown }).body === "string" 
-          ? (record as { body: string }).body 
-          : JSON.stringify((record as { body?: unknown }).body ?? record),
+        body:
+          typeof (record as { body?: unknown }).body === "string"
+            ? (record as { body: string }).body
+            : JSON.stringify((record as { body?: unknown }).body ?? record),
       };
     }
     return {
@@ -35,4 +36,4 @@ const sqsTestRecords = (...records: Array<unknown>): SQSEvent => {
   };
 };
 
-export default sqsTestRecords; 
+export default sqsTestRecords;

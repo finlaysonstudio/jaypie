@@ -20,13 +20,11 @@ declare module "@jaypie/datadog" {
   export function submitMetric(
     metric: string,
     value: number,
-    options?: MetricOptions
+    options?: MetricOptions,
   ): Promise<boolean>;
 
   /**
    * Submit multiple metrics to Datadog in a single request
    */
-  export function submitMetricSet(
-    options: MetricSetOptions
-  ): Promise<boolean>;
-} 
+  export function submitMetricSet(options: MetricSetOptions): Promise<boolean>;
+}

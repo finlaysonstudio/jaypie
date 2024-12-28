@@ -131,4 +131,4 @@ export {
   toThrowNotFoundError,
   toThrowUnauthorizedError,
   toThrowUnavailableError,
-}; 
+};

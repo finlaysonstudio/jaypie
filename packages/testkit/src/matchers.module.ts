@@ -49,4 +49,4 @@ const matchers = {
   toThrowUnavailableError,
 };
 
-export default matchers; 
+export default matchers;

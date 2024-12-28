@@ -50,4 +50,4 @@ const toBeJaypieError = (received: unknown): MatcherResult => {
 // Export
 //
 
-export default toBeJaypieError; 
+export default toBeJaypieError;

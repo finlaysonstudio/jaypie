@@ -33,4 +33,4 @@ const toBeClass = (received: unknown): MatcherResult => {
 // Export
 //
 
-export default toBeClass; 
+export default toBeClass;
