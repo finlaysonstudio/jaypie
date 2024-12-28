@@ -1,5 +1,5 @@
 import { getMessages as originalGetMessages } from "@jaypie/aws";
-import { force, uuid as originalUuid } from "@jaypie/core";
+import { force, Log, uuid as originalUuid } from "@jaypie/core";
 import {
   // Core utilities
   HTTP,
@@ -30,15 +30,19 @@ import {
 import { beforeAll, vi } from "vitest";
 
 import {
+  ExpressHandlerFunction,
   ExpressHandlerOptions,
   ExpressHandlerParameter,
+  GenericArgs,
   JaypieHandlerFunction,
   JaypieHandlerOptions,
   JaypieHandlerParameter,
   JaypieLifecycleOption,
+  WithJsonFunction,
 } from "./types/jaypie-testkit";
 import type { SQSMessageResponse } from "@jaypie/aws";
 import { spyLog } from "./mockLog.module.js";
+import type { Response as ExpressResponse } from "express";
 
 //
 //
@@ -57,7 +61,7 @@ export * from "@jaypie/mongoose";
 
 // Spy on log:
 beforeAll(() => {
-  spyLog(log as any);
+  spyLog(log as Log);
 });
 
 //
@@ -123,7 +127,7 @@ export const jaypieHandler = vi.fn(
       validate = [] as JaypieLifecycleOption,
     }: JaypieHandlerOptions = {},
   ) => {
-    return async (...args: any[]) => {
+    return async (...args: GenericArgs) => {
       let result;
       let thrownError;
       if (unavailable) throw UnavailableError();
@@ -186,7 +190,7 @@ export const expressHandler = vi.fn(
     handlerOrProps: ExpressHandlerParameter,
     propsOrHandler?: ExpressHandlerParameter,
   ) => {
-    let handler: (...args: any[]) => any;
+    let handler: ExpressHandlerFunction;
     let props: ExpressHandlerOptions;
 
     if (
@@ -194,7 +198,7 @@ export const expressHandler = vi.fn(
       typeof propsOrHandler === "function"
     ) {
       handler = propsOrHandler;
-      props = handlerOrProps as ExpressHandlerOptions;
+      props = handlerOrProps;
     } else if (typeof handlerOrProps === "function") {
       handler = handlerOrProps;
       props = (propsOrHandler || {}) as ExpressHandlerOptions;
@@ -270,18 +274,22 @@ export const expressHandler = vi.fn(
         response = await jaypieFunction(req, res, ...extra);
       } catch (error) {
         // In the mock context, if status is a function we are in a "supertest"
-        if (supertestMode && typeof (res as any).status === "function") {
+        if (
+          supertestMode &&
+          typeof (res as ExpressResponse).status === "function"
+        ) {
           // In theory jaypieFunction has handled all errors
           const errorStatus =
-            (error as any).status || HTTP.CODE.INTERNAL_SERVER_ERROR;
+            (error as ProjectErrorOriginal).status ||
+            HTTP.CODE.INTERNAL_SERVER_ERROR;
           let errorResponse;
-          if (typeof (error as any).json === "function") {
-            errorResponse = (error as any).json();
+          if (typeof (error as ProjectErrorOriginal).json === "function") {
+            errorResponse = (error as ProjectErrorOriginal).json();
           } else {
             // This should never happen
             errorResponse = UnhandledError().json();
           }
-          (res as any).status(errorStatus).json(errorResponse);
+          (res as ExpressResponse).status(errorStatus).json(errorResponse);
           return;
         } else {
           // else, res.status is not a function, throw the error
@@ -289,27 +297,35 @@ export const expressHandler = vi.fn(
         }
       }
 
-      if (supertestMode && typeof (res as any).status === "function") {
+      if (
+        supertestMode &&
+        typeof (res as ExpressResponse).status === "function"
+      ) {
         if (response) {
           if (typeof response === "object") {
-            if (typeof (response as any).json === "function") {
-              (res as any).json((response as any).json());
+            if (typeof (response as WithJsonFunction).json === "function") {
+              (res as ExpressResponse).json(
+                (response as WithJsonFunction).json(),
+              );
             } else {
-              (res as any).status(status).json(response);
+              (res as ExpressResponse).status(status).json(response);
             }
           } else if (typeof response === "string") {
             try {
-              (res as any).status(status).json(JSON.parse(response));
+              (res as ExpressResponse)
+                .status(status)
+                .json(JSON.parse(response));
+              // eslint-disable-next-line @typescript-eslint/no-unused-vars
             } catch (error) {
-              (res as any).status(status).send(response);
+              (res as ExpressResponse).status(status).send(response);
             }
           } else if (response === true) {
-            (res as any).status(HTTP.CODE.CREATED).send();
+            (res as ExpressResponse).status(HTTP.CODE.CREATED).send();
           } else {
-            (res as any).status(status).send(response);
+            (res as ExpressResponse).status(status).send(response);
           }
         } else {
-          (res as any).status(HTTP.CODE.NO_CONTENT).send();
+          (res as ExpressResponse).status(HTTP.CODE.NO_CONTENT).send();
         }
       } else {
         return response;

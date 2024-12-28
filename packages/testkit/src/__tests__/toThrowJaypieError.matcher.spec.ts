@@ -3,7 +3,6 @@ import {
   BadRequestError,
   ConfigurationError,
   InternalError,
-  ProjectError,
 } from "@jaypie/core";
 
 // Subject

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 declare module "@jaypie/core" {
   // Core utilities
   export const HTTP: {

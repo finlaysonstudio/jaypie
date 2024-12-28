@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Log } from "@jaypie/core";
 import { vi } from "vitest";
 import { LogMock } from "./types/jaypie-testkit";
