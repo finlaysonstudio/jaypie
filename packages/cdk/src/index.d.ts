@@ -135,9 +135,9 @@ declare module "@jaypie/cdk" {
   }
 
   export interface CfnOutputParams {
-    CfnOutput: any;
+    CfnOutput: typeof import("aws-cdk-lib").CfnOutput;
     output: Record<string, string>;
-    stack: any;
+    stack: import("aws-cdk-lib").Stack;
   }
 
   export function cfnOutput(params: CfnOutputParams): boolean;
@@ -148,8 +148,8 @@ declare module "@jaypie/cdk" {
     domain: string;
   }): string;
   export function projectTagger(params: {
-    cdk?: any;
-    stack?: any;
+    cdk?: typeof import("aws-cdk-lib");
+    stack?: import("aws-cdk-lib").Stack;
     stackName?: string;
   }): void;
 

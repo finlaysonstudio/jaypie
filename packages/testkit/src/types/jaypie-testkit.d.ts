@@ -84,10 +84,12 @@ export type JsonValue =
   | null
   | number
   | string;
-export type JsonObject = { [key: string]: JsonValue } | Array<JsonObject>;
+export type JsonObject = { [key: string]: JsonValue };
+export type JsonArray = Array<JsonObject>;
+export type JsonReturn = JsonObject | JsonArray;
 
 export type ExpressHandlerReturn =
-  | { json(): JsonObject }
+  | { json(): JsonReturn }
   | boolean
   | JsonObject
   | null

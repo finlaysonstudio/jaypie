@@ -158,6 +158,7 @@ export const jaypieHandler = vi.fn(
           try {
             await teardownFunction(...args);
           } catch (error) {
+            // eslint-disable-next-line no-console
             console.error(error);
           }
         }

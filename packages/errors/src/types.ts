@@ -89,9 +89,18 @@ export interface JaypieErrorJson {
   detail: string;
 }
 
+export type JsonValue =
+  | { [key: string]: JsonValue }
+  | boolean
+  | JsonValue[]
+  | null
+  | number
+  | string;
+export type JsonObject = { [key: string]: JsonValue };
+
 export interface JaypieErrorBody {
   errors: Array<JaypieErrorJson>;
-  meta?: Record<string, any>;
+  meta?: JsonObject;
 }
 
 export interface JaypieError extends Error, JaypieErrorJson {
