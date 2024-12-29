@@ -3,6 +3,7 @@ import vitest from "@vitest/eslint-plugin";
 import globals from "globals";
 import tsPlugin from "@typescript-eslint/eslint-plugin";
 import tsParser from "@typescript-eslint/parser";
+import eslintPluginImportX from 'eslint-plugin-import-x'
 import prettierPlugin from "eslint-plugin-prettier";
 
 export default [
@@ -11,6 +12,8 @@ export default [
   // Configs and Plugins
   //
   js.configs.recommended, // Recommended config applied to all files
+  eslintPluginImportX.flatConfigs.recommended,
+  eslintPluginImportX.flatConfigs.typescript,
 
   //
   //
@@ -88,6 +91,19 @@ export default [
   {
     // Ignore auto-generated Nuxt folders
     ignores: ["**/.nuxt/**", ".nuxt/"],
+  },
+
+  //
+  //
+  // Prettier
+  //
+  {
+    plugins: {
+      prettier: prettierPlugin,
+    },
+    rules: {
+      "prettier/prettier": "warn",
+    },
   },
 
   //
