@@ -8,7 +8,7 @@ import { ConfigurationError } from "jaypie";
 const parseMessageBody = (body) => {
   try {
     return JSON.parse(body);
-  // eslint-disable-next-line no-unused-vars
+    // eslint-disable-next-line no-unused-vars
   } catch (error) {
     return body;
   }
@@ -41,7 +41,7 @@ export default (event) => {
         }
       }
     });
-  // Handle array of events
+    // Handle array of events
   } else if (Array.isArray(event)) {
     event.forEach((record) => {
       if (record && record.body) {
@@ -51,7 +51,7 @@ export default (event) => {
         }
       }
     });
-  // Handle single object event
+    // Handle single object event
   } else {
     messages.push(event);
   }

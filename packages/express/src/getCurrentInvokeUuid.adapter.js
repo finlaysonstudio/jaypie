@@ -9,9 +9,9 @@ import { getCurrentInvoke } from "@codegenie/serverless-express";
 function getServerlessExpressUuid() {
   const currentInvoke = getCurrentInvoke();
   if (
-    currentInvoke
-    && currentInvoke.context
-    && currentInvoke.context.awsRequestId
+    currentInvoke &&
+    currentInvoke.context &&
+    currentInvoke.context.awsRequestId
   ) {
     return currentInvoke.context.awsRequestId;
   }

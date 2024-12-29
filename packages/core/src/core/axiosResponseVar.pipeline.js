@@ -8,13 +8,13 @@ function isAxiosResponse(response) {
     return false;
   }
   return (
-    response
-    && response.config
-    && response.data
-    && response.headers
-    && response.request
-    && response.status
-    && response.statusText
+    response &&
+    response.config &&
+    response.data &&
+    response.headers &&
+    response.request &&
+    response.status &&
+    response.statusText
   );
 }
 

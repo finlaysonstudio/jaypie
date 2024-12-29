@@ -28,12 +28,12 @@ const force = (value, type, options) => {
       if (typeof value === "string") {
         value = value.toLowerCase();
         if (
-          value === ""
-          || value === "0"
-          || value === "f"
-          || value === "false"
-          || value === "n"
-          || value === "no"
+          value === "" ||
+          value === "0" ||
+          value === "f" ||
+          value === "false" ||
+          value === "n" ||
+          value === "no"
         ) {
           return false;
         } else {
@@ -86,11 +86,11 @@ const force = (value, type, options) => {
 // Convenience Functions
 //
 
-force.array = value => force(value, Array);
-force.boolean = value => force(value, Boolean);
-force.number = value => force(value, Number);
+force.array = (value) => force(value, Array);
+force.boolean = (value) => force(value, Boolean);
+force.number = (value) => force(value, Number);
 force.object = (value, key = "value") => force(value, Object, key);
-force.positive = value => force(value, Number, { minimum: 0 });
+force.positive = (value) => force(value, Number, { minimum: 0 });
 force.string = (value, defaultValue = "") => force(value, String, defaultValue);
 
 //

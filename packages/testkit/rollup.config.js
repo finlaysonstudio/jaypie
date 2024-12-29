@@ -12,7 +12,17 @@ export default [
     plugins: [typescript()],
   },
   {
-    external: ["@jaypie/aws", "@jaypie/core", "@jaypie/datadog", "@jaypie/express", "@jaypie/lambda", "@jaypie/mongoose", "jest-json-schema", "lodash.isequal", "vitest"],
+    external: [
+      "@jaypie/aws",
+      "@jaypie/core",
+      "@jaypie/datadog",
+      "@jaypie/express",
+      "@jaypie/lambda",
+      "@jaypie/mongoose",
+      "jest-json-schema",
+      "lodash.isequal",
+      "vitest",
+    ],
     input: "src/jaypie.mock.ts",
     output: {
       dir: "dist",

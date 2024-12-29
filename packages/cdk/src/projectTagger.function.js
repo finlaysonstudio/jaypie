@@ -8,8 +8,8 @@ module.exports = ({ cdk, stack, stackName } = {}) => {
   if (!stack) {
     throw new ConfigurationError("projectTagger `stack` is required");
   }
-  const version
-    = process.env.npm_package_version || process.env.PROJECT_VERSION || null;
+  const version =
+    process.env.npm_package_version || process.env.PROJECT_VERSION || null;
 
   if (process.env.PROJECT_COMMIT && process.env.PROJECT_COMMIT.length > 8) {
     cdk.Tags.of(stack).add(

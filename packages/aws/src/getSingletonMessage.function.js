@@ -10,7 +10,9 @@ const getSingletonMessage = (event) => {
   const messages = getMessages(event);
 
   if (messages.length !== 1) {
-    throw new BadGatewayError("An upstream resource provided an invalid message format");
+    throw new BadGatewayError(
+      "An upstream resource provided an invalid message format",
+    );
   }
 
   return messages[0];

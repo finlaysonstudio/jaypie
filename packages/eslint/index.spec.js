@@ -26,14 +26,19 @@ describe("Index", () => {
 
     it("Contains Required Configs", () => {
       // Find configs by unique properties
-      const hasJsConfig = index.some(config =>
-        config === js.configs.recommended,
+      const hasJsConfig = index.some(
+        (config) => config === js.configs.recommended,
       );
-      const hasVitestConfig = index.some(config =>
-        config.files?.includes("**/*.spec.js") && config.plugins?.vitest,
+      const hasVitestConfig = index.some(
+        (config) =>
+          config.files?.includes("**/*.spec.js") && config.plugins?.vitest,
       );
-      const hasStylisticConfig = index.some(config =>
-        config.rules && Object.keys(config.rules).some(rule => rule.startsWith("@stylistic/")),
+      const hasStylisticConfig = index.some(
+        (config) =>
+          config.rules &&
+          Object.keys(config.rules).some((rule) =>
+            rule.startsWith("@stylistic/"),
+          ),
       );
 
       expect(hasJsConfig).toBe(true);
