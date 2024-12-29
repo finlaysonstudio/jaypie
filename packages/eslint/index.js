@@ -92,6 +92,19 @@ export default [
 
   //
   //
+  // Prettier
+  //
+  {
+    plugins: {
+      prettier: prettierPlugin,
+    },
+    rules: {
+      "prettier/prettier": "warn",
+    },
+  },
+
+  //
+  //
   // TypeScript
   //
   {
