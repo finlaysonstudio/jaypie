@@ -19,7 +19,7 @@ export default [
     },
     plugins: {
       "@typescript-eslint": tsPlugin,
-      prettier: prettierPlugin,
+      "prettier": prettierPlugin,
     },
     rules: {
       ...tsPlugin.configs.recommended.rules,
