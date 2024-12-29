@@ -22,6 +22,7 @@ describe("Matchers Module", () => {
       "toMatchBase64",
       "toMatchJwt",
       "toMatchMongoId",
+      "toMatchSchema",
       "toMatchSignedCookie",
       "toMatchUuid",
       "toMatchUuid4",
