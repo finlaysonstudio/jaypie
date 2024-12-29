@@ -1,6 +1,5 @@
 import js from "@eslint/js";
 import vitest from "@vitest/eslint-plugin";
-import stylistic from "@stylistic/eslint-plugin";
 import globals from "globals";
 import tsPlugin from "@typescript-eslint/eslint-plugin";
 import tsParser from "@typescript-eslint/parser";
@@ -12,15 +11,6 @@ export default [
   // Configs and Plugins
   //
   js.configs.recommended, // Recommended config applied to all files
-
-  stylistic.configs.customize({
-    // the following options are the default values
-    braceStyle: "1tbs",
-    indent: 2,
-    quotes: "double",
-    semi: true,
-    jsx: false,
-  }),
 
   //
   //
@@ -37,14 +27,6 @@ export default [
   },
   {
     rules: {
-      "@stylistic/arrow-parens": "warn",
-      "@stylistic/eol-last": "warn",
-      "@stylistic/indent": "warn",
-      "@stylistic/indent-binary-ops": "warn",
-      "@stylistic/operator-linebreak": "warn",
-      "@stylistic/quotes": "warn",
-      "@stylistic/quote-props": "warn",
-      "@stylistic/semi": "warn",
       "no-console": "warn",
       "no-fallthrough": "error",
       "no-restricted-syntax": [
