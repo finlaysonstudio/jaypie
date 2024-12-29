@@ -34,6 +34,7 @@ describe("Mock Log Function", () => {
   });
   describe("Features", () => {
     it("mockLogFactory produces a Jaypie logger", () => {
+      // eslint-disable-next-line no-shadow
       const log = mockLogFactory();
       expect(log).toBeObject();
       expect(log.debug).toBeFunction();
@@ -48,6 +49,7 @@ describe("Mock Log Function", () => {
       expect(log.with).toBeFunction();
     });
     it("spyLog swaps out log functions", () => {
+      // eslint-disable-next-line no-shadow
       const log = mockLogFactory();
       const original = { ...log };
       spyLog(log);
@@ -74,6 +76,7 @@ describe("Mock Log Function", () => {
       expect(log.with).not.toEqual(original.with);
     });
     it("restoreLog swaps back original log functions", () => {
+      // eslint-disable-next-line no-shadow
       const log = mockLogFactory();
       const original = { ...log };
       spyLog(log);

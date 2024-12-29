@@ -59,11 +59,11 @@ describe("Decorate response util", () => {
     expect(decorateResponse).toBeFunction();
   });
   it("Returns when a non-objects are passed in (or null, which is an object)", () => {
-    decorateResponse(undefined);
-    decorateResponse("Hello.");
-    decorateResponse(42);
-    decorateResponse(true);
-    decorateResponse(null);
+    expect(() => decorateResponse(undefined)).not.toThrow();
+    expect(() => decorateResponse("Hello.")).not.toThrow();
+    expect(() => decorateResponse(42)).not.toThrow();
+    expect(() => decorateResponse(true)).not.toThrow();
+    expect(() => decorateResponse(null)).not.toThrow();
   });
   it("Returns when no headers object is present", () => {
     // No headers object is often passed in mocking and tests
