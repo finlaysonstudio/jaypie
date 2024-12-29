@@ -25,7 +25,9 @@ export default [
   },
   {
     languageOptions: {
+      ecmaVersion: 2024,
       globals: globals.node,
+      sourceType: "module",
     },
   },
   {
@@ -149,34 +151,5 @@ export default [
       "vitest/no-focused-tests": ["error", { fixable: false }],
       "vitest/no-disabled-tests": "warn",
     },
-  },
-
-  //
-  //
-  // Vue
-  //
-  {
-    ignores: [
-      "packages/*-vue/**/*.js",
-      "packages/*-vue/**/*.mjs",
-      "packages/*-vue/**/*.mts",
-      "packages/*-vue/**/*.ts",
-      "packages/*-vue/**/*.vue",
-      "packages/vue/**/*.js",
-      "packages/vue/**/*.mjs",
-      "packages/vue/**/*.mts",
-      "packages/vue/**/*.ts",
-      "packages/vue/**/*.vue",
-      "packages/vue-*/**/*.js",
-      "packages/vue-*/**/*.mjs",
-      "packages/vue-*/**/*.mts",
-      "packages/vue-*/**/*.ts",
-      "packages/vue-*/**/*.vue",
-      "vue/**/*.js",
-      "vue/**/*.mjs",
-      "vue/**/*.mts",
-      "vue/**/*.ts",
-      "vue/**/*.vue",
-    ],
   },
 ];
