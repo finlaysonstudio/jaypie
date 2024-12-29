@@ -2,6 +2,9 @@ import js from "@eslint/js";
 import vitest from "@vitest/eslint-plugin";
 import stylistic from "@stylistic/eslint-plugin";
 import globals from "globals";
+import tsPlugin from "@typescript-eslint/eslint-plugin";
+import tsParser from "@typescript-eslint/parser";
+import prettierPlugin from "eslint-plugin-prettier";
 
 export default [
   //
@@ -34,6 +37,14 @@ export default [
   },
   {
     rules: {
+      "@stylistic/arrow-parens": "warn",
+      "@stylistic/eol-last": "warn",
+      "@stylistic/indent": "warn",
+      "@stylistic/indent-binary-ops": "warn",
+      "@stylistic/operator-linebreak": "warn",
+      "@stylistic/quotes": "warn",
+      "@stylistic/quote-props": "warn",
+      "@stylistic/semi": "warn",
       "no-console": "warn",
       "no-fallthrough": "error",
       "no-restricted-syntax": [
@@ -99,14 +110,44 @@ export default [
 
   //
   //
-  // Vitest
+  // TypeScript
   //
   {
-    files: ["**/__tests__/**", "**/*.spec.js", "**/*.test.js"],
+    files: ["**/*.ts", "**/*.tsx"],
+    languageOptions: {
+      parser: tsParser,
+    },
+    plugins: {
+      "@typescript-eslint": tsPlugin,
+      "prettier": prettierPlugin,
+    },
+    rules: {
+      ...tsPlugin.configs.recommended.rules,
+      "prettier/prettier": "warn",
+    },
+  },
+
+  //
+  //
+  // Tests (JavaScript and TypeScript)
+  //
+  {
+    files: ["**/__tests__/**", "**/*.spec.js", "**/*.test.js", "**/*.spec.ts", "**/*.test.ts"],
     plugins: {
       vitest,
     },
+    languageOptions: {
+      globals: {
+        describe: true,
+        it: true,
+        expect: true,
+        beforeEach: true,
+        afterEach: true,
+        vi: true,
+      },
+    },
     rules: {
+      ...vitest.configs.recommended.rules,
       "vitest/no-focused-tests": ["error", { fixable: false }],
       "vitest/no-disabled-tests": "warn",
     },
