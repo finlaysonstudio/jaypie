@@ -25,9 +25,8 @@ jobs:
           node-version: 20
       - run: npm ci
       - run: npm run build
-      - run: |
-          npm config set //registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}
-          lerna publish from-package --no-private --yes
+      - run: npm config set //registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}
+      - run: lerna publish from-package --no-private --yes
   lint:
     name: Lint (in parallel)
     runs-on: ubuntu-latest
@@ -52,6 +51,7 @@ jobs:
           node-version: ${{ matrix.node-version }}
           cache: 'npm'
       - run: npm install
+      - run: npm run build:errors
       - run: npm run build:testkit
       - name: Vitest with Optional Datadog Tracing
         run: |

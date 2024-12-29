@@ -34,6 +34,7 @@ jobs:
           node-version: ${{ matrix.node-version }}
           cache: 'npm'
       - run: npm install
+      - run: npm run build:errors
       - run: npm run build:testkit
       - name: Vitest with Optional Datadog Tracing
         run: |
