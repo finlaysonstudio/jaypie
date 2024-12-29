@@ -1,3 +1,4 @@
+import { matchers as jestJsonSchemaMatchers } from "jest-json-schema";
 import toBeCalledAboveTrace from "./matchers/toBeCalledAboveTrace.matcher.js";
 import toBeCalledWithInitialParams from "./matchers/toBeCalledWithInitialParams.matcher.js";
 import toBeClass from "./matchers/toBeClass.matcher.js";
@@ -33,6 +34,7 @@ const matchers = {
   toMatchJwt,
   toMatchMongoId,
   toMatchSignedCookie,
+  toMatchSchema: jestJsonSchemaMatchers.toMatchSchema,
   toMatchUuid,
   toMatchUuid4,
   toMatchUuid5,

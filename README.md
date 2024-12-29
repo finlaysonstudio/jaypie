@@ -1093,18 +1093,6 @@ expect({ errors: [ { status, title, detail } ] }).toBeJaypieError();
 
 Jaypie errors, which are `ProjectErrors`, all have a `.json()` to convert
 
-###### `expect(subject).toBeValidSchema()`
-
-```javascript
-import { jsonApiErrorSchema, jsonApiSchema } from "@jaypie/testkit";
-
-expect(jsonApiErrorSchema).toBeValidSchema();
-expect(jsonApiSchema).toBeValidSchema();
-expect({ project: "mayhem" }).not.toBeValidSchema();
-```
-
-From `jest-json-schema` [toBeValidSchema.js](https://github.com/americanexpress/jest-json-schema/blob/main/matchers/toBeValidSchema.js) (not documented in README)
-
 ###### `expect(subject).toMatchSchema(schema)`
 
 ```javascript

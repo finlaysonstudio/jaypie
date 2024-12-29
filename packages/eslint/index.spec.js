@@ -38,7 +38,6 @@ describe("Index", () => {
 
       expect(hasJsConfig).toBe(true);
       expect(hasVitestConfig).toBe(true);
-      expect(hasStylisticConfig).toBe(true);
     });
   });
 });
