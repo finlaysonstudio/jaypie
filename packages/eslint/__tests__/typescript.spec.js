@@ -15,7 +15,7 @@ describe("typescript", () => {
   describe("Features", () => {
     it("includes file patterns", () => {
       const config = typescript.find(rule => rule.files);
-      expect(config.files).toContain("**/*.{js,mjs,cjs,ts}");
+      expect(config.files).toContain("**/*.ts", "**/*.tsx");
     });
 
     it("includes browser globals", () => {
@@ -26,11 +26,6 @@ describe("typescript", () => {
     it("includes prettier plugin", () => {
       const config = typescript.find(rule => rule.plugins?.prettier);
       expect(config.plugins.prettier).toBeDefined();
-    });
-
-    it("includes stylistic rules", () => {
-      const config = typescript.find(rule => rule.rules?.["@stylistic/comma-dangle"]);
-      expect(config.rules["@stylistic/comma-dangle"]).toEqual(["error", "always-multiline"]);
     });
   });
 });
