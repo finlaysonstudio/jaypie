@@ -152,33 +152,4 @@ export default [
       "vitest/no-disabled-tests": "warn",
     },
   },
-
-  //
-  //
-  // Vue
-  //
-  {
-    ignores: [
-      "packages/*-vue/**/*.js",
-      "packages/*-vue/**/*.mjs",
-      "packages/*-vue/**/*.mts",
-      "packages/*-vue/**/*.ts",
-      "packages/*-vue/**/*.vue",
-      "packages/vue/**/*.js",
-      "packages/vue/**/*.mjs",
-      "packages/vue/**/*.mts",
-      "packages/vue/**/*.ts",
-      "packages/vue/**/*.vue",
-      "packages/vue-*/**/*.js",
-      "packages/vue-*/**/*.mjs",
-      "packages/vue-*/**/*.mts",
-      "packages/vue-*/**/*.ts",
-      "packages/vue-*/**/*.vue",
-      "vue/**/*.js",
-      "vue/**/*.mjs",
-      "vue/**/*.mts",
-      "vue/**/*.ts",
-      "vue/**/*.vue",
-    ],
-  },
 ];
