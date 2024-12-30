@@ -23,6 +23,7 @@
     "format": "npm run format:package && npm run format:lint",
     "format:lint": "eslint --fix .",
     "format:package": "sort-package-json ./package.json ./packages/*/package.json",
+    "postinstall": "npm run build",
     "lint": "eslint .",
     "new": "hygen jaypie new",
     "new:test": "hygen jaypie test",
