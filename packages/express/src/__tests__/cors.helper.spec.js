@@ -74,14 +74,14 @@ describe("Cors Helper", () => {
     it("allows localhost", () => {
       const middleware = corsHelper();
       const callback = vi.fn();
-      middleware.options.origin("localhost", callback);
+      middleware.options.origin("http://localhost", callback);
       expect(callback).toHaveBeenCalledWith(null, true);
     });
 
     it("allows localhost with port", () => {
       const middleware = corsHelper();
       const callback = vi.fn();
-      middleware.options.origin("localhost:3000", callback);
+      middleware.options.origin("http://localhost:3000", callback);
       expect(callback).toHaveBeenCalledWith(null, true);
     });
 
@@ -91,6 +91,43 @@ describe("Cors Helper", () => {
       const middleware = corsHelper();
       const callback = vi.fn();
       middleware.options.origin("https://malicious.com", callback);
+      expect(callback).toHaveBeenCalledWith(expect.any(Error));
+    });
+
+    it("allows BASE_URL origin with http protocol", () => {
+      process.env.BASE_URL = "http://example.com";
+      delete process.env.PROJECT_BASE_URL;
+      const middleware = corsHelper();
+      const callback = vi.fn();
+      middleware.options.origin("http://example.com", callback);
+      expect(callback).toHaveBeenCalledWith(null, true);
+    });
+
+    it("allows BASE_URL origin with https protocol", () => {
+      process.env.BASE_URL = "https://example.com";
+      delete process.env.PROJECT_BASE_URL;
+      const middleware = corsHelper();
+      const callback = vi.fn();
+      middleware.options.origin("https://example.com", callback);
+      expect(callback).toHaveBeenCalledWith(null, true);
+    });
+
+    it("adds https protocol to BASE_URL if missing", () => {
+      process.env.BASE_URL = "example.com";
+      delete process.env.PROJECT_BASE_URL;
+      const middleware = corsHelper();
+      const callback = vi.fn();
+      middleware.options.origin("https://example.com", callback);
+      expect(callback).toHaveBeenCalledWith(null, true);
+    });
+  });
+  describe("Edge Cases", () => {
+    it("Protects against similar origins", () => {
+      delete process.env.BASE_URL;
+      process.env.PROJECT_BASE_URL = "project.com";
+      const middleware = corsHelper();
+      const callback = vi.fn();
+      middleware.options.origin("https://myproject.com", callback);
       expect(callback).toHaveBeenCalledWith(expect.any(Error));
     });
   });

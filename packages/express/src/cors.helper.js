@@ -5,10 +5,20 @@ import expressCors from "cors";
 // Constants
 //
 
+const HTTP_PROTOCOL = "http://";
+const HTTPS_PROTOCOL = "https://";
+
 //
 //
 // Helper Functions
 //
+
+const ensureProtocol = (url) => {
+  if (!url) return url;
+  if (url.startsWith(HTTP_PROTOCOL) || url.startsWith(HTTPS_PROTOCOL))
+    return url;
+  return HTTPS_PROTOCOL + url;
+};
 
 //
 //
@@ -25,8 +35,8 @@ const corsHelper = () => {
       }
 
       const allowedOrigins = [
-        process.env.BASE_URL,
-        process.env.PROJECT_BASE_URL,
+        ensureProtocol(process.env.BASE_URL),
+        ensureProtocol(process.env.PROJECT_BASE_URL),
         "http://localhost",
         /^http:\/\/localhost:\d+$/,
       ];
