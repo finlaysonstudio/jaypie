@@ -1,3 +1,4 @@
+import { CorsError } from "@jaypie/errors";
 import expressCors from "cors";
 
 //
@@ -66,7 +67,7 @@ const corsHelper = (config = {}) => {
       if (isAllowed) {
         callback(null, true);
       } else {
-        callback(new Error("Not allowed by CORS"));
+        callback(new CorsError());
       }
     },
     methods: [...DEFAULT_METHODS, ...(methods || [])],
