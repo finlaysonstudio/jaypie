@@ -10,7 +10,6 @@ import corsHelper from "../cors.helper.js";
 
 vi.mock("cors", () => ({
   default: (options) => {
-    console.log("options :>> ", options);
     // eslint-disable-next-line no-unused-vars
     const middleware = (req, res, next) => {};
     middleware.options = options;
@@ -72,6 +71,7 @@ describe("Cors Helper", () => {
     });
 
     it("allows localhost", () => {
+      process.env.PROJECT_ENV = "sandbox";
       const middleware = corsHelper();
       const callback = vi.fn();
       middleware.options.origin("http://localhost", callback);
@@ -79,6 +79,7 @@ describe("Cors Helper", () => {
     });
 
     it("allows localhost with port", () => {
+      process.env.PROJECT_ENV = "sandbox";
       const middleware = corsHelper();
       const callback = vi.fn();
       middleware.options.origin("http://localhost:3000", callback);
@@ -119,6 +120,30 @@ describe("Cors Helper", () => {
       const callback = vi.fn();
       middleware.options.origin("https://example.com", callback);
       expect(callback).toHaveBeenCalledWith(null, true);
+    });
+
+    it("allows localhost only in sandbox environment", () => {
+      process.env.PROJECT_ENV = "sandbox";
+      const middleware = corsHelper();
+      const callback = vi.fn();
+      middleware.options.origin("http://localhost", callback);
+      expect(callback).toHaveBeenCalledWith(null, true);
+    });
+
+    it("blocks localhost in non-sandbox environment", () => {
+      process.env.PROJECT_ENV = "production";
+      const middleware = corsHelper();
+      const callback = vi.fn();
+      middleware.options.origin("http://localhost", callback);
+      expect(callback).toHaveBeenCalledWith(expect.any(Error));
+    });
+
+    it("blocks localhost with port in non-sandbox environment", () => {
+      process.env.PROJECT_ENV = "production";
+      const middleware = corsHelper();
+      const callback = vi.fn();
+      middleware.options.origin("http://localhost:3000", callback);
+      expect(callback).toHaveBeenCalledWith(expect.any(Error));
     });
   });
   describe("Edge Cases", () => {

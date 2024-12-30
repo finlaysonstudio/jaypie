@@ -7,6 +7,7 @@ import expressCors from "cors";
 
 const HTTP_PROTOCOL = "http://";
 const HTTPS_PROTOCOL = "https://";
+const SANDBOX_ENV = "sandbox";
 
 //
 //
@@ -37,9 +38,12 @@ const corsHelper = () => {
       const allowedOrigins = [
         ensureProtocol(process.env.BASE_URL),
         ensureProtocol(process.env.PROJECT_BASE_URL),
-        "http://localhost",
-        /^http:\/\/localhost:\d+$/,
       ];
+
+      if (process.env.PROJECT_ENV === SANDBOX_ENV) {
+        allowedOrigins.push("http://localhost");
+        allowedOrigins.push(/^http:\/\/localhost:\d+$/);
+      }
 
       const isAllowed = allowedOrigins.some((allowed) => {
         if (allowed instanceof RegExp) {
