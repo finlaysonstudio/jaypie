@@ -14,17 +14,17 @@ describe("typescript", () => {
 
   describe("Features", () => {
     it("includes file patterns", () => {
-      const config = typescript.find(rule => rule.files);
+      const config = typescript.find((rule) => rule.files);
       expect(config.files).toContain("**/*.ts", "**/*.tsx");
     });
 
     it("includes browser globals", () => {
-      const config = typescript.find(rule => rule.languageOptions?.globals);
+      const config = typescript.find((rule) => rule.languageOptions?.globals);
       expect(config.languageOptions.globals).toBeDefined();
     });
 
     it("includes prettier plugin", () => {
-      const config = typescript.find(rule => rule.plugins?.prettier);
+      const config = typescript.find((rule) => rule.plugins?.prettier);
       expect(config.plugins.prettier).toBeDefined();
     });
   });

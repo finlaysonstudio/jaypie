@@ -47,11 +47,11 @@ const optional = (value, type, options = {}) => {
 // Convenience Functions
 //
 
-optional.array = value => optional(value, Array);
-optional.boolean = value => optional(value, Boolean);
-optional.number = value => optional(value, Number);
-optional.object = value => optional(value, Object);
-optional.positive = value => optional(value, Number, { positive: true });
+optional.array = (value) => optional(value, Array);
+optional.boolean = (value) => optional(value, Boolean);
+optional.number = (value) => optional(value, Number);
+optional.object = (value) => optional(value, Object);
+optional.positive = (value) => optional(value, Number, { positive: true });
 optional.string = (value, defaultValue = "") =>
   optional(value, String, defaultValue);
 

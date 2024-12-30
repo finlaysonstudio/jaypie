@@ -1,5 +1,6 @@
 import vitest from "eslint-plugin-vitest";
 import tsPlugin from "@typescript-eslint/eslint-plugin";
+// eslint-disable-next-line import-x/default
 import tsParser from "@typescript-eslint/parser";
 import prettierPlugin from "eslint-plugin-prettier";
 
@@ -12,7 +13,7 @@ export default [
     },
     plugins: {
       "@typescript-eslint": tsPlugin,
-      "prettier": prettierPlugin,
+      prettier: prettierPlugin,
     },
     rules: {
       ...tsPlugin.configs.recommended.rules,

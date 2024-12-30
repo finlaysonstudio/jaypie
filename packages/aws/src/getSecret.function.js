@@ -45,9 +45,9 @@ async function getSecret(name) {
     [HTTP.HEADER.AMAZON.PARAMETERS_SECRETS_TOKEN]:
       process.env.AWS_SESSION_TOKEN,
   };
-  const port
-    = process.env.PARAMETERS_SECRETS_EXTENSION_HTTP_PORT
-    || DEFAULT.PARAMETERS_SECRETS_EXTENSION_HTTP_PORT;
+  const port =
+    process.env.PARAMETERS_SECRETS_EXTENSION_HTTP_PORT ||
+    DEFAULT.PARAMETERS_SECRETS_EXTENSION_HTTP_PORT;
   const params = { secretId: name };
   const endpoint = `http://localhost:${port}/secretsmanager/get`;
   const response = await axios.get(endpoint, { headers, params });

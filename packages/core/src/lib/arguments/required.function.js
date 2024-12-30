@@ -57,11 +57,11 @@ const required = (value, type, options = {}) => {
 // Convenience Functions
 //
 
-required.array = value => required(value, Array);
-required.boolean = value => required(value, Boolean);
-required.number = value => required(value, Number);
-required.object = value => required(value, Object);
-required.positive = value => required(value, Number, { positive: true });
+required.array = (value) => required(value, Array);
+required.boolean = (value) => required(value, Boolean);
+required.number = (value) => required(value, Number);
+required.object = (value) => required(value, Object);
+required.positive = (value) => required(value, Number, { positive: true });
 required.string = (value, defaultValue = "") =>
   required(value, String, defaultValue);
 

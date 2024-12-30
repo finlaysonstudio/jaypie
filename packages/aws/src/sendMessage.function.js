@@ -107,9 +107,11 @@ export default async ({
     return response;
   } catch (error) {
     // Handle forbidden/authorization errors differently
-    if (error.name === "AccessDeniedException"
-      || error.name === "NotAuthorized"
-      || error.name === "MissingAuthenticationToken") {
+    if (
+      error.name === "AccessDeniedException" ||
+      error.name === "NotAuthorized" ||
+      error.name === "MissingAuthenticationToken"
+    ) {
       log.error("[@jaypie/aws] Authorization error sending message to SQS");
       log.debug(`Does handler have grantSendMessages on "${queueUrl}"?`);
     } else {

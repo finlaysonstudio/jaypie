@@ -1,6 +1,8 @@
 import { getMessages as originalGetMessages } from "@jaypie/aws";
-import { force, Log, uuid as originalUuid } from "@jaypie/core";
 import {
+  force,
+  Log,
+  uuid as originalUuid,
   // Core utilities
   HTTP,
   JAYPIE,

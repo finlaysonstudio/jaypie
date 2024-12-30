@@ -104,10 +104,14 @@ export default async ({
       log.trace.var({ sqsSendMessageResponse: response });
     } catch (error) {
       // Handle forbidden/authorization errors differently
-      if (error.name === "AccessDeniedException"
-        || error.name === "NotAuthorized"
-        || error.name === "MissingAuthenticationToken") {
-        log.error("[@jaypie/aws] Authorization error sending batch messages to SQS");
+      if (
+        error.name === "AccessDeniedException" ||
+        error.name === "NotAuthorized" ||
+        error.name === "MissingAuthenticationToken"
+      ) {
+        log.error(
+          "[@jaypie/aws] Authorization error sending batch messages to SQS",
+        );
         log.debug(`Does handler have grantSendMessages on "${queueUrl}"?`);
       } else {
         // Log all other errors (service errors, throttling, network issues etc)

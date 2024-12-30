@@ -2,8 +2,9 @@ import js from "@eslint/js";
 import vitest from "@vitest/eslint-plugin";
 import globals from "globals";
 import tsPlugin from "@typescript-eslint/eslint-plugin";
+// eslint-disable-next-line import-x/default
 import tsParser from "@typescript-eslint/parser";
-import eslintPluginImportX from 'eslint-plugin-import-x'
+import eslintPluginImportX from "eslint-plugin-import-x";
 import prettierPlugin from "eslint-plugin-prettier";
 
 export default [
@@ -119,7 +120,7 @@ export default [
     },
     plugins: {
       "@typescript-eslint": tsPlugin,
-      "prettier": prettierPlugin,
+      prettier: prettierPlugin,
     },
     rules: {
       ...tsPlugin.configs.recommended.rules,
@@ -132,7 +133,13 @@ export default [
   // Tests (JavaScript and TypeScript)
   //
   {
-    files: ["**/__tests__/**", "**/*.spec.js", "**/*.test.js", "**/*.spec.ts", "**/*.test.ts"],
+    files: [
+      "**/__tests__/**",
+      "**/*.spec.js",
+      "**/*.test.js",
+      "**/*.spec.ts",
+      "**/*.test.ts",
+    ],
     plugins: {
       vitest,
     },

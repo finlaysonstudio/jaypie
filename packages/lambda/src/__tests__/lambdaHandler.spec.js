@@ -122,7 +122,10 @@ describe("Lambda Handler Module", () => {
       const handler = lambdaHandler(options, mockFunction);
       await handler({}, {});
       expect(mockFunction).toHaveBeenCalledTimes(1);
-      expect(jaypieHandler).toHaveBeenCalledWith(mockFunction, expect.objectContaining(options));
+      expect(jaypieHandler).toHaveBeenCalledWith(
+        mockFunction,
+        expect.objectContaining(options),
+      );
     });
 
     it("Throws if not passed a function after parameter swap", () => {

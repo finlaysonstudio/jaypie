@@ -1,6 +1,6 @@
 /// <reference types="vitest" />
 
-import { JsonApiError } from "../types.js";
+import { JsonApiError } from "./jaypie-testkit.js";
 
 interface CustomMatchers<R = unknown> {
   toBeCalledAboveTrace(): R;

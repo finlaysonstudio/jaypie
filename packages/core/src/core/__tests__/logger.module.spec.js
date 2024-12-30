@@ -41,7 +41,7 @@ expect.extend({
   toBeJaypieLogger(received) {
     const isObject = typeof received === "object" && received !== null;
     const hasLoggerMethods = LOG_METHOD_NAMES.every(
-      method => typeof received[method] === "function",
+      (method) => typeof received[method] === "function",
     );
 
     if (isObject && hasLoggerMethods) {

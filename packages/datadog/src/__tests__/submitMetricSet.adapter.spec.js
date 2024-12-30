@@ -39,6 +39,7 @@ const mockSubmitMetrics = vi.fn();
 beforeEach(() => {
   getSecret.mockImplementation(() => MOCK.SECRET_DATADOG_API_KEY);
   mockSubmitMetrics.mockResolvedValue({ errors: [] });
+  // eslint-disable-next-line import-x/namespace
   v2.MetricsApi = vi.fn(() => {
     return {
       submitMetrics: mockSubmitMetrics,

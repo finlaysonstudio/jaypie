@@ -3,9 +3,9 @@ module.exports = ({ CfnOutput, output, stack } = {}) => {
     Object.keys(output).forEach((key) => {
       const value = output[key];
       if (
-        value !== undefined
-        && typeof value === "string"
-        && value.length > 0
+        value !== undefined &&
+        typeof value === "string" &&
+        value.length > 0
       ) {
         new CfnOutput(stack, key, { value });
       }
