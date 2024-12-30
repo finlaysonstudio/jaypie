@@ -1,4 +1,15 @@
 {
   "$schema": "node_modules/lerna/schemas/lerna-schema.json",
+  "command": {
+    "run": {
+      "order": [
+        "errors",
+        "*"
+      ]
+    }
+  },
+  "packages": [
+    "packages/*"
+  ],
   "version": "independent"
 }
