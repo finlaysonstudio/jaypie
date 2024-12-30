@@ -20,6 +20,7 @@ export const ERROR = {
     BAD_REQUEST: "The request was not properly formatted",
     CONFIGURATION_ERROR:
       "The application responding to the request encountered a configuration error",
+    CORS_ERROR: "The requesting origin is not authorized to this resource",
     FORBIDDEN: "Access to this resource is not authorized",
     GATEWAY_TIMEOUT:
       "The connection timed out waiting for an upstream resource",
@@ -46,6 +47,7 @@ export const ERROR = {
     BAD_GATEWAY: "Bad Gateway",
     BAD_REQUEST: "Bad Request",
     CONFIGURATION_ERROR: "Internal Configuration Error",
+    CORS_ERROR: "Unauthorized Origin",
     FORBIDDEN: "Forbidden",
     GATEWAY_TIMEOUT: "Gateway Timeout",
     GONE: "Gone",
@@ -62,6 +64,7 @@ export const ERROR = {
     BAD_GATEWAY: "BAD_GATEWAY",
     BAD_REQUEST: "BAD_REQUEST",
     CONFIGURATION_ERROR: "CONFIGURATION_ERROR",
+    CORS_ERROR: "CORS_ERROR",
     FORBIDDEN: "FORBIDDEN",
     GATEWAY_TIMEOUT: "GATEWAY_TIMEOUT",
     GONE: "GONE",

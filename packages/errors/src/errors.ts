@@ -87,6 +87,13 @@ export const ConfigurationError = createErrorClass(
   ERROR.TYPE.CONFIGURATION_ERROR,
 );
 
+export const CorsError = createErrorClass(
+  ERROR.MESSAGE.CORS_ERROR,
+  HTTP.CODE.UNAUTHORIZED,
+  ERROR.TITLE.CORS_ERROR,
+  ERROR.TYPE.CORS_ERROR,
+);
+
 export const IllogicalError = createErrorClass(
   ERROR.MESSAGE.ILLOGICAL,
   HTTP.CODE.INTERNAL_ERROR,
