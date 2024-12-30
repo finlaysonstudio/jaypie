@@ -146,6 +146,55 @@ describe("Cors Helper", () => {
       expect(callback).toHaveBeenCalledWith(expect.any(Error));
     });
   });
+
+  describe("Features", () => {
+    it("accepts custom origins array", () => {
+      const middleware = corsHelper({
+        origins: ["https://custom.com"],
+      });
+      const callback = vi.fn();
+      middleware.options.origin("https://custom.com", callback);
+      expect(callback).toHaveBeenCalledWith(null, true);
+    });
+
+    it("allows all origins when origins is '*'", () => {
+      const middleware = corsHelper({
+        origins: "*",
+      });
+      const callback = vi.fn();
+      middleware.options.origin("https://any-domain.com", callback);
+      expect(callback).toHaveBeenCalledWith(null, true);
+    });
+
+    it("adds custom methods", () => {
+      const middleware = corsHelper({
+        methods: ["PATCH", "OPTIONS"],
+      });
+      expect(middleware.options.methods).toInclude("PATCH");
+      expect(middleware.options.methods).toInclude("OPTIONS");
+      expect(middleware.options.methods).toInclude("GET");
+    });
+
+    it("adds custom headers", () => {
+      const middleware = corsHelper({
+        headers: ["X-Custom-Header"],
+      });
+      expect(middleware.options.allowedHeaders).toInclude("X-Custom-Header");
+      expect(middleware.options.allowedHeaders).toInclude("X-Session-Id");
+    });
+
+    it("applies override options", () => {
+      const middleware = corsHelper({
+        overrides: {
+          credentials: true,
+          maxAge: 86400,
+        },
+      });
+      expect(middleware.options.credentials).toBe(true);
+      expect(middleware.options.maxAge).toBe(86400);
+    });
+  });
+
   describe("Edge Cases", () => {
     it("Protects against similar origins", () => {
       delete process.env.BASE_URL;
