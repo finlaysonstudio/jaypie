@@ -90,6 +90,7 @@ describe("Express handler", () => {
         });
         // Set up our mock express app
         const app = express();
+        // eslint-disable-next-line import-x/no-named-as-default-member
         app.use(express.json());
         app.use(handler);
         // Make a request

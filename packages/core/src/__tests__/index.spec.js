@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 // Subject
-import index from "../index.js";
-import {
+// eslint-disable-next-line import-x/default
+import index, {
   BadGatewayError,
   BadRequestError,
   cloneDeep,

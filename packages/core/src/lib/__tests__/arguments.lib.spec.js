@@ -1,8 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 // Subject
-import argumentsLib from "../arguments.lib.js";
-import { force, optional, required, TYPE } from "../arguments.lib.js";
+import argumentsLib, {
+  force,
+  optional,
+  required,
+  TYPE,
+} from "../arguments.lib.js";
 
 //
 //

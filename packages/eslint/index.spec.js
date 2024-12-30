@@ -33,13 +33,6 @@ describe("Index", () => {
         (config) =>
           config.files?.includes("**/*.spec.js") && config.plugins?.vitest,
       );
-      const hasStylisticConfig = index.some(
-        (config) =>
-          config.rules &&
-          Object.keys(config.rules).some((rule) =>
-            rule.startsWith("@stylistic/"),
-          ),
-      );
 
       expect(hasJsConfig).toBe(true);
       expect(hasVitestConfig).toBe(true);
