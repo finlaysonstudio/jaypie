@@ -1,4 +1,5 @@
 import { CorsError } from "@jaypie/errors";
+import { envBoolean } from "@jaypie/core";
 import expressCors from "cors";
 
 //
@@ -52,7 +53,10 @@ const corsHelper = (config = {}) => {
       ];
 
       // Add localhost origins in sandbox
-      if (!origins && process.env.PROJECT_ENV === SANDBOX_ENV) {
+      if (
+        process.env.PROJECT_ENV === SANDBOX_ENV ||
+        envBoolean("PROJECT_DEV")
+      ) {
         allowedOrigins.push("http://localhost");
         allowedOrigins.push(/^http:\/\/localhost:\d+$/);
       }
