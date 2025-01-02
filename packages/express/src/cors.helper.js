@@ -89,6 +89,15 @@ export default (config) => {
   const cors = corsHelper(config);
   return (req, res, next) => {
     console.log("Run cors middleware");
-    cors(req, res, next);
+    cors(req, res, (error) => {
+      if (error) {
+        res.status(error.status);
+        res.setHeader("Content-Type", "application/json");
+        console.log("Return cors error");
+        return res.json(error.toJSON());
+      }
+      console.log("Allow next");
+      next();
+    });
   };
 };
