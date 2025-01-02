@@ -94,7 +94,7 @@ export default (config) => {
         res.status(error.status);
         res.setHeader("Content-Type", "application/json");
         console.log("Return cors error");
-        return res.json(error.toJSON());
+        return res.json(error.body());
       }
       console.log("Allow next");
       next();
