@@ -6,6 +6,7 @@ import tsPlugin from "@typescript-eslint/eslint-plugin";
 import tsParser from "@typescript-eslint/parser";
 import eslintPluginImportX from "eslint-plugin-import-x";
 import prettierPlugin from "eslint-plugin-prettier";
+import pluginPrettierVue from "eslint-plugin-prettier-vue";
 
 export default [
   //
@@ -157,6 +158,22 @@ export default [
       ...vitest.configs.recommended.rules,
       "vitest/no-focused-tests": ["error", { fixable: false }],
       "vitest/no-disabled-tests": "warn",
+    },
+  },
+
+  //
+  //
+  // Vue
+  //
+  {
+    files: ["**/*.vue"],
+    plugins: {
+      "prettier-vue": pluginPrettierVue,
+    },
+    rules: {
+      "import-x/extensions": "off",
+      "prettier/prettier": "off",
+      "prettier-vue/prettier": "warn",
     },
   },
 ];
