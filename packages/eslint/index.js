@@ -174,6 +174,7 @@ export default [
       "import-x/extensions": "off",
       "prettier/prettier": "off",
       "prettier-vue/prettier": "warn",
+      "vue/html-self-closing": "off",
     },
   },
 ];
