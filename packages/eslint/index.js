@@ -93,8 +93,15 @@ export default [
   // Nuxt
   //
   {
-    // Ignore auto-generated Nuxt folders
-    ignores: ["**/.nuxt/**", ".nuxt/"],
+    ignores: [
+      // Ignore nuxt packages
+      "packages/nuxt",
+      "packages/nuxt-*",
+      "packages/*-nuxt",
+      "packages/*-nuxt-*",
+      // Ignore auto-generated Nuxt folders
+      ".nuxt/",
+    ],
   },
 
   //
