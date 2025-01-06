@@ -55,7 +55,7 @@ const corsHelper = (config = {}) => {
       // Add localhost origins in sandbox
       if (
         process.env.PROJECT_ENV === SANDBOX_ENV ||
-        envBoolean("PROJECT_DEV")
+        envBoolean("PROJECT_SANDBOX_MODE")
       ) {
         allowedOrigins.push("http://localhost");
         allowedOrigins.push(/^http:\/\/localhost:\d+$/);
