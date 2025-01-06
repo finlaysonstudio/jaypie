@@ -104,6 +104,37 @@ describe("corsHelper with supertest", () => {
     expect(response.statusCode).toEqual(HTTP.CODE.OK);
     expect(response.body.message).toEqual("Hello");
   });
+  it("allows localhost if env is sandbox", async () => {
+    process.env.PROJECT_ENV = "sandbox";
+    const route = express();
+    route.get("/", corsHelper(), (req, res) => {
+      res.json({ message: "Hello" });
+    });
+    const response = await request(route)
+      .get("/")
+      .set("Origin", "http://localhost")
+      .expect("Content-Type", /json/)
+      .expect(HTTP.CODE.OK)
+      .expect({ message: "Hello" });
+    expect(response.statusCode).toEqual(HTTP.CODE.OK);
+    expect(response.body.message).toEqual("Hello");
+  });
+  it("allows localhost if sandbox mode is true", async () => {
+    process.env.PROJECT_ENV = "unknown";
+    process.env.PROJECT_SANDBOX_MODE = true;
+    const route = express();
+    route.get("/", corsHelper(), (req, res) => {
+      res.json({ message: "Hello" });
+    });
+    const response = await request(route)
+      .get("/")
+      .set("Origin", "http://localhost")
+      .expect("Content-Type", /json/)
+      .expect(HTTP.CODE.OK)
+      .expect({ message: "Hello" });
+    expect(response.statusCode).toEqual(HTTP.CODE.OK);
+    expect(response.body.message).toEqual("Hello");
+  });
   it("denies requests with a non-matching origin", async () => {
     const route = express();
     route.get("/", corsHelper({ origins: "https://api.example.com" }), (req, res) => {
@@ -114,5 +145,15 @@ describe("corsHelper with supertest", () => {
       .set("Origin", "https://any-domain.com")
       .expect(HTTP.CODE.UNAUTHORIZED);
     expect(response.statusCode).toEqual(HTTP.CODE.UNAUTHORIZED);
+  });
+  it("allows any requested headers", async () => {
+    const route = express();
+    route.options("/", corsHelper(), (req, res) => {
+      res.json({ message: "Hello" });
+    });
+    const response = await request(route)
+      .options("/")
+      .set("Access-Control-Request-Headers", "X-Project-Token");
+    expect(response.headers["access-control-allow-headers"]).toEqual("X-Project-Token");
   });
 });
