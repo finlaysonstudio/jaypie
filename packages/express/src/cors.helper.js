@@ -1,5 +1,5 @@
 import { CorsError } from "@jaypie/errors";
-import { envBoolean } from "@jaypie/core";
+import { envBoolean, force } from "@jaypie/core";
 import expressCors from "cors";
 
 //
@@ -7,8 +7,6 @@ import expressCors from "cors";
 // Constants
 //
 
-const DEFAULT_HEADERS = ["Authorization", "X-Session-Id"];
-const DEFAULT_METHODS = ["DELETE", "HEAD", "GET", "POST", "PUT"];
 const HTTP_PROTOCOL = "http://";
 const HTTPS_PROTOCOL = "https://";
 const SANDBOX_ENV = "sandbox";
@@ -25,57 +23,67 @@ const ensureProtocol = (url) => {
   return HTTPS_PROTOCOL + url;
 };
 
+export const dynamicOriginCallbackHandler = (origins) => {
+  return (origin, callback) => {
+    // Handle wildcard origin
+    if (origins === "*") {
+      callback(null, true);
+      return;
+    }
+
+    // Allow requests with no origin (like mobile apps, curl, etc)
+    if (!origin) {
+      callback(null, true);
+      return;
+    }
+
+    const allowedOrigins = [];
+    if (process.env.BASE_URL) {
+      allowedOrigins.push(ensureProtocol(process.env.BASE_URL));
+    }
+    if (process.env.PROJECT_BASE_URL) {
+      allowedOrigins.push(ensureProtocol(process.env.PROJECT_BASE_URL));
+    }
+    if (origins) {
+      const additionalOrigins = force.array(origins);
+      allowedOrigins.push(...additionalOrigins);
+    }
+
+    // Add localhost origins in sandbox
+    if (
+      process.env.PROJECT_ENV === SANDBOX_ENV ||
+      envBoolean("PROJECT_SANDBOX_MODE")
+    ) {
+      allowedOrigins.push("http://localhost");
+      allowedOrigins.push(/^http:\/\/localhost:\d+$/);
+    }
+
+    const isAllowed = allowedOrigins.some((allowed) => {
+      if (allowed instanceof RegExp) {
+        return allowed.test(origin);
+      }
+      return origin.includes(allowed);
+    });
+
+    if (isAllowed) {
+      callback(null, true);
+    } else {
+      callback(new CorsError());
+    }
+  };
+};
+
 //
 //
 // Main
 //
 
 const corsHelper = (config = {}) => {
-  const { origins, methods, headers, overrides = {} } = config;
+  const { origins, overrides = {} } = config;
 
   const options = {
-    origin(origin, callback) {
-      // Handle wildcard origin
-      if (origins === "*") {
-        callback(null, true);
-        return;
-      }
-
-      // Allow requests with no origin (like mobile apps, curl, etc)
-      if (!origin) {
-        callback(null, true);
-        return;
-      }
-
-      const allowedOrigins = origins || [
-        ensureProtocol(process.env.BASE_URL),
-        ensureProtocol(process.env.PROJECT_BASE_URL),
-      ];
-
-      // Add localhost origins in sandbox
-      if (
-        process.env.PROJECT_ENV === SANDBOX_ENV ||
-        envBoolean("PROJECT_DEV")
-      ) {
-        allowedOrigins.push("http://localhost");
-        allowedOrigins.push(/^http:\/\/localhost:\d+$/);
-      }
-
-      const isAllowed = allowedOrigins.some((allowed) => {
-        if (allowed instanceof RegExp) {
-          return allowed.test(origin);
-        }
-        return origin.includes(allowed);
-      });
-
-      if (isAllowed) {
-        callback(null, true);
-      } else {
-        callback(new CorsError());
-      }
-    },
-    methods: [...DEFAULT_METHODS, ...(methods || [])],
-    allowedHeaders: [...DEFAULT_HEADERS, ...(headers || [])],
+    origin: dynamicOriginCallbackHandler(origins),
+    // * The default behavior is to allow any headers and methods so they are not included here
     ...overrides,
   };
 

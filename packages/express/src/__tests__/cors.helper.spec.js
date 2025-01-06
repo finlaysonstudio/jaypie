@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Subject
-import corsHelper from "../cors.helper.js";
+import corsHelper, { dynamicOriginCallbackHandler } from "../cors.helper.js";
 
 //
 //
@@ -9,7 +9,7 @@ import corsHelper from "../cors.helper.js";
 //
 
 vi.mock("cors", () => ({
-  default: (options) => {
+  default: () => {
     return (req, res, next) => next();
   },
 }));
@@ -42,6 +42,55 @@ describe("Cors Helper", () => {
       expect(callback).not.toHaveBeenCalled();
       cors(null, null, callback);
       expect(callback).toHaveBeenCalled();
+    });
+  });
+
+  describe("Features", () => {
+    describe("dynamicOriginCallbackHandler", () => {
+      it("is a function that returns a callback", () => {
+        expect(dynamicOriginCallbackHandler).toBeDefined();
+        expect(dynamicOriginCallbackHandler).toBeFunction();
+        expect(dynamicOriginCallbackHandler()).toBeFunction();
+      });
+      it("allows wildcard origin", () => {
+        const originHandler = dynamicOriginCallbackHandler("*");
+        const origin = "https://any-domain.com";
+        const callback = vi.fn();
+        originHandler(origin, callback);
+        expect(callback).toHaveBeenCalledWith(null, true);
+      });
+      it("allows requests with no origin", () => {
+        const originHandler = dynamicOriginCallbackHandler();
+        const callback = vi.fn();
+        originHandler(null, callback);
+        expect(callback).toHaveBeenCalledWith(null, true);
+      });
+      it("allows requests that match BASE_URL", () => {
+        process.env.BASE_URL = "https://api.example.com";
+        const originHandler = dynamicOriginCallbackHandler();
+        const origin = "https://api.example.com";
+        const callback = vi.fn();
+        originHandler(origin, callback);
+        expect(callback).toHaveBeenCalledWith(null, true);
+      });
+      it("allows requests that match PROJECT_BASE_URL", () => {
+        process.env.PROJECT_BASE_URL = "https://api.example.com";
+        const originHandler = dynamicOriginCallbackHandler();
+        const origin = "https://api.example.com";
+        const callback = vi.fn();
+        originHandler(origin, callback);
+        expect(callback).toHaveBeenCalledWith(null, true);
+      });
+      it("allows requests that match additional origins", () => {
+        const originHandler = dynamicOriginCallbackHandler([
+          "https://api.example.com",
+          "https://api.example.org",
+        ]);
+        const origin = "https://api.example.com";
+        const callback = vi.fn();
+        originHandler(origin, callback);
+        expect(callback).toHaveBeenCalledWith(null, true);
+      });
     });
   });
 });
