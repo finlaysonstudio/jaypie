@@ -25,6 +25,56 @@ const ensureProtocol = (url) => {
   return HTTPS_PROTOCOL + url;
 };
 
+export const dynamicOriginCallbackHandler = (origins) => {
+  return (origin, callback) => {
+    // Handle wildcard origin
+    if (origins === "*") {
+      callback(null, true);
+      return;
+    }
+
+    // Allow requests with no origin (like mobile apps, curl, etc)
+    if (!origin) {
+      callback(null, true);
+      return;
+    }
+
+    const allowedOrigins = [];
+    if (process.env.BASE_URL) {
+      allowedOrigins.push(ensureProtocol(process.env.BASE_URL));
+    }
+    if (process.env.PROJECT_BASE_URL) {
+      allowedOrigins.push(ensureProtocol(process.env.PROJECT_BASE_URL));
+    }
+    if (origins) {
+      const additionalOrigins = force.array(origins);
+      allowedOrigins.push(...additionalOrigins);
+    }
+
+    // Add localhost origins in sandbox
+    if (
+      process.env.PROJECT_ENV === SANDBOX_ENV ||
+      envBoolean("PROJECT_SANDBOX_MODE")
+    ) {
+      allowedOrigins.push("http://localhost");
+      allowedOrigins.push(/^http:\/\/localhost:\d+$/);
+    }
+
+    const isAllowed = allowedOrigins.some((allowed) => {
+      if (allowed instanceof RegExp) {
+        return allowed.test(origin);
+      }
+      return origin.includes(allowed);
+    });
+
+    if (isAllowed) {
+      callback(null, true);
+    } else {
+      callback(new CorsError());
+    }
+  };
+};
+
 //
 //
 // Main
@@ -34,53 +84,7 @@ const corsHelper = (config = {}) => {
   const { origins, methods, headers, overrides = {} } = config;
 
   const options = {
-    origin(origin, callback) {
-      // Handle wildcard origin
-      if (origins === "*") {
-        callback(null, true);
-        return;
-      }
-
-      // Allow requests with no origin (like mobile apps, curl, etc)
-      if (!origin) {
-        callback(null, true);
-        return;
-      }
-
-      const allowedOrigins = [];
-      if (process.env.BASE_URL) {
-        allowedOrigins.push(ensureProtocol(process.env.BASE_URL));
-      }
-      if (process.env.PROJECT_BASE_URL) {
-        allowedOrigins.push(ensureProtocol(process.env.PROJECT_BASE_URL));
-      }
-      if (origins) {
-        const additionalOrigins = force.array(origins);
-        allowedOrigins.push(...additionalOrigins);
-      }
-
-      // Add localhost origins in sandbox
-      if (
-        process.env.PROJECT_ENV === SANDBOX_ENV ||
-        envBoolean("PROJECT_SANDBOX_MODE")
-      ) {
-        allowedOrigins.push("http://localhost");
-        allowedOrigins.push(/^http:\/\/localhost:\d+$/);
-      }
-
-      const isAllowed = allowedOrigins.some((allowed) => {
-        if (allowed instanceof RegExp) {
-          return allowed.test(origin);
-        }
-        return origin.includes(allowed);
-      });
-
-      if (isAllowed) {
-        callback(null, true);
-      } else {
-        callback(new CorsError());
-      }
-    },
+    origin: dynamicOriginCallbackHandler(origins),
     methods: [...DEFAULT_METHODS, ...(methods || [])],
     allowedHeaders: [...DEFAULT_HEADERS, ...(headers || [])],
     ...overrides,
