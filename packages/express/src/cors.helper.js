@@ -7,8 +7,6 @@ import expressCors from "cors";
 // Constants
 //
 
-const DEFAULT_HEADERS = ["Authorization", "X-Project-Token", "X-Session-Id"];
-const DEFAULT_METHODS = ["DELETE", "HEAD", "GET", "POST", "PUT"];
 const HTTP_PROTOCOL = "http://";
 const HTTPS_PROTOCOL = "https://";
 const SANDBOX_ENV = "sandbox";
@@ -81,12 +79,11 @@ export const dynamicOriginCallbackHandler = (origins) => {
 //
 
 const corsHelper = (config = {}) => {
-  const { origins, methods, headers, overrides = {} } = config;
+  const { origins, overrides = {} } = config;
 
   const options = {
     origin: dynamicOriginCallbackHandler(origins),
-    methods: [...DEFAULT_METHODS, ...(methods || [])],
-    allowedHeaders: [...DEFAULT_HEADERS, ...(headers || [])],
+    // * The default behavior is to allow any headers and methods so they are not included here
     ...overrides,
   };
 
