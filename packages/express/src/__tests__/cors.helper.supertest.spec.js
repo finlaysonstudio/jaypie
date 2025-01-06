@@ -22,15 +22,6 @@ beforeEach(() => {
 // Run tests
 //
 
-describe("corsHelper", () => {
-  it("works", async () => {
-    const route = express();
-    route.get("/", corsHelper(), (req, res) => {
-      res.json({ message: "Hello" });
-    });
-  });
-});
-
 describe("Supertest", () => {
   it("works", async () => {
     const route = express();
@@ -77,9 +68,13 @@ describe("corsHelper with supertest", () => {
   });
   it("works with a matching origin", async () => {
     const route = express();
-    route.get("/", corsHelper({ origins: "https://api.example.com" }), (req, res) => {
-      res.json({ message: "Hello" });
-    });
+    route.get(
+      "/",
+      corsHelper({ origins: "https://api.example.com" }),
+      (req, res) => {
+        res.json({ message: "Hello" });
+      },
+    );
     const response = await request(route)
       .get("/")
       .set("Origin", "https://api.example.com")
@@ -137,9 +132,13 @@ describe("corsHelper with supertest", () => {
   });
   it("denies requests with a non-matching origin", async () => {
     const route = express();
-    route.get("/", corsHelper({ origins: "https://api.example.com" }), (req, res) => {
-      res.json({ message: "Hello" });
-    });
+    route.get(
+      "/",
+      corsHelper({ origins: "https://api.example.com" }),
+      (req, res) => {
+        res.json({ message: "Hello" });
+      },
+    );
     const response = await request(route)
       .get("/")
       .set("Origin", "https://any-domain.com")
@@ -154,6 +153,8 @@ describe("corsHelper with supertest", () => {
     const response = await request(route)
       .options("/")
       .set("Access-Control-Request-Headers", "X-Project-Token");
-    expect(response.headers["access-control-allow-headers"]).toEqual("X-Project-Token");
+    expect(response.headers["access-control-allow-headers"]).toEqual(
+      "X-Project-Token",
+    );
   });
 });
