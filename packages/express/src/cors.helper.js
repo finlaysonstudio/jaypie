@@ -7,7 +7,7 @@ import expressCors from "cors";
 // Constants
 //
 
-const DEFAULT_HEADERS = ["Authorization", "X-Session-Id"];
+const DEFAULT_HEADERS = ["Authorization", "X-Project-Token", "X-Session-Id"];
 const DEFAULT_METHODS = ["DELETE", "HEAD", "GET", "POST", "PUT"];
 const HTTP_PROTOCOL = "http://";
 const HTTPS_PROTOCOL = "https://";
