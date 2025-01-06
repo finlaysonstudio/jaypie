@@ -1,5 +1,5 @@
 import { CorsError } from "@jaypie/errors";
-import { envBoolean } from "@jaypie/core";
+import { envBoolean, force } from "@jaypie/core";
 import expressCors from "cors";
 
 //
@@ -47,10 +47,17 @@ const corsHelper = (config = {}) => {
         return;
       }
 
-      const allowedOrigins = origins || [
-        ensureProtocol(process.env.BASE_URL),
-        ensureProtocol(process.env.PROJECT_BASE_URL),
-      ];
+      const allowedOrigins = [];
+      if (process.env.BASE_URL) {
+        allowedOrigins.push(ensureProtocol(process.env.BASE_URL));
+      }
+      if (process.env.PROJECT_BASE_URL) {
+        allowedOrigins.push(ensureProtocol(process.env.PROJECT_BASE_URL));
+      }
+      if (origins) {
+        const additionalOrigins = force.array(origins);
+        allowedOrigins.push(...additionalOrigins);
+      }
 
       // Add localhost origins in sandbox
       if (
