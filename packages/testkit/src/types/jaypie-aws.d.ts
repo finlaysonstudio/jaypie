@@ -35,6 +35,8 @@ declare module "@jaypie/aws" {
     },
   ): Promise<string>;
 
+  export function getTextractResults(jobId: string): Promise<string>;
+
   export function sendBatchMessages(
     queueUrl: string,
     messages: Array<string | Record<string, unknown>>,
@@ -52,4 +54,9 @@ declare module "@jaypie/aws" {
       messageAttributes?: Record<string, unknown>;
     },
   ): Promise<SQSMessageResponse>;
+
+  export function sendTextractJob(job: {
+    key: string;
+    bucket: string;
+  }): Promise<Array<unknown>>;
 }

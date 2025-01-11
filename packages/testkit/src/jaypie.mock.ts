@@ -81,7 +81,7 @@ export const getSecret = vi.fn((): string => {
   return `_MOCK_SECRET_[${TAG}]`;
 });
 
-export const getTextractJob = vi.fn((job: string): SQSMessageResponse => {
+export const getTextractResults = vi.fn((job: string): SQSMessageResponse => {
   return { value: `_MOCK_TEXTRACT_JOB_[${job}]` };
 });
 
@@ -524,8 +524,10 @@ export default {
   // AWS
   getMessages,
   getSecret,
+  getTextractResults,
   sendBatchMessages,
   sendMessage,
+  sendTextractJob,
   // Core
   BadGatewayError,
   BadRequestError,
