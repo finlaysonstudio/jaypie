@@ -3,7 +3,6 @@ import {
   GetDocumentAnalysisCommand,
   JobStatus,
 } from "@aws-sdk/client-textract";
-import { BadGatewayError } from "jaypie";
 
 // Subject
 import getTextractJob from "../getTextractJob.function.js";
