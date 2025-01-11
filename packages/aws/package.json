@@ -24,6 +24,7 @@
     "test:spec:getMessages.function": "vitest run ./src/__tests__/getMessages.function.spec.js",
     "test:spec:getSecret.function": "vitest run ./src/__tests__/getSecret.function.spec.js",
     "test:spec:getSingletonMessage.function": "vitest run ./src/__tests__/getSingletonMessage.function.spec.js",
+    "test:spec:getTextractJob.function": "vitest run ./src/__tests__/getTextractJob.function.spec.js",
     "test:spec:index": "vitest run ./src/__tests__/index.spec.js",
     "test:spec:sendBatchMessages.function": "vitest run ./src/__tests__/sendBatchMessages.function.spec.js",
     "test:spec:sendMessage.function": "vitest run ./src/__tests__/sendMessage.function.spec.js",
