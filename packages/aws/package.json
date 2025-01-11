@@ -1,6 +1,6 @@
 {
   "name": "@jaypie/aws",
-  "version": "1.1.10",
+  "version": "1.1.11",
   "license": "MIT",
   "author": "Finlayson Studio",
   "type": "module",
@@ -24,13 +24,16 @@
     "test:spec:getMessages.function": "vitest run ./src/__tests__/getMessages.function.spec.js",
     "test:spec:getSecret.function": "vitest run ./src/__tests__/getSecret.function.spec.js",
     "test:spec:getSingletonMessage.function": "vitest run ./src/__tests__/getSingletonMessage.function.spec.js",
+    "test:spec:getTextractJob.function": "vitest run ./src/__tests__/getTextractJob.function.spec.js",
     "test:spec:index": "vitest run ./src/__tests__/index.spec.js",
     "test:spec:sendBatchMessages.function": "vitest run ./src/__tests__/sendBatchMessages.function.spec.js",
     "test:spec:sendMessage.function": "vitest run ./src/__tests__/sendMessage.function.spec.js",
+    "test:spec:sendTextractJob.function": "vitest run ./src/__tests__/sendTextractJob.function.spec.js",
     "test:spec:validateQueueUrl.util": "vitest run ./src/__tests__/validateQueueUrl.util.spec.js"
   },
   "dependencies": {
     "@aws-sdk/client-sqs": "^3.540.0",
+    "@aws-sdk/client-textract": "^3.726.1",
     "@jaypie/core": "^1.1.0",
     "axios": "^1.6.8"
   },
