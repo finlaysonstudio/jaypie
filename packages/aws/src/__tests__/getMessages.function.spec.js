@@ -27,6 +27,19 @@ const MOCK = {
       },
     ],
   },
+  SNS: {
+    EVENT: {
+      Records: [
+        {
+          EventSource: "aws:sns",
+          EventVersion: "1.0",
+          Sns: {
+            Message: '{"project":"mayhem","data":"hello world"}',
+          },
+        },
+      ],
+    },
+  },
   SQS: {
     EVENT: {
       Records: [
@@ -84,6 +97,13 @@ describe("Get Messages Function", () => {
   });
   it("Parses SQS events", () => {
     const response = getMessages(MOCK.SQS.EVENT);
+    expect(response).toBeArray();
+    expect(response).toHaveLength(1);
+    expect(response[0]).toBeObject();
+    expect(response[0]).toContainKeys(["project", "data"]);
+  });
+  it("Parses SNS events", () => {
+    const response = getMessages(MOCK.SNS.EVENT);
     expect(response).toBeArray();
     expect(response).toHaveLength(1);
     expect(response[0]).toBeObject();
