@@ -27,6 +27,7 @@
     "test:spec:index": "vitest run ./src/__tests__/index.spec.js",
     "test:spec:sendBatchMessages.function": "vitest run ./src/__tests__/sendBatchMessages.function.spec.js",
     "test:spec:sendMessage.function": "vitest run ./src/__tests__/sendMessage.function.spec.js",
+    "test:spec:sendTextractJob.function": "vitest run ./src/__tests__/sendTextractJob.function.spec.js",
     "test:spec:validateQueueUrl.util": "vitest run ./src/__tests__/validateQueueUrl.util.spec.js"
   },
   "dependencies": {
