@@ -524,8 +524,10 @@ export default {
   // AWS
   getMessages,
   getSecret,
+  getTextractJob,
   sendBatchMessages,
   sendMessage,
+  sendTextractJob,
   // Core
   BadGatewayError,
   BadRequestError,
