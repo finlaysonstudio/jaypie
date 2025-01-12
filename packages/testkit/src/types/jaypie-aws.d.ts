@@ -35,7 +35,7 @@ declare module "@jaypie/aws" {
     },
   ): Promise<string>;
 
-  export function getTextractResults(jobId: string): Promise<string>;
+  export function getTextractJob(jobId: string): Promise<string>;
 
   export function sendBatchMessages(
     queueUrl: string,
