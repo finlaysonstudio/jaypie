@@ -223,6 +223,16 @@ describe("Lambda Handler Module", () => {
         // Assert
         expect(jaypieHandler).not.toHaveBeenCalled();
       });
+      it("Throws errors when throw option is true", async () => {
+        // Arrange
+        const mockFunction = vi.fn(() => {
+          throw new Error();
+        });
+        const handler = lambdaHandler(mockFunction, { throw: true });
+        // Act & Assert
+        await expect(handler()).rejects.toThrow();
+        expect(log.debug).toHaveBeenCalled();
+      });
     });
   });
 });

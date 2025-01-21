@@ -19,7 +19,14 @@ const lambdaHandler = function (handler, options = {}) {
     options = temp;
   }
 
-  let { name, setup, teardown, unavailable, validate } = options;
+  let {
+    name,
+    setup,
+    teardown,
+    throw: shouldThrow = false,
+    unavailable,
+    validate,
+  } = options;
 
   //
   //
@@ -109,6 +116,12 @@ const lambdaHandler = function (handler, options = {}) {
         log.fatal("Caught unhandled error");
         log.var({ unhandledError: error.message });
         response = UnhandledError().json();
+      }
+      if (shouldThrow) {
+        log.debug(
+          `Throwing error instead of returning response (throw=${shouldThrow})`,
+        );
+        throw error;
       }
     }
 
