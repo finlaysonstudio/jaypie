@@ -23,16 +23,16 @@ const ensureProtocol = (url) => {
   return HTTPS_PROTOCOL + url;
 };
 
-export const dynamicOriginCallbackHandler = (origins) => {
-  return (origin, callback) => {
+export const dynamicOriginCallbackHandler = (origin) => {
+  return (requestOrigin, callback) => {
     // Handle wildcard origin
-    if (origins === "*") {
+    if (origin === "*") {
       callback(null, true);
       return;
     }
 
     // Allow requests with no origin (like mobile apps, curl, etc)
-    if (!origin) {
+    if (!requestOrigin) {
       callback(null, true);
       return;
     }
@@ -44,8 +44,8 @@ export const dynamicOriginCallbackHandler = (origins) => {
     if (process.env.PROJECT_BASE_URL) {
       allowedOrigins.push(ensureProtocol(process.env.PROJECT_BASE_URL));
     }
-    if (origins) {
-      const additionalOrigins = force.array(origins);
+    if (origin) {
+      const additionalOrigins = force.array(origin);
       allowedOrigins.push(...additionalOrigins);
     }
 
@@ -60,9 +60,9 @@ export const dynamicOriginCallbackHandler = (origins) => {
 
     const isAllowed = allowedOrigins.some((allowed) => {
       if (allowed instanceof RegExp) {
-        return allowed.test(origin);
+        return allowed.test(requestOrigin);
       }
-      return origin.includes(allowed);
+      return requestOrigin.includes(allowed);
     });
 
     if (isAllowed) {
@@ -79,10 +79,10 @@ export const dynamicOriginCallbackHandler = (origins) => {
 //
 
 const corsHelper = (config = {}) => {
-  const { origins, overrides = {} } = config;
+  const { origin, overrides = {} } = config;
 
   const options = {
-    origin: dynamicOriginCallbackHandler(origins),
+    origin: dynamicOriginCallbackHandler(origin),
     // * The default behavior is to allow any headers and methods so they are not included here
     ...overrides,
   };

@@ -54,7 +54,7 @@ describe("corsHelper with supertest", () => {
   });
   it("works with a wildcard origin", async () => {
     const route = express();
-    route.get("/", corsHelper({ origins: "*" }), (req, res) => {
+    route.get("/", corsHelper({ origin: "*" }), (req, res) => {
       res.json({ message: "Hello" });
     });
     const response = await request(route)
@@ -70,7 +70,7 @@ describe("corsHelper with supertest", () => {
     const route = express();
     route.get(
       "/",
-      corsHelper({ origins: "https://api.example.com" }),
+      corsHelper({ origin: "https://api.example.com" }),
       (req, res) => {
         res.json({ message: "Hello" });
       },
@@ -134,7 +134,7 @@ describe("corsHelper with supertest", () => {
     const route = express();
     route.get(
       "/",
-      corsHelper({ origins: "https://api.example.com" }),
+      corsHelper({ origin: "https://api.example.com" }),
       (req, res) => {
         res.json({ message: "Hello" });
       },
