@@ -3,6 +3,7 @@ import { defineWorkspace } from "vitest/config";
 export default defineWorkspace([
   "packages/aws",
   "packages/core",
+  "packages/constructs",
   "packages/datadog",
   "packages/errors",
   "packages/eslint",
