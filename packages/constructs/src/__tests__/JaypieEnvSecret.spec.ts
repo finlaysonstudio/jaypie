@@ -12,7 +12,7 @@ describe("JaypieSecret", () => {
 
     it("creates a secret", () => {
       const stack = new Stack();
-      const secret = new JaypieEnvSecret(stack, "TestSecret", { name: "test" });
+      const secret = new JaypieEnvSecret(stack, "TestSecret");
       const template = Template.fromStack(stack);
 
       template.hasResourceProperties("AWS::SecretsManager::Secret", {});
@@ -23,11 +23,13 @@ describe("JaypieSecret", () => {
   describe("Features", () => {
     it("adds role tag when not consuming", () => {
       const stack = new Stack();
-      new JaypieEnvSecret(stack, "TestSecret", {
+      const secret = new JaypieEnvSecret(stack, "TestSecret", {
         role: CDK.ROLE.API,
       });
       const template = Template.fromStack(stack);
 
+      expect(secret).toBeDefined();
+      template.resourceCountIs("AWS::SecretsManager::Secret", 1);
       template.hasResourceProperties("AWS::SecretsManager::Secret", {
         Tags: [
           {

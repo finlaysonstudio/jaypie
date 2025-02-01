@@ -61,7 +61,7 @@ export interface JaypieEnvSecretProps {
 export class JaypieEnvSecret extends Construct implements ISecret {
   private readonly _secret: secretsmanager.ISecret;
 
-  constructor(scope: Construct, id: string, props: JaypieEnvSecretProps) {
+  constructor(scope: Construct, id: string, props?: JaypieEnvSecretProps) {
     super(scope, id);
 
     const {
@@ -70,7 +70,7 @@ export class JaypieEnvSecret extends Construct implements ISecret {
       provider = checkEnvIsProvider(),
       role,
       value,
-    } = props;
+    } = props || {};
 
     let exportName;
 
