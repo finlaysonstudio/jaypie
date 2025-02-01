@@ -23,6 +23,10 @@
     "test": "vitest run .",
     "test:watch": "vitest"
   },
+  "dependencies": {
+    "aws-cdk-lib": "^2.177.0",
+    "constructs": "^10.4.2"
+  },
   "devDependencies": {
     "@rollup/plugin-typescript": "^11.1.6",
     "@types/node": "^20.11.24",
@@ -38,9 +42,5 @@
   },
   "publishConfig": {
     "access": "public"
-  },
-  "dependencies": {
-    "aws-cdk-lib": "^2.177.0",
-    "constructs": "^10.4.2"
   }
 }
