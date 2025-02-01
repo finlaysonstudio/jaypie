@@ -46,11 +46,13 @@ describe("JaypieSecret", () => {
       });
       const template = Template.fromStack(stack);
 
-      expect(template.template.Outputs).toBeObject();
-      expect(Object.values(template.template.Outputs)[0]).toBeObject();
-      expect(
-        Object.values(template.template.Outputs)[0].Export.Name,
-      ).toBeString();
+      const outputs = template.findOutputs("*");
+      expect(outputs).toBeObject();
+      expect(Object.keys(outputs)[0]).toBeString();
+      expect(Object.keys(outputs)[0]).toStartWith("TestSecretProvidedName");
+      expect(Object.values(outputs)[0]).toBeObject();
+      expect(Object.values(outputs)[0].Export.Name).toBeString();
+      expect(Object.values(outputs)[0].Export.Name).toBe("TestSecretExport");
     });
 
     it("imports secret when consumer is true", () => {
@@ -65,11 +67,13 @@ describe("JaypieSecret", () => {
 
     it("sets string value when value is string", () => {
       const stack = new Stack();
-      new JaypieEnvSecret(stack, "TestSecret", {
+      const secret = new JaypieEnvSecret(stack, "TestSecret", {
         value: "secret-value",
       });
       const template = Template.fromStack(stack);
 
+      expect(secret).toBeDefined();
+      template.resourceCountIs("AWS::SecretsManager::Secret", 1);
       template.hasResourceProperties("AWS::SecretsManager::Secret", {
         SecretString: "secret-value",
       });
