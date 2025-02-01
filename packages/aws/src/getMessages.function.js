@@ -1,4 +1,4 @@
-import { ConfigurationError } from "jaypie";
+import { ConfigurationError } from "@jaypie/core";
 
 //
 //

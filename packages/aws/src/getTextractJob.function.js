@@ -3,7 +3,7 @@ import {
   JobStatus,
   TextractClient,
 } from "@aws-sdk/client-textract";
-import { BadGatewayError, JAYPIE, log as jaypieLog } from "jaypie";
+import { BadGatewayError, JAYPIE, log as jaypieLog } from "@jaypie/core";
 
 //
 //
