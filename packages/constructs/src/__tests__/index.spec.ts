@@ -1,35 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { BadRequestError, isJaypieError, jaypieErrorFromStatus } from "..";
+import { JaypieEnvSecret } from "..";
 
-describe("errors/index", () => {
+describe("constructs/index", () => {
   describe("Base Cases", () => {
-    it("exports jaypieErrorFromStatus function", () => {
-      expect(typeof jaypieErrorFromStatus).toBe("function");
-    });
-
-    it("exports isJaypieError function", () => {
-      expect(typeof isJaypieError).toBe("function");
-    });
-
-    it("exports BadRequestError", () => {
-      expect(BadRequestError).toBeDefined();
-      expect(typeof BadRequestError).toBe("function");
-    });
-  });
-
-  describe("Happy Paths", () => {
-    it("creates a BadRequestError", () => {
-      const error = new BadRequestError("test");
-      expect(error).toBeInstanceOf(Error);
-      expect(error.message).toBe("test");
-      expect(error.status).toBe(400);
-      expect(error.title).toBe("Bad Request");
-      try {
-        throw error;
-      } catch (e) {
-        expect(e).toBe(error);
-      }
-      expect.assertions(5);
+    it("exports JaypieEnvSecret", () => {
+      expect(typeof JaypieEnvSecret).toBe("function");
     });
   });
 });
