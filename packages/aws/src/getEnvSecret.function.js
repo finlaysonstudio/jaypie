@@ -45,22 +45,29 @@ async function getEnvSecret(name, { env = process.env } = {}) {
   }
 
   // Try each environment variable pattern in order of preference
-  const secretId = env[`SECRET_${name}`] || env[`${name}_SECRET`] || env[name];
+  const secretId = env[`SECRET_${name}`] || env[`${name}_SECRET`];
+  const value = secretId || env[name];
 
-  if (!secretId) {
-    throw new ConfigurationError(`No secret found in environment for ${name}`);
+  if (!value) {
+    return undefined;
   }
 
-  const headers = {
-    [HTTP.HEADER.AMAZON.PARAMETERS_SECRETS_TOKEN]: env.AWS_SESSION_TOKEN,
-  };
-  const port =
-    env.PARAMETERS_SECRETS_EXTENSION_HTTP_PORT ||
-    DEFAULT.PARAMETERS_SECRETS_EXTENSION_HTTP_PORT;
-  const params = { secretId };
-  const endpoint = `http://localhost:${port}/secretsmanager/get`;
-  const response = await axios.get(endpoint, { headers, params });
-  return response.data.SecretString;
+  // Only fetch from secrets manager if it's an explicit secret reference
+  if (secretId) {
+    const headers = {
+      [HTTP.HEADER.AMAZON.PARAMETERS_SECRETS_TOKEN]: env.AWS_SESSION_TOKEN,
+    };
+    const port =
+      env.PARAMETERS_SECRETS_EXTENSION_HTTP_PORT ||
+      DEFAULT.PARAMETERS_SECRETS_EXTENSION_HTTP_PORT;
+    const params = { secretId };
+    const endpoint = `http://localhost:${port}/secretsmanager/get`;
+    const response = await axios.get(endpoint, { headers, params });
+    return response.data.SecretString;
+  }
+
+  // If no secret reference but we have a value, return it directly
+  return value;
 }
 
 //

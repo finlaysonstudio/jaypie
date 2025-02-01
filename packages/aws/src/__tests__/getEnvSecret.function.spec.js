@@ -46,6 +46,7 @@ beforeEach(() => {
 });
 afterEach(() => {
   process.env = DEFAULT_ENV;
+  vi.clearAllMocks();
 });
 
 //
@@ -115,16 +116,9 @@ describe("Get Environment Secret Function", () => {
     it("Uses name if available", async () => {
       const env = cloneDeep(process.env);
       env.test = "secret3";
-      await getEnvSecret("test", { env });
-      expect(axios.get).toHaveBeenCalledWith(
-        "http://localhost:2773/secretsmanager/get",
-        {
-          headers: {
-            "X-Aws-Parameters-Secrets-Token": MOCK.AWS_SESSION_TOKEN,
-          },
-          params: { secretId: "secret3" },
-        },
-      );
+      const result = await getEnvSecret("test", { env });
+      expect(result).toBe("secret3");
+      expect(axios.get).not.toHaveBeenCalled();
     });
 
     it("Prioritizes SECRET_name over name_SECRET over name", async () => {
@@ -142,6 +136,21 @@ describe("Get Environment Secret Function", () => {
           params: { secretId: "secret1" },
         },
       );
+    });
+
+    it("Returns value directly if not a secret reference", async () => {
+      const env = cloneDeep(process.env);
+      env.test = "direct-value";
+      const result = await getEnvSecret("test", { env });
+      expect(result).toBe("direct-value");
+      expect(axios.get).not.toHaveBeenCalled();
+    });
+
+    it("Returns undefined if name not found", async () => {
+      const env = cloneDeep(process.env);
+      const result = await getEnvSecret("nonexistent", { env });
+      expect(result).toBeUndefined();
+      expect(axios.get).not.toHaveBeenCalled();
     });
   });
 });
