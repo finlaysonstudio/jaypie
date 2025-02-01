@@ -72,6 +72,10 @@ beforeAll(() => {
 //
 
 // @jaypie/aws
+export const getEnvSecret = vi.fn((): string => {
+  return `_MOCK_ENV_SECRET_[${TAG}]`;
+});
+
 export const getMessages = vi.fn(
   (...params: Parameters<typeof originalGetMessages>) =>
     originalGetMessages(...params),
