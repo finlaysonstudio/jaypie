@@ -8,5 +8,10 @@ export default {
     sourcemap: true,
   },
   plugins: [typescript()],
-  external: [],
+  external: [
+    "@jaypie/cdk",
+    "aws-cdk-lib",
+    "aws-cdk-lib/aws-secretsmanager",
+    "constructs",
+  ],
 };
