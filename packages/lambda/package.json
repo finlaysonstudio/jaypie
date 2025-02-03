@@ -13,6 +13,7 @@
     }
   },
   "main": "src/index.js",
+  "types": "index.d.ts",
   "scripts": {
     "build": "rollup --config",
     "format": "npm run format:package && npm run format:lint",
