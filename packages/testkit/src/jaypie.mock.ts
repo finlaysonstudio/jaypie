@@ -1,3 +1,4 @@
+/* eslint-disable import-x/export */
 import { getMessages as originalGetMessages } from "@jaypie/aws";
 import {
   force,
