@@ -163,6 +163,7 @@ export default [
     },
     rules: {
       ...vitest.configs.recommended.rules,
+      "@typescript-eslint/no-explicit-any": "off",
       "vitest/no-focused-tests": ["error", { fixable: false }],
       "vitest/no-disabled-tests": "warn",
     },
