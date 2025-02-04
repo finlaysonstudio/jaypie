@@ -10,6 +10,7 @@ export default defineWorkspace([
   "packages/express",
   "packages/jaypie",
   "packages/lambda",
+  "packages/llm",
   "packages/mongoose",
   "packages/testkit",
   "packages/webkit",
