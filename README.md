@@ -103,12 +103,24 @@ This example would then be deployed to AWS via CDK or similar orchestration. See
 
 ```javascript
 import { 
+  getEnvSecret,
   getMessages,
   getSecret,
   getSingletonMessage,
   sendBatchMessages,
   sendMessage,
 } from "jaypie";
+```
+
+#### `getEnvSecret(name, { env = process.env } = {})`
+
+Checks for `${name}_SECRET` and `SECRET_${name}` in environment variables. If found, retrieves the secret from AWS Secrets Manager. Otherwise, returns the value of `name`. Convenient to use the environment locally and a secret when deployed.
+
+```javascript
+import { getEnvSecret } from "jaypie";
+
+const secret = await getEnvSecret("MONGODB_URI");
+// secret = "mongodb+srv://username:password@env-project.n0nc3.mongodb.net/app?retryWrites=true&w=majority";
 ```
 
 #### `getMessages(event)`
@@ -1221,23 +1233,24 @@ The `v4` function from the `uuid` package
 
 ## 🛣️ Roadmap
 
-Structural Changes:
-
-* 1.2.0 - Optional loading of Jaypie side packages
+* 1.2 - Converted to TypeScript?
+* 2.0 - Optional loading of Jaypie side packages?
 
 ### Wishlist 🌠
 
+* Complete conversion to TypeScript
+* Incomplete: aws, core, datadog, express, jaypie, lambda, mongoose
 * Nicely organized VitePress documentation 😅
-* Additional utility functions
-* VueKit or NuxtKit
-* Auth0
+* More packages: auth0, commander, hygen, llm
 * Mongoose project schema
 * Better mocking of Mongoose
+* @jaypie/constructs replaces @jaypie/cdk
 
 ## 📝 Changelog
 
 | Date       | Version | Summary        |
 | ---------- | ------- | -------------- |
+|   2/4/2025 |  1.1.22 | Best-effort support for types |
 | 10/21/2024 |  1.1.0  | Jaypie 1.1.0 release |
 | 10/16/2024 |  1.0.50 | Last 1.0.x release |
 |   5/4/2024 |  1.0.24 | Adds `@jaypie/datadog` |
