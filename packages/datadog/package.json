@@ -1,6 +1,6 @@
 {
   "name": "@jaypie/datadog",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "license": "MIT",
   "author": "Finlayson Studio",
   "type": "module",
@@ -9,10 +9,12 @@
       "default": {
         "require": "./dist/module.cjs",
         "default": "./src/index.js"
-      }
+      },
+      "types": "./index.d.ts"
     }
   },
   "main": "src/index.js",
+  "types": "index.d.ts",
   "scripts": {
     "build": "rollup --config",
     "format": "npm run format:package && npm run format:lint",
@@ -31,6 +33,9 @@
     "@datadog/datadog-api-client": "^1.24.0",
     "@jaypie/aws": "^1.1.0",
     "@jaypie/core": "^1.1.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.3"
   },
   "publishConfig": {
     "access": "public"

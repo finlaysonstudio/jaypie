@@ -1,6 +1,6 @@
 {
   "name": "@jaypie/core",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "license": "MIT",
   "author": "Finlayson Studio",
   "type": "module",
@@ -13,6 +13,7 @@
     }
   },
   "main": "src/index.js",
+  "types": "index.d.ts",
   "scripts": {
     "build": "rollup --config",
     "format": "npm run format:package && npm run format:lint",

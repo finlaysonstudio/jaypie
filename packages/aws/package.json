@@ -1,6 +1,6 @@
 {
   "name": "@jaypie/aws",
-  "version": "1.1.14",
+  "version": "1.1.15",
   "license": "MIT",
   "author": "Finlayson Studio",
   "type": "module",
@@ -13,6 +13,7 @@
     }
   },
   "main": "src/index.js",
+  "types": "./index.d.ts",
   "scripts": {
     "build": "rollup --config",
     "format": "npm run format:package && npm run format:lint",
@@ -36,6 +37,9 @@
     "@aws-sdk/client-textract": "^3.726.1",
     "@jaypie/core": "^1.1.0",
     "axios": "^1.6.8"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.24"
   },
   "publishConfig": {
     "access": "public"
