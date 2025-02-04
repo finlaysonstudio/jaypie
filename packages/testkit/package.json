@@ -32,17 +32,17 @@
     "jaypie": "^1.0.44",
     "jest-json-schema": "^6.1.0",
     "lodash.isequal": "^4.5.0",
-    "uuid": "^9.0.1"
+    "uuid": "^11.0.5"
   },
   "devDependencies": {
     "@types/express": "^5.0.0",
     "@types/lodash.isequal": "^4.5.8",
-    "@types/node": "^20.0.0",
+    "@types/node": "^22.13.1",
     "@types/supertest": "^6.0.2",
     "express": "^4.21.1",
     "rollup": "^4.29.1",
     "typescript": "^5.0.0",
-    "vitest": "^2.1.8"
+    "vitest": "^3.0.5"
   },
   "publishConfig": {
     "access": "public"

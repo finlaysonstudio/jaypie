@@ -56,10 +56,10 @@
     "test:spec:validate.function": "vitest run ./src/lib/arguments/__tests__/validate.function.spec.js"
   },
   "dependencies": {
-    "chalk": "^4.1.2",
+    "chalk": "4.1.2",
     "jsonapi-serializer": "^3.6.9",
     "lodash.clonedeep": "^4.5.0",
-    "uuid": "^10.0.0"
+    "uuid": "^11.0.5"
   },
   "publishConfig": {
     "access": "public"
