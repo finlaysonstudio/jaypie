@@ -26,12 +26,12 @@
     "test:spec:mongoose.package": "vitest run ./src/__tests__/mongoose.package.spec.js"
   },
   "dependencies": {
-    "@jaypie/aws": "^1.1.14",
-    "@jaypie/core": "^1.1.1",
-    "@jaypie/datadog": "^1.1.0",
-    "@jaypie/express": "^1.1.9",
-    "@jaypie/lambda": "^1.1.2",
-    "@jaypie/mongoose": "^1.1.0"
+    "@jaypie/aws": "^1.1.15",
+    "@jaypie/core": "^1.1.2",
+    "@jaypie/datadog": "^1.1.1",
+    "@jaypie/express": "^1.1.10",
+    "@jaypie/lambda": "^1.1.3",
+    "@jaypie/mongoose": "^1.1.1"
   },
   "publishConfig": {
     "access": "public"
