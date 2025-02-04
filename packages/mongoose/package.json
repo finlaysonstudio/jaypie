@@ -6,6 +6,7 @@
   "type": "module",
   "exports": {
     ".": {
+      "types": "./index.d.ts",
       "default": {
         "require": "./dist/jaypie-mongoose.cjs",
         "default": "./src/index.js"
