@@ -60,6 +60,7 @@ export * from "@jaypie/core";
 export * from "@jaypie/express";
 export * from "@jaypie/datadog";
 export * from "@jaypie/lambda";
+export * from "@jaypie/llm";
 export * from "@jaypie/mongoose";
 
 // Spy on log:
@@ -356,6 +357,19 @@ export const expressHandler = vi.fn(
   },
 );
 
+// @jaypie/llm
+const mockSend = vi.fn().mockResolvedValue("_MOCK_LLM_RESPONSE");
+export const Llm = Object.assign(
+  vi.fn().mockImplementation((providerName = "_MOCK_LLM_PROVIDER") => ({
+    _provider: providerName,
+    _llm: {
+      send: mockSend,
+    },
+    send: mockSend,
+  })),
+  { send: mockSend },
+);
+
 // @jaypie/mongoose
 export const connect = vi.fn((): boolean => {
   return true;
@@ -570,4 +584,6 @@ export default {
   connect,
   connectFromSecretEnv,
   disconnect,
+  // LLM
+  Llm,
 };
