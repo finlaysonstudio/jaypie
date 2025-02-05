@@ -1,6 +1,7 @@
 import { getEnvSecret } from "@jaypie/aws";
 import { OpenAI } from "openai";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { z } from "zod";
 import { OpenAiProvider } from "../OpenAiProvider.class";
 
 vi.mock("openai");
@@ -10,6 +11,13 @@ describe("OpenAiProvider", () => {
     vi.mocked(OpenAI).mockImplementation(
       () =>
         ({
+          beta: {
+            chat: {
+              completions: {
+                parse: vi.fn(),
+              },
+            },
+          },
           chat: {
             completions: {
               create: vi.fn(),
@@ -76,6 +84,55 @@ describe("OpenAiProvider", () => {
   });
 
   describe("Features", () => {
+    describe("Structured Output", () => {
+      it("Uses beta endpoint when structured output is requested", async () => {
+        const mockParsedResponse = {
+          salutation: "Hello",
+          name: "World",
+        };
+
+        const mockResponse = {
+          choices: [
+            {
+              message: {
+                parsed: { response: mockParsedResponse },
+              },
+            },
+          ],
+        };
+
+        const mockParse = vi.fn().mockResolvedValue(mockResponse);
+        vi.mocked(OpenAI).mockImplementation(
+          () =>
+            ({
+              beta: {
+                chat: {
+                  completions: {
+                    parse: mockParse,
+                  },
+                },
+              },
+            }) as any,
+        );
+
+        const provider = new OpenAiProvider();
+        const GreetingFormat = z.object({
+          salutation: z.string(),
+          name: z.string(),
+        });
+        const response = await provider.send("Hello, World", {
+          response: GreetingFormat,
+        });
+
+        expect(response).toEqual(mockParsedResponse);
+        expect(mockParse).toHaveBeenCalledWith({
+          messages: [{ role: "user", content: "Hello, World" }],
+          model: expect.any(String),
+          response_format: expect.any(Object),
+        });
+      });
+    });
+
     describe("Message Options", () => {
       it("includes system message when provided", async () => {
         const mockResponse = {
