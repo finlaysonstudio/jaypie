@@ -1,7 +1,11 @@
 import { DEFAULT, LlmProviderName, PROVIDER } from "./constants.js";
-import { LlmProvider } from "./types/LlmProvider.interface.js";
+import {
+  LlmProvider,
+  LlmMessageOptions,
+} from "./types/LlmProvider.interface.js";
 import { OpenAiProvider } from "./providers/OpenAiProvider.class.js";
 import { AnthropicProvider } from "./providers/AnthropicProvider.class.js";
+import { JsonObject } from "./types/jaypie.d.js";
 
 class Llm implements LlmProvider {
   private _provider: LlmProviderName;
@@ -23,8 +27,11 @@ class Llm implements LlmProvider {
     }
   }
 
-  async send(message: string): Promise<string> {
-    return this._llm.send(message);
+  async send(
+    message: string,
+    options?: LlmMessageOptions,
+  ): Promise<string | JsonObject> {
+    return this._llm.send(message, options);
   }
 }
 

@@ -1,8 +1,14 @@
 import { getEnvSecret } from "@jaypie/aws";
-import { ConfigurationError } from "@jaypie/core";
+import { ConfigurationError, placeholders } from "@jaypie/core";
 import { OpenAI } from "openai";
+import { zodResponseFormat } from "openai/helpers/zod";
+import { z } from "zod";
 import { PROVIDER } from "../constants.js";
-import { LlmProvider } from "../types/LlmProvider.interface.js";
+import { JsonObject } from "../types/jaypie.d.js";
+import {
+  LlmProvider,
+  LlmMessageOptions,
+} from "../types/LlmProvider.interface.js";
 
 export class OpenAiProvider implements LlmProvider {
   private model: string;
@@ -33,11 +39,31 @@ export class OpenAiProvider implements LlmProvider {
     return this._client;
   }
 
-  async send(message: string): Promise<string> {
+  async send(
+    message: string,
+    options?: LlmMessageOptions,
+  ): Promise<string | JsonObject> {
     const client = await this.getClient();
+    const messages = [];
+
+    if (options?.system) {
+      messages.push({ role: "system" as const, content: options.system });
+    }
+    const formattedMessage = placeholders(message, options?.data);
+    messages.push({ role: "user" as const, content: formattedMessage });
+
+    if (options?.response && options.response instanceof z.ZodType) {
+      const completion = await client.beta.chat.completions.parse({
+        messages,
+        model: options?.model || this.model,
+        response_format: zodResponseFormat(options.response, "response"),
+      });
+      return completion.choices[0].message.parsed.response;
+    }
+
     const completion = await client.chat.completions.create({
-      messages: [{ role: "user", content: message }],
-      model: this.model,
+      messages,
+      model: options?.model || this.model,
     });
 
     return completion.choices[0]?.message?.content || "";

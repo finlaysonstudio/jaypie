@@ -1,5 +1,6 @@
-import { LlmProvider } from "../types/LlmProvider.interface.js";
 import { PROVIDER } from "../constants.js";
+import { JsonObject } from "../types/jaypie.d.js";
+import { LlmProvider } from "../types/LlmProvider.interface.js";
 
 export class AnthropicProvider implements LlmProvider {
   private model: string;
@@ -8,8 +9,8 @@ export class AnthropicProvider implements LlmProvider {
     this.model = model;
   }
 
-  async send(message: string): Promise<string> {
+  async send(message: string): Promise<string | JsonObject> {
     // TODO: Implement Anthropic API call
     return `[anthropic ${this.model}] ${message}`;
   }
-} 
+}
