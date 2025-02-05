@@ -1,7 +1,7 @@
 import { getEnvSecret } from "@jaypie/aws";
 import { OpenAI } from "openai";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { OpenAiProvider } from "../providers/OpenAiProvider.class";
+import { OpenAiProvider } from "../OpenAiProvider.class";
 
 vi.mock("openai");
 
