@@ -1,5 +1,10 @@
 import { getEnvSecret } from "@jaypie/aws";
-import { ConfigurationError, placeholders } from "@jaypie/core";
+import {
+  ConfigurationError,
+  JAYPIE,
+  log as defaultLog,
+  placeholders,
+} from "@jaypie/core";
 import { OpenAI } from "openai";
 import { zodResponseFormat } from "openai/helpers/zod";
 import { z } from "zod";
@@ -14,6 +19,7 @@ export class OpenAiProvider implements LlmProvider {
   private model: string;
   private _client?: OpenAI;
   private apiKey?: string;
+  private log: typeof defaultLog;
 
   constructor(
     model: string = PROVIDER.OPENAI.MODEL.DEFAULT,
@@ -21,6 +27,7 @@ export class OpenAiProvider implements LlmProvider {
   ) {
     this.model = model;
     this.apiKey = apiKey;
+    this.log = defaultLog.lib({ lib: JAYPIE.LIB.LLM });
   }
 
   private async getClient(): Promise<OpenAI> {
@@ -36,6 +43,7 @@ export class OpenAiProvider implements LlmProvider {
     }
 
     this._client = new OpenAI({ apiKey });
+    this.log.trace("Initialized OpenAI client");
     return this._client;
   }
 
@@ -47,20 +55,33 @@ export class OpenAiProvider implements LlmProvider {
     const messages = [];
 
     if (options?.system) {
-      messages.push({ role: "system" as const, content: options.system });
+      const systemMessage = {
+        role: "developer" as const,
+        content: options.system,
+      };
+      messages.push(systemMessage);
+      this.log.var({ systemMessage });
     }
     const formattedMessage = placeholders(message, options?.data);
-    messages.push({ role: "user" as const, content: formattedMessage });
+    const userMessage = {
+      role: "user" as const,
+      content: formattedMessage,
+    };
+    messages.push(userMessage);
+    this.log.var({ userMessage });
 
     if (options?.response && options.response instanceof z.ZodType) {
+      this.log.trace("Using structured output");
       const completion = await client.beta.chat.completions.parse({
         messages,
         model: options?.model || this.model,
         response_format: zodResponseFormat(options.response, "response"),
       });
+      this.log.var({ completion });
       return completion.choices[0].message.parsed.response;
     }
 
+    this.log.trace("Using text output (unstructured)");
     const completion = await client.chat.completions.create({
       messages,
       model: options?.model || this.model,

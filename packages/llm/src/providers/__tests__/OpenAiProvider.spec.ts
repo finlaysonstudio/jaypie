@@ -159,7 +159,7 @@ describe("OpenAiProvider", () => {
         expect(response).toBe("test response");
         expect(mockCreate).toHaveBeenCalledWith({
           messages: [
-            { role: "system", content: "You are a test assistant" },
+            { role: "developer", content: "You are a test assistant" },
             { role: "user", content: "test message" },
           ],
           model: expect.any(String),
