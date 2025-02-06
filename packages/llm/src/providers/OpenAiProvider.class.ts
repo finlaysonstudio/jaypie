@@ -78,7 +78,7 @@ export class OpenAiProvider implements LlmProvider {
         response_format: zodResponseFormat(options.response, "response"),
       });
       this.log.var({ completion });
-      return completion.choices[0].message.parsed.response;
+      return completion.choices[0].message.parsed;
     }
 
     this.log.trace("Using text output (unstructured)");
