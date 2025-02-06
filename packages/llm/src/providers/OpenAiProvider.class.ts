@@ -77,7 +77,7 @@ export class OpenAiProvider implements LlmProvider {
         model: options?.model || this.model,
         response_format: zodResponseFormat(options.response, "response"),
       });
-      this.log.var({ completion });
+      this.log.var({ assistantReply: completion.choices[0].message.parsed });
       return completion.choices[0].message.parsed;
     }
 
@@ -86,6 +86,7 @@ export class OpenAiProvider implements LlmProvider {
       messages,
       model: options?.model || this.model,
     });
+    this.log.var({ assistantReply: completion.choices[0].message.content });
 
     return completion.choices[0]?.message?.content || "";
   }
