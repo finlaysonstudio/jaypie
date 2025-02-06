@@ -4,9 +4,16 @@
   "license": "MIT",
   "author": "Finlayson Studio",
   "type": "module",
+  "types": "./index.d.ts",
   "exports": {
-    ".": "./index.js",
-    "./typescript": "./typescript.js"
+    ".": {
+      "types": "./index.d.ts",
+      "default": "./index.js"
+    },
+    "./typescript": {
+      "types": "./index.d.ts",
+      "default": "./typescript.js"
+    }
   },
   "main": "index.js",
   "scripts": {
