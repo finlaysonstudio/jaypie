@@ -2,13 +2,17 @@ export const JAYPIE = {
   LIB: {
     AWS: "@jaypie/aws",
     CDK: "@jaypie/cdk",
+    CONSTRUCTS: "@jaypie/constructs",
     CORE: "@jaypie/core",
+    ERRORS: "@jaypie/errors",
+    ESLINT: "@jaypie/eslint",
     EXPRESS: "@jaypie/express",
     JAYPIE: "jaypie",
     LAMBDA: "@jaypie/lambda",
+    LLM: "@jaypie/llm",
     MONGOOSE: "@jaypie/mongoose",
     TESTKIT: "@jaypie/testkit",
-    VUEKIT: "@jaypie/vuekit",
+    WEBKIT: "@jaypie/webkit",
   },
   LAYER: {
     EXPRESS: "express",
