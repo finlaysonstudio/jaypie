@@ -95,7 +95,7 @@ describe("OpenAiProvider", () => {
           choices: [
             {
               message: {
-                parsed: { response: mockParsedResponse },
+                parsed: mockParsedResponse,
               },
             },
           ],
