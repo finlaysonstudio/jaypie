@@ -52,6 +52,9 @@ const HTTP = {
       REQUEST: "Cookie",
       RESPONSE: "Set-Cookie",
     },
+    DATADOG: {
+      SESSION_ID: "X-Session-Id",
+    },
     FORWARDED: {
       FOR: "X-Forwarded-For",
       PORT: "X-Forwarded-Port",
@@ -72,6 +75,7 @@ const HTTP = {
       INVOCATION: "X-Project-Invocation",
       ROOT_INVOCATION: "X-Project-Root-Invocation",
       SECRET: "X-Project-Secret",
+      SEED: "X-Project-Seed",
       SESSION: "X-Project-Session",
       VERSION: "X-Project-Version",
     },
