@@ -47,7 +47,11 @@ export class OpenAiProvider implements LlmProvider {
     const messages = [];
 
     if (options?.system) {
-      messages.push({ role: "system" as const, content: options.system });
+      const systemMessage = {
+        role: "developer" as const,
+        content: options.system,
+      };
+      messages.push(systemMessage);
     }
     const formattedMessage = placeholders(message, options?.data);
     messages.push({ role: "user" as const, content: formattedMessage });
