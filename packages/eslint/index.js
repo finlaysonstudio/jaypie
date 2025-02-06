@@ -22,8 +22,8 @@ export default [
   // Jaypie General
   //
   {
-    // Always ignore dist (build) folders
-    ignores: ["**/dist/**", "dist/"],
+    // Always ignore build output folders
+    ignores: ["**/cdk.out/**", "cdk.out/", "**/dist/**", "dist/"],
   },
   {
     languageOptions: {
