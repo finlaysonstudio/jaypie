@@ -84,7 +84,7 @@ export type JsonApiError = {
     parameter?: string;
     pointer?: string;
   };
-  status: string;
+  status: number | string;
   title: string;
 };
 

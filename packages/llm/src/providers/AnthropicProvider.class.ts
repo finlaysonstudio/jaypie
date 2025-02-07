@@ -1,5 +1,5 @@
+import { JsonObject } from "@jaypie/types";
 import { PROVIDER } from "../constants.js";
-import { JsonObject } from "../types/jaypie.d.js";
 import { LlmProvider } from "../types/LlmProvider.interface.js";
 
 export class AnthropicProvider implements LlmProvider {

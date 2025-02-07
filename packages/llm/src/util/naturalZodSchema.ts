@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { NaturalSchema } from "../types/jaypie";
+import { NaturalSchema } from "@jaypie/types";
 
 export default function naturalZodSchema(
   definition: NaturalSchema,

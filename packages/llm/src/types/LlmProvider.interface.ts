@@ -1,4 +1,4 @@
-import { JsonObject, NaturalSchema } from "./jaypie.d.js";
+import { JsonObject, NaturalSchema } from "@jaypie/types";
 import { z } from "zod";
 
 export interface LlmMessageOptions {

@@ -5,11 +5,11 @@ import {
   log as defaultLog,
   placeholders,
 } from "@jaypie/core";
+import { JsonObject, NaturalSchema } from "@jaypie/types";
 import { OpenAI } from "openai";
 import { zodResponseFormat } from "openai/helpers/zod";
 import { z } from "zod";
 import { PROVIDER } from "../constants.js";
-import { JsonObject, NaturalSchema } from "../types/jaypie.d.js";
 import {
   LlmProvider,
   LlmMessageOptions,

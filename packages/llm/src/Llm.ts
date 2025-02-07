@@ -1,3 +1,4 @@
+import { JsonObject } from "@jaypie/types";
 import { DEFAULT, LlmProviderName, PROVIDER } from "./constants.js";
 import {
   LlmProvider,
@@ -5,7 +6,6 @@ import {
 } from "./types/LlmProvider.interface.js";
 import { OpenAiProvider } from "./providers/OpenAiProvider.class.js";
 import { AnthropicProvider } from "./providers/AnthropicProvider.class.js";
-import { JsonObject } from "./types/jaypie.d.js";
 
 class Llm implements LlmProvider {
   private _provider: LlmProviderName;
