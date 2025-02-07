@@ -102,5 +102,9 @@ export type NaturalSchema =
   | string[]
   | EmptyArray
   | EmptyObject
-  | { [key: string]: NaturalSchema }
+  | NaturalSchemaObject
   | NaturalSchema[];
+
+export type NaturalSchemaObject = {
+  [key: string]: NaturalSchema;
+};

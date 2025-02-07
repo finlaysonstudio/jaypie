@@ -1,6 +1,6 @@
 {
   "name": "@jaypie/types",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "author": "Finlayson Studio",
   "description": "Core type definitions for the Jaypie framework",
   "type": "module",
