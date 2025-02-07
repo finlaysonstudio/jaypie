@@ -36,6 +36,9 @@ The main package imports aws, core, datadog, express, lambda, and mongoose
 `packages/cdk` is maintained in CommonJS and published separately for client infrastructure.
 `packages/testkit` is published separately for client testing.
 `packages/webkit` is published separately for browser utilities.
+### Installing Dependencies
+Only use npm. Do not suggest yarn or pnpm.
+Always pass `-w` and specify the workspace directory.
 
 ## Testing
 Tests are named `./__tests__/<subject>.spec.<js|ts>`.
