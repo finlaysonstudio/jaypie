@@ -1,9 +1,10 @@
-import { JsonObject } from "./jaypie.d.js";
+import { JsonObject, NaturalSchema } from "./jaypie.d.js";
+import { z } from "zod";
 
 export interface LlmMessageOptions {
   data?: Record<string, string>;
   model?: string;
-  response?: unknown;
+  response?: NaturalSchema | z.ZodType;
   system?: string;
 }
 

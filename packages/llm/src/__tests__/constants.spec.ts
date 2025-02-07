@@ -14,4 +14,4 @@ describe("Constants", () => {
     expect(PROVIDER.ANTHROPIC.MODEL).toBeObject();
     expect(DEFAULT.PROVIDER).toBe(PROVIDER.OPENAI);
   });
-}); 
+});

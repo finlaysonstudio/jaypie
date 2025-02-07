@@ -9,11 +9,12 @@ import { OpenAI } from "openai";
 import { zodResponseFormat } from "openai/helpers/zod";
 import { z } from "zod";
 import { PROVIDER } from "../constants.js";
-import { JsonObject } from "../types/jaypie.d.js";
+import { JsonObject, NaturalSchema } from "../types/jaypie.d.js";
 import {
   LlmProvider,
   LlmMessageOptions,
 } from "../types/LlmProvider.interface.js";
+import naturalZodSchema from "../util/naturalZodSchema.js";
 
 export class OpenAiProvider implements LlmProvider {
   private model: string;
@@ -70,12 +71,17 @@ export class OpenAiProvider implements LlmProvider {
     messages.push(userMessage);
     this.log.var({ userMessage });
 
-    if (options?.response && options.response instanceof z.ZodType) {
+    if (options?.response) {
       this.log.trace("Using structured output");
+      const zodSchema =
+        options.response instanceof z.ZodType
+          ? options.response
+          : naturalZodSchema(options.response as NaturalSchema);
+
       const completion = await client.beta.chat.completions.parse({
         messages,
         model: options?.model || this.model,
-        response_format: zodResponseFormat(options.response, "response"),
+        response_format: zodResponseFormat(zodSchema, "response"),
       });
       this.log.var({ assistantReply: completion.choices[0].message.parsed });
       return completion.choices[0].message.parsed;
