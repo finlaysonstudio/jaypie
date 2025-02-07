@@ -3,7 +3,7 @@ import {
   HTTP,
   NAME,
   JaypieError as IJaypieError,
-  JaypieErrorBody,
+  JaypieErrorResponseBody,
   JaypieErrorJson,
 } from "./types";
 interface ErrorOptions {
@@ -22,7 +22,7 @@ export class JaypieError extends Error implements IJaypieError {
   isProjectError: boolean;
   isJaypieError: boolean;
   _type: string;
-  body: () => JaypieErrorBody;
+  body: () => JaypieErrorResponseBody;
   json: () => JaypieErrorJson;
 
   constructor(
