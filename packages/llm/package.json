@@ -1,6 +1,6 @@
 {
   "name": "@jaypie/llm",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Large language model utilities",
   "license": "MIT",
   "author": "Finlayson Studio",
