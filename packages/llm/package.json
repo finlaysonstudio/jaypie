@@ -23,9 +23,6 @@
     "test": "vitest run .",
     "test:watch": "vitest"
   },
-  "publishConfig": {
-    "access": "public"
-  },
   "dependencies": {
     "@jaypie/aws": "^1.1.15",
     "@jaypie/core": "^1.1.2",
@@ -33,5 +30,8 @@
   },
   "devDependencies": {
     "zod": "^3.24.1"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

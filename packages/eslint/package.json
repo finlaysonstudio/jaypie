@@ -4,7 +4,6 @@
   "license": "MIT",
   "author": "Finlayson Studio",
   "type": "module",
-  "types": "./index.d.ts",
   "exports": {
     ".": {
       "types": "./index.d.ts",
@@ -16,6 +15,7 @@
     }
   },
   "main": "index.js",
+  "types": "./index.d.ts",
   "scripts": {
     "format:package": "sort-package-json ./package.json",
     "lint": "eslint .",
