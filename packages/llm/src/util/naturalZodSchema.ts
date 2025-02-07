@@ -2,27 +2,21 @@ import { z } from "zod";
 
 type EmptyArray = never[];
 type EmptyObject = Record<string, never>;
-type ConstructorArray = (
-  | StringConstructor
-  | NumberConstructor
-  | BooleanConstructor
-)[];
 
-type NaturalType =
+type NaturalSchema =
   | StringConstructor
   | NumberConstructor
   | BooleanConstructor
   | ObjectConstructor
   | ArrayConstructor
   | string[]
-  | ConstructorArray
   | EmptyArray
   | EmptyObject
-  | { [key: string]: NaturalType }
-  | NaturalType[];
+  | { [key: string]: NaturalSchema }
+  | NaturalSchema[];
 
 export default function naturalZodSchema(
-  definition: NaturalType,
+  definition: NaturalSchema,
 ): z.ZodTypeAny {
   if (Array.isArray(definition)) {
     if (definition.length === 0) {
