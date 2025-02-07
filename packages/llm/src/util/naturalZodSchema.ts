@@ -8,19 +8,22 @@ type ConstructorArray = (
   | BooleanConstructor
 )[];
 
-type NaturalType =
-  | StringConstructor
-  | NumberConstructor
-  | BooleanConstructor
-  | ObjectConstructor
-  | ArrayConstructor
-  | string[]
-  | ConstructorArray
-  | EmptyArray
-  | EmptyObject;
+interface NaturalType {
+  [key: string]:
+    | StringConstructor
+    | NumberConstructor
+    | BooleanConstructor
+    | ObjectConstructor
+    | ArrayConstructor
+    | string[]
+    | ConstructorArray
+    | EmptyArray
+    | EmptyObject
+    | { [key: string]: NaturalType[string] };
+}
 
 export default function naturalZodSchema(
-  definition: Record<string, NaturalType>,
+  definition: NaturalType,
 ): z.ZodObject<Record<string, z.ZodTypeAny>> {
   const schemaShape: Record<string, z.ZodTypeAny> = {};
 
@@ -50,13 +53,14 @@ export default function naturalZodSchema(
         // Handle enum arrays
         schemaShape[key] = z.enum(value as [string, ...string[]]);
       }
-    } else if (
-      value &&
-      typeof value === "object" &&
-      Object.keys(value).length === 0
-    ) {
-      // Handle empty object - accept any key-value pairs
-      schemaShape[key] = z.record(z.string(), z.any());
+    } else if (value && typeof value === "object") {
+      if (Object.keys(value).length === 0) {
+        // Handle empty object - accept any key-value pairs
+        schemaShape[key] = z.record(z.string(), z.any());
+      } else {
+        // Handle nested object
+        schemaShape[key] = naturalZodSchema(value as NaturalType);
+      }
     } else {
       switch (value) {
         case String:

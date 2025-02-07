@@ -111,5 +111,41 @@ describe("naturalInterfaceZodSchema", () => {
       const result = schema.safeParse(invalidData);
       expect(result.success).toBe(false);
     });
+
+    it("supports nested object schemas", () => {
+      const input = {
+        id: String,
+        type: String,
+        attributes: {
+          name: String,
+        },
+      };
+
+      const schema = naturalZodSchema(input);
+
+      // Test valid data
+      const validData = {
+        id: "123",
+        type: "user",
+        attributes: {
+          name: "John Doe",
+        },
+      };
+
+      const result = schema.safeParse(validData);
+      expect(result.success).toBe(true);
+
+      // Test invalid data
+      const invalidData = {
+        id: "123",
+        type: "user",
+        attributes: {
+          name: 42, // should be string
+        },
+      };
+
+      const invalidResult = schema.safeParse(invalidData);
+      expect(invalidResult.success).toBe(false);
+    });
   });
 });
