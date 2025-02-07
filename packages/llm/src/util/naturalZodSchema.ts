@@ -1,19 +1,5 @@
 import { z } from "zod";
-
-type EmptyArray = never[];
-type EmptyObject = Record<string, never>;
-
-type NaturalSchema =
-  | StringConstructor
-  | NumberConstructor
-  | BooleanConstructor
-  | ObjectConstructor
-  | ArrayConstructor
-  | string[]
-  | EmptyArray
-  | EmptyObject
-  | { [key: string]: NaturalSchema }
-  | NaturalSchema[];
+import { NaturalSchema } from "../types/jaypie";
 
 export default function naturalZodSchema(
   definition: NaturalSchema,
