@@ -40,6 +40,56 @@ describe("naturalInterfaceZodSchema", () => {
       expect(result.success).toBe(true);
     });
 
+    it("supports Boolean, Array, and Object types", () => {
+      const input = {
+        isActive: Boolean,
+        tags: [String],
+        numbers: [Number],
+        flags: [Boolean],
+        metadata: Object,
+        anyArray: [], // Empty array should accept any[]
+        anyObject: {}, // Empty object should accept any key-value pairs
+        anyArray2: Array, // Array constructor should also accept any[]
+      };
+
+      const schema = naturalZodSchema(input);
+
+      // Test the schema validates correct data
+      const validData = {
+        isActive: true,
+        tags: ["test", "demo"],
+        numbers: [1, 2, 3],
+        flags: [true, false],
+        metadata: { key: "value" },
+        anyArray: [1, "two", true, { three: 3 }],
+        anyObject: {
+          str: "string",
+          num: 42,
+          bool: true,
+          arr: [1, 2, 3],
+        },
+        anyArray2: ["string", 1, true, { nested: "object" }],
+      };
+
+      const result = schema.safeParse(validData);
+      expect(result.success).toBe(true);
+
+      // Test invalid data
+      const invalidData = {
+        isActive: "not a boolean",
+        tags: [1, 2, 3],
+        numbers: ["not", "numbers"],
+        flags: ["not", "booleans"],
+        metadata: "not an object",
+        anyArray: "not an array",
+        anyObject: "not an object",
+        anyArray2: "not an array either",
+      };
+
+      const invalidResult = schema.safeParse(invalidData);
+      expect(invalidResult.success).toBe(false);
+    });
+
     it("rejects invalid data", () => {
       const input = {
         decision: ["Accept", "Respond", "Indeterminate"],
