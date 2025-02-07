@@ -168,5 +168,50 @@ describe("naturalInterfaceZodSchema", () => {
       const invalidResult = schema.safeParse(invalidData);
       expect(invalidResult.success).toBe(false);
     });
+
+    it("supports array of objects", () => {
+      const input = [
+        {
+          id: String,
+          attributes: {
+            name: String,
+          },
+        },
+      ];
+
+      const schema = naturalZodSchema(input);
+
+      // Test valid data
+      const validData = [
+        {
+          id: "123",
+          attributes: {
+            name: "John Doe",
+          },
+        },
+        {
+          id: "456",
+          attributes: {
+            name: "Jane Smith",
+          },
+        },
+      ];
+
+      const result = schema.safeParse(validData);
+      expect(result.success).toBe(true);
+
+      // Test invalid data
+      const invalidData = [
+        {
+          id: 123, // should be string
+          attributes: {
+            name: "John Doe",
+          },
+        },
+      ];
+
+      const invalidResult = schema.safeParse(invalidData);
+      expect(invalidResult.success).toBe(false);
+    });
   });
 });

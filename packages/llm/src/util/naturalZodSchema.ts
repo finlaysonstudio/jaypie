@@ -18,7 +18,8 @@ type NaturalType =
   | ConstructorArray
   | EmptyArray
   | EmptyObject
-  | { [key: string]: NaturalType };
+  | { [key: string]: NaturalType }
+  | NaturalType[];
 
 export default function naturalZodSchema(
   definition: NaturalType,
@@ -38,6 +39,10 @@ export default function naturalZodSchema(
         case Boolean:
           return z.array(z.boolean());
         default:
+          if (typeof itemType === "object") {
+            // Handle array of objects
+            return z.array(naturalZodSchema(itemType));
+          }
           // Handle enum arrays
           return z.enum(definition as [string, ...string[]]);
       }
