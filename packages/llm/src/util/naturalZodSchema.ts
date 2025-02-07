@@ -8,81 +8,69 @@ type ConstructorArray = (
   | BooleanConstructor
 )[];
 
-interface NaturalType {
-  [key: string]:
-    | StringConstructor
-    | NumberConstructor
-    | BooleanConstructor
-    | ObjectConstructor
-    | ArrayConstructor
-    | string[]
-    | ConstructorArray
-    | EmptyArray
-    | EmptyObject
-    | { [key: string]: NaturalType[string] };
-}
+type NaturalType =
+  | StringConstructor
+  | NumberConstructor
+  | BooleanConstructor
+  | ObjectConstructor
+  | ArrayConstructor
+  | string[]
+  | ConstructorArray
+  | EmptyArray
+  | EmptyObject
+  | { [key: string]: NaturalType };
 
 export default function naturalZodSchema(
   definition: NaturalType,
-): z.ZodObject<Record<string, z.ZodTypeAny>> {
-  const schemaShape: Record<string, z.ZodTypeAny> = {};
-
-  for (const [key, value] of Object.entries(definition)) {
-    if (Array.isArray(value)) {
-      if (value.length === 0) {
-        // Handle empty array - accept any[]
-        schemaShape[key] = z.array(z.any());
-      } else if (value.length === 1) {
-        // Handle array types
-        const itemType = value[0];
-        switch (itemType) {
-          case String:
-            schemaShape[key] = z.array(z.string());
-            break;
-          case Number:
-            schemaShape[key] = z.array(z.number());
-            break;
-          case Boolean:
-            schemaShape[key] = z.array(z.boolean());
-            break;
-          default:
-            // Handle enum arrays
-            schemaShape[key] = z.enum(value as [string, ...string[]]);
-        }
-      } else {
-        // Handle enum arrays
-        schemaShape[key] = z.enum(value as [string, ...string[]]);
-      }
-    } else if (value && typeof value === "object") {
-      if (Object.keys(value).length === 0) {
-        // Handle empty object - accept any key-value pairs
-        schemaShape[key] = z.record(z.string(), z.any());
-      } else {
-        // Handle nested object
-        schemaShape[key] = naturalZodSchema(value as NaturalType);
+): z.ZodTypeAny {
+  if (Array.isArray(definition)) {
+    if (definition.length === 0) {
+      // Handle empty array - accept any[]
+      return z.array(z.any());
+    } else if (definition.length === 1) {
+      // Handle array types
+      const itemType = definition[0];
+      switch (itemType) {
+        case String:
+          return z.array(z.string());
+        case Number:
+          return z.array(z.number());
+        case Boolean:
+          return z.array(z.boolean());
+        default:
+          // Handle enum arrays
+          return z.enum(definition as [string, ...string[]]);
       }
     } else {
-      switch (value) {
-        case String:
-          schemaShape[key] = z.string();
-          break;
-        case Number:
-          schemaShape[key] = z.number();
-          break;
-        case Boolean:
-          schemaShape[key] = z.boolean();
-          break;
-        case Object:
-          schemaShape[key] = z.record(z.string(), z.any());
-          break;
-        case Array:
-          schemaShape[key] = z.array(z.any());
-          break;
-        default:
-          throw new Error(`Unsupported type: ${value}`);
+      // Handle enum arrays
+      return z.enum(definition as [string, ...string[]]);
+    }
+  } else if (definition && typeof definition === "object") {
+    if (Object.keys(definition).length === 0) {
+      // Handle empty object - accept any key-value pairs
+      return z.record(z.string(), z.any());
+    } else {
+      // Handle object with properties
+      const schemaShape: Record<string, z.ZodTypeAny> = {};
+      for (const [key, value] of Object.entries(definition)) {
+        schemaShape[key] = naturalZodSchema(value);
       }
+      return z.object(schemaShape);
+    }
+  } else {
+    switch (definition) {
+      case String:
+        return z.string();
+      case Number:
+        return z.number();
+      case Boolean:
+        return z.boolean();
+      case Object:
+        return z.record(z.string(), z.any());
+      case Array:
+        return z.array(z.any());
+      default:
+        throw new Error(`Unsupported type: ${definition}`);
     }
   }
-
-  return z.object(schemaShape);
 }

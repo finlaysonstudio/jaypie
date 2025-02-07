@@ -12,12 +12,33 @@ describe("naturalInterfaceZodSchema", () => {
     it("works", () => {
       const result = naturalZodSchema({});
       expect(result).toBeDefined();
-      expect(result).toBeInstanceOf(z.ZodObject);
+      expect(result).toBeInstanceOf(z.ZodType);
     });
   });
 
   // Happy Paths
   describe("Happy Paths", () => {
+    it("handles primitive types directly", () => {
+      expect(naturalZodSchema(String)).toBeInstanceOf(z.ZodString);
+      expect(naturalZodSchema(Number)).toBeInstanceOf(z.ZodNumber);
+      expect(naturalZodSchema(Boolean)).toBeInstanceOf(z.ZodBoolean);
+      expect(naturalZodSchema(Object)).toBeInstanceOf(z.ZodRecord);
+      expect(naturalZodSchema(Array)).toBeInstanceOf(z.ZodArray);
+
+      // Test validation
+      const stringSchema = naturalZodSchema(String);
+      expect(stringSchema.safeParse("test").success).toBe(true);
+      expect(stringSchema.safeParse(123).success).toBe(false);
+
+      const numberSchema = naturalZodSchema(Number);
+      expect(numberSchema.safeParse(123).success).toBe(true);
+      expect(numberSchema.safeParse("test").success).toBe(false);
+
+      const booleanSchema = naturalZodSchema(Boolean);
+      expect(booleanSchema.safeParse(true).success).toBe(true);
+      expect(booleanSchema.safeParse("true").success).toBe(false);
+    });
+
     it("creates a zod schema from a simple object definition", () => {
       const input = {
         decision: ["Accept", "Respond", "Indeterminate"],
