@@ -33,6 +33,7 @@
     "@jaypie/datadog": "^1.1.1",
     "@jaypie/express": "^1.1.10",
     "@jaypie/lambda": "^1.1.3",
+    "@jaypie/llm": "^1.1.0",
     "@jaypie/mongoose": "^1.1.1"
   },
   "publishConfig": {
