@@ -1,6 +1,6 @@
 {
   "name": "@jaypie/types",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "author": "Finlayson Studio",
   "description": "Core type definitions for the Jaypie framework",
   "type": "module",
@@ -28,4 +28,4 @@
   "publishConfig": {
     "access": "public"
   }
-} 
+}
