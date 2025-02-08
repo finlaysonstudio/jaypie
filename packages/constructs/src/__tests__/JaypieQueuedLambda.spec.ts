@@ -1,6 +1,6 @@
 import { CDK } from "@jaypie/cdk";
 import { describe, expect, it } from "vitest";
-import { Stack } from "aws-cdk-lib";
+import { Stack, RemovalPolicy } from "aws-cdk-lib";
 import { Template, Match } from "aws-cdk-lib/assertions";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import { JaypieQueuedLambda } from "../JaypieQueuedLambda";
@@ -190,6 +190,129 @@ describe("JaypieQueuedLambda", () => {
             }),
           ]),
         },
+      });
+
+      // Test assertions to satisfy linter
+      expect(template).toBeDefined();
+    });
+  });
+
+  describe("IQueue Implementation", () => {
+    it("implements IQueue by delegating to underlying queue", () => {
+      const stack = new Stack();
+      const construct = new JaypieQueuedLambda(stack, "TestConstruct", {
+        code: lambda.Code.fromInline("exports.handler = () => {}"),
+        handler: "index.handler",
+      });
+
+      // Test key IQueue properties
+      expect(construct.fifo).toBe(true);
+      expect(construct.queueArn).toBeDefined();
+      expect(construct.queueName).toBeDefined();
+      expect(construct.queueUrl).toBeDefined();
+      expect(construct.env).toEqual({
+        account: stack.account,
+        region: stack.region,
+      });
+      expect(construct.stack).toBe(stack);
+
+      // Verify the queue exists with expected properties
+      const template = Template.fromStack(stack);
+      template.hasResourceProperties("AWS::SQS::Queue", {
+        FifoQueue: true,
+      });
+    });
+
+    it("grants queue permissions", () => {
+      const stack = new Stack();
+      const construct = new JaypieQueuedLambda(stack, "TestConstruct", {
+        code: lambda.Code.fromInline("exports.handler = () => {}"),
+        handler: "index.handler",
+      });
+
+      // Create a role to test grants
+      const role = new iam.Role(stack, "TestRole", {
+        assumedBy: new iam.ServicePrincipal("lambda.amazonaws.com"),
+      });
+
+      // Test various queue permissions
+      construct.grantConsumeMessages(role);
+      construct.grantSendMessages(role);
+      construct.grantPurge(role);
+
+      const template = Template.fromStack(stack);
+
+      // Verify the IAM policy was created with SQS permissions
+      template.hasResourceProperties("AWS::IAM::Policy", {
+        PolicyDocument: {
+          Statement: Match.arrayWith([
+            Match.objectLike({
+              Action: Match.arrayWith([
+                "sqs:ReceiveMessage",
+                "sqs:ChangeMessageVisibility",
+                "sqs:GetQueueUrl",
+                "sqs:DeleteMessage",
+                "sqs:GetQueueAttributes",
+              ]),
+              Effect: "Allow",
+              Resource: {
+                "Fn::GetAtt": [
+                  Match.stringLikeRegexp("TestConstructQueue.*"),
+                  "Arn",
+                ],
+              },
+            }),
+            Match.objectLike({
+              Action: [
+                "sqs:SendMessage",
+                "sqs:GetQueueAttributes",
+                "sqs:GetQueueUrl",
+              ],
+              Effect: "Allow",
+              Resource: {
+                "Fn::GetAtt": [
+                  Match.stringLikeRegexp("TestConstructQueue.*"),
+                  "Arn",
+                ],
+              },
+            }),
+            Match.objectLike({
+              Action: [
+                "sqs:PurgeQueue",
+                "sqs:GetQueueAttributes",
+                "sqs:GetQueueUrl",
+              ],
+              Effect: "Allow",
+              Resource: {
+                "Fn::GetAtt": [
+                  Match.stringLikeRegexp("TestConstructQueue.*"),
+                  "Arn",
+                ],
+              },
+            }),
+          ]),
+        },
+      });
+
+      // Test assertions to satisfy linter
+      expect(template).toBeDefined();
+    });
+
+    it("applies removal policy to both resources", () => {
+      const stack = new Stack();
+      const construct = new JaypieQueuedLambda(stack, "TestConstruct", {
+        code: lambda.Code.fromInline("exports.handler = () => {}"),
+        handler: "index.handler",
+      });
+
+      construct.applyRemovalPolicy(RemovalPolicy.DESTROY);
+
+      const template = Template.fromStack(stack);
+      template.hasResource("AWS::Lambda::Function", {
+        DeletionPolicy: "Delete",
+      });
+      template.hasResource("AWS::SQS::Queue", {
+        DeletionPolicy: "Delete",
       });
 
       // Test assertions to satisfy linter

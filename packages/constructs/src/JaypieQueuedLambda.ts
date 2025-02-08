@@ -4,6 +4,8 @@ import * as lambda from "aws-cdk-lib/aws-lambda";
 import * as sqs from "aws-cdk-lib/aws-sqs";
 import { CDK } from "@jaypie/cdk";
 import * as iam from "aws-cdk-lib/aws-iam";
+import * as cloudwatch from "aws-cdk-lib/aws-cloudwatch";
+import * as kms from "aws-cdk-lib/aws-kms";
 
 const DEQUEUEING_MAXIMUM_CONCURRENT_EXECUTIONS = 1;
 
@@ -16,7 +18,10 @@ export interface JaypieQueuedLambdaProps {
   timeout?: Duration;
 }
 
-export class JaypieQueuedLambda extends Construct implements lambda.IFunction {
+export class JaypieQueuedLambda
+  extends Construct
+  implements lambda.IFunction, sqs.IQueue
+{
   private readonly _queue: sqs.Queue;
   private readonly _lambda: lambda.Function;
 
@@ -227,5 +232,104 @@ export class JaypieQueuedLambda extends Construct implements lambda.IFunction {
 
   public applyRemovalPolicy(policy: RemovalPolicy): void {
     this._lambda.applyRemovalPolicy(policy);
+    this._queue.applyRemovalPolicy(policy);
+  }
+
+  // IQueue implementation
+  public get fifo(): boolean {
+    return this._queue.fifo;
+  }
+
+  public get queueArn(): string {
+    return this._queue.queueArn;
+  }
+
+  public get queueName(): string {
+    return this._queue.queueName;
+  }
+
+  public get queueUrl(): string {
+    return this._queue.queueUrl;
+  }
+
+  public get encryptionMasterKey(): kms.IKey | undefined {
+    return this._queue.encryptionMasterKey;
+  }
+
+  public addToResourcePolicy(
+    statement: iam.PolicyStatement,
+  ): iam.AddToResourcePolicyResult {
+    return this._queue.addToResourcePolicy(statement);
+  }
+
+  public grant(grantee: iam.IGrantable, ...actions: string[]): iam.Grant {
+    return this._queue.grant(grantee, ...actions);
+  }
+
+  public grantConsumeMessages(grantee: iam.IGrantable): iam.Grant {
+    return this._queue.grantConsumeMessages(grantee);
+  }
+
+  public grantPurge(grantee: iam.IGrantable): iam.Grant {
+    return this._queue.grantPurge(grantee);
+  }
+
+  public grantSendMessages(grantee: iam.IGrantable): iam.Grant {
+    return this._queue.grantSendMessages(grantee);
+  }
+
+  // Queue metrics
+  public metricApproximateAgeOfOldestMessage(
+    props?: cloudwatch.MetricOptions,
+  ): cloudwatch.Metric {
+    return this._queue.metricApproximateAgeOfOldestMessage(props);
+  }
+
+  public metricApproximateNumberOfMessagesDelayed(
+    props?: cloudwatch.MetricOptions,
+  ): cloudwatch.Metric {
+    return this._queue.metricApproximateNumberOfMessagesDelayed(props);
+  }
+
+  public metricApproximateNumberOfMessagesNotVisible(
+    props?: cloudwatch.MetricOptions,
+  ): cloudwatch.Metric {
+    return this._queue.metricApproximateNumberOfMessagesNotVisible(props);
+  }
+
+  public metricApproximateNumberOfMessagesVisible(
+    props?: cloudwatch.MetricOptions,
+  ): cloudwatch.Metric {
+    return this._queue.metricApproximateNumberOfMessagesVisible(props);
+  }
+
+  public metricNumberOfEmptyReceives(
+    props?: cloudwatch.MetricOptions,
+  ): cloudwatch.Metric {
+    return this._queue.metricNumberOfEmptyReceives(props);
+  }
+
+  public metricNumberOfMessagesDeleted(
+    props?: cloudwatch.MetricOptions,
+  ): cloudwatch.Metric {
+    return this._queue.metricNumberOfMessagesDeleted(props);
+  }
+
+  public metricNumberOfMessagesReceived(
+    props?: cloudwatch.MetricOptions,
+  ): cloudwatch.Metric {
+    return this._queue.metricNumberOfMessagesReceived(props);
+  }
+
+  public metricNumberOfMessagesSent(
+    props?: cloudwatch.MetricOptions,
+  ): cloudwatch.Metric {
+    return this._queue.metricNumberOfMessagesSent(props);
+  }
+
+  public metricSentMessageSize(
+    props?: cloudwatch.MetricOptions,
+  ): cloudwatch.Metric {
+    return this._queue.metricSentMessageSize(props);
   }
 }
