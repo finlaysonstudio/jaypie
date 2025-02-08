@@ -3,8 +3,9 @@ import { describe, expect, it } from "vitest";
 import { Stack, RemovalPolicy, Duration } from "aws-cdk-lib";
 import { Template, Match } from "aws-cdk-lib/assertions";
 import * as lambda from "aws-cdk-lib/aws-lambda";
-import { JaypieQueuedLambda } from "../JaypieQueuedLambda";
+import { JaypieQueuedLambda } from "../JaypieQueuedLambda.js";
 import * as iam from "aws-cdk-lib/aws-iam";
+import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
 
 describe("JaypieQueuedLambda", () => {
   describe("Base Cases", () => {
@@ -61,6 +62,68 @@ describe("JaypieQueuedLambda", () => {
           },
         ],
       });
+    });
+
+    it("configures environment secrets", () => {
+      const stack = new Stack();
+      const testSecret = new secretsmanager.Secret(stack, "TestSecret", {
+        secretName: "test/secret",
+      });
+      const testSecret2 = new secretsmanager.Secret(stack, "TestSecret2", {
+        secretName: "test/secret2",
+      });
+
+      const construct = new JaypieQueuedLambda(stack, "TestConstruct", {
+        code: lambda.Code.fromInline("exports.handler = () => {}"),
+        envSecrets: {
+          VALUE_1: testSecret,
+          VALUE_2: testSecret2,
+        },
+        handler: "index.handler",
+      });
+
+      const template = Template.fromStack(stack);
+
+      // Verify environment variables are set
+      template.hasResourceProperties("AWS::Lambda::Function", {
+        Environment: {
+          Variables: {
+            SECRET_VALUE_1: Match.anyValue(),
+            SECRET_VALUE_2: Match.anyValue(),
+            APP_QUEUE_URL: Match.anyValue(),
+          },
+        },
+      });
+
+      // Verify IAM permissions are granted
+      template.hasResourceProperties("AWS::IAM::Policy", {
+        PolicyDocument: {
+          Statement: Match.arrayWith([
+            Match.objectLike({
+              Action: [
+                "secretsmanager:GetSecretValue",
+                "secretsmanager:DescribeSecret",
+              ],
+              Effect: "Allow",
+              Resource: {
+                Ref: Match.stringLikeRegexp("TestSecret.*"),
+              },
+            }),
+            Match.objectLike({
+              Action: [
+                "secretsmanager:GetSecretValue",
+                "secretsmanager:DescribeSecret",
+              ],
+              Effect: "Allow",
+              Resource: {
+                Ref: Match.stringLikeRegexp("TestSecret2.*"),
+              },
+            }),
+          ]),
+        },
+      });
+
+      expect(construct).toBeDefined();
     });
 
     it("sets environment variables", () => {

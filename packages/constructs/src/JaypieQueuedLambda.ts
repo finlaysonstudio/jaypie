@@ -6,10 +6,12 @@ import { CDK } from "@jaypie/cdk";
 import * as iam from "aws-cdk-lib/aws-iam";
 import * as cloudwatch from "aws-cdk-lib/aws-cloudwatch";
 import * as kms from "aws-cdk-lib/aws-kms";
+import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
 
 export interface JaypieQueuedLambdaProps {
   code: lambda.Code | string;
   environment?: { [key: string]: string };
+  envSecrets?: { [key: string]: secretsmanager.ISecret };
   fifo?: boolean;
   handler: string;
   logRetention?: number;
@@ -35,6 +37,7 @@ export class JaypieQueuedLambda
     const {
       code,
       environment = {},
+      envSecrets = {},
       fifo = true,
       handler = "index.handler",
       logRetention = CDK.LAMBDA.LOG_RETENTION,
@@ -60,11 +63,21 @@ export class JaypieQueuedLambda
       Tags.of(this._queue).add(CDK.TAG.ROLE, role);
     }
 
+    // Process secrets environment variables
+    const secretsEnvironment = Object.entries(envSecrets).reduce(
+      (acc, [key, secret]) => ({
+        ...acc,
+        [`SECRET_${key}`]: secret.secretName,
+      }),
+      {},
+    );
+
     // Create Lambda Function
     this._lambda = new lambda.Function(this, "Function", {
       code: this._code,
       environment: {
         ...environment,
+        ...secretsEnvironment,
         APP_QUEUE_URL: this._queue.queueUrl,
       },
       handler,
@@ -75,6 +88,12 @@ export class JaypieQueuedLambda
       timeout:
         typeof timeout === "number" ? Duration.seconds(timeout) : timeout,
     });
+
+    // Grant secret read permissions
+    Object.values(envSecrets).forEach((secret) => {
+      secret.grantRead(this._lambda);
+    });
+
     this._queue.grantConsumeMessages(this._lambda);
     if (role) {
       Tags.of(this._lambda).add(CDK.TAG.ROLE, role);
