@@ -1,5 +1,5 @@
 import { Construct } from "constructs";
-import { CfnOutput, Duration, Tags, Stack, RemovalPolicy } from "aws-cdk-lib";
+import { Duration, Tags, Stack, RemovalPolicy } from "aws-cdk-lib";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import * as sqs from "aws-cdk-lib/aws-sqs";
 import { CDK } from "@jaypie/cdk";
@@ -7,15 +7,18 @@ import * as iam from "aws-cdk-lib/aws-iam";
 import * as cloudwatch from "aws-cdk-lib/aws-cloudwatch";
 import * as kms from "aws-cdk-lib/aws-kms";
 
-const DEQUEUEING_MAXIMUM_CONCURRENT_EXECUTIONS = 1;
-
 export interface JaypieQueuedLambdaProps {
   code: lambda.Code;
   environment?: { [key: string]: string };
+  fifo?: boolean;
   handler: string;
+  logRetention?: number;
   memorySize?: number;
+  reservedConcurrentExecutions?: number;
   role?: string;
+  runtime?: lambda.Runtime;
   timeout?: Duration;
+  visibilityTimeout?: Duration;
 }
 
 export class JaypieQueuedLambda
@@ -31,16 +34,21 @@ export class JaypieQueuedLambda
     const {
       code,
       environment = {},
+      fifo = true,
       handler = "index.handler",
+      logRetention = CDK.LAMBDA.LOG_RETENTION,
       memorySize = CDK.LAMBDA.MEMORY_SIZE,
+      reservedConcurrentExecutions = 1,
       role,
+      runtime = lambda.Runtime.NODEJS_20_X,
       timeout = Duration.seconds(CDK.DURATION.LAMBDA_WORKER),
+      visibilityTimeout = Duration.seconds(CDK.DURATION.LAMBDA_WORKER),
     } = props;
 
     // Create SQS Queue
     this._queue = new sqs.Queue(this, "Queue", {
-      fifo: true,
-      visibilityTimeout: Duration.seconds(CDK.DURATION.LAMBDA_WORKER),
+      fifo,
+      visibilityTimeout,
     });
     if (role) {
       Tags.of(this._queue).add(CDK.TAG.ROLE, role);
@@ -51,30 +59,19 @@ export class JaypieQueuedLambda
       code,
       environment: {
         ...environment,
-        APP_JOB_QUEUE_URL: this._queue.queueUrl,
+        APP_QUEUE_URL: this._queue.queueUrl,
       },
       handler,
-      logRetention: CDK.LAMBDA.LOG_RETENTION,
+      logRetention,
       memorySize,
-      reservedConcurrentExecutions: DEQUEUEING_MAXIMUM_CONCURRENT_EXECUTIONS,
-      runtime: lambda.Runtime.NODEJS_20_X,
+      reservedConcurrentExecutions,
+      runtime,
       timeout,
     });
     this._queue.grantConsumeMessages(this._lambda);
     if (role) {
       Tags.of(this._lambda).add(CDK.TAG.ROLE, role);
     }
-
-    // Add outputs
-    new CfnOutput(this, "QueueUrl", {
-      value: this._queue.queueUrl,
-    });
-    new CfnOutput(this, "QueueArn", {
-      value: this._queue.queueArn,
-    });
-    new CfnOutput(this, "LambdaArn", {
-      value: this._lambda.functionArn,
-    });
   }
 
   // Public accessors

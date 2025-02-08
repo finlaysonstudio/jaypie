@@ -1,6 +1,6 @@
 import { CDK } from "@jaypie/cdk";
 import { describe, expect, it } from "vitest";
-import { Stack, RemovalPolicy } from "aws-cdk-lib";
+import { Stack, RemovalPolicy, Duration } from "aws-cdk-lib";
 import { Template, Match } from "aws-cdk-lib/assertions";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import { JaypieQueuedLambda } from "../JaypieQueuedLambda";
@@ -79,13 +79,13 @@ describe("JaypieQueuedLambda", () => {
         Environment: {
           Variables: {
             TEST_VAR: "test-value",
-            APP_JOB_QUEUE_URL: {},
+            APP_QUEUE_URL: Match.anyValue(),
           },
         },
       });
     });
 
-    it("configures FIFO queue", () => {
+    it("configures FIFO queue by default", () => {
       const stack = new Stack();
       const construct = new JaypieQueuedLambda(stack, "TestConstruct", {
         code: lambda.Code.fromInline("exports.handler = () => {}"),
@@ -98,6 +98,51 @@ describe("JaypieQueuedLambda", () => {
       template.hasResourceProperties("AWS::SQS::Queue", {
         FifoQueue: true,
       });
+    });
+
+    it("allows configuring queue and lambda properties", () => {
+      const stack = new Stack();
+      const customVisibilityTimeout = Duration.seconds(300);
+      const customTimeout = Duration.seconds(60);
+
+      const construct = new JaypieQueuedLambda(stack, "TestConstruct", {
+        code: lambda.Code.fromInline("exports.handler = () => {}"),
+        fifo: false,
+        handler: "index.handler",
+        logRetention: 7,
+        memorySize: 256,
+        reservedConcurrentExecutions: 5,
+        runtime: lambda.Runtime.NODEJS_18_X,
+        timeout: customTimeout,
+        visibilityTimeout: customVisibilityTimeout,
+      });
+
+      const template = Template.fromStack(stack);
+
+      // Verify queue configuration
+      template.hasResourceProperties("AWS::SQS::Queue", {
+        VisibilityTimeout: 300,
+      });
+      expect(
+        Object.keys(template.findResources("AWS::SQS::Queue", {})).length,
+      ).toBe(1);
+      expect(
+        Object.keys(
+          template.findResources("AWS::SQS::Queue", {
+            FifoQueue: true,
+          }),
+        ).length,
+      ).toBe(0);
+
+      // Verify lambda configuration
+      template.hasResourceProperties("AWS::Lambda::Function", {
+        MemorySize: 256,
+        Runtime: "nodejs18.x",
+        Timeout: 60,
+        ReservedConcurrentExecutions: 5,
+      });
+
+      expect(construct).toBeDefined();
     });
   });
 
