@@ -52,16 +52,18 @@ npm install jaypie
 
 `@jaypie/core` is included in `jaypie`.  Almost every Jaypie package requires core.
 
-#### Peer Packages
+#### Included Packages
 
 These packages are included in `jaypie`. They may be installed separately in the future.
 
 | Package | Exports | Description |
 | ------- | ------- | ----------- |
-| `@jaypie/aws` | `getMessages`, `getSecret`, `getSingletonMessage`, `sendBatchMessages`, `sendMessage` | AWS helpers |
+| `@jaypie/aws` |  `getEnvSecret`, `getMessages`, `getSecret`, `getSingletonMessage`, `getTextractJob`, `sendBatchMessages`, `sendMessage`, `sendTextractJob` | AWS helpers |
 | `@jaypie/datadog` | `submitMetric`, `submitMetricSet` | Datadog helpers |
-| `@jaypie/express` | `expressHandler` | Express entry point |
+| `@jaypie/express` | 
+`badRequestRoute`, `cors`, `echoRoute`, `expressHandler`, `expressHttpCodeHandler`, `forbiddenRoute`, `goneRoute`, `methodNotAllowedRoute`, `noContentRoute`, `notFoundRoute`, `notImplementedRoute`, | Express entry point |
 | `@jaypie/lambda` | `lambdaHandler` | Lambda entry point |
+| `@jaypie/llm` | `Llm` | LLM helpers |
 | `@jaypie/mongoose` | `connect`, `connectFromSecretEnv`, `disconnect`, `mongoose` | MongoDB management |
 
 #### TestKit
@@ -107,8 +109,10 @@ import {
   getMessages,
   getSecret,
   getSingletonMessage,
+  getTextractJob,
   sendBatchMessages,
   sendMessage,
+  sendTextractJob,
 } from "jaypie";
 ```
 
@@ -156,6 +160,17 @@ const message = await getSingletonMessage(event);
 // message = { salutation: "Hello, world!" }
 ```
 
+#### `getTextractJob(jobId)`
+
+Retrieve a Textract job from AWS Textract.
+
+```javascript
+import { getTextractJob } from '@jaypie/aws';
+
+const textractResults = await getTextractJob(jobId); // Array of Textract blocks
+const raw = JSON.stringify(textractResults);
+```
+
 #### `sendBatchMessages({ messages, queueUrl })`
 
 Batch and send messages to an SQS queue. If more than ten messages are provided, the function will batch them into groups of ten or less (per AWS).
@@ -200,6 +215,30 @@ const response = await sendMessage({ body, queueUrl });
 | `messageAttributes` | `object` | No | Message attributes |
 | `messageGroupId` | `string` | No | Custom message group for FIFO queues; default provided |
 | `queueUrl` | `string` | Yes | URL of the SQS queue |
+
+#### `sendTextractJob({ key, bucket, featureTypes, snsRoleArn, snsTopicArn })`
+
+Send a Textract job to AWS Textract.
+
+```javascript
+import { sendTextractJob } from '@jaypie/aws';
+
+const jobId = await sendTextractJob({
+  key: "document.pdf",
+  bucket: "my-bucket",
+  featureTypes: ["FORMS", "LAYOUT", "SIGNATURES", "TABLES"], // Optional, defaults to FORMS, LAYOUT, SIGNATURES, TABLES
+  snsRoleArn: "arn:aws:iam::123456789012:role/TextractRole", // Optional
+  snsTopicArn: "arn:aws:sns:us-east-1:123456789012:TextractTopic" // Optional
+});
+```
+
+| Parameter | Type | Required | Description |
+| --------- | ---- | -------- | ----------- |
+| `key` | `string` | Yes | S3 object key |
+| `bucket` | `string` | Yes | S3 bucket name |
+| `featureTypes` | `array` | No | Array of Textract feature types; defaults to `["FORMS", "LAYOUT", "SIGNATURES", "TABLES"]` |
+| `snsRoleArn` | `string` | No | SNS IAM role ARN for notifications |
+| `snsTopicArn` | `string` | No | SNS topic ARN for notifications |
 
 ### Constants
 
@@ -491,10 +530,12 @@ _A "handler" returns a function that can be used as an Express route. A "route" 
 
 ```javascript
 import { 
+  badRequestRoute,
   echoRoute,
   EXPRESS,
   forbiddenRoute,
   goneRoute,
+  methodNotAllowedRoute,
   noContentRoute,
   notFoundRoute,
   notImplementedRoute,
@@ -891,6 +932,72 @@ const handler = lambdaHandler(async({event}) => {
 ```javascript
 import { mongoose } from "jaypie";
 ```
+
+### LLM
+
+```javascript
+import { 
+  Llm,
+  LLM,
+} from "jaypie";
+```
+
+The LLM package provides a unified interface for interacting with large language models (LLMs) like OpenAI's GPT and Anthropic's Claude.
+
+#### Basic Usage
+
+```javascript
+import { Llm } from "jaypie";
+
+const llm = new Llm(); // Uses OpenAI by default
+const response = await llm.send("Hello, world!");
+```
+
+#### Provider Selection
+
+```javascript
+import { Llm, LLM } from "jaypie";
+
+// OpenAI (default)
+const openai = new Llm(LLM.PROVIDER.OPENAI.NAME);
+
+// Anthropic
+const anthropic = new Llm(LLM.PROVIDER.ANTHROPIC.NAME);
+```
+
+#### Message Options
+
+The `send` method accepts options to customize the request:
+
+```javascript
+const response = await llm.send("Hello, {{name}}!", {
+  data: { name: "World" }, // Template variables
+  model: "gpt-4", // Override default model
+  system: "You are a helpful assistant", // System prompt
+  response: { // Structured output schema
+    greeting: String,
+    timestamp: Number
+  }
+});
+```
+
+#### Available Models
+
+##### OpenAI
+- `LLM.PROVIDER.OPENAI.MODEL.GPT_4` - GPT-4
+- `LLM.PROVIDER.OPENAI.MODEL.GPT_4_O` - GPT-4 Optimized (default)
+
+##### Anthropic
+- `LLM.PROVIDER.ANTHROPIC.MODEL.CLAUDE_3_HAIKU` - Claude 3 Haiku
+- `LLM.PROVIDER.ANTHROPIC.MODEL.CLAUDE_3_OPUS` - Claude 3 Opus
+- `LLM.PROVIDER.ANTHROPIC.MODEL.CLAUDE_3_SONNET` - Claude 3 Sonnet (default)
+
+#### Configuration
+
+The LLM package uses environment variables or AWS Secrets Manager for API keys:
+
+- OpenAI: `OPENAI_API_KEY` or `SECRET_OPENAI_API_KEY`
+- Anthropic: Coming soon
 
 ### TestKit
 
