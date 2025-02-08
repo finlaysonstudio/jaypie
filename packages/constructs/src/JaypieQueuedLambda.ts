@@ -8,7 +8,7 @@ import * as cloudwatch from "aws-cdk-lib/aws-cloudwatch";
 import * as kms from "aws-cdk-lib/aws-kms";
 
 export interface JaypieQueuedLambdaProps {
-  code: lambda.Code;
+  code: lambda.Code | string;
   environment?: { [key: string]: string };
   fifo?: boolean;
   handler: string;
@@ -17,8 +17,8 @@ export interface JaypieQueuedLambdaProps {
   reservedConcurrentExecutions?: number;
   role?: string;
   runtime?: lambda.Runtime;
-  timeout?: Duration;
-  visibilityTimeout?: Duration;
+  timeout?: Duration | number;
+  visibilityTimeout?: Duration | number;
 }
 
 export class JaypieQueuedLambda
@@ -27,6 +27,7 @@ export class JaypieQueuedLambda
 {
   private readonly _queue: sqs.Queue;
   private readonly _lambda: lambda.Function;
+  private readonly _code: lambda.Code;
 
   constructor(scope: Construct, id: string, props: JaypieQueuedLambdaProps) {
     super(scope, id);
@@ -38,17 +39,22 @@ export class JaypieQueuedLambda
       handler = "index.handler",
       logRetention = CDK.LAMBDA.LOG_RETENTION,
       memorySize = CDK.LAMBDA.MEMORY_SIZE,
-      reservedConcurrentExecutions = 1,
+      reservedConcurrentExecutions,
       role,
       runtime = lambda.Runtime.NODEJS_20_X,
       timeout = Duration.seconds(CDK.DURATION.LAMBDA_WORKER),
       visibilityTimeout = Duration.seconds(CDK.DURATION.LAMBDA_WORKER),
     } = props;
 
+    this._code = typeof code === "string" ? lambda.Code.fromAsset(code) : code;
+
     // Create SQS Queue
     this._queue = new sqs.Queue(this, "Queue", {
       fifo,
-      visibilityTimeout,
+      visibilityTimeout:
+        typeof visibilityTimeout === "number"
+          ? Duration.seconds(visibilityTimeout)
+          : visibilityTimeout,
     });
     if (role) {
       Tags.of(this._queue).add(CDK.TAG.ROLE, role);
@@ -56,7 +62,7 @@ export class JaypieQueuedLambda
 
     // Create Lambda Function
     this._lambda = new lambda.Function(this, "Function", {
-      code,
+      code: this._code,
       environment: {
         ...environment,
         APP_QUEUE_URL: this._queue.queueUrl,
@@ -66,7 +72,8 @@ export class JaypieQueuedLambda
       memorySize,
       reservedConcurrentExecutions,
       runtime,
-      timeout,
+      timeout:
+        typeof timeout === "number" ? Duration.seconds(timeout) : timeout,
     });
     this._queue.grantConsumeMessages(this._lambda);
     if (role) {
@@ -81,6 +88,10 @@ export class JaypieQueuedLambda
 
   public get lambda(): lambda.Function {
     return this._lambda;
+  }
+
+  public get code(): lambda.Code {
+    return this._code;
   }
 
   // IFunction implementation
