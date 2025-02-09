@@ -54,6 +54,7 @@ export interface JaypieEnvSecretProps {
   export?: string;
   provider?: boolean;
   roleTag?: string;
+  vendorTag?: string;
   value?: string;
 }
 
@@ -70,6 +71,7 @@ export class JaypieEnvSecret extends Construct implements ISecret {
       export: exportParam,
       provider = checkEnvIsProvider(),
       roleTag,
+      vendorTag,
       value,
     } = props || {};
 
@@ -109,6 +111,10 @@ export class JaypieEnvSecret extends Construct implements ISecret {
 
       if (roleTag) {
         Tags.of(this._secret).add(CDK.TAG.ROLE, roleTag);
+      }
+
+      if (vendorTag) {
+        Tags.of(this._secret).add(CDK.TAG.VENDOR, vendorTag);
       }
 
       if (provider) {
