@@ -7,6 +7,7 @@ import * as iam from "aws-cdk-lib/aws-iam";
 import * as cloudwatch from "aws-cdk-lib/aws-cloudwatch";
 import * as kms from "aws-cdk-lib/aws-kms";
 import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
+import { JaypieEnvSecret } from "./JaypieEnvSecret.js";
 
 export interface JaypieQueuedLambdaProps {
   code: lambda.Code | string;
@@ -21,6 +22,7 @@ export interface JaypieQueuedLambdaProps {
   reservedConcurrentExecutions?: number;
   roleTag?: string;
   runtime?: lambda.Runtime;
+  secrets?: JaypieEnvSecret[];
   timeout?: Duration | number;
   visibilityTimeout?: Duration | number;
 }
@@ -49,6 +51,7 @@ export class JaypieQueuedLambda
       reservedConcurrentExecutions,
       roleTag,
       runtime = lambda.Runtime.NODEJS_20_X,
+      secrets = [],
       timeout = Duration.seconds(CDK.DURATION.LAMBDA_WORKER),
       visibilityTimeout = Duration.seconds(CDK.DURATION.LAMBDA_WORKER),
     } = props;
@@ -76,12 +79,24 @@ export class JaypieQueuedLambda
       {},
     );
 
+    // Process JaypieEnvSecret array
+    const jaypieSecretsEnvironment = secrets.reduce((acc, secret) => {
+      if (secret.envKey) {
+        return {
+          ...acc,
+          [`SECRET_${secret.envKey}`]: secret.secretName,
+        };
+      }
+      return acc;
+    }, {});
+
     // Create Lambda Function
     this._lambda = new lambda.Function(this, "Function", {
       code: this._code,
       environment: {
         ...environment,
         ...secretsEnvironment,
+        ...jaypieSecretsEnvironment,
         APP_QUEUE_URL: this._queue.queueUrl,
       },
       handler,
@@ -97,6 +112,11 @@ export class JaypieQueuedLambda
 
     // Grant secret read permissions
     Object.values(envSecrets).forEach((secret) => {
+      secret.grantRead(this._lambda);
+    });
+
+    // Grant read permissions for JaypieEnvSecrets
+    secrets.forEach((secret) => {
       secret.grantRead(this._lambda);
     });
 
