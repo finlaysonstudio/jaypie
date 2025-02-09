@@ -108,3 +108,5 @@ export type NaturalSchema =
 export type NaturalSchemaObject = {
   [key: string]: NaturalSchema;
 };
+
+export {};
