@@ -24,6 +24,7 @@ export interface JaypieQueuedLambdaProps {
   runtime?: lambda.Runtime;
   secrets?: JaypieEnvSecret[];
   timeout?: Duration | number;
+  vendorTag?: string;
   visibilityTimeout?: Duration | number;
 }
 
@@ -53,6 +54,7 @@ export class JaypieQueuedLambda
       runtime = lambda.Runtime.NODEJS_20_X,
       secrets = [],
       timeout = Duration.seconds(CDK.DURATION.LAMBDA_WORKER),
+      vendorTag,
       visibilityTimeout = Duration.seconds(CDK.DURATION.LAMBDA_WORKER),
     } = props;
 
@@ -68,6 +70,9 @@ export class JaypieQueuedLambda
     });
     if (roleTag) {
       Tags.of(this._queue).add(CDK.TAG.ROLE, roleTag);
+    }
+    if (vendorTag) {
+      Tags.of(this._queue).add(CDK.TAG.VENDOR, vendorTag);
     }
 
     // Process secrets environment variables
@@ -123,6 +128,9 @@ export class JaypieQueuedLambda
     this._queue.grantConsumeMessages(this._lambda);
     if (roleTag) {
       Tags.of(this._lambda).add(CDK.TAG.ROLE, roleTag);
+    }
+    if (vendorTag) {
+      Tags.of(this._lambda).add(CDK.TAG.VENDOR, vendorTag);
     }
   }
 

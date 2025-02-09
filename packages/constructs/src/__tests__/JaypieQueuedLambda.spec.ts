@@ -65,6 +65,73 @@ describe("JaypieQueuedLambda", () => {
       });
     });
 
+    it("adds vendor tag when provided", () => {
+      const stack = new Stack();
+      const construct = new JaypieQueuedLambda(stack, "TestConstruct", {
+        code: lambda.Code.fromInline("exports.handler = () => {}"),
+        handler: "index.handler",
+        vendorTag: "TEST_VENDOR",
+      });
+      const template = Template.fromStack(stack);
+
+      expect(construct).toBeDefined();
+      template.hasResourceProperties("AWS::SQS::Queue", {
+        Tags: [
+          {
+            Key: CDK.TAG.VENDOR,
+            Value: "TEST_VENDOR",
+          },
+        ],
+      });
+
+      template.hasResourceProperties("AWS::Lambda::Function", {
+        Tags: [
+          {
+            Key: CDK.TAG.VENDOR,
+            Value: "TEST_VENDOR",
+          },
+        ],
+      });
+    });
+
+    it("adds both role and vendor tags when provided", () => {
+      const stack = new Stack();
+      const construct = new JaypieQueuedLambda(stack, "TestConstruct", {
+        code: lambda.Code.fromInline("exports.handler = () => {}"),
+        handler: "index.handler",
+        roleTag: "TEST_ROLE",
+        vendorTag: "TEST_VENDOR",
+      });
+      const template = Template.fromStack(stack);
+
+      expect(construct).toBeDefined();
+      template.hasResourceProperties("AWS::SQS::Queue", {
+        Tags: Match.arrayWith([
+          {
+            Key: CDK.TAG.ROLE,
+            Value: "TEST_ROLE",
+          },
+          {
+            Key: CDK.TAG.VENDOR,
+            Value: "TEST_VENDOR",
+          },
+        ]),
+      });
+
+      template.hasResourceProperties("AWS::Lambda::Function", {
+        Tags: Match.arrayWith([
+          {
+            Key: CDK.TAG.ROLE,
+            Value: "TEST_ROLE",
+          },
+          {
+            Key: CDK.TAG.VENDOR,
+            Value: "TEST_VENDOR",
+          },
+        ]),
+      });
+    });
+
     it("configures environment secrets", () => {
       const stack = new Stack();
       const testSecret = new secretsmanager.Secret(stack, "TestSecret", {
