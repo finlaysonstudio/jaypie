@@ -13,5 +13,6 @@ export default defineWorkspace([
   "packages/llm",
   "packages/mongoose",
   "packages/testkit",
+  "packages/textract",
   "packages/webkit",
 ]);
