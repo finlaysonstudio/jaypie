@@ -54,7 +54,7 @@ export interface JaypieEnvSecretProps {
   consumer?: boolean;
   export?: string;
   provider?: boolean;
-  role?: string;
+  roleTag?: string;
   value?: string;
 }
 
@@ -68,7 +68,7 @@ export class JaypieEnvSecret extends Construct implements ISecret {
       consumer = checkEnvIsConsumer(),
       export: exportParam,
       provider = checkEnvIsProvider(),
-      role,
+      roleTag,
       value,
     } = props || {};
 
@@ -101,8 +101,8 @@ export class JaypieEnvSecret extends Construct implements ISecret {
 
       this._secret = new secretsmanager.Secret(this, id, secretProps);
 
-      if (role) {
-        Tags.of(this._secret).add(CDK.TAG.ROLE, role);
+      if (roleTag) {
+        Tags.of(this._secret).add(CDK.TAG.ROLE, roleTag);
       }
 
       if (provider) {

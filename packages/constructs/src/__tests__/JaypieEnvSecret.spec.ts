@@ -24,7 +24,7 @@ describe("JaypieSecret", () => {
     it("adds role tag when not consuming", () => {
       const stack = new Stack();
       const secret = new JaypieEnvSecret(stack, "TestSecret", {
-        role: CDK.ROLE.API,
+        roleTag: CDK.ROLE.API,
       });
       const template = Template.fromStack(stack);
 

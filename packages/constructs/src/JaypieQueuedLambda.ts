@@ -17,7 +17,7 @@ export interface JaypieQueuedLambdaProps {
   logRetention?: number;
   memorySize?: number;
   reservedConcurrentExecutions?: number;
-  role?: string;
+  roleTag?: string;
   runtime?: lambda.Runtime;
   timeout?: Duration | number;
   visibilityTimeout?: Duration | number;
@@ -43,7 +43,7 @@ export class JaypieQueuedLambda
       logRetention = CDK.LAMBDA.LOG_RETENTION,
       memorySize = CDK.LAMBDA.MEMORY_SIZE,
       reservedConcurrentExecutions,
-      role,
+      roleTag,
       runtime = lambda.Runtime.NODEJS_20_X,
       timeout = Duration.seconds(CDK.DURATION.LAMBDA_WORKER),
       visibilityTimeout = Duration.seconds(CDK.DURATION.LAMBDA_WORKER),
@@ -59,8 +59,8 @@ export class JaypieQueuedLambda
           ? Duration.seconds(visibilityTimeout)
           : visibilityTimeout,
     });
-    if (role) {
-      Tags.of(this._queue).add(CDK.TAG.ROLE, role);
+    if (roleTag) {
+      Tags.of(this._queue).add(CDK.TAG.ROLE, roleTag);
     }
 
     // Process secrets environment variables
@@ -95,8 +95,8 @@ export class JaypieQueuedLambda
     });
 
     this._queue.grantConsumeMessages(this._lambda);
-    if (role) {
-      Tags.of(this._lambda).add(CDK.TAG.ROLE, role);
+    if (roleTag) {
+      Tags.of(this._lambda).add(CDK.TAG.ROLE, roleTag);
     }
   }
 
