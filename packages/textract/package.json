@@ -15,5 +15,8 @@
   "dependencies": {
     "@jaypie/core": "^1.1.5",
     "amazon-textract-response-parser": "^0.4.3"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }
