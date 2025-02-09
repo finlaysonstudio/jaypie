@@ -1,0 +1,19 @@
+{
+  "name": "@jaypie/textract",
+  "version": "0.1.0",
+  "license": "MIT",
+  "author": "Finlayson Studio",
+  "type": "module",
+  "scripts": {
+    "format": "npm run format:lint && npm run format:package",
+    "format:lint": "eslint --fix .",
+    "format:package": "sort-package-json ./package.json",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:watch": "vitest watch"
+  },
+  "dependencies": {
+    "@jaypie/core": "^1.1.5",
+    "amazon-textract-response-parser": "^0.4.3"
+  }
+}
