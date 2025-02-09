@@ -111,5 +111,14 @@ describe("JaypieSecret", () => {
         SecretString: "secret-value",
       });
     });
+
+    it("exposes envKey through getter", () => {
+      const stack = new Stack();
+      const secret = new JaypieEnvSecret(stack, "TestSecret", {
+        envKey: "TEST_ENV_KEY",
+      });
+
+      expect(secret.envKey).toBe("TEST_ENV_KEY");
+    });
   });
 });

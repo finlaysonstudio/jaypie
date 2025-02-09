@@ -58,6 +58,7 @@ export interface JaypieEnvSecretProps {
 }
 
 export class JaypieEnvSecret extends Construct implements ISecret {
+  private readonly _envKey?: string;
   private readonly _secret: secretsmanager.ISecret;
 
   constructor(scope: Construct, id: string, props?: JaypieEnvSecretProps) {
@@ -71,6 +72,8 @@ export class JaypieEnvSecret extends Construct implements ISecret {
       roleTag,
       value,
     } = props || {};
+
+    this._envKey = envKey;
 
     let exportName;
 
@@ -190,5 +193,9 @@ export class JaypieEnvSecret extends Construct implements ISecret {
 
   public attach(target: ISecretAttachmentTarget): ISecret {
     return this._secret.attach(target);
+  }
+
+  public get envKey(): string | undefined {
+    return this._envKey;
   }
 }
