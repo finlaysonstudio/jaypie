@@ -1,4 +1,4 @@
-import { log } from "jaypie";
+import { log } from "@jaypie/core";
 import getItemContent from "./getItemContent.function.js";
 import getItemFirstWord from "./getItemFirstWord.js";
 

@@ -1,5 +1,5 @@
 import { TextractDocument } from "amazon-textract-response-parser";
-import { log } from "jaypie";
+import { log } from "@jaypie/core";
 import { TYPE } from "./constants.js";
 
 //

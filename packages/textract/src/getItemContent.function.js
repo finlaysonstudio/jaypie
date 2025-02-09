@@ -1,4 +1,4 @@
-import { force, log } from "jaypie";
+import { force, log } from "@jaypie/core";
 import { TYPE, WORD } from "./constants.js";
 
 const normalizeWhitespace = (input) => {

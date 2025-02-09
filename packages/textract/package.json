@@ -13,7 +13,7 @@
     "test:watch": "vitest watch"
   },
   "dependencies": {
-    "amazon-textract-response-parser": "^0.4.3",
-    "jaypie": "^1.1.17"
+    "@jaypie/core": "^1.1.5",
+    "amazon-textract-response-parser": "^0.4.3"
   }
 }
