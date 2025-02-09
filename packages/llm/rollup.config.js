@@ -8,5 +8,11 @@ export default {
     sourcemap: true,
   },
   plugins: [typescript()],
-  external: [],
+  external: [
+    "@jaypie/aws",
+    "@jaypie/core",
+    "openai",
+    "openai/helpers/zod",
+    "zod",
+  ],
 };

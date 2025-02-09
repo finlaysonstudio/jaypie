@@ -8,4 +8,5 @@ export default {
     sourcemap: true,
   },
   plugins: [typescript()],
+  external: ["@jaypie/errors", "uuid"],
 };

@@ -11,7 +11,9 @@ export default {
   external: [
     "@jaypie/cdk",
     "aws-cdk-lib",
+    "aws-cdk-lib/aws-lambda",
     "aws-cdk-lib/aws-secretsmanager",
+    "aws-cdk-lib/aws-sqs",
     "constructs",
   ],
 };
