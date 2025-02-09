@@ -26,6 +26,7 @@ All jaypie functions can be mocked with `vi.mock("jaypie", async () => vi.import
 Use matchers to test errors.
 `expect(fn).toThrowBadGatewayError();`
 `await expect(async() => fn()).toThrowBadGatewayError();`
+Do not use `.rejects`
 ### Express
 Most express functions are wrapped in `expressHandler` which is mocked.
 Test express functions directly with a `req` object.
