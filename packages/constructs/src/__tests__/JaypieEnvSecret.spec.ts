@@ -40,6 +40,37 @@ describe("JaypieSecret", () => {
       });
     });
 
+    it("uses environment variable value when envKey is set", () => {
+      process.env.TEST_SECRET_VALUE = "env-secret-value";
+      const stack = new Stack();
+      const secret = new JaypieEnvSecret(stack, "TestSecret", {
+        envKey: "TEST_SECRET_VALUE",
+      });
+      const template = Template.fromStack(stack);
+
+      expect(secret).toBeDefined();
+      template.resourceCountIs("AWS::SecretsManager::Secret", 1);
+      template.hasResourceProperties("AWS::SecretsManager::Secret", {
+        SecretString: "env-secret-value",
+      });
+      delete process.env.TEST_SECRET_VALUE;
+    });
+
+    it("falls back to value param when envKey is not in process.env", () => {
+      const stack = new Stack();
+      const secret = new JaypieEnvSecret(stack, "TestSecret", {
+        envKey: "NONEXISTENT_ENV_VALUE",
+        value: "fallback-value",
+      });
+      const template = Template.fromStack(stack);
+
+      expect(secret).toBeDefined();
+      template.resourceCountIs("AWS::SecretsManager::Secret", 1);
+      template.hasResourceProperties("AWS::SecretsManager::Secret", {
+        SecretString: "fallback-value",
+      });
+    });
+
     it("creates export when provider is true", () => {
       const stack = new Stack();
       new JaypieEnvSecret(stack, "TestSecret", {
@@ -79,6 +110,15 @@ describe("JaypieSecret", () => {
       template.hasResourceProperties("AWS::SecretsManager::Secret", {
         SecretString: "secret-value",
       });
+    });
+
+    it("exposes envKey through getter", () => {
+      const stack = new Stack();
+      const secret = new JaypieEnvSecret(stack, "TestSecret", {
+        envKey: "TEST_ENV_KEY",
+      });
+
+      expect(secret.envKey).toBe("TEST_ENV_KEY");
     });
   });
 });

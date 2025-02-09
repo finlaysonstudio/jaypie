@@ -6,6 +6,7 @@ import * as lambda from "aws-cdk-lib/aws-lambda";
 import { JaypieQueuedLambda } from "../JaypieQueuedLambda.js";
 import * as iam from "aws-cdk-lib/aws-iam";
 import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
+import { JaypieEnvSecret } from "../JaypieEnvSecret.js";
 
 describe("JaypieQueuedLambda", () => {
   describe("Base Cases", () => {
@@ -90,6 +91,67 @@ describe("JaypieQueuedLambda", () => {
           Variables: {
             SECRET_VALUE_1: Match.anyValue(),
             SECRET_VALUE_2: Match.anyValue(),
+            APP_QUEUE_URL: Match.anyValue(),
+          },
+        },
+      });
+
+      // Verify IAM permissions are granted
+      template.hasResourceProperties("AWS::IAM::Policy", {
+        PolicyDocument: {
+          Statement: Match.arrayWith([
+            Match.objectLike({
+              Action: [
+                "secretsmanager:GetSecretValue",
+                "secretsmanager:DescribeSecret",
+              ],
+              Effect: "Allow",
+              Resource: {
+                Ref: Match.stringLikeRegexp("TestSecret.*"),
+              },
+            }),
+            Match.objectLike({
+              Action: [
+                "secretsmanager:GetSecretValue",
+                "secretsmanager:DescribeSecret",
+              ],
+              Effect: "Allow",
+              Resource: {
+                Ref: Match.stringLikeRegexp("TestSecret2.*"),
+              },
+            }),
+          ]),
+        },
+      });
+
+      expect(construct).toBeDefined();
+    });
+
+    it("configures JaypieEnvSecrets", () => {
+      const stack = new Stack();
+      const testSecret = new JaypieEnvSecret(stack, "TestSecret", {
+        envKey: "TEST_SECRET",
+        value: "test-value",
+      });
+      const testSecret2 = new JaypieEnvSecret(stack, "TestSecret2", {
+        envKey: "TEST_SECRET_2",
+        value: "test-value-2",
+      });
+
+      const construct = new JaypieQueuedLambda(stack, "TestConstruct", {
+        code: lambda.Code.fromInline("exports.handler = () => {}"),
+        handler: "index.handler",
+        secrets: [testSecret, testSecret2],
+      });
+
+      const template = Template.fromStack(stack);
+
+      // Verify environment variables are set
+      template.hasResourceProperties("AWS::Lambda::Function", {
+        Environment: {
+          Variables: {
+            SECRET_TEST_SECRET: Match.anyValue(),
+            SECRET_TEST_SECRET_2: Match.anyValue(),
             APP_QUEUE_URL: Match.anyValue(),
           },
         },

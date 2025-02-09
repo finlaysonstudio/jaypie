@@ -25,9 +25,7 @@ import {
 
 // It is a consumer if the environment is ephemeral
 function checkEnvIsConsumer(env = process.env): boolean {
-  return (
-    !!process.env.CDK_ENV_EPHEMERAL || env.PROJECT_ENV === CDK.ENV.EPHEMERAL
-  );
+  return !!env.CDK_ENV_EPHEMERAL || env.PROJECT_ENV === CDK.ENV.EPHEMERAL;
 }
 
 function checkEnvIsProvider(env = process.env): boolean {
@@ -52,6 +50,7 @@ function exportEnvName(name: string, env = process.env): string {
 
 export interface JaypieEnvSecretProps {
   consumer?: boolean;
+  envKey?: string;
   export?: string;
   provider?: boolean;
   roleTag?: string;
@@ -59,6 +58,7 @@ export interface JaypieEnvSecretProps {
 }
 
 export class JaypieEnvSecret extends Construct implements ISecret {
+  private readonly _envKey?: string;
   private readonly _secret: secretsmanager.ISecret;
 
   constructor(scope: Construct, id: string, props?: JaypieEnvSecretProps) {
@@ -66,11 +66,14 @@ export class JaypieEnvSecret extends Construct implements ISecret {
 
     const {
       consumer = checkEnvIsConsumer(),
+      envKey,
       export: exportParam,
       provider = checkEnvIsProvider(),
       roleTag,
       value,
     } = props || {};
+
+    this._envKey = envKey;
 
     let exportName;
 
@@ -93,9 +96,12 @@ export class JaypieEnvSecret extends Construct implements ISecret {
         value: this._secret.secretName,
       });
     } else {
+      const secretValue =
+        envKey && process.env[envKey] ? process.env[envKey] : value;
+
       const secretProps: secretsmanager.SecretProps = {
-        secretStringValue: value
-          ? SecretValue.unsafePlainText(value)
+        secretStringValue: secretValue
+          ? SecretValue.unsafePlainText(secretValue)
           : undefined,
       };
 
@@ -187,5 +193,9 @@ export class JaypieEnvSecret extends Construct implements ISecret {
 
   public attach(target: ISecretAttachmentTarget): ISecret {
     return this._secret.attach(target);
+  }
+
+  public get envKey(): string | undefined {
+    return this._envKey;
   }
 }
