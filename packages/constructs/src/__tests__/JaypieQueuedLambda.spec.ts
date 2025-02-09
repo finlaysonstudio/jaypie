@@ -40,7 +40,7 @@ describe("JaypieQueuedLambda", () => {
       const construct = new JaypieQueuedLambda(stack, "TestConstruct", {
         code: lambda.Code.fromInline("exports.handler = () => {}"),
         handler: "index.handler",
-        role: "TEST_ROLE",
+        roleTag: "TEST_ROLE",
       });
       const template = Template.fromStack(stack);
 

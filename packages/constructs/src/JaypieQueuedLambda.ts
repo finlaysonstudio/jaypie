@@ -14,10 +14,12 @@ export interface JaypieQueuedLambdaProps {
   envSecrets?: { [key: string]: secretsmanager.ISecret };
   fifo?: boolean;
   handler: string;
+  layers?: lambda.ILayerVersion[];
   logRetention?: number;
   memorySize?: number;
+  paramsAndSecrets?: lambda.ParamsAndSecretsLayerVersion;
   reservedConcurrentExecutions?: number;
-  role?: string;
+  roleTag?: string;
   runtime?: lambda.Runtime;
   timeout?: Duration | number;
   visibilityTimeout?: Duration | number;
@@ -40,10 +42,12 @@ export class JaypieQueuedLambda
       envSecrets = {},
       fifo = true,
       handler = "index.handler",
+      layers = [],
       logRetention = CDK.LAMBDA.LOG_RETENTION,
       memorySize = CDK.LAMBDA.MEMORY_SIZE,
+      paramsAndSecrets,
       reservedConcurrentExecutions,
-      role,
+      roleTag,
       runtime = lambda.Runtime.NODEJS_20_X,
       timeout = Duration.seconds(CDK.DURATION.LAMBDA_WORKER),
       visibilityTimeout = Duration.seconds(CDK.DURATION.LAMBDA_WORKER),
@@ -59,8 +63,8 @@ export class JaypieQueuedLambda
           ? Duration.seconds(visibilityTimeout)
           : visibilityTimeout,
     });
-    if (role) {
-      Tags.of(this._queue).add(CDK.TAG.ROLE, role);
+    if (roleTag) {
+      Tags.of(this._queue).add(CDK.TAG.ROLE, roleTag);
     }
 
     // Process secrets environment variables
@@ -81,8 +85,10 @@ export class JaypieQueuedLambda
         APP_QUEUE_URL: this._queue.queueUrl,
       },
       handler,
+      layers,
       logRetention,
       memorySize,
+      paramsAndSecrets,
       reservedConcurrentExecutions,
       runtime,
       timeout:
@@ -95,8 +101,8 @@ export class JaypieQueuedLambda
     });
 
     this._queue.grantConsumeMessages(this._lambda);
-    if (role) {
-      Tags.of(this._lambda).add(CDK.TAG.ROLE, role);
+    if (roleTag) {
+      Tags.of(this._lambda).add(CDK.TAG.ROLE, roleTag);
     }
   }
 
