@@ -3,6 +3,7 @@ import { Duration, Tags, Stack, RemovalPolicy } from "aws-cdk-lib";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import * as sqs from "aws-cdk-lib/aws-sqs";
 import { CDK } from "@jaypie/cdk";
+import * as lambdaEventSources from "aws-cdk-lib/aws-lambda-event-sources";
 import * as iam from "aws-cdk-lib/aws-iam";
 import * as cloudwatch from "aws-cdk-lib/aws-cloudwatch";
 import * as kms from "aws-cdk-lib/aws-kms";
@@ -10,6 +11,7 @@ import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
 import { JaypieEnvSecret } from "./JaypieEnvSecret.js";
 
 export interface JaypieQueuedLambdaProps {
+  batchSize?: number;
   code: lambda.Code | string;
   environment?: { [key: string]: string };
   envSecrets?: { [key: string]: secretsmanager.ISecret };
@@ -40,6 +42,7 @@ export class JaypieQueuedLambda
     super(scope, id);
 
     const {
+      batchSize = 1,
       code,
       environment = {},
       envSecrets = {},
@@ -126,6 +129,11 @@ export class JaypieQueuedLambda
     });
 
     this._queue.grantConsumeMessages(this._lambda);
+    this._lambda.addEventSource(
+      new lambdaEventSources.SqsEventSource(this._queue, {
+        batchSize,
+      }),
+    );
     if (roleTag) {
       Tags.of(this._lambda).add(CDK.TAG.ROLE, roleTag);
     }
