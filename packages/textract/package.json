@@ -4,13 +4,20 @@
   "license": "MIT",
   "author": "Finlayson Studio",
   "type": "module",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "scripts": {
-    "format": "npm run format:lint && npm run format:package",
-    "format:lint": "eslint --fix .",
-    "format:package": "sort-package-json ./package.json",
+    "build": "rollup --config",
+    "format": "eslint . --fix",
     "lint": "eslint .",
-    "test": "vitest run",
-    "test:watch": "vitest watch"
+    "test": "vitest run .",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@jaypie/core": "^1.1.5",
