@@ -14,8 +14,10 @@ export interface JaypieQueuedLambdaProps {
   envSecrets?: { [key: string]: secretsmanager.ISecret };
   fifo?: boolean;
   handler: string;
+  layers?: lambda.ILayerVersion[];
   logRetention?: number;
   memorySize?: number;
+  paramsAndSecrets?: lambda.ParamsAndSecretsLayerVersion;
   reservedConcurrentExecutions?: number;
   roleTag?: string;
   runtime?: lambda.Runtime;
@@ -40,8 +42,10 @@ export class JaypieQueuedLambda
       envSecrets = {},
       fifo = true,
       handler = "index.handler",
+      layers = [],
       logRetention = CDK.LAMBDA.LOG_RETENTION,
       memorySize = CDK.LAMBDA.MEMORY_SIZE,
+      paramsAndSecrets,
       reservedConcurrentExecutions,
       roleTag,
       runtime = lambda.Runtime.NODEJS_20_X,
@@ -81,8 +85,10 @@ export class JaypieQueuedLambda
         APP_QUEUE_URL: this._queue.queueUrl,
       },
       handler,
+      layers,
       logRetention,
       memorySize,
+      paramsAndSecrets,
       reservedConcurrentExecutions,
       runtime,
       timeout:
