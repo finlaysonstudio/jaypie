@@ -16,6 +16,7 @@ export interface TextractItem {
   textType?: string;
   str?: () => string;
   toString?: () => string;
+  listItems?: () => TextractItem[];
   listWords?: () => TextractItem[];
   listContent?: () => TextractItem[];
   listLayoutChildren?: () => TextractItem[];

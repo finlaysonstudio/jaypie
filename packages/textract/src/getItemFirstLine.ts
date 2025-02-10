@@ -19,7 +19,8 @@ function getLayoutFirstLine(layout: TextractItem): TextractItem | null {
 }
 
 function getPageFirstLine(page: TextractItem): TextractItem | null {
-  return getItemFirstLine(page.listLines?.()[0]);
+  const lines = page.listLines?.();
+  return lines ? getItemFirstLine(lines[0]) : null;
 }
 
 function getRowFirstLine(row: TextractItem): TextractItem | null {
@@ -68,13 +69,23 @@ const getItemFirstLine = (
   if (Array.isArray(item)) return getItemFirstLine(item[0]);
   if (typeof item === "string") return item as unknown as TextractItem;
 
-  if (item.blockType) {
-    switch (item.blockType) {
+  // Handle TextractDocument first
+  if (item instanceof TextractDocument) {
+    const pages = item.listPages();
+    return pages.length > 0
+      ? getItemFirstLine(pages[0] as unknown as TextractItem)
+      : null;
+  }
+
+  // Now item can only be TextractItem
+  const textractItem = item as TextractItem;
+  if (textractItem.blockType) {
+    switch (textractItem.blockType) {
       // Parsable types
       case TYPE.PAGE:
-        return getPageFirstLine(item);
+        return getPageFirstLine(textractItem);
       case TYPE.TABLE:
-        return getTableFirstLine(item);
+        return getTableFirstLine(textractItem);
       case TYPE.LAYOUT_FIGURE:
       case TYPE.LAYOUT_FOOTER:
       case TYPE.LAYOUT_HEADER:
@@ -84,50 +95,49 @@ const getItemFirstLine = (
       case TYPE.LAYOUT_SECTION_HEADER:
       case TYPE.LAYOUT_TEXT:
       case TYPE.LAYOUT_TITLE:
-        return getLayoutFirstLine(item);
+        return getLayoutFirstLine(textractItem);
       // Terminal types (items that are the line)
       case TYPE.KEY_VALUE_SET:
       case TYPE.LINE:
       case TYPE.TABLE_FOOTER:
       case TYPE.TABLE_TITLE:
       case TYPE.SIGNATURE:
-        return item;
+        return textractItem;
       // null types (things without lines or smaller than a line)
       case TYPE.WORD:
         return null;
       // Incomplete types
       default:
-        log.warn(`[getItemFirstLine] Unknown blockType: ${item.blockType}`);
+        log.warn(
+          `[getItemFirstLine] Unknown blockType: ${textractItem.blockType}`,
+        );
         return undefined as unknown as TextractItem | null;
     }
   } else {
     // FormGeneric supports listFields
-    if (typeof item.listFields === "function") {
-      return getItemFirstLine(item.listFields());
+    if (typeof textractItem.listFields === "function") {
+      return getItemFirstLine(textractItem.listFields());
     }
 
     // Layout supports listItems
-    if (typeof item.listItems === "function") {
-      return getItemFirstLine(item.listItems()[0]);
+    if (typeof textractItem.listItems === "function") {
+      return getItemFirstLine(textractItem.listItems()[0]);
     }
 
     // RowGeneric supports listCells
-    if (typeof item.listCells === "function") {
-      return getRowFirstLine(item);
-    }
-
-    // TextractDocument supports listPages
-    if (item instanceof TextractDocument) {
-      return getItemFirstLine(item.listPages());
+    if (typeof textractItem.listCells === "function") {
+      return getRowFirstLine(textractItem);
     }
   }
 
-  if (item.id) {
-    log.warn(`[getItemFirstLine] Unknown unexpected item: {id:${item.id}}`);
+  if (textractItem.id) {
+    log.warn(
+      `[getItemFirstLine] Unknown unexpected item: {id:${textractItem.id}}`,
+    );
   } else {
-    log.warn(`[getItemFirstLine] Unknown unexpected item: ${item}`);
+    log.warn(`[getItemFirstLine] Unknown unexpected item: ${textractItem}`);
   }
-  return item as TextractItem;
+  return textractItem;
 };
 
 //

@@ -3,6 +3,14 @@ import { log } from "@jaypie/core";
 import { TYPE } from "./constants.js";
 import { TextractItem } from "./types.js";
 
+type TextractInput =
+  | string
+  | TextractItem
+  | TextractDocument
+  | TextractItem[]
+  | null
+  | undefined;
+
 //
 //
 // Main
@@ -14,7 +22,7 @@ import { TextractItem } from "./types.js";
  * @returns first word, query result, selection, or signature
  */
 const getItemFirstWord = (
-  item: TextractItem | TextractDocument | string | null | undefined,
+  item: TextractInput,
 ): TextractItem | string | null | undefined => {
   if (!item) return item;
   if (typeof item === "string") return item.split(" ")[0];
@@ -29,135 +37,145 @@ const getItemFirstWord = (
     );
   }
 
-  if (item.blockType) {
-    switch (item.blockType) {
+  // Handle TextractDocument first
+  if (item instanceof TextractDocument) {
+    const pages = item.listPages();
+    if (pages.length === 0) return undefined;
+    const lines = pages[0].listLines();
+    if (lines.length === 0) return undefined;
+    return getItemFirstWord(lines[0] as unknown as TextractItem);
+  }
+
+  // Now item can only be TextractItem
+  const textractItem = item as TextractItem;
+  if (textractItem.blockType) {
+    switch (textractItem.blockType) {
       case TYPE.CELL:
-        return getItemFirstWord(item.listContent?.());
+        return getItemFirstWord(textractItem.listContent?.());
       case TYPE.KEY_VALUE_SET:
-        if (typeof item.listWords === "function") {
-          return getItemFirstWord(item.listWords());
+        if (typeof textractItem.listWords === "function") {
+          return getItemFirstWord(textractItem.listWords());
         }
-        return getItemFirstWord(item.key);
+        return getItemFirstWord(textractItem.key);
       case TYPE.LAYOUT_FIGURE:
-        return getItemFirstWord(item.listContent?.());
+        return getItemFirstWord(textractItem.listContent?.());
       case TYPE.LAYOUT_FOOTER:
-        return getItemFirstWord(item.listContent?.());
+        return getItemFirstWord(textractItem.listContent?.());
       case TYPE.LAYOUT_HEADER:
-        return getItemFirstWord(item.listContent?.());
+        return getItemFirstWord(textractItem.listContent?.());
       case TYPE.LAYOUT_KEY_VALUE:
-        return getItemFirstWord(item.listContent?.());
+        return getItemFirstWord(textractItem.listContent?.());
       case TYPE.LAYOUT_LIST: {
-        const children = item.listLayoutChildren?.();
-        if (children?.length > 0) {
-          return getItemFirstWord(children);
+        const children = textractItem.listLayoutChildren?.();
+        if (children && children.length > 0) {
+          return getItemFirstWord(children[0]);
         }
-        return getItemFirstWord(item.listContent?.());
+        return getItemFirstWord(textractItem.listContent?.());
       }
       case TYPE.LAYOUT_PAGE_NUMBER:
-        return getItemFirstWord(item.listContent?.());
+        return getItemFirstWord(textractItem.listContent?.());
       case TYPE.LAYOUT_SECTION_HEADER:
-        return getItemFirstWord(item.listContent?.());
+        return getItemFirstWord(textractItem.listContent?.());
       case TYPE.LAYOUT_TABLE:
         // LayoutTable supports listTables
-        return getItemFirstWord(item.listTables?.());
+        return getItemFirstWord(textractItem.listTables?.());
       case TYPE.LAYOUT_TEXT:
-        return getItemFirstWord(item.listContent?.());
+        return getItemFirstWord(textractItem.listContent?.());
       case TYPE.LAYOUT_TITLE:
-        return getItemFirstWord(item.listContent?.());
+        return getItemFirstWord(textractItem.listContent?.());
       case TYPE.LINE:
-        return getItemFirstWord(item.listWords?.());
+        return getItemFirstWord(textractItem.listWords?.());
       case TYPE.MERGED_CELL:
-        return getItemFirstWord(item.listSubCells?.());
+        return getItemFirstWord(textractItem.listSubCells?.());
       case TYPE.PAGE:
-        return getItemFirstWord(item.listLines?.());
+        return getItemFirstWord(textractItem.listLines?.());
       case TYPE.SIGNATURE:
-        return item;
+        return textractItem;
       case TYPE.TABLE:
-        return item.firstTitle
-          ? getItemFirstWord(item.firstTitle)
-          : getItemFirstWord(item.listRows?.());
+        return textractItem.firstTitle
+          ? getItemFirstWord(textractItem.firstTitle)
+          : getItemFirstWord(textractItem.listRows?.());
       case TYPE.TABLE_FOOTER:
-        return getItemFirstWord(item.listWords?.());
+        return getItemFirstWord(textractItem.listWords?.());
       case TYPE.TABLE_TITLE:
-        return getItemFirstWord(item.listWords?.());
+        return getItemFirstWord(textractItem.listWords?.());
       case TYPE.TITLE:
-        log.warn(`Known but undocumented blockType: ${item.blockType}`);
+        log.warn(`Known but undocumented blockType: ${textractItem.blockType}`);
         break;
       case TYPE.WORD:
-        return item;
+        return textractItem;
       case TYPE.QUERY_RESULT:
-        return item;
+        return textractItem;
       case TYPE.QUERY:
-        return getItemFirstWord(item.listResultsByConfidence?.());
+        return getItemFirstWord(textractItem.listResultsByConfidence?.());
       case TYPE.SELECTION_ELEMENT:
-        return item;
+        return textractItem;
       default:
-        log.warn(`[getItemFirstWord] Unknown blockType: ${item.blockType}`);
+        log.warn(
+          `[getItemFirstWord] Unknown blockType: ${textractItem.blockType}`,
+        );
         break;
     }
   }
 
   // Support "big three" list functions (words, content, items)
-  if (typeof item.listWords === "function") {
-    return getItemFirstWord(item.listWords());
+  if (typeof textractItem.listWords === "function") {
+    return getItemFirstWord(textractItem.listWords());
   }
 
-  if (typeof item.listContent === "function") {
-    return getItemFirstWord(item.listContent());
+  if (typeof textractItem.listContent === "function") {
+    return getItemFirstWord(textractItem.listContent());
   }
 
   // Layout supports listItems
-  if (typeof item.listItems === "function") {
-    return getItemFirstWord(item.listItems()[0]);
+  if (typeof textractItem.listItems === "function") {
+    return getItemFirstWord(textractItem.listItems()[0]);
   }
 
   // Support miscellaneous functions (alphabetical)
 
   // RowGeneric supports listCells
-  if (typeof item.listCells === "function") {
-    return getItemFirstWord(item.listCells()[0]);
+  if (typeof textractItem.listCells === "function") {
+    return getItemFirstWord(textractItem.listCells()[0]);
   }
 
   // FormGeneric supports listFields
-  if (typeof item.listFields === "function") {
-    return getItemFirstWord(item.listFields());
+  if (typeof textractItem.listFields === "function") {
+    return getItemFirstWord(textractItem.listFields());
   }
 
-  if (typeof item.listLayoutChildren === "function") {
-    return getItemFirstWord(item.listLayoutChildren());
+  if (typeof textractItem.listLayoutChildren === "function") {
+    return getItemFirstWord(textractItem.listLayoutChildren());
   }
 
-  if (typeof item.listLines === "function") {
-    return getItemFirstWord(item.listLines());
+  if (typeof textractItem.listLines === "function") {
+    return getItemFirstWord(textractItem.listLines());
   }
 
-  if (typeof item.listResultsByConfidence === "function") {
-    return getItemFirstWord(item.listResultsByConfidence());
+  if (typeof textractItem.listResultsByConfidence === "function") {
+    return getItemFirstWord(textractItem.listResultsByConfidence());
   }
 
-  if (typeof item.listRows === "function") {
-    return getItemFirstWord(item.listRows());
+  if (typeof textractItem.listRows === "function") {
+    return getItemFirstWord(textractItem.listRows());
   }
 
-  if (typeof item.listSubCells === "function") {
-    return getItemFirstWord(item.listSubCells());
+  if (typeof textractItem.listSubCells === "function") {
+    return getItemFirstWord(textractItem.listSubCells());
   }
 
-  if (typeof item.listTables === "function") {
-    return getItemFirstWord(item.listTables());
+  if (typeof textractItem.listTables === "function") {
+    return getItemFirstWord(textractItem.listTables());
   }
 
-  // TextractDocument supports listPages
-  if (item instanceof TextractDocument) {
-    return getItemFirstWord(item.listPages());
-  }
-
-  if (item.id) {
-    log.warn(`[getItemFirstWord] Unknown unexpected item: {id:${item.id}}`);
+  if (textractItem.id) {
+    log.warn(
+      `[getItemFirstWord] Unknown unexpected item: {id:${textractItem.id}}`,
+    );
   } else {
-    log.warn(`[getItemFirstWord] Unknown unexpected item: ${item}`);
+    log.warn(`[getItemFirstWord] Unknown unexpected item: ${textractItem}`);
   }
-  return item;
+  return textractItem;
 };
 
 //
