@@ -164,7 +164,7 @@ function getLineContent(
       currentPhrase.text += " ";
     }
     returnedIds.push(word.id);
-    currentPhrase.text += word.text.trim();
+    currentPhrase.text += word.text?.trim() || "";
   });
 
   if (currentPhrase.text) {
@@ -208,7 +208,7 @@ function getTableContent(
       rowText += (
         row.listCells?.()?.map((cell) => {
           returnedIds.push(cell.id);
-          if (cell.nSubCells > 0) {
+          if (cell.nSubCells && cell.nSubCells > 0) {
             return cell
               .listSubCells?.()
               ?.map((subCell) => {
@@ -341,8 +341,7 @@ const getItemContent = (
           returnedIds.push(item.id);
           return item.text || "";
         default:
-          const content = getAbstract(item, { ignoreWords, returnedIds });
-          return content;
+          return getAbstract(item, { ignoreWords, returnedIds });
       }
     }
   } catch (error) {

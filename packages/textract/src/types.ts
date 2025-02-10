@@ -41,6 +41,7 @@ export interface TextractPage {
   text: string;
   layout: TextractLayout;
   listBlocks: () => Block[];
+  listLines: () => TextractItem[];
   listTables: () => TextractItem[];
   listSignatures: () => TextractItem[];
   getItemByBlockId: (id: string) => TextractItem;

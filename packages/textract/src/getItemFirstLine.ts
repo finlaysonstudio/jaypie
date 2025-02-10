@@ -62,7 +62,7 @@ function getTableFirstLine(table: TextractItem): TextractItem | null {
  * @returns {TextractItem | null} - The first line of the block content
  */
 const getItemFirstLine = (
-  item: TextractItem | TextractDocument | null,
+  item: TextractItem | TextractDocument | TextractItem[] | null,
 ): TextractItem | null => {
   if (!item) return null;
   if (Array.isArray(item)) return getItemFirstLine(item[0]);
