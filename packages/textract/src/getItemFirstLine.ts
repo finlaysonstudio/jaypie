@@ -1,35 +1,39 @@
 import { TextractDocument } from "amazon-textract-response-parser";
 import { log } from "@jaypie/core";
 import { TYPE } from "./constants.js";
+import { TextractItem } from "./types.js";
 
 //
 //
 // Helpers
 //
 
-function getLayoutFirstLine(layout) {
+function getLayoutFirstLine(layout: TextractItem): TextractItem | null {
   if (typeof layout.listLayoutChildren === "function") {
     const children = layout.listLayoutChildren();
     if (children.length > 0) {
       return getItemFirstLine(children);
     }
   }
-  return getItemFirstLine(layout.listContent());
+  return getItemFirstLine(layout.listContent?.() || []);
 }
 
-function getPageFirstLine(page) {
-  return getItemFirstLine(page.listLines()[0]);
+function getPageFirstLine(page: TextractItem): TextractItem | null {
+  return getItemFirstLine(page.listLines?.()[0]);
 }
 
-function getRowFirstLine(row) {
-  // Iterate over cells with listCells and return the first cell with
-  const cells = row.listCells();
+function getRowFirstLine(row: TextractItem): TextractItem | null {
+  // Iterate over cells with listCells and return the first cell with text
+  const cells = row.listCells?.();
+  if (!cells) return null;
+
   for (const cell of cells) {
     if (cell.text) return cell;
   }
+  return null;
 }
 
-function getTableFirstLine(table) {
+function getTableFirstLine(table: TextractItem): TextractItem | null {
   // Does it have a first title?
   const firstTitle = table.firstTitle;
   if (firstTitle) {
@@ -37,7 +41,7 @@ function getTableFirstLine(table) {
   }
 
   // Does it have a first row?
-  const firstRow = table.listRows()[0];
+  const firstRow = table.listRows?.()[0];
   if (firstRow) return getRowFirstLine(firstRow);
 
   // Does it have a first footer?
@@ -55,11 +59,14 @@ function getTableFirstLine(table) {
 
 /**
  * @param {BlockGeneric|TextractDocument} item - A block from the Textract response or TextractDocument
- * @returns {string} - The first line of the block content
+ * @returns {TextractItem | null} - The first line of the block content
  */
-const getItemFirstLine = (item) => {
+const getItemFirstLine = (
+  item: TextractItem | TextractDocument | null,
+): TextractItem | null => {
+  if (!item) return null;
   if (Array.isArray(item)) return getItemFirstLine(item[0]);
-  if (typeof item === "string") return item;
+  if (typeof item === "string") return item as unknown as TextractItem;
 
   if (item.blockType) {
     switch (item.blockType) {
@@ -91,7 +98,7 @@ const getItemFirstLine = (item) => {
       // Incomplete types
       default:
         log.warn(`[getItemFirstLine] Unknown blockType: ${item.blockType}`);
-        return undefined;
+        return undefined as unknown as TextractItem | null;
     }
   } else {
     // FormGeneric supports listFields
@@ -120,7 +127,7 @@ const getItemFirstLine = (item) => {
   } else {
     log.warn(`[getItemFirstLine] Unknown unexpected item: ${item}`);
   }
-  return item;
+  return item as TextractItem;
 };
 
 //

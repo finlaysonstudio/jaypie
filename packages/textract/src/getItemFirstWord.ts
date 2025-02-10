@@ -1,6 +1,7 @@
 import { TextractDocument } from "amazon-textract-response-parser";
 import { log } from "@jaypie/core";
 import { TYPE } from "./constants.js";
+import { TextractItem } from "./types.js";
 
 //
 //
@@ -9,71 +10,76 @@ import { TYPE } from "./constants.js";
 
 /**
  * Get the first word or similar "molecule sized" item (e.g., signature) from a Textract item.
- * @param item
+ * @param item - The Textract item to get the first word from
  * @returns first word, query result, selection, or signature
  */
-const getItemFirstWord = (item) => {
+const getItemFirstWord = (
+  item: TextractItem | TextractDocument | string | null | undefined,
+): TextractItem | string | null | undefined => {
   if (!item) return item;
   if (typeof item === "string") return item.split(" ")[0];
   // If item is an array, return the first item that has a first word
   if (Array.isArray(item)) {
-    return item.reduce((acc, subject) => {
-      if (acc) return acc;
-      return getItemFirstWord(subject);
-    }, undefined);
+    return item.reduce<TextractItem | string | null | undefined>(
+      (acc, subject) => {
+        if (acc) return acc;
+        return getItemFirstWord(subject);
+      },
+      undefined,
+    );
   }
 
   if (item.blockType) {
     switch (item.blockType) {
       case TYPE.CELL:
-        return getItemFirstWord(item.listContent());
+        return getItemFirstWord(item.listContent?.());
       case TYPE.KEY_VALUE_SET:
         if (typeof item.listWords === "function") {
           return getItemFirstWord(item.listWords());
         }
         return getItemFirstWord(item.key);
       case TYPE.LAYOUT_FIGURE:
-        return getItemFirstWord(item.listContent());
+        return getItemFirstWord(item.listContent?.());
       case TYPE.LAYOUT_FOOTER:
-        return getItemFirstWord(item.listContent());
+        return getItemFirstWord(item.listContent?.());
       case TYPE.LAYOUT_HEADER:
-        return getItemFirstWord(item.listContent());
+        return getItemFirstWord(item.listContent?.());
       case TYPE.LAYOUT_KEY_VALUE:
-        return getItemFirstWord(item.listContent());
-      case TYPE.LAYOUT_LIST:
-        // eslint-disable-next-line no-case-declarations
-        const children = item.listLayoutChildren();
-        if (children.length > 0) {
+        return getItemFirstWord(item.listContent?.());
+      case TYPE.LAYOUT_LIST: {
+        const children = item.listLayoutChildren?.();
+        if (children?.length > 0) {
           return getItemFirstWord(children);
         }
-        return getItemFirstWord(item.listContent());
+        return getItemFirstWord(item.listContent?.());
+      }
       case TYPE.LAYOUT_PAGE_NUMBER:
-        return getItemFirstWord(item.listContent());
+        return getItemFirstWord(item.listContent?.());
       case TYPE.LAYOUT_SECTION_HEADER:
-        return getItemFirstWord(item.listContent());
+        return getItemFirstWord(item.listContent?.());
       case TYPE.LAYOUT_TABLE:
         // LayoutTable supports listTables
-        return getItemFirstWord(item.listTables());
+        return getItemFirstWord(item.listTables?.());
       case TYPE.LAYOUT_TEXT:
-        return getItemFirstWord(item.listContent());
+        return getItemFirstWord(item.listContent?.());
       case TYPE.LAYOUT_TITLE:
-        return getItemFirstWord(item.listContent());
+        return getItemFirstWord(item.listContent?.());
       case TYPE.LINE:
-        return getItemFirstWord(item.listWords());
+        return getItemFirstWord(item.listWords?.());
       case TYPE.MERGED_CELL:
-        return getItemFirstWord(item.listSubCells());
+        return getItemFirstWord(item.listSubCells?.());
       case TYPE.PAGE:
-        return getItemFirstWord(item.listLines());
+        return getItemFirstWord(item.listLines?.());
       case TYPE.SIGNATURE:
         return item;
       case TYPE.TABLE:
         return item.firstTitle
           ? getItemFirstWord(item.firstTitle)
-          : getItemFirstWord(item.listRows());
+          : getItemFirstWord(item.listRows?.());
       case TYPE.TABLE_FOOTER:
-        return getItemFirstWord(item.listWords());
+        return getItemFirstWord(item.listWords?.());
       case TYPE.TABLE_TITLE:
-        return getItemFirstWord(item.listWords());
+        return getItemFirstWord(item.listWords?.());
       case TYPE.TITLE:
         log.warn(`Known but undocumented blockType: ${item.blockType}`);
         break;
@@ -82,7 +88,7 @@ const getItemFirstWord = (item) => {
       case TYPE.QUERY_RESULT:
         return item;
       case TYPE.QUERY:
-        return getItemFirstWord(item.listResultsByConfidence());
+        return getItemFirstWord(item.listResultsByConfidence?.());
       case TYPE.SELECTION_ELEMENT:
         return item;
       default:
@@ -92,7 +98,6 @@ const getItemFirstWord = (item) => {
   }
 
   // Support "big three" list functions (words, content, items)
-
   if (typeof item.listWords === "function") {
     return getItemFirstWord(item.listWords());
   }
