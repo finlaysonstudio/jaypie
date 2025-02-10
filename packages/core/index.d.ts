@@ -230,16 +230,37 @@ export function jaypieHandler<T extends (...args: unknown[]) => unknown>(
 
 // Logger
 export const log: {
-  debug(...args: unknown[]): void;
-  error(...args: unknown[]): void;
-  fatal(...args: unknown[]): void;
-  info(...args: unknown[]): void;
-  trace(...args: unknown[]): void;
-  warn(...args: unknown[]): void;
+  debug: {
+    (...args: unknown[]): void;
+    var(key: string | Record<string, unknown>, value?: unknown): void;
+  };
+  error: {
+    (...args: unknown[]): void;
+    var(key: string | Record<string, unknown>, value?: unknown): void;
+  };
+  fatal: {
+    (...args: unknown[]): void;
+    var(key: string | Record<string, unknown>, value?: unknown): void;
+  };
+  info: {
+    (...args: unknown[]): void;
+    var(key: string | Record<string, unknown>, value?: unknown): void;
+  };
+  trace: {
+    (...args: unknown[]): void;
+    var(key: string | Record<string, unknown>, value?: unknown): void;
+  };
+  warn: {
+    (...args: unknown[]): void;
+    var(key: string | Record<string, unknown>, value?: unknown): void;
+  };
   var(key: string | Record<string, unknown>, value?: unknown): void;
   with(tags: Record<string, unknown>): typeof log;
-  tag(tags: Record<string, unknown>): void;
-  untag(tags: string | string[] | Record<string, unknown>): void;
+  tag(
+    key: string | string[] | Record<string, unknown> | null,
+    value?: string,
+  ): void;
+  untag(tags: string | string[] | Record<string, unknown> | null): void;
   lib(options: {
     level?: string;
     lib?: string;
@@ -259,55 +280,104 @@ export const validate: {
     argument: unknown,
     options?: ValidationOptions & { type?: unknown },
   ): boolean;
-  array(argument: unknown, options?: ValidationOptions): boolean;
-  boolean(argument: unknown, options?: ValidationOptions): boolean;
+  array<T = unknown>(
+    argument: unknown,
+    options?: ValidationOptions,
+  ): argument is T[];
+  boolean(argument: unknown, options?: ValidationOptions): argument is boolean;
   class(argument: unknown, options?: ValidationOptions): boolean;
-  function(argument: unknown, options?: ValidationOptions): boolean;
-  null(argument: unknown, options?: ValidationOptions): boolean;
-  number(argument: unknown, options?: ValidationOptions): boolean;
-  object(argument: unknown, options?: ValidationOptions): boolean;
-  string(argument: unknown, options?: ValidationOptions): boolean;
-  undefined(argument: unknown, options?: ValidationOptions): boolean;
+  function(
+    argument: unknown,
+    options?: ValidationOptions,
+  ): argument is (...args: unknown[]) => unknown;
+  null(argument: unknown, options?: ValidationOptions): argument is null;
+  number(argument: unknown, options?: ValidationOptions): argument is number;
+  object<T extends Record<string, unknown> = Record<string, unknown>>(
+    argument: unknown,
+    options?: ValidationOptions,
+  ): argument is T;
+  string(argument: unknown, options?: ValidationOptions): argument is string;
+  undefined(
+    argument: unknown,
+    options?: ValidationOptions,
+  ): argument is undefined;
   optional: {
-    array(argument: unknown, options?: ValidationOptions): boolean;
-    boolean(argument: unknown, options?: ValidationOptions): boolean;
+    array<T = unknown>(
+      argument: unknown,
+      options?: ValidationOptions,
+    ): argument is T[] | undefined;
+    boolean(
+      argument: unknown,
+      options?: ValidationOptions,
+    ): argument is boolean | undefined;
     class(argument: unknown, options?: ValidationOptions): boolean;
-    function(argument: unknown, options?: ValidationOptions): boolean;
-    null(argument: unknown, options?: ValidationOptions): boolean;
-    number(argument: unknown, options?: ValidationOptions): boolean;
-    object(argument: unknown, options?: ValidationOptions): boolean;
-    string(argument: unknown, options?: ValidationOptions): boolean;
+    function(
+      argument: unknown,
+      options?: ValidationOptions,
+    ): argument is ((...args: unknown[]) => unknown) | undefined;
+    null(
+      argument: unknown,
+      options?: ValidationOptions,
+    ): argument is null | undefined;
+    number(
+      argument: unknown,
+      options?: ValidationOptions,
+    ): argument is number | undefined;
+    object<T extends Record<string, unknown> = Record<string, unknown>>(
+      argument: unknown,
+      options?: ValidationOptions,
+    ): argument is T | undefined;
+    string(
+      argument: unknown,
+      options?: ValidationOptions,
+    ): argument is string | undefined;
   };
+};
+
+export const force: {
+  (
+    value: unknown,
+    type: unknown,
+    options?:
+      | string
+      | { key?: string; maximum?: number; minimum?: number; nan?: boolean },
+  ): unknown;
+  array<T = unknown>(value: unknown): T[];
+  boolean(value: unknown): boolean;
+  number(value: unknown): number;
+  object<T extends Record<string, unknown> = Record<string, unknown>>(
+    value: unknown,
+    key?: string,
+  ): T;
+  positive(value: unknown): number;
+  string(value: unknown, defaultValue?: string): string;
 };
 
 export const optional: {
   (value: unknown, type: unknown, options?: Record<string, unknown>): boolean;
-  array(value: unknown): boolean;
-  boolean(value: unknown): boolean;
-  number(value: unknown): boolean;
-  object(value: unknown): boolean;
-  positive(value: unknown): boolean;
-  string(value: unknown, defaultValue?: string): boolean;
+  array<T = unknown>(value: unknown): value is T[] | undefined;
+  boolean(value: unknown): value is boolean | undefined;
+  number(value: unknown): value is number | undefined;
+  object<T extends Record<string, unknown> = Record<string, unknown>>(
+    value: unknown,
+  ): value is T | undefined;
+  positive(value: unknown): value is number | undefined;
+  string(value: unknown, defaultValue?: string): value is string | undefined;
 };
 
 export const required: {
   (value: unknown, type: unknown, options?: Record<string, unknown>): boolean;
-  array(value: unknown): boolean;
-  boolean(value: unknown): boolean;
-  number(value: unknown): boolean;
-  object(value: unknown): boolean;
-  positive(value: unknown): boolean;
-  string(value: unknown, defaultValue?: string): boolean;
+  array<T = unknown>(value: unknown): value is T[];
+  boolean(value: unknown): value is boolean;
+  number(value: unknown): value is number;
+  object<T extends Record<string, unknown> = Record<string, unknown>>(
+    value: unknown,
+  ): value is T;
+  positive(value: unknown): value is number;
+  string(value: unknown, defaultValue?: string): value is string;
 };
 
 // Utility Functions
-export function force(
-  value: unknown,
-  type: unknown,
-  options?:
-    | string
-    | { key?: string; maximum?: number; minimum?: number; nan?: boolean },
-): unknown;
 export function placeholders(
   template: string | (() => string),
   data?: Record<string, unknown>,
