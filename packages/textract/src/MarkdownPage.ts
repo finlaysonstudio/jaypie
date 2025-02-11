@@ -74,7 +74,7 @@ function initIndexObject(page: TextractPage | null): IndexObject {
   return { element, id, tableFirstWord };
 }
 
-export default class Page {
+export default class MarkdownPage {
   private _page: TextractPage;
   private _index: IndexObject;
 

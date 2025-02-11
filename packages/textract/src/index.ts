@@ -3,4 +3,4 @@
 // Export
 //
 
-export { default as Page } from "./Page.js";
+export { default as MarkdownPage } from "./MarkdownPage.js";

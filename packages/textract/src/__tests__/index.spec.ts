@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 // Subject
-import { Page } from "../index.js";
+import { MarkdownPage } from "../index.js";
 
 //
 //
@@ -10,6 +10,6 @@ import { Page } from "../index.js";
 
 describe("Index", () => {
   it("Exports what we expect", () => {
-    expect(Page).toBeClass();
+    expect(MarkdownPage).toBeClass();
   });
 });
