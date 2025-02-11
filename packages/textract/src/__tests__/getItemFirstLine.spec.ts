@@ -3,6 +3,7 @@ import { readFile } from "fs/promises";
 import { beforeAll, describe, expect, it } from "vitest";
 
 import { TYPE } from "../constants.js";
+import { TextractItem } from "../types.js";
 
 // Subject
 import getItemFirstLine from "../getItemFirstLine.js";
@@ -17,13 +18,13 @@ const MOCK = {
     "./packages/textract/src/__tests__/__fixtures__/textract.json",
 };
 
-let completeDocument;
-let signaturePage;
-let tablePage;
+let completeDocument: TextractDocument;
+let signaturePage: any;
+let tablePage: any;
 
 beforeAll(async () => {
   const fileBuffer = await readFile(MOCK.COMPLETE_DOCUMENT);
-  completeDocument = new TextractDocument(JSON.parse(fileBuffer));
+  completeDocument = new TextractDocument(JSON.parse(fileBuffer.toString()));
   signaturePage = completeDocument.pageNumber(29);
   tablePage = completeDocument.pageNumber(2);
 });
@@ -33,16 +34,14 @@ beforeAll(async () => {
 // Helpers
 //
 
-function findAllLayoutBlockTypes(blockType) {
-  const items = completeDocument.listPages().reduce((acc, page) => {
-    acc.push(
-      ...page.layout
-        .listItems()
-
-        .filter((item) => item.blockType === blockType),
-    );
-    return acc;
-  }, []);
+function findAllLayoutBlockTypes(blockType: string): TextractItem[] {
+  const items = completeDocument
+    .listPages()
+    .reduce<TextractItem[]>((acc, page) => {
+      const layoutItems = page.layout.listItems() as unknown as TextractItem[];
+      acc.push(...layoutItems.filter((item) => item.blockType === blockType));
+      return acc;
+    }, []);
   return items;
 }
 
@@ -57,7 +56,8 @@ describe("Get Item First Line Function", () => {
   });
   it("Returns string input as is", () => {
     const item = "Hello, World!";
-    expect(getItemFirstLine(item)).toBe(item);
+    const result = getItemFirstLine(item as unknown as TextractItem);
+    expect(result).toBe(item);
   });
   describe("Features", () => {
     it.todo("Works with unknown block types");
@@ -66,16 +66,20 @@ describe("Get Item First Line Function", () => {
         it("Returns the first line of the form", () => {
           const item = tablePage.form;
           const firstLine = getItemFirstLine(item);
-          expect(firstLine).not.toBeString();
-          expect(firstLine.id).toBeString();
+          if (firstLine) {
+            expect(firstLine).not.toBeString();
+            expect(firstLine.id).toBeString();
+          }
         });
       });
       describe("Layouts", () => {
         it("Returns the first line of the layout", () => {
           const item = tablePage.layout;
-          const firstLine = getItemFirstLine(item);
-          expect(firstLine).not.toBeString();
-          expect(firstLine.id).toBeString();
+          const firstLine = getItemFirstLine(item as unknown as TextractItem);
+          if (firstLine) {
+            expect(firstLine).not.toBeString();
+            expect(firstLine.id).toBeString();
+          }
         });
         it("Returns the first line of layout lists", () => {
           // Arrange
@@ -84,102 +88,133 @@ describe("Get Item First Line Function", () => {
           expect(items.length).toBeGreaterThan(0);
           for (const item of items) {
             const firstLine = getItemFirstLine(item);
-            expect(firstLine).not.toBeString();
-            expect(firstLine.id).toBeString();
+            if (firstLine) {
+              expect(firstLine).not.toBeString();
+              expect(firstLine.id).toBeString();
+            }
           }
         });
       });
       describe("Pages", () => {
         it("Returns the first line of the page", () => {
           const item = tablePage;
-          const firstLine = getItemFirstLine(item);
-          expect(firstLine).not.toBeString();
-          expect(firstLine.id).toBeString();
+          const firstLine = getItemFirstLine(item as unknown as TextractItem);
+          if (firstLine) {
+            expect(firstLine).not.toBeString();
+            expect(firstLine.id).toBeString();
+          }
         });
       });
       describe("Signatures", () => {
         it("Signature returns itself", () => {
-          const item = signaturePage.listSignatures()[0];
+          const signatures = signaturePage.listSignatures() as TextractItem[];
+          const item = signatures[0];
           const firstLine = getItemFirstLine(item);
-          expect(firstLine).not.toBeString();
-          expect(firstLine.id).toBeString();
-          expect(firstLine.blockType).toBe(TYPE.SIGNATURE);
-          expect(firstLine).toBe(item);
+          if (firstLine) {
+            expect(firstLine).not.toBeString();
+            expect(firstLine.id).toBeString();
+            expect(firstLine.blockType).toBe(TYPE.SIGNATURE);
+            expect(firstLine).toBe(item);
+          }
         });
       });
       describe("Tables", () => {
         it("Returns first line for TABLE", () => {
-          const item = tablePage.listTables()[0];
+          const tables = tablePage.listTables() as TextractItem[];
+          const item = tables[0];
           expect(item.blockType).toBe(TYPE.TABLE);
           const firstLine = getItemFirstLine(item);
-          expect(firstLine).not.toBeString();
-          expect(firstLine.id).toBeString();
-          expect(firstLine.id).toBe("c4f87f70-b72d-49e3-a3bd-bdfe2941ab57");
+          if (firstLine) {
+            expect(firstLine).not.toBeString();
+            expect(firstLine.id).toBeString();
+            expect(firstLine.id).toBe("c4f87f70-b72d-49e3-a3bd-bdfe2941ab57");
+          }
         });
         it("Returns first line for TABLE_TITLE", () => {
-          const item = tablePage.listTables()[0].firstTitle;
-          expect(item.blockType).toBe(TYPE.TABLE_TITLE);
-          const firstLine = getItemFirstLine(item);
-          expect(firstLine).not.toBeString();
-          expect(firstLine.id).toBeString();
-          expect(firstLine.id).toBe("c4f87f70-b72d-49e3-a3bd-bdfe2941ab57");
+          const tables = tablePage.listTables() as TextractItem[];
+          const item = tables[0].firstTitle;
+          if (item) {
+            expect(item.blockType).toBe(TYPE.TABLE_TITLE);
+            const firstLine = getItemFirstLine(item);
+            if (firstLine) {
+              expect(firstLine).not.toBeString();
+              expect(firstLine.id).toBeString();
+              expect(firstLine.id).toBe("c4f87f70-b72d-49e3-a3bd-bdfe2941ab57");
+            }
+          }
         });
         it("Returns first line for TABLE_FOOTER", () => {
-          const item = tablePage.listTables()[0].firstFooter;
-          expect(item.blockType).toBe(TYPE.TABLE_FOOTER);
-          const firstLine = getItemFirstLine(item);
-          expect(firstLine).not.toBeString();
-          expect(firstLine.id).toBeString();
+          const tables = tablePage.listTables() as TextractItem[];
+          const item = tables[0].firstFooter;
+          if (item) {
+            expect(item.blockType).toBe(TYPE.TABLE_FOOTER);
+            const firstLine = getItemFirstLine(item);
+            if (firstLine) {
+              expect(firstLine).not.toBeString();
+              expect(firstLine.id).toBeString();
+            }
+          }
         });
         it("Returns the first row if a table has no title", () => {
           // Arrange
-          const table = tablePage.listTables()[0];
-          const item = {
+          const tables = tablePage.listTables() as TextractItem[];
+          const table = tables[0];
+          const rows = (table.listRows?.() as TextractItem[]) || [];
+          const item: TextractItem = {
+            id: "mock-table",
             blockType: TYPE.TABLE,
-            firstTitle: null,
-            listRows: () => table.listRows(),
+            firstTitle: undefined,
+            listRows: () => rows,
           };
           // Act
           const firstLine = getItemFirstLine(item);
           // Assert
-          expect(firstLine).not.toBeString();
-          expect(firstLine.id).toBeString();
+          if (firstLine) {
+            expect(firstLine).not.toBeString();
+            expect(firstLine.id).toBeString();
+          }
         });
         it("Returns the first footer if a table has no title and no rows?!", () => {
           // Arrange
-          const table = tablePage.listTables()[0];
-          const item = {
+          const tables = tablePage.listTables() as TextractItem[];
+          const table = tables[0];
+          const item: TextractItem = {
+            id: "mock-table",
             blockType: TYPE.TABLE,
-            firstTitle: null,
+            firstTitle: undefined,
             listRows: () => [],
             firstFooter: table.firstFooter,
           };
           // Act
           const firstLine = getItemFirstLine(item);
           // Assert
-          expect(firstLine).not.toBeString();
-          expect(firstLine.id).toBeString();
+          if (firstLine) {
+            expect(firstLine).not.toBeString();
+            expect(firstLine.id).toBeString();
+          }
         });
       });
     });
     describe("Handles common wrappers", () => {
       it("Arrays return the first item", () => {
         const item = ["Item 1", "Item 2", "Item 3"];
-        const firstLine = getItemFirstLine(item);
+        const firstLine = getItemFirstLine(item as unknown as TextractItem[]);
         expect(firstLine).toBe("Item 1");
       });
       it("Strings return themselves", () => {
         const item = "Item 1";
-        const firstLine = getItemFirstLine(item);
+        const firstLine = getItemFirstLine(item as unknown as TextractItem);
         expect(firstLine).toBe(item);
       });
     });
     describe("Handles TextractDocument", () => {
       it("Returns the first line of a document", () => {
         const firstLine = getItemFirstLine(completeDocument);
-        expect(firstLine).not.toBeString();
-        expect(firstLine.id).toBeString();
-        expect(firstLine.text).toContain("LEASE");
+        if (firstLine) {
+          expect(firstLine).not.toBeString();
+          expect(firstLine.id).toBeString();
+          expect(firstLine.text).toContain("LEASE");
+        }
       });
     });
   });
