@@ -19,6 +19,7 @@ import {
   jaypieHandler,
   lambdaHandler,
   log,
+  MarkdownPage,
   mongoose,
   sendBatchMessages,
   sendMessage,
@@ -26,6 +27,7 @@ import {
   SQSMessage,
   submitMetric,
   submitMetricSet,
+  textractJsonToMarkdown,
   uuid,
 } from "../jaypie.mock";
 
@@ -983,6 +985,12 @@ describe("Jaypie Mock", () => {
       it.todo("Mocks mongoose", () => {
         expect(vi.isMockFunction(mongoose)).toBeTrue();
         expect(vi.isMockFunction(mongoose.connect)).toBeTrue();
+      });
+    });
+    describe("Jaypie Textract", () => {
+      it("Mocks expected function", () => {
+        expect(vi.isMockFunction(MarkdownPage)).toBeTrue();
+        expect(vi.isMockFunction(textractJsonToMarkdown)).toBeTrue();
       });
     });
   }); // END describe Jaypie Packages
