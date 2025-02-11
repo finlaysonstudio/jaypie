@@ -1,6 +1,6 @@
 import { log } from "@jaypie/core";
 import { TextractItem, TextractPage, IndexObject } from "./types.js";
-import getItemContent from "./getItemContent.function.js";
+import getItemContent from "./getItemContent.js";
 import getItemFirstWord from "./getItemFirstWord.js";
 
 const TEXTRACT = {
