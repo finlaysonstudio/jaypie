@@ -65,6 +65,9 @@ describe("Get Item Content Function", () => {
       const item = {
         blockType: TYPE.LINE,
         str: "Not a string XD",
+        listWords: vi.fn(() => {
+          throw new Error("Test Error");
+        }),
         toString: vi.fn().mockReturnValue("Hello, World!"),
       };
       // Act
@@ -79,6 +82,9 @@ describe("Get Item Content Function", () => {
       const item = {
         blockType: TYPE.LINE,
         str: "Not a string XD",
+        listWords: vi.fn(() => {
+          throw new Error("Test Error");
+        }),
       };
       // Act
       const result = getItemContent(item);

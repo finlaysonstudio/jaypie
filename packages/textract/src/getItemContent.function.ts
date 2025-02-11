@@ -347,15 +347,14 @@ const getItemContent = (
   } catch (error) {
     log.error.var({ error });
   }
-  try {
+
+  if (typeof item.str === "function") {
     return item.str?.() || "";
-  } catch (error) {
-    log.error.var({ error });
-    if (typeof item.toString === "function") {
-      return item.toString();
-    }
-    return String(item);
   }
+  if (typeof item.toString === "function") {
+    return item.toString();
+  }
+  return String(item);
 };
 
 //
