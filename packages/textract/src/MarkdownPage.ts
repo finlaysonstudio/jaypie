@@ -1,7 +1,7 @@
 import { log } from "@jaypie/core";
-import { TextractItem, TextractPage, IndexObject } from "./types.js";
 import getItemContent from "./getItemContent.js";
 import getItemFirstWord from "./getItemFirstWord.js";
+import { TextractItem, TextractPage, IndexObject } from "./types.js";
 
 const TEXTRACT = {
   RELATIONSHIP: {
