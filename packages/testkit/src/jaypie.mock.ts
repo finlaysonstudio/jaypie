@@ -30,10 +30,6 @@ import {
   UnhandledError as UnhandledErrorOriginal,
   UnreachableCodeError as UnreachableCodeErrorOriginal,
 } from "@jaypie/core";
-import {
-  MarkdownPage as MarkdownPageOriginal,
-  textractJsonToMarkdown as textractJsonToMarkdownOriginal,
-} from "@jaypie/textract";
 import type { TextractPageAdaptable } from "@jaypie/textract";
 import type { JsonReturn } from "@jaypie/types";
 import { beforeAll, vi } from "vitest";
@@ -70,8 +66,14 @@ export * from "@jaypie/llm";
 export * from "@jaypie/mongoose";
 export * from "@jaypie/textract";
 
+let textractJsonToMarkdownOriginal: typeof textractJsonToMarkdown;
+let MarkdownPageOriginal: typeof MarkdownPage;
+
 // Spy on log:
-beforeAll(() => {
+beforeAll(async () => {
+  const textract = await import("@jaypie/textract");
+  textractJsonToMarkdownOriginal = textract.textractJsonToMarkdown;
+  MarkdownPageOriginal = textract.MarkdownPage;
   spyLog(log as Log);
 });
 
