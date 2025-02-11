@@ -3,6 +3,7 @@ import { readFile } from "fs/promises";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 
 import { TYPE } from "../constants.js";
+import { TextractItem, TextractPage } from "../types.js";
 
 // Subject
 import getItemContent from "../getItemContent.function.js";
@@ -19,12 +20,12 @@ const MOCK = {
     "./packages/textract/src/__tests__/__fixtures__/signature.json",
 };
 
-let page;
+let page: TextractPage;
 
 beforeAll(async () => {
-  const fileBuffer = await readFile(MOCK.SIGNATURE_PAGE);
+  const fileBuffer = await readFile(MOCK.SIGNATURE_PAGE, "utf-8");
   const document = new TextractDocument(JSON.parse(fileBuffer));
-  page = document.pageNumber(1);
+  page = document.pageNumber(1) as unknown as TextractPage;
 });
 
 //
@@ -37,7 +38,8 @@ describe("Get Item Content Function", () => {
     expect(getItemContent).toBeFunction();
   });
   it("Works", () => {
-    const item = {
+    const item: TextractItem = {
+      id: "test-id",
       str: vi.fn().mockReturnValue("Hello, World!"),
     };
     expect(getItemContent(item)).toBe("Hello, World!");
@@ -45,7 +47,8 @@ describe("Get Item Content Function", () => {
   describe("Error Conditions", () => {
     it("Will attempt to resolve if an error is thrown", () => {
       // Arrange
-      const item = {
+      const item: TextractItem = {
+        id: "test-id",
         blockType: TYPE.LINE,
         listWords: vi.fn().mockImplementation(() => {
           throw new Error("Test Error");
@@ -101,7 +104,7 @@ describe("Get Item Content Function", () => {
         expect(TYPE.KEY_VALUE_SET).toBeString();
         expect(fieldKey.blockType).toBe(TYPE.KEY_VALUE_SET);
         // Arrange
-        const returnedIds = [];
+        const returnedIds: string[] = [];
         // Act
         getItemContent(fieldKey, { returnedIds });
         // Assert
@@ -113,7 +116,8 @@ describe("Get Item Content Function", () => {
   describe("Features", () => {
     describe("Item by block type", () => {
       it("Calls item str if there is no block type", () => {
-        const item = {
+        const item: TextractItem = {
+          id: "test-id",
           str: vi.fn().mockReturnValue("Hello, World!"),
         };
         getItemContent(item);
@@ -215,12 +219,12 @@ describe("Get Item Content Function", () => {
       });
       it("Prints LAYOUT_TITLE content with `#`", () => {
         // Assure
-        const item = {
+        const item: TextractItem = {
+          id: "test-id",
           blockType: TYPE.LAYOUT_TITLE,
           listContent: vi.fn().mockReturnValue([
-            // * This bypasses if (item.blockType) in getItemContent
-            { str: () => "LEASE AGREEMENT" },
-            { str: () => "THIS LEASE AGREEMENT" },
+            { id: "1", str: () => "LEASE AGREEMENT" },
+            { id: "2", str: () => "THIS LEASE AGREEMENT" },
           ]),
         };
         // Act
@@ -237,15 +241,14 @@ describe("Get Item Content Function", () => {
       });
       it("Prints TABLE content", async () => {
         // Arrange
-        const fileBuffer = await readFile(MOCK.COMPLETE_DOCUMENT);
+        const fileBuffer = await readFile(MOCK.COMPLETE_DOCUMENT, "utf-8");
         const document = new TextractDocument(JSON.parse(fileBuffer));
         const tablePage = document.pageNumber(2);
         // Assure
         const item = tablePage.listTables()[0];
         expect(item.blockType).toBe(TYPE.TABLE);
         // Act
-        const result = getItemContent(item);
-        // console.log(result);
+        const result = getItemContent(item as unknown as TextractItem);
         // Assert
         expect(result).toBeString();
         const lines = result.split("\n");
@@ -253,7 +256,8 @@ describe("Get Item Content Function", () => {
         // All lines have four pipes (in this table)
         lines.forEach((line) => {
           if (line.includes("|")) {
-            expect(line.match(/\|/g).length).toBe(4);
+            const matches = line.match(/\|/g);
+            expect(matches?.length).toBe(4);
           }
         });
       });
@@ -274,7 +278,7 @@ describe("Get Item Content Function", () => {
           const item = page.layout.listItems()[10]; // LayoutFigureGeneric
           expect(item.blockType).toBe(TYPE.LAYOUT_FIGURE);
           // Arrange
-          const returnedIds = [];
+          const returnedIds: string[] = [];
           // Act
           getItemContent(item, { returnedIds });
           // Assert
@@ -286,7 +290,7 @@ describe("Get Item Content Function", () => {
           const item = page.layout.listItems()[0]; // LayoutHeaderGeneric
           expect(item.blockType).toBe(TYPE.LAYOUT_HEADER);
           // Arrange
-          const returnedIds = [];
+          const returnedIds: string[] = [];
           // Act
           getItemContent(item, { returnedIds });
           // Assert
@@ -298,7 +302,7 @@ describe("Get Item Content Function", () => {
           const item = page.listLines()[0]; // LineGeneric
           expect(item.blockType).toBe(TYPE.LINE);
           // Arrange
-          const returnedIds = [];
+          const returnedIds: string[] = [];
           // Act
           getItemContent(item, { returnedIds });
           // Assert
@@ -310,7 +314,7 @@ describe("Get Item Content Function", () => {
           const item = page.layout.listItems()[5]; // LayoutKeyValueGeneric
           expect(item.blockType).toBe(TYPE.LAYOUT_KEY_VALUE);
           // Arrange
-          const returnedIds = [];
+          const returnedIds: string[] = [];
           // Act
           getItemContent(item, { returnedIds });
           // Assert
@@ -322,7 +326,7 @@ describe("Get Item Content Function", () => {
           const item = page.layout.listItems()[17]; // LayoutPageNumberGeneric
           expect(item.blockType).toBe(TYPE.LAYOUT_PAGE_NUMBER);
           // Arrange
-          const returnedIds = [];
+          const returnedIds: string[] = [];
           // Act
           getItemContent(item, { returnedIds });
           // Assert
@@ -335,7 +339,7 @@ describe("Get Item Content Function", () => {
           const item = page.layout.listItems()[12]; // LayoutTextGeneric
           expect(item.blockType).toBe(TYPE.LAYOUT_TEXT);
           // Arrange
-          const returnedIds = [];
+          const returnedIds: string[] = [];
           // Act
           getItemContent(item, { returnedIds });
           // Assert
@@ -347,7 +351,7 @@ describe("Get Item Content Function", () => {
           const signature = page.listSignatures()[0];
           expect(signature.id).toBeString();
           // Arrange
-          const returnedIds = [];
+          const returnedIds: string[] = [];
           // Act
           getItemContent(signature, { returnedIds });
           // Assert
@@ -362,7 +366,7 @@ describe("Get Item Content Function", () => {
           expect(TYPE.KEY_VALUE_SET).toBeString();
           expect(keyValueSet.blockType).toBe(TYPE.KEY_VALUE_SET);
           // Arrange
-          const returnedIds = [];
+          const returnedIds: string[] = [];
           // Act
           getItemContent(keyValueSet, { returnedIds });
           // Assert
