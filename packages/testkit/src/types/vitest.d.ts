@@ -1,4 +1,5 @@
 /// <reference types="vitest" />
+/// <reference types="jest-extended" />
 
 import { JsonApiError } from "./jaypie-testkit.js";
 
@@ -24,6 +25,15 @@ interface CustomMatchers<R = unknown> {
   toThrowNotFoundError(): R;
   toThrowUnauthorizedError(): R;
   toThrowUnavailableError(): R;
+  toBeArray(): R;
+  toBeBoolean(): R;
+  toBeFalse(): R;
+  toBeFunction(): R;
+  toBeNumber(): R;
+  toBeObject(): R;
+  toBeString(): R;
+  toBeTrue(): R;
+  toThrowJaypieError(): R;
 }
 
 declare module "vitest" {
