@@ -14,12 +14,12 @@ const MOCK = {
     "./packages/textract/src/__tests__/__fixtures__/textract.json",
 };
 
-let completeDocument;
-let tablePage;
+let completeDocument: TextractDocument;
+let tablePage: ReturnType<TextractDocument["pageNumber"]>;
 
 beforeAll(async () => {
   const fileBuffer = await readFile(MOCK.COMPLETE_DOCUMENT);
-  completeDocument = new TextractDocument(JSON.parse(fileBuffer));
+  completeDocument = new TextractDocument(JSON.parse(fileBuffer.toString()));
   tablePage = completeDocument.pageNumber(2);
 });
 
@@ -31,10 +31,10 @@ beforeAll(async () => {
 describe("Textract Library", () => {
   describe("Table of Contents Page", () => {
     describe("Layout Items", () => {
-      let layoutItems;
-      let titles;
-      let footers;
-      let content;
+      let layoutItems: ReturnType<typeof tablePage.layout.listItems>;
+      let titles: typeof layoutItems;
+      let footers: typeof layoutItems;
+      let content: typeof layoutItems;
       beforeAll(() => {
         layoutItems = tablePage.layout.listItems();
         titles = layoutItems.filter(
@@ -90,7 +90,7 @@ describe("Textract Library", () => {
       });
     });
     describe("Lines", () => {
-      let lines;
+      let lines: ReturnType<typeof tablePage.listLines>;
       beforeAll(() => {
         lines = tablePage.listLines();
       });
@@ -122,7 +122,7 @@ describe("Textract Library", () => {
       });
     });
     describe("Table", () => {
-      let table;
+      let table: ReturnType<typeof tablePage.listTables>[number];
       beforeAll(() => {
         table = tablePage.listTables()[0];
       });
@@ -136,18 +136,18 @@ describe("Textract Library", () => {
       it("Has a footer but isn't broken into lines", () => {
         const footer = table.listFooters()[0];
         // We have listWords because TableFooterGeneric extends WithWords but that's it
-        expect(footer.listWords).toBeFunction();
+        expect(typeof footer.listWords).toBe("function");
         // And, look, there is no function that returns lines
-        expect(footer.listCells).toBeUndefined();
-        expect(footer.listContent).toBeUndefined();
-        expect(footer.listItems).toBeUndefined();
-        expect(footer.listLines).toBeUndefined();
-        expect(footer.listTextLines).toBeUndefined();
+        expect("listCells" in footer).toBe(false);
+        expect("listContent" in footer).toBe(false);
+        expect("listItems" in footer).toBe(false);
+        expect("listLines" in footer).toBe(false);
+        expect("listTextLines" in footer).toBe(false);
       });
     });
     describe("Form", () => {
-      let form;
-      let fields;
+      let form: typeof tablePage.form;
+      let fields: ReturnType<typeof form.listFields>;
       beforeAll(() => {
         form = tablePage.form;
         fields = form.listFields();
