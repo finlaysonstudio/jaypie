@@ -30,6 +30,10 @@ import {
   UnhandledError as UnhandledErrorOriginal,
   UnreachableCodeError as UnreachableCodeErrorOriginal,
 } from "@jaypie/core";
+import {
+  MarkdownPage as MarkdownPageOriginal,
+  textractJsonToMarkdown as textractJsonToMarkdownOriginal,
+} from "@jaypie/textract";
 import type { TextractPageAdaptable } from "@jaypie/textract";
 import type { JsonReturn } from "@jaypie/types";
 import { beforeAll, vi } from "vitest";
@@ -543,12 +547,32 @@ export const disconnect = vi.fn((): boolean => {
 
 // @jaypie/textract
 export const MarkdownPage = vi.fn((page: TextractPageAdaptable): string => {
-  return `_MOCK_MARKDOWN_PAGE_[${page}]`;
+  try {
+    const result = new MarkdownPageOriginal(page).text;
+    return result;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.warn(
+      "[MarkdownPage] Actual implementation failed. To suppress this warning, manually mock the response with mockReturnValue",
+    );
+    return `_MOCK_MARKDOWN_PAGE_{{${page}}}`;
+  }
 });
 
 export const textractJsonToMarkdown = vi.fn(
   (textractResults: JsonReturn): string => {
-    return `_MOCK_TEXTRACT_JSON_TO_MARKDOWN_[${textractResults}]`;
+    try {
+      const result = textractJsonToMarkdownOriginal(textractResults);
+      return result;
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.warn(
+        "[textractJsonToMarkdown] Actual implementation failed. To suppress this warning, manually mock the response with mockReturnValue",
+      );
+      return `_MOCK_TEXTRACT_JSON_TO_MARKDOWN_{{${textractResults}}}`;
+    }
   },
 );
 
