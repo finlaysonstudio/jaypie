@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { TextractPageAdaptable } from "@jaypie/textract";
 import { mongoose as expectedMongoose } from "@jaypie/mongoose";
 
 import matchers from "../matchers.module";
@@ -32,6 +33,7 @@ import {
 } from "../jaypie.mock";
 
 import { isJaypieError, ProjectError } from "@jaypie/core";
+import { JsonReturn } from "@jaypie/types";
 
 // Add custom matchers
 expect.extend(matchers);
@@ -988,9 +990,13 @@ describe("Jaypie Mock", () => {
       });
     });
     describe("Jaypie Textract", () => {
-      it("Mocks expected function", () => {
+      it("Mocks expected functions", () => {
         expect(vi.isMockFunction(MarkdownPage)).toBeTrue();
         expect(vi.isMockFunction(textractJsonToMarkdown)).toBeTrue();
+      });
+      it("Mocks return string values", () => {
+        expect(MarkdownPage({} as TextractPageAdaptable)).toBeString();
+        expect(textractJsonToMarkdown({} as JsonReturn)).toBeString();
       });
     });
   }); // END describe Jaypie Packages
