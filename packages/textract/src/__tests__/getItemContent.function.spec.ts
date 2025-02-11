@@ -72,7 +72,7 @@ describe("Get Item Content Function", () => {
           throw new Error("Test Error");
         }),
         toString: vi.fn().mockReturnValue("Hello, World!"),
-      };
+      } as unknown as TextractItem;
       // Act
       const result = getItemContent(item);
       // Assert
@@ -88,7 +88,7 @@ describe("Get Item Content Function", () => {
         listWords: vi.fn(() => {
           throw new Error("Test Error");
         }),
-      };
+      } as unknown as TextractItem;
       // Act
       const result = getItemContent(item);
       // Assert
@@ -127,7 +127,7 @@ describe("Get Item Content Function", () => {
         const item = {
           blockType: "UNKNOWN",
           str: vi.fn().mockReturnValue("Hello, World!"),
-        };
+        } as unknown as TextractItem;
         getItemContent(item);
         expect(item.str).toHaveBeenCalled();
       });
@@ -380,8 +380,8 @@ describe("Get Item Content Function", () => {
             listContent: vi
               .fn()
               .mockReturnValue([{ id: "1" }, { id: "2" }, { id: "3" }]),
-          };
-          const returnedIds = [];
+          } as unknown as TextractItem;
+          const returnedIds: string[] = [];
           // Act
           getItemContent(item, { returnedIds });
           // Assert
