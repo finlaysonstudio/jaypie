@@ -30,6 +30,12 @@ import {
   UnhandledError as UnhandledErrorOriginal,
   UnreachableCodeError as UnreachableCodeErrorOriginal,
 } from "@jaypie/core";
+import {
+  MarkdownPage as MarkdownPageOriginal,
+  textractJsonToMarkdown as textractJsonToMarkdownOriginal,
+} from "@jaypie/textract";
+import type { TextractPageAdaptable } from "@jaypie/textract";
+import type { JsonReturn } from "@jaypie/types";
 import { beforeAll, vi } from "vitest";
 
 import {
@@ -62,6 +68,7 @@ export * from "@jaypie/datadog";
 export * from "@jaypie/lambda";
 export * from "@jaypie/llm";
 export * from "@jaypie/mongoose";
+export * from "@jaypie/textract";
 
 // Spy on log:
 beforeAll(() => {
@@ -128,6 +135,143 @@ export const ConfigurationError = vi.fn(
     ...params: ConstructorParameters<typeof ConfigurationErrorOriginal>
   ): InstanceType<typeof ConfigurationErrorOriginal> => {
     return new ConfigurationErrorOriginal(...params);
+  },
+);
+
+// Complete the error mocks
+export const ForbiddenError = vi.fn(
+  (
+    ...params: ConstructorParameters<typeof ForbiddenErrorOriginal>
+  ): InstanceType<typeof ForbiddenErrorOriginal> => {
+    return new ForbiddenErrorOriginal(...params);
+  },
+);
+
+export const GatewayTimeoutError = vi.fn(
+  (
+    ...params: ConstructorParameters<typeof GatewayTimeoutErrorOriginal>
+  ): InstanceType<typeof GatewayTimeoutErrorOriginal> => {
+    return new GatewayTimeoutErrorOriginal(...params);
+  },
+);
+
+export const GoneError = vi.fn(
+  (
+    ...params: ConstructorParameters<typeof GoneErrorOriginal>
+  ): InstanceType<typeof GoneErrorOriginal> => {
+    return new GoneErrorOriginal(...params);
+  },
+);
+
+export const IllogicalError = vi.fn(
+  (
+    ...params: ConstructorParameters<typeof IllogicalErrorOriginal>
+  ): InstanceType<typeof IllogicalErrorOriginal> => {
+    return new IllogicalErrorOriginal(...params);
+  },
+);
+
+export const InternalError = vi.fn(
+  (
+    ...params: ConstructorParameters<typeof InternalErrorOriginal>
+  ): InstanceType<typeof InternalErrorOriginal> => {
+    return new InternalErrorOriginal(...params);
+  },
+);
+
+export const MethodNotAllowedError = vi.fn(
+  (
+    ...params: ConstructorParameters<typeof MethodNotAllowedErrorOriginal>
+  ): InstanceType<typeof MethodNotAllowedErrorOriginal> => {
+    return new MethodNotAllowedErrorOriginal(...params);
+  },
+);
+
+export const MultiError = vi.fn(
+  (
+    ...params: ConstructorParameters<typeof MultiErrorOriginal>
+  ): InstanceType<typeof MultiErrorOriginal> => {
+    return new MultiErrorOriginal(...params);
+  },
+);
+
+export const NotFoundError = vi.fn(
+  (
+    ...params: ConstructorParameters<typeof NotFoundErrorOriginal>
+  ): InstanceType<typeof NotFoundErrorOriginal> => {
+    return new NotFoundErrorOriginal(...params);
+  },
+);
+
+export const NotImplementedError = vi.fn(
+  (
+    ...params: ConstructorParameters<typeof NotImplementedErrorOriginal>
+  ): InstanceType<typeof NotImplementedErrorOriginal> => {
+    return new NotImplementedErrorOriginal(...params);
+  },
+);
+
+export const ProjectError = vi.fn(
+  (
+    ...params: ConstructorParameters<typeof ProjectErrorOriginal>
+  ): InstanceType<typeof ProjectErrorOriginal> => {
+    return new ProjectErrorOriginal(...params);
+  },
+);
+
+export const ProjectMultiError = vi.fn(
+  (
+    ...params: ConstructorParameters<typeof ProjectMultiErrorOriginal>
+  ): InstanceType<typeof ProjectMultiErrorOriginal> => {
+    return new ProjectMultiErrorOriginal(...params);
+  },
+);
+
+export const RejectedError = vi.fn(
+  (
+    ...params: ConstructorParameters<typeof RejectedErrorOriginal>
+  ): InstanceType<typeof RejectedErrorOriginal> => {
+    return new RejectedErrorOriginal(...params);
+  },
+);
+
+export const TeapotError = vi.fn(
+  (
+    ...params: ConstructorParameters<typeof TeapotErrorOriginal>
+  ): InstanceType<typeof TeapotErrorOriginal> => {
+    return new TeapotErrorOriginal(...params);
+  },
+);
+
+export const UnauthorizedError = vi.fn(
+  (
+    ...params: ConstructorParameters<typeof UnauthorizedErrorOriginal>
+  ): InstanceType<typeof UnauthorizedErrorOriginal> => {
+    return new UnauthorizedErrorOriginal(...params);
+  },
+);
+
+export const UnavailableError = vi.fn(
+  (
+    ...params: ConstructorParameters<typeof UnavailableErrorOriginal>
+  ): InstanceType<typeof UnavailableErrorOriginal> => {
+    return new UnavailableErrorOriginal(...params);
+  },
+);
+
+export const UnhandledError = vi.fn(
+  (
+    ...params: ConstructorParameters<typeof UnhandledErrorOriginal>
+  ): InstanceType<typeof UnhandledErrorOriginal> => {
+    return new UnhandledErrorOriginal(...params);
+  },
+);
+
+export const UnreachableCodeError = vi.fn(
+  (
+    ...params: ConstructorParameters<typeof UnreachableCodeErrorOriginal>
+  ): InstanceType<typeof UnreachableCodeErrorOriginal> => {
+    return new UnreachableCodeErrorOriginal(...params);
   },
 );
 
@@ -357,6 +501,24 @@ export const expressHandler = vi.fn(
   },
 );
 
+// @jaypie/lambda
+export const lambdaHandler = vi.fn(
+  (handler: JaypieHandlerParameter, props: JaypieHandlerParameter = {}) => {
+    // If handler is an object and options is a function, swap them
+    if (typeof handler === "object" && typeof props === "function") {
+      const temp = handler;
+      handler = props;
+      props = temp;
+    }
+    return async (event: unknown, context: unknown, ...extra: unknown[]) => {
+      return jaypieHandler(
+        handler as JaypieHandlerFunction,
+        props as JaypieHandlerOptions,
+      )(event, context, ...extra);
+    };
+  },
+);
+
 // @jaypie/llm
 const mockSend = vi.fn().mockResolvedValue("_MOCK_LLM_RESPONSE");
 export const Llm = Object.assign(
@@ -383,158 +545,34 @@ export const disconnect = vi.fn((): boolean => {
   return true;
 });
 
-// Complete the error mocks
-export const ForbiddenError = vi.fn(
-  (
-    ...params: ConstructorParameters<typeof ForbiddenErrorOriginal>
-  ): InstanceType<typeof ForbiddenErrorOriginal> => {
-    return new ForbiddenErrorOriginal(...params);
-  },
-);
+// @jaypie/textract
+export const MarkdownPage = vi.fn((page: TextractPageAdaptable): string => {
+  try {
+    const result = new MarkdownPageOriginal(page).text;
+    return result;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.warn(
+      "[MarkdownPage] Actual implementation failed. To suppress this warning, manually mock the response with mockReturnValue",
+    );
+    return `_MOCK_MARKDOWN_PAGE_{{${page}}}`;
+  }
+});
 
-export const GatewayTimeoutError = vi.fn(
-  (
-    ...params: ConstructorParameters<typeof GatewayTimeoutErrorOriginal>
-  ): InstanceType<typeof GatewayTimeoutErrorOriginal> => {
-    return new GatewayTimeoutErrorOriginal(...params);
-  },
-);
-
-export const GoneError = vi.fn(
-  (
-    ...params: ConstructorParameters<typeof GoneErrorOriginal>
-  ): InstanceType<typeof GoneErrorOriginal> => {
-    return new GoneErrorOriginal(...params);
-  },
-);
-
-export const IllogicalError = vi.fn(
-  (
-    ...params: ConstructorParameters<typeof IllogicalErrorOriginal>
-  ): InstanceType<typeof IllogicalErrorOriginal> => {
-    return new IllogicalErrorOriginal(...params);
-  },
-);
-
-export const InternalError = vi.fn(
-  (
-    ...params: ConstructorParameters<typeof InternalErrorOriginal>
-  ): InstanceType<typeof InternalErrorOriginal> => {
-    return new InternalErrorOriginal(...params);
-  },
-);
-
-export const MethodNotAllowedError = vi.fn(
-  (
-    ...params: ConstructorParameters<typeof MethodNotAllowedErrorOriginal>
-  ): InstanceType<typeof MethodNotAllowedErrorOriginal> => {
-    return new MethodNotAllowedErrorOriginal(...params);
-  },
-);
-
-export const MultiError = vi.fn(
-  (
-    ...params: ConstructorParameters<typeof MultiErrorOriginal>
-  ): InstanceType<typeof MultiErrorOriginal> => {
-    return new MultiErrorOriginal(...params);
-  },
-);
-
-export const NotFoundError = vi.fn(
-  (
-    ...params: ConstructorParameters<typeof NotFoundErrorOriginal>
-  ): InstanceType<typeof NotFoundErrorOriginal> => {
-    return new NotFoundErrorOriginal(...params);
-  },
-);
-
-export const NotImplementedError = vi.fn(
-  (
-    ...params: ConstructorParameters<typeof NotImplementedErrorOriginal>
-  ): InstanceType<typeof NotImplementedErrorOriginal> => {
-    return new NotImplementedErrorOriginal(...params);
-  },
-);
-
-export const ProjectError = vi.fn(
-  (
-    ...params: ConstructorParameters<typeof ProjectErrorOriginal>
-  ): InstanceType<typeof ProjectErrorOriginal> => {
-    return new ProjectErrorOriginal(...params);
-  },
-);
-
-export const ProjectMultiError = vi.fn(
-  (
-    ...params: ConstructorParameters<typeof ProjectMultiErrorOriginal>
-  ): InstanceType<typeof ProjectMultiErrorOriginal> => {
-    return new ProjectMultiErrorOriginal(...params);
-  },
-);
-
-export const RejectedError = vi.fn(
-  (
-    ...params: ConstructorParameters<typeof RejectedErrorOriginal>
-  ): InstanceType<typeof RejectedErrorOriginal> => {
-    return new RejectedErrorOriginal(...params);
-  },
-);
-
-export const TeapotError = vi.fn(
-  (
-    ...params: ConstructorParameters<typeof TeapotErrorOriginal>
-  ): InstanceType<typeof TeapotErrorOriginal> => {
-    return new TeapotErrorOriginal(...params);
-  },
-);
-
-export const UnauthorizedError = vi.fn(
-  (
-    ...params: ConstructorParameters<typeof UnauthorizedErrorOriginal>
-  ): InstanceType<typeof UnauthorizedErrorOriginal> => {
-    return new UnauthorizedErrorOriginal(...params);
-  },
-);
-
-export const UnavailableError = vi.fn(
-  (
-    ...params: ConstructorParameters<typeof UnavailableErrorOriginal>
-  ): InstanceType<typeof UnavailableErrorOriginal> => {
-    return new UnavailableErrorOriginal(...params);
-  },
-);
-
-export const UnhandledError = vi.fn(
-  (
-    ...params: ConstructorParameters<typeof UnhandledErrorOriginal>
-  ): InstanceType<typeof UnhandledErrorOriginal> => {
-    return new UnhandledErrorOriginal(...params);
-  },
-);
-
-export const UnreachableCodeError = vi.fn(
-  (
-    ...params: ConstructorParameters<typeof UnreachableCodeErrorOriginal>
-  ): InstanceType<typeof UnreachableCodeErrorOriginal> => {
-    return new UnreachableCodeErrorOriginal(...params);
-  },
-);
-
-// @jaypie/lambda
-export const lambdaHandler = vi.fn(
-  (handler: JaypieHandlerParameter, props: JaypieHandlerParameter = {}) => {
-    // If handler is an object and options is a function, swap them
-    if (typeof handler === "object" && typeof props === "function") {
-      const temp = handler;
-      handler = props;
-      props = temp;
+export const textractJsonToMarkdown = vi.fn(
+  (textractResults: JsonReturn): string => {
+    try {
+      const result = textractJsonToMarkdownOriginal(textractResults);
+      return result;
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.warn(
+        "[textractJsonToMarkdown] Actual implementation failed. To suppress this warning, manually mock the response with mockReturnValue",
+      );
+      return `_MOCK_TEXTRACT_JSON_TO_MARKDOWN_{{${textractResults}}}`;
     }
-    return async (event: unknown, context: unknown, ...extra: unknown[]) => {
-      return jaypieHandler(
-        handler as JaypieHandlerFunction,
-        props as JaypieHandlerOptions,
-      )(event, context, ...extra);
-    };
   },
 );
 
@@ -580,10 +618,13 @@ export default {
   expressHandler,
   // Lambda
   lambdaHandler,
+  // LLM
+  Llm,
   // Mongoose
   connect,
   connectFromSecretEnv,
   disconnect,
-  // LLM
-  Llm,
+  // Textract
+  MarkdownPage,
+  textractJsonToMarkdown,
 };

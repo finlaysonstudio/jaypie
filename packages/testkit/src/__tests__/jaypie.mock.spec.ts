@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { TextractPageAdaptable } from "@jaypie/textract";
 import { mongoose as expectedMongoose } from "@jaypie/mongoose";
 
 import matchers from "../matchers.module";
@@ -19,6 +20,7 @@ import {
   jaypieHandler,
   lambdaHandler,
   log,
+  MarkdownPage,
   mongoose,
   sendBatchMessages,
   sendMessage,
@@ -26,10 +28,12 @@ import {
   SQSMessage,
   submitMetric,
   submitMetricSet,
+  textractJsonToMarkdown,
   uuid,
 } from "../jaypie.mock";
 
 import { isJaypieError, ProjectError } from "@jaypie/core";
+import { JsonReturn } from "@jaypie/types";
 
 // Add custom matchers
 expect.extend(matchers);
@@ -983,6 +987,81 @@ describe("Jaypie Mock", () => {
       it.todo("Mocks mongoose", () => {
         expect(vi.isMockFunction(mongoose)).toBeTrue();
         expect(vi.isMockFunction(mongoose.connect)).toBeTrue();
+      });
+    });
+    describe("Jaypie Textract", () => {
+      it("Mocks expected functions", () => {
+        expect(vi.isMockFunction(MarkdownPage)).toBeTrue();
+        expect(vi.isMockFunction(textractJsonToMarkdown)).toBeTrue();
+      });
+
+      describe("MarkdownPage", () => {
+        let consoleWarnSpy: ReturnType<typeof vi.spyOn>;
+
+        beforeEach(() => {
+          consoleWarnSpy = vi.spyOn(console, "warn");
+        });
+
+        afterEach(() => {
+          consoleWarnSpy.mockRestore();
+        });
+
+        it("Returns mock value and warns when real implementation fails", () => {
+          const mockPage = {
+            invalidPage: true,
+          } as unknown as TextractPageAdaptable;
+          const result = MarkdownPage(mockPage);
+          expect(result).toBe("_MOCK_MARKDOWN_PAGE_{{[object Object]}}");
+          expect(consoleWarnSpy).toHaveBeenCalledWith(
+            "[MarkdownPage] Actual implementation failed. To suppress this warning, manually mock the response with mockReturnValue",
+          );
+        });
+
+        it("Does not warn when using mockReturnValue", () => {
+          const mockPage = {
+            invalidPage: true,
+          } as unknown as TextractPageAdaptable;
+          MarkdownPage.mockReturnValue("mocked response");
+          const result = MarkdownPage(mockPage);
+          expect(result).toBe("mocked response");
+          expect(consoleWarnSpy).not.toHaveBeenCalled();
+        });
+      });
+
+      describe("textractJsonToMarkdown", () => {
+        let consoleWarnSpy: ReturnType<typeof vi.spyOn>;
+
+        beforeEach(() => {
+          consoleWarnSpy = vi.spyOn(console, "warn");
+        });
+
+        afterEach(() => {
+          consoleWarnSpy.mockRestore();
+        });
+
+        it("Returns mock value and warns when real implementation fails", () => {
+          const mockJson = { invalidJson: true } as unknown as JsonReturn;
+          const result = textractJsonToMarkdown(mockJson);
+          expect(result).toBe(
+            "_MOCK_TEXTRACT_JSON_TO_MARKDOWN_{{[object Object]}}",
+          );
+          expect(consoleWarnSpy).toHaveBeenCalledWith(
+            "[textractJsonToMarkdown] Actual implementation failed. To suppress this warning, manually mock the response with mockReturnValue",
+          );
+        });
+
+        it("Does not warn when using mockReturnValue", () => {
+          const mockJson = { invalidJson: true } as unknown as JsonReturn;
+          textractJsonToMarkdown.mockReturnValue("mocked response");
+          const result = textractJsonToMarkdown(mockJson);
+          expect(result).toBe("mocked response");
+          expect(consoleWarnSpy).not.toHaveBeenCalled();
+        });
+      });
+
+      it("Mocks return string values", () => {
+        expect(MarkdownPage({} as TextractPageAdaptable)).toBeString();
+        expect(textractJsonToMarkdown({} as JsonReturn)).toBeString();
       });
     });
   }); // END describe Jaypie Packages
