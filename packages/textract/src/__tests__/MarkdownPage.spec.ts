@@ -4,7 +4,7 @@ import { readFile } from "fs/promises";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 // Subject
-import Page from "../page.class.js";
+import Page from "../MarkdownPage.js";
 import { TextractPage } from "../types.js";
 
 //

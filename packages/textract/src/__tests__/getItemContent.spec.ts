@@ -6,7 +6,7 @@ import { TYPE } from "../constants.js";
 import { TextractItem, TextractPage } from "../types.js";
 
 // Subject
-import getItemContent from "../getItemContent.function.js";
+import getItemContent from "../getItemContent.js";
 
 //
 //
