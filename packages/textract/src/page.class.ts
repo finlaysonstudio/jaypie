@@ -66,7 +66,7 @@ function initIndexObject(page: TextractPage | null): IndexObject {
   // Index tables by first line id
   page.listTables().forEach((table) => {
     const firstWord = getItemFirstWord(table);
-    if (firstWord?.id) {
+    if (firstWord && typeof firstWord === "object" && "id" in firstWord) {
       tableFirstWord[firstWord.id] = table;
     }
   });
@@ -88,7 +88,7 @@ export default class Page {
   }
 
   get text(): string {
-    const metadata = {
+    const metadata: { type: string; id: string; signatures?: number } = {
       type: "page",
       id: this._page.id.slice(0, 8),
     };
@@ -115,7 +115,11 @@ export default class Page {
     const tableWordIds: string[] = [];
     layoutItems.forEach((item) => {
       const itemFirstWord = getItemFirstWord(item);
-      if (itemFirstWord) {
+      if (
+        itemFirstWord &&
+        typeof itemFirstWord === "object" &&
+        "id" in itemFirstWord
+      ) {
         returnedIds.push(item.id);
         if (itemFirstWord.id && this._index.tableFirstWord[itemFirstWord.id]) {
           const table = this._index.tableFirstWord[itemFirstWord.id];
