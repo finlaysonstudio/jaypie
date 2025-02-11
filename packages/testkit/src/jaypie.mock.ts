@@ -66,14 +66,16 @@ export * from "@jaypie/llm";
 export * from "@jaypie/mongoose";
 export * from "@jaypie/textract";
 
-let textractJsonToMarkdownOriginal: typeof textractJsonToMarkdown;
 let MarkdownPageOriginal: typeof MarkdownPage;
+let textractJsonToMarkdownOriginal = vi.fn<typeof textractJsonToMarkdown>();
 
 // Spy on log:
 beforeAll(async () => {
   const textract = await import("@jaypie/textract");
-  textractJsonToMarkdownOriginal = textract.textractJsonToMarkdown;
   MarkdownPageOriginal = textract.MarkdownPage;
+  textractJsonToMarkdownOriginal.mockImplementation(
+    textract.textractJsonToMarkdown,
+  );
   spyLog(log as Log);
 });
 
