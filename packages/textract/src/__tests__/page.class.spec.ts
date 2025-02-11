@@ -5,6 +5,7 @@ import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 // Subject
 import Page from "../page.class.js";
+import { TextractPage } from "../types.js";
 
 //
 //
@@ -31,8 +32,10 @@ describe("Page Class", () => {
   describe("Complete Document", () => {
     it("Converts to markdown", async () => {
       const fileBuffer = await readFile(MOCK.COMPLETE_DOCUMENT);
-      const document = new TextractDocument(JSON.parse(fileBuffer));
-      const pages = document.listPages().map((page) => new Page(page));
+      const document = new TextractDocument(JSON.parse(fileBuffer.toString()));
+      const pages = document
+        .listPages()
+        .map((page) => new Page(page as unknown as TextractPage));
 
       const markdown = pages.map((page) => page.text).join("\n\n");
 
@@ -42,11 +45,11 @@ describe("Page Class", () => {
     });
   });
   describe("Instantiation", () => {
-    let page;
+    let page: Page;
     beforeAll(async () => {
       const fileBuffer = await readFile(MOCK.SIGNATURE_PAGE);
-      const document = new TextractDocument(JSON.parse(fileBuffer));
-      page = new Page(document.pageNumber(1));
+      const document = new TextractDocument(JSON.parse(fileBuffer.toString()));
+      page = new Page(document.pageNumber(1) as unknown as TextractPage);
     });
     it("Instantiates from amazon-textract-response-parser page", async () => {
       expect(page).toBeInstanceOf(Page);
@@ -63,8 +66,8 @@ describe("Page Class", () => {
           expect(page._text).toBeString();
         });
         describe("Our custom text format", () => {
-          let blocks;
-          let text;
+          let blocks: string[];
+          let text: string;
           beforeAll(async () => {
             text = page.text;
             blocks = text.split("\n\n");
@@ -99,26 +102,32 @@ describe("Page Class", () => {
           describe("How It Works", () => {
             // "How It Works" are fragile and need not be maintained beyond their understood use
             it("Creates an _index object on init", () => {
-              expect(page._index).toBeObject();
-              expect(page._index).not.toBeEmpty();
-              expect(page._index.element).toBeObject();
-              expect(page._index.element).not.toBeEmpty();
-              expect(page._index.id).toBeObject();
-              expect(page._index.id).not.toBeEmpty();
+              // Access private property for testing
+              const index = (page as any)._index;
+              expect(index).toBeObject();
+              expect(index).not.toBeEmpty();
+              expect(index.element).toBeObject();
+              expect(index.element).not.toBeEmpty();
+              expect(index.id).toBeObject();
+              expect(index.id).not.toBeEmpty();
             });
             it("Creates a tableFirstWord object on init", () => {
-              expect(page._index.tableFirstWord).toBeObject();
+              // Access private property for testing
+              const index = (page as any)._index;
+              expect(index.tableFirstWord).toBeObject();
               // Empty because page one has no tables
-              expect(page._index.tableFirstWord).toBeEmpty();
+              expect(index.tableFirstWord).toBeEmpty();
             });
           });
         });
       });
       describe("Layout Text", () => {
         it("Has _layout (right now)", () => {
-          expect(page._layout).toBeObject();
-          expect(page._layout.constructor.name).toBe("LayoutGeneric");
-          expect(page._layout.str()).toBeString();
+          // Access private property for testing
+          const layout = (page as any)._layout;
+          expect(layout).toBeObject();
+          expect(layout.constructor.name).toBe("LayoutGeneric");
+          expect(layout.str()).toBeString();
         });
       });
     });
@@ -128,15 +137,25 @@ describe("Page Class", () => {
       // "How It Works" are fragile and need not be maintained beyond their understood use
       it("Creates tableFirstWord in _index init", async () => {
         const fileBuffer = await readFile(MOCK.COMPLETE_DOCUMENT);
-        const document = new TextractDocument(JSON.parse(fileBuffer));
-        const page = new Page(document.pageNumber(2));
-        expect(page._index.tableFirstWord).toBeObject();
-        expect(page._index.tableFirstWord).not.toBeEmpty();
+        const document = new TextractDocument(
+          JSON.parse(fileBuffer.toString()),
+        );
+        const page = new Page(
+          document.pageNumber(2) as unknown as TextractPage,
+        );
+        // Access private property for testing
+        const index = (page as any)._index;
+        expect(index.tableFirstWord).toBeObject();
+        expect(index.tableFirstWord).not.toBeEmpty();
       });
       it("Markdown includes tables", async () => {
         const fileBuffer = await readFile(MOCK.COMPLETE_DOCUMENT);
-        const document = new TextractDocument(JSON.parse(fileBuffer));
-        const page = new Page(document.pageNumber(2));
+        const document = new TextractDocument(
+          JSON.parse(fileBuffer.toString()),
+        );
+        const page = new Page(
+          document.pageNumber(2) as unknown as TextractPage,
+        );
         const text = page.text;
         // It is a table
         expect(text).toContain("|");
