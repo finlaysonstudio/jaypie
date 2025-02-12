@@ -1,7 +1,9 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { TextractPageAdaptable } from "@jaypie/textract";
 import { mongoose as expectedMongoose } from "@jaypie/mongoose";
+import { TextractDocument } from "amazon-textract-response-parser";
+import { readFile } from "fs/promises";
 
 import matchers from "../matchers.module";
 import sqsTestRecords from "../sqsTestRecords.function";
@@ -42,6 +44,13 @@ expect.extend(matchers);
 //
 // Mock modules
 //
+
+const MOCK_TEXTRACT_DOCUMENT_PATH = "./packages/testkit/src/mockTextract.json";
+let mockTextractContents: string;
+
+beforeAll(async () => {
+  mockTextractContents = await readFile(MOCK_TEXTRACT_DOCUMENT_PATH, "utf-8");
+});
 
 afterEach(() => {
   vi.clearAllMocks();
@@ -1011,7 +1020,8 @@ describe("Jaypie Mock", () => {
             invalidPage: true,
           } as unknown as TextractPageAdaptable;
           const result = MarkdownPage(mockPage);
-          expect(result).toBe("_MOCK_MARKDOWN_PAGE_{{[object Object]}}");
+          expect(result.text).toBeString();
+          expect(result.text).toStartWith("---");
           expect(consoleWarnSpy).toHaveBeenCalledWith(
             "[MarkdownPage] Actual implementation failed. To suppress this warning, manually mock the response with mockReturnValue",
           );
@@ -1021,10 +1031,21 @@ describe("Jaypie Mock", () => {
           const mockPage = {
             invalidPage: true,
           } as unknown as TextractPageAdaptable;
-          MarkdownPage.mockReturnValue("mocked response");
+          MarkdownPage.mockReturnValueOnce("mocked response");
           const result = MarkdownPage(mockPage);
           expect(result).toBe("mocked response");
           expect(consoleWarnSpy).not.toHaveBeenCalled();
+        });
+
+        it("Works as expected with mock textract contents", () => {
+          const mockPage = new TextractDocument(
+            JSON.parse(mockTextractContents),
+          );
+          const result = MarkdownPage(mockPage);
+          expect(result.text).toBeDefined();
+          expect(result.text).toBeString();
+          expect(result.text).toStartWith("---");
+          expect(result.text).toInclude("# Mock Page");
         });
       });
 
@@ -1060,7 +1081,7 @@ describe("Jaypie Mock", () => {
       });
 
       it("Mocks return string values", () => {
-        expect(MarkdownPage({} as TextractPageAdaptable)).toBeString();
+        expect(MarkdownPage({} as TextractPageAdaptable).text).toBeString();
         expect(textractJsonToMarkdown({} as JsonReturn)).toBeString();
       });
     });

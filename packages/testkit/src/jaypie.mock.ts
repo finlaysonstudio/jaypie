@@ -30,10 +30,6 @@ import {
   UnhandledError as UnhandledErrorOriginal,
   UnreachableCodeError as UnreachableCodeErrorOriginal,
 } from "@jaypie/core";
-import {
-  MarkdownPage as MarkdownPageOriginal,
-  textractJsonToMarkdown as textractJsonToMarkdownOriginal,
-} from "@jaypie/textract";
 import type { TextractPageAdaptable } from "@jaypie/textract";
 import type { JsonReturn } from "@jaypie/types";
 import { beforeAll, vi } from "vitest";
@@ -52,6 +48,9 @@ import {
 import type { SQSMessageResponse } from "@jaypie/aws";
 import { spyLog } from "./mockLog.module.js";
 import type { Response as ExpressResponse } from "express";
+import { readFile } from "fs/promises";
+import { TextractDocument } from "amazon-textract-response-parser";
+import { MarkdownPage as OriginalMarkdownPage } from "@jaypie/textract";
 
 //
 //
@@ -59,6 +58,8 @@ import type { Response as ExpressResponse } from "express";
 //
 
 const TAG = JAYPIE.LIB.TESTKIT;
+
+const MOCK_TEXTRACT_DOCUMENT_PATH = "./packages/testkit/src/mockTextract.json";
 
 // Export all the modules from Jaypie packages:
 export * from "@jaypie/aws";
@@ -70,8 +71,18 @@ export * from "@jaypie/llm";
 export * from "@jaypie/mongoose";
 export * from "@jaypie/textract";
 
+let textractJsonToMarkdownOriginal = vi.fn<typeof textractJsonToMarkdown>();
+let MarkdownPageOriginal: typeof OriginalMarkdownPage;
+let mockTextractContents: string;
+
 // Spy on log:
-beforeAll(() => {
+beforeAll(async () => {
+  const textract = await import("@jaypie/textract");
+  textractJsonToMarkdownOriginal.mockImplementation(
+    textract.textractJsonToMarkdown,
+  );
+  MarkdownPageOriginal = textract.MarkdownPage;
+  mockTextractContents = await readFile(MOCK_TEXTRACT_DOCUMENT_PATH, "utf-8");
   spyLog(log as Log);
 });
 
@@ -546,19 +557,25 @@ export const disconnect = vi.fn((): boolean => {
 });
 
 // @jaypie/textract
-export const MarkdownPage = vi.fn((page: TextractPageAdaptable): string => {
-  try {
-    const result = new MarkdownPageOriginal(page).text;
-    return result;
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  } catch (error) {
-    // eslint-disable-next-line no-console
-    console.warn(
-      "[MarkdownPage] Actual implementation failed. To suppress this warning, manually mock the response with mockReturnValue",
-    );
-    return `_MOCK_MARKDOWN_PAGE_{{${page}}}`;
-  }
-});
+export const MarkdownPage = vi
+  .fn()
+  .mockImplementation((page: TextractPageAdaptable) => {
+    try {
+      return new MarkdownPageOriginal(page);
+    } catch {
+      // eslint-disable-next-line no-console
+      console.warn(
+        "[MarkdownPage] Actual implementation failed. To suppress this warning, manually mock the response with mockReturnValue",
+      );
+      const mockDocument = new TextractDocument(
+        JSON.parse(mockTextractContents),
+      );
+      // Double type assertion needed to bridge incompatible types
+      return new MarkdownPageOriginal(
+        mockDocument._pages[0] as unknown as TextractPageAdaptable,
+      );
+    }
+  });
 
 export const textractJsonToMarkdown = vi.fn(
   (textractResults: JsonReturn): string => {
