@@ -51,6 +51,8 @@ import type { Response as ExpressResponse } from "express";
 import { readFile } from "fs/promises";
 import { TextractDocument } from "amazon-textract-response-parser";
 import { MarkdownPage as OriginalMarkdownPage } from "@jaypie/textract";
+import { dirname, join } from "path";
+import { fileURLToPath } from "url";
 
 //
 //
@@ -59,7 +61,10 @@ import { MarkdownPage as OriginalMarkdownPage } from "@jaypie/textract";
 
 const TAG = JAYPIE.LIB.TESTKIT;
 
-const MOCK_TEXTRACT_DOCUMENT_PATH = "./packages/testkit/src/mockTextract.json";
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+const MOCK_TEXTRACT_DOCUMENT_PATH = join(__dirname, "mockTextract.json");
 
 // Export all the modules from Jaypie packages:
 export * from "@jaypie/aws";
