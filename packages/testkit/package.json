@@ -36,6 +36,7 @@
     "uuid": "^11.0.5"
   },
   "devDependencies": {
+    "@rollup/plugin-json": "^6.1.0",
     "@types/express": "^5.0.0",
     "@types/lodash.isequal": "^4.5.8",
     "@types/node": "^22.13.1",
@@ -43,6 +44,7 @@
     "express": "^4.21.1",
     "jest-extended": "^4.0.2",
     "rollup": "^4.29.1",
+    "rollup-plugin-copy": "^3.5.0",
     "rollup-plugin-dts": "^6.1.1",
     "typescript": "^5.0.0",
     "vitest": "^3.0.5"

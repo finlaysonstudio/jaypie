@@ -1,4 +1,6 @@
 import typescript from "@rollup/plugin-typescript";
+import json from "@rollup/plugin-json";
+import copy from "rollup-plugin-copy";
 
 export default [
   {
@@ -9,7 +11,7 @@ export default [
       format: "es",
       sourcemap: true,
     },
-    plugins: [typescript()],
+    plugins: [typescript(), json()],
   },
   {
     external: [
@@ -31,6 +33,12 @@ export default [
       format: "es",
       sourcemap: true,
     },
-    plugins: [typescript()],
+    plugins: [
+      typescript(),
+      json(),
+      copy({
+        targets: [{ src: "src/mockTextract.json", dest: "dist" }],
+      }),
+    ],
   },
 ];
