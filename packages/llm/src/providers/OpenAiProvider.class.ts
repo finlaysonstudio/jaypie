@@ -56,15 +56,16 @@ export class OpenAiProvider implements LlmProvider {
     const messages = [];
 
     if (options?.system) {
+      const content =
+        options?.placeholders?.system === false
+          ? options.system
+          : placeholders(options.system, options?.data);
       const systemMessage = {
         role: "developer" as const,
-        content:
-          options?.placeholders?.system === false
-            ? options.system
-            : placeholders(options.system, options?.data),
+        content,
       };
       messages.push(systemMessage);
-      this.log.var({ systemMessage });
+      this.log.trace(`System message: ${content?.length} characters`);
     }
     const formattedMessage =
       options?.placeholders?.message === false
@@ -75,7 +76,7 @@ export class OpenAiProvider implements LlmProvider {
       content: formattedMessage,
     };
     messages.push(userMessage);
-    this.log.var({ userMessage });
+    this.log.trace(`User message: ${formattedMessage?.length} characters`);
 
     if (options?.response) {
       this.log.trace("Using structured output");
@@ -98,7 +99,9 @@ export class OpenAiProvider implements LlmProvider {
       messages,
       model: options?.model || this.model,
     });
-    this.log.var({ assistantReply: completion.choices[0].message.content });
+    this.log.trace(
+      `Assistant reply: ${completion.choices[0]?.message?.content?.length} characters`,
+    );
 
     return completion.choices[0]?.message?.content || "";
   }
