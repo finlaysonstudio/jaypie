@@ -68,4 +68,32 @@ describe("Llm Class", () => {
       expect(typeof response).toBe("string");
     });
   });
+
+  describe("static send", () => {
+    it("has a static send method", () => {
+      expect(Llm.send).toBeFunction();
+    });
+
+    it("uses default provider when no llm option provided", async () => {
+      const message = "Hello, world!";
+      const response = await Llm.send(message);
+      expect(response).toBeDefined();
+      expect(typeof response).toBe("string");
+    });
+
+    it("uses specified provider when llm option provided", async () => {
+      const message = "Hello, world!";
+      const response = await Llm.send(message, { llm: PROVIDER.OPENAI.NAME });
+      expect(response).toBeDefined();
+      expect(typeof response).toBe("string");
+    });
+
+    it("passes message options correctly", async () => {
+      const message = "Hello, world!";
+      const options = { temperature: 0.7, llm: PROVIDER.OPENAI.NAME };
+      const response = await Llm.send(message, options);
+      expect(response).toBeDefined();
+      expect(typeof response).toBe("string");
+    });
+  });
 });
