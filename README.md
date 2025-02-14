@@ -210,11 +210,11 @@ const response = await sendMessage({ body, queueUrl });
 
 | Parameter | Type | Required | Description |
 | --------- | ---- | -------- | ----------- |
-| `body` | `string` | Yes | Message body |
+| `body` | `string`, `object` | Yes | Message body |
 | `delaySeconds` | `number` | No | Seconds to delay message delivery; default `0` |
 | `messageAttributes` | `object` | No | Message attributes |
 | `messageGroupId` | `string` | No | Custom message group for FIFO queues; default provided |
-| `queueUrl` | `string` | Yes | URL of the SQS queue |
+| `queueUrl` | `string` | No | URL of the SQS queue; defaults to `process.env.CDK_ENV_QUEUE_URL` |
 
 #### `sendTextractJob({ key, bucket, featureTypes, snsRoleArn, snsTopicArn })`
 
