@@ -276,6 +276,87 @@ describe("OpenAiProvider", () => {
           model: expect.any(String),
         });
       });
+
+      it("respects placeholders.message option", async () => {
+        const mockResponse = {
+          choices: [{ message: { content: "test response" } }],
+        };
+
+        const mockCreate = vi.fn().mockResolvedValue(mockResponse);
+        vi.mocked(OpenAI).mockImplementation(
+          () =>
+            ({
+              chat: {
+                completions: {
+                  create: mockCreate,
+                },
+              },
+            }) as any,
+        );
+
+        const provider = new OpenAiProvider();
+        const response = await provider.send(
+          "Hello {{ name }}, your age is {{ age }}",
+          {
+            data: {
+              name: "John",
+              age: "30",
+            },
+            placeholders: {
+              message: false,
+            },
+          },
+        );
+
+        expect(response).toBe("test response");
+        expect(mockCreate).toHaveBeenCalledWith({
+          messages: [
+            {
+              role: "user",
+              content: "Hello {{ name }}, your age is {{ age }}",
+            },
+          ],
+          model: expect.any(String),
+        });
+      });
+
+      it("respects placeholders.system option", async () => {
+        const mockResponse = {
+          choices: [{ message: { content: "test response" } }],
+        };
+
+        const mockCreate = vi.fn().mockResolvedValue(mockResponse);
+        vi.mocked(OpenAI).mockImplementation(
+          () =>
+            ({
+              chat: {
+                completions: {
+                  create: mockCreate,
+                },
+              },
+            }) as any,
+        );
+
+        const provider = new OpenAiProvider();
+        const response = await provider.send("test message", {
+          system: "You are {{ role }}",
+          data: {
+            role: "test assistant",
+          },
+          placeholders: {
+            system: false,
+          },
+        });
+
+        expect(response).toBe("test response");
+        expect(mockCreate).toHaveBeenCalledWith({
+          messages: [
+            { role: "developer", content: "You are {{ role }}" },
+            { role: "user", content: "test message" },
+          ],
+          model: expect.any(String),
+        });
+      });
     });
   });
 });
