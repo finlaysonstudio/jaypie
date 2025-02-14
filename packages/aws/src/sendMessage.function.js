@@ -29,7 +29,7 @@ export default async ({
   delaySeconds = 0,
   messageAttributes,
   messageGroupId = `${PROJECT}-Group-Id`,
-  queueUrl,
+  queueUrl = process.env.CDK_ENV_QUEUE_URL,
 } = {}) => {
   const log = defaultLogger.lib({ lib: JAYPIE.LIB.AWS });
   log.var({
