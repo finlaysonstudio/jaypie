@@ -33,6 +33,15 @@ class Llm implements LlmProvider {
   ): Promise<string | JsonObject> {
     return this._llm.send(message, options);
   }
+
+  static async send(
+    message: string,
+    options?: LlmMessageOptions & { llm?: LlmProviderName },
+  ): Promise<string | JsonObject> {
+    const { llm, ...messageOptions } = options || {};
+    const instance = new Llm(llm);
+    return instance.send(message, messageOptions);
+  }
 }
 
 export default Llm;
