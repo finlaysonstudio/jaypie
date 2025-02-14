@@ -53,6 +53,7 @@ import { TextractDocument } from "amazon-textract-response-parser";
 import { MarkdownPage as OriginalMarkdownPage } from "@jaypie/textract";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
+import originalPlaceholders from "./types/placeholders.js";
 
 //
 //
@@ -295,6 +296,11 @@ export const UnreachableCodeError = vi.fn(
 export const envBoolean = vi.fn((): boolean => {
   return true;
 });
+
+export const placeholders = vi.fn(
+  (...params: Parameters<typeof originalPlaceholders>) =>
+    originalPlaceholders(...params),
+);
 
 export const jaypieHandler = vi.fn(
   (
@@ -623,6 +629,7 @@ export default {
   MultiError,
   NotFoundError,
   NotImplementedError,
+  placeholders,
   ProjectError,
   ProjectMultiError,
   RejectedError,
