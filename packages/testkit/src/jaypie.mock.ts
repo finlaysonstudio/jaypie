@@ -53,7 +53,7 @@ import { TextractDocument } from "amazon-textract-response-parser";
 import { MarkdownPage as OriginalMarkdownPage } from "@jaypie/textract";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
-import originalPlaceholders from "./types/placeholders.js";
+import originalPlaceholders from "./placeholders.js";
 
 //
 //
