@@ -30,16 +30,13 @@ const DEFAULT = {
  * @param {Object} options Options object
  * @param {Object} [options.env=process.env] Environment object to use for lookup
  * @returns {Promise<string>} secret value
- * @throws {ConfigurationError} if no AWS_SESSION_TOKEN available
+ * @throws {ConfigurationError} if secret requires AWS_SESSION_TOKEN but none available
  * @throws {ConfigurationError} if no secret name provided
  * @throws {ConfigurationError} if no secret found in environment
  */
 async function getEnvSecret(name, { env = process.env } = {}) {
   log.lib({ lib: JAYPIE.LIB.AWS }).trace.var({ getEnvSecret: name });
 
-  if (!env.AWS_SESSION_TOKEN) {
-    throw new ConfigurationError("No AWS_SESSION_TOKEN available");
-  }
   if (!name) {
     throw new ConfigurationError("No secret name provided");
   }
@@ -54,6 +51,10 @@ async function getEnvSecret(name, { env = process.env } = {}) {
 
   // Only fetch from secrets manager if it's an explicit secret reference
   if (secretId) {
+    if (!env.AWS_SESSION_TOKEN) {
+      throw new ConfigurationError("No AWS_SESSION_TOKEN available");
+    }
+
     const headers = {
       [HTTP.HEADER.AMAZON.PARAMETERS_SECRETS_TOKEN]: env.AWS_SESSION_TOKEN,
     };

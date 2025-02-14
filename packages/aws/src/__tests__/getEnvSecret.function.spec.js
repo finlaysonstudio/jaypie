@@ -65,24 +65,32 @@ describe("Get Environment Secret Function", () => {
   });
 
   describe("Error Cases", () => {
-    it("Throws if no AWS_SESSION_TOKEN", async () => {
+    it("Throws if secret reference but no AWS_SESSION_TOKEN", async () => {
       delete process.env.AWS_SESSION_TOKEN;
-      await expect(getEnvSecret(MOCK.SECRET)).rejects.toThrow(
+      process.env.SECRET_TEST_KEY = "SECRET_TEST_VALUE";
+      await expect(getEnvSecret("TEST_KEY")).rejects.toThrow(
         "No AWS_SESSION_TOKEN available",
       );
     });
     it("Throws if no secret name provided", async () => {
       await expect(getEnvSecret()).rejects.toThrow("No secret name provided");
     });
-    it("Throws if no secret found in environment", async () => {
+    it("Returns undefined if no secret found in environment", async () => {
       const env = {};
-      await expect(async () =>
-        getEnvSecret("test", { env }),
-      ).toThrowConfigurationError();
+      const result = await getEnvSecret("test", { env });
+      expect(result).toBeUndefined();
     });
   });
 
   describe("Features", () => {
+    it("Works without AWS_SESSION_TOKEN for direct values", async () => {
+      delete process.env.AWS_SESSION_TOKEN;
+      process.env.TEST_KEY = "direct-value";
+      const result = await getEnvSecret("TEST_KEY");
+      expect(result).toBe("direct-value");
+      expect(axios.get).not.toHaveBeenCalled();
+    });
+
     it("Uses SECRET_name if available", async () => {
       const env = cloneDeep(process.env);
       env.SECRET_test = "secret1";
