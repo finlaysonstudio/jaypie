@@ -49,12 +49,32 @@ afterEach(() => {
 //
 
 describe("Send Message Function", () => {
-  it("Works", async () => {
-    const response = await sendMessage({
-      body: MOCK.MESSAGE,
-      queueUrl: MOCK.QUEUE_URL,
+  describe("Base Cases", () => {
+    it("Works with params object", async () => {
+      const response = await sendMessage({
+        body: MOCK.MESSAGE,
+        queueUrl: MOCK.QUEUE_URL,
+      });
+      expect(response).not.toBeUndefined();
     });
-    expect(response).not.toBeUndefined();
+    it("Works with body and params", async () => {
+      const response = await sendMessage(MOCK.MESSAGE, {
+        queueUrl: MOCK.QUEUE_URL,
+      });
+      expect(response).not.toBeUndefined();
+    });
+    it("Works with complex body and params", async () => {
+      const response = await sendMessage(MOCK.BODY, {
+        queueUrl: MOCK.QUEUE_URL,
+      });
+      expect(response).not.toBeUndefined();
+    });
+    it("Works with complex body without params and CDK_ENV_QUEUE_URL", async () => {
+      process.env.CDK_ENV_QUEUE_URL = MOCK.QUEUE_URL;
+      const response = await sendMessage(MOCK.BODY);
+      expect(response).not.toBeUndefined();
+      delete process.env.CDK_ENV_QUEUE_URL;
+    });
   });
   describe("Error Cases", () => {
     it("Throws if delaySeconds is not number", async () => {
@@ -112,9 +132,22 @@ describe("Send Message Function", () => {
     });
   });
   describe("Features", () => {
-    it("Sends a standard message by default", async () => {
+    it("Sends a standard message with params object", async () => {
       const response = await sendMessage({
         body: MOCK.MESSAGE,
+        queueUrl: MOCK.QUEUE_URL,
+      });
+      expect(response).not.toBeUndefined();
+      expect(response.MessageId).toBe("MOCK_SQS_RESULT_MESSAGE_ID");
+      expect(SendMessageCommand).toHaveBeenCalledWith({
+        MessageBody: MOCK.MESSAGE,
+        QueueUrl: MOCK.QUEUE_URL,
+      });
+      expect(SQSClient).toHaveBeenCalled();
+      expect(mockSqsClientSend).toHaveBeenCalled();
+    });
+    it("Sends a standard message with body and params", async () => {
+      const response = await sendMessage(MOCK.MESSAGE, {
         queueUrl: MOCK.QUEUE_URL,
       });
       expect(response).not.toBeUndefined();

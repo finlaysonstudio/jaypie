@@ -24,17 +24,37 @@ const PROJECT = process.env.PROJECT_KEY || "Unknown";
 // Main
 //
 
-export default async ({
-  body,
-  delaySeconds = 0,
-  messageAttributes,
-  messageGroupId = `${PROJECT}-Group-Id`,
-  queueUrl = process.env.CDK_ENV_QUEUE_URL,
-} = {}) => {
+export default async function sendMessage(bodyOrParams, maybeParams) {
+  let params;
+  let messageBody;
+
+  // Handle both parameter styles
+  if (maybeParams === undefined) {
+    // params = bodyOrParams || {};
+    // If params does not have a body property, use the bodyOrParams as the body
+    if (!bodyOrParams.body) {
+      messageBody = bodyOrParams;
+      params = {};
+    } else {
+      messageBody = bodyOrParams.body;
+      params = bodyOrParams;
+    }
+  } else {
+    messageBody = bodyOrParams;
+    params = maybeParams || {};
+  }
+
+  const {
+    delaySeconds = 0,
+    messageAttributes,
+    messageGroupId: msgGroupId = `${PROJECT}-Group-Id`,
+    queueUrl = process.env.CDK_ENV_QUEUE_URL,
+  } = params;
+
   const log = defaultLogger.lib({ lib: JAYPIE.LIB.AWS });
   log.var({
     sendMessageInit: {
-      body,
+      body: messageBody,
       queueUrl,
       messageAttributes,
     },
@@ -45,14 +65,14 @@ export default async ({
   // Validate
   //
 
-  if (!body) {
+  if (!messageBody) {
     defaultLogger.error("Message body is required");
     throw new ConfigurationError();
   }
 
   validate.number(delaySeconds);
   validate.object(messageAttributes, { required: false });
-  messageGroupId = force.string(messageGroupId);
+  const messageGroupId = force.string(msgGroupId);
   validate.string(queueUrl);
   validateQueueUrl(queueUrl);
 
@@ -67,10 +87,10 @@ export default async ({
   if (messageAttributes) {
     command.MessageAttributes = messageAttributes;
   }
-  if (typeof body === "object") {
-    command.MessageBody = JSON.stringify(body);
+  if (typeof messageBody === "object") {
+    command.MessageBody = JSON.stringify(messageBody);
   } else {
-    command.MessageBody = String(body);
+    command.MessageBody = String(messageBody);
   }
   if (delaySeconds) {
     command.DelaySeconds = delaySeconds;
@@ -82,7 +102,7 @@ export default async ({
     command.MessageGroupId = messageGroupId;
     // FIFO requires deduplication
     const messageDeduplicationJson = {
-      body: JSON.stringify(body),
+      body: JSON.stringify(messageBody),
       messageAttributes: JSON.stringify(messageAttributes),
       queueUrl,
     };
@@ -126,4 +146,4 @@ export default async ({
   //
   // Return
   //
-};
+}
