@@ -29,10 +29,10 @@ const DEFAULT_FEATURE_TYPES = [
 
 const sendTextractJob = async ({
   key,
-  bucket,
+  bucket = process.env.CDK_ENV_BUCKET,
   featureTypes = DEFAULT_FEATURE_TYPES,
-  snsRoleArn,
-  snsTopicArn,
+  snsRoleArn = process.env.CDK_ENV_SNS_ROLE_ARN,
+  snsTopicArn = process.env.CDK_ENV_SNS_TOPIC_ARN,
 }) => {
   if (!key || !bucket) {
     throw new ConfigurationError("[sendTextractJob] Missing key or bucket");
