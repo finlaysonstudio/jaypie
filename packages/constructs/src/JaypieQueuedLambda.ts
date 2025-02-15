@@ -102,10 +102,10 @@ export class JaypieQueuedLambda
     this._lambda = new lambda.Function(this, "Function", {
       code: this._code,
       environment: {
+        CDK_ENV_QUEUE_URL: this._queue.queueUrl,
         ...environment,
         ...secretsEnvironment,
         ...jaypieSecretsEnvironment,
-        APP_QUEUE_URL: this._queue.queueUrl,
       },
       handler,
       layers,
