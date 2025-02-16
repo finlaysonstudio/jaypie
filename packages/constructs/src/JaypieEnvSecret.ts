@@ -173,7 +173,6 @@ export class JaypieEnvSecret extends Construct implements ISecret {
   }
 
   public grantRead(grantee: IGrantable, versionStages?: string[]): Grant {
-    console.log("grantee :>> ", grantee?.constructor?.name);
     return this._secret.grantRead(grantee, versionStages);
   }
 

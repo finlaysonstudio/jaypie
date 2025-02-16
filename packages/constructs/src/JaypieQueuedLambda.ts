@@ -125,7 +125,6 @@ export class JaypieQueuedLambda
 
     // Grant read permissions for JaypieEnvSecrets
     secrets.forEach((secret) => {
-      console.log("secret :>> ", secret.envKey);
       secret.grantRead(this);
       secret.grantRead(this._lambda);
     });
