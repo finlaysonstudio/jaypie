@@ -1,6 +1,6 @@
 {
   "name": "@jaypie/testkit",
-  "version": "1.1.16",
+  "version": "1.1.15",
   "license": "MIT",
   "author": "Finlayson Studio",
   "type": "module",
@@ -19,12 +19,8 @@
   "types": "./dist/index.d.ts",
   "typesVersions": {
     "*": {
-      "*": [
-        "./dist/index.d.ts"
-      ],
-      "matchers": [
-        "./dist/types/matchers.d.ts"
-      ]
+      "*": ["./dist/index.d.ts"],
+      "matchers": ["./dist/types/matchers.d.ts"]
     }
   },
   "files": [
