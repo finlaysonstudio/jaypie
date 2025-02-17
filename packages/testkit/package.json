@@ -17,12 +17,6 @@
   "main": "./dist/index.js",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "typesVersions": {
-    "*": {
-      "*": ["./dist/index.d.ts"],
-      "matchers": ["./dist/types/matchers.d.ts"]
-    }
-  },
   "files": [
     "dist"
   ],
