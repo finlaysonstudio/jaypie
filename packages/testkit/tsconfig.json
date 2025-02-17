@@ -8,11 +8,10 @@
     "strict": true,
     "skipLibCheck": true,
     "declaration": true,
-    "declarationDir": "./dist/types",
     "outDir": "./dist",
     "rootDir": "./src",
     "types": ["vitest/globals", "jest-extended"]
   },
-  "include": ["src/**/*"],
+  "include": ["src/**/*", "src/**/*.d.ts"],
   "exclude": ["node_modules", "dist"]
 }
