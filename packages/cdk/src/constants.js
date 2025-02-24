@@ -56,10 +56,10 @@ const CDK = {
     PERSONAL: "personal", // Personal builds using resources provided by sandbox
     PREVIEW: "preview", // External next thing to be released
     PRODUCTION: "production",
-    TRAINING: "training", // aka "test"; mirror of production for external audiences
     RELEASE: "release", // Internal next thing to be released
     REVIEW: "review", // Internal place to collaborate on issues
     SANDBOX: "sandbox", // Internal build space with no guaranteed longevity
+    TRAINING: "training", // aka "test"; mirror of production for external audiences
   },
   HOST: {
     APEX: "@",
