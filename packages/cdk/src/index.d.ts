@@ -51,7 +51,6 @@ declare module "@jaypie/cdk" {
     BUILD: {
       CONFIG: CDKBuildConfig;
       PERSONAL: string;
-      STATIC: string;
     };
     CREATION: {
       CDK: string;
@@ -76,7 +75,6 @@ declare module "@jaypie/cdk" {
       DEMO: string;
       DEVELOPMENT: string;
       LOCAL: string;
-      MAIN: string;
       META: string;
       PERSONAL: string;
       PREVIEW: string;
