@@ -16,6 +16,10 @@ const CDK = {
       NONE: "none",
       WEB: "web",
     },
+    PERSONAL: "personal",
+    /**
+     * @deprecated rename "ephemeral" to "personal" (since 2/24/2024)
+     */
     EPHEMERAL: "ephemeral",
     /**
      * @deprecated as even "ephemeral" builds have static assets (since 7/6/2024)
@@ -45,10 +49,11 @@ const CDK = {
   ENV: {
     DEMO: "demo", // Mirror of production
     DEVELOPMENT: "development", // Internal most stable development space
-    EPHEMERAL: "ephemeral", // Temporary builds using sandbox resources
+    /** @deprecated */ EPHEMERAL: "ephemeral", // Alias for "build"
     LOCAL: "local",
     /** @deprecated */ MAIN: "main", // Alias for development
     META: "meta", // For non-environment/infrastructure stacks
+    PERSONAL: "personal", // Personal builds using resources provided by sandbox
     PREVIEW: "preview", // External next thing to be released
     PRODUCTION: "production",
     TRAINING: "training", // aka "test"; mirror of production for external audiences
@@ -123,7 +128,10 @@ const CDK = {
     AWS_ACCOUNT: "AWS_ACCOUNT",
   },
   VENDOR: {
+    AUTH0: "auth0",
     DATADOG: "datadog",
+    MONGODB: "mongodb",
+    OPENAI: "openai",
   },
 };
 

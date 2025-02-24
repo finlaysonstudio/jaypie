@@ -50,7 +50,7 @@ declare module "@jaypie/cdk" {
     ACCOUNT: CDKAccount;
     BUILD: {
       CONFIG: CDKBuildConfig;
-      EPHEMERAL: string;
+      PERSONAL: string;
       STATIC: string;
     };
     CREATION: {
@@ -75,10 +75,10 @@ declare module "@jaypie/cdk" {
     ENV: {
       DEMO: string;
       DEVELOPMENT: string;
-      EPHEMERAL: string;
       LOCAL: string;
       MAIN: string;
       META: string;
+      PERSONAL: string;
       PREVIEW: string;
       PRODUCTION: string;
       RELEASE: string;
