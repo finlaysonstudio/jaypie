@@ -158,7 +158,7 @@ describe("JaypieQueuedLambda", () => {
           Variables: {
             SECRET_VALUE_1: Match.anyValue(),
             SECRET_VALUE_2: Match.anyValue(),
-            APP_QUEUE_URL: Match.anyValue(),
+            CDK_ENV_QUEUE_URL: Match.anyValue(),
           },
         },
       });
@@ -219,7 +219,7 @@ describe("JaypieQueuedLambda", () => {
           Variables: {
             SECRET_TEST_SECRET: Match.anyValue(),
             SECRET_TEST_SECRET_2: Match.anyValue(),
-            APP_QUEUE_URL: Match.anyValue(),
+            CDK_ENV_QUEUE_URL: Match.anyValue(),
           },
         },
       });
@@ -271,7 +271,7 @@ describe("JaypieQueuedLambda", () => {
         Environment: {
           Variables: {
             TEST_VAR: "test-value",
-            APP_QUEUE_URL: Match.anyValue(),
+            CDK_ENV_QUEUE_URL: Match.anyValue(),
           },
         },
       });

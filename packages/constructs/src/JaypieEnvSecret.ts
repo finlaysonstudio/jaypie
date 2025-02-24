@@ -25,7 +25,12 @@ import {
 
 // It is a consumer if the environment is ephemeral
 function checkEnvIsConsumer(env = process.env): boolean {
-  return !!env.CDK_ENV_EPHEMERAL || env.PROJECT_ENV === CDK.ENV.EPHEMERAL;
+  return (
+    env.PROJECT_ENV === CDK.ENV.PERSONAL ||
+    !!env.CDK_ENV_PERSONAL ||
+    /** @deprecated */ env.PROJECT_ENV === "ephemeral" ||
+    /** @deprecated */ !!env.CDK_ENV_EPHEMERAL
+  );
 }
 
 function checkEnvIsProvider(env = process.env): boolean {
