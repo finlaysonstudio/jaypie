@@ -130,7 +130,6 @@ export class JaypieEnvSecret extends Construct implements ISecret {
       } else {
         new CfnOutput(this, `CreatedName`, {
           value: this._secret.secretName,
-          exportName,
         });
       }
     }

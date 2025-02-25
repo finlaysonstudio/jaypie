@@ -5,12 +5,8 @@
   "description": "Core type definitions for the Jaypie framework",
   "type": "module",
   "exports": {
-    ".": {
-      "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
-    }
+    ".": "./dist/index.d.ts"
   },
-  "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": [
     "dist"
