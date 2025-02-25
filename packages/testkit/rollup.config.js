@@ -12,10 +12,10 @@ export default [
       sourcemap: true,
     },
     plugins: [
+      json(),
       typescript({
         exclude: ["**/__tests__/**/*", "**/*.test.ts"],
       }),
-      json(),
     ],
   },
   {
@@ -43,12 +43,12 @@ export default [
       sourcemap: true,
     },
     plugins: [
-      typescript({
-        exclude: ["**/__tests__/**/*", "**/*.test.ts"],
-      }),
-      json(),
       copy({
         targets: [{ src: "src/mockTextract.json", dest: "dist" }],
+      }),
+      json(),
+      typescript({
+        exclude: ["**/__tests__/**/*", "**/*.test.ts"],
       }),
     ],
   },
