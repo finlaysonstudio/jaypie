@@ -11,7 +11,12 @@ export default [
       format: "es",
       sourcemap: true,
     },
-    plugins: [typescript(), json()],
+    plugins: [
+      json(),
+      typescript({
+        exclude: ["**/__tests__/**/*", "**/*.test.ts"],
+      }),
+    ],
   },
   {
     external: [
@@ -23,8 +28,12 @@ export default [
       "@jaypie/llm",
       "@jaypie/mongoose",
       "@jaypie/textract",
+      "amazon-textract-response-parser",
+      "fs/promises",
       "jest-json-schema",
       "lodash.isequal",
+      "path",
+      "url",
       "vitest",
     ],
     input: "src/jaypie.mock.ts",
@@ -34,10 +43,12 @@ export default [
       sourcemap: true,
     },
     plugins: [
-      typescript(),
-      json(),
       copy({
         targets: [{ src: "src/mockTextract.json", dest: "dist" }],
+      }),
+      json(),
+      typescript({
+        exclude: ["**/__tests__/**/*", "**/*.test.ts"],
       }),
     ],
   },

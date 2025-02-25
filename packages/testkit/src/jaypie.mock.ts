@@ -83,7 +83,10 @@ let mockTextractContents: string;
 
 // Spy on log:
 beforeAll(async () => {
-  const textract = await import("@jaypie/textract");
+  const textract =
+    await vi.importActual<typeof import("@jaypie/textract")>(
+      "@jaypie/textract",
+    );
   textractJsonToMarkdownOriginal.mockImplementation(
     textract.textractJsonToMarkdown,
   );
