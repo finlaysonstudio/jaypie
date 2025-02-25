@@ -25,5 +25,8 @@
   },
   "publishConfig": {
     "access": "public"
+  },
+  "devDependencies": {
+    "@jaypie/types": "^0.1.3"
   }
 }
