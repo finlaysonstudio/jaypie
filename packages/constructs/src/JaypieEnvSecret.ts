@@ -48,7 +48,11 @@ function exportEnvName(name: string, env = process.env): string {
     // Clean the entire name to only allow alphanumeric, colons, and hyphens
     return cleanName(rawName);
   } else {
-    rawName = `env-${env.PROJECT_ENV}-${env.PROJECT_KEY}-${name}`;
+    if (checkEnvIsConsumer(env)) {
+      rawName = `env-${CDK.ENV.SANDBOX}-${env.PROJECT_KEY}-${name}`;
+    } else {
+      rawName = `env-${env.PROJECT_ENV}-${env.PROJECT_KEY}-${name}`;
+    }
   }
   return cleanName(rawName);
 }
