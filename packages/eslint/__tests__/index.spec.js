@@ -26,16 +26,16 @@ describe("Index", () => {
 
     it("Contains Required Configs", () => {
       // Find configs by unique properties
-      const hasJsConfig = index.some(
-        (config) => config === js.configs.recommended,
-      );
       const hasVitestConfig = index.some(
         (config) =>
           config.files?.includes("**/*.spec.js") && config.plugins?.vitest,
       );
-
-      expect(hasJsConfig).toBe(true);
       expect(hasVitestConfig).toBe(true);
+
+      const hasRecommendedConfig = index.some(
+        (config) => config.name === "jaypie:recommended",
+      );
+      expect(hasRecommendedConfig).toBe(true);
     });
   });
 });

@@ -2,7 +2,6 @@ import js from "@eslint/js";
 import vitest from "@vitest/eslint-plugin";
 import globals from "globals";
 import tsPlugin from "@typescript-eslint/eslint-plugin";
-// eslint-disable-next-line import-x/default
 import tsParser from "@typescript-eslint/parser";
 import eslintPluginImportX from "eslint-plugin-import-x";
 import prettierPlugin from "eslint-plugin-prettier";
@@ -14,10 +13,10 @@ export default [
   // Configs and Plugins
   //
   {
-    name: "jaypie:recommended",
     ...js.configs.recommended,
     ...eslintPluginImportX.flatConfigs.recommended,
     ...eslintPluginImportX.flatConfigs.typescript,
+    name: "jaypie:recommended",
   },
 
   //
