@@ -13,19 +13,24 @@ export default [
   //
   // Configs and Plugins
   //
-  js.configs.recommended, // Recommended config applied to all files
-  eslintPluginImportX.flatConfigs.recommended,
-  eslintPluginImportX.flatConfigs.typescript,
+  {
+    name: "jaypie:recommended",
+    ...js.configs.recommended,
+    ...eslintPluginImportX.flatConfigs.recommended,
+    ...eslintPluginImportX.flatConfigs.typescript,
+  },
 
   //
   //
   // Jaypie General
   //
   {
+    name: "jaypie:ignore-build",
     // Always ignore build output folders
     ignores: ["**/cdk.out/**", "cdk.out/", "**/dist/**", "dist/"],
   },
   {
+    name: "jaypie:language-options",
     languageOptions: {
       ecmaVersion: 2024,
       globals: globals.node,
@@ -33,6 +38,7 @@ export default [
     },
   },
   {
+    name: "jaypie:rules",
     rules: {
       "no-console": "warn",
       "no-fallthrough": "error",
@@ -64,6 +70,7 @@ export default [
   // CommonJS
   //
   {
+    name: "jaypie:commonjs",
     files: ["**/*.cjs"],
     languageOptions: {
       ecmaVersion: "latest",
@@ -93,6 +100,7 @@ export default [
   // Nuxt
   //
   {
+    name: "jaypie:ignore-nuxt",
     ignores: [
       // Ignore nuxt packages
       "packages/nuxt",
@@ -109,6 +117,7 @@ export default [
   // Prettier
   //
   {
+    name: "jaypie:prettier",
     plugins: {
       prettier: prettierPlugin,
     },
@@ -122,6 +131,7 @@ export default [
   // TypeScript
   //
   {
+    name: "jaypie:typescript",
     files: ["**/*.ts", "**/*.tsx"],
     languageOptions: {
       parser: tsParser,
@@ -141,6 +151,7 @@ export default [
   // Tests (JavaScript and TypeScript)
   //
   {
+    name: "jaypie:tests",
     files: [
       "**/__tests__/**",
       "**/*.spec.js",
@@ -174,6 +185,7 @@ export default [
   // Vue
   //
   {
+    name: "jaypie:vue",
     files: ["**/*.vue"],
     plugins: {
       "prettier-vue": pluginPrettierVue,

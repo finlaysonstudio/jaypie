@@ -12,6 +12,10 @@
     "./typescript": {
       "types": "./index.d.ts",
       "default": "./typescript.js"
+    },
+    "./nuxt": {
+      "types": "./index.d.ts",
+      "default": "./nuxt.js"
     }
   },
   "main": "index.js",
