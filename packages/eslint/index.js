@@ -14,9 +14,15 @@ export default [
   //
   {
     ...js.configs.recommended,
+    name: "jaypie:jsRecommended",
+  },
+  {
     ...eslintPluginImportX.flatConfigs.recommended,
+    name: "jaypie:importxRecommended",
+  },
+  {
     ...eslintPluginImportX.flatConfigs.typescript,
-    name: "jaypie:recommended",
+    name: "jaypie:typescriptRecommended",
   },
 
   //
