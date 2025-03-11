@@ -37,6 +37,7 @@ export default [
       format: "cjs",
       sourcemap: true,
       exports: "named",
+      entryFileNames: "[name].cjs",
     },
     plugins: [
       typescript({
