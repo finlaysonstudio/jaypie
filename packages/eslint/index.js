@@ -80,6 +80,11 @@ export default [
     languageOptions: {
       ecmaVersion: "latest",
       globals: {
+        afterEach: true,
+        beforeEach: true,
+        describe: true,
+        expect: true,
+        it: true,
         jest: true,
       },
       sourceType: "script",
