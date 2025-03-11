@@ -33,7 +33,7 @@ describe("Index", () => {
       expect(hasVitestConfig).toBe(true);
 
       const hasRecommendedConfig = index.some(
-        (config) => config.name === "jaypie:recommended",
+        (config) => config.name === "jaypie:jsRecommended",
       );
       expect(hasRecommendedConfig).toBe(true);
     });
