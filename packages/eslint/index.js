@@ -79,6 +79,9 @@ export default [
     files: ["**/*.cjs"],
     languageOptions: {
       ecmaVersion: "latest",
+      globals: {
+        jest: true,
+      },
       sourceType: "script",
     },
     rules: {
@@ -166,16 +169,6 @@ export default [
     ],
     plugins: {
       vitest,
-    },
-    languageOptions: {
-      globals: {
-        describe: true,
-        it: true,
-        expect: true,
-        beforeEach: true,
-        afterEach: true,
-        vi: true,
-      },
     },
     rules: {
       ...vitest.configs.recommended.rules,
