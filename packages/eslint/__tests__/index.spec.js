@@ -1,5 +1,4 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import js from "@eslint/js";
 
 // Subject
 import index from "../index.js";

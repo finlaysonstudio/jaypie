@@ -50,18 +50,6 @@ describe("JaypieHostedZone", () => {
     });
   });
 
-  // Security
-  describe("Security", () => {
-    beforeEach(() => {
-      app = new App();
-      stack = new Stack(app, "TestStack");
-      const zone = new JaypieHostedZone(stack, "TestZone", {
-        zoneName: "example.com",
-      });
-      template = Template.fromStack(stack);
-    });
-  });
-
   // Happy Paths
   describe("Happy Paths", () => {
     beforeEach(() => {
