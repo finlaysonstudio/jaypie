@@ -1,6 +1,6 @@
 {
   "name": "@jaypie/eslint",
-  "version": "1.1.19",
+  "version": "1.1.20",
   "license": "MIT",
   "author": "Finlayson Studio",
   "type": "module",
@@ -9,9 +9,9 @@
       "types": "./index.d.ts",
       "default": "./index.js"
     },
-    "./typescript": {
+    "./commonjs": {
       "types": "./index.d.ts",
-      "default": "./typescript.js"
+      "default": "./commonjs.js"
     },
     "./nuxt": {
       "types": "./index.d.ts",
