@@ -247,17 +247,18 @@ Jaypie CDK patterns with common conventions
 npm install --save-dev @jaypie/constructs
 ```
 
-#### Available Constructs
-
 ```javascript
 import { 
   JaypieEnvSecret,
   JaypieHostedZone, 
+  JaypieMongoDbSecret,
+  JaypieOpenAiSecret,
   JaypieQueuedLambda,
+  JaypieTraceSigningKeySecret,
 } from "@jaypie/constructs";
 ```
 
-##### `JaypieEnvSecret`
+#### `JaypieEnvSecret`
 
 Manages build-environment secrets, allowing consumer environments (personal environments) to import from provider environments (sandbox).
 
@@ -285,7 +286,17 @@ const mongoConnectionString = new JaypieEnvSecret(
 | `vendorTag` | `string` | No | Vendor tag for resource management |
 | `value` | `string` | No | Direct secret value if not using envKey |
 
-##### `JaypieHostedZone`
+##### Convenience Secrets
+
+```typescript
+import { JaypieMongoDbSecret, JaypieOpenAiSecret, JaypieTraceSigningKeySecret } from "@jaypie/constructs";
+
+const mongoConnectionString = new JaypieMongoDbSecret(this);
+const openAiKey = new JaypieOpenAiSecret(this);
+const traceSigningKey = new JaypieTraceSigningKeySecret(this);
+```
+
+#### `JaypieHostedZone`
 
 Route53 hosted zone with query logging and optional log forwarding.
 
@@ -305,7 +316,7 @@ const zone = new JaypieHostedZone(this, 'Zone', {
 | `project` | `string` | No | Project tag value |
 | `destination` | `LambdaDestination` | No | Optional log destination for query logs |
 
-##### `JaypieQueuedLambda`
+#### `JaypieQueuedLambda`
 
 Creates a Lambda function with an attached SQS queue for message processing. Includes built-in support for environment variables, secrets, and AWS Parameter Store.
 
@@ -316,8 +327,8 @@ const worker = new JaypieQueuedLambda(this, 'Worker', {
   environment: {
     NODE_ENV: 'production'
   },
-  secrets: [mongoConnectionString],
-  batchSize: 10,          // Process 10 messages at a time
+  secrets: [mongoConnectionString, openAiKey],
+  batchSize: 10, // Process 10 messages at a time
 });
 ```
 
