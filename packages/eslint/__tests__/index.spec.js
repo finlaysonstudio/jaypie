@@ -1,5 +1,4 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import js from "@eslint/js";
 
 // Subject
 import index from "../index.js";
@@ -33,7 +32,7 @@ describe("Index", () => {
       expect(hasVitestConfig).toBe(true);
 
       const hasRecommendedConfig = index.some(
-        (config) => config.name === "jaypie:recommended",
+        (config) => config.name === "jaypie:jsRecommended",
       );
       expect(hasRecommendedConfig).toBe(true);
     });

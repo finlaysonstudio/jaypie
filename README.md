@@ -60,8 +60,7 @@ These packages are included in `jaypie`. They may be installed separately in the
 | ------- | ------- | ----------- |
 | `@jaypie/aws` |  `getEnvSecret`, `getMessages`, `getSecret`, `getSingletonMessage`, `getTextractJob`, `sendBatchMessages`, `sendMessage`, `sendTextractJob` | AWS helpers |
 | `@jaypie/datadog` | `submitMetric`, `submitMetricSet` | Datadog helpers |
-| `@jaypie/express` | 
-`badRequestRoute`, `cors`, `echoRoute`, `expressHandler`, `expressHttpCodeHandler`, `forbiddenRoute`, `goneRoute`, `methodNotAllowedRoute`, `noContentRoute`, `notFoundRoute`, `notImplementedRoute`, | Express entry point |
+| `@jaypie/express` | `badRequestRoute`, `cors`, `echoRoute`, `expressHandler`, `expressHttpCodeHandler`, `forbiddenRoute`, `goneRoute`, `methodNotAllowedRoute`, `noContentRoute`, `notFoundRoute`, `notImplementedRoute`, | Express entry point |
 | `@jaypie/lambda` | `lambdaHandler` | Lambda entry point |
 | `@jaypie/llm` | `Llm` | LLM helpers |
 | `@jaypie/mongoose` | `connect`, `connectFromSecretEnv`, `disconnect`, `mongoose` | MongoDB management |
@@ -239,6 +238,119 @@ const jobId = await sendTextractJob({
 | `featureTypes` | `array` | No | Array of Textract feature types; defaults to `["FORMS", "LAYOUT", "SIGNATURES", "TABLES"]` |
 | `snsRoleArn` | `string` | No | SNS IAM role ARN for notifications |
 | `snsTopicArn` | `string` | No | SNS topic ARN for notifications |
+
+### CDK Constructs
+
+Jaypie CDK patterns with common conventions
+
+```bash
+npm install --save-dev @jaypie/constructs
+```
+
+```javascript
+import { 
+  JaypieEnvSecret,
+  JaypieHostedZone, 
+  JaypieMongoDbSecret,
+  JaypieOpenAiSecret,
+  JaypieQueuedLambda,
+  JaypieTraceSigningKeySecret,
+} from "@jaypie/constructs";
+```
+
+#### `JaypieEnvSecret`
+
+Manages build-environment secrets, allowing consumer environments (personal environments) to import from provider environments (sandbox).
+
+Most Jaypie projects will not need to specify `consumer` or `provider` properties, as the construct will automatically handle the correct behavior based on the environment.
+
+```typescript
+const mongoConnectionString = new JaypieEnvSecret(
+  this,
+  "MongoConnectionString",
+  {
+    envKey: "MONGODB_URI",
+    roleTag: CDK.ROLE.STORAGE,
+    vendorTag: CDK.VENDOR.MONGODB,
+  },
+);
+```
+
+| Property | Type | Required | Description |
+| -------- | ---- | -------- | ----------- |
+| `consumer` | `boolean` | No | If true, imports secret from provider environment |
+| `envKey` | `string` | No | Environment variable to read secret value from |
+| `export` | `string` | No | Custom export name for the secret |
+| `provider` | `boolean` | No | If true, makes secret available to other environments |
+| `roleTag` | `string` | No | Role tag for resource management |
+| `vendorTag` | `string` | No | Vendor tag for resource management |
+| `value` | `string` | No | Direct secret value if not using envKey |
+
+##### Convenience Secrets
+
+```typescript
+import { JaypieMongoDbSecret, JaypieOpenAiSecret, JaypieTraceSigningKeySecret } from "@jaypie/constructs";
+
+const mongoConnectionString = new JaypieMongoDbSecret(this);
+const openAiKey = new JaypieOpenAiSecret(this);
+const traceSigningKey = new JaypieTraceSigningKeySecret(this);
+```
+
+#### `JaypieHostedZone`
+
+Route53 hosted zone with query logging and optional log forwarding.
+
+```typescript
+const zone = new JaypieHostedZone(this, 'Zone', {
+  zoneName: 'example.com',
+  service: 'api',           // Service tag value
+  project: 'mayhem',     // Project tag value
+  destination: logHandler   // Optional Lambda destination for logs
+});
+```
+
+| Property | Type | Required | Description |
+| -------- | ---- | -------- | ----------- |
+| `zoneName` | `string` | Yes | Domain name for the hosted zone |
+| `service` | `string` | No | Service tag value, defaults to CDK.SERVICE.INFRASTRUCTURE |
+| `project` | `string` | No | Project tag value |
+| `destination` | `LambdaDestination` | No | Optional log destination for query logs |
+
+#### `JaypieQueuedLambda`
+
+Creates a Lambda function with an attached SQS queue for message processing. Includes built-in support for environment variables, secrets, and AWS Parameter Store.
+
+```typescript
+const worker = new JaypieQueuedLambda(this, 'Worker', {
+  code: lambda.Code.fromAsset('src'),
+  handler: 'index.handler',
+  environment: {
+    NODE_ENV: 'production'
+  },
+  secrets: [mongoConnectionString, openAiKey],
+  batchSize: 10, // Process 10 messages at a time
+});
+```
+
+| Property | Type | Required | Description |
+| -------- | ---- | -------- | ----------- |
+| `batchSize` | `number` | No | Number of messages to process per batch, default 1 |
+| `code` | `lambda.Code \| string` | Yes | Lambda function code or path to code |
+| `environment` | `object` | No | Environment variables for the Lambda |
+| `envSecrets` | `object` | No | Secrets to inject as environment variables |
+| `fifo` | `boolean` | No | Use FIFO queue, default true |
+| `handler` | `string` | No | Lambda handler function, default 'index.handler' |
+| `layers` | `lambda.ILayerVersion[]` | No | Lambda layers to attach |
+| `logRetention` | `number` | No | CloudWatch log retention in days |
+| `memorySize` | `number` | No | Lambda memory size in MB |
+| `paramsAndSecrets` | `lambda.ParamsAndSecretsLayerVersion` | No | AWS Parameter Store layer |
+| `reservedConcurrentExecutions` | `number` | No | Lambda concurrency limit |
+| `roleTag` | `string` | No | Role tag for resource management |
+| `runtime` | `lambda.Runtime` | No | Lambda runtime, default NODEJS_20_X |
+| `secrets` | `JaypieEnvSecret[]` | No | JaypieEnvSecrets to inject |
+| `timeout` | `Duration \| number` | No | Lambda timeout duration or number of seconds, defaults to CDK.DURATION.LAMBDA_WORKER (120 seconds) |
+| `vendorTag` | `string` | No | Vendor tag for resource management |
+| `visibilityTimeout` | `Duration \| number` | No | SQS visibility timeout |
 
 ### Constants
 

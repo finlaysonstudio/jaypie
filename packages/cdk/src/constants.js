@@ -35,8 +35,8 @@ const CDK = {
     SITE: "datadoghq.com",
     LAYER: {
       // https://docs.datadoghq.com/serverless/aws_lambda/installation/nodejs/?tab=awscdk
-      NODE: 112, // 112 on 6/28/2024
-      EXTENSION: 58, // 58 on 6/28/2024
+      NODE: 121, // 121 on 3/10/2025
+      EXTENSION: 73, // 73 on 3/10/2025
     },
   },
   DEFAULT: {
@@ -45,6 +45,7 @@ const CDK = {
   DURATION: {
     EXPRESS_API: 30,
     LAMBDA_WORKER: 120,
+    LAMBDA_MAXIMUM: 900,
   },
   ENV: {
     DEMO: "demo", // Mirror of production
@@ -130,6 +131,7 @@ const CDK = {
   VENDOR: {
     AUTH0: "auth0",
     DATADOG: "datadog",
+    KNOWTRACE: "knowtrace",
     MONGODB: "mongodb",
     OPENAI: "openai",
   },

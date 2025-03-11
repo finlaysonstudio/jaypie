@@ -128,7 +128,11 @@ declare module "@jaypie/cdk" {
     TAG: CDKTAG;
     TARGET_TYPE: CDKTargetType;
     VENDOR: {
+      AUTH0: string;
       DATADOG: string;
+      KNOWTRACE: string;
+      MONGODB: string;
+      OPENAI: string;
     };
   }
 
