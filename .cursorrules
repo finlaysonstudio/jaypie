@@ -58,5 +58,8 @@ Whenever possible, especially when refactoring, write the test first so the user
 Use double quotes, trailing commas, and semicolons.
 Whenever a hard-coded value like `site: "datadoghq.com"` is used, define a constant at the top of the file, `const DATADOG_SITE = "datadoghq.com"`, and reference that throughout.
 Alphabetize as much as possible.
+### Function Definitions
+Prefer functions with a single object parameter (e.g., `function myFunction({ param1, param2 })`).
+If a function takes only one required parameter, make it the first parameter and the remaining parameters object as the second parameter (e.g., `function myFunction(param1, { param2 })`).
 ### Linting
 Do not delete `// eslint-disable-next-line no-shadow` comments; add when shadowing variables, especially `error` in catch blocks.
