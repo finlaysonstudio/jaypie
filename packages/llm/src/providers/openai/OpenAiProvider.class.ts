@@ -1,26 +1,23 @@
-import { getEnvSecret } from "@jaypie/aws";
-import {
-  ConfigurationError,
-  JAYPIE,
-  log as defaultLog,
-  placeholders,
-} from "@jaypie/core";
-import { JsonObject, NaturalSchema } from "@jaypie/types";
+import { JsonObject } from "@jaypie/types";
 import { OpenAI } from "openai";
-import { zodResponseFormat } from "openai/helpers/zod";
-import { z } from "zod";
 import { PROVIDER } from "../../constants.js";
 import {
   LlmProvider,
   LlmMessageOptions,
 } from "../../types/LlmProvider.interface.js";
-import naturalZodSchema from "../../util/naturalZodSchema.js";
+import {
+  createStructuredCompletion,
+  createTextCompletion,
+  getLogger,
+  initializeClient,
+  prepareMessages,
+} from "./utils.js";
 
 export class OpenAiProvider implements LlmProvider {
   private model: string;
   private _client?: OpenAI;
   private apiKey?: string;
-  private log: typeof defaultLog;
+  private log = getLogger();
 
   constructor(
     model: string = PROVIDER.OPENAI.MODEL.DEFAULT,
@@ -28,7 +25,6 @@ export class OpenAiProvider implements LlmProvider {
   ) {
     this.model = model;
     this.apiKey = apiKey;
-    this.log = defaultLog.lib({ lib: JAYPIE.LIB.LLM });
   }
 
   private async getClient(): Promise<OpenAI> {
@@ -36,15 +32,7 @@ export class OpenAiProvider implements LlmProvider {
       return this._client;
     }
 
-    const apiKey = this.apiKey || (await getEnvSecret("OPENAI_API_KEY"));
-    if (!apiKey) {
-      throw new ConfigurationError(
-        "The application could not resolve the requested keys",
-      );
-    }
-
-    this._client = new OpenAI({ apiKey });
-    this.log.trace("Initialized OpenAI client");
+    this._client = await initializeClient({ apiKey: this.apiKey });
     return this._client;
   }
 
@@ -53,56 +41,20 @@ export class OpenAiProvider implements LlmProvider {
     options?: LlmMessageOptions,
   ): Promise<string | JsonObject> {
     const client = await this.getClient();
-    const messages = [];
-
-    if (options?.system) {
-      const content =
-        options?.placeholders?.system === false
-          ? options.system
-          : placeholders(options.system, options?.data);
-      const systemMessage = {
-        role: "developer" as const,
-        content,
-      };
-      messages.push(systemMessage);
-      this.log.trace(`System message: ${content?.length} characters`);
-    }
-    const formattedMessage =
-      options?.placeholders?.message === false
-        ? message
-        : placeholders(message, options?.data);
-    const userMessage = {
-      role: "user" as const,
-      content: formattedMessage,
-    };
-    messages.push(userMessage);
-    this.log.trace(`User message: ${formattedMessage?.length} characters`);
+    const messages = prepareMessages(message, options || {});
+    const modelToUse = options?.model || this.model;
 
     if (options?.response) {
-      this.log.trace("Using structured output");
-      const zodSchema =
-        options.response instanceof z.ZodType
-          ? options.response
-          : naturalZodSchema(options.response as NaturalSchema);
-
-      const completion = await client.beta.chat.completions.parse({
+      return createStructuredCompletion(client, {
         messages,
-        model: options?.model || this.model,
-        response_format: zodResponseFormat(zodSchema, "response"),
+        responseSchema: options.response,
+        model: modelToUse,
       });
-      this.log.var({ assistantReply: completion.choices[0].message.parsed });
-      return completion.choices[0].message.parsed;
     }
 
-    this.log.trace("Using text output (unstructured)");
-    const completion = await client.chat.completions.create({
+    return createTextCompletion(client, {
       messages,
-      model: options?.model || this.model,
+      model: modelToUse,
     });
-    this.log.trace(
-      `Assistant reply: ${completion.choices[0]?.message?.content?.length} characters`,
-    );
-
-    return completion.choices[0]?.message?.content || "";
   }
 }
