@@ -1,4 +1,5 @@
 import "vitest";
+import "jest-extended";
 
 interface CustomMatchers<R = unknown> {
   toBeFunction(): R;
