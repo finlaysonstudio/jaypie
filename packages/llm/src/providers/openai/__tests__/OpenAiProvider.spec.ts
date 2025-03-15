@@ -213,7 +213,7 @@ describe("OpenAiProvider", () => {
         });
       });
 
-      it("uses provided model when specified", async () => {
+      it("applies placeholders to system message", async () => {
         const mockResponse = {
           choices: [{ message: { content: "test response" } }],
         };
@@ -232,17 +232,21 @@ describe("OpenAiProvider", () => {
 
         const provider = new OpenAiProvider();
         const response = await provider.send("test message", {
-          model: "gpt-4",
+          system: "You are a {{role}}",
+          data: { role: "test assistant" },
         });
 
         expect(response).toBe("test response");
         expect(mockCreate).toHaveBeenCalledWith({
-          messages: [{ role: "user", content: "test message" }],
-          model: "gpt-4",
+          messages: [
+            { role: "developer", content: "You are a test assistant" },
+            { role: "user", content: "test message" },
+          ],
+          model: expect.any(String),
         });
       });
 
-      it("replaces data placeholders in message", async () => {
+      it("applies placeholders to user message", async () => {
         const mockResponse = {
           choices: [{ message: { content: "test response" } }],
         };
@@ -260,19 +264,13 @@ describe("OpenAiProvider", () => {
         );
 
         const provider = new OpenAiProvider();
-        const response = await provider.send(
-          "Hello {{ name }}, your age is {{ age }}",
-          {
-            data: {
-              name: "John",
-              age: "30",
-            },
-          },
-        );
+        const response = await provider.send("Hello, {{name}}", {
+          data: { name: "World" },
+        });
 
         expect(response).toBe("test response");
         expect(mockCreate).toHaveBeenCalledWith({
-          messages: [{ role: "user", content: "Hello John, your age is 30" }],
+          messages: [{ role: "user", content: "Hello, World" }],
           model: expect.any(String),
         });
       });
@@ -295,27 +293,14 @@ describe("OpenAiProvider", () => {
         );
 
         const provider = new OpenAiProvider();
-        const response = await provider.send(
-          "Hello {{ name }}, your age is {{ age }}",
-          {
-            data: {
-              name: "John",
-              age: "30",
-            },
-            placeholders: {
-              message: false,
-            },
-          },
-        );
+        const response = await provider.send("Hello, {{name}}", {
+          data: { name: "World" },
+          placeholders: { message: false },
+        });
 
         expect(response).toBe("test response");
         expect(mockCreate).toHaveBeenCalledWith({
-          messages: [
-            {
-              role: "user",
-              content: "Hello {{ name }}, your age is {{ age }}",
-            },
-          ],
+          messages: [{ role: "user", content: "Hello, {{name}}" }],
           model: expect.any(String),
         });
       });
@@ -339,19 +324,15 @@ describe("OpenAiProvider", () => {
 
         const provider = new OpenAiProvider();
         const response = await provider.send("test message", {
-          system: "You are {{ role }}",
-          data: {
-            role: "test assistant",
-          },
-          placeholders: {
-            system: false,
-          },
+          system: "You are a {{role}}",
+          data: { role: "test assistant" },
+          placeholders: { system: false },
         });
 
         expect(response).toBe("test response");
         expect(mockCreate).toHaveBeenCalledWith({
           messages: [
-            { role: "developer", content: "You are {{ role }}" },
+            { role: "developer", content: "You are a {{role}}" },
             { role: "user", content: "test message" },
           ],
           model: expect.any(String),

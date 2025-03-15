@@ -4,7 +4,7 @@ import {
   LlmProvider,
   LlmMessageOptions,
 } from "./types/LlmProvider.interface.js";
-import { OpenAiProvider } from "./providers/OpenAiProvider.class.js";
+import { OpenAiProvider } from "./providers/openai/index.js";
 import { AnthropicProvider } from "./providers/AnthropicProvider.class.js";
 
 class Llm implements LlmProvider {
