@@ -1,4 +1,4 @@
-import { JsonObject, NaturalSchema } from "@jaypie/types";
+import { JsonArray, JsonObject, NaturalSchema } from "@jaypie/types";
 import { z } from "zod";
 
 export interface LlmMessageOptions {
@@ -12,7 +12,13 @@ export interface LlmMessageOptions {
   system?: string;
 }
 
+export interface LlmOperateOptions {
+  instructions?: string;
+  model?: string;
+}
+
 export interface LlmProvider {
+  operate?(message: string, options?: LlmOperateOptions): Promise<JsonArray>;
   send(
     message: string,
     options?: LlmMessageOptions,

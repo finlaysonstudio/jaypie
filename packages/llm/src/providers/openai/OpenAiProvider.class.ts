@@ -1,9 +1,10 @@
-import { JsonObject } from "@jaypie/types";
+import { JsonArray, JsonObject } from "@jaypie/types";
 import { OpenAI } from "openai";
 import { PROVIDER } from "../../constants.js";
 import {
-  LlmProvider,
   LlmMessageOptions,
+  LlmOperateOptions,
+  LlmProvider,
 } from "../../types/LlmProvider.interface.js";
 import {
   createStructuredCompletion,
@@ -56,5 +57,16 @@ export class OpenAiProvider implements LlmProvider {
       messages,
       model: modelToUse,
     });
+  }
+
+  async operate(
+    message: string,
+    options?: LlmOperateOptions,
+  ): Promise<JsonArray> {
+    const client = await this.getClient();
+    const messages = prepareMessages(message, options || {});
+    const modelToUse = options?.model || this.model;
+
+    return [{ messages, modelToUse }];
   }
 }
