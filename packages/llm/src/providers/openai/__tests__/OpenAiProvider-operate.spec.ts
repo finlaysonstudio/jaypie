@@ -2,6 +2,10 @@ import { getEnvSecret } from "@jaypie/aws";
 import { OpenAI } from "openai";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { OpenAiProvider } from "../OpenAiProvider.class";
+import {
+  MAX_RETRIES_ABSOLUTE_LIMIT,
+  MAX_RETRIES_DEFAULT_LIMIT,
+} from "../operate";
 import { PROVIDER } from "../../../constants.js";
 
 vi.mock("openai");
@@ -58,6 +62,42 @@ describe("OpenAiProvider.operate", () => {
       expect(mockCreate).toHaveBeenCalledWith({
         model: "mock-model",
         input: testInput,
+      });
+    });
+  });
+
+  describe("Features", () => {
+    describe("API Retry", () => {
+      it.todo(
+        "Retries retryable errors up to the MAX_RETRIES_DEFAULT_LIMIT limit",
+      );
+      describe("Error Handling", () => {
+        it.todo("Throws BadGatewayError on non-retryable errors");
+        it.todo("Throws BadGatewayError when retryable errors exceed limit");
+      });
+      describe("Retryable Errors", () => {
+        it.todo("Retries 500 errors");
+        it.todo("Retries 502 errors");
+        it.todo("Retries 503 errors");
+        it.todo("Retries 504 errors");
+        it.todo("Retries timeout errors");
+        it.todo("Retries non-API errors");
+      });
+      describe("Not Retryable Errors", () => {
+        it.todo("Does not retry 400 errors");
+        it.todo("Does not retry 403 errors");
+        it.todo("Does not retry 404 errors");
+        it.todo("Does not retry 429 errors");
+      });
+      describe("API Retry Observability", () => {
+        it.todo("Logs debug on retry");
+        it.todo("Logs warn on non-API errors");
+        it.todo("Logs error on non-retryable errors");
+        it.todo("Logs warn on retryable errors");
+      });
+      describe("API Retry Context", () => {
+        it.todo("Can configure the retry limit");
+        it.todo("Retry limit has an absolute cap");
       });
     });
   });
