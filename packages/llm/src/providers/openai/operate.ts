@@ -1,7 +1,22 @@
 import { sleep } from "@jaypie/core";
 import { BadGatewayError } from "@jaypie/errors";
 import { JsonArray } from "@jaypie/types";
-import { APIError, OpenAI } from "openai";
+import {
+  APIConnectionError,
+  APIConnectionTimeoutError,
+  APIError,
+  APIUserAbortError,
+  AuthenticationError,
+  BadRequestError,
+  ConflictError,
+  InternalServerError,
+  NotFoundError,
+  OpenAI,
+  OpenAIError,
+  PermissionDeniedError,
+  RateLimitError,
+  UnprocessableEntityError,
+} from "openai";
 import { LlmOperateOptions } from "../../types/LlmProvider.interface.js";
 import { getLogger } from "./utils.js";
 import { PROVIDER } from "../../constants.js";
@@ -15,6 +30,23 @@ export const MAX_RETRIES_DEFAULT_LIMIT = 6;
 const INITIAL_RETRY_DELAY_MS = 1000; // 1 second
 const MAX_RETRY_DELAY_MS = 32000; // 32 seconds
 const RETRY_BACKOFF_FACTOR = 2; // Exponential backoff multiplier
+
+const RETRYABLE_ERRORS = [
+  APIConnectionError,
+  APIConnectionTimeoutError,
+  InternalServerError,
+];
+
+const NOT_RETRYABLE_ERRORS = [
+  APIUserAbortError,
+  AuthenticationError,
+  BadRequestError,
+  ConflictError,
+  NotFoundError,
+  PermissionDeniedError,
+  RateLimitError,
+  UnprocessableEntityError,
+];
 
 //
 //
@@ -71,28 +103,32 @@ export async function operate(
         throw new BadGatewayError();
       }
 
-      // Type guard for APIError
-      const isApiError = error instanceof APIError;
-
-      // Check if the error is retryable (500 server errors)
-      let isRetryable = false;
-
-      if (isApiError) {
-        const apiError = error as APIError;
-        const status = apiError.status || 500;
-        isRetryable =
-          status === 500 ||
-          (status >= 502 && status <= 504) ||
-          Boolean(apiError.message?.includes("timeout"));
-      } else {
-        log.warn("Non-API error occurred; allowing retry");
-        log.var({ error });
+      // Check if the error is not retryable
+      let isNotRetryable = false;
+      for (const notRetryableError of NOT_RETRYABLE_ERRORS) {
+        if (error instanceof notRetryableError) {
+          isNotRetryable = true;
+          break;
+        }
       }
 
-      if (!isRetryable) {
+      if (isNotRetryable) {
         log.error("OpenAI API call failed with non-retryable error");
         log.var({ error });
         throw new BadGatewayError();
+      }
+
+      // Warn if this error is not in our known retryable errors
+      let isUnknownError = true;
+      for (const retryableError of RETRYABLE_ERRORS) {
+        if (error instanceof retryableError) {
+          isUnknownError = false;
+          break;
+        }
+      }
+      if (isUnknownError) {
+        log.warn("OpenAI API returned unknown error");
+        log.var({ error });
       }
 
       // Log the error and retry

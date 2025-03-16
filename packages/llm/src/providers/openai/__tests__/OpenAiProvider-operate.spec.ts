@@ -1,5 +1,14 @@
 import { getEnvSecret } from "@jaypie/aws";
-import { OpenAI } from "openai";
+import {
+  APIConnectionError,
+  APIConnectionTimeoutError,
+  AuthenticationError,
+  InternalServerError,
+  NotFoundError,
+  OpenAI,
+  PermissionDeniedError,
+  RateLimitError,
+} from "openai";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { OpenAiProvider } from "../OpenAiProvider.class";
 import {
@@ -68,9 +77,60 @@ describe("OpenAiProvider.operate", () => {
 
   describe("Features", () => {
     describe("API Retry", () => {
-      it.todo(
-        "Retries retryable errors up to the MAX_RETRIES_DEFAULT_LIMIT limit",
-      );
+      it("Retries retryable errors up to the MAX_RETRIES_DEFAULT_LIMIT limit", async () => {
+        // Setup
+        const mockCreate = vi.fn();
+        // First MAX_RETRIES_DEFAULT_LIMIT calls will fail with 500 errors
+        for (let i = 0; i < MAX_RETRIES_DEFAULT_LIMIT; i++) {
+          mockCreate.mockRejectedValueOnce(
+            new InternalServerError(
+              500,
+              "Internal Server Error",
+              undefined,
+              {},
+            ),
+          );
+        }
+        // The next call will succeed
+        const mockResponse = {
+          id: "resp_123",
+          content: [{ text: "Success after retries" }],
+        };
+        mockCreate.mockResolvedValueOnce(mockResponse);
+
+        vi.mocked(OpenAI).mockImplementation(
+          () =>
+            ({
+              responses: {
+                create: mockCreate,
+              },
+            }) as any,
+        );
+
+        // Spy on sleep function to avoid waiting in tests
+        const sleepSpy = vi
+          .spyOn(await import("@jaypie/core"), "sleep")
+          .mockResolvedValue(undefined);
+
+        // Execute
+        const provider = new OpenAiProvider();
+        const result = await provider.operate("test input");
+
+        // Verify
+        expect(result).toBeArray();
+        expect(result).toHaveLength(1);
+        expect(result[0]).toEqual(mockResponse);
+
+        // Verify the create function was called the expected number of times
+        // MAX_RETRIES_DEFAULT_LIMIT failures + 1 success = MAX_RETRIES_DEFAULT_LIMIT + 1 total calls
+        expect(mockCreate).toHaveBeenCalledTimes(MAX_RETRIES_DEFAULT_LIMIT + 1);
+
+        // Verify sleep was called for each retry
+        expect(sleepSpy).toHaveBeenCalledTimes(MAX_RETRIES_DEFAULT_LIMIT);
+
+        // Clean up
+        sleepSpy.mockRestore();
+      });
       describe("Error Handling", () => {
         it.todo("Throws BadGatewayError when retryable errors exceed limit");
         describe("Not Retryable Errors", () => {
