@@ -134,28 +134,32 @@ describe("OpenAiProvider.operate", () => {
       describe("Error Handling", () => {
         it.todo("Throws BadGatewayError when retryable errors exceed limit");
         describe("Not Retryable Errors", () => {
-          it.todo("Throws BadGatewayError non-retryable 400 errors");
-          it.todo("Throws BadGatewayError non-retryable 403 errors");
-          it.todo("Throws BadGatewayError non-retryable 404 errors");
-          it.todo("Throws BadGatewayError non-retryable 429 errors");
+          it.todo("Throws BadGatewayError non-retryable APIUserAbortError");
+          it.todo("Throws BadGatewayError non-retryable AuthenticationError");
+          it.todo("Throws BadGatewayError non-retryable BadRequestError");
+          it.todo("Throws BadGatewayError non-retryable ConflictError");
+          it.todo("Throws BadGatewayError non-retryable NotFoundError");
+          it.todo("Throws BadGatewayError non-retryable PermissionDeniedError");
+          it.todo("Throws BadGatewayError non-retryable RateLimitError");
+          it.todo(
+            "Throws BadGatewayError non-retryable UnprocessableEntityError",
+          );
         });
       });
       describe("API Retry Observability", () => {
-        it.todo("Logs debug on retry");
-        it.todo("Logs warn on non-API errors");
+        it.todo("Logs debug on retry success");
+        it.todo("Logs second warn on unknown errors");
         it.todo("Logs error on non-retryable errors");
         it.todo("Logs warn on retryable errors");
       });
       describe("Retryable Errors", () => {
-        it.todo("Retries 500 errors");
-        it.todo("Retries 502 errors");
-        it.todo("Retries 503 errors");
-        it.todo("Retries 504 errors");
-        it.todo("Retries timeout errors");
-        it.todo("Retries non-API errors");
+        it.todo("Retries APIConnectionError");
+        it.todo("Retries APIConnectionTimeoutError");
+        it.todo("Retries InternalServerError");
+        it.todo("Retries unknown errors");
       });
       describe("API Retry Context", () => {
-        it.todo("Can configure the retry limit");
+        it.todo("Can raise the retry limit");
         it.todo("Retry limit has an absolute cap");
       });
     });
