@@ -32,6 +32,7 @@
     "nuxt",
     "oidc",
     "pinia",
+    "retryable",
     "roboto",
     "rollup",
     "sorpresa",
