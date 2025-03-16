@@ -1,7 +1,7 @@
 import { sleep } from "@jaypie/core";
 import { BadGatewayError } from "@jaypie/errors";
 import { JsonArray } from "@jaypie/types";
-import { OpenAI } from "openai";
+import { APIError, OpenAI } from "openai";
 import { LlmOperateOptions } from "../../types/LlmProvider.interface.js";
 import { getLogger } from "./utils.js";
 
@@ -68,7 +68,7 @@ export async function operate(
       }
       allResponses.push(currentResponse);
       break; // Success, exit the retry loop
-    } catch (error) {
+    } catch (error: unknown) {
       // Check if we've reached the maximum number of retries
       if (retryCount >= maxRetries) {
         log.error(`OpenAI API call failed after ${maxRetries} retries`);
@@ -76,11 +76,23 @@ export async function operate(
         throw new BadGatewayError();
       }
 
+      // Type guard for APIError
+      const isApiError = error instanceof APIError;
+
       // Check if the error is retryable (500 server errors)
-      const isRetryable =
-        error.status === 500 ||
-        (error.status >= 502 && error.status <= 504) ||
-        error.message?.includes("timeout");
+      let isRetryable = false;
+
+      if (isApiError) {
+        const apiError = error as APIError;
+        const status = apiError.status || 500;
+        isRetryable =
+          status === 500 ||
+          (status >= 502 && status <= 504) ||
+          Boolean(apiError.message?.includes("timeout"));
+      } else {
+        log.warn("Non-API error occurred; allowing retry");
+        log.var({ error });
+      }
 
       if (!isRetryable) {
         log.error("OpenAI API call failed with non-retryable error");
