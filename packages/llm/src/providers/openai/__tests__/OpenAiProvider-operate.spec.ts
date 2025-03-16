@@ -1,5 +1,4 @@
 import { getEnvSecret } from "@jaypie/aws";
-import { BadGatewayError } from "@jaypie/errors";
 import {
   APIConnectionError,
   APIConnectionTimeoutError,
@@ -16,11 +15,7 @@ import {
 } from "openai";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { OpenAiProvider } from "../OpenAiProvider.class";
-import {
-  MAX_RETRIES_ABSOLUTE_LIMIT,
-  MAX_RETRIES_DEFAULT_LIMIT,
-} from "../operate";
-import { PROVIDER } from "../../../constants.js";
+import { MAX_RETRIES_DEFAULT_LIMIT } from "../operate";
 
 vi.mock("openai");
 
@@ -574,6 +569,7 @@ describe("OpenAiProvider.operate", () => {
           const provider = new OpenAiProvider();
           try {
             await provider.operate("test input");
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
           } catch (error) {
             // Expected to throw
           }
@@ -653,7 +649,7 @@ describe("OpenAiProvider.operate", () => {
           const mockCreate = vi.fn();
           // First call fails with a connection error
           mockCreate.mockRejectedValueOnce(
-            new APIConnectionError("Connection error", undefined, {}),
+            new APIConnectionError({ message: "Connection error" }),
           );
           // Second call succeeds
           const mockResponse = {
@@ -697,7 +693,7 @@ describe("OpenAiProvider.operate", () => {
           const mockCreate = vi.fn();
           // First call fails with a timeout error
           mockCreate.mockRejectedValueOnce(
-            new APIConnectionTimeoutError("Connection timeout", undefined, {}),
+            new APIConnectionTimeoutError({ message: "Connection timeout" }),
           );
           // Second call succeeds
           const mockResponse = {
