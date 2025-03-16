@@ -2,12 +2,16 @@ import { getEnvSecret } from "@jaypie/aws";
 import {
   APIConnectionError,
   APIConnectionTimeoutError,
+  APIUserAbortError,
   AuthenticationError,
+  BadRequestError,
+  ConflictError,
   InternalServerError,
   NotFoundError,
   OpenAI,
   PermissionDeniedError,
   RateLimitError,
+  UnprocessableEntityError,
 } from "openai";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { OpenAiProvider } from "../OpenAiProvider.class";
@@ -132,18 +136,281 @@ describe("OpenAiProvider.operate", () => {
         sleepSpy.mockRestore();
       });
       describe("Error Handling", () => {
-        it.todo("Throws BadGatewayError when retryable errors exceed limit");
-        describe("Not Retryable Errors", () => {
-          it.todo("Throws BadGatewayError non-retryable APIUserAbortError");
-          it.todo("Throws BadGatewayError non-retryable AuthenticationError");
-          it.todo("Throws BadGatewayError non-retryable BadRequestError");
-          it.todo("Throws BadGatewayError non-retryable ConflictError");
-          it.todo("Throws BadGatewayError non-retryable NotFoundError");
-          it.todo("Throws BadGatewayError non-retryable PermissionDeniedError");
-          it.todo("Throws BadGatewayError non-retryable RateLimitError");
-          it.todo(
-            "Throws BadGatewayError non-retryable UnprocessableEntityError",
+        it("Throws BadGatewayError when retryable errors exceed limit", async () => {
+          // Setup
+          const mockCreate = vi.fn();
+          // All calls will fail with 500 errors (exceeding the retry limit)
+          for (let i = 0; i <= MAX_RETRIES_DEFAULT_LIMIT; i++) {
+            mockCreate.mockRejectedValueOnce(
+              new InternalServerError(
+                500,
+                "Internal Server Error",
+                undefined,
+                {},
+              ),
+            );
+          }
+
+          vi.mocked(OpenAI).mockImplementation(
+            () =>
+              ({
+                responses: {
+                  create: mockCreate,
+                },
+              }) as any,
           );
+
+          // Spy on sleep function to avoid waiting in tests
+          const sleepSpy = vi
+            .spyOn(await import("@jaypie/core"), "sleep")
+            .mockResolvedValue(undefined);
+
+          // Execute
+          const provider = new OpenAiProvider();
+
+          // Verify
+          await expect(provider.operate("test input")).rejects.toThrow();
+
+          // Verify the create function was called the expected number of times
+          // Should be called MAX_RETRIES_DEFAULT_LIMIT + 1 times (initial + retries)
+          expect(mockCreate).toHaveBeenCalledTimes(
+            MAX_RETRIES_DEFAULT_LIMIT + 1,
+          );
+
+          // Verify sleep was called for each retry
+          expect(sleepSpy).toHaveBeenCalledTimes(MAX_RETRIES_DEFAULT_LIMIT);
+
+          // Clean up
+          sleepSpy.mockRestore();
+        });
+        describe("Not Retryable Errors", () => {
+          it("Throws BadGatewayError non-retryable APIUserAbortError", async () => {
+            // Setup
+            const mockCreate = vi
+              .fn()
+              .mockRejectedValue(new APIUserAbortError());
+
+            vi.mocked(OpenAI).mockImplementation(
+              () =>
+                ({
+                  responses: {
+                    create: mockCreate,
+                  },
+                }) as any,
+            );
+
+            // Execute
+            const provider = new OpenAiProvider();
+
+            // Verify
+            await expect(provider.operate("test input")).rejects.toThrow();
+
+            // Should only be called once, not retried
+            expect(mockCreate).toHaveBeenCalledTimes(1);
+          });
+          it("Throws BadGatewayError non-retryable AuthenticationError", async () => {
+            // Setup
+            const mockCreate = vi
+              .fn()
+              .mockRejectedValue(
+                new AuthenticationError(
+                  401,
+                  "Authentication error",
+                  undefined,
+                  {},
+                ),
+              );
+
+            vi.mocked(OpenAI).mockImplementation(
+              () =>
+                ({
+                  responses: {
+                    create: mockCreate,
+                  },
+                }) as any,
+            );
+
+            // Execute
+            const provider = new OpenAiProvider();
+
+            // Verify
+            await expect(provider.operate("test input")).rejects.toThrow();
+
+            // Should only be called once, not retried
+            expect(mockCreate).toHaveBeenCalledTimes(1);
+          });
+
+          it("Throws BadGatewayError non-retryable BadRequestError", async () => {
+            // Setup
+            const mockCreate = vi
+              .fn()
+              .mockRejectedValue(
+                new BadRequestError(400, "Bad request error", undefined, {}),
+              );
+
+            vi.mocked(OpenAI).mockImplementation(
+              () =>
+                ({
+                  responses: {
+                    create: mockCreate,
+                  },
+                }) as any,
+            );
+
+            // Execute
+            const provider = new OpenAiProvider();
+
+            // Verify
+            await expect(provider.operate("test input")).rejects.toThrow();
+
+            // Should only be called once, not retried
+            expect(mockCreate).toHaveBeenCalledTimes(1);
+          });
+
+          it("Throws BadGatewayError non-retryable ConflictError", async () => {
+            // Setup
+            const mockCreate = vi
+              .fn()
+              .mockRejectedValue(
+                new ConflictError(409, "Conflict error", undefined, {}),
+              );
+
+            vi.mocked(OpenAI).mockImplementation(
+              () =>
+                ({
+                  responses: {
+                    create: mockCreate,
+                  },
+                }) as any,
+            );
+
+            // Execute
+            const provider = new OpenAiProvider();
+
+            // Verify
+            await expect(provider.operate("test input")).rejects.toThrow();
+
+            // Should only be called once, not retried
+            expect(mockCreate).toHaveBeenCalledTimes(1);
+          });
+
+          it("Throws BadGatewayError non-retryable NotFoundError", async () => {
+            // Setup
+            const mockCreate = vi
+              .fn()
+              .mockRejectedValue(
+                new NotFoundError(404, "Not found error", undefined, {}),
+              );
+
+            vi.mocked(OpenAI).mockImplementation(
+              () =>
+                ({
+                  responses: {
+                    create: mockCreate,
+                  },
+                }) as any,
+            );
+
+            // Execute
+            const provider = new OpenAiProvider();
+
+            // Verify
+            await expect(provider.operate("test input")).rejects.toThrow();
+
+            // Should only be called once, not retried
+            expect(mockCreate).toHaveBeenCalledTimes(1);
+          });
+
+          it("Throws BadGatewayError non-retryable PermissionDeniedError", async () => {
+            // Setup
+            const mockCreate = vi
+              .fn()
+              .mockRejectedValue(
+                new PermissionDeniedError(
+                  403,
+                  "Permission denied error",
+                  undefined,
+                  {},
+                ),
+              );
+
+            vi.mocked(OpenAI).mockImplementation(
+              () =>
+                ({
+                  responses: {
+                    create: mockCreate,
+                  },
+                }) as any,
+            );
+
+            // Execute
+            const provider = new OpenAiProvider();
+
+            // Verify
+            await expect(provider.operate("test input")).rejects.toThrow();
+
+            // Should only be called once, not retried
+            expect(mockCreate).toHaveBeenCalledTimes(1);
+          });
+
+          it("Throws BadGatewayError non-retryable RateLimitError", async () => {
+            // Setup
+            const mockCreate = vi
+              .fn()
+              .mockRejectedValue(
+                new RateLimitError(429, "Rate limit error", undefined, {}),
+              );
+
+            vi.mocked(OpenAI).mockImplementation(
+              () =>
+                ({
+                  responses: {
+                    create: mockCreate,
+                  },
+                }) as any,
+            );
+
+            // Execute
+            const provider = new OpenAiProvider();
+
+            // Verify
+            await expect(provider.operate("test input")).rejects.toThrow();
+
+            // Should only be called once, not retried
+            expect(mockCreate).toHaveBeenCalledTimes(1);
+          });
+
+          it("Throws BadGatewayError non-retryable UnprocessableEntityError", async () => {
+            // Setup
+            const mockCreate = vi
+              .fn()
+              .mockRejectedValue(
+                new UnprocessableEntityError(
+                  422,
+                  "Unprocessable entity error",
+                  undefined,
+                  {},
+                ),
+              );
+
+            vi.mocked(OpenAI).mockImplementation(
+              () =>
+                ({
+                  responses: {
+                    create: mockCreate,
+                  },
+                }) as any,
+            );
+
+            // Execute
+            const provider = new OpenAiProvider();
+
+            // Verify
+            await expect(provider.operate("test input")).rejects.toThrow();
+
+            // Should only be called once, not retried
+            expect(mockCreate).toHaveBeenCalledTimes(1);
+          });
         });
       });
       describe("API Retry Observability", () => {
