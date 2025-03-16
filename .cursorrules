@@ -58,6 +58,8 @@ Organize tests in one of seven second-level describe block sections in this orde
 7. Specific Scenarios - Special cases
 Omit describe blocks for sections that are not applicable or empty.
 Whenever possible, especially when refactoring, write the test first so the user can confirm the expected behavior passes/fails.
+### Completing Tests
+If there are multiple tests marked .todo and you are asked to complete them, only complete the first test in a describe block before moving on to sibling tests. Use the same logic traversing down describe blocks. Complete the first test in a describe block before moving on to sibling tests.
 ### Resolving Errors in Tests
 If multiple tests fail, apply `.only` to the first failing test and resolve that error. Run all tests again and isolate errors from the top down.
 
