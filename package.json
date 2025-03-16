@@ -57,6 +57,7 @@
     "@rollup/plugin-json": "^6.1.0",
     "@rollup/plugin-node-resolve": "^16.0.0",
     "@types/uuid": "^10.0.0",
+    "dotenv": "^16.4.7",
     "eslint": "^9.13.0",
     "eslint-plugin-jest": "^28.8.3",
     "hygen": "^6.2.11",
