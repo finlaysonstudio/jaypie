@@ -7,9 +7,9 @@ import { getLogger } from "./utils.js";
 
 // Constants
 
-const MAX_RETRIES_ABSOLUTE_LIMIT = 100;
-const MAX_RETRIES_CONFIGURED_HARD_LIMIT = 10;
-const MAX_RETRIES_DEFAULT_LIMIT = 5;
+const MAX_RETRIES_ABSOLUTE_LIMIT = 72;
+const MAX_RETRIES_CONFIGURED_HARD_LIMIT = 12;
+const MAX_RETRIES_DEFAULT_LIMIT = 6;
 
 // Retry policy constants
 const INITIAL_RETRY_DELAY_MS = 1000; // 1 second
@@ -29,14 +29,18 @@ const RETRY_BACKOFF_FACTOR = 2; // Exponential backoff multiplier
 export async function operate(
   input: string,
   options: LlmOperateOptions = {},
-  context: { client: OpenAI; maxRetries: number } = {
+  context: { client: OpenAI; maxRetries?: number } = {
     client: new OpenAI(),
-    maxRetries: MAX_RETRIES_DEFAULT_LIMIT,
   },
 ): Promise<JsonArray> {
   const log = getLogger();
   const openai = context.client;
   console.log("input :>> ", input);
+
+  // Validate
+  if (!context.maxRetries) {
+    context.maxRetries = MAX_RETRIES_DEFAULT_LIMIT;
+  }
 
   // Setup
   let retryCount = 0;
