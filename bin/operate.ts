@@ -10,7 +10,9 @@ async function main() {
     const model = new Llm();
 
     // Call the operate method with a simple message
-    const result = await model.operate("What is a good taco ingredient?");
+    const result = await model.operate("What is a good taco ingredient?", {
+      instructions: "Respond in one-word answers whenever possible.",
+    });
 
     // Output the result
     // eslint-disable-next-line no-console
