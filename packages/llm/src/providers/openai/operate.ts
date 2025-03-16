@@ -4,6 +4,7 @@ import { JsonArray } from "@jaypie/types";
 import { APIError, OpenAI } from "openai";
 import { LlmOperateOptions } from "../../types/LlmProvider.interface.js";
 import { getLogger } from "./utils.js";
+import { PROVIDER } from "../../constants.js";
 
 // Constants
 
@@ -35,12 +36,12 @@ export async function operate(
 ): Promise<JsonArray> {
   const log = getLogger();
   const openai = context.client;
-  console.log("input :>> ", input);
 
   // Validate
   if (!context.maxRetries) {
     context.maxRetries = MAX_RETRIES_DEFAULT_LIMIT;
   }
+  const model = options?.model || PROVIDER.OPENAI.MODEL.DEFAULT;
 
   // Setup
   let retryCount = 0;
@@ -58,7 +59,7 @@ export async function operate(
     try {
       // TODO: Test: Retry after failure
       const currentResponse = await openai.responses.create({
-        model: "gpt-4o",
+        model,
         input,
         // tools,
         // user,
