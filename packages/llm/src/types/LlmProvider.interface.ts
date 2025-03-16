@@ -17,6 +17,11 @@ export interface LlmOperateOptions {
   model?: string;
 }
 
+export interface LlmOptions {
+  apiKey?: string;
+  model?: string;
+}
+
 export interface LlmProvider {
   operate?(message: string, options?: LlmOperateOptions): Promise<JsonArray>;
   send(
