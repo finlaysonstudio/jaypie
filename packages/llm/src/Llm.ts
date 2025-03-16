@@ -1,8 +1,10 @@
-import { JsonObject } from "@jaypie/types";
+import { JsonArray, JsonObject } from "@jaypie/types";
+import { NotImplementedError } from "@jaypie/errors";
 import { DEFAULT, LlmProviderName, PROVIDER } from "./constants.js";
 import {
   LlmProvider,
   LlmMessageOptions,
+  LlmOperateOptions,
 } from "./types/LlmProvider.interface.js";
 import { OpenAiProvider } from "./providers/openai/index.js";
 import { AnthropicProvider } from "./providers/AnthropicProvider.class.js";
@@ -34,6 +36,18 @@ class Llm implements LlmProvider {
     return this._llm.send(message, options);
   }
 
+  async operate(
+    message: string,
+    options: LlmOperateOptions = {},
+  ): Promise<JsonArray> {
+    if (!this._llm.operate) {
+      throw new NotImplementedError(
+        `Provider ${this._provider} does not support operate method`,
+      );
+    }
+    return this._llm.operate(message, options);
+  }
+
   static async send(
     message: string,
     options?: LlmMessageOptions & { llm?: LlmProviderName },
@@ -41,6 +55,15 @@ class Llm implements LlmProvider {
     const { llm, ...messageOptions } = options || {};
     const instance = new Llm(llm);
     return instance.send(message, messageOptions);
+  }
+
+  static async operate(
+    message: string,
+    options?: LlmOperateOptions & { llm?: LlmProviderName },
+  ): Promise<JsonArray> {
+    const { llm, ...operateOptions } = options || {};
+    const instance = new Llm(llm);
+    return instance.operate(message, operateOptions);
   }
 }
 
