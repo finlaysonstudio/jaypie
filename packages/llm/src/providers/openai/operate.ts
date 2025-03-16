@@ -8,9 +8,8 @@ import { PROVIDER } from "../../constants.js";
 
 // Constants
 
-const MAX_RETRIES_ABSOLUTE_LIMIT = 72;
-const MAX_RETRIES_CONFIGURED_HARD_LIMIT = 12;
-const MAX_RETRIES_DEFAULT_LIMIT = 6;
+export const MAX_RETRIES_ABSOLUTE_LIMIT = 72;
+export const MAX_RETRIES_DEFAULT_LIMIT = 6;
 
 // Retry policy constants
 const INITIAL_RETRY_DELAY_MS = 1000; // 1 second
@@ -46,18 +45,13 @@ export async function operate(
   // Setup
   let retryCount = 0;
   let retryDelay = INITIAL_RETRY_DELAY_MS;
-  const maxRetries = Math.min(
-    context.maxRetries,
-    MAX_RETRIES_CONFIGURED_HARD_LIMIT,
-    MAX_RETRIES_ABSOLUTE_LIMIT,
-  );
+  const maxRetries = Math.min(context.maxRetries, MAX_RETRIES_ABSOLUTE_LIMIT);
   const allResponses = [];
 
   // OpenAI Retry Loop
 
   while (true) {
     try {
-      // TODO: Test: Retry after failure
       const currentResponse = await openai.responses.create({
         model,
         input,
