@@ -6,6 +6,7 @@ import {
   LlmOperateOptions,
   LlmProvider,
 } from "../../types/LlmProvider.interface.js";
+import { operate } from "./operate.js";
 import {
   createStructuredCompletion,
   createTextCompletion,
@@ -61,12 +62,11 @@ export class OpenAiProvider implements LlmProvider {
 
   async operate(
     message: string,
-    options?: LlmOperateOptions,
+    options: LlmOperateOptions = {},
   ): Promise<JsonArray> {
     const client = await this.getClient();
-    const messages = prepareMessages(message, options || {});
-    const modelToUse = options?.model || this.model;
+    options.model = options?.model || this.model;
 
-    return [{ messages, modelToUse }];
+    return operate(message, options, { client });
   }
 }
