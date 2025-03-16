@@ -76,6 +76,34 @@ describe("OpenAiProvider.operate", () => {
   });
 
   describe("Features", () => {
+    describe("User", () => {
+      it("Passes user to OpenAI", async () => {
+        // Setup
+        const mockCreate = vi.fn();
+        vi.mocked(OpenAI).mockImplementation(
+          () =>
+            ({
+              responses: {
+                create: mockCreate,
+              },
+            }) as any,
+        );
+        // Execute
+        const provider = new OpenAiProvider();
+        const testInput = "What is a good taco ingredient?";
+        const result = await provider.operate(testInput, {
+          user: "test-user",
+        });
+        // Verify
+        expect(result).toBeArray();
+        expect(mockCreate).toHaveBeenCalledTimes(1);
+        expect(mockCreate).toHaveBeenCalledWith({
+          model: expect.any(String),
+          input: testInput,
+          user: "test-user",
+        });
+      });
+    });
     describe("API Retry", () => {
       it("Retries retryable errors up to the MAX_RETRIES_DEFAULT_LIMIT limit", async () => {
         // Setup

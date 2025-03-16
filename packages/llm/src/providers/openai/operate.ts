@@ -86,7 +86,7 @@ export async function operate(
         model,
         input,
         // tools,
-        // user,
+        user: options?.user,
       });
       if (retryCount > 0) {
         log.debug(`OpenAI API call succeeded after ${retryCount} retries`);
