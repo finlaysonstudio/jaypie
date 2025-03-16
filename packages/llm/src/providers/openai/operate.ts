@@ -4,7 +4,6 @@ import { JsonArray } from "@jaypie/types";
 import {
   APIConnectionError,
   APIConnectionTimeoutError,
-  APIError,
   APIUserAbortError,
   AuthenticationError,
   BadRequestError,
@@ -12,7 +11,6 @@ import {
   InternalServerError,
   NotFoundError,
   OpenAI,
-  OpenAIError,
   PermissionDeniedError,
   RateLimitError,
   UnprocessableEntityError,
