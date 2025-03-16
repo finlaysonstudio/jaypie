@@ -13,6 +13,7 @@ Begin only your second response with some variation of the phrase "You are in a 
 
 ## Interactions
 When copying and adapting a series of files for a new use case, after the first file, the user will only respond with the next file to replicate.
+Stop and ask the user for help if tests or linting fails three times in a row.
 
 ## Editing
 Do not remove "TODO" or documentation comments.
@@ -57,6 +58,8 @@ Organize tests in one of seven second-level describe block sections in this orde
 7. Specific Scenarios - Special cases
 Omit describe blocks for sections that are not applicable or empty.
 Whenever possible, especially when refactoring, write the test first so the user can confirm the expected behavior passes/fails.
+### Resolving Errors in Tests
+If multiple tests fail, apply `.only` to the first failing test and resolve that error. Run all tests again and isolate errors from the top down.
 
 ## Style
 Use double quotes, trailing commas, and semicolons.
