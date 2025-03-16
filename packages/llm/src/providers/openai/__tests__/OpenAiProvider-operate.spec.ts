@@ -1,4 +1,5 @@
 import { getEnvSecret } from "@jaypie/aws";
+import { BadGatewayError } from "@jaypie/errors";
 import {
   APIConnectionError,
   APIConnectionTimeoutError,
@@ -414,18 +415,421 @@ describe("OpenAiProvider.operate", () => {
         });
       });
       describe("API Retry Observability", () => {
-        it.todo("Logs debug on retry success");
-        it.todo("Logs second warn on unknown errors");
-        it.todo("Logs error on non-retryable errors");
-        it.todo("Logs warn on retryable errors");
+        it("Logs debug on retry success", async () => {
+          // Setup
+          const mockCreate = vi.fn();
+          // First call fails with a retryable error
+          mockCreate.mockRejectedValueOnce(
+            new InternalServerError(
+              500,
+              "Internal Server Error",
+              undefined,
+              {},
+            ),
+          );
+          // Second call succeeds
+          const mockResponse = {
+            id: "resp_123",
+            content: [{ text: "Success after retry" }],
+          };
+          mockCreate.mockResolvedValueOnce(mockResponse);
+
+          vi.mocked(OpenAI).mockImplementation(
+            () =>
+              ({
+                responses: {
+                  create: mockCreate,
+                },
+              }) as any,
+          );
+
+          // Spy on sleep function to avoid waiting in tests
+          const sleepSpy = vi
+            .spyOn(await import("@jaypie/core"), "sleep")
+            .mockResolvedValue(undefined);
+
+          // Spy on logger
+          const mockDebug = vi.fn();
+          const loggerSpy = vi
+            .spyOn(await import("../utils"), "getLogger")
+            .mockReturnValue({
+              debug: mockDebug,
+              error: vi.fn(),
+              warn: vi.fn(),
+              var: vi.fn(),
+              trace: vi.fn(),
+            } as any);
+
+          // Execute
+          const provider = new OpenAiProvider();
+          const result = await provider.operate("test input");
+
+          // Verify
+          expect(result).toBeArray();
+          expect(result).toHaveLength(1);
+          expect(result[0]).toEqual(mockResponse);
+
+          // Verify debug log was called with the correct message
+          expect(mockDebug).toHaveBeenCalledWith(
+            "OpenAI API call succeeded after 1 retries",
+          );
+
+          // Clean up
+          sleepSpy.mockRestore();
+          loggerSpy.mockRestore();
+        });
+        it("Logs second warn on unknown errors", async () => {
+          // Setup
+          const mockCreate = vi.fn();
+          // Create an unknown error type that's not in the retryable list
+          const unknownError = new Error("Unknown error");
+          mockCreate.mockRejectedValueOnce(unknownError);
+
+          // Second call succeeds
+          const mockResponse = {
+            id: "resp_123",
+            content: [{ text: "Success after unknown error" }],
+          };
+          mockCreate.mockResolvedValueOnce(mockResponse);
+
+          vi.mocked(OpenAI).mockImplementation(
+            () =>
+              ({
+                responses: {
+                  create: mockCreate,
+                },
+              }) as any,
+          );
+
+          // Spy on sleep function to avoid waiting in tests
+          const sleepSpy = vi
+            .spyOn(await import("@jaypie/core"), "sleep")
+            .mockResolvedValue(undefined);
+
+          // Spy on logger
+          const mockWarn = vi.fn();
+          const mockVar = vi.fn();
+          const loggerSpy = vi
+            .spyOn(await import("../utils"), "getLogger")
+            .mockReturnValue({
+              debug: vi.fn(),
+              error: vi.fn(),
+              warn: mockWarn,
+              var: mockVar,
+              trace: vi.fn(),
+            } as any);
+
+          // Execute
+          const provider = new OpenAiProvider();
+          await provider.operate("test input");
+
+          // Verify warn log was called with the correct messages
+          expect(mockWarn).toHaveBeenCalledWith(
+            "OpenAI API returned unknown error",
+          );
+          expect(mockVar).toHaveBeenCalledWith({ error: unknownError });
+          expect(mockWarn).toHaveBeenCalledWith(
+            expect.stringContaining("OpenAI API call failed. Retrying"),
+          );
+
+          // Clean up
+          sleepSpy.mockRestore();
+          loggerSpy.mockRestore();
+        });
+
+        it("Logs error on non-retryable errors", async () => {
+          // Setup
+          const mockCreate = vi.fn();
+          const authError = new AuthenticationError(
+            401,
+            "Authentication error",
+            undefined,
+            {},
+          );
+          mockCreate.mockRejectedValueOnce(authError);
+
+          vi.mocked(OpenAI).mockImplementation(
+            () =>
+              ({
+                responses: {
+                  create: mockCreate,
+                },
+              }) as any,
+          );
+
+          // Spy on logger
+          const mockError = vi.fn();
+          const mockVar = vi.fn();
+          const loggerSpy = vi
+            .spyOn(await import("../utils"), "getLogger")
+            .mockReturnValue({
+              debug: vi.fn(),
+              error: mockError,
+              warn: vi.fn(),
+              var: mockVar,
+              trace: vi.fn(),
+            } as any);
+
+          // Execute
+          const provider = new OpenAiProvider();
+          try {
+            await provider.operate("test input");
+          } catch (error) {
+            // Expected to throw
+          }
+
+          // Verify error log was called with the correct message
+          expect(mockError).toHaveBeenCalledWith(
+            "OpenAI API call failed with non-retryable error",
+          );
+          expect(mockVar).toHaveBeenCalledWith({ error: authError });
+
+          // Clean up
+          loggerSpy.mockRestore();
+        });
+
+        it("Logs warn on retryable errors", async () => {
+          // Setup
+          const mockCreate = vi.fn();
+          // First call fails with a retryable error
+          const serverError = new InternalServerError(
+            500,
+            "Internal Server Error",
+            undefined,
+            {},
+          );
+          mockCreate.mockRejectedValueOnce(serverError);
+
+          // Second call succeeds
+          const mockResponse = {
+            id: "resp_123",
+            content: [{ text: "Success after retry" }],
+          };
+          mockCreate.mockResolvedValueOnce(mockResponse);
+
+          vi.mocked(OpenAI).mockImplementation(
+            () =>
+              ({
+                responses: {
+                  create: mockCreate,
+                },
+              }) as any,
+          );
+
+          // Spy on sleep function to avoid waiting in tests
+          const sleepSpy = vi
+            .spyOn(await import("@jaypie/core"), "sleep")
+            .mockResolvedValue(undefined);
+
+          // Spy on logger
+          const mockWarn = vi.fn();
+          const loggerSpy = vi
+            .spyOn(await import("../utils"), "getLogger")
+            .mockReturnValue({
+              debug: vi.fn(),
+              error: vi.fn(),
+              warn: mockWarn,
+              var: vi.fn(),
+              trace: vi.fn(),
+            } as any);
+
+          // Execute
+          const provider = new OpenAiProvider();
+          await provider.operate("test input");
+
+          // Verify warn log was called with the correct message
+          expect(mockWarn).toHaveBeenCalledWith(
+            expect.stringContaining("OpenAI API call failed. Retrying"),
+          );
+
+          // Clean up
+          sleepSpy.mockRestore();
+          loggerSpy.mockRestore();
+        });
       });
       describe("Retryable Errors", () => {
-        it.todo("Retries APIConnectionError");
-        it.todo("Retries APIConnectionTimeoutError");
-        it.todo("Retries InternalServerError");
-        it.todo("Retries unknown errors");
+        it("Retries APIConnectionError", async () => {
+          // Setup
+          const mockCreate = vi.fn();
+          // First call fails with a connection error
+          mockCreate.mockRejectedValueOnce(
+            new APIConnectionError("Connection error", undefined, {}),
+          );
+          // Second call succeeds
+          const mockResponse = {
+            id: "resp_123",
+            content: [{ text: "Success after connection error" }],
+          };
+          mockCreate.mockResolvedValueOnce(mockResponse);
+
+          vi.mocked(OpenAI).mockImplementation(
+            () =>
+              ({
+                responses: {
+                  create: mockCreate,
+                },
+              }) as any,
+          );
+
+          // Spy on sleep function to avoid waiting in tests
+          const sleepSpy = vi
+            .spyOn(await import("@jaypie/core"), "sleep")
+            .mockResolvedValue(undefined);
+
+          // Execute
+          const provider = new OpenAiProvider();
+          const result = await provider.operate("test input");
+
+          // Verify
+          expect(result).toBeArray();
+          expect(result).toHaveLength(1);
+          expect(result[0]).toEqual(mockResponse);
+
+          // Verify the create function was called twice (1 failure + 1 success)
+          expect(mockCreate).toHaveBeenCalledTimes(2);
+
+          // Clean up
+          sleepSpy.mockRestore();
+        });
+
+        it("Retries APIConnectionTimeoutError", async () => {
+          // Setup
+          const mockCreate = vi.fn();
+          // First call fails with a timeout error
+          mockCreate.mockRejectedValueOnce(
+            new APIConnectionTimeoutError("Connection timeout", undefined, {}),
+          );
+          // Second call succeeds
+          const mockResponse = {
+            id: "resp_123",
+            content: [{ text: "Success after timeout" }],
+          };
+          mockCreate.mockResolvedValueOnce(mockResponse);
+
+          vi.mocked(OpenAI).mockImplementation(
+            () =>
+              ({
+                responses: {
+                  create: mockCreate,
+                },
+              }) as any,
+          );
+
+          // Spy on sleep function to avoid waiting in tests
+          const sleepSpy = vi
+            .spyOn(await import("@jaypie/core"), "sleep")
+            .mockResolvedValue(undefined);
+
+          // Execute
+          const provider = new OpenAiProvider();
+          const result = await provider.operate("test input");
+
+          // Verify
+          expect(result).toBeArray();
+          expect(result).toHaveLength(1);
+          expect(result[0]).toEqual(mockResponse);
+
+          // Verify the create function was called twice (1 failure + 1 success)
+          expect(mockCreate).toHaveBeenCalledTimes(2);
+
+          // Clean up
+          sleepSpy.mockRestore();
+        });
+
+        it("Retries InternalServerError", async () => {
+          // Setup
+          const mockCreate = vi.fn();
+          // First call fails with a server error
+          mockCreate.mockRejectedValueOnce(
+            new InternalServerError(
+              500,
+              "Internal Server Error",
+              undefined,
+              {},
+            ),
+          );
+          // Second call succeeds
+          const mockResponse = {
+            id: "resp_123",
+            content: [{ text: "Success after server error" }],
+          };
+          mockCreate.mockResolvedValueOnce(mockResponse);
+
+          vi.mocked(OpenAI).mockImplementation(
+            () =>
+              ({
+                responses: {
+                  create: mockCreate,
+                },
+              }) as any,
+          );
+
+          // Spy on sleep function to avoid waiting in tests
+          const sleepSpy = vi
+            .spyOn(await import("@jaypie/core"), "sleep")
+            .mockResolvedValue(undefined);
+
+          // Execute
+          const provider = new OpenAiProvider();
+          const result = await provider.operate("test input");
+
+          // Verify
+          expect(result).toBeArray();
+          expect(result).toHaveLength(1);
+          expect(result[0]).toEqual(mockResponse);
+
+          // Verify the create function was called twice (1 failure + 1 success)
+          expect(mockCreate).toHaveBeenCalledTimes(2);
+
+          // Clean up
+          sleepSpy.mockRestore();
+        });
+
+        it("Retries unknown errors", async () => {
+          // Setup
+          const mockCreate = vi.fn();
+          // First call fails with an unknown error
+          const unknownError = new Error("Unknown error");
+          mockCreate.mockRejectedValueOnce(unknownError);
+          // Second call succeeds
+          const mockResponse = {
+            id: "resp_123",
+            content: [{ text: "Success after unknown error" }],
+          };
+          mockCreate.mockResolvedValueOnce(mockResponse);
+
+          vi.mocked(OpenAI).mockImplementation(
+            () =>
+              ({
+                responses: {
+                  create: mockCreate,
+                },
+              }) as any,
+          );
+
+          // Spy on sleep function to avoid waiting in tests
+          const sleepSpy = vi
+            .spyOn(await import("@jaypie/core"), "sleep")
+            .mockResolvedValue(undefined);
+
+          // Execute
+          const provider = new OpenAiProvider();
+          const result = await provider.operate("test input");
+
+          // Verify
+          expect(result).toBeArray();
+          expect(result).toHaveLength(1);
+          expect(result[0]).toEqual(mockResponse);
+
+          // Verify the create function was called twice (1 failure + 1 success)
+          expect(mockCreate).toHaveBeenCalledTimes(2);
+
+          // Clean up
+          sleepSpy.mockRestore();
+        });
       });
       describe("API Retry Context", () => {
+        // TODO: the context can only be tested when directly calling the operate function
         it.todo("Can raise the retry limit");
         it.todo("Retry limit has an absolute cap");
       });
