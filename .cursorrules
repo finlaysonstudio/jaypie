@@ -30,6 +30,10 @@ Eslint 9 "flat config" with Prettier.
 Rollup for bundling.
 Vitest for testing.
 
+## Commands
+`eslint --fix <file>` to fix correctable linting errors. This will be more reliable than a model call.
+`vitest run <file>` to run tests. `run` is required to prevent the default `watch` mode from hanging the agent process.
+
 ## Organization
 `packages/jaypie` is the main package, published to npm and imported by clients.
 The main package imports aws, core, datadog, express, lambda, and mongoose
