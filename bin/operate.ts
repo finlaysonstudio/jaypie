@@ -14,7 +14,7 @@ async function main() {
 
     // Output the result
     // eslint-disable-next-line no-console
-    console.log("Operation result:", JSON.stringify(result, null, 2));
+    console.log(JSON.stringify(result, null, 2));
   } catch (error) {
     // eslint-disable-next-line no-console
     console.error("Error:", error);
