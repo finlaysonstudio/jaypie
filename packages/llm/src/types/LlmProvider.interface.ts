@@ -15,6 +15,8 @@ export interface LlmMessageOptions {
 export interface LlmOperateOptions {
   instructions?: string;
   model?: string;
+  turns?: boolean | number;
+  user?: string;
 }
 
 export interface LlmOptions {
