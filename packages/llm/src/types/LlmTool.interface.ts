@@ -1,9 +1,10 @@
-import { JsonObject, JsonValue } from "@jaypie/types";
+import { JsonObject } from "@jaypie/types";
 
 export interface LlmTool {
   description: string;
   name: string;
   parameters: JsonObject;
   type: "function";
-  execute: (...args: JsonValue[]) => Promise<JsonValue> | JsonValue;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  execute: (...args: any[]) => Promise<any> | any;
 }
