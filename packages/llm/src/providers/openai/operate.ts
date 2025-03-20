@@ -141,6 +141,11 @@ export async function operate(
           requestOptions.tools = toolkit.tools;
         }
 
+        if (currentTurn > 1) {
+          log.trace(`[operate] Calling OpenAI Responses API - ${currentTurn}`);
+        } else {
+          log.trace("[operate] Calling OpenAI Responses API");
+        }
         const currentResponse = await openai.responses.create(requestOptions);
         if (retryCount > 0) {
           log.debug(`OpenAI API call succeeded after ${retryCount} retries`);
@@ -164,6 +169,7 @@ export async function operate(
                     JSON.parse(output.arguments);
 
                     // Call the tool and ensure the result is resolved if it's a Promise
+                    log.trace(`[operate] Calling tool - ${output.name}`);
                     const result = await toolkit.call({
                       name: output.name,
                       arguments: output.arguments,
