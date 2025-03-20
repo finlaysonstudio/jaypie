@@ -108,19 +108,9 @@ export async function operate(
   const maxRetries = Math.min(context.maxRetries, MAX_RETRIES_ABSOLUTE_LIMIT);
   const allResponses = [];
 
-  // Determine max turns for multiple turn conversations
-  const enableMultipleTurns =
-    options.turns === true ||
-    typeof options.turns === "number" ||
-    typeof options.maxTurns === "number";
-  const maxTurns =
-    typeof options.maxTurns === "number"
-      ? options.maxTurns
-      : typeof options.turns === "number"
-        ? options.turns
-        : options.turns === true
-          ? 10
-          : 1; // Default to 10 turns if turns=true, 1 otherwise
+  // Determine max turns from options
+  const maxTurns = maxTurnsFromOptions(options);
+  const enableMultipleTurns = maxTurns > 1;
   let currentTurn = 0;
   let currentInput = input;
   let toolkit: Toolkit | undefined;
