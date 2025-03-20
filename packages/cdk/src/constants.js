@@ -134,6 +134,7 @@ const CDK = {
     KNOWTRACE: "knowtrace",
     MONGODB: "mongodb",
     OPENAI: "openai",
+    SPLINTERLANDS: "splinterlands",
   },
 };
 
