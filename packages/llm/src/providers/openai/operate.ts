@@ -163,10 +163,17 @@ export async function operate(
                   try {
                     // Parse arguments for validation
                     JSON.parse(output.arguments);
-                    const result = await toolkit.call({
+
+                    // Call the tool and ensure the result is resolved if it's a Promise
+                    let result = await toolkit.call({
                       name: output.name,
                       arguments: output.arguments,
                     });
+
+                    // If the result is a Promise, resolve it
+                    if (result instanceof Promise) {
+                      result = await result;
+                    }
 
                     // Prepare for next turn by adding function call and result
                     // Add the function call to the input for the next turn

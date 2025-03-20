@@ -1168,6 +1168,119 @@ describe("OpenAiProvider.operate", () => {
           expect(mockCall).toHaveBeenNthCalledWith(i, { turn: i });
         }
       });
+
+      it("Properly resolves Promise results from toolkit calls", async () => {
+        // Setup - Create a mock response with a function call
+        const mockResponse1 = {
+          id: "resp_123",
+          output: [
+            {
+              type: "function_call",
+              name: "async_tool",
+              arguments: '{"delay":100}',
+              call_id: "call_1",
+            },
+          ],
+        };
+
+        const mockResponse2 = {
+          id: "resp_456",
+          output: [
+            {
+              type: "text",
+              text: "Completed async operation",
+            },
+          ],
+        };
+
+        // Create a mock for the OpenAI API call
+        const mockCreate = vi
+          .fn()
+          .mockResolvedValueOnce(mockResponse1)
+          .mockResolvedValueOnce(mockResponse2);
+
+        vi.mocked(OpenAI).mockImplementation(
+          () =>
+            ({
+              responses: {
+                create: mockCreate,
+              },
+            }) as any,
+        );
+
+        // Create a Promise that will be returned by the tool
+        const asyncResult = {
+          status: "completed",
+          data: "async operation result",
+        };
+
+        // Mock the tool call function to return a Promise
+        // This tests our new code that handles Promise results
+        const mockAsyncCall = vi.fn().mockImplementation(({ delay }) => {
+          return new Promise((resolve) => {
+            setTimeout(() => {
+              resolve(asyncResult);
+            }, delay);
+          });
+        });
+
+        // Execute
+        const provider = new OpenAiProvider();
+        const testInput = "Test input with async tool";
+        const tools = [
+          {
+            name: "async_tool",
+            description: "Test tool that returns a Promise",
+            parameters: {
+              type: "object",
+              properties: {
+                delay: { type: "number" },
+              },
+            },
+            type: "function",
+            call: mockAsyncCall,
+          },
+        ];
+
+        const result = await provider.operate(testInput, {
+          tools,
+          turns: true, // Enable multi-turn
+        });
+
+        // Verify
+        expect(result).toBeArray();
+        expect(result).toHaveLength(2);
+        expect(result[0]).toEqual(mockResponse1);
+        expect(result[1]).toEqual(mockResponse2);
+
+        // Verify the create function was called twice
+        expect(mockCreate).toHaveBeenCalledTimes(2);
+
+        // First call should be with the initial input
+        expect(mockCreate.mock.calls[0][0]).toEqual({
+          model: expect.any(String),
+          input: testInput,
+          tools: expect.any(Array),
+        });
+
+        // Second call should include the function call and its resolved Promise result
+        expect(mockCreate.mock.calls[1][0].input).toBeArray();
+        expect(mockCreate.mock.calls[1][0].input).toContainEqual({
+          type: "function_call",
+          name: "async_tool",
+          arguments: '{"delay":100}',
+          call_id: "call_1",
+        });
+        expect(mockCreate.mock.calls[1][0].input).toContainEqual({
+          type: "function_call_output",
+          call_id: "call_1",
+          output: JSON.stringify(asyncResult),
+        });
+
+        // Verify the async tool was called with the correct arguments
+        expect(mockAsyncCall).toHaveBeenCalledTimes(1);
+        expect(mockAsyncCall).toHaveBeenCalledWith({ delay: 100 });
+      });
     });
   });
 });
