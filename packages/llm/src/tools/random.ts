@@ -56,7 +56,7 @@ export const random: LlmTool = {
     },
   },
   type: "function",
-  execute: (options) => {
+  call: (options) => {
     const rng = randomUtil();
     return rng(options);
   },

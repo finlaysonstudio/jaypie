@@ -18,7 +18,7 @@ export const roll: LlmTool = {
     },
   },
   type: "function",
-  execute: ({ number = 1, sides = 6 }) => {
+  call: ({ number = 1, sides = 6 }) => {
     const rng = random();
     const rolls: number[] = [];
     let total = 0;
