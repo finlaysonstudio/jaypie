@@ -27,6 +27,7 @@
     "@jaypie/aws": "^1.1.15",
     "@jaypie/core": "^1.1.2",
     "openai": "^4.87.3",
+    "random": "^5.3.0",
     "zod": "^3.24.1"
   },
   "devDependencies": {
