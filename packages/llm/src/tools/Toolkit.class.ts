@@ -1,19 +1,10 @@
 import { LlmTool } from "../types/LlmTool.interface";
 
-interface ToolkitOptions {
-  strict?: boolean;
-}
-
 export class Toolkit {
   private readonly _tools: LlmTool[];
-  private readonly options: Required<ToolkitOptions>;
 
-  constructor(tools: LlmTool[], options: ToolkitOptions = {}) {
+  constructor(tools: LlmTool[]) {
     this._tools = tools;
-    this.options = {
-      strict: true,
-      ...options,
-    };
   }
 
   get tools(): Omit<LlmTool, "call">[] {
