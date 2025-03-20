@@ -1,6 +1,5 @@
 import { sleep } from "@jaypie/core";
 import { BadGatewayError } from "@jaypie/errors";
-import { JsonArray } from "@jaypie/types";
 import {
   APIConnectionError,
   APIConnectionTimeoutError,
@@ -93,7 +92,7 @@ export async function operate(
   context: { client: OpenAI; maxRetries?: number } = {
     client: new OpenAI(),
   },
-): Promise<JsonArray> {
+): Promise<OpenAI> {
   const log = getLogger();
   const openai = context.client;
 
@@ -165,15 +164,10 @@ export async function operate(
                     JSON.parse(output.arguments);
 
                     // Call the tool and ensure the result is resolved if it's a Promise
-                    let result = await toolkit.call({
+                    const result = await toolkit.call({
                       name: output.name,
                       arguments: output.arguments,
                     });
-
-                    // If the result is a Promise, resolve it
-                    if (result instanceof Promise) {
-                      result = await result;
-                    }
 
                     // Prepare for next turn by adding function call and result
                     // Add the function call to the input for the next turn

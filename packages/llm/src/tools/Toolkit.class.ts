@@ -38,6 +38,12 @@ export class Toolkit {
       parsedArgs = args;
     }
 
-    return tool.call(parsedArgs);
+    const result = tool.call(parsedArgs);
+
+    if (result instanceof Promise) {
+      return await result;
+    }
+
+    return result;
   }
 }

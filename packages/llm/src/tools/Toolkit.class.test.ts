@@ -73,6 +73,39 @@ describe("Toolkit", () => {
       expect(mockTool.call).toHaveBeenCalledWith(args);
     });
 
+    it("should properly resolve a promise if call returns a promise", async () => {
+      // This test verifies that the Toolkit class correctly awaits promises returned by tool calls
+      // by examining the implementation of the call method
+
+      // Get the source code of the Toolkit class
+      const toolkitSource = Toolkit.prototype.call.toString();
+
+      // Check if the implementation includes awaiting the promise
+      const hasAwaitPromise =
+        toolkitSource.includes("await result") ||
+        toolkitSource.includes("return await");
+
+      // The implementation should await the promise
+      expect(hasAwaitPromise).toBeTrue();
+
+      // Now test the actual functionality
+      const promiseResult = { success: true, data: "async result" };
+      const promiseTool: LlmTool = {
+        ...mockTool,
+        call: vi.fn().mockResolvedValue(promiseResult),
+      };
+
+      const toolkit = new Toolkit([promiseTool]);
+      const args = JSON.stringify({ testParam: "async test" });
+
+      const result = await toolkit.call({ name: "testTool", arguments: args });
+
+      expect(promiseTool.call).toHaveBeenCalledWith({
+        testParam: "async test",
+      });
+      expect(result).toEqual(promiseResult);
+    });
+
     it("should throw error for non-existent tool", async () => {
       const toolkit = new Toolkit([mockTool]);
 
