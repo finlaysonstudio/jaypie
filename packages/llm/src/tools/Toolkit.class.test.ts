@@ -46,6 +46,25 @@ describe("Toolkit", () => {
       expect(tools[0]).toHaveProperty("type");
       expect(tools[0]).not.toHaveProperty("call");
     });
+
+    it("should set default type 'function' for tools without type", () => {
+      // Create a tool without a type property
+      const toolWithoutType: Partial<LlmTool> = {
+        name: "noTypeTest",
+        description: "A test tool without type",
+        parameters: {
+          type: "object",
+          properties: {},
+        },
+        call: vi.fn(),
+      };
+
+      const toolkit = new Toolkit([toolWithoutType as LlmTool]);
+      const tools = toolkit.tools;
+
+      expect(tools).toHaveLength(1);
+      expect(tools[0].type).toBe("function");
+    });
   });
 
   describe("call", () => {

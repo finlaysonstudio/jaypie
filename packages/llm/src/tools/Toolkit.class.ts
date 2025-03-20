@@ -1,5 +1,7 @@
 import { LlmTool } from "../types/LlmTool.interface";
 
+const DEFAULT_TOOL_TYPE = "function";
+
 export class Toolkit {
   private readonly _tools: LlmTool[];
 
@@ -12,6 +14,12 @@ export class Toolkit {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const toolCopy: any = { ...tool };
       delete toolCopy.call;
+
+      // Set default type if not provided
+      if (!toolCopy.type) {
+        toolCopy.type = DEFAULT_TOOL_TYPE;
+      }
+
       return toolCopy;
     });
   }
