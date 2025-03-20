@@ -852,11 +852,6 @@ describe("OpenAiProvider.operate", () => {
           sleepSpy.mockRestore();
         });
       });
-      describe("API Retry Context", () => {
-        // TODO: the context can only be tested when directly calling the operate function
-        it.todo("Can raise the retry limit");
-        it.todo("Retry limit has an absolute cap");
-      });
     });
   });
 });
