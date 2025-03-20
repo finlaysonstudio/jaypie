@@ -92,7 +92,7 @@ export async function operate(
   context: { client: OpenAI; maxRetries?: number } = {
     client: new OpenAI(),
   },
-): Promise<OpenAI> {
+): Promise<unknown> {
   const log = getLogger();
   const openai = context.client;
 

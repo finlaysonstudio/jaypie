@@ -1,4 +1,4 @@
-import { JsonArray, JsonObject } from "@jaypie/types";
+import { JsonObject } from "@jaypie/types";
 import { OpenAI } from "openai";
 import { PROVIDER } from "../../constants.js";
 import {
@@ -63,7 +63,7 @@ export class OpenAiProvider implements LlmProvider {
   async operate(
     input: string,
     options: LlmOperateOptions = {},
-  ): Promise<JsonArray> {
+  ): Promise<unknown> {
     const client = await this.getClient();
     options.model = options?.model || this.model;
 
