@@ -6,3 +6,4 @@ export {
   LlmOptions,
   LlmProvider,
 } from "./types/LlmProvider.interface.js";
+export { LlmTool } from "./types/LlmTool.interface.js";

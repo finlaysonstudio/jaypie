@@ -1,5 +1,6 @@
 import { JsonArray, JsonObject, NaturalSchema } from "@jaypie/types";
 import { z } from "zod";
+import { LlmTool } from "./LlmTool.interface.js";
 
 export interface LlmMessageOptions {
   data?: Record<string, string>;
@@ -15,6 +16,7 @@ export interface LlmMessageOptions {
 export interface LlmOperateOptions {
   instructions?: string;
   model?: string;
+  tools?: LlmTool[];
   turns?: boolean | number;
   user?: string;
 }
