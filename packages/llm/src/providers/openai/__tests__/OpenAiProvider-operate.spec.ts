@@ -915,6 +915,259 @@ describe("OpenAiProvider.operate", () => {
         // Verify the tool was called
         expect(mockCall).toHaveBeenCalledWith({ name: "World" });
       });
+
+      it("Continues turns until it reaches the max turns limit", async () => {
+        // Setup - Create mock responses for each turn
+        const mockResponse1 = {
+          id: "resp_123",
+          output: [
+            {
+              type: "function_call",
+              name: "test_tool",
+              arguments: '{"turn":1}',
+              call_id: "call_1",
+            },
+          ],
+        };
+
+        const mockResponse2 = {
+          id: "resp_456",
+          output: [
+            {
+              type: "function_call",
+              name: "test_tool",
+              arguments: '{"turn":2}',
+              call_id: "call_2",
+            },
+          ],
+        };
+
+        const mockResponse3 = {
+          id: "resp_789",
+          output: [
+            {
+              type: "text",
+              text: "All done after 3 turns",
+            },
+          ],
+        };
+
+        // Create a mock for the OpenAI API call that returns different responses for each turn
+        const mockCreate = vi
+          .fn()
+          .mockResolvedValueOnce(mockResponse1)
+          .mockResolvedValueOnce(mockResponse2)
+          .mockResolvedValueOnce(mockResponse3);
+
+        vi.mocked(OpenAI).mockImplementation(
+          () =>
+            ({
+              responses: {
+                create: mockCreate,
+              },
+            }) as any,
+        );
+
+        // Mock the tool call function
+        const mockCall = vi
+          .fn()
+          .mockResolvedValueOnce({ result: "result from turn 1" })
+          .mockResolvedValueOnce({ result: "result from turn 2" });
+
+        // Execute
+        const provider = new OpenAiProvider();
+        const testInput = "Test input with multiple turns";
+        const tools = [
+          {
+            name: "test_tool",
+            description: "Test tool for multiple turns",
+            parameters: {
+              type: "object",
+              properties: {
+                turn: { type: "number" },
+              },
+            },
+            type: "function",
+            call: mockCall,
+          },
+        ];
+
+        const result = await provider.operate(testInput, {
+          tools,
+          turns: 3, // Set maximum turns to 3
+        });
+
+        // Verify
+        expect(result).toBeArray();
+        expect(result).toHaveLength(3); // Should have 3 responses (one for each turn)
+        expect(result[0]).toEqual(mockResponse1);
+        expect(result[1]).toEqual(mockResponse2);
+        expect(result[2]).toEqual(mockResponse3);
+
+        // Verify the create function was called 3 times (once for each turn)
+        expect(mockCreate).toHaveBeenCalledTimes(3);
+
+        // First call should be with the initial input
+        expect(mockCreate.mock.calls[0][0]).toEqual({
+          model: expect.any(String),
+          input: testInput,
+          tools: expect.any(Array),
+        });
+
+        // Second call should include the first function call and its result
+        expect(mockCreate.mock.calls[1][0].input).toBeArray();
+        expect(mockCreate.mock.calls[1][0].input).toContainEqual({
+          type: "function_call",
+          name: "test_tool",
+          arguments: '{"turn":1}',
+          call_id: "call_1",
+        });
+        expect(mockCreate.mock.calls[1][0].input).toContainEqual({
+          type: "function_call_output",
+          call_id: "call_1",
+          output: JSON.stringify({ result: "result from turn 1" }),
+        });
+
+        // Third call should include the second function call and its result
+        expect(mockCreate.mock.calls[2][0].input).toBeArray();
+        expect(mockCreate.mock.calls[2][0].input).toContainEqual({
+          type: "function_call",
+          name: "test_tool",
+          arguments: '{"turn":2}',
+          call_id: "call_2",
+        });
+        expect(mockCreate.mock.calls[2][0].input).toContainEqual({
+          type: "function_call_output",
+          call_id: "call_2",
+          output: JSON.stringify({ result: "result from turn 2" }),
+        });
+
+        // Verify the tool was called twice (once for each function call)
+        expect(mockCall).toHaveBeenCalledTimes(2);
+        expect(mockCall).toHaveBeenNthCalledWith(1, { turn: 1 });
+        expect(mockCall).toHaveBeenNthCalledWith(2, { turn: 2 });
+      });
+
+      it("Runs to default max turns (12) when no max is specified", async () => {
+        // Import the constant for default max turns
+        const { MAX_TURNS_DEFAULT_LIMIT } = await import("../operate");
+
+        // Setup - Create mock responses for each turn
+        const mockResponses = [];
+        const mockCreate = vi.fn();
+
+        // Create 12 mock responses, each with a function call
+        for (let i = 1; i <= MAX_TURNS_DEFAULT_LIMIT; i++) {
+          const mockResponse = {
+            id: `resp_${i}`,
+            output: [
+              {
+                type: "function_call",
+                name: "test_tool",
+                arguments: `{"turn":${i}}`,
+                call_id: `call_${i}`,
+              },
+            ],
+          };
+          mockResponses.push(mockResponse);
+
+          // For the last response, we'll have it return a text response
+          // to show that we're stopping because of max turns, not because
+          // there are no more function calls
+          if (i === MAX_TURNS_DEFAULT_LIMIT) {
+            mockCreate.mockResolvedValueOnce(mockResponse);
+          } else {
+            mockCreate.mockResolvedValueOnce(mockResponse);
+          }
+        }
+
+        vi.mocked(OpenAI).mockImplementation(
+          () =>
+            ({
+              responses: {
+                create: mockCreate,
+              },
+            }) as any,
+        );
+
+        // Mock the tool call function to return a result for each turn
+        const mockCall = vi.fn();
+        for (let i = 1; i <= MAX_TURNS_DEFAULT_LIMIT; i++) {
+          mockCall.mockResolvedValueOnce({ result: `result from turn ${i}` });
+        }
+
+        // Execute
+        const provider = new OpenAiProvider();
+        const testInput = "Test input with default max turns";
+        const tools = [
+          {
+            name: "test_tool",
+            description: "Test tool for default max turns",
+            parameters: {
+              type: "object",
+              properties: {
+                turn: { type: "number" },
+              },
+            },
+            type: "function",
+            call: mockCall,
+          },
+        ];
+
+        // Call operate with tools but no explicit turns parameter
+        // This should use the default max turns (12)
+        const result = await provider.operate(testInput, {
+          tools,
+          // No turns parameter specified
+        });
+
+        // Verify
+        expect(result).toBeArray();
+        expect(result).toHaveLength(MAX_TURNS_DEFAULT_LIMIT);
+
+        // Verify all responses are in the result
+        for (let i = 0; i < MAX_TURNS_DEFAULT_LIMIT; i++) {
+          expect(result[i]).toEqual(mockResponses[i]);
+        }
+
+        // Verify the create function was called MAX_TURNS_DEFAULT_LIMIT times
+        expect(mockCreate).toHaveBeenCalledTimes(MAX_TURNS_DEFAULT_LIMIT);
+
+        // Verify the first call was with the initial input
+        expect(mockCreate.mock.calls[0][0]).toEqual({
+          model: expect.any(String),
+          input: testInput,
+          tools: expect.any(Array),
+        });
+
+        // Verify each subsequent call included the previous function call and result
+        for (let i = 1; i < MAX_TURNS_DEFAULT_LIMIT; i++) {
+          expect(mockCreate.mock.calls[i][0].input).toBeArray();
+
+          // Should contain the function call from the previous turn
+          expect(mockCreate.mock.calls[i][0].input).toContainEqual({
+            type: "function_call",
+            name: "test_tool",
+            arguments: `{"turn":${i}}`,
+            call_id: `call_${i}`,
+          });
+
+          // Should contain the function call result from the previous turn
+          expect(mockCreate.mock.calls[i][0].input).toContainEqual({
+            type: "function_call_output",
+            call_id: `call_${i}`,
+            output: JSON.stringify({ result: `result from turn ${i}` }),
+          });
+        }
+
+        // Verify the tool was called MAX_TURNS_DEFAULT_LIMIT times
+        expect(mockCall).toHaveBeenCalledTimes(MAX_TURNS_DEFAULT_LIMIT);
+
+        // Verify each call to the tool had the correct arguments
+        for (let i = 1; i <= MAX_TURNS_DEFAULT_LIMIT; i++) {
+          expect(mockCall).toHaveBeenNthCalledWith(i, { turn: i });
+        }
+      });
     });
   });
 });
