@@ -8,12 +8,12 @@ export class Toolkit {
   }
 
   get tools(): Omit<LlmTool, "call">[] {
-    return this._tools.map(({ description, name, parameters, type }) => ({
-      description,
-      name,
-      parameters,
-      type,
-    }));
+    return this._tools.map((tool) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const toolCopy: any = { ...tool };
+      delete toolCopy.call;
+      return toolCopy;
+    });
   }
 
   async call({ name, arguments: args }: { name: string; arguments: string }) {
