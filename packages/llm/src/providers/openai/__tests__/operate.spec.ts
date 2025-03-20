@@ -1,9 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { maxTurnsFromOptions } from "../operate";
+import {
+  MAX_TURNS_ABSOLUTE_LIMIT,
+  MAX_TURNS_DEFAULT_LIMIT,
+  maxTurnsFromOptions,
+} from "../operate";
 import type { LlmOperateOptions } from "../../../types/LlmProvider.interface";
 
 describe("operate", () => {
-  describe("maxTurnsFromParameters", () => {
+  describe("maxTurnsFromOptions", () => {
     describe("Base Cases", () => {
       it("is a Function", () => {
         expect(maxTurnsFromOptions).toBeFunction();
@@ -19,13 +23,13 @@ describe("operate", () => {
       it("returns default limit (12) when turns is undefined", () => {
         const options: LlmOperateOptions = {};
         const result = maxTurnsFromOptions(options);
-        expect(result).toBe(12); // MAX_TURNS_DEFAULT_LIMIT
+        expect(result).toBe(MAX_TURNS_DEFAULT_LIMIT);
       });
 
       it("returns default limit (12) when turns is true", () => {
         const options: LlmOperateOptions = { turns: true };
         const result = maxTurnsFromOptions(options);
-        expect(result).toBe(12); // MAX_TURNS_DEFAULT_LIMIT
+        expect(result).toBe(MAX_TURNS_DEFAULT_LIMIT);
       });
 
       it("returns 1 when turns is false", () => {
@@ -49,13 +53,13 @@ describe("operate", () => {
       it("caps returns at MAX_TURNS_ABSOLUTE_LIMIT (72) when turns is a large positive number", () => {
         const options: LlmOperateOptions = { turns: 100 };
         const result = maxTurnsFromOptions(options);
-        expect(result).toBe(72); // MAX_TURNS_ABSOLUTE_LIMIT
+        expect(result).toBe(MAX_TURNS_ABSOLUTE_LIMIT);
       });
 
       it("returns default limit (12) when turns is a negative number", () => {
         const options: LlmOperateOptions = { turns: -5 };
         const result = maxTurnsFromOptions(options);
-        expect(result).toBe(12); // MAX_TURNS_DEFAULT_LIMIT
+        expect(result).toBe(MAX_TURNS_DEFAULT_LIMIT);
       });
 
       it("returns 1 for other falsy values like null", () => {

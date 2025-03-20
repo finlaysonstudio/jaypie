@@ -48,8 +48,8 @@ const NOT_RETRYABLE_ERRORS = [
 ];
 
 // Turn policy constants
-const MAX_TURNS_ABSOLUTE_LIMIT = 72;
-const MAX_TURNS_DEFAULT_LIMIT = 12;
+export const MAX_TURNS_ABSOLUTE_LIMIT = 72;
+export const MAX_TURNS_DEFAULT_LIMIT = 12;
 
 //
 //
