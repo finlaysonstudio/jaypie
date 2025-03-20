@@ -3,19 +3,20 @@ import random from "../util/random.js";
 
 export const roll: LlmTool = {
   description: "Roll one or more dice with a specified number of sides",
-
   name: "roll",
   parameters: {
-    number: {
-      type: "number",
-      description: "Number of dice to roll. Default: 1",
-      optional: true,
+    type: "object",
+    properties: {
+      number: {
+        type: "number",
+        description: "Number of dice to roll. Default: 1",
+      },
+      sides: {
+        type: "number",
+        description: "Number of sides on each die. Default: 6",
+      },
     },
-    sides: {
-      type: "number",
-      description: "Number of sides on each die. Default: 6",
-      optional: true,
-    },
+    required: ["number", "sides"],
   },
   type: "function",
   call: ({ number = 1, sides = 6 }) => {
