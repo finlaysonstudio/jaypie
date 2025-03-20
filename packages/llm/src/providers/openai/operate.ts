@@ -18,6 +18,7 @@ import {
 import { LlmOperateOptions } from "../../types/LlmProvider.interface.js";
 import { getLogger } from "./utils.js";
 import { PROVIDER } from "../../constants.js";
+import { Toolkit } from "../../tools/Toolkit.class.js";
 
 // Constants
 
@@ -82,12 +83,20 @@ export async function operate(
 
   while (true) {
     try {
-      const currentResponse = await openai.responses.create({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const requestOptions: /* OpenAI.Responses.InputItems */ any = {
         model,
         input,
-        // tools,
         user: options?.user,
-      });
+      };
+
+      // Initialize toolkit and add tools if provided
+      if (options.tools?.length) {
+        const toolkit = new Toolkit(options.tools);
+        requestOptions.tools = toolkit.tools;
+      }
+
+      const currentResponse = await openai.responses.create(requestOptions);
       if (retryCount > 0) {
         log.debug(`OpenAI API call succeeded after ${retryCount} retries`);
       }
