@@ -853,5 +853,68 @@ describe("OpenAiProvider.operate", () => {
         });
       });
     });
+
+    describe("Multi Turn", () => {
+      it("Calls tool when tools are provided without explicitly setting turns", async () => {
+        // Setup
+        const mockResponse = {
+          id: "resp_123",
+          output: [
+            {
+              type: "function_call",
+              name: "test_tool",
+              arguments: '{"name":"World"}',
+              call_id: "call_123",
+            },
+          ],
+        };
+        const mockCreate = vi.fn().mockResolvedValueOnce(mockResponse);
+        vi.mocked(OpenAI).mockImplementation(
+          () =>
+            ({
+              responses: {
+                create: mockCreate,
+              },
+            }) as any,
+        );
+        const mockCall = vi.fn().mockResolvedValue({ result: "tool_result" });
+
+        // Execute
+        const provider = new OpenAiProvider();
+        const testInput = "Test input";
+        const tools = [
+          {
+            name: "test_tool",
+            description: "Test tool",
+            parameters: {
+              type: "object",
+              properties: {
+                name: { type: "string" },
+              },
+            },
+            type: "function",
+            call: mockCall,
+          },
+        ];
+        const result = await provider.operate(testInput, {
+          tools,
+        });
+
+        // Verify
+        expect(result).toBeArray();
+        expect(result).toHaveLength(2);
+        expect(result[0]).toEqual(mockResponse);
+
+        // Verify the create function was called with the right parameters
+        expect(mockCreate).toHaveBeenCalledWith({
+          model: expect.any(String),
+          input: testInput,
+          tools: expect.any(Array),
+        });
+
+        // Verify the tool was called
+        expect(mockCall).toHaveBeenCalledWith({ name: "World" });
+      });
+    });
   });
 });
