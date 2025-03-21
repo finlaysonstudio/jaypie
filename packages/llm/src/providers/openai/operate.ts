@@ -18,6 +18,11 @@ import { LlmOperateOptions } from "../../types/LlmProvider.interface.js";
 import { getLogger } from "./utils.js";
 import { PROVIDER } from "../../constants.js";
 import { Toolkit } from "../../tools/Toolkit.class.js";
+import {
+  OpenAIRawResponse,
+  OpenAIResponse,
+  OpenAIResponseTurn,
+} from "./types.js";
 
 // Constants
 
@@ -92,7 +97,7 @@ export async function operate(
   context: { client: OpenAI; maxRetries?: number } = {
     client: new OpenAI(),
   },
-): Promise<unknown> {
+): Promise<OpenAIResponse> {
   const log = getLogger();
   const openai = context.client;
 
@@ -106,7 +111,7 @@ export async function operate(
   let retryCount = 0;
   let retryDelay = INITIAL_RETRY_DELAY_MS;
   const maxRetries = Math.min(context.maxRetries, MAX_RETRIES_ABSOLUTE_LIMIT);
-  const allResponses = [];
+  const allResponses: OpenAIResponseTurn[] = [];
 
   // Determine max turns from options
   const maxTurns = maxTurnsFromOptions(options);
@@ -146,12 +151,15 @@ export async function operate(
         } else {
           log.trace("[operate] Calling OpenAI Responses API");
         }
-        const currentResponse = await openai.responses.create(requestOptions);
+        // Use type assertion to handle the OpenAI SDK response type
+        const currentResponse = (await openai.responses.create(
+          requestOptions,
+        )) as unknown as OpenAIRawResponse;
         if (retryCount > 0) {
           log.debug(`OpenAI API call succeeded after ${retryCount} retries`);
         }
         // Add the entire response to allResponses
-        allResponses.push(currentResponse);
+        allResponses.push(currentResponse as unknown as OpenAIResponseTurn);
 
         // Check if we need to process function calls for multi-turn conversations
         let hasFunctionCall = false;
