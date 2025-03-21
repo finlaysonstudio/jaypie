@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { Toolkit } from "./Toolkit.class";
-import { LlmTool } from "../types/LlmTool.interface";
+import { Toolkit } from "../Toolkit.class";
+import { LlmTool } from "../../types/LlmTool.interface";
 
 describe("Toolkit", () => {
   // Mock tool for testing
