@@ -4,7 +4,7 @@ export interface LlmTool {
   description: string;
   name: string;
   parameters: JsonObject;
-  type: "function";
+  type: "function" | string;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   call: (...args: any[]) => Promise<any> | any;
 }

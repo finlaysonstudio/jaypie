@@ -16,6 +16,8 @@ import {
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { OpenAiProvider } from "../OpenAiProvider.class";
 import { MAX_RETRIES_DEFAULT_LIMIT } from "../operate";
+import { OpenAIResponse } from "../types";
+import { LlmTool } from "../../../types/LlmTool.interface";
 
 vi.mock("openai");
 
@@ -41,7 +43,7 @@ describe("OpenAiProvider.operate", () => {
     });
     it("Works", async () => {
       const provider = new OpenAiProvider();
-      const result = await provider.operate("test");
+      const result = (await provider.operate("test")) as OpenAIResponse;
       expect(result).toBeArray();
     });
     it("Works how we expect", async () => {
@@ -142,7 +144,7 @@ describe("OpenAiProvider.operate", () => {
 
         // Execute
         const provider = new OpenAiProvider();
-        const result = await provider.operate("test input");
+        const result = (await provider.operate("test input")) as OpenAIResponse;
 
         // Verify
         expect(result).toBeArray();
@@ -485,7 +487,9 @@ describe("OpenAiProvider.operate", () => {
 
           // Execute
           const provider = new OpenAiProvider();
-          const result = await provider.operate("test input");
+          const result = (await provider.operate(
+            "test input",
+          )) as OpenAIResponse;
 
           // Verify
           expect(result).toBeArray();
@@ -702,7 +706,9 @@ describe("OpenAiProvider.operate", () => {
 
           // Execute
           const provider = new OpenAiProvider();
-          const result = await provider.operate("test input");
+          const result = (await provider.operate(
+            "test input",
+          )) as OpenAIResponse;
 
           // Verify
           expect(result).toBeArray();
@@ -746,7 +752,9 @@ describe("OpenAiProvider.operate", () => {
 
           // Execute
           const provider = new OpenAiProvider();
-          const result = await provider.operate("test input");
+          const result = (await provider.operate(
+            "test input",
+          )) as OpenAIResponse;
 
           // Verify
           expect(result).toBeArray();
@@ -795,7 +803,9 @@ describe("OpenAiProvider.operate", () => {
 
           // Execute
           const provider = new OpenAiProvider();
-          const result = await provider.operate("test input");
+          const result = (await provider.operate(
+            "test input",
+          )) as OpenAIResponse;
 
           // Verify
           expect(result).toBeArray();
@@ -838,7 +848,9 @@ describe("OpenAiProvider.operate", () => {
 
           // Execute
           const provider = new OpenAiProvider();
-          const result = await provider.operate("test input");
+          const result = (await provider.operate(
+            "test input",
+          )) as OpenAIResponse;
 
           // Verify
           expect(result).toBeArray();
@@ -882,7 +894,7 @@ describe("OpenAiProvider.operate", () => {
         // Execute
         const provider = new OpenAiProvider();
         const testInput = "Test input";
-        const tools = [
+        const tools: LlmTool[] = [
           {
             name: "test_tool",
             description: "Test tool",
@@ -896,9 +908,9 @@ describe("OpenAiProvider.operate", () => {
             call: mockCall,
           },
         ];
-        const result = await provider.operate(testInput, {
+        const result = (await provider.operate(testInput, {
           tools,
-        });
+        })) as OpenAIResponse;
 
         // Verify
         expect(result).toBeArray();
@@ -977,7 +989,7 @@ describe("OpenAiProvider.operate", () => {
         // Execute
         const provider = new OpenAiProvider();
         const testInput = "Test input with multiple turns";
-        const tools = [
+        const tools: LlmTool[] = [
           {
             name: "test_tool",
             description: "Test tool for multiple turns",
@@ -992,10 +1004,10 @@ describe("OpenAiProvider.operate", () => {
           },
         ];
 
-        const result = await provider.operate(testInput, {
+        const result = (await provider.operate(testInput, {
           tools,
           turns: 3, // Set maximum turns to 3
-        });
+        })) as OpenAIResponse;
 
         // Verify
         expect(result).toBeArray();
@@ -1099,7 +1111,7 @@ describe("OpenAiProvider.operate", () => {
         // Execute
         const provider = new OpenAiProvider();
         const testInput = "Test input with default max turns";
-        const tools = [
+        const tools: LlmTool[] = [
           {
             name: "test_tool",
             description: "Test tool for default max turns",
@@ -1116,10 +1128,10 @@ describe("OpenAiProvider.operate", () => {
 
         // Call operate with tools but no explicit turns parameter
         // This should use the default max turns (12)
-        const result = await provider.operate(testInput, {
+        const result = (await provider.operate(testInput, {
           tools,
           // No turns parameter specified
-        });
+        })) as OpenAIResponse;
 
         // Verify
         expect(result).toBeArray();
@@ -1227,7 +1239,7 @@ describe("OpenAiProvider.operate", () => {
         // Execute
         const provider = new OpenAiProvider();
         const testInput = "Test input with async tool";
-        const tools = [
+        const tools: LlmTool[] = [
           {
             name: "async_tool",
             description: "Test tool that returns a Promise",
@@ -1242,10 +1254,10 @@ describe("OpenAiProvider.operate", () => {
           },
         ];
 
-        const result = await provider.operate(testInput, {
+        const result = (await provider.operate(testInput, {
           tools,
           turns: true, // Enable multi-turn
-        });
+        })) as OpenAIResponse;
 
         // Verify
         expect(result).toBeArray();
