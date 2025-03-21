@@ -16,6 +16,7 @@ jobs:
   lint:
     name: Lint (in parallel)
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -27,6 +28,7 @@ jobs:
   test:
     name: Unit Test (in parallel)
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     strategy:
       matrix:
         node-version: [20.x, 22.x]
