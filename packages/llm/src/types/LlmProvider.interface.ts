@@ -1,4 +1,4 @@
-import { JsonArray, JsonObject, NaturalSchema } from "@jaypie/types";
+import { JsonObject, NaturalSchema } from "@jaypie/types";
 import { z } from "zod";
 import { LlmTool } from "./LlmTool.interface.js";
 

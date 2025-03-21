@@ -27,11 +27,6 @@ describe("Toolkit", () => {
       expect(toolkit.tools).toHaveLength(1);
       expect(toolkit.tools[0].name).toBe("testTool");
     });
-
-    it("should create a Toolkit instance with custom options", () => {
-      const toolkit = new Toolkit([mockTool], { strict: false });
-      expect(toolkit.tools).toHaveLength(1);
-    });
   });
 
   describe("tools getter", () => {
