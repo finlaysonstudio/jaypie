@@ -177,12 +177,12 @@ export async function operate(
               : (options as unknown as { system: string }).system;
         }
 
-        if (options?.output) {
+        if (options?.format) {
           // Convert NaturalSchema to Zod schema if needed
           const zodSchema =
-            options.output instanceof z.ZodType
-              ? options.output
-              : naturalZodSchema(options.output as NaturalSchema);
+            options.format instanceof z.ZodType
+              ? options.format
+              : naturalZodSchema(options.format as NaturalSchema);
 
           // Set up structured output format in the format expected by the test
           requestOptions.text = {

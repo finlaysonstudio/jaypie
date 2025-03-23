@@ -1183,7 +1183,7 @@ describe("OpenAiProvider.operate", () => {
           name: z.string(),
         });
         const response = await provider.operate("Hello, World", {
-          output: GreetingFormat,
+          format: GreetingFormat,
         });
         expect(mockCreate).toHaveBeenCalledWith({
           input: "Hello, World",
@@ -1211,7 +1211,7 @@ describe("OpenAiProvider.operate", () => {
           name: String,
         };
         const response = await provider.operate("Hello, World", {
-          output: GreetingFormat,
+          format: GreetingFormat,
         });
 
         expect(mockCreate).toHaveBeenCalledWith({

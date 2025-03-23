@@ -15,13 +15,13 @@ export interface LlmMessageOptions {
 
 export interface LlmOperateOptions {
   data?: Record<string, string>;
+  format?: JsonObject | NaturalSchema | z.ZodType;
   instructions?: string;
   model?: string;
   placeholders?: {
     input?: boolean;
     instructions?: boolean;
   };
-  output?: NaturalSchema | z.ZodType;
   tools?: LlmTool[];
   turns?: boolean | number;
   user?: string;
