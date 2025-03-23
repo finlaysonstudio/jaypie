@@ -87,6 +87,10 @@ describe("OpenAiProvider.operate", () => {
   });
 
   describe("Features", () => {
+    let provider: OpenAiProvider;
+    beforeEach(() => {
+      provider = new OpenAiProvider();
+    });
     describe("User", () => {
       it("Passes user to OpenAI", async () => {
         // Execute
@@ -677,11 +681,6 @@ describe("OpenAiProvider.operate", () => {
       });
     });
     describe("Message Options", () => {
-      let provider: OpenAiProvider;
-      beforeEach(() => {
-        provider = new OpenAiProvider();
-      });
-
       it("includes instruction message when provided", async () => {
         const response = await provider.operate("test message", {
           instructions: MOCK.INSTRUCTIONS,
@@ -803,7 +802,6 @@ describe("OpenAiProvider.operate", () => {
         const mockCall = vi.fn().mockResolvedValue({ result: "tool_result" });
 
         // Execute
-        const provider = new OpenAiProvider();
         const testInput = "Test input";
         const tools: LlmTool[] = [
           {
@@ -888,7 +886,6 @@ describe("OpenAiProvider.operate", () => {
           .mockResolvedValueOnce({ result: "result from turn 2" });
 
         // Execute
-        const provider = new OpenAiProvider();
         const testInput = "Test input with multiple turns";
         const tools: LlmTool[] = [
           {
@@ -1000,7 +997,6 @@ describe("OpenAiProvider.operate", () => {
         }
 
         // Execute
-        const provider = new OpenAiProvider();
         const testInput = "Test input with default max turns";
         const tools: LlmTool[] = [
           {
@@ -1118,7 +1114,6 @@ describe("OpenAiProvider.operate", () => {
         });
 
         // Execute
-        const provider = new OpenAiProvider();
         const testInput = "Test input with async tool";
         const tools: LlmTool[] = [
           {
