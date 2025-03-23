@@ -21,6 +21,17 @@ import { LlmTool } from "../../../types/LlmTool.interface";
 
 vi.mock("openai");
 
+const MOCK = {
+  RESPONSE: {
+    CILANTRO: [
+      {
+        id: "resp_123",
+        content: [{ text: "Cilantro is a good taco ingredient" }],
+      },
+    ],
+  },
+};
+
 describe("OpenAiProvider.operate", () => {
   beforeEach(() => {
     vi.mocked(OpenAI).mockImplementation(
@@ -48,12 +59,7 @@ describe("OpenAiProvider.operate", () => {
     });
     it("Works how we expect", async () => {
       // Setup
-      const mockResponse = [
-        {
-          id: "resp_123",
-          content: [{ text: "Cilantro is a good taco ingredient" }],
-        },
-      ];
+      const mockResponse = MOCK.RESPONSE.CILANTRO;
       const mockCreate = vi.fn().mockResolvedValue(mockResponse[0]);
       vi.mocked(OpenAI).mockImplementation(
         () =>
