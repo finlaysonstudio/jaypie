@@ -1,5 +1,5 @@
 import RandomLib from "random";
-import { ConfigurationError } from "jaypie";
+import { ConfigurationError } from "@jaypie/errors";
 
 //
 // Types
