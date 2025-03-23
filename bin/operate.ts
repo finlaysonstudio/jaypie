@@ -12,9 +12,10 @@ async function main() {
 
     // Call the operate method with a simple message
     const result = await model.operate(
-      "Roll five six-sided dice and tell me how many points it is worth in Yahtzee",
+      "What is the weather right now? Will it rain in the foreseeable future?",
       {
-        instructions: "Respond in one-word answers whenever possible.",
+        instructions:
+          "Provide crisp, punchy answers. Be direct and to the point. Avoid flowery language.",
         tools,
       },
     );
