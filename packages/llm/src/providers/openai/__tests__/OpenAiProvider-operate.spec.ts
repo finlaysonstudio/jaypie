@@ -72,15 +72,6 @@ describe("OpenAiProvider.operate", () => {
       expect(result).toBeArray();
     });
     it("Works how we expect", async () => {
-      // Setup
-      vi.mocked(OpenAI).mockImplementation(
-        () =>
-          ({
-            responses: {
-              create: mockCreate,
-            },
-          }) as any,
-      );
       // Execute
       const provider = new OpenAiProvider("mock-model");
       const testInput = "What is a good taco ingredient?";
@@ -98,15 +89,6 @@ describe("OpenAiProvider.operate", () => {
   describe("Features", () => {
     describe("User", () => {
       it("Passes user to OpenAI", async () => {
-        // Setup
-        vi.mocked(OpenAI).mockImplementation(
-          () =>
-            ({
-              responses: {
-                create: mockCreate,
-              },
-            }) as any,
-        );
         // Execute
         const provider = new OpenAiProvider();
         const testInput = "What is a good taco ingredient?";
@@ -143,15 +125,6 @@ describe("OpenAiProvider.operate", () => {
           content: [{ text: "Success after retries" }],
         };
         mockCreate.mockResolvedValueOnce(mockResponse);
-
-        vi.mocked(OpenAI).mockImplementation(
-          () =>
-            ({
-              responses: {
-                create: mockCreate,
-              },
-            }) as any,
-        );
 
         // Spy on sleep function to avoid waiting in tests
         const sleepSpy = vi
@@ -192,15 +165,6 @@ describe("OpenAiProvider.operate", () => {
             );
           }
 
-          vi.mocked(OpenAI).mockImplementation(
-            () =>
-              ({
-                responses: {
-                  create: mockCreate,
-                },
-              }) as any,
-          );
-
           // Spy on sleep function to avoid waiting in tests
           const sleepSpy = vi
             .spyOn(await import("@jaypie/core"), "sleep")
@@ -229,15 +193,6 @@ describe("OpenAiProvider.operate", () => {
             // Setup
             mockCreate.mockRejectedValueOnce(new APIUserAbortError());
 
-            vi.mocked(OpenAI).mockImplementation(
-              () =>
-                ({
-                  responses: {
-                    create: mockCreate,
-                  },
-                }) as any,
-            );
-
             // Execute
             const provider = new OpenAiProvider();
 
@@ -258,15 +213,6 @@ describe("OpenAiProvider.operate", () => {
               ),
             );
 
-            vi.mocked(OpenAI).mockImplementation(
-              () =>
-                ({
-                  responses: {
-                    create: mockCreate,
-                  },
-                }) as any,
-            );
-
             // Execute
             const provider = new OpenAiProvider();
 
@@ -281,15 +227,6 @@ describe("OpenAiProvider.operate", () => {
             // Setup
             mockCreate.mockRejectedValueOnce(
               new BadRequestError(400, "Bad request error", undefined, {}),
-            );
-
-            vi.mocked(OpenAI).mockImplementation(
-              () =>
-                ({
-                  responses: {
-                    create: mockCreate,
-                  },
-                }) as any,
             );
 
             // Execute
@@ -308,15 +245,6 @@ describe("OpenAiProvider.operate", () => {
               new ConflictError(409, "Conflict error", undefined, {}),
             );
 
-            vi.mocked(OpenAI).mockImplementation(
-              () =>
-                ({
-                  responses: {
-                    create: mockCreate,
-                  },
-                }) as any,
-            );
-
             // Execute
             const provider = new OpenAiProvider();
 
@@ -331,15 +259,6 @@ describe("OpenAiProvider.operate", () => {
             // Setup
             mockCreate.mockRejectedValueOnce(
               new NotFoundError(404, "Not found error", undefined, {}),
-            );
-
-            vi.mocked(OpenAI).mockImplementation(
-              () =>
-                ({
-                  responses: {
-                    create: mockCreate,
-                  },
-                }) as any,
             );
 
             // Execute
@@ -363,15 +282,6 @@ describe("OpenAiProvider.operate", () => {
               ),
             );
 
-            vi.mocked(OpenAI).mockImplementation(
-              () =>
-                ({
-                  responses: {
-                    create: mockCreate,
-                  },
-                }) as any,
-            );
-
             // Execute
             const provider = new OpenAiProvider();
 
@@ -386,15 +296,6 @@ describe("OpenAiProvider.operate", () => {
             // Setup
             mockCreate.mockRejectedValueOnce(
               new RateLimitError(429, "Rate limit error", undefined, {}),
-            );
-
-            vi.mocked(OpenAI).mockImplementation(
-              () =>
-                ({
-                  responses: {
-                    create: mockCreate,
-                  },
-                }) as any,
             );
 
             // Execute
@@ -416,15 +317,6 @@ describe("OpenAiProvider.operate", () => {
                 undefined,
                 {},
               ),
-            );
-
-            vi.mocked(OpenAI).mockImplementation(
-              () =>
-                ({
-                  responses: {
-                    create: mockCreate,
-                  },
-                }) as any,
             );
 
             // Execute
@@ -456,15 +348,6 @@ describe("OpenAiProvider.operate", () => {
             content: [{ text: "Success after retry" }],
           };
           mockCreate.mockResolvedValueOnce(mockResponse);
-
-          vi.mocked(OpenAI).mockImplementation(
-            () =>
-              ({
-                responses: {
-                  create: mockCreate,
-                },
-              }) as any,
-          );
 
           // Spy on sleep function to avoid waiting in tests
           const sleepSpy = vi
@@ -516,15 +399,6 @@ describe("OpenAiProvider.operate", () => {
           };
           mockCreate.mockResolvedValueOnce(mockResponse);
 
-          vi.mocked(OpenAI).mockImplementation(
-            () =>
-              ({
-                responses: {
-                  create: mockCreate,
-                },
-              }) as any,
-          );
-
           // Spy on sleep function to avoid waiting in tests
           const sleepSpy = vi
             .spyOn(await import("@jaypie/core"), "sleep")
@@ -570,15 +444,6 @@ describe("OpenAiProvider.operate", () => {
             {},
           );
           mockCreate.mockRejectedValueOnce(authError);
-
-          vi.mocked(OpenAI).mockImplementation(
-            () =>
-              ({
-                responses: {
-                  create: mockCreate,
-                },
-              }) as any,
-          );
 
           // Spy on logger
           const mockError = vi.fn();
@@ -630,15 +495,6 @@ describe("OpenAiProvider.operate", () => {
           };
           mockCreate.mockResolvedValueOnce(mockResponse);
 
-          vi.mocked(OpenAI).mockImplementation(
-            () =>
-              ({
-                responses: {
-                  create: mockCreate,
-                },
-              }) as any,
-          );
-
           // Spy on sleep function to avoid waiting in tests
           const sleepSpy = vi
             .spyOn(await import("@jaypie/core"), "sleep")
@@ -684,15 +540,6 @@ describe("OpenAiProvider.operate", () => {
           };
           mockCreate.mockResolvedValueOnce(mockResponse);
 
-          vi.mocked(OpenAI).mockImplementation(
-            () =>
-              ({
-                responses: {
-                  create: mockCreate,
-                },
-              }) as any,
-          );
-
           // Spy on sleep function to avoid waiting in tests
           const sleepSpy = vi
             .spyOn(await import("@jaypie/core"), "sleep")
@@ -728,15 +575,6 @@ describe("OpenAiProvider.operate", () => {
             content: [{ text: "Success after timeout" }],
           };
           mockCreate.mockResolvedValueOnce(mockResponse);
-
-          vi.mocked(OpenAI).mockImplementation(
-            () =>
-              ({
-                responses: {
-                  create: mockCreate,
-                },
-              }) as any,
-          );
 
           // Spy on sleep function to avoid waiting in tests
           const sleepSpy = vi
@@ -779,15 +617,6 @@ describe("OpenAiProvider.operate", () => {
           };
           mockCreate.mockResolvedValueOnce(mockResponse);
 
-          vi.mocked(OpenAI).mockImplementation(
-            () =>
-              ({
-                responses: {
-                  create: mockCreate,
-                },
-              }) as any,
-          );
-
           // Spy on sleep function to avoid waiting in tests
           const sleepSpy = vi
             .spyOn(await import("@jaypie/core"), "sleep")
@@ -822,15 +651,6 @@ describe("OpenAiProvider.operate", () => {
             content: [{ text: "Success after unknown error" }],
           };
           mockCreate.mockResolvedValueOnce(mockResponse);
-
-          vi.mocked(OpenAI).mockImplementation(
-            () =>
-              ({
-                responses: {
-                  create: mockCreate,
-                },
-              }) as any,
-          );
 
           // Spy on sleep function to avoid waiting in tests
           const sleepSpy = vi
@@ -897,16 +717,6 @@ describe("OpenAiProvider.operate", () => {
           choices: [{ message: { content: "test response" } }],
         };
         mockCreate.mockResolvedValue(mockResponse);
-        vi.mocked(OpenAI).mockImplementation(
-          () =>
-            ({
-              chat: {
-                completions: {
-                  create: mockCreate,
-                },
-              },
-            }) as any,
-        );
 
         const provider = new OpenAiProvider();
         const response = await provider.operate("test message", {
@@ -930,16 +740,6 @@ describe("OpenAiProvider.operate", () => {
         };
 
         mockCreate.mockResolvedValue(mockResponse);
-        vi.mocked(OpenAI).mockImplementation(
-          () =>
-            ({
-              chat: {
-                completions: {
-                  create: mockCreate,
-                },
-              },
-            }) as any,
-        );
 
         const provider = new OpenAiProvider();
         const response = await provider.operate("Hello, {{name}}", {
@@ -959,16 +759,6 @@ describe("OpenAiProvider.operate", () => {
         };
 
         mockCreate.mockResolvedValue(mockResponse);
-        vi.mocked(OpenAI).mockImplementation(
-          () =>
-            ({
-              chat: {
-                completions: {
-                  create: mockCreate,
-                },
-              },
-            }) as any,
-        );
 
         const provider = new OpenAiProvider();
         const response = await provider.operate("Hello, {{name}}", {
@@ -989,16 +779,6 @@ describe("OpenAiProvider.operate", () => {
         };
 
         mockCreate.mockResolvedValue(mockResponse);
-        vi.mocked(OpenAI).mockImplementation(
-          () =>
-            ({
-              chat: {
-                completions: {
-                  create: mockCreate,
-                },
-              },
-            }) as any,
-        );
 
         const provider = new OpenAiProvider();
         const response = await provider.operate("test message", {
@@ -1032,14 +812,6 @@ describe("OpenAiProvider.operate", () => {
           ],
         };
         mockCreate.mockResolvedValueOnce(mockResponse);
-        vi.mocked(OpenAI).mockImplementation(
-          () =>
-            ({
-              responses: {
-                create: mockCreate,
-              },
-            }) as any,
-        );
         const mockCall = vi.fn().mockResolvedValue({ result: "tool_result" });
 
         // Execute
@@ -1120,15 +892,6 @@ describe("OpenAiProvider.operate", () => {
           .mockResolvedValueOnce(mockResponse1)
           .mockResolvedValueOnce(mockResponse2)
           .mockResolvedValueOnce(mockResponse3);
-
-        vi.mocked(OpenAI).mockImplementation(
-          () =>
-            ({
-              responses: {
-                create: mockCreate,
-              },
-            }) as any,
-        );
 
         // Mock the tool call function
         const mockCall = vi
@@ -1242,15 +1005,6 @@ describe("OpenAiProvider.operate", () => {
           }
         }
 
-        vi.mocked(OpenAI).mockImplementation(
-          () =>
-            ({
-              responses: {
-                create: mockCreate,
-              },
-            }) as any,
-        );
-
         // Mock the tool call function to return a result for each turn
         const mockCall = vi.fn();
         for (let i = 1; i <= MAX_TURNS_DEFAULT_LIMIT; i++) {
@@ -1359,15 +1113,6 @@ describe("OpenAiProvider.operate", () => {
           .mockResolvedValueOnce(mockResponse1)
           .mockResolvedValueOnce(mockResponse2);
 
-        vi.mocked(OpenAI).mockImplementation(
-          () =>
-            ({
-              responses: {
-                create: mockCreate,
-              },
-            }) as any,
-        );
-
         // Create a Promise that will be returned by the tool
         const asyncResult = {
           status: "completed",
@@ -1460,18 +1205,6 @@ describe("OpenAiProvider.operate", () => {
         };
 
         const mockParse = vi.fn().mockResolvedValue(mockResponse);
-        vi.mocked(OpenAI).mockImplementation(
-          () =>
-            ({
-              beta: {
-                chat: {
-                  completions: {
-                    parse: mockParse,
-                  },
-                },
-              },
-            }) as any,
-        );
 
         const provider = new OpenAiProvider();
         const GreetingFormat = z.object({
@@ -1507,18 +1240,6 @@ describe("OpenAiProvider.operate", () => {
         };
 
         const mockParse = vi.fn().mockResolvedValue(mockResponse);
-        vi.mocked(OpenAI).mockImplementation(
-          () =>
-            ({
-              beta: {
-                chat: {
-                  completions: {
-                    parse: mockParse,
-                  },
-                },
-              },
-            }) as any,
-        );
 
         const provider = new OpenAiProvider();
         const GreetingFormat = {
