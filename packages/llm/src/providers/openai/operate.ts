@@ -205,6 +205,7 @@ export async function operate(
           log.trace("[operate] Calling OpenAI Responses API");
         }
 
+        log.var({ requestOptions });
         // Use type assertion to handle the OpenAI SDK response type
         const currentResponse = (await openai.responses.create(
           requestOptions,
