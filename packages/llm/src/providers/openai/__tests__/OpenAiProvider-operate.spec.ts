@@ -23,6 +23,7 @@ import { LlmTool } from "../../../types/LlmTool.interface";
 vi.mock("openai");
 
 const MOCK = {
+  INSTRUCTIONS: "You are a helpful assistant",
   RESPONSE: {
     TEXT: {
       id: "resp_123",
@@ -876,19 +877,19 @@ describe("OpenAiProvider.operate", () => {
         provider = new OpenAiProvider();
       });
 
-      it.skip("includes instruction message when provided", async () => {
+      it("includes instruction message when provided", async () => {
         const response = await provider.operate("test message", {
-          instructions: "You are a test assistant",
+          instructions: MOCK.INSTRUCTIONS,
         });
 
         expect(mockCreate).toHaveBeenCalledWith({
-          messages: [
-            { role: "developer", content: "You are a test assistant" },
-            { role: "user", content: "test message" },
-          ],
+          instructions: MOCK.INSTRUCTIONS,
+          input: expect.any(String),
           model: expect.any(String),
         });
-        expect(response).toBe("test response");
+        expect(response).toBeArray();
+        expect(response).toHaveLength(1);
+        expect(response).toEqual([MOCK.RESPONSE.TEXT]);
       });
       it.todo("Warns if system message is provided");
       it.skip("applies placeholders to system message", async () => {

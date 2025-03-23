@@ -144,6 +144,10 @@ export async function operate(
           requestOptions.user = options.user;
         }
 
+        if (options?.instructions) {
+          requestOptions.instructions = options.instructions;
+        }
+
         // Add tools if toolkit is initialized
         if (toolkit) {
           requestOptions.tools = toolkit.tools;
