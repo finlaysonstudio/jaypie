@@ -138,8 +138,11 @@ export async function operate(
         const requestOptions: /* OpenAI.Responses.InputItems */ any = {
           model,
           input: currentInput,
-          user: options?.user,
         };
+
+        if (options?.user) {
+          requestOptions.user = options.user;
+        }
 
         // Add tools if toolkit is initialized
         if (toolkit) {
