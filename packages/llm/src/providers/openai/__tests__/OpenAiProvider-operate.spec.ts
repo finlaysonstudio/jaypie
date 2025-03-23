@@ -1171,7 +1171,7 @@ describe("OpenAiProvider.operate", () => {
       });
     });
     describe("Structured Output", () => {
-      it.skip("Structured output uses responses API", async () => {
+      it("Structured output uses responses API", async () => {
         const mockResponse = {
           salutation: "Hello",
           name: "World",
@@ -1189,7 +1189,12 @@ describe("OpenAiProvider.operate", () => {
           input: "Hello, World",
           model: expect.any(String),
           text: {
-            format: GreetingFormat,
+            format: {
+              name: expect.any(String),
+              schema: expect.any(Object),
+              strict: true,
+              type: "json_schema",
+            },
           },
         });
         expect(response).toEqual([mockResponse]);

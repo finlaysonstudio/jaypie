@@ -195,14 +195,15 @@ export async function operate(
               options.format instanceof z.ZodType
                 ? options.format
                 : naturalZodSchema(options.format as NaturalSchema);
+            const responseFormat = zodResponseFormat(zodSchema, "response");
 
             // Set up structured output format in the format expected by the test
             requestOptions.text = {
               format: {
-                name: "response",
-                schema: zodResponseFormat(zodSchema, "response"),
-                strict: true,
-                type: "json_schema",
+                name: responseFormat.json_schema.name,
+                schema: responseFormat.json_schema.schema,
+                strict: responseFormat.json_schema.strict,
+                type: responseFormat.type,
               },
             };
           }
