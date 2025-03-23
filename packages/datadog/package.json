@@ -6,11 +6,11 @@
   "type": "module",
   "exports": {
     ".": {
+      "types": "./index.d.ts",
       "default": {
         "require": "./dist/module.cjs",
         "default": "./src/index.js"
-      },
-      "types": "./index.d.ts"
+      }
     }
   },
   "main": "src/index.js",
