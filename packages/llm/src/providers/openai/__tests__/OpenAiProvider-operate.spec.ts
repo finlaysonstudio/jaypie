@@ -747,46 +747,40 @@ describe("OpenAiProvider.operate", () => {
         });
       });
 
-      it.skip("respects placeholders.message option", async () => {
+      it("respects placeholders.message option", async () => {
         const mockResponse = {
           choices: [{ message: { content: "test response" } }],
         };
 
         mockCreate.mockResolvedValue(mockResponse);
 
-        const provider = new OpenAiProvider();
-        const response = await provider.operate("Hello, {{name}}", {
+        await provider.operate("Hello, {{name}}", {
           data: { name: "World" },
-          placeholders: { message: false },
+          placeholders: { input: false },
         });
 
-        expect(response).toBe("test response");
         expect(mockCreate).toHaveBeenCalledWith({
-          messages: [{ role: "user", content: "Hello, {{name}}" }],
+          input: "Hello, {{name}}",
           model: expect.any(String),
         });
       });
 
-      it.skip("respects placeholders.system option", async () => {
+      it("respects placeholders.system option", async () => {
         const mockResponse = {
           choices: [{ message: { content: "test response" } }],
         };
 
         mockCreate.mockResolvedValue(mockResponse);
 
-        const provider = new OpenAiProvider();
-        const response = await provider.operate("test message", {
-          system: "You are a {{role}}",
+        await provider.operate("test message", {
+          instructions: "You are a {{role}}",
           data: { role: "test assistant" },
-          placeholders: { system: false },
+          placeholders: { instructions: false },
         });
 
-        expect(response).toBe("test response");
         expect(mockCreate).toHaveBeenCalledWith({
-          messages: [
-            { role: "developer", content: "You are a {{role}}" },
-            { role: "user", content: "test message" },
-          ],
+          instructions: "You are a {{role}}",
+          input: "test message",
           model: expect.any(String),
         });
       });
