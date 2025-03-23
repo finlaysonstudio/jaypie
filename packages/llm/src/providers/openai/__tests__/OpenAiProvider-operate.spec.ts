@@ -13,13 +13,22 @@ import {
   RateLimitError,
   UnprocessableEntityError,
 } from "openai";
-import { beforeEach, describe, it, expect, vi } from "vitest";
+import { log } from "@jaypie/core";
+import { afterEach, beforeEach, describe, it, expect, vi } from "vitest";
 import { z } from "zod";
 import { OpenAiProvider } from "../OpenAiProvider.class";
 import { MAX_RETRIES_DEFAULT_LIMIT } from "../operate";
 import { OpenAIResponse } from "../types";
 import { LlmTool } from "../../../types/LlmTool.interface";
 
+vi.mock("@jaypie/core", async (importOriginal) => {
+  const actual = await importOriginal();
+  const testkit = await vi.importActual("@jaypie/testkit");
+  return {
+    ...(actual as Record<string, unknown>),
+    ...(testkit.mock as Record<string, unknown>),
+  };
+});
 vi.mock("openai");
 
 const MOCK = {
@@ -31,6 +40,10 @@ const MOCK = {
     },
   },
 };
+
+afterEach(() => {
+  vi.clearAllMocks();
+});
 
 const mockCreate = vi.fn().mockResolvedValue(MOCK.RESPONSE.TEXT);
 describe("OpenAiProvider.operate", () => {
@@ -891,7 +904,22 @@ describe("OpenAiProvider.operate", () => {
         expect(response).toHaveLength(1);
         expect(response).toEqual([MOCK.RESPONSE.TEXT]);
       });
-      it.todo("Warns if system message is provided");
+      it("Warns if system message is provided", async () => {
+        const response = await provider.operate("test message", {
+          // @ts-expect-error Intentionally pass and old parameter
+          system: MOCK.INSTRUCTIONS,
+        });
+
+        expect(mockCreate).toHaveBeenCalledWith({
+          instructions: MOCK.INSTRUCTIONS,
+          input: expect.any(String),
+          model: expect.any(String),
+        });
+        expect(response).toBeArray();
+        expect(response).toHaveLength(1);
+        expect(response).toEqual([MOCK.RESPONSE.TEXT]);
+        expect(log.warn).toHaveBeenCalled();
+      });
       it.skip("applies placeholders to system message", async () => {
         const mockResponse = {
           choices: [{ message: { content: "test response" } }],

@@ -146,6 +146,12 @@ export async function operate(
 
         if (options?.instructions) {
           requestOptions.instructions = options.instructions;
+        } else if ((options as unknown as { system: string })?.system) {
+          // Check for illegal system option, use it as instructions, and log a warning
+          log.warn("[operate] Use 'instructions' instead of 'system'.");
+          requestOptions.instructions = (
+            options as unknown as { system: string }
+          ).system;
         }
 
         // Add tools if toolkit is initialized
