@@ -94,7 +94,6 @@ describe("OpenAiProvider.operate", () => {
     describe("User", () => {
       it("Passes user to OpenAI", async () => {
         // Execute
-        const provider = new OpenAiProvider();
         const testInput = "What is a good taco ingredient?";
         const result = await provider.operate(testInput, {
           user: "test-user",
@@ -136,7 +135,6 @@ describe("OpenAiProvider.operate", () => {
           .mockResolvedValue(undefined);
 
         // Execute
-        const provider = new OpenAiProvider();
         const result = (await provider.operate("test input")) as OpenAIResponse;
 
         // Verify
@@ -174,9 +172,6 @@ describe("OpenAiProvider.operate", () => {
             .spyOn(await import("@jaypie/core"), "sleep")
             .mockResolvedValue(undefined);
 
-          // Execute
-          const provider = new OpenAiProvider();
-
           // Verify
           await expect(provider.operate("test input")).rejects.toThrow();
 
@@ -197,9 +192,6 @@ describe("OpenAiProvider.operate", () => {
             // Setup
             mockCreate.mockRejectedValueOnce(new APIUserAbortError());
 
-            // Execute
-            const provider = new OpenAiProvider();
-
             // Verify
             await expect(provider.operate("test input")).rejects.toThrow();
 
@@ -217,9 +209,6 @@ describe("OpenAiProvider.operate", () => {
               ),
             );
 
-            // Execute
-            const provider = new OpenAiProvider();
-
             // Verify
             await expect(provider.operate("test input")).rejects.toThrow();
 
@@ -232,9 +221,6 @@ describe("OpenAiProvider.operate", () => {
             mockCreate.mockRejectedValueOnce(
               new BadRequestError(400, "Bad request error", undefined, {}),
             );
-
-            // Execute
-            const provider = new OpenAiProvider();
 
             // Verify
             await expect(provider.operate("test input")).rejects.toThrow();
@@ -249,9 +235,6 @@ describe("OpenAiProvider.operate", () => {
               new ConflictError(409, "Conflict error", undefined, {}),
             );
 
-            // Execute
-            const provider = new OpenAiProvider();
-
             // Verify
             await expect(provider.operate("test input")).rejects.toThrow();
 
@@ -264,9 +247,6 @@ describe("OpenAiProvider.operate", () => {
             mockCreate.mockRejectedValueOnce(
               new NotFoundError(404, "Not found error", undefined, {}),
             );
-
-            // Execute
-            const provider = new OpenAiProvider();
 
             // Verify
             await expect(provider.operate("test input")).rejects.toThrow();
@@ -286,9 +266,6 @@ describe("OpenAiProvider.operate", () => {
               ),
             );
 
-            // Execute
-            const provider = new OpenAiProvider();
-
             // Verify
             await expect(provider.operate("test input")).rejects.toThrow();
 
@@ -301,9 +278,6 @@ describe("OpenAiProvider.operate", () => {
             mockCreate.mockRejectedValueOnce(
               new RateLimitError(429, "Rate limit error", undefined, {}),
             );
-
-            // Execute
-            const provider = new OpenAiProvider();
 
             // Verify
             await expect(provider.operate("test input")).rejects.toThrow();
@@ -322,9 +296,6 @@ describe("OpenAiProvider.operate", () => {
                 {},
               ),
             );
-
-            // Execute
-            const provider = new OpenAiProvider();
 
             // Verify
             await expect(provider.operate("test input")).rejects.toThrow();
@@ -370,8 +341,7 @@ describe("OpenAiProvider.operate", () => {
               trace: vi.fn(),
             } as any);
 
-          // Execute
-          const provider = new OpenAiProvider();
+          // Verify
           const result = (await provider.operate(
             "test input",
           )) as OpenAIResponse;
@@ -421,8 +391,7 @@ describe("OpenAiProvider.operate", () => {
               trace: vi.fn(),
             } as any);
 
-          // Execute
-          const provider = new OpenAiProvider();
+          // Verify
           await provider.operate("test input");
 
           // Verify warn log was called with the correct messages
@@ -462,8 +431,7 @@ describe("OpenAiProvider.operate", () => {
               trace: vi.fn(),
             } as any);
 
-          // Execute
-          const provider = new OpenAiProvider();
+          // Verify
           try {
             await provider.operate("test input");
             // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -516,8 +484,7 @@ describe("OpenAiProvider.operate", () => {
               trace: vi.fn(),
             } as any);
 
-          // Execute
-          const provider = new OpenAiProvider();
+          // Verify
           await provider.operate("test input");
 
           // Verify warn log was called with the correct message
@@ -549,8 +516,7 @@ describe("OpenAiProvider.operate", () => {
             .spyOn(await import("@jaypie/core"), "sleep")
             .mockResolvedValue(undefined);
 
-          // Execute
-          const provider = new OpenAiProvider();
+          // Verify
           const result = (await provider.operate(
             "test input",
           )) as OpenAIResponse;
@@ -585,8 +551,7 @@ describe("OpenAiProvider.operate", () => {
             .spyOn(await import("@jaypie/core"), "sleep")
             .mockResolvedValue(undefined);
 
-          // Execute
-          const provider = new OpenAiProvider();
+          // Verify
           const result = (await provider.operate(
             "test input",
           )) as OpenAIResponse;
@@ -626,8 +591,7 @@ describe("OpenAiProvider.operate", () => {
             .spyOn(await import("@jaypie/core"), "sleep")
             .mockResolvedValue(undefined);
 
-          // Execute
-          const provider = new OpenAiProvider();
+          // Verify
           const result = (await provider.operate(
             "test input",
           )) as OpenAIResponse;
@@ -661,8 +625,7 @@ describe("OpenAiProvider.operate", () => {
             .spyOn(await import("@jaypie/core"), "sleep")
             .mockResolvedValue(undefined);
 
-          // Execute
-          const provider = new OpenAiProvider();
+          // Verify
           const result = (await provider.operate(
             "test input",
           )) as OpenAIResponse;
