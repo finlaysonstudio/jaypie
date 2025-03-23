@@ -31,13 +31,14 @@ const MOCK = {
   },
 };
 
+const mockCreate = vi.fn().mockResolvedValue(MOCK.RESPONSE.TEXT);
 describe("OpenAiProvider.operate", () => {
   beforeEach(() => {
     vi.mocked(OpenAI).mockImplementation(
       () =>
         ({
           responses: {
-            create: vi.fn(),
+            create: mockCreate,
           },
         }) as any,
     );
@@ -870,27 +871,8 @@ describe("OpenAiProvider.operate", () => {
       });
     });
     describe("Message Options", () => {
-      let mockCreate: ReturnType<typeof vi.fn>;
       let provider: OpenAiProvider;
-
       beforeEach(() => {
-        // Setup mock response and create function
-        mockCreate = vi.fn().mockResolvedValue({
-          id: "resp_123",
-          content: [{ text: "test response" }],
-        });
-
-        // Mock OpenAI implementation
-        vi.mocked(OpenAI).mockImplementation(
-          () =>
-            ({
-              responses: {
-                create: mockCreate,
-              },
-            }) as any,
-        );
-
-        // Create provider instance
         provider = new OpenAiProvider();
       });
 
