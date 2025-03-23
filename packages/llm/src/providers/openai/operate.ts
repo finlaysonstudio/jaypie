@@ -178,20 +178,34 @@ export async function operate(
         }
 
         if (options?.format) {
-          // Convert NaturalSchema to Zod schema if needed
-          const zodSchema =
-            options.format instanceof z.ZodType
-              ? options.format
-              : naturalZodSchema(options.format as NaturalSchema);
+          // Check if format is a JsonObject with type "json_schema"
+          if (
+            typeof options.format === "object" &&
+            options.format !== null &&
+            !Array.isArray(options.format) &&
+            (options.format as JsonObject).type === "json_schema"
+          ) {
+            // Direct pass-through for JsonObject with type "json_schema"
+            requestOptions.text = {
+              format: options.format,
+            };
+          } else {
+            // Convert NaturalSchema to Zod schema if needed
+            const zodSchema =
+              options.format instanceof z.ZodType
+                ? options.format
+                : naturalZodSchema(options.format as NaturalSchema);
 
-          // Set up structured output format in the format expected by the test
-          requestOptions.text = {
-            format: {
-              schema: zodResponseFormat(zodSchema, "response"),
-              strict: true,
-              type: "json_schema",
-            },
-          };
+            // Set up structured output format in the format expected by the test
+            requestOptions.text = {
+              format: {
+                name: "response",
+                schema: zodResponseFormat(zodSchema, "response"),
+                strict: true,
+                type: "json_schema",
+              },
+            };
+          }
         }
 
         // Add tools if toolkit is initialized
