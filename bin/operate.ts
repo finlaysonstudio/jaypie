@@ -5,7 +5,6 @@ import "dotenv/config";
 // Import directly from source files for development
 import Llm from "../packages/llm/src/Llm.js";
 import { tools } from "../packages/llm/src/tools/index.js";
-import { z } from "zod";
 
 const INSTRUCTIONS =
   "Provide crisp, punchy answers. Be direct and to the point. Avoid flowery language.";
