@@ -712,43 +712,37 @@ describe("OpenAiProvider.operate", () => {
         expect(response).toEqual([MOCK.RESPONSE.TEXT]);
         expect(log.warn).toHaveBeenCalled();
       });
-      it.skip("applies placeholders to system message", async () => {
+      it("applies placeholders to system message", async () => {
         const mockResponse = {
           choices: [{ message: { content: "test response" } }],
         };
         mockCreate.mockResolvedValue(mockResponse);
 
-        const provider = new OpenAiProvider();
-        const response = await provider.operate("test message", {
-          system: "You are a {{role}}",
+        await provider.operate("test message", {
+          instructions: "You are a {{role}}",
           data: { role: "test assistant" },
         });
 
-        expect(response).toBe("test response");
         expect(mockCreate).toHaveBeenCalledWith({
-          messages: [
-            { role: "developer", content: "You are a test assistant" },
-            { role: "user", content: "test message" },
-          ],
+          input: "test message",
+          instructions: "You are a test assistant",
           model: expect.any(String),
         });
       });
 
-      it.skip("applies placeholders to user message", async () => {
+      it("applies placeholders to user message", async () => {
         const mockResponse = {
           choices: [{ message: { content: "test response" } }],
         };
 
         mockCreate.mockResolvedValue(mockResponse);
 
-        const provider = new OpenAiProvider();
-        const response = await provider.operate("Hello, {{name}}", {
+        await provider.operate("Hello, {{name}}", {
           data: { name: "World" },
         });
 
-        expect(response).toBe("test response");
         expect(mockCreate).toHaveBeenCalledWith({
-          messages: [{ role: "user", content: "Hello, World" }],
+          input: "Hello, World",
           model: expect.any(String),
         });
       });

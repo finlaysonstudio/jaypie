@@ -14,6 +14,7 @@ export interface LlmMessageOptions {
 }
 
 export interface LlmOperateOptions {
+  data?: Record<string, string>;
   instructions?: string;
   model?: string;
   tools?: LlmTool[];

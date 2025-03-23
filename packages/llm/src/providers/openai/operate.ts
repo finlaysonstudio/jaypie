@@ -1,4 +1,4 @@
-import { sleep } from "@jaypie/core";
+import { sleep, placeholders } from "@jaypie/core";
 import { BadGatewayError } from "@jaypie/errors";
 import {
   APIConnectionError,
@@ -137,7 +137,10 @@ export async function operate(
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const requestOptions: /* OpenAI.Responses.InputItems */ any = {
           model,
-          input: currentInput,
+          input:
+            typeof currentInput === "string" && options?.data
+              ? placeholders(currentInput, options.data)
+              : currentInput,
         };
 
         if (options?.user) {
@@ -145,13 +148,20 @@ export async function operate(
         }
 
         if (options?.instructions) {
-          requestOptions.instructions = options.instructions;
+          // Apply placeholders to instructions if data is provided
+          requestOptions.instructions = options.data
+            ? placeholders(options.instructions, options.data)
+            : options.instructions;
         } else if ((options as unknown as { system: string })?.system) {
           // Check for illegal system option, use it as instructions, and log a warning
           log.warn("[operate] Use 'instructions' instead of 'system'.");
-          requestOptions.instructions = (
-            options as unknown as { system: string }
-          ).system;
+          // Apply placeholders to system if data is provided
+          requestOptions.instructions = options.data
+            ? placeholders(
+                (options as unknown as { system: string }).system,
+                options.data,
+              )
+            : (options as unknown as { system: string }).system;
         }
 
         // Add tools if toolkit is initialized
@@ -159,6 +169,7 @@ export async function operate(
           requestOptions.tools = toolkit.tools;
         }
 
+        console.log("requestOptions :>> ", requestOptions);
         if (currentTurn > 1) {
           log.trace(`[operate] Calling OpenAI Responses API - ${currentTurn}`);
         } else {
