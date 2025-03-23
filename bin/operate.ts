@@ -17,16 +17,18 @@ async function main() {
     // Call the operate method with a simple message
     const result = await model.operate(
       // "What is the weather right now? Will it rain in the foreseeable future?",
-      "Suggest some taco ingredients",
+      // "Suggest some taco ingredients",
+      "Roll five 6-sided dice. Tell me the best Yahtzee score in the upper section, the best non-chance score in the lower section, the best chance score, and which category the highest of the three is (e.g., 'Ones', 'Full House', 'Chance'). Include the dice roll.",
       {
         instructions: INSTRUCTIONS,
         format: {
-          Filling: String,
-          Sauce: String,
-          Shell: String,
-          Toppings: [String],
+          Upper: String,
+          Lower: String,
+          Chance: String,
+          Category: String,
+          Dice: [Number],
         },
-        // tools,
+        tools,
       },
     );
 
