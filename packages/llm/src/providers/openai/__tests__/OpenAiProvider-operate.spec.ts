@@ -24,12 +24,10 @@ vi.mock("openai");
 
 const MOCK = {
   RESPONSE: {
-    CILANTRO: [
-      {
-        id: "resp_123",
-        content: [{ text: "Cilantro is a good taco ingredient" }],
-      },
-    ],
+    TEXT: {
+      id: "resp_123",
+      content: [{ text: "Cilantro is a good taco ingredient" }],
+    },
   },
 };
 
@@ -60,8 +58,7 @@ describe("OpenAiProvider.operate", () => {
     });
     it("Works how we expect", async () => {
       // Setup
-      const mockResponse = MOCK.RESPONSE.CILANTRO;
-      const mockCreate = vi.fn().mockResolvedValue(mockResponse[0]);
+      const mockCreate = vi.fn().mockResolvedValue(MOCK.RESPONSE.TEXT);
       vi.mocked(OpenAI).mockImplementation(
         () =>
           ({
