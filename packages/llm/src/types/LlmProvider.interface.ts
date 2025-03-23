@@ -21,6 +21,7 @@ export interface LlmOperateOptions {
     input?: boolean;
     instructions?: boolean;
   };
+  output?: NaturalSchema | z.ZodType;
   tools?: LlmTool[];
   turns?: boolean | number;
   user?: string;

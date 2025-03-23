@@ -1171,75 +1171,66 @@ describe("OpenAiProvider.operate", () => {
       });
     });
     describe("Structured Output", () => {
-      it.skip("Uses beta endpoint when structured output is requested", async () => {
-        const mockParsedResponse = {
+      it("Structured output uses responses API", async () => {
+        const mockResponse = {
           salutation: "Hello",
           name: "World",
         };
+        mockCreate.mockResolvedValueOnce(mockResponse);
 
-        const mockResponse = {
-          choices: [
-            {
-              message: {
-                parsed: mockParsedResponse,
-              },
-            },
-          ],
-        };
-
-        const mockParse = vi.fn().mockResolvedValue(mockResponse);
-
-        const provider = new OpenAiProvider();
         const GreetingFormat = z.object({
           salutation: z.string(),
           name: z.string(),
         });
         const response = await provider.operate("Hello, World", {
-          response: GreetingFormat,
+          output: GreetingFormat,
         });
-
-        expect(response).toEqual(mockParsedResponse);
-        expect(mockParse).toHaveBeenCalledWith({
-          messages: [{ role: "user", content: "Hello, World" }],
+        expect(mockCreate).toHaveBeenCalledWith({
+          input: "Hello, World",
           model: expect.any(String),
-          response_format: expect.any(Object),
+          text: {
+            format: {
+              schema: expect.any(Object),
+              strict: true,
+              type: "json_schema",
+            },
+          },
         });
+        expect(response).toEqual([mockResponse]);
       });
 
-      it.skip("Handles NaturalSchema response format", async () => {
-        const mockParsedResponse = {
+      it("Handles NaturalSchema response format", async () => {
+        const mockResponse = {
           salutation: "Hello",
           name: "World",
         };
+        mockCreate.mockResolvedValueOnce(mockResponse);
 
-        const mockResponse = {
-          choices: [
-            {
-              message: {
-                parsed: mockParsedResponse,
-              },
-            },
-          ],
-        };
-
-        const mockParse = vi.fn().mockResolvedValue(mockResponse);
-
-        const provider = new OpenAiProvider();
         const GreetingFormat = {
           salutation: String,
           name: String,
         };
         const response = await provider.operate("Hello, World", {
-          response: GreetingFormat,
+          output: GreetingFormat,
         });
 
-        expect(response).toEqual(mockParsedResponse);
-        expect(mockParse).toHaveBeenCalledWith({
-          messages: [{ role: "user", content: "Hello, World" }],
+        expect(mockCreate).toHaveBeenCalledWith({
+          input: "Hello, World",
           model: expect.any(String),
-          response_format: expect.any(Object),
+          text: {
+            format: {
+              schema: expect.any(Object),
+              strict: true,
+              type: "json_schema",
+            },
+          },
         });
+        expect(response).toEqual([mockResponse]);
       });
+
+      it.todo("Accepts json_schema output format");
+
+      it.todo("Combines with tools on the final response?");
     });
   });
 });

@@ -1,5 +1,6 @@
 import { sleep, placeholders } from "@jaypie/core";
 import { BadGatewayError } from "@jaypie/errors";
+import { JsonObject, NaturalSchema } from "@jaypie/types";
 import {
   APIConnectionError,
   APIConnectionTimeoutError,
@@ -14,6 +15,9 @@ import {
   RateLimitError,
   UnprocessableEntityError,
 } from "openai";
+import { zodResponseFormat } from "openai/helpers/zod";
+import { z } from "zod";
+import naturalZodSchema from "../../util/naturalZodSchema.js";
 import { LlmOperateOptions } from "../../types/LlmProvider.interface.js";
 import { getLogger } from "./utils.js";
 import { PROVIDER } from "../../constants.js";
@@ -173,6 +177,23 @@ export async function operate(
               : (options as unknown as { system: string }).system;
         }
 
+        if (options?.output) {
+          // Convert NaturalSchema to Zod schema if needed
+          const zodSchema =
+            options.output instanceof z.ZodType
+              ? options.output
+              : naturalZodSchema(options.output as NaturalSchema);
+
+          // Set up structured output format in the format expected by the test
+          requestOptions.text = {
+            format: {
+              schema: zodResponseFormat(zodSchema, "response"),
+              strict: true,
+              type: "json_schema",
+            },
+          };
+        }
+
         // Add tools if toolkit is initialized
         if (toolkit) {
           requestOptions.tools = toolkit.tools;
@@ -183,6 +204,7 @@ export async function operate(
         } else {
           log.trace("[operate] Calling OpenAI Responses API");
         }
+
         // Use type assertion to handle the OpenAI SDK response type
         const currentResponse = (await openai.responses.create(
           requestOptions,
