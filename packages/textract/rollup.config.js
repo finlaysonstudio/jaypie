@@ -8,5 +8,9 @@ export default {
     sourcemap: true,
   },
   plugins: [typescript()],
-  external: ["@jaypie/core", "amazon-textract-response-parser"],
+  external: [
+    "@aws-sdk/client-textract",
+    "@jaypie/core",
+    "amazon-textract-response-parser",
+  ],
 };
