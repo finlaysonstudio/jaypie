@@ -13,7 +13,8 @@ import {
   RateLimitError,
   UnprocessableEntityError,
 } from "openai";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { beforeEach, describe, it, expect, vi } from "vitest";
+import { z } from "zod";
 import { OpenAiProvider } from "../OpenAiProvider.class";
 import { MAX_RETRIES_DEFAULT_LIMIT } from "../operate";
 import { OpenAIResponse } from "../types";
@@ -871,7 +872,172 @@ describe("OpenAiProvider.operate", () => {
         });
       });
     });
+    describe("Message Options", () => {
+      let mockCreate: ReturnType<typeof vi.fn>;
+      let provider: OpenAiProvider;
 
+      beforeEach(() => {
+        // Setup mock response and create function
+        mockCreate = vi.fn().mockResolvedValue({
+          id: "resp_123",
+          content: [{ text: "test response" }],
+        });
+
+        // Mock OpenAI implementation
+        vi.mocked(OpenAI).mockImplementation(
+          () =>
+            ({
+              responses: {
+                create: mockCreate,
+              },
+            }) as any,
+        );
+
+        // Create provider instance
+        provider = new OpenAiProvider();
+      });
+
+      it.skip("includes instruction message when provided", async () => {
+        const response = await provider.operate("test message", {
+          instructions: "You are a test assistant",
+        });
+
+        expect(mockCreate).toHaveBeenCalledWith({
+          messages: [
+            { role: "developer", content: "You are a test assistant" },
+            { role: "user", content: "test message" },
+          ],
+          model: expect.any(String),
+        });
+        expect(response).toBe("test response");
+      });
+      it.todo("Warns if system message is provided");
+      it.skip("applies placeholders to system message", async () => {
+        const mockResponse = {
+          choices: [{ message: { content: "test response" } }],
+        };
+
+        const mockCreate = vi.fn().mockResolvedValue(mockResponse);
+        vi.mocked(OpenAI).mockImplementation(
+          () =>
+            ({
+              chat: {
+                completions: {
+                  create: mockCreate,
+                },
+              },
+            }) as any,
+        );
+
+        const provider = new OpenAiProvider();
+        const response = await provider.operate("test message", {
+          system: "You are a {{role}}",
+          data: { role: "test assistant" },
+        });
+
+        expect(response).toBe("test response");
+        expect(mockCreate).toHaveBeenCalledWith({
+          messages: [
+            { role: "developer", content: "You are a test assistant" },
+            { role: "user", content: "test message" },
+          ],
+          model: expect.any(String),
+        });
+      });
+
+      it.skip("applies placeholders to user message", async () => {
+        const mockResponse = {
+          choices: [{ message: { content: "test response" } }],
+        };
+
+        const mockCreate = vi.fn().mockResolvedValue(mockResponse);
+        vi.mocked(OpenAI).mockImplementation(
+          () =>
+            ({
+              chat: {
+                completions: {
+                  create: mockCreate,
+                },
+              },
+            }) as any,
+        );
+
+        const provider = new OpenAiProvider();
+        const response = await provider.operate("Hello, {{name}}", {
+          data: { name: "World" },
+        });
+
+        expect(response).toBe("test response");
+        expect(mockCreate).toHaveBeenCalledWith({
+          messages: [{ role: "user", content: "Hello, World" }],
+          model: expect.any(String),
+        });
+      });
+
+      it.skip("respects placeholders.message option", async () => {
+        const mockResponse = {
+          choices: [{ message: { content: "test response" } }],
+        };
+
+        const mockCreate = vi.fn().mockResolvedValue(mockResponse);
+        vi.mocked(OpenAI).mockImplementation(
+          () =>
+            ({
+              chat: {
+                completions: {
+                  create: mockCreate,
+                },
+              },
+            }) as any,
+        );
+
+        const provider = new OpenAiProvider();
+        const response = await provider.operate("Hello, {{name}}", {
+          data: { name: "World" },
+          placeholders: { message: false },
+        });
+
+        expect(response).toBe("test response");
+        expect(mockCreate).toHaveBeenCalledWith({
+          messages: [{ role: "user", content: "Hello, {{name}}" }],
+          model: expect.any(String),
+        });
+      });
+
+      it.skip("respects placeholders.system option", async () => {
+        const mockResponse = {
+          choices: [{ message: { content: "test response" } }],
+        };
+
+        const mockCreate = vi.fn().mockResolvedValue(mockResponse);
+        vi.mocked(OpenAI).mockImplementation(
+          () =>
+            ({
+              chat: {
+                completions: {
+                  create: mockCreate,
+                },
+              },
+            }) as any,
+        );
+
+        const provider = new OpenAiProvider();
+        const response = await provider.operate("test message", {
+          system: "You are a {{role}}",
+          data: { role: "test assistant" },
+          placeholders: { system: false },
+        });
+
+        expect(response).toBe("test response");
+        expect(mockCreate).toHaveBeenCalledWith({
+          messages: [
+            { role: "developer", content: "You are a {{role}}" },
+            { role: "user", content: "test message" },
+          ],
+          model: expect.any(String),
+        });
+      });
+    });
     describe("Multi Turn", () => {
       it("Calls tool when tools are provided without explicitly setting turns", async () => {
         // Setup
@@ -1298,6 +1464,101 @@ describe("OpenAiProvider.operate", () => {
         // Verify the async tool was called with the correct arguments
         expect(mockAsyncCall).toHaveBeenCalledTimes(1);
         expect(mockAsyncCall).toHaveBeenCalledWith({ delay: 100 });
+      });
+    });
+    describe("Structured Output", () => {
+      it.skip("Uses beta endpoint when structured output is requested", async () => {
+        const mockParsedResponse = {
+          salutation: "Hello",
+          name: "World",
+        };
+
+        const mockResponse = {
+          choices: [
+            {
+              message: {
+                parsed: mockParsedResponse,
+              },
+            },
+          ],
+        };
+
+        const mockParse = vi.fn().mockResolvedValue(mockResponse);
+        vi.mocked(OpenAI).mockImplementation(
+          () =>
+            ({
+              beta: {
+                chat: {
+                  completions: {
+                    parse: mockParse,
+                  },
+                },
+              },
+            }) as any,
+        );
+
+        const provider = new OpenAiProvider();
+        const GreetingFormat = z.object({
+          salutation: z.string(),
+          name: z.string(),
+        });
+        const response = await provider.operate("Hello, World", {
+          response: GreetingFormat,
+        });
+
+        expect(response).toEqual(mockParsedResponse);
+        expect(mockParse).toHaveBeenCalledWith({
+          messages: [{ role: "user", content: "Hello, World" }],
+          model: expect.any(String),
+          response_format: expect.any(Object),
+        });
+      });
+
+      it.skip("Handles NaturalSchema response format", async () => {
+        const mockParsedResponse = {
+          salutation: "Hello",
+          name: "World",
+        };
+
+        const mockResponse = {
+          choices: [
+            {
+              message: {
+                parsed: mockParsedResponse,
+              },
+            },
+          ],
+        };
+
+        const mockParse = vi.fn().mockResolvedValue(mockResponse);
+        vi.mocked(OpenAI).mockImplementation(
+          () =>
+            ({
+              beta: {
+                chat: {
+                  completions: {
+                    parse: mockParse,
+                  },
+                },
+              },
+            }) as any,
+        );
+
+        const provider = new OpenAiProvider();
+        const GreetingFormat = {
+          salutation: String,
+          name: String,
+        };
+        const response = await provider.operate("Hello, World", {
+          response: GreetingFormat,
+        });
+
+        expect(response).toEqual(mockParsedResponse);
+        expect(mockParse).toHaveBeenCalledWith({
+          messages: [{ role: "user", content: "Hello, World" }],
+          model: expect.any(String),
+          response_format: expect.any(Object),
+        });
       });
     });
   });
