@@ -73,7 +73,6 @@ describe("OpenAiProvider.operate", () => {
     });
     it("Works how we expect", async () => {
       // Setup
-      const mockCreate = vi.fn().mockResolvedValue(MOCK.RESPONSE.TEXT);
       vi.mocked(OpenAI).mockImplementation(
         () =>
           ({
@@ -100,7 +99,6 @@ describe("OpenAiProvider.operate", () => {
     describe("User", () => {
       it("Passes user to OpenAI", async () => {
         // Setup
-        const mockCreate = vi.fn();
         vi.mocked(OpenAI).mockImplementation(
           () =>
             ({
@@ -128,7 +126,6 @@ describe("OpenAiProvider.operate", () => {
     describe("API Retry", () => {
       it("Retries retryable errors up to the MAX_RETRIES_DEFAULT_LIMIT limit", async () => {
         // Setup
-        const mockCreate = vi.fn();
         // First MAX_RETRIES_DEFAULT_LIMIT calls will fail with 500 errors
         for (let i = 0; i < MAX_RETRIES_DEFAULT_LIMIT; i++) {
           mockCreate.mockRejectedValueOnce(
@@ -183,7 +180,6 @@ describe("OpenAiProvider.operate", () => {
       describe("Error Handling", () => {
         it("Throws BadGatewayError when retryable errors exceed limit", async () => {
           // Setup
-          const mockCreate = vi.fn();
           // All calls will fail with 500 errors (exceeding the retry limit)
           for (let i = 0; i <= MAX_RETRIES_DEFAULT_LIMIT; i++) {
             mockCreate.mockRejectedValueOnce(
@@ -231,9 +227,7 @@ describe("OpenAiProvider.operate", () => {
         describe("Not Retryable Errors", () => {
           it("Throws BadGatewayError non-retryable APIUserAbortError", async () => {
             // Setup
-            const mockCreate = vi
-              .fn()
-              .mockRejectedValue(new APIUserAbortError());
+            mockCreate.mockRejectedValueOnce(new APIUserAbortError());
 
             vi.mocked(OpenAI).mockImplementation(
               () =>
@@ -255,16 +249,14 @@ describe("OpenAiProvider.operate", () => {
           });
           it("Throws BadGatewayError non-retryable AuthenticationError", async () => {
             // Setup
-            const mockCreate = vi
-              .fn()
-              .mockRejectedValue(
-                new AuthenticationError(
-                  401,
-                  "Authentication error",
-                  undefined,
-                  {},
-                ),
-              );
+            mockCreate.mockRejectedValueOnce(
+              new AuthenticationError(
+                401,
+                "Authentication error",
+                undefined,
+                {},
+              ),
+            );
 
             vi.mocked(OpenAI).mockImplementation(
               () =>
@@ -287,11 +279,9 @@ describe("OpenAiProvider.operate", () => {
 
           it("Throws BadGatewayError non-retryable BadRequestError", async () => {
             // Setup
-            const mockCreate = vi
-              .fn()
-              .mockRejectedValue(
-                new BadRequestError(400, "Bad request error", undefined, {}),
-              );
+            mockCreate.mockRejectedValueOnce(
+              new BadRequestError(400, "Bad request error", undefined, {}),
+            );
 
             vi.mocked(OpenAI).mockImplementation(
               () =>
@@ -314,11 +304,9 @@ describe("OpenAiProvider.operate", () => {
 
           it("Throws BadGatewayError non-retryable ConflictError", async () => {
             // Setup
-            const mockCreate = vi
-              .fn()
-              .mockRejectedValue(
-                new ConflictError(409, "Conflict error", undefined, {}),
-              );
+            mockCreate.mockRejectedValueOnce(
+              new ConflictError(409, "Conflict error", undefined, {}),
+            );
 
             vi.mocked(OpenAI).mockImplementation(
               () =>
@@ -341,11 +329,9 @@ describe("OpenAiProvider.operate", () => {
 
           it("Throws BadGatewayError non-retryable NotFoundError", async () => {
             // Setup
-            const mockCreate = vi
-              .fn()
-              .mockRejectedValue(
-                new NotFoundError(404, "Not found error", undefined, {}),
-              );
+            mockCreate.mockRejectedValueOnce(
+              new NotFoundError(404, "Not found error", undefined, {}),
+            );
 
             vi.mocked(OpenAI).mockImplementation(
               () =>
@@ -368,16 +354,14 @@ describe("OpenAiProvider.operate", () => {
 
           it("Throws BadGatewayError non-retryable PermissionDeniedError", async () => {
             // Setup
-            const mockCreate = vi
-              .fn()
-              .mockRejectedValue(
-                new PermissionDeniedError(
-                  403,
-                  "Permission denied error",
-                  undefined,
-                  {},
-                ),
-              );
+            mockCreate.mockRejectedValueOnce(
+              new PermissionDeniedError(
+                403,
+                "Permission denied error",
+                undefined,
+                {},
+              ),
+            );
 
             vi.mocked(OpenAI).mockImplementation(
               () =>
@@ -400,11 +384,9 @@ describe("OpenAiProvider.operate", () => {
 
           it("Throws BadGatewayError non-retryable RateLimitError", async () => {
             // Setup
-            const mockCreate = vi
-              .fn()
-              .mockRejectedValue(
-                new RateLimitError(429, "Rate limit error", undefined, {}),
-              );
+            mockCreate.mockRejectedValueOnce(
+              new RateLimitError(429, "Rate limit error", undefined, {}),
+            );
 
             vi.mocked(OpenAI).mockImplementation(
               () =>
@@ -427,16 +409,14 @@ describe("OpenAiProvider.operate", () => {
 
           it("Throws BadGatewayError non-retryable UnprocessableEntityError", async () => {
             // Setup
-            const mockCreate = vi
-              .fn()
-              .mockRejectedValue(
-                new UnprocessableEntityError(
-                  422,
-                  "Unprocessable entity error",
-                  undefined,
-                  {},
-                ),
-              );
+            mockCreate.mockRejectedValueOnce(
+              new UnprocessableEntityError(
+                422,
+                "Unprocessable entity error",
+                undefined,
+                {},
+              ),
+            );
 
             vi.mocked(OpenAI).mockImplementation(
               () =>
@@ -461,7 +441,6 @@ describe("OpenAiProvider.operate", () => {
       describe("API Retry Observability", () => {
         it("Logs debug on retry success", async () => {
           // Setup
-          const mockCreate = vi.fn();
           // First call fails with a retryable error
           mockCreate.mockRejectedValueOnce(
             new InternalServerError(
@@ -526,7 +505,6 @@ describe("OpenAiProvider.operate", () => {
         });
         it("Logs second warn on unknown errors", async () => {
           // Setup
-          const mockCreate = vi.fn();
           // Create an unknown error type that's not in the retryable list
           const unknownError = new Error("Unknown error");
           mockCreate.mockRejectedValueOnce(unknownError);
@@ -585,7 +563,6 @@ describe("OpenAiProvider.operate", () => {
 
         it("Logs error on non-retryable errors", async () => {
           // Setup
-          const mockCreate = vi.fn();
           const authError = new AuthenticationError(
             401,
             "Authentication error",
@@ -637,7 +614,6 @@ describe("OpenAiProvider.operate", () => {
 
         it("Logs warn on retryable errors", async () => {
           // Setup
-          const mockCreate = vi.fn();
           // First call fails with a retryable error
           const serverError = new InternalServerError(
             500,
@@ -697,7 +673,6 @@ describe("OpenAiProvider.operate", () => {
       describe("Retryable Errors", () => {
         it("Retries APIConnectionError", async () => {
           // Setup
-          const mockCreate = vi.fn();
           // First call fails with a connection error
           mockCreate.mockRejectedValueOnce(
             new APIConnectionError({ message: "Connection error" }),
@@ -743,7 +718,6 @@ describe("OpenAiProvider.operate", () => {
 
         it("Retries APIConnectionTimeoutError", async () => {
           // Setup
-          const mockCreate = vi.fn();
           // First call fails with a timeout error
           mockCreate.mockRejectedValueOnce(
             new APIConnectionTimeoutError({ message: "Connection timeout" }),
@@ -789,7 +763,6 @@ describe("OpenAiProvider.operate", () => {
 
         it("Retries InternalServerError", async () => {
           // Setup
-          const mockCreate = vi.fn();
           // First call fails with a server error
           mockCreate.mockRejectedValueOnce(
             new InternalServerError(
@@ -840,7 +813,6 @@ describe("OpenAiProvider.operate", () => {
 
         it("Retries unknown errors", async () => {
           // Setup
-          const mockCreate = vi.fn();
           // First call fails with an unknown error
           const unknownError = new Error("Unknown error");
           mockCreate.mockRejectedValueOnce(unknownError);
@@ -924,8 +896,7 @@ describe("OpenAiProvider.operate", () => {
         const mockResponse = {
           choices: [{ message: { content: "test response" } }],
         };
-
-        const mockCreate = vi.fn().mockResolvedValue(mockResponse);
+        mockCreate.mockResolvedValue(mockResponse);
         vi.mocked(OpenAI).mockImplementation(
           () =>
             ({
@@ -958,7 +929,7 @@ describe("OpenAiProvider.operate", () => {
           choices: [{ message: { content: "test response" } }],
         };
 
-        const mockCreate = vi.fn().mockResolvedValue(mockResponse);
+        mockCreate.mockResolvedValue(mockResponse);
         vi.mocked(OpenAI).mockImplementation(
           () =>
             ({
@@ -987,7 +958,7 @@ describe("OpenAiProvider.operate", () => {
           choices: [{ message: { content: "test response" } }],
         };
 
-        const mockCreate = vi.fn().mockResolvedValue(mockResponse);
+        mockCreate.mockResolvedValue(mockResponse);
         vi.mocked(OpenAI).mockImplementation(
           () =>
             ({
@@ -1017,7 +988,7 @@ describe("OpenAiProvider.operate", () => {
           choices: [{ message: { content: "test response" } }],
         };
 
-        const mockCreate = vi.fn().mockResolvedValue(mockResponse);
+        mockCreate.mockResolvedValue(mockResponse);
         vi.mocked(OpenAI).mockImplementation(
           () =>
             ({
@@ -1060,7 +1031,7 @@ describe("OpenAiProvider.operate", () => {
             },
           ],
         };
-        const mockCreate = vi.fn().mockResolvedValueOnce(mockResponse);
+        mockCreate.mockResolvedValueOnce(mockResponse);
         vi.mocked(OpenAI).mockImplementation(
           () =>
             ({
@@ -1145,8 +1116,7 @@ describe("OpenAiProvider.operate", () => {
         };
 
         // Create a mock for the OpenAI API call that returns different responses for each turn
-        const mockCreate = vi
-          .fn()
+        mockCreate
           .mockResolvedValueOnce(mockResponse1)
           .mockResolvedValueOnce(mockResponse2)
           .mockResolvedValueOnce(mockResponse3);
@@ -1246,7 +1216,6 @@ describe("OpenAiProvider.operate", () => {
 
         // Setup - Create mock responses for each turn
         const mockResponses = [];
-        const mockCreate = vi.fn();
 
         // Create 12 mock responses, each with a function call
         for (let i = 1; i <= MAX_TURNS_DEFAULT_LIMIT; i++) {
@@ -1386,8 +1355,7 @@ describe("OpenAiProvider.operate", () => {
         };
 
         // Create a mock for the OpenAI API call
-        const mockCreate = vi
-          .fn()
+        mockCreate
           .mockResolvedValueOnce(mockResponse1)
           .mockResolvedValueOnce(mockResponse2);
 
