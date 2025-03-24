@@ -141,5 +141,8 @@ describe("Toolkit", () => {
         }),
       ).rejects.toThrow("Tool 'nonExistentTool' not found");
     });
+
+    it.todo("Does not pass explanation to tool call in explain mode");
+    it.todo("Returns explanation in explain mode");
   });
 });
