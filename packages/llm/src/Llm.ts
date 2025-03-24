@@ -61,7 +61,7 @@ class Llm implements LlmProvider {
         `Provider ${this._provider} does not support operate method`,
       );
     }
-    return this._llm.operate(message, options);
+    return this._llm.operate(message, options) as Promise<JsonArray>;
   }
 
   static async send(
