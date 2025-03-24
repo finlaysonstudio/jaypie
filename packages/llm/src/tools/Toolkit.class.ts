@@ -2,11 +2,17 @@ import { LlmTool } from "../types/LlmTool.interface";
 
 const DEFAULT_TOOL_TYPE = "function";
 
+export interface ToolkitOptions {
+  explain?: boolean;
+}
+
 export class Toolkit {
   private readonly _tools: LlmTool[];
+  private readonly _options: ToolkitOptions;
 
-  constructor(tools: LlmTool[]) {
+  constructor(tools: LlmTool[], options?: ToolkitOptions) {
     this._tools = tools;
+    this._options = options || {};
   }
 
   get tools(): Omit<LlmTool, "call">[] {

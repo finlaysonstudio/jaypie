@@ -123,10 +123,11 @@ export async function operate(
   let currentTurn = 0;
   let currentInput = input;
   let toolkit: Toolkit | undefined;
+  const explain = options?.explain ?? false;
 
   // Initialize toolkit if tools are provided
   if (options.tools?.length) {
-    toolkit = new Toolkit(options.tools);
+    toolkit = new Toolkit(options.tools, { explain });
   }
 
   // OpenAI Multi-turn Loop

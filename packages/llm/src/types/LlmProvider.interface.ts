@@ -15,6 +15,7 @@ export interface LlmMessageOptions {
 
 export interface LlmOperateOptions {
   data?: Record<string, string>;
+  explain?: boolean;
   format?: JsonObject | NaturalSchema | z.ZodType;
   instructions?: string;
   model?: string;
