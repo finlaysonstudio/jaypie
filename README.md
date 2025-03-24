@@ -1077,7 +1077,74 @@ const openai = new Llm(LLM.PROVIDER.OPENAI.NAME);
 const anthropic = new Llm(LLM.PROVIDER.ANTHROPIC.NAME);
 ```
 
-#### Message Options
+#### Function Calling with `operate`
+
+The `operate` method enables function calling capabilities with LLMs:
+
+```javascript
+import { Llm } from "jaypie";
+
+const llm = new Llm();
+const result = await llm.operate("What's the weather in New York?", {
+  data: { city: "New York" }, // Template variables
+  explain: true, // Include explanation of tool usage
+  format: { // Structured output format
+    temperature: Number,
+    conditions: String
+  },
+  instructions: "You are a weather assistant", // System instructions
+  model: "gpt-4o", // Override default model
+  placeholders: { // Control placeholder replacement
+    input: true,     // Default: true - Replace placeholders in input
+    instructions: true // Default: true - Replace placeholders in instructions
+  },
+  providerOptions: {}, // Provider-specific options
+  tools: [weatherTool], // Array of tool definitions
+  turns: 3, // Maximum number of conversation turns (true = default limit)
+  user: "user-123" // User identifier for the request
+});
+```
+
+##### Operate
+
+The `operate` method is a more flexible API that allows for function calling and multi-turn conversations.
+
+```javascript
+import { Llm, toolkit } from "jaypie";
+
+const llm = new Llm();
+const result = await llm.operate("Roll 2d20 and tell me the weather", {
+  tools: [toolkit.roll, toolkit.weather],
+  turns: true // Enable multi-turn conversation
+});
+```
+
+The LLM package includes several built-in tools that can be used with the `operate` method:
+
+- **time** - Returns the current time or converts a date string to ISO UTC format
+  ```javascript
+  // Example: "2025-03-24T22:48:45.000Z"
+  ```
+
+- **weather** - Fetches current weather and forecast data for a location
+  ```javascript
+  // Parameters: latitude, longitude, timezone, past_days, forecast_days
+  ```
+
+- **random** - Generates random numbers with various distribution options
+  ```javascript
+  // Parameters: min, max, mean, stddev, integer, seed, precision, currency
+  ```
+
+- **roll** - Simulates dice rolls for tabletop gaming
+  ```javascript
+  // Parameters: number (of dice), sides
+  // Returns: { rolls: [3, 5], total: 8 }
+  ```
+
+#### Send Message
+
+_`send` is a limited single-turn call API. `operate` offers more options including function calling._
 
 The `send` method accepts options to customize the request:
 
@@ -1085,11 +1152,15 @@ The `send` method accepts options to customize the request:
 const response = await llm.send("Hello, {{name}}!", {
   data: { name: "World" }, // Template variables
   model: "gpt-4", // Override default model
-  system: "You are a helpful assistant", // System prompt
+  placeholders: { // Control placeholder replacement
+    message: true, // Default: true - Replace placeholders in message
+    system: true   // Default: true - Replace placeholders in system prompt
+  },
   response: { // Structured output schema
     greeting: String,
     timestamp: Number
-  }
+  },
+  system: "You are a helpful assistant" // System prompt
 });
 ```
 
@@ -1098,11 +1169,18 @@ const response = await llm.send("Hello, {{name}}!", {
 ##### OpenAI
 - `LLM.PROVIDER.OPENAI.MODEL.GPT_4` - GPT-4
 - `LLM.PROVIDER.OPENAI.MODEL.GPT_4_O` - GPT-4 Optimized (default)
+- `LLM.PROVIDER.OPENAI.MODEL.GPT_4_O_MINI` - GPT-4o Mini
+- `LLM.PROVIDER.OPENAI.MODEL.GPT_4_5` - GPT-4.5 Preview
+- `LLM.PROVIDER.OPENAI.MODEL.O1` - O1
+- `LLM.PROVIDER.OPENAI.MODEL.O1_MINI` - O1 Mini
+- `LLM.PROVIDER.OPENAI.MODEL.O1_PRO` - O1 Pro
+- `LLM.PROVIDER.OPENAI.MODEL.O3_MINI` - O3 Mini
+- `LLM.PROVIDER.OPENAI.MODEL.O3_MINI_HIGH` - O3 Mini High
 
 ##### Anthropic
-- `LLM.PROVIDER.ANTHROPIC.MODEL.CLAUDE_3_HAIKU` - Claude 3 Haiku
+- `LLM.PROVIDER.ANTHROPIC.MODEL.CLAUDE_3_HAIKU` - Claude 3.5 Haiku
 - `LLM.PROVIDER.ANTHROPIC.MODEL.CLAUDE_3_OPUS` - Claude 3 Opus
-- `LLM.PROVIDER.ANTHROPIC.MODEL.CLAUDE_3_SONNET` - Claude 3 Sonnet (default)
+- `LLM.PROVIDER.ANTHROPIC.MODEL.CLAUDE_3_SONNET` - Claude 3.5 Sonnet (default)
 
 #### Configuration
 
