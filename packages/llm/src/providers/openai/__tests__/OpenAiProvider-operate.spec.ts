@@ -14,6 +14,7 @@ import {
   UnprocessableEntityError,
 } from "openai";
 import { log } from "@jaypie/core";
+import { restoreLog, spyLog } from "@jaypie/testkit";
 import { afterEach, beforeEach, describe, it, expect, vi } from "vitest";
 import { z } from "zod";
 import { OpenAiProvider } from "../OpenAiProvider.class";
@@ -21,14 +22,6 @@ import { MAX_RETRIES_DEFAULT_LIMIT } from "../operate";
 import { OpenAIResponse } from "../types";
 import { LlmTool } from "../../../types/LlmTool.interface";
 
-vi.mock("@jaypie/core", async (importOriginal) => {
-  const actual = await importOriginal();
-  const testkit = await vi.importActual("@jaypie/testkit");
-  return {
-    ...(actual as Record<string, unknown>),
-    ...(testkit.mock as Record<string, unknown>),
-  };
-});
 vi.mock("openai");
 
 const MOCK = {
@@ -41,8 +34,13 @@ const MOCK = {
   },
 };
 
+beforeEach(() => {
+  spyLog(log);
+});
+
 afterEach(() => {
   vi.clearAllMocks();
+  restoreLog(log);
 });
 
 const mockCreate = vi.fn().mockResolvedValue(MOCK.RESPONSE.TEXT);
