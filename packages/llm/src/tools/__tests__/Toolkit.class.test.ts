@@ -59,6 +59,17 @@ describe("Toolkit", () => {
 
       expect(tools).toHaveLength(1);
       expect(tools[0].type).toBe("function");
+      expect(tools[0].parameters.properties).not.toHaveProperty(
+        "__Explanation",
+      );
+    });
+
+    it("should add the explain property to all tools", () => {
+      const toolkit = new Toolkit([mockTool], { explain: true });
+      const tools = toolkit.tools;
+
+      expect(tools).toHaveLength(1);
+      expect(tools[0].parameters.properties).toHaveProperty("__Explanation");
     });
   });
 

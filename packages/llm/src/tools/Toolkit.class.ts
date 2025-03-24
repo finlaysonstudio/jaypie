@@ -9,10 +9,12 @@ export interface ToolkitOptions {
 export class Toolkit {
   private readonly _tools: LlmTool[];
   private readonly _options: ToolkitOptions;
+  private readonly explain: boolean;
 
   constructor(tools: LlmTool[], options?: ToolkitOptions) {
     this._tools = tools;
     this._options = options || {};
+    this.explain = this._options.explain ? true : false;
   }
 
   get tools(): Omit<LlmTool, "call">[] {
@@ -20,6 +22,18 @@ export class Toolkit {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const toolCopy: any = { ...tool };
       delete toolCopy.call;
+
+      if (this.explain && toolCopy.parameters?.type === "object") {
+        if (toolCopy.parameters?.properties) {
+          if (!toolCopy.parameters.properties.__Explanation) {
+            toolCopy.parameters.properties.__Explanation = {
+              type: "string",
+              description:
+                "Explain the reasoning behind this function call. What is the expected result? Describe possible next steps and the conditions under which they should be taken.",
+            };
+          }
+        }
+      }
 
       // Set default type if not provided
       if (!toolCopy.type) {
