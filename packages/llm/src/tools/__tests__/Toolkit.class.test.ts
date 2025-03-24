@@ -142,7 +142,16 @@ describe("Toolkit", () => {
       ).rejects.toThrow("Tool 'nonExistentTool' not found");
     });
 
-    it.todo("Does not pass explanation to tool call in explain mode");
+    it("Does not pass explanation to tool call in explain mode", async () => {
+      const toolkit = new Toolkit([mockTool], { explain: true });
+      const args = JSON.stringify({
+        testParam: "value",
+        __Explanation: "explanation",
+      });
+
+      await toolkit.call({ name: "testTool", arguments: args });
+      expect(mockTool.call).toHaveBeenCalledWith({ testParam: "value" });
+    });
     it.todo("Returns explanation in explain mode");
   });
 });

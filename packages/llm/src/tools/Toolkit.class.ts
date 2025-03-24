@@ -53,6 +53,9 @@ export class Toolkit {
     let parsedArgs;
     try {
       parsedArgs = JSON.parse(args);
+      if (this.explain) {
+        delete parsedArgs.__Explanation;
+      }
     } catch {
       parsedArgs = args;
     }
