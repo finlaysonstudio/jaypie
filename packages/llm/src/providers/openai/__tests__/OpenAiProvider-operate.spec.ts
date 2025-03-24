@@ -1133,6 +1133,36 @@ describe("OpenAiProvider.operate", () => {
         expect(mockAsyncCall).toHaveBeenCalledWith({ delay: 100 });
       });
     });
+    describe("Provider Options", () => {
+      it("Passes providerOptions to the OpenAI API", async () => {
+        // Setup
+        const mockResponse = {
+          id: "resp_123",
+          content: [{ text: "Response with custom temperature" }],
+        };
+        mockCreate.mockResolvedValueOnce(mockResponse);
+
+        // Execute
+        const result = await provider.operate("test input", {
+          providerOptions: {
+            temperature: 0.5,
+            top_p: 0.8,
+            frequency_penalty: 0.2,
+          },
+        });
+
+        // Verify
+        expect(mockCreate).toHaveBeenCalledWith({
+          model: expect.any(String),
+          input: "test input",
+          temperature: 0.5,
+          top_p: 0.8,
+          frequency_penalty: 0.2,
+        });
+        expect(result).toEqual([mockResponse]);
+      });
+    });
+
     describe("Structured Output", () => {
       it("Structured output uses responses API", async () => {
         const mockResponse = {

@@ -22,6 +22,7 @@ export interface LlmOperateOptions {
     input?: boolean;
     instructions?: boolean;
   };
+  providerOptions?: Record<string, unknown>;
   tools?: LlmTool[];
   turns?: boolean | number;
   user?: string;

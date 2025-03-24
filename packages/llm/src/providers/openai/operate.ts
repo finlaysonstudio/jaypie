@@ -154,6 +154,11 @@ export async function operate(
           requestOptions.user = options.user;
         }
 
+        // Add any provider-specific options
+        if (options?.providerOptions) {
+          Object.assign(requestOptions, options.providerOptions);
+        }
+
         if (options?.instructions) {
           // Apply placeholders to instructions if data is provided and placeholders.instructions is undefined or true
           requestOptions.instructions =
