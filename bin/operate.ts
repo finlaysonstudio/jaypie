@@ -14,7 +14,7 @@ async function playYahtzee() {
   const result = await model.operate(
     "Roll five 6-sided dice. Tell me the best Yahtzee score in the upper section, the best non-chance score in the lower section, the best chance score, and which category the highest of the three is (e.g., 'Ones', 'Full House', 'Chance'). Include the dice roll.",
     {
-      instructions: INSTRUCTIONS,
+      explain: true,
       format: {
         Upper: String,
         Lower: String,
@@ -22,6 +22,7 @@ async function playYahtzee() {
         Category: String,
         Dice: [Number],
       },
+      instructions: INSTRUCTIONS,
       tools,
     },
   );
