@@ -17,7 +17,7 @@
     "dist"
   ],
   "scripts": {
-    "build": "rollup --config",
+    "build:manual": "rollup --config",
     "format": "eslint . --fix",
     "lint": "eslint .",
     "test": "vitest run .",
@@ -26,7 +26,9 @@
   "dependencies": {
     "@jaypie/aws": "^1.1.15",
     "@jaypie/core": "^1.1.2",
-    "openai": "^4.82.0",
+    "openai": "^4.87.3",
+    "openmeteo": "^1.2.0",
+    "random": "^5.3.0",
     "zod": "^3.24.1"
   },
   "devDependencies": {

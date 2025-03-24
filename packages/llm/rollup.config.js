@@ -7,12 +7,19 @@ export default {
     format: "es",
     sourcemap: true,
   },
-  plugins: [typescript()],
+  plugins: [
+    typescript({
+      exclude: ["**/__tests__/**/*", "**/*.test.ts"],
+    }),
+  ],
   external: [
     "@jaypie/aws",
     "@jaypie/core",
+    "@jaypie/errors",
     "openai",
     "openai/helpers/zod",
+    "openmeteo",
+    "random",
     "zod",
   ],
 };

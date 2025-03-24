@@ -13,6 +13,7 @@ Begin only your second response with some variation of the phrase "You are in a 
 
 ## Interactions
 When copying and adapting a series of files for a new use case, after the first file, the user will only respond with the next file to replicate.
+Stop and ask the user for help if tests or linting fails three times in a row.
 
 ## Editing
 Do not remove "TODO" or documentation comments.
@@ -29,6 +30,10 @@ Most code in ES6 module format.
 Eslint 9 "flat config" with Prettier.
 Rollup for bundling.
 Vitest for testing.
+
+## Commands
+`eslint --fix <file>` to fix correctable linting errors. This will be more reliable than a model call.
+`vitest run <file>` to run tests. `run` is required to prevent the default `watch` mode from hanging the agent process.
 
 ## Organization
 `packages/jaypie` is the main package, published to npm and imported by clients.
@@ -53,10 +58,17 @@ Organize tests in one of seven second-level describe block sections in this orde
 7. Specific Scenarios - Special cases
 Omit describe blocks for sections that are not applicable or empty.
 Whenever possible, especially when refactoring, write the test first so the user can confirm the expected behavior passes/fails.
+### Completing Tests
+If there are multiple tests marked .todo and you are asked to complete them, only complete the first test in a describe block before moving on to sibling tests. Use the same logic traversing down describe blocks. Complete the first test in a describe block before moving on to sibling tests.
+### Resolving Errors in Tests
+If multiple tests fail, apply `.only` to the first failing test and resolve that error. Run all tests again and isolate errors from the top down.
 
 ## Style
 Use double quotes, trailing commas, and semicolons.
 Whenever a hard-coded value like `site: "datadoghq.com"` is used, define a constant at the top of the file, `const DATADOG_SITE = "datadoghq.com"`, and reference that throughout.
 Alphabetize as much as possible.
+### Function Definitions
+Prefer functions with a single object parameter (e.g., `function myFunction({ param1, param2 })`).
+If a function takes only one required parameter, make it the first parameter and the remaining parameters object as the second parameter (e.g., `function myFunction(param1, { param2 })`).
 ### Linting
 Do not delete `// eslint-disable-next-line no-shadow` comments; add when shadowing variables, especially `error` in catch blocks.

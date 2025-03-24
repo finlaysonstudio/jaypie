@@ -18,7 +18,7 @@
     "build:express": "npm run build --workspace packages/express",
     "build:jaypie": "npm run build --workspace packages/jaypie",
     "build:lambda": "npm run build --workspace packages/lambda",
-    "build:llm": "npm run build --workspace packages/llm",
+    "build:llm": "npm run build:manual --workspace packages/llm",
     "build:mongoose": "npm run build --workspace packages/mongoose",
     "build:testkit": "npm run build --workspace packages/testkit",
     "build:textract": "npm run build --workspace packages/textract",
@@ -57,6 +57,7 @@
     "@rollup/plugin-json": "^6.1.0",
     "@rollup/plugin-node-resolve": "^16.0.0",
     "@types/uuid": "^10.0.0",
+    "dotenv": "^16.4.7",
     "eslint": "^9.13.0",
     "eslint-plugin-jest": "^28.8.3",
     "hygen": "^6.2.11",
@@ -69,6 +70,7 @@
     "rollup-plugin-auto-external": "^2.0.0",
     "sort-package-json": "^2.10.1",
     "supertest": "^7.0.0",
+    "tsx": "^4.19.3",
     "vitest": "^3.0.5"
   }
 }

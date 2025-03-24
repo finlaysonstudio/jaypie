@@ -5,7 +5,7 @@ import Llm from "../Llm.js";
 import { DEFAULT, PROVIDER } from "../constants.js";
 
 // Mock OpenAiProvider
-vi.mock("../providers/OpenAiProvider.class.js", () => ({
+vi.mock("../providers/openai/index.js", () => ({
   OpenAiProvider: vi.fn().mockImplementation(() => ({
     send: vi.fn().mockResolvedValue("Mocked OpenAI response"),
   })),
