@@ -1142,6 +1142,63 @@ The LLM package includes several built-in tools that can be used with the `opera
   // Returns: { rolls: [3, 5], total: 8 }
   ```
 
+##### Creating Custom Tools
+
+You can define custom tools by implementing the `LlmTool` interface:
+
+```javascript
+import { LlmTool } from "jaypie";
+
+const translateTool: LlmTool = {
+  description: "Translates text to a specified language",
+  name: "translate",
+  parameters: {
+    type: "object",
+    properties: {
+      text: {
+        type: "string",
+        description: "Text to translate"
+      },
+      targetLanguage: {
+        type: "string",
+        description: "Target language code (e.g., 'es', 'fr', 'de')"
+      }
+    },
+    required: ["text", "targetLanguage"]
+  },
+  type: "function",
+  call: async ({ text, targetLanguage }) => {
+    // Implementation of translation logic
+    // Could call an external API or use a library
+    return { translatedText: `[${targetLanguage}] ${text}` };
+  }
+};
+
+// Use the custom tool
+const llm = new Llm();
+const result = await llm.operate("Translate 'Hello world' to Spanish", {
+  tools: [translateTool]
+});
+```
+
+##### Using Multiple Tools
+
+You can use multiple tools together in the `operate` method:
+
+```javascript
+import { Llm, toolkit } from "jaypie";
+
+const llm = new Llm();
+const result = await llm.operate("What's the weather and give me a random number", {
+  tools: [
+    toolkit.weather,
+    toolkit.random,
+    translateTool, // Your custom tool
+    // Add more tools as needed
+  ]
+});
+```
+
 #### Send Message
 
 _`send` is a limited single-turn call API. `operate` offers more options including function calling._
