@@ -15,7 +15,7 @@ export interface LambdaHandlerOptions extends HandlerOptions {
 
 export type LambdaHandler<TEvent = unknown, TResult = unknown> = (
   event: TEvent,
-  context: LambdaContext,
+  context?: LambdaContext,
   ...args: unknown[]
 ) => Promise<TResult> | TResult;
 
