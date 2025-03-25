@@ -1077,34 +1077,6 @@ const openai = new Llm(LLM.PROVIDER.OPENAI.NAME);
 const anthropic = new Llm(LLM.PROVIDER.ANTHROPIC.NAME);
 ```
 
-#### Function Calling with `operate`
-
-The `operate` method enables function calling capabilities with LLMs:
-
-```javascript
-import { Llm } from "jaypie";
-
-const llm = new Llm();
-const result = await llm.operate("What's the weather in New York?", {
-  data: { city: "New York" }, // Template variables
-  explain: true, // Include explanation of tool usage
-  format: { // Structured output format
-    temperature: Number,
-    conditions: String
-  },
-  instructions: "You are a weather assistant", // System instructions
-  model: "gpt-4o", // Override default model
-  placeholders: { // Control placeholder replacement
-    input: true,     // Default: true - Replace placeholders in input
-    instructions: true // Default: true - Replace placeholders in instructions
-  },
-  providerOptions: {}, // Provider-specific options
-  tools: [weatherTool], // Array of tool definitions
-  turns: 3, // Maximum number of conversation turns (true = default limit)
-  user: "user-123" // User identifier for the request
-});
-```
-
 ##### Operate
 
 The `operate` method is a more flexible API that allows for function calling and multi-turn conversations.
@@ -1196,6 +1168,32 @@ const result = await llm.operate("What's the weather and give me a random number
     translateTool, // Your custom tool
     // Add more tools as needed
   ]
+});
+```
+
+##### Advanced Options
+
+```javascript
+import { Llm } from "jaypie";
+
+const llm = new Llm();
+const result = await llm.operate("What's the weather in New York?", {
+  data: { city: "New York" }, // Template variables
+  explain: true, // Include explanation of tool usage
+  format: { // Structured output format
+    temperature: Number,
+    conditions: String
+  },
+  instructions: "You are a weather assistant", // System instructions
+  model: "gpt-4o", // Override default model
+  placeholders: { // Control placeholder replacement
+    input: true,     // Default: true - Replace placeholders in input
+    instructions: true // Default: true - Replace placeholders in instructions
+  },
+  providerOptions: {}, // Provider-specific options
+  tools: [weatherTool], // Array of tool definitions
+  turns: 3, // Maximum number of conversation turns (true = default limit)
+  user: "user-123" // User identifier for the request
 });
 ```
 
