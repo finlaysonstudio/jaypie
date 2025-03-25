@@ -545,7 +545,7 @@ export const lambdaHandler = vi.fn(
 );
 
 // @jaypie/llm
-const mockOperate = vi.fn().mockResolvedValue("_MOCK_LLM_OPERATION");
+const mockOperate = vi.fn().mockResolvedValue([{ id: "_MOCK_LLM_OPERATION" }]);
 const mockSend = vi.fn().mockResolvedValue("_MOCK_LLM_RESPONSE");
 export const Llm = Object.assign(
   vi.fn().mockImplementation((providerName = "_MOCK_LLM_PROVIDER") => ({
