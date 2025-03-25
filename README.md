@@ -1077,7 +1077,7 @@ const openai = new Llm(LLM.PROVIDER.OPENAI.NAME);
 const anthropic = new Llm(LLM.PROVIDER.ANTHROPIC.NAME);
 ```
 
-##### Operate
+#### Operate
 
 The `operate` method is a more flexible API that allows for function calling and multi-turn conversations.
 
