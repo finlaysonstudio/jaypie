@@ -64,6 +64,31 @@ export const MAX_TURNS_DEFAULT_LIMIT = 12;
 // Helpers
 //
 
+export function formatInput(
+  input: string | JsonObject | JsonObject[],
+  { data, role = "user" }: { data?: JsonObject; role?: string } = {},
+): JsonObject[] {
+  if (Array.isArray(input)) {
+    return input;
+  }
+
+  if (typeof input === "object" && input !== null) {
+    return [
+      {
+        content: (input as { content: string }).content,
+        role: (input as { role?: string }).role || role,
+      },
+    ];
+  }
+
+  return [
+    {
+      content: data ? placeholders(input as string, data) : (input as string),
+      role,
+    },
+  ];
+}
+
 export function maxTurnsFromOptions(options: LlmOperateOptions): number {
   // Default to single turn (1) when turns are disabled
 
@@ -116,11 +141,13 @@ export async function operate(
   const maxRetries = Math.min(context.maxRetries, MAX_RETRIES_ABSOLUTE_LIMIT);
   const allResponses: OpenAIResponseTurn[] = [];
 
+  // Convert string input to array format with placeholders if needed
+  const currentInput = formatInput(input, { data: options?.data });
+
   // Determine max turns from options
   const maxTurns = maxTurnsFromOptions(options);
   const enableMultipleTurns = maxTurns > 1;
   let currentTurn = 0;
-  let currentInput = input;
   let toolkit: Toolkit | undefined;
   const explain = options?.explain ?? false;
 
@@ -141,13 +168,7 @@ export async function operate(
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const requestOptions: /* OpenAI.Responses.InputItems */ any = {
           model,
-          input:
-            typeof currentInput === "string" &&
-            options?.data &&
-            (options.placeholders?.input === undefined ||
-              options.placeholders?.input)
-              ? placeholders(currentInput, options.data)
-              : currentInput,
+          input: currentInput,
         };
 
         if (options?.user) {
@@ -262,7 +283,10 @@ export async function operate(
                     // Add the function call to the input for the next turn
                     if (typeof currentInput === "string") {
                       // Convert string input to array format for the first turn
-                      currentInput = [{ content: currentInput, role: "user" }];
+                      // currentInput = [{ content: currentInput, role: "user" }];
+                      console.error("THIS SHOULD NEVER HAPPEN");
+                    } else {
+                      // console.log("Hi.");
                     }
 
                     // Add model's function call and result
