@@ -95,8 +95,7 @@ export function maxTurnsFromOptions(options: LlmOperateOptions): number {
 //
 
 export async function operate(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  input: string | any[],
+  input: string | JsonObject | JsonObject[],
   options: LlmOperateOptions = {},
   context: { client: OpenAI; maxRetries?: number } = {
     client: new OpenAI(),

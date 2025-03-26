@@ -61,9 +61,9 @@ export class OpenAiProvider implements LlmProvider {
   }
 
   async operate(
-    input: string,
+    input: string | JsonObject | JsonObject[],
     options: LlmOperateOptions = {},
-  ): Promise<unknown> {
+  ): Promise<JsonObject[]> {
     const client = await this.getClient();
     options.model = options?.model || this.model;
 

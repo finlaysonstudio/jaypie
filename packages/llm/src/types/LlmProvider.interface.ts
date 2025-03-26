@@ -35,7 +35,10 @@ export interface LlmOptions {
 }
 
 export interface LlmProvider {
-  operate?(input: string, options?: LlmOperateOptions): Promise<unknown>;
+  operate?(
+    input: string | JsonObject | JsonObject[],
+    options?: LlmOperateOptions,
+  ): Promise<JsonObject[]>;
   send(
     message: string,
     options?: LlmMessageOptions,
