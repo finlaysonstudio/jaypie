@@ -261,7 +261,6 @@ export async function operate(
           log.trace("[operate] Calling OpenAI Responses API");
         }
 
-        log.var({ requestOptions });
         // Use type assertion to handle the OpenAI SDK response type
         const currentResponse = (await openai.responses.create(
           requestOptions,
@@ -293,16 +292,6 @@ export async function operate(
                       name: output.name,
                       arguments: output.arguments,
                     });
-
-                    // Prepare for next turn by adding function call and result
-                    // Add the function call to the input for the next turn
-                    if (typeof currentInput === "string") {
-                      // Convert string input to array format for the first turn
-                      // currentInput = [{ content: currentInput, role: "user" }];
-                      console.error("THIS SHOULD NEVER HAPPEN");
-                    } else {
-                      // console.log("Hi.");
-                    }
 
                     // Add model's function call and result
                     if (Array.isArray(currentInput)) {
