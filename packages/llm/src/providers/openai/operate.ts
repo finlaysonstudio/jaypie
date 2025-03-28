@@ -64,6 +64,26 @@ export const MAX_TURNS_DEFAULT_LIMIT = 12;
 // Helpers
 //
 
+export function formatMessage(
+  input: string | JsonObject,
+  { data, role = "user" }: { data?: JsonObject; role?: string } = {},
+): JsonObject {
+  if (typeof input === "object") {
+    return {
+      ...input,
+      content: data
+        ? placeholders(input.content as string, data)
+        : input.content,
+      role: input.role || role,
+    };
+  }
+
+  return {
+    content: data ? placeholders(input, data) : input,
+    role,
+  };
+}
+
 export function formatInput(
   input: string | JsonObject | JsonObject[],
   { data, role = "user" }: { data?: JsonObject; role?: string } = {},
@@ -73,20 +93,10 @@ export function formatInput(
   }
 
   if (typeof input === "object" && input !== null) {
-    return [
-      {
-        content: (input as { content: string }).content,
-        role: (input as { role?: string }).role || role,
-      },
-    ];
+    return [formatMessage(input, { data, role })];
   }
 
-  return [
-    {
-      content: data ? placeholders(input as string, data) : (input as string),
-      role,
-    },
-  ];
+  return [formatMessage(input, { data, role })];
 }
 
 export function maxTurnsFromOptions(options: LlmOperateOptions): number {
