@@ -1228,7 +1228,6 @@ describe("OpenAiProvider.operate", () => {
           content: [{ text: "Response to message #2" }],
         };
         mockCreate.mockResolvedValueOnce(secondMockResponse);
-        const calls = mockCreate.mock.calls;
         const secondResult = await provider.operate(secondMessage);
         expect(secondResult).toEqual([secondMockResponse]);
         expect(mockCreate).toHaveBeenCalledWith({
