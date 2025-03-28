@@ -1181,6 +1181,34 @@ describe("OpenAiProvider.operate", () => {
         expect(result).toEqual([mockResponse]);
       });
     });
+    describe("Chat history", () => {
+      it("Passes chat history to the OpenAI API", async () => {
+        // Setup
+        const mockResponse = {
+          id: "resp_123",
+          content: [{ text: "Response with chat history" }],
+        };
+        mockCreate.mockResolvedValueOnce(mockResponse);
+        const history = [
+          { role: "user", content: "test input" },
+          { role: "assistant", content: "test response" },
+        ];
+
+        // Execute
+        const result = await provider.operate("test message #3", {
+          history,
+        });
+
+        // Verify
+        const expectedInput = [...history, ...formatInput("test message #3")];
+        expect(mockCreate).toHaveBeenCalledWith({
+          model: expect.any(String),
+          input: expectedInput,
+        });
+        expect(result).toEqual([mockResponse]);
+      });
+      it.todo("Passes tool calls and results to the OpenAI API");
+    });
 
     describe("Structured Output", () => {
       it("Structured output uses responses API", async () => {

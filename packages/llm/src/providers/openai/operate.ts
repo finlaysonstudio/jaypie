@@ -142,7 +142,12 @@ export async function operate(
   const allResponses: OpenAIResponseTurn[] = [];
 
   // Convert string input to array format with placeholders if needed
-  const currentInput = formatInput(input, { data: options?.data });
+  let currentInput = formatInput(input, { data: options?.data });
+
+  // Add history to the input if provided
+  if (options?.history && Array.isArray(options.history)) {
+    currentInput = [...options.history, ...currentInput];
+  }
 
   // Determine max turns from options
   const maxTurns = maxTurnsFromOptions(options);
