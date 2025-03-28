@@ -59,10 +59,27 @@ async function getWeather() {
   return result;
 }
 
+async function talk() {
+  const model = new Llm();
+  const result = await model.operate("What is my name?", {
+    history: [
+      {
+        role: "user",
+        content: "My name is Doctor Charles Xavier",
+      },
+      {
+        role: "assistant",
+        content: "Hello, Dr. Xavier! How can I help you today?",
+      },
+    ],
+  });
+  return result;
+}
+
 async function main() {
   try {
     // Get the operation parameter from command line arguments
-    const param = process.argv[2] || "weather"; // Default to weather if no parameter provided
+    const param = process.argv[2] || "default";
 
     let result;
 
@@ -76,8 +93,11 @@ async function main() {
         result = await suggestTaco();
         break;
       case "weather":
-      default:
         result = await getWeather();
+        break;
+      case "talk":
+      default:
+        result = await talk();
         break;
     }
 
