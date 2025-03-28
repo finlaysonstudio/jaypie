@@ -17,6 +17,7 @@ export interface LlmOperateOptions {
   data?: Record<string, string>;
   explain?: boolean;
   format?: JsonObject | NaturalSchema | z.ZodType;
+  history?: JsonObject[];
   instructions?: string;
   model?: string;
   placeholders?: {
