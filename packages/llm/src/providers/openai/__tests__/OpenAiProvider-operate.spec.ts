@@ -18,7 +18,11 @@ import { restoreLog, spyLog } from "@jaypie/testkit";
 import { afterEach, beforeEach, describe, it, expect, vi } from "vitest";
 import { z } from "zod";
 import { OpenAiProvider } from "../OpenAiProvider.class";
-import { formatInput, MAX_RETRIES_DEFAULT_LIMIT } from "../operate";
+import {
+  formatInput,
+  formatMessage,
+  MAX_RETRIES_DEFAULT_LIMIT,
+} from "../operate";
 import { OpenAIResponse } from "../types";
 import { LlmTool } from "../../../types/LlmTool.interface";
 
@@ -1200,7 +1204,7 @@ describe("OpenAiProvider.operate", () => {
         });
 
         // Verify
-        const expectedInput = [...history, ...formatInput("test message #3")];
+        const expectedInput = [...history, formatMessage("test message #3")];
         expect(mockCreate).toHaveBeenCalledWith({
           model: expect.any(String),
           input: expectedInput,
@@ -1233,9 +1237,9 @@ describe("OpenAiProvider.operate", () => {
         expect(mockCreate).toHaveBeenCalledWith({
           model: expect.any(String),
           input: [
-            ...formatInput(firstMessage),
+            formatMessage(firstMessage),
             expect.any(Object),
-            ...formatInput(secondMessage),
+            formatMessage(secondMessage),
           ],
         });
       });
