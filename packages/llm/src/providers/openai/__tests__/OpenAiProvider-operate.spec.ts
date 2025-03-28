@@ -1208,6 +1208,38 @@ describe("OpenAiProvider.operate", () => {
         expect(result).toEqual([mockResponse]);
       });
       it.todo("Passes tool calls and results to the OpenAI API");
+      it("Instances track history by default", async () => {
+        // Setup
+        const firstMessage = "Test message #1";
+        const secondMessage = "Test message #2";
+        const mockResponse = {
+          id: "resp_123",
+          content: [{ text: "Response to message #1" }],
+        };
+        mockCreate.mockResolvedValueOnce(mockResponse);
+        const result = await provider.operate(firstMessage);
+        expect(result).toEqual([mockResponse]);
+        expect(mockCreate).toHaveBeenCalledWith({
+          model: expect.any(String),
+          input: formatInput(firstMessage),
+        });
+        const secondMockResponse = {
+          id: "resp_123",
+          content: [{ text: "Response to message #2" }],
+        };
+        mockCreate.mockResolvedValueOnce(secondMockResponse);
+        const calls = mockCreate.mock.calls;
+        const secondResult = await provider.operate(secondMessage);
+        expect(secondResult).toEqual([secondMockResponse]);
+        expect(mockCreate).toHaveBeenCalledWith({
+          model: expect.any(String),
+          input: [
+            ...formatInput(firstMessage),
+            expect.any(Object),
+            ...formatInput(secondMessage),
+          ],
+        });
+      });
     });
 
     describe("Structured Output", () => {
