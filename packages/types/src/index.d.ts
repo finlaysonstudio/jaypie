@@ -1,13 +1,13 @@
 // JSON Types - Building blocks for JSON:API
 
+export type NaturalValue = boolean | null | number | string | undefined;
+
+export type NaturalMap = { [key: string]: NaturalValue };
+
 export type JsonValue =
   | { [key: string]: JsonValue }
-  | boolean
   | JsonValue[]
-  | null
-  | number
-  | string
-  | undefined;
+  | NaturalValue;
 
 export type JsonObject = { [key: string]: JsonValue };
 export type JsonArray = Array<JsonArray | JsonValue | JsonObject>;
