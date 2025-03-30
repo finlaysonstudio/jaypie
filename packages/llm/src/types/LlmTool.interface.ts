@@ -1,5 +1,11 @@
 import { JsonObject } from "@jaypie/types";
 
+// Input and Output
+
+// TODO: LlmToolCall
+// TODO: LlmToolResult
+
+// Main
 export interface LlmTool {
   description: string;
   name: string;

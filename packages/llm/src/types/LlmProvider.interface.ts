@@ -2,6 +2,21 @@ import { JsonObject, NaturalSchema } from "@jaypie/types";
 import { z } from "zod";
 import { LlmTool } from "./LlmTool.interface.js";
 
+// Input
+
+// TODO: LlmInputContentFile
+// TODO: LlmInputContentImage
+// TODO: LlmInputContentText
+// TODO: LlmInputMessage: content: string | Array, role, type
+
+// Output
+
+// TODO: LlmOutputContentText
+// TODO: LlmOutputMessage
+// TODO: LlmOutputRefusal
+
+// Options
+
 export interface LlmMessageOptions {
   data?: Record<string, string>;
   model?: string;
@@ -35,6 +50,7 @@ export interface LlmOptions {
   model?: string;
 }
 
+// Main
 export interface LlmProvider {
   operate?(
     input: string | JsonObject | JsonObject[],
