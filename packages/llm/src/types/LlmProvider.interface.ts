@@ -17,6 +17,7 @@ export interface LlmOperateOptions {
   data?: Record<string, string>;
   explain?: boolean;
   format?: JsonObject | NaturalSchema | z.ZodType;
+  history?: JsonObject[];
   instructions?: string;
   model?: string;
   placeholders?: {
@@ -35,7 +36,10 @@ export interface LlmOptions {
 }
 
 export interface LlmProvider {
-  operate?(input: string, options?: LlmOperateOptions): Promise<unknown>;
+  operate?(
+    input: string | JsonObject | JsonObject[],
+    options?: LlmOperateOptions,
+  ): Promise<JsonObject[]>;
   send(
     message: string,
     options?: LlmMessageOptions,

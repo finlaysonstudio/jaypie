@@ -1,4 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import { JsonValue } from "@jaypie/types";
+
 /**
  * Type definitions for OpenAI API responses
  */
@@ -59,7 +61,7 @@ export interface OpenAIRawResponse {
   error?: any | null;
   status?: string | any;
   _request_id?: string | null;
-  [key: string]: unknown;
+  [key: string]: JsonValue;
 }
 
 /**
@@ -75,7 +77,7 @@ export interface OpenAIResponseTurn {
   error?: any | null;
   status?: string;
   _request_id?: string | null;
-  [key: string]: unknown;
+  [key: string]: JsonValue;
 }
 
 /**

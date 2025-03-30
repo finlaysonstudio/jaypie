@@ -6,11 +6,12 @@ export type JsonValue =
   | JsonValue[]
   | null
   | number
-  | string;
+  | string
+  | undefined;
 
 export type JsonObject = { [key: string]: JsonValue };
-export type JsonArray = Array<JsonObject>;
-export type JsonReturn = JsonObject | JsonArray;
+export type JsonArray = Array<JsonArray | JsonValue | JsonObject>;
+export type JsonReturn = JsonArray | JsonObject;
 
 export interface WithJsonFunction {
   json: () => JsonReturn;

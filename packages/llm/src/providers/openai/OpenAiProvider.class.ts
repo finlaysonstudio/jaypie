@@ -6,7 +6,7 @@ import {
   LlmOperateOptions,
   LlmProvider,
 } from "../../types/LlmProvider.interface.js";
-import { operate } from "./operate.js";
+import { operate, formatInput } from "./operate.js";
 import {
   createStructuredCompletion,
   createTextCompletion,
@@ -20,6 +20,7 @@ export class OpenAiProvider implements LlmProvider {
   private _client?: OpenAI;
   private apiKey?: string;
   private log = getLogger();
+  private conversationHistory: JsonObject[] = [];
 
   constructor(
     model: string = PROVIDER.OPENAI.MODEL.DEFAULT,
@@ -61,12 +62,55 @@ export class OpenAiProvider implements LlmProvider {
   }
 
   async operate(
-    input: string,
+    input: string | JsonObject | JsonObject[],
     options: LlmOperateOptions = {},
-  ): Promise<unknown> {
+  ): Promise<JsonObject[]> {
     const client = await this.getClient();
     options.model = options?.model || this.model;
 
-    return operate(input, options, { client });
+    // Format the input to ensure consistent format
+    const formattedInput = formatInput(input, { data: options?.data });
+
+    // Create a merged history including both the tracked history and any explicitly provided history
+    const mergedHistory = [...this.conversationHistory];
+    if (options?.history && Array.isArray(options.history)) {
+      mergedHistory.push(...options.history);
+    }
+
+    // Set the merged history in the options
+    const optionsWithHistory: LlmOperateOptions = {
+      ...options,
+      history: mergedHistory,
+    };
+
+    // Call operate with the updated options
+    const response = await operate(input, optionsWithHistory, { client });
+
+    // Update conversation history with the input and response
+    this.updateConversationHistory(formattedInput, response);
+
+    return response;
+  }
+
+  /**
+   * Updates the conversation history with the latest input and response
+   * @param input The formatted input messages
+   * @param response The response from the model
+   */
+  private updateConversationHistory(
+    input: JsonObject[],
+    response: JsonObject[],
+  ): void {
+    // Add the input to history
+    this.conversationHistory.push(...input);
+
+    // Add the response to history if it exists and has content
+    if (response && response.length > 0) {
+      // Extract the last response item and add it to history
+      const lastResponse = response[response.length - 1];
+      if (lastResponse) {
+        this.conversationHistory.push(lastResponse);
+      }
+    }
   }
 }

@@ -64,6 +64,41 @@ export const MAX_TURNS_DEFAULT_LIMIT = 12;
 // Helpers
 //
 
+export function formatMessage(
+  input: string | JsonObject,
+  { data, role = "user" }: { data?: JsonObject; role?: string } = {},
+): JsonObject {
+  if (typeof input === "object") {
+    return {
+      ...input,
+      content: data
+        ? placeholders(input.content as string, data)
+        : input.content,
+      role: input.role || role,
+    };
+  }
+
+  return {
+    content: data ? placeholders(input, data) : input,
+    role,
+  };
+}
+
+export function formatInput(
+  input: string | JsonObject | JsonObject[],
+  { data, role = "user" }: { data?: JsonObject; role?: string } = {},
+): JsonObject[] {
+  if (Array.isArray(input)) {
+    return input;
+  }
+
+  if (typeof input === "object" && input !== null) {
+    return [formatMessage(input, { data, role })];
+  }
+
+  return [formatMessage(input, { data, role })];
+}
+
 export function maxTurnsFromOptions(options: LlmOperateOptions): number {
   // Default to single turn (1) when turns are disabled
 
@@ -95,8 +130,7 @@ export function maxTurnsFromOptions(options: LlmOperateOptions): number {
 //
 
 export async function operate(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  input: string | any[],
+  input: string | JsonObject | JsonObject[],
   options: LlmOperateOptions = {},
   context: { client: OpenAI; maxRetries?: number } = {
     client: new OpenAI(),
@@ -117,11 +151,18 @@ export async function operate(
   const maxRetries = Math.min(context.maxRetries, MAX_RETRIES_ABSOLUTE_LIMIT);
   const allResponses: OpenAIResponseTurn[] = [];
 
+  // Convert string input to array format with placeholders if needed
+  let currentInput = formatInput(input, { data: options?.data });
+
+  // Add history to the input if provided
+  if (options?.history && Array.isArray(options.history)) {
+    currentInput = [...options.history, ...currentInput];
+  }
+
   // Determine max turns from options
   const maxTurns = maxTurnsFromOptions(options);
   const enableMultipleTurns = maxTurns > 1;
   let currentTurn = 0;
-  let currentInput = input;
   let toolkit: Toolkit | undefined;
   const explain = options?.explain ?? false;
 
@@ -142,13 +183,7 @@ export async function operate(
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const requestOptions: /* OpenAI.Responses.InputItems */ any = {
           model,
-          input:
-            typeof currentInput === "string" &&
-            options?.data &&
-            (options.placeholders?.input === undefined ||
-              options.placeholders?.input)
-              ? placeholders(currentInput, options.data)
-              : currentInput,
+          input: currentInput,
         };
 
         if (options?.user) {
@@ -226,7 +261,6 @@ export async function operate(
           log.trace("[operate] Calling OpenAI Responses API");
         }
 
-        log.var({ requestOptions });
         // Use type assertion to handle the OpenAI SDK response type
         const currentResponse = (await openai.responses.create(
           requestOptions,
@@ -258,13 +292,6 @@ export async function operate(
                       name: output.name,
                       arguments: output.arguments,
                     });
-
-                    // Prepare for next turn by adding function call and result
-                    // Add the function call to the input for the next turn
-                    if (typeof currentInput === "string") {
-                      // Convert string input to array format for the first turn
-                      currentInput = [{ content: currentInput, role: "user" }];
-                    }
 
                     // Add model's function call and result
                     if (Array.isArray(currentInput)) {
