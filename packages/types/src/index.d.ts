@@ -1,19 +1,19 @@
 // JSON Types - Building blocks for JSON:API
 
-export type NaturalValue = boolean | null | number | string | undefined;
+export type ScalarValue = boolean | null | number | string | undefined;
 
-export type NaturalMap = { [key: string]: NaturalValue };
+export type NaturalMap = { [key: string]: ScalarValue };
 
 export type JsonValue =
   | { [key: string]: JsonValue }
   | JsonValue[]
-  | NaturalValue;
+  | ScalarValue;
 
 export type JsonObject = { [key: string]: JsonValue };
 export type JsonArray = Array<JsonArray | JsonValue | JsonObject>;
 export type JsonReturn = JsonArray | JsonObject;
 
-export type AnyValue = JsonReturn | NaturalValue;
+export type AnyValue = JsonReturn | ScalarValue;
 
 export interface WithJsonFunction {
   json: () => JsonReturn;
