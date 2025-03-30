@@ -60,12 +60,6 @@ describe("tryParseNumber", () => {
       );
     });
 
-    it("handles async warnFunction", async () => {
-      const mockWarn = vi.fn().mockResolvedValue(undefined);
-      tryParseNumber("not a number", { warnFunction: mockWarn });
-      expect(mockWarn).toHaveBeenCalled();
-    });
-
     it("uses defaultValue and calls warnFunction together", () => {
       const mockWarn = vi.fn();
       const result = tryParseNumber("not a number", {

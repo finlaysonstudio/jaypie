@@ -34,14 +34,7 @@ export function tryParseNumber(
     if (Number.isNaN(parsed)) {
       if (options?.warnFunction) {
         const warningMessage = `Failed to parse "${String(input)}" as number`;
-        const warnResult = options.warnFunction(warningMessage);
-
-        // Handle both synchronous and asynchronous warn functions
-        if (warnResult instanceof Promise) {
-          void warnResult.catch(() => {
-            // Silently catch any errors from the warn function
-          });
-        }
+        options.warnFunction(warningMessage);
       }
 
       return typeof options?.defaultValue === "number"
@@ -54,14 +47,7 @@ export function tryParseNumber(
   } catch (error) {
     if (options?.warnFunction) {
       const warningMessage = `Error parsing "${String(input)}" as number`;
-      const warnResult = options.warnFunction(warningMessage);
-
-      // Handle both synchronous and asynchronous warn functions
-      if (warnResult instanceof Promise) {
-        void warnResult.catch(() => {
-          // Silently catch any errors from the warn function
-        });
-      }
+      options.warnFunction(warningMessage);
     }
 
     return typeof options?.defaultValue === "number"
