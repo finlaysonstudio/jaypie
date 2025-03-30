@@ -13,6 +13,8 @@ export type JsonObject = { [key: string]: JsonValue };
 export type JsonArray = Array<JsonArray | JsonValue | JsonObject>;
 export type JsonReturn = JsonArray | JsonObject;
 
+export type AnyValue = JsonReturn | NaturalValue;
+
 export interface WithJsonFunction {
   json: () => JsonReturn;
 }
