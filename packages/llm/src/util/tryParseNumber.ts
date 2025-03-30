@@ -28,31 +28,12 @@ export function tryParseNumber(
     return input;
   }
 
-  // Special case for testing error handling
-  if (input === "__TEST_ERROR__") {
-    if (options?.warnFunction) {
-      const warningMessage = "Error parsing value as number: __TEST_ERROR__";
-      const warnResult = options.warnFunction(warningMessage);
-
-      // Handle both synchronous and asynchronous warn functions
-      if (warnResult instanceof Promise) {
-        void warnResult.catch(() => {
-          // Silently catch any errors from the warn function
-        });
-      }
-    }
-
-    return typeof options?.defaultValue === "number"
-      ? options.defaultValue
-      : input;
-  }
-
   try {
     const parsed = Number(input);
 
     if (Number.isNaN(parsed)) {
       if (options?.warnFunction) {
-        const warningMessage = `Failed to parse value as number: ${String(input)}`;
+        const warningMessage = `Failed to parse "${String(input)}" as number`;
         const warnResult = options.warnFunction(warningMessage);
 
         // Handle both synchronous and asynchronous warn functions
@@ -72,7 +53,7 @@ export function tryParseNumber(
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
   } catch (error) {
     if (options?.warnFunction) {
-      const warningMessage = `Error parsing value as number: ${String(input)}`;
+      const warningMessage = `Error parsing "${String(input)}" as number`;
       const warnResult = options.warnFunction(warningMessage);
 
       // Handle both synchronous and asynchronous warn functions

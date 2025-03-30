@@ -56,15 +56,7 @@ describe("tryParseNumber", () => {
       const mockWarn = vi.fn();
       tryParseNumber("not a number", { warnFunction: mockWarn });
       expect(mockWarn).toHaveBeenCalledWith(
-        "Failed to parse value as number: not a number",
-      );
-    });
-
-    it("calls warnFunction when an error occurs", () => {
-      const mockWarn = vi.fn();
-      tryParseNumber("__TEST_ERROR__", { warnFunction: mockWarn });
-      expect(mockWarn).toHaveBeenCalledWith(
-        "Error parsing value as number: __TEST_ERROR__",
+        'Failed to parse "not a number" as number',
       );
     });
 
