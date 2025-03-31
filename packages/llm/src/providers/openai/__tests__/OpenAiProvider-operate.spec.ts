@@ -13,7 +13,7 @@ import {
   RateLimitError,
   UnprocessableEntityError,
 } from "openai";
-import { log } from "@jaypie/core";
+import log from "../../../util/logger.js";
 import { restoreLog, spyLog } from "@jaypie/testkit";
 import { afterEach, beforeEach, describe, it, expect, vi } from "vitest";
 import { z } from "zod";
@@ -333,18 +333,6 @@ describe("OpenAiProvider.operate", () => {
             .spyOn(await import("@jaypie/core"), "sleep")
             .mockResolvedValue(undefined);
 
-          // Spy on logger
-          const mockDebug = vi.fn();
-          const loggerSpy = vi
-            .spyOn(await import("../utils"), "getLogger")
-            .mockReturnValue({
-              debug: mockDebug,
-              error: vi.fn(),
-              warn: vi.fn(),
-              var: vi.fn(),
-              trace: vi.fn(),
-            } as any);
-
           // Verify
           const result = (await provider.operate(
             "test input",
@@ -356,13 +344,12 @@ describe("OpenAiProvider.operate", () => {
           expect(result[0]).toEqual(mockResponse);
 
           // Verify debug log was called with the correct message
-          expect(mockDebug).toHaveBeenCalledWith(
+          expect(log.debug).toHaveBeenCalledWith(
             "OpenAI API call succeeded after 1 retries",
           );
 
           // Clean up
           sleepSpy.mockRestore();
-          loggerSpy.mockRestore();
         });
         it("Logs second warn on unknown errors", async () => {
           // Setup
@@ -382,34 +369,20 @@ describe("OpenAiProvider.operate", () => {
             .spyOn(await import("@jaypie/core"), "sleep")
             .mockResolvedValue(undefined);
 
-          // Spy on logger
-          const mockWarn = vi.fn();
-          const mockVar = vi.fn();
-          const loggerSpy = vi
-            .spyOn(await import("../utils"), "getLogger")
-            .mockReturnValue({
-              debug: vi.fn(),
-              error: vi.fn(),
-              warn: mockWarn,
-              var: mockVar,
-              trace: vi.fn(),
-            } as any);
-
           // Verify
           await provider.operate("test input");
 
           // Verify warn log was called with the correct messages
-          expect(mockWarn).toHaveBeenCalledWith(
+          expect(log.warn).toHaveBeenCalledWith(
             "OpenAI API returned unknown error",
           );
-          expect(mockVar).toHaveBeenCalledWith({ error: unknownError });
-          expect(mockWarn).toHaveBeenCalledWith(
+          expect(log.var).toHaveBeenCalledWith({ error: unknownError });
+          expect(log.warn).toHaveBeenCalledWith(
             expect.stringContaining("OpenAI API call failed. Retrying"),
           );
 
           // Clean up
           sleepSpy.mockRestore();
-          loggerSpy.mockRestore();
         });
 
         it("Logs error on non-retryable errors", async () => {
@@ -422,19 +395,6 @@ describe("OpenAiProvider.operate", () => {
           );
           mockCreate.mockRejectedValueOnce(authError);
 
-          // Spy on logger
-          const mockError = vi.fn();
-          const mockVar = vi.fn();
-          const loggerSpy = vi
-            .spyOn(await import("../utils"), "getLogger")
-            .mockReturnValue({
-              debug: vi.fn(),
-              error: mockError,
-              warn: vi.fn(),
-              var: mockVar,
-              trace: vi.fn(),
-            } as any);
-
           // Verify
           try {
             await provider.operate("test input");
@@ -444,13 +404,10 @@ describe("OpenAiProvider.operate", () => {
           }
 
           // Verify error log was called with the correct message
-          expect(mockError).toHaveBeenCalledWith(
+          expect(log.error).toHaveBeenCalledWith(
             "OpenAI API call failed with non-retryable error",
           );
-          expect(mockVar).toHaveBeenCalledWith({ error: authError });
-
-          // Clean up
-          loggerSpy.mockRestore();
+          expect(log.var).toHaveBeenCalledWith({ error: authError });
         });
 
         it("Logs warn on retryable errors", async () => {
@@ -476,29 +433,16 @@ describe("OpenAiProvider.operate", () => {
             .spyOn(await import("@jaypie/core"), "sleep")
             .mockResolvedValue(undefined);
 
-          // Spy on logger
-          const mockWarn = vi.fn();
-          const loggerSpy = vi
-            .spyOn(await import("../utils"), "getLogger")
-            .mockReturnValue({
-              debug: vi.fn(),
-              error: vi.fn(),
-              warn: mockWarn,
-              var: vi.fn(),
-              trace: vi.fn(),
-            } as any);
-
           // Verify
           await provider.operate("test input");
 
           // Verify warn log was called with the correct message
-          expect(mockWarn).toHaveBeenCalledWith(
+          expect(log.warn).toHaveBeenCalledWith(
             expect.stringContaining("OpenAI API call failed. Retrying"),
           );
 
           // Clean up
           sleepSpy.mockRestore();
-          loggerSpy.mockRestore();
         });
       });
       describe("Retryable Errors", () => {
