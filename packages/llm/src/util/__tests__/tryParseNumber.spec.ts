@@ -69,6 +69,23 @@ describe("tryParseNumber", () => {
       expect(result).toBe(42);
       expect(mockWarn).toHaveBeenCalled();
     });
+
+    it("handles warnFunction that throws an error", () => {
+      const throwingWarnFn = vi.fn().mockImplementation(() => {
+        throw new Error("Error in warnFunction");
+      });
+
+      // This should not throw despite the warnFunction throwing
+      const result = tryParseNumber("not a number", {
+        defaultValue: 42,
+        warnFunction: throwingWarnFn,
+      });
+
+      // The function should complete and return the expected value
+      expect(result).toBe(42);
+      // The throwing function should have been called
+      expect(throwingWarnFn).toHaveBeenCalled();
+    });
   });
 
   describe("Specific Scenarios", () => {

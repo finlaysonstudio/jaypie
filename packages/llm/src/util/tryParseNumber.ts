@@ -9,7 +9,19 @@ export interface TryParseNumberOptions {
   /**
    * Function to call with warning message if parsing fails or results in NaN
    */
-  warnFunction?: (message: string) => void | Promise<void>;
+  warnFunction?: (message: string) => void;
+}
+
+/**
+ * Helper function to safely call a function that might throw
+ * @param fn Function to call safely
+ */
+function callSafely(fn: () => void): void {
+  try {
+    fn();
+  } catch {
+    // Silently catch any errors from the function
+  }
 }
 
 /**
@@ -34,7 +46,7 @@ export function tryParseNumber(
     if (Number.isNaN(parsed)) {
       if (options?.warnFunction) {
         const warningMessage = `Failed to parse "${String(input)}" as number`;
-        options.warnFunction(warningMessage);
+        callSafely(() => options.warnFunction!(warningMessage));
       }
 
       return typeof options?.defaultValue === "number"
@@ -43,11 +55,14 @@ export function tryParseNumber(
     }
 
     return parsed;
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  } catch (error) {
+  } catch (error: unknown) {
     if (options?.warnFunction) {
-      const warningMessage = `Error parsing "${String(input)}" as number`;
-      options.warnFunction(warningMessage);
+      let errorMessage = "";
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      const warningMessage = `Error parsing "${String(input)}" as number${errorMessage ? "; " + errorMessage : ""}`;
+      callSafely(() => options.warnFunction!(warningMessage));
     }
 
     return typeof options?.defaultValue === "number"
