@@ -15,7 +15,16 @@ import {
 } from "openai";
 import log from "../../../util/logger.js";
 import { restoreLog, spyLog } from "@jaypie/testkit";
-import { afterEach, beforeEach, describe, it, expect, vi } from "vitest";
+import { sleep } from "@jaypie/core";
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 import { z } from "zod";
 import { OpenAiProvider } from "../OpenAiProvider.class";
 import {
@@ -38,7 +47,10 @@ const MOCK = {
   },
 };
 
-beforeEach(() => {
+beforeAll(async () => {
+  vi.spyOn(await import("@jaypie/core"), "sleep").mockResolvedValue(undefined);
+});
+beforeEach(async () => {
   spyLog(log);
 });
 
@@ -48,6 +60,7 @@ afterEach(() => {
 });
 
 const mockCreate = vi.fn().mockResolvedValue(MOCK.RESPONSE.TEXT);
+
 describe("OpenAiProvider.operate", () => {
   beforeEach(() => {
     vi.mocked(OpenAI).mockImplementation(
@@ -131,11 +144,6 @@ describe("OpenAiProvider.operate", () => {
         };
         mockCreate.mockResolvedValueOnce(mockResponse);
 
-        // Spy on sleep function to avoid waiting in tests
-        const sleepSpy = vi
-          .spyOn(await import("@jaypie/core"), "sleep")
-          .mockResolvedValue(undefined);
-
         // Execute
         const result = (await provider.operate(
           formatInput("What is a good taco ingredient?"),
@@ -151,10 +159,7 @@ describe("OpenAiProvider.operate", () => {
         expect(mockCreate).toHaveBeenCalledTimes(MAX_RETRIES_DEFAULT_LIMIT + 1);
 
         // Verify sleep was called for each retry
-        expect(sleepSpy).toHaveBeenCalledTimes(MAX_RETRIES_DEFAULT_LIMIT);
-
-        // Clean up
-        sleepSpy.mockRestore();
+        expect(sleep).toHaveBeenCalledTimes(MAX_RETRIES_DEFAULT_LIMIT);
       });
       describe("Error Handling", () => {
         it("Throws BadGatewayError when retryable errors exceed limit", async () => {
@@ -171,11 +176,6 @@ describe("OpenAiProvider.operate", () => {
             );
           }
 
-          // Spy on sleep function to avoid waiting in tests
-          const sleepSpy = vi
-            .spyOn(await import("@jaypie/core"), "sleep")
-            .mockResolvedValue(undefined);
-
           // Verify
           await expect(provider.operate("test input")).rejects.toThrow();
 
@@ -186,10 +186,7 @@ describe("OpenAiProvider.operate", () => {
           );
 
           // Verify sleep was called for each retry
-          expect(sleepSpy).toHaveBeenCalledTimes(MAX_RETRIES_DEFAULT_LIMIT);
-
-          // Clean up
-          sleepSpy.mockRestore();
+          expect(sleep).toHaveBeenCalledTimes(MAX_RETRIES_DEFAULT_LIMIT);
         });
         describe("Not Retryable Errors", () => {
           it("Throws BadGatewayError non-retryable APIUserAbortError", async () => {
@@ -328,11 +325,6 @@ describe("OpenAiProvider.operate", () => {
           };
           mockCreate.mockResolvedValueOnce(mockResponse);
 
-          // Spy on sleep function to avoid waiting in tests
-          const sleepSpy = vi
-            .spyOn(await import("@jaypie/core"), "sleep")
-            .mockResolvedValue(undefined);
-
           // Verify
           const result = (await provider.operate(
             "test input",
@@ -347,9 +339,6 @@ describe("OpenAiProvider.operate", () => {
           expect(log.debug).toHaveBeenCalledWith(
             "OpenAI API call succeeded after 1 retries",
           );
-
-          // Clean up
-          sleepSpy.mockRestore();
         });
         it("Logs second warn on unknown errors", async () => {
           // Setup
@@ -364,11 +353,6 @@ describe("OpenAiProvider.operate", () => {
           };
           mockCreate.mockResolvedValueOnce(mockResponse);
 
-          // Spy on sleep function to avoid waiting in tests
-          const sleepSpy = vi
-            .spyOn(await import("@jaypie/core"), "sleep")
-            .mockResolvedValue(undefined);
-
           // Verify
           await provider.operate("test input");
 
@@ -380,9 +364,6 @@ describe("OpenAiProvider.operate", () => {
           expect(log.warn).toHaveBeenCalledWith(
             expect.stringContaining("OpenAI API call failed. Retrying"),
           );
-
-          // Clean up
-          sleepSpy.mockRestore();
         });
 
         it("Logs error on non-retryable errors", async () => {
@@ -428,11 +409,6 @@ describe("OpenAiProvider.operate", () => {
           };
           mockCreate.mockResolvedValueOnce(mockResponse);
 
-          // Spy on sleep function to avoid waiting in tests
-          const sleepSpy = vi
-            .spyOn(await import("@jaypie/core"), "sleep")
-            .mockResolvedValue(undefined);
-
           // Verify
           await provider.operate("test input");
 
@@ -440,9 +416,6 @@ describe("OpenAiProvider.operate", () => {
           expect(log.warn).toHaveBeenCalledWith(
             expect.stringContaining("OpenAI API call failed. Retrying"),
           );
-
-          // Clean up
-          sleepSpy.mockRestore();
         });
       });
       describe("Retryable Errors", () => {
@@ -459,11 +432,6 @@ describe("OpenAiProvider.operate", () => {
           };
           mockCreate.mockResolvedValueOnce(mockResponse);
 
-          // Spy on sleep function to avoid waiting in tests
-          const sleepSpy = vi
-            .spyOn(await import("@jaypie/core"), "sleep")
-            .mockResolvedValue(undefined);
-
           // Verify
           const result = (await provider.operate(
             "test input",
@@ -476,9 +444,6 @@ describe("OpenAiProvider.operate", () => {
 
           // Verify the create function was called twice (1 failure + 1 success)
           expect(mockCreate).toHaveBeenCalledTimes(2);
-
-          // Clean up
-          sleepSpy.mockRestore();
         });
 
         it("Retries APIConnectionTimeoutError", async () => {
@@ -494,11 +459,6 @@ describe("OpenAiProvider.operate", () => {
           };
           mockCreate.mockResolvedValueOnce(mockResponse);
 
-          // Spy on sleep function to avoid waiting in tests
-          const sleepSpy = vi
-            .spyOn(await import("@jaypie/core"), "sleep")
-            .mockResolvedValue(undefined);
-
           // Verify
           const result = (await provider.operate(
             "test input",
@@ -511,9 +471,6 @@ describe("OpenAiProvider.operate", () => {
 
           // Verify the create function was called twice (1 failure + 1 success)
           expect(mockCreate).toHaveBeenCalledTimes(2);
-
-          // Clean up
-          sleepSpy.mockRestore();
         });
 
         it("Retries InternalServerError", async () => {
@@ -534,11 +491,6 @@ describe("OpenAiProvider.operate", () => {
           };
           mockCreate.mockResolvedValueOnce(mockResponse);
 
-          // Spy on sleep function to avoid waiting in tests
-          const sleepSpy = vi
-            .spyOn(await import("@jaypie/core"), "sleep")
-            .mockResolvedValue(undefined);
-
           // Verify
           const result = (await provider.operate(
             "test input",
@@ -551,9 +503,6 @@ describe("OpenAiProvider.operate", () => {
 
           // Verify the create function was called twice (1 failure + 1 success)
           expect(mockCreate).toHaveBeenCalledTimes(2);
-
-          // Clean up
-          sleepSpy.mockRestore();
         });
 
         it("Retries unknown errors", async () => {
@@ -568,11 +517,6 @@ describe("OpenAiProvider.operate", () => {
           };
           mockCreate.mockResolvedValueOnce(mockResponse);
 
-          // Spy on sleep function to avoid waiting in tests
-          const sleepSpy = vi
-            .spyOn(await import("@jaypie/core"), "sleep")
-            .mockResolvedValue(undefined);
-
           // Verify
           const result = (await provider.operate(
             "test input",
@@ -585,9 +529,6 @@ describe("OpenAiProvider.operate", () => {
 
           // Verify the create function was called twice (1 failure + 1 success)
           expect(mockCreate).toHaveBeenCalledTimes(2);
-
-          // Clean up
-          sleepSpy.mockRestore();
         });
       });
     });
