@@ -21,7 +21,10 @@ export const roll: LlmTool = {
     required: ["number", "sides"],
   },
   type: "function",
-  call: ({ number = 1, sides = 6 }): { rolls: number[]; total: number } => {
+  call: ({ number = 1, sides = 6 } = {}): {
+    rolls: number[];
+    total: number;
+  } => {
     const rng = random();
     const rolls: number[] = [];
     let total = 0;

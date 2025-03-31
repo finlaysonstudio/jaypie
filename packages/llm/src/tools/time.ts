@@ -17,7 +17,7 @@ export const time: LlmTool = {
   },
   type: "function",
   call: ({ date } = {}) => {
-    if (date) {
+    if (typeof date === "number" || typeof date === "string") {
       const parsedDate = new Date(date);
       if (isNaN(parsedDate.getTime())) {
         throw new Error(`Invalid date format: ${date}`);
