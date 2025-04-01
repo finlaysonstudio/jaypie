@@ -17,7 +17,12 @@ import {
 } from "openai";
 import { zodResponseFormat } from "openai/helpers/zod";
 import { z } from "zod";
-import { LlmOperateOptions } from "../../types/LlmProvider.interface.js";
+import {
+  LlmHistory,
+  LlmInputMessage,
+  LlmOperateOptions,
+  LlmOperateResponse,
+} from "../../types/LlmProvider.interface.js";
 import { formatOperateInput, log, naturalZodSchema } from "../../util";
 import { PROVIDER } from "../../constants.js";
 import { Toolkit } from "../../tools/Toolkit.class.js";
@@ -63,41 +68,6 @@ export const MAX_TURNS_DEFAULT_LIMIT = 12;
 // Helpers
 //
 
-export function formatMessage(
-  input: string | JsonObject,
-  { data, role = "user" }: { data?: JsonObject; role?: string } = {},
-): JsonObject {
-  if (typeof input === "object") {
-    return {
-      ...input,
-      content: data
-        ? placeholders(input.content as string, data)
-        : input.content,
-      role: input.role || role,
-    };
-  }
-
-  return {
-    content: data ? placeholders(input, data) : input,
-    role,
-  };
-}
-
-export function formatInput(
-  input: string | JsonObject | JsonObject[],
-  { data, role = "user" }: { data?: JsonObject; role?: string } = {},
-): JsonObject[] {
-  if (Array.isArray(input)) {
-    return input;
-  }
-
-  if (typeof input === "object" && input !== null) {
-    return [formatMessage(input, { data, role })];
-  }
-
-  return [formatMessage(input, { data, role })];
-}
-
 export function maxTurnsFromOptions(options: LlmOperateOptions): number {
   // Default to single turn (1) when turns are disabled
 
@@ -129,12 +99,12 @@ export function maxTurnsFromOptions(options: LlmOperateOptions): number {
 //
 
 export async function operate(
-  input: string | JsonObject | JsonObject[],
+  input: string | LlmHistory | LlmInputMessage,
   options: LlmOperateOptions = {},
   context: { client: OpenAI; maxRetries?: number } = {
     client: new OpenAI(),
   },
-): Promise<OpenAIResponse> {
+): Promise<LlmOperateResponse> {
   const openai = context.client;
 
   // Validate
@@ -150,7 +120,7 @@ export async function operate(
   const allResponses: OpenAIResponseTurn[] = [];
 
   // Convert string input to array format with placeholders if needed
-  let currentInput = formatInput(input, { data: options?.data });
+  let currentInput = formatOperateInput(input, { data: options?.data });
 
   // Add history to the input if provided
   if (options?.history && Array.isArray(options.history)) {

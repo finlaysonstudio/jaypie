@@ -1,9 +1,7 @@
-import { placeholders } from "@jaypie/core";
 import {
   LlmHistory,
   LlmInputMessage,
   LlmMessageRole,
-  LlmMessageType,
 } from "../types/LlmProvider.interface.js";
 import { NaturalMap } from "@jaypie/types";
 import { formatOperateMessage } from "./formatOperateMessage.js";

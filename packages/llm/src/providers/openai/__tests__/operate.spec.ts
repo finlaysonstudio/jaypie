@@ -1,7 +1,5 @@
 import { describe, expect, it } from "vitest";
 import {
-  formatInput,
-  formatMessage,
   MAX_TURNS_ABSOLUTE_LIMIT,
   MAX_TURNS_DEFAULT_LIMIT,
   maxTurnsFromOptions,
@@ -69,96 +67,6 @@ describe("operate", () => {
         const options: LlmOperateOptions = { turns: null };
         const result = maxTurnsFromOptions(options);
         expect(result).toBe(1);
-      });
-    });
-  });
-
-  describe("formatInput", () => {
-    describe("Base Cases", () => {
-      it("is a Function", () => {
-        expect(formatInput).toBeFunction();
-      });
-    });
-    describe("Features", () => {
-      it("Formats a string", () => {
-        const result = formatInput("Hello, World!");
-        expect(result).toEqual([{ role: "user", content: "Hello, World!" }]);
-      });
-    });
-  });
-
-  describe("formatMessage", () => {
-    describe("Base Cases", () => {
-      it("is a Function", () => {
-        expect(formatMessage).toBeFunction();
-      });
-
-      it("returns an object", () => {
-        const result = formatMessage("Hello, World!");
-        expect(result).toBeObject();
-      });
-    });
-
-    describe("Features", () => {
-      it("formats a string input with default role", () => {
-        const result = formatMessage("Hello, World!");
-        expect(result).toEqual({
-          role: "user",
-          content: "Hello, World!",
-        });
-      });
-
-      it("formats a string input with custom role", () => {
-        const result = formatMessage("Hello, World!", { role: "assistant" });
-        expect(result).toEqual({
-          role: "assistant",
-          content: "Hello, World!",
-        });
-      });
-
-      it("formats a string input with placeholders", () => {
-        const result = formatMessage("Hello, {{name}}!", {
-          data: { name: "John" },
-        });
-        expect(result).toEqual({
-          role: "user",
-          content: "Hello, John!",
-        });
-      });
-
-      it("handles an object input preserving its properties", () => {
-        const input = { content: "Hello, World!", role: "assistant" };
-        const result = formatMessage(input);
-        expect(result).toEqual(input);
-      });
-
-      it("handles an object input with default role when not provided", () => {
-        const input = { content: "Hello, World!" };
-        const result = formatMessage(input);
-        expect(result).toEqual({
-          ...input,
-          role: "user",
-        });
-      });
-
-      it("handles an object input with placeholders in content", () => {
-        const input = { content: "Hello, {{name}}!" };
-        const result = formatMessage(input, { data: { name: "John" } });
-        expect(result).toEqual({
-          content: "Hello, John!",
-          role: "user",
-        });
-      });
-
-      it("preserves additional properties in object input", () => {
-        const input = {
-          content: "Hello, World!",
-          role: "assistant",
-          name: "test_assistant",
-          metadata: { version: "1.0" },
-        };
-        const result = formatMessage(input);
-        expect(result).toEqual(input);
       });
     });
   });

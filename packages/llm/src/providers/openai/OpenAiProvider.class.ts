@@ -2,11 +2,14 @@ import { JsonObject } from "@jaypie/types";
 import { OpenAI } from "openai";
 import { PROVIDER } from "../../constants.js";
 import {
+  LlmHistory,
+  LlmInputMessage,
   LlmMessageOptions,
   LlmOperateOptions,
+  LlmOperateResponse,
   LlmProvider,
 } from "../../types/LlmProvider.interface.js";
-import { operate, formatInput } from "./operate.js";
+import { operate } from "./operate.js";
 import {
   createStructuredCompletion,
   createTextCompletion,
@@ -14,6 +17,7 @@ import {
   initializeClient,
   prepareMessages,
 } from "./utils.js";
+import { formatOperateInput } from "../../util";
 
 export class OpenAiProvider implements LlmProvider {
   private model: string;
@@ -62,14 +66,14 @@ export class OpenAiProvider implements LlmProvider {
   }
 
   async operate(
-    input: string | JsonObject | JsonObject[],
+    input: string | LlmHistory | LlmInputMessage,
     options: LlmOperateOptions = {},
-  ): Promise<JsonObject[]> {
+  ): Promise<LlmOperateResponse> {
     const client = await this.getClient();
     options.model = options?.model || this.model;
 
     // Format the input to ensure consistent format
-    const formattedInput = formatInput(input, { data: options?.data });
+    const formattedInput = formatOperateInput(input, { data: options?.data });
 
     // Create a merged history including both the tracked history and any explicitly provided history
     const mergedHistory = [...this.conversationHistory];
