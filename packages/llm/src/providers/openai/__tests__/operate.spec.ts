@@ -583,6 +583,7 @@ describe("operate", () => {
     });
 
     describe("Chat history", () => {
+      it.todo("Passes chat history to the OpenAI API");
       it.todo("Instances track history by default");
     });
 
