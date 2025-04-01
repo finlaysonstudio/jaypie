@@ -5,14 +5,14 @@ import * as randomModule from "../../util/random.js";
 // Mock the logger module
 vi.mock("../../util/logger.js", () => {
   return {
-    default: {
+    log: {
       warn: vi.fn(),
     },
   };
 });
 
 // Import the mocked logger
-import logger from "../../util/logger.js";
+import { log } from "../../util/logger.js";
 
 describe("roll tool", () => {
   describe("Base Cases", () => {
@@ -53,12 +53,12 @@ describe("roll tool", () => {
     it("warns when number is not a number", () => {
       // Reset mock counts before test
       vi.clearAllMocks();
-      expect(logger.warn).not.toHaveBeenCalled();
+      expect(log.warn).not.toHaveBeenCalled();
 
       roll.call({ number: "a" });
 
-      expect(logger.warn).toHaveBeenCalled();
-      expect(logger.warn).toHaveBeenCalledTimes(1);
+      expect(log.warn).toHaveBeenCalled();
+      expect(log.warn).toHaveBeenCalledTimes(1);
     });
   });
 

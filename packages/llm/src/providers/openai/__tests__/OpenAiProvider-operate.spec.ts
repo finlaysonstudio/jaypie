@@ -13,7 +13,7 @@ import {
   RateLimitError,
   UnprocessableEntityError,
 } from "openai";
-import log from "../../../util/logger.js";
+import { log } from "../../../util/logger.js";
 import { restoreLog, spyLog } from "@jaypie/testkit";
 import { sleep } from "@jaypie/core";
 import {
