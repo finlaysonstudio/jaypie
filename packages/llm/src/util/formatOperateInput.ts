@@ -6,6 +6,7 @@ import {
   LlmMessageType,
 } from "../types/LlmProvider.interface.js";
 import { NaturalMap } from "@jaypie/types";
+import { formatOperateMessage } from "./formatOperateMessage.js";
 
 /**
  * Options for formatOperateInput function
@@ -41,22 +42,16 @@ export function formatOperateInput(
 
   // If input is a string, convert it to LlmInputMessage
   if (typeof input === "string") {
-    const content = options?.data ? placeholders(input, options.data) : input;
-    const message: LlmInputMessage = {
-      content,
-      role: options?.role || LlmMessageRole.User,
-      type: LlmMessageType.Message,
-    };
-    return [message];
+    return [formatOperateMessage(input, options)];
   }
 
   // If input is LlmInputMessage, apply placeholders if data is provided
   if (options?.data && typeof input.content === "string") {
     return [
-      {
-        ...input,
-        content: placeholders(input.content, options.data),
-      },
+      formatOperateMessage(input.content, {
+        data: options.data,
+        role: input.role || options?.role,
+      }),
     ];
   }
 
