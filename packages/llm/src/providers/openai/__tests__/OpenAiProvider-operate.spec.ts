@@ -103,23 +103,7 @@ describe("OpenAiProvider.operate", () => {
     beforeEach(() => {
       provider = new OpenAiProvider();
     });
-    describe("User", () => {
-      it("Passes user to OpenAI", async () => {
-        // Execute
-        const testInput = formatOperateInput("What is a good taco ingredient?");
-        const result = await provider.operate(testInput, {
-          user: "test-user",
-        });
-        // Verify
-        expect(result).toBeArray();
-        expect(mockCreate).toHaveBeenCalledTimes(1);
-        expect(mockCreate).toHaveBeenCalledWith({
-          model: expect.any(String),
-          input: testInput,
-          user: "test-user",
-        });
-      });
-    });
+    // User tests have been migrated to operate.spec.ts
     describe("API Retry", () => {
       it("Retries retryable errors up to the MAX_RETRIES_DEFAULT_LIMIT limit", async () => {
         // Setup

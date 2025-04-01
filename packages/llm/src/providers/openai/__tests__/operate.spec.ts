@@ -85,10 +85,6 @@ describe("operate", () => {
   });
 
   describe("Features", () => {
-    describe("User", () => {
-      it.todo("Passes user to OpenAI");
-    });
-
     describe("API Retry", () => {
       it.todo(
         "Retries retryable errors up to the MAX_RETRIES_DEFAULT_LIMIT limit",
@@ -126,6 +122,10 @@ describe("operate", () => {
       });
     });
 
+    describe("Chat history", () => {
+      it.todo("Instances track history by default");
+    });
+
     describe("Message Options", () => {
       it.todo("includes instruction message when provided");
       it.todo("Warns if system message is provided");
@@ -148,14 +148,54 @@ describe("operate", () => {
       it.todo("Passes providerOptions to the OpenAI API");
     });
 
-    describe("Chat history", () => {
-      it.todo("Instances track history by default");
-    });
-
     describe("Structured Output", () => {
       it.todo("Structured output uses responses API");
       it.todo("Handles NaturalSchema response format");
       it.todo("Accepts json_schema output format");
+    });
+
+    describe("User", () => {
+      it("Passes user to OpenAI", async () => {
+        // Execute
+        const testInput = "What is a good taco ingredient?";
+        await operate(
+          testInput,
+          {
+            user: "test-user",
+          },
+          { client: mockClient },
+        );
+
+        // Verify
+        expect(mockClient.responses.create).toHaveBeenCalledTimes(1);
+        expect(mockClient.responses.create).toHaveBeenCalledWith(
+          expect.objectContaining({
+            model: expect.any(String),
+            input: expect.any(Array),
+            user: "test-user",
+          }),
+        );
+      });
+      it("Does not pass user if not provided", async () => {
+        // Execute
+        const testInput = "What is a good taco ingredient?";
+        await operate(testInput, {}, { client: mockClient });
+
+        // Verify
+        expect(mockClient.responses.create).toHaveBeenCalledTimes(1);
+        expect(mockClient.responses.create).toHaveBeenCalledWith(
+          expect.objectContaining({
+            model: expect.any(String),
+            input: expect.any(Array),
+          }),
+        );
+        // Verify user is not passed
+        expect(mockClient.responses.create).not.toHaveBeenCalledWith(
+          expect.objectContaining({
+            user: "test-user",
+          }),
+        );
+      });
     });
   });
 });
