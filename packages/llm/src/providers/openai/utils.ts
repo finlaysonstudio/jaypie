@@ -10,7 +10,7 @@ import { OpenAI } from "openai";
 import { zodResponseFormat } from "openai/helpers/zod";
 import { z } from "zod";
 import { LlmMessageOptions } from "../../types/LlmProvider.interface.js";
-import naturalZodSchema from "../../util/naturalZodSchema.js";
+import { naturalZodSchema } from "../../util/naturalZodSchema.js";
 
 // Logger
 export const getLogger = () => defaultLog.lib({ lib: JAYPIE.LIB.LLM });
