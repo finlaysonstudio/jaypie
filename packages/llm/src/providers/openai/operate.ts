@@ -87,7 +87,15 @@ export async function operate(
   const allResponses: OpenAIResponseTurn[] = [];
 
   // Convert string input to array format with placeholders if needed
-  let currentInput = formatOperateInput(input, { data: options?.data });
+  let currentInput = formatOperateInput(input);
+  if (
+    options?.data &&
+    (options.placeholders?.input === undefined || options.placeholders?.input)
+  ) {
+    currentInput = formatOperateInput(input, {
+      data: options?.data,
+    });
+  }
 
   // Add history to the input if provided
   if (options?.history && Array.isArray(options.history)) {

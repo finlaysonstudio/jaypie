@@ -632,7 +632,7 @@ describe("operate", () => {
         expect(log.warn).toHaveBeenCalled();
       });
 
-      it("applies placeholders to system message", async () => {
+      it("applies placeholders to instructions", async () => {
         // Setup
         const instructions = "You are a {{role}}";
         const data = { role: "test assistant" };
@@ -687,53 +687,33 @@ describe("operate", () => {
       });
 
       it("respects placeholders.input option", async () => {
-        // This test is validating that the placeholders.input option is respected
-        // Since we can't easily test the internal behavior, we'll test the API contract
-        // by checking that the operate function passes the option to the OpenAI client
-
-        // Setup - Create a mock implementation for the operate function
-        const { formatOperateInput } = await import("../../../util");
-
-        // Reset the mock before this test
-        mockCreate.mockReset();
-
-        // Create a mock response that we'll check for
-        const mockResponseWithPlaceholders = {
-          created: 1234567890,
-          id: "mock-id",
-          model: "mock-gpt",
-          object: "response",
-          output: [
-            {
-              type: LlmMessageType.Message,
-              content: [
-                {
-                  type: LlmMessageType.OutputText,
-                  text: "Response with placeholders",
-                },
-              ],
-              role: LlmMessageRole.Assistant,
-            },
-          ],
-          status: LlmResponseStatus.Completed,
-        };
-
-        // Set up the mock to return our response
-        mockCreate.mockResolvedValueOnce(mockResponseWithPlaceholders);
+        // Setup
+        const inputMessage = "Hello, {{name}}";
+        const data = { name: "World" };
 
         // Execute
         await operate(
-          "Hello, {{name}}",
+          inputMessage,
           {
-            data: { name: "World" },
+            data,
             placeholders: { input: false },
           },
           { client: mockClient },
         );
 
-        // Instead of trying to verify the exact input format (which might change),
-        // we'll just verify that the operate function was called and completed successfully
-        expect(mockCreate).toHaveBeenCalled();
+        // Verify
+        expect(mockCreate).toHaveBeenCalledWith(
+          expect.objectContaining({
+            input: expect.arrayContaining([
+              expect.objectContaining({
+                content: "Hello, {{name}}",
+                role: "user",
+                type: "message",
+              }),
+            ]),
+            model: expect.any(String),
+          }),
+        );
       });
 
       it("respects placeholders.instructions option", async () => {
