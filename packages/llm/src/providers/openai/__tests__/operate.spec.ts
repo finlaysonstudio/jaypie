@@ -24,44 +24,46 @@ import {
 describe("operate", () => {
   // Mock OpenAI client setup
   let mockClient: OpenAI;
+  let mockCreate: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
+    // Create mock function for responses.create
+    mockCreate = vi.fn().mockResolvedValue({
+      created: 1234567890,
+      error: null,
+      id: "mock-id",
+      model: "mock-gpt",
+      object: "response",
+      output: [
+        {
+          type: LlmMessageType.Message,
+          content: [{ type: LlmMessageType.OutputText, text: "Hello, world!" }],
+          role: LlmMessageRole.Assistant,
+        },
+      ],
+      status: LlmResponseStatus.Completed,
+      text: {
+        format: {
+          type: "text",
+        },
+      },
+      usage: {
+        input_tokens: 36,
+        input_tokens_details: {
+          cached_tokens: 0,
+        },
+        output_tokens: 87,
+        output_tokens_details: {
+          reasoning_tokens: 0,
+        },
+        total_tokens: 123,
+      },
+    });
+
     // Reset mock client before each test
     mockClient = {
       responses: {
-        create: vi.fn().mockResolvedValue({
-          created: 1234567890,
-          error: null,
-          id: "mock-id",
-          model: "mock-gpt",
-          object: "response",
-          output: [
-            {
-              type: LlmMessageType.Message,
-              content: [
-                { type: LlmMessageType.OutputText, text: "Hello, world!" },
-              ],
-              role: LlmMessageRole.Assistant,
-            },
-          ],
-          status: LlmResponseStatus.Completed,
-          text: {
-            format: {
-              type: "text",
-            },
-          },
-          usage: {
-            input_tokens: 36,
-            input_tokens_details: {
-              cached_tokens: 0,
-            },
-            output_tokens: 87,
-            output_tokens_details: {
-              reasoning_tokens: 0,
-            },
-            total_tokens: 123,
-          },
-        }),
+        create: mockCreate,
       },
     } as unknown as OpenAI;
   });
@@ -106,7 +108,7 @@ describe("operate", () => {
         // Setup
         // First MAX_RETRIES_DEFAULT_LIMIT calls will fail with 500 errors
         for (let i = 0; i < MAX_RETRIES_DEFAULT_LIMIT; i++) {
-          mockClient.responses.create.mockRejectedValueOnce(
+          mockCreate.mockRejectedValueOnce(
             new InternalServerError(
               500,
               "Internal Server Error",
@@ -131,7 +133,7 @@ describe("operate", () => {
             },
           ],
         };
-        mockClient.responses.create.mockResolvedValueOnce(mockResponse);
+        mockCreate.mockResolvedValueOnce(mockResponse);
 
         // Execute
         await operate(
@@ -142,9 +144,7 @@ describe("operate", () => {
 
         // Verify the create function was called the expected number of times
         // MAX_RETRIES_DEFAULT_LIMIT failures + 1 success = MAX_RETRIES_DEFAULT_LIMIT + 1 total calls
-        expect(mockClient.responses.create).toHaveBeenCalledTimes(
-          MAX_RETRIES_DEFAULT_LIMIT + 1,
-        );
+        expect(mockCreate).toHaveBeenCalledTimes(MAX_RETRIES_DEFAULT_LIMIT + 1);
       });
 
       describe("Error Handling", () => {
@@ -155,7 +155,7 @@ describe("operate", () => {
           // Setup
           // All calls will fail with 500 errors (exceeding the retry limit)
           for (let i = 0; i <= MAX_RETRIES_DEFAULT_LIMIT; i++) {
-            mockClient.responses.create.mockRejectedValueOnce(
+            mockCreate.mockRejectedValueOnce(
               new InternalServerError(
                 500,
                 "Internal Server Error",
@@ -172,7 +172,7 @@ describe("operate", () => {
 
           // Verify the create function was called the expected number of times
           // Should be called MAX_RETRIES_DEFAULT_LIMIT + 1 times (initial + retries)
-          expect(mockClient.responses.create).toHaveBeenCalledTimes(
+          expect(mockCreate).toHaveBeenCalledTimes(
             MAX_RETRIES_DEFAULT_LIMIT + 1,
           );
         });
@@ -180,9 +180,7 @@ describe("operate", () => {
         describe("Not Retryable Errors", () => {
           it("Throws BadGatewayError non-retryable APIUserAbortError", async () => {
             // Setup
-            mockClient.responses.create.mockRejectedValueOnce(
-              new APIUserAbortError(),
-            );
+            mockCreate.mockRejectedValueOnce(new APIUserAbortError());
 
             // Verify
             await expect(
@@ -190,11 +188,11 @@ describe("operate", () => {
             ).rejects.toThrow();
 
             // Should only be called once, not retried
-            expect(mockClient.responses.create).toHaveBeenCalledTimes(1);
+            expect(mockCreate).toHaveBeenCalledTimes(1);
           });
           it("Throws BadGatewayError non-retryable AuthenticationError", async () => {
             // Setup
-            mockClient.responses.create.mockRejectedValueOnce(
+            mockCreate.mockRejectedValueOnce(
               new AuthenticationError(
                 401,
                 "Authentication error",
@@ -209,11 +207,11 @@ describe("operate", () => {
             ).rejects.toThrow();
 
             // Should only be called once, not retried
-            expect(mockClient.responses.create).toHaveBeenCalledTimes(1);
+            expect(mockCreate).toHaveBeenCalledTimes(1);
           });
           it("Throws BadGatewayError non-retryable BadRequestError", async () => {
             // Setup
-            mockClient.responses.create.mockRejectedValueOnce(
+            mockCreate.mockRejectedValueOnce(
               new BadRequestError(400, "Bad request error", undefined, {}),
             );
 
@@ -223,11 +221,11 @@ describe("operate", () => {
             ).rejects.toThrow();
 
             // Should only be called once, not retried
-            expect(mockClient.responses.create).toHaveBeenCalledTimes(1);
+            expect(mockCreate).toHaveBeenCalledTimes(1);
           });
           it("Throws BadGatewayError non-retryable ConflictError", async () => {
             // Setup
-            mockClient.responses.create.mockRejectedValueOnce(
+            mockCreate.mockRejectedValueOnce(
               new ConflictError(409, "Conflict error", undefined, {}),
             );
 
@@ -237,11 +235,11 @@ describe("operate", () => {
             ).rejects.toThrow();
 
             // Should only be called once, not retried
-            expect(mockClient.responses.create).toHaveBeenCalledTimes(1);
+            expect(mockCreate).toHaveBeenCalledTimes(1);
           });
           it("Throws BadGatewayError non-retryable NotFoundError", async () => {
             // Setup
-            mockClient.responses.create.mockRejectedValueOnce(
+            mockCreate.mockRejectedValueOnce(
               new NotFoundError(404, "Not found error", undefined, {}),
             );
 
@@ -251,11 +249,11 @@ describe("operate", () => {
             ).rejects.toThrow();
 
             // Should only be called once, not retried
-            expect(mockClient.responses.create).toHaveBeenCalledTimes(1);
+            expect(mockCreate).toHaveBeenCalledTimes(1);
           });
           it("Throws BadGatewayError non-retryable PermissionDeniedError", async () => {
             // Setup
-            mockClient.responses.create.mockRejectedValueOnce(
+            mockCreate.mockRejectedValueOnce(
               new PermissionDeniedError(
                 403,
                 "Permission denied error",
@@ -270,11 +268,11 @@ describe("operate", () => {
             ).rejects.toThrow();
 
             // Should only be called once, not retried
-            expect(mockClient.responses.create).toHaveBeenCalledTimes(1);
+            expect(mockCreate).toHaveBeenCalledTimes(1);
           });
           it("Throws BadGatewayError non-retryable RateLimitError", async () => {
             // Setup
-            mockClient.responses.create.mockRejectedValueOnce(
+            mockCreate.mockRejectedValueOnce(
               new RateLimitError(429, "Rate limit error", undefined, {}),
             );
 
@@ -284,11 +282,11 @@ describe("operate", () => {
             ).rejects.toThrow();
 
             // Should only be called once, not retried
-            expect(mockClient.responses.create).toHaveBeenCalledTimes(1);
+            expect(mockCreate).toHaveBeenCalledTimes(1);
           });
           it("Throws BadGatewayError non-retryable UnprocessableEntityError", async () => {
             // Setup
-            mockClient.responses.create.mockRejectedValueOnce(
+            mockCreate.mockRejectedValueOnce(
               new UnprocessableEntityError(
                 422,
                 "Unprocessable entity error",
@@ -303,7 +301,7 @@ describe("operate", () => {
             ).rejects.toThrow();
 
             // Should only be called once, not retried
-            expect(mockClient.responses.create).toHaveBeenCalledTimes(1);
+            expect(mockCreate).toHaveBeenCalledTimes(1);
           });
         });
       });
@@ -317,7 +315,7 @@ describe("operate", () => {
 
           // Setup
           // First call fails with a retryable error
-          mockClient.responses.create.mockRejectedValueOnce(
+          mockCreate.mockRejectedValueOnce(
             new InternalServerError(
               500,
               "Internal Server Error",
@@ -341,7 +339,7 @@ describe("operate", () => {
               },
             ],
           };
-          mockClient.responses.create.mockResolvedValueOnce(mockResponse);
+          mockCreate.mockResolvedValueOnce(mockResponse);
 
           // Execute
           await operate("test input", {}, { client: mockClient });
@@ -361,7 +359,7 @@ describe("operate", () => {
           // Setup
           // Create an unknown error type that's not in the retryable list
           const unknownError = new Error("Unknown error");
-          mockClient.responses.create.mockRejectedValueOnce(unknownError);
+          mockCreate.mockRejectedValueOnce(unknownError);
 
           // Second call succeeds
           const mockResponse = {
@@ -379,7 +377,7 @@ describe("operate", () => {
               },
             ],
           };
-          mockClient.responses.create.mockResolvedValueOnce(mockResponse);
+          mockCreate.mockResolvedValueOnce(mockResponse);
 
           // Execute
           await operate("test input", {}, { client: mockClient });
@@ -407,7 +405,7 @@ describe("operate", () => {
             undefined,
             {},
           );
-          mockClient.responses.create.mockRejectedValueOnce(authError);
+          mockCreate.mockRejectedValueOnce(authError);
 
           // Execute
           try {
@@ -437,7 +435,7 @@ describe("operate", () => {
             undefined,
             {},
           );
-          mockClient.responses.create.mockRejectedValueOnce(serverError);
+          mockCreate.mockRejectedValueOnce(serverError);
 
           // Second call succeeds
           const mockResponse = {
@@ -455,7 +453,7 @@ describe("operate", () => {
               },
             ],
           };
-          mockClient.responses.create.mockResolvedValueOnce(mockResponse);
+          mockCreate.mockResolvedValueOnce(mockResponse);
 
           // Execute
           await operate("test input", {}, { client: mockClient });
@@ -471,7 +469,7 @@ describe("operate", () => {
         it("Retries APIConnectionError", async () => {
           // Setup
           // First call fails with a connection error
-          mockClient.responses.create.mockRejectedValueOnce(
+          mockCreate.mockRejectedValueOnce(
             new APIConnectionError({ message: "Connection error" }),
           );
           // Second call succeeds
@@ -490,18 +488,18 @@ describe("operate", () => {
               },
             ],
           };
-          mockClient.responses.create.mockResolvedValueOnce(mockResponse);
+          mockCreate.mockResolvedValueOnce(mockResponse);
 
           // Execute
           await operate("test input", {}, { client: mockClient });
 
           // Verify the create function was called twice (1 failure + 1 success)
-          expect(mockClient.responses.create).toHaveBeenCalledTimes(2);
+          expect(mockCreate).toHaveBeenCalledTimes(2);
         });
         it("Retries APIConnectionTimeoutError", async () => {
           // Setup
           // First call fails with a timeout error
-          mockClient.responses.create.mockRejectedValueOnce(
+          mockCreate.mockRejectedValueOnce(
             new APIConnectionTimeoutError({ message: "Connection timeout" }),
           );
           // Second call succeeds
@@ -520,18 +518,18 @@ describe("operate", () => {
               },
             ],
           };
-          mockClient.responses.create.mockResolvedValueOnce(mockResponse);
+          mockCreate.mockResolvedValueOnce(mockResponse);
 
           // Execute
           await operate("test input", {}, { client: mockClient });
 
           // Verify the create function was called twice (1 failure + 1 success)
-          expect(mockClient.responses.create).toHaveBeenCalledTimes(2);
+          expect(mockCreate).toHaveBeenCalledTimes(2);
         });
         it("Retries InternalServerError", async () => {
           // Setup
           // First call fails with an internal server error
-          mockClient.responses.create.mockRejectedValueOnce(
+          mockCreate.mockRejectedValueOnce(
             new InternalServerError(
               500,
               "Internal Server Error",
@@ -555,19 +553,19 @@ describe("operate", () => {
               },
             ],
           };
-          mockClient.responses.create.mockResolvedValueOnce(mockResponse);
+          mockCreate.mockResolvedValueOnce(mockResponse);
 
           // Execute
           await operate("test input", {}, { client: mockClient });
 
           // Verify the create function was called twice (1 failure + 1 success)
-          expect(mockClient.responses.create).toHaveBeenCalledTimes(2);
+          expect(mockCreate).toHaveBeenCalledTimes(2);
         });
         it("Retries unknown errors", async () => {
           // Setup
           // First call fails with an unknown error
           const unknownError = new Error("Unknown error");
-          mockClient.responses.create.mockRejectedValueOnce(unknownError);
+          mockCreate.mockRejectedValueOnce(unknownError);
 
           // Second call succeeds
           const mockResponse = {
@@ -585,13 +583,13 @@ describe("operate", () => {
               },
             ],
           };
-          mockClient.responses.create.mockResolvedValueOnce(mockResponse);
+          mockCreate.mockResolvedValueOnce(mockResponse);
 
           // Execute
           await operate("test input", {}, { client: mockClient });
 
           // Verify the create function was called twice (1 failure + 1 success)
-          expect(mockClient.responses.create).toHaveBeenCalledTimes(2);
+          expect(mockCreate).toHaveBeenCalledTimes(2);
         });
       });
     });
@@ -641,8 +639,8 @@ describe("operate", () => {
         );
 
         // Verify
-        expect(mockClient.responses.create).toHaveBeenCalledTimes(1);
-        expect(mockClient.responses.create).toHaveBeenCalledWith(
+        expect(mockCreate).toHaveBeenCalledTimes(1);
+        expect(mockCreate).toHaveBeenCalledWith(
           expect.objectContaining({
             model: expect.any(String),
             input: expect.any(Array),
@@ -656,15 +654,15 @@ describe("operate", () => {
         await operate(testInput, {}, { client: mockClient });
 
         // Verify
-        expect(mockClient.responses.create).toHaveBeenCalledTimes(1);
-        expect(mockClient.responses.create).toHaveBeenCalledWith(
+        expect(mockCreate).toHaveBeenCalledTimes(1);
+        expect(mockCreate).toHaveBeenCalledWith(
           expect.objectContaining({
             model: expect.any(String),
             input: expect.any(Array),
           }),
         );
         // Verify user is not passed
-        expect(mockClient.responses.create).not.toHaveBeenCalledWith(
+        expect(mockCreate).not.toHaveBeenCalledWith(
           expect.objectContaining({
             user: "test-user",
           }),
