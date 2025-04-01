@@ -820,7 +820,9 @@ describe("OpenAiProvider.operate", () => {
 
       it("Runs to default max turns (12) when no max is specified", async () => {
         // Import the constant for default max turns
-        const { MAX_TURNS_DEFAULT_LIMIT } = await import("../operate");
+        const { MAX_TURNS_DEFAULT_LIMIT } = await import(
+          "../../../util/maxTurnsFromOptions.js"
+        );
 
         // Setup - Create mock responses for each turn
         const mockResponses = [];
