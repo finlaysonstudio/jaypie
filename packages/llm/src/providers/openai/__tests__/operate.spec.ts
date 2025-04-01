@@ -753,13 +753,165 @@ describe("operate", () => {
     });
 
     describe("Provider Options", () => {
-      it.todo("Passes providerOptions to the OpenAI API");
+      it("Passes providerOptions to the OpenAI API", async () => {
+        // Setup
+        const testInput = "Test input";
+        const providerOptions = {
+          temperature: 0.5,
+          top_p: 0.8,
+          frequency_penalty: 0.2,
+        };
+
+        // Execute
+        await operate(
+          testInput,
+          {
+            providerOptions,
+          },
+          { client: mockClient },
+        );
+
+        // Verify
+        expect(mockCreate).toHaveBeenCalledWith(
+          expect.objectContaining({
+            model: expect.any(String),
+            input: expect.any(Array),
+            temperature: 0.5,
+            top_p: 0.8,
+            frequency_penalty: 0.2,
+          }),
+        );
+      });
     });
 
     describe("Structured Output", () => {
-      it.todo("Structured output uses responses API");
-      it.todo("Handles NaturalSchema response format");
-      it.todo("Accepts json_schema output format");
+      it("Structured output uses responses API", async () => {
+        // Setup
+        const mockResponse = {
+          salutation: "Hello",
+          name: "World",
+        };
+        mockCreate.mockResolvedValueOnce(mockResponse);
+
+        const GreetingFormat = {
+          type: "object",
+          properties: {
+            salutation: { type: "string" },
+            name: { type: "string" },
+          },
+          required: ["salutation", "name"],
+        };
+
+        // Execute
+        const result = await operate(
+          "Hello, World",
+          {
+            format: {
+              type: "json_schema",
+              schema: GreetingFormat,
+            },
+          },
+          { client: mockClient },
+        );
+
+        // Verify
+        expect(mockCreate).toHaveBeenCalledWith(
+          expect.objectContaining({
+            input: expect.any(Array),
+            model: expect.any(String),
+            text: expect.objectContaining({
+              format: expect.objectContaining({
+                schema: expect.any(Object),
+                type: "json_schema",
+              }),
+            }),
+          }),
+        );
+        expect(result).toEqual([mockResponse]);
+      });
+
+      it("Handles NaturalSchema response format", async () => {
+        // Setup
+        const mockResponse = {
+          salutation: "Hello",
+          name: "World",
+        };
+        mockCreate.mockResolvedValueOnce(mockResponse);
+
+        const GreetingFormat = {
+          salutation: String,
+          name: String,
+        };
+
+        // Execute
+        const result = await operate(
+          "Hello, World",
+          {
+            format: GreetingFormat,
+          },
+          { client: mockClient },
+        );
+
+        // Verify
+        expect(mockCreate).toHaveBeenCalledWith(
+          expect.objectContaining({
+            input: expect.any(Array),
+            model: expect.any(String),
+            text: expect.objectContaining({
+              format: expect.objectContaining({
+                schema: expect.any(Object),
+                type: "json_schema",
+              }),
+            }),
+          }),
+        );
+        expect(result).toEqual([mockResponse]);
+      });
+
+      it("Accepts json_schema output format", async () => {
+        // Setup
+        const mockResponse = {
+          salutation: "Hello",
+          name: "World",
+        };
+        mockCreate.mockResolvedValueOnce(mockResponse);
+
+        const schema = {
+          type: "object",
+          properties: {
+            salutation: { type: "string" },
+            name: { type: "string" },
+          },
+          required: ["salutation", "name"],
+        };
+
+        // Execute
+        const result = await operate(
+          "Hello, World",
+          {
+            format: {
+              type: "json_schema",
+              schema,
+            },
+          },
+          { client: mockClient },
+        );
+
+        // Verify
+        expect(mockCreate).toHaveBeenCalledWith(
+          expect.objectContaining({
+            input: expect.any(Array),
+            model: expect.any(String),
+            text: expect.objectContaining({
+              format: expect.objectContaining({
+                schema,
+                type: "json_schema",
+              }),
+            }),
+          }),
+        );
+        expect(result).toEqual([mockResponse]);
+      });
     });
 
     describe("User", () => {

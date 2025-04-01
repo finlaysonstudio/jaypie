@@ -459,8 +459,9 @@ describe("OpenAiProvider.operate", () => {
         expect(mockAsyncCall).toHaveBeenCalledWith({ delay: 100 });
       });
     });
+    // Provider Options tests have been migrated to operate.spec.ts
     describe("Provider Options", () => {
-      it("Passes providerOptions to the OpenAI API", async () => {
+      it.skip("Passes providerOptions to the OpenAI API", async () => {
         // Setup
         const mockResponse = {
           id: "resp_123",
@@ -551,8 +552,9 @@ describe("OpenAiProvider.operate", () => {
       });
     });
 
+    // Structured Output tests have been migrated to operate.spec.ts
     describe("Structured Output", () => {
-      it("Structured output uses responses API", async () => {
+      it.skip("Structured output uses responses API", async () => {
         const mockResponse = {
           salutation: "Hello",
           name: "World",
@@ -581,7 +583,7 @@ describe("OpenAiProvider.operate", () => {
         expect(response).toEqual([mockResponse]);
       });
 
-      it("Handles NaturalSchema response format", async () => {
+      it.skip("Handles NaturalSchema response format", async () => {
         const mockResponse = {
           salutation: "Hello",
           name: "World",
@@ -611,7 +613,7 @@ describe("OpenAiProvider.operate", () => {
         expect(response).toEqual([mockResponse]);
       });
 
-      it("Accepts json_schema output format", async () => {
+      it.skip("Accepts json_schema output format", async () => {
         const mockResponse = {
           salutation: "Hello",
           name: "World",
