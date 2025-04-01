@@ -88,7 +88,7 @@ const validateBounds = (
  * // Use consistent seeding
  * const seeded = rng({ seed: "my-seed" });
  */
-const random = (defaultSeed?: string): RandomFunction => {
+export function random(defaultSeed?: string): RandomFunction {
   // Initialize default seeded RNG
   const defaultRng = RandomLib.clone(defaultSeed);
 
@@ -184,10 +184,4 @@ const random = (defaultSeed?: string): RandomFunction => {
   };
 
   return rngFn;
-};
-
-//
-// Export
-//
-
-export default random;
+}

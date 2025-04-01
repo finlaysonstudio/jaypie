@@ -27,8 +27,8 @@ describe("roll tool", () => {
     it("works with default parameters", () => {
       // Create a mock function that will be returned by the random function
       const mockRandomFn = vi.fn().mockReturnValue(3);
-      // Mock the random module's default export to return our mock function
-      vi.spyOn(randomModule, "default").mockImplementation(() => mockRandomFn);
+      // Mock the random module's named export to return our mock function
+      vi.spyOn(randomModule, "random").mockImplementation(() => mockRandomFn);
 
       const result = roll.call({});
 
@@ -66,8 +66,8 @@ describe("roll tool", () => {
     it("rolls a single die with specified sides", () => {
       // Create a mock function that will be returned by the random function
       const mockRandomFn = vi.fn().mockReturnValue(4);
-      // Mock the random module's default export to return our mock function
-      vi.spyOn(randomModule, "default").mockImplementation(() => mockRandomFn);
+      // Mock the random module's named export to return our mock function
+      vi.spyOn(randomModule, "random").mockImplementation(() => mockRandomFn);
 
       const result = roll.call({ number: 1, sides: 8 });
 
@@ -93,8 +93,8 @@ describe("roll tool", () => {
       const mockRandomFn = vi
         .fn()
         .mockImplementation(() => mockValues[callCount++]);
-      // Mock the random module's default export to return our mock function
-      vi.spyOn(randomModule, "default").mockImplementation(() => mockRandomFn);
+      // Mock the random module's named export to return our mock function
+      vi.spyOn(randomModule, "random").mockImplementation(() => mockRandomFn);
 
       const result = roll.call({ number: 3, sides: 6 });
 
@@ -130,8 +130,8 @@ describe("roll tool", () => {
     it("handles large number of dice", () => {
       // Create a mock function that will be returned by the random function
       const mockRandomFn = vi.fn().mockReturnValue(3);
-      // Mock the random module's default export to return our mock function
-      vi.spyOn(randomModule, "default").mockImplementation(() => mockRandomFn);
+      // Mock the random module's named export to return our mock function
+      vi.spyOn(randomModule, "random").mockImplementation(() => mockRandomFn);
 
       const result = roll.call({
         number: 100,
@@ -157,8 +157,8 @@ describe("roll tool", () => {
     it("handles dice with many sides", () => {
       // Create a mock function that will be returned by the random function
       const mockRandomFn = vi.fn().mockReturnValue(42);
-      // Mock the random module's default export to return our mock function
-      vi.spyOn(randomModule, "default").mockImplementation(() => mockRandomFn);
+      // Mock the random module's named export to return our mock function
+      vi.spyOn(randomModule, "random").mockImplementation(() => mockRandomFn);
 
       const result = roll.call({ number: 1, sides: 100 });
 
@@ -182,8 +182,8 @@ describe("roll tool", () => {
     it("handles zero dice gracefully", () => {
       // Create a mock function that will be returned by the random function
       const mockRandomFn = vi.fn();
-      // Mock the random module's default export to return our mock function
-      vi.spyOn(randomModule, "default").mockImplementation(() => mockRandomFn);
+      // Mock the random module's named export to return our mock function
+      vi.spyOn(randomModule, "random").mockImplementation(() => mockRandomFn);
 
       const result = roll.call({ number: 0, sides: 6 });
 
@@ -201,8 +201,8 @@ describe("roll tool", () => {
     it("uses correct random number generation parameters", () => {
       // Create a mock function that will be returned by the random function
       const mockRandomFn = vi.fn().mockReturnValue(3);
-      // Mock the random module's default export to return our mock function
-      vi.spyOn(randomModule, "default").mockImplementation(() => mockRandomFn);
+      // Mock the random module's named export to return our mock function
+      vi.spyOn(randomModule, "random").mockImplementation(() => mockRandomFn);
 
       roll.call({ number: 1, sides: 20 });
 

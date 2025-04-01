@@ -1,5 +1,5 @@
 import { LlmTool } from "../types/LlmTool.interface.js";
-import random from "../util/random.js";
+import { random } from "../util/random.js";
 import { tryParseNumber } from "../util/tryParseNumber.js";
 import { log } from "../util/logger.js";
 
