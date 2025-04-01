@@ -1,6 +1,19 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { operate } from "../operate";
-import { OpenAI } from "openai";
+import {
+  APIConnectionError,
+  APIConnectionTimeoutError,
+  APIUserAbortError,
+  AuthenticationError,
+  BadRequestError,
+  ConflictError,
+  InternalServerError,
+  NotFoundError,
+  OpenAI,
+  PermissionDeniedError,
+  RateLimitError,
+  UnprocessableEntityError,
+} from "openai";
 import {
   LlmMessageRole,
   LlmMessageType,
@@ -86,39 +99,500 @@ describe("operate", () => {
 
   describe("Features", () => {
     describe("API Retry", () => {
-      it.todo(
-        "Retries retryable errors up to the MAX_RETRIES_DEFAULT_LIMIT limit",
-      );
+      it("Retries retryable errors up to the MAX_RETRIES_DEFAULT_LIMIT limit", async () => {
+        // Import the MAX_RETRIES_DEFAULT_LIMIT constant
+        const { MAX_RETRIES_DEFAULT_LIMIT } = await import("../operate");
+
+        // Setup
+        // First MAX_RETRIES_DEFAULT_LIMIT calls will fail with 500 errors
+        for (let i = 0; i < MAX_RETRIES_DEFAULT_LIMIT; i++) {
+          mockClient.responses.create.mockRejectedValueOnce(
+            new InternalServerError(
+              500,
+              "Internal Server Error",
+              undefined,
+              {},
+            ),
+          );
+        }
+        // The next call will succeed
+        const mockResponse = {
+          id: "resp_123",
+          output: [
+            {
+              type: LlmMessageType.Message,
+              content: [
+                {
+                  type: LlmMessageType.OutputText,
+                  text: "Success after retries",
+                },
+              ],
+              role: LlmMessageRole.Assistant,
+            },
+          ],
+        };
+        mockClient.responses.create.mockResolvedValueOnce(mockResponse);
+
+        // Execute
+        await operate(
+          "What is a good taco ingredient?",
+          {},
+          { client: mockClient },
+        );
+
+        // Verify the create function was called the expected number of times
+        // MAX_RETRIES_DEFAULT_LIMIT failures + 1 success = MAX_RETRIES_DEFAULT_LIMIT + 1 total calls
+        expect(mockClient.responses.create).toHaveBeenCalledTimes(
+          MAX_RETRIES_DEFAULT_LIMIT + 1,
+        );
+      });
 
       describe("Error Handling", () => {
-        it.todo("Throws BadGatewayError when retryable errors exceed limit");
+        it("Throws BadGatewayError when retryable errors exceed limit", async () => {
+          // Import the MAX_RETRIES_DEFAULT_LIMIT constant
+          const { MAX_RETRIES_DEFAULT_LIMIT } = await import("../operate");
+
+          // Setup
+          // All calls will fail with 500 errors (exceeding the retry limit)
+          for (let i = 0; i <= MAX_RETRIES_DEFAULT_LIMIT; i++) {
+            mockClient.responses.create.mockRejectedValueOnce(
+              new InternalServerError(
+                500,
+                "Internal Server Error",
+                undefined,
+                {},
+              ),
+            );
+          }
+
+          // Verify
+          await expect(
+            operate("test input", {}, { client: mockClient }),
+          ).rejects.toThrow();
+
+          // Verify the create function was called the expected number of times
+          // Should be called MAX_RETRIES_DEFAULT_LIMIT + 1 times (initial + retries)
+          expect(mockClient.responses.create).toHaveBeenCalledTimes(
+            MAX_RETRIES_DEFAULT_LIMIT + 1,
+          );
+        });
 
         describe("Not Retryable Errors", () => {
-          it.todo("Throws BadGatewayError non-retryable APIUserAbortError");
-          it.todo("Throws BadGatewayError non-retryable AuthenticationError");
-          it.todo("Throws BadGatewayError non-retryable BadRequestError");
-          it.todo("Throws BadGatewayError non-retryable ConflictError");
-          it.todo("Throws BadGatewayError non-retryable NotFoundError");
-          it.todo("Throws BadGatewayError non-retryable PermissionDeniedError");
-          it.todo("Throws BadGatewayError non-retryable RateLimitError");
-          it.todo(
-            "Throws BadGatewayError non-retryable UnprocessableEntityError",
-          );
+          it("Throws BadGatewayError non-retryable APIUserAbortError", async () => {
+            // Setup
+            mockClient.responses.create.mockRejectedValueOnce(
+              new APIUserAbortError(),
+            );
+
+            // Verify
+            await expect(
+              operate("test input", {}, { client: mockClient }),
+            ).rejects.toThrow();
+
+            // Should only be called once, not retried
+            expect(mockClient.responses.create).toHaveBeenCalledTimes(1);
+          });
+          it("Throws BadGatewayError non-retryable AuthenticationError", async () => {
+            // Setup
+            mockClient.responses.create.mockRejectedValueOnce(
+              new AuthenticationError(
+                401,
+                "Authentication error",
+                undefined,
+                {},
+              ),
+            );
+
+            // Verify
+            await expect(
+              operate("test input", {}, { client: mockClient }),
+            ).rejects.toThrow();
+
+            // Should only be called once, not retried
+            expect(mockClient.responses.create).toHaveBeenCalledTimes(1);
+          });
+          it("Throws BadGatewayError non-retryable BadRequestError", async () => {
+            // Setup
+            mockClient.responses.create.mockRejectedValueOnce(
+              new BadRequestError(400, "Bad request error", undefined, {}),
+            );
+
+            // Verify
+            await expect(
+              operate("test input", {}, { client: mockClient }),
+            ).rejects.toThrow();
+
+            // Should only be called once, not retried
+            expect(mockClient.responses.create).toHaveBeenCalledTimes(1);
+          });
+          it("Throws BadGatewayError non-retryable ConflictError", async () => {
+            // Setup
+            mockClient.responses.create.mockRejectedValueOnce(
+              new ConflictError(409, "Conflict error", undefined, {}),
+            );
+
+            // Verify
+            await expect(
+              operate("test input", {}, { client: mockClient }),
+            ).rejects.toThrow();
+
+            // Should only be called once, not retried
+            expect(mockClient.responses.create).toHaveBeenCalledTimes(1);
+          });
+          it("Throws BadGatewayError non-retryable NotFoundError", async () => {
+            // Setup
+            mockClient.responses.create.mockRejectedValueOnce(
+              new NotFoundError(404, "Not found error", undefined, {}),
+            );
+
+            // Verify
+            await expect(
+              operate("test input", {}, { client: mockClient }),
+            ).rejects.toThrow();
+
+            // Should only be called once, not retried
+            expect(mockClient.responses.create).toHaveBeenCalledTimes(1);
+          });
+          it("Throws BadGatewayError non-retryable PermissionDeniedError", async () => {
+            // Setup
+            mockClient.responses.create.mockRejectedValueOnce(
+              new PermissionDeniedError(
+                403,
+                "Permission denied error",
+                undefined,
+                {},
+              ),
+            );
+
+            // Verify
+            await expect(
+              operate("test input", {}, { client: mockClient }),
+            ).rejects.toThrow();
+
+            // Should only be called once, not retried
+            expect(mockClient.responses.create).toHaveBeenCalledTimes(1);
+          });
+          it("Throws BadGatewayError non-retryable RateLimitError", async () => {
+            // Setup
+            mockClient.responses.create.mockRejectedValueOnce(
+              new RateLimitError(429, "Rate limit error", undefined, {}),
+            );
+
+            // Verify
+            await expect(
+              operate("test input", {}, { client: mockClient }),
+            ).rejects.toThrow();
+
+            // Should only be called once, not retried
+            expect(mockClient.responses.create).toHaveBeenCalledTimes(1);
+          });
+          it("Throws BadGatewayError non-retryable UnprocessableEntityError", async () => {
+            // Setup
+            mockClient.responses.create.mockRejectedValueOnce(
+              new UnprocessableEntityError(
+                422,
+                "Unprocessable entity error",
+                undefined,
+                {},
+              ),
+            );
+
+            // Verify
+            await expect(
+              operate("test input", {}, { client: mockClient }),
+            ).rejects.toThrow();
+
+            // Should only be called once, not retried
+            expect(mockClient.responses.create).toHaveBeenCalledTimes(1);
+          });
         });
       });
 
       describe("API Retry Observability", () => {
-        it.todo("Logs debug on retry success");
-        it.todo("Logs second warn on unknown errors");
-        it.todo("Logs error on non-retryable errors");
-        it.todo("Logs warn on retryable errors");
+        it("Logs debug on retry success", async () => {
+          // Import log module
+          const { log } = await import("../../../util/logger.js");
+          // Spy on the log.debug method
+          vi.spyOn(log, "debug");
+
+          // Setup
+          // First call fails with a retryable error
+          mockClient.responses.create.mockRejectedValueOnce(
+            new InternalServerError(
+              500,
+              "Internal Server Error",
+              undefined,
+              {},
+            ),
+          );
+          // Second call succeeds
+          const mockResponse = {
+            id: "resp_123",
+            output: [
+              {
+                type: LlmMessageType.Message,
+                content: [
+                  {
+                    type: LlmMessageType.OutputText,
+                    text: "Success after retry",
+                  },
+                ],
+                role: LlmMessageRole.Assistant,
+              },
+            ],
+          };
+          mockClient.responses.create.mockResolvedValueOnce(mockResponse);
+
+          // Execute
+          await operate("test input", {}, { client: mockClient });
+
+          // Verify debug log was called with the correct message
+          expect(log.debug).toHaveBeenCalledWith(
+            "OpenAI API call succeeded after 1 retries",
+          );
+        });
+        it("Logs second warn on unknown errors", async () => {
+          // Import log module
+          const { log } = await import("../../../util/logger.js");
+          // Spy on the log methods
+          vi.spyOn(log, "warn");
+          vi.spyOn(log, "var");
+
+          // Setup
+          // Create an unknown error type that's not in the retryable list
+          const unknownError = new Error("Unknown error");
+          mockClient.responses.create.mockRejectedValueOnce(unknownError);
+
+          // Second call succeeds
+          const mockResponse = {
+            id: "resp_123",
+            output: [
+              {
+                type: LlmMessageType.Message,
+                content: [
+                  {
+                    type: LlmMessageType.OutputText,
+                    text: "Success after unknown error",
+                  },
+                ],
+                role: LlmMessageRole.Assistant,
+              },
+            ],
+          };
+          mockClient.responses.create.mockResolvedValueOnce(mockResponse);
+
+          // Execute
+          await operate("test input", {}, { client: mockClient });
+
+          // Verify warn log was called with the correct messages
+          expect(log.warn).toHaveBeenCalledWith(
+            "OpenAI API returned unknown error",
+          );
+          expect(log.var).toHaveBeenCalledWith({ error: unknownError });
+          expect(log.warn).toHaveBeenCalledWith(
+            expect.stringContaining("OpenAI API call failed. Retrying"),
+          );
+        });
+        it("Logs error on non-retryable errors", async () => {
+          // Import log module
+          const { log } = await import("../../../util/logger.js");
+          // Spy on the log methods
+          vi.spyOn(log, "error");
+          vi.spyOn(log, "var");
+
+          // Setup
+          const authError = new AuthenticationError(
+            401,
+            "Authentication error",
+            undefined,
+            {},
+          );
+          mockClient.responses.create.mockRejectedValueOnce(authError);
+
+          // Execute
+          try {
+            await operate("test input", {}, { client: mockClient });
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          } catch (error) {
+            // Expected to throw
+          }
+
+          // Verify error log was called with the correct message
+          expect(log.error).toHaveBeenCalledWith(
+            "OpenAI API call failed with non-retryable error",
+          );
+          expect(log.var).toHaveBeenCalledWith({ error: authError });
+        });
+        it("Logs warn on retryable errors", async () => {
+          // Import log module
+          const { log } = await import("../../../util/logger.js");
+          // Spy on the log methods
+          vi.spyOn(log, "warn");
+
+          // Setup
+          // First call fails with a retryable error
+          const serverError = new InternalServerError(
+            500,
+            "Internal Server Error",
+            undefined,
+            {},
+          );
+          mockClient.responses.create.mockRejectedValueOnce(serverError);
+
+          // Second call succeeds
+          const mockResponse = {
+            id: "resp_123",
+            output: [
+              {
+                type: LlmMessageType.Message,
+                content: [
+                  {
+                    type: LlmMessageType.OutputText,
+                    text: "Success after retry",
+                  },
+                ],
+                role: LlmMessageRole.Assistant,
+              },
+            ],
+          };
+          mockClient.responses.create.mockResolvedValueOnce(mockResponse);
+
+          // Execute
+          await operate("test input", {}, { client: mockClient });
+
+          // Verify warn log was called with the correct message
+          expect(log.warn).toHaveBeenCalledWith(
+            expect.stringContaining("OpenAI API call failed. Retrying"),
+          );
+        });
       });
 
       describe("Retryable Errors", () => {
-        it.todo("Retries APIConnectionError");
-        it.todo("Retries APIConnectionTimeoutError");
-        it.todo("Retries InternalServerError");
-        it.todo("Retries unknown errors");
+        it("Retries APIConnectionError", async () => {
+          // Setup
+          // First call fails with a connection error
+          mockClient.responses.create.mockRejectedValueOnce(
+            new APIConnectionError({ message: "Connection error" }),
+          );
+          // Second call succeeds
+          const mockResponse = {
+            id: "resp_123",
+            output: [
+              {
+                type: LlmMessageType.Message,
+                content: [
+                  {
+                    type: LlmMessageType.OutputText,
+                    text: "Success after connection error",
+                  },
+                ],
+                role: LlmMessageRole.Assistant,
+              },
+            ],
+          };
+          mockClient.responses.create.mockResolvedValueOnce(mockResponse);
+
+          // Execute
+          await operate("test input", {}, { client: mockClient });
+
+          // Verify the create function was called twice (1 failure + 1 success)
+          expect(mockClient.responses.create).toHaveBeenCalledTimes(2);
+        });
+        it("Retries APIConnectionTimeoutError", async () => {
+          // Setup
+          // First call fails with a timeout error
+          mockClient.responses.create.mockRejectedValueOnce(
+            new APIConnectionTimeoutError({ message: "Connection timeout" }),
+          );
+          // Second call succeeds
+          const mockResponse = {
+            id: "resp_123",
+            output: [
+              {
+                type: LlmMessageType.Message,
+                content: [
+                  {
+                    type: LlmMessageType.OutputText,
+                    text: "Success after timeout",
+                  },
+                ],
+                role: LlmMessageRole.Assistant,
+              },
+            ],
+          };
+          mockClient.responses.create.mockResolvedValueOnce(mockResponse);
+
+          // Execute
+          await operate("test input", {}, { client: mockClient });
+
+          // Verify the create function was called twice (1 failure + 1 success)
+          expect(mockClient.responses.create).toHaveBeenCalledTimes(2);
+        });
+        it("Retries InternalServerError", async () => {
+          // Setup
+          // First call fails with an internal server error
+          mockClient.responses.create.mockRejectedValueOnce(
+            new InternalServerError(
+              500,
+              "Internal Server Error",
+              undefined,
+              {},
+            ),
+          );
+          // Second call succeeds
+          const mockResponse = {
+            id: "resp_123",
+            output: [
+              {
+                type: LlmMessageType.Message,
+                content: [
+                  {
+                    type: LlmMessageType.OutputText,
+                    text: "Success after server error",
+                  },
+                ],
+                role: LlmMessageRole.Assistant,
+              },
+            ],
+          };
+          mockClient.responses.create.mockResolvedValueOnce(mockResponse);
+
+          // Execute
+          await operate("test input", {}, { client: mockClient });
+
+          // Verify the create function was called twice (1 failure + 1 success)
+          expect(mockClient.responses.create).toHaveBeenCalledTimes(2);
+        });
+        it("Retries unknown errors", async () => {
+          // Setup
+          // First call fails with an unknown error
+          const unknownError = new Error("Unknown error");
+          mockClient.responses.create.mockRejectedValueOnce(unknownError);
+
+          // Second call succeeds
+          const mockResponse = {
+            id: "resp_123",
+            output: [
+              {
+                type: LlmMessageType.Message,
+                content: [
+                  {
+                    type: LlmMessageType.OutputText,
+                    text: "Success after unknown error",
+                  },
+                ],
+                role: LlmMessageRole.Assistant,
+              },
+            ],
+          };
+          mockClient.responses.create.mockResolvedValueOnce(mockResponse);
+
+          // Execute
+          await operate("test input", {}, { client: mockClient });
+
+          // Verify the create function was called twice (1 failure + 1 success)
+          expect(mockClient.responses.create).toHaveBeenCalledTimes(2);
+        });
       });
     });
 
