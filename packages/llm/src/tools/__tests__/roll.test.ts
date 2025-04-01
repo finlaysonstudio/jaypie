@@ -1,18 +1,18 @@
-import { describe, it, expect, vi } from "vitest";
+import { afterEach, beforeEach, describe, it, expect, vi } from "vitest";
+import { restoreLog, spyLog } from "@jaypie/testkit";
 import { roll } from "../roll.js";
-import * as randomModule from "../../util/random.js";
+import * as util from "../../util";
 
-// Mock the logger module
-vi.mock("../../util/logger.js", () => {
-  return {
-    log: {
-      warn: vi.fn(),
-    },
-  };
+const log = util.log;
+
+beforeEach(async () => {
+  spyLog(log);
 });
 
-// Import the mocked logger
-import { log } from "../../util/logger.js";
+afterEach(() => {
+  vi.clearAllMocks();
+  restoreLog(log);
+});
 
 describe("roll tool", () => {
   describe("Base Cases", () => {
@@ -28,7 +28,7 @@ describe("roll tool", () => {
       // Create a mock function that will be returned by the random function
       const mockRandomFn = vi.fn().mockReturnValue(3);
       // Mock the random module's named export to return our mock function
-      vi.spyOn(randomModule, "random").mockImplementation(() => mockRandomFn);
+      vi.spyOn(util, "random").mockImplementation(() => mockRandomFn);
 
       const result = roll.call({});
 
@@ -67,7 +67,7 @@ describe("roll tool", () => {
       // Create a mock function that will be returned by the random function
       const mockRandomFn = vi.fn().mockReturnValue(4);
       // Mock the random module's named export to return our mock function
-      vi.spyOn(randomModule, "random").mockImplementation(() => mockRandomFn);
+      vi.spyOn(util, "random").mockImplementation(() => mockRandomFn);
 
       const result = roll.call({ number: 1, sides: 8 });
 
@@ -94,7 +94,7 @@ describe("roll tool", () => {
         .fn()
         .mockImplementation(() => mockValues[callCount++]);
       // Mock the random module's named export to return our mock function
-      vi.spyOn(randomModule, "random").mockImplementation(() => mockRandomFn);
+      vi.spyOn(util, "random").mockImplementation(() => mockRandomFn);
 
       const result = roll.call({ number: 3, sides: 6 });
 
@@ -131,7 +131,7 @@ describe("roll tool", () => {
       // Create a mock function that will be returned by the random function
       const mockRandomFn = vi.fn().mockReturnValue(3);
       // Mock the random module's named export to return our mock function
-      vi.spyOn(randomModule, "random").mockImplementation(() => mockRandomFn);
+      vi.spyOn(util, "random").mockImplementation(() => mockRandomFn);
 
       const result = roll.call({
         number: 100,
@@ -158,7 +158,7 @@ describe("roll tool", () => {
       // Create a mock function that will be returned by the random function
       const mockRandomFn = vi.fn().mockReturnValue(42);
       // Mock the random module's named export to return our mock function
-      vi.spyOn(randomModule, "random").mockImplementation(() => mockRandomFn);
+      vi.spyOn(util, "random").mockImplementation(() => mockRandomFn);
 
       const result = roll.call({ number: 1, sides: 100 });
 
@@ -183,7 +183,7 @@ describe("roll tool", () => {
       // Create a mock function that will be returned by the random function
       const mockRandomFn = vi.fn();
       // Mock the random module's named export to return our mock function
-      vi.spyOn(randomModule, "random").mockImplementation(() => mockRandomFn);
+      vi.spyOn(util, "random").mockImplementation(() => mockRandomFn);
 
       const result = roll.call({ number: 0, sides: 6 });
 
@@ -202,7 +202,7 @@ describe("roll tool", () => {
       // Create a mock function that will be returned by the random function
       const mockRandomFn = vi.fn().mockReturnValue(3);
       // Mock the random module's named export to return our mock function
-      vi.spyOn(randomModule, "random").mockImplementation(() => mockRandomFn);
+      vi.spyOn(util, "random").mockImplementation(() => mockRandomFn);
 
       roll.call({ number: 1, sides: 20 });
 
