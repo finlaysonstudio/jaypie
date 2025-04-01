@@ -17,6 +17,9 @@ import {
 } from "openai";
 import { zodResponseFormat } from "openai/helpers/zod";
 import { z } from "zod";
+import { PROVIDER } from "../../constants.js";
+import { Toolkit } from "../../tools/Toolkit.class.js";
+import { OpenAIRawResponse, OpenAIResponseTurn } from "./types.js";
 import {
   LlmHistory,
   LlmInputMessage,
@@ -24,13 +27,6 @@ import {
   LlmOperateResponse,
 } from "../../types/LlmProvider.interface.js";
 import { formatOperateInput, log, naturalZodSchema } from "../../util";
-import { PROVIDER } from "../../constants.js";
-import { Toolkit } from "../../tools/Toolkit.class.js";
-import {
-  OpenAIRawResponse,
-  OpenAIResponse,
-  OpenAIResponseTurn,
-} from "./types.js";
 
 // Constants
 
