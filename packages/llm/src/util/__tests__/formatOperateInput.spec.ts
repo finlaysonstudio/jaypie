@@ -58,10 +58,10 @@ describe("formatOperateInput", () => {
   });
 
   describe("Features", () => {
-    it("uses defaultRole when converting string to LlmInputMessage", () => {
+    it("uses role when converting string to LlmInputMessage", () => {
       const input = "test message";
       const result = formatOperateInput(input, {
-        defaultRole: LlmMessageRole.System,
+        role: LlmMessageRole.System,
       }) as LlmInputMessage[];
 
       expect(result[0].role).toBe(LlmMessageRole.System);

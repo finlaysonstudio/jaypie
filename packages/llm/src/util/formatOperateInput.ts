@@ -10,16 +10,16 @@ import {
  */
 export interface FormatOperateInputOptions {
   /**
-   * Default role to use when converting a string to LlmInputMessage
+   * Role to use when converting a string to LlmInputMessage
    */
-  defaultRole?: LlmMessageRole;
+  role?: LlmMessageRole;
 }
 
 /**
  * Converts various input types to a standardized LlmHistory format
  * @param input - String, LlmInputMessage, or LlmHistory to format
  * @param options - Optional configuration
- * @param options.defaultRole - Default role to use when converting a string to LlmInputMessage (defaults to User)
+ * @param options.role - Role to use when converting a string to LlmInputMessage (defaults to User)
  * @returns Standardized LlmHistory array
  */
 export function formatOperateInput(
@@ -35,7 +35,7 @@ export function formatOperateInput(
   if (typeof input === "string") {
     const message: LlmInputMessage = {
       content: input,
-      role: options?.defaultRole || LlmMessageRole.User,
+      role: options?.role || LlmMessageRole.User,
       type: LlmMessageType.Message,
     };
     return [message];
