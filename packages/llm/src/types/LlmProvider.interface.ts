@@ -62,7 +62,7 @@ type LlmInputContent =
   | LlmInputContentImage
   | LlmInputContentText;
 
-interface LlmInputMessage {
+export interface LlmInputMessage {
   content: string | Array<LlmInputContent>;
   role: LlmMessageRole;
   type: LlmMessageType.Message;
@@ -125,7 +125,7 @@ type LlmHistoryItem =
   | LlmOutputItem
   | LlmToolResult;
 
-type LlmHistory = LlmHistoryItem[];
+export type LlmHistory = LlmHistoryItem[];
 
 export interface LlmMessageOptions {
   data?: NaturalMap;
