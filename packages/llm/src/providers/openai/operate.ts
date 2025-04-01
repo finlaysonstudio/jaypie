@@ -72,15 +72,18 @@ export async function operate(
     client: new OpenAI(),
   },
 ): Promise<LlmOperateResponse> {
+  //
+  //
+  // Setup
+  //
+
   const openai = context.client;
 
-  // Validate
   if (!context.maxRetries) {
     context.maxRetries = MAX_RETRIES_DEFAULT_LIMIT;
   }
   const model = options?.model || PROVIDER.OPENAI.MODEL.DEFAULT;
 
-  // Setup
   let retryCount = 0;
   let retryDelay = INITIAL_RETRY_DELAY_MS;
   const maxRetries = Math.min(context.maxRetries, MAX_RETRIES_ABSOLUTE_LIMIT);
@@ -97,11 +100,6 @@ export async function operate(
     });
   }
 
-  // Add history to the input if provided
-  if (options?.history && Array.isArray(options.history)) {
-    currentInput = [...options.history, ...currentInput];
-  }
-
   // Determine max turns from options
   const maxTurns = maxTurnsFromOptions(options);
   const enableMultipleTurns = maxTurns > 1;
@@ -114,90 +112,90 @@ export async function operate(
     toolkit = new Toolkit(options.tools, { explain });
   }
 
+  // Build request options outside the retry loop
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const requestOptions: /* OpenAI.Responses.InputItems */ any = {
+    model,
+    input: currentInput,
+  };
+
+  // Add user if provided
+  if (options?.user) {
+    requestOptions.user = options.user;
+  }
+
+  // Add any provider-specific options
+  if (options?.providerOptions) {
+    Object.assign(requestOptions, options.providerOptions);
+  }
+
+  // Handle instructions or system message
+  if (options?.instructions) {
+    // Apply placeholders to instructions if data is provided and placeholders.instructions is undefined or true
+    requestOptions.instructions =
+      options.data &&
+      (options.placeholders?.instructions === undefined ||
+        options.placeholders?.instructions)
+        ? placeholders(options.instructions, options.data)
+        : options.instructions;
+  } else if ((options as unknown as { system: string })?.system) {
+    // Check for illegal system option, use it as instructions, and log a warning
+    log.warn("[operate] Use 'instructions' instead of 'system'.");
+    // Apply placeholders to system if data is provided and placeholders.instructions is undefined or true
+    requestOptions.instructions =
+      options.data &&
+      (options.placeholders?.instructions === undefined ||
+        options.placeholders?.instructions)
+        ? placeholders(
+            (options as unknown as { system: string }).system,
+            options.data,
+          )
+        : (options as unknown as { system: string }).system;
+  }
+
+  // Handle structured output format
+  if (options?.format) {
+    // Check if format is a JsonObject with type "json_schema"
+    if (
+      typeof options.format === "object" &&
+      options.format !== null &&
+      !Array.isArray(options.format) &&
+      (options.format as JsonObject).type === "json_schema"
+    ) {
+      // Direct pass-through for JsonObject with type "json_schema"
+      requestOptions.text = {
+        format: options.format,
+      };
+    } else {
+      // Convert NaturalSchema to Zod schema if needed
+      const zodSchema =
+        options.format instanceof z.ZodType
+          ? options.format
+          : naturalZodSchema(options.format as NaturalSchema);
+      const responseFormat = zodResponseFormat(zodSchema, "response");
+
+      // Set up structured output format in the format expected by the test
+      requestOptions.text = {
+        format: {
+          name: responseFormat.json_schema.name,
+          schema: responseFormat.json_schema.schema,
+          strict: responseFormat.json_schema.strict,
+          type: responseFormat.type,
+        },
+      };
+    }
+  }
+
+  // Add tools if toolkit is initialized
+  if (toolkit) {
+    requestOptions.tools = toolkit.tools;
+  }
+
   // OpenAI Multi-turn Loop
   while (currentTurn < maxTurns) {
     currentTurn++;
     retryCount = 0;
     retryDelay = INITIAL_RETRY_DELAY_MS;
-
-    // Build request options outside the retry loop
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const requestOptions: /* OpenAI.Responses.InputItems */ any = {
-      model,
-      input: currentInput,
-    };
-
-    // Add user if provided
-    if (options?.user) {
-      requestOptions.user = options.user;
-    }
-
-    // Add any provider-specific options
-    if (options?.providerOptions) {
-      Object.assign(requestOptions, options.providerOptions);
-    }
-
-    // Handle instructions or system message
-    if (options?.instructions) {
-      // Apply placeholders to instructions if data is provided and placeholders.instructions is undefined or true
-      requestOptions.instructions =
-        options.data &&
-        (options.placeholders?.instructions === undefined ||
-          options.placeholders?.instructions)
-          ? placeholders(options.instructions, options.data)
-          : options.instructions;
-    } else if ((options as unknown as { system: string })?.system) {
-      // Check for illegal system option, use it as instructions, and log a warning
-      log.warn("[operate] Use 'instructions' instead of 'system'.");
-      // Apply placeholders to system if data is provided and placeholders.instructions is undefined or true
-      requestOptions.instructions =
-        options.data &&
-        (options.placeholders?.instructions === undefined ||
-          options.placeholders?.instructions)
-          ? placeholders(
-              (options as unknown as { system: string }).system,
-              options.data,
-            )
-          : (options as unknown as { system: string }).system;
-    }
-
-    // Handle structured output format
-    if (options?.format) {
-      // Check if format is a JsonObject with type "json_schema"
-      if (
-        typeof options.format === "object" &&
-        options.format !== null &&
-        !Array.isArray(options.format) &&
-        (options.format as JsonObject).type === "json_schema"
-      ) {
-        // Direct pass-through for JsonObject with type "json_schema"
-        requestOptions.text = {
-          format: options.format,
-        };
-      } else {
-        // Convert NaturalSchema to Zod schema if needed
-        const zodSchema =
-          options.format instanceof z.ZodType
-            ? options.format
-            : naturalZodSchema(options.format as NaturalSchema);
-        const responseFormat = zodResponseFormat(zodSchema, "response");
-
-        // Set up structured output format in the format expected by the test
-        requestOptions.text = {
-          format: {
-            name: responseFormat.json_schema.name,
-            schema: responseFormat.json_schema.schema,
-            strict: responseFormat.json_schema.strict,
-            type: responseFormat.type,
-          },
-        };
-      }
-    }
-
-    // Add tools if toolkit is initialized
-    if (toolkit) {
-      requestOptions.tools = toolkit.tools;
-    }
 
     // OpenAI Retry Loop
     while (true) {
