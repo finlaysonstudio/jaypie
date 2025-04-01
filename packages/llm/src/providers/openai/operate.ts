@@ -18,7 +18,7 @@ import {
 import { zodResponseFormat } from "openai/helpers/zod";
 import { z } from "zod";
 import { LlmOperateOptions } from "../../types/LlmProvider.interface.js";
-import { log, naturalZodSchema } from "../../util";
+import { formatOperateInput, log, naturalZodSchema } from "../../util";
 import { PROVIDER } from "../../constants.js";
 import { Toolkit } from "../../tools/Toolkit.class.js";
 import {
