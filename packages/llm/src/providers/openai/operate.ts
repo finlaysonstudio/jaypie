@@ -24,6 +24,7 @@ import {
   LlmHistory,
   LlmHistoryItem,
   LlmInputMessage,
+  LlmMessageType,
   LlmOperateOptions,
   LlmOperateResponse,
 } from "../../types/LlmProvider.interface.js";
@@ -207,7 +208,7 @@ export async function operate(
   const allResponses: LlmHistory = [];
 
   // Convert string input to array format with placeholders if needed
-  let currentInput = formatOperateInput(input);
+  let currentInput: LlmHistory = formatOperateInput(input);
   if (
     options?.data &&
     (options.placeholders?.input === undefined || options.placeholders?.input)
@@ -243,6 +244,7 @@ export async function operate(
 
         // Use type assertion to handle the OpenAI SDK response type
         const currentResponse = (await openai.responses.create(
+          // @ts-expect-error error claims missing non-required id, status
           requestOptions,
         )) as unknown as OpenAIRawResponse;
 
@@ -259,7 +261,7 @@ export async function operate(
           if (currentResponse.output && Array.isArray(currentResponse.output)) {
             // New OpenAI API format with output array
             for (const output of currentResponse.output) {
-              if (output.type === "function_call") {
+              if (output.type === LlmMessageType.FunctionCall) {
                 hasFunctionCall = true;
 
                 let toolkit: Toolkit | undefined;
@@ -272,9 +274,6 @@ export async function operate(
 
                 if (toolkit && enableMultipleTurns) {
                   try {
-                    // Parse arguments for validation
-                    JSON.parse(output.arguments);
-
                     // Call the tool and ensure the result is resolved if it's a Promise
                     log.trace(`[operate] Calling tool - ${output.name}`);
                     const result = await toolkit.call({
@@ -287,9 +286,9 @@ export async function operate(
                       currentInput.push(output);
                       // Add function call result
                       currentInput.push({
-                        type: "function_call_output",
                         call_id: output.call_id,
                         output: JSON.stringify(result),
+                        type: LlmMessageType.FunctionCallOutput,
                       });
                     }
                   } catch (error) {
