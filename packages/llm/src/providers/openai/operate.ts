@@ -19,9 +19,10 @@ import { zodResponseFormat } from "openai/helpers/zod";
 import { z } from "zod";
 import { PROVIDER } from "../../constants.js";
 import { Toolkit } from "../../tools/Toolkit.class.js";
-import { OpenAIRawResponse, OpenAIResponseTurn } from "./types.js";
+import { OpenAIRawResponse } from "./types.js";
 import {
   LlmHistory,
+  LlmHistoryItem,
   LlmInputMessage,
   LlmOperateOptions,
   LlmOperateResponse,
@@ -87,7 +88,7 @@ export async function operate(
   let retryCount = 0;
   let retryDelay = INITIAL_RETRY_DELAY_MS;
   const maxRetries = Math.min(context.maxRetries, MAX_RETRIES_ABSOLUTE_LIMIT);
-  const allResponses: OpenAIResponseTurn[] = [];
+  const allResponses: LlmHistory = [];
 
   // Convert string input to array format with placeholders if needed
   let currentInput = formatOperateInput(input);
@@ -216,7 +217,7 @@ export async function operate(
           log.debug(`OpenAI API call succeeded after ${retryCount} retries`);
         }
         // Add the entire response to allResponses
-        allResponses.push(currentResponse as unknown as OpenAIResponseTurn);
+        allResponses.push(currentResponse as unknown as LlmHistoryItem);
 
         // Check if we need to process function calls for multi-turn conversations
         let hasFunctionCall = false;

@@ -119,7 +119,7 @@ interface LlmItemReference {
 
 // Options
 
-type LlmHistoryItem =
+export type LlmHistoryItem =
   | LlmInputMessage
   | LlmItemReference
   | LlmOutputItem
