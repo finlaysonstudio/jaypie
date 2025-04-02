@@ -751,10 +751,11 @@ describe("operate", () => {
           id: "resp_123",
           output: [
             {
-              type: "function_call",
-              name: "test_tool",
               arguments: '{"query":"test"}',
               call_id: "call_1",
+              name: "test_tool",
+              type: LlmMessageType.FunctionCall,
+              status: LlmResponseStatus.Completed,
             },
           ],
         };
@@ -763,7 +764,7 @@ describe("operate", () => {
           id: "resp_456",
           output: [
             {
-              type: "text",
+              type: LlmMessageType.OutputText,
               text: "Tool call completed",
             },
           ],
@@ -783,8 +784,9 @@ describe("operate", () => {
         const testInput = "Test input with tools";
         const tools = [
           {
-            name: "test_tool",
+            call: mockToolCall,
             description: "Test tool",
+            name: "test_tool",
             parameters: {
               type: "object",
               properties: {
@@ -792,7 +794,6 @@ describe("operate", () => {
               },
             },
             type: "function",
-            call: mockToolCall,
           },
         ];
 
