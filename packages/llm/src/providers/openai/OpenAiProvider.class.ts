@@ -17,7 +17,6 @@ import {
   initializeClient,
   prepareMessages,
 } from "./utils.js";
-import { formatOperateInput } from "../../util";
 
 export class OpenAiProvider implements LlmProvider {
   private model: string;
