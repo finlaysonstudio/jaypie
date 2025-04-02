@@ -100,13 +100,13 @@ type LlmOutput = LlmOutputItem[];
 export interface LlmToolCall {
   arguments: string;
   call_id: string;
+  id: string;
   name: string;
   type: LlmMessageType.FunctionCall;
   status: LlmResponseStatus;
 }
 export interface LlmToolResult {
   call_id: string;
-  id: string;
   output: string;
   status?: LlmResponseStatus;
   type: LlmMessageType.FunctionCallOutput;
