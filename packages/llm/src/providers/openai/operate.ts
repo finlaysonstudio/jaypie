@@ -27,6 +27,7 @@ import {
   LlmOperateOptions,
   LlmOperateResponse,
 } from "../../types/LlmProvider.interface.js";
+import { LlmTool } from "../../types/LlmTool.interface.js";
 import {
   formatOperateInput,
   log,
@@ -34,7 +35,25 @@ import {
   naturalZodSchema,
 } from "../../util";
 
+//
+//
+// Types
+//
+
+/**
+ * OpenAI request options type that includes model and input properties
+ */
+export type OpenAiRequestOptions = Omit<LlmOperateOptions, "tools"> & {
+  model: string;
+  input: LlmInputMessage | LlmHistory;
+  text?: unknown;
+  tools?: Omit<LlmTool, "call">[];
+};
+
+//
+//
 // Constants
+//
 
 export const MAX_RETRIES_ABSOLUTE_LIMIT = 72;
 export const MAX_RETRIES_DEFAULT_LIMIT = 6;
@@ -63,61 +82,23 @@ const NOT_RETRYABLE_ERRORS = [
 
 //
 //
-// Main
+// Helpers
 //
 
-export async function operate(
-  input: string | LlmHistory | LlmInputMessage,
+/**
+ * Creates the request options for the OpenAI API call
+ *
+ * @param input - The formatted input messages
+ * @param options - The LLM operation options
+ * @returns The request options for the OpenAI API
+ */
+export function createRequestOptions(
+  input: LlmInputMessage | LlmHistory,
   options: LlmOperateOptions = {},
-  context: { client: OpenAI; maxRetries?: number } = {
-    client: new OpenAI(),
-  },
-): Promise<LlmOperateResponse> {
-  //
-  //
-  // Setup
-  //
-
-  const openai = context.client;
-
-  if (!context.maxRetries) {
-    context.maxRetries = MAX_RETRIES_DEFAULT_LIMIT;
-  }
-  const model = options?.model || PROVIDER.OPENAI.MODEL.DEFAULT;
-
-  let retryCount = 0;
-  let retryDelay = INITIAL_RETRY_DELAY_MS;
-  const maxRetries = Math.min(context.maxRetries, MAX_RETRIES_ABSOLUTE_LIMIT);
-  const allResponses: LlmHistory = [];
-
-  // Convert string input to array format with placeholders if needed
-  let currentInput = formatOperateInput(input);
-  if (
-    options?.data &&
-    (options.placeholders?.input === undefined || options.placeholders?.input)
-  ) {
-    currentInput = formatOperateInput(input, {
-      data: options?.data,
-    });
-  }
-
-  // Determine max turns from options
-  const maxTurns = maxTurnsFromOptions(options);
-  const enableMultipleTurns = maxTurns > 1;
-  let currentTurn = 0;
-  let toolkit: Toolkit | undefined;
-  const explain = options?.explain ?? false;
-
-  // Initialize toolkit if tools are provided
-  if (options.tools?.length) {
-    toolkit = new Toolkit(options.tools, { explain });
-  }
-
-  // Build request options outside the retry loop
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const requestOptions: /* OpenAI.Responses.InputItems */ any = {
-    model,
-    input: currentInput,
+): OpenAiRequestOptions {
+  const requestOptions: OpenAiRequestOptions = {
+    model: options?.model || PROVIDER.OPENAI.MODEL.DEFAULT,
+    input,
   };
 
   // Add user if provided
@@ -187,10 +168,62 @@ export async function operate(
     }
   }
 
-  // Add tools if toolkit is initialized
-  if (toolkit) {
+  // Create toolkit and add tools if provided
+  if (options.tools?.length) {
+    const explain = options?.explain ?? false;
+    const toolkit = new Toolkit(options.tools, { explain });
     requestOptions.tools = toolkit.tools;
   }
+
+  return requestOptions;
+}
+
+//
+//
+// Main
+//
+
+export async function operate(
+  input: string | LlmHistory | LlmInputMessage,
+  options: LlmOperateOptions = {},
+  context: { client: OpenAI; maxRetries?: number } = {
+    client: new OpenAI(),
+  },
+): Promise<LlmOperateResponse> {
+  //
+  //
+  // Setup
+  //
+
+  const openai = context.client;
+
+  if (!context.maxRetries) {
+    context.maxRetries = MAX_RETRIES_DEFAULT_LIMIT;
+  }
+
+  let retryCount = 0;
+  let retryDelay = INITIAL_RETRY_DELAY_MS;
+  const maxRetries = Math.min(context.maxRetries, MAX_RETRIES_ABSOLUTE_LIMIT);
+  const allResponses: LlmHistory = [];
+
+  // Convert string input to array format with placeholders if needed
+  let currentInput = formatOperateInput(input);
+  if (
+    options?.data &&
+    (options.placeholders?.input === undefined || options.placeholders?.input)
+  ) {
+    currentInput = formatOperateInput(input, {
+      data: options?.data,
+    });
+  }
+
+  // Determine max turns from options
+  const maxTurns = maxTurnsFromOptions(options);
+  const enableMultipleTurns = maxTurns > 1;
+  let currentTurn = 0;
+
+  // Build request options outside the retry loop
+  const requestOptions = createRequestOptions(currentInput, options);
 
   // OpenAI Multi-turn Loop
   while (currentTurn < maxTurns) {
@@ -228,6 +261,14 @@ export async function operate(
             for (const output of currentResponse.output) {
               if (output.type === "function_call") {
                 hasFunctionCall = true;
+
+                let toolkit: Toolkit | undefined;
+                const explain = options?.explain ?? false;
+
+                // Initialize toolkit if tools are provided for multi-turn function calling
+                if (options.tools?.length) {
+                  toolkit = new Toolkit(options.tools, { explain });
+                }
 
                 if (toolkit && enableMultipleTurns) {
                   try {
