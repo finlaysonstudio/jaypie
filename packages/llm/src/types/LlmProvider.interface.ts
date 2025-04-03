@@ -174,7 +174,7 @@ export interface LlmOperateResponse {
   history: LlmHistory;
   message?: string;
   output: LlmOutput;
-  response: JsonObject[] | null;
+  responses: JsonObject[];
   status: LlmResponseStatus;
   usage: LlmUsage;
 }

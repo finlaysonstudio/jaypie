@@ -22,11 +22,11 @@ import { Toolkit } from "../../tools/Toolkit.class.js";
 import { OpenAIRawResponse } from "./types.js";
 import {
   LlmHistory,
-  LlmHistoryItem,
   LlmInputMessage,
   LlmMessageType,
   LlmOperateOptions,
   LlmOperateResponse,
+  LlmResponseStatus,
 } from "../../types/LlmProvider.interface.js";
 import { LlmTool } from "../../types/LlmTool.interface.js";
 import {
@@ -205,7 +205,6 @@ export async function operate(
   let retryCount = 0;
   let retryDelay = INITIAL_RETRY_DELAY_MS;
   const maxRetries = Math.min(context.maxRetries, MAX_RETRIES_ABSOLUTE_LIMIT);
-  const allResponses: LlmHistory = [];
 
   // Convert string input to array format with placeholders if needed
   let currentInput: LlmHistory = formatOperateInput(input);
@@ -225,6 +224,18 @@ export async function operate(
 
   // Build request options outside the retry loop
   const requestOptions = createRequestOptions(currentInput, options);
+
+  const returnResponse: LlmOperateResponse = {
+    history: [],
+    output: [],
+    responses: [],
+    status: LlmResponseStatus.InProgress,
+    usage: {
+      input: 0,
+      output: 0,
+      total: 0,
+    },
+  };
 
   // OpenAI Multi-turn Loop
   while (currentTurn < maxTurns) {
@@ -251,8 +262,8 @@ export async function operate(
         if (retryCount > 0) {
           log.debug(`OpenAI API call succeeded after ${retryCount} retries`);
         }
-        // Add the entire response to allResponses
-        allResponses.push(currentResponse as unknown as LlmHistoryItem);
+        // Add the response to the responses array
+        returnResponse.responses.push(currentResponse);
 
         // Check if we need to process function calls for multi-turn conversations
         let hasFunctionCall = false;
@@ -315,7 +326,8 @@ export async function operate(
 
         // If there's no function call or we can't take another turn, exit the loop
         if (!hasFunctionCall || !enableMultipleTurns) {
-          return allResponses;
+          returnResponse.status = LlmResponseStatus.Completed;
+          return returnResponse;
         }
 
         // If we've reached the maximum number of turns, exit the loop
@@ -323,7 +335,8 @@ export async function operate(
           log.warn(
             `Model requested function call but exceeded ${maxTurns} turns`,
           );
-          return allResponses;
+          returnResponse.status = LlmResponseStatus.Incomplete;
+          return returnResponse;
         }
 
         // Continue to next turn
@@ -380,6 +393,11 @@ export async function operate(
     }
   }
 
-  // If we've reached the maximum number of turns, return all responses
-  return allResponses;
+  // * All possible paths should return a response; getting here is an error
+  // The main loop is `currentTurn < maxTurns` and `currentTurn >= maxTurns` within the loop returns
+  log.warn("This should never happen");
+  returnResponse.status = LlmResponseStatus.Incomplete;
+
+  // Always return the full LlmOperateResponse object for consistency
+  return returnResponse;
 }

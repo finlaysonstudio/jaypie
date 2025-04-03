@@ -17,7 +17,6 @@ import {
 import {
   LlmMessageRole,
   LlmMessageType,
-  LlmOperateResponse,
   LlmResponseStatus,
 } from "../../../types/LlmProvider.interface.js";
 import { log } from "../../../util";
@@ -83,7 +82,7 @@ describe("operate", () => {
       expect(operate).toBeFunction();
     });
 
-    it("works", async () => {
+    it("Works", async () => {
       // Call operate with mock client
       const result = await operate("Hello", {}, { client: mockClient });
 
@@ -92,20 +91,6 @@ describe("operate", () => {
 
       // Verify the mock was called
       expect(mockClient.responses.create).toHaveBeenCalledTimes(1);
-    });
-
-    it.skip("Responds with the LlmOperateResponse shape", async () => {
-      // Call operate with mock client
-      const result = await operate("Hello", {}, { client: mockClient });
-
-      // Verify result has the expected shape
-      expect(result).not.toBeUndefined();
-      expect(result).toBeObject();
-      expect(result).toHaveProperty("history");
-      expect(result).toHaveProperty("output");
-      expect(result).toHaveProperty("status");
-      expect(result).toHaveProperty("usage");
-      expect(result.status).toBe(LlmResponseStatus.Completed);
     });
   });
 
@@ -807,7 +792,7 @@ describe("operate", () => {
         );
 
         // Verify
-        expect(result).toEqual([mockResponse1, mockResponse2]);
+        expect(result.responses).toEqual([mockResponse1, mockResponse2]);
 
         // Verify the create function was called twice
         expect(mockCreate).toHaveBeenCalledTimes(2);
@@ -892,7 +877,11 @@ describe("operate", () => {
         );
 
         // Verify
-        expect(result).toEqual([mockResponse1, mockResponse2, mockResponse3]);
+        expect(result.responses).toEqual([
+          mockResponse1,
+          mockResponse2,
+          mockResponse3,
+        ]);
 
         // Verify the create function was called 3 times (once for each turn)
         expect(mockCreate).toHaveBeenCalledTimes(3);
@@ -1012,11 +1001,11 @@ describe("operate", () => {
         );
 
         // Verify
-        expect(result).toHaveLength(MAX_TURNS_DEFAULT_LIMIT);
+        expect(result.responses).toHaveLength(MAX_TURNS_DEFAULT_LIMIT);
 
         // Verify all responses are in the result
         for (let i = 0; i < MAX_TURNS_DEFAULT_LIMIT; i++) {
-          expect(result[i]).toEqual(mockResponses[i]);
+          expect(result.responses[i]).toEqual(mockResponses[i]);
         }
 
         // Verify the create function was called MAX_TURNS_DEFAULT_LIMIT times
@@ -1138,7 +1127,7 @@ describe("operate", () => {
         );
 
         // Verify
-        expect(result).toEqual([mockResponse1, mockResponse2]);
+        expect(result.responses).toEqual([mockResponse1, mockResponse2]);
 
         // Verify the create function was called twice
         expect(mockCreate).toHaveBeenCalledTimes(2);
@@ -1212,6 +1201,22 @@ describe("operate", () => {
       });
     });
 
+    describe("Response Object", () => {
+      it("Responds with the LlmOperateResponse shape", async () => {
+        // Call operate with mock client
+        const result = await operate("Hello", {}, { client: mockClient });
+
+        // Verify result has the expected shape
+        expect(result).not.toBeUndefined();
+        expect(result).toBeObject();
+        expect(result).toHaveProperty("history");
+        expect(result).toHaveProperty("output");
+        expect(result).toHaveProperty("status");
+        expect(result).toHaveProperty("usage");
+        expect(result.status).toBe(LlmResponseStatus.Completed);
+      });
+    });
+
     describe("Structured Output", () => {
       it("Structured output uses responses API", async () => {
         // Setup
@@ -1255,7 +1260,7 @@ describe("operate", () => {
             }),
           }),
         );
-        expect(result).toEqual([mockResponse]);
+        expect(result.responses).toEqual([mockResponse]);
       });
 
       it("Handles NaturalSchema response format", async () => {
@@ -1293,7 +1298,7 @@ describe("operate", () => {
             }),
           }),
         );
-        expect(result).toEqual([mockResponse]);
+        expect(result.responses).toEqual([mockResponse]);
       });
 
       it("Accepts json_schema output format", async () => {
@@ -1338,7 +1343,7 @@ describe("operate", () => {
             }),
           }),
         );
-        expect(result).toEqual([mockResponse]);
+        expect(result.responses).toEqual([mockResponse]);
       });
     });
 

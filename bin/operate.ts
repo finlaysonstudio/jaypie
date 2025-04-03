@@ -102,7 +102,7 @@ async function main() {
     }
 
     // Output the results
-    const outputs = result.map((r) => r.output);
+    const outputs = result.responses.map((r) => r.output);
 
     // eslint-disable-next-line no-console
     console.log(JSON.stringify(outputs, null, 2));
