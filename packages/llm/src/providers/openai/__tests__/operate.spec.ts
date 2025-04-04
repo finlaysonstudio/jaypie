@@ -19,8 +19,9 @@ import {
   LlmMessageType,
   LlmResponseStatus,
 } from "../../../types/LlmProvider.interface.js";
-import { log } from "../../../util";
+import { log, MAX_TURNS_DEFAULT_LIMIT } from "../../../util";
 import { restoreLog, spyLog } from "@jaypie/testkit";
+import { LlmTool } from "../../../types/LlmTool.interface";
 
 describe("operate", () => {
   // Mock OpenAI client setup
@@ -941,11 +942,6 @@ describe("operate", () => {
       });
 
       it("Runs to default max turns (12) when no max is specified", async () => {
-        // Import the constant for default max turns
-        const { MAX_TURNS_DEFAULT_LIMIT } = await import(
-          "../../../util/maxTurnsFromOptions.js"
-        );
-
         // Setup - Create mock responses for each turn
         const mockResponses = [];
 
@@ -1214,6 +1210,165 @@ describe("operate", () => {
         expect(result).toHaveProperty("status");
         expect(result).toHaveProperty("usage");
         expect(result.status).toBe(LlmResponseStatus.Completed);
+      });
+
+      describe("Return Status Scenarios", () => {
+        it("Returns Completed status when model completes response", async () => {
+          // Setup
+          mockCreate.mockResolvedValueOnce({
+            id: "resp_123",
+            output: [
+              {
+                type: LlmMessageType.Message,
+                content: [
+                  {
+                    type: LlmMessageType.OutputText,
+                    text: "Complete response",
+                  },
+                ],
+                role: LlmMessageRole.Assistant,
+              },
+            ],
+            status: LlmResponseStatus.Completed,
+          });
+
+          // Execute
+          const result = await operate(
+            "Test input",
+            {},
+            { client: mockClient },
+          );
+
+          // Verify
+          expect(result.status).toBe(LlmResponseStatus.Completed);
+          expect(mockCreate).toHaveBeenCalledTimes(1);
+        });
+
+        it("Returns Incomplete status when max turns are reached with function calls", async () => {
+          // Setup - Create a mock toolkit with a test function
+          const mockToolkit = {
+            call: vi.fn().mockResolvedValue({ result: "function result" }),
+            tools: [
+              {
+                name: "test_function",
+                description: "A test function",
+                parameters: {
+                  type: "object",
+                  properties: {
+                    param: { type: "string" },
+                  },
+                  required: ["param"],
+                },
+              },
+            ],
+          };
+
+          // Mock responses that always return a function call
+          for (let i = 0; i < MAX_TURNS_DEFAULT_LIMIT; i++) {
+            mockCreate.mockResolvedValueOnce({
+              id: `resp_${i}`,
+              output: [
+                {
+                  type: LlmMessageType.FunctionCall,
+                  name: "test_function",
+                  arguments: JSON.stringify({ param: "test" }),
+                  call_id: `call_${i}`,
+                  id: `id_${i}`,
+                },
+              ],
+            });
+          }
+
+          // Execute with turns enabled and tools
+          const result = await operate(
+            "Test input",
+            {
+              turns: true,
+              tools: mockToolkit.tools as unknown as LlmTool[],
+            },
+            {
+              client: mockClient,
+            },
+          );
+
+          // Verify
+          expect(result.status).toBe(LlmResponseStatus.Incomplete);
+          // Should be called the maximum number of turns
+          expect(mockCreate).toHaveBeenCalledTimes(MAX_TURNS_DEFAULT_LIMIT);
+        });
+
+        it("Returns InProgress status during multi-turn function calling", async () => {
+          // Setup - Create a mock toolkit with a test function
+          const mockToolkit = {
+            call: vi.fn().mockResolvedValue({ result: "function result" }),
+            tools: [
+              {
+                name: "test_function",
+                description: "A test function",
+                parameters: {
+                  type: "object",
+                  properties: {
+                    param: { type: "string" },
+                  },
+                  required: ["param"],
+                },
+              },
+            ],
+          };
+
+          // First response has a function call
+          mockCreate.mockResolvedValueOnce({
+            id: "resp_1",
+            output: [
+              {
+                type: LlmMessageType.FunctionCall,
+                name: "test_function",
+                arguments: JSON.stringify({ param: "test" }),
+                call_id: "call_1",
+                id: "id_1",
+                status: LlmResponseStatus.InProgress,
+              },
+            ],
+          });
+
+          // Second response completes the conversation
+          mockCreate.mockResolvedValueOnce({
+            id: "resp_2",
+            output: [
+              {
+                type: LlmMessageType.Message,
+                content: [
+                  { type: LlmMessageType.OutputText, text: "Final response" },
+                ],
+                role: LlmMessageRole.Assistant,
+              },
+            ],
+            status: LlmResponseStatus.Completed,
+          });
+
+          // Execute with turns enabled and tools
+          const result = await operate(
+            "Test input",
+            {
+              turns: true,
+              tools: mockToolkit.tools as unknown as LlmTool[],
+            },
+            {
+              client: mockClient,
+            },
+          );
+
+          // Verify
+          // Final status should be Completed
+          expect(result.status).toBe(LlmResponseStatus.Completed);
+          // Should be called twice (once for function call, once for completion)
+          expect(mockCreate).toHaveBeenCalledTimes(2);
+          // The first response should have been InProgress
+          // @ts-expect-error // TODO: not clear why this type isn't correct
+          expect(result.responses[0].output[0].status).toBe(
+            LlmResponseStatus.InProgress,
+          );
+        });
       });
     });
 
