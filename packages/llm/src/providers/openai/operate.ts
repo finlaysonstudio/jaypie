@@ -1,5 +1,5 @@
 import { sleep, placeholders } from "@jaypie/core";
-import { BadGatewayError } from "@jaypie/errors";
+import { BadGatewayError, TooManyRequestsError } from "@jaypie/errors";
 import { JsonObject, NaturalSchema } from "@jaypie/types";
 import {
   APIConnectionError,
@@ -80,6 +80,10 @@ const NOT_RETRYABLE_ERRORS = [
   RateLimitError,
   UnprocessableEntityError,
 ];
+
+const ERROR = {
+  BAD_FUNCTION_CALL: "Bad Function Call",
+};
 
 //
 //
@@ -303,10 +307,19 @@ export async function operate(
                       });
                     }
                   } catch (error) {
-                    log.error(
-                      `Error executing function call ${output.name}:`,
-                      error,
-                    );
+                    // TODO: but I do need to tell the model that something went wrong, right?
+                    const jaypieError = new BadGatewayError();
+                    const detail = [
+                      `Error executing function call ${output.name}.`,
+                      (error as Error).message,
+                    ].join("\n");
+                    returnResponse.error = {
+                      detail,
+                      status: jaypieError.status,
+                      title: ERROR.BAD_FUNCTION_CALL,
+                    };
+                    log.error(`Error executing function call ${output.name}`);
+                    log.var({ error });
                     // We don't add error messages to allResponses here as we want to keep the original response objects
                   }
                 } else if (!toolkit) {
@@ -332,10 +345,15 @@ export async function operate(
 
         // If we've reached the maximum number of turns, exit the loop
         if (currentTurn >= maxTurns) {
-          log.warn(
-            `Model requested function call but exceeded ${maxTurns} turns`,
-          );
+          const error = new TooManyRequestsError();
+          const detail = `Model requested function call but exceeded ${maxTurns} turns`;
+          log.warn(detail);
           returnResponse.status = LlmResponseStatus.Incomplete;
+          returnResponse.error = {
+            detail,
+            status: error.status,
+            title: error.title,
+          };
           return returnResponse;
         }
 

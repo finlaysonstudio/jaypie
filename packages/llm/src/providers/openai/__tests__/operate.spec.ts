@@ -22,6 +22,7 @@ import {
 import { log, MAX_TURNS_DEFAULT_LIMIT } from "../../../util";
 import { restoreLog, spyLog } from "@jaypie/testkit";
 import { LlmTool } from "../../../types/LlmTool.interface";
+import { BadGatewayError } from "@jaypie/errors";
 
 describe("operate", () => {
   // Mock OpenAI client setup
@@ -727,6 +728,176 @@ describe("operate", () => {
             model: expect.any(String),
           }),
         );
+      });
+    });
+
+    describe("Error Conditions", () => {
+      it("Handles malformed responses gracefully", async () => {
+        // Setup
+        // Create a malformed response that will cause processing to fail
+        const malformedResponse = {
+          id: "resp_123",
+          // Missing output array
+        };
+        mockCreate.mockResolvedValueOnce(malformedResponse);
+
+        // Execute
+        const result = await operate("test input", {}, { client: mockClient });
+
+        // Verify the function returns a valid response structure even with malformed input
+        expect(result).toHaveProperty("status");
+        expect(result).toHaveProperty("responses");
+        expect(result.responses).toContain(malformedResponse);
+
+        // Verify the create function was called once
+        expect(mockCreate).toHaveBeenCalledTimes(1);
+
+        expect(result.error).toBeUndefined();
+      });
+
+      it("Handles function call execution errors gracefully", async () => {
+        // Setup
+        // Mock a response with a function call
+        const mockResponse = {
+          id: "resp_123",
+          output: [
+            {
+              type: LlmMessageType.FunctionCall,
+              name: "test_function",
+              arguments: "{}",
+              call_id: "call_123",
+            },
+          ],
+        };
+        mockCreate.mockResolvedValueOnce(mockResponse);
+
+        // Create a failing tool
+        const mockTool: LlmTool = {
+          call: vi
+            .fn()
+            .mockRejectedValue(new Error("Function execution failed")),
+          description: "A test function",
+          name: "test_function",
+          parameters: {},
+          type: LlmMessageType.FunctionCall,
+        };
+
+        // Execute
+        const result = await operate(
+          "test input",
+          {
+            tools: [mockTool],
+            turns: true,
+          },
+          { client: mockClient },
+        );
+
+        // Verify the function returns a valid response
+        expect(result).toHaveProperty("status");
+        expect(result.responses).toContain(mockResponse);
+
+        // Verify the tool was called
+        expect(mockTool.call).toHaveBeenCalled();
+
+        // Verify that error was logged
+        expect(log.error).toHaveBeenCalledWith(
+          expect.stringContaining(
+            "Error executing function call test_function",
+          ),
+        );
+
+        expect(result.error).not.toBeUndefined();
+        expect(result.error).toBeObject();
+        expect(result.error?.title).toBeString();
+        expect(result.error?.detail).toBeString();
+        expect(result.error?.status).toBeNumber();
+      });
+
+      it("Handles responses with invalid structure gracefully", async () => {
+        // Setup
+        // Create a response with invalid structure
+        const invalidResponse = "not a valid response object";
+        mockCreate.mockResolvedValueOnce(invalidResponse);
+
+        // Execute
+        const result = await operate("test input", {}, { client: mockClient });
+
+        // Verify the function returns a valid response structure
+        expect(result).toHaveProperty("status");
+        expect(result).toHaveProperty("responses");
+        expect(result.responses).toContain(invalidResponse);
+
+        // Verify the create function was called once
+        expect(mockCreate).toHaveBeenCalledTimes(1);
+
+        // The operate function doesn't actually log a warning for invalid structure,
+        // it just handles it gracefully by including it in the responses array
+        expect(result.error).toBeUndefined();
+      });
+
+      it("Returns incomplete status when maxTurns is reached", async () => {
+        // Setup
+        // Create a response with a function call that will trigger multi-turn
+        const mockResponse = {
+          id: "resp_123",
+          output: [
+            {
+              type: LlmMessageType.FunctionCall,
+              name: "test_function",
+              arguments: "{}",
+              call_id: "call_123",
+            },
+          ],
+        };
+
+        // Always return the same response to force exceeding maxTurns
+        mockCreate.mockResolvedValue(mockResponse);
+
+        // Create a tool that always succeeds but doesn't stop the loop
+        const mockTool: LlmTool = {
+          call: vi.fn().mockResolvedValue({ result: "success" }),
+          description: "A test function",
+          name: "test_function",
+          parameters: {},
+          type: "function",
+        };
+
+        // Execute with a small maxTurns value
+        const result = await operate(
+          "test input",
+          {
+            tools: [mockTool],
+            turns: 2, // Set a small number of max turns
+          },
+          { client: mockClient },
+        );
+
+        // Verify the function returns incomplete status
+        expect(result.status).toBe(LlmResponseStatus.Incomplete);
+
+        // Verify the create function was called maxTurns times
+        expect(mockCreate).toHaveBeenCalledTimes(2); // Initial + 1 turn (2 total)
+
+        // Verify that a warning was logged
+        expect(log.warn).toHaveBeenCalledWith(
+          expect.stringContaining(
+            "Model requested function call but exceeded 2 turns",
+          ),
+        );
+
+        expect(result.error).not.toBeUndefined();
+        expect(result.error?.status).toBe(429);
+        expect(result.error?.title).toBe("Too Many Requests");
+        expect(result.error?.detail).toBe(
+          "Model requested function call but exceeded 2 turns",
+        );
+      });
+
+      it("Throws BadGatewayError when OpenAI client is not provided", async () => {
+        // Execute without providing a client
+        await expect(
+          operate("test input", {}, { client: undefined as unknown as OpenAI }),
+        ).rejects.toThrow(BadGatewayError);
       });
     });
 
