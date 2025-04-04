@@ -6,7 +6,7 @@ export const MAX_TURNS_DEFAULT_LIMIT = 12;
 
 /**
  * Determines the maximum number of turns based on the provided options
- * 
+ *
  * @param options - The LLM operate options
  * @returns The maximum number of turns
  */
