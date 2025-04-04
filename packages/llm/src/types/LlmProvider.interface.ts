@@ -1,4 +1,10 @@
-import { AnyValue, JsonObject, NaturalMap, NaturalSchema } from "@jaypie/types";
+import {
+  AnyValue,
+  JsonObject,
+  JsonReturn,
+  NaturalMap,
+  NaturalSchema,
+} from "@jaypie/types";
 import { z } from "zod";
 import { LlmTool } from "./LlmTool.interface.js";
 
@@ -32,8 +38,9 @@ export enum LlmResponseStatus {
 // Errors
 
 interface LlmError {
-  code: string;
-  message: string;
+  detail?: string;
+  status: number | string;
+  title: string;
 }
 
 // Input
@@ -174,7 +181,7 @@ export interface LlmOperateResponse {
   history: LlmHistory;
   message?: string;
   output: LlmOutput;
-  responses: JsonObject[];
+  responses: JsonReturn[];
   status: LlmResponseStatus;
   usage: LlmUsage;
 }
