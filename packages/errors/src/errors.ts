@@ -65,6 +65,13 @@ export const TeapotError = createErrorClass(
   ERROR.TYPE.TEAPOT,
 );
 
+export const TooManyRequestsError = createErrorClass(
+  ERROR.MESSAGE.TOO_MANY_REQUESTS,
+  HTTP.CODE.TOO_MANY_REQUESTS,
+  ERROR.TITLE.TOO_MANY_REQUESTS,
+  ERROR.TYPE.TOO_MANY_REQUESTS,
+);
+
 export const UnauthorizedError = createErrorClass(
   ERROR.MESSAGE.UNAUTHORIZED,
   HTTP.CODE.UNAUTHORIZED,
