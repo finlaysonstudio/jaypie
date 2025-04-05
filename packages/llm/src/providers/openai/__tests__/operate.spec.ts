@@ -1113,9 +1113,8 @@ describe("operate", () => {
         expect(mockCall).toHaveBeenNthCalledWith(1, { turn: 1 });
         expect(mockCall).toHaveBeenNthCalledWith(2, { turn: 2 });
 
-        console.log("result.output :>> ", result.output);
         expect(result.output).toBeArray();
-        expect(result.output).toBeArrayOfSize(3);
+        expect(result.output).toBeArrayOfSize(5);
         expect(result.output).toEqual([
           expect.objectContaining({
             type: LlmMessageType.FunctionCall,
@@ -1123,22 +1122,22 @@ describe("operate", () => {
             arguments: '{"turn":1}',
             call_id: "call_1",
           }),
-          // expect.objectContaining({
-          //   type: LlmMessageType.FunctionCallOutput,
-          //   call_id: "call_1",
-          //   output: JSON.stringify({ result: "result from turn 1" }),
-          // }),
+          expect.objectContaining({
+            type: LlmMessageType.FunctionCallOutput,
+            call_id: "call_1",
+            output: JSON.stringify({ result: "result from turn 1" }),
+          }),
           expect.objectContaining({
             type: LlmMessageType.FunctionCall,
             name: "test_tool",
             arguments: '{"turn":2}',
             call_id: "call_2",
           }),
-          // expect.objectContaining({
-          //   type: LlmMessageType.FunctionCallOutput,
-          //   call_id: "call_2",
-          //   output: JSON.stringify({ result: "result from turn 2" }),
-          // }),
+          expect.objectContaining({
+            type: LlmMessageType.FunctionCallOutput,
+            call_id: "call_2",
+            output: JSON.stringify({ result: "result from turn 2" }),
+          }),
           expect.objectContaining({
             type: LlmMessageType.OutputText,
             text: "All done after 3 turns",

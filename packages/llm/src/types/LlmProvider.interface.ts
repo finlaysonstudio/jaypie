@@ -97,7 +97,7 @@ export interface LlmOutputMessage {
   status: LlmResponseStatus;
 }
 
-type LlmOutputItem = LlmToolCall | LlmOutputMessage;
+type LlmOutputItem = LlmToolCall | LlmToolResult | LlmOutputMessage;
 
 type LlmOutput = LlmOutputItem[];
 

@@ -27,6 +27,7 @@ import {
   LlmOperateOptions,
   LlmOperateResponse,
   LlmResponseStatus,
+  LlmToolResult,
 } from "../../types/LlmProvider.interface.js";
 import { LlmTool } from "../../types/LlmTool.interface.js";
 import {
@@ -301,11 +302,13 @@ export async function operate(
                     if (Array.isArray(currentInput)) {
                       currentInput.push(output);
                       // Add function call result
-                      currentInput.push({
+                      const functionCallOutput: LlmToolResult = {
                         call_id: output.call_id,
                         output: JSON.stringify(result),
                         type: LlmMessageType.FunctionCallOutput,
-                      });
+                      };
+                      currentInput.push(functionCallOutput);
+                      returnResponse.output.push(functionCallOutput);
                     }
                   } catch (error) {
                     // TODO: but I do need to tell the model that something went wrong, right?
