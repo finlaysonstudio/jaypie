@@ -309,6 +309,7 @@ export async function operate(
                       };
                       currentInput.push(functionCallOutput);
                       returnResponse.output.push(functionCallOutput);
+                      returnResponse.content = `${LlmMessageType.FunctionCallOutput}:${functionCallOutput.output}#${functionCallOutput.call_id}`;
                     }
                   } catch (error) {
                     // TODO: but I do need to tell the model that something went wrong, right?
