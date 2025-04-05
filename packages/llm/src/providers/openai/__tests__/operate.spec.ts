@@ -99,6 +99,408 @@ describe("operate", () => {
   });
 
   describe("Features", () => {
+    describe("Token Counting", () => {
+      it("Accumulates input tokens across turns", async () => {
+        // Setup - Create mock responses for each turn
+        const mockResponse1 = {
+          id: "resp_123",
+          output: [
+            {
+              type: "function_call",
+              name: "test_tool",
+              arguments: '{"turn":1}',
+              call_id: "call_1",
+            },
+          ],
+          usage: {
+            input_tokens: 10,
+            input_tokens_details: {
+              cached_tokens: 0,
+            },
+            output_tokens: 5,
+            output_tokens_details: {
+              reasoning_tokens: 0,
+            },
+            total_tokens: 15,
+          },
+        };
+
+        const mockResponse2 = {
+          id: "resp_456",
+          output: [
+            {
+              type: LlmMessageType.Message,
+              content: [
+                { type: LlmMessageType.OutputText, text: "Final response" },
+              ],
+              role: LlmMessageRole.Assistant,
+            },
+          ],
+          usage: {
+            input_tokens: 20,
+            input_tokens_details: {
+              cached_tokens: 0,
+            },
+            output_tokens: 10,
+            output_tokens_details: {
+              reasoning_tokens: 0,
+            },
+            total_tokens: 30,
+          },
+        };
+
+        // Mock the API calls
+        mockCreate
+          .mockResolvedValueOnce(mockResponse1)
+          .mockResolvedValueOnce(mockResponse2);
+
+        // Mock a tool that returns a simple result
+        const mockTool = {
+          name: "test_tool",
+          description: "Test tool",
+          parameters: {
+            type: "object",
+            properties: {
+              turn: { type: "number" },
+            },
+          },
+          type: "function",
+          call: vi.fn().mockResolvedValue({ result: "test result" }),
+        };
+
+        // Execute with turns enabled and tools
+        const result = await operate(
+          "Test input",
+          {
+            tools: [mockTool],
+            turns: true,
+          },
+          { client: mockClient },
+        );
+
+        // Verify the total input tokens are accumulated
+        expect(result.usage.input).toBe(30); // 10 + 20
+      });
+      it("Accumulates output tokens across turns", async () => {
+        // Setup - Create mock responses for each turn
+        const mockResponse1 = {
+          id: "resp_123",
+          output: [
+            {
+              type: "function_call",
+              name: "test_tool",
+              arguments: '{"turn":1}',
+              call_id: "call_1",
+            },
+          ],
+          usage: {
+            input_tokens: 10,
+            input_tokens_details: {
+              cached_tokens: 0,
+            },
+            output_tokens: 5,
+            output_tokens_details: {
+              reasoning_tokens: 0,
+            },
+            total_tokens: 15,
+          },
+        };
+
+        const mockResponse2 = {
+          id: "resp_456",
+          output: [
+            {
+              type: LlmMessageType.Message,
+              content: [
+                { type: LlmMessageType.OutputText, text: "Final response" },
+              ],
+              role: LlmMessageRole.Assistant,
+            },
+          ],
+          usage: {
+            input_tokens: 20,
+            input_tokens_details: {
+              cached_tokens: 0,
+            },
+            output_tokens: 10,
+            output_tokens_details: {
+              reasoning_tokens: 0,
+            },
+            total_tokens: 30,
+          },
+        };
+
+        // Mock the API calls
+        mockCreate
+          .mockResolvedValueOnce(mockResponse1)
+          .mockResolvedValueOnce(mockResponse2);
+
+        // Mock a tool that returns a simple result
+        const mockTool = {
+          name: "test_tool",
+          description: "Test tool",
+          parameters: {
+            type: "object",
+            properties: {
+              turn: { type: "number" },
+            },
+          },
+          type: "function",
+          call: vi.fn().mockResolvedValue({ result: "test result" }),
+        };
+
+        // Execute with turns enabled and tools
+        const result = await operate(
+          "Test input",
+          {
+            tools: [mockTool],
+            turns: true,
+          },
+          { client: mockClient },
+        );
+
+        // Verify the total output tokens are accumulated
+        expect(result.usage.output).toBe(15); // 5 + 10
+      });
+      it("Accumulates total tokens across turns", async () => {
+        // Setup - Create mock responses for each turn
+        const mockResponse1 = {
+          id: "resp_123",
+          output: [
+            {
+              type: "function_call",
+              name: "test_tool",
+              arguments: '{"turn":1}',
+              call_id: "call_1",
+            },
+          ],
+          usage: {
+            input_tokens: 10,
+            input_tokens_details: {
+              cached_tokens: 0,
+            },
+            output_tokens: 5,
+            output_tokens_details: {
+              reasoning_tokens: 2,
+            },
+            total_tokens: 15,
+          },
+        };
+
+        const mockResponse2 = {
+          id: "resp_456",
+          output: [
+            {
+              type: LlmMessageType.Message,
+              content: [
+                { type: LlmMessageType.OutputText, text: "Final response" },
+              ],
+              role: LlmMessageRole.Assistant,
+            },
+          ],
+          usage: {
+            input_tokens: 20,
+            input_tokens_details: {
+              cached_tokens: 0,
+            },
+            output_tokens: 10,
+            output_tokens_details: {
+              reasoning_tokens: 3,
+            },
+            total_tokens: 30,
+          },
+        };
+
+        // Mock the API calls
+        mockCreate
+          .mockResolvedValueOnce(mockResponse1)
+          .mockResolvedValueOnce(mockResponse2);
+
+        // Mock a tool that returns a simple result
+        const mockTool = {
+          name: "test_tool",
+          description: "Test tool",
+          parameters: {
+            type: "object",
+            properties: {
+              turn: { type: "number" },
+            },
+          },
+          type: "function",
+          call: vi.fn().mockResolvedValue({ result: "test result" }),
+        };
+
+        // Execute with turns enabled and tools
+        const result = await operate(
+          "Test input",
+          {
+            tools: [mockTool],
+            turns: true,
+          },
+          { client: mockClient },
+        );
+
+        // Verify the total tokens are accumulated
+        expect(result.usage.total).toBe(45); // 15 + 30
+      });
+      it("Includes reasoning tokens when provided", async () => {
+        // Setup - Create mock responses for each turn
+        const mockResponse1 = {
+          id: "resp_123",
+          output: [
+            {
+              type: "function_call",
+              name: "test_tool",
+              arguments: '{"turn":1}',
+              call_id: "call_1",
+            },
+          ],
+          usage: {
+            input_tokens: 10,
+            input_tokens_details: {
+              cached_tokens: 0,
+            },
+            output_tokens: 5,
+            output_tokens_details: {
+              reasoning_tokens: 2,
+            },
+            total_tokens: 15,
+          },
+        };
+
+        const mockResponse2 = {
+          id: "resp_456",
+          output: [
+            {
+              type: LlmMessageType.Message,
+              content: [
+                { type: LlmMessageType.OutputText, text: "Final response" },
+              ],
+              role: LlmMessageRole.Assistant,
+            },
+          ],
+          usage: {
+            input_tokens: 20,
+            input_tokens_details: {
+              cached_tokens: 0,
+            },
+            output_tokens: 10,
+            output_tokens_details: {
+              reasoning_tokens: 3,
+            },
+            total_tokens: 30,
+          },
+        };
+
+        // Mock the API calls
+        mockCreate
+          .mockResolvedValueOnce(mockResponse1)
+          .mockResolvedValueOnce(mockResponse2);
+
+        // Mock a tool that returns a simple result
+        const mockTool = {
+          name: "test_tool",
+          description: "Test tool",
+          parameters: {
+            type: "object",
+            properties: {
+              turn: { type: "number" },
+            },
+          },
+          type: "function",
+          call: vi.fn().mockResolvedValue({ result: "test result" }),
+        };
+
+        // Execute with turns enabled and tools
+        const result = await operate(
+          "Test input",
+          {
+            tools: [mockTool],
+            turns: true,
+          },
+          { client: mockClient },
+        );
+
+        // Verify the reasoning tokens are accumulated
+        expect(result.usage.reasoning).toBe(5); // 2 + 3
+      });
+      it("Returns zero for missing token counts", async () => {
+        // Setup - Create mock responses for each turn
+        const mockResponse1 = {
+          id: "resp_123",
+          output: [
+            {
+              type: "function_call",
+              name: "test_tool",
+              arguments: '{"turn":1}',
+              call_id: "call_1",
+            },
+          ],
+          // No usage information in first response
+        };
+
+        const mockResponse2 = {
+          id: "resp_456",
+          output: [
+            {
+              type: LlmMessageType.Message,
+              content: [
+                { type: LlmMessageType.OutputText, text: "Final response" },
+              ],
+              role: LlmMessageRole.Assistant,
+            },
+          ],
+          usage: {
+            // Missing some token counts
+            input_tokens: 20,
+            input_tokens_details: {
+              cached_tokens: 0,
+            },
+            // No output_tokens
+            output_tokens_details: {
+              // No reasoning_tokens
+            },
+            // No total_tokens
+          },
+        };
+
+        // Mock the API calls
+        mockCreate
+          .mockResolvedValueOnce(mockResponse1)
+          .mockResolvedValueOnce(mockResponse2);
+
+        // Mock a tool that returns a simple result
+        const mockTool = {
+          name: "test_tool",
+          description: "Test tool",
+          parameters: {
+            type: "object",
+            properties: {
+              turn: { type: "number" },
+            },
+          },
+          type: "function",
+          call: vi.fn().mockResolvedValue({ result: "test result" }),
+        };
+
+        // Execute with turns enabled and tools
+        const result = await operate(
+          "Test input",
+          {
+            tools: [mockTool],
+            turns: true,
+          },
+          { client: mockClient },
+        );
+
+        // Verify missing token counts are handled gracefully
+        expect(result.usage.input).toBe(20); // Only from second response
+        expect(result.usage.output).toBe(0); // Missing in both responses
+        expect(result.usage.total).toBe(0); // Missing in both responses
+        expect(result.usage.reasoning).toBe(0); // Missing in both responses
+      });
+    });
+
     describe("API Retry", () => {
       it("Retries retryable errors up to the MAX_RETRIES_DEFAULT_LIMIT limit", async () => {
         // Import the MAX_RETRIES_DEFAULT_LIMIT constant

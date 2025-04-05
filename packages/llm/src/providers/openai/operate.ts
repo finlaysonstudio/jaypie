@@ -238,6 +238,7 @@ export async function operate(
     usage: {
       input: 0,
       output: 0,
+      reasoning: 0,
       total: 0,
     },
   };
@@ -269,6 +270,19 @@ export async function operate(
         }
         // Add the response to the responses array
         returnResponse.responses.push(currentResponse);
+
+        // Accumulate token usage from the current response
+        if (currentResponse.usage) {
+          returnResponse.usage.input += currentResponse.usage.input_tokens || 0;
+          returnResponse.usage.output +=
+            currentResponse.usage.output_tokens || 0;
+          returnResponse.usage.total += currentResponse.usage.total_tokens || 0;
+          if (currentResponse.usage.output_tokens_details?.reasoning_tokens) {
+            returnResponse.usage.reasoning =
+              (returnResponse.usage.reasoning || 0) +
+              currentResponse.usage.output_tokens_details.reasoning_tokens;
+          }
+        }
 
         // Check if we need to process function calls for multi-turn conversations
         let hasFunctionCall = false;

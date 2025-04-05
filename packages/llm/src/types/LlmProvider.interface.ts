@@ -171,7 +171,7 @@ export interface LlmOptions {
 interface LlmUsage {
   input: number;
   output: number;
-  reasoning?: number;
+  reasoning: number;
   total: number;
 }
 
