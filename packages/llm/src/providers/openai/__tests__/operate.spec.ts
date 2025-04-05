@@ -17,6 +17,8 @@ import {
 import {
   LlmMessageRole,
   LlmMessageType,
+  LlmOutputContentText,
+  LlmOutputMessage,
   LlmResponseStatus,
 } from "../../../types/LlmProvider.interface.js";
 import { log, MAX_TURNS_DEFAULT_LIMIT } from "../../../util";
@@ -1387,6 +1389,7 @@ describe("operate", () => {
         expect(result.output[0]).toHaveProperty("type");
         expect(result.output[0].type).toBe(LlmMessageType.Message);
         expect(result.output[0]).toHaveProperty("content");
+        result.output[0] = result.output[0] as LlmOutputMessage;
         expect(result.output[0].content).toBeArray();
         expect(result.output[0].content).toBeArrayOfSize(1);
         expect(result.output[0].content[0]).toBeObject();
@@ -1395,6 +1398,8 @@ describe("operate", () => {
           LlmMessageType.OutputText,
         );
         expect(result.output[0].content[0]).toHaveProperty("text");
+        result.output[0].content[0] = result.output[0]
+          .content[0] as LlmOutputContentText;
         expect(result.output[0].content[0].text).toBeString();
         expect(result.output[0].content[0].text).toBe("Hello, world!");
         expect(result.content).toBeString();

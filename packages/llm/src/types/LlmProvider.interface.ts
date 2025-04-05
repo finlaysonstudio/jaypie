@@ -76,8 +76,7 @@ export interface LlmInputMessage {
 }
 
 // Output
-
-interface LlmOutputContentText {
+export interface LlmOutputContentText {
   annotations?: AnyValue[];
   text: string;
   type: LlmMessageType.OutputText;
@@ -90,7 +89,7 @@ interface LlmOutputRefusal {
 
 type LlmOutputContent = LlmOutputContentText | LlmOutputRefusal;
 
-interface LlmOutputMessage {
+export interface LlmOutputMessage {
   content: Array<LlmOutputContent>;
   id: string;
   role: LlmMessageRole.Assistant;
