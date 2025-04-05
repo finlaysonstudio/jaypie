@@ -276,6 +276,7 @@ export async function operate(
           if (currentResponse.output && Array.isArray(currentResponse.output)) {
             // New OpenAI API format with output array
             for (const output of currentResponse.output) {
+              returnResponse.output.push(output);
               if (output.type === LlmMessageType.FunctionCall) {
                 hasFunctionCall = true;
 
@@ -326,6 +327,14 @@ export async function operate(
                   log.warn(
                     "Model requested function call but no toolkit available",
                   );
+                }
+              }
+              if (output.type === LlmMessageType.Message) {
+                if (
+                  output.content?.[0] &&
+                  output.content[0].type === LlmMessageType.OutputText
+                ) {
+                  returnResponse.content = output.content[0].text;
                 }
               }
             }

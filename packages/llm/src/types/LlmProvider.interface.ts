@@ -177,9 +177,9 @@ interface LlmUsage {
 }
 
 export interface LlmOperateResponse {
+  content?: string;
   error?: LlmError;
   history: LlmHistory;
-  message?: string;
   output: LlmOutput;
   responses: JsonReturn[];
   status: LlmResponseStatus;

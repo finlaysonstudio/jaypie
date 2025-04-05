@@ -1381,6 +1381,24 @@ describe("operate", () => {
         expect(result).toHaveProperty("status");
         expect(result).toHaveProperty("usage");
         expect(result.status).toBe(LlmResponseStatus.Completed);
+        expect(result.output).toBeArray();
+        expect(result.output).toBeArrayOfSize(1);
+        expect(result.output[0]).toBeObject();
+        expect(result.output[0]).toHaveProperty("type");
+        expect(result.output[0].type).toBe(LlmMessageType.Message);
+        expect(result.output[0]).toHaveProperty("content");
+        expect(result.output[0].content).toBeArray();
+        expect(result.output[0].content).toBeArrayOfSize(1);
+        expect(result.output[0].content[0]).toBeObject();
+        expect(result.output[0].content[0]).toHaveProperty("type");
+        expect(result.output[0].content[0].type).toBe(
+          LlmMessageType.OutputText,
+        );
+        expect(result.output[0].content[0]).toHaveProperty("text");
+        expect(result.output[0].content[0].text).toBeString();
+        expect(result.output[0].content[0].text).toBe("Hello, world!");
+        expect(result.content).toBeString();
+        expect(result.content).toBe("Hello, world!");
       });
 
       describe("Return Status Scenarios", () => {

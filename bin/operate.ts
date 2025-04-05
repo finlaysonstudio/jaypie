@@ -1,4 +1,5 @@
 #!/usr/bin/env tsx
+/* eslint-disable no-console */
 
 import "dotenv/config";
 
@@ -104,10 +105,9 @@ async function main() {
     // Output the results
     const outputs = result.responses.map((r) => r.output);
 
-    // eslint-disable-next-line no-console
     console.log(JSON.stringify(outputs, null, 2));
+    console.log("---\n---\n\n", result.content);
   } catch (error) {
-    // eslint-disable-next-line no-console
     console.error("Error:", error);
     process.exit(1);
   }
