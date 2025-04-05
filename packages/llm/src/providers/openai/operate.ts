@@ -293,6 +293,7 @@ export async function operate(
                   try {
                     // Call the tool and ensure the result is resolved if it's a Promise
                     log.trace(`[operate] Calling tool - ${output.name}`);
+                    returnResponse.content = `${LlmMessageType.FunctionCall}:${output.name}${output.arguments}#${output.call_id}`;
                     const result = await toolkit.call({
                       name: output.name,
                       arguments: output.arguments,

@@ -1282,6 +1282,136 @@ describe("operate", () => {
         );
       });
 
+      it("Will return content even when erroring mid-turn", async () => {
+        // Setup - Create mock responses for each turn
+        const mockResponse1 = {
+          id: "resp_123",
+          output: [
+            {
+              type: "function_call",
+              name: "test_tool",
+              arguments: '{"turn":1}',
+              call_id: "call_1",
+            },
+          ],
+        };
+
+        const mockResponse2 = {
+          id: "resp_456",
+          output: [
+            {
+              type: LlmMessageType.FunctionCall,
+              name: "test_tool",
+              arguments: '{"turn":2}',
+              call_id: "call_2",
+            },
+          ],
+        };
+
+        // Create a mock for the OpenAI API call that returns different responses for each turn
+        mockCreate
+          .mockResolvedValueOnce(mockResponse1)
+          .mockResolvedValueOnce(mockResponse2);
+
+        // Mock the tool call function
+        const mockCall = vi
+          .fn()
+          .mockResolvedValueOnce({ result: "result from turn 1" })
+          .mockRejectedValueOnce(new Error("Error from turn 2"));
+
+        // Execute
+        const testInput = "Test input with multiple turns";
+        const tools = [
+          {
+            name: "test_tool",
+            description: "Test tool for multiple turns",
+            parameters: {
+              type: "object",
+              properties: {
+                turn: { type: "number" },
+              },
+            },
+            type: "function",
+            call: mockCall,
+          },
+        ];
+
+        const result = await operate(
+          testInput,
+          {
+            tools,
+            turns: 2, // Set maximum turns to 2
+          },
+          { client: mockClient },
+        );
+
+        // Verify
+        expect(result.responses).toEqual([mockResponse1, mockResponse2]);
+
+        // Verify the create function was called 2 times (once for each turn)
+        expect(mockCreate).toHaveBeenCalledTimes(2);
+
+        // First call should be with the initial input
+        expect(mockCreate.mock.calls[0][0]).toEqual(
+          expect.objectContaining({
+            input: expect.any(Array),
+            tools: expect.any(Array),
+          }),
+        );
+        expect(mockCreate.mock.calls[0][0].input[0]).toEqual(
+          expect.objectContaining({
+            content: testInput,
+            role: "user",
+          }),
+        );
+
+        // Second call should include the first function call and its result
+        expect(mockCreate.mock.calls[1][0].input).toContainEqual(
+          expect.objectContaining({
+            type: "function_call",
+            name: "test_tool",
+            arguments: '{"turn":1}',
+            call_id: "call_1",
+          }),
+        );
+        expect(mockCreate.mock.calls[1][0].input).toContainEqual(
+          expect.objectContaining({
+            type: "function_call_output",
+            call_id: "call_1",
+            output: JSON.stringify({ result: "result from turn 1" }),
+          }),
+        );
+
+        // Verify the tool was called twice (once for each function call)
+        expect(mockCall).toHaveBeenCalledTimes(2);
+        expect(mockCall).toHaveBeenNthCalledWith(1, { turn: 1 });
+        expect(mockCall).toHaveBeenNthCalledWith(2, { turn: 2 });
+
+        expect(result.output).toBeArray();
+        expect(result.output).toBeArrayOfSize(3);
+        expect(result.output).toEqual([
+          expect.objectContaining({
+            type: LlmMessageType.FunctionCall,
+            name: "test_tool",
+            arguments: '{"turn":1}',
+            call_id: "call_1",
+          }),
+          expect.objectContaining({
+            type: LlmMessageType.FunctionCallOutput,
+            call_id: "call_1",
+            output: JSON.stringify({ result: "result from turn 1" }),
+          }),
+          expect.objectContaining({
+            type: LlmMessageType.FunctionCall,
+            name: "test_tool",
+            arguments: '{"turn":2}',
+            call_id: "call_2",
+          }),
+        ]);
+        expect(result.content).toBeString();
+        expect(result.content).toBe('function_call:test_tool{"turn":2}#call_2');
+      });
+
       it("Runs to default max turns (12) when no max is specified", async () => {
         // Setup - Create mock responses for each turn
         const mockResponses = [];
