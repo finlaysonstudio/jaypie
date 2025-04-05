@@ -103,10 +103,7 @@ async function main() {
     }
 
     // Output the results
-    const outputs = result.responses.map((r) => r.output);
-
-    console.log(JSON.stringify(outputs, null, 2));
-    console.log("---\n---\n\n", result.content);
+    console.log(result.content);
   } catch (error) {
     console.error("Error:", error);
     process.exit(1);
