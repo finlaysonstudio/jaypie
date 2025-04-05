@@ -994,7 +994,7 @@ describe("operate", () => {
           id: "resp_456",
           output: [
             {
-              type: "function_call",
+              type: LlmMessageType.FunctionCall,
               name: "test_tool",
               arguments: '{"turn":2}',
               call_id: "call_2",
@@ -1006,7 +1006,7 @@ describe("operate", () => {
           id: "resp_789",
           output: [
             {
-              type: "text",
+              type: LlmMessageType.OutputText,
               text: "All done after 3 turns",
             },
           ],
@@ -1112,6 +1112,38 @@ describe("operate", () => {
         expect(mockCall).toHaveBeenCalledTimes(2);
         expect(mockCall).toHaveBeenNthCalledWith(1, { turn: 1 });
         expect(mockCall).toHaveBeenNthCalledWith(2, { turn: 2 });
+
+        console.log("result.output :>> ", result.output);
+        expect(result.output).toBeArray();
+        expect(result.output).toBeArrayOfSize(3);
+        expect(result.output).toEqual([
+          expect.objectContaining({
+            type: LlmMessageType.FunctionCall,
+            name: "test_tool",
+            arguments: '{"turn":1}',
+            call_id: "call_1",
+          }),
+          // expect.objectContaining({
+          //   type: LlmMessageType.FunctionCallOutput,
+          //   call_id: "call_1",
+          //   output: JSON.stringify({ result: "result from turn 1" }),
+          // }),
+          expect.objectContaining({
+            type: LlmMessageType.FunctionCall,
+            name: "test_tool",
+            arguments: '{"turn":2}',
+            call_id: "call_2",
+          }),
+          // expect.objectContaining({
+          //   type: LlmMessageType.FunctionCallOutput,
+          //   call_id: "call_2",
+          //   output: JSON.stringify({ result: "result from turn 2" }),
+          // }),
+          expect.objectContaining({
+            type: LlmMessageType.OutputText,
+            text: "All done after 3 turns",
+          }),
+        ]);
       });
 
       it("Runs to default max turns (12) when no max is specified", async () => {
