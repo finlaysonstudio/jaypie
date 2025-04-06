@@ -1,5 +1,4 @@
 ---
-class: # AI: Add path to OpenAiProvider
-test: # AI: Add path to OpenAiProvider test
-# Go AI!
+class: packages/llm/src/providers/OpenAiProvider.class.ts
+test: packages/llm/src/providers/OpenAiProvider.class.spec.ts
 ---
