@@ -1042,36 +1042,6 @@ describe("operate", () => {
             ]),
           }),
         );
-        //   expect.objectContaining({
-        //     input: expect.arrayContaining([
-        //       // Previous user message
-        //       expect.objectContaining({
-        //         type: LlmMessageType.Message,
-        //         role: LlmMessageRole.User,
-        //         content: "Previous message",
-        //       }),
-        //       // Previous assistant response
-        //       expect.objectContaining({
-        //         type: LlmMessageType.Message,
-        //         role: LlmMessageRole.Assistant,
-        //         content: [
-        //           {
-        //             type: LlmMessageType.OutputText,
-        //             text: "Previous response",
-        //           },
-        //         ],
-        //         id: "prev_resp",
-        //         status: LlmResponseStatus.Completed,
-        //       }),
-        //       // New user message
-        //       expect.objectContaining({
-        //         type: LlmMessageType.Message,
-        //         role: LlmMessageRole.User,
-        //         content: testInput,
-        //       }),
-        //     ]),
-        //   }),
-        // );
 
         // Verify the history is included in the returned history
         expect(result.history).toBeArray();
