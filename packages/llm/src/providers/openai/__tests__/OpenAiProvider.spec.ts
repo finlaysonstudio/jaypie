@@ -1,6 +1,6 @@
 import { getEnvSecret } from "@jaypie/aws";
 import { OpenAI } from "openai";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { z } from "zod";
 import { OpenAiProvider } from "../OpenAiProvider.class";
 
@@ -346,16 +346,20 @@ describe("OpenAiProvider", () => {
   describe("Conversation History", () => {
     let operateMock: any;
 
-    beforeEach(() => {
+    beforeEach(async () => {
       // Create a mock for the operate function
       operateMock = vi.fn();
-      
+
       // Get the mocked operate function
       const { operate } = await import("../operate.js");
       operateMock = operate as any;
     });
 
-    it.skip("maintains conversation history across operate calls", async () => {
+    afterEach(() => {
+      vi.clearAllMocks();
+    });
+
+    it("maintains conversation history across operate calls", async () => {
       // Mock the operate function to return a history
       const mockOperateResponse1 = {
         content: "Hello, I'm an AI assistant",
@@ -426,7 +430,7 @@ describe("OpenAiProvider", () => {
       expect(secondCallOptions.history).toEqual(mockOperateResponse1.history);
     });
 
-    it.skip("merges provided history with instance history", async () => {
+    it("merges provided history with instance history", async () => {
       // Mock the operate function
       const existingHistory = [
         { role: "user", content: "Previous message", type: "message" },
@@ -482,7 +486,7 @@ describe("OpenAiProvider", () => {
       ]);
     });
 
-    it.skip("updates conversation history after each operate call", async () => {
+    it("updates conversation history after each operate call", async () => {
       // Mock the operate function
       const mockOperateResponse = {
         content: "Response content",
