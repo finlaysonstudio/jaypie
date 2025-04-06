@@ -3,7 +3,11 @@ import { OpenAI } from "openai";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { z } from "zod";
 import { OpenAiProvider } from "../OpenAiProvider.class";
-
+import {
+  LlmMessageRole,
+  LlmMessageType,
+  LlmInputMessage,
+} from "../../../types/LlmProvider.interface.js";
 // Mock the operate module
 vi.mock("../operate.js");
 vi.mock("openai");
@@ -446,9 +450,13 @@ describe("OpenAiProvider", () => {
         content: "Combined history response",
         history: [
           ...existingHistory,
-          { role: "user", content: "New message", type: "message" },
           {
-            role: "assistant",
+            role: LlmMessageRole.User,
+            content: "New message",
+            type: LlmMessageType.Message,
+          },
+          {
+            role: LlmMessageRole.Assistant,
             content: [
               { text: "Combined history response", type: "output_text" },
             ],
@@ -470,8 +478,12 @@ describe("OpenAiProvider", () => {
       provider["conversationHistory"] = [...existingHistory];
 
       // Provide additional history in the options
-      const additionalHistory = [
-        { role: "user", content: "Additional context", type: "message" },
+      const additionalHistory: LlmInputMessage[] = [
+        {
+          role: LlmMessageRole.User,
+          content: "Additional context",
+          type: LlmMessageType.Message,
+        },
       ];
 
       await provider.operate("New message", { history: additionalHistory });

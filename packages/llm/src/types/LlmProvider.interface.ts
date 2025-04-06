@@ -93,12 +93,16 @@ interface LlmOutputRefusal {
 
 type LlmOutputContent = LlmOutputContentText | LlmOutputRefusal;
 
+/**
+ * Represents the "Output message object" in the "input item list"
+ * from [OpenAI Responses API](https://platform.openai.com/docs/api-reference/responses/create)
+ */
 export interface LlmOutputMessage {
-  content: Array<LlmOutputContent>;
+  content: string | Array<LlmOutputContent>;
   id?: string;
   role: LlmMessageRole.Assistant;
-  status: LlmResponseStatus;
-  type: LlmMessageType.Message;
+  status?: LlmResponseStatus;
+  type?: LlmMessageType.Message;
 }
 
 type LlmOutputItem = LlmToolCall | LlmToolResult | LlmOutputMessage;
