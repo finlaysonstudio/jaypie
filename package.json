@@ -32,6 +32,9 @@
     "lint": "eslint .",
     "new": "hygen jaypie new",
     "new:test": "hygen jaypie test",
+    "repomix": "repomix",
+    // create repomix:xxx for all the subpackages like build above ai!
+    "repomix:llm": "repomix --include packages/llm --output ./prompts/repomix/llm-repomix.xml",
     "test": "vitest run",
     "test:aws": "npm run test --workspace packages/aws",
     "test:cdk": "npm run test --workspace packages/cdk",
