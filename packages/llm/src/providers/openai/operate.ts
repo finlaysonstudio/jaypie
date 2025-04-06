@@ -129,6 +129,16 @@ export function createRequestOptions(
         : options.instructions;
   }
 
+  // Handle developer message as system message
+  // @ts-expect-error Testing invalid option
+  if (options?.developer) {
+    log.warn(
+      "Developer message provided but not supported. Using as system message.",
+    );
+    // @ts-expect-error Testing invalid option
+    requestOptions.system = options.developer;
+  }
+
   // Handle structured output format
   if (options?.format) {
     // Check if format is a JsonObject with type "json_schema"

@@ -1683,6 +1683,72 @@ describe("operate", () => {
       });
     });
 
+    describe("Developer Warning", () => {
+      it("Logs warning when developer message is provided", async () => {
+        // Setup
+        const developerMessage = "You are a test assistant";
+
+        // Execute
+        await operate(
+          "test message",
+          {
+            // @ts-expect-error Testing invalid option
+            developer: developerMessage,
+          },
+          { client: mockClient },
+        );
+
+        // Verify warning was logged
+        expect(log.warn).toHaveBeenCalledWith(
+          "Developer message provided but not supported. Using as system message.",
+        );
+      });
+
+      it("Treats developer message like system message", async () => {
+        // Setup
+        const developerMessage = "You are a test assistant";
+
+        // Execute
+        await operate(
+          "test message",
+          {
+            // @ts-expect-error Testing invalid option
+            developer: developerMessage,
+          },
+          { client: mockClient },
+        );
+
+        // Verify developer message was passed as system message
+        expect(mockCreate).toHaveBeenCalledWith(
+          expect.objectContaining({
+            system: developerMessage,
+          }),
+        );
+      });
+
+      it("Does not add developer to message type", async () => {
+        // Setup
+        const developerMessage = "You are a test assistant";
+
+        // Execute
+        await operate(
+          "test message",
+          {
+            // @ts-expect-error Testing invalid option
+            developer: developerMessage,
+          },
+          { client: mockClient },
+        );
+
+        // Verify developer is not added as a message type
+        expect(mockCreate).not.toHaveBeenCalledWith(
+          expect.objectContaining({
+            developer: expect.any(String),
+          }),
+        );
+      });
+    });
+
     describe("Structured Output", () => {
       it("Structured output uses responses API", async () => {
         // Setup
