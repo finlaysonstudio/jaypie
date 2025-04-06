@@ -71,35 +71,24 @@ export class OpenAiProvider implements LlmProvider {
     const client = await this.getClient();
     options.model = options?.model || this.model;
 
-    // TODO: Create a merged history including both the tracked history and any explicitly provided history
+    // Create a merged history including both the tracked history and any explicitly provided history
+    const mergedOptions = { ...options };
+    if (this.conversationHistory.length > 0) {
+      // If options.history exists, merge with instance history, otherwise use instance history
+      mergedOptions.history = options.history 
+        ? [...this.conversationHistory, ...options.history] 
+        : [...this.conversationHistory];
+    }
 
     // Call operate with the updated options
-    const response = await operate(input, options, { client });
+    const response = await operate(input, mergedOptions, { client });
 
-    // TODO: Update conversation history with the input and response
+    // Update conversation history with the new history from the response
+    if (response.history && response.history.length > 0) {
+      this.conversationHistory = response.history;
+    }
 
     return response;
   }
 
-  /**
-   * Updates the conversation history with the latest input and response
-   * @param input The formatted input messages
-   * @param response The response from the model
-   */
-  private updateConversationHistory(
-    input: JsonObject[],
-    response: JsonObject[],
-  ): void {
-    // Add the input to history
-    this.conversationHistory.push(...input);
-
-    // Add the response to history if it exists and has content
-    if (response && response.length > 0) {
-      // Extract the last response item and add it to history
-      const lastResponse = response[response.length - 1];
-      if (lastResponse) {
-        this.conversationHistory.push(lastResponse);
-      }
-    }
-  }
 }
