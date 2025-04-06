@@ -49,6 +49,21 @@ export type OpenAIResponseItem =
   | OpenAIFunctionCallOutput;
 
 /**
+ * Represents token usage information in the OpenAI response
+ */
+export interface OpenAIUsage extends Record<string, JsonValue> {
+  input_tokens: number;
+  input_tokens_details?: {
+    cached_tokens: number;
+  };
+  output_tokens: number;
+  output_tokens_details?: {
+    reasoning_tokens: number;
+  };
+  total_tokens: number;
+}
+
+/**
  * Raw response from the OpenAI API
  */
 export interface OpenAIRawResponse {
@@ -61,6 +76,8 @@ export interface OpenAIRawResponse {
   error?: any | null;
   status?: string | any;
   _request_id?: string | null;
+  usage?: OpenAIUsage;
+  meta?: { [key: string]: JsonValue };
   [key: string]: JsonValue;
 }
 
