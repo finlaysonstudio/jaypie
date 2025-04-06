@@ -211,25 +211,6 @@ export async function operate(
   let retryDelay = INITIAL_RETRY_DELAY_MS;
   const maxRetries = Math.min(context.maxRetries, MAX_RETRIES_ABSOLUTE_LIMIT);
 
-  // Convert string input to array format with placeholders if needed
-  let currentInput: LlmHistory = formatOperateInput(input);
-  if (
-    options?.data &&
-    (options.placeholders?.input === undefined || options.placeholders?.input)
-  ) {
-    currentInput = formatOperateInput(input, {
-      data: options?.data,
-    });
-  }
-
-  // Determine max turns from options
-  const maxTurns = maxTurnsFromOptions(options);
-  const enableMultipleTurns = maxTurns > 1;
-  let currentTurn = 0;
-
-  // Build request options outside the retry loop
-  const requestOptions = createRequestOptions(currentInput, options);
-
   const returnResponse: LlmOperateResponse = {
     history: [],
     output: [],
@@ -242,6 +223,28 @@ export async function operate(
       total: 0,
     },
   };
+
+  // Convert string input to array format with placeholders if needed
+  let currentInput: LlmHistory = formatOperateInput(input);
+  if (
+    options?.data &&
+    (options.placeholders?.input === undefined || options.placeholders?.input)
+  ) {
+    currentInput = formatOperateInput(input, {
+      data: options?.data,
+    });
+  }
+
+  // Initialize history with currentInput
+  returnResponse.history = [...currentInput];
+
+  // Determine max turns from options
+  const maxTurns = maxTurnsFromOptions(options);
+  const enableMultipleTurns = maxTurns > 1;
+  let currentTurn = 0;
+
+  // Build request options outside the retry loop
+  const requestOptions = createRequestOptions(currentInput, options);
 
   // OpenAI Multi-turn Loop
   while (currentTurn < maxTurns) {
@@ -292,6 +295,7 @@ export async function operate(
             // New OpenAI API format with output array
             for (const output of currentResponse.output) {
               returnResponse.output.push(output);
+              returnResponse.history.push(output);
               if (output.type === LlmMessageType.FunctionCall) {
                 hasFunctionCall = true;
 
@@ -324,6 +328,7 @@ export async function operate(
                       };
                       currentInput.push(functionCallOutput);
                       returnResponse.output.push(functionCallOutput);
+                      returnResponse.history.push(functionCallOutput);
                       returnResponse.content = `${LlmMessageType.FunctionCallOutput}:${functionCallOutput.output}#${functionCallOutput.call_id}`;
                     }
                   } catch (error) {

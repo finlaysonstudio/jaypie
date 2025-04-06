@@ -978,6 +978,299 @@ describe("operate", () => {
       it.todo("Instances track history by default");
     });
 
+    describe("History", () => {
+      it("Stores initial user message in history", async () => {
+        // Setup
+        const testInput = "Test input message";
+        mockCreate.mockResolvedValueOnce({
+          id: "resp_123",
+          output: [
+            {
+              type: LlmMessageType.Message,
+              content: [{ type: LlmMessageType.OutputText, text: "Response" }],
+              role: LlmMessageRole.Assistant,
+            },
+          ],
+        });
+
+        // Execute
+        const result = await operate(testInput, {}, { client: mockClient });
+
+        // Verify
+        expect(result.history).toBeArray();
+        expect(result.history).toBeArrayOfSize(2); // User message + assistant response
+        expect(result.history[0]).toEqual({
+          content: testInput,
+          role: LlmMessageRole.User,
+          type: LlmMessageType.Message,
+        });
+        expect(result.history[1]).toEqual({
+          type: LlmMessageType.Message,
+          content: [{ type: LlmMessageType.OutputText, text: "Response" }],
+          role: LlmMessageRole.Assistant,
+        });
+      });
+      it("Stores function calls and results in history", async () => {
+        // Setup
+        const testInput = "Test input message";
+        const mockResponse1 = {
+          id: "resp_123",
+          output: [
+            {
+              type: LlmMessageType.FunctionCall,
+              name: "test_tool",
+              arguments: '{"param":"test"}',
+              call_id: "call_1",
+            },
+          ],
+        };
+
+        const mockResponse2 = {
+          id: "resp_456",
+          output: [
+            {
+              type: LlmMessageType.Message,
+              content: [
+                { type: LlmMessageType.OutputText, text: "Final response" },
+              ],
+              role: LlmMessageRole.Assistant,
+            },
+          ],
+        };
+
+        // Mock the API calls
+        mockCreate
+          .mockResolvedValueOnce(mockResponse1)
+          .mockResolvedValueOnce(mockResponse2);
+
+        // Mock a tool that returns a simple result
+        const mockTool: LlmTool = {
+          name: "test_tool",
+          description: "Test tool",
+          parameters: {
+            type: "object",
+            properties: {
+              param: { type: "string" },
+            },
+          },
+          type: "function",
+          call: vi.fn().mockResolvedValue({ result: "test result" }),
+        };
+
+        // Execute
+        const result = await operate(
+          testInput,
+          {
+            tools: [mockTool],
+            turns: true,
+          },
+          { client: mockClient },
+        );
+
+        // Verify
+        expect(result.history).toBeArray();
+        expect(result.history).toBeArrayOfSize(4); // Initial message + function call + function result + final response
+
+        // Initial message
+        expect(result.history[0]).toEqual({
+          content: testInput,
+          role: LlmMessageRole.User,
+          type: LlmMessageType.Message,
+        });
+
+        // Function call
+        expect(result.history[1]).toEqual({
+          type: LlmMessageType.FunctionCall,
+          name: "test_tool",
+          arguments: '{"param":"test"}',
+          call_id: "call_1",
+        });
+
+        // Function result
+        expect(result.history[2]).toEqual({
+          type: LlmMessageType.FunctionCallOutput,
+          call_id: "call_1",
+          output: JSON.stringify({ result: "test result" }),
+        });
+
+        // Final response
+        expect(result.history[3]).toEqual({
+          type: LlmMessageType.Message,
+          content: [
+            { type: LlmMessageType.OutputText, text: "Final response" },
+          ],
+          role: LlmMessageRole.Assistant,
+        });
+      });
+      it("Stores assistant responses in history", async () => {
+        // Setup
+        const testInput = "Test input message";
+        const mockResponse = {
+          id: "resp_123",
+          output: [
+            {
+              type: LlmMessageType.Message,
+              content: [
+                { type: LlmMessageType.OutputText, text: "First response" },
+                { type: LlmMessageType.OutputText, text: "Second response" },
+              ],
+              role: LlmMessageRole.Assistant,
+            },
+          ],
+        };
+
+        // Mock the API call
+        mockCreate.mockResolvedValueOnce(mockResponse);
+
+        // Execute
+        const result = await operate(testInput, {}, { client: mockClient });
+
+        // Verify
+        expect(result.history).toBeArray();
+        expect(result.history).toBeArrayOfSize(2); // User message + assistant response
+
+        // Initial message
+        expect(result.history[0]).toEqual({
+          content: testInput,
+          role: LlmMessageRole.User,
+          type: LlmMessageType.Message,
+        });
+
+        // Assistant response with multiple content items
+        expect(result.history[1]).toEqual({
+          type: LlmMessageType.Message,
+          content: [
+            { type: LlmMessageType.OutputText, text: "First response" },
+            { type: LlmMessageType.OutputText, text: "Second response" },
+          ],
+          role: LlmMessageRole.Assistant,
+        });
+      });
+      it("Maintains history across multiple turns", async () => {
+        // Setup
+        const testInput = "Test input message";
+        const mockResponse1 = {
+          id: "resp_123",
+          output: [
+            {
+              type: LlmMessageType.FunctionCall,
+              name: "test_tool",
+              arguments: '{"turn":1}',
+              call_id: "call_1",
+            },
+          ],
+        };
+
+        const mockResponse2 = {
+          id: "resp_456",
+          output: [
+            {
+              type: LlmMessageType.FunctionCall,
+              name: "test_tool",
+              arguments: '{"turn":2}',
+              call_id: "call_2",
+            },
+          ],
+        };
+
+        const mockResponse3 = {
+          id: "resp_789",
+          output: [
+            {
+              type: LlmMessageType.Message,
+              content: [
+                { type: LlmMessageType.OutputText, text: "Final response" },
+              ],
+              role: LlmMessageRole.Assistant,
+            },
+          ],
+        };
+
+        // Mock the API calls
+        mockCreate
+          .mockResolvedValueOnce(mockResponse1)
+          .mockResolvedValueOnce(mockResponse2)
+          .mockResolvedValueOnce(mockResponse3);
+
+        // Mock a tool that returns a simple result
+        const mockTool: LlmTool = {
+          name: "test_tool",
+          description: "Test tool",
+          parameters: {
+            type: "object",
+            properties: {
+              turn: { type: "number" },
+            },
+          },
+          type: "function",
+          call: vi
+            .fn()
+            .mockResolvedValueOnce({ result: "result from turn 1" })
+            .mockResolvedValueOnce({ result: "result from turn 2" }),
+        };
+
+        // Execute
+        const result = await operate(
+          testInput,
+          {
+            tools: [mockTool],
+            turns: true,
+          },
+          { client: mockClient },
+        );
+
+        // Verify
+        expect(result.history).toBeArray();
+        expect(result.history).toBeArrayOfSize(6); // Initial + 2 function calls + 2 results + final response
+
+        // Initial message
+        expect(result.history[0]).toEqual({
+          content: testInput,
+          role: LlmMessageRole.User,
+          type: LlmMessageType.Message,
+        });
+
+        // First function call
+        expect(result.history[1]).toEqual({
+          type: LlmMessageType.FunctionCall,
+          name: "test_tool",
+          arguments: '{"turn":1}',
+          call_id: "call_1",
+        });
+
+        // First function result
+        expect(result.history[2]).toEqual({
+          type: LlmMessageType.FunctionCallOutput,
+          call_id: "call_1",
+          output: JSON.stringify({ result: "result from turn 1" }),
+        });
+
+        // Second function call
+        expect(result.history[3]).toEqual({
+          type: LlmMessageType.FunctionCall,
+          name: "test_tool",
+          arguments: '{"turn":2}',
+          call_id: "call_2",
+        });
+
+        // Second function result
+        expect(result.history[4]).toEqual({
+          type: LlmMessageType.FunctionCallOutput,
+          call_id: "call_2",
+          output: JSON.stringify({ result: "result from turn 2" }),
+        });
+
+        // Final response
+        expect(result.history[5]).toEqual({
+          type: LlmMessageType.Message,
+          content: [
+            { type: LlmMessageType.OutputText, text: "Final response" },
+          ],
+          role: LlmMessageRole.Assistant,
+        });
+      });
+    });
+
     describe("Message Options", () => {
       it("includes instruction message when provided", async () => {
         // Setup
