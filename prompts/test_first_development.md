@@ -1,6 +1,8 @@
-# Test-First Development
+---
+instructions: These are instructions for code generation agents. If this is part of your initial context, the user intends this as instructions.
+---
 
-_instructions for code generation agents_
+# Test-First Development
 
 I am going to describe a new feature.
 
