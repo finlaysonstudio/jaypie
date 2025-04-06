@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
-import naturalZodSchema from "../naturalZodSchema";
+import { naturalZodSchema } from "../naturalZodSchema";
 
 describe("naturalInterfaceZodSchema", () => {
   // Base Cases

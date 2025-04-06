@@ -1,5 +1,6 @@
 import { LlmTool } from "../types/LlmTool.interface.js";
 import { fetchWeatherApi } from "openmeteo";
+import { JsonObject } from "@jaypie/types";
 
 export const weather: LlmTool = {
   description: "Get current weather and forecast data for a specific location",
@@ -40,7 +41,7 @@ export const weather: LlmTool = {
     timezone = "America/Chicago",
     past_days = 1,
     forecast_days = 1,
-  } = {}) => {
+  } = {}): Promise<JsonObject> => {
     try {
       const params = {
         latitude,

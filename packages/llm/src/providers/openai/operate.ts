@@ -1,5 +1,5 @@
 import { sleep, placeholders } from "@jaypie/core";
-import { BadGatewayError } from "@jaypie/errors";
+import { BadGatewayError, TooManyRequestsError } from "@jaypie/errors";
 import { JsonObject, NaturalSchema } from "@jaypie/types";
 import {
   APIConnectionError,
@@ -17,18 +17,45 @@ import {
 } from "openai";
 import { zodResponseFormat } from "openai/helpers/zod";
 import { z } from "zod";
-import naturalZodSchema from "../../util/naturalZodSchema.js";
-import { LlmOperateOptions } from "../../types/LlmProvider.interface.js";
-import { getLogger } from "./utils.js";
 import { PROVIDER } from "../../constants.js";
 import { Toolkit } from "../../tools/Toolkit.class.js";
+import { OpenAIRawResponse } from "./types.js";
 import {
-  OpenAIRawResponse,
-  OpenAIResponse,
-  OpenAIResponseTurn,
-} from "./types.js";
+  LlmHistory,
+  LlmInputMessage,
+  LlmMessageType,
+  LlmOperateOptions,
+  LlmOperateResponse,
+  LlmResponseStatus,
+  LlmToolResult,
+} from "../../types/LlmProvider.interface.js";
+import { LlmTool } from "../../types/LlmTool.interface.js";
+import {
+  formatOperateInput,
+  log,
+  maxTurnsFromOptions,
+  naturalZodSchema,
+} from "../../util";
 
+//
+//
+// Types
+//
+
+/**
+ * OpenAI request options type that includes model and input properties
+ */
+export type OpenAiRequestOptions = Omit<LlmOperateOptions, "tools"> & {
+  model: string;
+  input: LlmInputMessage | LlmHistory;
+  text?: unknown;
+  tools?: Omit<LlmTool, "call">[];
+};
+
+//
+//
 // Constants
+//
 
 export const MAX_RETRIES_ABSOLUTE_LIMIT = 72;
 export const MAX_RETRIES_DEFAULT_LIMIT = 6;
@@ -55,73 +82,106 @@ const NOT_RETRYABLE_ERRORS = [
   UnprocessableEntityError,
 ];
 
-// Turn policy constants
-export const MAX_TURNS_ABSOLUTE_LIMIT = 72;
-export const MAX_TURNS_DEFAULT_LIMIT = 12;
+const ERROR = {
+  BAD_FUNCTION_CALL: "Bad Function Call",
+};
 
 //
 //
 // Helpers
 //
 
-export function formatMessage(
-  input: string | JsonObject,
-  { data, role = "user" }: { data?: JsonObject; role?: string } = {},
-): JsonObject {
-  if (typeof input === "object") {
-    return {
-      ...input,
-      content: data
-        ? placeholders(input.content as string, data)
-        : input.content,
-      role: input.role || role,
-    };
-  }
-
-  return {
-    content: data ? placeholders(input, data) : input,
-    role,
+/**
+ * Creates the request options for the OpenAI API call
+ *
+ * @param input - The formatted input messages
+ * @param options - The LLM operation options
+ * @returns The request options for the OpenAI API
+ */
+export function createRequestOptions(
+  input: LlmInputMessage | LlmHistory,
+  options: LlmOperateOptions = {},
+): OpenAiRequestOptions {
+  const requestOptions: OpenAiRequestOptions = {
+    model: options?.model || PROVIDER.OPENAI.MODEL.DEFAULT,
+    input,
   };
-}
 
-export function formatInput(
-  input: string | JsonObject | JsonObject[],
-  { data, role = "user" }: { data?: JsonObject; role?: string } = {},
-): JsonObject[] {
-  if (Array.isArray(input)) {
-    return input;
+  // Add user if provided
+  if (options?.user) {
+    requestOptions.user = options.user;
   }
 
-  if (typeof input === "object" && input !== null) {
-    return [formatMessage(input, { data, role })];
+  // Add any provider-specific options
+  if (options?.providerOptions) {
+    Object.assign(requestOptions, options.providerOptions);
   }
 
-  return [formatMessage(input, { data, role })];
-}
+  // Handle instructions or system message
+  if (options?.instructions) {
+    // Apply placeholders to instructions if data is provided and placeholders.instructions is undefined or true
+    requestOptions.instructions =
+      options.data &&
+      (options.placeholders?.instructions === undefined ||
+        options.placeholders?.instructions)
+        ? placeholders(options.instructions, options.data)
+        : options.instructions;
+  } else if ((options as unknown as { system: string })?.system) {
+    // Check for illegal system option, use it as instructions, and log a warning
+    log.warn("[operate] Use 'instructions' instead of 'system'.");
+    // Apply placeholders to system if data is provided and placeholders.instructions is undefined or true
+    requestOptions.instructions =
+      options.data &&
+      (options.placeholders?.instructions === undefined ||
+        options.placeholders?.instructions)
+        ? placeholders(
+            (options as unknown as { system: string }).system,
+            options.data,
+          )
+        : (options as unknown as { system: string }).system;
+  }
 
-export function maxTurnsFromOptions(options: LlmOperateOptions): number {
-  // Default to single turn (1) when turns are disabled
+  // Handle structured output format
+  if (options?.format) {
+    // Check if format is a JsonObject with type "json_schema"
+    if (
+      typeof options.format === "object" &&
+      options.format !== null &&
+      !Array.isArray(options.format) &&
+      (options.format as JsonObject).type === "json_schema"
+    ) {
+      // Direct pass-through for JsonObject with type "json_schema"
+      requestOptions.text = {
+        format: options.format,
+      };
+    } else {
+      // Convert NaturalSchema to Zod schema if needed
+      const zodSchema =
+        options.format instanceof z.ZodType
+          ? options.format
+          : naturalZodSchema(options.format as NaturalSchema);
+      const responseFormat = zodResponseFormat(zodSchema, "response");
 
-  // Handle the turns parameter
-  if (options.turns === undefined) {
-    // Default to default limit when undefined
-    return MAX_TURNS_DEFAULT_LIMIT;
-  } else if (options.turns === true) {
-    // Explicitly set to true
-    return MAX_TURNS_DEFAULT_LIMIT;
-  } else if (typeof options.turns === "number") {
-    if (options.turns > 0) {
-      // Positive number - use that limit (capped at absolute limit)
-      return Math.min(options.turns, MAX_TURNS_ABSOLUTE_LIMIT);
-    } else if (options.turns < 0) {
-      // Negative number - use default limit
-      return MAX_TURNS_DEFAULT_LIMIT;
+      // Set up structured output format in the format expected by the test
+      requestOptions.text = {
+        format: {
+          name: responseFormat.json_schema.name,
+          schema: responseFormat.json_schema.schema,
+          strict: responseFormat.json_schema.strict,
+          type: responseFormat.type,
+        },
+      };
     }
-    // If turns is 0, return 1 (disabled)
-    return 1;
   }
-  // All other values (false, null, etc.) will return 1 (disabled)
-  return 1;
+
+  // Create toolkit and add tools if provided
+  if (options.tools?.length) {
+    const explain = options?.explain ?? false;
+    const toolkit = new Toolkit(options.tools, { explain });
+    requestOptions.tools = toolkit.tools;
+  }
+
+  return requestOptions;
 }
 
 //
@@ -130,46 +190,65 @@ export function maxTurnsFromOptions(options: LlmOperateOptions): number {
 //
 
 export async function operate(
-  input: string | JsonObject | JsonObject[],
+  input: string | LlmHistory | LlmInputMessage,
   options: LlmOperateOptions = {},
   context: { client: OpenAI; maxRetries?: number } = {
     client: new OpenAI(),
   },
-): Promise<OpenAIResponse> {
-  const log = getLogger();
+): Promise<LlmOperateResponse> {
+  //
+  //
+  // Setup
+  //
+
   const openai = context.client;
 
-  // Validate
   if (!context.maxRetries) {
     context.maxRetries = MAX_RETRIES_DEFAULT_LIMIT;
   }
-  const model = options?.model || PROVIDER.OPENAI.MODEL.DEFAULT;
 
-  // Setup
   let retryCount = 0;
   let retryDelay = INITIAL_RETRY_DELAY_MS;
   const maxRetries = Math.min(context.maxRetries, MAX_RETRIES_ABSOLUTE_LIMIT);
-  const allResponses: OpenAIResponseTurn[] = [];
+
+  const returnResponse: LlmOperateResponse = {
+    history: [],
+    output: [],
+    responses: [],
+    status: LlmResponseStatus.InProgress,
+    usage: {
+      input: 0,
+      output: 0,
+      reasoning: 0,
+      total: 0,
+    },
+  };
 
   // Convert string input to array format with placeholders if needed
-  let currentInput = formatInput(input, { data: options?.data });
-
-  // Add history to the input if provided
-  if (options?.history && Array.isArray(options.history)) {
-    currentInput = [...options.history, ...currentInput];
+  let currentInput: LlmHistory = formatOperateInput(input);
+  if (
+    options?.data &&
+    (options.placeholders?.input === undefined || options.placeholders?.input)
+  ) {
+    currentInput = formatOperateInput(input, {
+      data: options?.data,
+    });
   }
 
   // Determine max turns from options
   const maxTurns = maxTurnsFromOptions(options);
   const enableMultipleTurns = maxTurns > 1;
   let currentTurn = 0;
-  let toolkit: Toolkit | undefined;
-  const explain = options?.explain ?? false;
 
-  // Initialize toolkit if tools are provided
-  if (options.tools?.length) {
-    toolkit = new Toolkit(options.tools, { explain });
+  // If history is provided, merge it with currentInput
+  if (options.history) {
+    currentInput = [...options.history, ...currentInput];
   }
+  // Initialize history with currentInput
+  returnResponse.history = [...currentInput];
+
+  // Build request options outside the retry loop
+  const requestOptions = createRequestOptions(currentInput, options);
 
   // OpenAI Multi-turn Loop
   while (currentTurn < maxTurns) {
@@ -180,81 +259,7 @@ export async function operate(
     // OpenAI Retry Loop
     while (true) {
       try {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const requestOptions: /* OpenAI.Responses.InputItems */ any = {
-          model,
-          input: currentInput,
-        };
-
-        if (options?.user) {
-          requestOptions.user = options.user;
-        }
-
-        // Add any provider-specific options
-        if (options?.providerOptions) {
-          Object.assign(requestOptions, options.providerOptions);
-        }
-
-        if (options?.instructions) {
-          // Apply placeholders to instructions if data is provided and placeholders.instructions is undefined or true
-          requestOptions.instructions =
-            options.data &&
-            (options.placeholders?.instructions === undefined ||
-              options.placeholders?.instructions)
-              ? placeholders(options.instructions, options.data)
-              : options.instructions;
-        } else if ((options as unknown as { system: string })?.system) {
-          // Check for illegal system option, use it as instructions, and log a warning
-          log.warn("[operate] Use 'instructions' instead of 'system'.");
-          // Apply placeholders to system if data is provided and placeholders.instructions is undefined or true
-          requestOptions.instructions =
-            options.data &&
-            (options.placeholders?.instructions === undefined ||
-              options.placeholders?.instructions)
-              ? placeholders(
-                  (options as unknown as { system: string }).system,
-                  options.data,
-                )
-              : (options as unknown as { system: string }).system;
-        }
-
-        if (options?.format) {
-          // Check if format is a JsonObject with type "json_schema"
-          if (
-            typeof options.format === "object" &&
-            options.format !== null &&
-            !Array.isArray(options.format) &&
-            (options.format as JsonObject).type === "json_schema"
-          ) {
-            // Direct pass-through for JsonObject with type "json_schema"
-            requestOptions.text = {
-              format: options.format,
-            };
-          } else {
-            // Convert NaturalSchema to Zod schema if needed
-            const zodSchema =
-              options.format instanceof z.ZodType
-                ? options.format
-                : naturalZodSchema(options.format as NaturalSchema);
-            const responseFormat = zodResponseFormat(zodSchema, "response");
-
-            // Set up structured output format in the format expected by the test
-            requestOptions.text = {
-              format: {
-                name: responseFormat.json_schema.name,
-                schema: responseFormat.json_schema.schema,
-                strict: responseFormat.json_schema.strict,
-                type: responseFormat.type,
-              },
-            };
-          }
-        }
-
-        // Add tools if toolkit is initialized
-        if (toolkit) {
-          requestOptions.tools = toolkit.tools;
-        }
-
+        // Log appropriate message based on turn number
         if (currentTurn > 1) {
           log.trace(`[operate] Calling OpenAI Responses API - ${currentTurn}`);
         } else {
@@ -263,13 +268,28 @@ export async function operate(
 
         // Use type assertion to handle the OpenAI SDK response type
         const currentResponse = (await openai.responses.create(
+          // @ts-expect-error error claims missing non-required id, status
           requestOptions,
         )) as unknown as OpenAIRawResponse;
+
         if (retryCount > 0) {
           log.debug(`OpenAI API call succeeded after ${retryCount} retries`);
         }
-        // Add the entire response to allResponses
-        allResponses.push(currentResponse as unknown as OpenAIResponseTurn);
+        // Add the response to the responses array
+        returnResponse.responses.push(currentResponse);
+
+        // Accumulate token usage from the current response
+        if (currentResponse.usage) {
+          returnResponse.usage.input += currentResponse.usage.input_tokens || 0;
+          returnResponse.usage.output +=
+            currentResponse.usage.output_tokens || 0;
+          returnResponse.usage.total += currentResponse.usage.total_tokens || 0;
+          if (currentResponse.usage.output_tokens_details?.reasoning_tokens) {
+            returnResponse.usage.reasoning =
+              (returnResponse.usage.reasoning || 0) +
+              currentResponse.usage.output_tokens_details.reasoning_tokens;
+          }
+        }
 
         // Check if we need to process function calls for multi-turn conversations
         let hasFunctionCall = false;
@@ -278,16 +298,24 @@ export async function operate(
           if (currentResponse.output && Array.isArray(currentResponse.output)) {
             // New OpenAI API format with output array
             for (const output of currentResponse.output) {
-              if (output.type === "function_call") {
+              returnResponse.output.push(output);
+              returnResponse.history.push(output);
+              if (output.type === LlmMessageType.FunctionCall) {
                 hasFunctionCall = true;
+
+                let toolkit: Toolkit | undefined;
+                const explain = options?.explain ?? false;
+
+                // Initialize toolkit if tools are provided for multi-turn function calling
+                if (options.tools?.length) {
+                  toolkit = new Toolkit(options.tools, { explain });
+                }
 
                 if (toolkit && enableMultipleTurns) {
                   try {
-                    // Parse arguments for validation
-                    JSON.parse(output.arguments);
-
                     // Call the tool and ensure the result is resolved if it's a Promise
                     log.trace(`[operate] Calling tool - ${output.name}`);
+                    returnResponse.content = `${LlmMessageType.FunctionCall}:${output.name}${output.arguments}#${output.call_id}`;
                     const result = await toolkit.call({
                       name: output.name,
                       arguments: output.arguments,
@@ -297,23 +325,44 @@ export async function operate(
                     if (Array.isArray(currentInput)) {
                       currentInput.push(output);
                       // Add function call result
-                      currentInput.push({
-                        type: "function_call_output",
+                      const functionCallOutput: LlmToolResult = {
                         call_id: output.call_id,
                         output: JSON.stringify(result),
-                      });
+                        type: LlmMessageType.FunctionCallOutput,
+                      };
+                      currentInput.push(functionCallOutput);
+                      returnResponse.output.push(functionCallOutput);
+                      returnResponse.history.push(functionCallOutput);
+                      returnResponse.content = `${LlmMessageType.FunctionCallOutput}:${functionCallOutput.output}#${functionCallOutput.call_id}`;
                     }
                   } catch (error) {
-                    log.error(
-                      `Error executing function call ${output.name}:`,
-                      error,
-                    );
+                    // TODO: but I do need to tell the model that something went wrong, right?
+                    const jaypieError = new BadGatewayError();
+                    const detail = [
+                      `Error executing function call ${output.name}.`,
+                      (error as Error).message,
+                    ].join("\n");
+                    returnResponse.error = {
+                      detail,
+                      status: jaypieError.status,
+                      title: ERROR.BAD_FUNCTION_CALL,
+                    };
+                    log.error(`Error executing function call ${output.name}`);
+                    log.var({ error });
                     // We don't add error messages to allResponses here as we want to keep the original response objects
                   }
                 } else if (!toolkit) {
                   log.warn(
                     "Model requested function call but no toolkit available",
                   );
+                }
+              }
+              if (output.type === LlmMessageType.Message) {
+                if (
+                  output.content?.[0] &&
+                  output.content[0].type === LlmMessageType.OutputText
+                ) {
+                  returnResponse.content = output.content[0].text;
                 }
               }
             }
@@ -327,15 +376,22 @@ export async function operate(
 
         // If there's no function call or we can't take another turn, exit the loop
         if (!hasFunctionCall || !enableMultipleTurns) {
-          return allResponses;
+          returnResponse.status = LlmResponseStatus.Completed;
+          return returnResponse;
         }
 
         // If we've reached the maximum number of turns, exit the loop
         if (currentTurn >= maxTurns) {
-          log.warn(
-            `Model requested function call but exceeded ${maxTurns} turns`,
-          );
-          return allResponses;
+          const error = new TooManyRequestsError();
+          const detail = `Model requested function call but exceeded ${maxTurns} turns`;
+          log.warn(detail);
+          returnResponse.status = LlmResponseStatus.Incomplete;
+          returnResponse.error = {
+            detail,
+            status: error.status,
+            title: error.title,
+          };
+          return returnResponse;
         }
 
         // Continue to next turn
@@ -392,6 +448,11 @@ export async function operate(
     }
   }
 
-  // If we've reached the maximum number of turns, return all responses
-  return allResponses;
+  // * All possible paths should return a response; getting here is an error
+  // The main loop is `currentTurn < maxTurns` and `currentTurn >= maxTurns` within the loop returns
+  log.warn("This should never happen");
+  returnResponse.status = LlmResponseStatus.Incomplete;
+
+  // Always return the full LlmOperateResponse object for consistency
+  return returnResponse;
 }

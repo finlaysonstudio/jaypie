@@ -1,5 +1,5 @@
 import { LlmTool } from "../types/LlmTool.interface.js";
-import randomUtil from "../util/random.js";
+import { random as randomUtil } from "../util/random.js";
 
 export const random: LlmTool = {
   description:

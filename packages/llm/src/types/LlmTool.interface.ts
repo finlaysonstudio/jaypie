@@ -1,10 +1,10 @@
-import { JsonObject } from "@jaypie/types";
+import { AnyValue, JsonObject } from "@jaypie/types";
 
+// Main
 export interface LlmTool {
   description: string;
   name: string;
   parameters: JsonObject;
   type: "function" | string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  call: (...args: any[]) => Promise<any> | any;
+  call: (args?: JsonObject) => Promise<AnyValue> | AnyValue;
 }

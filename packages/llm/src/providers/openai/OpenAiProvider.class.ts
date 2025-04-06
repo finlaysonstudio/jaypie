@@ -2,11 +2,14 @@ import { JsonObject } from "@jaypie/types";
 import { OpenAI } from "openai";
 import { PROVIDER } from "../../constants.js";
 import {
+  LlmHistory,
+  LlmInputMessage,
   LlmMessageOptions,
   LlmOperateOptions,
+  LlmOperateResponse,
   LlmProvider,
 } from "../../types/LlmProvider.interface.js";
-import { operate, formatInput } from "./operate.js";
+import { operate } from "./operate.js";
 import {
   createStructuredCompletion,
   createTextCompletion,
@@ -62,32 +65,18 @@ export class OpenAiProvider implements LlmProvider {
   }
 
   async operate(
-    input: string | JsonObject | JsonObject[],
+    input: string | LlmHistory | LlmInputMessage,
     options: LlmOperateOptions = {},
-  ): Promise<JsonObject[]> {
+  ): Promise<LlmOperateResponse> {
     const client = await this.getClient();
     options.model = options?.model || this.model;
 
-    // Format the input to ensure consistent format
-    const formattedInput = formatInput(input, { data: options?.data });
-
-    // Create a merged history including both the tracked history and any explicitly provided history
-    const mergedHistory = [...this.conversationHistory];
-    if (options?.history && Array.isArray(options.history)) {
-      mergedHistory.push(...options.history);
-    }
-
-    // Set the merged history in the options
-    const optionsWithHistory: LlmOperateOptions = {
-      ...options,
-      history: mergedHistory,
-    };
+    // TODO: Create a merged history including both the tracked history and any explicitly provided history
 
     // Call operate with the updated options
-    const response = await operate(input, optionsWithHistory, { client });
+    const response = await operate(input, options, { client });
 
-    // Update conversation history with the input and response
-    this.updateConversationHistory(formattedInput, response);
+    // TODO: Update conversation history with the input and response
 
     return response;
   }

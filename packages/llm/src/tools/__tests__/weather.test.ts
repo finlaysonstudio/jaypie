@@ -63,23 +63,27 @@ describe("weather tool", () => {
   });
 
   it("should return weather data with default parameters", async () => {
-    const result = await weather.call();
+    const result = (await weather.call()) as {
+      location: any;
+      current: any;
+      hourly: any;
+    };
 
     expect(result).toHaveProperty("location");
     expect(result).toHaveProperty("current");
     expect(result).toHaveProperty("hourly");
 
-    expect(result.location.latitude).toBe(42.0399922);
-    expect(result.location.longitude).toBe(-87.6979454);
-    expect(result.location.timezone).toBe("America/Chicago");
+    expect(result?.location?.latitude).toBe(42.0399922);
+    expect(result?.location?.longitude).toBe(-87.6979454);
+    expect(result?.location?.timezone).toBe("America/Chicago");
 
-    expect(result.current.temperature2m).toBe(72);
-    expect(result.current.isDay).toBe(1);
+    expect(result?.current?.temperature2m).toBe(72);
+    expect(result?.current?.isDay).toBe(1);
 
-    expect(Array.isArray(result.hourly.time)).toBe(true);
-    expect(result.hourly.time.length).toBeGreaterThan(0);
-    expect(Array.isArray(result.hourly.temperature2m)).toBe(true);
-    expect(result.hourly.temperature2m.length).toBeGreaterThan(0);
+    expect(Array.isArray(result?.hourly?.time)).toBe(true);
+    expect(result?.hourly?.time?.length).toBeGreaterThan(0);
+    expect(Array.isArray(result?.hourly?.temperature2m)).toBe(true);
+    expect(result?.hourly?.temperature2m?.length).toBeGreaterThan(0);
   });
 
   it("should accept custom parameters", async () => {

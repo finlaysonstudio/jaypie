@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 // Subject
-import random, { DEFAULT_MAX, DEFAULT_MIN } from "../random.js";
+import { DEFAULT_MAX, DEFAULT_MIN, random } from "../random.js";
 
 //
 //

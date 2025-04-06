@@ -1,9 +1,7 @@
 import { z } from "zod";
 import { NaturalSchema } from "@jaypie/types";
 
-export default function naturalZodSchema(
-  definition: NaturalSchema,
-): z.ZodTypeAny {
+export function naturalZodSchema(definition: NaturalSchema): z.ZodTypeAny {
   if (Array.isArray(definition)) {
     if (definition.length === 0) {
       // Handle empty array - accept any[]

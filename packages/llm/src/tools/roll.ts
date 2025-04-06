@@ -1,5 +1,5 @@
 import { LlmTool } from "../types/LlmTool.interface.js";
-import random from "../util/random.js";
+import { log, random, tryParseNumber } from "../util";
 
 export const roll: LlmTool = {
   description: "Roll one or more dice with a specified number of sides",
@@ -19,13 +19,25 @@ export const roll: LlmTool = {
     required: ["number", "sides"],
   },
   type: "function",
-  call: ({ number = 1, sides = 6 }) => {
+  call: ({ number = 1, sides = 6 } = {}): {
+    rolls: number[];
+    total: number;
+  } => {
     const rng = random();
     const rolls: number[] = [];
     let total = 0;
 
-    for (let i = 0; i < number; i++) {
-      const rollValue = rng({ min: 1, max: sides, integer: true });
+    const parsedNumber = tryParseNumber(number, {
+      defaultValue: 1,
+      warnFunction: log.warn,
+    }) as number;
+    const parsedSides = tryParseNumber(sides, {
+      defaultValue: 6,
+      warnFunction: log.warn,
+    }) as number;
+
+    for (let i = 0; i < parsedNumber; i++) {
+      const rollValue = rng({ min: 1, max: parsedSides, integer: true });
       rolls.push(rollValue);
       total += rollValue;
     }
