@@ -1,9 +1,15 @@
 import { getEnvSecret } from "@jaypie/aws";
 import { OpenAI } from "openai";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { z } from "zod";
 import { OpenAiProvider } from "../OpenAiProvider.class";
-
+import {
+  LlmMessageRole,
+  LlmMessageType,
+  LlmInputMessage,
+} from "../../../types/LlmProvider.interface.js";
+// Mock the operate module
+vi.mock("../operate.js");
 vi.mock("openai");
 
 describe("OpenAiProvider", () => {
@@ -338,6 +344,189 @@ describe("OpenAiProvider", () => {
           model: expect.any(String),
         });
       });
+    });
+  });
+
+  describe("Conversation History", () => {
+    let operateMock: any;
+
+    beforeEach(async () => {
+      // Create a mock for the operate function
+      operateMock = vi.fn();
+
+      // Get the mocked operate function
+      const { operate } = await import("../operate.js");
+      operateMock = operate as any;
+    });
+
+    afterEach(() => {
+      vi.clearAllMocks();
+    });
+
+    it("maintains conversation history across operate calls", async () => {
+      // Mock the operate function to return a history
+      const mockOperateResponse1 = {
+        content: "Hello, I'm an AI assistant",
+        history: [
+          { role: "user", content: "Hello", type: "message" },
+          {
+            role: "assistant",
+            content: [
+              { text: "Hello, I'm an AI assistant", type: "output_text" },
+            ],
+            type: "message",
+            status: "completed",
+          },
+        ],
+        output: [],
+        responses: [],
+        status: "completed",
+        usage: { input: 1, output: 1, reasoning: 0, total: 2 },
+      };
+
+      const mockOperateResponse2 = {
+        content: "Your name is John",
+        history: [
+          { role: "user", content: "Hello", type: "message" },
+          {
+            role: "assistant",
+            content: [
+              { text: "Hello, I'm an AI assistant", type: "output_text" },
+            ],
+            type: "message",
+            status: "completed",
+          },
+          { role: "user", content: "What's my name?", type: "message" },
+          {
+            role: "assistant",
+            content: [{ text: "Your name is John", type: "output_text" }],
+            type: "message",
+            status: "completed",
+          },
+        ],
+        output: [],
+        responses: [],
+        status: "completed",
+        usage: { input: 1, output: 1, reasoning: 0, total: 2 },
+      };
+
+      // Set up the mock responses
+      operateMock
+        .mockResolvedValueOnce(mockOperateResponse1)
+        .mockResolvedValueOnce(mockOperateResponse2);
+
+      const provider = new OpenAiProvider();
+
+      // First operate call
+      await provider.operate("Hello");
+
+      // Second operate call should include history from first call
+      await provider.operate("What's my name?");
+
+      // Check that the second call included the history from the first call
+      expect(operateMock).toHaveBeenCalledTimes(2);
+      expect(operateMock.mock.calls[0][0]).toBe("Hello");
+      expect(operateMock.mock.calls[1][0]).toBe("What's my name?");
+
+      // The second call should have history in its options
+      const secondCallOptions = operateMock.mock.calls[1][1];
+      expect(secondCallOptions).toHaveProperty("history");
+      expect(secondCallOptions.history).toEqual(mockOperateResponse1.history);
+    });
+
+    it("merges provided history with instance history", async () => {
+      // Mock the operate function
+      const existingHistory = [
+        { role: "user", content: "Previous message", type: "message" },
+        {
+          role: "assistant",
+          content: [{ text: "Previous response", type: "output_text" }],
+          type: "message",
+          status: "completed",
+        },
+      ];
+
+      const mockOperateResponse = {
+        content: "Combined history response",
+        history: [
+          ...existingHistory,
+          {
+            role: LlmMessageRole.User,
+            content: "New message",
+            type: LlmMessageType.Message,
+          },
+          {
+            role: LlmMessageRole.Assistant,
+            content: [
+              { text: "Combined history response", type: "output_text" },
+            ],
+            type: "message",
+            status: "completed",
+          },
+        ],
+        output: [],
+        responses: [],
+        status: "completed",
+        usage: { input: 1, output: 1, reasoning: 0, total: 2 },
+      };
+
+      operateMock.mockResolvedValue(mockOperateResponse);
+
+      const provider = new OpenAiProvider();
+
+      // Set the conversation history directly for testing
+      provider["conversationHistory"] = [...existingHistory];
+
+      // Provide additional history in the options
+      const additionalHistory: LlmInputMessage[] = [
+        {
+          role: LlmMessageRole.User,
+          content: "Additional context",
+          type: LlmMessageType.Message,
+        },
+      ];
+
+      await provider.operate("New message", { history: additionalHistory });
+
+      // Check that both histories were merged
+      expect(operateMock).toHaveBeenCalledTimes(1);
+      const options = operateMock.mock.calls[0][1];
+      expect(options).toHaveProperty("history");
+      expect(options.history).toEqual([
+        ...existingHistory,
+        ...additionalHistory,
+      ]);
+    });
+
+    it("updates conversation history after each operate call", async () => {
+      // Mock the operate function
+      const mockOperateResponse = {
+        content: "Response content",
+        history: [
+          { role: "user", content: "Test message", type: "message" },
+          {
+            role: "assistant",
+            content: [{ text: "Response content", type: "output_text" }],
+            type: "message",
+            status: "completed",
+          },
+        ],
+        output: [],
+        responses: [],
+        status: "completed",
+        usage: { input: 1, output: 1, reasoning: 0, total: 2 },
+      };
+
+      operateMock.mockResolvedValue(mockOperateResponse);
+
+      const provider = new OpenAiProvider();
+
+      await provider.operate("Test message");
+
+      // Check that the conversation history was updated
+      expect(provider["conversationHistory"]).toEqual(
+        mockOperateResponse.history,
+      );
     });
   });
 });
