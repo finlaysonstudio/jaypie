@@ -20,6 +20,8 @@ import {
   LlmOutputContentText,
   LlmOutputMessage,
   LlmResponseStatus,
+  LlmInputMessage,
+  LlmHistory,
 } from "../../../types/LlmProvider.interface.js";
 import { log, MAX_TURNS_DEFAULT_LIMIT } from "../../../util";
 import { restoreLog, spyLog } from "@jaypie/testkit";
@@ -973,8 +975,122 @@ describe("operate", () => {
       });
     });
 
-    describe("Chat history", () => {
-      it.todo("Passes chat history to the OpenAI API");
+    describe("Chat History", () => {
+      it("Passes chat history to the OpenAI API", async () => {
+        // Setup
+        const initialHistory: LlmHistory = [
+          {
+            type: LlmMessageType.Message,
+            role: LlmMessageRole.User,
+            content: "Previous message",
+          } as LlmInputMessage,
+          {
+            type: LlmMessageType.Message,
+            role: LlmMessageRole.Assistant,
+            content: [
+              {
+                type: LlmMessageType.OutputText,
+                text: "Previous response",
+              },
+            ],
+            id: "prev_resp",
+            status: LlmResponseStatus.Completed,
+          } as LlmOutputMessage,
+        ];
+
+        const testInput = "New message";
+
+        mockCreate.mockResolvedValueOnce({
+          id: "resp_123",
+          output: [
+            {
+              type: LlmMessageType.Message,
+              content: [
+                { type: LlmMessageType.OutputText, text: "New response" },
+              ],
+              role: LlmMessageRole.Assistant,
+              id: "resp_123",
+              status: LlmResponseStatus.Completed,
+            },
+          ],
+        });
+
+        // Execute
+        const result = await operate(
+          testInput,
+          {
+            history: initialHistory,
+          },
+          { client: mockClient },
+        );
+
+        // Verify the history was passed to OpenAI
+        const call = mockCreate.mock.calls[0][0];
+        expect(call.input).toBeArray();
+        expect(call.input).toBeArrayOfSize(3);
+        expect(mockCreate).toHaveBeenCalledWith(
+          expect.objectContaining({
+            model: expect.any(String),
+            input: expect.arrayContaining([
+              expect.objectContaining({
+                content: "Previous message",
+                role: "user",
+                type: "message",
+              }),
+              expect.any(Object),
+              expect.any(Object),
+            ]),
+          }),
+        );
+        //   expect.objectContaining({
+        //     input: expect.arrayContaining([
+        //       // Previous user message
+        //       expect.objectContaining({
+        //         type: LlmMessageType.Message,
+        //         role: LlmMessageRole.User,
+        //         content: "Previous message",
+        //       }),
+        //       // Previous assistant response
+        //       expect.objectContaining({
+        //         type: LlmMessageType.Message,
+        //         role: LlmMessageRole.Assistant,
+        //         content: [
+        //           {
+        //             type: LlmMessageType.OutputText,
+        //             text: "Previous response",
+        //           },
+        //         ],
+        //         id: "prev_resp",
+        //         status: LlmResponseStatus.Completed,
+        //       }),
+        //       // New user message
+        //       expect.objectContaining({
+        //         type: LlmMessageType.Message,
+        //         role: LlmMessageRole.User,
+        //         content: testInput,
+        //       }),
+        //     ]),
+        //   }),
+        // );
+
+        // Verify the history is included in the returned history
+        expect(result.history).toBeArray();
+        expect(result.history).toBeArrayOfSize(4); // 2 initial + new message + new response
+        expect(result.history[0]).toEqual(initialHistory[0]); // First history message
+        expect(result.history[1]).toEqual(initialHistory[1]); // First history response
+        expect(result.history[2]).toEqual({
+          type: LlmMessageType.Message,
+          role: LlmMessageRole.User,
+          content: testInput,
+        } as LlmInputMessage); // New message
+        expect(result.history[3]).toEqual({
+          type: LlmMessageType.Message,
+          content: [{ type: LlmMessageType.OutputText, text: "New response" }],
+          role: LlmMessageRole.Assistant,
+          id: "resp_123",
+          status: LlmResponseStatus.Completed,
+        } as LlmOutputMessage); // New response
+      });
       it.todo("Instances track history by default");
     });
 

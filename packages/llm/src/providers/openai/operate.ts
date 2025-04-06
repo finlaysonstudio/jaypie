@@ -235,13 +235,17 @@ export async function operate(
     });
   }
 
-  // Initialize history with currentInput
-  returnResponse.history = [...currentInput];
-
   // Determine max turns from options
   const maxTurns = maxTurnsFromOptions(options);
   const enableMultipleTurns = maxTurns > 1;
   let currentTurn = 0;
+
+  // If history is provided, merge it with currentInput
+  if (options.history) {
+    currentInput = [...options.history, ...currentInput];
+  }
+  // Initialize history with currentInput
+  returnResponse.history = [...currentInput];
 
   // Build request options outside the retry loop
   const requestOptions = createRequestOptions(currentInput, options);
