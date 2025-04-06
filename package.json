@@ -32,7 +32,7 @@
     "lint": "eslint .",
     "new": "hygen jaypie new",
     "new:test": "hygen jaypie test",
-    "test": "vitest run .",
+    "test": "vitest run",
     "test:aws": "npm run test --workspace packages/aws",
     "test:cdk": "npm run test --workspace packages/cdk",
     "test:constructs": "npm run test --workspace packages/constructs",
