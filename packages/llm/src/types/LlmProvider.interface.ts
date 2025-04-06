@@ -69,6 +69,10 @@ type LlmInputContent =
   | LlmInputContentImage
   | LlmInputContentText;
 
+/**
+ * Represents the "Input message object" in the "input item list"
+ * from [OpenAI Responses API](https://platform.openai.com/docs/api-reference/responses/create)
+ */
 export interface LlmInputMessage {
   content: string | Array<LlmInputContent>;
   role: LlmMessageRole;
@@ -154,8 +158,10 @@ export interface LlmOperateOptions {
   placeholders?: {
     input?: boolean;
     instructions?: boolean;
+    system?: boolean;
   };
-  providerOptions?: Record<string, AnyValue>;
+  providerOptions?: JsonObject;
+  system?: string;
   tools?: LlmTool[];
   turns?: boolean | number;
   user?: string;
