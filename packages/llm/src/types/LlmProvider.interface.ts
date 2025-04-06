@@ -158,8 +158,10 @@ export interface LlmOperateOptions {
   placeholders?: {
     input?: boolean;
     instructions?: boolean;
+    system?: boolean;
   };
-  providerOptions?: Record<string, AnyValue>;
+  providerOptions?: JsonObject;
+  system?: string;
   tools?: LlmTool[];
   turns?: boolean | number;
   user?: string;

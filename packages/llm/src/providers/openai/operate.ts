@@ -24,6 +24,7 @@ import {
   LlmHistory,
   LlmInputMessage,
   LlmMessageType,
+  LlmMessageRole,
   LlmOperateOptions,
   LlmOperateResponse,
   LlmResponseStatus,
@@ -222,17 +223,52 @@ export async function operate(
     });
   }
 
-  // Determine max turns from options
-  const maxTurns = maxTurnsFromOptions(options);
-  const enableMultipleTurns = maxTurns > 1;
-  let currentTurn = 0;
-
   // If history is provided, merge it with currentInput
   if (options.history) {
     currentInput = [...options.history, ...currentInput];
   }
+
+  // If system message is provided, add it to the beginning of the input
+  if (options?.system) {
+    const systemMessage =
+      options.data && options.placeholders?.system !== false
+        ? placeholders(options.system, options.data)
+        : options.system;
+
+    // Create system message
+    const systemInputMessage: LlmInputMessage = {
+      content: systemMessage,
+      role: LlmMessageRole.System,
+      type: LlmMessageType.Message,
+    };
+
+    // Check if history starts with an identical system message
+    const firstMessage = currentInput[0];
+    const isIdenticalSystemMessage =
+      firstMessage?.type === LlmMessageType.Message &&
+      firstMessage?.role === LlmMessageRole.System &&
+      firstMessage?.content === systemMessage;
+
+    // Only prepend if not identical
+    if (!isIdenticalSystemMessage) {
+      // Remove any existing system message from the beginning
+      if (
+        currentInput[0]?.type === LlmMessageType.Message &&
+        currentInput[0]?.role === LlmMessageRole.System
+      ) {
+        currentInput = currentInput.slice(1);
+      }
+      currentInput = [systemInputMessage, ...currentInput];
+    }
+  }
+
   // Initialize history with currentInput
   returnResponse.history = [...currentInput];
+
+  // Determine max turns from options
+  const maxTurns = maxTurnsFromOptions(options);
+  const enableMultipleTurns = maxTurns > 1;
+  let currentTurn = 0;
 
   // Build request options outside the retry loop
   const requestOptions = createRequestOptions(currentInput, options);
