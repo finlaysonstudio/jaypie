@@ -126,19 +126,6 @@ export function createRequestOptions(
         options.placeholders?.instructions)
         ? placeholders(options.instructions, options.data)
         : options.instructions;
-  } else if ((options as unknown as { system: string })?.system) {
-    // Check for illegal system option, use it as instructions, and log a warning
-    log.warn("[operate] Use 'instructions' instead of 'system'.");
-    // Apply placeholders to system if data is provided and placeholders.instructions is undefined or true
-    requestOptions.instructions =
-      options.data &&
-      (options.placeholders?.instructions === undefined ||
-        options.placeholders?.instructions)
-        ? placeholders(
-            (options as unknown as { system: string }).system,
-            options.data,
-          )
-        : (options as unknown as { system: string }).system;
   }
 
   // Handle structured output format

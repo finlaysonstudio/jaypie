@@ -1381,28 +1381,6 @@ describe("operate", () => {
         );
       });
 
-      it("Warns if system message is provided", async () => {
-        // Execute
-        await operate(
-          "test message",
-          {
-            // @ts-expect-error Intentionally pass an old parameter
-            system: "You are a helpful assistant",
-          },
-          { client: mockClient },
-        );
-
-        // Verify
-        expect(mockCreate).toHaveBeenCalledWith(
-          expect.objectContaining({
-            instructions: "You are a helpful assistant",
-            input: expect.any(Array),
-            model: expect.any(String),
-          }),
-        );
-        expect(log.warn).toHaveBeenCalled();
-      });
-
       it("applies placeholders to instructions", async () => {
         // Setup
         const instructions = "You are a {{role}}";
