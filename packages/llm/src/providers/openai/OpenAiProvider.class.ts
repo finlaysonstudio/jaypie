@@ -8,6 +8,7 @@ import {
   LlmOperateOptions,
   LlmOperateResponse,
   LlmProvider,
+  LlmHistoryItem,
 } from "../../types/LlmProvider.interface.js";
 import { operate } from "./operate.js";
 import {
@@ -23,7 +24,7 @@ export class OpenAiProvider implements LlmProvider {
   private _client?: OpenAI;
   private apiKey?: string;
   private log = getLogger();
-  private conversationHistory: JsonObject[] = [];
+  private conversationHistory: LlmHistoryItem[] = [];
 
   constructor(
     model: string = PROVIDER.OPENAI.MODEL.DEFAULT,
@@ -75,8 +76,8 @@ export class OpenAiProvider implements LlmProvider {
     const mergedOptions = { ...options };
     if (this.conversationHistory.length > 0) {
       // If options.history exists, merge with instance history, otherwise use instance history
-      mergedOptions.history = options.history 
-        ? [...this.conversationHistory, ...options.history] 
+      mergedOptions.history = options.history
+        ? [...this.conversationHistory, ...options.history]
         : [...this.conversationHistory];
     }
 
@@ -90,5 +91,4 @@ export class OpenAiProvider implements LlmProvider {
 
     return response;
   }
-
 }

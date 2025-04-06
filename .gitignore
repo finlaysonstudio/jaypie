@@ -6,6 +6,9 @@ cdk.out
 node_modules
 dist
 
+# Generated repomix files
+/prompts/repomix
+
 # local env files
 .aider*
 .env

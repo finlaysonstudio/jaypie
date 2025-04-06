@@ -3,6 +3,7 @@ export * as LLM from "./constants.js";
 export {
   LlmMessageOptions,
   LlmOperateOptions,
+  LlmOperateResponse,
   LlmOptions,
   LlmProvider,
 } from "./types/LlmProvider.interface.js";
