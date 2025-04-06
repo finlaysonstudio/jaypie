@@ -91,10 +91,10 @@ type LlmOutputContent = LlmOutputContentText | LlmOutputRefusal;
 
 export interface LlmOutputMessage {
   content: Array<LlmOutputContent>;
-  id: string;
+  id?: string;
   role: LlmMessageRole.Assistant;
-  type: LlmMessageType.Message;
   status: LlmResponseStatus;
+  type: LlmMessageType.Message;
 }
 
 type LlmOutputItem = LlmToolCall | LlmToolResult | LlmOutputMessage;

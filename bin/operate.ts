@@ -6,6 +6,11 @@ import "dotenv/config";
 // Import directly from source files for development
 import Llm from "../packages/llm/src/Llm.js";
 import { tools } from "../packages/llm/src/tools/index.js";
+import {
+  LlmMessageRole,
+  LlmMessageType,
+  LlmResponseStatus,
+} from "../packages/llm/src/types/LlmProvider.interface.js";
 
 const INSTRUCTIONS =
   "Provide crisp, punchy answers. Be direct and to the point. Avoid flowery language.";
@@ -65,12 +70,25 @@ async function talk() {
   const result = await model.operate("What is my name?", {
     history: [
       {
-        role: "user",
-        content: "My name is Doctor Charles Xavier",
+        role: LlmMessageRole.User,
+        type: LlmMessageType.Message,
+        content: [
+          {
+            type: LlmMessageType.InputText,
+            text: "My name is Doctor Charles Xavier",
+          },
+        ],
       },
       {
-        role: "assistant",
-        content: "Hello, Dr. Xavier! How can I help you today?",
+        role: LlmMessageRole.Assistant,
+        content: [
+          {
+            type: LlmMessageType.OutputText,
+            text: "Hello, Dr. Xavier! How can I help you today?",
+          },
+        ],
+        status: LlmResponseStatus.Completed,
+        type: LlmMessageType.Message,
       },
     ],
   });
