@@ -4,6 +4,8 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { z } from "zod";
 import { OpenAiProvider } from "../OpenAiProvider.class";
 
+// Mock the operate module
+vi.mock("../operate.js");
 vi.mock("openai");
 
 describe("OpenAiProvider", () => {
@@ -347,12 +349,10 @@ describe("OpenAiProvider", () => {
     beforeEach(() => {
       // Create a mock for the operate function
       operateMock = vi.fn();
-
-      // fix this to mock actual so all the unmocked imports work. also move this to the top of the file ai!
-      // Set up the mock implementation before tests run
-      vi.mock("../operate.js", () => ({
-        operate: operateMock,
-      }));
+      
+      // Get the mocked operate function
+      const { operate } = await import("../operate.js");
+      operateMock = operate as any;
     });
 
     it.skip("maintains conversation history across operate calls", async () => {
