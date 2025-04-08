@@ -1,68 +1,61 @@
-# Write and Maintain and Engaging README.md
+# Write and Maintain an Engaging README.md
 
-An engaging README is a joy to scroll and invites all audiences to dig deeper.
+Engaging READMEs invite all audiences to explore the contents.
+They present documentation in an accessible and organized manner.
 
-## 🔧 Maintenance Checklist ("outputs")
+## 🔧 Maintenance Checklist (Outputs)
 
-* Check all spelling and grammar
-* Check all external links operate without redirect and land on a meaningful page
+Ensure all spelling and grammar have been checked.
+Confirm that all external links operate without redirection.
+Verify that external links land on meaningful pages.
 
-### Task Prerequisites ("inputs")
+## 📝 Task Prerequisites (Inputs)
 
-Most repositories already have a README.
-If only provided a README, the objective is to review it and perform maintenance without considering any drift from the code.
-If code is included, the objective is to review the provided code and update the README.
-If no README is provided, check if `README.md` exists before creating a new one.
-No README is present, create one from the context.
+Most repositories contain an existing README.
+If only a README is provided, review and maintain it without considering drift from the code.
+If code is included, review the provided code and update the README accordingly.
+If no README is present, verify that a README.md file exists before creating a new one.
 
-## 📋 Suggested Structure
+## ☑️ Editorial Guidelines
 
-Do not change existing documents to suit this structure, neither heading levels nor text.
-Do not add emoji if the current document does not use emoji.
+Adhere to the existing heading hierarchy.
+Refrain from modifying established sections.
+Maintain the style, tone, and technical formatting already in use.
+Avoid adding emojis if the current document does not use them.
 
-### Possible Outline
+## 📋 Suggested Outline
 
-Structure the document so content flows from the most common audience's highest-level needs, through a complete reference, with the narrowest minutia at the end.
+Structure the document so that the content flows from the most common audience's high-level needs to a complete reference.
+Avoid creating empty sections.
+Apply whitespace around headings to reduce visual clutter.
+Place each sentence on its own line to enhance version control diffs.
 
-* `# Document Title`
-* `Description` - the tagline or tl;dr, something beyond the title to draw a reader in
-* `## ✈️ Overview` an introduction, only needed for very long documents
-* `## 💿 Installation` or Setup
-* `## 📋 Usage` - Quick overview of most common uses
-* `## 📖 Reference` - Detailed guide to all uses, ideally alphabetical
-* `## 💻 Development` - How to set up a local environment
-* `## 🚀 Deployment` - Deploying to staging and production environments
-* `## 🛣️ Roadmap`
-* `## 📝 Changelog`
-* `## 📎 Appendix` or `## 🖇️ Footnotes` as necessary
-* `## 📜 License` assume `All rights reserved.` unless known otherwise
-
-Do not add or create empty sections.
-Use whitespace consistently to avoid visual clutter.
+```markdown
+# Document Title
+Description // a tagline or tl;dr that extends beyond the title
+## ✈️ Overview – an introduction for documents of extensive length
+## 💿 Installation - or ## 💿 Setup
+## 📋 Usage – a quick overview of the most common uses
+## 📖 Reference – a detailed guide to all uses, ideally arranged alphabetically
+## 💻 Development – instructions for setting up a local environment
+## 🚀 Deployment – guidelines for deploying to staging and production environments
+## 🛣️ Roadmap
+## 📝 Changelog
+## 📎 Appendix - or ## 🖇️ Footnotes as needed
+## 📜 License – typically defaulting to “All rights reserved.” unless specified otherwise
+```
 
 ## 🧑‍💻 Technical Audience
 
-Do not assume a background or familiarity with the subject.
-Assume the audience is technical and can follow directions.
-Always spell commands out explicitly to facilitate consistency.
-
-Focus on code examples.
-Declare needed imports at the top of example blocks.
+Assume that the audience is technical and capable of following explicit instructions.
+Include code examples as necessary.
+Declare required import statements at the beginning of example blocks.
 
 ## 🏠 Studio House Style
 
-* Chicago Manual of Style
-* Focus on clarity
-* Terse and pithy
-* Business formal language
-* Dry whimsy, if any
-* Emojis at the beginning of second-level heading lines, optionally at the end of first- and third-level headings
-
-Place each sentence on a new line.
-Single-line separated sentences will be rendered as a single paragraph in markdown.
-This produces more meaningful commit diffs.
-New paragraphs should be separated by two new lines.
-
-Avoid the word "you" in the second person.
-Declarative instructions can imply the reader without the word "you" ("install rimraf").
-If a party must be referenced directly, reference abstract third persons (e.g., "developers may install rimraf").
+Adhere to the Chicago Manual of Style.
+Focus on clarity using terse and pithy language.
+Apply business formal language with dry whimsy when appropriate.
+Use emojis only in second-level headings or to conclude first- or third-level headings as appropriate.
+Avoid the second-person pronoun; instructions may imply the reader without using “you.”
+Reference abstract third persons when a party must be mentioned.
