@@ -39,6 +39,7 @@
     "rollup",
     "sorpresa",
     "stddev",
+    "subpackages",
     "supertest",
     "testkit",
     "unplugin",
