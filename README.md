@@ -6,9 +6,11 @@ Event-driven fullstack architecture centered around JavaScript, AWS, and the JSO
 
 ## 🐦‍⬛ Introduction
 
-Jaypie is an opinionated approach to application development centered around JavaScript and the JSON:API specification in an event-driven architecture.
+Jaypie is an opinionated approach to application development.
+It centers around JavaScript and the JSON:API specification in an event-driven architecture.
 
-Jaypie is suited for applications that require custom infrastructure beyond HTTP requests (e.g., message queues). Without custom infrastructure, fullstack hosts like Vercel or Netlify are recommended.
+Jaypie is suited for applications requiring custom infrastructure beyond HTTP requests, such as message queues.
+For applications without custom infrastructure needs, fullstack hosts like Vercel or Netlify are recommended.
 
 ### "Jaypie Stack"
 
@@ -28,17 +30,18 @@ Jaypie is for building fullstack JavaScript applications.
 
 #### JavaScript Only 💛
 
-Jaypie uses the AWS Cloud Development Kit (CDK) to manage infrastructure, which is written in Node.js. This makes managing infrastructure accessible to the fullstack developer without learning a new syntax and living without language constructs like loops and inheritance.
+Jaypie utilizes the AWS Cloud Development Kit (CDK) to manage infrastructure, which is written in Node.js.
+This approach makes infrastructure management accessible to fullstack developers without requiring them to learn a new syntax or live without language constructs like loops and inheritance.
 
-Does NOT use Kubernetes, Docker, Terraform, or the "Serverless" framework. 
+It does not use Kubernetes, Docker, Terraform, or the "Serverless" framework.
 
 #### Eject Anything ⏏️
 
-Jaypie embraces "ejectability," the philosophy that any part of the code can be removed (and therefore replaced) without disturbing the whole.
+Jaypie embraces "ejectability," a philosophy where any part of the code can be removed and replaced without disturbing the whole.
 
 #### Mock Everywhere 🎴
 
-Jaypie strives to be "mockable-first" meaning all components should be easily tested via default or provided mocks.
+Jaypie strives to be "mockable-first," meaning all components should be easily tested via default or provided mocks.
 
 ## 📋 Usage
 
@@ -50,11 +53,13 @@ Jaypie strives to be "mockable-first" meaning all components should be easily te
 npm install jaypie
 ```
 
-`@jaypie/core` is included in `jaypie`.  Almost every Jaypie package requires core.
+`@jaypie/core` is included in `jaypie`.
+Almost every Jaypie package requires core.
 
 #### Included Packages
 
-These packages are included in `jaypie`. They may be installed separately in the future.
+These packages are included in `jaypie`.
+They may be installed separately in the future.
 
 | Package | Exports | Description |
 | ------- | ------- | ----------- |
@@ -117,7 +122,10 @@ import {
 
 #### `getEnvSecret(name, { env = process.env } = {})`
 
-Checks for `${name}_SECRET` and `SECRET_${name}` in environment variables. If found, retrieves the secret from AWS Secrets Manager. Otherwise, returns the value of `name`. Convenient to use the environment locally and a secret when deployed.
+Checks for `${name}_SECRET` and `SECRET_${name}` in environment variables.
+If found, retrieves the secret from AWS Secrets Manager.
+Otherwise, returns the value of `name`.
+This is convenient for using the environment locally and a secret when deployed.
 
 ```javascript
 import { getEnvSecret } from "jaypie";
@@ -128,7 +136,7 @@ const secret = await getEnvSecret("MONGODB_URI");
 
 #### `getMessages(event)`
 
-Return an array of message bodies from an SQS event.
+Returns an array of message bodies from an SQS event.
 
 ```javascript
 import { getMessages } from '@jaypie/aws';
@@ -139,7 +147,7 @@ const messages = getMessages(event);
 
 #### `getSecret(secretName: string)`
 
-Retrieve a secret from AWS Secrets Manager using the secret name.
+Retrieves a secret from AWS Secrets Manager using the secret name.
 
 ```javascript
 import { getSecret } from '@jaypie/aws';
@@ -150,7 +158,8 @@ const secret = await getSecret("MongoConnectionStringN0NC3-nSg1bR1sh");
 
 #### `getSingletonMessage(event)`
 
-Return the single message from an SQS event. Throws a `BadGatewayError` if more than one message is found.
+Returns the single message from an SQS event.
+Throws a `BadGatewayError` if more than one message is found.
 
 ```javascript
 import { getSingletonMessage } from '@jaypie/aws';
@@ -161,7 +170,7 @@ const message = await getSingletonMessage(event);
 
 #### `getTextractJob(jobId)`
 
-Retrieve a Textract job from AWS Textract.
+Retrieves a Textract job from AWS Textract.
 
 ```javascript
 import { getTextractJob } from '@jaypie/aws';
@@ -172,7 +181,8 @@ const raw = JSON.stringify(textractResults);
 
 #### `sendBatchMessages({ messages, queueUrl })`
 
-Batch and send messages to an SQS queue. If more than ten messages are provided, the function will batch them into groups of ten or less (per AWS).
+Batches and sends messages to an SQS queue.
+If more than ten messages are provided, the function will batch them into groups of ten or less, as per AWS guidelines.
 
 ```javascript
 import { sendBatchMessages } from '@jaypie/aws';
@@ -196,7 +206,7 @@ await sendBatchMessages({ messages, queueUrl });
 
 #### `sendMessage({ body, queueUrl })`
 
-Send a single message to an SQS queue.
+Sends a single message to an SQS queue.
 
 ```javascript
 import { sendMessage } from '@jaypie/aws';
@@ -217,7 +227,7 @@ const response = await sendMessage({ body, queueUrl });
 
 #### `sendTextractJob({ key, bucket, featureTypes, snsRoleArn, snsTopicArn })`
 
-Send a Textract job to AWS Textract.
+Sends a Textract job to AWS Textract.
 
 ```javascript
 import { sendTextractJob } from '@jaypie/aws';
@@ -318,7 +328,8 @@ const zone = new JaypieHostedZone(this, 'Zone', {
 
 #### `JaypieQueuedLambda`
 
-Creates a Lambda function with an attached SQS queue for message processing. Includes built-in support for environment variables, secrets, and AWS Parameter Store.
+Creates a Lambda function with an attached SQS queue for message processing.
+Includes built-in support for environment variables, secrets, and AWS Parameter Store.
 
 ```typescript
 const worker = new JaypieQueuedLambda(this, 'Worker', {
@@ -991,7 +1002,8 @@ import {
 
 #### `connect`
 
-Jaypie lifecycle method to connect to MongoDB. Uses `process.env.SECRET_MONGODB_URI` AWS Secret or `process.env.MONGODB_URI` string to connect.
+Jaypie lifecycle method to connect to MongoDB.
+Uses `process.env.SECRET_MONGODB_URI` AWS Secret or `process.env.MONGODB_URI` string to connect.
 
 ```javascript
 import { connect, disconnect, lambdaHandler, mongoose } from "jaypie";
@@ -1008,7 +1020,8 @@ const handler = lambdaHandler(async({event}) => {
 
 #### `connectFromSecretEnv`
 
-Jaypie lifecycle method to connect to MongoDB using `process.env.MONGO_CONNECTION_STRING`. Using the newer `connect` is generally preferred.
+Jaypie lifecycle method to connect to MongoDB using `process.env.MONGO_CONNECTION_STRING`.
+Using the newer `connect` is generally preferred.
 
 ```javascript
 import { connectFromSecretEnv, disconnect, lambdaHandler, mongoose } from "jaypie";
@@ -1116,7 +1129,7 @@ The LLM package includes several built-in tools that can be used with the `opera
 
 ##### Creating Custom Tools
 
-You can define custom tools by implementing the `LlmTool` interface:
+Custom tools can be defined by implementing the `LlmTool` interface:
 
 ```javascript
 import { LlmTool } from "jaypie";
@@ -1155,7 +1168,7 @@ const result = await llm.operate("Translate 'Hello world' to Spanish", {
 
 ##### Using Multiple Tools
 
-You can use multiple tools together in the `operate` method:
+Multiple tools can be used together in the `operate` method:
 
 ```javascript
 import { Llm, toolkit } from "jaypie";
@@ -1252,7 +1265,7 @@ npm install --save-dev @jaypie/testkit
 
 #### Mocking Jaypie
 
-The testkit provides a complete mock for Jaypie including:
+The testkit provides a complete mock for Jaypie, including:
 
 * Log spying (`expect(log.warn).toHaveBeenCalled()`)
 * Default responses for runtime-only functions (`connect`, `sendMessage`, `submitMetric`)
@@ -1378,7 +1391,8 @@ const libLogger = log.lib({ level: LOG.LEVEL.WARN, lib: "myLib" });
 
 ##### `jsonApiErrorSchema`
 
-A [JSON Schema](https://json-schema.org/) validator for the [JSON:API](https://jsonapi.org/) error schema. Powers the `toBeJaypieError` matcher (via `toMatchSchema`).
+A [JSON Schema](https://json-schema.org/) validator for the [JSON:API](https://jsonapi.org/) error schema.
+It powers the `toBeJaypieError` matcher (via `toMatchSchema`).
 
 ##### `jsonApiSchema`
 
@@ -1525,11 +1539,13 @@ expect(log.error).not.toHaveBeenCalled();
 
 ##### `restoreLog(log)`
 
-Restores the `log` provided by `@jaypie/core`, commonly performed `afterEach` with `spyLog` in `beforeEach`. See example with `spyLog`.
+Restores the `log` provided by `@jaypie/core`, commonly performed `afterEach` with `spyLog` in `beforeEach`.
+See example with `spyLog`.
 
 ##### `spyLog(log)`
 
-Spies on the `log` provided by `@jaypie/core`, commonly performed `beforeEach` with `restoreLog` in `afterEach`. Not necessary when mocking the entire Jaypie module.
+Spies on the `log` provided by `@jaypie/core`, commonly performed `beforeEach` with `restoreLog` in `afterEach`.
+This is not necessary when mocking the entire Jaypie module.
 
 ```javascript
 import { restoreLog, spyLog } from "@jaypie/testkit";
@@ -1552,7 +1568,8 @@ test("log", () => {
 
 ##### `sqsTestRecords(message, message, ...)` or `sqsTestRecords([...])`
 
-Generates an event object for testing SQS Lambda functions with as many messages as provided. Note, test will accept more than ten messages, but AWS will only send ten at a time.
+Generates an event object for testing SQS Lambda functions with as many messages as provided.
+Note that the test will accept more than ten messages, but AWS will only send ten at a time.
 
 ```javascript
 import { sqsTestRecords } from "@jaypie/testkit";
@@ -1614,7 +1631,9 @@ The `v4` function from the `uuid` package
 
 Keep `chalk` at `4`; `chalk` moves to ESM only in `5`
 
-Packages receive patch releases as needed. The main Jaypie package must be patched to include the updated packages if applicable. E.g.,
+Packages receive patch releases as needed.
+The main Jaypie package must be patched to include the updated packages if applicable.
+For example,
 * `npm -w packages/core version patch`
 * (push deploy)
 * `npm -w packages/jaypie install @jaypie/core@latest`
@@ -1631,4 +1650,5 @@ Process for minor releases:
 
 ## 📜 License
 
-[MIT License](./LICENSE.txt). Published by Finlayson Studio
+[MIT License](./LICENSE.txt).
+Published by Finlayson Studio
