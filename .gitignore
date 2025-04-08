@@ -7,7 +7,7 @@ node_modules
 dist
 
 # Generated repomix files
-/prompts/repomix
+/prompts/context
 
 # local env files
 .aider*
