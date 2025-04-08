@@ -1095,18 +1095,28 @@ import { mongoose } from "jaypie";
 import { 
   Llm,
   LLM,
+  toolkit,
+  tools
 } from "jaypie";
 ```
 
-The LLM package provides a unified interface for interacting with large language models (LLMs) like OpenAI's GPT and Anthropic's Claude.  
+The LLM package provides a unified interface for interacting with large language models (LLMs) like OpenAI's GPT and Anthropic's Claude.
 
 #### Basic Usage
 
 ```javascript
 import { Llm } from "jaypie";
 
-const llm = new Llm(); // Uses OpenAI by default
+// Create an LLM instance (uses OpenAI by default)
+const llm = new Llm();
+
+// Send a simple message
 const response = await llm.send("Hello, world!");
+console.log(response); // "Hello! How can I help you today?"
+
+// Static method for one-off requests
+const quickResponse = await Llm.send("What is the capital of France?");
+console.log(quickResponse); // "The capital of France is Paris."
 ```
 
 #### Provider Selection
@@ -1119,55 +1129,171 @@ const openai = new Llm(LLM.PROVIDER.OPENAI.NAME);
 
 // Anthropic
 const anthropic = new Llm(LLM.PROVIDER.ANTHROPIC.NAME);
+
+// With custom model
+const customModel = new Llm(LLM.PROVIDER.OPENAI.NAME, {
+  model: LLM.PROVIDER.OPENAI.MODEL.GPT_4_5
+});
+
+// With API key (not recommended - prefer environment variables or secrets)
+const withApiKey = new Llm(LLM.PROVIDER.OPENAI.NAME, {
+  apiKey: "your-api-key" 
+});
 ```
 
-#### Operate
+#### Structured Output
 
-The `operate` method is a more flexible API that allows for function calling and multi-turn conversations.  
+Get structured data back from the LLM using the `response` option:
+
+```javascript
+import { Llm } from "jaypie";
+
+// Using a natural schema (recommended)
+const naturalSchema = await llm.send("Parse my name: John Smith", {
+  response: {
+    firstName: String,
+    lastName: String
+  }
+});
+console.log(naturalSchema); // { firstName: "John", lastName: "Smith" }
+
+// Using Zod schema
+import { z } from "zod";
+const zodSchema = await llm.send("Parse my name: John Smith", {
+  response: z.object({
+    firstName: z.string(),
+    lastName: z.string()
+  })
+});
+console.log(zodSchema); // { firstName: "John", lastName: "Smith" }
+```
+
+#### System Messages and Templates
+
+```javascript
+import { Llm } from "jaypie";
+
+// With system message
+const withSystem = await llm.send("Tell me a joke", {
+  system: "You are a comedian who specializes in dad jokes."
+});
+
+// With template variables
+const withTemplate = await llm.send("Hello, {{name}}!", {
+  data: { name: "World" }
+});
+console.log(withTemplate); // Response using "Hello, World!"
+
+// Disable template replacement
+const noTemplate = await llm.send("Hello, {{name}}!", {
+  data: { name: "World" },
+  placeholders: { message: false }
+});
+console.log(noTemplate); // Response using literal "Hello, {{name}}!"
+```
+
+#### Function Calling with `operate`
+
+The `operate` method provides a more powerful API with function calling and multi-turn conversations:
 
 ```javascript
 import { Llm, toolkit } from "jaypie";
 
 const llm = new Llm();
-const result = await llm.operate("Roll 2d20 and tell me the weather", {
-  tools: [toolkit.roll, toolkit.weather],
-  turns: true // Enable multi-turn conversation
+
+// Basic operate call
+const result = await llm.operate("What time is it?", {
+  tools: [toolkit.time]
 });
+console.log(result.content); // "The current time is 2:45 PM."
+
+// Multi-turn conversation with function calling
+const weatherResult = await llm.operate("What's the weather like and roll a d20", {
+  tools: [toolkit.weather, toolkit.roll],
+  turns: true // Enable multi-turn conversation (default limit is 12 turns)
+});
+console.log(weatherResult.content); // Final response after tool calls
+console.log(weatherResult.history); // Full conversation history
 ```
 
-The LLM package includes several built-in tools that can be used with the `operate` method:  
+#### Built-in Tools
+
+The LLM package includes several built-in tools that can be used with the `operate` method:
+
+```javascript
+import { Llm, toolkit } from "jaypie";
+
+// Available tools:
+const { time, weather, random, roll } = toolkit;
+
+// Use individual tools
+const result = await llm.operate("Roll 3d6 for my character's strength", {
+  tools: [toolkit.roll]
+});
+
+// Or use all tools
+const result = await llm.operate("What's the weather and give me a random number", {
+  tools: Object.values(toolkit) // All tools
+});
+
+// Or import the tools array directly
+import { tools } from "jaypie";
+const result = await llm.operate("What's the current time?", { tools });
+```
+
+##### Tool Reference
 
 - **time** - Returns the current time or converts a date string to ISO UTC format
   ```javascript
-  // Example: "2025-03-24T22:48:45.000Z"
+  // Parameters:
+  // - date: Optional date string to convert (default: current time)
+  // Returns: "2025-03-24T22:48:45.000Z"
   ```
 
 - **weather** - Fetches current weather and forecast data for a location
   ```javascript
-  // Parameters: latitude, longitude, timezone, past_days, forecast_days
+  // Parameters:
+  // - latitude: Location latitude (default: Evanston, IL)
+  // - longitude: Location longitude (default: Evanston, IL)
+  // - timezone: Timezone string (default: America/Chicago)
+  // - past_days: Days of historical data (default: 1)
+  // - forecast_days: Days of forecast data (default: 1)
+  // Returns: Object with location, current, and hourly weather data
   ```
 
 - **random** - Generates random numbers with various distribution options
   ```javascript
-  // Parameters: min, max, mean, stddev, integer, seed, precision, currency
+  // Parameters:
+  // - min: Minimum value (default: 0)
+  // - max: Maximum value (default: 1)
+  // - mean: Mean for normal distribution
+  // - stddev: Standard deviation for normal distribution
+  // - integer: Return integer values (default: false)
+  // - seed: Seed string for consistent generation
+  // - precision: Number of decimal places
+  // - currency: Format as currency (2 decimal places)
+  // Returns: Random number based on parameters
   ```
 
 - **roll** - Simulates dice rolls for tabletop gaming
   ```javascript
-  // Parameters: number (of dice), sides
+  // Parameters:
+  // - number: Number of dice to roll (default: 1)
+  // - sides: Number of sides on each die (default: 6)
   // Returns: { rolls: [3, 5], total: 8 }
   ```
 
-##### Creating Custom Tools
+#### Creating Custom Tools
 
-Custom tools can be defined by implementing the `LlmTool` interface:  
+Custom tools can be defined by implementing the `LlmTool` interface:
 
 ```javascript
-import { LlmTool } from "jaypie";
+import { Llm, LlmTool } from "jaypie";
 
 const translateTool: LlmTool = {
-  description: "Translates text to a specified language",
   name: "translate",
+  description: "Translates text to a specified language",
+  type: "function",
   parameters: {
     type: "object",
     properties: {
@@ -1182,7 +1308,6 @@ const translateTool: LlmTool = {
     },
     required: ["text", "targetLanguage"]
   },
-  type: "function",
   call: async ({ text, targetLanguage }) => {
     // Implementation of translation logic
     // Could call an external API or use a library
@@ -1197,77 +1322,97 @@ const result = await llm.operate("Translate 'Hello world' to Spanish", {
 });
 ```
 
-##### Using Multiple Tools
+#### Using the Toolkit Class
 
-Multiple tools can be used together in the `operate` method:  
+For more advanced tool management, you can use the `Toolkit` class directly:
 
 ```javascript
-import { Llm, toolkit } from "jaypie";
+import { Llm, Toolkit } from "jaypie";
+import { toolkit } from "jaypie";
 
+// Create a toolkit with explanation mode enabled
+const myToolkit = new Toolkit([toolkit.time, toolkit.weather], { 
+  explain: true // Adds __Explanation field to tool parameters
+});
+
+// Use the toolkit in operate
 const llm = new Llm();
-const result = await llm.operate("What's the weather and give me a random number", {
-  tools: [
-    toolkit.weather,
-    toolkit.random,
-    translateTool, // Your custom tool
-    // Add more tools as needed
-  ]
+const result = await llm.operate("What time is it and what's the weather?", {
+  tools: myToolkit.tools,
+  explain: true
 });
 ```
 
-##### Advanced Options
+#### Advanced Operate Options
 
 ```javascript
 import { Llm } from "jaypie";
 
 const llm = new Llm();
-const result = await llm.operate("What's the weather in New York?", {
-  data: { city: "New York" }, // Template variables
-  explain: true, // Include explanation of tool usage
-  format: { // Structured output format
+const result = await llm.operate("What's the weather in {{city}}?", {
+  // Template variables
+  data: { city: "New York" },
+  
+  // Enable tool explanation mode
+  explain: true,
+  
+  // Structured output format (natural schema or Zod)
+  format: { 
     temperature: Number,
     conditions: String
   },
-  instructions: "You are a weather assistant", // System instructions
-  model: "gpt-4o", // Override default model
-  placeholders: { // Control placeholder replacement
-    input: true,     // Default: true - Replace placeholders in input
-    instructions: true // Default: true - Replace placeholders in instructions
+  
+  // Previous conversation history
+  history: [
+    { role: "user", content: "Hi there", type: "message" },
+    { role: "assistant", content: [{ text: "Hello! How can I help?", type: "output_text" }], type: "message" }
+  ],
+  
+  // System instructions
+  instructions: "You are a weather assistant for {{city}}",
+  
+  // Override default model
+  model: "gpt-4o",
+  
+  // Control placeholder replacement
+  placeholders: {
+    input: true,      // Default: true - Replace in input
+    instructions: true // Default: true - Replace in instructions
   },
-  providerOptions: {}, // Provider-specific options
-  tools: [weatherTool], // Array of tool definitions
-  turns: 3, // Maximum number of conversation turns (true = default limit)
-  user: "user-123" // User identifier for the request
+  
+  // Provider-specific options
+  providerOptions: {},
+  
+  // System message (alternative to instructions)
+  system: "You are a helpful assistant",
+  
+  // Array of tool definitions
+  tools: [toolkit.weather],
+  
+  // Maximum conversation turns
+  // true = default limit (12)
+  // number = specific limit (max 72)
+  turns: 3,
+  
+  // User identifier for the request
+  user: "user-123"
 });
-```
 
-#### Send Message
-
-_`send` is a limited single-turn call API. `operate` offers more options including function calling._
-
-The `send` method accepts options to customize the request:  
-
-```javascript
-const response = await llm.send("Hello, {{name}}!", {
-  data: { name: "World" }, // Template variables
-  model: "gpt-4", // Override default model
-  placeholders: { // Control placeholder replacement
-    message: true, // Default: true - Replace placeholders in message
-    system: true   // Default: true - Replace placeholders in system prompt
-  },
-  response: { // Structured output schema
-    greeting: String,
-    timestamp: Number
-  },
-  system: "You are a helpful assistant" // System prompt
-});
+// Access the results
+console.log(result.content);  // Final text response
+console.log(result.history);  // Full conversation history
+console.log(result.output);   // Raw output items
+console.log(result.responses); // Raw provider responses
+console.log(result.status);   // "completed" or "incomplete"
+console.log(result.usage);    // Token usage statistics
 ```
 
 #### Available Models
 
 ##### OpenAI
+- `LLM.PROVIDER.OPENAI.MODEL.DEFAULT` - GPT-4o (default)
 - `LLM.PROVIDER.OPENAI.MODEL.GPT_4` - GPT-4
-- `LLM.PROVIDER.OPENAI.MODEL.GPT_4_O` - GPT-4 Optimized (default)
+- `LLM.PROVIDER.OPENAI.MODEL.GPT_4_O` - GPT-4o
 - `LLM.PROVIDER.OPENAI.MODEL.GPT_4_O_MINI` - GPT-4o Mini
 - `LLM.PROVIDER.OPENAI.MODEL.GPT_4_5` - GPT-4.5 Preview
 - `LLM.PROVIDER.OPENAI.MODEL.O1` - O1
@@ -1277,16 +1422,39 @@ const response = await llm.send("Hello, {{name}}!", {
 - `LLM.PROVIDER.OPENAI.MODEL.O3_MINI_HIGH` - O3 Mini High
 
 ##### Anthropic
+- `LLM.PROVIDER.ANTHROPIC.MODEL.DEFAULT` - Claude 3.5 Sonnet
 - `LLM.PROVIDER.ANTHROPIC.MODEL.CLAUDE_3_HAIKU` - Claude 3.5 Haiku
 - `LLM.PROVIDER.ANTHROPIC.MODEL.CLAUDE_3_OPUS` - Claude 3 Opus
-- `LLM.PROVIDER.ANTHROPIC.MODEL.CLAUDE_3_SONNET` - Claude 3.5 Sonnet (default)
+- `LLM.PROVIDER.ANTHROPIC.MODEL.CLAUDE_3_SONNET` - Claude 3.5 Sonnet
 
 #### Configuration
 
-The LLM package uses environment variables or AWS Secrets Manager for API keys:  
+The LLM package uses environment variables or AWS Secrets Manager for API keys:
 
 - OpenAI: `OPENAI_API_KEY` or `SECRET_OPENAI_API_KEY`
 - Anthropic: Coming soon
+
+#### Static Methods
+
+For convenience, both main methods are available as static methods:
+
+```javascript
+import { Llm } from "jaypie";
+
+// Static send method
+const response = await Llm.send("Hello, world!", {
+  llm: LLM.PROVIDER.OPENAI.NAME,
+  model: LLM.PROVIDER.OPENAI.MODEL.GPT_4_O,
+  system: "You are a helpful assistant"
+});
+
+// Static operate method
+const result = await Llm.operate("What time is it?", {
+  llm: LLM.PROVIDER.OPENAI.NAME,
+  model: LLM.PROVIDER.OPENAI.MODEL.GPT_4_O,
+  tools: [toolkit.time]
+});
+```
 
 ### TestKit
 
