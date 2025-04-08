@@ -1,28 +1,28 @@
 # Jaypie 🐦‍⬛
 
-Event-driven fullstack architecture centered around JavaScript, AWS, and the JSON:API specification
+Event-driven fullstack architecture centered around JavaScript, AWS, and the JSON:API specification.
 
-"JavaScript on both sides and underneath"
+"JavaScript on both sides and underneath."
 
 ## 🐦‍⬛ Introduction
 
-Jaypie is an opinionated approach to application development.
-It centers around JavaScript and the JSON:API specification in an event-driven architecture.
+Jaypie is an opinionated approach to application development.  
+It centers around JavaScript and the JSON:API specification in an event-driven architecture.  
 
-Jaypie is suited for applications requiring custom infrastructure beyond HTTP requests, such as message queues.
-For applications without custom infrastructure needs, fullstack hosts like Vercel or Netlify are recommended.
+Jaypie is suited for applications requiring custom infrastructure beyond HTTP requests, such as message queues.  
+For applications without custom infrastructure needs, fullstack hosts like Vercel or Netlify are recommended.  
 
 ### "Jaypie Stack"
 
-* AWS infrastructure managed by CDK in Node.js
-* Express server running on AWS Lambda
-* Node.js worker processes running on AWS Lambda
-* MongoDB via Mongoose
-* Vue ecosystem frontend: Vue 3 composition, Vuetify, Pinia
-* Vitest for testing
-* ES6 syntax enforced via ESLint
-* Prettier formatting
-* JSON logging with custom metadata
+* AWS infrastructure managed by CDK in Node.js.
+* Express server running on AWS Lambda.
+* Node.js worker processes running on AWS Lambda.
+* MongoDB via Mongoose.
+* Vue ecosystem frontend: Vue 3 composition, Vuetify, Pinia.
+* Vitest for testing.
+* ES6 syntax enforced via ESLint.
+* Prettier formatting.
+* JSON logging with custom metadata.
 
 ### Philosophy
 
@@ -30,18 +30,18 @@ Jaypie is for building fullstack JavaScript applications.
 
 #### JavaScript Only 💛
 
-Jaypie utilizes the AWS Cloud Development Kit (CDK) to manage infrastructure, which is written in Node.js.
-This approach makes infrastructure management accessible to fullstack developers without requiring them to learn a new syntax or live without language constructs like loops and inheritance.
+Jaypie utilizes the AWS Cloud Development Kit (CDK) to manage infrastructure, which is written in Node.js.  
+This approach makes infrastructure management accessible to fullstack developers without requiring them to learn a new syntax or live without language constructs like loops and inheritance.  
 
-It does not use Kubernetes, Docker, Terraform, or the "Serverless" framework.
+It does not use Kubernetes, Docker, Terraform, or the "Serverless" framework.  
 
 #### Eject Anything ⏏️
 
-Jaypie embraces "ejectability," a philosophy where any part of the code can be removed and replaced without disturbing the whole.
+Jaypie embraces "ejectability," a philosophy where any part of the code can be removed and replaced without disturbing the whole.  
 
 #### Mock Everywhere 🎴
 
-Jaypie strives to be "mockable-first," meaning all components should be easily tested via default or provided mocks.
+Jaypie strives to be "mockable-first," meaning all components should be easily tested via default or provided mocks.  
 
 ## 📋 Usage
 
@@ -53,13 +53,13 @@ Jaypie strives to be "mockable-first," meaning all components should be easily t
 npm install jaypie
 ```
 
-`@jaypie/core` is included in `jaypie`.
-Almost every Jaypie package requires core.
+`@jaypie/core` is included in `jaypie`.  
+Almost every Jaypie package requires core.  
 
 #### Included Packages
 
-These packages are included in `jaypie`.
-They may be installed separately in the future.
+These packages are included in `jaypie`.  
+They may be installed separately in the future.  
 
 | Package | Exports | Description |
 | ------- | ------- | ----------- |
@@ -101,7 +101,8 @@ export const handler = lambdaHandler(async({event}) => {
 }, { name: "example"});
 ```
 
-This example would then be deployed to AWS via CDK or similar orchestration. See [@jaypie/cdk](https://github.com/finlaysonstudio/jaypie-cdk).
+This example would then be deployed to AWS via CDK or similar orchestration.  
+See [@jaypie/cdk](https://github.com/finlaysonstudio/jaypie-cdk).  
 
 ## 📖 Reference
 
@@ -122,10 +123,10 @@ import {
 
 #### `getEnvSecret(name, { env = process.env } = {})`
 
-Checks for `${name}_SECRET` and `SECRET_${name}` in environment variables.
-If found, retrieves the secret from AWS Secrets Manager.
-Otherwise, returns the value of `name`.
-This is convenient for using the environment locally and a secret when deployed.
+Checks for `${name}_SECRET` and `SECRET_${name}` in environment variables.  
+If found, retrieves the secret from AWS Secrets Manager.  
+Otherwise, returns the value of `name`.  
+This is convenient for using the environment locally and a secret when deployed.  
 
 ```javascript
 import { getEnvSecret } from "jaypie";
@@ -136,7 +137,7 @@ const secret = await getEnvSecret("MONGODB_URI");
 
 #### `getMessages(event)`
 
-Returns an array of message bodies from an SQS event.
+Returns an array of message bodies from an SQS event.  
 
 ```javascript
 import { getMessages } from '@jaypie/aws';
@@ -147,7 +148,7 @@ const messages = getMessages(event);
 
 #### `getSecret(secretName: string)`
 
-Retrieves a secret from AWS Secrets Manager using the secret name.
+Retrieves a secret from AWS Secrets Manager using the secret name.  
 
 ```javascript
 import { getSecret } from '@jaypie/aws';
@@ -158,8 +159,8 @@ const secret = await getSecret("MongoConnectionStringN0NC3-nSg1bR1sh");
 
 #### `getSingletonMessage(event)`
 
-Returns the single message from an SQS event.
-Throws a `BadGatewayError` if more than one message is found.
+Returns the single message from an SQS event.  
+Throws a `BadGatewayError` if more than one message is found.  
 
 ```javascript
 import { getSingletonMessage } from '@jaypie/aws';
@@ -170,7 +171,7 @@ const message = await getSingletonMessage(event);
 
 #### `getTextractJob(jobId)`
 
-Retrieves a Textract job from AWS Textract.
+Retrieves a Textract job from AWS Textract.  
 
 ```javascript
 import { getTextractJob } from '@jaypie/aws';
@@ -181,8 +182,8 @@ const raw = JSON.stringify(textractResults);
 
 #### `sendBatchMessages({ messages, queueUrl })`
 
-Batches and sends messages to an SQS queue.
-If more than ten messages are provided, the function will batch them into groups of ten or less, as per AWS guidelines.
+Batches and sends messages to an SQS queue.  
+If more than ten messages are provided, the function will batch them into groups of ten or less, as per AWS guidelines.  
 
 ```javascript
 import { sendBatchMessages } from '@jaypie/aws';
@@ -206,7 +207,7 @@ await sendBatchMessages({ messages, queueUrl });
 
 #### `sendMessage({ body, queueUrl })`
 
-Sends a single message to an SQS queue.
+Sends a single message to an SQS queue.  
 
 ```javascript
 import { sendMessage } from '@jaypie/aws';
@@ -227,7 +228,7 @@ const response = await sendMessage({ body, queueUrl });
 
 #### `sendTextractJob({ key, bucket, featureTypes, snsRoleArn, snsTopicArn })`
 
-Sends a Textract job to AWS Textract.
+Sends a Textract job to AWS Textract.  
 
 ```javascript
 import { sendTextractJob } from '@jaypie/aws';
@@ -251,7 +252,7 @@ const jobId = await sendTextractJob({
 
 ### CDK Constructs
 
-Jaypie CDK patterns with common conventions
+Jaypie CDK patterns with common conventions.  
 
 ```bash
 npm install --save-dev @jaypie/constructs
@@ -270,9 +271,9 @@ import {
 
 #### `JaypieEnvSecret`
 
-Manages build-environment secrets, allowing consumer environments (personal environments) to import from provider environments (sandbox).
+Manages build-environment secrets, allowing consumer environments (personal environments) to import from provider environments (sandbox).  
 
-Most Jaypie projects will not need to specify `consumer` or `provider` properties, as the construct will automatically handle the correct behavior based on the environment.
+Most Jaypie projects will not need to specify `consumer` or `provider` properties, as the construct will automatically handle the correct behavior based on the environment.  
 
 ```typescript
 const mongoConnectionString = new JaypieEnvSecret(
@@ -308,7 +309,7 @@ const traceSigningKey = new JaypieTraceSigningKeySecret(this);
 
 #### `JaypieHostedZone`
 
-Route53 hosted zone with query logging and optional log forwarding.
+Route53 hosted zone with query logging and optional log forwarding.  
 
 ```typescript
 const zone = new JaypieHostedZone(this, 'Zone', {
@@ -328,8 +329,8 @@ const zone = new JaypieHostedZone(this, 'Zone', {
 
 #### `JaypieQueuedLambda`
 
-Creates a Lambda function with an attached SQS queue for message processing.
-Includes built-in support for environment variables, secrets, and AWS Parameter Store.
+Creates a Lambda function with an attached SQS queue for message processing.  
+Includes built-in support for environment variables, secrets, and AWS Parameter Store.  
 
 ```typescript
 const worker = new JaypieQueuedLambda(this, 'Worker', {
@@ -395,7 +396,7 @@ See [constants.js in @jaypie/core](https://github.com/finlaysonstudio/jaypie-cor
 
 #### `ERROR`
 
-Default messages and titles for Jaypie errors.
+Default messages and titles for Jaypie errors.  
 
 * `ERROR.MESSAGE`
 * `ERROR.TITLE`
@@ -588,7 +589,11 @@ ALWAYS internal to the app, NEVER something the client did
 
 ### Express
 
-The Express handler wraps the Jaypie handler for Express running on AWS Lambda. It will call lifecycle methods and provide logging. Unhandled errors will be thrown as `UnhandledError`. It adds the `locals` lifecycle call. It extends `jaypieHandler`, not the lambda handler.
+The Express handler wraps the Jaypie handler for Express running on AWS Lambda.  
+It will call lifecycle methods and provide logging.  
+Unhandled errors will be thrown as `UnhandledError`.  
+It adds the `locals` lifecycle call.  
+It extends `jaypieHandler`, not the lambda handler.  
 
 ```javascript
 const { expressHandler } = require("jaypie");
@@ -600,7 +605,8 @@ const handler = expressHandler(async(req, res) => {
 }, { name: "lambdaReference"});
 ```
 
-The order of options and handler may be swapped to improve readability. Having lifecycle methods listed before the handler may read more intuitively.
+The order of options and handler may be swapped to improve readability.  
+Having lifecycle methods listed before the handler may read more intuitively.  
 
 ```javascript
 const handler = expressHandler({ 
@@ -616,7 +622,10 @@ const handler = expressHandler({
 
 #### Return Types
 
-Do not use `res.send` or `res.json` in the handler. The return value of the handler is the response body. The status code is determined by the error thrown or the return value. Custom status codes can be set by calling `res.status` in the handler.
+Do not use `res.send` or `res.json` in the handler.  
+The return value of the handler is the response body.  
+The status code is determined by the error thrown or the return value.  
+Custom status codes can be set by calling `res.status` in the handler.  
 
 | Return Type | Status Code | Content-Type |
 | ----------- | ----------- | ------------ |
@@ -625,11 +634,11 @@ Do not use `res.send` or `res.json` in the handler. The return value of the hand
 | `true` | 201 Created | None |
 | Falsy values | 204 No Content | None |
 
-Errors can be returned by throwing the appropriate Jaypie error.
+Errors can be returned by throwing the appropriate Jaypie error.  
 
 #### Lifecycle Methods
 
-In addition to the Jaypie lifecycle methods, `expressHandler` adds `locals`, an object of scalars or functions that will be called at the end of `setup` and available to the handler as `req.locals`.
+In addition to the Jaypie lifecycle methods, `expressHandler` adds `locals`, an object of scalars or functions that will be called at the end of `setup` and available to the handler as `req.locals`.  
 
 ```javascript
 const handler = expressHandler(async(req) => {
@@ -649,7 +658,8 @@ const handler = expressHandler(async(req) => {
 
 #### Convenience Routes
 
-_A "handler" returns a function that can be used as an Express route. A "route" does not require instantiation._
+_A "handler" returns a function that can be used as an Express route.  
+A "route" does not require instantiation._  
 
 ```javascript
 import { 
@@ -670,13 +680,15 @@ app.post(EXPRESS.PATH.ANY, forbiddenRoute); // 403 Forbidden
 app.any("/future", notImplementedRoute); // 400 Bad Request
 ```
 
-`notImplementedRoute` returns "400 Bad Request" as a placeholder for future functionality. In this regard, calling it is a "user error." The "501 Not Implemented" status code is reserved for the server not supporting parts of the HTTP protocol such as `POST` or `PUT`.
+`notImplementedRoute` returns "400 Bad Request" as a placeholder for future functionality.  
+In this regard, calling it is a "user error."  
+The "501 Not Implemented" status code is reserved for the server not supporting parts of the HTTP protocol such as `POST` or `PUT`.  
 
 ### Functions
 
 #### `cloneDeep`
 
-`lodash.clonedeep` from [NPM](https://www.npmjs.com/package/lodash.clonedeep)
+`lodash.clonedeep` from [NPM](https://www.npmjs.com/package/lodash.clonedeep).  
 
 ```javascript
 import { cloneDeep } from "jaypie";
@@ -687,10 +699,10 @@ const clone = cloneDeep(original);
 
 #### `envBoolean`
 
-Look up a key in `process.env` and coerce it into a boolean.
-Returns `true` for `true` (case-insensitive) and `1` for string, boolean, and numeric types.
-Returns `false` for `false` (case-insensitive) and `0` for string, boolean, and numeric types.
-Returns `undefined` otherwise.
+Look up a key in `process.env` and coerce it into a boolean.  
+Returns `true` for `true` (case-insensitive) and `1` for string, boolean, and numeric types.  
+Returns `false` for `false` (case-insensitive) and `0` for string, boolean, and numeric types.  
+Returns `undefined` otherwise.  
 
 ``` javascript
 const { envBoolean } = require("jaypie");
@@ -714,9 +726,9 @@ if (envBoolean("AWESOME", { defaultValue: true })) {
 
 #### `envsKey`
 
-`envsKey(key:string, { env:string = process.env.PROJECT_ENV || process.env.DEFAULT_ENV })`
+`envsKey(key:string, { env:string = process.env.PROJECT_ENV || process.env.DEFAULT_ENV })`.  
 
-return `process.env.${KEY} || ENV_${ENV}_${KEY} || false`
+Return `process.env.${KEY} || ENV_${ENV}_${KEY} || false`.  
 
 ```bash
 DEFAULT_ENV=sandbox
@@ -742,8 +754,8 @@ const url = envsKey("MONGODB_URI");
 
 #### `force`
 
-Coerce a value into a type or throw an error.
-Forcing arrays is the primary use case.
+Coerce a value into a type or throw an error.  
+Forcing arrays is the primary use case.  
 
 ```javascript
 import { force } from "jaypie";
@@ -774,15 +786,17 @@ argument = force.string(argument);
 
 `getHeaderFrom(headerKey:string, searchObject:object)`
 
-Case-insensitive search inside `searchObject` for `headerKey`.  Also looks in `header` and `headers` child object of `searchObject`, if `headerKey` not found at top-level.
+Case-insensitive search inside `searchObject` for `headerKey`.  
+Also looks in `header` and `headers` child object of `searchObject`, if `headerKey` not found at top-level.  
 
 #### `getObjectKeyCaseInsensitive(object:object, key:string)`
 
-Case-insensitive search for `key` in `object`.  Returns the value of the key or `undefined`.
+Case-insensitive search for `key` in `object`.  
+Returns the value of the key or `undefined`.  
 
 #### `placeholders`
 
-Lightweight string interpolation
+Lightweight string interpolation.  
 
 ```javascript
 import { placeholders } from "jaypie";
@@ -795,11 +809,13 @@ The code for placeholders was written by Chris Ferdinandi and distributed under 
 
 #### `safeParseFloat`
 
-`parseFloat` that returns `0` for `NaN`
+`parseFloat` that returns `0` for `NaN`.  
 
 #### `sleep`
 
-`sleep` is a promise-based `setTimeout` that resolves after a specified number of milliseconds. It will NOT run when `NODE_ENV` is `test`. See `sleepAlways` for a version that will run in tests.
+`sleep` is a promise-based `setTimeout` that resolves after a specified number of milliseconds.  
+It will NOT run when `NODE_ENV` is `test`.  
+See `sleepAlways` for a version that will run in tests.  
 
 ```javascript
 import { sleep } from "jaypie";
@@ -807,11 +823,14 @@ import { sleep } from "jaypie";
 await sleep(2000);
 ```
 
-_This is "bad code" because it checks `NODE_ENV` during runtime. The "right way" is to let sleep run and mock it in tests, in practice this is needless boilerplate. A fair compromise would be to mock `sleep` with `@jaypie/testkit` but not all projects include that dependency. Jaypie will trade academically incorrect for human convenience and simplicity._
+_This is "bad code" because it checks `NODE_ENV` during runtime.  
+The "right way" is to let sleep run and mock it in tests, in practice this is needless boilerplate.  
+A fair compromise would be to mock `sleep` with `@jaypie/testkit` but not all projects include that dependency.  
+Jaypie will trade academically incorrect for human convenience and simplicity._  
 
 #### `uuid`
 
-The `v4` function from the `uuid` package
+The `v4` function from the `uuid` package.  
 
 ```javascript
 import { uuid } from "jaypie";
@@ -865,7 +884,9 @@ validate(argument, {
 
 ### Jaypie Handler
 
-The Jaypie handler can be used directly but is more likely to be wrapped in a more specific handler. The Jaypie handler will call lifecycle methods and provide logging. Unhandled errors will be thrown as `UnhandledError`.
+The Jaypie handler can be used directly but is more likely to be wrapped in a more specific handler.  
+The Jaypie handler will call lifecycle methods and provide logging.  
+Unhandled errors will be thrown as `UnhandledError`.  
 
 ```javascript
 import { jaypieHandler } from "jaypie";
@@ -879,27 +900,33 @@ const handler = jaypieHandler(async(...args) => {
 
 #### Jaypie Lifecycle Methods
 
-Each function receives the same arguments as the handler.
+Each function receives the same arguments as the handler.  
 
 ##### `validate: [async Function]`
 
-Returns `true` to validate the request. Throw an error or return `false` to reject the request.
+Returns `true` to validate the request.  
+Throw an error or return `false` to reject the request.  
 
 ##### `setup: [async Function]`
 
-Called before the handler (e.g., connect to a database). Throw an error to halt execution.
+Called before the handler (e.g., connect to a database).  
+Throw an error to halt execution.  
 
 ##### `handler: async Function`
 
-The main function to handle the request. Throw an error to halt execution.
+The main function to handle the request.  
+Throw an error to halt execution.  
 
 ##### `teardown: [async Function]`
 
-Called after the handler (e.g., disconnect from a database). Runs even if setup or handler throws errors.
+Called after the handler (e.g., disconnect from a database).  
+Runs even if setup or handler throws errors.  
 
 ### Lambda Handler
 
-The Lambda handler wraps the Jaypie handler for AWS Lambda. It will call lifecycle methods and provide logging. Unhandled errors will be thrown as `UnhandledError`.
+The Lambda handler wraps the Jaypie handler for AWS Lambda.  
+It will call lifecycle methods and provide logging.  
+Unhandled errors will be thrown as `UnhandledError`.  
 
 ```javascript
 const { lambdaHandler } = require("jaypie");
@@ -934,7 +961,9 @@ log.fatal();
 
 ##### log.lib({ lib: "myLib" })
 
-Uses `silent` by default.  if `process.env.MODULE_LOG_LEVEL` is `true`, follows `process.env.LOG_LEVEL`.  If `process.env.MODULE_LOG_LEVEL` is also set, uses that log level.
+Uses `silent` by default.  
+If `process.env.MODULE_LOG_LEVEL` is `true`, follows `process.env.LOG_LEVEL`.  
+If `process.env.MODULE_LOG_LEVEL` is also set, uses that log level.  
 
 ```javascript
 import { log } from "jaypie";
@@ -945,7 +974,7 @@ log.lib({ lib: "myLib" }).trace();
 
 ##### log.tag(key, value) or log.tag({ key: value })
 
-Permanently add the key-value pair to the logger's tags, or at least until `log.untag(key)` is called.
+Permanently add the key-value pair to the logger's tags, or at least until `log.untag(key)` is called.  
 
 ```javascript
 import { log } from "jaypie";
@@ -956,7 +985,7 @@ log.tag({ myTag: "myValue" });
 
 ##### log.untag(key) or log.untag([key1, key2, ...])
 
-Remove the key-value pair from the logger's tags.
+Remove the key-value pair from the logger's tags.  
 
 ```javascript
 import { log } from "jaypie";
@@ -967,7 +996,9 @@ log.untag(["myTag1", "myTag2"]);
 
 ##### log.var(key, value) or log.var({ key: value })
 
-Log a key-value pair. In the `json` format, the key will be tagged as `var` and the value will be the value. Logging marker variables this way can be useful for debugging.
+Log a key-value pair.  
+In the `json` format, the key will be tagged as `var` and the value will be the value.  
+Logging marker variables this way can be useful for debugging.  
 
 ```javascript
 import { log } from "jaypie";
@@ -981,7 +1012,7 @@ log.var({ message });
 
 ##### log.with() - clone
 
-Create a new log object with additional tags
+Create a new log object with additional tags.  
 
 ```javascript
 import { log as defaultLogger } from "jaypie";
@@ -1002,8 +1033,8 @@ import {
 
 #### `connect`
 
-Jaypie lifecycle method to connect to MongoDB.
-Uses `process.env.SECRET_MONGODB_URI` AWS Secret or `process.env.MONGODB_URI` string to connect.
+Jaypie lifecycle method to connect to MongoDB.  
+Uses `process.env.SECRET_MONGODB_URI` AWS Secret or `process.env.MONGODB_URI` string to connect.  
 
 ```javascript
 import { connect, disconnect, lambdaHandler, mongoose } from "jaypie";
@@ -1020,8 +1051,8 @@ const handler = lambdaHandler(async({event}) => {
 
 #### `connectFromSecretEnv`
 
-Jaypie lifecycle method to connect to MongoDB using `process.env.MONGO_CONNECTION_STRING`.
-Using the newer `connect` is generally preferred.
+Jaypie lifecycle method to connect to MongoDB using `process.env.MONGO_CONNECTION_STRING`.  
+Using the newer `connect` is generally preferred.  
 
 ```javascript
 import { connectFromSecretEnv, disconnect, lambdaHandler, mongoose } from "jaypie";
@@ -1038,7 +1069,7 @@ const handler = lambdaHandler(async({event}) => {
 
 #### `disconnect`
 
-Jaypie lifecycle method to disconnect from MongoDB.
+Jaypie lifecycle method to disconnect from MongoDB.  
 
 ```javascript
 import { disconnect, lambdaHandler } from "jaypie";
@@ -1052,7 +1083,7 @@ const handler = lambdaHandler(async({event}) => {
 
 #### `mongoose`
 
-`mongoose` from [NPM](https://www.npmjs.com/package/mongoose)
+`mongoose` from [NPM](https://www.npmjs.com/package/mongoose).  
 
 ```javascript
 import { mongoose } from "jaypie";
@@ -1067,7 +1098,7 @@ import {
 } from "jaypie";
 ```
 
-The LLM package provides a unified interface for interacting with large language models (LLMs) like OpenAI's GPT and Anthropic's Claude.
+The LLM package provides a unified interface for interacting with large language models (LLMs) like OpenAI's GPT and Anthropic's Claude.  
 
 #### Basic Usage
 
@@ -1092,7 +1123,7 @@ const anthropic = new Llm(LLM.PROVIDER.ANTHROPIC.NAME);
 
 #### Operate
 
-The `operate` method is a more flexible API that allows for function calling and multi-turn conversations.
+The `operate` method is a more flexible API that allows for function calling and multi-turn conversations.  
 
 ```javascript
 import { Llm, toolkit } from "jaypie";
@@ -1104,7 +1135,7 @@ const result = await llm.operate("Roll 2d20 and tell me the weather", {
 });
 ```
 
-The LLM package includes several built-in tools that can be used with the `operate` method:
+The LLM package includes several built-in tools that can be used with the `operate` method:  
 
 - **time** - Returns the current time or converts a date string to ISO UTC format
   ```javascript
@@ -1129,7 +1160,7 @@ The LLM package includes several built-in tools that can be used with the `opera
 
 ##### Creating Custom Tools
 
-Custom tools can be defined by implementing the `LlmTool` interface:
+Custom tools can be defined by implementing the `LlmTool` interface:  
 
 ```javascript
 import { LlmTool } from "jaypie";
@@ -1168,7 +1199,7 @@ const result = await llm.operate("Translate 'Hello world' to Spanish", {
 
 ##### Using Multiple Tools
 
-Multiple tools can be used together in the `operate` method:
+Multiple tools can be used together in the `operate` method:  
 
 ```javascript
 import { Llm, toolkit } from "jaypie";
@@ -1214,7 +1245,7 @@ const result = await llm.operate("What's the weather in New York?", {
 
 _`send` is a limited single-turn call API. `operate` offers more options including function calling._
 
-The `send` method accepts options to customize the request:
+The `send` method accepts options to customize the request:  
 
 ```javascript
 const response = await llm.send("Hello, {{name}}!", {
@@ -1252,7 +1283,7 @@ const response = await llm.send("Hello, {{name}}!", {
 
 #### Configuration
 
-The LLM package uses environment variables or AWS Secrets Manager for API keys:
+The LLM package uses environment variables or AWS Secrets Manager for API keys:  
 
 - OpenAI: `OPENAI_API_KEY` or `SECRET_OPENAI_API_KEY`
 - Anthropic: Coming soon
@@ -1265,7 +1296,7 @@ npm install --save-dev @jaypie/testkit
 
 #### Mocking Jaypie
 
-The testkit provides a complete mock for Jaypie, including:
+The testkit provides a complete mock for Jaypie, including:  
 
 * Log spying (`expect(log.warn).toHaveBeenCalled()`)
 * Default responses for runtime-only functions (`connect`, `sendMessage`, `submitMetric`)
@@ -1313,7 +1344,7 @@ test("log", () => {
 });
 ```
 
-👺 Logging Conventions:
+👺 Logging Conventions:  
 
 * Only use `log.trace` or `log.var` during "happy path"
 * Use `log.debug` for edge cases
@@ -1338,7 +1369,7 @@ describe("Observability", () => {
 });
 ```
 
-> 👺 Follow the "arrange, act, assert" pattern
+> 👺 Follow the "arrange, act, assert" pattern.  
 
 #### Test Matchers
 
@@ -1391,12 +1422,12 @@ const libLogger = log.lib({ level: LOG.LEVEL.WARN, lib: "myLib" });
 
 ##### `jsonApiErrorSchema`
 
-A [JSON Schema](https://json-schema.org/) validator for the [JSON:API](https://jsonapi.org/) error schema.
-It powers the `toBeJaypieError` matcher (via `toMatchSchema`).
+A [JSON Schema](https://json-schema.org/) validator for the [JSON:API](https://jsonapi.org/) error schema.  
+It powers the `toBeJaypieError` matcher (via `toMatchSchema`).  
 
 ##### `jsonApiSchema`
 
-A [JSON Schema](https://json-schema.org/) validator for the [JSON:API](https://jsonapi.org/) data schema.
+A [JSON Schema](https://json-schema.org/) validator for the [JSON:API](https://jsonapi.org/) data schema.  
 
 ##### `matchers`
 
@@ -1488,7 +1519,8 @@ From `jest-json-schema`; see [README](https://github.com/americanexpress/jest-js
 
 ###### `expect(subject).toMatch*()` Regular Expression Matchers
 
-Note: these regular expressions matchers so not verify the value is value, only that it matches the pattern (it "looks like" something). For example, `expect("123e4567-e89b-12d3-a456-426614174000").toMatchUuid()` will pass because the string matches a UUID pattern, even though it is not a valid UUID. 
+Note: these regular expressions matchers do not verify the value is valid, only that it matches the pattern (it "looks like" something).  
+For example, `expect("123e4567-e89b-12d3-a456-426614174000").toMatchUuid()` will pass because the string matches a UUID pattern, even though it is not a valid UUID.  
 
 * `toMatchBase64`
 * `toMatchJwt`
@@ -1526,7 +1558,7 @@ await expect(async () => {
 
 ##### `mockLogFactory()`
 
-Creates a mock of the `log` provided by `@jaypie/core`.
+Creates a mock of the `log` provided by `@jaypie/core`.  
 
 ```javascript
 import { mockLogFactory } from "@jaypie/testkit";
@@ -1539,13 +1571,13 @@ expect(log.error).not.toHaveBeenCalled();
 
 ##### `restoreLog(log)`
 
-Restores the `log` provided by `@jaypie/core`, commonly performed `afterEach` with `spyLog` in `beforeEach`.
-See example with `spyLog`.
+Restores the `log` provided by `@jaypie/core`, commonly performed `afterEach` with `spyLog` in `beforeEach`.  
+See example with `spyLog`.  
 
 ##### `spyLog(log)`
 
-Spies on the `log` provided by `@jaypie/core`, commonly performed `beforeEach` with `restoreLog` in `afterEach`.
-This is not necessary when mocking the entire Jaypie module.
+Spies on the `log` provided by `@jaypie/core`, commonly performed `beforeEach` with `restoreLog` in `afterEach`.  
+This is not necessary when mocking the entire Jaypie module.  
 
 ```javascript
 import { restoreLog, spyLog } from "@jaypie/testkit";
@@ -1568,8 +1600,8 @@ test("log", () => {
 
 ##### `sqsTestRecords(message, message, ...)` or `sqsTestRecords([...])`
 
-Generates an event object for testing SQS Lambda functions with as many messages as provided.
-Note that the test will accept more than ten messages, but AWS will only send ten at a time.
+Generates an event object for testing SQS Lambda functions with as many messages as provided.  
+Note that the test will accept more than ten messages, but AWS will only send ten at a time.  
 
 ```javascript
 import { sqsTestRecords } from "@jaypie/testkit";
@@ -1582,7 +1614,7 @@ const event = sqsTestRecords(
 
 ### WebKit
 
-Browser-optimized, framework-agnostic frontend utilities for Jaypie.
+Browser-optimized, framework-agnostic frontend utilities for Jaypie.  
 
 ```bash
 npm install @jaypie/webkit
@@ -1598,22 +1630,22 @@ import {
 
 ##### `uuid`
 
-The `v4` function from the `uuid` package
+The `v4` function from the `uuid` package.  
 
 ## 🛣️ Roadmap
 
-* 1.2 - Converted to TypeScript?
-* 2.0 - Optional loading of Jaypie side packages?
+* 1.2 - Converted to TypeScript?  
+* 2.0 - Optional loading of Jaypie side packages?  
 
 ### Wishlist 🌠
 
-* Complete conversion to TypeScript
-* Incomplete: aws, core, datadog, express, jaypie, lambda, mongoose
-* Nicely organized VitePress documentation 😅
-* More packages: auth0, commander, hygen, llm
-* Mongoose project schema
-* Better mocking of Mongoose
-* @jaypie/constructs replaces @jaypie/cdk
+* Complete conversion to TypeScript.  
+* Incomplete: aws, core, datadog, express, jaypie, lambda, mongoose.  
+* Nicely organized VitePress documentation 😅.  
+* More packages: auth0, commander, hygen, llm.  
+* Mongoose project schema.  
+* Better mocking of Mongoose.  
+* @jaypie/constructs replaces @jaypie/cdk.  
 
 ## 📝 Changelog
 
@@ -1629,26 +1661,26 @@ The `v4` function from the `uuid` package
 
 ## 🖇️ Footnotes
 
-Keep `chalk` at `4`; `chalk` moves to ESM only in `5`
+Keep `chalk` at `4`; `chalk` moves to ESM only in `5`.  
 
-Packages receive patch releases as needed.
-The main Jaypie package must be patched to include the updated packages if applicable.
-For example,
+Packages receive patch releases as needed.  
+The main Jaypie package must be patched to include the updated packages if applicable.  
+For example,  
 * `npm -w packages/core version patch`
 * (push deploy)
 * `npm -w packages/jaypie install @jaypie/core@latest`
 * `npm -w packages/jaypie version patch`
 
-Process for minor releases:
+Process for minor releases:  
 
-* Update core, eslint (no internal dependencies)
-* Update aws, cdk, express, lambda (depend on core)
-* Update datadog, mongoose (depend on aws)
-* Update jaypie (depends on above)
-* Update testkit (depends on jaypie)
-* Update outer repo (private management monorepo)
+* Update core, eslint (no internal dependencies).  
+* Update aws, cdk, express, lambda (depend on core).  
+* Update datadog, mongoose (depend on aws).  
+* Update jaypie (depends on above).  
+* Update testkit (depends on jaypie).  
+* Update outer repo (private management monorepo).  
 
 ## 📜 License
 
-[MIT License](./LICENSE.txt).
-Published by Finlayson Studio
+[MIT License](./LICENSE.txt).  
+Published by Finlayson Studio.  
