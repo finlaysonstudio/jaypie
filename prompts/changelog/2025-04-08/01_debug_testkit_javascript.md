@@ -1,10 +1,20 @@
+Whenever I import @jaypie/testkit into new TypeScript projects and use the matchers I get warnings for my matchers like `toThrowBadRequestError` and `toBeCalledAboveTrace`. I also get warnings for `jest-extended` matchers like `toBeFunction` and `toBeObject`.
+
+Usually I fix this by adding a types file like this
+
+```typescript
 /// <reference types="vitest" />
 /// <reference types="jest-extended" />
 
-import { JsonApiError } from "./jaypie-testkit.js";
+export interface JsonApiError {
+  errors: Array<{
+    status: number;
+    title: string;
+    detail?: string;
+  }>;
+}
 
-// Make sure this is exported so it can be used by consumers
-export interface CustomMatchers<R = unknown> {
+interface CustomMatchers<R = unknown> {
   toBeCalledAboveTrace(): R;
   toBeCalledWithInitialParams(...params: unknown[]): R;
   toBeClass(): R;
@@ -37,18 +47,6 @@ export interface CustomMatchers<R = unknown> {
   toThrowJaypieError(): R;
 }
 
-declare global {
-  namespace Vi {
-    interface Assertion<T = unknown> extends CustomMatchers<T> {
-      not: Assertion<T>;
-    }
-    interface AsymmetricMatchersContaining extends CustomMatchers {
-      not: AsymmetricMatchersContaining;
-    }
-  }
-}
-
-// This is needed for module augmentation to work properly
 declare module "vitest" {
   interface Assertion<T = unknown> extends CustomMatchers<T> {
     not: Assertion<T>;
@@ -57,6 +55,17 @@ declare module "vitest" {
     not: AsymmetricMatchersContaining;
   }
 }
+```
 
-// Export an empty object to make TypeScript treat this as a module
-export {};
+I don't want to do that, I want the matchers to just work.
+
+This is how my vitest setup file usually looks:
+
+```typescript
+import { matchers as jaypieMatchers } from "@jaypie/testkit";
+import * as extendedMatchers from "jest-extended";
+import { expect } from "vitest";
+
+expect.extend(extendedMatchers);
+expect.extend(jaypieMatchers);
+```
