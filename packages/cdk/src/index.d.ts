@@ -51,6 +51,7 @@ declare module "@jaypie/cdk" {
     BUILD: {
       CONFIG: CDKBuildConfig;
       PERSONAL: string;
+      STATIC: string;
     };
     CREATION: {
       CDK: string;
@@ -145,10 +146,7 @@ declare module "@jaypie/cdk" {
   export function cfnOutput(params: CfnOutputParams): boolean;
   export function isValidHostname(hostname: string): boolean;
   export function isValidSubdomain(subdomain: string): boolean;
-  export function mergeDomain(params: {
-    subdomain: string;
-    domain: string;
-  }): string;
+  export function mergeDomain(subdomain: string, domain: string): string;
   export function projectTagger(params: {
     cdk?: typeof import("aws-cdk-lib");
     stack?: import("aws-cdk-lib").Stack;

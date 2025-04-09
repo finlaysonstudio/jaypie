@@ -10,7 +10,7 @@ export const EXPRESS: {
 };
 
 export interface CorsConfig {
-  origins?: string | string[];
+  origin?: string | string[];
   overrides?: Record<string, unknown>;
 }
 
