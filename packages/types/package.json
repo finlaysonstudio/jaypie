@@ -1,8 +1,9 @@
 {
   "name": "@jaypie/types",
   "version": "0.1.7",
-  "author": "Finlayson Studio",
   "description": "Core type definitions for the Jaypie framework",
+  "license": "MIT",
+  "author": "Finlayson Studio",
   "type": "module",
   "exports": {
     ".": "./dist/index.d.ts"
@@ -15,7 +16,6 @@
     "build": "rollup -c",
     "clean": "rm -rf dist"
   },
-  "license": "MIT",
   "dependencies": {
     "zod": "^3.22.4"
   },
