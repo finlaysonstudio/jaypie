@@ -1,16 +1,14 @@
-# LLM Tools with Jaypie
+# LLM Tools with Jaypie 🔧
 
-## Introduction
+Extend LLM capabilities with tools for external actions and data retrieval
 
-Jaypie provides a simple yet powerful interface for creating and using tools with Large Language Models (LLMs). These tools allow LLMs to perform specific actions or retrieve information beyond their training data, such as rolling dice, fetching data, or performing calculations.
+## Goal
 
-## Creating a Tool
+Create and integrate tools that enable LLMs to perform specific functions beyond their training data
 
-An LLM tool in Jaypie follows a standard interface that makes it compatible with various LLM providers.
+## Interface
 
-### Tool Interface
-
-Each tool must implement the `LlmTool` interface:
+Implement the `LlmTool` interface:
 
 ```typescript
 interface LlmTool {
@@ -22,15 +20,14 @@ interface LlmTool {
 }
 ```
 
-- `description`: A clear explanation of what the tool does
-- `name`: A unique identifier for the tool
-- `parameters`: JSON Schema object describing the expected input parameters
-- `type`: Usually "function" (following OpenAI's function calling convention)
-- `call`: The implementation function that executes when the tool is invoked
+Properties:
+- `description`: Clear explanation of tool functionality
+- `name`: Unique identifier
+- `parameters`: JSON Schema defining input parameters
+- `type`: Usually "function" (OpenAI convention)
+- `call`: Implementation function executed on invocation
 
-## Example Tool: Dice Roller
-
-Here's a complete example of a dice rolling tool:
+## Example: Dice Roller
 
 ```typescript
 import { LlmTool } from "../types/LlmTool.interface.js";
@@ -84,31 +81,19 @@ export const roll: LlmTool = {
 
 ## Best Practices
 
-### Parameter Validation
-
-Always validate and sanitize input parameters. The example above uses `tryParseNumber` to ensure inputs are valid numbers with sensible defaults.
+### Input Validation
+Validate and sanitize parameters with utilities like `tryParseNumber`.
 
 ### Clear Descriptions
+Write precise descriptions for tools and parameters to guide LLM usage.
 
-Write clear descriptions for both the tool and its parameters. The LLM will use these descriptions to determine when and how to use your tool.
-
-### Consistent Return Types
-
-Design your tool to return consistent data structures. This makes it easier for the LLM to interpret and use the results.
+### Consistent Returns
+Return consistent data structures for predictable LLM interpretation.
 
 ### Error Handling
+Implement robust error handling to prevent crashes and provide meaningful messages.
 
-Implement proper error handling in your tool's `call` function to prevent crashes and provide meaningful error messages.
-
-## Using Tools with LLMs
-
-To use tools with an LLM in Jaypie:
-
-1. Import your tools
-2. Add them to your LLM configuration
-3. The LLM will automatically invoke the appropriate tool when needed
-
-Example:
+## Integration
 
 ```typescript
 import { createLlm } from "@jaypie/llm";
@@ -123,13 +108,9 @@ const llm = createLlm({
 const response = await llm.chat([
   { role: "user", content: "Roll 3d20 and tell me the result" }
 ]);
-
-console.log(response);
 ```
 
-## Reference
+## References
 
-For more information on creating and using LLM tools with Jaypie, refer to:
-
-- [Jaypie LLM Package Documentation](https://github.com/jaypie/llm)
-- [OpenAI Function Calling Guide](https://platform.openai.com/docs/guides/function-calling)
+- [Jaypie LLM Package](https://github.com/finlaysonstudio/jaypie)
+- [OpenAI Function Calling](https://platform.openai.com/docs/guides/function-calling)
