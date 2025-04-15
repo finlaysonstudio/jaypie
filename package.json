@@ -9,6 +9,7 @@
     "packages/*"
   ],
   "scripts": {
+    "bin:changelog": "tsx context/bin/new-changelog.ts",
     "build": "lerna run build",
     "build:aws": "npm run build --workspace packages/aws",
     "build:constructs": "npm run build --workspace packages/constructs",
@@ -31,6 +32,7 @@
     "postinstall": "npm run build:errors && npm run build:llm && npm run build:testkit",
     "lint": "eslint .",
     "new": "hygen jaypie new",
+    "new:change": "npm run bin:changelog",
     "new:test": "hygen jaypie test",
     "repomix": "repomix",
     "repomix:aws": "repomix --include packages/aws --output ./prompts/context/aws.repomix.xml",
