@@ -186,7 +186,7 @@ interface LlmUsage {
 }
 
 export interface LlmOperateResponse {
-  content?: string;
+  content?: string | JsonObject;
   error?: LlmError;
   history: LlmHistory;
   output: LlmOutput;

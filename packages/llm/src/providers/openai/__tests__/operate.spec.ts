@@ -1877,6 +1877,88 @@ describe("operate", () => {
         );
         expect(result.responses).toEqual([mockResponse]);
       });
+
+      it("Parses JSON content when format is provided and response is valid JSON", async () => {
+        // Setup
+        const jsonContent = '{"answer": 42, "question": "meaning of life"}';
+        const expectedParsedContent = {
+          answer: 42,
+          question: "meaning of life",
+        };
+
+        mockCreate.mockResolvedValueOnce({
+          id: "resp_123",
+          output: [
+            {
+              type: LlmMessageType.Message,
+              content: [{ type: LlmMessageType.OutputText, text: jsonContent }],
+              role: LlmMessageRole.Assistant,
+            },
+          ],
+        });
+
+        // Execute
+        const result = await operate(
+          "What is the meaning of life?",
+          {
+            format: {
+              type: "json_schema",
+              schema: {
+                type: "object",
+                properties: {
+                  answer: { type: "number" },
+                  question: { type: "string" },
+                },
+              },
+            },
+          },
+          { client: mockClient },
+        );
+
+        // Verify
+        expect(result.content).toEqual(expectedParsedContent);
+        expect(typeof result.content).toBe("object");
+      });
+
+      it("Keeps original content when format is provided but response is not valid JSON", async () => {
+        // Setup
+        const textContent = "The answer is 42";
+
+        mockCreate.mockResolvedValueOnce({
+          id: "resp_123",
+          output: [
+            {
+              type: LlmMessageType.Message,
+              content: [{ type: LlmMessageType.OutputText, text: textContent }],
+              role: LlmMessageRole.Assistant,
+            },
+          ],
+        });
+
+        // Execute
+        const result = await operate(
+          "What is the meaning of life?",
+          {
+            format: {
+              type: "json_schema",
+              schema: {
+                type: "object",
+                properties: {
+                  answer: { type: "number" },
+                },
+              },
+            },
+          },
+          { client: mockClient },
+        );
+
+        // Verify
+        expect(result.content).toEqual(textContent);
+        expect(typeof result.content).toBe("string");
+        expect(log.debug).toHaveBeenCalledWith(
+          "Failed to parse formatted response as JSON",
+        );
+      });
     });
 
     describe("User", () => {

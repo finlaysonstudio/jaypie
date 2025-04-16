@@ -395,7 +395,20 @@ export async function operate(
                   output.content?.[0] &&
                   output.content[0].type === LlmMessageType.OutputText
                 ) {
-                  returnResponse.content = output.content[0].text;
+                  const rawContent = output.content[0].text;
+                  returnResponse.content = rawContent;
+
+                  // If format is provided, try to parse the content as JSON
+                  if (options?.format && typeof rawContent === "string") {
+                    try {
+                      const parsedContent = JSON.parse(rawContent);
+                      returnResponse.content = parsedContent;
+                    } catch (error) {
+                      // If parsing fails, keep the original string content
+                      log.debug("Failed to parse formatted response as JSON");
+                      log.var({ error });
+                    }
+                  }
                 }
               }
             }
