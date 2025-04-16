@@ -545,7 +545,44 @@ export const lambdaHandler = vi.fn(
 );
 
 // @jaypie/llm
-const mockOperate = vi.fn().mockResolvedValue([{ id: "_MOCK_LLM_OPERATION" }]);
+const mockOperate = vi.fn().mockResolvedValue({
+  history: [
+    {
+      content: "_MOCK_USER_INPUT",
+      role: "user",
+      type: "message",
+    },
+    {
+      id: "_MOCK_MESSAGE_ID",
+      type: "message",
+      status: "completed",
+      content: "_MOCK_CONTENT",
+      role: "assistant",
+    },
+  ],
+  output: [
+    {
+      id: "_MOCK_MESSAGE_ID",
+      type: "message",
+      status: "completed",
+      content: "_MOCK_CONTENT",
+      role: "assistant",
+    },
+  ],
+  responses: [
+    {
+      id: "_MOCK_RESPONSE_ID",
+      object: "response",
+      created_at: Date.now() / 1000,
+      status: "completed",
+      error: null,
+      output_text: "_MOCK_OUTPUT_TEXT",
+    },
+  ],
+  status: "completed",
+  usage: { input: 100, output: 20, reasoning: 0, total: 120 },
+  content: "_MOCK_OUTPUT_TEXT",
+});
 const mockSend = vi.fn().mockResolvedValue("_MOCK_LLM_RESPONSE");
 export const Llm = Object.assign(
   vi.fn().mockImplementation((providerName = "_MOCK_LLM_PROVIDER") => ({
