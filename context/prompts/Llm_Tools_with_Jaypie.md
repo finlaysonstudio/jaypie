@@ -96,17 +96,19 @@ Implement robust error handling to prevent crashes and provide meaningful messag
 ## Integration
 
 ```typescript
-import { createLlm } from "@jaypie/llm";
+import { Llm } from "jaypie";
 import { roll } from "./tools/roll.js";
 
-const llm = createLlm({
+const llm = new Llm({
   provider: "openai",
-  model: "gpt-4o",
-  tools: [roll],
+  model: "gpt-4o"
 });
 
-const response = await llm.chat([
-  { role: "user", content: "Roll 3d20 and tell me the result" }
+const response = await llm.operate([
+  { role: "user", content: "Roll 3d20 and tell me the result" },
+  {
+    tools: [roll],
+  },
 ]);
 ```
 
