@@ -13,6 +13,7 @@ export default {
     }),
   ],
   external: [
+    "@anthropic-ai/sdk",
     "@jaypie/aws",
     "@jaypie/core",
     "@jaypie/errors",
