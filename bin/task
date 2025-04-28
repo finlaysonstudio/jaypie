@@ -1,0 +1,9 @@
+#!/bin/bash
+cat context.md | claude "
+Read plan.md.
+Edit the plan and mark the first queued task as dequeued. 
+Complete that task. 
+Leave the task in the dequeued state.
+Do not move the task to verified.
+If the task was already completed, make sure to mark it as dequeued.
+"

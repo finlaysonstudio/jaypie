@@ -1,0 +1,6 @@
+#!/bin/bash
+cat plan.md | claude "
+Given the provided plan, think about how to verify the task. 
+Run those steps. 
+If the task is verified, move it to verified.
+"

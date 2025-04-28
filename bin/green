@@ -1,0 +1,8 @@
+#!/bin/bash
+
+npm audit
+npm install
+npm out
+npm run build
+npm run test
+npm run typecheck
