@@ -1,0 +1,5 @@
+#!/bin/bash
+npm run test 2>&1 | claude "
+Running \`npm run test\` produces the following output. 
+Fix the code and run \`npm run test\` again.
+"
