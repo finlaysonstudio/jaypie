@@ -19,7 +19,7 @@ This plan outlines the steps required to implement an Anthropic provider for the
 - Create necessary client dependencies _Verified_
   - Add `@anthropic-ai/sdk` to package.json
   - Test installation and validate SDK availability
-- Update constants for Anthropic models and API options
+- Update constants for Anthropic models and API options _Verified_
   - Verify existing constants are sufficient or extend as needed
   - Add required Anthropic-specific constants
 
