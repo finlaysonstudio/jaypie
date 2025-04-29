@@ -12,6 +12,15 @@ import {
 vi.mock("../operate.js");
 vi.mock("openai");
 
+vi.mock("@jaypie/aws", async () => {
+  const actual = await vi.importActual("@jaypie/aws");
+  const module = {
+    ...actual,
+    getEnvSecret: vi.fn(() => "MOCK_VALUE"),
+  };
+  return module;
+});
+
 describe("OpenAiProvider", () => {
   beforeEach(() => {
     vi.mocked(OpenAI).mockImplementation(
