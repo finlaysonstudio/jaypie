@@ -52,7 +52,7 @@ const matchers = {
   toThrowNotFoundError,
   toThrowUnauthorizedError,
   toThrowUnavailableError,
-  
+
   // Include all jest-extended matchers
   ...jestExtendedMatchers,
 };

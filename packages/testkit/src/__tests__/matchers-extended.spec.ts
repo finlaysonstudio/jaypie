@@ -13,7 +13,7 @@ describe("jest-extended matchers", () => {
     expect(() => {}).toBeFunction();
     expect("hello").toStartWith("h");
     expect("hello").toEndWith("o");
-    
+
     // Test it also works with .not
     expect("hello").not.toBeEmpty();
     expect([]).toBeEmpty();
@@ -22,10 +22,10 @@ describe("jest-extended matchers", () => {
   it("should work alongside Jaypie custom matchers", () => {
     class TestClass {}
     const instance = new TestClass();
-    
+
     // Custom Jaypie matcher
     expect(TestClass).toBeClass();
-    
+
     // jest-extended matcher
     expect(instance).toBeObject();
   });

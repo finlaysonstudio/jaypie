@@ -28,7 +28,7 @@ export interface CustomMatchers<R = unknown> {
   toThrowNotFoundError(): R;
   toThrowUnauthorizedError(): R;
   toThrowUnavailableError(): R;
-  
+
   // Include jest-extended matchers
   // These are already included via jest-extended reference
 }
