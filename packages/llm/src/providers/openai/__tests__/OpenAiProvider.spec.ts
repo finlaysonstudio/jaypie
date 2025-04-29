@@ -7,6 +7,8 @@ import {
   LlmMessageRole,
   LlmMessageType,
   LlmInputMessage,
+  LlmResponseStatus,
+  LlmHistoryItem,
 } from "../../../types/LlmProvider.interface.js";
 // Mock the operate module
 vi.mock("../operate.js");
@@ -377,45 +379,45 @@ describe("OpenAiProvider", () => {
       const mockOperateResponse1 = {
         content: "Hello, I'm an AI assistant",
         history: [
-          { role: "user", content: "Hello", type: "message" },
+          { role: LlmMessageRole.User, content: "Hello", type: LlmMessageType.Message },
           {
-            role: "assistant",
+            role: LlmMessageRole.Assistant,
             content: [
-              { text: "Hello, I'm an AI assistant", type: "output_text" },
+              { text: "Hello, I'm an AI assistant", type: LlmMessageType.OutputText },
             ],
-            type: "message",
-            status: "completed",
+            type: LlmMessageType.Message,
+            status: LlmResponseStatus.Completed,
           },
         ],
         output: [],
         responses: [],
-        status: "completed",
+        status: LlmResponseStatus.Completed,
         usage: { input: 1, output: 1, reasoning: 0, total: 2 },
       };
 
       const mockOperateResponse2 = {
         content: "Your name is John",
         history: [
-          { role: "user", content: "Hello", type: "message" },
+          { role: LlmMessageRole.User, content: "Hello", type: LlmMessageType.Message },
           {
-            role: "assistant",
+            role: LlmMessageRole.Assistant,
             content: [
-              { text: "Hello, I'm an AI assistant", type: "output_text" },
+              { text: "Hello, I'm an AI assistant", type: LlmMessageType.OutputText },
             ],
-            type: "message",
-            status: "completed",
+            type: LlmMessageType.Message,
+            status: LlmResponseStatus.Completed,
           },
-          { role: "user", content: "What's my name?", type: "message" },
+          { role: LlmMessageRole.User, content: "What's my name?", type: LlmMessageType.Message },
           {
-            role: "assistant",
-            content: [{ text: "Your name is John", type: "output_text" }],
-            type: "message",
-            status: "completed",
+            role: LlmMessageRole.Assistant,
+            content: [{ text: "Your name is John", type: LlmMessageType.OutputText }],
+            type: LlmMessageType.Message,
+            status: LlmResponseStatus.Completed,
           },
         ],
         output: [],
         responses: [],
-        status: "completed",
+        status: LlmResponseStatus.Completed,
         usage: { input: 1, output: 1, reasoning: 0, total: 2 },
       };
 
@@ -446,12 +448,16 @@ describe("OpenAiProvider", () => {
     it("merges provided history with instance history", async () => {
       // Mock the operate function
       const existingHistory = [
-        { role: "user", content: "Previous message", type: "message" },
+        { 
+          role: LlmMessageRole.User, 
+          content: "Previous message", 
+          type: LlmMessageType.Message 
+        },
         {
-          role: "assistant",
-          content: [{ text: "Previous response", type: "output_text" }],
-          type: "message",
-          status: "completed",
+          role: LlmMessageRole.Assistant,
+          content: [{ text: "Previous response", type: LlmMessageType.OutputText }],
+          type: LlmMessageType.Message,
+          status: LlmResponseStatus.Completed,
         },
       ];
 
@@ -467,10 +473,10 @@ describe("OpenAiProvider", () => {
           {
             role: LlmMessageRole.Assistant,
             content: [
-              { text: "Combined history response", type: "output_text" },
+              { text: "Combined history response", type: LlmMessageType.OutputText },
             ],
-            type: "message",
-            status: "completed",
+            type: LlmMessageType.Message,
+            status: LlmResponseStatus.Completed,
           },
         ],
         output: [],
@@ -484,7 +490,7 @@ describe("OpenAiProvider", () => {
       const provider = new OpenAiProvider();
 
       // Set the conversation history directly for testing
-      provider["conversationHistory"] = [...existingHistory];
+      provider["conversationHistory"] = [...existingHistory] as LlmHistoryItem[];
 
       // Provide additional history in the options
       const additionalHistory: LlmInputMessage[] = [
@@ -512,17 +518,17 @@ describe("OpenAiProvider", () => {
       const mockOperateResponse = {
         content: "Response content",
         history: [
-          { role: "user", content: "Test message", type: "message" },
+          { role: LlmMessageRole.User, content: "Test message", type: LlmMessageType.Message },
           {
-            role: "assistant",
-            content: [{ text: "Response content", type: "output_text" }],
-            type: "message",
-            status: "completed",
+            role: LlmMessageRole.Assistant,
+            content: [{ text: "Response content", type: LlmMessageType.OutputText }],
+            type: LlmMessageType.Message,
+            status: LlmResponseStatus.Completed,
           },
         ],
         output: [],
         responses: [],
-        status: "completed",
+        status: LlmResponseStatus.Completed,
         usage: { input: 1, output: 1, reasoning: 0, total: 2 },
       };
 
