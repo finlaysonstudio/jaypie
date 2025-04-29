@@ -72,7 +72,7 @@ They may be installed separately in the future.
 
 #### TestKit
 
-Matchers, mocks, and utilities to test Jaypie projects.
+Matchers (including all jest-extended matchers), mocks, and utilities to test Jaypie projects.
 
 ```bash
 npm install --save-dev @jaypie/testkit
@@ -1541,26 +1541,32 @@ describe("Observability", () => {
 
 #### Test Matchers
 
+The testkit includes custom Jaypie matchers and all matchers from jest-extended. You don't need to install jest-extended separately.
+
 testSetup.js
 
 ```javascript
-import { matchers as jaypieMatchers } from "@jaypie/testkit";
-import * as extendedMatchers from "jest-extended";
+import { matchers } from "@jaypie/testkit";
 import { expect } from "vitest";
 
-expect.extend(extendedMatchers);
-expect.extend(jaypieMatchers);
+// Extend with all matchers (includes jest-extended)
+expect.extend(matchers);
 ```
 
 test.spec.js
 
 ```javascript
+// Import types
+import "@jaypie/testkit";
 import { ConfigurationError } from "@jaypie/core";
 
+// Use both Jaypie matchers and jest-extended matchers
 const error = new ConfigurationError();
 const json = error.json();
-expect(error).toBeJaypieError();
-expect(json).toBeJaypieError();
+expect(error).toBeJaypieError(); // Jaypie matcher
+expect(json).toBeJaypieError(); // Jaypie matcher
+expect([1, 2, 3]).toBeArray(); // jest-extended matcher
+expect(true).toBeBoolean(); // jest-extended matcher
 ```
 
 #### TestKit Reference
@@ -1599,13 +1605,16 @@ A [JSON Schema](https://json-schema.org/) validator for the [JSON:API](https://j
 
 ##### `matchers`
 
+The matchers object includes both custom Jaypie matchers and all matchers from jest-extended:
+
 ```javascript
+// Custom Jaypie matchers
 export default {
+  // Jaypie custom matchers
   toBeCalledAboveTrace,
   toBeCalledWithInitialParams,
   toBeClass,
   toBeJaypieError,
-  toBeValidSchema: jsonSchemaMatchers.toBeValidSchema,
   toMatchBase64,
   toMatchJwt,
   toMatchMongoId,
@@ -1624,18 +1633,21 @@ export default {
   toThrowNotFoundError,
   toThrowUnauthorizedError,
   toThrowUnavailableError,
+  
+  // Includes all jest-extended matchers
+  // toBeArray, toBeBoolean, toBeFalse, toBeFunction, etc.
+  ...jestExtendedMatchers
 };
 ```
 
 testSetup.js
 
 ```javascript
-import { matchers as jaypieMatchers } from "@jaypie/testkit";
-import * as extendedMatchers from "jest-extended";
+import { matchers } from "@jaypie/testkit";
 import { expect } from "vitest";
 
-expect.extend(extendedMatchers);
-expect.extend(jaypieMatchers);
+// One line to extend with both Jaypie and jest-extended matchers
+expect.extend(matchers);
 ```
 
 ###### `expect(subject).toBeCalledAboveTrace()`
