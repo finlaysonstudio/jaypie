@@ -1,3 +1,4 @@
+import * as jestExtendedMatchers from "jest-extended";
 import { matchers as jestJsonSchemaMatchers } from "jest-json-schema";
 import toBeCalledAboveTrace from "./matchers/toBeCalledAboveTrace.matcher.js";
 import toBeCalledWithInitialParams from "./matchers/toBeCalledWithInitialParams.matcher.js";
@@ -25,7 +26,9 @@ import toThrowJaypieError, {
   toThrowUnavailableError,
 } from "./matchers/toThrowJaypieError.matcher.js";
 
+// Combine all matchers
 const matchers = {
+  // Custom Jaypie matchers
   toBeCalledAboveTrace,
   toBeCalledWithInitialParams,
   toBeClass,
@@ -49,6 +52,9 @@ const matchers = {
   toThrowNotFoundError,
   toThrowUnauthorizedError,
   toThrowUnavailableError,
+  
+  // Include all jest-extended matchers
+  ...jestExtendedMatchers,
 };
 
 export default matchers;
