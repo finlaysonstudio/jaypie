@@ -42,6 +42,7 @@ jobs:
           cache: 'npm'
       - run: npm install
       - run: npm run build
+      - run: npm run build:llm
       - name: Vitest with Optional Datadog Tracing
         run: |
           if [[ -n "${{ secrets.DATADOG_CICD_API_KEY }}" ]]; then
