@@ -1,4 +1,3 @@
-/* eslint-disable import-x/export */
 import { getMessages as originalGetMessages } from "@jaypie/aws";
 import {
   force,
@@ -30,6 +29,7 @@ import {
   UnhandledError as UnhandledErrorOriginal,
   UnreachableCodeError as UnreachableCodeErrorOriginal,
 } from "@jaypie/core";
+import { mongoose } from "@jaypie/mongoose";
 import type { TextractPageAdaptable } from "@jaypie/textract";
 import type { JsonReturn } from "@jaypie/types";
 import { beforeAll, vi } from "vitest";
@@ -67,16 +67,6 @@ const __dirname = dirname(__filename);
 
 const MOCK_TEXTRACT_DOCUMENT_PATH = join(__dirname, "mockTextract.json");
 
-// Export all the modules from Jaypie packages:
-export * from "@jaypie/aws";
-export * from "@jaypie/core";
-export * from "@jaypie/express";
-export * from "@jaypie/datadog";
-export * from "@jaypie/lambda";
-export * from "@jaypie/llm";
-export * from "@jaypie/mongoose";
-export * from "@jaypie/textract";
-
 let textractJsonToMarkdownOriginal = vi.fn<typeof textractJsonToMarkdown>();
 let MarkdownPageOriginal: typeof OriginalMarkdownPage;
 let mockTextractContents: string;
@@ -101,32 +91,31 @@ beforeAll(async () => {
 //
 
 // @jaypie/aws
-export const getEnvSecret = vi.fn((): string => {
+const getEnvSecret = vi.fn((): string => {
   return `_MOCK_ENV_SECRET_[${TAG}]`;
 });
 
-export const getMessages = vi.fn(
-  (...params: Parameters<typeof originalGetMessages>) =>
-    originalGetMessages(...params),
+const getMessages = vi.fn((...params: Parameters<typeof originalGetMessages>) =>
+  originalGetMessages(...params),
 );
 
-export const getSecret = vi.fn((): string => {
+const getSecret = vi.fn((): string => {
   return `_MOCK_SECRET_[${TAG}]`;
 });
 
-export const getTextractJob = vi.fn((job: string): SQSMessageResponse => {
+const getTextractJob = vi.fn((job: string): SQSMessageResponse => {
   return { value: `_MOCK_TEXTRACT_JOB_[${job}]` };
 });
 
-export const sendBatchMessages = vi.fn((): SQSMessageResponse => {
+const sendBatchMessages = vi.fn((): SQSMessageResponse => {
   return { value: `_MOCK_BATCH_MESSAGES_[${TAG}]` };
 });
 
-export const sendMessage = vi.fn((): SQSMessageResponse => {
+const sendMessage = vi.fn((): SQSMessageResponse => {
   return { value: `_MOCK_MESSAGE_[${TAG}]` };
 });
 
-export const sendTextractJob = vi.fn(({ key, bucket }): Array<unknown> => {
+const sendTextractJob = vi.fn(({ key, bucket }): Array<unknown> => {
   if (!key || !bucket) {
     throw new ConfigurationError("[sendTextractJob] Missing key or bucket");
   }
@@ -134,7 +123,7 @@ export const sendTextractJob = vi.fn(({ key, bucket }): Array<unknown> => {
 });
 
 // @jaypie/core Errors
-export const BadGatewayError = vi.fn(
+const BadGatewayError = vi.fn(
   (
     ...params: ConstructorParameters<typeof BadGatewayErrorOriginal>
   ): InstanceType<typeof BadGatewayErrorOriginal> => {
@@ -142,7 +131,7 @@ export const BadGatewayError = vi.fn(
   },
 );
 
-export const BadRequestError = vi.fn(
+const BadRequestError = vi.fn(
   (
     ...params: ConstructorParameters<typeof BadRequestErrorOriginal>
   ): InstanceType<typeof BadRequestErrorOriginal> => {
@@ -150,7 +139,7 @@ export const BadRequestError = vi.fn(
   },
 );
 
-export const ConfigurationError = vi.fn(
+const ConfigurationError = vi.fn(
   (
     ...params: ConstructorParameters<typeof ConfigurationErrorOriginal>
   ): InstanceType<typeof ConfigurationErrorOriginal> => {
@@ -159,7 +148,7 @@ export const ConfigurationError = vi.fn(
 );
 
 // Complete the error mocks
-export const ForbiddenError = vi.fn(
+const ForbiddenError = vi.fn(
   (
     ...params: ConstructorParameters<typeof ForbiddenErrorOriginal>
   ): InstanceType<typeof ForbiddenErrorOriginal> => {
@@ -167,7 +156,7 @@ export const ForbiddenError = vi.fn(
   },
 );
 
-export const GatewayTimeoutError = vi.fn(
+const GatewayTimeoutError = vi.fn(
   (
     ...params: ConstructorParameters<typeof GatewayTimeoutErrorOriginal>
   ): InstanceType<typeof GatewayTimeoutErrorOriginal> => {
@@ -175,7 +164,7 @@ export const GatewayTimeoutError = vi.fn(
   },
 );
 
-export const GoneError = vi.fn(
+const GoneError = vi.fn(
   (
     ...params: ConstructorParameters<typeof GoneErrorOriginal>
   ): InstanceType<typeof GoneErrorOriginal> => {
@@ -183,7 +172,7 @@ export const GoneError = vi.fn(
   },
 );
 
-export const IllogicalError = vi.fn(
+const IllogicalError = vi.fn(
   (
     ...params: ConstructorParameters<typeof IllogicalErrorOriginal>
   ): InstanceType<typeof IllogicalErrorOriginal> => {
@@ -191,7 +180,7 @@ export const IllogicalError = vi.fn(
   },
 );
 
-export const InternalError = vi.fn(
+const InternalError = vi.fn(
   (
     ...params: ConstructorParameters<typeof InternalErrorOriginal>
   ): InstanceType<typeof InternalErrorOriginal> => {
@@ -199,7 +188,7 @@ export const InternalError = vi.fn(
   },
 );
 
-export const MethodNotAllowedError = vi.fn(
+const MethodNotAllowedError = vi.fn(
   (
     ...params: ConstructorParameters<typeof MethodNotAllowedErrorOriginal>
   ): InstanceType<typeof MethodNotAllowedErrorOriginal> => {
@@ -207,7 +196,7 @@ export const MethodNotAllowedError = vi.fn(
   },
 );
 
-export const MultiError = vi.fn(
+const MultiError = vi.fn(
   (
     ...params: ConstructorParameters<typeof MultiErrorOriginal>
   ): InstanceType<typeof MultiErrorOriginal> => {
@@ -215,7 +204,7 @@ export const MultiError = vi.fn(
   },
 );
 
-export const NotFoundError = vi.fn(
+const NotFoundError = vi.fn(
   (
     ...params: ConstructorParameters<typeof NotFoundErrorOriginal>
   ): InstanceType<typeof NotFoundErrorOriginal> => {
@@ -223,7 +212,7 @@ export const NotFoundError = vi.fn(
   },
 );
 
-export const NotImplementedError = vi.fn(
+const NotImplementedError = vi.fn(
   (
     ...params: ConstructorParameters<typeof NotImplementedErrorOriginal>
   ): InstanceType<typeof NotImplementedErrorOriginal> => {
@@ -231,7 +220,7 @@ export const NotImplementedError = vi.fn(
   },
 );
 
-export const ProjectError = vi.fn(
+const ProjectError = vi.fn(
   (
     ...params: ConstructorParameters<typeof ProjectErrorOriginal>
   ): InstanceType<typeof ProjectErrorOriginal> => {
@@ -239,7 +228,7 @@ export const ProjectError = vi.fn(
   },
 );
 
-export const ProjectMultiError = vi.fn(
+const ProjectMultiError = vi.fn(
   (
     ...params: ConstructorParameters<typeof ProjectMultiErrorOriginal>
   ): InstanceType<typeof ProjectMultiErrorOriginal> => {
@@ -247,7 +236,7 @@ export const ProjectMultiError = vi.fn(
   },
 );
 
-export const RejectedError = vi.fn(
+const RejectedError = vi.fn(
   (
     ...params: ConstructorParameters<typeof RejectedErrorOriginal>
   ): InstanceType<typeof RejectedErrorOriginal> => {
@@ -255,7 +244,7 @@ export const RejectedError = vi.fn(
   },
 );
 
-export const TeapotError = vi.fn(
+const TeapotError = vi.fn(
   (
     ...params: ConstructorParameters<typeof TeapotErrorOriginal>
   ): InstanceType<typeof TeapotErrorOriginal> => {
@@ -263,7 +252,7 @@ export const TeapotError = vi.fn(
   },
 );
 
-export const UnauthorizedError = vi.fn(
+const UnauthorizedError = vi.fn(
   (
     ...params: ConstructorParameters<typeof UnauthorizedErrorOriginal>
   ): InstanceType<typeof UnauthorizedErrorOriginal> => {
@@ -271,7 +260,7 @@ export const UnauthorizedError = vi.fn(
   },
 );
 
-export const UnavailableError = vi.fn(
+const UnavailableError = vi.fn(
   (
     ...params: ConstructorParameters<typeof UnavailableErrorOriginal>
   ): InstanceType<typeof UnavailableErrorOriginal> => {
@@ -279,7 +268,7 @@ export const UnavailableError = vi.fn(
   },
 );
 
-export const UnhandledError = vi.fn(
+const UnhandledError = vi.fn(
   (
     ...params: ConstructorParameters<typeof UnhandledErrorOriginal>
   ): InstanceType<typeof UnhandledErrorOriginal> => {
@@ -287,7 +276,7 @@ export const UnhandledError = vi.fn(
   },
 );
 
-export const UnreachableCodeError = vi.fn(
+const UnreachableCodeError = vi.fn(
   (
     ...params: ConstructorParameters<typeof UnreachableCodeErrorOriginal>
   ): InstanceType<typeof UnreachableCodeErrorOriginal> => {
@@ -296,16 +285,16 @@ export const UnreachableCodeError = vi.fn(
 );
 
 // @jaypie/core Functions
-export const envBoolean = vi.fn((): boolean => {
+const envBoolean = vi.fn((): boolean => {
   return true;
 });
 
-export const placeholders = vi.fn(
+const placeholders = vi.fn(
   (...params: Parameters<typeof originalPlaceholders>) =>
     originalPlaceholders(...params),
 );
 
-export const jaypieHandler = vi.fn(
+const jaypieHandler = vi.fn(
   (
     handler: JaypieHandlerFunction,
     {
@@ -359,23 +348,23 @@ export const jaypieHandler = vi.fn(
   },
 );
 
-export const sleep = vi.fn((): boolean => {
+const sleep = vi.fn((): boolean => {
   return true;
 });
 
-export const uuid = vi.fn(originalUuid);
+const uuid = vi.fn(originalUuid);
 
 // @jaypie/datadog
-export const submitMetric = vi.fn((): boolean => {
+const submitMetric = vi.fn((): boolean => {
   return true;
 });
 
-export const submitMetricSet = vi.fn((): boolean => {
+const submitMetricSet = vi.fn((): boolean => {
   return true;
 });
 
 // @jaypie/express
-export const expressHandler = vi.fn(
+const expressHandler = vi.fn(
   (
     handlerOrProps: ExpressHandlerParameter,
     propsOrHandler?: ExpressHandlerParameter,
@@ -527,7 +516,7 @@ export const expressHandler = vi.fn(
 );
 
 // @jaypie/lambda
-export const lambdaHandler = vi.fn(
+const lambdaHandler = vi.fn(
   (handler: JaypieHandlerParameter, props: JaypieHandlerParameter = {}) => {
     // If handler is an object and options is a function, swap them
     if (typeof handler === "object" && typeof props === "function") {
@@ -584,7 +573,7 @@ const mockOperate = vi.fn().mockResolvedValue({
   content: "_MOCK_OUTPUT_TEXT",
 });
 const mockSend = vi.fn().mockResolvedValue("_MOCK_LLM_RESPONSE");
-export const Llm = Object.assign(
+const Llm = Object.assign(
   vi.fn().mockImplementation((providerName = "_MOCK_LLM_PROVIDER") => ({
     _provider: providerName,
     _llm: {
@@ -601,20 +590,20 @@ export const Llm = Object.assign(
 );
 
 // @jaypie/mongoose
-export const connect = vi.fn((): boolean => {
+const connect = vi.fn((): boolean => {
   return true;
 });
 
-export const connectFromSecretEnv = vi.fn((): boolean => {
+const connectFromSecretEnv = vi.fn((): boolean => {
   return true;
 });
 
-export const disconnect = vi.fn((): boolean => {
+const disconnect = vi.fn((): boolean => {
   return true;
 });
 
 // @jaypie/textract
-export const MarkdownPage = vi
+const MarkdownPage = vi
   .fn()
   .mockImplementation((page: TextractPageAdaptable) => {
     try {
@@ -634,25 +623,24 @@ export const MarkdownPage = vi
     }
   });
 
-export const textractJsonToMarkdown = vi.fn(
-  (textractResults: JsonReturn): string => {
-    try {
-      const result = textractJsonToMarkdownOriginal(textractResults);
-      return result;
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    } catch (error) {
-      // eslint-disable-next-line no-console
-      console.warn(
-        "[textractJsonToMarkdown] Actual implementation failed. To suppress this warning, manually mock the response with mockReturnValue",
-      );
-      return `_MOCK_TEXTRACT_JSON_TO_MARKDOWN_{{${textractResults}}}`;
-    }
-  },
-);
+const textractJsonToMarkdown = vi.fn((textractResults: JsonReturn): string => {
+  try {
+    const result = textractJsonToMarkdownOriginal(textractResults);
+    return result;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.warn(
+      "[textractJsonToMarkdown] Actual implementation failed. To suppress this warning, manually mock the response with mockReturnValue",
+    );
+    return `_MOCK_TEXTRACT_JSON_TO_MARKDOWN_{{${textractResults}}}`;
+  }
+});
 
 // Export default for convenience
 export default {
   // AWS
+  getEnvSecret,
   getMessages,
   getSecret,
   getTextractJob,
@@ -671,6 +659,7 @@ export default {
   IllogicalError,
   InternalError,
   jaypieHandler,
+  log,
   MethodNotAllowedError,
   MultiError,
   NotFoundError,
@@ -699,6 +688,7 @@ export default {
   connect,
   connectFromSecretEnv,
   disconnect,
+  mongoose,
   // Textract
   MarkdownPage,
   textractJsonToMarkdown,

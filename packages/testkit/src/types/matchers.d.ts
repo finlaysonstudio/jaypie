@@ -1,6 +1,4 @@
 // Import and re-export all matcher types
-/// <reference types="jest-extended" />
-
 import { JsonApiError } from "./jaypie-testkit.js";
 import "jest-extended";
 
@@ -34,4 +32,5 @@ export interface CustomMatchers<R = unknown> {
 }
 
 // Export combined interface that includes both custom matchers and jest-extended matchers
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface JaypieMatchers<R = unknown> extends CustomMatchers<R> {}

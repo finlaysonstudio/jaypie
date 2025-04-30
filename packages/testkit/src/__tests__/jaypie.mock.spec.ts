@@ -1,3 +1,10 @@
+import { isJaypieError, ProjectError } from "@jaypie/core";
+import { mongoose as expectedMongoose } from "@jaypie/mongoose";
+import { TextractPageAdaptable } from "@jaypie/textract";
+import { JsonReturn } from "@jaypie/types";
+import type { SQSMessage } from "@jaypie/aws";
+import { TextractDocument } from "amazon-textract-response-parser";
+import { readFile } from "fs/promises";
 import {
   afterEach,
   beforeAll,
@@ -8,16 +15,13 @@ import {
   vi,
 } from "vitest";
 
-import { TextractPageAdaptable } from "@jaypie/textract";
-import { mongoose as expectedMongoose } from "@jaypie/mongoose";
-import { TextractDocument } from "amazon-textract-response-parser";
-import { readFile } from "fs/promises";
-
 import matchers from "../matchers.module";
 import sqsTestRecords from "../sqsTestRecords.function";
 
 // Subject
-import {
+import jaypieMock from "../jaypie.mock";
+
+const {
   ConfigurationError,
   connect,
   connectFromSecretEnv,
@@ -35,15 +39,11 @@ import {
   sendBatchMessages,
   sendMessage,
   sleep,
-  SQSMessage,
   submitMetric,
   submitMetricSet,
   textractJsonToMarkdown,
   uuid,
-} from "../jaypie.mock";
-
-import { isJaypieError, ProjectError } from "@jaypie/core";
-import { JsonReturn } from "@jaypie/types";
+} = jaypieMock;
 
 // Add custom matchers
 expect.extend(matchers);
