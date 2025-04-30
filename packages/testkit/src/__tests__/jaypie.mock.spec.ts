@@ -2,6 +2,7 @@ import { isJaypieError, ProjectError } from "@jaypie/core";
 import { mongoose as expectedMongoose } from "@jaypie/mongoose";
 import { TextractPageAdaptable } from "@jaypie/textract";
 import { JsonReturn } from "@jaypie/types";
+import type { SQSMessage } from "@jaypie/aws";
 import { TextractDocument } from "amazon-textract-response-parser";
 import { readFile } from "fs/promises";
 import {
