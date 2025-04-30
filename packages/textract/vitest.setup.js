@@ -21,6 +21,6 @@ vi.mock("jaypie", async () => {
       var: vi.fn(),
       warn: vi.fn(),
       with: vi.fn(),
-    }
+    },
   };
 });
