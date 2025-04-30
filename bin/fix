@@ -3,10 +3,14 @@
 # Capture both stdout and stderr
 output=$("$@" 2>&1)
 
-# Check if output is empty
 if [ -z "$output" ]; then
-    echo "No output to process"
+    claude "The user is requesting a fix based on command output. Ask them for the command, reproduce the error, and provide the fix."
 else
-    echo "Running \`$@\` produces the following output:"
-    echo "$output"
+    message="
+Running \`$@\` produces the following output. 
+Fix the errors and run \`$@\` again to confirm.
+"
+    echo "$message"
+    sleep 1
+    echo "$output" | claude "$message"
 fi
