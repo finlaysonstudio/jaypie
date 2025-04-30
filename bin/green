@@ -1,8 +1,8 @@
 #!/bin/bash
 
-# npm audit
 npm install
 # npm out
+# npm run typecheck
 npm run build
 npm run test
-# npm run typecheck
+# npm audit
