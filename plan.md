@@ -32,7 +32,7 @@ This plan outlines the steps required to implement an Anthropic provider for the
   - Write unit tests for basic sending functionality
 
 ### 3. Message Preparation Utilities
-- Create Anthropic-specific utils for message formatting
+- Create Anthropic-specific utils for message formatting _Verified_
   - Create `prepareMessages` utility for Anthropic message format
   - Implement proper role mapping (system, user, assistant)
   - Handle message placeholders and data substitution
