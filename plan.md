@@ -61,7 +61,7 @@ Only work on the next task unless instructed to work on the last task
    - Test assignment creation
    - Test with various input configurations
 
-6. _Queued_ Add exports to package index
+6. _Verified_ Add exports to package index
    - Ensure the new construct is properly exported from the package
 
 7. _Queued_ Write documentation
