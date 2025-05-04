@@ -26,6 +26,16 @@ export interface JaypieSsoGroupMap {
 }
 
 /**
+ * IAM Policy Statement structure for inline policies
+ */
+export interface PolicyStatement {
+  Effect: "Allow" | "Deny";
+  Action: string[] | string;
+  Resource: string[] | string;
+  Condition?: Record<string, unknown>;
+}
+
+/**
  * Properties for the JaypieSsoGroups construct
  */
 export interface JaypieSsoGroupsProps {
@@ -43,6 +53,17 @@ export interface JaypieSsoGroupsProps {
    * Mapping of group types to Google Workspace group GUIDs
    */
   groupMap: JaypieSsoGroupMap;
+
+  /**
+   * Additional inline policy statements to append to each group's permission set
+   * Each group can have its own set of policy statements that will be merged
+   * with the default policies.
+   */
+  inlinePolicyStatements?: {
+    administrators?: PolicyStatement[];
+    analysts?: PolicyStatement[];
+    developers?: PolicyStatement[];
+  };
 }
 
 /**
@@ -65,11 +86,13 @@ export class JaypieSsoGroups extends Construct {
     sso.CfnPermissionSet
   > = {} as Record<PermissionSetType, sso.CfnPermissionSet>;
   private readonly instanceArn: string;
+  private readonly props: JaypieSsoGroupsProps;
 
   constructor(scope: Construct, id: string, props: JaypieSsoGroupsProps) {
     super(scope, id);
 
     this.instanceArn = props.instanceArn;
+    this.props = props;
 
     // Create the permission sets
     this.createAdministratorPermissionSet();
@@ -85,6 +108,30 @@ export class JaypieSsoGroups extends Construct {
    * and billing access
    */
   private createAdministratorPermissionSet(): void {
+    const defaultInlinePolicy = {
+      Version: "2012-10-17",
+      Statement: [
+        {
+          Effect: "Allow",
+          Action: [
+            "aws-portal:ViewBilling",
+            "aws-portal:ModifyBilling",
+            "aws-portal:ViewAccount",
+            "aws-portal:ModifyAccount",
+            "budgets:ViewBudget",
+            "budgets:ModifyBudget",
+          ],
+          Resource: "*",
+        },
+      ],
+    };
+
+    // Merge with any additional policy statements provided for administrators
+    const mergedPolicy = this.mergeInlinePolicies(
+      defaultInlinePolicy,
+      this.props?.inlinePolicyStatements?.administrators,
+    );
+
     const permissionSet = new sso.CfnPermissionSet(
       this,
       "AdministratorPermissionSet",
@@ -95,23 +142,7 @@ export class JaypieSsoGroups extends Construct {
           "Full administrative access to all AWS services and resources",
         sessionDuration: Duration.hours(8).toIsoString(),
         managedPolicies: ["arn:aws:iam::aws:policy/AdministratorAccess"],
-        inlinePolicy: {
-          Version: "2012-10-17",
-          Statement: [
-            {
-              Effect: "Allow",
-              Action: [
-                "aws-portal:ViewBilling",
-                "aws-portal:ModifyBilling",
-                "aws-portal:ViewAccount",
-                "aws-portal:ModifyAccount",
-                "budgets:ViewBudget",
-                "budgets:ModifyBudget",
-              ],
-              Resource: "*",
-            },
-          ],
-        },
+        inlinePolicy: mergedPolicy,
       },
     );
 
@@ -125,6 +156,32 @@ export class JaypieSsoGroups extends Construct {
    * and limited write access
    */
   private createAnalystPermissionSet(): void {
+    const defaultInlinePolicy = {
+      Version: "2012-10-17",
+      Statement: [
+        {
+          Effect: "Allow",
+          Action: [
+            "aws-portal:ViewBilling",
+            "aws-portal:ViewAccount",
+            "budgets:ViewBudget",
+            "cloudwatch:PutDashboard",
+            "cloudwatch:PutMetricData",
+            "s3:PutObject",
+            "s3:GetObject",
+            "s3:ListBucket",
+          ],
+          Resource: "*",
+        },
+      ],
+    };
+
+    // Merge with any additional policy statements provided for analysts
+    const mergedPolicy = this.mergeInlinePolicies(
+      defaultInlinePolicy,
+      this.props?.inlinePolicyStatements?.analysts,
+    );
+
     const permissionSet = new sso.CfnPermissionSet(
       this,
       "AnalystPermissionSet",
@@ -135,25 +192,7 @@ export class JaypieSsoGroups extends Construct {
           "Read-only access with billing visibility and limited write access",
         sessionDuration: Duration.hours(4).toIsoString(),
         managedPolicies: ["arn:aws:iam::aws:policy/ReadOnlyAccess"],
-        inlinePolicy: {
-          Version: "2012-10-17",
-          Statement: [
-            {
-              Effect: "Allow",
-              Action: [
-                "aws-portal:ViewBilling",
-                "aws-portal:ViewAccount",
-                "budgets:ViewBudget",
-                "cloudwatch:PutDashboard",
-                "cloudwatch:PutMetricData",
-                "s3:PutObject",
-                "s3:GetObject",
-                "s3:ListBucket",
-              ],
-              Resource: "*",
-            },
-          ],
-        },
+        inlinePolicy: mergedPolicy,
       },
     );
 
@@ -167,6 +206,47 @@ export class JaypieSsoGroups extends Construct {
    * and expanded write access
    */
   private createDeveloperPermissionSet(): void {
+    const defaultInlinePolicy = {
+      Version: "2012-10-17",
+      Statement: [
+        {
+          Effect: "Allow",
+          Action: [
+            "cloudwatch:*",
+            "logs:*",
+            "lambda:*",
+            "apigateway:*",
+            "dynamodb:*",
+            "s3:*",
+            "sns:*",
+            "sqs:*",
+            "events:*",
+            "ecr:*",
+            "ecs:*",
+            "codebuild:*",
+          ],
+          Resource: "*",
+        },
+        {
+          Effect: "Deny",
+          Action: [
+            "iam:*User*",
+            "iam:*Role*",
+            "iam:*Policy*",
+            "organizations:*",
+            "account:*",
+          ],
+          Resource: "*",
+        },
+      ],
+    };
+
+    // Merge with any additional policy statements provided for developers
+    const mergedPolicy = this.mergeInlinePolicies(
+      defaultInlinePolicy,
+      this.props?.inlinePolicyStatements?.developers,
+    );
+
     const permissionSet = new sso.CfnPermissionSet(
       this,
       "DeveloperPermissionSet",
@@ -179,40 +259,7 @@ export class JaypieSsoGroups extends Construct {
         managedPolicies: [
           "arn:aws:iam::aws:policy/job-function/SystemAdministrator",
         ],
-        inlinePolicy: {
-          Version: "2012-10-17",
-          Statement: [
-            {
-              Effect: "Allow",
-              Action: [
-                "cloudwatch:*",
-                "logs:*",
-                "lambda:*",
-                "apigateway:*",
-                "dynamodb:*",
-                "s3:*",
-                "sns:*",
-                "sqs:*",
-                "events:*",
-                "ecr:*",
-                "ecs:*",
-                "codebuild:*",
-              ],
-              Resource: "*",
-            },
-            {
-              Effect: "Deny",
-              Action: [
-                "iam:*User*",
-                "iam:*Role*",
-                "iam:*Policy*",
-                "organizations:*",
-                "account:*",
-              ],
-              Resource: "*",
-            },
-          ],
-        },
+        inlinePolicy: mergedPolicy,
       },
     );
 
@@ -226,6 +273,33 @@ export class JaypieSsoGroups extends Construct {
    */
   public getPermissionSet(type: PermissionSetType): sso.CfnPermissionSet {
     return this.permissionSets[type];
+  }
+
+  /**
+   * Merges default inline policies with additional user-provided policy statements
+   *
+   * @param defaultPolicy - The default policy object with Version and Statement properties
+   * @param additionalStatements - Optional additional policy statements to merge
+   * @returns The merged policy object
+   */
+  private mergeInlinePolicies(
+    defaultPolicy: Record<string, unknown>,
+    additionalStatements?: PolicyStatement[],
+  ): Record<string, unknown> {
+    if (!additionalStatements || additionalStatements.length === 0) {
+      return defaultPolicy;
+    }
+
+    // Create a deep copy of the default policy to avoid modifying the original
+    const mergedPolicy = JSON.parse(JSON.stringify(defaultPolicy));
+
+    // Add the additional statements to the existing statements
+    mergedPolicy.Statement = [
+      ...mergedPolicy.Statement,
+      ...additionalStatements,
+    ];
+
+    return mergedPolicy;
   }
 
   /**

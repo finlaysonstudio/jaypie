@@ -413,6 +413,331 @@ describe("JaypieSsoGroups", () => {
     });
   });
 
+  describe("Inline Policy Statements", () => {
+    it("should add inline policy statements to Administrator permission set", () => {
+      const stack = new Stack();
+      const ssoGroups = new JaypieSsoGroups(stack, "TestSsoGroups", {
+        instanceArn: "arn:aws:sso:::instance/ssoins-1234567890abcdef",
+        accountMap: {
+          development: ["111111111111"],
+          management: ["222222222222"],
+          operations: ["333333333333"],
+          production: ["444444444444"],
+          sandbox: ["555555555555"],
+          security: ["666666666666"],
+          stage: ["777777777777"],
+        },
+        groupMap: {
+          administrators: "c4f87458-e021-7053-669c-4dc2a2ceaadf",
+          analysts: "949844c8-60b1-7046-0328-9ad0806336f1",
+          developers: "5488a468-5031-7001-64d6-9ba1f377ee6d",
+        },
+        inlinePolicyStatements: {
+          administrators: [
+            {
+              Effect: "Allow",
+              Action: ["ce:*", "cost-optimization-hub:*"],
+              Resource: "*",
+            },
+          ],
+        },
+      });
+
+      const template = Template.fromStack(stack);
+
+      // Verify Administrator permission set has custom inline policies
+      template.hasResourceProperties("AWS::SSO::PermissionSet", {
+        Name: "Administrator",
+        InlinePolicy: Match.objectLike({
+          Statement: Match.arrayWith([
+            Match.objectLike({
+              Effect: "Allow",
+              Action: Match.arrayWith([
+                "aws-portal:ViewBilling",
+                "aws-portal:ModifyBilling",
+              ]),
+            }),
+            Match.objectLike({
+              Effect: "Allow",
+              Action: Match.arrayWith(["ce:*", "cost-optimization-hub:*"]),
+              Resource: "*",
+            }),
+          ]),
+        }),
+      });
+    });
+
+    it("should add inline policy statements to Analyst permission set", () => {
+      const stack = new Stack();
+      const ssoGroups = new JaypieSsoGroups(stack, "TestSsoGroups", {
+        instanceArn: "arn:aws:sso:::instance/ssoins-1234567890abcdef",
+        accountMap: {
+          development: ["111111111111"],
+          management: ["222222222222"],
+          operations: ["333333333333"],
+          production: ["444444444444"],
+          sandbox: ["555555555555"],
+          security: ["666666666666"],
+          stage: ["777777777777"],
+        },
+        groupMap: {
+          administrators: "c4f87458-e021-7053-669c-4dc2a2ceaadf",
+          analysts: "949844c8-60b1-7046-0328-9ad0806336f1",
+          developers: "5488a468-5031-7001-64d6-9ba1f377ee6d",
+        },
+        inlinePolicyStatements: {
+          analysts: [
+            {
+              Effect: "Allow",
+              Action: [
+                "athena:*",
+                "glue:GetTable*",
+                "glue:GetDatabase*",
+                "glue:GetPartition*",
+                "glue:BatchGetPartition",
+              ],
+              Resource: "*",
+            },
+          ],
+        },
+      });
+
+      const template = Template.fromStack(stack);
+
+      // Verify Analyst permission set has custom inline policies
+      template.hasResourceProperties("AWS::SSO::PermissionSet", {
+        Name: "Analyst",
+        InlinePolicy: Match.objectLike({
+          Statement: Match.arrayWith([
+            Match.objectLike({
+              Effect: "Allow",
+              Action: Match.arrayWith([
+                "aws-portal:ViewBilling",
+                "aws-portal:ViewAccount",
+              ]),
+            }),
+            Match.objectLike({
+              Effect: "Allow",
+              Action: Match.arrayWith(["athena:*", "glue:GetTable*"]),
+              Resource: "*",
+            }),
+          ]),
+        }),
+      });
+    });
+
+    it("should add inline policy statements to Developer permission set", () => {
+      const stack = new Stack();
+      const ssoGroups = new JaypieSsoGroups(stack, "TestSsoGroups", {
+        instanceArn: "arn:aws:sso:::instance/ssoins-1234567890abcdef",
+        accountMap: {
+          development: ["111111111111"],
+          management: ["222222222222"],
+          operations: ["333333333333"],
+          production: ["444444444444"],
+          sandbox: ["555555555555"],
+          security: ["666666666666"],
+          stage: ["777777777777"],
+        },
+        groupMap: {
+          administrators: "c4f87458-e021-7053-669c-4dc2a2ceaadf",
+          analysts: "949844c8-60b1-7046-0328-9ad0806336f1",
+          developers: "5488a468-5031-7001-64d6-9ba1f377ee6d",
+        },
+        inlinePolicyStatements: {
+          developers: [
+            {
+              Effect: "Allow",
+              Action: [
+                "codeartifact:*",
+                "secretsmanager:GetSecretValue",
+                "secretsmanager:DescribeSecret",
+                "kms:Decrypt",
+              ],
+              Resource: "*",
+            },
+          ],
+        },
+      });
+
+      const template = Template.fromStack(stack);
+
+      // Verify Developer permission set has custom inline policies
+      template.hasResourceProperties("AWS::SSO::PermissionSet", {
+        Name: "Developer",
+        InlinePolicy: Match.objectLike({
+          Statement: Match.arrayWith([
+            Match.objectLike({
+              Effect: "Allow",
+              Action: Match.arrayWith(["cloudwatch:*", "lambda:*"]),
+            }),
+            Match.objectLike({
+              Effect: "Allow",
+              Action: Match.arrayWith([
+                "codeartifact:*",
+                "secretsmanager:GetSecretValue",
+              ]),
+              Resource: "*",
+            }),
+          ]),
+        }),
+      });
+    });
+
+    it("should handle multiple inline policy statements for a permission set", () => {
+      const stack = new Stack();
+      const ssoGroups = new JaypieSsoGroups(stack, "TestSsoGroups", {
+        instanceArn: "arn:aws:sso:::instance/ssoins-1234567890abcdef",
+        accountMap: {
+          development: ["111111111111"],
+          management: ["222222222222"],
+          operations: ["333333333333"],
+          production: ["444444444444"],
+          sandbox: ["555555555555"],
+          security: ["666666666666"],
+          stage: ["777777777777"],
+        },
+        groupMap: {
+          administrators: "c4f87458-e021-7053-669c-4dc2a2ceaadf",
+          analysts: "949844c8-60b1-7046-0328-9ad0806336f1",
+          developers: "5488a468-5031-7001-64d6-9ba1f377ee6d",
+        },
+        inlinePolicyStatements: {
+          developers: [
+            {
+              Effect: "Allow",
+              Action: ["codeartifact:*", "ecr:*"],
+              Resource: "*",
+            },
+            {
+              Effect: "Allow",
+              Action: "kms:Decrypt",
+              Resource: "arn:aws:kms:*:*:key/*",
+              Condition: {
+                StringEquals: {
+                  "kms:ViaService": [
+                    "codeartifact.*.amazonaws.com",
+                    "ecr.*.amazonaws.com",
+                  ],
+                },
+              },
+            },
+          ],
+        },
+      });
+
+      const template = Template.fromStack(stack);
+
+      // Verify Developer permission set has multiple custom inline policies
+      template.hasResourceProperties("AWS::SSO::PermissionSet", {
+        Name: "Developer",
+        InlinePolicy: Match.objectLike({
+          Statement: Match.arrayWith([
+            Match.objectLike({
+              Effect: "Allow",
+              Action: Match.arrayWith(["codeartifact:*", "ecr:*"]),
+              Resource: "*",
+            }),
+            Match.objectLike({
+              Effect: "Allow",
+              Action: "kms:Decrypt",
+              Resource: "arn:aws:kms:*:*:key/*",
+              Condition: Match.objectLike({
+                StringEquals: Match.objectLike({
+                  "kms:ViaService": Match.arrayWith([
+                    "codeartifact.*.amazonaws.com",
+                    "ecr.*.amazonaws.com",
+                  ]),
+                }),
+              }),
+            }),
+          ]),
+        }),
+      });
+    });
+
+    it("should handle empty inlinePolicyStatements object", () => {
+      const stack = new Stack();
+      const ssoGroups = new JaypieSsoGroups(stack, "TestSsoGroups", {
+        instanceArn: "arn:aws:sso:::instance/ssoins-1234567890abcdef",
+        accountMap: {
+          development: ["111111111111"],
+          management: ["222222222222"],
+          operations: ["333333333333"],
+          production: ["444444444444"],
+          sandbox: ["555555555555"],
+          security: ["666666666666"],
+          stage: ["777777777777"],
+        },
+        groupMap: {
+          administrators: "c4f87458-e021-7053-669c-4dc2a2ceaadf",
+          analysts: "949844c8-60b1-7046-0328-9ad0806336f1",
+          developers: "5488a468-5031-7001-64d6-9ba1f377ee6d",
+        },
+        inlinePolicyStatements: {},
+      });
+
+      const template = Template.fromStack(stack);
+
+      // Verify permission sets still have their default policies
+      template.hasResourceProperties("AWS::SSO::PermissionSet", {
+        Name: "Administrator",
+        InlinePolicy: Match.objectLike({
+          Statement: Match.arrayWith([
+            Match.objectLike({
+              Effect: "Allow",
+              Action: Match.arrayWith([
+                "aws-portal:ViewBilling",
+                "aws-portal:ModifyBilling",
+              ]),
+            }),
+          ]),
+        }),
+      });
+    });
+
+    it("should handle empty policy statements array", () => {
+      const stack = new Stack();
+      const ssoGroups = new JaypieSsoGroups(stack, "TestSsoGroups", {
+        instanceArn: "arn:aws:sso:::instance/ssoins-1234567890abcdef",
+        accountMap: {
+          development: ["111111111111"],
+          management: ["222222222222"],
+          operations: ["333333333333"],
+          production: ["444444444444"],
+          sandbox: ["555555555555"],
+          security: ["666666666666"],
+          stage: ["777777777777"],
+        },
+        groupMap: {
+          administrators: "c4f87458-e021-7053-669c-4dc2a2ceaadf",
+          analysts: "949844c8-60b1-7046-0328-9ad0806336f1",
+          developers: "5488a468-5031-7001-64d6-9ba1f377ee6d",
+        },
+        inlinePolicyStatements: {
+          administrators: [],
+          analysts: [],
+          developers: [],
+        },
+      });
+
+      const template = Template.fromStack(stack);
+
+      // Verify permission sets still have their default policies
+      template.hasResourceProperties("AWS::SSO::PermissionSet", {
+        Name: "Developer",
+        InlinePolicy: Match.objectLike({
+          Statement: Match.arrayWith([
+            Match.objectLike({
+              Effect: "Allow",
+              Action: Match.arrayWith(["cloudwatch:*", "lambda:*"]),
+            }),
+          ]),
+        }),
+      });
+    });
+  });
+
   describe("Specific Scenarios", () => {
     it("handles multiple accounts per category", () => {
       const stack = new Stack();

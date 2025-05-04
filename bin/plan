@@ -8,4 +8,4 @@ else
 fi
 
 # Pipe the content of Plan_from_Project_Brief.md to claude with the message
-cat context/prompts/Plan_from_Project_Brief.md | claude "$message"
+cat context/prompts/Plan_from_Project_Brief.md | claude --dangerously-skip-permissions "$message"

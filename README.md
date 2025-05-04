@@ -394,6 +394,7 @@ const ssoGroups = new JaypieSsoGroups(this, 'SsoGroups', {
 | `instanceArn` | `string` | Yes | ARN of the IAM Identity Center instance |
 | `accountMap` | `Record<string, string[]>` | Yes | Mapping of account categories to AWS account IDs |
 | `groupMap` | `Record<string, string>` | Yes | Mapping of group types to Google Workspace group GUIDs |
+| `inlinePolicyStatements` | `object` | No | Additional inline policy statements to append to each group's permission set |
 
 The construct creates these permission sets:
 - **Administrator**: AdministratorAccess policy with billing access
@@ -401,6 +402,57 @@ The construct creates these permission sets:
 - **Developer**: SystemAdministrator policy with expanded write access
 
 Each permission set is assigned to the appropriate groups across the configured AWS accounts following organizational best practices.
+
+#### Customizing Permission Sets with Inline Policies
+
+You can extend the default permission sets with additional policy statements using the `inlinePolicyStatements` property:
+
+```typescript
+const ssoGroups = new JaypieSsoGroups(this, 'SsoGroups', {
+  instanceArn: 'arn:aws:sso:::instance/ssoins-1234567890abcdef',
+  accountMap: {
+    development: ["123456789012"],
+    management: ["234567890123"],
+    // ... other account mappings
+  },
+  groupMap: {
+    administrators: "c4f87458-e021-7053-669c-4dc2a2ceaadf",
+    analysts: "949844c8-60b1-7046-0328-9ad0806336f1",
+    developers: "5488a468-5031-7001-64d6-9ba1f377ee6d",
+  },
+  inlinePolicyStatements: {
+    administrators: [
+      {
+        Effect: "Allow",
+        Action: [
+          "ce:*",  // Cost Explorer permissions
+        ],
+        Resource: "*",
+      }
+    ],
+    analysts: [
+      {
+        Effect: "Allow",
+        Action: [
+          "athena:*",  // Athena query permissions
+        ],
+        Resource: "*",
+      }
+    ],
+    developers: [
+      {
+        Effect: "Allow",
+        Action: [
+          "ssm:*",  // Systems Manager permissions
+        ],
+        Resource: "*",
+      }
+    ]
+  }
+});
+```
+
+These additional policy statements are merged with the default policies for each permission set. This allows you to customize the permissions without having to redefine the entire permission set structure.
 
 ### Constants
 
