@@ -4,7 +4,7 @@
 output=$("$@" 2>&1)
 
 if [ -z "$output" ]; then
-    claude "The user is requesting a fix based on command output. Ask them for the command, reproduce the error, and provide the fix."
+    claude --dangerously-skip-permissions "The user is requesting a fix based on command output. Ask them for the command, reproduce the error, and provide the fix."
 else
     message="
 Running \`$@\` produces the following output. 
@@ -12,5 +12,5 @@ Fix the errors and run \`$@\` again to confirm.
 "
     echo "$message"
     sleep 1
-    echo "$output" | claude "$message"
+    echo "$output" | claude --dangerously-skip-permissions "$message"
 fi
