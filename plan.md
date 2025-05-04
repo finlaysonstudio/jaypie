@@ -64,8 +64,8 @@ Only work on the next task unless instructed to work on the last task
 6. _Verified_ Add exports to package index
    - Ensure the new construct is properly exported from the package
 
-7. _Queued_ Write documentation
-   - Document the new construct in README or appropriate documentation
+7. _Verified_ Write documentation
+   - Document the new construct in the top-level README.md
    - Include usage examples
    - Document the properties and their expected values
 
