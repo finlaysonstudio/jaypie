@@ -1,0 +1,11 @@
+#!/bin/bash
+
+# Check if path parameter is provided
+if [ -z "$1" ]; then
+    message="The user would like a project plan.md file in the repository root. Please request the project brief from the user. Follow these guidelines when creating the plan document:"
+else
+    message="Read $1 and create or overwrite a project plan.md file in the repository root. Follow these guidelines when creating the plan document:"
+fi
+
+# Pipe the content of Plan_from_Project_Brief.md to claude with the message
+cat context/prompts/Plan_from_Project_Brief.md | claude "$message"

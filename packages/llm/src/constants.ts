@@ -7,6 +7,21 @@ export const PROVIDER = {
       DEFAULT: "claude-3-5-sonnet-latest" as const,
     },
     NAME: "anthropic" as const,
+    PROMPT: {
+      AI: "\n\nAssistant:" as const,
+      HUMAN: "\n\nHuman:" as const,
+    },
+    ROLE: {
+      ASSISTANT: "assistant" as const,
+      SYSTEM: "system" as const,
+      USER: "user" as const,
+    },
+    MAX_TOKENS: {
+      DEFAULT: 4096 as const,
+    },
+    TOOLS: {
+      SCHEMA_VERSION: "v2" as const,
+    },
   },
   OPENAI: {
     MODEL: {
