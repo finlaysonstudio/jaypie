@@ -54,7 +54,7 @@ Only work on the next task unless instructed to work on the last task
    - Implement the same assignment logic from the sample code
    - Ensure proper resource naming and tagging
 
-5. _Queued_ Write unit tests for the construct
+5. _Verified_ Write unit tests for the construct
    - Create test file at `packages/constructs/__tests__/JaypieSsoGroups.spec.ts`
    - Test construct initialization
    - Test permission set creation
