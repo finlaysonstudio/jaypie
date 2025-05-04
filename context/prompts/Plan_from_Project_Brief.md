@@ -20,8 +20,9 @@ Write a plan for a code generator to guide development.
 * Assume the code generator does not have access to documentation and would benefit from code examples
 
 Assume the code generation agent will:
-* Invoke with a fully configured, tested local repository.
+* Invoke with a fully configured, tested local repository
 * Not have the full source code; the agent will follow paths in the plan so be sure they are included
+* Not have access to the project brief; carry over all code samples, details, and instructions
 
 ## Content
 
