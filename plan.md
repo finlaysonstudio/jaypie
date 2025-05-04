@@ -49,7 +49,7 @@ Only work on the next task unless instructed to work on the last task
      - Developer - with SystemAdministrator policy and expanded write access
    - Ensure proper tags, session durations, and descriptions match original implementation
 
-4. _Queued_ Implement group-account-permission assignments
+4. _Verified_ Implement group-account-permission assignments
    - Create the logic to assign permission sets to groups across accounts
    - Implement the same assignment logic from the sample code
    - Ensure proper resource naming and tagging

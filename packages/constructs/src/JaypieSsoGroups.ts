@@ -76,7 +76,8 @@ export class JaypieSsoGroups extends Construct {
     this.createAnalystPermissionSet();
     this.createDeveloperPermissionSet();
 
-    // Group assignment implementation will be added in the next task
+    // Create the assignments
+    this.createPermissionSetAssignments(props);
   }
 
   /**
@@ -225,5 +226,129 @@ export class JaypieSsoGroups extends Construct {
    */
   public getPermissionSet(type: PermissionSetType): sso.CfnPermissionSet {
     return this.permissionSets[type];
+  }
+
+  /**
+   * Creates assignments between permission sets, groups, and accounts
+   * based on the provided configuration
+   */
+  private createPermissionSetAssignments(props: JaypieSsoGroupsProps): void {
+    // Administrator assignments
+    this.assignAdministratorPermissions(props);
+
+    // Analyst assignments
+    this.assignAnalystPermissions(props);
+
+    // Developer assignments
+    this.assignDeveloperPermissions(props);
+  }
+
+  /**
+   * Assigns Administrator permissions to appropriate accounts
+   */
+  private assignAdministratorPermissions(props: JaypieSsoGroupsProps): void {
+    const administratorGroup = props.groupMap.administrators;
+    const administratorPermissionSet =
+      this.permissionSets[PermissionSetType.ADMINISTRATOR];
+
+    // Administrators get access to all accounts
+    const allAccounts = [
+      ...props.accountMap.development,
+      ...props.accountMap.management,
+      ...props.accountMap.operations,
+      ...props.accountMap.production,
+      ...props.accountMap.sandbox,
+      ...props.accountMap.security,
+      ...props.accountMap.stage,
+    ];
+
+    // Create assignments for each account
+    allAccounts.forEach((accountId, index) => {
+      const assignment = new sso.CfnAssignment(
+        this,
+        `AdministratorAssignment${index}`,
+        {
+          instanceArn: this.instanceArn,
+          permissionSetArn: administratorPermissionSet.attrPermissionSetArn,
+          principalId: administratorGroup,
+          principalType: "GROUP",
+          targetId: accountId,
+          targetType: "AWS_ACCOUNT",
+        },
+      );
+
+      Tags.of(assignment).add(CDK.TAG.SERVICE, CDK.SERVICE.SSO);
+      Tags.of(assignment).add("Group", "administrators");
+    });
+  }
+
+  /**
+   * Assigns Analyst permissions to appropriate accounts
+   */
+  private assignAnalystPermissions(props: JaypieSsoGroupsProps): void {
+    const analystGroup = props.groupMap.analysts;
+    const analystPermissionSet = this.permissionSets[PermissionSetType.ANALYST];
+
+    // Analysts get access to development, management, sandbox, and stage accounts
+    const analystAccounts = [
+      ...props.accountMap.development,
+      ...props.accountMap.management,
+      ...props.accountMap.sandbox,
+      ...props.accountMap.stage,
+    ];
+
+    // Create assignments for each account
+    analystAccounts.forEach((accountId, index) => {
+      const assignment = new sso.CfnAssignment(
+        this,
+        `AnalystAssignment${index}`,
+        {
+          instanceArn: this.instanceArn,
+          permissionSetArn: analystPermissionSet.attrPermissionSetArn,
+          principalId: analystGroup,
+          principalType: "GROUP",
+          targetId: accountId,
+          targetType: "AWS_ACCOUNT",
+        },
+      );
+
+      Tags.of(assignment).add(CDK.TAG.SERVICE, CDK.SERVICE.SSO);
+      Tags.of(assignment).add("Group", "analysts");
+    });
+  }
+
+  /**
+   * Assigns Developer permissions to appropriate accounts
+   */
+  private assignDeveloperPermissions(props: JaypieSsoGroupsProps): void {
+    const developerGroup = props.groupMap.developers;
+    const developerPermissionSet =
+      this.permissionSets[PermissionSetType.DEVELOPER];
+
+    // Developers get access to development, sandbox, and stage accounts
+    const developerAccounts = [
+      ...props.accountMap.development,
+      ...props.accountMap.sandbox,
+      ...props.accountMap.stage,
+    ];
+
+    // Create assignments for each account
+    developerAccounts.forEach((accountId, index) => {
+      const assignment = new sso.CfnAssignment(
+        this,
+        `DeveloperAssignment${index}`,
+        {
+          instanceArn: this.instanceArn,
+          permissionSetArn: developerPermissionSet.attrPermissionSetArn,
+          principalId: developerGroup,
+          principalType: "GROUP",
+          targetId: accountId,
+          targetType: "AWS_ACCOUNT",
+        },
+      );
+
+      Tags.of(assignment).add(CDK.TAG.SERVICE, CDK.SERVICE.SSO);
+      Tags.of(assignment).add("Group", "developers");
+    });
   }
 }
