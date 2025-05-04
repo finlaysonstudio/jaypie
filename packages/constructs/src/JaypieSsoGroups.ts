@@ -114,12 +114,10 @@ export class JaypieSsoGroups extends Construct {
         {
           Effect: "Allow",
           Action: [
-            "aws-portal:ViewBilling",
-            "aws-portal:ModifyBilling",
-            "aws-portal:ViewAccount",
-            "aws-portal:ModifyAccount",
-            "budgets:ViewBudget",
-            "budgets:ModifyBudget",
+            "aws-portal:*",
+            "budgets:*",
+            "ce:*",
+            "cost-optimization-hub:*",
           ],
           Resource: "*",
         },
