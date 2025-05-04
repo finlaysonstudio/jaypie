@@ -35,7 +35,7 @@ Only work on the next task unless instructed to work on the last task
    - Create directories as needed for the new construct
    - Ensure proper TypeScript configuration
 
-2. _Queued_ Create JaypieSsoGroups interface
+2. _Verified_ Create JaypieSsoGroups interface
    - Create a new file at `packages/constructs/src/JaypieSsoGroups.ts`
    - Define the interface for `JaypieSsoGroupsProps` with required properties:
      - `instanceArn: string` - ARN of the IAM Identity Center instance
