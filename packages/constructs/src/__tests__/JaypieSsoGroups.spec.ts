@@ -114,8 +114,7 @@ describe("JaypieSsoGroups", () => {
             Match.objectLike({
               Effect: "Allow",
               Action: Match.arrayWith([
-                "aws-portal:ViewBilling",
-                "aws-portal:ModifyBilling",
+                "aws-portal:*",
               ]),
             }),
           ]),
@@ -453,8 +452,7 @@ describe("JaypieSsoGroups", () => {
             Match.objectLike({
               Effect: "Allow",
               Action: Match.arrayWith([
-                "aws-portal:ViewBilling",
-                "aws-portal:ModifyBilling",
+                "aws-portal:*",
               ]),
             }),
             Match.objectLike({
@@ -687,8 +685,7 @@ describe("JaypieSsoGroups", () => {
             Match.objectLike({
               Effect: "Allow",
               Action: Match.arrayWith([
-                "aws-portal:ViewBilling",
-                "aws-portal:ModifyBilling",
+                "aws-portal:*",
               ]),
             }),
           ]),
