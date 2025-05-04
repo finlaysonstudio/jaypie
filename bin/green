@@ -6,3 +6,4 @@ npm install
 npm run build
 npm run test
 # npm audit
+eslint --fix --quiet
