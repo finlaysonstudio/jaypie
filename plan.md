@@ -30,7 +30,7 @@ The "last" or "previous" task refers to the bottom-most _Dequeued_ task
 Only work on one task at a time
 Only work on the next task unless instructed to work on the last task
 
-1. _Queued_ Create directory structure if needed
+1. _Verified_ Create directory structure if needed
    - Check if `packages/constructs` exists
    - Create directories as needed for the new construct
    - Ensure proper TypeScript configuration
