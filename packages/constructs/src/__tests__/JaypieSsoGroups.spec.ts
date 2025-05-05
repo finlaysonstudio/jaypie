@@ -113,9 +113,7 @@ describe("JaypieSsoGroups", () => {
           Statement: Match.arrayWith([
             Match.objectLike({
               Effect: "Allow",
-              Action: Match.arrayWith([
-                "aws-portal:*",
-              ]),
+              Action: Match.arrayWith(["aws-portal:*"]),
             }),
           ]),
         }),
@@ -451,9 +449,7 @@ describe("JaypieSsoGroups", () => {
           Statement: Match.arrayWith([
             Match.objectLike({
               Effect: "Allow",
-              Action: Match.arrayWith([
-                "aws-portal:*",
-              ]),
+              Action: Match.arrayWith(["aws-portal:*"]),
             }),
             Match.objectLike({
               Effect: "Allow",
@@ -684,9 +680,7 @@ describe("JaypieSsoGroups", () => {
           Statement: Match.arrayWith([
             Match.objectLike({
               Effect: "Allow",
-              Action: Match.arrayWith([
-                "aws-portal:*",
-              ]),
+              Action: Match.arrayWith(["aws-portal:*"]),
             }),
           ]),
         }),
