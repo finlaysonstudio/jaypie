@@ -1,5 +1,3 @@
-import { structuredClone as cloneDeep } from "node:util";
-
 //
 //
 // Main
@@ -12,8 +10,7 @@ const getHeaderFrom = (headerKey, searchObject) => {
   try {
     const searchKey = headerKey.toLowerCase();
 
-    searchObject = cloneDeep(searchObject);
-
+    searchObject = structuredClone(searchObject);
     // See if we find the key
     const keys = Object.keys(searchObject);
     for (let i = 0; i < keys.length; i += 1) {
