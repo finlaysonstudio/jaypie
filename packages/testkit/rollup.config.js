@@ -42,6 +42,8 @@ export default [
       json(),
       typescript({
         exclude: ["**/__tests__/**/*", "**/*.test.ts", "**/*.spec.ts"],
+        tsconfig: "./tsconfig.json",
+        outDir: "./dist", // Ensure this matches the output directory
       }),
       copy({
         targets: [{ src: "src/mockTextract.json", dest: "dist" }],
@@ -64,6 +66,8 @@ export default [
       json(),
       typescript({
         exclude: ["**/__tests__/**/*", "**/*.test.ts", "**/*.spec.ts"],
+        tsconfig: "./tsconfig.json",
+        outDir: "./dist/mock", // Ensure this matches the output directory
       }),
     ],
   },

@@ -6,7 +6,8 @@ import { vi } from "vitest";
 export function createMockFunction<T extends (...args: any[]) => any>(
   implementation?: (...args: Parameters<T>) => ReturnType<T>,
 ): T & { mock: any } {
-  return vi.fn(implementation) as T & { mock: any };
+  // Use a more specific type conversion to avoid TypeScript error
+  return vi.fn(implementation) as unknown as T & { mock: any };
 }
 
 /**

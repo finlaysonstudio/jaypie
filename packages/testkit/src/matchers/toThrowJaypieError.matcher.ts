@@ -13,6 +13,9 @@ import {
 } from "@jaypie/core";
 import { MatcherResult } from "../types/jaypie-testkit";
 
+// Define a more specific type for ProjectError with _type field
+type JaypieErrorWithType = ProjectError & { _type: string };
+
 //
 //
 // Main
@@ -64,14 +67,18 @@ const toThrowJaypieError = async (
     };
   } catch (error) {
     if (isJaypieError(error)) {
+      // Cast to the specific type with _type property
+      const jaypieError = error as JaypieErrorWithType;
+      
       // If expected is also a JaypieError, check if the error matches
       if (expectedError && isJaypieError(expectedError)) {
+        const expectedJaypieError = expectedError as JaypieErrorWithType;
         // If the error does not match, fail the test
-        if (error._type !== expectedError._type) {
+        if (jaypieError._type !== expectedJaypieError._type) {
           return {
             pass: false,
             message: () =>
-              `Expected function to throw "${expectedError._type}", but it threw "${error._type}"`,
+              `Expected function to throw "${expectedJaypieError._type}", but it threw "${jaypieError._type}"`,
           };
         }
       }

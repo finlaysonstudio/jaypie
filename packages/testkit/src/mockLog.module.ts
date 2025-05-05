@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Log } from "@jaypie/core";
+import { log } from "@jaypie/core";
 import { vi } from "vitest";
 import { LogMock } from "./types/jaypie-testkit";
 
@@ -67,30 +67,36 @@ const LOG_METHOD_NAMES = [
   "with",
 ] as const;
 
-const originalLogMethods = new WeakMap<Log, Partial<Log>>();
+// Use Record type for more flexible access pattern
+const originalLogMethods = new WeakMap<typeof log, Record<string, unknown>>();
 
-export function spyLog(log: Log): void {
-  if (!originalLogMethods.has(log)) {
+export function spyLog(logInstance: typeof log): void {
+  if (!originalLogMethods.has(logInstance)) {
     const mockLog = mockLogFactory();
-    const originalMethods: Partial<Log> = {};
+    const originalMethods: Record<string, unknown> = {};
 
+    // Save only methods that actually exist on the log instance
     LOG_METHOD_NAMES.forEach((method) => {
-      originalMethods[method] = log[method] as any;
-      log[method] = mockLog[method] as any;
+      if (method in logInstance) {
+        originalMethods[method] = logInstance[method as keyof typeof logInstance];
+        // Use type assertion after checking existence
+        (logInstance as Record<string, unknown>)[method] = mockLog[method];
+      }
     });
 
-    originalLogMethods.set(log, originalMethods);
+    originalLogMethods.set(logInstance, originalMethods);
   }
 }
 
-export function restoreLog(log: Log): void {
-  const originalMethods = originalLogMethods.get(log);
+export function restoreLog(logInstance: typeof log): void {
+  const originalMethods = originalLogMethods.get(logInstance);
   if (originalMethods) {
     LOG_METHOD_NAMES.forEach((method) => {
-      if (originalMethods[method]) {
-        log[method] = originalMethods[method] as any;
+      if (method in originalMethods && method in logInstance) {
+        // Use type assertion after checking existence
+        (logInstance as Record<string, unknown>)[method] = originalMethods[method];
       }
     });
-    originalLogMethods.delete(log);
+    originalLogMethods.delete(logInstance);
   }
 }
