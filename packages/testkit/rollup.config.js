@@ -1,16 +1,35 @@
 import typescript from "@rollup/plugin-typescript";
 import json from "@rollup/plugin-json";
 import copy from "rollup-plugin-copy";
+import { dts } from "rollup-plugin-dts";
+import { nodeResolve } from "@rollup/plugin-node-resolve";
+import commonjs from "@rollup/plugin-commonjs";
+
+const external = [
+  "@jaypie/aws",
+  "@jaypie/core",
+  "@jaypie/datadog",
+  "@jaypie/express",
+  "@jaypie/lambda",
+  "@jaypie/llm",
+  "@jaypie/mongoose",
+  "@jaypie/textract",
+  "amazon-textract-response-parser",
+  "express",
+  "fs/promises",
+  "jest-extended",
+  "jest-json-schema",
+  "mongoose",
+  "node:util",
+  "path",
+  "url",
+  "vitest",
+];
 
 export default [
+  // Main package bundle
   {
-    external: [
-      "@jaypie/core",
-      "jest-extended",
-      "jest-json-schema",
-      "vitest",
-      "node:util",
-    ],
+    external,
     input: "src/index.ts",
     output: {
       dir: "dist",
@@ -18,44 +37,54 @@ export default [
       sourcemap: true,
     },
     plugins: [
+      nodeResolve(),
+      commonjs(),
       json(),
       typescript({
-        exclude: ["**/__tests__/**/*", "**/*.test.ts"],
+        exclude: ["**/__tests__/**/*", "**/*.test.ts", "**/*.spec.ts"],
+      }),
+      copy({
+        targets: [{ src: "src/mockTextract.json", dest: "dist" }],
       }),
     ],
   },
+
+  // Mock subpackage bundle
   {
-    external: [
-      "@jaypie/aws",
-      "@jaypie/core",
-      "@jaypie/datadog",
-      "@jaypie/express",
-      "@jaypie/lambda",
-      "@jaypie/llm",
-      "@jaypie/mongoose",
-      "@jaypie/textract",
-      "amazon-textract-response-parser",
-      "fs/promises",
-      "jest-json-schema",
-      "node:util",
-      "path",
-      "url",
-      "vitest",
-    ],
-    input: "src/jaypie.mock.ts",
+    external,
+    input: "src/mock/index.ts",
     output: {
-      dir: "dist",
+      dir: "dist/mock",
       format: "es",
       sourcemap: true,
     },
     plugins: [
-      copy({
-        targets: [{ src: "src/mockTextract.json", dest: "dist" }],
-      }),
+      nodeResolve(),
+      commonjs(),
       json(),
       typescript({
-        exclude: ["**/__tests__/**/*", "**/*.test.ts"],
+        exclude: ["**/__tests__/**/*", "**/*.test.ts", "**/*.spec.ts"],
       }),
     ],
+  },
+
+  // Type definitions for main package
+  {
+    input: "src/index.ts",
+    output: {
+      file: "dist/index.d.ts",
+      format: "es",
+    },
+    plugins: [dts()],
+  },
+
+  // Type definitions for mock subpackage
+  {
+    input: "src/mock/index.ts",
+    output: {
+      file: "dist/mock/index.d.ts",
+      format: "es",
+    },
+    plugins: [dts()],
   },
 ];
