@@ -42,6 +42,9 @@
     "@jaypie/errors": "^1.1.2",
     "cors": "^2.8.5"
   },
+  "devDependencies": {
+    "express": "^4.21.2"
+  },
   "publishConfig": {
     "access": "public"
   }
