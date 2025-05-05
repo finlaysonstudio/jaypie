@@ -1,4 +1,4 @@
-import { getMessages as originalGetMessages } from "@jaypie/aws";
+import { getMessages as originalGetMessages, getSingletonMessage as originalGetSingletonMessage } from "@jaypie/aws";
 import {
   force,
   Log,
@@ -7,7 +7,20 @@ import {
   // Core utilities
   HTTP,
   JAYPIE,
+  PROJECT,
+  VALIDATE,
   log,
+  // Core functions
+  envsKey as originalEnvsKey,
+  errorFromStatusCode as originalErrorFromStatusCode,
+  formatError as originalFormatError,
+  getHeaderFrom as originalGetHeaderFrom,
+  getObjectKeyCaseInsensitive as originalGetObjectKeyCaseInsensitive,
+  isClass as originalIsClass,
+  isJaypieError as originalIsJaypieError,
+  optional as originalOptional,
+  required as originalRequired,
+  safeParseFloat as originalSafeParseFloat,
   // Errors
   BadGatewayError as BadGatewayErrorOriginal,
   BadRequestError as BadRequestErrorOriginal,
@@ -30,6 +43,31 @@ import {
   UnhandledError as UnhandledErrorOriginal,
   UnreachableCodeError as UnreachableCodeErrorOriginal,
 } from "@jaypie/core";
+import { DATADOG } from "@jaypie/datadog";
+import { 
+  EXPRESS, 
+  cors as originalCors,
+  expressHttpCodeHandler as originalExpressHttpCodeHandler,
+  badRequestRoute as originalBadRequestRoute,
+  echoRoute as originalEchoRoute,
+  forbiddenRoute as originalForbiddenRoute,
+  goneRoute as originalGoneRoute,
+  methodNotAllowedRoute as originalMethodNotAllowedRoute,
+  noContentRoute as originalNoContentRoute,
+  notFoundRoute as originalNotFoundRoute,
+  notImplementedRoute as originalNotImplementedRoute,
+} from "@jaypie/express";
+import {
+  LLM,
+  toolkit as originalToolkit,
+  tools as originalTools,
+  LlmMessageOptions,
+  LlmOperateOptions,
+  LlmOperateResponse,
+  LlmOptions,
+  LlmProvider,
+  LlmTool,
+} from "@jaypie/llm";
 import { mongoose } from "@jaypie/mongoose";
 import type { TextractPageAdaptable } from "@jaypie/textract";
 import type { JsonReturn } from "@jaypie/types";
@@ -99,6 +137,14 @@ const getEnvSecret = vi.fn((): string => {
 const getMessages = vi.fn((...params: Parameters<typeof originalGetMessages>) =>
   originalGetMessages(...params),
 );
+
+const getSingletonMessage = vi.fn((...params: Parameters<typeof originalGetSingletonMessage>) => {
+  try {
+    return originalGetSingletonMessage(...params);
+  } catch (error) {
+    return { value: `_MOCK_SINGLETON_MESSAGE_[${TAG}]` };
+  }
+});
 
 const getSecret = vi.fn((): string => {
   return `_MOCK_SECRET_[${TAG}]`;
@@ -290,6 +336,110 @@ const cloneDeep = vi.fn((value: unknown) => structuredClone(value));
 
 const envBoolean = vi.fn((): boolean => {
   return true;
+});
+
+const envsKey = vi.fn((...params: Parameters<typeof originalEnvsKey>) => {
+  try {
+    return originalEnvsKey(...params);
+  } catch (error) {
+    return `_MOCK_ENVS_KEY_[${TAG}]`;
+  }
+});
+
+const errorFromStatusCode = vi.fn((...params: Parameters<typeof originalErrorFromStatusCode>) => {
+  try {
+    return originalErrorFromStatusCode(...params);
+  } catch (error) {
+    return new ProjectErrorOriginal("_MOCK_ERROR_FROM_STATUS_CODE_");
+  }
+});
+
+const formatError = vi.fn((...params: Parameters<typeof originalFormatError>) => {
+  try {
+    return originalFormatError(...params);
+  } catch (error) {
+    return { errors: [{ title: "_MOCK_FORMAT_ERROR_" }] };
+  }
+});
+
+const getHeaderFrom = vi.fn((...params: Parameters<typeof originalGetHeaderFrom>) => {
+  try {
+    return originalGetHeaderFrom(...params);
+  } catch (error) {
+    return "_MOCK_GET_HEADER_FROM_";
+  }
+});
+
+const getObjectKeyCaseInsensitive = vi.fn((...params: Parameters<typeof originalGetObjectKeyCaseInsensitive>) => {
+  try {
+    return originalGetObjectKeyCaseInsensitive(...params);
+  } catch (error) {
+    return "_MOCK_GET_OBJECT_KEY_CASE_INSENSITIVE_";
+  }
+});
+
+const isClass = vi.fn((...params: Parameters<typeof originalIsClass>) => {
+  try {
+    return originalIsClass(...params);
+  } catch (error) {
+    return false;
+  }
+});
+
+const isJaypieError = vi.fn((...params: Parameters<typeof originalIsJaypieError>) => {
+  try {
+    return originalIsJaypieError(...params);
+  } catch (error) {
+    return false;
+  }
+});
+
+const optional = Object.assign(
+  vi.fn((...params: Parameters<typeof originalOptional>) => {
+    try {
+      return originalOptional(...params);
+    } catch (error) {
+      return false;
+    }
+  }),
+  {
+    array: vi.fn(() => false),
+    boolean: vi.fn(() => false),
+    class: vi.fn(() => false),
+    function: vi.fn(() => false),
+    null: vi.fn(() => false),
+    number: vi.fn(() => false),
+    object: vi.fn(() => false),
+    string: vi.fn(() => false),
+  }
+);
+
+const required = Object.assign(
+  vi.fn((...params: Parameters<typeof originalRequired>) => {
+    try {
+      return originalRequired(...params);
+    } catch (error) {
+      return false;
+    }
+  }),
+  {
+    array: vi.fn(() => false),
+    boolean: vi.fn(() => false),
+    class: vi.fn(() => false),
+    function: vi.fn(() => false),
+    null: vi.fn(() => false),
+    number: vi.fn(() => false),
+    object: vi.fn(() => false),
+    string: vi.fn(() => false),
+  }
+);
+
+const safeParseFloat = vi.fn((...params: Parameters<typeof originalSafeParseFloat>) => {
+  try {
+    return originalSafeParseFloat(...params);
+  } catch (error) {
+    return 0;
+  }
 });
 
 const placeholders = vi.fn(
@@ -501,6 +651,86 @@ const submitMetricSet = vi.fn((): boolean => {
 });
 
 // @jaypie/express
+const badRequestRoute = vi.fn((...params: Parameters<typeof originalBadRequestRoute>) => {
+  try {
+    return originalBadRequestRoute(...params);
+  } catch (error) {
+    return BadRequestError("_MOCK_BAD_REQUEST_ROUTE_");
+  }
+});
+
+const cors = vi.fn((...params: Parameters<typeof originalCors>) => {
+  try {
+    return originalCors(...params);
+  } catch (error) {
+    return (req: unknown, res: unknown, next: () => void) => next();
+  }
+});
+
+const echoRoute = vi.fn((...params: Parameters<typeof originalEchoRoute>) => {
+  try {
+    return originalEchoRoute(...params);
+  } catch (error) {
+    return (req: unknown) => req;
+  }
+});
+
+const expressHttpCodeHandler = vi.fn((...params: Parameters<typeof originalExpressHttpCodeHandler>) => {
+  try {
+    return originalExpressHttpCodeHandler(...params);
+  } catch (error) {
+    return (req: unknown, res: { status: (code: number) => { send: () => void } }) => res.status(200).send();
+  }
+});
+
+const forbiddenRoute = vi.fn((...params: Parameters<typeof originalForbiddenRoute>) => {
+  try {
+    return originalForbiddenRoute(...params);
+  } catch (error) {
+    return ForbiddenError("_MOCK_FORBIDDEN_ROUTE_");
+  }
+});
+
+const goneRoute = vi.fn((...params: Parameters<typeof originalGoneRoute>) => {
+  try {
+    return originalGoneRoute(...params);
+  } catch (error) {
+    return GoneError("_MOCK_GONE_ROUTE_");
+  }
+});
+
+const methodNotAllowedRoute = vi.fn((...params: Parameters<typeof originalMethodNotAllowedRoute>) => {
+  try {
+    return originalMethodNotAllowedRoute(...params);
+  } catch (error) {
+    return MethodNotAllowedError("_MOCK_METHOD_NOT_ALLOWED_ROUTE_");
+  }
+});
+
+const noContentRoute = vi.fn((...params: Parameters<typeof originalNoContentRoute>) => {
+  try {
+    return originalNoContentRoute(...params);
+  } catch (error) {
+    return (req: unknown, res: { status: (code: number) => { send: () => void } }) => res.status(204).send();
+  }
+});
+
+const notFoundRoute = vi.fn((...params: Parameters<typeof originalNotFoundRoute>) => {
+  try {
+    return originalNotFoundRoute(...params);
+  } catch (error) {
+    return NotFoundError("_MOCK_NOT_FOUND_ROUTE_");
+  }
+});
+
+const notImplementedRoute = vi.fn((...params: Parameters<typeof originalNotImplementedRoute>) => {
+  try {
+    return originalNotImplementedRoute(...params);
+  } catch (error) {
+    return NotImplementedError("_MOCK_NOT_IMPLEMENTED_ROUTE_");
+  }
+});
+
 const expressHandler = vi.fn(
   (
     handlerOrProps: ExpressHandlerParameter,
@@ -726,6 +956,52 @@ const Llm = Object.assign(
   },
 );
 
+// LLM Tools
+const random = vi.fn(() => ({
+  result: Math.random().toString(),
+  interpretation: "_MOCK_RANDOM_INTERPRETATION_",
+}));
+
+const roll = vi.fn(() => ({
+  result: "4",
+  interpretation: "_MOCK_ROLL_INTERPRETATION_",
+}));
+
+const time = vi.fn(() => ({
+  result: new Date().toISOString(),
+  interpretation: "_MOCK_TIME_INTERPRETATION_",
+}));
+
+const weather = vi.fn(() => ({
+  result: JSON.stringify({
+    temperature: 72,
+    conditions: "sunny",
+    location: "Mock City",
+  }),
+  interpretation: "_MOCK_WEATHER_INTERPRETATION_",
+}));
+
+const toolkit = vi.fn(() => {
+  try {
+    return originalToolkit;
+  } catch (error) {
+    return {
+      random,
+      roll,
+      time,
+      weather,
+    };
+  }
+});
+
+const tools = vi.fn(() => {
+  try {
+    return originalTools;
+  } catch (error) {
+    return [random, roll, time, weather];
+  }
+});
+
 // @jaypie/mongoose
 const connect = vi.fn((): boolean => {
   return true;
@@ -779,33 +1055,49 @@ export {
   // AWS
   getEnvSecret,
   getMessages,
+  getSingletonMessage,
   getSecret,
   getTextractJob,
   sendBatchMessages,
   sendMessage,
   sendTextractJob,
-  // Core
+  // Core Constants
+  HTTP,
+  JAYPIE,
+  PROJECT,
+  VALIDATE,
+  // Core Functions
   BadGatewayError,
   BadRequestError,
   cloneDeep,
   ConfigurationError,
   envBoolean,
+  envsKey,
+  errorFromStatusCode,
+  formatError,
   ForbiddenError,
+  force,
   GatewayTimeoutError,
+  getHeaderFrom,
+  getObjectKeyCaseInsensitive,
   GoneError,
-  HTTP,
   IllogicalError,
   InternalError,
+  isClass,
+  isJaypieError,
   jaypieHandler,
   log,
   MethodNotAllowedError,
   MultiError,
   NotFoundError,
   NotImplementedError,
+  optional,
   placeholders,
   ProjectError,
   ProjectMultiError,
   RejectedError,
+  required,
+  safeParseFloat,
   sleep,
   TeapotError,
   UnauthorizedError,
@@ -815,14 +1107,33 @@ export {
   uuid,
   validate,
   // Datadog
+  DATADOG,
   submitMetric,
   submitMetricSet,
   // Express
+  EXPRESS,
+  badRequestRoute,
+  cors,
+  echoRoute,
   expressHandler,
+  expressHttpCodeHandler,
+  forbiddenRoute,
+  goneRoute,
+  methodNotAllowedRoute,
+  noContentRoute,
+  notFoundRoute,
+  notImplementedRoute,
   // Lambda
   lambdaHandler,
   // LLM
+  LLM,
   Llm,
+  random,
+  roll,
+  time,
+  toolkit,
+  tools,
+  weather,
   // Mongoose
   connect,
   connectFromSecretEnv,
