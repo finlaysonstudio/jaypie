@@ -1,4 +1,4 @@
-import { isJaypieError, ProjectError } from "@jaypie/core";
+import { isJaypieError, ProjectError, VALIDATE } from "@jaypie/core";
 import { mongoose as expectedMongoose } from "@jaypie/mongoose";
 import { TextractPageAdaptable } from "@jaypie/textract";
 import { JsonReturn } from "@jaypie/types";
@@ -43,6 +43,7 @@ const {
   submitMetricSet,
   textractJsonToMarkdown,
   uuid,
+  validate,
 } = jaypieMock;
 
 // Add custom matchers
@@ -113,6 +114,7 @@ describe("Jaypie Mock", () => {
         expect(vi.isMockFunction(envBoolean)).toBeTrue();
         expect(vi.isMockFunction(sleep)).toBeTrue();
         expect(vi.isMockFunction(uuid)).toBeTrue();
+        expect(vi.isMockFunction(validate)).toBeTrue();
       });
       it("Mocks return appropriate values", () => {
         expect(envBoolean()).toBeTrue();
@@ -121,6 +123,82 @@ describe("Jaypie Mock", () => {
         expect(uuid()).toMatchUuid();
         uuid.mockReturnValueOnce("1234");
         expect(uuid()).not.toMatchUuid();
+      });
+      describe("Validate", () => {
+        describe("Base Cases", () => {
+          it("Works as expected", () => {
+            expect(validate("test", { type: VALIDATE.STRING })).toBeTrue();
+            expect(validate(42, { type: VALIDATE.STRING, throws: false })).toBeFalse();
+            expect(validate(42, { type: VALIDATE.NUMBER })).toBeTrue();
+            expect(validate([], { type: VALIDATE.ARRAY })).toBeTrue();
+            expect(validate({}, { type: VALIDATE.OBJECT })).toBeTrue();
+          });
+          
+          it("Has the expected convenience methods", () => {
+            expect(vi.isMockFunction(validate.string)).toBeTrue();
+            expect(vi.isMockFunction(validate.number)).toBeTrue();
+            expect(vi.isMockFunction(validate.array)).toBeTrue();
+            expect(vi.isMockFunction(validate.boolean)).toBeTrue();
+            expect(vi.isMockFunction(validate.class)).toBeTrue();
+            expect(vi.isMockFunction(validate.function)).toBeTrue();
+            expect(vi.isMockFunction(validate.null)).toBeTrue();
+            expect(vi.isMockFunction(validate.object)).toBeTrue();
+            expect(vi.isMockFunction(validate.undefined)).toBeTrue();
+          });
+          
+          it("Has the expected optional methods", () => {
+            expect(vi.isMockFunction(validate.optional.string)).toBeTrue();
+            expect(vi.isMockFunction(validate.optional.number)).toBeTrue();
+            expect(vi.isMockFunction(validate.optional.array)).toBeTrue();
+            expect(vi.isMockFunction(validate.optional.boolean)).toBeTrue();
+            expect(vi.isMockFunction(validate.optional.class)).toBeTrue();
+            expect(vi.isMockFunction(validate.optional.function)).toBeTrue();
+            expect(vi.isMockFunction(validate.optional.null)).toBeTrue();
+            expect(vi.isMockFunction(validate.optional.object)).toBeTrue();
+          });
+        });
+        
+        describe("Functionality", () => {
+          it("Throws errors when expected", () => {
+            expect(() => validate(42, { type: VALIDATE.STRING })).toThrow();
+            expect(() => validate.string(42)).toThrow();
+          });
+          
+          it("Convenience methods work correctly", () => {
+            expect(validate.string("test")).toBeTrue();
+            expect(validate.number(42)).toBeTrue();
+            expect(validate.array([])).toBeTrue();
+            expect(validate.object({})).toBeTrue();
+            expect(validate.boolean(true)).toBeTrue();
+            
+            expect(() => validate.number("42")).toThrow();
+            expect(() => validate.array({})).toThrow();
+          });
+          
+          it("Optional methods work correctly", () => {
+            expect(validate.optional.string("test")).toBeTrue();
+            expect(validate.optional.number(42)).toBeTrue();
+            expect(validate.optional.string(undefined)).toBeTrue();
+            expect(validate.optional.number(undefined)).toBeTrue();
+            
+            expect(() => validate.optional.number("42")).toThrow();
+            expect(() => validate.optional.array({})).toThrow();
+          });
+          
+          it("Can be mocked for testing", () => {
+            const original = validate.string;
+            try {
+              validate.string.mockReturnValueOnce(false);
+              expect(validate.string("test")).toBeFalse();
+              
+              validate.mockReturnValueOnce(false);
+              expect(validate("test", { type: VALIDATE.STRING, throws: false })).toBeFalse();
+            } finally {
+              // Restore the original implementation
+              validate.string.mockImplementation(original);
+            }
+          });
+        });
       });
       describe("Jaypie Handler", () => {
         describe("Base Cases", () => {

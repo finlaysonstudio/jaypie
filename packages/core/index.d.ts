@@ -386,5 +386,5 @@ export function safeParseFloat(value: string | number): number;
 export function sleep(milliseconds?: number): Promise<void>;
 
 // Re-exports
-export { default as cloneDeep } from "lodash.clonedeep";
+export const cloneDeep: <T>(value: T) => T;
 export { v4 as uuid } from "uuid";

@@ -4,13 +4,7 @@ import copy from "rollup-plugin-copy";
 
 export default [
   {
-    external: [
-      "@jaypie/core",
-      "jest-extended",
-      "jest-json-schema",
-      "lodash.isequal",
-      "vitest",
-    ],
+    external: ["@jaypie/core", "jest-extended", "jest-json-schema", "vitest"],
     input: "src/index.ts",
     output: {
       dir: "dist",
@@ -37,7 +31,7 @@ export default [
       "amazon-textract-response-parser",
       "fs/promises",
       "jest-json-schema",
-      "lodash.isequal",
+      "node:util",
       "path",
       "url",
       "vitest",
