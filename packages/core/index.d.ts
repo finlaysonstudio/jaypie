@@ -12,6 +12,19 @@ export const TYPE: {
   UNDEFINED: "_UNDEFINED";
 };
 
+export const VALIDATE: {
+  ANY: "*";
+  ARRAY: ArrayConstructor;
+  BOOLEAN: BooleanConstructor;
+  CLASS: "_CLASS";
+  FUNCTION: FunctionConstructor;
+  NUMBER: NumberConstructor;
+  NULL: null;
+  OBJECT: ObjectConstructor;
+  STRING: StringConstructor;
+  UNDEFINED: "_UNDEFINED";
+};
+
 export const HTTP: {
   ALLOW: {
     ANY: "*";
@@ -166,6 +179,8 @@ export class ProjectMultiError extends Error {
   _type: string;
   json(): { errors: Array<{ title: string; detail: string; status: number }> };
 }
+
+export const MultiError = ProjectMultiError;
 
 // Error Constructors
 export class BadGatewayError extends ProjectError {}

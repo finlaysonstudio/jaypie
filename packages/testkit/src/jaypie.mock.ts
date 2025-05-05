@@ -1,10 +1,11 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable import-x/export */
 import {
   getMessages as originalGetMessages,
   getSingletonMessage as originalGetSingletonMessage,
 } from "@jaypie/aws";
 import {
   force,
-  Log,
   uuid as originalUuid,
   validate as originalValidate,
   // Core utilities
@@ -64,12 +65,6 @@ import {
   LLM,
   toolkit as originalToolkit,
   tools as originalTools,
-  LlmMessageOptions,
-  LlmOperateOptions,
-  LlmOperateResponse,
-  LlmOptions,
-  LlmProvider,
-  LlmTool,
 } from "@jaypie/llm";
 import { mongoose } from "@jaypie/mongoose";
 import type { TextractPageAdaptable } from "@jaypie/textract";
@@ -87,7 +82,6 @@ import {
   JaypieLifecycleOption,
   WithJsonFunction,
 } from "./types/jaypie-testkit";
-import type { SQSMessageResponse } from "@jaypie/aws";
 import { spyLog } from "./mockLog.module.js";
 import type { Response as ExpressResponse } from "express";
 import { readFile } from "fs/promises";
@@ -124,7 +118,7 @@ beforeAll(async () => {
   );
   MarkdownPageOriginal = textract.MarkdownPage;
   mockTextractContents = await readFile(MOCK_TEXTRACT_DOCUMENT_PATH, "utf-8");
-  spyLog(log as Log);
+  spyLog(log);
 });
 
 //
@@ -156,15 +150,15 @@ export const getSecret = vi.fn((): string => {
   return `_MOCK_SECRET_[${TAG}]`;
 });
 
-export const getTextractJob = vi.fn((job: string): SQSMessageResponse => {
+export const getTextractJob = vi.fn((job: string): Record<string, unknown> => {
   return { value: `_MOCK_TEXTRACT_JOB_[${job}]` };
 });
 
-export const sendBatchMessages = vi.fn((): SQSMessageResponse => {
+export const sendBatchMessages = vi.fn((): Record<string, unknown> => {
   return { value: `_MOCK_BATCH_MESSAGES_[${TAG}]` };
 });
 
-export const sendMessage = vi.fn((): SQSMessageResponse => {
+export const sendMessage = vi.fn((): Record<string, unknown> => {
   return { value: `_MOCK_MESSAGE_[${TAG}]` };
 });
 
@@ -874,8 +868,7 @@ export const expressHandler = vi.fn(
         ) {
           // In theory jaypieFunction has handled all errors
           const errorStatus =
-            (error as ProjectErrorOriginal).status ||
-            HTTP.CODE.INTERNAL_SERVER_ERROR;
+            (error as ProjectErrorOriginal).status || HTTP.CODE.INTERNAL_ERROR;
           let errorResponse;
           if (typeof (error as ProjectErrorOriginal).json === "function") {
             errorResponse = (error as ProjectErrorOriginal).json();
@@ -909,7 +902,6 @@ export const expressHandler = vi.fn(
               (res as ExpressResponse)
                 .status(status)
                 .json(JSON.parse(response));
-              // eslint-disable-next-line @typescript-eslint/no-unused-vars
             } catch (error) {
               (res as ExpressResponse).status(status).send(response);
             }
@@ -1087,7 +1079,6 @@ export const textractJsonToMarkdown = vi.fn(
     try {
       const result = textractJsonToMarkdownOriginal(textractResults);
       return result;
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
       // eslint-disable-next-line no-console
       console.warn(
@@ -1107,100 +1098,6 @@ export * from "@jaypie/lambda";
 export * from "@jaypie/llm";
 export * from "@jaypie/mongoose";
 export * from "@jaypie/textract";
-
-// Export all items as named exports
-export {
-  // AWS
-  getEnvSecret,
-  getMessages,
-  getSingletonMessage,
-  getSecret,
-  getTextractJob,
-  sendBatchMessages,
-  sendMessage,
-  sendTextractJob,
-  // Core Constants
-  HTTP,
-  JAYPIE,
-  PROJECT,
-  VALIDATE,
-  // Core Functions
-  BadGatewayError,
-  BadRequestError,
-  cloneDeep,
-  ConfigurationError,
-  envBoolean,
-  envsKey,
-  errorFromStatusCode,
-  formatError,
-  ForbiddenError,
-  force,
-  GatewayTimeoutError,
-  getHeaderFrom,
-  getObjectKeyCaseInsensitive,
-  GoneError,
-  IllogicalError,
-  InternalError,
-  isClass,
-  isJaypieError,
-  jaypieHandler,
-  log,
-  MethodNotAllowedError,
-  MultiError,
-  NotFoundError,
-  NotImplementedError,
-  optional,
-  placeholders,
-  ProjectError,
-  ProjectMultiError,
-  RejectedError,
-  required,
-  safeParseFloat,
-  sleep,
-  TeapotError,
-  UnauthorizedError,
-  UnavailableError,
-  UnhandledError,
-  UnreachableCodeError,
-  uuid,
-  validate,
-  // Datadog
-  DATADOG,
-  submitMetric,
-  submitMetricSet,
-  // Express
-  EXPRESS,
-  badRequestRoute,
-  cors,
-  echoRoute,
-  expressHandler,
-  expressHttpCodeHandler,
-  forbiddenRoute,
-  goneRoute,
-  methodNotAllowedRoute,
-  noContentRoute,
-  notFoundRoute,
-  notImplementedRoute,
-  // Lambda
-  lambdaHandler,
-  // LLM
-  LLM,
-  Llm,
-  random,
-  roll,
-  time,
-  toolkit,
-  tools,
-  weather,
-  // Mongoose
-  connect,
-  connectFromSecretEnv,
-  disconnect,
-  mongoose,
-  // Textract
-  MarkdownPage,
-  textractJsonToMarkdown,
-};
 
 // Export default for convenience
 export default {
