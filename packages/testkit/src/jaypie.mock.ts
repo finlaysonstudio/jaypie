@@ -1,4 +1,7 @@
-import { getMessages as originalGetMessages, getSingletonMessage as originalGetSingletonMessage } from "@jaypie/aws";
+import {
+  getMessages as originalGetMessages,
+  getSingletonMessage as originalGetSingletonMessage,
+} from "@jaypie/aws";
 import {
   force,
   Log,
@@ -44,8 +47,8 @@ import {
   UnreachableCodeError as UnreachableCodeErrorOriginal,
 } from "@jaypie/core";
 import { DATADOG } from "@jaypie/datadog";
-import { 
-  EXPRESS, 
+import {
+  EXPRESS,
   cors as originalCors,
   expressHttpCodeHandler as originalExpressHttpCodeHandler,
   badRequestRoute as originalBadRequestRoute,
@@ -138,13 +141,15 @@ const getMessages = vi.fn((...params: Parameters<typeof originalGetMessages>) =>
   originalGetMessages(...params),
 );
 
-const getSingletonMessage = vi.fn((...params: Parameters<typeof originalGetSingletonMessage>) => {
-  try {
-    return originalGetSingletonMessage(...params);
-  } catch (error) {
-    return { value: `_MOCK_SINGLETON_MESSAGE_[${TAG}]` };
-  }
-});
+const getSingletonMessage = vi.fn(
+  (...params: Parameters<typeof originalGetSingletonMessage>) => {
+    try {
+      return originalGetSingletonMessage(...params);
+    } catch (error) {
+      return { value: `_MOCK_SINGLETON_MESSAGE_[${TAG}]` };
+    }
+  },
+);
 
 const getSecret = vi.fn((): string => {
   return `_MOCK_SECRET_[${TAG}]`;
@@ -346,37 +351,45 @@ const envsKey = vi.fn((...params: Parameters<typeof originalEnvsKey>) => {
   }
 });
 
-const errorFromStatusCode = vi.fn((...params: Parameters<typeof originalErrorFromStatusCode>) => {
-  try {
-    return originalErrorFromStatusCode(...params);
-  } catch (error) {
-    return new ProjectErrorOriginal("_MOCK_ERROR_FROM_STATUS_CODE_");
-  }
-});
+const errorFromStatusCode = vi.fn(
+  (...params: Parameters<typeof originalErrorFromStatusCode>) => {
+    try {
+      return originalErrorFromStatusCode(...params);
+    } catch (error) {
+      return new ProjectErrorOriginal("_MOCK_ERROR_FROM_STATUS_CODE_");
+    }
+  },
+);
 
-const formatError = vi.fn((...params: Parameters<typeof originalFormatError>) => {
-  try {
-    return originalFormatError(...params);
-  } catch (error) {
-    return { errors: [{ title: "_MOCK_FORMAT_ERROR_" }] };
-  }
-});
+const formatError = vi.fn(
+  (...params: Parameters<typeof originalFormatError>) => {
+    try {
+      return originalFormatError(...params);
+    } catch (error) {
+      return { errors: [{ title: "_MOCK_FORMAT_ERROR_" }] };
+    }
+  },
+);
 
-const getHeaderFrom = vi.fn((...params: Parameters<typeof originalGetHeaderFrom>) => {
-  try {
-    return originalGetHeaderFrom(...params);
-  } catch (error) {
-    return "_MOCK_GET_HEADER_FROM_";
-  }
-});
+const getHeaderFrom = vi.fn(
+  (...params: Parameters<typeof originalGetHeaderFrom>) => {
+    try {
+      return originalGetHeaderFrom(...params);
+    } catch (error) {
+      return "_MOCK_GET_HEADER_FROM_";
+    }
+  },
+);
 
-const getObjectKeyCaseInsensitive = vi.fn((...params: Parameters<typeof originalGetObjectKeyCaseInsensitive>) => {
-  try {
-    return originalGetObjectKeyCaseInsensitive(...params);
-  } catch (error) {
-    return "_MOCK_GET_OBJECT_KEY_CASE_INSENSITIVE_";
-  }
-});
+const getObjectKeyCaseInsensitive = vi.fn(
+  (...params: Parameters<typeof originalGetObjectKeyCaseInsensitive>) => {
+    try {
+      return originalGetObjectKeyCaseInsensitive(...params);
+    } catch (error) {
+      return "_MOCK_GET_OBJECT_KEY_CASE_INSENSITIVE_";
+    }
+  },
+);
 
 const isClass = vi.fn((...params: Parameters<typeof originalIsClass>) => {
   try {
@@ -386,13 +399,15 @@ const isClass = vi.fn((...params: Parameters<typeof originalIsClass>) => {
   }
 });
 
-const isJaypieError = vi.fn((...params: Parameters<typeof originalIsJaypieError>) => {
-  try {
-    return originalIsJaypieError(...params);
-  } catch (error) {
-    return false;
-  }
-});
+const isJaypieError = vi.fn(
+  (...params: Parameters<typeof originalIsJaypieError>) => {
+    try {
+      return originalIsJaypieError(...params);
+    } catch (error) {
+      return false;
+    }
+  },
+);
 
 const optional = Object.assign(
   vi.fn((...params: Parameters<typeof originalOptional>) => {
@@ -411,7 +426,7 @@ const optional = Object.assign(
     number: vi.fn(() => false),
     object: vi.fn(() => false),
     string: vi.fn(() => false),
-  }
+  },
 );
 
 const required = Object.assign(
@@ -431,16 +446,18 @@ const required = Object.assign(
     number: vi.fn(() => false),
     object: vi.fn(() => false),
     string: vi.fn(() => false),
-  }
+  },
 );
 
-const safeParseFloat = vi.fn((...params: Parameters<typeof originalSafeParseFloat>) => {
-  try {
-    return originalSafeParseFloat(...params);
-  } catch (error) {
-    return 0;
-  }
-});
+const safeParseFloat = vi.fn(
+  (...params: Parameters<typeof originalSafeParseFloat>) => {
+    try {
+      return originalSafeParseFloat(...params);
+    } catch (error) {
+      return 0;
+    }
+  },
+);
 
 const placeholders = vi.fn(
   (...params: Parameters<typeof originalPlaceholders>) =>
@@ -651,13 +668,15 @@ const submitMetricSet = vi.fn((): boolean => {
 });
 
 // @jaypie/express
-const badRequestRoute = vi.fn((...params: Parameters<typeof originalBadRequestRoute>) => {
-  try {
-    return originalBadRequestRoute(...params);
-  } catch (error) {
-    return BadRequestError("_MOCK_BAD_REQUEST_ROUTE_");
-  }
-});
+const badRequestRoute = vi.fn(
+  (...params: Parameters<typeof originalBadRequestRoute>) => {
+    try {
+      return originalBadRequestRoute(...params);
+    } catch (error) {
+      return BadRequestError("_MOCK_BAD_REQUEST_ROUTE_");
+    }
+  },
+);
 
 const cors = vi.fn((...params: Parameters<typeof originalCors>) => {
   try {
@@ -675,21 +694,28 @@ const echoRoute = vi.fn((...params: Parameters<typeof originalEchoRoute>) => {
   }
 });
 
-const expressHttpCodeHandler = vi.fn((...params: Parameters<typeof originalExpressHttpCodeHandler>) => {
-  try {
-    return originalExpressHttpCodeHandler(...params);
-  } catch (error) {
-    return (req: unknown, res: { status: (code: number) => { send: () => void } }) => res.status(200).send();
-  }
-});
+const expressHttpCodeHandler = vi.fn(
+  (...params: Parameters<typeof originalExpressHttpCodeHandler>) => {
+    try {
+      return originalExpressHttpCodeHandler(...params);
+    } catch (error) {
+      return (
+        req: unknown,
+        res: { status: (code: number) => { send: () => void } },
+      ) => res.status(200).send();
+    }
+  },
+);
 
-const forbiddenRoute = vi.fn((...params: Parameters<typeof originalForbiddenRoute>) => {
-  try {
-    return originalForbiddenRoute(...params);
-  } catch (error) {
-    return ForbiddenError("_MOCK_FORBIDDEN_ROUTE_");
-  }
-});
+const forbiddenRoute = vi.fn(
+  (...params: Parameters<typeof originalForbiddenRoute>) => {
+    try {
+      return originalForbiddenRoute(...params);
+    } catch (error) {
+      return ForbiddenError("_MOCK_FORBIDDEN_ROUTE_");
+    }
+  },
+);
 
 const goneRoute = vi.fn((...params: Parameters<typeof originalGoneRoute>) => {
   try {
@@ -699,37 +725,48 @@ const goneRoute = vi.fn((...params: Parameters<typeof originalGoneRoute>) => {
   }
 });
 
-const methodNotAllowedRoute = vi.fn((...params: Parameters<typeof originalMethodNotAllowedRoute>) => {
-  try {
-    return originalMethodNotAllowedRoute(...params);
-  } catch (error) {
-    return MethodNotAllowedError("_MOCK_METHOD_NOT_ALLOWED_ROUTE_");
-  }
-});
+const methodNotAllowedRoute = vi.fn(
+  (...params: Parameters<typeof originalMethodNotAllowedRoute>) => {
+    try {
+      return originalMethodNotAllowedRoute(...params);
+    } catch (error) {
+      return MethodNotAllowedError("_MOCK_METHOD_NOT_ALLOWED_ROUTE_");
+    }
+  },
+);
 
-const noContentRoute = vi.fn((...params: Parameters<typeof originalNoContentRoute>) => {
-  try {
-    return originalNoContentRoute(...params);
-  } catch (error) {
-    return (req: unknown, res: { status: (code: number) => { send: () => void } }) => res.status(204).send();
-  }
-});
+const noContentRoute = vi.fn(
+  (...params: Parameters<typeof originalNoContentRoute>) => {
+    try {
+      return originalNoContentRoute(...params);
+    } catch (error) {
+      return (
+        req: unknown,
+        res: { status: (code: number) => { send: () => void } },
+      ) => res.status(204).send();
+    }
+  },
+);
 
-const notFoundRoute = vi.fn((...params: Parameters<typeof originalNotFoundRoute>) => {
-  try {
-    return originalNotFoundRoute(...params);
-  } catch (error) {
-    return NotFoundError("_MOCK_NOT_FOUND_ROUTE_");
-  }
-});
+const notFoundRoute = vi.fn(
+  (...params: Parameters<typeof originalNotFoundRoute>) => {
+    try {
+      return originalNotFoundRoute(...params);
+    } catch (error) {
+      return NotFoundError("_MOCK_NOT_FOUND_ROUTE_");
+    }
+  },
+);
 
-const notImplementedRoute = vi.fn((...params: Parameters<typeof originalNotImplementedRoute>) => {
-  try {
-    return originalNotImplementedRoute(...params);
-  } catch (error) {
-    return NotImplementedError("_MOCK_NOT_IMPLEMENTED_ROUTE_");
-  }
-});
+const notImplementedRoute = vi.fn(
+  (...params: Parameters<typeof originalNotImplementedRoute>) => {
+    try {
+      return originalNotImplementedRoute(...params);
+    } catch (error) {
+      return NotImplementedError("_MOCK_NOT_IMPLEMENTED_ROUTE_");
+    }
+  },
+);
 
 const expressHandler = vi.fn(
   (
