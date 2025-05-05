@@ -41,7 +41,6 @@
     "@jaypie/mongoose": "^1.1.1",
     "@rollup/plugin-json": "^6.1.0",
     "@types/express": "^5.0.0",
-    "@types/lodash.isequal": "^4.5.8",
     "@types/node": "^22.13.1",
     "@types/supertest": "^6.0.2",
     "express": "^5.1.0",
