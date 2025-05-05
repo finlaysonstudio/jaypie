@@ -1,8 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
-import { cloneDeep } from "../jaypie.mock";
+import mock from "../jaypie.mock";
 
+const { cloneDeep } = mock;
 describe("cloneDeep", () => {
   it("Should be a mock function", () => {
+    console.log("cloneDeep :>> ", cloneDeep);
     expect(vi.isMockFunction(cloneDeep)).toBe(true);
   });
 

@@ -2,7 +2,6 @@ import { isJaypieError, ProjectError, VALIDATE } from "@jaypie/core";
 import { mongoose as expectedMongoose } from "@jaypie/mongoose";
 import { TextractPageAdaptable } from "@jaypie/textract";
 import { JsonReturn } from "@jaypie/types";
-import type { SQSMessage } from "@jaypie/aws";
 import { TextractDocument } from "amazon-textract-response-parser";
 import { readFile } from "fs/promises";
 import {
@@ -19,7 +18,8 @@ import matchers from "../matchers.module";
 import sqsTestRecords from "../sqsTestRecords.function";
 
 // Subject
-import {
+import mock from "../jaypie.mock";
+const {
   cloneDeep,
   ConfigurationError,
   connect,
@@ -43,7 +43,7 @@ import {
   textractJsonToMarkdown,
   uuid,
   validate,
-} from "../jaypie.mock";
+} = mock;
 
 // Add custom matchers
 expect.extend(matchers);
@@ -1167,14 +1167,14 @@ describe("Jaypie Mock", () => {
 
         it("Works as expected with mock textract contents", () => {
           // Mock the result directly to ensure test passes reliably
-          MarkdownPage.mockReturnValueOnce({ 
+          MarkdownPage.mockReturnValueOnce({
             text: `---
 type: page
 id: mock-page-1
 ---
 # Mock Page
 This is a mock Textract document
-For testing purposes only`
+For testing purposes only`,
           });
           const mockPage = new TextractDocument(
             JSON.parse(mockTextractContents),
