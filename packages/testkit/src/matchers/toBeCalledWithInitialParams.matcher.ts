@@ -1,4 +1,4 @@
-import isEqual from "lodash.isequal";
+import { isDeepStrictEqual as isEqual } from "node:util";
 import { Mock } from "vitest";
 import { MatcherResult } from "../types/jaypie-testkit";
 

@@ -1,6 +1,6 @@
 {
   "name": "@jaypie/core",
-  "version": "1.1.5",
+  "version": "1.1.6",
   "license": "MIT",
   "author": "Finlayson Studio",
   "type": "module",
@@ -59,7 +59,6 @@
   "dependencies": {
     "chalk": "4.1.2",
     "jsonapi-serializer": "^3.6.9",
-    "lodash.clonedeep": "^4.5.0",
     "uuid": "^11.0.5"
   },
   "publishConfig": {

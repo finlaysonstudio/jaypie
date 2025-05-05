@@ -1,5 +1,5 @@
 #!/bin/bash
-cat context.md | claude "
+claude --dangerously-skip-permissions "
 Read plan.md.
 Edit the plan and mark the first queued task as dequeued. 
 Complete that task. 

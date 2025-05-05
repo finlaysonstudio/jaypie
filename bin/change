@@ -1,0 +1,22 @@
+#!/bin/bash
+
+# Check if path parameter is provided
+if [ -z "$1" ]; then
+    echo "Called change with no arguments. Continuing..."
+    claude --dangerously-skip-permissions
+else
+    if [[ ! "$1" =~ ^[0-9_]+$ ]]; then
+        echo "File not found. Continuing..."
+        claude --dangerously-skip-permissions
+    else
+        # Find the alphanumerically lowest filename containing the input
+        file=$(find ./context/changelog -type f -name "*$1*" | sort | head -n 1)
+        
+        if [ -z "$file" ]; then
+            echo "File not found. Continuing..."
+            claude --dangerously-skip-permissions
+        else
+            cat "$file" | claude --dangerously-skip-permissions "The user requests the following change:"
+        fi
+    fi
+fi

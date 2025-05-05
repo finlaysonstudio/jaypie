@@ -156,6 +156,7 @@ export default [
     rules: {
       ...tsPlugin.configs.recommended.rules,
       "prettier/prettier": "warn",
+      "@typescript-eslint/no-unused-vars": "warn",
     },
   },
 
@@ -178,6 +179,7 @@ export default [
     rules: {
       ...vitest.configs.recommended.rules,
       "@typescript-eslint/no-explicit-any": "off",
+      "vitest/expect-expect": "warn",
       "vitest/no-focused-tests": ["error", { fixable: false }],
       "vitest/no-disabled-tests": "warn",
     },
