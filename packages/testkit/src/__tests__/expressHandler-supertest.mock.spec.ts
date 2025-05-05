@@ -6,9 +6,8 @@ import { describe, expect, it } from "vitest";
 import matchers from "../matchers.module";
 
 // Subject
-import mocks from "../jaypie.mock";
+import { expressHandler } from "../jaypie.mock";
 
-const { expressHandler } = mocks;
 // Add custom matchers
 expect.extend(matchers);
 

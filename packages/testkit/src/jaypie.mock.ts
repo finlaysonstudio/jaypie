@@ -363,7 +363,7 @@ const validateFn = vi.fn(
     ...params: Parameters<typeof originalValidate>
   ): ReturnType<typeof originalValidate> => {
     return originalValidate(...params);
-  }
+  },
 );
 
 // Create the validate object with all properties
@@ -373,63 +373,63 @@ const validate = Object.assign(validateFn, {
       ...params: Parameters<typeof originalValidate.array>
     ): ReturnType<typeof originalValidate.array> => {
       return originalValidate.array(...params);
-    }
+    },
   ),
   boolean: vi.fn(
     (
       ...params: Parameters<typeof originalValidate.boolean>
     ): ReturnType<typeof originalValidate.boolean> => {
       return originalValidate.boolean(...params);
-    }
+    },
   ),
   class: vi.fn(
     (
       ...params: Parameters<typeof originalValidate.class>
     ): ReturnType<typeof originalValidate.class> => {
       return originalValidate.class(...params);
-    }
+    },
   ),
   function: vi.fn(
     (
       ...params: Parameters<typeof originalValidate.function>
     ): ReturnType<typeof originalValidate.function> => {
       return originalValidate.function(...params);
-    }
+    },
   ),
   null: vi.fn(
     (
       ...params: Parameters<typeof originalValidate.null>
     ): ReturnType<typeof originalValidate.null> => {
       return originalValidate.null(...params);
-    }
+    },
   ),
   number: vi.fn(
     (
       ...params: Parameters<typeof originalValidate.number>
     ): ReturnType<typeof originalValidate.number> => {
       return originalValidate.number(...params);
-    }
+    },
   ),
   object: vi.fn(
     (
       ...params: Parameters<typeof originalValidate.object>
     ): ReturnType<typeof originalValidate.object> => {
       return originalValidate.object(...params);
-    }
+    },
   ),
   string: vi.fn(
     (
       ...params: Parameters<typeof originalValidate.string>
     ): ReturnType<typeof originalValidate.string> => {
       return originalValidate.string(...params);
-    }
+    },
   ),
   undefined: vi.fn(
     (
       ...params: Parameters<typeof originalValidate.undefined>
     ): ReturnType<typeof originalValidate.undefined> => {
       return originalValidate.undefined(...params);
-    }
+    },
   ),
   optional: {
     array: vi.fn(
@@ -437,58 +437,58 @@ const validate = Object.assign(validateFn, {
         ...params: Parameters<typeof originalValidate.optional.array>
       ): ReturnType<typeof originalValidate.optional.array> => {
         return originalValidate.optional.array(...params);
-      }
+      },
     ),
     boolean: vi.fn(
       (
         ...params: Parameters<typeof originalValidate.optional.boolean>
       ): ReturnType<typeof originalValidate.optional.boolean> => {
         return originalValidate.optional.boolean(...params);
-      }
+      },
     ),
     class: vi.fn(
       (
         ...params: Parameters<typeof originalValidate.optional.class>
       ): ReturnType<typeof originalValidate.optional.class> => {
         return originalValidate.optional.class(...params);
-      }
+      },
     ),
     function: vi.fn(
       (
         ...params: Parameters<typeof originalValidate.optional.function>
       ): ReturnType<typeof originalValidate.optional.function> => {
         return originalValidate.optional.function(...params);
-      }
+      },
     ),
     null: vi.fn(
       (
         ...params: Parameters<typeof originalValidate.optional.null>
       ): ReturnType<typeof originalValidate.optional.null> => {
         return originalValidate.optional.null(...params);
-      }
+      },
     ),
     number: vi.fn(
       (
         ...params: Parameters<typeof originalValidate.optional.number>
       ): ReturnType<typeof originalValidate.optional.number> => {
         return originalValidate.optional.number(...params);
-      }
+      },
     ),
     object: vi.fn(
       (
         ...params: Parameters<typeof originalValidate.optional.object>
       ): ReturnType<typeof originalValidate.optional.object> => {
         return originalValidate.optional.object(...params);
-      }
+      },
     ),
     string: vi.fn(
       (
         ...params: Parameters<typeof originalValidate.optional.string>
       ): ReturnType<typeof originalValidate.optional.string> => {
         return originalValidate.optional.string(...params);
-      }
+      },
     ),
-  }
+  },
 });
 
 // @jaypie/datadog
@@ -774,8 +774,8 @@ const textractJsonToMarkdown = vi.fn((textractResults: JsonReturn): string => {
   }
 });
 
-// Export default for convenience
-export default {
+// Export all items as named exports
+export {
   // AWS
   getEnvSecret,
   getMessages,

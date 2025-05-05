@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-function-type */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 declare module "@jaypie/core" {
   // Core utilities
@@ -49,7 +50,7 @@ declare module "@jaypie/core" {
   };
 
   export function uuid(): string;
-  
+
   // Validate functions
   export interface ValidateOptional {
     array: (value: unknown) => any[] | undefined;
