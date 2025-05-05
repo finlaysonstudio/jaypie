@@ -44,7 +44,7 @@
     "@types/lodash.isequal": "^4.5.8",
     "@types/node": "^22.13.1",
     "@types/supertest": "^6.0.2",
-    "express": "^4.21.1",
+    "express": "^5.1.0",
     "rollup": "^4.29.1",
     "rollup-plugin-copy": "^3.5.0",
     "rollup-plugin-dts": "^6.1.1",
