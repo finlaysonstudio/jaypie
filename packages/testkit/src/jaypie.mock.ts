@@ -286,6 +286,8 @@ const UnreachableCodeError = vi.fn(
 );
 
 // @jaypie/core Functions
+const cloneDeep = vi.fn((value: unknown) => structuredClone(value));
+
 const envBoolean = vi.fn((): boolean => {
   return true;
 });
@@ -785,6 +787,7 @@ export default {
   // Core
   BadGatewayError,
   BadRequestError,
+  cloneDeep,
   ConfigurationError,
   envBoolean,
   ForbiddenError,
