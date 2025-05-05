@@ -49,6 +49,34 @@ declare module "@jaypie/core" {
   };
 
   export function uuid(): string;
+  
+  // Validate functions
+  export interface ValidateOptional {
+    array: (value: unknown) => any[] | undefined;
+    boolean: (value: unknown) => boolean | undefined;
+    class: (value: unknown, className: any) => any | undefined;
+    function: (value: unknown) => Function | undefined;
+    null: (value: unknown) => null | undefined;
+    number: (value: unknown) => number | undefined;
+    object: (value: unknown) => object | undefined;
+    string: (value: unknown) => string | undefined;
+  }
+
+  export interface ValidateFunction {
+    (value: unknown): any;
+    array: (value: unknown) => any[];
+    boolean: (value: unknown) => boolean;
+    class: (value: unknown, className: any) => any;
+    function: (value: unknown) => Function;
+    null: (value: unknown) => null;
+    number: (value: unknown) => number;
+    object: (value: unknown) => object;
+    string: (value: unknown) => string;
+    undefined: (value: unknown) => undefined;
+    optional: ValidateOptional;
+  }
+
+  export const validate: ValidateFunction;
 
   // Error Classes
   export class ProjectError extends Error {

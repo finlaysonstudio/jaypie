@@ -358,7 +358,7 @@ const sleep = vi.fn((): boolean => {
 const uuid = vi.fn(originalUuid);
 
 // @jaypie/core validate
-const validate = vi.fn(
+const validateFn = vi.fn(
   (
     ...params: Parameters<typeof originalValidate>
   ): ReturnType<typeof originalValidate> => {
@@ -366,130 +366,130 @@ const validate = vi.fn(
   }
 );
 
-// Set up convenience functions to match original validate
-validate.array = vi.fn(
-  (
-    ...params: Parameters<typeof originalValidate.array>
-  ): ReturnType<typeof originalValidate.array> => {
-    return originalValidate.array(...params);
-  }
-);
-validate.boolean = vi.fn(
-  (
-    ...params: Parameters<typeof originalValidate.boolean>
-  ): ReturnType<typeof originalValidate.boolean> => {
-    return originalValidate.boolean(...params);
-  }
-);
-validate.class = vi.fn(
-  (
-    ...params: Parameters<typeof originalValidate.class>
-  ): ReturnType<typeof originalValidate.class> => {
-    return originalValidate.class(...params);
-  }
-);
-validate.function = vi.fn(
-  (
-    ...params: Parameters<typeof originalValidate.function>
-  ): ReturnType<typeof originalValidate.function> => {
-    return originalValidate.function(...params);
-  }
-);
-validate.null = vi.fn(
-  (
-    ...params: Parameters<typeof originalValidate.null>
-  ): ReturnType<typeof originalValidate.null> => {
-    return originalValidate.null(...params);
-  }
-);
-validate.number = vi.fn(
-  (
-    ...params: Parameters<typeof originalValidate.number>
-  ): ReturnType<typeof originalValidate.number> => {
-    return originalValidate.number(...params);
-  }
-);
-validate.object = vi.fn(
-  (
-    ...params: Parameters<typeof originalValidate.object>
-  ): ReturnType<typeof originalValidate.object> => {
-    return originalValidate.object(...params);
-  }
-);
-validate.string = vi.fn(
-  (
-    ...params: Parameters<typeof originalValidate.string>
-  ): ReturnType<typeof originalValidate.string> => {
-    return originalValidate.string(...params);
-  }
-);
-validate.undefined = vi.fn(
-  (
-    ...params: Parameters<typeof originalValidate.undefined>
-  ): ReturnType<typeof originalValidate.undefined> => {
-    return originalValidate.undefined(...params);
-  }
-);
-
-// Set up optional functions
-validate.optional = {
+// Create the validate object with all properties
+const validate = Object.assign(validateFn, {
   array: vi.fn(
     (
-      ...params: Parameters<typeof originalValidate.optional.array>
-    ): ReturnType<typeof originalValidate.optional.array> => {
-      return originalValidate.optional.array(...params);
+      ...params: Parameters<typeof originalValidate.array>
+    ): ReturnType<typeof originalValidate.array> => {
+      return originalValidate.array(...params);
     }
   ),
   boolean: vi.fn(
     (
-      ...params: Parameters<typeof originalValidate.optional.boolean>
-    ): ReturnType<typeof originalValidate.optional.boolean> => {
-      return originalValidate.optional.boolean(...params);
+      ...params: Parameters<typeof originalValidate.boolean>
+    ): ReturnType<typeof originalValidate.boolean> => {
+      return originalValidate.boolean(...params);
     }
   ),
   class: vi.fn(
     (
-      ...params: Parameters<typeof originalValidate.optional.class>
-    ): ReturnType<typeof originalValidate.optional.class> => {
-      return originalValidate.optional.class(...params);
+      ...params: Parameters<typeof originalValidate.class>
+    ): ReturnType<typeof originalValidate.class> => {
+      return originalValidate.class(...params);
     }
   ),
   function: vi.fn(
     (
-      ...params: Parameters<typeof originalValidate.optional.function>
-    ): ReturnType<typeof originalValidate.optional.function> => {
-      return originalValidate.optional.function(...params);
+      ...params: Parameters<typeof originalValidate.function>
+    ): ReturnType<typeof originalValidate.function> => {
+      return originalValidate.function(...params);
     }
   ),
   null: vi.fn(
     (
-      ...params: Parameters<typeof originalValidate.optional.null>
-    ): ReturnType<typeof originalValidate.optional.null> => {
-      return originalValidate.optional.null(...params);
+      ...params: Parameters<typeof originalValidate.null>
+    ): ReturnType<typeof originalValidate.null> => {
+      return originalValidate.null(...params);
     }
   ),
   number: vi.fn(
     (
-      ...params: Parameters<typeof originalValidate.optional.number>
-    ): ReturnType<typeof originalValidate.optional.number> => {
-      return originalValidate.optional.number(...params);
+      ...params: Parameters<typeof originalValidate.number>
+    ): ReturnType<typeof originalValidate.number> => {
+      return originalValidate.number(...params);
     }
   ),
   object: vi.fn(
     (
-      ...params: Parameters<typeof originalValidate.optional.object>
-    ): ReturnType<typeof originalValidate.optional.object> => {
-      return originalValidate.optional.object(...params);
+      ...params: Parameters<typeof originalValidate.object>
+    ): ReturnType<typeof originalValidate.object> => {
+      return originalValidate.object(...params);
     }
   ),
   string: vi.fn(
     (
-      ...params: Parameters<typeof originalValidate.optional.string>
-    ): ReturnType<typeof originalValidate.optional.string> => {
-      return originalValidate.optional.string(...params);
+      ...params: Parameters<typeof originalValidate.string>
+    ): ReturnType<typeof originalValidate.string> => {
+      return originalValidate.string(...params);
     }
   ),
-};
+  undefined: vi.fn(
+    (
+      ...params: Parameters<typeof originalValidate.undefined>
+    ): ReturnType<typeof originalValidate.undefined> => {
+      return originalValidate.undefined(...params);
+    }
+  ),
+  optional: {
+    array: vi.fn(
+      (
+        ...params: Parameters<typeof originalValidate.optional.array>
+      ): ReturnType<typeof originalValidate.optional.array> => {
+        return originalValidate.optional.array(...params);
+      }
+    ),
+    boolean: vi.fn(
+      (
+        ...params: Parameters<typeof originalValidate.optional.boolean>
+      ): ReturnType<typeof originalValidate.optional.boolean> => {
+        return originalValidate.optional.boolean(...params);
+      }
+    ),
+    class: vi.fn(
+      (
+        ...params: Parameters<typeof originalValidate.optional.class>
+      ): ReturnType<typeof originalValidate.optional.class> => {
+        return originalValidate.optional.class(...params);
+      }
+    ),
+    function: vi.fn(
+      (
+        ...params: Parameters<typeof originalValidate.optional.function>
+      ): ReturnType<typeof originalValidate.optional.function> => {
+        return originalValidate.optional.function(...params);
+      }
+    ),
+    null: vi.fn(
+      (
+        ...params: Parameters<typeof originalValidate.optional.null>
+      ): ReturnType<typeof originalValidate.optional.null> => {
+        return originalValidate.optional.null(...params);
+      }
+    ),
+    number: vi.fn(
+      (
+        ...params: Parameters<typeof originalValidate.optional.number>
+      ): ReturnType<typeof originalValidate.optional.number> => {
+        return originalValidate.optional.number(...params);
+      }
+    ),
+    object: vi.fn(
+      (
+        ...params: Parameters<typeof originalValidate.optional.object>
+      ): ReturnType<typeof originalValidate.optional.object> => {
+        return originalValidate.optional.object(...params);
+      }
+    ),
+    string: vi.fn(
+      (
+        ...params: Parameters<typeof originalValidate.optional.string>
+      ): ReturnType<typeof originalValidate.optional.string> => {
+        return originalValidate.optional.string(...params);
+      }
+    ),
+  }
+});
 
 // @jaypie/datadog
 const submitMetric = vi.fn((): boolean => {
