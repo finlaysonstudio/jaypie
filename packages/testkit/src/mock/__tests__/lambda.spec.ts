@@ -1,148 +1,123 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { createHandler, lambdaHandler, mockLambdaContext } from "../lambda";
+import { lambdaHandler } from "../lambda.js";
+import { BadRequestError, UnavailableError, jaypieHandler } from "../core.js";
 
-describe("Lambda Mocks", () => {
+describe("lambdaHandler", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  describe("createHandler", () => {
-    it("should return the provided handler function", () => {
-      const originalHandler = async (event: any) => ({ statusCode: 200 });
-      const wrappedHandler = createHandler(originalHandler);
+  // Mock for jaypieHandler to track calls
+  vi.mock("../core.js", async (importOriginal) => {
+    const actual = await importOriginal();
+    return {
+      ...actual,
+      jaypieHandler: vi.fn(actual.jaypieHandler),
+    };
+  });
 
-      expect(wrappedHandler).toBe(originalHandler);
+  describe("Base Cases", () => {
+    it("is a Function", () => {
+      expect(typeof lambdaHandler).toBe("function");
     });
 
-    it("should track calls with handler function", () => {
-      const originalHandler = async (event: any) => ({ statusCode: 200 });
-      createHandler(originalHandler);
-
-      expect(createHandler.mock.calls.length).toBe(1);
-      expect(createHandler.mock.calls[0][0]).toBe(originalHandler);
+    it("Works", async () => {
+      const handler = vi.fn().mockReturnValue("result");
+      const wrapped = lambdaHandler(handler);
+      const result = await wrapped({}, {});
+      expect(result).toBe("result");
     });
   });
 
-  describe("lambdaHandler", () => {
-    it("should return a function that calls the original handler", async () => {
-      // Arrange
-      const mockFunction = vi.fn().mockReturnValue({ success: true });
-      const handler = lambdaHandler(mockFunction);
-      
-      // Act
-      const result = await handler({ test: "event" }, { awsRequestId: "test-id" });
-      
-      // Assert
-      expect(mockFunction).toHaveBeenCalledTimes(1);
-      expect(mockFunction).toHaveBeenCalledWith({ test: "event" }, { awsRequestId: "test-id" });
-      expect(result).toEqual({ success: true });
+  describe("Error Conditions", () => {
+    it("throws BadRequestError when handler is not a function", () => {
+      expect(() => lambdaHandler({} as any)).toThrow(BadRequestError);
+      expect(() => lambdaHandler({} as any)).toThrow("handler must be a function");
     });
 
-    it("should handle errors from the handler", async () => {
-      // Arrange
-      const mockFunction = vi.fn().mockImplementation(() => {
-        throw new Error("Test error");
+    it("throws UnavailableError when unavailable option is true", async () => {
+      const handler = vi.fn();
+      const wrapped = lambdaHandler(handler, { unavailable: true });
+      
+      try {
+        await wrapped({}, {});
+        // Should not reach here
+        expect(true).toBe(false);
+      } catch (error) {
+        expect(error).toBeInstanceOf(UnavailableError);
+        expect((error as Error).message).toBe("Service unavailable");
+      }
+    });
+
+    it("handles thrown errors from handler", async () => {
+      const handler = vi.fn().mockImplementation(() => {
+        throw new Error("Handler error");
       });
-      const handler = lambdaHandler(mockFunction);
+      const wrapped = lambdaHandler(handler);
       
-      // Act
-      const result = await handler();
-      
-      // Assert
-      expect(mockFunction).toHaveBeenCalledTimes(1);
-      expect(result).toEqual({ error: "UnhandledError" });
-    });
-
-    it("should rethrow errors when throw option is true", async () => {
-      // Arrange
-      const mockFunction = vi.fn().mockImplementation(() => {
-        throw new Error("Test error");
-      });
-      const handler = lambdaHandler(mockFunction, { throw: true });
-      
-      // Act & Assert
-      await expect(handler()).rejects.toThrow("Test error");
-    });
-
-    it("should handle project errors separately", async () => {
-      // Arrange
-      const projectError = new Error("Project error");
-      projectError.isProjectError = true;
-      projectError.json = () => ({ status: 400, message: "Bad request" });
-      
-      const mockFunction = vi.fn().mockImplementation(() => {
-        throw projectError;
-      });
-      const handler = lambdaHandler(mockFunction);
-      
-      // Act
-      const result = await handler();
-      
-      // Assert
-      expect(mockFunction).toHaveBeenCalledTimes(1);
-      expect(result).toEqual({ status: 400, message: "Bad request" });
-    });
-
-    it("should swap parameters if handler is an object and options is a function", async () => {
-      // Arrange
-      const mockFunction = vi.fn().mockReturnValue({ success: true });
-      const options = { name: "test-handler" };
-      const handler = lambdaHandler(options, mockFunction);
-      
-      // Act
-      const result = await handler();
-      
-      // Assert
-      expect(mockFunction).toHaveBeenCalledTimes(1);
-      expect(result).toEqual({ success: true });
-    });
-
-    it("should throw if not passed a function", () => {
-      // Act & Assert
-      expect(() => lambdaHandler(42 as any)).toThrow();
-      expect(() => lambdaHandler("string" as any)).toThrow();
-      expect(() => lambdaHandler({} as any)).toThrow();
-      expect(() => lambdaHandler(null as any)).toThrow();
+      try {
+        await wrapped({}, {});
+        // Should not reach here
+        expect(true).toBe(false);
+      } catch (error) {
+        expect((error as Error).message).toBe("Handler error");
+      }
     });
   });
 
-  describe("mockLambdaContext", () => {
-    it("should create a context with expected properties", () => {
-      const context = mockLambdaContext();
+  describe("Observability", () => {
+    it("forwards calls to jaypieHandler", async () => {
+      const handler = vi.fn().mockReturnValue("result");
+      const options = { name: "testHandler" };
+      const wrapped = lambdaHandler(handler, options);
+      await wrapped({}, {});
+      expect(jaypieHandler).toHaveBeenCalledWith(handler, options);
+    });
+  });
 
-      expect(context.functionName).toBe("mock-function");
-      expect(context.awsRequestId).toBe("mock-request-id");
-      expect(context.logGroupName).toBe("mock-log-group");
-      expect(context.logStreamName).toBe("mock-log-stream");
-      expect(typeof context.getRemainingTimeInMillis).toBe("function");
-      expect(typeof context.done).toBe("function");
-      expect(typeof context.fail).toBe("function");
-      expect(typeof context.succeed).toBe("function");
+  describe("Happy Paths", () => {
+    it("accepts function as the first parameter", async () => {
+      const handler = vi.fn().mockReturnValue("result");
+      const wrapped = lambdaHandler(handler);
+      const result = await wrapped({}, {});
+      expect(result).toBe("result");
+      expect(handler).toHaveBeenCalledWith({}, {});
     });
 
-    it("should have getRemainingTimeInMillis return 30000 by default", () => {
-      const context = mockLambdaContext();
-      expect(context.getRemainingTimeInMillis()).toBe(30000);
+    it("accepts function and options", async () => {
+      const handler = vi.fn().mockReturnValue("result");
+      const options = { name: "testHandler" };
+      const wrapped = lambdaHandler(handler, options);
+      const result = await wrapped({}, {});
+      expect(result).toBe("result");
+      expect(jaypieHandler).toHaveBeenCalledWith(handler, options);
+    });
+  });
+
+  describe("Features", () => {
+    it("accepts options as first parameter and function as second parameter", async () => {
+      const handler = vi.fn().mockReturnValue("result");
+      const options = { name: "testHandler" };
+      const wrapped = lambdaHandler(options, handler);
+      const result = await wrapped({}, {});
+      expect(result).toBe("result");
+      expect(jaypieHandler).toHaveBeenCalledWith(handler, options);
     });
 
-    it("should track callback function calls", () => {
-      const context = mockLambdaContext();
-      const error = new Error("Test error");
-      const result = { success: true };
+    it("allows passing additional arguments to the wrapped function", async () => {
+      const handler = vi.fn().mockReturnValue("result");
+      const wrapped = lambdaHandler(handler);
+      const result = await wrapped({}, {}, "additional", 123);
+      expect(handler).toHaveBeenCalledWith({}, {}, "additional", 123);
+      expect(result).toBe("result");
+    });
 
-      context.done(error, result);
-      context.fail(error);
-      context.succeed(result);
-
-      expect(context.done.mock.calls.length).toBe(1);
-      expect(context.done.mock.calls[0][0]).toBe(error);
-      expect(context.done.mock.calls[0][1]).toBe(result);
-
-      expect(context.fail.mock.calls.length).toBe(1);
-      expect(context.fail.mock.calls[0][0]).toBe(error);
-
-      expect(context.succeed.mock.calls.length).toBe(1);
-      expect(context.succeed.mock.calls[0][0]).toBe(result);
+    it("provides empty objects as defaults for event and context", async () => {
+      const handler = vi.fn().mockReturnValue("result");
+      const wrapped = lambdaHandler(handler);
+      const result = await wrapped();
+      expect(handler).toHaveBeenCalledWith({}, {});
+      expect(result).toBe("result");
     });
   });
 });

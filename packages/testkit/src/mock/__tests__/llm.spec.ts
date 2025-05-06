@@ -1,122 +1,193 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import {
-  getCompletion,
-  getCompletionStream,
-  operate,
-} from "../llm";
+import { Llm, toolkit, tools } from "../llm";
 
 describe("LLM Mocks", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
+  // 1. Base Cases
+  describe("Base Cases", () => {
+    it("Llm is a class", () => {
+      expect(Llm).toBeClass();
+    });
+
+    it("getInstance returns a singleton instance", () => {
+      const instance1 = Llm.getInstance();
+      const instance2 = Llm.getInstance();
+      expect(instance1).toBe(instance2);
+    });
+
+    it("toolkit contains expected tools", () => {
+      expect(toolkit).toHaveProperty("random");
+      expect(toolkit).toHaveProperty("roll");
+      expect(toolkit).toHaveProperty("time");
+      expect(toolkit).toHaveProperty("weather");
+    });
+
+    it("tools is an array of the toolkit functions", () => {
+      expect(tools).toEqual(Object.values(toolkit));
+    });
+
+    it("new instance initializes with empty history", () => {
+      const llm = new Llm();
+      expect(llm.history).toEqual([]);
+    });
   });
 
-  describe("getCompletion", () => {
-    it("should return default mock response", async () => {
-      const response = await getCompletion("What is the capital of France?");
-      expect(response).toBe("This is a mock completion response");
+  // 2. Error Conditions
+  describe("Error Conditions", () => {
+    it("handles empty messages in send", async () => {
+      const llm = new Llm();
+      const result = await llm.send([]);
+      expect(result).toBe("_MOCK_LLM_RESPONSE_[LLM]");
+      expect(llm.history).toEqual([]);
     });
 
-    it("should track calls with prompt and options", async () => {
-      const prompt = "Tell me a joke";
-      const options = { temperature: 0.7, maxTokens: 100 };
-
-      await getCompletion(prompt, options);
-
-      expect(getCompletion.mock.calls.length).toBe(1);
-      expect(getCompletion.mock.calls[0][0]).toBe(prompt);
-      expect(getCompletion.mock.calls[0][1]).toBe(options);
-    });
-
-    it("should allow customizing the response", async () => {
-      const customResponse = "Paris is the capital of France";
-      getCompletion.mockResolvedValueOnce(customResponse);
-
-      const response = await getCompletion("What is the capital of France?");
-      expect(response).toBe(customResponse);
+    it("handles undefined options in static methods", async () => {
+      const spy = vi.spyOn(Llm.getInstance(), "send");
+      await Llm.send([{ role: "user", content: "Hello" }], undefined);
+      expect(spy).toHaveBeenCalledWith(
+        [{ role: "user", content: "Hello" }],
+        {},
+      );
     });
   });
 
-  describe("getCompletionStream", () => {
-    it("should return an async iterable with chunks", async () => {
-      const stream = await getCompletionStream("Tell me a story");
-      const chunks = [];
+  // 4. Observability
+  describe("Observability", () => {
+    it("instance tracks history of messages", async () => {
+      const llm = new Llm();
+      await llm.send([{ role: "user", content: "Hello" }]);
+      expect(llm.history).toHaveLength(1);
+      expect(llm.history[0]).toEqual({ role: "user", content: "Hello" });
+    });
 
-      for await (const chunk of stream) {
-        chunks.push(chunk);
-      }
-
-      expect(chunks).toEqual([
-        { content: "This " },
-        { content: "is " },
-        { content: "a " },
-        { content: "mock " },
-        { content: "streaming " },
-        { content: "response" },
+    it("instance tracks multiple messages", async () => {
+      const llm = new Llm();
+      await llm.send([
+        { role: "user", content: "Hello" },
+        { role: "assistant", content: "Hi there" },
       ]);
-
-      // Combined content should be "This is a mock streaming response"
-      const combinedContent = chunks.map((chunk) => chunk.content).join("");
-      expect(combinedContent).toBe("This is a mock streaming response");
-    });
-
-    it("should track calls with prompt and options", async () => {
-      const prompt = "Tell me a story";
-      const options = { temperature: 0.7 };
-
-      await getCompletionStream(prompt, options);
-
-      expect(getCompletionStream.mock.calls.length).toBe(1);
-      expect(getCompletionStream.mock.calls[0][0]).toBe(prompt);
-      expect(getCompletionStream.mock.calls[0][1]).toBe(options);
-    });
-
-    it("should allow customizing the stream response", async () => {
-      getCompletionStream.mockImplementationOnce(async function* () {
-        yield { content: "Custom " };
-        yield { content: "response" };
-      });
-
-      const stream = await getCompletionStream("Tell me a story");
-      const chunks = [];
-
-      for await (const chunk of stream) {
-        chunks.push(chunk);
-      }
-
-      expect(chunks).toEqual([{ content: "Custom " }, { content: "response" }]);
+      expect(llm.history).toHaveLength(2);
     });
   });
 
-  describe("operate", () => {
-    it("should return default mock result", async () => {
-      const question = "How many users registered today?";
-      const context = { data: [{ date: "2025-05-05", count: 42 }] };
+  // 5. Happy Paths
+  describe("Happy Paths", () => {
+    let llm: Llm;
 
-      const result = await operate(question, context);
-
-      expect(result).toEqual({ result: "mock operation result" });
+    beforeEach(() => {
+      Llm.instance = undefined;
+      llm = new Llm();
     });
 
-    it("should track calls with question, context and options", async () => {
-      const question = "How many users registered today?";
-      const context = { data: [{ date: "2025-05-05", count: 42 }] };
-      const options = { format: "json" };
-
-      await operate(question, context, options);
-
-      expect(operate.mock.calls.length).toBe(1);
-      expect(operate.mock.calls[0][0]).toBe(question);
-      expect(operate.mock.calls[0][1]).toBe(context);
-      expect(operate.mock.calls[0][2]).toBe(options);
+    it("send returns a mock response", async () => {
+      const response = await llm.send([{ role: "user", content: "Hello" }]);
+      expect(response).toEqual("_MOCK_LLM_RESPONSE_[LLM]");
     });
 
-    it("should allow customizing the result", async () => {
-      const customResult = { count: 42, date: "2025-05-05" };
-      operate.mockResolvedValueOnce(customResult);
+    it("operate returns a mock result object", async () => {
+      const result = await llm.operate("How's the weather?");
+      expect(result).toEqual({
+        result: "_MOCK_LLM_OPERATE_RESULT_[LLM]",
+        raw: {},
+      });
+    });
 
-      const result = await operate("How many users registered today?", {});
+    it("static send uses the singleton instance", async () => {
+      const spy = vi.spyOn(Llm.getInstance(), "send");
+      await Llm.send([{ role: "user", content: "Hello" }]);
+      expect(spy).toHaveBeenCalledWith(
+        [{ role: "user", content: "Hello" }],
+        {},
+      );
+    });
 
-      expect(result).toEqual(customResult);
+    it("static operate uses the singleton instance", async () => {
+      const spy = vi.spyOn(Llm.getInstance(), "operate");
+      await Llm.operate("How's the weather?");
+      expect(spy).toHaveBeenCalledWith("How's the weather?", {}, {});
+    });
+
+    it("send with options passes options through", async () => {
+      const spy = vi.spyOn(Llm.getInstance(), "send");
+      const options = { temperature: 0.7 };
+      await Llm.send([{ role: "user", content: "Hello" }], options);
+      expect(spy).toHaveBeenCalledWith(
+        [{ role: "user", content: "Hello" }],
+        options,
+      );
+    });
+  });
+
+  // 6. Features
+  describe("Features", () => {
+    it("operate adds to history", async () => {
+      const llm = new Llm();
+      await llm.operate("How's the weather?");
+      expect(llm.history).toHaveLength(2);
+      expect(llm.history[0]).toEqual({
+        role: "user",
+        content: "How's the weather?",
+      });
+      expect(llm.history[1]).toEqual({
+        role: "assistant",
+        content: "_MOCK_LLM_OPERATE_[LLM]",
+      });
+    });
+
+    it("random tool returns a mocked value", () => {
+      const result = toolkit.random();
+      expect(result).toBeGreaterThanOrEqual(0);
+      expect(result).toBeLessThanOrEqual(1);
+    });
+
+    it("roll tool returns a mocked value", () => {
+      const result = toolkit.roll();
+      expect(result).toBe(6);
+    });
+
+    it("time tool returns a mocked time string", () => {
+      const result = toolkit.time();
+      expect(result).toBe("_MOCK_TIME_[LLM]");
+    });
+
+    it("weather tool returns a mocked forecast", async () => {
+      const result = await toolkit.weather({
+        location: "San Francisco",
+        days: 3,
+      });
+      expect(result).toEqual({
+        location: "_MOCK_WEATHER_LOCATION_[LLM][San Francisco]",
+        forecast: [
+          {
+            date: "2025-05-1",
+            temperature: 72,
+            condition: "Sunny",
+            precipitation: 0,
+          },
+          {
+            date: "2025-05-2",
+            temperature: 72,
+            condition: "Sunny",
+            precipitation: 0,
+          },
+          {
+            date: "2025-05-3",
+            temperature: 72,
+            condition: "Sunny",
+            precipitation: 0,
+          },
+        ],
+      });
+    });
+
+    it("weather tool defaults to 1 day when days not specified", async () => {
+      const result = await toolkit.weather({ location: "Chicago" });
+      expect(result.forecast).toHaveLength(1);
+    });
+
+    it("weather tool handles undefined options", async () => {
+      const result = await toolkit.weather();
+      expect(result.location).toBe("_MOCK_WEATHER_LOCATION_[LLM][undefined]");
+      expect(result.forecast).toHaveLength(1);
     });
   });
 });

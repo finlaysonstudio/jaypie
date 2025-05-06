@@ -64,43 +64,4 @@ describe("AWS Mocks", () => {
       expect(sendMessage.mock.calls[0][1]).toBe(message);
     });
   });
-
-  describe("uploadToS3", () => {
-    it("should return mock S3 URL by default", async () => {
-      const result = await uploadToS3("bucket", "key", "data");
-      expect(result).toBe("https://mock-s3-url.com");
-    });
-
-    it("should track calls with bucket, key and data", async () => {
-      const bucket = "test-bucket";
-      const key = "path/to/file.json";
-      const data = { test: true };
-
-      await uploadToS3(bucket, key, data);
-
-      expect(uploadToS3.mock.calls.length).toBe(1);
-      expect(uploadToS3.mock.calls[0][0]).toBe(bucket);
-      expect(uploadToS3.mock.calls[0][1]).toBe(key);
-      expect(uploadToS3.mock.calls[0][2]).toBe(data);
-    });
-  });
-
-  describe("downloadFromS3", () => {
-    it("should return mock data as buffer by default", async () => {
-      const result = await downloadFromS3("bucket", "key");
-      expect(Buffer.isBuffer(result)).toBe(true);
-      expect(result.toString()).toBe("mock-data");
-    });
-
-    it("should track calls with bucket and key", async () => {
-      const bucket = "test-bucket";
-      const key = "path/to/file.json";
-
-      await downloadFromS3(bucket, key);
-
-      expect(downloadFromS3.mock.calls.length).toBe(1);
-      expect(downloadFromS3.mock.calls[0][0]).toBe(bucket);
-      expect(downloadFromS3.mock.calls[0][1]).toBe(key);
-    });
-  });
 });

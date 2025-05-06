@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { createMockFunction } from "./utils";
+import { vi } from "vitest";
 
 // Constants for mock values
 const TAG = "LLM";
@@ -57,35 +57,21 @@ export class Llm {
     return Llm.getInstance().operate(question, context, options);
   }
 }
-
-// Tool implementations
-export const random = createMockFunction<
-  (min?: number, max?: number, precision?: number) => number
->((min = 0, max = 1, precision = 0) => {
-  const value = min + Math.random() * (max - min);
-  return precision === 0 ? Math.floor(value) : Number(value.toFixed(precision));
+// Tool implementations - always return mock values
+const random = vi.fn(() => {
+  return 0.5;
 });
 
-export const roll = createMockFunction<
-  (dice: string) => { rolls: number[]; total: number }
->((dice) => {
-  // Just return mock value for consistency
-  return {
-    rolls: [4, 5, 6],
-    total: 15,
-    dice: `_MOCK_ROLL_[${TAG}][${dice}]`,
-  };
+const roll = vi.fn(() => {
+  return 6;
 });
 
-export const time = createMockFunction<
-  (format?: string, timezone?: string) => string
->((format = "iso", timezone = "UTC") => {
-  return `_MOCK_TIME_[${TAG}][${format}][${timezone}]`;
+const time = vi.fn(() => {
+  return `_MOCK_TIME_[${TAG}]`;
 });
 
-export const weather = createMockFunction<
-  (location: string, days?: number) => Promise<any>
->(async (location, days = 1) => {
+const weather = vi.fn(async (options?: any) => {
+  const { location, days = 1 } = options || {};
   return {
     location: `_MOCK_WEATHER_LOCATION_[${TAG}][${location}]`,
     forecast: Array(days)
@@ -108,10 +94,3 @@ export const toolkit = {
 };
 
 export const tools = Object.values(toolkit);
-
-// Standalone operate function
-export const operate = createMockFunction<
-  (question: string, context: any, options?: any) => Promise<any>
->(async (question, context, options) => {
-  return Llm.operate(question, context, options);
-});

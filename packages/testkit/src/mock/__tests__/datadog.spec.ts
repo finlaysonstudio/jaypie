@@ -1,52 +1,68 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { recordMetric, startSpan } from "../datadog";
+import { submitMetric, submitMetricSet } from "../datadog";
 
 describe("Datadog Mocks", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  describe("recordMetric", () => {
-    it("should be a mock function", () => {
-      expect(typeof recordMetric).toBe("function");
-      expect(recordMetric.mock).toBeDefined();
+  describe("Base Cases", () => {
+    it("submitMetric is a mock function", () => {
+      expect(typeof submitMetric).toBe("function");
+      expect(submitMetric.mock).toBeDefined();
     });
 
-    it("should track calls with metric name, value and tags", () => {
-      recordMetric("api.request.count", 1, ["endpoint:users", "method:GET"]);
-
-      expect(recordMetric.mock.calls.length).toBe(1);
-      expect(recordMetric.mock.calls[0][0]).toBe("api.request.count");
-      expect(recordMetric.mock.calls[0][1]).toBe(1);
-      expect(recordMetric.mock.calls[0][2]).toEqual([
-        "endpoint:users",
-        "method:GET",
-      ]);
+    it("submitMetricSet is a mock function", () => {
+      expect(typeof submitMetricSet).toBe("function");
+      expect(submitMetricSet.mock).toBeDefined();
     });
   });
 
-  describe("startSpan", () => {
-    it("should return an object with finish method", () => {
-      const span = startSpan("db.query");
-
-      expect(span).toBeDefined();
-      expect(typeof span.finish).toBe("function");
+  describe("Happy Paths", () => {
+    it("submitMetric returns true by default", () => {
+      const result = submitMetric({});
+      expect(result).toBe(true);
     });
 
-    it("should track calls with span name and options", () => {
-      const options = { resource: "getUserById" };
-      startSpan("db.query", options);
+    it("submitMetricSet returns true by default", () => {
+      const result = submitMetricSet({});
+      expect(result).toBe(true);
+    });
+  });
 
-      expect(startSpan.mock.calls.length).toBe(1);
-      expect(startSpan.mock.calls[0][0]).toBe("db.query");
-      expect(startSpan.mock.calls[0][1]).toBe(options);
+  describe("Features", () => {
+    it("submitMetric tracks calls with options", () => {
+      const options = { metric: "api.request.count", value: 1, tags: ["endpoint:users", "method:GET"] };
+      submitMetric(options);
+
+      expect(submitMetric).toHaveBeenCalledTimes(1);
+      expect(submitMetric).toHaveBeenCalledWith(options);
     });
 
-    it("should track finish method calls", () => {
-      const span = startSpan("db.query");
-      span.finish();
+    it("submitMetricSet tracks calls with options", () => {
+      const options = { 
+        metrics: [
+          { name: "api.request.count", value: 1 },
+          { name: "api.response.time", value: 150 }
+        ],
+        tags: ["endpoint:users", "method:GET"] 
+      };
+      submitMetricSet(options);
 
-      expect(span.finish.mock.calls.length).toBe(1);
+      expect(submitMetricSet).toHaveBeenCalledTimes(1);
+      expect(submitMetricSet).toHaveBeenCalledWith(options);
+    });
+
+    it("submitMetric can have custom return value", () => {
+      submitMetric.mockReturnValueOnce(false);
+      const result = submitMetric({});
+      expect(result).toBe(false);
+    });
+
+    it("submitMetricSet can have custom return value", () => {
+      submitMetricSet.mockReturnValueOnce(false);
+      const result = submitMetricSet({});
+      expect(result).toBe(false);
     });
   });
 });

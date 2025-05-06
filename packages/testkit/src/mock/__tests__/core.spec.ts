@@ -1,11 +1,15 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
 import {
   MockValidationError,
   MockNotFoundError,
   validate,
   getConfig,
-  logger,
+  log,
 } from "../core";
+
+afterEach(() => {
+  vi.clearAllMocks();
+});
 
 describe("Core Mocks", () => {
   describe("Error Classes", () => {
@@ -56,25 +60,25 @@ describe("Core Mocks", () => {
 
   describe("logger", () => {
     it("should have mock methods for logging", () => {
-      expect(typeof logger.debug).toBe("function");
-      expect(typeof logger.info).toBe("function");
-      expect(typeof logger.warn).toBe("function");
-      expect(typeof logger.error).toBe("function");
+      expect(typeof log.debug).toBe("function");
+      expect(typeof log.info).toBe("function");
+      expect(typeof log.warn).toBe("function");
+      expect(typeof log.error).toBe("function");
     });
 
     it("should track debug calls", () => {
-      logger.debug("Debug message", { extra: "data" });
+      log.debug("Debug message", { extra: "data" });
 
-      expect(logger.debug.mock.calls.length).toBe(1);
-      expect(logger.debug.mock.calls[0][0]).toBe("Debug message");
-      expect(logger.debug.mock.calls[0][1]).toEqual({ extra: "data" });
+      expect(log.debug.mock.calls.length).toBe(1);
+      expect(log.debug.mock.calls[0][0]).toBe("Debug message");
+      expect(log.debug.mock.calls[0][1]).toEqual({ extra: "data" });
     });
 
     it("should track info calls", () => {
-      logger.info("Info message");
+      log.info("Info message");
 
-      expect(logger.info.mock.calls.length).toBe(1);
-      expect(logger.info.mock.calls[0][0]).toBe("Info message");
+      expect(log.info.mock.calls.length).toBe(1);
+      expect(log.info.mock.calls[0][0]).toBe("Info message");
     });
   });
 });
