@@ -1,105 +1,82 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { createMockFunction } from "./utils";
+import { readFile } from "fs/promises";
+import { dirname, join } from "path";
+import { fileURLToPath } from "url";
+import { beforeAll, vi } from "vitest";
+import { TextractDocument } from "amazon-textract-response-parser";
+import type { TextractPageAdaptable } from "@jaypie/textract";
+import type { JsonReturn } from "@jaypie/types";
 
 // Constants for mock values
 const TAG = "TEXTRACT";
 
-// Try to import from the original package first
-let originalMarkdownPage: any;
-let originalTextractJsonToMarkdown: any;
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
-(async () => {
-  try {
-    const textractImport = await import("@jaypie/textract");
-    originalMarkdownPage = textractImport.MarkdownPage;
-    originalTextractJsonToMarkdown = textractImport.textractJsonToMarkdown;
-  } catch (error) {
-    // If the original package is not available, we'll use mock implementations
-    console.warn(
-      "[Mock] Could not import @jaypie/textract. Using mock implementations only.",
+const MOCK_TEXTRACT_DOCUMENT_PATH = join(__dirname, "..", "mockTextract.json");
+
+// Initialize variables that will be set in beforeAll
+let textractJsonToMarkdownOriginal = vi.fn<typeof textractJsonToMarkdown>();
+let MarkdownPageOriginal: any;
+let mockTextractContents: string;
+
+// Setup
+beforeAll(async () => {
+  const textract =
+    await vi.importActual<typeof import("@jaypie/textract")>(
+      "@jaypie/textract",
     );
-  }
-})();
+  textractJsonToMarkdownOriginal.mockImplementation(
+    textract.textractJsonToMarkdown,
+  );
+  MarkdownPageOriginal = textract.MarkdownPage;
+  mockTextractContents = await readFile(MOCK_TEXTRACT_DOCUMENT_PATH, "utf-8");
+});
 
 /**
  * Mock for MarkdownPage class from @jaypie/textract
- * Tries to use the original implementation first, then falls back to a mock
  */
-export class MarkdownPage {
-  private _page: any;
-  private _mockText: string;
-
-  constructor(page: any) {
-    this._page = page;
-    this._mockText = `---\ntype: page\nid: ${(page?.id || "mock-id").slice(0, 8)}\n---\n\n# Mock Markdown Page\n\nThis is a mock markdown page generated for testing.`;
-
-    // Try to use the original implementation if available
-    if (originalMarkdownPage) {
-      try {
-        return new originalMarkdownPage(page);
-      } catch (error) {
-        console.warn(
-          "[Mock] Failed to use original MarkdownPage implementation. Using mock instead.",
-        );
-      }
+export const MarkdownPage = vi
+  .fn()
+  .mockImplementation((page: TextractPageAdaptable) => {
+    try {
+      return new MarkdownPageOriginal(page);
+    } catch {
+      // eslint-disable-next-line no-console
+      console.warn(
+        "[MarkdownPage] Actual implementation failed. To suppress this warning, manually mock the response with mockReturnValue",
+      );
+      const mockDocument = new TextractDocument(
+        JSON.parse(mockTextractContents),
+      );
+      // Double type assertion needed to bridge incompatible types
+      return new MarkdownPageOriginal(
+        mockDocument._pages[0] as unknown as TextractPageAdaptable,
+      );
     }
-  }
-
-  get text(): string {
-    return this._mockText;
-  }
-
-  get _text(): string {
-    return this._page?.text || "mock text content";
-  }
-
-  get _layout() {
-    return this._page?.layout || { listItems: () => [] };
-  }
-}
+  });
 
 /**
  * Mock for textractJsonToMarkdown function from @jaypie/textract
- * Tries to use the original implementation first, then falls back to a mock
- * @param textractResults The Textract results as parsed JSON or stringified JSON
- * @returns The markdown representation of the document
  */
-export const textractJsonToMarkdown = createMockFunction<
-  (textractResults: any) => string
->((textractResults) => {
-  try {
-    // Try to use the original implementation if available
-    if (originalTextractJsonToMarkdown) {
-      return originalTextractJsonToMarkdown(textractResults);
+export const textractJsonToMarkdown = vi.fn(
+  (textractResults: JsonReturn): string => {
+    try {
+      const result = textractJsonToMarkdownOriginal(textractResults);
+      return result;
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.warn(
+        "[textractJsonToMarkdown] Actual implementation failed. To suppress this warning, manually mock the response with mockReturnValue",
+      );
+      return `_MOCK_TEXTRACT_JSON_TO_MARKDOWN_{{${textractResults}}}`;
     }
-  } catch (error) {
-    console.warn(
-      "[Mock] Failed to use original textractJsonToMarkdown implementation. Using mock instead.",
-    );
-  }
+  },
+);
 
-  // Fall back to mock implementation
-  const parsedResults =
-    typeof textractResults === "string"
-      ? JSON.parse(textractResults)
-      : textractResults;
-
-  // Create a simple mock markdown representation
-  return `---
-type: page
-id: ${(parsedResults?.id || "mock-id").slice(0, 8)}
----
-
-# Mock Textract Document
-
-This is a mock textract document generated for testing.
-
-## Page 1
-
-This is mock content for page 1.
-
-## Page 2
-
-This is mock content for page 2.`;
-});
+// Export default for convenience
+export default {
+  MarkdownPage,
+  textractJsonToMarkdown,
+};
