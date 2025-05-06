@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { createHandler, mockLambdaContext } from "../../src/mock/lambda";
+import { createHandler, lambdaHandler, mockLambdaContext } from "../../src/mock/lambda";
 
 describe("Lambda Mocks", () => {
   beforeEach(() => {
@@ -20,6 +20,89 @@ describe("Lambda Mocks", () => {
 
       expect(createHandler.mock.calls.length).toBe(1);
       expect(createHandler.mock.calls[0][0]).toBe(originalHandler);
+    });
+  });
+
+  describe("lambdaHandler", () => {
+    it("should return a function that calls the original handler", async () => {
+      // Arrange
+      const mockFunction = vi.fn().mockReturnValue({ success: true });
+      const handler = lambdaHandler(mockFunction);
+      
+      // Act
+      const result = await handler({ test: "event" }, { awsRequestId: "test-id" });
+      
+      // Assert
+      expect(mockFunction).toHaveBeenCalledTimes(1);
+      expect(mockFunction).toHaveBeenCalledWith({ test: "event" }, { awsRequestId: "test-id" });
+      expect(result).toEqual({ success: true });
+    });
+
+    it("should handle errors from the handler", async () => {
+      // Arrange
+      const mockFunction = vi.fn().mockImplementation(() => {
+        throw new Error("Test error");
+      });
+      const handler = lambdaHandler(mockFunction);
+      
+      // Act
+      const result = await handler();
+      
+      // Assert
+      expect(mockFunction).toHaveBeenCalledTimes(1);
+      expect(result).toEqual({ error: "UnhandledError" });
+    });
+
+    it("should rethrow errors when throw option is true", async () => {
+      // Arrange
+      const mockFunction = vi.fn().mockImplementation(() => {
+        throw new Error("Test error");
+      });
+      const handler = lambdaHandler(mockFunction, { throw: true });
+      
+      // Act & Assert
+      await expect(handler()).rejects.toThrow("Test error");
+    });
+
+    it("should handle project errors separately", async () => {
+      // Arrange
+      const projectError = new Error("Project error");
+      projectError.isProjectError = true;
+      projectError.json = () => ({ status: 400, message: "Bad request" });
+      
+      const mockFunction = vi.fn().mockImplementation(() => {
+        throw projectError;
+      });
+      const handler = lambdaHandler(mockFunction);
+      
+      // Act
+      const result = await handler();
+      
+      // Assert
+      expect(mockFunction).toHaveBeenCalledTimes(1);
+      expect(result).toEqual({ status: 400, message: "Bad request" });
+    });
+
+    it("should swap parameters if handler is an object and options is a function", async () => {
+      // Arrange
+      const mockFunction = vi.fn().mockReturnValue({ success: true });
+      const options = { name: "test-handler" };
+      const handler = lambdaHandler(options, mockFunction);
+      
+      // Act
+      const result = await handler();
+      
+      // Assert
+      expect(mockFunction).toHaveBeenCalledTimes(1);
+      expect(result).toEqual({ success: true });
+    });
+
+    it("should throw if not passed a function", () => {
+      // Act & Assert
+      expect(() => lambdaHandler(42 as any)).toThrow();
+      expect(() => lambdaHandler("string" as any)).toThrow();
+      expect(() => lambdaHandler({} as any)).toThrow();
+      expect(() => lambdaHandler(null as any)).toThrow();
     });
   });
 

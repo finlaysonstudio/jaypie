@@ -2,8 +2,9 @@ import { vi } from "vitest";
 
 /**
  * Creates function mocks with proper typing
+ * Internal utility to create properly typed mocks
  */
-export function createMockFunction<T extends (...args: any[]) => any>(
+function createMockFunction<T extends (...args: any[]) => any>(
   implementation?: (...args: Parameters<T>) => ReturnType<T>,
 ): T & { mock: any } {
   // Use a more specific type conversion to avoid TypeScript error
@@ -12,8 +13,9 @@ export function createMockFunction<T extends (...args: any[]) => any>(
 
 /**
  * Creates dynamic mocks based on original implementations
+ * Internal utility to create mocks from original implementation
  */
-export function createAutoMocks<T extends Record<string, unknown>>(
+function createAutoMocks<T extends Record<string, unknown>>(
   original: T,
   mockPrefix = "_MOCK_",
 ): Record<string, unknown> {
@@ -40,8 +42,9 @@ export function createAutoMocks<T extends Record<string, unknown>>(
 
 /**
  * Handles recursive mocking for nested objects
+ * Internal utility to create mocks with nested structure
  */
-export function createDeepMock<T extends object>(
+function createDeepMock<T extends object>(
   template: T,
   implementation: Partial<T> = {},
 ): T {
@@ -55,3 +58,6 @@ export function createDeepMock<T extends object>(
 
   return result;
 }
+
+// Export functions for internal use
+export { createMockFunction, createAutoMocks, createDeepMock };

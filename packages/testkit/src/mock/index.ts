@@ -7,8 +7,11 @@ import * as lambda from "./lambda";
 import * as llm from "./llm";
 import * as mongoose from "./mongoose";
 import * as textract from "./textract";
-import * as utils from "./utils";
+import { createMockFunction, createAutoMocks, createDeepMock } from "./utils";
 import * as setup from "./setup";
+
+// Re-export utilities
+export { createMockFunction, createAutoMocks, createDeepMock };
 
 // Re-export all mocks
 export * from "./aws";
@@ -19,19 +22,39 @@ export * from "./lambda";
 export * from "./llm";
 export * from "./mongoose";
 export * from "./textract";
-export * from "./utils";
 export * from "./setup";
 
 // Export default object with all mocks
 export default {
+  // Utilities
+  createMockFunction,
+  createAutoMocks,
+  createDeepMock,
+  
+  // AWS module
   ...aws,
+  
+  // Core module
   ...core,
+  
+  // Datadog module
   ...datadog,
+  
+  // Express module
   ...express,
+  
+  // Lambda module
   ...lambda,
+  
+  // LLM module  
   ...llm,
+  
+  // Mongoose module (now empty)
   ...mongoose,
+  
+  // Textract module
   ...textract,
-  ...utils,
+  
+  // Setup module
   ...setup,
 };

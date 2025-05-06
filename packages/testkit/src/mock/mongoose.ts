@@ -1,22 +1,7 @@
 import { createMockFunction } from "./utils";
 
-export const mockConnection = {
-  connect: createMockFunction<() => Promise<void>>(async () => {}),
-  disconnect: createMockFunction<() => Promise<void>>(async () => {}),
-  isConnected: createMockFunction<() => boolean>(() => true),
-};
+// Constants for mock values
+const TAG = "MONGOOSE";
 
-export const mockModel = (modelName: string, schema: any) => ({
-  modelName,
-  schema,
-  find: createMockFunction<() => any[]>(() => []),
-  findOne: createMockFunction<() => any | null>(() => null),
-  findById: createMockFunction<() => any | null>(() => null),
-  create: createMockFunction<(data: any) => Promise<any>>(async (data) => data),
-  updateOne: createMockFunction<() => Promise<{ modifiedCount: number }>>(
-    async () => ({ modifiedCount: 1 }),
-  ),
-  deleteOne: createMockFunction<() => Promise<{ deletedCount: number }>>(
-    async () => ({ deletedCount: 1 }),
-  ),
-});
+// Mongoose model mock functions can be added here based on original functionality
+// The mockConnection and mockModel functions were marked for deletion, so they're not included
