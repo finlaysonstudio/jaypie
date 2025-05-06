@@ -9,16 +9,18 @@ const TAG = "TEXTRACT";
 let originalMarkdownPage: any;
 let originalTextractJsonToMarkdown: any;
 
-try {
-  const textractImport = require("@jaypie/textract");
-  originalMarkdownPage = textractImport.MarkdownPage;
-  originalTextractJsonToMarkdown = textractImport.textractJsonToMarkdown;
-} catch (error) {
-  // If the original package is not available, we'll use mock implementations
-  console.warn(
-    "[Mock] Could not import @jaypie/textract. Using mock implementations only.",
-  );
-}
+(async () => {
+  try {
+    const textractImport = await import("@jaypie/textract");
+    originalMarkdownPage = textractImport.MarkdownPage;
+    originalTextractJsonToMarkdown = textractImport.textractJsonToMarkdown;
+  } catch (error) {
+    // If the original package is not available, we'll use mock implementations
+    console.warn(
+      "[Mock] Could not import @jaypie/textract. Using mock implementations only.",
+    );
+  }
+})();
 
 /**
  * Mock for MarkdownPage class from @jaypie/textract
