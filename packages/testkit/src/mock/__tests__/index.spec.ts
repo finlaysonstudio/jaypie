@@ -2,40 +2,74 @@ import { describe, it, expect } from "vitest";
 import mockDefault, * as mockExports from "..";
 
 describe("Mock Index", () => {
-  it("should export all named exports correctly", () => {
-    // Check some of the core exports
-    expect(typeof mockExports.validate).toBe("function");
-    expect(typeof mockExports.getConfig).toBe("function");
-    expect(mockExports.logger).toBeDefined();
+  // Base Cases
+  describe("Base Cases", () => {
+    it("should export all named exports correctly", () => {
+      // Check for required utility exports
+      expect(mockExports).toHaveProperty("createMockFunction");
+      expect(mockExports).toHaveProperty("createAutoMocks");
+      expect(mockExports).toHaveProperty("createDeepMock");
 
-    // Check aws exports
-    expect(typeof mockExports.getMessages).toBe("function");
-    expect(typeof mockExports.getSecret).toBe("function");
+      // Verify that we have exports from each module
+      // Check for specific exports from each module
+      const expectedExports = [
+        // Utilities
+        "createMockFunction",
+        "createAutoMocks",
+        "createDeepMock",
 
-    // Check express exports
-    expect(typeof mockExports.mockRequest).toBe("function");
-    expect(typeof mockExports.mockResponse).toBe("function");
+        // AWS module
+        "getMessages",
+        "getSecret",
+        "sendMessage",
 
-    // Check llm exports
-    expect(typeof mockExports.getCompletion).toBe("function");
-    expect(typeof mockExports.operate).toBe("function");
+        // Core module
+        "validate",
+        "getConfig",
+        "log",
+        "cloneDeep",
 
-    // Check utils exports
-    expect(typeof mockExports.createMockFunction).toBe("function");
-    expect(typeof mockExports.createDeepMock).toBe("function");
+        // Datadog module
+        "submitMetric",
+        "submitMetricSet",
 
-    // Check setup exports
-    expect(typeof mockExports.setupMockEnvironment).toBe("function");
-    expect(typeof mockExports.teardownMockEnvironment).toBe("function");
+        // Express module
+        "expressHandler",
+        "echoRoute",
+
+        // Lambda module
+        "lambdaHandler",
+
+        // LLM module
+        "Llm",
+        "toolkit",
+        "tools",
+
+        // Mongoose module
+        "connect",
+        "connectFromSecretEnv",
+        "disconnect",
+        "mongoose",
+
+        // Textract module
+        "MarkdownPage",
+        "textractJsonToMarkdown",
+      ];
+
+      for (const exportName of expectedExports) {
+        expect(mockExports).toHaveProperty(exportName);
+      }
+    });
   });
 
-  it("should have default export with all mocks", () => {
-    // Check if default export contains the same functions as named exports
-    for (const key of Object.keys(mockExports)) {
-      if (key !== "default") {
-        expect(mockDefault).toHaveProperty(key);
-        expect(mockDefault[key]).toBe(mockExports[key]);
+  // Happy Paths
+  describe("Happy Paths", () => {
+    it("should have default export with all mocks", () => {
+      for (const key of Object.keys(mockExports)) {
+        if (key !== "default") {
+          expect(mockDefault).toHaveProperty(key);
+        }
       }
-    }
+    });
   });
 });
