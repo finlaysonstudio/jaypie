@@ -61,6 +61,50 @@ function createDeepMock<T extends object>(
   return result;
 }
 
+/**
+ * Creates a mock function that resolves to a value when awaited
+ * Internal utility to create async mock functions
+ */
+function createMockResolvedFunction<T>(
+  value: T,
+): (...args: unknown[]) => Promise<T> {
+  return vi.fn().mockResolvedValue(value);
+}
+
+/**
+ * Creates a mock function that returns a value
+ * Internal utility to create mock functions that return a value
+ */
+function createMockReturnedFunction<T>(value: T): (...args: unknown[]) => T {
+  return vi.fn().mockReturnValue(value);
+}
+
+/**
+ * Creates a mock function that wraps another function
+ * Internal utility to create mock functions that wrap another function
+ */
+function createMockWrappedFunction<T>(
+  fn: (...args: unknown[]) => unknown,
+  fallback: any = "_MOCK_WRAPPED_RESULT",
+): (...args: unknown[]) => T {
+  return vi.fn().mockImplementation((...args: unknown[]) => {
+    try {
+      return fn(...args);
+    } catch (error) {
+      /* eslint-disable no-console */
+      console.warn(
+        `[@jaypie/testkit] Actual implementation failed. To suppress this warning, manually mock the response with mockReturnValue`,
+      );
+      if (error instanceof Error) {
+        console.warn(`[@jaypie/testkit] ${error.message}`);
+      }
+      /* eslint-enable no-console */
+      return fallback;
+    }
+  });
+}
+
+// Mock core errors - All error classes extend JaypieError
 class MockValidationError extends Error {
   constructor(message: string) {
     super(message);
@@ -80,6 +124,9 @@ export {
   createMockFunction,
   createAutoMocks,
   createDeepMock,
+  createMockResolvedFunction,
+  createMockReturnedFunction,
+  createMockWrappedFunction,
   MockValidationError,
   MockNotFoundError,
 };
