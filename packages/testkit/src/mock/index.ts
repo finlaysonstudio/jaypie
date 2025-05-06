@@ -30,31 +30,31 @@ export default {
   createMockFunction,
   createAutoMocks,
   createDeepMock,
-  
+
   // AWS module
   ...aws,
-  
+
   // Core module
   ...core,
-  
+
   // Datadog module
   ...datadog,
-  
+
   // Express module
   ...express,
-  
+
   // Lambda module
   ...lambda,
-  
-  // LLM module  
+
+  // LLM module
   ...llm,
-  
+
   // Mongoose module (now empty)
   ...mongoose,
-  
+
   // Textract module
   ...textract,
-  
+
   // Setup module
   ...setup,
 };

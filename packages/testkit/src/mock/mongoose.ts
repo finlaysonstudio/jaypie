@@ -1,7 +1,23 @@
 import { createMockFunction } from "./utils";
 
 // Constants for mock values
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const TAG = "MONGOOSE";
 
-// Mongoose model mock functions can be added here based on original functionality
-// The mockConnection and mockModel functions were marked for deletion, so they're not included
+// Mongoose mock functions
+export const connect = createMockFunction<() => boolean>(() => {
+  // Using TAG: MONGOOSE for connection mock
+  return true;
+});
+
+export const connectFromSecretEnv = createMockFunction<() => boolean>(() => {
+  // Using TAG: MONGOOSE for connectFromSecretEnv mock
+  return true;
+});
+
+export const disconnect = createMockFunction<() => boolean>(() => {
+  // Using TAG: MONGOOSE for disconnect mock
+  return true;
+});
+
+export { mongoose } from "@jaypie/mongoose";

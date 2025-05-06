@@ -6,7 +6,10 @@ export const lambdaHandler = createMockFunction(
   (handlerOrOptions, optionsOrHandler) => {
     // If handlerOrOptions is an object and optionsOrHandler is a function, swap them
     let handler, options;
-    if (typeof handlerOrOptions === "object" && typeof optionsOrHandler === "function") {
+    if (
+      typeof handlerOrOptions === "object" &&
+      typeof optionsOrHandler === "function"
+    ) {
       handler = optionsOrHandler;
       options = handlerOrOptions;
     } else {
@@ -22,10 +25,8 @@ export const lambdaHandler = createMockFunction(
     // Return a Lambda wrapper function
     return async (event = {}, context = {}, ...args) => {
       // Extract options
-      const {
-        name = handler.name || "unknown",
-        throw: shouldThrow = false,
-      } = options;
+      const { name = handler.name || "unknown", throw: shouldThrow = false } =
+        options;
 
       // Create a mock logger
       const log = {
@@ -65,7 +66,9 @@ export const lambdaHandler = createMockFunction(
           log.var({ jaypieError: error });
           const response = error.json ? error.json() : { error: error.message };
           if (shouldThrow) {
-            log.debug(`Throwing error instead of returning response (throw=${shouldThrow})`);
+            log.debug(
+              `Throwing error instead of returning response (throw=${shouldThrow})`,
+            );
             throw error;
           }
           return response;
@@ -79,7 +82,7 @@ export const lambdaHandler = createMockFunction(
         }
       }
     };
-  }
+  },
 );
 
 // No additional helper functions needed - the original lambdaHandler implementation is sufficient

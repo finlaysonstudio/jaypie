@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { createMockFunction } from "./utils";
 
 // Constants for mock values
@@ -13,7 +15,9 @@ try {
   originalTextractJsonToMarkdown = textractImport.textractJsonToMarkdown;
 } catch (error) {
   // If the original package is not available, we'll use mock implementations
-  console.warn("[Mock] Could not import @jaypie/textract. Using mock implementations only.");
+  console.warn(
+    "[Mock] Could not import @jaypie/textract. Using mock implementations only.",
+  );
 }
 
 /**
@@ -27,13 +31,15 @@ export class MarkdownPage {
   constructor(page: any) {
     this._page = page;
     this._mockText = `---\ntype: page\nid: ${(page?.id || "mock-id").slice(0, 8)}\n---\n\n# Mock Markdown Page\n\nThis is a mock markdown page generated for testing.`;
-    
+
     // Try to use the original implementation if available
     if (originalMarkdownPage) {
       try {
         return new originalMarkdownPage(page);
       } catch (error) {
-        console.warn("[Mock] Failed to use original MarkdownPage implementation. Using mock instead.");
+        console.warn(
+          "[Mock] Failed to use original MarkdownPage implementation. Using mock instead.",
+        );
       }
     }
   }
@@ -66,14 +72,17 @@ export const textractJsonToMarkdown = createMockFunction<
       return originalTextractJsonToMarkdown(textractResults);
     }
   } catch (error) {
-    console.warn("[Mock] Failed to use original textractJsonToMarkdown implementation. Using mock instead.");
+    console.warn(
+      "[Mock] Failed to use original textractJsonToMarkdown implementation. Using mock instead.",
+    );
   }
 
   // Fall back to mock implementation
-  const parsedResults = typeof textractResults === "string" 
-    ? JSON.parse(textractResults) 
-    : textractResults;
-  
+  const parsedResults =
+    typeof textractResults === "string"
+      ? JSON.parse(textractResults)
+      : textractResults;
+
   // Create a simple mock markdown representation
   return `---
 type: page
