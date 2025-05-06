@@ -21,5 +21,4 @@ Make sure tests follow the Order of Tests.
 "
 fi
 
-# Pipe the content of Plan_from_Project_Brief.md to claude with the message
 cat context/prompts/Add_Vitest_Tests.md | claude --dangerously-skip-permissions "$message"
