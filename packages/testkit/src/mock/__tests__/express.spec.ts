@@ -4,7 +4,7 @@ import {
   mockResponse,
   mockNext,
   mockRouter,
-} from "../../src/mock/express";
+} from "../express";
 
 describe("Express Mocks", () => {
   describe("mockRequest", () => {

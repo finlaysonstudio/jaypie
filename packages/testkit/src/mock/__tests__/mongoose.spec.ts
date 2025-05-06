@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { mockConnection, mockModel } from "../../src/mock/mongoose";
+import { mockConnection, mockModel } from "../mongoose";
 
 describe("Mongoose Mocks", () => {
   beforeEach(() => {

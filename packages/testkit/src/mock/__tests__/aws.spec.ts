@@ -1,11 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import {
-  getMessages,
-  getSecret,
-  sendMessage,
-  uploadToS3,
-  downloadFromS3,
-} from "../../src/mock/aws";
+import { getMessages, getSecret, sendMessage } from "../aws";
+
+// import * as aws from "@jaypie/aws";
 
 describe("AWS Mocks", () => {
   beforeEach(() => {

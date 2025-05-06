@@ -3,7 +3,7 @@ import {
   extractText,
   extractForms,
   extractTables,
-} from "../../src/mock/textract";
+} from "../textract";
 
 describe("Textract Mocks", () => {
   beforeEach(() => {

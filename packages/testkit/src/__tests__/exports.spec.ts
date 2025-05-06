@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import * as testkit from "../src";
-import * as mockExports from "../src/mock";
+import * as testkit from "..";
+import * as mockExports from "../mock";
 
 describe("Package Exports", () => {
   it("should export main testkit functions", () => {

@@ -1,9 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import {
-  createMockFunction,
-  createAutoMocks,
-  createDeepMock,
-} from "../../src/mock/utils";
+import { createMockFunction, createAutoMocks, createDeepMock } from "../utils";
 
 describe("Mock Utils", () => {
   describe("createMockFunction", () => {

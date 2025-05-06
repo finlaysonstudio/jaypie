@@ -5,7 +5,7 @@ import {
   validate,
   getConfig,
   logger,
-} from "../../src/mock/core";
+} from "../core";
 
 describe("Core Mocks", () => {
   describe("Error Classes", () => {

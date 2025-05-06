@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import mockDefault, * as mockExports from "../../src/mock";
+import mockDefault, * as mockExports from "..";
 
 describe("Mock Index", () => {
   it("should export all named exports correctly", () => {

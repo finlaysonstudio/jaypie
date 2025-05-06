@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { recordMetric, startSpan } from "../../src/mock/datadog";
+import { recordMetric, startSpan } from "../datadog";
 
 describe("Datadog Mocks", () => {
   beforeEach(() => {

@@ -3,7 +3,7 @@ import {
   getCompletion,
   getCompletionStream,
   operate,
-} from "../../src/mock/llm";
+} from "../llm";
 
 describe("LLM Mocks", () => {
   beforeEach(() => {

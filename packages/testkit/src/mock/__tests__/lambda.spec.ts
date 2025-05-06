@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { createHandler, lambdaHandler, mockLambdaContext } from "../../src/mock/lambda";
+import { createHandler, lambdaHandler, mockLambdaContext } from "../lambda";
 
 describe("Lambda Mocks", () => {
   beforeEach(() => {
