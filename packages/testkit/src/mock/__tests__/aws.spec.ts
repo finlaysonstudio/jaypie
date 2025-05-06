@@ -9,6 +9,7 @@ import {
   sendBatchMessages,
   sendTextractJob,
 } from "../aws";
+import sqsTestRecords from "../../sqsTestRecords.function";
 
 describe("AWS Mocks", () => {
   beforeEach(() => {
@@ -17,35 +18,35 @@ describe("AWS Mocks", () => {
 
   describe("Base Cases", () => {
     it("getMessages is a function", () => {
-      expect(typeof getMessages).toBe("function");
+      expect(getMessages).toBeMockFunction();
     });
 
     it("getSecret is a function", () => {
-      expect(typeof getSecret).toBe("function");
+      expect(getSecret).toBeMockFunction();
     });
 
     it("sendMessage is a function", () => {
-      expect(typeof sendMessage).toBe("function");
+      expect(sendMessage).toBeMockFunction();
     });
 
     it("getEnvSecret is a function", () => {
-      expect(typeof getEnvSecret).toBe("function");
+      expect(getEnvSecret).toBeMockFunction();
     });
 
     it("getSingletonMessage is a function", () => {
-      expect(typeof getSingletonMessage).toBe("function");
+      expect(getSingletonMessage).toBeMockFunction();
     });
 
     it("getTextractJob is a function", () => {
-      expect(typeof getTextractJob).toBe("function");
+      expect(getTextractJob).toBeMockFunction();
     });
 
     it("sendBatchMessages is a function", () => {
-      expect(typeof sendBatchMessages).toBe("function");
+      expect(sendBatchMessages).toBeMockFunction();
     });
 
     it("sendTextractJob is a function", () => {
-      expect(typeof sendTextractJob).toBe("function");
+      expect(sendTextractJob).toBeMockFunction();
     });
   });
 
@@ -63,15 +64,32 @@ describe("AWS Mocks", () => {
       expect(result).toEqual([]);
     });
 
+    it("getMessages returns empty array when no records", async () => {
+      const result = await getMessages();
+      expect(result).toEqual([]);
+    });
+
+    it("getMessages returns mock messages", async () => {
+      getMessages.mockResolvedValueOnce([{ messageId: "123" }]);
+      const result = await getMessages();
+      expect(result).toEqual([{ messageId: "123" }]);
+    });
+
+    it("getMessages returns mock record messages", async () => {
+      const mockRecords = sqsTestRecords({ messageId: "123" });
+      const result = await getMessages(mockRecords);
+      expect(result).toEqual([{ messageId: "123" }]);
+    });
+
     it("getSecret returns mock secret value by default", async () => {
       const result = await getSecret("test-secret");
       expect(result).toBe("mock-secret-value");
     });
 
     it("sendMessage resolves successfully", async () => {
-      await expect(
-        sendMessage("queue-url", { data: "test" }),
-      ).resolves.toBeUndefined();
+      await expect(sendMessage("queue-url", { data: "test" })).resolves.toEqual(
+        { MessageId: "mock-message-id" },
+      );
     });
 
     it("getEnvSecret returns formatted mock value", async () => {
@@ -80,8 +98,8 @@ describe("AWS Mocks", () => {
     });
 
     it("getSingletonMessage extracts first record from event", () => {
-      const event = { Records: [{ messageId: "123" }] };
-      const result = getSingletonMessage(event);
+      const mockRecords = sqsTestRecords({ messageId: "123" });
+      const result = getSingletonMessage(mockRecords);
       expect(result).toEqual({ messageId: "123" });
     });
 
@@ -99,7 +117,7 @@ describe("AWS Mocks", () => {
     it("sendBatchMessages returns response with count", async () => {
       const messages = [{ id: 1 }, { id: 2 }];
       const result = await sendBatchMessages("queue-url", messages);
-      expect(result).toHaveProperty("count", 2);
+      expect(result).toBeTrue();
     });
 
     it("sendTextractJob returns array with job ID", async () => {

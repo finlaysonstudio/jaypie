@@ -1,52 +1,38 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { createMockFunction } from "./utils";
+import * as original from "@jaypie/aws";
+import {
+  createMockFunction,
+  createMockResolvedFunction,
+  createMockWrappedFunction,
+} from "./utils";
 
 // Constants for mock values
 const TAG = "AWS";
 
-export const getMessages = createMockFunction<
-  (queueUrl: string) => Promise<any[]>
->(async () => []);
+export const getMessages = createMockWrappedFunction(original.getMessages, []);
 
-export const getSecret = createMockFunction<
-  (secretName: string) => Promise<string>
->(async () => "mock-secret-value");
+export const getSecret = createMockResolvedFunction("mock-secret-value");
 
-export const sendMessage = createMockFunction<
-  (queueUrl: string, message: any) => Promise<void>
->(async () => {});
+export const sendMessage = createMockResolvedFunction({
+  MessageId: "mock-message-id",
+});
 
 // Add missing functions from original implementation
 export const getEnvSecret = createMockFunction<
   (key: string) => Promise<string>
 >(async (key) => `_MOCK_ENV_SECRET_[${TAG}][${key}]`);
 
-export const getSingletonMessage = createMockFunction<(event: any) => any>(
-  (event) => {
-    try {
-      // Try original implementation first
-      if (event && Array.isArray(event.Records) && event.Records.length === 1) {
-        return event.Records[0];
-      }
-      // Fall back to mock implementation
-      return { value: `_MOCK_SINGLETON_MESSAGE_[${TAG}]` };
-    } catch (error) {
-      return { value: `_MOCK_SINGLETON_MESSAGE_[${TAG}]` };
-    }
-  },
+export const getSingletonMessage = createMockWrappedFunction(
+  original.getSingletonMessage,
+  { value: "_MOCK_SINGLETON_MESSAGE_" },
 );
 
 export const getTextractJob = createMockFunction<
   (jobId: string) => Promise<any>
 >(async (job) => ({ value: `_MOCK_TEXTRACT_JOB_[${job}]` }));
 
-export const sendBatchMessages = createMockFunction<
-  (queueUrl: string, messages: any[]) => Promise<any>
->(async (queueUrl, messages) => ({
-  value: `_MOCK_BATCH_MESSAGES_[${TAG}]`,
-  count: messages.length,
-}));
+export const sendBatchMessages = createMockResolvedFunction(true);
 
 export const sendTextractJob = createMockFunction<
   (bucket: string, key: string, featureTypes?: string[]) => Promise<any[]>
