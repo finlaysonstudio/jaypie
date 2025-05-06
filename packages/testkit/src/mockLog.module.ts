@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { log } from "@jaypie/core";
 import { vi } from "vitest";
 import { LogMock } from "./types/jaypie-testkit";
@@ -78,7 +77,8 @@ export function spyLog(logInstance: typeof log): void {
     // Save only methods that actually exist on the log instance
     LOG_METHOD_NAMES.forEach((method) => {
       if (method in logInstance) {
-        originalMethods[method] = logInstance[method as keyof typeof logInstance];
+        originalMethods[method] =
+          logInstance[method as keyof typeof logInstance];
         // Use type assertion after checking existence
         (logInstance as Record<string, unknown>)[method] = mockLog[method];
       }
@@ -94,7 +94,8 @@ export function restoreLog(logInstance: typeof log): void {
     LOG_METHOD_NAMES.forEach((method) => {
       if (method in originalMethods && method in logInstance) {
         // Use type assertion after checking existence
-        (logInstance as Record<string, unknown>)[method] = originalMethods[method];
+        (logInstance as Record<string, unknown>)[method] =
+          originalMethods[method];
       }
     });
     originalLogMethods.delete(logInstance);
