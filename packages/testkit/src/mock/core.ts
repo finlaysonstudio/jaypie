@@ -2,6 +2,9 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { createMockFunction } from "./utils";
+import { beforeAll } from "vitest";
+import { spyLog } from "../mockLog.module.js";
+import { log } from "@jaypie/core";
 
 // Constants for mock values
 const TAG = "CORE";
@@ -175,12 +178,10 @@ export const getConfig = createMockFunction<() => Record<string, string>>(
   () => ({ environment: "test" }),
 );
 
-export const logger = {
-  debug: createMockFunction<(message: string, meta?: any) => void>(),
-  info: createMockFunction<(message: string, meta?: any) => void>(),
-  warn: createMockFunction<(message: string, meta?: any) => void>(),
-  error: createMockFunction<(message: string, meta?: any) => void>(),
-};
+beforeAll(async () => {
+  spyLog(log);
+});
+export { log };
 
 // Add missing core functions
 export const cloneDeep = createMockFunction<(obj: any) => any>((obj) => {
