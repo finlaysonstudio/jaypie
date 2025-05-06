@@ -4,10 +4,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Commands
 - Build: `npm run build`
-- Run single test: `vitest run packages/<package>/__tests__/<test-file>.spec.ts`
+- Run single test: `vitest run packages/<package>/src/**/__tests__/<file>.spec.ts`
 - Run tests for package: `npm run test --workspace packages/<package>`
-- Lint: `npm run lint` or `eslint --fix <file>`
-- Format: `npm run format`
+- Lint (always format): `eslint --fix <file>`
+
+Do not `cd packages/<package> && npm <command>` to run commands.
+Run `npm --workspace packages/<package> <command>`.
 
 ## Code Style
 - TypeScript with ES modules, double quotes, trailing commas, semicolons
