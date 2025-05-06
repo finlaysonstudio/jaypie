@@ -20,20 +20,20 @@ export const getEnvSecret = createMockFunction<
   (key: string) => Promise<string>
 >(async (key) => `_MOCK_ENV_SECRET_[${TAG}][${key}]`);
 
-export const getSingletonMessage = createMockFunction<
-  (event: any) => any
->((event) => {
-  try {
-    // Try original implementation first
-    if (event && Array.isArray(event.Records) && event.Records.length === 1) {
-      return event.Records[0];
+export const getSingletonMessage = createMockFunction<(event: any) => any>(
+  (event) => {
+    try {
+      // Try original implementation first
+      if (event && Array.isArray(event.Records) && event.Records.length === 1) {
+        return event.Records[0];
+      }
+      // Fall back to mock implementation
+      return { value: `_MOCK_SINGLETON_MESSAGE_[${TAG}]` };
+    } catch (error) {
+      return { value: `_MOCK_SINGLETON_MESSAGE_[${TAG}]` };
     }
-    // Fall back to mock implementation
-    return { value: `_MOCK_SINGLETON_MESSAGE_[${TAG}]` };
-  } catch (error) {
-    return { value: `_MOCK_SINGLETON_MESSAGE_[${TAG}]` };
-  }
-});
+  },
+);
 
 export const getTextractJob = createMockFunction<
   (jobId: string) => Promise<any>
@@ -41,7 +41,10 @@ export const getTextractJob = createMockFunction<
 
 export const sendBatchMessages = createMockFunction<
   (queueUrl: string, messages: any[]) => Promise<any>
->(async (queueUrl, messages) => ({ value: `_MOCK_BATCH_MESSAGES_[${TAG}]`, count: messages.length }));
+>(async (queueUrl, messages) => ({
+  value: `_MOCK_BATCH_MESSAGES_[${TAG}]`,
+  count: messages.length,
+}));
 
 export const sendTextractJob = createMockFunction<
   (bucket: string, key: string, featureTypes?: string[]) => Promise<any[]>

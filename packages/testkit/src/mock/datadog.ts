@@ -1,8 +1,9 @@
 import { createMockFunction } from "./utils";
 
-export const recordMetric =
-  createMockFunction<(name: string, value: number, tags?: string[]) => void>();
+export const submitMetric = createMockFunction<
+  (options: Record<string, unknown>) => boolean
+>(() => true);
 
-export const startSpan = createMockFunction<
-  (name: string, options?: any) => { finish: () => void }
->(() => ({ finish: createMockFunction() }));
+export const submitMetricSet = createMockFunction<
+  (options: Record<string, unknown>) => boolean
+>(() => true);

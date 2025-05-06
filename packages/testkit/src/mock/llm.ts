@@ -3,25 +3,10 @@ import { createMockFunction } from "./utils";
 // Constants for mock values
 const TAG = "LLM";
 
-export const getCompletion = createMockFunction<
-  (prompt: string, options?: any) => Promise<string>
->(async () => "This is a mock completion response");
-
-export const getCompletionStream = createMockFunction<
-  (prompt: string, options?: any) => AsyncIterable<any>
->(async function* () {
-  yield { content: "This " };
-  yield { content: "is " };
-  yield { content: "a " };
-  yield { content: "mock " };
-  yield { content: "streaming " };
-  yield { content: "response" };
-});
-
 // Add missing Llm class
 export class Llm {
   static instance: Llm;
-  history: Array<{ role: string, content: string }> = [];
+  history: Array<{ role: string; content: string }> = [];
 
   constructor(config = {}) {
     this.history = [];
@@ -36,37 +21,37 @@ export class Llm {
   }
 
   // Main completion method
-  async send(messages: Array<{ role: string, content: string }>, options = {}): Promise<string> {
+  async send(
+    messages: Array<{ role: string; content: string }>,
+    options = {},
+  ): Promise<string> {
     this.history = [...this.history, ...messages];
     return `_MOCK_LLM_RESPONSE_[${TAG}]`;
-  }
-
-  // Stream completion method
-  async *stream(messages: Array<{ role: string, content: string }>, options = {}): AsyncGenerator<any> {
-    this.history = [...this.history, ...messages];
-    yield { content: `_MOCK_LLM_STREAM_[${TAG}]_` };
-    yield { content: "part1 " };
-    yield { content: "part2 " };
-    yield { content: "part3" };
   }
 
   // Operate method (tool using)
   async operate(question: string, context = {}, options = {}): Promise<any> {
     this.history.push({ role: "user", content: question });
-    this.history.push({ role: "assistant", content: `_MOCK_LLM_OPERATE_[${TAG}]` });
+    this.history.push({
+      role: "assistant",
+      content: `_MOCK_LLM_OPERATE_[${TAG}]`,
+    });
     return { result: `_MOCK_LLM_OPERATE_RESULT_[${TAG}]`, raw: {} };
   }
 
   // Static methods
-  static async send(messages: Array<{ role: string, content: string }>, options = {}): Promise<string> {
+  static async send(
+    messages: Array<{ role: string; content: string }>,
+    options = {},
+  ): Promise<string> {
     return Llm.getInstance().send(messages, options);
   }
 
-  static async *stream(messages: Array<{ role: string, content: string }>, options = {}): AsyncGenerator<any> {
-    yield* Llm.getInstance().stream(messages, options);
-  }
-
-  static async operate(question: string, context = {}, options = {}): Promise<any> {
+  static async operate(
+    question: string,
+    context = {},
+    options = {},
+  ): Promise<any> {
     return Llm.getInstance().operate(question, context, options);
   }
 }
@@ -75,18 +60,18 @@ export class Llm {
 export const random = createMockFunction<
   (min?: number, max?: number, precision?: number) => number
 >((min = 0, max = 1, precision = 0) => {
-  const value = min + (Math.random() * (max - min));
+  const value = min + Math.random() * (max - min);
   return precision === 0 ? Math.floor(value) : Number(value.toFixed(precision));
 });
 
 export const roll = createMockFunction<
-  (dice: string) => { rolls: number[], total: number }
+  (dice: string) => { rolls: number[]; total: number }
 >((dice) => {
   // Just return mock value for consistency
   return {
     rolls: [4, 5, 6],
     total: 15,
-    dice: `_MOCK_ROLL_[${TAG}][${dice}]`
+    dice: `_MOCK_ROLL_[${TAG}][${dice}]`,
   };
 });
 
@@ -101,12 +86,14 @@ export const weather = createMockFunction<
 >(async (location, days = 1) => {
   return {
     location: `_MOCK_WEATHER_LOCATION_[${TAG}][${location}]`,
-    forecast: Array(days).fill(0).map((_, i) => ({
-      date: `2025-05-${i + 1}`,
-      temperature: 72,
-      condition: "Sunny",
-      precipitation: 0
-    }))
+    forecast: Array(days)
+      .fill(0)
+      .map((_, i) => ({
+        date: `2025-05-${i + 1}`,
+        temperature: 72,
+        condition: "Sunny",
+        precipitation: 0,
+      })),
   };
 });
 
@@ -115,7 +102,7 @@ export const toolkit = {
   random,
   roll,
   time,
-  weather
+  weather,
 };
 
 export const tools = Object.values(toolkit);
