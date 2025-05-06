@@ -43,10 +43,13 @@ export const MarkdownPage = vi
     try {
       return new MarkdownPageOriginal(page);
     } catch {
-      // eslint-disable-next-line no-console
-      console.warn(
-        "[MarkdownPage] Actual implementation failed. To suppress this warning, manually mock the response with mockReturnValue",
-      );
+      // Only show warning if not in a test environment
+      if (process.env.NODE_ENV !== "test") {
+        // eslint-disable-next-line no-console
+        console.warn(
+          "[MarkdownPage] Actual implementation failed. To suppress this warning, manually mock the response with mockReturnValue",
+        );
+      }
       const mockDocument = new TextractDocument(
         JSON.parse(mockTextractContents),
       );
@@ -66,10 +69,13 @@ export const textractJsonToMarkdown = vi.fn(
       const result = textractJsonToMarkdownOriginal(textractResults);
       return result;
     } catch (error) {
-      // eslint-disable-next-line no-console
-      console.warn(
-        "[textractJsonToMarkdown] Actual implementation failed. To suppress this warning, manually mock the response with mockReturnValue",
-      );
+      // Only show warning if not in a test environment
+      if (process.env.NODE_ENV !== "test") {
+        // eslint-disable-next-line no-console
+        console.warn(
+          "[textractJsonToMarkdown] Actual implementation failed. To suppress this warning, manually mock the response with mockReturnValue",
+        );
+      }
       return `_MOCK_TEXTRACT_JSON_TO_MARKDOWN_{{${textractResults}}}`;
     }
   },

@@ -1,0 +1,284 @@
+{
+  "DocumentMetadata": {
+    "Pages": 1
+  },
+  "Blocks": [
+    {
+      "BlockType": "PAGE",
+      "Id": "page-1",
+      "Relationships": [
+        {
+          "Type": "CHILD",
+          "Ids": ["line-1", "line-2"]
+        }
+      ],
+      "Page": 1,
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 1.0,
+          "Height": 1.0,
+          "Left": 0.0,
+          "Top": 0.0
+        },
+        "Polygon": [
+          { "X": 0.0, "Y": 0.0 },
+          { "X": 1.0, "Y": 0.0 },
+          { "X": 1.0, "Y": 1.0 },
+          { "X": 0.0, "Y": 1.0 }
+        ]
+      }
+    },
+    {
+      "BlockType": "LINE",
+      "Id": "line-1",
+      "Text": "This is a mock Textract document",
+      "Page": 1,
+      "Relationships": [
+        {
+          "Type": "CHILD",
+          "Ids": ["word-1", "word-2", "word-3", "word-4", "word-5", "word-6"]
+        }
+      ],
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.8,
+          "Height": 0.1,
+          "Left": 0.1,
+          "Top": 0.3
+        },
+        "Polygon": [
+          { "X": 0.1, "Y": 0.3 },
+          { "X": 0.9, "Y": 0.3 },
+          { "X": 0.9, "Y": 0.4 },
+          { "X": 0.1, "Y": 0.4 }
+        ]
+      }
+    },
+    {
+      "BlockType": "LINE",
+      "Id": "line-2",
+      "Text": "For testing purposes only",
+      "Page": 1,
+      "Relationships": [
+        {
+          "Type": "CHILD",
+          "Ids": ["word-7", "word-8", "word-9", "word-10"]
+        }
+      ],
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.8,
+          "Height": 0.1,
+          "Left": 0.1,
+          "Top": 0.5
+        },
+        "Polygon": [
+          { "X": 0.1, "Y": 0.5 },
+          { "X": 0.9, "Y": 0.5 },
+          { "X": 0.9, "Y": 0.6 },
+          { "X": 0.1, "Y": 0.6 }
+        ]
+      }
+    },
+    {
+      "BlockType": "WORD",
+      "Id": "word-1",
+      "Text": "This",
+      "Page": 1,
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.1,
+          "Height": 0.1,
+          "Left": 0.1,
+          "Top": 0.3
+        },
+        "Polygon": [
+          { "X": 0.1, "Y": 0.3 },
+          { "X": 0.2, "Y": 0.3 },
+          { "X": 0.2, "Y": 0.4 },
+          { "X": 0.1, "Y": 0.4 }
+        ]
+      }
+    },
+    {
+      "BlockType": "WORD",
+      "Id": "word-2",
+      "Text": "is",
+      "Page": 1,
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.05,
+          "Height": 0.1,
+          "Left": 0.21,
+          "Top": 0.3
+        },
+        "Polygon": [
+          { "X": 0.21, "Y": 0.3 },
+          { "X": 0.26, "Y": 0.3 },
+          { "X": 0.26, "Y": 0.4 },
+          { "X": 0.21, "Y": 0.4 }
+        ]
+      }
+    },
+    {
+      "BlockType": "WORD",
+      "Id": "word-3",
+      "Text": "a",
+      "Page": 1,
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.05,
+          "Height": 0.1,
+          "Left": 0.27,
+          "Top": 0.3
+        },
+        "Polygon": [
+          { "X": 0.27, "Y": 0.3 },
+          { "X": 0.32, "Y": 0.3 },
+          { "X": 0.32, "Y": 0.4 },
+          { "X": 0.27, "Y": 0.4 }
+        ]
+      }
+    },
+    {
+      "BlockType": "WORD",
+      "Id": "word-4",
+      "Text": "mock",
+      "Page": 1,
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.15,
+          "Height": 0.1,
+          "Left": 0.33,
+          "Top": 0.3
+        },
+        "Polygon": [
+          { "X": 0.33, "Y": 0.3 },
+          { "X": 0.48, "Y": 0.3 },
+          { "X": 0.48, "Y": 0.4 },
+          { "X": 0.33, "Y": 0.4 }
+        ]
+      }
+    },
+    {
+      "BlockType": "WORD",
+      "Id": "word-5",
+      "Text": "Textract",
+      "Page": 1,
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.2,
+          "Height": 0.1,
+          "Left": 0.49,
+          "Top": 0.3
+        },
+        "Polygon": [
+          { "X": 0.49, "Y": 0.3 },
+          { "X": 0.69, "Y": 0.3 },
+          { "X": 0.69, "Y": 0.4 },
+          { "X": 0.49, "Y": 0.4 }
+        ]
+      }
+    },
+    {
+      "BlockType": "WORD",
+      "Id": "word-6",
+      "Text": "document",
+      "Page": 1,
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.2,
+          "Height": 0.1,
+          "Left": 0.7,
+          "Top": 0.3
+        },
+        "Polygon": [
+          { "X": 0.7, "Y": 0.3 },
+          { "X": 0.9, "Y": 0.3 },
+          { "X": 0.9, "Y": 0.4 },
+          { "X": 0.7, "Y": 0.4 }
+        ]
+      }
+    },
+    {
+      "BlockType": "WORD",
+      "Id": "word-7",
+      "Text": "For",
+      "Page": 1,
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.1,
+          "Height": 0.1,
+          "Left": 0.1,
+          "Top": 0.5
+        },
+        "Polygon": [
+          { "X": 0.1, "Y": 0.5 },
+          { "X": 0.2, "Y": 0.5 },
+          { "X": 0.2, "Y": 0.6 },
+          { "X": 0.1, "Y": 0.6 }
+        ]
+      }
+    },
+    {
+      "BlockType": "WORD",
+      "Id": "word-8",
+      "Text": "testing",
+      "Page": 1,
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.2,
+          "Height": 0.1,
+          "Left": 0.21,
+          "Top": 0.5
+        },
+        "Polygon": [
+          { "X": 0.21, "Y": 0.5 },
+          { "X": 0.41, "Y": 0.5 },
+          { "X": 0.41, "Y": 0.6 },
+          { "X": 0.21, "Y": 0.6 }
+        ]
+      }
+    },
+    {
+      "BlockType": "WORD",
+      "Id": "word-9",
+      "Text": "purposes",
+      "Page": 1,
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.25,
+          "Height": 0.1,
+          "Left": 0.42,
+          "Top": 0.5
+        },
+        "Polygon": [
+          { "X": 0.42, "Y": 0.5 },
+          { "X": 0.67, "Y": 0.5 },
+          { "X": 0.67, "Y": 0.6 },
+          { "X": 0.42, "Y": 0.6 }
+        ]
+      }
+    },
+    {
+      "BlockType": "WORD",
+      "Id": "word-10",
+      "Text": "only",
+      "Page": 1,
+      "Geometry": {
+        "BoundingBox": {
+          "Width": 0.1,
+          "Height": 0.1,
+          "Left": 0.68,
+          "Top": 0.5
+        },
+        "Polygon": [
+          { "X": 0.68, "Y": 0.5 },
+          { "X": 0.78, "Y": 0.5 },
+          { "X": 0.78, "Y": 0.6 },
+          { "X": 0.68, "Y": 0.6 }
+        ]
+      }
+    }
+  ]
+}

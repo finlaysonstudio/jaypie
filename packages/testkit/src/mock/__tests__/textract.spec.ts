@@ -1,99 +1,79 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import {
-  extractText,
-  extractForms,
-  extractTables,
-} from "../textract";
+import { MarkdownPage, textractJsonToMarkdown } from "../textract.js";
 
-describe("Textract Mocks", () => {
+describe("Textract Mock", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  const mockDocumentBytes = Buffer.from("mock document content");
-
-  describe("extractText", () => {
-    it("should return default mock text", async () => {
-      const result = await extractText(mockDocumentBytes);
-      expect(result).toBe("Mock extracted text");
+  describe("Base Cases", () => {
+    it("MarkdownPage is a function", () => {
+      expect(typeof MarkdownPage).toBe("function");
     });
 
-    it("should track calls with document bytes", async () => {
-      await extractText(mockDocumentBytes);
-
-      expect(extractText.mock.calls.length).toBe(1);
-      expect(extractText.mock.calls[0][0]).toBe(mockDocumentBytes);
-    });
-
-    it("should allow customizing the extracted text", async () => {
-      const customText = "Custom extracted document text";
-      extractText.mockResolvedValueOnce(customText);
-
-      const result = await extractText(mockDocumentBytes);
-      expect(result).toBe(customText);
+    it("textractJsonToMarkdown is a function", () => {
+      expect(typeof textractJsonToMarkdown).toBe("function");
     });
   });
 
-  describe("extractForms", () => {
-    it("should return default form fields", async () => {
-      const result = await extractForms(mockDocumentBytes);
+  describe("Error Conditions", () => {
+    it("MarkdownPage handles failed implementation gracefully", () => {
+      const mockPage = { someProperty: "not a real page" };
 
-      expect(result).toEqual({
-        field1: "value1",
-        field2: "value2",
-      });
+      // Should not throw even with invalid input
+      const result = MarkdownPage(mockPage);
+
+      // Just verify it returns something without throwing
+      expect(result).toBeDefined();
     });
 
-    it("should track calls with document bytes", async () => {
-      await extractForms(mockDocumentBytes);
+    it("textractJsonToMarkdown handles failed implementation gracefully", () => {
+      const mockTextractResults = { someProperty: "not real results" };
 
-      expect(extractForms.mock.calls.length).toBe(1);
-      expect(extractForms.mock.calls[0][0]).toBe(mockDocumentBytes);
-    });
+      // Should not throw even with invalid input
+      const result = textractJsonToMarkdown(mockTextractResults);
 
-    it("should allow customizing the form fields", async () => {
-      const customFields = {
-        name: "John Doe",
-        email: "john@example.com",
-        phone: "555-1234",
-      };
-
-      extractForms.mockResolvedValueOnce(customFields);
-
-      const result = await extractForms(mockDocumentBytes);
-      expect(result).toEqual(customFields);
+      // Verify it returns the expected mock format
+      expect(result).toContain("_MOCK_TEXTRACT_JSON_TO_MARKDOWN_");
     });
   });
 
-  describe("extractTables", () => {
-    it("should return default table data", async () => {
-      const result = await extractTables(mockDocumentBytes);
+  describe("Happy Paths", () => {
+    it("MarkdownPage returns a mocked instance when actual implementation is unavailable", () => {
+      const page = { someProperty: "not a real page" };
+      const result = MarkdownPage(page);
 
-      expect(result).toEqual([
-        ["Header1", "Header2"],
-        ["Row1Col1", "Row1Col2"],
-        ["Row2Col1", "Row2Col2"],
-      ]);
+      // Should return something that looks like a MarkdownPage
+      expect(result).toBeDefined();
     });
 
-    it("should track calls with document bytes", async () => {
-      await extractTables(mockDocumentBytes);
+    it("textractJsonToMarkdown returns a formatted string with the input when actual implementation fails", () => {
+      const textractResults = { text: "sample" };
+      const result = textractJsonToMarkdown(textractResults);
 
-      expect(extractTables.mock.calls.length).toBe(1);
-      expect(extractTables.mock.calls[0][0]).toBe(mockDocumentBytes);
+      // Should follow the expected mock format
+      expect(result).toContain("_MOCK_TEXTRACT_JSON_TO_MARKDOWN_");
+      expect(result).toContain("[object Object]");
+    });
+  });
+
+  describe("Features", () => {
+    it("MarkdownPage can be mocked with custom return value", () => {
+      const customReturn = { markdown: "# Custom Markdown" };
+      MarkdownPage.mockReturnValue(customReturn);
+
+      const result = MarkdownPage({});
+
+      expect(result).toBe(customReturn);
     });
 
-    it("should allow customizing the table data", async () => {
-      const customTable = [
-        ["Name", "Age", "Location"],
-        ["John", "30", "New York"],
-        ["Jane", "25", "San Francisco"],
-      ];
+    it("textractJsonToMarkdown can be mocked with custom return value", () => {
+      const customReturn = "# Custom Markdown";
+      textractJsonToMarkdown.mockReturnValue(customReturn);
 
-      extractTables.mockResolvedValueOnce(customTable);
+      const result = textractJsonToMarkdown({});
 
-      const result = await extractTables(mockDocumentBytes);
-      expect(result).toEqual(customTable);
+      expect(result).toBe(customReturn);
     });
   });
 });

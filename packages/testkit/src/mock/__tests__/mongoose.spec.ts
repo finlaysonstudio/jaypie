@@ -1,81 +1,76 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { mockConnection, mockModel } from "../mongoose";
+import {
+  connect,
+  connectFromSecretEnv,
+  disconnect,
+  mongoose,
+} from "../mongoose";
 
-describe("Mongoose Mocks", () => {
+// Mock the @jaypie/mongoose module
+vi.mock("@jaypie/mongoose", () => ({
+  mongoose: {
+    disconnect: vi.fn().mockResolvedValue(true),
+    connection: {
+      readyState: 1,
+    },
+  },
+}));
+
+describe("mock/mongoose", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  describe("mockConnection", () => {
-    it("should have connect, disconnect and isConnected methods", () => {
-      expect(typeof mockConnection.connect).toBe("function");
-      expect(typeof mockConnection.disconnect).toBe("function");
-      expect(typeof mockConnection.isConnected).toBe("function");
+  describe("Base Cases", () => {
+    it("exports expected functions", () => {
+      expect(connect).toBeInstanceOf(Function);
+      expect(connectFromSecretEnv).toBeInstanceOf(Function);
+      expect(disconnect).toBeInstanceOf(Function);
+      expect(mongoose).toBeDefined();
     });
 
-    it("should track connect calls", async () => {
-      await mockConnection.connect();
-      expect(mockConnection.connect.mock.calls.length).toBe(1);
+    it("connect returns true", () => {
+      expect(connect()).toBe(true);
     });
 
-    it("should track disconnect calls", async () => {
-      await mockConnection.disconnect();
-      expect(mockConnection.disconnect.mock.calls.length).toBe(1);
+    it("connectFromSecretEnv returns true", () => {
+      expect(connectFromSecretEnv()).toBe(true);
     });
 
-    it("should return true for isConnected by default", () => {
-      expect(mockConnection.isConnected()).toBe(true);
+    it("disconnect returns true", () => {
+      expect(disconnect()).toBe(true);
+    });
+
+    it("mongoose is properly mocked", () => {
+      expect(mongoose.connection).toBeDefined();
+      expect(mongoose.connection.readyState).toBe(1);
     });
   });
 
-  describe("mockModel", () => {
-    it("should create a model with expected properties and methods", () => {
-      const schema = { fields: { name: String, age: Number } };
-      const model = mockModel("User", schema);
+  describe("Features", () => {
+    it("connect tracks calls", () => {
+      connect();
+      connect("mongodb://test");
 
-      expect(model.modelName).toBe("User");
-      expect(model.schema).toBe(schema);
-      expect(typeof model.find).toBe("function");
-      expect(typeof model.findOne).toBe("function");
-      expect(typeof model.findById).toBe("function");
-      expect(typeof model.create).toBe("function");
-      expect(typeof model.updateOne).toBe("function");
-      expect(typeof model.deleteOne).toBe("function");
+      expect(connect).toHaveBeenCalledTimes(2);
+      expect(connect).toHaveBeenCalledWith();
+      expect(connect).toHaveBeenCalledWith("mongodb://test");
     });
 
-    it("should have find return empty array by default", () => {
-      const model = mockModel("User", {});
-      expect(model.find()).toEqual([]);
+    it("connectFromSecretEnv tracks calls", () => {
+      connectFromSecretEnv();
+      connectFromSecretEnv({ secretEnv: "TEST" });
+
+      expect(connectFromSecretEnv).toHaveBeenCalledTimes(2);
+      expect(connectFromSecretEnv).toHaveBeenCalledWith();
+      expect(connectFromSecretEnv).toHaveBeenCalledWith({ secretEnv: "TEST" });
     });
 
-    it("should have findOne return null by default", () => {
-      const model = mockModel("User", {});
-      expect(model.findOne()).toBeNull();
-    });
+    it("disconnect tracks calls", () => {
+      disconnect();
 
-    it("should have create return the input data", async () => {
-      const model = mockModel("User", {});
-      const userData = { name: "John", age: 30 };
-
-      const result = await model.create(userData);
-
-      expect(result).toBe(userData);
-      expect(model.create.mock.calls.length).toBe(1);
-      expect(model.create.mock.calls[0][0]).toBe(userData);
-    });
-
-    it("should have updateOne return modifiedCount 1 by default", async () => {
-      const model = mockModel("User", {});
-      const result = await model.updateOne();
-
-      expect(result).toEqual({ modifiedCount: 1 });
-    });
-
-    it("should have deleteOne return deletedCount 1 by default", async () => {
-      const model = mockModel("User", {});
-      const result = await model.deleteOne();
-
-      expect(result).toEqual({ deletedCount: 1 });
+      expect(disconnect).toHaveBeenCalledTimes(1);
+      expect(disconnect).toHaveBeenCalledWith();
     });
   });
 });
