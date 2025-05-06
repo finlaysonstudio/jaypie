@@ -8,7 +8,6 @@ import * as llm from "./llm";
 import * as mongoose from "./mongoose";
 import * as textract from "./textract";
 import { createMockFunction, createAutoMocks, createDeepMock } from "./utils";
-import * as setup from "./setup";
 
 // Re-export utilities
 export { createMockFunction, createAutoMocks, createDeepMock };
@@ -22,7 +21,6 @@ export * from "./lambda";
 export * from "./llm";
 export * from "./mongoose";
 export * from "./textract";
-export * from "./setup";
 
 // Export default object with all mocks
 export default {
@@ -54,7 +52,4 @@ export default {
 
   // Textract module
   ...textract,
-
-  // Setup module
-  ...setup,
 };
