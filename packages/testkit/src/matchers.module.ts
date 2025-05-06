@@ -4,6 +4,7 @@ import toBeCalledAboveTrace from "./matchers/toBeCalledAboveTrace.matcher.js";
 import toBeCalledWithInitialParams from "./matchers/toBeCalledWithInitialParams.matcher.js";
 import toBeClass from "./matchers/toBeClass.matcher.js";
 import toBeJaypieError from "./matchers/toBeJaypieError.matcher.js";
+import { toBeMockFunction } from "./matchers/toBeMockFunction.matcher.js";
 import {
   toMatchBase64,
   toMatchJwt,
@@ -33,6 +34,7 @@ const matchers = {
   toBeCalledWithInitialParams,
   toBeClass,
   toBeJaypieError,
+  toBeMockFunction,
   toMatchBase64,
   toMatchJwt,
   toMatchMongoId,
