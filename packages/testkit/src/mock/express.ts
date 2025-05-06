@@ -164,11 +164,11 @@ interface WithJsonFunction {
   json: () => any;
 }
 
-interface ExpressHandlerFunction {
+export interface ExpressHandlerFunction {
   (req: any, res: any, ...extra: any[]): Promise<any> | any;
 }
 
-interface ExpressHandlerOptions {
+export interface ExpressHandlerOptions {
   locals?: Record<string, any>;
   setup?: any[] | Function;
   teardown?: any[] | Function;
