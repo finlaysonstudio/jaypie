@@ -1,3 +1,6 @@
+/* eslint-disable @typescript-eslint/no-unsafe-function-type */
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { createMockFunction } from "./utils";
 
 // Constants for mock values
@@ -399,20 +402,92 @@ export const placeholders = createMockFunction<
   }
 });
 
+// Add force utilities to help with jaypieHandler implementation
+export const force = {
+  array: (value: any): any[] => {
+    if (Array.isArray(value)) return value;
+    return [];
+  },
+  boolean: (value: any): boolean => {
+    return Boolean(value);
+  },
+  object: (value: any): object => {
+    if (typeof value === "object" && value !== null) return value;
+    return {};
+  },
+};
+
 export const jaypieHandler = createMockFunction<
-  (fn: Function, options?: any) => Function
->((fn, options = {}) => {
+  (
+    handler: Function,
+    options?: {
+      setup?: Function | Function[];
+      teardown?: Function | Function[];
+      unavailable?: boolean;
+      validate?: Function | Function[];
+    },
+  ) => Function
+>((handler, options = {}) => {
   return async (...args: any[]) => {
-    try {
-      return await fn(...args);
-    } catch (error) {
-      if (error instanceof JaypieError) {
-        throw error;
+    let result;
+    let thrownError;
+
+    // Destructure options with defaults
+    const {
+      setup = [],
+      teardown = [],
+      unavailable = force.boolean(process.env.PROJECT_UNAVAILABLE),
+      validate = [],
+    } = options;
+
+    // Check if service is unavailable
+    if (unavailable) throw new UnavailableError("Service unavailable");
+
+    // Run validation functions
+    const validateFunctions = force.array(validate);
+    for (const validator of validateFunctions) {
+      if (typeof validator === "function") {
+        const valid = await validator(...args);
+        if (valid === false) {
+          throw new BadRequestError("Validation failed");
+        }
       }
-      throw new InternalError(
-        `${error instanceof Error ? error.message : String(error)}`,
-      );
     }
+
+    try {
+      // Run setup functions
+      const setupFunctions = force.array(setup);
+      for (const setupFunction of setupFunctions) {
+        if (typeof setupFunction === "function") {
+          await setupFunction(...args);
+        }
+      }
+
+      // Execute the handler
+      result = await handler(...args);
+    } catch (error) {
+      thrownError = error;
+    }
+
+    // Run teardown functions (always run even if there was an error)
+    const teardownFunctions = force.array(teardown);
+    for (const teardownFunction of teardownFunctions) {
+      if (typeof teardownFunction === "function") {
+        try {
+          await teardownFunction(...args);
+        } catch (error) {
+          // Swallow teardown errors, but log them
+          console.error(error);
+        }
+      }
+    }
+
+    // If there was an error in the handler, throw it after teardown
+    if (thrownError) {
+      throw thrownError;
+    }
+
+    return result;
   };
 });
 
