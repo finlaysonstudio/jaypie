@@ -1,10 +1,10 @@
 /* eslint-disable @typescript-eslint/no-unsafe-function-type */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { createMockFunction } from "./utils";
+import { createMockFunction, MockValidationError } from "./utils";
 import { beforeAll } from "vitest";
 import { spyLog } from "../mockLog.module.js";
-import { log } from "@jaypie/core";
+import { log, NotFoundError } from "@jaypie/core";
 
 // Constants for mock values
 const TAG = "CORE";
@@ -14,21 +14,6 @@ export class JaypieError extends Error {
   constructor(message: string) {
     super(message);
     this.name = "JaypieError";
-  }
-}
-
-// Mock core errors - All error classes extend JaypieError
-export class MockValidationError extends JaypieError {
-  constructor(message: string) {
-    super(message);
-    this.name = "ValidationError";
-  }
-}
-
-export class MockNotFoundError extends JaypieError {
-  constructor(message: string) {
-    super(message);
-    this.name = "NotFoundError";
   }
 }
 
@@ -220,7 +205,7 @@ export const errorFromStatusCode = createMockFunction<
       case 403:
         return new ForbiddenError(message);
       case 404:
-        return new MockNotFoundError(message);
+        return new NotFoundError(message);
       case 405:
         return new MethodNotAllowedError(message);
       case 410:

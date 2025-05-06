@@ -1,7 +1,30 @@
 import { describe, it, expect } from "vitest";
-import { createMockFunction, createAutoMocks, createDeepMock } from "../utils";
+import {
+  createMockFunction,
+  createAutoMocks,
+  createDeepMock,
+  createMockResolvedFunction,
+  MockValidationError,
+  MockNotFoundError,
+} from "../utils";
 
 describe("Mock Utils", () => {
+  describe("Error Classes", () => {
+    it("should create MockValidationError with correct name", () => {
+      const error = new MockValidationError("Invalid data");
+      expect(error.name).toBe("ValidationError");
+      expect(error.message).toBe("Invalid data");
+      expect(error instanceof Error).toBe(true);
+    });
+
+    it("should create MockNotFoundError with correct name", () => {
+      const error = new MockNotFoundError("Resource not found");
+      expect(error.name).toBe("NotFoundError");
+      expect(error.message).toBe("Resource not found");
+      expect(error instanceof Error).toBe(true);
+    });
+  });
+
   describe("createMockFunction", () => {
     it("should create a mock function with the implementation", () => {
       const mockFn = createMockFunction<(a: number, b: number) => number>(
@@ -75,6 +98,21 @@ describe("Mock Utils", () => {
 
       expect(result.prop1).toBe("override1");
       expect((result as any).prop2).toBeUndefined();
+    });
+  });
+
+  describe("createMockResolvedFunction", () => {
+    it("should resolve to the provided value when awaited", async () => {
+      const mockFn = createMockResolvedFunction("test value");
+      const result = await mockFn();
+      expect(result).toBe("test value");
+    });
+
+    it("should allow changing the resolved value", async () => {
+      const mockFn = createMockResolvedFunction("initial value");
+      mockFn.mockResolvedValue("new value");
+      const result = await mockFn();
+      expect(result).toBe("new value");
     });
   });
 });

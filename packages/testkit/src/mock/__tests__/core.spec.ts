@@ -1,33 +1,11 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import {
-  MockValidationError,
-  MockNotFoundError,
-  validate,
-  getConfig,
-  log,
-} from "../core";
+import { validate, getConfig, log } from "../core";
 
 afterEach(() => {
   vi.clearAllMocks();
 });
 
 describe("Core Mocks", () => {
-  describe("Error Classes", () => {
-    it("should create MockValidationError with correct name", () => {
-      const error = new MockValidationError("Invalid data");
-      expect(error.name).toBe("ValidationError");
-      expect(error.message).toBe("Invalid data");
-      expect(error instanceof Error).toBe(true);
-    });
-
-    it("should create MockNotFoundError with correct name", () => {
-      const error = new MockNotFoundError("Resource not found");
-      expect(error.name).toBe("NotFoundError");
-      expect(error.message).toBe("Resource not found");
-      expect(error instanceof Error).toBe(true);
-    });
-  });
-
   describe("validate", () => {
     it("should return true by default", () => {
       const result = validate({ name: "test" }, { type: "object" });

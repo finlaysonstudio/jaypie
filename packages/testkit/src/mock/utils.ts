@@ -61,5 +61,25 @@ function createDeepMock<T extends object>(
   return result;
 }
 
+class MockValidationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "ValidationError";
+  }
+}
+
+class MockNotFoundError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "NotFoundError";
+  }
+}
+
 // Export functions for internal use
-export { createMockFunction, createAutoMocks, createDeepMock };
+export {
+  createMockFunction,
+  createAutoMocks,
+  createDeepMock,
+  MockValidationError,
+  MockNotFoundError,
+};
