@@ -7,10 +7,6 @@ import * as lambda from "./lambda";
 import * as llm from "./llm";
 import * as mongoose from "./mongoose";
 import * as textract from "./textract";
-import { createMockFunction, createAutoMocks, createDeepMock } from "./utils";
-
-// Re-export utilities
-export { createMockFunction, createAutoMocks, createDeepMock };
 
 // Re-export all mocks
 export * from "./aws";
@@ -24,11 +20,6 @@ export * from "./textract";
 
 // Export default object with all mocks
 export default {
-  // Utilities
-  createMockFunction,
-  createAutoMocks,
-  createDeepMock,
-
   // AWS module
   ...aws,
 
