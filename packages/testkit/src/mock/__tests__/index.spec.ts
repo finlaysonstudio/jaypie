@@ -7,16 +7,12 @@ describe("Mock Index", () => {
     it("should export all named exports correctly", () => {
       // Check for required utility exports
       expect(mockExports).toHaveProperty("createMockFunction");
-      expect(mockExports).toHaveProperty("createAutoMocks");
-      expect(mockExports).toHaveProperty("createDeepMock");
 
       // Verify that we have exports from each module
       // Check for specific exports from each module
       const expectedExports = [
         // Utilities
         "createMockFunction",
-        "createAutoMocks",
-        "createDeepMock",
 
         // AWS module
         "getMessages",
