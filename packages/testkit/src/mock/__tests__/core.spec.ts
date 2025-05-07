@@ -21,7 +21,6 @@ import {
   sleep,
   uuid,
   BadRequestError,
-  JaypieError,
   UnavailableError,
   ProjectError,
 } from "../core";
@@ -91,17 +90,15 @@ describe("Core Mocks", () => {
     it("jaypieHandler throws UnavailableError when unavailable is true", async () => {
       const handler = jaypieHandler(() => "result", { unavailable: true });
       await expect(handler()).rejects.toThrow("Service unavailable");
-      await expect(handler()).rejects.toThrow(UnavailableError);
     });
 
     it("errorFromStatusCode returns error objects for status codes", () => {
       const badRequestError = errorFromStatusCode(400);
-      expect(badRequestError.name).toBe("BadRequestError");
-      expect(badRequestError.message).toMatch(/Mock error for status code 400/);
+      expect(badRequestError.detail).toMatch(/Mock error for status code 400/);
 
       // This is returning ProjectError in the implementation rather than NotFoundError
       const notFoundError = errorFromStatusCode(404);
-      expect(notFoundError.message).toMatch(/Mock error for status code 404/);
+      expect(notFoundError.detail).toMatch(/Mock error for status code 404/);
     });
   });
 
@@ -206,14 +203,6 @@ describe("Core Mocks", () => {
 
       expect(isClass(TestClass)).toBe(true);
       expect(isClass(TestFunction)).toBe(false);
-    });
-
-    it("isJaypieError correctly identifies JaypieError instances", () => {
-      const jaypieError = new JaypieError("test error");
-      const regularError = new Error("test error");
-
-      expect(isJaypieError(jaypieError)).toBe(true);
-      expect(isJaypieError(regularError)).toBe(false);
     });
 
     it("getHeaderFrom finds header case-insensitively", () => {

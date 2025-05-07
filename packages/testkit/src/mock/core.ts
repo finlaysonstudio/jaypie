@@ -1,158 +1,50 @@
 /* eslint-disable @typescript-eslint/no-unsafe-function-type */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { createMockFunction, MockValidationError } from "./utils";
-import { beforeAll } from "vitest";
+import {
+  createMockError,
+  createMockFunction,
+  createMockResolvedFunction,
+  createMockReturnedFunction,
+  createMockWrappedFunction,
+  MockValidationError,
+} from "./utils";
+import { beforeAll, vi } from "vitest";
 import { spyLog } from "../mockLog.module.js";
-import { log, NotFoundError } from "@jaypie/core";
+import { log } from "@jaypie/core";
+import * as original from "@jaypie/core";
 
 // Constants for mock values
 const TAG = "CORE";
 
-// Base error class for all Jaypie errors
-export class JaypieError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "JaypieError";
-  }
-}
-
-// Add all missing error classes
-export class BadGatewayError extends JaypieError {
-  constructor(message: string) {
-    super(message);
-    this.name = "BadGatewayError";
-  }
-}
-
-export class BadRequestError extends JaypieError {
-  constructor(message: string) {
-    super(message);
-    this.name = "BadRequestError";
-  }
-}
-
-export class ConfigurationError extends JaypieError {
-  constructor(message: string) {
-    super(message);
-    this.name = "ConfigurationError";
-  }
-}
-
-export class ForbiddenError extends JaypieError {
-  constructor(message: string) {
-    super(message);
-    this.name = "ForbiddenError";
-  }
-}
-
-export class GatewayTimeoutError extends JaypieError {
-  constructor(message: string) {
-    super(message);
-    this.name = "GatewayTimeoutError";
-  }
-}
-
-export class GoneError extends JaypieError {
-  constructor(message: string) {
-    super(message);
-    this.name = "GoneError";
-  }
-}
-
-export class IllogicalError extends JaypieError {
-  constructor(message: string) {
-    super(message);
-    this.name = "IllogicalError";
-  }
-}
-
-export class InternalError extends JaypieError {
-  constructor(message: string) {
-    super(message);
-    this.name = "InternalError";
-  }
-}
-
-export class MethodNotAllowedError extends JaypieError {
-  constructor(message: string) {
-    super(message);
-    this.name = "MethodNotAllowedError";
-  }
-}
-
-export class MultiError extends JaypieError {
-  constructor(
-    message: string,
-    public errors: Error[] = [],
-  ) {
-    super(message);
-    this.name = "MultiError";
-  }
-}
-
-export class NotImplementedError extends JaypieError {
-  constructor(message: string) {
-    super(message);
-    this.name = "NotImplementedError";
-  }
-}
-
-export class ProjectError extends JaypieError {
-  constructor(message: string) {
-    super(message);
-    this.name = "ProjectError";
-  }
-}
-
-export class ProjectMultiError extends MultiError {
-  constructor(message: string, errors: Error[] = []) {
-    super(message, errors);
-    this.name = "ProjectMultiError";
-  }
-}
-
-export class RejectedError extends JaypieError {
-  constructor(message: string) {
-    super(message);
-    this.name = "RejectedError";
-  }
-}
-
-export class TeapotError extends JaypieError {
-  constructor(message: string) {
-    super(message);
-    this.name = "TeapotError";
-  }
-}
-
-export class UnauthorizedError extends JaypieError {
-  constructor(message: string) {
-    super(message);
-    this.name = "UnauthorizedError";
-  }
-}
-
-export class UnavailableError extends JaypieError {
-  constructor(message: string) {
-    super(message);
-    this.name = "UnavailableError";
-  }
-}
-
-export class UnhandledError extends JaypieError {
-  constructor(message: string) {
-    super(message);
-    this.name = "UnhandledError";
-  }
-}
-
-export class UnreachableCodeError extends JaypieError {
-  constructor(message: string) {
-    super(message);
-    this.name = "UnreachableCodeError";
-  }
-}
+export const BadGatewayError = createMockError(original.BadGatewayError);
+export const BadRequestError = createMockError(original.BadRequestError);
+export const ConfigurationError = createMockError(original.ConfigurationError);
+export const ForbiddenError = createMockError(original.ForbiddenError);
+export const GatewayTimeoutError = createMockError(
+  original.GatewayTimeoutError,
+);
+export const GoneError = createMockError(original.GoneError);
+export const IllogicalError = createMockError(original.IllogicalError);
+export const InternalError = createMockError(original.InternalError);
+export const MethodNotAllowedError = createMockError(
+  original.MethodNotAllowedError,
+);
+export const MultiError = createMockError(original.MultiError);
+export const NotFoundError = createMockError(original.NotFoundError);
+export const NotImplementedError = createMockError(
+  original.NotImplementedError,
+);
+export const ProjectError = createMockError(original.ProjectError);
+export const ProjectMultiError = createMockError(original.ProjectMultiError);
+export const RejectedError = createMockError(original.RejectedError);
+export const TeapotError = createMockError(original.TeapotError);
+export const UnauthorizedError = createMockError(original.UnauthorizedError);
+export const UnavailableError = createMockError(original.UnavailableError);
+export const UnhandledError = createMockError(original.UnhandledError);
+export const UnreachableCodeError = createMockError(
+  original.UnreachableCodeError,
+);
 
 // Mock core functions
 export const validate = createMockFunction<(data: any, schema: any) => boolean>(
