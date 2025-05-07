@@ -1,10 +1,11 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import {
   createMockFunction,
   createMockResolvedFunction,
   MockValidationError,
   MockNotFoundError,
   createMockError,
+  createMockWrappedObject,
 } from "../utils";
 
 describe("Mock Utils", () => {
@@ -77,6 +78,59 @@ describe("Mock Utils", () => {
       mockFn.mockResolvedValue("new value");
       const result = await mockFn();
       expect(result).toBe("new value");
+    });
+  });
+
+  describe("createMockWrappedObject", () => {
+    it("should create mock functions for all methods in an object", () => {
+      const original = {
+        method1: (x: number) => x * 2,
+        method2: (s: string) => s.toUpperCase(),
+        prop: "value",
+        nested: {
+          nestedMethod: (x: number) => x * 3,
+          nestedProp: 42,
+        },
+      };
+
+      const mock = createMockWrappedObject(original);
+      
+      // Test method mocking
+      expect(mock.method1(5)).toBe(10);
+      expect(mock.method2("hello")).toBe("HELLO");
+      expect(mock.method1).toHaveProperty("mock");
+      expect(mock.method2).toHaveProperty("mock");
+      
+      // Test property preservation
+      expect(mock.prop).toBe("value");
+      
+      // Test nested objects
+      expect(mock.nested.nestedMethod(5)).toBe(15);
+      expect(mock.nested.nestedProp).toBe(42);
+      expect(mock.nested.nestedMethod).toHaveProperty("mock");
+    });
+
+    it("should return fallback value when wrapped function throws", () => {
+      const original = {
+        method: () => {
+          throw new Error("Original implementation error");
+        },
+      };
+
+      const fallback = "fallback value";
+      const mock = createMockWrappedObject(original, fallback);
+      
+      // Silence console warnings during test
+      const consoleWarn = console.warn;
+      console.warn = vi.fn();
+      
+      const result = mock.method();
+      
+      // Restore console
+      console.warn = consoleWarn;
+      
+      expect(result).toBe(fallback);
+      expect(mock.method).toHaveProperty("mock");
     });
   });
 });

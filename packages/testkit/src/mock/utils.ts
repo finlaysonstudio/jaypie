@@ -55,6 +55,27 @@ function createMockWrappedFunction<T>(
   });
 }
 
+function createMockWrappedObject<T extends Record<string, any>>(
+  object: T,
+  fallback: any = "_MOCK_WRAPPED_RESULT",
+): T {
+  let returnMock: Record<string, any> = {};
+  if (typeof object === "function") {
+    returnMock = createMockWrappedFunction(object, fallback);
+  }
+  for (const key of Object.keys(object)) {
+    const value = object[key];
+    if (typeof value === "function") {
+      returnMock[key] = createMockWrappedFunction(value, fallback);
+    } else if (typeof value === "object" && value !== null) {
+      returnMock[key] = createMockWrappedObject(value, fallback);
+    } else {
+      returnMock[key] = value;
+    }
+  }
+  return returnMock as T;
+}
+
 /**
  * Utility to create a mock error constructor from an error class
  */
@@ -89,6 +110,7 @@ export {
   createMockResolvedFunction,
   createMockReturnedFunction,
   createMockWrappedFunction,
+  createMockWrappedObject,
   MockValidationError,
   MockNotFoundError,
   createMockError,
