@@ -105,13 +105,16 @@ function createMockWrappedFunction<T>(
 }
 
 /**
- * Utility to create a mock error instance from an error class
+ * Utility to create a mock error constructor from an error class
  */
 function createMockError<T extends new (...args: any[]) => Error>(
   ErrorClass: T,
-  ...args: ConstructorParameters<T>
-): InstanceType<T> {
-  return new ErrorClass(...args) as unknown as InstanceType<T>;
+): T {
+  // Create a mock constructor that returns a new instance of ErrorClass
+  const mockConstructor = vi.fn(function (this: any, ...args: any[]) {
+    return new ErrorClass(...args);
+  });
+  return mockConstructor as unknown as T;
 }
 
 // Mock core errors - All error classes extend JaypieError

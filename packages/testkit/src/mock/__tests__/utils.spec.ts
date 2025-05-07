@@ -25,23 +25,28 @@ describe("Mock Utils", () => {
       expect(error instanceof Error).toBe(true);
     });
 
-    it("should create an error instance using createMockError", () => {
+    it("should create a mock error constructor that is new-able and a vi.fn", () => {
       class CustomError extends Error {
         constructor(message: string) {
           super(message);
           this.name = "CustomError";
         }
       }
-      const error = createMockError(CustomError, "custom message");
+      const MockCustomError = createMockError(CustomError);
+      expect(typeof MockCustomError).toBe("function");
+      const error = new MockCustomError("custom message");
       expect(error).toBeInstanceOf(CustomError);
       expect(error.name).toBe("CustomError");
       expect(error.message).toBe("custom message");
+      expect((MockCustomError as any).mock).toBeDefined();
     });
 
     it("should work with built-in Error using createMockError", () => {
-      const error = createMockError(Error, "built-in error");
+      const MockError = createMockError(Error);
+      const error = new MockError("built-in error");
       expect(error).toBeInstanceOf(Error);
       expect(error.message).toBe("built-in error");
+      expect((MockError as any).mock).toBeDefined();
     });
   });
 
