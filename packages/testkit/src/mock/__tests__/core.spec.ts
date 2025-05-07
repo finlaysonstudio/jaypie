@@ -33,8 +33,25 @@ afterEach(() => {
 describe("Core Mocks", () => {
   // 1. Base Cases
   describe("Base Cases", () => {
-    it("validate is a function", () => {
+    it("validate is a nested function", () => {
       expect(validate).toBeMockFunction();
+      expect(validate.array).toBeMockFunction();
+      expect(validate.boolean).toBeMockFunction();
+      expect(validate.class).toBeMockFunction();
+      expect(validate.function).toBeMockFunction();
+      expect(validate.null).toBeMockFunction();
+      expect(validate.number).toBeMockFunction();
+      expect(validate.object).toBeMockFunction();
+      expect(validate.optional).toBeObject();
+      expect(validate.optional.array).toBeMockFunction();
+      expect(validate.optional.boolean).toBeMockFunction();
+      expect(validate.optional.class).toBeMockFunction();
+      expect(validate.optional.function).toBeMockFunction();
+      expect(validate.optional.null).toBeMockFunction();
+      expect(validate.optional.number).toBeMockFunction();
+      expect(validate.optional.object).toBeMockFunction();
+      expect(validate.string).toBeMockFunction();
+      expect(validate.undefined).toBeMockFunction();
     });
 
     it("getConfig is a function", () => {
@@ -121,11 +138,6 @@ describe("Core Mocks", () => {
 
   // 5. Happy Paths
   describe("Happy Paths", () => {
-    it("validate returns true by default", () => {
-      const result = validate({ name: "test" }, { type: "object" });
-      expect(result).toBe(true);
-    });
-
     it("getConfig returns default test environment", () => {
       const config = getConfig();
       expect(config).toEqual({ environment: "test" });

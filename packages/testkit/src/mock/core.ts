@@ -7,6 +7,7 @@ import {
   createMockResolvedFunction,
   createMockReturnedFunction,
   createMockWrappedFunction,
+  createMockWrappedObject,
   MockValidationError,
 } from "./utils";
 import { beforeAll, vi } from "vitest";
@@ -47,9 +48,7 @@ export const UnreachableCodeError = createMockError(
 );
 
 // Mock core functions
-export const validate = createMockFunction<(data: any, schema: any) => boolean>(
-  () => true,
-);
+export const validate = createMockWrappedObject(original.validate);
 
 export const getConfig = createMockFunction<() => Record<string, string>>(
   () => ({ environment: "test" }),
