@@ -32,13 +32,15 @@ describe("lambdaHandler", () => {
   describe("Error Conditions", () => {
     it("throws BadRequestError when handler is not a function", () => {
       expect(() => lambdaHandler({} as any)).toThrow(BadRequestError);
-      expect(() => lambdaHandler({} as any)).toThrow("handler must be a function");
+      expect(() => lambdaHandler({} as any)).toThrow(
+        "handler must be a function",
+      );
     });
 
     it("throws UnavailableError when unavailable option is true", async () => {
       const handler = vi.fn();
       const wrapped = lambdaHandler(handler, { unavailable: true });
-      
+
       try {
         await wrapped({}, {});
         // Should not reach here
@@ -54,7 +56,7 @@ describe("lambdaHandler", () => {
         throw new Error("Handler error");
       });
       const wrapped = lambdaHandler(handler);
-      
+
       try {
         await wrapped({}, {});
         // Should not reach here

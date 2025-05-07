@@ -94,16 +94,16 @@ describe("Mock Utils", () => {
       };
 
       const mock = createMockWrappedObject(original);
-      
+
       // Test method mocking
       expect(mock.method1(5)).toBe(10);
       expect(mock.method2("hello")).toBe("HELLO");
       expect(mock.method1).toHaveProperty("mock");
       expect(mock.method2).toHaveProperty("mock");
-      
+
       // Test property preservation
       expect(mock.prop).toBe("value");
-      
+
       // Test nested objects
       expect(mock.nested.nestedMethod(5)).toBe(15);
       expect(mock.nested.nestedProp).toBe(42);
@@ -119,16 +119,16 @@ describe("Mock Utils", () => {
 
       const fallback = "fallback value";
       const mock = createMockWrappedObject(original, fallback);
-      
+
       // Silence console warnings during test
       const consoleWarn = console.warn;
       console.warn = vi.fn();
-      
+
       const result = mock.method();
-      
+
       // Restore console
       console.warn = consoleWarn;
-      
+
       expect(result).toBe(fallback);
       expect(mock.method).toHaveProperty("mock");
     });
