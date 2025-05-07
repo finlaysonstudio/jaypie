@@ -69,7 +69,7 @@ const toThrowJaypieError = async (
     if (isJaypieError(error)) {
       // Cast to the specific type with _type property
       const jaypieError = error as JaypieErrorWithType;
-      
+
       // If expected is also a JaypieError, check if the error matches
       if (expectedError && isJaypieError(expectedError)) {
         const expectedJaypieError = expectedError as JaypieErrorWithType;
