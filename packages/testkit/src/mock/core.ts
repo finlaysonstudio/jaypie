@@ -60,28 +60,14 @@ beforeAll(async () => {
 export { log };
 
 // Add missing core functions
-export const cloneDeep = createMockFunction<(obj: any) => any>((obj) => {
-  try {
-    return structuredClone(obj);
-  } catch (error) {
-    return JSON.parse(JSON.stringify(obj));
-  }
-});
+export const cloneDeep = createMockWrappedFunction(original.cloneDeep);
 
-export const envBoolean = createMockFunction<
-  (key: string, defaultValue?: boolean) => boolean
->(() => true);
+export const envBoolean = createMockReturnedFunction(true);
 
-export const envsKey = createMockFunction<
-  (key: string, defaultValue?: string) => string | undefined
->((key, defaultValue) => {
-  try {
-    // Try original implementation first
-    return process.env[key] || defaultValue;
-  } catch (error) {
-    return `_MOCK_ENVS_KEY_[${TAG}][${key}]`;
-  }
-});
+export const envsKey = createMockWrappedFunction(
+  original.envsKey,
+  `_MOCK_ENVS_KEY_[${TAG}]`,
+);
 
 export const errorFromStatusCode = createMockFunction<
   (statusCode: number, message?: string) => Error
@@ -121,178 +107,48 @@ export const errorFromStatusCode = createMockFunction<
   }
 });
 
-export const formatError = createMockFunction<(error: any) => any>((error) => {
-  try {
-    // Try to use original implementation first
-    if (error instanceof Error) {
-      return {
-        name: error.name,
-        message: error.message,
-        stack: error.stack,
-      };
-    }
-    return error;
-  } catch (e) {
-    return `_MOCK_FORMAT_ERROR_[${TAG}]`;
-  }
-});
+export const formatError = createMockWrappedFunction(
+  original.formatError,
+  `_MOCK_FORMAT_ERROR_[${TAG}]`,
+);
 
-export const getHeaderFrom = createMockFunction<
-  (
-    headers: Record<string, string | string[] | undefined>,
-    key: string,
-  ) => string | undefined
->((headers, key) => {
-  try {
-    // Try original implementation first
-    if (!headers || !key) return undefined;
-    const lowerKey = key.toLowerCase();
-    for (const [headerKey, value] of Object.entries(headers)) {
-      if (headerKey.toLowerCase() === lowerKey) {
-        return Array.isArray(value) ? value[0] : value;
-      }
-    }
-    return undefined;
-  } catch (error) {
-    return `_MOCK_HEADER_FROM_[${TAG}][${key}]`;
-  }
-});
+export const getHeaderFrom = createMockWrappedFunction(
+  original.getHeaderFrom,
+  `_MOCK_GET_HEADER_FROM_[${TAG}]`,
+);
 
-export const getObjectKeyCaseInsensitive = createMockFunction<
-  (obj: Record<string, any>, key: string) => any
->((obj, key) => {
-  try {
-    // Try original implementation first
-    if (!obj || !key) return undefined;
-    const lowerKey = key.toLowerCase();
-    for (const [objKey, value] of Object.entries(obj)) {
-      if (objKey.toLowerCase() === lowerKey) {
-        return value;
-      }
-    }
-    return undefined;
-  } catch (error) {
-    return `_MOCK_OBJECT_KEY_[${TAG}][${key}]`;
-  }
-});
+export const getObjectKeyCaseInsensitive = createMockWrappedFunction(
+  original.getObjectKeyCaseInsensitive,
+  `_MOCK_GET_OBJECT_KEY_CASE_INSENSITIVE_[${TAG}]`,
+);
 
-export const isClass = createMockFunction<(input: any) => boolean>((input) => {
-  try {
-    // Try original implementation first
-    return typeof input === "function" && /^\s*class\s+/.test(input.toString());
-  } catch (error) {
-    return false;
-  }
-});
+export const isClass = createMockWrappedFunction(
+  original.isClass,
+  `_MOCK_IS_CLASS_[${TAG}]`,
+);
 
-export const isJaypieError = createMockFunction<(input: any) => boolean>(
-  (input) => {
-    try {
-      // Try original implementation first
-      return input instanceof JaypieError;
-    } catch (error) {
-      return false;
-    }
-  },
+export const isJaypieError = createMockWrappedFunction(
+  original.isJaypieError,
+  false,
 );
 
 // Optional/Required validation functions
-export const optional = {
-  array: createMockFunction<(input: any) => any[]>((input) =>
-    Array.isArray(input) ? input : [],
-  ),
-  boolean: createMockFunction<(input: any) => boolean>((input) =>
-    Boolean(input),
-  ),
-  number: createMockFunction<(input: any) => number>(
-    (input) => Number(input) || 0,
-  ),
-  object: createMockFunction<(input: any) => object>((input) =>
-    typeof input === "object" && input !== null ? input : {},
-  ),
-  string: createMockFunction<(input: any) => string>((input) =>
-    String(input || ""),
-  ),
-};
+export const optional = validate.optional;
 
-export const required = {
-  array: createMockFunction<(input: any, name?: string) => any[]>(
-    (input, name = "array") => {
-      if (!Array.isArray(input))
-        throw new MockValidationError(`${name} must be an array`);
-      return input;
-    },
-  ),
-  boolean: createMockFunction<(input: any, name?: string) => boolean>(
-    (input, name = "boolean") => {
-      if (typeof input !== "boolean")
-        throw new MockValidationError(`${name} must be a boolean`);
-      return input;
-    },
-  ),
-  number: createMockFunction<(input: any, name?: string) => number>(
-    (input, name = "number") => {
-      if (typeof input !== "number" || isNaN(input))
-        throw new MockValidationError(`${name} must be a number`);
-      return input;
-    },
-  ),
-  object: createMockFunction<(input: any, name?: string) => object>(
-    (input, name = "object") => {
-      if (typeof input !== "object" || input === null)
-        throw new MockValidationError(`${name} must be an object`);
-      return input;
-    },
-  ),
-  string: createMockFunction<(input: any, name?: string) => string>(
-    (input, name = "string") => {
-      if (typeof input !== "string")
-        throw new MockValidationError(`${name} must be a string`);
-      return input;
-    },
-  ),
-};
+export const required = validate.required;
 
-export const safeParseFloat = createMockFunction<
-  (input: string | number) => number
->((input) => {
-  try {
-    // Try original implementation first
-    if (typeof input === "number") return input;
-    const parsed = parseFloat(input);
-    return isNaN(parsed) ? 0 : parsed;
-  } catch (error) {
-    return 0;
-  }
-});
+export const safeParseFloat = createMockWrappedFunction(
+  original.safeParseFloat,
+  `_MOCK_SAFE_PARSE_FLOAT_[${TAG}]`,
+);
 
-export const placeholders = createMockFunction<
-  (template: string, values: Record<string, any>) => string
->((template, values) => {
-  try {
-    // Try original implementation first
-    return template.replace(/\{([^}]+)\}/g, (_, key) => {
-      return values[key] !== undefined ? String(values[key]) : `{${key}}`;
-    });
-  } catch (error) {
-    return `_MOCK_PLACEHOLDERS_[${TAG}]`;
-  }
-});
+export const placeholders = createMockWrappedFunction(
+  original.placeholders,
+  `_MOCK_PLACEHOLDERS_[${TAG}]`,
+);
 
 // Add force utilities to help with jaypieHandler implementation
-export const force = {
-  array: (value: any): any[] => {
-    if (Array.isArray(value)) return value;
-    return [];
-  },
-  boolean: (value: any): boolean => {
-    return Boolean(value);
-  },
-  object: (value: any): object => {
-    if (typeof value === "object" && value !== null) return value;
-    return {};
-  },
-};
+export const force = createMockWrappedObject(original.force);
 
 export const jaypieHandler = createMockFunction<
   (
@@ -368,28 +224,11 @@ export const jaypieHandler = createMockFunction<
   };
 });
 
-export const sleep = createMockFunction<(ms: number) => Promise<boolean>>(
-  async () => true,
+export const sleep = createMockResolvedFunction(true);
+
+export const uuid = createMockWrappedFunction(
+  original.uuid,
+  `00000000-0000-0000-0000-000000000000`,
 );
 
-export const uuid = createMockFunction<() => string>(() => {
-  try {
-    // Try to use a real UUID implementation if available
-    const digits = "0123456789abcdef";
-    let uuid = "";
-    for (let i = 0; i < 36; i++) {
-      if (i === 8 || i === 13 || i === 18 || i === 23) {
-        uuid += "-";
-      } else if (i === 14) {
-        uuid += "4";
-      } else if (i === 19) {
-        uuid += digits[(Math.random() * 4) | 8];
-      } else {
-        uuid += digits[(Math.random() * 16) | 0];
-      }
-    }
-    return uuid;
-  } catch (error) {
-    return `_MOCK_UUID_[${TAG}]`;
-  }
-});
+export const HTTP = original.HTTP;

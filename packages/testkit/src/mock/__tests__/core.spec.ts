@@ -23,6 +23,7 @@ import {
   BadRequestError,
   UnavailableError,
   ProjectError,
+  HTTP,
 } from "../core";
 import { MockValidationError } from "../utils";
 
@@ -69,41 +70,18 @@ describe("Core Mocks", () => {
     it("cloneDeep is a function", () => {
       expect(cloneDeep).toBeMockFunction();
     });
+
+    it("envBoolean is a function", () => {
+      expect(envBoolean).toBeMockFunction();
+    });
+
+    it("envsKey is a function", () => {
+      expect(envsKey).toBeMockFunction();
+    });
   });
 
   // 2. Error Conditions
   describe("Error Conditions", () => {
-    it("required.string throws on invalid input", () => {
-      expect(() => required.string(123)).toThrow(MockValidationError);
-      expect(() => required.string(123)).toThrow("string must be a string");
-    });
-
-    it("required.number throws on invalid input", () => {
-      expect(() => required.number("123")).toThrow(MockValidationError);
-      expect(() => required.number("123")).toThrow("number must be a number");
-    });
-
-    it("required.boolean throws on invalid input", () => {
-      expect(() => required.boolean("true")).toThrow(MockValidationError);
-      expect(() => required.boolean("true")).toThrow(
-        "boolean must be a boolean",
-      );
-    });
-
-    it("required.array throws on invalid input", () => {
-      expect(() => required.array({})).toThrow(MockValidationError);
-      expect(() => required.array({})).toThrow("array must be an array");
-    });
-
-    it("required.object throws on invalid input", () => {
-      expect(() => required.object("not an object")).toThrow(
-        MockValidationError,
-      );
-      expect(() => required.object("not an object")).toThrow(
-        "object must be an object",
-      );
-    });
-
     it("jaypieHandler throws UnavailableError when unavailable is true", async () => {
       const handler = jaypieHandler(() => "result", { unavailable: true });
       await expect(handler()).rejects.toThrow("Service unavailable");
@@ -153,6 +131,10 @@ describe("Core Mocks", () => {
 
     it("envBoolean returns true by default", () => {
       expect(envBoolean("ANY_KEY")).toBe(true);
+    });
+
+    it("envsKey returns mock envsKey by default", () => {
+      expect(envsKey).toBeMockFunction();
     });
 
     it("optional.string converts input to string", () => {
@@ -218,14 +200,15 @@ describe("Core Mocks", () => {
     });
 
     it("getHeaderFrom finds header case-insensitively", () => {
+      expect(getHeaderFrom).toBeMockFunction();
       const headers = {
         "Content-Type": "application/json",
         "X-Test": "test-value",
       };
 
-      expect(getHeaderFrom(headers, "content-type")).toBe("application/json");
-      expect(getHeaderFrom(headers, "x-test")).toBe("test-value");
-      expect(getHeaderFrom(headers, "not-exist")).toBeUndefined();
+      expect(getHeaderFrom("content-type", headers)).toBe("application/json");
+      expect(getHeaderFrom("x-test", headers)).toBe("test-value");
+      expect(getHeaderFrom("not-exist", headers)).toBeUndefined();
     });
 
     it("getObjectKeyCaseInsensitive finds object key case-insensitively", () => {
@@ -241,7 +224,7 @@ describe("Core Mocks", () => {
 
     it("force.array converts to array or empty array", () => {
       expect(force.array([1, 2, 3])).toEqual([1, 2, 3]);
-      expect(force.array("not array")).toEqual([]);
+      expect(force.array("not array")).toBeArray();
     });
 
     it("force.boolean converts to boolean", () => {
@@ -251,42 +234,501 @@ describe("Core Mocks", () => {
 
     it("force.object converts to object or empty object", () => {
       expect(force.object({ a: 1 })).toEqual({ a: 1 });
-      expect(force.object("not object")).toEqual({});
+      expect(force.object("not object")).toBeObject();
     });
   });
 
   // 6. Features
   describe("Features", () => {
-    it("jaypieHandler executes the handler function", async () => {
-      // We can't directly test the validate, setup, or teardown functions
-      // since the mock implementation doesn't actually call them
-      const handlerFn = vi.fn().mockReturnValue("test result");
-      const handler = jaypieHandler(handlerFn);
+    describe("Jaypie Handler", () => {
+      describe("Base Cases", () => {
+        it("Works", () => {
+          expect(jaypieHandler).toBeDefined();
+          expect(jaypieHandler).toBeFunction();
+          expect(vi.isMockFunction(jaypieHandler)).toBeTrue();
+        });
+      });
+      describe("Observability", () => {
+        it("Does not log", async () => {
+          // Arrange
+          const handler = jaypieHandler(() => {});
+          // Act
+          await handler();
+          // Assert
+          expect(log.trace).not.toHaveBeenCalled();
+          expect(log.debug).not.toHaveBeenCalled();
+          expect(log.info).not.toHaveBeenCalled();
+          expect(log.warn).not.toHaveBeenCalled();
+          expect(log.error).not.toHaveBeenCalled();
+          expect(log.fatal).not.toHaveBeenCalled();
+        });
+      });
+      describe("Happy Paths", () => {
+        it("Calls a function I pass it", async () => {
+          // Arrange
+          const mockFunction = vi.fn(() => 12);
+          const handler = jaypieHandler(mockFunction);
+          const args = [1, 2, 3];
+          // Act
+          await handler(...args);
+          // Assert
+          expect(mockFunction).toHaveBeenCalledTimes(1);
+          expect(mockFunction).toHaveBeenCalledWith(...args);
+        });
+        it("Throws the error my function throws", async () => {
+          // Arrange
+          const mockFunction = vi.fn(() => {
+            throw new Error("Sorpresa!");
+          });
+          const handler = jaypieHandler(mockFunction);
+          // Act
+          try {
+            await handler();
+          } catch (error) {
+            if (error instanceof Error) {
+              expect(error.message).toBe("Sorpresa!");
+            }
+          }
+          expect.assertions(1);
+        });
+        it("Works if async/await is used", async () => {
+          // Arrange
+          const mockFunction = vi.fn(async () => 12);
+          const handler = jaypieHandler(mockFunction);
+          // Act
+          await handler();
+          // Assert
+          expect(mockFunction).toHaveBeenCalledTimes(1);
+        });
+        it("Returns what the function returns", async () => {
+          // Arrange
+          const mockFunction = vi.fn(() => 42);
+          const handler = jaypieHandler(mockFunction);
+          // Act
+          const result = await handler();
+          // Assert
+          expect(result).toBe(42);
+        });
+        it("Returns what async functions resolve", async () => {
+          // Arrange
+          const mockFunction = vi.fn(async () => 42);
+          const handler = jaypieHandler(mockFunction);
+          // Act
+          const result = await handler();
+          // Assert
+          expect(result).toBe(42);
+        });
+      });
+      describe("Features", () => {
+        describe("Lifecycle Functions", () => {
+          describe("Unavailable mode", () => {
+            it("Works as normal when process.env.PROJECT_UNAVAILABLE is set to false", async () => {
+              // Arrange
+              const handler = jaypieHandler(() => {});
+              // Act
+              await handler();
+              // Assert
+              expect(log.warn).not.toHaveBeenCalled();
+            });
+            it("Will throw 503 UnavailableError if process.env.PROJECT_UNAVAILABLE is set to true", async () => {
+              // Arrange
+              process.env.PROJECT_UNAVAILABLE = "true";
+              const handler = jaypieHandler(() => {});
+              // Act
+              try {
+                await handler();
+              } catch (error) {
+                if (isJaypieError(error)) {
+                  expect(error.isProjectError).toBeTrue();
+                  expect(error.status).toBe(HTTP.CODE.UNAVAILABLE);
+                }
+              }
+              expect.assertions(2);
+              delete process.env.PROJECT_UNAVAILABLE;
+            });
+            it("Will throw 503 UnavailableError if unavailable=true is passed to the handler", async () => {
+              // Arrange
+              const handler = jaypieHandler(() => {}, { unavailable: true });
+              // Act
+              try {
+                await handler();
+              } catch (error) {
+                if (isJaypieError(error)) {
+                  expect(error.isProjectError).toBeTrue();
+                  expect(error.status).toBe(HTTP.CODE.UNAVAILABLE);
+                }
+              }
+              expect.assertions(2);
+            });
+          });
+          describe("Validate", () => {
+            it("Calls validate functions in order", async () => {
+              // Arrange
+              const mockValidator1 = vi.fn(async () => {});
+              const mockValidator2 = vi.fn(async () => {});
+              const handler = jaypieHandler(() => {}, {
+                validate: [mockValidator1, mockValidator2],
+              });
+              // Act
+              await handler();
+              // Assert
+              expect(mockValidator1).toHaveBeenCalledTimes(1);
+              expect(mockValidator2).toHaveBeenCalledTimes(1);
+              expect(mockValidator1).toHaveBeenCalledBefore(mockValidator2);
+            });
+            it("Thrown validate errors throw out", async () => {
+              // Arrange
+              const handler = jaypieHandler(() => {}, {
+                validate: [
+                  async () => {
+                    throw new Error("Sorpresa!");
+                  },
+                ],
+              });
+              // Act
+              try {
+                await handler();
+              } catch (error) {
+                expect(error.isProjectError).toBeUndefined();
+                expect(error.status).toBeUndefined();
+              }
+              expect.assertions(2);
+            });
+            it("Returning false throws a bad request error", async () => {
+              // Arrange
+              const handler = jaypieHandler(() => {}, {
+                validate: [
+                  async () => {
+                    return false;
+                  },
+                ],
+              });
+              // Act
+              try {
+                await handler();
+              } catch (error) {
+                if (isJaypieError(error)) {
+                  expect(error.isProjectError).toBeTrue();
+                  expect(error.status).toBe(HTTP.CODE.BAD_REQUEST);
+                }
+              }
+              expect.assertions(2);
+            });
+            it("Will skip any validate functions that are not functions", async () => {
+              // Arrange
+              const handler = jaypieHandler(() => {}, {
+                // @ts-expect-error intentionally passing invalid inputs
+                validate: [null, undefined, 42, "string", {}, []],
+              });
+              // Act
+              await expect(handler()).resolves.not.toThrow();
+            });
+          });
+          describe("Setup", () => {
+            it("Calls setup functions in order", async () => {
+              // Arrange
+              const mockSetup1 = vi.fn(async () => {});
+              const mockSetup2 = vi.fn(async () => {});
+              const handler = jaypieHandler(() => {}, {
+                setup: [mockSetup1, mockSetup2],
+              });
+              // Act
+              await handler();
+              // Assert
+              expect(mockSetup1).toHaveBeenCalledTimes(1);
+              expect(mockSetup2).toHaveBeenCalledTimes(1);
+              expect(mockSetup1).toHaveBeenCalledBefore(mockSetup2);
+            });
+            it("Thrown setup errors throw out", async () => {
+              // Arrange
+              const handler = jaypieHandler(() => {}, {
+                setup: [
+                  async () => {
+                    throw new Error("Sorpresa!");
+                  },
+                ],
+              });
+              // Act
+              try {
+                await handler();
+              } catch (error) {
+                expect(error.isProjectError).toBeUndefined();
+                expect(error.status).toBeUndefined();
+                expect(error.message).toBe("Sorpresa!");
+              }
+              expect.assertions(3);
+            });
+            it("Will skip any setup functions that are not functions", async () => {
+              // Arrange
+              const handler = jaypieHandler(() => {}, {
+                // @ts-expect-error intentionally passing invalid inputs
+                setup: [null, undefined, 42, "string", {}, []],
+              });
+              // Act
+              await expect(handler()).resolves.not.toThrow();
+            });
+          });
+          describe("Teardown", () => {
+            it("Calls teardown functions in order", async () => {
+              // Arrange
+              const mockTeardown1 = vi.fn(async () => {});
+              const mockTeardown2 = vi.fn(async () => {});
+              const handler = jaypieHandler(() => {}, {
+                teardown: [mockTeardown1, mockTeardown2],
+              });
+              // Act
+              await handler();
+              // Assert
+              expect(mockTeardown1).toHaveBeenCalledTimes(1);
+              expect(mockTeardown2).toHaveBeenCalledTimes(1);
+              expect(mockTeardown1).toHaveBeenCalledBefore(mockTeardown2);
+            });
+            it("Calls all functions even on error", async () => {
+              // Arrange
+              const mockTeardown1 = vi.fn(async () => {});
+              const mockTeardown2 = vi.fn(async () => {
+                throw new Error("Sorpresa!");
+              });
+              const mockTeardown3 = vi.fn(async () => {});
+              const handler = jaypieHandler(() => {}, {
+                teardown: [mockTeardown1, mockTeardown2, mockTeardown3],
+              });
+              // Act
+              await handler();
+              // Assert
+              expect(mockTeardown1).toHaveBeenCalledTimes(1);
+              expect(mockTeardown2).toHaveBeenCalledTimes(1);
+              expect(mockTeardown3).toHaveBeenCalledTimes(1);
+            });
+            it("Will call teardown functions even if setup throws an error", async () => {
+              // Arrange
+              const mockTeardown1 = vi.fn(async () => {});
+              const mockTeardown2 = vi.fn(async () => {});
+              const handler = jaypieHandler(() => {}, {
+                setup: [
+                  async () => {
+                    throw new Error("Sorpresa!");
+                  },
+                ],
+                teardown: [mockTeardown1, mockTeardown2],
+              });
+              // Act
+              try {
+                await handler();
+                // eslint-disable-next-line @typescript-eslint/no-unused-vars
+              } catch (error) {
+                // Assert
+                expect(mockTeardown1).toHaveBeenCalledTimes(1);
+                expect(mockTeardown2).toHaveBeenCalledTimes(1);
+              }
+              expect.assertions(2);
+            });
+            it("Will call teardown functions even if the handler throws an error", async () => {
+              // Arrange
+              const mockTeardown1 = vi.fn(async () => {});
+              const mockTeardown2 = vi.fn(async () => {});
+              const handler = jaypieHandler(
+                () => {
+                  throw new Error("Sorpresa!");
+                },
+                {
+                  teardown: [mockTeardown1, mockTeardown2],
+                },
+              );
+              // Act
+              try {
+                await handler();
+                // eslint-disable-next-line @typescript-eslint/no-unused-vars
+              } catch (error) {
+                // Assert
+                expect(mockTeardown1).toHaveBeenCalledTimes(1);
+                expect(mockTeardown2).toHaveBeenCalledTimes(1);
+              }
+              expect.assertions(2);
+            });
+            it("Will NOT call teardown functions if validate throws an error", async () => {
+              // Arrange
+              const mockTeardown1 = vi.fn(async () => {});
+              const mockTeardown2 = vi.fn(async () => {});
+              const handler = jaypieHandler(() => {}, {
+                validate: [
+                  async () => {
+                    throw new Error("Sorpresa!");
+                  },
+                ],
+                teardown: [mockTeardown1, mockTeardown2],
+              });
+              // Act
+              try {
+                await handler();
+                // eslint-disable-next-line @typescript-eslint/no-unused-vars
+              } catch (error) {
+                // Assert
+                expect(mockTeardown1).not.toHaveBeenCalled();
+                expect(mockTeardown2).not.toHaveBeenCalled();
+              }
+              expect.assertions(2);
+            });
+            it("Will skip any teardown functions that are not functions", async () => {
+              // Arrange
+              const handler = jaypieHandler(() => {}, {
+                // @ts-expect-error intentionally passing invalid inputs
+                teardown: [null, undefined, 42, "string", {}, []],
+              });
+              // Act
+              await expect(handler()).resolves.not.toThrow();
+            });
+          });
+        });
+      });
+      describe("Edge Cases", () => {
+        it("Literally waits if I pass it a timeout", async () => {
+          // Arrange
+          const handler = jaypieHandler(async () => {
+            // 200ms is unnoticeable to us, but will catch anything that tries to log after the fact
+            await new Promise((resolve) => setTimeout(resolve, 200));
+          });
+          // Act
+          const start = Date.now();
+          await handler();
+          const end = Date.now();
+          // Assert
+          expect(end - start).toBeGreaterThanOrEqual(194); // Allowing a tiny amount of breathing room
+        });
+        it("Throws an unhandled error if async throws after a delay", async () => {
+          // Arrange
+          const handler = jaypieHandler(async () => {
+            // 200ms is unnoticeable to us, but will catch anything that tries to log after the fact
+            await new Promise((resolve) => setTimeout(resolve, 200));
+            throw new Error("Sorpresa!");
+          });
+          // Act
+          try {
+            await handler();
+          } catch (error) {
+            expect(error.isProjectError).toBeUndefined();
+          }
+          expect.assertions(1);
+        });
+      });
+      it("jaypieHandler executes the handler function", async () => {
+        // We can't directly test the validate, setup, or teardown functions
+        // since the mock implementation doesn't actually call them
+        const handlerFn = vi.fn().mockReturnValue("test result");
+        const handler = jaypieHandler(handlerFn);
 
-      const result = await handler();
+        const result = await handler();
 
-      expect(handlerFn).toHaveBeenCalled();
-      expect(result).toBe("test result");
-    });
-
-    it("jaypieHandler propagates errors from handler", async () => {
-      const handlerFn = vi.fn().mockImplementation(() => {
-        throw new Error("Handler error");
+        expect(handlerFn).toHaveBeenCalled();
+        expect(result).toBe("test result");
       });
 
-      const handler = jaypieHandler(handlerFn);
+      it("jaypieHandler propagates errors from handler", async () => {
+        const handlerFn = vi.fn().mockImplementation(() => {
+          throw new Error("Handler error");
+        });
 
-      await expect(handler()).rejects.toThrow("Handler error");
-      expect(handlerFn).toHaveBeenCalled();
+        const handler = jaypieHandler(handlerFn);
+
+        await expect(handler()).rejects.toThrow("Handler error");
+        expect(handlerFn).toHaveBeenCalled();
+      });
+    });
+
+    describe("Required Function", () => {
+      it("Works", () => {
+        const response = required(12, Number);
+        expect(response).not.toBeUndefined();
+      });
+      describe("Features", () => {
+        describe("Obvious success cases", () => {
+          it("Passes arrays", () => {
+            const response = required.array([]);
+            expect(response).toBeTrue();
+          });
+          it("Passes booleans", () => {
+            const response = required.boolean(true);
+            expect(response).toBeTrue();
+          });
+          it("Passes numbers", () => {
+            const response = required.number(12);
+            expect(response).toBeTrue();
+          });
+          it("Passes negative", () => {
+            const response = required.number(-12);
+            expect(response).toBeTrue();
+          });
+          it("Passes positive", () => {
+            const response = required.positive(12);
+            expect(response).toBeTrue();
+          });
+          it("Passes objects", () => {
+            const response = required.object({});
+            expect(response).toBeTrue();
+          });
+          it("Passes strings", () => {
+            const response = required.string("taco");
+            expect(response).toBeTrue();
+          });
+        });
+        describe("Obvious fail cases", () => {
+          it("Fails non-arrays", () => {
+            expect(() => required.array(null)).toThrowJaypieError();
+          });
+          it("Fails non-booleans", () => {
+            expect(() => required.boolean(null)).toThrowJaypieError();
+          });
+          it("Fails non-numbers", () => {
+            expect(() => required.number(null)).toThrowJaypieError();
+          });
+          it("Fails non-positives", () => {
+            expect(() => required.positive(-1)).toThrowJaypieError();
+          });
+          it("Fails non-objects", () => {
+            expect(() => required.object(null)).toThrowJaypieError();
+          });
+          it("Fails non-strings", () => {
+            expect(() => required.string(null)).toThrowJaypieError();
+          });
+        });
+        describe("Tricky fail cases", () => {
+          // False fails
+          it("Fails on false", () => {
+            expect(() => required.boolean(false)).toThrowJaypieError();
+          });
+          // NaN fails
+          it("Fails on NaN", () => {
+            expect(() => required.number(NaN)).toThrowJaypieError();
+          });
+          // null fails
+          it("Fails on null", () => {
+            expect(() => required.number(null)).toThrowJaypieError();
+          });
+          // Zero fails (then you want to validate it is a number)
+          it("Fails on zero", () => {
+            expect(() => required.number(0)).toThrowJaypieError();
+          });
+          // Empty string fails
+          it("Fails on empty string", () => {
+            expect(() => required.string("")).toThrowJaypieError();
+          });
+          // Positive fails zero
+          it("Fails non-positives", () => {
+            expect(() => required.positive(0)).toThrowJaypieError();
+          });
+        });
+      });
     });
 
     it("formatError formats error object", () => {
-      const error = new Error("test error");
+      const error = new BadRequestError("test error");
       const formatted = formatError(error);
 
-      expect(formatted).toHaveProperty("name", "Error");
-      expect(formatted).toHaveProperty("message", "test error");
-      expect(formatted).toHaveProperty("stack");
+      expect(formatted).toBeObject();
+      expect(formatted).toHaveProperty("status", 400);
+      expect(formatted).toHaveProperty("data", expect.any(Object));
+      expect(formatted.data).toHaveProperty("errors", expect.any(Array));
+      expect(formatted.data.errors).toHaveLength(1);
     });
   });
 
