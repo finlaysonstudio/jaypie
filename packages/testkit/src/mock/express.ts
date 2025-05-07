@@ -1,8 +1,15 @@
 /* eslint-disable @typescript-eslint/no-unsafe-function-type */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { createMockFunction } from "./utils";
-import * as core from "./core";
+import {
+  createMockFunction,
+  createMockReturnedFunction,
+  createMockResolvedFunction,
+  createMockWrappedFunction,
+} from "./utils";
+import { BadRequestError } from "@jaypie/core";
+import * as core from "./core"; // TODO: Remove this, use real things?
+import * as original from "@jaypie/express";
 
 // Constants for mock values
 const TAG = "EXPRESS";
@@ -11,153 +18,56 @@ const HTTP = {
 };
 
 // Add Express route functions
-export const badRequestRoute = createMockFunction<
-  (req: any, res: any, next: any) => void
->((req, res, next) => {
-  try {
-    // Try original implementation first, but fall back to mock
-    res.status(400).json({
-      error: {
-        name: "BadRequestError",
-        message: "Bad request",
-      },
-    });
-  } catch (error) {
-    res.status(400).json({ error: `_MOCK_BAD_REQUEST_ROUTE_[${TAG}]` });
-  }
+export const badRequestRoute = createMockWrappedFunction(
+  original.badRequestRoute,
+  { error: `_MOCK_BAD_REQUEST_ROUTE_[${TAG}]` },
+);
+
+export const echoRoute = createMockWrappedFunction(
+  original.echoRoute,
+  (req) => req,
+);
+
+export const forbiddenRoute = createMockWrappedFunction(
+  original.forbiddenRoute,
+  { error: `_MOCK_FORBIDDEN_ROUTE_[${TAG}]` },
+);
+
+export const goneRoute = createMockWrappedFunction(original.goneRoute, {
+  error: `_MOCK_GONE_ROUTE_[${TAG}]`,
 });
 
-export const echoRoute = createMockFunction<
-  (req: any, res: any, next: any) => void
->((req, res, next) => {
-  try {
-    // Try original implementation first, but fall back to mock
-    res.status(200).json({
-      method: req.method,
-      path: req.path,
-      params: req.params,
-      query: req.query,
-      headers: req.headers,
-      body: req.body,
-    });
-  } catch (error) {
-    res.status(200).json({ echo: `_MOCK_ECHO_ROUTE_[${TAG}]` });
-  }
+export const methodNotAllowedRoute = createMockWrappedFunction(
+  original.methodNotAllowedRoute,
+  { error: `_MOCK_METHOD_NOT_ALLOWED_ROUTE_[${TAG}]` },
+);
+
+export const methodNotAllowedRoute = createMockWrappedFunction(
+  original.methodNotAllowedRoute,
+  { error: `_MOCK_METHOD_NOT_ALLOWED_ROUTE_[${TAG}]` },
+);
+
+export const noContentRoute = createMockWrappedFunction(
+  original.noContentRoute,
+  { status: 204 },
+);
+
+export const notFoundRoute = createMockWrappedFunction(original.notFoundRoute, {
+  error: `_MOCK_NOT_FOUND_ROUTE_[${TAG}]`,
 });
 
-export const forbiddenRoute = createMockFunction<
-  (req: any, res: any, next: any) => void
->((req, res, next) => {
-  try {
-    // Try original implementation first, but fall back to mock
-    res.status(403).json({
-      error: {
-        name: "ForbiddenError",
-        message: "Forbidden",
-      },
-    });
-  } catch (error) {
-    res.status(403).json({ error: `_MOCK_FORBIDDEN_ROUTE_[${TAG}]` });
-  }
-});
+export const notImplementedRoute = createMockWrappedFunction(
+  original.notImplementedRoute,
+  { error: `_MOCK_NOT_IMPLEMENTED_ROUTE_[${TAG}]` },
+);
 
-export const goneRoute = createMockFunction<
-  (req: any, res: any, next: any) => void
->((req, res, next) => {
-  try {
-    // Try original implementation first, but fall back to mock
-    res.status(410).json({
-      error: {
-        name: "GoneError",
-        message: "Gone",
-      },
-    });
-  } catch (error) {
-    res.status(410).json({ error: `_MOCK_GONE_ROUTE_[${TAG}]` });
-  }
-});
-
-export const methodNotAllowedRoute = createMockFunction<
-  (req: any, res: any, next: any) => void
->((req, res, next) => {
-  try {
-    // Try original implementation first, but fall back to mock
-    res.status(405).json({
-      error: {
-        name: "MethodNotAllowedError",
-        message: "Method not allowed",
-      },
-    });
-  } catch (error) {
-    res.status(405).json({ error: `_MOCK_METHOD_NOT_ALLOWED_ROUTE_[${TAG}]` });
-  }
-});
-
-export const noContentRoute = createMockFunction<
-  (req: any, res: any, next: any) => void
->((req, res, next) => {
-  try {
-    // Try original implementation first, but fall back to mock
-    res.status(204).end();
-  } catch (error) {
-    res.status(204).end();
-  }
-});
-
-export const notFoundRoute = createMockFunction<
-  (req: any, res: any, next: any) => void
->((req, res, next) => {
-  try {
-    // Try original implementation first, but fall back to mock
-    res.status(404).json({
-      error: {
-        name: "NotFoundError",
-        message: "Not found",
-      },
-    });
-  } catch (error) {
-    res.status(404).json({ error: `_MOCK_NOT_FOUND_ROUTE_[${TAG}]` });
-  }
-});
-
-export const notImplementedRoute = createMockFunction<
-  (req: any, res: any, next: any) => void
->((req, res, next) => {
-  try {
-    // Try original implementation first, but fall back to mock
-    next(new core.NotImplementedError("Not implemented"));
-  } catch (error) {
-    next(new Error(`_MOCK_NOT_IMPLEMENTED_ROUTE_[${TAG}]`));
-  }
-});
-
-export const expressHttpCodeHandler = createMockFunction<
-  (statusCode: number, options?: any) => (req: any, res: any, next: any) => void
->((statusCode, options = {}) => {
-  try {
-    // Try to mimic original implementation
-    return (req, res, next) => {
-      // For success codes, return empty response
-      if (statusCode >= 200 && statusCode < 300) {
-        if (statusCode === 204) {
-          return res.status(statusCode).end();
-        }
-        return res.status(statusCode).json({});
-      }
-
-      // For error codes, create an error and format it
-      const error = core.errorFromStatusCode(statusCode, options.message);
-      return res.status(statusCode).json({ error: core.formatError(error) });
-    };
-    // eslint-disable-next-line no-unreachable
-  } catch (error) {
-    return (req, res, next) => {
-      res
-        .status(statusCode)
-        .json({ mock: `_MOCK_HTTP_CODE_HANDLER_[${TAG}][${statusCode}]` });
-    };
-  }
-});
+export const expressHttpCodeHandler = createMockWrappedFunction(
+  original.expressHttpCodeHandler,
+  (...args) => {
+    const [req, res, next] = args;
+    return res.status(200).send();
+  },
+);
 
 // Type definitions needed for the expressHandler
 interface WithJsonFunction {
@@ -212,12 +122,12 @@ export const expressHandler = createMockFunction<
 
     props.setup.unshift((req: { locals?: Record<string, unknown> }) => {
       if (!req || typeof req !== "object") {
-        throw new core.BadRequestError("req must be an object");
+        throw new BadRequestError("req must be an object");
       }
       // Set req.locals if it doesn't exist
       if (!req.locals) req.locals = {};
       if (typeof req.locals !== "object" || Array.isArray(req.locals)) {
-        throw new core.BadRequestError("req.locals must be an object");
+        throw new BadRequestError("req.locals must be an object");
       }
       if (!req.locals._jaypie) req.locals._jaypie = {};
     });
@@ -243,13 +153,13 @@ export const expressHandler = createMockFunction<
   }
 
   if (props.locals && typeof props.locals !== "object") {
-    throw new core.BadRequestError("props.locals must be an object");
+    throw new BadRequestError("props.locals must be an object");
   }
   if (props.locals && Array.isArray(props.locals)) {
-    throw new core.BadRequestError("props.locals must be an object");
+    throw new BadRequestError("props.locals must be an object");
   }
   if (props.locals === null) {
-    throw new core.BadRequestError("props.locals must be an object");
+    throw new BadRequestError("props.locals must be an object");
   }
 
   // Create the jaypieHandler wrapper that mimics the behavior expected
@@ -266,7 +176,7 @@ export const expressHandler = createMockFunction<
         if (typeof validator === "function") {
           const valid = await validator(req, res, ...extra);
           if (valid === false) {
-            throw new core.BadRequestError("Validation failed");
+            throw new BadRequestError("Validation failed");
           }
         }
       }
@@ -350,7 +260,7 @@ export const expressHandler = createMockFunction<
           errorResponse = (error as WithJsonFunction).json();
         } else {
           // This should never happen
-          const unhandledError = new core.UnhandledError("Unhandled error");
+          const unhandledError = new UnhandledError("Unhandled error");
           errorResponse = {
             error: {
               name: unhandledError.name,
