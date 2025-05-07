@@ -36,7 +36,9 @@ else
             echo "File not found. Continuing..."
             claude --dangerously-skip-permissions
         else
-            claude --dangerously-skip-permissions "Follow the instructions in $file"
+            # Get additional parameters (if any)
+            shift_params="${@:2}"
+            claude --dangerously-skip-permissions "Follow the instructions in $file" $shift_params
         fi
     fi
 fi
