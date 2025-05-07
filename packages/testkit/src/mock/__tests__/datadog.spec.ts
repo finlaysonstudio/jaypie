@@ -19,20 +19,24 @@ describe("Datadog Mocks", () => {
   });
 
   describe("Happy Paths", () => {
-    it("submitMetric returns true by default", () => {
-      const result = submitMetric({});
+    it("submitMetric returns true by default", async () => {
+      const result = await submitMetric({});
       expect(result).toBe(true);
     });
 
-    it("submitMetricSet returns true by default", () => {
-      const result = submitMetricSet({});
+    it("submitMetricSet returns true by default", async () => {
+      const result = await submitMetricSet({});
       expect(result).toBe(true);
     });
   });
 
   describe("Features", () => {
     it("submitMetric tracks calls with options", () => {
-      const options = { metric: "api.request.count", value: 1, tags: ["endpoint:users", "method:GET"] };
+      const options = {
+        metric: "api.request.count",
+        value: 1,
+        tags: ["endpoint:users", "method:GET"],
+      };
       submitMetric(options);
 
       expect(submitMetric).toHaveBeenCalledTimes(1);
@@ -40,12 +44,12 @@ describe("Datadog Mocks", () => {
     });
 
     it("submitMetricSet tracks calls with options", () => {
-      const options = { 
+      const options = {
         metrics: [
           { name: "api.request.count", value: 1 },
-          { name: "api.response.time", value: 150 }
+          { name: "api.response.time", value: 150 },
         ],
-        tags: ["endpoint:users", "method:GET"] 
+        tags: ["endpoint:users", "method:GET"],
       };
       submitMetricSet(options);
 

@@ -1,9 +1,5 @@
-import { createMockFunction } from "./utils";
+import { createMockResolvedFunction } from "./utils";
 
-export const submitMetric = createMockFunction<
-  (options: Record<string, unknown>) => boolean
->(() => true);
+export const submitMetric = createMockResolvedFunction(true);
 
-export const submitMetricSet = createMockFunction<
-  (options: Record<string, unknown>) => boolean
->(() => true);
+export const submitMetricSet = createMockResolvedFunction(true);
