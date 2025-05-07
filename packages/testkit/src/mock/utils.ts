@@ -104,6 +104,16 @@ function createMockWrappedFunction<T>(
   });
 }
 
+/**
+ * Utility to create a mock error instance from an error class
+ */
+function createMockError<T extends new (...args: any[]) => Error>(
+  ErrorClass: T,
+  ...args: ConstructorParameters<T>
+): InstanceType<T> {
+  return new ErrorClass(...args) as unknown as InstanceType<T>;
+}
+
 // Mock core errors - All error classes extend JaypieError
 class MockValidationError extends Error {
   constructor(message: string) {
@@ -129,4 +139,5 @@ export {
   createMockWrappedFunction,
   MockValidationError,
   MockNotFoundError,
+  createMockError,
 };
