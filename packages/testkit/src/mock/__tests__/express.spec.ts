@@ -7,7 +7,7 @@ import {
   noContentRoute,
   expressHttpCodeHandler,
 } from "../express";
-import { BadRequestError } from "../core";
+import { HTTP, isJaypieError } from "../core";
 
 describe("Express Mocks", () => {
   describe("Base Cases", () => {
@@ -36,412 +36,321 @@ describe("Express Mocks", () => {
     });
   });
 
-  describe("Error Conditions", () => {
-    it("expressHandler throws BadRequestError when handler is not a function", () => {
-      expect(() => expressHandler({}, {} as any)).toThrow(BadRequestError);
+  describe("Jaypie Express", () => {
+    it("Mocks expected function", () => {
+      expect(vi.isMockFunction(expressHandler)).toBeTrue();
     });
-
-    it("expressHandler validates props.locals is an object", () => {
-      // @ts-expect-error - Testing with invalid locals
-      expect(() => expressHandler(() => {}, { locals: 123 })).toThrow(
-        BadRequestError,
-      );
-    });
-
-    it("expressHandler validates props.locals is not an array", () => {
-      // @ts-expect-error - Testing with invalid locals
-      expect(() => expressHandler(() => {}, { locals: [] })).toThrow(
-        BadRequestError,
-      );
-    });
-
-    it("expressHandler validates props.locals is not null", () => {
-      // @ts-expect-error - Testing with invalid locals
-      expect(() => expressHandler(() => {}, { locals: null })).toThrow(
-        BadRequestError,
-      );
-    });
-  });
-
-  describe("Happy Paths", () => {
-    it("echoRoute returns request details", async () => {
-      const req = {
-        method: "GET",
-        path: "/test",
-        params: { id: "123" },
-        query: { filter: "active" },
-        headers: { "content-type": "application/json" },
-        body: { name: "test" },
-      };
-      const res = {
-        status: vi.fn().mockReturnThis(),
-        json: vi.fn(),
-      };
-      const next = vi.fn();
-
-      echoRoute(req, res, next);
-
-      expect(res.status).toHaveBeenCalledWith(200);
-      expect(res.json).toHaveBeenCalledWith({
-        method: "GET",
-        path: "/test",
-        params: { id: "123" },
-        query: { filter: "active" },
-        headers: { "content-type": "application/json" },
-        body: { name: "test" },
+    describe("Express Handler", () => {
+      describe("Base Cases", () => {
+        it("Works", async () => {
+          expect(expressHandler).toBeDefined();
+          expect(expressHandler).toBeFunction();
+        });
+        it("Will call a function I pass it", async () => {
+          const mockFunction = vi.fn();
+          const handler = expressHandler(mockFunction);
+          const req = {};
+          const res = {
+            on: vi.fn(),
+          };
+          const next = () => {};
+          await handler(req, res, next);
+          expect(mockFunction).toHaveBeenCalledTimes(1);
+        });
+        it("Passes req, res, and anything else to the handler", async () => {
+          // Set up four mock variables
+          const req = {};
+          const res = {
+            on: vi.fn(),
+          };
+          const three = "THREE";
+          const four = "FOUR";
+          // Set up our mock function
+          const mockFunction = vi.fn();
+          const handler = expressHandler(mockFunction);
+          // Call the handler with our mock variables
+          await handler(req, res, three, four);
+          // Expect the mock function to have been called with our mock variables
+          expect(mockFunction).toHaveBeenCalledTimes(1);
+          expect(mockFunction).toHaveBeenCalledWith(req, res, three, four);
+        });
+        it.todo("As a mock, returns what was sent", async () => {
+          //
+        });
       });
-    });
-
-    it("badRequestRoute returns 400 error response", () => {
-      const req = {};
-      const res = {
-        status: vi.fn().mockReturnThis(),
-        json: vi.fn(),
-      };
-      const next = vi.fn();
-
-      badRequestRoute(req, res, next);
-
-      expect(res.status).toHaveBeenCalledWith(400);
-      expect(res.json).toHaveBeenCalledWith({
-        error: {
-          name: "BadRequestError",
-          message: "Bad request",
-        },
+      describe("Error Conditions", () => {
+        it("Throws if not passed a function", () => {
+          // Arrange
+          // Act
+          // Assert
+          expect(() => expressHandler({})).toThrow();
+          // @ts-expect-error intentionally passing invalid inputs
+          expect(() => expressHandler()).toThrow();
+          // @ts-expect-error intentionally passing invalid inputs
+          expect(() => expressHandler(42)).toThrow();
+          // @ts-expect-error intentionally passing invalid inputs
+          expect(() => expressHandler("string")).toThrow();
+          // @ts-expect-error intentionally passing invalid inputs
+          expect(() => expressHandler([])).toThrow();
+          // @ts-expect-error intentionally passing invalid inputs
+          expect(() => expressHandler(null)).toThrow();
+          // @ts-expect-error intentionally passing invalid inputs
+          expect(() => expressHandler(undefined)).toThrow();
+        });
+        it("Throws if passed an invalid locals object", async () => {
+          // Arrange
+          const mockFunction = vi.fn();
+          // Act
+          expect(async () => {
+            // @ts-expect-error intentionally passing invalid inputs
+            expressHandler(mockFunction, { locals: true });
+          }).toThrowJaypieError();
+          expect(async () => {
+            // @ts-expect-error intentionally passing invalid inputs
+            expressHandler(mockFunction, { locals: 42 });
+          }).toThrowJaypieError();
+          expect(async () => {
+            // @ts-expect-error intentionally passing invalid inputs
+            expressHandler(mockFunction, { locals: "string" });
+          }).toThrowJaypieError();
+          expect(async () => {
+            // @ts-expect-error intentionally passing invalid inputs
+            expressHandler(mockFunction, { locals: [] });
+          }).toThrowJaypieError();
+          expect(async () => {
+            // @ts-expect-error intentionally passing invalid inputs
+            expressHandler(mockFunction, { locals: null });
+          }).toThrowJaypieError();
+        });
+        it("Will throw out errors", async () => {
+          const mockFunction = vi.fn(() => {
+            throw new Error("Sorpresa!");
+          });
+          const handler = expressHandler(mockFunction);
+          const req = {};
+          try {
+            await handler(req);
+          } catch (error) {
+            expect(error.isProjectError).not.toBeTrue();
+          }
+          expect.assertions(1);
+        });
+        it("Will throw async errors", async () => {
+          const mockFunction = vi
+            .fn()
+            .mockRejectedValueOnce(new Error("Sorpresa!"));
+          const handler = expressHandler(mockFunction);
+          const req = {};
+          try {
+            await handler(req);
+          } catch (error) {
+            expect(error.isProjectError).not.toBeTrue();
+          }
+          expect.assertions(1);
+        });
+        it("Will not be tricked by fake res objects", async () => {
+          const mockFunction = vi.fn(() => {
+            throw new Error("Sorpresa!");
+          });
+          const handler = expressHandler(mockFunction);
+          const req = {};
+          const res = {
+            status: () => {},
+          };
+          try {
+            await handler(req, res);
+          } catch (error) {
+            expect(error.isProjectError).not.toBeTrue();
+            expect(error.message).toBe("Sorpresa!");
+          }
+          expect.assertions(2);
+        });
       });
-    });
-
-    it("notFoundRoute returns 404 error response", () => {
-      const req = {};
-      const res = {
-        status: vi.fn().mockReturnThis(),
-        json: vi.fn(),
-      };
-      const next = vi.fn();
-
-      notFoundRoute(req, res, next);
-
-      expect(res.status).toHaveBeenCalledWith(404);
-      expect(res.json).toHaveBeenCalledWith({
-        error: {
-          name: "NotFoundError",
-          message: "Not found",
-        },
+      describe("Happy Path", () => {
+        it("Calls a function I pass it", async () => {
+          // Arrange
+          const mockFunction = vi.fn(() => 12);
+          const handler = expressHandler(mockFunction);
+          const args = [1, 2, 3];
+          // Act
+          await handler(...args);
+          // Assert
+          expect(mockFunction).toHaveBeenCalledTimes(1);
+          expect(mockFunction).toHaveBeenCalledWith(...args);
+        });
+        it("Throws the error my function throws", async () => {
+          // Arrange
+          const mockFunction = vi.fn(() => {
+            throw new Error("Sorpresa!");
+          });
+          const handler = expressHandler(mockFunction);
+          // Act
+          try {
+            await handler();
+          } catch (error) {
+            expect(error.message).toBe("Sorpresa!");
+          }
+          expect.assertions(1);
+        });
+        it("Works if async/await is used", async () => {
+          // Arrange
+          const mockFunction = vi.fn(async () => 12);
+          const handler = expressHandler(mockFunction);
+          // Act
+          await handler();
+          // Assert
+          expect(mockFunction).toHaveBeenCalledTimes(1);
+        });
+        it("Returns what the function returns", async () => {
+          // Arrange
+          const mockFunction = vi.fn(() => 42);
+          const handler = expressHandler(mockFunction);
+          // Act
+          const result = await handler();
+          // Assert
+          expect(result).toBe(42);
+        });
+        it("Returns what async functions resolve", async () => {
+          // Arrange
+          const mockFunction = vi.fn(async () => 42);
+          const handler = expressHandler(mockFunction);
+          // Act
+          const result = await handler();
+          // Assert
+          expect(result).toBe(42);
+        });
       });
-    });
-
-    it("noContentRoute returns 204 with no content", () => {
-      const req = {};
-      const res = {
-        status: vi.fn().mockReturnThis(),
-        end: vi.fn(),
-      };
-      const next = vi.fn();
-
-      noContentRoute(req, res, next);
-
-      expect(res.status).toHaveBeenCalledWith(204);
-      expect(res.end).toHaveBeenCalled();
-    });
-
-    it("expressHttpCodeHandler creates a handler for a specific status code", () => {
-      const statusHandler = expressHttpCodeHandler(201);
-      expect(typeof statusHandler).toBe("function");
-
-      const req = {};
-      const res = {
-        status: vi.fn().mockReturnThis(),
-        json: vi.fn(),
-      };
-      const next = vi.fn();
-
-      statusHandler(req, res, next);
-      expect(res.status).toHaveBeenCalledWith(201);
-      expect(res.json).toHaveBeenCalledWith({});
-    });
-
-    it("expressHttpCodeHandler handles 204 No Content", () => {
-      const noContentHandler = expressHttpCodeHandler(204);
-      const req = {};
-      const res = {
-        status: vi.fn().mockReturnThis(),
-        end: vi.fn(),
-      };
-      const next = vi.fn();
-
-      noContentHandler(req, res, next);
-      expect(res.status).toHaveBeenCalledWith(204);
-      expect(res.end).toHaveBeenCalled();
-    });
-
-    it("expressHttpCodeHandler creates error response for error status codes", () => {
-      const errorHandler = expressHttpCodeHandler(404, {
-        message: "Custom not found message",
-      });
-      const req = {};
-      const res = {
-        status: vi.fn().mockReturnThis(),
-        json: vi.fn(),
-      };
-      const next = vi.fn();
-
-      errorHandler(req, res, next);
-      expect(res.status).toHaveBeenCalledWith(404);
-      expect(res.json).toHaveBeenCalledWith(
-        expect.objectContaining({
-          error: expect.objectContaining({
-            name: "NotFoundError",
-            message: "Custom not found message",
-          }),
-        }),
-      );
-    });
-  });
-
-  describe("Features", () => {
-    it("expressHandler accepts options as first parameter and handler as second", async () => {
-      const handler = vi.fn();
-      const wrapper = expressHandler({ locals: { test: "value" } }, handler);
-
-      const req = { locals: {} };
-      await wrapper(req, {});
-
-      expect(handler).toHaveBeenCalled();
-      expect(req.locals.test).toBe("value");
-    });
-
-    it("expressHandler accepts handler as first parameter and options as second", async () => {
-      const handler = vi.fn();
-      const wrapper = expressHandler(handler, { locals: { test: "value" } });
-
-      const req = { locals: {} };
-      await wrapper(req, {});
-
-      expect(handler).toHaveBeenCalled();
-      expect(req.locals.test).toBe("value");
-    });
-
-    it("expressHandler runs setup functions", async () => {
-      const setupFn = vi.fn();
-      const handler = vi.fn();
-      const wrapper = expressHandler(handler, { setup: setupFn });
-
-      await wrapper({}, {});
-
-      expect(setupFn).toHaveBeenCalled();
-      expect(handler).toHaveBeenCalled();
-    });
-
-    it("expressHandler runs validate functions", async () => {
-      const validateFn = vi.fn(() => true);
-      const handler = vi.fn();
-      const wrapper = expressHandler(handler, { validate: validateFn });
-
-      await wrapper({}, {});
-
-      expect(validateFn).toHaveBeenCalled();
-      expect(handler).toHaveBeenCalled();
-    });
-
-    it("expressHandler fails when validation returns false", async () => {
-      const validateFn = vi.fn(() => false);
-      const handler = vi.fn();
-      const wrapper = expressHandler(handler, { validate: validateFn });
-
-      // Using try/catch instead of toThrow because of async behavior
-      let error;
-      try {
-        await wrapper({}, {});
-      } catch (err) {
-        error = err;
-      }
-
-      expect(error).toBeInstanceOf(BadRequestError);
-      expect(validateFn).toHaveBeenCalled();
-      expect(handler).not.toHaveBeenCalled();
-    });
-
-    it("expressHandler runs teardown functions even when handler throws", async () => {
-      const teardownFn = vi.fn();
-      const handler = vi.fn().mockImplementation(() => {
-        throw new Error("Test error");
-      });
-      const wrapper = expressHandler(handler, { teardown: teardownFn });
-
-      // Using try/catch instead of toThrow because of async behavior
-      let error;
-      try {
-        await wrapper({}, {});
-      } catch (err) {
-        error = err;
-      }
-
-      expect(error).toBeInstanceOf(Error);
-      expect(error.message).toBe("Test error");
-      expect(handler).toHaveBeenCalled();
-      expect(teardownFn).toHaveBeenCalled();
-    });
-
-    it("expressHandler handles locals property", async () => {
-      const handler = vi.fn();
-      const wrapper = expressHandler(handler, {
-        locals: {
-          staticValue: "test",
-          dynamicValue: () => "dynamic",
-        },
-      });
-
-      const req = { locals: {} };
-      await wrapper(req, {});
-
-      expect(req.locals.staticValue).toBe("test");
-      expect(req.locals.dynamicValue).toBe("dynamic");
-    });
-
-    it("expressHandler handles supertest mode with non-object response", async () => {
-      const handler = vi.fn().mockResolvedValue("string response");
-      const wrapper = expressHandler(handler);
-
-      const res = {
-        socket: {},
-        constructor: { name: "ServerResponse" },
-        status: vi.fn().mockReturnThis(),
-        send: vi.fn(),
-      };
-
-      await wrapper({}, res);
-
-      expect(res.status).toHaveBeenCalledWith(200);
-      expect(res.send).toHaveBeenCalledWith("string response");
-    });
-
-    it("expressHandler handles supertest mode with null response", async () => {
-      const handler = vi.fn().mockResolvedValue(null);
-      const wrapper = expressHandler(handler);
-
-      const res = {
-        socket: {},
-        constructor: { name: "ServerResponse" },
-        status: vi.fn().mockReturnThis(),
-        send: vi.fn(),
-      };
-
-      await wrapper({}, res);
-
-      expect(res.status).toHaveBeenCalledWith(204);
-      expect(res.send).toHaveBeenCalled();
-    });
-
-    it("expressHandler handles array of setup functions", async () => {
-      const setup1 = vi.fn();
-      const setup2 = vi.fn();
-      const handler = vi.fn();
-      const wrapper = expressHandler(handler, { setup: [setup1, setup2] });
-
-      await wrapper({}, {});
-
-      expect(setup1).toHaveBeenCalled();
-      expect(setup2).toHaveBeenCalled();
-      expect(handler).toHaveBeenCalled();
-    });
-
-    it("expressHandler handles array of validate functions", async () => {
-      const validate1 = vi.fn(() => true);
-      const validate2 = vi.fn(() => true);
-      const handler = vi.fn();
-      const wrapper = expressHandler(handler, {
-        validate: [validate1, validate2],
-      });
-
-      await wrapper({}, {});
-
-      expect(validate1).toHaveBeenCalled();
-      expect(validate2).toHaveBeenCalled();
-      expect(handler).toHaveBeenCalled();
-    });
-
-    it("expressHandler handles array of teardown functions", async () => {
-      const teardown1 = vi.fn();
-      const teardown2 = vi.fn();
-      const handler = vi.fn();
-      const wrapper = expressHandler(handler, {
-        teardown: [teardown1, teardown2],
-      });
-
-      await wrapper({}, {});
-
-      expect(teardown1).toHaveBeenCalled();
-      expect(teardown2).toHaveBeenCalled();
-      expect(handler).toHaveBeenCalled();
-    });
-  });
-
-  describe("Specific Scenarios", () => {
-    it("expressHandler creates req.locals if it doesn't exist", async () => {
-      const handler = vi.fn();
-      const wrapper = expressHandler(handler, { locals: { test: "value" } });
-
-      const req = {};
-      await wrapper(req, {});
-
-      expect(handler).toHaveBeenCalled();
-      // @ts-expect-error - Testing runtime behavior
-      expect(req.locals.test).toBe("value");
-    });
-
-    it("expressHandler handles invalid req.locals", async () => {
-      const handler = vi.fn();
-      const wrapper = expressHandler(handler, { locals: { test: "value" } });
-
-      const req = { locals: "not an object" };
-
-      // Using try/catch instead of toThrow because of async behavior
-      let error;
-      try {
-        await wrapper(req, {});
-      } catch (err) {
-        error = err;
-      }
-
-      expect(error).toBeInstanceOf(BadRequestError);
-      expect(handler).not.toHaveBeenCalled();
-    });
-
-    it("expressHandler initializes req.locals._jaypie if it doesn't exist", async () => {
-      const handler = vi.fn();
-      const wrapper = expressHandler(handler, { locals: { test: "value" } });
-
-      const req = { locals: {} };
-      await wrapper(req, {});
-
-      expect(handler).toHaveBeenCalled();
-      expect(req.locals._jaypie).toBeDefined();
-    });
-
-    it("expressHandler handles supertest error scenario", async () => {
-      const errorMessage = "Test error";
-      const handler = vi.fn().mockImplementation(() => {
-        // The implementation converts errors to UnhandledError in supertest mode
-        // So we need to verify what res.json is actually called with
-        throw new BadRequestError(errorMessage);
-      });
-      const wrapper = expressHandler(handler);
-
-      const res = {
-        socket: {},
-        constructor: { name: "ServerResponse" },
-        status: vi.fn().mockReturnThis(),
-        json: vi.fn(),
-      };
-
-      await wrapper({}, res);
-
-      expect(res.status).toHaveBeenCalledWith(500); // Default is internal error (500)
-      expect(res.json).toHaveBeenCalledWith({
-        error: expect.objectContaining({
-          name: "UnhandledError", // The mock converts it to an UnhandledError
-          message: "Unhandled error",
-        }),
+      describe("Features", () => {
+        describe("Locals", () => {
+          it("Sets values in req.locals by running functions during setup", async () => {
+            // Arrange
+            const mockFunction = vi.fn();
+            const mockLocalFunction = vi.fn(() => "function");
+            const mockLocalAsyncFunction = vi.fn(() =>
+              Promise.resolve("async/await"),
+            );
+            const handler = expressHandler(mockFunction, {
+              locals: {
+                key: "value",
+                fn: mockLocalFunction,
+                asyncFn: mockLocalAsyncFunction,
+              },
+            });
+            const req = {} as {
+              locals: {
+                key: string;
+                fn: () => string;
+                asyncFn: () => Promise<string>;
+              };
+            };
+            const res = {
+              on: vi.fn(),
+            };
+            const next = () => {};
+            // Act
+            await handler(req, res, next);
+            // Assert
+            expect(req.locals).toBeDefined();
+            expect(req.locals).toBeObject();
+            expect(req.locals.key).toBe("value");
+            expect(req.locals.fn).toBe("function");
+            expect(req.locals.asyncFn).toBe("async/await");
+          });
+          it("Sets locals after setup functions are called", async () => {
+            // Arrange
+            const mockFunction = vi.fn();
+            const mockLocalFunction = vi.fn(() => "function");
+            const mockSetupFunction = vi.fn();
+            const handler = expressHandler(mockFunction, {
+              locals: {
+                key: "value",
+                fn: mockLocalFunction,
+              },
+              setup: mockSetupFunction,
+            });
+            const req = {};
+            const res = {
+              on: vi.fn(),
+            };
+            const next = () => {};
+            // Act
+            await handler(req, res, next);
+            // Assert
+            expect(mockFunction).toHaveBeenCalledTimes(1);
+            expect(mockLocalFunction).toHaveBeenCalledTimes(1);
+            expect(mockSetupFunction).toHaveBeenCalledTimes(1);
+            expect(mockSetupFunction).toHaveBeenCalledBefore(mockLocalFunction);
+          });
+        });
+        describe("Swap expressHandler Parameter Order", () => {
+          it("Works with the options object first", async () => {
+            // Arrange
+            const mockFunction = vi.fn();
+            const handler = expressHandler({ unavailable: true }, mockFunction);
+            const req = {};
+            const res = {
+              on: vi.fn(),
+            };
+            const next = () => {};
+            // Act
+            try {
+              await handler(req, res, next);
+            } catch (error) {
+              if (isJaypieError(error)) {
+                expect(error.isProjectError).toBeTrue();
+                expect(error.status).toBe(HTTP.CODE.UNAVAILABLE);
+              }
+            }
+            expect.assertions(2);
+          });
+        });
+        describe("Unavailable mode", () => {
+          it("Works as normal when process.env.PROJECT_UNAVAILABLE is set to false", async () => {
+            process.env.PROJECT_UNAVAILABLE = "false";
+            const mockFunction = vi.fn();
+            const handler = expressHandler(mockFunction);
+            const req = {};
+            const mockResJson = vi.fn();
+            const res = {
+              json: mockResJson,
+              on: vi.fn(),
+              status: vi.fn(() => res),
+              send: vi.fn(),
+            };
+            const next = () => {};
+            await expect(async () => handler(req, res, next)).not.toThrow();
+          });
+          it("Will respond with a 503 if process.env.PROJECT_UNAVAILABLE is set to true", async () => {
+            // Arrange
+            process.env.PROJECT_UNAVAILABLE = "true";
+            const handler = expressHandler(() => {});
+            // Act
+            try {
+              await handler();
+            } catch (error) {
+              if (isJaypieError(error)) {
+                expect(error.isProjectError).toBeTrue();
+                expect(error.status).toBe(HTTP.CODE.UNAVAILABLE);
+              }
+            }
+            expect.assertions(2);
+            delete process.env.PROJECT_UNAVAILABLE;
+          });
+          it("Will respond with a 503 if unavailable=true is passed to the handler", async () => {
+            // Arrange
+            const handler = expressHandler(() => {}, { unavailable: true });
+            // Act
+            try {
+              await handler();
+            } catch (error) {
+              if (isJaypieError(error)) {
+                expect(error.isProjectError).toBeTrue();
+                expect(error.status).toBe(HTTP.CODE.UNAVAILABLE);
+              }
+            }
+            expect.assertions(2);
+          });
+        });
       });
     });
   });

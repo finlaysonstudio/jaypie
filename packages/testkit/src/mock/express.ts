@@ -7,8 +7,8 @@ import {
   createMockResolvedFunction,
   createMockWrappedFunction,
 } from "./utils";
-import { BadRequestError } from "@jaypie/core";
-import * as core from "./core"; // TODO: Remove this, use real things?
+import { BadRequestError, UnhandledError } from "@jaypie/core";
+import { force, jaypieHandler } from "./core";
 import * as original from "@jaypie/express";
 
 // Constants for mock values
@@ -36,11 +36,6 @@ export const forbiddenRoute = createMockWrappedFunction(
 export const goneRoute = createMockWrappedFunction(original.goneRoute, {
   error: `_MOCK_GONE_ROUTE_[${TAG}]`,
 });
-
-export const methodNotAllowedRoute = createMockWrappedFunction(
-  original.methodNotAllowedRoute,
-  { error: `_MOCK_METHOD_NOT_ALLOWED_ROUTE_[${TAG}]` },
-);
 
 export const methodNotAllowedRoute = createMockWrappedFunction(
   original.methodNotAllowedRoute,
@@ -95,7 +90,7 @@ export const expressHandler = createMockFunction<
   ) => (req: any, res: any, ...extra: any[]) => Promise<any>
 >((handlerOrProps, propsOrHandler) => {
   let handler: ExpressHandlerFunction;
-  let props: ExpressHandlerOptions = {};
+  let props: ExpressHandlerOptions;
 
   if (
     typeof handlerOrProps === "object" &&
@@ -107,7 +102,7 @@ export const expressHandler = createMockFunction<
     handler = handlerOrProps;
     props = (propsOrHandler || {}) as ExpressHandlerOptions;
   } else {
-    throw new core.BadRequestError("handler must be a function");
+    throw new BadRequestError("handler must be a function");
   }
 
   // Add locals setup if needed
@@ -118,8 +113,8 @@ export const expressHandler = createMockFunction<
   ) {
     const keys = Object.keys(props.locals);
     if (!props.setup) props.setup = [];
-    props.setup = Array.isArray(props.setup) ? props.setup : [props.setup];
-
+    props.setup = force.array(props.setup);
+    // @ts-expect-error TODO: cannot resolve; fix when JaypieHandler moves to TypeScript
     props.setup.unshift((req: { locals?: Record<string, unknown> }) => {
       if (!req || typeof req !== "object") {
         throw new BadRequestError("req must be an object");
@@ -131,7 +126,6 @@ export const expressHandler = createMockFunction<
       }
       if (!req.locals._jaypie) req.locals._jaypie = {};
     });
-
     const localsSetup = async (
       localsReq: { locals: Record<string, unknown> },
       localsRes: unknown,
@@ -148,10 +142,8 @@ export const expressHandler = createMockFunction<
         }
       }
     };
-
     props.setup.push(localsSetup);
   }
-
   if (props.locals && typeof props.locals !== "object") {
     throw new BadRequestError("props.locals must be an object");
   }
@@ -162,75 +154,8 @@ export const expressHandler = createMockFunction<
     throw new BadRequestError("props.locals must be an object");
   }
 
-  // Create the jaypieHandler wrapper that mimics the behavior expected
-  const jaypieFunction = async (...args: any[]) => {
-    const [req = {}, res = {}, ...extra] = args;
-
-    // Handle validation
-    if (props.validate) {
-      const validateArray = Array.isArray(props.validate)
-        ? props.validate
-        : [props.validate];
-
-      for (const validator of validateArray) {
-        if (typeof validator === "function") {
-          const valid = await validator(req, res, ...extra);
-          if (valid === false) {
-            throw new BadRequestError("Validation failed");
-          }
-        }
-      }
-    }
-
-    // Handle setup
-    if (props.setup) {
-      const setupArray = Array.isArray(props.setup)
-        ? props.setup
-        : [props.setup];
-
-      for (const setupFn of setupArray) {
-        if (typeof setupFn === "function") {
-          await setupFn(req, res, ...extra);
-        }
-      }
-    }
-
-    // Execute the handler
-    let result;
-    let thrownError;
-
-    try {
-      result = await handler(req, res, ...extra);
-    } catch (error) {
-      thrownError = error;
-    }
-
-    // Handle teardown
-    if (props.teardown) {
-      const teardownArray = Array.isArray(props.teardown)
-        ? props.teardown
-        : [props.teardown];
-
-      for (const teardownFn of teardownArray) {
-        if (typeof teardownFn === "function") {
-          try {
-            await teardownFn(req, res, ...extra);
-          } catch (error) {
-            // eslint-disable-next-line no-console
-            console.error(error);
-          }
-        }
-      }
-    }
-
-    if (thrownError) {
-      throw thrownError;
-    }
-
-    return result;
-  };
-
-  return async (req = {}, res = {}, ...extra) => {
+  const jaypieFunction = jaypieHandler(handler, props);
+  return async (req = {}, res = {}, ...extra: unknown[]) => {
     const status = HTTP.CODE.OK;
     let response;
     let supertestMode = false;
@@ -249,26 +174,17 @@ export const expressHandler = createMockFunction<
       response = await jaypieFunction(req, res, ...extra);
     } catch (error) {
       // In the mock context, if status is a function we are in a "supertest"
-      if (
-        supertestMode &&
-        typeof (res as { status: Function }).status === "function"
-      ) {
+      if (supertestMode && typeof res.status === "function") {
         // In theory jaypieFunction has handled all errors
-        const errorStatus = (error as any).status || HTTP.CODE.INTERNAL_ERROR;
+        const errorStatus = error.status || HTTP.CODE.INTERNAL_ERROR;
         let errorResponse;
-        if (typeof (error as WithJsonFunction).json === "function") {
-          errorResponse = (error as WithJsonFunction).json();
+        if (typeof error.json === "function") {
+          errorResponse = error.json();
         } else {
           // This should never happen
-          const unhandledError = new UnhandledError("Unhandled error");
-          errorResponse = {
-            error: {
-              name: unhandledError.name,
-              message: unhandledError.message,
-            },
-          };
+          errorResponse = new UnhandledError().json();
         }
-        (res as any).status(errorStatus).json(errorResponse);
+        res.status(errorStatus).json(errorResponse);
         return;
       } else {
         // else, res.status is not a function, throw the error
@@ -276,30 +192,27 @@ export const expressHandler = createMockFunction<
       }
     }
 
-    if (
-      supertestMode &&
-      typeof (res as { status: Function }).status === "function"
-    ) {
+    if (supertestMode && typeof res.status === "function") {
       if (response) {
         if (typeof response === "object") {
           if (typeof (response as WithJsonFunction).json === "function") {
-            (res as any).json((response as WithJsonFunction).json());
+            res.json((response as WithJsonFunction).json());
           } else {
-            (res as any).status(status).json(response);
+            res.status(status).json(response);
           }
         } else if (typeof response === "string") {
           try {
-            (res as any).status(status).json(JSON.parse(response));
+            res.status(status).json(JSON.parse(response));
           } catch (error) {
-            (res as any).status(status).send(response);
+            res.status(status).send(response);
           }
         } else if (response === true) {
-          (res as any).status(HTTP.CODE.CREATED).send();
+          res.status(HTTP.CODE.CREATED).send();
         } else {
-          (res as any).status(status).send(response);
+          res.status(status).send(response);
         }
       } else {
-        (res as any).status(HTTP.CODE.NO_CONTENT).send();
+        res.status(HTTP.CODE.NO_CONTENT).send();
       }
     } else {
       return response;
