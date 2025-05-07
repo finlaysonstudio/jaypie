@@ -137,34 +137,6 @@ describe("Core Mocks", () => {
       expect(envsKey).toBeMockFunction();
     });
 
-    it("optional.string converts input to string", () => {
-      expect(optional.string(123)).toBe("123");
-      expect(optional.string(null)).toBe("");
-      expect(optional.string(undefined)).toBe("");
-    });
-
-    it("optional.number converts input to number", () => {
-      expect(optional.number("123")).toBe(123);
-      expect(optional.number("abc")).toBe(0);
-      expect(optional.number(null)).toBe(0);
-    });
-
-    it("optional.boolean converts input to boolean", () => {
-      expect(optional.boolean(1)).toBe(true);
-      expect(optional.boolean(0)).toBe(false);
-      expect(optional.boolean("")).toBe(false);
-    });
-
-    it("optional.array returns array or empty array", () => {
-      expect(optional.array([1, 2, 3])).toEqual([1, 2, 3]);
-      expect(optional.array("not array")).toEqual([]);
-    });
-
-    it("optional.object returns object or empty object", () => {
-      expect(optional.object({ a: 1 })).toEqual({ a: 1 });
-      expect(optional.object("not object")).toEqual({});
-    });
-
     it("safeParseFloat converts input to number", () => {
       expect(safeParseFloat("123.45")).toBe(123.45);
       expect(safeParseFloat(123.45)).toBe(123.45);
@@ -172,7 +144,7 @@ describe("Core Mocks", () => {
     });
 
     it("placeholders replaces placeholders in template", () => {
-      const template = "Hello, {name}!";
+      const template = "Hello, {{name}}!";
       const values = { name: "World" };
       expect(placeholders(template, values)).toBe("Hello, World!");
     });
@@ -671,50 +643,53 @@ describe("Core Mocks", () => {
             expect(response).toBeTrue();
           });
         });
-        describe("Obvious fail cases", () => {
-          it("Fails non-arrays", () => {
-            expect(() => required.array(null)).toThrowJaypieError();
-          });
-          it("Fails non-booleans", () => {
-            expect(() => required.boolean(null)).toThrowJaypieError();
-          });
-          it("Fails non-numbers", () => {
-            expect(() => required.number(null)).toThrowJaypieError();
-          });
-          it("Fails non-positives", () => {
-            expect(() => required.positive(-1)).toThrowJaypieError();
-          });
-          it("Fails non-objects", () => {
-            expect(() => required.object(null)).toThrowJaypieError();
-          });
-          it("Fails non-strings", () => {
-            expect(() => required.string(null)).toThrowJaypieError();
-          });
+      });
+    });
+
+    describe("Optional Function", () => {
+      it("Works", async () => {
+        const response = await optional(undefined, Number);
+        expect(response).not.toBeUndefined();
+        expect(response).toBeBoolean();
+        expect(response).toBeTrue();
+      });
+      describe("Features", () => {
+        it("Always passes undefined", () => {
+          expect(optional(undefined)).toBeTrue();
+          expect(optional(undefined, Array)).toBeTrue();
+          expect(optional(undefined, Boolean)).toBeTrue();
+          expect(optional(undefined, Number)).toBeTrue();
+          expect(optional(undefined, Object)).toBeTrue();
+          expect(optional(undefined, String)).toBeTrue();
         });
-        describe("Tricky fail cases", () => {
-          // False fails
-          it("Fails on false", () => {
-            expect(() => required.boolean(false)).toThrowJaypieError();
+        describe("Obvious success cases", () => {
+          it("Passes arrays", () => {
+            const response = optional.array([]);
+            expect(response).toBeTrue();
           });
-          // NaN fails
-          it("Fails on NaN", () => {
-            expect(() => required.number(NaN)).toThrowJaypieError();
+          it("Passes booleans", () => {
+            const response = optional.boolean(true);
+            expect(response).toBeTrue();
           });
-          // null fails
-          it("Fails on null", () => {
-            expect(() => required.number(null)).toThrowJaypieError();
+          it("Passes numbers", () => {
+            const response = optional.number(12);
+            expect(response).toBeTrue();
           });
-          // Zero fails (then you want to validate it is a number)
-          it("Fails on zero", () => {
-            expect(() => required.number(0)).toThrowJaypieError();
+          it("Passes negative", () => {
+            const response = optional.number(-12);
+            expect(response).toBeTrue();
           });
-          // Empty string fails
-          it("Fails on empty string", () => {
-            expect(() => required.string("")).toThrowJaypieError();
+          it("Passes positive", () => {
+            const response = optional.positive(12);
+            expect(response).toBeTrue();
           });
-          // Positive fails zero
-          it("Fails non-positives", () => {
-            expect(() => required.positive(0)).toThrowJaypieError();
+          it("Passes objects", () => {
+            const response = optional.object({});
+            expect(response).toBeTrue();
+          });
+          it("Passes strings", () => {
+            const response = optional.string("taco");
+            expect(response).toBeTrue();
           });
         });
       });

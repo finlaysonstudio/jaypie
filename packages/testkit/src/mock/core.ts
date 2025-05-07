@@ -133,9 +133,9 @@ export const isJaypieError = createMockWrappedFunction(
 );
 
 // Optional/Required validation functions
-export const optional = validate.optional;
+export const optional = createMockWrappedObject(original.optional, true);
 
-export const required = validate.required;
+export const required = createMockWrappedObject(original.required, true);
 
 export const safeParseFloat = createMockWrappedFunction(
   original.safeParseFloat,
@@ -231,4 +231,8 @@ export const uuid = createMockWrappedFunction(
   `00000000-0000-0000-0000-000000000000`,
 );
 
+export const ERROR = original.ERROR;
 export const HTTP = original.HTTP;
+export const JAYPIE = original.JAYPIE;
+export const PROJECT = original.PROJECT;
+export const VALIDATE = original.VALIDATE;
