@@ -38,23 +38,30 @@ function createMockWrappedFunction<T>(
   fn: (...args: unknown[]) => unknown,
   fallbackOrOptions:
     | any
-    | { fallback?: any; throws?: boolean } = "_MOCK_WRAPPED_RESULT",
+    | {
+        fallback?: any;
+        throws?: boolean;
+        class?: boolean;
+      } = "_MOCK_WRAPPED_RESULT",
 ): (...args: unknown[]) => T {
   // Determine if we have a direct fallback or options object
   const options =
     typeof fallbackOrOptions === "object" &&
     fallbackOrOptions !== null &&
-    ("fallback" in fallbackOrOptions || "throws" in fallbackOrOptions)
+    ("fallback" in fallbackOrOptions ||
+      "throws" in fallbackOrOptions ||
+      "class" in fallbackOrOptions)
       ? fallbackOrOptions
       : { fallback: fallbackOrOptions };
 
   // Extract values with defaults
   const fallback = options.fallback ?? "_MOCK_WRAPPED_RESULT";
   const throws = options.throws ?? false;
+  const isClass = options.class ?? false;
 
   return vi.fn().mockImplementation((...args: unknown[]) => {
     try {
-      return fn(...args);
+      return isClass ? new (fn as any)(...args) : fn(...args);
     } catch (error) {
       if (throws) {
         throw error;
@@ -77,18 +84,53 @@ function createMockWrappedObject<T extends Record<string, any>>(
   object: T,
   fallbackOrOptions:
     | any
-    | { fallback?: any; throws?: boolean } = "_MOCK_WRAPPED_RESULT",
+    | {
+        fallback?: any;
+        throws?: boolean;
+        class?: boolean;
+      } = "_MOCK_WRAPPED_RESULT",
 ): T {
   let returnMock: Record<string, any> = {};
+
+  // Extract values with defaults for the top-level call
+  const options =
+    typeof fallbackOrOptions === "object" &&
+    fallbackOrOptions !== null &&
+    ("fallback" in fallbackOrOptions ||
+      "throws" in fallbackOrOptions ||
+      "class" in fallbackOrOptions)
+      ? fallbackOrOptions
+      : { fallback: fallbackOrOptions };
+
+  const fallback = options.fallback ?? "_MOCK_WRAPPED_RESULT";
+  const throws = options.throws ?? false;
+  const isClass = options.class ?? false;
+
+  // Create options for recursive calls
+  // Do not pass down class=true to nested objects
+  const recursiveOptions = {
+    fallback,
+    throws,
+    class: false, // Always pass class=false to nested objects
+  };
+
   if (typeof object === "function") {
-    returnMock = createMockWrappedFunction(object, fallbackOrOptions);
+    returnMock = createMockWrappedFunction(object, {
+      fallback,
+      throws,
+      class: isClass,
+    });
   }
   for (const key of Object.keys(object)) {
     const value = object[key];
     if (typeof value === "function") {
-      returnMock[key] = createMockWrappedFunction(value, fallbackOrOptions);
+      returnMock[key] = createMockWrappedFunction(value, {
+        fallback,
+        throws,
+        class: isClass,
+      });
     } else if (typeof value === "object" && value !== null) {
-      returnMock[key] = createMockWrappedObject(value, fallbackOrOptions);
+      returnMock[key] = createMockWrappedObject(value, recursiveOptions);
     } else {
       returnMock[key] = value;
     }

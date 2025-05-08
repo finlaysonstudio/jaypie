@@ -147,6 +147,26 @@ describe("Mock Utils", () => {
 
       expect(() => wrapped()).toThrow(errorMessage);
     });
+
+    it("should create a new instance when class option is true", () => {
+      // Define a class constructor function
+      function TestClass(this: any, name: string) {
+        this.name = name;
+        this.getValue = () => `Hello ${this.name}`;
+      }
+
+      const wrapped = createMockWrappedFunction<any>(TestClass as any, {
+        class: true,
+      });
+      const instance = wrapped("World") as {
+        name: string;
+        getValue: () => string;
+      };
+
+      expect(instance).toHaveProperty("name", "World");
+      expect(instance.getValue()).toBe("Hello World");
+      expect(wrapped).toHaveProperty("mock");
+    });
   });
 
   describe("createMockWrappedObject", () => {
@@ -199,6 +219,48 @@ describe("Mock Utils", () => {
 
       expect(result).toBe(fallback);
       expect(mock.method).toHaveProperty("mock");
+    });
+
+    it("should instantiate class methods when class option is true", () => {
+      // Define an object with class constructor methods
+      function UserClass(this: any, name: string) {
+        this.name = name;
+        this.greeting = "Hello";
+      }
+
+      function ProductClass(this: any, id: number) {
+        this.id = id;
+        this.type = "product";
+      }
+
+      const original = {
+        createUser: UserClass,
+        createProduct: ProductClass,
+        nested: {
+          createNestedUser: UserClass,
+        },
+      };
+
+      const mock = createMockWrappedObject(original, { class: true });
+
+      // Test class instantiation at top level
+      const user = mock.createUser("John");
+      expect(user).toHaveProperty("name", "John");
+      expect(user).toHaveProperty("greeting", "Hello");
+
+      const product = mock.createProduct(123);
+      expect(product).toHaveProperty("id", 123);
+      expect(product).toHaveProperty("type", "product");
+
+      // Test that nested functions don't get the class option passed down
+      // Test for fallback value since nested constructors are not called with new
+      const consoleWarn = console.warn;
+      console.warn = vi.fn();
+
+      const nestedUser = mock.nested.createNestedUser("Jane");
+      expect(nestedUser).toBe("_MOCK_WRAPPED_RESULT");
+
+      console.warn = consoleWarn;
     });
   });
 });
