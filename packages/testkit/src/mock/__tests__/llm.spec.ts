@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach } from "vitest";
 import { Llm, toolkit, tools } from "../llm";
 
 describe("LLM Mocks", () => {
@@ -6,18 +6,14 @@ describe("LLM Mocks", () => {
   it("calls Llm constructor when instantiated", () => {
     const llm = new Llm();
     expect(Llm).toHaveBeenCalled();
+    expect(llm).not.toBeUndefined();
+    expect(llm).toBeObject();
   });
 
   // 1. Base Cases
   describe("Base Cases", () => {
     it("Llm is a class", () => {
       expect(Llm).toBeClass();
-    });
-
-    it("getInstance returns a singleton instance", () => {
-      const instance1 = Llm.getInstance();
-      const instance2 = Llm.getInstance();
-      expect(instance1).toBe(instance2);
     });
 
     it("toolkit contains expected tools", () => {
@@ -30,11 +26,6 @@ describe("LLM Mocks", () => {
     it("tools is an array of the toolkit functions", () => {
       expect(tools).toEqual(Object.values(toolkit));
     });
-
-    it("new instance initializes with empty history", () => {
-      const llm = new Llm();
-      expect(llm.history).toEqual([]);
-    });
   });
 
   // 2. Error Conditions
@@ -42,8 +33,7 @@ describe("LLM Mocks", () => {
     it("handles empty messages in send", async () => {
       const llm = new Llm();
       const result = await llm.send([]);
-      expect(result).toBe("_MOCK_LLM_RESPONSE_[LLM]");
-      expect(llm.history).toEqual([]);
+      expect(result).toBe("_MOCK_LLM_RESPONSE");
     });
 
     it("handles undefined options in static methods", async () => {
@@ -55,44 +45,28 @@ describe("LLM Mocks", () => {
     });
   });
 
-  // 4. Observability
-  describe("Observability", () => {
-    it("instance tracks history of messages", async () => {
-      const llm = new Llm();
-      await llm.send([{ role: "user", content: "Hello" }]);
-      expect(llm.history).toHaveLength(1);
-      expect(llm.history[0]).toEqual({ role: "user", content: "Hello" });
-    });
-
-    it("instance tracks multiple messages", async () => {
-      const llm = new Llm();
-      await llm.send([
-        { role: "user", content: "Hello" },
-        { role: "assistant", content: "Hi there" },
-      ]);
-      expect(llm.history).toHaveLength(2);
-    });
-  });
-
   // 5. Happy Paths
   describe("Happy Paths", () => {
     let llm: any;
 
     beforeEach(() => {
-      Llm.instance = undefined;
       llm = new Llm();
     });
 
     it("send returns a mock response", async () => {
       const response = await llm.send([{ role: "user", content: "Hello" }]);
-      expect(response).toEqual("_MOCK_LLM_RESPONSE_[LLM]");
+      expect(response).toEqual("_MOCK_LLM_RESPONSE");
     });
 
     it("operate returns a mock result object", async () => {
       const result = await llm.operate("How's the weather?");
       expect(result).toEqual({
-        result: "_MOCK_LLM_OPERATE_RESULT_[LLM]",
-        raw: {},
+        content: "_MOCK_OUTPUT_TEXT",
+        history: expect.any(Array),
+        output: expect.any(Array),
+        responses: expect.any(Array),
+        status: "completed",
+        usage: expect.any(Object),
       });
     });
 
@@ -121,20 +95,6 @@ describe("LLM Mocks", () => {
 
   // 6. Features
   describe("Features", () => {
-    it("operate adds to history", async () => {
-      const llm = new Llm();
-      await llm.operate("How's the weather?");
-      expect(llm.history).toHaveLength(2);
-      expect(llm.history[0]).toEqual({
-        role: "user",
-        content: "How's the weather?",
-      });
-      expect(llm.history[1]).toEqual({
-        role: "assistant",
-        content: "_MOCK_LLM_OPERATE_[LLM]",
-      });
-    });
-
     it("random tool returns a mocked value", () => {
       const result = toolkit.random();
       expect(result).toBeGreaterThanOrEqual(0);
@@ -149,47 +109,6 @@ describe("LLM Mocks", () => {
     it("time tool returns a mocked time string", () => {
       const result = toolkit.time();
       expect(result).toBe("_MOCK_TIME_[LLM]");
-    });
-
-    it("weather tool returns a mocked forecast", async () => {
-      const result = await toolkit.weather({
-        location: "San Francisco",
-        days: 3,
-      });
-      expect(result).toEqual({
-        location: "_MOCK_WEATHER_LOCATION_[LLM][San Francisco]",
-        forecast: [
-          {
-            date: "2025-05-1",
-            temperature: 72,
-            condition: "Sunny",
-            precipitation: 0,
-          },
-          {
-            date: "2025-05-2",
-            temperature: 72,
-            condition: "Sunny",
-            precipitation: 0,
-          },
-          {
-            date: "2025-05-3",
-            temperature: 72,
-            condition: "Sunny",
-            precipitation: 0,
-          },
-        ],
-      });
-    });
-
-    it("weather tool defaults to 1 day when days not specified", async () => {
-      const result = await toolkit.weather({ location: "Chicago" });
-      expect(result.forecast).toHaveLength(1);
-    });
-
-    it("weather tool handles undefined options", async () => {
-      const result = await toolkit.weather();
-      expect(result.location).toBe("_MOCK_WEATHER_LOCATION_[LLM][undefined]");
-      expect(result.forecast).toHaveLength(1);
     });
   });
 });

@@ -1,101 +1,89 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { vi } from "vitest";
+import {
+  createMockFunction,
+  createMockResolvedFunction,
+  createMockReturnedFunction,
+  createMockWrappedFunction,
+  createMockWrappedObject,
+} from "./utils";
 
 // Constants for mock values
 const TAG = "LLM";
 
-// Define types for the mock
-type LlmMessage = { role: string; content: string };
-type LlmOptions = Record<string, any>;
-
-// Create the mock class
-export const Llm = vi.fn().mockImplementation(function Llm(
-  this: any,
-  config = {},
-) {
-  this.history = [];
-}) as unknown as typeof Llm;
-
-// Create mock functions for static methods
-const mockSend = vi.fn().mockImplementation(async function send(
-  messages: LlmMessage[],
-  options = {},
-) {
-  const instance = Llm.getInstance();
-  return instance.send(messages, options || {});
+export const mockOperate = createMockResolvedFunction({
+  history: [
+    {
+      content: "_MOCK_USER_INPUT",
+      role: "user",
+      type: "message",
+    },
+    {
+      id: "_MOCK_MESSAGE_ID",
+      type: "message",
+      status: "completed",
+      content: "_MOCK_CONTENT",
+      role: "assistant",
+    },
+  ],
+  output: [
+    {
+      id: "_MOCK_MESSAGE_ID",
+      type: "message",
+      status: "completed",
+      content: "_MOCK_CONTENT",
+      role: "assistant",
+    },
+  ],
+  responses: [
+    {
+      id: "_MOCK_RESPONSE_ID",
+      object: "response",
+      created_at: Date.now() / 1000,
+      status: "completed",
+      error: null,
+      output_text: "_MOCK_OUTPUT_TEXT",
+    },
+  ],
+  status: "completed",
+  usage: { input: 100, output: 20, reasoning: 0, total: 120 },
+  content: "_MOCK_OUTPUT_TEXT",
 });
-
-const mockOperate = vi.fn().mockImplementation(async function operate(
-  question: string,
-  context = {},
-  options = {},
-) {
-  const instance = Llm.getInstance();
-  return instance.operate(question, context || {}, options || {});
-});
-
-// Add static properties and methods to the mock
-Object.assign(Llm, {
-  instance: undefined as any,
-  getInstance: vi.fn().mockImplementation(function getInstance(config = {}) {
-    if (!Llm.instance) {
-      Llm.instance = new Llm(config);
-    }
-    return Llm.instance;
-  }),
-  send: mockSend,
-  operate: mockOperate,
-});
-
-// Add instance methods to the prototype
-Llm.prototype.send = vi.fn().mockImplementation(async function send(
-  messages: LlmMessage[],
-  options = {},
-): Promise<string> {
-  this.history = [...this.history, ...messages];
-  return `_MOCK_LLM_RESPONSE_[${TAG}]`;
-});
-
-Llm.prototype.operate = vi.fn().mockImplementation(async function operate(
-  question: string,
-  context = {},
-  options = {},
-): Promise<any> {
-  this.history.push({ role: "user", content: question });
-  this.history.push({
-    role: "assistant",
-    content: `_MOCK_LLM_OPERATE_[${TAG}]`,
-  });
-  return { result: `_MOCK_LLM_OPERATE_RESULT_[${TAG}]`, raw: {} };
-});
+export const mockSend = createMockResolvedFunction("_MOCK_LLM_RESPONSE");
+export const Llm = Object.assign(
+  vi.fn().mockImplementation((providerName = "_MOCK_LLM_PROVIDER") => ({
+    _provider: providerName,
+    _llm: {
+      operate: mockOperate,
+      send: mockSend,
+    },
+    operate: mockOperate,
+    send: mockSend,
+  })),
+  {
+    operate: mockOperate,
+    send: mockSend,
+  },
+);
 
 // Tool implementations - always return mock values
-const random = vi.fn(() => {
-  return 0.5;
-});
+const random = createMockReturnedFunction(0.5);
 
-const roll = vi.fn(() => {
-  return 6;
-});
+const roll = createMockReturnedFunction(6);
 
-const time = vi.fn(() => {
-  return `_MOCK_TIME_[${TAG}]`;
-});
+const time = createMockReturnedFunction(`_MOCK_TIME_[${TAG}]`);
 
-const weather = vi.fn(async (options?: any) => {
-  const { location, days = 1 } = options || {};
-  return {
-    location: `_MOCK_WEATHER_LOCATION_[${TAG}][${location}]`,
-    forecast: Array(days)
-      .fill(0)
-      .map((_, i) => ({
-        date: `2025-05-${i + 1}`,
-        temperature: 72,
-        condition: "Sunny",
-        precipitation: 0,
-      })),
-  };
+const weather = createMockResolvedFunction({
+  location: `_MOCK_WEATHER_LOCATION_[${TAG}]`,
+  forecast: Array(7)
+    .fill(0)
+    .map((_, i) => ({
+      date: `2025-05-${i + 1}`,
+      temperature: 72,
+      condition: "Sunny",
+      precipitation: 0,
+    })),
 });
 
 // Tool collections
