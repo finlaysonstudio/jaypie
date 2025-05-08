@@ -6,6 +6,7 @@ import {
   MockNotFoundError,
   createMockError,
   createMockWrappedObject,
+  createMockWrappedFunction,
 } from "../utils";
 
 describe("Mock Utils", () => {
@@ -75,9 +76,76 @@ describe("Mock Utils", () => {
 
     it("should allow changing the resolved value", async () => {
       const mockFn = createMockResolvedFunction("initial value");
-      mockFn.mockResolvedValue("new value");
+      (
+        mockFn as unknown as { mockResolvedValue: (val: any) => void }
+      ).mockResolvedValue("new value");
       const result = await mockFn();
       expect(result).toBe("new value");
+    });
+  });
+
+  describe("createMockWrappedFunction", () => {
+    it("should wrap a function and call the original implementation", () => {
+      const original = (x: number) => x * 2;
+      const wrapped = createMockWrappedFunction<number>((...args: unknown[]) =>
+        original(args[0] as number),
+      );
+
+      const result = wrapped(5);
+
+      expect(result).toBe(10);
+      expect((wrapped as unknown as { mock: any }).mock).toBeDefined();
+      expect(
+        (wrapped as unknown as { mock: { calls: any[] } }).mock.calls.length,
+      ).toBe(1);
+    });
+
+    it("should return fallback value when original throws", () => {
+      const original = () => {
+        throw new Error("Test error");
+      };
+      const fallback = "fallback value";
+      const wrapped = createMockWrappedFunction(original, fallback);
+
+      // Silence console warnings during test
+      const consoleWarn = console.warn;
+      console.warn = vi.fn();
+
+      const result = wrapped();
+
+      // Restore console
+      console.warn = consoleWarn;
+
+      expect(result).toBe(fallback);
+    });
+
+    it("should accept options object with fallback", () => {
+      const original = () => {
+        throw new Error("Test error");
+      };
+      const options = { fallback: "option fallback" };
+      const wrapped = createMockWrappedFunction(original, options);
+
+      // Silence console warnings during test
+      const consoleWarn = console.warn;
+      console.warn = vi.fn();
+
+      const result = wrapped();
+
+      // Restore console
+      console.warn = consoleWarn;
+
+      expect(result).toBe("option fallback");
+    });
+
+    it("should rethrow when throws option is true", () => {
+      const errorMessage = "Test error for rethrow";
+      const original = () => {
+        throw new Error(errorMessage);
+      };
+      const wrapped = createMockWrappedFunction(original, { throws: true });
+
+      expect(() => wrapped()).toThrow(errorMessage);
     });
   });
 

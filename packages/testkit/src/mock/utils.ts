@@ -36,12 +36,30 @@ function createMockReturnedFunction<T>(value: T): (...args: unknown[]) => T {
  */
 function createMockWrappedFunction<T>(
   fn: (...args: unknown[]) => unknown,
-  fallback: any = "_MOCK_WRAPPED_RESULT",
+  fallbackOrOptions:
+    | any
+    | { fallback?: any; throws?: boolean } = "_MOCK_WRAPPED_RESULT",
 ): (...args: unknown[]) => T {
+  // Determine if we have a direct fallback or options object
+  const options =
+    typeof fallbackOrOptions === "object" &&
+    fallbackOrOptions !== null &&
+    ("fallback" in fallbackOrOptions || "throws" in fallbackOrOptions)
+      ? fallbackOrOptions
+      : { fallback: fallbackOrOptions };
+
+  // Extract values with defaults
+  const fallback = options.fallback ?? "_MOCK_WRAPPED_RESULT";
+  const throws = options.throws ?? false;
+
   return vi.fn().mockImplementation((...args: unknown[]) => {
     try {
       return fn(...args);
     } catch (error) {
+      if (throws) {
+        throw error;
+      }
+
       /* eslint-disable no-console */
       console.warn(
         `[@jaypie/testkit] Actual implementation failed. To suppress this warning, manually mock the response with mockReturnValue`,
@@ -57,18 +75,20 @@ function createMockWrappedFunction<T>(
 
 function createMockWrappedObject<T extends Record<string, any>>(
   object: T,
-  fallback: any = "_MOCK_WRAPPED_RESULT",
+  fallbackOrOptions:
+    | any
+    | { fallback?: any; throws?: boolean } = "_MOCK_WRAPPED_RESULT",
 ): T {
   let returnMock: Record<string, any> = {};
   if (typeof object === "function") {
-    returnMock = createMockWrappedFunction(object, fallback);
+    returnMock = createMockWrappedFunction(object, fallbackOrOptions);
   }
   for (const key of Object.keys(object)) {
     const value = object[key];
     if (typeof value === "function") {
-      returnMock[key] = createMockWrappedFunction(value, fallback);
+      returnMock[key] = createMockWrappedFunction(value, fallbackOrOptions);
     } else if (typeof value === "object" && value !== null) {
-      returnMock[key] = createMockWrappedObject(value, fallback);
+      returnMock[key] = createMockWrappedObject(value, fallbackOrOptions);
     } else {
       returnMock[key] = value;
     }
