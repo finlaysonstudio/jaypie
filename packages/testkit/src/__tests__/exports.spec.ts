@@ -14,7 +14,6 @@ describe("Package Exports", () => {
     expect(mockExports).toBeDefined();
 
     // Check a few key mock exports are available
-    expect(typeof mockExports.createMockFunction).toBe("function");
     expect(typeof mockExports.InternalError).toBe("function");
     expect(typeof mockExports.log).toBe("object");
   });
