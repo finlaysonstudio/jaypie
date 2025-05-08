@@ -75,6 +75,19 @@ function createMockWrappedFunction<T>(
         console.warn(`[@jaypie/testkit] ${error.message}`);
       }
       /* eslint-enable no-console */
+
+      // If fallback is a function, call it
+      if (typeof fallback === "function") {
+        try {
+          return fallback(...args);
+        } catch (fallbackError) {
+          console.warn(
+            `[@jaypie/testkit] Fallback function failed: ${fallbackError instanceof Error ? fallbackError.message : fallbackError}`,
+          );
+          return "_MOCK_WRAPPED_RESULT";
+        }
+      }
+
       return fallback;
     }
   });

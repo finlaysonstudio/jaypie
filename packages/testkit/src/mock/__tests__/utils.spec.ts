@@ -85,13 +85,13 @@ describe("Mock Utils", () => {
   });
 
   describe("createMockWrappedFunction", () => {
-    it("should wrap a function and call the original implementation", () => {
+    it("should wrap a function and call the original implementation", async () => {
       const original = (x: number) => x * 2;
       const wrapped = createMockWrappedFunction<number>((...args: unknown[]) =>
         original(args[0] as number),
       );
 
-      const result = wrapped(5);
+      const result = await wrapped(5);
 
       expect(result).toBe(10);
       expect((wrapped as unknown as { mock: any }).mock).toBeDefined();
@@ -100,7 +100,7 @@ describe("Mock Utils", () => {
       ).toBe(1);
     });
 
-    it("should return fallback value when original throws", () => {
+    it("should return fallback value when original throws", async () => {
       const original = () => {
         throw new Error("Test error");
       };
@@ -111,7 +111,7 @@ describe("Mock Utils", () => {
       const consoleWarn = console.warn;
       console.warn = vi.fn();
 
-      const result = wrapped();
+      const result = await wrapped();
 
       // Restore console
       console.warn = consoleWarn;
@@ -119,7 +119,7 @@ describe("Mock Utils", () => {
       expect(result).toBe(fallback);
     });
 
-    it("should accept options object with fallback", () => {
+    it("should accept options object with fallback", async () => {
       const original = () => {
         throw new Error("Test error");
       };
@@ -130,7 +130,7 @@ describe("Mock Utils", () => {
       const consoleWarn = console.warn;
       console.warn = vi.fn();
 
-      const result = wrapped();
+      const result = await wrapped();
 
       // Restore console
       console.warn = consoleWarn;
@@ -138,17 +138,17 @@ describe("Mock Utils", () => {
       expect(result).toBe("option fallback");
     });
 
-    it("should rethrow when throws option is true", () => {
+    it("should rethrow when throws option is true", async () => {
       const errorMessage = "Test error for rethrow";
       const original = () => {
         throw new Error(errorMessage);
       };
       const wrapped = createMockWrappedFunction(original, { throws: true });
 
-      expect(() => wrapped()).toThrow(errorMessage);
+      await expect(wrapped()).rejects.toThrow(errorMessage);
     });
 
-    it("should create a new instance when class option is true", () => {
+    it("should create a new instance when class option is true", async () => {
       // Define a class constructor function
       function TestClass(this: any, name: string) {
         this.name = name;
@@ -158,7 +158,7 @@ describe("Mock Utils", () => {
       const wrapped = createMockWrappedFunction<any>(TestClass as any, {
         class: true,
       });
-      const instance = wrapped("World") as {
+      const instance = (await wrapped("World")) as {
         name: string;
         getValue: () => string;
       };
@@ -167,10 +167,95 @@ describe("Mock Utils", () => {
       expect(instance.getValue()).toBe("Hello World");
       expect(wrapped).toHaveProperty("mock");
     });
+
+    it("should execute fallback function and return its result when original throws", async () => {
+      const original = () => {
+        throw new Error("Test error");
+      };
+      const fallbackFn = vi.fn().mockReturnValue("fallback function result");
+      const wrapped = createMockWrappedFunction(original, fallbackFn);
+
+      // Silence console warnings during test
+      const consoleWarn = console.warn;
+      console.warn = vi.fn();
+
+      const result = await wrapped();
+
+      // Restore console
+      console.warn = consoleWarn;
+
+      expect(fallbackFn).toHaveBeenCalled();
+      expect(result).toBe("fallback function result");
+    });
+
+    it("should pass original args to fallback function", async () => {
+      const original = (..._args: unknown[]) => {
+        throw new Error("Test error");
+      };
+      const fallbackFn = vi.fn().mockReturnValue("args passed correctly");
+      const wrapped = createMockWrappedFunction(original, fallbackFn);
+
+      // Silence console warnings during test
+      const consoleWarn = console.warn;
+      console.warn = vi.fn();
+
+      await wrapped("test", 123);
+
+      // Restore console
+      console.warn = consoleWarn;
+
+      expect(fallbackFn).toHaveBeenCalledWith("test", 123);
+    });
+
+    it("should await fallback function's promise and return resolved value", async () => {
+      const original = () => {
+        throw new Error("Test error");
+      };
+      const fallbackFn = vi.fn().mockResolvedValue("async fallback result");
+      const wrapped = createMockWrappedFunction(original, fallbackFn);
+
+      // Silence console warnings during test
+      const consoleWarn = console.warn;
+      console.warn = vi.fn();
+
+      const result = await wrapped();
+
+      // Restore console
+      console.warn = consoleWarn;
+
+      expect(fallbackFn).toHaveBeenCalled();
+      expect(result).toBe("async fallback result");
+    });
+
+    it("should handle fallback function that throws by returning default value", async () => {
+      const original = () => {
+        throw new Error("Original error");
+      };
+      const fallbackFn = vi.fn().mockImplementation(() => {
+        throw new Error("Fallback error");
+      });
+      const wrapped = createMockWrappedFunction(original, fallbackFn);
+
+      // Silence console warnings during test
+      const consoleWarn = console.warn;
+      const warnSpy = vi.fn();
+      console.warn = warnSpy;
+
+      const result = await wrapped();
+
+      // Restore console
+      console.warn = consoleWarn;
+
+      expect(fallbackFn).toHaveBeenCalled();
+      expect(result).toBe("_MOCK_WRAPPED_RESULT");
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining("Fallback function failed"),
+      );
+    });
   });
 
   describe("createMockWrappedObject", () => {
-    it("should create mock functions for all methods in an object", () => {
+    it("should create mock functions for all methods in an object", async () => {
       const original = {
         method1: (x: number) => x * 2,
         method2: (s: string) => s.toUpperCase(),
@@ -184,8 +269,8 @@ describe("Mock Utils", () => {
       const mock = createMockWrappedObject(original);
 
       // Test method mocking
-      expect(mock.method1(5)).toBe(10);
-      expect(mock.method2("hello")).toBe("HELLO");
+      expect(await mock.method1(5)).toBe(10);
+      expect(await mock.method2("hello")).toBe("HELLO");
       expect(mock.method1).toHaveProperty("mock");
       expect(mock.method2).toHaveProperty("mock");
 
@@ -193,12 +278,12 @@ describe("Mock Utils", () => {
       expect(mock.prop).toBe("value");
 
       // Test nested objects
-      expect(mock.nested.nestedMethod(5)).toBe(15);
+      expect(await mock.nested.nestedMethod(5)).toBe(15);
       expect(mock.nested.nestedProp).toBe(42);
       expect(mock.nested.nestedMethod).toHaveProperty("mock");
     });
 
-    it("should return fallback value when wrapped function throws", () => {
+    it("should return fallback value when wrapped function throws", async () => {
       const original = {
         method: () => {
           throw new Error("Original implementation error");
@@ -212,7 +297,7 @@ describe("Mock Utils", () => {
       const consoleWarn = console.warn;
       console.warn = vi.fn();
 
-      const result = mock.method();
+      const result = await mock.method();
 
       // Restore console
       console.warn = consoleWarn;
@@ -221,7 +306,7 @@ describe("Mock Utils", () => {
       expect(mock.method).toHaveProperty("mock");
     });
 
-    it("should instantiate class methods when class option is true", () => {
+    it("should instantiate class methods when class option is true", async () => {
       // Define an object with class constructor methods
       function UserClass(this: any, name: string) {
         this.name = name;
@@ -244,11 +329,11 @@ describe("Mock Utils", () => {
       const mock = createMockWrappedObject(original, { class: true });
 
       // Test class instantiation at top level
-      const user = mock.createUser("John");
+      const user = await mock.createUser("John");
       expect(user).toHaveProperty("name", "John");
       expect(user).toHaveProperty("greeting", "Hello");
 
-      const product = mock.createProduct(123);
+      const product = await mock.createProduct(123);
       expect(product).toHaveProperty("id", 123);
       expect(product).toHaveProperty("type", "product");
 
@@ -257,7 +342,7 @@ describe("Mock Utils", () => {
       const consoleWarn = console.warn;
       console.warn = vi.fn();
 
-      const nestedUser = mock.nested.createNestedUser("Jane");
+      const nestedUser = await mock.nested.createNestedUser("Jane");
       expect(nestedUser).toBe("_MOCK_WRAPPED_RESULT");
 
       console.warn = consoleWarn;
