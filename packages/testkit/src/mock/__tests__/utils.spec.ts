@@ -138,14 +138,20 @@ describe("Mock Utils", () => {
       expect(result).toBe("option fallback");
     });
 
-    it("should rethrow when throws option is true", async () => {
+    it("should rethrow when throws option is true", () => {
       const errorMessage = "Test error for rethrow";
       const original = () => {
         throw new Error(errorMessage);
       };
       const wrapped = createMockWrappedFunction(original, { throws: true });
 
-      await expect(wrapped()).rejects.toThrow(errorMessage);
+      try {
+        wrapped();
+      } catch (error) {
+        expect(error).toBeInstanceOf(Error);
+        expect(error.message).toBe(errorMessage);
+      }
+      expect.assertions(2);
     });
 
     it("should create a new instance when class option is true", async () => {
