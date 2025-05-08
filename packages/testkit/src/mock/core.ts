@@ -48,11 +48,10 @@ export const UnreachableCodeError = createMockError(
 );
 
 // Mock core functions
-export const validate = createMockWrappedObject(original.validate);
-
-export const getConfig = createMockFunction<() => Record<string, string>>(
-  () => ({ environment: "test" }),
-);
+export const validate = createMockWrappedObject(original.validate, {
+  fallback: false,
+  throws: true,
+});
 
 beforeAll(async () => {
   spyLog(log);
@@ -133,9 +132,15 @@ export const isJaypieError = createMockWrappedFunction(
 );
 
 // Optional/Required validation functions
-export const optional = createMockWrappedObject(original.optional, true);
+export const optional = createMockWrappedObject(original.optional, {
+  fallback: true,
+  throws: true,
+});
 
-export const required = createMockWrappedObject(original.required, true);
+export const required = createMockWrappedObject(original.required, {
+  fallback: true,
+  throws: true,
+});
 
 export const safeParseFloat = createMockWrappedFunction(
   original.safeParseFloat,
