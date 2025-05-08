@@ -165,3 +165,41 @@ describe("AWS Mocks", () => {
     });
   });
 });
+
+describe("Jaypie AWS", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+  it("Mocks expected function", () => {
+    expect(getMessages).not.toHaveBeenCalled();
+    expect(getSecret).not.toHaveBeenCalled();
+    expect(sendBatchMessages).not.toHaveBeenCalled();
+    expect(sendMessage).not.toHaveBeenCalled();
+  });
+  it("Mocks return appropriate values", async () => {
+    //
+    await expect(getSecret()).resolves.toBeString();
+    await expect(sendBatchMessages()).resolves.toBeTrue();
+    await expect(sendMessage()).resolves.toBeObject();
+  });
+  it("sqsTestRecords mock returns appropriate values", () => {
+    // Arrange
+    const testRecords = sqsTestRecords(
+      { MessageId: 1, Body: "Hello, World!" },
+      { MessageId: 2, Body: "Goodbye, World!" },
+    );
+    // Assure
+    expect(getMessages).not.toHaveBeenCalled();
+    expect(testRecords).toBeObject();
+    expect(testRecords.Records).toBeArray();
+    expect(testRecords.Records[0].body).toBeString();
+    // Act
+    const messages = getMessages(testRecords) as Array<SQSMessage>;
+    // Assert
+    expect(getMessages).toHaveBeenCalled();
+    expect(messages).toBeArray();
+    expect(messages).toHaveLength(2);
+    expect(messages[0].Body).toBe("Hello, World!");
+    expect(messages[1].MessageId).toBe(2);
+  });
+});
