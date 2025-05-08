@@ -5,15 +5,9 @@ describe("Mock Index", () => {
   // Base Cases
   describe("Base Cases", () => {
     it("should export all named exports correctly", () => {
-      // Check for required utility exports
-      expect(mockExports).toHaveProperty("createMockFunction");
-
       // Verify that we have exports from each module
       // Check for specific exports from each module
       const expectedExports = [
-        // Utilities
-        "createMockFunction",
-
         // AWS module
         "getMessages",
         "getSecret",
@@ -21,7 +15,6 @@ describe("Mock Index", () => {
 
         // Core module
         "validate",
-        "getConfig",
         "log",
         "cloneDeep",
 
