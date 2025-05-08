@@ -5,7 +5,7 @@ import { jaypieHandler } from "./core";
 type HandlerFunction = (...args: unknown[]) => unknown;
 type LifecycleFunction = (...args: unknown[]) => unknown | Promise<unknown>;
 
-interface LambdaOptions {
+export interface LambdaOptions {
   name?: string;
   setup?: LifecycleFunction | LifecycleFunction[];
   teardown?: LifecycleFunction | LifecycleFunction[];
