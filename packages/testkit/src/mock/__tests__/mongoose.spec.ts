@@ -1,20 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { mongoose as expectedMongoose } from "@jaypie/mongoose";
 import {
   connect,
   connectFromSecretEnv,
   disconnect,
   mongoose,
 } from "../mongoose";
-
-// Mock the @jaypie/mongoose module
-vi.mock("@jaypie/mongoose", () => ({
-  mongoose: {
-    disconnect: vi.fn().mockResolvedValue(true),
-    connection: {
-      readyState: 1,
-    },
-  },
-}));
 
 describe("mock/mongoose", () => {
   beforeEach(() => {
@@ -39,11 +30,6 @@ describe("mock/mongoose", () => {
 
     it("disconnect returns true", () => {
       expect(disconnect()).toBe(true);
-    });
-
-    it("mongoose is properly mocked", () => {
-      expect(mongoose.connection).toBeDefined();
-      expect(mongoose.connection.readyState).toBe(1);
     });
   });
 
@@ -72,5 +58,28 @@ describe("mock/mongoose", () => {
       expect(disconnect).toHaveBeenCalledTimes(1);
       expect(disconnect).toHaveBeenCalledWith();
     });
+  });
+});
+
+describe("Jaypie Mongoose", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+  it("Mocks expected function", () => {
+    expect(connect).not.toHaveBeenCalled();
+    expect(connectFromSecretEnv).not.toHaveBeenCalled();
+    expect(disconnect).not.toHaveBeenCalled();
+  });
+  it("Mocks return appropriate values", () => {
+    expect(connect()).toBeTrue();
+    expect(connectFromSecretEnv()).toBeTrue();
+    expect(disconnect()).toBeTrue();
+  });
+  it("Mongoose is unaltered (for now)", () => {
+    expect(mongoose).toBe(expectedMongoose);
+  });
+  it.todo("Mocks mongoose", () => {
+    expect(vi.isMockFunction(mongoose)).toBeTrue();
+    expect(vi.isMockFunction(mongoose.connect)).toBeTrue();
   });
 });
