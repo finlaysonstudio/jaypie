@@ -8,13 +8,11 @@ describe("Datadog Mocks", () => {
 
   describe("Base Cases", () => {
     it("submitMetric is a mock function", () => {
-      expect(typeof submitMetric).toBe("function");
-      expect(submitMetric.mock).toBeDefined();
+      expect(submitMetric).toBeMockFunction();
     });
 
     it("submitMetricSet is a mock function", () => {
-      expect(typeof submitMetricSet).toBe("function");
-      expect(submitMetricSet.mock).toBeDefined();
+      expect(submitMetricSet).toBeMockFunction();
     });
   });
 
@@ -68,5 +66,16 @@ describe("Datadog Mocks", () => {
       const result = submitMetricSet({});
       expect(result).toBe(false);
     });
+  });
+});
+
+describe("Jaypie Datadog", () => {
+  it("Mocks expected function", () => {
+    expect(vi.isMockFunction(submitMetric)).toBeTrue();
+    expect(vi.isMockFunction(submitMetricSet)).toBeTrue();
+  });
+  it("Mocks return appropriate values", async () => {
+    await expect(submitMetric()).resolves.toBeTrue();
+    await expect(submitMetricSet()).resolves.toBeTrue();
   });
 });
