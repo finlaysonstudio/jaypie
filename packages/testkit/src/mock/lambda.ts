@@ -1,5 +1,5 @@
 import { createMockFunction } from "./utils";
-import { BadRequestError, jaypieHandler } from "./core";
+import { jaypieHandler } from "./core";
 
 // We'll use more specific types instead of Function
 type HandlerFunction = (...args: unknown[]) => unknown;
@@ -16,40 +16,16 @@ interface LambdaOptions {
 }
 
 // Mock implementation of lambdaHandler that follows the original implementation pattern
-export const lambdaHandler = createMockFunction(
-  (
-    handlerOrOptions: HandlerFunction | LambdaOptions,
-    optionsOrHandler?: LambdaOptions | HandlerFunction,
-  ) => {
-    // If handlerOrOptions is an object and optionsOrHandler is a function, swap them
-    let handler: HandlerFunction;
-    let options: LambdaOptions;
-
-    if (
-      typeof handlerOrOptions === "object" &&
-      typeof optionsOrHandler === "function"
-    ) {
-      handler = optionsOrHandler;
-      options = handlerOrOptions as LambdaOptions;
-    } else {
-      handler = handlerOrOptions as HandlerFunction;
-      options = (optionsOrHandler || {}) as LambdaOptions;
-    }
-
-    // Basic validation
-    if (typeof handler !== "function") {
-      throw new BadRequestError("handler must be a function");
-    }
-
-    // Return a Lambda wrapper function that delegates to jaypieHandler
-    return async (
-      event: Record<string, unknown> = {},
-      context: Record<string, unknown> = {},
-      ...args: unknown[]
-    ): Promise<unknown> => {
-      return jaypieHandler(handler, options)(event, context, ...args);
-    };
-  },
-);
-
-// No additional helper functions needed - the original lambdaHandler implementation is sufficient
+export const lambdaHandler = createMockFunction<
+  (handler: HandlerFunction, props?: LambdaOptions) => HandlerFunction
+>((handler, props = {}) => {
+  // If handler is an object and options is a function, swap them
+  if (typeof handler === "object" && typeof props === "function") {
+    const temp = handler;
+    handler = props;
+    props = temp;
+  }
+  return async (event: unknown, context: unknown, ...extra: unknown[]) => {
+    return jaypieHandler(handler, props)(event, context, ...extra);
+  };
+});

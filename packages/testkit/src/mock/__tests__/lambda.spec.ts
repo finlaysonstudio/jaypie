@@ -1,19 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { lambdaHandler } from "../lambda.js";
-import { BadRequestError, UnavailableError, jaypieHandler } from "../core.js";
+import {
+  BadRequestError,
+  HTTP,
+  UnavailableError,
+  jaypieHandler,
+} from "../core.js";
 
 describe("lambdaHandler", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-  });
-
-  // Mock for jaypieHandler to track calls
-  vi.mock("../core.js", async (importOriginal) => {
-    const actual = await importOriginal();
-    return {
-      ...actual,
-      jaypieHandler: vi.fn(actual.jaypieHandler),
-    };
   });
 
   describe("Base Cases", () => {
@@ -30,27 +26,6 @@ describe("lambdaHandler", () => {
   });
 
   describe("Error Conditions", () => {
-    it("throws BadRequestError when handler is not a function", () => {
-      expect(() => lambdaHandler({} as any)).toThrow(BadRequestError);
-      expect(() => lambdaHandler({} as any)).toThrow(
-        "handler must be a function",
-      );
-    });
-
-    it("throws UnavailableError when unavailable option is true", async () => {
-      const handler = vi.fn();
-      const wrapped = lambdaHandler(handler, { unavailable: true });
-
-      try {
-        await wrapped({}, {});
-        // Should not reach here
-        expect(true).toBe(false);
-      } catch (error) {
-        expect(error).toBeInstanceOf(UnavailableError);
-        expect((error as Error).message).toBe("Service unavailable");
-      }
-    });
-
     it("handles thrown errors from handler", async () => {
       const handler = vi.fn().mockImplementation(() => {
         throw new Error("Handler error");
@@ -113,13 +88,103 @@ describe("lambdaHandler", () => {
       expect(handler).toHaveBeenCalledWith({}, {}, "additional", 123);
       expect(result).toBe("result");
     });
+  });
+});
 
-    it("provides empty objects as defaults for event and context", async () => {
-      const handler = vi.fn().mockReturnValue("result");
-      const wrapped = lambdaHandler(handler);
-      const result = await wrapped();
-      expect(handler).toHaveBeenCalledWith({}, {});
-      expect(result).toBe("result");
+describe("Jaypie Lambda", () => {
+  it("Mocks expected function", () => {
+    expect(vi.isMockFunction(lambdaHandler)).toBeTrue();
+  });
+  describe("Lambda Handler", () => {
+    describe("Base Cases", () => {
+      it("Works", async () => {
+        expect(lambdaHandler).toBeDefined();
+        expect(lambdaHandler).toBeFunction();
+      });
+      it("Will call a function I pass it", async () => {
+        const mockFunction = vi.fn();
+        const handler = lambdaHandler(mockFunction);
+        const event = {};
+        const context = {};
+        const callback = vi.fn();
+        await handler(event, context, callback);
+        expect(mockFunction).toHaveBeenCalledTimes(1);
+      });
+      it("Passes event, context, and anything else to the handler", async () => {
+        // Set up four mock variables
+        const event = {};
+        const context = {};
+        const three = "THREE";
+        const four = "FOUR";
+        // Set up our mock function
+        const mockFunction = vi.fn();
+        const handler = lambdaHandler(mockFunction);
+        // Call the handler with our mock variables
+        await handler(event, context, three, four);
+        // Expect the mock function to have been called with our mock variables
+        expect(mockFunction).toHaveBeenCalledTimes(1);
+        expect(mockFunction).toHaveBeenCalledWith(event, context, three, four);
+      });
+      it("As a mock, returns what was sent", async () => {
+        // Arrange
+        const mockFunction = vi.fn(() => 42);
+        const handler = lambdaHandler(mockFunction);
+        const event = {};
+        const context = {};
+        // Act
+        const result = await handler(event, context);
+        // Assert
+        expect(result).toBe(42);
+      });
+    });
+    describe("Error Conditions", () => {
+      it("Will throw out errors", async () => {
+        const mockFunction = vi.fn(() => {
+          throw new Error("Sorpresa!");
+        });
+        const handler = lambdaHandler(mockFunction);
+        const event = {};
+        const context = {};
+        try {
+          await handler(event, context);
+        } catch (error) {
+          expect(error.isProjectError).not.toBeTrue();
+        }
+        expect.assertions(1);
+      });
+      it("Will throw async errors", async () => {
+        const mockFunction = vi
+          .fn()
+          .mockRejectedValueOnce(new Error("Sorpresa!"));
+        const handler = lambdaHandler(mockFunction);
+        const event = {};
+        const context = {};
+        try {
+          await handler(event, context);
+        } catch (error) {
+          expect(error.isProjectError).not.toBeTrue();
+        }
+        expect.assertions(1);
+      });
+    });
+    describe("Features", () => {
+      describe("Swap lambdaHandler Parameter Order", () => {
+        it("Works with the options object first", async () => {
+          // Arrange
+          const mockFunction = vi.fn();
+          const handler = lambdaHandler({ unavailable: true }, mockFunction);
+          const event = {};
+          const context = {};
+          // Act
+          try {
+            await handler(event, context);
+          } catch (error) {
+            expect(error.isProjectError).toBeTrue();
+            expect(error.status).toBe(HTTP.CODE.UNAVAILABLE);
+          }
+          expect.assertions(2);
+        });
+      });
     });
   });
 });
