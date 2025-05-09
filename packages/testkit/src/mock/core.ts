@@ -185,7 +185,6 @@ export const jaypieHandler = createMockFunction<
 
     // Run validation functions
     const validateFunctions = original.force.array(validate);
-    console.log("validateFunctions :>> ", validateFunctions);
     for (const validator of validateFunctions) {
       if (typeof validator === "function") {
         const valid = await validator(...args);
