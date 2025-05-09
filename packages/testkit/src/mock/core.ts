@@ -59,7 +59,9 @@ beforeAll(async () => {
 export { log };
 
 // Add missing core functions
-export const cloneDeep = createMockWrappedFunction(original.cloneDeep);
+export const cloneDeep = createMockWrappedFunction(original.cloneDeep, {
+  throws: true,
+});
 
 export const envBoolean = createMockReturnedFunction(true);
 
@@ -174,7 +176,7 @@ export const jaypieHandler = createMockFunction<
     const {
       setup = [],
       teardown = [],
-      unavailable = force.boolean(process.env.PROJECT_UNAVAILABLE),
+      unavailable = original.force.boolean(process.env.PROJECT_UNAVAILABLE),
       validate = [],
     } = options;
 
@@ -182,7 +184,8 @@ export const jaypieHandler = createMockFunction<
     if (unavailable) throw new UnavailableError("Service unavailable");
 
     // Run validation functions
-    const validateFunctions = force.array(validate);
+    const validateFunctions = original.force.array(validate);
+    console.log("validateFunctions :>> ", validateFunctions);
     for (const validator of validateFunctions) {
       if (typeof validator === "function") {
         const valid = await validator(...args);
@@ -194,7 +197,7 @@ export const jaypieHandler = createMockFunction<
 
     try {
       // Run setup functions
-      const setupFunctions = force.array(setup);
+      const setupFunctions = original.force.array(setup);
       for (const setupFunction of setupFunctions) {
         if (typeof setupFunction === "function") {
           await setupFunction(...args);
@@ -208,7 +211,7 @@ export const jaypieHandler = createMockFunction<
     }
 
     // Run teardown functions (always run even if there was an error)
-    const teardownFunctions = force.array(teardown);
+    const teardownFunctions = original.force.array(teardown);
     for (const teardownFunction of teardownFunctions) {
       if (typeof teardownFunction === "function") {
         try {
