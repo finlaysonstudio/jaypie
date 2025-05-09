@@ -17,6 +17,8 @@ const HTTP = {
   CODE: { OK: 200, CREATED: 201, NO_CONTENT: 204, INTERNAL_ERROR: 500 },
 };
 
+export const EXPRESS = original.EXPRESS;
+
 // Add Express route functions
 export const badRequestRoute = createMockWrappedFunction(
   original.badRequestRoute,
@@ -63,6 +65,8 @@ export const expressHttpCodeHandler = createMockWrappedFunction(
     return res.status(200).send();
   },
 );
+
+export const cors = createMockWrappedFunction(original.cors);
 
 // Type definitions needed for the expressHandler
 interface WithJsonFunction {

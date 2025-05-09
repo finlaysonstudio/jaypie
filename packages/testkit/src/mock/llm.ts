@@ -9,10 +9,14 @@ import {
   createMockWrappedObject,
 } from "./utils";
 
+import * as original from "@jaypie/llm";
+
 // Constants for mock values
 const TAG = "LLM";
 
-export const mockOperate = createMockResolvedFunction({
+export const LLM = original.LLM;
+
+const mockOperate = createMockResolvedFunction({
   history: [
     {
       content: "_MOCK_USER_INPUT",
@@ -50,7 +54,7 @@ export const mockOperate = createMockResolvedFunction({
   usage: { input: 100, output: 20, reasoning: 0, total: 120 },
   content: "_MOCK_OUTPUT_TEXT",
 });
-export const mockSend = createMockResolvedFunction("_MOCK_LLM_RESPONSE");
+const mockSend = createMockResolvedFunction("_MOCK_LLM_RESPONSE");
 export const Llm = Object.assign(
   vi.fn().mockImplementation((providerName = "_MOCK_LLM_PROVIDER") => ({
     _provider: providerName,
