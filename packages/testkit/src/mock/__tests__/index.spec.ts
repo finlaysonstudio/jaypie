@@ -1,6 +1,8 @@
 import { describe, it, expect } from "vitest";
 import mockDefault, * as mockExports from "..";
 
+import { original } from "../original";
+
 describe("Mock Index", () => {
   // Base Cases
   describe("Base Cases", () => {
@@ -59,6 +61,22 @@ describe("Mock Index", () => {
           expect(mockDefault).toHaveProperty(key);
         }
       }
+    });
+    it("should have all exports from original", () => {
+      const originalExportKeys = [];
+      for (const lib of Object.keys(original)) {
+        for (const exportName of Object.keys(
+          original[lib as keyof typeof original],
+        )) {
+          originalExportKeys.push(exportName);
+        }
+      }
+      originalExportKeys.sort();
+      const mockExportKeys = Object.keys(mockExports).filter(
+        (key) => key !== "default",
+      );
+      mockExportKeys.sort();
+      expect(mockExportKeys).toEqual(originalExportKeys);
     });
   });
 });
