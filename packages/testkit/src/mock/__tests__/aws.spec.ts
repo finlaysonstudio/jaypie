@@ -53,7 +53,7 @@ describe("AWS Mocks", () => {
   describe("Error Conditions", () => {
     it("sendTextractJob throws error for missing parameters", async () => {
       await expect(async () => {
-        await sendTextractJob("", "");
+        await sendTextractJob({});
       }).rejects.toThrow("Bucket and key are required");
     });
   });
@@ -121,7 +121,10 @@ describe("AWS Mocks", () => {
     });
 
     it("sendTextractJob returns array with job ID", async () => {
-      const result = await sendTextractJob("my-bucket", "document.pdf");
+      const result = await sendTextractJob({
+        bucket: "my-bucket",
+        key: "document.pdf",
+      });
       expect(Array.isArray(result)).toBe(true);
       expect(result[0]).toContain("my-bucket");
       expect(result[0]).toContain("document.pdf");

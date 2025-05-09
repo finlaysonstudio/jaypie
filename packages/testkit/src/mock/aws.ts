@@ -35,8 +35,18 @@ export const getTextractJob = createMockFunction<
 export const sendBatchMessages = createMockResolvedFunction(true);
 
 export const sendTextractJob = createMockFunction<
-  (bucket: string, key: string, featureTypes?: string[]) => Promise<any[]>
->(async (bucket, key, featureTypes = []) => {
+  ({
+    bucket,
+    key,
+    featureTypes,
+  }: {
+    bucket: string;
+    key: string;
+    featureTypes?: string[];
+    snsRoleArn?: string;
+    snsTopicArn?: string;
+  }) => Promise<any[]>
+>(async ({ bucket, key, featureTypes = [] }) => {
   // Basic validation to mimic original behavior
   if (!bucket || !key) {
     throw new Error("Bucket and key are required");
