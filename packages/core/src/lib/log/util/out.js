@@ -8,13 +8,10 @@ import stringify from "./stringify.js";
 //
 
 /**
- * Outputs the line by correct level (or default), optionally in a color
+ * Outputs the line by correct level (or default)
  * @param {string} line - The line to output. out will stringify
  */
-export default (
-  line,
-  { color = DEFAULT.COLOR, level = DEFAULT.LEVEL } = {},
-) => {
+export default (line, { level = DEFAULT.LEVEL } = {}) => {
   // Validate
 
   if (typeof line !== "string") {
@@ -52,16 +49,10 @@ export default (
 
   // Try a confusing set of attempts to output the line
   try {
-    outputFunction(color(line));
+    outputFunction(line);
   } catch (error) {
-    try {
-      console.warn(error);
-      outputFunction(line);
-      // eslint-disable-next-line no-shadow
-    } catch (error) {
-      console.warn(error);
-      console.log(line);
-    }
+    console.warn(error);
+    console.log(line);
   }
 
   // Return
