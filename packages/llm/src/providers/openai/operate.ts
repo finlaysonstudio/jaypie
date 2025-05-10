@@ -36,6 +36,7 @@ import {
   log,
   maxTurnsFromOptions,
   naturalZodSchema,
+  resolvePromise,
 } from "../../util";
 
 //
@@ -349,10 +350,47 @@ export async function operate(
                     // Call the tool and ensure the result is resolved if it's a Promise
                     log.trace(`[operate] Calling tool - ${output.name}`);
                     returnResponse.content = `${LlmMessageType.FunctionCall}:${output.name}${output.arguments}#${output.call_id}`;
-                    const result = await toolkit.call({
-                      name: output.name,
-                      arguments: output.arguments,
-                    });
+
+                    // Execute beforeEachTool hook if defined
+                    if (options.hooks?.beforeEachTool) {
+                      await resolvePromise(
+                        options.hooks.beforeEachTool(
+                          output.name,
+                          output.arguments,
+                        ),
+                      );
+                    }
+
+                    let result;
+                    try {
+                      result = await toolkit.call({
+                        name: output.name,
+                        arguments: output.arguments,
+                      });
+
+                      // Execute afterEachTool hook if defined
+                      if (options.hooks?.afterEachTool) {
+                        result = await resolvePromise(
+                          options.hooks.afterEachTool(
+                            result,
+                            output.name,
+                            output.arguments,
+                          ),
+                        );
+                      }
+                    } catch (error) {
+                      // Execute onToolError hook if defined
+                      if (options.hooks?.onToolError) {
+                        await resolvePromise(
+                          options.hooks.onToolError(
+                            error as Error,
+                            output.name,
+                            output.arguments,
+                          ),
+                        );
+                      }
+                      throw error;
+                    }
 
                     // Add model's function call and result
                     if (Array.isArray(currentInput)) {
