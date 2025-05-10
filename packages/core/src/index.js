@@ -32,5 +32,5 @@ export { default as HTTP } from "./lib/http.lib.js";
 export { log } from "./core.js";
 
 // Utilities
-export { cloneDeep } from "./core/cloneDeep.js";
+export { default as cloneDeep } from "./lib/functions/cloneDeep.js";
 export { v4 as uuid } from "uuid";
