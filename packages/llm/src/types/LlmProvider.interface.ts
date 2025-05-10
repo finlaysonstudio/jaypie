@@ -157,6 +157,22 @@ export interface LlmOperateOptions {
   explain?: boolean;
   format?: JsonObject | NaturalSchema | z.ZodType;
   history?: LlmHistory;
+  hooks?: {
+    afterEachTool?: (
+      result: unknown,
+      toolName: string,
+      args: string,
+    ) => unknown | Promise<unknown>;
+    beforeEachTool?: (
+      toolName: string,
+      args: string,
+    ) => unknown | Promise<unknown>;
+    onToolError?: (
+      error: Error,
+      toolName: string,
+      args: string,
+    ) => unknown | Promise<unknown>;
+  };
   instructions?: string;
   model?: string;
   placeholders?: {

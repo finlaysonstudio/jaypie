@@ -21,6 +21,7 @@ import {
   LlmResponseStatus,
   LlmInputMessage,
   LlmHistory,
+  LlmToolResult,
 } from "../../../types/LlmProvider.interface.js";
 import { log } from "../../../util";
 import { restoreLog, spyLog } from "@jaypie/testkit";
@@ -2003,6 +2004,360 @@ describe("operate", () => {
           }),
         );
       });
+    });
+  });
+
+  describe("Hooks", () => {
+    it("calls beforeEachTool hook before executing a tool", async () => {
+      // Setup
+      const mockResponse1 = {
+        id: "resp_123",
+        output: [
+          {
+            type: "function_call",
+            name: "test_tool",
+            arguments: '{"param":"test"}',
+            call_id: "call_1",
+          },
+        ],
+      };
+
+      const mockResponse2 = {
+        id: "resp_456",
+        output: [
+          {
+            type: LlmMessageType.Message,
+            content: [
+              { type: LlmMessageType.OutputText, text: "Final response" },
+            ],
+            role: LlmMessageRole.Assistant,
+          },
+        ],
+      };
+
+      // Mock the API calls
+      mockCreate
+        .mockResolvedValueOnce(mockResponse1)
+        .mockResolvedValueOnce(mockResponse2);
+
+      // Create a spy for the hook
+      const beforeEachToolSpy = vi.fn().mockReturnValue(undefined);
+
+      // Mock a tool that returns a simple result
+      const mockTool = {
+        name: "test_tool",
+        description: "Test tool",
+        parameters: {
+          type: "object",
+          properties: {
+            param: { type: "string" },
+          },
+        },
+        type: "function",
+        call: vi.fn().mockResolvedValue({ result: "test result" }),
+      };
+
+      // Execute with hooks
+      await operate(
+        "Test input",
+        {
+          tools: [mockTool],
+          turns: true,
+          hooks: {
+            beforeEachTool: beforeEachToolSpy,
+          },
+        },
+        { client: mockClient },
+      );
+
+      // Verify the beforeEachTool hook was called with correct parameters
+      expect(beforeEachToolSpy).toHaveBeenCalledTimes(1);
+      expect(beforeEachToolSpy).toHaveBeenCalledWith(
+        "test_tool",
+        '{"param":"test"}',
+      );
+      // Verify the tool was called after the hook
+      expect(mockTool.call).toHaveBeenCalledAfter(beforeEachToolSpy);
+    });
+
+    it("calls afterEachTool hook after executing a tool", async () => {
+      // Setup
+      const mockResponse1 = {
+        id: "resp_123",
+        output: [
+          {
+            type: "function_call",
+            name: "test_tool",
+            arguments: '{"param":"test"}',
+            call_id: "call_1",
+          },
+        ],
+      };
+
+      const mockResponse2 = {
+        id: "resp_456",
+        output: [
+          {
+            type: LlmMessageType.Message,
+            content: [
+              { type: LlmMessageType.OutputText, text: "Final response" },
+            ],
+            role: LlmMessageRole.Assistant,
+          },
+        ],
+      };
+
+      // Mock the API calls
+      mockCreate
+        .mockResolvedValueOnce(mockResponse1)
+        .mockResolvedValueOnce(mockResponse2);
+
+      // Create a spy for the hook
+      const afterEachToolSpy = vi.fn().mockReturnValue(undefined);
+
+      // Mock a tool that returns a simple result
+      const toolResult = { result: "test result" };
+      const mockTool = {
+        name: "test_tool",
+        description: "Test tool",
+        parameters: {
+          type: "object",
+          properties: {
+            param: { type: "string" },
+          },
+        },
+        type: "function",
+        call: vi.fn().mockResolvedValue(toolResult),
+      };
+
+      // Execute with hooks
+      await operate(
+        "Test input",
+        {
+          tools: [mockTool],
+          turns: true,
+          hooks: {
+            afterEachTool: afterEachToolSpy,
+          },
+        },
+        { client: mockClient },
+      );
+
+      // Verify the afterEachTool hook was called with correct parameters
+      expect(afterEachToolSpy).toHaveBeenCalledTimes(1);
+      expect(afterEachToolSpy).toHaveBeenCalledWith(
+        toolResult,
+        "test_tool",
+        '{"param":"test"}',
+      );
+      // Verify the tool was called before the hook
+      expect(mockTool.call).toHaveBeenCalledBefore(afterEachToolSpy);
+    });
+
+    it("calls onToolError hook when a tool throws an error", async () => {
+      // Setup
+      const mockResponse1 = {
+        id: "resp_123",
+        output: [
+          {
+            type: "function_call",
+            name: "test_tool",
+            arguments: '{"param":"test"}',
+            call_id: "call_1",
+          },
+        ],
+      };
+
+      // Mock the API calls
+      mockCreate.mockResolvedValueOnce(mockResponse1);
+
+      // Create a spy for the hook
+      const onToolErrorSpy = vi.fn().mockReturnValue(undefined);
+
+      // Mock error to be thrown
+      const toolError = new Error("Tool execution failed");
+
+      // Mock a tool that throws an error
+      const mockTool = {
+        name: "test_tool",
+        description: "Test tool",
+        parameters: {
+          type: "object",
+          properties: {
+            param: { type: "string" },
+          },
+        },
+        type: "function",
+        call: vi.fn().mockRejectedValue(toolError),
+      };
+
+      // Execute with hooks
+      await operate(
+        "Test input",
+        {
+          tools: [mockTool],
+          turns: true,
+          hooks: {
+            onToolError: onToolErrorSpy,
+          },
+        },
+        { client: mockClient },
+      );
+
+      // Verify the onToolError hook was called with correct parameters
+      expect(onToolErrorSpy).toHaveBeenCalledTimes(1);
+      expect(onToolErrorSpy).toHaveBeenCalledWith(
+        toolError,
+        "test_tool",
+        '{"param":"test"}',
+      );
+    });
+
+    it("allows beforeEachTool to return a Promise", async () => {
+      // Setup
+      const mockResponse1 = {
+        id: "resp_123",
+        output: [
+          {
+            type: "function_call",
+            name: "test_tool",
+            arguments: '{"param":"test"}',
+            call_id: "call_1",
+          },
+        ],
+      };
+
+      const mockResponse2 = {
+        id: "resp_456",
+        output: [
+          {
+            type: LlmMessageType.Message,
+            content: [
+              { type: LlmMessageType.OutputText, text: "Final response" },
+            ],
+            role: LlmMessageRole.Assistant,
+          },
+        ],
+      };
+
+      // Mock the API calls
+      mockCreate
+        .mockResolvedValueOnce(mockResponse1)
+        .mockResolvedValueOnce(mockResponse2);
+
+      // Create a spy for the hook that returns a Promise
+      const asyncValue = "async value";
+      const beforeEachToolSpy = vi.fn().mockResolvedValue(asyncValue);
+
+      // Mock a tool that returns a simple result
+      const mockTool = {
+        name: "test_tool",
+        description: "Test tool",
+        parameters: {
+          type: "object",
+          properties: {
+            param: { type: "string" },
+          },
+        },
+        type: "function",
+        call: vi.fn().mockResolvedValue({ result: "test result" }),
+      };
+
+      // Execute with hooks
+      await operate(
+        "Test input",
+        {
+          tools: [mockTool],
+          turns: true,
+          hooks: {
+            beforeEachTool: beforeEachToolSpy,
+          },
+        },
+        { client: mockClient },
+      );
+
+      // Verify the beforeEachTool hook was called
+      expect(beforeEachToolSpy).toHaveBeenCalledTimes(1);
+      // The promise should have been resolved
+      await expect(beforeEachToolSpy.mock.results[0].value).resolves.toBe(
+        asyncValue,
+      );
+    });
+
+    it("allows afterEachTool to modify the tool result", async () => {
+      // Setup
+      const mockResponse1 = {
+        id: "resp_123",
+        output: [
+          {
+            type: "function_call",
+            name: "test_tool",
+            arguments: '{"param":"test"}',
+            call_id: "call_1",
+          },
+        ],
+      };
+
+      const mockResponse2 = {
+        id: "resp_456",
+        output: [
+          {
+            type: LlmMessageType.Message,
+            content: [
+              { type: LlmMessageType.OutputText, text: "Final response" },
+            ],
+            role: LlmMessageRole.Assistant,
+          },
+        ],
+      };
+
+      // Mock the API calls
+      mockCreate
+        .mockResolvedValueOnce(mockResponse1)
+        .mockResolvedValueOnce(mockResponse2);
+
+      // Original tool result
+      const toolResult = { result: "original result" };
+
+      // Modified tool result from the hook
+      const modifiedResult = { result: "modified result" };
+
+      // Create a spy for the hook that modifies the result
+      const afterEachToolSpy = vi.fn().mockReturnValue(modifiedResult);
+
+      // Mock a tool that returns the original result
+      const mockTool = {
+        name: "test_tool",
+        description: "Test tool",
+        parameters: {
+          type: "object",
+          properties: {
+            param: { type: "string" },
+          },
+        },
+        type: "function",
+        call: vi.fn().mockResolvedValue(toolResult),
+      };
+
+      // Execute with hooks
+      const result = await operate(
+        "Test input",
+        {
+          tools: [mockTool],
+          turns: true,
+          hooks: {
+            afterEachTool: afterEachToolSpy,
+          },
+        },
+        { client: mockClient },
+      );
+
+      // Check that the functionCallOutput contains the modified result
+      const functionCallOutput = result.history.find(
+        (item) => item.type === LlmMessageType.FunctionCallOutput,
+      ) as LlmToolResult;
+
+      expect(JSON.parse(functionCallOutput.output)).toEqual(modifiedResult);
     });
   });
 });

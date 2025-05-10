@@ -1458,6 +1458,26 @@ const result = await llm.operate("What's the weather in {{city}}?", {
     { role: "assistant", content: [{ text: "Hello! How can I help?", type: "output_text" }], type: "message" }
   ],
   
+  // Tool execution hooks
+  hooks: {
+    // Called before each tool execution
+    beforeEachTool: (toolName, args) => {
+      console.log(`About to call ${toolName} with args: ${args}`);
+      // Return value is ignored, can return Promise
+    },
+    // Called after each tool execution with the result
+    afterEachTool: (result, toolName, args) => {
+      console.log(`Tool ${toolName} returned:`, result);
+      // Can modify the result by returning a new value
+      return result;
+    },
+    // Called when a tool throws an error
+    onToolError: (error, toolName, args) => {
+      console.error(`Error in tool ${toolName}:`, error);
+      // Return value is ignored, can return Promise
+    }
+  },
+  
   // System instructions
   instructions: "You are a weather assistant for {{city}}",
   
