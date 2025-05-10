@@ -1,19 +1,5 @@
-import chalk from "chalk";
-
-const COLOR = {
-  PLAIN: chalk,
-  TRACE: chalk.bgBlackBright,
-  DEBUG: chalk.bgBlack,
-  INFO: chalk.bgBlue,
-  WARN: chalk.bgYellow,
-  ERROR: chalk.bgRed,
-  FATAL: chalk.bgRedBright,
-};
-
 const DEFAULT = {
-  COLOR: chalk,
   LEVEL: "debug",
-  FORMAT: "color",
   VAR_LEVEL: "debug",
 };
 
@@ -28,7 +14,6 @@ const ERROR = {
 };
 
 const FORMAT = {
-  COLOR: "color",
   JSON: "json",
   TEXT: "text",
 };
@@ -56,4 +41,4 @@ const LEVEL_VALUES = {
   silent: 0,
 };
 
-export { COLOR, DEFAULT, ERROR, FORMAT, LEVEL, LEVEL_VALUES };
+export { DEFAULT, ERROR, FORMAT, LEVEL, LEVEL_VALUES };

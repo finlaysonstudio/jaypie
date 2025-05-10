@@ -1,7 +1,6 @@
 import { force } from "../arguments.lib.js";
 
 import {
-  COLOR,
   DEFAULT,
   ERROR,
   FORMAT,
@@ -25,26 +24,16 @@ const PSEUDO_LEVELS = ["ALL", "SILENT"];
 //
 
 /** Only log `messages` if `logLevel` is below `checkLevel` */
-function log(
-  messages,
-  logLevel,
-  checkLevel = DEFAULT.LEVEL,
-  { color = COLOR.PLAIN } = {},
-) {
+function log(messages, logLevel, checkLevel = DEFAULT.LEVEL) {
   if (LEVEL_VALUES[logLevel] <= LEVEL_VALUES[checkLevel]) {
     // TODO: replace log with out
-    logFunction(messages, color);
+    logFunction(messages);
   }
 }
 
-function outIfLogLevelCheck(
-  message,
-  logLevel,
-  checkLevel = DEFAULT.LEVEL,
-  { color = COLOR.PLAIN } = {},
-) {
+function outIfLogLevelCheck(message, logLevel, checkLevel = DEFAULT.LEVEL) {
   if (LEVEL_VALUES[logLevel] <= LEVEL_VALUES[checkLevel]) {
-    out(message, { color, level: logLevel });
+    out(message, { level: logLevel });
   }
 }
 
@@ -148,13 +137,6 @@ class Logger {
       // Ignore the pseudo levels
       if (!PSEUDO_LEVELS.includes(LEVEL_KEY)) {
         switch (format) {
-          case FORMAT.COLOR:
-            this[LEVEL[LEVEL_KEY]] = (...messages) =>
-              log(messages, LEVEL[LEVEL_KEY], level, {
-                color: COLOR[LEVEL_KEY],
-              });
-            break;
-
           case FORMAT.JSON:
             this[LEVEL[LEVEL_KEY]] = (...messages) => {
               const message = stringify(...messages);
@@ -167,17 +149,13 @@ class Logger {
               if (parses.parses) {
                 json.data = parses.message;
               }
-              outIfLogLevelCheck(json, LEVEL[LEVEL_KEY], level, {
-                color: COLOR[LEVEL_KEY],
-              });
+              outIfLogLevelCheck(json, LEVEL[LEVEL_KEY], level);
             };
             break;
 
           default:
             this[LEVEL[LEVEL_KEY]] = (...messages) =>
-              log(messages, LEVEL[LEVEL_KEY], level, {
-                color: COLOR.PLAIN,
-              });
+              log(messages, LEVEL[LEVEL_KEY], level);
             break;
         } // switch format
 
@@ -226,9 +204,7 @@ class Logger {
               var: messageKey,
               ...this.tags,
             };
-            return outIfLogLevelCheck(json, LEVEL[LEVEL_KEY], level, {
-              color: COLOR[LEVEL_KEY],
-            });
+            return outIfLogLevelCheck(json, LEVEL[LEVEL_KEY], level);
           }
           return this[LEVEL[LEVEL_KEY]](messageObject);
         };

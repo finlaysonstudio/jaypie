@@ -1,4 +1,3 @@
-import { COLOR } from "./constants.js";
 import stringify from "./stringify.js";
 
 //
@@ -6,9 +5,9 @@ import stringify from "./stringify.js";
 // Main
 //
 
-const log = (messages, color = COLOR.PLAIN) => {
+const log = (messages) => {
   // eslint-disable-next-line no-console
-  console.log(color(stringify(...messages)));
+  console.log(stringify(...messages));
 };
 
 //
