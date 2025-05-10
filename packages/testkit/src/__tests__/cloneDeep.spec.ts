@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import mock from "../jaypie.mock";
+import mock from "../mock";
 
 const { cloneDeep } = mock;
 describe("cloneDeep", () => {
