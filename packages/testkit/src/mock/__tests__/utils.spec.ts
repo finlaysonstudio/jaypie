@@ -7,9 +7,46 @@ import {
   createMockError,
   createMockWrappedObject,
   createMockWrappedFunction,
+  createMockReturnedFunction,
 } from "../utils";
 
 describe("Mock Utils", () => {
+  describe("Base Cases", () => {
+    it("adds _jaypie: true property to mock function", () => {
+      const mock = createMockFunction();
+      expect(mock).toHaveProperty("_jaypie", true);
+    });
+
+    it("adds _jaypie: true property to resolved mock function", () => {
+      const mock = createMockResolvedFunction("test");
+      expect(mock).toHaveProperty("_jaypie", true);
+    });
+
+    it("adds _jaypie: true property to returned mock function", () => {
+      const mock = createMockReturnedFunction("test");
+      expect(mock).toHaveProperty("_jaypie", true);
+    });
+
+    it("adds _jaypie: true property to wrapped mock function", () => {
+      const mock = createMockWrappedFunction(() => "test");
+      expect(mock).toHaveProperty("_jaypie", true);
+    });
+
+    it("adds _jaypie: true property to mock error constructor", () => {
+      class TestError extends Error {}
+      const mock = createMockError(TestError);
+      expect(mock).toHaveProperty("_jaypie", true);
+    });
+
+    it("adds _jaypie: true property to wrapped object function", () => {
+      const testObj = {
+        method: () => "test",
+      };
+      const mock = createMockWrappedObject(testObj);
+      expect(mock.method).toHaveProperty("_jaypie", true);
+    });
+  });
+
   describe("Error Classes", () => {
     it("should create MockValidationError with correct name", () => {
       const error = new MockValidationError("Invalid data");

@@ -2,6 +2,17 @@
 import { vi } from "vitest";
 
 /**
+ * Internal wrapper for vi.fn() that adds _jaypie: true to all mocks
+ */
+function _createJaypieMock<T extends (...args: any[]) => any>(
+  implementation?: T,
+): ReturnType<typeof vi.fn> {
+  const mock = vi.fn(implementation);
+  Object.defineProperty(mock, "_jaypie", { value: true });
+  return mock;
+}
+
+/**
  * Creates function mocks with proper typing
  * Internal utility to create properly typed mocks
  */
@@ -9,7 +20,7 @@ function createMockFunction<T extends (...args: any[]) => any>(
   implementation?: (...args: Parameters<T>) => ReturnType<T>,
 ): T & { mock: any } {
   // Use a more specific type conversion to avoid TypeScript error
-  return vi.fn(implementation) as unknown as T & { mock: any };
+  return _createJaypieMock(implementation) as unknown as T & { mock: any };
 }
 
 /**
@@ -19,7 +30,7 @@ function createMockFunction<T extends (...args: any[]) => any>(
 function createMockResolvedFunction<T>(
   value: T,
 ): (...args: unknown[]) => Promise<T> {
-  return vi.fn().mockResolvedValue(value);
+  return _createJaypieMock().mockResolvedValue(value);
 }
 
 /**
@@ -27,7 +38,7 @@ function createMockResolvedFunction<T>(
  * Internal utility to create mock functions that return a value
  */
 function createMockReturnedFunction<T>(value: T): (...args: unknown[]) => T {
-  return vi.fn().mockReturnValue(value);
+  return _createJaypieMock().mockReturnValue(value);
 }
 
 /**
@@ -59,7 +70,7 @@ function createMockWrappedFunction<T>(
   const throws = options.throws ?? false;
   const isClass = options.class ?? false;
 
-  return vi.fn().mockImplementation((...args: unknown[]) => {
+  return _createJaypieMock().mockImplementation((...args: unknown[]) => {
     try {
       return isClass ? new (fn as any)(...args) : fn(...args);
     } catch (error) {
@@ -158,7 +169,10 @@ function createMockError<T extends new (...args: any[]) => Error>(
   ErrorClass: T,
 ): T {
   // Create a mock constructor that returns a new instance of ErrorClass
-  const mockConstructor = vi.fn(function (this: any, ...args: any[]) {
+  const mockConstructor = _createJaypieMock(function (
+    this: any,
+    ...args: any[]
+  ) {
     return new ErrorClass(...args);
   });
   return mockConstructor as unknown as T;
