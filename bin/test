@@ -1,0 +1,24 @@
+#!/bin/bash
+
+# Check if path parameter is provided
+if [ -z "$1" ]; then
+    message="
+Ask the user to provide a path to a file.
+Read the file. Run `vitest run <file>`.
+Fix any failing tests. 
+Check the implementation file being tested. 
+Read the following guidelines. 
+Make sure tests follow the Order of Tests.
+"
+else
+    message="
+Read $1. 
+Run `vitest run $1`. 
+Fix any failing tests. 
+Check the implementation file being tested. 
+Read the following guidelines. 
+Make sure tests follow the Order of Tests.
+"
+fi
+
+cat context/prompts/Add_Vitest_Tests.md | claude --dangerously-skip-permissions "$message"

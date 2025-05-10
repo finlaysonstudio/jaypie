@@ -2,8 +2,28 @@
 
 # Check if path parameter is provided
 if [ -z "$1" ]; then
-    echo "Called change with no arguments. Continuing..."
-    claude --dangerously-skip-permissions
+    # Find the most recently created file in the changelog directory (macOS compatible)
+    recentfile=$(find ./context/changelog -type f -exec stat -f "%m %N" {} \; | sort -nr | head -n 1 | cut -d' ' -f2-)
+    
+    if [ -z "$recentfile" ]; then
+        echo "No changelog files found. Continuing..."
+        claude --dangerously-skip-permissions
+    else
+        # Extract just the filename to display
+        filename=$(basename "$recentfile")
+        # Ask user for confirmation
+        read -p "Process change $filename? [Y/n] " response
+        
+        # Default to Y if no response
+        response=${response:-Y}
+        
+        if [[ "$response" =~ ^[Yy]$ ]]; then
+            claude --dangerously-skip-permissions "Follow the instructions in $recentfile"
+        else
+            echo "Continuing without processing changelog..."
+            claude --dangerously-skip-permissions
+        fi
+    fi
 else
     if [[ ! "$1" =~ ^[0-9_]+$ ]]; then
         echo "File not found. Continuing..."
@@ -16,7 +36,9 @@ else
             echo "File not found. Continuing..."
             claude --dangerously-skip-permissions
         else
-            cat "$file" | claude --dangerously-skip-permissions "The user requests the following change:"
+            # Get additional parameters (if any)
+            shift_params="${@:2}"
+            claude --dangerously-skip-permissions "Follow the instructions in $file" $shift_params
         fi
     fi
 fi
