@@ -197,7 +197,7 @@ describe("Jaypie AWS", () => {
     expect(testRecords.Records).toBeArray();
     expect(testRecords.Records[0].body).toBeString();
     // Act
-    const messages = getMessages(testRecords) as Array<SQSMessage>;
+    const messages = getMessages(testRecords) as Array<any>;
     // Assert
     expect(getMessages).toHaveBeenCalled();
     expect(messages).toBeArray();

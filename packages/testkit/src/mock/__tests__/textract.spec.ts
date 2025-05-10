@@ -13,6 +13,7 @@ import { TextractDocument } from "amazon-textract-response-parser";
 import { readFile } from "fs/promises";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
+import { JsonReturn } from "@jaypie/types";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
