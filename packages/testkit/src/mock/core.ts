@@ -8,7 +8,6 @@ import {
   createMockReturnedFunction,
   createMockWrappedFunction,
   createMockWrappedObject,
-  MockValidationError,
 } from "./utils";
 import { beforeAll, vi } from "vitest";
 import { spyLog } from "../mockLog.module.js";
