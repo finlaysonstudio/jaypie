@@ -57,7 +57,6 @@
     "test:spec:validate.function": "vitest run ./src/lib/arguments/__tests__/validate.function.spec.js"
   },
   "dependencies": {
-    "chalk": "4.1.2",
     "jsonapi-serializer": "^3.6.9",
     "uuid": "^11.0.5"
   },
