@@ -32,6 +32,9 @@ export class McpServer {
   private systemPrompt: string;
 
   constructor({ systemPrompt }: { systemPrompt: string }) {
+    if (!systemPrompt) {
+      throw new Error("System prompt is required");
+    }
     this.systemPrompt = systemPrompt;
   }
 
