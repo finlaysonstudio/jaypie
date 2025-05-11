@@ -4,8 +4,40 @@
 if [ -z "$1" ]; then
     message="The user would like a project plan.md file in the repository root. Please request the project brief from the user. Follow these guidelines when creating the plan document:"
 else
-    message="Read $1 and create or overwrite a project plan.md file in the repository root. Follow these guidelines when creating the plan document:"
+    # Check if the parameter is a file that exists
+    if [ -f "$1" ]; then
+        message="Read $1. If there is only a brief, insert a horizontal rule followed by a formal plan. If there is already a plan, review it for completeness and adherence to the guidelines. Follow these guidelines when creating the plan document:"
+    elif [[ "$1" =~ ^[0-9a-zA-Z_]+$ ]]; then
+        # Find the most recently created file in the changelog directory containing the pattern
+        recentfile=$(find ./context/changelog -type f -name "*$1*" -exec stat -f "%m %N" {} \; | sort -nr | head -n 1 | cut -d' ' -f2-)
+        
+        if [ -z "$recentfile" ]; then
+            echo "No matching changelog files found."
+            message="The user would like a project plan.md file in the repository root. Please request the project brief from the user. Follow these guidelines when creating the plan document:"
+        else
+            # Extract just the filename to display
+            filename=$(basename "$recentfile")
+            # Ask user for confirmation
+            read -p "Use changelog $filename for planning? [Y/n] " response
+            
+            # Default to Y if no response
+            response=${response:-Y}
+            
+            if [[ "$response" =~ ^[Yy]$ ]]; then
+                message="Read $recentfile. If there is only a brief, insert a horizontal rule followed by a formal plan. If there is already a plan, review it for completeness and adherence to the guidelines. Follow these guidelines when creating the plan document:"
+            else
+                echo "Continuing without using changelog..."
+                message="The user would like a project plan.md file in the repository root. Please request the project brief from the user. Follow these guidelines when creating the plan document:"
+            fi
+        fi
+    else
+        # Treat as a file path even if it doesn't exist
+        message="The file $1 does not exist. Please ask the user for a project brief and then save the resulting plan to $1. If the user provides a brief, insert a horizontal rule followed by a formal plan. Follow these guidelines when creating the plan document:"
+    fi
 fi
 
+# Get additional parameters (if any)
+shift_params="${@:2}"
+
 # Pipe the content of Plan_from_Project_Brief.md to claude with the message
-cat context/prompts/Plan_from_Project_Brief.md | claude --dangerously-skip-permissions "$message"
+cat context/prompts/Plan_from_Project_Brief.md | claude --dangerously-skip-permissions "$message" $shift_params
