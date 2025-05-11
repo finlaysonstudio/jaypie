@@ -11,6 +11,7 @@ export default defineWorkspace([
   "packages/jaypie",
   "packages/lambda",
   "packages/llm",
+  "packages/mcp",
   "packages/mongoose",
   "packages/testkit",
   "packages/textract",

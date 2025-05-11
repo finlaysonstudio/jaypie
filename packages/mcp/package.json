@@ -1,0 +1,39 @@
+{
+  "name": "@jaypie/mcp",
+  "version": "0.0.1",
+  "description": "Model Control Protocol (MCP) server implementation for Jaypie",
+  "license": "MIT",
+  "author": "Finlayson Studio",
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./dist/jaypie-mcp.esm.js",
+      "require": "./dist/jaypie-mcp.cjs"
+    }
+  },
+  "main": "dist/jaypie-mcp.cjs",
+  "module": "dist/jaypie-mcp.esm.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "rollup -c",
+    "clean": "rm -rf dist",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@rollup/plugin-commonjs": "^28.0.1",
+    "@rollup/plugin-node-resolve": "^16.0.0",
+    "@rollup/plugin-typescript": "^12.1.2",
+    "rollup": "^4.24.0",
+    "rollup-plugin-auto-external": "^2.0.0",
+    "rollup-plugin-dts": "^6.1.0",
+    "typescript": "^5.3.3",
+    "vitest": "^3.0.7"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
