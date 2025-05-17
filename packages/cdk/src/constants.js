@@ -18,7 +18,7 @@ const CDK = {
     },
     PERSONAL: "personal",
     /**
-     * @deprecated rename "ephemeral" to "personal" (since 2/24/2024)
+     * @deprecated rename "ephemeral" to "personal" (since 2/24/2025)
      */
     EPHEMERAL: "ephemeral",
     /**
@@ -35,8 +35,8 @@ const CDK = {
     SITE: "datadoghq.com",
     LAYER: {
       // https://docs.datadoghq.com/serverless/aws_lambda/installation/nodejs/?tab=awscdk
-      NODE: 121, // 121 on 3/10/2025
-      EXTENSION: 73, // 73 on 3/10/2025
+      NODE: 125, // 125 on 5/16/2025
+      EXTENSION: 78, // 78 on 5/16/2025
     },
   },
   DEFAULT: {
@@ -129,6 +129,7 @@ const CDK = {
     AWS_ACCOUNT: "AWS_ACCOUNT",
   },
   VENDOR: {
+    ANTHROPIC: "anthropic",
     AUTH0: "auth0",
     DATADOG: "datadog",
     KNOWTRACE: "knowtrace",
