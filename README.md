@@ -367,7 +367,7 @@ const worker = new JaypieQueuedLambda(this, 'Worker', {
 
 #### `JaypieLambda`
 
-Creates an AWS Lambda function with enhanced configuration support for the Jaypie ecosystem, including built-in secrets management, tagging, and CloudWatch integration.
+Creates an AWS Lambda function with enhanced configuration support for the Jaypie ecosystem, including built-in secrets management, tagging, CloudWatch integration, and automatic Datadog integration.
 
 ```typescript
 const lambda = new JaypieLambda(this, 'Function', {
@@ -379,25 +379,33 @@ const lambda = new JaypieLambda(this, 'Function', {
   secrets: [mongoConnectionString, openAiKey],
   timeout: 30, // 30 seconds
   memorySize: 512, // 512MB
+  datadogApiKeyArn: 'arn:aws:secretsmanager:us-east-1:123456789012:secret:DatadogApiKey-abc123', // Optional
 });
 ```
 
 | Property | Type | Required | Description |
 | -------- | ---- | -------- | ----------- |
 | `code` | `lambda.Code \| string` | Yes | Lambda function code or path to code |
+| `datadogApiKeyArn` | `string` | No | ARN of the Secrets Manager secret containing Datadog API key; fallbacks to environment variables DATADOG_API_KEY_ARN or CDK_ENV_DATADOG_API_KEY_ARN |
 | `environment` | `object` | No | Environment variables for the Lambda |
 | `envSecrets` | `object` | No | Secrets to inject as environment variables |
 | `handler` | `string` | No | Lambda handler function, default 'index.handler' |
 | `layers` | `lambda.ILayerVersion[]` | No | Lambda layers to attach |
 | `logRetention` | `number` | No | CloudWatch log retention in days |
 | `memorySize` | `number` | No | Lambda memory size in MB |
-| `paramsAndSecrets` | `lambda.ParamsAndSecretsLayerVersion` | No | AWS Parameter Store layer |
+| `paramsAndSecrets` | `lambda.ParamsAndSecretsLayerVersion \| boolean` | No | AWS Parameter Store layer, or true to use defaults |
+| `paramsAndSecretsOptions` | `object` | No | Config options for the Parameters and Secrets layer |
 | `reservedConcurrentExecutions` | `number` | No | Lambda concurrency limit |
 | `roleTag` | `string` | No | Role tag for resource management |
 | `runtime` | `lambda.Runtime` | No | Lambda runtime, default NODEJS_20_X |
 | `secrets` | `JaypieEnvSecret[]` | No | JaypieEnvSecrets to inject |
 | `timeout` | `Duration \| number` | No | Lambda timeout duration or number of seconds, defaults to CDK.DURATION.LAMBDA_WORKER (120 seconds) |
 | `vendorTag` | `string` | No | Vendor tag for resource management |
+
+When provided with a Datadog API key (via `datadogApiKeyArn` or environment variables), the construct automatically:
+- Adds the Datadog Node.js and Extension layers
+- Configures necessary environment variables for Datadog monitoring
+- Grants the Lambda function permissions to access the Datadog API key
 
 #### `JaypieSsoGroups`
 
