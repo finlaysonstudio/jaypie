@@ -9,13 +9,20 @@ import { JaypieEnvSecret } from "./JaypieEnvSecret.js";
 
 export interface JaypieLambdaProps {
   code: lambda.Code | string;
+  datadog?: boolean;
   environment?: { [key: string]: string };
   envSecrets?: { [key: string]: secretsmanager.ISecret };
   handler: string;
   layers?: lambda.ILayerVersion[];
   logRetention?: number;
   memorySize?: number;
-  paramsAndSecrets?: lambda.ParamsAndSecretsLayerVersion;
+  paramsAndSecrets?: lambda.ParamsAndSecretsLayerVersion | boolean;
+  paramsAndSecretsOptions?: {
+    cacheSize?: number;
+    logLevel?: lambda.ParamsAndSecretsLogLevel;
+    parameterStoreTtl?: number;
+    secretsManagerTtl?: number;
+  };
   reservedConcurrentExecutions?: number;
   roleTag?: string;
   runtime?: lambda.Runtime;
@@ -33,6 +40,7 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
 
     const {
       code,
+      datadog = true,
       environment = {},
       envSecrets = {},
       handler = "index.handler",
@@ -40,6 +48,7 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
       logRetention = CDK.LAMBDA.LOG_RETENTION,
       memorySize = CDK.LAMBDA.MEMORY_SIZE,
       paramsAndSecrets,
+      paramsAndSecretsOptions,
       reservedConcurrentExecutions,
       roleTag,
       runtime = lambda.Runtime.NODEJS_20_X,
@@ -49,6 +58,48 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
     } = props;
 
     this._code = typeof code === "string" ? lambda.Code.fromAsset(code) : code;
+
+    // Create a working copy of layers
+    const resolvedLayers = [...layers];
+
+    // Add Datadog layers if enabled
+    if (datadog) {
+      // Add Datadog Node.js layer
+      const datadogNodeLayer = lambda.LayerVersion.fromLayerVersionArn(
+        this,
+        "DatadogNodeLayer",
+        `arn:aws:lambda:${Stack.of(this).region}:464622532012:layer:Datadog-Node20-x:${CDK.DATADOG.LAYER.NODE}`
+      );
+      resolvedLayers.push(datadogNodeLayer);
+
+      // Add Datadog Extension layer
+      const datadogExtensionLayer = lambda.LayerVersion.fromLayerVersionArn(
+        this,
+        "DatadogExtensionLayer",
+        `arn:aws:lambda:${Stack.of(this).region}:464622532012:layer:Datadog-Extension:${CDK.DATADOG.LAYER.EXTENSION}`
+      );
+      resolvedLayers.push(datadogExtensionLayer);
+    }
+
+    // Configure ParamsAndSecrets layer
+    let resolvedParamsAndSecrets: lambda.ParamsAndSecretsLayerVersion | undefined = undefined;
+    
+    if (paramsAndSecrets !== false) {
+      if (paramsAndSecrets instanceof lambda.ParamsAndSecretsLayerVersion) {
+        resolvedParamsAndSecrets = paramsAndSecrets;
+      } else {
+        // Create default ParamsAndSecrets layer
+        resolvedParamsAndSecrets = lambda.ParamsAndSecretsLayerVersion.fromVersion(
+          lambda.ParamsAndSecretsVersions.V1_0_103,
+          {
+            cacheSize: paramsAndSecretsOptions?.cacheSize,
+            logLevel: paramsAndSecretsOptions?.logLevel || lambda.ParamsAndSecretsLogLevel.WARN,
+            parameterStoreTtl: paramsAndSecretsOptions?.parameterStoreTtl,
+            secretsManagerTtl: paramsAndSecretsOptions?.secretsManagerTtl,
+          },
+        );
+      }
+    }
 
     // Process secrets environment variables
     const secretsEnvironment = Object.entries(envSecrets).reduce(
@@ -79,10 +130,10 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
         ...jaypieSecretsEnvironment,
       },
       handler,
-      layers,
+      layers: resolvedLayers,
       logRetention,
       memorySize,
-      paramsAndSecrets,
+      paramsAndSecrets: resolvedParamsAndSecrets,
       reservedConcurrentExecutions,
       runtime,
       timeout:
