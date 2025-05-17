@@ -9,7 +9,7 @@ import { JaypieEnvSecret } from "./JaypieEnvSecret.js";
 
 export interface JaypieLambdaProps {
   code: lambda.Code | string;
-  datadog?: boolean;
+  datadogApiKeyArn?: string;
   environment?: { [key: string]: string };
   envSecrets?: { [key: string]: secretsmanager.ISecret };
   handler: string;
@@ -40,8 +40,8 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
 
     const {
       code,
-      datadog = true,
-      environment = {},
+      datadogApiKeyArn,
+      environment: initialEnvironment = {},
       envSecrets = {},
       handler = "index.handler",
       layers = [],
@@ -57,18 +57,28 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
       vendorTag,
     } = props;
 
+    // Create a mutable copy of the environment variables
+    let environment = { ...initialEnvironment };
+
     this._code = typeof code === "string" ? lambda.Code.fromAsset(code) : code;
 
     // Create a working copy of layers
     const resolvedLayers = [...layers];
 
-    // Add Datadog layers if enabled
-    if (datadog) {
+    // Determine if we should add Datadog integration
+    // Check for datadog API key ARN in different sources
+    const resolvedDatadogApiKeyArn =
+      datadogApiKeyArn ||
+      process.env.DATADOG_API_KEY_ARN ||
+      process.env.CDK_ENV_DATADOG_API_KEY_ARN;
+
+    // Add Datadog integration if API key is available
+    if (resolvedDatadogApiKeyArn) {
       // Add Datadog Node.js layer
       const datadogNodeLayer = lambda.LayerVersion.fromLayerVersionArn(
         this,
         "DatadogNodeLayer",
-        `arn:aws:lambda:${Stack.of(this).region}:464622532012:layer:Datadog-Node20-x:${CDK.DATADOG.LAYER.NODE}`
+        `arn:aws:lambda:${Stack.of(this).region}:464622532012:layer:Datadog-Node20-x:${CDK.DATADOG.LAYER.NODE}`,
       );
       resolvedLayers.push(datadogNodeLayer);
 
@@ -76,28 +86,42 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
       const datadogExtensionLayer = lambda.LayerVersion.fromLayerVersionArn(
         this,
         "DatadogExtensionLayer",
-        `arn:aws:lambda:${Stack.of(this).region}:464622532012:layer:Datadog-Extension:${CDK.DATADOG.LAYER.EXTENSION}`
+        `arn:aws:lambda:${Stack.of(this).region}:464622532012:layer:Datadog-Extension:${CDK.DATADOG.LAYER.EXTENSION}`,
       );
       resolvedLayers.push(datadogExtensionLayer);
+
+      // Set Datadog environment variables
+      Object.assign(environment, {
+        DD_API_KEY_SECRET_ARN: resolvedDatadogApiKeyArn,
+        DD_ENV: process.env.PROJECT_ENV || "",
+        DD_SERVICE: process.env.PROJECT_SERVICE || "",
+        DD_SITE: CDK.DATADOG.SITE,
+        DD_TAGS: `${CDK.TAG.SPONSOR}:${process.env.PROJECT_SPONSOR || ""}`,
+      });
     }
 
     // Configure ParamsAndSecrets layer
-    let resolvedParamsAndSecrets: lambda.ParamsAndSecretsLayerVersion | undefined = undefined;
-    
+    let resolvedParamsAndSecrets:
+      | lambda.ParamsAndSecretsLayerVersion
+      | undefined = undefined;
+
     if (paramsAndSecrets !== false) {
       if (paramsAndSecrets instanceof lambda.ParamsAndSecretsLayerVersion) {
         resolvedParamsAndSecrets = paramsAndSecrets;
       } else {
         // Create default ParamsAndSecrets layer
-        resolvedParamsAndSecrets = lambda.ParamsAndSecretsLayerVersion.fromVersion(
-          lambda.ParamsAndSecretsVersions.V1_0_103,
-          {
-            cacheSize: paramsAndSecretsOptions?.cacheSize,
-            logLevel: paramsAndSecretsOptions?.logLevel || lambda.ParamsAndSecretsLogLevel.WARN,
-            parameterStoreTtl: paramsAndSecretsOptions?.parameterStoreTtl,
-            secretsManagerTtl: paramsAndSecretsOptions?.secretsManagerTtl,
-          },
-        );
+        resolvedParamsAndSecrets =
+          lambda.ParamsAndSecretsLayerVersion.fromVersion(
+            lambda.ParamsAndSecretsVersions.V1_0_103,
+            {
+              cacheSize: paramsAndSecretsOptions?.cacheSize,
+              logLevel:
+                paramsAndSecretsOptions?.logLevel ||
+                lambda.ParamsAndSecretsLogLevel.WARN,
+              parameterStoreTtl: paramsAndSecretsOptions?.parameterStoreTtl,
+              secretsManagerTtl: paramsAndSecretsOptions?.secretsManagerTtl,
+            },
+          );
       }
     }
 
@@ -150,6 +174,16 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
       secret.grantRead(this);
       secret.grantRead(this._lambda);
     });
+
+    // Grant Datadog API key read permission if applicable
+    if (resolvedDatadogApiKeyArn) {
+      const datadogApiKey = secretsmanager.Secret.fromSecretCompleteArn(
+        this,
+        "DatadogApiKeyGrant",
+        resolvedDatadogApiKeyArn,
+      );
+      datadogApiKey.grantRead(this._lambda);
+    }
 
     if (roleTag) {
       Tags.of(this._lambda).add(CDK.TAG.ROLE, roleTag);
@@ -259,15 +293,11 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
     return this._lambda.metric(metricName, props);
   }
 
-  public metricDuration(
-    props?: cloudwatch.MetricOptions,
-  ): cloudwatch.Metric {
+  public metricDuration(props?: cloudwatch.MetricOptions): cloudwatch.Metric {
     return this._lambda.metricDuration(props);
   }
 
-  public metricErrors(
-    props?: cloudwatch.MetricOptions,
-  ): cloudwatch.Metric {
+  public metricErrors(props?: cloudwatch.MetricOptions): cloudwatch.Metric {
     return this._lambda.metricErrors(props);
   }
 
@@ -277,9 +307,7 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
     return this._lambda.metricInvocations(props);
   }
 
-  public metricThrottles(
-    props?: cloudwatch.MetricOptions,
-  ): cloudwatch.Metric {
+  public metricThrottles(props?: cloudwatch.MetricOptions): cloudwatch.Metric {
     return this._lambda.metricThrottles(props);
   }
 

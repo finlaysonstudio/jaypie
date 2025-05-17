@@ -1,5 +1,5 @@
 import { CDK } from "@jaypie/cdk";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, beforeEach, afterEach } from "vitest";
 import { Stack, RemovalPolicy, Duration } from "aws-cdk-lib";
 import { Template, Match } from "aws-cdk-lib/assertions";
 import * as lambda from "aws-cdk-lib/aws-lambda";
@@ -311,13 +311,12 @@ describe("JaypieLambda", () => {
       // So this test is mostly ensuring that the construct can be created with default ParamsAndSecrets
     });
 
-    it("disables DataDog layers when datadog=false", () => {
+    it("does not add Datadog layers when datadogApiKeyArn is not provided", () => {
       const stack = new Stack();
       
       new JaypieLambda(stack, "TestConstruct", {
         code: lambda.Code.fromInline("exports.handler = () => {}"),
         handler: "index.handler",
-        datadog: false,
       });
 
       const template = Template.fromStack(stack);
@@ -334,6 +333,158 @@ describe("JaypieLambda", () => {
         expect(layerRefs.some(ref => ref.includes("DatadogNodeLayer"))).toBeFalsy();
         expect(layerRefs.some(ref => ref.includes("DatadogExtensionLayer"))).toBeFalsy();
       }
+      
+      // Verify no Datadog environment variables are set
+      const environment = lambdaFunction.Properties.Environment?.Variables || {};
+      expect(environment.DD_API_KEY_SECRET_ARN).toBeUndefined();
+      expect(environment.DD_SITE).toBeUndefined();
+    });
+    
+    it("configures Datadog with datadogApiKeyArn", () => {
+      const stack = new Stack();
+      const datadogApiKeyArn = "arn:aws:secretsmanager:us-east-1:123456789012:secret:test-datadog-api-key-123456";
+      
+      new JaypieLambda(stack, "TestConstruct", {
+        code: lambda.Code.fromInline("exports.handler = () => {}"),
+        handler: "index.handler",
+        datadogApiKeyArn,
+      });
+
+      const template = Template.fromStack(stack);
+      
+      // Verify Datadog layers are added
+      const resources = template.findResources("AWS::Lambda::Function");
+      const lambdaFunction = Object.values(resources).find(
+        resource => resource.Properties.Handler === "index.handler"
+      );
+      
+      // Check for environment variables
+      template.hasResourceProperties("AWS::Lambda::Function", {
+        Environment: {
+          Variables: {
+            DD_API_KEY_SECRET_ARN: datadogApiKeyArn,
+            DD_SITE: CDK.DATADOG.SITE,
+          },
+        },
+      });
+      
+      // Verify secret is accessed
+      template.hasResourceProperties("AWS::IAM::Policy", {
+        PolicyDocument: {
+          Statement: Match.arrayWith([
+            Match.objectLike({
+              Action: [
+                "secretsmanager:GetSecretValue",
+                "secretsmanager:DescribeSecret",
+              ],
+              Effect: "Allow",
+              Resource: datadogApiKeyArn,
+            }),
+          ]),
+        },
+      });
+    });
+    
+    describe("Environment Variable Fallbacks", () => {
+      const originalEnv = { ...process.env };
+      const datadogApiKeyArn = "arn:aws:secretsmanager:us-east-1:123456789012:secret:test-datadog-api-key-123456";
+      
+      beforeEach(() => {
+        // Clear relevant environment variables before each test
+        delete process.env.DATADOG_API_KEY_ARN;
+        delete process.env.CDK_ENV_DATADOG_API_KEY_ARN;
+      });
+      
+      afterEach(() => {
+        // Restore original environment
+        process.env = { ...originalEnv };
+      });
+      
+      it("uses DATADOG_API_KEY_ARN from environment", () => {
+        process.env.DATADOG_API_KEY_ARN = datadogApiKeyArn;
+        
+        const stack = new Stack();
+        new JaypieLambda(stack, "TestConstruct", {
+          code: lambda.Code.fromInline("exports.handler = () => {}"),
+          handler: "index.handler",
+        });
+
+        const template = Template.fromStack(stack);
+        
+        // Verify secret is accessed
+        template.hasResourceProperties("AWS::IAM::Policy", {
+          PolicyDocument: {
+            Statement: Match.arrayWith([
+              Match.objectLike({
+                Action: [
+                  "secretsmanager:GetSecretValue",
+                  "secretsmanager:DescribeSecret",
+                ],
+                Effect: "Allow",
+                Resource: datadogApiKeyArn,
+              }),
+            ]),
+          },
+        });
+      });
+      
+      it("uses CDK_ENV_DATADOG_API_KEY_ARN as fallback", () => {
+        process.env.CDK_ENV_DATADOG_API_KEY_ARN = datadogApiKeyArn;
+        
+        const stack = new Stack();
+        new JaypieLambda(stack, "TestConstruct", {
+          code: lambda.Code.fromInline("exports.handler = () => {}"),
+          handler: "index.handler",
+        });
+
+        const template = Template.fromStack(stack);
+        
+        // Verify secret is accessed
+        template.hasResourceProperties("AWS::IAM::Policy", {
+          PolicyDocument: {
+            Statement: Match.arrayWith([
+              Match.objectLike({
+                Action: [
+                  "secretsmanager:GetSecretValue",
+                  "secretsmanager:DescribeSecret",
+                ],
+                Effect: "Allow",
+                Resource: datadogApiKeyArn,
+              }),
+            ]),
+          },
+        });
+      });
+      
+      it("prefers explicitly provided datadogApiKeyArn over environment variables", () => {
+        process.env.DATADOG_API_KEY_ARN = "arn:aws:secretsmanager:us-east-1:123456789012:secret:wrong-key-123456";
+        process.env.CDK_ENV_DATADOG_API_KEY_ARN = "arn:aws:secretsmanager:us-east-1:123456789012:secret:also-wrong-key-123456";
+        
+        const stack = new Stack();
+        new JaypieLambda(stack, "TestConstruct", {
+          code: lambda.Code.fromInline("exports.handler = () => {}"),
+          handler: "index.handler",
+          datadogApiKeyArn,
+        });
+
+        const template = Template.fromStack(stack);
+        
+        // Verify secret is accessed
+        template.hasResourceProperties("AWS::IAM::Policy", {
+          PolicyDocument: {
+            Statement: Match.arrayWith([
+              Match.objectLike({
+                Action: [
+                  "secretsmanager:GetSecretValue",
+                  "secretsmanager:DescribeSecret",
+                ],
+                Effect: "Allow",
+                Resource: datadogApiKeyArn,
+              }),
+            ]),
+          },
+        });
+      });
     });
 
     it("disables ParamsAndSecrets layer when paramsAndSecrets=false", () => {
