@@ -262,6 +262,7 @@ npm install --save-dev @jaypie/constructs
 import { 
   JaypieEnvSecret,
   JaypieHostedZone, 
+  JaypieLambda,
   JaypieMongoDbSecret,
   JaypieOpenAiSecret,
   JaypieQueuedLambda,
@@ -363,6 +364,40 @@ const worker = new JaypieQueuedLambda(this, 'Worker', {
 | `timeout` | `Duration \| number` | No | Lambda timeout duration or number of seconds, defaults to CDK.DURATION.LAMBDA_WORKER (120 seconds) |
 | `vendorTag` | `string` | No | Vendor tag for resource management |
 | `visibilityTimeout` | `Duration \| number` | No | SQS visibility timeout |
+
+#### `JaypieLambda`
+
+Creates an AWS Lambda function with enhanced configuration support for the Jaypie ecosystem, including built-in secrets management, tagging, and CloudWatch integration.
+
+```typescript
+const lambda = new JaypieLambda(this, 'Function', {
+  code: lambda.Code.fromAsset('src'),
+  handler: 'index.handler',
+  environment: {
+    NODE_ENV: 'production'
+  },
+  secrets: [mongoConnectionString, openAiKey],
+  timeout: 30, // 30 seconds
+  memorySize: 512, // 512MB
+});
+```
+
+| Property | Type | Required | Description |
+| -------- | ---- | -------- | ----------- |
+| `code` | `lambda.Code \| string` | Yes | Lambda function code or path to code |
+| `environment` | `object` | No | Environment variables for the Lambda |
+| `envSecrets` | `object` | No | Secrets to inject as environment variables |
+| `handler` | `string` | No | Lambda handler function, default 'index.handler' |
+| `layers` | `lambda.ILayerVersion[]` | No | Lambda layers to attach |
+| `logRetention` | `number` | No | CloudWatch log retention in days |
+| `memorySize` | `number` | No | Lambda memory size in MB |
+| `paramsAndSecrets` | `lambda.ParamsAndSecretsLayerVersion` | No | AWS Parameter Store layer |
+| `reservedConcurrentExecutions` | `number` | No | Lambda concurrency limit |
+| `roleTag` | `string` | No | Role tag for resource management |
+| `runtime` | `lambda.Runtime` | No | Lambda runtime, default NODEJS_20_X |
+| `secrets` | `JaypieEnvSecret[]` | No | JaypieEnvSecrets to inject |
+| `timeout` | `Duration \| number` | No | Lambda timeout duration or number of seconds, defaults to CDK.DURATION.LAMBDA_WORKER (120 seconds) |
+| `vendorTag` | `string` | No | Vendor tag for resource management |
 
 #### `JaypieSsoGroups`
 
