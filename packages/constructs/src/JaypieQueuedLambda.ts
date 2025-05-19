@@ -7,26 +7,11 @@ import * as lambdaEventSources from "aws-cdk-lib/aws-lambda-event-sources";
 import * as iam from "aws-cdk-lib/aws-iam";
 import * as cloudwatch from "aws-cdk-lib/aws-cloudwatch";
 import * as kms from "aws-cdk-lib/aws-kms";
-import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
-import { JaypieEnvSecret } from "./JaypieEnvSecret.js";
+import { JaypieLambda, JaypieLambdaProps } from "./JaypieLambda.js";
 
-export interface JaypieQueuedLambdaProps {
+export interface JaypieQueuedLambdaProps extends JaypieLambdaProps {
   batchSize?: number;
-  code: lambda.Code | string;
-  environment?: { [key: string]: string };
-  envSecrets?: { [key: string]: secretsmanager.ISecret };
   fifo?: boolean;
-  handler: string;
-  layers?: lambda.ILayerVersion[];
-  logRetention?: number;
-  memorySize?: number;
-  paramsAndSecrets?: lambda.ParamsAndSecretsLayerVersion;
-  reservedConcurrentExecutions?: number;
-  roleTag?: string;
-  runtime?: lambda.Runtime;
-  secrets?: JaypieEnvSecret[];
-  timeout?: Duration | number;
-  vendorTag?: string;
   visibilityTimeout?: Duration | number;
 }
 
@@ -35,8 +20,7 @@ export class JaypieQueuedLambda
   implements lambda.IFunction, sqs.IQueue
 {
   private readonly _queue: sqs.Queue;
-  private readonly _lambda: lambda.Function;
-  private readonly _code: lambda.Code;
+  private readonly _lambdaConstruct: JaypieLambda;
 
   constructor(scope: Construct, id: string, props: JaypieQueuedLambdaProps) {
     super(scope, id);
@@ -61,8 +45,6 @@ export class JaypieQueuedLambda
       visibilityTimeout = Duration.seconds(CDK.DURATION.LAMBDA_WORKER),
     } = props;
 
-    this._code = typeof code === "string" ? lambda.Code.fromAsset(code) : code;
-
     // Create SQS Queue
     this._queue = new sqs.Queue(this, "Queue", {
       fifo,
@@ -78,70 +60,35 @@ export class JaypieQueuedLambda
       Tags.of(this._queue).add(CDK.TAG.VENDOR, vendorTag);
     }
 
-    // Process secrets environment variables
-    const secretsEnvironment = Object.entries(envSecrets).reduce(
-      (acc, [key, secret]) => ({
-        ...acc,
-        [`SECRET_${key}`]: secret.secretName,
-      }),
-      {},
-    );
-
-    // Process JaypieEnvSecret array
-    const jaypieSecretsEnvironment = secrets.reduce((acc, secret) => {
-      if (secret.envKey) {
-        return {
-          ...acc,
-          [`SECRET_${secret.envKey}`]: secret.secretName,
-        };
-      }
-      return acc;
-    }, {});
-
-    // Create Lambda Function
-    this._lambda = new lambda.Function(this, "Function", {
-      code: this._code,
+    // Create Lambda with JaypieLambda
+    this._lambdaConstruct = new JaypieLambda(this, "Function", {
+      code,
       environment: {
-        CDK_ENV_QUEUE_URL: this._queue.queueUrl,
         ...environment,
-        ...secretsEnvironment,
-        ...jaypieSecretsEnvironment,
+        CDK_ENV_QUEUE_URL: this._queue.queueUrl,
       },
+      envSecrets,
       handler,
       layers,
       logRetention,
       memorySize,
       paramsAndSecrets,
       reservedConcurrentExecutions,
+      roleTag,
       runtime,
-      timeout:
-        typeof timeout === "number" ? Duration.seconds(timeout) : timeout,
+      secrets,
+      timeout,
+      vendorTag,
     });
 
-    // Grant secret read permissions
-    Object.values(envSecrets).forEach((secret) => {
-      secret.grantRead(this._lambda);
-    });
-
-    // Grant read permissions for JaypieEnvSecrets
-    secrets.forEach((secret) => {
-      secret.grantRead(this);
-      secret.grantRead(this._lambda);
-    });
-
-    this._queue.grantConsumeMessages(this._lambda);
-    this._queue.grantSendMessages(this._lambda);
-    this._lambda.addEventSource(
+    // Set up queue and lambda integration
+    this._queue.grantConsumeMessages(this._lambdaConstruct);
+    this._queue.grantSendMessages(this._lambdaConstruct);
+    this._lambdaConstruct.addEventSource(
       new lambdaEventSources.SqsEventSource(this._queue, {
         batchSize,
       }),
     );
-    if (roleTag) {
-      Tags.of(this._lambda).add(CDK.TAG.ROLE, roleTag);
-    }
-    if (vendorTag) {
-      Tags.of(this._lambda).add(CDK.TAG.VENDOR, vendorTag);
-    }
   }
 
   // Public accessors
@@ -150,144 +97,144 @@ export class JaypieQueuedLambda
   }
 
   public get lambda(): lambda.Function {
-    return this._lambda;
+    return this._lambdaConstruct.lambda;
   }
 
   public get code(): lambda.Code {
-    return this._code;
+    return this._lambdaConstruct.code;
   }
 
   // IFunction implementation
   public get functionArn(): string {
-    return this._lambda.functionArn;
+    return this._lambdaConstruct.functionArn;
   }
 
   public get functionName(): string {
-    return this._lambda.functionName;
+    return this._lambdaConstruct.functionName;
   }
 
   public get grantPrincipal(): import("aws-cdk-lib/aws-iam").IPrincipal {
-    return this._lambda.grantPrincipal;
+    return this._lambdaConstruct.grantPrincipal;
   }
 
   public get role(): import("aws-cdk-lib/aws-iam").IRole | undefined {
-    return this._lambda.role;
+    return this._lambdaConstruct.role;
   }
 
   public get architecture(): lambda.Architecture {
-    return this._lambda.architecture;
+    return this._lambdaConstruct.architecture;
   }
 
   public get connections(): import("aws-cdk-lib/aws-ec2").Connections {
-    return this._lambda.connections;
+    return this._lambdaConstruct.connections;
   }
 
   public get isBoundToVpc(): boolean {
-    return this._lambda.isBoundToVpc;
+    return this._lambdaConstruct.isBoundToVpc;
   }
 
   public get latestVersion(): lambda.IVersion {
-    return this._lambda.latestVersion;
+    return this._lambdaConstruct.latestVersion;
   }
 
   public get permissionsNode(): import("constructs").Node {
-    return this._lambda.permissionsNode;
+    return this._lambdaConstruct.permissionsNode;
   }
 
   public get resourceArnsForGrantInvoke(): string[] {
-    return this._lambda.resourceArnsForGrantInvoke;
+    return this._lambdaConstruct.resourceArnsForGrantInvoke;
   }
 
   public addEventSource(source: lambda.IEventSource): void {
-    this._lambda.addEventSource(source);
+    this._lambdaConstruct.addEventSource(source);
   }
 
   public addEventSourceMapping(
     id: string,
     options: lambda.EventSourceMappingOptions,
   ): lambda.EventSourceMapping {
-    return this._lambda.addEventSourceMapping(id, options);
+    return this._lambdaConstruct.addEventSourceMapping(id, options);
   }
 
   public addFunctionUrl(
     options?: lambda.FunctionUrlOptions,
   ): lambda.FunctionUrl {
-    return this._lambda.addFunctionUrl(options);
+    return this._lambdaConstruct.addFunctionUrl(options);
   }
 
   public addPermission(id: string, permission: lambda.Permission): void {
-    this._lambda.addPermission(id, permission);
+    this._lambdaConstruct.addPermission(id, permission);
   }
 
   public addToRolePolicy(
     statement: import("aws-cdk-lib/aws-iam").PolicyStatement,
   ): void {
-    this._lambda.addToRolePolicy(statement);
+    this._lambdaConstruct.addToRolePolicy(statement);
   }
 
   public configureAsyncInvoke(options: lambda.EventInvokeConfigOptions): void {
-    this._lambda.configureAsyncInvoke(options);
+    this._lambdaConstruct.configureAsyncInvoke(options);
   }
 
   public grantInvoke(
     grantee: import("aws-cdk-lib/aws-iam").IGrantable,
   ): import("aws-cdk-lib/aws-iam").Grant {
-    return this._lambda.grantInvoke(grantee);
+    return this._lambdaConstruct.grantInvoke(grantee);
   }
 
   public grantInvokeCompositePrincipal(
     compositePrincipal: import("aws-cdk-lib/aws-iam").CompositePrincipal,
   ): import("aws-cdk-lib/aws-iam").Grant[] {
-    return this._lambda.grantInvokeCompositePrincipal(compositePrincipal);
+    return this._lambdaConstruct.grantInvokeCompositePrincipal(compositePrincipal);
   }
 
   public grantInvokeUrl(
     grantee: import("aws-cdk-lib/aws-iam").IGrantable,
   ): import("aws-cdk-lib/aws-iam").Grant {
-    return this._lambda.grantInvokeUrl(grantee);
+    return this._lambdaConstruct.grantInvokeUrl(grantee);
   }
 
   public metric(
     metricName: string,
     props?: import("aws-cdk-lib/aws-cloudwatch").MetricOptions,
   ): import("aws-cdk-lib/aws-cloudwatch").Metric {
-    return this._lambda.metric(metricName, props);
+    return this._lambdaConstruct.metric(metricName, props);
   }
 
   public metricDuration(
     props?: import("aws-cdk-lib/aws-cloudwatch").MetricOptions,
   ): import("aws-cdk-lib/aws-cloudwatch").Metric {
-    return this._lambda.metricDuration(props);
+    return this._lambdaConstruct.metricDuration(props);
   }
 
   public metricErrors(
     props?: import("aws-cdk-lib/aws-cloudwatch").MetricOptions,
   ): import("aws-cdk-lib/aws-cloudwatch").Metric {
-    return this._lambda.metricErrors(props);
+    return this._lambdaConstruct.metricErrors(props);
   }
 
   public metricInvocations(
     props?: import("aws-cdk-lib/aws-cloudwatch").MetricOptions,
   ): import("aws-cdk-lib/aws-cloudwatch").Metric {
-    return this._lambda.metricInvocations(props);
+    return this._lambdaConstruct.metricInvocations(props);
   }
 
   public metricThrottles(
     props?: import("aws-cdk-lib/aws-cloudwatch").MetricOptions,
   ): import("aws-cdk-lib/aws-cloudwatch").Metric {
-    return this._lambda.metricThrottles(props);
+    return this._lambdaConstruct.metricThrottles(props);
   }
 
   // Additional IFunction implementation
   public grantInvokeLatestVersion(grantee: iam.IGrantable): iam.Grant {
-    return this._lambda.grantInvokeLatestVersion(grantee);
+    return this._lambdaConstruct.grantInvokeLatestVersion(grantee);
   }
 
   public grantInvokeVersion(
     grantee: iam.IGrantable,
     version: lambda.Version,
   ): iam.Grant {
-    return this._lambda.grantInvokeVersion(grantee, version);
+    return this._lambdaConstruct.grantInvokeVersion(grantee, version);
   }
 
   public get env() {
@@ -298,11 +245,11 @@ export class JaypieQueuedLambda
   }
 
   public get stack(): Stack {
-    return this._lambda.stack;
+    return Stack.of(this);
   }
 
   public applyRemovalPolicy(policy: RemovalPolicy): void {
-    this._lambda.applyRemovalPolicy(policy);
+    this._lambdaConstruct.applyRemovalPolicy(policy);
     this._queue.applyRemovalPolicy(policy);
   }
 
