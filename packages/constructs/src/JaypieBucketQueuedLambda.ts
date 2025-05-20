@@ -97,7 +97,7 @@ export class JaypieBucketQueuedLambda
   }
 
   public get isWebsite(): boolean {
-    return this._bucket.isWebsite;
+    return this._bucket.isWebsite || false;
   }
 
   public get policy(): s3.BucketPolicy | undefined {
