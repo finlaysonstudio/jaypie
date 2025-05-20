@@ -185,7 +185,9 @@ export class JaypieQueuedLambda
   public grantInvokeCompositePrincipal(
     compositePrincipal: import("aws-cdk-lib/aws-iam").CompositePrincipal,
   ): import("aws-cdk-lib/aws-iam").Grant[] {
-    return this._lambdaConstruct.grantInvokeCompositePrincipal(compositePrincipal);
+    return this._lambdaConstruct.grantInvokeCompositePrincipal(
+      compositePrincipal,
+    );
   }
 
   public grantInvokeUrl(
