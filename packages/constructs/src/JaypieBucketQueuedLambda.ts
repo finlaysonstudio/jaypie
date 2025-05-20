@@ -26,6 +26,7 @@ export class JaypieBucketQueuedLambda
     id: string,
     props: JaypieBucketQueuedLambdaProps,
   ) {
+    props.fifo = false; // S3 event notifications are not supported for FIFO queues
     super(scope, id, props);
 
     const { bucketName, roleTag, vendorTag, bucketOptions = {} } = props;

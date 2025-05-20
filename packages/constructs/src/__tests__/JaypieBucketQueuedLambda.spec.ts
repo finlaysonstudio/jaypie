@@ -7,7 +7,6 @@ import * as s3 from "aws-cdk-lib/aws-s3";
 import * as iam from "aws-cdk-lib/aws-iam";
 import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
 import { JaypieBucketQueuedLambda } from "../JaypieBucketQueuedLambda.js";
-import { JaypieEnvSecret } from "../JaypieEnvSecret.js";
 
 describe("JaypieBucketQueuedLambda", () => {
   describe("Base Cases", () => {
@@ -27,9 +26,7 @@ describe("JaypieBucketQueuedLambda", () => {
       template.hasResource("AWS::SQS::Queue", {});
       template.hasResource("AWS::Lambda::Function", {});
       template.hasResource("AWS::S3::Bucket", {});
-      template.hasResourceProperties("AWS::SQS::Queue", {
-        FifoQueue: true,
-      });
+      template.hasResourceProperties("AWS::SQS::Queue", {});
       template.hasResourceProperties("AWS::Lambda::Function", {
         Handler: "index.handler",
         Runtime: "nodejs20.x",
@@ -300,10 +297,7 @@ describe("JaypieBucketQueuedLambda", () => {
         bucketOptions: {
           cors: [
             {
-              allowedMethods: [
-                s3.HttpMethods.GET,
-                s3.HttpMethods.PUT,
-              ],
+              allowedMethods: [s3.HttpMethods.GET, s3.HttpMethods.PUT],
               allowedOrigins: ["https://example.com"],
               allowedHeaders: ["*"],
             },
@@ -341,7 +335,7 @@ describe("JaypieBucketQueuedLambda", () => {
         },
       });
     });
-    
+
     it("bucketName in bucketOptions overrides top-level bucketName", () => {
       const stack = new Stack();
       const construct = new JaypieBucketQueuedLambda(stack, "TestConstruct", {
