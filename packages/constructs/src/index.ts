@@ -1,3 +1,4 @@
+export { JaypieBucketQueuedLambda } from "./JaypieBucketQueuedLambda";
 export { JaypieEnvSecret } from "./JaypieEnvSecret";
 export { JaypieHostedZone } from "./JaypieHostedZone";
 export { JaypieLambda } from "./JaypieLambda";
