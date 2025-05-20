@@ -63,8 +63,8 @@ export default [
           message: "Unexpected exports, use export instead.",
         },
       ],
-      "no-shadow": "warn",
       "no-shadow-restricted-names": "error",
+      "no-shadow": "off",
       "no-unused-vars": "warn",
       "object-shorthand": ["error", "always"],
     },
@@ -157,6 +157,7 @@ export default [
       ...tsPlugin.configs.recommended.rules,
       "prettier/prettier": "warn",
       "@typescript-eslint/no-unused-vars": "warn",
+      "@typescript-eslint/no-explicit-any": "off",
     },
   },
 
