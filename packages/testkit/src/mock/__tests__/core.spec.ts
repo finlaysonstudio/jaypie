@@ -478,7 +478,6 @@ describe("Core Mocks", () => {
               // Act
               try {
                 await handler();
-                // eslint-disable-next-line @typescript-eslint/no-unused-vars
               } catch (error) {
                 // Assert
                 expect(mockTeardown1).toHaveBeenCalledTimes(1);
@@ -501,7 +500,6 @@ describe("Core Mocks", () => {
               // Act
               try {
                 await handler();
-                // eslint-disable-next-line @typescript-eslint/no-unused-vars
               } catch (error) {
                 // Assert
                 expect(mockTeardown1).toHaveBeenCalledTimes(1);
@@ -524,7 +522,6 @@ describe("Core Mocks", () => {
               // Act
               try {
                 await handler();
-                // eslint-disable-next-line @typescript-eslint/no-unused-vars
               } catch (error) {
                 // Assert
                 expect(mockTeardown1).not.toHaveBeenCalled();
@@ -1122,7 +1119,6 @@ describe("Jaypie Core Utilities", () => {
             // Act
             try {
               await handler();
-              // eslint-disable-next-line @typescript-eslint/no-unused-vars
             } catch (error) {
               // Assert
               expect(mockTeardown1).toHaveBeenCalledTimes(1);
@@ -1145,7 +1141,6 @@ describe("Jaypie Core Utilities", () => {
             // Act
             try {
               await handler();
-              // eslint-disable-next-line @typescript-eslint/no-unused-vars
             } catch (error) {
               // Assert
               expect(mockTeardown1).toHaveBeenCalledTimes(1);
@@ -1168,7 +1163,6 @@ describe("Jaypie Core Utilities", () => {
             // Act
             try {
               await handler();
-              // eslint-disable-next-line @typescript-eslint/no-unused-vars
             } catch (error) {
               // Assert
               expect(mockTeardown1).not.toHaveBeenCalled();

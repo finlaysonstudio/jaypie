@@ -19,7 +19,6 @@ export class Toolkit {
 
   get tools(): Omit<LlmTool, "call">[] {
     return this._tools.map((tool) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const toolCopy: any = { ...tool };
       delete toolCopy.call;
 

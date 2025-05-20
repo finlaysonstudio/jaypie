@@ -1,4 +1,3 @@
-/* eslint-disable no-shadow */
 import { TextractDocument } from "amazon-textract-response-parser";
 import { readFile } from "fs/promises";
 import { beforeAll, describe, expect, it } from "vitest";

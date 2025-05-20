@@ -1,5 +1,5 @@
 /* eslint-disable no-restricted-syntax */
-/* eslint-disable no-shadow */
+
 /* eslint-disable no-unused-vars */
 /* eslint-disable no-empty */
 /**

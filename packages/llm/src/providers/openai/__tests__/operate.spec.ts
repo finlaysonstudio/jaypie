@@ -795,7 +795,6 @@ describe("operate", () => {
           // Execute
           try {
             await operate("test input", {}, { client: mockClient });
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
           } catch (error) {
             // Expected to throw
           }

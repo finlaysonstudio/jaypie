@@ -8,8 +8,6 @@ import {
   vi,
 } from "vitest";
 
-/* eslint-disable no-console */
-
 import { LEVEL } from "../constants.js";
 import out from "../out.js";
 

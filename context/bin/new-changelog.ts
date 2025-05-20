@@ -1,5 +1,4 @@
 #!/usr/bin/env tsx
-/* eslint-disable no-console */
 
 /**
  * Script to create a new changelog file with a timestamp and formatted message

@@ -268,24 +268,24 @@ describe("JaypieLambda", () => {
 
     it("adds layers by default", () => {
       const stack = new Stack();
-      
+
       new JaypieLambda(stack, "TestConstruct", {
         code: lambda.Code.fromInline("exports.handler = () => {}"),
         handler: "index.handler",
       });
 
       const template = Template.fromStack(stack);
-      
+
       // Check that layers are added
       const resources = template.findResources("AWS::Lambda::Function");
       const lambdaFunctions = Object.values(resources);
       const testFunction = lambdaFunctions.find(
-        resource => resource.Properties.Handler === "index.handler"
+        (resource) => resource.Properties.Handler === "index.handler",
       );
-      
+
       // Verify the layers array exists
       expect(testFunction.Properties.Layers).toBeDefined();
-      
+
       // Verify at least one layer is added
       // Note: exact layer configuration may vary, so we just verify layers exist
       expect(testFunction.Properties.Layers.length).toBeGreaterThan(0);
@@ -293,57 +293,68 @@ describe("JaypieLambda", () => {
 
     it("adds ParamsAndSecrets layer by default", () => {
       const stack = new Stack();
-      
+
       new JaypieLambda(stack, "TestConstruct", {
         code: lambda.Code.fromInline("exports.handler = () => {}"),
         handler: "index.handler",
       });
 
       const template = Template.fromStack(stack);
-      
+
       // The ParamsAndSecrets property does not directly appear in the CloudFormation template
       // Instead, check for its existence by verifying the Function has been created
       template.hasResourceProperties("AWS::Lambda::Function", {
         Handler: "index.handler",
       });
-      
+
       // The actual testing of ParamsAndSecrets is done at the CDK level, not CloudFormation template level
       // So this test is mostly ensuring that the construct can be created with default ParamsAndSecrets
     });
 
     it("does not add Datadog layers when datadogApiKeyArn is not provided", () => {
       const stack = new Stack();
-      
+
       new JaypieLambda(stack, "TestConstruct", {
         code: lambda.Code.fromInline("exports.handler = () => {}"),
         handler: "index.handler",
       });
 
       const template = Template.fromStack(stack);
-      
+
       // Check that DataDog layers are not added
       const resources = template.findResources("AWS::Lambda::Function");
       const lambdaFunction = Object.values(resources).find(
-        resource => resource.Properties.Handler === "index.handler"
+        (resource) => resource.Properties.Handler === "index.handler",
       );
-      
+
       // If there are Layers, verify none of them are DataDog layers
-      if (lambdaFunction.Properties.Layers && lambdaFunction.Properties.Layers.length > 0) {
-        const layerRefs = lambdaFunction.Properties.Layers.map(layer => layer.Ref || "");
-        expect(layerRefs.some(ref => ref.includes("DatadogNodeLayer"))).toBeFalsy();
-        expect(layerRefs.some(ref => ref.includes("DatadogExtensionLayer"))).toBeFalsy();
+      if (
+        lambdaFunction.Properties.Layers &&
+        lambdaFunction.Properties.Layers.length > 0
+      ) {
+        const layerRefs = lambdaFunction.Properties.Layers.map(
+          (layer) => layer.Ref || "",
+        );
+        expect(
+          layerRefs.some((ref) => ref.includes("DatadogNodeLayer")),
+        ).toBeFalsy();
+        expect(
+          layerRefs.some((ref) => ref.includes("DatadogExtensionLayer")),
+        ).toBeFalsy();
       }
-      
+
       // Verify no Datadog environment variables are set
-      const environment = lambdaFunction.Properties.Environment?.Variables || {};
+      const environment =
+        lambdaFunction.Properties.Environment?.Variables || {};
       expect(environment.DD_API_KEY_SECRET_ARN).toBeUndefined();
       expect(environment.DD_SITE).toBeUndefined();
     });
-    
+
     it("configures Datadog with datadogApiKeyArn", () => {
       const stack = new Stack();
-      const datadogApiKeyArn = "arn:aws:secretsmanager:us-east-1:123456789012:secret:test-datadog-api-key-123456";
-      
+      const datadogApiKeyArn =
+        "arn:aws:secretsmanager:us-east-1:123456789012:secret:test-datadog-api-key-123456";
+
       new JaypieLambda(stack, "TestConstruct", {
         code: lambda.Code.fromInline("exports.handler = () => {}"),
         handler: "index.handler",
@@ -351,13 +362,13 @@ describe("JaypieLambda", () => {
       });
 
       const template = Template.fromStack(stack);
-      
+
       // Verify Datadog layers are added
       const resources = template.findResources("AWS::Lambda::Function");
       const lambdaFunction = Object.values(resources).find(
-        resource => resource.Properties.Handler === "index.handler"
+        (resource) => resource.Properties.Handler === "index.handler",
       );
-      
+
       // Check for environment variables
       template.hasResourceProperties("AWS::Lambda::Function", {
         Environment: {
@@ -367,7 +378,7 @@ describe("JaypieLambda", () => {
           },
         },
       });
-      
+
       // Verify secret is accessed
       template.hasResourceProperties("AWS::IAM::Policy", {
         PolicyDocument: {
@@ -384,25 +395,26 @@ describe("JaypieLambda", () => {
         },
       });
     });
-    
+
     describe("Environment Variable Fallbacks", () => {
       const originalEnv = { ...process.env };
-      const datadogApiKeyArn = "arn:aws:secretsmanager:us-east-1:123456789012:secret:test-datadog-api-key-123456";
-      
+      const datadogApiKeyArn =
+        "arn:aws:secretsmanager:us-east-1:123456789012:secret:test-datadog-api-key-123456";
+
       beforeEach(() => {
         // Clear relevant environment variables before each test
         delete process.env.DATADOG_API_KEY_ARN;
         delete process.env.CDK_ENV_DATADOG_API_KEY_ARN;
       });
-      
+
       afterEach(() => {
         // Restore original environment
         process.env = { ...originalEnv };
       });
-      
+
       it("uses DATADOG_API_KEY_ARN from environment", () => {
         process.env.DATADOG_API_KEY_ARN = datadogApiKeyArn;
-        
+
         const stack = new Stack();
         new JaypieLambda(stack, "TestConstruct", {
           code: lambda.Code.fromInline("exports.handler = () => {}"),
@@ -410,7 +422,7 @@ describe("JaypieLambda", () => {
         });
 
         const template = Template.fromStack(stack);
-        
+
         // Verify secret is accessed
         template.hasResourceProperties("AWS::IAM::Policy", {
           PolicyDocument: {
@@ -427,10 +439,10 @@ describe("JaypieLambda", () => {
           },
         });
       });
-      
+
       it("uses CDK_ENV_DATADOG_API_KEY_ARN as fallback", () => {
         process.env.CDK_ENV_DATADOG_API_KEY_ARN = datadogApiKeyArn;
-        
+
         const stack = new Stack();
         new JaypieLambda(stack, "TestConstruct", {
           code: lambda.Code.fromInline("exports.handler = () => {}"),
@@ -438,7 +450,7 @@ describe("JaypieLambda", () => {
         });
 
         const template = Template.fromStack(stack);
-        
+
         // Verify secret is accessed
         template.hasResourceProperties("AWS::IAM::Policy", {
           PolicyDocument: {
@@ -455,11 +467,13 @@ describe("JaypieLambda", () => {
           },
         });
       });
-      
+
       it("prefers explicitly provided datadogApiKeyArn over environment variables", () => {
-        process.env.DATADOG_API_KEY_ARN = "arn:aws:secretsmanager:us-east-1:123456789012:secret:wrong-key-123456";
-        process.env.CDK_ENV_DATADOG_API_KEY_ARN = "arn:aws:secretsmanager:us-east-1:123456789012:secret:also-wrong-key-123456";
-        
+        process.env.DATADOG_API_KEY_ARN =
+          "arn:aws:secretsmanager:us-east-1:123456789012:secret:wrong-key-123456";
+        process.env.CDK_ENV_DATADOG_API_KEY_ARN =
+          "arn:aws:secretsmanager:us-east-1:123456789012:secret:also-wrong-key-123456";
+
         const stack = new Stack();
         new JaypieLambda(stack, "TestConstruct", {
           code: lambda.Code.fromInline("exports.handler = () => {}"),
@@ -468,7 +482,7 @@ describe("JaypieLambda", () => {
         });
 
         const template = Template.fromStack(stack);
-        
+
         // Verify secret is accessed
         template.hasResourceProperties("AWS::IAM::Policy", {
           PolicyDocument: {
@@ -489,7 +503,7 @@ describe("JaypieLambda", () => {
 
     it("disables ParamsAndSecrets layer when paramsAndSecrets=false", () => {
       const stack = new Stack();
-      
+
       new JaypieLambda(stack, "TestConstruct", {
         code: lambda.Code.fromInline("exports.handler = () => {}"),
         handler: "index.handler",
@@ -497,17 +511,17 @@ describe("JaypieLambda", () => {
       });
 
       const template = Template.fromStack(stack);
-      
+
       // Check that the Lambda is not configured with ParamsAndSecrets
       const resources = template.findResources("AWS::Lambda::Function");
       const lambdaFunction = Object.values(resources)[0];
-      
+
       expect(lambdaFunction.Properties.ParamsAndSecrets).toBeUndefined();
     });
 
     it("configures ParamsAndSecrets layer with custom options", () => {
       const stack = new Stack();
-      
+
       new JaypieLambda(stack, "TestConstruct", {
         code: lambda.Code.fromInline("exports.handler = () => {}"),
         handler: "index.handler",
@@ -519,7 +533,7 @@ describe("JaypieLambda", () => {
       });
 
       const template = Template.fromStack(stack);
-      
+
       // Simply verify the function is created, as the ParamsAndSecrets details
       // are not directly exposed in the CloudFormation template
       template.hasResourceProperties("AWS::Lambda::Function", {

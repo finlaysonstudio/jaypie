@@ -106,7 +106,6 @@ export class ProjectError extends Error {
     this.isProjectError = true;
     this._type = _type;
     this.json = () => {
-      // eslint-disable-next-line no-shadow
       const { data, status } = formatError(this);
       this.status = status;
       return data;

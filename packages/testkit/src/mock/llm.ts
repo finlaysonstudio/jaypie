@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
-
 import { vi } from "vitest";
 import {
   createMockFunction,

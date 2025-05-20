@@ -6,7 +6,6 @@ import stringify from "./stringify.js";
 //
 
 const log = (messages) => {
-  // eslint-disable-next-line no-console
   console.log(stringify(...messages));
 };
 

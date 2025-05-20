@@ -11,7 +11,6 @@ module.exports = ({ CfnOutput, output, stack } = {}) => {
       }
     });
   } catch (error) {
-    // eslint-disable-next-line no-console
     console.warn(error);
     return false;
   }

@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { JsonValue } from "@jaypie/types";
 
 /**
