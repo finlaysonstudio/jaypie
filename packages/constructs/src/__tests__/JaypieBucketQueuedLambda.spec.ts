@@ -276,7 +276,9 @@ describe("JaypieBucketQueuedLambda", () => {
         bucketName: "test-bucket",
         code: lambda.Code.fromInline("exports.handler = () => {}"),
         handler: "index.handler",
-        versioned: true,
+        bucketOptions: {
+          versioned: true,
+        },
       });
       const template = Template.fromStack(stack);
 
@@ -286,6 +288,75 @@ describe("JaypieBucketQueuedLambda", () => {
         VersioningConfiguration: {
           Status: "Enabled",
         },
+      });
+    });
+
+    it("applies additional bucket options through bucketOptions", () => {
+      const stack = new Stack();
+      const construct = new JaypieBucketQueuedLambda(stack, "TestConstruct", {
+        bucketName: "test-bucket",
+        code: lambda.Code.fromInline("exports.handler = () => {}"),
+        handler: "index.handler",
+        bucketOptions: {
+          cors: [
+            {
+              allowedMethods: [
+                s3.HttpMethods.GET,
+                s3.HttpMethods.PUT,
+              ],
+              allowedOrigins: ["https://example.com"],
+              allowedHeaders: ["*"],
+            },
+          ],
+          lifecycleRules: [
+            {
+              expiration: Duration.days(365),
+              id: "ExpireAfterOneYear",
+            },
+          ],
+        },
+      });
+      const template = Template.fromStack(stack);
+
+      expect(construct).toBeDefined();
+      template.hasResourceProperties("AWS::S3::Bucket", {
+        BucketName: "test-bucket",
+        CorsConfiguration: {
+          CorsRules: [
+            {
+              AllowedHeaders: ["*"],
+              AllowedMethods: ["GET", "PUT"],
+              AllowedOrigins: ["https://example.com"],
+            },
+          ],
+        },
+        LifecycleConfiguration: {
+          Rules: [
+            {
+              ExpirationInDays: 365,
+              Id: "ExpireAfterOneYear",
+              Status: "Enabled",
+            },
+          ],
+        },
+      });
+    });
+    
+    it("bucketName in bucketOptions overrides top-level bucketName", () => {
+      const stack = new Stack();
+      const construct = new JaypieBucketQueuedLambda(stack, "TestConstruct", {
+        bucketName: "test-bucket",
+        code: lambda.Code.fromInline("exports.handler = () => {}"),
+        handler: "index.handler",
+        bucketOptions: {
+          bucketName: "override-bucket",
+        },
+      });
+      const template = Template.fromStack(stack);
+
+      expect(construct).toBeDefined();
+      template.hasResourceProperties("AWS::S3::Bucket", {
+        BucketName: "override-bucket",
       });
     });
 
@@ -379,7 +450,9 @@ describe("JaypieBucketQueuedLambda", () => {
       const construct = new JaypieBucketQueuedLambda(stack, "TestConstruct", {
         code: lambda.Code.fromInline("exports.handler = () => {}"),
         handler: "index.handler",
-        removalPolicy: RemovalPolicy.DESTROY,
+        bucketOptions: {
+          removalPolicy: RemovalPolicy.DESTROY,
+        },
       });
 
       expect(construct).toBeDefined();

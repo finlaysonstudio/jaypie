@@ -1,7 +1,5 @@
 import { Construct } from "constructs";
-import { Duration, Tags, Stack, RemovalPolicy } from "aws-cdk-lib";
-import * as lambda from "aws-cdk-lib/aws-lambda";
-import * as sqs from "aws-cdk-lib/aws-sqs";
+import { Tags, RemovalPolicy } from "aws-cdk-lib";
 import * as s3 from "aws-cdk-lib/aws-s3";
 import * as s3n from "aws-cdk-lib/aws-s3-notifications";
 import { CDK } from "@jaypie/cdk";
@@ -14,8 +12,7 @@ import {
 
 export interface JaypieBucketQueuedLambdaProps extends JaypieQueuedLambdaProps {
   bucketName?: string;
-  removalPolicy?: RemovalPolicy;
-  versioned?: boolean;
+  bucketOptions?: s3.BucketProps;
 }
 
 export class JaypieBucketQueuedLambda
@@ -31,19 +28,13 @@ export class JaypieBucketQueuedLambda
   ) {
     super(scope, id, props);
 
-    const {
-      bucketName,
-      removalPolicy = RemovalPolicy.RETAIN,
-      roleTag,
-      vendorTag,
-      versioned = false,
-    } = props;
+    const { bucketName, roleTag, vendorTag, bucketOptions = {} } = props;
 
     // Create S3 Bucket
     this._bucket = new s3.Bucket(this, "Bucket", {
-      bucketName,
-      removalPolicy,
-      versioned,
+      bucketName: bucketOptions.bucketName || bucketName,
+      removalPolicy: bucketOptions.removalPolicy || RemovalPolicy.RETAIN,
+      ...bucketOptions,
     });
 
     // Add tags to bucket
