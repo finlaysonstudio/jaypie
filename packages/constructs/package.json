@@ -1,6 +1,6 @@
 {
   "name": "@jaypie/constructs",
-  "version": "1.1.23",
+  "version": "1.1.24",
   "description": "CDK constructs for Jaypie applications",
   "license": "MIT",
   "author": "Finlayson Studio",
