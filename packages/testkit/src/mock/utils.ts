@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { vi } from "vitest";
 
 /**
@@ -78,14 +77,12 @@ function createMockWrappedFunction<T>(
         throw error;
       }
 
-      /* eslint-disable no-console */
       console.warn(
         `[@jaypie/testkit] Actual implementation failed. To suppress this warning, manually mock the response with mockReturnValue`,
       );
       if (error instanceof Error) {
         console.warn(`[@jaypie/testkit] ${error.message}`);
       }
-      /* eslint-enable no-console */
 
       // If fallback is a function, call it
       if (typeof fallback === "function") {

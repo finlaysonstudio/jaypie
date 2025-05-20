@@ -55,7 +55,6 @@ describe("ProjectTagger Function", () => {
     expect(add).toHaveBeenCalledWith(CDK.TAG.STACK, "MOCK_STACK_NAME");
   });
   it("Will not tag stackName if not passed", () => {
-    /* eslint-disable no-shadow */
     const add = jest.fn();
     const of = jest.fn(() => ({ add }));
     const cdk = {
@@ -63,7 +62,7 @@ describe("ProjectTagger Function", () => {
         of,
       },
     };
-    /* eslint-enable no-shadow */
+
     const response = projectTagger({
       cdk,
       stack: "MOCK_STACK",

@@ -62,7 +62,6 @@ type LambdaModule = {
 const main = async () => {
   const [, , filePath, param1, param2] = process.argv;
   if (!filePath) {
-    // eslint-disable-next-line no-console
     console.error(
       "Usage: bin <file.ts> [exportName|event.json] [event.json|exportName]",
     );
@@ -94,7 +93,6 @@ const main = async () => {
       event = JSON.parse(eventContent);
     } catch (error) {
       if (eventFile) {
-        // eslint-disable-next-line no-console
         console.error("Error reading event file:", error);
         process.exit(1);
       }
@@ -110,30 +108,27 @@ const main = async () => {
       const handler = module[exportName];
       if (typeof handler === "function") {
         const response = await handler(event);
-        // eslint-disable-next-line no-console
+
         console.dir(response, { depth: 3 });
       } else {
-        // eslint-disable-next-line no-console
         console.error(`Export "${exportName}" not found or not a function.`);
         process.exit(1);
       }
     } else {
       if (typeof module.default === "function") {
         const response = await module.default(event);
-        // eslint-disable-next-line no-console
+
         console.dir(response, { depth: 3 });
       } else if (typeof module.handler === "function") {
         const response = await module.handler(event);
-        // eslint-disable-next-line no-console
+
         console.dir(response, { depth: 3 });
       } else {
-        // eslint-disable-next-line no-console
         console.error("No callable function found (default or handler).");
         process.exit(1);
       }
     }
   } catch (error) {
-    // eslint-disable-next-line no-console
     console.error("Error loading module:", error);
     process.exit(1);
   }

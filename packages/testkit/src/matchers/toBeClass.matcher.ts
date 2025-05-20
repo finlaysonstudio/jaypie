@@ -9,10 +9,8 @@ const toBeClass = (received: unknown): MatcherResult => {
   let pass = false;
   if (typeof received === "function") {
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       new (received as any)();
       pass = true;
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
       pass = false;
     }

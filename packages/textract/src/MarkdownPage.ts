@@ -167,7 +167,6 @@ export default class MarkdownPage {
     const warnIds = missingIds.filter((id) => !missingIgnoreIds.includes(id));
 
     if (warnIds.length > 0) {
-      // eslint-disable-next-line no-console
       console.warn("[textract] Incomplete JSON to markdown conversion");
       log.warn("[textract] Incomplete JSON to markdown conversion");
       log.var({

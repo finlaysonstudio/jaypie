@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 import { DEFAULT, LEVEL } from "./constants.js";
 import stringify from "./stringify.js";
 

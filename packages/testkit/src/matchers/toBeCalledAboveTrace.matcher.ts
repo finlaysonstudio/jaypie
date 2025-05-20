@@ -19,7 +19,6 @@ const calledAboveTrace = (log: LogMock): MatcherResult => {
         pass: true,
       };
     }
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
   } catch (error) {
     throw Error(`[calledAboveTrace] log is not a mock object`);
   }

@@ -212,7 +212,7 @@ export class AnthropicProvider implements LlmProvider {
   // This will be properly implemented in the "Tool Calling Implementation" task
   async operate(
     input: string | LlmHistory | LlmInputMessage,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
     _options: LlmOperateOptions = {},
   ): Promise<LlmOperateResponse> {
     throw new Error(
