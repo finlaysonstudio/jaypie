@@ -38,7 +38,12 @@ describe("Textract JSON to Markdown Local Files", () => {
       for (const file of jsonFiles) {
         const filePath = path.join(FIXTURES_DIR, file);
         const fileBuffer = await readFile(filePath);
-        const completeDocument = JSON.parse(fileBuffer.toString());
+        const jsonData = JSON.parse(fileBuffer.toString());
+
+        // Check if this is a MongoDB document with raw textract data
+        const completeDocument = jsonData.raw
+          ? JSON.parse(jsonData.raw)
+          : jsonData;
 
         const result = textractJsonToMarkdown(completeDocument);
         expect(result).toBeDefined();
