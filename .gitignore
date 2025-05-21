@@ -30,3 +30,4 @@ pnpm-debug.log*
 *.sw?
 
 **/.claude/settings.local.json
+/packages/textract/src/__tests__/__fixtures__/local
