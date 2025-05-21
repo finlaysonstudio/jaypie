@@ -21,6 +21,7 @@ const FIXTURES_DIR = "./packages/textract/src/__tests__/__fixtures__/local";
 describe("Textract JSON to Markdown Local Files", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.spyOn(console, "warn");
   });
 
   it("Processes local JSON files", async () => {
@@ -49,7 +50,9 @@ describe("Textract JSON to Markdown Local Files", () => {
         expect(result).toBeDefined();
         expect(result).toBeString();
         expect(result).not.toBeEmpty();
+        expect(log.warn).not.toHaveBeenCalled();
         expect(log).not.toBeCalledAboveTrace();
+        expect(console.warn).not.toHaveBeenCalled();
       }
     } catch (error: any) {
       if (error.code === "ENOENT") {
