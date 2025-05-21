@@ -3,7 +3,12 @@ import {
   StartDocumentAnalysisCommand,
   TextractClient,
 } from "@aws-sdk/client-textract";
-import { ConfigurationError, JAYPIE, log as defaultLogger } from "@jaypie/core";
+import {
+  ConfigurationError,
+  JAYPIE,
+  log as defaultLogger,
+  sleep,
+} from "@jaypie/core";
 import { StandardRetryStrategy } from "@aws-sdk/middleware-retry";
 
 //
@@ -13,7 +18,7 @@ import { StandardRetryStrategy } from "@aws-sdk/middleware-retry";
 
 const AWS_REGION = "us-east-1";
 const MAX_RETRIES = 5; // Increased from default 3
-const RETRY_DELAY = 300; // Base delay in ms
+const RETRY_DELAY = 600; // 100 requests per minute
 
 const DEFAULT_FEATURE_TYPES = [
   FeatureType.FORMS,
@@ -33,6 +38,7 @@ const sendTextractJob = async ({
   featureTypes = DEFAULT_FEATURE_TYPES,
   snsRoleArn = process.env.CDK_ENV_SNS_ROLE_ARN,
   snsTopicArn = process.env.CDK_ENV_SNS_TOPIC_ARN,
+  throttle = true,
 }) => {
   if (!key || !bucket) {
     throw new ConfigurationError("[sendTextractJob] Missing key or bucket");
@@ -65,6 +71,11 @@ const sendTextractJob = async ({
   try {
     const command = new StartDocumentAnalysisCommand(params);
     const response = await client.send(command);
+
+    if (throttle) {
+      await sleep(RETRY_DELAY);
+    }
+
     return response.JobId;
   } catch (error) {
     if (error.name === "ProvisionedThroughputExceededException") {
