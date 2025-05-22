@@ -128,46 +128,42 @@ export default class MarkdownPage {
     }
 
     // Process
-    const frontMatter = Object.entries(metadata)
-      .map(([key, value]) => `${key}: ${value}`)
-      .join("\n");
-    renderItems.push(`---\n${frontMatter}\n---` as unknown as TextractItem);
 
     const tableWordIds: string[] = [];
     let lineIndex = 0;
     let printed = false;
-    console.log("layoutItems.length :>> ", layoutItems.length);
-    console.log("lines.length :>> ", lines.length);
     for (const item of layoutItems) {
       let line = lines[lineIndex];
       const itemFirstWord = getItemFirstWord(item);
       let same = sameFirstWord(item, line);
       if (same) {
-        console.log("sameFirstWord:", itemFirstWord.text);
         lineIndex++;
       } else {
-        // Find out if line is already part of renderItems
-        // console.log(itemFirstWord.text, " <> ", line.text);
-        if (!printed) {
-          // console.log(
-          //   "renderedIds :>> ",
-          //   renderedIds.map((id) => this._page.getItemByBlockId(id).text),
-          // );
-          console.log("Bad line?:", line.text);
+        while (!same && lineIndex < lines.length) {
+          // console.log("Bad line?:", line.text);
           if (renderedIds.includes(line.id)) {
-            console.log("Found:", line.text);
+            // console.log("Found:", line.text);
           } else {
-            console.log("Missing:", line.text);
             const words = line.listWords();
+            let missingWords = 0;
             words.forEach((word) => {
               if (renderedIds.includes(word.id)) {
-                console.log("Found:", word.text);
+                // console.log("Found:", word.text);
               } else {
-                console.log("Missing:", word.text);
+                missingWords++;
               }
             });
+            if (missingWords > 0) {
+              renderItems.push(line);
+              renderedIds.push(line.id);
+              getItemContent(line, {
+                returnedIds: renderedIds,
+              });
+            }
           }
-          printed = true;
+          lineIndex++;
+          line = lines[lineIndex];
+          same = sameFirstWord(item, line);
         }
       }
       if (
@@ -200,6 +196,29 @@ export default class MarkdownPage {
       }
     }
 
+    if (lineIndex < lines.length) {
+      while (lineIndex < lines.length) {
+        const line = lines[lineIndex];
+        if (!renderedIds.includes(line.id)) {
+          const words = line.listWords();
+          let missingWords = 0;
+          words.forEach((word) => {
+            if (!renderedIds.includes(word.id)) {
+              missingWords++;
+            }
+          });
+          if (missingWords > 0) {
+            renderItems.push(line);
+            renderedIds.push(line.id);
+            getItemContent(line, {
+              returnedIds: renderedIds,
+            });
+          }
+        }
+        lineIndex++;
+      }
+    }
+
     const content = renderItems
       .map((item) => getItemContent(item, { returnedIds }))
       .join("\n\n");
@@ -227,15 +246,61 @@ export default class MarkdownPage {
       }
     }
 
-    const warnIds = missingIds.filter((id) => !missingIgnoreIds.includes(id));
+    let warnIds = missingIds.filter((id) => !missingIgnoreIds.includes(id));
 
     if (warnIds.length > 0) {
-      console.warn("[textract] Incomplete JSON to markdown conversion");
-      log.warn("[textract] Incomplete JSON to markdown conversion");
-      log.var({ missingIds: warnIds.length });
+      let lastSet = {
+        key: null as string | null,
+        value: null as string | null,
+      };
+      // Figure out what to do with missing ids
+      for (const id of warnIds) {
+        const item = this._page.getItemByBlockId(id);
+        // For key value sets, for now, add to the metadata
+        if (item.blockType === "KEY_VALUE_SET") {
+          const keyValueContent = item.listContent?.();
+          if (keyValueContent) {
+            keyValueContent.forEach((content) => {
+              if (content.blockType === "SELECTION_ELEMENT") {
+                // Value
+                lastSet.value = content.text;
+              } else {
+                // Key
+                if (lastSet.key === null) {
+                  lastSet.key = content.text;
+                } else {
+                  lastSet.key = lastSet.key + " " + content.text;
+                }
+              }
+              if (lastSet.key !== null && lastSet.value !== null) {
+                metadata[lastSet.key] = lastSet.value;
+                lastSet.key = null;
+                lastSet.value = null;
+                // If we are doing this, remove the id from the warnIds array
+                warnIds = warnIds.filter((i) => i !== id);
+              }
+            });
+          }
+        }
+      }
+      if (warnIds.length > 0) {
+        console.warn(
+          `[textract] ${warnIds.length} incomplete JSON to markdown conversion`,
+        );
+        log.warn("[textract] Incomplete JSON to markdown conversion");
+        log.var({ missingIds: warnIds.length });
+      }
     }
 
-    return content;
+    const frontMatter = Object.entries(metadata)
+      .map(([key, value]) => `${key}: ${value}`)
+      .join("\n");
+
+    return `---
+${frontMatter}
+---
+
+${content}`;
   }
 
   get _layout() {
