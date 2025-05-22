@@ -169,12 +169,7 @@ export default class MarkdownPage {
     if (warnIds.length > 0) {
       console.warn("[textract] Incomplete JSON to markdown conversion");
       log.warn("[textract] Incomplete JSON to markdown conversion");
-      log.var({
-        missingIds: {
-          length: warnIds.length,
-          ids: warnIds,
-        },
-      });
+      log.var({ missingIds: warnIds.length });
     }
 
     return content;
