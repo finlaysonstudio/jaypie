@@ -154,14 +154,19 @@ export default class MarkdownPage {
           //   renderedIds.map((id) => this._page.getItemByBlockId(id).text),
           // );
           console.log("Bad line?:", line.text);
-          const words = line.listWords();
-          words.forEach((word) => {
-            if (renderedIds.includes(word.id)) {
-              console.log("Found:", word.text);
-            } else {
-              console.log("Missing:", word.text);
-            }
-          });
+          if (renderedIds.includes(line.id)) {
+            console.log("Found:", line.text);
+          } else {
+            console.log("Missing:", line.text);
+            const words = line.listWords();
+            words.forEach((word) => {
+              if (renderedIds.includes(word.id)) {
+                console.log("Found:", word.text);
+              } else {
+                console.log("Missing:", word.text);
+              }
+            });
+          }
           printed = true;
         }
       }
