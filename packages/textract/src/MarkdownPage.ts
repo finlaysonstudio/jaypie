@@ -97,6 +97,7 @@ export default class MarkdownPage {
     const renderItems: TextractItem[] = [];
     const returnedIds: string[] = [this._page.id];
     const signatures = this._page.listSignatures();
+    const lines = this._page.listLines();
 
     // Preprocess
     if (signatures.length > 0) {
