@@ -10,6 +10,25 @@ const TEXTRACT = {
   },
 } as const;
 
+/**
+ * Compare the first word of multiple Textract items
+ * @param items - The items to compare
+ * @returns true if all items have the same first word, false otherwise
+ */
+function sameFirstWord(...items: TextractItem[]): boolean {
+  if (items.length < 2) return true;
+
+  const firstWords = items.map((item) => {
+    const firstWord = getItemFirstWord(item);
+    return firstWord && typeof firstWord === "object" && "id" in firstWord
+      ? firstWord.id
+      : firstWord;
+  });
+
+  const firstId = firstWords[0];
+  return firstWords.every((id) => id === firstId);
+}
+
 function getTableWordIds(table: TextractItem): string[] {
   const wordIds: string[] = [];
 
@@ -96,6 +115,7 @@ export default class MarkdownPage {
     const layoutItems = this._page.layout.listItems();
     const renderItems: TextractItem[] = [];
     const returnedIds: string[] = [this._page.id];
+    const renderedIds: string[] = [this._page.id];
     const signatures = this._page.listSignatures();
     const lines = this._page.listLines();
 
@@ -114,8 +134,37 @@ export default class MarkdownPage {
     renderItems.push(`---\n${frontMatter}\n---` as unknown as TextractItem);
 
     const tableWordIds: string[] = [];
-    layoutItems.forEach((item) => {
+    let lineIndex = 0;
+    let printed = false;
+    console.log("layoutItems.length :>> ", layoutItems.length);
+    console.log("lines.length :>> ", lines.length);
+    for (const item of layoutItems) {
+      let line = lines[lineIndex];
       const itemFirstWord = getItemFirstWord(item);
+      let same = sameFirstWord(item, line);
+      if (same) {
+        console.log("sameFirstWord:", itemFirstWord.text);
+        lineIndex++;
+      } else {
+        // Find out if line is already part of renderItems
+        // console.log(itemFirstWord.text, " <> ", line.text);
+        if (!printed) {
+          // console.log(
+          //   "renderedIds :>> ",
+          //   renderedIds.map((id) => this._page.getItemByBlockId(id).text),
+          // );
+          console.log("Bad line?:", line.text);
+          const words = line.listWords();
+          words.forEach((word) => {
+            if (renderedIds.includes(word.id)) {
+              console.log("Found:", word.text);
+            } else {
+              console.log("Missing:", word.text);
+            }
+          });
+          printed = true;
+        }
+      }
       if (
         itemFirstWord &&
         typeof itemFirstWord === "object" &&
@@ -127,16 +176,24 @@ export default class MarkdownPage {
           tableWordIds.push(...getTableWordIds(table));
           returnedIds.push(table.id);
           renderItems.push(table);
+          renderedIds.push(table.id);
+          getItemContent(table, {
+            returnedIds: renderedIds,
+          });
         } else {
           if (itemFirstWord.id && tableWordIds.includes(itemFirstWord.id)) {
-            return;
+            continue;
           }
           renderItems.push(item);
+          renderedIds.push(item.id);
+          getItemContent(item, {
+            returnedIds: renderedIds,
+          });
         }
       } else {
         log.warn(`[textract] Item with no first word: ${item.id}`);
       }
-    });
+    }
 
     const content = renderItems
       .map((item) => getItemContent(item, { returnedIds }))
