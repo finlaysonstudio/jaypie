@@ -1,9 +1,9 @@
 import { getEnvSecret } from "@jaypie/aws";
 import Anthropic from "@anthropic-ai/sdk";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { z } from "zod";
+import { z } from "zod/v4";
 import { AnthropicProvider } from "../AnthropicProvider.class.js";
-import { PROVIDER } from "../../constants.js";
+import { PROVIDER } from "../../../constants.js";
 
 // Create a mock implementation for Anthropic client
 vi.mock("@anthropic-ai/sdk", () => {
@@ -12,9 +12,14 @@ vi.mock("@anthropic-ai/sdk", () => {
   };
 });
 
-vi.mock("@jaypie/aws", () => ({
-  getEnvSecret: vi.fn(),
-}));
+vi.mock("@jaypie/aws", async () => {
+  const actual = await vi.importActual("@jaypie/aws");
+  const module = {
+    ...actual,
+    getEnvSecret: vi.fn(() => "MOCK_VALUE"),
+  };
+  return module;
+});
 
 describe("AnthropicProvider", () => {
   beforeEach(() => {
@@ -75,6 +80,44 @@ describe("AnthropicProvider", () => {
       provider["apiKey"] = "test-key"; // Set API key directly to avoid configuration error
       await expect(provider.operate("test")).rejects.toThrowError(
         "The operate method is not yet implemented for AnthropicProvider",
+      );
+    });
+
+    it("throws error when JSON response does not match schema", async () => {
+      const mockResponse = {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({
+              salutation: "Hello",
+              // Missing required 'name' field
+            }),
+          },
+        ],
+      };
+
+      const mockCreate = vi.fn().mockResolvedValue(mockResponse);
+      vi.mocked(Anthropic).mockImplementation(
+        () =>
+          ({
+            messages: {
+              create: mockCreate,
+            },
+          }) as any,
+      );
+
+      const provider = new AnthropicProvider();
+      const GreetingFormat = z.object({
+        salutation: z.string(),
+        name: z.string(),
+      });
+
+      await expect(
+        provider.send("Hello, World", {
+          response: GreetingFormat,
+        }),
+      ).rejects.toThrowError(
+        "Failed to parse structured response from Anthropic",
       );
     });
   });

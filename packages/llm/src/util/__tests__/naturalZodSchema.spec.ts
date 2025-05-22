@@ -12,18 +12,18 @@ describe("naturalInterfaceZodSchema", () => {
     it("works", () => {
       const result = naturalZodSchema({});
       expect(result).toBeDefined();
-      expect(result).toBeInstanceOf(z.ZodType);
+      expect(result._def.type).toBe("record");
     });
   });
 
   // Happy Paths
   describe("Happy Paths", () => {
     it("handles primitive types directly", () => {
-      expect(naturalZodSchema(String)).toBeInstanceOf(z.ZodString);
-      expect(naturalZodSchema(Number)).toBeInstanceOf(z.ZodNumber);
-      expect(naturalZodSchema(Boolean)).toBeInstanceOf(z.ZodBoolean);
-      expect(naturalZodSchema(Object)).toBeInstanceOf(z.ZodRecord);
-      expect(naturalZodSchema(Array)).toBeInstanceOf(z.ZodArray);
+      expect(naturalZodSchema(String)._def.type).toBe("string");
+      expect(naturalZodSchema(Number)._def.type).toBe("number");
+      expect(naturalZodSchema(Boolean)._def.type).toBe("boolean");
+      expect(naturalZodSchema(Object)._def.type).toBe("record");
+      expect(naturalZodSchema(Array)._def.type).toBe("array");
 
       // Test validation
       const stringSchema = naturalZodSchema(String);

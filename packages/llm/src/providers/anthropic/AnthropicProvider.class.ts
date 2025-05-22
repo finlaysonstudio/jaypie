@@ -1,6 +1,6 @@
-import { JsonObject } from "@jaypie/types";
+import { JsonObject, NaturalSchema } from "@jaypie/types";
 import Anthropic from "@anthropic-ai/sdk";
-import { PROVIDER } from "../constants.js";
+import { PROVIDER } from "../../constants.js";
 import {
   LlmHistory,
   LlmInputMessage,
@@ -9,15 +9,15 @@ import {
   LlmOperateResponse,
   LlmProvider,
   LlmHistoryItem,
-} from "../types/LlmProvider.interface.js";
-import { naturalZodSchema } from "../util/index.js";
-import { z } from "zod";
+} from "../../types/LlmProvider.interface.js";
+import { naturalZodSchema } from "../../util/index.js";
+import { z } from "zod/v4";
 import {
   getLogger,
   initializeClient,
   prepareMessages,
   formatSystemMessage,
-} from "./anthropic/index.js";
+} from "./index.js";
 
 // Main class implementation
 export class AnthropicProvider implements LlmProvider {
@@ -79,7 +79,7 @@ export class AnthropicProvider implements LlmProvider {
     client: Anthropic,
     messages: Anthropic.MessageParam[],
     model: string,
-    responseSchema: z.ZodType | JsonObject,
+    responseSchema: z.ZodType | NaturalSchema,
     systemMessage?: string,
   ): Promise<JsonObject> {
     this.log.trace("Using structured output");
@@ -88,15 +88,13 @@ export class AnthropicProvider implements LlmProvider {
     const schema =
       responseSchema instanceof z.ZodType
         ? responseSchema
-        : naturalZodSchema(responseSchema as JsonObject);
+        : naturalZodSchema(responseSchema as NaturalSchema);
 
     // Set system message with JSON instructions
     const defaultSystemPrompt =
       "You will be responding with structured JSON data. " +
       "Format your entire response as a valid JSON object with the following structure: " +
-      (responseSchema instanceof z.ZodType
-        ? JSON.stringify(this.simplifyZodSchema(schema))
-        : JSON.stringify(responseSchema));
+      JSON.stringify(z.toJSONSchema(schema));
 
     const systemPrompt = systemMessage || defaultSystemPrompt;
 
@@ -124,6 +122,11 @@ export class AnthropicProvider implements LlmProvider {
           // Parse the JSON response
           const jsonStr = jsonMatch[1] || jsonMatch[0];
           const result = JSON.parse(jsonStr);
+          if (!schema.parse(result)) {
+            throw new Error(
+              `JSON response from Anthropic does not match schema: ${responseText}`,
+            );
+          }
           this.log.trace("Received structured response", { result });
           return result;
         } catch {
@@ -186,16 +189,11 @@ export class AnthropicProvider implements LlmProvider {
     }
 
     if (options?.response) {
-      const schema =
-        options.response instanceof z.ZodType
-          ? options.response
-          : naturalZodSchema(options.response);
-
       return this.createStructuredCompletion(
         client,
         messages,
         modelToUse,
-        schema,
+        options.response,
         systemMessage,
       );
     }

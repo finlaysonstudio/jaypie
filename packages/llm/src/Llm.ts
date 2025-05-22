@@ -9,7 +9,7 @@ import {
   LlmOperateResponse,
 } from "./types/LlmProvider.interface.js";
 import { OpenAiProvider } from "./providers/openai/index.js";
-import { AnthropicProvider } from "./providers/AnthropicProvider.class.js";
+import { AnthropicProvider } from "./providers/anthropic/AnthropicProvider.class.js";
 
 class Llm implements LlmProvider {
   private _provider: LlmProviderName;
