@@ -215,12 +215,7 @@ export async function operate(
     output: [],
     responses: [],
     status: LlmResponseStatus.InProgress,
-    usage: {
-      input: 0,
-      output: 0,
-      reasoning: 0,
-      total: 0,
-    },
+    usage: [], // Initialize as empty array, will add entry for each response
   };
 
   // Convert string input to array format with placeholders if needed
@@ -312,17 +307,17 @@ export async function operate(
         // Add the response to the responses array
         returnResponse.responses.push(currentResponse);
 
-        // Accumulate token usage from the current response
+        // Add a new usage entry for each response instead of accumulating
         if (currentResponse.usage) {
-          returnResponse.usage.input += currentResponse.usage.input_tokens || 0;
-          returnResponse.usage.output +=
-            currentResponse.usage.output_tokens || 0;
-          returnResponse.usage.total += currentResponse.usage.total_tokens || 0;
-          if (currentResponse.usage.output_tokens_details?.reasoning_tokens) {
-            returnResponse.usage.reasoning =
-              (returnResponse.usage.reasoning || 0) +
-              currentResponse.usage.output_tokens_details.reasoning_tokens;
-          }
+          // Create new usage item for this response
+          returnResponse.usage.push({
+            input: currentResponse.usage.input_tokens || 0,
+            output: currentResponse.usage.output_tokens || 0,
+            total: currentResponse.usage.total_tokens || 0,
+            reasoning: currentResponse.usage.output_tokens_details?.reasoning_tokens || 0,
+            provider: PROVIDER.OPENAI.NAME,
+            model: options?.model || PROVIDER.OPENAI.MODEL.DEFAULT,
+          });
         }
 
         // Check if we need to process function calls for multi-turn conversations

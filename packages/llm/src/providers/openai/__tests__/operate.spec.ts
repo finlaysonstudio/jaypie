@@ -101,7 +101,56 @@ describe("operate", () => {
 
   describe("Features", () => {
     describe("Token Counting", () => {
-      it("Accumulates input tokens across turns", async () => {
+      it("Supports multiple usage items from different providers", async () => {
+        // Setup
+        const mockResponse = {
+          id: "resp_123",
+          output: [
+            {
+              type: LlmMessageType.Message,
+              content: [{ type: LlmMessageType.OutputText, text: "Response" }],
+              role: LlmMessageRole.Assistant,
+            },
+          ],
+          usage: {
+            input_tokens: 10,
+            output_tokens: 20,
+            total_tokens: 30,
+          },
+        };
+        
+        mockCreate.mockResolvedValueOnce(mockResponse);
+        
+        // Execute with standard options
+        const result = await operate("Test input", {}, { client: mockClient });
+        
+        // Add a second usage item manually (simulating a different provider)
+        result.usage.push({
+          input: 15,
+          output: 25,
+          total: 40,
+          reasoning: 0,
+          provider: "another-provider",
+          model: "another-model",
+        });
+        
+        // Verify that we have multiple usage items
+        expect(result.usage).toBeArrayOfSize(2);
+        
+        // Verify the first item (from the original provider)
+        expect(result.usage[0].provider).toBeDefined();
+        expect(result.usage[0].input).toBe(10);
+        expect(result.usage[0].output).toBe(20);
+        expect(result.usage[0].total).toBe(30);
+        
+        // Verify the second item (our manually added one)
+        expect(result.usage[1].provider).toBe("another-provider");
+        expect(result.usage[1].model).toBe("another-model");
+        expect(result.usage[1].input).toBe(15);
+        expect(result.usage[1].output).toBe(25);
+        expect(result.usage[1].total).toBe(40);
+      });
+      it("Tracks input tokens for each turn", async () => {
         // Setup - Create mock responses for each turn
         const mockResponse1 = {
           id: "resp_123",
@@ -179,10 +228,22 @@ describe("operate", () => {
           { client: mockClient },
         );
 
-        // Verify the total input tokens are accumulated
-        expect(result.usage.input).toBe(30); // 10 + 20
+        // Verify a separate usage item is created for each response
+        expect(result.usage.length).toBe(2);
+        
+        // Verify first response usage
+        expect(result.usage[0].input).toBe(10);
+        expect(result.usage[0].output).toBe(5);
+        expect(result.usage[0].total).toBe(15);
+        expect(result.usage[0].provider).toBeDefined();
+        expect(result.usage[0].model).toBeDefined();
+        
+        // Verify second response usage
+        expect(result.usage[1].input).toBe(20);
+        expect(result.usage[1].output).toBe(10);
+        expect(result.usage[1].total).toBe(30);
       });
-      it("Accumulates output tokens across turns", async () => {
+      it("Tracks output tokens for each turn", async () => {
         // Setup - Create mock responses for each turn
         const mockResponse1 = {
           id: "resp_123",
@@ -260,10 +321,20 @@ describe("operate", () => {
           { client: mockClient },
         );
 
-        // Verify the total output tokens are accumulated
-        expect(result.usage.output).toBe(15); // 5 + 10
+        // Verify a separate usage item is created for each response
+        expect(result.usage.length).toBe(2);
+        
+        // Verify first response usage
+        expect(result.usage[0].input).toBe(10);
+        expect(result.usage[0].output).toBe(5);
+        expect(result.usage[0].total).toBe(15);
+        
+        // Verify second response usage
+        expect(result.usage[1].input).toBe(20);
+        expect(result.usage[1].output).toBe(10);
+        expect(result.usage[1].total).toBe(30);
       });
-      it("Accumulates total tokens across turns", async () => {
+      it("Tracks total tokens for each turn", async () => {
         // Setup - Create mock responses for each turn
         const mockResponse1 = {
           id: "resp_123",
@@ -341,10 +412,20 @@ describe("operate", () => {
           { client: mockClient },
         );
 
-        // Verify the total tokens are accumulated
-        expect(result.usage.total).toBe(45); // 15 + 30
+        // Verify a separate usage item is created for each response
+        expect(result.usage.length).toBe(2);
+        
+        // Verify first response usage
+        expect(result.usage[0].input).toBe(10);
+        expect(result.usage[0].output).toBe(5);
+        expect(result.usage[0].total).toBe(15);
+        
+        // Verify second response usage
+        expect(result.usage[1].input).toBe(20);
+        expect(result.usage[1].output).toBe(10);
+        expect(result.usage[1].total).toBe(30);
       });
-      it("Includes reasoning tokens when provided", async () => {
+      it("Tracks reasoning tokens for each turn when provided", async () => {
         // Setup - Create mock responses for each turn
         const mockResponse1 = {
           id: "resp_123",
@@ -422,8 +503,20 @@ describe("operate", () => {
           { client: mockClient },
         );
 
-        // Verify the reasoning tokens are accumulated
-        expect(result.usage.reasoning).toBe(5); // 2 + 3
+        // Verify a separate usage item is created for each response
+        expect(result.usage.length).toBe(2);
+        
+        // Verify first response usage with reasoning tokens
+        expect(result.usage[0].input).toBe(10);
+        expect(result.usage[0].output).toBe(5);
+        expect(result.usage[0].reasoning).toBe(2);
+        expect(result.usage[0].total).toBe(15);
+        
+        // Verify second response usage with reasoning tokens
+        expect(result.usage[1].input).toBe(20);
+        expect(result.usage[1].output).toBe(10);
+        expect(result.usage[1].reasoning).toBe(3);
+        expect(result.usage[1].total).toBe(30);
       });
       it("Returns zero for missing token counts", async () => {
         // Setup - Create mock responses for each turn
@@ -494,11 +587,16 @@ describe("operate", () => {
           { client: mockClient },
         );
 
-        // Verify missing token counts are handled gracefully
-        expect(result.usage.input).toBe(20); // Only from second response
-        expect(result.usage.output).toBe(0); // Missing in both responses
-        expect(result.usage.total).toBe(0); // Missing in both responses
-        expect(result.usage.reasoning).toBe(0); // Missing in both responses
+        // Verify a separate usage item is created only for responses with usage info
+        expect(result.usage.length).toBe(1);
+        
+        // Verify second response usage with missing token counts
+        expect(result.usage[0].input).toBe(20); // Only from second response
+        expect(result.usage[0].output).toBe(0); // Missing in the response
+        expect(result.usage[0].total).toBe(0); // Missing in the response 
+        expect(result.usage[0].reasoning).toBe(0); // Missing in the response
+        expect(result.usage[0].provider).toBeDefined();
+        expect(result.usage[0].model).toBeDefined();
       });
     });
 

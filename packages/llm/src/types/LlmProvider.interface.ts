@@ -194,12 +194,16 @@ export interface LlmOptions {
 
 // Responses
 
-interface LlmUsage {
+export interface LlmUsageItem {
   input: number;
   output: number;
   reasoning: number;
   total: number;
+  provider?: string;
+  model?: string;
 }
+
+export type LlmUsage = LlmUsageItem[];
 
 export interface LlmOperateResponse {
   content?: string | JsonObject;
