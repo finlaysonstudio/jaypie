@@ -101,7 +101,56 @@ describe("operate", () => {
 
   describe("Features", () => {
     describe("Token Counting", () => {
-      it("Accumulates input tokens across turns", async () => {
+      it("Supports multiple usage items from different providers", async () => {
+        // Setup
+        const mockResponse = {
+          id: "resp_123",
+          output: [
+            {
+              type: LlmMessageType.Message,
+              content: [{ type: LlmMessageType.OutputText, text: "Response" }],
+              role: LlmMessageRole.Assistant,
+            },
+          ],
+          usage: {
+            input_tokens: 10,
+            output_tokens: 20,
+            total_tokens: 30,
+          },
+        };
+
+        mockCreate.mockResolvedValueOnce(mockResponse);
+
+        // Execute with standard options
+        const result = await operate("Test input", {}, { client: mockClient });
+
+        // Add a second usage item manually (simulating a different provider)
+        result.usage.push({
+          input: 15,
+          output: 25,
+          total: 40,
+          reasoning: 0,
+          provider: "another-provider",
+          model: "another-model",
+        });
+
+        // Verify that we have multiple usage items
+        expect(result.usage).toBeArrayOfSize(2);
+
+        // Verify the first item (from the original provider)
+        expect(result.usage[0].provider).toBeDefined();
+        expect(result.usage[0].input).toBe(10);
+        expect(result.usage[0].output).toBe(20);
+        expect(result.usage[0].total).toBe(30);
+
+        // Verify the second item (our manually added one)
+        expect(result.usage[1].provider).toBe("another-provider");
+        expect(result.usage[1].model).toBe("another-model");
+        expect(result.usage[1].input).toBe(15);
+        expect(result.usage[1].output).toBe(25);
+        expect(result.usage[1].total).toBe(40);
+      });
+      it("Tracks input tokens for each turn", async () => {
         // Setup - Create mock responses for each turn
         const mockResponse1 = {
           id: "resp_123",
@@ -179,10 +228,22 @@ describe("operate", () => {
           { client: mockClient },
         );
 
-        // Verify the total input tokens are accumulated
-        expect(result.usage.input).toBe(30); // 10 + 20
+        // Verify a separate usage item is created for each response
+        expect(result.usage.length).toBe(2);
+
+        // Verify first response usage
+        expect(result.usage[0].input).toBe(10);
+        expect(result.usage[0].output).toBe(5);
+        expect(result.usage[0].total).toBe(15);
+        expect(result.usage[0].provider).toBeDefined();
+        expect(result.usage[0].model).toBeDefined();
+
+        // Verify second response usage
+        expect(result.usage[1].input).toBe(20);
+        expect(result.usage[1].output).toBe(10);
+        expect(result.usage[1].total).toBe(30);
       });
-      it("Accumulates output tokens across turns", async () => {
+      it("Tracks output tokens for each turn", async () => {
         // Setup - Create mock responses for each turn
         const mockResponse1 = {
           id: "resp_123",
@@ -260,10 +321,20 @@ describe("operate", () => {
           { client: mockClient },
         );
 
-        // Verify the total output tokens are accumulated
-        expect(result.usage.output).toBe(15); // 5 + 10
+        // Verify a separate usage item is created for each response
+        expect(result.usage.length).toBe(2);
+
+        // Verify first response usage
+        expect(result.usage[0].input).toBe(10);
+        expect(result.usage[0].output).toBe(5);
+        expect(result.usage[0].total).toBe(15);
+
+        // Verify second response usage
+        expect(result.usage[1].input).toBe(20);
+        expect(result.usage[1].output).toBe(10);
+        expect(result.usage[1].total).toBe(30);
       });
-      it("Accumulates total tokens across turns", async () => {
+      it("Tracks total tokens for each turn", async () => {
         // Setup - Create mock responses for each turn
         const mockResponse1 = {
           id: "resp_123",
@@ -341,10 +412,20 @@ describe("operate", () => {
           { client: mockClient },
         );
 
-        // Verify the total tokens are accumulated
-        expect(result.usage.total).toBe(45); // 15 + 30
+        // Verify a separate usage item is created for each response
+        expect(result.usage.length).toBe(2);
+
+        // Verify first response usage
+        expect(result.usage[0].input).toBe(10);
+        expect(result.usage[0].output).toBe(5);
+        expect(result.usage[0].total).toBe(15);
+
+        // Verify second response usage
+        expect(result.usage[1].input).toBe(20);
+        expect(result.usage[1].output).toBe(10);
+        expect(result.usage[1].total).toBe(30);
       });
-      it("Includes reasoning tokens when provided", async () => {
+      it("Tracks reasoning tokens for each turn when provided", async () => {
         // Setup - Create mock responses for each turn
         const mockResponse1 = {
           id: "resp_123",
@@ -422,8 +503,20 @@ describe("operate", () => {
           { client: mockClient },
         );
 
-        // Verify the reasoning tokens are accumulated
-        expect(result.usage.reasoning).toBe(5); // 2 + 3
+        // Verify a separate usage item is created for each response
+        expect(result.usage.length).toBe(2);
+
+        // Verify first response usage with reasoning tokens
+        expect(result.usage[0].input).toBe(10);
+        expect(result.usage[0].output).toBe(5);
+        expect(result.usage[0].reasoning).toBe(2);
+        expect(result.usage[0].total).toBe(15);
+
+        // Verify second response usage with reasoning tokens
+        expect(result.usage[1].input).toBe(20);
+        expect(result.usage[1].output).toBe(10);
+        expect(result.usage[1].reasoning).toBe(3);
+        expect(result.usage[1].total).toBe(30);
       });
       it("Returns zero for missing token counts", async () => {
         // Setup - Create mock responses for each turn
@@ -494,11 +587,16 @@ describe("operate", () => {
           { client: mockClient },
         );
 
-        // Verify missing token counts are handled gracefully
-        expect(result.usage.input).toBe(20); // Only from second response
-        expect(result.usage.output).toBe(0); // Missing in both responses
-        expect(result.usage.total).toBe(0); // Missing in both responses
-        expect(result.usage.reasoning).toBe(0); // Missing in both responses
+        // Verify a separate usage item is created only for responses with usage info
+        expect(result.usage.length).toBe(1);
+
+        // Verify second response usage with missing token counts
+        expect(result.usage[0].input).toBe(20); // Only from second response
+        expect(result.usage[0].output).toBe(0); // Missing in the response
+        expect(result.usage[0].total).toBe(0); // Missing in the response
+        expect(result.usage[0].reasoning).toBe(0); // Missing in the response
+        expect(result.usage[0].provider).toBeDefined();
+        expect(result.usage[0].model).toBeDefined();
       });
     });
 
@@ -795,7 +893,7 @@ describe("operate", () => {
           // Execute
           try {
             await operate("test input", {}, { client: mockClient });
-          } catch (error) {
+          } catch {
             // Expected to throw
           }
 
@@ -2071,10 +2169,10 @@ describe("operate", () => {
 
       // Verify the beforeEachTool hook was called with correct parameters
       expect(beforeEachToolSpy).toHaveBeenCalledTimes(1);
-      expect(beforeEachToolSpy).toHaveBeenCalledWith(
-        "test_tool",
-        '{"param":"test"}',
-      );
+      expect(beforeEachToolSpy).toHaveBeenCalledWith({
+        toolName: "test_tool",
+        args: '{"param":"test"}',
+      });
       // Verify the tool was called after the hook
       expect(mockTool.call).toHaveBeenCalledAfter(beforeEachToolSpy);
     });
@@ -2144,11 +2242,11 @@ describe("operate", () => {
 
       // Verify the afterEachTool hook was called with correct parameters
       expect(afterEachToolSpy).toHaveBeenCalledTimes(1);
-      expect(afterEachToolSpy).toHaveBeenCalledWith(
-        toolResult,
-        "test_tool",
-        '{"param":"test"}',
-      );
+      expect(afterEachToolSpy).toHaveBeenCalledWith({
+        result: toolResult,
+        toolName: "test_tool",
+        args: '{"param":"test"}',
+      });
       // Verify the tool was called before the hook
       expect(mockTool.call).toHaveBeenCalledBefore(afterEachToolSpy);
     });
@@ -2205,11 +2303,11 @@ describe("operate", () => {
 
       // Verify the onToolError hook was called with correct parameters
       expect(onToolErrorSpy).toHaveBeenCalledTimes(1);
-      expect(onToolErrorSpy).toHaveBeenCalledWith(
-        toolError,
-        "test_tool",
-        '{"param":"test"}',
-      );
+      expect(onToolErrorSpy).toHaveBeenCalledWith({
+        error: toolError,
+        toolName: "test_tool",
+        args: '{"param":"test"}',
+      });
     });
 
     it("allows beforeEachTool to return a Promise", async () => {
@@ -2357,6 +2455,275 @@ describe("operate", () => {
       ) as LlmToolResult;
 
       expect(JSON.parse(functionCallOutput.output)).toEqual(modifiedResult);
+    });
+
+    describe("Model Hooks", () => {
+      it("calls beforeEachModelRequest hook before making a request", async () => {
+        // Setup
+        const mockResponse = {
+          id: "resp_123",
+          output: [
+            {
+              type: LlmMessageType.Message,
+              content: [{ type: LlmMessageType.OutputText, text: "Response" }],
+              role: LlmMessageRole.Assistant,
+            },
+          ],
+        };
+        mockCreate.mockResolvedValueOnce(mockResponse);
+
+        // Create a spy for the hook
+        const beforeEachModelRequestSpy = vi.fn().mockReturnValue(undefined);
+
+        // Execute with hook
+        await operate(
+          "Test input",
+          {
+            hooks: {
+              beforeEachModelRequest: beforeEachModelRequestSpy,
+            },
+          },
+          { client: mockClient },
+        );
+
+        // Verify the hook was called with correct parameters
+        expect(beforeEachModelRequestSpy).toHaveBeenCalledTimes(1);
+        expect(beforeEachModelRequestSpy).toHaveBeenCalledWith(
+          expect.objectContaining({
+            input: "Test input",
+            options: expect.objectContaining({
+              hooks: expect.objectContaining({
+                beforeEachModelRequest: beforeEachModelRequestSpy,
+              }),
+            }),
+            providerRequest: expect.objectContaining({
+              model: expect.any(String),
+              input: expect.any(Array),
+            }),
+          }),
+        );
+      });
+
+      it("calls afterEachModelResponse hook after receiving a response", async () => {
+        // Setup
+        const mockResponse = {
+          id: "resp_123",
+          output: [
+            {
+              type: LlmMessageType.Message,
+              content: [
+                { type: LlmMessageType.OutputText, text: "Test response" },
+              ],
+              role: LlmMessageRole.Assistant,
+            },
+          ],
+          usage: {
+            input_tokens: 10,
+            output_tokens: 20,
+            total_tokens: 30,
+          },
+        };
+        mockCreate.mockResolvedValueOnce(mockResponse);
+
+        // Create a spy for the hook
+        const afterEachModelResponseSpy = vi.fn().mockReturnValue(undefined);
+
+        // Execute with hook
+        await operate(
+          "Test input",
+          {
+            hooks: {
+              afterEachModelResponse: afterEachModelResponseSpy,
+            },
+          },
+          { client: mockClient },
+        );
+
+        // Verify the hook was called with correct parameters
+        expect(afterEachModelResponseSpy).toHaveBeenCalledTimes(1);
+        expect(afterEachModelResponseSpy).toHaveBeenCalledWith(
+          expect.objectContaining({
+            input: "Test input",
+            options: expect.objectContaining({
+              hooks: expect.objectContaining({
+                afterEachModelResponse: afterEachModelResponseSpy,
+              }),
+            }),
+            providerRequest: expect.objectContaining({
+              model: expect.any(String),
+              input: expect.any(Array),
+            }),
+            providerResponse: mockResponse,
+            content: "Test response",
+            usage: expect.arrayContaining([
+              expect.objectContaining({
+                input: 10,
+                output: 20,
+                total: 30,
+                provider: expect.any(String),
+                model: expect.any(String),
+              }),
+            ]),
+          }),
+        );
+      });
+
+      it("calls onRetryableModelError hook on retryable errors", async () => {
+        // Setup
+        const retryableError = new InternalServerError(
+          500,
+          "Internal Server Error",
+          undefined,
+          {},
+        );
+
+        // First call fails, second succeeds
+        mockCreate.mockRejectedValueOnce(retryableError);
+        const mockResponse = {
+          id: "resp_123",
+          output: [
+            {
+              type: LlmMessageType.Message,
+              content: [
+                {
+                  type: LlmMessageType.OutputText,
+                  text: "Success after retry",
+                },
+              ],
+              role: LlmMessageRole.Assistant,
+            },
+          ],
+        };
+        mockCreate.mockResolvedValueOnce(mockResponse);
+
+        // Create a spy for the hook
+        const onRetryableModelErrorSpy = vi.fn().mockReturnValue(undefined);
+
+        // Execute with hook
+        await operate(
+          "Test input",
+          {
+            hooks: {
+              onRetryableModelError: onRetryableModelErrorSpy,
+            },
+          },
+          { client: mockClient },
+        );
+
+        // Verify the hook was called with correct parameters
+        expect(onRetryableModelErrorSpy).toHaveBeenCalledTimes(1);
+        expect(onRetryableModelErrorSpy).toHaveBeenCalledWith(
+          expect.objectContaining({
+            input: "Test input",
+            options: expect.objectContaining({
+              hooks: expect.objectContaining({
+                onRetryableModelError: onRetryableModelErrorSpy,
+              }),
+            }),
+            providerRequest: expect.objectContaining({
+              model: expect.any(String),
+              input: expect.any(Array),
+            }),
+            error: retryableError,
+          }),
+        );
+      });
+
+      it("calls onUnrecoverableModelError hook on non-retryable errors", async () => {
+        // Setup
+        const nonRetryableError = new AuthenticationError(
+          401,
+          "Authentication error",
+          undefined,
+          {},
+        );
+        mockCreate.mockRejectedValueOnce(nonRetryableError);
+
+        // Create a spy for the hook
+        const onUnrecoverableModelErrorSpy = vi.fn().mockReturnValue(undefined);
+
+        // Execute with hook and expect it to throw
+        await expect(
+          operate(
+            "Test input",
+            {
+              hooks: {
+                onUnrecoverableModelError: onUnrecoverableModelErrorSpy,
+              },
+            },
+            { client: mockClient },
+          ),
+        ).rejects.toThrow();
+
+        // Verify the hook was called with correct parameters
+        expect(onUnrecoverableModelErrorSpy).toHaveBeenCalledTimes(1);
+        expect(onUnrecoverableModelErrorSpy).toHaveBeenCalledWith(
+          expect.objectContaining({
+            input: "Test input",
+            options: expect.objectContaining({
+              hooks: expect.objectContaining({
+                onUnrecoverableModelError: onUnrecoverableModelErrorSpy,
+              }),
+            }),
+            providerRequest: expect.objectContaining({
+              model: expect.any(String),
+              input: expect.any(Array),
+            }),
+            error: nonRetryableError,
+          }),
+        );
+      });
+
+      it("calls onUnrecoverableModelError hook when retries are exhausted", async () => {
+        // Import MAX_RETRIES_DEFAULT_LIMIT to use in test
+        const { MAX_RETRIES_DEFAULT_LIMIT } = await import("../operate");
+
+        // Setup - All calls fail with retryable errors (exceeding retry limit)
+        const retryableError = new InternalServerError(
+          500,
+          "Internal Server Error",
+          undefined,
+          {},
+        );
+
+        for (let i = 0; i <= MAX_RETRIES_DEFAULT_LIMIT; i++) {
+          mockCreate.mockRejectedValueOnce(retryableError);
+        }
+
+        // Create a spy for the hook
+        const onUnrecoverableModelErrorSpy = vi.fn().mockReturnValue(undefined);
+
+        // Execute with hook and expect it to throw
+        await expect(
+          operate(
+            "Test input",
+            {
+              hooks: {
+                onUnrecoverableModelError: onUnrecoverableModelErrorSpy,
+              },
+            },
+            { client: mockClient },
+          ),
+        ).rejects.toThrow();
+
+        // Verify the hook was called with correct parameters
+        expect(onUnrecoverableModelErrorSpy).toHaveBeenCalledTimes(1);
+        expect(onUnrecoverableModelErrorSpy).toHaveBeenCalledWith(
+          expect.objectContaining({
+            input: "Test input",
+            options: expect.objectContaining({
+              hooks: expect.objectContaining({
+                onUnrecoverableModelError: onUnrecoverableModelErrorSpy,
+              }),
+            }),
+            providerRequest: expect.objectContaining({
+              model: expect.any(String),
+              input: expect.any(Array),
+            }),
+            error: retryableError,
+          }),
+        );
+      });
     });
   });
 });
