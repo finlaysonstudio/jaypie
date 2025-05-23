@@ -158,20 +158,77 @@ export interface LlmOperateOptions {
   format?: JsonObject | NaturalSchema | z.ZodType;
   history?: LlmHistory;
   hooks?: {
-    afterEachTool?: (
-      result: unknown,
-      toolName: string,
-      args: string,
-    ) => unknown | Promise<unknown>;
-    beforeEachTool?: (
-      toolName: string,
-      args: string,
-    ) => unknown | Promise<unknown>;
-    onToolError?: (
-      error: Error,
-      toolName: string,
-      args: string,
-    ) => unknown | Promise<unknown>;
+    afterEachModelResponse?: ({
+      input,
+      options,
+      providerRequest,
+      providerResponse,
+      content,
+      usage,
+    }: {
+      input: string | LlmHistory | LlmInputMessage;
+      options?: LlmOperateOptions;
+      providerRequest: any;
+      providerResponse: any;
+      content: string | JsonObject;
+      usage: LlmUsage;
+    }) => unknown | Promise<unknown>;
+    afterEachTool?: ({
+      result,
+      toolName,
+      args,
+    }: {
+      result: unknown;
+      toolName: string;
+      args: string;
+    }) => unknown | Promise<unknown>;
+    beforeEachModelRequest?: ({
+      input,
+      options,
+      providerRequest,
+    }: {
+      input: string | LlmHistory | LlmInputMessage;
+      options?: LlmOperateOptions;
+      providerRequest: any;
+    }) => unknown | Promise<unknown>;
+    beforeEachTool?: ({
+      toolName,
+      args,
+    }: {
+      toolName: string;
+      args: string;
+    }) => unknown | Promise<unknown>;
+    onRetryableModelError?: ({
+      input,
+      options,
+      providerRequest,
+      error,
+    }: {
+      input: string | LlmHistory | LlmInputMessage;
+      options?: LlmOperateOptions;
+      providerRequest: any;
+      error: any;
+    }) => unknown | Promise<unknown>;
+    onToolError?: ({
+      error,
+      toolName,
+      args,
+    }: {
+      error: Error;
+      toolName: string;
+      args: string;
+    }) => unknown | Promise<unknown>;
+    onUnrecoverableModelError?: ({
+      input,
+      options,
+      providerRequest,
+      error,
+    }: {
+      input: string | LlmHistory | LlmInputMessage;
+      options?: LlmOperateOptions;
+      providerRequest: any;
+      error: any;
+    }) => unknown | Promise<unknown>;
   };
   instructions?: string;
   model?: string;
