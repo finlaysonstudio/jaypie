@@ -108,6 +108,49 @@ function createFunctionCallOutputContent(functionCallOutput: any): string {
 }
 
 /**
+ * Extracts content from OpenAI response output array
+ */
+function extractContentFromResponse(
+  currentResponse: OpenAIRawResponse,
+  options?: LlmOperateOptions,
+): any {
+  if (!currentResponse.output || !Array.isArray(currentResponse.output)) {
+    return "";
+  }
+
+  for (const output of currentResponse.output) {
+    if (output.type === LlmMessageType.Message) {
+      if (
+        output.content?.[0] &&
+        output.content[0].type === LlmMessageType.OutputText
+      ) {
+        const rawContent = output.content[0].text;
+
+        // If format is provided, try to parse the content as JSON
+        if (options?.format && typeof rawContent === "string") {
+          try {
+            const parsedContent = JSON.parse(rawContent);
+            return parsedContent;
+          } catch (error) {
+            // If parsing fails, keep the original string content
+            log.debug("Failed to parse formatted response as JSON");
+            log.var({ error });
+            return rawContent;
+          }
+        }
+
+        return rawContent;
+      }
+    }
+    if (output.type === LlmMessageType.FunctionCall) {
+      return createFunctionCallContent(output);
+    }
+  }
+
+  return "";
+}
+
+/**
  * Creates the request options for the OpenAI API call
  *
  * @param input - The formatted input messages
@@ -347,6 +390,24 @@ export async function operate(
           });
         }
 
+        // Execute afterEachModelResponse hook immediately after usage processing
+        if (options.hooks?.afterEachModelResponse) {
+          const extractedContent = extractContentFromResponse(
+            currentResponse,
+            options,
+          );
+          await resolvePromise(
+            options.hooks.afterEachModelResponse({
+              input,
+              options,
+              providerRequest: requestOptions,
+              providerResponse: currentResponse,
+              content: extractedContent || "",
+              usage: returnResponse.usage,
+            }),
+          );
+        }
+
         // Check if we need to process function calls for multi-turn conversations
         let hasFunctionCall = false;
 
@@ -371,7 +432,7 @@ export async function operate(
                   try {
                     // Call the tool and ensure the result is resolved if it's a Promise
                     log.trace(`[operate] Calling tool - ${output.name}`);
-                    returnResponse.content = createFunctionCallContent(output);
+                    // Content will be set by extractContentFromResponse call later
 
                     // Execute beforeEachTool hook if defined
                     if (options.hooks?.beforeEachTool) {
@@ -426,8 +487,7 @@ export async function operate(
                       currentInput.push(functionCallOutput);
                       returnResponse.output.push(functionCallOutput);
                       returnResponse.history.push(functionCallOutput);
-                      returnResponse.content =
-                        createFunctionCallOutputContent(functionCallOutput);
+                      // Content will be set by extractContentFromResponse call later
                     }
                   } catch (error) {
                     // TODO: but I do need to tell the model that something went wrong, right?
@@ -451,27 +511,7 @@ export async function operate(
                   );
                 }
               }
-              if (output.type === LlmMessageType.Message) {
-                if (
-                  output.content?.[0] &&
-                  output.content[0].type === LlmMessageType.OutputText
-                ) {
-                  const rawContent = output.content[0].text;
-                  returnResponse.content = rawContent;
-
-                  // If format is provided, try to parse the content as JSON
-                  if (options?.format && typeof rawContent === "string") {
-                    try {
-                      const parsedContent = JSON.parse(rawContent);
-                      returnResponse.content = parsedContent;
-                    } catch (error) {
-                      // If parsing fails, keep the original string content
-                      log.debug("Failed to parse formatted response as JSON");
-                      log.var({ error });
-                    }
-                  }
-                }
-              }
+              // Content processing is now handled by extractContentFromResponse function
             }
           }
         } catch (error) {
@@ -481,19 +521,11 @@ export async function operate(
           log.var({ error });
         }
 
-        // Execute afterEachModelResponse hook if defined
-        if (options.hooks?.afterEachModelResponse) {
-          await resolvePromise(
-            options.hooks.afterEachModelResponse({
-              input,
-              options,
-              providerRequest: requestOptions,
-              providerResponse: currentResponse,
-              content: returnResponse.content || "",
-              usage: returnResponse.usage,
-            }),
-          );
-        }
+        // Set content using the shared extraction function
+        returnResponse.content = extractContentFromResponse(
+          currentResponse,
+          options,
+        );
 
         // If there's no function call or we can't take another turn, exit the loop
         if (!hasFunctionCall || !enableMultipleTurns) {
