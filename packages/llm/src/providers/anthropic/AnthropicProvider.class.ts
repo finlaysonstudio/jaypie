@@ -10,13 +10,14 @@ import {
   LlmProvider,
   LlmHistoryItem,
 } from "../../types/LlmProvider.interface.js";
-import { naturalZodSchema } from "../../util/index.js";
-import { z } from "zod/v4";
+import { operate } from "./operate.js";
 import {
   getLogger,
   initializeClient,
   prepareMessages,
   formatSystemMessage,
+  createTextCompletion,
+  createStructuredCompletion,
 } from "./index.js";
 
 // Main class implementation
@@ -44,132 +45,6 @@ export class AnthropicProvider implements LlmProvider {
     return this._client;
   }
 
-  // Basic text completion
-  async createTextCompletion(
-    client: Anthropic,
-    messages: Anthropic.MessageParam[],
-    model: string,
-    systemMessage?: string,
-  ): Promise<string> {
-    this.log.trace("Using text output (unstructured)");
-
-    const params: Anthropic.MessageCreateParams = {
-      model,
-      messages,
-      max_tokens: PROVIDER.ANTHROPIC.MAX_TOKENS.DEFAULT,
-    };
-
-    // Add system instruction if provided
-    if (systemMessage) {
-      params.system = systemMessage;
-      this.log.trace(`System message: ${systemMessage.length} characters`);
-    }
-
-    const response = await client.messages.create(params);
-
-    this.log.trace(
-      `Assistant reply: ${response.content[0]?.text?.length || 0} characters`,
-    );
-
-    return response.content[0]?.text || "";
-  }
-
-  // Structured output completion
-  async createStructuredCompletion(
-    client: Anthropic,
-    messages: Anthropic.MessageParam[],
-    model: string,
-    responseSchema: z.ZodType | NaturalSchema,
-    systemMessage?: string,
-  ): Promise<JsonObject> {
-    this.log.trace("Using structured output");
-
-    // Get the JSON schema for the response
-    const schema =
-      responseSchema instanceof z.ZodType
-        ? responseSchema
-        : naturalZodSchema(responseSchema as NaturalSchema);
-
-    // Set system message with JSON instructions
-    const defaultSystemPrompt =
-      "You will be responding with structured JSON data. " +
-      "Format your entire response as a valid JSON object with the following structure: " +
-      JSON.stringify(z.toJSONSchema(schema));
-
-    const systemPrompt = systemMessage || defaultSystemPrompt;
-
-    try {
-      // Use standard Anthropic API to get response
-      const params: Anthropic.MessageCreateParams = {
-        model,
-        messages,
-        max_tokens: PROVIDER.ANTHROPIC.MAX_TOKENS.DEFAULT,
-        system: systemPrompt,
-      };
-
-      const response = await client.messages.create(params);
-
-      // Extract text from response
-      const responseText = response.content[0]?.text || "";
-
-      // Find JSON in response
-      const jsonMatch =
-        responseText.match(/```json\s*([\s\S]*?)\s*```/) ||
-        responseText.match(/\{[\s\S]*\}/);
-
-      if (jsonMatch) {
-        try {
-          // Parse the JSON response
-          const jsonStr = jsonMatch[1] || jsonMatch[0];
-          const result = JSON.parse(jsonStr);
-          if (!schema.parse(result)) {
-            throw new Error(
-              `JSON response from Anthropic does not match schema: ${responseText}`,
-            );
-          }
-          this.log.trace("Received structured response", { result });
-          return result;
-        } catch {
-          throw new Error(
-            `Failed to parse JSON response from Anthropic: ${responseText}`,
-          );
-        }
-      }
-
-      // If we can't extract JSON
-      throw new Error("Failed to parse structured response from Anthropic");
-    } catch (error: unknown) {
-      this.log.error("Error creating structured completion", { error });
-      throw error;
-    }
-  }
-
-  // Helper method to simplify Zod schema to a plain object for system prompt
-  private simplifyZodSchema(schema: z.ZodType): Record<string, unknown> {
-    try {
-      // Type casting for internal Zod structure
-      interface ZodTypeShape {
-        _def?: {
-          shape?: Record<string, unknown>;
-        };
-      }
-
-      const zodSchema = schema as ZodTypeShape;
-
-      if (typeof zodSchema._def?.shape === "object") {
-        const result: Record<string, string> = {};
-        Object.keys(zodSchema._def.shape || {}).forEach((key) => {
-          result[key] = "string";
-        });
-        return result;
-      }
-      return { result: "string" };
-    } catch (error: unknown) {
-      this.log.error(`Error simplifying schema: ${error}`);
-      return { result: "string" };
-    }
-  }
-
   // Main send method
   async send(
     message: string,
@@ -189,7 +64,7 @@ export class AnthropicProvider implements LlmProvider {
     }
 
     if (options?.response) {
-      return this.createStructuredCompletion(
+      return createStructuredCompletion(
         client,
         messages,
         modelToUse,
@@ -198,23 +73,33 @@ export class AnthropicProvider implements LlmProvider {
       );
     }
 
-    return this.createTextCompletion(
-      client,
-      messages,
-      modelToUse,
-      systemMessage,
-    );
+    return createTextCompletion(client, messages, modelToUse, systemMessage);
   }
 
-  // Placeholder for operate method - will be implemented in a future task
-  // This will be properly implemented in the "Tool Calling Implementation" task
   async operate(
     input: string | LlmHistory | LlmInputMessage,
-
-    _options: LlmOperateOptions = {},
+    options: LlmOperateOptions = {},
   ): Promise<LlmOperateResponse> {
-    throw new Error(
-      "The operate method is not yet implemented for AnthropicProvider",
-    );
+    const client = await this.getClient();
+    options.model = options?.model || this.model;
+
+    // Create a merged history including both the tracked history and any explicitly provided history
+    const mergedOptions = { ...options };
+    if (this.conversationHistory.length > 0) {
+      // If options.history exists, merge with instance history, otherwise use instance history
+      mergedOptions.history = options.history
+        ? [...this.conversationHistory, ...options.history]
+        : [...this.conversationHistory];
+    }
+
+    // Call operate with the updated options
+    const response = await operate(input, mergedOptions, { client });
+
+    // Update conversation history with the new history from the response
+    if (response.history && response.history.length > 0) {
+      this.conversationHistory = response.history;
+    }
+
+    return response;
   }
 }
