@@ -2399,7 +2399,7 @@ describe("operate", () => {
       );
     });
 
-    it("allows afterEachTool to modify the tool result", async () => {
+    it("afterEachTool does not modify the tool result", async () => {
       // Setup
       const mockResponse1 = {
         id: "resp_123",
@@ -2472,7 +2472,7 @@ describe("operate", () => {
         (item) => item.type === LlmMessageType.FunctionCallOutput,
       ) as LlmToolResult;
 
-      expect(JSON.parse(functionCallOutput.output)).toEqual(modifiedResult);
+      expect(JSON.parse(functionCallOutput.output)).toEqual(toolResult);
     });
 
     describe("Model Hooks", () => {
@@ -2629,12 +2629,12 @@ describe("operate", () => {
 
         // Track call order
         const callOrder: string[] = [];
-        
+
         // Create spies that track call order
         const afterEachModelResponseSpy = vi.fn().mockImplementation(() => {
           callOrder.push("afterEachModelResponse");
         });
-        
+
         const mockTool = {
           name: "test_tool",
           description: "Test tool",
@@ -2665,13 +2665,18 @@ describe("operate", () => {
         );
 
         // Verify the hook was called before tool execution on first turn, then again on second turn
-        expect(callOrder).toEqual(["afterEachModelResponse", "toolCall", "afterEachModelResponse"]);
+        expect(callOrder).toEqual([
+          "afterEachModelResponse",
+          "toolCall",
+          "afterEachModelResponse",
+        ]);
         expect(afterEachModelResponseSpy).toHaveBeenCalledTimes(2);
-        
+
         // Verify first call had function call content
-        expect(afterEachModelResponseSpy).toHaveBeenNthCalledWith(1,
+        expect(afterEachModelResponseSpy).toHaveBeenNthCalledWith(
+          1,
           expect.objectContaining({
-            content: "function_call:test_tool{\"param\":\"test\"}#call_1",
+            content: 'function_call:test_tool{"param":"test"}#call_1',
             usage: expect.arrayContaining([
               expect.objectContaining({
                 input: 15,
@@ -2683,7 +2688,8 @@ describe("operate", () => {
         );
 
         // Verify second call had message content
-        expect(afterEachModelResponseSpy).toHaveBeenNthCalledWith(2,
+        expect(afterEachModelResponseSpy).toHaveBeenNthCalledWith(
+          2,
           expect.objectContaining({
             content: "Final response",
             usage: expect.arrayContaining([
