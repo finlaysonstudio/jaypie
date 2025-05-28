@@ -392,7 +392,7 @@ export async function operate(
 
                       // Execute afterEachTool hook if defined
                       if (options.hooks?.afterEachTool) {
-                        result = await resolvePromise(
+                        await resolvePromise(
                           options.hooks.afterEachTool({
                             result,
                             toolName: output.name,
