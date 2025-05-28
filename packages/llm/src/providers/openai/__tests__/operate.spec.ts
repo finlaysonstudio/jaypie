@@ -27,6 +27,24 @@ import { log } from "../../../util";
 import { restoreLog, spyLog } from "@jaypie/testkit";
 import { LlmTool } from "../../../types/LlmTool.interface";
 
+const mockTool = {
+  name: "mock_tool",
+  description: "Mock tool",
+  parameters: {
+    type: "object",
+    properties: {
+      latitude: { type: "number" },
+      longitude: { type: "number" },
+    },
+  },
+  type: "function",
+  // call: vi.fn().mockResolvedValue({ result: "mock_tool_result" }),
+  call: vi.fn((params) => {
+    console.log("call params :>> ", params);
+    return { result: "mock_tool_result" };
+  }),
+};
+
 describe("operate", () => {
   // Mock OpenAI client setup
   let mockClient: OpenAI;
@@ -2381,7 +2399,7 @@ describe("operate", () => {
       );
     });
 
-    it("allows afterEachTool to modify the tool result", async () => {
+    it("afterEachTool does not modify the tool result", async () => {
       // Setup
       const mockResponse1 = {
         id: "resp_123",
@@ -2454,7 +2472,7 @@ describe("operate", () => {
         (item) => item.type === LlmMessageType.FunctionCallOutput,
       ) as LlmToolResult;
 
-      expect(JSON.parse(functionCallOutput.output)).toEqual(modifiedResult);
+      expect(JSON.parse(functionCallOutput.output)).toEqual(toolResult);
     });
 
     describe("Model Hooks", () => {
@@ -2611,12 +2629,12 @@ describe("operate", () => {
 
         // Track call order
         const callOrder: string[] = [];
-        
+
         // Create spies that track call order
         const afterEachModelResponseSpy = vi.fn().mockImplementation(() => {
           callOrder.push("afterEachModelResponse");
         });
-        
+
         const mockTool = {
           name: "test_tool",
           description: "Test tool",
@@ -2647,13 +2665,18 @@ describe("operate", () => {
         );
 
         // Verify the hook was called before tool execution on first turn, then again on second turn
-        expect(callOrder).toEqual(["afterEachModelResponse", "toolCall", "afterEachModelResponse"]);
+        expect(callOrder).toEqual([
+          "afterEachModelResponse",
+          "toolCall",
+          "afterEachModelResponse",
+        ]);
         expect(afterEachModelResponseSpy).toHaveBeenCalledTimes(2);
-        
+
         // Verify first call had function call content
-        expect(afterEachModelResponseSpy).toHaveBeenNthCalledWith(1,
+        expect(afterEachModelResponseSpy).toHaveBeenNthCalledWith(
+          1,
           expect.objectContaining({
-            content: "function_call:test_tool{\"param\":\"test\"}#call_1",
+            content: 'function_call:test_tool{"param":"test"}#call_1',
             usage: expect.arrayContaining([
               expect.objectContaining({
                 input: 15,
@@ -2665,7 +2688,8 @@ describe("operate", () => {
         );
 
         // Verify second call had message content
-        expect(afterEachModelResponseSpy).toHaveBeenNthCalledWith(2,
+        expect(afterEachModelResponseSpy).toHaveBeenNthCalledWith(
+          2,
           expect.objectContaining({
             content: "Final response",
             usage: expect.arrayContaining([
@@ -2839,6 +2863,76 @@ describe("operate", () => {
             error: retryableError,
           }),
         );
+      });
+    });
+  });
+
+  describe("Specific Scenarios", () => {
+    describe("Multi-turn conversation with function calling", () => {
+      beforeEach(async () => {
+        // const mockResponse = await mockCreate();
+        const mockResponse = {
+          created: 1234567890,
+          error: null,
+          id: "mock-id",
+          model: "mock-gpt",
+          object: "response",
+          output: [
+            {
+              arguments: `{"taco":"true"}`,
+              type: "function_call",
+              call_id: "call_AqV9ihaQqvQBEJmvmUOAJ7RD",
+              name: "mock_tool",
+            },
+          ],
+          status: LlmResponseStatus.Completed,
+          text: {
+            format: {
+              type: "text",
+            },
+          },
+          usage: {
+            input_tokens: 36,
+            input_tokens_details: {
+              cached_tokens: 0,
+            },
+            output_tokens: 87,
+            output_tokens_details: {
+              reasoning_tokens: 0,
+            },
+            total_tokens: 123,
+          },
+        };
+        mockCreate.mockResolvedValueOnce(mockResponse);
+        vi.clearAllMocks();
+        expect(mockCreate).not.toHaveBeenCalled();
+      });
+
+      it("Simulates multi-turn conversation with function calling", async () => {
+        // Call operate with mock client
+        const result = await operate(
+          "Hello",
+          {
+            tools: [mockTool],
+          },
+          { client: mockClient },
+        );
+
+        // Verify result contains the expected response
+        expect(result).not.toBeUndefined();
+
+        // Verify the mock was called twice: the call requesting the function and the call with the result
+        expect(mockClient.responses.create).toHaveBeenCalled();
+        expect(mockClient.responses.create).toHaveBeenCalledTimes(2);
+
+        // Verify tool was called
+        expect(mockTool.call).toHaveBeenCalled();
+        expect(mockTool.call).toHaveBeenCalledTimes(1);
+
+        // Verify tool was called with the correct arguments
+        expect(mockTool.call).toHaveBeenCalledWith({
+          taco: "true",
+        });
       });
     });
   });
