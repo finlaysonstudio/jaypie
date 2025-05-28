@@ -2586,6 +2586,122 @@ describe("operate", () => {
         );
       });
 
+      it("calls afterEachModelResponse hook immediately after usage processing, before function calls", async () => {
+        // Setup - First response with function call, second response with final answer
+        const mockResponse1 = {
+          id: "resp_123",
+          output: [
+            {
+              type: "function_call",
+              name: "test_tool",
+              arguments: '{"param":"test"}',
+              call_id: "call_1",
+            },
+          ],
+          usage: {
+            input_tokens: 15,
+            output_tokens: 5,
+            total_tokens: 20,
+          },
+        };
+
+        const mockResponse2 = {
+          id: "resp_456",
+          output: [
+            {
+              type: LlmMessageType.Message,
+              content: [
+                { type: LlmMessageType.OutputText, text: "Final response" },
+              ],
+              role: LlmMessageRole.Assistant,
+            },
+          ],
+          usage: {
+            input_tokens: 25,
+            output_tokens: 10,
+            total_tokens: 35,
+          },
+        };
+
+        mockCreate
+          .mockResolvedValueOnce(mockResponse1)
+          .mockResolvedValueOnce(mockResponse2);
+
+        // Track call order
+        const callOrder: string[] = [];
+        
+        // Create spies that track call order
+        const afterEachModelResponseSpy = vi.fn().mockImplementation(() => {
+          callOrder.push("afterEachModelResponse");
+        });
+        
+        const mockTool = {
+          name: "test_tool",
+          description: "Test tool",
+          parameters: {
+            type: "object",
+            properties: {
+              param: { type: "string" },
+            },
+          },
+          type: "function",
+          call: vi.fn().mockImplementation(() => {
+            callOrder.push("toolCall");
+            return { result: "test result" };
+          }),
+        };
+
+        // Execute with hook and tool
+        await operate(
+          "Test input",
+          {
+            tools: [mockTool],
+            turns: true,
+            hooks: {
+              afterEachModelResponse: afterEachModelResponseSpy,
+            },
+          },
+          { client: mockClient },
+        );
+
+        // Verify the hook was called before tool execution on first turn, then again on second turn
+        expect(callOrder).toEqual(["afterEachModelResponse", "toolCall", "afterEachModelResponse"]);
+        expect(afterEachModelResponseSpy).toHaveBeenCalledTimes(2);
+        
+        // Verify first call had function call content
+        expect(afterEachModelResponseSpy).toHaveBeenNthCalledWith(1,
+          expect.objectContaining({
+            content: "function_call:test_tool{\"param\":\"test\"}#call_1",
+            usage: expect.arrayContaining([
+              expect.objectContaining({
+                input: 15,
+                output: 5,
+                total: 20,
+              }),
+            ]),
+          }),
+        );
+
+        // Verify second call had message content
+        expect(afterEachModelResponseSpy).toHaveBeenNthCalledWith(2,
+          expect.objectContaining({
+            content: "Final response",
+            usage: expect.arrayContaining([
+              expect.objectContaining({
+                input: 15,
+                output: 5,
+                total: 20,
+              }),
+              expect.objectContaining({
+                input: 25,
+                output: 10,
+                total: 35,
+              }),
+            ]),
+          }),
+        );
+      });
+
       it("calls onRetryableModelError hook on retryable errors", async () => {
         // Setup
         const retryableError = new InternalServerError(
