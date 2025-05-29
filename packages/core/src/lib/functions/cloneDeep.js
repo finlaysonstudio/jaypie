@@ -1033,7 +1033,7 @@ function cloneBuffer(buffer, isDeep) {
   if (isDeep) {
     return buffer.slice();
   }
-  let result = new buffer.constructor(buffer.length);
+  let result = Buffer.alloc(buffer.length);
   buffer.copy(result);
   return result;
 }
@@ -1130,6 +1130,20 @@ function cloneSymbol(symbol) {
  */
 function cloneTypedArray(typedArray, isDeep) {
   let buffer = isDeep ? cloneArrayBuffer(typedArray.buffer) : typedArray.buffer;
+  // Handle Buffer objects specifically to avoid deprecated constructor warning
+  // Use globalThis.Buffer since the module-scoped Buffer may be undefined in ES modules
+  if (
+    typeof globalThis !== "undefined" &&
+    globalThis.Buffer &&
+    globalThis.Buffer.isBuffer &&
+    globalThis.Buffer.isBuffer(typedArray)
+  ) {
+    return globalThis.Buffer.from(
+      buffer,
+      typedArray.byteOffset,
+      typedArray.length,
+    );
+  }
   return new typedArray.constructor(
     buffer,
     typedArray.byteOffset,
@@ -1255,7 +1269,7 @@ let getSymbols = nativeGetSymbols
  */
 let getTag = baseGetTag;
 
-// Fallback for data views, maps, sets, and weak maps in IE 11,
+// Fallback for data views, maps, sets, and weakmaps in IE 11,
 // for data views in Edge < 14, and promises in Node.js.
 if (
   (DataView && getTag(new DataView(new ArrayBuffer(1))) != dataViewTag) ||
