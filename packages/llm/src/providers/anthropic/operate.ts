@@ -9,6 +9,7 @@ import {
   LlmResponseStatus,
   LlmToolResult,
   LlmOutputMessage,
+  LlmHistoryItem,
 } from "../../types/LlmProvider.interface.js";
 import { LlmTool } from "../../types/LlmTool.interface.js";
 import {
@@ -18,7 +19,11 @@ import {
   naturalZodSchema,
   resolvePromise,
 } from "../../util";
-import { createTextCompletion, prepareMessages } from "./index.js";
+import {
+  createTextCompletion,
+  formatUserMessage,
+  prepareMessages,
+} from "./index.js";
 import { PROVIDER } from "../../constants.js";
 import { JsonObject } from "@jaypie/types";
 
@@ -49,23 +54,46 @@ export async function operate(
     client: new Anthropic(),
   },
 ): Promise<LlmOperateResponse> {
+  // Convert string input to array format with placeholders if needed
+  let history: LlmHistory = formatOperateInput(input);
+  if (
+    options?.data &&
+    (options.placeholders?.input === undefined || options.placeholders?.input)
+  ) {
+    history = formatOperateInput(input, {
+      data: options?.data,
+    });
+  }
+
+  // If history is provided, merge it with currentInput
+  if (options.history) {
+    history = [...options.history, ...history];
+  }
+
+  // Avoid Anthropic error by removing type property
+  const inputMessages: Anthropic.MessageParam[] = structuredClone(history);
+  inputMessages.forEach((message) => {
+    delete message.type;
+  });
+
   const response = await context.client.messages.create({
     model: options.model as Anthropic.MessageCreateParams["model"],
-    messages: prepareMessages(input as string, options),
+    messages: inputMessages,
     max_tokens: PROVIDER.ANTHROPIC.MAX_TOKENS.DEFAULT,
     stream: false,
   });
 
+  history.push({
+    content: response.content[0].text,
+    role: PROVIDER.ANTHROPIC.ROLE.ASSISTANT,
+    type: LlmMessageType.Message,
+  } as LlmOutputMessage);
+
   return {
     content: response.content[0].text,
     responses: [response as unknown as JsonObject],
-    output: [
-      {
-        content: response.content[0].text,
-        role: PROVIDER.ANTHROPIC.ROLE.ASSISTANT,
-      } as LlmOutputMessage,
-    ],
-    history: [],
+    output: history.slice(-1) as LlmOutputMessage[],
+    history,
     status: LlmResponseStatus.Completed,
     usage: {
       input: response.usage.input_tokens,

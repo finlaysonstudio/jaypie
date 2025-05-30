@@ -4,6 +4,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { z } from "zod/v4";
 import { AnthropicProvider } from "../AnthropicProvider.class.js";
 import { PROVIDER } from "../../../constants.js";
+import { LlmMessageType, LlmInputMessage, LlmOutputMessage, LlmMessageRole } from "../../../types/LlmProvider.interface.js";
 
 // Create a mock implementation for Anthropic client
 vi.mock("@anthropic-ai/sdk", () => {
@@ -395,6 +396,143 @@ describe("AnthropicProvider", () => {
           max_tokens: PROVIDER.ANTHROPIC.MAX_TOKENS.DEFAULT,
           system: "You are a {{role}}",
         });
+      });
+    });
+
+    describe("History Tracking", () => {
+      it("maintains conversation history across operate calls", async () => {
+        const mockResponse1 = {
+          content: [{ type: "text", text: "first response" }],
+          usage: { input_tokens: 10, output_tokens: 10 },
+        };
+        const mockResponse2 = {
+          content: [{ type: "text", text: "second response" }],
+          usage: { input_tokens: 10, output_tokens: 10 },
+        };
+
+        const mockCreate = vi.fn()
+          .mockResolvedValueOnce(mockResponse1)
+          .mockResolvedValueOnce(mockResponse2);
+
+        vi.mocked(Anthropic).mockImplementation(
+          () =>
+            ({
+              messages: {
+                create: mockCreate,
+              },
+            }) as any,
+        );
+
+        const provider = new AnthropicProvider();
+        provider["apiKey"] = "test-key";
+
+        // First call
+        const response1 = await provider.operate("first message");
+        expect(response1.content).toBe("first response");
+        expect(mockCreate).toHaveBeenCalledWith({
+          messages: [
+            { role: PROVIDER.ANTHROPIC.ROLE.USER, content: "first message" },
+          ],
+          model: expect.any(String),
+          max_tokens: PROVIDER.ANTHROPIC.MAX_TOKENS.DEFAULT,
+          stream: false,
+        });
+
+        // Second call
+        const response2 = await provider.operate("second message");
+        expect(response2.content).toBe("second response");
+        expect(mockCreate).toHaveBeenCalledWith({
+          messages: [
+            { role: PROVIDER.ANTHROPIC.ROLE.USER, content: "first message" },
+            { role: PROVIDER.ANTHROPIC.ROLE.ASSISTANT, content: "first response" },
+            { role: PROVIDER.ANTHROPIC.ROLE.USER, content: "second message" },
+          ],
+          model: expect.any(String),
+          max_tokens: PROVIDER.ANTHROPIC.MAX_TOKENS.DEFAULT,
+          stream: false,
+        });
+      });
+
+      it("merges provided history with tracked history", async () => {
+        const mockResponse = {
+          content: [{ type: "text", text: "response" }],
+          usage: { input_tokens: 10, output_tokens: 10 },
+        };
+
+        const mockCreate = vi.fn().mockResolvedValue(mockResponse);
+        vi.mocked(Anthropic).mockImplementation(
+          () =>
+            ({
+              messages: {
+                create: mockCreate,
+              },
+            }) as any,
+        );
+
+        const provider = new AnthropicProvider();
+        provider["apiKey"] = "test-key";
+
+        // First call to establish tracked history
+        await provider.operate("first message");
+
+        // Second call with additional history
+        const additionalHistory: (LlmInputMessage | LlmOutputMessage)[] = [
+          { role: LlmMessageRole.User, content: "previous message", type: LlmMessageType.Message },
+          { role: LlmMessageRole.Assistant, content: "previous response", type: LlmMessageType.Message },
+        ];
+
+        await provider.operate("new message", { history: additionalHistory });
+
+        expect(mockCreate).toHaveBeenLastCalledWith({
+          messages: [
+            { role: PROVIDER.ANTHROPIC.ROLE.USER, content: "first message" },
+            { role: PROVIDER.ANTHROPIC.ROLE.ASSISTANT, content: "response" },
+            { role: PROVIDER.ANTHROPIC.ROLE.USER, content: "previous message" },
+            { role: PROVIDER.ANTHROPIC.ROLE.ASSISTANT, content: "previous response" },
+            { role: PROVIDER.ANTHROPIC.ROLE.USER, content: "new message" },
+          ],
+          model: expect.any(String),
+          max_tokens: PROVIDER.ANTHROPIC.MAX_TOKENS.DEFAULT,
+          stream: false,
+        });
+      });
+
+      it("updates tracked history after each operate call", async () => {
+        const mockResponse = {
+          content: [{ type: "text", text: "response" }],
+          usage: { input_tokens: 10, output_tokens: 10 },
+        };
+
+        const mockCreate = vi.fn().mockResolvedValue(mockResponse);
+        vi.mocked(Anthropic).mockImplementation(
+          () =>
+            ({
+              messages: {
+                create: mockCreate,
+              },
+            }) as any,
+        );
+
+        const provider = new AnthropicProvider();
+        provider["apiKey"] = "test-key";
+
+        // First call
+        const response1 = await provider.operate("first message");
+        expect(response1.history).toHaveLength(2); // User message + Assistant response
+
+        // Second call
+        const response2 = await provider.operate("second message");
+        expect(response2.history).toHaveLength(4); // Previous 2 + new user message + new assistant response
+
+        // Verify history content
+        const expectedHistory: (LlmInputMessage | LlmOutputMessage)[] = [
+          { role: LlmMessageRole.User, content: "first message", type: LlmMessageType.Message },
+          { role: LlmMessageRole.Assistant, content: "response", type: LlmMessageType.Message },
+          { role: LlmMessageRole.User, content: "second message", type: LlmMessageType.Message },
+          { role: LlmMessageRole.Assistant, content: "response", type: LlmMessageType.Message },
+        ];
+
+        expect(response2.history).toEqual(expectedHistory);
       });
     });
   });
