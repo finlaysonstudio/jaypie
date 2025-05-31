@@ -7,4 +7,5 @@ export interface LlmTool {
   parameters: JsonObject;
   type: "function" | string;
   call: (args?: JsonObject) => Promise<AnyValue> | AnyValue;
+  message?: string | (() => Promise<string> | string);
 }
