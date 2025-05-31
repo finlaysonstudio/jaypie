@@ -7,12 +7,12 @@ const DEFAULT_TOOL_TYPE = "function";
 const log = jaypieLog.lib({ lib: JAYPIE.LIB.LLM });
 
 type LogFunction = (
-  args: any,
-  context: { name: string },
+  message: string,
+  context: { name: string; args: any },
 ) => void | Promise<void>;
 
-function logToolCall(args: any, context: { name: string }) {
-  log.trace.var({ [context.name]: args });
+function logToolMessage(message: string, context: { name: string; args: any }) {
+  log.trace.var({ [context.name]: message });
 }
 
 export interface ToolkitOptions {
@@ -77,14 +77,33 @@ export class Toolkit {
 
     if (this.log !== false) {
       try {
-        const context = { name };
+        const context = { name, args: parsedArgs };
+        let message: string;
+
+        if (tool.message) {
+          if (typeof tool.message === "string") {
+            message = tool.message;
+          } else if (typeof tool.message === "function") {
+            const messageResult = tool.message();
+            if (messageResult instanceof Promise) {
+              message = await messageResult;
+            } else {
+              message = messageResult;
+            }
+          } else {
+            message = String(tool.message);
+          }
+        } else {
+          message = `${tool.name}:${JSON.stringify(parsedArgs)}`;
+        }
+
         if (typeof this.log === "function") {
-          const logResult = this.log(parsedArgs, context);
+          const logResult = this.log(message, context);
           if (logResult instanceof Promise) {
             await logResult;
           }
         } else {
-          logToolCall(parsedArgs, context);
+          logToolMessage(message, context);
         }
       } catch (error) {
         log.error("Caught error during logToolCall");

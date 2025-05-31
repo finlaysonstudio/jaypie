@@ -32,3 +32,15 @@ log.error("Caught error during logToolCall");
 log.var({ error });
 log.debug("Continuing...");
 ```
+
+---
+
+The above has already been completed.
+I want to change `logToolCall` to `logToolMessage(message: string, context)`.
+Move args to the context.
+Check to see if `tool.message` exists.
+If it is a string, use it.
+If it is a function, call it.
+If it returns a promise, await it.
+If it is not a string, cast it to string.
+If there is no message (if it is undefined or falsy) use `${tool}:${JSON.stringify(args)}` as the message

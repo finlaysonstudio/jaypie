@@ -187,8 +187,8 @@ describe("Toolkit", () => {
       await toolkit.call({ name: "testTool", arguments: args });
 
       expect(customLogFn).toHaveBeenCalledWith(
-        { testParam: "value" },
-        { name: "testTool" },
+        'testTool:{"testParam":"value"}',
+        { name: "testTool", args: { testParam: "value" } },
       );
     });
 
@@ -200,8 +200,8 @@ describe("Toolkit", () => {
       await toolkit.call({ name: "testTool", arguments: args });
 
       expect(customLogFn).toHaveBeenCalledWith(
-        { testParam: "value" },
-        { name: "testTool" },
+        'testTool:{"testParam":"value"}',
+        { name: "testTool", args: { testParam: "value" } },
       );
     });
 
@@ -213,8 +213,8 @@ describe("Toolkit", () => {
       await toolkit.call({ name: "testTool", arguments: args });
 
       expect(customLogFn).toHaveBeenCalledWith(
-        { testParam: "value" },
-        { name: "testTool" },
+        'testTool:{"testParam":"value"}',
+        { name: "testTool", args: { testParam: "value" } },
       );
       expect(mockTool.call).toHaveBeenCalledWith({ testParam: "value" });
     });
@@ -226,6 +226,87 @@ describe("Toolkit", () => {
       await toolkit.call({ name: "testTool", arguments: args });
 
       expect(mockTool.call).toHaveBeenCalledWith({ testParam: "value" });
+    });
+
+    it("should use tool.message when it is a string", async () => {
+      const toolWithMessage: LlmTool = {
+        ...mockTool,
+        message: "Custom message from tool",
+      };
+      const customLogFn = vi.fn();
+      const toolkit = new Toolkit([toolWithMessage], { log: customLogFn });
+      const args = JSON.stringify({ testParam: "value" });
+
+      await toolkit.call({ name: "testTool", arguments: args });
+
+      expect(customLogFn).toHaveBeenCalledWith("Custom message from tool", {
+        name: "testTool",
+        args: { testParam: "value" },
+      });
+    });
+
+    it("should use tool.message when it is a function returning a string", async () => {
+      const toolWithMessage: LlmTool = {
+        ...mockTool,
+        message: vi.fn().mockReturnValue("Function message"),
+      };
+      const customLogFn = vi.fn();
+      const toolkit = new Toolkit([toolWithMessage], { log: customLogFn });
+      const args = JSON.stringify({ testParam: "value" });
+
+      await toolkit.call({ name: "testTool", arguments: args });
+
+      expect(customLogFn).toHaveBeenCalledWith("Function message", {
+        name: "testTool",
+        args: { testParam: "value" },
+      });
+    });
+
+    it("should await tool.message when it is a function returning a promise", async () => {
+      const toolWithMessage: LlmTool = {
+        ...mockTool,
+        message: vi.fn().mockResolvedValue("Async function message"),
+      };
+      const customLogFn = vi.fn();
+      const toolkit = new Toolkit([toolWithMessage], { log: customLogFn });
+      const args = JSON.stringify({ testParam: "value" });
+
+      await toolkit.call({ name: "testTool", arguments: args });
+
+      expect(customLogFn).toHaveBeenCalledWith("Async function message", {
+        name: "testTool",
+        args: { testParam: "value" },
+      });
+    });
+
+    it("should cast tool.message to string when it is not a string or function", async () => {
+      const toolWithMessage: LlmTool = {
+        ...mockTool,
+        message: 123 as any,
+      };
+      const customLogFn = vi.fn();
+      const toolkit = new Toolkit([toolWithMessage], { log: customLogFn });
+      const args = JSON.stringify({ testParam: "value" });
+
+      await toolkit.call({ name: "testTool", arguments: args });
+
+      expect(customLogFn).toHaveBeenCalledWith("123", {
+        name: "testTool",
+        args: { testParam: "value" },
+      });
+    });
+
+    it("should fallback to default message format when tool.message is undefined", async () => {
+      const customLogFn = vi.fn();
+      const toolkit = new Toolkit([mockTool], { log: customLogFn });
+      const args = JSON.stringify({ testParam: "value" });
+
+      await toolkit.call({ name: "testTool", arguments: args });
+
+      expect(customLogFn).toHaveBeenCalledWith(
+        'testTool:{"testParam":"value"}',
+        { name: "testTool", args: { testParam: "value" } },
+      );
     });
   });
 });
