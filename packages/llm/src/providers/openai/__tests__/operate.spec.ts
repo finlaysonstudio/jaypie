@@ -26,6 +26,7 @@ import {
 import { log } from "../../../util";
 import { restoreLog, spyLog } from "@jaypie/testkit";
 import { LlmTool } from "../../../types/LlmTool.interface";
+import { Toolkit } from "../../../tools/Toolkit.class";
 
 const mockTool = {
   name: "mock_tool",
@@ -2863,6 +2864,221 @@ describe("operate", () => {
             error: retryableError,
           }),
         );
+      });
+    });
+  });
+
+  describe("Tools and Toolkit", () => {
+    describe("Toolkit Support", () => {
+      it("accepts Toolkit instance as tools parameter", async () => {
+        // Setup
+        const mockTool: LlmTool = {
+          name: "test_tool",
+          description: "Test tool",
+          parameters: {
+            type: "object",
+            properties: {
+              param: { type: "string" },
+            },
+          },
+          type: "function",
+          call: vi.fn().mockResolvedValue({ result: "test result" }),
+        };
+
+        const toolkit = new Toolkit([mockTool]);
+
+        const mockResponse = {
+          id: "resp_123",
+          output: [
+            {
+              type: LlmMessageType.Message,
+              content: [{ type: LlmMessageType.OutputText, text: "Response" }],
+              role: LlmMessageRole.Assistant,
+            },
+          ],
+        };
+        mockCreate.mockResolvedValueOnce(mockResponse);
+
+        // Execute
+        const result = await operate(
+          "Test input",
+          {
+            tools: toolkit,
+          },
+          { client: mockClient },
+        );
+
+        // Verify
+        expect(result).toBeDefined();
+        expect(mockCreate).toHaveBeenCalledWith(
+          expect.objectContaining({
+            tools: expect.arrayContaining([
+              expect.objectContaining({
+                name: "test_tool",
+                description: "Test tool",
+                type: "function",
+              }),
+            ]),
+          }),
+        );
+      });
+
+      it("uses provided Toolkit directly without recreating it", async () => {
+        // Setup
+        const mockTool: LlmTool = {
+          name: "test_tool",
+          description: "Test tool",
+          parameters: {
+            type: "object",
+            properties: {
+              param: { type: "string" },
+            },
+          },
+          type: "function",
+          call: vi.fn().mockResolvedValue({ result: "test result" }),
+        };
+
+        const toolkit = new Toolkit([mockTool], { explain: true });
+
+        const mockResponse1 = {
+          id: "resp_123",
+          output: [
+            {
+              type: "function_call",
+              name: "test_tool",
+              arguments: '{"param":"test","__Explanation":"Testing"}',
+              call_id: "call_1",
+            },
+          ],
+        };
+
+        const mockResponse2 = {
+          id: "resp_456",
+          output: [
+            {
+              type: LlmMessageType.Message,
+              content: [
+                { type: LlmMessageType.OutputText, text: "Final response" },
+              ],
+              role: LlmMessageRole.Assistant,
+            },
+          ],
+        };
+
+        mockCreate
+          .mockResolvedValueOnce(mockResponse1)
+          .mockResolvedValueOnce(mockResponse2);
+
+        // Execute
+        await operate(
+          "Test input",
+          {
+            tools: toolkit,
+            turns: true,
+          },
+          { client: mockClient },
+        );
+
+        // Verify the toolkit's explain functionality was preserved
+        expect(mockCreate).toHaveBeenCalledWith(
+          expect.objectContaining({
+            tools: expect.arrayContaining([
+              expect.objectContaining({
+                name: "test_tool",
+                parameters: expect.objectContaining({
+                  properties: expect.objectContaining({
+                    __Explanation: expect.objectContaining({
+                      type: "string",
+                      description: expect.stringContaining(
+                        "Explain the reasoning",
+                      ),
+                    }),
+                  }),
+                }),
+              }),
+            ]),
+          }),
+        );
+
+        // Verify the tool was called and __Explanation was removed
+        expect(mockTool.call).toHaveBeenCalledWith({ param: "test" });
+      });
+
+      it("works with both array of tools and Toolkit instance in multi-turn", async () => {
+        // Setup - Test that both types work the same way
+        const mockTool: LlmTool = {
+          name: "test_tool",
+          description: "Test tool",
+          parameters: {
+            type: "object",
+            properties: {
+              param: { type: "string" },
+            },
+          },
+          type: "function",
+          call: vi.fn().mockResolvedValue({ result: "test result" }),
+        };
+
+        const mockResponse1 = {
+          id: "resp_123",
+          output: [
+            {
+              type: "function_call",
+              name: "test_tool",
+              arguments: '{"param":"test"}',
+              call_id: "call_1",
+            },
+          ],
+        };
+
+        const mockResponse2 = {
+          id: "resp_456",
+          output: [
+            {
+              type: LlmMessageType.Message,
+              content: [
+                { type: LlmMessageType.OutputText, text: "Final response" },
+              ],
+              role: LlmMessageRole.Assistant,
+            },
+          ],
+        };
+
+        mockCreate
+          .mockResolvedValueOnce(mockResponse1)
+          .mockResolvedValueOnce(mockResponse2);
+
+        // Test with array first
+        await operate(
+          "Test input",
+          {
+            tools: [mockTool],
+            turns: true,
+          },
+          { client: mockClient },
+        );
+
+        // Reset mock
+        mockCreate.mockClear();
+        mockTool.call = vi.fn().mockResolvedValue({ result: "test result" });
+
+        mockCreate
+          .mockResolvedValueOnce(mockResponse1)
+          .mockResolvedValueOnce(mockResponse2);
+
+        // Test with Toolkit
+        const toolkit = new Toolkit([mockTool]);
+        await operate(
+          "Test input",
+          {
+            tools: toolkit,
+            turns: true,
+          },
+          { client: mockClient },
+        );
+
+        // Both should have called the tool
+        expect(mockTool.call).toHaveBeenCalledWith({ param: "test" });
       });
     });
   });
