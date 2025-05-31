@@ -101,13 +101,6 @@ function createFunctionCallContent(output: any): string {
 }
 
 /**
- * Creates content string for function call outputs
- */
-function createFunctionCallOutputContent(functionCallOutput: any): string {
-  return `${LlmMessageType.FunctionCallOutput}:${functionCallOutput.output}#${functionCallOutput.call_id}`;
-}
-
-/**
  * Extracts content from OpenAI response output array
  */
 function extractContentFromResponse(
@@ -230,11 +223,22 @@ export function createRequestOptions(
     }
   }
 
-  // Create toolkit and add tools if provided
-  if (options.tools?.length) {
-    const explain = options?.explain ?? false;
-    const toolkit = new Toolkit(options.tools, { explain });
-    requestOptions.tools = toolkit.tools;
+  // Handle tools - either as LlmTool[] or Toolkit
+  if (options.tools) {
+    let toolkit: Toolkit | undefined;
+
+    if (options.tools instanceof Toolkit) {
+      // If toolkit is already provided, use it directly
+      toolkit = options.tools;
+    } else if (Array.isArray(options.tools) && options.tools.length > 0) {
+      // If array of tools provided, create toolkit from them
+      const explain = options?.explain ?? false;
+      toolkit = new Toolkit(options.tools, { explain });
+    }
+
+    if (toolkit) {
+      requestOptions.tools = toolkit.tools;
+    }
   }
 
   return requestOptions;
@@ -421,11 +425,20 @@ export async function operate(
                 hasFunctionCall = true;
 
                 let toolkit: Toolkit | undefined;
-                const explain = options?.explain ?? false;
 
-                // Initialize toolkit if tools are provided for multi-turn function calling
-                if (options.tools?.length) {
-                  toolkit = new Toolkit(options.tools, { explain });
+                // Initialize toolkit for multi-turn function calling
+                if (options.tools) {
+                  if (options.tools instanceof Toolkit) {
+                    // If toolkit is already provided, use it directly
+                    toolkit = options.tools;
+                  } else if (
+                    Array.isArray(options.tools) &&
+                    options.tools.length > 0
+                  ) {
+                    // If array of tools provided, create toolkit from them
+                    const explain = options?.explain ?? false;
+                    toolkit = new Toolkit(options.tools, { explain });
+                  }
                 }
 
                 if (toolkit && enableMultipleTurns) {

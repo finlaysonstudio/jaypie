@@ -44,4 +44,7 @@ export const roll: LlmTool = {
 
     return { rolls, total };
   },
+  message: ({ number = 1, sides = 6 } = {}) => {
+    return `Rolling ${number} ${sides}-sided dice`;
+  },
 };

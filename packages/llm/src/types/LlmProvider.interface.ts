@@ -7,6 +7,7 @@ import {
 } from "@jaypie/types";
 import { z } from "zod";
 import { LlmTool } from "./LlmTool.interface.js";
+import { Toolkit } from "../tools/Toolkit.class.js";
 
 // Enums
 
@@ -239,7 +240,7 @@ export interface LlmOperateOptions {
   };
   providerOptions?: JsonObject;
   system?: string;
-  tools?: LlmTool[];
+  tools?: LlmTool[] | Toolkit;
   turns?: boolean | number;
   user?: string;
 }

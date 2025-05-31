@@ -8,6 +8,7 @@ describe("time tool", () => {
     expect(time).toHaveProperty("parameters");
     expect(time).toHaveProperty("type", "function");
     expect(time).toHaveProperty("call");
+    expect(time).toHaveProperty("message");
   });
 
   it("should return current time when no date is provided", () => {
@@ -39,5 +40,27 @@ describe("time tool", () => {
     expect(() => time.call({ date: "invalid-date" })).toThrow(
       "Invalid date format: invalid-date",
     );
+  });
+
+  describe("Message Functionality", () => {
+    it("returns correct message when no date is provided", () => {
+      const message = time.message?.();
+      expect(message).toBe("Checking current time");
+    });
+
+    it("returns correct message when no date is provided with empty object", () => {
+      const message = time.message?.({});
+      expect(message).toBe("Checking current time");
+    });
+
+    it("returns correct message when date is provided as string", () => {
+      const message = time.message?.({ date: "2025-01-15T12:30:45Z" });
+      expect(message).toBe("Converting date to ISO UTC format");
+    });
+
+    it("returns correct message when date is provided as number", () => {
+      const message = time.message?.({ date: 1705318245000 });
+      expect(message).toBe("Converting date to ISO UTC format");
+    });
   });
 });

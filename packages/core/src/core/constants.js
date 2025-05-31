@@ -10,6 +10,8 @@ export const JAYPIE = {
     JAYPIE: "jaypie",
     LAMBDA: "@jaypie/lambda",
     LLM: "@jaypie/llm",
+    MATCHERS: "@jaypie/matchers",
+    MOCK: "@jaypie/mock",
     MONGOOSE: "@jaypie/mongoose",
     TESTKIT: "@jaypie/testkit",
     WEBKIT: "@jaypie/webkit",

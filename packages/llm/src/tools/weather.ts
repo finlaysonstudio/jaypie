@@ -13,6 +13,11 @@ export const weather: LlmTool = {
         description:
           "Latitude of the location. Default: 42.051554533384866 (Evanston, IL)",
       },
+      location: {
+        type: "string",
+        description:
+          "Human-readable description of the location, not used for the API call. Default: Evanston, IL",
+      },
       longitude: {
         type: "number",
         description:
@@ -136,5 +141,8 @@ export const weather: LlmTool = {
       }
       throw new Error("Unknown error occurred while fetching weather data");
     }
+  },
+  message: ({ location } = {}) => {
+    return `Getting weather for ${location}`;
   },
 };
