@@ -89,33 +89,40 @@ export class Toolkit {
 
         if (tool.message) {
           if (typeof tool.message === "string") {
+            log.trace("[Toolkit] Tool provided string message");
             message = tool.message;
           } else if (typeof tool.message === "function") {
+            log.trace("[Toolkit] Tool provided function message");
             const messageResult = tool.message(parsedArgs, { name });
             if (messageResult instanceof Promise) {
+              log.trace("[Toolkit] Awaiting message result");
               message = await messageResult;
             } else {
               message = messageResult;
             }
           } else {
+            log.warn("[Toolkit] Tool provided unknown message type");
             message = String(tool.message);
           }
         } else {
+          log.trace("[Toolkit] Log tool call with default message");
           message = `${tool.name}:${JSON.stringify(parsedArgs)}`;
         }
 
         if (typeof this.log === "function") {
+          log.trace("[Toolkit] Log tool call with custom logger");
           const logResult = this.log(message, context);
           if (logResult instanceof Promise) {
             await logResult;
           }
         } else {
+          log.trace("[Toolkit] Log tool call with default logger");
           logToolMessage(message, context);
         }
       } catch (error) {
-        log.error("Caught error during logToolCall");
+        log.error("[Toolkit] Caught error during logToolCall");
         log.var({ error });
-        log.debug("Continuing...");
+        log.debug("[Toolkit] Continuing...");
       }
     }
 
