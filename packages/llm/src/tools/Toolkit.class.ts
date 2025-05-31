@@ -134,4 +134,45 @@ export class Toolkit {
 
     return result;
   }
+
+  extend(
+    tools: LlmTool[],
+    options: {
+      warn?: boolean;
+      replace?: boolean;
+      log?: boolean | LogFunction;
+      explain?: boolean;
+    } = {},
+  ): this {
+    for (const tool of tools) {
+      const existingIndex = this._tools.findIndex((t) => t.name === tool.name);
+      if (existingIndex !== -1) {
+        if (options.replace === false) {
+          continue;
+        }
+        if (options.warn !== false) {
+          if (typeof this.log === "function") {
+            this.log(
+              `[Toolkit] Tool '${tool.name}' already exists, replacing with new tool`,
+              { name: tool.name, args: {} },
+            );
+          } else if (this.log) {
+            log.warn(
+              `[Toolkit] Tool '${tool.name}' already exists, replacing with new tool`,
+            );
+          }
+        }
+        this._tools[existingIndex] = tool;
+      } else {
+        this._tools.push(tool);
+      }
+    }
+    if (Object.prototype.hasOwnProperty.call(options, "log")) {
+      (this as any).log = options.log;
+    }
+    if (Object.prototype.hasOwnProperty.call(options, "explain")) {
+      (this as any).explain = options.explain;
+    }
+    return this;
+  }
 }

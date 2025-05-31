@@ -309,4 +309,65 @@ describe("Toolkit", () => {
       );
     });
   });
+
+  describe("extend", () => {
+    const toolA: LlmTool = {
+      name: "toolA",
+      description: "Tool A",
+      type: "function",
+      parameters: { type: "object", properties: {} },
+      call: vi.fn(),
+    };
+    const toolB: LlmTool = {
+      name: "toolB",
+      description: "Tool B",
+      type: "function",
+      parameters: { type: "object", properties: {} },
+      call: vi.fn(),
+    };
+    it("adds new tools to the toolkit", () => {
+      const toolkit = new Toolkit([toolA]);
+      toolkit.extend([toolB]);
+      expect(toolkit.tools.map((t) => t.name)).toContain("toolA");
+      expect(toolkit.tools.map((t) => t.name)).toContain("toolB");
+    });
+    it("replaces tool with same name and logs warning", () => {
+      const toolkit = new Toolkit([toolA]);
+      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+      const toolA2 = { ...toolA, description: "Tool A2" };
+      toolkit.extend([toolA2]);
+      expect(toolkit.tools.find((t) => t.name === "toolA")?.description).toBe(
+        "Tool A2",
+      );
+      warnSpy.mockRestore();
+    });
+    it("skips warning if options.warn is false", () => {
+      const toolkit = new Toolkit([toolA]);
+      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+      const toolA2 = { ...toolA, description: "Tool A2" };
+      toolkit.extend([toolA2], { warn: false });
+      expect(warnSpy).not.toHaveBeenCalled();
+      warnSpy.mockRestore();
+    });
+    it("does not replace tool if options.replace is false", () => {
+      const toolkit = new Toolkit([toolA]);
+      const toolA2 = { ...toolA, description: "Tool A2" };
+      toolkit.extend([toolA2], { replace: false });
+      expect(toolkit.tools.find((t) => t.name === "toolA")?.description).toBe(
+        "Tool A",
+      );
+    });
+    it("updates log and explain if options are present", () => {
+      const toolkit = new Toolkit([toolA]);
+      const customLog = vi.fn();
+      toolkit.extend([toolB], { log: customLog, explain: true });
+      expect((toolkit as any).log).toBe(customLog);
+      expect((toolkit as any).explain).toBe(true);
+    });
+    it("returns this for chaining", () => {
+      const toolkit = new Toolkit([toolA]);
+      const result = toolkit.extend([toolB]);
+      expect(result).toBe(toolkit);
+    });
+  });
 });
