@@ -101,13 +101,6 @@ function createFunctionCallContent(output: any): string {
 }
 
 /**
- * Creates content string for function call outputs
- */
-function createFunctionCallOutputContent(functionCallOutput: any): string {
-  return `${LlmMessageType.FunctionCallOutput}:${functionCallOutput.output}#${functionCallOutput.call_id}`;
-}
-
-/**
  * Extracts content from OpenAI response output array
  */
 function extractContentFromResponse(
@@ -232,7 +225,7 @@ export function createRequestOptions(
 
   // Handle tools - either as LlmTool[] or Toolkit
   if (options.tools) {
-    let toolkit: Toolkit;
+    let toolkit: Toolkit | undefined;
 
     if (options.tools instanceof Toolkit) {
       // If toolkit is already provided, use it directly

@@ -39,11 +39,7 @@ const mockTool = {
     },
   },
   type: "function",
-  // call: vi.fn().mockResolvedValue({ result: "mock_tool_result" }),
-  call: vi.fn((params) => {
-    console.log("call params :>> ", params);
-    return { result: "mock_tool_result" };
-  }),
+  call: vi.fn().mockResolvedValue({ result: "mock_tool_result" }),
 };
 
 describe("operate", () => {
