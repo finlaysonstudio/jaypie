@@ -43,8 +43,7 @@ export class Toolkit {
           if (!toolCopy.parameters.properties.__Explanation) {
             toolCopy.parameters.properties.__Explanation = {
               type: "string",
-              description:
-                "Explain the reasoning behind this function call. What is the expected result? Describe possible next steps and the conditions under which they should be taken.",
+              description: `Clearly state why the tool is being called and what larger question it helps answer. For example, "I am checking the location API because the user asked for nearby pizza and I need coordinates to proceed"`,
             };
           }
         }
@@ -77,8 +76,15 @@ export class Toolkit {
 
     if (this.log !== false) {
       try {
-        const context = { name, args: parsedArgs };
+        const context: { name: string; args: any; explanation?: string } = {
+          name,
+          args: parsedArgs,
+        };
         let message: string;
+
+        if (this.explain) {
+          context.explanation = parsedArgs.__Explanation;
+        }
 
         if (tool.message) {
           if (typeof tool.message === "string") {

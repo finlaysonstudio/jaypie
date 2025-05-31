@@ -2976,6 +2976,8 @@ describe("operate", () => {
         );
 
         // Verify the toolkit's explain functionality was preserved
+        expect(mockCreate).toHaveBeenCalled();
+        expect(mockCreate).toHaveBeenCalledTimes(2);
         expect(mockCreate).toHaveBeenCalledWith(
           expect.objectContaining({
             tools: expect.arrayContaining([
@@ -2986,7 +2988,7 @@ describe("operate", () => {
                     __Explanation: expect.objectContaining({
                       type: "string",
                       description: expect.stringContaining(
-                        "Explain the reasoning",
+                        "Clearly state why the tool is being called",
                       ),
                     }),
                   }),
