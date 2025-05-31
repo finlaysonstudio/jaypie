@@ -37,6 +37,7 @@ export class Toolkit {
     return this._tools.map((tool) => {
       const toolCopy: any = { ...tool };
       delete toolCopy.call;
+      delete toolCopy.message;
 
       if (this.explain && toolCopy.parameters?.type === "object") {
         if (toolCopy.parameters?.properties) {
