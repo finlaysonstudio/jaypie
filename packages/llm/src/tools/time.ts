@@ -26,4 +26,10 @@ export const time: LlmTool = {
     }
     return new Date().toISOString();
   },
+  message: ({ date } = {}) => {
+    if (typeof date === "number" || typeof date === "string") {
+      return `Converting date to ISO UTC format`;
+    }
+    return "Checking current time";
+  },
 };
