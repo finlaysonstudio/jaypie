@@ -2,6 +2,29 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { Toolkit } from "../Toolkit.class";
 import { LlmTool } from "../../types/LlmTool.interface";
 
+// Mock jaypie/core
+vi.mock("@jaypie/core", () => {
+  const mockLog = {
+    trace: {
+      var: vi.fn(),
+    },
+    error: vi.fn(),
+    var: vi.fn(),
+    debug: vi.fn(),
+  };
+
+  return {
+    JAYPIE: {
+      LIB: {
+        LLM: "llm",
+      },
+    },
+    log: {
+      lib: vi.fn(() => mockLog),
+    },
+  };
+});
+
 describe("Toolkit", () => {
   // Mock tool for testing
   const mockTool: LlmTool = {
@@ -153,5 +176,56 @@ describe("Toolkit", () => {
       expect(mockTool.call).toHaveBeenCalledWith({ testParam: "value" });
     });
     it.todo("Returns explanation in explain mode");
+  });
+
+  describe("logging", () => {
+    it("should use custom log function when provided", async () => {
+      const customLogFn = vi.fn();
+      const toolkit = new Toolkit([mockTool], { log: customLogFn });
+      const args = JSON.stringify({ testParam: "value" });
+
+      await toolkit.call({ name: "testTool", arguments: args });
+
+      expect(customLogFn).toHaveBeenCalledWith(
+        { testParam: "value" },
+        { name: "testTool" },
+      );
+    });
+
+    it("should await custom log function if it returns a promise", async () => {
+      const customLogFn = vi.fn().mockResolvedValue(undefined);
+      const toolkit = new Toolkit([mockTool], { log: customLogFn });
+      const args = JSON.stringify({ testParam: "value" });
+
+      await toolkit.call({ name: "testTool", arguments: args });
+
+      expect(customLogFn).toHaveBeenCalledWith(
+        { testParam: "value" },
+        { name: "testTool" },
+      );
+    });
+
+    it("should handle logging errors gracefully and continue execution", async () => {
+      const customLogFn = vi.fn().mockRejectedValue(new Error("Log error"));
+      const toolkit = new Toolkit([mockTool], { log: customLogFn });
+      const args = JSON.stringify({ testParam: "value" });
+
+      await toolkit.call({ name: "testTool", arguments: args });
+
+      expect(customLogFn).toHaveBeenCalledWith(
+        { testParam: "value" },
+        { name: "testTool" },
+      );
+      expect(mockTool.call).toHaveBeenCalledWith({ testParam: "value" });
+    });
+
+    it("should not call any logging when log option is false", async () => {
+      const toolkit = new Toolkit([mockTool], { log: false });
+      const args = JSON.stringify({ testParam: "value" });
+
+      await toolkit.call({ name: "testTool", arguments: args });
+
+      expect(mockTool.call).toHaveBeenCalledWith({ testParam: "value" });
+    });
   });
 });

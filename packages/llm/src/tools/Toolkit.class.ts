@@ -1,20 +1,36 @@
+import { JAYPIE, log as jaypieLog } from "@jaypie/core";
+
 import { LlmTool } from "../types/LlmTool.interface";
 
 const DEFAULT_TOOL_TYPE = "function";
 
+const log = jaypieLog.lib({ lib: JAYPIE.LIB.LLM });
+
+type LogFunction = (
+  args: any,
+  context: { name: string },
+) => void | Promise<void>;
+
+function logToolCall(args: any, context: { name: string }) {
+  log.trace.var({ [context.name]: args });
+}
+
 export interface ToolkitOptions {
   explain?: boolean;
+  log?: boolean | LogFunction;
 }
 
 export class Toolkit {
   private readonly _tools: LlmTool[];
   private readonly _options: ToolkitOptions;
   private readonly explain: boolean;
+  private readonly log: boolean | LogFunction;
 
   constructor(tools: LlmTool[], options?: ToolkitOptions) {
     this._tools = tools;
     this._options = options || {};
     this.explain = this._options.explain ? true : false;
+    this.log = this._options.log !== undefined ? this._options.log : true;
   }
 
   get tools(): Omit<LlmTool, "call">[] {
@@ -57,6 +73,24 @@ export class Toolkit {
       }
     } catch {
       parsedArgs = args;
+    }
+
+    if (this.log !== false) {
+      try {
+        const context = { name };
+        if (typeof this.log === "function") {
+          const logResult = this.log(parsedArgs, context);
+          if (logResult instanceof Promise) {
+            await logResult;
+          }
+        } else {
+          logToolCall(parsedArgs, context);
+        }
+      } catch (error) {
+        log.error("Caught error during logToolCall");
+        log.var({ error });
+        log.debug("Continuing...");
+      }
     }
 
     const result = tool.call(parsedArgs);
