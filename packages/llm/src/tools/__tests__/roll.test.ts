@@ -22,6 +22,7 @@ describe("roll tool", () => {
       expect(roll).toHaveProperty("parameters");
       expect(roll).toHaveProperty("type", "function");
       expect(roll).toHaveProperty("call");
+      expect(roll).toHaveProperty("message");
     });
 
     it("works with default parameters", () => {
@@ -46,6 +47,23 @@ describe("roll tool", () => {
       });
 
       vi.restoreAllMocks();
+    });
+  });
+
+  describe("Message Functionality", () => {
+    it("returns correct message with default parameters", () => {
+      const message = roll.message?.({});
+      expect(message).toBe("Rolling 1 6-sided dice");
+    });
+
+    it("returns correct message with specified parameters", () => {
+      const message = roll.message?.({ number: 3, sides: 20 });
+      expect(message).toBe("Rolling 3 20-sided dice");
+    });
+
+    it("returns correct message with no parameters", () => {
+      const message = roll.message?.();
+      expect(message).toBe("Rolling 1 6-sided dice");
     });
   });
 
