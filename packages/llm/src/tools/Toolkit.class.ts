@@ -84,7 +84,7 @@ export class Toolkit {
           if (typeof tool.message === "string") {
             message = tool.message;
           } else if (typeof tool.message === "function") {
-            const messageResult = tool.message();
+            const messageResult = tool.message(parsedArgs, { name });
             if (messageResult instanceof Promise) {
               message = await messageResult;
             } else {
