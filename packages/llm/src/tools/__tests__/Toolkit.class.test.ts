@@ -5,12 +5,11 @@ import { LlmTool } from "../../types/LlmTool.interface";
 // Mock jaypie/core
 vi.mock("@jaypie/core", () => {
   const mockLog = {
-    trace: {
-      var: vi.fn(),
-    },
+    trace: vi.fn(),
     error: vi.fn(),
     var: vi.fn(),
     debug: vi.fn(),
+    warn: vi.fn(),
   };
 
   return {
@@ -186,6 +185,7 @@ describe("Toolkit", () => {
 
       await toolkit.call({ name: "testTool", arguments: args });
 
+      expect(customLogFn).toHaveBeenCalledTimes(1);
       expect(customLogFn).toHaveBeenCalledWith(
         'testTool:{"testParam":"value"}',
         { name: "testTool", args: { testParam: "value" } },
