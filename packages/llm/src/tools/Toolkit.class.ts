@@ -1,4 +1,4 @@
-import { JAYPIE, log as jaypieLog } from "@jaypie/core";
+import { JAYPIE, log as jaypieLog, resolveValue } from "@jaypie/core";
 
 import { LlmTool } from "../types/LlmTool.interface";
 
@@ -37,6 +37,7 @@ export class Toolkit {
     return this._tools.map((tool) => {
       const toolCopy: any = { ...tool };
       delete toolCopy.call;
+      delete toolCopy.message;
 
       if (this.explain && toolCopy.parameters?.type === "object") {
         if (toolCopy.parameters?.properties) {
@@ -88,42 +89,76 @@ export class Toolkit {
 
         if (tool.message) {
           if (typeof tool.message === "string") {
+            log.trace("[Toolkit] Tool provided string message");
             message = tool.message;
           } else if (typeof tool.message === "function") {
-            const messageResult = tool.message(parsedArgs, { name });
-            if (messageResult instanceof Promise) {
-              message = await messageResult;
-            } else {
-              message = messageResult;
-            }
+            log.trace("[Toolkit] Tool provided function message");
+            log.trace("[Toolkit] Resolving message result");
+            message = await resolveValue(tool.message(parsedArgs, { name }));
           } else {
+            log.warn("[Toolkit] Tool provided unknown message type");
             message = String(tool.message);
           }
         } else {
+          log.trace("[Toolkit] Log tool call with default message");
           message = `${tool.name}:${JSON.stringify(parsedArgs)}`;
         }
 
         if (typeof this.log === "function") {
-          const logResult = this.log(message, context);
-          if (logResult instanceof Promise) {
-            await logResult;
-          }
+          log.trace("[Toolkit] Log tool call with custom logger");
+          await resolveValue(this.log(message, context));
         } else {
+          log.trace("[Toolkit] Log tool call with default logger");
           logToolMessage(message, context);
         }
       } catch (error) {
-        log.error("Caught error during logToolCall");
+        log.error("[Toolkit] Caught error during logToolCall");
         log.var({ error });
-        log.debug("Continuing...");
+        log.debug("[Toolkit] Continuing...");
       }
     }
 
-    const result = tool.call(parsedArgs);
+    return await resolveValue(tool.call(parsedArgs));
+  }
 
-    if (result instanceof Promise) {
-      return await result;
+  extend(
+    tools: LlmTool[],
+    options: {
+      warn?: boolean;
+      replace?: boolean;
+      log?: boolean | LogFunction;
+      explain?: boolean;
+    } = {},
+  ): this {
+    for (const tool of tools) {
+      const existingIndex = this._tools.findIndex((t) => t.name === tool.name);
+      if (existingIndex !== -1) {
+        if (options.replace === false) {
+          continue;
+        }
+        if (options.warn !== false) {
+          if (typeof this.log === "function") {
+            this.log(
+              `[Toolkit] Tool '${tool.name}' already exists, replacing with new tool`,
+              { name: tool.name, args: {} },
+            );
+          } else if (this.log) {
+            log.warn(
+              `[Toolkit] Tool '${tool.name}' already exists, replacing with new tool`,
+            );
+          }
+        }
+        this._tools[existingIndex] = tool;
+      } else {
+        this._tools.push(tool);
+      }
     }
-
-    return result;
+    if (Object.prototype.hasOwnProperty.call(options, "log")) {
+      (this as any).log = options.log;
+    }
+    if (Object.prototype.hasOwnProperty.call(options, "explain")) {
+      (this as any).explain = options.explain;
+    }
+    return this;
   }
 }
