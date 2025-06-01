@@ -10,6 +10,7 @@ import {
   createMockReturnedFunction,
   createMockTool,
 } from "../utils";
+import { Toolkit } from "@jaypie/llm";
 
 describe("Mock Utils", () => {
   describe("Base Cases", () => {
@@ -584,6 +585,22 @@ describe("Mock Utils", () => {
 
         expect(syncTool.call()).toBe("sync result");
         expect(await asyncTool.call()).toBe("async result");
+      });
+
+      it("should work with Toolkit when calling tool by name with arguments", async () => {
+        const mockCall = vi.fn().mockResolvedValue("toolkit result");
+        const tool = createMockTool("testTool", mockCall);
+        const toolkit = new Toolkit([tool], { log: false });
+
+        const testArguments = { param1: "value1", param2: 42 };
+
+        await toolkit.call({
+          name: tool.name,
+          arguments: JSON.stringify(testArguments),
+        });
+
+        expect(mockCall).toHaveBeenCalledWith(testArguments);
+        expect(mockCall).toHaveBeenCalledTimes(1);
       });
     });
   });
