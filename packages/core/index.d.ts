@@ -456,6 +456,7 @@ export function placeholders(
   template: string | (() => string),
   data?: Record<string, unknown>,
 ): string;
+export function resolveValue<T = unknown>(valueOrFunction: T | (() => T)): T;
 export function safeParseFloat(value: string | number): number;
 export function sleep(milliseconds?: number): Promise<void>;
 
