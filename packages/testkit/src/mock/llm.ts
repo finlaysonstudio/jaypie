@@ -70,11 +70,13 @@ export const Llm = Object.assign(
 );
 
 // Tool implementations - always return mock values
-const random = createMockReturnedFunction(0.5);
+const random = createMockReturnedFunction(0.5) as any as original.LlmTool;
 
-const roll = createMockReturnedFunction(6);
+const roll = createMockReturnedFunction(6) as any as original.LlmTool;
 
-const time = createMockReturnedFunction(`_MOCK_TIME_[${TAG}]`);
+const time = createMockReturnedFunction(
+  `_MOCK_TIME_[${TAG}]`,
+) as any as original.LlmTool;
 
 const weather = createMockResolvedFunction({
   location: `_MOCK_WEATHER_LOCATION_[${TAG}]`,
@@ -86,18 +88,15 @@ const weather = createMockResolvedFunction({
       condition: "Sunny",
       precipitation: 0,
     })),
-});
-
-// Tool collections
-export const toolkit = {
-  random,
-  roll,
-  time,
-  weather,
-};
+}) as any as original.LlmTool;
 
 export const Toolkit = createMockWrappedObject(original.Toolkit, {
   isClass: true,
 });
+
+// Tool collections
+export const toolkit = createMockWrappedObject(
+  new original.Toolkit([random, roll, time, weather]),
+);
 
 export const tools = Object.values(toolkit);
