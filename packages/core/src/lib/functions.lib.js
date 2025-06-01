@@ -4,5 +4,6 @@ export { default as formatError } from "./functions/formatError.function.js";
 export { default as getHeaderFrom } from "./functions/getHeaderFrom.function.js";
 export { default as getObjectKeyCaseInsensitive } from "./functions/getObjectKeyCaseInsensitive.js";
 export { default as placeholders } from "./functions/placeholders.js";
+export { default as resolveValue } from "./functions/resolveValue.js";
 export { default as safeParseFloat } from "./functions/safeParseFloat.function.js";
 export { default as sleep } from "./functions/sleep.function.js";
