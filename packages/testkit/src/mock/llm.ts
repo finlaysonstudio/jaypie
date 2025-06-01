@@ -96,4 +96,8 @@ export const toolkit = {
   weather,
 };
 
+export const Toolkit = createMockWrappedObject(original.Toolkit, {
+  isClass: true,
+});
+
 export const tools = Object.values(toolkit);
