@@ -27,7 +27,7 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.18.0",
     "@jaypie/aws": "^1.1.15",
-    "@jaypie/core": "^1.1.2",
+    "@jaypie/core": "^1.1.11",
     "@jaypie/errors": "^1.1.5",
     "openai": "^4.87.3",
     "openmeteo": "^1.2.0",
