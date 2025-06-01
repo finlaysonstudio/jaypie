@@ -1,4 +1,4 @@
-import { JAYPIE, log as jaypieLog } from "@jaypie/core";
+import { JAYPIE, log as jaypieLog, resolveValue } from "@jaypie/core";
 
 import { LlmTool } from "../types/LlmTool.interface";
 
@@ -93,13 +93,8 @@ export class Toolkit {
             message = tool.message;
           } else if (typeof tool.message === "function") {
             log.trace("[Toolkit] Tool provided function message");
-            const messageResult = tool.message(parsedArgs, { name });
-            if (messageResult instanceof Promise) {
-              log.trace("[Toolkit] Awaiting message result");
-              message = await messageResult;
-            } else {
-              message = messageResult;
-            }
+            log.trace("[Toolkit] Resolving message result");
+            message = await resolveValue(tool.message(parsedArgs, { name }));
           } else {
             log.warn("[Toolkit] Tool provided unknown message type");
             message = String(tool.message);
@@ -111,10 +106,7 @@ export class Toolkit {
 
         if (typeof this.log === "function") {
           log.trace("[Toolkit] Log tool call with custom logger");
-          const logResult = this.log(message, context);
-          if (logResult instanceof Promise) {
-            await logResult;
-          }
+          await resolveValue(this.log(message, context));
         } else {
           log.trace("[Toolkit] Log tool call with default logger");
           logToolMessage(message, context);
@@ -126,13 +118,7 @@ export class Toolkit {
       }
     }
 
-    const result = tool.call(parsedArgs);
-
-    if (result instanceof Promise) {
-      return await result;
-    }
-
-    return result;
+    return await resolveValue(tool.call(parsedArgs));
   }
 
   extend(

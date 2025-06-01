@@ -1,4 +1,4 @@
-import { sleep, placeholders } from "@jaypie/core";
+import { resolveValue, sleep, placeholders } from "@jaypie/core";
 import { BadGatewayError, TooManyRequestsError } from "@jaypie/errors";
 import { JsonObject, NaturalSchema } from "@jaypie/types";
 import {
@@ -36,7 +36,6 @@ import {
   log,
   maxTurnsFromOptions,
   naturalZodSchema,
-  resolvePromise,
 } from "../../util";
 
 //
@@ -358,7 +357,7 @@ export async function operate(
 
         // Execute beforeEachModelRequest hook if defined
         if (options.hooks?.beforeEachModelRequest) {
-          await resolvePromise(
+          await resolveValue(
             options.hooks.beforeEachModelRequest({
               input,
               options,
@@ -400,7 +399,7 @@ export async function operate(
             currentResponse,
             options,
           );
-          await resolvePromise(
+          await resolveValue(
             options.hooks.afterEachModelResponse({
               input,
               options,
@@ -449,7 +448,7 @@ export async function operate(
 
                     // Execute beforeEachTool hook if defined
                     if (options.hooks?.beforeEachTool) {
-                      await resolvePromise(
+                      await resolveValue(
                         options.hooks.beforeEachTool({
                           toolName: output.name,
                           args: output.arguments,
@@ -466,7 +465,7 @@ export async function operate(
 
                       // Execute afterEachTool hook if defined
                       if (options.hooks?.afterEachTool) {
-                        await resolvePromise(
+                        await resolveValue(
                           options.hooks.afterEachTool({
                             result,
                             toolName: output.name,
@@ -477,7 +476,7 @@ export async function operate(
                     } catch (error) {
                       // Execute onToolError hook if defined
                       if (options.hooks?.onToolError) {
-                        await resolvePromise(
+                        await resolveValue(
                           options.hooks.onToolError({
                             error: error as Error,
                             toolName: output.name,
@@ -570,7 +569,7 @@ export async function operate(
 
           // Execute onUnrecoverableModelError hook if defined
           if (options.hooks?.onUnrecoverableModelError) {
-            await resolvePromise(
+            await resolveValue(
               options.hooks.onUnrecoverableModelError({
                 input,
                 options,
@@ -598,7 +597,7 @@ export async function operate(
 
           // Execute onUnrecoverableModelError hook if defined
           if (options.hooks?.onUnrecoverableModelError) {
-            await resolvePromise(
+            await resolveValue(
               options.hooks.onUnrecoverableModelError({
                 input,
                 options,
@@ -629,7 +628,7 @@ export async function operate(
 
         // Execute onRetryableModelError hook if defined
         if (options.hooks?.onRetryableModelError) {
-          await resolvePromise(
+          await resolveValue(
             options.hooks.onRetryableModelError({
               input,
               options,

@@ -21,6 +21,7 @@ vi.mock("@jaypie/core", () => {
     log: {
       lib: vi.fn(() => mockLog),
     },
+    resolveValue: vi.fn((value) => Promise.resolve(value)),
   };
 });
 
