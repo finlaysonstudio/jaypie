@@ -8,6 +8,7 @@ import {
   createMockWrappedObject,
   createMockWrappedFunction,
   createMockReturnedFunction,
+  createMockTool,
 } from "../utils";
 
 describe("Mock Utils", () => {
@@ -389,6 +390,201 @@ describe("Mock Utils", () => {
       expect(nestedUser).toBe("_MOCK_WRAPPED_RESULT");
 
       console.warn = consoleWarn;
+    });
+  });
+
+  describe("createMockTool", () => {
+    describe("Base Cases", () => {
+      it("should create a mock tool with default values when no parameters provided", () => {
+        const tool = createMockTool();
+
+        expect(tool.name).toBe("mockTool");
+        expect(tool.description).toBe("Mock tool for testing");
+        expect(tool.parameters).toEqual({});
+        expect(tool.type).toBe("function");
+        expect(typeof tool.call).toBe("function");
+        expect(tool.message).toBe("MOCK_TOOL_MESSAGE");
+      });
+
+      it("should create a mock tool with only name provided", () => {
+        const tool = createMockTool("customTool");
+
+        expect(tool.name).toBe("customTool");
+        expect(tool.description).toBe("Mock tool for testing");
+        expect(tool.parameters).toEqual({});
+        expect(tool.type).toBe("function");
+        expect(typeof tool.call).toBe("function");
+        expect(tool.message).toBe("MOCK_TOOL_MESSAGE");
+      });
+
+      it("should create a mock tool with name and call function", () => {
+        const customCall = vi.fn().mockReturnValue("custom result");
+        const tool = createMockTool("namedTool", customCall);
+
+        expect(tool.name).toBe("namedTool");
+        expect(tool.call).toBe(customCall);
+        expect(tool.description).toBe("Mock tool for testing");
+        expect(tool.type).toBe("function");
+        expect(tool.message).toBe("MOCK_TOOL_MESSAGE");
+      });
+
+      it("should create a mock tool with only call function provided", () => {
+        const customCall = vi.fn().mockReturnValue("function result");
+        const tool = createMockTool(customCall);
+
+        expect(tool.name).toBe("mockTool");
+        expect(tool.call).toBe(customCall);
+        expect(tool.description).toBe("Mock tool for testing");
+        expect(tool.type).toBe("function");
+        expect(tool.message).toBe("MOCK_TOOL_MESSAGE");
+      });
+    });
+
+    describe("Error Conditions", () => {
+      it("should handle null parameters gracefully", () => {
+        const tool = createMockTool(null as any);
+
+        expect(tool.name).toBe("mockTool");
+        expect(tool.description).toBe("Mock tool for testing");
+        expect(typeof tool.call).toBe("function");
+      });
+
+      it("should handle undefined parameters gracefully", () => {
+        const tool = createMockTool(undefined as any);
+
+        expect(tool.name).toBe("mockTool");
+        expect(tool.description).toBe("Mock tool for testing");
+        expect(typeof tool.call).toBe("function");
+      });
+    });
+
+    describe("Happy Paths", () => {
+      it("should create a mock tool with name and options object", () => {
+        const options = {
+          description: "Custom description",
+          parameters: { param1: "value1" },
+          type: "custom" as const,
+          message: "Custom message",
+        };
+        const tool = createMockTool("optionsTool", options);
+
+        expect(tool.name).toBe("optionsTool");
+        expect(tool.description).toBe("Custom description");
+        expect(tool.parameters).toEqual({ param1: "value1" });
+        expect(tool.type).toBe("custom");
+        expect(tool.message).toBe("Custom message");
+      });
+
+      it("should create a mock tool with full options object", () => {
+        const customCall = vi.fn().mockReturnValue("options result");
+        const options = {
+          name: "fullOptionsTool",
+          description: "Full options description",
+          parameters: { param1: "value1", param2: 42 },
+          type: "function" as const,
+          call: customCall,
+          message: "Full options message",
+        };
+        const tool = createMockTool(options);
+
+        expect(tool.name).toBe("fullOptionsTool");
+        expect(tool.description).toBe("Full options description");
+        expect(tool.parameters).toEqual({ param1: "value1", param2: 42 });
+        expect(tool.type).toBe("function");
+        expect(tool.call).toBe(customCall);
+        expect(tool.message).toBe("Full options message");
+      });
+
+      it("should create a mock tool with partial options object", () => {
+        const partialOptions = {
+          description: "Partial description",
+          parameters: { test: true },
+        };
+        const tool = createMockTool(partialOptions);
+
+        expect(tool.name).toBe("mockTool");
+        expect(tool.description).toBe("Partial description");
+        expect(tool.parameters).toEqual({ test: true });
+        expect(tool.type).toBe("function");
+        expect(typeof tool.call).toBe("function");
+        expect(tool.message).toBe("MOCK_TOOL_MESSAGE");
+      });
+    });
+
+    describe("Features", () => {
+      it("should have a working default call function that resolves to expected value", async () => {
+        const tool = createMockTool();
+
+        const result = await tool.call();
+        expect(result).toEqual({ result: "MOCK_TOOL" });
+      });
+
+      it("should support custom call function execution", async () => {
+        const customCall = vi.fn().mockResolvedValue("custom async result");
+        const tool = createMockTool("asyncTool", customCall);
+
+        const result = await tool.call({ arg1: "test" });
+        expect(result).toBe("custom async result");
+        expect(customCall).toHaveBeenCalledWith({ arg1: "test" });
+      });
+
+      it("should support message as function", () => {
+        const messageFunction = vi.fn().mockReturnValue("dynamic message");
+        const tool = createMockTool({
+          name: "messageTool",
+          message: messageFunction,
+        });
+
+        expect(typeof tool.message).toBe("function");
+        if (typeof tool.message === "function") {
+          const result = tool.message(
+            { param: "value" },
+            { name: "messageTool" },
+          );
+          expect(result).toBe("dynamic message");
+          expect(messageFunction).toHaveBeenCalledWith(
+            { param: "value" },
+            { name: "messageTool" },
+          );
+        }
+      });
+    });
+
+    describe("Specific Scenarios", () => {
+      it("should override defaults when options are provided", () => {
+        const customCall = vi.fn();
+        const tool = createMockTool("overrideTool", {
+          description: "Override description",
+          parameters: { override: true },
+          type: "override",
+          call: customCall,
+          message: "Override message",
+        });
+
+        expect(tool.name).toBe("overrideTool");
+        expect(tool.description).toBe("Override description");
+        expect(tool.parameters).toEqual({ override: true });
+        expect(tool.type).toBe("override");
+        expect(tool.call).toBe(customCall);
+        expect(tool.message).toBe("Override message");
+      });
+
+      it("should maintain jaypie mock properties on the call function", () => {
+        const tool = createMockTool();
+
+        expect(tool.call).toHaveProperty("_jaypie", true);
+      });
+
+      it("should support both sync and async call functions", async () => {
+        const syncCall = vi.fn().mockReturnValue("sync result");
+        const asyncCall = vi.fn().mockResolvedValue("async result");
+
+        const syncTool = createMockTool("syncTool", syncCall);
+        const asyncTool = createMockTool("asyncTool", asyncCall);
+
+        expect(syncTool.call()).toBe("sync result");
+        expect(await asyncTool.call()).toBe("async result");
+      });
     });
   });
 });

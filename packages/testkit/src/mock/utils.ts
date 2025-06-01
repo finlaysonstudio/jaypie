@@ -1,5 +1,7 @@
 import { vi } from "vitest";
 
+import { LlmTool } from "@jaypie/llm";
+
 /**
  * Internal wrapper for vi.fn() that adds _jaypie: true to all mocks
  */
@@ -190,6 +192,70 @@ class MockNotFoundError extends Error {
   }
 }
 
+/**
+ * Creates a mock LlmTool for testing purposes
+ * @param nameOrCallOrOptions - Name (string), call function, or full options object
+ * @param callOrOptions - Call function or options object (when first param is string)
+ * @returns Mock LlmTool object
+ */
+function createMockTool(
+  nameOrCallOrOptions: string | ((...args: any[]) => any) | Partial<LlmTool>,
+  callOrOptions?: ((...args: any[]) => any) | Partial<LlmTool>,
+): LlmTool {
+  // Default options
+  const defaults: LlmTool = {
+    name: "mockTool",
+    description: "Mock tool for testing",
+    parameters: {},
+    type: "function",
+    call: createMockResolvedFunction({ result: "MOCK_TOOL" }),
+    message: "MOCK_TOOL_MESSAGE",
+  };
+
+  // Handle different parameter combinations
+  if (typeof nameOrCallOrOptions === "string") {
+    // First parameter is name
+    const name = nameOrCallOrOptions;
+
+    if (typeof callOrOptions === "function") {
+      // Second parameter is call function
+      return {
+        ...defaults,
+        name,
+        call: callOrOptions,
+      };
+    } else if (callOrOptions && typeof callOrOptions === "object") {
+      // Second parameter is options object
+      return {
+        ...defaults,
+        name,
+        ...callOrOptions,
+      };
+    } else {
+      // Only name provided
+      return {
+        ...defaults,
+        name,
+      };
+    }
+  } else if (typeof nameOrCallOrOptions === "function") {
+    // First parameter is call function
+    return {
+      ...defaults,
+      call: nameOrCallOrOptions,
+    };
+  } else if (nameOrCallOrOptions && typeof nameOrCallOrOptions === "object") {
+    // First parameter is options object
+    return {
+      ...defaults,
+      ...nameOrCallOrOptions,
+    };
+  } else {
+    // No parameters or invalid parameters
+    return defaults;
+  }
+}
+
 // Export functions for internal use
 export {
   createMockFunction,
@@ -200,4 +266,5 @@ export {
   MockValidationError,
   MockNotFoundError,
   createMockError,
+  createMockTool,
 };
