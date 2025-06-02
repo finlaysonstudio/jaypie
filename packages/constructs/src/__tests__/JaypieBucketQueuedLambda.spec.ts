@@ -371,7 +371,7 @@ describe("JaypieBucketQueuedLambda", () => {
       // Find BucketNotificationsHandler Lambda
       template.hasResourceProperties("AWS::Lambda::Function", {
         Handler: "index.handler",
-        Runtime: lambda.Runtime.NODEJS_20_X.name,
+        Runtime: lambda.Runtime.NODEJS_LATEST.name,
       });
     });
 
