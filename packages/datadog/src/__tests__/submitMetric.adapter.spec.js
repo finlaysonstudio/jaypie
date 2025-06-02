@@ -38,6 +38,13 @@ vi.mock("@jaypie/aws");
 const mockSubmitMetrics = vi.fn();
 
 beforeEach(() => {
+  // Clear environment variables
+  delete process.env.PROJECT_ENV;
+  delete process.env.PROJECT_KEY;
+  delete process.env.PROJECT_SERVICE;
+  delete process.env.PROJECT_SPONSOR;
+  delete process.env.PROJECT_VERSION;
+  
   getSecret.mockImplementation(() => MOCK.SECRET_DATADOG_API_KEY);
   mockSubmitMetrics.mockResolvedValue({ errors: [] });
   // eslint-disable-next-line import-x/namespace
@@ -219,7 +226,9 @@ describe("Datadog Metric Adapter", () => {
       const submitMetricsArgs = v2.MetricsApi().submitMetrics.mock.calls[0][0];
       expect(submitMetricsArgs.body.series[0].tags).toContain("env:test");
       expect(submitMetricsArgs.body.series[0].tags).toContain("project:jaypie");
-      expect(submitMetricsArgs.body.series[0].tags).toContain("service:datadog");
+      expect(submitMetricsArgs.body.series[0].tags).toContain(
+        "service:datadog",
+      );
       expect(submitMetricsArgs.body.series[0].tags).toContain("sponsor:acme");
       expect(submitMetricsArgs.body.series[0].tags).toContain("version:1.0.0");
       // Cleanup
@@ -240,8 +249,12 @@ describe("Datadog Metric Adapter", () => {
       const submitMetricsArgs = v2.MetricsApi().submitMetrics.mock.calls[0][0];
       expect(submitMetricsArgs.body.series[0].tags).toContain("env:production");
       expect(submitMetricsArgs.body.series[0].tags).toContain("project:custom");
-      expect(submitMetricsArgs.body.series[0].tags).not.toContain("env:default");
-      expect(submitMetricsArgs.body.series[0].tags).not.toContain("project:default");
+      expect(submitMetricsArgs.body.series[0].tags).not.toContain(
+        "env:default",
+      );
+      expect(submitMetricsArgs.body.series[0].tags).not.toContain(
+        "project:default",
+      );
       // Cleanup
       process.env = originalEnv;
     });
@@ -261,13 +274,21 @@ describe("Datadog Metric Adapter", () => {
       expect(submitMetricsArgs.body.series[0].tags).toContain("env:false");
       expect(submitMetricsArgs.body.series[0].tags).toContain("project:");
       expect(submitMetricsArgs.body.series[0].tags).not.toContain("env:test");
-      expect(submitMetricsArgs.body.series[0].tags).not.toContain("project:jaypie");
+      expect(submitMetricsArgs.body.series[0].tags).not.toContain(
+        "project:jaypie",
+      );
       // Cleanup
       process.env = originalEnv;
     });
     it("Resolves duplicate tags correctly", async () => {
       // Arrange
-      const tags = ["taco:beef", "cheese:false", "double", "cheese:extra", "double"];
+      const tags = [
+        "taco:beef",
+        "cheese:false",
+        "double",
+        "cheese:extra",
+        "double",
+      ];
       // Act
       await submitMetric({ ...MOCK.SUBMISSION, tags });
       // Assert
@@ -277,8 +298,10 @@ describe("Datadog Metric Adapter", () => {
       expect(finalTags).toContain("cheese:extra");
       expect(finalTags).toContain("double");
       expect(finalTags).not.toContain("cheese:false");
-      expect(finalTags.filter(tag => tag === "double")).toHaveLength(1);
-      expect(finalTags.filter(tag => tag.startsWith("cheese:"))).toHaveLength(1);
+      expect(finalTags.filter((tag) => tag === "double")).toHaveLength(1);
+      expect(finalTags.filter((tag) => tag.startsWith("cheese:"))).toHaveLength(
+        1,
+      );
     });
     it("Mixed array and environment tags resolve duplicates correctly", async () => {
       // Arrange

@@ -40,3 +40,9 @@ The problem is `tags` can be passed in as an object or array.
 Make sure there is a test for each case.
 Maybe `tags` should use `objectToKeyValueArrayPipeline` sooner, combined with default tags in an array form, and then eliminate any duplicates.
 For example, `["taco:beef", "cheese:false", "double", "cheese:extra", "double"]` would reduce to `["taco:beef", "cheese:extra", "double"]` by eliminating duplicates with no `:` and only using the last `prefix:`.
+
+---
+
+All of the above works but the tests are failing in cicd.
+The reason they are failing in cicd is because the pipeline as some environment variables set.
+Before each test, empty the environment
