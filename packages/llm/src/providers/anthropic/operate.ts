@@ -25,7 +25,9 @@ import {
   prepareMessages,
 } from "./index.js";
 import { PROVIDER } from "../../constants.js";
-import { JsonObject } from "@jaypie/types";
+import { JsonObject, NaturalSchema } from "@jaypie/types";
+import { z } from "zod/v4";
+import ZSchema from "z-schema";
 
 //
 //
@@ -54,6 +56,33 @@ export async function operate(
     client: new Anthropic(),
   },
 ): Promise<LlmOperateResponse> {
+  // Handle structured output format
+  let schema: JsonObject | undefined;
+  if (options?.format) {
+    // Check if format is a JsonObject with type "json_schema"
+    if (
+      typeof options.format === "object" &&
+      options.format !== null &&
+      !Array.isArray(options.format) &&
+      (options.format as JsonObject).type === "json_schema"
+    ) {
+      // Direct pass-through for JsonObject with type "json_schema"
+      schema = structuredClone(options.format) as JsonObject;
+      schema.type = "object"; // Validator does not recognise "json_schema" as a type
+    } else {
+      // Convert NaturalSchema to JSON schema through Zod
+      const zodSchema =
+        options.format instanceof z.ZodType
+          ? options.format
+          : naturalZodSchema(options.format as NaturalSchema);
+      schema = z.toJSONSchema(zodSchema) as JsonObject;
+    }
+
+    if (schema.$schema) {
+      delete schema.$schema; // Hack to fix issue with validator
+    }
+  }
+
   // Convert string input to array format with placeholders if needed
   let history: LlmHistory = formatOperateInput(input);
   if (
@@ -78,10 +107,32 @@ export async function operate(
 
   const response = await context.client.messages.create({
     model: options.model as Anthropic.MessageCreateParams["model"],
+    system: schema
+      ? "You will be responding with structured JSON data. " +
+        "Format your entire response as a valid JSON object with the following structure: " +
+        JSON.stringify(schema)
+      : undefined,
     messages: inputMessages,
     max_tokens: PROVIDER.ANTHROPIC.MAX_TOKENS.DEFAULT,
     stream: false,
   });
+
+  let jsonResult: JsonObject | undefined;
+  if (schema) {
+    const validator = new ZSchema({});
+    const jsonMatch =
+      response.content[0].text.match(/```json\s*([\s\S]*?)\s*```/) ||
+      response.content[0].text.match(/\{[\s\S]*\}/);
+
+    if (jsonMatch) {
+      const jsonStr = jsonMatch[1] || jsonMatch[0];
+      jsonResult = JSON.parse(jsonStr);
+      if (!validator.validate(jsonResult, schema)) {
+        console.log(validator.getLastError());
+        throw new Error("Model returned invalid JSON");
+      }
+    }
+  }
 
   history.push({
     content: response.content[0].text,
@@ -90,7 +141,7 @@ export async function operate(
   } as LlmOutputMessage);
 
   return {
-    content: response.content[0].text,
+    content: schema ? jsonResult : response.content[0].text,
     responses: [response as unknown as JsonObject],
     output: history.slice(-1) as LlmOutputMessage[],
     history,

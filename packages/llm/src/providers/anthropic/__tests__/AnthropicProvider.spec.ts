@@ -4,7 +4,12 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { z } from "zod/v4";
 import { AnthropicProvider } from "../AnthropicProvider.class.js";
 import { PROVIDER } from "../../../constants.js";
-import { LlmMessageType, LlmInputMessage, LlmOutputMessage, LlmMessageRole } from "../../../types/LlmProvider.interface.js";
+import {
+  LlmMessageType,
+  LlmInputMessage,
+  LlmOutputMessage,
+  LlmMessageRole,
+} from "../../../types/LlmProvider.interface.js";
 
 // Create a mock implementation for Anthropic client
 vi.mock("@anthropic-ai/sdk", () => {
@@ -74,14 +79,6 @@ describe("AnthropicProvider", () => {
     it("throws ConfigurationError when API key is missing", async () => {
       const provider = new AnthropicProvider();
       expect(async () => provider.send("test")).toThrowConfigurationError();
-    });
-
-    it("throws Error when operate method is called", async () => {
-      const provider = new AnthropicProvider();
-      provider["apiKey"] = "test-key"; // Set API key directly to avoid configuration error
-      await expect(provider.operate("test")).rejects.toThrowError(
-        "The operate method is not yet implemented for AnthropicProvider",
-      );
     });
 
     it("throws error when JSON response does not match schema", async () => {
@@ -269,6 +266,189 @@ describe("AnthropicProvider", () => {
           "Failed to parse structured response from Anthropic",
         );
       });
+
+      it("operate returns structured output with history", async () => {
+        const mockResponse = {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify({
+                salutation: "Hello",
+                name: "World",
+              }),
+            },
+          ],
+          usage: { input_tokens: 10, output_tokens: 10 },
+        };
+
+        const mockCreate = vi.fn().mockResolvedValue(mockResponse);
+        vi.mocked(Anthropic).mockImplementation(
+          () =>
+            ({
+              messages: {
+                create: mockCreate,
+              },
+            }) as any,
+        );
+
+        const provider = new AnthropicProvider();
+        provider["apiKey"] = "test-key";
+
+        const GreetingFormat = z.object({
+          salutation: z.string(),
+          name: z.string(),
+        });
+
+        const response = await provider.operate("Hello, World", {
+          format: GreetingFormat,
+        });
+
+        expect(response.content).toEqual({
+          salutation: "Hello",
+          name: "World",
+        });
+        expect(response.history).toHaveLength(2);
+        expect(response.history[0]).toEqual({
+          role: LlmMessageRole.User,
+          content: "Hello, World",
+          type: LlmMessageType.Message,
+        });
+        expect(response.history[1]).toEqual({
+          role: LlmMessageRole.Assistant,
+          content: JSON.stringify({
+            salutation: "Hello",
+            name: "World",
+          }),
+          type: LlmMessageType.Message,
+        });
+      });
+
+      it("operate maintains history across structured output calls", async () => {
+        const mockResponse1 = {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify({
+                salutation: "Hello",
+                name: "World",
+              }),
+            },
+          ],
+          usage: { input_tokens: 10, output_tokens: 10 },
+        };
+
+        const mockResponse2 = {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify({
+                salutation: "Goodbye",
+                name: "World",
+              }),
+            },
+          ],
+          usage: { input_tokens: 10, output_tokens: 10 },
+        };
+
+        const mockCreate = vi
+          .fn()
+          .mockResolvedValueOnce(mockResponse1)
+          .mockResolvedValueOnce(mockResponse2);
+
+        vi.mocked(Anthropic).mockImplementation(
+          () =>
+            ({
+              messages: {
+                create: mockCreate,
+              },
+            }) as any,
+        );
+
+        const provider = new AnthropicProvider();
+        provider["apiKey"] = "test-key";
+
+        const GreetingFormat = z.object({
+          salutation: z.string(),
+          name: z.string(),
+        });
+
+        // First call
+        const response1 = await provider.operate("Hello, World", {
+          format: GreetingFormat,
+        });
+
+        // Second call
+        const response2 = await provider.operate("Goodbye, World", {
+          format: GreetingFormat,
+        });
+
+        expect(response2.history).toHaveLength(4);
+        expect(response2.history[0]).toEqual({
+          role: LlmMessageRole.User,
+          content: "Hello, World",
+          type: LlmMessageType.Message,
+        });
+        expect(response2.history[1]).toEqual({
+          role: LlmMessageRole.Assistant,
+          content: JSON.stringify({
+            salutation: "Hello",
+            name: "World",
+          }),
+          type: LlmMessageType.Message,
+        });
+        expect(response2.history[2]).toEqual({
+          role: LlmMessageRole.User,
+          content: "Goodbye, World",
+          type: LlmMessageType.Message,
+        });
+        expect(response2.history[3]).toEqual({
+          role: LlmMessageRole.Assistant,
+          content: JSON.stringify({
+            salutation: "Goodbye",
+            name: "World",
+          }),
+          type: LlmMessageType.Message,
+        });
+      });
+
+      it("operate throws error when structured output is invalid", async () => {
+        const mockResponse = {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify({
+                salutation: "Hello",
+                // Missing required 'name' field
+              }),
+            },
+          ],
+          usage: { input_tokens: 10, output_tokens: 10 },
+        };
+
+        const mockCreate = vi.fn().mockResolvedValue(mockResponse);
+        vi.mocked(Anthropic).mockImplementation(
+          () =>
+            ({
+              messages: {
+                create: mockCreate,
+              },
+            }) as any,
+        );
+
+        const provider = new AnthropicProvider();
+        provider["apiKey"] = "test-key";
+
+        const GreetingFormat = z.object({
+          salutation: z.string(),
+          name: z.string(),
+        });
+
+        await expect(async () => {
+          await provider.operate("Hello, World", {
+            format: GreetingFormat,
+          });
+        }).toThrowError("Model returned invalid JSON");
+      });
     });
 
     describe("Message Options", () => {
@@ -410,7 +590,8 @@ describe("AnthropicProvider", () => {
           usage: { input_tokens: 10, output_tokens: 10 },
         };
 
-        const mockCreate = vi.fn()
+        const mockCreate = vi
+          .fn()
           .mockResolvedValueOnce(mockResponse1)
           .mockResolvedValueOnce(mockResponse2);
 
@@ -444,7 +625,10 @@ describe("AnthropicProvider", () => {
         expect(mockCreate).toHaveBeenCalledWith({
           messages: [
             { role: PROVIDER.ANTHROPIC.ROLE.USER, content: "first message" },
-            { role: PROVIDER.ANTHROPIC.ROLE.ASSISTANT, content: "first response" },
+            {
+              role: PROVIDER.ANTHROPIC.ROLE.ASSISTANT,
+              content: "first response",
+            },
             { role: PROVIDER.ANTHROPIC.ROLE.USER, content: "second message" },
           ],
           model: expect.any(String),
@@ -477,8 +661,16 @@ describe("AnthropicProvider", () => {
 
         // Second call with additional history
         const additionalHistory: (LlmInputMessage | LlmOutputMessage)[] = [
-          { role: LlmMessageRole.User, content: "previous message", type: LlmMessageType.Message },
-          { role: LlmMessageRole.Assistant, content: "previous response", type: LlmMessageType.Message },
+          {
+            role: LlmMessageRole.User,
+            content: "previous message",
+            type: LlmMessageType.Message,
+          },
+          {
+            role: LlmMessageRole.Assistant,
+            content: "previous response",
+            type: LlmMessageType.Message,
+          },
         ];
 
         await provider.operate("new message", { history: additionalHistory });
@@ -488,7 +680,10 @@ describe("AnthropicProvider", () => {
             { role: PROVIDER.ANTHROPIC.ROLE.USER, content: "first message" },
             { role: PROVIDER.ANTHROPIC.ROLE.ASSISTANT, content: "response" },
             { role: PROVIDER.ANTHROPIC.ROLE.USER, content: "previous message" },
-            { role: PROVIDER.ANTHROPIC.ROLE.ASSISTANT, content: "previous response" },
+            {
+              role: PROVIDER.ANTHROPIC.ROLE.ASSISTANT,
+              content: "previous response",
+            },
             { role: PROVIDER.ANTHROPIC.ROLE.USER, content: "new message" },
           ],
           model: expect.any(String),
@@ -526,10 +721,26 @@ describe("AnthropicProvider", () => {
 
         // Verify history content
         const expectedHistory: (LlmInputMessage | LlmOutputMessage)[] = [
-          { role: LlmMessageRole.User, content: "first message", type: LlmMessageType.Message },
-          { role: LlmMessageRole.Assistant, content: "response", type: LlmMessageType.Message },
-          { role: LlmMessageRole.User, content: "second message", type: LlmMessageType.Message },
-          { role: LlmMessageRole.Assistant, content: "response", type: LlmMessageType.Message },
+          {
+            role: LlmMessageRole.User,
+            content: "first message",
+            type: LlmMessageType.Message,
+          },
+          {
+            role: LlmMessageRole.Assistant,
+            content: "response",
+            type: LlmMessageType.Message,
+          },
+          {
+            role: LlmMessageRole.User,
+            content: "second message",
+            type: LlmMessageType.Message,
+          },
+          {
+            role: LlmMessageRole.Assistant,
+            content: "response",
+            type: LlmMessageType.Message,
+          },
         ];
 
         expect(response2.history).toEqual(expectedHistory);
