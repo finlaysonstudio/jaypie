@@ -37,6 +37,13 @@ vi.mock("@jaypie/aws");
 const mockSubmitMetrics = vi.fn();
 
 beforeEach(() => {
+  // Clear environment variables
+  delete process.env.PROJECT_ENV;
+  delete process.env.PROJECT_KEY;
+  delete process.env.PROJECT_SERVICE;
+  delete process.env.PROJECT_SPONSOR;
+  delete process.env.PROJECT_VERSION;
+  
   getSecret.mockImplementation(() => MOCK.SECRET_DATADOG_API_KEY);
   mockSubmitMetrics.mockResolvedValue({ errors: [] });
   // eslint-disable-next-line import-x/namespace
@@ -238,6 +245,100 @@ describe("Datadog Metric Adapter", () => {
       expect(
         client.createConfiguration.mock.calls[0][0].authMethods.apiKeyAuth,
       ).toBe(MOCK.SECRET_DATADOG_API_KEY);
+    });
+    it("Includes environment tags when present", async () => {
+      // Arrange
+      const originalEnv = process.env;
+      process.env = {
+        ...originalEnv,
+        PROJECT_ENV: "test",
+        PROJECT_KEY: "jaypie",
+        PROJECT_SERVICE: "datadog",
+        PROJECT_SPONSOR: "acme",
+        PROJECT_VERSION: "1.0.0",
+      };
+      // Act
+      await submitMetricSet(MOCK.SUBMISSION);
+      // Assert
+      const submitMetricsArgs = v2.MetricsApi().submitMetrics.mock.calls[0][0];
+      expect(submitMetricsArgs.body.series[0].tags).toContain("env:test");
+      expect(submitMetricsArgs.body.series[0].tags).toContain("project:jaypie");
+      expect(submitMetricsArgs.body.series[0].tags).toContain(
+        "service:datadog",
+      );
+      expect(submitMetricsArgs.body.series[0].tags).toContain("sponsor:acme");
+      expect(submitMetricsArgs.body.series[0].tags).toContain("version:1.0.0");
+      // Cleanup
+      process.env = originalEnv;
+    });
+    it("User tags override environment tags", async () => {
+      // Arrange
+      const originalEnv = process.env;
+      process.env = {
+        ...originalEnv,
+        PROJECT_ENV: "default",
+        PROJECT_KEY: "default",
+      };
+      const tags = { env: "production", project: "custom" };
+      // Act
+      await submitMetricSet({ ...MOCK.SUBMISSION, tags });
+      // Assert
+      const submitMetricsArgs = v2.MetricsApi().submitMetrics.mock.calls[0][0];
+      expect(submitMetricsArgs.body.series[0].tags).toContain("env:production");
+      expect(submitMetricsArgs.body.series[0].tags).toContain("project:custom");
+      expect(submitMetricsArgs.body.series[0].tags).not.toContain(
+        "env:default",
+      );
+      expect(submitMetricsArgs.body.series[0].tags).not.toContain(
+        "project:default",
+      );
+      // Cleanup
+      process.env = originalEnv;
+    });
+    it("Resolves duplicate tags correctly", async () => {
+      // Arrange
+      const tags = [
+        "taco:beef",
+        "cheese:false",
+        "double",
+        "cheese:extra",
+        "double",
+      ];
+      // Act
+      await submitMetricSet({ ...MOCK.SUBMISSION, tags });
+      // Assert
+      const submitMetricsArgs = v2.MetricsApi().submitMetrics.mock.calls[0][0];
+      const finalTags = submitMetricsArgs.body.series[0].tags;
+      expect(finalTags).toContain("taco:beef");
+      expect(finalTags).toContain("cheese:extra");
+      expect(finalTags).toContain("double");
+      expect(finalTags).not.toContain("cheese:false");
+      expect(finalTags.filter((tag) => tag === "double")).toHaveLength(1);
+      expect(finalTags.filter((tag) => tag.startsWith("cheese:"))).toHaveLength(
+        1,
+      );
+    });
+    it("Mixed array and environment tags resolve duplicates correctly", async () => {
+      // Arrange
+      const originalEnv = process.env;
+      process.env = {
+        ...originalEnv,
+        PROJECT_ENV: "test",
+        PROJECT_KEY: "jaypie",
+      };
+      const tags = ["env:production", "custom", "project:override"];
+      // Act
+      await submitMetricSet({ ...MOCK.SUBMISSION, tags });
+      // Assert
+      const submitMetricsArgs = v2.MetricsApi().submitMetrics.mock.calls[0][0];
+      const finalTags = submitMetricsArgs.body.series[0].tags;
+      expect(finalTags).toContain("env:production");
+      expect(finalTags).toContain("project:override");
+      expect(finalTags).toContain("custom");
+      expect(finalTags).not.toContain("env:test");
+      expect(finalTags).not.toContain("project:jaypie");
+      // Cleanup
+      process.env = originalEnv;
     });
   });
 });

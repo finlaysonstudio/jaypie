@@ -1,9 +1,8 @@
 import { vi } from "vitest";
 import {
-  createMockFunction,
   createMockResolvedFunction,
   createMockReturnedFunction,
-  createMockWrappedFunction,
+  createMockTool,
   createMockWrappedObject,
 } from "./utils";
 
@@ -70,34 +69,25 @@ export const Llm = Object.assign(
 );
 
 // Tool implementations - always return mock values
-const random = createMockReturnedFunction(0.5);
+const random = createMockTool("random", createMockReturnedFunction(0.5));
 
-const roll = createMockReturnedFunction(6);
+const roll = createMockTool("roll", createMockReturnedFunction(6));
 
-const time = createMockReturnedFunction(`_MOCK_TIME_[${TAG}]`);
+const time = createMockTool("time", createMockReturnedFunction(`_MOCK_TIME`));
 
-const weather = createMockResolvedFunction({
-  location: `_MOCK_WEATHER_LOCATION_[${TAG}]`,
-  forecast: Array(7)
-    .fill(0)
-    .map((_, i) => ({
-      date: `2025-05-${i + 1}`,
-      temperature: 72,
-      condition: "Sunny",
-      precipitation: 0,
-    })),
-});
-
-// Tool collections
-export const toolkit = {
-  random,
-  roll,
-  time,
-  weather,
-};
+const weather = createMockTool(
+  "weather",
+  createMockResolvedFunction({
+    location: `_MOCK_WEATHER_LOCATION`,
+    forecast: [{ conditions: "good" }],
+  }),
+);
 
 export const Toolkit = createMockWrappedObject(original.Toolkit, {
   isClass: true,
 });
 
-export const tools = Object.values(toolkit);
+// Tool collections
+export const toolkit = new original.Toolkit([random, roll, time, weather]);
+
+export const tools = toolkit.tools;
