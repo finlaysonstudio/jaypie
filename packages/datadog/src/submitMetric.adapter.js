@@ -19,7 +19,8 @@ const NO_ERROR_RESPONSE_OBJECT = { errors: [] };
 
 const submitMetric = async ({
   apiKey = process.env[DATADOG.ENV.DATADOG_API_KEY],
-  apiSecret = process.env[DATADOG.ENV.SECRET_DATADOG_API_KEY],
+  apiSecret = process.env[DATADOG.ENV.SECRET_DATADOG_API_KEY] ||
+    process.env[DATADOG.ENV.DATADOG_API_KEY_ARN],
   name,
   type = DATADOG.METRIC.TYPE.UNKNOWN,
   value,
@@ -106,12 +107,12 @@ const submitMetric = async ({
   const seenPrefixes = new Set();
   const seenValues = new Set();
   const finalTags = [];
-  
+
   // Process in reverse to keep last occurrence
   for (let i = allTags.length - 1; i >= 0; i--) {
     const tag = allTags[i];
-    const colonIndex = tag.indexOf(':');
-    
+    const colonIndex = tag.indexOf(":");
+
     if (colonIndex === -1) {
       // Tag without colon - only keep if not seen before
       if (!seenValues.has(tag)) {
