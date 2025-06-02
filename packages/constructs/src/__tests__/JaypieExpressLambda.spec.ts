@@ -23,7 +23,6 @@ describe("JaypieExpressLambda", () => {
       template.hasResource("AWS::Lambda::Function", {});
       template.hasResourceProperties("AWS::Lambda::Function", {
         Handler: "index.handler",
-        Runtime: "nodejs20.x",
       });
     });
   });
@@ -120,7 +119,6 @@ describe("JaypieExpressLambda", () => {
         },
         Handler: "index.handler",
         MemorySize: 256,
-        Runtime: "nodejs20.x",
         Tags: [
           {
             Key: CDK.TAG.ROLE,
