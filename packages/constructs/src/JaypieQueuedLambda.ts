@@ -38,7 +38,7 @@ export class JaypieQueuedLambda
       paramsAndSecrets,
       reservedConcurrentExecutions,
       roleTag,
-      runtime = lambda.Runtime.NODEJS_LATEST,
+      runtime = lambda.Runtime.NODEJS_22_X,
       secrets = [],
       timeout = Duration.seconds(CDK.DURATION.LAMBDA_WORKER),
       vendorTag,
