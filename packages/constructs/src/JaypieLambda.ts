@@ -60,6 +60,28 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
     // Create a mutable copy of the environment variables
     let environment = { ...initialEnvironment };
 
+    // Default environment variables from process.env if present
+    const defaultEnvVars = [
+      "DATADOG_API_KEY_ARN",
+      "LOG_LEVEL",
+      "MODULE_LOGGER",
+      "MODULE_LOG_LEVEL",
+      "PROJECT_COMMIT",
+      "PROJECT_ENV",
+      "PROJECT_KEY",
+      "PROJECT_SECRET",
+      "PROJECT_SERVICE",
+      "PROJECT_SPONSOR",
+      "PROJECT_VERSION",
+    ];
+
+    // Add default environment variables if they exist in process.env
+    defaultEnvVars.forEach((envVar) => {
+      if (process.env[envVar] && !environment[envVar]) {
+        environment[envVar] = process.env[envVar];
+      }
+    });
+
     this._code = typeof code === "string" ? lambda.Code.fromAsset(code) : code;
 
     // Create a working copy of layers
@@ -118,8 +140,12 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
               logLevel:
                 paramsAndSecretsOptions?.logLevel ||
                 lambda.ParamsAndSecretsLogLevel.WARN,
-              parameterStoreTtl: paramsAndSecretsOptions?.parameterStoreTtl,
-              secretsManagerTtl: paramsAndSecretsOptions?.secretsManagerTtl,
+              parameterStoreTtl: paramsAndSecretsOptions?.parameterStoreTtl
+                ? Duration.seconds(paramsAndSecretsOptions.parameterStoreTtl)
+                : undefined,
+              secretsManagerTtl: paramsAndSecretsOptions?.secretsManagerTtl
+                ? Duration.seconds(paramsAndSecretsOptions.secretsManagerTtl)
+                : undefined,
             },
           );
       }
@@ -266,6 +292,14 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
 
   public addToRolePolicy(statement: iam.PolicyStatement): void {
     this._lambda.addToRolePolicy(statement);
+  }
+
+  public addEnvironment(
+    key: string,
+    value: string,
+    options?: lambda.EnvironmentOptions,
+  ): lambda.Function {
+    return this._lambda.addEnvironment(key, value, options);
   }
 
   public configureAsyncInvoke(options: lambda.EventInvokeConfigOptions): void {

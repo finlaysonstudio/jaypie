@@ -392,6 +392,123 @@ describe("JaypieLambda", () => {
       });
     });
 
+    describe("Default Environment Variables", () => {
+      const originalEnv = { ...process.env };
+
+      beforeEach(() => {
+        // Clear relevant environment variables before each test
+        delete process.env.DATADOG_API_KEY_ARN;
+        delete process.env.LOG_LEVEL;
+        delete process.env.MODULE_LOGGER;
+        delete process.env.MODULE_LOG_LEVEL;
+        delete process.env.PROJECT_COMMIT;
+        delete process.env.PROJECT_ENV;
+        delete process.env.PROJECT_KEY;
+        delete process.env.PROJECT_SECRET;
+        delete process.env.PROJECT_SERVICE;
+        delete process.env.PROJECT_SPONSOR;
+        delete process.env.PROJECT_VERSION;
+      });
+
+      afterEach(() => {
+        // Restore original environment
+        process.env = { ...originalEnv };
+      });
+
+      it("includes default environment variables when present in process.env", () => {
+        process.env.LOG_LEVEL = "debug";
+        process.env.PROJECT_ENV = "test";
+        process.env.PROJECT_SERVICE = "my-service";
+
+        const stack = new Stack();
+        new JaypieLambda(stack, "TestConstruct", {
+          code: lambda.Code.fromInline("exports.handler = () => {}"),
+          handler: "index.handler",
+        });
+
+        const template = Template.fromStack(stack);
+
+        template.hasResourceProperties("AWS::Lambda::Function", {
+          Environment: {
+            Variables: {
+              LOG_LEVEL: "debug",
+              PROJECT_ENV: "test",
+              PROJECT_SERVICE: "my-service",
+            },
+          },
+        });
+      });
+
+      it("does not override explicitly provided environment variables", () => {
+        process.env.LOG_LEVEL = "debug";
+        process.env.PROJECT_ENV = "production";
+
+        const stack = new Stack();
+        new JaypieLambda(stack, "TestConstruct", {
+          code: lambda.Code.fromInline("exports.handler = () => {}"),
+          handler: "index.handler",
+          environment: {
+            LOG_LEVEL: "info",
+            PROJECT_SERVICE: "override-service",
+          },
+        });
+
+        const template = Template.fromStack(stack);
+
+        template.hasResourceProperties("AWS::Lambda::Function", {
+          Environment: {
+            Variables: {
+              LOG_LEVEL: "info",
+              PROJECT_ENV: "production",
+              PROJECT_SERVICE: "override-service",
+            },
+          },
+        });
+      });
+
+      it("includes all supported default environment variables", () => {
+        process.env.DATADOG_API_KEY_ARN =
+          "arn:aws:secretsmanager:us-east-1:123456789012:secret:test-datadog-api-key-123456";
+        process.env.LOG_LEVEL = "info";
+        process.env.MODULE_LOGGER = "winston";
+        process.env.MODULE_LOG_LEVEL = "debug";
+        process.env.PROJECT_COMMIT = "abc123";
+        process.env.PROJECT_ENV = "staging";
+        process.env.PROJECT_KEY = "test-key";
+        process.env.PROJECT_SECRET = "test-secret";
+        process.env.PROJECT_SERVICE = "test-service";
+        process.env.PROJECT_SPONSOR = "test-sponsor";
+        process.env.PROJECT_VERSION = "1.0.0";
+
+        const stack = new Stack();
+        new JaypieLambda(stack, "TestConstruct", {
+          code: lambda.Code.fromInline("exports.handler = () => {}"),
+          handler: "index.handler",
+        });
+
+        const template = Template.fromStack(stack);
+
+        template.hasResourceProperties("AWS::Lambda::Function", {
+          Environment: {
+            Variables: {
+              DATADOG_API_KEY_ARN:
+                "arn:aws:secretsmanager:us-east-1:123456789012:secret:test-datadog-api-key-123456",
+              LOG_LEVEL: "info",
+              MODULE_LOGGER: "winston",
+              MODULE_LOG_LEVEL: "debug",
+              PROJECT_COMMIT: "abc123",
+              PROJECT_ENV: "staging",
+              PROJECT_KEY: "test-key",
+              PROJECT_SECRET: "test-secret",
+              PROJECT_SERVICE: "test-service",
+              PROJECT_SPONSOR: "test-sponsor",
+              PROJECT_VERSION: "1.0.0",
+            },
+          },
+        });
+      });
+    });
+
     describe("Environment Variable Fallbacks", () => {
       const originalEnv = { ...process.env };
       const datadogApiKeyArn =
