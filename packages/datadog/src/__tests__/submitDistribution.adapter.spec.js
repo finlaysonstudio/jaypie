@@ -21,7 +21,7 @@ const MOCK = {
   SUBMISSION: {
     apiKey: "MOCK_DD_API_KEY",
     name: "system.load.1.dist",
-    point: [1.0, 2.0],
+    value: [1.0, 2.0],
   },
   SUBMISSION_WITH_POINTS: {
     apiKey: "MOCK_DD_API_KEY",
@@ -126,7 +126,7 @@ describe("Datadog Distribution Adapter", () => {
       expect(submitArgs.body.series[0].points[0][0]).toBeNumber(); // timestamp
       expect(submitArgs.body.series[0].points[0][1]).toBeArray(); // values
       expect(submitArgs.body.series[0].points[0][1]).toEqual(
-        MOCK.SUBMISSION.point,
+        MOCK.SUBMISSION.value,
       );
       expect(submitArgs).toHaveProperty("contentEncoding");
       expect(submitArgs.contentEncoding).toBe("deflate");
@@ -153,18 +153,18 @@ describe("Datadog Distribution Adapter", () => {
       expect(response).toBeFalse();
       // Done
     });
-    it("Will return false if points and point are missing", async () => {
+    it("Will return false if points and value are missing", async () => {
       // Arrange
-      const submission = { ...MOCK.SUBMISSION, point: undefined };
+      const submission = { ...MOCK.SUBMISSION, value: undefined };
       // Act
       const response = await submitDistribution(submission);
       // Assert
       expect(response).toBeFalse();
       // Done
     });
-    it("Will return false if points is empty and point is null", async () => {
+    it("Will return false if points is empty and value is null", async () => {
       // Arrange
-      const submission = { ...MOCK.SUBMISSION, points: [], point: null };
+      const submission = { ...MOCK.SUBMISSION, points: [], value: null };
       // Act
       const response = await submitDistribution(submission);
       // Assert
@@ -242,9 +242,9 @@ describe("Datadog Distribution Adapter", () => {
       );
       // Done
     });
-    it("Converts single point to points array", async () => {
+    it("Converts single value to points array", async () => {
       // Arrange
-      const submission = { ...MOCK.SUBMISSION, point: [3.0, 4.0] };
+      const submission = { ...MOCK.SUBMISSION, value: [3.0, 4.0] };
       // Act
       await submitDistribution(submission);
       // Assert
@@ -255,9 +255,9 @@ describe("Datadog Distribution Adapter", () => {
       expect(submitArgs.body.series[0].points[0][1]).toEqual([3.0, 4.0]);
       // Done
     });
-    it("Converts single value to array in point", async () => {
+    it("Converts single value to array in value", async () => {
       // Arrange
-      const submission = { ...MOCK.SUBMISSION, point: 5.0 };
+      const submission = { ...MOCK.SUBMISSION, value: 5.0 };
       // Act
       await submitDistribution(submission);
       // Assert
@@ -413,13 +413,13 @@ describe("Datadog Distribution Adapter", () => {
       expect(submitArgs.body.series[0].points[0][0]).toBe(customTimestamp);
       // Done
     });
-    it("Prefers points over point when both are provided", async () => {
+    it("Prefers points over value when both are provided", async () => {
       // Arrange
       const customPoints = [[1234567890, [10.0, 20.0]]];
       const submission = {
         ...MOCK.SUBMISSION,
         points: customPoints,
-        point: [1.0, 2.0], // Should be ignored
+        value: [1.0, 2.0], // Should be ignored
       };
       // Act
       await submitDistribution(submission);
@@ -429,12 +429,12 @@ describe("Datadog Distribution Adapter", () => {
       expect(submitArgs.body.series[0].points).toEqual(customPoints);
       // Done
     });
-    it("Handles empty points array by falling back to point", async () => {
+    it("Handles empty points array by falling back to value", async () => {
       // Arrange
       const submission = {
         ...MOCK.SUBMISSION,
         points: [],
-        point: [7.0, 8.0],
+        value: [7.0, 8.0],
       };
       // Act
       await submitDistribution(submission);

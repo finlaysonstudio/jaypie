@@ -23,11 +23,11 @@ const submitDistribution = async ({
     process.env[DATADOG.ENV.DATADOG_API_KEY_ARN],
   name,
   points = [],
-  point,
+  value,
   tags,
   timestamp = Number.parseInt(Date.now() / 1000, 10),
 } = {}) => {
-  log.trace.var({ submitDistribution: { name, points, point } });
+  log.trace.var({ submitDistribution: { name, points, value } });
 
   //
   //
@@ -46,16 +46,16 @@ const submitDistribution = async ({
     log.warn("Distribution metric timestamp was not provided");
   }
 
-  // Validate points or point
+  // Validate points or value
   let finalPoints = points;
   if (!points || points.length === 0) {
-    if (point === undefined || point === null) {
-      log.warn("Distribution metric points or point was not provided");
+    if (value === undefined || value === null) {
+      log.warn("Distribution metric points or value was not provided");
       return false;
     }
 
-    // Convert point to points array
-    const pointValues = Array.isArray(point) ? point : [point];
+    // Convert value to points array
+    const pointValues = Array.isArray(value) ? value : [value];
     finalPoints = [[timestamp, pointValues]];
   }
 
