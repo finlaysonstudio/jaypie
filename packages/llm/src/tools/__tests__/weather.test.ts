@@ -108,17 +108,17 @@ describe("weather tool", () => {
   describe("Message Functionality", () => {
     it("returns correct message when no location is provided", () => {
       const message = weather.message?.();
-      expect(message).toBe("Getting weather for undefined");
+      expect(message).toBe("Getting weather for Evanston, IL (42.051554533384866, -87.6759911441785)");
     });
 
     it("returns correct message when no location is provided with empty object", () => {
       const message = weather.message?.({});
-      expect(message).toBe("Getting weather for undefined");
+      expect(message).toBe("Getting weather for Evanston, IL (42.051554533384866, -87.6759911441785)");
     });
 
     it("returns correct message when location is provided", () => {
       const message = weather.message?.({ location: "Chicago, IL" });
-      expect(message).toBe("Getting weather for Chicago, IL");
+      expect(message).toBe("Getting weather for Chicago, IL (42.051554533384866, -87.6759911441785)");
     });
 
     it("returns correct message when location is provided with other params", () => {
@@ -127,7 +127,9 @@ describe("weather tool", () => {
         latitude: 40.7128,
         longitude: -74.006,
       });
-      expect(message).toBe("Getting weather for New York, NY");
+      expect(message).toBe(
+        "Getting weather for New York, NY (40.7128, -74.006)",
+      );
     });
   });
 });
