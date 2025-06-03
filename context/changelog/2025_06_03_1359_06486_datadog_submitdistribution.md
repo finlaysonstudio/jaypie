@@ -63,3 +63,19 @@ apiInstance
   })
   .catch((error: any) => console.error(error));
 ```
+
+---
+
+The work above was completed.
+I want to change `point` to `value`
+
+## COMPLETED
+
+Successfully updated the submitDistribution function to use `value` parameter instead of `point`:
+
+- Updated function signature in `packages/datadog/src/submitDistribution.adapter.js:26`
+- Updated validation logic in `packages/datadog/src/submitDistribution.adapter.js:52-60`
+- Updated log tracing in `packages/datadog/src/submitDistribution.adapter.js:30`
+- Updated all test cases in `packages/datadog/src/__tests__/submitDistribution.adapter.spec.js`
+- All tests passing (62/62)
+- Build successful
