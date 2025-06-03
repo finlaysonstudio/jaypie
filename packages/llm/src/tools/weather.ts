@@ -25,7 +25,7 @@ export const weather: LlmTool = {
       },
       timezone: {
         type: "string",
-        description: "Timezone for the location. Default: America/Chicago",
+        description: "Timezone for the results. Default: America/Chicago",
       },
       past_days: {
         type: "number",
@@ -37,7 +37,7 @@ export const weather: LlmTool = {
         description: "Number of forecast days to include. Default: 1",
       },
     },
-    required: [],
+    required: ["latitude", "location", "longitude"],
   },
   type: "function",
   call: async ({
@@ -142,7 +142,11 @@ export const weather: LlmTool = {
       throw new Error("Unknown error occurred while fetching weather data");
     }
   },
-  message: ({ location } = {}) => {
-    return `Getting weather for ${location}`;
+  message: ({
+    latitude = 42.051554533384866,
+    longitude = -87.6759911441785,
+    location = "Evanston, IL",
+  } = {}) => {
+    return `Getting weather for ${location} (${latitude}, ${longitude})`;
   },
 };
