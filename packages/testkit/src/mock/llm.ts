@@ -48,7 +48,16 @@ const mockOperate = createMockResolvedFunction({
     },
   ],
   status: "completed",
-  usage: { input: 100, output: 20, reasoning: 0, total: 120 },
+  usage: [
+    {
+      input: 100,
+      output: 20,
+      reasoning: 0,
+      total: 120,
+      provider: "_MOCK_PROVIDER",
+      model: "_MOCK_MODEL",
+    },
+  ],
   content: "_MOCK_OUTPUT_TEXT",
 });
 const mockSend = createMockResolvedFunction("_MOCK_LLM_RESPONSE");
