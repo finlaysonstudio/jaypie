@@ -267,7 +267,9 @@ export interface LlmOperateResponse {
   content?: string | JsonObject;
   error?: LlmError;
   history: LlmHistory;
+  model?: string;
   output: LlmOutput;
+  provider?: string;
   responses: JsonReturn[];
   status: LlmResponseStatus;
   usage: LlmUsage;

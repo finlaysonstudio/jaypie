@@ -28,6 +28,7 @@ const mockOperate = createMockResolvedFunction({
       role: "assistant",
     },
   ],
+  model: "_MOCK_MODEL",
   output: [
     {
       id: "_MOCK_MESSAGE_ID",
@@ -37,6 +38,7 @@ const mockOperate = createMockResolvedFunction({
       role: "assistant",
     },
   ],
+  provider: "_MOCK_PROVIDER",
   responses: [
     {
       id: "_MOCK_RESPONSE_ID",
