@@ -41,3 +41,17 @@ export interface SubmitMetricSetOptions
 export function submitMetricSet(
   options: SubmitMetricSetOptions,
 ): Promise<boolean>;
+
+export interface SubmitDistributionOptions {
+  apiKey?: string;
+  apiSecret?: string;
+  name: string;
+  points?: number[][];
+  value?: number | number[];
+  tags?: Record<string, string> | string[];
+  timestamp?: number;
+}
+
+export function submitDistribution(
+  options: SubmitDistributionOptions,
+): Promise<boolean>;
