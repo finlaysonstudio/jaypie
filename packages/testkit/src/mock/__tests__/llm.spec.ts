@@ -70,7 +70,9 @@ describe("LLM Mocks", () => {
       expect(result).toEqual({
         content: "_MOCK_OUTPUT_TEXT",
         history: expect.any(Array),
+        model: "_MOCK_MODEL",
         output: expect.any(Array),
+        provider: "_MOCK_PROVIDER",
         responses: expect.any(Array),
         status: "completed",
         usage: expect.any(Object),

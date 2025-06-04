@@ -272,7 +272,9 @@ export async function operate(
 
   const returnResponse: LlmOperateResponse = {
     history: [],
+    model: options?.model || PROVIDER.OPENAI.MODEL.DEFAULT,
     output: [],
+    provider: PROVIDER.OPENAI.NAME,
     responses: [],
     status: LlmResponseStatus.InProgress,
     usage: [], // Initialize as empty array, will add entry for each response
