@@ -20,7 +20,8 @@ const NO_ERROR_RESPONSE_OBJECT = { errors: [] };
 const submitMetric = async ({
   apiKey = process.env[DATADOG.ENV.DATADOG_API_KEY],
   apiSecret = process.env[DATADOG.ENV.SECRET_DATADOG_API_KEY] ||
-    process.env[DATADOG.ENV.DATADOG_API_KEY_ARN],
+    process.env[DATADOG.ENV.DATADOG_API_KEY_ARN] ||
+    process.env[DATADOG.ENV.DD_API_KEY_SECRET_ARN],
   name,
   type = DATADOG.METRIC.TYPE.UNKNOWN,
   value,
