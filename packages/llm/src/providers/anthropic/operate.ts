@@ -28,6 +28,7 @@ import { PROVIDER } from "../../constants.js";
 import { JsonObject, NaturalSchema } from "@jaypie/types";
 import { z } from "zod/v4";
 import ZSchema from "z-schema";
+import { Toolkit } from "../../tools/Toolkit.class.js";
 
 //
 //
@@ -56,6 +57,28 @@ export async function operate(
     client: new Anthropic(),
   },
 ): Promise<LlmOperateResponse> {
+  // Register tools and process them to work with Anthropic
+  let toolkit: Toolkit | undefined;
+  let processedTools: Anthropic.Tool[] = [];
+  if (options.tools?.length) {
+    toolkit = new Toolkit(options.tools, { explain: options?.explain });
+    toolkit.tools.forEach((tool) => {
+      processedTools.push({
+        ...tool,
+        input_schema: {
+          ...tool.parameters,
+          type: "object",
+        },
+        type: "custom",
+      });
+      delete (
+        processedTools[processedTools.length - 1] as unknown as {
+          parameters: unknown;
+        }
+      ).parameters;
+    });
+  }
+
   // Handle structured output format
   let schema: JsonObject | undefined;
   if (options?.format) {
@@ -81,6 +104,15 @@ export async function operate(
     if (schema.$schema) {
       delete schema.$schema; // Hack to fix issue with validator
     }
+
+    processedTools.push({
+      name: "structured_output",
+      description:
+        "Output a structured JSON object, " +
+        "use this before your final response to give structured outputs to the user",
+      input_schema: schema as unknown as Anthropic.Messages.Tool.InputSchema,
+      type: "custom",
+    });
   }
 
   // Convert string input to array format with placeholders if needed
@@ -105,43 +137,115 @@ export async function operate(
     delete message.type;
   });
 
-  const response = await context.client.messages.create({
-    model: options.model as Anthropic.MessageCreateParams["model"],
-    system: schema
-      ? "You will be responding with structured JSON data. " +
-        "Format your entire response as a valid JSON object with the following structure: " +
-        JSON.stringify(schema)
-      : undefined,
-    messages: inputMessages,
-    max_tokens: PROVIDER.ANTHROPIC.MAX_TOKENS.DEFAULT,
-    stream: false,
-  });
+  let response: Anthropic.Message;
+  while (true) {
+    // Loop for tool use
+    response = await context.client.messages.create({
+      model: options.model as Anthropic.MessageCreateParams["model"],
+      system: options.system,
+      messages: inputMessages,
+      max_tokens: PROVIDER.ANTHROPIC.MAX_TOKENS.DEFAULT,
+      stream: false,
+      tools: processedTools,
+      tool_choice: {
+        type: schema ? "any" : "auto",
+      },
+    });
+
+    if (response.stop_reason !== "tool_use") {
+      break;
+    }
+
+    inputMessages.push({
+      role: PROVIDER.ANTHROPIC.ROLE.ASSISTANT,
+      content: response.content as Anthropic.TextBlockParam[],
+    });
+
+    const toolUse = response.content[
+      response.content.length - 1
+    ] as Anthropic.ToolUseBlock;
+
+    if (toolUse.name === "structured_output") {
+      break;
+    }
+
+    if (options.hooks?.beforeEachTool) {
+      await options.hooks.beforeEachTool(
+        toolUse.name,
+        JSON.stringify(toolUse.input),
+      );
+    }
+
+    let result: unknown;
+    try {
+      result = await toolkit?.call({
+        name: toolUse.name,
+        arguments: JSON.stringify(toolUse.input),
+      });
+    } catch (error) {
+      if (options.hooks?.onToolError) {
+        await options.hooks.onToolError(
+          error as Error,
+          toolUse.name,
+          JSON.stringify(toolUse.input),
+        );
+      }
+      throw error;
+    }
+
+    if (options.hooks?.afterEachTool) {
+      await options.hooks.afterEachTool(
+        result,
+        toolUse.name,
+        JSON.stringify(toolUse.input),
+      );
+    }
+
+    inputMessages.push({
+      role: PROVIDER.ANTHROPIC.ROLE.USER,
+      content: [
+        {
+          type: "tool_result",
+          content: JSON.stringify(result),
+          tool_use_id: toolUse.id,
+        },
+      ],
+    });
+
+    history.push({
+      call_id: toolUse.id,
+      output: JSON.stringify(result),
+      status: LlmResponseStatus.Completed,
+      type: LlmMessageType.FunctionCallOutput,
+    } as LlmToolResult);
+  }
 
   let jsonResult: JsonObject | undefined;
   if (schema) {
     const validator = new ZSchema({});
-    const jsonMatch =
-      response.content[0].text.match(/```json\s*([\s\S]*?)\s*```/) ||
-      response.content[0].text.match(/\{[\s\S]*\}/);
+    jsonResult = (
+      response.content[response.content.length - 1] as Anthropic.ToolUseBlock
+    ).input as JsonObject;
 
-    if (jsonMatch) {
-      const jsonStr = jsonMatch[1] || jsonMatch[0];
-      jsonResult = JSON.parse(jsonStr);
-      if (!validator.validate(jsonResult, schema)) {
-        console.log(validator.getLastError());
-        throw new Error("Model returned invalid JSON");
-      }
+    if (!validator.validate(jsonResult, schema)) {
+      throw new Error("Model returned invalid JSON");
     }
   }
 
   history.push({
-    content: response.content[0].text,
+    content: schema
+      ? JSON.stringify(jsonResult)
+      : (response.content[0] as Anthropic.TextBlock).text,
     role: PROVIDER.ANTHROPIC.ROLE.ASSISTANT,
     type: LlmMessageType.Message,
   } as LlmOutputMessage);
 
   return {
-    content: schema ? jsonResult : response.content[0].text,
+    //model: options.model,
+    //provider: PROVIDER.ANTHROPIC,
+    content: schema
+      ? jsonResult
+      : (response.content[0] as Anthropic.TextBlock).text,
     responses: [response as unknown as JsonObject],
     output: history.slice(-1) as LlmOutputMessage[],
     history,

@@ -271,11 +271,13 @@ describe("AnthropicProvider", () => {
         const mockResponse = {
           content: [
             {
-              type: "text",
-              text: JSON.stringify({
+              type: "tool_use",
+              id: "tool_1",
+              name: "structured_output",
+              input: {
                 salutation: "Hello",
                 name: "World",
-              }),
+              },
             },
           ],
           usage: { input_tokens: 10, output_tokens: 10 },
@@ -327,11 +329,13 @@ describe("AnthropicProvider", () => {
         const mockResponse1 = {
           content: [
             {
-              type: "text",
-              text: JSON.stringify({
+              type: "tool_use",
+              id: "tool_1",
+              name: "structured_output",
+              input: {
                 salutation: "Hello",
                 name: "World",
-              }),
+              },
             },
           ],
           usage: { input_tokens: 10, output_tokens: 10 },
@@ -340,11 +344,13 @@ describe("AnthropicProvider", () => {
         const mockResponse2 = {
           content: [
             {
-              type: "text",
-              text: JSON.stringify({
+              type: "tool_use",
+              id: "tool_2",
+              name: "structured_output",
+              input: {
                 salutation: "Goodbye",
                 name: "World",
-              }),
+              },
             },
           ],
           usage: { input_tokens: 10, output_tokens: 10 },
@@ -448,6 +454,53 @@ describe("AnthropicProvider", () => {
             format: GreetingFormat,
           });
         }).toThrowError("Model returned invalid JSON");
+      });
+
+      it("sets tool_choice to 'any' when structured output is requested", async () => {
+        const mockResponse = {
+          content: [
+            {
+              type: "tool_use",
+              id: "tool_1",
+              name: "structured_output",
+              input: {
+                salutation: "Hello",
+                name: "World",
+              },
+            },
+          ],
+          usage: { input_tokens: 10, output_tokens: 10 },
+        };
+
+        const mockCreate = vi.fn().mockResolvedValue(mockResponse);
+        vi.mocked(Anthropic).mockImplementation(
+          () =>
+            ({
+              messages: {
+                create: mockCreate,
+              },
+            }) as any,
+        );
+
+        const provider = new AnthropicProvider();
+        provider["apiKey"] = "test-key";
+
+        const GreetingFormat = z.object({
+          salutation: z.string(),
+          name: z.string(),
+        });
+
+        await provider.operate("Hello, World", {
+          format: GreetingFormat,
+        });
+
+        expect(mockCreate).toHaveBeenCalledWith(
+          expect.objectContaining({
+            tool_choice: {
+              type: "any",
+            },
+          }),
+        );
       });
     });
 
@@ -579,6 +632,313 @@ describe("AnthropicProvider", () => {
       });
     });
 
+    describe("Tool Calling", () => {
+      it("processes tool calls correctly", async () => {
+        const mockResponse1 = {
+          content: [
+            { type: "text", text: "Let me help you with that." },
+            {
+              type: "tool_use",
+              id: "tool_1",
+              name: "test_tool",
+              input: { param: "test" },
+            },
+          ],
+          stop_reason: "tool_use",
+          usage: { input_tokens: 10, output_tokens: 10 },
+        };
+
+        const mockResponse2 = {
+          content: [{ type: "text", text: "Final response" }],
+          stop_reason: "end_turn",
+          usage: { input_tokens: 10, output_tokens: 10 },
+        };
+
+        const mockCreate = vi
+          .fn()
+          .mockResolvedValueOnce(mockResponse1)
+          .mockResolvedValueOnce(mockResponse2);
+
+        vi.mocked(Anthropic).mockImplementation(
+          () =>
+            ({
+              messages: {
+                create: mockCreate,
+              },
+            }) as any,
+        );
+
+        const provider = new AnthropicProvider();
+        provider["apiKey"] = "test-key";
+
+        const mockTool = {
+          name: "test_tool",
+          description: "Test tool",
+          parameters: {
+            type: "object",
+            properties: {
+              param: { type: "string" },
+            },
+          },
+          type: "function",
+          call: vi.fn().mockResolvedValue({ result: "test result" }),
+        };
+
+        const response = await provider.operate("Test input", {
+          tools: [mockTool],
+        });
+
+        expect(response.content).toBe("Final response");
+        expect(mockTool.call).toHaveBeenCalledWith({ param: "test" });
+      });
+
+      it("handles tool call errors", async () => {
+        const mockResponse1 = {
+          content: [
+            { type: "text", text: "Let me help you with that." },
+            {
+              type: "tool_use",
+              id: "tool_1",
+              name: "test_tool",
+              input: { param: "test" },
+            },
+          ],
+          stop_reason: "tool_use",
+          usage: { input_tokens: 10, output_tokens: 10 },
+        };
+
+        const mockCreate = vi.fn().mockResolvedValue(mockResponse1);
+
+        vi.mocked(Anthropic).mockImplementation(
+          () =>
+            ({
+              messages: {
+                create: mockCreate,
+              },
+            }) as any,
+        );
+
+        const provider = new AnthropicProvider();
+        provider["apiKey"] = "test-key";
+
+        const mockTool = {
+          name: "test_tool",
+          description: "Test tool",
+          parameters: {
+            type: "object",
+            properties: {
+              param: { type: "string" },
+            },
+          },
+          type: "function",
+          call: vi.fn().mockRejectedValue(new Error("Tool error")),
+        };
+
+        await expect(
+          provider.operate("Test input", {
+            tools: [mockTool],
+          }),
+        ).rejects.toThrow("Tool error");
+      });
+
+      it("calls beforeEachTool hook before executing a tool", async () => {
+        const mockResponse1 = {
+          content: [
+            { type: "text", text: "Let me help you with that." },
+            {
+              type: "tool_use",
+              id: "tool_1",
+              name: "test_tool",
+              input: { param: "test" },
+            },
+          ],
+          stop_reason: "tool_use",
+          usage: { input_tokens: 10, output_tokens: 10 },
+        };
+
+        const mockResponse2 = {
+          content: [{ type: "text", text: "Final response" }],
+          stop_reason: "end_turn",
+          usage: { input_tokens: 10, output_tokens: 10 },
+        };
+
+        const mockCreate = vi
+          .fn()
+          .mockResolvedValueOnce(mockResponse1)
+          .mockResolvedValueOnce(mockResponse2);
+
+        vi.mocked(Anthropic).mockImplementation(
+          () =>
+            ({
+              messages: {
+                create: mockCreate,
+              },
+            }) as any,
+        );
+
+        const provider = new AnthropicProvider();
+        provider["apiKey"] = "test-key";
+
+        const mockTool = {
+          name: "test_tool",
+          description: "Test tool",
+          parameters: {
+            type: "object",
+            properties: {
+              param: { type: "string" },
+            },
+          },
+          type: "function",
+          call: vi.fn().mockResolvedValue({ result: "test result" }),
+        };
+
+        const beforeEachToolSpy = vi.fn();
+
+        await provider.operate("Test input", {
+          tools: [mockTool],
+          hooks: {
+            beforeEachTool: beforeEachToolSpy,
+          },
+        });
+
+        expect(beforeEachToolSpy).toHaveBeenCalledWith(
+          "test_tool",
+          '{"param":"test"}',
+        );
+        expect(beforeEachToolSpy).toHaveBeenCalledBefore(mockTool.call);
+      });
+
+      it("calls afterEachTool hook after executing a tool", async () => {
+        const mockResponse1 = {
+          content: [
+            { type: "text", text: "Let me help you with that." },
+            {
+              type: "tool_use",
+              id: "tool_1",
+              name: "test_tool",
+              input: { param: "test" },
+            },
+          ],
+          stop_reason: "tool_use",
+          usage: { input_tokens: 10, output_tokens: 10 },
+        };
+
+        const mockResponse2 = {
+          content: [{ type: "text", text: "Final response" }],
+          stop_reason: "end_turn",
+          usage: { input_tokens: 10, output_tokens: 10 },
+        };
+
+        const mockCreate = vi
+          .fn()
+          .mockResolvedValueOnce(mockResponse1)
+          .mockResolvedValueOnce(mockResponse2);
+
+        vi.mocked(Anthropic).mockImplementation(
+          () =>
+            ({
+              messages: {
+                create: mockCreate,
+              },
+            }) as any,
+        );
+
+        const provider = new AnthropicProvider();
+        provider["apiKey"] = "test-key";
+
+        const toolResult = { result: "test result" };
+        const mockTool = {
+          name: "test_tool",
+          description: "Test tool",
+          parameters: {
+            type: "object",
+            properties: {
+              param: { type: "string" },
+            },
+          },
+          type: "function",
+          call: vi.fn().mockResolvedValue(toolResult),
+        };
+
+        const afterEachToolSpy = vi.fn();
+
+        await provider.operate("Test input", {
+          tools: [mockTool],
+          hooks: {
+            afterEachTool: afterEachToolSpy,
+          },
+        });
+
+        expect(afterEachToolSpy).toHaveBeenCalledWith(
+          toolResult,
+          "test_tool",
+          '{"param":"test"}',
+        );
+        expect(mockTool.call).toHaveBeenCalledBefore(afterEachToolSpy);
+      });
+
+      it("calls onToolError hook when tool execution fails", async () => {
+        const mockResponse1 = {
+          content: [
+            { type: "text", text: "Let me help you with that." },
+            {
+              type: "tool_use",
+              id: "tool_1",
+              name: "test_tool",
+              input: { param: "test" },
+            },
+          ],
+          usage: { input_tokens: 10, output_tokens: 10 },
+          stop_reason: "tool_use",
+        };
+
+        const mockCreate = vi.fn().mockResolvedValue(mockResponse1);
+
+        vi.mocked(Anthropic).mockImplementation(
+          () =>
+            ({
+              messages: {
+                create: mockCreate,
+              },
+            }) as any,
+        );
+
+        const provider = new AnthropicProvider();
+        provider["apiKey"] = "test-key";
+
+        const toolError = new Error("Tool error");
+        const mockTool = {
+          name: "test_tool",
+          description: "Test tool",
+          parameters: {
+            type: "object",
+            properties: {
+              param: { type: "string" },
+            },
+          },
+          type: "function",
+          call: vi.fn().mockRejectedValue(toolError),
+        };
+
+        const onToolErrorSpy = vi.fn();
+
+        await expect(
+          provider.operate("Test input", {
+            tools: [mockTool],
+            hooks: {
+              onToolError: onToolErrorSpy,
+            },
+          }),
+        ).rejects.toThrow("Tool error");
+
+        expect(onToolErrorSpy).toHaveBeenCalledWith(
+          toolError,
+          "test_tool",
+          '{"param":"test"}',
+        );
+      });
+    });
+
     describe("History Tracking", () => {
       it("maintains conversation history across operate calls", async () => {
         const mockResponse1 = {
@@ -617,6 +977,11 @@ describe("AnthropicProvider", () => {
           model: expect.any(String),
           max_tokens: PROVIDER.ANTHROPIC.MAX_TOKENS.DEFAULT,
           stream: false,
+          system: undefined,
+          tools: [],
+          tool_choice: {
+            type: "auto",
+          },
         });
 
         // Second call
@@ -634,6 +999,11 @@ describe("AnthropicProvider", () => {
           model: expect.any(String),
           max_tokens: PROVIDER.ANTHROPIC.MAX_TOKENS.DEFAULT,
           stream: false,
+          system: undefined,
+          tools: [],
+          tool_choice: {
+            type: "auto",
+          },
         });
       });
 
@@ -689,6 +1059,11 @@ describe("AnthropicProvider", () => {
           model: expect.any(String),
           max_tokens: PROVIDER.ANTHROPIC.MAX_TOKENS.DEFAULT,
           stream: false,
+          system: undefined,
+          tools: [],
+          tool_choice: {
+            type: "auto",
+          },
         });
       });
 
