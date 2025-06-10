@@ -9,6 +9,7 @@ import {
   LlmInputMessage,
   LlmOutputMessage,
   LlmMessageRole,
+  LlmResponseStatus,
 } from "../../../types/LlmProvider.interface.js";
 
 // Create a mock implementation for Anthropic client
@@ -1119,6 +1120,364 @@ describe("AnthropicProvider", () => {
         ];
 
         expect(response2.history).toEqual(expectedHistory);
+      });
+    });
+
+    describe("LlmOperateOptions", () => {
+      it("applies data to input message", async () => {
+        const mockResponse = {
+          content: [{ type: "text", text: "test response" }],
+          usage: { input_tokens: 10, output_tokens: 10 },
+        };
+
+        const mockCreate = vi.fn().mockResolvedValue(mockResponse);
+        vi.mocked(Anthropic).mockImplementation(
+          () =>
+            ({
+              messages: {
+                create: mockCreate,
+              },
+            }) as any,
+        );
+
+        const provider = new AnthropicProvider();
+        provider["apiKey"] = "test-key";
+
+        await provider.operate("Hello, {{name}}", {
+          data: { name: "World" },
+        });
+
+        expect(mockCreate).toHaveBeenCalledWith(
+          expect.objectContaining({
+            messages: [
+              { role: PROVIDER.ANTHROPIC.ROLE.USER, content: "Hello, World" },
+            ],
+          }),
+        );
+      });
+
+      it("applies data to instructions", async () => {
+        const mockResponse = {
+          content: [{ type: "text", text: "test response" }],
+          usage: { input_tokens: 10, output_tokens: 10 },
+        };
+
+        const mockCreate = vi.fn().mockResolvedValue(mockResponse);
+        vi.mocked(Anthropic).mockImplementation(
+          () =>
+            ({
+              messages: {
+                create: mockCreate,
+              },
+            }) as any,
+        );
+
+        const provider = new AnthropicProvider();
+        provider["apiKey"] = "test-key";
+
+        await provider.operate("test message", {
+          data: { role: "test assistant" },
+          instructions: "You are a {{role}}",
+        });
+
+        expect(mockCreate).toHaveBeenCalledWith(
+          expect.objectContaining({
+            messages: [
+              {
+                role: PROVIDER.ANTHROPIC.ROLE.USER,
+                content: "test message\n\nYou are a test assistant",
+              },
+            ],
+          }),
+        );
+      });
+
+      it("applies data to system message", async () => {
+        const mockResponse = {
+          content: [{ type: "text", text: "test response" }],
+          usage: { input_tokens: 10, output_tokens: 10 },
+        };
+
+        const mockCreate = vi.fn().mockResolvedValue(mockResponse);
+        vi.mocked(Anthropic).mockImplementation(
+          () =>
+            ({
+              messages: {
+                create: mockCreate,
+              },
+            }) as any,
+        );
+
+        const provider = new AnthropicProvider();
+        provider["apiKey"] = "test-key";
+
+        await provider.operate("test message", {
+          data: { role: "test assistant" },
+          system: "You are a {{role}}",
+        });
+
+        expect(mockCreate).toHaveBeenCalledWith(
+          expect.objectContaining({
+            system: "You are a test assistant",
+          }),
+        );
+      });
+
+      it("respects placeholders.input option", async () => {
+        const mockResponse = {
+          content: [{ type: "text", text: "test response" }],
+          usage: { input_tokens: 10, output_tokens: 10 },
+        };
+
+        const mockCreate = vi.fn().mockResolvedValue(mockResponse);
+        vi.mocked(Anthropic).mockImplementation(
+          () =>
+            ({
+              messages: {
+                create: mockCreate,
+              },
+            }) as any,
+        );
+
+        const provider = new AnthropicProvider();
+        provider["apiKey"] = "test-key";
+
+        await provider.operate("Hello, {{name}}", {
+          data: { name: "World" },
+          placeholders: { input: false },
+        });
+
+        expect(mockCreate).toHaveBeenCalledWith(
+          expect.objectContaining({
+            messages: [
+              { role: PROVIDER.ANTHROPIC.ROLE.USER, content: "Hello, {{name}}" },
+            ],
+          }),
+        );
+      });
+
+      it("respects placeholders.instructions option", async () => {
+        const mockResponse = {
+          content: [{ type: "text", text: "test response" }],
+          usage: { input_tokens: 10, output_tokens: 10 },
+        };
+
+        const mockCreate = vi.fn().mockResolvedValue(mockResponse);
+        vi.mocked(Anthropic).mockImplementation(
+          () =>
+            ({
+              messages: {
+                create: mockCreate,
+              },
+            }) as any,
+        );
+
+        const provider = new AnthropicProvider();
+        provider["apiKey"] = "test-key";
+
+        await provider.operate("test message", {
+          data: { role: "test assistant" },
+          instructions: "You are a {{role}}",
+          placeholders: { instructions: false },
+        });
+
+        expect(mockCreate).toHaveBeenCalledWith(
+          expect.objectContaining({
+            messages: [
+              {
+                role: PROVIDER.ANTHROPIC.ROLE.USER,
+                content: "test message\n\nYou are a {{role}}",
+              },
+            ],
+          }),
+        );
+      });
+
+      it("respects placeholders.system option", async () => {
+        const mockResponse = {
+          content: [{ type: "text", text: "test response" }],
+          usage: { input_tokens: 10, output_tokens: 10 },
+        };
+
+        const mockCreate = vi.fn().mockResolvedValue(mockResponse);
+        vi.mocked(Anthropic).mockImplementation(
+          () =>
+            ({
+              messages: {
+                create: mockCreate,
+              },
+            }) as any,
+        );
+
+        const provider = new AnthropicProvider();
+        provider["apiKey"] = "test-key";
+
+        await provider.operate("test message", {
+          data: { role: "test assistant" },
+          system: "You are a {{role}}",
+          placeholders: { system: false },
+        });
+
+        expect(mockCreate).toHaveBeenCalledWith(
+          expect.objectContaining({
+            system: "You are a {{role}}",
+          }),
+        );
+      });
+
+      it("applies providerOptions to the request", async () => {
+        const mockResponse = {
+          content: [{ type: "text", text: "test response" }],
+          usage: { input_tokens: 10, output_tokens: 10 },
+        };
+
+        const mockCreate = vi.fn().mockResolvedValue(mockResponse);
+        vi.mocked(Anthropic).mockImplementation(
+          () =>
+            ({
+              messages: {
+                create: mockCreate,
+              },
+            }) as any,
+        );
+
+        const provider = new AnthropicProvider();
+        provider["apiKey"] = "test-key";
+
+        await provider.operate("test message", {
+          providerOptions: {
+            temperature: 0.7,
+            top_p: 0.9,
+          },
+        });
+
+        expect(mockCreate).toHaveBeenCalledWith(
+          expect.objectContaining({
+            temperature: 0.7,
+            top_p: 0.9,
+          }),
+        );
+      });
+
+      it("applies turns option to limit conversation turns", async () => {
+        const mockResponse1 = {
+          content: [
+            { type: "text", text: "Let me help you with that." },
+            {
+              type: "tool_use",
+              id: "tool_1",
+              name: "test_tool",
+              input: { param: "test" },
+            },
+          ],
+          stop_reason: "tool_use",
+          usage: { input_tokens: 10, output_tokens: 10 },
+        };
+
+        const mockCreate = vi.fn().mockResolvedValue(mockResponse1);
+        vi.mocked(Anthropic).mockImplementation(
+          () =>
+            ({
+              messages: {
+                create: mockCreate,
+              },
+            }) as any,
+        );
+
+        const provider = new AnthropicProvider();
+        provider["apiKey"] = "test-key";
+
+        const mockTool = {
+          name: "test_tool",
+          description: "Test tool",
+          parameters: {
+            type: "object",
+            properties: {
+              param: { type: "string" },
+            },
+          },
+          type: "function",
+          call: vi.fn().mockResolvedValue({ result: "test result" }),
+        };
+
+        const response = await provider.operate("Test input", {
+          tools: [mockTool],
+          turns: 1,
+        });
+
+        expect(response.status).toBe(LlmResponseStatus.Incomplete);
+        expect(response.error?.detail).toContain("exceeded 1 turns");
+      });
+
+      it("applies explain option to tool calls", async () => {
+        const mockResponse1 = {
+          content: [
+            { type: "text", text: "Let me help you with that." },
+            {
+              type: "tool_use",
+              id: "tool_1",
+              name: "test_tool",
+              input: { param: "test" },
+            },
+          ],
+          stop_reason: "tool_use",
+          usage: { input_tokens: 10, output_tokens: 10 },
+        };
+
+        const mockResponse2 = {
+          content: [{ type: "text", text: "Final response" }],
+          stop_reason: "end_turn",
+          usage: { input_tokens: 10, output_tokens: 10 },
+        };
+
+        const mockCreate = vi
+          .fn()
+          .mockResolvedValueOnce(mockResponse1)
+          .mockResolvedValueOnce(mockResponse2);
+
+        vi.mocked(Anthropic).mockImplementation(
+          () =>
+            ({
+              messages: {
+                create: mockCreate,
+              },
+            }) as any,
+        );
+
+        const provider = new AnthropicProvider();
+        provider["apiKey"] = "test-key";
+
+        const mockTool = {
+          name: "test_tool",
+          description: "Test tool",
+          parameters: {
+            type: "object",
+            properties: {
+              param: { type: "string" },
+            },
+          },
+          type: "function",
+          call: vi.fn().mockResolvedValue({ result: "test result" }),
+        };
+
+        await provider.operate("Test input", {
+          tools: [mockTool],
+          explain: true,
+        });
+
+        expect(mockCreate).toHaveBeenCalledWith(
+          expect.objectContaining({
+            tools: expect.arrayContaining([
+              expect.objectContaining({
+                input_schema: expect.objectContaining({
+                  properties: expect.objectContaining({
+                    __Explanation: expect.any(Object),
+                  }),
+                }),
+              }),
+            ]),
+          }),
+        );
       });
     });
   });

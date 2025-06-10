@@ -3,13 +3,11 @@ import {
   LlmHistory,
   LlmInputMessage,
   LlmMessageType,
-  LlmMessageRole,
   LlmOperateOptions,
   LlmOperateResponse,
   LlmResponseStatus,
   LlmToolResult,
   LlmOutputMessage,
-  LlmHistoryItem,
 } from "../../types/LlmProvider.interface.js";
 import { LlmTool } from "../../types/LlmTool.interface.js";
 import {
@@ -17,18 +15,14 @@ import {
   log,
   maxTurnsFromOptions,
   naturalZodSchema,
-  resolvePromise,
 } from "../../util";
-import {
-  createTextCompletion,
-  formatUserMessage,
-  prepareMessages,
-} from "./index.js";
 import { PROVIDER } from "../../constants.js";
-import { JsonObject, NaturalSchema } from "@jaypie/types";
+import { JsonArray, JsonObject, JsonReturn, NaturalSchema } from "@jaypie/types";
 import { z } from "zod/v4";
 import ZSchema from "z-schema";
 import { Toolkit } from "../../tools/Toolkit.class.js";
+import { placeholders } from "@jaypie/core";
+import { TooManyRequestsError } from "@jaypie/errors";
 
 //
 //
@@ -57,6 +51,9 @@ export async function operate(
     client: new Anthropic(),
   },
 ): Promise<LlmOperateResponse> {
+  // Set model
+  const model = options?.model || PROVIDER.ANTHROPIC.MODEL.DEFAULT;
+
   // Register tools and process them to work with Anthropic
   let toolkit: Toolkit | undefined;
   let processedTools: Anthropic.Tool[] = [];
@@ -115,8 +112,12 @@ export async function operate(
     });
   }
 
-  // Convert string input to array format with placeholders if needed
+  // Handle placeholder logic
+  // Convert string input to array format if needed
+  // Apply placeholders to fields if data is provided and placeholders.instructions is undefined or true
   let history: LlmHistory = formatOperateInput(input);
+  let llmInstructions: string | undefined;
+  let systemPrompt: string | undefined;
   if (
     options?.data &&
     (options.placeholders?.input === undefined || options.placeholders?.input)
@@ -124,6 +125,18 @@ export async function operate(
     history = formatOperateInput(input, {
       data: options?.data,
     });
+  }
+  if (options?.instructions) {
+    llmInstructions =
+      options.data && options.placeholders?.instructions !== false
+        ? placeholders(options.instructions, options.data)
+        : options.instructions;
+  }
+  if (options?.system) {
+    systemPrompt =
+      options.data && options.placeholders?.system !== false
+        ? placeholders(options.system, options.data)
+        : options.system;
   }
 
   // If history is provided, merge it with currentInput
@@ -137,12 +150,29 @@ export async function operate(
     delete message.type;
   });
 
+  // Add instruction to the input message
+  if (llmInstructions) {
+    inputMessages[inputMessages.length - 1].content += "\n\n" + llmInstructions;
+  }
+
+  // Setup usage tracking
+  let totalUsage = {
+    input_tokens: 0,
+    output_tokens: 0,
+    total_tokens: 0,
+  };
+
+  // Determine max turns from options
+  const maxTurns = maxTurnsFromOptions(options);
+  const enableMultipleTurns = maxTurns > 1;
+  let currentTurn = 0;
+
   let response: Anthropic.Message;
   while (true) {
     // Loop for tool use
     response = await context.client.messages.create({
-      model: options.model as Anthropic.MessageCreateParams["model"],
-      system: options.system,
+      model: model as Anthropic.MessageCreateParams["model"],
+      system: systemPrompt,
       messages: inputMessages,
       max_tokens: PROVIDER.ANTHROPIC.MAX_TOKENS.DEFAULT,
       stream: false,
@@ -150,8 +180,16 @@ export async function operate(
       tool_choice: {
         type: schema ? "any" : "auto",
       },
+      ...options?.providerOptions,
     });
 
+    // Update usage
+    totalUsage.input_tokens += response.usage.input_tokens;
+    totalUsage.output_tokens += response.usage.output_tokens;
+    totalUsage.total_tokens +=
+      response.usage.input_tokens + response.usage.output_tokens;
+
+    // If the response is not a tool use, break
     if (response.stop_reason !== "tool_use") {
       break;
     }
@@ -161,12 +199,40 @@ export async function operate(
       content: response.content as Anthropic.TextBlockParam[],
     });
 
+    // Get the tool use
     const toolUse = response.content[
       response.content.length - 1
     ] as Anthropic.ToolUseBlock;
 
+    // If the tool use is structured output (magic tool), break
     if (toolUse.name === "structured_output") {
       break;
+    }
+
+    // Handle turn limit
+    if (!enableMultipleTurns || currentTurn >= maxTurns) {
+      const error = new TooManyRequestsError();
+      const detail = `Model requested function call but exceeded ${maxTurns} turns`;
+      log.warn(detail);
+      return {
+        //model: model,
+        //provider: PROVIDER.ANTHROPIC,
+        error: {
+          detail,
+          status: error.status,
+          title: error.title,
+        },
+        history,
+        output: inputMessages.slice(-1) as LlmOutputMessage[],
+        responses: response.content as unknown as JsonReturn[],
+        status: LlmResponseStatus.Incomplete,
+        usage: {
+          input: totalUsage.input_tokens,
+          output: totalUsage.output_tokens,
+          reasoning: 0,
+          total: totalUsage.total_tokens,
+        },
+      };
     }
 
     if (options.hooks?.beforeEachTool) {
@@ -241,7 +307,7 @@ export async function operate(
   } as LlmOutputMessage);
 
   return {
-    //model: options.model,
+    //model: model,
     //provider: PROVIDER.ANTHROPIC,
     content: schema
       ? jsonResult
@@ -251,10 +317,10 @@ export async function operate(
     history,
     status: LlmResponseStatus.Completed,
     usage: {
-      input: response.usage.input_tokens,
-      output: response.usage.output_tokens,
+      input: totalUsage.input_tokens,
+      output: totalUsage.output_tokens,
       reasoning: 0,
-      total: response.usage.input_tokens + response.usage.output_tokens,
+      total: totalUsage.total_tokens,
     },
   };
 }
