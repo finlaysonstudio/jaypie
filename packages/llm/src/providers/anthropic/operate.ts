@@ -17,7 +17,12 @@ import {
   naturalZodSchema,
 } from "../../util";
 import { PROVIDER } from "../../constants.js";
-import { JsonArray, JsonObject, JsonReturn, NaturalSchema } from "@jaypie/types";
+import {
+  JsonArray,
+  JsonObject,
+  JsonReturn,
+  NaturalSchema,
+} from "@jaypie/types";
 import { z } from "zod/v4";
 import ZSchema from "z-schema";
 import { Toolkit } from "../../tools/Toolkit.class.js";
@@ -177,9 +182,10 @@ export async function operate(
       max_tokens: PROVIDER.ANTHROPIC.MAX_TOKENS.DEFAULT,
       stream: false,
       tools: processedTools,
-      tool_choice: {
-        type: schema ? "any" : "auto",
-      },
+      tool_choice:
+        processedTools.length > 0
+          ? { type: schema ? "any" : "auto" }
+          : undefined,
       ...options?.providerOptions,
     });
 

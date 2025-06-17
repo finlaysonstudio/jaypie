@@ -980,9 +980,7 @@ describe("AnthropicProvider", () => {
           stream: false,
           system: undefined,
           tools: [],
-          tool_choice: {
-            type: "auto",
-          },
+          tool_choice: undefined,
         });
 
         // Second call
@@ -1002,9 +1000,7 @@ describe("AnthropicProvider", () => {
           stream: false,
           system: undefined,
           tools: [],
-          tool_choice: {
-            type: "auto",
-          },
+          tool_choice: undefined,
         });
       });
 
@@ -1062,9 +1058,7 @@ describe("AnthropicProvider", () => {
           stream: false,
           system: undefined,
           tools: [],
-          tool_choice: {
-            type: "auto",
-          },
+          tool_choice: undefined,
         });
       });
 
