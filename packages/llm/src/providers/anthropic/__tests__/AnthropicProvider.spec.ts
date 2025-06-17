@@ -11,6 +11,7 @@ import {
   LlmMessageRole,
   LlmResponseStatus,
 } from "../../../types/LlmProvider.interface.js";
+import { Toolkit } from "../../../tools/Toolkit.class.js";
 
 // Create a mock implementation for Anthropic client
 vi.mock("@anthropic-ai/sdk", () => {
@@ -936,6 +937,61 @@ describe("AnthropicProvider", () => {
           toolError,
           "test_tool",
           '{"param":"test"}',
+        );
+      });
+
+      it("accepts a Toolkit object in tools field", async () => {
+        const mockResponse = {
+          content: [{ type: "text", text: "test response" }],
+          usage: { input_tokens: 10, output_tokens: 10 },
+        };
+
+        const mockCreate = vi.fn().mockResolvedValue(mockResponse);
+        vi.mocked(Anthropic).mockImplementation(
+          () =>
+            ({
+              messages: {
+                create: mockCreate,
+              },
+            }) as any,
+        );
+
+        const provider = new AnthropicProvider();
+        provider["apiKey"] = "test-key";
+
+        const mockTool = {
+          name: "test_tool",
+          description: "Test tool",
+          parameters: {
+            type: "object",
+            properties: {
+              param: { type: "string" },
+            },
+          },
+          type: "function",
+          call: vi.fn().mockResolvedValue({ result: "test result" }),
+        };
+
+        const toolkit = new Toolkit([mockTool], { explain: true });
+
+        await provider.operate("Test input", {
+          tools: toolkit,
+        });
+
+        expect(mockCreate).toHaveBeenCalledWith(
+          expect.objectContaining({
+            tools: expect.arrayContaining([
+              expect.objectContaining({
+                name: "test_tool",
+                input_schema: expect.objectContaining({
+                  properties: expect.objectContaining({
+                    param: expect.any(Object),
+                    __Explanation: expect.any(Object),
+                  }),
+                }),
+              }),
+            ]),
+          }),
         );
       });
     });

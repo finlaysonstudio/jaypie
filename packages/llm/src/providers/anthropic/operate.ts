@@ -62,8 +62,14 @@ export async function operate(
   // Register tools and process them to work with Anthropic
   let toolkit: Toolkit | undefined;
   let processedTools: Anthropic.Tool[] = [];
-  if (options.tools?.length) {
+
+  if (options.tools instanceof Toolkit) {
+    toolkit = options.tools;
+  } else if (Array.isArray(options.tools)) {
     toolkit = new Toolkit(options.tools, { explain: options?.explain });
+  }
+
+  if (toolkit) {
     toolkit.tools.forEach((tool) => {
       processedTools.push({
         ...tool,
