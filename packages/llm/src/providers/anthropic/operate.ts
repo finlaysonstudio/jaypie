@@ -248,10 +248,10 @@ export async function operate(
     }
 
     if (options.hooks?.beforeEachTool) {
-      await options.hooks.beforeEachTool(
-        toolUse.name,
-        JSON.stringify(toolUse.input),
-      );
+      await options.hooks.beforeEachTool({
+        toolName: toolUse.name,
+        args: JSON.stringify(toolUse.input),
+      });
     }
 
     let result: unknown;
@@ -262,21 +262,21 @@ export async function operate(
       });
     } catch (error) {
       if (options.hooks?.onToolError) {
-        await options.hooks.onToolError(
-          error as Error,
-          toolUse.name,
-          JSON.stringify(toolUse.input),
-        );
+        await options.hooks.onToolError({
+          error: error as Error,
+          toolName: toolUse.name,
+          args: JSON.stringify(toolUse.input),
+        });
       }
       throw error;
     }
 
     if (options.hooks?.afterEachTool) {
-      await options.hooks.afterEachTool(
+      await options.hooks.afterEachTool({
         result,
-        toolUse.name,
-        JSON.stringify(toolUse.input),
-      );
+        toolName: toolUse.name,
+        args: JSON.stringify(toolUse.input),
+      });
     }
 
     inputMessages.push({
