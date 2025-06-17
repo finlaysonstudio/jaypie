@@ -17,14 +17,21 @@ describe("LLM Mocks", () => {
     });
 
     it("toolkit contains expected tools", () => {
-      expect(toolkit).toHaveProperty("random");
-      expect(toolkit).toHaveProperty("roll");
-      expect(toolkit).toHaveProperty("time");
-      expect(toolkit).toHaveProperty("weather");
+      expect(toolkit.tools).toBeArray();
+      expect(toolkit.tools).toBeArrayOfSize(4);
+
+      // Check for all expected tools
+      const expectedTools = ["random", "roll", "weather", "time"];
+
+      expectedTools.forEach((toolName) => {
+        const tool = toolkit.tools.find((t) => t.name === toolName);
+        expect(tool).toBeDefined();
+        expect(tool?.name).toBe(toolName);
+      });
     });
 
-    it("tools is an array of the toolkit functions", () => {
-      expect(tools).toEqual(Object.values(toolkit));
+    it("tools is an array of the toolkit tools", () => {
+      expect(tools).toEqual(toolkit.tools);
     });
   });
 
@@ -63,7 +70,9 @@ describe("LLM Mocks", () => {
       expect(result).toEqual({
         content: "_MOCK_OUTPUT_TEXT",
         history: expect.any(Array),
+        model: "_MOCK_MODEL",
         output: expect.any(Array),
+        provider: "_MOCK_PROVIDER",
         responses: expect.any(Array),
         status: "completed",
         usage: expect.any(Object),
@@ -90,25 +99,6 @@ describe("LLM Mocks", () => {
         [{ role: "user", content: "Hello" }],
         options,
       );
-    });
-  });
-
-  // 6. Features
-  describe("Features", () => {
-    it("random tool returns a mocked value", () => {
-      const result = toolkit.random();
-      expect(result).toBeGreaterThanOrEqual(0);
-      expect(result).toBeLessThanOrEqual(1);
-    });
-
-    it("roll tool returns a mocked value", () => {
-      const result = toolkit.roll();
-      expect(result).toBe(6);
-    });
-
-    it("time tool returns a mocked time string", () => {
-      const result = toolkit.time();
-      expect(result).toBe("_MOCK_TIME_[LLM]");
     });
   });
 });

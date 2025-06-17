@@ -7,6 +7,7 @@ import {
 } from "@jaypie/types";
 import { z } from "zod";
 import { LlmTool } from "./LlmTool.interface.js";
+import { Toolkit } from "../tools/Toolkit.class.js";
 
 // Enums
 
@@ -158,20 +159,77 @@ export interface LlmOperateOptions {
   format?: JsonObject | NaturalSchema | z.ZodType;
   history?: LlmHistory;
   hooks?: {
-    afterEachTool?: (
-      result: unknown,
-      toolName: string,
-      args: string,
-    ) => unknown | Promise<unknown>;
-    beforeEachTool?: (
-      toolName: string,
-      args: string,
-    ) => unknown | Promise<unknown>;
-    onToolError?: (
-      error: Error,
-      toolName: string,
-      args: string,
-    ) => unknown | Promise<unknown>;
+    afterEachModelResponse?: ({
+      input,
+      options,
+      providerRequest,
+      providerResponse,
+      content,
+      usage,
+    }: {
+      input: string | LlmHistory | LlmInputMessage;
+      options?: LlmOperateOptions;
+      providerRequest: any;
+      providerResponse: any;
+      content: string | JsonObject;
+      usage: LlmUsage;
+    }) => unknown | Promise<unknown>;
+    afterEachTool?: ({
+      result,
+      toolName,
+      args,
+    }: {
+      result: unknown;
+      toolName: string;
+      args: string;
+    }) => unknown | Promise<unknown>;
+    beforeEachModelRequest?: ({
+      input,
+      options,
+      providerRequest,
+    }: {
+      input: string | LlmHistory | LlmInputMessage;
+      options?: LlmOperateOptions;
+      providerRequest: any;
+    }) => unknown | Promise<unknown>;
+    beforeEachTool?: ({
+      toolName,
+      args,
+    }: {
+      toolName: string;
+      args: string;
+    }) => unknown | Promise<unknown>;
+    onRetryableModelError?: ({
+      input,
+      options,
+      providerRequest,
+      error,
+    }: {
+      input: string | LlmHistory | LlmInputMessage;
+      options?: LlmOperateOptions;
+      providerRequest: any;
+      error: any;
+    }) => unknown | Promise<unknown>;
+    onToolError?: ({
+      error,
+      toolName,
+      args,
+    }: {
+      error: Error;
+      toolName: string;
+      args: string;
+    }) => unknown | Promise<unknown>;
+    onUnrecoverableModelError?: ({
+      input,
+      options,
+      providerRequest,
+      error,
+    }: {
+      input: string | LlmHistory | LlmInputMessage;
+      options?: LlmOperateOptions;
+      providerRequest: any;
+      error: any;
+    }) => unknown | Promise<unknown>;
   };
   instructions?: string;
   model?: string;
@@ -182,7 +240,7 @@ export interface LlmOperateOptions {
   };
   providerOptions?: JsonObject;
   system?: string;
-  tools?: LlmTool[];
+  tools?: LlmTool[] | Toolkit;
   turns?: boolean | number;
   user?: string;
 }
@@ -194,18 +252,24 @@ export interface LlmOptions {
 
 // Responses
 
-interface LlmUsage {
+export interface LlmUsageItem {
   input: number;
   output: number;
   reasoning: number;
   total: number;
+  provider?: string;
+  model?: string;
 }
+
+export type LlmUsage = LlmUsageItem[];
 
 export interface LlmOperateResponse {
   content?: string | JsonObject;
   error?: LlmError;
   history: LlmHistory;
+  model?: string;
   output: LlmOutput;
+  provider?: string;
   responses: JsonReturn[];
   status: LlmResponseStatus;
   usage: LlmUsage;

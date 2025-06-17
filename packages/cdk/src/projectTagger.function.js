@@ -34,7 +34,7 @@ module.exports = ({ cdk, stack, stackName } = {}) => {
   if (process.env.PROJECT_SPONSOR)
     cdk.Tags.of(stack).add(CDK.TAG.SPONSOR, process.env.PROJECT_SPONSOR);
   if (stackName) cdk.Tags.of(stack).add(CDK.TAG.STACK, stackName);
-  if (version) cdk.Tags.of(stack).add(CDK.TAG.VENDOR, version);
+  if (version) cdk.Tags.of(stack).add(CDK.TAG.VERSION, version);
 
   return true;
 };

@@ -8,7 +8,7 @@ import {
   createMockWrappedFunction,
   createMockWrappedObject,
 } from "./utils";
-import { beforeAll, vi } from "vitest";
+import { beforeAll } from "vitest";
 import { spyLog } from "../mockLog.module.js";
 import { log } from "@jaypie/core";
 import * as original from "@jaypie/core";
@@ -141,6 +141,11 @@ export const required = createMockWrappedObject(original.required, {
   fallback: true,
   throws: true,
 });
+
+export const resolveValue = createMockWrappedFunction(
+  original.resolveValue,
+  `_MOCK_RESOLVE_VALUE_[${TAG}]`,
+);
 
 export const safeParseFloat = createMockWrappedFunction(
   original.safeParseFloat,

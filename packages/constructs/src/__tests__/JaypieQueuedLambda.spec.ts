@@ -30,7 +30,6 @@ describe("JaypieQueuedLambda", () => {
       });
       template.hasResourceProperties("AWS::Lambda::Function", {
         Handler: "index.handler",
-        Runtime: "nodejs20.x",
       });
     });
   });
@@ -361,7 +360,6 @@ describe("JaypieQueuedLambda", () => {
       const template = Template.fromStack(stack);
       template.hasResourceProperties("AWS::Lambda::Function", {
         Handler: "index.handler",
-        Runtime: "nodejs20.x",
       });
     });
 

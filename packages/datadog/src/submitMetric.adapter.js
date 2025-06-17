@@ -19,7 +19,9 @@ const NO_ERROR_RESPONSE_OBJECT = { errors: [] };
 
 const submitMetric = async ({
   apiKey = process.env[DATADOG.ENV.DATADOG_API_KEY],
-  apiSecret = process.env[DATADOG.ENV.SECRET_DATADOG_API_KEY],
+  apiSecret = process.env[DATADOG.ENV.SECRET_DATADOG_API_KEY] ||
+    process.env[DATADOG.ENV.DATADOG_API_KEY_ARN] ||
+    process.env[DATADOG.ENV.DD_API_KEY_SECRET_ARN],
   name,
   type = DATADOG.METRIC.TYPE.UNKNOWN,
   value,
@@ -73,13 +75,68 @@ const submitMetric = async ({
   // Preprocess
   //
 
+  const {
+    PROJECT_ENV,
+    PROJECT_KEY,
+    PROJECT_SERVICE,
+    PROJECT_SPONSOR,
+    PROJECT_VERSION,
+  } = process.env;
+
+  // Build default tags array
+  const defaultTagsArray = [];
+  if (PROJECT_ENV) defaultTagsArray.push(`env:${PROJECT_ENV}`);
+  if (PROJECT_KEY) defaultTagsArray.push(`project:${PROJECT_KEY}`);
+  if (PROJECT_SERVICE) defaultTagsArray.push(`service:${PROJECT_SERVICE}`);
+  if (PROJECT_SPONSOR) defaultTagsArray.push(`sponsor:${PROJECT_SPONSOR}`);
+  if (PROJECT_VERSION) defaultTagsArray.push(`version:${PROJECT_VERSION}`);
+
+  // Convert user tags to array format
+  let userTagsArray = [];
+  if (tags) {
+    if (Array.isArray(tags)) {
+      userTagsArray = tags;
+    } else {
+      userTagsArray = objectToKeyValueArrayPipeline(tags);
+    }
+  }
+
+  // Combine tags with user tags taking precedence
+  const allTags = [...defaultTagsArray, ...userTagsArray];
+
+  // Remove duplicates, keeping the last occurrence of each prefix
+  const seenPrefixes = new Set();
+  const seenValues = new Set();
+  const finalTags = [];
+
+  // Process in reverse to keep last occurrence
+  for (let i = allTags.length - 1; i >= 0; i--) {
+    const tag = allTags[i];
+    const colonIndex = tag.indexOf(":");
+
+    if (colonIndex === -1) {
+      // Tag without colon - only keep if not seen before
+      if (!seenValues.has(tag)) {
+        seenValues.add(tag);
+        finalTags.unshift(tag);
+      }
+    } else {
+      // Tag with colon - only keep if prefix not seen before
+      const prefix = tag.substring(0, colonIndex);
+      if (!seenPrefixes.has(prefix)) {
+        seenPrefixes.add(prefix);
+        finalTags.unshift(tag);
+      }
+    }
+  }
+
   const data = {
     body: {
       series: [
         // https://datadoghq.dev/datadog-api-client-typescript/classes/v2.MetricSeries.html
         {
           metric: name,
-          tags: objectToKeyValueArrayPipeline(tags),
+          tags: finalTags,
           type,
           points: [
             {

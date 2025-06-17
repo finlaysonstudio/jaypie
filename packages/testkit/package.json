@@ -1,6 +1,6 @@
 {
   "name": "@jaypie/testkit",
-  "version": "1.1.27",
+  "version": "1.1.31",
   "license": "MIT",
   "author": "Finlayson Studio",
   "type": "module",
@@ -29,16 +29,21 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@jaypie/core": "^1.1.0",
+    "@jaypie/aws": "^1.1.21",
+    "@jaypie/core": "^1.1.11",
+    "@jaypie/datadog": "^1.1.2",
+    "@jaypie/express": "^1.1.11",
+    "@jaypie/lambda": "^1.1.4",
+    "@jaypie/llm": "^1.1.21",
+    "@jaypie/mongoose": "^1.1.1",
     "@jaypie/textract": "^0.2.4",
-    "@jaypie/types": "^0.1.3",
-    "jaypie": "^1.0.44",
+    "jaypie": "^1.1.48",
     "jest-extended": "^4.0.2",
     "jest-json-schema": "^6.1.0",
     "uuid": "^11.0.5"
   },
   "devDependencies": {
-    "@jaypie/mongoose": "^1.1.1",
+    "@jaypie/types": "^0.1.7",
     "@rollup/plugin-commonjs": "^28.0.3",
     "@rollup/plugin-json": "^6.1.0",
     "@rollup/plugin-node-resolve": "^16.0.1",

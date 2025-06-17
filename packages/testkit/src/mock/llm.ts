@@ -1,9 +1,8 @@
 import { vi } from "vitest";
 import {
-  createMockFunction,
   createMockResolvedFunction,
   createMockReturnedFunction,
-  createMockWrappedFunction,
+  createMockTool,
   createMockWrappedObject,
 } from "./utils";
 
@@ -29,6 +28,7 @@ const mockOperate = createMockResolvedFunction({
       role: "assistant",
     },
   ],
+  model: "_MOCK_MODEL",
   output: [
     {
       id: "_MOCK_MESSAGE_ID",
@@ -38,6 +38,7 @@ const mockOperate = createMockResolvedFunction({
       role: "assistant",
     },
   ],
+  provider: "_MOCK_PROVIDER",
   responses: [
     {
       id: "_MOCK_RESPONSE_ID",
@@ -49,7 +50,16 @@ const mockOperate = createMockResolvedFunction({
     },
   ],
   status: "completed",
-  usage: { input: 100, output: 20, reasoning: 0, total: 120 },
+  usage: [
+    {
+      input: 100,
+      output: 20,
+      reasoning: 0,
+      total: 120,
+      provider: "_MOCK_PROVIDER",
+      model: "_MOCK_MODEL",
+    },
+  ],
   content: "_MOCK_OUTPUT_TEXT",
 });
 const mockSend = createMockResolvedFunction("_MOCK_LLM_RESPONSE");
@@ -70,30 +80,25 @@ export const Llm = Object.assign(
 );
 
 // Tool implementations - always return mock values
-const random = createMockReturnedFunction(0.5);
+const random = createMockTool("random", createMockReturnedFunction(0.5));
 
-const roll = createMockReturnedFunction(6);
+const roll = createMockTool("roll", createMockReturnedFunction(6));
 
-const time = createMockReturnedFunction(`_MOCK_TIME_[${TAG}]`);
+const time = createMockTool("time", createMockReturnedFunction(`_MOCK_TIME`));
 
-const weather = createMockResolvedFunction({
-  location: `_MOCK_WEATHER_LOCATION_[${TAG}]`,
-  forecast: Array(7)
-    .fill(0)
-    .map((_, i) => ({
-      date: `2025-05-${i + 1}`,
-      temperature: 72,
-      condition: "Sunny",
-      precipitation: 0,
-    })),
+const weather = createMockTool(
+  "weather",
+  createMockResolvedFunction({
+    location: `_MOCK_WEATHER_LOCATION`,
+    forecast: [{ conditions: "good" }],
+  }),
+);
+
+export const Toolkit = createMockWrappedObject(original.Toolkit, {
+  isClass: true,
 });
 
 // Tool collections
-export const toolkit = {
-  random,
-  roll,
-  time,
-  weather,
-};
+export const toolkit = new original.Toolkit([random, roll, time, weather]);
 
-export const tools = Object.values(toolkit);
+export const tools = toolkit.tools;

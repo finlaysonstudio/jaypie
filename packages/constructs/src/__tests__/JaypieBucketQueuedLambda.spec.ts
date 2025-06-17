@@ -29,7 +29,6 @@ describe("JaypieBucketQueuedLambda", () => {
       template.hasResourceProperties("AWS::SQS::Queue", {});
       template.hasResourceProperties("AWS::Lambda::Function", {
         Handler: "index.handler",
-        Runtime: "nodejs20.x",
       });
     });
   });
@@ -371,7 +370,7 @@ describe("JaypieBucketQueuedLambda", () => {
       // Find BucketNotificationsHandler Lambda
       template.hasResourceProperties("AWS::Lambda::Function", {
         Handler: "index.handler",
-        Runtime: lambda.Runtime.NODEJS_20_X.name,
+        Runtime: lambda.Runtime.NODEJS_22_X.name,
       });
     });
 

@@ -1,4 +1,4 @@
-import { sleep, placeholders } from "@jaypie/core";
+import { resolveValue, sleep, placeholders } from "@jaypie/core";
 import { BadGatewayError, TooManyRequestsError } from "@jaypie/errors";
 import { JsonObject, NaturalSchema } from "@jaypie/types";
 import {
@@ -36,7 +36,6 @@ import {
   log,
   maxTurnsFromOptions,
   naturalZodSchema,
-  resolvePromise,
 } from "../../util";
 
 //
@@ -92,6 +91,56 @@ const ERROR = {
 //
 // Helpers
 //
+
+/**
+ * Creates content string for function calls
+ */
+function createFunctionCallContent(output: any): string {
+  return `${LlmMessageType.FunctionCall}:${output.name}${output.arguments}#${output.call_id}`;
+}
+
+/**
+ * Extracts content from OpenAI response output array
+ */
+function extractContentFromResponse(
+  currentResponse: OpenAIRawResponse,
+  options?: LlmOperateOptions,
+): any {
+  if (!currentResponse.output || !Array.isArray(currentResponse.output)) {
+    return "";
+  }
+
+  for (const output of currentResponse.output) {
+    if (output.type === LlmMessageType.Message) {
+      if (
+        output.content?.[0] &&
+        output.content[0].type === LlmMessageType.OutputText
+      ) {
+        const rawContent = output.content[0].text;
+
+        // If format is provided, try to parse the content as JSON
+        if (options?.format && typeof rawContent === "string") {
+          try {
+            const parsedContent = JSON.parse(rawContent);
+            return parsedContent;
+          } catch (error) {
+            // If parsing fails, keep the original string content
+            log.debug("Failed to parse formatted response as JSON");
+            log.var({ error });
+            return rawContent;
+          }
+        }
+
+        return rawContent;
+      }
+    }
+    if (output.type === LlmMessageType.FunctionCall) {
+      return createFunctionCallContent(output);
+    }
+  }
+
+  return "";
+}
 
 /**
  * Creates the request options for the OpenAI API call
@@ -173,11 +222,22 @@ export function createRequestOptions(
     }
   }
 
-  // Create toolkit and add tools if provided
-  if (options.tools?.length) {
-    const explain = options?.explain ?? false;
-    const toolkit = new Toolkit(options.tools, { explain });
-    requestOptions.tools = toolkit.tools;
+  // Handle tools - either as LlmTool[] or Toolkit
+  if (options.tools) {
+    let toolkit: Toolkit | undefined;
+
+    if (options.tools instanceof Toolkit) {
+      // If toolkit is already provided, use it directly
+      toolkit = options.tools;
+    } else if (Array.isArray(options.tools) && options.tools.length > 0) {
+      // If array of tools provided, create toolkit from them
+      const explain = options?.explain ?? false;
+      toolkit = new Toolkit(options.tools, { explain });
+    }
+
+    if (toolkit) {
+      requestOptions.tools = toolkit.tools;
+    }
   }
 
   return requestOptions;
@@ -212,15 +272,12 @@ export async function operate(
 
   const returnResponse: LlmOperateResponse = {
     history: [],
+    model: options?.model || PROVIDER.OPENAI.MODEL.DEFAULT,
     output: [],
+    provider: PROVIDER.OPENAI.NAME,
     responses: [],
     status: LlmResponseStatus.InProgress,
-    usage: {
-      input: 0,
-      output: 0,
-      reasoning: 0,
-      total: 0,
-    },
+    usage: [], // Initialize as empty array, will add entry for each response
   };
 
   // Convert string input to array format with placeholders if needed
@@ -300,6 +357,17 @@ export async function operate(
           log.trace("[operate] Calling OpenAI Responses API");
         }
 
+        // Execute beforeEachModelRequest hook if defined
+        if (options.hooks?.beforeEachModelRequest) {
+          await resolveValue(
+            options.hooks.beforeEachModelRequest({
+              input,
+              options,
+              providerRequest: requestOptions,
+            }),
+          );
+        }
+
         // Use type assertion to handle the OpenAI SDK response type
         const currentResponse = (await openai.responses.create(
           // @ts-expect-error error claims missing non-required id, status
@@ -312,17 +380,37 @@ export async function operate(
         // Add the response to the responses array
         returnResponse.responses.push(currentResponse);
 
-        // Accumulate token usage from the current response
+        // Add a new usage entry for each response instead of accumulating
         if (currentResponse.usage) {
-          returnResponse.usage.input += currentResponse.usage.input_tokens || 0;
-          returnResponse.usage.output +=
-            currentResponse.usage.output_tokens || 0;
-          returnResponse.usage.total += currentResponse.usage.total_tokens || 0;
-          if (currentResponse.usage.output_tokens_details?.reasoning_tokens) {
-            returnResponse.usage.reasoning =
-              (returnResponse.usage.reasoning || 0) +
-              currentResponse.usage.output_tokens_details.reasoning_tokens;
-          }
+          // Create new usage item for this response
+          returnResponse.usage.push({
+            input: currentResponse.usage.input_tokens || 0,
+            output: currentResponse.usage.output_tokens || 0,
+            total: currentResponse.usage.total_tokens || 0,
+            reasoning:
+              currentResponse.usage.output_tokens_details?.reasoning_tokens ||
+              0,
+            provider: PROVIDER.OPENAI.NAME,
+            model: options?.model || PROVIDER.OPENAI.MODEL.DEFAULT,
+          });
+        }
+
+        // Execute afterEachModelResponse hook immediately after usage processing
+        if (options.hooks?.afterEachModelResponse) {
+          const extractedContent = extractContentFromResponse(
+            currentResponse,
+            options,
+          );
+          await resolveValue(
+            options.hooks.afterEachModelResponse({
+              input,
+              options,
+              providerRequest: requestOptions,
+              providerResponse: currentResponse,
+              content: extractedContent || "",
+              usage: returnResponse.usage,
+            }),
+          );
         }
 
         // Check if we need to process function calls for multi-turn conversations
@@ -338,26 +426,35 @@ export async function operate(
                 hasFunctionCall = true;
 
                 let toolkit: Toolkit | undefined;
-                const explain = options?.explain ?? false;
 
-                // Initialize toolkit if tools are provided for multi-turn function calling
-                if (options.tools?.length) {
-                  toolkit = new Toolkit(options.tools, { explain });
+                // Initialize toolkit for multi-turn function calling
+                if (options.tools) {
+                  if (options.tools instanceof Toolkit) {
+                    // If toolkit is already provided, use it directly
+                    toolkit = options.tools;
+                  } else if (
+                    Array.isArray(options.tools) &&
+                    options.tools.length > 0
+                  ) {
+                    // If array of tools provided, create toolkit from them
+                    const explain = options?.explain ?? false;
+                    toolkit = new Toolkit(options.tools, { explain });
+                  }
                 }
 
                 if (toolkit && enableMultipleTurns) {
                   try {
                     // Call the tool and ensure the result is resolved if it's a Promise
                     log.trace(`[operate] Calling tool - ${output.name}`);
-                    returnResponse.content = `${LlmMessageType.FunctionCall}:${output.name}${output.arguments}#${output.call_id}`;
+                    // Content will be set by extractContentFromResponse call later
 
                     // Execute beforeEachTool hook if defined
                     if (options.hooks?.beforeEachTool) {
-                      await resolvePromise(
-                        options.hooks.beforeEachTool(
-                          output.name,
-                          output.arguments,
-                        ),
+                      await resolveValue(
+                        options.hooks.beforeEachTool({
+                          toolName: output.name,
+                          args: output.arguments,
+                        }),
                       );
                     }
 
@@ -370,23 +467,23 @@ export async function operate(
 
                       // Execute afterEachTool hook if defined
                       if (options.hooks?.afterEachTool) {
-                        result = await resolvePromise(
-                          options.hooks.afterEachTool(
+                        await resolveValue(
+                          options.hooks.afterEachTool({
                             result,
-                            output.name,
-                            output.arguments,
-                          ),
+                            toolName: output.name,
+                            args: output.arguments,
+                          }),
                         );
                       }
                     } catch (error) {
                       // Execute onToolError hook if defined
                       if (options.hooks?.onToolError) {
-                        await resolvePromise(
-                          options.hooks.onToolError(
-                            error as Error,
-                            output.name,
-                            output.arguments,
-                          ),
+                        await resolveValue(
+                          options.hooks.onToolError({
+                            error: error as Error,
+                            toolName: output.name,
+                            args: output.arguments,
+                          }),
                         );
                       }
                       throw error;
@@ -404,7 +501,7 @@ export async function operate(
                       currentInput.push(functionCallOutput);
                       returnResponse.output.push(functionCallOutput);
                       returnResponse.history.push(functionCallOutput);
-                      returnResponse.content = `${LlmMessageType.FunctionCallOutput}:${functionCallOutput.output}#${functionCallOutput.call_id}`;
+                      // Content will be set by extractContentFromResponse call later
                     }
                   } catch (error) {
                     // TODO: but I do need to tell the model that something went wrong, right?
@@ -428,27 +525,7 @@ export async function operate(
                   );
                 }
               }
-              if (output.type === LlmMessageType.Message) {
-                if (
-                  output.content?.[0] &&
-                  output.content[0].type === LlmMessageType.OutputText
-                ) {
-                  const rawContent = output.content[0].text;
-                  returnResponse.content = rawContent;
-
-                  // If format is provided, try to parse the content as JSON
-                  if (options?.format && typeof rawContent === "string") {
-                    try {
-                      const parsedContent = JSON.parse(rawContent);
-                      returnResponse.content = parsedContent;
-                    } catch (error) {
-                      // If parsing fails, keep the original string content
-                      log.debug("Failed to parse formatted response as JSON");
-                      log.var({ error });
-                    }
-                  }
-                }
-              }
+              // Content processing is now handled by extractContentFromResponse function
             }
           }
         } catch (error) {
@@ -457,6 +534,12 @@ export async function operate(
           log.warn("Error processing response for function calls");
           log.var({ error });
         }
+
+        // Set content using the shared extraction function
+        returnResponse.content = extractContentFromResponse(
+          currentResponse,
+          options,
+        );
 
         // If there's no function call or we can't take another turn, exit the loop
         if (!hasFunctionCall || !enableMultipleTurns) {
@@ -485,6 +568,19 @@ export async function operate(
         if (retryCount >= maxRetries) {
           log.error(`OpenAI API call failed after ${maxRetries} retries`);
           log.var({ error });
+
+          // Execute onUnrecoverableModelError hook if defined
+          if (options.hooks?.onUnrecoverableModelError) {
+            await resolveValue(
+              options.hooks.onUnrecoverableModelError({
+                input,
+                options,
+                providerRequest: requestOptions,
+                error,
+              }),
+            );
+          }
+
           throw new BadGatewayError();
         }
 
@@ -500,6 +596,19 @@ export async function operate(
         if (isNotRetryable) {
           log.error("OpenAI API call failed with non-retryable error");
           log.var({ error });
+
+          // Execute onUnrecoverableModelError hook if defined
+          if (options.hooks?.onUnrecoverableModelError) {
+            await resolveValue(
+              options.hooks.onUnrecoverableModelError({
+                input,
+                options,
+                providerRequest: requestOptions,
+                error,
+              }),
+            );
+          }
+
           throw new BadGatewayError();
         }
 
@@ -518,6 +627,18 @@ export async function operate(
 
         // Log the error and retry
         log.warn(`OpenAI API call failed. Retrying in ${retryDelay}ms...`);
+
+        // Execute onRetryableModelError hook if defined
+        if (options.hooks?.onRetryableModelError) {
+          await resolveValue(
+            options.hooks.onRetryableModelError({
+              input,
+              options,
+              providerRequest: requestOptions,
+              error,
+            }),
+          );
+        }
 
         // Wait before retrying
         await sleep(retryDelay);

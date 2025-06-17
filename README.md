@@ -359,7 +359,7 @@ const worker = new JaypieQueuedLambda(this, 'Worker', {
 | `paramsAndSecrets` | `lambda.ParamsAndSecretsLayerVersion` | No | AWS Parameter Store layer |
 | `reservedConcurrentExecutions` | `number` | No | Lambda concurrency limit |
 | `roleTag` | `string` | No | Role tag for resource management |
-| `runtime` | `lambda.Runtime` | No | Lambda runtime, default NODEJS_20_X |
+| `runtime` | `lambda.Runtime` | No | Lambda runtime, default NODEJS_22_X |
 | `secrets` | `JaypieEnvSecret[]` | No | JaypieEnvSecrets to inject |
 | `timeout` | `Duration \| number` | No | Lambda timeout duration or number of seconds, defaults to CDK.DURATION.LAMBDA_WORKER (120 seconds) |
 | `vendorTag` | `string` | No | Vendor tag for resource management |
@@ -397,7 +397,7 @@ const lambda = new JaypieLambda(this, 'Function', {
 | `paramsAndSecretsOptions` | `object` | No | Config options for the Parameters and Secrets layer |
 | `reservedConcurrentExecutions` | `number` | No | Lambda concurrency limit |
 | `roleTag` | `string` | No | Role tag for resource management |
-| `runtime` | `lambda.Runtime` | No | Lambda runtime, default NODEJS_20_X |
+| `runtime` | `lambda.Runtime` | No | Lambda runtime, default NODEJS_22_X |
 | `secrets` | `JaypieEnvSecret[]` | No | JaypieEnvSecrets to inject |
 | `timeout` | `Duration \| number` | No | Lambda timeout duration or number of seconds, defaults to CDK.DURATION.LAMBDA_WORKER (120 seconds) |
 | `vendorTag` | `string` | No | Vendor tag for resource management |
