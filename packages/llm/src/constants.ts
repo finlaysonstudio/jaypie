@@ -38,11 +38,27 @@ export const PROVIDER = {
     },
     NAME: "openai" as const,
   },
+  OPENROUTER: {
+    MODEL: {
+      DEFAULT: "google/gemini-2.0-flash-001" as const,
+      DEEPSEEK_V3: "deepseek/deepseek-chat-v3-0324" as const,
+    },
+    NAME: "openrouter" as const,
+    ROLE: {
+      ASSISTANT: "assistant" as const,
+      SYSTEM: "system" as const,
+      USER: "user" as const,
+    },
+    MAX_TOKENS: {
+      DEFAULT: 4096 as const,
+    },
+  },
 } as const;
 
 export type LlmProviderName =
   | typeof PROVIDER.OPENAI.NAME
-  | typeof PROVIDER.ANTHROPIC.NAME;
+  | typeof PROVIDER.ANTHROPIC.NAME
+  | typeof PROVIDER.OPENROUTER.NAME;
 
 // Last: Defaults
 export const DEFAULT = {

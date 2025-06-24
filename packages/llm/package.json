@@ -29,9 +29,12 @@
     "@jaypie/aws": "^1.1.15",
     "@jaypie/core": "^1.1.11",
     "@jaypie/errors": "^1.1.5",
+    "@openrouter/ai-sdk-provider": "^0.7.2",
+    "ai": "^4.3.16",
     "openai": "^4.87.3",
     "openmeteo": "^1.2.0",
     "random": "^5.3.0",
+    "z-schema": "^6.0.2",
     "zod": "^3.24.1"
   },
   "devDependencies": {

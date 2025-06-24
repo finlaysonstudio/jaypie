@@ -10,6 +10,7 @@ import {
 } from "./types/LlmProvider.interface.js";
 import { OpenAiProvider } from "./providers/openai/index.js";
 import { AnthropicProvider } from "./providers/AnthropicProvider.class.js";
+import { OpenRouterProvider } from "./providers/openrouter/OpenRouterProvider.class.js";
 
 class Llm implements LlmProvider {
   private _provider: LlmProviderName;
@@ -39,6 +40,11 @@ class Llm implements LlmProvider {
       case PROVIDER.ANTHROPIC.NAME:
         return new AnthropicProvider(
           model || PROVIDER.ANTHROPIC.MODEL.DEFAULT,
+          { apiKey },
+        );
+      case PROVIDER.OPENROUTER.NAME:
+        return new OpenRouterProvider(
+          model || PROVIDER.OPENROUTER.MODEL.DEFAULT,
           { apiKey },
         );
       default:
