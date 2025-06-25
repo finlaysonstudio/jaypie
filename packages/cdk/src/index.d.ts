@@ -71,6 +71,7 @@ declare module "@jaypie/cdk" {
     DURATION: {
       EXPRESS_API: number;
       LAMBDA_WORKER: number;
+      LAMBDA_MAXIMUM: number;
     };
     ENV: {
       DEMO: string;
