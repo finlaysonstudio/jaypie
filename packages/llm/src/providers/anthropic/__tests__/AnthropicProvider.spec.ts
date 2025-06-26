@@ -803,10 +803,10 @@ describe("AnthropicProvider", () => {
           },
         });
 
-        expect(beforeEachToolSpy).toHaveBeenCalledWith(
-          "test_tool",
-          '{"param":"test"}',
-        );
+        expect(beforeEachToolSpy).toHaveBeenCalledWith({
+          toolName: "test_tool",
+          args: '{"param":"test"}',
+        });
         expect(beforeEachToolSpy).toHaveBeenCalledBefore(mockTool.call);
       });
 
@@ -871,11 +871,11 @@ describe("AnthropicProvider", () => {
           },
         });
 
-        expect(afterEachToolSpy).toHaveBeenCalledWith(
-          toolResult,
-          "test_tool",
-          '{"param":"test"}',
-        );
+        expect(afterEachToolSpy).toHaveBeenCalledWith({
+          toolName: "test_tool",
+          args: '{"param":"test"}',
+          result: toolResult,
+        });
         expect(mockTool.call).toHaveBeenCalledBefore(afterEachToolSpy);
       });
 
@@ -933,11 +933,11 @@ describe("AnthropicProvider", () => {
           }),
         ).rejects.toThrow("Tool error");
 
-        expect(onToolErrorSpy).toHaveBeenCalledWith(
-          toolError,
-          "test_tool",
-          '{"param":"test"}',
-        );
+        expect(onToolErrorSpy).toHaveBeenCalledWith({
+          toolName: "test_tool",
+          args: '{"param":"test"}',
+          error: toolError,
+        });
       });
 
       it("accepts a Toolkit object in tools field", async () => {
@@ -1300,7 +1300,10 @@ describe("AnthropicProvider", () => {
         expect(mockCreate).toHaveBeenCalledWith(
           expect.objectContaining({
             messages: [
-              { role: PROVIDER.ANTHROPIC.ROLE.USER, content: "Hello, {{name}}" },
+              {
+                role: PROVIDER.ANTHROPIC.ROLE.USER,
+                content: "Hello, {{name}}",
+              },
             ],
           }),
         );

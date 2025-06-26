@@ -10,7 +10,7 @@ import { OpenAI } from "openai";
 import { zodResponseFormat } from "openai/helpers/zod";
 import { z } from "zod";
 import { LlmMessageOptions } from "../../types/LlmProvider.interface.js";
-import { naturalZodSchema } from "../../util";
+import { naturalZod3Schema } from "../../util";
 
 // Logger
 export const getLogger = () => defaultLog.lib({ lib: JAYPIE.LIB.LLM });
@@ -110,7 +110,7 @@ export async function createStructuredCompletion(
   const zodSchema =
     responseSchema instanceof z.ZodType
       ? responseSchema
-      : naturalZodSchema(responseSchema as NaturalSchema);
+      : naturalZod3Schema(responseSchema as NaturalSchema);
 
   const completion = await client.beta.chat.completions.parse({
     messages,

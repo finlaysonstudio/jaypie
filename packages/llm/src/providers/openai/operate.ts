@@ -35,7 +35,7 @@ import {
   formatOperateInput,
   log,
   maxTurnsFromOptions,
-  naturalZodSchema,
+  naturalZod3Schema,
 } from "../../util";
 
 //
@@ -207,7 +207,7 @@ export function createRequestOptions(
       const zodSchema =
         options.format instanceof z.ZodType
           ? options.format
-          : naturalZodSchema(options.format as NaturalSchema);
+          : naturalZod3Schema(options.format as NaturalSchema);
       const responseFormat = zodResponseFormat(zodSchema, "response");
 
       // Set up structured output format in the format expected by the test

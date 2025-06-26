@@ -14,7 +14,7 @@ import {
   formatOperateInput,
   log,
   maxTurnsFromOptions,
-  naturalZodSchema,
+  naturalZod4Schema,
 } from "../../util";
 import { PROVIDER } from "../../constants.js";
 import {
@@ -105,7 +105,7 @@ export async function operate(
       const zodSchema =
         options.format instanceof z.ZodType
           ? options.format
-          : naturalZodSchema(options.format as NaturalSchema);
+          : naturalZod4Schema(options.format as NaturalSchema);
       schema = z.toJSONSchema(zodSchema) as JsonObject;
     }
 
@@ -180,8 +180,6 @@ export async function operate(
 
   let response: Anthropic.Message;
   while (true) {
-    console.log(inputMessages);
-
     // Loop for tool use
     response = await context.client.messages.create({
       model: model as Anthropic.MessageCreateParams["model"],
