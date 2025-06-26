@@ -180,6 +180,8 @@ export async function operate(
 
   let response: Anthropic.Message;
   while (true) {
+    console.log(inputMessages);
+
     // Loop for tool use
     response = await context.client.messages.create({
       model: model as Anthropic.MessageCreateParams["model"],
@@ -289,13 +291,6 @@ export async function operate(
         },
       ],
     });
-
-    history.push({
-      call_id: toolUse.id,
-      output: JSON.stringify(result),
-      status: LlmResponseStatus.Completed,
-      type: LlmMessageType.FunctionCallOutput,
-    } as LlmToolResult);
   }
 
   let jsonResult: JsonObject | undefined;
