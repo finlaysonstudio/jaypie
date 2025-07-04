@@ -16,5 +16,6 @@ export {
   PermissionSetType,
 } from "./JaypieSsoGroups";
 export { JaypieTraceSigningKeySecret } from "./JaypieTraceSigningKeySecret";
+export { constructEnvName } from "./helpers";
 
 // * No default export

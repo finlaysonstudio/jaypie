@@ -5,6 +5,7 @@ import * as apiGateway from "aws-cdk-lib/aws-apigateway";
 import * as route53 from "aws-cdk-lib/aws-route53";
 import * as route53Targets from "aws-cdk-lib/aws-route53-targets";
 import { CDK } from "@jaypie/cdk";
+import { constructEnvName } from "./helpers";
 
 export interface JaypieApiGatewayProps extends apiGateway.LambdaRestApiProps {
   certificate?: boolean | acm.ICertificate;
@@ -32,14 +33,9 @@ export class JaypieApiGateway extends Construct implements apiGateway.IRestApi {
       zone,
     } = props;
 
-    const projectEnv = process.env.PROJECT_ENV || "sandbox";
-    const projectKey = process.env.PROJECT_KEY || "unknown";
-    const projectNonce = process.env.PROJECT_NONCE || "none";
-
-    const apiGatewayName =
-      name || `${projectEnv}-${projectKey}-ApiGateway-${projectNonce}`;
-    const certificateName = `${projectEnv}-${projectKey}-Certificate-${projectNonce}`;
-    const apiDomainName = `${projectEnv}-${projectKey}-ApiDomainName-${projectNonce}`;
+    const apiGatewayName = name || constructEnvName("ApiGateway");
+    const certificateName = constructEnvName("Certificate");
+    const apiDomainName = constructEnvName("ApiDomainName");
 
     let hostedZone: route53.IHostedZone | undefined;
     let certificateToUse: acm.ICertificate | undefined;
