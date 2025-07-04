@@ -1,3 +1,4 @@
+export { JaypieApiGateway } from "./JaypieApiGateway";
 export { JaypieBucketQueuedLambda } from "./JaypieBucketQueuedLambda";
 export { JaypieDatadogSecret } from "./JaypieDatadogSecret";
 export { JaypieEnvSecret } from "./JaypieEnvSecret";
