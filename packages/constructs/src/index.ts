@@ -16,6 +16,7 @@ export {
   PermissionSetType,
 } from "./JaypieSsoGroups";
 export { JaypieTraceSigningKeySecret } from "./JaypieTraceSigningKeySecret";
+export { JaypieWebDeploymentBucket } from "./JaypieWebDeploymentBucket";
 export * from "./helpers";
 
 // * No default export
