@@ -8,6 +8,18 @@ import * as iam from "aws-cdk-lib/aws-iam";
 import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
 import { JaypieEnvSecret } from "../JaypieEnvSecret.js";
 
+// Helper function to find the main Lambda function in the template
+function findMainLambdaFunction(
+  template: Template,
+  handler: string = "index.handler",
+) {
+  const resources = template.findResources("AWS::Lambda::Function");
+  const lambdaFunctions = Object.values(resources);
+  return lambdaFunctions.find(
+    (resource: any) => resource.Properties?.Handler === handler,
+  );
+}
+
 describe("JaypieQueuedLambda", () => {
   describe("Base Cases", () => {
     it("is a function", () => {
@@ -54,13 +66,13 @@ describe("JaypieQueuedLambda", () => {
         ],
       });
 
-      template.hasResourceProperties("AWS::Lambda::Function", {
-        Tags: [
-          {
-            Key: CDK.TAG.ROLE,
-            Value: "TEST_ROLE",
-          },
-        ],
+      const mainFunction = findMainLambdaFunction(template);
+      expect(mainFunction).toBeDefined();
+
+      const tags = mainFunction?.Properties?.Tags || [];
+      expect(tags).toContainEqual({
+        Key: CDK.TAG.ROLE,
+        Value: "TEST_ROLE",
       });
     });
 
@@ -83,13 +95,13 @@ describe("JaypieQueuedLambda", () => {
         ],
       });
 
-      template.hasResourceProperties("AWS::Lambda::Function", {
-        Tags: [
-          {
-            Key: CDK.TAG.VENDOR,
-            Value: "TEST_VENDOR",
-          },
-        ],
+      const mainFunction = findMainLambdaFunction(template);
+      expect(mainFunction).toBeDefined();
+
+      const tags = mainFunction?.Properties?.Tags || [];
+      expect(tags).toContainEqual({
+        Key: CDK.TAG.VENDOR,
+        Value: "TEST_VENDOR",
       });
     });
 
@@ -117,17 +129,17 @@ describe("JaypieQueuedLambda", () => {
         ]),
       });
 
-      template.hasResourceProperties("AWS::Lambda::Function", {
-        Tags: Match.arrayWith([
-          {
-            Key: CDK.TAG.ROLE,
-            Value: "TEST_ROLE",
-          },
-          {
-            Key: CDK.TAG.VENDOR,
-            Value: "TEST_VENDOR",
-          },
-        ]),
+      const mainFunction = findMainLambdaFunction(template);
+      expect(mainFunction).toBeDefined();
+
+      const tags = mainFunction?.Properties?.Tags || [];
+      expect(tags).toContainEqual({
+        Key: CDK.TAG.ROLE,
+        Value: "TEST_ROLE",
+      });
+      expect(tags).toContainEqual({
+        Key: CDK.TAG.VENDOR,
+        Value: "TEST_VENDOR",
       });
     });
 

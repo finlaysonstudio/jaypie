@@ -8,6 +8,18 @@ import * as iam from "aws-cdk-lib/aws-iam";
 import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
 import { JaypieBucketQueuedLambda } from "../JaypieBucketQueuedLambda.js";
 
+// Helper function to find the main Lambda function in the template
+function findMainLambdaFunction(
+  template: Template,
+  handler: string = "index.handler",
+) {
+  const resources = template.findResources("AWS::Lambda::Function");
+  const lambdaFunctions = Object.values(resources);
+  return lambdaFunctions.find(
+    (resource: any) => resource.Properties?.Handler === handler,
+  );
+}
+
 describe("JaypieBucketQueuedLambda", () => {
   describe("Base Cases", () => {
     it("is a function", () => {
@@ -53,13 +65,13 @@ describe("JaypieBucketQueuedLambda", () => {
         ],
       });
 
-      template.hasResourceProperties("AWS::Lambda::Function", {
-        Tags: [
-          {
-            Key: CDK.TAG.ROLE,
-            Value: "TEST_ROLE",
-          },
-        ],
+      const mainFunction = findMainLambdaFunction(template);
+      expect(mainFunction).toBeDefined();
+
+      const tags = mainFunction?.Properties?.Tags || [];
+      expect(tags).toContainEqual({
+        Key: CDK.TAG.ROLE,
+        Value: "TEST_ROLE",
       });
 
       template.hasResourceProperties("AWS::S3::Bucket", {
@@ -91,13 +103,13 @@ describe("JaypieBucketQueuedLambda", () => {
         ],
       });
 
-      template.hasResourceProperties("AWS::Lambda::Function", {
-        Tags: [
-          {
-            Key: CDK.TAG.VENDOR,
-            Value: "TEST_VENDOR",
-          },
-        ],
+      const mainFunction = findMainLambdaFunction(template);
+      expect(mainFunction).toBeDefined();
+
+      const tags = mainFunction?.Properties?.Tags || [];
+      expect(tags).toContainEqual({
+        Key: CDK.TAG.VENDOR,
+        Value: "TEST_VENDOR",
       });
 
       template.hasResourceProperties("AWS::S3::Bucket", {
@@ -137,17 +149,17 @@ describe("JaypieBucketQueuedLambda", () => {
       });
 
       // Check tags on Lambda Function
-      template.hasResourceProperties("AWS::Lambda::Function", {
-        Tags: Match.arrayWith([
-          {
-            Key: CDK.TAG.ROLE,
-            Value: "TEST_ROLE",
-          },
-          {
-            Key: CDK.TAG.VENDOR,
-            Value: "TEST_VENDOR",
-          },
-        ]),
+      const mainFunction = findMainLambdaFunction(template);
+      expect(mainFunction).toBeDefined();
+
+      const tags = mainFunction?.Properties?.Tags || [];
+      expect(tags).toContainEqual({
+        Key: CDK.TAG.ROLE,
+        Value: "TEST_ROLE",
+      });
+      expect(tags).toContainEqual({
+        Key: CDK.TAG.VENDOR,
+        Value: "TEST_VENDOR",
       });
 
       // Check tags on S3 Bucket
@@ -402,8 +414,8 @@ describe("JaypieBucketQueuedLambda", () => {
       const statements = policy.Properties.PolicyDocument.Statement;
 
       // Find statement with S3 actions
-      const s3Statement = statements.find((statement) =>
-        statement.Action.some((action) => action.startsWith("s3:")),
+      const s3Statement = statements.find((statement: any) =>
+        statement.Action.some((action: any) => action.startsWith("s3:")),
       );
 
       // Verify statement exists and has the right effect
@@ -413,7 +425,7 @@ describe("JaypieBucketQueuedLambda", () => {
       // Verify it references the bucket
       expect(
         s3Statement.Resource.some(
-          (resource) =>
+          (resource: any) =>
             typeof resource === "object" &&
             resource["Fn::GetAtt"]?.[0]?.includes("TestConstructBucket"),
         ),
