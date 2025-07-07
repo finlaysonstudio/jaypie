@@ -9,7 +9,7 @@ import {
 import Anthropic from "@anthropic-ai/sdk";
 import { PROVIDER } from "../../constants.js";
 import { LlmMessageOptions } from "../../types/LlmProvider.interface.js";
-import { naturalZod4Schema } from "../../util/index.js";
+import { naturalZodSchema } from "../../util/index.js";
 import { z } from "zod/v4";
 import { JsonObject, NaturalSchema } from "@jaypie/types";
 
@@ -120,7 +120,7 @@ export async function createStructuredCompletion(
   const schema =
     responseSchema instanceof z.ZodType
       ? responseSchema
-      : naturalZod4Schema(responseSchema as NaturalSchema);
+      : naturalZodSchema(responseSchema as NaturalSchema);
 
   // Set system message with JSON instructions
   const defaultSystemPrompt =

@@ -15,7 +15,7 @@ import {
   formatOperateInput,
   log,
   maxTurnsFromOptions,
-  naturalZod4Schema,
+  naturalZodSchema,
 } from "../../util";
 import { PROVIDER } from "../../constants.js";
 import {
@@ -142,7 +142,7 @@ function handleOutputSchema(
       const zodSchema =
         format instanceof z.ZodType
           ? format
-          : naturalZod4Schema(format as NaturalSchema);
+          : naturalZodSchema(format as NaturalSchema);
       schema = z.toJSONSchema(zodSchema) as JsonObject;
     }
 

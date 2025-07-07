@@ -1,7 +1,7 @@
 import { getEnvSecret } from "@jaypie/aws";
 import { OpenAI } from "openai";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { z } from "zod";
+import { z } from "zod/v4";
 import { OpenAiProvider } from "../OpenAiProvider.class";
 import {
   LlmMessageRole,
