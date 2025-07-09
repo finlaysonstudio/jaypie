@@ -16,7 +16,7 @@ import {
   UnprocessableEntityError,
 } from "openai";
 import { zodResponseFormat } from "openai/helpers/zod";
-import { z } from "zod";
+import { z } from "zod/v4";
 import { PROVIDER } from "../../constants.js";
 import { Toolkit } from "../../tools/Toolkit.class.js";
 import { OpenAIRawResponse } from "./types.js";
@@ -208,13 +208,30 @@ export function createRequestOptions(
         options.format instanceof z.ZodType
           ? options.format
           : naturalZodSchema(options.format as NaturalSchema);
-      const responseFormat = zodResponseFormat(zodSchema, "response");
+      const responseFormat = zodResponseFormat(zodSchema as any, "response");
+
+      const jsonSchema = z.toJSONSchema(zodSchema);
+
+      // Temporary hack because of OpenAI requires additional_properties to be false on all objects
+      const checks: any[] = [jsonSchema];
+      while (checks.length > 0) {
+        const current = checks[0];
+        if (current.type == "object") {
+          current.additionalProperties = false;
+        }
+        Object.keys(current).forEach((key) => {
+          if (typeof current[key] == "object") {
+            checks.push(current[key]);
+          }
+        });
+        checks.shift();
+      }
 
       // Set up structured output format in the format expected by the test
       requestOptions.text = {
         format: {
           name: responseFormat.json_schema.name,
-          schema: responseFormat.json_schema.schema,
+          schema: jsonSchema, // Replace this with responseFormat.json_schema.schema once OpenAI supports Zod v4,
           strict: responseFormat.json_schema.strict,
           type: responseFormat.type,
         },

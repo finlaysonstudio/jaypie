@@ -1,6 +1,6 @@
 import { getEnvSecret } from "@jaypie/aws";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { z } from "zod";
+import { z } from "zod/v4";
 import { generateText, generateObject } from "ai";
 import { OpenRouterProvider } from "../OpenRouterProvider.class.js";
 import { PROVIDER } from "../../../constants.js";
@@ -13,8 +13,10 @@ import {
 } from "../../../types/LlmProvider.interface.js";
 import { Toolkit } from "../../../tools/Toolkit.class.js";
 
-vi.mock("ai", () => {
+vi.mock("ai", async () => {
+  const actual = await vi.importActual("ai");
   return {
+    ...actual,
     generateText: vi.fn(),
     generateObject: vi.fn(),
   };
@@ -160,7 +162,16 @@ describe("OpenRouterProvider", () => {
           model: expect.any(Object),
           maxTokens: PROVIDER.OPENROUTER.MAX_TOKENS.DEFAULT,
           system: undefined,
-          schema: GreetingFormat,
+          schema: expect.objectContaining({
+            jsonSchema: expect.objectContaining({
+              type: "object",
+              properties: {
+                salutation: { type: "string" },
+                name: { type: "string" },
+              },
+              required: ["salutation", "name"],
+            }),
+          }),
         });
       });
     });
@@ -262,8 +273,8 @@ describe("OpenRouterProvider", () => {
     });
   });
 
-  describe.todo("Operate Features", () => {
-    describe("Structured Output", () => {
+  describe("Operate Features", () => {
+    describe.todo("Structured Output", () => {
       it("operate returns structured output with history", async () => {
         const mockResponse = {
           content: [
@@ -277,7 +288,7 @@ describe("OpenRouterProvider", () => {
               },
             },
           ],
-          usage: { input_tokens: 10, output_tokens: 10 },
+          usage: { promptTokens: 10, completionTokens: 10, totalTokens: 20 },
         };
 
         const mockCreate = vi.fn().mockResolvedValue(mockResponse);
@@ -335,7 +346,7 @@ describe("OpenRouterProvider", () => {
               },
             },
           ],
-          usage: { input_tokens: 10, output_tokens: 10 },
+          usage: { promptTokens: 10, completionTokens: 10, totalTokens: 20 },
         };
 
         const mockResponse2 = {
@@ -350,7 +361,7 @@ describe("OpenRouterProvider", () => {
               },
             },
           ],
-          usage: { input_tokens: 10, output_tokens: 10 },
+          usage: { promptTokens: 10, completionTokens: 10, totalTokens: 20 },
         };
 
         const mockCreate = vi
@@ -425,7 +436,7 @@ describe("OpenRouterProvider", () => {
               }),
             },
           ],
-          usage: { input_tokens: 10, output_tokens: 10 },
+          usage: { promptTokens: 10, completionTokens: 10, totalTokens: 20 },
         };
 
         const mockCreate = vi.fn().mockResolvedValue(mockResponse);
@@ -466,7 +477,7 @@ describe("OpenRouterProvider", () => {
               },
             },
           ],
-          usage: { input_tokens: 10, output_tokens: 10 },
+          usage: { promptTokens: 10, completionTokens: 10, totalTokens: 20 },
         };
 
         const mockCreate = vi.fn().mockResolvedValue(mockResponse);
@@ -501,7 +512,7 @@ describe("OpenRouterProvider", () => {
       });
     });
 
-    describe("Message Options", () => {
+    describe.skip("Message Options", () => {
       it("applies placeholders to system message", async () => {
         const mockResponse = {
           content: [{ type: "text", text: "test response" }],
@@ -629,7 +640,7 @@ describe("OpenRouterProvider", () => {
       });
     });
 
-    describe("Tool Calling", () => {
+    describe.todo("Tool Calling", () => {
       it("processes tool calls correctly", async () => {
         const mockResponse1 = {
           content: [
@@ -642,13 +653,13 @@ describe("OpenRouterProvider", () => {
             },
           ],
           stop_reason: "tool_use",
-          usage: { input_tokens: 10, output_tokens: 10 },
+          usage: { promptTokens: 10, completionTokens: 10, totalTokens: 20 },
         };
 
         const mockResponse2 = {
           content: [{ type: "text", text: "Final response" }],
           stop_reason: "end_turn",
-          usage: { input_tokens: 10, output_tokens: 10 },
+          usage: { promptTokens: 10, completionTokens: 10, totalTokens: 20 },
         };
 
         const mockCreate = vi
@@ -701,7 +712,7 @@ describe("OpenRouterProvider", () => {
             },
           ],
           stop_reason: "tool_use",
-          usage: { input_tokens: 10, output_tokens: 10 },
+          usage: { promptTokens: 10, completionTokens: 10, totalTokens: 20 },
         };
 
         const mockCreate = vi.fn().mockResolvedValue(mockResponse1);
@@ -750,13 +761,13 @@ describe("OpenRouterProvider", () => {
             },
           ],
           stop_reason: "tool_use",
-          usage: { input_tokens: 10, output_tokens: 10 },
+          usage: { promptTokens: 10, completionTokens: 10, totalTokens: 20 },
         };
 
         const mockResponse2 = {
           content: [{ type: "text", text: "Final response" }],
           stop_reason: "end_turn",
-          usage: { input_tokens: 10, output_tokens: 10 },
+          usage: { promptTokens: 10, completionTokens: 10, totalTokens: 20 },
         };
 
         const mockCreate = vi
@@ -817,13 +828,13 @@ describe("OpenRouterProvider", () => {
             },
           ],
           stop_reason: "tool_use",
-          usage: { input_tokens: 10, output_tokens: 10 },
+          usage: { promptTokens: 10, completionTokens: 10, totalTokens: 20 },
         };
 
         const mockResponse2 = {
           content: [{ type: "text", text: "Final response" }],
           stop_reason: "end_turn",
-          usage: { input_tokens: 10, output_tokens: 10 },
+          usage: { promptTokens: 10, completionTokens: 10, totalTokens: 20 },
         };
 
         const mockCreate = vi
@@ -885,7 +896,7 @@ describe("OpenRouterProvider", () => {
               input: { param: "test" },
             },
           ],
-          usage: { input_tokens: 10, output_tokens: 10 },
+          usage: { promptTokens: 10, completionTokens: 10, totalTokens: 20 },
           stop_reason: "tool_use",
         };
 
@@ -938,7 +949,7 @@ describe("OpenRouterProvider", () => {
       it("accepts a Toolkit object in tools field", async () => {
         const mockResponse = {
           content: [{ type: "text", text: "test response" }],
-          usage: { input_tokens: 10, output_tokens: 10 },
+          usage: { promptTokens: 10, completionTokens: 10, totalTokens: 20 },
         };
 
         const mockCreate = vi.fn().mockResolvedValue(mockResponse);
@@ -994,27 +1005,16 @@ describe("OpenRouterProvider", () => {
     describe("History Tracking", () => {
       it("maintains conversation history across operate calls", async () => {
         const mockResponse1 = {
-          content: [{ type: "text", text: "first response" }],
-          usage: { input_tokens: 10, output_tokens: 10 },
-        };
+          text: "first response",
+          usage: { promptTokens: 10, completionTokens: 10, totalTokens: 20 },
+        } as any;
         const mockResponse2 = {
-          content: [{ type: "text", text: "second response" }],
-          usage: { input_tokens: 10, output_tokens: 10 },
-        };
+          text: "second response",
+          usage: { promptTokens: 10, completionTokens: 10, totalTokens: 20 },
+        } as any;
 
-        const mockCreate = vi
-          .fn()
-          .mockResolvedValueOnce(mockResponse1)
-          .mockResolvedValueOnce(mockResponse2);
-
-        // vi.mocked(Anthropic).mockImplementation(
-        //   () =>
-        //     ({
-        //       messages: {
-        //         create: mockCreate,
-        //       },
-        //     }) as any,
-        // );
+        vi.mocked(generateText).mockResolvedValueOnce(mockResponse1);
+        vi.mocked(generateText).mockResolvedValueOnce(mockResponse2);
 
         const provider = new OpenRouterProvider();
         provider["apiKey"] = "test-key";
@@ -1022,54 +1022,44 @@ describe("OpenRouterProvider", () => {
         // First call
         const response1 = await provider.operate("first message");
         expect(response1.content).toBe("first response");
-        expect(mockCreate).toHaveBeenCalledWith({
+        expect(vi.mocked(generateText)).toHaveBeenLastCalledWith({
           messages: [
-            { role: PROVIDER.ANTHROPIC.ROLE.USER, content: "first message" },
+            { role: PROVIDER.OPENROUTER.ROLE.USER, content: "first message" },
           ],
           model: expect.any(Object),
           maxTokens: PROVIDER.OPENROUTER.MAX_TOKENS.DEFAULT,
-          stream: false,
           system: undefined,
           tools: [],
-          tool_choice: undefined,
         });
 
         // Second call
         const response2 = await provider.operate("second message");
         expect(response2.content).toBe("second response");
-        expect(mockCreate).toHaveBeenCalledWith({
+        expect(vi.mocked(generateText)).toHaveBeenLastCalledWith({
           messages: [
-            { role: PROVIDER.ANTHROPIC.ROLE.USER, content: "first message" },
+            { role: PROVIDER.OPENROUTER.ROLE.USER, content: "first message" },
             {
-              role: PROVIDER.ANTHROPIC.ROLE.ASSISTANT,
+              role: PROVIDER.OPENROUTER.ROLE.ASSISTANT,
               content: "first response",
             },
-            { role: PROVIDER.ANTHROPIC.ROLE.USER, content: "second message" },
+            { role: PROVIDER.OPENROUTER.ROLE.USER, content: "second message" },
           ],
           model: expect.any(Object),
           maxTokens: PROVIDER.OPENROUTER.MAX_TOKENS.DEFAULT,
-          stream: false,
           system: undefined,
           tools: [],
-          tool_choice: undefined,
         });
+
+        expect(vi.mocked(generateText)).toHaveBeenCalledTimes(2);
       });
 
       it("merges provided history with tracked history", async () => {
         const mockResponse = {
-          content: [{ type: "text", text: "response" }],
-          usage: { input_tokens: 10, output_tokens: 10 },
-        };
+          text: "response",
+          usage: { promptTokens: 10, completionTokens: 10, totalTokens: 20 },
+        } as any;
 
-        const mockCreate = vi.fn().mockResolvedValue(mockResponse);
-        // vi.mocked(Anthropic).mockImplementation(
-        //   () =>
-        //     ({
-        //       messages: {
-        //         create: mockCreate,
-        //       },
-        //     }) as any,
-        // );
+        vi.mocked(generateText).mockResolvedValue(mockResponse);
 
         const provider = new OpenRouterProvider();
         provider["apiKey"] = "test-key";
@@ -1093,41 +1083,34 @@ describe("OpenRouterProvider", () => {
 
         await provider.operate("new message", { history: additionalHistory });
 
-        expect(mockCreate).toHaveBeenLastCalledWith({
+        expect(vi.mocked(generateText)).toHaveBeenLastCalledWith({
           messages: [
-            { role: PROVIDER.ANTHROPIC.ROLE.USER, content: "first message" },
-            { role: PROVIDER.ANTHROPIC.ROLE.ASSISTANT, content: "response" },
-            { role: PROVIDER.ANTHROPIC.ROLE.USER, content: "previous message" },
+            { role: PROVIDER.OPENROUTER.ROLE.USER, content: "first message" },
+            { role: PROVIDER.OPENROUTER.ROLE.ASSISTANT, content: "response" },
             {
-              role: PROVIDER.ANTHROPIC.ROLE.ASSISTANT,
+              role: PROVIDER.OPENROUTER.ROLE.USER,
+              content: "previous message",
+            },
+            {
+              role: PROVIDER.OPENROUTER.ROLE.ASSISTANT,
               content: "previous response",
             },
-            { role: PROVIDER.ANTHROPIC.ROLE.USER, content: "new message" },
+            { role: PROVIDER.OPENROUTER.ROLE.USER, content: "new message" },
           ],
           model: expect.any(Object),
           maxTokens: PROVIDER.OPENROUTER.MAX_TOKENS.DEFAULT,
-          stream: false,
           system: undefined,
           tools: [],
-          tool_choice: undefined,
         });
       });
 
       it("updates tracked history after each operate call", async () => {
         const mockResponse = {
-          content: [{ type: "text", text: "response" }],
-          usage: { input_tokens: 10, output_tokens: 10 },
-        };
+          text: "response",
+          usage: { promptTokens: 10, completionTokens: 10, totalTokens: 20 },
+        } as any;
 
-        const mockCreate = vi.fn().mockResolvedValue(mockResponse);
-        // vi.mocked(Anthropic).mockImplementation(
-        //   () =>
-        //     ({
-        //       messages: {
-        //         create: mockCreate,
-        //       },
-        //     }) as any,
-        // );
+        vi.mocked(generateText).mockResolvedValue(mockResponse);
 
         const provider = new OpenRouterProvider();
         provider["apiKey"] = "test-key";
@@ -1168,11 +1151,11 @@ describe("OpenRouterProvider", () => {
       });
     });
 
-    describe("LlmOperateOptions", () => {
+    describe.todo("LlmOperateOptions", () => {
       it("applies data to input message", async () => {
         const mockResponse = {
           content: [{ type: "text", text: "test response" }],
-          usage: { input_tokens: 10, output_tokens: 10 },
+          usage: { promptTokens: 10, completionTokens: 10, totalTokens: 20 },
         };
 
         const mockCreate = vi.fn().mockResolvedValue(mockResponse);
@@ -1204,7 +1187,7 @@ describe("OpenRouterProvider", () => {
       it("applies data to instructions", async () => {
         const mockResponse = {
           content: [{ type: "text", text: "test response" }],
-          usage: { input_tokens: 10, output_tokens: 10 },
+          usage: { promptTokens: 10, completionTokens: 10, totalTokens: 20 },
         };
 
         const mockCreate = vi.fn().mockResolvedValue(mockResponse);
@@ -1240,7 +1223,7 @@ describe("OpenRouterProvider", () => {
       it("applies data to system message", async () => {
         const mockResponse = {
           content: [{ type: "text", text: "test response" }],
-          usage: { input_tokens: 10, output_tokens: 10 },
+          usage: { promptTokens: 10, completionTokens: 10, totalTokens: 20 },
         };
 
         const mockCreate = vi.fn().mockResolvedValue(mockResponse);
@@ -1271,7 +1254,7 @@ describe("OpenRouterProvider", () => {
       it("respects placeholders.input option", async () => {
         const mockResponse = {
           content: [{ type: "text", text: "test response" }],
-          usage: { input_tokens: 10, output_tokens: 10 },
+          usage: { promptTokens: 10, completionTokens: 10, totalTokens: 20 },
         };
 
         const mockCreate = vi.fn().mockResolvedValue(mockResponse);
@@ -1307,7 +1290,7 @@ describe("OpenRouterProvider", () => {
       it("respects placeholders.instructions option", async () => {
         const mockResponse = {
           content: [{ type: "text", text: "test response" }],
-          usage: { input_tokens: 10, output_tokens: 10 },
+          usage: { promptTokens: 10, completionTokens: 10, totalTokens: 20 },
         };
 
         const mockCreate = vi.fn().mockResolvedValue(mockResponse);
@@ -1344,7 +1327,7 @@ describe("OpenRouterProvider", () => {
       it("respects placeholders.system option", async () => {
         const mockResponse = {
           content: [{ type: "text", text: "test response" }],
-          usage: { input_tokens: 10, output_tokens: 10 },
+          usage: { promptTokens: 10, completionTokens: 10, totalTokens: 20 },
         };
 
         const mockCreate = vi.fn().mockResolvedValue(mockResponse);
@@ -1376,7 +1359,7 @@ describe("OpenRouterProvider", () => {
       it("applies providerOptions to the request", async () => {
         const mockResponse = {
           content: [{ type: "text", text: "test response" }],
-          usage: { input_tokens: 10, output_tokens: 10 },
+          usage: { promptTokens: 10, completionTokens: 10, totalTokens: 20 },
         };
 
         const mockCreate = vi.fn().mockResolvedValue(mockResponse);
@@ -1419,7 +1402,7 @@ describe("OpenRouterProvider", () => {
             },
           ],
           stop_reason: "tool_use",
-          usage: { input_tokens: 10, output_tokens: 10 },
+          usage: { promptTokens: 10, completionTokens: 10, totalTokens: 20 },
         };
 
         const mockCreate = vi.fn().mockResolvedValue(mockResponse1);
@@ -1469,13 +1452,13 @@ describe("OpenRouterProvider", () => {
             },
           ],
           stop_reason: "tool_use",
-          usage: { input_tokens: 10, output_tokens: 10 },
+          usage: { promptTokens: 10, completionTokens: 10, totalTokens: 20 },
         };
 
         const mockResponse2 = {
           content: [{ type: "text", text: "Final response" }],
           stop_reason: "end_turn",
-          usage: { input_tokens: 10, output_tokens: 10 },
+          usage: { promptTokens: 10, completionTokens: 10, totalTokens: 20 },
         };
 
         const mockCreate = vi

@@ -17,12 +17,14 @@ import {
   CoreUserMessage,
   generateObject,
   generateText,
+  jsonSchema,
 } from "ai";
 import { PROVIDER } from "../../constants.js";
 import { LlmMessageOptions } from "../../types/LlmProvider.interface.js";
 import { naturalZodSchema } from "../../util/index.js";
-import { z } from "zod";
+import { z } from "zod/v4";
 import { JsonObject, NaturalSchema } from "@jaypie/types";
+import { JSONSchema7 } from "json-schema";
 
 // Logger
 export const getLogger = () => defaultLog.lib({ lib: JAYPIE.LIB.LLM });
@@ -139,13 +141,15 @@ export async function createStructuredCompletion(
       ? responseSchema
       : naturalZodSchema(responseSchema as NaturalSchema);
 
+  const convertedSchema = z.toJSONSchema(schema); // Temporary workaround until AI SDK supports Zod v4
+
   const response = await generateObject({
     model: client(model),
     messages,
-    schema,
+    schema: jsonSchema(convertedSchema as JSONSchema7),
     system: systemMessage,
     maxTokens: PROVIDER.OPENROUTER.MAX_TOKENS.DEFAULT,
   });
 
-  return response.object;
+  return response.object as JsonObject;
 }
