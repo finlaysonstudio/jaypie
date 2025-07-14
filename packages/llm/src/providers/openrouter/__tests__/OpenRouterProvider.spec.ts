@@ -274,32 +274,23 @@ describe("OpenRouterProvider", () => {
   });
 
   describe("Operate Features", () => {
-    describe.todo("Structured Output", () => {
+    describe("Structured Output", () => {
       it("operate returns structured output with history", async () => {
         const mockResponse = {
-          content: [
+          text: "",
+          usage: { promptTokens: 10, completionTokens: 10, totalTokens: 20 },
+          toolCalls: [
             {
-              type: "tool_use",
-              id: "tool_1",
-              name: "structured_output",
-              input: {
+              toolName: "structured_output",
+              args: {
                 salutation: "Hello",
                 name: "World",
               },
             },
           ],
-          usage: { promptTokens: 10, completionTokens: 10, totalTokens: 20 },
-        };
+        } as any;
 
-        const mockCreate = vi.fn().mockResolvedValue(mockResponse);
-        // vi.mocked(Anthropic).mockImplementation(
-        //   () =>
-        //     ({
-        //       messages: {
-        //         create: mockCreate,
-        //       },
-        //     }) as any,
-        // );
+        vi.mocked(generateText).mockResolvedValue(mockResponse);
 
         const provider = new OpenRouterProvider();
         provider["apiKey"] = "test-key";
@@ -335,48 +326,35 @@ describe("OpenRouterProvider", () => {
 
       it("operate maintains history across structured output calls", async () => {
         const mockResponse1 = {
-          content: [
+          text: "",
+          usage: { promptTokens: 10, completionTokens: 10, totalTokens: 20 },
+          toolCalls: [
             {
-              type: "tool_use",
-              id: "tool_1",
-              name: "structured_output",
-              input: {
+              toolName: "structured_output",
+              args: {
                 salutation: "Hello",
                 name: "World",
               },
             },
           ],
-          usage: { promptTokens: 10, completionTokens: 10, totalTokens: 20 },
-        };
+        } as any;
 
         const mockResponse2 = {
-          content: [
+          text: "",
+          usage: { promptTokens: 10, completionTokens: 10, totalTokens: 20 },
+          toolCalls: [
             {
-              type: "tool_use",
-              id: "tool_2",
-              name: "structured_output",
-              input: {
+              toolName: "structured_output",
+              args: {
                 salutation: "Goodbye",
                 name: "World",
               },
             },
           ],
-          usage: { promptTokens: 10, completionTokens: 10, totalTokens: 20 },
-        };
+        } as any;
 
-        const mockCreate = vi
-          .fn()
-          .mockResolvedValueOnce(mockResponse1)
-          .mockResolvedValueOnce(mockResponse2);
-
-        // vi.mocked(Anthropic).mockImplementation(
-        //   () =>
-        //     ({
-        //       messages: {
-        //         create: mockCreate,
-        //       },
-        //     }) as any,
-        // );
+        vi.mocked(generateText).mockResolvedValueOnce(mockResponse1);
+        vi.mocked(generateText).mockResolvedValueOnce(mockResponse2);
 
         const provider = new OpenRouterProvider();
         provider["apiKey"] = "test-key";
@@ -425,70 +403,22 @@ describe("OpenRouterProvider", () => {
         });
       });
 
-      it("operate throws error when structured output is invalid", async () => {
+      it("sets toolChoice to 'required' when structured output is requested", async () => {
         const mockResponse = {
-          content: [
-            {
-              type: "text",
-              text: JSON.stringify({
-                salutation: "Hello",
-                // Missing required 'name' field
-              }),
-            },
-          ],
+          text: "",
           usage: { promptTokens: 10, completionTokens: 10, totalTokens: 20 },
-        };
-
-        const mockCreate = vi.fn().mockResolvedValue(mockResponse);
-        // vi.mocked(Anthropic).mockImplementation(
-        //   () =>
-        //     ({
-        //       messages: {
-        //         create: mockCreate,
-        //       },
-        //     }) as any,
-        // );
-
-        const provider = new OpenRouterProvider();
-        provider["apiKey"] = "test-key";
-
-        const GreetingFormat = z.object({
-          salutation: z.string(),
-          name: z.string(),
-        });
-
-        await expect(async () => {
-          await provider.operate("Hello, World", {
-            format: GreetingFormat,
-          });
-        }).toThrowError("Model returned invalid JSON");
-      });
-
-      it("sets tool_choice to 'any' when structured output is requested", async () => {
-        const mockResponse = {
-          content: [
+          toolCalls: [
             {
-              type: "tool_use",
-              id: "tool_1",
-              name: "structured_output",
-              input: {
+              toolName: "structured_output",
+              args: {
                 salutation: "Hello",
                 name: "World",
               },
             },
           ],
-          usage: { promptTokens: 10, completionTokens: 10, totalTokens: 20 },
-        };
+        } as any;
 
-        const mockCreate = vi.fn().mockResolvedValue(mockResponse);
-        // vi.mocked(Anthropic).mockImplementation(
-        //   () =>
-        //     ({
-        //       messages: {
-        //         create: mockCreate,
-        //       },
-        //     }) as any,
-        // );
+        vi.mocked(generateText).mockResolvedValue(mockResponse);
 
         const provider = new OpenRouterProvider();
         provider["apiKey"] = "test-key";
@@ -502,183 +432,132 @@ describe("OpenRouterProvider", () => {
           format: GreetingFormat,
         });
 
-        expect(mockCreate).toHaveBeenCalledWith(
+        expect(vi.mocked(generateText)).toHaveBeenCalledWith(
           expect.objectContaining({
-            tool_choice: {
-              type: "any",
-            },
+            toolChoice: "required",
           }),
         );
       });
     });
 
-    describe.skip("Message Options", () => {
+    describe("Message Options", () => {
       it("applies placeholders to system message", async () => {
         const mockResponse = {
-          content: [{ type: "text", text: "test response" }],
-        };
+          text: "test response",
+          usage: { promptTokens: 10, completionTokens: 10, totalTokens: 20 },
+          toolCalls: [],
+        } as any;
 
-        const mockCreate = vi.fn().mockResolvedValue(mockResponse);
-        // vi.mocked(Anthropic).mockImplementation(
-        //   () =>
-        //     ({
-        //       messages: {
-        //         create: mockCreate,
-        //       },
-        //     }) as any,
-        // );
+        vi.mocked(generateText).mockResolvedValue(mockResponse);
 
         const provider = new OpenRouterProvider();
-        const response = await provider.send("test message", {
+        const response = await provider.operate("test message", {
           system: "You are a {{role}}",
           data: { role: "test assistant" },
         });
 
-        expect(response).toBe("test response");
-        expect(mockCreate).toHaveBeenCalledWith({
+        expect(response.content).toBe("test response");
+        expect(vi.mocked(generateText)).toHaveBeenCalledWith({
           messages: [
-            { role: PROVIDER.ANTHROPIC.ROLE.USER, content: "test message" },
+            { role: PROVIDER.OPENROUTER.ROLE.USER, content: "test message" },
           ],
           model: expect.any(Object),
+          maxSteps: 9999,
           maxTokens: PROVIDER.OPENROUTER.MAX_TOKENS.DEFAULT,
           system: "You are a test assistant",
+          tools: {},
+          toolChoice: "auto",
         });
       });
 
       it("applies placeholders to user message", async () => {
         const mockResponse = {
-          content: [{ type: "text", text: "test response" }],
-        };
+          text: "test response",
+          usage: { promptTokens: 10, completionTokens: 10, totalTokens: 20 },
+          toolCalls: [],
+        } as any;
 
-        const mockCreate = vi.fn().mockResolvedValue(mockResponse);
-        // vi.mocked(Anthropic).mockImplementation(
-        //   () =>
-        //     ({
-        //       messages: {
-        //         create: mockCreate,
-        //       },
-        //     }) as any,
-        // );
+        vi.mocked(generateText).mockResolvedValue(mockResponse);
 
         const provider = new OpenRouterProvider();
-        const response = await provider.send("Hello, {{name}}", {
+        const response = await provider.operate("Hello, {{name}}", {
           data: { name: "World" },
         });
 
-        expect(response).toBe("test response");
-        expect(mockCreate).toHaveBeenCalledWith({
+        expect(response.content).toBe("test response");
+        expect(vi.mocked(generateText)).toHaveBeenCalledWith({
           messages: [
-            { role: PROVIDER.ANTHROPIC.ROLE.USER, content: "Hello, World" },
+            { role: PROVIDER.OPENROUTER.ROLE.USER, content: "Hello, World" },
           ],
           model: expect.any(Object),
+          maxSteps: 9999,
           maxTokens: PROVIDER.OPENROUTER.MAX_TOKENS.DEFAULT,
+          tools: {},
+          toolChoice: "auto",
         });
       });
 
-      it("respects placeholders.message option", async () => {
+      it("respects placeholders.input option", async () => {
         const mockResponse = {
-          content: [{ type: "text", text: "test response" }],
-        };
+          text: "test response",
+          usage: { promptTokens: 10, completionTokens: 10, totalTokens: 20 },
+          toolCalls: [],
+        } as any;
 
-        const mockCreate = vi.fn().mockResolvedValue(mockResponse);
-        // vi.mocked(Anthropic).mockImplementation(
-        //   () =>
-        //     ({
-        //       messages: {
-        //         create: mockCreate,
-        //       },
-        //     }) as any,
-        // );
+        vi.mocked(generateText).mockResolvedValue(mockResponse);
 
         const provider = new OpenRouterProvider();
-        const response = await provider.send("Hello, {{name}}", {
+        const response = await provider.operate("Hello, {{name}}", {
           data: { name: "World" },
-          placeholders: { message: false },
+          placeholders: { input: false },
         });
 
-        expect(response).toBe("test response");
-        expect(mockCreate).toHaveBeenCalledWith({
+        expect(response.content).toBe("test response");
+        expect(vi.mocked(generateText)).toHaveBeenCalledWith({
           messages: [
-            { role: PROVIDER.ANTHROPIC.ROLE.USER, content: "Hello, {{name}}" },
+            { role: PROVIDER.OPENROUTER.ROLE.USER, content: "Hello, {{name}}" },
           ],
           model: expect.any(Object),
+          maxSteps: 9999,
+          tools: {},
+          toolChoice: "auto",
           maxTokens: PROVIDER.OPENROUTER.MAX_TOKENS.DEFAULT,
         });
       });
 
       it("respects placeholders.system option", async () => {
         const mockResponse = {
-          content: [{ type: "text", text: "test response" }],
-        };
+          text: "test response",
+          usage: { promptTokens: 10, completionTokens: 10, totalTokens: 20 },
+          toolCalls: [],
+        } as any;
 
-        const mockCreate = vi.fn().mockResolvedValue(mockResponse);
-        // vi.mocked(Anthropic).mockImplementation(
-        //   () =>
-        //     ({
-        //       messages: {
-        //         create: mockCreate,
-        //       },
-        //     }) as any,
-        // );
+        vi.mocked(generateText).mockResolvedValue(mockResponse);
 
         const provider = new OpenRouterProvider();
-        const response = await provider.send("test message", {
+        const response = await provider.operate("test message", {
           system: "You are a {{role}}",
           data: { role: "test assistant" },
           placeholders: { system: false },
         });
 
-        expect(response).toBe("test response");
-        expect(mockCreate).toHaveBeenCalledWith({
+        expect(response.content).toBe("test response");
+        expect(vi.mocked(generateText)).toHaveBeenCalledWith({
           messages: [
-            { role: PROVIDER.ANTHROPIC.ROLE.USER, content: "test message" },
+            { role: PROVIDER.OPENROUTER.ROLE.USER, content: "test message" },
           ],
           model: expect.any(Object),
+          maxSteps: 9999,
           maxTokens: PROVIDER.OPENROUTER.MAX_TOKENS.DEFAULT,
           system: "You are a {{role}}",
+          tools: {},
+          toolChoice: "auto",
         });
       });
     });
 
-    describe.todo("Tool Calling", () => {
+    describe("Tool Calling", () => {
       it("processes tool calls correctly", async () => {
-        const mockResponse1 = {
-          content: [
-            { type: "text", text: "Let me help you with that." },
-            {
-              type: "tool_use",
-              id: "tool_1",
-              name: "test_tool",
-              input: { param: "test" },
-            },
-          ],
-          stop_reason: "tool_use",
-          usage: { promptTokens: 10, completionTokens: 10, totalTokens: 20 },
-        };
-
-        const mockResponse2 = {
-          content: [{ type: "text", text: "Final response" }],
-          stop_reason: "end_turn",
-          usage: { promptTokens: 10, completionTokens: 10, totalTokens: 20 },
-        };
-
-        const mockCreate = vi
-          .fn()
-          .mockResolvedValueOnce(mockResponse1)
-          .mockResolvedValueOnce(mockResponse2);
-
-        // vi.mocked(Anthropic).mockImplementation(
-        //   () =>
-        //     ({
-        //       messages: {
-        //         create: mockCreate,
-        //       },
-        //     }) as any,
-        // );
-
-        const provider = new OpenRouterProvider();
-        provider["apiKey"] = "test-key";
-
         const mockTool = {
           name: "test_tool",
           description: "Test tool",
@@ -692,6 +571,39 @@ describe("OpenRouterProvider", () => {
           call: vi.fn().mockResolvedValue({ result: "test result" }),
         };
 
+        // Mock generateText to simulate tool execution
+        vi.mocked(generateText).mockImplementation(async (options: any) => {
+          // Simulate the AI SDK calling the tool's execute function
+          const toolResult = await options.tools.test_tool.execute(
+            { param: "test" },
+            { toolCallId: "test", messages: [] },
+          );
+          return {
+            text: "Final response",
+            toolCalls: [
+              {
+                toolName: "test_tool",
+                args: { param: "test" },
+              },
+            ],
+            toolResults: [
+              {
+                toolName: "test_tool",
+                result: toolResult,
+              },
+            ],
+            usage: {
+              promptTokens: 10,
+              completionTokens: 10,
+              totalTokens: 20,
+            },
+            finishReason: "stop",
+          } as any;
+        });
+
+        const provider = new OpenRouterProvider();
+        provider["apiKey"] = "test-key";
+
         const response = await provider.operate("Test input", {
           tools: [mockTool],
         });
@@ -700,93 +612,7 @@ describe("OpenRouterProvider", () => {
         expect(mockTool.call).toHaveBeenCalledWith({ param: "test" });
       });
 
-      it("handles tool call errors", async () => {
-        const mockResponse1 = {
-          content: [
-            { type: "text", text: "Let me help you with that." },
-            {
-              type: "tool_use",
-              id: "tool_1",
-              name: "test_tool",
-              input: { param: "test" },
-            },
-          ],
-          stop_reason: "tool_use",
-          usage: { promptTokens: 10, completionTokens: 10, totalTokens: 20 },
-        };
-
-        const mockCreate = vi.fn().mockResolvedValue(mockResponse1);
-
-        // vi.mocked(Anthropic).mockImplementation(
-        //   () =>
-        //     ({
-        //       messages: {
-        //         create: mockCreate,
-        //       },
-        //     }) as any,
-        // );
-
-        const provider = new OpenRouterProvider();
-        provider["apiKey"] = "test-key";
-
-        const mockTool = {
-          name: "test_tool",
-          description: "Test tool",
-          parameters: {
-            type: "object",
-            properties: {
-              param: { type: "string" },
-            },
-          },
-          type: "function",
-          call: vi.fn().mockRejectedValue(new Error("Tool error")),
-        };
-
-        await expect(
-          provider.operate("Test input", {
-            tools: [mockTool],
-          }),
-        ).rejects.toThrow("Tool error");
-      });
-
       it("calls beforeEachTool hook before executing a tool", async () => {
-        const mockResponse1 = {
-          content: [
-            { type: "text", text: "Let me help you with that." },
-            {
-              type: "tool_use",
-              id: "tool_1",
-              name: "test_tool",
-              input: { param: "test" },
-            },
-          ],
-          stop_reason: "tool_use",
-          usage: { promptTokens: 10, completionTokens: 10, totalTokens: 20 },
-        };
-
-        const mockResponse2 = {
-          content: [{ type: "text", text: "Final response" }],
-          stop_reason: "end_turn",
-          usage: { promptTokens: 10, completionTokens: 10, totalTokens: 20 },
-        };
-
-        const mockCreate = vi
-          .fn()
-          .mockResolvedValueOnce(mockResponse1)
-          .mockResolvedValueOnce(mockResponse2);
-
-        // vi.mocked(Anthropic).mockImplementation(
-        //   () =>
-        //     ({
-        //       messages: {
-        //         create: mockCreate,
-        //       },
-        //     }) as any,
-        // );
-
-        const provider = new OpenRouterProvider();
-        provider["apiKey"] = "test-key";
-
         const mockTool = {
           name: "test_tool",
           description: "Test tool",
@@ -802,6 +628,37 @@ describe("OpenRouterProvider", () => {
 
         const beforeEachToolSpy = vi.fn();
 
+        vi.mocked(generateText).mockImplementation(async (options: any) => {
+          const toolResult = await options.tools.test_tool.execute(
+            { param: "test" },
+            { toolCallId: "test", messages: [] },
+          );
+          return {
+            text: "Final response",
+            toolCalls: [
+              {
+                toolName: "test_tool",
+                args: { param: "test" },
+              },
+            ],
+            toolResults: [
+              {
+                toolName: "test_tool",
+                result: toolResult,
+              },
+            ],
+            usage: {
+              promptTokens: 10,
+              completionTokens: 10,
+              totalTokens: 20,
+            },
+            finishReason: "stop",
+          } as any;
+        });
+
+        const provider = new OpenRouterProvider();
+        provider["apiKey"] = "test-key";
+
         await provider.operate("Test input", {
           tools: [mockTool],
           hooks: {
@@ -809,52 +666,14 @@ describe("OpenRouterProvider", () => {
           },
         });
 
-        expect(beforeEachToolSpy).toHaveBeenCalledWith(
-          "test_tool",
-          '{"param":"test"}',
-        );
+        expect(beforeEachToolSpy).toHaveBeenCalledWith({
+          toolName: "test_tool",
+          args: '{"param":"test"}',
+        });
         expect(beforeEachToolSpy).toHaveBeenCalledBefore(mockTool.call);
       });
 
       it("calls afterEachTool hook after executing a tool", async () => {
-        const mockResponse1 = {
-          content: [
-            { type: "text", text: "Let me help you with that." },
-            {
-              type: "tool_use",
-              id: "tool_1",
-              name: "test_tool",
-              input: { param: "test" },
-            },
-          ],
-          stop_reason: "tool_use",
-          usage: { promptTokens: 10, completionTokens: 10, totalTokens: 20 },
-        };
-
-        const mockResponse2 = {
-          content: [{ type: "text", text: "Final response" }],
-          stop_reason: "end_turn",
-          usage: { promptTokens: 10, completionTokens: 10, totalTokens: 20 },
-        };
-
-        const mockCreate = vi
-          .fn()
-          .mockResolvedValueOnce(mockResponse1)
-          .mockResolvedValueOnce(mockResponse2);
-
-        // vi.mocked(Anthropic).mockImplementation(
-        //   () =>
-        //     ({
-        //       messages: {
-        //         create: mockCreate,
-        //       },
-        //     }) as any,
-        // );
-
-        const provider = new OpenRouterProvider();
-        provider["apiKey"] = "test-key";
-
-        const toolResult = { result: "test result" };
         const mockTool = {
           name: "test_tool",
           description: "Test tool",
@@ -865,10 +684,41 @@ describe("OpenRouterProvider", () => {
             },
           },
           type: "function",
-          call: vi.fn().mockResolvedValue(toolResult),
+          call: vi.fn().mockResolvedValue({ result: "test result" }),
         };
 
         const afterEachToolSpy = vi.fn();
+
+        vi.mocked(generateText).mockImplementation(async (options: any) => {
+          const toolResult = await options.tools.test_tool.execute(
+            { param: "test" },
+            { toolCallId: "test", messages: [] },
+          );
+          return {
+            text: "Final response",
+            toolCalls: [
+              {
+                toolName: "test_tool",
+                args: { param: "test" },
+              },
+            ],
+            toolResults: [
+              {
+                toolName: "test_tool",
+                result: toolResult,
+              },
+            ],
+            usage: {
+              promptTokens: 10,
+              completionTokens: 10,
+              totalTokens: 20,
+            },
+            finishReason: "stop",
+          } as any;
+        });
+
+        const provider = new OpenRouterProvider();
+        provider["apiKey"] = "test-key";
 
         await provider.operate("Test input", {
           tools: [mockTool],
@@ -877,44 +727,15 @@ describe("OpenRouterProvider", () => {
           },
         });
 
-        expect(afterEachToolSpy).toHaveBeenCalledWith(
-          toolResult,
-          "test_tool",
-          '{"param":"test"}',
-        );
+        expect(afterEachToolSpy).toHaveBeenCalledWith({
+          toolName: "test_tool",
+          args: '{"param":"test"}',
+          result: '{"result":"test result"}',
+        });
         expect(mockTool.call).toHaveBeenCalledBefore(afterEachToolSpy);
       });
 
       it("calls onToolError hook when tool execution fails", async () => {
-        const mockResponse1 = {
-          content: [
-            { type: "text", text: "Let me help you with that." },
-            {
-              type: "tool_use",
-              id: "tool_1",
-              name: "test_tool",
-              input: { param: "test" },
-            },
-          ],
-          usage: { promptTokens: 10, completionTokens: 10, totalTokens: 20 },
-          stop_reason: "tool_use",
-        };
-
-        const mockCreate = vi.fn().mockResolvedValue(mockResponse1);
-
-        // vi.mocked(Anthropic).mockImplementation(
-        //   () =>
-        //     ({
-        //       messages: {
-        //         create: mockCreate,
-        //       },
-        //     }) as any,
-        // );
-
-        const provider = new OpenRouterProvider();
-        provider["apiKey"] = "test-key";
-
-        const toolError = new Error("Tool error");
         const mockTool = {
           name: "test_tool",
           description: "Test tool",
@@ -925,10 +746,21 @@ describe("OpenRouterProvider", () => {
             },
           },
           type: "function",
-          call: vi.fn().mockRejectedValue(toolError),
+          call: vi.fn().mockRejectedValue(new Error("Tool error")),
         };
 
         const onToolErrorSpy = vi.fn();
+
+        // Mock generateText to simulate tool execution error with hooks
+        vi.mocked(generateText).mockImplementation(async (options: any) => {
+          await options.tools.test_tool.execute(
+            { param: "test" },
+            { toolCallId: "test", messages: [] },
+          );
+        });
+
+        const provider = new OpenRouterProvider();
+        provider["apiKey"] = "test-key";
 
         await expect(
           provider.operate("Test input", {
@@ -939,28 +771,23 @@ describe("OpenRouterProvider", () => {
           }),
         ).rejects.toThrow("Tool error");
 
-        expect(onToolErrorSpy).toHaveBeenCalledWith(
-          toolError,
-          "test_tool",
-          '{"param":"test"}',
-        );
+        expect(onToolErrorSpy).toHaveBeenCalledWith({
+          error: expect.any(Error),
+          toolName: "test_tool",
+          args: '{"param":"test"}',
+        });
       });
 
       it("accepts a Toolkit object in tools field", async () => {
         const mockResponse = {
-          content: [{ type: "text", text: "test response" }],
+          text: "test response",
+          toolCalls: [],
+          toolResults: [],
           usage: { promptTokens: 10, completionTokens: 10, totalTokens: 20 },
-        };
+          finishReason: "stop",
+        } as any;
 
-        const mockCreate = vi.fn().mockResolvedValue(mockResponse);
-        // vi.mocked(Anthropic).mockImplementation(
-        //   () =>
-        //     ({
-        //       messages: {
-        //         create: mockCreate,
-        //       },
-        //     }) as any,
-        // );
+        vi.mocked(generateText).mockResolvedValue(mockResponse);
 
         const provider = new OpenRouterProvider();
         provider["apiKey"] = "test-key";
@@ -984,19 +811,16 @@ describe("OpenRouterProvider", () => {
           tools: toolkit,
         });
 
-        expect(mockCreate).toHaveBeenCalledWith(
+        expect(vi.mocked(generateText)).toHaveBeenCalledWith(
           expect.objectContaining({
-            tools: expect.arrayContaining([
-              expect.objectContaining({
+            tools: expect.objectContaining({
+              test_tool: expect.objectContaining({
                 name: "test_tool",
-                input_schema: expect.objectContaining({
-                  properties: expect.objectContaining({
-                    param: expect.any(Object),
-                    __Explanation: expect.any(Object),
-                  }),
-                }),
+                parameters: expect.any(Object),
+                type: "function",
+                execute: expect.any(Function),
               }),
-            ]),
+            }),
           }),
         );
       });
@@ -1007,10 +831,12 @@ describe("OpenRouterProvider", () => {
         const mockResponse1 = {
           text: "first response",
           usage: { promptTokens: 10, completionTokens: 10, totalTokens: 20 },
+          toolCalls: [],
         } as any;
         const mockResponse2 = {
           text: "second response",
           usage: { promptTokens: 10, completionTokens: 10, totalTokens: 20 },
+          toolCalls: [],
         } as any;
 
         vi.mocked(generateText).mockResolvedValueOnce(mockResponse1);
@@ -1027,9 +853,11 @@ describe("OpenRouterProvider", () => {
             { role: PROVIDER.OPENROUTER.ROLE.USER, content: "first message" },
           ],
           model: expect.any(Object),
+          maxSteps: 9999,
           maxTokens: PROVIDER.OPENROUTER.MAX_TOKENS.DEFAULT,
           system: undefined,
-          tools: [],
+          tools: {},
+          toolChoice: "auto",
         });
 
         // Second call
@@ -1045,9 +873,11 @@ describe("OpenRouterProvider", () => {
             { role: PROVIDER.OPENROUTER.ROLE.USER, content: "second message" },
           ],
           model: expect.any(Object),
+          maxSteps: 9999,
           maxTokens: PROVIDER.OPENROUTER.MAX_TOKENS.DEFAULT,
           system: undefined,
-          tools: [],
+          tools: {},
+          toolChoice: "auto",
         });
 
         expect(vi.mocked(generateText)).toHaveBeenCalledTimes(2);
@@ -1057,6 +887,7 @@ describe("OpenRouterProvider", () => {
         const mockResponse = {
           text: "response",
           usage: { promptTokens: 10, completionTokens: 10, totalTokens: 20 },
+          toolCalls: [],
         } as any;
 
         vi.mocked(generateText).mockResolvedValue(mockResponse);
@@ -1098,9 +929,11 @@ describe("OpenRouterProvider", () => {
             { role: PROVIDER.OPENROUTER.ROLE.USER, content: "new message" },
           ],
           model: expect.any(Object),
+          maxSteps: 9999,
           maxTokens: PROVIDER.OPENROUTER.MAX_TOKENS.DEFAULT,
           system: undefined,
-          tools: [],
+          tools: {},
+          toolChoice: "auto",
         });
       });
 
@@ -1108,6 +941,7 @@ describe("OpenRouterProvider", () => {
         const mockResponse = {
           text: "response",
           usage: { promptTokens: 10, completionTokens: 10, totalTokens: 20 },
+          toolCalls: [],
         } as any;
 
         vi.mocked(generateText).mockResolvedValue(mockResponse);
@@ -1188,6 +1022,7 @@ describe("OpenRouterProvider", () => {
         const mockResponse = {
           content: [{ type: "text", text: "test response" }],
           usage: { promptTokens: 10, completionTokens: 10, totalTokens: 20 },
+          toolCalls: [],
         };
 
         const mockCreate = vi.fn().mockResolvedValue(mockResponse);

@@ -1,4 +1,3 @@
-import { Anthropic } from "@anthropic-ai/sdk";
 import {
   LlmHistory,
   LlmInputMessage,
@@ -37,7 +36,9 @@ import {
   CoreMessage,
   generateText,
   GenerateTextResult,
+  jsonSchema,
   LanguageModelUsage,
+  Schema,
   ToolSet,
 } from "ai";
 
@@ -131,52 +132,81 @@ function handleOutputSchema(
   }
 }
 
-// // Register tools and process them to work with Anthropic
-// function bundleTools(
-//   tools: LlmTool[] | Toolkit | undefined,
-//   explain: boolean | undefined,
-//   schema: JsonObject | undefined,
-// ) {
-//   let toolkit: Toolkit | undefined;
-//   let processedTools: Anthropic.Tool[] = [];
+// Register tools and process them to work with OpenRouter
+function bundleTools(
+  tools: LlmTool[] | Toolkit | undefined,
+  explain: boolean | undefined,
+  hooks: LlmOperateOptions["hooks"],
+  schema: JsonObject | undefined,
+) {
+  let toolkit: Toolkit | undefined;
+  let processedTools: ToolSet = {};
 
-//   if (tools instanceof Toolkit) {
-//     toolkit = tools;
-//   } else if (Array.isArray(tools)) {
-//     toolkit = new Toolkit(tools, { explain });
-//   }
+  if (tools instanceof Toolkit) {
+    toolkit = tools;
+  } else if (Array.isArray(tools)) {
+    toolkit = new Toolkit(tools, { explain });
+  }
 
-//   if (toolkit) {
-//     toolkit.tools.forEach((tool) => {
-//       processedTools.push({
-//         ...tool,
-//         input_schema: {
-//           ...tool.parameters,
-//           type: "object",
-//         },
-//         type: "custom",
-//       });
-//       delete (
-//         processedTools[processedTools.length - 1] as unknown as {
-//           parameters: unknown;
-//         }
-//       ).parameters;
-//     });
-//   }
+  if (toolkit) {
+    toolkit.tools.forEach((tool) => {
+      processedTools[tool.name] = {
+        ...tool,
+        parameters: jsonSchema(tool.parameters),
+        type: "function",
+        execute: async (args) => {
+          let result;
+          if (hooks?.beforeEachTool) {
+            await hooks.beforeEachTool({
+              toolName: tool.name,
+              args: JSON.stringify(args),
+            });
+          }
+          try {
+            result = await toolkit.call({
+              name: tool.name,
+              arguments: JSON.stringify(args),
+            });
+          } catch (error) {
+            if (hooks?.onToolError) {
+              await hooks.onToolError({
+                error: error as Error,
+                toolName: tool.name,
+                args: JSON.stringify(args),
+              });
+            }
+            throw error;
+          }
+          if (hooks?.afterEachTool) {
+            await hooks.afterEachTool({
+              toolName: tool.name,
+              args: JSON.stringify(args),
+              result: JSON.stringify(result),
+            });
+          }
+          return result;
+        },
+      };
+    });
+  }
 
-//   if (schema) {
-//     processedTools.push({
-//       name: "structured_output",
-//       description:
-//         "Output a structured JSON object, " +
-//         "use this before your final response to give structured outputs to the user",
-//       input_schema: schema as unknown as Anthropic.Messages.Tool.InputSchema,
-//       type: "custom",
-//     });
-//   }
+  // There may be a fix in the future.
+  // The official documentation claims that there is an experimental option for SOME models to natively support tools and structured outputs simultaneously.
+  // However, it comes with a warning that the feature is experimental and may be changed in the future.
+  // https://ai-sdk.dev/docs/ai-sdk-core/generating-structured-data#structured-outputs-with-generatetext-and-streamtext
+  if (schema) {
+    processedTools.structured_output = {
+      description:
+        "Output a structured JSON object. " +
+        "Use this once you have finished formulating your response to give structured outputs to the user. " +
+        "This tool should be used whenever you are about to give your final response to the user, in lieu of a text response.",
+      parameters: jsonSchema(schema),
+      type: "function",
+    };
+  }
 
-//   return { processedTools, toolkit };
-// }
+  return processedTools;
+}
 
 //
 //
@@ -190,24 +220,17 @@ export async function operate(
     client: createOpenRouter(),
   },
 ): Promise<LlmOperateResponse> {
-  if (options.format) {
-    throw new Error("Structured output is not currently implemented");
-  }
-  if (options.tools) {
-    throw new Error("Tools calling is not currently implemented");
-  }
-
   // Set model
-  const model = options?.model || PROVIDER.ANTHROPIC.MODEL.DEFAULT;
+  const model = options?.model || PROVIDER.OPENROUTER.MODEL.DEFAULT;
 
   let schema = handleOutputSchema(options.format);
 
-  let { processedTools, toolkit } = { processedTools: [], toolkit: undefined };
-  // let { processedTools, toolkit } = bundleTools(
-  //   options.tools,
-  //   options.explain,
-  //   schema,
-  // );
+  let processedTools = bundleTools(
+    options.tools,
+    options.explain,
+    options.hooks,
+    schema,
+  );
 
   let { history, systemPrompt, llmInstructions } = handleInputAndPlaceholders(
     input,
@@ -246,14 +269,23 @@ export async function operate(
     messages: inputMessages,
     system: systemPrompt,
     maxTokens: PROVIDER.OPENROUTER.MAX_TOKENS.DEFAULT,
-    tools: processedTools as unknown as ToolSet,
+    maxSteps: 9999,
+    tools: processedTools,
+    toolChoice: schema ? "required" : "auto",
   });
+
+  const structuredOutputs = response.toolCalls.filter(
+    (call) => call.toolName === "structured_output",
+  );
 
   // Update usage
   updateUsage(response.usage, totalUsage);
 
   history.push({
-    content: response.text,
+    content:
+      structuredOutputs.length > 0
+        ? JSON.stringify(structuredOutputs[0].args)
+        : response.text,
     role: PROVIDER.OPENROUTER.ROLE.ASSISTANT,
     type: LlmMessageType.Message,
   } as LlmOutputMessage);
@@ -261,7 +293,8 @@ export async function operate(
   return {
     //model: model,
     //provider: PROVIDER.ANTHROPIC,
-    content: response.text,
+    content:
+      structuredOutputs.length > 0 ? structuredOutputs[0].args : response.text,
     responses: [response as unknown as JsonObject],
     output: history.slice(-1) as LlmOutputMessage[],
     history,
