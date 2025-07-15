@@ -68,3 +68,22 @@ jobs:
           else
             npm test
           fi
+  test-llm-client:
+    name: LLM Client Test (conditional)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+      - name: Install dependencies
+        run: npm install
+      - name: Run LLM Client Tests
+        run: npm run test:llm:client
+        env:
+          APP_PROVIDER: openai
+          ANTHROPIC_API_KEY: ${{ secrets.CICD_ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.CICD_OPENAI_API_KEY }}
