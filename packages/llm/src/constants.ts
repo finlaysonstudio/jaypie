@@ -42,6 +42,9 @@ export const PROVIDER = {
     MODEL: {
       DEFAULT: "google/gemini-2.5-pro" as const,
       DEEPSEEK_V3: "deepseek/deepseek-chat-v3-0324" as const,
+      LLAMA_4: "meta-llama/llama-4-maverick" as const,
+      QWEN_3: "qwen/qwen3-235b-a22b" as const,
+      MISTRAL_MAGISTRAL: "mistralai/magistral-medium-2506:thinking" as const,
     },
     NAME: "openrouter" as const,
     ROLE: {
