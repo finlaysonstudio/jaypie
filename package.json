@@ -63,6 +63,7 @@
     "test:jaypie": "npm run test --workspace packages/jaypie",
     "test:lambda": "npm run test --workspace packages/lambda",
     "test:llm": "npm run test --workspace packages/llm",
+    "test:llm:client": "tsx packages/llm/test/client.ts",
     "test:mongoose": "npm run test --workspace packages/mongoose",
     "test:testkit": "npm run test --workspace packages/testkit",
     "test:textract": "npm run test --workspace packages/textract",
