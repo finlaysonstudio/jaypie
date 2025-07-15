@@ -17,7 +17,7 @@
     "dist"
   ],
   "scripts": {
-    "build:manual": "rollup --config",
+    "build": "rollup --config",
     "format": "eslint . --fix",
     "lint": "eslint .",
     "test": "vitest run .",
