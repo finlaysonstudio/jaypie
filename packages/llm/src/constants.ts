@@ -40,7 +40,7 @@ export const PROVIDER = {
   },
   OPENROUTER: {
     MODEL: {
-      DEFAULT: "google/gemini-2.0-flash-001" as const,
+      DEFAULT: "google/gemini-2.5-pro" as const,
       DEEPSEEK_V3: "deepseek/deepseek-chat-v3-0324" as const,
     },
     NAME: "openrouter" as const,
