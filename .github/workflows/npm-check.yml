@@ -54,3 +54,30 @@ jobs:
           else
             npm test
           fi
+  test-llm-client:
+    name: LLM Client Test (conditional)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v2
+        id: changes
+        with:
+          filters: |
+            llm:
+              - 'packages/llm/**'
+      - name: Use Node.js 20
+        if: steps.changes.outputs.llm == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+      - name: Install dependencies
+        if: steps.changes.outputs.llm == 'true'
+        run: npm install
+      - name: Run LLM Client Tests
+        if: steps.changes.outputs.llm == 'true'
+        run: npm run test:llm:client
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.CICD_ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.CICD_OPENAI_API_KEY }}
