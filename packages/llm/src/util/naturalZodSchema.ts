@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "zod/v4";
 import { NaturalSchema } from "@jaypie/types";
 
 export function naturalZodSchema(definition: NaturalSchema): z.ZodTypeAny {

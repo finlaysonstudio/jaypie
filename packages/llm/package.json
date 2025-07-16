@@ -1,6 +1,6 @@
 {
   "name": "@jaypie/llm",
-  "version": "1.1.22",
+  "version": "1.1.23",
   "description": "Large language model utilities",
   "license": "MIT",
   "author": "Finlayson Studio",
@@ -25,13 +25,14 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.18.0",
+    "@anthropic-ai/sdk": "^0.52.0",
     "@jaypie/aws": "^1.1.15",
-    "@jaypie/core": "^1.1.11",
+    "@jaypie/core": "^1.1.2",
     "@jaypie/errors": "^1.1.5",
     "openai": "^4.87.3",
     "openmeteo": "^1.2.0",
     "random": "^5.3.0",
+    "z-schema": "^6.0.2",
     "zod": "^3.24.1"
   },
   "devDependencies": {

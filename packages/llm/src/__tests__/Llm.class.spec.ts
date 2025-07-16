@@ -11,7 +11,7 @@ vi.mock("../providers/openai/index.js", () => ({
   })),
 }));
 
-vi.mock("../providers/AnthropicProvider.class.js", () => ({
+vi.mock("../providers/anthropic/AnthropicProvider.class.js", () => ({
   AnthropicProvider: vi.fn().mockImplementation(() => ({
     send: vi.fn().mockResolvedValue("Mocked Anthropic response"),
   })),
@@ -63,7 +63,8 @@ describe("Llm Class", () => {
 
     it("returns a response when using Anthropic provider", async () => {
       const llm = new Llm(PROVIDER.ANTHROPIC.NAME);
-      const response = await llm.send("test");
+      const message = "Hello, world!";
+      const response = await llm.send(message);
       expect(response).toBeDefined();
       expect(typeof response).toBe("string");
     });
