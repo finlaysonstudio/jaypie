@@ -12,6 +12,7 @@ import {
   LlmResponseStatus,
 } from "../../../types/LlmProvider.interface.js";
 import { Toolkit } from "../../../tools/Toolkit.class.js";
+import { MAX_TURNS_DEFAULT_LIMIT } from "../../../util/maxTurnsFromOptions.js";
 
 vi.mock("ai", async () => {
   const actual = await vi.importActual("ai");
@@ -462,7 +463,7 @@ describe("OpenRouterProvider", () => {
             { role: PROVIDER.OPENROUTER.ROLE.USER, content: "test message" },
           ],
           model: expect.any(Object),
-          maxSteps: 9999,
+          maxSteps: MAX_TURNS_DEFAULT_LIMIT,
           maxTokens: PROVIDER.OPENROUTER.MAX_TOKENS.DEFAULT,
           system: "You are a test assistant",
           tools: {},
@@ -490,7 +491,7 @@ describe("OpenRouterProvider", () => {
             { role: PROVIDER.OPENROUTER.ROLE.USER, content: "Hello, World" },
           ],
           model: expect.any(Object),
-          maxSteps: 9999,
+          maxSteps: MAX_TURNS_DEFAULT_LIMIT,
           maxTokens: PROVIDER.OPENROUTER.MAX_TOKENS.DEFAULT,
           tools: {},
           toolChoice: "auto",
@@ -518,7 +519,7 @@ describe("OpenRouterProvider", () => {
             { role: PROVIDER.OPENROUTER.ROLE.USER, content: "Hello, {{name}}" },
           ],
           model: expect.any(Object),
-          maxSteps: 9999,
+          maxSteps: MAX_TURNS_DEFAULT_LIMIT,
           tools: {},
           toolChoice: "auto",
           maxTokens: PROVIDER.OPENROUTER.MAX_TOKENS.DEFAULT,
@@ -547,7 +548,7 @@ describe("OpenRouterProvider", () => {
             { role: PROVIDER.OPENROUTER.ROLE.USER, content: "test message" },
           ],
           model: expect.any(Object),
-          maxSteps: 9999,
+          maxSteps: MAX_TURNS_DEFAULT_LIMIT,
           maxTokens: PROVIDER.OPENROUTER.MAX_TOKENS.DEFAULT,
           system: "You are a {{role}}",
           tools: {},
@@ -853,7 +854,7 @@ describe("OpenRouterProvider", () => {
             { role: PROVIDER.OPENROUTER.ROLE.USER, content: "first message" },
           ],
           model: expect.any(Object),
-          maxSteps: 9999,
+          maxSteps: MAX_TURNS_DEFAULT_LIMIT,
           maxTokens: PROVIDER.OPENROUTER.MAX_TOKENS.DEFAULT,
           system: undefined,
           tools: {},
@@ -873,7 +874,7 @@ describe("OpenRouterProvider", () => {
             { role: PROVIDER.OPENROUTER.ROLE.USER, content: "second message" },
           ],
           model: expect.any(Object),
-          maxSteps: 9999,
+          maxSteps: MAX_TURNS_DEFAULT_LIMIT,
           maxTokens: PROVIDER.OPENROUTER.MAX_TOKENS.DEFAULT,
           system: undefined,
           tools: {},
@@ -929,7 +930,7 @@ describe("OpenRouterProvider", () => {
             { role: PROVIDER.OPENROUTER.ROLE.USER, content: "new message" },
           ],
           model: expect.any(Object),
-          maxSteps: 9999,
+          maxSteps: MAX_TURNS_DEFAULT_LIMIT,
           maxTokens: PROVIDER.OPENROUTER.MAX_TOKENS.DEFAULT,
           system: undefined,
           tools: {},
@@ -985,22 +986,15 @@ describe("OpenRouterProvider", () => {
       });
     });
 
-    describe.todo("LlmOperateOptions", () => {
+    describe("LlmOperateOptions", () => {
       it("applies data to input message", async () => {
         const mockResponse = {
-          content: [{ type: "text", text: "test response" }],
+          text: "test response",
           usage: { promptTokens: 10, completionTokens: 10, totalTokens: 20 },
-        };
+          toolCalls: [],
+        } as any;
 
-        const mockCreate = vi.fn().mockResolvedValue(mockResponse);
-        // vi.mocked(Anthropic).mockImplementation(
-        //   () =>
-        //     ({
-        //       messages: {
-        //         create: mockCreate,
-        //       },
-        //     }) as any,
-        // );
+        vi.mocked(generateText).mockResolvedValue(mockResponse);
 
         const provider = new OpenRouterProvider();
         provider["apiKey"] = "test-key";
@@ -1009,31 +1003,29 @@ describe("OpenRouterProvider", () => {
           data: { name: "World" },
         });
 
-        expect(mockCreate).toHaveBeenCalledWith(
+        expect(vi.mocked(generateText)).toHaveBeenCalledWith(
           expect.objectContaining({
             messages: [
-              { role: PROVIDER.ANTHROPIC.ROLE.USER, content: "Hello, World" },
+              { role: PROVIDER.OPENROUTER.ROLE.USER, content: "Hello, World" },
             ],
+            model: expect.any(Object),
+            maxSteps: MAX_TURNS_DEFAULT_LIMIT,
+            maxTokens: PROVIDER.OPENROUTER.MAX_TOKENS.DEFAULT,
+            system: undefined,
+            tools: {},
+            toolChoice: "auto",
           }),
         );
       });
 
       it("applies data to instructions", async () => {
         const mockResponse = {
-          content: [{ type: "text", text: "test response" }],
+          text: "test response",
           usage: { promptTokens: 10, completionTokens: 10, totalTokens: 20 },
           toolCalls: [],
-        };
+        } as any;
 
-        const mockCreate = vi.fn().mockResolvedValue(mockResponse);
-        // vi.mocked(Anthropic).mockImplementation(
-        //   () =>
-        //     ({
-        //       messages: {
-        //         create: mockCreate,
-        //       },
-        //     }) as any,
-        // );
+        vi.mocked(generateText).mockResolvedValue(mockResponse);
 
         const provider = new OpenRouterProvider();
         provider["apiKey"] = "test-key";
@@ -1043,33 +1035,31 @@ describe("OpenRouterProvider", () => {
           instructions: "You are a {{role}}",
         });
 
-        expect(mockCreate).toHaveBeenCalledWith(
+        expect(vi.mocked(generateText)).toHaveBeenCalledWith(
           expect.objectContaining({
             messages: [
               {
-                role: PROVIDER.ANTHROPIC.ROLE.USER,
+                role: PROVIDER.OPENROUTER.ROLE.USER,
                 content: "test message\n\nYou are a test assistant",
               },
             ],
+            maxSteps: MAX_TURNS_DEFAULT_LIMIT,
+            maxTokens: PROVIDER.OPENROUTER.MAX_TOKENS.DEFAULT,
+            system: undefined,
+            tools: {},
+            toolChoice: "auto",
           }),
         );
       });
 
       it("applies data to system message", async () => {
         const mockResponse = {
-          content: [{ type: "text", text: "test response" }],
+          text: "test response",
           usage: { promptTokens: 10, completionTokens: 10, totalTokens: 20 },
-        };
+          toolCalls: [],
+        } as any;
 
-        const mockCreate = vi.fn().mockResolvedValue(mockResponse);
-        // vi.mocked(Anthropic).mockImplementation(
-        //   () =>
-        //     ({
-        //       messages: {
-        //         create: mockCreate,
-        //       },
-        //     }) as any,
-        // );
+        vi.mocked(generateText).mockResolvedValue(mockResponse);
 
         const provider = new OpenRouterProvider();
         provider["apiKey"] = "test-key";
@@ -1079,28 +1069,25 @@ describe("OpenRouterProvider", () => {
           system: "You are a {{role}}",
         });
 
-        expect(mockCreate).toHaveBeenCalledWith(
+        expect(vi.mocked(generateText)).toHaveBeenCalledWith(
           expect.objectContaining({
             system: "You are a test assistant",
+            maxSteps: MAX_TURNS_DEFAULT_LIMIT,
+            maxTokens: PROVIDER.OPENROUTER.MAX_TOKENS.DEFAULT,
+            tools: {},
+            toolChoice: "auto",
           }),
         );
       });
 
       it("respects placeholders.input option", async () => {
         const mockResponse = {
-          content: [{ type: "text", text: "test response" }],
+          text: "test response",
           usage: { promptTokens: 10, completionTokens: 10, totalTokens: 20 },
-        };
+          toolCalls: [],
+        } as any;
 
-        const mockCreate = vi.fn().mockResolvedValue(mockResponse);
-        // vi.mocked(Anthropic).mockImplementation(
-        //   () =>
-        //     ({
-        //       messages: {
-        //         create: mockCreate,
-        //       },
-        //     }) as any,
-        // );
+        vi.mocked(generateText).mockResolvedValue(mockResponse);
 
         const provider = new OpenRouterProvider();
         provider["apiKey"] = "test-key";
@@ -1110,33 +1097,30 @@ describe("OpenRouterProvider", () => {
           placeholders: { input: false },
         });
 
-        expect(mockCreate).toHaveBeenCalledWith(
+        expect(vi.mocked(generateText)).toHaveBeenCalledWith(
           expect.objectContaining({
             messages: [
               {
-                role: PROVIDER.ANTHROPIC.ROLE.USER,
+                role: PROVIDER.OPENROUTER.ROLE.USER,
                 content: "Hello, {{name}}",
               },
             ],
+            maxSteps: MAX_TURNS_DEFAULT_LIMIT,
+            maxTokens: PROVIDER.OPENROUTER.MAX_TOKENS.DEFAULT,
+            tools: {},
+            toolChoice: "auto",
           }),
         );
       });
 
       it("respects placeholders.instructions option", async () => {
         const mockResponse = {
-          content: [{ type: "text", text: "test response" }],
+          text: "test response",
           usage: { promptTokens: 10, completionTokens: 10, totalTokens: 20 },
-        };
+          toolCalls: [],
+        } as any;
 
-        const mockCreate = vi.fn().mockResolvedValue(mockResponse);
-        // vi.mocked(Anthropic).mockImplementation(
-        //   () =>
-        //     ({
-        //       messages: {
-        //         create: mockCreate,
-        //       },
-        //     }) as any,
-        // );
+        vi.mocked(generateText).mockResolvedValue(mockResponse);
 
         const provider = new OpenRouterProvider();
         provider["apiKey"] = "test-key";
@@ -1147,33 +1131,30 @@ describe("OpenRouterProvider", () => {
           placeholders: { instructions: false },
         });
 
-        expect(mockCreate).toHaveBeenCalledWith(
+        expect(vi.mocked(generateText)).toHaveBeenCalledWith(
           expect.objectContaining({
             messages: [
               {
-                role: PROVIDER.ANTHROPIC.ROLE.USER,
+                role: PROVIDER.OPENROUTER.ROLE.USER,
                 content: "test message\n\nYou are a {{role}}",
               },
             ],
+            maxSteps: MAX_TURNS_DEFAULT_LIMIT,
+            maxTokens: PROVIDER.OPENROUTER.MAX_TOKENS.DEFAULT,
+            tools: {},
+            toolChoice: "auto",
           }),
         );
       });
 
       it("respects placeholders.system option", async () => {
         const mockResponse = {
-          content: [{ type: "text", text: "test response" }],
+          text: "test response",
           usage: { promptTokens: 10, completionTokens: 10, totalTokens: 20 },
-        };
+          toolCalls: [],
+        } as any;
 
-        const mockCreate = vi.fn().mockResolvedValue(mockResponse);
-        // vi.mocked(Anthropic).mockImplementation(
-        //   () =>
-        //     ({
-        //       messages: {
-        //         create: mockCreate,
-        //       },
-        //     }) as any,
-        // );
+        vi.mocked(generateText).mockResolvedValue(mockResponse);
 
         const provider = new OpenRouterProvider();
         provider["apiKey"] = "test-key";
@@ -1184,28 +1165,25 @@ describe("OpenRouterProvider", () => {
           placeholders: { system: false },
         });
 
-        expect(mockCreate).toHaveBeenCalledWith(
+        expect(vi.mocked(generateText)).toHaveBeenCalledWith(
           expect.objectContaining({
             system: "You are a {{role}}",
+            maxSteps: MAX_TURNS_DEFAULT_LIMIT,
+            maxTokens: PROVIDER.OPENROUTER.MAX_TOKENS.DEFAULT,
+            tools: {},
+            toolChoice: "auto",
           }),
         );
       });
 
       it("applies providerOptions to the request", async () => {
         const mockResponse = {
-          content: [{ type: "text", text: "test response" }],
+          text: "test response",
           usage: { promptTokens: 10, completionTokens: 10, totalTokens: 20 },
-        };
+          toolCalls: [],
+        } as any;
 
-        const mockCreate = vi.fn().mockResolvedValue(mockResponse);
-        // vi.mocked(Anthropic).mockImplementation(
-        //   () =>
-        //     ({
-        //       messages: {
-        //         create: mockCreate,
-        //       },
-        //     }) as any,
-        // );
+        vi.mocked(generateText).mockResolvedValue(mockResponse);
 
         const provider = new OpenRouterProvider();
         provider["apiKey"] = "test-key";
@@ -1217,38 +1195,32 @@ describe("OpenRouterProvider", () => {
           },
         });
 
-        expect(mockCreate).toHaveBeenCalledWith(
+        expect(vi.mocked(generateText)).toHaveBeenCalledWith(
           expect.objectContaining({
             temperature: 0.7,
             top_p: 0.9,
+            maxSteps: MAX_TURNS_DEFAULT_LIMIT,
+            maxTokens: PROVIDER.OPENROUTER.MAX_TOKENS.DEFAULT,
+            tools: {},
+            toolChoice: "auto",
           }),
         );
       });
 
       it("applies turns option to limit conversation turns", async () => {
         const mockResponse1 = {
-          content: [
-            { type: "text", text: "Let me help you with that." },
+          text: "Let me help you with that.",
+          toolCalls: [
             {
-              type: "tool_use",
-              id: "tool_1",
               name: "test_tool",
               input: { param: "test" },
             },
           ],
-          stop_reason: "tool_use",
+          finishReason: "tool-calls",
           usage: { promptTokens: 10, completionTokens: 10, totalTokens: 20 },
-        };
+        } as any;
 
-        const mockCreate = vi.fn().mockResolvedValue(mockResponse1);
-        // vi.mocked(Anthropic).mockImplementation(
-        //   () =>
-        //     ({
-        //       messages: {
-        //         create: mockCreate,
-        //       },
-        //     }) as any,
-        // );
+        vi.mocked(generateText).mockResolvedValue(mockResponse1);
 
         const provider = new OpenRouterProvider();
         provider["apiKey"] = "test-key";
@@ -1277,38 +1249,25 @@ describe("OpenRouterProvider", () => {
 
       it("applies explain option to tool calls", async () => {
         const mockResponse1 = {
-          content: [
-            { type: "text", text: "Let me help you with that." },
+          text: "Let me help you with that.",
+          toolCalls: [
             {
-              type: "tool_use",
-              id: "tool_1",
               name: "test_tool",
               input: { param: "test" },
             },
           ],
-          stop_reason: "tool_use",
+          finishReason: "tool-calls",
           usage: { promptTokens: 10, completionTokens: 10, totalTokens: 20 },
-        };
+        } as any;
 
         const mockResponse2 = {
-          content: [{ type: "text", text: "Final response" }],
-          stop_reason: "end_turn",
+          text: "Final response",
+          finishReason: "stop",
           usage: { promptTokens: 10, completionTokens: 10, totalTokens: 20 },
-        };
+        } as any;
 
-        const mockCreate = vi
-          .fn()
-          .mockResolvedValueOnce(mockResponse1)
-          .mockResolvedValueOnce(mockResponse2);
-
-        // vi.mocked(Anthropic).mockImplementation(
-        //   () =>
-        //     ({
-        //       messages: {
-        //         create: mockCreate,
-        //       },
-        //     }) as any,
-        // );
+        vi.mocked(generateText).mockResolvedValueOnce(mockResponse1);
+        vi.mocked(generateText).mockResolvedValueOnce(mockResponse2);
 
         const provider = new OpenRouterProvider();
         provider["apiKey"] = "test-key";
@@ -1331,17 +1290,19 @@ describe("OpenRouterProvider", () => {
           explain: true,
         });
 
-        expect(mockCreate).toHaveBeenCalledWith(
+        expect(vi.mocked(generateText)).toHaveBeenCalledWith(
           expect.objectContaining({
-            tools: expect.arrayContaining([
-              expect.objectContaining({
-                input_schema: expect.objectContaining({
-                  properties: expect.objectContaining({
-                    __Explanation: expect.any(Object),
+            tools: expect.objectContaining({
+              test_tool: expect.objectContaining({
+                parameters: expect.objectContaining({
+                  jsonSchema: expect.objectContaining({
+                    properties: expect.objectContaining({
+                      __Explanation: expect.any(Object),
+                    }),
                   }),
                 }),
               }),
-            ]),
+            }),
           }),
         );
       });

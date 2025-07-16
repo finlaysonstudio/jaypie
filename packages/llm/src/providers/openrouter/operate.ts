@@ -264,22 +264,73 @@ export async function operate(
     total: 0,
   };
 
-  const response = await generateText({
+  const requestOptions = {
+    ...options.providerOptions,
     model: context.client(model),
     messages: inputMessages,
     system: systemPrompt,
     maxTokens: PROVIDER.OPENROUTER.MAX_TOKENS.DEFAULT,
-    maxSteps: 9999,
+    maxSteps: maxTurnsFromOptions(options),
     tools: processedTools,
-    toolChoice: schema ? "required" : "auto",
+    toolChoice: schema ? ("required" as const) : ("auto" as const),
+  };
+
+  await options.hooks?.beforeEachModelRequest?.({
+    input: history,
+    options,
+    providerRequest: requestOptions,
+  });
+
+  let response;
+  try {
+    response = await generateText(requestOptions);
+  } catch (error) {
+    await options.hooks?.onUnrecoverableModelError?.({
+      error: error as Error,
+      input: history,
+      options,
+      providerRequest: requestOptions,
+    });
+    throw error;
+  }
+
+  // Update usage
+  updateUsage(response.usage, totalUsage);
+
+  await options.hooks?.afterEachModelResponse?.({
+    input: history,
+    options,
+    providerRequest: requestOptions,
+    providerResponse: response,
+    content: response.text,
+    usage: [totalUsage],
   });
 
   const structuredOutputs = response.toolCalls.filter(
     (call) => call.toolName === "structured_output",
   );
 
-  // Update usage
-  updateUsage(response.usage, totalUsage);
+  if (response.finishReason === "tool-calls" && structuredOutputs.length == 0) {
+    const returnResponse: LlmOperateResponse = {
+      history: [],
+      model: options?.model || PROVIDER.OPENROUTER.MODEL.DEFAULT,
+      output: [],
+      provider: PROVIDER.OPENROUTER.NAME,
+      responses: [],
+      status: LlmResponseStatus.Incomplete,
+      usage: [], // Initialize as empty array, will add entry for each response
+    };
+
+    const error = new TooManyRequestsError();
+    const detail = `Model requested function call but exceeded ${maxTurnsFromOptions(options)} turns`;
+    log.warn(detail);
+    returnResponse.error = {
+      detail,
+      status: error.status,
+      title: error.title,
+    };
+    return returnResponse;
+  }
 
   history.push({
     content:
