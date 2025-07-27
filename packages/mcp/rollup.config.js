@@ -12,5 +12,14 @@ export default {
       exclude: ["**/__tests__/**/*", "**/*.test.ts"],
     }),
   ],
-  external: ["@jaypie/core", "@jaypie/errors"],
+  external: [
+    "@jaypie/core",
+    "@jaypie/errors",
+    "@modelcontextprotocol/sdk/server/mcp.js",
+    "@modelcontextprotocol/sdk/server/stdio.js",
+    "fs/promises",
+    "gray-matter",
+    "path",
+    "zod",
+  ],
 };
