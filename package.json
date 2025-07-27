@@ -70,6 +70,9 @@
     "test:types": "npm run test --workspace packages/types",
     "test:webkit": "npm run test --workspace packages/webkit"
   },
+  "overrides": {
+    "zod": "^3.23.8"
+  },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.52.0"
   },
