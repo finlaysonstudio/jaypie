@@ -44,4 +44,15 @@ export default [
     ],
     ...jest.configs["flat/recommended"],
   },
+  
+  //
+  //
+  // MCP: Allow gray-matter import
+  //
+  {
+    files: ["packages/mcp/**/*.ts"],
+    rules: {
+      "import-x/no-unresolved": ["error", { ignore: ["gray-matter"] }],
+    },
+  },
 ];

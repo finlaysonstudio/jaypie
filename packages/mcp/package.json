@@ -24,6 +24,12 @@
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit"
   },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.17.0",
+    "commander": "^14.0.0",
+    "gray-matter": "^4.0.3",
+    "zod": "^4.0.10"
+  },
   "publishConfig": {
     "access": "public"
   }
