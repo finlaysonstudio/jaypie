@@ -7,10 +7,15 @@ import matter from "gray-matter";
 // Version will be injected during build
 const version = "0.0.0";
 
-const server = new McpServer({
-  name: "jaypie",
-  version,
-});
+const server = new McpServer(
+  {
+    name: "jaypie",
+    version,
+  },
+  {
+    capabilities: {},
+  },
+);
 
 interface FrontMatter {
   description?: string;
@@ -109,7 +114,7 @@ server.tool(
         "The name of the prompt file to read (e.g., example_prompt.md)",
       ),
   },
-  async ({ filename }: { filename: string }) => {
+  async ({ filename }) => {
     try {
       const promptsPath = "./prompts";
       const filePath = path.join(promptsPath, filename);
