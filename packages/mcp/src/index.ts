@@ -4,9 +4,14 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { z } from "zod";
 import * as fs from "fs/promises";
 import * as path from "path";
+import { fileURLToPath } from "url";
 import matter from "gray-matter";
 // Version will be injected during build
 const version = "0.0.0";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const PROMPTS_PATH = path.join(__dirname, "..", "prompts");
 
 const server = new McpServer(
   {
@@ -73,12 +78,11 @@ server.tool(
   {},
   async () => {
     try {
-      const promptsPath = "./prompts";
-      const files = await fs.readdir(promptsPath);
+      const files = await fs.readdir(PROMPTS_PATH);
       const mdFiles = files.filter((file) => file.endsWith(".md"));
 
       const prompts = await Promise.all(
-        mdFiles.map((file) => parseMarkdownFile(path.join(promptsPath, file))),
+        mdFiles.map((file) => parseMarkdownFile(path.join(PROMPTS_PATH, file))),
       );
 
       const formattedList = prompts.map(formatPromptListItem).join("\n");
@@ -117,8 +121,7 @@ server.tool(
   },
   async ({ filename }) => {
     try {
-      const promptsPath = "./prompts";
-      const filePath = path.join(promptsPath, filename);
+      const filePath = path.join(PROMPTS_PATH, filename);
       const content = await fs.readFile(filePath, "utf-8");
 
       return {
