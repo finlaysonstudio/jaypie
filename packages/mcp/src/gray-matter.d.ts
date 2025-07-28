@@ -9,7 +9,7 @@ declare module "gray-matter" {
     delimiters?: string | [string, string];
   }
 
-  interface GrayMatterFile<I extends any> {
+  interface GrayMatterFile<I> {
     data: I;
     content: string;
     excerpt?: string;
@@ -19,7 +19,7 @@ declare module "gray-matter" {
     stringify: (lang: string) => string;
   }
 
-  function matter<I extends any = any>(
+  function matter<I = any>(
     input: string | Buffer,
     options?: GrayMatterOption
   ): GrayMatterFile<I>;
