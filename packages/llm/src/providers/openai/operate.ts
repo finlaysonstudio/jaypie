@@ -208,8 +208,24 @@ export function createRequestOptions(
         options.format instanceof z.ZodType
           ? options.format
           : naturalZodSchema(options.format as NaturalSchema);
+      const responseFormat = zodResponseFormat(zodSchema as any, "response");
 
-      const responseFormat = zodResponseFormat(zodSchema, "response");
+      const jsonSchema = z.toJSONSchema(zodSchema);
+
+      // Temporary hack because of OpenAI requires additional_properties to be false on all objects
+      const checks: any[] = [jsonSchema];
+      while (checks.length > 0) {
+        const current = checks[0];
+        if (current.type == "object") {
+          current.additionalProperties = false;
+        }
+        Object.keys(current).forEach((key) => {
+          if (typeof current[key] == "object") {
+            checks.push(current[key]);
+          }
+        });
+        checks.shift();
+      }
 
       const jsonSchema = z.toJSONSchema(zodSchema);
 

@@ -5,7 +5,7 @@ import {
   NaturalMap,
   NaturalSchema,
 } from "@jaypie/types";
-import { z } from "zod";
+import { z } from "zod/v4";
 import { LlmTool } from "./LlmTool.interface.js";
 import { Toolkit } from "../tools/Toolkit.class.js";
 
