@@ -7,6 +7,14 @@ export default [
   // Jaypie
   //
   ...jaypie,
+  
+  //
+  //
+  // Global ignores
+  //
+  {
+    ignores: ["**/prompts/templates/**"],
+  },
 
   //
   //
