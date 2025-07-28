@@ -17,7 +17,11 @@ describe("Constants", () => {
 
   describe("Anthropic Constants", () => {
     it("Has model constants", () => {
-      expect(PROVIDER.ANTHROPIC.MODEL.DEFAULT).toBe("claude-3-5-sonnet-latest");
+      expect(PROVIDER.ANTHROPIC.MODEL.DEFAULT).toBeDefined();
+      expect(PROVIDER.ANTHROPIC.MODEL.DEFAULT).toBeString();
+      expect(PROVIDER.ANTHROPIC.MODEL.DEFAULT).toBe(
+        PROVIDER.ANTHROPIC.MODEL.CLAUDE_SONNET_4,
+      );
       expect(PROVIDER.ANTHROPIC.MODEL.CLAUDE_3_HAIKU).toBe(
         "claude-3-5-haiku-latest",
       );
@@ -25,7 +29,7 @@ describe("Constants", () => {
         "claude-3-opus-latest",
       );
       expect(PROVIDER.ANTHROPIC.MODEL.CLAUDE_3_SONNET).toBe(
-        "claude-3-5-sonnet-latest",
+        "claude-3-7-sonnet-latest",
       );
     });
 

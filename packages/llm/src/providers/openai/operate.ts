@@ -227,11 +227,28 @@ export function createRequestOptions(
         checks.shift();
       }
 
+      const jsonSchema = z.toJSONSchema(zodSchema);
+
+      // Temporary hack because of OpenAI requires additional_properties to be false on all objects
+      const checks = [jsonSchema];
+      while (checks.length > 0) {
+        const current = checks[0];
+        if (current.type == "object") {
+          current.additionalProperties = false;
+        }
+        Object.keys(current).forEach((key) => {
+          if (typeof current[key] == "object") {
+            checks.push(current[key]);
+          }
+        });
+        checks.shift();
+      }
+
       // Set up structured output format in the format expected by the test
       requestOptions.text = {
         format: {
           name: responseFormat.json_schema.name,
-          schema: jsonSchema, // Replace this with responseFormat.json_schema.schema once OpenAI supports Zod v4,
+          schema: jsonSchema, // Replace this with responseFormat.json_schema.schema once OpenAI supports Zod v4
           strict: responseFormat.json_schema.strict,
           type: responseFormat.type,
         },

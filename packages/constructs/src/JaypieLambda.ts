@@ -50,7 +50,7 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
       paramsAndSecrets,
       paramsAndSecretsOptions,
       reservedConcurrentExecutions,
-      roleTag,
+      roleTag = CDK.ROLE.PROCESSING,
       runtime = lambda.Runtime.NODEJS_22_X,
       secrets = [],
       timeout = Duration.seconds(CDK.DURATION.LAMBDA_WORKER),

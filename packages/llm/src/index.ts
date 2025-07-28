@@ -1,12 +1,12 @@
 export { default as Llm } from "./Llm.js";
 export * as LLM from "./constants.js";
-export {
+export type {
   LlmMessageOptions,
   LlmOperateOptions,
   LlmOperateResponse,
   LlmOptions,
   LlmProvider,
 } from "./types/LlmProvider.interface.js";
-export { LlmTool } from "./types/LlmTool.interface.js";
+export type { LlmTool } from "./types/LlmTool.interface.js";
 
 export { toolkit, Toolkit, tools } from "./tools/index.js";

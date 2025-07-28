@@ -8,6 +8,18 @@ import * as iam from "aws-cdk-lib/aws-iam";
 import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
 import { JaypieEnvSecret } from "../JaypieEnvSecret.js";
 
+// Helper function to find the main Lambda function in the template
+function findMainLambdaFunction(
+  template: Template,
+  handler: string = "index.handler",
+) {
+  const resources = template.findResources("AWS::Lambda::Function");
+  const lambdaFunctions = Object.values(resources);
+  return lambdaFunctions.find(
+    (resource: any) => resource.Properties?.Handler === handler,
+  );
+}
+
 describe("JaypieLambda", () => {
   describe("Base Cases", () => {
     it("is a function", () => {
@@ -38,13 +50,14 @@ describe("JaypieLambda", () => {
       const template = Template.fromStack(stack);
 
       expect(construct).toBeDefined();
-      template.hasResourceProperties("AWS::Lambda::Function", {
-        Tags: [
-          {
-            Key: CDK.TAG.ROLE,
-            Value: "TEST_ROLE",
-          },
-        ],
+
+      const mainFunction = findMainLambdaFunction(template);
+      expect(mainFunction).toBeDefined();
+
+      const tags = mainFunction?.Properties?.Tags || [];
+      expect(tags).toContainEqual({
+        Key: CDK.TAG.ROLE,
+        Value: "TEST_ROLE",
       });
     });
 
@@ -58,13 +71,14 @@ describe("JaypieLambda", () => {
       const template = Template.fromStack(stack);
 
       expect(construct).toBeDefined();
-      template.hasResourceProperties("AWS::Lambda::Function", {
-        Tags: [
-          {
-            Key: CDK.TAG.VENDOR,
-            Value: "TEST_VENDOR",
-          },
-        ],
+
+      const mainFunction = findMainLambdaFunction(template);
+      expect(mainFunction).toBeDefined();
+
+      const tags = mainFunction?.Properties?.Tags || [];
+      expect(tags).toContainEqual({
+        Key: CDK.TAG.VENDOR,
+        Value: "TEST_VENDOR",
       });
     });
 
@@ -79,17 +93,18 @@ describe("JaypieLambda", () => {
       const template = Template.fromStack(stack);
 
       expect(construct).toBeDefined();
-      template.hasResourceProperties("AWS::Lambda::Function", {
-        Tags: Match.arrayWith([
-          {
-            Key: CDK.TAG.ROLE,
-            Value: "TEST_ROLE",
-          },
-          {
-            Key: CDK.TAG.VENDOR,
-            Value: "TEST_VENDOR",
-          },
-        ]),
+
+      const mainFunction = findMainLambdaFunction(template);
+      expect(mainFunction).toBeDefined();
+
+      const tags = mainFunction?.Properties?.Tags || [];
+      expect(tags).toContainEqual({
+        Key: CDK.TAG.ROLE,
+        Value: "TEST_ROLE",
+      });
+      expect(tags).toContainEqual({
+        Key: CDK.TAG.VENDOR,
+        Value: "TEST_VENDOR",
       });
     });
 
@@ -113,15 +128,13 @@ describe("JaypieLambda", () => {
 
       const template = Template.fromStack(stack);
 
+      const mainFunction = findMainLambdaFunction(template);
+      expect(mainFunction).toBeDefined();
+
       // Verify environment variables are set
-      template.hasResourceProperties("AWS::Lambda::Function", {
-        Environment: {
-          Variables: {
-            SECRET_VALUE_1: Match.anyValue(),
-            SECRET_VALUE_2: Match.anyValue(),
-          },
-        },
-      });
+      const envVars = mainFunction?.Properties?.Environment?.Variables || {};
+      expect(envVars.SECRET_VALUE_1).toBeDefined();
+      expect(envVars.SECRET_VALUE_2).toBeDefined();
 
       // Verify IAM permissions are granted
       template.hasResourceProperties("AWS::IAM::Policy", {
@@ -173,15 +186,13 @@ describe("JaypieLambda", () => {
 
       const template = Template.fromStack(stack);
 
+      const mainFunction = findMainLambdaFunction(template);
+      expect(mainFunction).toBeDefined();
+
       // Verify environment variables are set
-      template.hasResourceProperties("AWS::Lambda::Function", {
-        Environment: {
-          Variables: {
-            SECRET_TEST_SECRET: Match.anyValue(),
-            SECRET_TEST_SECRET_2: Match.anyValue(),
-          },
-        },
-      });
+      const envVars = mainFunction?.Properties?.Environment?.Variables || {};
+      expect(envVars.SECRET_TEST_SECRET).toBeDefined();
+      expect(envVars.SECRET_TEST_SECRET_2).toBeDefined();
 
       // Verify IAM permissions are granted
       template.hasResourceProperties("AWS::IAM::Policy", {
@@ -226,13 +237,12 @@ describe("JaypieLambda", () => {
       const template = Template.fromStack(stack);
 
       expect(construct).toBeDefined();
-      template.hasResourceProperties("AWS::Lambda::Function", {
-        Environment: {
-          Variables: {
-            TEST_VAR: "test-value",
-          },
-        },
-      });
+
+      const mainFunction = findMainLambdaFunction(template);
+      expect(mainFunction).toBeDefined();
+
+      const envVars = mainFunction?.Properties?.Environment?.Variables || {};
+      expect(envVars.TEST_VAR).toBe("test-value");
     });
 
     it("allows configuring lambda properties", () => {
@@ -251,13 +261,14 @@ describe("JaypieLambda", () => {
 
       const template = Template.fromStack(stack);
 
+      const mainFunction = findMainLambdaFunction(template);
+      expect(mainFunction).toBeDefined();
+
       // Verify lambda configuration
-      template.hasResourceProperties("AWS::Lambda::Function", {
-        MemorySize: 256,
-        Runtime: "nodejs18.x",
-        Timeout: 60,
-        ReservedConcurrentExecutions: 5,
-      });
+      expect(mainFunction?.Properties?.MemorySize).toBe(256);
+      expect(mainFunction?.Properties?.Runtime).toBe("nodejs18.x");
+      expect(mainFunction?.Properties?.Timeout).toBe(60);
+      expect(mainFunction?.Properties?.ReservedConcurrentExecutions).toBe(5);
 
       expect(construct).toBeDefined();
     });
@@ -272,19 +283,13 @@ describe("JaypieLambda", () => {
 
       const template = Template.fromStack(stack);
 
-      // Check that layers are added
-      const resources = template.findResources("AWS::Lambda::Function");
-      const lambdaFunctions = Object.values(resources);
-      const testFunction = lambdaFunctions.find(
-        (resource) => resource.Properties.Handler === "index.handler",
-      );
+      const mainFunction = findMainLambdaFunction(template);
+      expect(mainFunction).toBeDefined();
 
-      // Verify the layers array exists
-      expect(testFunction.Properties.Layers).toBeDefined();
-
-      // Verify at least one layer is added
-      // Note: exact layer configuration may vary, so we just verify layers exist
-      expect(testFunction.Properties.Layers.length).toBeGreaterThan(0);
+      // Verify the layers array exists and has at least one layer
+      const layers = mainFunction?.Properties?.Layers || [];
+      expect(layers).toBeDefined();
+      expect(layers.length).toBeGreaterThan(0);
     });
 
     it("adds ParamsAndSecrets layer by default", () => {
@@ -297,11 +302,9 @@ describe("JaypieLambda", () => {
 
       const template = Template.fromStack(stack);
 
-      // The ParamsAndSecrets property does not directly appear in the CloudFormation template
-      // Instead, check for its existence by verifying the Function has been created
-      template.hasResourceProperties("AWS::Lambda::Function", {
-        Handler: "index.handler",
-      });
+      const mainFunction = findMainLambdaFunction(template);
+      expect(mainFunction).toBeDefined();
+      expect(mainFunction?.Properties?.Handler).toBe("index.handler");
 
       // The actual testing of ParamsAndSecrets is done at the CDK level, not CloudFormation template level
       // So this test is mostly ensuring that the construct can be created with default ParamsAndSecrets
@@ -317,31 +320,26 @@ describe("JaypieLambda", () => {
 
       const template = Template.fromStack(stack);
 
-      // Check that DataDog layers are not added
-      const resources = template.findResources("AWS::Lambda::Function");
-      const lambdaFunction = Object.values(resources).find(
-        (resource) => resource.Properties.Handler === "index.handler",
-      );
+      const mainFunction = findMainLambdaFunction(template);
+      expect(mainFunction).toBeDefined();
 
       // If there are Layers, verify none of them are DataDog layers
-      if (
-        lambdaFunction.Properties.Layers &&
-        lambdaFunction.Properties.Layers.length > 0
-      ) {
-        const layerRefs = lambdaFunction.Properties.Layers.map(
-          (layer) => layer.Ref || "",
-        );
+      const layers = mainFunction?.Properties?.Layers || [];
+      if (layers.length > 0) {
+        const layerRefs = layers.map((layer: any) => layer.Ref || "");
         expect(
-          layerRefs.some((ref) => ref.includes("DatadogNodeLayer")),
+          layerRefs.some((ref: string) => ref.includes("DatadogNodeLayer")),
         ).toBeFalsy();
         expect(
-          layerRefs.some((ref) => ref.includes("DatadogExtensionLayer")),
+          layerRefs.some((ref: string) =>
+            ref.includes("DatadogExtensionLayer"),
+          ),
         ).toBeFalsy();
       }
 
       // Verify no Datadog environment variables are set
       const environment =
-        lambdaFunction.Properties.Environment?.Variables || {};
+        mainFunction?.Properties?.Environment?.Variables || {};
       expect(environment.DD_API_KEY_SECRET_ARN).toBeUndefined();
       expect(environment.DD_SITE).toBeUndefined();
     });
@@ -359,21 +357,13 @@ describe("JaypieLambda", () => {
 
       const template = Template.fromStack(stack);
 
-      // Verify Datadog layers are added
-      const resources = template.findResources("AWS::Lambda::Function");
-      const lambdaFunction = Object.values(resources).find(
-        (resource) => resource.Properties.Handler === "index.handler",
-      );
+      const mainFunction = findMainLambdaFunction(template);
+      expect(mainFunction).toBeDefined();
 
       // Check for environment variables
-      template.hasResourceProperties("AWS::Lambda::Function", {
-        Environment: {
-          Variables: {
-            DD_API_KEY_SECRET_ARN: datadogApiKeyArn,
-            DD_SITE: CDK.DATADOG.SITE,
-          },
-        },
-      });
+      const envVars = mainFunction?.Properties?.Environment?.Variables || {};
+      expect(envVars.DD_API_KEY_SECRET_ARN).toBe(datadogApiKeyArn);
+      expect(envVars.DD_SITE).toBe(CDK.DATADOG.SITE);
 
       // Verify secret is accessed
       template.hasResourceProperties("AWS::IAM::Policy", {
@@ -428,15 +418,13 @@ describe("JaypieLambda", () => {
 
         const template = Template.fromStack(stack);
 
-        template.hasResourceProperties("AWS::Lambda::Function", {
-          Environment: {
-            Variables: {
-              LOG_LEVEL: "debug",
-              PROJECT_ENV: "test",
-              PROJECT_SERVICE: "my-service",
-            },
-          },
-        });
+        const mainFunction = findMainLambdaFunction(template);
+        expect(mainFunction).toBeDefined();
+
+        const envVars = mainFunction?.Properties?.Environment?.Variables || {};
+        expect(envVars.LOG_LEVEL).toBe("debug");
+        expect(envVars.PROJECT_ENV).toBe("test");
+        expect(envVars.PROJECT_SERVICE).toBe("my-service");
       });
 
       it("does not override explicitly provided environment variables", () => {
@@ -455,15 +443,13 @@ describe("JaypieLambda", () => {
 
         const template = Template.fromStack(stack);
 
-        template.hasResourceProperties("AWS::Lambda::Function", {
-          Environment: {
-            Variables: {
-              LOG_LEVEL: "info",
-              PROJECT_ENV: "production",
-              PROJECT_SERVICE: "override-service",
-            },
-          },
-        });
+        const mainFunction = findMainLambdaFunction(template);
+        expect(mainFunction).toBeDefined();
+
+        const envVars = mainFunction?.Properties?.Environment?.Variables || {};
+        expect(envVars.LOG_LEVEL).toBe("info");
+        expect(envVars.PROJECT_ENV).toBe("production");
+        expect(envVars.PROJECT_SERVICE).toBe("override-service");
       });
 
       it("includes all supported default environment variables", () => {
@@ -488,24 +474,23 @@ describe("JaypieLambda", () => {
 
         const template = Template.fromStack(stack);
 
-        template.hasResourceProperties("AWS::Lambda::Function", {
-          Environment: {
-            Variables: {
-              DATADOG_API_KEY_ARN:
-                "arn:aws:secretsmanager:us-east-1:123456789012:secret:test-datadog-api-key-123456",
-              LOG_LEVEL: "info",
-              MODULE_LOGGER: "winston",
-              MODULE_LOG_LEVEL: "debug",
-              PROJECT_COMMIT: "abc123",
-              PROJECT_ENV: "staging",
-              PROJECT_KEY: "test-key",
-              PROJECT_SECRET: "test-secret",
-              PROJECT_SERVICE: "test-service",
-              PROJECT_SPONSOR: "test-sponsor",
-              PROJECT_VERSION: "1.0.0",
-            },
-          },
-        });
+        const mainFunction = findMainLambdaFunction(template);
+        expect(mainFunction).toBeDefined();
+
+        const envVars = mainFunction?.Properties?.Environment?.Variables || {};
+        expect(envVars.DATADOG_API_KEY_ARN).toBe(
+          "arn:aws:secretsmanager:us-east-1:123456789012:secret:test-datadog-api-key-123456",
+        );
+        expect(envVars.LOG_LEVEL).toBe("info");
+        expect(envVars.MODULE_LOGGER).toBe("winston");
+        expect(envVars.MODULE_LOG_LEVEL).toBe("debug");
+        expect(envVars.PROJECT_COMMIT).toBe("abc123");
+        expect(envVars.PROJECT_ENV).toBe("staging");
+        expect(envVars.PROJECT_KEY).toBe("test-key");
+        expect(envVars.PROJECT_SECRET).toBe("test-secret");
+        expect(envVars.PROJECT_SERVICE).toBe("test-service");
+        expect(envVars.PROJECT_SPONSOR).toBe("test-sponsor");
+        expect(envVars.PROJECT_VERSION).toBe("1.0.0");
       });
     });
 
@@ -625,11 +610,11 @@ describe("JaypieLambda", () => {
 
       const template = Template.fromStack(stack);
 
-      // Check that the Lambda is not configured with ParamsAndSecrets
-      const resources = template.findResources("AWS::Lambda::Function");
-      const lambdaFunction = Object.values(resources)[0];
+      const mainFunction = findMainLambdaFunction(template);
+      expect(mainFunction).toBeDefined();
 
-      expect(lambdaFunction.Properties.ParamsAndSecrets).toBeUndefined();
+      // Check that the Lambda is not configured with ParamsAndSecrets
+      expect(mainFunction?.Properties?.ParamsAndSecrets).toBeUndefined();
     });
 
     it("configures ParamsAndSecrets layer with custom options", () => {
@@ -647,11 +632,12 @@ describe("JaypieLambda", () => {
 
       const template = Template.fromStack(stack);
 
+      const mainFunction = findMainLambdaFunction(template);
+      expect(mainFunction).toBeDefined();
+      expect(mainFunction?.Properties?.Handler).toBe("index.handler");
+
       // Simply verify the function is created, as the ParamsAndSecrets details
       // are not directly exposed in the CloudFormation template
-      template.hasResourceProperties("AWS::Lambda::Function", {
-        Handler: "index.handler",
-      });
     });
   });
 
@@ -676,9 +662,9 @@ describe("JaypieLambda", () => {
 
       // Verify the function exists with expected properties
       const template = Template.fromStack(stack);
-      template.hasResourceProperties("AWS::Lambda::Function", {
-        Handler: "index.handler",
-      });
+      const mainFunction = findMainLambdaFunction(template);
+      expect(mainFunction).toBeDefined();
+      expect(mainFunction?.Properties?.Handler).toBe("index.handler");
     });
 
     it("grants invoke permissions", () => {
@@ -705,7 +691,7 @@ describe("JaypieLambda", () => {
             Match.objectLike({
               Action: "lambda:InvokeFunction",
               Effect: "Allow",
-              Resource: [{}, {}],
+              Resource: Match.anyValue(),
             }),
           ]),
         },

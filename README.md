@@ -789,6 +789,48 @@ const handler = expressHandler(async(req) => {
 });
 ```
 
+#### CORS Helper
+
+The CORS helper provides flexible Cross-Origin Resource Sharing (CORS) middleware with dynamic origin validation.
+
+```javascript
+import { cors } from "jaypie";
+
+// Basic usage - allows requests based on environment variables
+app.use(cors());
+
+// Allow specific origins
+app.use(cors({ origin: "https://mydomain.com" }));
+
+// Allow multiple origins
+app.use(cors({ origin: ["https://mydomain.com", "https://api.mydomain.com"] }));
+
+// Allow all origins (wildcard)
+app.use(cors({ origin: "*" }));
+
+// Custom overrides for the underlying express cors middleware
+app.use(cors({ 
+  origin: "https://mydomain.com",
+  overrides: {
+    credentials: true,
+    optionsSuccessStatus: 200
+  }
+}));
+```
+
+##### Origin Resolution
+
+The CORS helper automatically checks origins in this order:
+
+1. **Explicit origins** - Origins passed in the `origin` parameter
+2. **Environment variables** - `BASE_URL` and `PROJECT_BASE_URL` (automatically adds https:// if missing)
+3. **Sandbox mode** - Allows `localhost` origins when `PROJECT_ENV=sandbox` or `PROJECT_SANDBOX_MODE=true`
+4. **No origin requests** - Always allowed (mobile apps, curl, etc.)
+
+##### Error Handling
+
+Invalid origins receive a `CorsError` (401 Unauthorized) response in JSON:API format.
+
 #### Convenience Routes
 
 _A "handler" returns a function that can be used as an Express route.  

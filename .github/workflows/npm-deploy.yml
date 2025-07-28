@@ -25,8 +25,6 @@ jobs:
         with:
           node-version: 20
       - run: npm ci
-      - run: npm run build
-      - run: npm run build:llm
       - run: npm config set //registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}
       - run: lerna publish from-package --no-private --yes
   lint:
@@ -39,8 +37,6 @@ jobs:
         with:
           node-version: 20
       - run: npm install
-      - run: npm run build
-      - run: npm run build:llm
       - run: npm run lint
   test:
     name: Unit Test (in parallel)
@@ -57,8 +53,6 @@ jobs:
           node-version: ${{ matrix.node-version }}
           cache: 'npm'
       - run: npm install
-      - run: npm run build
-      - run: npm run build:llm
       - name: Vitest with Optional Datadog Tracing
         run: |
           if [[ -n "${{ secrets.DATADOG_CICD_API_KEY }}" ]]; then
@@ -74,3 +68,22 @@ jobs:
           else
             npm test
           fi
+  test-llm-client:
+    name: LLM Client Test (conditional)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+      - name: Install dependencies
+        run: npm install
+      - name: Run LLM Client Tests
+        run: npm run test:llm:client
+        env:
+          APP_PROVIDER: anthropic,openai
+          ANTHROPIC_API_KEY: ${{ secrets.CICD_ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.CICD_OPENAI_API_KEY }}

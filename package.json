@@ -19,7 +19,7 @@
     "build:express": "npm run build --workspace packages/express",
     "build:jaypie": "npm run build --workspace packages/jaypie",
     "build:lambda": "npm run build --workspace packages/lambda",
-    "build:llm": "npm run build:manual --workspace packages/llm",
+    "build:llm": "npm run build --workspace packages/llm",
     "build:mongoose": "npm run build --workspace packages/mongoose",
     "build:testkit": "npm run build --workspace packages/testkit",
     "build:textract": "npm run build --workspace packages/textract",
@@ -29,7 +29,7 @@
     "format": "npm run format:package && npm run format:lint",
     "format:lint": "eslint --fix --quiet .",
     "format:package": "sort-package-json ./package.json ./packages/*/package.json",
-    "postinstall": "npm run build:errors && npm run build:llm && npm run build:testkit && npm run build:types",
+    "postinstall": "npm run build",
     "lint": "eslint --quiet .",
     "new": "hygen jaypie new",
     "new:change": "npm run bin:changelog",
@@ -63,11 +63,18 @@
     "test:jaypie": "npm run test --workspace packages/jaypie",
     "test:lambda": "npm run test --workspace packages/lambda",
     "test:llm": "npm run test --workspace packages/llm",
+    "test:llm:client": "tsx packages/llm/test/client.ts",
     "test:mongoose": "npm run test --workspace packages/mongoose",
     "test:testkit": "npm run test --workspace packages/testkit",
     "test:textract": "npm run test --workspace packages/textract",
     "test:types": "npm run test --workspace packages/types",
     "test:webkit": "npm run test --workspace packages/webkit"
+  },
+  "overrides": {
+    "zod": "^3.23.8"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.52.0"
   },
   "devDependencies": {
     "@jaypie/eslint": "^1.1.0",

@@ -8,7 +8,7 @@ import {
 import { JsonObject, NaturalSchema } from "@jaypie/types";
 import { OpenAI } from "openai";
 import { zodResponseFormat } from "openai/helpers/zod";
-import { z } from "zod";
+import { z } from "zod/v4";
 import { LlmMessageOptions } from "../../types/LlmProvider.interface.js";
 import { naturalZodSchema } from "../../util";
 
@@ -112,10 +112,30 @@ export async function createStructuredCompletion(
       ? responseSchema
       : naturalZodSchema(responseSchema as NaturalSchema);
 
+    const responseFormat = zodResponseFormat(zodSchema, "response");
+
+    const jsonSchema = z.toJSONSchema(zodSchema);
+
+    // Temporary hack because OpenAI requires additional_properties to be false on all objects
+    const checks = [jsonSchema];
+    while (checks.length > 0) {
+      const current = checks[0];
+      if (current.type == "object") {
+        current.additionalProperties = false;
+      }
+      Object.keys(current).forEach((key) => {
+        if (typeof current[key] == "object") {
+          checks.push(current[key]);
+        }
+      });
+      checks.shift();
+    }
+    responseFormat.json_schema.schema = jsonSchema;
+
   const completion = await client.beta.chat.completions.parse({
     messages,
     model,
-    response_format: zodResponseFormat(zodSchema, "response"),
+    response_format: responseFormat,
   });
 
   logger.var({ assistantReply: completion.choices[0].message.parsed });
