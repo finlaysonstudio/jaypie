@@ -1,0 +1,39 @@
+{
+  "name": "@jaypie/mcp",
+  "version": "0.1.0",
+  "description": "Jaypie MCP server",
+  "license": "MIT",
+  "author": "Finlayson Studio",
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "jaypie-mcp": "dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "rollup --config",
+    "format": "eslint . --fix",
+    "lint": "eslint .",
+    "test": "vitest run .",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.17.0",
+    "commander": "^14.0.0",
+    "gray-matter": "^4.0.3",
+    "zod": "^3.23.8"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

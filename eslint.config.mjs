@@ -7,6 +7,14 @@ export default [
   // Jaypie
   //
   ...jaypie,
+  
+  //
+  //
+  // Global ignores
+  //
+  {
+    ignores: ["**/prompts/templates/**"],
+  },
 
   //
   //
@@ -43,5 +51,16 @@ export default [
       "packages/cdk/**/__tests__/**/*.js",
     ],
     ...jest.configs["flat/recommended"],
+  },
+  
+  //
+  //
+  // MCP: Allow gray-matter import
+  //
+  {
+    files: ["packages/mcp/**/*.ts"],
+    rules: {
+      "import-x/no-unresolved": ["error", { ignore: ["gray-matter"] }],
+    },
   },
 ];

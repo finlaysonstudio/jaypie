@@ -70,6 +70,12 @@
     "test:types": "npm run test --workspace packages/types",
     "test:webkit": "npm run test --workspace packages/webkit"
   },
+  "overrides": {
+    "zod": "^3.23.8"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.52.0"
+  },
   "devDependencies": {
     "@jaypie/eslint": "^1.1.0",
     "@jaypie/testkit": "^1.1.0",
@@ -93,8 +99,5 @@
     "supertest": "^7.0.0",
     "tsx": "^4.19.3",
     "vitest": "^3.0.5"
-  },
-  "dependencies": {
-    "@anthropic-ai/sdk": "^0.52.0"
   }
 }
