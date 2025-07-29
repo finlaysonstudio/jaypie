@@ -156,10 +156,7 @@ const submitMetric = async ({
 
   try {
     log.trace.var({ submitMetric: data });
-    const response = await apiInstance.submitMetrics(data);
-    if (JSON.stringify(response) !== JSON.stringify(NO_ERROR_RESPONSE_OBJECT)) {
-      log.var({ submitMetricResponse: response });
-    }
+    await apiInstance.submitMetrics(data);
   } catch (error) {
     log.error.var({ submitMetricError: error.message });
     return false;

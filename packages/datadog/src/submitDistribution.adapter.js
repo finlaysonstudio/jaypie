@@ -156,10 +156,7 @@ const submitDistribution = async ({
 
   try {
     log.trace.var({ submitDistribution: data });
-    const response = await apiInstance.submitDistributionPoints(data);
-    if (JSON.stringify(response) !== JSON.stringify(NO_ERROR_RESPONSE_OBJECT)) {
-      log.var({ submitDistributionResponse: response });
-    }
+    await apiInstance.submitDistributionPoints(data);
   } catch (error) {
     log.error.var({ submitDistributionError: error.message });
     return false;
