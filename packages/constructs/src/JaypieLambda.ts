@@ -23,6 +23,7 @@ export interface JaypieLambdaProps {
     parameterStoreTtl?: number;
     secretsManagerTtl?: number;
   };
+  provisionedConcurrentExecutions?: number;
   reservedConcurrentExecutions?: number;
   roleTag?: string;
   runtime?: lambda.Runtime;
@@ -49,6 +50,7 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
       memorySize = CDK.LAMBDA.MEMORY_SIZE,
       paramsAndSecrets,
       paramsAndSecretsOptions,
+      provisionedConcurrentExecutions,
       reservedConcurrentExecutions,
       roleTag = CDK.ROLE.PROCESSING,
       runtime = lambda.Runtime.NODEJS_22_X,
@@ -209,6 +211,15 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
         resolvedDatadogApiKeyArn,
       );
       datadogApiKey.grantRead(this._lambda);
+    }
+
+    // Configure provisioned concurrency if specified
+    if (provisionedConcurrentExecutions !== undefined) {
+      new lambda.Alias(this, "ProvisionedAlias", {
+        aliasName: "provisioned",
+        version: this._lambda.currentVersion,
+        provisionedConcurrentExecutions,
+      });
     }
 
     if (roleTag) {
