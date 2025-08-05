@@ -4,7 +4,7 @@ import * as acm from "aws-cdk-lib/aws-certificatemanager";
 import * as apiGateway from "aws-cdk-lib/aws-apigateway";
 import * as route53 from "aws-cdk-lib/aws-route53";
 import * as route53Targets from "aws-cdk-lib/aws-route53-targets";
-import { CDK } from "@jaypie/cdk";
+import { CDK, mergeDomain } from "@jaypie/cdk";
 import { constructEnvName } from "./helpers";
 
 export interface JaypieApiGatewayProps extends apiGateway.LambdaRestApiProps {
@@ -27,11 +27,33 @@ export class JaypieApiGateway extends Construct implements apiGateway.IRestApi {
     const {
       certificate = true,
       handler,
-      host,
+      host: propsHost,
       name,
       roleTag = CDK.ROLE.API,
-      zone,
+      zone: propsZone,
     } = props;
+
+    // Determine zone from props or environment
+    let zone = propsZone;
+    if (!zone && process.env.CDK_ENV_API_HOSTED_ZONE) {
+      zone = process.env.CDK_ENV_API_HOSTED_ZONE;
+    }
+
+    // Determine host from props or environment
+    let host = propsHost;
+    if (!host) {
+      if (process.env.CDK_ENV_API_HOST_NAME) {
+        host = process.env.CDK_ENV_API_HOST_NAME;
+      } else if (
+        process.env.CDK_ENV_API_SUBDOMAIN &&
+        process.env.CDK_ENV_API_HOSTED_ZONE
+      ) {
+        host = mergeDomain(
+          process.env.CDK_ENV_API_SUBDOMAIN,
+          process.env.CDK_ENV_API_HOSTED_ZONE,
+        );
+      }
+    }
 
     const apiGatewayName = name || constructEnvName("ApiGateway");
     const certificateName = constructEnvName("Certificate");
