@@ -191,6 +191,15 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
       runtime,
       timeout:
         typeof timeout === "number" ? Duration.seconds(timeout) : timeout,
+      // Enable auto-publishing of versions when using provisioned concurrency
+      currentVersionOptions:
+        provisionedConcurrentExecutions !== undefined
+          ? {
+              removalPolicy: RemovalPolicy.RETAIN,
+              description: "Auto-published version for provisioned concurrency",
+              // Don't set provisioned concurrency here - it will be set on the alias
+            }
+          : undefined,
     });
 
     // Grant secret read permissions
@@ -216,11 +225,18 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
 
     // Configure provisioned concurrency if specified
     if (provisionedConcurrentExecutions !== undefined) {
+      // Use currentVersion which is auto-published with proper configuration
+      const version = this._lambda.currentVersion;
+
+      // Create alias for provisioned concurrency
       this._alias = new lambda.Alias(this, "ProvisionedAlias", {
         aliasName: "provisioned",
-        version: this._lambda.currentVersion,
+        version,
         provisionedConcurrentExecutions,
       });
+
+      // Add explicit dependencies to ensure proper creation order
+      this._alias.node.addDependency(version);
     }
 
     if (roleTag) {
