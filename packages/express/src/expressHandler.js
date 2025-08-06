@@ -135,7 +135,7 @@ const expressHandler = (handler, options = {}) => {
     };
 
     res.status = (...params) => {
-      originalRes.statusSent = params;
+      originalRes.statusSent = params[0];
       return originalRes.status(...params);
     };
 
