@@ -34,7 +34,7 @@ export interface JaypieLambdaProps {
 
 export class JaypieLambda extends Construct implements lambda.IFunction {
   private readonly _lambda: lambda.Function;
-  private readonly _alias?: lambda.Alias;
+  private readonly _provisioned?: lambda.Alias;
   private readonly _code: lambda.Code;
 
   constructor(scope: Construct, id: string, props: JaypieLambdaProps) {
@@ -253,14 +253,14 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
       const version = this._lambda.currentVersion;
 
       // Create alias for provisioned concurrency
-      this._alias = new lambda.Alias(this, "ProvisionedAlias", {
+      this._provisioned = new lambda.Alias(this, "ProvisionedAlias", {
         aliasName: "provisioned",
         version,
         provisionedConcurrentExecutions,
       });
 
       // Add explicit dependencies to ensure proper creation order
-      this._alias.node.addDependency(version);
+      this._provisioned.node.addDependency(version);
     }
 
     if (roleTag) {
@@ -276,8 +276,8 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
     return this._lambda;
   }
 
-  public get alias(): lambda.Alias | undefined {
-    return this._alias;
+  public get provisioned(): lambda.Alias | undefined {
+    return this._provisioned;
   }
 
   public get code(): lambda.Code {
@@ -286,11 +286,11 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
 
   // IFunction implementation
   public get functionArn(): string {
-    return this._alias?.functionArn ?? this._lambda.functionArn;
+    return this._lambda.functionArn;
   }
 
   public get functionName(): string {
-    return this._alias?.functionName ?? this._lambda.functionName;
+    return this._lambda.functionName;
   }
 
   public get grantPrincipal(): iam.IPrincipal {
@@ -322,10 +322,7 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
   }
 
   public get resourceArnsForGrantInvoke(): string[] {
-    return (
-      this._alias?.resourceArnsForGrantInvoke ??
-      this._lambda.resourceArnsForGrantInvoke
-    );
+    return this._lambda.resourceArnsForGrantInvoke;
   }
 
   public addEventSource(source: lambda.IEventSource): void {
@@ -366,9 +363,7 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
   }
 
   public grantInvoke(grantee: iam.IGrantable): iam.Grant {
-    return (
-      this._alias?.grantInvoke(grantee) ?? this._lambda.grantInvoke(grantee)
-    );
+    return this._lambda.grantInvoke(grantee);
   }
 
   public grantInvokeCompositePrincipal(
