@@ -6,6 +6,7 @@ import * as route53 from "aws-cdk-lib/aws-route53";
 import * as route53Targets from "aws-cdk-lib/aws-route53-targets";
 import { CDK, mergeDomain } from "@jaypie/cdk";
 import { constructEnvName } from "./helpers";
+import { JaypieLambda } from "./JaypieLambda";
 
 export interface JaypieApiGatewayProps extends apiGateway.LambdaRestApiProps {
   certificate?: boolean | acm.ICertificate;
@@ -99,8 +100,14 @@ export class JaypieApiGateway extends Construct implements apiGateway.IRestApi {
       ...lambdaRestApiProps
     } = props;
 
+    // Check if handler is a JaypieLambda instance and use provisioned alias if available
+    let handlerToUse = handler;
+    if (handler instanceof JaypieLambda && handler.provisioned) {
+      handlerToUse = handler.provisioned;
+    }
+
     this._api = new apiGateway.LambdaRestApi(this, apiGatewayName, {
-      handler,
+      handler: handlerToUse,
       ...lambdaRestApiProps,
     });
     Tags.of(this._api).add(CDK.TAG.ROLE, roleTag);
