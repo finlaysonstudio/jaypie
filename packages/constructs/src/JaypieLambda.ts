@@ -143,6 +143,7 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
       // Set Datadog environment variables
       Object.assign(environment, {
         DD_API_KEY_SECRET_ARN: resolvedDatadogApiKeyArn,
+        DD_ENHANCED_METRICS: "true",
         DD_ENV: process.env.PROJECT_ENV || "",
         DD_SERVICE: process.env.PROJECT_SERVICE || "",
         DD_SITE: CDK.DATADOG.SITE,
