@@ -100,14 +100,8 @@ export class JaypieApiGateway extends Construct implements apiGateway.IRestApi {
       ...lambdaRestApiProps
     } = props;
 
-    // Check if handler is a JaypieLambda instance and use provisioned alias if available
-    let handlerToUse = handler;
-    if (handler instanceof JaypieLambda && handler.provisioned) {
-      handlerToUse = handler.provisioned;
-    }
-
     this._api = new apiGateway.LambdaRestApi(this, apiGatewayName, {
-      handler: handlerToUse,
+      handler,
       ...lambdaRestApiProps,
     });
     Tags.of(this._api).add(CDK.TAG.ROLE, roleTag);
