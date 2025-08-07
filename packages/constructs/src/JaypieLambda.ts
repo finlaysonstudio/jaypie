@@ -36,6 +36,7 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
   private readonly _lambda: lambda.Function;
   private readonly _provisioned?: lambda.Alias;
   private readonly _code: lambda.Code;
+  private readonly _reference: lambda.IFunction;
 
   constructor(scope: Construct, id: string, props: JaypieLambdaProps) {
     super(scope, id);
@@ -233,7 +234,6 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
 
     // Grant read permissions for JaypieEnvSecrets
     secrets.forEach((secret) => {
-      secret.grantRead(this);
       secret.grantRead(this._lambda);
     });
 
@@ -269,6 +269,10 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
     if (vendorTag) {
       Tags.of(this._lambda).add(CDK.TAG.VENDOR, vendorTag);
     }
+
+    // Assign _reference based on provisioned state
+    this._reference =
+      this._provisioned !== undefined ? this._provisioned : this._lambda;
   }
 
   // Public accessors
@@ -286,68 +290,68 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
 
   // IFunction implementation
   public get functionArn(): string {
-    return this._lambda.functionArn;
+    return this._reference.functionArn;
   }
 
   public get functionName(): string {
-    return this._lambda.functionName;
+    return this._reference.functionName;
   }
 
   public get grantPrincipal(): iam.IPrincipal {
-    return this._lambda.grantPrincipal;
+    return this._reference.grantPrincipal;
   }
 
   public get role(): iam.IRole | undefined {
-    return this._lambda.role;
+    return this._reference.role;
   }
 
   public get architecture(): lambda.Architecture {
-    return this._lambda.architecture;
+    return this._reference.architecture;
   }
 
   public get connections(): import("aws-cdk-lib/aws-ec2").Connections {
-    return this._lambda.connections;
+    return this._reference.connections;
   }
 
   public get isBoundToVpc(): boolean {
-    return this._lambda.isBoundToVpc;
+    return this._reference.isBoundToVpc;
   }
 
   public get latestVersion(): lambda.IVersion {
-    return this._lambda.latestVersion;
+    return this._reference.latestVersion;
   }
 
   public get permissionsNode(): import("constructs").Node {
-    return this._lambda.permissionsNode;
+    return this._reference.permissionsNode;
   }
 
   public get resourceArnsForGrantInvoke(): string[] {
-    return this._lambda.resourceArnsForGrantInvoke;
+    return this._reference.resourceArnsForGrantInvoke;
   }
 
   public addEventSource(source: lambda.IEventSource): void {
-    this._lambda.addEventSource(source);
+    this._reference.addEventSource(source);
   }
 
   public addEventSourceMapping(
     id: string,
     options: lambda.EventSourceMappingOptions,
   ): lambda.EventSourceMapping {
-    return this._lambda.addEventSourceMapping(id, options);
+    return this._reference.addEventSourceMapping(id, options);
   }
 
   public addFunctionUrl(
     options?: lambda.FunctionUrlOptions,
   ): lambda.FunctionUrl {
-    return this._lambda.addFunctionUrl(options);
+    return this._reference.addFunctionUrl(options);
   }
 
   public addPermission(id: string, permission: lambda.Permission): void {
-    this._lambda.addPermission(id, permission);
+    this._reference.addPermission(id, permission);
   }
 
   public addToRolePolicy(statement: iam.PolicyStatement): void {
-    this._lambda.addToRolePolicy(statement);
+    this._reference.addToRolePolicy(statement);
   }
 
   public addEnvironment(
@@ -359,58 +363,58 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
   }
 
   public configureAsyncInvoke(options: lambda.EventInvokeConfigOptions): void {
-    this._lambda.configureAsyncInvoke(options);
+    this._reference.configureAsyncInvoke(options);
   }
 
   public grantInvoke(grantee: iam.IGrantable): iam.Grant {
-    return this._lambda.grantInvoke(grantee);
+    return this._reference.grantInvoke(grantee);
   }
 
   public grantInvokeCompositePrincipal(
     compositePrincipal: iam.CompositePrincipal,
   ): iam.Grant[] {
-    return this._lambda.grantInvokeCompositePrincipal(compositePrincipal);
+    return this._reference.grantInvokeCompositePrincipal(compositePrincipal);
   }
 
   public grantInvokeUrl(grantee: iam.IGrantable): iam.Grant {
-    return this._lambda.grantInvokeUrl(grantee);
+    return this._reference.grantInvokeUrl(grantee);
   }
 
   public metric(
     metricName: string,
     props?: cloudwatch.MetricOptions,
   ): cloudwatch.Metric {
-    return this._lambda.metric(metricName, props);
+    return this._reference.metric(metricName, props);
   }
 
   public metricDuration(props?: cloudwatch.MetricOptions): cloudwatch.Metric {
-    return this._lambda.metricDuration(props);
+    return this._reference.metricDuration(props);
   }
 
   public metricErrors(props?: cloudwatch.MetricOptions): cloudwatch.Metric {
-    return this._lambda.metricErrors(props);
+    return this._reference.metricErrors(props);
   }
 
   public metricInvocations(
     props?: cloudwatch.MetricOptions,
   ): cloudwatch.Metric {
-    return this._lambda.metricInvocations(props);
+    return this._reference.metricInvocations(props);
   }
 
   public metricThrottles(props?: cloudwatch.MetricOptions): cloudwatch.Metric {
-    return this._lambda.metricThrottles(props);
+    return this._reference.metricThrottles(props);
   }
 
   // Additional IFunction implementation
   public grantInvokeLatestVersion(grantee: iam.IGrantable): iam.Grant {
-    return this._lambda.grantInvokeLatestVersion(grantee);
+    return this._reference.grantInvokeLatestVersion(grantee);
   }
 
   public grantInvokeVersion(
     grantee: iam.IGrantable,
     version: lambda.Version,
   ): iam.Grant {
-    return this._lambda.grantInvokeVersion(grantee, version);
+    return this._reference.grantInvokeVersion(grantee, version);
   }
 
   public get env() {
@@ -421,10 +425,10 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
   }
 
   public get stack(): Stack {
-    return this._lambda.stack;
+    return this._reference.stack;
   }
 
   public applyRemovalPolicy(policy: RemovalPolicy): void {
-    this._lambda.applyRemovalPolicy(policy);
+    this._reference.applyRemovalPolicy(policy);
   }
 }
