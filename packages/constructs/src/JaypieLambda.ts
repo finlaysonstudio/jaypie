@@ -145,9 +145,12 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
         DD_API_KEY_SECRET_ARN: resolvedDatadogApiKeyArn,
         DD_ENHANCED_METRICS: "true",
         DD_ENV: process.env.PROJECT_ENV || "",
+        DD_PROFILING_ENABLED: "false",
+        DD_SERVERLESS_APPSEC_ENABLED: "false",
         DD_SERVICE: process.env.PROJECT_SERVICE || "",
         DD_SITE: CDK.DATADOG.SITE,
         DD_TAGS: `${CDK.TAG.SPONSOR}:${process.env.PROJECT_SPONSOR || ""}`,
+        DD_TRACE_OTEL_ENABLED: "false",
       });
     }
 
