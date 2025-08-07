@@ -105,7 +105,7 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
     // Add default environment variables if they exist in process.env
     defaultEnvVars.forEach((envVar) => {
       if (process.env[envVar] && !environment[envVar]) {
-        environment[envVar] = process.env[envVar];
+        environment[envVar] = process.env[envVar]!;
       }
     });
 
