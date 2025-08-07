@@ -1,0 +1,27 @@
+name: NPM Publish
+
+on:
+  push:
+    tags: 
+      - publish-*
+
+env:
+  PROJECT_ENV: meta
+  PROJECT_SERVICE: libraries
+
+jobs:
+  publish:
+    name: NPM Publish
+    timeout-minutes: 20
+    permissions:
+      id-token: write # for aws-actions/configure-aws-credentials
+      contents: read # for actions/checkout
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm ci
+      - run: npm config set //registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}
+      - run: lerna publish from-package --no-private --yes

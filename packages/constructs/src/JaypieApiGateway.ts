@@ -6,6 +6,7 @@ import * as route53 from "aws-cdk-lib/aws-route53";
 import * as route53Targets from "aws-cdk-lib/aws-route53-targets";
 import { CDK, mergeDomain } from "@jaypie/cdk";
 import { constructEnvName } from "./helpers";
+import { JaypieLambda } from "./JaypieLambda";
 
 export interface JaypieApiGatewayProps extends apiGateway.LambdaRestApiProps {
   certificate?: boolean | acm.ICertificate;
