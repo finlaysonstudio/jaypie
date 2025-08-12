@@ -61,6 +61,7 @@ export interface JaypieEnvSecretProps {
   consumer?: boolean;
   envKey?: string;
   export?: string;
+  generateSecretString?: secretsmanager.SecretStringGenerator;
   provider?: boolean;
   roleTag?: string;
   vendorTag?: string;
@@ -78,6 +79,7 @@ export class JaypieEnvSecret extends Construct implements ISecret {
       consumer = checkEnvIsConsumer(),
       envKey,
       export: exportParam,
+      generateSecretString,
       provider = checkEnvIsProvider(),
       roleTag,
       vendorTag,
@@ -111,7 +113,8 @@ export class JaypieEnvSecret extends Construct implements ISecret {
         envKey && process.env[envKey] ? process.env[envKey] : value;
 
       const secretProps: secretsmanager.SecretProps = {
-        secretStringValue: secretValue
+        generateSecretString,
+        secretStringValue: !generateSecretString && secretValue
           ? SecretValue.unsafePlainText(secretValue)
           : undefined,
       };
