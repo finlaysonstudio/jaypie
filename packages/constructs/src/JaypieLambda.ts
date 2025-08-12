@@ -4,6 +4,7 @@ import * as lambda from "aws-cdk-lib/aws-lambda";
 import { CDK } from "@jaypie/cdk";
 import * as iam from "aws-cdk-lib/aws-iam";
 import * as cloudwatch from "aws-cdk-lib/aws-cloudwatch";
+import * as ec2 from "aws-cdk-lib/aws-ec2";
 import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
 import { JaypieEnvSecret } from "./JaypieEnvSecret.js";
 
@@ -28,8 +29,11 @@ export interface JaypieLambdaProps {
   roleTag?: string;
   runtime?: lambda.Runtime;
   secrets?: JaypieEnvSecret[];
+  securityGroups?: ec2.ISecurityGroup[];
   timeout?: Duration | number;
   vendorTag?: string;
+  vpc?: ec2.IVpc;
+  vpcSubnets?: ec2.SubnetSelection;
 }
 
 export class JaypieLambda extends Construct implements lambda.IFunction {
@@ -37,6 +41,16 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
   private readonly _provisioned?: lambda.Alias;
   private readonly _code: lambda.Code;
   private readonly _reference: lambda.IFunction;
+  private readonly _handler: string;
+  private readonly _memorySize: number;
+  private readonly _timeout: Duration;
+  private readonly _runtime: lambda.Runtime;
+  private readonly _environment: { [key: string]: string };
+  private readonly _vpc?: ec2.IVpc;
+  private readonly _vpcSubnets?: ec2.SubnetSelection;
+  private readonly _securityGroups?: ec2.ISecurityGroup[];
+  private readonly _reservedConcurrentExecutions?: number;
+  private readonly _layers: lambda.ILayerVersion[];
 
   constructor(scope: Construct, id: string, props: JaypieLambdaProps) {
     super(scope, id);
@@ -57,8 +71,11 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
       roleTag = CDK.ROLE.PROCESSING,
       runtime = lambda.Runtime.NODEJS_22_X,
       secrets = [],
+      securityGroups,
       timeout = Duration.seconds(CDK.DURATION.LAMBDA_WORKER),
       vendorTag,
+      vpc,
+      vpcSubnets,
     } = props;
 
     // Create a mutable copy of the environment variables
@@ -218,8 +235,11 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
       paramsAndSecrets: resolvedParamsAndSecrets,
       reservedConcurrentExecutions,
       runtime,
+      securityGroups,
       timeout:
         typeof timeout === "number" ? Duration.seconds(timeout) : timeout,
+      vpc,
+      vpcSubnets,
       // Enable auto-publishing of versions when using provisioned concurrency
       currentVersionOptions:
         provisionedConcurrentExecutions !== undefined
@@ -274,6 +294,23 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
       Tags.of(this._lambda).add(CDK.TAG.VENDOR, vendorTag);
     }
 
+    // Store constructor props for later access
+    this._handler = handler;
+    this._memorySize = memorySize;
+    this._timeout =
+      typeof timeout === "number" ? Duration.seconds(timeout) : timeout;
+    this._runtime = runtime;
+    this._environment = {
+      ...environment,
+      ...secretsEnvironment,
+      ...jaypieSecretsEnvironment,
+    };
+    this._vpc = vpc;
+    this._vpcSubnets = vpcSubnets;
+    this._securityGroups = securityGroups;
+    this._reservedConcurrentExecutions = reservedConcurrentExecutions;
+    this._layers = resolvedLayers;
+
     // Assign _reference based on provisioned state
     this._reference =
       this._provisioned !== undefined ? this._provisioned : this._lambda;
@@ -290,6 +327,10 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
 
   public get code(): lambda.Code {
     return this._code;
+  }
+
+  public get reference(): lambda.IFunction {
+    return this._reference;
   }
 
   // IFunction implementation
@@ -434,5 +475,202 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
 
   public applyRemovalPolicy(policy: RemovalPolicy): void {
     this._reference.applyRemovalPolicy(policy);
+  }
+
+  // Additional Lambda Function specific methods
+  public get currentVersion(): lambda.Version {
+    return this._lambda.currentVersion;
+  }
+
+  public get deadLetterQueue():
+    | import("aws-cdk-lib/aws-sqs").IQueue
+    | undefined {
+    return this._lambda.deadLetterQueue;
+  }
+
+  public get deadLetterTopic():
+    | import("aws-cdk-lib/aws-sns").ITopic
+    | undefined {
+    return this._lambda.deadLetterTopic;
+  }
+
+  public get logGroup(): import("aws-cdk-lib/aws-logs").ILogGroup {
+    return this._lambda.logGroup;
+  }
+
+  public get runtime(): lambda.Runtime {
+    return this._runtime;
+  }
+
+  public get timeout(): Duration | undefined {
+    return this._timeout;
+  }
+
+  public addAlias(
+    aliasName: string,
+    options?: lambda.AliasOptions,
+  ): lambda.Alias {
+    return this._lambda.addAlias(aliasName, options);
+  }
+
+  public addLayers(...layers: lambda.ILayerVersion[]): void {
+    this._lambda.addLayers(...layers);
+  }
+
+  public invalidateVersionBasedOn(x: string): void {
+    this._lambda.invalidateVersionBasedOn(x);
+  }
+
+  public metricConcurrentExecutions(
+    props?: cloudwatch.MetricOptions,
+  ): cloudwatch.Metric {
+    return new cloudwatch.Metric({
+      namespace: "AWS/Lambda",
+      metricName: "ConcurrentExecutions",
+      dimensionsMap: {
+        FunctionName: this.functionName,
+      },
+      ...props,
+    });
+  }
+
+  public metricUnreservedConcurrentExecutions(
+    props?: cloudwatch.MetricOptions,
+  ): cloudwatch.Metric {
+    return new cloudwatch.Metric({
+      namespace: "AWS/Lambda",
+      metricName: "UnreservedConcurrentExecutions",
+      ...props,
+    });
+  }
+
+  public addVersion(
+    name: string,
+    codeSha256?: string,
+    description?: string,
+    provisionedExecutions?: number,
+    asyncInvokeConfig?: lambda.EventInvokeConfigOptions,
+  ): lambda.Version {
+    return new lambda.Version(this, name, {
+      lambda: this._lambda,
+      codeSha256,
+      description,
+      provisionedConcurrentExecutions: provisionedExecutions,
+      ...asyncInvokeConfig,
+    });
+  }
+
+  public get memorySize(): number | undefined {
+    return this._memorySize;
+  }
+
+  public get handler(): string {
+    return this._handler;
+  }
+
+  public get environment(): { [key: string]: string } | undefined {
+    return this._environment;
+  }
+
+  public get layers(): lambda.ILayerVersion[] | undefined {
+    return this._layers;
+  }
+
+  public get maxEventAge(): Duration | undefined {
+    return undefined;
+  }
+
+  public get retryAttempts(): number | undefined {
+    return undefined;
+  }
+
+  public get reservedConcurrentExecutions(): number | undefined {
+    return this._reservedConcurrentExecutions;
+  }
+
+  public get description(): string | undefined {
+    return undefined;
+  }
+
+  public get initialPolicy(): iam.PolicyDocument[] | undefined {
+    return undefined;
+  }
+
+  public get logRetentionRole(): iam.IRole | undefined {
+    return undefined;
+  }
+
+  public get logRetentionRetryOptions():
+    | lambda.LogRetentionRetryOptions
+    | undefined {
+    return undefined;
+  }
+
+  public get tracing(): lambda.Tracing | undefined {
+    return undefined;
+  }
+
+  public get profiling(): boolean | undefined {
+    return undefined;
+  }
+
+  public get profilingGroup():
+    | import("aws-cdk-lib/aws-codeguruprofiler").IProfilingGroup
+    | undefined {
+    return undefined;
+  }
+
+  public get environmentEncryption():
+    | import("aws-cdk-lib/aws-kms").IKey
+    | undefined {
+    return undefined;
+  }
+
+  public get codeSigningConfig(): lambda.ICodeSigningConfig | undefined {
+    return undefined;
+  }
+
+  public get filesystemConfig(): lambda.FileSystemConfig | undefined {
+    return undefined;
+  }
+
+  public get filesystemConfigs(): lambda.FileSystemConfig[] | undefined {
+    return undefined;
+  }
+
+  public get ephemeralStorageSize(): number | undefined {
+    return undefined;
+  }
+
+  public get runtimeManagementMode(): lambda.RuntimeManagementMode | undefined {
+    return undefined;
+  }
+
+  public get architectureLabel(): string {
+    return this._lambda.architecture.name;
+  }
+
+  public get vpc(): ec2.IVpc | undefined {
+    return this._vpc;
+  }
+
+  public get vpcSubnets(): ec2.SubnetSelection | undefined {
+    return this._vpcSubnets;
+  }
+
+  public get securityGroups(): ec2.ISecurityGroup[] | undefined {
+    return this._securityGroups;
+  }
+
+  public get allowAllOutbound(): boolean | undefined {
+    return undefined;
+  }
+
+  public get allowPublicSubnet(): boolean | undefined {
+    return undefined;
+  }
+
+  public get canCreateLambdaLogGroup(): boolean {
+    return true;
   }
 }
