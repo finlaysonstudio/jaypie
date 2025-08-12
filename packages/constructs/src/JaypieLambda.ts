@@ -1,5 +1,5 @@
 import { Construct } from "constructs";
-import { Duration, Tags, Stack, RemovalPolicy } from "aws-cdk-lib";
+import { Duration, Size, Stack, RemovalPolicy, Tags } from "aws-cdk-lib";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import { CDK } from "@jaypie/cdk";
 import * as iam from "aws-cdk-lib/aws-iam";
@@ -9,13 +9,28 @@ import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
 import { JaypieEnvSecret } from "./JaypieEnvSecret.js";
 
 export interface JaypieLambdaProps {
+  allowAllOutbound?: boolean;
+  allowPublicSubnet?: boolean;
+  architecture?: lambda.Architecture;
   code: lambda.Code | string;
+  codeSigningConfig?: lambda.ICodeSigningConfig;
   datadogApiKeyArn?: string;
+  deadLetterQueue?: import("aws-cdk-lib/aws-sqs").IQueue;
+  deadLetterQueueEnabled?: boolean;
+  deadLetterTopic?: import("aws-cdk-lib/aws-sns").ITopic;
+  description?: string;
   environment?: { [key: string]: string };
+  environmentEncryption?: import("aws-cdk-lib/aws-kms").IKey;
   envSecrets?: { [key: string]: secretsmanager.ISecret };
+  ephemeralStorageSize?: import("aws-cdk-lib").Size;
+  filesystem?: lambda.FileSystemConfig;
   handler: string;
+  initialPolicy?: iam.PolicyStatement[];
   layers?: lambda.ILayerVersion[];
   logRetention?: number;
+  logRetentionRole?: iam.IRole;
+  logRetentionRetryOptions?: lambda.LogRetentionRetryOptions;
+  maxEventAge?: Duration;
   memorySize?: number;
   paramsAndSecrets?: lambda.ParamsAndSecretsLayerVersion | boolean;
   paramsAndSecretsOptions?: {
@@ -24,13 +39,18 @@ export interface JaypieLambdaProps {
     parameterStoreTtl?: number;
     secretsManagerTtl?: number;
   };
+  profiling?: boolean;
+  profilingGroup?: import("aws-cdk-lib/aws-codeguruprofiler").IProfilingGroup;
   provisionedConcurrentExecutions?: number;
   reservedConcurrentExecutions?: number;
+  retryAttempts?: number;
   roleTag?: string;
   runtime?: lambda.Runtime;
+  runtimeManagementMode?: lambda.RuntimeManagementMode;
   secrets?: JaypieEnvSecret[];
   securityGroups?: ec2.ISecurityGroup[];
   timeout?: Duration | number;
+  tracing?: lambda.Tracing;
   vendorTag?: string;
   vpc?: ec2.IVpc;
   vpcSubnets?: ec2.SubnetSelection;
@@ -51,28 +71,66 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
   private readonly _securityGroups?: ec2.ISecurityGroup[];
   private readonly _reservedConcurrentExecutions?: number;
   private readonly _layers: lambda.ILayerVersion[];
+  private readonly _architecture: lambda.Architecture;
+  private readonly _ephemeralStorageSize?: number;
+  private readonly _codeSigningConfig?: lambda.ICodeSigningConfig;
+  private readonly _filesystemConfigs?: lambda.FileSystemConfig[];
+  private readonly _environmentEncryption?: import("aws-cdk-lib/aws-kms").IKey;
+  private readonly _tracing?: lambda.Tracing;
+  private readonly _profiling?: boolean;
+  private readonly _profilingGroup?: import("aws-cdk-lib/aws-codeguruprofiler").IProfilingGroup;
+  private readonly _logRetentionRole?: iam.IRole;
+  private readonly _logRetentionRetryOptions?: lambda.LogRetentionRetryOptions;
+  private readonly _initialPolicy?: iam.PolicyStatement[];
+  private readonly _description?: string;
+  private readonly _maxEventAge?: Duration;
+  private readonly _retryAttempts?: number;
+  private readonly _runtimeManagementMode?: lambda.RuntimeManagementMode;
+  private readonly _allowAllOutbound?: boolean;
+  private readonly _allowPublicSubnet?: boolean;
+  private readonly _deadLetterQueueEnabled?: boolean;
 
   constructor(scope: Construct, id: string, props: JaypieLambdaProps) {
     super(scope, id);
 
     const {
+      allowAllOutbound,
+      allowPublicSubnet,
+      architecture = lambda.Architecture.X86_64,
       code,
+      codeSigningConfig,
       datadogApiKeyArn,
+      deadLetterQueue,
+      deadLetterQueueEnabled,
+      deadLetterTopic,
+      description,
       environment: initialEnvironment = {},
+      environmentEncryption,
       envSecrets = {},
+      ephemeralStorageSize,
+      filesystem,
       handler = "index.handler",
+      initialPolicy,
       layers = [],
       logRetention = CDK.LAMBDA.LOG_RETENTION,
+      logRetentionRole,
+      logRetentionRetryOptions,
+      maxEventAge,
       memorySize = CDK.LAMBDA.MEMORY_SIZE,
       paramsAndSecrets,
       paramsAndSecretsOptions,
+      profiling,
+      profilingGroup,
       provisionedConcurrentExecutions,
       reservedConcurrentExecutions,
+      retryAttempts,
       roleTag = CDK.ROLE.PROCESSING,
       runtime = lambda.Runtime.NODEJS_22_X,
+      runtimeManagementMode,
       secrets = [],
       securityGroups,
       timeout = Duration.seconds(CDK.DURATION.LAMBDA_WORKER),
+      tracing,
       vendorTag,
       vpc,
       vpcSubnets,
@@ -222,22 +280,42 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
 
     // Create Lambda Function
     this._lambda = new lambda.Function(this, "Function", {
+      allowAllOutbound,
+      allowPublicSubnet,
+      architecture,
       code: this._code,
+      codeSigningConfig,
+      deadLetterQueue,
+      deadLetterQueueEnabled,
+      deadLetterTopic,
+      description,
       environment: {
         ...environment,
         ...secretsEnvironment,
         ...jaypieSecretsEnvironment,
       },
+      environmentEncryption,
+      ephemeralStorageSize,
+      filesystem: filesystem ? { config: filesystem } : undefined,
       handler,
+      initialPolicy,
       layers: resolvedLayers,
       logRetention,
+      logRetentionRole,
+      logRetentionRetryOptions,
+      maxEventAge,
       memorySize,
       paramsAndSecrets: resolvedParamsAndSecrets,
+      profiling,
+      profilingGroup,
       reservedConcurrentExecutions,
+      retryAttempts,
       runtime,
+      runtimeManagementMode,
       securityGroups,
       timeout:
         typeof timeout === "number" ? Duration.seconds(timeout) : timeout,
+      tracing,
       vpc,
       vpcSubnets,
       // Enable auto-publishing of versions when using provisioned concurrency
@@ -310,6 +388,24 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
     this._securityGroups = securityGroups;
     this._reservedConcurrentExecutions = reservedConcurrentExecutions;
     this._layers = resolvedLayers;
+    this._architecture = architecture;
+    this._ephemeralStorageSize = ephemeralStorageSize?.toMebibytes();
+    this._codeSigningConfig = codeSigningConfig;
+    this._filesystemConfigs = filesystem ? [filesystem] : undefined;
+    this._environmentEncryption = environmentEncryption;
+    this._tracing = tracing;
+    this._profiling = profiling;
+    this._profilingGroup = profilingGroup;
+    this._logRetentionRole = logRetentionRole;
+    this._logRetentionRetryOptions = logRetentionRetryOptions;
+    this._initialPolicy = initialPolicy;
+    this._description = description;
+    this._maxEventAge = maxEventAge;
+    this._retryAttempts = retryAttempts;
+    this._runtimeManagementMode = runtimeManagementMode;
+    this._allowAllOutbound = allowAllOutbound;
+    this._allowPublicSubnet = allowPublicSubnet;
+    this._deadLetterQueueEnabled = deadLetterQueueEnabled;
 
     // Assign _reference based on provisioned state
     this._reference =
@@ -577,11 +673,11 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
   }
 
   public get maxEventAge(): Duration | undefined {
-    return undefined;
+    return this._maxEventAge;
   }
 
   public get retryAttempts(): number | undefined {
-    return undefined;
+    return this._retryAttempts;
   }
 
   public get reservedConcurrentExecutions(): number | undefined {
@@ -589,61 +685,61 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
   }
 
   public get description(): string | undefined {
-    return undefined;
+    return this._description;
   }
 
-  public get initialPolicy(): iam.PolicyDocument[] | undefined {
-    return undefined;
+  public get initialPolicy(): iam.PolicyStatement[] | undefined {
+    return this._initialPolicy;
   }
 
   public get logRetentionRole(): iam.IRole | undefined {
-    return undefined;
+    return this._logRetentionRole;
   }
 
   public get logRetentionRetryOptions():
     | lambda.LogRetentionRetryOptions
     | undefined {
-    return undefined;
+    return this._logRetentionRetryOptions;
   }
 
   public get tracing(): lambda.Tracing | undefined {
-    return undefined;
+    return this._tracing;
   }
 
   public get profiling(): boolean | undefined {
-    return undefined;
+    return this._profiling;
   }
 
   public get profilingGroup():
     | import("aws-cdk-lib/aws-codeguruprofiler").IProfilingGroup
     | undefined {
-    return undefined;
+    return this._profilingGroup;
   }
 
   public get environmentEncryption():
     | import("aws-cdk-lib/aws-kms").IKey
     | undefined {
-    return undefined;
+    return this._environmentEncryption;
   }
 
   public get codeSigningConfig(): lambda.ICodeSigningConfig | undefined {
-    return undefined;
+    return this._codeSigningConfig;
   }
 
   public get filesystemConfig(): lambda.FileSystemConfig | undefined {
-    return undefined;
+    return this._filesystemConfigs?.[0];
   }
 
   public get filesystemConfigs(): lambda.FileSystemConfig[] | undefined {
-    return undefined;
+    return this._filesystemConfigs;
   }
 
   public get ephemeralStorageSize(): number | undefined {
-    return undefined;
+    return this._ephemeralStorageSize;
   }
 
   public get runtimeManagementMode(): lambda.RuntimeManagementMode | undefined {
-    return undefined;
+    return this._runtimeManagementMode;
   }
 
   public get architectureLabel(): string {
@@ -663,14 +759,22 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
   }
 
   public get allowAllOutbound(): boolean | undefined {
-    return undefined;
+    return this._allowAllOutbound;
   }
 
   public get allowPublicSubnet(): boolean | undefined {
-    return undefined;
+    return this._allowPublicSubnet;
   }
 
   public get canCreateLambdaLogGroup(): boolean {
     return true;
+  }
+
+  public get canCreatePermissions(): boolean {
+    return true;
+  }
+
+  public get deadLetterQueueEnabled(): boolean | undefined {
+    return this._lambda.deadLetterQueue !== undefined || this._lambda.deadLetterTopic !== undefined;
   }
 }
