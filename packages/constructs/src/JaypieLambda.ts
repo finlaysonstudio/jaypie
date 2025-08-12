@@ -4,6 +4,7 @@ import * as lambda from "aws-cdk-lib/aws-lambda";
 import { CDK } from "@jaypie/cdk";
 import * as iam from "aws-cdk-lib/aws-iam";
 import * as cloudwatch from "aws-cdk-lib/aws-cloudwatch";
+import * as ec2 from "aws-cdk-lib/aws-ec2";
 import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
 import { JaypieEnvSecret } from "./JaypieEnvSecret.js";
 
@@ -28,8 +29,11 @@ export interface JaypieLambdaProps {
   roleTag?: string;
   runtime?: lambda.Runtime;
   secrets?: JaypieEnvSecret[];
+  securityGroups?: ec2.ISecurityGroup[];
   timeout?: Duration | number;
   vendorTag?: string;
+  vpc?: ec2.IVpc;
+  vpcSubnets?: ec2.SubnetSelection;
 }
 
 export class JaypieLambda extends Construct implements lambda.IFunction {
@@ -57,8 +61,11 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
       roleTag = CDK.ROLE.PROCESSING,
       runtime = lambda.Runtime.NODEJS_22_X,
       secrets = [],
+      securityGroups,
       timeout = Duration.seconds(CDK.DURATION.LAMBDA_WORKER),
       vendorTag,
+      vpc,
+      vpcSubnets,
     } = props;
 
     // Create a mutable copy of the environment variables
@@ -218,8 +225,11 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
       paramsAndSecrets: resolvedParamsAndSecrets,
       reservedConcurrentExecutions,
       runtime,
+      securityGroups,
       timeout:
         typeof timeout === "number" ? Duration.seconds(timeout) : timeout,
+      vpc,
+      vpcSubnets,
       // Enable auto-publishing of versions when using provisioned concurrency
       currentVersionOptions:
         provisionedConcurrentExecutions !== undefined
