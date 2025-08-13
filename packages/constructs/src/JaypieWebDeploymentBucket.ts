@@ -342,6 +342,10 @@ export class JaypieWebDeploymentBucket extends Construct implements s3.IBucket {
     return this.bucket.grantWrite(identity, objectsKeyPattern);
   }
 
+  grantReplicationPermission(identity: any, props: any): any {
+    return this.bucket.grantReplicationPermission(identity, props);
+  }
+
   s3UrlForObject(key?: string): string {
     return this.bucket.s3UrlForObject(key);
   }
