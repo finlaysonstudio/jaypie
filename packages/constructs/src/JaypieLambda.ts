@@ -1,5 +1,5 @@
 import { Construct } from "constructs";
-import { Duration, Size, Stack, RemovalPolicy, Tags } from "aws-cdk-lib";
+import { Duration, Stack, RemovalPolicy, Tags } from "aws-cdk-lib";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import { CDK } from "@jaypie/cdk";
 import * as iam from "aws-cdk-lib/aws-iam";
@@ -23,7 +23,7 @@ export interface JaypieLambdaProps {
   environmentEncryption?: import("aws-cdk-lib/aws-kms").IKey;
   envSecrets?: { [key: string]: secretsmanager.ISecret };
   ephemeralStorageSize?: import("aws-cdk-lib").Size;
-  filesystem?: lambda.FileSystemConfig;
+  filesystem?: lambda.FileSystem;
   handler: string;
   initialPolicy?: iam.PolicyStatement[];
   layers?: lambda.ILayerVersion[];
@@ -296,7 +296,7 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
       },
       environmentEncryption,
       ephemeralStorageSize,
-      filesystem: filesystem ? { config: filesystem } : undefined,
+      filesystem,
       handler,
       initialPolicy,
       layers: resolvedLayers,
@@ -391,7 +391,8 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
     this._architecture = architecture;
     this._ephemeralStorageSize = ephemeralStorageSize?.toMebibytes();
     this._codeSigningConfig = codeSigningConfig;
-    this._filesystemConfigs = filesystem ? [filesystem] : undefined;
+    // FileSystem type doesn't expose the underlying config
+    this._filesystemConfigs = undefined;
     this._environmentEncryption = environmentEncryption;
     this._tracing = tracing;
     this._profiling = profiling;
@@ -775,6 +776,9 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
   }
 
   public get deadLetterQueueEnabled(): boolean | undefined {
-    return this._lambda.deadLetterQueue !== undefined || this._lambda.deadLetterTopic !== undefined;
+    return (
+      this._lambda.deadLetterQueue !== undefined ||
+      this._lambda.deadLetterTopic !== undefined
+    );
   }
 }
