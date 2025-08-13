@@ -1,5 +1,5 @@
 import { Construct } from "constructs";
-import { Duration, Size, Stack, RemovalPolicy, Tags } from "aws-cdk-lib";
+import { Duration, Stack, RemovalPolicy, Tags } from "aws-cdk-lib";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import { CDK } from "@jaypie/cdk";
 import * as iam from "aws-cdk-lib/aws-iam";
@@ -23,7 +23,7 @@ export interface JaypieLambdaProps {
   environmentEncryption?: import("aws-cdk-lib/aws-kms").IKey;
   envSecrets?: { [key: string]: secretsmanager.ISecret };
   ephemeralStorageSize?: import("aws-cdk-lib").Size;
-  filesystem?: lambda.FileSystemConfig;
+  filesystem?: lambda.FileSystem;
   handler: string;
   initialPolicy?: iam.PolicyStatement[];
   layers?: lambda.ILayerVersion[];
@@ -59,36 +59,7 @@ export interface JaypieLambdaProps {
 export class JaypieLambda extends Construct implements lambda.IFunction {
   private readonly _lambda: lambda.Function;
   private readonly _provisioned?: lambda.Alias;
-  private readonly _code: lambda.Code;
   private readonly _reference: lambda.IFunction;
-  private readonly _handler: string;
-  private readonly _memorySize: number;
-  private readonly _timeout: Duration;
-  private readonly _runtime: lambda.Runtime;
-  private readonly _environment: { [key: string]: string };
-  private readonly _vpc?: ec2.IVpc;
-  private readonly _vpcSubnets?: ec2.SubnetSelection;
-  private readonly _securityGroups?: ec2.ISecurityGroup[];
-  private readonly _reservedConcurrentExecutions?: number;
-  private readonly _layers: lambda.ILayerVersion[];
-  private readonly _architecture: lambda.Architecture;
-  private readonly _ephemeralStorageSize?: number;
-  private readonly _codeSigningConfig?: lambda.ICodeSigningConfig;
-  private readonly _filesystemConfigs?: lambda.FileSystemConfig[];
-  private readonly _environmentEncryption?: import("aws-cdk-lib/aws-kms").IKey;
-  private readonly _tracing?: lambda.Tracing;
-  private readonly _profiling?: boolean;
-  private readonly _profilingGroup?: import("aws-cdk-lib/aws-codeguruprofiler").IProfilingGroup;
-  private readonly _logRetentionRole?: iam.IRole;
-  private readonly _logRetentionRetryOptions?: lambda.LogRetentionRetryOptions;
-  private readonly _initialPolicy?: iam.PolicyStatement[];
-  private readonly _description?: string;
-  private readonly _maxEventAge?: Duration;
-  private readonly _retryAttempts?: number;
-  private readonly _runtimeManagementMode?: lambda.RuntimeManagementMode;
-  private readonly _allowAllOutbound?: boolean;
-  private readonly _allowPublicSubnet?: boolean;
-  private readonly _deadLetterQueueEnabled?: boolean;
 
   constructor(scope: Construct, id: string, props: JaypieLambdaProps) {
     super(scope, id);
@@ -185,7 +156,8 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
       }
     });
 
-    this._code = typeof code === "string" ? lambda.Code.fromAsset(code) : code;
+    const codeAsset =
+      typeof code === "string" ? lambda.Code.fromAsset(code) : code;
 
     // Create a working copy of layers
     const resolvedLayers = [...layers];
@@ -283,7 +255,7 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
       allowAllOutbound,
       allowPublicSubnet,
       architecture,
-      code: this._code,
+      code: codeAsset,
       codeSigningConfig,
       deadLetterQueue,
       deadLetterQueueEnabled,
@@ -296,7 +268,7 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
       },
       environmentEncryption,
       ephemeralStorageSize,
-      filesystem: filesystem ? { config: filesystem } : undefined,
+      filesystem,
       handler,
       initialPolicy,
       layers: resolvedLayers,
@@ -372,41 +344,6 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
       Tags.of(this._lambda).add(CDK.TAG.VENDOR, vendorTag);
     }
 
-    // Store constructor props for later access
-    this._handler = handler;
-    this._memorySize = memorySize;
-    this._timeout =
-      typeof timeout === "number" ? Duration.seconds(timeout) : timeout;
-    this._runtime = runtime;
-    this._environment = {
-      ...environment,
-      ...secretsEnvironment,
-      ...jaypieSecretsEnvironment,
-    };
-    this._vpc = vpc;
-    this._vpcSubnets = vpcSubnets;
-    this._securityGroups = securityGroups;
-    this._reservedConcurrentExecutions = reservedConcurrentExecutions;
-    this._layers = resolvedLayers;
-    this._architecture = architecture;
-    this._ephemeralStorageSize = ephemeralStorageSize?.toMebibytes();
-    this._codeSigningConfig = codeSigningConfig;
-    this._filesystemConfigs = filesystem ? [filesystem] : undefined;
-    this._environmentEncryption = environmentEncryption;
-    this._tracing = tracing;
-    this._profiling = profiling;
-    this._profilingGroup = profilingGroup;
-    this._logRetentionRole = logRetentionRole;
-    this._logRetentionRetryOptions = logRetentionRetryOptions;
-    this._initialPolicy = initialPolicy;
-    this._description = description;
-    this._maxEventAge = maxEventAge;
-    this._retryAttempts = retryAttempts;
-    this._runtimeManagementMode = runtimeManagementMode;
-    this._allowAllOutbound = allowAllOutbound;
-    this._allowPublicSubnet = allowPublicSubnet;
-    this._deadLetterQueueEnabled = deadLetterQueueEnabled;
-
     // Assign _reference based on provisioned state
     this._reference =
       this._provisioned !== undefined ? this._provisioned : this._lambda;
@@ -419,10 +356,6 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
 
   public get provisioned(): lambda.Alias | undefined {
     return this._provisioned;
-  }
-
-  public get code(): lambda.Code {
-    return this._code;
   }
 
   public get reference(): lambda.IFunction {
@@ -495,14 +428,6 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
     this._reference.addToRolePolicy(statement);
   }
 
-  public addEnvironment(
-    key: string,
-    value: string,
-    options?: lambda.EnvironmentOptions,
-  ): lambda.Function {
-    return this._lambda.addEnvironment(key, value, options);
-  }
-
   public configureAsyncInvoke(options: lambda.EventInvokeConfigOptions): void {
     this._reference.configureAsyncInvoke(options);
   }
@@ -519,6 +444,17 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
 
   public grantInvokeUrl(grantee: iam.IGrantable): iam.Grant {
     return this._reference.grantInvokeUrl(grantee);
+  }
+
+  public grantInvokeLatestVersion(grantee: iam.IGrantable): iam.Grant {
+    return this._reference.grantInvokeLatestVersion(grantee);
+  }
+
+  public grantInvokeVersion(
+    grantee: iam.IGrantable,
+    version: lambda.IVersion,
+  ): iam.Grant {
+    return this._reference.grantInvokeVersion(grantee, version);
   }
 
   public metric(
@@ -546,18 +482,6 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
     return this._reference.metricThrottles(props);
   }
 
-  // Additional IFunction implementation
-  public grantInvokeLatestVersion(grantee: iam.IGrantable): iam.Grant {
-    return this._reference.grantInvokeLatestVersion(grantee);
-  }
-
-  public grantInvokeVersion(
-    grantee: iam.IGrantable,
-    version: lambda.Version,
-  ): iam.Grant {
-    return this._reference.grantInvokeVersion(grantee, version);
-  }
-
   public get env() {
     return {
       account: Stack.of(this).account,
@@ -571,210 +495,5 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
 
   public applyRemovalPolicy(policy: RemovalPolicy): void {
     this._reference.applyRemovalPolicy(policy);
-  }
-
-  // Additional Lambda Function specific methods
-  public get currentVersion(): lambda.Version {
-    return this._lambda.currentVersion;
-  }
-
-  public get deadLetterQueue():
-    | import("aws-cdk-lib/aws-sqs").IQueue
-    | undefined {
-    return this._lambda.deadLetterQueue;
-  }
-
-  public get deadLetterTopic():
-    | import("aws-cdk-lib/aws-sns").ITopic
-    | undefined {
-    return this._lambda.deadLetterTopic;
-  }
-
-  public get logGroup(): import("aws-cdk-lib/aws-logs").ILogGroup {
-    return this._lambda.logGroup;
-  }
-
-  public get runtime(): lambda.Runtime {
-    return this._runtime;
-  }
-
-  public get timeout(): Duration | undefined {
-    return this._timeout;
-  }
-
-  public addAlias(
-    aliasName: string,
-    options?: lambda.AliasOptions,
-  ): lambda.Alias {
-    return this._lambda.addAlias(aliasName, options);
-  }
-
-  public addLayers(...layers: lambda.ILayerVersion[]): void {
-    this._lambda.addLayers(...layers);
-  }
-
-  public invalidateVersionBasedOn(x: string): void {
-    this._lambda.invalidateVersionBasedOn(x);
-  }
-
-  public metricConcurrentExecutions(
-    props?: cloudwatch.MetricOptions,
-  ): cloudwatch.Metric {
-    return new cloudwatch.Metric({
-      namespace: "AWS/Lambda",
-      metricName: "ConcurrentExecutions",
-      dimensionsMap: {
-        FunctionName: this.functionName,
-      },
-      ...props,
-    });
-  }
-
-  public metricUnreservedConcurrentExecutions(
-    props?: cloudwatch.MetricOptions,
-  ): cloudwatch.Metric {
-    return new cloudwatch.Metric({
-      namespace: "AWS/Lambda",
-      metricName: "UnreservedConcurrentExecutions",
-      ...props,
-    });
-  }
-
-  public addVersion(
-    name: string,
-    codeSha256?: string,
-    description?: string,
-    provisionedExecutions?: number,
-    asyncInvokeConfig?: lambda.EventInvokeConfigOptions,
-  ): lambda.Version {
-    return new lambda.Version(this, name, {
-      lambda: this._lambda,
-      codeSha256,
-      description,
-      provisionedConcurrentExecutions: provisionedExecutions,
-      ...asyncInvokeConfig,
-    });
-  }
-
-  public get memorySize(): number | undefined {
-    return this._memorySize;
-  }
-
-  public get handler(): string {
-    return this._handler;
-  }
-
-  public get environment(): { [key: string]: string } | undefined {
-    return this._environment;
-  }
-
-  public get layers(): lambda.ILayerVersion[] | undefined {
-    return this._layers;
-  }
-
-  public get maxEventAge(): Duration | undefined {
-    return this._maxEventAge;
-  }
-
-  public get retryAttempts(): number | undefined {
-    return this._retryAttempts;
-  }
-
-  public get reservedConcurrentExecutions(): number | undefined {
-    return this._reservedConcurrentExecutions;
-  }
-
-  public get description(): string | undefined {
-    return this._description;
-  }
-
-  public get initialPolicy(): iam.PolicyStatement[] | undefined {
-    return this._initialPolicy;
-  }
-
-  public get logRetentionRole(): iam.IRole | undefined {
-    return this._logRetentionRole;
-  }
-
-  public get logRetentionRetryOptions():
-    | lambda.LogRetentionRetryOptions
-    | undefined {
-    return this._logRetentionRetryOptions;
-  }
-
-  public get tracing(): lambda.Tracing | undefined {
-    return this._tracing;
-  }
-
-  public get profiling(): boolean | undefined {
-    return this._profiling;
-  }
-
-  public get profilingGroup():
-    | import("aws-cdk-lib/aws-codeguruprofiler").IProfilingGroup
-    | undefined {
-    return this._profilingGroup;
-  }
-
-  public get environmentEncryption():
-    | import("aws-cdk-lib/aws-kms").IKey
-    | undefined {
-    return this._environmentEncryption;
-  }
-
-  public get codeSigningConfig(): lambda.ICodeSigningConfig | undefined {
-    return this._codeSigningConfig;
-  }
-
-  public get filesystemConfig(): lambda.FileSystemConfig | undefined {
-    return this._filesystemConfigs?.[0];
-  }
-
-  public get filesystemConfigs(): lambda.FileSystemConfig[] | undefined {
-    return this._filesystemConfigs;
-  }
-
-  public get ephemeralStorageSize(): number | undefined {
-    return this._ephemeralStorageSize;
-  }
-
-  public get runtimeManagementMode(): lambda.RuntimeManagementMode | undefined {
-    return this._runtimeManagementMode;
-  }
-
-  public get architectureLabel(): string {
-    return this._lambda.architecture.name;
-  }
-
-  public get vpc(): ec2.IVpc | undefined {
-    return this._vpc;
-  }
-
-  public get vpcSubnets(): ec2.SubnetSelection | undefined {
-    return this._vpcSubnets;
-  }
-
-  public get securityGroups(): ec2.ISecurityGroup[] | undefined {
-    return this._securityGroups;
-  }
-
-  public get allowAllOutbound(): boolean | undefined {
-    return this._allowAllOutbound;
-  }
-
-  public get allowPublicSubnet(): boolean | undefined {
-    return this._allowPublicSubnet;
-  }
-
-  public get canCreateLambdaLogGroup(): boolean {
-    return true;
-  }
-
-  public get canCreatePermissions(): boolean {
-    return true;
-  }
-
-  public get deadLetterQueueEnabled(): boolean | undefined {
-    return this._lambda.deadLetterQueue !== undefined || this._lambda.deadLetterTopic !== undefined;
   }
 }
