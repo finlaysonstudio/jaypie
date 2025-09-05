@@ -69,6 +69,7 @@ const HTTP = {
     PROJECT: {
       ACCOUNT: "X-Project-Account",
       CALLER: "X-Project-Caller",
+      CHAOS: "X-Project-Chaos",
       ENVIRONMENT: "X-Project-Environment",
       KEY: "X-Project-Key",
       HANDLER: "X-Project-Handler",
