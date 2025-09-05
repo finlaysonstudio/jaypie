@@ -1,5 +1,6 @@
 import {
   force,
+  getHeaderFrom,
   HTTP,
   JAYPIE,
   jaypieHandler,
@@ -53,6 +54,13 @@ const expressHandler = (handler, options = {}) => {
 
   return async (req, res, ...params) => {
     // * This is the first line of code that runs when a request is received
+
+    // Set default chaos value
+    if (chaos === undefined) {
+      chaos =
+        process.env.PROJECT_CHAOS ||
+        getHeaderFrom(HTTP.HEADER.PROJECT.CHAOS, req);
+    }
 
     // Re-init the logger
     publicLogger.init();
