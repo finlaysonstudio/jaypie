@@ -7,6 +7,7 @@ import {
 } from "./lib/errors.lib.js";
 
 import { envBoolean } from "./lib/functions.lib.js";
+import invokeChaos from "./lib/functions/invokeChaos.function.js";
 
 //
 //
@@ -26,6 +27,7 @@ import { envBoolean } from "./lib/functions.lib.js";
 const jaypieHandler = (
   handler,
   {
+    chaos = process.env.PROJECT_CHAOS || "none",
     name = undefined,
     setup = [],
     teardown = [],
@@ -79,6 +81,9 @@ const jaypieHandler = (
       );
       throw new UnavailableError();
     }
+
+    // Lifecycle: Chaos
+    await invokeChaos(chaos, { log });
 
     // Lifecycle: Validate
     try {

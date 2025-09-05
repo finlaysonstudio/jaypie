@@ -31,6 +31,7 @@ const expressHandler = (handler, options = {}) => {
   // Validate
   //
   let {
+    chaos,
     locals,
     name,
     setup = [],
@@ -171,6 +172,7 @@ const expressHandler = (handler, options = {}) => {
 
       // Initialize after logging is set up
       jaypieFunction = jaypieHandler(handler, {
+        chaos,
         name,
         setup,
         teardown,

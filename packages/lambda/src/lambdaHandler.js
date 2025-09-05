@@ -20,6 +20,7 @@ const lambdaHandler = function (handler, options = {}) {
   }
 
   let {
+    chaos,
     name,
     setup,
     teardown,
@@ -81,6 +82,7 @@ const lambdaHandler = function (handler, options = {}) {
     //
 
     const jaypieFunction = jaypieHandler(handler, {
+      chaos,
       name,
       setup,
       teardown,
