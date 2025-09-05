@@ -44,7 +44,7 @@ const CDK = {
   },
   DURATION: {
     EXPRESS_API: 30,
-    LAMBDA_WORKER: 120,
+    LAMBDA_WORKER: 900,
     LAMBDA_MAXIMUM: 900,
   },
   ENV: {

@@ -1,6 +1,6 @@
 {
   "name": "jaypie",
-  "version": "1.1.59",
+  "version": "1.1.60",
   "license": "MIT",
   "author": "Finlayson Studio",
   "type": "module",
@@ -29,10 +29,10 @@
   },
   "dependencies": {
     "@jaypie/aws": "^1.1.21",
-    "@jaypie/core": "^1.1.12",
-    "@jaypie/datadog": "^1.1.8",
-    "@jaypie/express": "^1.1.12",
-    "@jaypie/lambda": "^1.1.3",
+    "@jaypie/core": "^1.1.13",
+    "@jaypie/datadog": "^1.1.9",
+    "@jaypie/express": "^1.1.13",
+    "@jaypie/lambda": "^1.1.5",
     "@jaypie/llm": "^1.1.23",
     "@jaypie/mongoose": "^1.1.1"
   },

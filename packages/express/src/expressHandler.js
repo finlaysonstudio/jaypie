@@ -1,5 +1,6 @@
 import {
   force,
+  getHeaderFrom,
   HTTP,
   JAYPIE,
   jaypieHandler,
@@ -7,6 +8,7 @@ import {
   UnhandledError,
   validate as validateIs,
 } from "@jaypie/core";
+import { DATADOG, hasDatadogEnv, submitMetric } from "@jaypie/datadog";
 
 import getCurrentInvokeUuid from "./getCurrentInvokeUuid.adapter.js";
 import decorateResponse from "./decorateResponse.helper.js";
@@ -31,6 +33,7 @@ const expressHandler = (handler, options = {}) => {
   // Validate
   //
   let {
+    chaos,
     locals,
     name,
     setup = [],
@@ -52,6 +55,13 @@ const expressHandler = (handler, options = {}) => {
 
   return async (req, res, ...params) => {
     // * This is the first line of code that runs when a request is received
+
+    // Set default chaos value
+    if (chaos === undefined) {
+      chaos =
+        process.env.PROJECT_CHAOS ||
+        getHeaderFrom(HTTP.HEADER.PROJECT.CHAOS, req);
+    }
 
     // Re-init the logger
     publicLogger.init();
@@ -171,6 +181,7 @@ const expressHandler = (handler, options = {}) => {
 
       // Initialize after logging is set up
       jaypieFunction = jaypieHandler(handler, {
+        chaos,
         name,
         setup,
         teardown,
@@ -275,6 +286,45 @@ const expressHandler = (handler, options = {}) => {
     log.info.var({
       res: summarizeResponse(res, extras),
     });
+
+    // Submit metric if Datadog is configured
+    if (hasDatadogEnv()) {
+      // Construct path from baseUrl and url
+      let path = (req.baseUrl || "") + (req.url || "");
+      // Ensure path starts with /
+      if (!path.startsWith("/")) {
+        path = "/" + path;
+      }
+      // Remove trailing slash unless it's the root path
+      if (path.length > 1 && path.endsWith("/")) {
+        path = path.slice(0, -1);
+      }
+
+      // Replace UUIDs with :id for better aggregation
+      // Matches standard UUID v4 format (8-4-4-4-12 hex characters)
+      path = path.replace(
+        /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi,
+        ":id",
+      );
+
+      // Determine metric name based on environment variables
+      let metricPrefix = "project";
+      if (process.env.PROJECT_SPONSOR) {
+        metricPrefix = process.env.PROJECT_SPONSOR;
+      } else if (process.env.PROJECT_KEY) {
+        metricPrefix = `project.${process.env.PROJECT_KEY}`;
+      }
+
+      await submitMetric({
+        name: `${metricPrefix}.api.response`,
+        type: DATADOG.METRIC.TYPE.COUNT,
+        value: 1,
+        tags: {
+          code: res.statusCode,
+          path,
+        },
+      });
+    }
 
     // Clean up the public logger
     publicLogger.untag("handler");

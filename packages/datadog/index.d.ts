@@ -55,3 +55,5 @@ export interface SubmitDistributionOptions {
 export function submitDistribution(
   options: SubmitDistributionOptions,
 ): Promise<boolean>;
+
+export function hasDatadogEnv(): boolean;

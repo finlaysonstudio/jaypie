@@ -572,11 +572,25 @@ See `HTTP` for status codes.
 
 ### Datadog
 
+Functions all detect the Datadog key in the environment and safely fail on errors.
+
 ```javascript
 const { 
+  submitDistribution,
   submitMetric, 
   submitMetricSet 
 } = require("jaypie");
+```
+
+#### `submitDistribution({ name, tags, type, value })`
+
+```javascript
+import { submitDistribution } from "jaypie";
+
+await submitDistribution({
+  name: "jaypie.metric",
+  value: 1,
+})
 ```
 
 #### `submitMetric({ name, tags, type, value })`
