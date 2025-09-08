@@ -391,10 +391,12 @@ export async function operate(
         }
 
         // Use type assertion to handle the OpenAI SDK response type
+        console.dir(requestOptions, { depth: null });
         const currentResponse = (await openai.responses.create(
           // @ts-expect-error error claims missing non-required id, status
           requestOptions,
         )) as unknown as OpenAIRawResponse;
+        console.dir(currentResponse, { depth: null });
 
         if (retryCount > 0) {
           log.debug(`OpenAI API call succeeded after ${retryCount} retries`);
@@ -526,7 +528,7 @@ export async function operate(
                       }
                       // Clear the pending reasoning items after adding them
                       pendingReasoningItems.length = 0;
-                      
+
                       // Add the function call
                       currentInput.push(output);
                       // Add function call result
@@ -541,6 +543,7 @@ export async function operate(
                       // Content will be set by extractContentFromResponse call later
                     }
                   } catch (error) {
+                    console.dir(error, { depth: null });
                     // TODO: but I do need to tell the model that something went wrong, right?
                     const jaypieError = new BadGatewayError();
                     const detail = [
@@ -599,6 +602,7 @@ export async function operate(
         }
 
         // Continue to next turn
+        console.dir(returnResponse, { depth: null });
         break;
       } catch (error: unknown) {
         // Check if we've reached the maximum number of retries
