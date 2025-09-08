@@ -5,7 +5,7 @@ config();
 
 const INSTRUCTIONS =
   "Provide crisp, punchy answers. Be direct and to the point. Avoid flowery language.";
-const QUESTION = "Imagine you are on vacation and check the weather";
+const QUESTION = "What is the weather in Aruba?";
 
 async function main(provider: string) {
   try {
@@ -26,6 +26,9 @@ async function main(provider: string) {
           if (tool.toolName === "weather") {
             weatherToolCalled = true;
           }
+        },
+        onUnrecoverableModelError: (error) => {
+          console.log(error);
         },
       },
       tools,

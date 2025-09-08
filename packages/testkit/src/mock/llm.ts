@@ -98,7 +98,16 @@ export const Toolkit = createMockWrappedObject(original.Toolkit, {
   isClass: true,
 });
 
+export const JaypieToolkit = createMockWrappedObject(original.JaypieToolkit, {
+  isClass: true,
+});
+
 // Tool collections
-export const toolkit = new original.Toolkit([random, roll, time, weather]);
+export const toolkit = new original.JaypieToolkit([
+  random,
+  roll,
+  time,
+  weather,
+]);
 
 export const tools = toolkit.tools;

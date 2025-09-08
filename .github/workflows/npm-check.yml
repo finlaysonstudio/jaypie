@@ -77,7 +77,7 @@ jobs:
         run: npm install
       - name: Run LLM Client Tests
         if: steps.changes.outputs.llm == 'true'
-        run: npm run test:llm:client
+        run: LOG_LEVEL=trace npm run test:llm:client
         env:
           APP_PROVIDER: anthropic,openai
           ANTHROPIC_API_KEY: ${{ secrets.CICD_ANTHROPIC_API_KEY }}

@@ -137,6 +137,10 @@ function extractContentFromResponse(
     if (output.type === LlmMessageType.FunctionCall) {
       return createFunctionCallContent(output);
     }
+    // Skip reasoning items when extracting content
+    if (output.type === "reasoning") {
+      continue;
+    }
   }
 
   return "";
@@ -433,6 +437,7 @@ export async function operate(
 
         // Check if we need to process function calls for multi-turn conversations
         let hasFunctionCall = false;
+        const pendingReasoningItems = []; // Track reasoning items that need to be paired
 
         try {
           if (currentResponse.output && Array.isArray(currentResponse.output)) {
@@ -440,6 +445,12 @@ export async function operate(
             for (const output of currentResponse.output) {
               returnResponse.output.push(output);
               returnResponse.history.push(output);
+              // Handle reasoning items (GPT-5)
+              if (output.type === "reasoning") {
+                // Store reasoning items to be added with their paired function calls
+                pendingReasoningItems.push(output);
+                continue;
+              }
               if (output.type === LlmMessageType.FunctionCall) {
                 hasFunctionCall = true;
 
@@ -509,6 +520,14 @@ export async function operate(
 
                     // Add model's function call and result
                     if (Array.isArray(currentInput)) {
+                      // Add any pending reasoning items before the function call
+                      for (const reasoningItem of pendingReasoningItems) {
+                        currentInput.push(reasoningItem);
+                      }
+                      // Clear the pending reasoning items after adding them
+                      pendingReasoningItems.length = 0;
+
+                      // Add the function call
                       currentInput.push(output);
                       // Add function call result
                       const functionCallOutput: LlmToolResult = {

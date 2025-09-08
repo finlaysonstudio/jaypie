@@ -3,18 +3,18 @@ export const PROVIDER = {
     // https://docs.anthropic.com/en/docs/about-claude/models/overview
     MODEL: {
       // Jaypie Aliases
-      DEFAULT: "claude-sonnet-4-0" as const,
-      SMALL: "claude-3-5-haiku-latest" as const,
+      DEFAULT: "claude-opus-4-1" as const,
+      SMALL: "claude-sonnet-4-0" as const,
       TINY: "claude-3-5-haiku-latest" as const,
-      LARGE: "claude-opus-4-0" as const,
-      JUMBO: "claude-opus-4-0" as const,
+      LARGE: "claude-opus-4-1" as const,
       // Latests
-      CLAUDE_OPUS_4: "claude-opus-4-0" as const,
+      CLAUDE_OPUS_4: "claude-opus-4-1" as const,
       CLAUDE_SONNET_4: "claude-sonnet-4-0" as const,
       CLAUDE_3_HAIKU: "claude-3-5-haiku-latest" as const,
       CLAUDE_3_OPUS: "claude-3-opus-latest" as const,
       CLAUDE_3_SONNET: "claude-3-7-sonnet-latest" as const,
       // Specifics
+      CLAUDE_OPUS_4_1: "claude-opus-4-1" as const,
       CLAUDE_OPUS_4_0: "claude-opus-4-0" as const,
       CLAUDE_SONNET_4_0: "claude-sonnet-4-0" as const,
       CLAUDE_3_7_SONNET: "claude-3-7-sonnet-latest	" as const,
@@ -47,12 +47,14 @@ export const PROVIDER = {
     // https://platform.openai.com/docs/models
     MODEL: {
       // Jaypie Aliases
-      DEFAULT: "gpt-4.1" as const,
-      SMALL: "gpt-4.1-mini" as const,
-      LARGE: "o3" as const,
-      TINY: "gpt-4.1-nano" as const,
-      JUMBO: "o3-pro" as const,
+      DEFAULT: "gpt-5" as const,
+      SMALL: "gpt-5-mini" as const,
+      LARGE: "gpt-5" as const,
+      TINY: "gpt-5-nano" as const,
       // OpenAI Official
+      GPT_5: "gpt-5" as const,
+      GPT_5_MINI: "gpt-5-mini" as const,
+      GPT_5_NANO: "gpt-5-nano" as const,
       GPT_4_1: "gpt-4.1" as const,
       GPT_4_1_MINI: "gpt-4.1-mini" as const,
       GPT_4_1_NANO: "gpt-4.1-nano" as const,
