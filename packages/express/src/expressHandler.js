@@ -320,7 +320,7 @@ const expressHandler = (handler, options = {}) => {
         type: DATADOG.METRIC.TYPE.COUNT,
         value: 1,
         tags: {
-          code: res.statusCode,
+          status: res.statusCode,
           path,
         },
       });
