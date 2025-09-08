@@ -628,7 +628,6 @@ export async function operate(
         }
 
         if (isNotRetryable) {
-          console.log("error :>> ", error);
           log.error("OpenAI API call failed with non-retryable error");
           log.var({ error });
 

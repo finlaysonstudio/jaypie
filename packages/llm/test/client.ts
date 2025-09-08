@@ -27,6 +27,9 @@ async function main(provider: string) {
             weatherToolCalled = true;
           }
         },
+        onUnrecoverableModelError: (error) => {
+          console.log(error);
+        },
       },
       tools,
       instructions: INSTRUCTIONS,
