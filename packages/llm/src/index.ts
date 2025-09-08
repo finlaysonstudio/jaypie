@@ -9,4 +9,4 @@ export type {
 } from "./types/LlmProvider.interface.js";
 export type { LlmTool } from "./types/LlmTool.interface.js";
 
-export { toolkit, Toolkit, tools } from "./tools/index.js";
+export { JaypieToolkit, toolkit, Toolkit, tools } from "./tools/index.js";
