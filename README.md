@@ -1501,7 +1501,32 @@ const translateTool: LlmTool = {
     // Implementation of translation logic
     // Could call an external API or use a library
     return { translatedText: `[${targetLanguage}] ${text}` };
-  }
+  },
+  // Optional: Custom logging message
+  message: "Translating text to another language"
+};
+
+// Tool with dynamic logging message
+const weatherTool: LlmTool = {
+  name: "weather",
+  description: "Gets weather for a location",
+  type: "function",
+  parameters: {
+    type: "object",
+    properties: {
+      location: {
+        type: "string",
+        description: "Location to get weather for"
+      }
+    },
+    required: ["location"]
+  },
+  call: async ({ location }) => {
+    // Implementation
+    return { temperature: 72, location };
+  },
+  // Dynamic message based on arguments
+  message: (args, context) => `Getting weather for ${args.location}`
 };
 
 // Use the custom tool
@@ -1519,9 +1544,17 @@ For more advanced tool management, you can use the `Toolkit` class directly:
 import { Llm, Toolkit } from "jaypie";
 import { toolkit } from "jaypie";
 
-// Create a toolkit with explanation mode enabled
+// Create a toolkit with options
 const myToolkit = new Toolkit([toolkit.time, toolkit.weather], { 
-  explain: true // Adds __Explanation field to tool parameters
+  explain: true, // Adds __Explanation field to tool parameters
+  log: true      // Enable tool call logging (default: true)
+});
+
+// Custom logging function
+const customToolkit = new Toolkit([toolkit.time], {
+  log: (message, context) => {
+    console.log(`Tool ${context.name} called: ${message}`);
+  }
 });
 
 // Use the toolkit in operate
@@ -1529,6 +1562,27 @@ const llm = new Llm();
 const result = await llm.operate("What time is it and what's the weather?", {
   tools: myToolkit.tools,
   explain: true
+});
+```
+
+##### Toolkit Options
+
+- **explain** (boolean): Adds an `__Explanation` field to tool parameters, prompting the LLM to explain why it's calling the tool
+- **log** (boolean | LogFunction): Controls tool call logging. Set to `false` to disable, or provide a custom logging function
+
+##### Extending a Toolkit
+
+You can add tools to an existing toolkit using the `extend` method:
+
+```javascript
+const myToolkit = new Toolkit([toolkit.time]);
+
+// Add more tools
+myToolkit.extend([toolkit.weather, toolkit.roll], {
+  replace: true,  // Replace existing tools with same name (default: true)
+  warn: true,     // Warn when replacing tools (default: true)
+  explain: false, // Override explain setting for extended toolkit
+  log: false      // Override log setting for extended toolkit
 });
 ```
 
@@ -1559,20 +1613,40 @@ const result = await llm.operate("What's the weather in {{city}}?", {
   
   // Tool execution hooks
   hooks: {
+    // Called before each model request
+    beforeEachModelRequest: ({ input, options, providerRequest }) => {
+      console.log("Sending request to model");
+      // Return value is ignored, can return Promise
+    },
+    // Called after each model response
+    afterEachModelResponse: ({ input, options, providerRequest, providerResponse, content, usage }) => {
+      console.log("Received response from model");
+      // Return value is ignored, can return Promise
+    },
     // Called before each tool execution
-    beforeEachTool: (toolName, args) => {
+    beforeEachTool: ({ toolName, args }) => {
       console.log(`About to call ${toolName} with args: ${args}`);
       // Return value is ignored, can return Promise
     },
     // Called after each tool execution with the result
-    afterEachTool: (result, toolName, args) => {
+    afterEachTool: ({ result, toolName, args }) => {
       console.log(`Tool ${toolName} returned:`, result);
       // Can modify the result by returning a new value
       return result;
     },
     // Called when a tool throws an error
-    onToolError: (error, toolName, args) => {
+    onToolError: ({ error, toolName, args }) => {
       console.error(`Error in tool ${toolName}:`, error);
+      // Return value is ignored, can return Promise
+    },
+    // Called when model encounters a retryable error
+    onRetryableModelError: ({ input, options, providerRequest, error }) => {
+      console.warn("Retryable error encountered, will retry:", error);
+      // Return value is ignored, can return Promise
+    },
+    // Called when model encounters an unrecoverable error
+    onUnrecoverableModelError: ({ input, options, providerRequest, error }) => {
+      console.error("Unrecoverable error encountered:", error);
       // Return value is ignored, can return Promise
     }
   },
