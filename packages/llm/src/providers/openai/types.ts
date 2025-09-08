@@ -40,12 +40,22 @@ export interface OpenAIFunctionCallOutput {
 }
 
 /**
+ * Represents a reasoning item in the OpenAI response (GPT-5)
+ */
+export interface OpenAIReasoningItem {
+  type: "reasoning";
+  id: string;
+  content?: string;
+}
+
+/**
  * Union type for all possible response items
  */
 export type OpenAIResponseItem =
   | OpenAIFunctionCall
   | OpenAIMessage
-  | OpenAIFunctionCallOutput;
+  | OpenAIFunctionCallOutput
+  | OpenAIReasoningItem;
 
 /**
  * Represents token usage information in the OpenAI response
