@@ -437,7 +437,7 @@ export async function operate(
 
         // Check if we need to process function calls for multi-turn conversations
         let hasFunctionCall = false;
-        let reasoningItem = null; // Track reasoning item for pairing with function calls
+        const pendingReasoningItems = []; // Track reasoning items that need to be paired
 
         try {
           if (currentResponse.output && Array.isArray(currentResponse.output)) {
@@ -447,12 +447,8 @@ export async function operate(
               returnResponse.history.push(output);
               // Handle reasoning items (GPT-5)
               if (output.type === "reasoning") {
-                // Store reasoning item to pair with function calls
-                reasoningItem = output;
-                // Include reasoning items in currentInput for next turn
-                if (Array.isArray(currentInput)) {
-                  currentInput.push(output);
-                }
+                // Store reasoning items to be added with their paired function calls
+                pendingReasoningItems.push(output);
                 continue;
               }
               if (output.type === LlmMessageType.FunctionCall) {
@@ -524,7 +520,14 @@ export async function operate(
 
                     // Add model's function call and result
                     if (Array.isArray(currentInput)) {
-                      // The reasoning item was already added above
+                      // Add any pending reasoning items before the function call
+                      for (const reasoningItem of pendingReasoningItems) {
+                        currentInput.push(reasoningItem);
+                      }
+                      // Clear the pending reasoning items after adding them
+                      pendingReasoningItems.length = 0;
+                      
+                      // Add the function call
                       currentInput.push(output);
                       // Add function call result
                       const functionCallOutput: LlmToolResult = {
