@@ -20,7 +20,7 @@ describe("Constants", () => {
       expect(PROVIDER.ANTHROPIC.MODEL.DEFAULT).toBeDefined();
       expect(PROVIDER.ANTHROPIC.MODEL.DEFAULT).toBeString();
       expect(PROVIDER.ANTHROPIC.MODEL.DEFAULT).toBe(
-        PROVIDER.ANTHROPIC.MODEL.CLAUDE_SONNET_4,
+        PROVIDER.ANTHROPIC.MODEL.CLAUDE_OPUS_4,
       );
       expect(PROVIDER.ANTHROPIC.MODEL.CLAUDE_3_HAIKU).toBe(
         "claude-3-5-haiku-latest",
