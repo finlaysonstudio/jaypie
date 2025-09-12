@@ -1,6 +1,6 @@
 {
   "name": "@jaypie/lambda",
-  "version": "1.1.5",
+  "version": "1.1.6",
   "license": "MIT",
   "author": "Finlayson Studio",
   "type": "module",
@@ -27,7 +27,7 @@
     "test:spec:lambdaHandler": "vitest run ./src/__tests__/lambdaHandler.spec.js"
   },
   "dependencies": {
-    "@jaypie/core": "^1.1.0"
+    "@jaypie/core": "^1.1.14"
   },
   "publishConfig": {
     "access": "public"
