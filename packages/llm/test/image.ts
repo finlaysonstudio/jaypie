@@ -34,7 +34,6 @@ async function main(provider: string) {
     };
     const inputMessage: LlmInputMessage = {
       role: LlmMessageRole.User,
-      type: LlmMessageType.Message,
       content: [textContent, imageContent],
     };
 

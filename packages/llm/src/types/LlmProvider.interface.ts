@@ -77,7 +77,7 @@ export type LlmInputContent =
 export interface LlmInputMessage {
   content: string | Array<LlmInputContent>;
   role: LlmMessageRole;
-  type: LlmMessageType.Message;
+  type?: LlmMessageType.Message;
 }
 
 // Output
