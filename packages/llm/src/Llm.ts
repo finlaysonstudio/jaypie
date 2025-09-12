@@ -1,6 +1,7 @@
 import { JsonObject } from "@jaypie/types";
-import { NotImplementedError } from "@jaypie/errors";
+import { ConfigurationError, NotImplementedError } from "@jaypie/errors";
 import { DEFAULT, LlmProviderName, PROVIDER } from "./constants.js";
+import { determineModelProvider } from "./util/determineModelProvider.js";
 import {
   LlmProvider,
   LlmHistory,
@@ -22,9 +23,21 @@ class Llm implements LlmProvider {
     providerName: LlmProviderName = DEFAULT.PROVIDER.NAME,
     options: LlmOptions = {},
   ) {
-    this._provider = providerName;
-    this._options = options;
-    this._llm = this.createProvider(providerName, options);
+    const { model } = options;
+    let finalProvider = providerName;
+    let finalModel = model;
+
+    if (model) {
+      const determined = determineModelProvider(model);
+      finalModel = determined.model;
+      if (determined.provider) {
+        finalProvider = determined.provider as LlmProviderName;
+      }
+    }
+
+    this._provider = finalProvider;
+    this._options = { ...options, model: finalModel };
+    this._llm = this.createProvider(finalProvider, this._options);
   }
 
   private createProvider(
@@ -44,7 +57,7 @@ class Llm implements LlmProvider {
           { apiKey },
         );
       default:
-        throw new Error(`Unsupported provider: ${providerName}`);
+        throw new ConfigurationError(`Unsupported provider: ${providerName}`);
     }
   }
 
@@ -89,7 +102,25 @@ class Llm implements LlmProvider {
     },
   ): Promise<LlmOperateResponse> {
     const { llm, apiKey, model, ...operateOptions } = options || {};
-    const instance = new Llm(llm, { apiKey, model });
+
+    let finalLlm = llm;
+    let finalModel = model;
+
+    if (!llm && model) {
+      const determined = determineModelProvider(model);
+      if (determined.provider) {
+        finalLlm = determined.provider as LlmProviderName;
+      }
+    } else if (llm && model) {
+      // When both llm and model are provided, check if they conflict
+      const determined = determineModelProvider(model);
+      if (determined.provider && determined.provider !== llm) {
+        // Don't pass the conflicting model to the constructor
+        finalModel = undefined;
+      }
+    }
+
+    const instance = new Llm(finalLlm, { apiKey, model: finalModel });
     return instance.operate(input, operateOptions);
   }
 }
