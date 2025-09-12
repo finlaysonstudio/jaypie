@@ -7,6 +7,7 @@ import * as cloudwatch from "aws-cdk-lib/aws-cloudwatch";
 import * as ec2 from "aws-cdk-lib/aws-ec2";
 import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
 import { JaypieEnvSecret } from "./JaypieEnvSecret.js";
+import { jaypieLambdaEnv } from "./helpers/jaypieLambdaEnv.js";
 
 export interface JaypieLambdaProps {
   allowAllOutbound?: boolean;
@@ -107,54 +108,8 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
       vpcSubnets,
     } = props;
 
-    // Create a mutable copy of the environment variables
-    let environment = { ...initialEnvironment };
-
-    // Default environment values
-    const defaultEnvValues: { [key: string]: string } = {
-      AWS_LAMBDA_NODEJS_DISABLE_CALLBACK_WARNING: "true",
-    };
-
-    // Apply default environment values with user overrides
-    Object.entries(defaultEnvValues).forEach(([key, defaultValue]) => {
-      if (key in initialEnvironment) {
-        const userValue = initialEnvironment[key];
-        // If user passes a string, use that value
-        if (typeof userValue === "string") {
-          environment[key] = userValue;
-        }
-        // If user passes non-string falsy value, omit the key
-        else if (!userValue) {
-          delete environment[key];
-        }
-        // Ignore non-string truthy values (key already not present)
-      } else {
-        // No user override, use default value
-        environment[key] = defaultValue;
-      }
-    });
-
-    // Default environment variables from process.env if present
-    const defaultEnvVars = [
-      "DATADOG_API_KEY_ARN",
-      "LOG_LEVEL",
-      "MODULE_LOGGER",
-      "MODULE_LOG_LEVEL",
-      "PROJECT_COMMIT",
-      "PROJECT_ENV",
-      "PROJECT_KEY",
-      "PROJECT_SECRET",
-      "PROJECT_SERVICE",
-      "PROJECT_SPONSOR",
-      "PROJECT_VERSION",
-    ];
-
-    // Add default environment variables if they exist in process.env
-    defaultEnvVars.forEach((envVar) => {
-      if (process.env[envVar] && !environment[envVar]) {
-        environment[envVar] = process.env[envVar]!;
-      }
-    });
+    // Get base environment with defaults
+    const environment = jaypieLambdaEnv({ initialEnvironment });
 
     const codeAsset =
       typeof code === "string" ? lambda.Code.fromAsset(code) : code;
