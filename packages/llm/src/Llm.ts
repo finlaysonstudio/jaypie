@@ -3,6 +3,8 @@ import { NotImplementedError } from "@jaypie/errors";
 import { DEFAULT, LlmProviderName, PROVIDER } from "./constants.js";
 import {
   LlmProvider,
+  LlmHistory,
+  LlmInputMessage,
   LlmMessageOptions,
   LlmOperateOptions,
   LlmOptions,
@@ -54,7 +56,7 @@ class Llm implements LlmProvider {
   }
 
   async operate(
-    message: string,
+    input: string | LlmHistory | LlmInputMessage,
     options: LlmOperateOptions = {},
   ): Promise<LlmOperateResponse> {
     if (!this._llm.operate) {
@@ -62,7 +64,7 @@ class Llm implements LlmProvider {
         `Provider ${this._provider} does not support operate method`,
       );
     }
-    return this._llm.operate(message, options);
+    return this._llm.operate(input, options);
   }
 
   static async send(
@@ -79,7 +81,7 @@ class Llm implements LlmProvider {
   }
 
   static async operate(
-    message: string,
+    input: string | LlmHistory | LlmInputMessage,
     options?: LlmOperateOptions & {
       llm?: LlmProviderName;
       apiKey?: string;
@@ -88,7 +90,7 @@ class Llm implements LlmProvider {
   ): Promise<LlmOperateResponse> {
     const { llm, apiKey, model, ...operateOptions } = options || {};
     const instance = new Llm(llm, { apiKey, model });
-    return instance.operate(message, operateOptions);
+    return instance.operate(input, operateOptions);
   }
 }
 
