@@ -1,6 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { HTTP, InternalError, NotFoundError } from "@jaypie/core";
+import {
+  HTTP,
+  InternalError,
+  NotFoundError,
+  jaypieHandler,
+} from "@jaypie/core";
 
 import getCurrentInvokeUuid from "../getCurrentInvokeUuid.adapter.js";
 import decorateResponse from "../decorateResponse.helper.js";
@@ -15,9 +20,42 @@ import expressHandler from "../expressHandler.js";
 
 vi.mock("../getCurrentInvokeUuid.adapter.js");
 vi.mock("../decorateResponse.helper.js");
+vi.mock("@jaypie/core", async (importOriginal) => {
+  const actual = await importOriginal();
+  return {
+    ...actual,
+    jaypieHandler: vi.fn(),
+  };
+});
 
 beforeEach(() => {
   getCurrentInvokeUuid.mockReturnValue("MOCK_UUID");
+  jaypieHandler.mockImplementation((handler, options) => {
+    return async (...args) => {
+      // Simulate environment variable processing for unavailable (same logic as jaypieHandler)
+      let unavailable = options?.unavailable;
+      if (unavailable === undefined) {
+        // Simulate envBoolean("PROJECT_UNAVAILABLE", { defaultValue: false })
+        const envValue = process.env.PROJECT_UNAVAILABLE;
+        unavailable = envValue === "true";
+      }
+
+      // Simulate unavailable check - this should happen before anything else
+      if (unavailable) {
+        const { UnavailableError } = await import("@jaypie/core");
+        throw new UnavailableError();
+      }
+      // Simulate setup functions execution for locals tests
+      if (options?.setup && Array.isArray(options.setup)) {
+        for (const setupFn of options.setup) {
+          if (typeof setupFn === "function") {
+            await setupFn(...args);
+          }
+        }
+      }
+      return await handler(...args);
+    };
+  });
 });
 
 afterEach(() => {
@@ -566,6 +604,181 @@ describe("Express Handler", () => {
         const response = mockResJson.mock.calls[0][0];
         expect(response).toBeJaypieError();
         expect(response.errors[0].status).toBe(HTTP.CODE.UNAVAILABLE);
+      });
+    });
+    describe("Chaos", () => {
+      const DEFAULT_ENV = process.env;
+
+      beforeEach(() => {
+        process.env = { ...DEFAULT_ENV };
+      });
+
+      afterEach(() => {
+        process.env = DEFAULT_ENV;
+      });
+
+      it("Passes default chaos from environment to jaypieHandler", async () => {
+        // Arrange
+        process.env.PROJECT_CHAOS = "medium";
+        const mockFunction = vi.fn();
+        const handler = expressHandler(mockFunction);
+        const req = {};
+        const res = {
+          on: vi.fn(),
+          status: vi.fn(() => res),
+          json: vi.fn(),
+        };
+        const next = () => {};
+        // Act
+        await handler(req, res, next);
+        // Assert
+        expect(jaypieHandler).toHaveBeenCalledWith(mockFunction, {
+          chaos: "medium",
+          name: expect.any(String),
+          setup: expect.any(Array),
+          teardown: expect.any(Array),
+          unavailable: undefined,
+          validate: undefined,
+        });
+      });
+
+      it("Passes chaos from options to jaypieHandler", async () => {
+        // Arrange
+        const mockFunction = vi.fn();
+        const handler = expressHandler(mockFunction, { chaos: "high" });
+        const req = {};
+        const res = {
+          on: vi.fn(),
+          status: vi.fn(() => res),
+          json: vi.fn(),
+        };
+        const next = () => {};
+        // Act
+        await handler(req, res, next);
+        // Assert
+        expect(jaypieHandler).toHaveBeenCalledWith(mockFunction, {
+          chaos: "high",
+          name: expect.any(String),
+          setup: expect.any(Array),
+          teardown: expect.any(Array),
+          unavailable: undefined,
+          validate: undefined,
+        });
+      });
+
+      it("Passes chaos from HTTP header to jaypieHandler", async () => {
+        // Arrange
+        const mockFunction = vi.fn();
+        const handler = expressHandler(mockFunction);
+        const req = {
+          headers: {
+            "X-Project-Chaos": "low",
+          },
+        };
+        const res = {
+          on: vi.fn(),
+          status: vi.fn(() => res),
+          json: vi.fn(),
+        };
+        const next = () => {};
+        // Act
+        await handler(req, res, next);
+        // Assert
+        expect(jaypieHandler).toHaveBeenCalledWith(mockFunction, {
+          chaos: "low",
+          name: expect.any(String),
+          setup: expect.any(Array),
+          teardown: expect.any(Array),
+          unavailable: undefined,
+          validate: undefined,
+        });
+      });
+
+      it("Options override header and environment chaos", async () => {
+        // Arrange
+        process.env.PROJECT_CHAOS = "medium";
+        const mockFunction = vi.fn();
+        const handler = expressHandler(mockFunction, { chaos: "high" });
+        const req = {
+          headers: {
+            "X-Project-Chaos": "low",
+          },
+        };
+        const res = {
+          on: vi.fn(),
+          status: vi.fn(() => res),
+          json: vi.fn(),
+        };
+        const next = () => {};
+        // Act
+        await handler(req, res, next);
+        // Assert
+        expect(jaypieHandler).toHaveBeenCalledWith(mockFunction, {
+          chaos: "high",
+          name: expect.any(String),
+          setup: expect.any(Array),
+          teardown: expect.any(Array),
+          unavailable: undefined,
+          validate: undefined,
+        });
+      });
+
+      it("Environment overrides header chaos when no options provided", async () => {
+        // Arrange
+        process.env.PROJECT_CHAOS = "medium";
+        const mockFunction = vi.fn();
+        const handler = expressHandler(mockFunction);
+        const req = {
+          headers: {
+            "X-Project-Chaos": "low",
+          },
+        };
+        const res = {
+          on: vi.fn(),
+          status: vi.fn(() => res),
+          json: vi.fn(),
+        };
+        const next = () => {};
+        // Act
+        await handler(req, res, next);
+        // Assert
+        expect(jaypieHandler).toHaveBeenCalledWith(mockFunction, {
+          chaos: "medium",
+          name: expect.any(String),
+          setup: expect.any(Array),
+          teardown: expect.any(Array),
+          unavailable: undefined,
+          validate: undefined,
+        });
+      });
+
+      it("Uses header chaos when no environment variable set", async () => {
+        // Arrange
+        delete process.env.PROJECT_CHAOS;
+        const mockFunction = vi.fn();
+        const handler = expressHandler(mockFunction);
+        const req = {
+          headers: {
+            "X-Project-Chaos": "low",
+          },
+        };
+        const res = {
+          on: vi.fn(),
+          status: vi.fn(() => res),
+          json: vi.fn(),
+        };
+        const next = () => {};
+        // Act
+        await handler(req, res, next);
+        // Assert
+        expect(jaypieHandler).toHaveBeenCalledWith(mockFunction, {
+          chaos: "low",
+          name: expect.any(String),
+          setup: expect.any(Array),
+          teardown: expect.any(Array),
+          unavailable: undefined,
+          validate: undefined,
+        });
       });
     });
   });
