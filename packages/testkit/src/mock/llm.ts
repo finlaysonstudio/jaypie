@@ -102,6 +102,13 @@ export const JaypieToolkit = createMockWrappedObject(original.JaypieToolkit, {
   isClass: true,
 });
 
+export const LlmMessageRole = createMockWrappedObject(original.LlmMessageRole, {
+  isClass: true,
+});
+export const LlmMessageType = createMockWrappedObject(original.LlmMessageType, {
+  isClass: true,
+});
+
 // Tool collections
 export const toolkit = new original.JaypieToolkit([
   random,
