@@ -46,26 +46,26 @@ interface LlmError {
 
 // Input
 
-interface LlmInputContentFile {
+export interface LlmInputContentFile {
   type: LlmMessageType.InputFile;
   file_data: File;
   file_id?: string;
   filename?: string;
 }
 
-interface LlmInputContentImage {
+export interface LlmInputContentImage {
   type: LlmMessageType.InputImage;
-  detail: File;
+  detail?: File;
   file_id?: string;
   image_url?: string;
 }
 
-interface LlmInputContentText {
+export interface LlmInputContentText {
   type: LlmMessageType.InputText;
   text: string;
 }
 
-type LlmInputContent =
+export type LlmInputContent =
   | LlmInputContentFile
   | LlmInputContentImage
   | LlmInputContentText;
@@ -77,7 +77,7 @@ type LlmInputContent =
 export interface LlmInputMessage {
   content: string | Array<LlmInputContent>;
   role: LlmMessageRole;
-  type: LlmMessageType.Message;
+  type?: LlmMessageType.Message;
 }
 
 // Output

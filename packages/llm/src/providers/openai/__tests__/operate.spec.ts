@@ -1492,114 +1492,116 @@ describe("operate", () => {
         );
       });
 
-      it("applies placeholders to instructions", async () => {
-        // Setup
-        const instructions = "You are a {{role}}";
-        const data = { role: "test assistant" };
+      describe("Placeholders", () => {
+        it("applies placeholders to instructions", async () => {
+          // Setup
+          const instructions = "You are a {{role}}";
+          const data = { role: "test assistant" };
 
-        // Execute
-        await operate(
-          "test message",
-          {
-            instructions,
-            data,
-          },
-          { client: mockClient },
-        );
+          // Execute
+          await operate(
+            "test message",
+            {
+              instructions,
+              data,
+            },
+            { client: mockClient },
+          );
 
-        // Verify
-        expect(mockCreate).toHaveBeenCalledWith(
-          expect.objectContaining({
-            instructions: "You are a test assistant",
-            input: expect.any(Array),
-            model: expect.any(String),
-          }),
-        );
-      });
+          // Verify
+          expect(mockCreate).toHaveBeenCalledWith(
+            expect.objectContaining({
+              instructions: "You are a test assistant",
+              input: expect.any(Array),
+              model: expect.any(String),
+            }),
+          );
+        });
 
-      it("applies placeholders to user message", async () => {
-        // Setup
-        const inputMessage = "Hello, {{name}}";
-        const data = { name: "World" };
+        it("applies placeholders to user message", async () => {
+          // Setup
+          const inputMessage = "Hello, {{name}}";
+          const data = { name: "World" };
 
-        // Execute
-        await operate(
-          inputMessage,
-          {
-            data,
-          },
-          { client: mockClient },
-        );
+          // Execute
+          await operate(
+            inputMessage,
+            {
+              data,
+            },
+            { client: mockClient },
+          );
 
-        // Verify
-        expect(mockCreate).toHaveBeenCalledWith(
-          expect.objectContaining({
-            input: expect.arrayContaining([
-              expect.objectContaining({
-                content: "Hello, World",
-                role: "user",
-                type: "message",
-              }),
-            ]),
-            model: expect.any(String),
-          }),
-        );
-      });
+          // Verify
+          expect(mockCreate).toHaveBeenCalledWith(
+            expect.objectContaining({
+              input: expect.arrayContaining([
+                expect.objectContaining({
+                  content: "Hello, World",
+                  role: "user",
+                  type: "message",
+                }),
+              ]),
+              model: expect.any(String),
+            }),
+          );
+        });
 
-      it("respects placeholders.input option", async () => {
-        // Setup
-        const inputMessage = "Hello, {{name}}";
-        const data = { name: "World" };
+        it("respects placeholders.input option", async () => {
+          // Setup
+          const inputMessage = "Hello, {{name}}";
+          const data = { name: "World" };
 
-        // Execute
-        await operate(
-          inputMessage,
-          {
-            data,
-            placeholders: { input: false },
-          },
-          { client: mockClient },
-        );
+          // Execute
+          await operate(
+            inputMessage,
+            {
+              data,
+              placeholders: { input: false },
+            },
+            { client: mockClient },
+          );
 
-        // Verify
-        expect(mockCreate).toHaveBeenCalledWith(
-          expect.objectContaining({
-            input: expect.arrayContaining([
-              expect.objectContaining({
-                content: "Hello, {{name}}",
-                role: "user",
-                type: "message",
-              }),
-            ]),
-            model: expect.any(String),
-          }),
-        );
-      });
+          // Verify
+          expect(mockCreate).toHaveBeenCalledWith(
+            expect.objectContaining({
+              input: expect.arrayContaining([
+                expect.objectContaining({
+                  content: "Hello, {{name}}",
+                  role: "user",
+                  type: "message",
+                }),
+              ]),
+              model: expect.any(String),
+            }),
+          );
+        });
 
-      it("respects placeholders.instructions option", async () => {
-        // Setup
-        const instructions = "You are a {{role}}";
-        const data = { role: "test assistant" };
+        it("respects placeholders.instructions option", async () => {
+          // Setup
+          const instructions = "You are a {{role}}";
+          const data = { role: "test assistant" };
 
-        // Execute
-        await operate(
-          "test message",
-          {
-            instructions,
-            data,
-            placeholders: { instructions: false },
-          },
-          { client: mockClient },
-        );
+          // Execute
+          await operate(
+            "test message",
+            {
+              instructions,
+              data,
+              placeholders: { instructions: false },
+            },
+            { client: mockClient },
+          );
 
-        // Verify
-        expect(mockCreate).toHaveBeenCalledWith(
-          expect.objectContaining({
-            instructions: "You are a {{role}}",
-            input: expect.any(Array),
-            model: expect.any(String),
-          }),
-        );
+          // Verify
+          expect(mockCreate).toHaveBeenCalledWith(
+            expect.objectContaining({
+              instructions: "You are a {{role}}",
+              input: expect.any(Array),
+              model: expect.any(String),
+            }),
+          );
+        });
       });
 
       describe("System Message", () => {

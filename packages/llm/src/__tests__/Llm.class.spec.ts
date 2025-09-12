@@ -8,12 +8,18 @@ import { DEFAULT, PROVIDER } from "../constants.js";
 vi.mock("../providers/openai/index.js", () => ({
   OpenAiProvider: vi.fn().mockImplementation(() => ({
     send: vi.fn().mockResolvedValue("Mocked OpenAI response"),
+    operate: vi
+      .fn()
+      .mockResolvedValue({ response: "Mocked OpenAI operate response" }),
   })),
 }));
 
 vi.mock("../providers/anthropic/AnthropicProvider.class.js", () => ({
   AnthropicProvider: vi.fn().mockImplementation(() => ({
     send: vi.fn().mockResolvedValue("Mocked Anthropic response"),
+    operate: vi
+      .fn()
+      .mockResolvedValue({ response: "Mocked Anthropic operate response" }),
   })),
 }));
 
@@ -45,6 +51,32 @@ describe("Llm Class", () => {
     const customProvider = PROVIDER.ANTHROPIC.NAME;
     const llm = new Llm(customProvider);
     expect(llm["_provider"]).toBe(customProvider);
+  });
+
+  it("Determines provider from model when model is provided", () => {
+    const llm = new Llm(undefined, { model: "gpt-4" });
+    expect(llm["_provider"]).toBe(PROVIDER.OPENAI.NAME);
+  });
+
+  it("Determines provider from Anthropic model", () => {
+    const llm = new Llm(undefined, { model: "claude-3-opus" });
+    expect(llm["_provider"]).toBe(PROVIDER.ANTHROPIC.NAME);
+  });
+
+  it("Prefers determined provider over original when model is provided", () => {
+    const llm = new Llm(PROVIDER.ANTHROPIC.NAME, { model: "gpt-4" });
+    expect(llm["_provider"]).toBe(PROVIDER.OPENAI.NAME);
+  });
+
+  it("Falls back to original provider when model provider cannot be determined", () => {
+    const llm = new Llm(PROVIDER.OPENAI.NAME, { model: "unknown-model" });
+    expect(llm["_provider"]).toBe(PROVIDER.OPENAI.NAME);
+  });
+
+  it("Throws ConfigurationError for unsupported provider", () => {
+    expect(() => {
+      new Llm("unsupported-provider" as any);
+    }).toThrowError("Unsupported provider: unsupported-provider");
   });
 
   describe("send", () => {
@@ -95,6 +127,36 @@ describe("Llm Class", () => {
       const response = await Llm.send(message, options);
       expect(response).toBeDefined();
       expect(typeof response).toBe("string");
+    });
+  });
+
+  describe("static operate", () => {
+    it("has a static operate method", () => {
+      expect(Llm.operate).toBeFunction();
+    });
+
+    it("determines provider from model when no llm option provided", async () => {
+      const input = "test input";
+      const options = { model: "gpt-4" };
+
+      const result = await Llm.operate(input, options);
+      expect(result).toEqual({ response: "Mocked OpenAI operate response" });
+    });
+
+    it("uses explicitly provided llm over determined provider", async () => {
+      const input = "test input";
+      const options = { model: "gpt-4", llm: PROVIDER.ANTHROPIC.NAME };
+
+      const result = await Llm.operate(input, options);
+      expect(result).toEqual({ response: "Mocked Anthropic operate response" });
+    });
+
+    it("falls back to default when model provider cannot be determined", async () => {
+      const input = "test input";
+      const options = { model: "unknown-model" };
+
+      const result = await Llm.operate(input, options);
+      expect(result).toEqual({ response: "Mocked OpenAI operate response" });
     });
   });
 });

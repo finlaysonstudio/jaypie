@@ -1,3 +1,4 @@
+export * from "./determineModelProvider.js";
 export * from "./formatOperateInput.js";
 export * from "./formatOperateMessage.js";
 export * from "./logger.js";

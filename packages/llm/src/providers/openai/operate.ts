@@ -391,6 +391,7 @@ export async function operate(
         }
 
         // Use type assertion to handle the OpenAI SDK response type
+        log.trace.var({ "openai.responses.create": requestOptions });
         const currentResponse = (await openai.responses.create(
           // @ts-expect-error error claims missing non-required id, status
           requestOptions,
