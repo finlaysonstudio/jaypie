@@ -65,6 +65,7 @@
     "test:llm": "npm run test --workspace packages/llm",
     "test:llm:client": "tsx packages/llm/test/client.ts",
     "test:llm:image": "tsx packages/llm/test/image.ts",
+    "test:llm:joke": "tsx packages/llm/test/joke.ts",
     "test:mongoose": "npm run test --workspace packages/mongoose",
     "test:testkit": "npm run test --workspace packages/testkit",
     "test:textract": "npm run test --workspace packages/textract",
