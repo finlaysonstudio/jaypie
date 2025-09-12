@@ -20,7 +20,7 @@ class Llm implements LlmProvider {
   private _options: LlmOptions;
 
   constructor(
-    providerName: LlmProviderName = DEFAULT.PROVIDER.NAME,
+    providerName: LlmProviderName | string = DEFAULT.PROVIDER.NAME,
     options: LlmOptions = {},
   ) {
     const { model } = options;

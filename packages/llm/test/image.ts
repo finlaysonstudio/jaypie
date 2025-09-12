@@ -21,7 +21,7 @@ const base64Image = fs.readFileSync(IMAGE_FILE_PATH, { encoding: "base64" });
 
 async function main(provider: string) {
   try {
-    const model = new Llm(provider as any);
+    const model = new Llm(provider);
     console.log(`\n============ Provider: "${provider}"`);
 
     const textContent: LlmInputContentText = {
