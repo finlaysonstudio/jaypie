@@ -6,6 +6,10 @@ describe("envHostname", () => {
 
   beforeEach(() => {
     process.env = { ...originalEnv };
+    delete process.env.CDK_ENV_DOMAIN;
+    delete process.env.CDK_ENV_HOSTED_ZONE;
+    delete process.env.CDK_ENV_SUBDOMAIN;
+    delete process.env.PROJECT_ENV;
   });
 
   afterEach(() => {
