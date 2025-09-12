@@ -28,16 +28,44 @@ class Llm implements LlmProvider {
     let finalModel = model;
 
     if (model) {
-      const determined = determineModelProvider(model);
-      finalModel = determined.model;
-      if (determined.provider) {
-        finalProvider = determined.provider as LlmProviderName;
+      const modelDetermined = determineModelProvider(model);
+      finalModel = modelDetermined.model;
+      if (modelDetermined.provider) {
+        finalProvider = modelDetermined.provider as LlmProviderName;
       }
     }
 
-    this._provider = finalProvider;
+    // Only determine provider from providerName if we don't have a provider from model
+    if (!model || !determineModelProvider(model).provider) {
+      const providerDetermined = determineModelProvider(providerName);
+      if (!providerDetermined.provider) {
+        throw new ConfigurationError(
+          `Unable to determine provider from: ${providerName}`,
+        );
+      }
+      finalProvider = providerDetermined.provider;
+    }
+
+    // Handle conflicts: if both providerName and model specify different providers
+    if (model && providerName !== DEFAULT.PROVIDER.NAME) {
+      const modelDetermined = determineModelProvider(model);
+      const providerDetermined = determineModelProvider(providerName);
+      if (
+        modelDetermined.provider &&
+        providerDetermined.provider &&
+        modelDetermined.provider !== providerDetermined.provider
+      ) {
+        // Model's provider conflicts with explicit provider, don't pass model
+        finalModel = undefined;
+      }
+    }
+
+    this._provider = finalProvider as LlmProviderName;
     this._options = { ...options, model: finalModel };
-    this._llm = this.createProvider(finalProvider, this._options);
+    this._llm = this.createProvider(
+      finalProvider as LlmProviderName,
+      this._options,
+    );
   }
 
   private createProvider(
