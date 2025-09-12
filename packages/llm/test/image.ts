@@ -37,7 +37,7 @@ async function main(provider: string) {
       content: [textContent, imageContent],
     };
 
-    const result = await model.operate([inputMessage], {
+    const result = await model.operate(inputMessage, {
       user: process?.env?.APP_USER || "[client] Jaypie User",
     });
 
