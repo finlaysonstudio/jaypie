@@ -1319,7 +1319,11 @@ const openai = new Llm(LLM.PROVIDER.OPENAI.NAME);
 // Anthropic
 const anthropic = new Llm(LLM.PROVIDER.ANTHROPIC.NAME);
 
-// With custom model
+// Direct model specification (provider auto-detected)
+const gpt4 = new Llm("gpt-4o");
+const claude = new Llm("claude-3-5-sonnet-20241022");
+
+// With custom model via options
 const customModel = new Llm(LLM.PROVIDER.OPENAI.NAME, {
   model: LLM.PROVIDER.OPENAI.MODEL.GPT_4_5
 });
