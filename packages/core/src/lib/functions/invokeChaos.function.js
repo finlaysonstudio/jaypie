@@ -1,4 +1,4 @@
-import errorFromStatusCode from "../errors/errorFromStatusCode.js";
+import { errorFromStatusCode } from "../errors/errorFromStatusCode.js";
 import sleep from "./sleep.function.js";
 
 //
@@ -13,11 +13,6 @@ const CHAOS_RATE_LOW = 0.021;
 const CHAOS_SLEEP_MINIMUM = 0;
 const CHAOS_SLEEP_MAXIMUM = 12000;
 const CHAOS_TIMEOUT_DURATION = 15 * 60 * 1000; // 15 minutes in milliseconds
-
-//
-//
-// Helper Functions
-//
 
 //
 //
@@ -82,6 +77,9 @@ const invokeChaos = async (message = "medium", { log } = {}) => {
     message === "skip" ||
     message === ""
   ) {
+    if (log && typeof log.trace === "function") {
+      log.trace(`Chaos off triggered, skipping`);
+    }
     return;
   }
 

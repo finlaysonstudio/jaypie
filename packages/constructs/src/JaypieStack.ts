@@ -1,6 +1,6 @@
 import { Stack, StackProps } from "aws-cdk-lib";
 import { Construct } from "constructs";
-import { constructStackName, stackTagger } from "./helpers";
+import { constructStackName, constructTagger } from "./helpers";
 
 export interface JaypieStackProps extends StackProps {
   key?: string;
@@ -25,6 +25,6 @@ export class JaypieStack extends Stack {
     super(scope, id, stackProps);
 
     // Apply tags
-    stackTagger(this, { name: stackProps.stackName });
+    constructTagger(this, { name: stackProps.stackName });
   }
 }

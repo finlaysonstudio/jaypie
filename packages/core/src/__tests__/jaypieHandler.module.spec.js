@@ -7,6 +7,7 @@ import HTTP from "../lib/http.lib.js";
 
 // Subject
 import jaypieHandler from "../jaypieHandler.module.js";
+import invokeChaos from "../lib/functions/invokeChaos.function.js";
 
 //
 //
@@ -17,6 +18,8 @@ import jaypieHandler from "../jaypieHandler.module.js";
 //
 // Mock modules
 //
+
+vi.mock("../lib/functions/invokeChaos.function.js");
 
 //
 //
@@ -461,6 +464,78 @@ describe("Jaypie Handler Module", () => {
           // Assert
           expect(log.warn).toHaveBeenCalledTimes(6);
         });
+      });
+    });
+    describe("Chaos", () => {
+      it("Does not invoke chaos by default", async () => {
+        // Arrange
+        const handler = jaypieHandler(() => {});
+        // Act
+        await handler();
+        // Assert
+        expect(invokeChaos).toHaveBeenCalledTimes(1);
+        expect(invokeChaos).toHaveBeenCalledWith("none", {
+          log: expect.any(Object),
+        });
+      });
+      it("Invokes chaos with specified level from options", async () => {
+        // Arrange
+        const handler = jaypieHandler(() => {}, { chaos: "high" });
+        // Act
+        await handler();
+        // Assert
+        expect(invokeChaos).toHaveBeenCalledTimes(1);
+        expect(invokeChaos).toHaveBeenCalledWith("high", {
+          log: expect.any(Object),
+        });
+      });
+      it("Invokes chaos with level from environment variable", async () => {
+        // Arrange
+        process.env.PROJECT_CHAOS = "medium";
+        const handler = jaypieHandler(() => {});
+        // Act
+        await handler();
+        // Assert
+        expect(invokeChaos).toHaveBeenCalledTimes(1);
+        expect(invokeChaos).toHaveBeenCalledWith("medium", {
+          log: expect.any(Object),
+        });
+      });
+      it("Options override environment variable", async () => {
+        // Arrange
+        process.env.PROJECT_CHAOS = "medium";
+        const handler = jaypieHandler(() => {}, { chaos: "low" });
+        // Act
+        await handler();
+        // Assert
+        expect(invokeChaos).toHaveBeenCalledTimes(1);
+        expect(invokeChaos).toHaveBeenCalledWith("low", {
+          log: expect.any(Object),
+        });
+      });
+      it("Invokes chaos after unavailable check and before validate", async () => {
+        // Arrange
+        const mockValidator = vi.fn(async () => true);
+        const handler = jaypieHandler(() => {}, {
+          chaos: "high",
+          validate: [mockValidator],
+        });
+        // Act
+        await handler();
+        // Assert
+        expect(invokeChaos).toHaveBeenCalledBefore(mockValidator);
+      });
+      it("Does not invoke chaos when unavailable throws", async () => {
+        // Arrange
+        const handler = jaypieHandler(() => {}, { unavailable: true });
+        // Act
+        try {
+          await handler();
+        } catch (error) {
+          // Expected to throw
+        }
+        // Assert
+        expect(invokeChaos).not.toHaveBeenCalled();
       });
     });
   });

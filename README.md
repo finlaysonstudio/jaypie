@@ -873,6 +873,50 @@ app.any("/future", notImplementedRoute); // 400 Bad Request
 In this regard, calling it is a "user error."  
 The "501 Not Implemented" status code is reserved for the server not supporting parts of the HTTP protocol such as `POST` or `PUT`.  
 
+### Chaos Engineering
+
+Jaypie includes built-in chaos engineering capabilities to test system resilience. Chaos mode can be activated via the `PROJECT_CHAOS` environment variable or the `X-Project-Chaos` HTTP header.
+
+#### Chaos Modes
+
+| Mode | Description | Behavior |
+| ---- | ----------- | -------- |
+| `off`, `false`, `none`, `skip`, `0`, `""` | Disabled | No chaos effects |
+| `low` | Low chaos rate (2.1%) | Random sleep 0-12s when triggered |
+| `medium` | Medium chaos rate (14.6%) | Random sleep 0-12s when triggered (default) |
+| `high` | High chaos rate (38.2%) | Random sleep 0-12s when triggered |
+| `always` | Always triggers (100%) | Always sleeps 0-12s |
+| `error` | Immediate error | Throws 500 Internal Server Error |
+| `error=<code>` | Custom error | Throws error with specified HTTP status code (e.g., `error=404`) |
+| `timeout` | Simulated timeout | Sleeps for 15 minutes then throws 500 error |
+| `exit` | Process termination | Immediately exits the process with code 1 |
+| `memory` | Memory exhaustion | Allocates memory until system runs out |
+
+#### Usage Examples
+
+```javascript
+// Via environment variable
+process.env.PROJECT_CHAOS = "medium";
+
+// Via HTTP header
+curl -H "X-Project-Chaos: high" https://api.example.com/endpoint
+
+// In handler options
+const handler = expressHandler(myHandler, {
+  chaos: "low", // Override environment/header
+  // ... other options
+});
+```
+
+#### Chaos Rate Probabilities
+
+The chaos rates follow the golden ratio for natural-feeling randomness:
+- **Low**: 2.1% chance (1 in ~48 requests)
+- **Medium**: 14.6% chance (1 in ~7 requests)  
+- **High**: 38.2% chance (1 in ~3 requests)
+
+When chaos triggers with rate-based modes (low/medium/high/always), it introduces a random delay between 0-12 seconds to simulate latency issues.
+
 ### Functions
 
 #### `cloneDeep`
