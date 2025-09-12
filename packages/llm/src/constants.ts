@@ -26,6 +26,13 @@ export const PROVIDER = {
       CLAUDE_OPUS_3: "claude-3-opus-latest" as const,
       CLAUDE_SONNET_3: "claude-3-7-sonnet-latest" as const,
     },
+    MODEL_MATCH_WORDS: [
+      "anthropic",
+      "claude",
+      "haiku",
+      "opus",
+      "sonnet",
+    ] as const,
     NAME: "anthropic" as const,
     PROMPT: {
       AI: "\n\nAssistant:" as const,
@@ -71,6 +78,7 @@ export const PROVIDER = {
       O3_PRO: "o3-pro" as const,
       O4_MINI: "o4-mini" as const,
     },
+    MODEL_MATCH_WORDS: ["openai", "gpt", /^o\d/],
     NAME: "openai" as const,
   },
 } as const;
