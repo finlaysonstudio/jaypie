@@ -7,7 +7,7 @@ import * as cloudwatch from "aws-cdk-lib/aws-cloudwatch";
 import * as ec2 from "aws-cdk-lib/aws-ec2";
 import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
 import { JaypieEnvSecret } from "./JaypieEnvSecret.js";
-import { addDatadogLayer, jaypieLambdaEnv } from "./helpers/index.js";
+import { addDatadogLayer, addParamsAndSecrets, jaypieLambdaEnv } from "./helpers/index.js";
 
 export interface JaypieLambdaProps {
   allowAllOutbound?: boolean;
@@ -117,35 +117,6 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
     // Create a working copy of layers
     const resolvedLayers = [...layers];
 
-    // Configure ParamsAndSecrets layer
-    let resolvedParamsAndSecrets:
-      | lambda.ParamsAndSecretsLayerVersion
-      | undefined = undefined;
-
-    if (paramsAndSecrets !== false) {
-      if (paramsAndSecrets instanceof lambda.ParamsAndSecretsLayerVersion) {
-        resolvedParamsAndSecrets = paramsAndSecrets;
-      } else {
-        // Create default ParamsAndSecrets layer
-        resolvedParamsAndSecrets =
-          lambda.ParamsAndSecretsLayerVersion.fromVersion(
-            lambda.ParamsAndSecretsVersions.V1_0_103,
-            {
-              cacheSize: paramsAndSecretsOptions?.cacheSize,
-              logLevel:
-                paramsAndSecretsOptions?.logLevel ||
-                lambda.ParamsAndSecretsLogLevel.WARN,
-              parameterStoreTtl: paramsAndSecretsOptions?.parameterStoreTtl
-                ? Duration.seconds(paramsAndSecretsOptions.parameterStoreTtl)
-                : undefined,
-              secretsManagerTtl: paramsAndSecretsOptions?.secretsManagerTtl
-                ? Duration.seconds(paramsAndSecretsOptions.secretsManagerTtl)
-                : undefined,
-            },
-          );
-      }
-    }
-
     // Process secrets environment variables
     const secretsEnvironment = Object.entries(envSecrets).reduce(
       (acc, [key, secret]) => ({
@@ -193,7 +164,6 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
       logRetentionRetryOptions,
       maxEventAge,
       memorySize,
-      paramsAndSecrets: resolvedParamsAndSecrets,
       profiling,
       profilingGroup,
       reservedConcurrentExecutions,
@@ -216,6 +186,9 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
             }
           : undefined,
     });
+
+    // Add ParamsAndSecrets layer if configured
+    addParamsAndSecrets(this._lambda, { paramsAndSecrets, paramsAndSecretsOptions });
 
     // Add Datadog layers and environment variables if configured
     addDatadogLayer(this._lambda, { datadogApiKeyArn });

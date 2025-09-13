@@ -1,4 +1,5 @@
 export { addDatadogLayer } from "./addDatadogLayer";
+export { addParamsAndSecrets } from "./addParamsAndSecrets";
 export { constructEnvName } from "./constructEnvName";
 export { constructStackName } from "./constructStackName";
 export { constructTagger } from "./constructTagger";
