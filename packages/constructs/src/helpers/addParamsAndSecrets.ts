@@ -1,4 +1,4 @@
-import { Duration } from "aws-cdk-lib";
+import { Duration, Stack } from "aws-cdk-lib";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 
 export interface AddParamsAndSecretsOptions {
@@ -22,34 +22,85 @@ export function addParamsAndSecrets(
     return false;
   }
 
-  let resolvedParamsAndSecrets:
-    | lambda.ParamsAndSecretsLayerVersion
-    | undefined = undefined;
+  const stack = Stack.of(lambdaFunction);
+
+  let resolvedLayer: lambda.ILayerVersion | undefined = undefined;
 
   if (paramsAndSecrets instanceof lambda.ParamsAndSecretsLayerVersion) {
-    resolvedParamsAndSecrets = paramsAndSecrets;
-  } else {
-    // Create default ParamsAndSecrets layer
-    resolvedParamsAndSecrets = lambda.ParamsAndSecretsLayerVersion.fromVersion(
-      lambda.ParamsAndSecretsVersions.V1_0_103,
-      {
-        cacheSize: paramsAndSecretsOptions?.cacheSize,
-        logLevel:
-          paramsAndSecretsOptions?.logLevel ||
-          lambda.ParamsAndSecretsLogLevel.WARN,
-        parameterStoreTtl: paramsAndSecretsOptions?.parameterStoreTtl
-          ? Duration.seconds(paramsAndSecretsOptions.parameterStoreTtl)
-          : undefined,
-        secretsManagerTtl: paramsAndSecretsOptions?.secretsManagerTtl
-          ? Duration.seconds(paramsAndSecretsOptions.secretsManagerTtl)
-          : undefined,
-      },
+    // For custom ParamsAndSecretsLayerVersion, we need to extract the ARN
+    // This is a workaround since ParamsAndSecretsLayerVersion doesn't implement ILayerVersion
+    const layerArn = `arn:aws:lambda:${stack.region}:017000801446:layer:AWSLambdaParametersAndSecrets:${lambda.ParamsAndSecretsVersions.V1_0_103}`;
+    resolvedLayer = lambda.LayerVersion.fromLayerVersionArn(
+      stack,
+      `ParamsAndSecretsLayer-${lambdaFunction.node.id}`,
+      layerArn,
     );
+
+    // Set environment variables for configuration
+    if (paramsAndSecretsOptions?.cacheSize) {
+      lambdaFunction.addEnvironment(
+        "PARAMETERS_SECRETS_EXTENSION_CACHE_SIZE",
+        paramsAndSecretsOptions.cacheSize.toString(),
+      );
+    }
+    if (paramsAndSecretsOptions?.logLevel) {
+      lambdaFunction.addEnvironment(
+        "PARAMETERS_SECRETS_EXTENSION_LOG_LEVEL",
+        paramsAndSecretsOptions.logLevel,
+      );
+    }
+    if (paramsAndSecretsOptions?.parameterStoreTtl) {
+      lambdaFunction.addEnvironment(
+        "PARAMETERS_SECRETS_EXTENSION_PARAMETER_STORE_TTL",
+        paramsAndSecretsOptions.parameterStoreTtl.toString(),
+      );
+    }
+    if (paramsAndSecretsOptions?.secretsManagerTtl) {
+      lambdaFunction.addEnvironment(
+        "PARAMETERS_SECRETS_EXTENSION_SECRETS_MANAGER_TTL",
+        paramsAndSecretsOptions.secretsManagerTtl.toString(),
+      );
+    }
+  } else {
+    // Create default ParamsAndSecrets layer using LayerVersion.fromLayerVersionArn
+    const layerArn = `arn:aws:lambda:${stack.region}:017000801446:layer:AWSLambdaParametersAndSecrets:${lambda.ParamsAndSecretsVersions.V1_0_103}`;
+    resolvedLayer = lambda.LayerVersion.fromLayerVersionArn(
+      stack,
+      `ParamsAndSecretsLayer-${lambdaFunction.node.id}`,
+      layerArn,
+    );
+
+    // Set default environment variables
+    if (paramsAndSecretsOptions?.cacheSize) {
+      lambdaFunction.addEnvironment(
+        "PARAMETERS_SECRETS_EXTENSION_CACHE_SIZE",
+        paramsAndSecretsOptions.cacheSize.toString(),
+      );
+    }
+    const logLevel =
+      paramsAndSecretsOptions?.logLevel || lambda.ParamsAndSecretsLogLevel.WARN;
+    lambdaFunction.addEnvironment(
+      "PARAMETERS_SECRETS_EXTENSION_LOG_LEVEL",
+      logLevel,
+    );
+
+    if (paramsAndSecretsOptions?.parameterStoreTtl) {
+      lambdaFunction.addEnvironment(
+        "PARAMETERS_SECRETS_EXTENSION_PARAMETER_STORE_TTL",
+        paramsAndSecretsOptions.parameterStoreTtl.toString(),
+      );
+    }
+    if (paramsAndSecretsOptions?.secretsManagerTtl) {
+      lambdaFunction.addEnvironment(
+        "PARAMETERS_SECRETS_EXTENSION_SECRETS_MANAGER_TTL",
+        paramsAndSecretsOptions.secretsManagerTtl.toString(),
+      );
+    }
   }
 
   // Add the layer to the lambda function
-  if (resolvedParamsAndSecrets) {
-    lambdaFunction.addLayers(resolvedParamsAndSecrets);
+  if (resolvedLayer) {
+    lambdaFunction.addLayers(resolvedLayer);
     return true;
   }
 
