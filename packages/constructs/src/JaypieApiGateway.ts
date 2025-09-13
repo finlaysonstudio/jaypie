@@ -5,8 +5,7 @@ import * as apiGateway from "aws-cdk-lib/aws-apigateway";
 import * as route53 from "aws-cdk-lib/aws-route53";
 import * as route53Targets from "aws-cdk-lib/aws-route53-targets";
 import { CDK, mergeDomain } from "@jaypie/cdk";
-import { constructEnvName } from "./helpers";
-import { JaypieLambda } from "./JaypieLambda";
+import { constructEnvName, resolveHostedZone } from "./helpers";
 
 export interface JaypieApiGatewayProps extends apiGateway.LambdaRestApiProps {
   certificate?: boolean | acm.ICertificate;
@@ -64,13 +63,7 @@ export class JaypieApiGateway extends Construct implements apiGateway.IRestApi {
     let certificateToUse: acm.ICertificate | undefined;
 
     if (host && zone) {
-      if (typeof zone === "string") {
-        hostedZone = route53.HostedZone.fromLookup(this, "HostedZone", {
-          domainName: zone,
-        });
-      } else {
-        hostedZone = zone;
-      }
+      hostedZone = resolveHostedZone(this, { zone });
 
       if (certificate === true) {
         certificateToUse = new acm.Certificate(this, certificateName, {
