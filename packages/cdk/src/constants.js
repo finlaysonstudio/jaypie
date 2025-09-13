@@ -35,8 +35,8 @@ const CDK = {
     SITE: "datadoghq.com",
     LAYER: {
       // https://docs.datadoghq.com/serverless/aws_lambda/installation/nodejs/?tab=awscdk
-      NODE: 127, // 127 on 8/7/2025
-      EXTENSION: 83, // 83 on 8/7/2025
+      NODE: 127, // 127 on 9/12/2025
+      EXTENSION: 86, // 86 on 9/12/2025
     },
   },
   DEFAULT: {

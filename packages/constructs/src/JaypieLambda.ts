@@ -7,6 +7,11 @@ import * as cloudwatch from "aws-cdk-lib/aws-cloudwatch";
 import * as ec2 from "aws-cdk-lib/aws-ec2";
 import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
 import { JaypieEnvSecret } from "./JaypieEnvSecret.js";
+import {
+  addDatadogLayer,
+  addParamsAndSecrets,
+  jaypieLambdaEnv,
+} from "./helpers/index.js";
 
 export interface JaypieLambdaProps {
   allowAllOutbound?: boolean;
@@ -107,128 +112,14 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
       vpcSubnets,
     } = props;
 
-    // Create a mutable copy of the environment variables
-    let environment = { ...initialEnvironment };
-
-    // Default environment values
-    const defaultEnvValues: { [key: string]: string } = {
-      AWS_LAMBDA_NODEJS_DISABLE_CALLBACK_WARNING: "true",
-    };
-
-    // Apply default environment values with user overrides
-    Object.entries(defaultEnvValues).forEach(([key, defaultValue]) => {
-      if (key in initialEnvironment) {
-        const userValue = initialEnvironment[key];
-        // If user passes a string, use that value
-        if (typeof userValue === "string") {
-          environment[key] = userValue;
-        }
-        // If user passes non-string falsy value, omit the key
-        else if (!userValue) {
-          delete environment[key];
-        }
-        // Ignore non-string truthy values (key already not present)
-      } else {
-        // No user override, use default value
-        environment[key] = defaultValue;
-      }
-    });
-
-    // Default environment variables from process.env if present
-    const defaultEnvVars = [
-      "DATADOG_API_KEY_ARN",
-      "LOG_LEVEL",
-      "MODULE_LOGGER",
-      "MODULE_LOG_LEVEL",
-      "PROJECT_COMMIT",
-      "PROJECT_ENV",
-      "PROJECT_KEY",
-      "PROJECT_SECRET",
-      "PROJECT_SERVICE",
-      "PROJECT_SPONSOR",
-      "PROJECT_VERSION",
-    ];
-
-    // Add default environment variables if they exist in process.env
-    defaultEnvVars.forEach((envVar) => {
-      if (process.env[envVar] && !environment[envVar]) {
-        environment[envVar] = process.env[envVar]!;
-      }
-    });
+    // Get base environment with defaults
+    const environment = jaypieLambdaEnv({ initialEnvironment });
 
     const codeAsset =
       typeof code === "string" ? lambda.Code.fromAsset(code) : code;
 
     // Create a working copy of layers
     const resolvedLayers = [...layers];
-
-    // Determine if we should add Datadog integration
-    // Check for datadog API key ARN in different sources
-    const resolvedDatadogApiKeyArn =
-      datadogApiKeyArn ||
-      process.env.DATADOG_API_KEY_ARN ||
-      process.env.CDK_ENV_DATADOG_API_KEY_ARN;
-
-    // Add Datadog integration if API key is available
-    if (resolvedDatadogApiKeyArn) {
-      // Add Datadog Node.js layer
-      const datadogNodeLayer = lambda.LayerVersion.fromLayerVersionArn(
-        this,
-        "DatadogNodeLayer",
-        `arn:aws:lambda:${Stack.of(this).region}:464622532012:layer:Datadog-Node20-x:${CDK.DATADOG.LAYER.NODE}`,
-      );
-      resolvedLayers.push(datadogNodeLayer);
-
-      // Add Datadog Extension layer
-      const datadogExtensionLayer = lambda.LayerVersion.fromLayerVersionArn(
-        this,
-        "DatadogExtensionLayer",
-        `arn:aws:lambda:${Stack.of(this).region}:464622532012:layer:Datadog-Extension:${CDK.DATADOG.LAYER.EXTENSION}`,
-      );
-      resolvedLayers.push(datadogExtensionLayer);
-
-      // Set Datadog environment variables
-      Object.assign(environment, {
-        DD_API_KEY_SECRET_ARN: resolvedDatadogApiKeyArn,
-        DD_ENHANCED_METRICS: "true",
-        DD_ENV: process.env.PROJECT_ENV || "",
-        DD_PROFILING_ENABLED: "false",
-        DD_SERVERLESS_APPSEC_ENABLED: "false",
-        DD_SERVICE: process.env.PROJECT_SERVICE || "",
-        DD_SITE: CDK.DATADOG.SITE,
-        DD_TAGS: `${CDK.TAG.SPONSOR}:${process.env.PROJECT_SPONSOR || ""}`,
-        DD_TRACE_OTEL_ENABLED: "false",
-      });
-    }
-
-    // Configure ParamsAndSecrets layer
-    let resolvedParamsAndSecrets:
-      | lambda.ParamsAndSecretsLayerVersion
-      | undefined = undefined;
-
-    if (paramsAndSecrets !== false) {
-      if (paramsAndSecrets instanceof lambda.ParamsAndSecretsLayerVersion) {
-        resolvedParamsAndSecrets = paramsAndSecrets;
-      } else {
-        // Create default ParamsAndSecrets layer
-        resolvedParamsAndSecrets =
-          lambda.ParamsAndSecretsLayerVersion.fromVersion(
-            lambda.ParamsAndSecretsVersions.V1_0_103,
-            {
-              cacheSize: paramsAndSecretsOptions?.cacheSize,
-              logLevel:
-                paramsAndSecretsOptions?.logLevel ||
-                lambda.ParamsAndSecretsLogLevel.WARN,
-              parameterStoreTtl: paramsAndSecretsOptions?.parameterStoreTtl
-                ? Duration.seconds(paramsAndSecretsOptions.parameterStoreTtl)
-                : undefined,
-              secretsManagerTtl: paramsAndSecretsOptions?.secretsManagerTtl
-                ? Duration.seconds(paramsAndSecretsOptions.secretsManagerTtl)
-                : undefined,
-            },
-          );
-      }
-    }
 
     // Process secrets environment variables
     const secretsEnvironment = Object.entries(envSecrets).reduce(
@@ -277,7 +168,6 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
       logRetentionRetryOptions,
       maxEventAge,
       memorySize,
-      paramsAndSecrets: resolvedParamsAndSecrets,
       profiling,
       profilingGroup,
       reservedConcurrentExecutions,
@@ -301,6 +191,15 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
           : undefined,
     });
 
+    // Add ParamsAndSecrets layer if configured
+    addParamsAndSecrets(this._lambda, {
+      paramsAndSecrets,
+      paramsAndSecretsOptions,
+    });
+
+    // Add Datadog layers and environment variables if configured
+    addDatadogLayer(this._lambda, { datadogApiKeyArn });
+
     // Grant secret read permissions
     Object.values(envSecrets).forEach((secret) => {
       secret.grantRead(this._lambda);
@@ -310,16 +209,6 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
     secrets.forEach((secret) => {
       secret.grantRead(this._lambda);
     });
-
-    // Grant Datadog API key read permission if applicable
-    if (resolvedDatadogApiKeyArn) {
-      const datadogApiKey = secretsmanager.Secret.fromSecretCompleteArn(
-        this,
-        "DatadogApiKeyGrant",
-        resolvedDatadogApiKeyArn,
-      );
-      datadogApiKey.grantRead(this._lambda);
-    }
 
     // Configure provisioned concurrency if specified
     if (provisionedConcurrentExecutions !== undefined) {

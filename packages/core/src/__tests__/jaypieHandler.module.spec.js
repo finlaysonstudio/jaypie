@@ -11,11 +11,6 @@ import invokeChaos from "../lib/functions/invokeChaos.function.js";
 
 //
 //
-// Mock constants
-//
-
-//
-//
 // Mock modules
 //
 
