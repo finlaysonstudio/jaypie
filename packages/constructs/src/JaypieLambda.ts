@@ -7,7 +7,11 @@ import * as cloudwatch from "aws-cdk-lib/aws-cloudwatch";
 import * as ec2 from "aws-cdk-lib/aws-ec2";
 import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
 import { JaypieEnvSecret } from "./JaypieEnvSecret.js";
-import { addDatadogLayer, addParamsAndSecrets, jaypieLambdaEnv } from "./helpers/index.js";
+import {
+  addDatadogLayer,
+  addParamsAndSecrets,
+  jaypieLambdaEnv,
+} from "./helpers/index.js";
 
 export interface JaypieLambdaProps {
   allowAllOutbound?: boolean;
@@ -188,7 +192,10 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
     });
 
     // Add ParamsAndSecrets layer if configured
-    addParamsAndSecrets(this._lambda, { paramsAndSecrets, paramsAndSecretsOptions });
+    addParamsAndSecrets(this._lambda, {
+      paramsAndSecrets,
+      paramsAndSecretsOptions,
+    });
 
     // Add Datadog layers and environment variables if configured
     addDatadogLayer(this._lambda, { datadogApiKeyArn });
