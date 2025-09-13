@@ -10,7 +10,7 @@ export function envHostname({
   domain?: string;
   env?: string;
   subdomain?: string;
-}) {
+} = {}) {
   const resolvedDomain =
     domain || process.env.CDK_ENV_DOMAIN || process.env.CDK_ENV_HOSTED_ZONE;
 
