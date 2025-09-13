@@ -5,7 +5,21 @@ describe("jaypieLambdaEnv", () => {
   const originalEnv = process.env;
 
   beforeEach(() => {
-    process.env = { ...originalEnv };
+    // Clear all environment variables that could affect tests
+    delete process.env.DATADOG_API_KEY_ARN;
+    delete process.env.LOG_LEVEL;
+    delete process.env.MODULE_LOGGER;
+    delete process.env.MODULE_LOG_LEVEL;
+    delete process.env.PROJECT_COMMIT;
+    delete process.env.PROJECT_ENV;
+    delete process.env.PROJECT_KEY;
+    delete process.env.PROJECT_SECRET;
+    delete process.env.PROJECT_SERVICE;
+    delete process.env.PROJECT_SPONSOR;
+    delete process.env.PROJECT_VERSION;
+    delete process.env.NOT_IN_LIST;
+    delete process.env.RANDOM_VAR;
+    delete process.env.ANOTHER_VAR;
   });
 
   afterEach(() => {
