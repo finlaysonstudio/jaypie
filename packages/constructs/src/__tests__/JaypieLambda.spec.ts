@@ -273,24 +273,6 @@ describe("JaypieLambda", () => {
       expect(construct).toBeDefined();
     });
 
-    it("adds layers by default", () => {
-      const stack = new Stack();
-
-      new JaypieLambda(stack, "TestConstruct", {
-        code: lambda.Code.fromInline("exports.handler = () => {}"),
-        handler: "index.handler",
-      });
-
-      const template = Template.fromStack(stack);
-
-      const mainFunction = findMainLambdaFunction(template);
-      expect(mainFunction).toBeDefined();
-
-      // Verify the layers array exists and has at least one layer
-      const layers = mainFunction?.Properties?.Layers || [];
-      expect(layers).toBeDefined();
-      expect(layers.length).toBeGreaterThan(0);
-    });
 
     it("adds ParamsAndSecrets layer by default", () => {
       const stack = new Stack();
