@@ -10,7 +10,7 @@ export function resolveHostedZone(
   }: {
     name?: string;
     zone?: string | route53.IHostedZone;
-  },
+  } = {},
 ): route53.IHostedZone {
   if (!zone) {
     throw new ConfigurationError(
