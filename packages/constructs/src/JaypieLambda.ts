@@ -41,8 +41,8 @@ export interface JaypieLambdaProps {
   paramsAndSecretsOptions?: {
     cacheSize?: number;
     logLevel?: lambda.ParamsAndSecretsLogLevel;
-    parameterStoreTtl?: number;
-    secretsManagerTtl?: number;
+    parameterStoreTtl?: Duration;
+    secretsManagerTtl?: Duration;
   };
   profiling?: boolean;
   profilingGroup?: import("aws-cdk-lib/aws-codeguruprofiler").IProfilingGroup;
@@ -192,10 +192,7 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
     });
 
     // Add ParamsAndSecrets layer if configured
-    addParamsAndSecrets(this._lambda, {
-      paramsAndSecrets,
-      paramsAndSecretsOptions,
-    });
+    addParamsAndSecrets(this._lambda, paramsAndSecretsOptions);
 
     // Add Datadog layers and environment variables if configured
     addDatadogLayer(this._lambda, { datadogApiKeyArn });

@@ -1,108 +1,81 @@
-import { Duration, Stack } from "aws-cdk-lib";
+import { Arn, Duration, Stack } from "aws-cdk-lib";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 
 export interface AddParamsAndSecretsOptions {
-  paramsAndSecrets?: lambda.ParamsAndSecretsLayerVersion | boolean;
-  paramsAndSecretsOptions?: {
-    cacheSize?: number;
-    logLevel?: lambda.ParamsAndSecretsLogLevel;
-    parameterStoreTtl?: number;
-    secretsManagerTtl?: number;
-  };
+  cacheSize?: number;
+  logLevel?: lambda.ParamsAndSecretsLogLevel;
+  parameterStoreTtl?: Duration;
+  secretsManagerTtl?: Duration;
 }
+
+export const PARAMS_AND_SECRETS_VERSION =
+  lambda.ParamsAndSecretsVersions.V1_0_103;
+export const PARAMS_AND_SECRETS_ACCOUNT = "017000801446";
 
 export function addParamsAndSecrets(
   lambdaFunction: lambda.Function,
-  options: AddParamsAndSecretsOptions = {},
+  options:
+    | AddParamsAndSecretsOptions
+    | boolean = {} as AddParamsAndSecretsOptions,
 ): boolean {
-  const { paramsAndSecrets, paramsAndSecretsOptions } = options;
-
-  // Return false if explicitly disabled
-  if (paramsAndSecrets === false) {
+  if (typeof options === "boolean" && options === false) {
     return false;
   }
 
   const stack = Stack.of(lambdaFunction);
+  const arn = Arn.format(
+    {
+      partition: stack.partition,
+      service: "lambda",
+      region: stack.region,
+      account: PARAMS_AND_SECRETS_ACCOUNT,
+      resource: "layer",
+      resourceName: `AWSLambdaParametersAndSecrets:${PARAMS_AND_SECRETS_VERSION}`,
+    },
+    stack,
+  );
 
-  let resolvedLayer: lambda.ILayerVersion | undefined = undefined;
+  const layer = lambda.LayerVersion.fromLayerVersionArn(
+    stack,
+    "ParamsAndSecretsExtension",
+    arn,
+  );
 
-  if (paramsAndSecrets instanceof lambda.ParamsAndSecretsLayerVersion) {
-    // For custom ParamsAndSecretsLayerVersion, we need to extract the ARN
-    // This is a workaround since ParamsAndSecretsLayerVersion doesn't implement ILayerVersion
-    const layerArn = `arn:aws:lambda:${stack.region}:017000801446:layer:AWSLambdaParametersAndSecrets:${lambda.ParamsAndSecretsVersions.V1_0_103}`;
-    resolvedLayer = lambda.LayerVersion.fromLayerVersionArn(
-      stack,
-      `ParamsAndSecretsLayer-${lambdaFunction.node.id}`,
-      layerArn,
+  if (typeof options === "boolean" && options === true) {
+    options = {} as AddParamsAndSecretsOptions;
+  }
+  if (!options.logLevel) {
+    options.logLevel = lambda.ParamsAndSecretsLogLevel.WARN;
+  }
+  const { cacheSize, logLevel, parameterStoreTtl, secretsManagerTtl } = options;
+
+  // Set environment variables for configuration
+  if (cacheSize) {
+    lambdaFunction.addEnvironment(
+      "PARAMETERS_SECRETS_EXTENSION_CACHE_SIZE",
+      cacheSize.toString(),
     );
-
-    // Set environment variables for configuration
-    if (paramsAndSecretsOptions?.cacheSize) {
-      lambdaFunction.addEnvironment(
-        "PARAMETERS_SECRETS_EXTENSION_CACHE_SIZE",
-        paramsAndSecretsOptions.cacheSize.toString(),
-      );
-    }
-    if (paramsAndSecretsOptions?.logLevel) {
-      lambdaFunction.addEnvironment(
-        "PARAMETERS_SECRETS_EXTENSION_LOG_LEVEL",
-        paramsAndSecretsOptions.logLevel,
-      );
-    }
-    if (paramsAndSecretsOptions?.parameterStoreTtl) {
-      lambdaFunction.addEnvironment(
-        "PARAMETERS_SECRETS_EXTENSION_PARAMETER_STORE_TTL",
-        paramsAndSecretsOptions.parameterStoreTtl.toString(),
-      );
-    }
-    if (paramsAndSecretsOptions?.secretsManagerTtl) {
-      lambdaFunction.addEnvironment(
-        "PARAMETERS_SECRETS_EXTENSION_SECRETS_MANAGER_TTL",
-        paramsAndSecretsOptions.secretsManagerTtl.toString(),
-      );
-    }
-  } else {
-    // Create default ParamsAndSecrets layer using LayerVersion.fromLayerVersionArn
-    const layerArn = `arn:aws:lambda:${stack.region}:017000801446:layer:AWSLambdaParametersAndSecrets:${lambda.ParamsAndSecretsVersions.V1_0_103}`;
-    resolvedLayer = lambda.LayerVersion.fromLayerVersionArn(
-      stack,
-      `ParamsAndSecretsLayer-${lambdaFunction.node.id}`,
-      layerArn,
-    );
-
-    // Set default environment variables
-    if (paramsAndSecretsOptions?.cacheSize) {
-      lambdaFunction.addEnvironment(
-        "PARAMETERS_SECRETS_EXTENSION_CACHE_SIZE",
-        paramsAndSecretsOptions.cacheSize.toString(),
-      );
-    }
-    const logLevel =
-      paramsAndSecretsOptions?.logLevel || lambda.ParamsAndSecretsLogLevel.WARN;
+  }
+  if (logLevel) {
     lambdaFunction.addEnvironment(
       "PARAMETERS_SECRETS_EXTENSION_LOG_LEVEL",
       logLevel,
     );
-
-    if (paramsAndSecretsOptions?.parameterStoreTtl) {
-      lambdaFunction.addEnvironment(
-        "PARAMETERS_SECRETS_EXTENSION_PARAMETER_STORE_TTL",
-        paramsAndSecretsOptions.parameterStoreTtl.toString(),
-      );
-    }
-    if (paramsAndSecretsOptions?.secretsManagerTtl) {
-      lambdaFunction.addEnvironment(
-        "PARAMETERS_SECRETS_EXTENSION_SECRETS_MANAGER_TTL",
-        paramsAndSecretsOptions.secretsManagerTtl.toString(),
-      );
-    }
+  }
+  if (parameterStoreTtl) {
+    lambdaFunction.addEnvironment(
+      "PARAMETERS_SECRETS_EXTENSION_PARAMETER_STORE_TTL",
+      parameterStoreTtl.toString(),
+    );
+  }
+  if (secretsManagerTtl) {
+    lambdaFunction.addEnvironment(
+      "PARAMETERS_SECRETS_EXTENSION_SECRETS_MANAGER_TTL",
+      secretsManagerTtl.toString(),
+    );
   }
 
   // Add the layer to the lambda function
-  if (resolvedLayer) {
-    lambdaFunction.addLayers(resolvedLayer);
-    return true;
-  }
-
-  return false;
+  lambdaFunction.addLayers(layer);
+  return true;
 }
