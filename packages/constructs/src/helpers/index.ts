@@ -1,9 +1,10 @@
-export { addDatadogLayer } from "./addDatadogLayer";
-export { addParamsAndSecrets } from "./addParamsAndSecrets";
+export { addDatadogLayers } from "./addDatadogLayers";
 export { constructEnvName } from "./constructEnvName";
 export { constructStackName } from "./constructStackName";
 export { constructTagger } from "./constructTagger";
 export { envHostname } from "./envHostname";
 export { isEnv, isProductionEnv, isSandboxEnv } from "./isEnv";
 export { jaypieLambdaEnv } from "./jaypieLambdaEnv";
+export { resolveDatadogLayers } from "./resolveDatadogLayers";
 export { resolveHostedZone } from "./resolveHostedZone";
+export { resolveParamsAndSecrets } from "./resolveParamsAndSecrets";

@@ -8,9 +8,9 @@ import * as ec2 from "aws-cdk-lib/aws-ec2";
 import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
 import { JaypieEnvSecret } from "./JaypieEnvSecret.js";
 import {
-  addDatadogLayer,
-  addParamsAndSecrets,
+  addDatadogLayers,
   jaypieLambdaEnv,
+  resolveParamsAndSecrets,
 } from "./helpers/index.js";
 
 export interface JaypieLambdaProps {
@@ -41,8 +41,8 @@ export interface JaypieLambdaProps {
   paramsAndSecretsOptions?: {
     cacheSize?: number;
     logLevel?: lambda.ParamsAndSecretsLogLevel;
-    parameterStoreTtl?: number;
-    secretsManagerTtl?: number;
+    parameterStoreTtl?: Duration;
+    secretsManagerTtl?: Duration;
   };
   profiling?: boolean;
   profilingGroup?: import("aws-cdk-lib/aws-codeguruprofiler").IProfilingGroup;
@@ -141,6 +141,11 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
       return acc;
     }, {});
 
+    // Add ParamsAndSecrets layer if configured
+    const resolvedParamsAndSecrets = paramsAndSecrets
+      ? resolveParamsAndSecrets(paramsAndSecretsOptions)
+      : undefined;
+
     // Create Lambda Function
     this._lambda = new lambda.Function(this, "Function", {
       allowAllOutbound,
@@ -168,6 +173,7 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
       logRetentionRetryOptions,
       maxEventAge,
       memorySize,
+      paramsAndSecrets: resolvedParamsAndSecrets,
       profiling,
       profilingGroup,
       reservedConcurrentExecutions,
@@ -191,14 +197,7 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
           : undefined,
     });
 
-    // Add ParamsAndSecrets layer if configured
-    addParamsAndSecrets(this._lambda, {
-      paramsAndSecrets,
-      paramsAndSecretsOptions,
-    });
-
-    // Add Datadog layers and environment variables if configured
-    addDatadogLayer(this._lambda, { datadogApiKeyArn });
+    addDatadogLayers(this._lambda, { datadogApiKeyArn });
 
     // Grant secret read permissions
     Object.values(envSecrets).forEach((secret) => {
