@@ -48,7 +48,7 @@ interface LlmError {
 
 export interface LlmInputContentFile {
   type: LlmMessageType.InputFile;
-  file_data: File;
+  file_data: File | string;
   file_id?: string;
   filename?: string;
 }
