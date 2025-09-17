@@ -27,7 +27,7 @@ export function cors(
 ): (req: Request, res: Response, next: NextFunction) => void;
 
 export function expressHandler<T>(
-  handler: (req: Request, res?: Response, ...params: unknown[]) => Promise<T>,
+  handler: (req: Request, res: Response, ...params: unknown[]) => Promise<T>,
   options?: ExpressHandlerOptions,
 ): (req: Request, res: Response, ...params: unknown[]) => Promise<T>;
 
