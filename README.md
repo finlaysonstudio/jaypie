@@ -64,7 +64,7 @@ They may be installed separately in the future.
 | Package | Exports | Description |
 | ------- | ------- | ----------- |
 | `@jaypie/aws` |  `getEnvSecret`, `getMessages`, `getSecret`, `getSingletonMessage`, `getTextractJob`, `sendBatchMessages`, `sendMessage`, `sendTextractJob` | AWS helpers |
-| `@jaypie/datadog` | `submitMetric`, `submitMetricSet` | Datadog helpers |
+| `@jaypie/datadog` | `submitDistribution`, `submitMetric`, `submitMetricSet` | Datadog helpers |
 | `@jaypie/express` | `badRequestRoute`, `cors`, `echoRoute`, `expressHandler`, `expressHttpCodeHandler`, `forbiddenRoute`, `goneRoute`, `methodNotAllowedRoute`, `noContentRoute`, `notFoundRoute`, `notImplementedRoute`, | Express entry point |
 | `@jaypie/lambda` | `lambdaHandler` | Lambda entry point |
 | `@jaypie/llm` | `Llm` | LLM helpers |
@@ -123,10 +123,11 @@ import {
 
 #### `getEnvSecret(name, { env = process.env } = {})`
 
-Checks for `${name}_SECRET` and `SECRET_${name}` in environment variables.  
-If found, retrieves the secret from AWS Secrets Manager.  
-Otherwise, returns the value of `name`.  
-This is convenient for using the environment locally and a secret when deployed.  
+Checks for `SECRET_${name}` and `${name}_SECRET` in environment variables.
+If found, retrieves the secret from AWS Secrets Manager using the AWS Parameters and Secrets Lambda Extension.
+Otherwise, returns the value of `name` from the environment.
+Returns `undefined` if no value is found.
+This is convenient for using the environment locally and a secret when deployed.
 
 ```javascript
 import { getEnvSecret } from "jaypie";
@@ -137,7 +138,9 @@ const secret = await getEnvSecret("MONGODB_URI");
 
 #### `getMessages(event)`
 
-Returns an array of message bodies from an SQS event.  
+Returns an array of message bodies from SQS or SNS events.
+Supports SQS events, SNS events, and direct arrays of events.
+Automatically parses JSON message bodies and returns strings as-is.
 
 ```javascript
 import { getMessages } from '@jaypie/aws';
@@ -171,13 +174,15 @@ const message = await getSingletonMessage(event);
 
 #### `getTextractJob(jobId)`
 
-Retrieves a Textract job from AWS Textract.  
+Retrieves a Textract job from AWS Textract.
+Returns an array of response objects from the Textract API.
+Handles pagination automatically to retrieve all results.
 
 ```javascript
 import { getTextractJob } from '@jaypie/aws';
 
-const textractResults = await getTextractJob(jobId); // Array of Textract blocks
-const raw = JSON.stringify(textractResults);
+const textractResponses = await getTextractJob(jobId); // Array of Textract response objects
+const allBlocks = textractResponses.flatMap(response => response.Blocks || []);
 ```
 
 #### `sendBatchMessages({ messages, queueUrl })`
@@ -205,17 +210,25 @@ await sendBatchMessages({ messages, queueUrl });
 | `messageGroupId` | `string` | No | Custom message group for FIFO queues; default provided |
 | `queueUrl` | `string` | Yes | URL of the SQS queue |
 
-#### `sendMessage({ body, queueUrl })`
+#### `sendMessage(body, options)` or `sendMessage({ body, ...options })`
 
-Sends a single message to an SQS queue.  
+Sends a single message to an SQS queue.
+Supports both flexible parameter styles for convenience.
 
 ```javascript
 import { sendMessage } from '@jaypie/aws';
 
-const body = "Hello, world!";
-const queueUrl = "https://sqs.us-east-1.amazonaws.com/123456789012/MyQueue";
+// Option 1: Separate body and options
+const response = await sendMessage("Hello, world!", { queueUrl });
 
-const response = await sendMessage({ body, queueUrl });
+// Option 2: Everything in options object
+const response = await sendMessage({
+  body: "Hello, world!",
+  queueUrl: "https://sqs.us-east-1.amazonaws.com/123456789012/MyQueue"
+});
+
+// Option 3: Just body (uses default queue URL)
+const response = await sendMessage("Hello, world!");
 ```
 
 | Parameter | Type | Required | Description |
@@ -226,9 +239,10 @@ const response = await sendMessage({ body, queueUrl });
 | `messageGroupId` | `string` | No | Custom message group for FIFO queues; default provided |
 | `queueUrl` | `string` | No | URL of the SQS queue; defaults to `process.env.CDK_ENV_QUEUE_URL` |
 
-#### `sendTextractJob({ key, bucket, featureTypes, snsRoleArn, snsTopicArn })`
+#### `sendTextractJob({ key, bucket, featureTypes, snsRoleArn, snsTopicArn, throttle })`
 
-Sends a Textract job to AWS Textract.  
+Sends a Textract job to AWS Textract.
+Includes built-in retry logic and optional throttling to prevent rate limit issues.
 
 ```javascript
 import { sendTextractJob } from '@jaypie/aws';
@@ -238,17 +252,19 @@ const jobId = await sendTextractJob({
   bucket: "my-bucket",
   featureTypes: ["FORMS", "LAYOUT", "SIGNATURES", "TABLES"], // Optional, defaults to FORMS, LAYOUT, SIGNATURES, TABLES
   snsRoleArn: "arn:aws:iam::123456789012:role/TextractRole", // Optional
-  snsTopicArn: "arn:aws:sns:us-east-1:123456789012:TextractTopic" // Optional
+  snsTopicArn: "arn:aws:sns:us-east-1:123456789012:TextractTopic", // Optional
+  throttle: true // Optional, defaults to true
 });
 ```
 
 | Parameter | Type | Required | Description |
 | --------- | ---- | -------- | ----------- |
 | `key` | `string` | Yes | S3 object key |
-| `bucket` | `string` | Yes | S3 bucket name |
+| `bucket` | `string` | No | S3 bucket name; defaults to `process.env.CDK_ENV_BUCKET` |
 | `featureTypes` | `array` | No | Array of Textract feature types; defaults to `["FORMS", "LAYOUT", "SIGNATURES", "TABLES"]` |
-| `snsRoleArn` | `string` | No | SNS IAM role ARN for notifications |
-| `snsTopicArn` | `string` | No | SNS topic ARN for notifications |
+| `snsRoleArn` | `string` | No | SNS IAM role ARN for notifications; defaults to `process.env.CDK_ENV_SNS_ROLE_ARN` |
+| `snsTopicArn` | `string` | No | SNS topic ARN for notifications; defaults to `process.env.CDK_ENV_SNS_TOPIC_ARN` |
+| `throttle` | `boolean` | No | Whether to throttle requests to prevent rate limiting; defaults to `true` |
 
 ### CDK Constructs
 
@@ -259,14 +275,23 @@ npm install --save-dev @jaypie/constructs
 ```
 
 ```javascript
-import { 
+import {
+  JaypieApiGateway,
+  JaypieAppStack,
+  JaypieBucketQueuedLambda,
+  JaypieDatadogSecret,
   JaypieEnvSecret,
-  JaypieHostedZone, 
+  JaypieExpressLambda,
+  JaypieHostedZone,
+  JaypieInfrastructureStack,
   JaypieLambda,
   JaypieMongoDbSecret,
   JaypieOpenAiSecret,
   JaypieQueuedLambda,
+  JaypieSsoGroups,
+  JaypieStack,
   JaypieTraceSigningKeySecret,
+  JaypieWebDeploymentBucket,
 } from "@jaypie/constructs";
 ```
 
@@ -301,11 +326,124 @@ const mongoConnectionString = new JaypieEnvSecret(
 ##### Convenience Secrets
 
 ```typescript
-import { JaypieMongoDbSecret, JaypieOpenAiSecret, JaypieTraceSigningKeySecret } from "@jaypie/constructs";
+import { JaypieDatadogSecret, JaypieMongoDbSecret, JaypieOpenAiSecret, JaypieTraceSigningKeySecret } from "@jaypie/constructs";
 
+const datadogApiKey = new JaypieDatadogSecret(this);
 const mongoConnectionString = new JaypieMongoDbSecret(this);
 const openAiKey = new JaypieOpenAiSecret(this);
 const traceSigningKey = new JaypieTraceSigningKeySecret(this);
+```
+
+#### `JaypieApiGateway`
+
+Creates an API Gateway with Jaypie conventions for Lambda integration and proper CORS handling.
+
+```typescript
+const apiGateway = new JaypieApiGateway(this, "Api", {
+  lambdaFunction: expressLambda,
+  domainName: "api.example.com",
+  certificateArn: "arn:aws:acm:us-east-1:123456789012:certificate/abc123",
+});
+```
+
+#### `JaypieAppStack`
+
+Base application stack with common Jaypie patterns, resource tagging, and cross-stack resource sharing capabilities.
+
+```typescript
+export class MyAppStack extends JaypieAppStack {
+  constructor(scope: Construct, id: string, props?: JaypieStackProps) {
+    super(scope, id, {
+      ...props,
+      service: "api",
+      project: "myproject",
+    });
+
+    // Add your application resources here
+  }
+}
+```
+
+#### `JaypieBucketQueuedLambda`
+
+Lambda function triggered by S3 bucket events with integrated SQS queuing for reliable processing of object notifications.
+
+```typescript
+const processor = new JaypieBucketQueuedLambda(this, "DocumentProcessor", {
+  code: lambda.Code.fromAsset("src"),
+  handler: "processDocument.handler",
+  bucketName: "documents-bucket",
+  batchSize: 5,
+  environment: {
+    PROCESSING_MODE: "async"
+  },
+});
+```
+
+#### `JaypieExpressLambda`
+
+Lambda function optimized for Express.js applications with API Gateway integration and proper request/response handling.
+
+```typescript
+const expressLambda = new JaypieExpressLambda(this, "ApiServer", {
+  code: lambda.Code.fromAsset("src"),
+  handler: "app.handler",
+  environment: {
+    NODE_ENV: "production"
+  },
+  secrets: [mongoConnectionString],
+  memorySize: 512,
+});
+```
+
+#### `JaypieInfrastructureStack`
+
+Infrastructure stack with common patterns for cross-stack resource sharing and environment-specific configurations.
+
+```typescript
+export class MyInfrastructureStack extends JaypieInfrastructureStack {
+  constructor(scope: Construct, id: string, props?: JaypieStackProps) {
+    super(scope, id, {
+      ...props,
+      service: "infrastructure",
+      project: "myproject",
+    });
+
+    // Add shared infrastructure resources like VPCs, databases, etc.
+  }
+}
+```
+
+#### `JaypieStack`
+
+Base stack with Jaypie conventions, standardized tagging, and common resource patterns for consistent deployments.
+
+```typescript
+export class MyStack extends JaypieStack {
+  constructor(scope: Construct, id: string, props?: JaypieStackProps) {
+    super(scope, id, {
+      ...props,
+      service: "worker",
+      project: "myproject",
+      roleTag: "processing",
+    });
+
+    // Add your stack resources here
+  }
+}
+```
+
+#### `JaypieWebDeploymentBucket`
+
+S3 bucket optimized for static website deployment with CloudFront distribution, custom domain support, and automated deployment workflows.
+
+```typescript
+const webBucket = new JaypieWebDeploymentBucket(this, "WebSite", {
+  domainName: "www.example.com",
+  certificateArn: "arn:aws:acm:us-east-1:123456789012:certificate/abc123",
+  indexDocument: "index.html",
+  errorDocument: "404.html",
+});
 ```
 
 #### `JaypieHostedZone`
@@ -592,6 +730,16 @@ await submitDistribution({
   value: 1,
 })
 ```
+
+| Parameter | Type | Required | Description |
+| --------- | ---- | -------- | ----------- |
+| apiKey | `string` | No | Datadog API key; checks `process.env.DATADOG_API_KEY` |
+| apiSecret | `string` | No | AWS Secret name holding Datadog API key; checks `process.env.SECRET_DATADOG_API_KEY`. Preferred method of retrieving key |
+| name | `string` | Yes | Name of the distribution metric |
+| points | `array` | No | Array of [timestamp, values] pairs for distribution data |
+| value | `number`, `array` | No | Single value or array of values (alternative to points) |
+| tags | `array`, `object` | No | Tags for the metric. Accepts arrays `["key:value"]` or objects `{"key":"value"}` |
+| timestamp | `number` | No | Unix timestamp; defaults to `Date.now()` |
 
 #### `submitMetric({ name, tags, type, value })`
 
