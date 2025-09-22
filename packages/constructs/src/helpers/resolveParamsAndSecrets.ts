@@ -8,35 +8,30 @@ export interface ResolveParamsAndSecretsOptions {
   secretsManagerTtl?: Duration;
 }
 
-export const resolveParamsAndSecrets = (
-  paramsAndSecretsOptions?:
-    | lambda.ParamsAndSecretsLayerVersion
-    | boolean
-    | ResolveParamsAndSecretsOptions,
-) => {
-  if (paramsAndSecretsOptions === false) {
+export const resolveParamsAndSecrets = ({
+  paramsAndSecrets,
+  options,
+}: {
+  paramsAndSecrets?: lambda.ParamsAndSecretsLayerVersion | boolean;
+  options?: ResolveParamsAndSecretsOptions;
+}) => {
+  if (paramsAndSecrets === false) {
     return;
   }
 
   let resolvedParamsAndSecrets: lambda.ParamsAndSecretsLayerVersion;
-  if (paramsAndSecretsOptions instanceof lambda.ParamsAndSecretsLayerVersion) {
-    resolvedParamsAndSecrets = paramsAndSecretsOptions;
+  if (paramsAndSecrets instanceof lambda.ParamsAndSecretsLayerVersion) {
+    resolvedParamsAndSecrets = paramsAndSecrets;
   } else {
-    if (
-      paramsAndSecretsOptions === true ||
-      paramsAndSecretsOptions === undefined
-    ) {
-      paramsAndSecretsOptions = {} as ResolveParamsAndSecretsOptions;
-    }
+    const resolvedOptions = options || {};
     resolvedParamsAndSecrets = lambda.ParamsAndSecretsLayerVersion.fromVersion(
       lambda.ParamsAndSecretsVersions.V1_0_103,
       {
-        cacheSize: paramsAndSecretsOptions?.cacheSize,
+        cacheSize: resolvedOptions.cacheSize,
         logLevel:
-          paramsAndSecretsOptions?.logLevel ||
-          lambda.ParamsAndSecretsLogLevel.WARN,
-        parameterStoreTtl: paramsAndSecretsOptions?.parameterStoreTtl,
-        secretsManagerTtl: paramsAndSecretsOptions?.secretsManagerTtl,
+          resolvedOptions.logLevel || lambda.ParamsAndSecretsLogLevel.WARN,
+        parameterStoreTtl: resolvedOptions.parameterStoreTtl,
+        secretsManagerTtl: resolvedOptions.secretsManagerTtl,
       },
     );
   }
