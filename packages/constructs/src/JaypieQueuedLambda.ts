@@ -189,6 +189,10 @@ export class JaypieQueuedLambda
     return this._lambdaConstruct.resourceArnsForGrantInvoke;
   }
 
+  public get functionRef(): lambda.FunctionRef {
+    return this._lambdaConstruct.functionRef;
+  }
+
   public addEventSource(source: lambda.IEventSource): void {
     this._lambdaConstruct.addEventSource(source);
   }

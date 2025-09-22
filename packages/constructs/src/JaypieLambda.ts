@@ -148,7 +148,6 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
       allowPublicSubnet,
       architecture,
       code: codeAsset,
-      codeSigningConfig,
       deadLetterQueue,
       deadLetterQueueEnabled,
       deadLetterTopic,
@@ -158,7 +157,6 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
         ...secretsEnvironment,
         ...jaypieSecretsEnvironment,
       },
-      environmentEncryption,
       ephemeralStorageSize,
       filesystem,
       handler,
@@ -285,6 +283,10 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
 
   public get resourceArnsForGrantInvoke(): string[] {
     return this._reference.resourceArnsForGrantInvoke;
+  }
+
+  public get functionRef(): lambda.FunctionRef {
+    return this._reference.functionRef;
   }
 
   public addEventSource(source: lambda.IEventSource): void {
