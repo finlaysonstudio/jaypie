@@ -138,9 +138,10 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
     }, {});
 
     // Add ParamsAndSecrets layer if configured
-    const resolvedParamsAndSecrets = paramsAndSecrets
-      ? resolveParamsAndSecrets(paramsAndSecretsOptions)
-      : undefined;
+    const resolvedParamsAndSecrets = resolveParamsAndSecrets({
+      paramsAndSecrets,
+      options: paramsAndSecretsOptions,
+    });
 
     // Create Lambda Function
     this._lambda = new lambda.Function(this, "Function", {
