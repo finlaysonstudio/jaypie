@@ -31,14 +31,12 @@ export class JaypieQueuedLambda
       architecture,
       batchSize = 1,
       code,
-      codeSigningConfig,
       datadogApiKeyArn,
       deadLetterQueue,
       deadLetterQueueEnabled,
       deadLetterTopic,
       description,
       environment = {},
-      environmentEncryption,
       envSecrets = {},
       ephemeralStorageSize,
       fifo = true,
@@ -92,7 +90,6 @@ export class JaypieQueuedLambda
       allowPublicSubnet,
       architecture,
       code,
-      codeSigningConfig,
       datadogApiKeyArn,
       deadLetterQueue,
       deadLetterQueueEnabled,
@@ -102,7 +99,6 @@ export class JaypieQueuedLambda
         ...environment,
         CDK_ENV_QUEUE_URL: this._queue.queueUrl,
       },
-      environmentEncryption,
       envSecrets,
       ephemeralStorageSize,
       filesystem,
@@ -191,6 +187,10 @@ export class JaypieQueuedLambda
 
   public get resourceArnsForGrantInvoke(): string[] {
     return this._lambdaConstruct.resourceArnsForGrantInvoke;
+  }
+
+  public get functionRef(): lambda.FunctionRef {
+    return this._lambdaConstruct.functionRef;
   }
 
   public addEventSource(source: lambda.IEventSource): void {
