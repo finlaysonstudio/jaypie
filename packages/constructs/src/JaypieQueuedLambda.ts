@@ -152,10 +152,6 @@ export class JaypieQueuedLambda
     return this._lambdaConstruct.lambda;
   }
 
-  public get code(): lambda.Code {
-    return this._lambdaConstruct.code;
-  }
-
   // IFunction implementation
   public get functionArn(): string {
     return this._lambdaConstruct.functionArn;
@@ -403,5 +399,9 @@ export class JaypieQueuedLambda
     props?: cloudwatch.MetricOptions,
   ): cloudwatch.Metric {
     return this._queue.metricSentMessageSize(props);
+  }
+
+  public addEnvironment(key: string, value: string): void {
+    this._lambdaConstruct.addEnvironment(key, value);
   }
 }

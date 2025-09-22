@@ -384,4 +384,8 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
   public applyRemovalPolicy(policy: RemovalPolicy): void {
     this._reference.applyRemovalPolicy(policy);
   }
+
+  public addEnvironment(key: string, value: string): void {
+    this._lambda.addEnvironment(key, value);
+  }
 }
