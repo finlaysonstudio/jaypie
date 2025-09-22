@@ -174,6 +174,27 @@ describe("Datadog Metric Adapter", () => {
       expect(response).toBeFalse();
       // Done
     });
+    it("Does not throw when API call fails", async () => {
+      // Arrange
+      mockSubmitMetrics.mockRejectedValue(new Error("API Error"));
+      // Act & Assert
+      await expect(async () => {
+        const response = await submitMetricSet(MOCK.SUBMISSION);
+        expect(response).toBeFalse();
+      }).not.toThrow();
+      // Done
+    });
+    it("Does not throw when getSecret fails", async () => {
+      // Arrange
+      getSecret.mockRejectedValue(new Error("Secret retrieval failed"));
+      const submission = { ...MOCK.SUBMISSION, apiKey: undefined, apiSecret: "secret-name" };
+      // Act & Assert
+      await expect(async () => {
+        const response = await submitMetricSet(submission);
+        expect(response).toBeFalse();
+      }).not.toThrow();
+      // Done
+    });
   });
   describe("Features", () => {
     it("Submits tags", async () => {

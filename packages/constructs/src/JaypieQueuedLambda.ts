@@ -26,23 +26,49 @@ export class JaypieQueuedLambda
     super(scope, id);
 
     const {
+      allowAllOutbound,
+      allowPublicSubnet,
+      architecture,
       batchSize = 1,
       code,
+      codeSigningConfig,
+      datadogApiKeyArn,
+      deadLetterQueue,
+      deadLetterQueueEnabled,
+      deadLetterTopic,
+      description,
       environment = {},
+      environmentEncryption,
       envSecrets = {},
+      ephemeralStorageSize,
       fifo = true,
+      filesystem,
       handler = "index.handler",
+      initialPolicy,
       layers = [],
       logRetention = CDK.LAMBDA.LOG_RETENTION,
+      logRetentionRole,
+      logRetentionRetryOptions,
+      maxEventAge,
       memorySize = CDK.LAMBDA.MEMORY_SIZE,
       paramsAndSecrets,
+      paramsAndSecretsOptions,
+      profiling,
+      profilingGroup,
+      provisionedConcurrentExecutions,
       reservedConcurrentExecutions,
+      retryAttempts,
       roleTag,
       runtime = lambda.Runtime.NODEJS_22_X,
+      runtimeManagementMode,
       secrets = [],
+      securityGroups,
       timeout = Duration.seconds(CDK.DURATION.LAMBDA_WORKER),
+      tracing,
       vendorTag,
       visibilityTimeout = Duration.seconds(CDK.DURATION.LAMBDA_WORKER),
+      vpc,
+      vpcSubnets,
     } = props;
 
     // Create SQS Queue
@@ -62,23 +88,49 @@ export class JaypieQueuedLambda
 
     // Create Lambda with JaypieLambda
     this._lambdaConstruct = new JaypieLambda(this, "Function", {
+      allowAllOutbound,
+      allowPublicSubnet,
+      architecture,
       code,
+      codeSigningConfig,
+      datadogApiKeyArn,
+      deadLetterQueue,
+      deadLetterQueueEnabled,
+      deadLetterTopic,
+      description,
       environment: {
         ...environment,
         CDK_ENV_QUEUE_URL: this._queue.queueUrl,
       },
+      environmentEncryption,
       envSecrets,
+      ephemeralStorageSize,
+      filesystem,
       handler,
+      initialPolicy,
       layers,
       logRetention,
+      logRetentionRole,
+      logRetentionRetryOptions,
+      maxEventAge,
       memorySize,
       paramsAndSecrets,
+      paramsAndSecretsOptions,
+      profiling,
+      profilingGroup,
+      provisionedConcurrentExecutions,
       reservedConcurrentExecutions,
+      retryAttempts,
       roleTag,
       runtime,
+      runtimeManagementMode,
       secrets,
+      securityGroups,
       timeout,
+      tracing,
       vendorTag,
+      vpc,
+      vpcSubnets,
     });
 
     // Set up queue and lambda integration
@@ -98,10 +150,6 @@ export class JaypieQueuedLambda
 
   public get lambda(): lambda.Function {
     return this._lambdaConstruct.lambda;
-  }
-
-  public get code(): lambda.Code {
-    return this._lambdaConstruct.code;
   }
 
   // IFunction implementation
@@ -351,5 +399,9 @@ export class JaypieQueuedLambda
     props?: cloudwatch.MetricOptions,
   ): cloudwatch.Metric {
     return this._queue.metricSentMessageSize(props);
+  }
+
+  public addEnvironment(key: string, value: string): void {
+    this._lambdaConstruct.addEnvironment(key, value);
   }
 }
