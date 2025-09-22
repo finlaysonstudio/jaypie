@@ -18,14 +18,12 @@ export interface JaypieLambdaProps {
   allowPublicSubnet?: boolean;
   architecture?: lambda.Architecture;
   code: lambda.Code | string;
-  codeSigningConfig?: lambda.ICodeSigningConfig;
   datadogApiKeyArn?: string;
   deadLetterQueue?: import("aws-cdk-lib/aws-sqs").IQueue;
   deadLetterQueueEnabled?: boolean;
   deadLetterTopic?: import("aws-cdk-lib/aws-sns").ITopic;
   description?: string;
   environment?: { [key: string]: string };
-  environmentEncryption?: import("aws-cdk-lib/aws-kms").IKey;
   envSecrets?: { [key: string]: secretsmanager.ISecret };
   ephemeralStorageSize?: import("aws-cdk-lib").Size;
   filesystem?: lambda.FileSystem;
@@ -74,14 +72,12 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
       allowPublicSubnet,
       architecture = lambda.Architecture.X86_64,
       code,
-      codeSigningConfig,
       datadogApiKeyArn,
       deadLetterQueue,
       deadLetterQueueEnabled,
       deadLetterTopic,
       description,
       environment: initialEnvironment = {},
-      environmentEncryption,
       envSecrets = {},
       ephemeralStorageSize,
       filesystem,
