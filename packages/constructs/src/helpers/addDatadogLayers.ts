@@ -41,12 +41,12 @@ export function addDatadogLayers(
 
   const datadogApiKeySecret: secretsmanager.ISecret =
     secretsmanager.Secret.fromSecretNameV2(
-      lambdaFunction.stack,
+      lambdaFunction,
       "DatadogApiKey",
       resolvedDatadogApiKeyArn,
     );
   const datadogLambda = new DatadogLambda(
-    lambdaFunction.stack,
+    lambdaFunction,
     "DatadogLambda",
     {
       apiKeySecret: datadogApiKeySecret, // apiKeySecret auto-grants secret access to the added lambdas
