@@ -149,6 +149,71 @@ const messages = getMessages(event);
 // messages = [{ salutation: "Hello, world!" }, { salutation: "Hola, dushi!" }]
 ```
 
+##### Supported Event Formats
+
+**SQS Event (Lambda trigger):**
+```javascript
+const sqsEvent = {
+  Records: [
+    {
+      body: '{"message": "Hello from SQS"}'
+    },
+    {
+      body: 'Plain text message'
+    }
+  ]
+};
+const messages = getMessages(sqsEvent);
+// messages = [{ message: "Hello from SQS" }, "Plain text message"]
+```
+
+**SNS Event (wrapped in SQS):**
+```javascript
+const snsEvent = {
+  Records: [
+    {
+      EventSource: "aws:sns",
+      Sns: {
+        Message: '{"notification": "Hello from SNS"}'
+      }
+    }
+  ]
+};
+const messages = getMessages(snsEvent);
+// messages = [{ notification: "Hello from SNS" }]
+```
+
+**Direct Array of Events:**
+```javascript
+const arrayEvent = [
+  { body: '{"data": "First message"}' },
+  { body: '{"data": "Second message"}' }
+];
+const messages = getMessages(arrayEvent);
+// messages = [{ data: "First message" }, { data: "Second message" }]
+```
+
+**Single Object (passthrough):**
+```javascript
+const singleEvent = { action: "process", id: 123 };
+const messages = getMessages(singleEvent);
+// messages = [{ action: "process", id: 123 }]
+```
+
+**Edge Cases:**
+```javascript
+// Undefined or null
+const messages1 = getMessages(undefined);
+// messages1 = []
+
+const messages2 = getMessages(null);
+// Throws ConfigurationError: "Event must be an object"
+
+// Invalid event type
+const messages3 = getMessages("invalid");
+// Throws ConfigurationError: "Event must be an object"
+```
+
 #### `getSecret(secretName: string)`
 
 Retrieves a secret from AWS Secrets Manager using the secret name.  
