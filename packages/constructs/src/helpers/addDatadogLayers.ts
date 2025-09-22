@@ -40,7 +40,7 @@ export function addDatadogLayers(
   });
 
   const datadogApiKeySecret: secretsmanager.ISecret =
-    secretsmanager.Secret.fromSecretNameV2(
+    secretsmanager.Secret.fromSecretCompleteArn(
       lambdaFunction,
       "DatadogApiKey",
       resolvedDatadogApiKeyArn,
