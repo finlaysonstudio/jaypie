@@ -45,18 +45,14 @@ export function addDatadogLayers(
       "DatadogApiKey",
       resolvedDatadogApiKeyArn,
     );
-  const datadogLambda = new DatadogLambda(
-    lambdaFunction,
-    "DatadogLambda",
-    {
-      apiKeySecret: datadogApiKeySecret, // apiKeySecret auto-grants secret access to the added lambdas
-      nodeLayerVersion: CDK.DATADOG.LAYER.NODE,
-      extensionLayerVersion: CDK.DATADOG.LAYER.EXTENSION,
-      env: process.env.PROJECT_ENV,
-      service: process.env.PROJECT_SERVICE,
-      version: process.env.PROJECT_VERSION,
-    },
-  );
+  const datadogLambda = new DatadogLambda(lambdaFunction, "DatadogLambda", {
+    apiKeySecret: datadogApiKeySecret, // apiKeySecret auto-grants secret access to the added lambdas
+    nodeLayerVersion: CDK.DATADOG.LAYER.NODE,
+    extensionLayerVersion: CDK.DATADOG.LAYER.EXTENSION,
+    env: process.env.PROJECT_ENV,
+    service: process.env.PROJECT_SERVICE,
+    version: process.env.PROJECT_VERSION,
+  });
   datadogLambda.addLambdaFunctions([lambdaFunction]);
 
   return true;
