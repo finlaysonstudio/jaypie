@@ -186,6 +186,7 @@ const submitDistribution = async ({
 //
 
 const submitDistributionViaStatsD = ({ name, points, value, tags }) => {
+  log.trace("Submit distribution via StatsD");
   try {
     if (!name) {
       log.warn("Distribution metric name was not provided");
