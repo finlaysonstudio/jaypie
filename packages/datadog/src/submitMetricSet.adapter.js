@@ -4,6 +4,7 @@ import { force, log } from "@jaypie/core";
 
 import { DATADOG } from "./constants.js";
 import objectToKeyValueArrayPipeline from "./objectToKeyValueArray.pipeline.js";
+import getStatsDClient, { isLambdaWithExtension } from "./statsd.client.js";
 
 //
 //
@@ -29,6 +30,10 @@ const submitMetricSet = async ({
 } = {}) => {
   try {
     log.trace.var({ submitMetricSet: { valueSet } });
+
+    if (isLambdaWithExtension()) {
+      return submitMetricSetViaStatsD({ type, valueSet, tags });
+    }
 
     //
     //
@@ -169,6 +174,87 @@ const submitMetricSet = async ({
   } catch (error) {
     // eslint-disable-next-line no-console
     console.error({ submitMetricSetUnexpectedError: error.message });
+    return false;
+  }
+};
+
+//
+//
+//
+
+const submitMetricSetViaStatsD = ({ type, valueSet, tags }) => {
+  log.trace("Submit metric set via StatsD");
+  try {
+    if (!valueSet || Object.keys(valueSet).length === 0) {
+      log.warn("Metric valueSet was not provided");
+      return false;
+    }
+
+    const {
+      PROJECT_ENV,
+      PROJECT_KEY,
+      PROJECT_SERVICE,
+      PROJECT_SPONSOR,
+      PROJECT_VERSION,
+    } = process.env;
+
+    const defaultTagsArray = [];
+    if (PROJECT_ENV) defaultTagsArray.push(`env:${PROJECT_ENV}`);
+    if (PROJECT_KEY) defaultTagsArray.push(`project:${PROJECT_KEY}`);
+    if (PROJECT_SERVICE) defaultTagsArray.push(`service:${PROJECT_SERVICE}`);
+    if (PROJECT_SPONSOR) defaultTagsArray.push(`sponsor:${PROJECT_SPONSOR}`);
+    if (PROJECT_VERSION) defaultTagsArray.push(`version:${PROJECT_VERSION}`);
+
+    let userTagsArray = [];
+    if (tags) {
+      if (Array.isArray(tags)) {
+        userTagsArray = tags;
+      } else {
+        userTagsArray = objectToKeyValueArrayPipeline(tags);
+      }
+    }
+
+    const allTags = [...defaultTagsArray, ...userTagsArray];
+
+    const seenPrefixes = new Set();
+    const seenValues = new Set();
+    const finalTags = [];
+
+    for (let i = allTags.length - 1; i >= 0; i--) {
+      const tag = allTags[i];
+      const colonIndex = tag.indexOf(":");
+
+      if (colonIndex === -1) {
+        if (!seenValues.has(tag)) {
+          seenValues.add(tag);
+          finalTags.unshift(tag);
+        }
+      } else {
+        const prefix = tag.substring(0, colonIndex);
+        if (!seenPrefixes.has(prefix)) {
+          seenPrefixes.add(prefix);
+          finalTags.unshift(tag);
+        }
+      }
+    }
+
+    const client = getStatsDClient();
+
+    for (const [name, value] of Object.entries(valueSet)) {
+      const numericValue = force.number(value);
+
+      if (type === DATADOG.METRIC.TYPE.COUNT) {
+        client.increment(name, numericValue, finalTags);
+      } else if (type === DATADOG.METRIC.TYPE.GAUGE) {
+        client.gauge(name, numericValue, finalTags);
+      } else {
+        client.increment(name, numericValue, finalTags);
+      }
+    }
+
+    return true;
+  } catch (error) {
+    log.error.var({ submitMetricSetStatsDError: error.message });
     return false;
   }
 };
