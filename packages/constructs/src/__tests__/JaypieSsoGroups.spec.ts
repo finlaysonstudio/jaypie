@@ -124,16 +124,29 @@ describe("JaypieSsoGroups", () => {
         Name: "Analyst",
         Description: Match.stringLikeRegexp(".*Read-only access.*"),
         InstanceArn: "arn:aws:sso:::instance/ssoins-1234567890abcdef",
-        ManagedPolicies: ["arn:aws:iam::aws:policy/ReadOnlyAccess"],
+        ManagedPolicies: Match.arrayWith([
+          Match.objectLike({
+            "Fn::Join": Match.arrayWith([
+              Match.arrayWith([
+                Match.stringLikeRegexp(".*AmazonQDeveloperAccess"),
+              ]),
+            ]),
+          }),
+          Match.objectLike({
+            "Fn::Join": Match.arrayWith([
+              Match.arrayWith([Match.stringLikeRegexp(".*ReadOnlyAccess")]),
+            ]),
+          }),
+        ]),
         SessionDuration: "PT4H",
         InlinePolicy: Match.objectLike({
           Statement: Match.arrayWith([
             Match.objectLike({
               Effect: "Allow",
               Action: Match.arrayWith([
+                "aws-portal:ViewUsage",
                 "aws-portal:ViewBilling",
-                "aws-portal:ViewAccount",
-                "s3:GetObject",
+                "s3:Get*",
               ]),
             }),
           ]),
@@ -145,9 +158,27 @@ describe("JaypieSsoGroups", () => {
         Name: "Developer",
         Description: Match.stringLikeRegexp(".*System administrator access.*"),
         InstanceArn: "arn:aws:sso:::instance/ssoins-1234567890abcdef",
-        ManagedPolicies: [
-          "arn:aws:iam::aws:policy/job-function/SystemAdministrator",
-        ],
+        ManagedPolicies: Match.arrayWith([
+          Match.objectLike({
+            "Fn::Join": Match.arrayWith([
+              Match.arrayWith([
+                Match.stringLikeRegexp(".*AmazonQDeveloperAccess"),
+              ]),
+            ]),
+          }),
+          Match.objectLike({
+            "Fn::Join": Match.arrayWith([
+              Match.arrayWith([Match.stringLikeRegexp(".*ReadOnlyAccess")]),
+            ]),
+          }),
+          Match.objectLike({
+            "Fn::Join": Match.arrayWith([
+              Match.arrayWith([
+                Match.stringLikeRegexp(".*SystemAdministrator"),
+              ]),
+            ]),
+          }),
+        ]),
         SessionDuration: "PT8H",
         InlinePolicy: Match.objectLike({
           Statement: Match.arrayWith([
@@ -506,8 +537,8 @@ describe("JaypieSsoGroups", () => {
             Match.objectLike({
               Effect: "Allow",
               Action: Match.arrayWith([
+                "aws-portal:ViewUsage",
                 "aws-portal:ViewBilling",
-                "aws-portal:ViewAccount",
               ]),
             }),
             Match.objectLike({
