@@ -7,6 +7,10 @@ export { JaypieBucketQueuedLambda } from "./JaypieBucketQueuedLambda";
 export { JaypieDatadogSecret } from "./JaypieDatadogSecret";
 export { JaypieDnsRecord, JaypieDnsRecordProps } from "./JaypieDnsRecord";
 export { JaypieEnvSecret } from "./JaypieEnvSecret";
+export {
+  JaypieGitHubDeployRole,
+  JaypieGitHubDeployRoleProps,
+} from "./JaypieGitHubDeployRole";
 export { JaypieExpressLambda } from "./JaypieExpressLambda";
 export {
   JaypieHostedZone,
