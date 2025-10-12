@@ -2,20 +2,34 @@ import { CDK } from "@jaypie/cdk";
 import * as cdk from "aws-cdk-lib";
 import { ServicePrincipal } from "aws-cdk-lib/aws-iam";
 import {
-  LogGroup,
   FilterPattern,
-  RetentionDays,
   ILogGroup,
+  LogGroup,
+  RetentionDays,
 } from "aws-cdk-lib/aws-logs";
-import { HostedZone, IHostedZone } from "aws-cdk-lib/aws-route53";
 import { LambdaDestination } from "aws-cdk-lib/aws-logs-destinations";
+import { HostedZone, IHostedZone } from "aws-cdk-lib/aws-route53";
 import { Construct } from "constructs";
 
 import { resolveDatadogLoggingDestination } from "./helpers/resolveDatadogLoggingDestination";
+import { JaypieDnsRecord, JaypieDnsRecordProps } from "./JaypieDnsRecord";
 
 const SERVICE = {
   ROUTE53: "route53.amazonaws.com",
 } as const;
+
+/**
+ * DNS record configuration for JaypieHostedZone
+ * Omits 'zone' since it will be automatically set to the created hosted zone
+ */
+export interface JaypieHostedZoneRecordProps
+  extends Omit<JaypieDnsRecordProps, "zone"> {
+  /**
+   * Optional ID for the DNS record construct
+   * @default Generated from record type and name
+   */
+  id?: string;
+}
 
 interface JaypieHostedZoneProps {
   /**
@@ -39,14 +53,20 @@ interface JaypieHostedZoneProps {
    * @default true
    */
   destination?: LambdaDestination | boolean;
+  /**
+   * Optional DNS records to create for this hosted zone
+   * Each record will be created as a JaypieDnsRecord construct
+   */
+  records?: JaypieHostedZoneRecordProps[];
 }
 
 export class JaypieHostedZone extends Construct {
   public readonly hostedZone: IHostedZone;
   public readonly logGroup: ILogGroup;
+  public readonly dnsRecords: JaypieDnsRecord[];
 
   /**
-   * Create a new hosted zone with query logging
+   * Create a new hosted zone with query logging and optional DNS records
    */
   constructor(scope: Construct, id: string, props: JaypieHostedZoneProps) {
     super(scope, id);
@@ -97,6 +117,25 @@ export class JaypieHostedZone extends Construct {
     cdk.Tags.of(this.hostedZone).add(CDK.TAG.ROLE, CDK.ROLE.NETWORKING);
     if (project) {
       cdk.Tags.of(this.hostedZone).add(CDK.TAG.PROJECT, project);
+    }
+
+    // Create DNS records if provided
+    this.dnsRecords = [];
+    if (props.records) {
+      props.records.forEach((recordConfig, index) => {
+        const { id, ...recordProps } = recordConfig;
+        // Generate a default ID if not provided
+        const recordId =
+          id ||
+          `${recordProps.type}${recordProps.recordName ? `-${recordProps.recordName}` : ""}-${index}`;
+
+        const dnsRecord = new JaypieDnsRecord(this, recordId, {
+          ...recordProps,
+          zone: this.hostedZone,
+        });
+
+        this.dnsRecords.push(dnsRecord);
+      });
     }
   }
 }

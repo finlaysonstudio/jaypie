@@ -5,10 +5,13 @@ export { JaypieApiGateway } from "./JaypieApiGateway";
 export { JaypieAppStack } from "./JaypieAppStack";
 export { JaypieBucketQueuedLambda } from "./JaypieBucketQueuedLambda";
 export { JaypieDatadogSecret } from "./JaypieDatadogSecret";
-export { JaypieDnsRecord } from "./JaypieDnsRecord";
+export { JaypieDnsRecord, JaypieDnsRecordProps } from "./JaypieDnsRecord";
 export { JaypieEnvSecret } from "./JaypieEnvSecret";
 export { JaypieExpressLambda } from "./JaypieExpressLambda";
-export { JaypieHostedZone } from "./JaypieHostedZone";
+export {
+  JaypieHostedZone,
+  JaypieHostedZoneRecordProps,
+} from "./JaypieHostedZone";
 export { JaypieInfrastructureStack } from "./JaypieInfrastructureStack";
 export { JaypieLambda } from "./JaypieLambda";
 export { JaypieMongoDbSecret } from "./JaypieMongoDbSecret";

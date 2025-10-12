@@ -13,7 +13,7 @@ import { Construct } from "constructs";
 
 import { resolveHostedZone } from "./helpers/resolveHostedZone";
 
-interface JaypieDnsRecordProps {
+export interface JaypieDnsRecordProps {
   /**
    * Optional comment to add to the DNS record
    */
