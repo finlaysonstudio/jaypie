@@ -1,3 +1,6 @@
+// Re-export CDK from @jaypie/cdk for convenience
+export { CDK } from "@jaypie/cdk";
+
 export { JaypieApiGateway } from "./JaypieApiGateway";
 export { JaypieAppStack } from "./JaypieAppStack";
 export { JaypieBucketQueuedLambda } from "./JaypieBucketQueuedLambda";
