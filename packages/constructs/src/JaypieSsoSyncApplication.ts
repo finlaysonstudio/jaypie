@@ -1,8 +1,7 @@
 import { Construct } from "constructs";
 import { Stack, Tags } from "aws-cdk-lib";
 import { CfnApplication } from "aws-cdk-lib/aws-sam";
-import { CDK } from "@jaypie/cdk";
-import { ConfigurationError } from "@jaypie/errors";
+import { CDK, ConfigurationError } from "@jaypie/cdk";
 
 //
 //

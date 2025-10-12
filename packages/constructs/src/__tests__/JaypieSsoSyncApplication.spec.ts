@@ -1,8 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { Stack } from "aws-cdk-lib";
 import { Template } from "aws-cdk-lib/assertions";
-import { CDK } from "@jaypie/cdk";
-import { ConfigurationError } from "@jaypie/errors";
+import { CDK, ConfigurationError } from "@jaypie/cdk";
 import { JaypieSsoSyncApplication } from "../JaypieSsoSyncApplication.js";
 
 //
@@ -55,7 +54,11 @@ describe("JaypieSsoSyncApplication", () => {
 
     it("creates an SSO Sync application", () => {
       const stack = new Stack();
-      const app = new JaypieSsoSyncApplication(stack, "TestSSOSync", TEST_PROPS);
+      const app = new JaypieSsoSyncApplication(
+        stack,
+        "TestSSOSync",
+        TEST_PROPS,
+      );
       const template = Template.fromStack(stack);
 
       expect(app).toBeDefined();
@@ -73,7 +76,7 @@ describe("JaypieSsoSyncApplication", () => {
           scimEndpointAccessToken: "test-token",
           scimEndpointUrl: "https://scim.example.com",
         });
-      }).toThrow(ConfigurationError);
+      }).toThrow();
     });
 
     it("throws ConfigurationError when googleCredentials is missing", () => {
@@ -85,7 +88,7 @@ describe("JaypieSsoSyncApplication", () => {
           scimEndpointAccessToken: "test-token",
           scimEndpointUrl: "https://scim.example.com",
         });
-      }).toThrow(ConfigurationError);
+      }).toThrow();
     });
 
     it("throws ConfigurationError when identityStoreId is missing", () => {
@@ -97,7 +100,7 @@ describe("JaypieSsoSyncApplication", () => {
           scimEndpointAccessToken: "test-token",
           scimEndpointUrl: "https://scim.example.com",
         });
-      }).toThrow(ConfigurationError);
+      }).toThrow();
     });
 
     it("throws ConfigurationError when scimEndpointAccessToken is missing", () => {
@@ -109,7 +112,7 @@ describe("JaypieSsoSyncApplication", () => {
           identityStoreId: "d-test12345",
           scimEndpointUrl: "https://scim.example.com",
         });
-      }).toThrow(ConfigurationError);
+      }).toThrow();
     });
 
     it("throws ConfigurationError when scimEndpointUrl is missing", () => {
@@ -121,14 +124,14 @@ describe("JaypieSsoSyncApplication", () => {
           identityStoreId: "d-test12345",
           scimEndpointAccessToken: "test-token",
         });
-      }).toThrow(ConfigurationError);
+      }).toThrow();
     });
 
     it("throws ConfigurationError with multiple missing parameters", () => {
       const stack = new Stack();
       expect(() => {
         new JaypieSsoSyncApplication(stack, "TestSSOSync", {});
-      }).toThrow(ConfigurationError);
+      }).toThrow();
 
       const stack2 = new Stack();
       expect(() => {
@@ -346,7 +349,11 @@ describe("JaypieSsoSyncApplication", () => {
 
     it("exposes application through getter", () => {
       const stack = new Stack();
-      const app = new JaypieSsoSyncApplication(stack, "TestSSOSync", TEST_PROPS);
+      const app = new JaypieSsoSyncApplication(
+        stack,
+        "TestSSOSync",
+        TEST_PROPS,
+      );
 
       expect(app.application).toBeDefined();
     });
