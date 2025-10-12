@@ -1,4 +1,4 @@
-import { CfnOutput, Duration } from "aws-cdk-lib";
+import { CfnOutput, Duration, Fn } from "aws-cdk-lib";
 import {
   Effect,
   FederatedPrincipal,
@@ -6,10 +6,11 @@ import {
   Role,
 } from "aws-cdk-lib/aws-iam";
 import { Construct } from "constructs";
+import { CDK } from "@jaypie/cdk";
 
 export interface JaypieGitHubDeployRoleProps {
   accountId: string;
-  oidcProviderArn: string;
+  oidcProviderArn?: string;
   output?: boolean | string;
   repoRestriction: string;
 }
@@ -26,7 +27,7 @@ export class JaypieGitHubDeployRole extends Construct {
 
     const {
       accountId,
-      oidcProviderArn,
+      oidcProviderArn = Fn.importValue(CDK.IMPORT.OIDC_PROVIDER),
       output = true,
       repoRestriction,
     } = props;
