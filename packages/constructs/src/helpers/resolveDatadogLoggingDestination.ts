@@ -1,4 +1,4 @@
-import { CDK } from "@jaypie/cdk";
+import { CDK } from "../constants";
 import * as logDestinations from "aws-cdk-lib/aws-logs-destinations";
 import { Construct } from "constructs";
 

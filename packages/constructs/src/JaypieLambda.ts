@@ -1,7 +1,7 @@
 import { Construct } from "constructs";
 import { Duration, Stack, RemovalPolicy, Tags } from "aws-cdk-lib";
 import * as lambda from "aws-cdk-lib/aws-lambda";
-import { CDK } from "@jaypie/cdk";
+import { CDK } from "./constants";
 import * as iam from "aws-cdk-lib/aws-iam";
 import * as cloudwatch from "aws-cdk-lib/aws-cloudwatch";
 import * as ec2 from "aws-cdk-lib/aws-ec2";

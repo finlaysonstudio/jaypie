@@ -1,5 +1,6 @@
 import { Construct } from "constructs";
-import { CDK } from "@jaypie/cdk";
+
+import { CDK } from "./constants";
 import { JaypieEnvSecret, JaypieEnvSecretProps } from "./JaypieEnvSecret";
 
 export class JaypieMongoDbSecret extends JaypieEnvSecret {

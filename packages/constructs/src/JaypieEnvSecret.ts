@@ -8,7 +8,6 @@ import {
   Stack,
 } from "aws-cdk-lib";
 import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
-import { CDK } from "@jaypie/cdk";
 import {
   ISecret,
   ISecretAttachmentTarget,
@@ -22,6 +21,8 @@ import {
   PolicyStatement,
   AddToResourcePolicyResult,
 } from "aws-cdk-lib/aws-iam";
+
+import { CDK } from "./constants";
 
 // It is a consumer if the environment is ephemeral
 function checkEnvIsConsumer(env = process.env): boolean {

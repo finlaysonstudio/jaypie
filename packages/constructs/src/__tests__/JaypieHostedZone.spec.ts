@@ -1,6 +1,6 @@
 /* eslint-disable vitest/expect-expect */
 
-import { CDK } from "@jaypie/cdk";
+import { CDK } from "../constants";
 import { App, Stack } from "aws-cdk-lib";
 import { Template } from "aws-cdk-lib/assertions";
 import { describe, expect, it, beforeEach } from "vitest";

@@ -1,4 +1,4 @@
-import { ConfigurationError } from "@jaypie/cdk";
+import { ConfigurationError } from "@jaypie/errors";
 
 export function envHostname({
   component,

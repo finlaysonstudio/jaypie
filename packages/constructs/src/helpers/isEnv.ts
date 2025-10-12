@@ -1,4 +1,4 @@
-import { CDK } from "@jaypie/cdk";
+import { CDK } from "../constants";
 
 /**
  * Check if the current environment matches the given environment

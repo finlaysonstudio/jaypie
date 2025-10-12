@@ -1,6 +1,6 @@
 /* eslint-disable vitest/expect-expect */
 
-import { CDK } from "@jaypie/cdk";
+import { CDK } from "../constants";
 import { App, Duration, Stack } from "aws-cdk-lib";
 import { Template } from "aws-cdk-lib/assertions";
 import { HostedZone } from "aws-cdk-lib/aws-route53";

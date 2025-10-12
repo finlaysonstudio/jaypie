@@ -1,4 +1,4 @@
-import { CDK } from "@jaypie/cdk";
+import { CDK } from "../constants";
 import { describe, expect, it } from "vitest";
 import { Stack, Duration } from "aws-cdk-lib";
 import { Template } from "aws-cdk-lib/assertions";

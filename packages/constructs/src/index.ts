@@ -1,5 +1,5 @@
-// Re-export CDK from @jaypie/cdk for convenience
-export { CDK } from "@jaypie/cdk";
+// Export CDK constants
+export { CDK } from "./constants";
 
 export { JaypieApiGateway } from "./JaypieApiGateway";
 export { JaypieAppStack } from "./JaypieAppStack";
