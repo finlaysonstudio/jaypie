@@ -48,7 +48,7 @@ export class JaypieSsoSyncApplication extends Construct {
 
   constructor(
     scope: Construct,
-    id = "SSOSyncApplication",
+    id = "SsoSyncApplication",
     props: JaypieSsoSyncApplicationProps = {},
   ) {
     super(scope, id);

@@ -1,4 +1,4 @@
-import { CfnOutput, Duration, Fn, Tags } from "aws-cdk-lib";
+import { CfnOutput, Duration, Fn, Stack, Tags } from "aws-cdk-lib";
 import {
   Effect,
   FederatedPrincipal,
@@ -9,7 +9,6 @@ import { Construct } from "constructs";
 import { CDK, ConfigurationError } from "@jaypie/cdk";
 
 export interface JaypieGitHubDeployRoleProps {
-  accountId: string;
   oidcProviderArn?: string;
   output?: boolean | string;
   repoRestriction?: string;
@@ -21,16 +20,18 @@ export class JaypieGitHubDeployRole extends Construct {
   constructor(
     scope: Construct,
     id: string,
-    props: JaypieGitHubDeployRoleProps,
+    props: JaypieGitHubDeployRoleProps = {},
   ) {
     super(scope, id);
 
     const {
-      accountId,
       oidcProviderArn = Fn.importValue(CDK.IMPORT.OIDC_PROVIDER),
       output = true,
       repoRestriction: propsRepoRestriction,
     } = props;
+
+    // Extract account ID from the scope
+    const accountId = Stack.of(this).account;
 
     // Resolve repoRestriction from props or environment variables
     let repoRestriction = propsRepoRestriction;
