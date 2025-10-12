@@ -33,6 +33,11 @@ export interface JaypieHostedZoneRecordProps
 
 interface JaypieHostedZoneProps {
   /**
+   * Optional construct ID
+   * @default `${zoneName}-HostedZone`
+   */
+  id?: string;
+  /**
    * The domain name for the hosted zone
    */
   zoneName: string;
@@ -68,7 +73,19 @@ export class JaypieHostedZone extends Construct {
   /**
    * Create a new hosted zone with query logging and optional DNS records
    */
-  constructor(scope: Construct, id: string, props: JaypieHostedZoneProps) {
+  constructor(
+    scope: Construct,
+    idOrProps: string | JaypieHostedZoneProps,
+    propsOrUndefined?: JaypieHostedZoneProps,
+  ) {
+    // Handle overloaded constructor signatures
+    const props =
+      typeof idOrProps === "string" ? propsOrUndefined! : idOrProps;
+    const id =
+      typeof idOrProps === "string"
+        ? idOrProps
+        : props.id || `${props.zoneName}-HostedZone`;
+
     super(scope, id);
 
     const { zoneName, project } = props;
