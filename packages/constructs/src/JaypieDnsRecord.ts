@@ -147,5 +147,9 @@ export class JaypieDnsRecord extends Construct {
           `Unsupported DNS record type: ${type}. Supported types: A, CNAME, MX, NS, TXT`,
         );
     }
+
+    // Add standard tags to the DNS record
+    cdk.Tags.of(this.record).add(CDK.TAG.SERVICE, CDK.SERVICE.INFRASTRUCTURE);
+    cdk.Tags.of(this.record).add(CDK.TAG.ROLE, CDK.ROLE.NETWORKING);
   }
 }
