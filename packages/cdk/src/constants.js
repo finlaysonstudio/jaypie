@@ -42,6 +42,18 @@ const CDK = {
   DEFAULT: {
     REGION: "us-east-1",
   },
+  DNS: {
+    CONFIG: {
+      TTL: 300, // 5 minutes in seconds for Route53
+    },
+    RECORD: {
+      A: "A",
+      CNAME: "CNAME",
+      MX: "MX",
+      NS: "NS",
+      TXT: "TXT",
+    },
+  },
   DURATION: {
     EXPRESS_API: 30,
     LAMBDA_WORKER: 900,

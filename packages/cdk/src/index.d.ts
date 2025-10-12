@@ -17,6 +17,18 @@ declare module "@jaypie/cdk" {
     WEB: string;
   }
 
+  export interface CDKDnsConfig {
+    TTL: number;
+  }
+
+  export interface CDKDnsRecord {
+    A: string;
+    CNAME: string;
+    MX: string;
+    NS: string;
+    TXT: string;
+  }
+
   export interface CDKTAG {
     BUILD_DATE: string;
     BUILD_HEX: string;
@@ -67,6 +79,10 @@ declare module "@jaypie/cdk" {
     };
     DEFAULT: {
       REGION: string;
+    };
+    DNS: {
+      CONFIG: CDKDnsConfig;
+      RECORD: CDKDnsRecord;
     };
     DURATION: {
       EXPRESS_API: number;

@@ -2,6 +2,7 @@ export { JaypieApiGateway } from "./JaypieApiGateway";
 export { JaypieAppStack } from "./JaypieAppStack";
 export { JaypieBucketQueuedLambda } from "./JaypieBucketQueuedLambda";
 export { JaypieDatadogSecret } from "./JaypieDatadogSecret";
+export { JaypieDnsRecord } from "./JaypieDnsRecord";
 export { JaypieEnvSecret } from "./JaypieEnvSecret";
 export { JaypieExpressLambda } from "./JaypieExpressLambda";
 export { JaypieHostedZone } from "./JaypieHostedZone";
