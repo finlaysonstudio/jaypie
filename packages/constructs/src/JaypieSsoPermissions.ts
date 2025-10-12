@@ -19,7 +19,8 @@ export interface AccountAssignments {
 export interface JaypieSsoPermissionsProps {
   /**
    * ARN of the IAM Identity Center instance
-   * If not provided, SSO setup will be skipped
+   * If not provided, falls back to CDK_ENV_IAM_IDENTITY_CENTER_ARN
+   * If neither is set, SSO setup will be skipped
    */
   iamIdentityCenterArn?: string;
 
@@ -108,7 +109,7 @@ export class JaypieSsoPermissions extends Construct {
     super(scope, id);
 
     const {
-      iamIdentityCenterArn,
+      iamIdentityCenterArn: iamIdentityCenterArnProp,
       administratorGroupId,
       analystGroupId,
       developerGroupId,
@@ -116,6 +117,9 @@ export class JaypieSsoPermissions extends Construct {
       analystAccountAssignments,
       developerAccountAssignments,
     } = props;
+
+    const iamIdentityCenterArn =
+      iamIdentityCenterArnProp || process.env.CDK_ENV_IAM_IDENTITY_CENTER_ARN;
 
     if (!iamIdentityCenterArn) {
       // If no IAM Identity Center ARN provided, skip SSO setup
