@@ -421,4 +421,11 @@ export class JaypieWebDeploymentBucket extends Construct implements s3.IBucket {
   applyRemovalPolicy(policy: RemovalPolicy): void {
     this.bucket.applyRemovalPolicy(policy);
   }
+
+  get bucketRef(): s3.BucketReference {
+    return {
+      bucketArn: this.bucket.bucketArn,
+      bucketName: this.bucket.bucketName,
+    };
+  }
 }

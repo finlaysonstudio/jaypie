@@ -286,8 +286,11 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
     return this._reference.resourceArnsForGrantInvoke;
   }
 
-  public get functionRef(): lambda.FunctionRef {
-    return this._reference.functionRef;
+  public get functionRef(): lambda.FunctionReference {
+    return {
+      functionArn: this._reference.functionArn,
+      functionName: this._reference.functionName,
+    };
   }
 
   public addEventSource(source: lambda.IEventSource): void {

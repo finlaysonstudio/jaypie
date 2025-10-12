@@ -236,4 +236,10 @@ export class JaypieApiGateway extends Construct implements apiGateway.IRestApi {
   public applyRemovalPolicy(policy: RemovalPolicy): void {
     this._api.applyRemovalPolicy(policy);
   }
+
+  public get restApiRef(): apiGateway.RestApiReference {
+    return {
+      restApiId: this._api.restApiId,
+    };
+  }
 }

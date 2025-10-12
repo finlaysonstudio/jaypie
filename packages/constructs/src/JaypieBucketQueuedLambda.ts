@@ -4,7 +4,6 @@ import * as s3 from "aws-cdk-lib/aws-s3";
 import * as s3n from "aws-cdk-lib/aws-s3-notifications";
 import { CDK } from "@jaypie/cdk";
 import * as iam from "aws-cdk-lib/aws-iam";
-import * as cloudwatch from "aws-cdk-lib/aws-cloudwatch";
 import {
   JaypieQueuedLambda,
   JaypieQueuedLambdaProps,
@@ -108,7 +107,7 @@ export class JaypieBucketQueuedLambda
   public addEventNotification(
     event: s3.EventType,
     dest: s3.IBucketNotificationDestination,
-    filters?: s3.NotificationKeyFilter[],
+    ...filters: s3.NotificationKeyFilter[]
   ): void {
     this._bucket.addEventNotification(event, dest, ...filters);
   }
@@ -139,10 +138,6 @@ export class JaypieBucketQueuedLambda
 
   public enableEventBridgeNotification(): void {
     this._bucket.enableEventBridgeNotification();
-  }
-
-  public grant(grantee: iam.IGrantable, ...actions: string[]): iam.Grant {
-    return this._bucket.grant(grantee, ...actions);
   }
 
   public grantDelete(
@@ -234,101 +229,22 @@ export class JaypieBucketQueuedLambda
     return this._bucket.virtualHostedUrlForObject(key, options);
   }
 
-  // Bucket metrics
-  public metricAllRequests(
-    props?: cloudwatch.MetricOptions,
-  ): cloudwatch.Metric {
-    return this._bucket.metricAllRequests(props);
+  public grantReplicationPermission(
+    identity: iam.IGrantable,
+    props: any,
+  ): iam.Grant {
+    return this._bucket.grantReplicationPermission(identity, props);
   }
 
-  public metricBucketSizeBytes(
-    props?: cloudwatch.MetricOptions,
-  ): cloudwatch.Metric {
-    return this._bucket.metricBucketSizeBytes(props);
+  public addReplicationPolicy(policy: any): void {
+    this._bucket.addReplicationPolicy(policy);
   }
 
-  public metricDeleteRequests(
-    props?: cloudwatch.MetricOptions,
-  ): cloudwatch.Metric {
-    return this._bucket.metricDeleteRequests(props);
-  }
-
-  public metricDownloadBytes(
-    props?: cloudwatch.MetricOptions,
-  ): cloudwatch.Metric {
-    return this._bucket.metricDownloadBytes(props);
-  }
-
-  public metricFirstByteLatency(
-    props?: cloudwatch.MetricOptions,
-  ): cloudwatch.Metric {
-    return this._bucket.metricFirstByteLatency(props);
-  }
-
-  public metricGetRequests(
-    props?: cloudwatch.MetricOptions,
-  ): cloudwatch.Metric {
-    return this._bucket.metricGetRequests(props);
-  }
-
-  public metricHeadRequests(
-    props?: cloudwatch.MetricOptions,
-  ): cloudwatch.Metric {
-    return this._bucket.metricHeadRequests(props);
-  }
-
-  public metricHttpRequests(
-    props?: cloudwatch.MetricOptions,
-  ): cloudwatch.Metric {
-    return this._bucket.metricHttpRequests(props);
-  }
-
-  public metricListRequests(
-    props?: cloudwatch.MetricOptions,
-  ): cloudwatch.Metric {
-    return this._bucket.metricListRequests(props);
-  }
-
-  public metricNumberOfObjects(
-    props?: cloudwatch.MetricOptions,
-  ): cloudwatch.Metric {
-    return this._bucket.metricNumberOfObjects(props);
-  }
-
-  public metricPostRequests(
-    props?: cloudwatch.MetricOptions,
-  ): cloudwatch.Metric {
-    return this._bucket.metricPostRequests(props);
-  }
-
-  public metricPutRequests(
-    props?: cloudwatch.MetricOptions,
-  ): cloudwatch.Metric {
-    return this._bucket.metricPutRequests(props);
-  }
-
-  public metricSelectRequests(
-    props?: cloudwatch.MetricOptions,
-  ): cloudwatch.Metric {
-    return this._bucket.metricSelectRequests(props);
-  }
-
-  public metricSelectScannedBytes(
-    props?: cloudwatch.MetricOptions,
-  ): cloudwatch.Metric {
-    return this._bucket.metricSelectScannedBytes(props);
-  }
-
-  public metricUploadBytes(
-    props?: cloudwatch.MetricOptions,
-  ): cloudwatch.Metric {
-    return this._bucket.metricUploadBytes(props);
-  }
-
-  public metricSelectReturnedBytes(
-    props?: cloudwatch.MetricOptions,
-  ): cloudwatch.Metric {
-    return this._bucket.metricSelectReturnedBytes(props);
+  public get bucketRef(): s3.BucketReference {
+    return {
+      bucketArn: this._bucket.bucketArn,
+      bucketName: this._bucket.bucketName,
+    };
   }
 
   // Override applyRemovalPolicy to apply to all resources
