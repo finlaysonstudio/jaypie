@@ -10,6 +10,7 @@ import { Construct } from "constructs";
 export interface JaypieGitHubDeployRoleProps {
   accountId: string;
   oidcProviderArn: string;
+  output?: boolean | string;
   repoRestriction: string;
 }
 
@@ -23,7 +24,12 @@ export class JaypieGitHubDeployRole extends Construct {
   ) {
     super(scope, id);
 
-    const { accountId, oidcProviderArn, repoRestriction } = props;
+    const {
+      accountId,
+      oidcProviderArn,
+      output = true,
+      repoRestriction,
+    } = props;
 
     // Create the IAM role
     this._role = new Role(this, "GitHubActionsRole", {
@@ -85,9 +91,13 @@ export class JaypieGitHubDeployRole extends Construct {
     );
 
     // Export the ARN of the role
-    new CfnOutput(this, "GitHubActionsRoleArn", {
-      value: this._role.roleArn,
-    });
+    if (output !== false) {
+      const outputId =
+        typeof output === "string" ? output : "GitHubActionsRoleArn";
+      new CfnOutput(this, outputId, {
+        value: this._role.roleArn,
+      });
+    }
   }
 
   public get role(): Role {
