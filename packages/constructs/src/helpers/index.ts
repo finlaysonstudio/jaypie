@@ -5,6 +5,7 @@ export { constructTagger } from "./constructTagger";
 export { envHostname } from "./envHostname";
 export { isEnv, isProductionEnv, isSandboxEnv } from "./isEnv";
 export { jaypieLambdaEnv } from "./jaypieLambdaEnv";
+export { resolveDatadogForwarderFunction } from "./resolveDatadogForwarderFunction";
 export { resolveDatadogLayers } from "./resolveDatadogLayers";
 export { resolveHostedZone } from "./resolveHostedZone";
 export { resolveParamsAndSecrets } from "./resolveParamsAndSecrets";
