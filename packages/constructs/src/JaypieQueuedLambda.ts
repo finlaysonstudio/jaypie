@@ -189,7 +189,7 @@ export class JaypieQueuedLambda
     return this._lambdaConstruct.resourceArnsForGrantInvoke;
   }
 
-  public get functionRef(): lambda.FunctionRef {
+  public get functionRef(): lambda.FunctionReference {
     return this._lambdaConstruct.functionRef;
   }
 

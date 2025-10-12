@@ -121,5 +121,107 @@ describe("JaypieHostedZone", () => {
         ],
       });
     });
+
+    it("creates DNS records when provided", () => {
+      app = new App();
+      stack = new Stack(app, "TestStack");
+      const zone = new JaypieHostedZone(stack, "TestZone", {
+        zoneName: "example.com",
+        records: [
+          {
+            type: CDK.DNS.RECORD.A,
+            recordName: "www",
+            values: ["1.2.3.4"],
+          },
+          {
+            type: CDK.DNS.RECORD.CNAME,
+            recordName: "api",
+            values: ["example.com"],
+          },
+        ],
+      });
+      template = Template.fromStack(stack);
+
+      // Verify hosted zone exists
+      template.hasResourceProperties("AWS::Route53::HostedZone", {
+        Name: "example.com.",
+      });
+
+      // Verify A record
+      template.hasResourceProperties("AWS::Route53::RecordSet", {
+        Name: "www.example.com.",
+        ResourceRecords: ["1.2.3.4"],
+        Type: "A",
+      });
+
+      // Verify CNAME record
+      template.hasResourceProperties("AWS::Route53::RecordSet", {
+        Name: "api.example.com.",
+        ResourceRecords: ["example.com"],
+        Type: "CNAME",
+      });
+
+      // Verify dnsRecords property
+      expect(zone.dnsRecords).toHaveLength(2);
+      expect(zone.dnsRecords[0]).toBeDefined();
+      expect(zone.dnsRecords[1]).toBeDefined();
+    });
+
+    it("creates DNS records with custom IDs when provided", () => {
+      app = new App();
+      stack = new Stack(app, "TestStack");
+      const zone = new JaypieHostedZone(stack, "TestZone", {
+        zoneName: "example.com",
+        records: [
+          {
+            id: "CustomWebRecord",
+            type: CDK.DNS.RECORD.A,
+            recordName: "www",
+            values: ["1.2.3.4"],
+          },
+        ],
+      });
+      template = Template.fromStack(stack);
+
+      // Verify record exists
+      template.hasResourceProperties("AWS::Route53::RecordSet", {
+        Name: "www.example.com.",
+        Type: "A",
+      });
+
+      // Verify dnsRecords property
+      expect(zone.dnsRecords).toHaveLength(1);
+    });
+
+    it("creates hosted zone without records when records array is empty", () => {
+      app = new App();
+      stack = new Stack(app, "TestStack");
+      const zone = new JaypieHostedZone(stack, "TestZone", {
+        zoneName: "example.com",
+        records: [],
+      });
+      template = Template.fromStack(stack);
+
+      template.hasResourceProperties("AWS::Route53::HostedZone", {
+        Name: "example.com.",
+      });
+
+      expect(zone.dnsRecords).toHaveLength(0);
+    });
+
+    it("creates hosted zone without records when records prop is not provided", () => {
+      app = new App();
+      stack = new Stack(app, "TestStack");
+      const zone = new JaypieHostedZone(stack, "TestZone", {
+        zoneName: "example.com",
+      });
+      template = Template.fromStack(stack);
+
+      template.hasResourceProperties("AWS::Route53::HostedZone", {
+        Name: "example.com.",
+      });
+
+      expect(zone.dnsRecords).toHaveLength(0);
+    });
   });
 });
