@@ -345,15 +345,18 @@ import {
   JaypieAppStack,
   JaypieBucketQueuedLambda,
   JaypieDatadogSecret,
+  JaypieDnsRecord,
   JaypieEnvSecret,
   JaypieExpressLambda,
+  JaypieGitHubDeployRole,
   JaypieHostedZone,
   JaypieInfrastructureStack,
   JaypieLambda,
   JaypieMongoDbSecret,
   JaypieOpenAiSecret,
   JaypieQueuedLambda,
-  JaypieSsoGroups,
+  JaypieSsoPermissions,
+  JaypieSsoSyncApplication,
   JaypieStack,
   JaypieTraceSigningKeySecret,
   JaypieWebDeploymentBucket,
@@ -511,17 +514,85 @@ const webBucket = new JaypieWebDeploymentBucket(this, "WebSite", {
 });
 ```
 
-#### `JaypieHostedZone`
+#### `JaypieGitHubDeployRole`
 
-Route53 hosted zone with query logging and optional log forwarding.  
+Creates an IAM role for GitHub Actions deployments using OIDC authentication.
 
 ```typescript
+// Basic usage with environment variables
+const deployRole = new JaypieGitHubDeployRole(this, 'GitHubDeployRole');
+
+// With explicit repository restriction
+const deployRole = new JaypieGitHubDeployRole(this, 'GitHubDeployRole', {
+  repoRestriction: 'repo:myorg/myrepo:*',
+  oidcProviderArn: 'arn:aws:iam::123456789012:oidc-provider/token.actions.githubusercontent.com',
+  output: true  // Outputs role ARN (default: true)
+});
+
+// Organization-wide access
+const deployRole = new JaypieGitHubDeployRole(this, 'GitHubDeployRole', {
+  repoRestriction: 'repo:myorg/*:*'
+});
+
+// Custom output name
+const deployRole = new JaypieGitHubDeployRole(this, 'GitHubDeployRole', {
+  output: 'CustomRoleArnOutput'
+});
+```
+
+| Property | Type | Required | Description |
+| -------- | ---- | -------- | ----------- |
+| `oidcProviderArn` | `string` | No | OIDC provider ARN; defaults to CDK.IMPORT.OIDC_PROVIDER import |
+| `output` | `boolean \| string` | No | Output role ARN: true (default name), string (custom name), false (no output) |
+| `repoRestriction` | `string` | No | Repository restriction pattern; defaults to organization-wide from CDK_ENV_REPO or PROJECT_REPO |
+
+The construct automatically grants permissions for:
+- Assuming roles via OIDC
+- Deploying CDK applications
+- CloudFormation stack operations
+- S3 and Route53 read access
+- Passing roles for CDK deployment
+
+#### `JaypieHostedZone`
+
+Route53 hosted zone with query logging, optional log forwarding, and DNS record management.
+
+```typescript
+// Basic usage with explicit props
 const zone = new JaypieHostedZone(this, 'Zone', {
   zoneName: 'example.com',
   service: 'api',           // Service tag value
-  project: 'mayhem',     // Project tag value
+  project: 'myproject',     // Project tag value
   destination: logHandler   // Optional Lambda destination for logs
 });
+
+// Shorthand using domain name as first parameter
+const zone = new JaypieHostedZone(this, 'example.com', {
+  service: 'api',
+  project: 'myproject'
+});
+
+// With DNS records
+const zone = new JaypieHostedZone(this, 'example.com', {
+  service: 'api',
+  records: [
+    {
+      type: 'A',
+      recordName: 'www',
+      values: ['1.2.3.4']
+    },
+    {
+      type: 'TXT',
+      values: ['v=spf1 include:example.com ~all']
+    }
+  ]
+});
+
+// With records array as third parameter
+const zone = new JaypieHostedZone(this, 'example.com', [
+  { type: 'A', recordName: 'www', values: ['1.2.3.4'] },
+  { type: 'CNAME', recordName: 'blog', values: ['myblog.example.net'] }
+]);
 ```
 
 | Property | Type | Required | Description |
@@ -529,7 +600,66 @@ const zone = new JaypieHostedZone(this, 'Zone', {
 | `zoneName` | `string` | Yes | Domain name for the hosted zone |
 | `service` | `string` | No | Service tag value, defaults to CDK.SERVICE.INFRASTRUCTURE |
 | `project` | `string` | No | Project tag value |
-| `destination` | `LambdaDestination` | No | Optional log destination for query logs |
+| `destination` | `LambdaDestination \| boolean` | No | Log destination: LambdaDestination (specific), true (Datadog, default), or false (none) |
+| `records` | `JaypieHostedZoneRecordProps[]` | No | Optional DNS records to create for this hosted zone |
+| `id` | `string` | No | Optional construct ID, defaults to `${zoneName}-HostedZone` |
+
+#### `JaypieDnsRecord`
+
+Creates DNS records in Route53 hosted zones with support for A, CNAME, MX, NS, and TXT record types.
+
+```typescript
+// Create an A record
+const aRecord = new JaypieDnsRecord(this, 'WebsiteRecord', {
+  zone: 'example.com',  // Can be zone name or IHostedZone
+  type: 'A',
+  recordName: 'www',
+  values: ['1.2.3.4', '5.6.7.8'],
+  ttl: cdk.Duration.minutes(5)
+});
+
+// Create a CNAME record
+const cnameRecord = new JaypieDnsRecord(this, 'BlogRecord', {
+  zone: myHostedZone,  // IHostedZone object
+  type: 'CNAME',
+  recordName: 'blog',
+  values: ['myblog.example.net']
+});
+
+// Create an MX record
+const mxRecord = new JaypieDnsRecord(this, 'MailRecord', {
+  zone: 'example.com',
+  type: 'MX',
+  values: [
+    { priority: 10, hostName: 'mail1.example.com' },
+    { priority: 20, hostName: 'mail2.example.com' }
+  ]
+});
+
+// Create a TXT record for SPF
+const txtRecord = new JaypieDnsRecord(this, 'SpfRecord', {
+  zone: 'example.com',
+  type: 'TXT',
+  values: ['v=spf1 include:example.com ~all']
+});
+
+// Create an NS record
+const nsRecord = new JaypieDnsRecord(this, 'SubdomainNS', {
+  zone: 'example.com',
+  type: 'NS',
+  recordName: 'subdomain',
+  values: ['ns1.subdomain.example.com', 'ns2.subdomain.example.com']
+});
+```
+
+| Property | Type | Required | Description |
+| -------- | ---- | -------- | ----------- |
+| `zone` | `string \| IHostedZone` | Yes | The hosted zone (zone name string or IHostedZone object) |
+| `type` | `string` | Yes | DNS record type: A, CNAME, MX, NS, or TXT |
+| `values` | `string[] \| Array<{priority, hostName}>` | Yes | Record values (format depends on type) |
+| `recordName` | `string` | No | Record name (subdomain); omit for zone apex |
+| `ttl` | `Duration` | No | Time to live, defaults to 5 minutes |
+| `comment` | `string` | No | Optional comment for the DNS record |
 
 #### `JaypieQueuedLambda`
 
@@ -598,6 +728,7 @@ const lambda = new JaypieLambda(this, 'Function', {
 | `memorySize` | `number` | No | Lambda memory size in MB |
 | `paramsAndSecrets` | `lambda.ParamsAndSecretsLayerVersion \| boolean` | No | AWS Parameter Store layer, or true to use defaults |
 | `paramsAndSecretsOptions` | `object` | No | Config options for the Parameters and Secrets layer |
+| `provisionedConcurrentExecutions` | `number` | No | Number of provisioned concurrent executions; creates alias with provisioned concurrency |
 | `reservedConcurrentExecutions` | `number` | No | Lambda concurrency limit |
 | `roleTag` | `string` | No | Role tag for resource management |
 | `runtime` | `lambda.Runtime` | No | Lambda runtime, default NODEJS_22_X |
@@ -610,95 +741,116 @@ When provided with a Datadog API key (via `datadogApiKeyArn` or environment vari
 - Configures necessary environment variables for Datadog monitoring
 - Grants the Lambda function permissions to access the Datadog API key
 
-#### `JaypieSsoGroups`
+When `provisionedConcurrentExecutions` is specified, the construct:
+- Creates a new Lambda version with auto-publishing
+- Creates a Lambda alias named "provisioned" pointing to the version
+- Configures the specified number of provisioned concurrent executions on the alias
+- The `reference` property will point to the alias instead of the function
 
-Simplifies AWS IAM Identity Center (SSO) group management by creating permission sets and assigning them to groups across multiple AWS accounts.  
-The construct creates three standard permission sets (Administrator, Analyst, Developer) and associates them with Google Workspace groups.
+#### `JaypieSsoPermissions`
+
+Creates and manages AWS IAM Identity Center (SSO) permission sets and assignments for administrator, analyst, and developer roles.
 
 ```typescript
-const ssoGroups = new JaypieSsoGroups(this, 'SsoGroups', {
-  instanceArn: 'arn:aws:sso:::instance/ssoins-1234567890abcdef',
-  accountMap: {
-    development: ["123456789012"],
-    management: ["234567890123"],
-    operations: ["345678901234"],
-    production: ["456789012345"],
-    sandbox: ["567890123456"],
-    security: ["678901234567"],
-    stage: ["789012345678"],
+// Basic usage with environment variable for IAM Identity Center ARN
+const permissionSets = new JaypieSsoPermissions(this, 'PermissionSets', {
+  administratorGroupId: "b4c8b438-4031-7000-782d-5046945fb956",
+  analystGroupId: "2488f4e8-d061-708e-abe1-c315f0e30005",
+  developerGroupId: "b438a4f8-e0e1-707c-c6e8-21841daf9ad1",
+  administratorAccountAssignments: {
+    "211125635435": ["Administrator", "Analyst", "Developer"],
+    "381492033431": ["Administrator", "Analyst"],
   },
-  groupMap: {
-    administrators: "c4f87458-e021-7053-669c-4dc2a2ceaadf",
-    analysts: "949844c8-60b1-7046-0328-9ad0806336f1",
-    developers: "5488a468-5031-7001-64d6-9ba1f377ee6d",
-  }
+  analystAccountAssignments: {
+    "211125635435": ["Analyst", "Developer"],
+    "381492033431": [],
+  },
+  developerAccountAssignments: {
+    "211125635435": ["Analyst", "Developer"],
+    "381492033431": [],
+  },
+});
+
+// With explicit IAM Identity Center ARN
+const permissionSets = new JaypieSsoPermissions(this, 'PermissionSets', {
+  iamIdentityCenterArn: 'arn:aws:sso:::instance/ssoins-1234567890abcdef',
+  administratorGroupId: "b4c8b438-4031-7000-782d-5046945fb956",
+  // ... other properties
 });
 ```
 
 | Property | Type | Required | Description |
 | -------- | ---- | -------- | ----------- |
-| `instanceArn` | `string` | Yes | ARN of the IAM Identity Center instance |
-| `accountMap` | `Record<string, string[]>` | Yes | Mapping of account categories to AWS account IDs |
-| `groupMap` | `Record<string, string>` | Yes | Mapping of group types to Google Workspace group GUIDs |
-| `inlinePolicyStatements` | `object` | No | Additional inline policy statements to append to each group's permission set |
+| `iamIdentityCenterArn` | `string` | No | ARN of the IAM Identity Center instance; falls back to CDK_ENV_IAM_IDENTITY_CENTER_ARN |
+| `administratorGroupId` | `string` | No | Google Workspace group GUID for administrators |
+| `analystGroupId` | `string` | No | Google Workspace group GUID for analysts |
+| `developerGroupId` | `string` | No | Google Workspace group GUID for developers |
+| `administratorAccountAssignments` | `AccountAssignments` | No | Map of account IDs to arrays of permission set names for administrators |
+| `analystAccountAssignments` | `AccountAssignments` | No | Map of account IDs to arrays of permission set names for analysts |
+| `developerAccountAssignments` | `AccountAssignments` | No | Map of account IDs to arrays of permission set names for developers |
 
-The construct creates these permission sets:
-- **Administrator**: AdministratorAccess policy with billing access
-- **Analyst**: ReadOnlyAccess policy with limited write capabilities
-- **Developer**: SystemAdministrator policy with expanded write access
+The construct creates these permission sets with predefined policies:
 
-Each permission set is assigned to the appropriate groups across the configured AWS accounts following organizational best practices.
+- **Administrator**:
+  - `AdministratorAccess` managed policy
+  - `AWSManagementConsoleBasicUserAccess` managed policy
+  - Billing and cost management permissions
+  - 1-hour session duration
 
-#### Customizing Permission Sets with Inline Policies
+- **Analyst**:
+  - `ReadOnlyAccess` managed policy
+  - `AmazonQDeveloperAccess` managed policy
+  - `AWSManagementConsoleBasicUserAccess` managed policy
+  - Extended read permissions (billing, logs, secrets metadata, tags, X-Ray)
+  - Limited write access (tagging, X-Ray)
+  - 12-hour session duration
 
-You can extend the default permission sets with additional policy statements using the `inlinePolicyStatements` property:
+- **Developer**:
+  - `ReadOnlyAccess` managed policy
+  - `SystemAdministrator` managed policy
+  - `AmazonQDeveloperAccess` managed policy
+  - `AWSManagementConsoleBasicUserAccess` managed policy
+  - Administrative permissions for common services (CloudFormation, Lambda, S3, etc.)
+  - Limited IAM permissions (Get, List, PassRole)
+  - 4-hour session duration
+
+If `iamIdentityCenterArn` is not provided and `CDK_ENV_IAM_IDENTITY_CENTER_ARN` environment variable is not set, SSO setup will be skipped.
+
+#### `JaypieSsoSyncApplication`
+
+Deploys the SSO Sync application from AWS Serverless Application Repository to synchronize Google Workspace groups with AWS IAM Identity Center.
 
 ```typescript
-const ssoGroups = new JaypieSsoGroups(this, 'SsoGroups', {
-  instanceArn: 'arn:aws:sso:::instance/ssoins-1234567890abcdef',
-  accountMap: {
-    development: ["123456789012"],
-    management: ["234567890123"],
-    // ... other account mappings
-  },
-  groupMap: {
-    administrators: "c4f87458-e021-7053-669c-4dc2a2ceaadf",
-    analysts: "949844c8-60b1-7046-0328-9ad0806336f1",
-    developers: "5488a468-5031-7001-64d6-9ba1f377ee6d",
-  },
-  inlinePolicyStatements: {
-    administrators: [
-      {
-        Effect: "Allow",
-        Action: [
-          "ce:*",  // Cost Explorer permissions
-        ],
-        Resource: "*",
-      }
-    ],
-    analysts: [
-      {
-        Effect: "Allow",
-        Action: [
-          "athena:*",  // Athena query permissions
-        ],
-        Resource: "*",
-      }
-    ],
-    developers: [
-      {
-        Effect: "Allow",
-        Action: [
-          "ssm:*",  // Systems Manager permissions
-        ],
-        Resource: "*",
-      }
-    ]
-  }
+// Basic usage with environment variables
+const ssoSync = new JaypieSsoSyncApplication(this, 'SsoSync');
+
+// With explicit configuration
+const ssoSync = new JaypieSsoSyncApplication(this, 'SsoSync', {
+  googleAdminEmail: 'admin@example.com',
+  googleCredentials: JSON.stringify(credentialsObject),
+  googleGroupMatch: 'name:AWS*',
+  identityStoreId: 'd-1234567890',
+  scimEndpointUrl: 'https://scim.us-east-1.amazonaws.com/abc123/scim/v2',
+  scimEndpointAccessToken: 'token-value',
+  semanticVersion: '2.3.3'
 });
 ```
 
-These additional policy statements are merged with the default policies for each permission set. This allows you to customize the permissions without having to redefine the entire permission set structure.
+| Property | Type | Required | Description |
+| -------- | ---- | -------- | ----------- |
+| `googleAdminEmail` | `string` | No* | Google Workspace admin email; falls back to CDK_ENV_SSOSYNC_GOOGLE_ADMIN_EMAIL |
+| `googleCredentials` | `string` | No* | Google Workspace service account credentials (JSON); falls back to CDK_ENV_SSOSYNC_GOOGLE_CREDENTIALS |
+| `googleGroupMatch` | `string` | No | Group filter pattern; defaults to "name:AWS*" or CDK_ENV_SSOSYNC_GOOGLE_GROUP_MATCH |
+| `identityStoreId` | `string` | No* | IAM Identity Center identity store ID; falls back to CDK_ENV_SSOSYNC_IDENTITY_STORE_ID |
+| `scimEndpointUrl` | `string` | No* | SCIM endpoint URL; falls back to CDK_ENV_SSOSYNC_SCIM_ENDPOINT_URL |
+| `scimEndpointAccessToken` | `string` | No* | SCIM endpoint access token; falls back to CDK_ENV_SCIM_ENDPOINT_ACCESS_TOKEN |
+| `semanticVersion` | `string` | No | Application version; defaults to "2.3.3" or CDK_ENV_SSOSYNC_SEMANTIC_VERSION |
+| `ssoSyncApplicationId` | `string` | No | Serverless app ARN; defaults to official SSO Sync application |
+| `tags` | `object` | No | Additional resource tags |
+
+*Required fields can be provided via props or environment variables. An error will be thrown if any required field is missing.
+
+The construct automatically tags resources with `CDK.TAG.ROLE` set to `CDK.ROLE.SECURITY`.
 
 ### Constants
 
