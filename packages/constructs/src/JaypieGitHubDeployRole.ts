@@ -1,4 +1,4 @@
-import { CfnOutput, Duration, Fn } from "aws-cdk-lib";
+import { CfnOutput, Duration, Fn, Tags } from "aws-cdk-lib";
 import {
   Effect,
   FederatedPrincipal,
@@ -6,13 +6,13 @@ import {
   Role,
 } from "aws-cdk-lib/aws-iam";
 import { Construct } from "constructs";
-import { CDK } from "@jaypie/cdk";
+import { CDK, ConfigurationError } from "@jaypie/cdk";
 
 export interface JaypieGitHubDeployRoleProps {
   accountId: string;
   oidcProviderArn?: string;
   output?: boolean | string;
-  repoRestriction: string;
+  repoRestriction?: string;
 }
 
 export class JaypieGitHubDeployRole extends Construct {
@@ -29,8 +29,22 @@ export class JaypieGitHubDeployRole extends Construct {
       accountId,
       oidcProviderArn = Fn.importValue(CDK.IMPORT.OIDC_PROVIDER),
       output = true,
-      repoRestriction,
+      repoRestriction: propsRepoRestriction,
     } = props;
+
+    // Resolve repoRestriction from props or environment variables
+    let repoRestriction = propsRepoRestriction;
+    if (!repoRestriction) {
+      const envRepo = process.env.CDK_ENV_REPO || process.env.PROJECT_REPO;
+      if (!envRepo) {
+        throw new ConfigurationError(
+          "No repoRestriction provided. Set repoRestriction prop, CDK_ENV_REPO, or PROJECT_REPO environment variable",
+        );
+      }
+      // Extract organization from owner/repo format and create org-wide restriction
+      const organization = envRepo.split("/")[0];
+      repoRestriction = `repo:${organization}/*:*`;
+    }
 
     // Create the IAM role
     this._role = new Role(this, "GitHubActionsRole", {
@@ -46,6 +60,7 @@ export class JaypieGitHubDeployRole extends Construct {
       maxSessionDuration: Duration.hours(1),
       path: "/",
     });
+    Tags.of(this._role).add(CDK.TAG.ROLE, CDK.ROLE.DEPLOY);
 
     // Allow the role to access the GitHub OIDC provider
     this._role.addToPolicy(
