@@ -25,6 +25,10 @@ export {
   JaypieSsoPermissions,
   JaypieSsoPermissionsProps,
 } from "./JaypieSsoPermissions";
+export {
+  JaypieSsoSyncApplication,
+  JaypieSsoSyncApplicationProps,
+} from "./JaypieSsoSyncApplication";
 export { JaypieQueuedLambda } from "./JaypieQueuedLambda";
 export { JaypieStack, JaypieStackProps } from "./JaypieStack";
 export { JaypieTraceSigningKeySecret } from "./JaypieTraceSigningKeySecret";
