@@ -19,6 +19,19 @@ const SERVICE = {
 } as const;
 
 /**
+ * Check if a string is a valid hostname
+ */
+function isValidHostname(str: string): boolean {
+  // Check if it contains a dot and matches hostname pattern
+  if (!str.includes(".")) return false;
+
+  // Basic hostname validation: alphanumeric, hyphens, dots
+  // Each label must start and end with alphanumeric
+  const hostnameRegex = /^([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,}$/i;
+  return hostnameRegex.test(str);
+}
+
+/**
  * DNS record configuration for JaypieHostedZone
  * Omits 'zone' since it will be automatically set to the created hosted zone
  */
@@ -32,6 +45,11 @@ export interface JaypieHostedZoneRecordProps
 }
 
 interface JaypieHostedZoneProps {
+  /**
+   * Optional construct ID
+   * @default `${zoneName}-HostedZone`
+   */
+  id?: string;
   /**
    * The domain name for the hosted zone
    */
@@ -68,7 +86,41 @@ export class JaypieHostedZone extends Construct {
   /**
    * Create a new hosted zone with query logging and optional DNS records
    */
-  constructor(scope: Construct, id: string, props: JaypieHostedZoneProps) {
+  constructor(
+    scope: Construct,
+    idOrProps: string | JaypieHostedZoneProps,
+    propsOrRecords?: JaypieHostedZoneProps | JaypieHostedZoneRecordProps[],
+  ) {
+    // Handle overloaded constructor signatures
+    let props: JaypieHostedZoneProps;
+    let id: string;
+
+    if (typeof idOrProps === "string") {
+      // If it's a valid hostname, treat it as zoneName
+      if (isValidHostname(idOrProps)) {
+        // Third param can be props object or records array
+        if (Array.isArray(propsOrRecords)) {
+          props = { zoneName: idOrProps, records: propsOrRecords };
+        } else {
+          props = propsOrRecords || { zoneName: idOrProps };
+          // Set zoneName if not already set
+          if (!props.zoneName) {
+            props = { ...props, zoneName: idOrProps };
+          }
+        }
+        // Use id from props if provided, otherwise derive from zoneName
+        id = props.id || `${idOrProps}-HostedZone`;
+      } else {
+        // Otherwise treat it as an explicit id
+        props = propsOrRecords as JaypieHostedZoneProps;
+        id = idOrProps;
+      }
+    } else {
+      // idOrProps is props
+      props = idOrProps;
+      id = props.id || `${props.zoneName}-HostedZone`;
+    }
+
     super(scope, id);
 
     const { zoneName, project } = props;

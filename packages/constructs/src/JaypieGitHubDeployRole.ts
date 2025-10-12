@@ -19,7 +19,7 @@ export class JaypieGitHubDeployRole extends Construct {
 
   constructor(
     scope: Construct,
-    id: string,
+    id: string = "GitHubDeployRole",
     props: JaypieGitHubDeployRoleProps = {},
   ) {
     super(scope, id);
