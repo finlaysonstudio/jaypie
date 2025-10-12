@@ -7,5 +7,6 @@ export { isEnv, isProductionEnv, isSandboxEnv } from "./isEnv";
 export { jaypieLambdaEnv } from "./jaypieLambdaEnv";
 export { resolveDatadogForwarderFunction } from "./resolveDatadogForwarderFunction";
 export { resolveDatadogLayers } from "./resolveDatadogLayers";
+export { resolveDatadogLoggingDestination } from "./resolveDatadogLoggingDestination";
 export { resolveHostedZone } from "./resolveHostedZone";
 export { resolveParamsAndSecrets } from "./resolveParamsAndSecrets";
