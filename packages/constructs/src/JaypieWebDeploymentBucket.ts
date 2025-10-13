@@ -1,10 +1,3 @@
-import {
-  CDK,
-  ConfigurationError,
-  isValidHostname,
-  isValidSubdomain,
-  mergeDomain,
-} from "@jaypie/cdk";
 import { CfnOutput, Duration, Fn, RemovalPolicy, Tags } from "aws-cdk-lib";
 import * as acm from "aws-cdk-lib/aws-certificatemanager";
 import * as cloudfront from "aws-cdk-lib/aws-cloudfront";
@@ -21,7 +14,16 @@ import * as route53Targets from "aws-cdk-lib/aws-route53-targets";
 import * as s3 from "aws-cdk-lib/aws-s3";
 import * as kms from "aws-cdk-lib/aws-kms";
 import { Construct } from "constructs";
-import { constructEnvName, isProductionEnv } from "./helpers";
+import { ConfigurationError } from "@jaypie/errors";
+
+import { CDK } from "./constants";
+import {
+  constructEnvName,
+  isProductionEnv,
+  isValidHostname,
+  isValidSubdomain,
+  mergeDomain,
+} from "./helpers";
 
 export interface JaypieWebDeploymentBucketProps extends s3.BucketProps {
   /**

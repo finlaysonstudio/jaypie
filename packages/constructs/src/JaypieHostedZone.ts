@@ -1,4 +1,4 @@
-import { CDK } from "@jaypie/cdk";
+import { CDK } from "./constants";
 import * as cdk from "aws-cdk-lib";
 import { ServicePrincipal } from "aws-cdk-lib/aws-iam";
 import {

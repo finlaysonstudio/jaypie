@@ -1,6 +1,6 @@
 import { Construct } from "constructs";
 import * as route53 from "aws-cdk-lib/aws-route53";
-import { ConfigurationError } from "@jaypie/cdk";
+import { ConfigurationError } from "@jaypie/errors";
 
 export function resolveHostedZone(
   scope: Construct,

@@ -2,7 +2,9 @@ import { Construct } from "constructs";
 import { Duration, Tags } from "aws-cdk-lib";
 import { CfnAssignment, CfnPermissionSet } from "aws-cdk-lib/aws-sso";
 import { ManagedPolicy } from "aws-cdk-lib/aws-iam";
-import { CDK, ConfigurationError } from "@jaypie/cdk";
+import { ConfigurationError } from "@jaypie/errors";
+
+import { CDK } from "./constants";
 
 /**
  * Mapping of account IDs to permission set names

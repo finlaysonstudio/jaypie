@@ -4,8 +4,8 @@ import * as acm from "aws-cdk-lib/aws-certificatemanager";
 import * as apiGateway from "aws-cdk-lib/aws-apigateway";
 import * as route53 from "aws-cdk-lib/aws-route53";
 import * as route53Targets from "aws-cdk-lib/aws-route53-targets";
-import { CDK, mergeDomain } from "@jaypie/cdk";
-import { constructEnvName, resolveHostedZone } from "./helpers";
+import { CDK } from "./constants";
+import { constructEnvName, mergeDomain, resolveHostedZone } from "./helpers";
 
 export interface JaypieApiGatewayProps extends apiGateway.LambdaRestApiProps {
   certificate?: boolean | acm.ICertificate;

@@ -341,12 +341,16 @@ npm install --save-dev @jaypie/constructs
 
 ```javascript
 import {
+  JaypieAccountLoggingBucket,
   JaypieApiGateway,
   JaypieAppStack,
   JaypieBucketQueuedLambda,
+  JaypieDatadogBucket,
+  JaypieDatadogForwarder,
   JaypieDatadogSecret,
   JaypieDnsRecord,
   JaypieEnvSecret,
+  JaypieEventsRule,
   JaypieExpressLambda,
   JaypieGitHubDeployRole,
   JaypieHostedZone,
@@ -354,6 +358,7 @@ import {
   JaypieLambda,
   JaypieMongoDbSecret,
   JaypieOpenAiSecret,
+  JaypieOrganizationTrail,
   JaypieQueuedLambda,
   JaypieSsoPermissions,
   JaypieSsoSyncApplication,
@@ -402,6 +407,59 @@ const openAiKey = new JaypieOpenAiSecret(this);
 const traceSigningKey = new JaypieTraceSigningKeySecret(this);
 ```
 
+#### `JaypieAccountLoggingBucket`
+
+Creates an S3 bucket for account-wide logging with automatic lifecycle policies for cost optimization. Logs transition from standard storage to infrequent access, then to Glacier, and eventually expire.
+
+```typescript
+// Basic usage with environment variables
+const loggingBucket = new JaypieAccountLoggingBucket(this);
+
+// With explicit bucket name
+const loggingBucket = new JaypieAccountLoggingBucket(this, "LoggingBucket", {
+  bucketName: "my-account-logs",
+  service: "infrastructure",
+  project: "myproject"
+});
+
+// Shorthand using bucket name as first parameter
+const loggingBucket = new JaypieAccountLoggingBucket(this, {
+  bucketName: "my-account-logs",
+  expirationDays: 730,  // Keep logs for 2 years
+  infrequentAccessTransitionDays: 90,  // Move to IA after 90 days
+  glacierTransitionDays: 365  // Move to Glacier after 1 year
+});
+
+// Without CloudFormation output
+const loggingBucket = new JaypieAccountLoggingBucket(this, {
+  createOutput: false
+});
+
+// With custom export name
+const loggingBucket = new JaypieAccountLoggingBucket(this, {
+  exportName: "MyCustomLogBucketName",
+  outputDescription: "Custom logging bucket for account-wide logs"
+});
+```
+
+| Property | Type | Required | Description |
+| -------- | ---- | -------- | ----------- |
+| `bucketName` | `string` | No | Bucket name; defaults to `account-logging-stack-${PROJECT_NONCE}` |
+| `service` | `string` | No | Service tag value, defaults to CDK.SERVICE.INFRASTRUCTURE |
+| `project` | `string` | No | Project tag value |
+| `expirationDays` | `number` | No | Days before logs expire; default 365 |
+| `infrequentAccessTransitionDays` | `number` | No | Days before transitioning to INFREQUENT_ACCESS; default 30 |
+| `glacierTransitionDays` | `number` | No | Days before transitioning to GLACIER; default 180 |
+| `createOutput` | `boolean` | No | Whether to create CloudFormation output; default true |
+| `exportName` | `string` | No | Custom export name for the bucket; defaults to CDK.IMPORT.LOG_BUCKET |
+| `outputDescription` | `string` | No | Description for CloudFormation output; default "Account-wide logging bucket" |
+
+The bucket is automatically configured with:
+- `LOG_DELIVERY_WRITE` access control for AWS service log delivery
+- Lifecycle policies for cost optimization
+- Tagged with `CDK.TAG.ROLE` set to `CDK.ROLE.MONITORING`
+- CloudFormation output for cross-stack reference (unless disabled)
+
 #### `JaypieApiGateway`
 
 Creates an API Gateway with Jaypie conventions for Lambda integration and proper CORS handling.
@@ -447,6 +505,91 @@ const processor = new JaypieBucketQueuedLambda(this, "DocumentProcessor", {
   },
 });
 ```
+
+#### `JaypieDatadogBucket`
+
+Creates an S3 bucket for Datadog log archiving with automatic IAM permissions for the Datadog role.
+
+```typescript
+// Basic usage
+const datadogBucket = new JaypieDatadogBucket(this, "DatadogArchive", {
+  bucketName: "my-datadog-logs"
+});
+
+// With custom bucket configuration
+const datadogBucket = new JaypieDatadogBucket(this, "DatadogArchive", {
+  bucketName: "my-datadog-logs",
+  versioned: true,
+  lifecycleRules: [{
+    expiration: cdk.Duration.days(90)
+  }]
+});
+
+// Without automatic Datadog role access
+const datadogBucket = new JaypieDatadogBucket(this, {
+  bucketName: "my-datadog-logs",
+  grantDatadogAccess: false
+});
+```
+
+| Property | Type | Required | Description |
+| -------- | ---- | -------- | ----------- |
+| `id` | `string` | No | Custom construct ID; default "DatadogArchiveBucket" |
+| `service` | `string` | No | Service tag value, defaults to CDK.SERVICE.DATADOG |
+| `project` | `string` | No | Project tag value |
+| `grantDatadogAccess` | `boolean` | No | Grant Datadog role bucket access; default true |
+| ...`BucketProps` | | | Accepts all standard CDK Bucket properties |
+
+The construct automatically:
+- Tags resources with `CDK.TAG.ROLE` set to `CDK.ROLE.MONITORING`
+- Grants the Datadog IAM role (from `CDK_ENV_DATADOG_ROLE_ARN`) read/write access to the bucket if enabled
+
+#### `JaypieDatadogForwarder`
+
+Deploys the Datadog log forwarder Lambda using Datadog's official CloudFormation template.
+
+```typescript
+// Basic usage with environment variables
+const forwarder = new JaypieDatadogForwarder(this);
+
+// With explicit configuration
+const forwarder = new JaypieDatadogForwarder(this, "Forwarder", {
+  datadogApiKey: "your-api-key",
+  account: "production",
+  reservedConcurrency: "20"
+});
+
+// Without CloudFormation events
+const forwarder = new JaypieDatadogForwarder(this, {
+  enableCloudFormationEvents: false,
+  createOutput: false
+});
+
+// Access the forwarder function
+const forwarderFunction = forwarder.forwarderFunction;
+```
+
+| Property | Type | Required | Description |
+| -------- | ---- | -------- | ----------- |
+| `id` | `string` | No | Custom construct ID; default "DatadogForwarder" |
+| `datadogApiKey` | `string` | No | Datadog API key; defaults to CDK_ENV_DATADOG_API_KEY |
+| `account` | `string` | No | Account identifier for Datadog tags; defaults to CDK_ENV_ACCOUNT |
+| `reservedConcurrency` | `string` | No | Reserved concurrency for Lambda; default "10" |
+| `additionalTags` | `string` | No | Additional Datadog tags (comma-separated) |
+| `service` | `string` | No | Service tag value, defaults to CDK.VENDOR.DATADOG |
+| `project` | `string` | No | Project tag value |
+| `enableCloudFormationEvents` | `boolean` | No | Create CloudFormation events rule; default true |
+| `enableRoleExtension` | `boolean` | No | Extend Datadog role with custom permissions; default true |
+| `createOutput` | `boolean` | No | Create CloudFormation output for forwarder ARN; default true |
+| `exportName` | `string` | No | Custom export name for output; defaults to CDK.IMPORT.DATADOG_LOG_FORWARDER |
+| `templateUrl` | `string` | No | URL to Datadog forwarder CloudFormation template |
+
+The construct automatically:
+- Deploys Datadog's official forwarder CloudFormation stack
+- Creates an EventBridge rule to forward CloudFormation events to Datadog
+- Extends the Datadog IAM role with custom permissions (if `CDK_ENV_DATADOG_ROLE_ARN` is set)
+- Exports the forwarder Lambda ARN for cross-stack reference
+- Tags resources with `CDK.TAG.ROLE` set to `CDK.ROLE.MONITORING`
 
 #### `JaypieExpressLambda`
 
@@ -660,6 +803,131 @@ const nsRecord = new JaypieDnsRecord(this, 'SubdomainNS', {
 | `recordName` | `string` | No | Record name (subdomain); omit for zone apex |
 | `ttl` | `Duration` | No | Time to live, defaults to 5 minutes |
 | `comment` | `string` | No | Optional comment for the DNS record |
+
+#### `JaypieEventsRule`
+
+Creates an EventBridge rule that targets a Lambda function. Automatically resolves the Datadog forwarder function if no target is specified, making it ideal for routing AWS service events to Datadog for monitoring.
+
+```typescript
+// Basic usage - routes events to Datadog forwarder
+const rule = new JaypieEventsRule(this, "aws.s3");
+
+// With explicit event source
+const s3Rule = new JaypieEventsRule(this, {
+  source: "aws.s3"
+});
+
+// Multiple event sources
+const multiRule = new JaypieEventsRule(this, "MultiSourceRule", {
+  source: ["aws.s3", "aws.cloudtrail"]
+});
+
+// With custom target function
+const customRule = new JaypieEventsRule(this, "CustomRule", {
+  source: "aws.lambda",
+  targetFunction: myLambdaFunction
+});
+
+// With explicit construct ID and full configuration
+const advancedRule = new JaypieEventsRule(this, "AdvancedRule", {
+  source: "aws.ec2",
+  targetFunction: myLambdaFunction,
+  description: "Route EC2 events to custom processor",
+  enabled: true,
+  service: "infrastructure",
+  vendor: CDK.VENDOR.AWS,
+  project: "myproject"
+});
+
+// With custom event pattern (beyond just source)
+const patternRule = new JaypieEventsRule(this, {
+  eventPattern: {
+    source: ["aws.ec2"],
+    detailType: ["EC2 Instance State-change Notification"],
+    detail: {
+      state: ["running"]
+    }
+  },
+  targetFunction: myLambdaFunction
+});
+```
+
+| Property | Type | Required | Description |
+| -------- | ---- | -------- | ----------- |
+| `source` | `string \| string[]` | No | Event source(s) to match (e.g., "aws.s3", "aws.cloudtrail") |
+| `targetFunction` | `IFunction` | No | Lambda function to target; defaults to Datadog forwarder via resolveDatadogForwarderFunction |
+| `service` | `string` | No | Service tag value, defaults to CDK.SERVICE.DATADOG |
+| `vendor` | `string` | No | Vendor tag value, defaults to CDK.VENDOR.DATADOG |
+| `project` | `string` | No | Project tag value |
+| `eventPattern` | `EventPattern` | No | Custom event pattern (source field merged with `source` parameter if both provided) |
+| `description` | `string` | No | Rule description |
+| `enabled` | `boolean` | No | Whether the rule is enabled; default true |
+| `id` | `string` | No | Custom construct ID; auto-generated from source if not provided |
+
+The construct supports three flexible constructor signatures:
+
+1. **Source as first parameter**: `new JaypieEventsRule(this, "aws.s3")` - Automatically generates construct ID
+2. **Explicit ID**: `new JaypieEventsRule(this, "MyRule", { source: "aws.s3" })`
+3. **Props only**: `new JaypieEventsRule(this, { source: "aws.s3", id: "MyRule" })`
+
+The construct automatically:
+- Tags resources with `CDK.TAG.ROLE` set to `CDK.ROLE.MONITORING`
+- Resolves the Datadog forwarder function if no target is specified
+- Configures the rule to pass the full event payload to the target
+- Generates friendly construct IDs from source names (e.g., "aws.s3" becomes "S3EventsRule")
+
+#### `JaypieOrganizationTrail`
+
+Creates an AWS CloudTrail for organization-wide audit logging with S3 storage and automatic lifecycle policies. Optionally forwards logs to Datadog for monitoring.
+
+```typescript
+// Basic usage with environment variables
+const trail = new JaypieOrganizationTrail(this);
+
+// With explicit configuration
+const trail = new JaypieOrganizationTrail(this, "OrgTrail", {
+  trailName: "my-organization-trail",
+  bucketName: "my-cloudtrail-logs",
+  enableFileValidation: true
+});
+
+// With custom lifecycle policies
+const trail = new JaypieOrganizationTrail(this, {
+  trailName: "my-trail",
+  expirationDays: 730,  // Keep logs for 2 years
+  infrequentAccessTransitionDays: 90,  // Move to IA after 90 days
+  glacierTransitionDays: 365  // Move to Glacier after 1 year
+});
+
+// Without Datadog notifications
+const trail = new JaypieOrganizationTrail(this, {
+  enableDatadogNotifications: false
+});
+
+// Access the trail and bucket
+const bucket = trail.bucket;
+const cloudTrail = trail.trail;
+```
+
+| Property | Type | Required | Description |
+| -------- | ---- | -------- | ----------- |
+| `id` | `string` | No | Custom construct ID; auto-generated from trail name |
+| `trailName` | `string` | No | CloudTrail name; defaults to `organization-cloudtrail-${PROJECT_NONCE}` |
+| `bucketName` | `string` | No | S3 bucket name for logs; defaults to `organization-cloudtrail-${PROJECT_NONCE}` |
+| `service` | `string` | No | Service tag value, defaults to CDK.SERVICE.INFRASTRUCTURE |
+| `project` | `string` | No | Project tag value |
+| `enableFileValidation` | `boolean` | No | Enable file validation for the trail; default false |
+| `expirationDays` | `number` | No | Days before logs expire; default 365 |
+| `infrequentAccessTransitionDays` | `number` | No | Days before transitioning to INFREQUENT_ACCESS; default 30 |
+| `glacierTransitionDays` | `number` | No | Days before transitioning to GLACIER; default 180 |
+| `enableDatadogNotifications` | `boolean` | No | Send S3 notifications to Datadog forwarder; default true |
+
+The construct automatically:
+- Creates an S3 bucket with lifecycle policies for cost optimization
+- Configures the bucket with proper CloudTrail permissions
+- Creates an organization-wide CloudTrail that logs all management events
+- Forwards S3 object creation events to Datadog forwarder (if enabled)
+- Tags resources with `CDK.TAG.ROLE` set to `CDK.ROLE.MONITORING`
 
 #### `JaypieQueuedLambda`
 

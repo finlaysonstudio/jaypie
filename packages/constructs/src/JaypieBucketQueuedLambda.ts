@@ -2,7 +2,7 @@ import { Construct } from "constructs";
 import { Tags, RemovalPolicy } from "aws-cdk-lib";
 import * as s3 from "aws-cdk-lib/aws-s3";
 import * as s3n from "aws-cdk-lib/aws-s3-notifications";
-import { CDK } from "@jaypie/cdk";
+import { CDK } from "./constants";
 import * as iam from "aws-cdk-lib/aws-iam";
 import {
   JaypieQueuedLambda,

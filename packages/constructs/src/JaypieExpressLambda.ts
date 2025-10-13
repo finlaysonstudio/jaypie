@@ -1,6 +1,6 @@
 import { Construct } from "constructs";
 import { Duration } from "aws-cdk-lib";
-import { CDK } from "@jaypie/cdk";
+import { CDK } from "./constants";
 import { JaypieLambda, JaypieLambdaProps } from "./JaypieLambda.js";
 
 export class JaypieExpressLambda extends JaypieLambda {

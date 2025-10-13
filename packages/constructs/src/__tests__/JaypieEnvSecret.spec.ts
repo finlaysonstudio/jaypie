@@ -2,7 +2,7 @@ import { expect, it, describe } from "vitest";
 import { Stack } from "aws-cdk-lib";
 import { Template } from "aws-cdk-lib/assertions";
 import { JaypieEnvSecret } from "../JaypieEnvSecret.js";
-import { CDK } from "@jaypie/cdk";
+import { CDK } from "../constants";
 
 describe("JaypieSecret", () => {
   describe("Base Cases", () => {

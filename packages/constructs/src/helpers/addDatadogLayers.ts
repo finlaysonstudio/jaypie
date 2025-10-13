@@ -1,6 +1,6 @@
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
-import { CDK } from "@jaypie/cdk";
+import { CDK } from "../constants";
 import { DatadogLambda } from "datadog-cdk-constructs-v2";
 
 export interface AddDatadogLayerOptions {

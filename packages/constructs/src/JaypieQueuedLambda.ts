@@ -2,7 +2,7 @@ import { Construct } from "constructs";
 import { Duration, Tags, Stack, RemovalPolicy } from "aws-cdk-lib";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import * as sqs from "aws-cdk-lib/aws-sqs";
-import { CDK } from "@jaypie/cdk";
+import { CDK } from "./constants";
 import * as lambdaEventSources from "aws-cdk-lib/aws-lambda-event-sources";
 import * as iam from "aws-cdk-lib/aws-iam";
 import * as cloudwatch from "aws-cdk-lib/aws-cloudwatch";

@@ -6,7 +6,9 @@ import {
   Role,
 } from "aws-cdk-lib/aws-iam";
 import { Construct } from "constructs";
-import { CDK, ConfigurationError } from "@jaypie/cdk";
+import { ConfigurationError } from "@jaypie/errors";
+
+import { CDK } from "./constants";
 
 export interface JaypieGitHubDeployRoleProps {
   oidcProviderArn?: string;

@@ -1,4 +1,4 @@
-import { CDK } from "@jaypie/cdk";
+import { CDK } from "../constants";
 import { Stack } from "aws-cdk-lib";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import { Construct } from "constructs";

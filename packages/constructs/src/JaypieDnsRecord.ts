@@ -1,4 +1,3 @@
-import { CDK, ConfigurationError } from "@jaypie/cdk";
 import * as cdk from "aws-cdk-lib";
 import {
   ARecord,
@@ -10,7 +9,9 @@ import {
   TxtRecord,
 } from "aws-cdk-lib/aws-route53";
 import { Construct } from "constructs";
+import { ConfigurationError } from "@jaypie/errors";
 
+import { CDK } from "./constants";
 import { resolveHostedZone } from "./helpers/resolveHostedZone";
 
 export interface JaypieDnsRecordProps {
