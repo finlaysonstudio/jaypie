@@ -1,6 +1,10 @@
 // Export CDK constants
 export { CDK } from "./constants";
 
+export {
+  JaypieAccountLoggingBucket,
+  JaypieAccountLoggingBucketProps,
+} from "./JaypieAccountLoggingBucket";
 export { JaypieApiGateway } from "./JaypieApiGateway";
 export { JaypieAppStack } from "./JaypieAppStack";
 export { JaypieBucketQueuedLambda } from "./JaypieBucketQueuedLambda";
@@ -15,6 +19,7 @@ export {
 export { JaypieDatadogSecret } from "./JaypieDatadogSecret";
 export { JaypieDnsRecord, JaypieDnsRecordProps } from "./JaypieDnsRecord";
 export { JaypieEnvSecret } from "./JaypieEnvSecret";
+export { JaypieEventsRule, JaypieEventsRuleProps } from "./JaypieEventsRule";
 export {
   JaypieGitHubDeployRole,
   JaypieGitHubDeployRoleProps,
