@@ -4,6 +4,14 @@ export { CDK } from "./constants";
 export { JaypieApiGateway } from "./JaypieApiGateway";
 export { JaypieAppStack } from "./JaypieAppStack";
 export { JaypieBucketQueuedLambda } from "./JaypieBucketQueuedLambda";
+export {
+  JaypieDatadogBucket,
+  JaypieDatadogBucketProps,
+} from "./JaypieDatadogBucket";
+export {
+  JaypieDatadogForwarder,
+  JaypieDatadogForwarderProps,
+} from "./JaypieDatadogForwarder";
 export { JaypieDatadogSecret } from "./JaypieDatadogSecret";
 export { JaypieDnsRecord, JaypieDnsRecordProps } from "./JaypieDnsRecord";
 export { JaypieEnvSecret } from "./JaypieEnvSecret";

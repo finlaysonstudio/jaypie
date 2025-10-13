@@ -1,16 +1,9 @@
 import { CDK } from "../constants";
 import * as cdk from "aws-cdk-lib";
 import { Policy, PolicyStatement, Role } from "aws-cdk-lib/aws-iam";
-import { IBucket } from "aws-cdk-lib/aws-s3";
 import { Construct } from "constructs";
 
 export interface ExtendDatadogRoleOptions {
-  /**
-   * Optional S3 bucket to grant Datadog access to
-   * Grants s3:ListBucket on bucket and s3:GetObject/s3:PutObject on bucket/*
-   */
-  bucket?: IBucket;
-
   /**
    * Optional construct ID for the policy
    * @default "DatadogCustomPolicy"
@@ -36,7 +29,6 @@ export interface ExtendDatadogRoleOptions {
  * If found, creates a custom policy with:
  * - budgets:ViewBudget
  * - logs:DescribeLogGroups
- * - S3 bucket access (if bucket provided)
  *
  * @param scope - The construct scope
  * @param options - Configuration options
@@ -54,7 +46,6 @@ export function extendDatadogRole(
   }
 
   const {
-    bucket,
     id = "DatadogCustomPolicy",
     project,
     service = CDK.SERVICE.DATADOG,
@@ -76,22 +67,6 @@ export function extendDatadogRole(
       resources: ["*"],
     }),
   ];
-
-  // Add bucket permissions if bucket is provided
-  if (bucket) {
-    statements.push(
-      // Allow list bucket
-      new PolicyStatement({
-        actions: ["s3:ListBucket"],
-        resources: [bucket.bucketArn],
-      }),
-      // Allow read and write to the bucket
-      new PolicyStatement({
-        actions: ["s3:GetObject", "s3:PutObject"],
-        resources: [`${bucket.bucketArn}/*`],
-      }),
-    );
-  }
 
   // Create the custom policy
   const datadogCustomPolicy = new Policy(scope, id, {
