@@ -1,12 +1,40 @@
 import typescript from "@rollup/plugin-typescript";
 
-export default {
-  input: "src/index.ts",
-  output: {
-    dir: "dist",
-    format: "es",
-    sourcemap: true,
+export default [
+  // ES modules version
+  {
+    input: "src/index.ts",
+    output: {
+      dir: "dist/esm",
+      format: "es",
+      sourcemap: true,
+    },
+    plugins: [
+      typescript({
+        tsconfig: "./tsconfig.json",
+        declaration: true,
+        outDir: "dist/esm",
+      }),
+    ],
+    external: [],
   },
-  plugins: [typescript()],
-  external: [],
-};
+  // CommonJS version
+  {
+    input: "src/index.ts",
+    output: {
+      dir: "dist/cjs",
+      format: "cjs",
+      sourcemap: true,
+      exports: "named",
+      entryFileNames: "[name].cjs",
+    },
+    plugins: [
+      typescript({
+        tsconfig: "./tsconfig.json",
+        declaration: true,
+        outDir: "dist/cjs",
+      }),
+    ],
+    external: [],
+  },
+];
