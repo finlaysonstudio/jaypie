@@ -59,6 +59,7 @@ export default [
     ],
     external: [
       "@jaypie/cdk",
+      "@jaypie/errors",
       "aws-cdk-lib",
       "aws-cdk-lib/aws-apigateway",
       "aws-cdk-lib/aws-certificatemanager",
