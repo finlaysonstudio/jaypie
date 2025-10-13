@@ -21,6 +21,10 @@ export { JaypieLambda } from "./JaypieLambda";
 export { JaypieMongoDbSecret } from "./JaypieMongoDbSecret";
 export { JaypieOpenAiSecret } from "./JaypieOpenAiSecret";
 export {
+  JaypieOrganizationTrail,
+  JaypieOrganizationTrailProps,
+} from "./JaypieOrganizationTrail";
+export {
   AccountAssignments,
   JaypieSsoPermissions,
   JaypieSsoPermissionsProps,
