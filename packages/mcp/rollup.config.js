@@ -17,9 +17,11 @@ export default {
     "@jaypie/errors",
     "@modelcontextprotocol/sdk/server/mcp.js",
     "@modelcontextprotocol/sdk/server/stdio.js",
+    "commander",
     "fs/promises",
     "gray-matter",
     "path",
+    "url",
     "zod",
   ],
 };

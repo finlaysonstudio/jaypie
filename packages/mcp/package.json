@@ -21,9 +21,10 @@
     "prompts"
   ],
   "scripts": {
-    "build": "rollup --config",
+    "build": "rollup --config && shx chmod +x dist/*.js",
     "format": "eslint . --fix",
     "lint": "eslint .",
+    "prepare": "npm run build",
     "test": "vitest run .",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit"
@@ -33,6 +34,9 @@
     "commander": "^14.0.0",
     "gray-matter": "^4.0.3",
     "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "shx": "^0.3.4"
   },
   "publishConfig": {
     "access": "public"
