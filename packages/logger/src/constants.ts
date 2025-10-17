@@ -3,7 +3,7 @@ export const DEFAULT = {
   VAR_LEVEL: "debug",
 };
 
-export const ERROR_PREFIX = '{ "lib": "@jaypie/logger" }:';
+export const ERROR_PREFIX = "[logger]";
 
 export const ERROR = {
   VAR: {

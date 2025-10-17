@@ -1,4 +1,6 @@
-export function logTags(withTags?: Record<string, string>): Record<string, string> {
+export function logTags(
+  withTags?: Record<string, string>,
+): Record<string, string> {
   if (withTags && typeof withTags !== "object") {
     withTags = {};
   }
@@ -30,7 +32,8 @@ export function logTags(withTags?: Record<string, string>): Record<string, strin
     tags.sponsor = PROJECT_SPONSOR;
   }
   if (process.env.npm_package_version || PROJECT_VERSION) {
-    tags.version = (process.env.npm_package_version || PROJECT_VERSION) as string;
+    tags.version = (process.env.npm_package_version ||
+      PROJECT_VERSION) as string;
   }
 
   return {

@@ -8,7 +8,10 @@ interface JaypieLoggerOptions {
   tags?: Record<string, string>;
 }
 
-function envBoolean(key: string, { defaultValue }: { defaultValue: boolean }): boolean {
+function envBoolean(
+  key: string,
+  { defaultValue }: { defaultValue: boolean },
+): boolean {
   const value = process.env[key];
   if (value === undefined) return defaultValue;
   const lower = value.toLowerCase();
@@ -38,7 +41,10 @@ class JaypieLogger {
   private _tags: Record<string, string>;
   private _withLoggers: Record<string, JaypieLogger>;
 
-  constructor({ level = process.env.LOG_LEVEL, tags = {} }: JaypieLoggerOptions = {}) {
+  constructor({
+    level = process.env.LOG_LEVEL,
+    tags = {},
+  }: JaypieLoggerOptions = {}) {
     this._params = { level, tags };
     this._loggers = [];
     this._tags = {};
@@ -54,22 +60,28 @@ class JaypieLogger {
     });
     this._loggers = [this._logger];
 
-    this.debug = ((...args: any[]) => this._logger.debug(...args)) as Logger["debug"];
+    this.debug = ((...args: any[]) =>
+      this._logger.debug(...args)) as Logger["debug"];
     this.debug.var = (...args: any[]) => this._logger.debug.var(...args);
 
-    this.error = ((...args: any[]) => this._logger.error(...args)) as Logger["error"];
+    this.error = ((...args: any[]) =>
+      this._logger.error(...args)) as Logger["error"];
     this.error.var = (...args: any[]) => this._logger.error.var(...args);
 
-    this.fatal = ((...args: any[]) => this._logger.fatal(...args)) as Logger["fatal"];
+    this.fatal = ((...args: any[]) =>
+      this._logger.fatal(...args)) as Logger["fatal"];
     this.fatal.var = (...args: any[]) => this._logger.fatal.var(...args);
 
-    this.info = ((...args: any[]) => this._logger.info(...args)) as Logger["info"];
+    this.info = ((...args: any[]) =>
+      this._logger.info(...args)) as Logger["info"];
     this.info.var = (...args: any[]) => this._logger.info.var(...args);
 
-    this.trace = ((...args: any[]) => this._logger.trace(...args)) as Logger["trace"];
+    this.trace = ((...args: any[]) =>
+      this._logger.trace(...args)) as Logger["trace"];
     this.trace.var = (...args: any[]) => this._logger.trace.var(...args);
 
-    this.warn = ((...args: any[]) => this._logger.warn(...args)) as Logger["warn"];
+    this.warn = ((...args: any[]) =>
+      this._logger.warn(...args)) as Logger["warn"];
     this.warn.var = (...args: any[]) => this._logger.warn.var(...args);
 
     this.var = (...args: any[]) => this._logger.var(logVar(...args));
@@ -93,7 +105,14 @@ class JaypieLogger {
     this._loggers = [this._logger];
     this._withLoggers = {};
 
-    const levels = ["debug", "error", "fatal", "info", "trace", "warn"] as const;
+    const levels = [
+      "debug",
+      "error",
+      "fatal",
+      "info",
+      "trace",
+      "warn",
+    ] as const;
     levels.forEach((lvl) => {
       this[lvl] = ((...args: any[]) => {
         this._logger[lvl](...args);
@@ -104,7 +123,15 @@ class JaypieLogger {
     });
   }
 
-  public lib({ level, lib, tags = {} }: { level?: string; lib?: string; tags?: Record<string, string> } = {}): JaypieLogger {
+  public lib({
+    level,
+    lib,
+    tags = {},
+  }: {
+    level?: string;
+    lib?: string;
+    tags?: Record<string, string>;
+  } = {}): JaypieLogger {
     const newTags = Object.assign({}, this._tags, tags);
     if (lib) {
       newTags.lib = lib;

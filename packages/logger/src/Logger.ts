@@ -1,4 +1,11 @@
-import { DEFAULT, ERROR, FORMAT, LEVEL, LEVEL_VALUES, PSEUDO_LEVELS } from "./constants";
+import {
+  DEFAULT,
+  ERROR,
+  FORMAT,
+  LEVEL,
+  LEVEL_VALUES,
+  PSEUDO_LEVELS,
+} from "./constants";
 import { forceString, out, parse, parsesTo, stringify } from "./utils";
 
 type LogLevel = string;
@@ -61,7 +68,8 @@ class Logger {
     this.trace = this.createLogMethod(LEVEL.TRACE, format, level);
     this.warn = this.createLogMethod(LEVEL.WARN, format, level);
 
-    const varLevelMethod = this[varLevel as "debug" | "error" | "fatal" | "info" | "trace" | "warn"];
+    const varLevelMethod =
+      this[varLevel as "debug" | "error" | "fatal" | "info" | "trace" | "warn"];
     this.var = (varLevelMethod as LogMethod)?.var || this.debug.var;
   }
 
