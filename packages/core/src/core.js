@@ -1,4 +1,4 @@
-import logger from "./core/logger.module.js";
+import { createLogger } from "@jaypie/logger";
 
 //
 //
@@ -9,4 +9,4 @@ import logger from "./core/logger.module.js";
 export { JAYPIE, PROJECT } from "./core/constants.js";
 
 // Logger
-export const log = logger();
+export const log = createLogger();
