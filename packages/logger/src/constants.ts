@@ -1,10 +1,11 @@
-const DEFAULT = {
+export const DEFAULT = {
   LEVEL: "debug",
   VAR_LEVEL: "debug",
 };
 
-const ERROR_PREFIX = '{ "lib": "@knowdev/log" }:';
-const ERROR = {
+export const ERROR_PREFIX = '{ "lib": "@jaypie/logger" }:';
+
+export const ERROR = {
   VAR: {
     EMPTY_OBJECT: `${ERROR_PREFIX} Logger.var() called with empty object`,
     MULTIPLE_KEYS: `${ERROR_PREFIX} Logger.var() called with multiple keys`,
@@ -13,32 +14,32 @@ const ERROR = {
   },
 };
 
-const FORMAT = {
+export const FORMAT = {
   JSON: "json",
   TEXT: "text",
-};
+} as const;
 
-const LEVEL = {
+export const LEVEL = {
   ALL: "all",
-  TRACE: "trace",
   DEBUG: "debug",
-  INFO: "info",
-  WARN: "warn",
   ERROR: "error",
   FATAL: "fatal",
+  INFO: "info",
   SILENT: "silent",
-};
+  TRACE: "trace",
+  WARN: "warn",
+} as const;
 
-const LEVEL_VALUES = {
+export const LEVEL_VALUES: Record<string, number> = {
   all: 100,
-  trace: 90,
   debug: 70,
-  info: 50,
-  warn: 30,
   error: 10,
   fatal: 1,
+  info: 50,
   none: 0,
   silent: 0,
+  trace: 90,
+  warn: 30,
 };
 
-export { DEFAULT, ERROR, FORMAT, LEVEL, LEVEL_VALUES };
+export const PSEUDO_LEVELS = ["ALL", "SILENT"];

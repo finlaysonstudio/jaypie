@@ -1,20 +1,8 @@
-//
-//
-// Main
-//
-
-/**
- * Returns key-value pairs that should be included in all logs
- * @param {{[key: string]: string}} withTags Tags to include for logger
- * @returns {Object} Provided plus default tags
- */
-const logTags = (withTags) => {
-  // Validate
+export function logTags(withTags?: Record<string, string>): Record<string, string> {
   if (withTags && typeof withTags !== "object") {
     withTags = {};
   }
 
-  // Setup
   const {
     PROJECT_COMMIT,
     PROJECT_ENV,
@@ -24,44 +12,29 @@ const logTags = (withTags) => {
     PROJECT_VERSION,
   } = process.env;
 
-  // Process
-  const tags = {};
+  const tags: Record<string, string> = {};
 
-  // Commit
   if (PROJECT_COMMIT) {
     tags.commit = PROJECT_COMMIT;
   }
-  // Env
   if (PROJECT_ENV) {
     tags.env = PROJECT_ENV;
   }
-  // Key (project name)
   if (PROJECT_KEY) {
     tags.project = PROJECT_KEY;
   }
-  // Service
   if (PROJECT_SERVICE) {
     tags.service = PROJECT_SERVICE;
   }
-  // Sponsor
   if (PROJECT_SPONSOR) {
     tags.sponsor = PROJECT_SPONSOR;
   }
-  // Version
   if (process.env.npm_package_version || PROJECT_VERSION) {
-    tags.version = process.env.npm_package_version || PROJECT_VERSION;
+    tags.version = (process.env.npm_package_version || PROJECT_VERSION) as string;
   }
 
-  // Return
   return {
     ...tags,
     ...withTags,
   };
-};
-
-//
-//
-// Export
-//
-
-export default logTags;
+}

@@ -1,6 +1,6 @@
 {
   "name": "@jaypie/core",
-  "version": "1.1.15",
+  "version": "1.1.16",
   "license": "MIT",
   "author": "Finlayson Studio",
   "type": "module",
@@ -57,6 +57,7 @@
     "test:spec:validate.function": "vitest run ./src/lib/arguments/__tests__/validate.function.spec.js"
   },
   "dependencies": {
+    "@jaypie/logger": "^1.1.0",
     "jsonapi-serializer": "^3.6.9",
     "uuid": "^11.0.5"
   },
