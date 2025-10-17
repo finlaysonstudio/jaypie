@@ -3,6 +3,7 @@ name: NPM Check
 on:
   push:
     branches:
+      - devin/*
       - fix/*
       - feat/*
     tags:
