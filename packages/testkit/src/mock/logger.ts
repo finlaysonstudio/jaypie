@@ -10,7 +10,7 @@ import { mockLogFactory } from "../mockLog.module.js";
 const mockLog = mockLogFactory();
 
 export const createLogger = createMockWrappedFunction(
-  originalCreateLogger,
+  originalCreateLogger as any,
   mockLog,
 );
 

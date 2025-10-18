@@ -51,4 +51,4 @@ export default {
 
   // Textract module
   ...textract,
-} as Record<string, unknown>;
+};

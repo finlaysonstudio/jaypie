@@ -30,7 +30,7 @@ function createMockFunction<T extends (...args: any[]) => any>(
  */
 function createMockResolvedFunction<T>(
   value: T,
-): (...args: unknown[]) => Promise<T> {
+): ReturnType<typeof vi.fn> {
   return _createJaypieMock().mockResolvedValue(value);
 }
 
@@ -38,7 +38,7 @@ function createMockResolvedFunction<T>(
  * Creates a mock function that returns a value
  * Internal utility to create mock functions that return a value
  */
-function createMockReturnedFunction<T>(value: T): (...args: unknown[]) => T {
+function createMockReturnedFunction<T>(value: T): ReturnType<typeof vi.fn> {
   return _createJaypieMock().mockReturnValue(value);
 }
 
@@ -46,7 +46,7 @@ function createMockReturnedFunction<T>(value: T): (...args: unknown[]) => T {
  * Creates a mock function that wraps another function
  * Internal utility to create mock functions that wrap another function
  */
-function createMockWrappedFunction<T>(
+function createMockWrappedFunction<T = any>(
   fn: (...args: unknown[]) => unknown,
   fallbackOrOptions:
     | any
@@ -55,7 +55,7 @@ function createMockWrappedFunction<T>(
         throws?: boolean;
         class?: boolean;
       } = "_MOCK_WRAPPED_RESULT",
-): (...args: unknown[]) => T {
+): ReturnType<typeof vi.fn> {
   // Determine if we have a direct fallback or options object
   const options =
     typeof fallbackOrOptions === "object" &&

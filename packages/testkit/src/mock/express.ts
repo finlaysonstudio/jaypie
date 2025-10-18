@@ -53,19 +53,19 @@ export const notFoundRoute = createMockWrappedFunction(original.notFoundRoute, {
 });
 
 export const notImplementedRoute = createMockWrappedFunction(
-  original.notImplementedRoute,
+  original.notImplementedRoute as any,
   { error: `_MOCK_NOT_IMPLEMENTED_ROUTE_[${TAG}]` },
 );
 
 export const expressHttpCodeHandler = createMockWrappedFunction(
-  original.expressHttpCodeHandler,
-  (...args) => {
+  original.expressHttpCodeHandler as any,
+  (...args: any[]) => {
     const [req, res, next] = args;
     return res.status(200).send();
   },
 );
 
-export const cors = createMockWrappedFunction(original.cors);
+export const cors = createMockWrappedFunction(original.cors as any);
 
 // Type definitions needed for the expressHandler
 interface WithJsonFunction {
@@ -117,7 +117,6 @@ export const expressHandler = createMockFunction<
     const keys = Object.keys(props.locals);
     if (!props.setup) props.setup = [];
     props.setup = force.array(props.setup);
-    // @ts-expect-error TODO: cannot resolve; fix when JaypieHandler moves to TypeScript
     props.setup.unshift((req: { locals?: Record<string, unknown> }) => {
       if (!req || typeof req !== "object") {
         throw new BadRequestError("req must be an object");
@@ -175,13 +174,13 @@ export const expressHandler = createMockFunction<
 
     try {
       response = await jaypieFunction(req, res, ...extra);
-    } catch (error) {
+    } catch (error: any) {
       // In the mock context, if status is a function we are in a "supertest"
       if (supertestMode && typeof res.status === "function") {
         // In theory jaypieFunction has handled all errors
-        const errorStatus = error.status || HTTP.CODE.INTERNAL_ERROR;
+        const errorStatus = error?.status || HTTP.CODE.INTERNAL_ERROR;
         let errorResponse;
-        if (typeof error.json === "function") {
+        if (typeof error?.json === "function") {
           errorResponse = error.json();
         } else {
           // This should never happen
