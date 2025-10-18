@@ -4,7 +4,12 @@ import Link from "@docusaurus/Link";
 import useDocusaurusContext from "@docusaurus/useDocusaurusContext";
 import styles from "./index.module.css";
 
-function HomepageHeader() {
+interface Feature {
+  title: string;
+  description: React.ReactElement;
+}
+
+function HomepageHeader(): React.ReactElement {
   const { siteConfig } = useDocusaurusContext();
   return (
     <header className={styles.heroBanner}>
@@ -28,8 +33,8 @@ function HomepageHeader() {
   );
 }
 
-function HomepageFeatures() {
-  const features = [
+function HomepageFeatures(): React.ReactElement {
+  const features: Feature[] = [
     {
       title: "Unified Handler Lifecycle",
       description: (
@@ -102,7 +107,7 @@ function HomepageFeatures() {
   );
 }
 
-function HomepageQuickStart() {
+function HomepageQuickStart(): React.ReactElement {
   return (
     <section className={styles.quickStart}>
       <div className="container">
@@ -120,7 +125,7 @@ function HomepageQuickStart() {
   );
 }
 
-export default function Home() {
+export default function Home(): React.ReactElement {
   const { siteConfig } = useDocusaurusContext();
   return (
     <Layout

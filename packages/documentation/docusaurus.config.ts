@@ -1,6 +1,8 @@
-const { themes: prismThemes } = require("prism-react-renderer");
+import type { Config } from "@docusaurus/types";
+import type * as Preset from "@docusaurus/preset-classic";
+import { themes as prismThemes } from "prism-react-renderer";
 
-const config = {
+const config: Config = {
   title: "Jaypie",
   tagline: "Event-driven JavaScript library for AWS",
   favicon: "img/favicon.ico",
@@ -16,9 +18,7 @@ const config = {
   trailingSlash: false,
 
   markdown: {
-    hooks: {
-      onBrokenMarkdownLinks: "warn",
-    },
+    format: "mdx",
   },
 
   i18n: {
@@ -31,14 +31,14 @@ const config = {
       "classic",
       {
         docs: {
-          sidebarPath: "./sidebars.js",
+          sidebarPath: "./sidebars.ts",
           editUrl: "https://github.com/finlaysonstudio/jaypie/tree/main/packages/documentation/",
         },
         blog: false,
         theme: {
           customCss: "./src/css/custom.css",
         },
-      },
+      } satisfies Preset.Options,
     ],
   ],
 
@@ -125,7 +125,7 @@ const config = {
       theme: prismThemes.github,
       darkTheme: prismThemes.dracula,
     },
-  },
+  } satisfies Preset.ThemeConfig,
 };
 
-module.exports = config;
+export default config;

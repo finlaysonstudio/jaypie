@@ -1,8 +1,12 @@
 #!/usr/bin/env node
 
-const { Extractor, ExtractorConfig } = require("@microsoft/api-extractor");
-const path = require("path");
-const fs = require("fs");
+import { Extractor, ExtractorConfig, ExtractorLogLevel, ExtractorResult } from "@microsoft/api-extractor";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const PACKAGES_DIR = path.resolve(__dirname, "../../");
 const TEMP_DIR = path.resolve(__dirname, "../temp");
@@ -36,7 +40,7 @@ for (const packageName of TS_PACKAGES) {
   const dtsPath1 = path.join(packagePath, "dist/index.d.ts");
   const dtsPath2 = path.join(packagePath, "dist/esm/index.d.ts");
 
-  let mainEntryPointFilePath;
+  let mainEntryPointFilePath: string | undefined;
   if (fs.existsSync(dtsPath1)) {
     mainEntryPointFilePath = dtsPath1;
   } else if (fs.existsSync(dtsPath2)) {
@@ -51,7 +55,6 @@ for (const packageName of TS_PACKAGES) {
 
     const extractorConfig = ExtractorConfig.prepare({
       configObject: {
-        $schema: "https://developer.microsoft.com/json-schemas/api-extractor/v7/api-extractor.schema.json",
         projectFolder: packagePath,
         mainEntryPointFilePath,
         bundledPackages: [],
@@ -74,24 +77,24 @@ for (const packageName of TS_PACKAGES) {
         messages: {
           compilerMessageReporting: {
             default: {
-              logLevel: "warning",
+              logLevel: ExtractorLogLevel.Warning,
             },
           },
           extractorMessageReporting: {
             default: {
-              logLevel: "warning",
+              logLevel: ExtractorLogLevel.Warning,
               addToApiReportFile: false,
             },
             "ae-missing-release-tag": {
-              logLevel: "none",
+              logLevel: ExtractorLogLevel.None,
             },
             "ae-internal-missing-underscore": {
-              logLevel: "none",
+              logLevel: ExtractorLogLevel.None,
             },
           },
           tsdocMessageReporting: {
             default: {
-              logLevel: "warning",
+              logLevel: ExtractorLogLevel.Warning,
             },
           },
         },
@@ -100,7 +103,7 @@ for (const packageName of TS_PACKAGES) {
       packageJsonFullPath: path.join(packagePath, "package.json"),
     });
 
-    const extractorResult = Extractor.invoke(extractorConfig, {
+    const extractorResult: ExtractorResult = Extractor.invoke(extractorConfig, {
       localBuild: true,
       showVerboseMessages: false,
     });
@@ -113,7 +116,8 @@ for (const packageName of TS_PACKAGES) {
       errorCount++;
     }
   } catch (error) {
-    console.error(`❌ @jaypie/${packageName} - Error:`, error.message, "\n");
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error(`❌ @jaypie/${packageName} - Error:`, errorMessage, "\n");
     errorCount++;
   }
 }
