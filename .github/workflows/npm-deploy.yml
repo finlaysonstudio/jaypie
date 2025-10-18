@@ -28,6 +28,7 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
       - run: npm ci
       - run: rm -f ~/.npmrc
+      - run: cat /home/runner/work/_temp/.npmrc
       - run: npm ping --registry=https://registry.npmjs.org
       - run: npm whoami || echo "Not authenticated"
       - run: lerna publish from-package --no-private --yes --registry=https://registry.npmjs.org/ --concurrency 1
