@@ -27,9 +27,10 @@ jobs:
           node-version: 22 # Includes npm >= 11.5.1 for OIDC support
           registry-url: 'https://registry.npmjs.org'
       - run: npm ci
+      - run: rm -f ~/.npmrc
       - run: npm ping --registry=https://registry.npmjs.org
       - run: npm whoami || echo "Not authenticated"
-      - run: lerna publish from-package --no-private --yes --registry=https://registry.npmjs.org/ --concurrency 1 # Uses OIDC via trusted publishing
+      - run: lerna publish from-package --no-private --yes --registry=https://registry.npmjs.org/ --concurrency 1
   lint:
     name: Lint (in parallel)
     runs-on: ubuntu-latest
