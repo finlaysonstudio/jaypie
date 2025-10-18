@@ -20,35 +20,35 @@ export const EXPRESS = original.EXPRESS;
 
 // Add Express route functions
 export const badRequestRoute = createMockWrappedFunction(
-  original.badRequestRoute,
+  original.badRequestRoute as (...args: unknown[]) => unknown,
   { error: `_MOCK_BAD_REQUEST_ROUTE_[${TAG}]` },
 );
 
 export const echoRoute = createMockWrappedFunction(
-  original.echoRoute,
-  (req) => req,
+  original.echoRoute as (...args: unknown[]) => unknown,
+  (req: unknown) => req,
 );
 
 export const forbiddenRoute = createMockWrappedFunction(
-  original.forbiddenRoute,
+  original.forbiddenRoute as (...args: unknown[]) => unknown,
   { error: `_MOCK_FORBIDDEN_ROUTE_[${TAG}]` },
 );
 
-export const goneRoute = createMockWrappedFunction(original.goneRoute, {
+export const goneRoute = createMockWrappedFunction(original.goneRoute as (...args: unknown[]) => unknown, {
   error: `_MOCK_GONE_ROUTE_[${TAG}]`,
 });
 
 export const methodNotAllowedRoute = createMockWrappedFunction(
-  original.methodNotAllowedRoute,
+  original.methodNotAllowedRoute as (...args: unknown[]) => unknown,
   { error: `_MOCK_METHOD_NOT_ALLOWED_ROUTE_[${TAG}]` },
 );
 
 export const noContentRoute = createMockWrappedFunction(
-  original.noContentRoute,
+  original.noContentRoute as (...args: unknown[]) => unknown,
   { status: 204 },
 );
 
-export const notFoundRoute = createMockWrappedFunction(original.notFoundRoute, {
+export const notFoundRoute = createMockWrappedFunction(original.notFoundRoute as (...args: unknown[]) => unknown, {
   error: `_MOCK_NOT_FOUND_ROUTE_[${TAG}]`,
 });
 
