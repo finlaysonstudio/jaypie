@@ -23,7 +23,7 @@ export * from "./mongoose";
 export * from "./textract";
 
 // Export default object with all mocks
-export default {
+const mock: Record<string, any> = {
   // AWS module
   ...aws,
 
@@ -51,4 +51,6 @@ export default {
 
   // Textract module
   ...textract,
-} as Record<string, unknown>;
+};
+
+export default mock;

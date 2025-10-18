@@ -44,7 +44,7 @@ export const MarkdownPage = createMockWrappedObject(original.MarkdownPage, {
  * Mock for textractJsonToMarkdown function from @jaypie/textract
  */
 export const textractJsonToMarkdown = createMockWrappedFunction<string>(
-  original.textractJsonToMarkdown,
+  original.textractJsonToMarkdown as any,
   `_MOCK_TEXTRACT_JSON_TO_MARKDOWN_[${TAG}]`,
 );
 
