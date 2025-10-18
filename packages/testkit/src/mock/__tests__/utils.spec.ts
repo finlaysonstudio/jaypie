@@ -188,7 +188,7 @@ describe("Mock Utils", () => {
         wrapped();
       } catch (error) {
         expect(error).toBeInstanceOf(Error);
-        expect(error.message).toBe(errorMessage);
+        expect((error as Error).message).toBe(errorMessage);
       }
       expect.assertions(2);
     });

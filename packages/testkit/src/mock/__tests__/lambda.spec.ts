@@ -74,8 +74,8 @@ describe("lambdaHandler", () => {
   describe("Features", () => {
     it("accepts options as first parameter and function as second parameter", async () => {
       const handler = vi.fn().mockReturnValue("result");
-      const options = { name: "testHandler" };
-      const wrapped = lambdaHandler(options, handler);
+      const options = { name: "testHandler" } as any;
+      const wrapped = lambdaHandler(options, handler as any);
       const result = await wrapped({}, {});
       expect(result).toBe("result");
       expect(jaypieHandler).toHaveBeenCalledWith(handler, options);
@@ -148,7 +148,7 @@ describe("Jaypie Lambda", () => {
         try {
           await handler(event, context);
         } catch (error) {
-          expect(error.isProjectError).not.toBeTrue();
+          expect((error as any).isProjectError).not.toBeTrue();
         }
         expect.assertions(1);
       });
@@ -162,7 +162,7 @@ describe("Jaypie Lambda", () => {
         try {
           await handler(event, context);
         } catch (error) {
-          expect(error.isProjectError).not.toBeTrue();
+          expect((error as any).isProjectError).not.toBeTrue();
         }
         expect.assertions(1);
       });
@@ -172,15 +172,15 @@ describe("Jaypie Lambda", () => {
         it("Works with the options object first", async () => {
           // Arrange
           const mockFunction = vi.fn();
-          const handler = lambdaHandler({ unavailable: true }, mockFunction);
+          const handler = lambdaHandler({ unavailable: true } as any, mockFunction as any);
           const event = {};
           const context = {};
           // Act
           try {
             await handler(event, context);
           } catch (error) {
-            expect(error.isProjectError).toBeTrue();
-            expect(error.status).toBe(HTTP.CODE.UNAVAILABLE);
+            expect((error as any).isProjectError).toBeTrue();
+            expect((error as any).status).toBe(HTTP.CODE.UNAVAILABLE);
           }
           expect.assertions(2);
         });

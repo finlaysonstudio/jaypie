@@ -1,19 +1,12 @@
 import { vi } from "vitest";
-import type { Assertion } from "vitest";
+import { MatcherResult } from "../types/jaypie-testkit";
 
-declare module "vitest" {
-  interface Assertion<T = any> {
-    toBeMockFunction(): T;
-  }
-}
-
-export function toBeMockFunction(this: Assertion, received: unknown) {
-  const { equals, utils } = this;
+export function toBeMockFunction(received: unknown): MatcherResult {
   const pass = typeof received === "function" && vi.isMockFunction(received);
 
   return {
     message: () =>
-      `expected ${utils.printReceived(received)} ${
+      `expected ${received} ${
         pass ? "not " : ""
       }to be a mock function`,
     pass,
