@@ -64,16 +64,16 @@ export function mcpExpressHandler(
     enableJsonResponse = false,
   } = options;
 
+  const server = createMcpServer(version);
+
+  const transport = new StreamableHTTPServerTransport({
+    sessionIdGenerator: enableSessions ? sessionIdGenerator : undefined,
+    enableJsonResponse,
+  });
+
+  server.connect(transport);
+
   return async (req: Request, res: Response): Promise<void> => {
-    const server = createMcpServer(version);
-
-    const transport = new StreamableHTTPServerTransport({
-      sessionIdGenerator: enableSessions ? sessionIdGenerator : undefined,
-      enableJsonResponse,
-    });
-
-    await server.connect(transport);
-
     try {
       await transport.handleRequest(req, res, req.body);
     } catch (error) {
