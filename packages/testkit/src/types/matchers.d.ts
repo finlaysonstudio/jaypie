@@ -9,6 +9,7 @@ export interface CustomMatchers<R = unknown> {
   toBeCalledWithInitialParams(...params: unknown[]): R;
   toBeClass(): R;
   toBeJaypieError(): R;
+  toBeMockFunction(): R;
   toMatchBase64(): R;
   toMatchJwt(): R;
   toMatchMongoId(): R;

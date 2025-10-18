@@ -21,6 +21,8 @@ export default {
     "openai/helpers/zod",
     "openmeteo",
     "random",
+    "z-schema",
     "zod",
+    "zod/v4",
   ],
 };

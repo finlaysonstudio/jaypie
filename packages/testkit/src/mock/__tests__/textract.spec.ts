@@ -45,7 +45,7 @@ describe("Textract Mock", () => {
       const mockPage = { someProperty: "not a real page" };
 
       // Should not throw even with invalid input
-      const result = MarkdownPage(mockPage);
+      const result = new (MarkdownPage as any)(mockPage);
 
       // Just verify it returns something without throwing
       expect(result).toBeDefined();
@@ -65,7 +65,7 @@ describe("Textract Mock", () => {
   describe("Happy Paths", () => {
     it("MarkdownPage returns a mocked instance when actual implementation is unavailable", () => {
       const page = { someProperty: "not a real page" };
-      const result = MarkdownPage(page);
+      const result = new (MarkdownPage as any)(page);
 
       // Should return something that looks like a MarkdownPage
       expect(result).toBeDefined();
@@ -84,9 +84,9 @@ describe("Textract Mock", () => {
   describe("Features", () => {
     it("MarkdownPage can be mocked with custom return value", () => {
       const customReturn = { markdown: "# Custom Markdown" };
-      MarkdownPage.mockReturnValueOnce(customReturn);
+      (MarkdownPage as any).mockReturnValueOnce(customReturn);
 
-      const result = MarkdownPage({});
+      const result = new (MarkdownPage as any)({});
 
       expect(result).toBe(customReturn);
     });
@@ -125,7 +125,7 @@ describe("Jaypie Textract", () => {
       const mockPage = {
         invalidPage: true,
       } as unknown as TextractPageAdaptable;
-      const result = MarkdownPage(mockPage);
+      const result = new (MarkdownPage as any)(mockPage);
       expect(result.text).toBeString();
       expect(result.text).toStartWith("---");
       expect(consoleWarnSpy).toHaveBeenCalled();
@@ -135,15 +135,16 @@ describe("Jaypie Textract", () => {
       const mockPage = {
         invalidPage: true,
       } as unknown as TextractPageAdaptable;
-      MarkdownPage.mockReturnValueOnce("mocked response");
-      const result = MarkdownPage(mockPage);
-      expect(result).toBe("mocked response");
+      const mockedResponse = { text: "mocked response" };
+      (MarkdownPage as any).mockReturnValueOnce(mockedResponse);
+      const result = new (MarkdownPage as any)(mockPage);
+      expect(result).toBe(mockedResponse);
       expect(consoleWarnSpy).not.toHaveBeenCalled();
     });
 
     it("Works as expected with mock textract contents", () => {
       // Mock the result directly to ensure test passes reliably
-      MarkdownPage.mockReturnValueOnce({
+      (MarkdownPage as any).mockReturnValueOnce({
         text: `---
 type: page
 id: mock-page-1
@@ -153,7 +154,7 @@ This is a mock Textract document
 For testing purposes only`,
       });
       const mockPage = new TextractDocument(JSON.parse(mockTextractContents));
-      const result = MarkdownPage(mockPage);
+      const result = new (MarkdownPage as any)(mockPage);
       expect(result.text).toBeDefined();
       expect(result.text).toBeString();
       expect(result.text).toStartWith("---");
@@ -190,7 +191,7 @@ For testing purposes only`,
   });
 
   it("Mocks return string values", () => {
-    expect(MarkdownPage({} as TextractPageAdaptable).text).toBeString();
+    expect(new (MarkdownPage as any)({} as TextractPageAdaptable).text).toBeString();
     expect(textractJsonToMarkdown({} as JsonReturn)).toBeString();
   });
 });
