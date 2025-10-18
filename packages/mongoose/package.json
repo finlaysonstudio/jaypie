@@ -25,7 +25,8 @@
     "test": "vitest run .",
     "test:spec:connect.function": "vitest run ./src/__tests__/connect.function.spec.js",
     "test:spec:connectFromSecretEnv.function": "vitest run ./src/__tests__/connectFromSecretEnv.function.spec.js",
-    "test:spec:index": "vitest run ./src/__tests__/index.spec.js"
+    "test:spec:index": "vitest run ./src/__tests__/index.spec.js",
+    "typecheck": "echo '[TODO] Convert @jaypie/mongoose to TypeScript'"
   },
   "dependencies": {
     "@jaypie/aws": "^1.1.0",
