@@ -22,7 +22,6 @@
     "build": "rollup --config",
     "format": "eslint . --fix",
     "lint": "eslint .",
-    "prepublish": "npm run build",
     "test": "vitest run .",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit"
