@@ -1,6 +1,6 @@
 {
   "name": "@jaypie/testkit",
-  "version": "1.1.34",
+  "version": "1.1.35",
   "license": "MIT",
   "author": "Finlayson Studio",
   "type": "module",
@@ -39,7 +39,7 @@
     "@jaypie/logger": "^1.1.0",
     "@jaypie/mongoose": "^1.1.1",
     "@jaypie/textract": "^0.2.4",
-    "jaypie": "^1.1.48",
+    "jaypie": "^1.1.71",
     "jest-extended": "^4.0.2",
     "jest-json-schema": "^6.1.0",
     "uuid": "^11.0.5"
