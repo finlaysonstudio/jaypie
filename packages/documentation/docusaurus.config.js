@@ -12,9 +12,14 @@ const config = {
   projectName: "jaypie",
 
   onBrokenLinks: "warn",
-  onBrokenMarkdownLinks: "warn",
 
   trailingSlash: false,
+
+  markdown: {
+    hooks: {
+      onBrokenMarkdownLinks: "warn",
+    },
+  },
 
   i18n: {
     defaultLocale: "en",
