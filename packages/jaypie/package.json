@@ -1,20 +1,22 @@
 {
   "name": "jaypie",
-  "version": "1.1.70",
+  "version": "1.1.71",
   "license": "MIT",
   "author": "Finlayson Studio",
   "type": "module",
   "exports": {
     ".": {
-      "types": "./index.d.ts",
-      "default": {
-        "require": "./dist/jaypie.cjs",
-        "default": "./src/index.js"
-      }
+      "types": "./dist/esm/index.d.ts",
+      "import": "./dist/esm/index.js",
+      "require": "./dist/cjs/index.cjs"
     }
   },
-  "main": "src/index.js",
-  "types": "index.d.ts",
+  "main": "./dist/cjs/index.cjs",
+  "module": "./dist/esm/index.js",
+  "types": "./dist/esm/index.d.ts",
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "rollup --config",
     "format": "npm run format:package && npm run format:lint",
@@ -25,7 +27,7 @@
     "test:spec:dynamicExport.function": "vitest run ./src/__tests__/dynamicExport.function.spec.js",
     "test:spec:index": "vitest run ./src/__tests__/index.spec.js",
     "test:spec:mongoose.package": "vitest run ./src/__tests__/mongoose.package.spec.js",
-    "typecheck": "echo '[TODO] Convert jaypie to TypeScript'"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@jaypie/aws": "^1.1.21",
@@ -36,6 +38,18 @@
     "@jaypie/lambda": "^1.1.6",
     "@jaypie/llm": "^1.1.26",
     "@jaypie/mongoose": "^1.1.1"
+  },
+  "devDependencies": {
+    "@jaypie/types": "^0.1.7",
+    "@rollup/plugin-typescript": "^12.1.4",
+    "@types/node": "^24.8.1",
+    "@typescript-eslint/eslint-plugin": "^8.46.1",
+    "@typescript-eslint/parser": "^8.46.1",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.4",
+    "eslint-plugin-vitest": "^0.5.4",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.46.1"
   },
   "publishConfig": {
     "access": "public"

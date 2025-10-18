@@ -1,34 +1,58 @@
-import autoExternal from "rollup-plugin-auto-external";
-import commonjs from "@rollup/plugin-commonjs";
-import resolve from "@rollup/plugin-node-resolve";
+import typescript from "@rollup/plugin-typescript";
 
 export default [
+  // ES modules version
   {
-    input: "src/index.js", // Path to your main JavaScript file
-    output: [
-      {
-        file: "dist/jaypie.esm.js", // Output file for ES Module
-        format: "es", // ES Module format
-      },
-    ],
+    input: "src/index.ts",
+    output: {
+      dir: "dist/esm",
+      format: "es",
+      sourcemap: true,
+    },
     plugins: [
-      autoExternal(), // Automatically exclude dependencies from the bundle
-      resolve(), // Tells Rollup how to find node modules
-      commonjs(), // Converts CommonJS modules to ES6
+      typescript({
+        tsconfig: "./tsconfig.json",
+        declaration: true,
+        outDir: "dist/esm",
+      }),
+    ],
+    external: [
+      "@jaypie/aws",
+      "@jaypie/core",
+      "@jaypie/datadog",
+      "@jaypie/express",
+      "@jaypie/kit",
+      "@jaypie/lambda",
+      "@jaypie/llm",
+      "@jaypie/mongoose",
     ],
   },
+  // CommonJS version
   {
-    input: "src/index.js", // Path to the CommonJS file
-    output: [
-      {
-        file: "dist/jaypie.cjs", // Output file for CommonJS
-        format: "cjs", // CommonJS format
-      },
-    ],
+    input: "src/index.ts",
+    output: {
+      dir: "dist/cjs",
+      format: "cjs",
+      sourcemap: true,
+      exports: "named",
+      entryFileNames: "[name].cjs",
+    },
     plugins: [
-      autoExternal(), // Automatically exclude dependencies from the bundle
-      resolve(), // Tells Rollup how to find node modules
-      commonjs(), // Converts CommonJS modules to ES6
+      typescript({
+        tsconfig: "./tsconfig.json",
+        declaration: true,
+        outDir: "dist/cjs",
+      }),
+    ],
+    external: [
+      "@jaypie/aws",
+      "@jaypie/core",
+      "@jaypie/datadog",
+      "@jaypie/express",
+      "@jaypie/kit",
+      "@jaypie/lambda",
+      "@jaypie/llm",
+      "@jaypie/mongoose",
     ],
   },
 ];
