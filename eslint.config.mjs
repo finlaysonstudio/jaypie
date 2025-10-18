@@ -13,7 +13,11 @@ export default [
   // Global ignores
   //
   {
-    ignores: ["**/prompts/templates/**"],
+    ignores: [
+      "**/prompts/templates/**",
+      "packages/documentation/build/**",
+      "packages/documentation/.docusaurus/**",
+    ],
   },
 
   //
@@ -61,6 +65,35 @@ export default [
     files: ["packages/mcp/**/*.ts"],
     rules: {
       "import-x/no-unresolved": ["error", { ignore: ["gray-matter"] }],
+    },
+  },
+
+  //
+  //
+  // Documentation: CommonJS
+  //
+  {
+    files: ["packages/documentation/**/*.js"],
+    languageOptions: {
+      ecmaVersion: "latest",
+      sourceType: "script",
+    },
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: "ImportDeclaration",
+          message: "Unexpected import, use require instead.",
+        },
+        {
+          selector: "ExportNamedDeclaration",
+          message: "Unexpected export, use module.exports instead.",
+        },
+        {
+          selector: "ExportDefaultDeclaration",
+          message: "Unexpected export, use module.exports instead.",
+        },
+      ],
     },
   },
 ];
