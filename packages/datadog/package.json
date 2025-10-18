@@ -27,7 +27,8 @@
     "test:spec:index": "vitest run ./src/__tests__/index.spec.js",
     "test:spec:objectToKeyValueArray.pipeline": "vitest run ./src/__tests__/objectToKeyValueArray.pipeline.spec.js",
     "test:spec:submitMetric.adapter": "vitest run ./src/__tests__/submitMetric.adapter.spec.js",
-    "test:spec:submitMetricSet.adapter": "vitest run ./src/__tests__/submitMetricSet.adapter.spec.js"
+    "test:spec:submitMetricSet.adapter": "vitest run ./src/__tests__/submitMetricSet.adapter.spec.js",
+    "typecheck": "echo '[TODO] Convert @jaypie/datadog to TypeScript'"
   },
   "dependencies": {
     "@datadog/datadog-api-client": "^1.24.0",

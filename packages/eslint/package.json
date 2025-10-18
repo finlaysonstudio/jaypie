@@ -25,7 +25,8 @@
     "lint": "eslint .",
     "test": "vitest run .",
     "test:spec:index": "vitest run ./index.spec.js",
-    "test:spec:typescript": "vitest run ./__tests__/typescript.spec.js"
+    "test:spec:typescript": "vitest run ./__tests__/typescript.spec.js",
+    "typecheck": "echo '[TODO] Convert @jaypie/eslint to TypeScript'"
   },
   "dependencies": {
     "@eslint/js": "^9.17.0",

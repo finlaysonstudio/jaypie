@@ -24,7 +24,8 @@
     "prepublish": "npm run build",
     "test": "vitest run .",
     "test:spec:index": "vitest run ./src/__tests__/index.spec.js",
-    "test:spec:lambdaHandler": "vitest run ./src/__tests__/lambdaHandler.spec.js"
+    "test:spec:lambdaHandler": "vitest run ./src/__tests__/lambdaHandler.spec.js",
+    "typecheck": "echo '[TODO] Convert @jaypie/lambda to TypeScript'"
   },
   "dependencies": {
     "@jaypie/core": "^1.1.14"
