@@ -88,7 +88,6 @@ function updateUsage(
 ) {
   totalUsage.input += usage.input_tokens;
   totalUsage.output += usage.output_tokens;
-  totalUsage.reasoning += usage.input_tokens;
   totalUsage.total += usage.input_tokens + usage.output_tokens;
 }
 
