@@ -25,7 +25,8 @@
     "test": "vitest run .",
     "test:spec:dynamicExport.function": "vitest run ./src/__tests__/dynamicExport.function.spec.js",
     "test:spec:index": "vitest run ./src/__tests__/index.spec.js",
-    "test:spec:mongoose.package": "vitest run ./src/__tests__/mongoose.package.spec.js"
+    "test:spec:mongoose.package": "vitest run ./src/__tests__/mongoose.package.spec.js",
+    "typecheck": "echo '[TODO] Convert jaypie to TypeScript'"
   },
   "dependencies": {
     "@jaypie/aws": "^1.1.21",
