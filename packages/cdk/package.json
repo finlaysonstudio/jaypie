@@ -17,7 +17,8 @@
     "test:spec:isValidHostname.function": "jest ./src/__tests__/isValidHostname.function.spec.js",
     "test:spec:isValidSubdomain.function": "jest ./src/__tests__/isValidSubdomain.function.spec.js",
     "test:spec:mergeDomain.function": "jest ./src/__tests__/mergeDomain.function.spec.js",
-    "test:spec:projectTagger.function": "jest ./src/__tests__/projectTagger.function.spec.js"
+    "test:spec:projectTagger.function": "jest ./src/__tests__/projectTagger.function.spec.js",
+    "typecheck": "echo '[TODO] Convert @jaypie/cdk to TypeScript'"
   },
   "dependencies": {
     "@jaypie/core": "^1.1.0"

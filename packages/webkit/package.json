@@ -22,7 +22,8 @@
     "format": "eslint --fix .",
     "lint": "eslint .",
     "test": "vitest run .",
-    "test:watch": "vitest watch ."
+    "test:watch": "vitest watch .",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@jaypie/errors": "^1.1.2",

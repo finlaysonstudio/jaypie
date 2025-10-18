@@ -31,7 +31,8 @@
     "test:spec:sendBatchMessages.function": "vitest run ./src/__tests__/sendBatchMessages.function.spec.js",
     "test:spec:sendMessage.function": "vitest run ./src/__tests__/sendMessage.function.spec.js",
     "test:spec:sendTextractJob.function": "vitest run ./src/__tests__/sendTextractJob.function.spec.js",
-    "test:spec:validateQueueUrl.util": "vitest run ./src/__tests__/validateQueueUrl.util.spec.js"
+    "test:spec:validateQueueUrl.util": "vitest run ./src/__tests__/validateQueueUrl.util.spec.js",
+    "typecheck": "echo '[TODO] Convert @jaypie/aws to TypeScript'"
   },
   "dependencies": {
     "@aws-sdk/client-sqs": "^3.540.0",

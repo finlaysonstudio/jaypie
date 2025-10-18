@@ -23,7 +23,8 @@
     "format": "eslint . --fix",
     "lint": "eslint .",
     "test": "vitest run .",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
     "@jaypie/types": "^0.1.2",

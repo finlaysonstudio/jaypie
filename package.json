@@ -70,7 +70,8 @@
     "test:testkit": "npm run test --workspace packages/testkit",
     "test:textract": "npm run test --workspace packages/textract",
     "test:types": "npm run test --workspace packages/types",
-    "test:webkit": "npm run test --workspace packages/webkit"
+    "test:webkit": "npm run test --workspace packages/webkit",
+    "typecheck": "npm run typecheck --workspaces"
   },
   "overrides": {
     "zod": "^3.23.8"
