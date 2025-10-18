@@ -11,6 +11,7 @@ export default defineConfig({
       "packages/eslint",
       "packages/express",
       "packages/jaypie",
+      "packages/kit",
       "packages/lambda",
       "packages/llm",
       "packages/mcp",

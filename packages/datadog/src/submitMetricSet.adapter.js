@@ -183,7 +183,6 @@ const submitMetricSet = async ({
 //
 
 const submitMetricSetViaStatsD = ({ type, valueSet, tags }) => {
-  log.trace("Submit metric set via StatsD");
   try {
     if (!valueSet || Object.keys(valueSet).length === 0) {
       log.warn("Metric valueSet was not provided");
