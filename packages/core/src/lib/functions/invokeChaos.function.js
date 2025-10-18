@@ -77,9 +77,6 @@ const invokeChaos = async (message = "medium", { log } = {}) => {
     message === "skip" ||
     message === ""
   ) {
-    if (log && typeof log.trace === "function") {
-      log.trace(`No chaos`);
-    }
     return;
   }
 

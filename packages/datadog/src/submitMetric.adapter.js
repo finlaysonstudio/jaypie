@@ -186,7 +186,6 @@ const submitMetric = async ({
 //
 
 const submitMetricViaStatsD = ({ name, type, value, tags }) => {
-  log.trace("Submit metric via StatsD");
   try {
     if (!name) {
       log.warn("Metric name was not provided");
