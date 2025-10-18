@@ -11,4 +11,5 @@ export * from "@jaypie/datadog";
 export * from "@jaypie/express";
 export * from "@jaypie/lambda";
 export * from "@jaypie/llm";
+export * from "@jaypie/kit";
 export * from "@jaypie/mongoose";
