@@ -112,7 +112,7 @@ export async function createStructuredCompletion(
       ? responseSchema
       : naturalZodSchema(responseSchema as NaturalSchema);
 
-    const responseFormat = zodResponseFormat(zodSchema, "response");
+    const responseFormat = zodResponseFormat(zodSchema as any, "response");
 
     const jsonSchema = z.toJSONSchema(zodSchema);
 
@@ -124,8 +124,8 @@ export async function createStructuredCompletion(
         current.additionalProperties = false;
       }
       Object.keys(current).forEach((key) => {
-        if (typeof current[key] == "object") {
-          checks.push(current[key]);
+        if (typeof current[key] == "object" && current[key] !== null) {
+          checks.push(current[key] as any);
         }
       });
       checks.shift();
