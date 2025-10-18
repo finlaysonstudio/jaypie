@@ -135,9 +135,10 @@ describe("Jaypie Textract", () => {
       const mockPage = {
         invalidPage: true,
       } as unknown as TextractPageAdaptable;
-      (MarkdownPage as any).mockReturnValueOnce("mocked response");
+      const mockedResponse = { text: "mocked response" };
+      (MarkdownPage as any).mockReturnValueOnce(mockedResponse);
       const result = new (MarkdownPage as any)(mockPage);
-      expect(result).toBe("mocked response");
+      expect(result).toBe(mockedResponse);
       expect(consoleWarnSpy).not.toHaveBeenCalled();
     });
 
