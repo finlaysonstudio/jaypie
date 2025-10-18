@@ -16,8 +16,9 @@ jobs:
     name: NPM Deploy
     timeout-minutes: 20
     permissions:
-      id-token: write # for aws-actions/configure-aws-credentials
-      contents: read # for actions/checkout
+      contents: read
+      id-token: write
+      packages: write
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
