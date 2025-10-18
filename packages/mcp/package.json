@@ -21,7 +21,7 @@
     "prompts"
   ],
   "scripts": {
-    "build": "rollup --config && shx chmod +x dist/*.js",
+    "build": "rollup --config",
     "format": "eslint . --fix",
     "lint": "eslint .",
     "prepare": "npm run build",
@@ -37,8 +37,7 @@
   },
   "devDependencies": {
     "@types/express": "^5.0.3",
-    "express": "^5.1.0",
-    "shx": "^0.3.4"
+    "express": "^5.1.0"
   },
   "publishConfig": {
     "access": "public"
