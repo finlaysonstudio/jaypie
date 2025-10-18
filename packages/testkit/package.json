@@ -1,6 +1,6 @@
 {
   "name": "@jaypie/testkit",
-  "version": "1.1.33",
+  "version": "1.1.34",
   "license": "MIT",
   "author": "Finlayson Studio",
   "type": "module",
@@ -33,8 +33,10 @@
     "@jaypie/core": "^1.1.11",
     "@jaypie/datadog": "^1.1.2",
     "@jaypie/express": "^1.1.11",
+    "@jaypie/kit": "^1.1.0",
     "@jaypie/lambda": "^1.1.4",
     "@jaypie/llm": "^1.1.21",
+    "@jaypie/logger": "^1.1.0",
     "@jaypie/mongoose": "^1.1.1",
     "@jaypie/textract": "^0.2.4",
     "jaypie": "^1.1.48",
