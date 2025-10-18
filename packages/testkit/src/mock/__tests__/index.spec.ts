@@ -71,12 +71,15 @@ describe("Mock Index", () => {
           originalExportKeys.push(exportName);
         }
       }
-      originalExportKeys.sort();
+      const uniqueOriginalKeys = [...new Set(originalExportKeys)].filter(
+        (key) => key !== "default",
+      );
+      uniqueOriginalKeys.sort();
       const mockExportKeys = Object.keys(mockExports).filter(
         (key) => key !== "default",
       );
       mockExportKeys.sort();
-      expect(mockExportKeys).toEqual(originalExportKeys);
+      expect(mockExportKeys).toEqual(uniqueOriginalKeys);
     });
   });
 });
