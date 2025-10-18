@@ -37,6 +37,17 @@ jobs:
           node-version: 20
       - run: npm install
       - run: npm run lint
+  typecheck:
+    name: Type Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install
+      - run: npm run typecheck
   test:
     name: Unit Test (in parallel)
     runs-on: ubuntu-latest
