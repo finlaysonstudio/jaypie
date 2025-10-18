@@ -64,7 +64,7 @@ export const cloneDeep = createMockWrappedFunction(original.cloneDeep, {
 export const envBoolean = createMockReturnedFunction(true);
 
 export const envsKey = createMockWrappedFunction(
-  original.envsKey,
+  original.envsKey as (...args: unknown[]) => unknown,
   `_MOCK_ENVS_KEY_[${TAG}]`,
 );
 
@@ -107,17 +107,17 @@ export const errorFromStatusCode = createMockFunction<
 });
 
 export const formatError = createMockWrappedFunction(
-  original.formatError,
+  original.formatError as (...args: unknown[]) => unknown,
   `_MOCK_FORMAT_ERROR_[${TAG}]`,
 );
 
 export const getHeaderFrom = createMockWrappedFunction(
-  original.getHeaderFrom,
+  original.getHeaderFrom as (...args: unknown[]) => unknown,
   `_MOCK_GET_HEADER_FROM_[${TAG}]`,
 );
 
 export const getObjectKeyCaseInsensitive = createMockWrappedFunction(
-  original.getObjectKeyCaseInsensitive,
+  original.getObjectKeyCaseInsensitive as (...args: unknown[]) => unknown,
   `_MOCK_GET_OBJECT_KEY_CASE_INSENSITIVE_[${TAG}]`,
 );
 
@@ -148,12 +148,12 @@ export const resolveValue = createMockWrappedFunction(
 );
 
 export const safeParseFloat = createMockWrappedFunction(
-  original.safeParseFloat,
+  original.safeParseFloat as (...args: unknown[]) => unknown,
   `_MOCK_SAFE_PARSE_FLOAT_[${TAG}]`,
 );
 
 export const placeholders = createMockWrappedFunction(
-  original.placeholders,
+  original.placeholders as (...args: unknown[]) => unknown,
   `_MOCK_PLACEHOLDERS_[${TAG}]`,
 );
 
@@ -237,7 +237,7 @@ export const jaypieHandler = createMockFunction<
 export const sleep = createMockResolvedFunction(true);
 
 export const uuid = createMockWrappedFunction(
-  original.uuid,
+  original.uuid as (...args: unknown[]) => unknown,
   `00000000-0000-0000-0000-000000000000`,
 );
 

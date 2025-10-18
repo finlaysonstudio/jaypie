@@ -199,7 +199,7 @@ class MockNotFoundError extends Error {
  * @returns Mock LlmTool object
  */
 function createMockTool(
-  nameOrCallOrOptions: string | ((...args: any[]) => any) | Partial<LlmTool>,
+  nameOrCallOrOptions?: string | ((...args: any[]) => any) | Partial<LlmTool>,
   callOrOptions?: ((...args: any[]) => any) | Partial<LlmTool>,
 ): LlmTool {
   // Default options

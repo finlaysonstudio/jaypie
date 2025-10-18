@@ -31,8 +31,10 @@ describe("cloneDeep", () => {
     expect(copy).toEqual(original);
 
     // Modifying the nested array in the copy should not affect the original
-    copy[1][0] = 4;
-    expect(original[1][0]).toBe(2);
+    const nestedArray = copy[1] as number[];
+    nestedArray[0] = 4;
+    const originalNested = original[1] as number[];
+    expect(originalNested[0]).toBe(2);
   });
 
   it("Should be mockable", () => {

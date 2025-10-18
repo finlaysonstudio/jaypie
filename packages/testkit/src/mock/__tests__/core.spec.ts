@@ -84,11 +84,11 @@ describe("Core Mocks", () => {
     });
 
     it("errorFromStatusCode returns error objects for status codes", () => {
-      const badRequestError = errorFromStatusCode(400);
+      const badRequestError = errorFromStatusCode(400) as any;
       expect(badRequestError.detail).toMatch(/Mock error for status code 400/);
 
       // This is returning ProjectError in the implementation rather than NotFoundError
-      const notFoundError = errorFromStatusCode(404);
+      const notFoundError = errorFromStatusCode(404) as any;
       expect(notFoundError.detail).toMatch(/Mock error for status code 404/);
     });
   });
@@ -103,10 +103,10 @@ describe("Core Mocks", () => {
       log.warn("Warning message");
       log.error("Error message");
 
-      expect(log.debug.mock.calls.length).toBe(1);
-      expect(log.info.mock.calls.length).toBe(1);
-      expect(log.warn.mock.calls.length).toBe(1);
-      expect(log.error.mock.calls.length).toBe(1);
+      expect((log.debug as any).mock.calls.length).toBe(1);
+      expect((log.info as any).mock.calls.length).toBe(1);
+      expect((log.warn as any).mock.calls.length).toBe(1);
+      expect((log.error as any).mock.calls.length).toBe(1);
     });
   });
 
@@ -302,8 +302,8 @@ describe("Core Mocks", () => {
                 await handler();
               } catch (error) {
                 if (isJaypieError(error)) {
-                  expect(error.isProjectError).toBeTrue();
-                  expect(error.status).toBe(HTTP.CODE.UNAVAILABLE);
+                  expect((error as any).isProjectError).toBeTrue();
+                  expect((error as any).status).toBe(HTTP.CODE.UNAVAILABLE);
                 }
               }
               expect.assertions(2);
@@ -317,8 +317,8 @@ describe("Core Mocks", () => {
                 await handler();
               } catch (error) {
                 if (isJaypieError(error)) {
-                  expect(error.isProjectError).toBeTrue();
-                  expect(error.status).toBe(HTTP.CODE.UNAVAILABLE);
+                  expect((error as any).isProjectError).toBeTrue();
+                  expect((error as any).status).toBe(HTTP.CODE.UNAVAILABLE);
                 }
               }
               expect.assertions(2);
@@ -352,8 +352,8 @@ describe("Core Mocks", () => {
               try {
                 await handler();
               } catch (error) {
-                expect(error.isProjectError).toBeUndefined();
-                expect(error.status).toBeUndefined();
+                expect((error as any).isProjectError).toBeUndefined();
+                expect((error as any).status).toBeUndefined();
               }
               expect.assertions(2);
             });
@@ -371,8 +371,8 @@ describe("Core Mocks", () => {
                 await handler();
               } catch (error) {
                 if (isJaypieError(error)) {
-                  expect(error.isProjectError).toBeTrue();
-                  expect(error.status).toBe(HTTP.CODE.BAD_REQUEST);
+                  expect((error as any).isProjectError).toBeTrue();
+                  expect((error as any).status).toBe(HTTP.CODE.BAD_REQUEST);
                 }
               }
               expect.assertions(2);
@@ -415,9 +415,9 @@ describe("Core Mocks", () => {
               try {
                 await handler();
               } catch (error) {
-                expect(error.isProjectError).toBeUndefined();
-                expect(error.status).toBeUndefined();
-                expect(error.message).toBe("Sorpresa!");
+                expect((error as any).isProjectError).toBeUndefined();
+                expect((error as any).status).toBeUndefined();
+                expect((error as Error).message).toBe("Sorpresa!");
               }
               expect.assertions(3);
             });
@@ -566,7 +566,7 @@ describe("Core Mocks", () => {
           try {
             await handler();
           } catch (error) {
-            expect(error.isProjectError).toBeUndefined();
+            expect((error as any).isProjectError).toBeUndefined();
           }
           expect.assertions(1);
         });
@@ -643,12 +643,12 @@ describe("Core Mocks", () => {
       });
       describe("Features", () => {
         it("Always passes undefined", () => {
-          expect(optional(undefined)).toBeTrue();
-          expect(optional(undefined, Array)).toBeTrue();
-          expect(optional(undefined, Boolean)).toBeTrue();
-          expect(optional(undefined, Number)).toBeTrue();
-          expect(optional(undefined, Object)).toBeTrue();
-          expect(optional(undefined, String)).toBeTrue();
+          expect(optional(undefined, {})).toBeTrue();
+          expect(optional(undefined, { type: Array })).toBeTrue();
+          expect(optional(undefined, { type: Boolean })).toBeTrue();
+          expect(optional(undefined, { type: Number })).toBeTrue();
+          expect(optional(undefined, { type: Object })).toBeTrue();
+          expect(optional(undefined, { type: String })).toBeTrue();
         });
         describe("Obvious success cases", () => {
           it("Passes arrays", () => {
@@ -751,8 +751,10 @@ describe("Jaypie Core Utilities", () => {
       expect(copy).toEqual(original);
 
       // Modifying the nested array in the copy should not affect the original
-      copy[1][0] = 4;
-      expect(original[1][0]).toBe(2);
+      const nestedCopy = copy[1] as number[];
+      nestedCopy[0] = 4;
+      const nestedOriginal = original[1] as number[];
+      expect(nestedOriginal[0]).toBe(2);
     });
 
     it("Should be mockable", () => {
@@ -830,16 +832,16 @@ describe("Jaypie Core Utilities", () => {
       it("Can be mocked for testing", () => {
         const original = validate.string;
         try {
-          validate.string.mockReturnValueOnce(false);
+          (validate.string as any).mockReturnValueOnce(false);
           expect(validate.string("test")).toBeFalse();
 
-          validate.mockReturnValueOnce(false);
+          (validate as any).mockReturnValueOnce(false);
           expect(
             validate("test", { type: VALIDATE.STRING, throws: false }),
           ).toBeFalse();
         } finally {
           // Restore the original implementation
-          validate.string.mockImplementation(original);
+          (validate.string as any).mockImplementation(original);
         }
       });
     });
@@ -943,8 +945,8 @@ describe("Jaypie Core Utilities", () => {
               await handler();
             } catch (error) {
               if (isJaypieError(error)) {
-                expect(error.isProjectError).toBeTrue();
-                expect(error.status).toBe(HTTP.CODE.UNAVAILABLE);
+                expect((error as any).isProjectError).toBeTrue();
+                expect((error as any).status).toBe(HTTP.CODE.UNAVAILABLE);
               }
             }
             expect.assertions(2);
@@ -958,8 +960,8 @@ describe("Jaypie Core Utilities", () => {
               await handler();
             } catch (error) {
               if (isJaypieError(error)) {
-                expect(error.isProjectError).toBeTrue();
-                expect(error.status).toBe(HTTP.CODE.UNAVAILABLE);
+                expect((error as any).isProjectError).toBeTrue();
+                expect((error as any).status).toBe(HTTP.CODE.UNAVAILABLE);
               }
             }
             expect.assertions(2);
@@ -993,8 +995,8 @@ describe("Jaypie Core Utilities", () => {
             try {
               await handler();
             } catch (error) {
-              expect((error as ProjectError).isProjectError).toBeUndefined();
-              expect((error as ProjectError).status).toBeUndefined();
+              expect((error as any).isProjectError).toBeUndefined();
+              expect((error as any).status).toBeUndefined();
             }
             expect.assertions(2);
           });
@@ -1012,8 +1014,8 @@ describe("Jaypie Core Utilities", () => {
               await handler();
             } catch (error) {
               if (isJaypieError(error)) {
-                expect(error.isProjectError).toBeTrue();
-                expect(error.status).toBe(HTTP.CODE.BAD_REQUEST);
+                expect((error as any).isProjectError).toBeTrue();
+                expect((error as any).status).toBe(HTTP.CODE.BAD_REQUEST);
               }
             }
             expect.assertions(2);
@@ -1056,9 +1058,9 @@ describe("Jaypie Core Utilities", () => {
             try {
               await handler();
             } catch (error) {
-              expect((error as ProjectError).isProjectError).toBeUndefined();
-              expect((error as ProjectError).status).toBeUndefined();
-              expect((error as ProjectError).message).toBe("Sorpresa!");
+              expect((error as any).isProjectError).toBeUndefined();
+              expect((error as any).status).toBeUndefined();
+              expect((error as Error).message).toBe("Sorpresa!");
             }
             expect.assertions(3);
           });
@@ -1207,7 +1209,7 @@ describe("Jaypie Core Utilities", () => {
         try {
           await handler();
         } catch (error) {
-          expect((error as ProjectError).isProjectError).toBeUndefined();
+          expect((error as any).isProjectError).toBeUndefined();
         }
         expect.assertions(1);
       });

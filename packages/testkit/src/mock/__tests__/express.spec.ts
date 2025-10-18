@@ -114,8 +114,7 @@ describe("Express Mocks", () => {
             expressHandler(mockFunction, { locals: "string" });
           }).toThrowJaypieError();
           expect(async () => {
-            // @ts-expect-error intentionally passing invalid inputs
-            expressHandler(mockFunction, { locals: [] });
+            expressHandler(mockFunction, { locals: [] as any });
           }).toThrowJaypieError();
           expect(async () => {
             // @ts-expect-error intentionally passing invalid inputs
@@ -128,10 +127,11 @@ describe("Express Mocks", () => {
           });
           const handler = expressHandler(mockFunction);
           const req = {};
+          const res = {};
           try {
-            await handler(req);
+            await handler(req, res);
           } catch (error) {
-            expect(error.isProjectError).not.toBeTrue();
+            expect((error as any).isProjectError).not.toBeTrue();
           }
           expect.assertions(1);
         });
@@ -141,10 +141,11 @@ describe("Express Mocks", () => {
             .mockRejectedValueOnce(new Error("Sorpresa!"));
           const handler = expressHandler(mockFunction);
           const req = {};
+          const res = {};
           try {
-            await handler(req);
+            await handler(req, res);
           } catch (error) {
-            expect(error.isProjectError).not.toBeTrue();
+            expect((error as any).isProjectError).not.toBeTrue();
           }
           expect.assertions(1);
         });
@@ -160,8 +161,8 @@ describe("Express Mocks", () => {
           try {
             await handler(req, res);
           } catch (error) {
-            expect(error.isProjectError).not.toBeTrue();
-            expect(error.message).toBe("Sorpresa!");
+            expect((error as any).isProjectError).not.toBeTrue();
+            expect((error as Error).message).toBe("Sorpresa!");
           }
           expect.assertions(2);
         });
@@ -171,7 +172,7 @@ describe("Express Mocks", () => {
           // Arrange
           const mockFunction = vi.fn(() => 12);
           const handler = expressHandler(mockFunction);
-          const args = [1, 2, 3];
+          const args = [1, 2, 3] as [any, any, ...any[]];
           // Act
           await handler(...args);
           // Assert
@@ -186,9 +187,9 @@ describe("Express Mocks", () => {
           const handler = expressHandler(mockFunction);
           // Act
           try {
-            await handler();
+            await handler({}, {});
           } catch (error) {
-            expect(error.message).toBe("Sorpresa!");
+            expect((error as Error).message).toBe("Sorpresa!");
           }
           expect.assertions(1);
         });
@@ -197,7 +198,7 @@ describe("Express Mocks", () => {
           const mockFunction = vi.fn(async () => 12);
           const handler = expressHandler(mockFunction);
           // Act
-          await handler();
+          await handler({}, {});
           // Assert
           expect(mockFunction).toHaveBeenCalledTimes(1);
         });
@@ -206,7 +207,7 @@ describe("Express Mocks", () => {
           const mockFunction = vi.fn(() => 42);
           const handler = expressHandler(mockFunction);
           // Act
-          const result = await handler();
+          const result = await handler({}, {});
           // Assert
           expect(result).toBe(42);
         });
@@ -215,7 +216,7 @@ describe("Express Mocks", () => {
           const mockFunction = vi.fn(async () => 42);
           const handler = expressHandler(mockFunction);
           // Act
-          const result = await handler();
+          const result = await handler({}, {});
           // Assert
           expect(result).toBe(42);
         });
@@ -297,8 +298,8 @@ describe("Express Mocks", () => {
               await handler(req, res, next);
             } catch (error) {
               if (isJaypieError(error)) {
-                expect(error.isProjectError).toBeTrue();
-                expect(error.status).toBe(HTTP.CODE.UNAVAILABLE);
+                expect((error as any).isProjectError).toBeTrue();
+                expect((error as any).status).toBe(HTTP.CODE.UNAVAILABLE);
               }
             }
             expect.assertions(2);
@@ -326,11 +327,11 @@ describe("Express Mocks", () => {
             const handler = expressHandler(() => {});
             // Act
             try {
-              await handler();
+              await handler({}, {});
             } catch (error) {
               if (isJaypieError(error)) {
-                expect(error.isProjectError).toBeTrue();
-                expect(error.status).toBe(HTTP.CODE.UNAVAILABLE);
+                expect((error as any).isProjectError).toBeTrue();
+                expect((error as any).status).toBe(HTTP.CODE.UNAVAILABLE);
               }
             }
             expect.assertions(2);
@@ -341,11 +342,11 @@ describe("Express Mocks", () => {
             const handler = expressHandler(() => {}, { unavailable: true });
             // Act
             try {
-              await handler();
+              await handler({}, {});
             } catch (error) {
               if (isJaypieError(error)) {
-                expect(error.isProjectError).toBeTrue();
-                expect(error.status).toBe(HTTP.CODE.UNAVAILABLE);
+                expect((error as any).isProjectError).toBeTrue();
+                expect((error as any).status).toBe(HTTP.CODE.UNAVAILABLE);
               }
             }
             expect.assertions(2);

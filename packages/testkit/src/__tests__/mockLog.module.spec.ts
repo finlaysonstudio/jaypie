@@ -102,7 +102,7 @@ describe("Mock Log Function", () => {
     });
     it("Tracks calls made to lib instances", () => {
       spyLog(log);
-      const subLog = log.lib("subLog");
+      const subLog = (log.lib as any)("subLog");
       subLog.debug("Hello, world!");
       expect(log.lib).toHaveBeenCalledTimes(1);
       expect(log.debug).toHaveBeenCalledTimes(1);
