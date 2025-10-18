@@ -213,7 +213,7 @@ export function createRequestOptions(
           ? options.format
           : naturalZodSchema(options.format as NaturalSchema);
 
-      const responseFormat = zodResponseFormat(zodSchema, "response");
+      const responseFormat = zodResponseFormat(zodSchema as any, "response");
 
       const jsonSchema = z.toJSONSchema(zodSchema);
 
@@ -225,8 +225,8 @@ export function createRequestOptions(
           current.additionalProperties = false;
         }
         Object.keys(current).forEach((key) => {
-          if (typeof current[key] == "object") {
-            checks.push(current[key]);
+          if (typeof current[key] == "object" && current[key] !== null) {
+            checks.push(current[key] as any);
           }
         });
         checks.shift();

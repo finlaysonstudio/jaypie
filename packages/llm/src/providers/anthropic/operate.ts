@@ -83,12 +83,12 @@ function handleInputAndPlaceholders(
 }
 
 function updateUsage(
-  usage: Anthropic.MessageCreateParamsNonStreaming.Usage,
+  usage: Anthropic.Usage,
   totalUsage: LlmUsageItem,
 ) {
   totalUsage.input += usage.input_tokens;
   totalUsage.output += usage.output_tokens;
-  totalUsage.reasoning += usage.prompt_tokens;
+  totalUsage.reasoning += usage.input_tokens;
   totalUsage.total += usage.input_tokens + usage.output_tokens;
 }
 
@@ -122,7 +122,7 @@ function handleOutputSchema(
   format:
     | JsonObject
     | NaturalSchema
-    | z.ZodType<any, z.ZodTypeDef, any>
+    | z.ZodType<any, any, any>
     | undefined,
 ) {
   let schema: JsonObject | undefined;
@@ -303,9 +303,9 @@ export async function operate(
   }
 
   // Avoid Anthropic error by removing type property
-  const inputMessages: Anthropic.MessageParam[] = structuredClone(history);
+  const inputMessages: Anthropic.MessageParam[] = structuredClone(history) as any;
   inputMessages.forEach((message) => {
-    delete message.type;
+    delete (message as any).type;
   });
 
   // Add instruction to the input message
