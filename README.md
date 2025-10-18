@@ -18,7 +18,7 @@ For applications without custom infrastructure needs, fullstack hosts like Verce
 * Express server running on AWS Lambda.
 * Node.js worker processes running on AWS Lambda.
 * MongoDB via Mongoose.
-* Vue ecosystem frontend: Vue 3 composition, Vuetify, Pinia.
+* Frontend agnostic - use any framework or library.
 * Vitest for testing.
 * ES6 syntax enforced via ESLint.
 * Prettier formatting.
@@ -2827,4 +2827,4 @@ Process for minor releases:
 ## 📜 License
 
 [MIT License](./LICENSE.txt).  
-Published by Finlayson Studio.  
+Published by Finlayson Studio.    

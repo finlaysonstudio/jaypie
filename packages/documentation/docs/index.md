@@ -1,14 +1,13 @@
-# Jaypie Documentation
+---
+sidebar_position: 1
+slug: /
+---
 
-Welcome to the Jaypie documentation! Jaypie is an event-driven JavaScript library for building serverless applications on AWS.
+# Jaypie
 
-## What is Jaypie?
+**Event-driven JavaScript library for building serverless applications on AWS**
 
-Jaypie is an opinionated library that embodies a "JavaScript Only" philosophy, enabling developers to use a single language across:
-
-- **Backend**: Express.js, AWS Lambda
-- **Infrastructure**: AWS CDK
-- **Tooling**: Node.js ecosystem
+Jaypie is an opinionated library that embodies a "JavaScript Only" philosophy, enabling developers to use a single language across backend, infrastructure, and tooling.
 
 ## Core Features
 
@@ -45,24 +44,6 @@ Or install individual packages as needed:
 ```bash
 npm install @jaypie/core @jaypie/express @jaypie/lambda
 ```
-
-## Package Overview
-
-### Core Packages
-
-- **[@jaypie/core](./api/core)** - Foundation: errors, logging, validation, HTTP utilities
-- **[@jaypie/express](./api/express)** - Express.js handlers, CORS, routes
-- **[@jaypie/lambda](./api/lambda)** - Lambda wrappers and lifecycle management
-
-### Integration Packages
-
-- **[@jaypie/aws](./api/aws)** - SQS, Textract, Secrets Manager integrations
-- **[@jaypie/llm](./api/llm)** - LLM abstraction (OpenAI, Anthropic, tools)
-
-### Utility Packages
-
-- **[@jaypie/errors](./api/errors)** - Error class definitions
-- **[@jaypie/testkit](./api/testkit)** - Test utilities and mocks
 
 ## Architecture
 

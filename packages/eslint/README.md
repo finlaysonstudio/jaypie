@@ -39,7 +39,6 @@ export default [
 
 ### Wishlist 🌠
 
-* Vue
 * CommonJS
 * eslint-plugin-import-x
 

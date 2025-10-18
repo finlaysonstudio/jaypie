@@ -4,7 +4,7 @@ Express.js handlers, CORS, and route utilities.
 
 ## Overview
 
-`@jaypie/express` provides Express.js integration for the Jaypie framework, including:
+`@jaypie/express` provides Express.js integration for the Jaypie library, including:
 
 - Express handler wrapper with lifecycle management
 - CORS configuration

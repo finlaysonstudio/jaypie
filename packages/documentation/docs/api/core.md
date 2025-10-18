@@ -4,7 +4,7 @@ Foundation package providing errors, logging, validation, and HTTP utilities.
 
 ## Overview
 
-`@jaypie/core` is the foundational package of the Jaypie framework. It provides essential utilities for:
+`@jaypie/core` is the foundational package of the Jaypie library. It provides essential utilities for:
 
 - Error handling and custom error classes
 - Structured JSON logging

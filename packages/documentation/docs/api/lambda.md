@@ -4,7 +4,7 @@ AWS Lambda wrappers and lifecycle management.
 
 ## Overview
 
-`@jaypie/lambda` provides AWS Lambda integration for the Jaypie framework, including:
+`@jaypie/lambda` provides AWS Lambda integration for the Jaypie library, including:
 
 - Lambda handler wrapper with lifecycle management
 - Event/context integration

@@ -27,6 +27,7 @@
     "build:webkit": "npm run build --workspace packages/webkit",
     "clean": "rimraf ./packages/*/dist",
     "docs:build": "npm run build && npm run build --workspace packages/documentation",
+    "docs:extract": "npm run extract --workspace packages/documentation",
     "docs:serve": "npm run serve --workspace packages/documentation",
     "docs:start": "npm run start --workspace packages/documentation",
     "format": "npm run format:package && npm run format:lint",

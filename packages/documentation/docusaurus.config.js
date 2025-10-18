@@ -2,7 +2,7 @@ const { themes: prismThemes } = require("prism-react-renderer");
 
 const config = {
   title: "Jaypie",
-  tagline: "Event-driven fullstack JavaScript framework for AWS",
+  tagline: "Event-driven JavaScript library for AWS",
   favicon: "img/favicon.ico",
 
   url: "https://jaypie.finlayson.studio",
@@ -63,16 +63,7 @@ const config = {
       style: "dark",
       links: [
         {
-          title: "Docs",
-          items: [
-            {
-              label: "Introduction",
-              to: "/docs/intro",
-            },
-          ],
-        },
-        {
-          title: "Packages",
+          title: "Main Packages",
           items: [
             {
               label: "Core",
@@ -83,12 +74,29 @@ const config = {
               to: "/docs/api/express",
             },
             {
+              label: "Lambda",
+              to: "/docs/api/lambda",
+            },
+            {
               label: "LLM",
               to: "/docs/api/llm",
             },
+          ],
+        },
+        {
+          title: "Extra Packages",
+          items: [
             {
-              label: "AWS",
-              to: "/docs/api/aws",
+              label: "Constructs",
+              to: "/docs/api/constructs",
+            },
+            {
+              label: "MCP",
+              to: "/docs/api/mcp",
+            },
+            {
+              label: "Textract",
+              to: "/docs/api/textract",
             },
           ],
         },
