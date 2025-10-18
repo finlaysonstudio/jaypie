@@ -119,7 +119,7 @@ const config = {
           ],
         },
       ],
-      copyright: `Copyright © ${new Date().getFullYear()} Finlayson Studio. Built with Docusaurus.`,
+      copyright: `Built with Docusaurus. Published by Finlayson Studio. Available under the MIT License.`,
     },
     prism: {
       theme: prismThemes.github,
