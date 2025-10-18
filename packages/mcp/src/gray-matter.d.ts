@@ -21,7 +21,7 @@ declare module "gray-matter" {
 
   function matter<I = any>(
     input: string | Buffer,
-    options?: GrayMatterOption
+    options?: GrayMatterOption,
   ): GrayMatterFile<I>;
 
   export = matter;

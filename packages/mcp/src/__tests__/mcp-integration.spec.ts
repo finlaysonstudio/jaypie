@@ -5,7 +5,7 @@ describe("MCP Integration", () => {
   it("should reproduce the original MCP tool call issue", async () => {
     // This test verifies that zod schemas work correctly with MCP tool definitions
     // The original issue was "keyValidator._parse is not a function"
-    
+
     // Define a schema similar to what's used in the read_prompt tool
     const schema = {
       filename: z
