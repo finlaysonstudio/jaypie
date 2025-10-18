@@ -99,11 +99,14 @@ export async function createTextCompletion(
 
   const response = await client.messages.create(params);
 
+  const firstContent = response.content[0];
+  const text = firstContent && "text" in firstContent ? firstContent.text : "";
+  
   log.trace(
-    `Assistant reply: ${response.content[0]?.text?.length || 0} characters`,
+    `Assistant reply: ${text.length} characters`,
   );
 
-  return response.content[0]?.text || "";
+  return text;
 }
 
 // Structured output completion
@@ -142,7 +145,8 @@ export async function createStructuredCompletion(
     const response = await client.messages.create(params);
 
     // Extract text from response
-    const responseText = response.content[0]?.text || "";
+    const firstContent = response.content[0];
+    const responseText = firstContent && "text" in firstContent ? firstContent.text : "";
 
     // Find JSON in response
     const jsonMatch =

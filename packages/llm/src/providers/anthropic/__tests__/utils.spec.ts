@@ -97,7 +97,7 @@ describe("Anthropic Utils", () => {
     describe("initializeClient", () => {
       it("initializes client with provided API key", async () => {
         // Setup explicit mock for logger
-        const mockLogger = { trace: vi.fn(), error: vi.fn(), var: vi.fn() };
+        const mockLogger = { trace: vi.fn(), error: vi.fn(), var: vi.fn() } as any;
         vi.mocked(log.lib).mockReturnValue(mockLogger);
 
         await initializeClient({ apiKey: "provided-key" });
@@ -109,7 +109,7 @@ describe("Anthropic Utils", () => {
 
       it("initializes client with environment API key", async () => {
         // Setup explicit mock for logger
-        const mockLogger = { trace: vi.fn(), error: vi.fn(), var: vi.fn() };
+        const mockLogger = { trace: vi.fn(), error: vi.fn(), var: vi.fn() } as any;
         vi.mocked(log.lib).mockReturnValue(mockLogger);
 
         await initializeClient();
@@ -174,7 +174,7 @@ describe("Anthropic Utils", () => {
           trace: vi.fn(),
           error: vi.fn(),
           var: vi.fn(),
-        });
+        } as any);
       });
 
       it("prepares user message", () => {

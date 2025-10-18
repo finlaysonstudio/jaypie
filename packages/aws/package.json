@@ -21,7 +21,6 @@
     "format:lint": "eslint --fix .",
     "format:package": "sort-package-json ./package.json",
     "lint": "eslint .",
-    "prepublish": "npm run build",
     "test": "vitest run .",
     "test:spec:getMessages.function": "vitest run ./src/__tests__/getMessages.function.spec.js",
     "test:spec:getSecret.function": "vitest run ./src/__tests__/getSecret.function.spec.js",
