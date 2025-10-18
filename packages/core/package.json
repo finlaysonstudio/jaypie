@@ -21,7 +21,6 @@
     "format:lint": "eslint --fix .",
     "format:package": "sort-package-json ./package.json",
     "lint": "eslint .",
-    "prepublish": "npm run build",
     "test": "vitest run .",
     "test:spec:Client": "vitest run ./src/__tests__/Client.spec.js",
     "test:spec:arguments.lib": "vitest run ./src/lib/__tests__/arguments.lib.spec.js",

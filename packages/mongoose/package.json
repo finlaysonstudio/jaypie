@@ -21,7 +21,6 @@
     "format:lint": "eslint --fix .",
     "format:package": "sort-package-json ./package.json",
     "lint": "eslint .",
-    "prepublish": "npm run build",
     "test": "vitest run .",
     "test:spec:connect.function": "vitest run ./src/__tests__/connect.function.spec.js",
     "test:spec:connectFromSecretEnv.function": "vitest run ./src/__tests__/connectFromSecretEnv.function.spec.js",
