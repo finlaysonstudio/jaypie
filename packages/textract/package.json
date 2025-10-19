@@ -1,6 +1,6 @@
 {
   "name": "@jaypie/textract",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "license": "MIT",
   "author": "Finlayson Studio",
   "type": "module",
@@ -21,7 +21,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@jaypie/core": "^1.1.5",
+    "@jaypie/logger": "^1.1.0",
     "amazon-textract-response-parser": "^0.4.3"
   },
   "devDependencies": {
