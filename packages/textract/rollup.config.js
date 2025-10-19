@@ -11,6 +11,7 @@ export default {
   external: [
     "@aws-sdk/client-textract",
     "@jaypie/core",
+    "@jaypie/logger",
     "amazon-textract-response-parser",
   ],
 };
