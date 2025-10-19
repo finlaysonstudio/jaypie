@@ -1,6 +1,6 @@
 {
   "name": "@jaypie/webkit",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "Framework-agnostic frontend utilities for Jaypie",
   "license": "MIT",
   "author": "Finlayson Studio",
@@ -26,7 +26,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@jaypie/errors": "^1.1.2",
+    "@jaypie/errors": "^1.1.6",
     "uuid": "^11.0.5"
   },
   "devDependencies": {

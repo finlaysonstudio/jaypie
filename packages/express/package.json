@@ -1,6 +1,6 @@
 {
   "name": "@jaypie/express",
-  "version": "1.1.16",
+  "version": "1.1.17",
   "license": "MIT",
   "author": "Finlayson Studio",
   "type": "module",
@@ -40,7 +40,7 @@
     "@codegenie/serverless-express": "^4.15.0",
     "@jaypie/core": "^1.1.14",
     "@jaypie/datadog": "^1.1.8",
-    "@jaypie/errors": "^1.1.2",
+    "@jaypie/errors": "^1.1.6",
     "cors": "^2.8.5"
   },
   "devDependencies": {
