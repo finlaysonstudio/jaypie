@@ -1,4 +1,4 @@
-import { force, log } from "@jaypie/core";
+import { log } from "@jaypie/logger";
 import { TYPE, WORD } from "./constants.js";
 import { TextractItem, GetItemContentOptions } from "./types.js";
 
@@ -6,8 +6,12 @@ const normalizeWhitespace = (input: string): string => {
   return input.replace(/\s+/g, " ").trim();
 };
 
+const forceArray = <T>(value: T | T[]): T[] => {
+  return Array.isArray(value) ? value : [value];
+};
+
 const idsArrayHasItem = (ids: string[], item: unknown): boolean => {
-  ids = force.array(ids);
+  ids = forceArray(ids);
   if (typeof item !== "object" || !item) {
     return false;
   }
@@ -26,7 +30,7 @@ function getAbstract(
   item: TextractItem,
   { ignoreWords = false, returnedIds = [] }: GetItemContentOptions = {},
 ): string {
-  returnedIds = force.array(returnedIds);
+  returnedIds = forceArray(returnedIds);
   // Does it implement WithContent?
   if (typeof item.listContent === "function") {
     const content = item.listContent().map((myItem) => {
@@ -70,7 +74,7 @@ function getLayoutFigureContent(
   item: TextractItem,
   { ignoreWords = false, returnedIds = [] }: GetItemContentOptions = {},
 ): string {
-  returnedIds = force.array(returnedIds);
+  returnedIds = forceArray(returnedIds);
   const alt =
     item.listContent?.()?.map((line) => {
       returnedIds.push(line.id);
@@ -88,7 +92,7 @@ function getLayoutHeaderContent(
   item: TextractItem,
   { ignoreWords = false, returnedIds = [] }: GetItemContentOptions = {},
 ): string {
-  returnedIds = force.array(returnedIds);
+  returnedIds = forceArray(returnedIds);
   return (
     item.listContent?.()?.map((line) => {
       returnedIds.push(line.id);
@@ -138,7 +142,7 @@ function getLineContent(
   line: TextractItem,
   { ignoreWords = false, returnedIds = [] }: GetItemContentOptions = {},
 ): string {
-  returnedIds = force.array(returnedIds);
+  returnedIds = forceArray(returnedIds);
   // Build list of phrases (most will be all "printed")
   const phrases: Array<{ text: string; type: string | null }> = [];
   let currentPhrase = {
@@ -198,7 +202,7 @@ function getTableContent(
   item: TextractItem,
   { ignoreWords = false, returnedIds = [] }: GetItemContentOptions = {},
 ): string {
-  returnedIds = force.array(returnedIds);
+  returnedIds = forceArray(returnedIds);
   const content: string[] = [];
 
   // Handle rows
@@ -290,7 +294,7 @@ function getTitleContent(
   item: TextractItem,
   { ignoreWords = false, returnedIds = [] }: GetItemContentOptions = {},
 ): string {
-  returnedIds = force.array(returnedIds);
+  returnedIds = forceArray(returnedIds);
   return (
     item.listContent?.()?.map((line) => {
       returnedIds.push(line.id);

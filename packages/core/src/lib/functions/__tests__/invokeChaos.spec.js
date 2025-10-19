@@ -186,8 +186,7 @@ describe("invokeChaos", () => {
       const sleep = (await import("../sleep.function.js")).default;
       Math.random = vi.fn().mockReturnValueOnce(0.3).mockReturnValueOnce(0.5);
       await invokeChaos("high");
-      expect(sleep).toHaveBeenCalledOnce();
-      expect(sleep).toHaveBeenCalledWith(expect.any(Number));
+      expect(sleep).toHaveBeenCalledExactlyOnceWith(expect.any(Number));
       const sleepDuration = sleep.mock.calls[0][0];
       expect(sleepDuration).toBeGreaterThanOrEqual(0);
       expect(sleepDuration).toBeLessThanOrEqual(12000);
@@ -197,8 +196,7 @@ describe("invokeChaos", () => {
       const sleep = (await import("../sleep.function.js")).default;
       Math.random = vi.fn().mockReturnValueOnce(0.1).mockReturnValueOnce(0.5);
       await invokeChaos("medium");
-      expect(sleep).toHaveBeenCalledOnce();
-      expect(sleep).toHaveBeenCalledWith(expect.any(Number));
+      expect(sleep).toHaveBeenCalledExactlyOnceWith(expect.any(Number));
       const sleepDuration = sleep.mock.calls[0][0];
       expect(sleepDuration).toBeGreaterThanOrEqual(0);
       expect(sleepDuration).toBeLessThanOrEqual(12000);
@@ -208,8 +206,7 @@ describe("invokeChaos", () => {
       const sleep = (await import("../sleep.function.js")).default;
       Math.random = vi.fn().mockReturnValueOnce(0.01).mockReturnValueOnce(0.5);
       await invokeChaos("low");
-      expect(sleep).toHaveBeenCalledOnce();
-      expect(sleep).toHaveBeenCalledWith(expect.any(Number));
+      expect(sleep).toHaveBeenCalledExactlyOnceWith(expect.any(Number));
       const sleepDuration = sleep.mock.calls[0][0];
       expect(sleepDuration).toBeGreaterThanOrEqual(0);
       expect(sleepDuration).toBeLessThanOrEqual(12000);
@@ -243,8 +240,7 @@ describe("invokeChaos", () => {
       const sleep = (await import("../sleep.function.js")).default;
       Math.random = vi.fn().mockReturnValue(0.5); // For sleep duration
       await invokeChaos("always");
-      expect(sleep).toHaveBeenCalledOnce();
-      expect(sleep).toHaveBeenCalledWith(6000); // 0.5 * 12000
+      expect(sleep).toHaveBeenCalledExactlyOnceWith(6000); // 0.5 * 12000
     });
 
     it("defaults to medium when no message is provided", async () => {

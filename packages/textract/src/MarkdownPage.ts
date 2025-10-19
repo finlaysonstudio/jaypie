@@ -1,4 +1,4 @@
-import { log } from "@jaypie/core";
+import { log } from "@jaypie/logger";
 import getItemContent from "./getItemContent.js";
 import getItemFirstWord from "./getItemFirstWord.js";
 import { TextractItem, TextractPage, IndexObject } from "./types.js";
