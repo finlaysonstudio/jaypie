@@ -15,6 +15,7 @@ export default [
   {
     ignores: [
       "**/prompts/templates/**",
+      "LOCAL/**",
       "packages/documentation/build/**",
       "packages/documentation/.docusaurus/**",
     ],
@@ -65,6 +66,21 @@ export default [
     files: ["packages/mcp/**/*.ts"],
     rules: {
       "import-x/no-unresolved": ["error", { ignore: ["gray-matter"] }],
+    },
+  },
+
+  //
+  //
+  // Documentation: TypeScript/TSX files (allow imports)
+  //
+  {
+    files: ["packages/documentation/**/*.ts", "packages/documentation/**/*.tsx"],
+    rules: {
+      "import-x/default": "off",
+      "import-x/no-unresolved": [
+        "error",
+        { ignore: ["^@theme/", "^@docusaurus/"] },
+      ],
     },
   },
 
