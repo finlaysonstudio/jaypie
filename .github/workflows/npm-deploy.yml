@@ -24,10 +24,11 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22 # Includes npm >= 11.5.1 for OIDC support
+          node-version: 20
           registry-url: 'https://registry.npmjs.org'
+      - run: npm install -g npm@latest
       - run: npm ci
-      - run: npm whoami || echo "Not authenticated"
+      - run: npm whoami
       - run: lerna publish from-package --no-private --yes --registry=https://registry.npmjs.org/ --concurrency 1
   lint:
     name: Lint (in parallel)
