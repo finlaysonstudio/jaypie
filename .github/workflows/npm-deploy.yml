@@ -29,7 +29,7 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
       - run: npm install -g npm@latest
       - run: npm ci
-      - run: lerna publish from-package --no-private --yes --registry=https://registry.npmjs.org/ --concurrency 1 --loglevel verbose
+      - run: lerna publish from-package --no-private --yes
   lint:
     name: Lint (in parallel)
     runs-on: ubuntu-latest
