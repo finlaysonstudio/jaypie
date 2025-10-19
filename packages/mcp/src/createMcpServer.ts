@@ -1,8 +1,8 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import * as fs from "fs/promises";
-import * as path from "path";
-import { fileURLToPath } from "url";
+import * as fs from "node:fs/promises";
+import * as path from "node:path";
+import { fileURLToPath } from "node:url";
 import matter from "gray-matter";
 
 const __filename = fileURLToPath(import.meta.url);
