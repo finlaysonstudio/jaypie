@@ -8,8 +8,9 @@
   "exports": {
     ".": {
       "types": "./dist/esm/index.d.ts",
+      "require": "./dist/cjs/index.cjs",
       "import": "./dist/esm/index.js",
-      "require": "./dist/cjs/index.cjs"
+      "default": "./dist/esm/index.js"
     }
   },
   "main": "./dist/cjs/index.cjs",
