@@ -2,6 +2,10 @@
   "name": "@jaypie/webkit",
   "version": "1.1.2",
   "description": "Framework-agnostic frontend utilities for Jaypie",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/finlaysonstudio/jaypie"
+  },
   "license": "MIT",
   "author": "Finlayson Studio",
   "type": "module",

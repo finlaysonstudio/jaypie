@@ -2,6 +2,10 @@
   "name": "@jaypie/types",
   "version": "0.1.7",
   "description": "Core type definitions for the Jaypie framework",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/finlaysonstudio/jaypie"
+  },
   "license": "MIT",
   "author": "Finlayson Studio",
   "type": "module",
