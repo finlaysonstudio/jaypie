@@ -21,6 +21,7 @@ export default {
     "commander",
     "gray-matter",
     "node:crypto",
+    "node:fs",
     "node:fs/promises",
     "node:path",
     "node:url",
