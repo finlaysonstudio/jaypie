@@ -1,7 +1,11 @@
 {
   "name": "@jaypie/llm",
-  "version": "1.1.27",
+  "version": "1.1.29",
   "description": "Large language model utilities",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/finlaysonstudio/jaypie"
+  },
   "license": "MIT",
   "author": "Finlayson Studio",
   "type": "module",
@@ -30,7 +34,7 @@
     "@anthropic-ai/sdk": "^0.52.0",
     "@jaypie/aws": "^1.1.15",
     "@jaypie/core": "^1.1.2",
-    "@jaypie/errors": "^1.1.5",
+    "@jaypie/errors": "^1.1.6",
     "openai": "^4.87.3",
     "openmeteo": "^1.2.0",
     "random": "^5.3.0",

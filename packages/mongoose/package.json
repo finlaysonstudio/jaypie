@@ -1,6 +1,10 @@
 {
   "name": "@jaypie/mongoose",
   "version": "1.1.1",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/finlaysonstudio/jaypie"
+  },
   "license": "MIT",
   "author": "Finlayson Studio",
   "type": "module",
