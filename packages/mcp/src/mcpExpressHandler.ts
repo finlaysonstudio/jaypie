@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
-import { randomUUID } from "crypto";
+import { randomUUID } from "node:crypto";
 import { createMcpServer } from "./createMcpServer.js";
 
 // Version will be injected during build
