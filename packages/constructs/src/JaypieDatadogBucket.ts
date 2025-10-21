@@ -7,9 +7,21 @@ import { Construct } from "constructs";
 export interface JaypieDatadogBucketProps extends BucketProps {
   /**
    * Optional construct ID
-   * @default "DatadogArchiveBucket"
+   * @default "JaypieDatadogBucket"
    */
   id?: string;
+
+  /**
+   * The scope to use when creating the S3 bucket
+   * @default this (the construct itself)
+   */
+  bucketScope?: Construct;
+
+  /**
+   * The ID to use for the S3 bucket construct
+   * @default "DatadogArchiveBucket"
+   */
+  bucketId?: string;
 
   /**
    * The service tag value
@@ -53,23 +65,25 @@ export class JaypieDatadogBucket extends Construct {
     } else {
       // First param is props
       props = idOrProps || {};
-      id = props.id || "DatadogArchiveBucket";
+      id = props.id || "JaypieDatadogBucket";
     }
 
     super(scope, id);
 
     // Extract Jaypie-specific options
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
     const {
+      bucketId = "DatadogArchiveBucket",
+      bucketScope,
       grantDatadogAccess = true,
-      id: _id,
       project,
       service = CDK.SERVICE.DATADOG,
       ...bucketProps
     } = props;
 
-    // Create the bucket
-    this.bucket = new Bucket(this, "Bucket", bucketProps);
+    // Create the bucket using bucketScope (defaults to this) and bucketId
+    const effectiveBucketScope = bucketScope || this;
+    this.bucket = new Bucket(effectiveBucketScope, bucketId, bucketProps);
 
     // Add tags to bucket
     cdk.Tags.of(this.bucket).add(CDK.TAG.SERVICE, service);
