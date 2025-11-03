@@ -8,13 +8,6 @@ import getStatsDClient, { isLambdaWithExtension } from "./statsd.client.js";
 
 //
 //
-// Constants
-//
-
-const NO_ERROR_RESPONSE_OBJECT = { errors: [] };
-
-//
-//
 // Main
 //
 
@@ -255,7 +248,7 @@ const submitDistributionViaStatsD = ({ name, points, value, tags }) => {
     const client = getStatsDClient();
 
     for (const pointValue of finalPoints) {
-      client.histogram(name, pointValue, finalTags);
+      client.distribution(name, pointValue, finalTags);
     }
 
     return true;
