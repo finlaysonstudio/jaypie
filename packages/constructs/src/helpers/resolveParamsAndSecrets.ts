@@ -14,7 +14,7 @@ export const resolveParamsAndSecrets = ({
 }: {
   paramsAndSecrets?: lambda.ParamsAndSecretsLayerVersion | boolean;
   options?: ResolveParamsAndSecretsOptions;
-}) => {
+} = {}) => {
   if (paramsAndSecrets === false) {
     return;
   }
