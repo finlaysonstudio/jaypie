@@ -33,6 +33,7 @@
   "dependencies": {
     "@jaypie/errors": "^1.1.6",
     "aws-cdk-lib": "^2.216.0",
+    "cdk-nextjs-standalone": "^4.3.0",
     "constructs": "^10.4.2",
     "datadog-cdk-constructs-v2": "^3.2.0"
   },
