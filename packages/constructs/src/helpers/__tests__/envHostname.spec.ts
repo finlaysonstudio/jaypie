@@ -93,7 +93,7 @@ describe("envHostname", () => {
         component: "web",
         domain: "example.com",
       });
-      expect(result).toBe("web.production.example.com");
+      expect(result).toBe("web.example.com");
     });
 
     it("uses CDK_ENV_SUBDOMAIN from environment when subdomain not provided", () => {
@@ -167,10 +167,18 @@ describe("envHostname", () => {
         domain: "example.com",
       });
 
-      expect(result).toBe("api.us-east-1.production.example.com");
+      expect(result).toBe("api.us-east-1.example.com");
     });
 
     it("handles all undefined optional parameters", () => {
+      const result = envHostname({
+        domain: "example.com",
+      });
+      expect(result).toBe("example.com");
+    });
+
+    it("Returns the apex domain in production", () => {
+      process.env.PROJECT_ENV = "production";
       const result = envHostname({
         domain: "example.com",
       });

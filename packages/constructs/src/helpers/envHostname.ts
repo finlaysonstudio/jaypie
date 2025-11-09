@@ -1,4 +1,5 @@
 import { ConfigurationError } from "@jaypie/errors";
+import { CDK } from "../constants";
 
 export function envHostname({
   component,
@@ -24,11 +25,13 @@ export function envHostname({
     component === "@" || component === "" ? undefined : component;
   const resolvedSubdomain = subdomain || process.env.CDK_ENV_SUBDOMAIN;
   const resolvedEnv = env || process.env.PROJECT_ENV;
+  const filteredEnv =
+    resolvedEnv === CDK.ENV.PRODUCTION ? undefined : resolvedEnv;
 
   const parts = [
     resolvedComponent,
     resolvedSubdomain,
-    resolvedEnv,
+    filteredEnv,
     resolvedDomain,
   ].filter((part) => part);
 
