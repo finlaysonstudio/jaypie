@@ -26,6 +26,9 @@ export class JaypieNextJs extends Construct {
     super(scope, id);
 
     const domainName = props?.domainName || envHostname();
+    const domainNameSanitized = domainName
+      .replace(/\./g, "-")
+      .replace(/[^a-zA-Z0-9]/g, "_");
     const envSecrets = props?.envSecrets || {};
     const nextjsPath = props?.nextjsPath?.startsWith("..")
       ? path.join(process.cwd(), props.nextjsPath)
@@ -67,12 +70,20 @@ export class JaypieNextJs extends Construct {
         ...jaypieSecretsEnvironment,
       },
       overrides: {
-        nextjsServer: {
+        nextjsDistribution: {
+          imageCachePolicyProps: {
+            cachePolicyName: `NextJsImageCachePolicy-${domainNameSanitized}`,
+          },
+          serverCachePolicyProps: {
+            cachePolicyName: `NextJsServerCachePolicy-${domainNameSanitized}`,
+          },
+        },
+        nextjsImage: {
           functionProps: {
             paramsAndSecrets,
           },
         },
-        nextjsImage: {
+        nextjsServer: {
           functionProps: {
             paramsAndSecrets,
           },
