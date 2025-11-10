@@ -60,6 +60,20 @@ export class JaypieNextJs extends Construct {
       return acc;
     }, {});
 
+    // Process NEXT_PUBLIC_ environment variables
+    const nextPublicEnv = Object.entries(process.env).reduce(
+      (acc, [key, value]) => {
+        if (key.startsWith("NEXT_PUBLIC_") && value) {
+          return {
+            ...acc,
+            [key]: value,
+          };
+        }
+        return acc;
+      },
+      {},
+    );
+
     const nextjs = new Nextjs(this, "NextJsApp", {
       nextjsPath,
       domainProps: {
@@ -72,6 +86,7 @@ export class JaypieNextJs extends Construct {
         ...jaypieLambdaEnv(),
         ...secretsEnvironment,
         ...jaypieSecretsEnvironment,
+        ...nextPublicEnv,
         NEXT_PUBLIC_SITE_URL: `https://${domainName}`,
       },
       overrides: {
