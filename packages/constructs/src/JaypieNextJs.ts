@@ -1,15 +1,16 @@
-import {
-  envHostname,
-  jaypieLambdaEnv,
-  resolveHostedZone,
-} from "@jaypie/constructs";
 import { IHostedZone } from "aws-cdk-lib/aws-route53";
 import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
 import { Nextjs } from "cdk-nextjs-standalone";
 import { Construct } from "constructs";
 import * as path from "path";
 
-import { addDatadogLayers, resolveParamsAndSecrets } from "./helpers";
+import {
+  addDatadogLayers,
+  envHostname,
+  jaypieLambdaEnv,
+  resolveHostedZone,
+  resolveParamsAndSecrets,
+} from "./helpers";
 import { JaypieEnvSecret } from "./JaypieEnvSecret.js";
 
 export interface JaypieNextjsProps {
@@ -22,10 +23,13 @@ export interface JaypieNextjsProps {
 }
 
 export class JaypieNextJs extends Construct {
+  public readonly domainName: string;
+
   constructor(scope: Construct, id: string, props?: JaypieNextjsProps) {
     super(scope, id);
 
     const domainName = props?.domainName || envHostname();
+    this.domainName = domainName;
     const domainNameSanitized = domainName
       .replace(/\./g, "-")
       .replace(/[^a-zA-Z0-9]/g, "_");
@@ -56,6 +60,20 @@ export class JaypieNextJs extends Construct {
       return acc;
     }, {});
 
+    // Process NEXT_PUBLIC_ environment variables
+    const nextPublicEnv = Object.entries(process.env).reduce(
+      (acc, [key, value]) => {
+        if (key.startsWith("NEXT_PUBLIC_") && value) {
+          return {
+            ...acc,
+            [key]: value,
+          };
+        }
+        return acc;
+      },
+      {},
+    );
+
     const nextjs = new Nextjs(this, "NextJsApp", {
       nextjsPath,
       domainProps: {
@@ -68,6 +86,8 @@ export class JaypieNextJs extends Construct {
         ...jaypieLambdaEnv(),
         ...secretsEnvironment,
         ...jaypieSecretsEnvironment,
+        ...nextPublicEnv,
+        NEXT_PUBLIC_SITE_URL: `https://${domainName}`,
       },
       overrides: {
         nextjsDistribution: {
