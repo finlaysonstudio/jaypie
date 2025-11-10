@@ -23,10 +23,13 @@ export interface JaypieNextjsProps {
 }
 
 export class JaypieNextJs extends Construct {
+  public readonly domainName: string;
+
   constructor(scope: Construct, id: string, props?: JaypieNextjsProps) {
     super(scope, id);
 
     const domainName = props?.domainName || envHostname();
+    this.domainName = domainName;
     const domainNameSanitized = domainName
       .replace(/\./g, "-")
       .replace(/[^a-zA-Z0-9]/g, "_");
