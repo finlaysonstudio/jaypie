@@ -72,6 +72,7 @@ export class JaypieNextJs extends Construct {
         ...jaypieLambdaEnv(),
         ...secretsEnvironment,
         ...jaypieSecretsEnvironment,
+        NEXT_PUBLIC_SITE_URL: `https://${domainName}`,
       },
       overrides: {
         nextjsDistribution: {
