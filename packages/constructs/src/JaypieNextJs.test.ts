@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { Stack, App } from "aws-cdk-lib";
 
-vi.mock("@jaypie/constructs", () => ({
+vi.mock("./helpers", () => ({
+  addDatadogLayers: vi.fn(),
   envHostname: vi.fn(() => "test.example.com"),
   jaypieLambdaEnv: vi.fn(() => ({ NODE_ENV: "test" })),
   resolveHostedZone: vi.fn(() => ({ hostedZoneId: "Z123456789" })),
-  addDatadogLayer: vi.fn(),
-  addParamsAndSecrets: vi.fn(),
+  resolveParamsAndSecrets: vi.fn(() => ({})),
 }));
 
 vi.mock("cdk-nextjs-standalone", () => ({
