@@ -1,15 +1,16 @@
-import {
-  envHostname,
-  jaypieLambdaEnv,
-  resolveHostedZone,
-} from "@jaypie/constructs";
 import { IHostedZone } from "aws-cdk-lib/aws-route53";
 import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
 import { Nextjs } from "cdk-nextjs-standalone";
 import { Construct } from "constructs";
 import * as path from "path";
 
-import { addDatadogLayers, resolveParamsAndSecrets } from "./helpers";
+import {
+  addDatadogLayers,
+  envHostname,
+  jaypieLambdaEnv,
+  resolveHostedZone,
+  resolveParamsAndSecrets,
+} from "./helpers";
 import { JaypieEnvSecret } from "./JaypieEnvSecret.js";
 
 export interface JaypieNextjsProps {

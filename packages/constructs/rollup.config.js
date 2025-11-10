@@ -40,8 +40,10 @@ export default [
       "aws-cdk-lib/aws-secretsmanager",
       "aws-cdk-lib/aws-sqs",
       "aws-cdk-lib/aws-sso",
+      "cdk-nextjs-standalone",
       "constructs",
       "datadog-cdk-constructs-v2",
+      "path",
     ],
   },
   // CommonJS version
@@ -85,8 +87,10 @@ export default [
       "aws-cdk-lib/aws-secretsmanager",
       "aws-cdk-lib/aws-sqs",
       "aws-cdk-lib/aws-sso",
+      "cdk-nextjs-standalone",
       "constructs",
       "datadog-cdk-constructs-v2",
+      "path",
     ],
   },
 ];
