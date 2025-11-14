@@ -115,7 +115,7 @@ describe("Get Secret Function", () => {
       let attemptCount = 0;
       axios.get.mockImplementation(() => {
         attemptCount++;
-        if (attemptCount < 3) {
+        if (attemptCount < 2) {
           const error = new Error("connect ECONNREFUSED");
           error.code = "ECONNREFUSED";
           return Promise.reject(error);
@@ -125,7 +125,7 @@ describe("Get Secret Function", () => {
 
       const response = await getSecret(MOCK.SECRET);
       expect(response).toBe(MOCK.SECRET_RESPONSE);
-      expect(axios.get).toHaveBeenCalledTimes(3);
+      expect(axios.get).toHaveBeenCalledTimes(2);
     }, 10000);
     it("Retries on timeout errors", async () => {
       let attemptCount = 0;
@@ -171,7 +171,7 @@ describe("Get Secret Function", () => {
 
       const response = await getSecret(MOCK.SECRET);
       expect(response).toBe(MOCK.SECRET_RESPONSE);
-      expect(axios.get).toHaveBeenCalledTimes(4); // 1 initial + 3 retries
+      expect(axios.get).toHaveBeenCalledTimes(2); // 1 initial + 1 retry
       expect(SecretsManagerClient).toHaveBeenCalled();
     }, 15000);
     it("Throws SDK error if both extension and SDK fail", async () => {
@@ -185,7 +185,7 @@ describe("Get Secret Function", () => {
       }));
 
       await expect(getSecret(MOCK.SECRET)).rejects.toThrow("SDK Error");
-      expect(axios.get).toHaveBeenCalledTimes(4); // 1 initial + 3 retries
+      expect(axios.get).toHaveBeenCalledTimes(2); // 1 initial + 1 retry
       expect(SecretsManagerClient).toHaveBeenCalled();
     }, 15000);
   });

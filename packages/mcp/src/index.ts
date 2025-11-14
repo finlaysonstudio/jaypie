@@ -37,11 +37,7 @@ async function main() {
   process.on("SIGINT", () => gracefulShutdown(0));
   process.on("SIGTERM", () => gracefulShutdown(0));
 
-  // Handle stdin close/end events (common when parent process exits)
-  process.stdin.on("end", () => gracefulShutdown(0));
-  process.stdin.on("close", () => gracefulShutdown(0));
-
-  // Handle stdio stream errors
+  // Handle stdio stream errors (but let transport handle normal stdin end/close)
   process.stdin.on("error", (error) => {
     if (error.message?.includes("EPIPE") || error.message?.includes("EOF")) {
       gracefulShutdown(0);
