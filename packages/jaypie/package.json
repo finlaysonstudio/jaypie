@@ -1,6 +1,6 @@
 {
   "name": "jaypie",
-  "version": "1.1.74",
+  "version": "1.1.75",
   "repository": {
     "type": "git",
     "url": "https://github.com/finlaysonstudio/jaypie"
@@ -34,7 +34,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@jaypie/aws": "^1.1.21",
+    "@jaypie/aws": "^1.1.22",
     "@jaypie/core": "^1.1.17",
     "@jaypie/datadog": "^1.1.12",
     "@jaypie/express": "^1.1.17",

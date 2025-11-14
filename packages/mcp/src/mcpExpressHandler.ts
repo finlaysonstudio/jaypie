@@ -34,7 +34,7 @@ export interface McpExpressHandlerOptions {
  * Creates an Express handler for the Jaypie MCP server using HTTP transport
  *
  * @param options - Configuration options for the handler
- * @returns Express middleware function
+ * @returns Promise that resolves to an Express middleware function
  *
  * @example
  * ```typescript
@@ -44,7 +44,8 @@ export interface McpExpressHandlerOptions {
  * const app = express();
  * app.use(express.json());
  *
- * app.use('/mcp', mcpExpressHandler({
+ * // Note: mcpExpressHandler is now async
+ * app.use('/mcp', await mcpExpressHandler({
  *   version: '1.0.0',
  *   enableSessions: true
  * }));
@@ -54,9 +55,9 @@ export interface McpExpressHandlerOptions {
  * });
  * ```
  */
-export function mcpExpressHandler(
+export async function mcpExpressHandler(
   options: McpExpressHandlerOptions = {},
-): (req: Request, res: Response) => Promise<void> {
+): Promise<(req: Request, res: Response) => Promise<void>> {
   const {
     version = DEFAULT_VERSION,
     enableSessions = true,
@@ -71,7 +72,7 @@ export function mcpExpressHandler(
     enableJsonResponse,
   });
 
-  server.connect(transport);
+  await server.connect(transport);
 
   return async (req: Request, res: Response): Promise<void> => {
     try {

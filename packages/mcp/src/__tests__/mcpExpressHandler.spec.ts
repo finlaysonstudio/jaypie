@@ -8,48 +8,48 @@ describe("mcpExpressHandler", () => {
       expect(mcpExpressHandler).toBeInstanceOf(Function);
     });
 
-    it("Works", () => {
-      const handler = mcpExpressHandler();
+    it("Works", async () => {
+      const handler = await mcpExpressHandler();
       expect(handler).toBeInstanceOf(Function);
     });
   });
 
   describe("Happy Paths", () => {
-    it("Creates a handler function", () => {
-      const handler = mcpExpressHandler({
+    it("Creates a handler function", async () => {
+      const handler = await mcpExpressHandler({
         version: "1.0.0",
       });
 
       expect(handler).toBeInstanceOf(Function);
     });
 
-    it("Accepts version option", () => {
-      const handler = mcpExpressHandler({
+    it("Accepts version option", async () => {
+      const handler = await mcpExpressHandler({
         version: "2.0.0",
       });
 
       expect(handler).toBeInstanceOf(Function);
     });
 
-    it("Accepts enableSessions option", () => {
-      const handler = mcpExpressHandler({
+    it("Accepts enableSessions option", async () => {
+      const handler = await mcpExpressHandler({
         enableSessions: false,
       });
 
       expect(handler).toBeInstanceOf(Function);
     });
 
-    it("Accepts custom sessionIdGenerator", () => {
+    it("Accepts custom sessionIdGenerator", async () => {
       const customGenerator = () => "custom-session-id";
-      const handler = mcpExpressHandler({
+      const handler = await mcpExpressHandler({
         sessionIdGenerator: customGenerator,
       });
 
       expect(handler).toBeInstanceOf(Function);
     });
 
-    it("Accepts enableJsonResponse option", () => {
-      const handler = mcpExpressHandler({
+    it("Accepts enableJsonResponse option", async () => {
+      const handler = await mcpExpressHandler({
         enableJsonResponse: true,
       });
 
@@ -58,13 +58,13 @@ describe("mcpExpressHandler", () => {
   });
 
   describe("Features", () => {
-    it("Defaults to enabling sessions", () => {
-      const handler = mcpExpressHandler();
+    it("Defaults to enabling sessions", async () => {
+      const handler = await mcpExpressHandler();
       expect(handler).toBeInstanceOf(Function);
     });
 
-    it("Defaults to SSE streaming (not JSON response)", () => {
-      const handler = mcpExpressHandler();
+    it("Defaults to SSE streaming (not JSON response)", async () => {
+      const handler = await mcpExpressHandler();
       expect(handler).toBeInstanceOf(Function);
     });
   });
@@ -93,7 +93,7 @@ describe("mcpExpressHandler", () => {
     });
 
     it("Handles errors gracefully when response not yet sent", async () => {
-      const handler = mcpExpressHandler();
+      const handler = await mcpExpressHandler();
 
       mockReq.body = undefined;
 

@@ -2,15 +2,54 @@
 import { realpathSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { createMcpServer } from "./createMcpServer.js";
 
 // Version will be injected during build
 const version = "0.0.0";
 
+let server: McpServer | null = null;
+let isShuttingDown = false;
+
+async function gracefulShutdown(exitCode = 0) {
+  if (isShuttingDown) {
+    return;
+  }
+  isShuttingDown = true;
+
+  try {
+    if (server) {
+      await server.close();
+    }
+  } catch (error) {
+    // Ignore errors during shutdown
+  } finally {
+    process.exit(exitCode);
+  }
+}
+
 async function main() {
-  const server = createMcpServer(version);
+  server = createMcpServer(version);
   const transport = new StdioServerTransport();
   await server.connect(transport);
+
+  // Handle process termination signals
+  process.on("SIGINT", () => gracefulShutdown(0));
+  process.on("SIGTERM", () => gracefulShutdown(0));
+
+  // Handle stdio stream errors (but let transport handle normal stdin end/close)
+  process.stdin.on("error", (error) => {
+    if (error.message?.includes("EPIPE") || error.message?.includes("EOF")) {
+      gracefulShutdown(0);
+    }
+  });
+
+  process.stdout.on("error", (error) => {
+    if (error.message?.includes("EPIPE")) {
+      gracefulShutdown(0);
+    }
+  });
+
   // Server is running on stdio
 }
 
@@ -20,7 +59,10 @@ if (process.argv[1]) {
   const realPath = realpathSync(process.argv[1]);
   const realPathAsUrl = pathToFileURL(realPath).href;
   if (import.meta.url === realPathAsUrl) {
-    main();
+    main().catch((error) => {
+      console.error("Fatal error:", error);
+      process.exit(1);
+    });
   }
 }
 

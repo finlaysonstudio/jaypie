@@ -34,6 +34,16 @@ vi.mock("axios", async () => {
   return module;
 });
 
+// Mock AWS SDK
+vi.mock("@aws-sdk/client-secrets-manager", () => ({
+  GetSecretValueCommand: vi.fn(),
+  SecretsManagerClient: vi.fn(() => ({
+    send: vi.fn(() =>
+      Promise.resolve({ SecretString: MOCK.SECRET_RESPONSE }),
+    ),
+  })),
+}));
+
 //
 //
 // Mock environment
@@ -95,30 +105,28 @@ describe("Get Environment Secret Function", () => {
       const env = cloneDeep(process.env);
       env.SECRET_test = "secret1";
       await getEnvSecret("test", { env });
-      expect(axios.get).toHaveBeenCalledWith(
-        "http://localhost:2773/secretsmanager/get",
-        {
-          headers: {
-            "X-Aws-Parameters-Secrets-Token": MOCK.AWS_SESSION_TOKEN,
-          },
-          params: { secretId: "secret1" },
-        },
-      );
+      const calls = axios.get.mock.calls;
+      const lastCall = calls[calls.length - 1];
+      expect(lastCall[0]).toBe("http://localhost:2773/secretsmanager/get");
+      expect(lastCall[1].headers).toEqual({
+        "X-Aws-Parameters-Secrets-Token": MOCK.AWS_SESSION_TOKEN,
+      });
+      expect(lastCall[1].params).toEqual({ secretId: "secret1" });
+      expect(lastCall[1].timeout).toBe(3000);
     });
 
     it("Uses name_SECRET if available", async () => {
       const env = cloneDeep(process.env);
       env.test_SECRET = "secret2";
       await getEnvSecret("test", { env });
-      expect(axios.get).toHaveBeenCalledWith(
-        "http://localhost:2773/secretsmanager/get",
-        {
-          headers: {
-            "X-Aws-Parameters-Secrets-Token": MOCK.AWS_SESSION_TOKEN,
-          },
-          params: { secretId: "secret2" },
-        },
-      );
+      const calls = axios.get.mock.calls;
+      const lastCall = calls[calls.length - 1];
+      expect(lastCall[0]).toBe("http://localhost:2773/secretsmanager/get");
+      expect(lastCall[1].headers).toEqual({
+        "X-Aws-Parameters-Secrets-Token": MOCK.AWS_SESSION_TOKEN,
+      });
+      expect(lastCall[1].params).toEqual({ secretId: "secret2" });
+      expect(lastCall[1].timeout).toBe(3000);
     });
 
     it("Uses name if available", async () => {
@@ -135,15 +143,14 @@ describe("Get Environment Secret Function", () => {
       env.test_SECRET = "secret2";
       env.test = "secret3";
       await getEnvSecret("test", { env });
-      expect(axios.get).toHaveBeenCalledWith(
-        "http://localhost:2773/secretsmanager/get",
-        {
-          headers: {
-            "X-Aws-Parameters-Secrets-Token": MOCK.AWS_SESSION_TOKEN,
-          },
-          params: { secretId: "secret1" },
-        },
-      );
+      const calls = axios.get.mock.calls;
+      const lastCall = calls[calls.length - 1];
+      expect(lastCall[0]).toBe("http://localhost:2773/secretsmanager/get");
+      expect(lastCall[1].headers).toEqual({
+        "X-Aws-Parameters-Secrets-Token": MOCK.AWS_SESSION_TOKEN,
+      });
+      expect(lastCall[1].params).toEqual({ secretId: "secret1" });
+      expect(lastCall[1].timeout).toBe(3000);
     });
 
     it("Returns value directly if not a secret reference", async () => {
@@ -160,5 +167,103 @@ describe("Get Environment Secret Function", () => {
       expect(result).toBeUndefined();
       expect(axios.get).not.toHaveBeenCalled();
     });
+  });
+
+  describe("Retry Logic", () => {
+    beforeEach(() => {
+      vi.clearAllMocks();
+      // Reset to default mock implementation
+      axios.get.mockResolvedValue({ data: { SecretString: MOCK.SECRET_RESPONSE } });
+    });
+    it("Retries on connection refused errors", async () => {
+      const env = cloneDeep(process.env);
+      env.SECRET_test = "secret1";
+      let attemptCount = 0;
+      axios.get.mockImplementation(() => {
+        attemptCount++;
+        if (attemptCount < 3) {
+          const error = new Error("connect ECONNREFUSED");
+          error.code = "ECONNREFUSED";
+          return Promise.reject(error);
+        }
+        return Promise.resolve({ data: { SecretString: MOCK.SECRET_RESPONSE } });
+      });
+
+      const response = await getEnvSecret("test", { env });
+      expect(response).toBe(MOCK.SECRET_RESPONSE);
+      expect(axios.get).toHaveBeenCalledTimes(3);
+    }, 10000);
+    it("Retries on timeout errors", async () => {
+      const env = cloneDeep(process.env);
+      env.SECRET_test = "secret1";
+      let attemptCount = 0;
+      axios.get.mockImplementation(() => {
+        attemptCount++;
+        if (attemptCount < 2) {
+          const error = new Error("timeout");
+          error.code = "ETIMEDOUT";
+          return Promise.reject(error);
+        }
+        return Promise.resolve({ data: { SecretString: MOCK.SECRET_RESPONSE } });
+      });
+
+      const response = await getEnvSecret("test", { env });
+      expect(response).toBe(MOCK.SECRET_RESPONSE);
+      expect(axios.get).toHaveBeenCalledTimes(2);
+    }, 10000);
+    it("Does not retry on 4xx errors", async () => {
+      const env = cloneDeep(process.env);
+      env.SECRET_test = "secret1";
+      axios.get.mockImplementation(() => {
+        const error = new Error("Bad Request");
+        error.response = { status: 400 };
+        return Promise.reject(error);
+      });
+
+      await expect(getEnvSecret("test", { env })).rejects.toThrow(
+        "Bad Request",
+      );
+      expect(axios.get).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("SDK Fallback", () => {
+    beforeEach(() => {
+      vi.clearAllMocks();
+      // Reset axios to throw errors for fallback tests
+      axios.get.mockImplementation(() => {
+        const error = new Error("connect ECONNREFUSED");
+        error.code = "ECONNREFUSED";
+        return Promise.reject(error);
+      });
+    });
+    it("Falls back to AWS SDK after retries exhausted", async () => {
+      const {
+        SecretsManagerClient,
+      } = await import("@aws-sdk/client-secrets-manager");
+      const env = cloneDeep(process.env);
+      env.SECRET_test = "secret1";
+
+      const response = await getEnvSecret("test", { env });
+      expect(response).toBe(MOCK.SECRET_RESPONSE);
+      expect(axios.get).toHaveBeenCalledTimes(4); // 1 initial + 3 retries
+      expect(SecretsManagerClient).toHaveBeenCalled();
+    }, 15000);
+    it("Throws SDK error if both extension and SDK fail", async () => {
+      const {
+        SecretsManagerClient,
+      } = await import("@aws-sdk/client-secrets-manager");
+      const env = cloneDeep(process.env);
+      env.SECRET_test = "secret1";
+
+      // Mock SDK to also fail
+      SecretsManagerClient.mockImplementationOnce(() => ({
+        send: vi.fn(() => Promise.reject(new Error("SDK Error"))),
+      }));
+
+      await expect(getEnvSecret("test", { env })).rejects.toThrow("SDK Error");
+      expect(axios.get).toHaveBeenCalledTimes(4); // 1 initial + 3 retries
+      expect(SecretsManagerClient).toHaveBeenCalled();
+    }, 15000);
   });
 });
