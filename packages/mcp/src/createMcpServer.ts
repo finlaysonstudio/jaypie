@@ -9,6 +9,25 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const PROMPTS_PATH = path.join(__dirname, "..", "prompts");
 
+export interface CreateMcpServerOptions {
+  version?: string;
+  verbose?: boolean;
+}
+
+// Logger utility
+function createLogger(verbose: boolean) {
+  return {
+    info: (message: string, ...args: unknown[]) => {
+      if (verbose) {
+        console.error(`[jaypie-mcp] ${message}`, ...args);
+      }
+    },
+    error: (message: string, ...args: unknown[]) => {
+      console.error(`[jaypie-mcp ERROR] ${message}`, ...args);
+    },
+  };
+}
+
 interface FrontMatter {
   description?: string;
   include?: string;
@@ -60,10 +79,23 @@ function formatPromptListItem(prompt: {
 
 /**
  * Creates and configures an MCP server instance with Jaypie tools
- * @param version - The version string for the server
+ * @param options - Configuration options (or legacy version string)
  * @returns Configured MCP server instance
  */
-export function createMcpServer(version: string = "0.0.0"): McpServer {
+export function createMcpServer(
+  options: CreateMcpServerOptions | string = {},
+): McpServer {
+  // Support legacy signature: createMcpServer(version: string)
+  const config: CreateMcpServerOptions =
+    typeof options === "string" ? { version: options } : options;
+
+  const { version = "0.0.0", verbose = false } = config;
+
+  const log = createLogger(verbose);
+
+  log.info("Creating MCP server instance");
+  log.info(`Prompts directory: ${PROMPTS_PATH}`);
+
   const server = new McpServer(
     {
       name: "jaypie",
@@ -74,14 +106,21 @@ export function createMcpServer(version: string = "0.0.0"): McpServer {
     },
   );
 
+  log.info("Registering tools...");
+
   server.tool(
     "list_prompts",
     "Returns a bulleted list of all .md files in the prompts directory with their descriptions and requirements",
     {},
     async () => {
+      log.info("Tool called: list_prompts");
+      log.info(`Reading directory: ${PROMPTS_PATH}`);
+
       try {
         const files = await fs.readdir(PROMPTS_PATH);
         const mdFiles = files.filter((file) => file.endsWith(".md"));
+
+        log.info(`Found ${mdFiles.length} .md files`);
 
         const prompts = await Promise.all(
           mdFiles.map((file) =>
@@ -90,6 +129,8 @@ export function createMcpServer(version: string = "0.0.0"): McpServer {
         );
 
         const formattedList = prompts.map(formatPromptListItem).join("\n");
+
+        log.info("Successfully listed prompts");
 
         return {
           content: [
@@ -101,6 +142,8 @@ export function createMcpServer(version: string = "0.0.0"): McpServer {
           ],
         };
       } catch (error) {
+        log.error("Error listing prompts:", error);
+
         return {
           content: [
             {
@@ -113,6 +156,8 @@ export function createMcpServer(version: string = "0.0.0"): McpServer {
     },
   );
 
+  log.info("Registered tool: list_prompts");
+
   server.tool(
     "read_prompt",
     "Returns the contents of a specified prompt file",
@@ -124,9 +169,16 @@ export function createMcpServer(version: string = "0.0.0"): McpServer {
         ),
     },
     async ({ filename }) => {
+      log.info(`Tool called: read_prompt (filename: ${filename})`);
+
       try {
         const filePath = path.join(PROMPTS_PATH, filename);
+
+        log.info(`Reading file: ${filePath}`);
+
         const content = await fs.readFile(filePath, "utf-8");
+
+        log.info(`Successfully read ${filename} (${content.length} bytes)`);
 
         return {
           content: [
@@ -138,6 +190,8 @@ export function createMcpServer(version: string = "0.0.0"): McpServer {
         };
       } catch (error) {
         if ((error as { code?: string }).code === "ENOENT") {
+          log.error(`File not found: ${filename}`);
+
           return {
             content: [
               {
@@ -147,6 +201,8 @@ export function createMcpServer(version: string = "0.0.0"): McpServer {
             ],
           };
         }
+
+        log.error("Error reading prompt file:", error);
 
         return {
           content: [
@@ -159,6 +215,9 @@ export function createMcpServer(version: string = "0.0.0"): McpServer {
       }
     },
   );
+
+  log.info("Registered tool: read_prompt");
+  log.info("MCP server configuration complete");
 
   return server;
 }
