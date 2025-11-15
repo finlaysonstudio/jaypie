@@ -35,7 +35,7 @@ npm install --save-dev @jaypie/eslint @jaypie/testkit eslint rimraf sort-package
 ## Context
 
 prompts/Jaypie_Ideal_Project_Structure.md
-prompts/templates/project-monorepo/.gitignore
+prompts/templates/project-monorepo/gitignore (rename to .gitignore when copying)
 prompts/templates/project-monorepo/.vscode/settings.json
 prompts/templates/project-monorepo/eslint.config.mjs
 prompts/templates/project-monorepo/package.json
