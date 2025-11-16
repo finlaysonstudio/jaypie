@@ -89,6 +89,26 @@ describe("fabricator", () => {
     const fab = fabricator({ name: "Test Fabricator" });
     expect(fab.name).toBe("Test Fabricator");
   });
+
+  it("should have id property", () => {
+    const fab = fabricator("test-seed");
+    expect(typeof fab.id).toBe("string");
+    expect(fab.id).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
+    );
+  });
+
+  it("should use UUID seed as lowercase id", () => {
+    const uuid = "550E8400-E29B-41D4-A716-446655440000";
+    const fab = fabricator(uuid);
+    expect(fab.id).toBe(uuid.toLowerCase());
+  });
+
+  it("should generate deterministic id from seed", () => {
+    const fab1 = fabricator("my-seed");
+    const fab2 = fabricator("my-seed");
+    expect(fab1.id).toBe(fab2.id);
+  });
 });
 
 describe("random", () => {

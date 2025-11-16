@@ -7,6 +7,10 @@ describe("Fabricator", () => {
     it("should create instance without seed", () => {
       const fabricator = new Fabricator();
       expect(fabricator).toBeInstanceOf(Fabricator);
+      expect(typeof fabricator.id).toBe("string");
+      expect(fabricator.id).toMatch(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
+      );
     });
 
     it("should create instance with string seed", () => {
@@ -75,6 +79,92 @@ describe("Fabricator", () => {
       const fab2 = new Fabricator("seed2");
 
       expect(fab1.name).not.toBe(fab2.name);
+    });
+  });
+
+  describe("id property", () => {
+    it("should use UUID seed as id (lowercase)", () => {
+      const uuid = "550E8400-E29B-41D4-A716-446655440000";
+      const fabricator = new Fabricator(uuid);
+
+      expect(fabricator.id).toBe(uuid.toLowerCase());
+    });
+
+    it("should generate UUID from non-UUID string seed", () => {
+      const fabricator = new Fabricator("test-seed");
+
+      expect(typeof fabricator.id).toBe("string");
+      expect(fabricator.id).toMatch(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
+      );
+    });
+
+    it("should generate UUID from number seed", () => {
+      const fabricator = new Fabricator(12345);
+
+      expect(typeof fabricator.id).toBe("string");
+      expect(fabricator.id).toMatch(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
+      );
+    });
+
+    it("should generate deterministic id from same non-UUID seed", () => {
+      const fab1 = new Fabricator("consistent-seed");
+      const fab2 = new Fabricator("consistent-seed");
+
+      expect(fab1.id).toBe(fab2.id);
+    });
+
+    it("should generate deterministic id from same UUID seed", () => {
+      const uuid = "550e8400-e29b-41d4-a716-446655440000";
+      const fab1 = new Fabricator(uuid);
+      const fab2 = new Fabricator(uuid);
+
+      expect(fab1.id).toBe(fab2.id);
+      expect(fab1.id).toBe(uuid.toLowerCase());
+    });
+
+    it("should generate different ids from different seeds", () => {
+      const fab1 = new Fabricator("seed1");
+      const fab2 = new Fabricator("seed2");
+
+      expect(fab1.id).not.toBe(fab2.id);
+    });
+
+    it("should generate random UUID when no seed provided", () => {
+      const fab1 = new Fabricator();
+      const fab2 = new Fabricator();
+
+      expect(fab1.id).toMatch(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
+      );
+      expect(fab2.id).toMatch(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
+      );
+      // Different instances should have different random IDs
+      expect(fab1.id).not.toBe(fab2.id);
+    });
+
+    it("should always return lowercase UUID", () => {
+      const uppercaseUuid = "550E8400-E29B-41D4-A716-446655440000";
+      const fabricator = new Fabricator(uppercaseUuid);
+
+      expect(fabricator.id).toBe(uppercaseUuid.toLowerCase());
+      expect(fabricator.id).not.toContain("A");
+      expect(fabricator.id).not.toContain("B");
+      expect(fabricator.id).not.toContain("C");
+      expect(fabricator.id).not.toContain("D");
+      expect(fabricator.id).not.toContain("E");
+      expect(fabricator.id).not.toContain("F");
+    });
+
+    it("should work with options object containing seed", () => {
+      const fabricator = new Fabricator({ seed: "test-seed" });
+
+      expect(typeof fabricator.id).toBe("string");
+      expect(fabricator.id).toMatch(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
+      );
     });
   });
 

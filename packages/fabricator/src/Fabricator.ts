@@ -1,6 +1,8 @@
 import { en, Faker } from "@faker-js/faker";
 import numericSeedArray from "./util/numericSeedArray.js";
 import { random, type RandomFunction } from "./random.js";
+import isUuid from "./util/isUuid.js";
+import { uuidFrom } from "./util/uuidFrom.js";
 
 //
 // Types
@@ -32,6 +34,7 @@ function capitalize(word: string): string {
  */
 export class Fabricator {
   private _faker: Faker;
+  private _id: string;
   private _name: string;
   private _random: RandomFunction;
 
@@ -79,6 +82,21 @@ export class Fabricator {
       this._faker.seed(seedArray);
     }
 
+    // Initialize id from seed
+    if (seed !== undefined) {
+      const seedStr = String(seed);
+      // If seed is already a UUID, use it (lowercase). Otherwise, generate UUID from seed.
+      // We check isUuid first to avoid the warning that uuidFrom logs when given a UUID
+      if (isUuid(seedStr)) {
+        this._id = seedStr.toLowerCase();
+      } else {
+        this._id = uuidFrom(seed);
+      }
+    } else {
+      // No seed provided, generate a random UUID
+      this._id = this._faker.string.uuid();
+    }
+
     // Initialize name
     if (opts.name) {
       this._name = opts.name;
@@ -98,6 +116,13 @@ export class Fabricator {
    */
   get faker(): Faker {
     return this._faker;
+  }
+
+  /**
+   * Gets the fabricator id (UUID)
+   */
+  get id(): string {
+    return this._id;
   }
 
   /**
