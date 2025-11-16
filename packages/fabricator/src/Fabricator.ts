@@ -36,6 +36,7 @@ export class Fabricator {
   private _faker: Faker;
   private _id: string;
   private _name: string;
+  private _nextId: string;
   private _random: RandomFunction;
 
   /**
@@ -102,6 +103,9 @@ export class Fabricator {
       this._id = this._faker.string.uuid();
     }
 
+    // Initialize nextId using faker (deterministic based on seed, but more random)
+    this._nextId = this._faker.string.uuid();
+
     // Initialize name
     if (opts.name) {
       this._name = opts.name;
@@ -135,6 +139,14 @@ export class Fabricator {
    */
   get name(): string {
     return this._name;
+  }
+
+  /**
+   * Creates a new Fabricator instance with nextId as the seed
+   * @returns A new Fabricator instance seeded with the incremented UUID
+   */
+  next(): Fabricator {
+    return new Fabricator(this._nextId);
   }
 
   /**
