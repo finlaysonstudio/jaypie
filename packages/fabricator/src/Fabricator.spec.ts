@@ -42,7 +42,10 @@ describe("Fabricator", () => {
     });
 
     it("should create instance with options object only", () => {
-      const fabricator = new Fabricator({ seed: "test-seed", name: "Test Fab" });
+      const fabricator = new Fabricator({
+        seed: "test-seed",
+        name: "Test Fab",
+      });
       expect(fabricator).toBeInstanceOf(Fabricator);
       expect(fabricator.name).toBe("Test Fab");
     });
@@ -92,6 +95,42 @@ describe("Fabricator", () => {
       const fab2 = new Fabricator("seed2");
 
       expect(fab1.name).not.toBe(fab2.name);
+    });
+
+    it("should accept name as a function", () => {
+      const fabricator = new Fabricator({ name: () => "Custom Name" });
+      expect(fabricator.name).toBe("Custom Name");
+    });
+
+    it("should call function to get name", () => {
+      let callCount = 0;
+      const nameFunc = () => {
+        callCount++;
+        return "Function Name";
+      };
+
+      const fabricator = new Fabricator({ name: nameFunc });
+      expect(callCount).toBe(1);
+      expect(fabricator.name).toBe("Function Name");
+    });
+
+    it("should accept name as an async function", async () => {
+      const fabricator = new Fabricator({
+        name: async () => "Async Name",
+      });
+
+      // Wait for the promise to resolve
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      expect(fabricator.name).toBe("Async Name");
+    });
+
+    it("should work with seed and name function", () => {
+      const fabricator = new Fabricator("my-seed", {
+        name: () => "Functional Name",
+      });
+
+      expect(fabricator.name).toBe("Functional Name");
     });
   });
 

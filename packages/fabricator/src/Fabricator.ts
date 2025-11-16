@@ -9,7 +9,7 @@ import { uuidFrom } from "./util/uuidFrom.js";
 //
 
 export interface FabricatorOptions {
-  name?: string;
+  name?: string | (() => string) | (() => Promise<string>);
   seed?: string | number;
 }
 
@@ -106,9 +106,24 @@ export class Fabricator {
     // Initialize nextId using faker (deterministic based on seed, but more random)
     this._nextId = this._faker.string.uuid();
 
-    // Initialize name
-    if (opts.name) {
-      this._name = opts.name;
+    // Initialize name (must be sync, so we store the raw value)
+    if (opts.name !== undefined) {
+      if (typeof opts.name === "function") {
+        const result = opts.name();
+        // Handle both sync and async functions
+        if (result instanceof Promise) {
+          // For promises, we need to handle this in an async manner
+          // We'll store a placeholder and set it later
+          this._name = "";
+          result.then((resolvedName) => {
+            this._name = resolvedName;
+          });
+        } else {
+          this._name = result;
+        }
+      } else {
+        this._name = opts.name;
+      }
     } else {
       // Generate name using capitalized words()
       // We need to call words() which relies on faker being initialized
