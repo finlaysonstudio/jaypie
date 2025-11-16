@@ -51,6 +51,7 @@
     "subpackages",
     "supertest",
     "testkit",
+    "texttract",
     "unplugin",
     "vendia",
     "vite",
