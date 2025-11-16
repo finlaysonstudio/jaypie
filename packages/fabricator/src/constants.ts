@@ -1,0 +1,6 @@
+export const CHANCE = {
+  UNCOMMON: 0.146,
+  RARE: 0.021,
+  EPIC: 0.00307,
+  LEGENDARY: 0.000441,
+};
