@@ -2,27 +2,94 @@ import { en, Faker } from "@faker-js/faker";
 import numericSeedArray from "./util/numericSeedArray.js";
 import { random, type RandomFunction } from "./random.js";
 
+//
+// Types
+//
+
+export interface FabricatorOptions {
+  name?: string;
+  seed?: string | number;
+}
+
+//
+// Helper Functions
+//
+
+/**
+ * Capitalizes the first letter of a word
+ */
+function capitalize(word: string): string {
+  return word.charAt(0).toUpperCase() + word.slice(1);
+}
+
+//
+// Class
+//
+
 /**
  * Fabricator class for generating test data with faker.js
  * Manages an internal faker instance with optional seeding for deterministic output
  */
 export class Fabricator {
   private _faker: Faker;
+  private _name: string;
   private _random: RandomFunction;
 
   /**
    * Creates a new Fabricator instance
-   * @param seed - Optional seed (string or number) for deterministic data generation
+   * Supports multiple signatures:
+   * - new Fabricator()
+   * - new Fabricator(seed)
+   * - new Fabricator(seed, options)
+   * - new Fabricator(options)
    */
-  constructor(seed?: string | number) {
+  constructor();
+  constructor(seed: string | number);
+  constructor(seed: string | number, options: FabricatorOptions);
+  constructor(options: FabricatorOptions);
+  constructor(
+    seedOrOptions?: string | number | FabricatorOptions,
+    options?: FabricatorOptions,
+  ) {
+    // Parse arguments to extract seed and options
+    let seed: string | number | undefined;
+    let opts: FabricatorOptions = {};
+
+    if (typeof seedOrOptions === "object" && seedOrOptions !== null) {
+      // Called as: new Fabricator(options)
+      opts = seedOrOptions;
+      seed = opts.seed;
+    } else {
+      // Called as: new Fabricator() or new Fabricator(seed) or new Fabricator(seed, options)
+      seed = seedOrOptions;
+      if (options) {
+        opts = options;
+      }
+    }
+
+    // Initialize faker
     this._faker = new Faker({ locale: en });
 
     // Initialize random with seed
     this._random = random(seed);
 
+    // Apply seed to faker if provided
     if (seed !== undefined) {
       const seedArray = numericSeedArray(String(seed));
       this._faker.seed(seedArray);
+    }
+
+    // Initialize name
+    if (opts.name) {
+      this._name = opts.name;
+    } else {
+      // Generate name using capitalized words()
+      // We need to call words() which relies on faker being initialized
+      const rawWords = this.words();
+      this._name = rawWords
+        .split(" ")
+        .map((word) => capitalize(word))
+        .join(" ");
     }
   }
 
@@ -31,6 +98,13 @@ export class Fabricator {
    */
   get faker(): Faker {
     return this._faker;
+  }
+
+  /**
+   * Gets the fabricator name
+   */
+  get name(): string {
+    return this._name;
   }
 
   /**

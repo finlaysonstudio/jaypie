@@ -23,6 +23,59 @@ describe("Fabricator", () => {
       const fabricator = new Fabricator("550e8400-e29b-41d4-a716-446655440000");
       expect(fabricator).toBeInstanceOf(Fabricator);
     });
+
+    it("should create instance with options object only", () => {
+      const fabricator = new Fabricator({ seed: "test-seed", name: "Test Fab" });
+      expect(fabricator).toBeInstanceOf(Fabricator);
+      expect(fabricator.name).toBe("Test Fab");
+    });
+
+    it("should create instance with seed and options", () => {
+      const fabricator = new Fabricator("my-seed", { name: "Named Fab" });
+      expect(fabricator).toBeInstanceOf(Fabricator);
+      expect(fabricator.name).toBe("Named Fab");
+    });
+
+    it("should create instance with options object containing seed", () => {
+      const fabricator = new Fabricator({ seed: 123 });
+      expect(fabricator).toBeInstanceOf(Fabricator);
+    });
+
+    it("should prefer seed from first param over options.seed", () => {
+      const fab1 = new Fabricator("first-seed", { seed: "options-seed" });
+      const fab2 = new Fabricator("first-seed");
+
+      // Should use the first param seed
+      expect(fab1.faker.person.firstName()).toBe(fab2.faker.person.firstName());
+    });
+
+    it("should generate capitalized name when no name provided", () => {
+      const fabricator = new Fabricator("consistent-seed");
+      expect(typeof fabricator.name).toBe("string");
+
+      // Should have two words
+      const words = fabricator.name.split(" ");
+      expect(words.length).toBe(2);
+
+      // Each word should be capitalized
+      words.forEach((word) => {
+        expect(word[0]).toBe(word[0].toUpperCase());
+      });
+    });
+
+    it("should generate same name with same seed", () => {
+      const fab1 = new Fabricator("same-seed");
+      const fab2 = new Fabricator("same-seed");
+
+      expect(fab1.name).toBe(fab2.name);
+    });
+
+    it("should generate different name with different seed", () => {
+      const fab1 = new Fabricator("seed1");
+      const fab2 = new Fabricator("seed2");
+
+      expect(fab1.name).not.toBe(fab2.name);
+    });
   });
 
   describe("faker getter", () => {

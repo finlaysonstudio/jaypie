@@ -1,16 +1,42 @@
-// Export Fabricator class
-export { Fabricator } from "./Fabricator.js";
+// Export Fabricator class and types
+export { Fabricator, type FabricatorOptions } from "./Fabricator.js";
 
 // Re-import Fabricator for the function
-import { Fabricator } from "./Fabricator.js";
+import { Fabricator, type FabricatorOptions } from "./Fabricator.js";
 
 /**
  * Creates and returns a new Fabricator instance with optional seeding
- * @param seed - Optional seed (string or number) for deterministic data generation
- * @returns A new Fabricator instance
+ * Supports multiple signatures:
+ * - fabricator()
+ * - fabricator(seed)
+ * - fabricator(seed, options)
+ * - fabricator(options)
  */
-export function fabricator(seed?: string | number): Fabricator {
-  return new Fabricator(seed);
+export function fabricator(): Fabricator;
+export function fabricator(seed: string | number): Fabricator;
+export function fabricator(
+  seed: string | number,
+  options: FabricatorOptions,
+): Fabricator;
+export function fabricator(options: FabricatorOptions): Fabricator;
+export function fabricator(
+  seedOrOptions?: string | number | FabricatorOptions,
+  options?: FabricatorOptions,
+): Fabricator {
+  if (typeof seedOrOptions === "object" && seedOrOptions !== null) {
+    // Called as: fabricator(options)
+    return new Fabricator(seedOrOptions);
+  } else if (options) {
+    // Called as: fabricator(seed, options)
+    // seedOrOptions must be string | number here since it's not an object
+    return new Fabricator(seedOrOptions as string | number, options);
+  } else if (seedOrOptions !== undefined) {
+    // Called as: fabricator(seed)
+    return new Fabricator(seedOrOptions);
+  } else {
+    // Called as: fabricator()
+    return new Fabricator();
+  }
 }
 
 // Export random function and types

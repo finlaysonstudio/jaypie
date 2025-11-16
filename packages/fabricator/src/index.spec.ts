@@ -51,6 +51,44 @@ describe("fabricator", () => {
     expect(typeof email).toBe("string");
     expect(email).toContain("@");
   });
+
+  it("should accept options object with name", () => {
+    const fab = fabricator({ name: "Custom Name" });
+    expect(fab.name).toBe("Custom Name");
+  });
+
+  it("should accept options object with seed", () => {
+    const fab1 = fabricator({ seed: "options-seed" });
+    const fab2 = fabricator({ seed: "options-seed" });
+
+    expect(fab1.faker.person.firstName()).toBe(fab2.faker.person.firstName());
+  });
+
+  it("should accept seed and options", () => {
+    const fab = fabricator("my-seed", { name: "Named" });
+    expect(fab.name).toBe("Named");
+
+    // Verify the seed is being used by comparing instances with same signature
+    const fab2 = fabricator("my-seed", { name: "Named" });
+    expect(fab.faker.person.firstName()).toBe(fab2.faker.person.firstName());
+  });
+
+  it("should generate capitalized name when no name provided", () => {
+    const fab = fabricator("test-seed");
+    expect(typeof fab.name).toBe("string");
+
+    const words = fab.name.split(" ");
+    expect(words.length).toBe(2);
+
+    words.forEach((word) => {
+      expect(word[0]).toBe(word[0].toUpperCase());
+    });
+  });
+
+  it("should allow access to name property", () => {
+    const fab = fabricator({ name: "Test Fabricator" });
+    expect(fab.name).toBe("Test Fabricator");
+  });
 });
 
 describe("random", () => {
