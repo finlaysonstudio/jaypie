@@ -1,7 +1,7 @@
 {
   "name": "@jaypie/mcp",
-  "version": "0.1.6",
-  "description": "Jaypie MCP server",
+  "version": "0.1.7",
+  "description": "Jaypie MCP",
   "repository": {
     "type": "git",
     "url": "https://github.com/finlaysonstudio/jaypie"
