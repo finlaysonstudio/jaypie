@@ -97,26 +97,37 @@ describe("Fabricator", () => {
       expect(fab1.name).not.toBe(fab2.name);
     });
 
-    it("should accept name as a function", () => {
-      const fabricator = new Fabricator({ name: () => "Custom Name" });
+    it("should accept name as a function with fabricator param", () => {
+      const fabricator = new Fabricator({
+        name: ({ fabricator }) => {
+          expect(fabricator).toBeInstanceOf(Fabricator);
+          return "Custom Name";
+        },
+      });
       expect(fabricator.name).toBe("Custom Name");
     });
 
-    it("should call function to get name", () => {
+    it("should call function to get name with seeded fabricator", () => {
       let callCount = 0;
-      const nameFunc = () => {
+      const nameFunc = ({ fabricator }: { fabricator: Fabricator }) => {
         callCount++;
-        return "Function Name";
+        expect(fabricator).toBeInstanceOf(Fabricator);
+        // The fabricator passed should be deterministic based on _seedMap.name
+        return `Function ${fabricator.faker.person.firstName()}`;
       };
 
-      const fabricator = new Fabricator({ name: nameFunc });
-      expect(callCount).toBe(1);
-      expect(fabricator.name).toBe("Function Name");
+      const fab1 = new Fabricator("test-seed", { name: nameFunc });
+      const fab2 = new Fabricator("test-seed", { name: nameFunc });
+      expect(callCount).toBe(2);
+      expect(fab1.name).toBe(fab2.name); // Should be deterministic
     });
 
     it("should accept name as an async function", async () => {
       const fabricator = new Fabricator({
-        name: async () => "Async Name",
+        name: async ({ fabricator }) => {
+          expect(fabricator).toBeInstanceOf(Fabricator);
+          return "Async Name";
+        },
       });
 
       // Wait for the promise to resolve
@@ -127,10 +138,37 @@ describe("Fabricator", () => {
 
     it("should work with seed and name function", () => {
       const fabricator = new Fabricator("my-seed", {
-        name: () => "Functional Name",
+        name: ({ fabricator }) => {
+          expect(fabricator).toBeInstanceOf(Fabricator);
+          return "Functional Name";
+        },
       });
 
       expect(fabricator.name).toBe("Functional Name");
+    });
+
+    it("should provide deterministic fabricator to name function", () => {
+      const nameFunc = ({ fabricator }: { fabricator: Fabricator }) => {
+        return fabricator.faker.person.firstName();
+      };
+
+      const fab1 = new Fabricator("seed1", { name: nameFunc });
+      const fab2 = new Fabricator("seed1", { name: nameFunc });
+
+      // Same seed should produce same name via same fabricator
+      expect(fab1.name).toBe(fab2.name);
+    });
+
+    it("should provide different fabricator for different seeds", () => {
+      const nameFunc = ({ fabricator }: { fabricator: Fabricator }) => {
+        return fabricator.faker.person.firstName();
+      };
+
+      const fab1 = new Fabricator("seed1", { name: nameFunc });
+      const fab2 = new Fabricator("seed2", { name: nameFunc });
+
+      // Different seeds should produce different names
+      expect(fab1.name).not.toBe(fab2.name);
     });
   });
 
@@ -303,6 +341,51 @@ describe("Fabricator", () => {
       expect(nextFab.id).toMatch(
         /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
       );
+    });
+
+    it("should chain name function through next() calls", () => {
+      const nameFunc = ({ fabricator }: { fabricator: Fabricator }) => {
+        return fabricator.faker.person.firstName();
+      };
+
+      const fab1 = new Fabricator("test-seed", { name: nameFunc });
+      const fab2 = fab1.next();
+      const fab3 = fab2.next();
+
+      // All should have names from the function
+      expect(typeof fab1.name).toBe("string");
+      expect(typeof fab2.name).toBe("string");
+      expect(typeof fab3.name).toBe("string");
+
+      // Names should be different (different seeds)
+      expect(fab1.name).not.toBe(fab2.name);
+      expect(fab2.name).not.toBe(fab3.name);
+
+      // Should be deterministic
+      const fab1Fresh = new Fabricator("test-seed", { name: nameFunc });
+      const fab2Fresh = fab1Fresh.next();
+      expect(fab1.name).toBe(fab1Fresh.name);
+      expect(fab2.name).toBe(fab2Fresh.name);
+    });
+
+    it("should not chain name if no name option provided", () => {
+      const fab1 = new Fabricator("test-seed");
+      const fab2 = fab1.next();
+
+      // Both should have generated names (from words())
+      expect(typeof fab1.name).toBe("string");
+      expect(typeof fab2.name).toBe("string");
+    });
+
+    it("should chain string name through next() calls", () => {
+      const fab1 = new Fabricator("test-seed", { name: "Static Name" });
+      const fab2 = fab1.next();
+      const fab3 = fab2.next();
+
+      // All should have the same static name
+      expect(fab1.name).toBe("Static Name");
+      expect(fab2.name).toBe("Static Name");
+      expect(fab3.name).toBe("Static Name");
     });
   });
 

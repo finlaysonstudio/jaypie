@@ -1,4 +1,5 @@
 import { en, Faker } from "@faker-js/faker";
+import { v5 as uuidv5 } from "uuid";
 import numericSeedArray from "./util/numericSeedArray.js";
 import { random, type RandomFunction } from "./random.js";
 import isUuid from "./util/isUuid.js";
@@ -8,8 +9,15 @@ import { uuidFrom } from "./util/uuidFrom.js";
 // Types
 //
 
+export interface FabricatorNameParams {
+  fabricator: Fabricator;
+}
+
 export interface FabricatorOptions {
-  name?: string | (() => string) | (() => Promise<string>);
+  name?:
+    | string
+    | ((params: FabricatorNameParams) => string)
+    | ((params: FabricatorNameParams) => Promise<string>);
   seed?: string | number;
 }
 
@@ -36,8 +44,15 @@ export class Fabricator {
   private _faker: Faker;
   private _id: string;
   private _name: string;
-  private _nextId: string;
+  private _nameOption?:
+    | string
+    | ((params: FabricatorNameParams) => string)
+    | ((params: FabricatorNameParams) => Promise<string>);
   private _random: RandomFunction;
+  private _seedMap: {
+    name: string;
+    next: string;
+  };
 
   /**
    * Creates a new Fabricator instance
@@ -103,13 +118,21 @@ export class Fabricator {
       this._id = this._faker.string.uuid();
     }
 
-    // Initialize nextId using faker (deterministic based on seed, but more random)
-    this._nextId = this._faker.string.uuid();
+    // Initialize seedMap with uuidv5 based on _id
+    this._seedMap = {
+      name: uuidv5("name", this._id),
+      next: uuidv5("next", this._id),
+    };
 
-    // Initialize name (must be sync, so we store the raw value)
+    // Store the name option for chaining
+    this._nameOption = opts.name;
+
+    // Initialize name
     if (opts.name !== undefined) {
       if (typeof opts.name === "function") {
-        const result = opts.name();
+        // Create a fabricator instance for the name function
+        const nameFabricator = new Fabricator(this._seedMap.name);
+        const result = opts.name({ fabricator: nameFabricator });
         // Handle both sync and async functions
         if (result instanceof Promise) {
           // For promises, we need to handle this in an async manner
@@ -157,11 +180,14 @@ export class Fabricator {
   }
 
   /**
-   * Creates a new Fabricator instance with nextId as the seed
-   * @returns A new Fabricator instance seeded with the incremented UUID
+   * Creates a new Fabricator instance with next seed from _seedMap
+   * @returns A new Fabricator instance seeded with the next UUID, chaining the name option if present
    */
   next(): Fabricator {
-    return new Fabricator(this._nextId);
+    if (this._nameOption !== undefined) {
+      return new Fabricator(this._seedMap.next, { name: this._nameOption });
+    }
+    return new Fabricator(this._seedMap.next);
   }
 
   /**
