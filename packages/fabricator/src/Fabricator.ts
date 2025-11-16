@@ -70,6 +70,11 @@ export class Fabricator {
       }
     }
 
+    // If no seed provided, check PROJECT_SEED environment variable
+    if (seed === undefined && process.env.PROJECT_SEED) {
+      seed = process.env.PROJECT_SEED;
+    }
+
     // Initialize faker
     this._faker = new Faker({ locale: en });
 

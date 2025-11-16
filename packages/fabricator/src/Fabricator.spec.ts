@@ -1,8 +1,21 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { Fabricator } from "./Fabricator.js";
 import { Faker } from "@faker-js/faker";
 
 describe("Fabricator", () => {
+  let originalProjectSeed: string | undefined;
+
+  beforeEach(() => {
+    originalProjectSeed = process.env.PROJECT_SEED;
+  });
+
+  afterEach(() => {
+    if (originalProjectSeed !== undefined) {
+      process.env.PROJECT_SEED = originalProjectSeed;
+    } else {
+      delete process.env.PROJECT_SEED;
+    }
+  });
   describe("constructor", () => {
     it("should create instance without seed", () => {
       const fabricator = new Fabricator();
@@ -165,6 +178,103 @@ describe("Fabricator", () => {
       expect(fabricator.id).toMatch(
         /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
       );
+    });
+  });
+
+  describe("PROJECT_SEED environment variable", () => {
+    it("should use PROJECT_SEED when no seed provided", () => {
+      process.env.PROJECT_SEED = "env-seed";
+
+      const fab1 = new Fabricator();
+      const fab2 = new Fabricator();
+
+      // Both should have same id because they use the same PROJECT_SEED
+      expect(fab1.id).toBe(fab2.id);
+
+      // Verify it's deterministic with the env seed
+      const fab3 = new Fabricator("env-seed");
+      expect(fab1.id).toBe(fab3.id);
+    });
+
+    it("should use explicit seed over PROJECT_SEED", () => {
+      process.env.PROJECT_SEED = "env-seed";
+
+      const fabEnv = new Fabricator();
+      const fabExplicit = new Fabricator("explicit-seed");
+
+      // Should be different because explicit seed overrides env
+      expect(fabEnv.id).not.toBe(fabExplicit.id);
+
+      // Verify env seed was used for first one
+      const fabEnv2 = new Fabricator();
+      expect(fabEnv.id).toBe(fabEnv2.id);
+    });
+
+    it("should generate random UUID when no PROJECT_SEED and no seed", () => {
+      delete process.env.PROJECT_SEED;
+
+      const fab1 = new Fabricator();
+      const fab2 = new Fabricator();
+
+      // Should be different random UUIDs
+      expect(fab1.id).not.toBe(fab2.id);
+      expect(fab1.id).toMatch(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
+      );
+      expect(fab2.id).toMatch(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
+      );
+    });
+
+    it("should use PROJECT_SEED with options object when no seed in options", () => {
+      process.env.PROJECT_SEED = "env-seed";
+
+      const fab1 = new Fabricator({ name: "Test Name" });
+      const fab2 = new Fabricator({ name: "Test Name" });
+
+      // Both should have same id from PROJECT_SEED
+      expect(fab1.id).toBe(fab2.id);
+      expect(fab1.name).toBe("Test Name");
+    });
+
+    it("should prefer options.seed over PROJECT_SEED", () => {
+      process.env.PROJECT_SEED = "env-seed";
+
+      const fabEnv = new Fabricator();
+      const fabOptions = new Fabricator({ seed: "options-seed" });
+
+      expect(fabEnv.id).not.toBe(fabOptions.id);
+    });
+
+    it("should handle PROJECT_SEED as UUID", () => {
+      process.env.PROJECT_SEED = "550e8400-e29b-41d4-a716-446655440000";
+
+      const fab = new Fabricator();
+
+      expect(fab.id).toBe("550e8400-e29b-41d4-a716-446655440000");
+    });
+
+    it("should lowercase PROJECT_SEED if it's a UUID", () => {
+      process.env.PROJECT_SEED = "550E8400-E29B-41D4-A716-446655440000";
+
+      const fab = new Fabricator();
+
+      expect(fab.id).toBe("550e8400-e29b-41d4-a716-446655440000");
+    });
+
+    it("should produce deterministic results with PROJECT_SEED", () => {
+      process.env.PROJECT_SEED = "test-env-seed";
+
+      const fab1 = new Fabricator();
+      const fab2 = new Fabricator();
+
+      // Same faker output
+      expect(fab1.faker.person.firstName()).toBe(fab2.faker.person.firstName());
+
+      // Same random output
+      const fab3 = new Fabricator();
+      const fab4 = new Fabricator();
+      expect(fab3.random()).toBe(fab4.random());
     });
   });
 

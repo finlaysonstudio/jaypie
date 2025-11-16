@@ -1,7 +1,20 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { fabricator, Fabricator, random } from "./index.js";
 
 describe("fabricator", () => {
+  let originalProjectSeed: string | undefined;
+
+  beforeEach(() => {
+    originalProjectSeed = process.env.PROJECT_SEED;
+  });
+
+  afterEach(() => {
+    if (originalProjectSeed !== undefined) {
+      process.env.PROJECT_SEED = originalProjectSeed;
+    } else {
+      delete process.env.PROJECT_SEED;
+    }
+  });
   it("should return a Fabricator instance without seed", () => {
     const result = fabricator();
     expect(result).toBeInstanceOf(Fabricator);
@@ -108,6 +121,24 @@ describe("fabricator", () => {
     const fab1 = fabricator("my-seed");
     const fab2 = fabricator("my-seed");
     expect(fab1.id).toBe(fab2.id);
+  });
+
+  it("should use PROJECT_SEED when no seed provided", () => {
+    process.env.PROJECT_SEED = "env-test-seed";
+
+    const fab1 = fabricator();
+    const fab2 = fabricator();
+
+    expect(fab1.id).toBe(fab2.id);
+  });
+
+  it("should prefer explicit seed over PROJECT_SEED", () => {
+    process.env.PROJECT_SEED = "env-seed";
+
+    const fabEnv = fabricator();
+    const fabExplicit = fabricator("explicit-seed");
+
+    expect(fabEnv.id).not.toBe(fabExplicit.id);
   });
 });
 
