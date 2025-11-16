@@ -1,6 +1,6 @@
 {
   "name": "@jaypie/fabricator",
-  "version": "0.0.2",
+  "version": "0.1.0",
   "private": false,
   "type": "module",
   "exports": {
@@ -35,5 +35,8 @@
   "devDependencies": {
     "@types/node": "^24.2.1",
     "@types/uuid": "^10.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }
