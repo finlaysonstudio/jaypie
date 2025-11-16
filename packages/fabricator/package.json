@@ -1,0 +1,42 @@
+{
+  "name": "@jaypie/fabricator",
+  "version": "0.1.0",
+  "private": false,
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./constants": {
+      "import": "./dist/constants.js",
+      "types": "./dist/constants.d.ts"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "vite build",
+    "clean": "rimraf coverage dist node_modules package-lock.json",
+    "dev": "vite",
+    "test": "vitest run",
+    "test:watch": "vitest watch",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@faker-js/faker": "^9.3.0",
+    "@jaypie/errors": "^1.1.7",
+    "random": "^5.4.1",
+    "uuid": "^13.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.2.1",
+    "@types/uuid": "^10.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
