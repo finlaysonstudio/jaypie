@@ -32,6 +32,19 @@ function capitalize(word: string): string {
   return word.charAt(0).toUpperCase() + word.slice(1);
 }
 
+/**
+ * Default name generator function using capitalized words from fabricator
+ * @param params - Object containing the fabricator instance
+ * @returns A capitalized two-word name
+ */
+function defaultNameGenerator({ fabricator }: FabricatorNameParams): string {
+  const rawWords = fabricator.words();
+  return rawWords
+    .split(" ")
+    .map((word) => capitalize(word))
+    .join(" ");
+}
+
 //
 // Class
 //
@@ -124,37 +137,33 @@ export class Fabricator {
       next: uuidv5("next", this._id),
     };
 
-    // Store the name option for chaining
+    // Store the name option for chaining (store original, not defaulted)
     this._nameOption = opts.name;
 
+    // Use default name generator if no name option provided
+    const nameOption = opts.name ?? defaultNameGenerator;
+
     // Initialize name
-    if (opts.name !== undefined) {
-      if (typeof opts.name === "function") {
-        // Create a fabricator instance for the name function
-        const nameFabricator = new Fabricator(this._seedMap.name);
-        const result = opts.name({ fabricator: nameFabricator });
-        // Handle both sync and async functions
-        if (result instanceof Promise) {
-          // For promises, we need to handle this in an async manner
-          // We'll store a placeholder and set it later
-          this._name = "";
-          result.then((resolvedName) => {
-            this._name = resolvedName;
-          });
-        } else {
-          this._name = result;
-        }
+    if (typeof nameOption === "function") {
+      // Create a fabricator instance for the name function
+      // Pass a dummy name to prevent infinite recursion
+      const nameFabricator = new Fabricator(this._seedMap.name, {
+        name: "",
+      });
+      const result = nameOption({ fabricator: nameFabricator });
+      // Handle both sync and async functions
+      if (result instanceof Promise) {
+        // For promises, we need to handle this in an async manner
+        // We'll store a placeholder and set it later
+        this._name = "";
+        result.then((resolvedName) => {
+          this._name = resolvedName;
+        });
       } else {
-        this._name = opts.name;
+        this._name = result;
       }
     } else {
-      // Generate name using capitalized words()
-      // We need to call words() which relies on faker being initialized
-      const rawWords = this.words();
-      this._name = rawWords
-        .split(" ")
-        .map((word) => capitalize(word))
-        .join(" ");
+      this._name = nameOption;
     }
   }
 
