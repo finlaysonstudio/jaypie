@@ -203,79 +203,79 @@ export class Fabricator {
   };
 
   // Proxy all faker fields for direct access
-  get airline() {
+  get airline(): Faker["airline"] {
     return this._faker.airline;
   }
-  get animal() {
+  get animal(): Faker["animal"] {
     return this._faker.animal;
   }
-  get color() {
+  get color(): Faker["color"] {
     return this._faker.color;
   }
-  get commerce() {
+  get commerce(): Faker["commerce"] {
     return this._faker.commerce;
   }
-  get company() {
+  get company(): Faker["company"] {
     return this._faker.company;
   }
-  get database() {
+  get database(): Faker["database"] {
     return this._faker.database;
   }
-  get datatype() {
+  get datatype(): Faker["datatype"] {
     return this._faker.datatype;
   }
-  get date() {
+  get date(): Faker["date"] {
     return this._faker.date;
   }
-  get finance() {
+  get finance(): Faker["finance"] {
     return this._faker.finance;
   }
-  get git() {
+  get git(): Faker["git"] {
     return this._faker.git;
   }
-  get hacker() {
+  get hacker(): Faker["hacker"] {
     return this._faker.hacker;
   }
-  get helpers() {
+  get helpers(): Faker["helpers"] {
     return this._faker.helpers;
   }
-  get image() {
+  get image(): Faker["image"] {
     return this._faker.image;
   }
-  get internet() {
+  get internet(): Faker["internet"] {
     return this._faker.internet;
   }
-  get location() {
+  get location(): Faker["location"] {
     return this._faker.location;
   }
-  get lorem() {
+  get lorem(): Faker["lorem"] {
     return this._faker.lorem;
   }
-  get music() {
+  get music(): Faker["music"] {
     return this._faker.music;
   }
-  get number() {
+  get number(): Faker["number"] {
     return this._faker.number;
   }
-  get person() {
+  get person(): Faker["person"] {
     return this._faker.person;
   }
-  get phone() {
+  get phone(): Faker["phone"] {
     return this._faker.phone;
   }
-  get science() {
+  get science(): Faker["science"] {
     return this._faker.science;
   }
-  get string() {
+  get string(): Faker["string"] {
     return this._faker.string;
   }
-  get system() {
+  get system(): Faker["system"] {
     return this._faker.system;
   }
-  get vehicle() {
+  get vehicle(): Faker["vehicle"] {
     return this._faker.vehicle;
   }
-  get word() {
+  get word(): Faker["word"] {
     return this._faker.word;
   }
 }
