@@ -161,7 +161,9 @@ export class WorldFabricator extends Fabricator {
    */
   cities(): Generator<Fabricator, void, undefined>;
   cities(count: number): Fabricator[];
-  cities(count?: number): Fabricator[] | Generator<Fabricator, void, undefined> {
+  cities(
+    count?: number,
+  ): Fabricator[] | Generator<Fabricator, void, undefined> {
     if (count === undefined) {
       // Return a generator for infinite chaining
       const worldId = this.id;
