@@ -113,6 +113,15 @@ class WorldFabricator extends Fabricator {
 
     return exportItems;
   }
+
+  /**
+   * Creates a new WorldFabricator instance with next seed
+   * @returns A new WorldFabricator instance seeded with the next UUID
+   */
+  next(): WorldFabricator {
+    const nextFabricator = super.next();
+    return new WorldFabricator(nextFabricator.id);
+  }
 }
 
 describe("WorldFabricator", () => {
@@ -317,6 +326,7 @@ describe("WorldFabricator", () => {
   it("should generate consistent results regardless of batch size", () => {
     const world1 = new WorldFabricator("same-seed");
     const worldA = new WorldFabricator("same-seed");
+    const world2 = world1.next();
 
     const cities1 = world1.cities(6);
     const worldExports1 = world1.exports(6);
@@ -324,9 +334,16 @@ describe("WorldFabricator", () => {
     const worldExportsA = worldA.exports(12);
     const citiesA = worldA.cities(24);
 
+    const cities2 = world2.cities(6);
+    const worldExports2 = world2.exports(6);
+
     // Same seed should produce same results regardless of batch size
     expect(cities1).toEqual(citiesA.slice(0, 6));
     expect(worldExports1).toEqual(worldExportsA.slice(0, 6));
+
+    // Next world should produce different results
+    expect(cities1).not.toEqual(cities2);
+    expect(worldExports1).not.toEqual(worldExports2);
 
     // Log for visual verification
     // eslint-disable-next-line no-console
@@ -336,8 +353,43 @@ describe("WorldFabricator", () => {
     // eslint-disable-next-line no-console
     console.log("citiesA (first 6 of 24):", citiesA.slice(0, 6));
     // eslint-disable-next-line no-console
+    console.log("cities2 (next world, 6):", cities2);
+    // eslint-disable-next-line no-console
     console.log("exports1 (6):", worldExports1);
     // eslint-disable-next-line no-console
     console.log("exportsA (first 6 of 12):", worldExportsA.slice(0, 6));
+    // eslint-disable-next-line no-console
+    console.log("exports2 (next world, 6):", worldExports2);
+  });
+
+  it("should chain through WorldFabricator instances using next()", () => {
+    const world1 = new WorldFabricator("chain-test");
+    const world2 = world1.next();
+    const world3 = world2.next();
+
+    // All should be WorldFabricator instances with cities and exports methods
+    expect(world2.cities).toBeDefined();
+    expect(world2.exports).toBeDefined();
+    expect(world3.cities).toBeDefined();
+    expect(world3.exports).toBeDefined();
+
+    // Should have different IDs (deterministic seeds)
+    expect(world1.id).not.toBe(world2.id);
+    expect(world2.id).not.toBe(world3.id);
+
+    // Should generate different cities and exports
+    const cities1 = world1.cities(3);
+    const cities2 = world2.cities(3);
+    const cities3 = world3.cities(3);
+
+    expect(cities1).not.toEqual(cities2);
+    expect(cities2).not.toEqual(cities3);
+
+    const exports1 = world1.exports(3);
+    const exports2 = world2.exports(3);
+    const exports3 = world3.exports(3);
+
+    expect(exports1).not.toEqual(exports2);
+    expect(exports2).not.toEqual(exports3);
   });
 });
