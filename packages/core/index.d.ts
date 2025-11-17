@@ -132,12 +132,19 @@ export const JAYPIE: {
     CORE: "@jaypie/core";
     ESLINT: "@jaypie/eslint";
     EXPRESS: "@jaypie/express";
+    FABRICATOR: "@jaypie/fabricator";
     ERRORS: "@jaypie/errors";
     JAYPIE: "jaypie";
+    KIT: "@jaypie/kit";
     LAMBDA: "@jaypie/lambda";
     LLM: "@jaypie/llm";
+    LOGGER: "@jaypie/logger";
+    MCP: "@jaypie/mcp";
+    MOCK: "@jaypie/mock";
     MONGOOSE: "@jaypie/mongoose";
     TESTKIT: "@jaypie/testkit";
+    TEXTTRACT: "@jaypie/textract";
+    TYPES: "@jaypie/types";
     WEBKIT: "@jaypie/webkit";
   };
   LAYER: {
@@ -146,6 +153,7 @@ export const JAYPIE: {
     JAYPIE: "jaypie";
     LAMBDA: "lambda";
     MODULE: "module";
+    NEXTJS: "nextjs";
   };
   LOGGER: {
     DEFAULT: "default";

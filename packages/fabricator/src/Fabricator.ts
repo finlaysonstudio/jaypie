@@ -1,6 +1,97 @@
 import { en, Faker } from "@faker-js/faker";
+import { v5 as uuidv5 } from "uuid";
+import { ConfigurationError } from "@jaypie/errors";
 import numericSeedArray from "./util/numericSeedArray.js";
 import { random, type RandomFunction } from "./random.js";
+import isUuid from "./util/isUuid.js";
+import { uuidFrom } from "./util/uuidFrom.js";
+
+//
+// Types
+//
+
+export interface FabricatorNameParams {
+  fabricator: Fabricator;
+}
+
+export interface FabricatorOptions {
+  name?:
+    | string
+    | ((params: FabricatorNameParams) => string)
+    | ((params: FabricatorNameParams) => Promise<string>);
+  seed?: string | number;
+}
+
+export interface PrefabResultsFunctionConfig<T> {
+  generate: (params: FabricatorNameParams) => T;
+  results: T[];
+  seed?: string | number;
+}
+
+/**
+ * Configuration for a child fabricator in the nested structure
+ */
+export interface NestedFabricatorConfig {
+  name?:
+    | string
+    | ((params: FabricatorNameParams) => string)
+    | ((params: FabricatorNameParams) => Promise<string>);
+  fabricators?: Record<string, NestedFabricatorConfig>;
+  seed?: string | number;
+}
+
+/**
+ * Extracts the type of nested fabricator methods from a config
+ * Generates methods that return either a generator or an array of fabricators
+ */
+export type NestedFabricatorMethods<Config extends NestedFabricatorConfig> =
+  Config["fabricators"] extends Record<string, NestedFabricatorConfig>
+    ? {
+        [K in keyof Config["fabricators"]]: {
+          (): Generator<
+            NestedFabricator<Config["fabricators"][K]>,
+            void,
+            undefined
+          >;
+          (count: number): NestedFabricator<Config["fabricators"][K]>[];
+        };
+      }
+    : Record<string, never>;
+
+/**
+ * Type of a fabricator created from a nested config
+ * Includes all base Fabricator properties plus nested methods
+ */
+export type NestedFabricator<Config extends NestedFabricatorConfig> =
+  Fabricator & NestedFabricatorMethods<Config>;
+
+//
+// Helper Functions
+//
+
+/**
+ * Capitalizes the first letter of a word
+ */
+function capitalize(word: string): string {
+  return word.charAt(0).toUpperCase() + word.slice(1);
+}
+
+/**
+ * Default name generator function using capitalized words from fabricator
+ * @param params - Object containing the fabricator instance
+ * @returns A capitalized two-word name
+ */
+function defaultNameGenerator({ fabricator }: FabricatorNameParams): string {
+  const rawWords = fabricator.words();
+  return rawWords
+    .split(" ")
+    .map((word) => capitalize(word))
+    .join(" ");
+}
+
+//
+// Class
+//
 
 /**
  * Fabricator class for generating test data with faker.js
@@ -8,22 +99,202 @@ import { random, type RandomFunction } from "./random.js";
  */
 export class Fabricator {
   private _faker: Faker;
+  private _id: string;
+  private _name: string;
+  private _nameOption?:
+    | string
+    | ((params: FabricatorNameParams) => string)
+    | ((params: FabricatorNameParams) => Promise<string>);
   private _random: RandomFunction;
+  private _seedMap: {
+    name: string;
+    next: string;
+  };
+  private _nestedConfig?: NestedFabricatorConfig;
 
   /**
    * Creates a new Fabricator instance
-   * @param seed - Optional seed (string or number) for deterministic data generation
+   * Supports multiple signatures:
+   * - new Fabricator()
+   * - new Fabricator(seed)
+   * - new Fabricator(seed, options)
+   * - new Fabricator(options)
    */
-  constructor(seed?: string | number) {
+  constructor();
+  constructor(seed: string | number);
+  constructor(seed: string | number, options: FabricatorOptions);
+  constructor(options: FabricatorOptions);
+  constructor(
+    seedOrOptions?: string | number | FabricatorOptions,
+    options?: FabricatorOptions,
+  ) {
+    // Parse arguments to extract seed and options
+    let seed: string | number | undefined;
+    let opts: FabricatorOptions = {};
+
+    if (typeof seedOrOptions === "object" && seedOrOptions !== null) {
+      // Called as: new Fabricator(options)
+      opts = seedOrOptions;
+      seed = opts.seed;
+    } else {
+      // Called as: new Fabricator() or new Fabricator(seed) or new Fabricator(seed, options)
+      seed = seedOrOptions;
+      if (options) {
+        opts = options;
+      }
+    }
+
+    // If no seed provided, check PROJECT_SEED environment variable
+    if (seed === undefined && process.env.PROJECT_SEED) {
+      seed = process.env.PROJECT_SEED;
+    }
+
+    // Initialize faker
     this._faker = new Faker({ locale: en });
 
     // Initialize random with seed
     this._random = random(seed);
 
+    // Apply seed to faker if provided
     if (seed !== undefined) {
       const seedArray = numericSeedArray(String(seed));
       this._faker.seed(seedArray);
     }
+
+    // Initialize id from seed
+    if (seed !== undefined) {
+      const seedStr = String(seed);
+      // If seed is already a UUID, use it (lowercase). Otherwise, generate UUID from seed.
+      // We check isUuid first to avoid the warning that uuidFrom logs when given a UUID
+      if (isUuid(seedStr)) {
+        this._id = seedStr.toLowerCase();
+      } else {
+        this._id = uuidFrom(seed);
+      }
+    } else {
+      // No seed provided, generate a random UUID
+      this._id = this._faker.string.uuid();
+    }
+
+    // Initialize seedMap with uuidv5 based on _id
+    this._seedMap = {
+      name: uuidv5("name", this._id),
+      next: uuidv5("next", this._id),
+    };
+
+    // Store the name option for chaining (store original, not defaulted)
+    this._nameOption = opts.name;
+
+    // Use default name generator if no name option provided
+    const nameOption = opts.name ?? defaultNameGenerator;
+
+    // Initialize name
+    if (typeof nameOption === "function") {
+      // Create a fabricator instance for the name function
+      // Pass a dummy name to prevent infinite recursion
+      const nameFabricator = new Fabricator(this._seedMap.name, {
+        name: "",
+      });
+      const result = nameOption({ fabricator: nameFabricator });
+      // Handle both sync and async functions
+      if (result instanceof Promise) {
+        // For promises, we need to handle this in an async manner
+        // We'll store a placeholder and set it later
+        this._name = "";
+        result.then((resolvedName) => {
+          this._name = resolvedName;
+        });
+      } else {
+        this._name = result;
+      }
+    } else {
+      this._name = nameOption;
+    }
+  }
+
+  /**
+   * Creates a new nested fabricator from a configuration object
+   * Automatically generates child fabricator methods based on the config
+   *
+   * @param config - Nested fabricator configuration
+   * @returns A fabricator with dynamically generated child methods
+   *
+   * @example
+   * const world = Fabricator.new({
+   *   seed: "my-world",
+   *   name: worldNameGenerator,
+   *   fabricators: {
+   *     cities: {
+   *       name: cityNameGenerator,
+   *       fabricators: {
+   *         streets: { name: streetNameGenerator }
+   *       }
+   *     },
+   *     exports: { name: exportNameGenerator }
+   *   }
+   * });
+   *
+   * // Now you can use:
+   * world.cities(5); // Returns array of 5 city fabricators
+   * world.cities(); // Returns a generator of city fabricators
+   * const city = world.cities(1)[0];
+   * city.streets(10); // Returns array of 10 street fabricators
+   */
+  static new<Config extends NestedFabricatorConfig>(
+    config: Config,
+  ): NestedFabricator<Config> {
+    // Create base fabricator
+    const baseFabricator = new Fabricator({
+      seed: config.seed,
+      name: config.name,
+    });
+
+    // Store the config for use in next()
+    baseFabricator._nestedConfig = config;
+
+    // If no nested fabricators, return base
+    if (!config.fabricators) {
+      return baseFabricator as NestedFabricator<Config>;
+    }
+
+    // Add child fabricator methods
+    const fabricatorWithMethods = baseFabricator as NestedFabricator<Config>;
+
+    for (const [key, childConfig] of Object.entries(config.fabricators)) {
+      // Create the overloaded method
+      const method = (count?: number) => {
+        if (count === undefined) {
+          // Return a generator for infinite chaining
+          const parentId = baseFabricator.id;
+          return (function* () {
+            let i = 0;
+            while (true) {
+              yield Fabricator.new({
+                ...childConfig,
+                seed: `${parentId}-${key}-${i++}`,
+              });
+            }
+          })();
+        }
+
+        // Return an array of fabricators
+        const fabricators = [];
+        for (let i = 0; i < count; i++) {
+          fabricators.push(
+            Fabricator.new({
+              ...childConfig,
+              seed: `${baseFabricator.id}-${key}-${i}`,
+            }),
+          );
+        }
+        return fabricators;
+      };
+
+      // Attach method to fabricator
+      (fabricatorWithMethods as any)[key] = method;
+    }
+
+    return fabricatorWithMethods;
   }
 
   /**
@@ -31,6 +302,40 @@ export class Fabricator {
    */
   get faker(): Faker {
     return this._faker;
+  }
+
+  /**
+   * Gets the fabricator id (UUID)
+   */
+  get id(): string {
+    return this._id;
+  }
+
+  /**
+   * Gets the fabricator name
+   */
+  get name(): string {
+    return this._name;
+  }
+
+  /**
+   * Creates a new Fabricator instance with next seed from _seedMap
+   * @returns A new Fabricator instance seeded with the next UUID, chaining the name option and nested config if present
+   */
+  next(): Fabricator {
+    // If this was created with Fabricator.new(), recreate with nested config
+    if (this._nestedConfig) {
+      return Fabricator.new({
+        ...this._nestedConfig,
+        seed: this._seedMap.next,
+      });
+    }
+
+    // Otherwise, use standard constructor
+    if (this._nameOption !== undefined) {
+      return new Fabricator(this._seedMap.next, { name: this._nameOption });
+    }
+    return new Fabricator(this._seedMap.next);
   }
 
   /**
@@ -126,82 +431,133 @@ export class Fabricator {
         fullName,
       };
     },
+
+    /**
+     * Utility namespace for helper functions
+     */
+    util: {
+      /**
+       * Creates a function that returns predetermined results in sequence,
+       * then falls back to generated values
+       *
+       * @param config - Configuration object
+       * @param config.generate - Function to generate values after results are exhausted
+       * @param config.results - Array of predetermined results to return in order
+       * @param config.seed - Optional seed for the fabricator passed to generate function
+       * @returns A function that returns results sequentially, then generates new values
+       *
+       * @example
+       * const getName = fab.generate.util.prefab({
+       *   results: ["Alice", "Bob"],
+       *   generate: ({ fabricator }) => fabricator.person.firstName(),
+       * });
+       * getName(); // "Alice"
+       * getName(); // "Bob"
+       * getName(); // Generated name
+       */
+      prefab: <T>(config: PrefabResultsFunctionConfig<T>): (() => T) => {
+        // Validate inputs
+        if (!config.generate || typeof config.generate !== "function") {
+          throw new ConfigurationError("generate must be a function");
+        }
+        if (!Array.isArray(config.results)) {
+          throw new ConfigurationError("results must be an array");
+        }
+
+        // Create fabricator for generate function
+        const fabricator =
+          config.seed !== undefined ? new Fabricator(config.seed) : this;
+
+        // Closure state: current index
+        let currentIndex = 0;
+
+        // Return the stateful function
+        return (): T => {
+          if (currentIndex < config.results.length) {
+            // Return predetermined result and increment
+            return config.results[currentIndex++];
+          }
+          // Fall back to generate function
+          return config.generate({ fabricator });
+        };
+      },
+    },
   };
 
   // Proxy all faker fields for direct access
-  get airline() {
+  get airline(): Faker["airline"] {
     return this._faker.airline;
   }
-  get animal() {
+  get animal(): Faker["animal"] {
     return this._faker.animal;
   }
-  get color() {
+  get color(): Faker["color"] {
     return this._faker.color;
   }
-  get commerce() {
+  get commerce(): Faker["commerce"] {
     return this._faker.commerce;
   }
-  get company() {
+  get company(): Faker["company"] {
     return this._faker.company;
   }
-  get database() {
+  get database(): Faker["database"] {
     return this._faker.database;
   }
-  get datatype() {
+  get datatype(): Faker["datatype"] {
     return this._faker.datatype;
   }
-  get date() {
+  get date(): Faker["date"] {
     return this._faker.date;
   }
-  get finance() {
+  get finance(): Faker["finance"] {
     return this._faker.finance;
   }
-  get git() {
+  get git(): Faker["git"] {
     return this._faker.git;
   }
-  get hacker() {
+  get hacker(): Faker["hacker"] {
     return this._faker.hacker;
   }
-  get helpers() {
+  get helpers(): Faker["helpers"] {
     return this._faker.helpers;
   }
-  get image() {
+  get image(): Faker["image"] {
     return this._faker.image;
   }
-  get internet() {
+  get internet(): Faker["internet"] {
     return this._faker.internet;
   }
-  get location() {
+  get location(): Faker["location"] {
     return this._faker.location;
   }
-  get lorem() {
+  get lorem(): Faker["lorem"] {
     return this._faker.lorem;
   }
-  get music() {
+  get music(): Faker["music"] {
     return this._faker.music;
   }
-  get number() {
+  get number(): Faker["number"] {
     return this._faker.number;
   }
-  get person() {
+  get person(): Faker["person"] {
     return this._faker.person;
   }
-  get phone() {
+  get phone(): Faker["phone"] {
     return this._faker.phone;
   }
-  get science() {
+  get science(): Faker["science"] {
     return this._faker.science;
   }
-  get string() {
+  get string(): Faker["string"] {
     return this._faker.string;
   }
-  get system() {
+  get system(): Faker["system"] {
     return this._faker.system;
   }
-  get vehicle() {
+  get vehicle(): Faker["vehicle"] {
     return this._faker.vehicle;
   }
-  get word() {
+  get word(): Faker["word"] {
     return this._faker.word;
   }
 }

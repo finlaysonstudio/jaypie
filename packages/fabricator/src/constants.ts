@@ -4,3 +4,5 @@ export const CHANCE = {
   EPIC: 0.00307,
   LEGENDARY: 0.000441,
 };
+
+export const JAYPIE_FABRICATOR_UUID = "345457ac-3414-4ae6-96d1-a16f12ae562f";
