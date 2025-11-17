@@ -28,6 +28,43 @@ export interface PrefabResultsFunctionConfig<T> {
   seed?: string | number;
 }
 
+/**
+ * Configuration for a child fabricator in the nested structure
+ */
+export interface NestedFabricatorConfig {
+  name?:
+    | string
+    | ((params: FabricatorNameParams) => string)
+    | ((params: FabricatorNameParams) => Promise<string>);
+  fabricators?: Record<string, NestedFabricatorConfig>;
+  seed?: string | number;
+}
+
+/**
+ * Extracts the type of nested fabricator methods from a config
+ * Generates methods that return either a generator or an array of fabricators
+ */
+export type NestedFabricatorMethods<Config extends NestedFabricatorConfig> =
+  Config["fabricators"] extends Record<string, NestedFabricatorConfig>
+    ? {
+        [K in keyof Config["fabricators"]]: {
+          (): Generator<
+            NestedFabricator<Config["fabricators"][K]>,
+            void,
+            undefined
+          >;
+          (count: number): NestedFabricator<Config["fabricators"][K]>[];
+        };
+      }
+    : Record<string, never>;
+
+/**
+ * Type of a fabricator created from a nested config
+ * Includes all base Fabricator properties plus nested methods
+ */
+export type NestedFabricator<Config extends NestedFabricatorConfig> =
+  Fabricator & NestedFabricatorMethods<Config>;
+
 //
 // Helper Functions
 //
@@ -73,6 +110,7 @@ export class Fabricator {
     name: string;
     next: string;
   };
+  private _nestedConfig?: NestedFabricatorConfig;
 
   /**
    * Creates a new Fabricator instance
@@ -175,6 +213,91 @@ export class Fabricator {
   }
 
   /**
+   * Creates a new nested fabricator from a configuration object
+   * Automatically generates child fabricator methods based on the config
+   *
+   * @param config - Nested fabricator configuration
+   * @returns A fabricator with dynamically generated child methods
+   *
+   * @example
+   * const world = Fabricator.new({
+   *   seed: "my-world",
+   *   name: worldNameGenerator,
+   *   fabricators: {
+   *     cities: {
+   *       name: cityNameGenerator,
+   *       fabricators: {
+   *         streets: { name: streetNameGenerator }
+   *       }
+   *     },
+   *     exports: { name: exportNameGenerator }
+   *   }
+   * });
+   *
+   * // Now you can use:
+   * world.cities(5); // Returns array of 5 city fabricators
+   * world.cities(); // Returns a generator of city fabricators
+   * const city = world.cities(1)[0];
+   * city.streets(10); // Returns array of 10 street fabricators
+   */
+  static new<Config extends NestedFabricatorConfig>(
+    config: Config,
+  ): NestedFabricator<Config> {
+    // Create base fabricator
+    const baseFabricator = new Fabricator({
+      seed: config.seed,
+      name: config.name,
+    });
+
+    // Store the config for use in next()
+    baseFabricator._nestedConfig = config;
+
+    // If no nested fabricators, return base
+    if (!config.fabricators) {
+      return baseFabricator as NestedFabricator<Config>;
+    }
+
+    // Add child fabricator methods
+    const fabricatorWithMethods = baseFabricator as NestedFabricator<Config>;
+
+    for (const [key, childConfig] of Object.entries(config.fabricators)) {
+      // Create the overloaded method
+      const method = (count?: number) => {
+        if (count === undefined) {
+          // Return a generator for infinite chaining
+          const parentId = baseFabricator.id;
+          return (function* () {
+            let i = 0;
+            while (true) {
+              yield Fabricator.new({
+                ...childConfig,
+                seed: `${parentId}-${key}-${i++}`,
+              });
+            }
+          })();
+        }
+
+        // Return an array of fabricators
+        const fabricators = [];
+        for (let i = 0; i < count; i++) {
+          fabricators.push(
+            Fabricator.new({
+              ...childConfig,
+              seed: `${baseFabricator.id}-${key}-${i}`,
+            }),
+          );
+        }
+        return fabricators;
+      };
+
+      // Attach method to fabricator
+      (fabricatorWithMethods as any)[key] = method;
+    }
+
+    return fabricatorWithMethods;
+  }
+
+  /**
    * Gets the internal faker instance
    */
   get faker(): Faker {
@@ -197,9 +320,18 @@ export class Fabricator {
 
   /**
    * Creates a new Fabricator instance with next seed from _seedMap
-   * @returns A new Fabricator instance seeded with the next UUID, chaining the name option if present
+   * @returns A new Fabricator instance seeded with the next UUID, chaining the name option and nested config if present
    */
   next(): Fabricator {
+    // If this was created with Fabricator.new(), recreate with nested config
+    if (this._nestedConfig) {
+      return Fabricator.new({
+        ...this._nestedConfig,
+        seed: this._seedMap.next,
+      });
+    }
+
+    // Otherwise, use standard constructor
     if (this._nameOption !== undefined) {
       return new Fabricator(this._seedMap.next, { name: this._nameOption });
     }

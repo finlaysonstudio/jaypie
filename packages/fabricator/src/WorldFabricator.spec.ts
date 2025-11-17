@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { Fabricator } from "./Fabricator.js";
 import { WorldFabricator } from "./WorldFabricator.js";
 
 describe("WorldFabricator", () => {
@@ -76,20 +77,19 @@ describe("WorldFabricator", () => {
     expect(world2a.name).toBe(world2b.name);
   });
 
-  it("should generate cities as CityFabricator instances", () => {
+  it("should generate cities as Fabricator instances", () => {
     const world = new WorldFabricator("city-seed");
     const cities = world.cities(12);
 
     // Should generate exactly 12 cities
     expect(cities).toHaveLength(12);
 
-    // All should be CityFabricator instances with names
+    // All should be Fabricator instances with names
     cities.forEach((city) => {
       expect(city.name).toBeDefined();
       expect(typeof city.name).toBe("string");
       expect(city.name.length).toBeGreaterThan(0);
       expect(city.next).toBeDefined();
-      expect(city.streets).toBeDefined();
     });
 
     // Log cities for visual inspection
@@ -154,21 +154,18 @@ describe("WorldFabricator", () => {
     expect(names1).not.toEqual(names2);
   });
 
-  it("should generate exports as ExportFabricator instances", () => {
+  it("should generate exports as Fabricator instances", () => {
     const world = new WorldFabricator("export-seed");
     const worldExports = world.exports(10);
 
     // Should generate exactly 10 exports
     expect(worldExports).toHaveLength(10);
 
-    // All should be ExportFabricator instances with names and properties
+    // All should be Fabricator instances with names
     worldExports.forEach((exportItem) => {
       expect(exportItem.name).toBeDefined();
       expect(typeof exportItem.name).toBe("string");
       expect(exportItem.name.length).toBeGreaterThan(0);
-      expect(exportItem.climate).toBeDefined();
-      expect(exportItem.terrain).toBeDefined();
-      expect(exportItem.adjective).toBeDefined();
     });
 
     // Log exports for visual inspection
@@ -176,9 +173,7 @@ describe("WorldFabricator", () => {
     console.log("Generated Exports:");
     worldExports.forEach((exportItem, index) => {
       // eslint-disable-next-line no-console
-      console.log(
-        `  Export ${index + 1}: ${exportItem.name} (${exportItem.climate}, ${exportItem.terrain})`,
-      );
+      console.log(`  Export ${index + 1}: ${exportItem.name}`);
     });
   });
 
@@ -321,5 +316,118 @@ describe("WorldFabricator", () => {
 
     expect(exportNames1).not.toEqual(exportNames2);
     expect(exportNames2).not.toEqual(exportNames3);
+  });
+
+  describe("WorldFabricator.create() - Config-based approach", () => {
+    it("should create a world with cities() and exports() methods", () => {
+      const world = WorldFabricator.create("test-seed");
+
+      expect(world).toBeInstanceOf(Fabricator);
+      expect(typeof world.cities).toBe("function");
+      expect(typeof world.exports).toBe("function");
+    });
+
+    it("should generate deterministic cities with same seed", () => {
+      const world1 = WorldFabricator.create("same-seed");
+      const world2 = WorldFabricator.create("same-seed");
+
+      const cities1 = world1.cities(5);
+      const cities2 = world2.cities(5);
+
+      expect(cities1.map((c) => c.name)).toEqual(cities2.map((c) => c.name));
+    });
+
+    it("should generate deterministic exports with same seed", () => {
+      const world1 = WorldFabricator.create("same-seed");
+      const world2 = WorldFabricator.create("same-seed");
+
+      const exports1 = world1.exports(5);
+      const exports2 = world2.exports(5);
+
+      expect(exports1.map((e) => e.name)).toEqual(exports2.map((e) => e.name));
+    });
+
+    it("should chain through worlds using next()", () => {
+      const world1 = WorldFabricator.create("chain-seed");
+      const world2 = world1.next();
+      const world3 = world2.next();
+
+      expect(world1.id).not.toBe(world2.id);
+      expect(world2.id).not.toBe(world3.id);
+
+      // All should have cities and exports methods
+      expect(typeof world2.cities).toBe("function");
+      expect(typeof world2.exports).toBe("function");
+      expect(typeof world3.cities).toBe("function");
+      expect(typeof world3.exports).toBe("function");
+
+      const cities1 = world1.cities(3);
+      const cities2 = world2.cities(3);
+
+      expect(cities1.map((c) => c.name)).not.toEqual(
+        cities2.map((c) => c.name),
+      );
+    });
+
+    it("should generate cities as fabricators with proper names", () => {
+      const world = WorldFabricator.create("city-test");
+      const cities = world.cities(10);
+
+      expect(cities).toHaveLength(10);
+      cities.forEach((city) => {
+        expect(city).toBeInstanceOf(Fabricator);
+        expect(typeof city.name).toBe("string");
+        expect(city.name.length).toBeGreaterThan(0);
+      });
+    });
+
+    it("should generate exports as fabricators with proper names", () => {
+      const world = WorldFabricator.create("export-test");
+      const worldExports = world.exports(10);
+
+      expect(worldExports).toHaveLength(10);
+      worldExports.forEach((exportItem) => {
+        expect(exportItem).toBeInstanceOf(Fabricator);
+        expect(typeof exportItem.name).toBe("string");
+        expect(exportItem.name.length).toBeGreaterThan(0);
+      });
+    });
+
+    it("should return generators when no count provided", () => {
+      const world = WorldFabricator.create("generator-test");
+
+      const citiesGen = world.cities();
+      const cities = [];
+      let i = 0;
+      for (const city of citiesGen) {
+        cities.push(city);
+        if (++i >= 3) break;
+      }
+
+      expect(cities).toHaveLength(3);
+
+      const exportsGen = world.exports();
+      const worldExports = [];
+      let j = 0;
+      for (const exportItem of exportsGen) {
+        worldExports.push(exportItem);
+        if (++j >= 3) break;
+      }
+
+      expect(worldExports).toHaveLength(3);
+    });
+
+    it("should work without a seed", () => {
+      const world = WorldFabricator.create();
+
+      expect(world).toBeInstanceOf(Fabricator);
+      expect(world.name).toBeTruthy();
+
+      const cities = world.cities(2);
+      expect(cities).toHaveLength(2);
+
+      const worldExports = world.exports(2);
+      expect(worldExports).toHaveLength(2);
+    });
   });
 });

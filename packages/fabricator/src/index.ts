@@ -2,8 +2,6 @@
 
 // Export Fabricator classes and types
 export { Fabricator, type FabricatorOptions } from "./Fabricator.js";
-export { CityFabricator } from "./CityFabricator.js";
-export { ExportFabricator } from "./ExportFabricator.js";
 export { WorldFabricator } from "./WorldFabricator.js";
 
 // Re-import Fabricator for the function
