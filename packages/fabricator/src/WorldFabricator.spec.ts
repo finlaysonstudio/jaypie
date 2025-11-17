@@ -1,128 +1,5 @@
-import { describe, it, expect } from "vitest";
-import {
-  Faker,
-  az,
-  da,
-  de,
-  en,
-  eo,
-  es,
-  fi,
-  fr,
-  hr,
-  it as itLocale,
-  lv,
-  mk,
-  nl,
-  pl,
-  tr,
-} from "@faker-js/faker";
-import { Fabricator } from "./Fabricator.js";
-import numericSeedArray from "./util/numericSeedArray.js";
-
-/**
- * WorldFabricator generates world names based on city names from various locales
- * Takes the longest segment (or last among tied lengths) from city names
- */
-class WorldFabricator extends Fabricator {
-  constructor(seed?: string | number) {
-    super({
-      seed,
-      name: ({ fabricator }) => {
-        // Curated list of locales
-        const locales = [nl, de, tr, mk, hr, lv, eo, az, da, fi, pl];
-
-        // Pick a random locale using the fabricator
-        const selectedLocale =
-          locales[fabricator.number.int({ min: 0, max: locales.length - 1 })];
-
-        // Create a faker with the selected locale
-        const localeFaker = new Faker({ locale: selectedLocale });
-        const seedArray = numericSeedArray(fabricator.id);
-        localeFaker.seed(seedArray);
-
-        const city = localeFaker.location.city();
-        const segments = city.split(" ");
-
-        // Find the longest segment, or last segment if tied
-        let longestSegment = segments[0];
-        let maxLength = segments[0].length;
-
-        for (let i = 1; i < segments.length; i++) {
-          if (segments[i].length >= maxLength) {
-            longestSegment = segments[i];
-            maxLength = segments[i].length;
-          }
-        }
-
-        return longestSegment;
-      },
-    });
-  }
-
-  /**
-   * Generates an array of city names from en, es, fr, it locales
-   * @param count - Number of cities to generate (default: 1)
-   * @returns Array of city names
-   */
-  cities(count = 1): string[] {
-    const cityLocales = [en, es, fr, itLocale];
-    const cities: string[] = [];
-
-    for (let i = 0; i < count; i++) {
-      // Pick a random locale
-      const selectedLocale =
-        cityLocales[this.number.int({ min: 0, max: cityLocales.length - 1 })];
-
-      // Create a faker with the selected locale
-      const localeFaker = new Faker({ locale: selectedLocale });
-      const seedArray = numericSeedArray(`${this.id}-city-${i}`);
-      localeFaker.seed(seedArray);
-
-      cities.push(localeFaker.location.city());
-    }
-
-    return cities;
-  }
-
-  /**
-   * Generates an array of export items from faker.food (vegetable, spice, ingredient, or fruit)
-   * @param count - Number of exports to generate (default: 1)
-   * @returns Array of export items
-   */
-  exports(count = 1): string[] {
-    const exportItems: string[] = [];
-    const foodTypes = ["vegetable", "spice", "ingredient", "fruit"] as const;
-
-    for (let i = 0; i < count; i++) {
-      // Create a faker seeded for this export item
-      const exportFaker = new Faker({ locale: en });
-      const seedArray = numericSeedArray(`${this.id}-export-${i}`);
-      exportFaker.seed(seedArray);
-
-      // Pick a random food type
-      const selectedType =
-        foodTypes[
-          exportFaker.number.int({ min: 0, max: foodTypes.length - 1 })
-        ];
-
-      // Generate the food item based on type
-      const foodItem = exportFaker.food[selectedType]();
-      exportItems.push(foodItem);
-    }
-
-    return exportItems;
-  }
-
-  /**
-   * Creates a new WorldFabricator instance with next seed
-   * @returns A new WorldFabricator instance seeded with the next UUID
-   */
-  next(): WorldFabricator {
-    const nextFabricator = super.next();
-    return new WorldFabricator(nextFabricator.id);
-  }
-}
+import { describe, expect, it } from "vitest";
+import { WorldFabricator } from "./WorldFabricator.js";
 
 describe("WorldFabricator", () => {
   it("should generate world names using city segments", () => {
@@ -199,17 +76,20 @@ describe("WorldFabricator", () => {
     expect(world2a.name).toBe(world2b.name);
   });
 
-  it("should generate cities from en, es, fr, it locales", () => {
+  it("should generate cities as CityFabricator instances", () => {
     const world = new WorldFabricator("city-seed");
     const cities = world.cities(12);
 
     // Should generate exactly 12 cities
     expect(cities).toHaveLength(12);
 
-    // All should be non-empty strings
+    // All should be CityFabricator instances with names
     cities.forEach((city) => {
-      expect(typeof city).toBe("string");
-      expect(city.length).toBeGreaterThan(0);
+      expect(city.name).toBeDefined();
+      expect(typeof city.name).toBe("string");
+      expect(city.name.length).toBeGreaterThan(0);
+      expect(city.next).toBeDefined();
+      expect(city.streets).toBeDefined();
     });
 
     // Log cities for visual inspection
@@ -217,7 +97,7 @@ describe("WorldFabricator", () => {
     console.log("Generated Cities:");
     cities.forEach((city, index) => {
       // eslint-disable-next-line no-console
-      console.log(`  City ${index + 1}: ${city}`);
+      console.log(`  City ${index + 1}: ${city.name}`);
     });
   });
 
@@ -228,7 +108,8 @@ describe("WorldFabricator", () => {
     const world2 = new WorldFabricator("city-deterministic");
     const cities2 = world2.cities(5);
 
-    expect(cities1).toEqual(cities2);
+    // Same names for same seeds
+    expect(cities1.map((c) => c.name)).toEqual(cities2.map((c) => c.name));
   });
 
   it("should allow custom city count", () => {
@@ -241,11 +122,23 @@ describe("WorldFabricator", () => {
     expect(cities20).toHaveLength(20);
   });
 
-  it("should default to 1 city when no count provided", () => {
-    const world = new WorldFabricator("default-count");
-    const cities = world.cities();
+  it("should return generator when no count provided", () => {
+    const world = new WorldFabricator("generator-test");
+    const citiesGen = world.cities();
 
-    expect(cities).toHaveLength(1);
+    // Get first 3 cities from generator
+    const cities = [];
+    let i = 0;
+    for (const city of citiesGen) {
+      cities.push(city);
+      if (++i >= 3) break;
+    }
+
+    expect(cities).toHaveLength(3);
+    cities.forEach((city) => {
+      expect(city.name).toBeDefined();
+      expect(typeof city.name).toBe("string");
+    });
   });
 
   it("should generate different cities for different worlds", () => {
@@ -255,25 +148,27 @@ describe("WorldFabricator", () => {
     const cities1 = world1.cities(10);
     const cities2 = world2.cities(10);
 
-    // Different worlds should generate different cities
-    expect(cities1).not.toEqual(cities2);
-
-    // At least some cities should be different
-    const sameCities = cities1.filter((city, index) => city === cities2[index]);
-    expect(sameCities.length).toBeLessThan(10);
+    // Different worlds should generate different city names
+    const names1 = cities1.map((c) => c.name);
+    const names2 = cities2.map((c) => c.name);
+    expect(names1).not.toEqual(names2);
   });
 
-  it("should generate exports from food categories", () => {
+  it("should generate exports as ExportFabricator instances", () => {
     const world = new WorldFabricator("export-seed");
     const worldExports = world.exports(10);
 
     // Should generate exactly 10 exports
     expect(worldExports).toHaveLength(10);
 
-    // All should be non-empty strings
+    // All should be ExportFabricator instances with names and properties
     worldExports.forEach((exportItem) => {
-      expect(typeof exportItem).toBe("string");
-      expect(exportItem.length).toBeGreaterThan(0);
+      expect(exportItem.name).toBeDefined();
+      expect(typeof exportItem.name).toBe("string");
+      expect(exportItem.name.length).toBeGreaterThan(0);
+      expect(exportItem.climate).toBeDefined();
+      expect(exportItem.terrain).toBeDefined();
+      expect(exportItem.adjective).toBeDefined();
     });
 
     // Log exports for visual inspection
@@ -281,7 +176,9 @@ describe("WorldFabricator", () => {
     console.log("Generated Exports:");
     worldExports.forEach((exportItem, index) => {
       // eslint-disable-next-line no-console
-      console.log(`  Export ${index + 1}: ${exportItem}`);
+      console.log(
+        `  Export ${index + 1}: ${exportItem.name} (${exportItem.climate}, ${exportItem.terrain})`,
+      );
     });
   });
 
@@ -292,14 +189,29 @@ describe("WorldFabricator", () => {
     const world2 = new WorldFabricator("export-deterministic");
     const worldExports2 = world2.exports(5);
 
-    expect(worldExports1).toEqual(worldExports2);
+    // Same names for same seeds
+    expect(worldExports1.map((e) => e.name)).toEqual(
+      worldExports2.map((e) => e.name),
+    );
   });
 
-  it("should default to 1 export when no count provided", () => {
-    const world = new WorldFabricator("default-export");
-    const worldExports = world.exports();
+  it("should return generator when no export count provided", () => {
+    const world = new WorldFabricator("export-generator-test");
+    const exportsGen = world.exports();
 
-    expect(worldExports).toHaveLength(1);
+    // Get first 3 exports from generator
+    const worldExports = [];
+    let i = 0;
+    for (const exportItem of exportsGen) {
+      worldExports.push(exportItem);
+      if (++i >= 3) break;
+    }
+
+    expect(worldExports).toHaveLength(3);
+    worldExports.forEach((exportItem) => {
+      expect(exportItem.name).toBeDefined();
+      expect(typeof exportItem.name).toBe("string");
+    });
   });
 
   it("should allow custom export count", () => {
@@ -319,8 +231,10 @@ describe("WorldFabricator", () => {
     const worldExports1 = world1.exports(8);
     const worldExports2 = world2.exports(8);
 
-    // Different worlds should generate different exports
-    expect(worldExports1).not.toEqual(worldExports2);
+    // Different worlds should generate different export names
+    const names1 = worldExports1.map((e) => e.name);
+    const names2 = worldExports2.map((e) => e.name);
+    expect(names1).not.toEqual(names2);
   });
 
   it("should generate consistent results regardless of batch size", () => {
@@ -338,28 +252,36 @@ describe("WorldFabricator", () => {
     const worldExports2 = world2.exports(6);
 
     // Same seed should produce same results regardless of batch size
-    expect(cities1).toEqual(citiesA.slice(0, 6));
-    expect(worldExports1).toEqual(worldExportsA.slice(0, 6));
+    const cityNames1 = cities1.map((c) => c.name);
+    const cityNamesA = citiesA.slice(0, 6).map((c) => c.name);
+    expect(cityNames1).toEqual(cityNamesA);
+
+    const exportNames1 = worldExports1.map((e) => e.name);
+    const exportNamesA = worldExportsA.slice(0, 6).map((e) => e.name);
+    expect(exportNames1).toEqual(exportNamesA);
 
     // Next world should produce different results
-    expect(cities1).not.toEqual(cities2);
-    expect(worldExports1).not.toEqual(worldExports2);
+    const cityNames2 = cities2.map((c) => c.name);
+    expect(cityNames1).not.toEqual(cityNames2);
+
+    const exportNames2 = worldExports2.map((e) => e.name);
+    expect(exportNames1).not.toEqual(exportNames2);
 
     // Log for visual verification
     // eslint-disable-next-line no-console
     console.log("\nBatch Size Consistency Test:");
     // eslint-disable-next-line no-console
-    console.log("cities1 (6):", cities1);
+    console.log("cities1 (6):", cityNames1);
     // eslint-disable-next-line no-console
-    console.log("citiesA (first 6 of 24):", citiesA.slice(0, 6));
+    console.log("citiesA (first 6 of 24):", cityNamesA);
     // eslint-disable-next-line no-console
-    console.log("cities2 (next world, 6):", cities2);
+    console.log("cities2 (next world, 6):", cityNames2);
     // eslint-disable-next-line no-console
-    console.log("exports1 (6):", worldExports1);
+    console.log("exports1 (6):", exportNames1);
     // eslint-disable-next-line no-console
-    console.log("exportsA (first 6 of 12):", worldExportsA.slice(0, 6));
+    console.log("exportsA (first 6 of 12):", exportNamesA);
     // eslint-disable-next-line no-console
-    console.log("exports2 (next world, 6):", worldExports2);
+    console.log("exports2 (next world, 6):", exportNames2);
   });
 
   it("should chain through WorldFabricator instances using next()", () => {
@@ -382,14 +304,22 @@ describe("WorldFabricator", () => {
     const cities2 = world2.cities(3);
     const cities3 = world3.cities(3);
 
-    expect(cities1).not.toEqual(cities2);
-    expect(cities2).not.toEqual(cities3);
+    const cityNames1 = cities1.map((c) => c.name);
+    const cityNames2 = cities2.map((c) => c.name);
+    const cityNames3 = cities3.map((c) => c.name);
+
+    expect(cityNames1).not.toEqual(cityNames2);
+    expect(cityNames2).not.toEqual(cityNames3);
 
     const exports1 = world1.exports(3);
     const exports2 = world2.exports(3);
     const exports3 = world3.exports(3);
 
-    expect(exports1).not.toEqual(exports2);
-    expect(exports2).not.toEqual(exports3);
+    const exportNames1 = exports1.map((e) => e.name);
+    const exportNames2 = exports2.map((e) => e.name);
+    const exportNames3 = exports3.map((e) => e.name);
+
+    expect(exportNames1).not.toEqual(exportNames2);
+    expect(exportNames2).not.toEqual(exportNames3);
   });
 });

@@ -1,7 +1,10 @@
 /* eslint-disable no-redeclare */
 
-// Export Fabricator class and types
+// Export Fabricator classes and types
 export { Fabricator, type FabricatorOptions } from "./Fabricator.js";
+export { CityFabricator } from "./CityFabricator.js";
+export { ExportFabricator } from "./ExportFabricator.js";
+export { WorldFabricator } from "./WorldFabricator.js";
 
 // Re-import Fabricator for the function
 import { Fabricator, type FabricatorOptions } from "./Fabricator.js";
