@@ -1,5 +1,6 @@
 import { en, Faker } from "@faker-js/faker";
 import { v5 as uuidv5 } from "uuid";
+import { ConfigurationError } from "@jaypie/errors";
 import numericSeedArray from "./util/numericSeedArray.js";
 import { random, type RandomFunction } from "./random.js";
 import isUuid from "./util/isUuid.js";
@@ -18,6 +19,12 @@ export interface FabricatorOptions {
     | string
     | ((params: FabricatorNameParams) => string)
     | ((params: FabricatorNameParams) => Promise<string>);
+  seed?: string | number;
+}
+
+export interface PrefabResultsFunctionConfig<T> {
+  generate: (params: FabricatorNameParams) => T;
+  results: T[];
   seed?: string | number;
 }
 
@@ -291,6 +298,57 @@ export class Fabricator {
         lastName,
         fullName,
       };
+    },
+
+    /**
+     * Utility namespace for helper functions
+     */
+    util: {
+      /**
+       * Creates a function that returns predetermined results in sequence,
+       * then falls back to generated values
+       *
+       * @param config - Configuration object
+       * @param config.generate - Function to generate values after results are exhausted
+       * @param config.results - Array of predetermined results to return in order
+       * @param config.seed - Optional seed for the fabricator passed to generate function
+       * @returns A function that returns results sequentially, then generates new values
+       *
+       * @example
+       * const getName = fab.generate.util.prefab({
+       *   results: ["Alice", "Bob"],
+       *   generate: ({ fabricator }) => fabricator.person.firstName(),
+       * });
+       * getName(); // "Alice"
+       * getName(); // "Bob"
+       * getName(); // Generated name
+       */
+      prefab: <T>(config: PrefabResultsFunctionConfig<T>): (() => T) => {
+        // Validate inputs
+        if (!config.generate || typeof config.generate !== "function") {
+          throw new ConfigurationError("generate must be a function");
+        }
+        if (!Array.isArray(config.results)) {
+          throw new ConfigurationError("results must be an array");
+        }
+
+        // Create fabricator for generate function
+        const fabricator =
+          config.seed !== undefined ? new Fabricator(config.seed) : this;
+
+        // Closure state: current index
+        let currentIndex = 0;
+
+        // Return the stateful function
+        return (): T => {
+          if (currentIndex < config.results.length) {
+            // Return predetermined result and increment
+            return config.results[currentIndex++];
+          }
+          // Fall back to generate function
+          return config.generate({ fabricator });
+        };
+      },
     },
   };
 
