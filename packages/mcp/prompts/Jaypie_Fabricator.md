@@ -150,15 +150,3 @@ Use these for consistent probability calculations across your test data.
 2. **Probabilistic Variations**: Use float rolls with CHANCE constants for realistic data variety
 3. **Proxy Access**: All faker modules exposed through getters for ergonomic API
 4. **Seed Flexibility**: Accepts strings, numbers, or UUIDs as seeds
-
-## Usage in @entpayco/fabricator
-
-Your wrapper package should:
-- Extend or compose `Fabricator` from `@jaypie/fabricator`
-- Add domain-specific generators (payments, accounts, transactions, etc.)
-- Follow the same patterns: seeding, probabilistic variations, subfaker for complex objects
-- Maintain the same function signature standards (single param, config object, or optional config)
-
----
-
-Ready to build domain-specific test data generators on this foundation!
