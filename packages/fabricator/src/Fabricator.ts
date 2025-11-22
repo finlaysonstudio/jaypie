@@ -15,10 +15,21 @@ export interface FabricatorNameParams {
 }
 
 export interface FabricatorOptions {
+  generator?: Record<
+    string,
+    | string
+    | ((params: FabricatorNameParams) => string)
+    | ((params: FabricatorNameParams) => Promise<string>)
+  >;
   name?:
     | string
     | ((params: FabricatorNameParams) => string)
-    | ((params: FabricatorNameParams) => Promise<string>);
+    | ((params: FabricatorNameParams) => Promise<string>)
+    | Array<
+        | string
+        | ((params: FabricatorNameParams) => string)
+        | ((params: FabricatorNameParams) => Promise<string>)
+      >;
   seed?: string | number;
 }
 
@@ -32,10 +43,21 @@ export interface PrefabResultsFunctionConfig<T> {
  * Configuration for a child fabricator in the nested structure
  */
 export interface NestedFabricatorConfig {
+  generator?: Record<
+    string,
+    | string
+    | ((params: FabricatorNameParams) => string)
+    | ((params: FabricatorNameParams) => Promise<string>)
+  >;
   name?:
     | string
     | ((params: FabricatorNameParams) => string)
-    | ((params: FabricatorNameParams) => Promise<string>);
+    | ((params: FabricatorNameParams) => Promise<string>)
+    | Array<
+        | string
+        | ((params: FabricatorNameParams) => string)
+        | ((params: FabricatorNameParams) => Promise<string>)
+      >;
   fabricators?: Record<string, NestedFabricatorConfig>;
   seed?: string | number;
 }
@@ -82,7 +104,7 @@ function capitalize(word: string): string {
  * @returns A capitalized two-word name
  */
 function defaultNameGenerator({ fabricator }: FabricatorNameParams): string {
-  const rawWords = fabricator.words();
+  const rawWords = fabricator.generate.words();
   return rawWords
     .split(" ")
     .map((word) => capitalize(word))
@@ -99,13 +121,29 @@ function defaultNameGenerator({ fabricator }: FabricatorNameParams): string {
  */
 export class Fabricator {
   private _faker: Faker;
+  private _generator?: Record<
+    string,
+    | string
+    | ((params: FabricatorNameParams) => string)
+    | ((params: FabricatorNameParams) => Promise<string>)
+  >;
   private _id: string;
   private _name: string;
   private _nameOption?:
     | string
     | ((params: FabricatorNameParams) => string)
-    | ((params: FabricatorNameParams) => Promise<string>);
+    | ((params: FabricatorNameParams) => Promise<string>)
+    | Array<
+        | string
+        | ((params: FabricatorNameParams) => string)
+        | ((params: FabricatorNameParams) => Promise<string>)
+      >;
   private _random: RandomFunction;
+  private _remainingNameArray?: Array<
+    | string
+    | ((params: FabricatorNameParams) => string)
+    | ((params: FabricatorNameParams) => Promise<string>)
+  >;
   private _seedMap: {
     name: string;
     next: string;
@@ -182,33 +220,191 @@ export class Fabricator {
       next: uuidv5("next", this._id),
     };
 
+    // Store the generator option
+    this._generator = opts.generator;
+
     // Store the name option for chaining (store original, not defaulted)
     this._nameOption = opts.name;
 
-    // Use default name generator if no name option provided
-    const nameOption = opts.name ?? defaultNameGenerator;
+    // Process name and determine final name value
+    let resolvedName:
+      | string
+      | ((params: FabricatorNameParams) => string)
+      | ((params: FabricatorNameParams) => Promise<string>)
+      | undefined;
 
-    // Initialize name
-    if (typeof nameOption === "function") {
+    if (Array.isArray(opts.name)) {
+      // Process array of names/functions
+      const nameArray = [...opts.name]; // Create a copy to avoid mutating input
+      let arrayIndex = 0;
+
+      while (arrayIndex < nameArray.length) {
+        const element = nameArray[arrayIndex];
+
+        if (typeof element === "string") {
+          // Use the string as name and store remaining elements
+          resolvedName = element;
+          if (arrayIndex + 1 < nameArray.length) {
+            this._remainingNameArray = nameArray.slice(arrayIndex + 1);
+          }
+          break;
+        } else if (typeof element === "function") {
+          // Call the function
+          const nameFabricator = new Fabricator(this._seedMap.name, {
+            name: "",
+          });
+          const result = element({ fabricator: nameFabricator });
+
+          // Handle both sync and async
+          if (result instanceof Promise) {
+            // For async, we need to await it
+            // Store a placeholder and resolve later
+            this._name = "";
+            result.then((resolvedResult) => {
+              if (resolvedResult) {
+                this._name = resolvedResult;
+              } else {
+                // If falsy, try next element or fallback
+                arrayIndex++;
+                if (arrayIndex < nameArray.length) {
+                  this._remainingNameArray = nameArray.slice(arrayIndex);
+                  // Continue processing would require async, so fall back to generator.name or default
+                  const fallback =
+                    this._generator?.name ?? defaultNameGenerator;
+                  if (typeof fallback === "function") {
+                    const fallbackResult = fallback({
+                      fabricator: nameFabricator,
+                    });
+                    if (fallbackResult instanceof Promise) {
+                      fallbackResult.then((name) => {
+                        this._name = name;
+                      });
+                    } else {
+                      this._name = fallbackResult;
+                    }
+                  } else {
+                    this._name = fallback;
+                  }
+                } else {
+                  // No more elements, use fallback
+                  const fallback =
+                    this._generator?.name ?? defaultNameGenerator;
+                  if (typeof fallback === "function") {
+                    const fallbackResult = fallback({
+                      fabricator: nameFabricator,
+                    });
+                    if (fallbackResult instanceof Promise) {
+                      fallbackResult.then((name) => {
+                        this._name = name;
+                      });
+                    } else {
+                      this._name = fallbackResult;
+                    }
+                  } else {
+                    this._name = fallback;
+                  }
+                }
+              }
+            });
+            return; // Exit constructor early for async
+          } else if (result) {
+            // If truthy, use it
+            resolvedName = result;
+            if (arrayIndex + 1 < nameArray.length) {
+              this._remainingNameArray = nameArray.slice(arrayIndex + 1);
+            }
+            break;
+          } else {
+            // If falsy, try next element
+            arrayIndex++;
+          }
+        } else {
+          // Skip invalid elements
+          arrayIndex++;
+        }
+      }
+
+      // If we went through all elements without finding a name, use fallback
+      if (!resolvedName) {
+        resolvedName = this._generator?.name ?? defaultNameGenerator;
+      }
+    } else {
+      // Not an array, use the provided name or fallback
+      resolvedName = opts.name;
+    }
+
+    // Now resolve the final name value
+    // If resolvedName is still undefined, use generator.name or default
+    if (resolvedName === undefined) {
+      resolvedName = this._generator?.name ?? defaultNameGenerator;
+    }
+
+    // Initialize name from resolvedName
+    if (typeof resolvedName === "function") {
       // Create a fabricator instance for the name function
-      // Pass a dummy name to prevent infinite recursion
       const nameFabricator = new Fabricator(this._seedMap.name, {
         name: "",
       });
-      const result = nameOption({ fabricator: nameFabricator });
+      const result = resolvedName({ fabricator: nameFabricator });
       // Handle both sync and async functions
       if (result instanceof Promise) {
         // For promises, we need to handle this in an async manner
-        // We'll store a placeholder and set it later
         this._name = "";
-        result.then((resolvedName) => {
-          this._name = resolvedName;
+        result.then((resolvedNameValue) => {
+          // If the function returns undefined or empty, use generator.name or default
+          if (
+            (resolvedNameValue === undefined || resolvedNameValue === "") &&
+            this._generator?.name
+          ) {
+            const fallback = this._generator.name;
+            if (typeof fallback === "function") {
+              const fallbackResult = fallback({ fabricator: nameFabricator });
+              if (fallbackResult instanceof Promise) {
+                fallbackResult.then((name) => {
+                  this._name = name;
+                });
+              } else {
+                this._name = fallbackResult;
+              }
+            } else {
+              this._name = fallback;
+            }
+          } else if (resolvedNameValue === undefined || resolvedNameValue === "") {
+            // No generator.name, use default
+            this._name = defaultNameGenerator({ fabricator: nameFabricator });
+          } else {
+            this._name = resolvedNameValue;
+          }
         });
       } else {
-        this._name = result;
+        // Sync function - check if result is undefined or empty
+        if (
+          (result === undefined || result === "") &&
+          this._generator?.name
+        ) {
+          const fallback = this._generator.name;
+          if (typeof fallback === "function") {
+            const fallbackResult = fallback({ fabricator: nameFabricator });
+            if (fallbackResult instanceof Promise) {
+              this._name = "";
+              fallbackResult.then((name) => {
+                this._name = name;
+              });
+            } else {
+              this._name = fallbackResult;
+            }
+          } else {
+            this._name = fallback;
+          }
+        } else if (result === undefined || result === "") {
+          // No generator.name, use default
+          this._name = defaultNameGenerator({ fabricator: nameFabricator });
+        } else {
+          this._name = result;
+        }
       }
     } else {
-      this._name = nameOption;
+      this._name = resolvedName;
     }
   }
 
@@ -245,8 +441,9 @@ export class Fabricator {
   ): NestedFabricator<Config> {
     // Create base fabricator
     const baseFabricator = new Fabricator({
-      seed: config.seed,
+      generator: config.generator,
       name: config.name,
+      seed: config.seed,
     });
 
     // Store the config for use in next()
@@ -332,10 +529,23 @@ export class Fabricator {
     }
 
     // Otherwise, use standard constructor
-    if (this._nameOption !== undefined) {
-      return new Fabricator(this._seedMap.next, { name: this._nameOption });
+    const options: FabricatorOptions = {
+      seed: this._seedMap.next,
+    };
+
+    // Pass generator if present
+    if (this._generator !== undefined) {
+      options.generator = this._generator;
     }
-    return new Fabricator(this._seedMap.next);
+
+    // If we have remaining array elements, use them
+    if (this._remainingNameArray && this._remainingNameArray.length > 0) {
+      options.name = this._remainingNameArray;
+    } else if (this._nameOption !== undefined) {
+      options.name = this._nameOption;
+    }
+
+    return new Fabricator(options);
   }
 
   /**
@@ -344,28 +554,27 @@ export class Fabricator {
   random: RandomFunction = (options?) => this._random(options);
 
   /**
-   * Generates a random word combination using one of three patterns:
-   * - adjective noun
-   * - adjective verb
-   * - noun verb
-   * @returns A string with two words following one of the patterns
-   */
-  words(): string {
-    const patterns = [
-      () => `${this._faker.word.adjective()} ${this._faker.word.noun()}`, // adjective noun
-      () => `${this._faker.word.adjective()} ${this._faker.word.verb()}`, // adjective verb
-      () => `${this._faker.word.noun()} ${this._faker.word.verb()}`, // noun verb
-    ];
-
-    const selectedPattern =
-      patterns[this._faker.number.int({ min: 0, max: patterns.length - 1 })];
-    return selectedPattern();
-  }
-
-  /**
    * Generate namespace for complex data generation methods
    */
   generate = {
+    /**
+     * Generates a random word combination using one of three patterns:
+     * - adjective noun
+     * - adjective verb
+     * - noun verb
+     * @returns A string with two words following one of the patterns
+     */
+    words: (): string => {
+      const patterns = [
+        () => `${this._faker.word.adjective()} ${this._faker.word.noun()}`, // adjective noun
+        () => `${this._faker.word.adjective()} ${this._faker.word.verb()}`, // adjective verb
+        () => `${this._faker.word.noun()} ${this._faker.word.verb()}`, // noun verb
+      ];
+
+      const selectedPattern =
+        patterns[this._faker.number.int({ min: 0, max: patterns.length - 1 })];
+      return selectedPattern();
+    },
     /**
      * Generates a person with firstName, middleName, lastName, and fullName
      * Uses probabilistic logic for variations:

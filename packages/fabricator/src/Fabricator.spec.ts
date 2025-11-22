@@ -705,7 +705,7 @@ describe("Fabricator", () => {
   describe("words", () => {
     it("should return a string with two words", () => {
       const fabricator = new Fabricator();
-      const result = fabricator.words();
+      const result = fabricator.generate.words();
 
       expect(typeof result).toBe("string");
       const words = result.split(" ");
@@ -716,8 +716,8 @@ describe("Fabricator", () => {
       const fabricator1 = new Fabricator("words-seed");
       const fabricator2 = new Fabricator("words-seed");
 
-      const result1 = fabricator1.words();
-      const result2 = fabricator2.words();
+      const result1 = fabricator1.generate.words();
+      const result2 = fabricator2.generate.words();
 
       expect(result1).toBe(result2);
     });
@@ -726,8 +726,8 @@ describe("Fabricator", () => {
       const fabricator1 = new Fabricator("seed1");
       const fabricator2 = new Fabricator("seed2");
 
-      const result1 = fabricator1.words();
-      const result2 = fabricator2.words();
+      const result1 = fabricator1.generate.words();
+      const result2 = fabricator2.generate.words();
 
       expect(result1).not.toBe(result2);
     });
@@ -736,7 +736,9 @@ describe("Fabricator", () => {
       const fabricator = new Fabricator(123);
 
       // Generate multiple combinations to test all patterns
-      const results = Array.from({ length: 20 }, () => fabricator.words());
+      const results = Array.from({ length: 20 }, () =>
+        fabricator.generate.words(),
+      );
 
       results.forEach((result) => {
         expect(typeof result).toBe("string");
@@ -751,7 +753,9 @@ describe("Fabricator", () => {
       const fabricator = new Fabricator(42);
 
       // Generate many results to ensure we're using the patterns
-      const results = Array.from({ length: 30 }, () => fabricator.words());
+      const results = Array.from({ length: 30 }, () =>
+        fabricator.generate.words(),
+      );
 
       // All results should be strings with exactly 2 words
       results.forEach((result) => {
@@ -1148,7 +1152,7 @@ describe("Fabricator", () => {
       it("should work as name generator per user example", () => {
         const fabricator = new Fabricator();
         const name = fabricator.generate.util.prefab({
-          generate: ({ fabricator }) => fabricator.words(),
+          generate: ({ fabricator }) => fabricator.generate.words(),
           results: ["Diesel", "Luna"],
         });
 
