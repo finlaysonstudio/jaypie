@@ -227,13 +227,4 @@ export class WorldFabricator extends Fabricator {
     }
     return exportFabricators;
   }
-
-  /**
-   * Creates a new WorldFabricator instance with next seed
-   * @returns A new WorldFabricator instance seeded with the next UUID
-   */
-  next(): WorldFabricator {
-    const nextFabricator = super.next();
-    return new WorldFabricator(nextFabricator.id);
-  }
 }

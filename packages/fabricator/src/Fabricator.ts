@@ -24,12 +24,7 @@ export interface FabricatorOptions {
   name?:
     | string
     | ((params: FabricatorNameParams) => string)
-    | ((params: FabricatorNameParams) => Promise<string>)
-    | Array<
-        | string
-        | ((params: FabricatorNameParams) => string)
-        | ((params: FabricatorNameParams) => Promise<string>)
-      >;
+    | ((params: FabricatorNameParams) => Promise<string>);
   seed?: string | number;
 }
 
@@ -52,12 +47,7 @@ export interface NestedFabricatorConfig {
   name?:
     | string
     | ((params: FabricatorNameParams) => string)
-    | ((params: FabricatorNameParams) => Promise<string>)
-    | Array<
-        | string
-        | ((params: FabricatorNameParams) => string)
-        | ((params: FabricatorNameParams) => Promise<string>)
-      >;
+    | ((params: FabricatorNameParams) => Promise<string>);
   fabricators?: Record<string, NestedFabricatorConfig>;
   seed?: string | number;
 }
@@ -129,26 +119,7 @@ export class Fabricator {
   >;
   private _id: string;
   private _name: string;
-  private _nameOption?:
-    | string
-    | ((params: FabricatorNameParams) => string)
-    | ((params: FabricatorNameParams) => Promise<string>)
-    | Array<
-        | string
-        | ((params: FabricatorNameParams) => string)
-        | ((params: FabricatorNameParams) => Promise<string>)
-      >;
   private _random: RandomFunction;
-  private _remainingNameArray?: Array<
-    | string
-    | ((params: FabricatorNameParams) => string)
-    | ((params: FabricatorNameParams) => Promise<string>)
-  >;
-  private _seedMap: {
-    name: string;
-    next: string;
-  };
-  private _nestedConfig?: NestedFabricatorConfig;
 
   /**
    * Creates a new Fabricator instance
@@ -214,135 +185,22 @@ export class Fabricator {
       this._id = this._faker.string.uuid();
     }
 
-    // Initialize seedMap with uuidv5 based on _id
-    this._seedMap = {
-      name: uuidv5("name", this._id),
-      next: uuidv5("next", this._id),
-    };
-
     // Store the generator option
     this._generator = opts.generator;
 
-    // Store the name option for chaining (store original, not defaulted)
-    this._nameOption = opts.name;
-
-    // Process name and determine final name value
-    let resolvedName:
-      | string
-      | ((params: FabricatorNameParams) => string)
-      | ((params: FabricatorNameParams) => Promise<string>)
-      | undefined;
-
-    if (Array.isArray(opts.name)) {
-      // Process array of names/functions
-      const nameArray = [...opts.name]; // Create a copy to avoid mutating input
-      let arrayIndex = 0;
-
-      while (arrayIndex < nameArray.length) {
-        const element = nameArray[arrayIndex];
-
-        if (typeof element === "string") {
-          // Use the string as name and store remaining elements
-          resolvedName = element;
-          if (arrayIndex + 1 < nameArray.length) {
-            this._remainingNameArray = nameArray.slice(arrayIndex + 1);
-          }
-          break;
-        } else if (typeof element === "function") {
-          // Call the function
-          const nameFabricator = new Fabricator(this._seedMap.name, {
-            name: "",
-          });
-          const result = element({ fabricator: nameFabricator });
-
-          // Handle both sync and async
-          if (result instanceof Promise) {
-            // For async, we need to await it
-            // Store a placeholder and resolve later
-            this._name = "";
-            result.then((resolvedResult) => {
-              if (resolvedResult) {
-                this._name = resolvedResult;
-              } else {
-                // If falsy, try next element or fallback
-                arrayIndex++;
-                if (arrayIndex < nameArray.length) {
-                  this._remainingNameArray = nameArray.slice(arrayIndex);
-                  // Continue processing would require async, so fall back to generator.name or default
-                  const fallback =
-                    this._generator?.name ?? defaultNameGenerator;
-                  if (typeof fallback === "function") {
-                    const fallbackResult = fallback({
-                      fabricator: nameFabricator,
-                    });
-                    if (fallbackResult instanceof Promise) {
-                      fallbackResult.then((name) => {
-                        this._name = name;
-                      });
-                    } else {
-                      this._name = fallbackResult;
-                    }
-                  } else {
-                    this._name = fallback;
-                  }
-                } else {
-                  // No more elements, use fallback
-                  const fallback =
-                    this._generator?.name ?? defaultNameGenerator;
-                  if (typeof fallback === "function") {
-                    const fallbackResult = fallback({
-                      fabricator: nameFabricator,
-                    });
-                    if (fallbackResult instanceof Promise) {
-                      fallbackResult.then((name) => {
-                        this._name = name;
-                      });
-                    } else {
-                      this._name = fallbackResult;
-                    }
-                  } else {
-                    this._name = fallback;
-                  }
-                }
-              }
-            });
-            return; // Exit constructor early for async
-          } else if (result) {
-            // If truthy, use it
-            resolvedName = result;
-            if (arrayIndex + 1 < nameArray.length) {
-              this._remainingNameArray = nameArray.slice(arrayIndex + 1);
-            }
-            break;
-          } else {
-            // If falsy, try next element
-            arrayIndex++;
-          }
-        } else {
-          // Skip invalid elements
-          arrayIndex++;
-        }
-      }
-
-      // If we went through all elements without finding a name, use fallback
-      if (!resolvedName) {
-        resolvedName = this._generator?.name ?? defaultNameGenerator;
-      }
-    } else {
-      // Not an array, use the provided name or fallback
-      resolvedName = opts.name;
-    }
-
-    // Now resolve the final name value
-    // If resolvedName is still undefined, use generator.name or default
-    if (resolvedName === undefined) {
-      resolvedName = this._generator?.name ?? defaultNameGenerator;
-    }
+    // Determine final name value
+    // If name is undefined, use generator.name or default
+    const resolvedName =
+      opts.name === undefined
+        ? (this._generator?.name ?? defaultNameGenerator)
+        : opts.name;
 
     // Initialize name from resolvedName
     if (typeof resolvedName === "function") {
       // Create a fabricator instance for the name function
-      const nameFabricator = new Fabricator(this._seedMap.name, {
+      // Use a deterministic seed based on the fabricator id
+      const nameSeed = uuidv5("name", this._id);
+      const nameFabricator = new Fabricator(nameSeed, {
         name: "",
       });
       const result = resolvedName({ fabricator: nameFabricator });
@@ -369,7 +227,10 @@ export class Fabricator {
             } else {
               this._name = fallback;
             }
-          } else if (resolvedNameValue === undefined || resolvedNameValue === "") {
+          } else if (
+            resolvedNameValue === undefined ||
+            resolvedNameValue === ""
+          ) {
             // No generator.name, use default
             this._name = defaultNameGenerator({ fabricator: nameFabricator });
           } else {
@@ -378,10 +239,7 @@ export class Fabricator {
         });
       } else {
         // Sync function - check if result is undefined or empty
-        if (
-          (result === undefined || result === "") &&
-          this._generator?.name
-        ) {
+        if ((result === undefined || result === "") && this._generator?.name) {
           const fallback = this._generator.name;
           if (typeof fallback === "function") {
             const fallbackResult = fallback({ fabricator: nameFabricator });
@@ -445,9 +303,6 @@ export class Fabricator {
       name: config.name,
       seed: config.seed,
     });
-
-    // Store the config for use in next()
-    baseFabricator._nestedConfig = config;
 
     // If no nested fabricators, return base
     if (!config.fabricators) {
@@ -513,39 +368,6 @@ export class Fabricator {
    */
   get name(): string {
     return this._name;
-  }
-
-  /**
-   * Creates a new Fabricator instance with next seed from _seedMap
-   * @returns A new Fabricator instance seeded with the next UUID, chaining the name option and nested config if present
-   */
-  next(): Fabricator {
-    // If this was created with Fabricator.new(), recreate with nested config
-    if (this._nestedConfig) {
-      return Fabricator.new({
-        ...this._nestedConfig,
-        seed: this._seedMap.next,
-      });
-    }
-
-    // Otherwise, use standard constructor
-    const options: FabricatorOptions = {
-      seed: this._seedMap.next,
-    };
-
-    // Pass generator if present
-    if (this._generator !== undefined) {
-      options.generator = this._generator;
-    }
-
-    // If we have remaining array elements, use them
-    if (this._remainingNameArray && this._remainingNameArray.length > 0) {
-      options.name = this._remainingNameArray;
-    } else if (this._nameOption !== undefined) {
-      options.name = this._nameOption;
-    }
-
-    return new Fabricator(options);
   }
 
   /**
