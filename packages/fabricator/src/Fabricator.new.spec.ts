@@ -153,27 +153,6 @@ describe("Fabricator.new()", () => {
       expect(cities1.map((c) => c.name)).toEqual(cities2.map((c) => c.name));
     });
 
-    it("should chain through nested fabricators using next()", () => {
-      const fab1 = Fabricator.new({
-        seed: "chain-seed",
-        name: "World",
-        fabricators: {
-          cities: {
-            name: () => "City",
-          },
-        },
-      });
-
-      const fab2 = fab1.next();
-
-      expect(fab2).toBeInstanceOf(Fabricator);
-      expect(typeof fab2.cities).toBe("function");
-      expect(fab1.id).not.toBe(fab2.id);
-
-      const cities2 = fab2.cities(2);
-      expect(cities2).toHaveLength(2);
-    });
-
     it("should maintain type safety with nested config", () => {
       const config = {
         name: () => "World",

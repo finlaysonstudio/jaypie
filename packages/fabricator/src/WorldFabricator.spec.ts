@@ -18,64 +18,6 @@ describe("WorldFabricator", () => {
     expect(world1.name).toBe(world2.name);
   });
 
-  it("should chain through first 12 world names using next()", () => {
-    const world1 = new WorldFabricator("world-seed");
-    const world2 = world1.next();
-    const world3 = world2.next();
-    const world4 = world3.next();
-    const world5 = world4.next();
-    const world6 = world5.next();
-    const world7 = world6.next();
-    const world8 = world7.next();
-    const world9 = world8.next();
-    const world10 = world9.next();
-    const world11 = world10.next();
-    const world12 = world11.next();
-
-    const worldNames = [
-      world1.name,
-      world2.name,
-      world3.name,
-      world4.name,
-      world5.name,
-      world6.name,
-      world7.name,
-      world8.name,
-      world9.name,
-      world10.name,
-      world11.name,
-      world12.name,
-    ];
-
-    // All should be strings
-    worldNames.forEach((name) => {
-      expect(typeof name).toBe("string");
-      expect(name.length).toBeGreaterThan(0);
-    });
-
-    // All should be unique (very likely with different seeds)
-    const uniqueNames = new Set(worldNames);
-    expect(uniqueNames.size).toBeGreaterThan(1);
-
-    // Log the world names for visual inspection
-    // eslint-disable-next-line no-console
-    console.log("First 12 World Names:");
-    worldNames.forEach((name, index) => {
-      // eslint-disable-next-line no-console
-      console.log(`  World ${index + 1}: ${name}`);
-    });
-  });
-
-  it("should be deterministic when chained", () => {
-    const world1a = new WorldFabricator("chain-seed");
-    const world2a = world1a.next();
-
-    const world1b = new WorldFabricator("chain-seed");
-    const world2b = world1b.next();
-
-    expect(world1a.name).toBe(world1b.name);
-    expect(world2a.name).toBe(world2b.name);
-  });
 
   it("should generate cities as Fabricator instances", () => {
     const world = new WorldFabricator("city-seed");
@@ -89,7 +31,6 @@ describe("WorldFabricator", () => {
       expect(city.name).toBeDefined();
       expect(typeof city.name).toBe("string");
       expect(city.name.length).toBeGreaterThan(0);
-      expect(city.next).toBeDefined();
     });
 
     // Log cities for visual inspection
@@ -235,16 +176,12 @@ describe("WorldFabricator", () => {
   it("should generate consistent results regardless of batch size", () => {
     const world1 = new WorldFabricator("same-seed");
     const worldA = new WorldFabricator("same-seed");
-    const world2 = world1.next();
 
     const cities1 = world1.cities(6);
     const worldExports1 = world1.exports(6);
 
     const worldExportsA = worldA.exports(12);
     const citiesA = worldA.cities(24);
-
-    const cities2 = world2.cities(6);
-    const worldExports2 = world2.exports(6);
 
     // Same seed should produce same results regardless of batch size
     const cityNames1 = cities1.map((c) => c.name);
@@ -255,13 +192,6 @@ describe("WorldFabricator", () => {
     const exportNamesA = worldExportsA.slice(0, 6).map((e) => e.name);
     expect(exportNames1).toEqual(exportNamesA);
 
-    // Next world should produce different results
-    const cityNames2 = cities2.map((c) => c.name);
-    expect(cityNames1).not.toEqual(cityNames2);
-
-    const exportNames2 = worldExports2.map((e) => e.name);
-    expect(exportNames1).not.toEqual(exportNames2);
-
     // Log for visual verification
     // eslint-disable-next-line no-console
     console.log("\nBatch Size Consistency Test:");
@@ -270,52 +200,9 @@ describe("WorldFabricator", () => {
     // eslint-disable-next-line no-console
     console.log("citiesA (first 6 of 24):", cityNamesA);
     // eslint-disable-next-line no-console
-    console.log("cities2 (next world, 6):", cityNames2);
-    // eslint-disable-next-line no-console
     console.log("exports1 (6):", exportNames1);
     // eslint-disable-next-line no-console
     console.log("exportsA (first 6 of 12):", exportNamesA);
-    // eslint-disable-next-line no-console
-    console.log("exports2 (next world, 6):", exportNames2);
-  });
-
-  it("should chain through WorldFabricator instances using next()", () => {
-    const world1 = new WorldFabricator("chain-test");
-    const world2 = world1.next();
-    const world3 = world2.next();
-
-    // All should be WorldFabricator instances with cities and exports methods
-    expect(world2.cities).toBeDefined();
-    expect(world2.exports).toBeDefined();
-    expect(world3.cities).toBeDefined();
-    expect(world3.exports).toBeDefined();
-
-    // Should have different IDs (deterministic seeds)
-    expect(world1.id).not.toBe(world2.id);
-    expect(world2.id).not.toBe(world3.id);
-
-    // Should generate different cities and exports
-    const cities1 = world1.cities(3);
-    const cities2 = world2.cities(3);
-    const cities3 = world3.cities(3);
-
-    const cityNames1 = cities1.map((c) => c.name);
-    const cityNames2 = cities2.map((c) => c.name);
-    const cityNames3 = cities3.map((c) => c.name);
-
-    expect(cityNames1).not.toEqual(cityNames2);
-    expect(cityNames2).not.toEqual(cityNames3);
-
-    const exports1 = world1.exports(3);
-    const exports2 = world2.exports(3);
-    const exports3 = world3.exports(3);
-
-    const exportNames1 = exports1.map((e) => e.name);
-    const exportNames2 = exports2.map((e) => e.name);
-    const exportNames3 = exports3.map((e) => e.name);
-
-    expect(exportNames1).not.toEqual(exportNames2);
-    expect(exportNames2).not.toEqual(exportNames3);
   });
 
   describe("WorldFabricator.create() - Config-based approach", () => {
@@ -345,28 +232,6 @@ describe("WorldFabricator", () => {
       const exports2 = world2.exports(5);
 
       expect(exports1.map((e) => e.name)).toEqual(exports2.map((e) => e.name));
-    });
-
-    it("should chain through worlds using next()", () => {
-      const world1 = WorldFabricator.create("chain-seed");
-      const world2 = world1.next();
-      const world3 = world2.next();
-
-      expect(world1.id).not.toBe(world2.id);
-      expect(world2.id).not.toBe(world3.id);
-
-      // All should have cities and exports methods
-      expect(typeof world2.cities).toBe("function");
-      expect(typeof world2.exports).toBe("function");
-      expect(typeof world3.cities).toBe("function");
-      expect(typeof world3.exports).toBe("function");
-
-      const cities1 = world1.cities(3);
-      const cities2 = world2.cities(3);
-
-      expect(cities1.map((c) => c.name)).not.toEqual(
-        cities2.map((c) => c.name),
-      );
     });
 
     it("should generate cities as fabricators with proper names", () => {

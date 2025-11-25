@@ -15,6 +15,12 @@ export interface FabricatorNameParams {
 }
 
 export interface FabricatorOptions {
+  generator?: Record<
+    string,
+    | string
+    | ((params: FabricatorNameParams) => string)
+    | ((params: FabricatorNameParams) => Promise<string>)
+  >;
   name?:
     | string
     | ((params: FabricatorNameParams) => string)
@@ -22,16 +28,16 @@ export interface FabricatorOptions {
   seed?: string | number;
 }
 
-export interface PrefabResultsFunctionConfig<T> {
-  generate: (params: FabricatorNameParams) => T;
-  results: T[];
-  seed?: string | number;
-}
-
 /**
  * Configuration for a child fabricator in the nested structure
  */
 export interface NestedFabricatorConfig {
+  generator?: Record<
+    string,
+    | string
+    | ((params: FabricatorNameParams) => string)
+    | ((params: FabricatorNameParams) => Promise<string>)
+  >;
   name?:
     | string
     | ((params: FabricatorNameParams) => string)
@@ -82,7 +88,7 @@ function capitalize(word: string): string {
  * @returns A capitalized two-word name
  */
 function defaultNameGenerator({ fabricator }: FabricatorNameParams): string {
-  const rawWords = fabricator.words();
+  const rawWords = fabricator.generate.words();
   return rawWords
     .split(" ")
     .map((word) => capitalize(word))
@@ -99,18 +105,15 @@ function defaultNameGenerator({ fabricator }: FabricatorNameParams): string {
  */
 export class Fabricator {
   private _faker: Faker;
-  private _id: string;
-  private _name: string;
-  private _nameOption?:
+  private _generator?: Record<
+    string,
     | string
     | ((params: FabricatorNameParams) => string)
-    | ((params: FabricatorNameParams) => Promise<string>);
+    | ((params: FabricatorNameParams) => Promise<string>)
+  >;
+  private _id: string;
+  private _name: string;
   private _random: RandomFunction;
-  private _seedMap: {
-    name: string;
-    next: string;
-  };
-  private _nestedConfig?: NestedFabricatorConfig;
 
   /**
    * Creates a new Fabricator instance
@@ -176,39 +179,84 @@ export class Fabricator {
       this._id = this._faker.string.uuid();
     }
 
-    // Initialize seedMap with uuidv5 based on _id
-    this._seedMap = {
-      name: uuidv5("name", this._id),
-      next: uuidv5("next", this._id),
-    };
+    // Store the generator option
+    this._generator = opts.generator;
 
-    // Store the name option for chaining (store original, not defaulted)
-    this._nameOption = opts.name;
+    // Determine final name value
+    // If name is undefined, use generator.name or default
+    const resolvedName =
+      opts.name === undefined
+        ? (this._generator?.name ?? defaultNameGenerator)
+        : opts.name;
 
-    // Use default name generator if no name option provided
-    const nameOption = opts.name ?? defaultNameGenerator;
-
-    // Initialize name
-    if (typeof nameOption === "function") {
+    // Initialize name from resolvedName
+    if (typeof resolvedName === "function") {
       // Create a fabricator instance for the name function
-      // Pass a dummy name to prevent infinite recursion
-      const nameFabricator = new Fabricator(this._seedMap.name, {
+      // Use a deterministic seed based on the fabricator id
+      const nameSeed = uuidv5("name", this._id);
+      const nameFabricator = new Fabricator(nameSeed, {
         name: "",
       });
-      const result = nameOption({ fabricator: nameFabricator });
+      const result = resolvedName({ fabricator: nameFabricator });
       // Handle both sync and async functions
       if (result instanceof Promise) {
         // For promises, we need to handle this in an async manner
-        // We'll store a placeholder and set it later
         this._name = "";
-        result.then((resolvedName) => {
-          this._name = resolvedName;
+        result.then((resolvedNameValue) => {
+          // If the function returns undefined or empty, use generator.name or default
+          if (
+            (resolvedNameValue === undefined || resolvedNameValue === "") &&
+            this._generator?.name
+          ) {
+            const fallback = this._generator.name;
+            if (typeof fallback === "function") {
+              const fallbackResult = fallback({ fabricator: nameFabricator });
+              if (fallbackResult instanceof Promise) {
+                fallbackResult.then((name) => {
+                  this._name = name;
+                });
+              } else {
+                this._name = fallbackResult;
+              }
+            } else {
+              this._name = fallback;
+            }
+          } else if (
+            resolvedNameValue === undefined ||
+            resolvedNameValue === ""
+          ) {
+            // No generator.name, use default
+            this._name = defaultNameGenerator({ fabricator: nameFabricator });
+          } else {
+            this._name = resolvedNameValue;
+          }
         });
       } else {
-        this._name = result;
+        // Sync function - check if result is undefined or empty
+        if ((result === undefined || result === "") && this._generator?.name) {
+          const fallback = this._generator.name;
+          if (typeof fallback === "function") {
+            const fallbackResult = fallback({ fabricator: nameFabricator });
+            if (fallbackResult instanceof Promise) {
+              this._name = "";
+              fallbackResult.then((name) => {
+                this._name = name;
+              });
+            } else {
+              this._name = fallbackResult;
+            }
+          } else {
+            this._name = fallback;
+          }
+        } else if (result === undefined || result === "") {
+          // No generator.name, use default
+          this._name = defaultNameGenerator({ fabricator: nameFabricator });
+        } else {
+          this._name = result;
+        }
       }
     } else {
-      this._name = nameOption;
+      this._name = resolvedName;
     }
   }
 
@@ -245,12 +293,10 @@ export class Fabricator {
   ): NestedFabricator<Config> {
     // Create base fabricator
     const baseFabricator = new Fabricator({
-      seed: config.seed,
+      generator: config.generator,
       name: config.name,
+      seed: config.seed,
     });
-
-    // Store the config for use in next()
-    baseFabricator._nestedConfig = config;
 
     // If no nested fabricators, return base
     if (!config.fabricators) {
@@ -319,53 +365,32 @@ export class Fabricator {
   }
 
   /**
-   * Creates a new Fabricator instance with next seed from _seedMap
-   * @returns A new Fabricator instance seeded with the next UUID, chaining the name option and nested config if present
-   */
-  next(): Fabricator {
-    // If this was created with Fabricator.new(), recreate with nested config
-    if (this._nestedConfig) {
-      return Fabricator.new({
-        ...this._nestedConfig,
-        seed: this._seedMap.next,
-      });
-    }
-
-    // Otherwise, use standard constructor
-    if (this._nameOption !== undefined) {
-      return new Fabricator(this._seedMap.next, { name: this._nameOption });
-    }
-    return new Fabricator(this._seedMap.next);
-  }
-
-  /**
    * Gets the internal random function
    */
   random: RandomFunction = (options?) => this._random(options);
 
   /**
-   * Generates a random word combination using one of three patterns:
-   * - adjective noun
-   * - adjective verb
-   * - noun verb
-   * @returns A string with two words following one of the patterns
-   */
-  words(): string {
-    const patterns = [
-      () => `${this._faker.word.adjective()} ${this._faker.word.noun()}`, // adjective noun
-      () => `${this._faker.word.adjective()} ${this._faker.word.verb()}`, // adjective verb
-      () => `${this._faker.word.noun()} ${this._faker.word.verb()}`, // noun verb
-    ];
-
-    const selectedPattern =
-      patterns[this._faker.number.int({ min: 0, max: patterns.length - 1 })];
-    return selectedPattern();
-  }
-
-  /**
    * Generate namespace for complex data generation methods
    */
   generate = {
+    /**
+     * Generates a random word combination using one of three patterns:
+     * - adjective noun
+     * - adjective verb
+     * - noun verb
+     * @returns A string with two words following one of the patterns
+     */
+    words: (): string => {
+      const patterns = [
+        () => `${this._faker.word.adjective()} ${this._faker.word.noun()}`, // adjective noun
+        () => `${this._faker.word.adjective()} ${this._faker.word.verb()}`, // adjective verb
+        () => `${this._faker.word.noun()} ${this._faker.word.verb()}`, // noun verb
+      ];
+
+      const selectedPattern =
+        patterns[this._faker.number.int({ min: 0, max: patterns.length - 1 })];
+      return selectedPattern();
+    },
     /**
      * Generates a person with firstName, middleName, lastName, and fullName
      * Uses probabilistic logic for variations:
@@ -430,57 +455,6 @@ export class Fabricator {
         lastName,
         fullName,
       };
-    },
-
-    /**
-     * Utility namespace for helper functions
-     */
-    util: {
-      /**
-       * Creates a function that returns predetermined results in sequence,
-       * then falls back to generated values
-       *
-       * @param config - Configuration object
-       * @param config.generate - Function to generate values after results are exhausted
-       * @param config.results - Array of predetermined results to return in order
-       * @param config.seed - Optional seed for the fabricator passed to generate function
-       * @returns A function that returns results sequentially, then generates new values
-       *
-       * @example
-       * const getName = fab.generate.util.prefab({
-       *   results: ["Alice", "Bob"],
-       *   generate: ({ fabricator }) => fabricator.person.firstName(),
-       * });
-       * getName(); // "Alice"
-       * getName(); // "Bob"
-       * getName(); // Generated name
-       */
-      prefab: <T>(config: PrefabResultsFunctionConfig<T>): (() => T) => {
-        // Validate inputs
-        if (!config.generate || typeof config.generate !== "function") {
-          throw new ConfigurationError("generate must be a function");
-        }
-        if (!Array.isArray(config.results)) {
-          throw new ConfigurationError("results must be an array");
-        }
-
-        // Create fabricator for generate function
-        const fabricator =
-          config.seed !== undefined ? new Fabricator(config.seed) : this;
-
-        // Closure state: current index
-        let currentIndex = 0;
-
-        // Return the stateful function
-        return (): T => {
-          if (currentIndex < config.results.length) {
-            // Return predetermined result and increment
-            return config.results[currentIndex++];
-          }
-          // Fall back to generate function
-          return config.generate({ fabricator });
-        };
-      },
     },
   };
 

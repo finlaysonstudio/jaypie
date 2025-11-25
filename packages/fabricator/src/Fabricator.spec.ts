@@ -258,137 +258,6 @@ describe("Fabricator", () => {
     });
   });
 
-  describe("next() method", () => {
-    it("should create a new Fabricator instance", () => {
-      const fab = new Fabricator("test-seed");
-      const nextFab = fab.next();
-      expect(nextFab).toBeInstanceOf(Fabricator);
-      expect(nextFab).not.toBe(fab);
-    });
-
-    it("should create a new fabricator with different id", () => {
-      const fab = new Fabricator("test-seed");
-      const nextFab = fab.next();
-      expect(nextFab.id).not.toBe(fab.id);
-    });
-
-    it("should chain multiple next() calls", () => {
-      const fab1 = new Fabricator("test-seed");
-      const fab2 = fab1.next();
-      const fab3 = fab2.next();
-      const fab4 = fab3.next();
-
-      // Each should have different ids
-      expect(fab1.id).not.toBe(fab2.id);
-      expect(fab2.id).not.toBe(fab3.id);
-      expect(fab3.id).not.toBe(fab4.id);
-
-      // But should be deterministic
-      const fab1Fresh = new Fabricator("test-seed");
-      const fab2Fresh = fab1Fresh.next();
-      expect(fab1.id).toBe(fab1Fresh.id);
-      expect(fab2.id).toBe(fab2Fresh.id);
-    });
-
-    it("should have deterministic faker output", () => {
-      const fab = new Fabricator("test-seed");
-      const nextFab = fab.next();
-
-      // Each instance should have deterministic output based on its id
-      const name1a = fab.faker.person.firstName();
-      const name1b = fab.faker.person.firstName();
-
-      const name2a = nextFab.faker.person.firstName();
-      const name2b = nextFab.faker.person.firstName();
-
-      // Within same instance, should be different (sequential calls)
-      expect(name1a).not.toBe(name1b);
-      expect(name2a).not.toBe(name2b);
-
-      // But when created fresh with same seed, should match first call
-      const fab1Fresh = new Fabricator("test-seed");
-      const nextFabFresh = fab1Fresh.next();
-      expect(fab1Fresh.faker.person.firstName()).toBe(name1a);
-      expect(nextFabFresh.faker.person.firstName()).toBe(name2a);
-    });
-
-    it("should create different sequences from different seeds", () => {
-      const fabA = new Fabricator("seed-a");
-      const fabB = new Fabricator("seed-b");
-
-      const nextA = fabA.next();
-      const nextB = fabB.next();
-
-      // Different starting seeds produce different chains
-      expect(nextA.id).not.toBe(nextB.id);
-    });
-
-    it("should work without explicit seed", () => {
-      delete process.env.PROJECT_SEED;
-
-      const fab1 = new Fabricator();
-      const fab2 = fab1.next();
-
-      expect(fab2).toBeInstanceOf(Fabricator);
-      expect(fab2.id).not.toBe(fab1.id);
-    });
-
-    it("should preserve lowercase format", () => {
-      const fab = new Fabricator("550E8400-E29B-41D4-A716-446655440000");
-      const nextFab = fab.next();
-
-      expect(fab.id).toBe("550e8400-e29b-41d4-a716-446655440000");
-      expect(nextFab.id).toMatch(
-        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
-      );
-    });
-
-    it("should chain name function through next() calls", () => {
-      const nameFunc = ({ fabricator }: { fabricator: Fabricator }) => {
-        return fabricator.faker.person.firstName();
-      };
-
-      const fab1 = new Fabricator("test-seed", { name: nameFunc });
-      const fab2 = fab1.next();
-      const fab3 = fab2.next();
-
-      // All should have names from the function
-      expect(typeof fab1.name).toBe("string");
-      expect(typeof fab2.name).toBe("string");
-      expect(typeof fab3.name).toBe("string");
-
-      // Names should be different (different seeds)
-      expect(fab1.name).not.toBe(fab2.name);
-      expect(fab2.name).not.toBe(fab3.name);
-
-      // Should be deterministic
-      const fab1Fresh = new Fabricator("test-seed", { name: nameFunc });
-      const fab2Fresh = fab1Fresh.next();
-      expect(fab1.name).toBe(fab1Fresh.name);
-      expect(fab2.name).toBe(fab2Fresh.name);
-    });
-
-    it("should not chain name if no name option provided", () => {
-      const fab1 = new Fabricator("test-seed");
-      const fab2 = fab1.next();
-
-      // Both should have generated names (from words())
-      expect(typeof fab1.name).toBe("string");
-      expect(typeof fab2.name).toBe("string");
-    });
-
-    it("should chain string name through next() calls", () => {
-      const fab1 = new Fabricator("test-seed", { name: "Static Name" });
-      const fab2 = fab1.next();
-      const fab3 = fab2.next();
-
-      // All should have the same static name
-      expect(fab1.name).toBe("Static Name");
-      expect(fab2.name).toBe("Static Name");
-      expect(fab3.name).toBe("Static Name");
-    });
-  });
-
   describe("PROJECT_SEED environment variable", () => {
     it("should use PROJECT_SEED when no seed provided", () => {
       process.env.PROJECT_SEED = "env-seed";
@@ -705,7 +574,7 @@ describe("Fabricator", () => {
   describe("words", () => {
     it("should return a string with two words", () => {
       const fabricator = new Fabricator();
-      const result = fabricator.words();
+      const result = fabricator.generate.words();
 
       expect(typeof result).toBe("string");
       const words = result.split(" ");
@@ -716,8 +585,8 @@ describe("Fabricator", () => {
       const fabricator1 = new Fabricator("words-seed");
       const fabricator2 = new Fabricator("words-seed");
 
-      const result1 = fabricator1.words();
-      const result2 = fabricator2.words();
+      const result1 = fabricator1.generate.words();
+      const result2 = fabricator2.generate.words();
 
       expect(result1).toBe(result2);
     });
@@ -726,8 +595,8 @@ describe("Fabricator", () => {
       const fabricator1 = new Fabricator("seed1");
       const fabricator2 = new Fabricator("seed2");
 
-      const result1 = fabricator1.words();
-      const result2 = fabricator2.words();
+      const result1 = fabricator1.generate.words();
+      const result2 = fabricator2.generate.words();
 
       expect(result1).not.toBe(result2);
     });
@@ -736,7 +605,9 @@ describe("Fabricator", () => {
       const fabricator = new Fabricator(123);
 
       // Generate multiple combinations to test all patterns
-      const results = Array.from({ length: 20 }, () => fabricator.words());
+      const results = Array.from({ length: 20 }, () =>
+        fabricator.generate.words(),
+      );
 
       results.forEach((result) => {
         expect(typeof result).toBe("string");
@@ -751,7 +622,9 @@ describe("Fabricator", () => {
       const fabricator = new Fabricator(42);
 
       // Generate many results to ensure we're using the patterns
-      const results = Array.from({ length: 30 }, () => fabricator.words());
+      const results = Array.from({ length: 30 }, () =>
+        fabricator.generate.words(),
+      );
 
       // All results should be strings with exactly 2 words
       results.forEach((result) => {
@@ -895,267 +768,6 @@ describe("Fabricator", () => {
       const nameParts = person.fullName.split(" ");
       expect(nameParts.length).toBeGreaterThanOrEqual(2);
       expect(nameParts.length).toBeLessThanOrEqual(3);
-    });
-  });
-
-  describe("generate.util.prefab", () => {
-    describe("Base Cases", () => {
-      it("should return predetermined results in order", () => {
-        const fabricator = new Fabricator();
-        const getResult = fabricator.generate.util.prefab({
-          results: ["first", "second", "third"],
-          generate: ({ fabricator }) => fabricator.lorem.word(),
-        });
-
-        expect(getResult()).toBe("first");
-        expect(getResult()).toBe("second");
-        expect(getResult()).toBe("third");
-      });
-
-      it("should fall back to generate after results exhausted", () => {
-        const fabricator = new Fabricator("test-seed");
-        const getResult = fabricator.generate.util.prefab({
-          results: ["predetermined"],
-          generate: ({ fabricator }) => fabricator.lorem.word(),
-        });
-
-        expect(getResult()).toBe("predetermined");
-        // Next calls should generate
-        const result1 = getResult();
-        const result2 = getResult();
-        expect(typeof result1).toBe("string");
-        expect(typeof result2).toBe("string");
-        expect(result1).not.toBe("predetermined");
-        expect(result2).not.toBe("predetermined");
-      });
-
-      it("should handle empty results array", () => {
-        const fabricator = new Fabricator("test-seed");
-        const getResult = fabricator.generate.util.prefab({
-          results: [],
-          generate: ({ fabricator }) => fabricator.lorem.word(),
-        });
-
-        // Should immediately fall back to generate
-        const result = getResult();
-        expect(typeof result).toBe("string");
-      });
-
-      it("should work with single result", () => {
-        const fabricator = new Fabricator();
-        const getResult = fabricator.generate.util.prefab({
-          results: ["only"],
-          generate: () => "generated",
-        });
-
-        expect(getResult()).toBe("only");
-        expect(getResult()).toBe("generated");
-      });
-    });
-
-    describe("Error Conditions", () => {
-      it("should throw ConfigurationError if generate is not a function", () => {
-        const fabricator = new Fabricator();
-        expect(() => {
-          fabricator.generate.util.prefab({
-            results: ["test"],
-            generate: "not a function" as any,
-          });
-        }).toThrow("generate must be a function");
-      });
-
-      it("should throw ConfigurationError if generate is missing", () => {
-        const fabricator = new Fabricator();
-        expect(() => {
-          fabricator.generate.util.prefab({
-            results: ["test"],
-          } as any);
-        }).toThrow("generate must be a function");
-      });
-
-      it("should throw ConfigurationError if results is not an array", () => {
-        const fabricator = new Fabricator();
-        expect(() => {
-          fabricator.generate.util.prefab({
-            results: "not an array" as any,
-            generate: () => "value",
-          });
-        }).toThrow("results must be an array");
-      });
-    });
-
-    describe("Happy Paths", () => {
-      it("should work with string results", () => {
-        const fabricator = new Fabricator();
-        const getName = fabricator.generate.util.prefab({
-          results: ["Alice", "Bob", "Charlie"],
-          generate: ({ fabricator }) => fabricator.person.firstName(),
-        });
-
-        expect(getName()).toBe("Alice");
-        expect(getName()).toBe("Bob");
-        expect(getName()).toBe("Charlie");
-        expect(typeof getName()).toBe("string");
-      });
-
-      it("should work with number results", () => {
-        const fabricator = new Fabricator();
-        const getNumber = fabricator.generate.util.prefab({
-          results: [1, 2, 3],
-          generate: ({ fabricator }) => fabricator.number.int(),
-        });
-
-        expect(getNumber()).toBe(1);
-        expect(getNumber()).toBe(2);
-        expect(getNumber()).toBe(3);
-        expect(typeof getNumber()).toBe("number");
-      });
-
-      it("should work with object results", () => {
-        const fabricator = new Fabricator();
-        const obj1 = { id: 1, name: "first" };
-        const obj2 = { id: 2, name: "second" };
-
-        const getObject = fabricator.generate.util.prefab({
-          results: [obj1, obj2],
-          generate: () => ({ id: 3, name: "generated" }),
-        });
-
-        expect(getObject()).toBe(obj1);
-        expect(getObject()).toBe(obj2);
-        expect(getObject()).toEqual({ id: 3, name: "generated" });
-      });
-
-      it("should maintain independent state for multiple functions", () => {
-        const fabricator = new Fabricator();
-
-        const getFirst = fabricator.generate.util.prefab({
-          results: ["a", "b"],
-          generate: () => "x",
-        });
-
-        const getSecond = fabricator.generate.util.prefab({
-          results: ["1", "2"],
-          generate: () => "9",
-        });
-
-        expect(getFirst()).toBe("a");
-        expect(getSecond()).toBe("1");
-        expect(getFirst()).toBe("b");
-        expect(getSecond()).toBe("2");
-        expect(getFirst()).toBe("x");
-        expect(getSecond()).toBe("9");
-      });
-    });
-
-    describe("Features", () => {
-      it("should use parent fabricator when no seed provided", () => {
-        const fabricator = new Fabricator("parent-seed");
-        const getValue = fabricator.generate.util.prefab({
-          results: [],
-          generate: ({ fabricator }) => fabricator.person.firstName(),
-        });
-
-        const name1 = getValue();
-        const name2 = getValue();
-
-        // Create new fabricator with same seed to verify determinism
-        const fabricator2 = new Fabricator("parent-seed");
-        const getValue2 = fabricator2.generate.util.prefab({
-          results: [],
-          generate: ({ fabricator }) => fabricator.person.firstName(),
-        });
-
-        expect(getValue2()).toBe(name1);
-        expect(getValue2()).toBe(name2);
-      });
-
-      it("should create isolated fabricator when seed provided", () => {
-        const fabricator = new Fabricator("parent-seed");
-
-        const getValue = fabricator.generate.util.prefab({
-          results: [],
-          generate: ({ fabricator }) => fabricator.person.firstName(),
-          seed: "isolated-seed",
-        });
-
-        const name1 = getValue();
-
-        // Create new prefab with same isolated seed
-        const getValue2 = fabricator.generate.util.prefab({
-          results: [],
-          generate: ({ fabricator }) => fabricator.person.firstName(),
-          seed: "isolated-seed",
-        });
-
-        expect(getValue2()).toBe(name1);
-      });
-
-      it("should generate deterministic values with seed", () => {
-        const fabricator = new Fabricator();
-
-        const getValue1 = fabricator.generate.util.prefab({
-          results: ["fixed"],
-          generate: ({ fabricator }) => fabricator.person.firstName(),
-          seed: "deterministic",
-        });
-
-        const getValue2 = fabricator.generate.util.prefab({
-          results: ["fixed"],
-          generate: ({ fabricator }) => fabricator.person.firstName(),
-          seed: "deterministic",
-        });
-
-        // First calls return predetermined results
-        expect(getValue1()).toBe("fixed");
-        expect(getValue2()).toBe("fixed");
-
-        // Subsequent calls should generate the same values
-        expect(getValue1()).toBe(getValue2());
-      });
-    });
-
-    describe("Specific Scenarios", () => {
-      it("should work with complex generate functions", () => {
-        const fabricator = new Fabricator("test-seed");
-        const getPerson = fabricator.generate.util.prefab({
-          results: [{ name: "Alice", age: 30 }],
-          generate: ({ fabricator }) => ({
-            name: fabricator.person.firstName(),
-            age: fabricator.number.int({ min: 18, max: 80 }),
-          }),
-        });
-
-        expect(getPerson()).toEqual({ name: "Alice", age: 30 });
-        const generated = getPerson();
-        expect(generated).toHaveProperty("name");
-        expect(generated).toHaveProperty("age");
-        expect(typeof generated.name).toBe("string");
-        expect(typeof generated.age).toBe("number");
-      });
-
-      it("should preserve type safety", () => {
-        const fabricator = new Fabricator();
-        const getString = fabricator.generate.util.prefab<string>({
-          results: ["typed"],
-          generate: ({ fabricator }) => fabricator.lorem.word(),
-        });
-
-        const result: string = getString();
-        expect(typeof result).toBe("string");
-      });
-
-      it("should work as name generator per user example", () => {
-        const fabricator = new Fabricator();
-        const name = fabricator.generate.util.prefab({
-          generate: ({ fabricator }) => fabricator.words(),
-          results: ["Diesel", "Luna"],
-        });
-
-        expect(name()).toBe("Diesel");
-        expect(name()).toBe("Luna");
-        expect(typeof name()).toBe("string");
-      });
     });
   });
 });

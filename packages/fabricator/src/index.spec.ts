@@ -140,29 +140,6 @@ describe("fabricator", () => {
 
     expect(fabEnv.id).not.toBe(fabExplicit.id);
   });
-
-  it("should have next() method", () => {
-    const fab = fabricator("test-seed");
-    const nextFab = fab.next();
-    expect(nextFab).toBeInstanceOf(Fabricator);
-    expect(nextFab.id).not.toBe(fab.id);
-  });
-
-  it("should chain next() calls", () => {
-    const fab1 = fabricator("test-seed");
-    const fab2 = fab1.next();
-    const fab3 = fab2.next();
-
-    // Each should be different
-    expect(fab1.id).not.toBe(fab2.id);
-    expect(fab2.id).not.toBe(fab3.id);
-
-    // But deterministic
-    const fab1Fresh = fabricator("test-seed");
-    const fab2Fresh = fab1Fresh.next();
-    expect(fab1.id).toBe(fab1Fresh.id);
-    expect(fab2.id).toBe(fab2Fresh.id);
-  });
 });
 
 describe("random", () => {
