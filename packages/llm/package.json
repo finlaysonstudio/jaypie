@@ -32,6 +32,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.71.0",
+    "@google/genai": "^1.30.0",
     "@jaypie/aws": "^1.1.15",
     "@jaypie/core": "^1.1.2",
     "@jaypie/errors": "^1.1.6",

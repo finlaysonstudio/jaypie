@@ -11,8 +11,9 @@ import {
   LlmOptions,
   LlmOperateResponse,
 } from "./types/LlmProvider.interface.js";
-import { OpenAiProvider } from "./providers/openai/index.js";
 import { AnthropicProvider } from "./providers/anthropic/AnthropicProvider.class.js";
+import { GeminiProvider } from "./providers/gemini/GeminiProvider.class.js";
+import { OpenAiProvider } from "./providers/openai/index.js";
 
 class Llm implements LlmProvider {
   private _provider: LlmProviderName;
@@ -75,15 +76,19 @@ class Llm implements LlmProvider {
     const { apiKey, model } = options;
 
     switch (providerName) {
-      case PROVIDER.OPENAI.NAME:
-        return new OpenAiProvider(model || PROVIDER.OPENAI.MODEL.DEFAULT, {
-          apiKey,
-        });
       case PROVIDER.ANTHROPIC.NAME:
         return new AnthropicProvider(
           model || PROVIDER.ANTHROPIC.MODEL.DEFAULT,
           { apiKey },
         );
+      case PROVIDER.GEMINI.NAME:
+        return new GeminiProvider(model || PROVIDER.GEMINI.MODEL.DEFAULT, {
+          apiKey,
+        });
+      case PROVIDER.OPENAI.NAME:
+        return new OpenAiProvider(model || PROVIDER.OPENAI.MODEL.DEFAULT, {
+          apiKey,
+        });
       default:
         throw new ConfigurationError(`Unsupported provider: ${providerName}`);
     }

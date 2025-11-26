@@ -1,4 +1,30 @@
 export const PROVIDER = {
+  GEMINI: {
+    // https://ai.google.dev/gemini-api/docs/models
+    MODEL: {
+      // Jaypie Aliases
+      DEFAULT: "gemini-2.5-flash" as const,
+      SMALL: "gemini-2.5-flash" as const,
+      LARGE: "gemini-2.5-pro" as const,
+      TINY: "gemini-2.0-flash-lite" as const,
+      // Gemini 2.5 Models
+      GEMINI_2_5_PRO: "gemini-2.5-pro" as const,
+      GEMINI_2_5_FLASH: "gemini-2.5-flash" as const,
+      // Gemini 2.0 Models
+      GEMINI_2_0_FLASH: "gemini-2.0-flash" as const,
+      GEMINI_2_0_FLASH_LITE: "gemini-2.0-flash-lite" as const,
+      // Gemini 1.5 Models (backward compatibility)
+      GEMINI_1_5_PRO: "gemini-1.5-pro" as const,
+      GEMINI_1_5_FLASH: "gemini-1.5-flash" as const,
+      GEMINI_1_5_FLASH_8B: "gemini-1.5-flash-8b" as const,
+    },
+    MODEL_MATCH_WORDS: ["gemini", "google"] as const,
+    NAME: "gemini" as const,
+    ROLE: {
+      MODEL: "model" as const,
+      USER: "user" as const,
+    },
+  },
   ANTHROPIC: {
     // https://docs.anthropic.com/en/docs/about-claude/models/overview
     MODEL: {
@@ -84,8 +110,9 @@ export const PROVIDER = {
 } as const;
 
 export type LlmProviderName =
-  | typeof PROVIDER.OPENAI.NAME
-  | typeof PROVIDER.ANTHROPIC.NAME;
+  | typeof PROVIDER.ANTHROPIC.NAME
+  | typeof PROVIDER.GEMINI.NAME
+  | typeof PROVIDER.OPENAI.NAME;
 
 // Last: Defaults
 export const DEFAULT = {

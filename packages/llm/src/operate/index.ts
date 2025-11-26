@@ -3,6 +3,8 @@ export {
   AnthropicAdapter,
   anthropicAdapter,
   BaseProviderAdapter,
+  GeminiAdapter,
+  geminiAdapter,
   OpenAiAdapter,
   openAiAdapter,
 } from "./adapters/index.js";

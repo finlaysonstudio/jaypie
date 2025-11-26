@@ -5,8 +5,13 @@ import { Toolkit } from "../tools/Toolkit.class.js";
 import {
   LlmHistory,
   LlmInputMessage,
+  LlmMessageRole,
+  LlmMessageType,
   LlmOperateOptions,
   LlmOperateResponse,
+  LlmOutputMessage,
+  LlmToolCall,
+  LlmToolResult,
 } from "../types/LlmProvider.interface.js";
 import { log, maxTurnsFromOptions } from "../util/index.js";
 import { ProviderAdapter } from "./adapters/ProviderAdapter.interface.js";
@@ -435,7 +440,72 @@ export class OperateLoop {
     } else if (Array.isArray(request.messages)) {
       // Anthropic format
       state.currentInput = request.messages as LlmHistory;
+    } else if (Array.isArray(request.contents)) {
+      // Gemini format - convert contents to history items
+      state.currentInput = this.convertGeminiContentsToHistory(
+        request.contents as Array<{
+          role: string;
+          parts?: Array<Record<string, unknown>>;
+        }>,
+      );
     }
+  }
+
+  /**
+   * Convert Gemini contents format to internal history format.
+   */
+  private convertGeminiContentsToHistory(
+    contents: Array<{ role: string; parts?: Array<Record<string, unknown>> }>,
+  ): LlmHistory {
+    const history: LlmHistory = [];
+
+    for (const content of contents) {
+      if (!content.parts) continue;
+
+      for (const part of content.parts) {
+        if (part.text && typeof part.text === "string") {
+          // Regular text message
+          history.push({
+            role:
+              content.role === "model"
+                ? LlmMessageRole.Assistant
+                : LlmMessageRole.User,
+            content: part.text,
+            type: LlmMessageType.Message,
+          } as LlmOutputMessage);
+        } else if (part.functionCall) {
+          // Function call
+          const fc = part.functionCall as {
+            name?: string;
+            args?: Record<string, unknown>;
+            id?: string;
+          };
+          history.push({
+            type: LlmMessageType.FunctionCall,
+            name: fc.name || "",
+            arguments: JSON.stringify(fc.args || {}),
+            call_id: fc.id || "",
+            id: fc.id || "",
+          } as unknown as LlmToolCall);
+        } else if (part.functionResponse) {
+          // Function response
+          const fr = part.functionResponse as {
+            name?: string;
+            response?: Record<string, unknown>;
+          };
+          // Store name in the object even though it's not part of LlmToolResult type
+          // This allows round-trip conversion back to Gemini format
+          history.push({
+            type: LlmMessageType.FunctionCallOutput,
+            output: JSON.stringify(fr.response || {}),
+            call_id: "",
+            name: fr.name || "",
+          } as LlmToolResult & { name: string });
+        }
+      }
+    }
+
+    return history;
   }
 
   /**
