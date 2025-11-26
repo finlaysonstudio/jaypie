@@ -4,11 +4,11 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { z } from "zod/v4";
 import { OpenAiProvider } from "../OpenAiProvider.class";
 import {
+  LlmHistoryItem,
+  LlmInputMessage,
   LlmMessageRole,
   LlmMessageType,
-  LlmInputMessage,
   LlmResponseStatus,
-  LlmHistoryItem,
 } from "../../../types/LlmProvider.interface.js";
 // Mock the operate module
 vi.mock("../operate.js");
@@ -39,16 +39,10 @@ describe("OpenAiProvider", () => {
     vi.mocked(OpenAI).mockImplementation(
       () =>
         ({
-          beta: {
-            chat: {
-              completions: {
-                parse: vi.fn(),
-              },
-            },
-          },
           chat: {
             completions: {
               create: vi.fn(),
+              parse: vi.fn(),
             },
           },
         }) as any,
@@ -113,7 +107,7 @@ describe("OpenAiProvider", () => {
 
   describe("Features", () => {
     describe("Structured Output", () => {
-      it("Uses beta endpoint when structured output is requested", async () => {
+      it("Uses parse endpoint when structured output is requested", async () => {
         const mockParsedResponse = {
           salutation: "Hello",
           name: "World",
@@ -133,11 +127,9 @@ describe("OpenAiProvider", () => {
         vi.mocked(OpenAI).mockImplementation(
           () =>
             ({
-              beta: {
-                chat: {
-                  completions: {
-                    parse: mockParse,
-                  },
+              chat: {
+                completions: {
+                  parse: mockParse,
                 },
               },
             }) as any,
@@ -180,11 +172,9 @@ describe("OpenAiProvider", () => {
         vi.mocked(OpenAI).mockImplementation(
           () =>
             ({
-              beta: {
-                chat: {
-                  completions: {
-                    parse: mockParse,
-                  },
+              chat: {
+                completions: {
+                  parse: mockParse,
                 },
               },
             }) as any,

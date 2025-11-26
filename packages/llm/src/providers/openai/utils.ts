@@ -132,7 +132,7 @@ export async function createStructuredCompletion(
   }
   responseFormat.json_schema.schema = jsonSchema;
 
-  const completion = await client.beta.chat.completions.parse({
+  const completion = await client.chat.completions.parse({
     messages,
     model,
     response_format: responseFormat,
