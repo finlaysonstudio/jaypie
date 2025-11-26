@@ -1121,5 +1121,171 @@ describe("AnthropicProvider", () => {
         );
       });
     });
+
+    // Feature Parity tests - verifies Anthropic has all features previously OpenAI-only
+    describe("Feature Parity (Phase 6)", () => {
+      it("passes beforeEachModelRequest hook to OperateLoop.execute", async () => {
+        const { createOperateLoop } = await import("../../../operate/index.js");
+        const executeMock = vi.fn().mockResolvedValue({
+          content: "test response",
+          history: [],
+          model: "claude-opus-4-1",
+          output: [],
+          provider: "anthropic",
+          responses: [],
+          status: LlmResponseStatus.Completed,
+          usage: [],
+        });
+        vi.mocked(createOperateLoop).mockReturnValue({
+          execute: executeMock,
+        } as any);
+
+        const provider = new AnthropicProvider();
+        const beforeEachModelRequest = vi.fn();
+
+        await provider.operate("Test input", {
+          hooks: { beforeEachModelRequest },
+        });
+
+        expect(executeMock).toHaveBeenCalledWith(
+          "Test input",
+          expect.objectContaining({
+            hooks: expect.objectContaining({
+              beforeEachModelRequest,
+            }),
+          }),
+        );
+      });
+
+      it("passes afterEachModelResponse hook to OperateLoop.execute", async () => {
+        const { createOperateLoop } = await import("../../../operate/index.js");
+        const executeMock = vi.fn().mockResolvedValue({
+          content: "test response",
+          history: [],
+          model: "claude-opus-4-1",
+          output: [],
+          provider: "anthropic",
+          responses: [],
+          status: LlmResponseStatus.Completed,
+          usage: [],
+        });
+        vi.mocked(createOperateLoop).mockReturnValue({
+          execute: executeMock,
+        } as any);
+
+        const provider = new AnthropicProvider();
+        const afterEachModelResponse = vi.fn();
+
+        await provider.operate("Test input", {
+          hooks: { afterEachModelResponse },
+        });
+
+        expect(executeMock).toHaveBeenCalledWith(
+          "Test input",
+          expect.objectContaining({
+            hooks: expect.objectContaining({
+              afterEachModelResponse,
+            }),
+          }),
+        );
+      });
+
+      it("passes onRetryableModelError hook to OperateLoop.execute", async () => {
+        const { createOperateLoop } = await import("../../../operate/index.js");
+        const executeMock = vi.fn().mockResolvedValue({
+          content: "test response",
+          history: [],
+          model: "claude-opus-4-1",
+          output: [],
+          provider: "anthropic",
+          responses: [],
+          status: LlmResponseStatus.Completed,
+          usage: [],
+        });
+        vi.mocked(createOperateLoop).mockReturnValue({
+          execute: executeMock,
+        } as any);
+
+        const provider = new AnthropicProvider();
+        const onRetryableModelError = vi.fn();
+
+        await provider.operate("Test input", {
+          hooks: { onRetryableModelError },
+        });
+
+        expect(executeMock).toHaveBeenCalledWith(
+          "Test input",
+          expect.objectContaining({
+            hooks: expect.objectContaining({
+              onRetryableModelError,
+            }),
+          }),
+        );
+      });
+
+      it("passes onUnrecoverableModelError hook to OperateLoop.execute", async () => {
+        const { createOperateLoop } = await import("../../../operate/index.js");
+        const executeMock = vi.fn().mockResolvedValue({
+          content: "test response",
+          history: [],
+          model: "claude-opus-4-1",
+          output: [],
+          provider: "anthropic",
+          responses: [],
+          status: LlmResponseStatus.Completed,
+          usage: [],
+        });
+        vi.mocked(createOperateLoop).mockReturnValue({
+          execute: executeMock,
+        } as any);
+
+        const provider = new AnthropicProvider();
+        const onUnrecoverableModelError = vi.fn();
+
+        await provider.operate("Test input", {
+          hooks: { onUnrecoverableModelError },
+        });
+
+        expect(executeMock).toHaveBeenCalledWith(
+          "Test input",
+          expect.objectContaining({
+            hooks: expect.objectContaining({
+              onUnrecoverableModelError,
+            }),
+          }),
+        );
+      });
+
+      it("uses OperateLoop which includes retry logic via RetryExecutor", async () => {
+        // This test verifies the provider uses createOperateLoop
+        // The OperateLoop itself includes RetryExecutor which is tested separately
+        const { createOperateLoop } = await import("../../../operate/index.js");
+        const executeMock = vi.fn().mockResolvedValue({
+          content: "test response",
+          history: [],
+          model: "claude-opus-4-1",
+          output: [],
+          provider: "anthropic",
+          responses: [],
+          status: LlmResponseStatus.Completed,
+          usage: [],
+        });
+        vi.mocked(createOperateLoop).mockReturnValue({
+          execute: executeMock,
+        } as any);
+
+        const provider = new AnthropicProvider();
+        await provider.operate("Test input");
+
+        // Verify createOperateLoop was called with anthropicAdapter
+        expect(createOperateLoop).toHaveBeenCalledWith(
+          expect.objectContaining({
+            adapter: expect.objectContaining({
+              name: "anthropic",
+            }),
+          }),
+        );
+      });
+    });
   });
 });
