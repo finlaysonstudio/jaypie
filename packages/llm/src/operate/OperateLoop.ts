@@ -303,6 +303,15 @@ export class OperateLoop {
         // Track updated provider request for tool results
         let currentProviderRequest = providerRequest;
 
+        // Add all response output items to the request BEFORE processing tool calls
+        // This is critical for OpenAI which requires reasoning items to be present
+        // when function_call items reference them
+        const responseItems = this.adapter.responseToHistoryItems(response);
+        this.appendResponseItemsToRequest(
+          currentProviderRequest,
+          responseItems,
+        );
+
         // Process each tool call
         for (const toolCall of toolCalls) {
           try {
@@ -426,6 +435,29 @@ export class OperateLoop {
     } else if (Array.isArray(request.messages)) {
       // Anthropic format
       state.currentInput = request.messages as LlmHistory;
+    }
+  }
+
+  /**
+   * Append response items to the provider request.
+   * This adds all output items from a response (including reasoning, function_calls, etc.)
+   * to the request's input/messages array.
+   *
+   * This is critical for OpenAI which requires reasoning items to be present
+   * when function_call items reference them.
+   */
+  private appendResponseItemsToRequest(
+    request: unknown,
+    responseItems: LlmHistory,
+  ): void {
+    const requestObj = request as Record<string, unknown>;
+
+    if (Array.isArray(requestObj.input)) {
+      // OpenAI format
+      requestObj.input.push(...responseItems);
+    } else if (Array.isArray(requestObj.messages)) {
+      // Anthropic format
+      requestObj.messages.push(...responseItems);
     }
   }
 }

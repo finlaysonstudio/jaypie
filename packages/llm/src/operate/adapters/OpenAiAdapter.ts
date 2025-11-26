@@ -94,6 +94,7 @@ export class OpenAiAdapter extends BaseProviderAdapter {
 
     if (request.tools && request.tools.length > 0) {
       openaiRequest.tools = request.tools.map((tool) => ({
+        type: "function",
         name: tool.name,
         description: tool.description,
         parameters: tool.parameters,
@@ -274,10 +275,11 @@ export class OpenAiAdapter extends BaseProviderAdapter {
     const openaiRequest = request as Record<string, unknown>;
     const input = openaiRequest.input as unknown[];
 
-    // Add the function call to the input
-    input.push(toolCall.raw);
+    // Note: The function_call item has already been added via responseToHistoryItems
+    // which is called before processing tool calls. This includes any required
+    // reasoning items that precede the function_call.
 
-    // Add the function call result
+    // Add only the function call result
     input.push({
       call_id: toolCall.callId,
       output: result.output,
@@ -299,11 +301,9 @@ export class OpenAiAdapter extends BaseProviderAdapter {
       return historyItems;
     }
 
+    // Include all output items, including reasoning items
+    // OpenAI requires reasoning items to be present when a function_call references them
     for (const output of openaiResponse.output) {
-      // Skip reasoning items for history (they're internal)
-      if (output.type === "reasoning") {
-        continue;
-      }
       historyItems.push(output);
     }
 

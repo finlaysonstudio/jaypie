@@ -6,13 +6,13 @@ export {
   defaultRetryPolicy,
   MAX_RETRIES_ABSOLUTE_LIMIT,
   RetryPolicy,
-  RetryPolicyConfig,
 } from "./RetryPolicy.js";
+export type { RetryPolicyConfig } from "./RetryPolicy.js";
 
-export {
+export { RetryExecutor } from "./RetryExecutor.js";
+export type {
   ErrorClassifier,
   ExecuteOptions,
   RetryContext,
-  RetryExecutor,
   RetryExecutorConfig,
 } from "./RetryExecutor.js";

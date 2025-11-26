@@ -1,10 +1,9 @@
-export {
+export { HookRunner, hookRunner } from "./HookRunner.js";
+export type {
   AfterModelResponseContext,
   AfterToolContext,
   BeforeModelRequestContext,
   BeforeToolContext,
-  HookRunner,
-  hookRunner,
   LlmHooks,
   RetryableErrorContext,
   ToolErrorContext,
