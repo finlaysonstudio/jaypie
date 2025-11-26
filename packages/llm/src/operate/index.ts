@@ -1,5 +1,12 @@
 // Adapters
-export { BaseProviderAdapter, ProviderAdapter } from "./adapters/index.js";
+export {
+  AnthropicAdapter,
+  anthropicAdapter,
+  BaseProviderAdapter,
+  OpenAiAdapter,
+  openAiAdapter,
+  ProviderAdapter,
+} from "./adapters/index.js";
 
 // Hooks
 export {
