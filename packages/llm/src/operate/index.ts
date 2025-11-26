@@ -1,3 +1,6 @@
+// Adapters
+export { BaseProviderAdapter, ProviderAdapter } from "./adapters/index.js";
+
 // Hooks
 export {
   AfterModelResponseContext,
@@ -43,3 +46,17 @@ export {
   RetryPolicy,
   RetryPolicyConfig,
 } from "./retry/index.js";
+
+// Types
+export {
+  ClassifiedError,
+  ErrorCategory,
+  LlmMessageType,
+  OperateContext,
+  OperateLoopState,
+  OperateRequest,
+  ParsedResponse,
+  ProviderToolDefinition,
+  StandardToolCall,
+  StandardToolResult,
+} from "./types.js";
