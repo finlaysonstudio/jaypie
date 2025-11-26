@@ -1,4 +1,5 @@
-import { JsonObject } from "@jaypie/types";
+import { JsonObject, NaturalSchema } from "@jaypie/types";
+import { z } from "zod/v4";
 
 import {
   LlmHistory,
@@ -69,10 +70,12 @@ export interface ProviderAdapter {
   /**
    * Format a structured output schema for the provider
    *
-   * @param schema - JSON schema for the expected output
+   * @param schema - JSON schema, NaturalSchema, or Zod schema for the expected output
    * @returns Provider-specific format configuration
    */
-  formatOutputSchema(schema: JsonObject): unknown;
+  formatOutputSchema(
+    schema: JsonObject | NaturalSchema | z.ZodType,
+  ): JsonObject;
 
   //
   // API Execution
@@ -234,7 +237,9 @@ export abstract class BaseProviderAdapter implements ProviderAdapter {
     toolkit: Toolkit,
     outputSchema?: JsonObject,
   ): ProviderToolDefinition[];
-  abstract formatOutputSchema(schema: JsonObject): unknown;
+  abstract formatOutputSchema(
+    schema: JsonObject | NaturalSchema | z.ZodType,
+  ): JsonObject;
   abstract executeRequest(client: unknown, request: unknown): Promise<unknown>;
   abstract parseResponse(
     response: unknown,

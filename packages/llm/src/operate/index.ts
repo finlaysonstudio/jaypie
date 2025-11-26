@@ -8,6 +8,13 @@ export {
   ProviderAdapter,
 } from "./adapters/index.js";
 
+// Core Loop
+export {
+  createOperateLoop,
+  OperateLoop,
+  OperateLoopConfig,
+} from "./OperateLoop.js";
+
 // Hooks
 export {
   AfterModelResponseContext,

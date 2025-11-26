@@ -82,10 +82,7 @@ function handleInputAndPlaceholders(
   return { history, systemPrompt, llmInstructions };
 }
 
-function updateUsage(
-  usage: Anthropic.Usage,
-  totalUsage: LlmUsageItem,
-) {
+function updateUsage(usage: Anthropic.Usage, totalUsage: LlmUsageItem) {
   totalUsage.input += usage.input_tokens;
   totalUsage.output += usage.output_tokens;
   totalUsage.total += usage.input_tokens + usage.output_tokens;
@@ -118,11 +115,7 @@ function handleMaxTurns(
 }
 
 function handleOutputSchema(
-  format:
-    | JsonObject
-    | NaturalSchema
-    | z.ZodType<any, any, any>
-    | undefined,
+  format: JsonObject | NaturalSchema | z.ZodType<any, any, any> | undefined,
 ) {
   let schema: JsonObject | undefined;
   if (format) {
@@ -302,7 +295,9 @@ export async function operate(
   }
 
   // Avoid Anthropic error by removing type property
-  const inputMessages: Anthropic.MessageParam[] = structuredClone(history) as any;
+  const inputMessages: Anthropic.MessageParam[] = structuredClone(
+    history,
+  ) as any;
   inputMessages.forEach((message) => {
     delete (message as any).type;
   });

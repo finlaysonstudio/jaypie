@@ -44,22 +44,30 @@ describe("time tool", () => {
 
   describe("Message Functionality", () => {
     it("returns correct message when no date is provided", () => {
-      const message = typeof time.message === "function" ? time.message() : time.message;
+      const message =
+        typeof time.message === "function" ? time.message() : time.message;
       expect(message).toBe("Checking current time");
     });
 
     it("returns correct message when no date is provided with empty object", () => {
-      const message = typeof time.message === "function" ? time.message({}) : time.message;
+      const message =
+        typeof time.message === "function" ? time.message({}) : time.message;
       expect(message).toBe("Checking current time");
     });
 
     it("returns correct message when date is provided as string", () => {
-      const message = typeof time.message === "function" ? time.message({ date: "2025-01-15T12:30:45Z" }) : time.message;
+      const message =
+        typeof time.message === "function"
+          ? time.message({ date: "2025-01-15T12:30:45Z" })
+          : time.message;
       expect(message).toBe("Converting date to ISO UTC format");
     });
 
     it("returns correct message when date is provided as number", () => {
-      const message = typeof time.message === "function" ? time.message({ date: 1705318245000 }) : time.message;
+      const message =
+        typeof time.message === "function"
+          ? time.message({ date: 1705318245000 })
+          : time.message;
       expect(message).toBe("Converting date to ISO UTC format");
     });
   });

@@ -52,17 +52,22 @@ describe("roll tool", () => {
 
   describe("Message Functionality", () => {
     it("returns correct message with default parameters", () => {
-      const message = typeof roll.message === "function" ? roll.message({}) : roll.message;
+      const message =
+        typeof roll.message === "function" ? roll.message({}) : roll.message;
       expect(message).toBe("Rolling 1 6-sided dice");
     });
 
     it("returns correct message with specified parameters", () => {
-      const message = typeof roll.message === "function" ? roll.message({ number: 3, sides: 20 }) : roll.message;
+      const message =
+        typeof roll.message === "function"
+          ? roll.message({ number: 3, sides: 20 })
+          : roll.message;
       expect(message).toBe("Rolling 3 20-sided dice");
     });
 
     it("returns correct message with no parameters", () => {
-      const message = typeof roll.message === "function" ? roll.message() : roll.message;
+      const message =
+        typeof roll.message === "function" ? roll.message() : roll.message;
       expect(message).toBe("Rolling 1 6-sided dice");
     });
   });

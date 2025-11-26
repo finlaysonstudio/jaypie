@@ -60,21 +60,13 @@ export interface ParsedResponse {
 }
 
 /**
- * Context passed to the operate loop for each turn
+ * Context passed to hooks and utilities during the operate loop
  */
 export interface OperateContext {
-  /** The original input */
-  input: string | LlmHistory | LlmInputMessage;
+  /** The hooks configuration */
+  hooks: LlmOperateOptions["hooks"];
   /** The operate options */
   options: LlmOperateOptions;
-  /** Current conversation history */
-  history: LlmHistory;
-  /** The toolkit for tool calls */
-  toolkit?: Toolkit;
-  /** Current turn number (1-indexed) */
-  currentTurn: number;
-  /** Maximum allowed turns */
-  maxTurns: number;
 }
 
 //
@@ -155,28 +147,27 @@ export interface ClassifiedError {
 // Operate Loop State
 //
 
+// Import ResponseBuilder for type declaration
+import type { ResponseBuilder } from "./response/ResponseBuilder.js";
+
 /**
  * Internal state of the operate loop
  */
 export interface OperateLoopState {
-  /** Current status of the operation */
-  status: LlmResponseStatus;
-  /** Accumulated history */
-  history: LlmHistory;
-  /** All raw provider responses */
-  responses: unknown[];
-  /** Output items (tool calls, messages, etc.) */
-  output: unknown[];
-  /** Usage tracking for each API call */
-  usage: LlmUsageItem[];
-  /** Final content (set when complete) */
-  content?: string | JsonObject;
-  /** Error information (if any) */
-  error?: {
-    detail?: string;
-    status: number | string;
-    title: string;
-  };
+  /** Current conversation input/messages */
+  currentInput: LlmHistory;
+  /** Current turn number (0-indexed, incremented at start of each turn) */
+  currentTurn: number;
+  /** Formatted output schema for structured output */
+  formattedFormat?: JsonObject;
+  /** Formatted tools for the provider */
+  formattedTools?: ProviderToolDefinition[];
+  /** Maximum allowed turns */
+  maxTurns: number;
+  /** Response builder instance */
+  responseBuilder: ResponseBuilder;
+  /** The toolkit for tool calls */
+  toolkit?: Toolkit;
 }
 
 //
