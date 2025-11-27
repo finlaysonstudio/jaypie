@@ -50,3 +50,17 @@ export * from "./util";
 
 // Export constants
 export * from "./constants.js";
+
+// Export EventFabricator
+export {
+  EventFabricator,
+  type CreateEventParams,
+  type EventFabricatorOptions,
+  type EventGenerationConfig,
+} from "./EventFabricator.js";
+
+// Export templates
+export * from "./templates/index.js";
+
+// Export temporal utilities
+export * from "./temporal/index.js";
