@@ -30,6 +30,12 @@ export function determineModelProvider(input?: string): {
       provider: PROVIDER.OPENAI.NAME,
     };
   }
+  if (input === PROVIDER.OPENROUTER.NAME) {
+    return {
+      model: PROVIDER.OPENROUTER.MODEL.DEFAULT,
+      provider: PROVIDER.OPENROUTER.NAME,
+    };
+  }
 
   // Check if input matches an Anthropic model exactly
   for (const [, modelValue] of Object.entries(PROVIDER.ANTHROPIC.MODEL)) {
@@ -57,6 +63,16 @@ export function determineModelProvider(input?: string): {
       return {
         model: input,
         provider: PROVIDER.OPENAI.NAME,
+      };
+    }
+  }
+
+  // Check if input matches an OpenRouter model exactly
+  for (const [, modelValue] of Object.entries(PROVIDER.OPENROUTER.MODEL)) {
+    if (input === modelValue) {
+      return {
+        model: input,
+        provider: PROVIDER.OPENROUTER.NAME,
       };
     }
   }
@@ -98,6 +114,16 @@ export function determineModelProvider(input?: string): {
           provider: PROVIDER.OPENAI.NAME,
         };
       }
+    }
+  }
+
+  // Check OpenRouter match words
+  for (const matchWord of PROVIDER.OPENROUTER.MODEL_MATCH_WORDS) {
+    if (lowerInput.includes(matchWord)) {
+      return {
+        model: input,
+        provider: PROVIDER.OPENROUTER.NAME,
+      };
     }
   }
 

@@ -7,6 +7,8 @@ export {
   geminiAdapter,
   OpenAiAdapter,
   openAiAdapter,
+  OpenRouterAdapter,
+  openRouterAdapter,
 } from "./adapters/index.js";
 export type { ProviderAdapter } from "./adapters/index.js";
 

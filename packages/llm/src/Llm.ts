@@ -14,6 +14,7 @@ import {
 import { AnthropicProvider } from "./providers/anthropic/AnthropicProvider.class.js";
 import { GeminiProvider } from "./providers/gemini/GeminiProvider.class.js";
 import { OpenAiProvider } from "./providers/openai/index.js";
+import { OpenRouterProvider } from "./providers/openrouter/index.js";
 
 class Llm implements LlmProvider {
   private _provider: LlmProviderName;
@@ -87,6 +88,10 @@ class Llm implements LlmProvider {
         });
       case PROVIDER.OPENAI.NAME:
         return new OpenAiProvider(model || PROVIDER.OPENAI.MODEL.DEFAULT, {
+          apiKey,
+        });
+      case PROVIDER.OPENROUTER.NAME:
+        return new OpenRouterProvider(model || PROVIDER.OPENROUTER.MODEL.DEFAULT, {
           apiKey,
         });
       default:

@@ -23,3 +23,4 @@ export { JaypieToolkit, toolkit, Toolkit, tools } from "./tools/index.js";
 
 // Providers
 export { GeminiProvider } from "./providers/gemini/index.js";
+export { OpenRouterProvider } from "./providers/openrouter/index.js";

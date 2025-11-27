@@ -1,4 +1,24 @@
 export const PROVIDER = {
+  OPENROUTER: {
+    // https://openrouter.ai/models
+    // OpenRouter provides access to hundreds of models from various providers
+    // The model format is: provider/model-name (e.g., "openai/gpt-4", "anthropic/claude-3-opus")
+    MODEL: {
+      // Default uses env var OPENROUTER_MODEL if set, otherwise a reasonable default
+      DEFAULT: "openai/gpt-4o" as const,
+      SMALL: "openai/gpt-4o-mini" as const,
+      LARGE: "anthropic/claude-3-opus" as const,
+      TINY: "openai/gpt-4o-mini" as const,
+    },
+    MODEL_MATCH_WORDS: ["openrouter"] as const,
+    NAME: "openrouter" as const,
+    ROLE: {
+      ASSISTANT: "assistant" as const,
+      SYSTEM: "system" as const,
+      TOOL: "tool" as const,
+      USER: "user" as const,
+    },
+  },
   GEMINI: {
     // https://ai.google.dev/gemini-api/docs/models
     MODEL: {
@@ -112,7 +132,8 @@ export const PROVIDER = {
 export type LlmProviderName =
   | typeof PROVIDER.ANTHROPIC.NAME
   | typeof PROVIDER.GEMINI.NAME
-  | typeof PROVIDER.OPENAI.NAME;
+  | typeof PROVIDER.OPENAI.NAME
+  | typeof PROVIDER.OPENROUTER.NAME;
 
 // Last: Defaults
 export const DEFAULT = {
