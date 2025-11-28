@@ -370,11 +370,17 @@ import {
 
 #### `JaypieEnvSecret`
 
-Manages build-environment secrets, allowing consumer environments (personal environments) to import from provider environments (sandbox).  
+Manages build-environment secrets, allowing consumer environments (personal environments) to import from provider environments (sandbox).
 
-Most Jaypie projects will not need to specify `consumer` or `provider` properties, as the construct will automatically handle the correct behavior based on the environment.  
+Most Jaypie projects will not need to specify `consumer` or `provider` properties, as the construct will automatically handle the correct behavior based on the environment.
 
 ```typescript
+// Shorthand: if the second parameter is an environment variable key with a non-empty value,
+// it will be used as envKey and the construct id becomes "EnvSecret_${envKey}"
+const mongoSecret = new JaypieEnvSecret(this, "MONGODB_URI");
+// Equivalent to: new JaypieEnvSecret(this, "EnvSecret_MONGODB_URI", { envKey: "MONGODB_URI" })
+
+// Explicit configuration
 const mongoConnectionString = new JaypieEnvSecret(
   this,
   "MongoConnectionString",
@@ -395,6 +401,8 @@ const mongoConnectionString = new JaypieEnvSecret(
 | `roleTag` | `string` | No | Role tag for resource management |
 | `vendorTag` | `string` | No | Vendor tag for resource management |
 | `value` | `string` | No | Direct secret value if not using envKey |
+
+**Shorthand Behavior**: When the second parameter (normally the construct id) matches an environment variable key with a non-empty string value, and no `envKey` is provided in props, the construct treats it as the `envKey` and generates the id as `EnvSecret_${envKey}`.
 
 ##### Convenience Secrets
 
