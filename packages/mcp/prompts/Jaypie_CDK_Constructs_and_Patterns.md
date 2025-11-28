@@ -94,6 +94,11 @@ new JaypieInfrastructureStack(scope, "InfraStack");  // Infrastructure resources
 
 Use `JaypieEnvSecret` for cross-stack secret sharing:
 ```typescript
+// Shorthand: if API_KEY exists in process.env, uses it as envKey
+// Creates construct with id "EnvSecret_API_KEY"
+new JaypieEnvSecret(this, "API_KEY");
+
+// Explicit configuration
 new JaypieEnvSecret(this, "ApiKey", {
   envKey: "API_KEY",
   provider: true,  // Exports for other stacks
