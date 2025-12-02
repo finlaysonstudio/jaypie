@@ -1,4 +1,4 @@
-import { CfnOutput, Duration, Fn, RemovalPolicy, Tags } from "aws-cdk-lib";
+import { CfnOutput, Duration, Fn, RemovalPolicy, Stack, Tags } from "aws-cdk-lib";
 import * as acm from "aws-cdk-lib/aws-certificatemanager";
 import * as cloudfront from "aws-cdk-lib/aws-cloudfront";
 import * as origins from "aws-cdk-lib/aws-cloudfront-origins";
@@ -205,12 +205,15 @@ export class JaypieWebDeploymentBucket extends Construct implements s3.IBucket {
         }),
       );
 
-      // Allow the role to deploy CDK apps
+      // Allow the role to describe the current stack
+      const stack = Stack.of(this);
       bucketDeployRole.addToPolicy(
         new PolicyStatement({
           actions: ["cloudformation:DescribeStacks"],
           effect: Effect.ALLOW,
-          resources: ["*"], // TODO: restrict to this stack
+          resources: [
+            `arn:aws:cloudformation:${stack.region}:${stack.account}:stack/${stack.stackName}/*`,
+          ],
         }),
       );
 
