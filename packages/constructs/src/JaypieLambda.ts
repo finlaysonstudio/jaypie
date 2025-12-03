@@ -2,9 +2,10 @@ import { Construct } from "constructs";
 import { Duration, Stack, RemovalPolicy, Tags } from "aws-cdk-lib";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import { CDK } from "./constants";
-import * as iam from "aws-cdk-lib/aws-iam";
 import * as cloudwatch from "aws-cdk-lib/aws-cloudwatch";
 import * as ec2 from "aws-cdk-lib/aws-ec2";
+import * as iam from "aws-cdk-lib/aws-iam";
+import * as logs from "aws-cdk-lib/aws-logs";
 import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
 import { JaypieEnvSecret } from "./JaypieEnvSecret.js";
 import {
@@ -30,9 +31,8 @@ export interface JaypieLambdaProps {
   handler: string;
   initialPolicy?: iam.PolicyStatement[];
   layers?: lambda.ILayerVersion[];
-  logRetention?: number;
-  logRetentionRole?: iam.IRole;
-  logRetentionRetryOptions?: lambda.LogRetentionRetryOptions;
+  logGroup?: logs.ILogGroup;
+  logRetention?: logs.RetentionDays | number;
   maxEventAge?: Duration;
   memorySize?: number;
   paramsAndSecrets?: lambda.ParamsAndSecretsLayerVersion | boolean;
@@ -84,9 +84,8 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
       handler = "index.handler",
       initialPolicy,
       layers = [],
+      logGroup,
       logRetention = CDK.LAMBDA.LOG_RETENTION,
-      logRetentionRole,
-      logRetentionRetryOptions,
       maxEventAge,
       memorySize = CDK.LAMBDA.MEMORY_SIZE,
       paramsAndSecrets,
@@ -143,6 +142,14 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
       options: paramsAndSecretsOptions,
     });
 
+    // Create LogGroup if not provided
+    const resolvedLogGroup =
+      logGroup ??
+      new logs.LogGroup(this, "LogGroup", {
+        retention: logRetention as logs.RetentionDays,
+        removalPolicy: RemovalPolicy.DESTROY,
+      });
+
     // Create Lambda Function
     this._lambda = new lambda.Function(this, "Function", {
       allowAllOutbound,
@@ -163,9 +170,7 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
       handler,
       initialPolicy,
       layers: resolvedLayers,
-      logRetention,
-      logRetentionRole,
-      logRetentionRetryOptions,
+      logGroup: resolvedLogGroup,
       maxEventAge,
       memorySize,
       paramsAndSecrets: resolvedParamsAndSecrets,
