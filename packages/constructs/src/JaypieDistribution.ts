@@ -163,8 +163,7 @@ export class JaypieDistribution
       defaultBehavior = {
         cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
         origin,
-        originRequestPolicy:
-          cloudfront.OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER,
+        originRequestPolicy: cloudfront.OriginRequestPolicy.ALL_VIEWER,
         viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
       };
     } else {
