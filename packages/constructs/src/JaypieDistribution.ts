@@ -174,6 +174,7 @@ export class JaypieDistribution
       defaultBehavior = propsDefaultBehavior;
     } else if (origin) {
       defaultBehavior = {
+        allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
         cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
         origin,
         originRequestPolicy:
