@@ -1,10 +1,12 @@
-import { RemovalPolicy, Stack, Tags } from "aws-cdk-lib";
+import { Duration, RemovalPolicy, Stack, Tags } from "aws-cdk-lib";
 import * as acm from "aws-cdk-lib/aws-certificatemanager";
 import * as cloudfront from "aws-cdk-lib/aws-cloudfront";
 import * as origins from "aws-cdk-lib/aws-cloudfront-origins";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import * as route53 from "aws-cdk-lib/aws-route53";
 import * as route53Targets from "aws-cdk-lib/aws-route53-targets";
+import * as s3 from "aws-cdk-lib/aws-s3";
+import { LambdaDestination } from "aws-cdk-lib/aws-s3-notifications";
 import { Construct } from "constructs";
 
 import { CDK } from "./constants";
@@ -15,6 +17,7 @@ import {
   mergeDomain,
   resolveHostedZone,
 } from "./helpers";
+import { resolveDatadogForwarderFunction } from "./helpers/resolveDatadogForwarderFunction";
 
 export interface JaypieDistributionProps
   extends Omit<
@@ -30,6 +33,14 @@ export interface JaypieDistributionProps
    * Override default behavior (optional if handler is provided)
    */
   defaultBehavior?: cloudfront.BehaviorOptions;
+  /**
+   * Log destination configuration for CloudFront access logs
+   * - LambdaDestination: Use a specific Lambda destination for S3 notifications
+   * - true: Use Datadog forwarder for S3 notifications (default)
+   * - false: Disable logging entirely
+   * @default true
+   */
+  destination?: LambdaDestination | boolean;
   /**
    * The origin handler - can be an IOrigin, IFunctionUrl, or IFunction
    * If IFunction, a FunctionUrl will be created with auth NONE
@@ -69,18 +80,20 @@ export class JaypieDistribution
   public readonly domainName: string;
   public readonly functionUrl?: lambda.FunctionUrl;
   public readonly host?: string;
+  public readonly logBucket?: s3.IBucket;
 
   constructor(scope: Construct, id: string, props: JaypieDistributionProps) {
     super(scope, id);
 
     const {
       certificate: certificateProp = true,
+      defaultBehavior: propsDefaultBehavior,
+      destination: destinationProp = true,
       handler,
       host: propsHost,
       invokeMode = lambda.InvokeMode.BUFFERED,
       roleTag = CDK.ROLE.API,
       zone: propsZone,
-      defaultBehavior: propsDefaultBehavior,
       ...distributionProps
     } = props;
 
@@ -198,6 +211,41 @@ export class JaypieDistribution
       this.certificate = certificateToUse;
     }
 
+    // Create log bucket if logging is enabled
+    let logBucket: s3.Bucket | undefined;
+    if (destinationProp !== false) {
+      logBucket = new s3.Bucket(this, constructEnvName("LogBucket"), {
+        objectOwnership: s3.ObjectOwnership.OBJECT_WRITER,
+        removalPolicy: RemovalPolicy.DESTROY,
+        autoDeleteObjects: true,
+        lifecycleRules: [
+          {
+            expiration: Duration.days(90),
+            transitions: [
+              {
+                storageClass: s3.StorageClass.INFREQUENT_ACCESS,
+                transitionAfter: Duration.days(30),
+              },
+            ],
+          },
+        ],
+      });
+      Tags.of(logBucket).add(CDK.TAG.ROLE, CDK.ROLE.STORAGE);
+
+      // Add S3 notification to Datadog forwarder
+      const lambdaDestination =
+        destinationProp === true
+          ? new LambdaDestination(resolveDatadogForwarderFunction(this))
+          : destinationProp;
+
+      logBucket.addEventNotification(
+        s3.EventType.OBJECT_CREATED,
+        lambdaDestination,
+      );
+
+      this.logBucket = logBucket;
+    }
+
     // Create the CloudFront distribution
     this.distribution = new cloudfront.Distribution(
       this,
@@ -208,6 +256,13 @@ export class JaypieDistribution
           ? {
               certificate: certificateToUse,
               domainNames: [host],
+            }
+          : {}),
+        ...(logBucket
+          ? {
+              enableLogging: true,
+              logBucket,
+              logFilePrefix: "cloudfront-logs/",
             }
           : {}),
         ...distributionProps,

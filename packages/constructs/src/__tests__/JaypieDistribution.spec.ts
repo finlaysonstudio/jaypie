@@ -550,4 +550,135 @@ describe("JaypieDistribution", () => {
       expect(template).toBeDefined();
     });
   });
+
+  describe("Logging", () => {
+    it("creates log bucket by default", () => {
+      const stack = new Stack();
+      const bucket = new s3.Bucket(stack, "TestBucket");
+      const origin = new origins.S3Origin(bucket);
+
+      const construct = new JaypieDistribution(stack, "TestDistribution", {
+        handler: origin,
+      });
+      const template = Template.fromStack(stack);
+
+      expect(construct.logBucket).toBeDefined();
+      // Should have two S3 buckets: the origin bucket and the log bucket
+      template.resourceCountIs("AWS::S3::Bucket", 2);
+    });
+
+    it("configures distribution with logging enabled", () => {
+      const stack = new Stack();
+      const bucket = new s3.Bucket(stack, "TestBucket");
+      const origin = new origins.S3Origin(bucket);
+
+      new JaypieDistribution(stack, "TestDistribution", {
+        handler: origin,
+      });
+      const template = Template.fromStack(stack);
+
+      const distribution = findDistribution(template);
+      expect(distribution).toBeDefined();
+      expect(distribution.Properties.DistributionConfig.Logging).toBeDefined();
+      expect(distribution.Properties.DistributionConfig.Logging.Prefix).toBe(
+        "cloudfront-logs/",
+      );
+    });
+
+    it("creates log bucket with lifecycle rules", () => {
+      const stack = new Stack();
+      const bucket = new s3.Bucket(stack, "TestBucket");
+      const origin = new origins.S3Origin(bucket);
+
+      new JaypieDistribution(stack, "TestDistribution", {
+        handler: origin,
+      });
+      const template = Template.fromStack(stack);
+
+      // Find the log bucket (has lifecycle configuration)
+      template.hasResourceProperties("AWS::S3::Bucket", {
+        LifecycleConfiguration: {
+          Rules: Match.arrayWith([
+            Match.objectLike({
+              ExpirationInDays: 90,
+              Status: "Enabled",
+            }),
+          ]),
+        },
+      });
+
+      expect(template).toBeDefined();
+    });
+
+    it("adds storage role tag to log bucket", () => {
+      const stack = new Stack();
+      const bucket = new s3.Bucket(stack, "TestBucket");
+      const origin = new origins.S3Origin(bucket);
+
+      new JaypieDistribution(stack, "TestDistribution", {
+        handler: origin,
+      });
+      const template = Template.fromStack(stack);
+
+      // Find the log bucket with the role tag
+      template.hasResourceProperties("AWS::S3::Bucket", {
+        Tags: Match.arrayWith([
+          Match.objectLike({
+            Key: CDK.TAG.ROLE,
+            Value: CDK.ROLE.STORAGE,
+          }),
+        ]),
+      });
+
+      expect(template).toBeDefined();
+    });
+
+    it("disables logging when destination is false", () => {
+      const stack = new Stack();
+      const bucket = new s3.Bucket(stack, "TestBucket");
+      const origin = new origins.S3Origin(bucket);
+
+      const construct = new JaypieDistribution(stack, "TestDistribution", {
+        handler: origin,
+        destination: false,
+      });
+      const template = Template.fromStack(stack);
+
+      expect(construct.logBucket).toBeUndefined();
+      // Should only have the origin bucket, no log bucket
+      template.resourceCountIs("AWS::S3::Bucket", 1);
+
+      const distribution = findDistribution(template);
+      expect(
+        distribution.Properties.DistributionConfig.Logging,
+      ).toBeUndefined();
+    });
+
+    it("sets up S3 notification for log bucket", () => {
+      const stack = new Stack();
+      const bucket = new s3.Bucket(stack, "TestBucket");
+      const origin = new origins.S3Origin(bucket);
+
+      new JaypieDistribution(stack, "TestDistribution", {
+        handler: origin,
+      });
+      const template = Template.fromStack(stack);
+
+      // Verify that there's a bucket notification configuration
+      template.hasResourceProperties(
+        "Custom::S3BucketNotifications",
+        Match.objectLike({
+          NotificationConfiguration: {
+            LambdaFunctionConfigurations: Match.arrayWith([
+              Match.objectLike({
+                Events: ["s3:ObjectCreated:*"],
+              }),
+            ]),
+          },
+        }),
+      );
+
+      expect(template).toBeDefined();
+    });
+  });
 });
