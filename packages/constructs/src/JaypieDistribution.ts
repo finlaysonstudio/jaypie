@@ -219,16 +219,25 @@ export class JaypieDistribution
     this.distributionId = this.distribution.distributionId;
     this.domainName = this.distribution.domainName;
 
-    // Create DNS record if we have host and zone
+    // Create DNS records if we have host and zone
     if (host && hostedZone) {
-      const record = new route53.ARecord(this, "AliasRecord", {
+      const aRecord = new route53.ARecord(this, "AliasRecord", {
         recordName: host,
         target: route53.RecordTarget.fromAlias(
           new route53Targets.CloudFrontTarget(this.distribution),
         ),
         zone: hostedZone,
       });
-      Tags.of(record).add(CDK.TAG.ROLE, CDK.ROLE.NETWORKING);
+      Tags.of(aRecord).add(CDK.TAG.ROLE, CDK.ROLE.NETWORKING);
+
+      const aaaaRecord = new route53.AaaaRecord(this, "AaaaAliasRecord", {
+        recordName: host,
+        target: route53.RecordTarget.fromAlias(
+          new route53Targets.CloudFrontTarget(this.distribution),
+        ),
+        zone: hostedZone,
+      });
+      Tags.of(aaaaRecord).add(CDK.TAG.ROLE, CDK.ROLE.NETWORKING);
     }
   }
 
