@@ -296,7 +296,7 @@ describe("JaypieDistribution", () => {
       const tags = distribution.Properties.Tags || [];
       expect(tags).toContainEqual({
         Key: CDK.TAG.ROLE,
-        Value: CDK.ROLE.HOSTING,
+        Value: CDK.ROLE.API,
       });
     });
 
