@@ -8,8 +8,8 @@
   },
   "license": "MIT",
   "author": "Finlayson Studio",
-  "type": "module",
   "sideEffects": false,
+  "type": "module",
   "exports": {
     ".": {
       "types": "./dist/esm/index.d.ts",
