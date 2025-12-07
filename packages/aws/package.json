@@ -11,15 +11,15 @@
   "sideEffects": false,
   "exports": {
     ".": {
-      "types": "./index.d.ts",
-      "default": {
-        "require": "./dist/jaypie-aws.cjs",
-        "default": "./src/index.js"
-      }
+      "types": "./dist/esm/index.d.ts",
+      "require": "./dist/cjs/index.cjs",
+      "import": "./dist/esm/index.js",
+      "default": "./dist/esm/index.js"
     }
   },
-  "main": "src/index.js",
-  "types": "./index.d.ts",
+  "main": "./dist/cjs/index.cjs",
+  "module": "./dist/esm/index.js",
+  "types": "./dist/esm/index.d.ts",
   "scripts": {
     "build": "rollup --config",
     "format": "npm run format:package && npm run format:lint",
@@ -27,16 +27,16 @@
     "format:package": "sort-package-json ./package.json",
     "lint": "eslint .",
     "test": "vitest run .",
-    "test:spec:getMessages.function": "vitest run ./src/__tests__/getMessages.function.spec.js",
-    "test:spec:getSecret.function": "vitest run ./src/__tests__/getSecret.function.spec.js",
-    "test:spec:getSingletonMessage.function": "vitest run ./src/__tests__/getSingletonMessage.function.spec.js",
-    "test:spec:getTextractJob.function": "vitest run ./src/__tests__/getTextractJob.function.spec.js",
-    "test:spec:index": "vitest run ./src/__tests__/index.spec.js",
-    "test:spec:sendBatchMessages.function": "vitest run ./src/__tests__/sendBatchMessages.function.spec.js",
-    "test:spec:sendMessage.function": "vitest run ./src/__tests__/sendMessage.function.spec.js",
-    "test:spec:sendTextractJob.function": "vitest run ./src/__tests__/sendTextractJob.function.spec.js",
-    "test:spec:validateQueueUrl.util": "vitest run ./src/__tests__/validateQueueUrl.util.spec.js",
-    "typecheck": "echo '[TODO] Convert @jaypie/aws to TypeScript'"
+    "test:spec:getMessages.function": "vitest run ./src/__tests__/getMessages.function.spec.ts",
+    "test:spec:getSecret.function": "vitest run ./src/__tests__/getSecret.function.spec.ts",
+    "test:spec:getSingletonMessage.function": "vitest run ./src/__tests__/getSingletonMessage.function.spec.ts",
+    "test:spec:getTextractJob.function": "vitest run ./src/__tests__/getTextractJob.function.spec.ts",
+    "test:spec:index": "vitest run ./src/__tests__/index.spec.ts",
+    "test:spec:sendBatchMessages.function": "vitest run ./src/__tests__/sendBatchMessages.function.spec.ts",
+    "test:spec:sendMessage.function": "vitest run ./src/__tests__/sendMessage.function.spec.ts",
+    "test:spec:sendTextractJob.function": "vitest run ./src/__tests__/sendTextractJob.function.spec.ts",
+    "test:spec:validateQueueUrl.util": "vitest run ./src/__tests__/validateQueueUrl.util.spec.ts",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@aws-sdk/client-secrets-manager": "^3.931.0",
@@ -48,7 +48,10 @@
     "axios": "^1.6.8"
   },
   "devDependencies": {
-    "@types/node": "^22.13.1"
+    "@rollup/plugin-typescript": "^12.1.2",
+    "@types/async-retry": "^1.4.9",
+    "@types/node": "^22.13.1",
+    "typescript": "^5.3.3"
   },
   "publishConfig": {
     "access": "public"

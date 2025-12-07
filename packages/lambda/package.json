@@ -11,15 +11,18 @@
   "sideEffects": false,
   "exports": {
     ".": {
-      "types": "./index.d.ts",
-      "default": {
-        "require": "./dist/jaypie-lambda.cjs",
-        "default": "./src/index.js"
-      }
+      "types": "./dist/esm/index.d.ts",
+      "require": "./dist/cjs/index.cjs",
+      "import": "./dist/esm/index.js",
+      "default": "./dist/esm/index.js"
     }
   },
-  "main": "src/index.js",
-  "types": "index.d.ts",
+  "main": "./dist/cjs/index.cjs",
+  "module": "./dist/esm/index.js",
+  "types": "./dist/esm/index.d.ts",
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "rollup --config",
     "format": "npm run format:package && npm run format:lint",
@@ -27,12 +30,17 @@
     "format:package": "sort-package-json ./package.json",
     "lint": "eslint .",
     "test": "vitest run .",
-    "test:spec:index": "vitest run ./src/__tests__/index.spec.js",
-    "test:spec:lambdaHandler": "vitest run ./src/__tests__/lambdaHandler.spec.js",
-    "typecheck": "echo '[TODO] Convert @jaypie/lambda to TypeScript'"
+    "test:spec:index": "vitest run ./src/__tests__/index.spec.ts",
+    "test:spec:lambdaHandler": "vitest run ./src/__tests__/lambdaHandler.spec.ts",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@jaypie/core": "^1.1.14"
+  },
+  "devDependencies": {
+    "@rollup/plugin-typescript": "^12.1.2",
+    "@types/node": "^22.13.1",
+    "typescript": "^5.3.3"
   },
   "publishConfig": {
     "access": "public"

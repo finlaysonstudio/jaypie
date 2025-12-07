@@ -11,15 +11,15 @@
   "sideEffects": false,
   "exports": {
     ".": {
-      "types": "./index.d.ts",
-      "default": {
-        "require": "./dist/module.cjs",
-        "default": "./src/index.js"
-      }
+      "types": "./dist/esm/index.d.ts",
+      "require": "./dist/cjs/index.cjs",
+      "import": "./dist/esm/index.js",
+      "default": "./dist/esm/index.js"
     }
   },
-  "main": "src/index.js",
-  "types": "index.d.ts",
+  "main": "./dist/cjs/index.cjs",
+  "module": "./dist/esm/index.js",
+  "types": "./dist/esm/index.d.ts",
   "scripts": {
     "build": "rollup --config",
     "format": "npm run format:package && npm run format:lint",
@@ -27,12 +27,12 @@
     "format:package": "sort-package-json ./package.json",
     "lint": "eslint .",
     "test": "vitest run .",
-    "test:spec:constants": "vitest run ./src/__tests__/constants.spec.js",
-    "test:spec:index": "vitest run ./src/__tests__/index.spec.js",
-    "test:spec:objectToKeyValueArray.pipeline": "vitest run ./src/__tests__/objectToKeyValueArray.pipeline.spec.js",
-    "test:spec:submitMetric.adapter": "vitest run ./src/__tests__/submitMetric.adapter.spec.js",
-    "test:spec:submitMetricSet.adapter": "vitest run ./src/__tests__/submitMetricSet.adapter.spec.js",
-    "typecheck": "echo '[TODO] Convert @jaypie/datadog to TypeScript'"
+    "test:spec:constants": "vitest run ./src/__tests__/constants.spec.ts",
+    "test:spec:index": "vitest run ./src/__tests__/index.spec.ts",
+    "test:spec:objectToKeyValueArray.pipeline": "vitest run ./src/__tests__/objectToKeyValueArray.pipeline.spec.ts",
+    "test:spec:submitMetric.adapter": "vitest run ./src/__tests__/submitMetric.adapter.spec.ts",
+    "test:spec:submitMetricSet.adapter": "vitest run ./src/__tests__/submitMetricSet.adapter.spec.ts",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@datadog/datadog-api-client": "^1.24.0",
@@ -41,6 +41,8 @@
     "hot-shots": "^10.0.0"
   },
   "devDependencies": {
+    "@rollup/plugin-typescript": "^12.1.2",
+    "@types/node": "^22.13.1",
     "typescript": "^5.3.3"
   },
   "publishConfig": {
