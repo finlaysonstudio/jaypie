@@ -9,4 +9,6 @@ export const EXPRESS = {
     ID: "/:id",
     ROOT: /^\/?$/,
   },
-};
+} as const;
+
+export type ExpressConstants = typeof EXPRESS;

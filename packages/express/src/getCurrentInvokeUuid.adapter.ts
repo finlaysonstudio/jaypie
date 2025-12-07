@@ -6,7 +6,7 @@ import { getCurrentInvoke } from "@codegenie/serverless-express";
 //
 
 // Adapter for the "@codegenie/serverless-express" uuid
-function getServerlessExpressUuid() {
+function getServerlessExpressUuid(): string | undefined {
   const currentInvoke = getCurrentInvoke();
   if (
     currentInvoke &&
@@ -23,7 +23,8 @@ function getServerlessExpressUuid() {
 // Main
 //
 
-const getCurrentInvokeUuid = () => getServerlessExpressUuid();
+const getCurrentInvokeUuid = (): string | undefined =>
+  getServerlessExpressUuid();
 
 //
 //

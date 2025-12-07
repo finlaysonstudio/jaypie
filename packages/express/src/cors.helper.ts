@@ -1,3 +1,4 @@
+import type { Request, Response, NextFunction } from "express";
 import { CorsError } from "@jaypie/errors";
 import { envBoolean, force } from "@jaypie/core";
 import expressCors from "cors";
@@ -13,18 +14,32 @@ const SANDBOX_ENV = "sandbox";
 
 //
 //
+// Types
+//
+
+export interface CorsConfig {
+  origin?: string | string[];
+  overrides?: Record<string, unknown>;
+}
+
+type CorsCallback = (err: Error | null, allow?: boolean) => void;
+
+//
+//
 // Helper Functions
 //
 
-const ensureProtocol = (url) => {
+const ensureProtocol = (url: string | undefined): string | undefined => {
   if (!url) return url;
   if (url.startsWith(HTTP_PROTOCOL) || url.startsWith(HTTPS_PROTOCOL))
     return url;
   return HTTPS_PROTOCOL + url;
 };
 
-export const dynamicOriginCallbackHandler = (origin) => {
-  return (requestOrigin, callback) => {
+export const dynamicOriginCallbackHandler = (
+  origin?: string | string[],
+): ((requestOrigin: string | undefined, callback: CorsCallback) => void) => {
+  return (requestOrigin: string | undefined, callback: CorsCallback) => {
     // Handle wildcard origin
     if (origin === "*") {
       callback(null, true);
@@ -37,15 +52,17 @@ export const dynamicOriginCallbackHandler = (origin) => {
       return;
     }
 
-    const allowedOrigins = [];
+    const allowedOrigins: (string | RegExp)[] = [];
     if (process.env.BASE_URL) {
-      allowedOrigins.push(ensureProtocol(process.env.BASE_URL));
+      allowedOrigins.push(ensureProtocol(process.env.BASE_URL) as string);
     }
     if (process.env.PROJECT_BASE_URL) {
-      allowedOrigins.push(ensureProtocol(process.env.PROJECT_BASE_URL));
+      allowedOrigins.push(
+        ensureProtocol(process.env.PROJECT_BASE_URL) as string,
+      );
     }
     if (origin) {
-      const additionalOrigins = force.array(origin);
+      const additionalOrigins = force.array<string>(origin);
       allowedOrigins.push(...additionalOrigins);
     }
 
@@ -78,7 +95,9 @@ export const dynamicOriginCallbackHandler = (origin) => {
 // Main
 //
 
-const corsHelper = (config = {}) => {
+const corsHelper = (
+  config: CorsConfig = {},
+): ReturnType<typeof expressCors> => {
   const { origin, overrides = {} } = config;
 
   const options = {
@@ -95,14 +114,22 @@ const corsHelper = (config = {}) => {
 // Export
 //
 
-export default (config) => {
+interface CorsErrorWithBody extends Error {
+  status: number;
+  body: () => Record<string, unknown>;
+}
+
+export default (
+  config?: CorsConfig,
+): ((req: Request, res: Response, next: NextFunction) => void) => {
   const cors = corsHelper(config);
-  return (req, res, next) => {
-    cors(req, res, (error) => {
+  return (req: Request, res: Response, next: NextFunction) => {
+    cors(req, res, (error?: Error | null) => {
       if (error) {
-        res.status(error.status);
+        const corsError = error as CorsErrorWithBody;
+        res.status(corsError.status);
         res.setHeader("Content-Type", "application/json");
-        return res.json(error.body());
+        return res.json(corsError.body());
       }
       next();
     });

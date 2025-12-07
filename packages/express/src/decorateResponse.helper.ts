@@ -1,5 +1,17 @@
+import type { Response } from "express";
 import { HTTP, JAYPIE, log as publicLogger } from "@jaypie/core";
+
 import getCurrentInvokeUuid from "./getCurrentInvokeUuid.adapter.js";
+
+//
+//
+// Types
+//
+
+interface DecorateResponseOptions {
+  handler?: string;
+  version?: string;
+}
 
 //
 //
@@ -7,9 +19,12 @@ import getCurrentInvokeUuid from "./getCurrentInvokeUuid.adapter.js";
 //
 
 const decorateResponse = (
-  res,
-  { handler = "", version = process.env.PROJECT_VERSION } = {},
-) => {
+  res: Response,
+  {
+    handler = "",
+    version = process.env.PROJECT_VERSION,
+  }: DecorateResponseOptions = {},
+): void => {
   const log = publicLogger.lib({
     lib: JAYPIE.LIB.EXPRESS,
   });

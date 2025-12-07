@@ -1,10 +1,27 @@
+import type { Response } from "express";
+
+//
+//
+// Types
+//
+
+export interface ResponseSummary {
+  statusCode: number;
+  statusMessage: string;
+  headers?: ReturnType<Response["getHeaders"]>;
+  [key: string]: unknown;
+}
+
 //
 //
 // Function Definition
 //
 
-function summarizeResponse(res, extras) {
-  const response = {
+function summarizeResponse(
+  res: Response,
+  extras?: Record<string, unknown>,
+): ResponseSummary {
+  const response: ResponseSummary = {
     statusCode: res.statusCode,
     statusMessage: res.statusMessage,
   };

@@ -10,15 +10,17 @@
   "type": "module",
   "exports": {
     ".": {
-      "types": "./index.d.ts",
-      "default": {
-        "require": "./dist/module.cjs",
-        "default": "./src/index.js"
-      }
+      "types": "./dist/esm/index.d.ts",
+      "import": "./dist/esm/index.js",
+      "require": "./dist/cjs/index.cjs"
     }
   },
-  "main": "src/index.js",
-  "types": "index.d.ts",
+  "main": "./dist/cjs/index.cjs",
+  "module": "./dist/esm/index.js",
+  "types": "./dist/esm/index.d.ts",
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "rollup --config",
     "format": "npm run format:package && npm run format:lint",
@@ -26,19 +28,19 @@
     "format:package": "sort-package-json ./package.json",
     "lint": "eslint .",
     "test": "vitest run .",
-    "test:spec:constants": "vitest run ./src/__tests__/constants.spec.js",
-    "test:spec:cors.helper": "vitest run ./src/__tests__/cors.helper.spec.js",
-    "test:spec:decorateResponse.helper": "vitest run ./src/__tests__/decorateResponse.helper.spec.js",
-    "test:spec:echo.handler": "vitest run ./src/__tests__/echo.handler.spec.js",
-    "test:spec:expressHandler": "vitest run ./src/__tests__/expressHandler.spec.js",
-    "test:spec:getCurrentInvokeUuid.adapter": "vitest run ./src/__tests__/getCurrentInvokeUuid.adapter.spec.js",
-    "test:spec:http.handler": "vitest run ./src/__tests__/http.handler.spec.js",
-    "test:spec:index": "vitest run ./src/__tests__/index.spec.js",
-    "test:spec:routes": "vitest run ./src/__tests__/routes.spec.js",
-    "test:spec:summarizeRequest.helper": "vitest run ./src/__tests__/summarizeRequest.helper.spec.js",
-    "test:spec:summarizeResponse.helper": "vitest run ./src/__tests__/summarizeResponse.helper.spec.js",
-    "test:spec:supertest": "vitest run ./src/__tests__/supertest.spec.js",
-    "typecheck": "echo '[TODO] Convert @jaypie/express to TypeScript'"
+    "test:spec:constants": "vitest run ./src/__tests__/constants.spec.ts",
+    "test:spec:cors.helper": "vitest run ./src/__tests__/cors.helper.spec.ts",
+    "test:spec:decorateResponse.helper": "vitest run ./src/__tests__/decorateResponse.helper.spec.ts",
+    "test:spec:echo.handler": "vitest run ./src/__tests__/echo.handler.spec.ts",
+    "test:spec:expressHandler": "vitest run ./src/__tests__/expressHandler.spec.ts",
+    "test:spec:getCurrentInvokeUuid.adapter": "vitest run ./src/__tests__/getCurrentInvokeUuid.adapter.spec.ts",
+    "test:spec:http.handler": "vitest run ./src/__tests__/http.handler.spec.ts",
+    "test:spec:index": "vitest run ./src/__tests__/index.spec.ts",
+    "test:spec:routes": "vitest run ./src/__tests__/routes.spec.ts",
+    "test:spec:summarizeRequest.helper": "vitest run ./src/__tests__/summarizeRequest.helper.spec.ts",
+    "test:spec:summarizeResponse.helper": "vitest run ./src/__tests__/summarizeResponse.helper.spec.ts",
+    "test:spec:supertest": "vitest run ./src/__tests__/supertest.spec.ts",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@codegenie/serverless-express": "^4.15.0",
@@ -48,7 +50,12 @@
     "cors": "^2.8.5"
   },
   "devDependencies": {
-    "express": "^4.21.2"
+    "@rollup/plugin-typescript": "^12.1.2",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.13.1",
+    "express": "^4.21.2",
+    "typescript": "^5.3.3"
   },
   "publishConfig": {
     "access": "public"

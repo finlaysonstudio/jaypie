@@ -1,3 +1,4 @@
+import type { Request } from "express";
 import { describe, expect, it } from "vitest";
 
 // Subject
@@ -20,7 +21,7 @@ describe("Summarize Request Helper", () => {
       method: "MOCK_METHOD",
       query: "MOCK_QUERY",
       url: "MOCK_URL",
-    };
+    } as unknown as Request;
     const result = summarizeRequest(req);
     expect(result).toEqual({
       baseUrl: "MOCK_BASE_URL",
@@ -45,7 +46,7 @@ describe("Summarize Request Helper", () => {
       method: "MOCK_METHOD",
       query: "MOCK_QUERY",
       url: "MOCK_URL",
-    };
+    } as unknown as Request;
     const result = summarizeRequest(req);
     expect(result).toEqual({
       baseUrl: "MOCK_BASE_URL",

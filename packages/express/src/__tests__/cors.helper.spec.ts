@@ -1,3 +1,4 @@
+import type { Request, Response, NextFunction } from "express";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Subject
@@ -10,7 +11,7 @@ import corsHelper, { dynamicOriginCallbackHandler } from "../cors.helper.js";
 
 vi.mock("cors", () => ({
   default: () => {
-    return (req, res, next) => next();
+    return (req: Request, res: Response, next: NextFunction) => next();
   },
 }));
 
@@ -40,7 +41,7 @@ describe("Cors Helper", () => {
       const cors = corsHelper();
       const callback = vi.fn();
       expect(callback).not.toHaveBeenCalled();
-      cors(null, null, callback);
+      cors(null as unknown as Request, null as unknown as Response, callback);
       expect(callback).toHaveBeenCalled();
     });
   });
@@ -62,7 +63,7 @@ describe("Cors Helper", () => {
       it("allows requests with no origin", () => {
         const originHandler = dynamicOriginCallbackHandler();
         const callback = vi.fn();
-        originHandler(null, callback);
+        originHandler(undefined, callback);
         expect(callback).toHaveBeenCalledWith(null, true);
       });
       it("allows requests that match BASE_URL", () => {
