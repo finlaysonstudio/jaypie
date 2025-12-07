@@ -1,22 +1,41 @@
+import typescript from "@rollup/plugin-typescript";
 import autoExternal from "rollup-plugin-auto-external";
-import commonjs from "@rollup/plugin-commonjs";
-import resolve from "@rollup/plugin-node-resolve";
 
-export default {
-  input: "src/index.js", // Path to your main JavaScript file
-  output: [
-    {
-      file: "dist/jaypie-core.cjs", // Output file for CommonJS
-      format: "cjs", // CommonJS format
+export default [
+  // ES modules version
+  {
+    input: "src/index.ts",
+    output: {
+      dir: "dist/esm",
+      format: "es",
+      sourcemap: true,
     },
-    {
-      file: "dist/jaypie-core.esm.js", // Output file for ES Module
-      format: "esm", // ES Module format
+    plugins: [
+      autoExternal(),
+      typescript({
+        tsconfig: "./tsconfig.json",
+        declaration: true,
+        outDir: "dist/esm",
+      }),
+    ],
+  },
+  // CommonJS version
+  {
+    input: "src/index.ts",
+    output: {
+      dir: "dist/cjs",
+      format: "cjs",
+      sourcemap: true,
+      exports: "named",
+      entryFileNames: "[name].cjs",
     },
-  ],
-  plugins: [
-    autoExternal(), // Automatically exclude dependencies from the bundle
-    resolve(), // Tells Rollup how to find node modules
-    commonjs(), // Converts CommonJS modules to ES6
-  ],
-};
+    plugins: [
+      autoExternal(),
+      typescript({
+        tsconfig: "./tsconfig.json",
+        declaration: true,
+        outDir: "dist/cjs",
+      }),
+    ],
+  },
+];
