@@ -1,4 +1,12 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+  type MockedFunction,
+} from "vitest";
 
 import { HTTP, log } from "@jaypie/core";
 import { restoreLog, spyLog } from "@jaypie/testkit";
@@ -18,7 +26,9 @@ import expressHandler from "../expressHandler.js";
 vi.mock("../getCurrentInvokeUuid.adapter.js");
 
 beforeEach(() => {
-  getCurrentInvokeUuid.mockReturnValue("MOCK_UUID");
+  (
+    getCurrentInvokeUuid as MockedFunction<typeof getCurrentInvokeUuid>
+  ).mockReturnValue("MOCK_UUID");
   spyLog(log);
 });
 
@@ -71,14 +81,28 @@ describe("Express handler", () => {
         // Check the log was called twice: once for the request, once for the response
         expect(log.var).toBeCalledTimes(2);
         // Both calls should be an object with a single key: "req" or "res"
-        expect(log.info.var.mock.calls[0][0]).toHaveProperty("req");
-        expect(log.info.var.mock.calls[1][0]).toHaveProperty("res");
-        expect(log.info.var.mock.calls[1][0].res.body).toEqual({
+        expect(
+          (log.info.var as ReturnType<typeof vi.fn>).mock.calls[0][0],
+        ).toHaveProperty("req");
+        expect(
+          (log.info.var as ReturnType<typeof vi.fn>).mock.calls[1][0],
+        ).toHaveProperty("res");
+        expect(
+          (log.info.var as ReturnType<typeof vi.fn>).mock.calls[1][0].res.body,
+        ).toEqual({
           goose: "honk",
         });
         // The count of keys in each call should be 1
-        expect(Object.keys(log.info.var.mock.calls[0][0]).length).toEqual(1);
-        expect(Object.keys(log.info.var.mock.calls[1][0]).length).toEqual(1);
+        expect(
+          Object.keys(
+            (log.info.var as ReturnType<typeof vi.fn>).mock.calls[0][0],
+          ).length,
+        ).toEqual(1);
+        expect(
+          Object.keys(
+            (log.info.var as ReturnType<typeof vi.fn>).mock.calls[1][0],
+          ).length,
+        ).toEqual(1);
       });
       it("POST requests with a body", async () => {
         // Set up our mock function
@@ -100,15 +124,31 @@ describe("Express handler", () => {
         // Check the log was called twice: once for the request, once for the response
         expect(log.var).toBeCalledTimes(2);
         // Both calls should be an object with a single key: "req" or "res"
-        expect(log.info.var.mock.calls[0][0]).toHaveProperty("req");
-        expect(log.info.var.mock.calls[0][0].req.body).toEqual({ cat: "meow" });
-        expect(log.info.var.mock.calls[1][0]).toHaveProperty("res");
-        expect(log.info.var.mock.calls[1][0].res.body).toEqual({
+        expect(
+          (log.info.var as ReturnType<typeof vi.fn>).mock.calls[0][0],
+        ).toHaveProperty("req");
+        expect(
+          (log.info.var as ReturnType<typeof vi.fn>).mock.calls[0][0].req.body,
+        ).toEqual({ cat: "meow" });
+        expect(
+          (log.info.var as ReturnType<typeof vi.fn>).mock.calls[1][0],
+        ).toHaveProperty("res");
+        expect(
+          (log.info.var as ReturnType<typeof vi.fn>).mock.calls[1][0].res.body,
+        ).toEqual({
           goose: "honk",
         });
         // The count of keys in each call should be 1
-        expect(Object.keys(log.info.var.mock.calls[0][0]).length).toEqual(1);
-        expect(Object.keys(log.info.var.mock.calls[1][0]).length).toEqual(1);
+        expect(
+          Object.keys(
+            (log.info.var as ReturnType<typeof vi.fn>).mock.calls[0][0],
+          ).length,
+        ).toEqual(1);
+        expect(
+          Object.keys(
+            (log.info.var as ReturnType<typeof vi.fn>).mock.calls[1][0],
+          ).length,
+        ).toEqual(1);
       });
       it("Returning HTML", async () => {
         // Set up our mock function
@@ -126,14 +166,26 @@ describe("Express handler", () => {
         // Check the log was called twice: once for the request, once for the response
         expect(log.var).toBeCalledTimes(2);
         // Both calls should be an object with a single key: "req" or "res"
-        expect(log.info.var.mock.calls[0][0]).toHaveProperty("req");
-        expect(log.info.var.mock.calls[1][0]).toHaveProperty("res");
-        expect(log.info.var.mock.calls[1][0].res.body).toEqual(
-          "<h1>Hello, world!</h1>",
-        );
+        expect(
+          (log.info.var as ReturnType<typeof vi.fn>).mock.calls[0][0],
+        ).toHaveProperty("req");
+        expect(
+          (log.info.var as ReturnType<typeof vi.fn>).mock.calls[1][0],
+        ).toHaveProperty("res");
+        expect(
+          (log.info.var as ReturnType<typeof vi.fn>).mock.calls[1][0].res.body,
+        ).toEqual("<h1>Hello, world!</h1>");
         // The count of keys in each call should be 1
-        expect(Object.keys(log.info.var.mock.calls[0][0]).length).toEqual(1);
-        expect(Object.keys(log.info.var.mock.calls[1][0]).length).toEqual(1);
+        expect(
+          Object.keys(
+            (log.info.var as ReturnType<typeof vi.fn>).mock.calls[0][0],
+          ).length,
+        ).toEqual(1);
+        expect(
+          Object.keys(
+            (log.info.var as ReturnType<typeof vi.fn>).mock.calls[1][0],
+          ).length,
+        ).toEqual(1);
       });
       it("Returning String", async () => {
         // Set up our mock function
@@ -151,12 +203,26 @@ describe("Express handler", () => {
         // Check the log was called twice: once for the request, once for the response
         expect(log.var).toBeCalledTimes(2);
         // Both calls should be an object with a single key: "req" or "res"
-        expect(log.info.var.mock.calls[0][0]).toHaveProperty("req");
-        expect(log.info.var.mock.calls[1][0]).toHaveProperty("res");
-        expect(log.info.var.mock.calls[1][0].res.body).toEqual("Hello, world!");
+        expect(
+          (log.info.var as ReturnType<typeof vi.fn>).mock.calls[0][0],
+        ).toHaveProperty("req");
+        expect(
+          (log.info.var as ReturnType<typeof vi.fn>).mock.calls[1][0],
+        ).toHaveProperty("res");
+        expect(
+          (log.info.var as ReturnType<typeof vi.fn>).mock.calls[1][0].res.body,
+        ).toEqual("Hello, world!");
         // The count of keys in each call should be 1
-        expect(Object.keys(log.info.var.mock.calls[0][0]).length).toEqual(1);
-        expect(Object.keys(log.info.var.mock.calls[1][0]).length).toEqual(1);
+        expect(
+          Object.keys(
+            (log.info.var as ReturnType<typeof vi.fn>).mock.calls[0][0],
+          ).length,
+        ).toEqual(1);
+        expect(
+          Object.keys(
+            (log.info.var as ReturnType<typeof vi.fn>).mock.calls[1][0],
+          ).length,
+        ).toEqual(1);
       });
       it("Returning no content", async () => {
         const mockFunction = vi.fn(() => null);

@@ -1,4 +1,5 @@
 import { HTTP, NotImplementedError } from "@jaypie/core";
+
 import expressHandler from "./expressHandler.js";
 import httpHandler from "./http.handler.js";
 import echoHandler from "./echo.handler.js";
@@ -19,7 +20,7 @@ const routes = {
   noContentRoute: httpHandler(HTTP.CODE.NO_CONTENT, { name: "_noContent" }),
   notFoundRoute: httpHandler(HTTP.CODE.NOT_FOUND, { name: "_notFound" }),
   notImplementedRoute: expressHandler(
-    () => {
+    (): never => {
       throw new NotImplementedError();
     },
     { name: "_notImplemented" },
@@ -31,13 +32,11 @@ const routes = {
 // Export
 //
 
-export const {
-  badRequestRoute,
-  echoRoute,
-  forbiddenRoute,
-  goneRoute,
-  methodNotAllowedRoute,
-  noContentRoute,
-  notFoundRoute,
-  notImplementedRoute,
-} = routes;
+export const badRequestRoute = routes.badRequestRoute;
+export const echoRoute = routes.echoRoute;
+export const forbiddenRoute = routes.forbiddenRoute;
+export const goneRoute = routes.goneRoute;
+export const methodNotAllowedRoute = routes.methodNotAllowedRoute;
+export const noContentRoute = routes.noContentRoute;
+export const notFoundRoute = routes.notFoundRoute;
+export const notImplementedRoute = routes.notImplementedRoute;

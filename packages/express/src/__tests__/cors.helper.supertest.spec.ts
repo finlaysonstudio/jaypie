@@ -1,3 +1,4 @@
+import type { Request, Response } from "express";
 import { HTTP } from "@jaypie/core";
 import express from "express";
 import request from "supertest";
@@ -25,7 +26,7 @@ beforeEach(() => {
 describe("Supertest", () => {
   it("works", async () => {
     const route = express();
-    route.get("/", (req, res) => {
+    route.get("/", (req: Request, res: Response) => {
       res.json({ message: "Hello" });
     });
     const response = await request(route)
@@ -41,7 +42,7 @@ describe("Supertest", () => {
 describe("corsHelper with supertest", () => {
   it("works", async () => {
     const route = express();
-    route.get("/", corsHelper(), (req, res) => {
+    route.get("/", corsHelper(), (req: Request, res: Response) => {
       res.json({ message: "Hello" });
     });
     const response = await request(route)
@@ -54,9 +55,13 @@ describe("corsHelper with supertest", () => {
   });
   it("works with a wildcard origin", async () => {
     const route = express();
-    route.get("/", corsHelper({ origin: "*" }), (req, res) => {
-      res.json({ message: "Hello" });
-    });
+    route.get(
+      "/",
+      corsHelper({ origin: "*" }),
+      (req: Request, res: Response) => {
+        res.json({ message: "Hello" });
+      },
+    );
     const response = await request(route)
       .get("/")
       .set("Origin", "https://any-domain.com")
@@ -71,7 +76,7 @@ describe("corsHelper with supertest", () => {
     route.get(
       "/",
       corsHelper({ origin: "https://api.example.com" }),
-      (req, res) => {
+      (req: Request, res: Response) => {
         res.json({ message: "Hello" });
       },
     );
@@ -87,7 +92,7 @@ describe("corsHelper with supertest", () => {
   it("works with an origin matching BASE_URL", async () => {
     process.env.BASE_URL = "https://api.example.com";
     const route = express();
-    route.get("/", corsHelper(), (req, res) => {
+    route.get("/", corsHelper(), (req: Request, res: Response) => {
       res.json({ message: "Hello" });
     });
     const response = await request(route)
@@ -102,7 +107,7 @@ describe("corsHelper with supertest", () => {
   it("allows localhost if env is sandbox", async () => {
     process.env.PROJECT_ENV = "sandbox";
     const route = express();
-    route.get("/", corsHelper(), (req, res) => {
+    route.get("/", corsHelper(), (req: Request, res: Response) => {
       res.json({ message: "Hello" });
     });
     const response = await request(route)
@@ -116,9 +121,9 @@ describe("corsHelper with supertest", () => {
   });
   it("allows localhost if sandbox mode is true", async () => {
     process.env.PROJECT_ENV = "unknown";
-    process.env.PROJECT_SANDBOX_MODE = true;
+    process.env.PROJECT_SANDBOX_MODE = "true";
     const route = express();
-    route.get("/", corsHelper(), (req, res) => {
+    route.get("/", corsHelper(), (req: Request, res: Response) => {
       res.json({ message: "Hello" });
     });
     const response = await request(route)
@@ -135,7 +140,7 @@ describe("corsHelper with supertest", () => {
     route.get(
       "/",
       corsHelper({ origin: "https://api.example.com" }),
-      (req, res) => {
+      (req: Request, res: Response) => {
         res.json({ message: "Hello" });
       },
     );
@@ -147,7 +152,7 @@ describe("corsHelper with supertest", () => {
   });
   it("allows any requested headers", async () => {
     const route = express();
-    route.options("/", corsHelper(), (req, res) => {
+    route.options("/", corsHelper(), (req: Request, res: Response) => {
       res.json({ message: "Hello" });
     });
     const response = await request(route)

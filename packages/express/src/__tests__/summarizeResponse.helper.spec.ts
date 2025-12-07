@@ -1,3 +1,4 @@
+import type { Response } from "express";
 import { describe, expect, it } from "vitest";
 
 // Subject
@@ -17,7 +18,7 @@ describe("Summarize Response Helper", () => {
       getHeaders: () => "MOCK_HEADERS",
       statusCode: "MOCK_STATUS_CODE",
       statusMessage: "MOCK_STATUS_MESSAGE",
-    };
+    } as unknown as Response;
     const result = summarizeResponse(res);
     expect(result).toEqual({
       headers: "MOCK_HEADERS",
@@ -30,7 +31,7 @@ describe("Summarize Response Helper", () => {
       getHeaders: () => "MOCK_HEADERS",
       statusCode: "MOCK_STATUS_CODE",
       statusMessage: "MOCK_STATUS_MESSAGE",
-    };
+    } as unknown as Response;
     const extras = {
       extra1: "MOCK_EXTRA_1",
       extra2: "MOCK_EXTRA_2",
