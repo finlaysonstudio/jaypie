@@ -56,7 +56,9 @@ export class JaypieQueuedLambda
       reservedConcurrentExecutions,
       retryAttempts,
       roleTag,
-      runtime = lambda.Runtime.NODEJS_22_X,
+      runtime = new lambda.Runtime("nodejs24.x", lambda.RuntimeFamily.NODEJS, {
+        supportsInlineCode: true,
+      }),
       runtimeManagementMode,
       secrets = [],
       securityGroups,

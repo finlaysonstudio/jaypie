@@ -32,10 +32,10 @@
   },
   "dependencies": {
     "@jaypie/errors": "^1.1.6",
-    "aws-cdk-lib": "^2.216.0",
+    "aws-cdk-lib": "^2.232.1",
     "cdk-nextjs-standalone": "^4.3.0",
-    "constructs": "^10.4.2",
-    "datadog-cdk-constructs-v2": "^3.2.0"
+    "constructs": "^10.4.3",
+    "datadog-cdk-constructs-v2": "^3.4.0"
   },
   "devDependencies": {
     "@rollup/plugin-typescript": "^12.1.2",
