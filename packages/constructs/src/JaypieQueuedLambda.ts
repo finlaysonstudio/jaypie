@@ -2,7 +2,6 @@ import { Construct } from "constructs";
 import { Duration, Tags, Stack, RemovalPolicy } from "aws-cdk-lib";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import * as sqs from "aws-cdk-lib/aws-sqs";
-import { QueueReference } from "aws-cdk-lib/interfaces";
 import { CDK } from "./constants";
 import * as lambdaEventSources from "aws-cdk-lib/aws-lambda-event-sources";
 import * as iam from "aws-cdk-lib/aws-iam";
@@ -304,17 +303,17 @@ export class JaypieQueuedLambda
     this._queue.applyRemovalPolicy(policy);
   }
 
-    // IQueue implementation
-    public get queueRef(): QueueReference {
-      return {
-        queueUrl: this._queue.queueUrl,
-        queueArn: this._queue.queueArn,
-      };
-    }
+  // IQueue implementation
+  public get queueRef() {
+    return {
+      queueUrl: this._queue.queueUrl,
+      queueArn: this._queue.queueArn,
+    };
+  }
 
-    public get fifo(): boolean {
-      return this._queue.fifo;
-    }
+  public get fifo(): boolean {
+    return this._queue.fifo;
+  }
 
   public get queueArn(): string {
     return this._queue.queueArn;
