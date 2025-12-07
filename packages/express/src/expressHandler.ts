@@ -62,23 +62,35 @@ interface ExtendedLogger {
   }): ExtendedLogger;
 }
 
+// Exported type aliases for defining handler lifecycle functions
+export type JaypieHandlerSetup = (
+  req: Request,
+  res: Response,
+) => Promise<void> | void;
+
+export type JaypieHandlerTeardown = (
+  req: Request,
+  res: Response,
+) => Promise<void> | void;
+
+export type JaypieHandlerValidate = (
+  req: Request,
+  res: Response,
+) => Promise<boolean> | boolean;
+
+export type ExpressHandlerLocals = (
+  req: Request,
+  res: Response,
+) => Promise<unknown> | unknown;
+
 export interface ExpressHandlerOptions {
   chaos?: string;
-  locals?: Record<
-    string,
-    unknown | ((req: Request, res: Response) => Promise<unknown>)
-  >;
+  locals?: Record<string, unknown | ExpressHandlerLocals>;
   name?: string;
-  setup?:
-    | ((req: Request, res: Response) => Promise<void>)[]
-    | ((req: Request, res: Response) => Promise<void>);
-  teardown?:
-    | ((req: Request, res: Response) => Promise<void>)[]
-    | ((req: Request, res: Response) => Promise<void>);
+  setup?: JaypieHandlerSetup[] | JaypieHandlerSetup;
+  teardown?: JaypieHandlerTeardown[] | JaypieHandlerTeardown;
   unavailable?: boolean;
-  validate?:
-    | ((req: Request, res: Response) => Promise<boolean> | boolean)[]
-    | ((req: Request, res: Response) => Promise<boolean> | boolean);
+  validate?: JaypieHandlerValidate[] | JaypieHandlerValidate;
 }
 
 interface ExtendedRequest extends Request {
