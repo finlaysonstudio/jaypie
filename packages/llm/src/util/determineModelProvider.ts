@@ -18,10 +18,22 @@ export function determineModelProvider(input?: string): {
       provider: PROVIDER.ANTHROPIC.NAME,
     };
   }
+  if (input === PROVIDER.GEMINI.NAME) {
+    return {
+      model: PROVIDER.GEMINI.MODEL.DEFAULT,
+      provider: PROVIDER.GEMINI.NAME,
+    };
+  }
   if (input === PROVIDER.OPENAI.NAME) {
     return {
       model: PROVIDER.OPENAI.MODEL.DEFAULT,
       provider: PROVIDER.OPENAI.NAME,
+    };
+  }
+  if (input === PROVIDER.OPENROUTER.NAME) {
+    return {
+      model: PROVIDER.OPENROUTER.MODEL.DEFAULT,
+      provider: PROVIDER.OPENROUTER.NAME,
     };
   }
 
@@ -31,6 +43,16 @@ export function determineModelProvider(input?: string): {
       return {
         model: input,
         provider: PROVIDER.ANTHROPIC.NAME,
+      };
+    }
+  }
+
+  // Check if input matches a Gemini model exactly
+  for (const [, modelValue] of Object.entries(PROVIDER.GEMINI.MODEL)) {
+    if (input === modelValue) {
+      return {
+        model: input,
+        provider: PROVIDER.GEMINI.NAME,
       };
     }
   }
@@ -45,6 +67,16 @@ export function determineModelProvider(input?: string): {
     }
   }
 
+  // Check if input matches an OpenRouter model exactly
+  for (const [, modelValue] of Object.entries(PROVIDER.OPENROUTER.MODEL)) {
+    if (input === modelValue) {
+      return {
+        model: input,
+        provider: PROVIDER.OPENROUTER.NAME,
+      };
+    }
+  }
+
   // Check Anthropic match words
   const lowerInput = input.toLowerCase();
   for (const matchWord of PROVIDER.ANTHROPIC.MODEL_MATCH_WORDS) {
@@ -52,6 +84,16 @@ export function determineModelProvider(input?: string): {
       return {
         model: input,
         provider: PROVIDER.ANTHROPIC.NAME,
+      };
+    }
+  }
+
+  // Check Gemini match words
+  for (const matchWord of PROVIDER.GEMINI.MODEL_MATCH_WORDS) {
+    if (lowerInput.includes(matchWord)) {
+      return {
+        model: input,
+        provider: PROVIDER.GEMINI.NAME,
       };
     }
   }
@@ -72,6 +114,16 @@ export function determineModelProvider(input?: string): {
           provider: PROVIDER.OPENAI.NAME,
         };
       }
+    }
+  }
+
+  // Check OpenRouter match words
+  for (const matchWord of PROVIDER.OPENROUTER.MODEL_MATCH_WORDS) {
+    if (lowerInput.includes(matchWord)) {
+      return {
+        model: input,
+        provider: PROVIDER.OPENROUTER.NAME,
+      };
     }
   }
 

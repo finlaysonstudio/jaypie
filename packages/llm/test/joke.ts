@@ -4,10 +4,40 @@ import { Llm } from "../src/index.js";
 
 config();
 
-async function main(provider: string) {
+function getProviderAndModel(): { provider?: string; model?: string } {
+  const appModel = process.env.APP_MODEL;
+  const appProvider = process.env.APP_PROVIDER;
+
+  // If APP_MODEL is set, use it (provider will be inferred by Llm)
+  if (appModel) {
+    return { model: appModel };
+  }
+
+  // If APP_PROVIDER is set, determine the model
+  if (appProvider) {
+    let model: string | undefined;
+
+    // For openrouter, check OPENROUTER_MODEL
+    if (appProvider === "openrouter") {
+      model = process.env.OPENROUTER_MODEL;
+    }
+
+    return { provider: appProvider, model };
+  }
+
+  // Default fallback
+  return { provider: "gpt-5" };
+}
+
+async function main() {
   try {
-    const model = new Llm(provider);
-    const result = await model.operate("Tell me a joke about a {{subject}}", {
+    const { provider, model } = getProviderAndModel();
+    console.log(
+      `Provider: ${provider || "(inferred)"}, Model: ${model || "(default)"}`,
+    );
+
+    const llm = new Llm(provider, { model });
+    const result = await llm.operate("Tell me a joke about a {{subject}}", {
       data: {
         subject: "pirate",
         rating: "PG",
@@ -24,26 +54,16 @@ async function main(provider: string) {
   }
 }
 
-async function runAllProviders() {
-  const providers = ["gpt-5"];
-
-  let hasError = false;
-  for (const provider of providers) {
-    const success = await main(provider);
-    if (!success) {
-      console.error(`❌ Failed assertions for provider "${provider}"`);
-      hasError = true;
-    }
-  }
-
-  if (hasError) {
-    console.error("\n💀 Exiting with failed assertions");
+async function run() {
+  const success = await main();
+  if (!success) {
+    console.error("\n💀 Exiting with failure");
     process.exit(1);
   } else {
-    console.log("\n🎉 All assertions passed");
+    console.log("\n🎉 Success");
   }
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
-  runAllProviders();
+  run();
 }

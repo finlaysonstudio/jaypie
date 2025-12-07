@@ -4,15 +4,26 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { z } from "zod/v4";
 import { OpenAiProvider } from "../OpenAiProvider.class";
 import {
+  LlmHistoryItem,
+  LlmInputMessage,
   LlmMessageRole,
   LlmMessageType,
-  LlmInputMessage,
   LlmResponseStatus,
-  LlmHistoryItem,
 } from "../../../types/LlmProvider.interface.js";
 // Mock the operate module
 vi.mock("../operate.js");
 vi.mock("openai");
+
+// Mock the OperateLoop for conversation history tests
+vi.mock("../../../operate/index.js", async (importOriginal) => {
+  const actual = await importOriginal();
+  return {
+    ...(actual as object),
+    createOperateLoop: vi.fn(() => ({
+      execute: vi.fn(),
+    })),
+  };
+});
 
 vi.mock("@jaypie/aws", async () => {
   const actual = await vi.importActual("@jaypie/aws");
@@ -28,16 +39,10 @@ describe("OpenAiProvider", () => {
     vi.mocked(OpenAI).mockImplementation(
       () =>
         ({
-          beta: {
-            chat: {
-              completions: {
-                parse: vi.fn(),
-              },
-            },
-          },
           chat: {
             completions: {
               create: vi.fn(),
+              parse: vi.fn(),
             },
           },
         }) as any,
@@ -102,7 +107,7 @@ describe("OpenAiProvider", () => {
 
   describe("Features", () => {
     describe("Structured Output", () => {
-      it("Uses beta endpoint when structured output is requested", async () => {
+      it("Uses parse endpoint when structured output is requested", async () => {
         const mockParsedResponse = {
           salutation: "Hello",
           name: "World",
@@ -122,11 +127,9 @@ describe("OpenAiProvider", () => {
         vi.mocked(OpenAI).mockImplementation(
           () =>
             ({
-              beta: {
-                chat: {
-                  completions: {
-                    parse: mockParse,
-                  },
+              chat: {
+                completions: {
+                  parse: mockParse,
                 },
               },
             }) as any,
@@ -169,11 +172,9 @@ describe("OpenAiProvider", () => {
         vi.mocked(OpenAI).mockImplementation(
           () =>
             ({
-              beta: {
-                chat: {
-                  completions: {
-                    parse: mockParse,
-                  },
+              chat: {
+                completions: {
+                  parse: mockParse,
                 },
               },
             }) as any,
@@ -359,15 +360,15 @@ describe("OpenAiProvider", () => {
   });
 
   describe("Conversation History", () => {
-    let operateMock: any;
+    let executeMock: ReturnType<typeof vi.fn>;
 
     beforeEach(async () => {
-      // Create a mock for the operate function
-      operateMock = vi.fn();
-
-      // Get the mocked operate function
-      const { operate } = await import("../operate.js");
-      operateMock = operate as any;
+      // Get the mocked createOperateLoop function
+      const { createOperateLoop } = await import("../../../operate/index.js");
+      executeMock = vi.fn();
+      vi.mocked(createOperateLoop).mockReturnValue({
+        execute: executeMock,
+      } as any);
     });
 
     afterEach(() => {
@@ -375,7 +376,7 @@ describe("OpenAiProvider", () => {
     });
 
     it("maintains conversation history across operate calls", async () => {
-      // Mock the operate function to return a history
+      // Mock the execute function to return a history
       const mockOperateResponse1 = {
         content: "Hello, I'm an AI assistant",
         history: [
@@ -396,10 +397,21 @@ describe("OpenAiProvider", () => {
             status: LlmResponseStatus.Completed,
           },
         ],
+        model: "gpt-4o",
         output: [],
+        provider: "openai",
         responses: [],
         status: LlmResponseStatus.Completed,
-        usage: { input: 1, output: 1, reasoning: 0, total: 2 },
+        usage: [
+          {
+            input: 1,
+            output: 1,
+            reasoning: 0,
+            total: 2,
+            provider: "openai",
+            model: "gpt-4o",
+          },
+        ],
       };
 
       const mockOperateResponse2 = {
@@ -435,14 +447,25 @@ describe("OpenAiProvider", () => {
             status: LlmResponseStatus.Completed,
           },
         ],
+        model: "gpt-4o",
         output: [],
+        provider: "openai",
         responses: [],
         status: LlmResponseStatus.Completed,
-        usage: { input: 1, output: 1, reasoning: 0, total: 2 },
+        usage: [
+          {
+            input: 1,
+            output: 1,
+            reasoning: 0,
+            total: 2,
+            provider: "openai",
+            model: "gpt-4o",
+          },
+        ],
       };
 
       // Set up the mock responses
-      operateMock
+      executeMock
         .mockResolvedValueOnce(mockOperateResponse1)
         .mockResolvedValueOnce(mockOperateResponse2);
 
@@ -455,18 +478,18 @@ describe("OpenAiProvider", () => {
       await provider.operate("What's my name?");
 
       // Check that the second call included the history from the first call
-      expect(operateMock).toHaveBeenCalledTimes(2);
-      expect(operateMock.mock.calls[0][0]).toBe("Hello");
-      expect(operateMock.mock.calls[1][0]).toBe("What's my name?");
+      expect(executeMock).toHaveBeenCalledTimes(2);
+      expect(executeMock.mock.calls[0][0]).toBe("Hello");
+      expect(executeMock.mock.calls[1][0]).toBe("What's my name?");
 
       // The second call should have history in its options
-      const secondCallOptions = operateMock.mock.calls[1][1];
+      const secondCallOptions = executeMock.mock.calls[1][1];
       expect(secondCallOptions).toHaveProperty("history");
       expect(secondCallOptions.history).toEqual(mockOperateResponse1.history);
     });
 
     it("merges provided history with instance history", async () => {
-      // Mock the operate function
+      // Mock the execute function
       const existingHistory = [
         {
           role: LlmMessageRole.User,
@@ -504,13 +527,24 @@ describe("OpenAiProvider", () => {
             status: LlmResponseStatus.Completed,
           },
         ],
+        model: "gpt-4o",
         output: [],
+        provider: "openai",
         responses: [],
-        status: "completed",
-        usage: { input: 1, output: 1, reasoning: 0, total: 2 },
+        status: LlmResponseStatus.Completed,
+        usage: [
+          {
+            input: 1,
+            output: 1,
+            reasoning: 0,
+            total: 2,
+            provider: "openai",
+            model: "gpt-4o",
+          },
+        ],
       };
 
-      operateMock.mockResolvedValue(mockOperateResponse);
+      executeMock.mockResolvedValue(mockOperateResponse);
 
       const provider = new OpenAiProvider();
 
@@ -531,8 +565,8 @@ describe("OpenAiProvider", () => {
       await provider.operate("New message", { history: additionalHistory });
 
       // Check that both histories were merged
-      expect(operateMock).toHaveBeenCalledTimes(1);
-      const options = operateMock.mock.calls[0][1];
+      expect(executeMock).toHaveBeenCalledTimes(1);
+      const options = executeMock.mock.calls[0][1];
       expect(options).toHaveProperty("history");
       expect(options.history).toEqual([
         ...existingHistory,
@@ -541,7 +575,7 @@ describe("OpenAiProvider", () => {
     });
 
     it("updates conversation history after each operate call", async () => {
-      // Mock the operate function
+      // Mock the execute function
       const mockOperateResponse = {
         content: "Response content",
         history: [
@@ -559,13 +593,24 @@ describe("OpenAiProvider", () => {
             status: LlmResponseStatus.Completed,
           },
         ],
+        model: "gpt-4o",
         output: [],
+        provider: "openai",
         responses: [],
         status: LlmResponseStatus.Completed,
-        usage: { input: 1, output: 1, reasoning: 0, total: 2 },
+        usage: [
+          {
+            input: 1,
+            output: 1,
+            reasoning: 0,
+            total: 2,
+            provider: "openai",
+            model: "gpt-4o",
+          },
+        ],
       };
 
-      operateMock.mockResolvedValue(mockOperateResponse);
+      executeMock.mockResolvedValue(mockOperateResponse);
 
       const provider = new OpenAiProvider();
 

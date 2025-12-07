@@ -101,10 +101,8 @@ export async function createTextCompletion(
 
   const firstContent = response.content[0];
   const text = firstContent && "text" in firstContent ? firstContent.text : "";
-  
-  log.trace(
-    `Assistant reply: ${text.length} characters`,
-  );
+
+  log.trace(`Assistant reply: ${text.length} characters`);
 
   return text;
 }
@@ -146,7 +144,8 @@ export async function createStructuredCompletion(
 
     // Extract text from response
     const firstContent = response.content[0];
-    const responseText = firstContent && "text" in firstContent ? firstContent.text : "";
+    const responseText =
+      firstContent && "text" in firstContent ? firstContent.text : "";
 
     // Find JSON in response
     const jsonMatch =
