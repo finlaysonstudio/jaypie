@@ -1,5 +1,4 @@
-// eslint-disable-next-line no-unused-vars
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 // Subject
 import { JAYPIE, PROJECT } from "../constants.js";

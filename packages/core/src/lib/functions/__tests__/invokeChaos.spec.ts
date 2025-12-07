@@ -113,7 +113,8 @@ describe("invokeChaos", () => {
       const originalArray = global.Array;
       let arrayCallCount = 0;
       global.Array = new Proxy(originalArray, {
-        construct(target, args) {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        construct(_target, _args) {
           arrayCallCount++;
           // After a few iterations, throw to prevent infinite loop in tests
           if (arrayCallCount > 3) {
