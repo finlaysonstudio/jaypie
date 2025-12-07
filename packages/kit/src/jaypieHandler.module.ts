@@ -72,10 +72,10 @@ const jaypieHandler = (
 
   // Internal convention
   const log = publicLogger.with({
-    lib: JAYPIE.LIB.CORE,
+    lib: JAYPIE.LIB.KIT,
   });
   const libLogger = log.lib({
-    lib: JAYPIE.LIB.CORE,
+    lib: JAYPIE.LIB.KIT,
   });
 
   libLogger.trace("[jaypie] Handler init");

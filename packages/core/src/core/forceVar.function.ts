@@ -1,4 +1,4 @@
-import { force } from "../lib/arguments.lib.js";
+import { force } from "@jaypie/kit";
 
 //
 //

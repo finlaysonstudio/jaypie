@@ -16,7 +16,7 @@ export default [
         outDir: "dist/esm",
       }),
     ],
-    external: [],
+    external: ["@jaypie/errors", "@jaypie/logger", "jsonapi-serializer"],
   },
   // CommonJS version
   {
@@ -35,6 +35,6 @@ export default [
         outDir: "dist/cjs",
       }),
     ],
-    external: [],
+    external: ["@jaypie/errors", "@jaypie/logger", "jsonapi-serializer"],
   },
 ];

@@ -1,7 +1,7 @@
 import { BadRequestError, ConfigurationError } from "@jaypie/errors";
+import { isClass } from "@jaypie/kit";
 
 import { TYPE, ValidationType } from "./constants.js";
-import isClass from "./isClass.function.js";
 
 //
 //

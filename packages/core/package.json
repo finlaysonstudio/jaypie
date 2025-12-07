@@ -34,8 +34,8 @@
   },
   "dependencies": {
     "@jaypie/errors": "^1.1.7",
+    "@jaypie/kit": "^1.1.1",
     "@jaypie/logger": "^1.1.1",
-    "jsonapi-serializer": "^3.6.9",
     "uuid": "^11.0.5"
   },
   "devDependencies": {

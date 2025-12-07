@@ -31,7 +31,13 @@
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit"
   },
+  "dependencies": {
+    "@jaypie/errors": "^1.1.7",
+    "@jaypie/logger": "^1.1.1",
+    "jsonapi-serializer": "^3.6.9"
+  },
   "devDependencies": {
+    "@jaypie/testkit": "^1.1.36",
     "@jaypie/types": "^0.1.2",
     "@rollup/plugin-typescript": "^12.1.2",
     "@types/node": "^22.13.1",
@@ -40,6 +46,7 @@
     "eslint-config-prettier": "^10.0.1",
     "eslint-plugin-prettier": "^5.2.1",
     "eslint-plugin-vitest": "^0.5.4",
+    "jest-extended": "^7.0.0",
     "rollup": "^4.12.0",
     "typescript": "^5.3.3",
     "typescript-eslint": "^8.18.2",

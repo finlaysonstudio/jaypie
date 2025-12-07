@@ -1,5 +1,5 @@
 import getObjectKeyCaseInsensitive from "./getObjectKeyCaseInsensitive.js";
-import validate, { force } from "../arguments/index.js";
+import { force } from "../arguments/index.js";
 
 const LOCAL_ENV = "local";
 
@@ -23,7 +23,9 @@ const envsKey = (
 ): string | false => {
   // Validate
   let envValue = force.string(env);
-  validate.string(key, { falsy: false });
+  if (typeof key !== "string" || key === "") {
+    throw new Error("key must be a non-empty string");
+  }
 
   if (!envValue) {
     envValue = LOCAL_ENV;

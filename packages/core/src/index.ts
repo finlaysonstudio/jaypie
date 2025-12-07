@@ -3,34 +3,43 @@
 // Export
 //
 
-// Argument Validation
+// Argument Validation (validate stays local, force/isClass from kit)
 export {
   default as validate,
-  force,
-  isClass,
   optional,
   required,
   TYPE as VALIDATE,
 } from "./lib/arguments.lib.js";
+export { force, isClass } from "@jaypie/kit";
 
-// Constants
+// Constants (stay local - both core and kit have identical copies)
 export { JAYPIE, PROJECT } from "./core.js";
 
-// Handler
-export { default as jaypieHandler } from "./jaypieHandler.module.js";
+// Handler (from kit)
+export { jaypieHandler } from "@jaypie/kit";
 
-// Errors (re-exported from @jaypie/errors)
+// Errors (stay local - re-export from @jaypie/errors)
 export * from "./lib/errors.lib.js";
 
-// Functions
-export * from "./lib/functions.lib.js";
+// Functions (from kit)
+export {
+  cloneDeep,
+  envBoolean,
+  envsKey,
+  formatError,
+  getHeaderFrom,
+  getObjectKeyCaseInsensitive,
+  placeholders,
+  resolveValue,
+  safeParseFloat,
+  sleep,
+} from "@jaypie/kit";
 
-// HTTP
-export { default as HTTP } from "./lib/http.lib.js";
+// HTTP (from kit)
+export { HTTP } from "@jaypie/kit";
 
-// Log
+// Log (stays local)
 export { log } from "./core.js";
 
 // Utilities
-export { default as cloneDeep } from "./lib/functions/cloneDeep.js";
 export { v4 as uuid } from "uuid";

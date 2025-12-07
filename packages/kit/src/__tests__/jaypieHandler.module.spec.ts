@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { spyLog, restoreLog } from "@jaypie/testkit";
 
 import { log } from "../core.js";
-import { ProjectError } from "../lib/errors.lib.js";
+import { InternalError } from "@jaypie/errors";
 import HTTP from "../lib/http.lib.js";
 
 // Subject
@@ -92,7 +92,7 @@ describe("Jaypie Handler Module", () => {
     it("Logs debug if a Jaypie error is caught", async () => {
       // Arrange
       const handler = jaypieHandler(() => {
-        throw new ProjectError("Sorpresa!");
+        throw new InternalError("Sorpresa!");
       });
       // Act
       try {
@@ -320,7 +320,7 @@ describe("Jaypie Handler Module", () => {
           const handler = jaypieHandler(() => {}, {
             setup: [
               async () => {
-                throw new ProjectError("Sorpresa!");
+                throw new InternalError("Sorpresa!");
               },
             ],
           });

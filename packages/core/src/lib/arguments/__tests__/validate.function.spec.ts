@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { HTTP } from "@jaypie/kit";
 
-import HTTP from "../../http.lib.js";
 import { TYPE } from "../constants.js";
 import validate from "../validate.function.js";
 
