@@ -37,6 +37,7 @@
     "nuxt",
     "oidc",
     "openmeteo",
+    "openrouter",
     "pinia",
     "repomix",
     "retryable",

@@ -53,6 +53,10 @@ export {
 } from "./JaypieSsoSyncApplication";
 export { JaypieQueuedLambda } from "./JaypieQueuedLambda";
 export { JaypieStack, JaypieStackProps } from "./JaypieStack";
+export {
+  JaypieStaticWebBucket,
+  JaypieStaticWebBucketProps,
+} from "./JaypieStaticWebBucket";
 export { JaypieTraceSigningKeySecret } from "./JaypieTraceSigningKeySecret";
 export { JaypieWebDeploymentBucket } from "./JaypieWebDeploymentBucket";
 export * from "./helpers";

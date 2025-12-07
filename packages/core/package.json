@@ -1,6 +1,6 @@
 {
   "name": "@jaypie/core",
-  "version": "1.1.18",
+  "version": "1.1.19",
   "repository": {
     "type": "git",
     "url": "https://github.com/finlaysonstudio/jaypie"
@@ -61,7 +61,7 @@
     "typecheck": "echo '[TODO] Convert @jaypie/core to TypeScript'"
   },
   "dependencies": {
-    "@jaypie/logger": "^1.1.0",
+    "@jaypie/logger": "^1.1.1",
     "jsonapi-serializer": "^3.6.9",
     "uuid": "^11.0.5"
   },

@@ -21,9 +21,6 @@
     "clean": "rm -rf dist",
     "typecheck": "tsc --noEmit"
   },
-  "dependencies": {
-    "zod": "^3.25.20"
-  },
   "devDependencies": {
     "@rollup/plugin-typescript": "^12.1.2",
     "rollup": "^4.9.1",

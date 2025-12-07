@@ -109,6 +109,17 @@ export const LlmMessageType = createMockWrappedObject(original.LlmMessageType, {
   isClass: true,
 });
 
+// Provider mocks
+export const GeminiProvider = createMockWrappedObject(original.GeminiProvider, {
+  isClass: true,
+});
+export const OpenRouterProvider = createMockWrappedObject(
+  original.OpenRouterProvider,
+  {
+    isClass: true,
+  },
+);
+
 // Tool collections
 export const toolkit = new original.JaypieToolkit([
   random,

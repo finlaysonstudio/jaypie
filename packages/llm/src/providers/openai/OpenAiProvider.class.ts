@@ -2,6 +2,11 @@ import { JsonObject } from "@jaypie/types";
 import { OpenAI } from "openai";
 import { PROVIDER } from "../../constants.js";
 import {
+  createOperateLoop,
+  OperateLoop,
+  openAiAdapter,
+} from "../../operate/index.js";
+import {
   LlmHistory,
   LlmInputMessage,
   LlmMessageOptions,
@@ -10,7 +15,6 @@ import {
   LlmProvider,
   LlmHistoryItem,
 } from "../../types/LlmProvider.interface.js";
-import { operate } from "./operate.js";
 import {
   createStructuredCompletion,
   createTextCompletion,
@@ -22,6 +26,7 @@ import {
 export class OpenAiProvider implements LlmProvider {
   private model: string;
   private _client?: OpenAI;
+  private _operateLoop?: OperateLoop;
   private apiKey?: string;
   private log = getLogger();
   private conversationHistory: LlmHistoryItem[] = [];
@@ -41,6 +46,19 @@ export class OpenAiProvider implements LlmProvider {
 
     this._client = await initializeClient({ apiKey: this.apiKey });
     return this._client;
+  }
+
+  private async getOperateLoop(): Promise<OperateLoop> {
+    if (this._operateLoop) {
+      return this._operateLoop;
+    }
+
+    const client = await this.getClient();
+    this._operateLoop = createOperateLoop({
+      adapter: openAiAdapter,
+      client,
+    });
+    return this._operateLoop;
   }
 
   async send(
@@ -69,11 +87,10 @@ export class OpenAiProvider implements LlmProvider {
     input: string | LlmHistory | LlmInputMessage,
     options: LlmOperateOptions = {},
   ): Promise<LlmOperateResponse> {
-    const client = await this.getClient();
-    options.model = options?.model || this.model;
+    const operateLoop = await this.getOperateLoop();
+    const mergedOptions = { ...options, model: options.model ?? this.model };
 
     // Create a merged history including both the tracked history and any explicitly provided history
-    const mergedOptions = { ...options };
     if (this.conversationHistory.length > 0) {
       // If options.history exists, merge with instance history, otherwise use instance history
       mergedOptions.history = options.history
@@ -81,8 +98,8 @@ export class OpenAiProvider implements LlmProvider {
         : [...this.conversationHistory];
     }
 
-    // Call operate with the updated options
-    const response = await operate(input, mergedOptions, { client });
+    // Execute operate loop
+    const response = await operateLoop.execute(input, mergedOptions);
 
     // Update conversation history with the new history from the response
     if (response.history && response.history.length > 0) {

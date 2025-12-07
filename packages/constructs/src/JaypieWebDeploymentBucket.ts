@@ -31,6 +31,7 @@ import {
   isValidSubdomain,
   mergeDomain,
 } from "./helpers";
+import { JaypieHostedZone } from "./JaypieHostedZone";
 
 export interface JaypieWebDeploymentBucketProps extends s3.BucketProps {
   /**
@@ -56,7 +57,7 @@ export interface JaypieWebDeploymentBucketProps extends s3.BucketProps {
    * The hosted zone for DNS records
    * @default CDK_ENV_WEB_HOSTED_ZONE || CDK_ENV_HOSTED_ZONE
    */
-  zone?: string | route53.IHostedZone;
+  zone?: string | route53.IHostedZone | JaypieHostedZone;
 }
 
 export class JaypieWebDeploymentBucket extends Construct implements s3.IBucket {
@@ -234,12 +235,16 @@ export class JaypieWebDeploymentBucket extends Construct implements s3.IBucket {
 
     // Create CloudFront distribution and certificate if host and zone are provided
     if (host && zone) {
-      const hostedZone =
-        typeof zone === "string"
-          ? route53.HostedZone.fromLookup(this, "HostedZone", {
-              domainName: zone,
-            })
-          : zone;
+      let hostedZone: route53.IHostedZone;
+      if (typeof zone === "string") {
+        hostedZone = route53.HostedZone.fromLookup(this, "HostedZone", {
+          domainName: zone,
+        });
+      } else if (zone instanceof JaypieHostedZone) {
+        hostedZone = zone.hostedZone;
+      } else {
+        hostedZone = zone;
+      }
 
       // Create certificate if not provided
       if (props.certificate !== false) {

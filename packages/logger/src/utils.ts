@@ -62,19 +62,8 @@ export function stringify(...params: unknown[]): string {
     return formatAsJsonString(params[0]);
   }
 
-  const noObjects = params.reduce((previous: boolean, current: unknown) => {
-    if (typeof current === "object" && current !== null) {
-      return false;
-    }
-    return previous;
-  }, true);
-
-  if (noObjects) {
-    const formatted = params.map(formatAsJsonString);
-    return formatted.join(" ");
-  }
-
-  return formatAsJsonString(params);
+  const formatted = params.map(formatAsJsonString);
+  return formatted.join(" ");
 }
 
 export function out(
