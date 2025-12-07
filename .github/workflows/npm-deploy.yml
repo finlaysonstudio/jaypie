@@ -29,7 +29,23 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
       - run: npm install -g npm@latest
       - run: npm ci
-      - run: lerna publish from-package --no-private --yes
+      - name: Publish packages to npm
+        run: |
+          for pkg in packages/*/; do
+            if [ -f "$pkg/package.json" ]; then
+              private=$(node -p "require('./$pkg/package.json').private || false")
+              if [ "$private" != "true" ]; then
+                name=$(node -p "require('./$pkg/package.json').name")
+                version=$(node -p "require('./$pkg/package.json').version")
+                if ! npm view "$name@$version" version >/dev/null 2>&1; then
+                  echo "Publishing $name@$version"
+                  npm publish "$pkg"
+                else
+                  echo "Skipping $name@$version (already published)"
+                fi
+              fi
+            fi
+          done
   lint:
     name: Lint (in parallel)
     runs-on: ubuntu-latest

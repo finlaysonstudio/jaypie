@@ -10,7 +10,7 @@
   ],
   "scripts": {
     "bin:changelog": "tsx context/bin/new-changelog.ts",
-    "build": "lerna run build",
+    "build": "npm run build --workspaces --if-present",
     "build:aws": "npm run build --workspace packages/aws",
     "build:constructs": "npm run build --workspace packages/constructs",
     "build:core": "npm run build --workspace packages/core",
@@ -79,7 +79,6 @@
     "hygen": "^6.2.11",
     "jest": "^29.7.0",
     "jest-extended": "^4.0.2",
-    "lerna": "^9.0.0",
     "prettier": "^3.3.3",
     "rimraf": "^6.0.1",
     "rollup": "^4.24.0",
