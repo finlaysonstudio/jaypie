@@ -13,6 +13,7 @@ import {
   ISecretAttachmentTarget,
   RotationSchedule,
   RotationScheduleOptions,
+  SecretsManagerSecretOptions,
 } from "aws-cdk-lib/aws-secretsmanager";
 import { IKey } from "aws-cdk-lib/aws-kms";
 import {
@@ -228,6 +229,12 @@ export class JaypieEnvSecret extends Construct implements ISecret {
 
   public attach(target: ISecretAttachmentTarget): ISecret {
     return this._secret.attach(target);
+  }
+
+  public cfnDynamicReferenceKey(
+    options?: SecretsManagerSecretOptions,
+  ): string {
+    return this._secret.cfnDynamicReferenceKey(options);
   }
 
   public get envKey(): string | undefined {
