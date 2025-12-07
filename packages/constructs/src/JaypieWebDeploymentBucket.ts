@@ -1,4 +1,11 @@
-import { CfnOutput, Duration, Fn, RemovalPolicy, Tags } from "aws-cdk-lib";
+import {
+  CfnOutput,
+  Duration,
+  Fn,
+  RemovalPolicy,
+  Stack,
+  Tags,
+} from "aws-cdk-lib";
 import * as acm from "aws-cdk-lib/aws-certificatemanager";
 import * as cloudfront from "aws-cdk-lib/aws-cloudfront";
 import * as origins from "aws-cdk-lib/aws-cloudfront-origins";
@@ -138,7 +145,7 @@ export class JaypieWebDeploymentBucket extends Construct implements s3.IBucket {
     this.bucket = new s3.Bucket(this, "DestinationBucket", {
       accessControl: s3.BucketAccessControl.BUCKET_OWNER_FULL_CONTROL,
       autoDeleteObjects: true,
-      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ACLS,
+      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ACLS_ONLY,
       bucketName: props.name || constructEnvName("web"),
       publicReadAccess: true,
       removalPolicy: RemovalPolicy.DESTROY,
@@ -205,12 +212,15 @@ export class JaypieWebDeploymentBucket extends Construct implements s3.IBucket {
         }),
       );
 
-      // Allow the role to deploy CDK apps
+      // Allow the role to describe the current stack
+      const stack = Stack.of(this);
       bucketDeployRole.addToPolicy(
         new PolicyStatement({
           actions: ["cloudformation:DescribeStacks"],
           effect: Effect.ALLOW,
-          resources: ["*"], // TODO: restrict to this stack
+          resources: [
+            `arn:aws:cloudformation:${stack.region}:${stack.account}:stack/${stack.stackName}/*`,
+          ],
         }),
       );
 
@@ -251,7 +261,7 @@ export class JaypieWebDeploymentBucket extends Construct implements s3.IBucket {
       this.distribution = new cloudfront.Distribution(this, "Distribution", {
         defaultBehavior: {
           cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
-          origin: new origins.S3Origin(this.bucket),
+          origin: new origins.S3StaticWebsiteOrigin(this.bucket),
           viewerProtocolPolicy:
             cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
         },
@@ -262,11 +272,15 @@ export class JaypieWebDeploymentBucket extends Construct implements s3.IBucket {
 
       // If this is production, enable caching on everything but index.html
       if (isProductionEnv()) {
-        this.distribution.addBehavior("/*", new origins.S3Origin(this.bucket), {
-          viewerProtocolPolicy:
-            cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
-          cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED,
-        });
+        this.distribution.addBehavior(
+          "/*",
+          new origins.S3StaticWebsiteOrigin(this.bucket),
+          {
+            viewerProtocolPolicy:
+              cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+            cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED,
+          },
+        );
       }
 
       // Create DNS record

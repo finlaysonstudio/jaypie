@@ -16,6 +16,10 @@ export {
   JaypieDatadogForwarder,
   JaypieDatadogForwarderProps,
 } from "./JaypieDatadogForwarder";
+export {
+  JaypieDistribution,
+  JaypieDistributionProps,
+} from "./JaypieDistribution";
 export { JaypieDatadogSecret } from "./JaypieDatadogSecret";
 export { JaypieDnsRecord, JaypieDnsRecordProps } from "./JaypieDnsRecord";
 export { JaypieEnvSecret } from "./JaypieEnvSecret";
