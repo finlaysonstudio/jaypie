@@ -8,6 +8,7 @@
   "license": "MIT",
   "author": "Finlayson Studio",
   "type": "module",
+  "sideEffects": false,
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -36,6 +37,7 @@
     "@jaypie/aws": "^1.1.21",
     "@jaypie/core": "^1.1.11",
     "@jaypie/datadog": "^1.1.2",
+    "@jaypie/errors": "^1.1.7",
     "@jaypie/express": "^1.1.11",
     "@jaypie/kit": "^1.1.0",
     "@jaypie/lambda": "^1.1.4",

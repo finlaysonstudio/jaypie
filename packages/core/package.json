@@ -8,6 +8,7 @@
   "license": "MIT",
   "author": "Finlayson Studio",
   "type": "module",
+  "sideEffects": false,
   "exports": {
     ".": {
       "types": "./index.d.ts",

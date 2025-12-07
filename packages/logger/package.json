@@ -9,6 +9,7 @@
   "license": "MIT",
   "author": "Finlayson Studio",
   "type": "module",
+  "sideEffects": false,
   "exports": {
     ".": {
       "types": "./dist/esm/index.d.ts",

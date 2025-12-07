@@ -34,9 +34,12 @@ export const forbiddenRoute = createMockWrappedFunction(
   { error: `_MOCK_FORBIDDEN_ROUTE_[${TAG}]` },
 );
 
-export const goneRoute = createMockWrappedFunction(original.goneRoute as (...args: unknown[]) => unknown, {
-  error: `_MOCK_GONE_ROUTE_[${TAG}]`,
-});
+export const goneRoute = createMockWrappedFunction(
+  original.goneRoute as (...args: unknown[]) => unknown,
+  {
+    error: `_MOCK_GONE_ROUTE_[${TAG}]`,
+  },
+);
 
 export const methodNotAllowedRoute = createMockWrappedFunction(
   original.methodNotAllowedRoute as (...args: unknown[]) => unknown,
@@ -48,9 +51,12 @@ export const noContentRoute = createMockWrappedFunction(
   { status: 204 },
 );
 
-export const notFoundRoute = createMockWrappedFunction(original.notFoundRoute as (...args: unknown[]) => unknown, {
-  error: `_MOCK_NOT_FOUND_ROUTE_[${TAG}]`,
-});
+export const notFoundRoute = createMockWrappedFunction(
+  original.notFoundRoute as (...args: unknown[]) => unknown,
+  {
+    error: `_MOCK_NOT_FOUND_ROUTE_[${TAG}]`,
+  },
+);
 
 export const notImplementedRoute = createMockWrappedFunction(
   original.notImplementedRoute as any,
