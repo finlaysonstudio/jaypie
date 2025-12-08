@@ -1,14 +1,4 @@
-import {
-  Anthropic,
-  APIConnectionError,
-  APIConnectionTimeoutError,
-  AuthenticationError,
-  BadRequestError,
-  InternalServerError,
-  NotFoundError,
-  PermissionDeniedError,
-  RateLimitError,
-} from "@anthropic-ai/sdk";
+import type { Anthropic } from "@anthropic-ai/sdk";
 import { JsonObject, NaturalSchema } from "@jaypie/types";
 import { z } from "zod/v4";
 
@@ -40,17 +30,18 @@ import { BaseProviderAdapter } from "./ProviderAdapter.interface.js";
 
 const STRUCTURED_OUTPUT_TOOL_NAME = "structured_output";
 
-const RETRYABLE_ERROR_TYPES = [
-  APIConnectionError,
-  APIConnectionTimeoutError,
-  InternalServerError,
+// Error names for classification (using string names since SDK is optional)
+const RETRYABLE_ERROR_NAMES = [
+  "APIConnectionError",
+  "APIConnectionTimeoutError",
+  "InternalServerError",
 ];
 
-const NOT_RETRYABLE_ERROR_TYPES = [
-  AuthenticationError,
-  BadRequestError,
-  NotFoundError,
-  PermissionDeniedError,
+const NOT_RETRYABLE_ERROR_NAMES = [
+  "AuthenticationError",
+  "BadRequestError",
+  "NotFoundError",
+  "PermissionDeniedError",
 ];
 
 //
@@ -329,8 +320,10 @@ export class AnthropicAdapter extends BaseProviderAdapter {
   //
 
   classifyError(error: unknown): ClassifiedError {
+    const errorName = (error as Error)?.constructor?.name;
+
     // Check for rate limit error
-    if (error instanceof RateLimitError) {
+    if (errorName === "RateLimitError") {
       return {
         error,
         category: ErrorCategory.RateLimit,
@@ -340,25 +333,21 @@ export class AnthropicAdapter extends BaseProviderAdapter {
     }
 
     // Check for retryable errors
-    for (const ErrorType of RETRYABLE_ERROR_TYPES) {
-      if (error instanceof ErrorType) {
-        return {
-          error,
-          category: ErrorCategory.Retryable,
-          shouldRetry: true,
-        };
-      }
+    if (RETRYABLE_ERROR_NAMES.includes(errorName)) {
+      return {
+        error,
+        category: ErrorCategory.Retryable,
+        shouldRetry: true,
+      };
     }
 
     // Check for non-retryable errors
-    for (const ErrorType of NOT_RETRYABLE_ERROR_TYPES) {
-      if (error instanceof ErrorType) {
-        return {
-          error,
-          category: ErrorCategory.Unrecoverable,
-          shouldRetry: false,
-        };
-      }
+    if (NOT_RETRYABLE_ERROR_NAMES.includes(errorName)) {
+      return {
+        error,
+        category: ErrorCategory.Unrecoverable,
+        shouldRetry: false,
+      };
     }
 
     // Unknown error - treat as potentially retryable

@@ -1,5 +1,5 @@
 import { JsonObject } from "@jaypie/types";
-import { GoogleGenAI } from "@google/genai";
+import type { GoogleGenAI } from "@google/genai";
 import { PROVIDER } from "../../constants.js";
 import {
   createOperateLoop,

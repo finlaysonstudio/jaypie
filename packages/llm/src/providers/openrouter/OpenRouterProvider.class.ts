@@ -1,5 +1,5 @@
 import { JsonObject } from "@jaypie/types";
-import { OpenRouter } from "@openrouter/sdk";
+import type { OpenRouter } from "@openrouter/sdk";
 import {
   createOperateLoop,
   OperateLoop,

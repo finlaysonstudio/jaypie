@@ -1,5 +1,5 @@
 import { JsonObject, NaturalSchema } from "@jaypie/types";
-import { OpenRouter } from "@openrouter/sdk";
+import type { OpenRouter } from "@openrouter/sdk";
 import { z } from "zod/v4";
 
 import { PROVIDER } from "../../constants.js";

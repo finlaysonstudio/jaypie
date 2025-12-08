@@ -2,12 +2,27 @@ import { getEnvSecret } from "@jaypie/aws";
 import { ConfigurationError } from "@jaypie/errors";
 import { JAYPIE, placeholders as replacePlaceholders } from "@jaypie/kit";
 import { log as defaultLog, log } from "@jaypie/logger";
-import Anthropic from "@anthropic-ai/sdk";
+import type Anthropic from "@anthropic-ai/sdk";
 import { PROVIDER } from "../../constants.js";
 import { LlmMessageOptions } from "../../types/LlmProvider.interface.js";
 import { naturalZodSchema } from "../../util/index.js";
 import { z } from "zod/v4";
 import { JsonObject, NaturalSchema } from "@jaypie/types";
+
+// SDK loader with caching
+let cachedSdk: typeof import("@anthropic-ai/sdk") | null = null;
+
+export async function loadSdk(): Promise<typeof import("@anthropic-ai/sdk")> {
+  if (cachedSdk) return cachedSdk;
+  try {
+    cachedSdk = await import("@anthropic-ai/sdk");
+    return cachedSdk;
+  } catch {
+    throw new ConfigurationError(
+      "@anthropic-ai/sdk is required but not installed. Run: npm install @anthropic-ai/sdk",
+    );
+  }
+}
 
 // Logger
 export const getLogger = () => defaultLog.lib({ lib: JAYPIE.LIB.LLM });
@@ -27,7 +42,8 @@ export async function initializeClient({
     );
   }
 
-  const client = new Anthropic({ apiKey: resolvedApiKey });
+  const sdk = await loadSdk();
+  const client = new sdk.default({ apiKey: resolvedApiKey });
   logger.trace("Initialized Anthropic client");
   return client;
 }

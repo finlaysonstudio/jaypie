@@ -2,9 +2,24 @@ import { getEnvSecret } from "@jaypie/aws";
 import { ConfigurationError } from "@jaypie/errors";
 import { JAYPIE, placeholders as replacePlaceholders } from "@jaypie/kit";
 import { log as defaultLog } from "@jaypie/logger";
-import { OpenRouter } from "@openrouter/sdk";
+import type { OpenRouter } from "@openrouter/sdk";
 import { LlmMessageOptions } from "../../types/LlmProvider.interface.js";
 import { PROVIDER } from "../../constants.js";
+
+// SDK loader with caching
+let cachedSdk: typeof import("@openrouter/sdk") | null = null;
+
+export async function loadSdk(): Promise<typeof import("@openrouter/sdk")> {
+  if (cachedSdk) return cachedSdk;
+  try {
+    cachedSdk = await import("@openrouter/sdk");
+    return cachedSdk;
+  } catch {
+    throw new ConfigurationError(
+      "@openrouter/sdk is required but not installed. Run: npm install @openrouter/sdk",
+    );
+  }
+}
 
 // Logger
 export const getLogger = () => defaultLog.lib({ lib: JAYPIE.LIB.LLM });
@@ -24,7 +39,8 @@ export async function initializeClient({
     );
   }
 
-  const client = new OpenRouter({ apiKey: resolvedApiKey });
+  const sdk = await loadSdk();
+  const client = new sdk.OpenRouter({ apiKey: resolvedApiKey });
   logger.trace("Initialized OpenRouter client");
   return client;
 }

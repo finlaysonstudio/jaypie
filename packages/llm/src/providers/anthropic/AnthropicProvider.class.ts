@@ -1,4 +1,4 @@
-import Anthropic from "@anthropic-ai/sdk";
+import type Anthropic from "@anthropic-ai/sdk";
 import { JsonObject } from "@jaypie/types";
 import { PROVIDER } from "../../constants.js";
 import {
