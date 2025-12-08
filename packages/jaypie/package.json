@@ -1,6 +1,6 @@
 {
   "name": "jaypie",
-  "version": "1.2.0-rc.0",
+  "version": "1.2.0-rc.1",
   "repository": {
     "type": "git",
     "url": "https://github.com/finlaysonstudio/jaypie"
@@ -35,17 +35,17 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@jaypie/aws": "1.2.0-rc.0",
-    "@jaypie/core": "1.2.0-rc.0",
-    "@jaypie/datadog": "1.2.0-rc.0",
-    "@jaypie/errors": "1.2.0-rc.0",
-    "@jaypie/express": "1.2.0-rc.0",
-    "@jaypie/kit": "1.2.0-rc.0",
-    "@jaypie/lambda": "1.2.0-rc.0",
-    "@jaypie/llm": "1.2.0-rc.0"
+    "@jaypie/aws": "1.2.0-rc.1",
+    "@jaypie/core": "1.2.0-rc.1",
+    "@jaypie/datadog": "1.2.0-rc.1",
+    "@jaypie/errors": "1.2.0-rc.1",
+    "@jaypie/express": "1.2.0-rc.1",
+    "@jaypie/kit": "1.2.0-rc.1",
+    "@jaypie/lambda": "1.2.0-rc.1",
+    "@jaypie/llm": "1.2.0-rc.1"
   },
   "devDependencies": {
-    "@jaypie/mongoose": "1.2.0-rc.0",
+    "@jaypie/mongoose": "1.2.0-rc.1",
     "@jaypie/types": "^0.1.7",
     "@rollup/plugin-typescript": "^12.1.4",
     "@types/node": "^24.8.1",
@@ -58,7 +58,7 @@
     "typescript-eslint": "^8.46.1"
   },
   "peerDependencies": {
-    "@jaypie/mongoose": "1.2.0-rc.0"
+    "@jaypie/mongoose": "1.2.0-rc.1"
   },
   "peerDependenciesMeta": {
     "@jaypie/mongoose": {

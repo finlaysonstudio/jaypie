@@ -1,6 +1,6 @@
 {
   "name": "@jaypie/core",
-  "version": "1.2.0-rc.0",
+  "version": "1.2.0-rc.1",
   "repository": {
     "type": "git",
     "url": "https://github.com/finlaysonstudio/jaypie"
@@ -33,9 +33,9 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@jaypie/errors": "1.2.0-rc.0",
-    "@jaypie/kit": "1.2.0-rc.0",
-    "@jaypie/logger": "1.2.0-rc.0",
+    "@jaypie/errors": "1.2.0-rc.1",
+    "@jaypie/kit": "1.2.0-rc.1",
+    "@jaypie/logger": "1.2.0-rc.1",
     "uuid": "^11.0.5"
   },
   "devDependencies": {

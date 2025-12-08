@@ -1,6 +1,6 @@
 {
   "name": "@jaypie/kit",
-  "version": "1.2.0-rc.0",
+  "version": "1.2.0-rc.1",
   "description": "Utility functions for Jaypie applications",
   "repository": {
     "type": "git",
@@ -32,8 +32,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@jaypie/errors": "1.2.0-rc.0",
-    "@jaypie/logger": "1.2.0-rc.0"
+    "@jaypie/errors": "1.2.0-rc.1",
+    "@jaypie/logger": "1.2.0-rc.1"
   },
   "devDependencies": {
     "@jaypie/types": "*",

@@ -1,6 +1,6 @@
 {
   "name": "@jaypie/express",
-  "version": "1.2.0-rc.0",
+  "version": "1.2.0-rc.1",
   "repository": {
     "type": "git",
     "url": "https://github.com/finlaysonstudio/jaypie"
@@ -45,8 +45,8 @@
   },
   "dependencies": {
     "@codegenie/serverless-express": "^4.15.0",
-    "@jaypie/datadog": "1.2.0-rc.0",
-    "@jaypie/errors": "1.2.0-rc.0",
+    "@jaypie/datadog": "1.2.0-rc.1",
+    "@jaypie/errors": "1.2.0-rc.1",
     "cors": "^2.8.5"
   },
   "devDependencies": {
