@@ -35,7 +35,6 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@datadog/datadog-api-client": "^1.24.0",
     "@jaypie/aws": "^1.1.0",
     "@jaypie/core": "^1.1.17",
     "hot-shots": "^10.0.0"

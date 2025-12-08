@@ -1,11 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Mock } from "vitest";
 
-import { client, v2 } from "@datadog/datadog-api-client";
 import { getSecret } from "@jaypie/aws";
 import { cloneDeep } from "@jaypie/kit";
 
 import { DATADOG } from "../constants.js";
+import { createDatadogClient } from "../datadog.client.js";
 
 // Subject
 import submitMetricSet from "../submitMetricSet.adapter.js";
@@ -31,7 +31,7 @@ const MOCK = {
 // Mock modules
 //
 
-vi.mock("@datadog/datadog-api-client");
+vi.mock("../datadog.client.js");
 
 vi.mock("@jaypie/aws");
 
@@ -46,12 +46,10 @@ beforeEach(() => {
   delete process.env.PROJECT_VERSION;
 
   (getSecret as Mock).mockImplementation(() => MOCK.SECRET_DATADOG_API_KEY);
-  mockSubmitMetrics.mockResolvedValue({ errors: [] });
+  mockSubmitMetrics.mockResolvedValue({ status: "ok" });
 
-  (v2.MetricsApi as unknown as Mock) = vi.fn(() => {
-    return {
-      submitMetrics: mockSubmitMetrics,
-    };
+  (createDatadogClient as Mock).mockReturnValue({
+    submitMetrics: mockSubmitMetrics,
   });
 });
 
@@ -69,28 +67,17 @@ describe("Datadog Metric Adapter", () => {
     const response = await submitMetricSet(MOCK.SUBMISSION);
     expect(response).not.toBeUndefined();
   });
-  it("Creates a client configuration", async () => {
+  it("Creates a datadog client", async () => {
     // Arrange
     // N/A
     // Act
     await submitMetricSet(MOCK.SUBMISSION);
     // Assert
-    expect(client.createConfiguration).toHaveBeenCalled();
-    expect(client.createConfiguration).toHaveBeenCalledTimes(1);
-    expect(
-      (client.createConfiguration as Mock).mock.calls[0][0].authMethods
-        .apiKeyAuth,
-    ).toBe(MOCK.SUBMISSION.apiKey);
-    // Done
-  });
-  it("Creates a metrics API instance", async () => {
-    // Arrange
-    // N/A
-    // Act
-    await submitMetricSet(MOCK.SUBMISSION);
-    // Assert
-    expect(v2.MetricsApi).toHaveBeenCalled();
-    expect(v2.MetricsApi).toHaveBeenCalledTimes(1);
+    expect(createDatadogClient).toHaveBeenCalled();
+    expect(createDatadogClient).toHaveBeenCalledTimes(1);
+    expect((createDatadogClient as Mock).mock.calls[0][0].apiKey).toBe(
+      MOCK.SUBMISSION.apiKey,
+    );
     // Done
   });
   it("Submits a metric", async () => {
@@ -99,39 +86,30 @@ describe("Datadog Metric Adapter", () => {
     // Act
     await submitMetricSet(MOCK.SUBMISSION);
     // Assert
-    expect(
-      (v2.MetricsApi as unknown as Mock)().submitMetrics,
-    ).toHaveBeenCalled();
-    expect(
-      (v2.MetricsApi as unknown as Mock)().submitMetrics,
-    ).toHaveBeenCalledTimes(1);
-    const submitMetricsArgs = (v2.MetricsApi as unknown as Mock)().submitMetrics
-      .mock.calls[0][0];
+    expect(mockSubmitMetrics).toHaveBeenCalled();
+    expect(mockSubmitMetrics).toHaveBeenCalledTimes(1);
+    const submitMetricsArgs = mockSubmitMetrics.mock.calls[0][0];
     expect(submitMetricsArgs).toBeObject();
-    expect(submitMetricsArgs).toHaveProperty("body");
-    expect(submitMetricsArgs.body).toBeObject();
-    expect(submitMetricsArgs.body).toHaveProperty("series");
-    expect(submitMetricsArgs.body.series).toBeArray();
-    expect(submitMetricsArgs.body.series).not.toBeEmpty();
-    expect(submitMetricsArgs.body.series).toHaveLength(1);
-    expect(submitMetricsArgs.body.series[0]).toBeObject();
-    expect(submitMetricsArgs.body.series[0]).toHaveProperty("metric");
-    expect(submitMetricsArgs.body.series[0].metric).toBe(
+    expect(submitMetricsArgs).toHaveProperty("series");
+    expect(submitMetricsArgs.series).toBeArray();
+    expect(submitMetricsArgs.series).not.toBeEmpty();
+    expect(submitMetricsArgs.series).toHaveLength(1);
+    expect(submitMetricsArgs.series[0]).toBeObject();
+    expect(submitMetricsArgs.series[0]).toHaveProperty("metric");
+    expect(submitMetricsArgs.series[0].metric).toBe(
       Object.keys(MOCK.SUBMISSION.valueSet)[0], // "MOCK.METRIC.NAME"
     );
-    expect(submitMetricsArgs.body.series[0]).toHaveProperty("type");
-    expect(submitMetricsArgs.body.series[0].type).toBe(MOCK.SUBMISSION.type);
-    expect(submitMetricsArgs.body.series[0]).toHaveProperty("points");
-    expect(submitMetricsArgs.body.series[0].points).toBeArray();
-    expect(submitMetricsArgs.body.series[0].points).not.toBeEmpty();
-    expect(submitMetricsArgs.body.series[0].points).toHaveLength(1);
-    expect(submitMetricsArgs.body.series[0].points[0]).toBeObject();
-    expect(submitMetricsArgs.body.series[0].points[0]).toHaveProperty(
-      "timestamp",
-    );
-    expect(submitMetricsArgs.body.series[0].points[0].timestamp).toBeNumber();
-    expect(submitMetricsArgs.body.series[0].points[0]).toHaveProperty("value");
-    expect(submitMetricsArgs.body.series[0].points[0].value).toBeNumber();
+    expect(submitMetricsArgs.series[0]).toHaveProperty("type");
+    expect(submitMetricsArgs.series[0].type).toBe(MOCK.SUBMISSION.type);
+    expect(submitMetricsArgs.series[0]).toHaveProperty("points");
+    expect(submitMetricsArgs.series[0].points).toBeArray();
+    expect(submitMetricsArgs.series[0].points).not.toBeEmpty();
+    expect(submitMetricsArgs.series[0].points).toHaveLength(1);
+    expect(submitMetricsArgs.series[0].points[0]).toBeObject();
+    expect(submitMetricsArgs.series[0].points[0]).toHaveProperty("timestamp");
+    expect(submitMetricsArgs.series[0].points[0].timestamp).toBeNumber();
+    expect(submitMetricsArgs.series[0].points[0]).toHaveProperty("value");
+    expect(submitMetricsArgs.series[0].points[0].value).toBeNumber();
     // Done
   });
   it("Submits multiple metrics", async () => {
@@ -144,37 +122,27 @@ describe("Datadog Metric Adapter", () => {
     // Act
     await submitMetricSet(submission);
     // Assert
-    expect(
-      (v2.MetricsApi as unknown as Mock)().submitMetrics,
-    ).toHaveBeenCalled();
-    expect(
-      (v2.MetricsApi as unknown as Mock)().submitMetrics,
-    ).toHaveBeenCalledTimes(1);
-    const submitMetricsArgs = (v2.MetricsApi as unknown as Mock)().submitMetrics
-      .mock.calls[0][0];
+    expect(mockSubmitMetrics).toHaveBeenCalled();
+    expect(mockSubmitMetrics).toHaveBeenCalledTimes(1);
+    const submitMetricsArgs = mockSubmitMetrics.mock.calls[0][0];
     expect(submitMetricsArgs).toBeObject();
-    expect(submitMetricsArgs).toHaveProperty("body");
-    expect(submitMetricsArgs.body).toBeObject();
-    expect(submitMetricsArgs.body).toHaveProperty("series");
-    expect(submitMetricsArgs.body.series).toBeArray();
-    expect(submitMetricsArgs.body.series).not.toBeEmpty();
-    expect(submitMetricsArgs.body.series).toHaveLength(2);
-    expect(submitMetricsArgs.body.series[0]).toBeObject();
-    expect(submitMetricsArgs.body.series[0]).toHaveProperty("metric");
-    expect(submitMetricsArgs.body.series[0].metric).toBe(
+    expect(submitMetricsArgs).toHaveProperty("series");
+    expect(submitMetricsArgs.series).toBeArray();
+    expect(submitMetricsArgs.series).not.toBeEmpty();
+    expect(submitMetricsArgs.series).toHaveLength(2);
+    expect(submitMetricsArgs.series[0]).toBeObject();
+    expect(submitMetricsArgs.series[0]).toHaveProperty("metric");
+    expect(submitMetricsArgs.series[0].metric).toBe(
       Object.keys(valueSet)[0], // "MOCK.METRIC.NAME.1"
     );
-    // expect(submitMetricsArgs.body.series[0].metric.points).toBeArray();
-    expect(submitMetricsArgs.body.series[0].points).toHaveLength(1);
-    expect(submitMetricsArgs.body.series[0].points[0]).toBeObject();
-    expect(submitMetricsArgs.body.series[0].points[0]).toHaveProperty(
-      "timestamp",
-    );
-    expect(submitMetricsArgs.body.series[0].points[0].timestamp).toBeNumber();
-    expect(submitMetricsArgs.body.series[0].points[0]).toHaveProperty("value");
-    expect(submitMetricsArgs.body.series[0].points[0].value).toBeNumber();
-    expect(submitMetricsArgs.body.series[0].points[0].value).toBe(12);
-    expect(submitMetricsArgs.body.series[1]).toBeObject();
+    expect(submitMetricsArgs.series[0].points).toHaveLength(1);
+    expect(submitMetricsArgs.series[0].points[0]).toBeObject();
+    expect(submitMetricsArgs.series[0].points[0]).toHaveProperty("timestamp");
+    expect(submitMetricsArgs.series[0].points[0].timestamp).toBeNumber();
+    expect(submitMetricsArgs.series[0].points[0]).toHaveProperty("value");
+    expect(submitMetricsArgs.series[0].points[0].value).toBeNumber();
+    expect(submitMetricsArgs.series[0].points[0].value).toBe(12);
+    expect(submitMetricsArgs.series[1]).toBeObject();
   });
   describe("Error cases", () => {
     it("Will return false if DD_API_KEY is missing", async () => {
@@ -221,15 +189,13 @@ describe("Datadog Metric Adapter", () => {
       // Act
       await submitMetricSet({ ...MOCK.SUBMISSION, tags });
       // Assert
-      const submitMetricsArgs = (v2.MetricsApi as unknown as Mock)()
-        .submitMetrics.mock.calls[0][0];
-      expect(submitMetricsArgs).toHaveProperty("body");
-      expect(submitMetricsArgs.body).toHaveProperty("series");
-      expect(submitMetricsArgs.body.series).toHaveLength(1);
-      expect(submitMetricsArgs.body.series[0]).toHaveProperty("tags");
-      expect(submitMetricsArgs.body.series[0].tags).toBeArray();
-      expect(submitMetricsArgs.body.series[0].tags).not.toBeEmpty();
-      expect(submitMetricsArgs.body.series[0].tags).toEqual(tags);
+      const submitMetricsArgs = mockSubmitMetrics.mock.calls[0][0];
+      expect(submitMetricsArgs).toHaveProperty("series");
+      expect(submitMetricsArgs.series).toHaveLength(1);
+      expect(submitMetricsArgs.series[0]).toHaveProperty("tags");
+      expect(submitMetricsArgs.series[0].tags).toBeArray();
+      expect(submitMetricsArgs.series[0].tags).not.toBeEmpty();
+      expect(submitMetricsArgs.series[0].tags).toEqual(tags);
       // Done
     });
     it("Tags submitted as an object are converted to an array", async () => {
@@ -238,16 +204,14 @@ describe("Datadog Metric Adapter", () => {
       // Act
       await submitMetricSet({ ...MOCK.SUBMISSION, tags });
       // Assert
-      const submitMetricsArgs = (v2.MetricsApi as unknown as Mock)()
-        .submitMetrics.mock.calls[0][0];
-      expect(submitMetricsArgs).toHaveProperty("body");
-      expect(submitMetricsArgs.body).toHaveProperty("series");
-      expect(submitMetricsArgs.body.series).toHaveLength(1);
-      expect(submitMetricsArgs.body.series[0]).toHaveProperty("tags");
-      expect(submitMetricsArgs.body.series[0].tags).toBeArray();
-      expect(submitMetricsArgs.body.series[0].tags).not.toBeEmpty();
-      expect(submitMetricsArgs.body.series[0].tags).toHaveLength(1);
-      expect(submitMetricsArgs.body.series[0].tags[0]).toBe("project:mayhem");
+      const submitMetricsArgs = mockSubmitMetrics.mock.calls[0][0];
+      expect(submitMetricsArgs).toHaveProperty("series");
+      expect(submitMetricsArgs.series).toHaveLength(1);
+      expect(submitMetricsArgs.series[0]).toHaveProperty("tags");
+      expect(submitMetricsArgs.series[0].tags).toBeArray();
+      expect(submitMetricsArgs.series[0].tags).not.toBeEmpty();
+      expect(submitMetricsArgs.series[0].tags).toHaveLength(1);
+      expect(submitMetricsArgs.series[0].tags[0]).toBe("project:mayhem");
       // Done
     });
     it("Will use apiSecret if provided", async () => {
@@ -263,12 +227,11 @@ describe("Datadog Metric Adapter", () => {
       expect(getSecret).toHaveBeenCalled();
       expect(getSecret).toHaveBeenCalledTimes(1);
       expect(getSecret).toHaveBeenCalledWith(apiSecretName);
-      expect(client.createConfiguration).toHaveBeenCalled();
-      expect(client.createConfiguration).toHaveBeenCalledTimes(1);
-      expect(
-        (client.createConfiguration as Mock).mock.calls[0][0].authMethods
-          .apiKeyAuth,
-      ).toBe(MOCK.SECRET_DATADOG_API_KEY);
+      expect(createDatadogClient).toHaveBeenCalled();
+      expect(createDatadogClient).toHaveBeenCalledTimes(1);
+      expect((createDatadogClient as Mock).mock.calls[0][0].apiKey).toBe(
+        MOCK.SECRET_DATADOG_API_KEY,
+      );
     });
     it("Will use apiSecret over apiKey if both are provided", async () => {
       // Arrange
@@ -282,12 +245,11 @@ describe("Datadog Metric Adapter", () => {
       expect(getSecret).toHaveBeenCalled();
       expect(getSecret).toHaveBeenCalledTimes(1);
       expect(getSecret).toHaveBeenCalledWith(apiSecretName);
-      expect(client.createConfiguration).toHaveBeenCalled();
-      expect(client.createConfiguration).toHaveBeenCalledTimes(1);
-      expect(
-        (client.createConfiguration as Mock).mock.calls[0][0].authMethods
-          .apiKeyAuth,
-      ).toBe(MOCK.SECRET_DATADOG_API_KEY);
+      expect(createDatadogClient).toHaveBeenCalled();
+      expect(createDatadogClient).toHaveBeenCalledTimes(1);
+      expect((createDatadogClient as Mock).mock.calls[0][0].apiKey).toBe(
+        MOCK.SECRET_DATADOG_API_KEY,
+      );
     });
     it("Includes environment tags when present", async () => {
       // Arrange
@@ -303,15 +265,12 @@ describe("Datadog Metric Adapter", () => {
       // Act
       await submitMetricSet(MOCK.SUBMISSION);
       // Assert
-      const submitMetricsArgs = (v2.MetricsApi as unknown as Mock)()
-        .submitMetrics.mock.calls[0][0];
-      expect(submitMetricsArgs.body.series[0].tags).toContain("env:test");
-      expect(submitMetricsArgs.body.series[0].tags).toContain("project:jaypie");
-      expect(submitMetricsArgs.body.series[0].tags).toContain(
-        "service:datadog",
-      );
-      expect(submitMetricsArgs.body.series[0].tags).toContain("sponsor:acme");
-      expect(submitMetricsArgs.body.series[0].tags).toContain("version:1.0.0");
+      const submitMetricsArgs = mockSubmitMetrics.mock.calls[0][0];
+      expect(submitMetricsArgs.series[0].tags).toContain("env:test");
+      expect(submitMetricsArgs.series[0].tags).toContain("project:jaypie");
+      expect(submitMetricsArgs.series[0].tags).toContain("service:datadog");
+      expect(submitMetricsArgs.series[0].tags).toContain("sponsor:acme");
+      expect(submitMetricsArgs.series[0].tags).toContain("version:1.0.0");
       // Cleanup
       process.env = originalEnv;
     });
@@ -327,16 +286,11 @@ describe("Datadog Metric Adapter", () => {
       // Act
       await submitMetricSet({ ...MOCK.SUBMISSION, tags });
       // Assert
-      const submitMetricsArgs = (v2.MetricsApi as unknown as Mock)()
-        .submitMetrics.mock.calls[0][0];
-      expect(submitMetricsArgs.body.series[0].tags).toContain("env:production");
-      expect(submitMetricsArgs.body.series[0].tags).toContain("project:custom");
-      expect(submitMetricsArgs.body.series[0].tags).not.toContain(
-        "env:default",
-      );
-      expect(submitMetricsArgs.body.series[0].tags).not.toContain(
-        "project:default",
-      );
+      const submitMetricsArgs = mockSubmitMetrics.mock.calls[0][0];
+      expect(submitMetricsArgs.series[0].tags).toContain("env:production");
+      expect(submitMetricsArgs.series[0].tags).toContain("project:custom");
+      expect(submitMetricsArgs.series[0].tags).not.toContain("env:default");
+      expect(submitMetricsArgs.series[0].tags).not.toContain("project:default");
       // Cleanup
       process.env = originalEnv;
     });
@@ -352,9 +306,8 @@ describe("Datadog Metric Adapter", () => {
       // Act
       await submitMetricSet({ ...MOCK.SUBMISSION, tags });
       // Assert
-      const submitMetricsArgs = (v2.MetricsApi as unknown as Mock)()
-        .submitMetrics.mock.calls[0][0];
-      const finalTags = submitMetricsArgs.body.series[0].tags;
+      const submitMetricsArgs = mockSubmitMetrics.mock.calls[0][0];
+      const finalTags = submitMetricsArgs.series[0].tags;
       expect(finalTags).toContain("taco:beef");
       expect(finalTags).toContain("cheese:extra");
       expect(finalTags).toContain("double");
@@ -378,9 +331,8 @@ describe("Datadog Metric Adapter", () => {
       // Act
       await submitMetricSet({ ...MOCK.SUBMISSION, tags });
       // Assert
-      const submitMetricsArgs = (v2.MetricsApi as unknown as Mock)()
-        .submitMetrics.mock.calls[0][0];
-      const finalTags = submitMetricsArgs.body.series[0].tags;
+      const submitMetricsArgs = mockSubmitMetrics.mock.calls[0][0];
+      const finalTags = submitMetricsArgs.series[0].tags;
       expect(finalTags).toContain("env:production");
       expect(finalTags).toContain("project:override");
       expect(finalTags).toContain("custom");

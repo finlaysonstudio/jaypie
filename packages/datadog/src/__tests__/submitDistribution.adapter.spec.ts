@@ -1,11 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Mock } from "vitest";
 
-import { client, v1 } from "@datadog/datadog-api-client";
 import { getSecret } from "@jaypie/aws";
 import { cloneDeep } from "@jaypie/kit";
 
 import { DATADOG } from "../constants.js";
+import { createDatadogClient } from "../datadog.client.js";
 
 // Subject
 import submitDistribution from "../submitDistribution.adapter.js";
@@ -39,7 +39,7 @@ const MOCK = {
 // Mock modules
 //
 
-vi.mock("@datadog/datadog-api-client");
+vi.mock("../datadog.client.js");
 
 vi.mock("@jaypie/aws");
 
@@ -54,12 +54,10 @@ beforeEach(() => {
   delete process.env.PROJECT_VERSION;
 
   (getSecret as Mock).mockImplementation(() => MOCK.SECRET_DATADOG_API_KEY);
-  mockSubmitDistributionPoints.mockResolvedValue({ errors: [] });
+  mockSubmitDistributionPoints.mockResolvedValue({ status: "ok" });
 
-  (v1.MetricsApi as unknown as Mock) = vi.fn(() => {
-    return {
-      submitDistributionPoints: mockSubmitDistributionPoints,
-    };
+  (createDatadogClient as Mock).mockReturnValue({
+    submitDistributionPoints: mockSubmitDistributionPoints,
   });
 });
 
@@ -78,28 +76,17 @@ describe("Datadog Distribution Adapter", () => {
       const response = await submitDistribution(MOCK.SUBMISSION);
       expect(response).not.toBeUndefined();
     });
-    it("Creates a client configuration", async () => {
+    it("Creates a datadog client", async () => {
       // Arrange
       // N/A
       // Act
       await submitDistribution(MOCK.SUBMISSION);
       // Assert
-      expect(client.createConfiguration).toHaveBeenCalled();
-      expect(client.createConfiguration).toHaveBeenCalledTimes(1);
-      expect(
-        (client.createConfiguration as Mock).mock.calls[0][0].authMethods
-          .apiKeyAuth,
-      ).toBe(MOCK.SUBMISSION.apiKey);
-      // Done
-    });
-    it("Creates a metrics API instance", async () => {
-      // Arrange
-      // N/A
-      // Act
-      await submitDistribution(MOCK.SUBMISSION);
-      // Assert
-      expect(v1.MetricsApi).toHaveBeenCalled();
-      expect(v1.MetricsApi).toHaveBeenCalledTimes(1);
+      expect(createDatadogClient).toHaveBeenCalled();
+      expect(createDatadogClient).toHaveBeenCalledTimes(1);
+      expect((createDatadogClient as Mock).mock.calls[0][0].apiKey).toBe(
+        MOCK.SUBMISSION.apiKey,
+      );
       // Done
     });
     it("Submits a distribution", async () => {
@@ -108,37 +95,26 @@ describe("Datadog Distribution Adapter", () => {
       // Act
       await submitDistribution(MOCK.SUBMISSION);
       // Assert
-      expect(
-        (v1.MetricsApi as unknown as Mock)().submitDistributionPoints,
-      ).toHaveBeenCalled();
-      expect(
-        (v1.MetricsApi as unknown as Mock)().submitDistributionPoints,
-      ).toHaveBeenCalledTimes(1);
-      const submitArgs = (v1.MetricsApi as unknown as Mock)()
-        .submitDistributionPoints.mock.calls[0][0];
+      expect(mockSubmitDistributionPoints).toHaveBeenCalled();
+      expect(mockSubmitDistributionPoints).toHaveBeenCalledTimes(1);
+      const submitArgs = mockSubmitDistributionPoints.mock.calls[0][0];
       expect(submitArgs).toBeObject();
-      expect(submitArgs).toHaveProperty("body");
-      expect(submitArgs.body).toBeObject();
-      expect(submitArgs.body).toHaveProperty("series");
-      expect(submitArgs.body.series).toBeArray();
-      expect(submitArgs.body.series).not.toBeEmpty();
-      expect(submitArgs.body.series).toHaveLength(1);
-      expect(submitArgs.body.series[0]).toBeObject();
-      expect(submitArgs.body.series[0]).toHaveProperty("metric");
-      expect(submitArgs.body.series[0].metric).toBe(MOCK.SUBMISSION.name);
-      expect(submitArgs.body.series[0]).toHaveProperty("points");
-      expect(submitArgs.body.series[0].points).toBeArray();
-      expect(submitArgs.body.series[0].points).not.toBeEmpty();
-      expect(submitArgs.body.series[0].points).toHaveLength(1);
-      expect(submitArgs.body.series[0].points[0]).toBeArray();
-      expect(submitArgs.body.series[0].points[0]).toHaveLength(2);
-      expect(submitArgs.body.series[0].points[0][0]).toBeNumber(); // timestamp
-      expect(submitArgs.body.series[0].points[0][1]).toBeArray(); // values
-      expect(submitArgs.body.series[0].points[0][1]).toEqual(
-        MOCK.SUBMISSION.value,
-      );
-      expect(submitArgs).toHaveProperty("contentEncoding");
-      expect(submitArgs.contentEncoding).toBe("deflate");
+      expect(submitArgs).toHaveProperty("series");
+      expect(submitArgs.series).toBeArray();
+      expect(submitArgs.series).not.toBeEmpty();
+      expect(submitArgs.series).toHaveLength(1);
+      expect(submitArgs.series[0]).toBeObject();
+      expect(submitArgs.series[0]).toHaveProperty("metric");
+      expect(submitArgs.series[0].metric).toBe(MOCK.SUBMISSION.name);
+      expect(submitArgs.series[0]).toHaveProperty("points");
+      expect(submitArgs.series[0].points).toBeArray();
+      expect(submitArgs.series[0].points).not.toBeEmpty();
+      expect(submitArgs.series[0].points).toHaveLength(1);
+      expect(submitArgs.series[0].points[0]).toBeArray();
+      expect(submitArgs.series[0].points[0]).toHaveLength(2);
+      expect(submitArgs.series[0].points[0][0]).toBeNumber(); // timestamp
+      expect(submitArgs.series[0].points[0][1]).toBeArray(); // values
+      expect(submitArgs.series[0].points[0][1]).toEqual(MOCK.SUBMISSION.value);
       // Done
     });
   });
@@ -227,12 +203,11 @@ describe("Datadog Distribution Adapter", () => {
       expect(getSecret).toHaveBeenCalled();
       expect(getSecret).toHaveBeenCalledTimes(1);
       expect(getSecret).toHaveBeenCalledWith(apiSecretName);
-      expect(client.createConfiguration).toHaveBeenCalled();
-      expect(client.createConfiguration).toHaveBeenCalledTimes(1);
-      expect(
-        (client.createConfiguration as Mock).mock.calls[0][0].authMethods
-          .apiKeyAuth,
-      ).toBe(MOCK.SECRET_DATADOG_API_KEY);
+      expect(createDatadogClient).toHaveBeenCalled();
+      expect(createDatadogClient).toHaveBeenCalledTimes(1);
+      expect((createDatadogClient as Mock).mock.calls[0][0].apiKey).toBe(
+        MOCK.SECRET_DATADOG_API_KEY,
+      );
     });
     it("Will use apiSecret over apiKey if both are provided", async () => {
       // Arrange
@@ -246,12 +221,11 @@ describe("Datadog Distribution Adapter", () => {
       expect(getSecret).toHaveBeenCalled();
       expect(getSecret).toHaveBeenCalledTimes(1);
       expect(getSecret).toHaveBeenCalledWith(apiSecretName);
-      expect(client.createConfiguration).toHaveBeenCalled();
-      expect(client.createConfiguration).toHaveBeenCalledTimes(1);
-      expect(
-        (client.createConfiguration as Mock).mock.calls[0][0].authMethods
-          .apiKeyAuth,
-      ).toBe(MOCK.SECRET_DATADOG_API_KEY);
+      expect(createDatadogClient).toHaveBeenCalled();
+      expect(createDatadogClient).toHaveBeenCalledTimes(1);
+      expect((createDatadogClient as Mock).mock.calls[0][0].apiKey).toBe(
+        MOCK.SECRET_DATADOG_API_KEY,
+      );
     });
   });
 
@@ -276,12 +250,9 @@ describe("Datadog Distribution Adapter", () => {
       // Act
       await submitDistribution(MOCK.SUBMISSION_WITH_POINTS);
       // Assert
-      expect(
-        (v1.MetricsApi as unknown as Mock)().submitDistributionPoints,
-      ).toHaveBeenCalled();
-      const submitArgs = (v1.MetricsApi as unknown as Mock)()
-        .submitDistributionPoints.mock.calls[0][0];
-      expect(submitArgs.body.series[0].points).toEqual(
+      expect(mockSubmitDistributionPoints).toHaveBeenCalled();
+      const submitArgs = mockSubmitDistributionPoints.mock.calls[0][0];
+      expect(submitArgs.series[0].points).toEqual(
         MOCK.SUBMISSION_WITH_POINTS.points,
       );
       // Done
@@ -292,11 +263,10 @@ describe("Datadog Distribution Adapter", () => {
       // Act
       await submitDistribution(submission);
       // Assert
-      const submitArgs = (v1.MetricsApi as unknown as Mock)()
-        .submitDistributionPoints.mock.calls[0][0];
-      expect(submitArgs.body.series[0].points).toBeArray();
-      expect(submitArgs.body.series[0].points).toHaveLength(1);
-      expect(submitArgs.body.series[0].points[0][1]).toEqual([3.0, 4.0]);
+      const submitArgs = mockSubmitDistributionPoints.mock.calls[0][0];
+      expect(submitArgs.series[0].points).toBeArray();
+      expect(submitArgs.series[0].points).toHaveLength(1);
+      expect(submitArgs.series[0].points[0][1]).toEqual([3.0, 4.0]);
       // Done
     });
     it("Converts single value to array in value", async () => {
@@ -305,11 +275,10 @@ describe("Datadog Distribution Adapter", () => {
       // Act
       await submitDistribution(submission);
       // Assert
-      const submitArgs = (v1.MetricsApi as unknown as Mock)()
-        .submitDistributionPoints.mock.calls[0][0];
-      expect(submitArgs.body.series[0].points).toBeArray();
-      expect(submitArgs.body.series[0].points).toHaveLength(1);
-      expect(submitArgs.body.series[0].points[0][1]).toEqual([5.0]);
+      const submitArgs = mockSubmitDistributionPoints.mock.calls[0][0];
+      expect(submitArgs.series[0].points).toBeArray();
+      expect(submitArgs.series[0].points).toHaveLength(1);
+      expect(submitArgs.series[0].points[0][1]).toEqual([5.0]);
       // Done
     });
   });
@@ -321,15 +290,13 @@ describe("Datadog Distribution Adapter", () => {
       // Act
       await submitDistribution({ ...MOCK.SUBMISSION, tags });
       // Assert
-      const submitArgs = (v1.MetricsApi as unknown as Mock)()
-        .submitDistributionPoints.mock.calls[0][0];
-      expect(submitArgs).toHaveProperty("body");
-      expect(submitArgs.body).toHaveProperty("series");
-      expect(submitArgs.body.series).toHaveLength(1);
-      expect(submitArgs.body.series[0]).toHaveProperty("tags");
-      expect(submitArgs.body.series[0].tags).toBeArray();
-      expect(submitArgs.body.series[0].tags).not.toBeEmpty();
-      expect(submitArgs.body.series[0].tags).toEqual(tags);
+      const submitArgs = mockSubmitDistributionPoints.mock.calls[0][0];
+      expect(submitArgs).toHaveProperty("series");
+      expect(submitArgs.series).toHaveLength(1);
+      expect(submitArgs.series[0]).toHaveProperty("tags");
+      expect(submitArgs.series[0].tags).toBeArray();
+      expect(submitArgs.series[0].tags).not.toBeEmpty();
+      expect(submitArgs.series[0].tags).toEqual(tags);
       // Done
     });
     it("Tags submitted as an object are converted to an array", async () => {
@@ -338,16 +305,14 @@ describe("Datadog Distribution Adapter", () => {
       // Act
       await submitDistribution({ ...MOCK.SUBMISSION, tags });
       // Assert
-      const submitArgs = (v1.MetricsApi as unknown as Mock)()
-        .submitDistributionPoints.mock.calls[0][0];
-      expect(submitArgs).toHaveProperty("body");
-      expect(submitArgs.body).toHaveProperty("series");
-      expect(submitArgs.body.series).toHaveLength(1);
-      expect(submitArgs.body.series[0]).toHaveProperty("tags");
-      expect(submitArgs.body.series[0].tags).toBeArray();
-      expect(submitArgs.body.series[0].tags).not.toBeEmpty();
-      expect(submitArgs.body.series[0].tags).toHaveLength(1);
-      expect(submitArgs.body.series[0].tags[0]).toBe("project:mayhem");
+      const submitArgs = mockSubmitDistributionPoints.mock.calls[0][0];
+      expect(submitArgs).toHaveProperty("series");
+      expect(submitArgs.series).toHaveLength(1);
+      expect(submitArgs.series[0]).toHaveProperty("tags");
+      expect(submitArgs.series[0].tags).toBeArray();
+      expect(submitArgs.series[0].tags).not.toBeEmpty();
+      expect(submitArgs.series[0].tags).toHaveLength(1);
+      expect(submitArgs.series[0].tags[0]).toBe("project:mayhem");
       // Done
     });
     it("Includes environment tags when present", async () => {
@@ -364,13 +329,12 @@ describe("Datadog Distribution Adapter", () => {
       // Act
       await submitDistribution(MOCK.SUBMISSION);
       // Assert
-      const submitArgs = (v1.MetricsApi as unknown as Mock)()
-        .submitDistributionPoints.mock.calls[0][0];
-      expect(submitArgs.body.series[0].tags).toContain("env:test");
-      expect(submitArgs.body.series[0].tags).toContain("project:jaypie");
-      expect(submitArgs.body.series[0].tags).toContain("service:datadog");
-      expect(submitArgs.body.series[0].tags).toContain("sponsor:acme");
-      expect(submitArgs.body.series[0].tags).toContain("version:1.0.0");
+      const submitArgs = mockSubmitDistributionPoints.mock.calls[0][0];
+      expect(submitArgs.series[0].tags).toContain("env:test");
+      expect(submitArgs.series[0].tags).toContain("project:jaypie");
+      expect(submitArgs.series[0].tags).toContain("service:datadog");
+      expect(submitArgs.series[0].tags).toContain("sponsor:acme");
+      expect(submitArgs.series[0].tags).toContain("version:1.0.0");
       // Cleanup
       process.env = originalEnv;
     });
@@ -386,12 +350,11 @@ describe("Datadog Distribution Adapter", () => {
       // Act
       await submitDistribution({ ...MOCK.SUBMISSION, tags });
       // Assert
-      const submitArgs = (v1.MetricsApi as unknown as Mock)()
-        .submitDistributionPoints.mock.calls[0][0];
-      expect(submitArgs.body.series[0].tags).toContain("env:production");
-      expect(submitArgs.body.series[0].tags).toContain("project:custom");
-      expect(submitArgs.body.series[0].tags).not.toContain("env:default");
-      expect(submitArgs.body.series[0].tags).not.toContain("project:default");
+      const submitArgs = mockSubmitDistributionPoints.mock.calls[0][0];
+      expect(submitArgs.series[0].tags).toContain("env:production");
+      expect(submitArgs.series[0].tags).toContain("project:custom");
+      expect(submitArgs.series[0].tags).not.toContain("env:default");
+      expect(submitArgs.series[0].tags).not.toContain("project:default");
       // Cleanup
       process.env = originalEnv;
     });
@@ -407,9 +370,8 @@ describe("Datadog Distribution Adapter", () => {
       // Act
       await submitDistribution({ ...MOCK.SUBMISSION, tags });
       // Assert
-      const submitArgs = (v1.MetricsApi as unknown as Mock)()
-        .submitDistributionPoints.mock.calls[0][0];
-      const finalTags = submitArgs.body.series[0].tags;
+      const submitArgs = mockSubmitDistributionPoints.mock.calls[0][0];
+      const finalTags = submitArgs.series[0].tags;
       expect(finalTags).toContain("taco:beef");
       expect(finalTags).toContain("cheese:extra");
       expect(finalTags).toContain("double");
@@ -433,9 +395,8 @@ describe("Datadog Distribution Adapter", () => {
       // Act
       await submitDistribution({ ...MOCK.SUBMISSION, tags });
       // Assert
-      const submitArgs = (v1.MetricsApi as unknown as Mock)()
-        .submitDistributionPoints.mock.calls[0][0];
-      const finalTags = submitArgs.body.series[0].tags;
+      const submitArgs = mockSubmitDistributionPoints.mock.calls[0][0];
+      const finalTags = submitArgs.series[0].tags;
       expect(finalTags).toContain("env:production");
       expect(finalTags).toContain("project:override");
       expect(finalTags).toContain("custom");
@@ -454,9 +415,8 @@ describe("Datadog Distribution Adapter", () => {
       // Act
       await submitDistribution(submission);
       // Assert
-      const submitArgs = (v1.MetricsApi as unknown as Mock)()
-        .submitDistributionPoints.mock.calls[0][0];
-      expect(submitArgs.body.series[0].points[0][0]).toBe(customTimestamp);
+      const submitArgs = mockSubmitDistributionPoints.mock.calls[0][0];
+      expect(submitArgs.series[0].points[0][0]).toBe(customTimestamp);
       // Done
     });
     it("Prefers points over value when both are provided", async () => {
@@ -470,9 +430,8 @@ describe("Datadog Distribution Adapter", () => {
       // Act
       await submitDistribution(submission);
       // Assert
-      const submitArgs = (v1.MetricsApi as unknown as Mock)()
-        .submitDistributionPoints.mock.calls[0][0];
-      expect(submitArgs.body.series[0].points).toEqual(customPoints);
+      const submitArgs = mockSubmitDistributionPoints.mock.calls[0][0];
+      expect(submitArgs.series[0].points).toEqual(customPoints);
       // Done
     });
     it("Handles empty points array by falling back to value", async () => {
@@ -485,10 +444,9 @@ describe("Datadog Distribution Adapter", () => {
       // Act
       await submitDistribution(submission);
       // Assert
-      const submitArgs = (v1.MetricsApi as unknown as Mock)()
-        .submitDistributionPoints.mock.calls[0][0];
-      expect(submitArgs.body.series[0].points).toHaveLength(1);
-      expect(submitArgs.body.series[0].points[0][1]).toEqual([7.0, 8.0]);
+      const submitArgs = mockSubmitDistributionPoints.mock.calls[0][0];
+      expect(submitArgs.series[0].points).toHaveLength(1);
+      expect(submitArgs.series[0].points[0][1]).toEqual([7.0, 8.0]);
       // Done
     });
   });

@@ -1,10 +1,9 @@
-import { client, v2 } from "@datadog/datadog-api-client";
-import type { MetricIntakeType } from "@datadog/datadog-api-client/dist/packages/datadog-api-client-v2/models/MetricIntakeType.js";
 import { getSecret } from "@jaypie/aws";
 import { force } from "@jaypie/kit";
 import { log } from "@jaypie/logger";
 
 import { DATADOG } from "./constants.js";
+import { createDatadogClient } from "./datadog.client.js";
 import objectToKeyValueArrayPipeline from "./objectToKeyValueArray.pipeline.js";
 import getStatsDClient, { isLambdaWithExtension } from "./statsd.client.js";
 
@@ -81,12 +80,12 @@ const submitMetricSet = async ({
       resolvedApiKey = await getSecret(apiSecret);
     }
 
-    const configuration = client.createConfiguration({
-      authMethods: {
-        apiKeyAuth: resolvedApiKey,
-      },
-    });
-    const apiInstance = new v2.MetricsApi(configuration);
+    if (!resolvedApiKey) {
+      log.warn("DATADOG_API_KEY could not be resolved");
+      return false;
+    }
+
+    const datadogClient = createDatadogClient({ apiKey: resolvedApiKey });
 
     //
     //
@@ -153,7 +152,7 @@ const submitMetricSet = async ({
       series.push({
         metric: name,
         tags: finalTags,
-        type: type as unknown as MetricIntakeType,
+        type,
         points: [
           {
             timestamp,
@@ -162,10 +161,8 @@ const submitMetricSet = async ({
         ],
       });
     }
-    const data = {
-      body: {
-        series,
-      },
+    const payload = {
+      series,
     };
 
     //
@@ -174,8 +171,8 @@ const submitMetricSet = async ({
     //
 
     try {
-      log.trace.var({ submitMetricRequest: data });
-      await apiInstance.submitMetrics(data);
+      log.trace.var({ submitMetricRequest: payload });
+      await datadogClient.submitMetrics(payload);
     } catch (error) {
       log.error.var({ submitMetricError: error });
       return false;

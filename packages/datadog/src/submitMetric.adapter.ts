@@ -1,10 +1,9 @@
-import { client, v2 } from "@datadog/datadog-api-client";
-import type { MetricIntakeType } from "@datadog/datadog-api-client/dist/packages/datadog-api-client-v2/models/MetricIntakeType.js";
 import { getSecret } from "@jaypie/aws";
 import { force } from "@jaypie/kit";
 import { log } from "@jaypie/logger";
 
 import { DATADOG } from "./constants.js";
+import { createDatadogClient } from "./datadog.client.js";
 import objectToKeyValueArrayPipeline from "./objectToKeyValueArray.pipeline.js";
 import getStatsDClient, { isLambdaWithExtension } from "./statsd.client.js";
 
@@ -84,12 +83,12 @@ const submitMetric = async ({
       resolvedApiKey = await getSecret(apiSecret);
     }
 
-    const configuration = client.createConfiguration({
-      authMethods: {
-        apiKeyAuth: resolvedApiKey,
-      },
-    });
-    const apiInstance = new v2.MetricsApi(configuration);
+    if (!resolvedApiKey) {
+      log.warn("DATADOG_API_KEY could not be resolved");
+      return false;
+    }
+
+    const datadogClient = createDatadogClient({ apiKey: resolvedApiKey });
 
     // Required by Datadog to be a number
     const numericValue = force.number(value);
@@ -154,23 +153,20 @@ const submitMetric = async ({
       }
     }
 
-    const data = {
-      body: {
-        series: [
-          // https://datadoghq.dev/datadog-api-client-typescript/classes/v2.MetricSeries.html
-          {
-            metric: name,
-            tags: finalTags,
-            type: type as unknown as MetricIntakeType,
-            points: [
-              {
-                timestamp,
-                value: numericValue,
-              },
-            ],
-          },
-        ],
-      },
+    const payload = {
+      series: [
+        {
+          metric: name,
+          tags: finalTags,
+          type,
+          points: [
+            {
+              timestamp,
+              value: numericValue,
+            },
+          ],
+        },
+      ],
     };
 
     //
@@ -179,8 +175,8 @@ const submitMetric = async ({
     //
 
     try {
-      log.trace.var({ submitMetric: data });
-      await apiInstance.submitMetrics(data);
+      log.trace.var({ submitMetric: payload });
+      await datadogClient.submitMetrics(payload);
     } catch (error) {
       log.error.var({ submitMetricError: (error as Error).message });
       return false;

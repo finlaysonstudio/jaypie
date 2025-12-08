@@ -1,8 +1,8 @@
-import { client, v1 } from "@datadog/datadog-api-client";
 import { getSecret } from "@jaypie/aws";
 import { log } from "@jaypie/logger";
 
 import { DATADOG } from "./constants.js";
+import { createDatadogClient } from "./datadog.client.js";
 import objectToKeyValueArrayPipeline from "./objectToKeyValueArray.pipeline.js";
 import getStatsDClient, { isLambdaWithExtension } from "./statsd.client.js";
 
@@ -91,12 +91,12 @@ const submitDistribution = async ({
       resolvedApiKey = await getSecret(apiSecret);
     }
 
-    const configuration = client.createConfiguration({
-      authMethods: {
-        apiKeyAuth: resolvedApiKey,
-      },
-    });
-    const apiInstance = new v1.MetricsApi(configuration);
+    if (!resolvedApiKey) {
+      log.warn("DATADOG_API_KEY could not be resolved");
+      return false;
+    }
+
+    const datadogClient = createDatadogClient({ apiKey: resolvedApiKey });
 
     //
     //
@@ -158,17 +158,14 @@ const submitDistribution = async ({
       }
     }
 
-    const data = {
-      body: {
-        series: [
-          {
-            metric: name,
-            tags: finalTags,
-            points: finalPoints,
-          },
-        ],
-      },
-      contentEncoding: "deflate" as const,
+    const payload = {
+      series: [
+        {
+          metric: name,
+          tags: finalTags,
+          points: finalPoints,
+        },
+      ],
     };
 
     //
@@ -177,8 +174,8 @@ const submitDistribution = async ({
     //
 
     try {
-      log.trace.var({ submitDistribution: data });
-      await apiInstance.submitDistributionPoints(data);
+      log.trace.var({ submitDistribution: payload });
+      await datadogClient.submitDistributionPoints(payload);
     } catch (error) {
       log.error.var({ submitDistributionError: (error as Error).message });
       return false;
