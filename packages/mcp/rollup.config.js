@@ -13,7 +13,6 @@ export default {
     }),
   ],
   external: [
-    "@jaypie/core",
     "@jaypie/errors",
     "@modelcontextprotocol/sdk/server/mcp.js",
     "@modelcontextprotocol/sdk/server/stdio.js",

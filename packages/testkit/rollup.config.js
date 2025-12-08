@@ -7,7 +7,6 @@ import commonjs from "@rollup/plugin-commonjs";
 
 const external = [
   "@jaypie/aws",
-  "@jaypie/core",
   "@jaypie/datadog",
   "@jaypie/errors",
   "@jaypie/express",

@@ -33,7 +33,6 @@
   },
   "dependencies": {
     "@jaypie/aws": "^1.1.15",
-    "@jaypie/core": "^1.1.2",
     "@jaypie/errors": "^1.1.6",
     "openai": "^6.9.1",
     "openmeteo": "^1.2.0",

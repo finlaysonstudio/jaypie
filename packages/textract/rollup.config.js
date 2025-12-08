@@ -10,7 +10,6 @@ export default {
   plugins: [typescript()],
   external: [
     "@aws-sdk/client-textract",
-    "@jaypie/core",
     "@jaypie/logger",
     "amazon-textract-response-parser",
   ],
