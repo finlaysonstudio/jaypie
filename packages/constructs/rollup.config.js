@@ -17,7 +17,6 @@ export default [
       }),
     ],
     external: [
-      "@jaypie/cdk",
       "@jaypie/errors",
       "aws-cdk-lib",
       "aws-cdk-lib/aws-apigateway",
@@ -64,7 +63,6 @@ export default [
       }),
     ],
     external: [
-      "@jaypie/cdk",
       "@jaypie/errors",
       "aws-cdk-lib",
       "aws-cdk-lib/aws-apigateway",
