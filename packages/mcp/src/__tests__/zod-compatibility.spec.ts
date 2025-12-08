@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { z } from "zod";
+import { z } from "zod/v3";
 
 describe("Zod Compatibility", () => {
   it("should work with safeParse method (Zod v3 and v4 compatible)", () => {

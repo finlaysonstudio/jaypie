@@ -1,5 +1,5 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { z } from "zod";
+import { z } from "zod/v3";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -158,7 +158,6 @@ export function createMcpServer(
 
   log.info("Registered tool: list_prompts");
 
-  // @ts-expect-error - TS2589: Type instantiation is excessively deep with MCP SDK generics
   server.registerTool(
     "read_prompt",
     {
