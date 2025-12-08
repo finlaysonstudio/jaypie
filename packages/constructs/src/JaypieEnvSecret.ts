@@ -230,6 +230,12 @@ export class JaypieEnvSecret extends Construct implements ISecret {
     return this._secret.attach(target);
   }
 
+  public cfnDynamicReferenceKey(
+    options?: Parameters<ISecret["cfnDynamicReferenceKey"]>[0],
+  ): string {
+    return this._secret.cfnDynamicReferenceKey(options);
+  }
+
   public get envKey(): string | undefined {
     return this._envKey;
   }

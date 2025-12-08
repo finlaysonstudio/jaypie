@@ -1,7 +1,7 @@
 {
-  "name": "@jaypie/constructs",
-  "version": "1.1.64",
-  "description": "CDK constructs for Jaypie applications",
+  "name": "@jaypie/repokit",
+  "version": "1.1.0",
+  "description": "Essential development utilities for Jaypie repositories",
   "repository": {
     "type": "git",
     "url": "https://github.com/finlaysonstudio/jaypie"
@@ -12,8 +12,9 @@
   "exports": {
     ".": {
       "types": "./dist/esm/index.d.ts",
+      "require": "./dist/cjs/index.cjs",
       "import": "./dist/esm/index.js",
-      "require": "./dist/cjs/index.cjs"
+      "default": "./dist/esm/index.js"
     }
   },
   "main": "./dist/cjs/index.cjs",
@@ -31,11 +32,10 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@jaypie/errors": "^1.1.6",
-    "aws-cdk-lib": "^2.232.1",
-    "cdk-nextjs-standalone": "^4.3.2",
-    "constructs": "^10.4.3",
-    "datadog-cdk-constructs-v2": "^3.4.0"
+    "dotenv": "16.6.1",
+    "rimraf": "^6.0.1",
+    "sort-package-json": "^3.2.0",
+    "tsx": "^4.19.3"
   },
   "devDependencies": {
     "@rollup/plugin-typescript": "^12.1.2",
