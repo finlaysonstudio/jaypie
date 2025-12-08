@@ -1,6 +1,10 @@
 import { BadRequestError } from "@jaypie/errors";
+
+import { log } from "../../core.js";
 import { TYPE, ValidationType } from "./constants.js";
 import validate from "./validate.function.js";
+
+const libLog = log.lib({ lib: "@jaypie/core" });
 
 //
 //
@@ -31,6 +35,9 @@ const optional: OptionalFunction = (
   type: ValidationType,
   options: OptionalOptions = {},
 ): boolean => {
+  libLog.warn(
+    "[deprecated] optional() is deprecated and will be removed in a future version",
+  );
   if (value === undefined) {
     // Type=Any, Required=False is always true
     return validate(value, { type: TYPE.ANY, required: false });

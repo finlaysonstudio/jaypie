@@ -1,7 +1,10 @@
 import { BadRequestError, ConfigurationError } from "@jaypie/errors";
 import { isClass } from "@jaypie/kit";
 
+import { log } from "../../core.js";
 import { TYPE, ValidationType } from "./constants.js";
+
+const libLog = log.lib({ lib: "@jaypie/core" });
 
 //
 //
@@ -100,6 +103,9 @@ const validate: ValidateFunction = (
     throws = true,
   }: ValidateOptions = {},
 ): boolean => {
+  libLog.warn(
+    "[deprecated] validate() is deprecated and will be removed in a future version",
+  );
   //
   //
   // Setup

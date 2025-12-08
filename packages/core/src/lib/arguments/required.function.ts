@@ -1,6 +1,10 @@
 import { BadRequestError } from "@jaypie/errors";
+
+import { log } from "../../core.js";
 import { TYPE, ValidationType } from "./constants.js";
 import validate from "./validate.function.js";
+
+const libLog = log.lib({ lib: "@jaypie/core" });
 
 //
 //
@@ -31,6 +35,9 @@ const required: RequiredFunction = (
   type: ValidationType,
   options: RequiredOptions = {},
 ): boolean => {
+  libLog.warn(
+    "[deprecated] required() is deprecated and will be removed in a future version",
+  );
   switch (type) {
     case TYPE.ARRAY:
       return validate(value, { type: TYPE.ARRAY, required: true });
