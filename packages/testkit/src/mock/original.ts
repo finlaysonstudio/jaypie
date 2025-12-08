@@ -44,7 +44,8 @@ function loadPackageOrProxy<T>(packageName: string): T {
 }
 
 // Core packages - always required
-import * as core from "@jaypie/core";
+import * as errors from "@jaypie/errors";
+import * as kit from "@jaypie/kit";
 import * as logger from "@jaypie/logger";
 
 // Optional packages - lazy loaded with validation
@@ -53,7 +54,6 @@ const datadog =
   loadPackageOrProxy<typeof import("@jaypie/datadog")>("@jaypie/datadog");
 const express =
   loadPackageOrProxy<typeof import("@jaypie/express")>("@jaypie/express");
-const kit = loadPackageOrProxy<typeof import("@jaypie/kit")>("@jaypie/kit");
 const lambda =
   loadPackageOrProxy<typeof import("@jaypie/lambda")>("@jaypie/lambda");
 const llm = loadPackageOrProxy<typeof import("@jaypie/llm")>("@jaypie/llm");
@@ -64,8 +64,8 @@ const textract =
 
 export const original = {
   aws,
-  core,
   datadog,
+  errors,
   express,
   kit,
   lambda,

@@ -8,7 +8,7 @@ import { RetryPolicy } from "../RetryPolicy.js";
 // Mock
 //
 
-vi.mock("@jaypie/core", () => ({
+vi.mock("@jaypie/kit", () => ({
   resolveValue: vi.fn(async (value) => {
     if (value instanceof Promise) {
       return await value;

@@ -1,5 +1,4 @@
-import { validate } from "@jaypie/core";
-import { BadGatewayError, ConfigurationError } from "@jaypie/errors";
+import { BadGatewayError, BadRequestError, ConfigurationError } from "@jaypie/errors";
 import { force, JAYPIE } from "@jaypie/kit";
 import { log as defaultLogger } from "@jaypie/logger";
 
@@ -70,12 +69,20 @@ export default async ({
     throw new ConfigurationError();
   }
 
-  validate.number(delaySeconds);
-  validate.object(messageAttributes, { required: false });
+  if (typeof delaySeconds !== "number" || Number.isNaN(delaySeconds)) {
+    throw new BadRequestError(`Argument "${delaySeconds}" doesn't match type "number"`);
+  }
+  if (messageAttributes !== undefined && (typeof messageAttributes !== "object" || messageAttributes === null || Array.isArray(messageAttributes))) {
+    throw new BadRequestError(`Argument "${messageAttributes}" doesn't match type "object"`);
+  }
   const resolvedMessageGroupId = force.string(messageGroupId);
-  validate.array(messages);
-  validate.string(queueUrl);
-  validateQueueUrl(queueUrl as string);
+  if (!Array.isArray(messages)) {
+    throw new BadRequestError(`Argument "${messages}" doesn't match type "array"`);
+  }
+  if (typeof queueUrl !== "string") {
+    throw new BadRequestError(`Argument "${queueUrl}" doesn't match type "string"`);
+  }
+  validateQueueUrl(queueUrl);
 
   //
   //

@@ -1,6 +1,5 @@
 import type { Request, Response } from "express";
-import { validate as validateIs } from "@jaypie/core";
-import { UnhandledError } from "@jaypie/errors";
+import { BadRequestError, UnhandledError } from "@jaypie/errors";
 import { force, getHeaderFrom, HTTP, JAYPIE, jaypieHandler } from "@jaypie/kit";
 import { log as publicLogger } from "@jaypie/logger";
 import { DATADOG, hasDatadogEnv, submitMetric } from "@jaypie/datadog";
@@ -164,8 +163,12 @@ function expressHandler<T>(
     unavailable,
     validate,
   } = options;
-  validateIs.function(handler);
-  validateIs.optional.object(locals);
+  if (typeof handler !== "function") {
+    throw new BadRequestError(`Argument "${handler}" doesn't match type "function"`);
+  }
+  if (locals !== undefined && (typeof locals !== "object" || locals === null || Array.isArray(locals))) {
+    throw new BadRequestError(`Argument "${locals}" doesn't match type "object"`);
+  }
   setup = force.array(setup) as ((
     req: Request,
     res: Response,

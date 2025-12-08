@@ -16,7 +16,6 @@ describe("Mock Index", () => {
         "sendMessage",
 
         // Core module
-        "validate",
         "log",
         "cloneDeep",
 
