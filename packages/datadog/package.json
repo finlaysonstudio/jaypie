@@ -35,7 +35,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@jaypie/aws": "*",
+    "@jaypie/aws": "1.2.0-rc.0",
     "hot-shots": "^10.0.0"
   },
   "devDependencies": {

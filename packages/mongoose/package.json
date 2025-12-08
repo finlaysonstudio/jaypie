@@ -33,7 +33,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@jaypie/aws": "*"
+    "@jaypie/aws": "1.2.0-rc.0"
   },
   "devDependencies": {
     "@rollup/plugin-typescript": "^12.1.2",

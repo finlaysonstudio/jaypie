@@ -45,8 +45,8 @@
   },
   "dependencies": {
     "@codegenie/serverless-express": "^4.15.0",
-    "@jaypie/datadog": "*",
-    "@jaypie/errors": "*",
+    "@jaypie/datadog": "1.2.0-rc.0",
+    "@jaypie/errors": "1.2.0-rc.0",
     "cors": "^2.8.5"
   },
   "devDependencies": {

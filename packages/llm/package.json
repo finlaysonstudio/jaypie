@@ -32,8 +32,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@jaypie/aws": "*",
-    "@jaypie/errors": "*",
+    "@jaypie/aws": "1.2.0-rc.0",
+    "@jaypie/errors": "1.2.0-rc.0",
     "openai": "^6.9.1",
     "openmeteo": "^1.2.0",
     "random": "^5.3.0",
