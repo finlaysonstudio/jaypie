@@ -158,15 +158,18 @@ export function createMcpServer(
 
   log.info("Registered tool: list_prompts");
 
-  server.tool(
+  // @ts-expect-error - TS2589: Type instantiation is excessively deep with MCP SDK generics
+  server.registerTool(
     "read_prompt",
-    "Returns the contents of a specified prompt file",
     {
-      filename: z
-        .string()
-        .describe(
-          "The name of the prompt file to read (e.g., example_prompt.md)",
-        ),
+      description: "Returns the contents of a specified prompt file",
+      inputSchema: {
+        filename: z
+          .string()
+          .describe(
+            "The name of the prompt file to read (e.g., example_prompt.md)",
+          ),
+      },
     },
     async ({ filename }) => {
       log.info(`Tool called: read_prompt (filename: ${filename})`);
