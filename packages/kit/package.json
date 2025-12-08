@@ -33,8 +33,7 @@
   },
   "dependencies": {
     "@jaypie/errors": "^1.1.7",
-    "@jaypie/logger": "^1.1.1",
-    "jsonapi-serializer": "^3.6.9"
+    "@jaypie/logger": "^1.1.1"
   },
   "devDependencies": {
     "@jaypie/testkit": "^1.1.36",

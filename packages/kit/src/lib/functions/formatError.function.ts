@@ -1,5 +1,4 @@
 import HTTP from "../http.lib.js";
-import JsonApiSerializer from "jsonapi-serializer";
 
 interface JaypieError extends Error {
   isProjectError?: boolean;
@@ -9,13 +8,32 @@ interface JaypieError extends Error {
   errors?: JaypieError[];
 }
 
+interface JsonApiError {
+  status: string;
+  title?: string;
+  detail?: string;
+}
+
 interface FormattedError {
   status: number;
-  data: { errors: unknown[] };
+  data: { errors: JsonApiError[] };
 }
 
 function isMultiError(error: JaypieError): boolean {
   return Array.isArray(error.errors);
+}
+
+function toJsonApiError(error: JaypieError): JsonApiError {
+  const jsonApiError: JsonApiError = {
+    status: String(error.status ?? HTTP.CODE.INTERNAL_ERROR),
+  };
+  if (error.title) {
+    jsonApiError.title = error.title;
+  }
+  if (error.detail) {
+    jsonApiError.detail = error.detail;
+  }
+  return jsonApiError;
 }
 
 const formatError = (error: JaypieError): FormattedError => {
@@ -26,7 +44,7 @@ const formatError = (error: JaypieError): FormattedError => {
     errors = error.errors!;
   }
 
-  const errorArray: unknown[] = [];
+  const errorArray: JsonApiError[] = [];
   let { status } = errors[0];
   errors.forEach((e) => {
     // If the errors aren't the same use a generic error
@@ -43,10 +61,7 @@ const formatError = (error: JaypieError): FormattedError => {
       }
     }
 
-    // Format the error
-    const formatted = new JsonApiSerializer.Error(e);
-    // But only pluck out the inner part of the array
-    errorArray.push(formatted.errors[0]);
+    errorArray.push(toJsonApiError(e));
   });
 
   return {
