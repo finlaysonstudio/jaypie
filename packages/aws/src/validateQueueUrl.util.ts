@@ -1,4 +1,5 @@
-import { ConfigurationError, log } from "@jaypie/core";
+import { ConfigurationError } from "@jaypie/errors";
+import { log } from "@jaypie/logger";
 
 const validateQueueUrl = (queueUrl: string): boolean => {
   const regex = /https:\/\/sqs\.us-east-1\.amazonaws\.com\/\d{12}\/\w+/g;

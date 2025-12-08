@@ -3,7 +3,7 @@ import type { Mock } from "vitest";
 
 import { client, v2 } from "@datadog/datadog-api-client";
 import { getSecret } from "@jaypie/aws";
-import { cloneDeep } from "@jaypie/core";
+import { cloneDeep } from "@jaypie/kit";
 
 import { DATADOG } from "../constants.js";
 

@@ -6,7 +6,7 @@ import {
   createMockResolvedFunction,
   createMockWrappedFunction,
 } from "./utils";
-import { BadRequestError, UnhandledError } from "@jaypie/core";
+import { BadRequestError, UnhandledError } from "@jaypie/errors";
 import { force, jaypieHandler } from "./core";
 import * as original from "@jaypie/express";
 

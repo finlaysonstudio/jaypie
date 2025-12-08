@@ -1,6 +1,6 @@
 import StatsD from "hot-shots";
 import type { StatsD as StatsDType } from "hot-shots";
-import { log } from "@jaypie/core";
+import { log } from "@jaypie/logger";
 
 let statsdClient: StatsDType | null = null;
 

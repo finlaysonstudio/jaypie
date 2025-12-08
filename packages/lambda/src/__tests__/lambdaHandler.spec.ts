@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { ConfigurationError, HTTP, jaypieHandler, log } from "@jaypie/core";
+import { ConfigurationError } from "@jaypie/errors";
+import { HTTP, jaypieHandler } from "@jaypie/kit";
+import { log } from "@jaypie/logger";
 import { restoreLog, spyLog } from "@jaypie/testkit";
 
 // Subject
@@ -16,8 +18,8 @@ import lambdaHandler from "../lambdaHandler.js";
 // Mock modules
 //
 
-vi.mock("@jaypie/core", async () => {
-  const actual = await vi.importActual("@jaypie/core");
+vi.mock("@jaypie/kit", async () => {
+  const actual = await vi.importActual("@jaypie/kit");
   const module = {
     ...actual,
     jaypieHandler: vi.fn(

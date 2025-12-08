@@ -1,5 +1,7 @@
 import { getSecret } from "@jaypie/aws";
-import { ConfigurationError, JAYPIE, log } from "@jaypie/core";
+import { ConfigurationError } from "@jaypie/errors";
+import { JAYPIE } from "@jaypie/kit";
+import { log } from "@jaypie/logger";
 
 import mongoose, { Mongoose } from "mongoose";
 

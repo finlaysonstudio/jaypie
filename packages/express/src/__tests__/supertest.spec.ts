@@ -8,7 +8,8 @@ import {
   type MockedFunction,
 } from "vitest";
 
-import { HTTP, log } from "@jaypie/core";
+import { HTTP } from "@jaypie/kit";
+import { log } from "@jaypie/logger";
 import { restoreLog, spyLog } from "@jaypie/testkit";
 import express from "express";
 import request from "supertest";

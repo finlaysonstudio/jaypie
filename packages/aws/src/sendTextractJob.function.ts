@@ -4,12 +4,9 @@ import {
   StartDocumentAnalysisCommandInput,
   TextractClient,
 } from "@aws-sdk/client-textract";
-import {
-  ConfigurationError,
-  JAYPIE,
-  log as defaultLogger,
-  sleep,
-} from "@jaypie/core";
+import { ConfigurationError } from "@jaypie/errors";
+import { JAYPIE, sleep } from "@jaypie/kit";
+import { log as defaultLogger } from "@jaypie/logger";
 import { StandardRetryStrategy } from "@aws-sdk/middleware-retry";
 
 //

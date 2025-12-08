@@ -1,4 +1,5 @@
-import { HTTP, JAYPIE, log } from "@jaypie/core";
+import { HTTP, JAYPIE } from "@jaypie/kit";
+import { log } from "@jaypie/logger";
 import { jsonApiErrorSchema, restoreLog, spyLog } from "@jaypie/testkit";
 import express from "express";
 import request from "supertest";

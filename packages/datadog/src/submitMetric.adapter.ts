@@ -1,7 +1,8 @@
 import { client, v2 } from "@datadog/datadog-api-client";
 import type { MetricIntakeType } from "@datadog/datadog-api-client/dist/packages/datadog-api-client-v2/models/MetricIntakeType.js";
 import { getSecret } from "@jaypie/aws";
-import { force, log } from "@jaypie/core";
+import { force } from "@jaypie/kit";
+import { log } from "@jaypie/logger";
 
 import { DATADOG } from "./constants.js";
 import objectToKeyValueArrayPipeline from "./objectToKeyValueArray.pipeline.js";

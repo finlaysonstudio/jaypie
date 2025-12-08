@@ -1,4 +1,5 @@
-import { JAYPIE, log as jaypieLog, resolveValue } from "@jaypie/core";
+import { JAYPIE, resolveValue } from "@jaypie/kit";
+import { log as jaypieLog } from "@jaypie/logger";
 
 import { LlmTool } from "../types/LlmTool.interface";
 

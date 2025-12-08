@@ -1,10 +1,6 @@
-import {
-  JAYPIE,
-  jaypieHandler,
-  log as publicLogger,
-  ConfigurationError,
-  UnhandledError,
-} from "@jaypie/core";
+import { ConfigurationError, UnhandledError } from "@jaypie/errors";
+import { JAYPIE, jaypieHandler } from "@jaypie/kit";
+import { log as publicLogger } from "@jaypie/logger";
 
 //
 //

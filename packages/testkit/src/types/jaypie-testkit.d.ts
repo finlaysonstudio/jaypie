@@ -1,4 +1,5 @@
-import { Log } from "@jaypie/core";
+import { log } from "@jaypie/logger";
+type Log = typeof log;
 import { Mock } from "vitest";
 import type { Request, Response } from "express";
 

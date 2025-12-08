@@ -1,4 +1,6 @@
-import { ConfigurationError, JAYPIE, log } from "@jaypie/core";
+import { ConfigurationError } from "@jaypie/errors";
+import { JAYPIE } from "@jaypie/kit";
+import { log } from "@jaypie/logger";
 
 import {
   GetSecretValueCommand,

@@ -1,5 +1,5 @@
 const { CDK } = require("./constants.js");
-const { ConfigurationError } = require("@jaypie/core");
+const { ConfigurationError } = require("@jaypie/errors");
 
 module.exports = ({ cdk, stack, stackName } = {}) => {
   if (!cdk) {

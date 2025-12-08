@@ -1,5 +1,5 @@
 import type { Request, Response } from "express";
-import { HTTP } from "@jaypie/core";
+import { HTTP } from "@jaypie/kit";
 import express from "express";
 import request from "supertest";
 import { beforeEach, describe, expect, it, vi } from "vitest";

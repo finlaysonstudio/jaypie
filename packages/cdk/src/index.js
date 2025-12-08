@@ -11,7 +11,7 @@ const {
   UnavailableError,
   UnhandledError,
   UnreachableCodeError,
-} = require("@jaypie/core");
+} = require("@jaypie/errors");
 
 const { CDK } = require("./constants.js");
 const cfnOutput = require("./cfnOutput.function.js");

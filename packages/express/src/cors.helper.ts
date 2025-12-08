@@ -1,6 +1,6 @@
 import type { Request, Response, NextFunction } from "express";
 import { CorsError } from "@jaypie/errors";
-import { envBoolean, force } from "@jaypie/core";
+import { envBoolean, force } from "@jaypie/kit";
 import expressCors from "cors";
 
 //

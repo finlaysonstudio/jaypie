@@ -1,4 +1,4 @@
-import { BadGatewayError } from "@jaypie/core";
+import { BadGatewayError } from "@jaypie/errors";
 import getMessages from "./getMessages.function.js";
 
 //

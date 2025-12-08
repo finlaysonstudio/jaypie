@@ -1,4 +1,4 @@
-import { sleep } from "@jaypie/core";
+import { sleep } from "@jaypie/kit";
 import { BadGatewayError } from "@jaypie/errors";
 
 import { log } from "../../util/index.js";

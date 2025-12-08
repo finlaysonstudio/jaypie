@@ -1,4 +1,5 @@
-import { JAYPIE, log } from "@jaypie/core";
+import { JAYPIE } from "@jaypie/kit";
+import { log } from "@jaypie/logger";
 
 import connect from "./connect.function.js";
 import connectFromSecretEnv from "./connectFromSecretEnv.function.js";

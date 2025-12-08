@@ -1,6 +1,6 @@
 import { client, v1 } from "@datadog/datadog-api-client";
 import { getSecret } from "@jaypie/aws";
-import { log } from "@jaypie/core";
+import { log } from "@jaypie/logger";
 
 import { DATADOG } from "./constants.js";
 import objectToKeyValueArrayPipeline from "./objectToKeyValueArray.pipeline.js";

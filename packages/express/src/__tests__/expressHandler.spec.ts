@@ -9,12 +9,8 @@ import {
   type MockedFunction,
 } from "vitest";
 
-import {
-  HTTP,
-  InternalError,
-  NotFoundError,
-  jaypieHandler,
-} from "@jaypie/core";
+import { InternalError, NotFoundError } from "@jaypie/errors";
+import { HTTP, jaypieHandler } from "@jaypie/kit";
 
 import getCurrentInvokeUuid from "../getCurrentInvokeUuid.adapter.js";
 import decorateResponse from "../decorateResponse.helper.js";
@@ -29,7 +25,7 @@ import expressHandler from "../expressHandler.js";
 
 vi.mock("../getCurrentInvokeUuid.adapter.js");
 vi.mock("../decorateResponse.helper.js");
-vi.mock("@jaypie/core", async (importOriginal) => {
+vi.mock("@jaypie/kit", async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
   return {
     ...actual,
@@ -81,7 +77,7 @@ beforeEach(() => {
 
         // Simulate unavailable check - this should happen before anything else
         if (unavailable) {
-          const { UnavailableError } = await import("@jaypie/core");
+          const { UnavailableError } = await import("@jaypie/errors");
           throw new UnavailableError();
         }
         // Simulate setup functions execution for locals tests

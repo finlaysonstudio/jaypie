@@ -1,11 +1,7 @@
 import { getEnvSecret } from "@jaypie/aws";
-import {
-  ConfigurationError,
-  log as defaultLog,
-  placeholders as replacePlaceholders,
-  JAYPIE,
-  log,
-} from "@jaypie/core";
+import { ConfigurationError } from "@jaypie/errors";
+import { JAYPIE, placeholders as replacePlaceholders } from "@jaypie/kit";
+import { log as defaultLog, log } from "@jaypie/logger";
 import Anthropic from "@anthropic-ai/sdk";
 import { PROVIDER } from "../../constants.js";
 import { LlmMessageOptions } from "../../types/LlmProvider.interface.js";

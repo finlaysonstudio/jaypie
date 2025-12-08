@@ -1,11 +1,7 @@
-import {
-  BadGatewayError,
-  ConfigurationError,
-  force,
-  JAYPIE,
-  log as defaultLogger,
-  validate,
-} from "@jaypie/core";
+import { validate } from "@jaypie/core";
+import { BadGatewayError, ConfigurationError } from "@jaypie/errors";
+import { force, JAYPIE } from "@jaypie/kit";
+import { log as defaultLogger } from "@jaypie/logger";
 
 import {
   MessageAttributeValue,

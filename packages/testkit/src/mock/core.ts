@@ -10,11 +10,14 @@ import {
 } from "./utils";
 import { beforeAll } from "vitest";
 import { spyLog } from "../mockLog.module.js";
-import { log } from "@jaypie/core";
+import { log } from "@jaypie/logger";
 import * as original from "@jaypie/core";
 
 // Constants for mock values
 const TAG = "CORE";
+
+// JaypieError is the base class - export it directly from original
+export const JaypieError = original.JaypieError;
 
 export const BadGatewayError: typeof original.BadGatewayError = createMockError(
   original.BadGatewayError,

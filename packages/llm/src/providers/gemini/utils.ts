@@ -1,10 +1,7 @@
 import { getEnvSecret } from "@jaypie/aws";
-import {
-  ConfigurationError,
-  log as defaultLog,
-  placeholders as replacePlaceholders,
-  JAYPIE,
-} from "@jaypie/core";
+import { ConfigurationError } from "@jaypie/errors";
+import { JAYPIE, placeholders as replacePlaceholders } from "@jaypie/kit";
+import { log as defaultLog } from "@jaypie/logger";
 import { GoogleGenAI } from "@google/genai";
 import { LlmMessageOptions } from "../../types/LlmProvider.interface.js";
 
