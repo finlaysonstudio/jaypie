@@ -333,7 +333,7 @@ function expressHandler<T>(
       // Initialize after logging is set up
 
       jaypieFunction = jaypieHandler(
-        handler as unknown as (...args: unknown[]) => unknown,
+        handler as unknown as (...args: unknown[]) => Promise<unknown>,
         {
           chaos,
           name,
@@ -371,7 +371,7 @@ function expressHandler<T>(
       } else {
         // This should never happen
         const unhandledError = new UnhandledError();
-        response = unhandledError.json();
+        response = unhandledError.json() as unknown as Record<string, unknown>;
         status = unhandledError.status;
       }
     }

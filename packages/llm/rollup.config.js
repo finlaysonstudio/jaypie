@@ -19,9 +19,11 @@ export default [
     ],
     external: [
       "@anthropic-ai/sdk",
+      "@google/genai",
       "@jaypie/aws",
       "@jaypie/core",
       "@jaypie/errors",
+      "@openrouter/sdk",
       "openai",
       "openai/helpers/zod",
       "openmeteo",
@@ -51,9 +53,11 @@ export default [
     ],
     external: [
       "@anthropic-ai/sdk",
+      "@google/genai",
       "@jaypie/aws",
       "@jaypie/core",
       "@jaypie/errors",
+      "@openrouter/sdk",
       "openai",
       "openai/helpers/zod",
       "openmeteo",
