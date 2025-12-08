@@ -29,6 +29,7 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
       - run: npm install -g npm@latest
       - run: npm ci
+      - run: npm run build
       - name: Publish packages to npm
         run: |
           for pkg in packages/*/; do
@@ -56,6 +57,7 @@ jobs:
         with:
           node-version: 20
       - run: npm install
+      - run: npm run build
       - run: npm run lint
   typecheck:
     name: Type Check
@@ -68,6 +70,7 @@ jobs:
         with:
           node-version: 20
       - run: npm install
+      - run: npm run build
       - run: npm run typecheck
   test:
     name: Unit Test (in parallel)
@@ -84,6 +87,7 @@ jobs:
           node-version: ${{ matrix.node-version }}
           cache: 'npm'
       - run: npm install
+      - run: npm run build
       - name: Vitest with Optional Datadog Tracing
         run: |
           if [[ -n "${{ secrets.DATADOG_CICD_API_KEY }}" ]]; then
@@ -112,6 +116,8 @@ jobs:
           cache: 'npm'
       - name: Install dependencies
         run: npm install
+      - name: Build packages
+        run: npm run build
       - name: Run LLM Client Tests
         run: npm run test:llm:client
         env:

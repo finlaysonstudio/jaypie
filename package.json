@@ -32,7 +32,6 @@
     "format": "npm run format:package && npm run format:lint",
     "format:lint": "eslint --fix --quiet .",
     "format:package": "sort-package-json ./package.json ./packages/*/package.json",
-    "postinstall": "npm run build",
     "lint": "eslint --quiet .",
     "test": "vitest run",
     "test:aws": "npm run test --workspace packages/aws",
