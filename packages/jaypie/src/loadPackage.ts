@@ -15,9 +15,26 @@ export function loadPackage<T>(packageName: string): T {
     const pkg = require(packageName) as T;
     packageCache.set(packageName, pkg);
     return pkg;
-  } catch {
+  } catch (error) {
+    const resolveAttempt = safeResolve(packageName);
+    const err = error as Error & { code?: string };
+    // eslint-disable-next-line no-console
+    console.error(`[jaypie] loadPackage failed for "${packageName}"`, {
+      importMetaUrl: import.meta.url,
+      resolveAttempt,
+      errorCode: err.code,
+      errorMessage: err.message,
+    });
     throw new ConfigurationError(
       `${packageName} is required but not installed. Run: npm install ${packageName}`,
     );
+  }
+}
+
+function safeResolve(packageName: string): string | null {
+  try {
+    return require.resolve(packageName);
+  } catch {
+    return null;
   }
 }
