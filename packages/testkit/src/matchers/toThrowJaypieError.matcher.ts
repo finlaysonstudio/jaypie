@@ -14,7 +14,8 @@ import {
 import { MatcherResult } from "../types/jaypie-testkit";
 
 // Define a more specific type for ProjectError with _type field
-type JaypieErrorWithType = ProjectError & { _type: string };
+type ProjectErrorInstance = InstanceType<typeof ProjectError>;
+type JaypieErrorWithType = ProjectErrorInstance & { _type: string };
 
 //
 //
@@ -22,7 +23,7 @@ type JaypieErrorWithType = ProjectError & { _type: string };
 //
 
 type ReceivedFunction = () => unknown | Promise<unknown>;
-type ErrorConstructor = new () => ProjectError;
+type ErrorConstructor = new () => ProjectErrorInstance;
 
 function isErrorConstructor(value: unknown): value is ErrorConstructor {
   return typeof value === "function" && "prototype" in value;
@@ -30,13 +31,16 @@ function isErrorConstructor(value: unknown): value is ErrorConstructor {
 
 const toThrowJaypieError = async (
   received: ReceivedFunction,
-  expected?: ProjectError | (() => ProjectError) | ErrorConstructor,
+  expected?:
+    | ProjectErrorInstance
+    | (() => ProjectErrorInstance)
+    | ErrorConstructor,
 ): Promise<MatcherResult> => {
   const isAsync =
     received.constructor.name === "AsyncFunction" ||
     received.constructor.name === "Promise";
 
-  let expectedError: ProjectError | undefined = undefined;
+  let expectedError: ProjectErrorInstance | undefined = undefined;
 
   // Handle constructor, function, or instance
   if (typeof expected === "function") {

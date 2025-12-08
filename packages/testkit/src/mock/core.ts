@@ -16,40 +16,72 @@ import * as original from "@jaypie/core";
 // Constants for mock values
 const TAG = "CORE";
 
-export const BadGatewayError = createMockError(original.BadGatewayError);
-export const BadRequestError = createMockError(original.BadRequestError);
-export const ConfigurationError = createMockError(original.ConfigurationError);
-export const ForbiddenError = createMockError(original.ForbiddenError);
-export const GatewayTimeoutError = createMockError(
-  original.GatewayTimeoutError,
+export const BadGatewayError: typeof original.BadGatewayError = createMockError(
+  original.BadGatewayError,
 );
-export const GoneError = createMockError(original.GoneError);
-export const IllogicalError = createMockError(original.IllogicalError);
-export const InternalError = createMockError(original.InternalError);
-export const MethodNotAllowedError = createMockError(
-  original.MethodNotAllowedError,
+export const BadRequestError: typeof original.BadRequestError = createMockError(
+  original.BadRequestError,
 );
-export const MultiError = createMockError(original.MultiError);
-export const NotFoundError = createMockError(original.NotFoundError);
-export const NotImplementedError = createMockError(
-  original.NotImplementedError,
+export const ConfigurationError: typeof original.ConfigurationError =
+  createMockError(original.ConfigurationError);
+export const CorsError: typeof original.CorsError = createMockError(
+  original.CorsError,
 );
-export const ProjectError = createMockError(original.ProjectError);
-export const ProjectMultiError = createMockError(original.ProjectMultiError);
-export const RejectedError = createMockError(original.RejectedError);
-export const TeapotError = createMockError(original.TeapotError);
-export const UnauthorizedError = createMockError(original.UnauthorizedError);
-export const UnavailableError = createMockError(original.UnavailableError);
-export const UnhandledError = createMockError(original.UnhandledError);
-export const UnreachableCodeError = createMockError(
-  original.UnreachableCodeError,
+export const ForbiddenError: typeof original.ForbiddenError = createMockError(
+  original.ForbiddenError,
 );
+export const GatewayTimeoutError: typeof original.GatewayTimeoutError =
+  createMockError(original.GatewayTimeoutError);
+export const GoneError: typeof original.GoneError = createMockError(
+  original.GoneError,
+);
+export const IllogicalError: typeof original.IllogicalError = createMockError(
+  original.IllogicalError,
+);
+export const InternalError: typeof original.InternalError = createMockError(
+  original.InternalError,
+);
+export const MethodNotAllowedError: typeof original.MethodNotAllowedError =
+  createMockError(original.MethodNotAllowedError);
+export const MultiError: typeof original.MultiError = createMockError(
+  original.MultiError,
+);
+export const NotFoundError: typeof original.NotFoundError = createMockError(
+  original.NotFoundError,
+);
+export const NotImplementedError: typeof original.NotImplementedError =
+  createMockError(original.NotImplementedError);
+export const ProjectError: typeof original.ProjectError = createMockError(
+  original.ProjectError,
+);
+export const ProjectMultiError: typeof original.ProjectMultiError =
+  createMockError(original.ProjectMultiError);
+export const RejectedError: typeof original.RejectedError = createMockError(
+  original.RejectedError,
+);
+export const TeapotError: typeof original.TeapotError = createMockError(
+  original.TeapotError,
+);
+export const TooManyRequestsError: typeof original.TooManyRequestsError =
+  createMockError(original.TooManyRequestsError);
+export const UnauthorizedError: typeof original.UnauthorizedError =
+  createMockError(original.UnauthorizedError);
+export const UnavailableError: typeof original.UnavailableError =
+  createMockError(original.UnavailableError);
+export const UnhandledError: typeof original.UnhandledError = createMockError(
+  original.UnhandledError,
+);
+export const UnreachableCodeError: typeof original.UnreachableCodeError =
+  createMockError(original.UnreachableCodeError);
 
 // Mock core functions
-export const validate = createMockWrappedObject(original.validate, {
-  fallback: false,
-  throws: true,
-});
+export const validate: typeof original.validate = createMockWrappedObject(
+  original.validate,
+  {
+    fallback: false,
+    throws: true,
+  },
+);
 
 beforeAll(async () => {
   spyLog(log);
@@ -111,6 +143,9 @@ export const formatError = createMockWrappedFunction(
   `_MOCK_FORMAT_ERROR_[${TAG}]`,
 );
 
+// Alias for errorFromStatusCode (exported from @jaypie/errors as jaypieErrorFromStatus)
+export const jaypieErrorFromStatus = errorFromStatusCode;
+
 export const getHeaderFrom = createMockWrappedFunction(
   original.getHeaderFrom as (...args: unknown[]) => unknown,
   `_MOCK_GET_HEADER_FROM_[${TAG}]`,
@@ -132,15 +167,21 @@ export const isJaypieError = createMockWrappedFunction(
 );
 
 // Optional/Required validation functions
-export const optional = createMockWrappedObject(original.optional, {
-  fallback: true,
-  throws: true,
-});
+export const optional: typeof original.optional = createMockWrappedObject(
+  original.optional,
+  {
+    fallback: true,
+    throws: true,
+  },
+);
 
-export const required = createMockWrappedObject(original.required, {
-  fallback: true,
-  throws: true,
-});
+export const required: typeof original.required = createMockWrappedObject(
+  original.required,
+  {
+    fallback: true,
+    throws: true,
+  },
+);
 
 export const resolveValue = createMockWrappedFunction(
   original.resolveValue,

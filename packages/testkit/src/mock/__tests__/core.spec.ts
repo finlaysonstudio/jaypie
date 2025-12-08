@@ -643,12 +643,12 @@ describe("Core Mocks", () => {
       });
       describe("Features", () => {
         it("Always passes undefined", () => {
-          expect(optional(undefined, {})).toBeTrue();
-          expect(optional(undefined, { type: Array })).toBeTrue();
-          expect(optional(undefined, { type: Boolean })).toBeTrue();
-          expect(optional(undefined, { type: Number })).toBeTrue();
-          expect(optional(undefined, { type: Object })).toBeTrue();
-          expect(optional(undefined, { type: String })).toBeTrue();
+          expect(optional(undefined, VALIDATE.ANY)).toBeTrue();
+          expect(optional(undefined, Array)).toBeTrue();
+          expect(optional(undefined, Boolean)).toBeTrue();
+          expect(optional(undefined, Number)).toBeTrue();
+          expect(optional(undefined, Object)).toBeTrue();
+          expect(optional(undefined, String)).toBeTrue();
         });
         describe("Obvious success cases", () => {
           it("Passes arrays", () => {
