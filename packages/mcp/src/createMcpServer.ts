@@ -158,7 +158,6 @@ export function createMcpServer(
 
   log.info("Registered tool: list_prompts");
 
-  // @ts-expect-error - TS2589: Type instantiation is excessively deep with MCP SDK generics
   server.registerTool(
     "read_prompt",
     {

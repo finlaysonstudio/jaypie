@@ -181,6 +181,7 @@ export default [
       ...vitest.configs.recommended.rules,
       "@typescript-eslint/no-explicit-any": "off",
       "vitest/expect-expect": "warn",
+      "vitest/no-conditional-expect": "off",
       "vitest/no-focused-tests": ["error", { fixable: false }],
       "vitest/no-disabled-tests": "warn",
     },
