@@ -42,10 +42,10 @@
     "@jaypie/express": "^1.1.18",
     "@jaypie/kit": "^1.1.1",
     "@jaypie/lambda": "^1.1.6",
-    "@jaypie/llm": "^1.1.30",
-    "@jaypie/mongoose": "^1.1.1"
+    "@jaypie/llm": "^1.1.30"
   },
   "devDependencies": {
+    "@jaypie/mongoose": "^1.1.1",
     "@jaypie/types": "^0.1.7",
     "@rollup/plugin-typescript": "^12.1.4",
     "@types/node": "^24.8.1",
@@ -56,6 +56,14 @@
     "eslint-plugin-vitest": "^0.5.4",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.46.1"
+  },
+  "peerDependencies": {
+    "@jaypie/mongoose": "^1.1.1"
+  },
+  "peerDependenciesMeta": {
+    "@jaypie/mongoose": {
+      "optional": true
+    }
   },
   "publishConfig": {
     "access": "public"
