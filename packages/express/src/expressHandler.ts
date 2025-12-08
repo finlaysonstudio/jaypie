@@ -113,7 +113,7 @@ type ExpressHandler<T> = (
 
 interface JaypieError extends Error {
   status?: number;
-  json?: () => Record<string, unknown>;
+  body?: () => Record<string, unknown>;
 }
 
 interface ResponseWithJson {
@@ -366,12 +366,12 @@ function expressHandler<T>(
       if (jaypieError.status) {
         status = jaypieError.status;
       }
-      if (typeof jaypieError.json === "function") {
-        response = jaypieError.json();
+      if (typeof jaypieError.body === "function") {
+        response = jaypieError.body();
       } else {
         // This should never happen
         const unhandledError = new UnhandledError();
-        response = unhandledError.json() as unknown as Record<string, unknown>;
+        response = unhandledError.body() as unknown as Record<string, unknown>;
         status = unhandledError.status;
       }
     }
