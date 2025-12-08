@@ -32,8 +32,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@jaypie/aws": "^1.1.15",
-    "@jaypie/errors": "^1.1.6",
+    "@jaypie/aws": "*",
+    "@jaypie/errors": "*",
     "openai": "^6.9.1",
     "openmeteo": "^1.2.0",
     "random": "^5.3.0",
@@ -43,7 +43,7 @@
   "devDependencies": {
     "@anthropic-ai/sdk": "^0.71.0",
     "@google/genai": "^1.30.0",
-    "@jaypie/types": "^0.1.3",
+    "@jaypie/types": "*",
     "@openrouter/sdk": "^0.1.27"
   },
   "peerDependencies": {

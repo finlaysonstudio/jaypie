@@ -34,23 +34,12 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@jaypie/aws": "^1.1.21",
-    "@jaypie/datadog": "^1.1.2",
-    "@jaypie/errors": "^1.1.7",
-    "@jaypie/express": "^1.1.11",
-    "@jaypie/kit": "^1.1.0",
-    "@jaypie/lambda": "^1.1.4",
-    "@jaypie/llm": "^1.1.21",
-    "@jaypie/logger": "^1.1.0",
-    "@jaypie/mongoose": "^1.1.1",
-    "@jaypie/textract": "^0.2.4",
-    "jaypie": "^1.1.71",
     "jest-extended": "^4.0.2",
     "jest-json-schema": "^6.1.0",
     "uuid": "^11.0.5"
   },
   "devDependencies": {
-    "@jaypie/types": "^0.1.7",
+    "@jaypie/types": "*",
     "@rollup/plugin-commonjs": "^28.0.3",
     "@rollup/plugin-json": "^6.1.0",
     "@rollup/plugin-node-resolve": "^16.0.1",
@@ -64,6 +53,23 @@
     "rollup-plugin-dts": "^6.1.1",
     "typescript": "^5.0.0",
     "vitest": "^3.0.5"
+  },
+  "peerDependencies": {
+    "@jaypie/errors": "*",
+    "@jaypie/kit": "*",
+    "@jaypie/logger": "*",
+    "vitest": ">=1.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@jaypie/errors": {
+      "optional": true
+    },
+    "@jaypie/kit": {
+      "optional": true
+    },
+    "@jaypie/logger": {
+      "optional": true
+    }
   },
   "publishConfig": {
     "access": "public"

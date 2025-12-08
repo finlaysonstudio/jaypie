@@ -164,10 +164,17 @@ function expressHandler<T>(
     validate,
   } = options;
   if (typeof handler !== "function") {
-    throw new BadRequestError(`Argument "${handler}" doesn't match type "function"`);
+    throw new BadRequestError(
+      `Argument "${handler}" doesn't match type "function"`,
+    );
   }
-  if (locals !== undefined && (typeof locals !== "object" || locals === null || Array.isArray(locals))) {
-    throw new BadRequestError(`Argument "${locals}" doesn't match type "object"`);
+  if (
+    locals !== undefined &&
+    (typeof locals !== "object" || locals === null || Array.isArray(locals))
+  ) {
+    throw new BadRequestError(
+      `Argument "${locals}" doesn't match type "object"`,
+    );
   }
   setup = force.array(setup) as ((
     req: Request,

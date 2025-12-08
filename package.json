@@ -62,9 +62,9 @@
     "@anthropic-ai/sdk": "^0.52.0"
   },
   "devDependencies": {
-    "@jaypie/eslint": "^1.1.0",
-    "@jaypie/repokit": "^1.1.0",
-    "@jaypie/testkit": "^1.1.0",
+    "@jaypie/eslint": "*",
+    "@jaypie/repokit": "*",
+    "@jaypie/testkit": "*",
     "@rollup/plugin-commonjs": "^28.0.1",
     "@rollup/plugin-json": "^6.1.0",
     "@rollup/plugin-node-resolve": "^16.0.0",

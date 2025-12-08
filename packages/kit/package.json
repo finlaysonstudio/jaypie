@@ -32,12 +32,11 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@jaypie/errors": "^1.1.7",
-    "@jaypie/logger": "^1.1.1"
+    "@jaypie/errors": "*",
+    "@jaypie/logger": "*"
   },
   "devDependencies": {
-    "@jaypie/testkit": "^1.1.36",
-    "@jaypie/types": "^0.1.2",
+    "@jaypie/types": "*",
     "@rollup/plugin-typescript": "^12.1.2",
     "@types/node": "^22.13.1",
     "@typescript-eslint/eslint-plugin": "^8.18.2",

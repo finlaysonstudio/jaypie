@@ -250,9 +250,8 @@ describe("Get Environment Secret Function", () => {
       });
     });
     it("Falls back to AWS SDK after retries exhausted", async () => {
-      const { SecretsManagerClient } = await import(
-        "@aws-sdk/client-secrets-manager"
-      );
+      const { SecretsManagerClient } =
+        await import("@aws-sdk/client-secrets-manager");
       const env = cloneDeep(process.env) as Record<string, string | undefined>;
       env.SECRET_test = "secret1";
 
@@ -262,9 +261,8 @@ describe("Get Environment Secret Function", () => {
       expect(SecretsManagerClient).toHaveBeenCalled();
     }, 15000);
     it("Throws SDK error if both extension and SDK fail", async () => {
-      const { SecretsManagerClient } = await import(
-        "@aws-sdk/client-secrets-manager"
-      );
+      const { SecretsManagerClient } =
+        await import("@aws-sdk/client-secrets-manager");
       const env = cloneDeep(process.env) as Record<string, string | undefined>;
       env.SECRET_test = "secret1";
 

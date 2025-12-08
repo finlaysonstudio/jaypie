@@ -31,7 +31,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@jaypie/errors": "^1.1.6",
+    "@jaypie/errors": "*",
     "aws-cdk-lib": "^2.232.1",
     "cdk-nextjs-standalone": "^4.3.2",
     "constructs": "^10.4.3",

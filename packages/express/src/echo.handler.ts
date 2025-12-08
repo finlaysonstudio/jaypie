@@ -21,8 +21,14 @@ export interface EchoResponse {
 const echoHandler = (
   context: ExpressHandlerOptions = {},
 ): ((req: Request, res: Response) => Promise<EchoResponse>) => {
-  if (typeof context !== "object" || context === null || Array.isArray(context)) {
-    throw new BadRequestError(`Argument "${context}" doesn't match type "object"`);
+  if (
+    typeof context !== "object" ||
+    context === null ||
+    Array.isArray(context)
+  ) {
+    throw new BadRequestError(
+      `Argument "${context}" doesn't match type "object"`,
+    );
   }
   // Give a default name if there isn't one
   if (!context.name) {

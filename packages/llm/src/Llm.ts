@@ -91,9 +91,12 @@ class Llm implements LlmProvider {
           apiKey,
         });
       case PROVIDER.OPENROUTER.NAME:
-        return new OpenRouterProvider(model || PROVIDER.OPENROUTER.MODEL.DEFAULT, {
-          apiKey,
-        });
+        return new OpenRouterProvider(
+          model || PROVIDER.OPENROUTER.MODEL.DEFAULT,
+          {
+            apiKey,
+          },
+        );
       default:
         throw new ConfigurationError(`Unsupported provider: ${providerName}`);
     }

@@ -18,7 +18,6 @@ describe("WorldFabricator", () => {
     expect(world1.name).toBe(world2.name);
   });
 
-
   it("should generate cities as Fabricator instances", () => {
     const world = new WorldFabricator("city-seed");
     const cities = world.cities(12);

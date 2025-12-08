@@ -35,8 +35,10 @@ function isValidHostname(str: string): boolean {
  * DNS record configuration for JaypieHostedZone
  * Omits 'zone' since it will be automatically set to the created hosted zone
  */
-export interface JaypieHostedZoneRecordProps
-  extends Omit<JaypieDnsRecordProps, "zone"> {
+export interface JaypieHostedZoneRecordProps extends Omit<
+  JaypieDnsRecordProps,
+  "zone"
+> {
   /**
    * Optional ID for the DNS record construct
    * @default Generated from record type and name

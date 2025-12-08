@@ -273,7 +273,6 @@ describe("JaypieLambda", () => {
       expect(construct).toBeDefined();
     });
 
-
     it("adds ParamsAndSecrets layer by default", () => {
       const stack = new Stack();
 
@@ -341,9 +340,10 @@ describe("JaypieLambda", () => {
 
       // Find the main function (when Datadog is enabled, it uses the Datadog handler)
       const allLambdas = template.findResources("AWS::Lambda::Function");
-      const mainFunction = Object.values(allLambdas).find((resource: any) =>
-        resource.Properties?.Handler?.includes('datadog-lambda-js') ||
-        resource.Properties?.Handler === "index.handler"
+      const mainFunction = Object.values(allLambdas).find(
+        (resource: any) =>
+          resource.Properties?.Handler?.includes("datadog-lambda-js") ||
+          resource.Properties?.Handler === "index.handler",
       );
       expect(mainFunction).toBeDefined();
 
@@ -464,9 +464,10 @@ describe("JaypieLambda", () => {
 
         // Find the main function (when Datadog is enabled, it uses the Datadog handler)
         const allLambdas = template.findResources("AWS::Lambda::Function");
-        const mainFunction = Object.values(allLambdas).find((resource: any) =>
-          resource.Properties?.Handler?.includes('datadog-lambda-js') ||
-          resource.Properties?.Handler === "index.handler"
+        const mainFunction = Object.values(allLambdas).find(
+          (resource: any) =>
+            resource.Properties?.Handler?.includes("datadog-lambda-js") ||
+            resource.Properties?.Handler === "index.handler",
         );
         expect(mainFunction).toBeDefined();
 
@@ -531,9 +532,10 @@ describe("JaypieLambda", () => {
 
         // Find the main function (when Datadog is enabled, it uses the Datadog handler)
         const allLambdas = template.findResources("AWS::Lambda::Function");
-        const mainFunction = Object.values(allLambdas).find((resource: any) =>
-          resource.Properties?.Handler?.includes('datadog-lambda-js') ||
-          resource.Properties?.Handler === "index.handler"
+        const mainFunction = Object.values(allLambdas).find(
+          (resource: any) =>
+            resource.Properties?.Handler?.includes("datadog-lambda-js") ||
+            resource.Properties?.Handler === "index.handler",
         );
         expect(mainFunction).toBeDefined();
 
@@ -573,9 +575,10 @@ describe("JaypieLambda", () => {
 
         // Find the main function (when Datadog is enabled, it uses the Datadog handler)
         const allLambdas = template.findResources("AWS::Lambda::Function");
-        const mainFunction = Object.values(allLambdas).find((resource: any) =>
-          resource.Properties?.Handler?.includes('datadog-lambda-js') ||
-          resource.Properties?.Handler === "index.handler"
+        const mainFunction = Object.values(allLambdas).find(
+          (resource: any) =>
+            resource.Properties?.Handler?.includes("datadog-lambda-js") ||
+            resource.Properties?.Handler === "index.handler",
         );
         expect(mainFunction).toBeDefined();
 
@@ -619,9 +622,10 @@ describe("JaypieLambda", () => {
 
         // Find the main function (when Datadog is enabled, it uses the Datadog handler)
         const allLambdas = template.findResources("AWS::Lambda::Function");
-        const mainFunction = Object.values(allLambdas).find((resource: any) =>
-          resource.Properties?.Handler?.includes('datadog-lambda-js') ||
-          resource.Properties?.Handler === "index.handler"
+        const mainFunction = Object.values(allLambdas).find(
+          (resource: any) =>
+            resource.Properties?.Handler?.includes("datadog-lambda-js") ||
+            resource.Properties?.Handler === "index.handler",
         );
         expect(mainFunction).toBeDefined();
 

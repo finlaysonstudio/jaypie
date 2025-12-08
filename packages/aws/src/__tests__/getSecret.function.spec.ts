@@ -177,9 +177,8 @@ describe("Get Secret Function", () => {
       });
     });
     it("Falls back to AWS SDK after retries exhausted", async () => {
-      const { SecretsManagerClient } = await import(
-        "@aws-sdk/client-secrets-manager"
-      );
+      const { SecretsManagerClient } =
+        await import("@aws-sdk/client-secrets-manager");
 
       const response = await getSecret(MOCK.SECRET);
       expect(response).toBe(MOCK.SECRET_RESPONSE);
@@ -187,9 +186,8 @@ describe("Get Secret Function", () => {
       expect(SecretsManagerClient).toHaveBeenCalled();
     }, 15000);
     it("Throws SDK error if both extension and SDK fail", async () => {
-      const { SecretsManagerClient } = await import(
-        "@aws-sdk/client-secrets-manager"
-      );
+      const { SecretsManagerClient } =
+        await import("@aws-sdk/client-secrets-manager");
 
       // Mock SDK to also fail
       (SecretsManagerClient as Mock).mockImplementationOnce(() => ({

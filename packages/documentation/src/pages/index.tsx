@@ -17,14 +17,13 @@ function HomepageHeader(): React.ReactElement {
         <h1 className={styles.heroTitle}>{siteConfig.title}</h1>
         <p className={styles.heroTagline}>{siteConfig.tagline}</p>
         <div className={styles.buttons}>
-          <Link
-            className="button button--primary button--lg"
-            to="/docs/intro">
+          <Link className="button button--primary button--lg" to="/docs/intro">
             Get Started
           </Link>
           <Link
             className="button button--secondary button--lg"
-            to="/docs/api/core">
+            to="/docs/api/core"
+          >
             API Reference
           </Link>
         </div>
@@ -130,7 +129,8 @@ export default function Home(): React.ReactElement {
   return (
     <Layout
       title={`${siteConfig.title} - ${siteConfig.tagline}`}
-      description="Event-driven JavaScript library for building serverless applications on AWS">
+      description="Event-driven JavaScript library for building serverless applications on AWS"
+    >
       <HomepageHeader />
       <main>
         <HomepageFeatures />

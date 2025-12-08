@@ -59,8 +59,9 @@ export const NotImplementedError: typeof errors.NotImplementedError =
 export const ProjectError: typeof errors.InternalError = createMockError(
   errors.InternalError,
 );
-export const ProjectMultiError: typeof errors.InternalError =
-  createMockError(errors.InternalError);
+export const ProjectMultiError: typeof errors.InternalError = createMockError(
+  errors.InternalError,
+);
 export const RejectedError: typeof errors.RejectedError = createMockError(
   errors.RejectedError,
 );
@@ -71,8 +72,9 @@ export const TooManyRequestsError: typeof errors.TooManyRequestsError =
   createMockError(errors.TooManyRequestsError);
 export const UnauthorizedError: typeof errors.UnauthorizedError =
   createMockError(errors.UnauthorizedError);
-export const UnavailableError: typeof errors.UnavailableError =
-  createMockError(errors.UnavailableError);
+export const UnavailableError: typeof errors.UnavailableError = createMockError(
+  errors.UnavailableError,
+);
 export const UnhandledError: typeof errors.UnhandledError = createMockError(
   errors.UnhandledError,
 );

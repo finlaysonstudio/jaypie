@@ -33,9 +33,9 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@jaypie/errors": "^1.1.7",
-    "@jaypie/kit": "^1.1.1",
-    "@jaypie/logger": "^1.1.1",
+    "@jaypie/errors": "*",
+    "@jaypie/kit": "*",
+    "@jaypie/logger": "*",
     "uuid": "^11.0.5"
   },
   "devDependencies": {
