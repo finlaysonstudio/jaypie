@@ -379,10 +379,10 @@ describe("JaypieBucketQueuedLambda", () => {
       const resources = template.findResources("Custom::S3BucketNotifications");
       expect(Object.keys(resources).length).toBeGreaterThan(0);
 
-      // Find BucketNotificationsHandler Lambda
+      // Find BucketNotificationsHandler Lambda - our Lambda uses nodejs24.x by default
       template.hasResourceProperties("AWS::Lambda::Function", {
         Handler: "index.handler",
-        Runtime: lambda.Runtime.NODEJS_22_X.name,
+        Runtime: "nodejs24.x",
       });
     });
 

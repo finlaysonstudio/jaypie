@@ -96,7 +96,9 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
       reservedConcurrentExecutions,
       retryAttempts,
       roleTag = CDK.ROLE.PROCESSING,
-      runtime = lambda.Runtime.NODEJS_22_X,
+      runtime = new lambda.Runtime("nodejs24.x", lambda.RuntimeFamily.NODEJS, {
+        supportsInlineCode: true,
+      }),
       runtimeManagementMode,
       secrets = [],
       securityGroups,
