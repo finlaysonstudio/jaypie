@@ -34,13 +34,16 @@
   },
   "dependencies": {
     "@jaypie/aws": "^1.1.0",
-    "@jaypie/core": "^1.1.0",
-    "mongoose": "^8.3.0"
+    "@jaypie/core": "^1.1.0"
   },
   "devDependencies": {
     "@rollup/plugin-typescript": "^12.1.2",
     "@types/node": "^22.13.1",
+    "mongoose": "^8.3.0",
     "typescript": "^5.3.3"
+  },
+  "peerDependencies": {
+    "mongoose": "^8.3.0"
   },
   "publishConfig": {
     "access": "public"
