@@ -5,7 +5,11 @@ import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 import matter from "gray-matter";
 
-import { getDatadogCredentials, searchDatadogLogs } from "./datadog.js";
+import {
+  aggregateDatadogLogs,
+  getDatadogCredentials,
+  searchDatadogLogs,
+} from "./datadog.js";
 
 // Build-time constants injected by rollup
 declare const __BUILD_VERSION_STRING__: string;
@@ -396,6 +400,186 @@ export function createMcpServer(
   );
 
   log.info("Registered tool: datadog_logs");
+
+  // Datadog Log Analytics Tool
+  server.tool(
+    "datadog_log_analytics",
+    "Aggregate and analyze Datadog logs by grouping them by specified fields (e.g., source, service, status, host). Returns counts grouped by the specified facets. Useful for getting an overview of log distribution without fetching individual log entries.",
+    {
+      groupBy: z
+        .array(z.string())
+        .describe(
+          "Fields to group logs by. Common facets: 'source', 'service', 'status', 'host', '@http.status_code', '@env'. Use Datadog facet names.",
+        ),
+      query: z
+        .string()
+        .optional()
+        .describe(
+          "Additional search query terms. Use '*' for all logs. The base query is built from DD_ENV, DD_SERVICE, DD_SOURCE environment variables.",
+        ),
+      source: z
+        .string()
+        .optional()
+        .describe(
+          "Override the log source filter. Use '*' to include all sources. If not provided, uses DD_SOURCE env var or defaults to 'lambda'.",
+        ),
+      env: z
+        .string()
+        .optional()
+        .describe(
+          "Override the environment filter. If not provided, uses DD_ENV env var.",
+        ),
+      service: z
+        .string()
+        .optional()
+        .describe(
+          "Override the service name filter. If not provided, uses DD_SERVICE env var.",
+        ),
+      from: z
+        .string()
+        .optional()
+        .describe(
+          "Start time for the search. ISO 8601 format or relative time like 'now-1h'. Defaults to 'now-15m'.",
+        ),
+      to: z
+        .string()
+        .optional()
+        .describe(
+          "End time for the search. ISO 8601 format or 'now'. Defaults to 'now'.",
+        ),
+      aggregation: z
+        .enum(["count", "avg", "sum", "min", "max", "cardinality"])
+        .optional()
+        .describe(
+          "Aggregation type. 'count' counts logs, others require a metric field. Defaults to 'count'.",
+        ),
+      metric: z
+        .string()
+        .optional()
+        .describe(
+          "Metric field to aggregate when using avg, sum, min, max, or cardinality. E.g., '@duration', '@http.response_time'.",
+        ),
+    },
+    async ({
+      groupBy,
+      query,
+      source,
+      env,
+      service,
+      from,
+      to,
+      aggregation,
+      metric,
+    }) => {
+      log.info("Tool called: datadog_log_analytics");
+
+      const credentials = getDatadogCredentials();
+      if (!credentials) {
+        const missingApiKey =
+          !process.env.DATADOG_API_KEY && !process.env.DD_API_KEY;
+        const missingAppKey =
+          !process.env.DATADOG_APP_KEY &&
+          !process.env.DATADOG_APPLICATION_KEY &&
+          !process.env.DD_APP_KEY &&
+          !process.env.DD_APPLICATION_KEY;
+
+        if (missingApiKey) {
+          log.error("No Datadog API key found in environment");
+          return {
+            content: [
+              {
+                type: "text" as const,
+                text: "Error: No Datadog API key found. Please set DATADOG_API_KEY or DD_API_KEY environment variable.",
+              },
+            ],
+          };
+        }
+        if (missingAppKey) {
+          log.error("No Datadog Application key found in environment");
+          return {
+            content: [
+              {
+                type: "text" as const,
+                text: "Error: No Datadog Application key found. Please set DATADOG_APP_KEY or DD_APP_KEY environment variable.",
+              },
+            ],
+          };
+        }
+      }
+
+      const compute = aggregation
+        ? [{ aggregation, metric }]
+        : [{ aggregation: "count" as const }];
+
+      const result = await aggregateDatadogLogs(
+        credentials!,
+        {
+          query,
+          source,
+          env,
+          service,
+          from,
+          to,
+          groupBy,
+          compute,
+        },
+        log,
+      );
+
+      if (!result.success) {
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: `Error from Datadog Analytics API: ${result.error}`,
+            },
+          ],
+        };
+      }
+
+      if (result.buckets.length === 0) {
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: `No data found for query: ${result.query}\nTime range: ${result.timeRange.from} to ${result.timeRange.to}\nGrouped by: ${result.groupBy.join(", ")}`,
+            },
+          ],
+        };
+      }
+
+      // Format buckets as a readable table
+      const formattedBuckets = result.buckets.map((bucket) => {
+        const byParts = Object.entries(bucket.by)
+          .map(([key, value]) => `${key}: ${value}`)
+          .join(", ");
+        const computeParts = Object.entries(bucket.computes)
+          .map(([key, value]) => `${key}: ${value}`)
+          .join(", ");
+        return `  ${byParts} => ${computeParts}`;
+      });
+
+      const resultText = [
+        `Query: ${result.query}`,
+        `Time range: ${result.timeRange.from} to ${result.timeRange.to}`,
+        `Grouped by: ${result.groupBy.join(", ")}`,
+        `Found ${result.buckets.length} groups:`,
+        "",
+        ...formattedBuckets,
+      ].join("\n");
+
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: resultText,
+          },
+        ],
+      };
+    },
+  );
+
+  log.info("Registered tool: datadog_log_analytics");
 
   log.info("MCP server configuration complete");
 

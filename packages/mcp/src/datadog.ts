@@ -19,6 +19,20 @@ export interface DatadogSearchOptions {
   sort?: "timestamp" | "-timestamp";
 }
 
+export interface DatadogAnalyticsOptions {
+  query?: string;
+  source?: string;
+  env?: string;
+  service?: string;
+  from?: string;
+  to?: string;
+  groupBy: string[];
+  compute?: Array<{
+    aggregation: "count" | "avg" | "sum" | "min" | "max" | "cardinality";
+    metric?: string;
+  }>;
+}
+
 export interface DatadogLogEntry {
   id: string;
   timestamp?: string;
@@ -33,6 +47,20 @@ export interface DatadogSearchResult {
   query: string;
   timeRange: { from: string; to: string };
   logs: DatadogLogEntry[];
+  error?: string;
+}
+
+export interface DatadogAnalyticsBucket {
+  by: Record<string, string>;
+  computes: Record<string, number>;
+}
+
+export interface DatadogAnalyticsResult {
+  success: boolean;
+  query: string;
+  timeRange: { from: string; to: string };
+  groupBy: string[];
+  buckets: DatadogAnalyticsBucket[];
   error?: string;
 }
 
@@ -270,6 +298,144 @@ export async function searchDatadogLogs(
         query: effectiveQuery,
         timeRange: { from: effectiveFrom, to: effectiveTo },
         logs: [],
+        error: `Connection error: ${error.message}`,
+      });
+    });
+
+    req.write(requestBody);
+    req.end();
+  });
+}
+
+/**
+ * Aggregate Datadog logs using the Analytics API
+ * Groups logs by specified fields and computes aggregations
+ */
+export async function aggregateDatadogLogs(
+  credentials: DatadogCredentials,
+  options: DatadogAnalyticsOptions,
+  logger: Logger = nullLogger,
+): Promise<DatadogAnalyticsResult> {
+  const effectiveQuery = buildDatadogQuery(options);
+  const effectiveFrom = options.from || "now-15m";
+  const effectiveTo = options.to || "now";
+  const groupBy = options.groupBy;
+  const compute = options.compute || [{ aggregation: "count" as const }];
+
+  logger.info(`Analytics query: ${effectiveQuery}`);
+  logger.info(`Group by: ${groupBy.join(", ")}`);
+  logger.info(`Time range: ${effectiveFrom} to ${effectiveTo}`);
+
+  const requestBody = JSON.stringify({
+    filter: {
+      query: effectiveQuery,
+      from: effectiveFrom,
+      to: effectiveTo,
+    },
+    group_by: groupBy.map((field) => ({
+      facet: field,
+      limit: 100,
+      sort: {
+        aggregation: "count",
+        order: "desc",
+      },
+    })),
+    compute: compute.map((c) => ({
+      aggregation: c.aggregation,
+      metric: c.metric,
+      type: "total",
+    })),
+    page: {
+      limit: 100,
+    },
+  });
+
+  return new Promise((resolve) => {
+    const requestOptions = {
+      hostname: "api.datadoghq.com",
+      port: 443,
+      path: "/api/v2/logs/analytics/aggregate",
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "DD-API-KEY": credentials.apiKey,
+        "DD-APPLICATION-KEY": credentials.appKey,
+        "Content-Length": Buffer.byteLength(requestBody),
+      },
+    };
+
+    const req = https.request(requestOptions, (res) => {
+      let data = "";
+
+      res.on("data", (chunk: Buffer) => {
+        data += chunk.toString();
+      });
+
+      res.on("end", () => {
+        logger.info(`Response status: ${res.statusCode}`);
+
+        if (res.statusCode !== 200) {
+          logger.error(`Datadog Analytics API error: ${res.statusCode}`);
+          resolve({
+            success: false,
+            query: effectiveQuery,
+            timeRange: { from: effectiveFrom, to: effectiveTo },
+            groupBy,
+            buckets: [],
+            error: `Datadog API returned status ${res.statusCode}: ${data}`,
+          });
+          return;
+        }
+
+        try {
+          const response = JSON.parse(data) as {
+            data?: {
+              buckets?: Array<{
+                by?: Record<string, string>;
+                computes?: Record<string, number>;
+              }>;
+            };
+          };
+
+          const buckets = (response.data?.buckets || []).map((bucket) => ({
+            by: bucket.by || {},
+            computes: bucket.computes || {},
+          }));
+
+          logger.info(`Retrieved ${buckets.length} aggregation buckets`);
+
+          resolve({
+            success: true,
+            query: effectiveQuery,
+            timeRange: { from: effectiveFrom, to: effectiveTo },
+            groupBy,
+            buckets,
+          });
+        } catch (parseError) {
+          logger.error(
+            "Failed to parse Datadog analytics response:",
+            parseError,
+          );
+          resolve({
+            success: false,
+            query: effectiveQuery,
+            timeRange: { from: effectiveFrom, to: effectiveTo },
+            groupBy,
+            buckets: [],
+            error: `Failed to parse response: ${parseError instanceof Error ? parseError.message : "Unknown error"}`,
+          });
+        }
+      });
+    });
+
+    req.on("error", (error) => {
+      logger.error("Request error:", error);
+      resolve({
+        success: false,
+        query: effectiveQuery,
+        timeRange: { from: effectiveFrom, to: effectiveTo },
+        groupBy,
+        buckets: [],
         error: `Connection error: ${error.message}`,
       });
     });
