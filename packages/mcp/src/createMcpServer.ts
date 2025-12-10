@@ -128,7 +128,7 @@ export function createMcpServer(
 
   server.tool(
     "list_prompts",
-    "Returns a bulleted list of all .md files in the prompts directory with their descriptions and requirements",
+    "List available Jaypie development prompts and guides. Use this FIRST when starting work on a Jaypie project to discover relevant documentation. Returns filenames, descriptions, and which file patterns each prompt applies to (e.g., 'Required for packages/express/**').",
     {},
     async () => {
       log.info("Tool called: list_prompts");
@@ -178,12 +178,12 @@ export function createMcpServer(
 
   server.tool(
     "read_prompt",
-    "Returns the contents of a specified prompt file",
+    "Read a Jaypie prompt/guide by filename. Call list_prompts first to see available prompts. These contain best practices, templates, code patterns, and step-by-step guides for Jaypie development tasks.",
     {
       filename: z
         .string()
         .describe(
-          "The name of the prompt file to read (e.g., example_prompt.md)",
+          "The prompt filename from list_prompts (e.g., 'Jaypie_Express_Package.md', 'Development_Process.md')",
         ),
     },
     async ({ filename }) => {
@@ -259,13 +259,13 @@ export function createMcpServer(
   // Datadog Logs Tool
   server.tool(
     "datadog_logs",
-    "Search Datadog logs using the Datadog Logs Search API. Requires DATADOG_API_KEY (or DD_API_KEY) and DATADOG_APP_KEY (or DD_APP_KEY) environment variables. Optionally uses DD_ENV for environment, DD_SERVICE for service, DD_SOURCE for source (defaults to 'lambda'), and DD_QUERY for additional base query terms.",
+    "Search and retrieve individual Datadog log entries. Use this to view actual log messages and details. For aggregated counts/statistics (e.g., 'how many errors by service?'), use datadog_log_analytics instead. Requires DATADOG_API_KEY and DATADOG_APP_KEY environment variables.",
     {
       query: z
         .string()
         .optional()
         .describe(
-          "Additional search query terms to append to the base query. The base query is built from DD_ENV, DD_SERVICE, DD_SOURCE (or 'lambda'), and DD_QUERY environment variables. Use this to add specific filters like error messages or request IDs.",
+          "Search query to filter logs. Examples: 'status:error', '@http.status_code:500', '*timeout*', '@requestId:abc123'. Combined with DD_ENV, DD_SERVICE, DD_SOURCE env vars if set.",
         ),
       source: z
         .string()
@@ -289,25 +289,23 @@ export function createMcpServer(
         .string()
         .optional()
         .describe(
-          "Start time for the search. ISO 8601 format or relative time like 'now-15m'. Defaults to 'now-15m'.",
+          "Start time. Formats: relative ('now-15m', 'now-1h', 'now-1d'), ISO 8601 ('2024-01-15T10:00:00Z'). Defaults to 'now-15m'.",
         ),
       to: z
         .string()
         .optional()
         .describe(
-          "End time for the search. ISO 8601 format or 'now'. Defaults to 'now'.",
+          "End time. Formats: 'now', relative ('now-5m'), or ISO 8601. Defaults to 'now'.",
         ),
       limit: z
         .number()
         .optional()
-        .describe(
-          "Maximum number of logs to return. Defaults to 50, max 1000.",
-        ),
+        .describe("Max logs to return (1-1000). Defaults to 50."),
       sort: z
         .enum(["timestamp", "-timestamp"])
         .optional()
         .describe(
-          "Sort order. 'timestamp' for oldest first, '-timestamp' for newest first. Defaults to '-timestamp'.",
+          "Sort order: 'timestamp' (oldest first) or '-timestamp' (newest first, default).",
         ),
     },
     async ({ query, source, env, service, from, to, limit, sort }) => {
@@ -409,18 +407,18 @@ export function createMcpServer(
   // Datadog Log Analytics Tool
   server.tool(
     "datadog_log_analytics",
-    "Aggregate and analyze Datadog logs by grouping them by specified fields (e.g., source, service, status, host). Returns counts grouped by the specified facets. Useful for getting an overview of log distribution without fetching individual log entries.",
+    "Aggregate and analyze Datadog logs by grouping them by fields. Use this for statistics and counts (e.g., 'errors by service', 'requests by status code'). For viewing individual log entries, use datadog_logs instead.",
     {
       groupBy: z
         .array(z.string())
         .describe(
-          "Fields to group logs by. Common facets: 'source', 'service', 'status', 'host', '@http.status_code', '@env'. Use Datadog facet names.",
+          "Fields to group by. Examples: ['source'], ['service', 'status'], ['@http.status_code']. Common facets: source, service, status, host, @http.status_code, @env.",
         ),
       query: z
         .string()
         .optional()
         .describe(
-          "Additional search query terms. Use '*' for all logs. The base query is built from DD_ENV, DD_SERVICE, DD_SOURCE environment variables.",
+          "Filter query. Examples: 'status:error', '*timeout*', '@http.method:POST'. Use '*' for all logs.",
         ),
       source: z
         .string()
@@ -444,13 +442,13 @@ export function createMcpServer(
         .string()
         .optional()
         .describe(
-          "Start time for the search. ISO 8601 format or relative time like 'now-1h'. Defaults to 'now-15m'.",
+          "Start time. Formats: relative ('now-15m', 'now-1h', 'now-1d'), ISO 8601 ('2024-01-15T10:00:00Z'). Defaults to 'now-15m'.",
         ),
       to: z
         .string()
         .optional()
         .describe(
-          "End time for the search. ISO 8601 format or 'now'. Defaults to 'now'.",
+          "End time. Formats: 'now', relative ('now-5m'), or ISO 8601. Defaults to 'now'.",
         ),
       aggregation: z
         .enum(["count", "avg", "sum", "min", "max", "cardinality"])
@@ -859,19 +857,19 @@ export function createMcpServer(
       query: z
         .string()
         .describe(
-          "Datadog metric query string. E.g., 'avg:system.cpu.user{*}', 'sum:aws.lambda.invocations{function:my-function}.as_count()'",
+          "Metric query. Format: 'aggregation:metric.name{tags}'. Examples: 'avg:system.cpu.user{*}', 'sum:aws.lambda.invocations{function:my-func}.as_count()', 'max:aws.lambda.duration{env:production}'.",
         ),
       from: z
         .string()
         .optional()
         .describe(
-          "Start time. Can be relative like '1h' (1 hour ago), '30m' (30 minutes ago), or a Unix timestamp. Defaults to '1h'.",
+          "Start time. Formats: relative ('1h', '30m', '1d'), or Unix timestamp. Defaults to '1h'.",
         ),
       to: z
         .string()
         .optional()
         .describe(
-          "End time. Can be 'now' or a Unix timestamp. Defaults to 'now'.",
+          "End time. Formats: 'now' or Unix timestamp. Defaults to 'now'.",
         ),
     },
     async ({ query, from, to }) => {
@@ -995,18 +993,18 @@ export function createMcpServer(
         .string()
         .optional()
         .describe(
-          "Start time. ISO 8601 format or relative like 'now-1h'. Defaults to 'now-15m'.",
+          "Start time. Formats: relative ('now-15m', 'now-1h', 'now-1d'), ISO 8601 ('2024-01-15T10:00:00Z'). Defaults to 'now-15m'.",
         ),
       to: z
         .string()
         .optional()
-        .describe("End time. ISO 8601 format or 'now'. Defaults to 'now'."),
+        .describe(
+          "End time. Formats: 'now', relative ('now-5m'), or ISO 8601. Defaults to 'now'.",
+        ),
       limit: z
         .number()
         .optional()
-        .describe(
-          "Maximum number of events to return. Defaults to 50, max 1000.",
-        ),
+        .describe("Max events to return (1-1000). Defaults to 50."),
     },
     async ({ query, from, to, limit }) => {
       log.info("Tool called: datadog_rum");

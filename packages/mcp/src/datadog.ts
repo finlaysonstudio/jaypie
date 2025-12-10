@@ -349,12 +349,22 @@ export async function searchDatadogLogs(
 
         if (res.statusCode !== 200) {
           logger.error(`Datadog API error: ${res.statusCode}`);
+          let errorMessage = `Datadog API returned status ${res.statusCode}: ${data}`;
+          if (res.statusCode === 400) {
+            errorMessage = `Invalid query syntax. Check your query: "${effectiveQuery}". Datadog error: ${data}`;
+          } else if (res.statusCode === 403) {
+            errorMessage =
+              "Access denied. Verify your API and Application keys have logs_read permission.";
+          } else if (res.statusCode === 429) {
+            errorMessage =
+              "Rate limited by Datadog. Wait a moment and try again, or reduce your query scope.";
+          }
           resolve({
             success: false,
             query: effectiveQuery,
             timeRange: { from: effectiveFrom, to: effectiveTo },
             logs: [],
-            error: `Datadog API returned status ${res.statusCode}: ${data}`,
+            error: errorMessage,
           });
           return;
         }
@@ -518,13 +528,23 @@ export async function aggregateDatadogLogs(
 
         if (res.statusCode !== 200) {
           logger.error(`Datadog Analytics API error: ${res.statusCode}`);
+          let errorMessage = `Datadog API returned status ${res.statusCode}: ${data}`;
+          if (res.statusCode === 400) {
+            errorMessage = `Invalid query or groupBy fields. Verify facet names exist: ${groupBy.join(", ")}. Datadog error: ${data}`;
+          } else if (res.statusCode === 403) {
+            errorMessage =
+              "Access denied. Verify your API and Application keys have logs_read permission.";
+          } else if (res.statusCode === 429) {
+            errorMessage =
+              "Rate limited by Datadog. Wait a moment and try again, or reduce your query scope.";
+          }
           resolve({
             success: false,
             query: effectiveQuery,
             timeRange: { from: effectiveFrom, to: effectiveTo },
             groupBy,
             buckets: [],
-            error: `Datadog API returned status ${res.statusCode}: ${data}`,
+            error: errorMessage,
           });
           return;
         }
@@ -638,10 +658,18 @@ export async function listDatadogMonitors(
 
         if (res.statusCode !== 200) {
           logger.error(`Datadog Monitors API error: ${res.statusCode}`);
+          let errorMessage = `Datadog API returned status ${res.statusCode}: ${data}`;
+          if (res.statusCode === 403) {
+            errorMessage =
+              "Access denied. Verify your API and Application keys have monitors_read permission.";
+          } else if (res.statusCode === 429) {
+            errorMessage =
+              "Rate limited by Datadog. Wait a moment and try again.";
+          }
           resolve({
             success: false,
             monitors: [],
-            error: `Datadog API returned status ${res.statusCode}: ${data}`,
+            error: errorMessage,
           });
           return;
         }
@@ -746,10 +774,18 @@ export async function listDatadogSynthetics(
 
         if (res.statusCode !== 200) {
           logger.error(`Datadog Synthetics API error: ${res.statusCode}`);
+          let errorMessage = `Datadog API returned status ${res.statusCode}: ${data}`;
+          if (res.statusCode === 403) {
+            errorMessage =
+              "Access denied. Verify your API and Application keys have synthetics_read permission.";
+          } else if (res.statusCode === 429) {
+            errorMessage =
+              "Rate limited by Datadog. Wait a moment and try again.";
+          }
           resolve({
             success: false,
             tests: [],
-            error: `Datadog API returned status ${res.statusCode}: ${data}`,
+            error: errorMessage,
           });
           return;
         }
@@ -858,11 +894,21 @@ export async function getDatadogSyntheticResults(
           logger.error(
             `Datadog Synthetics Results API error: ${res.statusCode}`,
           );
+          let errorMessage = `Datadog API returned status ${res.statusCode}: ${data}`;
+          if (res.statusCode === 403) {
+            errorMessage =
+              "Access denied. Verify your API and Application keys have synthetics_read permission.";
+          } else if (res.statusCode === 404) {
+            errorMessage = `Synthetic test '${publicId}' not found. Use datadog_synthetics (without testId) to list available tests.`;
+          } else if (res.statusCode === 429) {
+            errorMessage =
+              "Rate limited by Datadog. Wait a moment and try again.";
+          }
           resolve({
             success: false,
             publicId,
             results: [],
-            error: `Datadog API returned status ${res.statusCode}: ${data}`,
+            error: errorMessage,
           });
           return;
         }
@@ -966,12 +1012,22 @@ export async function queryDatadogMetrics(
 
         if (res.statusCode !== 200) {
           logger.error(`Datadog Metrics API error: ${res.statusCode}`);
+          let errorMessage = `Datadog API returned status ${res.statusCode}: ${data}`;
+          if (res.statusCode === 400) {
+            errorMessage = `Invalid metric query. Check format: 'aggregation:metric.name{tags}'. Query: "${options.query}". Datadog error: ${data}`;
+          } else if (res.statusCode === 403) {
+            errorMessage =
+              "Access denied. Verify your API and Application keys have metrics_read permission.";
+          } else if (res.statusCode === 429) {
+            errorMessage =
+              "Rate limited by Datadog. Wait a moment and try again, or reduce your time range.";
+          }
           resolve({
             success: false,
             query: options.query,
             timeRange: { from: options.from, to: options.to },
             series: [],
-            error: `Datadog API returned status ${res.statusCode}: ${data}`,
+            error: errorMessage,
           });
           return;
         }
@@ -1084,12 +1140,20 @@ export async function searchDatadogRum(
 
         if (res.statusCode !== 200) {
           logger.error(`Datadog RUM API error: ${res.statusCode}`);
-          // Check for specific "No valid indexes" error which means no RUM app is configured
           let errorMessage = `Datadog API returned status ${res.statusCode}: ${data}`;
+          // Check for specific "No valid indexes" error which means no RUM app is configured
           if (data.includes("No valid indexes")) {
             errorMessage =
               "No RUM application found. Ensure you have a RUM application configured in Datadog and it has collected data. " +
               "You can create a RUM application at https://app.datadoghq.com/rum/list";
+          } else if (res.statusCode === 400) {
+            errorMessage = `Invalid RUM query. Check syntax: "${effectiveQuery}". Datadog error: ${data}`;
+          } else if (res.statusCode === 403) {
+            errorMessage =
+              "Access denied. Verify your API and Application keys have rum_read permission.";
+          } else if (res.statusCode === 429) {
+            errorMessage =
+              "Rate limited by Datadog. Wait a moment and try again, or reduce your query scope.";
           }
           resolve({
             success: false,
