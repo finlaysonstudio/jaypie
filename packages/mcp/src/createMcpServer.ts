@@ -1,6 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import * as fs from "node:fs/promises";
+import * as https from "node:https";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 import matter from "gray-matter";
@@ -244,6 +245,279 @@ export function createMcpServer(
   );
 
   log.info("Registered tool: version");
+
+  // Datadog Logs Tool
+  server.tool(
+    "datadog_logs",
+    "Search Datadog logs using the Datadog Logs Search API. Requires DATADOG_API_KEY or DD_API_KEY environment variable. Optionally uses DD_ENV for environment, DD_SERVICE for service, DD_SOURCE for source (defaults to 'lambda'), and DD_QUERY for additional base query terms.",
+    {
+      query: z
+        .string()
+        .optional()
+        .describe(
+          "Additional search query terms to append to the base query. The base query is built from DD_ENV, DD_SERVICE, DD_SOURCE (or 'lambda'), and DD_QUERY environment variables. Use this to add specific filters like error messages or request IDs.",
+        ),
+      source: z
+        .string()
+        .optional()
+        .describe(
+          "Override the log source (e.g., 'lambda', 'auth0', 'nginx'). If not provided, uses DD_SOURCE env var or defaults to 'lambda'.",
+        ),
+      env: z
+        .string()
+        .optional()
+        .describe(
+          "Override the environment (e.g., 'sandbox', 'kitchen', 'lab', 'studio', 'production'). If not provided, uses DD_ENV env var.",
+        ),
+      service: z
+        .string()
+        .optional()
+        .describe(
+          "Override the service name. If not provided, uses DD_SERVICE env var.",
+        ),
+      from: z
+        .string()
+        .optional()
+        .describe(
+          "Start time for the search. ISO 8601 format or relative time like 'now-15m'. Defaults to 'now-15m'.",
+        ),
+      to: z
+        .string()
+        .optional()
+        .describe(
+          "End time for the search. ISO 8601 format or 'now'. Defaults to 'now'.",
+        ),
+      limit: z
+        .number()
+        .optional()
+        .describe(
+          "Maximum number of logs to return. Defaults to 50, max 1000.",
+        ),
+      sort: z
+        .enum(["timestamp", "-timestamp"])
+        .optional()
+        .describe(
+          "Sort order. 'timestamp' for oldest first, '-timestamp' for newest first. Defaults to '-timestamp'.",
+        ),
+    },
+    async ({ query, source, env, service, from, to, limit, sort }) => {
+      log.info("Tool called: datadog_logs");
+
+      // Check for API key
+      const apiKey = process.env.DATADOG_API_KEY || process.env.DD_API_KEY;
+      if (!apiKey) {
+        log.error("No Datadog API key found in environment");
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: "Error: No Datadog API key found. Please set DATADOG_API_KEY or DD_API_KEY environment variable.",
+            },
+          ],
+        };
+      }
+      log.info("Datadog API key found");
+
+      // Get environment variables
+      const ddEnv = process.env.DD_ENV;
+      const ddService = process.env.DD_SERVICE;
+      const ddSource = process.env.DD_SOURCE;
+      const ddQuery = process.env.DD_QUERY;
+
+      // Build query from environment variables and parameters
+      const queryParts: string[] = [];
+
+      // Add source (parameter > env var > default 'lambda')
+      const effectiveSource = source || ddSource || "lambda";
+      queryParts.push(`source:${effectiveSource}`);
+
+      // Add env (parameter > env var)
+      const effectiveEnv = env || ddEnv;
+      if (effectiveEnv) {
+        queryParts.push(`env:${effectiveEnv}`);
+      }
+
+      // Add service (parameter > env var)
+      const effectiveService = service || ddService;
+      if (effectiveService) {
+        queryParts.push(`service:${effectiveService}`);
+      }
+
+      // Add base query from DD_QUERY if available
+      if (ddQuery) {
+        queryParts.push(ddQuery);
+      }
+
+      // Add user-provided query terms
+      if (query) {
+        queryParts.push(query);
+      }
+
+      const effectiveQuery = queryParts.join(" ");
+
+      log.info(`Effective query: ${effectiveQuery}`);
+      log.info(`Source: ${effectiveSource}`);
+      if (effectiveEnv) log.info(`Env: ${effectiveEnv}`);
+      if (effectiveService) log.info(`Service: ${effectiveService}`);
+      if (ddQuery) log.info(`DD_QUERY: ${ddQuery}`);
+
+      // Set defaults
+      const effectiveFrom = from || "now-15m";
+      const effectiveTo = to || "now";
+      const effectiveLimit = Math.min(limit || 50, 1000);
+      const effectiveSort = sort || "-timestamp";
+
+      log.info(
+        `Search params: from=${effectiveFrom}, to=${effectiveTo}, limit=${effectiveLimit}, sort=${effectiveSort}`,
+      );
+
+      // Build request body
+      const requestBody = JSON.stringify({
+        filter: {
+          query: effectiveQuery,
+          from: effectiveFrom,
+          to: effectiveTo,
+        },
+        page: {
+          limit: effectiveLimit,
+        },
+        sort: effectiveSort,
+      });
+
+      log.info("Making request to Datadog Logs API...");
+
+      return new Promise((resolve) => {
+        const options = {
+          hostname: "api.datadoghq.com",
+          port: 443,
+          path: "/api/v2/logs/events/search",
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "DD-API-KEY": apiKey,
+            "Content-Length": Buffer.byteLength(requestBody),
+          },
+        };
+
+        const req = https.request(options, (res) => {
+          let data = "";
+
+          res.on("data", (chunk: Buffer) => {
+            data += chunk.toString();
+          });
+
+          res.on("end", () => {
+            log.info(`Response status: ${res.statusCode}`);
+
+            if (res.statusCode !== 200) {
+              log.error(`Datadog API error: ${res.statusCode}`);
+              resolve({
+                content: [
+                  {
+                    type: "text" as const,
+                    text: `Error from Datadog API (${res.statusCode}): ${data}`,
+                  },
+                ],
+              });
+              return;
+            }
+
+            try {
+              const response = JSON.parse(data) as {
+                data?: Array<{
+                  id: string;
+                  attributes?: {
+                    timestamp?: string;
+                    status?: string;
+                    service?: string;
+                    message?: string;
+                    attributes?: Record<string, unknown>;
+                  };
+                }>;
+                meta?: {
+                  page?: {
+                    after?: string;
+                  };
+                };
+              };
+              const logs = response.data || [];
+              log.info(`Retrieved ${logs.length} log entries`);
+
+              if (logs.length === 0) {
+                resolve({
+                  content: [
+                    {
+                      type: "text" as const,
+                      text: `No logs found for query: ${effectiveQuery}\nTime range: ${effectiveFrom} to ${effectiveTo}`,
+                    },
+                  ],
+                });
+                return;
+              }
+
+              // Format logs for output
+              const formattedLogs = logs.map((log) => {
+                const attrs = log.attributes || {};
+                return {
+                  id: log.id,
+                  timestamp: attrs.timestamp,
+                  status: attrs.status,
+                  service: attrs.service,
+                  message: attrs.message,
+                  attributes: attrs.attributes,
+                };
+              });
+
+              const resultText = [
+                `Query: ${effectiveQuery}`,
+                `Time range: ${effectiveFrom} to ${effectiveTo}`,
+                `Found ${logs.length} log entries:`,
+                "",
+                JSON.stringify(formattedLogs, null, 2),
+              ].join("\n");
+
+              resolve({
+                content: [
+                  {
+                    type: "text" as const,
+                    text: resultText,
+                  },
+                ],
+              });
+            } catch (parseError) {
+              log.error("Failed to parse Datadog response:", parseError);
+              resolve({
+                content: [
+                  {
+                    type: "text" as const,
+                    text: `Error parsing Datadog response: ${parseError instanceof Error ? parseError.message : "Unknown error"}`,
+                  },
+                ],
+              });
+            }
+          });
+        });
+
+        req.on("error", (error) => {
+          log.error("Request error:", error);
+          resolve({
+            content: [
+              {
+                type: "text" as const,
+                text: `Error connecting to Datadog API: ${error.message}`,
+              },
+            ],
+          });
+        });
+
+        req.write(requestBody);
+        req.end();
+      });
+    },
+  );
+
+  log.info("Registered tool: datadog_logs");
+
   log.info("MCP server configuration complete");
 
   return server;
