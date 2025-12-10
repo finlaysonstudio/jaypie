@@ -33,6 +33,121 @@ export interface DatadogAnalyticsOptions {
   }>;
 }
 
+// Monitors types
+export interface DatadogMonitorsOptions {
+  tags?: string[];
+  monitorTags?: string[];
+  name?: string;
+  status?: ("Alert" | "Warn" | "No Data" | "OK")[];
+}
+
+export interface DatadogMonitor {
+  id: number;
+  name: string;
+  type: string;
+  status: string;
+  message?: string;
+  tags: string[];
+  priority?: number;
+  query?: string;
+  overallState?: string;
+}
+
+export interface DatadogMonitorsResult {
+  success: boolean;
+  monitors: DatadogMonitor[];
+  error?: string;
+}
+
+// Synthetics types
+export interface DatadogSyntheticsOptions {
+  tags?: string[];
+  type?: "api" | "browser";
+}
+
+export interface DatadogSyntheticTest {
+  publicId: string;
+  name: string;
+  type: string;
+  status: string;
+  tags: string[];
+  locations: string[];
+  message?: string;
+}
+
+export interface DatadogSyntheticResult {
+  publicId: string;
+  resultId: string;
+  status: number;
+  checkTime: number;
+  passed: boolean;
+  location?: string;
+}
+
+export interface DatadogSyntheticsResult {
+  success: boolean;
+  tests: DatadogSyntheticTest[];
+  error?: string;
+}
+
+export interface DatadogSyntheticResultsResult {
+  success: boolean;
+  publicId: string;
+  results: DatadogSyntheticResult[];
+  error?: string;
+}
+
+// Metrics types
+export interface DatadogMetricsOptions {
+  query: string;
+  from: number;
+  to: number;
+}
+
+export interface DatadogMetricSeries {
+  metric: string;
+  scope: string;
+  pointlist: Array<[number, number | null]>;
+  unit?: string;
+}
+
+export interface DatadogMetricsResult {
+  success: boolean;
+  query: string;
+  timeRange: { from: number; to: number };
+  series: DatadogMetricSeries[];
+  error?: string;
+}
+
+// RUM types
+export interface DatadogRumOptions {
+  query?: string;
+  from?: string;
+  to?: string;
+  limit?: number;
+  sort?: "timestamp" | "-timestamp";
+}
+
+export interface DatadogRumEvent {
+  id: string;
+  type: string;
+  timestamp?: string;
+  sessionId?: string;
+  viewUrl?: string;
+  viewName?: string;
+  errorMessage?: string;
+  errorType?: string;
+  attributes?: Record<string, unknown>;
+}
+
+export interface DatadogRumResult {
+  success: boolean;
+  query: string;
+  timeRange: { from: string; to: string };
+  events: DatadogRumEvent[];
+  error?: string;
+}
+
 export interface DatadogLogEntry {
   id: string;
   timestamp?: string;
@@ -326,25 +441,52 @@ export async function aggregateDatadogLogs(
   logger.info(`Group by: ${groupBy.join(", ")}`);
   logger.info(`Time range: ${effectiveFrom} to ${effectiveTo}`);
 
+  // Build compute array - each item needs aggregation and type
+  const computeItems = compute.map((c) => {
+    const item: {
+      aggregation: string;
+      type: string;
+      metric?: string;
+    } = {
+      aggregation: c.aggregation,
+      type: "total",
+    };
+    if (c.metric) {
+      item.metric = c.metric;
+    }
+    return item;
+  });
+
+  // Build group_by with proper sort configuration
+  const groupByItems = groupBy.map((field) => {
+    const item: {
+      facet: string;
+      limit: number;
+      sort: {
+        type: string;
+        order: string;
+        aggregation?: string;
+      };
+    } = {
+      facet: field,
+      limit: 100,
+      sort: {
+        type: "measure",
+        order: "desc",
+        aggregation: compute[0]?.aggregation || "count",
+      },
+    };
+    return item;
+  });
+
   const requestBody = JSON.stringify({
     filter: {
       query: effectiveQuery,
       from: effectiveFrom,
       to: effectiveTo,
     },
-    group_by: groupBy.map((field) => ({
-      facet: field,
-      limit: 100,
-      sort: {
-        aggregation: "count",
-        order: "desc",
-      },
-    })),
-    compute: compute.map((c) => ({
-      aggregation: c.aggregation,
-      metric: c.metric,
-      type: "total",
-    })),
+    group_by: groupByItems,
+    compute: computeItems,
     page: {
       limit: 100,
     },
@@ -436,6 +578,589 @@ export async function aggregateDatadogLogs(
         timeRange: { from: effectiveFrom, to: effectiveTo },
         groupBy,
         buckets: [],
+        error: `Connection error: ${error.message}`,
+      });
+    });
+
+    req.write(requestBody);
+    req.end();
+  });
+}
+
+/**
+ * List Datadog monitors with optional filtering
+ */
+export async function listDatadogMonitors(
+  credentials: DatadogCredentials,
+  options: DatadogMonitorsOptions = {},
+  logger: Logger = nullLogger,
+): Promise<DatadogMonitorsResult> {
+  logger.info("Fetching Datadog monitors");
+
+  const queryParams = new URLSearchParams();
+
+  if (options.tags && options.tags.length > 0) {
+    queryParams.set("tags", options.tags.join(","));
+  }
+  if (options.monitorTags && options.monitorTags.length > 0) {
+    queryParams.set("monitor_tags", options.monitorTags.join(","));
+  }
+  if (options.name) {
+    queryParams.set("name", options.name);
+  }
+
+  const queryString = queryParams.toString();
+  const path = `/api/v1/monitor${queryString ? `?${queryString}` : ""}`;
+
+  logger.info(`Request path: ${path}`);
+
+  return new Promise((resolve) => {
+    const requestOptions = {
+      hostname: "api.datadoghq.com",
+      port: 443,
+      path,
+      method: "GET",
+      headers: {
+        "DD-API-KEY": credentials.apiKey,
+        "DD-APPLICATION-KEY": credentials.appKey,
+      },
+    };
+
+    const req = https.request(requestOptions, (res) => {
+      let data = "";
+
+      res.on("data", (chunk: Buffer) => {
+        data += chunk.toString();
+      });
+
+      res.on("end", () => {
+        logger.info(`Response status: ${res.statusCode}`);
+
+        if (res.statusCode !== 200) {
+          logger.error(`Datadog Monitors API error: ${res.statusCode}`);
+          resolve({
+            success: false,
+            monitors: [],
+            error: `Datadog API returned status ${res.statusCode}: ${data}`,
+          });
+          return;
+        }
+
+        try {
+          const response = JSON.parse(data) as Array<{
+            id: number;
+            name: string;
+            type: string;
+            overall_state?: string;
+            message?: string;
+            tags?: string[];
+            priority?: number;
+            query?: string;
+          }>;
+
+          let monitors = response.map((monitor) => ({
+            id: monitor.id,
+            name: monitor.name,
+            type: monitor.type,
+            status: monitor.overall_state || "Unknown",
+            message: monitor.message,
+            tags: monitor.tags || [],
+            priority: monitor.priority,
+            query: monitor.query,
+            overallState: monitor.overall_state,
+          }));
+
+          // Filter by status if specified
+          if (options.status && options.status.length > 0) {
+            monitors = monitors.filter((m) =>
+              options.status!.includes(
+                m.status as "Alert" | "Warn" | "No Data" | "OK",
+              ),
+            );
+          }
+
+          logger.info(`Retrieved ${monitors.length} monitors`);
+
+          resolve({
+            success: true,
+            monitors,
+          });
+        } catch (parseError) {
+          logger.error(
+            "Failed to parse Datadog monitors response:",
+            parseError,
+          );
+          resolve({
+            success: false,
+            monitors: [],
+            error: `Failed to parse response: ${parseError instanceof Error ? parseError.message : "Unknown error"}`,
+          });
+        }
+      });
+    });
+
+    req.on("error", (error) => {
+      logger.error("Request error:", error);
+      resolve({
+        success: false,
+        monitors: [],
+        error: `Connection error: ${error.message}`,
+      });
+    });
+
+    req.end();
+  });
+}
+
+/**
+ * List Datadog Synthetic tests
+ */
+export async function listDatadogSynthetics(
+  credentials: DatadogCredentials,
+  options: DatadogSyntheticsOptions = {},
+  logger: Logger = nullLogger,
+): Promise<DatadogSyntheticsResult> {
+  logger.info("Fetching Datadog Synthetic tests");
+
+  return new Promise((resolve) => {
+    const requestOptions = {
+      hostname: "api.datadoghq.com",
+      port: 443,
+      path: "/api/v1/synthetics/tests",
+      method: "GET",
+      headers: {
+        "DD-API-KEY": credentials.apiKey,
+        "DD-APPLICATION-KEY": credentials.appKey,
+      },
+    };
+
+    const req = https.request(requestOptions, (res) => {
+      let data = "";
+
+      res.on("data", (chunk: Buffer) => {
+        data += chunk.toString();
+      });
+
+      res.on("end", () => {
+        logger.info(`Response status: ${res.statusCode}`);
+
+        if (res.statusCode !== 200) {
+          logger.error(`Datadog Synthetics API error: ${res.statusCode}`);
+          resolve({
+            success: false,
+            tests: [],
+            error: `Datadog API returned status ${res.statusCode}: ${data}`,
+          });
+          return;
+        }
+
+        try {
+          const response = JSON.parse(data) as {
+            tests?: Array<{
+              public_id: string;
+              name: string;
+              type: string;
+              status: string;
+              tags?: string[];
+              locations?: string[];
+              message?: string;
+            }>;
+          };
+
+          let tests = (response.tests || []).map((test) => ({
+            publicId: test.public_id,
+            name: test.name,
+            type: test.type,
+            status: test.status,
+            tags: test.tags || [],
+            locations: test.locations || [],
+            message: test.message,
+          }));
+
+          // Filter by type if specified
+          if (options.type) {
+            tests = tests.filter((t) => t.type === options.type);
+          }
+
+          // Filter by tags if specified
+          if (options.tags && options.tags.length > 0) {
+            tests = tests.filter((t) =>
+              options.tags!.some((tag) => t.tags.includes(tag)),
+            );
+          }
+
+          logger.info(`Retrieved ${tests.length} synthetic tests`);
+
+          resolve({
+            success: true,
+            tests,
+          });
+        } catch (parseError) {
+          logger.error(
+            "Failed to parse Datadog synthetics response:",
+            parseError,
+          );
+          resolve({
+            success: false,
+            tests: [],
+            error: `Failed to parse response: ${parseError instanceof Error ? parseError.message : "Unknown error"}`,
+          });
+        }
+      });
+    });
+
+    req.on("error", (error) => {
+      logger.error("Request error:", error);
+      resolve({
+        success: false,
+        tests: [],
+        error: `Connection error: ${error.message}`,
+      });
+    });
+
+    req.end();
+  });
+}
+
+/**
+ * Get recent results for a specific Synthetic test
+ */
+export async function getDatadogSyntheticResults(
+  credentials: DatadogCredentials,
+  publicId: string,
+  logger: Logger = nullLogger,
+): Promise<DatadogSyntheticResultsResult> {
+  logger.info(`Fetching results for Synthetic test: ${publicId}`);
+
+  return new Promise((resolve) => {
+    const requestOptions = {
+      hostname: "api.datadoghq.com",
+      port: 443,
+      path: `/api/v1/synthetics/tests/${publicId}/results`,
+      method: "GET",
+      headers: {
+        "DD-API-KEY": credentials.apiKey,
+        "DD-APPLICATION-KEY": credentials.appKey,
+      },
+    };
+
+    const req = https.request(requestOptions, (res) => {
+      let data = "";
+
+      res.on("data", (chunk: Buffer) => {
+        data += chunk.toString();
+      });
+
+      res.on("end", () => {
+        logger.info(`Response status: ${res.statusCode}`);
+
+        if (res.statusCode !== 200) {
+          logger.error(
+            `Datadog Synthetics Results API error: ${res.statusCode}`,
+          );
+          resolve({
+            success: false,
+            publicId,
+            results: [],
+            error: `Datadog API returned status ${res.statusCode}: ${data}`,
+          });
+          return;
+        }
+
+        try {
+          const response = JSON.parse(data) as {
+            results?: Array<{
+              result_id: string;
+              status: number;
+              check_time: number;
+              dc_id?: number;
+              result?: {
+                passed?: boolean;
+              };
+            }>;
+          };
+
+          const results = (response.results || []).map((result) => ({
+            publicId,
+            resultId: result.result_id,
+            status: result.status,
+            checkTime: result.check_time,
+            passed: result.result?.passed ?? result.status === 0,
+            location: result.dc_id?.toString(),
+          }));
+
+          logger.info(`Retrieved ${results.length} synthetic results`);
+
+          resolve({
+            success: true,
+            publicId,
+            results,
+          });
+        } catch (parseError) {
+          logger.error(
+            "Failed to parse Datadog synthetic results:",
+            parseError,
+          );
+          resolve({
+            success: false,
+            publicId,
+            results: [],
+            error: `Failed to parse response: ${parseError instanceof Error ? parseError.message : "Unknown error"}`,
+          });
+        }
+      });
+    });
+
+    req.on("error", (error) => {
+      logger.error("Request error:", error);
+      resolve({
+        success: false,
+        publicId,
+        results: [],
+        error: `Connection error: ${error.message}`,
+      });
+    });
+
+    req.end();
+  });
+}
+
+/**
+ * Query Datadog metrics
+ */
+export async function queryDatadogMetrics(
+  credentials: DatadogCredentials,
+  options: DatadogMetricsOptions,
+  logger: Logger = nullLogger,
+): Promise<DatadogMetricsResult> {
+  logger.info(`Querying metrics: ${options.query}`);
+  logger.info(`Time range: ${options.from} to ${options.to}`);
+
+  const queryParams = new URLSearchParams({
+    query: options.query,
+    from: options.from.toString(),
+    to: options.to.toString(),
+  });
+
+  return new Promise((resolve) => {
+    const requestOptions = {
+      hostname: "api.datadoghq.com",
+      port: 443,
+      path: `/api/v1/query?${queryParams.toString()}`,
+      method: "GET",
+      headers: {
+        "DD-API-KEY": credentials.apiKey,
+        "DD-APPLICATION-KEY": credentials.appKey,
+      },
+    };
+
+    const req = https.request(requestOptions, (res) => {
+      let data = "";
+
+      res.on("data", (chunk: Buffer) => {
+        data += chunk.toString();
+      });
+
+      res.on("end", () => {
+        logger.info(`Response status: ${res.statusCode}`);
+
+        if (res.statusCode !== 200) {
+          logger.error(`Datadog Metrics API error: ${res.statusCode}`);
+          resolve({
+            success: false,
+            query: options.query,
+            timeRange: { from: options.from, to: options.to },
+            series: [],
+            error: `Datadog API returned status ${res.statusCode}: ${data}`,
+          });
+          return;
+        }
+
+        try {
+          const response = JSON.parse(data) as {
+            series?: Array<{
+              metric: string;
+              scope: string;
+              pointlist: Array<[number, number | null]>;
+              unit?: Array<{ name?: string }>;
+            }>;
+          };
+
+          const series = (response.series || []).map((s) => ({
+            metric: s.metric,
+            scope: s.scope,
+            pointlist: s.pointlist,
+            unit: s.unit?.[0]?.name,
+          }));
+
+          logger.info(`Retrieved ${series.length} metric series`);
+
+          resolve({
+            success: true,
+            query: options.query,
+            timeRange: { from: options.from, to: options.to },
+            series,
+          });
+        } catch (parseError) {
+          logger.error("Failed to parse Datadog metrics response:", parseError);
+          resolve({
+            success: false,
+            query: options.query,
+            timeRange: { from: options.from, to: options.to },
+            series: [],
+            error: `Failed to parse response: ${parseError instanceof Error ? parseError.message : "Unknown error"}`,
+          });
+        }
+      });
+    });
+
+    req.on("error", (error) => {
+      logger.error("Request error:", error);
+      resolve({
+        success: false,
+        query: options.query,
+        timeRange: { from: options.from, to: options.to },
+        series: [],
+        error: `Connection error: ${error.message}`,
+      });
+    });
+
+    req.end();
+  });
+}
+
+/**
+ * Search Datadog RUM events
+ */
+export async function searchDatadogRum(
+  credentials: DatadogCredentials,
+  options: DatadogRumOptions = {},
+  logger: Logger = nullLogger,
+): Promise<DatadogRumResult> {
+  const effectiveQuery = options.query || "*";
+  const effectiveFrom = options.from || "now-15m";
+  const effectiveTo = options.to || "now";
+  const effectiveLimit = Math.min(options.limit || 50, 1000);
+  const effectiveSort = options.sort || "-timestamp";
+
+  logger.info(`RUM query: ${effectiveQuery}`);
+  logger.info(`Time range: ${effectiveFrom} to ${effectiveTo}`);
+
+  const requestBody = JSON.stringify({
+    filter: {
+      query: effectiveQuery,
+      from: effectiveFrom,
+      to: effectiveTo,
+    },
+    page: {
+      limit: effectiveLimit,
+    },
+    sort: effectiveSort,
+  });
+
+  return new Promise((resolve) => {
+    const requestOptions = {
+      hostname: "api.datadoghq.com",
+      port: 443,
+      path: "/api/v2/rum/events/search",
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "DD-API-KEY": credentials.apiKey,
+        "DD-APPLICATION-KEY": credentials.appKey,
+        "Content-Length": Buffer.byteLength(requestBody),
+      },
+    };
+
+    const req = https.request(requestOptions, (res) => {
+      let data = "";
+
+      res.on("data", (chunk: Buffer) => {
+        data += chunk.toString();
+      });
+
+      res.on("end", () => {
+        logger.info(`Response status: ${res.statusCode}`);
+
+        if (res.statusCode !== 200) {
+          logger.error(`Datadog RUM API error: ${res.statusCode}`);
+          // Check for specific "No valid indexes" error which means no RUM app is configured
+          let errorMessage = `Datadog API returned status ${res.statusCode}: ${data}`;
+          if (data.includes("No valid indexes")) {
+            errorMessage =
+              "No RUM application found. Ensure you have a RUM application configured in Datadog and it has collected data. " +
+              "You can create a RUM application at https://app.datadoghq.com/rum/list";
+          }
+          resolve({
+            success: false,
+            query: effectiveQuery,
+            timeRange: { from: effectiveFrom, to: effectiveTo },
+            events: [],
+            error: errorMessage,
+          });
+          return;
+        }
+
+        try {
+          const response = JSON.parse(data) as {
+            data?: Array<{
+              id: string;
+              type: string;
+              attributes?: {
+                timestamp?: string;
+                attributes?: {
+                  session?: { id?: string };
+                  view?: { url?: string; name?: string };
+                  error?: { message?: string; type?: string };
+                  [key: string]: unknown;
+                };
+              };
+            }>;
+          };
+
+          const events = (response.data || []).map((event) => {
+            const attrs = event.attributes?.attributes || {};
+            return {
+              id: event.id,
+              type: event.type,
+              timestamp: event.attributes?.timestamp,
+              sessionId: attrs.session?.id,
+              viewUrl: attrs.view?.url,
+              viewName: attrs.view?.name,
+              errorMessage: attrs.error?.message,
+              errorType: attrs.error?.type,
+              attributes: attrs,
+            };
+          });
+
+          logger.info(`Retrieved ${events.length} RUM events`);
+
+          resolve({
+            success: true,
+            query: effectiveQuery,
+            timeRange: { from: effectiveFrom, to: effectiveTo },
+            events,
+          });
+        } catch (parseError) {
+          logger.error("Failed to parse Datadog RUM response:", parseError);
+          resolve({
+            success: false,
+            query: effectiveQuery,
+            timeRange: { from: effectiveFrom, to: effectiveTo },
+            events: [],
+            error: `Failed to parse response: ${parseError instanceof Error ? parseError.message : "Unknown error"}`,
+          });
+        }
+      });
+    });
+
+    req.on("error", (error) => {
+      logger.error("Request error:", error);
+      resolve({
+        success: false,
+        query: effectiveQuery,
+        timeRange: { from: effectiveFrom, to: effectiveTo },
+        events: [],
         error: `Connection error: ${error.message}`,
       });
     });

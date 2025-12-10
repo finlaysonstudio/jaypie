@@ -8,7 +8,12 @@ import matter from "gray-matter";
 import {
   aggregateDatadogLogs,
   getDatadogCredentials,
+  getDatadogSyntheticResults,
+  listDatadogMonitors,
+  listDatadogSynthetics,
+  queryDatadogMetrics,
   searchDatadogLogs,
+  searchDatadogRum,
 } from "./datadog.js";
 
 // Build-time constants injected by rollup
@@ -580,6 +585,520 @@ export function createMcpServer(
   );
 
   log.info("Registered tool: datadog_log_analytics");
+
+  // Datadog Monitors Tool
+  server.tool(
+    "datadog_monitors",
+    "List and check Datadog monitors. Shows monitor status (Alert, Warn, No Data, OK), name, type, and tags. Useful for quickly checking if any monitors are alerting.",
+    {
+      status: z
+        .array(z.enum(["Alert", "Warn", "No Data", "OK"]))
+        .optional()
+        .describe(
+          "Filter monitors by status. E.g., ['Alert', 'Warn'] to see only alerting monitors.",
+        ),
+      tags: z
+        .array(z.string())
+        .optional()
+        .describe(
+          "Filter monitors by resource tags (tags on the monitored resources).",
+        ),
+      monitorTags: z
+        .array(z.string())
+        .optional()
+        .describe(
+          "Filter monitors by monitor tags (tags on the monitor itself).",
+        ),
+      name: z
+        .string()
+        .optional()
+        .describe("Filter monitors by name (partial match supported)."),
+    },
+    async ({ status, tags, monitorTags, name }) => {
+      log.info("Tool called: datadog_monitors");
+
+      const credentials = getDatadogCredentials();
+      if (!credentials) {
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: "Error: Datadog credentials not found. Please set DATADOG_API_KEY and DATADOG_APP_KEY environment variables.",
+            },
+          ],
+        };
+      }
+
+      const result = await listDatadogMonitors(
+        credentials,
+        { status, tags, monitorTags, name },
+        log,
+      );
+
+      if (!result.success) {
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: `Error from Datadog Monitors API: ${result.error}`,
+            },
+          ],
+        };
+      }
+
+      if (result.monitors.length === 0) {
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: "No monitors found matching the specified criteria.",
+            },
+          ],
+        };
+      }
+
+      // Group monitors by status for better readability
+      const byStatus: Record<string, typeof result.monitors> = {};
+      for (const monitor of result.monitors) {
+        const status = monitor.status;
+        if (!byStatus[status]) {
+          byStatus[status] = [];
+        }
+        byStatus[status].push(monitor);
+      }
+
+      const statusOrder = ["Alert", "Warn", "No Data", "OK", "Unknown"];
+      const formattedMonitors: string[] = [];
+
+      for (const status of statusOrder) {
+        const monitors = byStatus[status];
+        if (monitors && monitors.length > 0) {
+          formattedMonitors.push(`\n## ${status} (${monitors.length})`);
+          for (const m of monitors) {
+            formattedMonitors.push(`  - [${m.id}] ${m.name} (${m.type})`);
+          }
+        }
+      }
+
+      const resultText = [
+        `Found ${result.monitors.length} monitors:`,
+        ...formattedMonitors,
+      ].join("\n");
+
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: resultText,
+          },
+        ],
+      };
+    },
+  );
+
+  log.info("Registered tool: datadog_monitors");
+
+  // Datadog Synthetics Tool
+  server.tool(
+    "datadog_synthetics",
+    "List Datadog Synthetic tests and optionally get recent results for a specific test. Shows test status, type (api/browser), and locations.",
+    {
+      type: z
+        .enum(["api", "browser"])
+        .optional()
+        .describe("Filter tests by type: 'api' or 'browser'."),
+      tags: z.array(z.string()).optional().describe("Filter tests by tags."),
+      testId: z
+        .string()
+        .optional()
+        .describe(
+          "If provided, fetches recent results for this specific test (public_id). Otherwise lists all tests.",
+        ),
+    },
+    async ({ type, tags, testId }) => {
+      log.info("Tool called: datadog_synthetics");
+
+      const credentials = getDatadogCredentials();
+      if (!credentials) {
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: "Error: Datadog credentials not found. Please set DATADOG_API_KEY and DATADOG_APP_KEY environment variables.",
+            },
+          ],
+        };
+      }
+
+      // If testId is provided, get results for that specific test
+      if (testId) {
+        const result = await getDatadogSyntheticResults(
+          credentials,
+          testId,
+          log,
+        );
+
+        if (!result.success) {
+          return {
+            content: [
+              {
+                type: "text" as const,
+                text: `Error from Datadog Synthetics API: ${result.error}`,
+              },
+            ],
+          };
+        }
+
+        if (result.results.length === 0) {
+          return {
+            content: [
+              {
+                type: "text" as const,
+                text: `No recent results found for test: ${testId}`,
+              },
+            ],
+          };
+        }
+
+        const passedCount = result.results.filter((r) => r.passed).length;
+        const failedCount = result.results.length - passedCount;
+
+        const formattedResults = result.results.slice(0, 10).map((r) => {
+          const date = new Date(r.checkTime * 1000).toISOString();
+          const status = r.passed ? "✓ PASSED" : "✗ FAILED";
+          return `  ${date} - ${status}`;
+        });
+
+        const resultText = [
+          `Results for test: ${testId}`,
+          `Recent: ${passedCount} passed, ${failedCount} failed (showing last ${Math.min(10, result.results.length)})`,
+          "",
+          ...formattedResults,
+        ].join("\n");
+
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: resultText,
+            },
+          ],
+        };
+      }
+
+      // Otherwise list all tests
+      const result = await listDatadogSynthetics(
+        credentials,
+        { type, tags },
+        log,
+      );
+
+      if (!result.success) {
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: `Error from Datadog Synthetics API: ${result.error}`,
+            },
+          ],
+        };
+      }
+
+      if (result.tests.length === 0) {
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: "No synthetic tests found matching the specified criteria.",
+            },
+          ],
+        };
+      }
+
+      // Group by status
+      const byStatus: Record<string, typeof result.tests> = {};
+      for (const test of result.tests) {
+        const status = test.status;
+        if (!byStatus[status]) {
+          byStatus[status] = [];
+        }
+        byStatus[status].push(test);
+      }
+
+      const formattedTests: string[] = [];
+      for (const [status, tests] of Object.entries(byStatus)) {
+        formattedTests.push(`\n## ${status} (${tests.length})`);
+        for (const t of tests) {
+          formattedTests.push(`  - [${t.publicId}] ${t.name} (${t.type})`);
+        }
+      }
+
+      const resultText = [
+        `Found ${result.tests.length} synthetic tests:`,
+        ...formattedTests,
+      ].join("\n");
+
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: resultText,
+          },
+        ],
+      };
+    },
+  );
+
+  log.info("Registered tool: datadog_synthetics");
+
+  // Datadog Metrics Tool
+  server.tool(
+    "datadog_metrics",
+    "Query Datadog metrics. Returns timeseries data for the specified metric query. Useful for checking specific metric values.",
+    {
+      query: z
+        .string()
+        .describe(
+          "Datadog metric query string. E.g., 'avg:system.cpu.user{*}', 'sum:aws.lambda.invocations{function:my-function}.as_count()'",
+        ),
+      from: z
+        .string()
+        .optional()
+        .describe(
+          "Start time. Can be relative like '1h' (1 hour ago), '30m' (30 minutes ago), or a Unix timestamp. Defaults to '1h'.",
+        ),
+      to: z
+        .string()
+        .optional()
+        .describe(
+          "End time. Can be 'now' or a Unix timestamp. Defaults to 'now'.",
+        ),
+    },
+    async ({ query, from, to }) => {
+      log.info("Tool called: datadog_metrics");
+
+      const credentials = getDatadogCredentials();
+      if (!credentials) {
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: "Error: Datadog credentials not found. Please set DATADOG_API_KEY and DATADOG_APP_KEY environment variables.",
+            },
+          ],
+        };
+      }
+
+      // Parse time parameters
+      const now = Math.floor(Date.now() / 1000);
+      let fromTs: number;
+      let toTs: number;
+
+      // Parse 'from' parameter
+      const fromStr = from || "1h";
+      if (fromStr.match(/^\d+$/)) {
+        fromTs = parseInt(fromStr, 10);
+      } else if (fromStr.match(/^(\d+)h$/)) {
+        const hours = parseInt(fromStr.match(/^(\d+)h$/)![1], 10);
+        fromTs = now - hours * 3600;
+      } else if (fromStr.match(/^(\d+)m$/)) {
+        const minutes = parseInt(fromStr.match(/^(\d+)m$/)![1], 10);
+        fromTs = now - minutes * 60;
+      } else if (fromStr.match(/^(\d+)d$/)) {
+        const days = parseInt(fromStr.match(/^(\d+)d$/)![1], 10);
+        fromTs = now - days * 86400;
+      } else {
+        fromTs = now - 3600; // Default 1 hour
+      }
+
+      // Parse 'to' parameter
+      const toStr = to || "now";
+      if (toStr === "now") {
+        toTs = now;
+      } else if (toStr.match(/^\d+$/)) {
+        toTs = parseInt(toStr, 10);
+      } else {
+        toTs = now;
+      }
+
+      const result = await queryDatadogMetrics(
+        credentials,
+        { query, from: fromTs, to: toTs },
+        log,
+      );
+
+      if (!result.success) {
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: `Error from Datadog Metrics API: ${result.error}`,
+            },
+          ],
+        };
+      }
+
+      if (result.series.length === 0) {
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: `No data found for query: ${query}\nTime range: ${new Date(fromTs * 1000).toISOString()} to ${new Date(toTs * 1000).toISOString()}`,
+            },
+          ],
+        };
+      }
+
+      const formattedSeries = result.series.map((s) => {
+        const points = s.pointlist.slice(-5); // Last 5 points
+        const formattedPoints = points
+          .map(([ts, val]) => {
+            const date = new Date(ts).toISOString();
+            return `    ${date}: ${val !== null ? val.toFixed(4) : "null"}`;
+          })
+          .join("\n");
+        return `\n  ${s.metric} (${s.scope})${s.unit ? ` [${s.unit}]` : ""}:\n${formattedPoints}`;
+      });
+
+      const resultText = [
+        `Query: ${query}`,
+        `Time range: ${new Date(fromTs * 1000).toISOString()} to ${new Date(toTs * 1000).toISOString()}`,
+        `Found ${result.series.length} series (showing last 5 points each):`,
+        ...formattedSeries,
+      ].join("\n");
+
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: resultText,
+          },
+        ],
+      };
+    },
+  );
+
+  log.info("Registered tool: datadog_metrics");
+
+  // Datadog RUM Tool
+  server.tool(
+    "datadog_rum",
+    "Search Datadog RUM (Real User Monitoring) events. Find user sessions, page views, errors, and actions. Useful for debugging frontend issues and understanding user behavior.",
+    {
+      query: z
+        .string()
+        .optional()
+        .describe(
+          "RUM search query. E.g., '@type:error', '@session.id:abc123', '@view.url:*checkout*'. Defaults to '*' (all events).",
+        ),
+      from: z
+        .string()
+        .optional()
+        .describe(
+          "Start time. ISO 8601 format or relative like 'now-1h'. Defaults to 'now-15m'.",
+        ),
+      to: z
+        .string()
+        .optional()
+        .describe("End time. ISO 8601 format or 'now'. Defaults to 'now'."),
+      limit: z
+        .number()
+        .optional()
+        .describe(
+          "Maximum number of events to return. Defaults to 50, max 1000.",
+        ),
+    },
+    async ({ query, from, to, limit }) => {
+      log.info("Tool called: datadog_rum");
+
+      const credentials = getDatadogCredentials();
+      if (!credentials) {
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: "Error: Datadog credentials not found. Please set DATADOG_API_KEY and DATADOG_APP_KEY environment variables.",
+            },
+          ],
+        };
+      }
+
+      const result = await searchDatadogRum(
+        credentials,
+        { query, from, to, limit },
+        log,
+      );
+
+      if (!result.success) {
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: `Error from Datadog RUM API: ${result.error}`,
+            },
+          ],
+        };
+      }
+
+      if (result.events.length === 0) {
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: `No RUM events found for query: ${result.query}\nTime range: ${result.timeRange.from} to ${result.timeRange.to}`,
+            },
+          ],
+        };
+      }
+
+      // Group events by type for better readability
+      const byType: Record<string, typeof result.events> = {};
+      for (const event of result.events) {
+        const type = event.type;
+        if (!byType[type]) {
+          byType[type] = [];
+        }
+        byType[type].push(event);
+      }
+
+      const formattedEvents: string[] = [];
+      for (const [type, events] of Object.entries(byType)) {
+        formattedEvents.push(`\n## ${type} (${events.length})`);
+        for (const e of events.slice(0, 10)) {
+          // Limit per type
+          const parts = [e.timestamp];
+          if (e.viewName || e.viewUrl) {
+            parts.push(e.viewName || e.viewUrl || "");
+          }
+          if (e.errorMessage) {
+            parts.push(`Error: ${e.errorMessage}`);
+          }
+          if (e.sessionId) {
+            parts.push(`Session: ${e.sessionId.substring(0, 8)}...`);
+          }
+          formattedEvents.push(`  - ${parts.join(" | ")}`);
+        }
+      }
+
+      const resultText = [
+        `Query: ${result.query}`,
+        `Time range: ${result.timeRange.from} to ${result.timeRange.to}`,
+        `Found ${result.events.length} RUM events:`,
+        ...formattedEvents,
+      ].join("\n");
+
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: resultText,
+          },
+        ],
+      };
+    },
+  );
+
+  log.info("Registered tool: datadog_rum");
 
   log.info("MCP server configuration complete");
 
