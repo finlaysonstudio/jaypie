@@ -5,6 +5,13 @@ import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 import matter from "gray-matter";
 
+// Build-time constants injected by rollup
+declare const __BUILD_VERSION_STRING__: string;
+const BUILD_VERSION_STRING =
+  typeof __BUILD_VERSION_STRING__ !== "undefined"
+    ? __BUILD_VERSION_STRING__
+    : "@jaypie/mcp@0.0.0";
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const PROMPTS_PATH = path.join(__dirname, "..", "prompts");
@@ -217,6 +224,26 @@ export function createMcpServer(
   );
 
   log.info("Registered tool: read_prompt");
+
+  server.tool(
+    "version",
+    `Prints the current version and hash, \`${BUILD_VERSION_STRING}\``,
+    {},
+    async () => {
+      log.info("Tool called: version");
+
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: BUILD_VERSION_STRING,
+          },
+        ],
+      };
+    },
+  );
+
+  log.info("Registered tool: version");
   log.info("MCP server configuration complete");
 
   return server;
