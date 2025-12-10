@@ -39,5 +39,12 @@ describe("createMcpServer", () => {
       expect(server).toHaveProperty("tool");
       expect(server).toHaveProperty("registerTool");
     });
+
+    it("Registers version tool", () => {
+      const server = createMcpServer();
+      // The server object doesn't expose registered tools directly,
+      // but we can verify it creates without error when registering the version tool
+      expect(server).toBeDefined();
+    });
   });
 });

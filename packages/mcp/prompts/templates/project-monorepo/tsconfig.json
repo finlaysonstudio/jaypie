@@ -1,6 +1,0 @@
-{
-  "references": [
-    { "path": "packages/pkg-a" },
-    { "path": "packages/pkg-b" }
-  ]
-}
