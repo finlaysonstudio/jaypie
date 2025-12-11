@@ -46,5 +46,12 @@ describe("createMcpServer", () => {
       // but we can verify it creates without error when registering the version tool
       expect(server).toBeDefined();
     });
+
+    it("Registers datadog_logs tool", () => {
+      const server = createMcpServer();
+      // The server object doesn't expose registered tools directly,
+      // but we can verify it creates without error when registering the datadog_logs tool
+      expect(server).toBeDefined();
+    });
   });
 });
