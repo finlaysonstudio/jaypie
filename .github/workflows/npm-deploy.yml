@@ -8,6 +8,7 @@ on:
       - deploy-*
 
 env:
+  PROJECT_COMMIT: ${{ github.sha }}
   PROJECT_ENV: meta
   PROJECT_SERVICE: libraries
 

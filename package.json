@@ -19,6 +19,7 @@
     "build:jaypie": "npm run build --workspace packages/jaypie",
     "build:lambda": "npm run build --workspace packages/lambda",
     "build:llm": "npm run build --workspace packages/llm",
+    "build:mcp": "npm run build --workspace packages/mcp",
     "build:mongoose": "npm run build --workspace packages/mongoose",
     "build:testkit": "npm run build --workspace packages/testkit",
     "build:textract": "npm run build --workspace packages/textract",
