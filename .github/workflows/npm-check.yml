@@ -25,6 +25,7 @@ jobs:
         with:
           node-version: 20
       - run: npm install
+      - run: npm run build
       - run: npm run lint
   typecheck:
     name: Type Check
@@ -37,6 +38,7 @@ jobs:
         with:
           node-version: 20
       - run: npm install
+      - run: npm run build
       - run: npm run typecheck
   test:
     name: Unit Test (in parallel)
@@ -53,6 +55,7 @@ jobs:
           node-version: ${{ matrix.node-version }}
           cache: 'npm'
       - run: npm install
+      - run: npm run build
       - name: Vitest with Optional Datadog Tracing
         run: |
           if [[ -n "${{ secrets.DATADOG_CICD_API_KEY }}" ]]; then
@@ -89,6 +92,9 @@ jobs:
       - name: Install dependencies
         if: steps.changes.outputs.llm == 'true'
         run: npm install
+      - name: Build
+        if: steps.changes.outputs.llm == 'true'
+        run: npm run build
       - name: Run LLM Client Tests
         if: steps.changes.outputs.llm == 'true'
         run: LOG_LEVEL=trace npm run test:llm:client
