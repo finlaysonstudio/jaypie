@@ -1,42 +1,75 @@
 ---
-description: MongoDB/Mongoose integration with Jaypie Express patterns
-globs: packages/express/**
+description: User pattern for MongoDB/Mongoose models with Jaypie Express CRUD handlers
+globs: packages/express/**, packages/mongoose/**
+status: User Pattern (not a Jaypie package)
 ---
 
-# Jaypie Mongoose with Express CRUD
+# User Pattern: Mongoose Models with Express CRUD
 
-MongoDB/Mongoose integration patterns for Jaypie Express applications with full CRUD operations, authentication, and relationship management using TypeScript.
+This document describes a user implementation pattern that combines:
+- `@jaypie/mongoose` for database connections
+- A user-created models package with Mongoose schemas and relationship utilities
+- `@jaypie/express` for HTTP handler lifecycle management
+- CRUD operations with authentication and relationship management
 
-## Pattern
+**Note**: This is NOT a built-in Jaypie feature. You must create the models package, relationship utilities, and authentication middleware yourself following the patterns shown here.
+
+## What This Pattern Provides
+
+This pattern demonstrates:
+- Using `@jaypie/mongoose` (`connect`, `disconnect`) for database connection management
+- Using `@jaypie/express` (`expressHandler`) for HTTP handler lifecycle
+- Using `@jaypie/core` errors (`UnauthorizedError`, `ForbiddenError`, etc.) for error handling
+- Creating a custom models package with Mongoose schemas and relationship utilities
+- Implementing Auth0 JWT authentication middleware
+- Building CRUD route handlers with proper lifecycle hooks
+- Formatting responses as JSON:API
+- Writing tests with `@jaypie/testkit`
+
+## Pattern Components
 
 - TypeScript with ES modules (`"type": "module"`)
-- Model package with MongoDB/Mongoose connections
-- Handler configuration with connection lifecycle
-- Authentication/authorization with user context
-- JSON:API formatting for consistent responses
-- Relationship management with foreign keys
-- Type-safe interfaces for all data models
+- Custom models package with Mongoose schemas and relationship methods
+- Handler configuration with database connection lifecycle
+- Auth0 JWT authentication and group-based authorization
+- JSON:API response formatting
+- Relationship management with bidirectional foreign keys
 
 ## Dependencies
 
+This pattern requires multiple packages. Install Jaypie packages separately:
+
+```bash
+npm install @jaypie/core @jaypie/express @jaypie/mongoose
+npm install express mongoose
+npm install ajv ajv-formats  # For JSON schema validation
+npm install express-oauth2-jwt-bearer  # For Auth0 JWT validation (optional)
+```
+
+**package.json**:
 ```json
 {
   "dependencies": {
-    "@yourorg/models": "^1.0.0",
-    "mongoose": "^8.0.0",
-    "jaypie": "^1.1.0",
+    "@jaypie/core": "^1.1.0",
+    "@jaypie/express": "^1.1.0",
+    "@jaypie/mongoose": "^1.1.0",
+    "@yourorg/models": "workspace:*",
+    "ajv": "^8.12.0",
+    "ajv-formats": "^2.1.1",
     "express": "^4.19.0",
     "express-oauth2-jwt-bearer": "^1.6.0",
-    "ajv": "^8.12.0",
-    "ajv-formats": "^2.1.1"
+    "mongoose": "^8.0.0"
   },
   "devDependencies": {
+    "@jaypie/testkit": "^1.1.0",
     "@types/express": "^4.17.0",
-    "@types/mongoose": "^8.0.0",
-    "typescript": "^5.0.0"
+    "typescript": "^5.0.0",
+    "vitest": "^2.0.0"
   }
 }
 ```
+
+**Note**: `@yourorg/models` is a package you create following the pattern in `Jaypie_Mongoose_Models_Package.md`.
 
 ## TypeScript Configuration
 
@@ -65,7 +98,7 @@ MongoDB/Mongoose integration patterns for Jaypie Express applications with full 
 
 **src/handler.config.ts** - Database lifecycle management
 ```typescript
-import { force } from "jaypie";
+import { force } from "@jaypie/core";
 import Model from "@yourorg/models";
 import systemContextLocal from "./util/systemContextLocal.js";
 import userLocal from "./util/userLocal.js";
@@ -119,7 +152,7 @@ export default handlerConfig;
 
 **src/util/validateAuth.ts** - JWT validation
 ```typescript
-import { UnauthorizedError } from "jaypie";
+import { UnauthorizedError } from "@jaypie/core";
 import { auth } from "express-oauth2-jwt-bearer";
 import type { Request, Response, NextFunction } from "express";
 
@@ -143,7 +176,7 @@ export default async (req: Request, res: Response, next: NextFunction): Promise<
 
 **src/util/userLocal.ts** - User context extraction
 ```typescript
-import { UnauthorizedError } from "jaypie";
+import { UnauthorizedError } from "@jaypie/core";
 import type { Request } from "express";
 
 interface UserContext {
@@ -170,7 +203,7 @@ export default async (req: Request): Promise<UserContext> => {
 
 **src/util/authUserHasGroups.ts** - Group authorization
 ```typescript
-import { ForbiddenError } from "jaypie";
+import { ForbiddenError } from "@jaypie/core";
 
 interface AuthUserHasGroupsOptions {
   requireGroups?: boolean;
@@ -193,7 +226,7 @@ export default (user: User, options: AuthUserHasGroupsOptions = {}): boolean => 
 
 **src/util/authUserHasAllGroups.ts** - Specific group validation
 ```typescript
-import { ForbiddenError } from "jaypie";
+import { ForbiddenError } from "@jaypie/core";
 
 interface AuthUserHasAllGroupsOptions {
   groupUuids: string[];
@@ -220,15 +253,20 @@ export default async (user: User, { groupUuids }: AuthUserHasAllGroupsOptions): 
 ## Database Operations
 
 ### Model Connection
+
+These methods come from your `@yourorg/models` package, not from `@jaypie/mongoose`:
+
 ```typescript
-// Connect to MongoDB
+// Connect to MongoDB (delegates to @jaypie/mongoose connect())
 await Model.connect();
 
-// Disconnect from MongoDB
+// Disconnect from MongoDB (delegates to mongoose.disconnect())
 await Model.disconnect();
 ```
 
 ### CRUD Operations
+
+**Note**: Methods like `createWithRelationships`, `updateWithRelationships`, `oneByUuid`, etc. are implemented in your models package using the `projectSchema.plugin.js` pattern. See `Jaypie_Mongoose_Models_Package.md` for implementation details.
 
 **Create with relationships**
 ```typescript
@@ -289,7 +327,8 @@ await Model.Resource.destroyByUuid(resourceId);
 
 **src/routes/resource/resourceCreate.route.ts**
 ```typescript
-import { cloneDeep, expressHandler, uuid } from "jaypie";
+import { cloneDeep, uuid } from "@jaypie/core";
+import { expressHandler } from "@jaypie/express";
 import Model from "@yourorg/models";
 import handlerConfig from "../../handler.config.js";
 import authUserHasGroups from "../../util/authUserHasGroups.js";
@@ -365,7 +404,8 @@ export default expressHandler(
 
 **src/routes/resource/resourceRead.route.ts**
 ```typescript
-import { expressHandler, NotFoundError } from "jaypie";
+import { NotFoundError } from "@jaypie/core";
+import { expressHandler } from "@jaypie/express";
 import Model from "@yourorg/models";
 import handlerConfig from "../../handler.config.js";
 import authUserHasGroups from "../../util/authUserHasGroups.js";
@@ -423,7 +463,8 @@ export default expressHandler(
 
 **src/routes/resource/resourceUpdate.route.ts**
 ```typescript
-import { cloneDeep, expressHandler, NotFoundError } from "jaypie";
+import { cloneDeep, NotFoundError } from "@jaypie/core";
+import { expressHandler } from "@jaypie/express";
 import Model from "@yourorg/models";
 import handlerConfig from "../../handler.config.js";
 import authUserHasGroups from "../../util/authUserHasGroups.js";
@@ -489,7 +530,8 @@ export default expressHandler(
 
 **src/routes/resource/resourceDelete.route.ts**
 ```typescript
-import { expressHandler, NotFoundError } from "jaypie";
+import { NotFoundError } from "@jaypie/core";
+import { expressHandler } from "@jaypie/express";
 import Model from "@yourorg/models";
 import handlerConfig from "../../handler.config.js";
 import authUserHasGroups from "../../util/authUserHasGroups.js";
@@ -522,14 +564,14 @@ export default expressHandler(
     }
 
     await Resource.deleteByUuid(id);
-    return true; // 201 Created
+    return true; // Returns 201 Created per expressHandler convention
   }
 );
 ```
 
 **src/routes/resource/resourceIndex.route.ts**
 ```typescript
-import { expressHandler } from "jaypie";
+import { expressHandler } from "@jaypie/express";
 import Model from "@yourorg/models";
 import handlerConfig from "../../handler.config.js";
 import authUserHasGroups from "../../util/authUserHasGroups.js";
@@ -708,7 +750,9 @@ export default resourceJsonSchema;
 
 ## Utility Functions
 
-**src/util/formatMongoToJsonApi.ts**
+These are custom utilities you implement in your application, not Jaypie exports.
+
+**src/util/formatMongoToJsonApi.ts** - Converts Mongoose documents to JSON:API format
 ```typescript
 interface MongoDoc {
   toObject?: () => Record<string, any>;
@@ -752,11 +796,11 @@ export default (mongoDoc: MongoDoc, schema: JsonApiSchema): JsonApiResponse => {
 };
 ```
 
-**src/util/jsonApiValidator.ts**
+**src/util/jsonApiValidator.ts** - JSON Schema validation middleware
 ```typescript
 import Ajv from "ajv";
 import addFormats from "ajv-formats";
-import { BadRequestError } from "jaypie";
+import { BadRequestError } from "@jaypie/core";
 import type { Request } from "express";
 
 interface ValidationError {
@@ -811,7 +855,8 @@ expect.extend(extendedMatchers);
 expect.extend(jaypieMatchers);
 
 vi.mock("@yourorg/models");
-vi.mock("jaypie", async () => vi.importActual("@jaypie/testkit/mock"));
+// Mock @jaypie/core with testkit versions that support .mockReturnValue()
+vi.mock("@jaypie/core", async () => vi.importActual("@jaypie/testkit/mock/core"));
 vi.mock("./src/util/userLocal.js");
 vi.mock("./src/util/validateAuth.js");
 
@@ -855,11 +900,12 @@ Model.mock.Group.idsToUuids.mockResolvedValue([
 
 **Unit Test**
 ```typescript
-import { uuid } from "jaypie";
+import { uuid } from "@jaypie/core";
 import { describe, expect, it } from "vitest";
 import Model from "@yourorg/models";
 import resourceCreate from "../resourceCreate.route.js";
 
+// uuid will be mocked via @jaypie/testkit/mock/core
 uuid.mockReturnValue("generated-uuid");
 
 describe("Resource Create Route", () => {
@@ -941,9 +987,11 @@ export default {
 
 ## Error Handling
 
+All Jaypie errors are available from `@jaypie/core`.
+
 ### Database Errors
 ```typescript
-import { InternalError, BadRequestError } from "jaypie";
+import { InternalError, BadRequestError } from "@jaypie/core";
 
 try {
   await Model.Resource.createWithRelationships(data);

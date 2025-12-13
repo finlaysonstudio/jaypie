@@ -16,7 +16,7 @@ Templates for creating a new subpackage within a Jaypie monorepo.
   "private": true,
   "scripts": {
     "build": "vite build",
-    "clean": "rimfaf dist",
+    "clean": "rimraf dist",
     "format": "eslint --fix",
     "format:package": "sort-package-json",
     "lint": "eslint",
@@ -84,10 +84,10 @@ export default defineConfig({
 ## vitest.setup.ts
 
 ```typescript
-import { matchers } from "@jaypie/testkit";
-import { expect, vi } from "vitest";
+import { matchers as jaypieMatchers } from "@jaypie/testkit";
+import * as extendedMatchers from "jest-extended";
+import { expect } from "vitest";
 
-expect.extend(matchers);
-
-vi.mock("jaypie", async () => vi.importActual("@jaypie/testkit/mock"));
+expect.extend(extendedMatchers);
+expect.extend(jaypieMatchers);
 ```

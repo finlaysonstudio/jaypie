@@ -52,10 +52,10 @@
     "test:spec:log.lib": "vitest run ./src/lib/__tests__/log.lib.spec.js",
     "test:spec:logTags.function": "vitest run ./src/core/__tests__/logTags.function.spec.js",
     "test:spec:logVar.function": "vitest run ./src/core/__tests__/logVar.function.spec.js",
-    "test:spec:logger.module": "vitest run ./src/core/__tests__/logger.module.spec.js",
     "test:spec:logger:Logger.class": "vitest run ./src/lib/log/__tests__/Logger.spec.js",
     "test:spec:logger:json": "vitest run ./src/lib/log/__tests__/json-logger.spec.js",
     "test:spec:logger:var": "vitest run ./src/lib/log/__tests__/var.spec.js",
+    "test:spec:logger.module": "vitest run ./src/core/__tests__/logger.module.spec.js",
     "test:spec:sleep.function": "vitest run ./src/lib/functions/__tests__/sleep.function.spec.js",
     "test:spec:validate.function": "vitest run ./src/lib/arguments/__tests__/validate.function.spec.js",
     "typecheck": "echo '[TODO] Convert @jaypie/core to TypeScript'"

@@ -25,10 +25,10 @@ Create AWS Lambda functions that integrate with Jaypie for event-driven processi
 ```
 packages/lambda/
 ├── package.json       # Define dependencies and scripts
-├── tsconfig.json      # TypeScript configuration 
-├── rollup.config.ts   # Bundle configuration
-├── vitest.config.ts   # Test configuration
-├── vitest.setup.ts    # Test setup and mocks
+├── tsconfig.json      # TypeScript configuration
+├── rollup.config.mjs  # Bundle configuration
+├── vite.config.js     # Test configuration
+├── testSetup.ts       # Test setup and matchers
 └── src/
     ├── index.ts       # Export handlers
     ├── worker.ts      # Lambda function implementation
@@ -43,21 +43,37 @@ packages/lambda/
   "name": "@yourorg/lambda",
   "version": "0.1.0",
   "type": "module",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/esm/index.d.ts",
+      "import": "./dist/esm/index.js",
+      "require": "./dist/cjs/index.cjs"
+    }
+  },
+  "main": "./dist/cjs/index.cjs",
+  "module": "./dist/esm/index.js",
+  "types": "./dist/esm/index.d.ts",
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "rollup --config",
+    "format": "npm run format:package && npm run format:lint",
+    "format:lint": "eslint --fix .",
+    "format:package": "sort-package-json ./package.json",
     "lint": "eslint .",
-    "test": "vitest run",
+    "test": "vitest run .",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "jaypie": "^1.1.0"
+    "@jaypie/core": "^1.1.0",
+    "@jaypie/lambda": "^1.1.0"
   },
   "devDependencies": {
     "@rollup/plugin-typescript": "^12.0.0",
     "@types/aws-lambda": "^8.10.0",
     "rollup": "^4.0.0",
+    "rollup-plugin-auto-external": "^2.0.0",
     "typescript": "^5.0.0"
   }
 }
@@ -74,107 +90,124 @@ packages/lambda/
     "declaration": true,
     "outDir": "./dist",
     "strict": true,
-    "esModuleInterop": true
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist"]
+  "exclude": ["node_modules", "dist", "src/__tests__"]
 }
 ```
 
 ### 4. Configure Rollup
 
-```typescript
-import typescript from "@rollup/plugin-typescript";
-import type { RollupOptions } from "rollup";
+Create `rollup.config.mjs`:
 
-const config: RollupOptions[] = [
-  {
-    input: "src/worker.ts",
-    output: {
-      file: "dist/worker.js",
-      format: "es",
-      sourcemap: true
-    },
-    plugins: [
-      typescript({
-        exclude: ["**/__tests__/**/*"]
-      })
-    ],
-    external: ["jaypie"]
-  },
+```javascript
+import autoExternal from "rollup-plugin-auto-external";
+import typescript from "@rollup/plugin-typescript";
+
+export default [
+  // ES modules version
   {
     input: "src/index.ts",
     output: {
-      file: "dist/index.js",
+      dir: "dist/esm",
       format: "es",
-      sourcemap: true
+      sourcemap: true,
     },
     plugins: [
+      autoExternal(),
       typescript({
-        exclude: ["**/__tests__/**/*"]
-      })
+        tsconfig: "./tsconfig.json",
+        declaration: true,
+        outDir: "dist/esm",
+      }),
     ],
-    external: ["jaypie"]
-  }
+  },
+  // CommonJS version
+  {
+    input: "src/index.ts",
+    output: {
+      dir: "dist/cjs",
+      format: "cjs",
+      sourcemap: true,
+      exports: "named",
+      entryFileNames: "[name].cjs",
+    },
+    plugins: [
+      autoExternal(),
+      typescript({
+        tsconfig: "./tsconfig.json",
+        declaration: true,
+        outDir: "dist/cjs",
+      }),
+    ],
+  },
 ];
-
-export default config;
 ```
 
 ### 5. Setup Vitest
 
-```typescript
-// vitest.config.ts
+Create `vite.config.js`:
+
+```javascript
+/// <reference types="vitest" />
+
 import { defineConfig } from "vite";
 
 export default defineConfig({
   test: {
-    setupFiles: ["./vitest.setup.ts"]
-  }
+    setupFiles: ["./testSetup.ts"],
+  },
 });
+```
 
-// vitest.setup.ts
+Create `testSetup.ts`:
+
+```typescript
 import { matchers as jaypieMatchers } from "@jaypie/testkit";
 import * as extendedMatchers from "jest-extended";
-import { expect, vi } from "vitest";
+import { expect } from "vitest";
 
 expect.extend(extendedMatchers);
 expect.extend(jaypieMatchers);
-
-vi.mock("jaypie", async () => vi.importActual("@jaypie/testkit/mock"));
 ```
+
+Note: Do not mock `jaypie` in the setup file for lambda consumer packages. Mock in individual test files as needed.
 
 ### 6. Create Handler Implementation
 
 ```typescript
 // src/worker.ts
-import { lambdaHandler, log } from "jaypie";
-import type { Context } from "jaypie";
+import { log } from "@jaypie/core";
+import { lambdaHandler } from "@jaypie/lambda";
+import type { LambdaContext } from "@jaypie/lambda";
 
 export interface WorkerEvent {
   message?: string;
 }
 
 export const handler = lambdaHandler(
-  async (event: WorkerEvent, context: Context) => {
+  async (event: WorkerEvent, context?: LambdaContext) => {
     log.trace("worker: start");
-    
+
     const message = event?.message || "Hello, world!";
-    
+
     log.trace("worker: processing message", { message });
-    
+
     const response = {
       status: "success",
       message,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     };
-    
+
     log.trace("worker: complete");
     return response;
   },
   {
-    name: "worker"
-  }
+    name: "worker",
+  },
 );
 ```
 
@@ -187,59 +220,145 @@ export { handler as workerHandler } from "./worker.js";
 
 ### 8. Write Tests
 
+Tests are organized in sections: Base Cases, Error Conditions, Security, Observability, Happy Paths, Features, Specific Scenarios. Omit sections that are not applicable.
+
 ```typescript
 // src/__tests__/worker.spec.ts
-import { vi, describe, it, expect, beforeEach } from "vitest";
-import { handler, WorkerEvent } from "../worker.js";
-import { log } from "jaypie";
-import type { Context } from "jaypie";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("jaypie", async () => vi.importActual("@jaypie/testkit/mock"));
+import { log } from "@jaypie/core";
+import { restoreLog, spyLog } from "@jaypie/testkit";
+
+// Subject
+import { handler } from "../worker.js";
+import type { WorkerEvent } from "../worker.js";
+
+//
+//
+// Mock modules
+//
+
+vi.mock("@jaypie/core", async () => {
+  const actual = await vi.importActual("@jaypie/core");
+  return {
+    ...actual,
+  };
+});
+
+//
+//
+// Mock environment
+//
+
+const DEFAULT_ENV = process.env;
+beforeEach(() => {
+  process.env = { ...process.env };
+  spyLog(log);
+});
+afterEach(() => {
+  process.env = DEFAULT_ENV;
+  vi.clearAllMocks();
+  restoreLog(log);
+});
+
+//
+//
+// Run tests
+//
 
 describe("worker Lambda handler", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
+  describe("Base Cases", () => {
+    it("Works", async () => {
+      const event: WorkerEvent = {};
+      const result = await handler(event);
+      expect(result).toBeDefined();
+    });
   });
 
-  it("returns success with provided message", async () => {
-    const event: WorkerEvent = {
-      message: "Test message"
-    };
-
-    const result = await handler(event, {} as Context);
-    
-    expect(result).toHaveProperty("status", "success");
-    expect(result).toHaveProperty("message", "Test message");
-    expect(result).toHaveProperty("timestamp");
+  describe("Observability", () => {
+    it("Does not log above trace", async () => {
+      const event: WorkerEvent = { message: "Test" };
+      await handler(event);
+      expect(log).not.toBeCalledAboveTrace();
+    });
   });
 
-  it("returns default message when none provided", async () => {
-    const event = {} as WorkerEvent;
+  describe("Happy Paths", () => {
+    it("Returns success with provided message", async () => {
+      const event: WorkerEvent = {
+        message: "Test message",
+      };
 
-    const result = await handler(event, {} as Context);
-    
-    expect(result).toHaveProperty("message", "Hello, world!");
-  });
+      const result = await handler(event);
 
-  it("logs trace for operations", async () => {
-    const event: WorkerEvent = {
-      message: "Test message"
-    };
+      expect(result).toHaveProperty("status", "success");
+      expect(result).toHaveProperty("message", "Test message");
+      expect(result).toHaveProperty("timestamp");
+    });
 
-    await handler(event, {} as Context);
-    
-    expect(log.trace).toHaveBeenCalled();
-    expect(log).not.toBeCalledAboveTrace();
+    it("Returns default message when none provided", async () => {
+      const event: WorkerEvent = {};
+
+      const result = await handler(event);
+
+      expect(result).toHaveProperty("message", "Hello, world!");
+    });
   });
 });
 ```
 
-### 9. Build and Deploy
+### 9. Build and Test
+
+Build, lint, typecheck, and test the package:
 
 ```bash
-# Build the Lambda package
-npm run build
+# Install dependencies (from monorepo root)
+npm install <package> -w packages/lambda
 
-# Deploy using AWS CDK or other deployment tool
-# The Lambda handler will be referenced as "workerHandler"
+# Lint and format
+npm run format -w packages/lambda
+
+# Type check
+npm run typecheck -w packages/lambda
+
+# Build the package
+npm run build -w packages/lambda
+
+# Run tests
+npm run test -w packages/lambda
 ```
+
+### 10. Deploy
+
+Deploy using AWS CDK or other deployment tool. The Lambda handler will be referenced as "workerHandler" from the built package.
+
+## Important Notes
+
+### Import Patterns
+
+- Import `lambdaHandler` from `@jaypie/lambda`, not from `jaypie`
+- Import `log` from `@jaypie/core`, not from `jaypie`
+- Use `LambdaContext` type from `@jaypie/lambda`, not `Context` from `jaypie`
+- TypeScript files must use `.js` extension in relative imports (e.g., `from "./worker.js"`)
+
+### Test Structure
+
+- Tests are organized in 7 sections: Base Cases, Error Conditions, Security, Observability, Happy Paths, Features, Specific Scenarios
+- Omit sections that are not applicable
+- Use `spyLog` and `restoreLog` from `@jaypie/testkit` for logging tests
+- Use Jaypie matchers like `toBeCalledAboveTrace()` for observability tests
+- Mock `@jaypie/core` in test files, not in `testSetup.ts`
+
+### Build Configuration
+
+- Use `rollup-plugin-auto-external` to automatically exclude dependencies from bundles
+- Build both ESM and CommonJS formats for maximum compatibility
+- Use `vite.config.js` (not `vitest.config.ts`) for test configuration
+- Use `testSetup.ts` (not `vitest.setup.ts`) for test setup
+
+### Code Style
+
+- Use double quotes, trailing commas, semicolons
+- Alphabetize imports and properties
+- Define constants for hard-coded values at file top
+- Never throw vanilla Error; use errors from `@jaypie/errors`
