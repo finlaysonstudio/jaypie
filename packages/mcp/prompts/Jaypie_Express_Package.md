@@ -5,7 +5,7 @@ globs: packages/express/**
 
 # Jaypie Express Package
 
-Jaypie provides Express utilities through `@jaypie/express` (also available via `jaypie`). The primary export is `expressHandler`, a wrapper that adds error handling, logging, lifecycle hooks, and response formatting to Express route handlers.
+Jaypie provides Express utilities through `@jaypie/express` (also available via `jaypie`). The main export is `expressHandler`, a function that wraps Express route handlers to add error handling, logging, lifecycle hooks, and automatic response formatting.
 
 ## Installation
 
@@ -17,7 +17,7 @@ npm install @jaypie/express
 
 ## expressHandler
 
-The core of Jaypie Express. Wraps route handlers with error handling, logging, and lifecycle management.
+Wraps Express route handlers with error handling, logging, and lifecycle management.
 
 ### Basic Usage
 
@@ -35,7 +35,7 @@ app.get("/hello", myRoute);
 
 ### Return Value Handling
 
-expressHandler automatically formats responses:
+expressHandler automatically formats responses based on return values:
 
 | Return Value | HTTP Status | Response |
 |--------------|-------------|----------|
@@ -43,9 +43,12 @@ expressHandler automatically formats responses:
 | Array | 200 | JSON body |
 | String (JSON) | 200 | Parsed JSON |
 | String (other) | 200 | Text body |
+| Number | 200 | Sent via `res.send()` |
 | `true` | 201 Created | Empty |
 | `null`, `undefined`, `false` | 204 No Content | Empty |
 | Object with `.json()` method | 200 | Result of `.json()` |
+
+**Note:** If you call `res.json()`, `res.send()`, or `res.end()` directly in your handler, expressHandler will log a warning but respect your call. Prefer using return values instead.
 
 ### Options
 
@@ -75,9 +78,16 @@ const handler2 = expressHandler(options, async (req, res) => {
 
 ## Lifecycle Hooks
 
+Lifecycle hooks execute in this order:
+1. Setup functions (in array order)
+2. Locals functions (in object key order, after all setup)
+3. Validate functions (in array order)
+4. Main handler
+5. Teardown functions (always run, even on error)
+
 ### Setup Functions
 
-Run before the main handler. Use for initialization, authentication checks, or setting up request context.
+Run before validation and the main handler. Use for initialization, authentication checks, or setting up request context.
 
 ```typescript
 import { expressHandler } from "jaypie";
@@ -105,7 +115,7 @@ const handler = expressHandler(
 
 ### Teardown Functions
 
-Run after the main handler completes (success or error). Use for cleanup.
+Run after the main handler completes. Teardown functions execute regardless of success or error, making them suitable for cleanup operations.
 
 ```typescript
 import type { JaypieHandlerTeardown } from "jaypie";
@@ -157,7 +167,7 @@ const handler = expressHandler(
 
 ### Locals
 
-Set values on `req.locals`. Values can be static or functions that receive `(req, res)`.
+Set values on `req.locals`. Values can be static or functions that receive `(req, res)`. Locals functions are called AFTER setup functions.
 
 ```typescript
 import type { ExpressHandlerLocals } from "jaypie";
@@ -176,7 +186,7 @@ const handler = expressHandler(
   {
     locals: {
       apiVersion: "v1",          // Static value
-      user: getUser,             // Function called during setup
+      user: getUser,             // Function called after setup
     },
   }
 );
@@ -184,7 +194,7 @@ const handler = expressHandler(
 
 ## CORS Helper
 
-Configure CORS middleware with Jaypie conventions.
+Configures CORS middleware using the `cors` npm package with automatic origin validation.
 
 ```typescript
 import { cors } from "jaypie";
@@ -199,17 +209,23 @@ app.use(cors({ origin: "*" }));
 // Specific origin
 app.use(cors({ origin: "https://example.com" }));
 
+// Multiple origins
+app.use(cors({ origin: ["https://example.com", "https://app.example.com"] }));
+
 // Custom configuration
 const corsConfig: CorsConfig = {
   origin: "https://api.example.com",
-  // Additional cors options
+  overrides: {
+    // Additional options passed to the cors package
+    credentials: true,
+  },
 };
 app.use(cors(corsConfig));
 ```
 
 Environment variables:
-- `BASE_URL` or `PROJECT_BASE_URL`: Default allowed origin
-- `PROJECT_ENV=sandbox` or `PROJECT_SANDBOX_MODE=true`: Allows localhost
+- `BASE_URL` or `PROJECT_BASE_URL`: Default allowed origins
+- `PROJECT_ENV=sandbox` or `PROJECT_SANDBOX_MODE=true`: Allows localhost origins (including ports)
 
 ## Pre-built Routes
 
@@ -319,6 +335,7 @@ import {
   notFoundRoute,
   NotFoundError,
   ForbiddenError,
+  UnauthorizedError,
   log,
 } from "jaypie";
 import type {
@@ -378,10 +395,13 @@ export default app;
 
 ## Response Headers
 
-expressHandler automatically sets:
-- `X-Powered-By: @jaypie/express`
-- `X-Project-Handler: {name}` (if name option provided)
-- `X-Project-Invocation: {uuid}` (request tracking ID)
+expressHandler automatically sets these headers:
+- `X-Powered-By: @jaypie/express` (always set, overrides Express default)
+- `X-Project-Handler: {name}` (when name option is provided)
+- `X-Project-Invocation: {uuid}` (request tracking ID, always set)
+- `X-Project-Environment: {env}` (when PROJECT_ENV is set)
+- `X-Project-Key: {key}` (when PROJECT_KEY is set)
+- `X-Project-Version: {version}` (when PROJECT_VERSION is set or version option provided)
 
 ## Datadog Integration
 

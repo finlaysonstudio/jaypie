@@ -1,68 +1,78 @@
 ---
 trigger: model_decision
-description: When asked to create a new workspace or subpackage for express, usually packages/express, to run as serverless Lambdas behind API Gateway
+description: Create a new Express application subpackage that runs as a serverless Lambda behind API Gateway using @jaypie/express utilities
 ---
 
-# Jaypie Initialize Express on Lambda Subpackage
+# Jaypie Initialize Express Application on Lambda
+
+Create an Express application subpackage that uses @jaypie/express to run as a serverless Lambda behind API Gateway. This prompt is for creating **application packages** (like packages/api or packages/backend), not the @jaypie/express library itself.
 
 ## Process
 
 1. Follow Jaypie_Init_Project_Subpackage.md:
-   * Use @project-org/express in packages/express
+   * Choose an appropriate package name (e.g., @project-org/api, @project-org/backend)
+   * Use packages/<package-name> for the directory (e.g., packages/api)
    * This creates the basic subpackage structure with package.json, tsconfig.json, and vitest config files
 
-2. Copy Express-specific template files:
-   * Copy `prompts/templates/express-subpackage/index.ts` to `packages/express/index.ts`
-   * Copy `prompts/templates/express-subpackage/src/app.ts` to `packages/express/src/app.ts`
-   * Copy `prompts/templates/express-subpackage/src/handler.config.ts` to `packages/express/src/handler.config.ts`
-   * Copy `prompts/templates/express-subpackage/src/routes/resource.router.ts` to `packages/express/src/routes/resource.router.ts`
-   * Copy `prompts/templates/express-subpackage/src/routes/resource/resourceGet.route.ts` to `packages/express/src/routes/resource/resourceGet.route.ts`
-   * Copy `prompts/templates/express-subpackage/src/routes/resource/__tests__/resourceGet.route.spec.ts` to `packages/express/src/routes/resource/__tests__/resourceGet.route.spec.ts`
-   * Copy `prompts/templates/express-subpackage/src/types/express.ts` to `packages/express/src/types/express.ts`
+2. Create Express application files using Templates_Express_Subpackage.md:
+   * Create `packages/<package-name>/index.ts` using the index.ts template
+   * Create `packages/<package-name>/src/app.ts` using the app.ts template
+   * Create `packages/<package-name>/src/handler.config.ts` using the handler.config.ts template
+   * Create `packages/<package-name>/src/routes/resource.router.ts` using the resource.router.ts template
+   * Create `packages/<package-name>/src/routes/resource/resourceGet.route.ts` using the resourceGet.route.ts template
+   * Create `packages/<package-name>/src/routes/resource/__tests__/resourceGet.route.spec.ts` using the test template
+   * Create `packages/<package-name>/src/types/express.ts` using the express types template
+   * All templates are documented in Templates_Express_Subpackage.md
 
 3. Update package.json scripts:
-   * Modify the existing scripts section to include:
+   * Add these scripts to the package.json:
      * `"dev": "tsx watch index.ts"`
      * `"start": "node dist/index.js"`
      * `"build": "tsc"`
-   * Run `npm run format:package`
+   * Keep existing scripts from the template (test, lint, typecheck, format)
+   * Run `npm --workspace ./packages/<package-name> run format:package`
 
 4. Install dependencies:
-   * `npm --workspace ./packages/express install jaypie express @codegenie/serverless-express`
-   * `npm --workspace ./packages/express install --save-dev @types/express @types/cors`
-   * Always run `npm install`, never update package.json with dependencies from memory
+   * `npm --workspace ./packages/<package-name> install jaypie express @codegenie/serverless-express`
+   * `npm --workspace ./packages/<package-name> install --save-dev @types/express @types/cors tsx`
+   * Always use npm install commands; never manually edit package.json dependencies
 
 5. Update TypeScript configuration:
-   * Update packages/express/tsconfig.json to include index.ts in the include array: `"include": ["src/**/*", "index.ts"]`
+   * Edit packages/<package-name>/tsconfig.json to include index.ts in the include array
+   * Change include to: `"include": ["src/**/*", "index.ts"]`
    * Change exclude to: `"exclude": ["node_modules", "dist", "**/*.spec.ts"]`
-   * Test the build
-   * Ensure dist/ is in gitignore
+   * Test the build with `npm --workspace ./packages/<package-name> run build`
+   * Verify dist/ is in root .gitignore (it should already be there)
 
 6. Update the top-level package.json:
-   * Add `"dev:express": "npm --workspace packages/express run dev"` and `"start:express": "npm --workspace packages/express run start"`
-   * If there is no stand-alone `dev` or `start`, create a `dev` running `dev:express` and `start` running `start:express`
-   * If `dev` or `start` exist, add calls to express if it fits the goal of the current commands
+   * Add workspace-specific dev and start scripts
+   * Add `"dev:<package-name>": "npm --workspace packages/<package-name> run dev"`
+   * Add `"start:<package-name>": "npm --workspace packages/<package-name> run start"`
+   * If there is no standalone `dev` or `start` script, create them referencing the new package
+   * If `dev` or `start` scripts already exist, consider whether to update them based on project needs
 
 ## Pattern
 
 - TypeScript with ES modules (`"type": "module"`)
 - Handler pattern: configuration → lifecycle → processing → response
-- Optional `handlerConfig` for shared configuration and lifecycle management
-- Clean separation of concerns with middleware patterns
-- Lambda-optimized Express configuration
+- Use `handlerConfig` helper for shared configuration and lifecycle management
+- Separation of concerns: routers, route handlers, and middleware
+- Lambda-optimized Express configuration using @codegenie/serverless-express
+- Development mode: Express listens on port 8080 when NODE_ENV=development
 
 ## Structure
 
 ```
-express/
+<package-name>/
 ├── package.json
 ├── tsconfig.json
-├── vitest.config.ts
-├── vitest.setup.ts
-├── index.ts
+├── vite.config.ts           # From template
+├── vitest.config.ts         # From template
+├── vitest.setup.ts          # From template
+├── index.ts                 # Lambda handler entry point
 ├── src/
-│   ├── app.ts
-│   ├── handler.config.ts
+│   ├── app.ts              # Express app configuration
+│   ├── handler.config.ts   # Shared handler configuration helper
 │   ├── routes/
 │   │   ├── resource.router.ts
 │   │   └── resource/
@@ -70,18 +80,36 @@ express/
 │   │       └── __tests__/
 │   │           └── resourceGet.route.spec.ts
 │   └── types/
-│       └── express.ts
-└── dist/
+│       └── express.ts      # Express type augmentation for req.locals
+└── dist/                   # Generated by tsc
 ```
 
 ## Local Development
 
-### Listening on Port 8080
+The index.ts template checks `process.env.NODE_ENV === "development"` to enable local development mode. In this mode, Express listens on port 8080 (port 3000 is typically reserved for frontend applications).
 
-A local entrypoint, usually index.ts, may check `process.env.NODE_ENV === "development"` and be allowed to listen on port 8080 (preserving 3000 for front ends).
-`npm run dev:express` should be configured to initialize this mode locally.
+Start local development with:
+```bash
+npm run dev:<package-name>
+```
+
+This runs `tsx watch index.ts`, which:
+- Sets up the Express app
+- Listens on port 8080
+- Auto-reloads on file changes
+- Does not invoke serverless-express wrapper
 
 ## Version Compatibility
 
-Jaypie uses Express 4.
-There is no immediately planned upgrade to Express 5.
+- Express: 4.x (Express 5 upgrade not planned)
+- Node: ES modules with TypeScript
+- @codegenie/serverless-express: 4.x
+- @types/express: Compatible with Express 4.x
+
+## Context Files
+
+Reference these files for additional guidance:
+- `Jaypie_Init_Project_Subpackage.md` - Subpackage initialization process
+- `Templates_Express_Subpackage.md` - Code templates for all files
+- `Jaypie_Express_Package.md` - Documentation on @jaypie/express features
+- `Jaypie_Core_Errors_and_Logging.md` - Error handling patterns
