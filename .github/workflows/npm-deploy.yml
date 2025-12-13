@@ -28,8 +28,7 @@ jobs:
           always-auth: false
           node-version: 20
           registry-url: 'https://registry.npmjs.org'
-      - run: npm install -g npm@latest
-      - run: npm ci
+      - run: npm install
       - run: lerna publish from-package --no-private --yes
   lint:
     name: Lint (in parallel)
