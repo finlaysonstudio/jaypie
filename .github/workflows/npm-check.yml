@@ -90,7 +90,7 @@ jobs:
       - name: Install dependencies
         if: steps.changes.outputs.llm == 'true'
         run: npm install
-      - name: Build packages
+      - name: Build
         if: steps.changes.outputs.llm == 'true'
         run: npm run build
       - name: Run LLM Client Tests

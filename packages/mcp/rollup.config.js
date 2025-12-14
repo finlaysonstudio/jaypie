@@ -37,6 +37,7 @@ export default {
     "node:crypto",
     "node:fs",
     "node:fs/promises",
+    "node:https",
     "node:path",
     "node:url",
     "zod",

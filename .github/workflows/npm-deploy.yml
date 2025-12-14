@@ -28,7 +28,6 @@ jobs:
           always-auth: false
           node-version: 20
           registry-url: 'https://registry.npmjs.org'
-      - run: npm install -g npm@latest
       - run: npm ci
       - run: npm run build
       - name: Publish packages to npm
@@ -117,7 +116,7 @@ jobs:
           cache: 'npm'
       - name: Install dependencies
         run: npm install
-      - name: Build packages
+      - name: Build
         run: npm run build
       - name: Run LLM Client Tests
         run: npm run test:llm:client

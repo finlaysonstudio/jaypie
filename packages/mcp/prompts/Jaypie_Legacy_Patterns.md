@@ -4,6 +4,10 @@ description: Old conventions repositories should update and the new conventions 
 
 # Jaypie Legacy Patterns
 
+## Mongoose
+
+Use MongoDB directly or something else
+
 ## TypeScript, Not Vanilla JavaScript
 
 ## Vite for Builds
