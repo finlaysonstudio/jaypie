@@ -34,9 +34,9 @@ export {
   JaypieHostedZoneRecordProps,
 } from "./JaypieHostedZone";
 export { JaypieInfrastructureStack } from "./JaypieInfrastructureStack";
-export { JaypieLambda } from "./JaypieLambda";
+export { JaypieLambda, JaypieLambdaProps } from "./JaypieLambda";
 export { JaypieMongoDbSecret } from "./JaypieMongoDbSecret";
-export { JaypieNextJs } from "./JaypieNextJs";
+export { JaypieNextJs, JaypieNextjsProps } from "./JaypieNextJs";
 export { JaypieOpenAiSecret } from "./JaypieOpenAiSecret";
 export {
   JaypieOrganizationTrail,
