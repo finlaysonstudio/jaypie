@@ -16,6 +16,7 @@ import { JaypieEnvSecret } from "./JaypieEnvSecret.js";
 export interface JaypieNextjsProps {
   datadogApiKeyArn?: string;
   domainName?: string;
+  environment?: { [key: string]: string };
   envSecrets?: { [key: string]: secretsmanager.ISecret };
   hostedZone?: IHostedZone | string;
   nextjsPath?: string;
@@ -33,6 +34,7 @@ export class JaypieNextJs extends Construct {
     const domainNameSanitized = domainName
       .replace(/\./g, "-")
       .replace(/[^a-zA-Z0-9]/g, "_");
+    const environment = props?.environment || {};
     const envSecrets = props?.envSecrets || {};
     const nextjsPath = props?.nextjsPath?.startsWith("..")
       ? path.join(process.cwd(), props.nextjsPath)
@@ -84,6 +86,7 @@ export class JaypieNextJs extends Construct {
       },
       environment: {
         ...jaypieLambdaEnv(),
+        ...environment,
         ...secretsEnvironment,
         ...jaypieSecretsEnvironment,
         ...nextPublicEnv,
