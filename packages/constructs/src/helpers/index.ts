@@ -15,5 +15,16 @@ export { mergeDomain } from "./mergeDomain";
 export { resolveDatadogForwarderFunction } from "./resolveDatadogForwarderFunction";
 export { resolveDatadogLayers } from "./resolveDatadogLayers";
 export { resolveDatadogLoggingDestination } from "./resolveDatadogLoggingDestination";
+export {
+  resolveEnvironment,
+  EnvironmentArrayItem,
+  EnvironmentInput,
+} from "./resolveEnvironment";
 export { resolveHostedZone } from "./resolveHostedZone";
 export { resolveParamsAndSecrets } from "./resolveParamsAndSecrets";
+export {
+  resolveSecrets,
+  SecretsArrayItem,
+  clearSecretsCache,
+  clearAllSecretsCaches,
+} from "./resolveSecrets";

@@ -245,6 +245,143 @@ describe("JaypieLambda", () => {
       expect(envVars.TEST_VAR).toBe("test-value");
     });
 
+    describe("environment array syntax", () => {
+      const originalEnv = { ...process.env };
+
+      beforeEach(() => {
+        process.env.TEST_VAR_FROM_ENV = "from-env";
+        process.env.ANOTHER_VAR = "another-value";
+      });
+
+      afterEach(() => {
+        process.env = { ...originalEnv };
+      });
+
+      it("supports string array items that lookup process.env", () => {
+        const stack = new Stack();
+        const construct = new JaypieLambda(stack, "TestConstruct", {
+          code: lambda.Code.fromInline("exports.handler = () => {}"),
+          environment: ["TEST_VAR_FROM_ENV"],
+          handler: "index.handler",
+        });
+        const template = Template.fromStack(stack);
+
+        expect(construct).toBeDefined();
+
+        const mainFunction = findMainLambdaFunction(template);
+        expect(mainFunction).toBeDefined();
+
+        const envVars = mainFunction?.Properties?.Environment?.Variables || {};
+        expect(envVars.TEST_VAR_FROM_ENV).toBe("from-env");
+      });
+
+      it("supports object array items with direct key-value pairs", () => {
+        const stack = new Stack();
+        const construct = new JaypieLambda(stack, "TestConstruct", {
+          code: lambda.Code.fromInline("exports.handler = () => {}"),
+          environment: [{ DIRECT_VAR: "direct-value" }],
+          handler: "index.handler",
+        });
+        const template = Template.fromStack(stack);
+
+        expect(construct).toBeDefined();
+
+        const mainFunction = findMainLambdaFunction(template);
+        expect(mainFunction).toBeDefined();
+
+        const envVars = mainFunction?.Properties?.Environment?.Variables || {};
+        expect(envVars.DIRECT_VAR).toBe("direct-value");
+      });
+
+      it("supports mixed array with strings and objects", () => {
+        const stack = new Stack();
+        const construct = new JaypieLambda(stack, "TestConstruct", {
+          code: lambda.Code.fromInline("exports.handler = () => {}"),
+          environment: [
+            "TEST_VAR_FROM_ENV",
+            { DIRECT_VAR: "direct-value" },
+            "ANOTHER_VAR",
+            { FOO: "bar", BAZ: "qux" },
+          ],
+          handler: "index.handler",
+        });
+        const template = Template.fromStack(stack);
+
+        expect(construct).toBeDefined();
+
+        const mainFunction = findMainLambdaFunction(template);
+        expect(mainFunction).toBeDefined();
+
+        const envVars = mainFunction?.Properties?.Environment?.Variables || {};
+        expect(envVars.TEST_VAR_FROM_ENV).toBe("from-env");
+        expect(envVars.ANOTHER_VAR).toBe("another-value");
+        expect(envVars.DIRECT_VAR).toBe("direct-value");
+        expect(envVars.FOO).toBe("bar");
+        expect(envVars.BAZ).toBe("qux");
+      });
+    });
+
+    describe("secrets string syntax", () => {
+      const originalEnv = { ...process.env };
+
+      beforeEach(() => {
+        process.env.AUTH0_CLIENT_SECRET = "auth0-secret-value";
+        process.env.MONGODB_URI = "mongodb://localhost/test";
+        process.env.PROJECT_ENV = "test";
+        process.env.PROJECT_KEY = "test-key";
+      });
+
+      afterEach(() => {
+        process.env = { ...originalEnv };
+      });
+
+      it("creates JaypieEnvSecrets from strings", () => {
+        const stack = new Stack();
+        const construct = new JaypieLambda(stack, "TestConstruct", {
+          code: lambda.Code.fromInline("exports.handler = () => {}"),
+          handler: "index.handler",
+          secrets: ["AUTH0_CLIENT_SECRET"],
+        });
+
+        const template = Template.fromStack(stack);
+
+        const mainFunction = findMainLambdaFunction(template);
+        expect(mainFunction).toBeDefined();
+
+        // Verify environment variable is set for the secret
+        const envVars = mainFunction?.Properties?.Environment?.Variables || {};
+        expect(envVars.SECRET_AUTH0_CLIENT_SECRET).toBeDefined();
+
+        expect(construct).toBeDefined();
+      });
+
+      it("supports mixed array with strings and JaypieEnvSecret instances", () => {
+        const stack = new Stack();
+        const existingSecret = new JaypieEnvSecret(stack, "ExistingSecret", {
+          envKey: "EXISTING_KEY",
+          value: "existing-value",
+        });
+
+        const construct = new JaypieLambda(stack, "TestConstruct", {
+          code: lambda.Code.fromInline("exports.handler = () => {}"),
+          handler: "index.handler",
+          secrets: [existingSecret, "AUTH0_CLIENT_SECRET"],
+        });
+
+        const template = Template.fromStack(stack);
+
+        const mainFunction = findMainLambdaFunction(template);
+        expect(mainFunction).toBeDefined();
+
+        // Verify environment variables are set for both secrets
+        const envVars = mainFunction?.Properties?.Environment?.Variables || {};
+        expect(envVars.SECRET_EXISTING_KEY).toBeDefined();
+        expect(envVars.SECRET_AUTH0_CLIENT_SECRET).toBeDefined();
+
+        expect(construct).toBeDefined();
+      });
+    });
+
     it("allows configuring lambda properties", () => {
       const stack = new Stack();
       const customTimeout = Duration.seconds(60);

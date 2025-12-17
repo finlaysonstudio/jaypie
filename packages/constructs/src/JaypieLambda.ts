@@ -7,11 +7,14 @@ import * as ec2 from "aws-cdk-lib/aws-ec2";
 import * as iam from "aws-cdk-lib/aws-iam";
 import * as logs from "aws-cdk-lib/aws-logs";
 import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
-import { JaypieEnvSecret } from "./JaypieEnvSecret.js";
 import {
   addDatadogLayers,
+  EnvironmentInput,
   jaypieLambdaEnv,
+  resolveEnvironment,
   resolveParamsAndSecrets,
+  resolveSecrets,
+  SecretsArrayItem,
 } from "./helpers/index.js";
 
 export interface JaypieLambdaProps {
@@ -24,7 +27,16 @@ export interface JaypieLambdaProps {
   deadLetterQueueEnabled?: boolean;
   deadLetterTopic?: import("aws-cdk-lib/aws-sns").ITopic;
   description?: string;
-  environment?: { [key: string]: string };
+  /**
+   * Environment variables for the Lambda function.
+   *
+   * Supports both legacy object syntax and new array syntax:
+   * - Object: { KEY: "value" } - directly sets environment variables
+   * - Array: ["KEY1", "KEY2", { KEY3: "value" }]
+   *   - Strings: lookup value from process.env
+   *   - Objects: merge key-value pairs directly
+   */
+  environment?: EnvironmentInput;
   envSecrets?: { [key: string]: secretsmanager.ISecret };
   ephemeralStorageSize?: import("aws-cdk-lib").Size;
   filesystem?: lambda.FileSystem;
@@ -50,7 +62,15 @@ export interface JaypieLambdaProps {
   roleTag?: string;
   runtime?: lambda.Runtime;
   runtimeManagementMode?: lambda.RuntimeManagementMode;
-  secrets?: JaypieEnvSecret[];
+  /**
+   * Secrets to make available to the Lambda function.
+   *
+   * Supports both JaypieEnvSecret instances and strings:
+   * - JaypieEnvSecret: used directly
+   * - String: creates a JaypieEnvSecret with the string as envKey
+   *   (reuses existing secrets within the same scope)
+   */
+  secrets?: SecretsArrayItem[];
   securityGroups?: ec2.ISecurityGroup[];
   timeout?: Duration | number;
   tracing?: lambda.Tracing;
@@ -77,7 +97,7 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
       deadLetterQueueEnabled,
       deadLetterTopic,
       description,
-      environment: initialEnvironment = {},
+      environment: environmentInput,
       envSecrets = {},
       ephemeralStorageSize,
       filesystem,
@@ -100,7 +120,7 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
         supportsInlineCode: true,
       }),
       runtimeManagementMode,
-      secrets = [],
+      secrets: secretsInput = [],
       securityGroups,
       timeout = Duration.seconds(CDK.DURATION.LAMBDA_WORKER),
       tracing,
@@ -109,8 +129,14 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
       vpcSubnets,
     } = props;
 
+    // Resolve environment from array or object syntax
+    const initialEnvironment = resolveEnvironment(environmentInput);
+
     // Get base environment with defaults
     const environment = jaypieLambdaEnv({ initialEnvironment });
+
+    // Resolve secrets from mixed array (strings and JaypieEnvSecret instances)
+    const secrets = resolveSecrets(scope, secretsInput);
 
     const codeAsset =
       typeof code === "string" ? lambda.Code.fromAsset(code) : code;
@@ -128,15 +154,18 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
     );
 
     // Process JaypieEnvSecret array
-    const jaypieSecretsEnvironment = secrets.reduce((acc, secret) => {
-      if (secret.envKey) {
-        return {
-          ...acc,
-          [`SECRET_${secret.envKey}`]: secret.secretName,
-        };
-      }
-      return acc;
-    }, {});
+    const jaypieSecretsEnvironment = secrets.reduce<{ [key: string]: string }>(
+      (acc, secret) => {
+        if (secret.envKey) {
+          return {
+            ...acc,
+            [`SECRET_${secret.envKey}`]: secret.secretName,
+          };
+        }
+        return acc;
+      },
+      {},
+    );
 
     // Add ParamsAndSecrets layer if configured
     const resolvedParamsAndSecrets = resolveParamsAndSecrets({
