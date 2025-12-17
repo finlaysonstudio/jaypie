@@ -4,7 +4,9 @@ import { PROVIDER } from "../../constants.js";
 import {
   anthropicAdapter,
   createOperateLoop,
+  createStreamLoop,
   OperateLoop,
+  StreamLoop,
 } from "../../operate/index.js";
 import {
   LlmHistory,
@@ -15,6 +17,7 @@ import {
   LlmProvider,
   LlmHistoryItem,
 } from "../../types/LlmProvider.interface.js";
+import { LlmStreamChunk } from "../../types/LlmStreamChunk.interface.js";
 import {
   createStructuredCompletion,
   createTextCompletion,
@@ -29,6 +32,7 @@ export class AnthropicProvider implements LlmProvider {
   private model: string;
   private _client?: Anthropic;
   private _operateLoop?: OperateLoop;
+  private _streamLoop?: StreamLoop;
   private apiKey?: string;
   private log = getLogger();
   private conversationHistory: LlmHistoryItem[] = [];
@@ -61,6 +65,19 @@ export class AnthropicProvider implements LlmProvider {
       client,
     });
     return this._operateLoop;
+  }
+
+  private async getStreamLoop(): Promise<StreamLoop> {
+    if (this._streamLoop) {
+      return this._streamLoop;
+    }
+
+    const client = await this.getClient();
+    this._streamLoop = createStreamLoop({
+      adapter: anthropicAdapter,
+      client,
+    });
+    return this._streamLoop;
   }
 
   // Main send method
@@ -118,5 +135,23 @@ export class AnthropicProvider implements LlmProvider {
     }
 
     return response;
+  }
+
+  async *stream(
+    input: string | LlmHistory | LlmInputMessage,
+    options: LlmOperateOptions = {},
+  ): AsyncIterable<LlmStreamChunk> {
+    const streamLoop = await this.getStreamLoop();
+    const mergedOptions = { ...options, model: options.model ?? this.model };
+
+    // Create a merged history including both the tracked history and any explicitly provided history
+    if (this.conversationHistory.length > 0) {
+      mergedOptions.history = options.history
+        ? [...this.conversationHistory, ...options.history]
+        : [...this.conversationHistory];
+    }
+
+    // Execute stream loop
+    yield* streamLoop.execute(input, mergedOptions);
   }
 }

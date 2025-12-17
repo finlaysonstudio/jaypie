@@ -18,6 +18,15 @@ export {
   LlmMessageType,
 } from "./types/LlmProvider.interface.js";
 export type { LlmTool } from "./types/LlmTool.interface.js";
+export type {
+  LlmStreamChunk,
+  LlmStreamChunkDone,
+  LlmStreamChunkError,
+  LlmStreamChunkText,
+  LlmStreamChunkToolCall,
+  LlmStreamChunkToolResult,
+} from "./types/LlmStreamChunk.interface.js";
+export { LlmStreamChunkType } from "./types/LlmStreamChunk.interface.js";
 
 export { JaypieToolkit, toolkit, Toolkit, tools } from "./tools/index.js";
 

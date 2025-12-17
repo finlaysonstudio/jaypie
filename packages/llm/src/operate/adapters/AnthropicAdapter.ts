@@ -11,6 +11,10 @@ import {
   LlmOutputMessage,
   LlmUsageItem,
 } from "../../types/LlmProvider.interface.js";
+import {
+  LlmStreamChunk,
+  LlmStreamChunkType,
+} from "../../types/LlmStreamChunk.interface.js";
 import { naturalZodSchema } from "../../util/index.js";
 import {
   ClassifiedError,
@@ -190,6 +194,96 @@ export class AnthropicAdapter extends BaseProviderAdapter {
     return (await anthropic.messages.create(
       request as Anthropic.MessageCreateParams,
     )) as Anthropic.Message;
+  }
+
+  async *executeStreamRequest(
+    client: unknown,
+    request: unknown,
+  ): AsyncIterable<LlmStreamChunk> {
+    const anthropic = client as Anthropic;
+    const streamRequest = {
+      ...(request as Anthropic.MessageCreateParams),
+      stream: true,
+    } as Anthropic.MessageCreateParamsStreaming;
+
+    const stream = await anthropic.messages.create(streamRequest);
+
+    // Track current tool call being built
+    let currentToolCall: {
+      id: string;
+      name: string;
+      arguments: string;
+    } | null = null;
+
+    // Track usage for final chunk
+    let inputTokens = 0;
+    let outputTokens = 0;
+    let model = streamRequest.model;
+
+    for await (const event of stream) {
+      if (event.type === "message_start") {
+        // Extract initial usage and model info
+        const message = event.message;
+        if (message.usage) {
+          inputTokens = message.usage.input_tokens;
+        }
+        model = message.model;
+      } else if (event.type === "content_block_start") {
+        const contentBlock = event.content_block;
+        if (contentBlock.type === "tool_use") {
+          // Start building a tool call
+          currentToolCall = {
+            id: contentBlock.id,
+            name: contentBlock.name,
+            arguments: "",
+          };
+        }
+      } else if (event.type === "content_block_delta") {
+        const delta = event.delta;
+        if (delta.type === "text_delta") {
+          yield {
+            type: LlmStreamChunkType.Text,
+            content: delta.text,
+          };
+        } else if (delta.type === "input_json_delta" && currentToolCall) {
+          // Accumulate tool call arguments
+          currentToolCall.arguments += delta.partial_json;
+        }
+      } else if (event.type === "content_block_stop") {
+        // If we were building a tool call, emit it now
+        if (currentToolCall) {
+          yield {
+            type: LlmStreamChunkType.ToolCall,
+            toolCall: {
+              id: currentToolCall.id,
+              name: currentToolCall.name,
+              arguments: currentToolCall.arguments,
+            },
+          };
+          currentToolCall = null;
+        }
+      } else if (event.type === "message_delta") {
+        // Extract final usage
+        if (event.usage) {
+          outputTokens = event.usage.output_tokens;
+        }
+      } else if (event.type === "message_stop") {
+        // Emit done chunk with usage
+        yield {
+          type: LlmStreamChunkType.Done,
+          usage: [
+            {
+              input: inputTokens,
+              output: outputTokens,
+              reasoning: 0,
+              total: inputTokens + outputTokens,
+              provider: this.name,
+              model,
+            },
+          ],
+        };
+      }
+    }
   }
 
   //

@@ -6,6 +6,7 @@ import {
   LlmOperateOptions,
   LlmUsageItem,
 } from "../../types/LlmProvider.interface.js";
+import { LlmStreamChunk } from "../../types/LlmStreamChunk.interface.js";
 import { Toolkit } from "../../tools/Toolkit.class.js";
 import {
   ClassifiedError,
@@ -89,6 +90,18 @@ export interface ProviderAdapter {
    * @returns Raw provider response
    */
   executeRequest(client: unknown, request: unknown): Promise<unknown>;
+
+  /**
+   * Execute a streaming API request to the provider
+   *
+   * @param client - The provider's SDK client instance
+   * @param request - Provider-specific request object (from buildRequest)
+   * @returns AsyncIterable of stream chunks
+   */
+  executeStreamRequest?(
+    client: unknown,
+    request: unknown,
+  ): AsyncIterable<LlmStreamChunk>;
 
   //
   // Response Parsing

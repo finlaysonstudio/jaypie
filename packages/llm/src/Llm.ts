@@ -11,6 +11,7 @@ import {
   LlmOptions,
   LlmOperateResponse,
 } from "./types/LlmProvider.interface.js";
+import { LlmStreamChunk } from "./types/LlmStreamChunk.interface.js";
 import { AnthropicProvider } from "./providers/anthropic/AnthropicProvider.class.js";
 import { GeminiProvider } from "./providers/gemini/GeminiProvider.class.js";
 import { OpenAiProvider } from "./providers/openai/index.js";
@@ -121,6 +122,18 @@ class Llm implements LlmProvider {
     return this._llm.operate(input, options);
   }
 
+  async *stream(
+    input: string | LlmHistory | LlmInputMessage,
+    options: LlmOperateOptions = {},
+  ): AsyncIterable<LlmStreamChunk> {
+    if (!this._llm.stream) {
+      throw new NotImplementedError(
+        `Provider ${this._provider} does not support stream method`,
+      );
+    }
+    yield* this._llm.stream(input, options);
+  }
+
   static async send(
     message: string,
     options?: LlmMessageOptions & {
@@ -163,6 +176,37 @@ class Llm implements LlmProvider {
 
     const instance = new Llm(finalLlm, { apiKey, model: finalModel });
     return instance.operate(input, operateOptions);
+  }
+
+  static stream(
+    input: string | LlmHistory | LlmInputMessage,
+    options?: LlmOperateOptions & {
+      llm?: LlmProviderName;
+      apiKey?: string;
+      model?: string;
+    },
+  ): AsyncIterable<LlmStreamChunk> {
+    const { llm, apiKey, model, ...streamOptions } = options || {};
+
+    let finalLlm = llm;
+    let finalModel = model;
+
+    if (!llm && model) {
+      const determined = determineModelProvider(model);
+      if (determined.provider) {
+        finalLlm = determined.provider as LlmProviderName;
+      }
+    } else if (llm && model) {
+      // When both llm and model are provided, check if they conflict
+      const determined = determineModelProvider(model);
+      if (determined.provider && determined.provider !== llm) {
+        // Don't pass the conflicting model to the constructor
+        finalModel = undefined;
+      }
+    }
+
+    const instance = new Llm(finalLlm, { apiKey, model: finalModel });
+    return instance.stream(input, streamOptions);
   }
 }
 
