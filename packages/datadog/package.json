@@ -1,6 +1,6 @@
 {
   "name": "@jaypie/datadog",
-  "version": "1.2.0-rc.3",
+  "version": "1.2.0-rc.4",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/finlaysonstudio/jaypie.git"
@@ -38,7 +38,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@jaypie/aws": "1.2.0-rc.2",
+    "@jaypie/aws": "^1.2.0-rc.4",
     "hot-shots": "^10.0.0"
   },
   "devDependencies": {
@@ -47,8 +47,8 @@
     "typescript": "^5.3.3"
   },
   "peerDependencies": {
-    "@jaypie/kit": "^1.2.0-rc.2",
-    "@jaypie/logger": "^1.2.0-rc.2"
+    "@jaypie/kit": "^1.2.0-rc.4",
+    "@jaypie/logger": "^1.2.0-rc.4"
   },
   "publishConfig": {
     "access": "public"
