@@ -21,9 +21,6 @@ export * from "@jaypie/kit";
 // Logger
 export { log } from "@jaypie/logger";
 
-// UUID
-export { uuid } from "@jaypie/kit";
-
 // Optional packages - lazy loaded wrappers
 export * from "./aws.js";
 export * from "./datadog.js";
