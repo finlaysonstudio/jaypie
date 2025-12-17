@@ -42,4 +42,4 @@ export { HTTP } from "@jaypie/kit";
 export { log } from "./core.js";
 
 // Utilities
-export { v4 as uuid } from "uuid";
+export { uuid } from "@jaypie/kit";

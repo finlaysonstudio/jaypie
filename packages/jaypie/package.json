@@ -42,7 +42,8 @@
     "@jaypie/express": "1.2.0-rc.1",
     "@jaypie/kit": "1.2.0-rc.1",
     "@jaypie/lambda": "1.2.0-rc.1",
-    "@jaypie/llm": "1.2.0-rc.1"
+    "@jaypie/llm": "1.2.0-rc.1",
+    "@jaypie/logger": "1.2.0-rc.1"
   },
   "devDependencies": {
     "@jaypie/mongoose": "1.2.0-rc.1",

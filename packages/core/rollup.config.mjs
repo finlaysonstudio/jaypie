@@ -1,6 +1,12 @@
 import typescript from "@rollup/plugin-typescript";
 import autoExternal from "rollup-plugin-auto-external";
 
+const external = [
+  "@jaypie/errors",
+  "@jaypie/kit",
+  "@jaypie/logger",
+];
+
 export default [
   // ES modules version
   {
@@ -10,6 +16,7 @@ export default [
       format: "es",
       sourcemap: true,
     },
+    external,
     plugins: [
       autoExternal(),
       typescript({
@@ -29,6 +36,7 @@ export default [
       exports: "named",
       entryFileNames: "[name].cjs",
     },
+    external,
     plugins: [
       autoExternal(),
       typescript({

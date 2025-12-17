@@ -33,7 +33,8 @@
   },
   "dependencies": {
     "@jaypie/errors": "1.2.0-rc.1",
-    "@jaypie/logger": "1.2.0-rc.1"
+    "@jaypie/logger": "1.2.0-rc.1",
+    "uuid": "^11.0.5"
   },
   "devDependencies": {
     "@jaypie/types": "*",

@@ -39,6 +39,11 @@
     "@types/node": "^22.13.1",
     "typescript": "^5.3.3"
   },
+  "peerDependencies": {
+    "@jaypie/errors": "^1.2.0-rc.1",
+    "@jaypie/kit": "^1.2.0-rc.1",
+    "@jaypie/logger": "^1.2.0-rc.1"
+  },
   "publishConfig": {
     "access": "public"
   }

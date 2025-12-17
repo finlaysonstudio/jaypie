@@ -49,6 +49,8 @@
   "peerDependencies": {
     "@anthropic-ai/sdk": "^0.71.0",
     "@google/genai": "^1.30.0",
+    "@jaypie/kit": "^1.2.0-rc.1",
+    "@jaypie/logger": "^1.2.0-rc.1",
     "@openrouter/sdk": "^0.1.27"
   },
   "peerDependenciesMeta": {

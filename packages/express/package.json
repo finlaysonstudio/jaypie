@@ -57,6 +57,10 @@
     "express": "^4.21.2",
     "typescript": "^5.3.3"
   },
+  "peerDependencies": {
+    "@jaypie/kit": "^1.2.0-rc.1",
+    "@jaypie/logger": "^1.2.0-rc.1"
+  },
   "publishConfig": {
     "access": "public"
   }

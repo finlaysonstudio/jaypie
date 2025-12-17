@@ -22,7 +22,7 @@ export * from "@jaypie/kit";
 export { log } from "@jaypie/logger";
 
 // UUID
-export { v4 as uuid } from "uuid";
+export { uuid } from "@jaypie/kit";
 
 // Optional packages - lazy loaded wrappers
 export * from "./aws.js";

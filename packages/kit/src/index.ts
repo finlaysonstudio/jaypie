@@ -22,3 +22,6 @@ export { default as HTTP } from "./lib/http.lib.js";
 
 // Handler
 export { default as jaypieHandler } from "./jaypieHandler.module.js";
+
+// UUID
+export { v4 as uuid } from "uuid";
