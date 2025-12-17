@@ -1,6 +1,6 @@
 {
   "name": "@jaypie/aws",
-  "version": "1.2.0-rc.1",
+  "version": "1.2.0-rc.2",
   "repository": {
     "type": "git",
     "url": "https://github.com/finlaysonstudio/jaypie"
@@ -56,9 +56,9 @@
     "typescript": "^5.3.3"
   },
   "peerDependencies": {
-    "@jaypie/errors": "^1.2.0-rc.1",
-    "@jaypie/kit": "^1.2.0-rc.1",
-    "@jaypie/logger": "^1.2.0-rc.1"
+    "@jaypie/errors": "^1.2.0-rc.2",
+    "@jaypie/kit": "^1.2.0-rc.2",
+    "@jaypie/logger": "^1.2.0-rc.2"
   },
   "publishConfig": {
     "access": "public"
