@@ -1,6 +1,17 @@
 import typescript from "@rollup/plugin-typescript";
 import autoExternal from "rollup-plugin-auto-external";
 
+// Filter out TS2307 warnings for @jaypie/* packages (external workspace dependencies)
+const onwarn = (warning, defaultHandler) => {
+  if (
+    warning.plugin === "typescript" &&
+    warning.message.includes("@jaypie/")
+  ) {
+    return;
+  }
+  defaultHandler(warning);
+};
+
 const external = [
   "@jaypie/errors",
   "@jaypie/kit",
@@ -17,6 +28,7 @@ export default [
       sourcemap: true,
     },
     external,
+    onwarn,
     plugins: [
       autoExternal(),
       typescript({
@@ -37,6 +49,7 @@ export default [
       entryFileNames: "[name].cjs",
     },
     external,
+    onwarn,
     plugins: [
       autoExternal(),
       typescript({

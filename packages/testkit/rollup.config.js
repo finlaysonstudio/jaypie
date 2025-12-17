@@ -5,6 +5,17 @@ import { dts } from "rollup-plugin-dts";
 import { nodeResolve } from "@rollup/plugin-node-resolve";
 import commonjs from "@rollup/plugin-commonjs";
 
+// Filter out TS2307 warnings for @jaypie/* packages (external workspace dependencies)
+const onwarn = (warning, defaultHandler) => {
+  if (
+    warning.plugin === "typescript" &&
+    warning.message.includes("@jaypie/")
+  ) {
+    return;
+  }
+  defaultHandler(warning);
+};
+
 const external = [
   "@jaypie/aws",
   "@jaypie/datadog",
@@ -34,6 +45,7 @@ export default [
   {
     external,
     input: "src/index.ts",
+    onwarn,
     output: {
       dir: "dist",
       format: "es",
@@ -58,6 +70,7 @@ export default [
   {
     external,
     input: "src/mock/index.ts",
+    onwarn,
     output: {
       dir: "dist/mock",
       format: "es",
