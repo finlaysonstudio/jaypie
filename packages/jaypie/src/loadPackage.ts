@@ -1,8 +1,15 @@
 import { createRequire } from "module";
+import { pathToFileURL } from "url";
+
 import { ConfigurationError } from "@jaypie/errors";
 
-// Using createRequire for synchronous package loading - required for lazy loading pattern
-const require = createRequire(import.meta.url);
+// CJS/ESM compatible require - handles bundling to CJS where import.meta.url becomes undefined
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore - __filename exists in CJS context when ESM is bundled to CJS
+const require =
+  typeof __filename !== "undefined"
+    ? createRequire(pathToFileURL(__filename).href)
+    : createRequire(import.meta.url);
 const packageCache = new Map<string, unknown>();
 
 export function loadPackage<T>(packageName: string): T {

@@ -29,3 +29,42 @@ export const lambdaHandler = createMockFunction<
     return jaypieHandler(handler, props)(event, context, ...extra);
   };
 });
+
+// Mock stream handler function type
+type StreamHandlerFunction = (
+  event: unknown,
+  responseStream: { write: (data: string) => void; end: () => void },
+  context: unknown,
+  ...extra: unknown[]
+) => Promise<void>;
+
+// Mock implementation of lambdaStreamHandler
+export const lambdaStreamHandler = createMockFunction<
+  (
+    handler: StreamHandlerFunction,
+    props?: LambdaOptions,
+  ) => StreamHandlerFunction
+>((handler, props = {}) => {
+  // If handler is an object and options is a function, swap them
+  if (typeof handler === "object" && typeof props === "function") {
+    const temp = handler;
+    handler = props;
+    props = temp;
+  }
+  return async (
+    event: unknown,
+    responseStream: { write: (data: string) => void; end: () => void },
+    context: unknown,
+    ...extra: unknown[]
+  ) => {
+    try {
+      await handler(event, responseStream, context, ...extra);
+    } finally {
+      try {
+        responseStream.end();
+      } catch {
+        // Response stream may already be ended
+      }
+    }
+  };
+});
