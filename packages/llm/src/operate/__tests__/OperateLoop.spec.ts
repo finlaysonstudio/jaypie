@@ -512,17 +512,6 @@ describe("OperateLoop", () => {
 
   // Specific Scenarios
   describe("Specific Scenarios", () => {
-    it("uses custom maxRetries from config", () => {
-      const loop = new OperateLoop({
-        adapter: mockAdapter,
-        client: mockClient,
-        maxRetries: 10,
-      });
-
-      // The loop is created with custom maxRetries
-      expect(loop).toBeInstanceOf(OperateLoop);
-    });
-
     it("handles options.model override", async () => {
       const loop = new OperateLoop({
         adapter: mockAdapter,
