@@ -86,11 +86,6 @@ const sidebars: SidebarsConfig = {
               id: "api/textract",
               label: "@jaypie/textract",
             },
-            {
-              type: "doc",
-              id: "api/webkit",
-              label: "@jaypie/webkit",
-            },
           ],
         },
         {
