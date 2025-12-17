@@ -4,8 +4,9 @@ on:
   push:
     branches:
       - main
-    tags: 
+    tags:
       - deploy-*
+      - rc-*
 
 env:
   PROJECT_COMMIT: ${{ github.sha }}
@@ -30,7 +31,29 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
       - run: npm ci
       - run: npm run build
+      - name: Publish RC packages
+        if: startsWith(github.ref, 'refs/tags/rc-')
+        run: |
+          for pkg in packages/*/; do
+            if [ -f "$pkg/package.json" ]; then
+              private=$(node -p "require('./$pkg/package.json').private || false")
+              if [ "$private" != "true" ]; then
+                name=$(node -p "require('./$pkg/package.json').name")
+                version=$(node -p "require('./$pkg/package.json').version")
+                # Only process RC versions
+                if [[ "$version" == *"-rc."* ]]; then
+                  if ! npm view "$name@$version" version >/dev/null 2>&1; then
+                    echo "Publishing $name@$version with tag rc"
+                    npm publish "$pkg" --tag rc
+                  else
+                    echo "Skipping $name@$version (already published)"
+                  fi
+                fi
+              fi
+            fi
+          done
       - name: Publish packages to npm
+        if: ${{ !startsWith(github.ref, 'refs/tags/rc-') }}
         run: |
           for pkg in packages/*/; do
             if [ -f "$pkg/package.json" ]; then

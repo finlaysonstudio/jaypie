@@ -9,10 +9,6 @@ on:
     tags:
       - check-*
 
-permissions:
-  contents: read
-  id-token: write
-
 env:
   PROJECT_COMMIT: ${{ github.sha }}
   PROJECT_ENV: meta
@@ -106,39 +102,3 @@ jobs:
           APP_PROVIDER: anthropic,openai
           ANTHROPIC_API_KEY: ${{ secrets.CICD_ANTHROPIC_API_KEY }}
           OPENAI_API_KEY: ${{ secrets.CICD_OPENAI_API_KEY }}
-  publish-rc:
-    name: Publish RC Versions
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    needs: [lint, test]
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          always-auth: false
-          node-version: 20
-          registry-url: 'https://registry.npmjs.org'
-      - run: npm install
-      - run: npm run build
-      - name: Publish RC packages
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: |
-          for pkg in packages/*/; do
-            if [ -f "$pkg/package.json" ]; then
-              private=$(node -p "require('./$pkg/package.json').private || false")
-              if [ "$private" != "true" ]; then
-                name=$(node -p "require('./$pkg/package.json').name")
-                version=$(node -p "require('./$pkg/package.json').version")
-                # Only process RC versions
-                if [[ "$version" == *"-rc."* ]]; then
-                  if ! npm view "$name@$version" version >/dev/null 2>&1; then
-                    echo "Publishing $name@$version with tag rc"
-                    npm publish "$pkg" --tag rc
-                  else
-                    echo "Skipping $name@$version (already published)"
-                  fi
-                fi
-              fi
-            fi
-          done
