@@ -110,7 +110,7 @@ async function getEnvSecret(
 
     try {
       const response = await retry(
-        async (bail) => {
+        async (bail: (e: Error) => void) => {
           try {
             logger.trace.var({ getEnvSecretAttempt: { secretId, endpoint } });
             return await axios.get(endpoint, {

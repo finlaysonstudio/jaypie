@@ -86,7 +86,7 @@ async function getSecret(name: string): Promise<string | undefined> {
 
   try {
     const response = await retry(
-      async (bail) => {
+      async (bail: (e: Error) => void) => {
         try {
           logger.trace.var({ getSecretAttempt: { name, endpoint } });
           return await axios.get(endpoint, {
