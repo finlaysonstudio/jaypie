@@ -44,7 +44,7 @@ jobs:
                 if [[ "$version" == *"-rc."* ]]; then
                   if ! npm view "$name@$version" version >/dev/null 2>&1; then
                     echo "Publishing $name@$version with tag rc"
-                    npm publish "$pkg" --tag rc
+                    npm publish "$pkg" --provenance --tag rc
                   else
                     echo "Skipping $name@$version (already published)"
                   fi
@@ -63,7 +63,7 @@ jobs:
                 version=$(node -p "require('./$pkg/package.json').version")
                 if ! npm view "$name@$version" version >/dev/null 2>&1; then
                   echo "Publishing $name@$version"
-                  npm publish "$pkg"
+                  npm publish "$pkg" --provenance
                 else
                   echo "Skipping $name@$version (already published)"
                 fi
