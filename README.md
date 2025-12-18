@@ -958,7 +958,7 @@ const worker = new JaypieQueuedLambda(this, 'Worker', {
 | `roleTag` | `string` | No | Role tag for resource management |
 | `runtime` | `lambda.Runtime` | No | Lambda runtime, default NODEJS_22_X |
 | `secrets` | `JaypieEnvSecret[]` | No | JaypieEnvSecrets to inject |
-| `timeout` | `Duration \| number` | No | Lambda timeout duration or number of seconds, defaults to CDK.DURATION.LAMBDA_WORKER (120 seconds) |
+| `timeout` | `Duration \| number` | No | Lambda timeout duration or number of seconds, defaults to CDK.DURATION.LAMBDA_WORKER (900 seconds) |
 | `vendorTag` | `string` | No | Vendor tag for resource management |
 | `visibilityTimeout` | `Duration \| number` | No | SQS visibility timeout |
 
@@ -997,7 +997,7 @@ const lambda = new JaypieLambda(this, 'Function', {
 | `roleTag` | `string` | No | Role tag for resource management |
 | `runtime` | `lambda.Runtime` | No | Lambda runtime, default NODEJS_22_X |
 | `secrets` | `JaypieEnvSecret[]` | No | JaypieEnvSecrets to inject |
-| `timeout` | `Duration \| number` | No | Lambda timeout duration or number of seconds, defaults to CDK.DURATION.LAMBDA_WORKER (120 seconds) |
+| `timeout` | `Duration \| number` | No | Lambda timeout duration or number of seconds, defaults to CDK.DURATION.LAMBDA_WORKER (900 seconds) |
 | `vendorTag` | `string` | No | Vendor tag for resource management |
 
 When provided with a Datadog API key (via `datadogApiKeyArn` or environment variables), the construct automatically:
