@@ -21,10 +21,14 @@ export * from "@jaypie/kit";
 // Logger
 export { log } from "@jaypie/logger";
 
-// Optional packages - lazy loaded wrappers
-export * from "./aws.js";
-export * from "./datadog.js";
-export * from "./express.js";
-export * from "./lambda.js";
-export * from "./llm.js";
-export * from "./mongoose.js";
+// AWS
+export * from "@jaypie/aws";
+
+// Datadog
+export * from "@jaypie/datadog";
+
+// Express
+export * from "@jaypie/express";
+
+// Lambda
+export * from "@jaypie/lambda";

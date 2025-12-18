@@ -29,9 +29,6 @@
     "format:package": "sort-package-json ./package.json",
     "lint": "eslint .",
     "test": "vitest run .",
-    "test:spec:dynamicExport.function": "vitest run ./src/__tests__/dynamicExport.function.spec.js",
-    "test:spec:index": "vitest run ./src/__tests__/index.spec.js",
-    "test:spec:mongoose.package": "vitest run ./src/__tests__/mongoose.package.spec.js",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -42,11 +39,9 @@
     "@jaypie/express": "^1.2.0-rc.4",
     "@jaypie/kit": "^1.2.0-rc.4",
     "@jaypie/lambda": "^1.2.0-rc.4",
-    "@jaypie/llm": "^1.2.0-rc.4",
     "@jaypie/logger": "^1.2.0-rc.4"
   },
   "devDependencies": {
-    "@jaypie/mongoose": "^1.2.0-rc.4",
     "@jaypie/types": "^0.1.7",
     "@rollup/plugin-typescript": "^12.1.4",
     "@types/node": "^24.8.1",
@@ -59,9 +54,13 @@
     "typescript-eslint": "^8.46.1"
   },
   "peerDependencies": {
+    "@jaypie/llm": "^1.2.0-rc.4",
     "@jaypie/mongoose": "^1.2.0-rc.4"
   },
   "peerDependenciesMeta": {
+    "@jaypie/llm": {
+      "optional": true
+    },
     "@jaypie/mongoose": {
       "optional": true
     }

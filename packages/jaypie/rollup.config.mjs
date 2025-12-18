@@ -2,14 +2,23 @@ import typescript from "@rollup/plugin-typescript";
 
 // Filter out TS2307 warnings for @jaypie/* packages (external workspace dependencies)
 const onwarn = (warning, defaultHandler) => {
-  if (
-    warning.plugin === "typescript" &&
-    warning.message.includes("@jaypie/")
-  ) {
+  if (warning.plugin === "typescript" && warning.message.includes("@jaypie/")) {
     return;
   }
   defaultHandler(warning);
 };
+
+// External dependencies - these are not bundled
+const external = [
+  "@jaypie/aws",
+  "@jaypie/core",
+  "@jaypie/datadog",
+  "@jaypie/errors",
+  "@jaypie/express",
+  "@jaypie/kit",
+  "@jaypie/lambda",
+  "@jaypie/logger",
+];
 
 export default [
   // ES modules version
@@ -28,19 +37,7 @@ export default [
         outDir: "dist/esm",
       }),
     ],
-    external: [
-      "@jaypie/aws",
-      "@jaypie/core",
-      "@jaypie/datadog",
-      "@jaypie/errors",
-      "@jaypie/express",
-      "@jaypie/kit",
-      "@jaypie/lambda",
-      "@jaypie/llm",
-      "@jaypie/logger",
-      "@jaypie/mongoose",
-      "module",
-    ],
+    external,
   },
   // CommonJS version
   {
@@ -60,18 +57,6 @@ export default [
         outDir: "dist/cjs",
       }),
     ],
-    external: [
-      "@jaypie/aws",
-      "@jaypie/core",
-      "@jaypie/datadog",
-      "@jaypie/errors",
-      "@jaypie/express",
-      "@jaypie/kit",
-      "@jaypie/lambda",
-      "@jaypie/llm",
-      "@jaypie/logger",
-      "@jaypie/mongoose",
-      "module",
-    ],
+    external,
   },
 ];
