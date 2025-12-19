@@ -139,6 +139,35 @@ describe("AnthropicAdapter", () => {
         expect(result.system).toBe("You are helpful");
       });
 
+      it("filters out system messages from messages array", () => {
+        // Anthropic only accepts system as a top-level field, not as a message role
+        const request: OperateRequest = {
+          model: "claude-opus-4",
+          messages: [
+            {
+              content: "You are a helpful assistant",
+              role: LlmMessageRole.System,
+              type: LlmMessageType.Message,
+            },
+            {
+              content: "Hello",
+              role: LlmMessageRole.User,
+              type: LlmMessageType.Message,
+            },
+          ],
+          system: "You are a helpful assistant",
+        };
+
+        const result = anthropicAdapter.buildRequest(request);
+
+        // System message should be filtered out from messages
+        expect(result.messages).toHaveLength(1);
+        expect(result.messages[0].role).toBe("user");
+        expect(result.messages[0].content).toBe("Hello");
+        // System should only be in the top-level field
+        expect(result.system).toBe("You are a helpful assistant");
+      });
+
       it("appends instructions to last message", () => {
         const request: OperateRequest = {
           model: "claude-opus-4",

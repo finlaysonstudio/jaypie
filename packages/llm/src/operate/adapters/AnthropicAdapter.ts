@@ -68,14 +68,20 @@ export class AnthropicAdapter extends BaseProviderAdapter {
 
   buildRequest(request: OperateRequest): Anthropic.MessageCreateParams {
     // Convert messages to Anthropic format (remove 'type' property)
-    const messages: Anthropic.MessageParam[] = request.messages.map((msg) => {
-      const anthropicMsg = structuredClone(msg) as unknown as Record<
-        string,
-        unknown
-      >;
-      delete anthropicMsg.type;
-      return anthropicMsg as unknown as Anthropic.MessageParam;
-    });
+    // Filter out system messages - Anthropic only accepts system as a top-level field
+    const messages: Anthropic.MessageParam[] = request.messages
+      .filter((msg) => {
+        const role = (msg as { role?: string }).role;
+        return role !== "system";
+      })
+      .map((msg) => {
+        const anthropicMsg = structuredClone(msg) as unknown as Record<
+          string,
+          unknown
+        >;
+        delete anthropicMsg.type;
+        return anthropicMsg as unknown as Anthropic.MessageParam;
+      });
 
     // Append instructions to last message if provided
     if (request.instructions && messages.length > 0) {
