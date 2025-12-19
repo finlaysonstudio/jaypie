@@ -11,6 +11,15 @@ export function determineModelProvider(input?: string): {
     };
   }
 
+  // Check for explicit openrouter: prefix
+  if (input.startsWith("openrouter:")) {
+    const model = input.slice("openrouter:".length);
+    return {
+      model,
+      provider: PROVIDER.OPENROUTER.NAME,
+    };
+  }
+
   // Check if input is a provider name
   if (input === PROVIDER.ANTHROPIC.NAME) {
     return {
@@ -75,6 +84,15 @@ export function determineModelProvider(input?: string): {
         provider: PROVIDER.OPENROUTER.NAME,
       };
     }
+  }
+
+  // Assume OpenRouter for models containing "/" (e.g., "openai/gpt-4", "anthropic/claude-3-opus")
+  // This check must come before match words so that "openai/gpt-4" is not matched by "openai" keyword
+  if (input.includes("/")) {
+    return {
+      model: input,
+      provider: PROVIDER.OPENROUTER.NAME,
+    };
   }
 
   // Check Anthropic match words
