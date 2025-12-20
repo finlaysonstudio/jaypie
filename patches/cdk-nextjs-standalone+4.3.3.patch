@@ -1,0 +1,15 @@
+diff --git a/node_modules/cdk-nextjs-standalone/lib/NextjsImage.js b/node_modules/cdk-nextjs-standalone/lib/NextjsImage.js
+index 8da6434..11a5c0b 100644
+--- a/node_modules/cdk-nextjs-standalone/lib/NextjsImage.js
++++ b/node_modules/cdk-nextjs-standalone/lib/NextjsImage.js
+@@ -14,7 +14,9 @@ class NextjsImage extends aws_lambda_1.Function {
+         const commonFnProps = (0, common_lambda_props_1.getCommonFunctionProps)(scope);
+         super(scope, id, {
+             ...commonFnProps,
+-            code: aws_lambda_1.Code.fromAsset(props.nextBuild.nextImageFnDir),
++            code: aws_lambda_1.Code.fromAsset(props.nextBuild.nextImageFnDir, {
++                exclude: ['node_modules/.bin'],
++            }),
+             handler: 'index.handler',
+             description: 'Next.js Image Optimization Function',
+             ...lambdaOptions,
