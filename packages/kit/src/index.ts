@@ -1,4 +1,5 @@
 // Existing
+export { isLocalEnv } from "./isLocalEnv.js";
 export { isNodeTestEnv } from "./isNodeTestEnv.js";
 export { isProductionEnv } from "./isProductionEnv.js";
 
