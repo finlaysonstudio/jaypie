@@ -1,4 +1,5 @@
 export { addDatadogLayers } from "./addDatadogLayers";
+export { cdkLog } from "./cdkLog";
 export { constructEnvName } from "./constructEnvName";
 export { constructStackName } from "./constructStackName";
 export { constructTagger } from "./constructTagger";

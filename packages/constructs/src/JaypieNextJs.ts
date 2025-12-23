@@ -6,6 +6,7 @@ import * as path from "path";
 
 import {
   addDatadogLayers,
+  cdkLog,
   envHostname,
   EnvironmentInput,
   jaypieLambdaEnv,
@@ -49,11 +50,34 @@ export class JaypieNextJs extends Construct {
   constructor(scope: Construct, id: string, props?: JaypieNextjsProps) {
     super(scope, id);
 
+    cdkLog("JaypieNextJs constructor called", {
+      id,
+      props: {
+        domainName: props?.domainName,
+        hostedZone:
+          typeof props?.hostedZone === "string"
+            ? props.hostedZone
+            : props?.hostedZone
+              ? "(IHostedZone object)"
+              : undefined,
+        nextjsPath: props?.nextjsPath,
+        hasEnvironment: !!props?.environment,
+        hasEnvSecrets: !!props?.envSecrets,
+        hasSecrets: !!props?.secrets,
+      },
+      cwd: process.cwd(),
+    });
+
     const domainName = props?.domainName || envHostname();
     this.domainName = domainName;
     const domainNameSanitized = domainName
       .replace(/\./g, "-")
       .replace(/[^a-zA-Z0-9]/g, "_");
+
+    cdkLog("JaypieNextJs domain resolved", {
+      domainName,
+      domainNameSanitized,
+    });
 
     // Resolve environment from array or object syntax
     const environment = resolveEnvironment(props?.environment);
@@ -62,6 +86,12 @@ export class JaypieNextJs extends Construct {
       ? path.join(process.cwd(), props.nextjsPath)
       : props?.nextjsPath || path.join(process.cwd(), "..", "nextjs");
     const paramsAndSecrets = resolveParamsAndSecrets();
+
+    cdkLog("JaypieNextJs paths resolved", {
+      nextjsPath,
+      propsNextjsPath: props?.nextjsPath,
+      cwd: process.cwd(),
+    });
 
     // Resolve secrets from mixed array (strings and JaypieEnvSecret instances)
     const secrets = resolveSecrets(scope, props?.secrets);
@@ -103,6 +133,18 @@ export class JaypieNextJs extends Construct {
       {},
     );
 
+    cdkLog("JaypieNextJs creating Nextjs construct", {
+      nextjsPath,
+      domainName,
+      environmentKeys: Object.keys({
+        ...jaypieLambdaEnv(),
+        ...environment,
+        ...secretsEnvironment,
+        ...jaypieSecretsEnvironment,
+        ...nextPublicEnv,
+      }),
+    });
+
     const nextjs = new Nextjs(this, "NextJsApp", {
       nextjsPath,
       domainProps: {
@@ -141,8 +183,11 @@ export class JaypieNextJs extends Construct {
       },
     });
 
+    cdkLog("JaypieNextJs Nextjs construct created successfully");
+
     addDatadogLayers(nextjs.imageOptimizationFunction);
     addDatadogLayers(nextjs.serverFunction.lambdaFunction);
+    cdkLog("JaypieNextJs Datadog layers added");
 
     // Grant secret read permissions
     Object.values(envSecrets).forEach((secret) => {
