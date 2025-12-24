@@ -1,6 +1,6 @@
 {
   "name": "@jaypie/llm",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Large language model utilities",
   "repository": {
     "type": "git",
@@ -32,10 +32,10 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@jaypie/aws": "^1.2.0-rc.4",
-    "@jaypie/errors": "^1.2.0-rc.4",
+    "@jaypie/aws": "^1.2.1",
+    "@jaypie/errors": "^1.2.1",
     "openai": "^6.9.1",
-    "openmeteo": "^1.2.0",
+    "openmeteo": "^1.2.1",
     "random": "^5.3.0",
     "z-schema": "^6.0.2",
     "zod": "^4.1.13"
@@ -49,8 +49,8 @@
   "peerDependencies": {
     "@anthropic-ai/sdk": "^0.71.0",
     "@google/genai": "^1.30.0",
-    "@jaypie/kit": "^1.2.0-rc.4",
-    "@jaypie/logger": "^1.2.0-rc.4",
+    "@jaypie/kit": "^1.2.1",
+    "@jaypie/logger": "^1.2.1",
     "@openrouter/sdk": "^0.1.27"
   },
   "peerDependenciesMeta": {
