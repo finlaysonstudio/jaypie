@@ -1,5 +1,3 @@
-import { createLogger } from "@jaypie/logger";
-
 //
 //
 // Export
@@ -8,5 +6,6 @@ import { createLogger } from "@jaypie/logger";
 // Core
 export { JAYPIE, PROJECT } from "./core/constants.js";
 
-// Logger
-export const log = createLogger();
+// Logger - re-export the singleton instance from @jaypie/logger
+// so that tag() calls from handlers propagate to all consumers
+export { log } from "@jaypie/logger";
