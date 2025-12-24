@@ -57,12 +57,6 @@
     "test:webkit": "npm run test --workspace packages/webkit",
     "typecheck": "npm run typecheck --workspaces"
   },
-  "overrides": {
-    "zod": "^3.23.8"
-  },
-  "dependencies": {
-    "@anthropic-ai/sdk": "^0.52.0"
-  },
   "devDependencies": {
     "@jaypie/eslint": "*",
     "@jaypie/repokit": "*",
