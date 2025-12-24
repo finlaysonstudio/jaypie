@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import {
-  validate,
   log,
   cloneDeep,
   envBoolean,
@@ -11,8 +10,6 @@ import {
   getObjectKeyCaseInsensitive,
   isClass,
   isJaypieError,
-  optional,
-  required,
   safeParseFloat,
   placeholders,
   force,
@@ -23,9 +20,7 @@ import {
   UnavailableError,
   ProjectError,
   HTTP,
-  VALIDATE,
 } from "../core";
-import { MockValidationError } from "../utils";
 
 afterEach(() => {
   vi.clearAllMocks();
@@ -34,27 +29,6 @@ afterEach(() => {
 describe("Core Mocks", () => {
   // 1. Base Cases
   describe("Base Cases", () => {
-    it("validate is a nested function", () => {
-      expect(validate).toBeMockFunction();
-      expect(validate.array).toBeMockFunction();
-      expect(validate.boolean).toBeMockFunction();
-      expect(validate.class).toBeMockFunction();
-      expect(validate.function).toBeMockFunction();
-      expect(validate.null).toBeMockFunction();
-      expect(validate.number).toBeMockFunction();
-      expect(validate.object).toBeMockFunction();
-      expect(validate.optional).toBeObject();
-      expect(validate.optional.array).toBeMockFunction();
-      expect(validate.optional.boolean).toBeMockFunction();
-      expect(validate.optional.class).toBeMockFunction();
-      expect(validate.optional.function).toBeMockFunction();
-      expect(validate.optional.null).toBeMockFunction();
-      expect(validate.optional.number).toBeMockFunction();
-      expect(validate.optional.object).toBeMockFunction();
-      expect(validate.string).toBeMockFunction();
-      expect(validate.undefined).toBeMockFunction();
-    });
-
     it("log has expected methods", () => {
       expect(log.debug).toBeMockFunction();
       expect(log.info).toBeMockFunction();
@@ -140,13 +114,12 @@ describe("Core Mocks", () => {
       expect(placeholders(template, values)).toBe("Hello, World!");
     });
 
-    it("uuid generates a valid UUID", () => {
+    it("uuid returns a mock UUID string", () => {
       const id = uuid();
       expect(typeof id).toBe("string");
       expect(id.length).toBe(36);
-      expect(id).toMatch(
-        /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
-      );
+      // Mock returns a fixed string "00000000-0000-0000-0000-000000000000"
+      expect(id).toBe("00000000-0000-0000-0000-000000000000");
     });
 
     it("sleep resolves with true", async () => {
@@ -595,94 +568,6 @@ describe("Core Mocks", () => {
       });
     });
 
-    describe("Required Function", () => {
-      it("Works", () => {
-        const response = required(12, Number);
-        expect(response).not.toBeUndefined();
-      });
-      describe("Features", () => {
-        describe("Obvious success cases", () => {
-          it("Passes arrays", () => {
-            const response = required.array([]);
-            expect(response).toBeTrue();
-          });
-          it("Passes booleans", () => {
-            const response = required.boolean(true);
-            expect(response).toBeTrue();
-          });
-          it("Passes numbers", () => {
-            const response = required.number(12);
-            expect(response).toBeTrue();
-          });
-          it("Passes negative", () => {
-            const response = required.number(-12);
-            expect(response).toBeTrue();
-          });
-          it("Passes positive", () => {
-            const response = required.positive(12);
-            expect(response).toBeTrue();
-          });
-          it("Passes objects", () => {
-            const response = required.object({});
-            expect(response).toBeTrue();
-          });
-          it("Passes strings", () => {
-            const response = required.string("taco");
-            expect(response).toBeTrue();
-          });
-        });
-      });
-    });
-
-    describe("Optional Function", () => {
-      it("Works", async () => {
-        const response = await optional(undefined, Number);
-        expect(response).not.toBeUndefined();
-        expect(response).toBeBoolean();
-        expect(response).toBeTrue();
-      });
-      describe("Features", () => {
-        it("Always passes undefined", () => {
-          expect(optional(undefined, {})).toBeTrue();
-          expect(optional(undefined, { type: Array })).toBeTrue();
-          expect(optional(undefined, { type: Boolean })).toBeTrue();
-          expect(optional(undefined, { type: Number })).toBeTrue();
-          expect(optional(undefined, { type: Object })).toBeTrue();
-          expect(optional(undefined, { type: String })).toBeTrue();
-        });
-        describe("Obvious success cases", () => {
-          it("Passes arrays", () => {
-            const response = optional.array([]);
-            expect(response).toBeTrue();
-          });
-          it("Passes booleans", () => {
-            const response = optional.boolean(true);
-            expect(response).toBeTrue();
-          });
-          it("Passes numbers", () => {
-            const response = optional.number(12);
-            expect(response).toBeTrue();
-          });
-          it("Passes negative", () => {
-            const response = optional.number(-12);
-            expect(response).toBeTrue();
-          });
-          it("Passes positive", () => {
-            const response = optional.positive(12);
-            expect(response).toBeTrue();
-          });
-          it("Passes objects", () => {
-            const response = optional.object({});
-            expect(response).toBeTrue();
-          });
-          it("Passes strings", () => {
-            const response = optional.string("taco");
-            expect(response).toBeTrue();
-          });
-        });
-      });
-    });
-
     it("formatError formats error object", () => {
       const error = new BadRequestError("test error");
       const formatted = formatError(error);
@@ -716,15 +601,15 @@ describe("Jaypie Core Utilities", () => {
     expect(vi.isMockFunction(envBoolean)).toBeTrue();
     expect(vi.isMockFunction(sleep)).toBeTrue();
     expect(vi.isMockFunction(uuid)).toBeTrue();
-    expect(vi.isMockFunction(validate)).toBeTrue();
   });
   it("Mocks return appropriate values", async () => {
     expect(envBoolean()).toBeTrue();
     await expect(sleep()).resolves.toBeTrue();
     expect(uuid()).toBeString();
-    expect(uuid()).toMatchUuid();
+    // Mock returns a fixed mock UUID string
+    expect(uuid()).toBe("00000000-0000-0000-0000-000000000000");
     uuid.mockReturnValueOnce("1234");
-    expect(uuid()).not.toMatchUuid();
+    expect(uuid()).toBe("1234");
   });
   describe("cloneDeep", () => {
     it("Should create a deep copy of an object", () => {
@@ -764,86 +649,6 @@ describe("Jaypie Core Utilities", () => {
       const result = cloneDeep({ original: true });
       expect(result).toBe(mockValue);
       expect(cloneDeep).toHaveBeenCalledWith({ original: true });
-    });
-  });
-  describe("Validate", () => {
-    describe("Base Cases", () => {
-      it("Works as expected", () => {
-        expect(validate("test", { type: VALIDATE.STRING })).toBeTrue();
-        expect(
-          validate(42, { type: VALIDATE.STRING, throws: false }),
-        ).toBeFalse();
-        expect(validate(42, { type: VALIDATE.NUMBER })).toBeTrue();
-        expect(validate([], { type: VALIDATE.ARRAY })).toBeTrue();
-        expect(validate({}, { type: VALIDATE.OBJECT })).toBeTrue();
-      });
-
-      it("Has the expected convenience methods", () => {
-        expect(vi.isMockFunction(validate.string)).toBeTrue();
-        expect(vi.isMockFunction(validate.number)).toBeTrue();
-        expect(vi.isMockFunction(validate.array)).toBeTrue();
-        expect(vi.isMockFunction(validate.boolean)).toBeTrue();
-        expect(vi.isMockFunction(validate.class)).toBeTrue();
-        expect(vi.isMockFunction(validate.function)).toBeTrue();
-        expect(vi.isMockFunction(validate.null)).toBeTrue();
-        expect(vi.isMockFunction(validate.object)).toBeTrue();
-        expect(vi.isMockFunction(validate.undefined)).toBeTrue();
-      });
-
-      it("Has the expected optional methods", () => {
-        expect(vi.isMockFunction(validate.optional.string)).toBeTrue();
-        expect(vi.isMockFunction(validate.optional.number)).toBeTrue();
-        expect(vi.isMockFunction(validate.optional.array)).toBeTrue();
-        expect(vi.isMockFunction(validate.optional.boolean)).toBeTrue();
-        expect(vi.isMockFunction(validate.optional.class)).toBeTrue();
-        expect(vi.isMockFunction(validate.optional.function)).toBeTrue();
-        expect(vi.isMockFunction(validate.optional.null)).toBeTrue();
-        expect(vi.isMockFunction(validate.optional.object)).toBeTrue();
-      });
-    });
-
-    describe("Functionality", () => {
-      it("Throws errors when expected", () => {
-        expect(() => validate(42, { type: VALIDATE.STRING })).toThrow();
-        expect(() => validate.string(42)).toThrow();
-      });
-
-      it("Convenience methods work correctly", () => {
-        expect(validate.string("test")).toBeTrue();
-        expect(validate.number(42)).toBeTrue();
-        expect(validate.array([])).toBeTrue();
-        expect(validate.object({})).toBeTrue();
-        expect(validate.boolean(true)).toBeTrue();
-
-        expect(() => validate.number("42")).toThrow();
-        expect(() => validate.array({})).toThrow();
-      });
-
-      it("Optional methods work correctly", () => {
-        expect(validate.optional.string("test")).toBeTrue();
-        expect(validate.optional.number(42)).toBeTrue();
-        expect(validate.optional.string(undefined)).toBeTrue();
-        expect(validate.optional.number(undefined)).toBeTrue();
-
-        expect(() => validate.optional.number("42")).toThrow();
-        expect(() => validate.optional.array({})).toThrow();
-      });
-
-      it("Can be mocked for testing", () => {
-        const original = validate.string;
-        try {
-          (validate.string as any).mockReturnValueOnce(false);
-          expect(validate.string("test")).toBeFalse();
-
-          (validate as any).mockReturnValueOnce(false);
-          expect(
-            validate("test", { type: VALIDATE.STRING, throws: false }),
-          ).toBeFalse();
-        } finally {
-          // Restore the original implementation
-          (validate.string as any).mockImplementation(original);
-        }
-      });
     });
   });
   describe("Jaypie Handler", () => {

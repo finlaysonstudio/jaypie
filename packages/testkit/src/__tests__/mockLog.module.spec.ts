@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { log } from "@jaypie/core";
+import { log } from "@jaypie/logger";
 
 // Subject
 import { mockLogFactory, restoreLog, spyLog } from "../mockLog.module";

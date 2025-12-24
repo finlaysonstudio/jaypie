@@ -1,10 +1,10 @@
 {
   "name": "@jaypie/constructs",
-  "version": "1.1.66",
+  "version": "1.2.0",
   "description": "CDK constructs for Jaypie applications",
   "repository": {
     "type": "git",
-    "url": "https://github.com/finlaysonstudio/jaypie"
+    "url": "git+https://github.com/finlaysonstudio/jaypie.git"
   },
   "license": "MIT",
   "author": "Finlayson Studio",
@@ -31,7 +31,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@jaypie/errors": "^1.1.6",
+    "@jaypie/errors": "^1.2.0-rc.4",
     "aws-cdk-lib": "^2.232.1",
     "cdk-nextjs-standalone": "^4.3.2",
     "constructs": "^10.4.3",

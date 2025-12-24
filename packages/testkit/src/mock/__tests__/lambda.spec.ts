@@ -172,7 +172,10 @@ describe("Jaypie Lambda", () => {
         it("Works with the options object first", async () => {
           // Arrange
           const mockFunction = vi.fn();
-          const handler = lambdaHandler({ unavailable: true } as any, mockFunction as any);
+          const handler = lambdaHandler(
+            { unavailable: true } as any,
+            mockFunction as any,
+          );
           const event = {};
           const context = {};
           // Act

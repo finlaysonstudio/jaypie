@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { z } from "zod";
+import { z } from "zod/v3";
 
 describe("MCP Integration", () => {
   it("should reproduce the original MCP tool call issue", async () => {

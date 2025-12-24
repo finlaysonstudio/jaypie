@@ -6,9 +6,7 @@ export function toBeMockFunction(received: unknown): MatcherResult {
 
   return {
     message: () =>
-      `expected ${received} ${
-        pass ? "not " : ""
-      }to be a mock function`,
+      `expected ${received} ${pass ? "not " : ""}to be a mock function`,
     pass,
   };
 }

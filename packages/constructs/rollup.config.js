@@ -1,9 +1,21 @@
 import typescript from "@rollup/plugin-typescript";
 
+// Filter out TS2307 warnings for @jaypie/* packages (external workspace dependencies)
+const onwarn = (warning, defaultHandler) => {
+  if (
+    warning.plugin === "typescript" &&
+    warning.message.includes("@jaypie/")
+  ) {
+    return;
+  }
+  defaultHandler(warning);
+};
+
 export default [
   // ES modules version
   {
     input: "src/index.ts",
+    onwarn,
     output: {
       dir: "dist/esm",
       format: "es",
@@ -17,7 +29,6 @@ export default [
       }),
     ],
     external: [
-      "@jaypie/cdk",
       "@jaypie/errors",
       "aws-cdk-lib",
       "aws-cdk-lib/aws-apigateway",
@@ -49,6 +60,7 @@ export default [
   // CommonJS version
   {
     input: "src/index.ts",
+    onwarn,
     output: {
       dir: "dist/cjs",
       format: "cjs",
@@ -64,7 +76,6 @@ export default [
       }),
     ],
     external: [
-      "@jaypie/cdk",
       "@jaypie/errors",
       "aws-cdk-lib",
       "aws-cdk-lib/aws-apigateway",

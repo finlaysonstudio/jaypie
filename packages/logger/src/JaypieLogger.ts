@@ -62,29 +62,36 @@ class JaypieLogger {
 
     this.debug = ((...args: any[]) =>
       this._logger.debug(...args)) as Logger["debug"];
-    this.debug.var = (messageObject: unknown, messageValue?: unknown) => this._logger.debug.var(messageObject, messageValue);
+    this.debug.var = (messageObject: unknown, messageValue?: unknown) =>
+      this._logger.debug.var(messageObject, messageValue);
 
     this.error = ((...args: any[]) =>
       this._logger.error(...args)) as Logger["error"];
-    this.error.var = (messageObject: unknown, messageValue?: unknown) => this._logger.error.var(messageObject, messageValue);
+    this.error.var = (messageObject: unknown, messageValue?: unknown) =>
+      this._logger.error.var(messageObject, messageValue);
 
     this.fatal = ((...args: any[]) =>
       this._logger.fatal(...args)) as Logger["fatal"];
-    this.fatal.var = (messageObject: unknown, messageValue?: unknown) => this._logger.fatal.var(messageObject, messageValue);
+    this.fatal.var = (messageObject: unknown, messageValue?: unknown) =>
+      this._logger.fatal.var(messageObject, messageValue);
 
     this.info = ((...args: any[]) =>
       this._logger.info(...args)) as Logger["info"];
-    this.info.var = (messageObject: unknown, messageValue?: unknown) => this._logger.info.var(messageObject, messageValue);
+    this.info.var = (messageObject: unknown, messageValue?: unknown) =>
+      this._logger.info.var(messageObject, messageValue);
 
     this.trace = ((...args: any[]) =>
       this._logger.trace(...args)) as Logger["trace"];
-    this.trace.var = (messageObject: unknown, messageValue?: unknown) => this._logger.trace.var(messageObject, messageValue);
+    this.trace.var = (messageObject: unknown, messageValue?: unknown) =>
+      this._logger.trace.var(messageObject, messageValue);
 
     this.warn = ((...args: any[]) =>
       this._logger.warn(...args)) as Logger["warn"];
-    this.warn.var = (messageObject: unknown, messageValue?: unknown) => this._logger.warn.var(messageObject, messageValue);
+    this.warn.var = (messageObject: unknown, messageValue?: unknown) =>
+      this._logger.warn.var(messageObject, messageValue);
 
-    this.var = (messageObject: unknown, messageValue?: unknown) => this._logger.var(logVar(messageObject, messageValue));
+    this.var = (messageObject: unknown, messageValue?: unknown) =>
+      this._logger.var(logVar(messageObject, messageValue));
   }
 
   public init(): void {
@@ -182,7 +189,9 @@ class JaypieLogger {
 
   public with(key: unknown, value?: unknown): JaypieLogger {
     if (!key || (typeof key !== "object" && value === undefined)) {
-      throw new Error("ConfigurationError: with() requires an object argument or key-value pair");
+      throw new Error(
+        "ConfigurationError: with() requires an object argument or key-value pair",
+      );
     }
     const loggerKey = JSON.stringify([key, value]);
     if (Object.keys(this._withLoggers).includes(loggerKey)) {

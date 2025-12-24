@@ -191,7 +191,9 @@ For testing purposes only`,
   });
 
   it("Mocks return string values", () => {
-    expect(new (MarkdownPage as any)({} as TextractPageAdaptable).text).toBeString();
+    expect(
+      new (MarkdownPage as any)({} as TextractPageAdaptable).text,
+    ).toBeString();
     expect(textractJsonToMarkdown({} as JsonReturn)).toBeString();
   });
 });

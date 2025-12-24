@@ -21,12 +21,18 @@ import { Toolkit } from "../../tools/Toolkit.class.js";
 // Mock
 //
 
-vi.mock("@jaypie/core", () => ({
+vi.mock("@jaypie/kit", () => ({
   JAYPIE: {
     LIB: {
       LLM: "@jaypie/llm",
     },
   },
+  placeholders: vi.fn((str: string) => str),
+  resolveValue: vi.fn((val) => val),
+  sleep: vi.fn(() => Promise.resolve()),
+}));
+
+vi.mock("@jaypie/logger", () => ({
   log: {
     lib: vi.fn(() => ({
       debug: vi.fn(),
@@ -36,9 +42,6 @@ vi.mock("@jaypie/core", () => ({
       warn: vi.fn(),
     })),
   },
-  placeholders: vi.fn((str: string) => str),
-  resolveValue: vi.fn((val) => val),
-  sleep: vi.fn(() => Promise.resolve()),
 }));
 
 vi.mock("@jaypie/errors", () => ({
@@ -509,17 +512,6 @@ describe("OperateLoop", () => {
 
   // Specific Scenarios
   describe("Specific Scenarios", () => {
-    it("uses custom maxRetries from config", () => {
-      const loop = new OperateLoop({
-        adapter: mockAdapter,
-        client: mockClient,
-        maxRetries: 10,
-      });
-
-      // The loop is created with custom maxRetries
-      expect(loop).toBeInstanceOf(OperateLoop);
-    });
-
     it("handles options.model override", async () => {
       const loop = new OperateLoop({
         adapter: mockAdapter,

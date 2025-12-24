@@ -103,7 +103,7 @@ export class JaypieAccountLoggingBucket extends Construct {
       : "account-logging-stack";
 
     // Extract Jaypie-specific options
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
     const {
       bucketName = defaultBucketName,
       createOutput = true,

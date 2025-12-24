@@ -1,5 +1,5 @@
 import { getEnvSecret } from "@jaypie/aws";
-import { log } from "@jaypie/core";
+import { log } from "@jaypie/logger";
 import Anthropic from "@anthropic-ai/sdk";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { PROVIDER } from "../../../constants.js";
@@ -15,7 +15,30 @@ vi.mock("@jaypie/aws", () => ({
   getEnvSecret: vi.fn(),
 }));
 
-vi.mock("@jaypie/core", () => {
+vi.mock("@jaypie/errors", () => ({
+  ConfigurationError: class ConfigurationError extends Error {
+    constructor(message: string) {
+      super(message);
+      this.name = "ConfigurationError";
+    }
+  },
+}));
+
+vi.mock("@jaypie/kit", () => ({
+  placeholders: vi.fn((text, data) => {
+    if (!data) return text;
+    return Object.entries(data).reduce((result, [key, value]) => {
+      return result.replace(new RegExp(`{{${key}}}`, "g"), String(value));
+    }, text);
+  }),
+  JAYPIE: {
+    LIB: {
+      LLM: "llm",
+    },
+  },
+}));
+
+vi.mock("@jaypie/logger", () => {
   const mockLogger = {
     trace: vi.fn(),
     error: vi.fn(),
@@ -25,23 +48,6 @@ vi.mock("@jaypie/core", () => {
   return {
     log: {
       lib: vi.fn().mockReturnValue(mockLogger),
-    },
-    ConfigurationError: class ConfigurationError extends Error {
-      constructor(message: string) {
-        super(message);
-        this.name = "ConfigurationError";
-      }
-    },
-    placeholders: vi.fn((text, data) => {
-      if (!data) return text;
-      return Object.entries(data).reduce((result, [key, value]) => {
-        return result.replace(new RegExp(`{{${key}}}`, "g"), String(value));
-      }, text);
-    }),
-    JAYPIE: {
-      LIB: {
-        LLM: "llm",
-      },
     },
   };
 });

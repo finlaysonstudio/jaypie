@@ -56,6 +56,6 @@ Jaypie follows an event-driven architecture centered around:
 
 ## Next Steps
 
-- Explore the [API Reference](./api/core) for detailed package documentation
+- Explore the [API Reference](/docs/api/core) for detailed package documentation
 - Check out the [GitHub repository](https://github.com/finlaysonstudio/jaypie)
 - View packages on [npm](https://www.npmjs.com/package/@jaypie/jaypie)

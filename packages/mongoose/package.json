@@ -1,24 +1,28 @@
 {
   "name": "@jaypie/mongoose",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/finlaysonstudio/jaypie"
+    "url": "git+https://github.com/finlaysonstudio/jaypie.git"
   },
   "license": "MIT",
   "author": "Finlayson Studio",
+  "sideEffects": false,
   "type": "module",
   "exports": {
     ".": {
-      "types": "./index.d.ts",
-      "default": {
-        "require": "./dist/jaypie-mongoose.cjs",
-        "default": "./src/index.js"
-      }
+      "types": "./dist/esm/index.d.ts",
+      "require": "./dist/cjs/index.cjs",
+      "import": "./dist/esm/index.js",
+      "default": "./dist/esm/index.js"
     }
   },
-  "main": "src/index.js",
-  "types": "index.d.ts",
+  "main": "./dist/cjs/index.cjs",
+  "module": "./dist/esm/index.js",
+  "types": "./dist/esm/index.d.ts",
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "rollup --config",
     "format": "npm run format:package && npm run format:lint",
@@ -26,14 +30,24 @@
     "format:package": "sort-package-json ./package.json",
     "lint": "eslint .",
     "test": "vitest run .",
-    "test:spec:connect.function": "vitest run ./src/__tests__/connect.function.spec.js",
-    "test:spec:connectFromSecretEnv.function": "vitest run ./src/__tests__/connectFromSecretEnv.function.spec.js",
-    "test:spec:index": "vitest run ./src/__tests__/index.spec.js",
-    "typecheck": "echo '[TODO] Convert @jaypie/mongoose to TypeScript'"
+    "test:spec:connect.function": "vitest run ./src/__tests__/connect.function.spec.ts",
+    "test:spec:connectFromSecretEnv.function": "vitest run ./src/__tests__/connectFromSecretEnv.function.spec.ts",
+    "test:spec:index": "vitest run ./src/__tests__/index.spec.ts",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@jaypie/aws": "^1.1.0",
-    "@jaypie/core": "^1.1.0",
+    "@jaypie/aws": "^1.2.0-rc.4"
+  },
+  "devDependencies": {
+    "@rollup/plugin-typescript": "^12.1.2",
+    "@types/node": "^22.13.1",
+    "mongoose": "^8.3.0",
+    "typescript": "^5.3.3"
+  },
+  "peerDependencies": {
+    "@jaypie/errors": "^1.2.0-rc.4",
+    "@jaypie/kit": "^1.2.0-rc.4",
+    "@jaypie/logger": "^1.2.0-rc.4",
     "mongoose": "^8.3.0"
   },
   "publishConfig": {

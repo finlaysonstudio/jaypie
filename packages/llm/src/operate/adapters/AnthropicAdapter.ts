@@ -1,14 +1,4 @@
-import {
-  Anthropic,
-  APIConnectionError,
-  APIConnectionTimeoutError,
-  AuthenticationError,
-  BadRequestError,
-  InternalServerError,
-  NotFoundError,
-  PermissionDeniedError,
-  RateLimitError,
-} from "@anthropic-ai/sdk";
+import type { Anthropic } from "@anthropic-ai/sdk";
 import { JsonObject, NaturalSchema } from "@jaypie/types";
 import { z } from "zod/v4";
 
@@ -21,6 +11,10 @@ import {
   LlmOutputMessage,
   LlmUsageItem,
 } from "../../types/LlmProvider.interface.js";
+import {
+  LlmStreamChunk,
+  LlmStreamChunkType,
+} from "../../types/LlmStreamChunk.interface.js";
 import { naturalZodSchema } from "../../util/index.js";
 import {
   ClassifiedError,
@@ -40,17 +34,18 @@ import { BaseProviderAdapter } from "./ProviderAdapter.interface.js";
 
 const STRUCTURED_OUTPUT_TOOL_NAME = "structured_output";
 
-const RETRYABLE_ERROR_TYPES = [
-  APIConnectionError,
-  APIConnectionTimeoutError,
-  InternalServerError,
+// Error names for classification (using string names since SDK is optional)
+const RETRYABLE_ERROR_NAMES = [
+  "APIConnectionError",
+  "APIConnectionTimeoutError",
+  "InternalServerError",
 ];
 
-const NOT_RETRYABLE_ERROR_TYPES = [
-  AuthenticationError,
-  BadRequestError,
-  NotFoundError,
-  PermissionDeniedError,
+const NOT_RETRYABLE_ERROR_NAMES = [
+  "AuthenticationError",
+  "BadRequestError",
+  "NotFoundError",
+  "PermissionDeniedError",
 ];
 
 //
@@ -73,14 +68,20 @@ export class AnthropicAdapter extends BaseProviderAdapter {
 
   buildRequest(request: OperateRequest): Anthropic.MessageCreateParams {
     // Convert messages to Anthropic format (remove 'type' property)
-    const messages: Anthropic.MessageParam[] = request.messages.map((msg) => {
-      const anthropicMsg = structuredClone(msg) as unknown as Record<
-        string,
-        unknown
-      >;
-      delete anthropicMsg.type;
-      return anthropicMsg as unknown as Anthropic.MessageParam;
-    });
+    // Filter out system messages - Anthropic only accepts system as a top-level field
+    const messages: Anthropic.MessageParam[] = request.messages
+      .filter((msg) => {
+        const role = (msg as { role?: string }).role;
+        return role !== "system";
+      })
+      .map((msg) => {
+        const anthropicMsg = structuredClone(msg) as unknown as Record<
+          string,
+          unknown
+        >;
+        delete anthropicMsg.type;
+        return anthropicMsg as unknown as Anthropic.MessageParam;
+      });
 
     // Append instructions to last message if provided
     if (request.instructions && messages.length > 0) {
@@ -199,6 +200,96 @@ export class AnthropicAdapter extends BaseProviderAdapter {
     return (await anthropic.messages.create(
       request as Anthropic.MessageCreateParams,
     )) as Anthropic.Message;
+  }
+
+  async *executeStreamRequest(
+    client: unknown,
+    request: unknown,
+  ): AsyncIterable<LlmStreamChunk> {
+    const anthropic = client as Anthropic;
+    const streamRequest = {
+      ...(request as Anthropic.MessageCreateParams),
+      stream: true,
+    } as Anthropic.MessageCreateParamsStreaming;
+
+    const stream = await anthropic.messages.create(streamRequest);
+
+    // Track current tool call being built
+    let currentToolCall: {
+      id: string;
+      name: string;
+      arguments: string;
+    } | null = null;
+
+    // Track usage for final chunk
+    let inputTokens = 0;
+    let outputTokens = 0;
+    let model = streamRequest.model;
+
+    for await (const event of stream) {
+      if (event.type === "message_start") {
+        // Extract initial usage and model info
+        const message = event.message;
+        if (message.usage) {
+          inputTokens = message.usage.input_tokens;
+        }
+        model = message.model;
+      } else if (event.type === "content_block_start") {
+        const contentBlock = event.content_block;
+        if (contentBlock.type === "tool_use") {
+          // Start building a tool call
+          currentToolCall = {
+            id: contentBlock.id,
+            name: contentBlock.name,
+            arguments: "",
+          };
+        }
+      } else if (event.type === "content_block_delta") {
+        const delta = event.delta;
+        if (delta.type === "text_delta") {
+          yield {
+            type: LlmStreamChunkType.Text,
+            content: delta.text,
+          };
+        } else if (delta.type === "input_json_delta" && currentToolCall) {
+          // Accumulate tool call arguments
+          currentToolCall.arguments += delta.partial_json;
+        }
+      } else if (event.type === "content_block_stop") {
+        // If we were building a tool call, emit it now
+        if (currentToolCall) {
+          yield {
+            type: LlmStreamChunkType.ToolCall,
+            toolCall: {
+              id: currentToolCall.id,
+              name: currentToolCall.name,
+              arguments: currentToolCall.arguments,
+            },
+          };
+          currentToolCall = null;
+        }
+      } else if (event.type === "message_delta") {
+        // Extract final usage
+        if (event.usage) {
+          outputTokens = event.usage.output_tokens;
+        }
+      } else if (event.type === "message_stop") {
+        // Emit done chunk with usage
+        yield {
+          type: LlmStreamChunkType.Done,
+          usage: [
+            {
+              input: inputTokens,
+              output: outputTokens,
+              reasoning: 0,
+              total: inputTokens + outputTokens,
+              provider: this.name,
+              model,
+            },
+          ],
+        };
+      }
+    }
   }
 
   //
@@ -329,8 +420,10 @@ export class AnthropicAdapter extends BaseProviderAdapter {
   //
 
   classifyError(error: unknown): ClassifiedError {
+    const errorName = (error as Error)?.constructor?.name;
+
     // Check for rate limit error
-    if (error instanceof RateLimitError) {
+    if (errorName === "RateLimitError") {
       return {
         error,
         category: ErrorCategory.RateLimit,
@@ -340,25 +433,21 @@ export class AnthropicAdapter extends BaseProviderAdapter {
     }
 
     // Check for retryable errors
-    for (const ErrorType of RETRYABLE_ERROR_TYPES) {
-      if (error instanceof ErrorType) {
-        return {
-          error,
-          category: ErrorCategory.Retryable,
-          shouldRetry: true,
-        };
-      }
+    if (RETRYABLE_ERROR_NAMES.includes(errorName)) {
+      return {
+        error,
+        category: ErrorCategory.Retryable,
+        shouldRetry: true,
+      };
     }
 
     // Check for non-retryable errors
-    for (const ErrorType of NOT_RETRYABLE_ERROR_TYPES) {
-      if (error instanceof ErrorType) {
-        return {
-          error,
-          category: ErrorCategory.Unrecoverable,
-          shouldRetry: false,
-        };
-      }
+    if (NOT_RETRYABLE_ERROR_NAMES.includes(errorName)) {
+      return {
+        error,
+        category: ErrorCategory.Unrecoverable,
+        shouldRetry: false,
+      };
     }
 
     // Unknown error - treat as potentially retryable

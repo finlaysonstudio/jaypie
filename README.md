@@ -53,9 +53,6 @@ Jaypie strives to be "mockable-first," meaning all components should be easily t
 npm install jaypie
 ```
 
-`@jaypie/core` is included in `jaypie`.  
-Almost every Jaypie package requires core.  
-
 #### Included Packages
 
 These packages are included in `jaypie`.  
@@ -78,14 +75,6 @@ Matchers (including all jest-extended matchers), mocks, and utilities to test Ja
 npm install --save-dev @jaypie/testkit
 ```
 
-#### WebKit
-
-Frontend utilities for Jaypie.
-
-```bash
-npm install @jaypie/webkit
-```
-
 ### Example
 
 ```javascript
@@ -101,8 +90,7 @@ export const handler = lambdaHandler(async({event}) => {
 }, { name: "example"});
 ```
 
-This example would then be deployed to AWS via CDK or similar orchestration.  
-See [@jaypie/cdk](https://github.com/finlaysonstudio/jaypie-cdk).  
+This example would then be deployed to AWS via CDK or similar orchestration.
 
 ## 📖 Reference
 
@@ -970,7 +958,7 @@ const worker = new JaypieQueuedLambda(this, 'Worker', {
 | `roleTag` | `string` | No | Role tag for resource management |
 | `runtime` | `lambda.Runtime` | No | Lambda runtime, default NODEJS_22_X |
 | `secrets` | `JaypieEnvSecret[]` | No | JaypieEnvSecrets to inject |
-| `timeout` | `Duration \| number` | No | Lambda timeout duration or number of seconds, defaults to CDK.DURATION.LAMBDA_WORKER (120 seconds) |
+| `timeout` | `Duration \| number` | No | Lambda timeout duration or number of seconds, defaults to CDK.DURATION.LAMBDA_WORKER (900 seconds) |
 | `vendorTag` | `string` | No | Vendor tag for resource management |
 | `visibilityTimeout` | `Duration \| number` | No | SQS visibility timeout |
 
@@ -1009,7 +997,7 @@ const lambda = new JaypieLambda(this, 'Function', {
 | `roleTag` | `string` | No | Role tag for resource management |
 | `runtime` | `lambda.Runtime` | No | Lambda runtime, default NODEJS_22_X |
 | `secrets` | `JaypieEnvSecret[]` | No | JaypieEnvSecrets to inject |
-| `timeout` | `Duration \| number` | No | Lambda timeout duration or number of seconds, defaults to CDK.DURATION.LAMBDA_WORKER (120 seconds) |
+| `timeout` | `Duration \| number` | No | Lambda timeout duration or number of seconds, defaults to CDK.DURATION.LAMBDA_WORKER (900 seconds) |
 | `vendorTag` | `string` | No | Vendor tag for resource management |
 
 When provided with a Datadog API key (via `datadogApiKeyArn` or environment variables), the construct automatically:
@@ -1183,18 +1171,6 @@ See `HTTP` for status codes.
 * `HTTP.CONTENT.TEXT`
 * `HTTP.HEADER`: ...
 * `HTTP.METHOD`: `GET`, `POST`, ...
-
-#### `VALIDATE`
-
-* `VALIDATE.ANY` - Default
-* `VALIDATE.ARRAY`
-* `VALIDATE.CLASS`
-* `VALIDATE.FUNCTION`
-* `VALIDATE.NUMBER`
-* `VALIDATE.NULL`
-* `VALIDATE.OBJECT`
-* `VALIDATE.STRING`
-* `VALIDATE.UNDEFINED`
 
 #### Internal Constants
 
@@ -1710,50 +1686,6 @@ The `v4` function from the `uuid` package.
 import { uuid } from "jaypie";
 
 const id = uuid();
-```
-
-#### `validate`
-
-```javascript
-import { validate, VALIDATE } from "jaypie";
-
-validate(argument, {
-  type: VALIDATE.ANY,
-  falsy: false,     // When `true`, allows "falsy" values that match the type (e.g., `0`, `""`)
-  required: true,   // When `false`, allows `undefined` as a valid value
-  throws: true      // When `false`, returns `false` instead of throwing error
-});
-```
-
-##### Validate Convenience Functions
-
-``` javascript
-import { validate } from "jaypie";
-
-validate.array(argument);
-validate.class(argument);
-validate.function(argument);
-validate.null(argument);
-validate.number(argument);
-validate.object(argument);
-validate.string(argument);
-validate.undefined(argument);
-```
-
-##### Intuitive Validate Types
-
-_Does not include any, class, or undefined_
-
-``` javascript
-validate(argument, {
-  // One of:
-  type: Array,
-  type: Function,
-  type: Number,
-  type: null,
-  type: Object,
-  type: String,
-})
 ```
 
 ### Jaypie Handler
@@ -2764,26 +2696,6 @@ const event = sqsTestRecords(
 );
 ```
 
-### WebKit
-
-Browser-optimized, framework-agnostic frontend utilities for Jaypie.  
-
-```bash
-npm install @jaypie/webkit
-```
-
-#### WebKit Reference
-
-```
-import { 
-  uuid
-} from '@jaypie/webkit'
-```
-
-##### `uuid`
-
-The `v4` function from the `uuid` package.  
-
 ## 🛣️ Roadmap
 
 * 1.2 - Converted to TypeScript?  
@@ -2794,10 +2706,9 @@ The `v4` function from the `uuid` package.
 * Complete conversion to TypeScript.  
 * Incomplete: aws, core, datadog, express, jaypie, lambda, mongoose.  
 * Nicely organized VitePress documentation 😅.  
-* More packages: auth0, commander, hygen, llm.  
-* Mongoose project schema.  
-* Better mocking of Mongoose.  
-* @jaypie/constructs replaces @jaypie/cdk.  
+* More packages: auth0, commander, hygen, llm.
+* Mongoose project schema.
+* Better mocking of Mongoose.
 
 ## 📝 Changelog
 
@@ -2825,8 +2736,8 @@ For example,
 
 Process for minor releases:  
 
-* Update core, eslint (no internal dependencies).  
-* Update aws, cdk, express, lambda (depend on core).  
+* Update core, eslint (no internal dependencies).
+* Update aws, constructs, express, lambda.
 * Update datadog, mongoose (depend on aws).  
 * Update jaypie (depends on above).  
 * Update testkit (depends on jaypie).  

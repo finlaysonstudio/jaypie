@@ -1,9 +1,11 @@
 import { JsonObject } from "@jaypie/types";
-import { OpenRouter } from "@openrouter/sdk";
+import type { OpenRouter } from "@openrouter/sdk";
 import {
   createOperateLoop,
+  createStreamLoop,
   OperateLoop,
   openRouterAdapter,
+  StreamLoop,
 } from "../../operate/index.js";
 import {
   LlmHistory,
@@ -14,6 +16,7 @@ import {
   LlmProvider,
   LlmHistoryItem,
 } from "../../types/LlmProvider.interface.js";
+import { LlmStreamChunk } from "../../types/LlmStreamChunk.interface.js";
 import {
   getDefaultModel,
   getLogger,
@@ -25,6 +28,7 @@ export class OpenRouterProvider implements LlmProvider {
   private model: string;
   private _client?: OpenRouter;
   private _operateLoop?: OperateLoop;
+  private _streamLoop?: StreamLoop;
   private apiKey?: string;
   private log = getLogger();
   private conversationHistory: LlmHistoryItem[] = [];
@@ -57,6 +61,19 @@ export class OpenRouterProvider implements LlmProvider {
       client,
     });
     return this._operateLoop;
+  }
+
+  private async getStreamLoop(): Promise<StreamLoop> {
+    if (this._streamLoop) {
+      return this._streamLoop;
+    }
+
+    const client = await this.getClient();
+    this._streamLoop = createStreamLoop({
+      adapter: openRouterAdapter,
+      client,
+    });
+    return this._streamLoop;
   }
 
   async send(
@@ -123,5 +140,23 @@ export class OpenRouterProvider implements LlmProvider {
     }
 
     return response;
+  }
+
+  async *stream(
+    input: string | LlmHistory | LlmInputMessage,
+    options: LlmOperateOptions = {},
+  ): AsyncIterable<LlmStreamChunk> {
+    const streamLoop = await this.getStreamLoop();
+    const mergedOptions = { ...options, model: options.model ?? this.model };
+
+    // Create a merged history including both the tracked history and any explicitly provided history
+    if (this.conversationHistory.length > 0) {
+      mergedOptions.history = options.history
+        ? [...this.conversationHistory, ...options.history]
+        : [...this.conversationHistory];
+    }
+
+    // Execute stream loop
+    yield* streamLoop.execute(input, mergedOptions);
   }
 }

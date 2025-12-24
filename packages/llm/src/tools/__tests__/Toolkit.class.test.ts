@@ -2,26 +2,34 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { Toolkit } from "../Toolkit.class";
 import { LlmTool } from "../../types/LlmTool.interface";
 
-// Mock jaypie/core
-vi.mock("@jaypie/core", () => {
+// Mock jaypie/kit and jaypie/logger
+vi.mock("@jaypie/kit", () => ({
+  JAYPIE: {
+    LIB: {
+      LLM: "llm",
+    },
+  },
+  resolveValue: vi.fn((value) => Promise.resolve(value)),
+}));
+
+vi.mock("@jaypie/logger", () => {
   const mockLog = {
     trace: vi.fn(),
     error: vi.fn(),
     var: vi.fn(),
     debug: vi.fn(),
     warn: vi.fn(),
+    lib: vi.fn(() => ({
+      trace: vi.fn(),
+      error: vi.fn(),
+      var: vi.fn(),
+      debug: vi.fn(),
+      warn: vi.fn(),
+    })),
   };
 
   return {
-    JAYPIE: {
-      LIB: {
-        LLM: "llm",
-      },
-    },
-    log: {
-      lib: vi.fn(() => mockLog),
-    },
-    resolveValue: vi.fn((value) => Promise.resolve(value)),
+    log: mockLog,
   };
 });
 

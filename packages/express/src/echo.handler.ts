@@ -1,5 +1,5 @@
 import type { Request, Response } from "express";
-import { validate } from "@jaypie/core";
+import { BadRequestError } from "@jaypie/errors";
 
 import expressHandler, { ExpressHandlerOptions } from "./expressHandler.js";
 import summarizeRequest from "./summarizeRequest.helper.js";
@@ -21,7 +21,15 @@ export interface EchoResponse {
 const echoHandler = (
   context: ExpressHandlerOptions = {},
 ): ((req: Request, res: Response) => Promise<EchoResponse>) => {
-  validate.object(context);
+  if (
+    typeof context !== "object" ||
+    context === null ||
+    Array.isArray(context)
+  ) {
+    throw new BadRequestError(
+      `Argument "${context}" doesn't match type "object"`,
+    );
+  }
   // Give a default name if there isn't one
   if (!context.name) {
     context.name = "_echo";

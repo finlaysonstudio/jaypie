@@ -28,9 +28,7 @@ function createMockFunction<T extends (...args: any[]) => any>(
  * Creates a mock function that resolves to a value when awaited
  * Internal utility to create async mock functions
  */
-function createMockResolvedFunction<T>(
-  value: T,
-): ReturnType<typeof vi.fn> {
+function createMockResolvedFunction<T>(value: T): ReturnType<typeof vi.fn> {
   return _createJaypieMock().mockResolvedValue(value);
 }
 

@@ -182,8 +182,8 @@ export default [
       "@typescript-eslint/no-explicit-any": "off",
       "vitest/expect-expect": "warn",
       "vitest/no-conditional-expect": "off",
-      "vitest/no-disabled-tests": "warn",
       "vitest/no-focused-tests": ["error", { fixable: false }],
+      "vitest/no-disabled-tests": "warn",
     },
   },
 

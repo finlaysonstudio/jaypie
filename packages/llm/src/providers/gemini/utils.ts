@@ -1,12 +1,24 @@
 import { getEnvSecret } from "@jaypie/aws";
-import {
-  ConfigurationError,
-  log as defaultLog,
-  placeholders as replacePlaceholders,
-  JAYPIE,
-} from "@jaypie/core";
-import { GoogleGenAI } from "@google/genai";
+import { ConfigurationError } from "@jaypie/errors";
+import { JAYPIE, placeholders as replacePlaceholders } from "@jaypie/kit";
+import { log as defaultLog } from "@jaypie/logger";
+import type { GoogleGenAI } from "@google/genai";
 import { LlmMessageOptions } from "../../types/LlmProvider.interface.js";
+
+// SDK loader with caching
+let cachedSdk: typeof import("@google/genai") | null = null;
+
+export async function loadSdk(): Promise<typeof import("@google/genai")> {
+  if (cachedSdk) return cachedSdk;
+  try {
+    cachedSdk = await import("@google/genai");
+    return cachedSdk;
+  } catch {
+    throw new ConfigurationError(
+      "@google/genai is required but not installed. Run: npm install @google/genai",
+    );
+  }
+}
 
 // Logger
 export const getLogger = () => defaultLog.lib({ lib: JAYPIE.LIB.LLM });
@@ -26,7 +38,8 @@ export async function initializeClient({
     );
   }
 
-  const client = new GoogleGenAI({ apiKey: resolvedApiKey });
+  const sdk = await loadSdk();
+  const client = new sdk.GoogleGenAI({ apiKey: resolvedApiKey });
   logger.trace("Initialized Gemini client");
   return client;
 }

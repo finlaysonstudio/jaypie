@@ -1,6 +1,11 @@
 #!/usr/bin/env node
 
-import { Extractor, ExtractorConfig, ExtractorLogLevel, ExtractorResult } from "@microsoft/api-extractor";
+import {
+  Extractor,
+  ExtractorConfig,
+  ExtractorLogLevel,
+  ExtractorResult,
+} from "@microsoft/api-extractor";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -112,7 +117,9 @@ for (const packageName of TS_PACKAGES) {
       console.log(`✅ @jaypie/${packageName} - API extracted successfully\n`);
       successCount++;
     } else {
-      console.log(`❌ @jaypie/${packageName} - API extraction completed with errors\n`);
+      console.log(
+        `❌ @jaypie/${packageName} - API extraction completed with errors\n`,
+      );
       errorCount++;
     }
   } catch (error) {

@@ -677,7 +677,9 @@ describe("OpenRouterAdapter", () => {
 
         expect(result).toHaveLength(1);
         expect((result[0] as { content: string }).content).toBe("Hello there!");
-        expect((result[0] as { role: string }).role).toBe(LlmMessageRole.Assistant);
+        expect((result[0] as { role: string }).role).toBe(
+          LlmMessageRole.Assistant,
+        );
       });
 
       it("returns empty array for tool use response", () => {

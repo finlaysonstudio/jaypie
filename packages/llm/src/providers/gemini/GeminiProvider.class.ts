@@ -1,10 +1,12 @@
 import { JsonObject } from "@jaypie/types";
-import { GoogleGenAI } from "@google/genai";
+import type { GoogleGenAI } from "@google/genai";
 import { PROVIDER } from "../../constants.js";
 import {
   createOperateLoop,
+  createStreamLoop,
   OperateLoop,
   geminiAdapter,
+  StreamLoop,
 } from "../../operate/index.js";
 import {
   LlmHistory,
@@ -15,12 +17,14 @@ import {
   LlmProvider,
   LlmHistoryItem,
 } from "../../types/LlmProvider.interface.js";
+import { LlmStreamChunk } from "../../types/LlmStreamChunk.interface.js";
 import { getLogger, initializeClient, prepareMessages } from "./utils.js";
 
 export class GeminiProvider implements LlmProvider {
   private model: string;
   private _client?: GoogleGenAI;
   private _operateLoop?: OperateLoop;
+  private _streamLoop?: StreamLoop;
   private apiKey?: string;
   private log = getLogger();
   private conversationHistory: LlmHistoryItem[] = [];
@@ -53,6 +57,19 @@ export class GeminiProvider implements LlmProvider {
       client,
     });
     return this._operateLoop;
+  }
+
+  private async getStreamLoop(): Promise<StreamLoop> {
+    if (this._streamLoop) {
+      return this._streamLoop;
+    }
+
+    const client = await this.getClient();
+    this._streamLoop = createStreamLoop({
+      adapter: geminiAdapter,
+      client,
+    });
+    return this._streamLoop;
   }
 
   async send(
@@ -125,5 +142,23 @@ export class GeminiProvider implements LlmProvider {
     }
 
     return response;
+  }
+
+  async *stream(
+    input: string | LlmHistory | LlmInputMessage,
+    options: LlmOperateOptions = {},
+  ): AsyncIterable<LlmStreamChunk> {
+    const streamLoop = await this.getStreamLoop();
+    const mergedOptions = { ...options, model: options.model ?? this.model };
+
+    // Create a merged history including both the tracked history and any explicitly provided history
+    if (this.conversationHistory.length > 0) {
+      mergedOptions.history = options.history
+        ? [...this.conversationHistory, ...options.history]
+        : [...this.conversationHistory];
+    }
+
+    // Execute stream loop
+    yield* streamLoop.execute(input, mergedOptions);
   }
 }

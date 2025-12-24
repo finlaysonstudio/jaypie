@@ -25,6 +25,10 @@ import {
   LlmToolResult,
   LlmUsageItem,
 } from "../../types/LlmProvider.interface.js";
+import {
+  LlmStreamChunk,
+  LlmStreamChunkType,
+} from "../../types/LlmStreamChunk.interface.js";
 import { naturalZodSchema } from "../../util/index.js";
 import { OpenAIRawResponse } from "../../providers/openai/types.js";
 import {
@@ -178,6 +182,106 @@ export class OpenAiAdapter extends BaseProviderAdapter {
     const openai = client as OpenAI;
     // @ts-expect-error OpenAI SDK types don't match our request format exactly
     return await openai.responses.create(request);
+  }
+
+  async *executeStreamRequest(
+    client: unknown,
+    request: unknown,
+  ): AsyncIterable<LlmStreamChunk> {
+    const openai = client as OpenAI;
+    const baseRequest = request as Record<string, unknown>;
+    const streamRequest = {
+      ...baseRequest,
+      stream: true,
+    };
+
+    const stream = await openai.responses.create(
+      streamRequest as Parameters<typeof openai.responses.create>[0],
+    );
+
+    // Track current function call being built
+    let currentFunctionCall: {
+      id: string;
+      callId: string;
+      name: string;
+      arguments: string;
+    } | null = null;
+
+    // Track usage for final chunk
+    let inputTokens = 0;
+    let outputTokens = 0;
+    let reasoningTokens = 0;
+    const model = (baseRequest.model as string) || this.defaultModel;
+
+    // Cast to async iterable - when stream: true, this is always a Stream<ResponseStreamEvent>
+    const asyncStream = stream as AsyncIterable<Record<string, unknown>>;
+    for await (const event of asyncStream) {
+      const eventType = event.type as string;
+
+      if (eventType === "response.output_text.delta") {
+        // Text content delta
+        const delta = (event as { delta?: string }).delta;
+        if (delta) {
+          yield {
+            type: LlmStreamChunkType.Text,
+            content: delta,
+          };
+        }
+      } else if (eventType === "response.function_call_arguments.delta") {
+        // Function call arguments delta - accumulate
+        const delta = (event as { delta?: string }).delta;
+        if (delta && currentFunctionCall) {
+          currentFunctionCall.arguments += delta;
+        }
+      } else if (eventType === "response.output_item.added") {
+        // New output item - check if it's a function call
+        const item = (event as { item?: { type?: string; id?: string; call_id?: string; name?: string } }).item;
+        if (item?.type === "function_call") {
+          currentFunctionCall = {
+            id: item.id || "",
+            callId: item.call_id || "",
+            name: item.name || "",
+            arguments: "",
+          };
+        }
+      } else if (eventType === "response.output_item.done") {
+        // Output item completed - emit function call if that's what we were building
+        if (currentFunctionCall) {
+          yield {
+            type: LlmStreamChunkType.ToolCall,
+            toolCall: {
+              id: currentFunctionCall.callId,
+              name: currentFunctionCall.name,
+              arguments: currentFunctionCall.arguments,
+            },
+          };
+          currentFunctionCall = null;
+        }
+      } else if (eventType === "response.completed") {
+        // Response completed - extract final usage
+        const response = (event as { response?: OpenAIRawResponse }).response;
+        if (response?.usage) {
+          inputTokens = response.usage.input_tokens || 0;
+          outputTokens = response.usage.output_tokens || 0;
+          reasoningTokens = response.usage.output_tokens_details?.reasoning_tokens || 0;
+        }
+      } else if (eventType === "response.done") {
+        // Stream done - emit final chunk with usage
+        yield {
+          type: LlmStreamChunkType.Done,
+          usage: [
+            {
+              input: inputTokens,
+              output: outputTokens,
+              reasoning: reasoningTokens,
+              total: inputTokens + outputTokens,
+              provider: this.name,
+              model,
+            },
+          ],
+        };
+      }
+    }
   }
 
   //

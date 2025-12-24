@@ -10,46 +10,76 @@ import {
 } from "./utils";
 import { beforeAll } from "vitest";
 import { spyLog } from "../mockLog.module.js";
-import { log } from "@jaypie/core";
-import * as original from "@jaypie/core";
+import { log } from "@jaypie/logger";
+import * as errors from "@jaypie/errors";
+import * as kit from "@jaypie/kit";
 
 // Constants for mock values
 const TAG = "CORE";
 
-export const BadGatewayError = createMockError(original.BadGatewayError);
-export const BadRequestError = createMockError(original.BadRequestError);
-export const ConfigurationError = createMockError(original.ConfigurationError);
-export const ForbiddenError = createMockError(original.ForbiddenError);
-export const GatewayTimeoutError = createMockError(
-  original.GatewayTimeoutError,
-);
-export const GoneError = createMockError(original.GoneError);
-export const IllogicalError = createMockError(original.IllogicalError);
-export const InternalError = createMockError(original.InternalError);
-export const MethodNotAllowedError = createMockError(
-  original.MethodNotAllowedError,
-);
-export const MultiError = createMockError(original.MultiError);
-export const NotFoundError = createMockError(original.NotFoundError);
-export const NotImplementedError = createMockError(
-  original.NotImplementedError,
-);
-export const ProjectError = createMockError(original.ProjectError);
-export const ProjectMultiError = createMockError(original.ProjectMultiError);
-export const RejectedError = createMockError(original.RejectedError);
-export const TeapotError = createMockError(original.TeapotError);
-export const UnauthorizedError = createMockError(original.UnauthorizedError);
-export const UnavailableError = createMockError(original.UnavailableError);
-export const UnhandledError = createMockError(original.UnhandledError);
-export const UnreachableCodeError = createMockError(
-  original.UnreachableCodeError,
-);
+// JaypieError is the base class - export it directly from errors
+export const JaypieError = errors.JaypieError;
 
-// Mock core functions
-export const validate = createMockWrappedObject(original.validate, {
-  fallback: false,
-  throws: true,
-});
+export const BadGatewayError: typeof errors.BadGatewayError = createMockError(
+  errors.BadGatewayError,
+);
+export const BadRequestError: typeof errors.BadRequestError = createMockError(
+  errors.BadRequestError,
+);
+export const ConfigurationError: typeof errors.ConfigurationError =
+  createMockError(errors.ConfigurationError);
+export const CorsError: typeof errors.CorsError = createMockError(
+  errors.CorsError,
+);
+export const ForbiddenError: typeof errors.ForbiddenError = createMockError(
+  errors.ForbiddenError,
+);
+export const GatewayTimeoutError: typeof errors.GatewayTimeoutError =
+  createMockError(errors.GatewayTimeoutError);
+export const GoneError: typeof errors.GoneError = createMockError(
+  errors.GoneError,
+);
+export const IllogicalError: typeof errors.IllogicalError = createMockError(
+  errors.IllogicalError,
+);
+export const InternalError: typeof errors.InternalError = createMockError(
+  errors.InternalError,
+);
+export const MethodNotAllowedError: typeof errors.MethodNotAllowedError =
+  createMockError(errors.MethodNotAllowedError);
+// Backwards compatibility aliases
+export const MultiError: typeof errors.InternalError = createMockError(
+  errors.InternalError,
+);
+export const NotFoundError: typeof errors.NotFoundError = createMockError(
+  errors.NotFoundError,
+);
+export const NotImplementedError: typeof errors.NotImplementedError =
+  createMockError(errors.NotImplementedError);
+export const ProjectError: typeof errors.InternalError = createMockError(
+  errors.InternalError,
+);
+export const ProjectMultiError: typeof errors.InternalError = createMockError(
+  errors.InternalError,
+);
+export const RejectedError: typeof errors.RejectedError = createMockError(
+  errors.RejectedError,
+);
+export const TeapotError: typeof errors.TeapotError = createMockError(
+  errors.TeapotError,
+);
+export const TooManyRequestsError: typeof errors.TooManyRequestsError =
+  createMockError(errors.TooManyRequestsError);
+export const UnauthorizedError: typeof errors.UnauthorizedError =
+  createMockError(errors.UnauthorizedError);
+export const UnavailableError: typeof errors.UnavailableError = createMockError(
+  errors.UnavailableError,
+);
+export const UnhandledError: typeof errors.UnhandledError = createMockError(
+  errors.UnhandledError,
+);
+export const UnreachableCodeError: typeof errors.UnreachableCodeError =
+  createMockError(errors.UnreachableCodeError);
 
 beforeAll(async () => {
   spyLog(log);
@@ -57,14 +87,14 @@ beforeAll(async () => {
 export { log };
 
 // Add missing core functions
-export const cloneDeep = createMockWrappedFunction(original.cloneDeep, {
+export const cloneDeep = createMockWrappedFunction(kit.cloneDeep, {
   throws: true,
 });
 
 export const envBoolean = createMockReturnedFunction(true);
 
 export const envsKey = createMockWrappedFunction(
-  original.envsKey as (...args: unknown[]) => unknown,
+  kit.envsKey as (...args: unknown[]) => unknown,
   `_MOCK_ENVS_KEY_[${TAG}]`,
 );
 
@@ -107,58 +137,50 @@ export const errorFromStatusCode = createMockFunction<
 });
 
 export const formatError = createMockWrappedFunction(
-  original.formatError as (...args: unknown[]) => unknown,
+  kit.formatError as (...args: unknown[]) => unknown,
   `_MOCK_FORMAT_ERROR_[${TAG}]`,
 );
 
+// Alias for errorFromStatusCode (exported from @jaypie/errors as jaypieErrorFromStatus)
+export const jaypieErrorFromStatus = errorFromStatusCode;
+
 export const getHeaderFrom = createMockWrappedFunction(
-  original.getHeaderFrom as (...args: unknown[]) => unknown,
+  kit.getHeaderFrom as (...args: unknown[]) => unknown,
   `_MOCK_GET_HEADER_FROM_[${TAG}]`,
 );
 
 export const getObjectKeyCaseInsensitive = createMockWrappedFunction(
-  original.getObjectKeyCaseInsensitive as (...args: unknown[]) => unknown,
+  kit.getObjectKeyCaseInsensitive as (...args: unknown[]) => unknown,
   `_MOCK_GET_OBJECT_KEY_CASE_INSENSITIVE_[${TAG}]`,
 );
 
 export const isClass = createMockWrappedFunction(
-  original.isClass,
+  kit.isClass,
   `_MOCK_IS_CLASS_[${TAG}]`,
 );
 
 export const isJaypieError = createMockWrappedFunction(
-  original.isJaypieError,
+  errors.isJaypieError,
   false,
 );
 
-// Optional/Required validation functions
-export const optional = createMockWrappedObject(original.optional, {
-  fallback: true,
-  throws: true,
-});
-
-export const required = createMockWrappedObject(original.required, {
-  fallback: true,
-  throws: true,
-});
-
 export const resolveValue = createMockWrappedFunction(
-  original.resolveValue,
+  kit.resolveValue,
   `_MOCK_RESOLVE_VALUE_[${TAG}]`,
 );
 
 export const safeParseFloat = createMockWrappedFunction(
-  original.safeParseFloat as (...args: unknown[]) => unknown,
+  kit.safeParseFloat as (...args: unknown[]) => unknown,
   `_MOCK_SAFE_PARSE_FLOAT_[${TAG}]`,
 );
 
 export const placeholders = createMockWrappedFunction(
-  original.placeholders as (...args: unknown[]) => unknown,
+  kit.placeholders as (...args: unknown[]) => unknown,
   `_MOCK_PLACEHOLDERS_[${TAG}]`,
 );
 
 // Add force utilities to help with jaypieHandler implementation
-export const force = createMockWrappedObject(original.force);
+export const force = createMockWrappedObject(kit.force);
 
 export const jaypieHandler = createMockFunction<
   (
@@ -179,7 +201,7 @@ export const jaypieHandler = createMockFunction<
     const {
       setup = [],
       teardown = [],
-      unavailable = original.force.boolean(process.env.PROJECT_UNAVAILABLE),
+      unavailable = kit.force.boolean(process.env.PROJECT_UNAVAILABLE),
       validate = [],
     } = options;
 
@@ -187,7 +209,7 @@ export const jaypieHandler = createMockFunction<
     if (unavailable) throw new UnavailableError("Service unavailable");
 
     // Run validation functions
-    const validateFunctions = original.force.array(validate);
+    const validateFunctions = kit.force.array(validate);
     for (const validator of validateFunctions) {
       if (typeof validator === "function") {
         const valid = await validator(...args);
@@ -199,7 +221,7 @@ export const jaypieHandler = createMockFunction<
 
     try {
       // Run setup functions
-      const setupFunctions = original.force.array(setup);
+      const setupFunctions = kit.force.array(setup);
       for (const setupFunction of setupFunctions) {
         if (typeof setupFunction === "function") {
           await setupFunction(...args);
@@ -213,7 +235,7 @@ export const jaypieHandler = createMockFunction<
     }
 
     // Run teardown functions (always run even if there was an error)
-    const teardownFunctions = original.force.array(teardown);
+    const teardownFunctions = kit.force.array(teardown);
     for (const teardownFunction of teardownFunctions) {
       if (typeof teardownFunction === "function") {
         try {
@@ -237,12 +259,10 @@ export const jaypieHandler = createMockFunction<
 export const sleep = createMockResolvedFunction(true);
 
 export const uuid = createMockWrappedFunction(
-  original.uuid as (...args: unknown[]) => unknown,
+  () => "00000000-0000-0000-0000-000000000000",
   `00000000-0000-0000-0000-000000000000`,
 );
 
-export const ERROR = original.ERROR;
-export const HTTP = original.HTTP;
-export const JAYPIE = original.JAYPIE;
-export const PROJECT = original.PROJECT;
-export const VALIDATE = original.VALIDATE;
+export const HTTP = kit.HTTP;
+export const JAYPIE = kit.JAYPIE;
+export const PROJECT = kit.PROJECT;

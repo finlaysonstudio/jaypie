@@ -7,8 +7,20 @@ const version = pkg.version;
 const commitHash = (process.env.PROJECT_COMMIT || "").slice(0, 8);
 const versionString = `@jaypie/mcp@${version}${commitHash ? `#${commitHash}` : ""}`;
 
+// Filter out TS2307 warnings for @jaypie/* packages (external workspace dependencies)
+const onwarn = (warning, defaultHandler) => {
+  if (
+    warning.plugin === "typescript" &&
+    warning.message.includes("@jaypie/")
+  ) {
+    return;
+  }
+  defaultHandler(warning);
+};
+
 export default {
   input: "src/index.ts",
+  onwarn,
   output: {
     dir: "dist",
     format: "es",
@@ -28,7 +40,6 @@ export default {
     }),
   ],
   external: [
-    "@jaypie/core",
     "@jaypie/errors",
     "@modelcontextprotocol/sdk/server/mcp.js",
     "@modelcontextprotocol/sdk/server/stdio.js",

@@ -1,4 +1,5 @@
-import { HTTP, NotImplementedError } from "@jaypie/core";
+import { NotImplementedError } from "@jaypie/errors";
+import { HTTP } from "@jaypie/kit";
 
 import expressHandler from "./expressHandler.js";
 import httpHandler from "./http.handler.js";

@@ -39,7 +39,6 @@ export interface OperateLoopConfig {
   client: unknown;
   hookRunner?: HookRunner;
   inputProcessor?: InputProcessor;
-  maxRetries?: number;
   retryPolicy?: RetryPolicy;
 }
 
@@ -88,7 +87,6 @@ export class OperateLoop {
   private readonly client: unknown;
   private readonly hookRunnerInstance: HookRunner;
   private readonly inputProcessorInstance: InputProcessor;
-  private readonly maxRetries: number;
   private readonly retryPolicy: RetryPolicy;
 
   constructor(config: OperateLoopConfig) {
@@ -96,7 +94,6 @@ export class OperateLoop {
     this.client = config.client;
     this.hookRunnerInstance = config.hookRunner ?? hookRunner;
     this.inputProcessorInstance = config.inputProcessor ?? inputProcessor;
-    this.maxRetries = config.maxRetries ?? 6;
     this.retryPolicy = config.retryPolicy ?? defaultRetryPolicy;
   }
 
@@ -107,6 +104,11 @@ export class OperateLoop {
     input: string | LlmHistory | LlmInputMessage,
     options: LlmOperateOptions = {},
   ): Promise<LlmOperateResponse> {
+    // Log what was passed to operate
+    log.trace("[operate] Starting operate loop");
+    log.var({ "operate.input": input });
+    log.var({ "operate.options": options });
+
     // Initialize state
     const state = this.initializeState(input, options);
     const context = this.createContext(options);
@@ -247,6 +249,10 @@ export class OperateLoop {
     // Build provider-specific request
     const providerRequest = this.adapter.buildRequest(request);
 
+    // Log what was passed to the model
+    log.trace("[operate] Calling model");
+    log.var({ "operate.request": providerRequest });
+
     // Execute beforeEachModelRequest hook
     await this.hookRunnerInstance.runBeforeModelRequest(context.hooks, {
       input: state.currentInput,
@@ -266,6 +272,10 @@ export class OperateLoop {
         hooks: context.hooks as LlmHooks,
       },
     );
+
+    // Log what was returned from the model
+    log.trace("[operate] Model response received");
+    log.var({ "operate.response": response });
 
     // Parse response
     const parsed = this.adapter.parseResponse(response, options);

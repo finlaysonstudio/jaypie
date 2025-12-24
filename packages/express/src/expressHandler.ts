@@ -1,14 +1,7 @@
 import type { Request, Response } from "express";
-import {
-  force,
-  getHeaderFrom,
-  HTTP,
-  JAYPIE,
-  jaypieHandler,
-  log as publicLogger,
-  UnhandledError,
-  validate as validateIs,
-} from "@jaypie/core";
+import { BadRequestError, UnhandledError } from "@jaypie/errors";
+import { force, getHeaderFrom, HTTP, JAYPIE, jaypieHandler } from "@jaypie/kit";
+import { log as publicLogger } from "@jaypie/logger";
 import { DATADOG, hasDatadogEnv, submitMetric } from "@jaypie/datadog";
 
 import getCurrentInvokeUuid from "./getCurrentInvokeUuid.adapter.js";
@@ -113,7 +106,7 @@ type ExpressHandler<T> = (
 
 interface JaypieError extends Error {
   status?: number;
-  json?: () => Record<string, unknown>;
+  body?: () => Record<string, unknown>;
 }
 
 interface ResponseWithJson {
@@ -170,8 +163,19 @@ function expressHandler<T>(
     unavailable,
     validate,
   } = options;
-  validateIs.function(handler);
-  validateIs.optional.object(locals);
+  if (typeof handler !== "function") {
+    throw new BadRequestError(
+      `Argument "${handler}" doesn't match type "function"`,
+    );
+  }
+  if (
+    locals !== undefined &&
+    (typeof locals !== "object" || locals === null || Array.isArray(locals))
+  ) {
+    throw new BadRequestError(
+      `Argument "${locals}" doesn't match type "object"`,
+    );
+  }
   setup = force.array(setup) as ((
     req: Request,
     res: Response,
@@ -333,7 +337,7 @@ function expressHandler<T>(
       // Initialize after logging is set up
 
       jaypieFunction = jaypieHandler(
-        handler as unknown as (...args: unknown[]) => unknown,
+        handler as unknown as (...args: unknown[]) => Promise<unknown>,
         {
           chaos,
           name,
@@ -366,12 +370,12 @@ function expressHandler<T>(
       if (jaypieError.status) {
         status = jaypieError.status;
       }
-      if (typeof jaypieError.json === "function") {
-        response = jaypieError.json();
+      if (typeof jaypieError.body === "function") {
+        response = jaypieError.body();
       } else {
         // This should never happen
         const unhandledError = new UnhandledError();
-        response = unhandledError.json();
+        response = unhandledError.body() as unknown as Record<string, unknown>;
         status = unhandledError.status;
       }
     }

@@ -13,17 +13,8 @@ import {
 // Mock
 //
 
-vi.mock("@jaypie/core", () => ({
+vi.mock("@jaypie/kit", () => ({
   JAYPIE: { LIB: { LLM: "llm" } },
-  log: {
-    lib: vi.fn(() => ({
-      debug: vi.fn(),
-      error: vi.fn(),
-      trace: vi.fn(),
-      var: vi.fn(),
-      warn: vi.fn(),
-    })),
-  },
   placeholders: vi.fn((template: string, data: Record<string, unknown>) => {
     let result = template;
     for (const [key, value] of Object.entries(data)) {
@@ -34,6 +25,18 @@ vi.mock("@jaypie/core", () => ({
     }
     return result;
   }),
+}));
+
+vi.mock("@jaypie/logger", () => ({
+  log: {
+    lib: vi.fn(() => ({
+      debug: vi.fn(),
+      error: vi.fn(),
+      trace: vi.fn(),
+      var: vi.fn(),
+      warn: vi.fn(),
+    })),
+  },
 }));
 
 //

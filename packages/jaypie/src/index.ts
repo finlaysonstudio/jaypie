@@ -3,13 +3,32 @@
 // Export
 //
 
-// Required dependencies
-export * from "@jaypie/core";
+// Errors - from @jaypie/errors
+export * from "@jaypie/errors";
+export { jaypieErrorFromStatus as errorFromStatusCode } from "@jaypie/errors";
 
-export * from "@jaypie/aws";
-export * from "@jaypie/datadog";
-export * from "@jaypie/express";
-export * from "@jaypie/lambda";
-export * from "@jaypie/llm";
+// Backwards compatibility aliases for errors
+export { InternalError as ProjectError } from "@jaypie/errors";
+export { InternalError as MultiError } from "@jaypie/errors";
+export { InternalError as ProjectMultiError } from "@jaypie/errors";
+
+// ERROR constant
+export { ERROR } from "./error.constant.js";
+
+// Kit exports
 export * from "@jaypie/kit";
-export * from "@jaypie/mongoose";
+
+// Logger
+export { log } from "@jaypie/logger";
+
+// AWS
+export * from "@jaypie/aws";
+
+// Datadog
+export * from "@jaypie/datadog";
+
+// Express
+export * from "@jaypie/express";
+
+// Lambda
+export * from "@jaypie/lambda";

@@ -1,4 +1,4 @@
-import { placeholders } from "@jaypie/core";
+import { placeholders } from "@jaypie/kit";
 
 import {
   LlmHistory,

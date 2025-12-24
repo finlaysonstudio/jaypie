@@ -7,8 +7,10 @@ import {
   JaypieWebDeploymentBucketProps,
 } from "./JaypieWebDeploymentBucket";
 
-export interface JaypieStaticWebBucketProps
-  extends Omit<JaypieWebDeploymentBucketProps, "host" | "name" | "roleTag"> {
+export interface JaypieStaticWebBucketProps extends Omit<
+  JaypieWebDeploymentBucketProps,
+  "host" | "name" | "roleTag"
+> {
   /**
    * The domain name for the website
    * @default envHostname({ subdomain: "static" })

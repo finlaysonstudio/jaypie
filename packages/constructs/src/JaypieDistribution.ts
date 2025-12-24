@@ -19,11 +19,10 @@ import {
 } from "./helpers";
 import { resolveDatadogForwarderFunction } from "./helpers/resolveDatadogForwarderFunction";
 
-export interface JaypieDistributionProps
-  extends Omit<
-    cloudfront.DistributionProps,
-    "certificate" | "defaultBehavior"
-  > {
+export interface JaypieDistributionProps extends Omit<
+  cloudfront.DistributionProps,
+  "certificate" | "defaultBehavior"
+> {
   /**
    * SSL certificate for the CloudFront distribution
    * @default true (creates a new certificate)

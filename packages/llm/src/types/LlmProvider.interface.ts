@@ -7,6 +7,7 @@ import {
 } from "@jaypie/types";
 import { z } from "zod/v4";
 import { LlmTool } from "./LlmTool.interface.js";
+import { LlmStreamChunk } from "./LlmStreamChunk.interface.js";
 import { Toolkit } from "../tools/Toolkit.class.js";
 
 // Enums
@@ -286,4 +287,8 @@ export interface LlmProvider {
     message: string,
     options?: LlmMessageOptions,
   ): Promise<string | JsonObject>;
+  stream?(
+    input: string | LlmHistory | LlmInputMessage,
+    options?: LlmOperateOptions,
+  ): AsyncIterable<LlmStreamChunk>;
 }

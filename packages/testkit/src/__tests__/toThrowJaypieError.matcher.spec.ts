@@ -3,7 +3,7 @@ import {
   BadRequestError,
   ConfigurationError,
   InternalError,
-} from "@jaypie/core";
+} from "@jaypie/errors";
 
 // Subject
 import toThrowJaypieError, {

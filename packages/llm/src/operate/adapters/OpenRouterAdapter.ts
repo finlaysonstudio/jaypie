@@ -1,5 +1,5 @@
 import { JsonObject, NaturalSchema } from "@jaypie/types";
-import { OpenRouter } from "@openrouter/sdk";
+import type { OpenRouter } from "@openrouter/sdk";
 import { z } from "zod/v4";
 
 import { PROVIDER } from "../../constants.js";
@@ -12,6 +12,10 @@ import {
   LlmOutputMessage,
   LlmUsageItem,
 } from "../../types/LlmProvider.interface.js";
+import {
+  LlmStreamChunk,
+  LlmStreamChunkType,
+} from "../../types/LlmStreamChunk.interface.js";
 import { naturalZodSchema } from "../../util/index.js";
 import {
   ClassifiedError,
@@ -258,6 +262,150 @@ export class OpenRouterAdapter extends BaseProviderAdapter {
     });
 
     return response as unknown as OpenRouterResponse;
+  }
+
+  async *executeStreamRequest(
+    client: unknown,
+    request: unknown,
+  ): AsyncIterable<LlmStreamChunk> {
+    const openRouter = client as OpenRouter;
+    const openRouterRequest = request as OpenRouterRequest;
+
+    // Use chat.send with stream: true for streaming responses
+    const stream = await openRouter.chat.send({
+      model: openRouterRequest.model,
+      messages: openRouterRequest.messages as Parameters<
+        typeof openRouter.chat.send
+      >[0]["messages"],
+      tools: openRouterRequest.tools as Parameters<
+        typeof openRouter.chat.send
+      >[0]["tools"],
+      toolChoice: openRouterRequest.tool_choice,
+      user: openRouterRequest.user,
+      stream: true,
+    });
+
+    // Track current tool call being built
+    let currentToolCall: {
+      id: string;
+      name: string;
+      arguments: string;
+    } | null = null;
+
+    // Track usage for final chunk
+    let inputTokens = 0;
+    let outputTokens = 0;
+    const model = openRouterRequest.model || this.defaultModel;
+
+    for await (const chunk of stream) {
+      // Handle different chunk types from OpenRouter (OpenAI-compatible format)
+      interface StreamChunk {
+        choices?: Array<{
+          delta?: {
+            content?: string;
+            tool_calls?: Array<{
+              id?: string;
+              function?: { name?: string; arguments?: string };
+            }>;
+          };
+          finish_reason?: string;
+        }>;
+        usage?: {
+          prompt_tokens?: number;
+          completion_tokens?: number;
+          promptTokens?: number;
+          completionTokens?: number;
+        };
+      }
+      const typedChunk = chunk as StreamChunk;
+      const choices = typedChunk.choices;
+
+      if (choices && choices.length > 0) {
+        const delta = choices[0].delta;
+
+        // Handle text content
+        if (delta?.content) {
+          yield {
+            type: LlmStreamChunkType.Text,
+            content: delta.content,
+          };
+        }
+
+        // Handle tool calls
+        if (delta?.tool_calls && delta.tool_calls.length > 0) {
+          for (const toolCallDelta of delta.tool_calls) {
+            if (toolCallDelta.id) {
+              // New tool call starting
+              if (currentToolCall) {
+                // Emit the previous tool call
+                yield {
+                  type: LlmStreamChunkType.ToolCall,
+                  toolCall: {
+                    id: currentToolCall.id,
+                    name: currentToolCall.name,
+                    arguments: currentToolCall.arguments,
+                  },
+                };
+              }
+              currentToolCall = {
+                id: toolCallDelta.id,
+                name: toolCallDelta.function?.name || "",
+                arguments: toolCallDelta.function?.arguments || "",
+              };
+            } else if (currentToolCall) {
+              // Continuing existing tool call
+              if (toolCallDelta.function?.name) {
+                currentToolCall.name += toolCallDelta.function.name;
+              }
+              if (toolCallDelta.function?.arguments) {
+                currentToolCall.arguments += toolCallDelta.function.arguments;
+              }
+            }
+          }
+        }
+
+        // Check for finish reason
+        if (choices[0].finish_reason) {
+          // Emit any pending tool call
+          if (currentToolCall) {
+            yield {
+              type: LlmStreamChunkType.ToolCall,
+              toolCall: {
+                id: currentToolCall.id,
+                name: currentToolCall.name,
+                arguments: currentToolCall.arguments,
+              },
+            };
+            currentToolCall = null;
+          }
+        }
+      }
+
+      // Extract usage if present (usually in the final chunk)
+      if (typedChunk.usage) {
+        inputTokens =
+          typedChunk.usage.prompt_tokens || typedChunk.usage.promptTokens || 0;
+        outputTokens =
+          typedChunk.usage.completion_tokens ||
+          typedChunk.usage.completionTokens ||
+          0;
+      }
+    }
+
+    // Emit done chunk with final usage
+    yield {
+      type: LlmStreamChunkType.Done,
+      usage: [
+        {
+          input: inputTokens,
+          output: outputTokens,
+          reasoning: 0,
+          total: inputTokens + outputTokens,
+          provider: this.name,
+          model,
+        },
+      ],
+    };
   }
 
   //

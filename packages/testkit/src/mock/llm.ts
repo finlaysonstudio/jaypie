@@ -108,6 +108,12 @@ export const LlmMessageRole = createMockWrappedObject(original.LlmMessageRole, {
 export const LlmMessageType = createMockWrappedObject(original.LlmMessageType, {
   isClass: true,
 });
+export const LlmStreamChunkType = createMockWrappedObject(
+  original.LlmStreamChunkType,
+  {
+    isClass: true,
+  },
+);
 
 // Provider mocks
 export const GeminiProvider = createMockWrappedObject(original.GeminiProvider, {

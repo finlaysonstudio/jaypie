@@ -1,4 +1,4 @@
-import { resolveValue } from "@jaypie/core";
+import { resolveValue } from "@jaypie/kit";
 import { JsonObject } from "@jaypie/types";
 
 import {

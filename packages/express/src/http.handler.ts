@@ -5,15 +5,15 @@ import {
   ForbiddenError,
   GatewayTimeoutError,
   GoneError,
-  HTTP,
   InternalError,
-  log,
   MethodNotAllowedError,
   NotFoundError,
   TeapotError,
   UnauthorizedError,
   UnavailableError,
-} from "@jaypie/core";
+} from "@jaypie/errors";
+import { HTTP } from "@jaypie/kit";
+import { log } from "@jaypie/logger";
 
 import expressHandler, { ExpressHandlerOptions } from "./expressHandler.js";
 

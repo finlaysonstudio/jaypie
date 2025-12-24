@@ -54,7 +54,17 @@ describe("determineModelProvider", () => {
 
   describe("Security", () => {
     it("Handles malicious input safely", () => {
+      // Note: This input contains "/" so it's detected as OpenRouter
       const maliciousInput = "<script>alert('xss')</script>";
+      const result = determineModelProvider(maliciousInput);
+      expect(result).toEqual({
+        model: maliciousInput,
+        provider: PROVIDER.OPENROUTER.NAME,
+      });
+    });
+
+    it("Handles malicious input without slash", () => {
+      const maliciousInput = "DROP TABLE users; --";
       const result = determineModelProvider(maliciousInput);
       expect(result).toEqual({
         model: maliciousInput,
@@ -268,6 +278,66 @@ describe("determineModelProvider", () => {
         expect(result).toEqual({
           model: "gpt-5",
           provider: PROVIDER.OPENAI.NAME,
+        });
+      });
+    });
+
+    describe("OpenRouter Detection", () => {
+      it("Identifies OpenRouter when model contains /", () => {
+        const result = determineModelProvider("openai/gpt-4");
+        expect(result).toEqual({
+          model: "openai/gpt-4",
+          provider: PROVIDER.OPENROUTER.NAME,
+        });
+      });
+
+      it("Identifies OpenRouter when model contains / with anthropic prefix", () => {
+        const result = determineModelProvider("anthropic/claude-3-opus");
+        expect(result).toEqual({
+          model: "anthropic/claude-3-opus",
+          provider: PROVIDER.OPENROUTER.NAME,
+        });
+      });
+
+      it("Identifies OpenRouter when model contains / with custom org", () => {
+        const result = determineModelProvider("mistralai/mistral-large");
+        expect(result).toEqual({
+          model: "mistralai/mistral-large",
+          provider: PROVIDER.OPENROUTER.NAME,
+        });
+      });
+
+      it("Handles openrouter: prefix and strips it", () => {
+        const result = determineModelProvider(
+          "openrouter:mistralai/mistral-large",
+        );
+        expect(result).toEqual({
+          model: "mistralai/mistral-large",
+          provider: PROVIDER.OPENROUTER.NAME,
+        });
+      });
+
+      it("Handles openrouter: prefix with simple model name", () => {
+        const result = determineModelProvider("openrouter:gpt-4");
+        expect(result).toEqual({
+          model: "gpt-4",
+          provider: PROVIDER.OPENROUTER.NAME,
+        });
+      });
+
+      it("openrouter: prefix takes precedence over other match words", () => {
+        const result = determineModelProvider("openrouter:claude-opus-4-1");
+        expect(result).toEqual({
+          model: "claude-opus-4-1",
+          provider: PROVIDER.OPENROUTER.NAME,
+        });
+      });
+
+      it("Handles openrouter: prefix with empty model", () => {
+        const result = determineModelProvider("openrouter:");
+        expect(result).toEqual({
+          model: "",
+          provider: PROVIDER.OPENROUTER.NAME,
         });
       });
     });

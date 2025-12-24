@@ -16,6 +16,10 @@ export type { ProviderAdapter } from "./adapters/index.js";
 export { createOperateLoop, OperateLoop } from "./OperateLoop.js";
 export type { OperateLoopConfig } from "./OperateLoop.js";
 
+// Stream Loop
+export { createStreamLoop, StreamLoop } from "./StreamLoop.js";
+export type { StreamLoopConfig } from "./StreamLoop.js";
+
 // Hooks
 export { HookRunner, hookRunner } from "./hooks/index.js";
 export type {

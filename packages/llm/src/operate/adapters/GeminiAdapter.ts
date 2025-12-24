@@ -1,4 +1,4 @@
-import { GoogleGenAI } from "@google/genai";
+import type { GoogleGenAI } from "@google/genai";
 import { JsonObject, NaturalSchema } from "@jaypie/types";
 import { z } from "zod/v4";
 
@@ -12,6 +12,10 @@ import {
   LlmOutputMessage,
   LlmUsageItem,
 } from "../../types/LlmProvider.interface.js";
+import {
+  LlmStreamChunk,
+  LlmStreamChunkType,
+} from "../../types/LlmStreamChunk.interface.js";
 import { naturalZodSchema } from "../../util/index.js";
 import {
   ClassifiedError,
@@ -239,6 +243,93 @@ export class GeminiAdapter extends BaseProviderAdapter {
     });
 
     return response as unknown as GeminiRawResponse;
+  }
+
+  async *executeStreamRequest(
+    client: unknown,
+    request: unknown,
+  ): AsyncIterable<LlmStreamChunk> {
+    const genAI = client as GoogleGenAI;
+    const geminiRequest = request as GeminiRequest;
+
+    // Use generateContentStream for streaming
+    const stream = await genAI.models.generateContentStream({
+      model: geminiRequest.model,
+      contents: geminiRequest.contents as any,
+      config: geminiRequest.config as any,
+    });
+
+    // Track current function call being built
+    let currentFunctionCall: {
+      id: string;
+      name: string;
+      arguments: Record<string, unknown>;
+    } | null = null;
+
+    // Track usage for final chunk
+    let inputTokens = 0;
+    let outputTokens = 0;
+    let reasoningTokens = 0;
+    const model = geminiRequest.model || this.defaultModel;
+
+    for await (const chunk of stream) {
+      // Extract text content from the chunk
+      const candidate = chunk.candidates?.[0];
+      if (candidate?.content?.parts) {
+        for (const part of candidate.content.parts) {
+          // Handle text content (excluding thought parts)
+          if (part.text && !part.thought) {
+            yield {
+              type: LlmStreamChunkType.Text,
+              content: part.text,
+            };
+          }
+
+          // Handle function calls
+          if (part.functionCall) {
+            const functionCall = part.functionCall as GeminiFunctionCall;
+            currentFunctionCall = {
+              id: functionCall.id || this.generateCallId(),
+              name: functionCall.name || "",
+              arguments: functionCall.args || {},
+            };
+
+            // Emit the function call immediately
+            yield {
+              type: LlmStreamChunkType.ToolCall,
+              toolCall: {
+                id: currentFunctionCall.id,
+                name: currentFunctionCall.name,
+                arguments: JSON.stringify(currentFunctionCall.arguments),
+              },
+            };
+            currentFunctionCall = null;
+          }
+        }
+      }
+
+      // Extract usage metadata if present
+      if (chunk.usageMetadata) {
+        inputTokens = chunk.usageMetadata.promptTokenCount || 0;
+        outputTokens = chunk.usageMetadata.candidatesTokenCount || 0;
+        reasoningTokens = chunk.usageMetadata.thoughtsTokenCount || 0;
+      }
+    }
+
+    // Emit done chunk with final usage
+    yield {
+      type: LlmStreamChunkType.Done,
+      usage: [
+        {
+          input: inputTokens,
+          output: outputTokens,
+          reasoning: reasoningTokens,
+          total: inputTokens + outputTokens,
+          provider: this.name,
+          model,
+        },
+      ],
+    };
   }
 
   //

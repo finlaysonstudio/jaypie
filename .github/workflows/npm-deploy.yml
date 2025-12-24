@@ -4,8 +4,9 @@ on:
   push:
     branches:
       - main
-    tags: 
+    tags:
       - deploy-*
+      - rc-*
 
 env:
   PROJECT_COMMIT: ${{ github.sha }}
@@ -26,11 +27,49 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           always-auth: false
-          node-version: 20
+          node-version: 24
           registry-url: 'https://registry.npmjs.org'
       - run: npm ci
       - run: npm run build
-      - run: lerna publish from-package --no-private --yes
+      - name: Publish RC packages
+        if: startsWith(github.ref, 'refs/tags/rc-')
+        run: |
+          for pkg in packages/*/; do
+            if [ -f "$pkg/package.json" ]; then
+              private=$(node -p "require('./$pkg/package.json').private || false")
+              if [ "$private" != "true" ]; then
+                name=$(node -p "require('./$pkg/package.json').name")
+                version=$(node -p "require('./$pkg/package.json').version")
+                # Only process RC versions
+                if [[ "$version" == *"-rc."* ]]; then
+                  if ! npm view "$name@$version" version >/dev/null 2>&1; then
+                    echo "Publishing $name@$version with tag rc"
+                    npm publish "$pkg" --provenance --tag rc
+                  else
+                    echo "Skipping $name@$version (already published)"
+                  fi
+                fi
+              fi
+            fi
+          done
+      - name: Publish packages to npm
+        if: ${{ !startsWith(github.ref, 'refs/tags/rc-') }}
+        run: |
+          for pkg in packages/*/; do
+            if [ -f "$pkg/package.json" ]; then
+              private=$(node -p "require('./$pkg/package.json').private || false")
+              if [ "$private" != "true" ]; then
+                name=$(node -p "require('./$pkg/package.json').name")
+                version=$(node -p "require('./$pkg/package.json').version")
+                if ! npm view "$name@$version" version >/dev/null 2>&1; then
+                  echo "Publishing $name@$version"
+                  npm publish "$pkg" --provenance
+                else
+                  echo "Skipping $name@$version (already published)"
+                fi
+              fi
+            fi
+          done
   lint:
     name: Lint (in parallel)
     runs-on: ubuntu-latest
@@ -39,7 +78,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
       - run: npm install
       - run: npm run build
       - run: npm run lint
@@ -52,7 +91,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
       - run: npm install
       - run: npm run build
       - run: npm run typecheck
@@ -62,15 +101,17 @@ jobs:
     timeout-minutes: 10
     strategy:
       matrix:
-        node-version: [20.x]
+        node-version: [20.x, 22.x, 24.x, 25.x]
     steps:
       - uses: actions/checkout@v4
       - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
-          cache: 'npm'
-      - run: npm install
+      - name: Fresh install (avoid native binding issues)
+        run: |
+          rm -f package-lock.json
+          npm install
       - run: npm run build
       - name: Vitest with Optional Datadog Tracing
         run: |
@@ -81,9 +122,7 @@ jobs:
             export DD_API_KEY=${{ secrets.DATADOG_CICD_API_KEY }}
             export DD_SITE=datadoghq.com
             # Additional steps to test CDK, still using CommonJS :(
-            npm --prefix packages/cdk install
             NODE_OPTIONS='--import dd-trace/register.js -r dd-trace/ci/init' DD_ENV=${{ env.PROJECT_ENV }} DD_SERVICE=${{ env.PROJECT_SERVICE }} npm run test
-            NODE_OPTIONS='--import dd-trace/register.js -r dd-trace/ci/init' DD_ENV=${{ env.PROJECT_ENV }} DD_SERVICE=${{ env.PROJECT_SERVICE }} npm --prefix packages/cdk run test
           else
             npm test
           fi
@@ -93,10 +132,10 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - name: Use Node.js 20
+      - name: Use Node.js 24
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: 'npm'
       - name: Install dependencies
         run: npm install
