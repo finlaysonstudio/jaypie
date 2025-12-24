@@ -3,7 +3,6 @@ import { Stack, App } from "aws-cdk-lib";
 
 vi.mock("./helpers", () => ({
   addDatadogLayers: vi.fn(),
-  cdkLog: vi.fn(),
   envHostname: vi.fn(() => "test.example.com"),
   jaypieLambdaEnv: vi.fn(() => ({ NODE_ENV: "test" })),
   resolveEnvironment: vi.fn((env) => (Array.isArray(env) ? {} : env || {})),
