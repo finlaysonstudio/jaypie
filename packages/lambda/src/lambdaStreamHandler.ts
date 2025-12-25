@@ -1,3 +1,4 @@
+import { loadEnvSecrets } from "@jaypie/aws";
 import { ConfigurationError, UnhandledError } from "@jaypie/errors";
 import { JAYPIE, jaypieHandler } from "@jaypie/kit";
 import { log as publicLogger } from "@jaypie/logger";
@@ -38,6 +39,7 @@ export interface LambdaStreamHandlerOptions {
   chaos?: string;
   contentType?: string;
   name?: string;
+  secrets?: string[];
   setup?: LifecycleFunction[];
   teardown?: LifecycleFunction[];
   throw?: boolean;
@@ -142,12 +144,22 @@ const lambdaStreamHandler = function <TEvent = unknown>(
     chaos,
     contentType = "text/event-stream",
     name,
-    setup,
+    secrets,
+    setup = [],
     teardown,
     throw: shouldThrow = false,
     unavailable,
     validate,
   } = opts;
+
+  // Add secrets loading to setup if secrets are provided
+  if (secrets && secrets.length > 0) {
+    const secretsToLoad = secrets;
+    const secretsSetup: LifecycleFunction = async () => {
+      await loadEnvSecrets(...secretsToLoad);
+    };
+    setup = [secretsSetup, ...setup];
+  }
 
   //
   //

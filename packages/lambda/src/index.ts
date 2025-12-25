@@ -1,5 +1,3 @@
-import { loadEnvSecrets } from "@jaypie/aws";
-
 import lambdaHandler from "./lambdaHandler.js";
 import lambdaStreamHandler from "./lambdaStreamHandler.js";
 
@@ -8,7 +6,7 @@ import lambdaStreamHandler from "./lambdaStreamHandler.js";
 // Export
 //
 
-export { lambdaHandler, lambdaStreamHandler, loadEnvSecrets };
+export { lambdaHandler, lambdaStreamHandler };
 export type {
   LambdaContext,
   LambdaHandlerFunction,

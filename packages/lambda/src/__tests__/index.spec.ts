@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 // Subject
-import { lambdaHandler, loadEnvSecrets } from "../index.js";
+import { lambdaHandler, lambdaStreamHandler } from "../index.js";
 
 //
 //
@@ -9,12 +9,12 @@ import { lambdaHandler, loadEnvSecrets } from "../index.js";
 //
 
 describe("Index", () => {
-  it("Exports Function", () => {
+  it("Exports lambdaHandler", () => {
     expect(lambdaHandler).not.toBeUndefined();
     expect(lambdaHandler).toBeFunction();
   });
-  it("Exports loadEnvSecrets", () => {
-    expect(loadEnvSecrets).not.toBeUndefined();
-    expect(loadEnvSecrets).toBeFunction();
+  it("Exports lambdaStreamHandler", () => {
+    expect(lambdaStreamHandler).not.toBeUndefined();
+    expect(lambdaStreamHandler).toBeFunction();
   });
 });
