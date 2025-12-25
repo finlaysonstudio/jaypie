@@ -2,6 +2,7 @@
   "cSpell.words": [
     "appsec",
     "autofix",
+    "awslambda",
     "CDKTAG",
     "certificatemanager",
     "cicd",
@@ -36,6 +37,7 @@
     "npmjs",
     "nuxt",
     "oidc",
+    "onwarn",
     "openmeteo",
     "openrouter",
     "pinia",
@@ -51,6 +53,7 @@
     "SSOSYNC",
     "stddev",
     "streamable",
+    "streamify",
     "subfaker",
     "subpackages",
     "supertest",

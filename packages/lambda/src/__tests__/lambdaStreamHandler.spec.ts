@@ -5,7 +5,10 @@ import { log } from "@jaypie/logger";
 import { restoreLog, spyLog } from "@jaypie/testkit";
 
 import lambdaStreamHandler from "../lambdaStreamHandler.js";
-import type { ResponseStream, StreamHandlerContext } from "../lambdaStreamHandler.js";
+import type {
+  ResponseStream,
+  StreamHandlerContext,
+} from "../lambdaStreamHandler.js";
 
 //
 //
@@ -69,7 +72,6 @@ function createMockResponseStream(): ResponseStream & { chunks: string[] } {
 //
 
 describe("lambdaStreamHandler", () => {
-
   //
   // Base Cases
   //
@@ -104,7 +106,9 @@ describe("lambdaStreamHandler", () => {
       await handler({}, responseStream, {});
 
       expect(responseStream.write).toHaveBeenCalled();
-      const errorChunk = responseStream.chunks.find((c) => c.includes("event: error"));
+      const errorChunk = responseStream.chunks.find((c) =>
+        c.includes("event: error"),
+      );
       expect(errorChunk).toBeDefined();
       expect(responseStream.end).toHaveBeenCalled();
     });
@@ -118,7 +122,9 @@ describe("lambdaStreamHandler", () => {
       await handler({}, responseStream, {});
 
       expect(responseStream.write).toHaveBeenCalled();
-      const errorChunk = responseStream.chunks.find((c) => c.includes("event: error"));
+      const errorChunk = responseStream.chunks.find((c) =>
+        c.includes("event: error"),
+      );
       expect(errorChunk).toBeDefined();
       expect(responseStream.end).toHaveBeenCalled();
     });
@@ -159,7 +165,9 @@ describe("lambdaStreamHandler", () => {
 
       await handler({}, responseStream, {});
 
-      expect(responseStream.setContentType).toHaveBeenCalledWith("text/event-stream");
+      expect(responseStream.setContentType).toHaveBeenCalledWith(
+        "text/event-stream",
+      );
     });
 
     it("supports custom content type", async () => {
@@ -170,7 +178,9 @@ describe("lambdaStreamHandler", () => {
 
       await handler({}, responseStream, {});
 
-      expect(responseStream.setContentType).toHaveBeenCalledWith("application/json");
+      expect(responseStream.setContentType).toHaveBeenCalledWith(
+        "application/json",
+      );
     });
   });
 
@@ -200,7 +210,9 @@ describe("lambdaStreamHandler", () => {
 
     it("supports teardown lifecycle", async () => {
       const teardown = vi.fn();
-      const handler = lambdaStreamHandler(async () => {}, { teardown: [teardown] });
+      const handler = lambdaStreamHandler(async () => {}, {
+        teardown: [teardown],
+      });
       const responseStream = createMockResponseStream();
 
       await handler({}, responseStream, {});

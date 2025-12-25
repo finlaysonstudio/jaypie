@@ -127,7 +127,7 @@ const logger = publicLogger as unknown as ExtendedLogger;
 function formatErrorSSE(error: JaypieError | Error): string {
   const isJaypieError = (error as JaypieError).isProjectError;
   const body = isJaypieError
-    ? (error as JaypieError).body?.() ?? { error: error.message }
+    ? ((error as JaypieError).body?.() ?? { error: error.message })
     : new UnhandledError().body();
 
   return `event: error\ndata: ${JSON.stringify(body)}\n\n`;

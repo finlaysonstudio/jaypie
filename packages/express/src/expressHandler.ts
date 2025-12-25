@@ -1,4 +1,5 @@
 import type { Request, Response } from "express";
+import { loadEnvSecrets } from "@jaypie/aws";
 import { BadRequestError, UnhandledError } from "@jaypie/errors";
 import { force, getHeaderFrom, HTTP, JAYPIE, jaypieHandler } from "@jaypie/kit";
 import { log as publicLogger } from "@jaypie/logger";
@@ -80,6 +81,7 @@ export interface ExpressHandlerOptions {
   chaos?: string;
   locals?: Record<string, unknown | ExpressHandlerLocals>;
   name?: string;
+  secrets?: string[];
   setup?: JaypieHandlerSetup[] | JaypieHandlerSetup;
   teardown?: JaypieHandlerTeardown[] | JaypieHandlerTeardown;
   unavailable?: boolean;
@@ -158,6 +160,7 @@ function expressHandler<T>(
     chaos,
     locals,
     name,
+    secrets,
     setup = [],
     teardown = [],
     unavailable,
@@ -306,6 +309,15 @@ function expressHandler<T>(
     //
     // Preprocess
     //
+
+    // Load secrets into process.env if configured
+    if (secrets && secrets.length > 0) {
+      const secretsToLoad = secrets;
+      const secretsSetup: JaypieHandlerSetup = async () => {
+        await loadEnvSecrets(...secretsToLoad);
+      };
+      setup.unshift(secretsSetup);
+    }
 
     if (locals) {
       // Locals

@@ -1,5 +1,6 @@
 export { default as getEnvSecret } from "./getEnvSecret.function.js";
 export { default as getMessages } from "./getMessages.function.js";
+export { default as loadEnvSecrets } from "./loadEnvSecrets.function.js";
 export { default as getSecret } from "./getSecret.function.js";
 export { default as getSingletonMessage } from "./getSingletonMessage.function.js";
 export { default as getTextractJob } from "./getTextractJob.function.js";

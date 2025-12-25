@@ -44,7 +44,9 @@ describe("JaypieStream", () => {
   describe("formatSSE", () => {
     it("formats a chunk as SSE event", () => {
       const result = formatSSE(mockChunk);
-      expect(result).toBe('event: text\ndata: {"type":"text","content":"Hello world"}\n\n');
+      expect(result).toBe(
+        'event: text\ndata: {"type":"text","content":"Hello world"}\n\n',
+      );
     });
 
     it("uses chunk.type as the event name", () => {
@@ -100,7 +102,9 @@ describe("JaypieStream", () => {
         throw new Error("Stream error");
       }
 
-      await expect(createLambdaStream(errorStream(), writer)).rejects.toThrow("Stream error");
+      await expect(createLambdaStream(errorStream(), writer)).rejects.toThrow(
+        "Stream error",
+      );
       expect(end).toHaveBeenCalledTimes(1);
     });
   });
@@ -118,7 +122,10 @@ describe("JaypieStream", () => {
 
       await createExpressStream(createMockStream(), res);
 
-      expect(setHeader).toHaveBeenCalledWith("Content-Type", "text/event-stream");
+      expect(setHeader).toHaveBeenCalledWith(
+        "Content-Type",
+        "text/event-stream",
+      );
       expect(setHeader).toHaveBeenCalledWith("Cache-Control", "no-cache");
       expect(setHeader).toHaveBeenCalledWith("Connection", "keep-alive");
       expect(setHeader).toHaveBeenCalledWith("X-Accel-Buffering", "no");

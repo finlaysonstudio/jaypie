@@ -125,9 +125,7 @@ function formatErrorSSE(error: JaypieError | Error): string {
  * to the Lambda response stream writer.
  */
 const lambdaStreamHandler = function <TEvent = unknown>(
-  handler:
-    | LambdaStreamHandlerFunction<TEvent>
-    | LambdaStreamHandlerOptions,
+  handler: LambdaStreamHandlerFunction<TEvent> | LambdaStreamHandlerOptions,
   options:
     | LambdaStreamHandlerOptions
     | LambdaStreamHandlerFunction<TEvent> = {},
