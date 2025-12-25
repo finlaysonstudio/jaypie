@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 // Subject
-import { lambdaHandler } from "../index.js";
+import { lambdaHandler, lambdaStreamHandler } from "../index.js";
 
 //
 //
@@ -9,8 +9,12 @@ import { lambdaHandler } from "../index.js";
 //
 
 describe("Index", () => {
-  it("Exports Function", () => {
+  it("Exports lambdaHandler", () => {
     expect(lambdaHandler).not.toBeUndefined();
     expect(lambdaHandler).toBeFunction();
+  });
+  it("Exports lambdaStreamHandler", () => {
+    expect(lambdaStreamHandler).not.toBeUndefined();
+    expect(lambdaStreamHandler).toBeFunction();
   });
 });

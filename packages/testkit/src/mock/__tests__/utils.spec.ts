@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 import { describe, it, expect, vi } from "vitest";
 import {
   createMockFunction,
@@ -234,7 +235,7 @@ describe("Mock Utils", () => {
     });
 
     it("should pass original args to fallback function", async () => {
-      const original = (..._args: unknown[]) => {
+      const original = () => {
         throw new Error("Test error");
       };
       const fallbackFn = vi.fn().mockReturnValue("args passed correctly");

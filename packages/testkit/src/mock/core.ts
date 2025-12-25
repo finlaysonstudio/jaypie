@@ -131,7 +131,7 @@ export const errorFromStatusCode = createMockFunction<
       default:
         return new Error(message);
     }
-  } catch (error) {
+  } catch {
     return new Error(`_MOCK_ERROR_FROM_STATUS_CODE_[${TAG}][${statusCode}]`);
   }
 });
@@ -240,9 +240,10 @@ export const jaypieHandler = createMockFunction<
       if (typeof teardownFunction === "function") {
         try {
           await teardownFunction(...args);
-        } catch (error) {
+        } catch (teardownError) {
           // Swallow teardown errors, but log them
-          console.error(error);
+          // eslint-disable-next-line no-console
+          console.error(teardownError);
         }
       }
     }

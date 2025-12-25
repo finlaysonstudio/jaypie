@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 import { vi } from "vitest";
 
 import { LlmTool } from "@jaypie/llm";
@@ -44,6 +45,7 @@ function createMockReturnedFunction<T>(value: T): ReturnType<typeof vi.fn> {
  * Creates a mock function that wraps another function
  * Internal utility to create mock functions that wrap another function
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function createMockWrappedFunction<T = any>(
   fn: (...args: unknown[]) => unknown,
   fallbackOrOptions:

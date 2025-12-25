@@ -1,12 +1,5 @@
 import type { Request, Response } from "express";
-import {
-  afterEach,
-  beforeEach,
-  describe,
-  expect,
-  it,
-  vi,
-} from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { BadRequestError } from "@jaypie/errors";
 
@@ -25,11 +18,9 @@ vi.mock("@jaypie/kit", async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
   return {
     ...actual,
-    jaypieHandler: vi.fn(
-      (handler: (...args: unknown[]) => unknown) => {
-        return handler;
-      },
-    ),
+    jaypieHandler: vi.fn((handler: (...args: unknown[]) => unknown) => {
+      return handler;
+    }),
   };
 });
 vi.mock("@jaypie/datadog", () => ({
@@ -65,7 +56,9 @@ function createMockRequest(overrides: Partial<MockRequest> = {}): MockRequest {
   };
 }
 
-function createMockResponse(overrides: Partial<MockResponse> = {}): MockResponse {
+function createMockResponse(
+  overrides: Partial<MockResponse> = {},
+): MockResponse {
   const chunks: string[] = [];
   return {
     chunks,
@@ -88,7 +81,9 @@ function createMockResponse(overrides: Partial<MockResponse> = {}): MockResponse
 
 beforeEach(() => {
   vi.clearAllMocks();
-  (getCurrentInvokeUuid as ReturnType<typeof vi.fn>).mockReturnValue("test-uuid");
+  (getCurrentInvokeUuid as ReturnType<typeof vi.fn>).mockReturnValue(
+    "test-uuid",
+  );
 });
 
 afterEach(() => {
@@ -147,7 +142,10 @@ describe("expressStreamHandler", () => {
 
       await handler(req as Request, res as unknown as Response);
 
-      expect(res.setHeader).toHaveBeenCalledWith("Content-Type", "text/event-stream");
+      expect(res.setHeader).toHaveBeenCalledWith(
+        "Content-Type",
+        "text/event-stream",
+      );
       expect(res.setHeader).toHaveBeenCalledWith("Cache-Control", "no-cache");
       expect(res.setHeader).toHaveBeenCalledWith("Connection", "keep-alive");
       expect(res.setHeader).toHaveBeenCalledWith("X-Accel-Buffering", "no");
@@ -182,7 +180,10 @@ describe("expressStreamHandler", () => {
 
       await handler(req as Request, res as unknown as Response);
 
-      expect(res.setHeader).toHaveBeenCalledWith("Content-Type", "application/json");
+      expect(res.setHeader).toHaveBeenCalledWith(
+        "Content-Type",
+        "application/json",
+      );
     });
   });
 
@@ -206,9 +207,11 @@ describe("expressStreamHandler", () => {
   //
   describe("Streaming Integration", () => {
     it("allows handler to write to response", async () => {
-      const handler = expressStreamHandler(async (_req: Request, res: Response) => {
-        res.write("event: test\ndata: {}\n\n");
-      });
+      const handler = expressStreamHandler(
+        async (_req: Request, res: Response) => {
+          res.write("event: test\ndata: {}\n\n");
+        },
+      );
       const req = createMockRequest();
       const res = createMockResponse();
 
@@ -218,11 +221,13 @@ describe("expressStreamHandler", () => {
     });
 
     it("allows streaming multiple chunks", async () => {
-      const handler = expressStreamHandler(async (_req: Request, res: Response) => {
-        res.write("event: chunk1\ndata: {}\n\n");
-        res.write("event: chunk2\ndata: {}\n\n");
-        res.write("event: chunk3\ndata: {}\n\n");
-      });
+      const handler = expressStreamHandler(
+        async (_req: Request, res: Response) => {
+          res.write("event: chunk1\ndata: {}\n\n");
+          res.write("event: chunk2\ndata: {}\n\n");
+          res.write("event: chunk3\ndata: {}\n\n");
+        },
+      );
       const req = createMockRequest();
       const res = createMockResponse();
 

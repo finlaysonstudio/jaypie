@@ -17,8 +17,6 @@ import {
   sleep,
   uuid,
   BadRequestError,
-  UnavailableError,
-  ProjectError,
   HTTP,
 } from "../core";
 
@@ -451,7 +449,7 @@ describe("Core Mocks", () => {
               // Act
               try {
                 await handler();
-              } catch (error) {
+              } catch {
                 // Assert
                 expect(mockTeardown1).toHaveBeenCalledTimes(1);
                 expect(mockTeardown2).toHaveBeenCalledTimes(1);
@@ -473,7 +471,7 @@ describe("Core Mocks", () => {
               // Act
               try {
                 await handler();
-              } catch (error) {
+              } catch {
                 // Assert
                 expect(mockTeardown1).toHaveBeenCalledTimes(1);
                 expect(mockTeardown2).toHaveBeenCalledTimes(1);
@@ -495,7 +493,7 @@ describe("Core Mocks", () => {
               // Act
               try {
                 await handler();
-              } catch (error) {
+              } catch {
                 // Assert
                 expect(mockTeardown1).not.toHaveBeenCalled();
                 expect(mockTeardown2).not.toHaveBeenCalled();
@@ -926,7 +924,7 @@ describe("Jaypie Core Utilities", () => {
             // Act
             try {
               await handler();
-            } catch (error) {
+            } catch {
               // Assert
               expect(mockTeardown1).toHaveBeenCalledTimes(1);
               expect(mockTeardown2).toHaveBeenCalledTimes(1);
@@ -948,7 +946,7 @@ describe("Jaypie Core Utilities", () => {
             // Act
             try {
               await handler();
-            } catch (error) {
+            } catch {
               // Assert
               expect(mockTeardown1).toHaveBeenCalledTimes(1);
               expect(mockTeardown2).toHaveBeenCalledTimes(1);
@@ -970,7 +968,7 @@ describe("Jaypie Core Utilities", () => {
             // Act
             try {
               await handler();
-            } catch (error) {
+            } catch {
               // Assert
               expect(mockTeardown1).not.toHaveBeenCalled();
               expect(mockTeardown2).not.toHaveBeenCalled();

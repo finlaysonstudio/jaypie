@@ -1,3 +1,4 @@
+import { loadEnvSecrets } from "@jaypie/aws";
 import { ConfigurationError, UnhandledError } from "@jaypie/errors";
 import { JAYPIE, jaypieHandler } from "@jaypie/kit";
 import { log as publicLogger } from "@jaypie/logger";
@@ -18,6 +19,7 @@ type LifecycleFunction = (...args: unknown[]) => void | Promise<void>;
 export interface LambdaHandlerOptions {
   chaos?: string;
   name?: string;
+  secrets?: string[];
   setup?: LifecycleFunction[];
   teardown?: LifecycleFunction[];
   throw?: boolean;
@@ -74,12 +76,22 @@ const lambdaHandler = function <TEvent = unknown, TResult = unknown>(
   let {
     chaos,
     name,
-    setup,
+    secrets,
+    setup = [],
     teardown,
     throw: shouldThrow = false,
     unavailable,
     validate,
   } = opts;
+
+  // Add secrets loading to setup if secrets are provided
+  if (secrets && secrets.length > 0) {
+    const secretsToLoad = secrets;
+    const secretsSetup: LifecycleFunction = async () => {
+      await loadEnvSecrets(...secretsToLoad);
+    };
+    setup = [secretsSetup, ...setup];
+  }
 
   //
   //
@@ -194,8 +206,6 @@ const lambdaHandler = function <TEvent = unknown, TResult = unknown>(
     //
     // Postprocess
     //
-
-    // TODO: API Gateway proxy response
 
     // Log response
     log.info.var({ response });

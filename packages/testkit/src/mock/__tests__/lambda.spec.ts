@@ -1,11 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { lambdaHandler } from "../lambda.js";
-import {
-  BadRequestError,
-  HTTP,
-  UnavailableError,
-  jaypieHandler,
-} from "../core.js";
+import { HTTP, jaypieHandler } from "../core.js";
 
 describe("lambdaHandler", () => {
   beforeEach(() => {

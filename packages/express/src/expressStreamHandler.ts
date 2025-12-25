@@ -1,4 +1,5 @@
 import type { Request, Response } from "express";
+import { loadEnvSecrets } from "@jaypie/aws";
 import { BadRequestError, UnhandledError } from "@jaypie/errors";
 import { force, getHeaderFrom, HTTP, JAYPIE, jaypieHandler } from "@jaypie/kit";
 import { log as publicLogger } from "@jaypie/logger";
@@ -79,6 +80,7 @@ export interface ExpressStreamHandlerOptions {
   contentType?: string;
   locals?: Record<string, unknown | ExpressStreamHandlerLocals>;
   name?: string;
+  secrets?: string[];
   setup?: JaypieStreamHandlerSetup[] | JaypieStreamHandlerSetup;
   teardown?: JaypieStreamHandlerTeardown[] | JaypieStreamHandlerTeardown;
   unavailable?: boolean;
@@ -127,7 +129,7 @@ const logger = publicLogger as unknown as ExtendedLogger;
 function formatErrorSSE(error: JaypieError | Error): string {
   const isJaypieError = (error as JaypieError).isProjectError;
   const body = isJaypieError
-    ? (error as JaypieError).body?.() ?? { error: error.message }
+    ? ((error as JaypieError).body?.() ?? { error: error.message })
     : new UnhandledError().body();
 
   return `event: error\ndata: ${JSON.stringify(body)}\n\n`;
@@ -195,6 +197,7 @@ function expressStreamHandler(
     contentType = "text/event-stream",
     locals,
     name,
+    secrets,
     setup = [],
     teardown = [],
     unavailable,
@@ -304,6 +307,15 @@ function expressStreamHandler(
     //
     // Preprocess
     //
+
+    // Load secrets into process.env if configured
+    if (secrets && secrets.length > 0) {
+      const secretsToLoad = secrets;
+      const secretsSetup: JaypieStreamHandlerSetup = async () => {
+        await loadEnvSecrets(...secretsToLoad);
+      };
+      setup.unshift(secretsSetup);
+    }
 
     if (locals) {
       const keys = Object.keys(locals);
