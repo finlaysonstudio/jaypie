@@ -1,11 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unsafe-function-type */
 
-import {
-  createMockFunction,
-  createMockReturnedFunction,
-  createMockResolvedFunction,
-  createMockWrappedFunction,
-} from "./utils";
+import { createMockFunction, createMockWrappedFunction } from "./utils";
 import { BadRequestError, UnhandledError } from "@jaypie/errors";
 import { force, jaypieHandler } from "./core";
 import * as original from "@jaypie/express";
@@ -66,7 +61,7 @@ export const notImplementedRoute = createMockWrappedFunction(
 export const expressHttpCodeHandler = createMockWrappedFunction(
   original.expressHttpCodeHandler as any,
   (...args: any[]) => {
-    const [req, res, next] = args;
+    const [, res] = args;
     return res.status(200).send();
   },
 );
@@ -279,7 +274,7 @@ export const expressHandler = createMockFunction<
         } else if (typeof response === "string") {
           try {
             res.status(status).json(JSON.parse(response));
-          } catch (error) {
+          } catch {
             res.status(status).send(response);
           }
         } else if (response === true) {

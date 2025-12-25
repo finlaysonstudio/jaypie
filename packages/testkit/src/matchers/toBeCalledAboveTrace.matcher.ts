@@ -19,7 +19,7 @@ const calledAboveTrace = (log: LogMock): MatcherResult => {
         pass: true,
       };
     }
-  } catch (error) {
+  } catch {
     throw Error(`[calledAboveTrace] log is not a mock object`);
   }
 

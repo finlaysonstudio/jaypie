@@ -8,9 +8,6 @@ import {
 
 import * as original from "@jaypie/llm";
 
-// Constants for mock values
-const TAG = "LLM";
-
 export const LLM = original.LLM;
 
 const mockOperate = createMockResolvedFunction({

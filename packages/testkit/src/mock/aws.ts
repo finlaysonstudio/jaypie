@@ -46,7 +46,7 @@ export const sendTextractJob = createMockFunction<
     snsRoleArn?: string;
     snsTopicArn?: string;
   }) => Promise<any[]>
->(async ({ bucket, key, featureTypes = [] }) => {
+>(async ({ bucket, key }) => {
   // Basic validation to mimic original behavior
   if (!bucket || !key) {
     throw new Error("Bucket and key are required");
