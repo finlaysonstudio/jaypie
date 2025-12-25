@@ -21,6 +21,8 @@ export const getEnvSecret = createMockFunction<
   (key: string) => Promise<string>
 >(async (key) => `_MOCK_ENV_SECRET_[${TAG}][${key}]`);
 
+export const loadEnvSecrets = createMockResolvedFunction(undefined);
+
 export const getSingletonMessage = createMockWrappedFunction(
   original.getSingletonMessage,
   { value: "_MOCK_SINGLETON_MESSAGE_" },
