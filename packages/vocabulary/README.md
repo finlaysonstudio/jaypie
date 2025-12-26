@@ -79,16 +79,16 @@ const divisionHandler = serviceHandler({
   service: ({ numerator, denominator }) => (numerator / denominator),
 });
 
-divisionHandler(); // =4
-divisionHandler({ numerator: 24 }); // =8
-divisionHandler({ numerator: 24, denominator: 2 }); // =12
-divisionHandler({ numerator: "14", denominator: "7" }); // =2
-divisionHandler({ numerator: 1, denominator: 0 }); // throws BadRequestError(); does not validate
-divisionHandler({ numerator: 1, denominator: "0" }); // throws BadRequestError(); does not validate
-divisionHandler('{ "numerator": "18" }'); // =3; String parses as JSON
-divisionHandler({ numerator: "ONE" }); // throws BadRequestError(); cannot coerce NaN to Number
-divisionHandler({ denominator: "TWO" }); // throws BadRequestError(); cannot coerce NaN to Number
-divisionHandler(12, 2); // throws BadRequestError(); future argument coercion may allow
+await divisionHandler(); // =4
+await divisionHandler({ numerator: 24 }); // =8
+await divisionHandler({ numerator: 24, denominator: 2 }); // =12
+await divisionHandler({ numerator: "14", denominator: "7" }); // =2
+await divisionHandler({ numerator: 1, denominator: 0 }); // throws BadRequestError(); does not validate
+await divisionHandler({ numerator: 1, denominator: "0" }); // throws BadRequestError(); does not validate
+await divisionHandler('{ "numerator": "18" }'); // =3; String parses as JSON
+await divisionHandler({ numerator: "ONE" }); // throws BadRequestError(); cannot coerce NaN to Number
+await divisionHandler({ denominator: "TWO" }); // throws BadRequestError(); cannot coerce NaN to Number
+await divisionHandler(12, 2); // throws BadRequestError(); future argument coercion may allow
 ```
 
 Service Handler builds a function that initiates a "controller" step that:
