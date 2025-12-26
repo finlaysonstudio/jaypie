@@ -89,6 +89,20 @@ async function runValidation(
 }
 
 /**
+ * Check if a field is required
+ * A field is required unless it has a default OR required is explicitly false
+ */
+function isFieldRequired(definition: InputFieldDefinition): boolean {
+  if (definition.required === false) {
+    return false;
+  }
+  if (definition.default !== undefined) {
+    return false;
+  }
+  return true;
+}
+
+/**
  * Process a single field through coercion and validation
  */
 async function processField(
@@ -104,6 +118,11 @@ async function processField(
 
   // Coerce to target type
   const coercedValue = coerce(processedValue, definition.type);
+
+  // Check if required field is missing
+  if (coercedValue === undefined && isFieldRequired(definition)) {
+    throw new BadRequestError(`Missing required field "${fieldName}"`);
+  }
 
   // Run validation if provided
   if (definition.validate !== undefined && coercedValue !== undefined) {

@@ -19,6 +19,7 @@ export type CoercionType = CompositeType | ScalarType;
 export interface InputFieldDefinition {
   default?: unknown;
   description?: string;
+  required?: boolean;
   type: CoercionType;
   validate?: ValidateFunction | RegExp | Array<unknown>;
 }

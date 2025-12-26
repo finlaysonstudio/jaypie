@@ -67,6 +67,7 @@ const handler = serviceHandler({
       type: Number,           // CoercionType (Boolean, Number, String, Array, Object)
       default: 42,            // Optional default value
       description: "...",     // Optional description
+      required: false,        // Optional: defaults to true unless default is set
       validate: (v) => v > 0, // Optional: function, RegExp, or array
     },
   },
@@ -78,6 +79,7 @@ Handler features:
 - Accepts object or JSON string input
 - Coerces all defined fields to their types
 - Applies defaults before coercion
+- **Required validation**: Fields are required unless they have a `default` OR `required: false`
 - Runs validation (sync or async) after coercion
 - Always returns a Promise
 
@@ -90,7 +92,7 @@ Located in `types.ts`:
 | `ScalarType` | `Boolean \| Number \| String` or string equivalents |
 | `CompositeType` | `Array \| Object` or string equivalents |
 | `CoercionType` | Union of ScalarType and CompositeType |
-| `InputFieldDefinition` | Field config with type, default, description, validate |
+| `InputFieldDefinition` | Field config with type, default, description, required, validate |
 | `ValidateFunction` | `(value) => boolean \| void \| Promise<...>` |
 | `ServiceFunction<TInput, TOutput>` | The actual service logic |
 | `ServiceHandlerConfig` | Full handler configuration |

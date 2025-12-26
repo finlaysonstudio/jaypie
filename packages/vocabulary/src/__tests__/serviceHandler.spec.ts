@@ -348,10 +348,11 @@ describe("serviceHandler", () => {
         await expect(handler({ value: 1 })).rejects.toThrow(BadRequestError);
       });
 
-      it("skips validation for undefined values", async () => {
+      it("skips validation for undefined values when not required", async () => {
         const handler = serviceHandler({
           input: {
             value: {
+              required: false,
               type: Number,
               validate: (v) => (v as number) > 0,
             },
@@ -359,6 +360,74 @@ describe("serviceHandler", () => {
           service: ({ value }: { value?: number }) => value ?? "undefined",
         });
         await expect(handler({})).resolves.toBe("undefined");
+      });
+    });
+
+    describe("Required Fields", () => {
+      it("throws when required field is missing (no default)", async () => {
+        const handler = serviceHandler({
+          input: {
+            value: { type: Number },
+          },
+          service: ({ value }: { value: number }) => value,
+        });
+        await expect(handler({})).rejects.toThrow(BadRequestError);
+        await expect(handler({})).rejects.toThrow(
+          'Missing required field "value"',
+        );
+      });
+
+      it("does not throw when field has default", async () => {
+        const handler = serviceHandler({
+          input: {
+            value: { default: 42, type: Number },
+          },
+          service: ({ value }: { value: number }) => value,
+        });
+        await expect(handler({})).resolves.toBe(42);
+      });
+
+      it("does not throw when required: false", async () => {
+        const handler = serviceHandler({
+          input: {
+            value: { required: false, type: Number },
+          },
+          service: ({ value }: { value?: number }) => value ?? "undefined",
+        });
+        await expect(handler({})).resolves.toBe("undefined");
+      });
+
+      it("throws when required field is empty string (coerces to undefined)", async () => {
+        const handler = serviceHandler({
+          input: {
+            value: { type: String },
+          },
+          service: ({ value }: { value: string }) => value,
+        });
+        await expect(handler({ value: "" })).rejects.toThrow(BadRequestError);
+      });
+
+      it("does not throw when required: true with default (default takes precedence)", async () => {
+        const handler = serviceHandler({
+          input: {
+            value: { default: 42, required: true, type: Number },
+          },
+          service: ({ value }: { value: number }) => value,
+        });
+        await expect(handler({})).resolves.toBe(42);
+      });
+
+      it("throws on missing required field even with other fields provided", async () => {
+        const handler = serviceHandler({
+          input: {
+            a: { type: Number },
+            b: { type: Number },
+          },
+          service: ({ a, b }: { a: number; b: number }) => a + b,
+        });
+        await expect(handler({ a: 1 })).rejects.toThrow(
+          'Missing required field "b"',
+        );
       });
     });
 

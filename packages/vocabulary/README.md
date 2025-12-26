@@ -99,6 +99,7 @@ Service Handler builds a function that initiates a "controller" step that:
   * A regular expression should be used as a matcher
   * An array should validate if any scalar matches when coerced to the same type, any regular expression matches, or any function returns true (pocket throws in this case)
 * Calls the service function and returns the response
+* Parameters are assumed required unless (a) they have a default or (b) they are `required: false`
 
 ### Serialization Formats
 
