@@ -70,6 +70,47 @@ describe("coerce", () => {
       });
     });
 
+    describe("Unwrapping", () => {
+      it("unwraps object with value property", () => {
+        expect(coerceToBoolean({ value: "true" })).toBe(true);
+        expect(coerceToBoolean({ value: true })).toBe(true);
+        expect(coerceToBoolean({ value: 1 })).toBe(true);
+        expect(coerceToBoolean({ value: 0 })).toBe(false);
+      });
+
+      it("unwraps single-element array", () => {
+        expect(coerceToBoolean([true])).toBe(true);
+        expect(coerceToBoolean(["true"])).toBe(true);
+        expect(coerceToBoolean([1])).toBe(true);
+        expect(coerceToBoolean([0])).toBe(false);
+      });
+
+      it("unwraps nested array with object", () => {
+        expect(coerceToBoolean([{ value: "true" }])).toBe(true);
+      });
+
+      it("parses JSON string to object and unwraps", () => {
+        expect(coerceToBoolean('{"value":"true"}')).toBe(true);
+        expect(coerceToBoolean('{"value":true}')).toBe(true);
+        expect(coerceToBoolean('{"value":1}')).toBe(true);
+      });
+
+      it("parses JSON string to array and unwraps", () => {
+        expect(coerceToBoolean('["true"]')).toBe(true);
+        expect(coerceToBoolean("[true]")).toBe(true);
+        expect(coerceToBoolean("[1]")).toBe(true);
+      });
+
+      it("parses JSON string with nested structure", () => {
+        expect(coerceToBoolean('[{"value":true}]')).toBe(true);
+        expect(coerceToBoolean('[{"value":"true"}]')).toBe(true);
+      });
+
+      it("returns undefined for empty array", () => {
+        expect(coerceToBoolean([])).toBeUndefined();
+      });
+    });
+
     describe("Error Cases", () => {
       it("throws on non-numeric string", () => {
         expect(() => coerceToBoolean("hello")).toThrow(BadRequestError);
@@ -79,12 +120,12 @@ describe("coerce", () => {
         expect(() => coerceToBoolean(NaN)).toThrow(BadRequestError);
       });
 
-      it("throws on object", () => {
-        expect(() => coerceToBoolean({})).toThrow(BadRequestError);
+      it("throws on object without value property", () => {
+        expect(() => coerceToBoolean({ foo: "bar" })).toThrow(BadRequestError);
       });
 
-      it("throws on array", () => {
-        expect(() => coerceToBoolean([])).toThrow(BadRequestError);
+      it("throws on multi-element array", () => {
+        expect(() => coerceToBoolean([true, false])).toThrow(BadRequestError);
       });
     });
   });
@@ -135,6 +176,42 @@ describe("coerce", () => {
       });
     });
 
+    describe("Unwrapping", () => {
+      it("unwraps object with value property", () => {
+        expect(coerceToNumber({ value: "42" })).toBe(42);
+        expect(coerceToNumber({ value: 42 })).toBe(42);
+        expect(coerceToNumber({ value: true })).toBe(1);
+      });
+
+      it("unwraps single-element array", () => {
+        expect(coerceToNumber([42])).toBe(42);
+        expect(coerceToNumber(["42"])).toBe(42);
+        expect(coerceToNumber([true])).toBe(1);
+      });
+
+      it("unwraps nested array with object", () => {
+        expect(coerceToNumber([{ value: 42 }])).toBe(42);
+      });
+
+      it("parses JSON string to object and unwraps", () => {
+        expect(coerceToNumber('{"value":"42"}')).toBe(42);
+        expect(coerceToNumber('{"value":42}')).toBe(42);
+      });
+
+      it("parses JSON string to array and unwraps", () => {
+        expect(coerceToNumber('["42"]')).toBe(42);
+        expect(coerceToNumber("[42]")).toBe(42);
+      });
+
+      it("parses JSON string with nested structure", () => {
+        expect(coerceToNumber('[{"value":42}]')).toBe(42);
+      });
+
+      it("returns undefined for empty array", () => {
+        expect(coerceToNumber([])).toBeUndefined();
+      });
+    });
+
     describe("Error Cases", () => {
       it("throws on non-numeric string", () => {
         expect(() => coerceToNumber("hello")).toThrow(BadRequestError);
@@ -144,12 +221,12 @@ describe("coerce", () => {
         expect(() => coerceToNumber(NaN)).toThrow(BadRequestError);
       });
 
-      it("throws on object", () => {
-        expect(() => coerceToNumber({})).toThrow(BadRequestError);
+      it("throws on object without value property", () => {
+        expect(() => coerceToNumber({ foo: "bar" })).toThrow(BadRequestError);
       });
 
-      it("throws on array", () => {
-        expect(() => coerceToNumber([])).toThrow(BadRequestError);
+      it("throws on multi-element array", () => {
+        expect(() => coerceToNumber([1, 2])).toThrow(BadRequestError);
       });
     });
   });
@@ -188,17 +265,53 @@ describe("coerce", () => {
       });
     });
 
+    describe("Unwrapping", () => {
+      it("unwraps object with value property", () => {
+        expect(coerceToString({ value: "hello" })).toBe("hello");
+        expect(coerceToString({ value: 42 })).toBe("42");
+        expect(coerceToString({ value: true })).toBe("true");
+      });
+
+      it("unwraps single-element array", () => {
+        expect(coerceToString(["hello"])).toBe("hello");
+        expect(coerceToString([42])).toBe("42");
+        expect(coerceToString([true])).toBe("true");
+      });
+
+      it("unwraps nested array with object", () => {
+        expect(coerceToString([{ value: "hello" }])).toBe("hello");
+      });
+
+      it("parses JSON string to object and unwraps", () => {
+        expect(coerceToString('{"value":"hello"}')).toBe("hello");
+        expect(coerceToString('{"value":42}')).toBe("42");
+      });
+
+      it("parses JSON string to array and unwraps", () => {
+        expect(coerceToString('["hello"]')).toBe("hello");
+        expect(coerceToString("[42]")).toBe("42");
+      });
+
+      it("parses JSON string with nested structure", () => {
+        expect(coerceToString('[{"value":"hello"}]')).toBe("hello");
+      });
+
+      it("returns undefined for empty array", () => {
+        expect(coerceToString([])).toBeUndefined();
+      });
+    });
+
     describe("Error Cases", () => {
       it("throws on NaN number", () => {
         expect(() => coerceToString(NaN)).toThrow(BadRequestError);
       });
 
-      it("throws on object", () => {
-        expect(() => coerceToString({})).toThrow(BadRequestError);
+      it("throws on object without value property", () => {
+        expect(() => coerceToString({ foo: "bar" })).toThrow(BadRequestError);
       });
 
-      it("throws on array", () => {
-        expect(() => coerceToString([])).toThrow(BadRequestError);
+      it("throws on multi-element array", () => {
+        expect(() => coerceToString(["a", "b"])).toThrow(BadRequestError);
       });
     });
   });

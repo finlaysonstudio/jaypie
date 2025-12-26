@@ -5,7 +5,88 @@ import { BadRequestError } from "@jaypie/errors";
 import type { CoercionType } from "./types.js";
 
 /**
+ * Try to parse a string as JSON if it looks like JSON
+ * Returns the parsed value or the original string if not JSON
+ */
+function tryParseJson(value: string): unknown {
+  const trimmed = value.trim();
+  if (
+    (trimmed.startsWith("{") && trimmed.endsWith("}")) ||
+    (trimmed.startsWith("[") && trimmed.endsWith("]"))
+  ) {
+    try {
+      return JSON.parse(trimmed);
+    } catch {
+      // Not valid JSON, return original
+      return value;
+    }
+  }
+  return value;
+}
+
+/**
+ * Unwrap arrays and objects to get to the scalar value
+ * - Single-element arrays unwrap to their element
+ * - Objects with value property unwrap to that value
+ * - Recursively unwraps nested structures
+ */
+function unwrapToScalar(value: unknown): unknown {
+  if (value === undefined || value === null) {
+    return value;
+  }
+
+  // Unwrap single-element arrays
+  if (Array.isArray(value)) {
+    if (value.length === 0) {
+      return undefined;
+    }
+    if (value.length === 1) {
+      return unwrapToScalar(value[0]);
+    }
+    throw new BadRequestError("Cannot coerce multi-value array to scalar");
+  }
+
+  // Unwrap objects with value property
+  if (typeof value === "object") {
+    const obj = value as Record<string, unknown>;
+    if ("value" in obj) {
+      return unwrapToScalar(obj.value);
+    }
+    throw new BadRequestError("Object must have a value attribute");
+  }
+
+  return value;
+}
+
+/**
+ * Prepare a value for scalar coercion by parsing JSON strings and unwrapping
+ */
+function prepareForScalarCoercion(value: unknown): unknown {
+  if (value === undefined || value === null) {
+    return value;
+  }
+
+  // Try to parse JSON strings
+  if (typeof value === "string") {
+    const parsed = tryParseJson(value);
+    if (parsed !== value) {
+      // Successfully parsed, unwrap the result
+      return unwrapToScalar(parsed);
+    }
+    return value;
+  }
+
+  // Unwrap arrays and objects
+  if (Array.isArray(value) || typeof value === "object") {
+    return unwrapToScalar(value);
+  }
+
+  return value;
+}
+
+/**
  * Coerce a value to a boolean
+ * - Arrays, objects, and JSON strings are unwrapped first
  * - String "true" becomes true
  * - String "false" becomes false
  * - Strings that parse to numbers: positive = true, zero or negative = false
@@ -13,19 +94,22 @@ import type { CoercionType } from "./types.js";
  * - Boolean passes through
  */
 export function coerceToBoolean(value: unknown): boolean | undefined {
-  if (value === undefined || value === null) {
+  // Prepare value by parsing JSON and unwrapping arrays/objects
+  const prepared = prepareForScalarCoercion(value);
+
+  if (prepared === undefined || prepared === null) {
     return undefined;
   }
 
-  if (typeof value === "boolean") {
-    return value;
+  if (typeof prepared === "boolean") {
+    return prepared;
   }
 
-  if (typeof value === "string") {
-    if (value === "") {
+  if (typeof prepared === "string") {
+    if (prepared === "") {
       return undefined;
     }
-    const lower = value.toLowerCase();
+    const lower = prepared.toLowerCase();
     if (lower === "true") {
       return true;
     }
@@ -33,25 +117,26 @@ export function coerceToBoolean(value: unknown): boolean | undefined {
       return false;
     }
     // Try to parse as number
-    const num = parseFloat(value);
+    const num = parseFloat(prepared);
     if (isNaN(num)) {
-      throw new BadRequestError(`Cannot coerce "${value}" to Boolean`);
+      throw new BadRequestError(`Cannot coerce "${prepared}" to Boolean`);
     }
     return num > 0;
   }
 
-  if (typeof value === "number") {
-    if (isNaN(value)) {
+  if (typeof prepared === "number") {
+    if (isNaN(prepared)) {
       throw new BadRequestError("Cannot coerce NaN to Boolean");
     }
-    return value > 0;
+    return prepared > 0;
   }
 
-  throw new BadRequestError(`Cannot coerce ${typeof value} to Boolean`);
+  throw new BadRequestError(`Cannot coerce ${typeof prepared} to Boolean`);
 }
 
 /**
  * Coerce a value to a number
+ * - Arrays, objects, and JSON strings are unwrapped first
  * - String "" becomes undefined
  * - String "true" becomes 1
  * - String "false" becomes 0
@@ -61,73 +146,80 @@ export function coerceToBoolean(value: unknown): boolean | undefined {
  * - Number passes through
  */
 export function coerceToNumber(value: unknown): number | undefined {
-  if (value === undefined || value === null) {
+  // Prepare value by parsing JSON and unwrapping arrays/objects
+  const prepared = prepareForScalarCoercion(value);
+
+  if (prepared === undefined || prepared === null) {
     return undefined;
   }
 
-  if (typeof value === "number") {
-    if (isNaN(value)) {
+  if (typeof prepared === "number") {
+    if (isNaN(prepared)) {
       throw new BadRequestError("Cannot coerce NaN to Number");
     }
-    return value;
+    return prepared;
   }
 
-  if (typeof value === "boolean") {
-    return value ? 1 : 0;
+  if (typeof prepared === "boolean") {
+    return prepared ? 1 : 0;
   }
 
-  if (typeof value === "string") {
-    if (value === "") {
+  if (typeof prepared === "string") {
+    if (prepared === "") {
       return undefined;
     }
-    const lower = value.toLowerCase();
+    const lower = prepared.toLowerCase();
     if (lower === "true") {
       return 1;
     }
     if (lower === "false") {
       return 0;
     }
-    const num = parseFloat(value);
+    const num = parseFloat(prepared);
     if (isNaN(num)) {
-      throw new BadRequestError(`Cannot coerce "${value}" to Number`);
+      throw new BadRequestError(`Cannot coerce "${prepared}" to Number`);
     }
     return num;
   }
 
-  throw new BadRequestError(`Cannot coerce ${typeof value} to Number`);
+  throw new BadRequestError(`Cannot coerce ${typeof prepared} to Number`);
 }
 
 /**
  * Coerce a value to a string
+ * - Arrays, objects, and JSON strings are unwrapped first
  * - String "" becomes undefined
  * - Boolean true becomes "true", false becomes "false"
  * - Number converts to string representation
  * - String passes through
  */
 export function coerceToString(value: unknown): string | undefined {
-  if (value === undefined || value === null) {
+  // Prepare value by parsing JSON and unwrapping arrays/objects
+  const prepared = prepareForScalarCoercion(value);
+
+  if (prepared === undefined || prepared === null) {
     return undefined;
   }
 
-  if (typeof value === "string") {
-    if (value === "") {
+  if (typeof prepared === "string") {
+    if (prepared === "") {
       return undefined;
     }
-    return value;
+    return prepared;
   }
 
-  if (typeof value === "boolean") {
-    return value ? "true" : "false";
+  if (typeof prepared === "boolean") {
+    return prepared ? "true" : "false";
   }
 
-  if (typeof value === "number") {
-    if (isNaN(value)) {
+  if (typeof prepared === "number") {
+    if (isNaN(prepared)) {
       throw new BadRequestError("Cannot coerce NaN to String");
     }
-    return String(value);
+    return String(prepared);
   }
 
-  throw new BadRequestError(`Cannot coerce ${typeof value} to String`);
+  throw new BadRequestError(`Cannot coerce ${typeof prepared} to String`);
 }
 
 /**
@@ -183,9 +275,7 @@ export function coerceFromArray(value: unknown): unknown {
  * - Objects without a value attribute throw BadRequestError
  * - undefined/null become undefined
  */
-export function coerceToObject(
-  value: unknown,
-): { value: unknown } | undefined {
+export function coerceToObject(value: unknown): { value: unknown } | undefined {
   if (value === undefined || value === null) {
     return undefined;
   }
@@ -228,10 +318,7 @@ export function coerceFromObject(value: unknown): unknown {
 /**
  * Coerce a value to the specified type
  */
-export function coerce(
-  value: unknown,
-  type: CoercionType,
-): unknown {
+export function coerce(value: unknown, type: CoercionType): unknown {
   const normalizedType = normalizeType(type);
 
   switch (normalizedType) {
