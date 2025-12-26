@@ -36,7 +36,11 @@ export {
 export { JaypieInfrastructureStack } from "./JaypieInfrastructureStack";
 export { JaypieLambda, JaypieLambdaProps } from "./JaypieLambda";
 export { JaypieMongoDbSecret } from "./JaypieMongoDbSecret";
-export { JaypieNextJs, JaypieNextjsProps } from "./JaypieNextJs";
+export {
+  DomainNameConfig,
+  JaypieNextJs,
+  JaypieNextjsProps,
+} from "./JaypieNextJs";
 export { JaypieOpenAiSecret } from "./JaypieOpenAiSecret";
 export {
   JaypieOrganizationTrail,

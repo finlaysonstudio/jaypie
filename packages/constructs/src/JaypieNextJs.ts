@@ -16,9 +16,24 @@ import {
   SecretsArrayItem,
 } from "./helpers";
 
+export interface DomainNameConfig {
+  component?: string;
+  domain?: string;
+  env?: string;
+  subdomain?: string;
+}
+
 export interface JaypieNextjsProps {
   datadogApiKeyArn?: string;
-  domainName?: string;
+  /**
+   * Domain name for the Next.js application.
+   *
+   * Supports both string and config object:
+   * - String: used directly as the domain name
+   * - Object: passed to envHostname() to construct the domain name
+   *   - { component, domain, env, subdomain }
+   */
+  domainName?: string | DomainNameConfig;
   /**
    * Environment variables for the Next.js application.
    *
@@ -49,7 +64,10 @@ export class JaypieNextJs extends Construct {
   constructor(scope: Construct, id: string, props?: JaypieNextjsProps) {
     super(scope, id);
 
-    const domainName = props?.domainName || envHostname();
+    const domainName =
+      typeof props?.domainName === "string"
+        ? props.domainName
+        : envHostname(props?.domainName);
     this.domainName = domainName;
     const domainNameSanitized = domainName
       .replace(/\./g, "-")
