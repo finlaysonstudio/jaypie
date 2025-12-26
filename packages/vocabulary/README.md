@@ -183,32 +183,34 @@ Should be treated as "strictly" defined:
 
 Ideally optimize for reusability:
 
-* controller: () => input | { input, context }
+* default: *
 * input: {}
-* parameters: {}
-* required: []
-* serializer: ()
 * service: ()
+* value: ""
+* validate: [()] | { "": () | // }
 
 ##### Assumed Attributes
 
 Future intentions planned:
 
+* authentication: () | [()]
+* authorization: () | [()]
 * chaos: ""
 * class: ""
 * context: {}
-* default: *
+* controller: () => input | { input, context }
 * env: ""
 * history: {}
 * locals: {}
 * message: () | ""
+* parameters: {}
+* required: []
 * role: ""
 * seed: ""
+* serializer: ()
 * setup: [()]
 * tags: [""]
 * teardown: [()]
-* value: ""
-* validate: [()] | { "": () | // }
 
 ##### Avoidable Attributes
 
