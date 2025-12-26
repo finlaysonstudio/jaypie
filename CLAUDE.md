@@ -9,9 +9,69 @@
 - `@jaypie/repokit` provides common repository tools
 - Additional packages provide special functions
 ## Technology Stack
+- **Language**: TypeScript with ESM modules
+- **Runtime**: Node.js 20, 22, 24, 25 (tested across all versions)
+- **Package Manager**: npm with workspaces (monorepo)
+- **Testing**: Vitest
+- **Building**: Rollup with vite-plugin-dts for type declarations
+- **Linting**: ESLint 9 with custom `@jaypie/eslint` config
+- **Formatting**: Prettier, sort-package-json
+
 ## Package Structure
+| Package | Description |
+|---------|-------------|
+| `jaypie` | Main package: secrets, error handling, event parsing, lifecycle, logging, queues |
+| `@jaypie/aws` | AWS SDK utilities (SQS, Secrets Manager, Textract) |
+| `@jaypie/constructs` | CDK constructs for AWS infrastructure |
+| `@jaypie/core` | Core utilities (deprecated, migrating to kit) |
+| `@jaypie/datadog` | Datadog integration utilities |
+| `@jaypie/errors` | Error types (ConfigurationError, etc.) |
+| `@jaypie/eslint` | Opinionated ESLint configuration |
+| `@jaypie/express` | Express.js handler utilities |
+| `@jaypie/fabricator` | Data fabrication utilities |
+| `@jaypie/kit` | Utility functions for Jaypie applications |
+| `@jaypie/lambda` | AWS Lambda handler utilities |
+| `@jaypie/llm` | LLM provider interface (Anthropic, OpenAI) |
+| `@jaypie/logger` | Logging utilities |
+| `@jaypie/magpie` | Open source utility collection |
+| `@jaypie/mcp` | Model Context Protocol server |
+| `@jaypie/mongoose` | MongoDB/Mongoose connection utilities |
+| `@jaypie/repokit` | Repository development tools |
+| `@jaypie/testkit` | Testing mocks and utilities |
+| `@jaypie/textract` | AWS Textract utilities |
+| `@jaypie/types` | Core TypeScript type definitions |
+| `@jaypie/documentation` | Documentation site (private) |
+
 ## CI/CD Workflows
+- **npm-check.yml**: Runs on `feat/*`, `fix/*`, `devin/*` branches
+  - Lint, typecheck, and unit tests in parallel
+  - Tests across Node.js 20, 22, 24, 25
+  - Optional Datadog test tracing
+  - Conditional LLM client tests when `packages/llm` changes
+- **npm-deploy.yml**: Runs on `main` branch and `deploy-*`/`rc-*` tags
+  - Publishes packages to npm with provenance
+  - RC tags publish with `--tag rc`
+  - Skips already-published versions
+
 ## Environment Variables
+| Variable | Description |
+|----------|-------------|
+| `PROJECT_ENV` | Environment identifier (local, meta, production) |
+| `PROJECT_KEY` | Project identifier for logging |
+| `PROJECT_NONCE` | Unique identifier for resources |
+| `PROJECT_CHAOS` | Chaos engineering mode (none, partial, full) |
+| `NODE_ENV` | Node environment (development, production) |
+| `LOG_LEVEL` | Logging level (trace, debug, info, warn, error) |
+| `CDK_ENV_BUCKET` | AWS S3 bucket name |
+| `CDK_ENV_QUEUE_URL` | AWS SQS queue URL |
+| `CDK_ENV_SNS_ROLE_ARN` | SNS role ARN for notifications |
+| `CDK_ENV_SNS_TOPIC_ARN` | SNS topic ARN |
+| `CDK_ENV_DATADOG_API_KEY_ARN` | Datadog API key ARN in Secrets Manager |
+| `SECRET_MONGODB_URI` | MongoDB URI secret name |
+| `MONGODB_URI` | Direct MongoDB connection URI |
+| `ANTHROPIC_API_KEY` | Anthropic API key for LLM |
+| `OPENAI_API_KEY` | OpenAI API key for LLM |
+| `AWS_SESSION_TOKEN` | AWS session token (set by Lambda runtime) |
 ## Commands
 ### Testing
 ```bash
