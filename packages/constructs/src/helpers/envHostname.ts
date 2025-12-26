@@ -23,7 +23,9 @@ export function envHostname({
 
   const resolvedComponent =
     component === "@" || component === "" ? undefined : component;
-  const resolvedSubdomain = subdomain || process.env.CDK_ENV_SUBDOMAIN;
+  const providedSubdomain =
+    subdomain === "@" || subdomain === "" ? undefined : subdomain;
+  const resolvedSubdomain = providedSubdomain || process.env.CDK_ENV_SUBDOMAIN;
   const resolvedEnv = env || process.env.PROJECT_ENV;
   const filteredEnv =
     resolvedEnv === CDK.ENV.PRODUCTION ? undefined : resolvedEnv;

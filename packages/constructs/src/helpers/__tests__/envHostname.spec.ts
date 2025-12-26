@@ -62,6 +62,31 @@ describe("envHostname", () => {
       });
       expect(result).toBe("example.com");
     });
+
+    it("treats @ as undefined for subdomain", () => {
+      const result = envHostname({
+        subdomain: "@",
+        domain: "example.com",
+      });
+      expect(result).toBe("example.com");
+    });
+
+    it("treats empty string as undefined for subdomain", () => {
+      const result = envHostname({
+        subdomain: "",
+        domain: "example.com",
+      });
+      expect(result).toBe("example.com");
+    });
+
+    it("falls back to CDK_ENV_SUBDOMAIN when subdomain is @", () => {
+      process.env.CDK_ENV_SUBDOMAIN = "fallback";
+      const result = envHostname({
+        subdomain: "@",
+        domain: "example.com",
+      });
+      expect(result).toBe("fallback.example.com");
+    });
   });
 
   describe("Observability", () => {
