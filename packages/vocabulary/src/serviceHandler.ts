@@ -24,7 +24,11 @@ function parseInput(input: unknown): Record<string, unknown> {
     }
     try {
       const parsed = JSON.parse(input);
-      if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+      if (
+        typeof parsed !== "object" ||
+        parsed === null ||
+        Array.isArray(parsed)
+      ) {
         throw new BadRequestError("Input must be an object");
       }
       return parsed as Record<string, unknown>;
@@ -121,7 +125,9 @@ async function processField(
 export function serviceHandler<
   TInput extends Record<string, unknown> = Record<string, unknown>,
   TOutput = unknown,
->(config: ServiceHandlerConfig<TInput, TOutput>): ServiceHandlerFunction<TInput, TOutput> {
+>(
+  config: ServiceHandlerConfig<TInput, TOutput>,
+): ServiceHandlerFunction<TInput, TOutput> {
   const { input: inputDefinitions, service } = config;
 
   return async (rawInput?: Partial<TInput> | string): Promise<TOutput> => {
