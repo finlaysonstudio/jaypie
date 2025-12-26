@@ -183,7 +183,7 @@ Should be treated as "strictly" defined:
 
 Ideally optimize for reusability:
 
-* controller: ()
+* controller: () => input | { input, context }
 * input: {}
 * parameters: {}
 * required: []

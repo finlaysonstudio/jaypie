@@ -25,7 +25,7 @@ export default [
         outDir: "dist/esm",
       }),
     ],
-    external: [],
+    external: ["@jaypie/errors"],
   },
   // CommonJS version
   {
@@ -45,6 +45,6 @@ export default [
         outDir: "dist/cjs",
       }),
     ],
-    external: [],
+    external: ["@jaypie/errors"],
   },
 ];

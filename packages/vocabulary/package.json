@@ -31,6 +31,9 @@
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit"
   },
+  "dependencies": {
+    "@jaypie/errors": "^1.2.1"
+  },
   "devDependencies": {
     "@jaypie/testkit": "*",
     "@rollup/plugin-typescript": "^12.1.2",
