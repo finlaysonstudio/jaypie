@@ -162,6 +162,23 @@ Priority order:
 3. Tab splitting: `"1\t2\t3"` → `["1", "2", "3"]`
 4. Single element wrap: `"42"` → `["42"]`
 
+#### RegExp Type Shorthand
+
+A bare RegExp as type coerces to String and validates against the pattern:
+
+```typescript
+const handler = serviceHandler({
+  input: {
+    email: { type: /^[^@]+@[^@]+\.[^@]+$/ },
+    url: { type: /^https?:\/\/.+/ },
+  },
+  service: ({ email, url }) => ({ email, url }),
+});
+
+await handler({ email: "bob@example.com", url: "https://example.com" });  // ✓
+await handler({ email: "invalid", url: "https://example.com" });          // ✗ BadRequestError
+```
+
 #### Validated Type Shorthand
 
 Arrays of literals validate a value against allowed options.

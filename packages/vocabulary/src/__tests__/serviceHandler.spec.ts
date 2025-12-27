@@ -500,6 +500,97 @@ describe("serviceHandler", () => {
       });
     });
 
+    describe("Bare RegExp Type Shorthand", () => {
+      it("accepts bare RegExp as type shorthand for validated string", async () => {
+        const handler = serviceHandler({
+          input: {
+            email: { type: /^[^@]+@[^@]+\.[^@]+$/ },
+          },
+          service: ({ email }: { email: string }) => email,
+        });
+        await expect(handler({ email: "test@example.com" })).resolves.toBe(
+          "test@example.com",
+        );
+      });
+
+      it("throws BadRequestError when value does not match RegExp", async () => {
+        const handler = serviceHandler({
+          input: {
+            email: { type: /^[^@]+@[^@]+\.[^@]+$/ },
+          },
+          service: ({ email }: { email: string }) => email,
+        });
+        await expect(handler({ email: "invalid" })).rejects.toThrow(
+          BadRequestError,
+        );
+      });
+
+      it("coerces value to string before validation", async () => {
+        const handler = serviceHandler({
+          input: {
+            code: { type: /^\d+$/ },
+          },
+          service: ({ code }: { code: string }) => code,
+        });
+        // Number 123 coerces to string "123" which matches the regex
+        await expect(handler({ code: 123 })).resolves.toBe("123");
+      });
+
+      it("supports default value with bare RegExp", async () => {
+        const handler = serviceHandler({
+          input: {
+            code: { default: "ABC123", type: /^[A-Z]+\d+$/ },
+          },
+          service: ({ code }: { code: string }) => code,
+        });
+        await expect(handler({})).resolves.toBe("ABC123");
+        await expect(handler({ code: "XYZ789" })).resolves.toBe("XYZ789");
+      });
+
+      it("supports required: false with bare RegExp", async () => {
+        const handler = serviceHandler({
+          input: {
+            code: { required: false, type: /^[A-Z]+$/ },
+          },
+          service: ({ code }: { code?: string }) => code ?? "none",
+        });
+        await expect(handler({})).resolves.toBe("none");
+      });
+
+      it("works with no service (validation only)", async () => {
+        const handler = serviceHandler({
+          input: {
+            email: { type: /^[^@]+@[^@]+\.[^@]+$/ },
+            name: { type: String },
+          },
+        });
+        await expect(
+          handler({ email: "bob@example.com", name: "Bob" }),
+        ).resolves.toEqual({
+          email: "bob@example.com",
+          name: "Bob",
+        });
+      });
+
+      it("real-world example: URL validation", async () => {
+        const handler = serviceHandler({
+          input: {
+            url: { type: /^https?:\/\/.+/ },
+          },
+          service: ({ url }: { url: string }) => url,
+        });
+        await expect(handler({ url: "https://example.com" })).resolves.toBe(
+          "https://example.com",
+        );
+        await expect(handler({ url: "http://localhost:3000" })).resolves.toBe(
+          "http://localhost:3000",
+        );
+        await expect(handler({ url: "ftp://invalid" })).rejects.toThrow(
+          BadRequestError,
+        );
+      });
+    });
+
     describe("Validated String Shorthand", () => {
       it('accepts ["value1", "value2"] as type shorthand for validated string', async () => {
         const handler = serviceHandler({

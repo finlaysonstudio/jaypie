@@ -125,6 +125,17 @@ Priority order:
 3. Tab splitting: `"1\t2\t3"` splits on tab
 4. Single element wrap: `"42"` becomes `["42"]`
 
+### RegExp Type Shorthand
+
+A bare RegExp as type coerces to String and validates against the pattern:
+
+```typescript
+email: { type: /^[^@]+@[^@]+\.[^@]+$/ }  // Coerces to String, validates against regex
+url: { type: /^https?:\/\/.+/ }           // Same behavior
+```
+
+This is equivalent to `{ type: String, validate: /regex/ }` but more concise.
+
 ### Validated Type Shorthand
 
 Arrays of literals validate a value against allowed options:
@@ -133,7 +144,7 @@ Arrays of literals validate a value against allowed options:
 // String validation - array of strings and/or RegExp
 currency: { type: ["dec", "sps"] }        // Must be "dec" or "sps"
 value: { type: [/^test-/, "special"] }    // Matches regex OR equals "special"
-email: { type: [/^[^@]+@[^@]+\.[^@]+$/] } // Must match email pattern
+email: { type: [/^[^@]+@[^@]+\.[^@]+$/] } // Must match email pattern (array form)
 
 // Number validation - array of numbers
 priority: { type: [1, 2, 3, 4, 5] }       // Must be 1-5
@@ -152,6 +163,7 @@ Located in `types.ts`:
 | `CompositeType` | `Array \| Object` or string equivalents |
 | `ArrayElementType` | Types usable inside typed arrays |
 | `TypedArrayType` | `[String]`, `[Number]`, `[Boolean]`, `[Object]`, `[]` |
+| `RegExpType` | `RegExp` - bare regex coerces to String with validation |
 | `ValidatedStringType` | `Array<string \| RegExp>` - string with validation |
 | `ValidatedNumberType` | `Array<number>` - number with validation |
 | `CoercionType` | Union of all type variants |
@@ -171,7 +183,7 @@ export { coerce, coerceFromArray, coerceFromObject, coerceToArray, coerceToBoole
 export { serviceHandler } from "./serviceHandler.js";
 
 // Types
-export type { ArrayElementType, CoercionType, CompositeType, InputFieldDefinition, ScalarType, ServiceFunction, ServiceHandlerConfig, ServiceHandlerFunction, TypedArrayType, ValidatedNumberType, ValidatedStringType, ValidateFunction } from "./types.js";
+export type { ArrayElementType, CoercionType, CompositeType, InputFieldDefinition, RegExpType, ScalarType, ServiceFunction, ServiceHandlerConfig, ServiceHandlerFunction, TypedArrayType, ValidatedNumberType, ValidatedStringType, ValidateFunction } from "./types.js";
 
 // Version
 export const VOCABULARY_VERSION: string;
@@ -212,6 +224,7 @@ This means:
 - `"1,2,3"` splits into array when target is typed array
 - `"a\tb\tc"` splits on tabs when target is typed array
 - `["a", "b"]` as type means validated string (must be "a" or "b")
-- `[/regex/]` as type means string validated against pattern
+- `/regex/` as type means string validated against pattern (bare RegExp)
+- `[/regex/]` as type means string validated against pattern (array form)
 - `[1, 2, 3]` as type means validated number (must be 1, 2, or 3)
 - Invalid conversions fail fast with `BadRequestError`

@@ -49,9 +49,14 @@ export type ValidatedStringType = Array<string | RegExp>;
 // Coerces to Number and validates against the array
 export type ValidatedNumberType = Array<number>;
 
+// RegExp type shorthand: /regex/
+// Coerces to String and validates against the pattern
+export type RegExpType = RegExp;
+
 // All supported types (including validated shorthands)
 export type CoercionType =
   | CompositeType
+  | RegExpType
   | ScalarType
   | TypedArrayType
   | ValidatedNumberType

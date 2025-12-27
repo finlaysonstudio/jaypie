@@ -21,6 +21,7 @@ export type {
   CoercionType,
   CompositeType,
   InputFieldDefinition,
+  RegExpType,
   ScalarType,
   ServiceFunction,
   ServiceHandlerConfig,

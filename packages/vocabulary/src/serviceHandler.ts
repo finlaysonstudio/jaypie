@@ -192,8 +192,13 @@ async function processField(
   let actualType: CoercionType = definition.type;
   let validation = definition.validate;
 
+  // Handle bare RegExp shorthand: /regex/
+  if (definition.type instanceof RegExp) {
+    actualType = String;
+    validation = definition.type; // The RegExp becomes the validation
+  }
   // Handle validated string shorthand: ["value1", "value2"] or [/regex/]
-  if (isValidatedStringType(definition.type)) {
+  else if (isValidatedStringType(definition.type)) {
     actualType = String;
     validation = definition.type; // The array becomes the validation
   }
