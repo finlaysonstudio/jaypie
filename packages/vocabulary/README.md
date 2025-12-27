@@ -101,6 +101,21 @@ Service Handler builds a function that initiates a "controller" step that:
 * Calls the service function and returns the response
 * Parameters are assumed required unless (a) they have a default or (b) they are `required: false`
 
+#### Natural Types
+
+* `Array`
+  * `[]` same as `Array`
+  * `[Boolean]` same as `Array<boolean>`
+  * `[Number]` same as `Array<number>`
+  * `[Object]` same as `[{}]``Array<object>`
+  * `[String]` same as `[""]``Array<string>`
+* `Boolean`
+* `Number`
+* `Object`
+  * `{}` same as `Object`
+* `String`
+  * `""` same as `String`
+
 ### Serialization Formats
 
 #### Complete Formats
