@@ -323,6 +323,51 @@ function isTypedArrayType(type: CoercionType): type is TypedArrayType {
 }
 
 /**
+ * Split a string on comma or tab delimiters for typed array coercion.
+ * Only splits if the string contains commas or tabs.
+ * Returns the original value if not a string or no delimiters found.
+ */
+function splitStringForArray(value: unknown): unknown {
+  if (typeof value !== "string") {
+    return value;
+  }
+
+  // Check for comma or tab delimiters
+  if (value.includes(",")) {
+    return value.split(",").map((s) => s.trim());
+  }
+  if (value.includes("\t")) {
+    return value.split("\t").map((s) => s.trim());
+  }
+
+  return value;
+}
+
+/**
+ * Try to parse a string as JSON for array context.
+ * Returns parsed value if it's an array, otherwise returns original.
+ */
+function tryParseJsonArray(value: unknown): unknown {
+  if (typeof value !== "string") {
+    return value;
+  }
+
+  const trimmed = value.trim();
+  if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (Array.isArray(parsed)) {
+        return parsed;
+      }
+    } catch {
+      // Not valid JSON, fall through
+    }
+  }
+
+  return value;
+}
+
+/**
  * Get the element type from a typed array type
  * Returns undefined for untyped arrays ([])
  */
@@ -362,6 +407,8 @@ function getArrayElementType(
 
 /**
  * Coerce a value to a typed array
+ * - Tries to parse JSON arrays first
+ * - Splits strings on comma/tab if present
  * - Wraps non-arrays in an array
  * - Coerces each element to the specified element type
  */
@@ -369,8 +416,14 @@ function coerceToTypedArray(
   value: unknown,
   elementType: "boolean" | "number" | "object" | "string" | undefined,
 ): unknown[] | undefined {
-  // First coerce to array
-  const array = coerceToArray(value);
+  // Try to parse JSON array first
+  let processed = tryParseJsonArray(value);
+
+  // If still a string, try to split on comma/tab
+  processed = splitStringForArray(processed);
+
+  // Coerce to array (wraps non-arrays)
+  const array = coerceToArray(processed);
 
   if (array === undefined) {
     return undefined;

@@ -107,14 +107,39 @@ Service Handler builds a function that initiates a "controller" step that:
   * `[]` same as `Array`
   * `[Boolean]` same as `Array<boolean>`
   * `[Number]` same as `Array<number>`
-  * `[Object]` same as `[{}]``Array<object>`
-  * `[String]` same as `[""]``Array<string>`
+  * `[Object]` same as `[{}]` same as `Array<object>`
+  * `[String]` same as `[""]` same as `Array<string>`
 * `Boolean`
 * `Number`
 * `Object`
   * `{}` same as `Object`
 * `String`
   * `""` same as `String`
+
+#### Typed Array Coercion
+
+Typed arrays (`[String]`, `[Number]`, `[Boolean]`, `[Object]`) coerce each element to the specified type.
+
+```typescript
+coerce([1, 2, 3], [String])        // → ["1", "2", "3"]
+coerce(["1", "2"], [Number])       // → [1, 2]
+coerce([1, 0, -1], [Boolean])      // → [true, false, false]
+coerce([1, "hello"], [Object])     // → [{ value: 1 }, { value: "hello" }]
+```
+
+**String Splitting**: Strings containing commas or tabs are automatically split into arrays.
+
+```typescript
+coerce("1,2,3", [Number])          // → [1, 2, 3]
+coerce("a, b, c", [String])        // → ["a", "b", "c"] (whitespace trimmed)
+coerce("true\tfalse", [Boolean])   // → [true, false]
+```
+
+Priority order:
+1. JSON parsing: `"[1,2,3]"` → `[1, 2, 3]`
+2. Comma splitting: `"1,2,3"` → `["1", "2", "3"]`
+3. Tab splitting: `"1\t2\t3"` → `["1", "2", "3"]`
+4. Single element wrap: `"42"` → `["42"]`
 
 ### Serialization Formats
 

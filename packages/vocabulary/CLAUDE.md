@@ -6,7 +6,7 @@ Jaypie standard application component vocabulary - provides type coercion and se
 
 | Attribute | Value |
 |-----------|-------|
-| Status | Initial development (0.0.1) |
+| Status | Initial development (0.1.x) |
 | Type | Utility library |
 | Dependencies | `@jaypie/errors` |
 | Exports | Coercion functions, serviceHandler, TypeScript types |
@@ -83,6 +83,32 @@ Handler features:
 - Runs validation (sync or async) after coercion
 - Always returns a Promise
 
+### Typed Arrays
+
+Typed arrays (`[String]`, `[Number]`, `[Boolean]`, `[Object]`, `[]`) coerce each element:
+
+```typescript
+coerce([1, 2, 3], [String])      // → ["1", "2", "3"]
+coerce(["1", "2"], [Number])     // → [1, 2]
+coerce([1, 0], [Boolean])        // → [true, false]
+coerce([1, 2], [Object])         // → [{ value: 1 }, { value: 2 }]
+coerce([1, "a", true], [])       // → [1, "a", true] (untyped, no element coercion)
+```
+
+**String Splitting**: Strings with commas or tabs are automatically split before coercion:
+
+```typescript
+coerce("1,2,3", [Number])        // → [1, 2, 3]
+coerce("a, b, c", [String])      // → ["a", "b", "c"] (whitespace trimmed)
+coerce("true\tfalse", [Boolean]) // → [true, false]
+```
+
+Priority order:
+1. JSON parsing: `"[1,2,3]"` parses as JSON array
+2. Comma splitting: `"1,2,3"` splits on comma
+3. Tab splitting: `"1\t2\t3"` splits on tab
+4. Single element wrap: `"42"` becomes `["42"]`
+
 ### Types
 
 Located in `types.ts`:
@@ -91,7 +117,9 @@ Located in `types.ts`:
 |------|-------------|
 | `ScalarType` | `Boolean \| Number \| String` or string equivalents |
 | `CompositeType` | `Array \| Object` or string equivalents |
-| `CoercionType` | Union of ScalarType and CompositeType |
+| `ArrayElementType` | Types usable inside typed arrays |
+| `TypedArrayType` | `[String]`, `[Number]`, `[Boolean]`, `[Object]`, `[]` |
+| `CoercionType` | Union of ScalarType, CompositeType, and TypedArrayType |
 | `InputFieldDefinition` | Field config with type, default, description, required, validate |
 | `ValidateFunction` | `(value) => boolean \| void \| Promise<...>` |
 | `ServiceFunction<TInput, TOutput>` | The actual service logic |
@@ -108,10 +136,10 @@ export { coerce, coerceFromArray, coerceFromObject, coerceToArray, coerceToBoole
 export { serviceHandler } from "./serviceHandler.js";
 
 // Types
-export type { CoercionType, CompositeType, InputFieldDefinition, ScalarType, ServiceFunction, ServiceHandlerConfig, ServiceHandlerFunction, ValidateFunction } from "./types.js";
+export type { ArrayElementType, CoercionType, CompositeType, InputFieldDefinition, ScalarType, ServiceFunction, ServiceHandlerConfig, ServiceHandlerFunction, TypedArrayType, ValidateFunction } from "./types.js";
 
 // Version
-export const VOCABULARY_VERSION = "0.0.1";
+export const VOCABULARY_VERSION: string;
 ```
 
 ## Usage in Other Packages
@@ -146,4 +174,6 @@ This means:
 - `[X]` unwraps for all scalar types
 - `'{"value":X}'` and `'[X]'` parse and unwrap for all scalar types
 - JSON strings automatically parse
+- `"1,2,3"` splits into array when target is typed array
+- `"a\tb\tc"` splits on tabs when target is typed array
 - Invalid conversions fail fast with `BadRequestError`

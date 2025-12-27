@@ -585,7 +585,10 @@ describe("coerce", () => {
       });
 
       it("supports string type shorthand", () => {
-        expect(coerce([1, 2], ["object"])).toEqual([{ value: 1 }, { value: 2 }]);
+        expect(coerce([1, 2], ["object"])).toEqual([
+          { value: 1 },
+          { value: 2 },
+        ]);
       });
 
       it("supports {} shorthand for Object", () => {
@@ -618,9 +621,83 @@ describe("coerce", () => {
 
     describe("Error reporting", () => {
       it("includes index in error message", () => {
-        expect(() => coerce(["1", "hello", "3"], [Number])).toThrow(
-          /index 1/,
-        );
+        expect(() => coerce(["1", "hello", "3"], [Number])).toThrow(/index 1/);
+      });
+    });
+
+    describe("String splitting (comma/tab)", () => {
+      describe("Comma-separated strings", () => {
+        it("splits comma-separated string into [Number]", () => {
+          expect(coerce("1,2,3", [Number])).toEqual([1, 2, 3]);
+        });
+
+        it("splits comma-separated string into [String]", () => {
+          expect(coerce("a,b,c", [String])).toEqual(["a", "b", "c"]);
+        });
+
+        it("splits comma-separated string into [Boolean]", () => {
+          expect(coerce("true,false,true", [Boolean])).toEqual([
+            true,
+            false,
+            true,
+          ]);
+        });
+
+        it("trims whitespace around comma-separated values", () => {
+          expect(coerce("1, 2, 3", [Number])).toEqual([1, 2, 3]);
+          expect(coerce("a , b , c", [String])).toEqual(["a", "b", "c"]);
+        });
+
+        it("handles single value without comma", () => {
+          expect(coerce("42", [Number])).toEqual([42]);
+        });
+      });
+
+      describe("Tab-separated strings", () => {
+        it("splits tab-separated string into [Number]", () => {
+          expect(coerce("1\t2\t3", [Number])).toEqual([1, 2, 3]);
+        });
+
+        it("splits tab-separated string into [String]", () => {
+          expect(coerce("a\tb\tc", [String])).toEqual(["a", "b", "c"]);
+        });
+
+        it("splits tab-separated string into [Boolean]", () => {
+          expect(coerce("true\tfalse", [Boolean])).toEqual([true, false]);
+        });
+
+        it("trims whitespace around tab-separated values", () => {
+          expect(coerce("1\t 2\t 3", [Number])).toEqual([1, 2, 3]);
+        });
+      });
+
+      describe("Priority: JSON > comma/tab splitting", () => {
+        it("parses JSON array before splitting", () => {
+          // JSON array should be parsed, not split on comma
+          expect(coerce("[1,2,3]", [Number])).toEqual([1, 2, 3]);
+          expect(coerce('["a","b","c"]', [String])).toEqual(["a", "b", "c"]);
+        });
+
+        it("falls back to comma splitting for non-JSON", () => {
+          // Not valid JSON, should split on comma
+          expect(coerce("1,2,3", [Number])).toEqual([1, 2, 3]);
+        });
+      });
+
+      describe("Comma takes priority over tab", () => {
+        it("splits on comma when both comma and tab present", () => {
+          expect(coerce("a,b\tc", [String])).toEqual(["a", "b\tc"]);
+        });
+      });
+
+      describe("Untyped arrays with string splitting", () => {
+        it("splits comma-separated string for untyped array", () => {
+          expect(coerce("a,b,c", [])).toEqual(["a", "b", "c"]);
+        });
+
+        it("splits tab-separated string for untyped array", () => {
+          expect(coerce("a\tb\tc", [])).toEqual(["a", "b", "c"]);
+        });
       });
     });
   });
