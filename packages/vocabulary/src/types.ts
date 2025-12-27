@@ -77,6 +77,7 @@ export type ServiceFunction<TInput, TOutput> = (
 ) => TOutput | Promise<TOutput>;
 
 // Service handler configuration
+// When service is omitted, the handler returns the processed input (TInput)
 export interface ServiceHandlerConfig<
   TInput extends Record<string, unknown> = Record<string, unknown>,
   TOutput = unknown,
@@ -84,7 +85,7 @@ export interface ServiceHandlerConfig<
   alias?: string;
   description?: string;
   input?: Record<string, InputFieldDefinition>;
-  service: ServiceFunction<TInput, TOutput>;
+  service?: ServiceFunction<TInput, TOutput>;
 }
 
 // The handler function returned by serviceHandler (always async)

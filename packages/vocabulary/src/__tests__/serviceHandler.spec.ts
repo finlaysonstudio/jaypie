@@ -648,6 +648,110 @@ describe("serviceHandler", () => {
       });
     });
 
+    describe("No Service (Validation Only)", () => {
+      it("returns processed input when no service is provided", async () => {
+        const handler = serviceHandler({
+          input: {
+            age: { type: Number },
+            email: { type: String },
+          },
+        });
+        const result = await handler({ age: "25", email: "bob@example.com" });
+        expect(result).toEqual({ age: 25, email: "bob@example.com" });
+      });
+
+      it("applies defaults when no service is provided", async () => {
+        const handler = serviceHandler({
+          input: {
+            count: { default: 10, type: Number },
+            name: { type: String },
+          },
+        });
+        const result = await handler({ name: "test" });
+        expect(result).toEqual({ count: 10, name: "test" });
+      });
+
+      it("validates input when no service is provided", async () => {
+        const handler = serviceHandler({
+          input: {
+            value: { type: Number, validate: (v) => (v as number) > 0 },
+          },
+        });
+        await expect(handler({ value: 5 })).resolves.toEqual({ value: 5 });
+        await expect(handler({ value: 0 })).rejects.toThrow(BadRequestError);
+      });
+
+      it("validates with validated string shorthand when no service", async () => {
+        const handler = serviceHandler({
+          input: {
+            status: { type: ["active", "inactive"] },
+          },
+        });
+        await expect(handler({ status: "active" })).resolves.toEqual({
+          status: "active",
+        });
+        await expect(handler({ status: "pending" })).rejects.toThrow(
+          BadRequestError,
+        );
+      });
+
+      it("parses JSON string input when no service", async () => {
+        const handler = serviceHandler({
+          input: {
+            value: { type: Number },
+          },
+        });
+        const result = await handler('{"value": "42"}');
+        expect(result).toEqual({ value: 42 });
+      });
+
+      it("returns parsed input when no input definitions and no service", async () => {
+        const handler = serviceHandler({});
+        const result = await handler({ foo: "bar", num: 42 });
+        expect(result).toEqual({ foo: "bar", num: 42 });
+      });
+
+      it("enforces required fields when no service", async () => {
+        const handler = serviceHandler({
+          input: {
+            required: { type: String },
+          },
+        });
+        await expect(handler({})).rejects.toThrow(
+          'Missing required field "required"',
+        );
+      });
+
+      it("real-world example: validateUser", async () => {
+        const validateUser = serviceHandler({
+          input: {
+            age: { type: Number, validate: (v) => (v as number) >= 18 },
+            email: { type: [/^[^@]+@[^@]+\.[^@]+$/] },
+            role: { default: "user", type: ["admin", "user", "guest"] },
+          },
+        });
+
+        // Valid input
+        await expect(
+          validateUser({ age: "25", email: "bob@example.com" }),
+        ).resolves.toEqual({
+          age: 25,
+          email: "bob@example.com",
+          role: "user",
+        });
+
+        // Invalid age
+        await expect(
+          validateUser({ age: 16, email: "teen@example.com" }),
+        ).rejects.toThrow(BadRequestError);
+
+        // Invalid email
+        await expect(
+          validateUser({ age: 25, email: "not-an-email" }),
+        ).rejects.toThrow(BadRequestError);
+      });
+    });
+
     describe("Validated Number Shorthand", () => {
       it("accepts [1, 2, 3] as type shorthand for validated number", async () => {
         const handler = serviceHandler({

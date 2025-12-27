@@ -240,9 +240,12 @@ export function serviceHandler<
     // Parse input (handles string JSON)
     const parsedInput = parseInput(rawInput);
 
-    // If no input definitions, pass through to service
+    // If no input definitions, pass through to service or return parsed input
     if (!inputDefinitions) {
-      return service(parsedInput as TInput);
+      if (service) {
+        return service(parsedInput as TInput);
+      }
+      return parsedInput as TOutput;
     }
 
     // Process all fields in parallel
@@ -259,6 +262,10 @@ export function serviceHandler<
       processedInput[fieldName] = processedValues[index];
     });
 
-    return service(processedInput as TInput);
+    // Return processed input if no service, otherwise call service
+    if (service) {
+      return service(processedInput as TInput);
+    }
+    return processedInput as TOutput;
   };
 }

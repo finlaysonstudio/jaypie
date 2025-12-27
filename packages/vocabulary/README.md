@@ -98,8 +98,29 @@ Service Handler builds a function that initiates a "controller" step that:
   * The validation function may return false or throw
   * A regular expression should be used as a matcher
   * An array should validate if any scalar matches when coerced to the same type, any regular expression matches, or any function returns true (pocket throws in this case)
-* Calls the service function and returns the response
+* Calls the service function and returns the response (or returns the processed input if no service is provided)
 * Parameters are assumed required unless (a) they have a default or (b) they are `required: false`
+
+#### Validation Only (No Service)
+
+When no `service` function is provided, the handler returns the coerced and validated input:
+
+```typescript
+const validateUser = serviceHandler({
+  input: {
+    age: { type: Number, validate: (v) => v >= 18 },
+    email: { type: [/^[^@]+@[^@]+\.[^@]+$/] },
+    role: { default: "user", type: ["admin", "user", "guest"] },
+  },
+  // no service - returns processed input
+});
+
+await validateUser({ age: "25", email: "bob@example.com" });
+// → { age: 25, email: "bob@example.com", role: "user" }
+
+await validateUser({ age: 16, email: "teen@example.com" });
+// throws BadRequestError - age validation fails
+```
 
 #### Natural Types
 

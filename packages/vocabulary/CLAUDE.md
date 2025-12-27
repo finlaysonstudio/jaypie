@@ -82,6 +82,22 @@ Handler features:
 - **Required validation**: Fields are required unless they have a `default` OR `required: false`
 - Runs validation (sync or async) after coercion
 - Always returns a Promise
+- **Optional service**: When `service` is omitted, returns the processed input (validation-only mode)
+
+#### Validation Only (No Service)
+
+```typescript
+const validateUser = serviceHandler({
+  input: {
+    age: { type: Number, validate: (v) => v >= 18 },
+    email: { type: [/^[^@]+@[^@]+\.[^@]+$/] },
+  },
+  // no service - returns processed input
+});
+
+await validateUser({ age: "25", email: "bob@example.com" });
+// → { age: 25, email: "bob@example.com" }
+```
 
 ### Typed Arrays
 
