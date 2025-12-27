@@ -12,8 +12,35 @@ export type ScalarType =
 // Supported composite types
 export type CompositeType = typeof Array | typeof Object | "array" | "object";
 
+// Element types that can be used inside typed arrays
+export type ArrayElementType =
+  | typeof Boolean
+  | typeof Number
+  | typeof Object
+  | typeof String
+  | "boolean"
+  | "number"
+  | "object"
+  | "string"
+  | "" // shorthand for String
+  | Record<string, never>; // {} shorthand for Object
+
+// Typed array types: [String], [Number], [Boolean], [Object], [""], [{}], []
+export type TypedArrayType =
+  | [] // untyped array
+  | [typeof Boolean]
+  | [typeof Number]
+  | [typeof Object]
+  | [typeof String]
+  | ["boolean"]
+  | ["number"]
+  | ["object"]
+  | ["string"]
+  | [""] // shorthand for [String]
+  | [Record<string, never>]; // [{}] shorthand for [Object]
+
 // All supported types
-export type CoercionType = CompositeType | ScalarType;
+export type CoercionType = CompositeType | ScalarType | TypedArrayType;
 
 // Input field definition
 export interface InputFieldDefinition {

@@ -17,6 +17,7 @@ export { serviceHandler } from "./serviceHandler.js";
 
 // Types
 export type {
+  ArrayElementType,
   CoercionType,
   CompositeType,
   InputFieldDefinition,
@@ -24,6 +25,7 @@ export type {
   ServiceFunction,
   ServiceHandlerConfig,
   ServiceHandlerFunction,
+  TypedArrayType,
   ValidateFunction,
 } from "./types.js";
 

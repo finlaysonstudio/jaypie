@@ -479,4 +479,149 @@ describe("coerce", () => {
       expect(coerce({ value: "test" }, Object)).toEqual({ value: "test" });
     });
   });
+
+  describe("Typed Arrays", () => {
+    describe("[String] - Array of Strings", () => {
+      it("coerces array elements to strings", () => {
+        expect(coerce([1, 2, 3], [String])).toEqual(["1", "2", "3"]);
+        expect(coerce([true, false], [String])).toEqual(["true", "false"]);
+      });
+
+      it("wraps non-array in array and coerces", () => {
+        expect(coerce(42, [String])).toEqual(["42"]);
+        expect(coerce(true, [String])).toEqual(["true"]);
+      });
+
+      it("returns undefined for undefined/null", () => {
+        expect(coerce(undefined, [String])).toBeUndefined();
+        expect(coerce(null, [String])).toBeUndefined();
+      });
+
+      it("supports string type shorthand", () => {
+        expect(coerce([1, 2], ["string"])).toEqual(["1", "2"]);
+      });
+
+      it('supports "" shorthand for String', () => {
+        expect(coerce([1, 2], [""])).toEqual(["1", "2"]);
+      });
+    });
+
+    describe("[Number] - Array of Numbers", () => {
+      it("coerces array elements to numbers", () => {
+        expect(coerce(["1", "2", "3"], [Number])).toEqual([1, 2, 3]);
+        expect(coerce([true, false], [Number])).toEqual([1, 0]);
+      });
+
+      it("wraps non-array in array and coerces", () => {
+        expect(coerce("42", [Number])).toEqual([42]);
+        expect(coerce(true, [Number])).toEqual([1]);
+      });
+
+      it("returns undefined for undefined/null", () => {
+        expect(coerce(undefined, [Number])).toBeUndefined();
+        expect(coerce(null, [Number])).toBeUndefined();
+      });
+
+      it("supports string type shorthand", () => {
+        expect(coerce(["1", "2"], ["number"])).toEqual([1, 2]);
+      });
+
+      it("throws on non-numeric element", () => {
+        expect(() => coerce(["1", "hello", "3"], [Number])).toThrow(
+          BadRequestError,
+        );
+      });
+    });
+
+    describe("[Boolean] - Array of Booleans", () => {
+      it("coerces array elements to booleans", () => {
+        expect(coerce(["true", "false"], [Boolean])).toEqual([true, false]);
+        expect(coerce([1, 0, -1], [Boolean])).toEqual([true, false, false]);
+      });
+
+      it("wraps non-array in array and coerces", () => {
+        expect(coerce("true", [Boolean])).toEqual([true]);
+        expect(coerce(1, [Boolean])).toEqual([true]);
+      });
+
+      it("returns undefined for undefined/null", () => {
+        expect(coerce(undefined, [Boolean])).toBeUndefined();
+        expect(coerce(null, [Boolean])).toBeUndefined();
+      });
+
+      it("supports string type shorthand", () => {
+        expect(coerce(["true", "false"], ["boolean"])).toEqual([true, false]);
+      });
+
+      it("throws on non-boolean-convertible element", () => {
+        expect(() => coerce(["true", "hello"], [Boolean])).toThrow(
+          BadRequestError,
+        );
+      });
+    });
+
+    describe("[Object] - Array of Objects", () => {
+      it("coerces array elements to objects", () => {
+        expect(coerce([1, "hello"], [Object])).toEqual([
+          { value: 1 },
+          { value: "hello" },
+        ]);
+      });
+
+      it("passes through objects with value property", () => {
+        expect(coerce([{ value: 1 }, { value: 2 }], [Object])).toEqual([
+          { value: 1 },
+          { value: 2 },
+        ]);
+      });
+
+      it("wraps non-array in array and coerces", () => {
+        expect(coerce(42, [Object])).toEqual([{ value: 42 }]);
+      });
+
+      it("returns undefined for undefined/null", () => {
+        expect(coerce(undefined, [Object])).toBeUndefined();
+        expect(coerce(null, [Object])).toBeUndefined();
+      });
+
+      it("supports string type shorthand", () => {
+        expect(coerce([1, 2], ["object"])).toEqual([{ value: 1 }, { value: 2 }]);
+      });
+
+      it("supports {} shorthand for Object", () => {
+        expect(coerce([1, 2], [{}])).toEqual([{ value: 1 }, { value: 2 }]);
+      });
+
+      it("throws on object without value property", () => {
+        expect(() => coerce([{ foo: "bar" }], [Object])).toThrow(
+          BadRequestError,
+        );
+      });
+    });
+
+    describe("[] - Untyped Array", () => {
+      it("wraps non-array in array without coercion", () => {
+        expect(coerce(42, [])).toEqual([42]);
+        expect(coerce("hello", [])).toEqual(["hello"]);
+        expect(coerce(true, [])).toEqual([true]);
+      });
+
+      it("passes through arrays without element coercion", () => {
+        expect(coerce([1, "two", true], [])).toEqual([1, "two", true]);
+      });
+
+      it("returns undefined for undefined/null", () => {
+        expect(coerce(undefined, [])).toBeUndefined();
+        expect(coerce(null, [])).toBeUndefined();
+      });
+    });
+
+    describe("Error reporting", () => {
+      it("includes index in error message", () => {
+        expect(() => coerce(["1", "hello", "3"], [Number])).toThrow(
+          /index 1/,
+        );
+      });
+    });
+  });
 });

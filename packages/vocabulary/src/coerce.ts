@@ -2,7 +2,7 @@
 
 import { BadRequestError } from "@jaypie/errors";
 
-import type { CoercionType } from "./types.js";
+import type { CoercionType, TypedArrayType } from "./types.js";
 
 /**
  * Try to parse a string as JSON if it looks like JSON
@@ -316,9 +316,107 @@ export function coerceFromObject(value: unknown): unknown {
 }
 
 /**
+ * Check if a type is a typed array (e.g., [String], [Number], [], etc.)
+ */
+function isTypedArrayType(type: CoercionType): type is TypedArrayType {
+  return Array.isArray(type);
+}
+
+/**
+ * Get the element type from a typed array type
+ * Returns undefined for untyped arrays ([])
+ */
+function getArrayElementType(
+  type: TypedArrayType,
+): "boolean" | "number" | "object" | "string" | undefined {
+  if (type.length === 0) {
+    return undefined; // Untyped array
+  }
+
+  const elementType = type[0];
+
+  // Handle constructor types
+  if (elementType === Boolean) return "boolean";
+  if (elementType === Number) return "number";
+  if (elementType === String) return "string";
+  if (elementType === Object) return "object";
+
+  // Handle string types
+  if (elementType === "boolean") return "boolean";
+  if (elementType === "number") return "number";
+  if (elementType === "string") return "string";
+  if (elementType === "object") return "object";
+
+  // Handle shorthand types
+  if (elementType === "") return "string"; // "" shorthand for String
+  if (
+    typeof elementType === "object" &&
+    elementType !== null &&
+    Object.keys(elementType).length === 0
+  ) {
+    return "object"; // {} shorthand for Object
+  }
+
+  throw new BadRequestError(`Unknown array element type: ${String(elementType)}`);
+}
+
+/**
+ * Coerce a value to a typed array
+ * - Wraps non-arrays in an array
+ * - Coerces each element to the specified element type
+ */
+function coerceToTypedArray(
+  value: unknown,
+  elementType: "boolean" | "number" | "object" | "string" | undefined,
+): unknown[] | undefined {
+  // First coerce to array
+  const array = coerceToArray(value);
+
+  if (array === undefined) {
+    return undefined;
+  }
+
+  // If no element type specified, return as-is
+  if (elementType === undefined) {
+    return array;
+  }
+
+  // Coerce each element to the element type
+  return array.map((element, index) => {
+    try {
+      switch (elementType) {
+        case "boolean":
+          return coerceToBoolean(element);
+        case "number":
+          return coerceToNumber(element);
+        case "object":
+          return coerceToObject(element);
+        case "string":
+          return coerceToString(element);
+        default:
+          throw new BadRequestError(`Unknown element type: ${elementType}`);
+      }
+    } catch (error) {
+      if (error instanceof BadRequestError) {
+        throw new BadRequestError(
+          `Cannot coerce array element at index ${index}: ${error.message}`,
+        );
+      }
+      throw error;
+    }
+  });
+}
+
+/**
  * Coerce a value to the specified type
  */
 export function coerce(value: unknown, type: CoercionType): unknown {
+  // Check for typed array types first
+  if (isTypedArrayType(type)) {
+    const elementType = getArrayElementType(type);
+    return coerceToTypedArray(value, elementType);
+  }
+
   const normalizedType = normalizeType(type);
 
   switch (normalizedType) {
