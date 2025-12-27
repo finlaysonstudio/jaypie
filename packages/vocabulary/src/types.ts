@@ -39,8 +39,23 @@ export type TypedArrayType =
   | [""] // shorthand for [String]
   | [Record<string, never>]; // [{}] shorthand for [Object]
 
-// All supported types
-export type CoercionType = CompositeType | ScalarType | TypedArrayType;
+// Validated string type: ["value1", "value2"] or [/regex/, "value"]
+// An array of string literals and/or RegExp patterns
+// Coerces to String and validates against the array
+export type ValidatedStringType = Array<string | RegExp>;
+
+// Validated number type: [1, 2, 3]
+// An array of number literals
+// Coerces to Number and validates against the array
+export type ValidatedNumberType = Array<number>;
+
+// All supported types (including validated shorthands)
+export type CoercionType =
+  | CompositeType
+  | ScalarType
+  | TypedArrayType
+  | ValidatedNumberType
+  | ValidatedStringType;
 
 // Input field definition
 export interface InputFieldDefinition {

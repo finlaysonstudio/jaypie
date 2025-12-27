@@ -141,6 +141,56 @@ Priority order:
 3. Tab splitting: `"1\t2\t3"` → `["1", "2", "3"]`
 4. Single element wrap: `"42"` → `["42"]`
 
+#### Validated Type Shorthand
+
+Arrays of literals validate a value against allowed options.
+
+**String validation** - array of strings and/or RegExp:
+
+```typescript
+const sendMoneyHandler = serviceHandler({
+  input: {
+    amount: { type: Number },
+    currency: { type: ["dec", "sps"] },  // Must be "dec" or "sps"
+    user: { type: String },
+  },
+  service: ({ amount, currency, user }) => ({ amount, currency, user }),
+});
+
+await sendMoneyHandler({ amount: 100, currency: "dec", user: "bob" });  // ✓
+await sendMoneyHandler({ amount: 100, currency: "usd", user: "bob" });  // ✗ BadRequestError
+```
+
+**Number validation** - array of numbers:
+
+```typescript
+const taskHandler = serviceHandler({
+  input: {
+    priority: { type: [1, 2, 3, 4, 5] },  // Must be 1-5
+    title: { type: String },
+  },
+  service: ({ priority, title }) => ({ priority, title }),
+});
+
+await taskHandler({ priority: 1, title: "Urgent" });   // ✓
+await taskHandler({ priority: 10, title: "Invalid" }); // ✗ BadRequestError
+```
+
+**Mixed string and RegExp validation**:
+
+```typescript
+const handler = serviceHandler({
+  input: {
+    value: { type: [/^test-/, "special"] },  // Matches /^test-/ OR equals "special"
+  },
+  service: ({ value }) => value,
+});
+
+await handler({ value: "test-123" });  // ✓
+await handler({ value: "special" });   // ✓
+await handler({ value: "other" });     // ✗ BadRequestError
+```
+
 ### Serialization Formats
 
 #### Complete Formats

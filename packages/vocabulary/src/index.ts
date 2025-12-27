@@ -26,6 +26,8 @@ export type {
   ServiceHandlerConfig,
   ServiceHandlerFunction,
   TypedArrayType,
+  ValidatedNumberType,
+  ValidatedStringType,
   ValidateFunction,
 } from "./types.js";
 

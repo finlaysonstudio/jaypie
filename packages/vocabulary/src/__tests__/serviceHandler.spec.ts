@@ -499,5 +499,263 @@ describe("serviceHandler", () => {
         await expect(handler({ value: 21 })).resolves.toBe(42);
       });
     });
+
+    describe("Validated String Shorthand", () => {
+      it('accepts ["value1", "value2"] as type shorthand for validated string', async () => {
+        const handler = serviceHandler({
+          input: {
+            currency: { type: ["dec", "sps"] },
+          },
+          service: ({ currency }: { currency: string }) => currency,
+        });
+        await expect(handler({ currency: "dec" })).resolves.toBe("dec");
+        await expect(handler({ currency: "sps" })).resolves.toBe("sps");
+      });
+
+      it("throws BadRequestError when value not in allowed list", async () => {
+        const handler = serviceHandler({
+          input: {
+            currency: { type: ["dec", "sps"] },
+          },
+          service: ({ currency }: { currency: string }) => currency,
+        });
+        await expect(handler({ currency: "usd" })).rejects.toThrow(
+          BadRequestError,
+        );
+      });
+
+      it("coerces value to string before validation", async () => {
+        const handler = serviceHandler({
+          input: {
+            code: { type: ["1", "2", "3"] },
+          },
+          service: ({ code }: { code: string }) => code,
+        });
+        // Number 1 coerces to string "1" which matches
+        await expect(handler({ code: 1 })).resolves.toBe("1");
+      });
+
+      it("accepts RegExp in validation array", async () => {
+        const handler = serviceHandler({
+          input: {
+            value: { type: [/^test-/, "special"] },
+          },
+          service: ({ value }: { value: string }) => value,
+        });
+        await expect(handler({ value: "test-123" })).resolves.toBe("test-123");
+        await expect(handler({ value: "test-abc" })).resolves.toBe("test-abc");
+        await expect(handler({ value: "special" })).resolves.toBe("special");
+        await expect(handler({ value: "other" })).rejects.toThrow(
+          BadRequestError,
+        );
+      });
+
+      it("accepts array with only RegExp", async () => {
+        const handler = serviceHandler({
+          input: {
+            email: { type: [/^[^@]+@[^@]+\.[^@]+$/] },
+          },
+          service: ({ email }: { email: string }) => email,
+        });
+        await expect(handler({ email: "test@example.com" })).resolves.toBe(
+          "test@example.com",
+        );
+        await expect(handler({ email: "invalid" })).rejects.toThrow(
+          BadRequestError,
+        );
+      });
+
+      it("supports default value with validated string", async () => {
+        const handler = serviceHandler({
+          input: {
+            currency: { default: "dec", type: ["dec", "sps"] },
+          },
+          service: ({ currency }: { currency: string }) => currency,
+        });
+        await expect(handler({})).resolves.toBe("dec");
+        await expect(handler({ currency: "sps" })).resolves.toBe("sps");
+      });
+
+      it("supports required: false with validated string", async () => {
+        const handler = serviceHandler({
+          input: {
+            currency: { required: false, type: ["dec", "sps"] },
+          },
+          service: ({ currency }: { currency?: string }) =>
+            currency ?? "none",
+        });
+        await expect(handler({})).resolves.toBe("none");
+      });
+
+      it("still distinguishes [String] as typed array", async () => {
+        const handler = serviceHandler({
+          input: {
+            values: { type: [String] },
+          },
+          service: ({ values }: { values: string[] }) => values,
+        });
+        // This should be a typed array, coercing elements to strings
+        await expect(handler({ values: [1, 2, 3] })).resolves.toEqual([
+          "1",
+          "2",
+          "3",
+        ]);
+      });
+
+      it("still distinguishes [] as untyped array", async () => {
+        const handler = serviceHandler({
+          input: {
+            values: { type: [] },
+          },
+          service: ({ values }: { values: unknown[] }) => values,
+        });
+        await expect(handler({ values: [1, "two", true] })).resolves.toEqual([
+          1,
+          "two",
+          true,
+        ]);
+      });
+
+      it("real-world example: sendMoney handler", async () => {
+        const sendMoneyHandler = serviceHandler({
+          input: {
+            amount: { type: Number },
+            currency: { type: ["dec", "sps"] },
+            user: { type: String },
+          },
+          service: ({
+            amount,
+            currency,
+            user,
+          }: {
+            amount: number;
+            currency: string;
+            user: string;
+          }) => ({ amount, currency, user }),
+        });
+
+        await expect(
+          sendMoneyHandler({ amount: 100, currency: "dec", user: "bob" }),
+        ).resolves.toEqual({ amount: 100, currency: "dec", user: "bob" });
+
+        await expect(
+          sendMoneyHandler({ amount: 50, currency: "sps", user: "alice" }),
+        ).resolves.toEqual({ amount: 50, currency: "sps", user: "alice" });
+
+        await expect(
+          sendMoneyHandler({ amount: 100, currency: "usd", user: "bob" }),
+        ).rejects.toThrow(BadRequestError);
+      });
+    });
+
+    describe("Validated Number Shorthand", () => {
+      it("accepts [1, 2, 3] as type shorthand for validated number", async () => {
+        const handler = serviceHandler({
+          input: {
+            level: { type: [1, 2, 3] },
+          },
+          service: ({ level }: { level: number }) => level,
+        });
+        await expect(handler({ level: 1 })).resolves.toBe(1);
+        await expect(handler({ level: 2 })).resolves.toBe(2);
+        await expect(handler({ level: 3 })).resolves.toBe(3);
+      });
+
+      it("throws BadRequestError when value not in allowed list", async () => {
+        const handler = serviceHandler({
+          input: {
+            level: { type: [1, 2, 3] },
+          },
+          service: ({ level }: { level: number }) => level,
+        });
+        await expect(handler({ level: 4 })).rejects.toThrow(BadRequestError);
+        await expect(handler({ level: 0 })).rejects.toThrow(BadRequestError);
+      });
+
+      it("coerces value to number before validation", async () => {
+        const handler = serviceHandler({
+          input: {
+            level: { type: [1, 2, 3] },
+          },
+          service: ({ level }: { level: number }) => level,
+        });
+        // String "2" coerces to number 2 which matches
+        await expect(handler({ level: "2" })).resolves.toBe(2);
+      });
+
+      it("supports default value with validated number", async () => {
+        const handler = serviceHandler({
+          input: {
+            level: { default: 1, type: [1, 2, 3] },
+          },
+          service: ({ level }: { level: number }) => level,
+        });
+        await expect(handler({})).resolves.toBe(1);
+        await expect(handler({ level: 3 })).resolves.toBe(3);
+      });
+
+      it("supports required: false with validated number", async () => {
+        const handler = serviceHandler({
+          input: {
+            level: { required: false, type: [1, 2, 3] },
+          },
+          service: ({ level }: { level?: number }) => level ?? "none",
+        });
+        await expect(handler({})).resolves.toBe("none");
+      });
+
+      it("still distinguishes [Number] as typed array", async () => {
+        const handler = serviceHandler({
+          input: {
+            values: { type: [Number] },
+          },
+          service: ({ values }: { values: number[] }) => values,
+        });
+        // This should be a typed array, coercing elements to numbers
+        await expect(handler({ values: ["1", "2", "3"] })).resolves.toEqual([
+          1, 2, 3,
+        ]);
+      });
+
+      it("validates against exact number values", async () => {
+        const handler = serviceHandler({
+          input: {
+            rating: { type: [0.5, 1, 1.5, 2] },
+          },
+          service: ({ rating }: { rating: number }) => rating,
+        });
+        await expect(handler({ rating: 0.5 })).resolves.toBe(0.5);
+        await expect(handler({ rating: 1.5 })).resolves.toBe(1.5);
+        await expect(handler({ rating: 0.75 })).rejects.toThrow(BadRequestError);
+      });
+
+      it("real-world example: priority levels", async () => {
+        const taskHandler = serviceHandler({
+          input: {
+            priority: { type: [1, 2, 3, 4, 5] },
+            title: { type: String },
+          },
+          service: ({
+            priority,
+            title,
+          }: {
+            priority: number;
+            title: string;
+          }) => ({ priority, title }),
+        });
+
+        await expect(
+          taskHandler({ priority: 1, title: "Urgent" }),
+        ).resolves.toEqual({ priority: 1, title: "Urgent" });
+
+        await expect(
+          taskHandler({ priority: 3, title: "Normal" }),
+        ).resolves.toEqual({ priority: 3, title: "Normal" });
+
+        await expect(
+          taskHandler({ priority: 10, title: "Invalid" }),
+        ).rejects.toThrow(BadRequestError);
+      });
+    });
   });
 });

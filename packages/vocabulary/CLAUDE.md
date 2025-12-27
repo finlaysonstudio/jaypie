@@ -109,6 +109,23 @@ Priority order:
 3. Tab splitting: `"1\t2\t3"` splits on tab
 4. Single element wrap: `"42"` becomes `["42"]`
 
+### Validated Type Shorthand
+
+Arrays of literals validate a value against allowed options:
+
+```typescript
+// String validation - array of strings and/or RegExp
+currency: { type: ["dec", "sps"] }        // Must be "dec" or "sps"
+value: { type: [/^test-/, "special"] }    // Matches regex OR equals "special"
+email: { type: [/^[^@]+@[^@]+\.[^@]+$/] } // Must match email pattern
+
+// Number validation - array of numbers
+priority: { type: [1, 2, 3, 4, 5] }       // Must be 1-5
+rating: { type: [0.5, 1, 1.5, 2] }        // Must be one of these values
+```
+
+This is equivalent to `{ type: String, validate: [...] }` or `{ type: Number, validate: [...] }` but more concise.
+
 ### Types
 
 Located in `types.ts`:
@@ -119,7 +136,9 @@ Located in `types.ts`:
 | `CompositeType` | `Array \| Object` or string equivalents |
 | `ArrayElementType` | Types usable inside typed arrays |
 | `TypedArrayType` | `[String]`, `[Number]`, `[Boolean]`, `[Object]`, `[]` |
-| `CoercionType` | Union of ScalarType, CompositeType, and TypedArrayType |
+| `ValidatedStringType` | `Array<string \| RegExp>` - string with validation |
+| `ValidatedNumberType` | `Array<number>` - number with validation |
+| `CoercionType` | Union of all type variants |
 | `InputFieldDefinition` | Field config with type, default, description, required, validate |
 | `ValidateFunction` | `(value) => boolean \| void \| Promise<...>` |
 | `ServiceFunction<TInput, TOutput>` | The actual service logic |
@@ -136,7 +155,7 @@ export { coerce, coerceFromArray, coerceFromObject, coerceToArray, coerceToBoole
 export { serviceHandler } from "./serviceHandler.js";
 
 // Types
-export type { ArrayElementType, CoercionType, CompositeType, InputFieldDefinition, ScalarType, ServiceFunction, ServiceHandlerConfig, ServiceHandlerFunction, TypedArrayType, ValidateFunction } from "./types.js";
+export type { ArrayElementType, CoercionType, CompositeType, InputFieldDefinition, ScalarType, ServiceFunction, ServiceHandlerConfig, ServiceHandlerFunction, TypedArrayType, ValidatedNumberType, ValidatedStringType, ValidateFunction } from "./types.js";
 
 // Version
 export const VOCABULARY_VERSION: string;
@@ -176,4 +195,7 @@ This means:
 - JSON strings automatically parse
 - `"1,2,3"` splits into array when target is typed array
 - `"a\tb\tc"` splits on tabs when target is typed array
+- `["a", "b"]` as type means validated string (must be "a" or "b")
+- `[/regex/]` as type means string validated against pattern
+- `[1, 2, 3]` as type means validated number (must be 1, 2, or 3)
 - Invalid conversions fail fast with `BadRequestError`

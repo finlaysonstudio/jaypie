@@ -4,11 +4,83 @@ import { BadRequestError } from "@jaypie/errors";
 
 import { coerce } from "./coerce.js";
 import type {
+  CoercionType,
   InputFieldDefinition,
   ServiceHandlerConfig,
   ServiceHandlerFunction,
   ValidateFunction,
 } from "./types.js";
+
+/**
+ * Check if a single-element array is a typed array type constructor.
+ */
+function isTypedArrayConstructor(element: unknown): boolean {
+  return (
+    element === Boolean ||
+    element === Number ||
+    element === String ||
+    element === Object ||
+    element === "boolean" ||
+    element === "number" ||
+    element === "string" ||
+    element === "object" ||
+    element === "" ||
+    (typeof element === "object" &&
+      element !== null &&
+      !(element instanceof RegExp) &&
+      Object.keys(element as Record<string, unknown>).length === 0)
+  );
+}
+
+/**
+ * Check if a type is a validated string type (array of string literals and/or RegExp).
+ * Distinguishes from typed arrays like [String], [Number], etc.
+ */
+function isValidatedStringType(
+  type: CoercionType,
+): type is Array<string | RegExp> {
+  if (!Array.isArray(type)) {
+    return false;
+  }
+
+  // Empty array is untyped array, not validated string
+  if (type.length === 0) {
+    return false;
+  }
+
+  // Single-element arrays with type constructors are typed arrays
+  if (type.length === 1 && isTypedArrayConstructor(type[0])) {
+    return false;
+  }
+
+  // Check that all elements are strings or RegExp
+  return type.every(
+    (item) => typeof item === "string" || item instanceof RegExp,
+  );
+}
+
+/**
+ * Check if a type is a validated number type (array of number literals).
+ * Distinguishes from typed arrays like [Number], etc.
+ */
+function isValidatedNumberType(type: CoercionType): type is Array<number> {
+  if (!Array.isArray(type)) {
+    return false;
+  }
+
+  // Empty array is untyped array, not validated number
+  if (type.length === 0) {
+    return false;
+  }
+
+  // Single-element arrays with type constructors are typed arrays
+  if (type.length === 1 && isTypedArrayConstructor(type[0])) {
+    return false;
+  }
+
+  // Check that all elements are numbers
+  return type.every((item) => typeof item === "number");
+}
 
 /**
  * Parse input string as JSON if it's a string
@@ -116,8 +188,23 @@ async function processField(
     processedValue = definition.default;
   }
 
+  // Determine actual type and validation
+  let actualType: CoercionType = definition.type;
+  let validation = definition.validate;
+
+  // Handle validated string shorthand: ["value1", "value2"] or [/regex/]
+  if (isValidatedStringType(definition.type)) {
+    actualType = String;
+    validation = definition.type; // The array becomes the validation
+  }
+  // Handle validated number shorthand: [1, 2, 3]
+  else if (isValidatedNumberType(definition.type)) {
+    actualType = Number;
+    validation = definition.type; // The array becomes the validation
+  }
+
   // Coerce to target type
-  const coercedValue = coerce(processedValue, definition.type);
+  const coercedValue = coerce(processedValue, actualType);
 
   // Check if required field is missing
   if (coercedValue === undefined && isFieldRequired(definition)) {
@@ -125,8 +212,8 @@ async function processField(
   }
 
   // Run validation if provided
-  if (definition.validate !== undefined && coercedValue !== undefined) {
-    await runValidation(coercedValue, definition.validate, fieldName);
+  if (validation !== undefined && coercedValue !== undefined) {
+    await runValidation(coercedValue, validation, fieldName);
   }
 
   return coercedValue;
