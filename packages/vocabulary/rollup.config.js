@@ -8,8 +8,10 @@ const onwarn = (warning, defaultHandler) => {
   defaultHandler(warning);
 };
 
+const external = ["@jaypie/errors", "commander"];
+
 export default [
-  // ES modules version
+  // ES modules version - main
   {
     input: "src/index.ts",
     output: {
@@ -25,9 +27,27 @@ export default [
         outDir: "dist/esm",
       }),
     ],
-    external: ["@jaypie/errors"],
+    external,
   },
-  // CommonJS version
+  // ES modules version - commander
+  {
+    input: "src/commander/index.ts",
+    output: {
+      dir: "dist/esm/commander",
+      format: "es",
+      sourcemap: true,
+    },
+    onwarn,
+    plugins: [
+      typescript({
+        tsconfig: "./tsconfig.json",
+        declaration: true,
+        outDir: "dist/esm/commander",
+      }),
+    ],
+    external,
+  },
+  // CommonJS version - main
   {
     input: "src/index.ts",
     output: {
@@ -45,6 +65,26 @@ export default [
         outDir: "dist/cjs",
       }),
     ],
-    external: ["@jaypie/errors"],
+    external,
+  },
+  // CommonJS version - commander
+  {
+    input: "src/commander/index.ts",
+    output: {
+      dir: "dist/cjs/commander",
+      format: "cjs",
+      sourcemap: true,
+      exports: "named",
+      entryFileNames: "[name].cjs",
+    },
+    onwarn,
+    plugins: [
+      typescript({
+        tsconfig: "./tsconfig.json",
+        declaration: true,
+        outDir: "dist/cjs/commander",
+      }),
+    ],
+    external,
   },
 ];

@@ -12,6 +12,9 @@ export {
   coerceToString,
 } from "./coerce.js";
 
+// Commander adapter (re-exported for convenience)
+export * as commander from "./commander/index.js";
+
 // Service Handler
 export { serviceHandler } from "./serviceHandler.js";
 

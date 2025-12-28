@@ -232,6 +232,8 @@ async function processField(
  * - Coerces each input field to its type
  * - Calls the validation function or regular expression or checks the array
  * - Calls the service function and returns the response
+ *
+ * The returned function has a `config` property for introspection.
  */
 export function serviceHandler<
   TInput extends Record<string, unknown> = Record<string, unknown>,
@@ -241,7 +243,9 @@ export function serviceHandler<
 ): ServiceHandlerFunction<TInput, TOutput> {
   const { input: inputDefinitions, service } = config;
 
-  return async (rawInput?: Partial<TInput> | string): Promise<TOutput> => {
+  const handler = async (
+    rawInput?: Partial<TInput> | string,
+  ): Promise<TOutput> => {
     // Parse input (handles string JSON)
     const parsedInput = parseInput(rawInput);
 
@@ -273,4 +277,14 @@ export function serviceHandler<
     }
     return processedInput as TOutput;
   };
+
+  // Attach config properties directly to handler for flat access
+  const typedHandler = handler as ServiceHandlerFunction<TInput, TOutput>;
+  if (config.alias !== undefined) typedHandler.alias = config.alias;
+  if (config.description !== undefined)
+    typedHandler.description = config.description;
+  if (config.input !== undefined) typedHandler.input = config.input;
+  if (config.service !== undefined) typedHandler.service = config.service;
+
+  return typedHandler;
 }

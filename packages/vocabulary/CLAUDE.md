@@ -9,20 +9,27 @@ Jaypie standard application component vocabulary - provides type coercion and se
 | Status | Initial development (0.1.x) |
 | Type | Utility library |
 | Dependencies | `@jaypie/errors` |
-| Exports | Coercion functions, serviceHandler, TypeScript types |
+| Peer Dependencies | `commander` (optional) |
+| Exports | Coercion functions, serviceHandler, commander adapters, TypeScript types |
 
 ## Internal Structure
 
 ```
 src/
 ├── __tests__/
-│   ├── coerce.spec.ts       # Coercion function tests
-│   ├── index.spec.ts        # Export verification tests
+│   ├── coerce.spec.ts         # Coercion function tests
+│   ├── commander.spec.ts      # Commander adapter tests
+│   ├── index.spec.ts          # Export verification tests
 │   └── serviceHandler.spec.ts # Service handler tests
-├── coerce.ts                # Type coercion utilities
-├── index.ts                 # Package exports
-├── serviceHandler.ts        # Service handler factory
-└── types.ts                 # TypeScript type definitions
+├── commander/
+│   ├── createCommanderOptions.ts  # Generate Commander Options from config
+│   ├── index.ts                   # Commander module exports
+│   ├── parseCommanderOptions.ts   # Parse Commander opts to handler input
+│   └── types.ts                   # Commander adapter types
+├── coerce.ts                  # Type coercion utilities
+├── index.ts                   # Package exports
+├── serviceHandler.ts          # Service handler factory
+└── types.ts                   # TypeScript type definitions
 ```
 
 ## Core Concepts
@@ -83,6 +90,7 @@ Handler features:
 - Runs validation (sync or async) after coercion
 - Always returns a Promise
 - **Optional service**: When `service` is omitted, returns the processed input (validation-only mode)
+- **Flat properties**: Config properties attached directly to handler (`handler.alias`, `handler.input`, etc.)
 
 #### Validation Only (No Service)
 
@@ -153,6 +161,59 @@ rating: { type: [0.5, 1, 1.5, 2] }        // Must be one of these values
 
 This is equivalent to `{ type: String, validate: [...] }` or `{ type: Number, validate: [...] }` but more concise.
 
+### Commander Adapter
+
+Located in `src/commander/`. Utilities for integrating service handlers with Commander.js CLIs.
+
+**registerServiceCommand**: Registers a serviceHandler as a Commander.js command with automatic option generation.
+
+```typescript
+import { Command } from "commander";
+import { serviceHandler } from "@jaypie/vocabulary";
+import { registerServiceCommand } from "@jaypie/vocabulary/commander";
+
+const handler = serviceHandler({
+  alias: "greet",
+  description: "Greet a user",
+  input: {
+    userName: { type: String, flag: "user", letter: "u" },
+    loud: { type: Boolean, letter: "l", default: false },
+  },
+  service: ({ loud, userName }) => {
+    const greeting = `Hello, ${userName}!`;
+    return loud ? greeting.toUpperCase() : greeting;
+  },
+});
+
+const program = new Command();
+registerServiceCommand({ handler, program });
+program.parse();
+// Usage: greet --user Alice -l
+```
+
+**createCommanderOptions**: Generates Commander.js `Option` objects from handler input definitions.
+
+```typescript
+import { createCommanderOptions } from "@jaypie/vocabulary/commander";
+
+const { options } = createCommanderOptions(handler.input, {
+  exclude: ["internalField"],
+  overrides: { userName: { short: "u" } },
+});
+options.forEach((opt) => program.addOption(opt));
+```
+
+**parseCommanderOptions**: Converts Commander.js options back to handler input format.
+
+```typescript
+import { parseCommanderOptions } from "@jaypie/vocabulary/commander";
+
+const input = parseCommanderOptions(program.opts(), {
+  input: handler.input,
+});
+await handler(input);
+```
+
 ### Types
 
 Located in `types.ts`:
@@ -167,7 +228,7 @@ Located in `types.ts`:
 | `ValidatedStringType` | `Array<string \| RegExp>` - string with validation |
 | `ValidatedNumberType` | `Array<number>` - number with validation |
 | `CoercionType` | Union of all type variants |
-| `InputFieldDefinition` | Field config with type, default, description, required, validate |
+| `InputFieldDefinition` | Field config with type, default, description, flag, letter, required, validate |
 | `ValidateFunction` | `(value) => boolean \| void \| Promise<...>` |
 | `ServiceFunction<TInput, TOutput>` | The actual service logic |
 | `ServiceHandlerConfig` | Full handler configuration |
@@ -175,9 +236,14 @@ Located in `types.ts`:
 
 ## Exports
 
+### Main Export (`@jaypie/vocabulary`)
+
 ```typescript
 // Coercion
 export { coerce, coerceFromArray, coerceFromObject, coerceToArray, coerceToBoolean, coerceToNumber, coerceToObject, coerceToString } from "./coerce.js";
+
+// Commander adapter namespace
+export * as commander from "./commander/index.js";
 
 // Service Handler
 export { serviceHandler } from "./serviceHandler.js";
@@ -187,6 +253,15 @@ export type { ArrayElementType, CoercionType, CompositeType, InputFieldDefinitio
 
 // Version
 export const VOCABULARY_VERSION: string;
+```
+
+### Commander Export (`@jaypie/vocabulary/commander`)
+
+```typescript
+export { createCommanderOptions } from "./createCommanderOptions.js";
+export { parseCommanderOptions } from "./parseCommanderOptions.js";
+export { registerServiceCommand } from "./registerServiceCommand.js";
+export type { CommanderOptionOverride, CreateCommanderOptionsConfig, CreateCommanderOptionsResult, ParseCommanderOptionsConfig, RegisterServiceCommandConfig, RegisterServiceCommandResult } from "./types.js";
 ```
 
 ## Usage in Other Packages

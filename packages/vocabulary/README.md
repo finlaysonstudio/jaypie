@@ -101,6 +101,26 @@ Service Handler builds a function that initiates a "controller" step that:
 * Calls the service function and returns the response (or returns the processed input if no service is provided)
 * Parameters are assumed required unless (a) they have a default or (b) they are `required: false`
 
+#### Handler Properties
+
+The returned handler exposes config properties directly for introspection, useful for building CLI adapters and documentation:
+
+```typescript
+const handler = serviceHandler({
+  alias: "division",
+  description: "Divides two numbers",
+  input: {
+    numerator: { type: Number, default: 12 },
+    denominator: { type: Number, default: 3 },
+  },
+  service: ({ numerator, denominator }) => numerator / denominator,
+});
+
+handler.alias;       // "division"
+handler.description; // "Divides two numbers"
+handler.input;       // { numerator: {...}, denominator: {...} }
+```
+
 #### Validation Only (No Service)
 
 When no `service` function is provided, the handler returns the coerced and validated input:
@@ -227,6 +247,131 @@ const handler = serviceHandler({
 await handler({ value: "test-123" });  // ✓
 await handler({ value: "special" });   // ✓
 await handler({ value: "other" });     // ✗ BadRequestError
+```
+
+### Commander Adapter
+
+The vocabulary package includes utilities for integrating service handlers with Commander.js CLIs.
+
+#### registerServiceCommand
+
+The simplest way to register a service handler as a Commander command:
+
+```typescript
+import { Command } from "commander";
+import { serviceHandler } from "@jaypie/vocabulary";
+import { registerServiceCommand } from "@jaypie/vocabulary/commander";
+
+const handler = serviceHandler({
+  alias: "greet",
+  description: "Greet a user",
+  input: {
+    userName: { type: String, flag: "user", letter: "u" },
+    loud: { type: Boolean, letter: "l", default: false },
+  },
+  service: ({ loud, userName }) => {
+    const greeting = `Hello, ${userName}!`;
+    return loud ? greeting.toUpperCase() : greeting;
+  },
+});
+
+const program = new Command();
+registerServiceCommand({ handler, program });
+program.parse();
+// Usage: greet --user Alice -l
+```
+
+Configuration options:
+- `handler` - The service handler to register
+- `program` - The Commander program or command
+- `name` - Override command name (defaults to handler.alias)
+- `description` - Override description (defaults to handler.description)
+- `exclude` - Field names to exclude from options
+- `overrides` - Per-field option overrides
+
+#### Input Flag and Letter Properties
+
+Input definitions support `flag` and `letter` for Commander.js integration:
+
+```typescript
+input: {
+  userName: {
+    type: String,
+    flag: "user",     // Long flag: --user (instead of --user-name)
+    letter: "u",      // Short flag: -u
+  },
+  verbose: {
+    type: Boolean,
+    letter: "v",      // Short flag: -v
+  },
+}
+// Generates: --user <userName>, -u and --verbose, -v
+```
+
+#### createCommanderOptions
+
+Generates Commander.js `Option` objects from handler input definitions:
+
+```typescript
+import { createCommanderOptions } from "@jaypie/vocabulary/commander";
+
+const { options } = createCommanderOptions(handler.input, {
+  exclude: ["internalField"],      // Fields to skip
+  overrides: {
+    userName: {
+      short: "u",                   // Add short flag: -u
+      description: "Override desc", // Override description
+      hidden: true,                 // Hide from help
+    },
+  },
+});
+options.forEach((opt) => program.addOption(opt));
+```
+
+#### parseCommanderOptions
+
+Converts Commander.js options back to handler input format with type coercion:
+
+```typescript
+import { parseCommanderOptions } from "@jaypie/vocabulary/commander";
+
+const input = parseCommanderOptions(program.opts(), {
+  input: handler.input,         // For type coercion and flag mapping
+  exclude: ["help", "version"], // Fields to skip
+});
+```
+
+#### Manual Integration Example
+
+For more control, you can use createCommanderOptions and parseCommanderOptions directly:
+
+```typescript
+import { Command } from "commander";
+import { serviceHandler } from "@jaypie/vocabulary";
+import { createCommanderOptions, parseCommanderOptions } from "@jaypie/vocabulary/commander";
+
+const handler = serviceHandler({
+  input: {
+    userName: { type: String, description: "User name" },
+    maxRetries: { type: Number, default: 3, description: "Max retries" },
+    verbose: { type: Boolean, description: "Verbose output" },
+  },
+  service: (input) => console.log(input),
+});
+
+const program = new Command();
+
+// Create Commander options from handler input
+const { options } = createCommanderOptions(handler.input);
+options.forEach((opt) => program.addOption(opt));
+
+program.action(async (opts) => {
+  // Parse Commander options back to handler input
+  const input = parseCommanderOptions(opts, { input: handler.input });
+  await handler(input);
+});
+
+program.parse();
 ```
 
 ### Serialization Formats

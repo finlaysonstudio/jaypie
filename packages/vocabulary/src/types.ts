@@ -66,6 +66,10 @@ export type CoercionType =
 export interface InputFieldDefinition {
   default?: unknown;
   description?: string;
+  /** Override the long flag name for Commander.js (e.g., "user" for --user) */
+  flag?: string;
+  /** Short switch letter for Commander.js (e.g., "u" for -u) */
+  letter?: string;
   required?: boolean;
   type: CoercionType;
   validate?: ValidateFunction | RegExp | Array<unknown>;
@@ -94,7 +98,10 @@ export interface ServiceHandlerConfig<
 }
 
 // The handler function returned by serviceHandler (always async)
-export type ServiceHandlerFunction<
+// Config properties are attached directly to the handler for flat access
+export interface ServiceHandlerFunction<
   TInput extends Record<string, unknown> = Record<string, unknown>,
   TOutput = unknown,
-> = (input?: Partial<TInput> | string) => Promise<TOutput>;
+> extends ServiceHandlerConfig<TInput, TOutput> {
+  (input?: Partial<TInput> | string): Promise<TOutput>;
+}

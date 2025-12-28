@@ -9,6 +9,7 @@ import {
   coerceToNumber,
   coerceToObject,
   coerceToString,
+  commander,
   serviceHandler,
   VOCABULARY_VERSION,
 } from "..";
@@ -36,6 +37,14 @@ describe("vocabulary/index", () => {
       expect(coerceFromArray).toBeDefined();
       expect(coerceToObject).toBeDefined();
       expect(coerceFromObject).toBeDefined();
+    });
+
+    it("exports commander namespace", () => {
+      expect(commander).toBeDefined();
+      expect(commander.createCommanderOptions).toBeDefined();
+      expect(commander.parseCommanderOptions).toBeDefined();
+      expect(typeof commander.createCommanderOptions).toBe("function");
+      expect(typeof commander.parseCommanderOptions).toBe("function");
     });
   });
 

@@ -402,7 +402,9 @@ function getArrayElementType(
     return "object"; // {} shorthand for Object
   }
 
-  throw new BadRequestError(`Unknown array element type: ${String(elementType)}`);
+  throw new BadRequestError(
+    `Unknown array element type: ${String(elementType)}`,
+  );
 }
 
 /**

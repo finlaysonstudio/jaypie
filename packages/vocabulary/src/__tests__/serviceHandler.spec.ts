@@ -50,6 +50,47 @@ describe("serviceHandler", () => {
       expect(result).toBeInstanceOf(Promise);
       await expect(result).resolves.toBe("test");
     });
+
+    it("exposes config properties directly on returned handler", () => {
+      const config = {
+        alias: "test-handler",
+        description: "A test handler",
+        input: {
+          value: { type: Number, default: 42 },
+        },
+        service: ({ value }: { value: number }) => value * 2,
+      };
+      const handler = serviceHandler(config);
+
+      expect(handler.alias).toBe("test-handler");
+      expect(handler.description).toBe("A test handler");
+      expect(handler.input).toBe(config.input);
+      expect(handler.service).toBe(config.service);
+    });
+
+    it("handler has all original config properties", () => {
+      const handler = serviceHandler({
+        alias: "division",
+        description: "Divides numbers",
+        input: {
+          denominator: { default: 2, type: Number },
+          numerator: { type: Number },
+        },
+        service: ({
+          denominator,
+          numerator,
+        }: {
+          denominator: number;
+          numerator: number;
+        }) => numerator / denominator,
+      });
+
+      expect(handler.alias).toBe("division");
+      expect(handler.description).toBe("Divides numbers");
+      expect(handler.input?.numerator).toBeDefined();
+      expect(handler.input?.denominator).toBeDefined();
+      expect(handler.input?.denominator.default).toBe(2);
+    });
   });
 
   describe("Happy Paths", () => {
@@ -672,8 +713,7 @@ describe("serviceHandler", () => {
           input: {
             currency: { required: false, type: ["dec", "sps"] },
           },
-          service: ({ currency }: { currency?: string }) =>
-            currency ?? "none",
+          service: ({ currency }: { currency?: string }) => currency ?? "none",
         });
         await expect(handler({})).resolves.toBe("none");
       });
@@ -921,7 +961,9 @@ describe("serviceHandler", () => {
         });
         await expect(handler({ rating: 0.5 })).resolves.toBe(0.5);
         await expect(handler({ rating: 1.5 })).resolves.toBe(1.5);
-        await expect(handler({ rating: 0.75 })).rejects.toThrow(BadRequestError);
+        await expect(handler({ rating: 0.75 })).rejects.toThrow(
+          BadRequestError,
+        );
       });
 
       it("real-world example: priority levels", async () => {
