@@ -2,10 +2,7 @@
 
 import type { Command, Option } from "commander";
 
-import type {
-  InputFieldDefinition,
-  ServiceHandlerFunction,
-} from "../types.js";
+import type { InputFieldDefinition, ServiceHandlerFunction } from "../types.js";
 
 /**
  * Override configuration for a specific option

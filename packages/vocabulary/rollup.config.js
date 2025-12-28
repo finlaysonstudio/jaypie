@@ -30,6 +30,7 @@ export default [
     external,
   },
   // ES modules version - commander
+  // NOTE: declaration: false because main build generates correct .d.ts files
   {
     input: "src/commander/index.ts",
     output: {
@@ -41,7 +42,7 @@ export default [
     plugins: [
       typescript({
         tsconfig: "./tsconfig.json",
-        declaration: true,
+        declaration: false,
         outDir: "dist/esm/commander",
       }),
     ],
@@ -68,6 +69,7 @@ export default [
     external,
   },
   // CommonJS version - commander
+  // NOTE: declaration: false because main build generates correct .d.ts files
   {
     input: "src/commander/index.ts",
     output: {
@@ -81,7 +83,7 @@ export default [
     plugins: [
       typescript({
         tsconfig: "./tsconfig.json",
-        declaration: true,
+        declaration: false,
         outDir: "dist/cjs/commander",
       }),
     ],
