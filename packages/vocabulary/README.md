@@ -348,12 +348,20 @@ Future intentions planned:
 
 #### Models
 
-* base
+* item
   * Not used directly
+
+* record
+  * types: text, json
+  * attributes: content
+
+* collection
+  * types: models; e.g., records, jobs
+  * attributes: items, subject
 
 * job
   * types: api, call, command, event, schedule
-  * attributes: job, plan
+  * attributes: job, plan, status
 
 #### Extending Vocabulary
 
