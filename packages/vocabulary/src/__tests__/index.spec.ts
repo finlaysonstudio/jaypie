@@ -10,6 +10,7 @@ import {
   coerceToObject,
   coerceToString,
   commander,
+  lambda,
   serviceHandler,
   VOCABULARY_VERSION,
 } from "..";
@@ -46,6 +47,12 @@ describe("vocabulary/index", () => {
       expect(typeof commander.createCommanderOptions).toBe("function");
       expect(typeof commander.parseCommanderOptions).toBe("function");
     });
+
+    it("exports lambda namespace", () => {
+      expect(lambda).toBeDefined();
+      expect(lambda.lambdaServiceHandler).toBeDefined();
+      expect(typeof lambda.lambdaServiceHandler).toBe("function");
+    });
   });
 
   describe("Happy Paths", () => {
@@ -54,7 +61,7 @@ describe("vocabulary/index", () => {
     });
 
     it("VOCABULARY_VERSION matches package version", () => {
-      expect(VOCABULARY_VERSION).toBe("0.0.1");
+      expect(VOCABULARY_VERSION).toBe("0.1.5");
     });
   });
 });

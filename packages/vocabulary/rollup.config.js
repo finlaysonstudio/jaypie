@@ -8,7 +8,12 @@ const onwarn = (warning, defaultHandler) => {
   defaultHandler(warning);
 };
 
-const external = ["@jaypie/errors", "commander"];
+const external = [
+  "@jaypie/aws",
+  "@jaypie/errors",
+  "@jaypie/lambda",
+  "commander",
+];
 
 export default [
   // ES modules version - main
@@ -85,6 +90,46 @@ export default [
         tsconfig: "./tsconfig.json",
         declaration: false,
         outDir: "dist/cjs/commander",
+      }),
+    ],
+    external,
+  },
+  // ES modules version - lambda
+  // NOTE: declaration: false because main build generates correct .d.ts files
+  {
+    input: "src/lambda/index.ts",
+    output: {
+      dir: "dist/esm/lambda",
+      format: "es",
+      sourcemap: true,
+    },
+    onwarn,
+    plugins: [
+      typescript({
+        tsconfig: "./tsconfig.json",
+        declaration: false,
+        outDir: "dist/esm/lambda",
+      }),
+    ],
+    external,
+  },
+  // CommonJS version - lambda
+  // NOTE: declaration: false because main build generates correct .d.ts files
+  {
+    input: "src/lambda/index.ts",
+    output: {
+      dir: "dist/cjs/lambda",
+      format: "cjs",
+      sourcemap: true,
+      exports: "named",
+      entryFileNames: "[name].cjs",
+    },
+    onwarn,
+    plugins: [
+      typescript({
+        tsconfig: "./tsconfig.json",
+        declaration: false,
+        outDir: "dist/cjs/lambda",
       }),
     ],
     external,

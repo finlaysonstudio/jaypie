@@ -9,8 +9,8 @@ Jaypie standard application component vocabulary - provides type coercion and se
 | Status | Initial development (0.1.x) |
 | Type | Utility library |
 | Dependencies | `@jaypie/errors` |
-| Peer Dependencies | `commander` (optional) |
-| Exports | Coercion functions, serviceHandler, commander adapters, TypeScript types |
+| Peer Dependencies | `@jaypie/aws` (optional), `@jaypie/lambda` (optional), `commander` (optional) |
+| Exports | Coercion functions, serviceHandler, commander adapters, lambda adapters, TypeScript types |
 
 ## Internal Structure
 
@@ -20,12 +20,18 @@ src/
 │   ├── coerce.spec.ts         # Coercion function tests
 │   ├── commander.spec.ts      # Commander adapter tests
 │   ├── index.spec.ts          # Export verification tests
+│   ├── lambda.spec.ts         # Lambda adapter tests
 │   └── serviceHandler.spec.ts # Service handler tests
 ├── commander/
 │   ├── createCommanderOptions.ts  # Generate Commander Options from config
 │   ├── index.ts                   # Commander module exports
 │   ├── parseCommanderOptions.ts   # Parse Commander opts to handler input
+│   ├── registerServiceCommand.ts  # Register handler as Commander command
 │   └── types.ts                   # Commander adapter types
+├── lambda/
+│   ├── index.ts                   # Lambda module exports
+│   ├── lambdaServiceHandler.ts    # Wrap serviceHandler for Lambda
+│   └── types.ts                   # Lambda adapter types
 ├── coerce.ts                  # Type coercion utilities
 ├── index.ts                   # Package exports
 ├── serviceHandler.ts          # Service handler factory
@@ -214,6 +220,50 @@ const input = parseCommanderOptions(program.opts(), {
 await handler(input);
 ```
 
+### Lambda Adapter
+
+Located in `src/lambda/`. Utilities for integrating service handlers with AWS Lambda.
+
+**lambdaServiceHandler**: Wraps a serviceHandler for use as an AWS Lambda handler with full lifecycle management.
+
+```typescript
+import { serviceHandler } from "@jaypie/vocabulary";
+import { lambdaServiceHandler } from "@jaypie/vocabulary/lambda";
+
+const evaluationsHandler = serviceHandler({
+  alias: "evaluationsHandler",
+  input: {
+    count: { type: Number, default: 1 },
+    models: { type: [String], default: [] },
+    plan: { type: String },
+  },
+  service: ({ count, models, plan }) => ({
+    jobId: `job-${Date.now()}`,
+    plan,
+  }),
+});
+
+// Config object style
+export const handler = lambdaServiceHandler({
+  handler: evaluationsHandler,
+  secrets: ["ANTHROPIC_API_KEY", "OPENAI_API_KEY"],
+});
+
+// Or handler with options style
+export const handler2 = lambdaServiceHandler(evaluationsHandler, {
+  secrets: ["ANTHROPIC_API_KEY"],
+  setup: [async () => { /* initialization */ }],
+  teardown: [async () => { /* cleanup */ }],
+});
+```
+
+Features:
+- Uses `getMessages()` from `@jaypie/aws` to extract messages from SQS/SNS events
+- Calls the service handler once for each message
+- Returns single response if one message, array of responses if multiple
+- Uses `handler.alias` as the logging handler name (overridable via `name` option)
+- Supports all `lambdaHandler` options: `chaos`, `name`, `secrets`, `setup`, `teardown`, `throw`, `unavailable`, `validate`
+
 ### Types
 
 Located in `types.ts`:
@@ -245,6 +295,9 @@ export { coerce, coerceFromArray, coerceFromObject, coerceToArray, coerceToBoole
 // Commander adapter namespace
 export * as commander from "./commander/index.js";
 
+// Lambda adapter namespace
+export * as lambda from "./lambda/index.js";
+
 // Service Handler
 export { serviceHandler } from "./serviceHandler.js";
 
@@ -262,6 +315,13 @@ export { createCommanderOptions } from "./createCommanderOptions.js";
 export { parseCommanderOptions } from "./parseCommanderOptions.js";
 export { registerServiceCommand } from "./registerServiceCommand.js";
 export type { CommanderOptionOverride, CreateCommanderOptionsConfig, CreateCommanderOptionsResult, ParseCommanderOptionsConfig, RegisterServiceCommandConfig, RegisterServiceCommandResult } from "./types.js";
+```
+
+### Lambda Export (`@jaypie/vocabulary/lambda`)
+
+```typescript
+export { lambdaServiceHandler } from "./lambdaServiceHandler.js";
+export type { LambdaContext, LambdaServiceHandlerConfig, LambdaServiceHandlerOptions, LambdaServiceHandlerResult } from "./types.js";
 ```
 
 ## Usage in Other Packages

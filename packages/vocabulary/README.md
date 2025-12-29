@@ -374,6 +374,81 @@ program.action(async (opts) => {
 program.parse();
 ```
 
+### Lambda Adapter
+
+The vocabulary package includes utilities for integrating service handlers with AWS Lambda.
+
+#### lambdaServiceHandler
+
+Wraps a service handler for use as an AWS Lambda handler with full lifecycle management:
+
+```typescript
+import { serviceHandler } from "@jaypie/vocabulary";
+import { lambdaServiceHandler } from "@jaypie/vocabulary/lambda";
+
+const evaluationsHandler = serviceHandler({
+  alias: "evaluationsHandler",
+  input: {
+    count: { type: Number, default: 1 },
+    models: { type: [String], default: [] },
+    plan: { type: String },
+  },
+  service: ({ count, models, plan }) => ({
+    jobId: `job-${Date.now()}`,
+    plan,
+  }),
+});
+
+// Config object style
+export const handler = lambdaServiceHandler({
+  handler: evaluationsHandler,
+  secrets: ["ANTHROPIC_API_KEY", "OPENAI_API_KEY"],
+});
+
+// Or handler with options style
+export const handler2 = lambdaServiceHandler(evaluationsHandler, {
+  secrets: ["ANTHROPIC_API_KEY"],
+  setup: [async () => { /* initialization */ }],
+  teardown: [async () => { /* cleanup */ }],
+});
+```
+
+Features:
+- Uses `getMessages()` from `@jaypie/aws` to extract messages from SQS/SNS events
+- Calls the service handler once for each message
+- Returns single response if one message, array of responses if multiple
+- Uses `handler.alias` as the logging handler name (overridable via `name` option)
+- Supports all `lambdaHandler` options: `chaos`, `name`, `secrets`, `setup`, `teardown`, `throw`, `unavailable`, `validate`
+
+#### Before/After Comparison
+
+**Before** (manual lambdaHandler wrapping):
+```typescript
+export const handler = lambdaHandler(
+  async (event: unknown) => {
+    const messages = getMessages(event);
+    const results = [];
+    for (const message of messages) {
+      const result = await evaluationsHandler(message);
+      results.push({ status: "success", jobId: result.job.id, plan: message.plan });
+    }
+    return { status: "success", results };
+  },
+  {
+    name: "evaluationsHandler",
+    secrets: ["ANTHROPIC_API_KEY", "OPENAI_API_KEY"],
+  },
+);
+```
+
+**After** (using lambdaServiceHandler):
+```typescript
+export const handler = lambdaServiceHandler({
+  handler: evaluationsHandler,
+  secrets: ["ANTHROPIC_API_KEY", "OPENAI_API_KEY"],
+});
+```
+
 ### Serialization Formats
 
 #### Complete Formats
