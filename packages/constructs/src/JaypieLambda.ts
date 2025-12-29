@@ -1,12 +1,13 @@
 import { Construct } from "constructs";
 import { Duration, Stack, RemovalPolicy, Tags } from "aws-cdk-lib";
-import * as lambda from "aws-cdk-lib/aws-lambda";
-import { CDK } from "./constants";
 import * as cloudwatch from "aws-cdk-lib/aws-cloudwatch";
+import * as dynamodb from "aws-cdk-lib/aws-dynamodb";
 import * as ec2 from "aws-cdk-lib/aws-ec2";
 import * as iam from "aws-cdk-lib/aws-iam";
+import * as lambda from "aws-cdk-lib/aws-lambda";
 import * as logs from "aws-cdk-lib/aws-logs";
 import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
+import { CDK } from "./constants";
 import {
   addDatadogLayers,
   EnvironmentInput,
@@ -27,6 +28,10 @@ export interface JaypieLambdaProps {
   deadLetterQueueEnabled?: boolean;
   deadLetterTopic?: import("aws-cdk-lib/aws-sns").ITopic;
   description?: string;
+  /**
+   * DynamoDB tables to grant read/write access to the Lambda function.
+   */
+  dynamoTables?: dynamodb.ITable[];
   /**
    * Environment variables for the Lambda function.
    *
@@ -97,6 +102,7 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
       deadLetterQueueEnabled,
       deadLetterTopic,
       description,
+      dynamoTables = [],
       environment: environmentInput,
       envSecrets = {},
       ephemeralStorageSize,
@@ -239,6 +245,16 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
     secrets.forEach((secret) => {
       secret.grantRead(this._lambda);
     });
+
+    // Grant read/write permissions for DynamoDB tables
+    dynamoTables.forEach((table) => {
+      table.grantReadWriteData(this._lambda);
+    });
+
+    // Add table name to environment if there's exactly one table
+    if (dynamoTables.length === 1) {
+      this._lambda.addEnvironment("CDK_ENV_DYNAMO_TABLE", dynamoTables[0].tableName);
+    }
 
     // Configure provisioned concurrency if specified
     if (provisionedConcurrentExecutions !== undefined) {

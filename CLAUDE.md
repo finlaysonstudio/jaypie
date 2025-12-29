@@ -139,3 +139,5 @@ Utilize these MCP when provided. When they are unavailable but would be useful, 
 ### Development Notes (memories)
 - Whenever a new export is added to a package, make sure to update the exports of packages/testkit or tests will fail.
 - Updating testkit requires bumping testkit's version
+- Avoid default exports
+- Do not preserve backwards compatibility in unreleased changes or pre-1.0 codebases

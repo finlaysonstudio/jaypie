@@ -1,3 +1,4 @@
+import * as dynamodb from "aws-cdk-lib/aws-dynamodb";
 import { IHostedZone } from "aws-cdk-lib/aws-route53";
 import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
 import { Nextjs } from "cdk-nextjs-standalone";
@@ -35,6 +36,10 @@ export interface JaypieNextjsProps {
    */
   domainName?: string | DomainNameConfig;
   /**
+   * DynamoDB tables to grant read/write access to the Next.js server function.
+   */
+  dynamoTables?: dynamodb.ITable[];
+  /**
    * Environment variables for the Next.js application.
    *
    * Supports both legacy object syntax and new array syntax:
@@ -59,6 +64,7 @@ export interface JaypieNextjsProps {
 }
 
 export class JaypieNextJs extends Construct {
+  private readonly _nextjs: Nextjs;
   public readonly domainName: string;
 
   constructor(scope: Construct, id: string, props?: JaypieNextjsProps) {
@@ -171,5 +177,79 @@ export class JaypieNextJs extends Construct {
     secrets.forEach((secret) => {
       secret.grantRead(nextjs.serverFunction.lambdaFunction);
     });
+
+    // Grant read/write permissions for DynamoDB tables
+    const dynamoTables = props?.dynamoTables || [];
+    dynamoTables.forEach((table) => {
+      table.grantReadWriteData(nextjs.serverFunction.lambdaFunction);
+    });
+
+    // Add table name to environment if there's exactly one table
+    if (dynamoTables.length === 1) {
+      nextjs.serverFunction.lambdaFunction.addEnvironment(
+        "CDK_ENV_DYNAMO_TABLE",
+        dynamoTables[0].tableName,
+      );
+    }
+
+    // Store reference to nextjs for property exposure
+    this._nextjs = nextjs;
+  }
+
+  // Expose Nextjs construct properties
+
+  /** S3 bucket for static assets */
+  public get bucket() {
+    return this._nextjs.bucket;
+  }
+
+  /** CloudFront distribution */
+  public get distribution() {
+    return this._nextjs.distribution;
+  }
+
+  /** Route53 domain configuration */
+  public get domain() {
+    return this._nextjs.domain;
+  }
+
+  /** Image optimization Lambda function */
+  public get imageOptimizationFunction() {
+    return this._nextjs.imageOptimizationFunction;
+  }
+
+  /** Image optimization Lambda function URL */
+  public get imageOptimizationLambdaFunctionUrl() {
+    return this._nextjs.imageOptimizationLambdaFunctionUrl;
+  }
+
+  /** Server Lambda function URL */
+  public get lambdaFunctionUrl() {
+    return this._nextjs.lambdaFunctionUrl;
+  }
+
+  /** Next.js build output */
+  public get nextBuild() {
+    return this._nextjs.nextBuild;
+  }
+
+  /** ISR revalidation configuration */
+  public get revalidation() {
+    return this._nextjs.revalidation;
+  }
+
+  /** Next.js server function */
+  public get serverFunction() {
+    return this._nextjs.serverFunction;
+  }
+
+  /** Static assets configuration */
+  public get staticAssets() {
+    return this._nextjs.staticAssets;
+  }
+
+  /** CloudFront distribution URL */
+  public get url() {
+    return this._nextjs.url;
   }
 }
