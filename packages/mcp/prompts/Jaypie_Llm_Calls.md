@@ -12,13 +12,30 @@ Streamline API calls with multi-model capabilities
 ```
 export interface LlmProvider {
   operate(
-    input: string | LlmHistory | LlmInputMessage,
+    input: string | LlmHistory | LlmInputMessage | LlmOperateInput,
     options?: LlmOperateOptions,
   ): Promise<LlmOperateResponse>;
   send(
     message: string,
     options?: LlmMessageOptions,
   ): Promise<string | JsonObject>;
+}
+
+// Simplified input for files and images
+type LlmOperateInput = LlmOperateInputContent[];
+type LlmOperateInputContent = string | LlmOperateInputFile | LlmOperateInputImage;
+
+interface LlmOperateInputFile {
+  file: string;           // Path or filename
+  bucket?: string;        // S3 bucket (uses CDK_ENV_BUCKET if omitted)
+  pages?: number[];       // Extract specific PDF pages (omit = all)
+  data?: string;          // Base64 data (skips file loading)
+}
+
+interface LlmOperateInputImage {
+  image: string;          // Path or filename
+  bucket?: string;        // S3 bucket (uses CDK_ENV_BUCKET if omitted)
+  data?: string;          // Base64 data (skips file loading)
 }
 
 export interface LlmOperateOptions {
@@ -105,6 +122,65 @@ content will be an object when format was passed and the provider supports struc
 error will include any errors.
 output is just the output components of full responses.
 responses are the complete responses.
+
+## Files and Images
+
+Use `LlmOperateInput` array syntax to send files and images with automatic loading and provider translation:
+
+```javascript
+import { Llm } from "jaypie";
+
+const llm = new Llm("openai");
+
+// Image from local filesystem
+const imageResult = await llm.operate([
+  "Extract text from this image",
+  { image: "/path/to/photo.png" }
+]);
+
+// PDF from local filesystem
+const pdfResult = await llm.operate([
+  "Summarize this document",
+  { file: "/path/to/document.pdf" }
+]);
+
+// From S3 bucket (uses CDK_ENV_BUCKET if bucket omitted)
+const s3Result = await llm.operate([
+  "Analyze this file",
+  { file: "documents/report.pdf", bucket: "my-bucket" }
+]);
+
+// Extract specific PDF pages
+const pagesResult = await llm.operate([
+  "Read pages 1-3",
+  { file: "large-doc.pdf", pages: [1, 2, 3] }
+]);
+
+// With pre-loaded base64 data (skips file loading)
+const base64Result = await llm.operate([
+  "Describe this image",
+  { image: "photo.jpg", data: base64String }
+]);
+
+// Multiple files and text
+const multiResult = await llm.operate([
+  "Compare these documents",
+  { file: "doc1.pdf" },
+  { file: "doc2.pdf" },
+  "Focus on the methodology section"
+]);
+```
+
+### File Resolution Order
+
+1. If `data` is present → uses base64 directly
+2. If `bucket` is present → loads from S3
+3. If `CDK_ENV_BUCKET` env var exists → loads from that S3 bucket
+4. Otherwise → loads from local filesystem (relative to process.cwd())
+
+### Supported Image Extensions
+
+Files with these extensions are treated as images: `png`, `jpg`, `jpeg`, `gif`, `webp`, `svg`, `bmp`, `ico`, `tiff`, `avif`
 
 ## Footnotes
 
