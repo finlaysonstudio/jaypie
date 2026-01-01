@@ -123,6 +123,12 @@ export const OpenRouterProvider = createMockWrappedObject(
   },
 );
 
+// Type guards - re-export from original (these are pure functions)
+export const isLlmOperateInput = original.isLlmOperateInput;
+export const isLlmOperateInputContent = original.isLlmOperateInputContent;
+export const isLlmOperateInputFile = original.isLlmOperateInputFile;
+export const isLlmOperateInputImage = original.isLlmOperateInputImage;
+
 // Tool collections
 export const toolkit = new original.JaypieToolkit([
   random,

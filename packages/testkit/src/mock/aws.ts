@@ -10,6 +10,10 @@ const TAG = "AWS";
 
 export const getMessages = createMockWrappedFunction(original.getMessages, []);
 
+export const getS3FileBuffer = createMockFunction<
+  ({ bucket, key }: { bucket: string; key: string }) => Promise<Buffer>
+>(async ({ bucket, key }) => Buffer.from(`_MOCK_S3_FILE_[${bucket}/${key}]`));
+
 export const getSecret = createMockResolvedFunction("mock-secret-value");
 
 export const sendMessage = createMockResolvedFunction({
