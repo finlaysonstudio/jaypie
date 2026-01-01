@@ -2,7 +2,6 @@
 import { config } from "dotenv";
 
 import { Llm } from "../src/index.js";
-import { parseJsonFromMarkdown } from "../src/util/parseJsonFromMarkdown.js";
 
 config();
 
@@ -154,20 +153,6 @@ function tryParseJson(content: unknown): StructuredResult | null {
     } catch {
       // Not valid JSON in code block
     }
-  }
-
-  // Try parseJsonFromMarkdown as last resort
-  const markdownResult = parseJsonFromMarkdown(content, FORMAT);
-  if (markdownResult) {
-    console.log(`  (Parsed from markdown headings)`);
-    // Convert string sentence_count to number if needed
-    if (typeof markdownResult.sentence_count === "string") {
-      const parsed = parseInt(markdownResult.sentence_count, 10);
-      if (!isNaN(parsed)) {
-        markdownResult.sentence_count = parsed;
-      }
-    }
-    return markdownResult as StructuredResult;
   }
 
   return null;
