@@ -28,7 +28,12 @@ import {
   RetryExecutor,
   RetryPolicy,
 } from "./retry/index.js";
-import { OperateContext, OperateLoopState, OperateRequest } from "./types.js";
+import {
+  OperateContext,
+  OperateLoopState,
+  OperateRequest,
+  ProviderToolDefinition,
+} from "./types.js";
 
 //
 //
@@ -196,9 +201,21 @@ export class OperateLoop {
     }
 
     // Format tools through adapter
-    const formattedTools = toolkit
-      ? this.adapter.formatTools(toolkit, formattedFormat)
-      : undefined;
+    // If format is provided but no toolkit, create an empty toolkit
+    // so that structured_output tool can be added for providers that need it
+    // (Anthropic, OpenRouter use tool-based structured output)
+    let formattedTools: ProviderToolDefinition[] | undefined;
+    if (toolkit) {
+      formattedTools = this.adapter.formatTools(toolkit, formattedFormat);
+    } else if (formattedFormat) {
+      // Create empty toolkit just for structured output
+      const emptyToolkit = new Toolkit([]);
+      formattedTools = this.adapter.formatTools(emptyToolkit, formattedFormat);
+      // Only include if there are tools (structured_output was added)
+      if (formattedTools.length === 0) {
+        formattedTools = undefined;
+      }
+    }
 
     return {
       currentInput: processedInput.history,

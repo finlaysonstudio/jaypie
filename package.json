@@ -50,6 +50,7 @@
     "test:llm:document": "tsx packages/llm/test/document.ts",
     "test:llm:image": "tsx packages/llm/test/image.ts",
     "test:llm:joke": "tsx packages/llm/test/joke.ts",
+    "test:llm:structured": "tsx packages/llm/test/structured.ts",
     "test:mongoose": "npm run test --workspace packages/mongoose",
     "test:testkit": "npm run test --workspace packages/testkit",
     "test:textract": "npm run test --workspace packages/textract",
