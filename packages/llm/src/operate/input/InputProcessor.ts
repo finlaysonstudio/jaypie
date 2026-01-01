@@ -5,8 +5,11 @@ import {
   LlmInputMessage,
   LlmMessageRole,
   LlmMessageType,
+  LlmOperateInput,
   LlmOperateOptions,
 } from "../../types/LlmProvider.interface.js";
+import { isLlmOperateInput } from "../../types/LlmOperateInput.guards.js";
+import { resolveOperateInput } from "../../upload/resolveOperateInput.js";
 import { formatOperateInput } from "../../util/index.js";
 
 //
@@ -36,16 +39,28 @@ export class InputProcessor {
   /**
    * Process input with placeholders, history merging, and system message handling
    *
-   * @param input - The raw input (string, message, or history)
+   * @param input - The raw input (string, message, history, or LlmOperateInput)
    * @param options - The operate options containing data, history, system, etc.
    * @returns Processed input with all transformations applied
    */
-  process(
-    input: string | LlmHistory | LlmInputMessage,
+  async process(
+    input: string | LlmHistory | LlmInputMessage | LlmOperateInput,
     options: LlmOperateOptions = {},
-  ): ProcessedInput {
+  ): Promise<ProcessedInput> {
+    // Handle LlmOperateInput by resolving files first
+    let resolvedInput: string | LlmHistory | LlmInputMessage = input as
+      | string
+      | LlmHistory
+      | LlmInputMessage;
+    if (isLlmOperateInput(input)) {
+      resolvedInput = await resolveOperateInput(input);
+    }
+
     // Convert input to history format with placeholder substitution
-    let history: LlmHistory = this.formatInputWithPlaceholders(input, options);
+    let history: LlmHistory = this.formatInputWithPlaceholders(
+      resolvedInput,
+      options,
+    );
 
     // Process instructions with placeholders
     const instructions = this.processInstructions(options);

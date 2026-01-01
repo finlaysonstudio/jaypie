@@ -8,6 +8,10 @@ export type {
   LlmInputContentText,
   LlmInputMessage,
   LlmMessageOptions,
+  LlmOperateInput,
+  LlmOperateInputContent,
+  LlmOperateInputFile,
+  LlmOperateInputImage,
   LlmOperateOptions,
   LlmOperateResponse,
   LlmOptions,
@@ -17,6 +21,12 @@ export {
   LlmMessageRole,
   LlmMessageType,
 } from "./types/LlmProvider.interface.js";
+export {
+  isLlmOperateInput,
+  isLlmOperateInputContent,
+  isLlmOperateInputFile,
+  isLlmOperateInputImage,
+} from "./types/LlmOperateInput.guards.js";
 export type { LlmTool } from "./types/LlmTool.interface.js";
 export type {
   LlmStreamChunk,

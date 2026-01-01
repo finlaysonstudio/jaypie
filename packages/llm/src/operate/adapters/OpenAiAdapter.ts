@@ -235,7 +235,16 @@ export class OpenAiAdapter extends BaseProviderAdapter {
         }
       } else if (eventType === "response.output_item.added") {
         // New output item - check if it's a function call
-        const item = (event as { item?: { type?: string; id?: string; call_id?: string; name?: string } }).item;
+        const item = (
+          event as {
+            item?: {
+              type?: string;
+              id?: string;
+              call_id?: string;
+              name?: string;
+            };
+          }
+        ).item;
         if (item?.type === "function_call") {
           currentFunctionCall = {
             id: item.id || "",
@@ -263,7 +272,8 @@ export class OpenAiAdapter extends BaseProviderAdapter {
         if (response?.usage) {
           inputTokens = response.usage.input_tokens || 0;
           outputTokens = response.usage.output_tokens || 0;
-          reasoningTokens = response.usage.output_tokens_details?.reasoning_tokens || 0;
+          reasoningTokens =
+            response.usage.output_tokens_details?.reasoning_tokens || 0;
         }
       } else if (eventType === "response.done") {
         // Stream done - emit final chunk with usage

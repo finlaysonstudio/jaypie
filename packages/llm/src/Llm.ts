@@ -3,13 +3,14 @@ import { ConfigurationError, NotImplementedError } from "@jaypie/errors";
 import { DEFAULT, LlmProviderName, PROVIDER } from "./constants.js";
 import { determineModelProvider } from "./util/determineModelProvider.js";
 import {
-  LlmProvider,
   LlmHistory,
   LlmInputMessage,
   LlmMessageOptions,
+  LlmOperateInput,
   LlmOperateOptions,
-  LlmOptions,
   LlmOperateResponse,
+  LlmOptions,
+  LlmProvider,
 } from "./types/LlmProvider.interface.js";
 import { LlmStreamChunk } from "./types/LlmStreamChunk.interface.js";
 import { AnthropicProvider } from "./providers/anthropic/AnthropicProvider.class.js";
@@ -111,7 +112,7 @@ class Llm implements LlmProvider {
   }
 
   async operate(
-    input: string | LlmHistory | LlmInputMessage,
+    input: string | LlmHistory | LlmInputMessage | LlmOperateInput,
     options: LlmOperateOptions = {},
   ): Promise<LlmOperateResponse> {
     if (!this._llm.operate) {
@@ -123,7 +124,7 @@ class Llm implements LlmProvider {
   }
 
   async *stream(
-    input: string | LlmHistory | LlmInputMessage,
+    input: string | LlmHistory | LlmInputMessage | LlmOperateInput,
     options: LlmOperateOptions = {},
   ): AsyncIterable<LlmStreamChunk> {
     if (!this._llm.stream) {
@@ -148,7 +149,7 @@ class Llm implements LlmProvider {
   }
 
   static async operate(
-    input: string | LlmHistory | LlmInputMessage,
+    input: string | LlmHistory | LlmInputMessage | LlmOperateInput,
     options?: LlmOperateOptions & {
       llm?: LlmProviderName;
       apiKey?: string;
@@ -179,7 +180,7 @@ class Llm implements LlmProvider {
   }
 
   static stream(
-    input: string | LlmHistory | LlmInputMessage,
+    input: string | LlmHistory | LlmInputMessage | LlmOperateInput,
     options?: LlmOperateOptions & {
       llm?: LlmProviderName;
       apiKey?: string;

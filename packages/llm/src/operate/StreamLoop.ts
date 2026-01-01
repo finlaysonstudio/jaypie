@@ -7,6 +7,7 @@ import {
   LlmInputMessage,
   LlmMessageRole,
   LlmMessageType,
+  LlmOperateInput,
   LlmOperateOptions,
   LlmOutputMessage,
   LlmToolCall,
@@ -87,7 +88,7 @@ export class StreamLoop {
    * Yields stream chunks as they become available.
    */
   async *execute(
-    input: string | LlmHistory | LlmInputMessage,
+    input: string | LlmHistory | LlmInputMessage | LlmOperateInput,
     options: LlmOperateOptions = {},
   ): AsyncIterable<LlmStreamChunk> {
     // Verify adapter supports streaming
@@ -98,7 +99,7 @@ export class StreamLoop {
     }
 
     // Initialize state
-    const state = this.initializeState(input, options);
+    const state = await this.initializeState(input, options);
     const context = this.createContext(options);
 
     // Build initial request
@@ -167,12 +168,15 @@ export class StreamLoop {
   // Private Methods
   //
 
-  private initializeState(
-    input: string | LlmHistory | LlmInputMessage,
+  private async initializeState(
+    input: string | LlmHistory | LlmInputMessage | LlmOperateInput,
     options: LlmOperateOptions,
-  ): StreamLoopState {
+  ): Promise<StreamLoopState> {
     // Process input with placeholders
-    const processedInput = this.inputProcessorInstance.process(input, options);
+    const processedInput = await this.inputProcessorInstance.process(
+      input,
+      options,
+    );
 
     // Determine max turns
     const maxTurns = maxTurnsFromOptions(options);

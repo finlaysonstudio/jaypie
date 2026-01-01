@@ -7,6 +7,7 @@ import {
   LlmInputMessage,
   LlmMessageRole,
   LlmMessageType,
+  LlmOperateInput,
   LlmOperateOptions,
   LlmOperateResponse,
   LlmOutputMessage,
@@ -101,7 +102,7 @@ export class OperateLoop {
    * Execute the operate loop for multi-turn conversations with tool calling.
    */
   async execute(
-    input: string | LlmHistory | LlmInputMessage,
+    input: string | LlmHistory | LlmInputMessage | LlmOperateInput,
     options: LlmOperateOptions = {},
   ): Promise<LlmOperateResponse> {
     // Log what was passed to operate
@@ -110,7 +111,7 @@ export class OperateLoop {
     log.var({ "operate.options": options });
 
     // Initialize state
-    const state = this.initializeState(input, options);
+    const state = await this.initializeState(input, options);
     const context = this.createContext(options);
 
     // Build initial request
@@ -152,12 +153,15 @@ export class OperateLoop {
   // Private Methods
   //
 
-  private initializeState(
-    input: string | LlmHistory | LlmInputMessage,
+  private async initializeState(
+    input: string | LlmHistory | LlmInputMessage | LlmOperateInput,
     options: LlmOperateOptions,
-  ): OperateLoopState {
+  ): Promise<OperateLoopState> {
     // Process input with placeholders
-    const processedInput = this.inputProcessorInstance.process(input, options);
+    const processedInput = await this.inputProcessorInstance.process(
+      input,
+      options,
+    );
 
     // Determine max turns
     const maxTurns = maxTurnsFromOptions(options);

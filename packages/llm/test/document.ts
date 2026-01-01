@@ -1,18 +1,9 @@
 /* eslint-disable no-console */
 import { config } from "dotenv";
-import * as fs from "fs";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
 
-import {
-  Llm,
-  LlmInputContentFile,
-  LlmInputContentImage,
-  LlmInputContentText,
-  LlmInputMessage,
-  LlmMessageRole,
-  LlmMessageType,
-} from "../src/index.js";
+import { Llm, LlmOperateInput } from "../src/index.js";
 
 config();
 
@@ -77,23 +68,12 @@ async function testImageOpenAI(): Promise<boolean> {
   try {
     console.log(`\n============ Image Test: ${provider} (${model})`);
 
-    const base64Image = fs.readFileSync(IMAGE_FILE_PATH, { encoding: "base64" });
     const llm = new Llm(provider, { model });
 
-    const textContent: LlmInputContentText = {
-      type: LlmMessageType.InputText,
-      text: REQUEST_IMAGE,
-    };
-    const imageContent: LlmInputContentImage = {
-      type: LlmMessageType.InputImage,
-      image_url: `data:image/png;base64,${base64Image}`,
-    };
-    const inputMessage: LlmInputMessage = {
-      role: LlmMessageRole.User,
-      content: [textContent, imageContent],
-    };
+    // New simplified LlmOperateInput syntax
+    const input: LlmOperateInput = [REQUEST_IMAGE, { image: IMAGE_FILE_PATH }];
 
-    const result = await llm.operate(inputMessage, {
+    const result = await llm.operate(input, {
       user: process?.env?.APP_USER || "[document] Jaypie User",
     });
 
@@ -127,30 +107,12 @@ async function testImageAnthropic(): Promise<boolean> {
   try {
     console.log(`\n============ Image Test: ${provider} (${model})`);
 
-    const base64Image = fs.readFileSync(IMAGE_FILE_PATH, { encoding: "base64" });
     const llm = new Llm(provider, { model });
 
-    // Anthropic uses a different format for images
-    // They expect: { type: "image", source: { type: "base64", media_type: "image/png", data: "..." } }
-    const inputMessage: LlmInputMessage = {
-      role: LlmMessageRole.User,
-      content: [
-        {
-          type: "image" as any,
-          source: {
-            type: "base64",
-            media_type: "image/png",
-            data: base64Image,
-          },
-        },
-        {
-          type: "text" as any,
-          text: REQUEST_IMAGE,
-        },
-      ] as any,
-    };
+    // New simplified LlmOperateInput syntax - same for all providers!
+    const input: LlmOperateInput = [REQUEST_IMAGE, { image: IMAGE_FILE_PATH }];
 
-    const result = await llm.operate(inputMessage, {
+    const result = await llm.operate(input, {
       user: process?.env?.APP_USER || "[document] Jaypie User",
     });
 
@@ -184,24 +146,12 @@ async function testImageGemini(): Promise<boolean> {
   try {
     console.log(`\n============ Image Test: ${provider} (${model})`);
 
-    const base64Image = fs.readFileSync(IMAGE_FILE_PATH, { encoding: "base64" });
     const llm = new Llm(provider, { model });
 
-    // Gemini now supports the standardized format (adapter converts it)
-    const textContent: LlmInputContentText = {
-      type: LlmMessageType.InputText,
-      text: REQUEST_IMAGE,
-    };
-    const imageContent: LlmInputContentImage = {
-      type: LlmMessageType.InputImage,
-      image_url: `data:image/png;base64,${base64Image}`,
-    };
-    const inputMessage: LlmInputMessage = {
-      role: LlmMessageRole.User,
-      content: [textContent, imageContent],
-    };
+    // New simplified LlmOperateInput syntax - same for all providers!
+    const input: LlmOperateInput = [REQUEST_IMAGE, { image: IMAGE_FILE_PATH }];
 
-    const result = await llm.operate(inputMessage, {
+    const result = await llm.operate(input, {
       user: process?.env?.APP_USER || "[document] Jaypie User",
     });
 
@@ -240,24 +190,12 @@ async function testPdfOpenAI(): Promise<boolean> {
   try {
     console.log(`\n============ PDF Test: ${provider} (${model})`);
 
-    const base64Pdf = fs.readFileSync(PDF_FILE_PATH, { encoding: "base64" });
     const llm = new Llm(provider, { model });
 
-    const textContent: LlmInputContentText = {
-      type: LlmMessageType.InputText,
-      text: REQUEST_PDF,
-    };
-    const fileContent: LlmInputContentFile = {
-      type: LlmMessageType.InputFile,
-      filename: "page.pdf",
-      file_data: `data:application/pdf;base64,${base64Pdf}`,
-    };
-    const inputMessage: LlmInputMessage = {
-      role: LlmMessageRole.User,
-      content: [textContent, fileContent],
-    };
+    // New simplified LlmOperateInput syntax for PDF files
+    const input: LlmOperateInput = [REQUEST_PDF, { file: PDF_FILE_PATH }];
 
-    const result = await llm.operate(inputMessage, {
+    const result = await llm.operate(input, {
       user: process?.env?.APP_USER || "[document] Jaypie User",
     });
 
@@ -291,30 +229,12 @@ async function testPdfAnthropic(): Promise<boolean> {
   try {
     console.log(`\n============ PDF Test: ${provider} (${model})`);
 
-    const base64Pdf = fs.readFileSync(PDF_FILE_PATH, { encoding: "base64" });
     const llm = new Llm(provider, { model });
 
-    // Anthropic supports PDF via document type
-    // https://docs.anthropic.com/en/docs/build-with-claude/pdf-support
-    const inputMessage: LlmInputMessage = {
-      role: LlmMessageRole.User,
-      content: [
-        {
-          type: "document" as any,
-          source: {
-            type: "base64",
-            media_type: "application/pdf",
-            data: base64Pdf,
-          },
-        },
-        {
-          type: "text" as any,
-          text: REQUEST_PDF,
-        },
-      ] as any,
-    };
+    // New simplified LlmOperateInput syntax - same for all providers!
+    const input: LlmOperateInput = [REQUEST_PDF, { file: PDF_FILE_PATH }];
 
-    const result = await llm.operate(inputMessage, {
+    const result = await llm.operate(input, {
       user: process?.env?.APP_USER || "[document] Jaypie User",
     });
 
@@ -348,25 +268,12 @@ async function testPdfGemini(): Promise<boolean> {
   try {
     console.log(`\n============ PDF Test: ${provider} (${model})`);
 
-    const base64Pdf = fs.readFileSync(PDF_FILE_PATH, { encoding: "base64" });
     const llm = new Llm(provider, { model });
 
-    // Try using the standard format
-    const textContent: LlmInputContentText = {
-      type: LlmMessageType.InputText,
-      text: REQUEST_PDF,
-    };
-    const fileContent: LlmInputContentFile = {
-      type: LlmMessageType.InputFile,
-      filename: "page.pdf",
-      file_data: `data:application/pdf;base64,${base64Pdf}`,
-    };
-    const inputMessage: LlmInputMessage = {
-      role: LlmMessageRole.User,
-      content: [textContent, fileContent],
-    };
+    // New simplified LlmOperateInput syntax - same for all providers!
+    const input: LlmOperateInput = [REQUEST_PDF, { file: PDF_FILE_PATH }];
 
-    const result = await llm.operate(inputMessage, {
+    const result = await llm.operate(input, {
       user: process?.env?.APP_USER || "[document] Jaypie User",
     });
 
