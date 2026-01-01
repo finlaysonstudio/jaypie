@@ -656,14 +656,11 @@ export class GeminiAdapter extends BaseProviderAdapter {
       // Handle input/output messages
       if ("role" in message && "content" in message) {
         const role = this.mapRole(message.role as LlmMessageRole);
-        const content =
-          typeof message.content === "string"
-            ? message.content
-            : JSON.stringify(message.content);
+        const parts = this.convertContentToParts(message.content);
 
         contents.push({
           role,
-          parts: [{ text: content }],
+          parts,
         });
       }
       // Handle function call items
@@ -712,6 +709,102 @@ export class GeminiAdapter extends BaseProviderAdapter {
     }
 
     return contents;
+  }
+
+  private convertContentToParts(content: unknown): GeminiPart[] {
+    // Handle string content
+    if (typeof content === "string") {
+      return [{ text: content }];
+    }
+
+    // Handle array content
+    if (Array.isArray(content)) {
+      const parts: GeminiPart[] = [];
+
+      for (const item of content) {
+        // Handle Gemini-native parts (already have inlineData, text, etc.)
+        if (item.inlineData) {
+          parts.push({ inlineData: item.inlineData });
+          continue;
+        }
+
+        if (item.text && !item.type) {
+          // Plain text part
+          parts.push({ text: item.text });
+          continue;
+        }
+
+        if (item.fileData) {
+          parts.push({ fileData: item.fileData });
+          continue;
+        }
+
+        // Handle standardized LlmInputContentText
+        if (item.type === LlmMessageType.InputText) {
+          parts.push({ text: item.text });
+          continue;
+        }
+
+        // Handle standardized LlmInputContentImage
+        if (item.type === LlmMessageType.InputImage) {
+          const imageUrl = item.image_url as string;
+          // Parse data URL format: data:image/png;base64,<data>
+          if (imageUrl?.startsWith("data:")) {
+            const match = imageUrl.match(/^data:([^;]+);base64,(.+)$/);
+            if (match) {
+              parts.push({
+                inlineData: {
+                  mimeType: match[1],
+                  data: match[2],
+                },
+              });
+              continue;
+            }
+          }
+          // If not a data URL, try to use as file URI
+          if (imageUrl) {
+            parts.push({
+              fileData: {
+                mimeType: "image/png",
+                fileUri: imageUrl,
+              },
+            });
+          }
+          continue;
+        }
+
+        // Handle standardized LlmInputContentFile
+        if (item.type === LlmMessageType.InputFile) {
+          const fileData = item.file_data as string;
+          // Parse data URL format: data:application/pdf;base64,<data>
+          if (fileData?.startsWith("data:")) {
+            const match = fileData.match(/^data:([^;]+);base64,(.+)$/);
+            if (match) {
+              parts.push({
+                inlineData: {
+                  mimeType: match[1],
+                  data: match[2],
+                },
+              });
+              continue;
+            }
+          }
+          // If not a data URL, just add as text (fallback)
+          if (typeof fileData === "string") {
+            parts.push({ text: `[File: ${item.filename || "unknown"}]` });
+          }
+          continue;
+        }
+
+        // Fallback: stringify unknown content
+        parts.push({ text: JSON.stringify(item) });
+      }
+
+      return parts;
+    }
+
+    // Fallback for other types
+    return [{ text: JSON.stringify(content) }];
   }
 
   private mapRole(role: LlmMessageRole): "user" | "model" {
