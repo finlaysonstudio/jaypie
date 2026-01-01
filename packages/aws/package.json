@@ -1,6 +1,6 @@
 {
   "name": "@jaypie/aws",
-  "version": "1.2.2",
+  "version": "1.2.3",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/finlaysonstudio/jaypie.git"
@@ -42,6 +42,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.958.0",
     "@aws-sdk/client-secrets-manager": "^3.931.0",
     "@aws-sdk/client-sqs": "^3.540.0",
     "@aws-sdk/client-textract": "^3.726.1",
