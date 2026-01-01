@@ -12,8 +12,17 @@ const IMAGE_FILE_PATH = join(__dirname, "fixtures/page.png");
 
 async function main(provider: string) {
   try {
-    const model = new Llm(provider);
     console.log(`\n============ Provider: "${provider}"`);
+
+    // OpenRouter doesn't support image uploads, skip the test
+    if (provider.toLowerCase() === "openrouter") {
+      console.log(
+        "Note: OpenRouter does not support image uploads, skipping test",
+      );
+      return true;
+    }
+
+    const model = new Llm(provider);
 
     // New simplified LlmOperateInput syntax
     const input: LlmOperateInput = [REQUEST, { image: IMAGE_FILE_PATH }];

@@ -6,6 +6,7 @@ import { PROVIDER } from "../../constants.js";
 import { Toolkit } from "../../tools/Toolkit.class.js";
 import {
   LlmHistory,
+  LlmInputContent,
   LlmMessageType,
   LlmOperateOptions,
   LlmOutputMessage,
@@ -33,6 +34,85 @@ import { BaseProviderAdapter } from "./ProviderAdapter.interface.js";
 //
 
 const STRUCTURED_OUTPUT_TOOL_NAME = "structured_output";
+
+// Regular expression to parse data URLs: data:mime/type;base64,data
+const DATA_URL_REGEX = /^data:([^;]+);base64,(.+)$/;
+
+/**
+ * Parse a data URL into its components
+ */
+function parseDataUrl(
+  dataUrl: string,
+): { data: string; mediaType: string } | null {
+  const match = dataUrl.match(DATA_URL_REGEX);
+  if (!match) return null;
+  return { mediaType: match[1], data: match[2] };
+}
+
+/**
+ * Convert standardized content items to Anthropic format
+ */
+function convertContentToAnthropic(
+  content: string | LlmInputContent[],
+): Anthropic.ContentBlockParam[] | string {
+  if (typeof content === "string") {
+    return content;
+  }
+
+  return content.map((item): Anthropic.ContentBlockParam => {
+    // Text content
+    if (item.type === LlmMessageType.InputText) {
+      return { type: "text", text: item.text };
+    }
+
+    // Image content
+    if (item.type === LlmMessageType.InputImage) {
+      const imageUrl = item.image_url || "";
+      const parsed = parseDataUrl(imageUrl);
+      if (parsed) {
+        return {
+          type: "image",
+          source: {
+            type: "base64",
+            media_type:
+              parsed.mediaType as Anthropic.Base64ImageSource["media_type"],
+            data: parsed.data,
+          },
+        };
+      }
+      // Fallback for URL-based images (not base64)
+      return {
+        type: "image",
+        source: {
+          type: "url",
+          url: imageUrl,
+        },
+      };
+    }
+
+    // File/Document content (PDF, etc.)
+    if (item.type === LlmMessageType.InputFile) {
+      const fileData = typeof item.file_data === "string" ? item.file_data : "";
+      const parsed = parseDataUrl(fileData);
+      if (parsed) {
+        return {
+          type: "document",
+          source: {
+            type: "base64",
+            media_type:
+              parsed.mediaType as Anthropic.Base64PDFSource["media_type"],
+            data: parsed.data,
+          },
+        };
+      }
+      // Fallback - return as text with the filename
+      return { type: "text", text: `[File: ${item.filename || "unknown"}]` };
+    }
+
+    // Unknown type - return as text
+    return { type: "text", text: JSON.stringify(item) };
+  });
+}
 
 // Error names for classification (using string names since SDK is optional)
 const RETRYABLE_ERROR_NAMES = [
@@ -67,7 +147,7 @@ export class AnthropicAdapter extends BaseProviderAdapter {
   //
 
   buildRequest(request: OperateRequest): Anthropic.MessageCreateParams {
-    // Convert messages to Anthropic format (remove 'type' property)
+    // Convert messages to Anthropic format
     // Filter out system messages - Anthropic only accepts system as a top-level field
     const messages: Anthropic.MessageParam[] = request.messages
       .filter((msg) => {
@@ -75,12 +155,14 @@ export class AnthropicAdapter extends BaseProviderAdapter {
         return role !== "system";
       })
       .map((msg) => {
-        const anthropicMsg = structuredClone(msg) as unknown as Record<
-          string,
-          unknown
-        >;
-        delete anthropicMsg.type;
-        return anthropicMsg as unknown as Anthropic.MessageParam;
+        const typedMsg = msg as {
+          role: string;
+          content: string | LlmInputContent[];
+        };
+        return {
+          role: typedMsg.role as "user" | "assistant",
+          content: convertContentToAnthropic(typedMsg.content),
+        } as Anthropic.MessageParam;
       });
 
     // Append instructions to last message if provided

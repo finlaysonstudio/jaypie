@@ -1,3 +1,4 @@
+import { log } from "@jaypie/logger";
 import { JsonObject, NaturalSchema } from "@jaypie/types";
 import type { OpenRouter } from "@openrouter/sdk";
 import { z } from "zod/v4";
@@ -6,6 +7,7 @@ import { PROVIDER } from "../../constants.js";
 import { Toolkit } from "../../tools/Toolkit.class.js";
 import {
   LlmHistory,
+  LlmInputContent,
   LlmMessageRole,
   LlmMessageType,
   LlmOperateOptions,
@@ -36,7 +38,7 @@ import { BaseProviderAdapter } from "./ProviderAdapter.interface.js";
 // Request types - SDK validates using camelCase internally
 interface OpenRouterMessage {
   role: "system" | "user" | "assistant" | "tool";
-  content?: string | null;
+  content?: string | OpenRouterContentPart[] | null;
   toolCalls?: OpenRouterToolCall[];
   toolCallId?: string;
 }
@@ -109,6 +111,59 @@ interface OpenRouterRequest {
 //
 
 const STRUCTURED_OUTPUT_TOOL_NAME = "structured_output";
+
+/**
+ * OpenRouter content part types (text only - images/files not supported)
+ */
+type OpenRouterContentPart = { type: "text"; text: string };
+
+/**
+ * Convert standardized content items to OpenRouter format
+ * Note: OpenRouter does not support native file/image uploads.
+ * Images and files are discarded with a warning.
+ */
+function convertContentToOpenRouter(
+  content: string | LlmInputContent[],
+): string | OpenRouterContentPart[] {
+  if (typeof content === "string") {
+    return content;
+  }
+
+  const parts: OpenRouterContentPart[] = [];
+
+  for (const item of content) {
+    // Text content - pass through
+    if (item.type === LlmMessageType.InputText) {
+      parts.push({ type: "text", text: item.text });
+      continue;
+    }
+
+    // Image content - warn and discard
+    if (item.type === LlmMessageType.InputImage) {
+      log.warn("OpenRouter does not support image uploads; image discarded");
+      continue;
+    }
+
+    // File/Document content - warn and discard
+    if (item.type === LlmMessageType.InputFile) {
+      log.warn(
+        { filename: item.filename },
+        "OpenRouter does not support file uploads; file discarded",
+      );
+      continue;
+    }
+
+    // Unknown type - warn and skip
+    log.warn({ item }, "Unknown content type for OpenRouter; discarded");
+  }
+
+  // If no text parts remain, return empty string to avoid empty array
+  if (parts.length === 0) {
+    return "";
+  }
+
+  return parts;
+}
 
 // OpenRouter SDK error types based on HTTP status codes
 const RETRYABLE_STATUS_CODES = [408, 500, 502, 503, 524, 529];
@@ -713,7 +768,9 @@ export class OpenRouterAdapter extends BaseProviderAdapter {
       } else if (message.role === "user") {
         openRouterMessages.push({
           role: "user",
-          content: message.content as string,
+          content: convertContentToOpenRouter(
+            message.content as string | LlmInputContent[],
+          ),
         });
       } else if (message.role === "assistant") {
         const assistantMsg: OpenRouterMessage = {
@@ -747,7 +804,9 @@ export class OpenRouterAdapter extends BaseProviderAdapter {
         } else {
           openRouterMessages.push({
             role: "user",
-            content: message.content as string,
+            content: convertContentToOpenRouter(
+              message.content as string | LlmInputContent[],
+            ),
           });
         }
       }
