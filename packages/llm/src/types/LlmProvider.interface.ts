@@ -325,6 +325,7 @@ export interface LlmOperateResponse {
   model?: string;
   output: LlmOutput;
   provider?: string;
+  reasoning: string[];
   responses: JsonReturn[];
   status: LlmResponseStatus;
   usage: LlmUsage;

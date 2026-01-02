@@ -40,6 +40,9 @@ export { LlmStreamChunkType } from "./types/LlmStreamChunk.interface.js";
 
 export { JaypieToolkit, toolkit, Toolkit, tools } from "./tools/index.js";
 
+// Utilities
+export { extractReasoning } from "./util/extractReasoning.js";
+
 // Providers
 export { GeminiProvider } from "./providers/gemini/index.js";
 export { OpenRouterProvider } from "./providers/openrouter/index.js";

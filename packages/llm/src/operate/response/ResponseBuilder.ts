@@ -7,6 +7,7 @@ import {
   LlmUsage,
   LlmUsageItem,
 } from "../../types/LlmProvider.interface.js";
+import { extractReasoning } from "../../util/extractReasoning.js";
 
 // Derive LlmOutput type from LlmOperateResponse since it's not exported
 type LlmOutput = LlmOperateResponse["output"];
@@ -47,6 +48,7 @@ export class ResponseBuilder {
       model: config.model,
       output: [],
       provider: config.provider,
+      reasoning: [],
       responses: [],
       status: LlmResponseStatus.InProgress,
       usage: [],
@@ -107,6 +109,29 @@ export class ResponseBuilder {
   appendToOutput(...items: LlmOutput): this {
     this.response.output.push(...items);
     return this;
+  }
+
+  /**
+   * Set the reasoning array
+   */
+  setReasoning(reasoning: string[]): this {
+    this.response.reasoning = reasoning;
+    return this;
+  }
+
+  /**
+   * Append reasoning text items
+   */
+  appendToReasoning(...items: string[]): this {
+    this.response.reasoning.push(...items);
+    return this;
+  }
+
+  /**
+   * Get the current reasoning array
+   */
+  getReasoning(): string[] {
+    return this.response.reasoning;
   }
 
   /**
@@ -171,9 +196,14 @@ export class ResponseBuilder {
   }
 
   /**
-   * Build and return the final response object
+   * Build and return the final response object.
+   * Automatically extracts reasoning from history if not already set.
    */
   build(): LlmOperateResponse {
+    // Extract reasoning from history if not already populated
+    if (this.response.reasoning.length === 0) {
+      this.response.reasoning = extractReasoning(this.response.history);
+    }
     return { ...this.response };
   }
 }

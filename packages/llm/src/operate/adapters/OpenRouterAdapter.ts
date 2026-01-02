@@ -76,6 +76,10 @@ interface OpenRouterUsage {
   prompt_tokens?: number;
   completion_tokens?: number;
   total_tokens?: number;
+  // Reasoning tokens (some models like z-ai/glm include this)
+  completionTokensDetails?: {
+    reasoningTokens?: number;
+  };
 }
 
 interface OpenRouterResponse {
@@ -531,7 +535,7 @@ export class OpenRouterAdapter extends BaseProviderAdapter {
     return {
       input: usage.promptTokens || usage.prompt_tokens || 0,
       output: usage.completionTokens || usage.completion_tokens || 0,
-      reasoning: 0, // OpenRouter doesn't expose reasoning tokens in standard format
+      reasoning: usage.completionTokensDetails?.reasoningTokens || 0,
       total: usage.totalTokens || usage.total_tokens || 0,
       provider: this.name,
       model,
@@ -595,11 +599,18 @@ export class OpenRouterAdapter extends BaseProviderAdapter {
 
     // Extract text content for non-tool responses
     if (choice.message.content) {
-      historyItems.push({
+      const historyItem: LlmOutputMessage & { reasoning?: string } = {
         content: choice.message.content,
         role: LlmMessageRole.Assistant,
         type: LlmMessageType.Message,
-      } as LlmOutputMessage);
+      };
+
+      // Preserve reasoning if present (z-ai/glm models include this)
+      if (choice.message.reasoning) {
+        historyItem.reasoning = choice.message.reasoning;
+      }
+
+      historyItems.push(historyItem as LlmOutputMessage);
     }
 
     return historyItems;

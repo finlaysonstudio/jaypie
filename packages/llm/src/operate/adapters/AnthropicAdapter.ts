@@ -306,6 +306,7 @@ export class AnthropicAdapter extends BaseProviderAdapter {
     // Track usage for final chunk
     let inputTokens = 0;
     let outputTokens = 0;
+    let thinkingTokens = 0;
     let model = streamRequest.model;
 
     for await (const event of stream) {
@@ -354,6 +355,11 @@ export class AnthropicAdapter extends BaseProviderAdapter {
         // Extract final usage
         if (event.usage) {
           outputTokens = event.usage.output_tokens;
+          // Check for thinking tokens in extended thinking responses
+          const extendedUsage = event.usage as { thinking_tokens?: number };
+          if (extendedUsage.thinking_tokens) {
+            thinkingTokens = extendedUsage.thinking_tokens;
+          }
         }
       } else if (event.type === "message_stop") {
         // Emit done chunk with usage
@@ -363,7 +369,7 @@ export class AnthropicAdapter extends BaseProviderAdapter {
             {
               input: inputTokens,
               output: outputTokens,
-              reasoning: 0,
+              reasoning: thinkingTokens,
               total: inputTokens + outputTokens,
               provider: this.name,
               model,
@@ -417,13 +423,19 @@ export class AnthropicAdapter extends BaseProviderAdapter {
   extractUsage(response: unknown, model: string): LlmUsageItem {
     const anthropicResponse = response as Anthropic.Message;
 
+    // Check for thinking tokens in the usage (extended thinking feature)
+    // Anthropic includes thinking tokens in a separate field when enabled
+    const usage = anthropicResponse.usage as {
+      input_tokens: number;
+      output_tokens: number;
+      thinking_tokens?: number;
+    };
+
     return {
-      input: anthropicResponse.usage.input_tokens,
-      output: anthropicResponse.usage.output_tokens,
-      reasoning: 0, // Anthropic doesn't expose reasoning tokens
-      total:
-        anthropicResponse.usage.input_tokens +
-        anthropicResponse.usage.output_tokens,
+      input: usage.input_tokens,
+      output: usage.output_tokens,
+      reasoning: usage.thinking_tokens || 0,
+      total: usage.input_tokens + usage.output_tokens,
       provider: this.name,
       model,
     };
@@ -479,6 +491,16 @@ export class AnthropicAdapter extends BaseProviderAdapter {
     if (anthropicResponse.stop_reason === "tool_use") {
       // Don't add to history yet - will be added after tool execution
       return historyItems;
+    }
+
+    // Include thinking blocks for extended thinking support
+    // Thinking blocks are preserved in history so extractReasoning can find them
+    for (const block of anthropicResponse.content) {
+      if (block.type === "thinking") {
+        // Push raw block - types are loosely checked at runtime
+        // This allows extractReasoning to access the thinking property
+        historyItems.push(block as unknown as LlmOutputMessage);
+      }
     }
 
     // Extract text content for non-tool responses

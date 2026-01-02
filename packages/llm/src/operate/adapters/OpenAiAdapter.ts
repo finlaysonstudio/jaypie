@@ -17,6 +17,33 @@ import { zodResponseFormat } from "openai/helpers/zod";
 import { z } from "zod/v4";
 
 import { PROVIDER } from "../../constants.js";
+
+// OpenAI reasoning models that support extended thinking
+const REASONING_MODELS = [
+  // GPT-5 series
+  PROVIDER.OPENAI.MODEL.GPT_5,
+  PROVIDER.OPENAI.MODEL.GPT_5_MINI,
+  PROVIDER.OPENAI.MODEL.GPT_5_NANO,
+  // O-series
+  PROVIDER.OPENAI.MODEL.O1,
+  PROVIDER.OPENAI.MODEL.O1_MINI,
+  PROVIDER.OPENAI.MODEL.O1_PRO,
+  PROVIDER.OPENAI.MODEL.O3,
+  PROVIDER.OPENAI.MODEL.O3_MINI,
+  PROVIDER.OPENAI.MODEL.O3_MINI_HIGH,
+  PROVIDER.OPENAI.MODEL.O3_PRO,
+  PROVIDER.OPENAI.MODEL.O4_MINI,
+] as const;
+
+/**
+ * Check if a model is a reasoning model that supports extended thinking
+ */
+function isReasoningModel(model: string): boolean {
+  return REASONING_MODELS.some(
+    (reasoningModel) =>
+      model === reasoningModel || model.startsWith(`${reasoningModel}-`),
+  );
+}
 import { Toolkit } from "../../tools/Toolkit.class.js";
 import {
   LlmHistory,
@@ -83,8 +110,9 @@ export class OpenAiAdapter extends BaseProviderAdapter {
   //
 
   buildRequest(request: OperateRequest): unknown {
+    const model = request.model || this.defaultModel;
     const openaiRequest: Record<string, unknown> = {
-      model: request.model || this.defaultModel,
+      model,
       input: request.messages,
     };
 
@@ -108,6 +136,14 @@ export class OpenAiAdapter extends BaseProviderAdapter {
     if (request.format) {
       openaiRequest.text = {
         format: request.format,
+      };
+    }
+
+    // Enable reasoning summary for reasoning models (o1, o3, etc.)
+    // This allows us to extract reasoning text from the response
+    if (isReasoningModel(model)) {
+      openaiRequest.reasoning = {
+        summary: "auto",
       };
     }
 

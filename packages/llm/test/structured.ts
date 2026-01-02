@@ -163,10 +163,7 @@ function tryParseJson(content: unknown): StructuredResult | null {
 // Test Functions
 //
 
-async function testProvider(
-  provider: string,
-  model: string,
-): Promise<boolean> {
+async function testProvider(provider: string, model: string): Promise<boolean> {
   try {
     console.log(`\n============ Structured JSON Test: ${provider} (${model})`);
 
