@@ -5,10 +5,10 @@ export const PROVIDER = {
     // The model format is: provider/model-name (e.g., "openai/gpt-4", "anthropic/claude-3-opus")
     MODEL: {
       // Default uses env var OPENROUTER_MODEL if set, otherwise a reasonable default
-      DEFAULT: "openai/gpt-4.1" as const,
-      SMALL: "openai/gpt-4.1-mini" as const,
-      LARGE: "anthropic/claude-sonnet-4" as const,
-      TINY: "openai/gpt-4.1-nano" as const,
+      DEFAULT: "z-ai/glm-4.7" as const,
+      SMALL: "z-ai/glm-4.7" as const,
+      LARGE: "z-ai/glm-4.7" as const,
+      TINY: "z-ai/glm-4.7" as const,
     },
     MODEL_MATCH_WORDS: ["openrouter"] as const,
     NAME: "openrouter" as const,
