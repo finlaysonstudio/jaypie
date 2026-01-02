@@ -25,7 +25,7 @@
     "prompts"
   ],
   "scripts": {
-    "build": "rollup --config",
+    "build": "rollup --config && chmod +x dist/index.js",
     "format": "eslint . --fix",
     "lint": "eslint .",
     "prepare": "npm run build",

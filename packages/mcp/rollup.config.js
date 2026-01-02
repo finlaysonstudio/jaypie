@@ -38,6 +38,7 @@ export default {
   ],
   external: [
     "@jaypie/errors",
+    "@jaypie/llm",
     "@modelcontextprotocol/sdk/server/mcp.js",
     "@modelcontextprotocol/sdk/server/stdio.js",
     "@modelcontextprotocol/sdk/server/streamableHttp.js",

@@ -15,11 +15,7 @@ import {
   searchDatadogLogs,
   searchDatadogRum,
 } from "./datadog.js";
-import {
-  debugLlmCall,
-  listLlmProviders,
-  type LlmProvider,
-} from "./llm.js";
+import { debugLlmCall, listLlmProviders, type LlmProvider } from "./llm.js";
 
 // Build-time constants injected by rollup
 declare const __BUILD_VERSION_STRING__: string;
