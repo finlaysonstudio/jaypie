@@ -5,10 +5,10 @@ export const PROVIDER = {
     // The model format is: provider/model-name (e.g., "openai/gpt-4", "anthropic/claude-3-opus")
     MODEL: {
       // Default uses env var OPENROUTER_MODEL if set, otherwise a reasonable default
-      DEFAULT: "openai/gpt-4o" as const,
-      SMALL: "openai/gpt-4o-mini" as const,
-      LARGE: "anthropic/claude-3-opus" as const,
-      TINY: "openai/gpt-4o-mini" as const,
+      DEFAULT: "openai/gpt-4.1" as const,
+      SMALL: "openai/gpt-4.1-mini" as const,
+      LARGE: "anthropic/claude-sonnet-4" as const,
+      TINY: "openai/gpt-4.1-nano" as const,
     },
     MODEL_MATCH_WORDS: ["openrouter"] as const,
     NAME: "openrouter" as const,
@@ -100,10 +100,10 @@ export const PROVIDER = {
     // https://platform.openai.com/docs/models
     MODEL: {
       // Jaypie Aliases
-      DEFAULT: "gpt-5" as const,
-      SMALL: "gpt-5-mini" as const,
-      LARGE: "gpt-5" as const,
-      TINY: "gpt-5-nano" as const,
+      DEFAULT: "gpt-4.1" as const,
+      SMALL: "gpt-4.1-mini" as const,
+      LARGE: "gpt-4.1" as const,
+      TINY: "gpt-4.1-nano" as const,
       // OpenAI Official
       GPT_5: "gpt-5" as const,
       GPT_5_MINI: "gpt-5-mini" as const,
