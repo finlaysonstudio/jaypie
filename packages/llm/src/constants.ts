@@ -23,20 +23,23 @@ export const PROVIDER = {
     // https://ai.google.dev/gemini-api/docs/models
     MODEL: {
       // Jaypie Aliases
-      DEFAULT: "gemini-2.5-flash" as const,
-      SMALL: "gemini-2.5-flash" as const,
-      LARGE: "gemini-2.5-pro" as const,
+      DEFAULT: "gemini-3-pro-preview" as const,
+      LARGE: "gemini-3-pro-preview" as const,
+      SMALL: "gemini-3-flash-preview" as const,
       TINY: "gemini-2.0-flash-lite" as const,
+      // Gemini 3 Models
+      GEMINI_3_FLASH_PREVIEW: "gemini-3-flash-preview" as const,
+      GEMINI_3_PRO_PREVIEW: "gemini-3-pro-preview" as const,
       // Gemini 2.5 Models
-      GEMINI_2_5_PRO: "gemini-2.5-pro" as const,
       GEMINI_2_5_FLASH: "gemini-2.5-flash" as const,
+      GEMINI_2_5_PRO: "gemini-2.5-pro" as const,
       // Gemini 2.0 Models
       GEMINI_2_0_FLASH: "gemini-2.0-flash" as const,
       GEMINI_2_0_FLASH_LITE: "gemini-2.0-flash-lite" as const,
       // Gemini 1.5 Models (backward compatibility)
-      GEMINI_1_5_PRO: "gemini-1.5-pro" as const,
       GEMINI_1_5_FLASH: "gemini-1.5-flash" as const,
       GEMINI_1_5_FLASH_8B: "gemini-1.5-flash-8b" as const,
+      GEMINI_1_5_PRO: "gemini-1.5-pro" as const,
     },
     MODEL_MATCH_WORDS: ["gemini", "google"] as const,
     NAME: "gemini" as const,
