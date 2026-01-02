@@ -15,6 +15,11 @@ import {
   searchDatadogLogs,
   searchDatadogRum,
 } from "./datadog.js";
+import {
+  debugLlmCall,
+  listLlmProviders,
+  type LlmProvider,
+} from "./llm.js";
 
 // Build-time constants injected by rollup
 declare const __BUILD_VERSION_STRING__: string;
@@ -1097,6 +1102,117 @@ export function createMcpServer(
   );
 
   log.info("Registered tool: datadog_rum");
+
+  // LLM Debug Tools
+  server.tool(
+    "llm_debug_call",
+    "Make a debug LLM API call and inspect the raw response. Useful for understanding how each provider formats responses, especially for reasoning/thinking content. Returns full history, raw responses, and extracted reasoning.",
+    {
+      provider: z
+        .enum(["anthropic", "gemini", "openai", "openrouter"])
+        .describe("LLM provider to call"),
+      model: z
+        .string()
+        .optional()
+        .describe(
+          "Model to use. If not provided, uses a sensible default. For reasoning tests, try 'o3-mini' with openai.",
+        ),
+      message: z
+        .string()
+        .describe(
+          "Message to send to the LLM. For reasoning tests, try something that requires thinking like 'What is 15 * 17? Think step by step.'",
+        ),
+    },
+    async ({ provider, model, message }) => {
+      log.info(`Tool called: llm_debug_call (provider: ${provider})`);
+
+      const result = await debugLlmCall(
+        { provider: provider as LlmProvider, model, message },
+        log,
+      );
+
+      if (!result.success) {
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: `Error calling ${provider}: ${result.error}`,
+            },
+          ],
+        };
+      }
+
+      const sections = [
+        `## LLM Debug Call Result`,
+        `Provider: ${result.provider}`,
+        `Model: ${result.model}`,
+        ``,
+        `### Content`,
+        result.content || "(no content)",
+        ``,
+        `### Reasoning (${result.reasoning?.length || 0} items, ${result.reasoningTokens || 0} tokens)`,
+        result.reasoning && result.reasoning.length > 0
+          ? result.reasoning.map((r, i) => `[${i}] ${r}`).join("\n")
+          : "(no reasoning extracted)",
+        ``,
+        `### Usage`,
+        JSON.stringify(result.usage, null, 2),
+        ``,
+        `### History (${result.history?.length || 0} items)`,
+        JSON.stringify(result.history, null, 2),
+        ``,
+        `### Raw Responses (${result.rawResponses?.length || 0} items)`,
+        JSON.stringify(result.rawResponses, null, 2),
+      ];
+
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: sections.join("\n"),
+          },
+        ],
+      };
+    },
+  );
+
+  log.info("Registered tool: llm_debug_call");
+
+  server.tool(
+    "llm_list_providers",
+    "List available LLM providers with their default and reasoning-capable models.",
+    {},
+    async () => {
+      log.info("Tool called: llm_list_providers");
+
+      const { providers } = listLlmProviders();
+
+      const formatted = providers.map((p) => {
+        const reasoningNote =
+          p.reasoningModels.length > 0
+            ? `Reasoning models: ${p.reasoningModels.join(", ")}`
+            : "No known reasoning models";
+        return `- ${p.name}: default=${p.defaultModel}, ${reasoningNote}`;
+      });
+
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: [
+              "## Available LLM Providers",
+              "",
+              ...formatted,
+              "",
+              "Use llm_debug_call to test responses from any provider.",
+            ].join("\n"),
+          },
+        ],
+      };
+    },
+  );
+
+  log.info("Registered tool: llm_list_providers");
 
   log.info("MCP server configuration complete");
 

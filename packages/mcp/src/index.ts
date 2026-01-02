@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-import { realpathSync } from "node:fs";
+import { readFileSync, realpathSync } from "node:fs";
+import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -7,6 +8,47 @@ import { createMcpServer } from "./createMcpServer.js";
 
 // Version will be injected during build
 const version = "0.0.0";
+
+/**
+ * Load environment variables from .env file in current working directory
+ * Simple implementation that doesn't require external dependencies
+ */
+function loadEnvFile() {
+  try {
+    const envPath = join(process.cwd(), ".env");
+    const content = readFileSync(envPath, "utf-8");
+
+    for (const line of content.split("\n")) {
+      const trimmed = line.trim();
+      // Skip comments and empty lines
+      if (!trimmed || trimmed.startsWith("#")) continue;
+
+      const eqIndex = trimmed.indexOf("=");
+      if (eqIndex === -1) continue;
+
+      const key = trimmed.slice(0, eqIndex).trim();
+      let value = trimmed.slice(eqIndex + 1).trim();
+
+      // Remove surrounding quotes if present
+      if (
+        (value.startsWith('"') && value.endsWith('"')) ||
+        (value.startsWith("'") && value.endsWith("'"))
+      ) {
+        value = value.slice(1, -1);
+      }
+
+      // Only set if not already defined (environment takes precedence)
+      if (!process.env[key]) {
+        process.env[key] = value;
+      }
+    }
+  } catch {
+    // .env file not found or not readable - that's fine
+  }
+}
+
+// Load .env file before anything else
+loadEnvFile();
 
 // Parse command-line arguments
 const args = process.argv.slice(2);
