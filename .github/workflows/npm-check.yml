@@ -97,8 +97,10 @@ jobs:
         run: npm run build
       - name: Run LLM Client Tests
         if: steps.changes.outputs.llm == 'true'
-        run: LOG_LEVEL=trace npm run test:llm:client
+        run: LOG_LEVEL=trace npm run test:llm:all
         env:
-          APP_PROVIDER: anthropic,openai
+          APP_PROVIDER: anthropic,gemini,openai,openrouter
           ANTHROPIC_API_KEY: ${{ secrets.CICD_ANTHROPIC_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.CICD_GEMINI_API_KEY }}
           OPENAI_API_KEY: ${{ secrets.CICD_OPENAI_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.CICD_OPENROUTER_API_KEY }}
