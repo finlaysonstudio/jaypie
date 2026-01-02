@@ -9,10 +9,7 @@ const versionString = `@jaypie/mcp@${version}${commitHash ? `#${commitHash}` : "
 
 // Filter out TS2307 warnings for @jaypie/* packages (external workspace dependencies)
 const onwarn = (warning, defaultHandler) => {
-  if (
-    warning.plugin === "typescript" &&
-    warning.message.includes("@jaypie/")
-  ) {
+  if (warning.plugin === "typescript" && warning.message.includes("@jaypie/")) {
     return;
   }
   defaultHandler(warning);
@@ -41,6 +38,7 @@ export default {
   ],
   external: [
     "@jaypie/errors",
+    "@jaypie/llm",
     "@modelcontextprotocol/sdk/server/mcp.js",
     "@modelcontextprotocol/sdk/server/stdio.js",
     "@modelcontextprotocol/sdk/server/streamableHttp.js",

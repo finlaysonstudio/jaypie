@@ -5,10 +5,10 @@ export const PROVIDER = {
     // The model format is: provider/model-name (e.g., "openai/gpt-4", "anthropic/claude-3-opus")
     MODEL: {
       // Default uses env var OPENROUTER_MODEL if set, otherwise a reasonable default
-      DEFAULT: "openai/gpt-4o" as const,
-      SMALL: "openai/gpt-4o-mini" as const,
-      LARGE: "anthropic/claude-3-opus" as const,
-      TINY: "openai/gpt-4o-mini" as const,
+      DEFAULT: "z-ai/glm-4.7" as const,
+      SMALL: "z-ai/glm-4.7" as const,
+      LARGE: "z-ai/glm-4.7" as const,
+      TINY: "z-ai/glm-4.7" as const,
     },
     MODEL_MATCH_WORDS: ["openrouter"] as const,
     NAME: "openrouter" as const,
@@ -23,20 +23,23 @@ export const PROVIDER = {
     // https://ai.google.dev/gemini-api/docs/models
     MODEL: {
       // Jaypie Aliases
-      DEFAULT: "gemini-2.5-flash" as const,
-      SMALL: "gemini-2.5-flash" as const,
-      LARGE: "gemini-2.5-pro" as const,
+      DEFAULT: "gemini-3-pro-preview" as const,
+      LARGE: "gemini-3-pro-preview" as const,
+      SMALL: "gemini-3-flash-preview" as const,
       TINY: "gemini-2.0-flash-lite" as const,
+      // Gemini 3 Models
+      GEMINI_3_FLASH_PREVIEW: "gemini-3-flash-preview" as const,
+      GEMINI_3_PRO_PREVIEW: "gemini-3-pro-preview" as const,
       // Gemini 2.5 Models
-      GEMINI_2_5_PRO: "gemini-2.5-pro" as const,
       GEMINI_2_5_FLASH: "gemini-2.5-flash" as const,
+      GEMINI_2_5_PRO: "gemini-2.5-pro" as const,
       // Gemini 2.0 Models
       GEMINI_2_0_FLASH: "gemini-2.0-flash" as const,
       GEMINI_2_0_FLASH_LITE: "gemini-2.0-flash-lite" as const,
       // Gemini 1.5 Models (backward compatibility)
-      GEMINI_1_5_PRO: "gemini-1.5-pro" as const,
       GEMINI_1_5_FLASH: "gemini-1.5-flash" as const,
       GEMINI_1_5_FLASH_8B: "gemini-1.5-flash-8b" as const,
+      GEMINI_1_5_PRO: "gemini-1.5-pro" as const,
     },
     MODEL_MATCH_WORDS: ["gemini", "google"] as const,
     NAME: "gemini" as const,
@@ -100,10 +103,10 @@ export const PROVIDER = {
     // https://platform.openai.com/docs/models
     MODEL: {
       // Jaypie Aliases
-      DEFAULT: "gpt-5" as const,
-      SMALL: "gpt-5-mini" as const,
-      LARGE: "gpt-5" as const,
-      TINY: "gpt-5-nano" as const,
+      DEFAULT: "gpt-4.1" as const,
+      SMALL: "gpt-4.1-mini" as const,
+      LARGE: "gpt-4.1" as const,
+      TINY: "gpt-4.1-nano" as const,
       // OpenAI Official
       GPT_5: "gpt-5" as const,
       GPT_5_MINI: "gpt-5-mini" as const,

@@ -11,6 +11,7 @@ import * as original from "@jaypie/llm";
 export const LLM = original.LLM;
 
 const mockOperate = createMockResolvedFunction({
+  content: "_MOCK_OUTPUT_TEXT",
   history: [
     {
       content: "_MOCK_USER_INPUT",
@@ -36,6 +37,7 @@ const mockOperate = createMockResolvedFunction({
     },
   ],
   provider: "_MOCK_PROVIDER",
+  reasoning: [],
   responses: [
     {
       id: "_MOCK_RESPONSE_ID",
@@ -57,7 +59,6 @@ const mockOperate = createMockResolvedFunction({
       model: "_MOCK_MODEL",
     },
   ],
-  content: "_MOCK_OUTPUT_TEXT",
 });
 const mockSend = createMockResolvedFunction("_MOCK_LLM_RESPONSE");
 export const Llm = Object.assign(
@@ -122,6 +123,13 @@ export const OpenRouterProvider = createMockWrappedObject(
     isClass: true,
   },
 );
+
+// Type guards and utilities - re-export from original (these are pure functions)
+export const extractReasoning = original.extractReasoning;
+export const isLlmOperateInput = original.isLlmOperateInput;
+export const isLlmOperateInputContent = original.isLlmOperateInputContent;
+export const isLlmOperateInputFile = original.isLlmOperateInputFile;
+export const isLlmOperateInputImage = original.isLlmOperateInputImage;
 
 // Tool collections
 export const toolkit = new original.JaypieToolkit([

@@ -7,6 +7,7 @@ import {
   LlmInputMessage,
   LlmMessageRole,
   LlmMessageType,
+  LlmOperateInput,
   LlmOperateOptions,
   LlmOperateResponse,
   LlmOutputMessage,
@@ -27,7 +28,12 @@ import {
   RetryExecutor,
   RetryPolicy,
 } from "./retry/index.js";
-import { OperateContext, OperateLoopState, OperateRequest } from "./types.js";
+import {
+  OperateContext,
+  OperateLoopState,
+  OperateRequest,
+  ProviderToolDefinition,
+} from "./types.js";
 
 //
 //
@@ -101,7 +107,7 @@ export class OperateLoop {
    * Execute the operate loop for multi-turn conversations with tool calling.
    */
   async execute(
-    input: string | LlmHistory | LlmInputMessage,
+    input: string | LlmHistory | LlmInputMessage | LlmOperateInput,
     options: LlmOperateOptions = {},
   ): Promise<LlmOperateResponse> {
     // Log what was passed to operate
@@ -110,7 +116,7 @@ export class OperateLoop {
     log.var({ "operate.options": options });
 
     // Initialize state
-    const state = this.initializeState(input, options);
+    const state = await this.initializeState(input, options);
     const context = this.createContext(options);
 
     // Build initial request
@@ -152,12 +158,15 @@ export class OperateLoop {
   // Private Methods
   //
 
-  private initializeState(
-    input: string | LlmHistory | LlmInputMessage,
+  private async initializeState(
+    input: string | LlmHistory | LlmInputMessage | LlmOperateInput,
     options: LlmOperateOptions,
-  ): OperateLoopState {
+  ): Promise<OperateLoopState> {
     // Process input with placeholders
-    const processedInput = this.inputProcessorInstance.process(input, options);
+    const processedInput = await this.inputProcessorInstance.process(
+      input,
+      options,
+    );
 
     // Determine max turns
     const maxTurns = maxTurnsFromOptions(options);
@@ -192,9 +201,21 @@ export class OperateLoop {
     }
 
     // Format tools through adapter
-    const formattedTools = toolkit
-      ? this.adapter.formatTools(toolkit, formattedFormat)
-      : undefined;
+    // If format is provided but no toolkit, create an empty toolkit
+    // so that structured_output tool can be added for providers that need it
+    // (Anthropic, OpenRouter use tool-based structured output)
+    let formattedTools: ProviderToolDefinition[] | undefined;
+    if (toolkit) {
+      formattedTools = this.adapter.formatTools(toolkit, formattedFormat);
+    } else if (formattedFormat) {
+      // Create empty toolkit just for structured output
+      const emptyToolkit = new Toolkit([]);
+      formattedTools = this.adapter.formatTools(emptyToolkit, formattedFormat);
+      // Only include if there are tools (structured_output was added)
+      if (formattedTools.length === 0) {
+        formattedTools = undefined;
+      }
+    }
 
     return {
       currentInput: processedInput.history,
@@ -490,12 +511,16 @@ export class OperateLoop {
             args?: Record<string, unknown>;
             id?: string;
           };
+          // Preserve thoughtSignature for Gemini 3 models (required for tool calls)
+          const thoughtSignature = (part as { thoughtSignature?: string })
+            .thoughtSignature;
           history.push({
             type: LlmMessageType.FunctionCall,
             name: fc.name || "",
             arguments: JSON.stringify(fc.args || {}),
             call_id: fc.id || "",
             id: fc.id || "",
+            ...(thoughtSignature && { thoughtSignature }),
           } as unknown as LlmToolCall);
         } else if (part.functionResponse) {
           // Function response

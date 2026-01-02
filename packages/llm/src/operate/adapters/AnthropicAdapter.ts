@@ -6,6 +6,7 @@ import { PROVIDER } from "../../constants.js";
 import { Toolkit } from "../../tools/Toolkit.class.js";
 import {
   LlmHistory,
+  LlmInputContent,
   LlmMessageType,
   LlmOperateOptions,
   LlmOutputMessage,
@@ -33,6 +34,85 @@ import { BaseProviderAdapter } from "./ProviderAdapter.interface.js";
 //
 
 const STRUCTURED_OUTPUT_TOOL_NAME = "structured_output";
+
+// Regular expression to parse data URLs: data:mime/type;base64,data
+const DATA_URL_REGEX = /^data:([^;]+);base64,(.+)$/;
+
+/**
+ * Parse a data URL into its components
+ */
+function parseDataUrl(
+  dataUrl: string,
+): { data: string; mediaType: string } | null {
+  const match = dataUrl.match(DATA_URL_REGEX);
+  if (!match) return null;
+  return { mediaType: match[1], data: match[2] };
+}
+
+/**
+ * Convert standardized content items to Anthropic format
+ */
+function convertContentToAnthropic(
+  content: string | LlmInputContent[],
+): Anthropic.ContentBlockParam[] | string {
+  if (typeof content === "string") {
+    return content;
+  }
+
+  return content.map((item): Anthropic.ContentBlockParam => {
+    // Text content
+    if (item.type === LlmMessageType.InputText) {
+      return { type: "text", text: item.text };
+    }
+
+    // Image content
+    if (item.type === LlmMessageType.InputImage) {
+      const imageUrl = item.image_url || "";
+      const parsed = parseDataUrl(imageUrl);
+      if (parsed) {
+        return {
+          type: "image",
+          source: {
+            type: "base64",
+            media_type:
+              parsed.mediaType as Anthropic.Base64ImageSource["media_type"],
+            data: parsed.data,
+          },
+        };
+      }
+      // Fallback for URL-based images (not base64)
+      return {
+        type: "image",
+        source: {
+          type: "url",
+          url: imageUrl,
+        },
+      };
+    }
+
+    // File/Document content (PDF, etc.)
+    if (item.type === LlmMessageType.InputFile) {
+      const fileData = typeof item.file_data === "string" ? item.file_data : "";
+      const parsed = parseDataUrl(fileData);
+      if (parsed) {
+        return {
+          type: "document",
+          source: {
+            type: "base64",
+            media_type:
+              parsed.mediaType as Anthropic.Base64PDFSource["media_type"],
+            data: parsed.data,
+          },
+        };
+      }
+      // Fallback - return as text with the filename
+      return { type: "text", text: `[File: ${item.filename || "unknown"}]` };
+    }
+
+    // Unknown type - return as text
+    return { type: "text", text: JSON.stringify(item) };
+  });
+}
 
 // Error names for classification (using string names since SDK is optional)
 const RETRYABLE_ERROR_NAMES = [
@@ -67,7 +147,7 @@ export class AnthropicAdapter extends BaseProviderAdapter {
   //
 
   buildRequest(request: OperateRequest): Anthropic.MessageCreateParams {
-    // Convert messages to Anthropic format (remove 'type' property)
+    // Convert messages to Anthropic format
     // Filter out system messages - Anthropic only accepts system as a top-level field
     const messages: Anthropic.MessageParam[] = request.messages
       .filter((msg) => {
@@ -75,12 +155,14 @@ export class AnthropicAdapter extends BaseProviderAdapter {
         return role !== "system";
       })
       .map((msg) => {
-        const anthropicMsg = structuredClone(msg) as unknown as Record<
-          string,
-          unknown
-        >;
-        delete anthropicMsg.type;
-        return anthropicMsg as unknown as Anthropic.MessageParam;
+        const typedMsg = msg as {
+          role: string;
+          content: string | LlmInputContent[];
+        };
+        return {
+          role: typedMsg.role as "user" | "assistant",
+          content: convertContentToAnthropic(typedMsg.content),
+        } as Anthropic.MessageParam;
       });
 
     // Append instructions to last message if provided
@@ -224,6 +306,7 @@ export class AnthropicAdapter extends BaseProviderAdapter {
     // Track usage for final chunk
     let inputTokens = 0;
     let outputTokens = 0;
+    let thinkingTokens = 0;
     let model = streamRequest.model;
 
     for await (const event of stream) {
@@ -272,6 +355,11 @@ export class AnthropicAdapter extends BaseProviderAdapter {
         // Extract final usage
         if (event.usage) {
           outputTokens = event.usage.output_tokens;
+          // Check for thinking tokens in extended thinking responses
+          const extendedUsage = event.usage as { thinking_tokens?: number };
+          if (extendedUsage.thinking_tokens) {
+            thinkingTokens = extendedUsage.thinking_tokens;
+          }
         }
       } else if (event.type === "message_stop") {
         // Emit done chunk with usage
@@ -281,7 +369,7 @@ export class AnthropicAdapter extends BaseProviderAdapter {
             {
               input: inputTokens,
               output: outputTokens,
-              reasoning: 0,
+              reasoning: thinkingTokens,
               total: inputTokens + outputTokens,
               provider: this.name,
               model,
@@ -335,13 +423,19 @@ export class AnthropicAdapter extends BaseProviderAdapter {
   extractUsage(response: unknown, model: string): LlmUsageItem {
     const anthropicResponse = response as Anthropic.Message;
 
+    // Check for thinking tokens in the usage (extended thinking feature)
+    // Anthropic includes thinking tokens in a separate field when enabled
+    const usage = anthropicResponse.usage as {
+      input_tokens: number;
+      output_tokens: number;
+      thinking_tokens?: number;
+    };
+
     return {
-      input: anthropicResponse.usage.input_tokens,
-      output: anthropicResponse.usage.output_tokens,
-      reasoning: 0, // Anthropic doesn't expose reasoning tokens
-      total:
-        anthropicResponse.usage.input_tokens +
-        anthropicResponse.usage.output_tokens,
+      input: usage.input_tokens,
+      output: usage.output_tokens,
+      reasoning: usage.thinking_tokens || 0,
+      total: usage.input_tokens + usage.output_tokens,
       provider: this.name,
       model,
     };
@@ -397,6 +491,16 @@ export class AnthropicAdapter extends BaseProviderAdapter {
     if (anthropicResponse.stop_reason === "tool_use") {
       // Don't add to history yet - will be added after tool execution
       return historyItems;
+    }
+
+    // Include thinking blocks for extended thinking support
+    // Thinking blocks are preserved in history so extractReasoning can find them
+    for (const block of anthropicResponse.content) {
+      if (block.type === "thinking") {
+        // Push raw block - types are loosely checked at runtime
+        // This allows extractReasoning to access the thinking property
+        historyItems.push(block as unknown as LlmOutputMessage);
+      }
     }
 
     // Extract text content for non-tool responses

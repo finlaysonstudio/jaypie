@@ -1,6 +1,6 @@
 {
   "name": "@jaypie/llm",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "description": "Large language model utilities",
   "repository": {
     "type": "git",
@@ -36,6 +36,7 @@
     "@jaypie/errors": "^1.2.1",
     "openai": "^6.9.1",
     "openmeteo": "^1.2.1",
+    "pdf-lib": "^1.17.1",
     "random": "^5.3.0",
     "z-schema": "^6.0.2",
     "zod": "^4.1.13"

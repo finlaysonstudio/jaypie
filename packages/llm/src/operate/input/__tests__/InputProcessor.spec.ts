@@ -75,8 +75,8 @@ describe("InputProcessor", () => {
       vi.clearAllMocks();
     });
 
-    it("converts string input to history", () => {
-      const result = processor.process("Hello, world!");
+    it("converts string input to history", async () => {
+      const result = await processor.process("Hello, world!");
 
       expect(result.history).toHaveLength(1);
       expect(result.history[0]).toMatchObject({
@@ -85,7 +85,7 @@ describe("InputProcessor", () => {
       });
     });
 
-    it("passes through history array", () => {
+    it("passes through history array", async () => {
       const history: LlmHistory = [
         {
           content: "Hi",
@@ -94,13 +94,13 @@ describe("InputProcessor", () => {
         } as LlmInputMessage,
       ];
 
-      const result = processor.process(history);
+      const result = await processor.process(history);
 
       expect(result.history).toEqual(history);
     });
 
-    it("applies placeholders to input when data is provided", () => {
-      const result = processor.process("Hello, {{name}}!", {
+    it("applies placeholders to input when data is provided", async () => {
+      const result = await processor.process("Hello, {{name}}!", {
         data: { name: "World" },
       });
 
@@ -109,8 +109,8 @@ describe("InputProcessor", () => {
       });
     });
 
-    it("applies placeholders to instructions", () => {
-      const result = processor.process("Hello", {
+    it("applies placeholders to instructions", async () => {
+      const result = await processor.process("Hello", {
         data: { task: "summarize" },
         instructions: "Please {{task}} this.",
       });
@@ -118,8 +118,8 @@ describe("InputProcessor", () => {
       expect(result.instructions).toBe("Please summarize this.");
     });
 
-    it("applies placeholders to system prompt", () => {
-      const result = processor.process("Hello", {
+    it("applies placeholders to system prompt", async () => {
+      const result = await processor.process("Hello", {
         data: { role: "assistant" },
         system: "You are a {{role}}.",
       });
@@ -127,7 +127,7 @@ describe("InputProcessor", () => {
       expect(result.system).toBe("You are a assistant.");
     });
 
-    it("merges with provided history", () => {
+    it("merges with provided history", async () => {
       const existingHistory: LlmHistory = [
         {
           content: "Previous message",
@@ -136,7 +136,7 @@ describe("InputProcessor", () => {
         } as LlmInputMessage,
       ];
 
-      const result = processor.process("New message", {
+      const result = await processor.process("New message", {
         history: existingHistory,
       });
 
@@ -159,8 +159,8 @@ describe("InputProcessor", () => {
     });
 
     describe("System message handling", () => {
-      it("prepends system message to history", () => {
-        const result = processor.process("User message", {
+      it("prepends system message to history", async () => {
+        const result = await processor.process("User message", {
           system: "You are helpful.",
         });
 
@@ -175,7 +175,7 @@ describe("InputProcessor", () => {
         });
       });
 
-      it("does not duplicate identical system message", () => {
+      it("does not duplicate identical system message", async () => {
         const existingHistory: LlmHistory = [
           {
             content: "You are helpful.",
@@ -189,7 +189,7 @@ describe("InputProcessor", () => {
           } as LlmInputMessage,
         ];
 
-        const result = processor.process(existingHistory, {
+        const result = await processor.process(existingHistory, {
           system: "You are helpful.",
         });
 
@@ -200,7 +200,7 @@ describe("InputProcessor", () => {
         });
       });
 
-      it("replaces different system message at start", () => {
+      it("replaces different system message at start", async () => {
         const existingHistory: LlmHistory = [
           {
             content: "Old system prompt",
@@ -214,7 +214,7 @@ describe("InputProcessor", () => {
           } as LlmInputMessage,
         ];
 
-        const result = processor.process(existingHistory, {
+        const result = await processor.process(existingHistory, {
           system: "New system prompt",
         });
 
@@ -227,8 +227,8 @@ describe("InputProcessor", () => {
     });
 
     describe("Placeholder control", () => {
-      it("skips input placeholders when placeholders.input is false", () => {
-        const result = processor.process("Hello, {{name}}!", {
+      it("skips input placeholders when placeholders.input is false", async () => {
+        const result = await processor.process("Hello, {{name}}!", {
           data: { name: "World" },
           placeholders: { input: false },
         });
@@ -238,8 +238,8 @@ describe("InputProcessor", () => {
         });
       });
 
-      it("skips instructions placeholders when placeholders.instructions is false", () => {
-        const result = processor.process("Hello", {
+      it("skips instructions placeholders when placeholders.instructions is false", async () => {
+        const result = await processor.process("Hello", {
           data: { task: "summarize" },
           instructions: "Please {{task}} this.",
           placeholders: { instructions: false },
@@ -248,8 +248,8 @@ describe("InputProcessor", () => {
         expect(result.instructions).toBe("Please {{task}} this.");
       });
 
-      it("skips system placeholders when placeholders.system is false", () => {
-        const result = processor.process("Hello", {
+      it("skips system placeholders when placeholders.system is false", async () => {
+        const result = await processor.process("Hello", {
           data: { role: "assistant" },
           placeholders: { system: false },
           system: "You are a {{role}}.",
@@ -260,16 +260,16 @@ describe("InputProcessor", () => {
     });
 
     describe("No data provided", () => {
-      it("returns instructions without placeholder processing", () => {
-        const result = processor.process("Hello", {
+      it("returns instructions without placeholder processing", async () => {
+        const result = await processor.process("Hello", {
           instructions: "Please {{task}} this.",
         });
 
         expect(result.instructions).toBe("Please {{task}} this.");
       });
 
-      it("returns system without placeholder processing", () => {
-        const result = processor.process("Hello", {
+      it("returns system without placeholder processing", async () => {
+        const result = await processor.process("Hello", {
           system: "You are a {{role}}.",
         });
 
@@ -286,7 +286,7 @@ describe("InputProcessor", () => {
       processor = new InputProcessor();
     });
 
-    it("handles all options together", () => {
+    it("handles all options together", async () => {
       const existingHistory: LlmHistory = [
         {
           content: "Earlier",
@@ -295,7 +295,7 @@ describe("InputProcessor", () => {
         } as LlmInputMessage,
       ];
 
-      const result = processor.process("Hello, {{name}}!", {
+      const result = await processor.process("Hello, {{name}}!", {
         data: { name: "World", task: "help", role: "assistant" },
         history: existingHistory,
         instructions: "Please {{task}} me.",

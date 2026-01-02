@@ -25,7 +25,7 @@
     "prompts"
   ],
   "scripts": {
-    "build": "rollup --config",
+    "build": "rollup --config && chmod +x dist/index.js",
     "format": "eslint . --fix",
     "lint": "eslint .",
     "prepare": "npm run build",
@@ -34,6 +34,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@jaypie/llm": "^1.2.2",
     "@modelcontextprotocol/sdk": "^1.17.0",
     "commander": "^14.0.0",
     "gray-matter": "^4.0.3",

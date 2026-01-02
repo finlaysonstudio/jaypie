@@ -2360,6 +2360,75 @@ const result = await Llm.operate("What time is it?", {
 });
 ```
 
+#### Files and Images
+
+Send files and images to LLMs using the simplified array syntax with automatic file loading and provider-specific format translation:
+
+```javascript
+import { Llm } from "jaypie";
+
+const llm = new Llm();
+
+// Image from local filesystem
+const imageResult = await llm.operate([
+  "Extract text from this image",
+  { image: "/path/to/photo.png" }
+]);
+
+// PDF from local filesystem
+const pdfResult = await llm.operate([
+  "Summarize this document",
+  { file: "/path/to/document.pdf" }
+]);
+
+// From S3 bucket
+const s3Result = await llm.operate([
+  "Analyze this file",
+  { file: "documents/report.pdf", bucket: "my-bucket" }
+]);
+
+// Extract specific PDF pages
+const pagesResult = await llm.operate([
+  "Read pages 1-3",
+  { file: "large-doc.pdf", pages: [1, 2, 3] }
+]);
+
+// With pre-loaded base64 data (skips file loading)
+const base64Result = await llm.operate([
+  "Describe this image",
+  { image: "photo.jpg", data: base64String }
+]);
+
+// Multiple files and text
+const multiResult = await llm.operate([
+  "Compare these documents",
+  { file: "doc1.pdf" },
+  { file: "doc2.pdf" },
+  "Focus on the methodology section"
+]);
+```
+
+##### File Resolution Order
+
+1. If `data` is present → uses base64 directly
+2. If `bucket` is present → loads from S3
+3. If `CDK_ENV_BUCKET` env var exists → loads from that S3 bucket
+4. Otherwise → loads from local filesystem (relative to `process.cwd()`)
+
+##### Input Types
+
+| Property | Description |
+|----------|-------------|
+| `file` | Path to file (PDF or other document) |
+| `image` | Path to image file |
+| `bucket` | S3 bucket name (optional, uses `CDK_ENV_BUCKET` if not set) |
+| `pages` | Array of page numbers to extract from PDF (optional, extracts all if omitted) |
+| `data` | Base64-encoded file data (optional, skips file loading if provided) |
+
+##### Supported Image Extensions
+
+Files with these extensions are auto-detected as images: `png`, `jpg`, `jpeg`, `gif`, `webp`, `svg`, `bmp`, `ico`, `tiff`, `avif`
+
 ### TestKit
 
 ```bash

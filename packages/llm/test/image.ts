@@ -2,42 +2,32 @@
 import { config } from "dotenv";
 import { fileURLToPath } from "url";
 import { join, dirname } from "path";
-import {
-  Llm,
-  LlmInputContentImage,
-  LlmInputContentText,
-  LlmInputMessage,
-  LlmMessageRole,
-  LlmMessageType,
-} from "../src/index.js";
-import * as fs from "fs";
+import { Llm, LlmOperateInput } from "../src/index.js";
 
 config();
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REQUEST = "Extract the text from the image.";
 const IMAGE_FILE_PATH = join(__dirname, "fixtures/page.png");
-const base64Image = fs.readFileSync(IMAGE_FILE_PATH, { encoding: "base64" });
 
 async function main(provider: string) {
   try {
-    const model = new Llm(provider);
     console.log(`\n============ Provider: "${provider}"`);
 
-    const textContent: LlmInputContentText = {
-      type: LlmMessageType.InputText,
-      text: REQUEST,
-    };
-    const imageContent: LlmInputContentImage = {
-      type: LlmMessageType.InputImage,
-      image_url: `data:image/jpeg;base64,${base64Image}`,
-    };
-    const inputMessage: LlmInputMessage = {
-      role: LlmMessageRole.User,
-      content: [textContent, imageContent],
-    };
+    // OpenRouter doesn't support image uploads, skip the test
+    if (provider.toLowerCase() === "openrouter") {
+      console.log(
+        "Note: OpenRouter does not support image uploads, skipping test",
+      );
+      return true;
+    }
 
-    const result = await model.operate(inputMessage, {
+    const model = new Llm(provider);
+
+    // New simplified LlmOperateInput syntax
+    const input: LlmOperateInput = [REQUEST, { image: IMAGE_FILE_PATH }];
+
+    const result = await model.operate(input, {
       user: process?.env?.APP_USER || "[client] Jaypie User",
     });
 

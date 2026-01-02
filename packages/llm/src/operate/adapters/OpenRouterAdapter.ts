@@ -1,3 +1,4 @@
+import { log } from "@jaypie/logger";
 import { JsonObject, NaturalSchema } from "@jaypie/types";
 import type { OpenRouter } from "@openrouter/sdk";
 import { z } from "zod/v4";
@@ -6,6 +7,7 @@ import { PROVIDER } from "../../constants.js";
 import { Toolkit } from "../../tools/Toolkit.class.js";
 import {
   LlmHistory,
+  LlmInputContent,
   LlmMessageRole,
   LlmMessageType,
   LlmOperateOptions,
@@ -36,7 +38,7 @@ import { BaseProviderAdapter } from "./ProviderAdapter.interface.js";
 // Request types - SDK validates using camelCase internally
 interface OpenRouterMessage {
   role: "system" | "user" | "assistant" | "tool";
-  content?: string | null;
+  content?: string | OpenRouterContentPart[] | null;
   toolCalls?: OpenRouterToolCall[];
   toolCallId?: string;
 }
@@ -74,6 +76,10 @@ interface OpenRouterUsage {
   prompt_tokens?: number;
   completion_tokens?: number;
   total_tokens?: number;
+  // Reasoning tokens (some models like z-ai/glm include this)
+  completionTokensDetails?: {
+    reasoningTokens?: number;
+  };
 }
 
 interface OpenRouterResponse {
@@ -109,6 +115,59 @@ interface OpenRouterRequest {
 //
 
 const STRUCTURED_OUTPUT_TOOL_NAME = "structured_output";
+
+/**
+ * OpenRouter content part types (text only - images/files not supported)
+ */
+type OpenRouterContentPart = { type: "text"; text: string };
+
+/**
+ * Convert standardized content items to OpenRouter format
+ * Note: OpenRouter does not support native file/image uploads.
+ * Images and files are discarded with a warning.
+ */
+function convertContentToOpenRouter(
+  content: string | LlmInputContent[],
+): string | OpenRouterContentPart[] {
+  if (typeof content === "string") {
+    return content;
+  }
+
+  const parts: OpenRouterContentPart[] = [];
+
+  for (const item of content) {
+    // Text content - pass through
+    if (item.type === LlmMessageType.InputText) {
+      parts.push({ type: "text", text: item.text });
+      continue;
+    }
+
+    // Image content - warn and discard
+    if (item.type === LlmMessageType.InputImage) {
+      log.warn("OpenRouter does not support image uploads; image discarded");
+      continue;
+    }
+
+    // File/Document content - warn and discard
+    if (item.type === LlmMessageType.InputFile) {
+      log.warn(
+        { filename: item.filename },
+        "OpenRouter does not support file uploads; file discarded",
+      );
+      continue;
+    }
+
+    // Unknown type - warn and skip
+    log.warn({ item }, "Unknown content type for OpenRouter; discarded");
+  }
+
+  // If no text parts remain, return empty string to avoid empty array
+  if (parts.length === 0) {
+    return "";
+  }
+
+  return parts;
+}
 
 // OpenRouter SDK error types based on HTTP status codes
 const RETRYABLE_STATUS_CODES = [408, 500, 502, 503, 524, 529];
@@ -167,11 +226,9 @@ export class OpenRouterAdapter extends BaseProviderAdapter {
         },
       }));
 
-      // Determine tool choice based on whether structured output is requested
-      const hasStructuredOutput = request.tools.some(
-        (t) => t.name === STRUCTURED_OUTPUT_TOOL_NAME,
-      );
-      openRouterRequest.tool_choice = hasStructuredOutput ? "required" : "auto";
+      // Use "auto" for tool_choice - many OpenRouter models don't support "required"
+      // The structured_output tool prompt already emphasizes it must be called
+      openRouterRequest.tool_choice = "auto";
     }
 
     if (request.providerOptions) {
@@ -476,7 +533,7 @@ export class OpenRouterAdapter extends BaseProviderAdapter {
     return {
       input: usage.promptTokens || usage.prompt_tokens || 0,
       output: usage.completionTokens || usage.completion_tokens || 0,
-      reasoning: 0, // OpenRouter doesn't expose reasoning tokens in standard format
+      reasoning: usage.completionTokensDetails?.reasoningTokens || 0,
       total: usage.totalTokens || usage.total_tokens || 0,
       provider: this.name,
       model,
@@ -540,11 +597,18 @@ export class OpenRouterAdapter extends BaseProviderAdapter {
 
     // Extract text content for non-tool responses
     if (choice.message.content) {
-      historyItems.push({
+      const historyItem: LlmOutputMessage & { reasoning?: string } = {
         content: choice.message.content,
         role: LlmMessageRole.Assistant,
         type: LlmMessageType.Message,
-      } as LlmOutputMessage);
+      };
+
+      // Preserve reasoning if present (z-ai/glm models include this)
+      if (choice.message.reasoning) {
+        historyItem.reasoning = choice.message.reasoning;
+      }
+
+      historyItems.push(historyItem as LlmOutputMessage);
     }
 
     return historyItems;
@@ -713,7 +777,9 @@ export class OpenRouterAdapter extends BaseProviderAdapter {
       } else if (message.role === "user") {
         openRouterMessages.push({
           role: "user",
-          content: message.content as string,
+          content: convertContentToOpenRouter(
+            message.content as string | LlmInputContent[],
+          ),
         });
       } else if (message.role === "assistant") {
         const assistantMsg: OpenRouterMessage = {
@@ -747,7 +813,9 @@ export class OpenRouterAdapter extends BaseProviderAdapter {
         } else {
           openRouterMessages.push({
             role: "user",
-            content: message.content as string,
+            content: convertContentToOpenRouter(
+              message.content as string | LlmInputContent[],
+            ),
           });
         }
       }
