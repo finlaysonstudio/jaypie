@@ -668,17 +668,22 @@ export class GeminiAdapter extends BaseProviderAdapter {
         "type" in message &&
         message.type === LlmMessageType.FunctionCall
       ) {
+        // Build the function call part, including thoughtSignature if present
+        // (required for Gemini 3 models)
+        const functionCallPart: GeminiPart = {
+          functionCall: {
+            name: (message as any).name,
+            args: JSON.parse((message as any).arguments || "{}"),
+            id: (message as any).call_id,
+          },
+        };
+        // Preserve thoughtSignature for Gemini 3 models
+        if ((message as any).thoughtSignature) {
+          functionCallPart.thoughtSignature = (message as any).thoughtSignature;
+        }
         contents.push({
           role: "model",
-          parts: [
-            {
-              functionCall: {
-                name: (message as any).name,
-                args: JSON.parse((message as any).arguments || "{}"),
-                id: (message as any).call_id,
-              },
-            },
-          ],
+          parts: [functionCallPart],
         });
       }
       // Handle function call output items

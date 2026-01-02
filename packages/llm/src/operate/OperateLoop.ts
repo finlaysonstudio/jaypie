@@ -511,12 +511,16 @@ export class OperateLoop {
             args?: Record<string, unknown>;
             id?: string;
           };
+          // Preserve thoughtSignature for Gemini 3 models (required for tool calls)
+          const thoughtSignature = (part as { thoughtSignature?: string })
+            .thoughtSignature;
           history.push({
             type: LlmMessageType.FunctionCall,
             name: fc.name || "",
             arguments: JSON.stringify(fc.args || {}),
             call_id: fc.id || "",
             id: fc.id || "",
+            ...(thoughtSignature && { thoughtSignature }),
           } as unknown as LlmToolCall);
         } else if (part.functionResponse) {
           // Function response
