@@ -226,11 +226,9 @@ export class OpenRouterAdapter extends BaseProviderAdapter {
         },
       }));
 
-      // Determine tool choice based on whether structured output is requested
-      const hasStructuredOutput = request.tools.some(
-        (t) => t.name === STRUCTURED_OUTPUT_TOOL_NAME,
-      );
-      openRouterRequest.tool_choice = hasStructuredOutput ? "required" : "auto";
+      // Use "auto" for tool_choice - many OpenRouter models don't support "required"
+      // The structured_output tool prompt already emphasizes it must be called
+      openRouterRequest.tool_choice = "auto";
     }
 
     if (request.providerOptions) {

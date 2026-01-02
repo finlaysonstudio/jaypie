@@ -722,7 +722,7 @@ describe("OpenRouterAdapter", () => {
       expect(result.model).toBe(PROVIDER.OPENROUTER.MODEL.DEFAULT);
     });
 
-    it("sets tool_choice to required when structured output tool present", () => {
+    it("sets tool_choice to auto (many OpenRouter models don't support required)", () => {
       const request: OperateRequest = {
         model: "openai/gpt-4",
         messages: [],
@@ -737,7 +737,8 @@ describe("OpenRouterAdapter", () => {
 
       const result = openRouterAdapter.buildRequest(request);
 
-      expect(result.tool_choice).toBe("required");
+      // Use "auto" instead of "required" because many OpenRouter models don't support "required"
+      expect(result.tool_choice).toBe("auto");
     });
 
     it("handles multiple tool calls in a single response", () => {
