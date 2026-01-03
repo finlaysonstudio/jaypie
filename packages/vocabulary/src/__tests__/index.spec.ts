@@ -61,7 +61,7 @@ describe("vocabulary/index", () => {
     });
 
     it("VOCABULARY_VERSION matches package version", () => {
-      expect(VOCABULARY_VERSION).toBe("0.1.5");
+      expect(VOCABULARY_VERSION).toBe("0.1.6");
     });
   });
 });
