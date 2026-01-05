@@ -14,7 +14,6 @@ const external = [
   "@jaypie/lambda",
   "@modelcontextprotocol/sdk/server/mcp.js",
   "commander",
-  "zod",
 ];
 
 export default [

@@ -1,6 +1,5 @@
 // Register a service handler as an MCP tool
 
-import { inputToZodSchema } from "./inputToZodSchema.js";
 import type { RegisterMcpToolConfig, RegisterMcpToolResult } from "./types.js";
 
 /**
@@ -26,7 +25,7 @@ function formatResult(value: unknown): string {
  * It automatically:
  * - Uses handler.alias as the tool name (or custom name)
  * - Uses handler.description as the tool description (or custom)
- * - Converts input definitions to Zod schema parameters
+ * - Delegates validation to the service handler
  * - Wraps the handler and formats the response
  *
  * @param config - Configuration including handler, server, and optional overrides
@@ -58,7 +57,7 @@ function formatResult(value: unknown): string {
 export function registerMcpTool(
   config: RegisterMcpToolConfig,
 ): RegisterMcpToolResult {
-  const { description, exclude, handler, name, server } = config;
+  const { description, handler, name, server } = config;
 
   // Determine tool name (priority: name > handler.alias > "tool")
   const toolName = name ?? handler.alias ?? "tool";
@@ -66,11 +65,9 @@ export function registerMcpTool(
   // Determine tool description (priority: description > handler.description)
   const toolDescription = description ?? handler.description ?? "";
 
-  // Convert input definitions to Zod schema
-  const zodSchema = inputToZodSchema(handler.input, { exclude });
-
   // Register the tool with the MCP server
-  server.tool(toolName, toolDescription, zodSchema, async (args) => {
+  // Use empty schema - service handler validates inputs
+  server.tool(toolName, toolDescription, {}, async (args) => {
     const result = await handler(args as Record<string, unknown>);
 
     return {

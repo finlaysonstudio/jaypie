@@ -1,246 +1,18 @@
 // Tests for MCP adapter
 
 import { describe, expect, it, vi } from "vitest";
-import { z } from "zod";
 
-import { inputToZodSchema, registerMcpTool } from "../mcp/index.js";
+import { registerMcpTool } from "../mcp/index.js";
 import { serviceHandler } from "../serviceHandler.js";
-import type { InputFieldDefinition } from "../types.js";
 
 describe("MCP Adapter", () => {
-  describe("inputToZodSchema", () => {
-    it("returns empty schema when no input defined", () => {
-      const schema = inputToZodSchema();
-      expect(schema).toEqual({});
-    });
-
-    it("returns empty schema when input is empty object", () => {
-      const schema = inputToZodSchema({});
-      expect(schema).toEqual({});
-    });
-
-    it("converts String type to Zod string", () => {
-      const input: Record<string, InputFieldDefinition> = {
-        name: { type: String, description: "User name" },
-      };
-      const schema = inputToZodSchema(input);
-
-      expect(schema.name).toBeDefined();
-      // Test via parsing behavior
-      expect(() => schema.name.parse("test")).not.toThrow();
-      expect(() => schema.name.parse(123)).toThrow();
-    });
-
-    it("converts Number type to Zod number", () => {
-      const input: Record<string, InputFieldDefinition> = {
-        age: { type: Number, description: "User age" },
-      };
-      const schema = inputToZodSchema(input);
-
-      expect(schema.age).toBeDefined();
-      expect(() => schema.age.parse(25)).not.toThrow();
-      expect(() => schema.age.parse("25")).toThrow();
-    });
-
-    it("converts Boolean type to Zod boolean", () => {
-      const input: Record<string, InputFieldDefinition> = {
-        active: { type: Boolean, description: "Is active" },
-      };
-      const schema = inputToZodSchema(input);
-
-      expect(schema.active).toBeDefined();
-      expect(() => schema.active.parse(true)).not.toThrow();
-      expect(() => schema.active.parse("true")).toThrow();
-    });
-
-    it("converts Object type to Zod record", () => {
-      const input: Record<string, InputFieldDefinition> = {
-        config: { type: Object, description: "Configuration" },
-      };
-      const schema = inputToZodSchema(input);
-
-      expect(schema.config).toBeDefined();
-      expect(() => schema.config.parse({ key: "value" })).not.toThrow();
-      expect(() => schema.config.parse("string")).toThrow();
-    });
-
-    it("converts Array type to Zod array", () => {
-      const input: Record<string, InputFieldDefinition> = {
-        items: { type: Array, description: "Items list" },
-      };
-      const schema = inputToZodSchema(input);
-
-      expect(schema.items).toBeDefined();
-      expect(() => schema.items.parse([1, 2, 3])).not.toThrow();
-      expect(() => schema.items.parse("not-array")).toThrow();
-    });
-
-    it("converts typed array [String] to Zod array of strings", () => {
-      const input: Record<string, InputFieldDefinition> = {
-        tags: { type: [String], description: "Tags" },
-      };
-      const schema = inputToZodSchema(input);
-
-      expect(schema.tags).toBeDefined();
-      expect(() => schema.tags.parse(["a", "b", "c"])).not.toThrow();
-      expect(() => schema.tags.parse([1, 2, 3])).toThrow();
-    });
-
-    it("converts typed array [Number] to Zod array of numbers", () => {
-      const input: Record<string, InputFieldDefinition> = {
-        scores: { type: [Number], description: "Scores" },
-      };
-      const schema = inputToZodSchema(input);
-
-      expect(schema.scores).toBeDefined();
-      expect(() => schema.scores.parse([1, 2, 3])).not.toThrow();
-      expect(() => schema.scores.parse(["a", "b"])).toThrow();
-    });
-
-    it("converts validated string type to Zod enum", () => {
-      const input: Record<string, InputFieldDefinition> = {
-        status: {
-          type: ["active", "inactive", "pending"],
-          description: "Status",
-        },
-      };
-      const schema = inputToZodSchema(input);
-
-      expect(schema.status).toBeDefined();
-      expect(() => schema.status.parse("active")).not.toThrow();
-      expect(() => schema.status.parse("inactive")).not.toThrow();
-      expect(() => schema.status.parse("invalid")).toThrow();
-    });
-
-    it("converts validated number type to Zod union of literals", () => {
-      const input: Record<string, InputFieldDefinition> = {
-        priority: { type: [1, 2, 3], description: "Priority level" },
-      };
-      const schema = inputToZodSchema(input);
-
-      expect(schema.priority).toBeDefined();
-      expect(() => schema.priority.parse(1)).not.toThrow();
-      expect(() => schema.priority.parse(2)).not.toThrow();
-      expect(() => schema.priority.parse(4)).toThrow();
-    });
-
-    it("converts single validated number to Zod literal", () => {
-      const input: Record<string, InputFieldDefinition> = {
-        version: { type: [1], description: "Version" },
-      };
-      const schema = inputToZodSchema(input);
-
-      expect(schema.version).toBeDefined();
-      expect(() => schema.version.parse(1)).not.toThrow();
-      expect(() => schema.version.parse(2)).toThrow();
-    });
-
-    it("converts RegExp type to Zod string", () => {
-      const input: Record<string, InputFieldDefinition> = {
-        email: { type: /^.+@.+\..+$/, description: "Email address" },
-      };
-      const schema = inputToZodSchema(input);
-
-      expect(schema.email).toBeDefined();
-      expect(() => schema.email.parse("test@example.com")).not.toThrow();
-      expect(() => schema.email.parse(123)).toThrow();
-    });
-
-    it("makes fields with default optional", () => {
-      const input: Record<string, InputFieldDefinition> = {
-        format: { type: String, default: "json", description: "Output format" },
-      };
-      const schema = inputToZodSchema(input);
-
-      expect(schema.format).toBeDefined();
-      // Optional fields allow undefined
-      expect(() => schema.format.parse(undefined)).not.toThrow();
-      expect(() => schema.format.parse("xml")).not.toThrow();
-    });
-
-    it("makes fields with required: false optional", () => {
-      const input: Record<string, InputFieldDefinition> = {
-        prefix: {
-          type: String,
-          required: false,
-          description: "Optional prefix",
-        },
-      };
-      const schema = inputToZodSchema(input);
-
-      expect(schema.prefix).toBeDefined();
-      // Optional fields allow undefined
-      expect(() => schema.prefix.parse(undefined)).not.toThrow();
-      expect(() => schema.prefix.parse("pre")).not.toThrow();
-    });
-
-    it("excludes specified fields", () => {
-      const input: Record<string, InputFieldDefinition> = {
-        age: { type: Number },
-        name: { type: String },
-        secret: { type: String },
-      };
-      const schema = inputToZodSchema(input, { exclude: ["secret"] });
-
-      expect(schema).toHaveProperty("name");
-      expect(schema).toHaveProperty("age");
-      expect(schema).not.toHaveProperty("secret");
-    });
-
-    it("alphabetizes properties", () => {
-      const input: Record<string, InputFieldDefinition> = {
-        zebra: { type: String },
-        apple: { type: String },
-        mango: { type: String },
-      };
-      const schema = inputToZodSchema(input);
-
-      const keys = Object.keys(schema);
-      expect(keys).toEqual(["apple", "mango", "zebra"]);
-    });
-
-    it("works with string type names", () => {
-      const input: Record<string, InputFieldDefinition> = {
-        active: { type: "boolean" },
-        age: { type: "number" },
-        name: { type: "string" },
-      };
-      const schema = inputToZodSchema(input);
-
-      // Test via parsing behavior
-      expect(() => schema.name.parse("test")).not.toThrow();
-      expect(() => schema.age.parse(25)).not.toThrow();
-      expect(() => schema.active.parse(true)).not.toThrow();
-    });
-
-    it("validates string values correctly", () => {
-      const input: Record<string, InputFieldDefinition> = {
-        name: { type: String },
-      };
-      const schema = inputToZodSchema(input);
-
-      expect(() => schema.name.parse("test")).not.toThrow();
-      expect(() => schema.name.parse(123)).toThrow();
-    });
-
-    it("validates enum values correctly", () => {
-      const input: Record<string, InputFieldDefinition> = {
-        status: { type: ["active", "inactive"] },
-      };
-      const schema = inputToZodSchema(input);
-
-      expect(() => schema.status.parse("active")).not.toThrow();
-      expect(() => schema.status.parse("invalid")).toThrow();
-    });
-  });
-
   describe("registerMcpTool", () => {
     function createMockServer() {
       const registeredTools: Array<{
-        name: string;
         description: string;
-        schema: Record<string, z.ZodTypeAny>;
         handler: (args: Record<string, unknown>) => Promise<unknown>;
+        name: string;
+        schema: Record<string, unknown>;
       }> = [];
 
       return {
@@ -249,10 +21,10 @@ describe("MCP Adapter", () => {
           (
             name: string,
             description: string,
-            schema: Record<string, z.ZodTypeAny>,
+            schema: Record<string, unknown>,
             handler: (args: Record<string, unknown>) => Promise<unknown>,
           ) => {
-            registeredTools.push({ name, description, schema, handler });
+            registeredTools.push({ description, handler, name, schema });
           },
         ),
       };
@@ -368,12 +140,12 @@ describe("MCP Adapter", () => {
       expect(mockServer.registeredTools[0].description).toBe("");
     });
 
-    it("converts handler input to Zod schema", () => {
+    it("registers with empty schema (service handler validates)", () => {
       const handler = serviceHandler({
         alias: "greet",
         input: {
-          name: { type: String, description: "User name" },
-          loud: { type: Boolean, default: false },
+          loud: { default: false, type: Boolean },
+          name: { description: "User name", type: String },
         },
         service: ({ name, loud }) => {
           const greeting = `Hello, ${name}!`;
@@ -390,32 +162,7 @@ describe("MCP Adapter", () => {
       });
 
       const schema = mockServer.registeredTools[0].schema;
-      expect(schema).toHaveProperty("loud");
-      expect(schema).toHaveProperty("name");
-    });
-
-    it("excludes specified fields from schema", () => {
-      const handler = serviceHandler({
-        alias: "test",
-        input: {
-          name: { type: String },
-          secret: { type: String },
-        },
-        service: (input) => input,
-      });
-
-      const mockServer = createMockServer();
-      registerMcpTool({
-        exclude: ["secret"],
-        handler,
-        server: mockServer as unknown as Parameters<
-          typeof registerMcpTool
-        >[0]["server"],
-      });
-
-      const schema = mockServer.registeredTools[0].schema;
-      expect(schema).toHaveProperty("name");
-      expect(schema).not.toHaveProperty("secret");
+      expect(schema).toEqual({});
     });
 
     it("handler returns MCP-formatted response", async () => {
@@ -628,8 +375,8 @@ describe("MCP Adapter", () => {
         alias: "calculate",
         description: "Calculate the sum of two numbers",
         input: {
-          a: { type: Number, description: "First number" },
-          b: { type: Number, description: "Second number" },
+          a: { description: "First number", type: Number },
+          b: { description: "Second number", type: Number },
         },
         service: ({ a, b }) => a + b,
       });

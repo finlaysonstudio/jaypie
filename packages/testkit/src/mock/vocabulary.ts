@@ -189,7 +189,6 @@ interface McpServer {
 
 interface RegisterMcpToolConfig {
   description?: string;
-  exclude?: string[];
   handler: ServiceHandlerFunctionWithMetadata;
   name?: string;
   server: McpServer;
@@ -231,13 +230,3 @@ export const registerMcpTool = createMockFunction<
   return { name: toolName };
 });
 
-/**
- * Mock implementation of inputToZodSchema
- * Converts vocabulary input definitions to Zod schema
- */
-export const inputToZodSchema = createMockFunction<
-  (
-    input?: Record<string, InputFieldDefinition>,
-    options?: { exclude?: string[] },
-  ) => Record<string, unknown>
->(() => ({}));
