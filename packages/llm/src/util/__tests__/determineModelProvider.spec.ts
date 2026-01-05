@@ -82,48 +82,42 @@ describe("determineModelProvider", () => {
   });
 
   describe("Happy Paths", () => {
-    it("Identifies OpenAI GPT-5 model", () => {
-      const result = determineModelProvider(PROVIDER.OPENAI.MODEL.GPT_5);
+    it("Identifies OpenAI DEFAULT model", () => {
+      const result = determineModelProvider(PROVIDER.OPENAI.MODEL.DEFAULT);
       expect(result).toEqual({
-        model: "gpt-5",
+        model: PROVIDER.OPENAI.MODEL.DEFAULT,
         provider: PROVIDER.OPENAI.NAME,
       });
     });
 
-    it("Identifies OpenAI GPT-5-mini model", () => {
-      const result = determineModelProvider(PROVIDER.OPENAI.MODEL.GPT_5_MINI);
+    it("Identifies OpenAI SMALL model", () => {
+      const result = determineModelProvider(PROVIDER.OPENAI.MODEL.SMALL);
       expect(result).toEqual({
-        model: "gpt-5-mini",
+        model: PROVIDER.OPENAI.MODEL.SMALL,
         provider: PROVIDER.OPENAI.NAME,
       });
     });
 
-    it("Identifies Anthropic Claude Opus 4.1 model", () => {
-      const result = determineModelProvider(
-        PROVIDER.ANTHROPIC.MODEL.CLAUDE_OPUS_4_1,
-      );
+    it("Identifies Anthropic LARGE model", () => {
+      const result = determineModelProvider(PROVIDER.ANTHROPIC.MODEL.LARGE);
       expect(result).toEqual({
-        model: "claude-opus-4-1",
+        model: PROVIDER.ANTHROPIC.MODEL.LARGE,
         provider: PROVIDER.ANTHROPIC.NAME,
       });
     });
 
-    it("Identifies Anthropic Claude Sonnet 4.0 model", () => {
-      const result = determineModelProvider(
-        PROVIDER.ANTHROPIC.MODEL.CLAUDE_SONNET_4_0,
-      );
+    it("Identifies Anthropic DEFAULT model", () => {
+      const result = determineModelProvider(PROVIDER.ANTHROPIC.MODEL.DEFAULT);
       expect(result).toEqual({
-        model: "claude-sonnet-4-0",
+        model: PROVIDER.ANTHROPIC.MODEL.DEFAULT,
         provider: PROVIDER.ANTHROPIC.NAME,
       });
     });
 
-    it("Identifies Anthropic Claude Haiku model", () => {
-      const result = determineModelProvider(
-        PROVIDER.ANTHROPIC.MODEL.CLAUDE_3_HAIKU,
-      );
+    it("Identifies Anthropic TINY model", () => {
+      const result = determineModelProvider(PROVIDER.ANTHROPIC.MODEL.TINY);
       expect(result).toEqual({
-        model: "claude-3-5-haiku-latest",
+        model: PROVIDER.ANTHROPIC.MODEL.TINY,
         provider: PROVIDER.ANTHROPIC.NAME,
       });
     });
@@ -182,12 +176,10 @@ describe("determineModelProvider", () => {
       });
     });
 
-    it("Handles backward compatibility Anthropic models", () => {
-      const result = determineModelProvider(
-        PROVIDER.ANTHROPIC.MODEL.CLAUDE_HAIKU_3,
-      );
+    it("Handles Anthropic TINY model", () => {
+      const result = determineModelProvider(PROVIDER.ANTHROPIC.MODEL.TINY);
       expect(result).toEqual({
-        model: "claude-3-5-haiku-latest",
+        model: PROVIDER.ANTHROPIC.MODEL.TINY,
         provider: PROVIDER.ANTHROPIC.NAME,
       });
     });

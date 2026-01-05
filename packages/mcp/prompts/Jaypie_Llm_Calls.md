@@ -43,6 +43,7 @@ export interface LlmOperateOptions {
   explain?: boolean;
   format?: JsonObject | NaturalSchema | z.ZodType;
   history?: LlmHistory;
+  hooks?: LlmOperateHooks;
   instructions?: string;
   model?: string;
   placeholders?: {
@@ -52,26 +53,44 @@ export interface LlmOperateOptions {
   };
   providerOptions?: JsonObject;
   system?: string;
-  tools?: LlmTool[];
+  tools?: LlmTool[] | Toolkit;
   turns?: boolean | number;
   user?: string;
+}
+
+export interface LlmOperateHooks {
+  afterEachModelResponse?: (context: HookContext) => unknown | Promise<unknown>;
+  afterEachTool?: (context: ToolHookContext) => unknown | Promise<unknown>;
+  beforeEachModelRequest?: (context: HookContext) => unknown | Promise<unknown>;
+  beforeEachTool?: (context: ToolHookContext) => unknown | Promise<unknown>;
+  onRetryableModelError?: (context: ErrorHookContext) => unknown | Promise<unknown>;
+  onToolError?: (context: ToolErrorContext) => unknown | Promise<unknown>;
+  onUnrecoverableModelError?: (context: ErrorHookContext) => unknown | Promise<unknown>;
 }
 
 export interface LlmOperateResponse {
   content?: string | JsonObject;
   error?: LlmError;
   history: LlmHistory;
+  model?: string;
   output: LlmOutput;
+  provider?: string;
+  reasoning: string[];
   responses: JsonReturn[];
   status: LlmResponseStatus;
   usage: LlmUsage;
 }
 
-interface LlmUsage {
+// LlmUsage is an array of usage items (one per model call in multi-turn)
+type LlmUsage = LlmUsageItem[];
+
+interface LlmUsageItem {
   input: number;
   output: number;
   reasoning: number;
   total: number;
+  model?: string;
+  provider?: string;
 }
 ```
 
@@ -83,6 +102,63 @@ import { Llm } from "jaypie";
 const llm = new Llm();
 
 const result = await llm.operate("Give me advice on Yahtzee");
+```
+
+## Providers and Models
+
+Available providers: `anthropic`, `gemini`, `openai`, `openrouter`
+
+```typescript
+import { Llm, PROVIDER } from "jaypie";
+
+// Using provider name (uses provider's default model)
+const llm = new Llm("anthropic");
+
+// Using model name directly (provider auto-detected)
+const llm2 = new Llm("claude-sonnet-4-0");
+const llm3 = new Llm("gpt-4.1");
+const llm4 = new Llm("gemini-2.5-flash");
+
+// Using provider with specific model
+const llm5 = new Llm("openai", { model: "gpt-4.1" });
+
+// Using constants
+const llm6 = new Llm(PROVIDER.OPENAI.NAME, {
+  model: PROVIDER.OPENAI.MODEL.LARGE
+});
+```
+
+### Model Aliases
+
+Each provider has standard aliases: `DEFAULT`, `SMALL`, `LARGE`, `TINY`
+
+| Provider | DEFAULT | LARGE | SMALL | TINY |
+|----------|---------|-------|-------|------|
+| anthropic | claude-opus-4-1 | claude-opus-4-1 | claude-sonnet-4-0 | claude-3-5-haiku-latest |
+| gemini | gemini-3-pro-preview | gemini-3-pro-preview | gemini-3-flash-preview | gemini-2.0-flash-lite |
+| openai | gpt-4.1 | gpt-4.1 | gpt-4.1-mini | gpt-4.1-nano |
+| openrouter | z-ai/glm-4.7 | z-ai/glm-4.7 | z-ai/glm-4.7 | z-ai/glm-4.7 |
+
+### Provider Constants
+
+```typescript
+import { PROVIDER } from "jaypie";
+
+// Anthropic models
+PROVIDER.ANTHROPIC.MODEL.CLAUDE_OPUS_4      // claude-opus-4-1
+PROVIDER.ANTHROPIC.MODEL.CLAUDE_SONNET_4    // claude-sonnet-4-0
+PROVIDER.ANTHROPIC.MODEL.CLAUDE_3_HAIKU     // claude-3-5-haiku-latest
+
+// Gemini models
+PROVIDER.GEMINI.MODEL.GEMINI_3_PRO_PREVIEW  // gemini-3-pro-preview
+PROVIDER.GEMINI.MODEL.GEMINI_2_5_FLASH      // gemini-2.5-flash
+PROVIDER.GEMINI.MODEL.GEMINI_2_0_FLASH      // gemini-2.0-flash
+
+// OpenAI models
+PROVIDER.OPENAI.MODEL.GPT_4_1               // gpt-4.1
+PROVIDER.OPENAI.MODEL.GPT_4_O               // gpt-4o
+PROVIDER.OPENAI.MODEL.O3                    // o3
+PROVIDER.OPENAI.MODEL.O4_MINI               // o4-mini
 ```
 
 ## "Operating" an Llm
@@ -181,6 +257,113 @@ const multiResult = await llm.operate([
 ### Supported Image Extensions
 
 Files with these extensions are treated as images: `png`, `jpg`, `jpeg`, `gif`, `webp`, `svg`, `bmp`, `ico`, `tiff`, `avif`
+
+## Streaming
+
+Use `Llm.stream()` for real-time streaming responses:
+
+```javascript
+import { Llm } from "jaypie";
+
+const llm = new Llm("anthropic");
+
+// Basic streaming
+for await (const chunk of llm.stream("Tell me a story")) {
+  if (chunk.type === "text") {
+    process.stdout.write(chunk.content);
+  }
+}
+
+// Streaming with tools
+for await (const chunk of llm.stream("Roll 3d6", { tools: [roll] })) {
+  switch (chunk.type) {
+    case "text":
+      console.log("Text:", chunk.content);
+      break;
+    case "tool_call":
+      console.log("Calling tool:", chunk.toolCall.name);
+      break;
+    case "tool_result":
+      console.log("Tool result:", chunk.toolResult.result);
+      break;
+    case "done":
+      console.log("Usage:", chunk.usage);
+      break;
+    case "error":
+      console.error("Error:", chunk.error);
+      break;
+  }
+}
+
+// Static method
+for await (const chunk of Llm.stream("Hello", { llm: "openai" })) {
+  // ...
+}
+```
+
+### Stream Chunk Types
+
+```typescript
+type LlmStreamChunk =
+  | LlmStreamChunkText      // { type: "text", content: string }
+  | LlmStreamChunkToolCall  // { type: "tool_call", toolCall: { id, name, arguments } }
+  | LlmStreamChunkToolResult // { type: "tool_result", toolResult: { id, name, result } }
+  | LlmStreamChunkDone      // { type: "done", usage: LlmUsage }
+  | LlmStreamChunkError;    // { type: "error", error: { status, title, detail? } }
+```
+
+## Hooks
+
+Use hooks to intercept and observe the LLM lifecycle:
+
+```javascript
+const result = await llm.operate("Process this", {
+  hooks: {
+    beforeEachModelRequest: ({ input, options, providerRequest }) => {
+      console.log("About to call model with:", providerRequest);
+    },
+    afterEachModelResponse: ({ content, usage, providerResponse }) => {
+      console.log("Model responded:", content);
+      console.log("Tokens used:", usage);
+    },
+    beforeEachTool: ({ toolName, args }) => {
+      console.log(`Calling tool ${toolName} with:`, args);
+    },
+    afterEachTool: ({ toolName, result }) => {
+      console.log(`Tool ${toolName} returned:`, result);
+    },
+    onToolError: ({ toolName, error }) => {
+      console.error(`Tool ${toolName} failed:`, error);
+    },
+    onRetryableModelError: ({ error }) => {
+      console.warn("Retrying after error:", error);
+    },
+    onUnrecoverableModelError: ({ error }) => {
+      console.error("Fatal error:", error);
+    },
+  },
+});
+```
+
+## Toolkit
+
+Group tools with `Toolkit` for additional features:
+
+```javascript
+import { Llm, Toolkit } from "jaypie";
+
+const toolkit = new Toolkit([roll, weather, time], {
+  explain: true,  // Add __Explanation param to tools
+  log: true,      // Log tool calls (default)
+});
+
+// Extend toolkit with more tools
+toolkit.extend([anotherTool], { replace: true });
+
+const result = await llm.operate("Roll dice and check weather", {
+  tools: toolkit,
+});
+```
 
 ## Footnotes
 

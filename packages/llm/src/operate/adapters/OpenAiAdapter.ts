@@ -18,31 +18,17 @@ import { z } from "zod/v4";
 
 import { PROVIDER } from "../../constants.js";
 
-// OpenAI reasoning models that support extended thinking
-const REASONING_MODELS = [
-  // GPT-5 series
-  PROVIDER.OPENAI.MODEL.GPT_5,
-  PROVIDER.OPENAI.MODEL.GPT_5_MINI,
-  PROVIDER.OPENAI.MODEL.GPT_5_NANO,
-  // O-series
-  PROVIDER.OPENAI.MODEL.O1,
-  PROVIDER.OPENAI.MODEL.O1_MINI,
-  PROVIDER.OPENAI.MODEL.O1_PRO,
-  PROVIDER.OPENAI.MODEL.O3,
-  PROVIDER.OPENAI.MODEL.O3_MINI,
-  PROVIDER.OPENAI.MODEL.O3_MINI_HIGH,
-  PROVIDER.OPENAI.MODEL.O3_PRO,
-  PROVIDER.OPENAI.MODEL.O4_MINI,
+// Patterns for OpenAI reasoning models that support extended thinking
+const REASONING_MODEL_PATTERNS = [
+  /^gpt-[5-9]/, // GPT-5 and above (gpt-5, gpt-5.1, gpt-5.2, gpt-6, etc.)
+  /^o\d/, // O-series (o1, o3, o4, o5, etc.)
 ] as const;
 
 /**
  * Check if a model is a reasoning model that supports extended thinking
  */
 function isReasoningModel(model: string): boolean {
-  return REASONING_MODELS.some(
-    (reasoningModel) =>
-      model === reasoningModel || model.startsWith(`${reasoningModel}-`),
-  );
+  return REASONING_MODEL_PATTERNS.some((pattern) => pattern.test(model));
 }
 import { Toolkit } from "../../tools/Toolkit.class.js";
 import {
