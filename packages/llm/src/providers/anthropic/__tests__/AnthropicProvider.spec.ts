@@ -114,10 +114,8 @@ describe("AnthropicProvider", () => {
     });
 
     it("accepts a model parameter", () => {
-      const provider = new AnthropicProvider(
-        PROVIDER.ANTHROPIC.MODEL.CLAUDE_3_OPUS,
-      );
-      expect(provider["model"]).toBe(PROVIDER.ANTHROPIC.MODEL.CLAUDE_3_OPUS);
+      const provider = new AnthropicProvider(PROVIDER.ANTHROPIC.MODEL.LARGE);
+      expect(provider["model"]).toBe(PROVIDER.ANTHROPIC.MODEL.LARGE);
     });
 
     it("accepts an apiKey parameter", () => {
