@@ -111,14 +111,19 @@ Available providers: `anthropic`, `gemini`, `openai`, `openrouter`
 ```typescript
 import { Llm, PROVIDER } from "jaypie";
 
-// Using provider name
+// Using provider name (uses provider's default model)
 const llm = new Llm("anthropic");
 
-// Using model directly (provider auto-detected)
-const llm2 = new Llm("openai", { model: "gpt-4.1" });
+// Using model name directly (provider auto-detected)
+const llm2 = new Llm("claude-sonnet-4-0");
+const llm3 = new Llm("gpt-4.1");
+const llm4 = new Llm("gemini-2.5-flash");
+
+// Using provider with specific model
+const llm5 = new Llm("openai", { model: "gpt-4.1" });
 
 // Using constants
-const llm3 = new Llm(PROVIDER.OPENAI.NAME, {
+const llm6 = new Llm(PROVIDER.OPENAI.NAME, {
   model: PROVIDER.OPENAI.MODEL.LARGE
 });
 ```
