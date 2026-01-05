@@ -104,17 +104,25 @@ Implement robust error handling to prevent crashes and provide meaningful messag
 import { Llm } from "jaypie";
 import { roll } from "./tools/roll.js";
 
-const llm = new Llm({
-  provider: "openai",
-  model: "gpt-4o"
+// Create Llm instance
+const llm = new Llm("openai", { model: "gpt-4o" });
+
+// Use tools with operate
+const response = await llm.operate("Roll 3d20 and tell me the result", {
+  tools: [roll],
 });
 
-const response = await llm.operate([
-  { role: "user", content: "Roll 3d20 and tell me the result" },
-  {
-    tools: [roll],
-  },
-]);
+// Or use Toolkit for additional features
+import { Toolkit } from "jaypie";
+
+const toolkit = new Toolkit([roll], {
+  explain: true,  // Requires model to explain why it's calling tools
+  log: true,      // Log tool calls (default)
+});
+
+const result = await llm.operate("Roll some dice", {
+  tools: toolkit,
+});
 ```
 
 ## References
