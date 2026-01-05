@@ -3,6 +3,9 @@ name: NPM Check
 on:
   push:
     branches:
+      - branch/*
+      - claude/*
+      - codex/*
       - devin/*
       - fix/*
       - feat/*
