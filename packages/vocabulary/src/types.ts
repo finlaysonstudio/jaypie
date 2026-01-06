@@ -53,9 +53,13 @@ export type ValidatedNumberType = Array<number>;
 // Coerces to String and validates against the pattern
 export type RegExpType = RegExp;
 
+// Date type
+export type DateCoercionType = typeof Date;
+
 // All supported types (including validated shorthands)
 export type CoercionType =
   | CompositeType
+  | DateCoercionType
   | RegExpType
   | ScalarType
   | TypedArrayType

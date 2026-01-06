@@ -2,6 +2,7 @@
 
 import { BadRequestError } from "@jaypie/errors";
 
+import { coerceToDate, isDateType } from "./coerce-date.js";
 import type { CoercionType, TypedArrayType } from "./types.js";
 
 /**
@@ -466,7 +467,12 @@ function coerceToTypedArray(
  * Coerce a value to the specified type
  */
 export function coerce(value: unknown, type: CoercionType): unknown {
-  // Check for typed array types first
+  // Check for Date type first
+  if (isDateType(type)) {
+    return coerceToDate(value);
+  }
+
+  // Check for typed array types
   if (isTypedArrayType(type)) {
     const elementType = getArrayElementType(type);
     return coerceToTypedArray(value, elementType);

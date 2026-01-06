@@ -1,5 +1,26 @@
 // @jaypie/vocabulary
 
+// BaseEntity
+export {
+  BASE_ENTITY_AUTO_FIELDS,
+  BASE_ENTITY_FIELDS,
+  BASE_ENTITY_REQUIRED_FIELDS,
+  BASE_ENTITY_TIMESTAMP_FIELDS,
+  createBaseEntityInput,
+  hasBaseEntityShape,
+  isAutoField,
+  isBaseEntity,
+  isTimestampField,
+  pickBaseEntityFields,
+} from "./base-entity.js";
+export type {
+  BaseEntity,
+  BaseEntityFilter,
+  BaseEntityInput,
+  BaseEntityUpdate,
+  HistoryEntry,
+} from "./base-entity.js";
+
 // Coercion
 export {
   coerce,
@@ -11,6 +32,15 @@ export {
   coerceToObject,
   coerceToString,
 } from "./coerce.js";
+
+// Date Coercion
+export {
+  coerceFromDate,
+  coerceToDate,
+  DateType,
+  isDateType,
+  isValidDate,
+} from "./coerce-date.js";
 
 // Commander adapter (re-exported for convenience)
 export * as commander from "./commander/index.js";
@@ -26,6 +56,7 @@ export type {
   ArrayElementType,
   CoercionType,
   CompositeType,
+  DateCoercionType,
   InputFieldDefinition,
   RegExpType,
   ScalarType,
@@ -39,4 +70,4 @@ export type {
 } from "./types.js";
 
 // Version
-export const VOCABULARY_VERSION = "0.1.5";
+export const VOCABULARY_VERSION = "0.1.6";
