@@ -9,6 +9,19 @@ type ServiceHandlerFunction = (
   input?: Record<string, unknown> | string,
 ) => Promise<unknown>;
 
+interface ServiceHandlerFunctionWithMetadata extends ServiceHandlerFunction {
+  alias?: string;
+  description?: string;
+  input?: Record<string, InputFieldDefinition>;
+}
+
+interface InputFieldDefinition {
+  default?: unknown;
+  description?: string;
+  required?: boolean;
+  type: unknown;
+}
+
 interface LambdaServiceHandlerOptions {
   chaos?: string;
   name?: string;
@@ -84,3 +97,136 @@ export const lambdaServiceHandler = createMockFunction<
     validate: opts.validate,
   });
 });
+
+// LLM adapter types
+interface LlmTool {
+  call: (args?: Record<string, unknown>) => Promise<unknown> | unknown;
+  description: string;
+  message?:
+    | string
+    | ((
+        args?: Record<string, unknown>,
+        context?: { name: string },
+      ) => Promise<string> | string);
+  name: string;
+  parameters: Record<string, unknown>;
+  type: "function" | string;
+}
+
+interface CreateLlmToolConfig {
+  description?: string;
+  exclude?: string[];
+  handler: ServiceHandlerFunctionWithMetadata;
+  message?: string | ((args?: Record<string, unknown>) => string);
+  name?: string;
+}
+
+interface CreateLlmToolResult {
+  tool: LlmTool;
+}
+
+/**
+ * Mock implementation of createLlmTool
+ * Creates an LLM tool from a vocabulary service handler
+ */
+export const createLlmTool = createMockFunction<
+  (config: CreateLlmToolConfig) => CreateLlmToolResult
+>((config) => {
+  const { description, handler, message, name } = config;
+
+  const toolName = name ?? handler.alias ?? "tool";
+  const toolDescription = description ?? handler.description ?? "";
+
+  const tool: LlmTool = {
+    call: async (args?: Record<string, unknown>): Promise<unknown> => {
+      return handler(args);
+    },
+    description: toolDescription,
+    name: toolName,
+    parameters: {
+      properties: {},
+      required: [],
+      type: "object",
+    },
+    type: "function",
+  };
+
+  if (message !== undefined) {
+    tool.message = message;
+  }
+
+  return { tool };
+});
+
+/**
+ * Mock implementation of inputToJsonSchema
+ * Converts vocabulary input definitions to JSON Schema
+ */
+export const inputToJsonSchema = createMockFunction<
+  (
+    input?: Record<string, InputFieldDefinition>,
+    options?: { exclude?: string[] },
+  ) => Record<string, unknown>
+>(() => ({
+  properties: {},
+  required: [],
+  type: "object",
+}));
+
+// MCP adapter types
+interface McpToolResponse {
+  content: Array<{ text: string; type: "text" }>;
+}
+
+interface McpServer {
+  tool: (
+    name: string,
+    description: string,
+    schema: Record<string, unknown>,
+    handler: (args: Record<string, unknown>) => Promise<McpToolResponse>,
+  ) => void;
+}
+
+interface RegisterMcpToolConfig {
+  description?: string;
+  handler: ServiceHandlerFunctionWithMetadata;
+  name?: string;
+  server: McpServer;
+}
+
+interface RegisterMcpToolResult {
+  name: string;
+}
+
+/**
+ * Mock implementation of registerMcpTool
+ * Registers a vocabulary service handler as an MCP tool
+ */
+export const registerMcpTool = createMockFunction<
+  (config: RegisterMcpToolConfig) => RegisterMcpToolResult
+>((config) => {
+  const { description, handler, name, server } = config;
+
+  const toolName = name ?? handler.alias ?? "tool";
+  const toolDescription = description ?? handler.description ?? "";
+
+  server.tool(
+    toolName,
+    toolDescription,
+    {},
+    async (args: Record<string, unknown>): Promise<McpToolResponse> => {
+      const result = await handler(args);
+      return {
+        content: [
+          {
+            text: result === undefined || result === null ? "" : String(result),
+            type: "text" as const,
+          },
+        ],
+      };
+    },
+  );
+
+  return { name: toolName };
+});
+

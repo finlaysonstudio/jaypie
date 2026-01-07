@@ -25,6 +25,16 @@
       "types": "./dist/esm/lambda/index.d.ts",
       "import": "./dist/esm/lambda/index.js",
       "require": "./dist/cjs/lambda/index.cjs"
+    },
+    "./llm": {
+      "types": "./dist/esm/llm/index.d.ts",
+      "import": "./dist/esm/llm/index.js",
+      "require": "./dist/cjs/llm/index.cjs"
+    },
+    "./mcp": {
+      "types": "./dist/esm/mcp/index.d.ts",
+      "import": "./dist/esm/mcp/index.js",
+      "require": "./dist/cjs/mcp/index.cjs"
     }
   },
   "main": "./dist/cjs/index.cjs",
@@ -46,6 +56,7 @@
   },
   "devDependencies": {
     "@jaypie/testkit": "*",
+    "@modelcontextprotocol/sdk": "^1.17.0",
     "@rollup/plugin-typescript": "^12.1.2",
     "@types/node": "^22.13.1",
     "@typescript-eslint/eslint-plugin": "^8.18.2",
@@ -63,6 +74,7 @@
   "peerDependencies": {
     "@jaypie/aws": "*",
     "@jaypie/lambda": "*",
+    "@modelcontextprotocol/sdk": ">=1.0.0",
     "commander": ">=12.0.0"
   },
   "peerDependenciesMeta": {
@@ -70,6 +82,9 @@
       "optional": true
     },
     "@jaypie/lambda": {
+      "optional": true
+    },
+    "@modelcontextprotocol/sdk": {
       "optional": true
     },
     "commander": {

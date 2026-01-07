@@ -48,6 +48,12 @@ export * as commander from "./commander/index.js";
 // Lambda adapter (re-exported for convenience)
 export * as lambda from "./lambda/index.js";
 
+// LLM adapter (re-exported for convenience)
+export * as llm from "./llm/index.js";
+
+// MCP adapter (re-exported for convenience)
+export * as mcp from "./mcp/index.js";
+
 // Service Handler
 export { serviceHandler } from "./serviceHandler.js";
 
