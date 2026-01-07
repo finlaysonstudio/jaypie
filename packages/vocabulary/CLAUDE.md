@@ -197,6 +197,30 @@ program.parse();
 // Usage: greet --user Alice -l
 ```
 
+**registerServiceCommand with callbacks**: Supports lifecycle callbacks for handling results, errors, and messages:
+
+```typescript
+registerServiceCommand({
+  handler,
+  program,
+  onComplete: (response) => {
+    console.log("Done:", JSON.stringify(response, null, 2));
+  },
+  onError: (error) => {
+    console.error("Failed:", error);
+  },
+  onMessage: (msg) => {
+    console[msg.level || "info"](msg.message);
+  },
+});
+```
+
+| Callback | Type | Description |
+|----------|------|-------------|
+| `onComplete` | `(response: unknown) => void \| Promise<void>` | Called with handler's return value on success |
+| `onError` | `(error: unknown) => void \| Promise<void>` | Called when handler throws (prevents re-throw) |
+| `onMessage` | `(message: Message) => void \| Promise<void>` | Returned in result for external progress reporting |
+
 **createCommanderOptions**: Generates Commander.js `Option` objects from handler input definitions.
 
 ```typescript
@@ -270,6 +294,8 @@ Located in `types.ts`:
 
 | Type | Description |
 |------|-------------|
+| `MessageLevel` | `"trace" \| "debug" \| "info" \| "warn" \| "error"` - log levels for messages |
+| `Message` | `{ level?: MessageLevel; message: string }` - standard message structure |
 | `ScalarType` | `Boolean \| Number \| String` or string equivalents |
 | `CompositeType` | `Array \| Object` or string equivalents |
 | `ArrayElementType` | Types usable inside typed arrays |
@@ -302,7 +328,7 @@ export * as lambda from "./lambda/index.js";
 export { serviceHandler } from "./serviceHandler.js";
 
 // Types
-export type { ArrayElementType, CoercionType, CompositeType, InputFieldDefinition, RegExpType, ScalarType, ServiceFunction, ServiceHandlerConfig, ServiceHandlerFunction, TypedArrayType, ValidatedNumberType, ValidatedStringType, ValidateFunction } from "./types.js";
+export type { ArrayElementType, CoercionType, CompositeType, InputFieldDefinition, Message, MessageLevel, RegExpType, ScalarType, ServiceFunction, ServiceHandlerConfig, ServiceHandlerFunction, TypedArrayType, ValidatedNumberType, ValidatedStringType, ValidateFunction } from "./types.js";
 
 // Version
 export const VOCABULARY_VERSION: string;
@@ -314,7 +340,7 @@ export const VOCABULARY_VERSION: string;
 export { createCommanderOptions } from "./createCommanderOptions.js";
 export { parseCommanderOptions } from "./parseCommanderOptions.js";
 export { registerServiceCommand } from "./registerServiceCommand.js";
-export type { CommanderOptionOverride, CreateCommanderOptionsConfig, CreateCommanderOptionsResult, ParseCommanderOptionsConfig, RegisterServiceCommandConfig, RegisterServiceCommandResult } from "./types.js";
+export type { CommanderOptionOverride, CreateCommanderOptionsConfig, CreateCommanderOptionsResult, OnCompleteCallback, OnErrorCallback, OnMessageCallback, ParseCommanderOptionsConfig, RegisterServiceCommandConfig, RegisterServiceCommandResult } from "./types.js";
 ```
 
 ### Lambda Export (`@jaypie/vocabulary/lambda`)

@@ -227,7 +227,46 @@ program.parse();
 | `name` | `string` | Override command name (default: handler.alias) |
 | `description` | `string` | Override description (default: handler.description) |
 | `exclude` | `string[]` | Field names to exclude from options |
+| `onComplete` | `OnCompleteCallback` | Called with handler's return value on success |
+| `onError` | `OnErrorCallback` | Called when handler throws (prevents re-throw if provided) |
+| `onMessage` | `OnMessageCallback` | Returned in result for external progress reporting |
 | `overrides` | `Record<string, override>` | Per-field option overrides |
+
+### registerServiceCommand with Callbacks
+
+```typescript
+import { Command } from "commander";
+import { serviceHandler } from "@jaypie/vocabulary";
+import { registerServiceCommand } from "@jaypie/vocabulary/commander";
+
+const handler = serviceHandler({
+  alias: "evaluate",
+  input: { jobId: { type: String } },
+  service: async ({ jobId }) => {
+    // Run evaluation...
+    return { jobId, status: "complete", results: 42 };
+  },
+});
+
+const program = new Command();
+const { command, onMessage } = registerServiceCommand({
+  handler,
+  program,
+  onComplete: (response) => {
+    console.log("Done:", JSON.stringify(response, null, 2));
+  },
+  onError: (error) => {
+    console.error("Failed:", error);
+    process.exit(1);
+  },
+  onMessage: (msg) => {
+    // msg: { level?: "trace"|"debug"|"info"|"warn"|"error", message: string }
+    console[msg.level || "info"](msg.message);
+  },
+});
+
+program.parse();
+```
 
 ### Input Flag and Letter Properties
 
@@ -366,6 +405,10 @@ cli evaluate --help
 
 ```typescript
 import type {
+  // Message types
+  Message,
+  MessageLevel,
+
   // Coercion types
   CoercionType,
   ScalarType,
@@ -389,10 +432,26 @@ import type {
   CommanderOptionOverride,
   CreateCommanderOptionsConfig,
   CreateCommanderOptionsResult,
+  OnCompleteCallback,
+  OnErrorCallback,
+  OnMessageCallback,
   ParseCommanderOptionsConfig,
   RegisterServiceCommandConfig,
   RegisterServiceCommandResult,
 } from "@jaypie/vocabulary/commander";
+```
+
+### Message Type
+
+Standard message structure for callbacks and notifications:
+
+```typescript
+type MessageLevel = "trace" | "debug" | "info" | "warn" | "error";
+
+interface Message {
+  level?: MessageLevel;  // Defaults to "info" if not specified
+  message: string;
+}
 ```
 
 ## Exports
@@ -418,6 +477,9 @@ export { serviceHandler } from "./serviceHandler.js";
 // Commander namespace
 export * as commander from "./commander/index.js";
 
+// Types (including Message vocabulary)
+export type { Message, MessageLevel } from "./types.js";
+
 // Version
 export const VOCABULARY_VERSION: string;
 ```
@@ -428,6 +490,9 @@ export const VOCABULARY_VERSION: string;
 export { createCommanderOptions } from "./createCommanderOptions.js";
 export { parseCommanderOptions } from "./parseCommanderOptions.js";
 export { registerServiceCommand } from "./registerServiceCommand.js";
+
+// Callback types
+export type { OnCompleteCallback, OnErrorCallback, OnMessageCallback } from "./types.js";
 ```
 
 ## Error Handling
