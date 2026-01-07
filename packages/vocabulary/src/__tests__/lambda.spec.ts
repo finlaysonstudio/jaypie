@@ -379,7 +379,7 @@ describe("Lambda Adapter", () => {
 
     describe("sendMessage and onMessage", () => {
       it("passes context with sendMessage to service when onMessage is provided", async () => {
-        const messages: Array<{ level?: string; message: string }> = [];
+        const messages: Array<{ content: string; level?: string }> = [];
 
         const handler = serviceHandler({
           alias: "test",
