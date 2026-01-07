@@ -1,7 +1,7 @@
 // Tests for commander adapter
 
 import { Command, Option } from "commander";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   createCommanderOptions,
@@ -686,6 +686,158 @@ describe("Commander Adapter", () => {
       ]);
 
       expect(capturedResult).toBe("HELLO, ALICE!");
+    });
+
+    describe("onComplete callback", () => {
+      it("calls onComplete with handler response", async () => {
+        let capturedResponse: unknown;
+        const handler = serviceHandler({
+          alias: "test",
+          input: {
+            value: { type: Number, default: 42 },
+          },
+          service: ({ value }) => ({ doubled: value * 2 }),
+        });
+
+        registerServiceCommand({
+          handler,
+          onComplete: (response) => {
+            capturedResponse = response;
+          },
+          program,
+        });
+
+        await program.parseAsync(["node", "test", "test"]);
+
+        expect(capturedResponse).toEqual({ doubled: 84 });
+      });
+
+      it("does not require onComplete callback", async () => {
+        const handler = serviceHandler({
+          alias: "test",
+          service: () => "result",
+        });
+
+        registerServiceCommand({ handler, program });
+
+        // Should not throw
+        await expect(
+          program.parseAsync(["node", "test", "test"]),
+        ).resolves.not.toThrow();
+      });
+
+      it("supports async onComplete callback", async () => {
+        let completed = false;
+        const handler = serviceHandler({
+          alias: "test",
+          service: () => "result",
+        });
+
+        registerServiceCommand({
+          handler,
+          onComplete: async () => {
+            await new Promise((resolve) => setTimeout(resolve, 10));
+            completed = true;
+          },
+          program,
+        });
+
+        await program.parseAsync(["node", "test", "test"]);
+
+        expect(completed).toBe(true);
+      });
+    });
+
+    describe("onError callback", () => {
+      it("calls onError when handler throws", async () => {
+        let capturedError: unknown;
+        const handler = serviceHandler({
+          alias: "test",
+          service: () => {
+            throw new Error("Handler failed");
+          },
+        });
+
+        registerServiceCommand({
+          handler,
+          onError: (error) => {
+            capturedError = error;
+          },
+          program,
+        });
+
+        await program.parseAsync(["node", "test", "test"]);
+
+        expect(capturedError).toBeInstanceOf(Error);
+        expect((capturedError as Error).message).toBe("Handler failed");
+      });
+
+      it("re-throws error when no onError callback provided", async () => {
+        const handler = serviceHandler({
+          alias: "test",
+          service: () => {
+            throw new Error("Handler failed");
+          },
+        });
+
+        registerServiceCommand({ handler, program });
+
+        await expect(
+          program.parseAsync(["node", "test", "test"]),
+        ).rejects.toThrow("Handler failed");
+      });
+
+      it("supports async onError callback", async () => {
+        let errorHandled = false;
+        const handler = serviceHandler({
+          alias: "test",
+          service: () => {
+            throw new Error("Handler failed");
+          },
+        });
+
+        registerServiceCommand({
+          handler,
+          onError: async () => {
+            await new Promise((resolve) => setTimeout(resolve, 10));
+            errorHandled = true;
+          },
+          program,
+        });
+
+        await program.parseAsync(["node", "test", "test"]);
+
+        expect(errorHandled).toBe(true);
+      });
+    });
+
+    describe("onMessage callback", () => {
+      it("returns onMessage in result", () => {
+        const handler = serviceHandler({
+          alias: "test",
+          service: () => "result",
+        });
+
+        const onMessage = vi.fn();
+        const result = registerServiceCommand({
+          handler,
+          onMessage,
+          program,
+        });
+
+        expect(result.onMessage).toBe(onMessage);
+      });
+
+      it("does not include onMessage when not provided", () => {
+        const handler = serviceHandler({
+          alias: "test",
+          service: () => "result",
+        });
+
+        const result = registerServiceCommand({ handler, program });
+
+        expect(result.onMessage).toBeUndefined();
+      });
     });
   });
 });

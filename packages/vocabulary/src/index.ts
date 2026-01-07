@@ -58,6 +58,8 @@ export type {
   CompositeType,
   DateCoercionType,
   InputFieldDefinition,
+  Message,
+  MessageLevel,
   RegExpType,
   ScalarType,
   ServiceFunction,

@@ -48,6 +48,9 @@ export function registerServiceCommand({
   exclude,
   handler,
   name,
+  onComplete,
+  onError,
+  onMessage,
   overrides,
   program,
 }: RegisterServiceCommandConfig): RegisterServiceCommandResult {
@@ -82,9 +85,23 @@ export function registerServiceCommand({
       input: handler.input,
     });
 
-    // Call the handler
-    await handler(input);
+    try {
+      // Call the handler
+      const response = await handler(input);
+
+      // Call onComplete callback if provided
+      if (onComplete) {
+        await onComplete(response);
+      }
+    } catch (error) {
+      // Call onError callback if provided, otherwise re-throw
+      if (onError) {
+        await onError(error);
+      } else {
+        throw error;
+      }
+    }
   });
 
-  return { command };
+  return { command, onMessage };
 }

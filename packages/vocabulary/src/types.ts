@@ -1,5 +1,21 @@
 // Type definitions for @jaypie/vocabulary
 
+// Message Types - Standard vocabulary for messaging
+
+/**
+ * Log levels for messages
+ * @default "info"
+ */
+export type MessageLevel = "debug" | "error" | "info" | "trace" | "warn";
+
+/**
+ * Standard message structure for callbacks and notifications
+ */
+export interface Message {
+  level?: MessageLevel;
+  message: string;
+}
+
 // Supported scalar types
 export type ScalarType =
   | typeof Boolean
