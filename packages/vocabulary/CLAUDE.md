@@ -17,13 +17,16 @@ Jaypie standard application component vocabulary - provides type coercion and se
 ```
 src/
 ├── __tests__/
+│   ├── base-entity.spec.ts    # Entity type tests
 │   ├── coerce.spec.ts         # Coercion function tests
+│   ├── coerce-date.spec.ts    # Date coercion tests
 │   ├── commander.spec.ts      # Commander adapter tests
 │   ├── index.spec.ts          # Export verification tests
 │   ├── lambda.spec.ts         # Lambda adapter tests
 │   ├── llm.spec.ts            # LLM adapter tests
 │   ├── mcp.spec.ts            # MCP adapter tests
-│   └── serviceHandler.spec.ts # Service handler tests
+│   ├── serviceHandler.spec.ts # Service handler tests
+│   └── status.spec.ts         # Status type tests
 ├── commander/
 │   ├── createCommanderOptions.ts  # Generate Commander Options from config
 │   ├── index.ts                   # Commander module exports
@@ -43,9 +46,12 @@ src/
 │   ├── index.ts                   # MCP module exports
 │   ├── registerMcpTool.ts         # Register serviceHandler as MCP tool
 │   └── types.ts                   # MCP adapter types
+├── base-entity.ts             # BaseEntity, Job, MessageEntity, Progress types
 ├── coerce.ts                  # Type coercion utilities
+├── coerce-date.ts             # Date coercion utilities
 ├── index.ts                   # Package exports
 ├── serviceHandler.ts          # Service handler factory
+├── status.ts                  # Status type and validators
 └── types.ts                   # TypeScript type definitions
 ```
 
@@ -470,6 +476,54 @@ Located in `base-entity.ts`:
 | `MessageEntity` | Message entity extending BaseEntity with required content field |
 | `Progress` | Tracks job execution progress (elapsedTime, estimatedTime, percentageComplete, nextPercentageCheckpoint) |
 | `Job` | Job entity extending BaseEntity with status (required), startedAt, completedAt, messages, progress |
+
+#### Entity Model Schemas
+
+**BaseEntity** (base for all entities):
+```
+model: <varies>
+id: String (auto)
+createdAt: Date (auto)
+updatedAt: Date (auto)
+history?: [HistoryEntry] (auto)
+name?: String
+label?: String
+abbreviation?: String
+alias?: String
+xid?: String
+description?: String
+class?: String
+type?: String
+content?: String
+metadata?: Object
+emoji?: String
+icon?: String
+archivedAt?: Date
+deletedAt?: Date
+```
+
+**MessageEntity** (extends BaseEntity):
+```
+model: message
+content: String (required)
+type?: String (e.g., "assistant", "user", "system")
+```
+
+**Job** (extends BaseEntity):
+```
+model: job
+type?: String (e.g., "batch", "realtime", "scheduled")
+class?: String (e.g., "evaluation", "export", "import")
+status: String (required)
+startedAt?: Date
+completedAt?: Date
+messages?: [MessageEntity]
+progress?:
+    elapsedTime?: Number
+    estimatedTime?: Number
+    percentageComplete?: Number
+    nextPercentageCheckpoint?: Number
+```
 
 ## Exports
 

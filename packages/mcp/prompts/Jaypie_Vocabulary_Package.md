@@ -417,6 +417,16 @@ cli evaluate --help
 
 ```typescript
 import type {
+  // Entity types
+  BaseEntity,
+  BaseEntityFilter,
+  BaseEntityInput,
+  BaseEntityUpdate,
+  HistoryEntry,
+  Job,
+  MessageEntity,
+  Progress,
+
   // Message types
   Message,
   MessageLevel,
@@ -478,6 +488,72 @@ interface ServiceContext {
 ```
 
 Services receive context as an optional second parameter and can use `sendMessage` to emit progress messages that connect to `onMessage` in `registerServiceCommand` or `lambdaServiceHandler`.
+
+### Entity Types
+
+The vocabulary provides standard entity types for consistent data modeling:
+
+```typescript
+import type {
+  BaseEntity,
+  BaseEntityInput,
+  BaseEntityUpdate,
+  BaseEntityFilter,
+  HistoryEntry,
+  Job,
+  MessageEntity,
+  Progress,
+} from "@jaypie/vocabulary";
+```
+
+#### BaseEntity (base for all entities)
+
+```
+model: <varies>
+id: String (auto)
+createdAt: Date (auto)
+updatedAt: Date (auto)
+history?: [HistoryEntry] (auto)
+name?: String
+label?: String
+abbreviation?: String
+alias?: String
+xid?: String
+description?: String
+class?: String
+type?: String
+content?: String
+metadata?: Object
+emoji?: String
+icon?: String
+archivedAt?: Date
+deletedAt?: Date
+```
+
+#### MessageEntity (extends BaseEntity)
+
+```
+model: message
+content: String (required)
+type?: String (e.g., "assistant", "user", "system")
+```
+
+#### Job (extends BaseEntity)
+
+```
+model: job
+type?: String (e.g., "batch", "realtime", "scheduled")
+class?: String (e.g., "evaluation", "export", "import")
+status: String (required)
+startedAt?: Date
+completedAt?: Date
+messages?: [MessageEntity]
+progress?:
+    elapsedTime?: Number
+    estimatedTime?: Number
+    percentageComplete?: Number
+    nextPercentageCheckpoint?: Number
+```
 
 ## Lambda Integration
 
