@@ -202,10 +202,7 @@ export function createCommanderOptions(
     // Commander.js requires separate options for --flag and --no-flag
     if (isBooleanType(definition.type) && !override?.flags) {
       const long = override?.long ?? definition.flag ?? toKebabCase(fieldName);
-      const negateOption = new Option(
-        `--no-${long}`,
-        `Disable ${fieldName}`,
-      );
+      const negateOption = new Option(`--no-${long}`, `Disable ${fieldName}`);
       // Hide the negatable option from help to avoid clutter
       negateOption.hideHelp();
       options.push(negateOption);
