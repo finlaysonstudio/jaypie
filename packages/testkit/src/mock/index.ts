@@ -2,6 +2,7 @@
 import * as aws from "./aws";
 import * as core from "./core";
 import * as datadog from "./datadog";
+import * as dynamodb from "./dynamodb";
 import * as express from "./express";
 import * as kit from "./kit";
 import * as lambda from "./lambda";
@@ -15,6 +16,7 @@ import * as vocabulary from "./vocabulary";
 export * from "./aws";
 export * from "./core";
 export * from "./datadog";
+export * from "./dynamodb";
 export * from "./express";
 export * from "./kit";
 export * from "./lambda";
@@ -35,9 +37,13 @@ const mock: Record<string, any> = {
   // Datadog module
   ...datadog,
 
+  // DynamoDB module
+  ...dynamodb,
+
   // Express module
   ...express,
 
+  // Kit module
   ...kit,
 
   // Lambda module
@@ -46,9 +52,10 @@ const mock: Record<string, any> = {
   // LLM module
   ...llm,
 
+  // Logger module
   ...logger,
 
-  // Mongoose module (now empty)
+  // Mongoose module
   ...mongoose,
 
   // Textract module

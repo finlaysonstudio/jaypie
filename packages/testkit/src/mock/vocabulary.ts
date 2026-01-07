@@ -259,4 +259,3 @@ export const registerMcpTool = createMockFunction<
 
   return { name: toolName };
 });
-
