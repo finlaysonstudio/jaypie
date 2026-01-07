@@ -475,7 +475,58 @@ interface ServiceContext {
 }
 ```
 
-Services receive context as an optional second parameter and can use `sendMessage` to emit progress messages that connect to `onMessage` in `registerServiceCommand`.
+Services receive context as an optional second parameter and can use `sendMessage` to emit progress messages that connect to `onMessage` in `registerServiceCommand` or `lambdaServiceHandler`.
+
+## Lambda Integration
+
+### lambdaServiceHandler
+
+Wraps a serviceHandler for use as an AWS Lambda handler:
+
+```typescript
+import { serviceHandler } from "@jaypie/vocabulary";
+import { lambdaServiceHandler } from "@jaypie/vocabulary/lambda";
+
+const handler = serviceHandler({
+  alias: "evaluate",
+  input: { jobId: { type: String } },
+  service: async ({ jobId }, context) => {
+    context?.sendMessage?.({ message: `Starting job ${jobId}` });
+    context?.sendMessage?.({ level: "debug", message: "Processing..." });
+    return { jobId, status: "complete" };
+  },
+});
+
+export const lambdaHandler = lambdaServiceHandler({
+  handler,
+  secrets: ["ANTHROPIC_API_KEY"],
+  onMessage: (msg) => {
+    console.log(`[${msg.level || "info"}] ${msg.message}`);
+  },
+});
+```
+
+### lambdaServiceHandler Options
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `handler` | `ServiceHandlerFunction` | Required. The service handler |
+| `chaos` | `string` | Chaos testing mode |
+| `name` | `string` | Override handler name for logging (default: handler.alias) |
+| `onMessage` | `OnMessageCallback` | Receives messages from `context.sendMessage` (errors swallowed) |
+| `secrets` | `string[]` | AWS secrets to load into process.env |
+| `setup` | `LifecycleFunction[]` | Functions to run before handler |
+| `teardown` | `LifecycleFunction[]` | Functions to run after handler (always runs) |
+| `throw` | `boolean` | Re-throw errors instead of returning error response |
+| `unavailable` | `boolean` | Return 503 Unavailable immediately |
+| `validate` | `ValidatorFunction[]` | Validation functions to run before handler |
+
+Features:
+- Uses `getMessages()` from `@jaypie/aws` to extract messages from SQS/SNS events
+- Calls the service handler once for each message
+- Returns single response if one message, array of responses if multiple
+
+**Note:** Errors in `onMessage` are swallowed to ensure messaging failures never halt service execution.
 
 ## Exports
 
@@ -516,6 +567,21 @@ export { registerServiceCommand } from "./registerServiceCommand.js";
 
 // Callback types
 export type { OnCompleteCallback, OnErrorCallback, OnMessageCallback } from "./types.js";
+```
+
+### Lambda Export (`@jaypie/vocabulary/lambda`)
+
+```typescript
+export { lambdaServiceHandler } from "./lambdaServiceHandler.js";
+
+// Types
+export type {
+  LambdaContext,
+  LambdaServiceHandlerConfig,
+  LambdaServiceHandlerOptions,
+  LambdaServiceHandlerResult,
+  OnMessageCallback,
+} from "./types.js";
 ```
 
 ## Error Handling

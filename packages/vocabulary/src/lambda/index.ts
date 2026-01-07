@@ -8,4 +8,5 @@ export type {
   LambdaServiceHandlerConfig,
   LambdaServiceHandlerOptions,
   LambdaServiceHandlerResult,
+  OnMessageCallback,
 } from "./types.js";

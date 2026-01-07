@@ -377,6 +377,165 @@ describe("Lambda Adapter", () => {
       });
     });
 
+    describe("sendMessage and onMessage", () => {
+      it("passes context with sendMessage to service when onMessage is provided", async () => {
+        const messages: Array<{ level?: string; message: string }> = [];
+
+        const handler = serviceHandler({
+          alias: "test",
+          input: { name: { type: String } },
+          service: ({ name }, context) => {
+            context?.sendMessage?.({ message: `Processing ${name}` });
+            return `Hello, ${name}!`;
+          },
+        });
+
+        const lambdaHandler = lambdaServiceHandler({
+          handler,
+          onMessage: (msg) => {
+            messages.push(msg);
+          },
+        });
+
+        const result = await lambdaHandler({ name: "Alice" });
+
+        expect(result).toBe("Hello, Alice!");
+        expect(messages).toEqual([{ message: "Processing Alice" }]);
+      });
+
+      it("supports message levels", async () => {
+        const messages: Array<{ level?: string; message: string }> = [];
+
+        const handler = serviceHandler({
+          alias: "test",
+          service: (_, context) => {
+            context?.sendMessage?.({ level: "debug", message: "Debug info" });
+            context?.sendMessage?.({ level: "warn", message: "Warning!" });
+            return "done";
+          },
+        });
+
+        const lambdaHandler = lambdaServiceHandler({
+          handler,
+          onMessage: (msg) => {
+            messages.push(msg);
+          },
+        });
+
+        await lambdaHandler({});
+
+        expect(messages).toEqual([
+          { level: "debug", message: "Debug info" },
+          { level: "warn", message: "Warning!" },
+        ]);
+      });
+
+      it("service works when onMessage is not provided", async () => {
+        const handler = serviceHandler({
+          alias: "test",
+          service: (_, context) => {
+            // Safely call sendMessage even when not provided
+            context?.sendMessage?.({ message: "This goes nowhere" });
+            return "done";
+          },
+        });
+
+        const lambdaHandler = lambdaServiceHandler({ handler });
+
+        const result = await lambdaHandler({});
+
+        expect(result).toBe("done");
+      });
+
+      it("swallows errors in onMessage and continues execution", async () => {
+        const handler = serviceHandler({
+          alias: "test",
+          service: (_, context) => {
+            context?.sendMessage?.({ message: "Before error" });
+            context?.sendMessage?.({ message: "This will throw" });
+            context?.sendMessage?.({ message: "After error" });
+            return "completed";
+          },
+        });
+
+        let callCount = 0;
+        const lambdaHandler = lambdaServiceHandler({
+          handler,
+          onMessage: () => {
+            callCount++;
+            if (callCount === 2) {
+              throw new Error("onMessage error");
+            }
+          },
+        });
+
+        // Should complete without throwing
+        const result = await lambdaHandler({});
+
+        expect(result).toBe("completed");
+        expect(callCount).toBe(3); // All three messages were attempted
+      });
+
+      it("supports async onMessage callbacks", async () => {
+        const messages: string[] = [];
+
+        const handler = serviceHandler({
+          alias: "test",
+          service: async (_, context) => {
+            await context?.sendMessage?.({ message: "Step 1" });
+            await context?.sendMessage?.({ message: "Step 2" });
+            return "done";
+          },
+        });
+
+        const lambdaHandler = lambdaServiceHandler({
+          handler,
+          onMessage: async (msg) => {
+            await new Promise((resolve) => setTimeout(resolve, 5));
+            messages.push(msg.message);
+          },
+        });
+
+        const result = await lambdaHandler({});
+
+        expect(result).toBe("done");
+        expect(messages).toEqual(["Step 1", "Step 2"]);
+      });
+
+      it("sends messages for each message in batch processing", async () => {
+        const messages: string[] = [];
+
+        const handler = serviceHandler({
+          alias: "test",
+          input: { id: { type: String } },
+          service: ({ id }, context) => {
+            context?.sendMessage?.({ message: `Processing ${id}` });
+            return `result-${id}`;
+          },
+        });
+
+        const lambdaHandler = lambdaServiceHandler({
+          handler,
+          onMessage: (msg) => {
+            messages.push(msg.message);
+          },
+        });
+
+        const result = await lambdaHandler([
+          { id: "a" },
+          { id: "b" },
+          { id: "c" },
+        ]);
+
+        expect(result).toEqual(["result-a", "result-b", "result-c"]);
+        expect(messages).toEqual([
+          "Processing a",
+          "Processing b",
+          "Processing c",
+        ]);
+      });
+    });
+
     describe("Integration Example", () => {
       it("works with typical evaluation handler pattern", async () => {
         // Simulates the target use case from the issue

@@ -1,6 +1,11 @@
 // Type definitions for @jaypie/vocabulary/lambda
 
-import type { ServiceHandlerFunction } from "../types.js";
+import type { Message, ServiceHandlerFunction } from "../types.js";
+
+/**
+ * Callback for receiving messages from service during execution
+ */
+export type OnMessageCallback = (message: Message) => void | Promise<void>;
 
 // Re-export from @jaypie/lambda for convenience
 export interface LambdaContext {
@@ -20,6 +25,8 @@ export interface LambdaServiceHandlerOptions {
   chaos?: string;
   /** Override the handler name for logging (defaults to handler.alias) */
   name?: string;
+  /** Callback for receiving messages from service during execution (errors swallowed) */
+  onMessage?: OnMessageCallback;
   /** AWS secrets to load into process.env */
   secrets?: string[];
   /** Functions to run before handler */

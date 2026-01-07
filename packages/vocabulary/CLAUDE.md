@@ -300,6 +300,34 @@ Features:
 - Uses `handler.alias` as the logging handler name (overridable via `name` option)
 - Supports all `lambdaHandler` options: `chaos`, `name`, `secrets`, `setup`, `teardown`, `throw`, `unavailable`, `validate`
 
+**lambdaServiceHandler with onMessage**: Services can send messages during execution via context:
+
+```typescript
+const handler = serviceHandler({
+  alias: "evaluate",
+  input: { jobId: { type: String } },
+  service: async ({ jobId }, context) => {
+    context?.sendMessage?.({ message: `Starting job ${jobId}` });
+    context?.sendMessage?.({ level: "debug", message: "Processing..." });
+    return { jobId, status: "complete" };
+  },
+});
+
+export const lambdaHandler = lambdaServiceHandler({
+  handler,
+  onMessage: (msg) => {
+    // msg: { level?: "trace"|"debug"|"info"|"warn"|"error", message: string }
+    console.log(`[${msg.level || "info"}] ${msg.message}`);
+  },
+});
+```
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `onMessage` | `(message: Message) => void \| Promise<void>` | Receives messages from `context.sendMessage` in service (errors swallowed) |
+
+**Note:** Errors in `onMessage` are swallowed to ensure messaging failures never halt service execution.
+
 ### Types
 
 Located in `types.ts`:
@@ -360,7 +388,7 @@ export type { CommanderOptionOverride, CreateCommanderOptionsConfig, CreateComma
 
 ```typescript
 export { lambdaServiceHandler } from "./lambdaServiceHandler.js";
-export type { LambdaContext, LambdaServiceHandlerConfig, LambdaServiceHandlerOptions, LambdaServiceHandlerResult } from "./types.js";
+export type { LambdaContext, LambdaServiceHandlerConfig, LambdaServiceHandlerOptions, LambdaServiceHandlerResult, OnMessageCallback } from "./types.js";
 ```
 
 ## Usage in Other Packages

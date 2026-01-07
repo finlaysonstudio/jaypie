@@ -3,7 +3,11 @@
 import { getMessages } from "@jaypie/aws";
 import { lambdaHandler } from "@jaypie/lambda";
 
-import type { ServiceHandlerFunction } from "../types.js";
+import type {
+  Message,
+  ServiceContext,
+  ServiceHandlerFunction,
+} from "../types.js";
 import type {
   LambdaContext,
   LambdaServiceHandlerConfig,
@@ -61,6 +65,21 @@ export function lambdaServiceHandler<TResult = unknown>(
   // Use handler.alias as the name for logging (can be overridden via options.name)
   const name = opts.name ?? handler.alias;
 
+  // Create sendMessage that wraps onMessage with error swallowing
+  // Messaging failures should never halt service execution
+  const sendMessage = opts.onMessage
+    ? async (message: Message): Promise<void> => {
+        try {
+          await opts.onMessage!(message);
+        } catch {
+          // Swallow errors - messaging failures should not halt execution
+        }
+      }
+    : undefined;
+
+  // Create context for the service
+  const context: ServiceContext = { sendMessage };
+
   // Create the inner Lambda handler logic (context param required for lambdaHandler signature)
   const innerHandler = async (
     event: unknown,
@@ -73,7 +92,7 @@ export function lambdaServiceHandler<TResult = unknown>(
     // Process each message through the service handler
     const results: TResult[] = [];
     for (const message of messages) {
-      const result = await handler(message as Record<string, unknown>);
+      const result = await handler(message as Record<string, unknown>, context);
       results.push(result as TResult);
     }
 
