@@ -4,6 +4,36 @@ import { createMockFunction } from "./utils";
 import { lambdaHandler } from "./lambda";
 import { getMessages } from "./aws";
 
+// Status Type - re-export real values (no mocking needed)
+export const STATUS_VALUES = [
+  "canceled",
+  "complete",
+  "error",
+  "pending",
+  "processing",
+  "queued",
+  "sending",
+] as const;
+
+export type Status = (typeof STATUS_VALUES)[number];
+
+export const StatusType = [...STATUS_VALUES] as (
+  | "canceled"
+  | "complete"
+  | "error"
+  | "pending"
+  | "processing"
+  | "queued"
+  | "sending"
+)[];
+
+export function isStatus(value: unknown): value is Status {
+  return (
+    typeof value === "string" &&
+    STATUS_VALUES.includes(value as (typeof STATUS_VALUES)[number])
+  );
+}
+
 // Vocabulary types
 type ServiceHandlerFunction = (
   input?: Record<string, unknown> | string,

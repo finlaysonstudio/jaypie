@@ -19,6 +19,9 @@ export type {
   BaseEntityInput,
   BaseEntityUpdate,
   HistoryEntry,
+  Job,
+  MessageEntity,
+  Progress,
 } from "./base-entity.js";
 
 // Coercion
@@ -41,6 +44,10 @@ export {
   isDateType,
   isValidDate,
 } from "./coerce-date.js";
+
+// Status Type
+export { isStatus, STATUS_VALUES, StatusType } from "./status.js";
+export type { Status } from "./status.js";
 
 // Commander adapter (re-exported for convenience)
 export * as commander from "./commander/index.js";

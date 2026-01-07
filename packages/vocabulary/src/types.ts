@@ -12,8 +12,8 @@ export type MessageLevel = "debug" | "error" | "info" | "trace" | "warn";
  * Standard message structure for callbacks and notifications
  */
 export interface Message {
+  content: string;
   level?: MessageLevel;
-  message: string;
 }
 
 // Supported scalar types

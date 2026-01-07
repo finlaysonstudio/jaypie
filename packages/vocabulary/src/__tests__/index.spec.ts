@@ -22,11 +22,14 @@ import {
   isAutoField,
   isBaseEntity,
   isDateType,
+  isStatus,
   isTimestampField,
   isValidDate,
   lambda,
   pickBaseEntityFields,
   serviceHandler,
+  STATUS_VALUES,
+  StatusType,
   VOCABULARY_VERSION,
 } from "..";
 
@@ -74,6 +77,15 @@ describe("vocabulary/index", () => {
       expect(pickBaseEntityFields).toBeDefined();
       expect(isTimestampField).toBeDefined();
       expect(isAutoField).toBeDefined();
+    });
+
+    it("exports status type and utilities", () => {
+      expect(STATUS_VALUES).toBeDefined();
+      expect(StatusType).toBeDefined();
+      expect(isStatus).toBeDefined();
+      expect(Array.isArray(STATUS_VALUES)).toBe(true);
+      expect(Array.isArray(StatusType)).toBe(true);
+      expect(typeof isStatus).toBe("function");
     });
 
     it("exports commander namespace", () => {

@@ -248,10 +248,10 @@ const handler = serviceHandler({
   input: { jobId: { type: String } },
   service: async ({ jobId }, context) => {
     // Service can send progress messages via context
-    context?.sendMessage?.({ message: `Starting job ${jobId}` });
+    context?.sendMessage?.({ content: `Starting job ${jobId}` });
 
     // Run evaluation...
-    context?.sendMessage?.({ level: "debug", message: "Processing..." });
+    context?.sendMessage?.({ content: "Processing...", level: "debug" });
 
     return { jobId, status: "complete", results: 42 };
   },
@@ -270,8 +270,8 @@ registerServiceCommand({
   },
   onMessage: (msg) => {
     // Receives messages from context.sendMessage
-    // msg: { level?: "trace"|"debug"|"info"|"warn"|"error", message: string }
-    console[msg.level || "info"](msg.message);
+    // msg: { content: string, level?: "trace"|"debug"|"info"|"warn"|"error" }
+    console[msg.level || "info"](msg.content);
   },
 });
 
@@ -462,8 +462,8 @@ Standard message structure for callbacks and notifications:
 type MessageLevel = "trace" | "debug" | "info" | "warn" | "error";
 
 interface Message {
+  content: string;
   level?: MessageLevel;  // Defaults to "info" if not specified
-  message: string;
 }
 ```
 
@@ -493,8 +493,8 @@ const handler = serviceHandler({
   alias: "evaluate",
   input: { jobId: { type: String } },
   service: async ({ jobId }, context) => {
-    context?.sendMessage?.({ message: `Starting job ${jobId}` });
-    context?.sendMessage?.({ level: "debug", message: "Processing..." });
+    context?.sendMessage?.({ content: `Starting job ${jobId}` });
+    context?.sendMessage?.({ content: "Processing...", level: "debug" });
     return { jobId, status: "complete" };
   },
 });
@@ -503,7 +503,7 @@ export const lambdaHandler = lambdaServiceHandler({
   handler,
   secrets: ["ANTHROPIC_API_KEY"],
   onMessage: (msg) => {
-    console.log(`[${msg.level || "info"}] ${msg.message}`);
+    console.log(`[${msg.level || "info"}] ${msg.content}`);
   },
 });
 ```

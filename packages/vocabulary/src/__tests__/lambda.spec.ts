@@ -385,7 +385,7 @@ describe("Lambda Adapter", () => {
           alias: "test",
           input: { name: { type: String } },
           service: ({ name }, context) => {
-            context?.sendMessage?.({ message: `Processing ${name}` });
+            context?.sendMessage?.({ content: `Processing ${name}` });
             return `Hello, ${name}!`;
           },
         });
@@ -400,17 +400,17 @@ describe("Lambda Adapter", () => {
         const result = await lambdaHandler({ name: "Alice" });
 
         expect(result).toBe("Hello, Alice!");
-        expect(messages).toEqual([{ message: "Processing Alice" }]);
+        expect(messages).toEqual([{ content: "Processing Alice" }]);
       });
 
       it("supports message levels", async () => {
-        const messages: Array<{ level?: string; message: string }> = [];
+        const messages: Array<{ content: string; level?: string }> = [];
 
         const handler = serviceHandler({
           alias: "test",
           service: (_, context) => {
-            context?.sendMessage?.({ level: "debug", message: "Debug info" });
-            context?.sendMessage?.({ level: "warn", message: "Warning!" });
+            context?.sendMessage?.({ content: "Debug info", level: "debug" });
+            context?.sendMessage?.({ content: "Warning!", level: "warn" });
             return "done";
           },
         });
@@ -425,8 +425,8 @@ describe("Lambda Adapter", () => {
         await lambdaHandler({});
 
         expect(messages).toEqual([
-          { level: "debug", message: "Debug info" },
-          { level: "warn", message: "Warning!" },
+          { content: "Debug info", level: "debug" },
+          { content: "Warning!", level: "warn" },
         ]);
       });
 
@@ -435,7 +435,7 @@ describe("Lambda Adapter", () => {
           alias: "test",
           service: (_, context) => {
             // Safely call sendMessage even when not provided
-            context?.sendMessage?.({ message: "This goes nowhere" });
+            context?.sendMessage?.({ content: "This goes nowhere" });
             return "done";
           },
         });
@@ -451,9 +451,9 @@ describe("Lambda Adapter", () => {
         const handler = serviceHandler({
           alias: "test",
           service: (_, context) => {
-            context?.sendMessage?.({ message: "Before error" });
-            context?.sendMessage?.({ message: "This will throw" });
-            context?.sendMessage?.({ message: "After error" });
+            context?.sendMessage?.({ content: "Before error" });
+            context?.sendMessage?.({ content: "This will throw" });
+            context?.sendMessage?.({ content: "After error" });
             return "completed";
           },
         });
@@ -482,8 +482,8 @@ describe("Lambda Adapter", () => {
         const handler = serviceHandler({
           alias: "test",
           service: async (_, context) => {
-            await context?.sendMessage?.({ message: "Step 1" });
-            await context?.sendMessage?.({ message: "Step 2" });
+            await context?.sendMessage?.({ content: "Step 1" });
+            await context?.sendMessage?.({ content: "Step 2" });
             return "done";
           },
         });
@@ -492,7 +492,7 @@ describe("Lambda Adapter", () => {
           handler,
           onMessage: async (msg) => {
             await new Promise((resolve) => setTimeout(resolve, 5));
-            messages.push(msg.message);
+            messages.push(msg.content);
           },
         });
 
@@ -509,7 +509,7 @@ describe("Lambda Adapter", () => {
           alias: "test",
           input: { id: { type: String } },
           service: ({ id }, context) => {
-            context?.sendMessage?.({ message: `Processing ${id}` });
+            context?.sendMessage?.({ content: `Processing ${id}` });
             return `result-${id}`;
           },
         });
@@ -517,7 +517,7 @@ describe("Lambda Adapter", () => {
         const lambdaHandler = lambdaServiceHandler({
           handler,
           onMessage: (msg) => {
-            messages.push(msg.message);
+            messages.push(msg.content);
           },
         });
 

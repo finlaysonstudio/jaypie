@@ -33,9 +33,9 @@ export interface HistoryEntry {
  * Optional fields may be omitted when not applicable.
  *
  * Field Groups:
- * - Identity (required): id, name
- * - Identity (optional): label, abbreviation, alias, xid, description
- * - Schema: model, class
+ * - Identity (required): id
+ * - Identity (optional): name, label, abbreviation, alias, xid, description
+ * - Schema: model, class, type
  * - Content: content, metadata
  * - Display: emoji, icon
  * - Time: createdAt, updatedAt, archivedAt, deletedAt
@@ -48,9 +48,6 @@ export interface BaseEntity {
 
   /** UUID - unique identifier */
   id: string;
-
-  /** Full name, first reference (e.g., "December 12, 2026 Session") */
-  name: string;
 
   // -------------------------------------------------------------------------
   // Identity (optional)
@@ -68,6 +65,9 @@ export interface BaseEntity {
   /** Short name, second reference (e.g., "December 12") */
   label?: string;
 
+  /** Full name, first reference (e.g., "December 12, 2026 Session") */
+  name?: string;
+
   /** External identifier for machine lookup (e.g., file path, external UUID) */
   xid?: string;
 
@@ -76,17 +76,20 @@ export interface BaseEntity {
   // -------------------------------------------------------------------------
 
   /** Varies by model (e.g., "memory", "reflection", "session") */
-  class: string;
+  class?: string;
 
   /** Schema reference (e.g., "record", "job", "person") */
   model: string;
+
+  /** Varies by model (e.g., "assistant", "user", "system") */
+  type?: string;
 
   // -------------------------------------------------------------------------
   // Content
   // -------------------------------------------------------------------------
 
   /** The actual content */
-  content: string;
+  content?: string;
 
   /** Extensible data */
   metadata?: Record<string, unknown>;
@@ -126,6 +129,77 @@ export interface BaseEntity {
 }
 
 // =============================================================================
+// MessageEntity
+// =============================================================================
+
+/**
+ * MessageEntity - A message entity that extends BaseEntity
+ *
+ * Used for chat messages, notifications, logs, and other content-focused entities.
+ * The content field contains the actual message text.
+ */
+export interface MessageEntity extends BaseEntity {
+  /** The actual message content (inherited from BaseEntity) */
+  content: string;
+
+  /** Message type (e.g., "assistant", "user", "system") */
+  type?: string;
+}
+
+// =============================================================================
+// Progress
+// =============================================================================
+
+/**
+ * Progress - Tracks job execution progress
+ */
+export interface Progress {
+  /** Time elapsed in milliseconds */
+  elapsedTime?: number;
+
+  /** Estimated total time in milliseconds */
+  estimatedTime?: number;
+
+  /** Next percentage milestone to report (e.g., 25, 50, 75, 100) */
+  nextPercentageCheckpoint?: number;
+
+  /** Current completion percentage (0-100) */
+  percentageComplete?: number;
+}
+
+// =============================================================================
+// Job
+// =============================================================================
+
+/**
+ * Job - A job entity that extends BaseEntity
+ *
+ * Used for tracking asynchronous tasks, background processes, and batch operations.
+ */
+export interface Job extends BaseEntity {
+  /** Job class (e.g., "evaluation", "export", "import") */
+  class?: string;
+
+  /** When the job finished (success or failure) */
+  completedAt?: Date | null;
+
+  /** Messages generated during job execution */
+  messages?: MessageEntity[];
+
+  /** Job execution progress */
+  progress?: Progress;
+
+  /** When the job started processing */
+  startedAt?: Date | null;
+
+  /** Current job status */
+  status: string;
+
+  /** Job type (e.g., "batch", "realtime", "scheduled") */
+  type?: string;
+}
+
+// =============================================================================
 // Input/Update/Filter Types
 // =============================================================================
 
@@ -153,6 +227,7 @@ export interface BaseEntityFilter {
   alias?: string;
   class?: string;
   model?: string;
+  type?: string;
   xid?: string;
 }
 
@@ -181,15 +256,16 @@ export const BASE_ENTITY_FIELDS = {
   ALIAS: "alias",
   DESCRIPTION: "description",
   LABEL: "label",
+  NAME: "name",
   XID: "xid",
 
   // Identity (required)
   ID: "id",
-  NAME: "name",
 
   // Schema
   CLASS: "class",
   MODEL: "model",
+  TYPE: "type",
 
   // Time
   ARCHIVED_AT: "archivedAt",
@@ -202,12 +278,9 @@ export const BASE_ENTITY_FIELDS = {
  * Required fields for BaseEntity
  */
 export const BASE_ENTITY_REQUIRED_FIELDS = [
-  BASE_ENTITY_FIELDS.CLASS,
-  BASE_ENTITY_FIELDS.CONTENT,
   BASE_ENTITY_FIELDS.CREATED_AT,
   BASE_ENTITY_FIELDS.ID,
   BASE_ENTITY_FIELDS.MODEL,
-  BASE_ENTITY_FIELDS.NAME,
   BASE_ENTITY_FIELDS.UPDATED_AT,
 ] as const;
 
@@ -246,12 +319,9 @@ export function isBaseEntity(value: unknown): value is BaseEntity {
   const obj = value as Record<string, unknown>;
 
   return (
-    typeof obj.class === "string" &&
-    typeof obj.content === "string" &&
     obj.createdAt instanceof Date &&
     typeof obj.id === "string" &&
     typeof obj.model === "string" &&
-    typeof obj.name === "string" &&
     obj.updatedAt instanceof Date
   );
 }
@@ -277,10 +347,7 @@ export function hasBaseEntityShape(value: unknown): boolean {
  */
 export function createBaseEntityInput(
   overrides: Partial<BaseEntityInput> & {
-    class: string;
-    content: string;
     model: string;
-    name: string;
   },
 ): BaseEntityInput {
   return {

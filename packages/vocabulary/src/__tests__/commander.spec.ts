@@ -1068,8 +1068,8 @@ describe("Commander Adapter", () => {
         const handler = serviceHandler({
           alias: "test",
           service: (_input, context) => {
-            context?.sendMessage?.({ message: "Starting..." });
-            context?.sendMessage?.({ level: "debug", message: "Processing" });
+            context?.sendMessage?.({ content: "Starting..." });
+            context?.sendMessage?.({ content: "Processing", level: "debug" });
             return "done";
           },
         });
@@ -1085,8 +1085,8 @@ describe("Commander Adapter", () => {
         await program.parseAsync(["node", "test", "test"]);
 
         expect(messages).toHaveLength(2);
-        expect(messages[0]).toEqual({ message: "Starting..." });
-        expect(messages[1]).toEqual({ level: "debug", message: "Processing" });
+        expect(messages[0]).toEqual({ content: "Starting..." });
+        expect(messages[1]).toEqual({ content: "Processing", level: "debug" });
       });
 
       it("service works when onMessage is not provided", async () => {
@@ -1096,7 +1096,7 @@ describe("Commander Adapter", () => {
           service: (_input, context) => {
             contextReceived = context;
             // sendMessage should be undefined, calling it should not throw
-            context?.sendMessage?.({ message: "test" });
+            context?.sendMessage?.({ content: "test" });
             return "done";
           },
         });
@@ -1116,7 +1116,7 @@ describe("Commander Adapter", () => {
         const handler = serviceHandler({
           alias: "test",
           service: (_input, context) => {
-            context?.sendMessage?.({ message: "Before error" });
+            context?.sendMessage?.({ content: "Before error" });
             serviceCompleted = true;
             return "done";
           },
@@ -1142,7 +1142,7 @@ describe("Commander Adapter", () => {
         const handler = serviceHandler({
           alias: "test",
           service: async (_input, context) => {
-            await context?.sendMessage?.({ message: "Async message" });
+            await context?.sendMessage?.({ content: "Async message" });
             serviceCompleted = true;
             return "done";
           },
@@ -1168,8 +1168,8 @@ describe("Commander Adapter", () => {
         const handler = serviceHandler({
           alias: "test",
           service: async (_input, context) => {
-            await context?.sendMessage?.({ message: "First" });
-            await context?.sendMessage?.({ message: "Second" });
+            await context?.sendMessage?.({ content: "First" });
+            await context?.sendMessage?.({ content: "Second" });
             return "done";
           },
         });
@@ -1186,8 +1186,8 @@ describe("Commander Adapter", () => {
         await program.parseAsync(["node", "test", "test"]);
 
         expect(messages).toHaveLength(2);
-        expect(messages[0]).toEqual({ message: "First" });
-        expect(messages[1]).toEqual({ message: "Second" });
+        expect(messages[0]).toEqual({ content: "First" });
+        expect(messages[1]).toEqual({ content: "Second" });
       });
     });
   });

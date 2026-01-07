@@ -216,8 +216,8 @@ const handler = serviceHandler({
   input: { jobId: { type: String } },
   service: async ({ jobId }, context) => {
     // Service can send messages via context.sendMessage
-    context?.sendMessage?.({ message: `Starting job ${jobId}` });
-    context?.sendMessage?.({ level: "debug", message: "Processing..." });
+    context?.sendMessage?.({ content: `Starting job ${jobId}` });
+    context?.sendMessage?.({ content: "Processing...", level: "debug" });
     return { jobId, status: "complete" };
   },
 });
@@ -233,7 +233,7 @@ registerServiceCommand({
   },
   onMessage: (msg) => {
     // Receives messages from context.sendMessage
-    console[msg.level || "info"](msg.message);
+    console[msg.level || "info"](msg.content);
   },
 });
 ```
@@ -318,8 +318,8 @@ const handler = serviceHandler({
   alias: "evaluate",
   input: { jobId: { type: String } },
   service: async ({ jobId }, context) => {
-    context?.sendMessage?.({ message: `Starting job ${jobId}` });
-    context?.sendMessage?.({ level: "debug", message: "Processing..." });
+    context?.sendMessage?.({ content: `Starting job ${jobId}` });
+    context?.sendMessage?.({ content: "Processing...", level: "debug" });
     return { jobId, status: "complete" };
   },
 });
@@ -327,8 +327,8 @@ const handler = serviceHandler({
 export const lambdaHandler = lambdaServiceHandler({
   handler,
   onMessage: (msg) => {
-    // msg: { level?: "trace"|"debug"|"info"|"warn"|"error", message: string }
-    console.log(`[${msg.level || "info"}] ${msg.message}`);
+    // msg: { content: string, level?: "trace"|"debug"|"info"|"warn"|"error" }
+    console.log(`[${msg.level || "info"}] ${msg.content}`);
   },
 });
 ```
@@ -440,7 +440,7 @@ Located in `types.ts`:
 | Type | Description |
 |------|-------------|
 | `MessageLevel` | `"trace" \| "debug" \| "info" \| "warn" \| "error"` - log levels for messages |
-| `Message` | `{ level?: MessageLevel; message: string }` - standard message structure |
+| `Message` | `{ content: string; level?: MessageLevel }` - standard message structure |
 | `ServiceContext` | `{ sendMessage?: (message: Message) => void \| Promise<void> }` - context passed to services |
 | `ScalarType` | `Boolean \| Number \| String` or string equivalents |
 | `CompositeType` | `Array \| Object` or string equivalents |
@@ -455,6 +455,21 @@ Located in `types.ts`:
 | `ServiceFunction<TInput, TOutput>` | The actual service logic |
 | `ServiceHandlerConfig` | Full handler configuration |
 | `ServiceHandlerFunction` | The returned async handler |
+
+### Entity Types
+
+Located in `base-entity.ts`:
+
+| Type | Description |
+|------|-------------|
+| `BaseEntity` | Base type for all vocabulary entities with id, model (required) and optional name, class, type, content |
+| `BaseEntityInput` | Input for creating entities (omits auto-generated fields) |
+| `BaseEntityUpdate` | Partial input for updating entities |
+| `BaseEntityFilter` | Filter options for listing entities |
+| `HistoryEntry` | Reverse delta recording previous values of changed fields |
+| `MessageEntity` | Message entity extending BaseEntity with required content field |
+| `Progress` | Tracks job execution progress (elapsedTime, estimatedTime, percentageComplete, nextPercentageCheckpoint) |
+| `Job` | Job entity extending BaseEntity with status (required), startedAt, completedAt, messages, progress |
 
 ## Exports
 
