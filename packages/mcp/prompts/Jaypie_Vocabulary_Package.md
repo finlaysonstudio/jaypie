@@ -1,10 +1,10 @@
 ---
-description: Complete guide to using Jaypie Vocabulary for type coercion, service handlers, and Commander CLI integration
+description: Complete guide to using Jaypie Vocabulary for type coercion, service handlers, and adapter integrations (Commander, Lambda, LLM, MCP)
 ---
 
 # Jaypie Vocabulary Package
 
-Jaypie Vocabulary (`@jaypie/vocabulary`) provides type coercion utilities and service handler patterns for consistent input handling across Jaypie applications. It includes adapters for integrating service handlers with Commander.js CLIs.
+Jaypie Vocabulary (`@jaypie/vocabulary`) provides type coercion utilities and service handler patterns for consistent input handling across Jaypie applications. It includes adapters for integrating service handlers with Commander.js CLIs, AWS Lambda, LLM toolkits, and MCP servers.
 
 ## Installation
 
@@ -12,6 +12,8 @@ Jaypie Vocabulary (`@jaypie/vocabulary`) provides type coercion utilities and se
 npm install @jaypie/vocabulary
 # For CLI integration:
 npm install commander
+# For MCP integration:
+npm install @modelcontextprotocol/sdk
 ```
 
 ## Core Concepts
@@ -528,6 +530,106 @@ Features:
 
 **Note:** Errors in `onMessage` are swallowed to ensure messaging failures never halt service execution.
 
+## LLM Integration
+
+### createLlmTool
+
+Creates an LLM tool from a serviceHandler for use with `@jaypie/llm` Toolkit:
+
+```typescript
+import { serviceHandler } from "@jaypie/vocabulary";
+import { createLlmTool } from "@jaypie/vocabulary/llm";
+import { Toolkit } from "@jaypie/llm";
+
+const handler = serviceHandler({
+  alias: "greet",
+  description: "Greet a user by name",
+  input: {
+    userName: { type: String, description: "The user's name" },
+    loud: { type: Boolean, default: false, description: "Shout the greeting" },
+  },
+  service: ({ userName, loud }) => {
+    const greeting = `Hello, ${userName}!`;
+    return loud ? greeting.toUpperCase() : greeting;
+  },
+});
+
+const { tool } = createLlmTool({ handler });
+
+// Use with Toolkit
+const toolkit = new Toolkit([tool]);
+```
+
+### createLlmTool Options
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `handler` | `ServiceHandlerFunction` | Required. The service handler to adapt |
+| `name` | `string` | Override tool name (defaults to handler.alias) |
+| `description` | `string` | Override tool description (defaults to handler.description) |
+| `message` | `string \| function` | Custom message for logging |
+| `exclude` | `string[]` | Fields to exclude from tool parameters |
+
+### inputToJsonSchema
+
+Converts vocabulary input definitions to JSON Schema for LLM tools:
+
+```typescript
+import { inputToJsonSchema } from "@jaypie/vocabulary/llm";
+
+const schema = inputToJsonSchema(handler.input, { exclude: ["internal"] });
+// Returns JSON Schema with properties, required array, and type: "object"
+```
+
+Features:
+- Automatically converts vocabulary types to JSON Schema types
+- Handles typed arrays, validated types, and regex patterns
+- Generates `enum` for validated string/number types
+- Respects `required` and `default` settings
+
+## MCP Integration
+
+### registerMcpTool
+
+Registers a serviceHandler as an MCP (Model Context Protocol) tool:
+
+```typescript
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { serviceHandler } from "@jaypie/vocabulary";
+import { registerMcpTool } from "@jaypie/vocabulary/mcp";
+
+const handler = serviceHandler({
+  alias: "greet",
+  description: "Greet a user by name",
+  input: {
+    userName: { type: String, description: "The user's name" },
+    loud: { type: Boolean, default: false, description: "Shout the greeting" },
+  },
+  service: ({ userName, loud }) => {
+    const greeting = `Hello, ${userName}!`;
+    return loud ? greeting.toUpperCase() : greeting;
+  },
+});
+
+const server = new McpServer({ name: "my-server", version: "1.0.0" });
+registerMcpTool({ handler, server });
+```
+
+### registerMcpTool Options
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `handler` | `ServiceHandlerFunction` | Required. The service handler to adapt |
+| `server` | `McpServer` | Required. The MCP server to register with |
+| `name` | `string` | Override tool name (defaults to handler.alias) |
+| `description` | `string` | Override tool description (defaults to handler.description) |
+
+Features:
+- Uses handler.alias as tool name (overridable)
+- Uses handler.description as tool description (overridable)
+- Delegates input validation to the service handler
+- Formats responses as MCP text content
+
 ## Exports
 
 ### Main Export (`@jaypie/vocabulary`)
@@ -548,8 +650,11 @@ export {
 // Service Handler
 export { serviceHandler } from "./serviceHandler.js";
 
-// Commander namespace
+// Adapter namespaces
 export * as commander from "./commander/index.js";
+export * as lambda from "./lambda/index.js";
+export * as llm from "./llm/index.js";
+export * as mcp from "./mcp/index.js";
 
 // Types (including Message vocabulary and ServiceContext)
 export type { Message, MessageLevel, ServiceContext } from "./types.js";
@@ -584,6 +689,34 @@ export type {
 } from "./types.js";
 ```
 
+### LLM Export (`@jaypie/vocabulary/llm`)
+
+```typescript
+export { createLlmTool } from "./createLlmTool.js";
+export { inputToJsonSchema } from "./inputToJsonSchema.js";
+
+// Types
+export type {
+  CreateLlmToolConfig,
+  CreateLlmToolResult,
+  LlmTool,
+} from "./types.js";
+```
+
+### MCP Export (`@jaypie/vocabulary/mcp`)
+
+```typescript
+export { registerMcpTool } from "./registerMcpTool.js";
+
+// Types
+export type {
+  McpToolContentItem,
+  McpToolResponse,
+  RegisterMcpToolConfig,
+  RegisterMcpToolResult,
+} from "./types.js";
+```
+
 ## Error Handling
 
 Invalid coercions throw `BadRequestError` from `@jaypie/errors`:
@@ -602,4 +735,6 @@ await handler({});                              // Missing required field
 Vocabulary is designed to be consumed by:
 - **`@jaypie/lambda`** - Lambda handler input processing
 - **`@jaypie/express`** - Express route input validation
+- **`@jaypie/llm`** - LLM tool parameter coercion via the llm adapter
+- **`@jaypie/mcp`** - MCP server tool registration via the mcp adapter
 - **CLI packages** - Commander.js integration via the commander adapter

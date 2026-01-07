@@ -9,8 +9,8 @@ Jaypie standard application component vocabulary - provides type coercion and se
 | Status | Initial development (0.1.x) |
 | Type | Utility library |
 | Dependencies | `@jaypie/errors` |
-| Peer Dependencies | `@jaypie/aws` (optional), `@jaypie/lambda` (optional), `commander` (optional) |
-| Exports | Coercion functions, serviceHandler, commander adapters, lambda adapters, TypeScript types |
+| Peer Dependencies | `@jaypie/aws` (optional), `@jaypie/lambda` (optional), `@modelcontextprotocol/sdk` (optional), `commander` (optional) |
+| Exports | Coercion functions, serviceHandler, commander/lambda/llm/mcp adapters, TypeScript types |
 
 ## Internal Structure
 
@@ -21,6 +21,8 @@ src/
 │   ├── commander.spec.ts      # Commander adapter tests
 │   ├── index.spec.ts          # Export verification tests
 │   ├── lambda.spec.ts         # Lambda adapter tests
+│   ├── llm.spec.ts            # LLM adapter tests
+│   ├── mcp.spec.ts            # MCP adapter tests
 │   └── serviceHandler.spec.ts # Service handler tests
 ├── commander/
 │   ├── createCommanderOptions.ts  # Generate Commander Options from config
@@ -32,6 +34,15 @@ src/
 │   ├── index.ts                   # Lambda module exports
 │   ├── lambdaServiceHandler.ts    # Wrap serviceHandler for Lambda
 │   └── types.ts                   # Lambda adapter types
+├── llm/
+│   ├── createLlmTool.ts           # Create LLM tool from serviceHandler
+│   ├── index.ts                   # LLM module exports
+│   ├── inputToJsonSchema.ts       # Convert input definitions to JSON Schema
+│   └── types.ts                   # LLM adapter types
+├── mcp/
+│   ├── index.ts                   # MCP module exports
+│   ├── registerMcpTool.ts         # Register serviceHandler as MCP tool
+│   └── types.ts                   # MCP adapter types
 ├── coerce.ts                  # Type coercion utilities
 ├── index.ts                   # Package exports
 ├── serviceHandler.ts          # Service handler factory
@@ -328,6 +339,100 @@ export const lambdaHandler = lambdaServiceHandler({
 
 **Note:** Errors in `onMessage` are swallowed to ensure messaging failures never halt service execution.
 
+### LLM Adapter
+
+Located in `src/llm/`. Utilities for integrating service handlers with `@jaypie/llm` Toolkit.
+
+**createLlmTool**: Creates an LLM tool from a serviceHandler for use with Toolkit:
+
+```typescript
+import { serviceHandler } from "@jaypie/vocabulary";
+import { createLlmTool } from "@jaypie/vocabulary/llm";
+import { Toolkit } from "@jaypie/llm";
+
+const handler = serviceHandler({
+  alias: "greet",
+  description: "Greet a user by name",
+  input: {
+    userName: { type: String, description: "The user's name" },
+    loud: { type: Boolean, default: false, description: "Shout the greeting" },
+  },
+  service: ({ userName, loud }) => {
+    const greeting = `Hello, ${userName}!`;
+    return loud ? greeting.toUpperCase() : greeting;
+  },
+});
+
+const { tool } = createLlmTool({ handler });
+
+// Use with Toolkit
+const toolkit = new Toolkit([tool]);
+```
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `handler` | `ServiceHandlerFunction` | Required. The service handler to adapt |
+| `name` | `string` | Override tool name (defaults to handler.alias) |
+| `description` | `string` | Override tool description (defaults to handler.description) |
+| `message` | `string \| function` | Custom message for logging |
+| `exclude` | `string[]` | Fields to exclude from tool parameters |
+
+**inputToJsonSchema**: Converts vocabulary input definitions to JSON Schema for LLM tools:
+
+```typescript
+import { inputToJsonSchema } from "@jaypie/vocabulary/llm";
+
+const schema = inputToJsonSchema(handler.input, { exclude: ["internal"] });
+// Returns JSON Schema with properties, required array, and type: "object"
+```
+
+Features:
+- Automatically converts vocabulary types to JSON Schema types
+- Handles typed arrays, validated types, and regex patterns
+- Generates `enum` for validated string/number types
+- Respects `required` and `default` settings
+
+### MCP Adapter
+
+Located in `src/mcp/`. Utilities for integrating service handlers with Model Context Protocol servers.
+
+**registerMcpTool**: Registers a serviceHandler as an MCP tool:
+
+```typescript
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { serviceHandler } from "@jaypie/vocabulary";
+import { registerMcpTool } from "@jaypie/vocabulary/mcp";
+
+const handler = serviceHandler({
+  alias: "greet",
+  description: "Greet a user by name",
+  input: {
+    userName: { type: String, description: "The user's name" },
+    loud: { type: Boolean, default: false, description: "Shout the greeting" },
+  },
+  service: ({ userName, loud }) => {
+    const greeting = `Hello, ${userName}!`;
+    return loud ? greeting.toUpperCase() : greeting;
+  },
+});
+
+const server = new McpServer({ name: "my-server", version: "1.0.0" });
+registerMcpTool({ handler, server });
+```
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `handler` | `ServiceHandlerFunction` | Required. The service handler to adapt |
+| `server` | `McpServer` | Required. The MCP server to register with |
+| `name` | `string` | Override tool name (defaults to handler.alias) |
+| `description` | `string` | Override tool description (defaults to handler.description) |
+
+Features:
+- Uses handler.alias as tool name (overridable)
+- Uses handler.description as tool description (overridable)
+- Delegates input validation to the service handler
+- Formats responses as MCP text content
+
 ### Types
 
 Located in `types.ts`:
@@ -359,11 +464,11 @@ Located in `types.ts`:
 // Coercion
 export { coerce, coerceFromArray, coerceFromObject, coerceToArray, coerceToBoolean, coerceToNumber, coerceToObject, coerceToString } from "./coerce.js";
 
-// Commander adapter namespace
+// Adapter namespaces
 export * as commander from "./commander/index.js";
-
-// Lambda adapter namespace
 export * as lambda from "./lambda/index.js";
+export * as llm from "./llm/index.js";
+export * as mcp from "./mcp/index.js";
 
 // Service Handler
 export { serviceHandler } from "./serviceHandler.js";
@@ -389,6 +494,21 @@ export type { CommanderOptionOverride, CreateCommanderOptionsConfig, CreateComma
 ```typescript
 export { lambdaServiceHandler } from "./lambdaServiceHandler.js";
 export type { LambdaContext, LambdaServiceHandlerConfig, LambdaServiceHandlerOptions, LambdaServiceHandlerResult, OnMessageCallback } from "./types.js";
+```
+
+### LLM Export (`@jaypie/vocabulary/llm`)
+
+```typescript
+export { createLlmTool } from "./createLlmTool.js";
+export { inputToJsonSchema } from "./inputToJsonSchema.js";
+export type { CreateLlmToolConfig, CreateLlmToolResult, LlmTool } from "./types.js";
+```
+
+### MCP Export (`@jaypie/vocabulary/mcp`)
+
+```typescript
+export { registerMcpTool } from "./registerMcpTool.js";
+export type { McpToolContentItem, McpToolResponse, RegisterMcpToolConfig, RegisterMcpToolResult } from "./types.js";
 ```
 
 ## Usage in Other Packages
