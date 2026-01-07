@@ -45,14 +45,16 @@ describe("Commander Adapter", () => {
       expect(options[0].flags).toBe("--age <age>");
     });
 
-    it("creates Option for boolean field without value placeholder", () => {
+    it("creates Option for boolean field with negatable form", () => {
       const input: Record<string, InputFieldDefinition> = {
         verbose: { type: Boolean, description: "Enable verbose output" },
       };
       const { options } = createCommanderOptions(input);
 
-      expect(options).toHaveLength(1);
+      // Boolean fields create 2 options: --flag and --no-flag
+      expect(options).toHaveLength(2);
       expect(options[0].flags).toBe("--verbose");
+      expect(options[1].flags).toBe("--no-verbose");
     });
 
     it("creates Option for Date field with value placeholder", () => {
@@ -154,6 +156,7 @@ describe("Commander Adapter", () => {
       });
 
       expect(options[0].flags).toBe("-v, --verbose");
+      expect(options[1].flags).toBe("--no-verbose");
     });
 
     it("applies flags override completely", () => {
@@ -212,6 +215,7 @@ describe("Commander Adapter", () => {
       const { options } = createCommanderOptions(input);
 
       expect(options[0].flags).toBe("-v, --verbose");
+      expect(options[1].flags).toBe("--no-verbose");
     });
 
     it("uses both flag and letter from input definition", () => {
@@ -237,6 +241,7 @@ describe("Commander Adapter", () => {
       });
 
       expect(options[0].flags).toBe("-V, --verbose");
+      expect(options[1].flags).toBe("--no-verbose");
     });
 
     it("override long takes precedence over input flag", () => {
@@ -701,6 +706,7 @@ describe("Commander Adapter", () => {
 
       const testCommand = program.commands.find((c) => c.name() === "test");
       expect(testCommand!.options[0].flags).toBe("-v, --verbose");
+      expect(testCommand!.options[1].flags).toBe("--no-verbose");
     });
 
     it("respects flag and letter in input definitions", () => {
@@ -778,9 +784,54 @@ describe("Commander Adapter", () => {
 
       registerServiceCommand({ handler, program });
 
-      // Commander automatically handles --no-verbose for boolean flags
+      // Boolean fields create both --flag and --no-flag options
       const testCommand = program.commands.find((c) => c.name() === "test");
       expect(testCommand!.options[0].flags).toBe("--verbose");
+      expect(testCommand!.options[1].flags).toBe("--no-verbose");
+    });
+
+    it("--no-<flag> sets boolean to false", async () => {
+      let capturedInput: unknown;
+      const handler = serviceHandler({
+        alias: "test",
+        input: {
+          save: { type: Boolean, default: true, description: "Save results" },
+        },
+        service: (input) => {
+          capturedInput = input;
+          return input;
+        },
+      });
+
+      registerServiceCommand({ handler, program });
+
+      await program.parseAsync(["node", "test", "test", "--no-save"]);
+
+      expect(capturedInput).toEqual({ save: false });
+    });
+
+    it("--<flag> sets boolean to true when default is false", async () => {
+      let capturedInput: unknown;
+      const handler = serviceHandler({
+        alias: "test",
+        input: {
+          dryRun: {
+            type: Boolean,
+            default: false,
+            description: "Dry run mode",
+          },
+        },
+        service: (input) => {
+          capturedInput = input;
+          return input;
+        },
+      });
+
+      registerServiceCommand({ handler, program });
+
+      await program.parseAsync(["node", "test", "test", "--dry-run"]);
+
+      expect(capturedInput).toEqual({ dryRun: true });
     });
 
     it("works with handler that has no input", async () => {
