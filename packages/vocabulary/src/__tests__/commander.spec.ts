@@ -55,6 +55,16 @@ describe("Commander Adapter", () => {
       expect(options[0].flags).toBe("--verbose");
     });
 
+    it("creates Option for Date field with value placeholder", () => {
+      const input: Record<string, InputFieldDefinition> = {
+        startDate: { type: Date, description: "Start date" },
+      };
+      const { options } = createCommanderOptions(input);
+
+      expect(options).toHaveLength(1);
+      expect(options[0].flags).toBe("--start-date <startDate>");
+    });
+
     it("creates Option with optional value for field with default", () => {
       const input: Record<string, InputFieldDefinition> = {
         format: { type: String, default: "json", description: "Output format" },
@@ -342,6 +352,138 @@ describe("Commander Adapter", () => {
       );
 
       expect(result).toEqual({ name: "John", age: 30 });
+    });
+
+    describe("Date coercion", () => {
+      it("coerces ISO string to Date with type definition", () => {
+        const input: Record<string, InputFieldDefinition> = {
+          startDate: { type: Date },
+        };
+        const result = parseCommanderOptions(
+          { startDate: "2024-01-15T10:30:00Z" },
+          { input },
+        );
+        expect(result.startDate).toBeInstanceOf(Date);
+        expect((result.startDate as Date).toISOString()).toBe(
+          "2024-01-15T10:30:00.000Z",
+        );
+      });
+
+      it("coerces date-only string to Date", () => {
+        const input: Record<string, InputFieldDefinition> = {
+          birthDate: { type: Date },
+        };
+        const result = parseCommanderOptions(
+          { birthDate: "2000-06-15" },
+          { input },
+        );
+        expect(result.birthDate).toBeInstanceOf(Date);
+      });
+
+      it("coerces Unix timestamp number to Date", () => {
+        const input: Record<string, InputFieldDefinition> = {
+          timestamp: { type: Date },
+        };
+        const timestamp = 1705320600000; // 2024-01-15T10:30:00Z
+        const result = parseCommanderOptions({ timestamp }, { input });
+        expect(result.timestamp).toBeInstanceOf(Date);
+        expect((result.timestamp as Date).getTime()).toBe(timestamp);
+      });
+
+      it("passes through Date values unchanged", () => {
+        const input: Record<string, InputFieldDefinition> = {
+          eventDate: { type: Date },
+        };
+        const date = new Date("2024-03-20");
+        const result = parseCommanderOptions({ eventDate: date }, { input });
+        expect(result.eventDate).toBe(date);
+      });
+
+      it("returns invalid date string as-is for serviceHandler to handle", () => {
+        const input: Record<string, InputFieldDefinition> = {
+          badDate: { type: Date },
+        };
+        const result = parseCommanderOptions(
+          { badDate: "not-a-date" },
+          { input },
+        );
+        // parseCommanderOptions returns as-is, serviceHandler will throw
+        expect(result.badDate).toBe("not-a-date");
+      });
+    });
+
+    describe("Boolean coercion", () => {
+      it("coerces 'true' string to true", () => {
+        const input: Record<string, InputFieldDefinition> = {
+          enabled: { type: Boolean },
+        };
+        const result = parseCommanderOptions({ enabled: "true" }, { input });
+        expect(result.enabled).toBe(true);
+      });
+
+      it("coerces 'false' string to false", () => {
+        const input: Record<string, InputFieldDefinition> = {
+          enabled: { type: Boolean },
+        };
+        const result = parseCommanderOptions({ enabled: "false" }, { input });
+        expect(result.enabled).toBe(false);
+      });
+
+      it("coerces '1' string to true", () => {
+        const input: Record<string, InputFieldDefinition> = {
+          active: { type: Boolean },
+        };
+        const result = parseCommanderOptions({ active: "1" }, { input });
+        expect(result.active).toBe(true);
+      });
+
+      it("coerces '0' string to false", () => {
+        const input: Record<string, InputFieldDefinition> = {
+          active: { type: Boolean },
+        };
+        const result = parseCommanderOptions({ active: "0" }, { input });
+        expect(result.active).toBe(false);
+      });
+
+      it("coerces 'yes' string to true (case insensitive)", () => {
+        const input: Record<string, InputFieldDefinition> = {
+          confirm: { type: Boolean },
+        };
+        const result = parseCommanderOptions({ confirm: "YES" }, { input });
+        expect(result.confirm).toBe(true);
+      });
+
+      it("coerces 'no' string to false (case insensitive)", () => {
+        const input: Record<string, InputFieldDefinition> = {
+          confirm: { type: Boolean },
+        };
+        const result = parseCommanderOptions({ confirm: "NO" }, { input });
+        expect(result.confirm).toBe(false);
+      });
+
+      it("passes through boolean true unchanged", () => {
+        const input: Record<string, InputFieldDefinition> = {
+          flag: { type: Boolean },
+        };
+        const result = parseCommanderOptions({ flag: true }, { input });
+        expect(result.flag).toBe(true);
+      });
+
+      it("passes through boolean false unchanged", () => {
+        const input: Record<string, InputFieldDefinition> = {
+          flag: { type: Boolean },
+        };
+        const result = parseCommanderOptions({ flag: false }, { input });
+        expect(result.flag).toBe(false);
+      });
+
+      it("coerces truthy non-string values to true via Boolean()", () => {
+        const input: Record<string, InputFieldDefinition> = {
+          value: { type: Boolean },
+        };
+        const result = parseCommanderOptions({ value: 42 }, { input });
+        expect(result.value).toBe(true);
+      });
     });
   });
 
@@ -686,6 +828,35 @@ describe("Commander Adapter", () => {
       ]);
 
       expect(capturedResult).toBe("HELLO, ALICE!");
+    });
+
+    it("coerces Date type through full command flow", async () => {
+      let capturedInput: unknown;
+      const handler = serviceHandler({
+        alias: "schedule",
+        input: {
+          startDate: { type: Date, description: "Start date" },
+        },
+        service: (input) => {
+          capturedInput = input;
+          return input;
+        },
+      });
+
+      registerServiceCommand({ handler, program });
+
+      await program.parseAsync([
+        "node",
+        "test",
+        "schedule",
+        "--start-date",
+        "2024-06-15T09:00:00Z",
+      ]);
+
+      expect(capturedInput).toBeDefined();
+      const input = capturedInput as { startDate: Date };
+      expect(input.startDate).toBeInstanceOf(Date);
+      expect(input.startDate.toISOString()).toBe("2024-06-15T09:00:00.000Z");
     });
 
     describe("onComplete callback", () => {

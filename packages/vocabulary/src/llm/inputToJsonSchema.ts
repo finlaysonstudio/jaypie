@@ -1,5 +1,6 @@
 // Convert vocabulary input definitions to JSON Schema
 
+import { isDateType } from "../coerce-date.js";
 import type { CoercionType, InputFieldDefinition } from "../types.js";
 
 /**
@@ -53,6 +54,9 @@ function getJsonSchemaType(type: CoercionType): string {
   if (type === String || type === "string") return "string";
   if (type === Object || type === "object") return "object";
   if (type === Array || type === "array") return "array";
+
+  // Handle Date type (represented as string in JSON Schema)
+  if (isDateType(type)) return "string";
 
   // Handle RegExp (coerces to string)
   if (type instanceof RegExp) return "string";

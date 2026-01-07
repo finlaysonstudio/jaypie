@@ -63,6 +63,18 @@ describe("LLM Adapter", () => {
       });
     });
 
+    it("converts Date type to JSON Schema string", () => {
+      const input: Record<string, InputFieldDefinition> = {
+        startDate: { type: Date, description: "Start date" },
+      };
+      const schema = inputToJsonSchema(input);
+
+      expect(schema.properties.startDate).toEqual({
+        description: "Start date",
+        type: "string",
+      });
+    });
+
     it("converts Object type to JSON Schema object", () => {
       const input: Record<string, InputFieldDefinition> = {
         config: { type: Object, description: "Configuration" },

@@ -1,5 +1,6 @@
 // Parse Commander.js options back to handler input format
 
+import { coerceToDate, isDateType } from "../coerce-date.js";
 import type { CoercionType } from "../types.js";
 import type { ParseCommanderOptionsConfig } from "./types.js";
 
@@ -129,6 +130,19 @@ function coerceValue(value: unknown, type: CoercionType): unknown {
       }
     }
     return value;
+  }
+
+  // Date type
+  if (isDateType(type)) {
+    if (value instanceof Date) {
+      return value;
+    }
+    try {
+      return coerceToDate(value);
+    } catch {
+      // If coercion fails, return as-is and let serviceHandler handle it
+      return value;
+    }
   }
 
   // Array types - handle variadic options
