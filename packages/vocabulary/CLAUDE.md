@@ -200,6 +200,17 @@ program.parse();
 **registerServiceCommand with callbacks**: Supports lifecycle callbacks for handling results, errors, and messages:
 
 ```typescript
+const handler = serviceHandler({
+  alias: "evaluate",
+  input: { jobId: { type: String } },
+  service: async ({ jobId }, context) => {
+    // Service can send messages via context.sendMessage
+    context?.sendMessage?.({ message: `Starting job ${jobId}` });
+    context?.sendMessage?.({ level: "debug", message: "Processing..." });
+    return { jobId, status: "complete" };
+  },
+});
+
 registerServiceCommand({
   handler,
   program,
@@ -210,6 +221,7 @@ registerServiceCommand({
     console.error("Failed:", error);
   },
   onMessage: (msg) => {
+    // Receives messages from context.sendMessage
     console[msg.level || "info"](msg.message);
   },
 });
@@ -219,7 +231,7 @@ registerServiceCommand({
 |----------|------|-------------|
 | `onComplete` | `(response: unknown) => void \| Promise<void>` | Called with handler's return value on success |
 | `onError` | `(error: unknown) => void \| Promise<void>` | Called when handler throws (prevents re-throw) |
-| `onMessage` | `(message: Message) => void \| Promise<void>` | Returned in result for external progress reporting |
+| `onMessage` | `(message: Message) => void \| Promise<void>` | Receives messages from `context.sendMessage` in service (errors swallowed) |
 
 **createCommanderOptions**: Generates Commander.js `Option` objects from handler input definitions.
 
@@ -296,6 +308,7 @@ Located in `types.ts`:
 |------|-------------|
 | `MessageLevel` | `"trace" \| "debug" \| "info" \| "warn" \| "error"` - log levels for messages |
 | `Message` | `{ level?: MessageLevel; message: string }` - standard message structure |
+| `ServiceContext` | `{ sendMessage?: (message: Message) => void \| Promise<void> }` - context passed to services |
 | `ScalarType` | `Boolean \| Number \| String` or string equivalents |
 | `CompositeType` | `Array \| Object` or string equivalents |
 | `ArrayElementType` | Types usable inside typed arrays |
@@ -328,7 +341,7 @@ export * as lambda from "./lambda/index.js";
 export { serviceHandler } from "./serviceHandler.js";
 
 // Types
-export type { ArrayElementType, CoercionType, CompositeType, InputFieldDefinition, Message, MessageLevel, RegExpType, ScalarType, ServiceFunction, ServiceHandlerConfig, ServiceHandlerFunction, TypedArrayType, ValidatedNumberType, ValidatedStringType, ValidateFunction } from "./types.js";
+export type { ArrayElementType, CoercionType, CompositeType, InputFieldDefinition, Message, MessageLevel, RegExpType, ScalarType, ServiceContext, ServiceFunction, ServiceHandlerConfig, ServiceHandlerFunction, TypedArrayType, ValidatedNumberType, ValidatedStringType, ValidateFunction } from "./types.js";
 
 // Version
 export const VOCABULARY_VERSION: string;

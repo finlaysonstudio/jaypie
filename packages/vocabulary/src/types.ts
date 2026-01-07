@@ -100,9 +100,18 @@ export type ValidateFunction = (
   value: unknown,
 ) => boolean | void | Promise<boolean | void>;
 
+/**
+ * Context passed to service functions for callbacks and utilities
+ */
+export interface ServiceContext {
+  /** Send a message during service execution (connects to onMessage callback) */
+  sendMessage?: (message: Message) => void | Promise<void>;
+}
+
 // Service function signature (can be sync or async)
 export type ServiceFunction<TInput, TOutput> = (
   input: TInput,
+  context?: ServiceContext,
 ) => TOutput | Promise<TOutput>;
 
 // Service handler configuration
@@ -123,5 +132,8 @@ export interface ServiceHandlerFunction<
   TInput extends Record<string, unknown> = Record<string, unknown>,
   TOutput = unknown,
 > extends ServiceHandlerConfig<TInput, TOutput> {
-  (input?: Partial<TInput> | string): Promise<TOutput>;
+  (
+    input?: Partial<TInput> | string,
+    context?: ServiceContext,
+  ): Promise<TOutput>;
 }

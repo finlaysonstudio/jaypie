@@ -62,6 +62,7 @@ export type {
   MessageLevel,
   RegExpType,
   ScalarType,
+  ServiceContext,
   ServiceFunction,
   ServiceHandlerConfig,
   ServiceHandlerFunction,

@@ -6,6 +6,7 @@ import { coerce } from "./coerce.js";
 import type {
   CoercionType,
   InputFieldDefinition,
+  ServiceContext,
   ServiceHandlerConfig,
   ServiceHandlerFunction,
   ValidateFunction,
@@ -245,6 +246,7 @@ export function serviceHandler<
 
   const handler = async (
     rawInput?: Partial<TInput> | string,
+    context?: ServiceContext,
   ): Promise<TOutput> => {
     // Parse input (handles string JSON)
     const parsedInput = parseInput(rawInput);
@@ -252,7 +254,7 @@ export function serviceHandler<
     // If no input definitions, pass through to service or return parsed input
     if (!inputDefinitions) {
       if (service) {
-        return service(parsedInput as TInput);
+        return service(parsedInput as TInput, context);
       }
       return parsedInput as TOutput;
     }
@@ -273,7 +275,7 @@ export function serviceHandler<
 
     // Return processed input if no service, otherwise call service
     if (service) {
-      return service(processedInput as TInput);
+      return service(processedInput as TInput, context);
     }
     return processedInput as TOutput;
   };

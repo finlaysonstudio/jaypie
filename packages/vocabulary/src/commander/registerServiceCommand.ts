@@ -1,5 +1,6 @@
 // Register a serviceHandler as a Commander command
 
+import type { Message, ServiceContext } from "../types.js";
 import type {
   RegisterServiceCommandConfig,
   RegisterServiceCommandResult,
@@ -85,9 +86,24 @@ export function registerServiceCommand({
       input: handler.input,
     });
 
+    // Create sendMessage that wraps onMessage with error swallowing
+    // Messaging failures should never halt service execution
+    const sendMessage = onMessage
+      ? async (message: Message): Promise<void> => {
+          try {
+            await onMessage(message);
+          } catch {
+            // Swallow errors - messaging failures should not halt execution
+          }
+        }
+      : undefined;
+
+    // Create context for the service
+    const context: ServiceContext = { sendMessage };
+
     try {
-      // Call the handler
-      const response = await handler(input);
+      // Call the handler with context
+      const response = await handler(input, context);
 
       // Call onComplete callback if provided
       if (onComplete) {

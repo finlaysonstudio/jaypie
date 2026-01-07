@@ -234,6 +234,8 @@ program.parse();
 
 ### registerServiceCommand with Callbacks
 
+Services can send messages during execution via the `context.sendMessage` function, which connects to `onMessage`:
+
 ```typescript
 import { Command } from "commander";
 import { serviceHandler } from "@jaypie/vocabulary";
@@ -242,14 +244,19 @@ import { registerServiceCommand } from "@jaypie/vocabulary/commander";
 const handler = serviceHandler({
   alias: "evaluate",
   input: { jobId: { type: String } },
-  service: async ({ jobId }) => {
+  service: async ({ jobId }, context) => {
+    // Service can send progress messages via context
+    context?.sendMessage?.({ message: `Starting job ${jobId}` });
+
     // Run evaluation...
+    context?.sendMessage?.({ level: "debug", message: "Processing..." });
+
     return { jobId, status: "complete", results: 42 };
   },
 });
 
 const program = new Command();
-const { command, onMessage } = registerServiceCommand({
+registerServiceCommand({
   handler,
   program,
   onComplete: (response) => {
@@ -260,6 +267,7 @@ const { command, onMessage } = registerServiceCommand({
     process.exit(1);
   },
   onMessage: (msg) => {
+    // Receives messages from context.sendMessage
     // msg: { level?: "trace"|"debug"|"info"|"warn"|"error", message: string }
     console[msg.level || "info"](msg.message);
   },
@@ -267,6 +275,8 @@ const { command, onMessage } = registerServiceCommand({
 
 program.parse();
 ```
+
+**Note:** Errors in `onMessage` are swallowed to ensure messaging failures never halt service execution.
 
 ### Input Flag and Letter Properties
 
@@ -421,10 +431,11 @@ import type {
 
   // Service handler types
   InputFieldDefinition,
-  ValidateFunction,
+  ServiceContext,
   ServiceFunction,
   ServiceHandlerConfig,
   ServiceHandlerFunction,
+  ValidateFunction,
 } from "@jaypie/vocabulary";
 
 import type {
@@ -454,6 +465,18 @@ interface Message {
 }
 ```
 
+### ServiceContext Type
+
+Context passed to service functions for callbacks and utilities:
+
+```typescript
+interface ServiceContext {
+  sendMessage?: (message: Message) => void | Promise<void>;
+}
+```
+
+Services receive context as an optional second parameter and can use `sendMessage` to emit progress messages that connect to `onMessage` in `registerServiceCommand`.
+
 ## Exports
 
 ### Main Export (`@jaypie/vocabulary`)
@@ -477,8 +500,8 @@ export { serviceHandler } from "./serviceHandler.js";
 // Commander namespace
 export * as commander from "./commander/index.js";
 
-// Types (including Message vocabulary)
-export type { Message, MessageLevel } from "./types.js";
+// Types (including Message vocabulary and ServiceContext)
+export type { Message, MessageLevel, ServiceContext } from "./types.js";
 
 // Version
 export const VOCABULARY_VERSION: string;

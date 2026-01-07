@@ -839,5 +839,134 @@ describe("Commander Adapter", () => {
         expect(result.onMessage).toBeUndefined();
       });
     });
+
+    describe("sendMessage in service context", () => {
+      it("service can call sendMessage and onMessage receives the message", async () => {
+        const messages: unknown[] = [];
+        const handler = serviceHandler({
+          alias: "test",
+          service: (_input, context) => {
+            context?.sendMessage?.({ message: "Starting..." });
+            context?.sendMessage?.({ level: "debug", message: "Processing" });
+            return "done";
+          },
+        });
+
+        registerServiceCommand({
+          handler,
+          onMessage: (msg) => {
+            messages.push(msg);
+          },
+          program,
+        });
+
+        await program.parseAsync(["node", "test", "test"]);
+
+        expect(messages).toHaveLength(2);
+        expect(messages[0]).toEqual({ message: "Starting..." });
+        expect(messages[1]).toEqual({ level: "debug", message: "Processing" });
+      });
+
+      it("service works when onMessage is not provided", async () => {
+        let contextReceived: unknown;
+        const handler = serviceHandler({
+          alias: "test",
+          service: (_input, context) => {
+            contextReceived = context;
+            // sendMessage should be undefined, calling it should not throw
+            context?.sendMessage?.({ message: "test" });
+            return "done";
+          },
+        });
+
+        registerServiceCommand({ handler, program });
+
+        await program.parseAsync(["node", "test", "test"]);
+
+        expect(contextReceived).toBeDefined();
+        expect(
+          (contextReceived as { sendMessage: unknown }).sendMessage,
+        ).toBeUndefined();
+      });
+
+      it("errors in onMessage are swallowed and do not halt execution", async () => {
+        let serviceCompleted = false;
+        const handler = serviceHandler({
+          alias: "test",
+          service: (_input, context) => {
+            context?.sendMessage?.({ message: "Before error" });
+            serviceCompleted = true;
+            return "done";
+          },
+        });
+
+        registerServiceCommand({
+          handler,
+          onMessage: () => {
+            throw new Error("onMessage failed!");
+          },
+          program,
+        });
+
+        // Should not throw even though onMessage throws
+        await expect(
+          program.parseAsync(["node", "test", "test"]),
+        ).resolves.not.toThrow();
+        expect(serviceCompleted).toBe(true);
+      });
+
+      it("async onMessage errors are swallowed", async () => {
+        let serviceCompleted = false;
+        const handler = serviceHandler({
+          alias: "test",
+          service: async (_input, context) => {
+            await context?.sendMessage?.({ message: "Async message" });
+            serviceCompleted = true;
+            return "done";
+          },
+        });
+
+        registerServiceCommand({
+          handler,
+          onMessage: async () => {
+            await new Promise((resolve) => setTimeout(resolve, 5));
+            throw new Error("Async onMessage failed!");
+          },
+          program,
+        });
+
+        await expect(
+          program.parseAsync(["node", "test", "test"]),
+        ).resolves.not.toThrow();
+        expect(serviceCompleted).toBe(true);
+      });
+
+      it("async onMessage callbacks work correctly", async () => {
+        const messages: unknown[] = [];
+        const handler = serviceHandler({
+          alias: "test",
+          service: async (_input, context) => {
+            await context?.sendMessage?.({ message: "First" });
+            await context?.sendMessage?.({ message: "Second" });
+            return "done";
+          },
+        });
+
+        registerServiceCommand({
+          handler,
+          onMessage: async (msg) => {
+            await new Promise((resolve) => setTimeout(resolve, 5));
+            messages.push(msg);
+          },
+          program,
+        });
+
+        await program.parseAsync(["node", "test", "test"]);
+
+        expect(messages).toHaveLength(2);
+        expect(messages[0]).toEqual({ message: "First" });
+        expect(messages[1]).toEqual({ message: "Second" });
+      });
+    });
   });
 });
