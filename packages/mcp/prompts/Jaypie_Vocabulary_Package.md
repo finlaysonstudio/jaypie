@@ -1,19 +1,26 @@
 ---
-description: Complete guide to using Jaypie Vocabulary for type coercion, service handlers, and adapter integrations (Commander, Lambda, LLM, MCP)
+description: Core guide to Jaypie Vocabulary for type coercion, service handlers, and entity types
 ---
 
 # Jaypie Vocabulary Package
 
-Jaypie Vocabulary (`@jaypie/vocabulary`) provides type coercion utilities and service handler patterns for consistent input handling across Jaypie applications. It includes adapters for integrating service handlers with Commander.js CLIs, AWS Lambda, LLM toolkits, and MCP servers.
+Jaypie Vocabulary (`@jaypie/vocabulary`) provides type coercion utilities and service handler patterns for consistent input handling across Jaypie applications.
+
+## Related Adapter Guides
+
+Vocabulary includes adapters for integrating service handlers with various platforms. See these guides for platform-specific integration:
+
+| Guide | Import | Description |
+|-------|--------|-------------|
+| [Jaypie_Vocabulary_Commander.md](Jaypie_Vocabulary_Commander.md) | `@jaypie/vocabulary/commander` | Commander.js CLI integration with callbacks |
+| [Jaypie_Vocabulary_Lambda.md](Jaypie_Vocabulary_Lambda.md) | `@jaypie/vocabulary/lambda` | AWS Lambda handler wrapping |
+| [Jaypie_Vocabulary_LLM.md](Jaypie_Vocabulary_LLM.md) | `@jaypie/vocabulary/llm` | LLM tool creation for `@jaypie/llm` Toolkit |
+| [Jaypie_Vocabulary_MCP.md](Jaypie_Vocabulary_MCP.md) | `@jaypie/vocabulary/mcp` | MCP server tool registration |
 
 ## Installation
 
 ```bash
 npm install @jaypie/vocabulary
-# For CLI integration:
-npm install commander
-# For MCP integration:
-npm install @modelcontextprotocol/sdk
 ```
 
 ## Core Concepts
@@ -106,6 +113,46 @@ await validateUser({ age: "25", email: "bob@example.com" });
 // → { age: 25, email: "bob@example.com", role: "user" }
 ```
 
+### ServiceContext
+
+Services receive an optional second parameter with context utilities:
+
+```typescript
+interface ServiceContext {
+  onError?: (error: unknown) => void | Promise<void>;
+  onFatal?: (error: unknown) => void | Promise<void>;
+  sendMessage?: (message: Message) => void | Promise<void>;
+}
+
+const handler = serviceHandler({
+  input: { jobId: { type: String } },
+  service: async ({ jobId }, context) => {
+    context?.sendMessage?.({ content: `Starting job ${jobId}` });
+
+    // Handle recoverable errors without throwing
+    try {
+      await riskyOperation();
+    } catch (err) {
+      context?.onError?.(err);  // Reports error but continues
+    }
+
+    // Or report fatal errors explicitly
+    if (criticalFailure) {
+      context?.onFatal?.(new Error("Cannot continue"));
+    }
+
+    return { jobId, status: "complete" };
+  },
+});
+```
+
+Context callbacks connect to adapter registration:
+- `sendMessage` → `onMessage` callback
+- `onError` → `onError` callback (recoverable errors)
+- `onFatal` → `onFatal` callback (fatal errors)
+
+**Note:** Any error that escapes the service (is thrown) is treated as fatal and routes to `onFatal`.
+
 ## Type Coercion
 
 ### Supported Types
@@ -189,228 +236,70 @@ input: {
 }
 ```
 
-## Commander.js Integration
+## Entity Types
 
-### registerServiceCommand (Recommended)
-
-The simplest way to register a service handler as a Commander command:
+The vocabulary provides standard entity types for consistent data modeling:
 
 ```typescript
-import { Command } from "commander";
-import { serviceHandler } from "@jaypie/vocabulary";
-import { registerServiceCommand } from "@jaypie/vocabulary/commander";
-
-const handler = serviceHandler({
-  alias: "greet",
-  description: "Greet a user",
-  input: {
-    userName: { type: String, flag: "user", letter: "u" },
-    loud: { type: Boolean, letter: "l", default: false },
-  },
-  service: ({ loud, userName }) => {
-    const greeting = `Hello, ${userName}!`;
-    console.log(loud ? greeting.toUpperCase() : greeting);
-  },
-});
-
-const program = new Command();
-registerServiceCommand({ handler, program });
-program.parse();
-// Usage: greet --user Alice -l
-// Output: HELLO, ALICE!
+import type {
+  BaseEntity,
+  BaseEntityInput,
+  BaseEntityUpdate,
+  BaseEntityFilter,
+  HistoryEntry,
+  Job,
+  MessageEntity,
+  Progress,
+} from "@jaypie/vocabulary";
 ```
 
-### registerServiceCommand Options
+### BaseEntity (base for all entities)
 
-| Option | Type | Description |
-|--------|------|-------------|
-| `handler` | `ServiceHandlerFunction` | Required. The service handler |
-| `program` | `Command` | Required. Commander program or command |
-| `name` | `string` | Override command name (default: handler.alias) |
-| `description` | `string` | Override description (default: handler.description) |
-| `exclude` | `string[]` | Field names to exclude from options |
-| `onComplete` | `OnCompleteCallback` | Called with handler's return value on success |
-| `onError` | `OnErrorCallback` | Called when handler throws (prevents re-throw if provided) |
-| `onMessage` | `OnMessageCallback` | Returned in result for external progress reporting |
-| `overrides` | `Record<string, override>` | Per-field option overrides |
-
-### registerServiceCommand with Callbacks
-
-Services can send messages during execution via the `context.sendMessage` function, which connects to `onMessage`:
-
-```typescript
-import { Command } from "commander";
-import { serviceHandler } from "@jaypie/vocabulary";
-import { registerServiceCommand } from "@jaypie/vocabulary/commander";
-
-const handler = serviceHandler({
-  alias: "evaluate",
-  input: { jobId: { type: String } },
-  service: async ({ jobId }, context) => {
-    // Service can send progress messages via context
-    context?.sendMessage?.({ content: `Starting job ${jobId}` });
-
-    // Run evaluation...
-    context?.sendMessage?.({ content: "Processing...", level: "debug" });
-
-    return { jobId, status: "complete", results: 42 };
-  },
-});
-
-const program = new Command();
-registerServiceCommand({
-  handler,
-  program,
-  onComplete: (response) => {
-    console.log("Done:", JSON.stringify(response, null, 2));
-  },
-  onError: (error) => {
-    console.error("Failed:", error);
-    process.exit(1);
-  },
-  onMessage: (msg) => {
-    // Receives messages from context.sendMessage
-    // msg: { content: string, level?: "trace"|"debug"|"info"|"warn"|"error" }
-    console[msg.level || "info"](msg.content);
-  },
-});
-
-program.parse();
+```
+model: <varies>
+id: String (auto)
+createdAt: Date (auto)
+updatedAt: Date (auto)
+history?: [HistoryEntry] (auto)
+name?: String
+label?: String
+abbreviation?: String
+alias?: String
+xid?: String
+description?: String
+class?: String
+type?: String
+content?: String
+metadata?: Object
+emoji?: String
+icon?: String
+archivedAt?: Date
+deletedAt?: Date
 ```
 
-**Note:** Errors in `onMessage` are swallowed to ensure messaging failures never halt service execution.
+### MessageEntity (extends BaseEntity)
 
-### Input Flag and Letter Properties
-
-Define CLI flags directly in input definitions:
-
-```typescript
-input: {
-  userName: {
-    type: String,
-    flag: "user",     // Long flag: --user (instead of --user-name)
-    letter: "u",      // Short flag: -u
-    description: "User name to greet",
-  },
-  verbose: {
-    type: Boolean,
-    letter: "v",      // -v
-  },
-}
-// Generates: --user <userName>, -u and --verbose, -v
+```
+model: message
+content: String (required)
+type?: String (e.g., "assistant", "user", "system")
 ```
 
-### Manual Integration
+### Job (extends BaseEntity)
 
-For more control, use `createCommanderOptions` and `parseCommanderOptions`:
-
-```typescript
-import { Command } from "commander";
-import { serviceHandler } from "@jaypie/vocabulary";
-import {
-  createCommanderOptions,
-  parseCommanderOptions,
-} from "@jaypie/vocabulary/commander";
-
-const handler = serviceHandler({
-  input: {
-    userName: { type: String, description: "User name" },
-    maxRetries: { type: Number, default: 3 },
-    verbose: { type: Boolean },
-  },
-  service: (input) => console.log(input),
-});
-
-const program = new Command();
-
-// Create options from handler input
-const { options } = createCommanderOptions(handler.input, {
-  exclude: ["internalField"],
-  overrides: {
-    userName: { short: "u", description: "Override description" },
-  },
-});
-options.forEach((opt) => program.addOption(opt));
-
-// Wire up action
-program.action(async (opts) => {
-  const input = parseCommanderOptions(opts, { input: handler.input });
-  await handler(input);
-});
-
-program.parse();
 ```
-
-### Boolean Flag Behavior
-
-Commander.js automatically handles boolean flags:
-- `--verbose` sets to `true`
-- `--no-verbose` sets to `false` (for flags with `default: true`)
-
-## Complete CLI Example
-
-```typescript
-// src/commands/evaluate.ts
-import { Command } from "commander";
-import { serviceHandler } from "@jaypie/vocabulary";
-import { registerServiceCommand } from "@jaypie/vocabulary/commander";
-
-export const evaluateHandler = serviceHandler({
-  alias: "evaluate",
-  description: "Run an evaluation job",
-  input: {
-    jobId: {
-      type: String,
-      flag: "job",
-      letter: "j",
-      description: "Job identifier",
-    },
-    priority: {
-      type: [1, 2, 3, 4, 5],
-      default: 3,
-      letter: "p",
-      description: "Job priority (1-5)",
-    },
-    tags: {
-      type: [String],
-      letter: "t",
-      required: false,
-      description: "Tags to apply",
-    },
-    dryRun: {
-      type: Boolean,
-      letter: "d",
-      default: false,
-      description: "Run without executing",
-    },
-  },
-  service: async ({ dryRun, jobId, priority, tags }) => {
-    console.log(`Running job ${jobId} with priority ${priority}`);
-    if (tags?.length) console.log(`Tags: ${tags.join(", ")}`);
-    if (dryRun) {
-      console.log("(dry run - no changes made)");
-      return;
-    }
-    // Execute job...
-  },
-});
-
-export function evaluateCommand(program: Command): Command {
-  registerServiceCommand({ handler: evaluateHandler, program });
-  return program;
-}
-```
-
-Usage:
-```bash
-# Required job, default priority
-cli evaluate --job abc123
-
-# With all options
-cli evaluate -j abc123 -p 1 -t urgent -t critical --dry-run
-
-# Help
-cli evaluate --help
+model: job
+type?: String (e.g., "batch", "realtime", "scheduled")
+class?: String (e.g., "evaluation", "export", "import")
+status: String (required)
+startedAt?: Date
+completedAt?: Date
+messages?: [MessageEntity]
+progress?:
+    elapsedTime?: Number
+    estimatedTime?: Number
+    percentageComplete?: Number
+    nextPercentageCheckpoint?: Number
 ```
 
 ## TypeScript Types
@@ -449,19 +338,6 @@ import type {
   ServiceHandlerFunction,
   ValidateFunction,
 } from "@jaypie/vocabulary";
-
-import type {
-  // Commander adapter types
-  CommanderOptionOverride,
-  CreateCommanderOptionsConfig,
-  CreateCommanderOptionsResult,
-  OnCompleteCallback,
-  OnErrorCallback,
-  OnMessageCallback,
-  ParseCommanderOptionsConfig,
-  RegisterServiceCommandConfig,
-  RegisterServiceCommandResult,
-} from "@jaypie/vocabulary/commander";
 ```
 
 ### Message Type
@@ -476,235 +352,6 @@ interface Message {
   level?: MessageLevel;  // Defaults to "info" if not specified
 }
 ```
-
-### ServiceContext Type
-
-Context passed to service functions for callbacks and utilities:
-
-```typescript
-interface ServiceContext {
-  sendMessage?: (message: Message) => void | Promise<void>;
-}
-```
-
-Services receive context as an optional second parameter and can use `sendMessage` to emit progress messages that connect to `onMessage` in `registerServiceCommand` or `lambdaServiceHandler`.
-
-### Entity Types
-
-The vocabulary provides standard entity types for consistent data modeling:
-
-```typescript
-import type {
-  BaseEntity,
-  BaseEntityInput,
-  BaseEntityUpdate,
-  BaseEntityFilter,
-  HistoryEntry,
-  Job,
-  MessageEntity,
-  Progress,
-} from "@jaypie/vocabulary";
-```
-
-#### BaseEntity (base for all entities)
-
-```
-model: <varies>
-id: String (auto)
-createdAt: Date (auto)
-updatedAt: Date (auto)
-history?: [HistoryEntry] (auto)
-name?: String
-label?: String
-abbreviation?: String
-alias?: String
-xid?: String
-description?: String
-class?: String
-type?: String
-content?: String
-metadata?: Object
-emoji?: String
-icon?: String
-archivedAt?: Date
-deletedAt?: Date
-```
-
-#### MessageEntity (extends BaseEntity)
-
-```
-model: message
-content: String (required)
-type?: String (e.g., "assistant", "user", "system")
-```
-
-#### Job (extends BaseEntity)
-
-```
-model: job
-type?: String (e.g., "batch", "realtime", "scheduled")
-class?: String (e.g., "evaluation", "export", "import")
-status: String (required)
-startedAt?: Date
-completedAt?: Date
-messages?: [MessageEntity]
-progress?:
-    elapsedTime?: Number
-    estimatedTime?: Number
-    percentageComplete?: Number
-    nextPercentageCheckpoint?: Number
-```
-
-## Lambda Integration
-
-### lambdaServiceHandler
-
-Wraps a serviceHandler for use as an AWS Lambda handler:
-
-```typescript
-import { serviceHandler } from "@jaypie/vocabulary";
-import { lambdaServiceHandler } from "@jaypie/vocabulary/lambda";
-
-const handler = serviceHandler({
-  alias: "evaluate",
-  input: { jobId: { type: String } },
-  service: async ({ jobId }, context) => {
-    context?.sendMessage?.({ content: `Starting job ${jobId}` });
-    context?.sendMessage?.({ content: "Processing...", level: "debug" });
-    return { jobId, status: "complete" };
-  },
-});
-
-export const lambdaHandler = lambdaServiceHandler({
-  handler,
-  secrets: ["ANTHROPIC_API_KEY"],
-  onMessage: (msg) => {
-    console.log(`[${msg.level || "info"}] ${msg.content}`);
-  },
-});
-```
-
-### lambdaServiceHandler Options
-
-| Option | Type | Description |
-|--------|------|-------------|
-| `handler` | `ServiceHandlerFunction` | Required. The service handler |
-| `chaos` | `string` | Chaos testing mode |
-| `name` | `string` | Override handler name for logging (default: handler.alias) |
-| `onMessage` | `OnMessageCallback` | Receives messages from `context.sendMessage` (errors swallowed) |
-| `secrets` | `string[]` | AWS secrets to load into process.env |
-| `setup` | `LifecycleFunction[]` | Functions to run before handler |
-| `teardown` | `LifecycleFunction[]` | Functions to run after handler (always runs) |
-| `throw` | `boolean` | Re-throw errors instead of returning error response |
-| `unavailable` | `boolean` | Return 503 Unavailable immediately |
-| `validate` | `ValidatorFunction[]` | Validation functions to run before handler |
-
-Features:
-- Uses `getMessages()` from `@jaypie/aws` to extract messages from SQS/SNS events
-- Calls the service handler once for each message
-- Returns single response if one message, array of responses if multiple
-
-**Note:** Errors in `onMessage` are swallowed to ensure messaging failures never halt service execution.
-
-## LLM Integration
-
-### createLlmTool
-
-Creates an LLM tool from a serviceHandler for use with `@jaypie/llm` Toolkit:
-
-```typescript
-import { serviceHandler } from "@jaypie/vocabulary";
-import { createLlmTool } from "@jaypie/vocabulary/llm";
-import { Toolkit } from "@jaypie/llm";
-
-const handler = serviceHandler({
-  alias: "greet",
-  description: "Greet a user by name",
-  input: {
-    userName: { type: String, description: "The user's name" },
-    loud: { type: Boolean, default: false, description: "Shout the greeting" },
-  },
-  service: ({ userName, loud }) => {
-    const greeting = `Hello, ${userName}!`;
-    return loud ? greeting.toUpperCase() : greeting;
-  },
-});
-
-const { tool } = createLlmTool({ handler });
-
-// Use with Toolkit
-const toolkit = new Toolkit([tool]);
-```
-
-### createLlmTool Options
-
-| Option | Type | Description |
-|--------|------|-------------|
-| `handler` | `ServiceHandlerFunction` | Required. The service handler to adapt |
-| `name` | `string` | Override tool name (defaults to handler.alias) |
-| `description` | `string` | Override tool description (defaults to handler.description) |
-| `message` | `string \| function` | Custom message for logging |
-| `exclude` | `string[]` | Fields to exclude from tool parameters |
-
-### inputToJsonSchema
-
-Converts vocabulary input definitions to JSON Schema for LLM tools:
-
-```typescript
-import { inputToJsonSchema } from "@jaypie/vocabulary/llm";
-
-const schema = inputToJsonSchema(handler.input, { exclude: ["internal"] });
-// Returns JSON Schema with properties, required array, and type: "object"
-```
-
-Features:
-- Automatically converts vocabulary types to JSON Schema types
-- Handles typed arrays, validated types, and regex patterns
-- Generates `enum` for validated string/number types
-- Respects `required` and `default` settings
-
-## MCP Integration
-
-### registerMcpTool
-
-Registers a serviceHandler as an MCP (Model Context Protocol) tool:
-
-```typescript
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { serviceHandler } from "@jaypie/vocabulary";
-import { registerMcpTool } from "@jaypie/vocabulary/mcp";
-
-const handler = serviceHandler({
-  alias: "greet",
-  description: "Greet a user by name",
-  input: {
-    userName: { type: String, description: "The user's name" },
-    loud: { type: Boolean, default: false, description: "Shout the greeting" },
-  },
-  service: ({ userName, loud }) => {
-    const greeting = `Hello, ${userName}!`;
-    return loud ? greeting.toUpperCase() : greeting;
-  },
-});
-
-const server = new McpServer({ name: "my-server", version: "1.0.0" });
-registerMcpTool({ handler, server });
-```
-
-### registerMcpTool Options
-
-| Option | Type | Description |
-|--------|------|-------------|
-| `handler` | `ServiceHandlerFunction` | Required. The service handler to adapt |
-| `server` | `McpServer` | Required. The MCP server to register with |
-| `name` | `string` | Override tool name (defaults to handler.alias) |
-| `description` | `string` | Override tool description (defaults to handler.description) |
-
-Features:
-- Uses handler.alias as tool name (overridable)
-- Uses handler.description as tool description (overridable)
-- Delegates input validation to the service handler
-- Formats responses as MCP text content
 
 ## Exports
 
@@ -737,60 +384,6 @@ export type { Message, MessageLevel, ServiceContext } from "./types.js";
 
 // Version
 export const VOCABULARY_VERSION: string;
-```
-
-### Commander Export (`@jaypie/vocabulary/commander`)
-
-```typescript
-export { createCommanderOptions } from "./createCommanderOptions.js";
-export { parseCommanderOptions } from "./parseCommanderOptions.js";
-export { registerServiceCommand } from "./registerServiceCommand.js";
-
-// Callback types
-export type { OnCompleteCallback, OnErrorCallback, OnMessageCallback } from "./types.js";
-```
-
-### Lambda Export (`@jaypie/vocabulary/lambda`)
-
-```typescript
-export { lambdaServiceHandler } from "./lambdaServiceHandler.js";
-
-// Types
-export type {
-  LambdaContext,
-  LambdaServiceHandlerConfig,
-  LambdaServiceHandlerOptions,
-  LambdaServiceHandlerResult,
-  OnMessageCallback,
-} from "./types.js";
-```
-
-### LLM Export (`@jaypie/vocabulary/llm`)
-
-```typescript
-export { createLlmTool } from "./createLlmTool.js";
-export { inputToJsonSchema } from "./inputToJsonSchema.js";
-
-// Types
-export type {
-  CreateLlmToolConfig,
-  CreateLlmToolResult,
-  LlmTool,
-} from "./types.js";
-```
-
-### MCP Export (`@jaypie/vocabulary/mcp`)
-
-```typescript
-export { registerMcpTool } from "./registerMcpTool.js";
-
-// Types
-export type {
-  McpToolContentItem,
-  McpToolResponse,
-  RegisterMcpToolConfig,
-  RegisterMcpToolResult,
-} from "./types.js";
 ```
 
 ## Error Handling
