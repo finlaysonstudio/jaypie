@@ -2,9 +2,16 @@
 
 import type { Message, ServiceHandlerFunction } from "../types.js";
 
-/**
- * Callback for receiving messages from service during execution
- */
+/** Callback called when handler completes successfully */
+export type OnCompleteCallback = (response: unknown) => void | Promise<void>;
+
+/** Callback called for recoverable errors (via context.onError) */
+export type OnErrorCallback = (error: unknown) => void | Promise<void>;
+
+/** Callback called for fatal errors (thrown or via context.onFatal) */
+export type OnFatalCallback = (error: unknown) => void | Promise<void>;
+
+/** Callback for receiving messages from service during execution */
 export type OnMessageCallback = (message: Message) => void | Promise<void>;
 
 // Re-export from @jaypie/lambda for convenience
@@ -18,14 +25,19 @@ type LifecycleFunction = (...args: unknown[]) => void | Promise<void>;
 
 /**
  * Options for lambdaServiceHandler
- * Same as LambdaHandlerOptions but excludes 'name' since we use handler.alias
  */
 export interface LambdaServiceHandlerOptions {
   /** Chaos testing mode */
   chaos?: string;
   /** Override the handler name for logging (defaults to handler.alias) */
   name?: string;
-  /** Callback for receiving messages from service during execution (errors swallowed) */
+  /** Callback called when handler completes successfully */
+  onComplete?: OnCompleteCallback;
+  /** Callback for recoverable errors (via context.onError) */
+  onError?: OnErrorCallback;
+  /** Callback for fatal errors (thrown or via context.onFatal) */
+  onFatal?: OnFatalCallback;
+  /** Callback for receiving messages from service during execution */
   onMessage?: OnMessageCallback;
   /** AWS secrets to load into process.env */
   secrets?: string[];

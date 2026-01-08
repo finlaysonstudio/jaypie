@@ -1,5 +1,6 @@
 // Register a service handler as an MCP tool
 
+import type { Message, ServiceContext } from "../types.js";
 import type { RegisterMcpToolConfig, RegisterMcpToolResult } from "./types.js";
 
 /**
@@ -57,7 +58,16 @@ function formatResult(value: unknown): string {
 export function registerMcpTool(
   config: RegisterMcpToolConfig,
 ): RegisterMcpToolResult {
-  const { description, handler, name, server } = config;
+  const {
+    description,
+    handler,
+    name,
+    onComplete,
+    onError,
+    onFatal,
+    onMessage,
+    server,
+  } = config;
 
   // Determine tool name (priority: name > handler.alias > "tool")
   const toolName = name ?? handler.alias ?? "tool";
@@ -65,19 +75,76 @@ export function registerMcpTool(
   // Determine tool description (priority: description > handler.description)
   const toolDescription = description ?? handler.description ?? "";
 
+  // Create context callbacks that wrap with error swallowing
+  const sendMessage = onMessage
+    ? async (msg: Message): Promise<void> => {
+        try {
+          await onMessage(msg);
+        } catch {
+          // Swallow errors - callback failures should not halt execution
+        }
+      }
+    : undefined;
+
+  const contextOnError = onError
+    ? async (error: unknown): Promise<void> => {
+        try {
+          await onError(error);
+        } catch {
+          // Swallow errors - callback failures should not halt execution
+        }
+      }
+    : undefined;
+
+  const contextOnFatal = onFatal
+    ? async (error: unknown): Promise<void> => {
+        try {
+          await onFatal(error);
+        } catch {
+          // Swallow errors - callback failures should not halt execution
+        }
+      }
+    : undefined;
+
+  // Create context for the service
+  const context: ServiceContext = {
+    onError: contextOnError,
+    onFatal: contextOnFatal,
+    sendMessage,
+  };
+
   // Register the tool with the MCP server
   // Use empty schema - service handler validates inputs
   server.tool(toolName, toolDescription, {}, async (args) => {
-    const result = await handler(args as Record<string, unknown>);
+    try {
+      const result = await handler(args as Record<string, unknown>, context);
 
-    return {
-      content: [
-        {
-          text: formatResult(result),
-          type: "text" as const,
-        },
-      ],
-    };
+      // Call onComplete if provided
+      if (onComplete) {
+        try {
+          await onComplete(result);
+        } catch {
+          // Swallow errors - callback failures should not halt execution
+        }
+      }
+
+      return {
+        content: [
+          {
+            text: formatResult(result),
+            type: "text" as const,
+          },
+        ],
+      };
+    } catch (error) {
+      // Any thrown error is fatal
+      if (onFatal) {
+        await onFatal(error);
+      } else if (onError) {
+        await onError(error);
+      }
+      throw error;
+    }
   });
 
   return { name: toolName };

@@ -6,4 +6,8 @@ export type {
   CreateLlmToolConfig,
   CreateLlmToolResult,
   LlmTool,
+  OnCompleteCallback,
+  OnErrorCallback,
+  OnFatalCallback,
+  OnMessageCallback,
 } from "./types.js";

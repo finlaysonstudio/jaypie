@@ -1,5 +1,6 @@
 // Create an LLM tool from a service handler
 
+import type { Message, ServiceContext } from "../types.js";
 import { inputToJsonSchema } from "./inputToJsonSchema.js";
 import type {
   CreateLlmToolConfig,
@@ -48,7 +49,17 @@ import type {
 export function createLlmTool(
   config: CreateLlmToolConfig,
 ): CreateLlmToolResult {
-  const { description, exclude, handler, message, name } = config;
+  const {
+    description,
+    exclude,
+    handler,
+    message,
+    name,
+    onComplete,
+    onError,
+    onFatal,
+    onMessage,
+  } = config;
 
   // Determine tool name (priority: name > handler.alias > "tool")
   const toolName = name ?? handler.alias ?? "tool";
@@ -59,9 +70,68 @@ export function createLlmTool(
   // Convert input definitions to JSON Schema
   const parameters = inputToJsonSchema(handler.input, { exclude });
 
+  // Create context callbacks that wrap with error swallowing
+  const sendMessage = onMessage
+    ? async (msg: Message): Promise<void> => {
+        try {
+          await onMessage(msg);
+        } catch {
+          // Swallow errors - callback failures should not halt execution
+        }
+      }
+    : undefined;
+
+  const contextOnError = onError
+    ? async (error: unknown): Promise<void> => {
+        try {
+          await onError(error);
+        } catch {
+          // Swallow errors - callback failures should not halt execution
+        }
+      }
+    : undefined;
+
+  const contextOnFatal = onFatal
+    ? async (error: unknown): Promise<void> => {
+        try {
+          await onFatal(error);
+        } catch {
+          // Swallow errors - callback failures should not halt execution
+        }
+      }
+    : undefined;
+
+  // Create context for the service
+  const context: ServiceContext = {
+    onError: contextOnError,
+    onFatal: contextOnFatal,
+    sendMessage,
+  };
+
   // Create the call function that invokes the handler
   const call = async (args?: Record<string, unknown>): Promise<unknown> => {
-    return handler(args);
+    try {
+      const result = await handler(args, context);
+
+      // Call onComplete if provided
+      if (onComplete) {
+        try {
+          await onComplete(result);
+        } catch {
+          // Swallow errors - callback failures should not halt execution
+        }
+      }
+
+      return result;
+    } catch (error) {
+      // Any thrown error is fatal
+      if (onFatal) {
+        await onFatal(error);
+      } else if (onError) {
+        await onError(error);
+      }
+      throw error;
+    }
   };
 
   // Build the tool

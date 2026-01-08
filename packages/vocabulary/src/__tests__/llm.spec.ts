@@ -474,5 +474,214 @@ describe("LLM Adapter", () => {
       const result = await tool.call({ a: 5, b: 3 });
       expect(result).toBe(8);
     });
+
+    describe("sendMessage and onMessage", () => {
+      it("passes context with sendMessage to service when onMessage is provided", async () => {
+        const messages: Array<{ content: string; level?: string }> = [];
+
+        const handler = serviceHandler({
+          alias: "test",
+          input: { name: { type: String } },
+          service: ({ name }, context) => {
+            context?.sendMessage?.({ content: `Processing ${name}` });
+            return `Hello, ${name}!`;
+          },
+        });
+
+        const { tool } = createLlmTool({
+          handler,
+          onMessage: (msg) => {
+            messages.push(msg);
+          },
+        });
+
+        const result = await tool.call({ name: "Alice" });
+
+        expect(result).toBe("Hello, Alice!");
+        expect(messages).toEqual([{ content: "Processing Alice" }]);
+      });
+
+      it("swallows errors in onMessage callback", async () => {
+        const handler = serviceHandler({
+          alias: "test",
+          service: (_, context) => {
+            context?.sendMessage?.({ content: "Message" });
+            return "completed";
+          },
+        });
+
+        let callCount = 0;
+        const { tool } = createLlmTool({
+          handler,
+          onMessage: () => {
+            callCount++;
+            throw new Error("onMessage error");
+          },
+        });
+
+        const result = await tool.call();
+
+        expect(result).toBe("completed");
+        expect(callCount).toBe(1);
+      });
+    });
+
+    describe("onComplete callback", () => {
+      it("calls onComplete with result on success", async () => {
+        let completedValue: unknown;
+
+        const handler = serviceHandler({
+          alias: "test",
+          input: { value: { type: Number } },
+          service: ({ value }) => value * 2,
+        });
+
+        const { tool } = createLlmTool({
+          handler,
+          onComplete: (result) => {
+            completedValue = result;
+          },
+        });
+
+        await tool.call({ value: 21 });
+
+        expect(completedValue).toBe(42);
+      });
+
+      it("swallows errors in onComplete callback", async () => {
+        const handler = serviceHandler({
+          alias: "test",
+          service: () => "result",
+        });
+
+        const { tool } = createLlmTool({
+          handler,
+          onComplete: () => {
+            throw new Error("onComplete error");
+          },
+        });
+
+        const result = await tool.call();
+
+        expect(result).toBe("result");
+      });
+    });
+
+    describe("onError and onFatal callbacks", () => {
+      it("calls onFatal when handler throws", async () => {
+        let fatalError: unknown;
+
+        const handler = serviceHandler({
+          alias: "test",
+          service: () => {
+            throw new Error("Service error");
+          },
+        });
+
+        const { tool } = createLlmTool({
+          handler,
+          onFatal: (error) => {
+            fatalError = error;
+          },
+        });
+
+        await expect(tool.call()).rejects.toThrow("Service error");
+        expect(fatalError).toBeInstanceOf(Error);
+        expect((fatalError as Error).message).toBe("Service error");
+      });
+
+      it("falls back to onError when onFatal is not provided", async () => {
+        let errorValue: unknown;
+
+        const handler = serviceHandler({
+          alias: "test",
+          service: () => {
+            throw new Error("Service error");
+          },
+        });
+
+        const { tool } = createLlmTool({
+          handler,
+          onError: (error) => {
+            errorValue = error;
+          },
+        });
+
+        await expect(tool.call()).rejects.toThrow("Service error");
+        expect(errorValue).toBeInstanceOf(Error);
+        expect((errorValue as Error).message).toBe("Service error");
+      });
+
+      it("passes context.onError to service for recoverable errors", async () => {
+        let recoveredError: unknown;
+
+        const handler = serviceHandler({
+          alias: "test",
+          service: (_, context) => {
+            context?.onError?.(new Error("Recoverable error"));
+            return "continued";
+          },
+        });
+
+        const { tool } = createLlmTool({
+          handler,
+          onError: (error) => {
+            recoveredError = error;
+          },
+        });
+
+        const result = await tool.call();
+
+        expect(result).toBe("continued");
+        expect(recoveredError).toBeInstanceOf(Error);
+        expect((recoveredError as Error).message).toBe("Recoverable error");
+      });
+
+      it("passes context.onFatal to service for explicit fatal errors", async () => {
+        let fatalError: unknown;
+
+        const handler = serviceHandler({
+          alias: "test",
+          service: (_, context) => {
+            context?.onFatal?.(new Error("Fatal error"));
+            return "continued";
+          },
+        });
+
+        const { tool } = createLlmTool({
+          handler,
+          onFatal: (error) => {
+            fatalError = error;
+          },
+        });
+
+        const result = await tool.call();
+
+        expect(result).toBe("continued");
+        expect(fatalError).toBeInstanceOf(Error);
+        expect((fatalError as Error).message).toBe("Fatal error");
+      });
+
+      it("swallows errors in context.onError callback", async () => {
+        const handler = serviceHandler({
+          alias: "test",
+          service: (_, context) => {
+            context?.onError?.(new Error("Test error"));
+            return "completed";
+          },
+        });
+
+        const { tool } = createLlmTool({
+          handler,
+          onError: () => {
+            throw new Error("Callback error");
+          },
+        });
+
+        const result = await tool.call();
+
+        expect(result).toBe("completed");
+      });
+    });
   });
 });

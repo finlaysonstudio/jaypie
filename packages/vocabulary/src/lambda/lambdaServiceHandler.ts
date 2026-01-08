@@ -65,20 +65,44 @@ export function lambdaServiceHandler<TResult = unknown>(
   // Use handler.alias as the name for logging (can be overridden via options.name)
   const name = opts.name ?? handler.alias;
 
-  // Create sendMessage that wraps onMessage with error swallowing
-  // Messaging failures should never halt service execution
+  // Create context callbacks that wrap the registration callbacks with error swallowing
+  // Callback failures should never halt service execution
   const sendMessage = opts.onMessage
     ? async (message: Message): Promise<void> => {
         try {
           await opts.onMessage!(message);
         } catch {
-          // Swallow errors - messaging failures should not halt execution
+          // Swallow errors - callback failures should not halt execution
+        }
+      }
+    : undefined;
+
+  const contextOnError = opts.onError
+    ? async (error: unknown): Promise<void> => {
+        try {
+          await opts.onError!(error);
+        } catch {
+          // Swallow errors - callback failures should not halt execution
+        }
+      }
+    : undefined;
+
+  const contextOnFatal = opts.onFatal
+    ? async (error: unknown): Promise<void> => {
+        try {
+          await opts.onFatal!(error);
+        } catch {
+          // Swallow errors - callback failures should not halt execution
         }
       }
     : undefined;
 
   // Create context for the service
-  const context: ServiceContext = { sendMessage };
+  const context: ServiceContext = {
+    onError: contextOnError,
+    onFatal: contextOnFatal,
+    sendMessage,
+  };
 
   // Create the inner Lambda handler logic (context param required for lambdaHandler signature)
   const innerHandler = async (
@@ -92,15 +116,35 @@ export function lambdaServiceHandler<TResult = unknown>(
     // Process each message through the service handler
     const results: TResult[] = [];
     for (const message of messages) {
-      const result = await handler(message as Record<string, unknown>, context);
-      results.push(result as TResult);
+      try {
+        const result = await handler(
+          message as Record<string, unknown>,
+          context,
+        );
+        results.push(result as TResult);
+      } catch (error) {
+        // Any thrown error is fatal - call onFatal or onError as fallback
+        if (opts.onFatal) {
+          await opts.onFatal(error);
+        } else if (opts.onError) {
+          await opts.onError(error);
+        }
+        // Re-throw to let lambdaHandler handle it
+        throw error;
+      }
     }
 
-    // Return single result if only one message, otherwise return array
-    if (results.length === 1) {
-      return results[0];
+    // Call onComplete if provided
+    const response = results.length === 1 ? results[0] : results;
+    if (opts.onComplete) {
+      try {
+        await opts.onComplete(response);
+      } catch {
+        // Swallow errors - callback failures should not halt execution
+      }
     }
-    return results;
+
+    return response;
   };
 
   // Wrap with lambdaHandler for lifecycle management
