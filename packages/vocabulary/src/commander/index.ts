@@ -11,6 +11,7 @@ export type {
   CreateCommanderOptionsResult,
   OnCompleteCallback,
   OnErrorCallback,
+  OnFatalCallback,
   OnMessageCallback,
   ParseCommanderOptionsConfig,
   RegisterServiceCommandConfig,

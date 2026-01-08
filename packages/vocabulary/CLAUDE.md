@@ -221,9 +221,20 @@ const handler = serviceHandler({
   alias: "evaluate",
   input: { jobId: { type: String } },
   service: async ({ jobId }, context) => {
-    // Service can send messages via context.sendMessage
     context?.sendMessage?.({ content: `Starting job ${jobId}` });
-    context?.sendMessage?.({ content: "Processing...", level: "debug" });
+
+    // Handle recoverable errors without throwing
+    try {
+      await riskyOperation();
+    } catch (err) {
+      context?.onError?.(err); // Reports error but continues
+    }
+
+    // For fatal errors, either throw or call context.onFatal()
+    if (criticalFailure) {
+      context?.onFatal?.(new Error("Cannot continue"));
+    }
+
     return { jobId, status: "complete" };
   },
 });
@@ -235,10 +246,15 @@ registerServiceCommand({
     console.log("Done:", JSON.stringify(response, null, 2));
   },
   onError: (error) => {
-    console.error("Failed:", error);
+    // Recoverable errors reported via context.onError()
+    console.error("Warning:", error);
+  },
+  onFatal: (error) => {
+    // Fatal errors (thrown or via context.onFatal())
+    console.error("Fatal:", error);
+    process.exit(1);
   },
   onMessage: (msg) => {
-    // Receives messages from context.sendMessage
     console[msg.level || "info"](msg.content);
   },
 });
@@ -247,8 +263,11 @@ registerServiceCommand({
 | Callback | Type | Description |
 |----------|------|-------------|
 | `onComplete` | `(response: unknown) => void \| Promise<void>` | Called with handler's return value on success |
-| `onError` | `(error: unknown) => void \| Promise<void>` | Called when handler throws (prevents re-throw) |
-| `onMessage` | `(message: Message) => void \| Promise<void>` | Receives messages from `context.sendMessage` in service (errors swallowed) |
+| `onError` | `(error: unknown) => void \| Promise<void>` | Receives errors reported via `context.onError()` in service |
+| `onFatal` | `(error: unknown) => void \| Promise<void>` | Receives fatal errors (thrown or via `context.onFatal()`) |
+| `onMessage` | `(message: Message) => void \| Promise<void>` | Receives messages from `context.sendMessage` in service |
+
+**Error handling**: Services receive `context.onError()` and `context.onFatal()` callbacks to report errors without throwing. Any error that escapes the service (is thrown) is treated as fatal and routes to `onFatal`. If `onFatal` is not provided, thrown errors fall back to `onError`. If neither callback is provided, errors are re-thrown.
 
 **createCommanderOptions**: Generates Commander.js `Option` objects from handler input definitions.
 
@@ -447,7 +466,7 @@ Located in `types.ts`:
 |------|-------------|
 | `MessageLevel` | `"trace" \| "debug" \| "info" \| "warn" \| "error"` - log levels for messages |
 | `Message` | `{ content: string; level?: MessageLevel }` - standard message structure |
-| `ServiceContext` | `{ sendMessage?: (message: Message) => void \| Promise<void> }` - context passed to services |
+| `ServiceContext` | `{ onError?, onFatal?, sendMessage? }` - context passed to services with error/message callbacks |
 | `ScalarType` | `Boolean \| Number \| String` or string equivalents |
 | `CompositeType` | `Array \| Object` or string equivalents |
 | `ArrayElementType` | Types usable inside typed arrays |
@@ -555,7 +574,7 @@ export const VOCABULARY_VERSION: string;
 export { createCommanderOptions } from "./createCommanderOptions.js";
 export { parseCommanderOptions } from "./parseCommanderOptions.js";
 export { registerServiceCommand } from "./registerServiceCommand.js";
-export type { CommanderOptionOverride, CreateCommanderOptionsConfig, CreateCommanderOptionsResult, OnCompleteCallback, OnErrorCallback, OnMessageCallback, ParseCommanderOptionsConfig, RegisterServiceCommandConfig, RegisterServiceCommandResult } from "./types.js";
+export type { CommanderOptionOverride, CreateCommanderOptionsConfig, CreateCommanderOptionsResult, OnCompleteCallback, OnErrorCallback, OnFatalCallback, OnMessageCallback, ParseCommanderOptionsConfig, RegisterServiceCommandConfig, RegisterServiceCommandResult } from "./types.js";
 ```
 
 ### Lambda Export (`@jaypie/vocabulary/lambda`)

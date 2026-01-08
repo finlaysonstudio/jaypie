@@ -21,6 +21,13 @@ export type OnCompleteCallback = (response: unknown) => void | Promise<void>;
 export type OnErrorCallback = (error: unknown) => void | Promise<void>;
 
 /**
+ * Callback function called when the command encounters a fatal error
+ * Fatal errors are unrecoverable and typically should terminate the process
+ * @param error - The fatal error that occurred
+ */
+export type OnFatalCallback = (error: unknown) => void | Promise<void>;
+
+/**
  * Callback function called to report progress messages during execution
  * @param message - Message object with level and message text
  */
@@ -86,6 +93,8 @@ export interface RegisterServiceCommandConfig {
   onComplete?: OnCompleteCallback;
   /** Callback called when command encounters an error */
   onError?: OnErrorCallback;
+  /** Callback called when command encounters a fatal error (unrecoverable) */
+  onFatal?: OnFatalCallback;
   /** Callback called to report progress messages */
   onMessage?: OnMessageCallback;
   /** Per-field overrides */
