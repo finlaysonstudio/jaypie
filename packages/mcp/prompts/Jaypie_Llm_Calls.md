@@ -312,6 +312,60 @@ type LlmStreamChunk =
   | LlmStreamChunkError;    // { type: "error", error: { status, title, detail? } }
 ```
 
+### Streaming to Express
+
+Use `createExpressStream` to pipe LLM streams to Express responses:
+
+```javascript
+import { expressStreamHandler, Llm, createExpressStream } from "jaypie";
+
+const chatRoute = expressStreamHandler(async (req, res) => {
+  const llm = new Llm("anthropic");
+  const stream = llm.stream(req.body.prompt);
+  await createExpressStream(stream, res);
+});
+
+app.post("/chat", chatRoute);
+```
+
+### Streaming to Lambda
+
+Use `createLambdaStream` with Lambda Response Streaming:
+
+```javascript
+import { lambdaStreamHandler, Llm, createLambdaStream } from "jaypie";
+
+const handler = awslambda.streamifyResponse(
+  lambdaStreamHandler(async (event, context) => {
+    const llm = new Llm("openai");
+    const stream = llm.stream(event.prompt);
+    await createLambdaStream(stream, context.responseStream);
+  })
+);
+```
+
+### JaypieStream Wrapper
+
+Use `JaypieStream` or `createJaypieStream` for fluent piping:
+
+```javascript
+import { createJaypieStream, Llm } from "jaypie";
+
+const llm = new Llm("gemini");
+const stream = createJaypieStream(llm.stream("Hello"));
+
+// Pipe to Express
+await stream.toExpress(res);
+
+// Or pipe to Lambda
+await stream.toLambda(responseStream);
+
+// Or iterate manually
+for await (const chunk of stream) {
+  console.log(chunk);
+}
+```
+
 ## Hooks
 
 Use hooks to intercept and observe the LLM lifecycle:

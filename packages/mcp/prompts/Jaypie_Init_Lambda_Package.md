@@ -362,3 +362,136 @@ Deploy using AWS CDK or other deployment tool. The Lambda handler will be refere
 - Alphabetize imports and properties
 - Define constants for hard-coded values at file top
 - Never throw vanilla Error; use errors from `@jaypie/errors`
+
+## Streaming Lambda Functions
+
+Use `lambdaStreamHandler` for AWS Lambda Response Streaming. This enables real-time streaming responses for LLM interactions, large file processing, and SSE endpoints.
+
+### Lambda Streaming Setup
+
+Create a streaming Lambda handler with `awslambda.streamifyResponse`:
+
+```typescript
+// src/streamWorker.ts
+import { log } from "@jaypie/core";
+import { lambdaStreamHandler, createLambdaStream, Llm } from "jaypie";
+import type { StreamHandlerContext } from "@jaypie/lambda";
+
+export interface StreamWorkerEvent {
+  prompt?: string;
+}
+
+const streamWorker = lambdaStreamHandler(
+  async (event: StreamWorkerEvent, context: StreamHandlerContext) => {
+    log.trace("streamWorker: start");
+
+    const llm = new Llm("anthropic");
+    const stream = llm.stream(event.prompt || "Hello");
+
+    // createLambdaStream pipes LLM chunks as SSE events
+    await createLambdaStream(stream, context.responseStream);
+
+    log.trace("streamWorker: complete");
+  },
+  {
+    name: "streamWorker",
+    contentType: "text/event-stream",
+  }
+);
+
+// Wrap with AWS streamifyResponse
+declare const awslambda: { streamifyResponse: <T>(handler: T) => T };
+export const handler = awslambda.streamifyResponse(streamWorker);
+```
+
+### Manual Stream Writing
+
+Write directly to the response stream for custom SSE events:
+
+```typescript
+import { lambdaStreamHandler } from "jaypie";
+import type { StreamHandlerContext } from "@jaypie/lambda";
+
+const manualStreamHandler = lambdaStreamHandler(
+  async (event: unknown, context: StreamHandlerContext) => {
+    const { responseStream } = context;
+
+    // Write SSE events directly
+    responseStream.write("event: start\ndata: {\"status\": \"processing\"}\n\n");
+
+    // Process data in chunks
+    for (const item of items) {
+      const result = await process(item);
+      responseStream.write(`event: data\ndata: ${JSON.stringify(result)}\n\n`);
+    }
+
+    responseStream.write("event: done\ndata: {\"status\": \"complete\"}\n\n");
+    // Handler automatically calls responseStream.end()
+  },
+  {
+    name: "manualStream",
+  }
+);
+```
+
+### Stream Handler Options
+
+```typescript
+import type { LambdaStreamHandlerOptions } from "@jaypie/lambda";
+
+const options: LambdaStreamHandlerOptions = {
+  name: "myStreamHandler",          // Handler name for logging
+  contentType: "text/event-stream", // Response content type (default)
+  chaos: "low",                     // Chaos testing level
+  secrets: ["API_KEY"],             // AWS secrets to load into process.env
+  setup: [],                        // Setup function(s)
+  teardown: [],                     // Teardown function(s)
+  validate: [],                     // Validation function(s)
+  throw: false,                     // Re-throw errors instead of SSE error
+  unavailable: false,               // Return 503 if true
+};
+```
+
+### Stream Handler Types
+
+```typescript
+import type {
+  LambdaStreamHandlerOptions,
+  StreamHandlerContext,
+  ResponseStream,
+  AwsStreamingHandler,
+} from "@jaypie/lambda";
+```
+
+### CDK Configuration for Streaming
+
+Enable Lambda Response Streaming via Function URL in CDK:
+
+```typescript
+import { JaypieLambda } from "@jaypie/constructs";
+import { FunctionUrlAuthType, InvokeMode } from "aws-cdk-lib/aws-lambda";
+
+const streamingLambda = new JaypieLambda(this, "StreamingFunction", {
+  code: "dist",
+  handler: "streamWorker.handler",
+  timeout: Duration.minutes(5),
+});
+
+// Add Function URL with streaming enabled
+streamingLambda.addFunctionUrl({
+  authType: FunctionUrlAuthType.NONE, // or AWS_IAM for auth
+  invokeMode: InvokeMode.RESPONSE_STREAM,
+});
+```
+
+### Error Handling in Streams
+
+Errors are formatted as SSE error events:
+
+```typescript
+// Jaypie errors written as:
+// event: error
+// data: {"errors":[{"status":500,"title":"Internal Error"}]}
+```
+
+Set `throw: true` to re-throw errors instead of writing to stream.
