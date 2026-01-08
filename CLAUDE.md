@@ -97,7 +97,7 @@ npm run format:package      # Sort package.json files
 ```
 Always prefer `format` when linting.
 ## Guidelines
-### Actions 
+### Actions
 - Do not commit changes or push without explicit user request
 - When installing dependencies: `npm install <package> -w packages/<workspace>`
 - Run `npm i --package-lock-only` after versioning
@@ -139,5 +139,6 @@ Utilize these MCP when provided. When they are unavailable but would be useful, 
 ### Development Notes (memories)
 - Whenever a new export is added to a package, make sure to update the exports of packages/testkit or tests will fail.
 - Updating testkit requires bumping testkit's version
+- Do not bump a package twice in a branch. Versions are only published when merged into main. Check the current version on NPM when unsure
 - Avoid default exports
 - Do not preserve backwards compatibility in unreleased changes or pre-1.0 codebases
