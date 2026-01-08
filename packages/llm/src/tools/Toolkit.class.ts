@@ -1,5 +1,7 @@
 import { JAYPIE, resolveValue } from "@jaypie/kit";
 import { log as jaypieLog } from "@jaypie/logger";
+import { JsonObject } from "@jaypie/types";
+import { z } from "zod/v4";
 
 import { LlmTool } from "../types/LlmTool.interface";
 
@@ -39,6 +41,16 @@ export class Toolkit {
       const toolCopy: any = { ...tool };
       delete toolCopy.call;
       delete toolCopy.message;
+
+      // Convert Zod schema to JSON Schema if needed
+      if (toolCopy.parameters instanceof z.ZodType) {
+        const jsonSchema = z.toJSONSchema(toolCopy.parameters) as JsonObject;
+        // Remove $schema property (causes issues with some providers)
+        if (jsonSchema.$schema) {
+          delete jsonSchema.$schema;
+        }
+        toolCopy.parameters = jsonSchema;
+      }
 
       if (this.explain && toolCopy.parameters?.type === "object") {
         if (toolCopy.parameters?.properties) {

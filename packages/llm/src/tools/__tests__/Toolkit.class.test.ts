@@ -1,6 +1,9 @@
+import { JsonObject } from "@jaypie/types";
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { Toolkit } from "../Toolkit.class";
+import { z } from "zod/v4";
+
 import { LlmTool } from "../../types/LlmTool.interface";
+import { Toolkit } from "../Toolkit.class";
 
 // Mock jaypie/kit and jaypie/logger
 vi.mock("@jaypie/kit", () => ({
@@ -90,9 +93,9 @@ describe("Toolkit", () => {
 
       expect(tools).toHaveLength(1);
       expect(tools[0].type).toBe("function");
-      expect(tools[0].parameters.properties).not.toHaveProperty(
-        "__Explanation",
-      );
+      expect(
+        (tools[0].parameters as JsonObject).properties,
+      ).not.toHaveProperty("__Explanation");
     });
 
     it("should add the explain property to all tools", () => {
@@ -100,7 +103,9 @@ describe("Toolkit", () => {
       const tools = toolkit.tools;
 
       expect(tools).toHaveLength(1);
-      expect(tools[0].parameters.properties).toHaveProperty("__Explanation");
+      expect((tools[0].parameters as JsonObject).properties).toHaveProperty(
+        "__Explanation",
+      );
     });
   });
 
@@ -377,6 +382,165 @@ describe("Toolkit", () => {
       const toolkit = new Toolkit([toolA]);
       const result = toolkit.extend([toolB]);
       expect(result).toBe(toolkit);
+    });
+  });
+
+  describe("Zod Schema Support", () => {
+    it("converts Zod schema to JSON Schema", () => {
+      const zodSchema = z.object({
+        city: z.string(),
+        unit: z.enum(["celsius", "fahrenheit"]),
+      });
+
+      const tool: LlmTool = {
+        name: "get_weather",
+        description: "Get weather for a city",
+        parameters: zodSchema,
+        type: "function",
+        call: vi.fn(),
+      };
+
+      const toolkit = new Toolkit([tool]);
+      const tools = toolkit.tools;
+
+      expect(tools).toHaveLength(1);
+      const params = tools[0].parameters as JsonObject;
+      expect(params).toMatchObject({
+        type: "object",
+        properties: {
+          city: { type: "string" },
+          unit: { enum: ["celsius", "fahrenheit"] },
+        },
+      });
+    });
+
+    it("removes $schema property from converted JSON Schema", () => {
+      const zodSchema = z.object({
+        name: z.string(),
+      });
+
+      const tool: LlmTool = {
+        name: "test_tool",
+        description: "A test tool",
+        parameters: zodSchema,
+        type: "function",
+        call: vi.fn(),
+      };
+
+      const toolkit = new Toolkit([tool]);
+      const tools = toolkit.tools;
+
+      expect(tools[0].parameters).not.toHaveProperty("$schema");
+    });
+
+    it("handles complex Zod schemas", () => {
+      const zodSchema = z.object({
+        items: z.array(
+          z.object({
+            id: z.string(),
+            quantity: z.number(),
+          }),
+        ),
+        priority: z.enum(["low", "medium", "high"]),
+      });
+
+      const tool: LlmTool = {
+        name: "process_order",
+        description: "Process an order",
+        parameters: zodSchema,
+        type: "function",
+        call: vi.fn(),
+      };
+
+      const toolkit = new Toolkit([tool]);
+      const tools = toolkit.tools;
+      const params = tools[0].parameters as JsonObject;
+
+      expect(params).toMatchObject({
+        type: "object",
+        properties: {
+          items: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                id: { type: "string" },
+                quantity: { type: "number" },
+              },
+            },
+          },
+          priority: { enum: ["low", "medium", "high"] },
+        },
+      });
+    });
+
+    it("supports both JSON Schema and Zod schema in same toolkit", () => {
+      const jsonSchemaTool: LlmTool = {
+        name: "json_tool",
+        description: "Tool with JSON Schema",
+        parameters: {
+          type: "object",
+          properties: {
+            name: { type: "string" },
+          },
+        },
+        type: "function",
+        call: vi.fn(),
+      };
+
+      const zodSchemaTool: LlmTool = {
+        name: "zod_tool",
+        description: "Tool with Zod Schema",
+        parameters: z.object({
+          age: z.number(),
+        }),
+        type: "function",
+        call: vi.fn(),
+      };
+
+      const toolkit = new Toolkit([jsonSchemaTool, zodSchemaTool]);
+      const tools = toolkit.tools;
+
+      expect(tools).toHaveLength(2);
+
+      // JSON Schema tool should remain unchanged
+      const jsonParams = tools[0].parameters as JsonObject;
+      expect(jsonParams).toMatchObject({
+        type: "object",
+        properties: {
+          name: { type: "string" },
+        },
+      });
+
+      // Zod Schema tool should be converted
+      const zodParams = tools[1].parameters as JsonObject;
+      expect(zodParams).toMatchObject({
+        type: "object",
+        properties: {
+          age: { type: "number" },
+        },
+      });
+    });
+
+    it("adds __Explanation to Zod schema when explain mode is enabled", () => {
+      const zodSchema = z.object({
+        city: z.string(),
+      });
+
+      const tool: LlmTool = {
+        name: "get_weather",
+        description: "Get weather",
+        parameters: zodSchema,
+        type: "function",
+        call: vi.fn(),
+      };
+
+      const toolkit = new Toolkit([tool], { explain: true });
+      const tools = toolkit.tools;
+
+      const params = tools[0].parameters as JsonObject;
+      const props = params.properties as JsonObject;
+      expect(props.__Explanation).toBeDefined();
     });
   });
 });
