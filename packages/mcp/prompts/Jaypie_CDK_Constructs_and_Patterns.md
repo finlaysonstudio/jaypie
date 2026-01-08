@@ -100,6 +100,57 @@ new JaypieExpressLambda(this, "ExpressApp", {
 
 Preconfigured with API-optimized timeouts and role tags.
 
+### Streaming Lambda Functions
+
+Enable Lambda Response Streaming via Function URLs for real-time SSE responses:
+
+```typescript
+import { FunctionUrlAuthType, InvokeMode } from "aws-cdk-lib/aws-lambda";
+
+const streamingLambda = new JaypieLambda(this, "StreamingFunction", {
+  code: "dist",
+  handler: "stream.handler",
+  timeout: Duration.minutes(5), // Longer timeout for streaming
+});
+
+// Add Function URL with streaming enabled
+const functionUrl = streamingLambda.addFunctionUrl({
+  authType: FunctionUrlAuthType.NONE,     // Public access
+  // authType: FunctionUrlAuthType.AWS_IAM, // IAM authentication
+  invokeMode: InvokeMode.RESPONSE_STREAM, // Enable streaming
+});
+
+// Output the URL
+new cdk.CfnOutput(this, "StreamingUrl", {
+  value: functionUrl.url,
+});
+```
+
+Features:
+- `RESPONSE_STREAM` invoke mode enables real-time streaming
+- Works with `lambdaStreamHandler` from `@jaypie/lambda`
+- Use `FunctionUrlAuthType.AWS_IAM` for authenticated endpoints
+- Combine with API Gateway for custom domains via `JaypieApiGateway`
+
+For Express-based streaming with custom domains:
+```typescript
+// Express app with streaming routes
+const expressLambda = new JaypieExpressLambda(this, "ExpressStream", {
+  code: "dist",
+  handler: "app.handler",
+  timeout: Duration.minutes(5),
+});
+
+// API Gateway handles the domain routing
+new JaypieApiGateway(this, "Api", {
+  handler: expressLambda,
+  host: "api.example.com",
+  zone: "example.com",
+});
+```
+
+Note: API Gateway has a 29-second timeout limit. For longer streaming operations, use Function URLs directly.
+
 ### Stack Types
 
 Use specialized stacks for different purposes:

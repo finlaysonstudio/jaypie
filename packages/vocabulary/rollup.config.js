@@ -12,6 +12,7 @@ const external = [
   "@jaypie/aws",
   "@jaypie/errors",
   "@jaypie/lambda",
+  "@modelcontextprotocol/sdk/server/mcp.js",
   "commander",
 ];
 
@@ -130,6 +131,86 @@ export default [
         tsconfig: "./tsconfig.json",
         declaration: false,
         outDir: "dist/cjs/lambda",
+      }),
+    ],
+    external,
+  },
+  // ES modules version - llm
+  // NOTE: declaration: false because main build generates correct .d.ts files
+  {
+    input: "src/llm/index.ts",
+    output: {
+      dir: "dist/esm/llm",
+      format: "es",
+      sourcemap: true,
+    },
+    onwarn,
+    plugins: [
+      typescript({
+        tsconfig: "./tsconfig.json",
+        declaration: false,
+        outDir: "dist/esm/llm",
+      }),
+    ],
+    external,
+  },
+  // CommonJS version - llm
+  // NOTE: declaration: false because main build generates correct .d.ts files
+  {
+    input: "src/llm/index.ts",
+    output: {
+      dir: "dist/cjs/llm",
+      format: "cjs",
+      sourcemap: true,
+      exports: "named",
+      entryFileNames: "[name].cjs",
+    },
+    onwarn,
+    plugins: [
+      typescript({
+        tsconfig: "./tsconfig.json",
+        declaration: false,
+        outDir: "dist/cjs/llm",
+      }),
+    ],
+    external,
+  },
+  // ES modules version - mcp
+  // NOTE: declaration: false because main build generates correct .d.ts files
+  {
+    input: "src/mcp/index.ts",
+    output: {
+      dir: "dist/esm/mcp",
+      format: "es",
+      sourcemap: true,
+    },
+    onwarn,
+    plugins: [
+      typescript({
+        tsconfig: "./tsconfig.json",
+        declaration: false,
+        outDir: "dist/esm/mcp",
+      }),
+    ],
+    external,
+  },
+  // CommonJS version - mcp
+  // NOTE: declaration: false because main build generates correct .d.ts files
+  {
+    input: "src/mcp/index.ts",
+    output: {
+      dir: "dist/cjs/mcp",
+      format: "cjs",
+      sourcemap: true,
+      exports: "named",
+      entryFileNames: "[name].cjs",
+    },
+    onwarn,
+    plugins: [
+      typescript({
+        tsconfig: "./tsconfig.json",
+        declaration: false,
+        outDir: "dist/cjs/mcp",
       }),
     ],
     external,

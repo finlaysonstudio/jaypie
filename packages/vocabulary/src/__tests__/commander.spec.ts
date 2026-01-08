@@ -1,7 +1,7 @@
 // Tests for commander adapter
 
 import { Command, Option } from "commander";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   createCommanderOptions,
@@ -45,14 +45,26 @@ describe("Commander Adapter", () => {
       expect(options[0].flags).toBe("--age <age>");
     });
 
-    it("creates Option for boolean field without value placeholder", () => {
+    it("creates Option for boolean field with negatable form", () => {
       const input: Record<string, InputFieldDefinition> = {
         verbose: { type: Boolean, description: "Enable verbose output" },
       };
       const { options } = createCommanderOptions(input);
 
-      expect(options).toHaveLength(1);
+      // Boolean fields create 2 options: --flag and --no-flag
+      expect(options).toHaveLength(2);
       expect(options[0].flags).toBe("--verbose");
+      expect(options[1].flags).toBe("--no-verbose");
+    });
+
+    it("creates Option for Date field with value placeholder", () => {
+      const input: Record<string, InputFieldDefinition> = {
+        startDate: { type: Date, description: "Start date" },
+      };
+      const { options } = createCommanderOptions(input);
+
+      expect(options).toHaveLength(1);
+      expect(options[0].flags).toBe("--start-date <startDate>");
     });
 
     it("creates Option with optional value for field with default", () => {
@@ -144,6 +156,7 @@ describe("Commander Adapter", () => {
       });
 
       expect(options[0].flags).toBe("-v, --verbose");
+      expect(options[1].flags).toBe("--no-verbose");
     });
 
     it("applies flags override completely", () => {
@@ -202,6 +215,7 @@ describe("Commander Adapter", () => {
       const { options } = createCommanderOptions(input);
 
       expect(options[0].flags).toBe("-v, --verbose");
+      expect(options[1].flags).toBe("--no-verbose");
     });
 
     it("uses both flag and letter from input definition", () => {
@@ -227,6 +241,7 @@ describe("Commander Adapter", () => {
       });
 
       expect(options[0].flags).toBe("-V, --verbose");
+      expect(options[1].flags).toBe("--no-verbose");
     });
 
     it("override long takes precedence over input flag", () => {
@@ -342,6 +357,138 @@ describe("Commander Adapter", () => {
       );
 
       expect(result).toEqual({ name: "John", age: 30 });
+    });
+
+    describe("Date coercion", () => {
+      it("coerces ISO string to Date with type definition", () => {
+        const input: Record<string, InputFieldDefinition> = {
+          startDate: { type: Date },
+        };
+        const result = parseCommanderOptions(
+          { startDate: "2024-01-15T10:30:00Z" },
+          { input },
+        );
+        expect(result.startDate).toBeInstanceOf(Date);
+        expect((result.startDate as Date).toISOString()).toBe(
+          "2024-01-15T10:30:00.000Z",
+        );
+      });
+
+      it("coerces date-only string to Date", () => {
+        const input: Record<string, InputFieldDefinition> = {
+          birthDate: { type: Date },
+        };
+        const result = parseCommanderOptions(
+          { birthDate: "2000-06-15" },
+          { input },
+        );
+        expect(result.birthDate).toBeInstanceOf(Date);
+      });
+
+      it("coerces Unix timestamp number to Date", () => {
+        const input: Record<string, InputFieldDefinition> = {
+          timestamp: { type: Date },
+        };
+        const timestamp = 1705320600000; // 2024-01-15T10:30:00Z
+        const result = parseCommanderOptions({ timestamp }, { input });
+        expect(result.timestamp).toBeInstanceOf(Date);
+        expect((result.timestamp as Date).getTime()).toBe(timestamp);
+      });
+
+      it("passes through Date values unchanged", () => {
+        const input: Record<string, InputFieldDefinition> = {
+          eventDate: { type: Date },
+        };
+        const date = new Date("2024-03-20");
+        const result = parseCommanderOptions({ eventDate: date }, { input });
+        expect(result.eventDate).toBe(date);
+      });
+
+      it("returns invalid date string as-is for serviceHandler to handle", () => {
+        const input: Record<string, InputFieldDefinition> = {
+          badDate: { type: Date },
+        };
+        const result = parseCommanderOptions(
+          { badDate: "not-a-date" },
+          { input },
+        );
+        // parseCommanderOptions returns as-is, serviceHandler will throw
+        expect(result.badDate).toBe("not-a-date");
+      });
+    });
+
+    describe("Boolean coercion", () => {
+      it("coerces 'true' string to true", () => {
+        const input: Record<string, InputFieldDefinition> = {
+          enabled: { type: Boolean },
+        };
+        const result = parseCommanderOptions({ enabled: "true" }, { input });
+        expect(result.enabled).toBe(true);
+      });
+
+      it("coerces 'false' string to false", () => {
+        const input: Record<string, InputFieldDefinition> = {
+          enabled: { type: Boolean },
+        };
+        const result = parseCommanderOptions({ enabled: "false" }, { input });
+        expect(result.enabled).toBe(false);
+      });
+
+      it("coerces '1' string to true", () => {
+        const input: Record<string, InputFieldDefinition> = {
+          active: { type: Boolean },
+        };
+        const result = parseCommanderOptions({ active: "1" }, { input });
+        expect(result.active).toBe(true);
+      });
+
+      it("coerces '0' string to false", () => {
+        const input: Record<string, InputFieldDefinition> = {
+          active: { type: Boolean },
+        };
+        const result = parseCommanderOptions({ active: "0" }, { input });
+        expect(result.active).toBe(false);
+      });
+
+      it("coerces 'yes' string to true (case insensitive)", () => {
+        const input: Record<string, InputFieldDefinition> = {
+          confirm: { type: Boolean },
+        };
+        const result = parseCommanderOptions({ confirm: "YES" }, { input });
+        expect(result.confirm).toBe(true);
+      });
+
+      it("coerces 'no' string to false (case insensitive)", () => {
+        const input: Record<string, InputFieldDefinition> = {
+          confirm: { type: Boolean },
+        };
+        const result = parseCommanderOptions({ confirm: "NO" }, { input });
+        expect(result.confirm).toBe(false);
+      });
+
+      it("passes through boolean true unchanged", () => {
+        const input: Record<string, InputFieldDefinition> = {
+          flag: { type: Boolean },
+        };
+        const result = parseCommanderOptions({ flag: true }, { input });
+        expect(result.flag).toBe(true);
+      });
+
+      it("passes through boolean false unchanged", () => {
+        const input: Record<string, InputFieldDefinition> = {
+          flag: { type: Boolean },
+        };
+        const result = parseCommanderOptions({ flag: false }, { input });
+        expect(result.flag).toBe(false);
+      });
+
+      it("coerces truthy non-string values to true via Boolean()", () => {
+        const input: Record<string, InputFieldDefinition> = {
+          value: { type: Boolean },
+        };
+        const result = parseCommanderOptions({ value: 42 }, { input });
+        expect(result.value).toBe(true);
+      });
     });
   });
 
@@ -559,6 +706,7 @@ describe("Commander Adapter", () => {
 
       const testCommand = program.commands.find((c) => c.name() === "test");
       expect(testCommand!.options[0].flags).toBe("-v, --verbose");
+      expect(testCommand!.options[1].flags).toBe("--no-verbose");
     });
 
     it("respects flag and letter in input definitions", () => {
@@ -636,9 +784,54 @@ describe("Commander Adapter", () => {
 
       registerServiceCommand({ handler, program });
 
-      // Commander automatically handles --no-verbose for boolean flags
+      // Boolean fields create both --flag and --no-flag options
       const testCommand = program.commands.find((c) => c.name() === "test");
       expect(testCommand!.options[0].flags).toBe("--verbose");
+      expect(testCommand!.options[1].flags).toBe("--no-verbose");
+    });
+
+    it("--no-<flag> sets boolean to false", async () => {
+      let capturedInput: unknown;
+      const handler = serviceHandler({
+        alias: "test",
+        input: {
+          save: { type: Boolean, default: true, description: "Save results" },
+        },
+        service: (input) => {
+          capturedInput = input;
+          return input;
+        },
+      });
+
+      registerServiceCommand({ handler, program });
+
+      await program.parseAsync(["node", "test", "test", "--no-save"]);
+
+      expect(capturedInput).toEqual({ save: false });
+    });
+
+    it("--<flag> sets boolean to true when default is false", async () => {
+      let capturedInput: unknown;
+      const handler = serviceHandler({
+        alias: "test",
+        input: {
+          dryRun: {
+            type: Boolean,
+            default: false,
+            description: "Dry run mode",
+          },
+        },
+        service: (input) => {
+          capturedInput = input;
+          return input;
+        },
+      });
+
+      registerServiceCommand({ handler, program });
+
+      await program.parseAsync(["node", "test", "test", "--dry-run"]);
+
+      expect(capturedInput).toEqual({ dryRun: true });
     });
 
     it("works with handler that has no input", async () => {
@@ -686,6 +879,316 @@ describe("Commander Adapter", () => {
       ]);
 
       expect(capturedResult).toBe("HELLO, ALICE!");
+    });
+
+    it("coerces Date type through full command flow", async () => {
+      let capturedInput: unknown;
+      const handler = serviceHandler({
+        alias: "schedule",
+        input: {
+          startDate: { type: Date, description: "Start date" },
+        },
+        service: (input) => {
+          capturedInput = input;
+          return input;
+        },
+      });
+
+      registerServiceCommand({ handler, program });
+
+      await program.parseAsync([
+        "node",
+        "test",
+        "schedule",
+        "--start-date",
+        "2024-06-15T09:00:00Z",
+      ]);
+
+      expect(capturedInput).toBeDefined();
+      const input = capturedInput as { startDate: Date };
+      expect(input.startDate).toBeInstanceOf(Date);
+      expect(input.startDate.toISOString()).toBe("2024-06-15T09:00:00.000Z");
+    });
+
+    describe("onComplete callback", () => {
+      it("calls onComplete with handler response", async () => {
+        let capturedResponse: unknown;
+        const handler = serviceHandler({
+          alias: "test",
+          input: {
+            value: { type: Number, default: 42 },
+          },
+          service: ({ value }) => ({ doubled: value * 2 }),
+        });
+
+        registerServiceCommand({
+          handler,
+          onComplete: (response) => {
+            capturedResponse = response;
+          },
+          program,
+        });
+
+        await program.parseAsync(["node", "test", "test"]);
+
+        expect(capturedResponse).toEqual({ doubled: 84 });
+      });
+
+      it("does not require onComplete callback", async () => {
+        const handler = serviceHandler({
+          alias: "test",
+          service: () => "result",
+        });
+
+        registerServiceCommand({ handler, program });
+
+        // Should not throw
+        await expect(
+          program.parseAsync(["node", "test", "test"]),
+        ).resolves.not.toThrow();
+      });
+
+      it("supports async onComplete callback", async () => {
+        let completed = false;
+        const handler = serviceHandler({
+          alias: "test",
+          service: () => "result",
+        });
+
+        registerServiceCommand({
+          handler,
+          onComplete: async () => {
+            await new Promise((resolve) => setTimeout(resolve, 10));
+            completed = true;
+          },
+          program,
+        });
+
+        await program.parseAsync(["node", "test", "test"]);
+
+        expect(completed).toBe(true);
+      });
+    });
+
+    describe("onError callback", () => {
+      it("calls onError when handler throws", async () => {
+        let capturedError: unknown;
+        const handler = serviceHandler({
+          alias: "test",
+          service: () => {
+            throw new Error("Handler failed");
+          },
+        });
+
+        registerServiceCommand({
+          handler,
+          onError: (error) => {
+            capturedError = error;
+          },
+          program,
+        });
+
+        await program.parseAsync(["node", "test", "test"]);
+
+        expect(capturedError).toBeInstanceOf(Error);
+        expect((capturedError as Error).message).toBe("Handler failed");
+      });
+
+      it("re-throws error when no onError callback provided", async () => {
+        const handler = serviceHandler({
+          alias: "test",
+          service: () => {
+            throw new Error("Handler failed");
+          },
+        });
+
+        registerServiceCommand({ handler, program });
+
+        await expect(
+          program.parseAsync(["node", "test", "test"]),
+        ).rejects.toThrow("Handler failed");
+      });
+
+      it("supports async onError callback", async () => {
+        let errorHandled = false;
+        const handler = serviceHandler({
+          alias: "test",
+          service: () => {
+            throw new Error("Handler failed");
+          },
+        });
+
+        registerServiceCommand({
+          handler,
+          onError: async () => {
+            await new Promise((resolve) => setTimeout(resolve, 10));
+            errorHandled = true;
+          },
+          program,
+        });
+
+        await program.parseAsync(["node", "test", "test"]);
+
+        expect(errorHandled).toBe(true);
+      });
+    });
+
+    describe("onMessage callback", () => {
+      it("returns onMessage in result", () => {
+        const handler = serviceHandler({
+          alias: "test",
+          service: () => "result",
+        });
+
+        const onMessage = vi.fn();
+        const result = registerServiceCommand({
+          handler,
+          onMessage,
+          program,
+        });
+
+        expect(result.onMessage).toBe(onMessage);
+      });
+
+      it("does not include onMessage when not provided", () => {
+        const handler = serviceHandler({
+          alias: "test",
+          service: () => "result",
+        });
+
+        const result = registerServiceCommand({ handler, program });
+
+        expect(result.onMessage).toBeUndefined();
+      });
+    });
+
+    describe("sendMessage in service context", () => {
+      it("service can call sendMessage and onMessage receives the message", async () => {
+        const messages: unknown[] = [];
+        const handler = serviceHandler({
+          alias: "test",
+          service: (_input, context) => {
+            context?.sendMessage?.({ content: "Starting..." });
+            context?.sendMessage?.({ content: "Processing", level: "debug" });
+            return "done";
+          },
+        });
+
+        registerServiceCommand({
+          handler,
+          onMessage: (msg) => {
+            messages.push(msg);
+          },
+          program,
+        });
+
+        await program.parseAsync(["node", "test", "test"]);
+
+        expect(messages).toHaveLength(2);
+        expect(messages[0]).toEqual({ content: "Starting..." });
+        expect(messages[1]).toEqual({ content: "Processing", level: "debug" });
+      });
+
+      it("service works when onMessage is not provided", async () => {
+        let contextReceived: unknown;
+        const handler = serviceHandler({
+          alias: "test",
+          service: (_input, context) => {
+            contextReceived = context;
+            // sendMessage should be undefined, calling it should not throw
+            context?.sendMessage?.({ content: "test" });
+            return "done";
+          },
+        });
+
+        registerServiceCommand({ handler, program });
+
+        await program.parseAsync(["node", "test", "test"]);
+
+        expect(contextReceived).toBeDefined();
+        expect(
+          (contextReceived as { sendMessage: unknown }).sendMessage,
+        ).toBeUndefined();
+      });
+
+      it("errors in onMessage are swallowed and do not halt execution", async () => {
+        let serviceCompleted = false;
+        const handler = serviceHandler({
+          alias: "test",
+          service: (_input, context) => {
+            context?.sendMessage?.({ content: "Before error" });
+            serviceCompleted = true;
+            return "done";
+          },
+        });
+
+        registerServiceCommand({
+          handler,
+          onMessage: () => {
+            throw new Error("onMessage failed!");
+          },
+          program,
+        });
+
+        // Should not throw even though onMessage throws
+        await expect(
+          program.parseAsync(["node", "test", "test"]),
+        ).resolves.not.toThrow();
+        expect(serviceCompleted).toBe(true);
+      });
+
+      it("async onMessage errors are swallowed", async () => {
+        let serviceCompleted = false;
+        const handler = serviceHandler({
+          alias: "test",
+          service: async (_input, context) => {
+            await context?.sendMessage?.({ content: "Async message" });
+            serviceCompleted = true;
+            return "done";
+          },
+        });
+
+        registerServiceCommand({
+          handler,
+          onMessage: async () => {
+            await new Promise((resolve) => setTimeout(resolve, 5));
+            throw new Error("Async onMessage failed!");
+          },
+          program,
+        });
+
+        await expect(
+          program.parseAsync(["node", "test", "test"]),
+        ).resolves.not.toThrow();
+        expect(serviceCompleted).toBe(true);
+      });
+
+      it("async onMessage callbacks work correctly", async () => {
+        const messages: unknown[] = [];
+        const handler = serviceHandler({
+          alias: "test",
+          service: async (_input, context) => {
+            await context?.sendMessage?.({ content: "First" });
+            await context?.sendMessage?.({ content: "Second" });
+            return "done";
+          },
+        });
+
+        registerServiceCommand({
+          handler,
+          onMessage: async (msg) => {
+            await new Promise((resolve) => setTimeout(resolve, 5));
+            messages.push(msg);
+          },
+          program,
+        });
+
+        await program.parseAsync(["node", "test", "test"]);
+
+        expect(messages).toHaveLength(2);
+        expect(messages[0]).toEqual({ content: "First" });
+        expect(messages[1]).toEqual({ content: "Second" });
+      });
     });
   });
 });

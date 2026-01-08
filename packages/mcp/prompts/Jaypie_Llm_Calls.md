@@ -312,6 +312,60 @@ type LlmStreamChunk =
   | LlmStreamChunkError;    // { type: "error", error: { status, title, detail? } }
 ```
 
+### Streaming to Express
+
+Use `createExpressStream` to pipe LLM streams to Express responses:
+
+```javascript
+import { expressStreamHandler, Llm, createExpressStream } from "jaypie";
+
+const chatRoute = expressStreamHandler(async (req, res) => {
+  const llm = new Llm("anthropic");
+  const stream = llm.stream(req.body.prompt);
+  await createExpressStream(stream, res);
+});
+
+app.post("/chat", chatRoute);
+```
+
+### Streaming to Lambda
+
+Use `createLambdaStream` with Lambda Response Streaming:
+
+```javascript
+import { lambdaStreamHandler, Llm, createLambdaStream } from "jaypie";
+
+const handler = awslambda.streamifyResponse(
+  lambdaStreamHandler(async (event, context) => {
+    const llm = new Llm("openai");
+    const stream = llm.stream(event.prompt);
+    await createLambdaStream(stream, context.responseStream);
+  })
+);
+```
+
+### JaypieStream Wrapper
+
+Use `JaypieStream` or `createJaypieStream` for fluent piping:
+
+```javascript
+import { createJaypieStream, Llm } from "jaypie";
+
+const llm = new Llm("gemini");
+const stream = createJaypieStream(llm.stream("Hello"));
+
+// Pipe to Express
+await stream.toExpress(res);
+
+// Or pipe to Lambda
+await stream.toLambda(responseStream);
+
+// Or iterate manually
+for await (const chunk of stream) {
+  console.log(chunk);
+}
+```
+
 ## Hooks
 
 Use hooks to intercept and observe the LLM lifecycle:
@@ -363,6 +417,29 @@ toolkit.extend([anotherTool], { replace: true });
 const result = await llm.operate("Roll dice and check weather", {
   tools: toolkit,
 });
+```
+
+### Zod Schema Support
+
+Tool parameters can be defined using Zod schemas instead of JSON Schema:
+
+```javascript
+import { z } from "zod/v4";
+import { Llm, Toolkit } from "jaypie";
+
+const weatherTool = {
+  name: "get_weather",
+  description: "Get weather for a city",
+  parameters: z.object({
+    city: z.string().describe("City name"),
+    unit: z.enum(["celsius", "fahrenheit"]),
+  }),
+  type: "function",
+  call: async ({ city, unit }) => ({ city, temp: 72, unit }),
+};
+
+const toolkit = new Toolkit([weatherTool]);
+// Zod schemas are automatically converted to JSON Schema
 ```
 
 ## Footnotes

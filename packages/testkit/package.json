@@ -1,6 +1,6 @@
 {
   "name": "@jaypie/testkit",
-  "version": "1.2.4",
+  "version": "1.2.7",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/finlaysonstudio/jaypie.git"
@@ -39,6 +39,7 @@
     "uuid": "^11.0.5"
   },
   "devDependencies": {
+    "@jaypie/dynamodb": "*",
     "@jaypie/types": "*",
     "@rollup/plugin-commonjs": "^28.0.3",
     "@rollup/plugin-json": "^6.1.0",
@@ -55,12 +56,16 @@
     "vitest": "^3.0.5"
   },
   "peerDependencies": {
+    "@jaypie/dynamodb": ">=0.1.0",
     "@jaypie/errors": "^1.2.1",
     "@jaypie/kit": "^1.2.1",
     "@jaypie/logger": "^1.2.1",
     "vitest": ">=1.0.0"
   },
   "peerDependenciesMeta": {
+    "@jaypie/dynamodb": {
+      "optional": true
+    },
     "@jaypie/errors": {
       "optional": true
     },

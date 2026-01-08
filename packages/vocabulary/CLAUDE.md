@@ -9,19 +9,24 @@ Jaypie standard application component vocabulary - provides type coercion and se
 | Status | Initial development (0.1.x) |
 | Type | Utility library |
 | Dependencies | `@jaypie/errors` |
-| Peer Dependencies | `@jaypie/aws` (optional), `@jaypie/lambda` (optional), `commander` (optional) |
-| Exports | Coercion functions, serviceHandler, commander adapters, lambda adapters, TypeScript types |
+| Peer Dependencies | `@jaypie/aws` (optional), `@jaypie/lambda` (optional), `@modelcontextprotocol/sdk` (optional), `commander` (optional) |
+| Exports | Coercion functions, serviceHandler, commander/lambda/llm/mcp adapters, TypeScript types |
 
 ## Internal Structure
 
 ```
 src/
 ├── __tests__/
+│   ├── base-entity.spec.ts    # Entity type tests
 │   ├── coerce.spec.ts         # Coercion function tests
+│   ├── coerce-date.spec.ts    # Date coercion tests
 │   ├── commander.spec.ts      # Commander adapter tests
 │   ├── index.spec.ts          # Export verification tests
 │   ├── lambda.spec.ts         # Lambda adapter tests
-│   └── serviceHandler.spec.ts # Service handler tests
+│   ├── llm.spec.ts            # LLM adapter tests
+│   ├── mcp.spec.ts            # MCP adapter tests
+│   ├── serviceHandler.spec.ts # Service handler tests
+│   └── status.spec.ts         # Status type tests
 ├── commander/
 │   ├── createCommanderOptions.ts  # Generate Commander Options from config
 │   ├── index.ts                   # Commander module exports
@@ -32,9 +37,21 @@ src/
 │   ├── index.ts                   # Lambda module exports
 │   ├── lambdaServiceHandler.ts    # Wrap serviceHandler for Lambda
 │   └── types.ts                   # Lambda adapter types
+├── llm/
+│   ├── createLlmTool.ts           # Create LLM tool from serviceHandler
+│   ├── index.ts                   # LLM module exports
+│   ├── inputToJsonSchema.ts       # Convert input definitions to JSON Schema
+│   └── types.ts                   # LLM adapter types
+├── mcp/
+│   ├── index.ts                   # MCP module exports
+│   ├── registerMcpTool.ts         # Register serviceHandler as MCP tool
+│   └── types.ts                   # MCP adapter types
+├── base-entity.ts             # BaseEntity, Job, MessageEntity, Progress types
 ├── coerce.ts                  # Type coercion utilities
+├── coerce-date.ts             # Date coercion utilities
 ├── index.ts                   # Package exports
 ├── serviceHandler.ts          # Service handler factory
+├── status.ts                  # Status type and validators
 └── types.ts                   # TypeScript type definitions
 ```
 
@@ -197,6 +214,42 @@ program.parse();
 // Usage: greet --user Alice -l
 ```
 
+**registerServiceCommand with callbacks**: Supports lifecycle callbacks for handling results, errors, and messages:
+
+```typescript
+const handler = serviceHandler({
+  alias: "evaluate",
+  input: { jobId: { type: String } },
+  service: async ({ jobId }, context) => {
+    // Service can send messages via context.sendMessage
+    context?.sendMessage?.({ content: `Starting job ${jobId}` });
+    context?.sendMessage?.({ content: "Processing...", level: "debug" });
+    return { jobId, status: "complete" };
+  },
+});
+
+registerServiceCommand({
+  handler,
+  program,
+  onComplete: (response) => {
+    console.log("Done:", JSON.stringify(response, null, 2));
+  },
+  onError: (error) => {
+    console.error("Failed:", error);
+  },
+  onMessage: (msg) => {
+    // Receives messages from context.sendMessage
+    console[msg.level || "info"](msg.content);
+  },
+});
+```
+
+| Callback | Type | Description |
+|----------|------|-------------|
+| `onComplete` | `(response: unknown) => void \| Promise<void>` | Called with handler's return value on success |
+| `onError` | `(error: unknown) => void \| Promise<void>` | Called when handler throws (prevents re-throw) |
+| `onMessage` | `(message: Message) => void \| Promise<void>` | Receives messages from `context.sendMessage` in service (errors swallowed) |
+
 **createCommanderOptions**: Generates Commander.js `Option` objects from handler input definitions.
 
 ```typescript
@@ -264,12 +317,137 @@ Features:
 - Uses `handler.alias` as the logging handler name (overridable via `name` option)
 - Supports all `lambdaHandler` options: `chaos`, `name`, `secrets`, `setup`, `teardown`, `throw`, `unavailable`, `validate`
 
+**lambdaServiceHandler with onMessage**: Services can send messages during execution via context:
+
+```typescript
+const handler = serviceHandler({
+  alias: "evaluate",
+  input: { jobId: { type: String } },
+  service: async ({ jobId }, context) => {
+    context?.sendMessage?.({ content: `Starting job ${jobId}` });
+    context?.sendMessage?.({ content: "Processing...", level: "debug" });
+    return { jobId, status: "complete" };
+  },
+});
+
+export const lambdaHandler = lambdaServiceHandler({
+  handler,
+  onMessage: (msg) => {
+    // msg: { content: string, level?: "trace"|"debug"|"info"|"warn"|"error" }
+    console.log(`[${msg.level || "info"}] ${msg.content}`);
+  },
+});
+```
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `onMessage` | `(message: Message) => void \| Promise<void>` | Receives messages from `context.sendMessage` in service (errors swallowed) |
+
+**Note:** Errors in `onMessage` are swallowed to ensure messaging failures never halt service execution.
+
+### LLM Adapter
+
+Located in `src/llm/`. Utilities for integrating service handlers with `@jaypie/llm` Toolkit.
+
+**createLlmTool**: Creates an LLM tool from a serviceHandler for use with Toolkit:
+
+```typescript
+import { serviceHandler } from "@jaypie/vocabulary";
+import { createLlmTool } from "@jaypie/vocabulary/llm";
+import { Toolkit } from "@jaypie/llm";
+
+const handler = serviceHandler({
+  alias: "greet",
+  description: "Greet a user by name",
+  input: {
+    userName: { type: String, description: "The user's name" },
+    loud: { type: Boolean, default: false, description: "Shout the greeting" },
+  },
+  service: ({ userName, loud }) => {
+    const greeting = `Hello, ${userName}!`;
+    return loud ? greeting.toUpperCase() : greeting;
+  },
+});
+
+const { tool } = createLlmTool({ handler });
+
+// Use with Toolkit
+const toolkit = new Toolkit([tool]);
+```
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `handler` | `ServiceHandlerFunction` | Required. The service handler to adapt |
+| `name` | `string` | Override tool name (defaults to handler.alias) |
+| `description` | `string` | Override tool description (defaults to handler.description) |
+| `message` | `string \| function` | Custom message for logging |
+| `exclude` | `string[]` | Fields to exclude from tool parameters |
+
+**inputToJsonSchema**: Converts vocabulary input definitions to JSON Schema for LLM tools:
+
+```typescript
+import { inputToJsonSchema } from "@jaypie/vocabulary/llm";
+
+const schema = inputToJsonSchema(handler.input, { exclude: ["internal"] });
+// Returns JSON Schema with properties, required array, and type: "object"
+```
+
+Features:
+- Automatically converts vocabulary types to JSON Schema types
+- Handles typed arrays, validated types, and regex patterns
+- Generates `enum` for validated string/number types
+- Respects `required` and `default` settings
+
+### MCP Adapter
+
+Located in `src/mcp/`. Utilities for integrating service handlers with Model Context Protocol servers.
+
+**registerMcpTool**: Registers a serviceHandler as an MCP tool:
+
+```typescript
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { serviceHandler } from "@jaypie/vocabulary";
+import { registerMcpTool } from "@jaypie/vocabulary/mcp";
+
+const handler = serviceHandler({
+  alias: "greet",
+  description: "Greet a user by name",
+  input: {
+    userName: { type: String, description: "The user's name" },
+    loud: { type: Boolean, default: false, description: "Shout the greeting" },
+  },
+  service: ({ userName, loud }) => {
+    const greeting = `Hello, ${userName}!`;
+    return loud ? greeting.toUpperCase() : greeting;
+  },
+});
+
+const server = new McpServer({ name: "my-server", version: "1.0.0" });
+registerMcpTool({ handler, server });
+```
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `handler` | `ServiceHandlerFunction` | Required. The service handler to adapt |
+| `server` | `McpServer` | Required. The MCP server to register with |
+| `name` | `string` | Override tool name (defaults to handler.alias) |
+| `description` | `string` | Override tool description (defaults to handler.description) |
+
+Features:
+- Uses handler.alias as tool name (overridable)
+- Uses handler.description as tool description (overridable)
+- Delegates input validation to the service handler
+- Formats responses as MCP text content
+
 ### Types
 
 Located in `types.ts`:
 
 | Type | Description |
 |------|-------------|
+| `MessageLevel` | `"trace" \| "debug" \| "info" \| "warn" \| "error"` - log levels for messages |
+| `Message` | `{ content: string; level?: MessageLevel }` - standard message structure |
+| `ServiceContext` | `{ sendMessage?: (message: Message) => void \| Promise<void> }` - context passed to services |
 | `ScalarType` | `Boolean \| Number \| String` or string equivalents |
 | `CompositeType` | `Array \| Object` or string equivalents |
 | `ArrayElementType` | Types usable inside typed arrays |
@@ -284,6 +462,69 @@ Located in `types.ts`:
 | `ServiceHandlerConfig` | Full handler configuration |
 | `ServiceHandlerFunction` | The returned async handler |
 
+### Entity Types
+
+Located in `base-entity.ts`:
+
+| Type | Description |
+|------|-------------|
+| `BaseEntity` | Base type for all vocabulary entities with id, model (required) and optional name, class, type, content |
+| `BaseEntityInput` | Input for creating entities (omits auto-generated fields) |
+| `BaseEntityUpdate` | Partial input for updating entities |
+| `BaseEntityFilter` | Filter options for listing entities |
+| `HistoryEntry` | Reverse delta recording previous values of changed fields |
+| `MessageEntity` | Message entity extending BaseEntity with required content field |
+| `Progress` | Tracks job execution progress (elapsedTime, estimatedTime, percentageComplete, nextPercentageCheckpoint) |
+| `Job` | Job entity extending BaseEntity with status (required), startedAt, completedAt, messages, progress |
+
+#### Entity Model Schemas
+
+**BaseEntity** (base for all entities):
+```
+model: <varies>
+id: String (auto)
+createdAt: Date (auto)
+updatedAt: Date (auto)
+history?: [HistoryEntry] (auto)
+name?: String
+label?: String
+abbreviation?: String
+alias?: String
+xid?: String
+description?: String
+class?: String
+type?: String
+content?: String
+metadata?: Object
+emoji?: String
+icon?: String
+archivedAt?: Date
+deletedAt?: Date
+```
+
+**MessageEntity** (extends BaseEntity):
+```
+model: message
+content: String (required)
+type?: String (e.g., "assistant", "user", "system")
+```
+
+**Job** (extends BaseEntity):
+```
+model: job
+type?: String (e.g., "batch", "realtime", "scheduled")
+class?: String (e.g., "evaluation", "export", "import")
+status: String (required)
+startedAt?: Date
+completedAt?: Date
+messages?: [MessageEntity]
+progress?:
+    elapsedTime?: Number
+    estimatedTime?: Number
+    percentageComplete?: Number
+    nextPercentageCheckpoint?: Number
+```
+
 ## Exports
 
 ### Main Export (`@jaypie/vocabulary`)
@@ -292,17 +533,17 @@ Located in `types.ts`:
 // Coercion
 export { coerce, coerceFromArray, coerceFromObject, coerceToArray, coerceToBoolean, coerceToNumber, coerceToObject, coerceToString } from "./coerce.js";
 
-// Commander adapter namespace
+// Adapter namespaces
 export * as commander from "./commander/index.js";
-
-// Lambda adapter namespace
 export * as lambda from "./lambda/index.js";
+export * as llm from "./llm/index.js";
+export * as mcp from "./mcp/index.js";
 
 // Service Handler
 export { serviceHandler } from "./serviceHandler.js";
 
 // Types
-export type { ArrayElementType, CoercionType, CompositeType, InputFieldDefinition, RegExpType, ScalarType, ServiceFunction, ServiceHandlerConfig, ServiceHandlerFunction, TypedArrayType, ValidatedNumberType, ValidatedStringType, ValidateFunction } from "./types.js";
+export type { ArrayElementType, CoercionType, CompositeType, InputFieldDefinition, Message, MessageLevel, RegExpType, ScalarType, ServiceContext, ServiceFunction, ServiceHandlerConfig, ServiceHandlerFunction, TypedArrayType, ValidatedNumberType, ValidatedStringType, ValidateFunction } from "./types.js";
 
 // Version
 export const VOCABULARY_VERSION: string;
@@ -314,14 +555,29 @@ export const VOCABULARY_VERSION: string;
 export { createCommanderOptions } from "./createCommanderOptions.js";
 export { parseCommanderOptions } from "./parseCommanderOptions.js";
 export { registerServiceCommand } from "./registerServiceCommand.js";
-export type { CommanderOptionOverride, CreateCommanderOptionsConfig, CreateCommanderOptionsResult, ParseCommanderOptionsConfig, RegisterServiceCommandConfig, RegisterServiceCommandResult } from "./types.js";
+export type { CommanderOptionOverride, CreateCommanderOptionsConfig, CreateCommanderOptionsResult, OnCompleteCallback, OnErrorCallback, OnMessageCallback, ParseCommanderOptionsConfig, RegisterServiceCommandConfig, RegisterServiceCommandResult } from "./types.js";
 ```
 
 ### Lambda Export (`@jaypie/vocabulary/lambda`)
 
 ```typescript
 export { lambdaServiceHandler } from "./lambdaServiceHandler.js";
-export type { LambdaContext, LambdaServiceHandlerConfig, LambdaServiceHandlerOptions, LambdaServiceHandlerResult } from "./types.js";
+export type { LambdaContext, LambdaServiceHandlerConfig, LambdaServiceHandlerOptions, LambdaServiceHandlerResult, OnMessageCallback } from "./types.js";
+```
+
+### LLM Export (`@jaypie/vocabulary/llm`)
+
+```typescript
+export { createLlmTool } from "./createLlmTool.js";
+export { inputToJsonSchema } from "./inputToJsonSchema.js";
+export type { CreateLlmToolConfig, CreateLlmToolResult, LlmTool } from "./types.js";
+```
+
+### MCP Export (`@jaypie/vocabulary/mcp`)
+
+```typescript
+export { registerMcpTool } from "./registerMcpTool.js";
+export type { McpToolContentItem, McpToolResponse, RegisterMcpToolConfig, RegisterMcpToolResult } from "./types.js";
 ```
 
 ## Usage in Other Packages

@@ -1,5 +1,21 @@
 // Type definitions for @jaypie/vocabulary
 
+// Message Types - Standard vocabulary for messaging
+
+/**
+ * Log levels for messages
+ * @default "info"
+ */
+export type MessageLevel = "debug" | "error" | "info" | "trace" | "warn";
+
+/**
+ * Standard message structure for callbacks and notifications
+ */
+export interface Message {
+  content: string;
+  level?: MessageLevel;
+}
+
 // Supported scalar types
 export type ScalarType =
   | typeof Boolean
@@ -53,9 +69,13 @@ export type ValidatedNumberType = Array<number>;
 // Coerces to String and validates against the pattern
 export type RegExpType = RegExp;
 
+// Date type
+export type DateCoercionType = typeof Date;
+
 // All supported types (including validated shorthands)
 export type CoercionType =
   | CompositeType
+  | DateCoercionType
   | RegExpType
   | ScalarType
   | TypedArrayType
@@ -80,9 +100,18 @@ export type ValidateFunction = (
   value: unknown,
 ) => boolean | void | Promise<boolean | void>;
 
+/**
+ * Context passed to service functions for callbacks and utilities
+ */
+export interface ServiceContext {
+  /** Send a message during service execution (connects to onMessage callback) */
+  sendMessage?: (message: Message) => void | Promise<void>;
+}
+
 // Service function signature (can be sync or async)
 export type ServiceFunction<TInput, TOutput> = (
   input: TInput,
+  context?: ServiceContext,
 ) => TOutput | Promise<TOutput>;
 
 // Service handler configuration
@@ -103,5 +132,8 @@ export interface ServiceHandlerFunction<
   TInput extends Record<string, unknown> = Record<string, unknown>,
   TOutput = unknown,
 > extends ServiceHandlerConfig<TInput, TOutput> {
-  (input?: Partial<TInput> | string): Promise<TOutput>;
+  (
+    input?: Partial<TInput> | string,
+    context?: ServiceContext,
+  ): Promise<TOutput>;
 }

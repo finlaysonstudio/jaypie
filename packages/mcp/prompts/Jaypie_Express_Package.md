@@ -406,3 +406,94 @@ expressHandler automatically sets these headers:
 ## Datadog Integration
 
 When Datadog environment variables are configured, expressHandler automatically submits metrics for each request including status code and path.
+
+## Streaming Responses
+
+Use `expressStreamHandler` for Server-Sent Events (SSE) streaming responses. Ideal for real-time updates, LLM streaming, and long-running operations.
+
+### Basic Streaming Usage
+
+```typescript
+import { expressStreamHandler } from "jaypie";
+import type { Request, Response } from "express";
+
+const streamRoute = expressStreamHandler(async (req: Request, res: Response) => {
+  // Write SSE events directly to response
+  res.write("event: message\ndata: {\"text\": \"Hello\"}\n\n");
+  res.write("event: message\ndata: {\"text\": \"World\"}\n\n");
+  // Handler automatically ends the stream
+});
+
+app.get("/stream", streamRoute);
+```
+
+### Streaming with LLM
+
+```typescript
+import { expressStreamHandler, Llm, createExpressStream } from "jaypie";
+
+const llmStreamRoute = expressStreamHandler(async (req: Request, res: Response) => {
+  const llm = new Llm("anthropic");
+  const stream = llm.stream(req.body.prompt);
+
+  // createExpressStream pipes LLM chunks as SSE events
+  await createExpressStream(stream, res);
+});
+
+app.post("/chat", llmStreamRoute);
+```
+
+### Stream Handler Options
+
+`expressStreamHandler` supports the same lifecycle options as `expressHandler`:
+
+```typescript
+import { expressStreamHandler } from "jaypie";
+import type { ExpressStreamHandlerOptions } from "jaypie";
+
+const options: ExpressStreamHandlerOptions = {
+  name: "myStreamHandler",      // Handler name for logging
+  contentType: "text/event-stream", // Default SSE content type
+  chaos: "low",                 // Chaos testing level
+  secrets: ["API_KEY"],         // Secrets to load
+  setup: [],                    // Setup function(s)
+  teardown: [],                 // Teardown function(s)
+  validate: [],                 // Validation function(s)
+  locals: {},                   // Values to set on req.locals
+  unavailable: false,           // Return 503 if true
+};
+
+const handler = expressStreamHandler(async (req, res) => {
+  // Streaming logic
+}, options);
+```
+
+### SSE Headers
+
+`expressStreamHandler` automatically sets SSE headers:
+- `Content-Type: text/event-stream`
+- `Cache-Control: no-cache`
+- `Connection: keep-alive`
+- `X-Accel-Buffering: no` (disables nginx buffering)
+
+### Error Handling in Streams
+
+Errors are formatted as SSE error events:
+
+```typescript
+// Jaypie errors and unhandled errors are written as:
+// event: error
+// data: {"errors":[{"status":500,"title":"Internal Error"}]}
+```
+
+### TypeScript Types
+
+```typescript
+import type {
+  ExpressStreamHandlerOptions,
+  ExpressStreamHandlerLocals,
+  JaypieStreamHandlerSetup,
+  JaypieStreamHandlerTeardown,
+  JaypieStreamHandlerValidate,
+} from "jaypie";
+```

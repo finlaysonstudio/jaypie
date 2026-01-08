@@ -1,17 +1,35 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  BASE_ENTITY_AUTO_FIELDS,
+  BASE_ENTITY_FIELDS,
+  BASE_ENTITY_REQUIRED_FIELDS,
+  BASE_ENTITY_TIMESTAMP_FIELDS,
   coerce,
   coerceFromArray,
+  coerceFromDate,
   coerceFromObject,
   coerceToArray,
   coerceToBoolean,
+  coerceToDate,
   coerceToNumber,
   coerceToObject,
   coerceToString,
   commander,
+  createBaseEntityInput,
+  DateType,
+  hasBaseEntityShape,
+  isAutoField,
+  isBaseEntity,
+  isDateType,
+  isStatus,
+  isTimestampField,
+  isValidDate,
   lambda,
+  pickBaseEntityFields,
   serviceHandler,
+  STATUS_VALUES,
+  StatusType,
   VOCABULARY_VERSION,
 } from "..";
 
@@ -40,6 +58,36 @@ describe("vocabulary/index", () => {
       expect(coerceFromObject).toBeDefined();
     });
 
+    it("exports date coerce functions", () => {
+      expect(coerceToDate).toBeDefined();
+      expect(coerceFromDate).toBeDefined();
+      expect(isValidDate).toBeDefined();
+      expect(isDateType).toBeDefined();
+      expect(DateType).toBe(Date);
+    });
+
+    it("exports BaseEntity types and utilities", () => {
+      expect(BASE_ENTITY_FIELDS).toBeDefined();
+      expect(BASE_ENTITY_REQUIRED_FIELDS).toBeDefined();
+      expect(BASE_ENTITY_AUTO_FIELDS).toBeDefined();
+      expect(BASE_ENTITY_TIMESTAMP_FIELDS).toBeDefined();
+      expect(isBaseEntity).toBeDefined();
+      expect(hasBaseEntityShape).toBeDefined();
+      expect(createBaseEntityInput).toBeDefined();
+      expect(pickBaseEntityFields).toBeDefined();
+      expect(isTimestampField).toBeDefined();
+      expect(isAutoField).toBeDefined();
+    });
+
+    it("exports status type and utilities", () => {
+      expect(STATUS_VALUES).toBeDefined();
+      expect(StatusType).toBeDefined();
+      expect(isStatus).toBeDefined();
+      expect(Array.isArray(STATUS_VALUES)).toBe(true);
+      expect(Array.isArray(StatusType)).toBe(true);
+      expect(typeof isStatus).toBe("function");
+    });
+
     it("exports commander namespace", () => {
       expect(commander).toBeDefined();
       expect(commander.createCommanderOptions).toBeDefined();
@@ -61,7 +109,7 @@ describe("vocabulary/index", () => {
     });
 
     it("VOCABULARY_VERSION matches package version", () => {
-      expect(VOCABULARY_VERSION).toBe("0.1.5");
+      expect(VOCABULARY_VERSION).toBe("0.1.6");
     });
   });
 });
