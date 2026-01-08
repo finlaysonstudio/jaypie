@@ -419,6 +419,29 @@ const result = await llm.operate("Roll dice and check weather", {
 });
 ```
 
+### Zod Schema Support
+
+Tool parameters can be defined using Zod schemas instead of JSON Schema:
+
+```javascript
+import { z } from "zod/v4";
+import { Llm, Toolkit } from "jaypie";
+
+const weatherTool = {
+  name: "get_weather",
+  description: "Get weather for a city",
+  parameters: z.object({
+    city: z.string().describe("City name"),
+    unit: z.enum(["celsius", "fahrenheit"]),
+  }),
+  type: "function",
+  call: async ({ city, unit }) => ({ city, temp: 72, unit }),
+};
+
+const toolkit = new Toolkit([weatherTool]);
+// Zod schemas are automatically converted to JSON Schema
+```
+
 ## Footnotes
 
 Llm.operate(input, options)
