@@ -1,16 +1,28 @@
 import * as original from "@jaypie/dynamodb";
 import type {
+  ArchiveEntityParams,
+  BaseQueryOptions,
+  DeleteEntityParams,
   DynamoClientConfig,
   FabricEntity,
+  GetEntityParams,
   ParentReference,
-  QueryOptions,
+  PutEntityParams,
+  QueryByAliasParams,
+  QueryByClassParams,
+  QueryByOuParams,
+  QueryByTypeParams,
+  QueryByXidParams,
   QueryResult,
+  UpdateEntityParams,
 } from "@jaypie/dynamodb";
 
 import { createMockFunction, createMockResolvedFunction } from "./utils";
 
 // Re-export constants (no need to mock, just pass through)
 export const APEX = original.APEX;
+export const ARCHIVED_SUFFIX = original.ARCHIVED_SUFFIX;
+export const DELETED_SUFFIX = original.DELETED_SUFFIX;
 export const INDEX_ALIAS = original.INDEX_ALIAS;
 export const INDEX_CLASS = original.INDEX_CLASS;
 export const INDEX_OU = original.INDEX_OU;
@@ -43,9 +55,11 @@ export const calculateOu = createMockFunction<
   (parent?: ParentReference) => string
 >((parent) => original.calculateOu(parent));
 
-export const populateIndexKeys = createMockFunction<
-  <T extends FabricEntity>(entity: T) => T
->(<T extends FabricEntity>(entity: T) => original.populateIndexKeys(entity));
+export const indexEntity = createMockFunction<
+  <T extends FabricEntity>(entity: T, suffix?: string) => T
+>(<T extends FabricEntity>(entity: T, suffix?: string) =>
+  original.indexEntity(entity, suffix),
+);
 
 // Client functions
 export const initClient = createMockFunction<
@@ -66,12 +80,42 @@ export const resetClient = createMockFunction(() => {
   // No-op in mock
 });
 
-// Query functions - return empty results by default
+// Entity operations - return mock data
+export const getEntity = createMockFunction<
+  <T extends FabricEntity = FabricEntity>(
+    params: GetEntityParams,
+  ) => Promise<T | null>
+>(async () => null);
+
+export const putEntity = createMockFunction<
+  <T extends FabricEntity>(params: PutEntityParams<T>) => Promise<T>
+>(async <T extends FabricEntity>(params: PutEntityParams<T>) =>
+  original.indexEntity(params.entity),
+);
+
+export const updateEntity = createMockFunction<
+  <T extends FabricEntity>(params: UpdateEntityParams<T>) => Promise<T>
+>(async <T extends FabricEntity>(params: UpdateEntityParams<T>) => ({
+  ...original.indexEntity(params.entity),
+  updatedAt: new Date().toISOString(),
+}));
+
+export const deleteEntity = createMockFunction<
+  (params: DeleteEntityParams) => Promise<boolean>
+>(async () => true);
+
+export const archiveEntity = createMockFunction<
+  (params: ArchiveEntityParams) => Promise<boolean>
+>(async () => true);
+
+export const destroyEntity = createMockFunction<
+  (params: DeleteEntityParams) => Promise<boolean>
+>(async () => true);
+
+// Query functions - return empty results by default (use object params)
 export const queryByOu = createMockFunction<
   <T extends FabricEntity = FabricEntity>(
-    ou: string,
-    model: string,
-    options?: QueryOptions,
+    params: QueryByOuParams,
   ) => Promise<QueryResult<T>>
 >(async () => ({
   items: [],
@@ -80,18 +124,13 @@ export const queryByOu = createMockFunction<
 
 export const queryByAlias = createMockFunction<
   <T extends FabricEntity = FabricEntity>(
-    ou: string,
-    model: string,
-    alias: string,
+    params: QueryByAliasParams,
   ) => Promise<T | null>
 >(async () => null);
 
 export const queryByClass = createMockFunction<
   <T extends FabricEntity = FabricEntity>(
-    ou: string,
-    model: string,
-    recordClass: string,
-    options?: QueryOptions,
+    params: QueryByClassParams,
   ) => Promise<QueryResult<T>>
 >(async () => ({
   items: [],
@@ -100,10 +139,7 @@ export const queryByClass = createMockFunction<
 
 export const queryByType = createMockFunction<
   <T extends FabricEntity = FabricEntity>(
-    ou: string,
-    model: string,
-    type: string,
-    options?: QueryOptions,
+    params: QueryByTypeParams,
   ) => Promise<QueryResult<T>>
 >(async () => ({
   items: [],
@@ -112,8 +148,9 @@ export const queryByType = createMockFunction<
 
 export const queryByXid = createMockFunction<
   <T extends FabricEntity = FabricEntity>(
-    ou: string,
-    model: string,
-    xid: string,
+    params: QueryByXidParams,
   ) => Promise<T | null>
 >(async () => null);
+
+// Re-export types for convenience
+export type { BaseQueryOptions, FabricEntity, ParentReference, QueryResult };

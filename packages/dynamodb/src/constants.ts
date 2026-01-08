@@ -8,3 +8,7 @@ export const INDEX_CLASS = "indexClass";
 export const INDEX_OU = "indexOu";
 export const INDEX_TYPE = "indexType";
 export const INDEX_XID = "indexXid";
+
+// Index suffixes for soft state
+export const ARCHIVED_SUFFIX = "#archived";
+export const DELETED_SUFFIX = "#deleted";

@@ -8,7 +8,7 @@ import {
   buildIndexType,
   buildIndexXid,
   calculateOu,
-  populateIndexKeys,
+  indexEntity,
 } from "../keyBuilders.js";
 import type { FabricEntity } from "../types.js";
 
@@ -104,7 +104,7 @@ describe("calculateOu", () => {
   });
 });
 
-describe("populateIndexKeys", () => {
+describe("indexEntity", () => {
   const now = new Date().toISOString();
 
   const createBaseEntity = (): FabricEntity => ({
@@ -118,18 +118,18 @@ describe("populateIndexKeys", () => {
   });
 
   it("is a function", () => {
-    expect(populateIndexKeys).toBeFunction();
+    expect(indexEntity).toBeFunction();
   });
 
   it("always populates indexOu", () => {
     const entity = createBaseEntity();
-    const result = populateIndexKeys(entity);
+    const result = indexEntity(entity);
     expect(result.indexOu).toBe("@#record");
   });
 
   it("does not modify other properties", () => {
     const entity = createBaseEntity();
-    const result = populateIndexKeys(entity);
+    const result = indexEntity(entity);
     expect(result.id).toBe(entity.id);
     expect(result.model).toBe(entity.model);
     expect(result.name).toBe(entity.name);
@@ -138,49 +138,49 @@ describe("populateIndexKeys", () => {
 
   it("populates indexAlias when alias is present", () => {
     const entity = { ...createBaseEntity(), alias: "my-alias" };
-    const result = populateIndexKeys(entity);
+    const result = indexEntity(entity);
     expect(result.indexAlias).toBe("@#record#my-alias");
   });
 
   it("does not populate indexAlias when alias is missing", () => {
     const entity = createBaseEntity();
-    const result = populateIndexKeys(entity);
+    const result = indexEntity(entity);
     expect(result.indexAlias).toBeUndefined();
   });
 
   it("populates indexClass when class is present", () => {
     const entity = { ...createBaseEntity(), class: "memory" };
-    const result = populateIndexKeys(entity);
+    const result = indexEntity(entity);
     expect(result.indexClass).toBe("@#record#memory");
   });
 
   it("does not populate indexClass when class is missing", () => {
     const entity = createBaseEntity();
-    const result = populateIndexKeys(entity);
+    const result = indexEntity(entity);
     expect(result.indexClass).toBeUndefined();
   });
 
   it("populates indexType when type is present", () => {
     const entity = { ...createBaseEntity(), type: "note" };
-    const result = populateIndexKeys(entity);
+    const result = indexEntity(entity);
     expect(result.indexType).toBe("@#record#note");
   });
 
   it("does not populate indexType when type is missing", () => {
     const entity = createBaseEntity();
-    const result = populateIndexKeys(entity);
+    const result = indexEntity(entity);
     expect(result.indexType).toBeUndefined();
   });
 
   it("populates indexXid when xid is present", () => {
     const entity = { ...createBaseEntity(), xid: "ext-12345" };
-    const result = populateIndexKeys(entity);
+    const result = indexEntity(entity);
     expect(result.indexXid).toBe("@#record#ext-12345");
   });
 
   it("does not populate indexXid when xid is missing", () => {
     const entity = createBaseEntity();
-    const result = populateIndexKeys(entity);
+    const result = indexEntity(entity);
     expect(result.indexXid).toBeUndefined();
   });
 
@@ -192,7 +192,7 @@ describe("populateIndexKeys", () => {
       type: "note",
       xid: "ext-12345",
     };
-    const result = populateIndexKeys(entity);
+    const result = indexEntity(entity);
     expect(result.indexOu).toBe("@#record");
     expect(result.indexAlias).toBe("@#record#my-alias");
     expect(result.indexClass).toBe("@#record#memory");
@@ -207,8 +207,36 @@ describe("populateIndexKeys", () => {
       model: "message",
       ou: "chat#abc-123",
     };
-    const result = populateIndexKeys(entity);
+    const result = indexEntity(entity);
     expect(result.indexOu).toBe("chat#abc-123#message");
     expect(result.indexAlias).toBe("chat#abc-123#message#first-message");
+  });
+
+  describe("suffix parameter", () => {
+    it("appends suffix to indexOu", () => {
+      const entity = createBaseEntity();
+      const result = indexEntity(entity, "#deleted");
+      expect(result.indexOu).toBe("@#record#deleted");
+    });
+
+    it("appends suffix to all present index keys", () => {
+      const entity = {
+        ...createBaseEntity(),
+        alias: "my-alias",
+        class: "memory",
+      };
+      const result = indexEntity(entity, "#archived");
+      expect(result.indexOu).toBe("@#record#archived");
+      expect(result.indexAlias).toBe("@#record#my-alias#archived");
+      expect(result.indexClass).toBe("@#record#memory#archived");
+    });
+
+    it("defaults to empty string (no suffix)", () => {
+      const entity = createBaseEntity();
+      const result = indexEntity(entity);
+      expect(result.indexOu).toBe("@#record");
+      expect(result.indexOu).not.toContain("#deleted");
+      expect(result.indexOu).not.toContain("#archived");
+    });
   });
 });

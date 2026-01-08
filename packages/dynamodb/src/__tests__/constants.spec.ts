@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import {
   APEX,
+  ARCHIVED_SUFFIX,
+  DELETED_SUFFIX,
   INDEX_ALIAS,
   INDEX_CLASS,
   INDEX_OU,
@@ -50,6 +52,16 @@ describe("Constants", () => {
 
     it("INDEX_XID is 'indexXid'", () => {
       expect(INDEX_XID).toBe("indexXid");
+    });
+  });
+
+  describe("Index suffixes", () => {
+    it("ARCHIVED_SUFFIX is '#archived'", () => {
+      expect(ARCHIVED_SUFFIX).toBe("#archived");
+    });
+
+    it("DELETED_SUFFIX is '#deleted'", () => {
+      expect(DELETED_SUFFIX).toBe("#deleted");
     });
   });
 });

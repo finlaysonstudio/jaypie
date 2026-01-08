@@ -38,6 +38,16 @@ describe("@jaypie/dynamodb exports", () => {
       expect(dynamodb.INDEX_XID).toBeDefined();
       expect(dynamodb.INDEX_XID).toBe("indexXid");
     });
+
+    it("exports ARCHIVED_SUFFIX", () => {
+      expect(dynamodb.ARCHIVED_SUFFIX).toBeDefined();
+      expect(dynamodb.ARCHIVED_SUFFIX).toBe("#archived");
+    });
+
+    it("exports DELETED_SUFFIX", () => {
+      expect(dynamodb.DELETED_SUFFIX).toBeDefined();
+      expect(dynamodb.DELETED_SUFFIX).toBe("#deleted");
+    });
   });
 
   describe("Key Builder Functions", () => {
@@ -65,8 +75,34 @@ describe("@jaypie/dynamodb exports", () => {
       expect(dynamodb.calculateOu).toBeFunction();
     });
 
-    it("exports populateIndexKeys", () => {
-      expect(dynamodb.populateIndexKeys).toBeFunction();
+    it("exports indexEntity", () => {
+      expect(dynamodb.indexEntity).toBeFunction();
+    });
+  });
+
+  describe("Entity Operations", () => {
+    it("exports getEntity", () => {
+      expect(dynamodb.getEntity).toBeFunction();
+    });
+
+    it("exports putEntity", () => {
+      expect(dynamodb.putEntity).toBeFunction();
+    });
+
+    it("exports updateEntity", () => {
+      expect(dynamodb.updateEntity).toBeFunction();
+    });
+
+    it("exports deleteEntity", () => {
+      expect(dynamodb.deleteEntity).toBeFunction();
+    });
+
+    it("exports archiveEntity", () => {
+      expect(dynamodb.archiveEntity).toBeFunction();
+    });
+
+    it("exports destroyEntity", () => {
+      expect(dynamodb.destroyEntity).toBeFunction();
     });
   });
 

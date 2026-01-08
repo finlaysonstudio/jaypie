@@ -1,5 +1,5 @@
 ---
-description: Complete guide to @jaypie/dynamodb single-table design utilities including GSI patterns, key builders, and query functions
+description: Complete guide to @jaypie/dynamodb single-table design utilities including GSI patterns, key builders, entity operations, and query functions
 globs: packages/dynamodb/**
 ---
 
@@ -61,9 +61,7 @@ initClient({
 });
 ```
 
-## Creating Entities
-
-### FabricEntity Interface
+## FabricEntity Interface
 
 All entities must implement `FabricEntity`:
 
@@ -83,7 +81,8 @@ interface MyRecord extends FabricEntity {
   // Timestamps (ISO 8601)
   createdAt: string;
   updatedAt: string;
-  deletedAt?: string; // Soft delete
+  archivedAt?: string; // Set by archiveEntity
+  deletedAt?: string;  // Set by deleteEntity
 
   // Optional - trigger GSI population
   alias?: string;     // Human-friendly slug
@@ -93,31 +92,97 @@ interface MyRecord extends FabricEntity {
 }
 ```
 
-### Using populateIndexKeys
+## Entity Operations
 
-Always use `populateIndexKeys` before saving to auto-populate GSI keys:
+### Creating Entities
+
+Use `putEntity` to create or replace entities. GSI keys are auto-populated:
 
 ```typescript
-import { APEX, populateIndexKeys } from "@jaypie/dynamodb";
+import { APEX, putEntity } from "@jaypie/dynamodb";
 
 const now = new Date().toISOString();
 
-const record = populateIndexKeys({
-  model: "record",
-  id: crypto.randomUUID(),
-  name: "Daily Log",
-  ou: APEX,
-  sequence: Date.now(),
-  alias: "2026-01-07",    // Optional
-  class: "memory",        // Optional
-  createdAt: now,
-  updatedAt: now,
+const record = await putEntity({
+  entity: {
+    model: "record",
+    id: crypto.randomUUID(),
+    name: "Daily Log",
+    ou: APEX,
+    sequence: Date.now(),
+    alias: "2026-01-07",    // Optional
+    class: "memory",        // Optional
+    createdAt: now,
+    updatedAt: now,
+  },
 });
 
-// Result includes:
+// Result includes auto-populated indexes:
 // indexOu: "@#record"
 // indexAlias: "@#record#2026-01-07"
 // indexClass: "@#record#memory"
+```
+
+### Getting Entities
+
+```typescript
+import { getEntity } from "@jaypie/dynamodb";
+
+const record = await getEntity({ id: "123", model: "record" });
+// Returns entity or null
+```
+
+### Updating Entities
+
+Use `updateEntity` to update. Automatically sets `updatedAt` and re-indexes:
+
+```typescript
+import { updateEntity } from "@jaypie/dynamodb";
+
+const updated = await updateEntity({
+  entity: {
+    ...existingRecord,
+    name: "Updated Name",
+    alias: "new-alias",
+  },
+});
+// updatedAt is set automatically
+// indexAlias is re-calculated
+```
+
+### Soft Delete
+
+Use `deleteEntity` for soft delete (sets `deletedAt`):
+
+```typescript
+import { deleteEntity } from "@jaypie/dynamodb";
+
+await deleteEntity({ id: "123", model: "record" });
+// Sets deletedAt and updatedAt timestamps
+// Entity excluded from queries by default
+```
+
+### Archive
+
+Use `archiveEntity` for archiving (sets `archivedAt`):
+
+```typescript
+import { archiveEntity } from "@jaypie/dynamodb";
+
+await archiveEntity({ id: "123", model: "record" });
+// Sets archivedAt and updatedAt timestamps
+// Entity excluded from queries by default
+```
+
+### Hard Delete
+
+Use `destroyEntity` to permanently remove:
+
+```typescript
+import { destroyEntity } from "@jaypie/dynamodb";
+
+await destroyEntity({ id: "123", model: "record" });
+// Permanently removes from table
 ```
 
 ### Hierarchical Entities
@@ -125,7 +190,7 @@ const record = populateIndexKeys({
 Use `calculateOu` to derive OU from parent:
 
 ```typescript
-import { calculateOu, populateIndexKeys } from "@jaypie/dynamodb";
+import { calculateOu, putEntity, queryByOu } from "@jaypie/dynamodb";
 
 // Parent reference
 const chat = { model: "chat", id: "abc-123" };
@@ -134,22 +199,26 @@ const chat = { model: "chat", id: "abc-123" };
 const messageOu = calculateOu(chat); // "chat#abc-123"
 
 // Create child entity
-const message = populateIndexKeys({
-  model: "message",
-  id: crypto.randomUUID(),
-  name: "First message",
-  ou: messageOu,
-  sequence: Date.now(),
-  createdAt: now,
-  updatedAt: now,
+const message = await putEntity({
+  entity: {
+    model: "message",
+    id: crypto.randomUUID(),
+    name: "First message",
+    ou: messageOu,
+    sequence: Date.now(),
+    createdAt: now,
+    updatedAt: now,
+  },
 });
-
 // indexOu: "chat#abc-123#message"
+
+// Query all messages in chat
+const { items } = await queryByOu({ model: "message", ou: messageOu });
 ```
 
 ## Query Functions
 
-All queries filter soft-deleted records by default (`attribute_not_exists(deletedAt)`).
+All queries use object parameters and filter soft-deleted and archived records by default.
 
 ### queryByOu - List by Parent
 
@@ -159,11 +228,16 @@ List all entities of a model under a parent:
 import { APEX, queryByOu } from "@jaypie/dynamodb";
 
 // Root-level records
-const { items, lastEvaluatedKey } = await queryByOu(APEX, "record");
+const { items, lastEvaluatedKey } = await queryByOu({
+  model: "record",
+  ou: APEX,
+});
 
 // Messages under a chat
-const chatOu = "chat#abc-123";
-const { items: messages } = await queryByOu(chatOu, "message");
+const { items: messages } = await queryByOu({
+  model: "message",
+  ou: "chat#abc-123",
+});
 ```
 
 ### queryByAlias - Human-Friendly Lookup
@@ -173,7 +247,11 @@ Single entity lookup by slug:
 ```typescript
 import { APEX, queryByAlias } from "@jaypie/dynamodb";
 
-const record = await queryByAlias(APEX, "record", "2026-01-07");
+const record = await queryByAlias({
+  alias: "2026-01-07",
+  model: "record",
+  ou: APEX,
+});
 // Returns entity or null
 ```
 
@@ -183,10 +261,18 @@ const record = await queryByAlias(APEX, "record", "2026-01-07");
 import { APEX, queryByClass, queryByType } from "@jaypie/dynamodb";
 
 // All memory records
-const { items } = await queryByClass(APEX, "record", "memory");
+const { items } = await queryByClass({
+  model: "record",
+  ou: APEX,
+  recordClass: "memory",
+});
 
 // All note-type records
-const { items: notes } = await queryByType(APEX, "record", "note");
+const { items: notes } = await queryByType({
+  model: "record",
+  ou: APEX,
+  type: "note",
+});
 ```
 
 ### queryByXid - External ID Lookup
@@ -196,23 +282,29 @@ Single entity lookup by external system ID:
 ```typescript
 import { APEX, queryByXid } from "@jaypie/dynamodb";
 
-const record = await queryByXid(APEX, "record", "ext-12345");
+const record = await queryByXid({
+  model: "record",
+  ou: APEX,
+  xid: "ext-12345",
+});
 // Returns entity or null
 ```
 
 ### Query Options
 
 ```typescript
-import type { QueryOptions } from "@jaypie/dynamodb";
+import type { BaseQueryOptions } from "@jaypie/dynamodb";
 
-const options: QueryOptions = {
+const result = await queryByOu({
+  model: "record",
+  ou: APEX,
+  // BaseQueryOptions:
   limit: 25,                // Max items to return
   ascending: true,          // Oldest first (default: false = newest first)
   includeDeleted: true,     // Include soft-deleted records
+  includeArchived: true,    // Include archived records
   startKey: lastEvaluatedKey, // Pagination cursor
-};
-
-const result = await queryByOu(APEX, "record", options);
+});
 ```
 
 ### Pagination
@@ -224,7 +316,9 @@ let startKey: Record<string, unknown> | undefined;
 const allItems: FabricEntity[] = [];
 
 do {
-  const { items, lastEvaluatedKey } = await queryByOu(APEX, "record", {
+  const { items, lastEvaluatedKey } = await queryByOu({
+    model: "record",
+    ou: APEX,
     limit: 100,
     startKey,
   });
@@ -235,7 +329,23 @@ do {
 
 ## Key Builder Functions
 
-Use these to construct GSI keys manually when needed:
+Use `indexEntity` to auto-populate GSI keys on an entity:
+
+```typescript
+import { indexEntity } from "@jaypie/dynamodb";
+
+const indexed = indexEntity({
+  model: "record",
+  id: "123",
+  ou: "@",
+  alias: "my-alias",
+  // ...
+});
+// indexOu: "@#record"
+// indexAlias: "@#record#my-alias"
+```
+
+Use individual key builders for manual key construction:
 
 ```typescript
 import {
@@ -332,37 +442,54 @@ vi.mock("@jaypie/dynamodb", async () => {
   return testkit;
 });
 
-// Key builders and populateIndexKeys work correctly
+// Key builders and indexEntity work correctly (delegate to real implementations)
 // Query functions return empty results by default
-// Use mockResolvedValue to customize query results
+// Entity operations return sensible defaults
 
-import { queryByOu } from "@jaypie/testkit/mock";
+// Customize mock behavior:
+import { queryByOu, getEntity, putEntity } from "@jaypie/testkit/mock";
+
 queryByOu.mockResolvedValue({
   items: [{ id: "123", name: "Test" }],
   lastEvaluatedKey: undefined,
 });
+
+getEntity.mockResolvedValue({ id: "123", model: "record", name: "Test" });
 ```
 
 ## Best Practices
 
-### Always Use populateIndexKeys
+### Use putEntity, Not Direct Writes
 
-Never manually set `indexOu`, `indexAlias`, etc. Always use `populateIndexKeys`:
+Always use `putEntity` or `updateEntity` to ensure GSI keys are auto-populated:
 
 ```typescript
-// CORRECT
-const entity = populateIndexKeys({
-  model: "record",
-  alias: "my-alias",
-  // ...
+// CORRECT - uses putEntity which calls indexEntity internally
+const entity = await putEntity({
+  entity: {
+    model: "record",
+    alias: "my-alias",
+    // ...
+  },
 });
 
-// WRONG - manual index key assignment
+// WRONG - bypasses index population
 const entity = {
   model: "record",
   alias: "my-alias",
-  indexAlias: "@#record#my-alias", // Don't do this
+  indexAlias: "@#record#my-alias", // Don't manually set index keys
 };
+```
+
+### Use indexEntity for Raw Entities
+
+If you need to prepare an entity before a batch write:
+
+```typescript
+import { indexEntity } from "@jaypie/dynamodb";
+
+// Use indexEntity to prepare entities for batch operations
+const indexed = indexEntity(myEntity);
 ```
 
 ### Use Meaningful Model Names
@@ -385,26 +512,36 @@ Model names are part of every key. Use short, descriptive names:
 Always set `sequence: Date.now()` for chronological ordering in GSI queries:
 
 ```typescript
-const entity = populateIndexKeys({
-  // ...
-  sequence: Date.now(),  // Required for proper ordering
+const entity = await putEntity({
+  entity: {
+    // ...
+    sequence: Date.now(),  // Required for proper ordering
+  },
 });
 ```
 
-### Soft Delete Pattern
+### Soft Delete and Archive Patterns
 
-Use `deletedAt` instead of deleting records:
+Use `deleteEntity` for logical deletion and `archiveEntity` for archival:
 
 ```typescript
-// Soft delete
-record.deletedAt = new Date().toISOString();
-await updateRecord(record);
+// Soft delete - user action, can be recovered
+await deleteEntity({ id: "123", model: "record" });
 
-// Query excludes deleted by default
-const { items } = await queryByOu(APEX, "record");
+// Archive - system action, long-term storage
+await archiveEntity({ id: "123", model: "record" });
 
-// Include deleted if needed
-const { items: all } = await queryByOu(APEX, "record", {
+// Queries exclude both by default
+const { items } = await queryByOu({ model: "record", ou: APEX });
+
+// Include if needed
+const { items: all } = await queryByOu({
+  model: "record",
+  ou: APEX,
   includeDeleted: true,
+  includeArchived: true,
 });
+
+// Permanent deletion (use sparingly)
+await destroyEntity({ id: "123", model: "record" });
 ```

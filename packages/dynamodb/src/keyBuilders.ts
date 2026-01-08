@@ -88,29 +88,37 @@ export function calculateOu(parent?: ParentReference): string {
  * - indexXid is populated only when xid is present
  *
  * @param entity - The entity to populate index keys for
+ * @param suffix - Optional suffix to append to all index keys (e.g., "#deleted", "#archived")
  * @returns The entity with populated index keys
  */
-export function populateIndexKeys<T extends FabricEntity>(entity: T): T {
+export function indexEntity<T extends FabricEntity>(
+  entity: T,
+  suffix: string = "",
+): T {
   const result = { ...entity };
 
   // indexOu is always set (from ou + model)
-  result.indexOu = buildIndexOu(entity.ou, entity.model);
+  result.indexOu = buildIndexOu(entity.ou, entity.model) + suffix;
 
   // Optional indexes - only set when the source field is present
   if (entity.alias !== undefined) {
-    result.indexAlias = buildIndexAlias(entity.ou, entity.model, entity.alias);
+    result.indexAlias =
+      buildIndexAlias(entity.ou, entity.model, entity.alias) + suffix;
   }
 
   if (entity.class !== undefined) {
-    result.indexClass = buildIndexClass(entity.ou, entity.model, entity.class);
+    result.indexClass =
+      buildIndexClass(entity.ou, entity.model, entity.class) + suffix;
   }
 
   if (entity.type !== undefined) {
-    result.indexType = buildIndexType(entity.ou, entity.model, entity.type);
+    result.indexType =
+      buildIndexType(entity.ou, entity.model, entity.type) + suffix;
   }
 
   if (entity.xid !== undefined) {
-    result.indexXid = buildIndexXid(entity.ou, entity.model, entity.xid);
+    result.indexXid =
+      buildIndexXid(entity.ou, entity.model, entity.xid) + suffix;
   }
 
   return result;

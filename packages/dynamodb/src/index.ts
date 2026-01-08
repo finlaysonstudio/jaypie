@@ -10,6 +10,8 @@ export {
 // Constants
 export {
   APEX,
+  ARCHIVED_SUFFIX,
+  DELETED_SUFFIX,
   INDEX_ALIAS,
   INDEX_CLASS,
   INDEX_OU,
@@ -17,6 +19,16 @@ export {
   INDEX_XID,
   SEPARATOR,
 } from "./constants.js";
+
+// Entity operations
+export {
+  archiveEntity,
+  deleteEntity,
+  destroyEntity,
+  getEntity,
+  putEntity,
+  updateEntity,
+} from "./entities.js";
 
 // Key builders and entity utilities
 export {
@@ -26,7 +38,7 @@ export {
   buildIndexType,
   buildIndexXid,
   calculateOu,
-  populateIndexKeys,
+  indexEntity,
 } from "./keyBuilders.js";
 
 // Query utilities
@@ -40,9 +52,22 @@ export {
 
 // Types
 export type {
+  ArchiveEntityParams,
+  DeleteEntityParams,
+  GetEntityParams,
+  PutEntityParams,
+  UpdateEntityParams,
+} from "./entities.js";
+
+export type {
+  BaseQueryOptions,
   DynamoClientConfig,
   FabricEntity,
   ParentReference,
-  QueryOptions,
+  QueryByAliasParams,
+  QueryByClassParams,
+  QueryByOuParams,
+  QueryByTypeParams,
+  QueryByXidParams,
   QueryResult,
 } from "./types.js";

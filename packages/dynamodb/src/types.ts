@@ -24,17 +24,85 @@ export interface ParentReference {
 }
 
 /**
- * Query options for GSI queries
+ * Base query options shared by all query functions
  */
-export interface QueryOptions {
+export interface BaseQueryOptions {
+  /** Query archived entities instead of active ones */
+  archived?: boolean;
   /** Whether to sort ascending (oldest first). Default: false (most recent first) */
   ascending?: boolean;
-  /** Whether to include soft-deleted records. Default: false */
-  includeDeleted?: boolean;
+  /** Query deleted entities instead of active ones */
+  deleted?: boolean;
   /** Maximum number of items to return */
   limit?: number;
   /** Pagination cursor from previous query */
   startKey?: Record<string, unknown>;
+}
+
+/**
+ * Parameters for queryByOu
+ */
+export interface QueryByOuParams extends BaseQueryOptions {
+  /** The entity model name */
+  model: string;
+  /** The organizational unit (APEX or "{parent.model}#{parent.id}") */
+  ou: string;
+}
+
+/**
+ * Parameters for queryByAlias
+ */
+export interface QueryByAliasParams {
+  /** The human-friendly alias */
+  alias: string;
+  /** Query archived entities instead of active ones */
+  archived?: boolean;
+  /** Query deleted entities instead of active ones */
+  deleted?: boolean;
+  /** The entity model name */
+  model: string;
+  /** The organizational unit */
+  ou: string;
+}
+
+/**
+ * Parameters for queryByClass
+ */
+export interface QueryByClassParams extends BaseQueryOptions {
+  /** The entity model name */
+  model: string;
+  /** The organizational unit */
+  ou: string;
+  /** The category classification */
+  recordClass: string;
+}
+
+/**
+ * Parameters for queryByType
+ */
+export interface QueryByTypeParams extends BaseQueryOptions {
+  /** The entity model name */
+  model: string;
+  /** The organizational unit */
+  ou: string;
+  /** The type classification */
+  type: string;
+}
+
+/**
+ * Parameters for queryByXid
+ */
+export interface QueryByXidParams {
+  /** Query archived entities instead of active ones */
+  archived?: boolean;
+  /** Query deleted entities instead of active ones */
+  deleted?: boolean;
+  /** The entity model name */
+  model: string;
+  /** The organizational unit */
+  ou: string;
+  /** The external ID */
+  xid: string;
 }
 
 /**
@@ -65,7 +133,7 @@ export interface FabricEntity {
   /** Timestamp for chronological ordering (Date.now()) */
   sequence: number;
 
-  // GSI Keys (auto-populated by populateIndexKeys)
+  // GSI Keys (auto-populated by indexEntity)
   indexAlias?: string;
   indexClass?: string;
   indexOu?: string;
@@ -85,6 +153,8 @@ export interface FabricEntity {
   // Timestamps (ISO 8601)
   createdAt: string;
   updatedAt: string;
+  /** Archive timestamp (for inactive but preserved records) */
+  archivedAt?: string;
   /** Soft-delete timestamp */
   deletedAt?: string;
 }
