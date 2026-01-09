@@ -137,8 +137,9 @@ Utilize these MCP when provided. When they are unavailable but would be useful, 
   - Consult when creating new packages and debugging Jaypie components
   - Use documented mock patterns in `@jaypie/testkit`
 ### Development Notes (memories)
-- Whenever a new export is added to a package, make sure to update the exports of packages/testkit or tests will fail.
-- Updating testkit or mcp requires bumping the package version (patch)
+- Whenever a new export is added to a package, make sure to update the exports of packages/testkit or tests will fail
+- After any functionality changes, check @packages/mcp/prompts and update relevant documentation
+- Updating mcp or testkit requires bumping the package version (patch)
 - Do not bump a package twice in a branch. Versions are only published when merged into main. Check the current version on NPM when unsure
 - Avoid default exports
 - Do not preserve backwards compatibility in unreleased changes or pre-1.0 packages
