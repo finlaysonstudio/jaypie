@@ -536,6 +536,256 @@ describe("Lambda Adapter", () => {
       });
     });
 
+    describe("onComplete callback", () => {
+      it("calls onComplete with result on success", async () => {
+        let completedValue: unknown;
+
+        const handler = serviceHandler({
+          alias: "test",
+          input: { value: { type: Number } },
+          service: ({ value }) => value * 2,
+        });
+
+        const lambdaHandler = lambdaServiceHandler({
+          handler,
+          onComplete: (result) => {
+            completedValue = result;
+          },
+        });
+
+        await lambdaHandler({ value: 21 });
+
+        expect(completedValue).toBe(42);
+      });
+
+      it("calls onComplete with array for multiple messages", async () => {
+        let completedValue: unknown;
+
+        const handler = serviceHandler({
+          alias: "test",
+          input: { value: { type: Number } },
+          service: ({ value }) => value * 2,
+        });
+
+        const lambdaHandler = lambdaServiceHandler({
+          handler,
+          onComplete: (result) => {
+            completedValue = result;
+          },
+        });
+
+        await lambdaHandler([{ value: 1 }, { value: 2 }]);
+
+        expect(completedValue).toEqual([2, 4]);
+      });
+
+      it("swallows errors in onComplete callback", async () => {
+        const handler = serviceHandler({
+          alias: "test",
+          service: () => "result",
+        });
+
+        const lambdaHandler = lambdaServiceHandler({
+          handler,
+          onComplete: () => {
+            throw new Error("onComplete error");
+          },
+        });
+
+        // Should complete without throwing
+        const result = await lambdaHandler({});
+
+        expect(result).toBe("result");
+      });
+
+      it("supports async onComplete callback", async () => {
+        let completedValue: unknown;
+
+        const handler = serviceHandler({
+          alias: "test",
+          service: () => "result",
+        });
+
+        const lambdaHandler = lambdaServiceHandler({
+          handler,
+          onComplete: async (result) => {
+            await new Promise((resolve) => setTimeout(resolve, 5));
+            completedValue = result;
+          },
+        });
+
+        await lambdaHandler({});
+
+        expect(completedValue).toBe("result");
+      });
+    });
+
+    describe("onError and onFatal callbacks", () => {
+      it("calls onFatal when handler throws", async () => {
+        let fatalError: unknown;
+
+        const handler = serviceHandler({
+          alias: "test",
+          service: () => {
+            throw new Error("Service error");
+          },
+        });
+
+        const lambdaHandler = lambdaServiceHandler({
+          handler,
+          onFatal: (error) => {
+            fatalError = error;
+          },
+        });
+
+        await expect(lambdaHandler({})).rejects.toThrow("Service error");
+        expect(fatalError).toBeInstanceOf(Error);
+        expect((fatalError as Error).message).toBe("Service error");
+      });
+
+      it("falls back to onError when onFatal is not provided", async () => {
+        let errorValue: unknown;
+
+        const handler = serviceHandler({
+          alias: "test",
+          service: () => {
+            throw new Error("Service error");
+          },
+        });
+
+        const lambdaHandler = lambdaServiceHandler({
+          handler,
+          onError: (error) => {
+            errorValue = error;
+          },
+        });
+
+        await expect(lambdaHandler({})).rejects.toThrow("Service error");
+        expect(errorValue).toBeInstanceOf(Error);
+        expect((errorValue as Error).message).toBe("Service error");
+      });
+
+      it("prefers onFatal over onError for thrown errors", async () => {
+        let fatalCalled = false;
+        let errorCalled = false;
+
+        const handler = serviceHandler({
+          alias: "test",
+          service: () => {
+            throw new Error("Service error");
+          },
+        });
+
+        const lambdaHandler = lambdaServiceHandler({
+          handler,
+          onError: () => {
+            errorCalled = true;
+          },
+          onFatal: () => {
+            fatalCalled = true;
+          },
+        });
+
+        await expect(lambdaHandler({})).rejects.toThrow();
+        expect(fatalCalled).toBe(true);
+        expect(errorCalled).toBe(false);
+      });
+
+      it("passes context.onError to service for recoverable errors", async () => {
+        let recoveredError: unknown;
+
+        const handler = serviceHandler({
+          alias: "test",
+          service: (_, context) => {
+            context?.onError?.(new Error("Recoverable error"));
+            return "continued";
+          },
+        });
+
+        const lambdaHandler = lambdaServiceHandler({
+          handler,
+          onError: (error) => {
+            recoveredError = error;
+          },
+        });
+
+        const result = await lambdaHandler({});
+
+        expect(result).toBe("continued");
+        expect(recoveredError).toBeInstanceOf(Error);
+        expect((recoveredError as Error).message).toBe("Recoverable error");
+      });
+
+      it("passes context.onFatal to service for explicit fatal errors", async () => {
+        let fatalError: unknown;
+
+        const handler = serviceHandler({
+          alias: "test",
+          service: (_, context) => {
+            context?.onFatal?.(new Error("Fatal error"));
+            return "continued";
+          },
+        });
+
+        const lambdaHandler = lambdaServiceHandler({
+          handler,
+          onFatal: (error) => {
+            fatalError = error;
+          },
+        });
+
+        const result = await lambdaHandler({});
+
+        expect(result).toBe("continued");
+        expect(fatalError).toBeInstanceOf(Error);
+        expect((fatalError as Error).message).toBe("Fatal error");
+      });
+
+      it("swallows errors in context.onError callback", async () => {
+        const handler = serviceHandler({
+          alias: "test",
+          service: (_, context) => {
+            context?.onError?.(new Error("Test error"));
+            return "completed";
+          },
+        });
+
+        const lambdaHandler = lambdaServiceHandler({
+          handler,
+          onError: () => {
+            throw new Error("Callback error");
+          },
+        });
+
+        // Should complete without throwing
+        const result = await lambdaHandler({});
+
+        expect(result).toBe("completed");
+      });
+
+      it("swallows errors in context.onFatal callback", async () => {
+        const handler = serviceHandler({
+          alias: "test",
+          service: (_, context) => {
+            context?.onFatal?.(new Error("Test error"));
+            return "completed";
+          },
+        });
+
+        const lambdaHandler = lambdaServiceHandler({
+          handler,
+          onFatal: () => {
+            throw new Error("Callback error");
+          },
+        });
+
+        // Should complete without throwing
+        const result = await lambdaHandler({});
+
+        expect(result).toBe("completed");
+      });
+    });
+
     describe("Integration Example", () => {
       it("works with typical evaluation handler pattern", async () => {
         // Simulates the target use case from the issue

@@ -221,9 +221,20 @@ const handler = serviceHandler({
   alias: "evaluate",
   input: { jobId: { type: String } },
   service: async ({ jobId }, context) => {
-    // Service can send messages via context.sendMessage
     context?.sendMessage?.({ content: `Starting job ${jobId}` });
-    context?.sendMessage?.({ content: "Processing...", level: "debug" });
+
+    // Handle recoverable errors without throwing
+    try {
+      await riskyOperation();
+    } catch (err) {
+      context?.onError?.(err); // Reports error but continues
+    }
+
+    // For fatal errors, either throw or call context.onFatal()
+    if (criticalFailure) {
+      context?.onFatal?.(new Error("Cannot continue"));
+    }
+
     return { jobId, status: "complete" };
   },
 });
@@ -235,10 +246,15 @@ registerServiceCommand({
     console.log("Done:", JSON.stringify(response, null, 2));
   },
   onError: (error) => {
-    console.error("Failed:", error);
+    // Recoverable errors reported via context.onError()
+    console.error("Warning:", error);
+  },
+  onFatal: (error) => {
+    // Fatal errors (thrown or via context.onFatal())
+    console.error("Fatal:", error);
+    process.exit(1);
   },
   onMessage: (msg) => {
-    // Receives messages from context.sendMessage
     console[msg.level || "info"](msg.content);
   },
 });
@@ -247,8 +263,11 @@ registerServiceCommand({
 | Callback | Type | Description |
 |----------|------|-------------|
 | `onComplete` | `(response: unknown) => void \| Promise<void>` | Called with handler's return value on success |
-| `onError` | `(error: unknown) => void \| Promise<void>` | Called when handler throws (prevents re-throw) |
-| `onMessage` | `(message: Message) => void \| Promise<void>` | Receives messages from `context.sendMessage` in service (errors swallowed) |
+| `onError` | `(error: unknown) => void \| Promise<void>` | Receives errors reported via `context.onError()` in service |
+| `onFatal` | `(error: unknown) => void \| Promise<void>` | Receives fatal errors (thrown or via `context.onFatal()`) |
+| `onMessage` | `(message: Message) => void \| Promise<void>` | Receives messages from `context.sendMessage` in service |
+
+**Error handling**: Services receive `context.onError()` and `context.onFatal()` callbacks to report errors without throwing. Any error that escapes the service (is thrown) is treated as fatal and routes to `onFatal`. If `onFatal` is not provided, thrown errors fall back to `onError`. If neither callback is provided, errors are re-thrown.
 
 **createCommanderOptions**: Generates Commander.js `Option` objects from handler input definitions.
 
@@ -317,7 +336,7 @@ Features:
 - Uses `handler.alias` as the logging handler name (overridable via `name` option)
 - Supports all `lambdaHandler` options: `chaos`, `name`, `secrets`, `setup`, `teardown`, `throw`, `unavailable`, `validate`
 
-**lambdaServiceHandler with onMessage**: Services can send messages during execution via context:
+**lambdaServiceHandler with callbacks**: Supports lifecycle callbacks for handling results, errors, and messages:
 
 ```typescript
 const handler = serviceHandler({
@@ -325,25 +344,50 @@ const handler = serviceHandler({
   input: { jobId: { type: String } },
   service: async ({ jobId }, context) => {
     context?.sendMessage?.({ content: `Starting job ${jobId}` });
-    context?.sendMessage?.({ content: "Processing...", level: "debug" });
+
+    // Handle recoverable errors without throwing
+    try {
+      await riskyOperation();
+    } catch (err) {
+      context?.onError?.(err); // Reports error but continues
+    }
+
+    // For fatal errors, either throw or call context.onFatal()
+    if (criticalFailure) {
+      context?.onFatal?.(new Error("Cannot continue"));
+    }
+
     return { jobId, status: "complete" };
   },
 });
 
 export const lambdaHandler = lambdaServiceHandler({
   handler,
+  onComplete: (response) => {
+    console.log("Done:", JSON.stringify(response, null, 2));
+  },
+  onError: (error) => {
+    // Recoverable errors reported via context.onError()
+    console.error("Warning:", error);
+  },
+  onFatal: (error) => {
+    // Fatal errors (thrown or via context.onFatal())
+    console.error("Fatal:", error);
+  },
   onMessage: (msg) => {
-    // msg: { content: string, level?: "trace"|"debug"|"info"|"warn"|"error" }
     console.log(`[${msg.level || "info"}] ${msg.content}`);
   },
 });
 ```
 
-| Option | Type | Description |
-|--------|------|-------------|
-| `onMessage` | `(message: Message) => void \| Promise<void>` | Receives messages from `context.sendMessage` in service (errors swallowed) |
+| Callback | Type | Description |
+|----------|------|-------------|
+| `onComplete` | `(response: unknown) => void \| Promise<void>` | Called with handler's return value on success |
+| `onError` | `(error: unknown) => void \| Promise<void>` | Receives errors reported via `context.onError()` in service |
+| `onFatal` | `(error: unknown) => void \| Promise<void>` | Receives fatal errors (thrown or via `context.onFatal()`) |
+| `onMessage` | `(message: Message) => void \| Promise<void>` | Receives messages from `context.sendMessage` in service |
 
-**Note:** Errors in `onMessage` are swallowed to ensure messaging failures never halt service execution.
+**Error handling**: Services receive `context.onError()` and `context.onFatal()` callbacks to report errors without throwing. Any error that escapes the service (is thrown) is treated as fatal and routes to `onFatal`. If `onFatal` is not provided, thrown errors fall back to `onError`. Callback errors are swallowed to ensure failures never halt service execution.
 
 ### LLM Adapter
 
@@ -382,6 +426,40 @@ const toolkit = new Toolkit([tool]);
 | `description` | `string` | Override tool description (defaults to handler.description) |
 | `message` | `string \| function` | Custom message for logging |
 | `exclude` | `string[]` | Fields to exclude from tool parameters |
+| `onComplete` | `(response: unknown) => void \| Promise<void>` | Called with tool's return value on success |
+| `onError` | `(error: unknown) => void \| Promise<void>` | Receives errors reported via `context.onError()` in service |
+| `onFatal` | `(error: unknown) => void \| Promise<void>` | Receives fatal errors (thrown or via `context.onFatal()`) |
+| `onMessage` | `(message: Message) => void \| Promise<void>` | Receives messages from `context.sendMessage` in service |
+
+**createLlmTool with callbacks**: Supports lifecycle callbacks for handling results, errors, and messages:
+
+```typescript
+const handler = serviceHandler({
+  alias: "evaluate",
+  input: { jobId: { type: String } },
+  service: async ({ jobId }, context) => {
+    context?.sendMessage?.({ content: `Processing ${jobId}` });
+
+    try {
+      await riskyOperation();
+    } catch (err) {
+      context?.onError?.(err); // Reports error but continues
+    }
+
+    return { jobId, status: "complete" };
+  },
+});
+
+const { tool } = createLlmTool({
+  handler,
+  onComplete: (result) => console.log("Tool completed:", result),
+  onError: (error) => console.warn("Recoverable error:", error),
+  onFatal: (error) => console.error("Fatal error:", error),
+  onMessage: (msg) => console.log(`[${msg.level || "info"}] ${msg.content}`),
+});
+```
+
+**Error handling**: Services receive `context.onError()` and `context.onFatal()` callbacks to report errors without throwing. Any error that escapes the service (is thrown) is treated as fatal and routes to `onFatal`. If `onFatal` is not provided, thrown errors fall back to `onError`. Callback errors are swallowed to ensure failures never halt service execution.
 
 **inputToJsonSchema**: Converts vocabulary input definitions to JSON Schema for LLM tools:
 
@@ -432,6 +510,41 @@ registerMcpTool({ handler, server });
 | `server` | `McpServer` | Required. The MCP server to register with |
 | `name` | `string` | Override tool name (defaults to handler.alias) |
 | `description` | `string` | Override tool description (defaults to handler.description) |
+| `onComplete` | `(response: unknown) => void \| Promise<void>` | Called with tool's return value on success |
+| `onError` | `(error: unknown) => void \| Promise<void>` | Receives errors reported via `context.onError()` in service |
+| `onFatal` | `(error: unknown) => void \| Promise<void>` | Receives fatal errors (thrown or via `context.onFatal()`) |
+| `onMessage` | `(message: Message) => void \| Promise<void>` | Receives messages from `context.sendMessage` in service |
+
+**registerMcpTool with callbacks**: Supports lifecycle callbacks for handling results, errors, and messages:
+
+```typescript
+const handler = serviceHandler({
+  alias: "evaluate",
+  input: { jobId: { type: String } },
+  service: async ({ jobId }, context) => {
+    context?.sendMessage?.({ content: `Processing ${jobId}` });
+
+    try {
+      await riskyOperation();
+    } catch (err) {
+      context?.onError?.(err); // Reports error but continues
+    }
+
+    return { jobId, status: "complete" };
+  },
+});
+
+registerMcpTool({
+  handler,
+  server,
+  onComplete: (result) => console.log("Tool completed:", result),
+  onError: (error) => console.warn("Recoverable error:", error),
+  onFatal: (error) => console.error("Fatal error:", error),
+  onMessage: (msg) => console.log(`[${msg.level || "info"}] ${msg.content}`),
+});
+```
+
+**Error handling**: Services receive `context.onError()` and `context.onFatal()` callbacks to report errors without throwing. Any error that escapes the service (is thrown) is treated as fatal and routes to `onFatal`. If `onFatal` is not provided, thrown errors fall back to `onError`. Callback errors are swallowed to ensure failures never halt service execution.
 
 Features:
 - Uses handler.alias as tool name (overridable)
@@ -447,7 +560,7 @@ Located in `types.ts`:
 |------|-------------|
 | `MessageLevel` | `"trace" \| "debug" \| "info" \| "warn" \| "error"` - log levels for messages |
 | `Message` | `{ content: string; level?: MessageLevel }` - standard message structure |
-| `ServiceContext` | `{ sendMessage?: (message: Message) => void \| Promise<void> }` - context passed to services |
+| `ServiceContext` | `{ onError?, onFatal?, sendMessage? }` - context passed to services with error/message callbacks |
 | `ScalarType` | `Boolean \| Number \| String` or string equivalents |
 | `CompositeType` | `Array \| Object` or string equivalents |
 | `ArrayElementType` | Types usable inside typed arrays |
@@ -555,14 +668,14 @@ export const VOCABULARY_VERSION: string;
 export { createCommanderOptions } from "./createCommanderOptions.js";
 export { parseCommanderOptions } from "./parseCommanderOptions.js";
 export { registerServiceCommand } from "./registerServiceCommand.js";
-export type { CommanderOptionOverride, CreateCommanderOptionsConfig, CreateCommanderOptionsResult, OnCompleteCallback, OnErrorCallback, OnMessageCallback, ParseCommanderOptionsConfig, RegisterServiceCommandConfig, RegisterServiceCommandResult } from "./types.js";
+export type { CommanderOptionOverride, CreateCommanderOptionsConfig, CreateCommanderOptionsResult, OnCompleteCallback, OnErrorCallback, OnFatalCallback, OnMessageCallback, ParseCommanderOptionsConfig, RegisterServiceCommandConfig, RegisterServiceCommandResult } from "./types.js";
 ```
 
 ### Lambda Export (`@jaypie/vocabulary/lambda`)
 
 ```typescript
 export { lambdaServiceHandler } from "./lambdaServiceHandler.js";
-export type { LambdaContext, LambdaServiceHandlerConfig, LambdaServiceHandlerOptions, LambdaServiceHandlerResult, OnMessageCallback } from "./types.js";
+export type { LambdaContext, LambdaServiceHandlerConfig, LambdaServiceHandlerOptions, LambdaServiceHandlerResult, OnCompleteCallback, OnErrorCallback, OnFatalCallback, OnMessageCallback } from "./types.js";
 ```
 
 ### LLM Export (`@jaypie/vocabulary/llm`)
@@ -570,14 +683,14 @@ export type { LambdaContext, LambdaServiceHandlerConfig, LambdaServiceHandlerOpt
 ```typescript
 export { createLlmTool } from "./createLlmTool.js";
 export { inputToJsonSchema } from "./inputToJsonSchema.js";
-export type { CreateLlmToolConfig, CreateLlmToolResult, LlmTool } from "./types.js";
+export type { CreateLlmToolConfig, CreateLlmToolResult, LlmTool, OnCompleteCallback, OnErrorCallback, OnFatalCallback, OnMessageCallback } from "./types.js";
 ```
 
 ### MCP Export (`@jaypie/vocabulary/mcp`)
 
 ```typescript
 export { registerMcpTool } from "./registerMcpTool.js";
-export type { McpToolContentItem, McpToolResponse, RegisterMcpToolConfig, RegisterMcpToolResult } from "./types.js";
+export type { McpToolContentItem, McpToolResponse, OnCompleteCallback, OnErrorCallback, OnFatalCallback, OnMessageCallback, RegisterMcpToolConfig, RegisterMcpToolResult } from "./types.js";
 ```
 
 ## Usage in Other Packages

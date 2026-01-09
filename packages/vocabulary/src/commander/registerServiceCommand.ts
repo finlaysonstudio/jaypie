@@ -17,6 +17,11 @@ import { parseCommanderOptions } from "./parseCommanderOptions.js";
  * - Converting input definitions to Commander options
  * - Wiring up the action to call the handler with parsed input
  *
+ * Error handling:
+ * - Services can call context.onError() for recoverable errors
+ * - Services can call context.onFatal() for fatal errors
+ * - Any error that throws out of the service is treated as fatal
+ *
  * @param config - Configuration including handler, program, and optional overrides
  * @returns An object containing the created command
  *
@@ -44,6 +49,7 @@ import { parseCommanderOptions } from "./parseCommanderOptions.js";
  * program.parse();
  * ```
  */
+
 export function registerServiceCommand({
   description,
   exclude,
@@ -51,6 +57,7 @@ export function registerServiceCommand({
   name,
   onComplete,
   onError,
+  onFatal,
   onMessage,
   overrides,
   program,
@@ -86,8 +93,8 @@ export function registerServiceCommand({
       input: handler.input,
     });
 
-    // Create sendMessage that wraps onMessage with error swallowing
-    // Messaging failures should never halt service execution
+    // Create context callbacks that wrap the registration callbacks with error swallowing
+    // Callback failures should never halt service execution
     const sendMessage = onMessage
       ? async (message: Message): Promise<void> => {
           try {
@@ -98,8 +105,32 @@ export function registerServiceCommand({
         }
       : undefined;
 
+    const contextOnError = onError
+      ? async (error: unknown): Promise<void> => {
+          try {
+            await onError(error);
+          } catch {
+            // Swallow errors - callback failures should not halt execution
+          }
+        }
+      : undefined;
+
+    const contextOnFatal = onFatal
+      ? async (error: unknown): Promise<void> => {
+          try {
+            await onFatal(error);
+          } catch {
+            // Swallow errors - callback failures should not halt execution
+          }
+        }
+      : undefined;
+
     // Create context for the service
-    const context: ServiceContext = { sendMessage };
+    const context: ServiceContext = {
+      onError: contextOnError,
+      onFatal: contextOnFatal,
+      sendMessage,
+    };
 
     try {
       // Call the handler with context
@@ -110,10 +141,15 @@ export function registerServiceCommand({
         await onComplete(response);
       }
     } catch (error) {
-      // Call onError callback if provided, otherwise re-throw
-      if (onError) {
+      // Any error that escapes the service is treated as fatal
+      // Services should catch recoverable errors and call context.onError() explicitly
+      if (onFatal) {
+        await onFatal(error);
+      } else if (onError) {
+        // Fall back to onError if onFatal not provided
         await onError(error);
       } else {
+        // No error callbacks provided, re-throw
         throw error;
       }
     }

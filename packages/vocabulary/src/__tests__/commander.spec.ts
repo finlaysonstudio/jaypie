@@ -1190,5 +1190,304 @@ describe("Commander Adapter", () => {
         expect(messages[1]).toEqual({ content: "Second" });
       });
     });
+
+    describe("onFatal callback", () => {
+      it("calls onFatal for any thrown error", async () => {
+        let capturedError: unknown;
+        const handler = serviceHandler({
+          alias: "test",
+          service: () => {
+            throw new Error("Service error");
+          },
+        });
+
+        registerServiceCommand({
+          handler,
+          onFatal: (error) => {
+            capturedError = error;
+          },
+          program,
+        });
+
+        await program.parseAsync(["node", "test", "test"]);
+
+        expect(capturedError).toBeInstanceOf(Error);
+        expect((capturedError as Error).message).toBe("Service error");
+      });
+
+      it("calls onFatal (not onError) when both callbacks provided and error is thrown", async () => {
+        let errorCallback: string | undefined;
+        const handler = serviceHandler({
+          alias: "test",
+          service: () => {
+            throw new Error("Thrown error");
+          },
+        });
+
+        registerServiceCommand({
+          handler,
+          onError: () => {
+            errorCallback = "onError";
+          },
+          onFatal: () => {
+            errorCallback = "onFatal";
+          },
+          program,
+        });
+
+        await program.parseAsync(["node", "test", "test"]);
+
+        // Any thrown error goes to onFatal
+        expect(errorCallback).toBe("onFatal");
+      });
+
+      it("falls back to onError when onFatal not provided", async () => {
+        let capturedError: unknown;
+        const handler = serviceHandler({
+          alias: "test",
+          service: () => {
+            throw new Error("Service error");
+          },
+        });
+
+        registerServiceCommand({
+          handler,
+          onError: (error) => {
+            capturedError = error;
+          },
+          program,
+        });
+
+        await program.parseAsync(["node", "test", "test"]);
+
+        expect(capturedError).toBeInstanceOf(Error);
+        expect((capturedError as Error).message).toBe("Service error");
+      });
+
+      it("re-throws error when no error callbacks provided", async () => {
+        const handler = serviceHandler({
+          alias: "test",
+          service: () => {
+            throw new Error("Unhandled error");
+          },
+        });
+
+        registerServiceCommand({ handler, program });
+
+        await expect(
+          program.parseAsync(["node", "test", "test"]),
+        ).rejects.toThrow("Unhandled error");
+      });
+
+      it("supports async onFatal callback", async () => {
+        let fatalHandled = false;
+        const handler = serviceHandler({
+          alias: "test",
+          service: () => {
+            throw new Error("Fatal error");
+          },
+        });
+
+        registerServiceCommand({
+          handler,
+          onFatal: async () => {
+            await new Promise((resolve) => setTimeout(resolve, 10));
+            fatalHandled = true;
+          },
+          program,
+        });
+
+        await program.parseAsync(["node", "test", "test"]);
+
+        expect(fatalHandled).toBe(true);
+      });
+    });
+
+    describe("context.onError and context.onFatal", () => {
+      it("service can call context.onError for recoverable errors", async () => {
+        let capturedError: unknown;
+        const handler = serviceHandler({
+          alias: "test",
+          service: async (_input, context) => {
+            // Service catches its own error and reports it as recoverable
+            try {
+              throw new Error("Recoverable error");
+            } catch (err) {
+              await context?.onError?.(err);
+            }
+            return "continued after error";
+          },
+        });
+
+        registerServiceCommand({
+          handler,
+          onError: (error) => {
+            capturedError = error;
+          },
+          program,
+        });
+
+        await program.parseAsync(["node", "test", "test"]);
+
+        expect(capturedError).toBeInstanceOf(Error);
+        expect((capturedError as Error).message).toBe("Recoverable error");
+      });
+
+      it("service can call context.onFatal for fatal errors", async () => {
+        let capturedError: unknown;
+        const handler = serviceHandler({
+          alias: "test",
+          service: async (_input, context) => {
+            // Service explicitly reports a fatal error
+            await context?.onFatal?.(new Error("Explicit fatal"));
+            return "result";
+          },
+        });
+
+        registerServiceCommand({
+          handler,
+          onFatal: (error) => {
+            capturedError = error;
+          },
+          program,
+        });
+
+        await program.parseAsync(["node", "test", "test"]);
+
+        expect(capturedError).toBeInstanceOf(Error);
+        expect((capturedError as Error).message).toBe("Explicit fatal");
+      });
+
+      it("context.onError is undefined when onError not registered", async () => {
+        let contextReceived: unknown;
+        const handler = serviceHandler({
+          alias: "test",
+          service: (_input, context) => {
+            contextReceived = context;
+            // Should not throw even if calling undefined
+            context?.onError?.(new Error("test"));
+            return "done";
+          },
+        });
+
+        registerServiceCommand({
+          handler,
+          onFatal: () => {},
+          program,
+        });
+
+        await program.parseAsync(["node", "test", "test"]);
+
+        expect(contextReceived).toBeDefined();
+        expect(
+          (contextReceived as { onError: unknown }).onError,
+        ).toBeUndefined();
+      });
+
+      it("context.onFatal is undefined when onFatal not registered", async () => {
+        let contextReceived: unknown;
+        const handler = serviceHandler({
+          alias: "test",
+          service: (_input, context) => {
+            contextReceived = context;
+            // Should not throw even if calling undefined
+            context?.onFatal?.(new Error("test"));
+            return "done";
+          },
+        });
+
+        registerServiceCommand({
+          handler,
+          onError: () => {},
+          program,
+        });
+
+        await program.parseAsync(["node", "test", "test"]);
+
+        expect(contextReceived).toBeDefined();
+        expect(
+          (contextReceived as { onFatal: unknown }).onFatal,
+        ).toBeUndefined();
+      });
+
+      it("errors in context.onError callback are swallowed", async () => {
+        let serviceCompleted = false;
+        const handler = serviceHandler({
+          alias: "test",
+          service: async (_input, context) => {
+            await context?.onError?.(new Error("test"));
+            serviceCompleted = true;
+            return "done";
+          },
+        });
+
+        registerServiceCommand({
+          handler,
+          onError: () => {
+            throw new Error("Callback failed");
+          },
+          program,
+        });
+
+        await expect(
+          program.parseAsync(["node", "test", "test"]),
+        ).resolves.not.toThrow();
+        expect(serviceCompleted).toBe(true);
+      });
+
+      it("errors in context.onFatal callback are swallowed", async () => {
+        let serviceCompleted = false;
+        const handler = serviceHandler({
+          alias: "test",
+          service: async (_input, context) => {
+            await context?.onFatal?.(new Error("test"));
+            serviceCompleted = true;
+            return "done";
+          },
+        });
+
+        registerServiceCommand({
+          handler,
+          onFatal: () => {
+            throw new Error("Callback failed");
+          },
+          program,
+        });
+
+        await expect(
+          program.parseAsync(["node", "test", "test"]),
+        ).resolves.not.toThrow();
+        expect(serviceCompleted).toBe(true);
+      });
+
+      it("service can report multiple errors via context", async () => {
+        const errors: unknown[] = [];
+        const handler = serviceHandler({
+          alias: "test",
+          service: async (_input, context) => {
+            // Report multiple recoverable errors
+            await context?.onError?.(new Error("Error 1"));
+            await context?.onError?.(new Error("Error 2"));
+            await context?.onError?.(new Error("Error 3"));
+            return "completed despite errors";
+          },
+        });
+
+        registerServiceCommand({
+          handler,
+          onError: (error) => {
+            errors.push(error);
+          },
+          program,
+        });
+
+        await program.parseAsync(["node", "test", "test"]);
+
+        expect(errors).toHaveLength(3);
+        expect((errors[0] as Error).message).toBe("Error 1");
+        expect((errors[1] as Error).message).toBe("Error 2");
+        expect((errors[2] as Error).message).toBe("Error 3");
+      });
+    });
   });
 });

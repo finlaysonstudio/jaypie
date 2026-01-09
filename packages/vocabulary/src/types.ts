@@ -104,6 +104,10 @@ export type ValidateFunction = (
  * Context passed to service functions for callbacks and utilities
  */
 export interface ServiceContext {
+  /** Report a recoverable error during service execution (does not throw) */
+  onError?: (error: unknown) => void | Promise<void>;
+  /** Report a fatal error during service execution (does not throw) */
+  onFatal?: (error: unknown) => void | Promise<void>;
   /** Send a message during service execution (connects to onMessage callback) */
   sendMessage?: (message: Message) => void | Promise<void>;
 }
