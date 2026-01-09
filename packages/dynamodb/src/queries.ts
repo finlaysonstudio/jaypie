@@ -1,4 +1,5 @@
 import { QueryCommand } from "@aws-sdk/lib-dynamodb";
+import { serviceHandler } from "@jaypie/vocabulary";
 
 import { getDocClient, getTableName } from "./client.js";
 import {
@@ -17,16 +18,7 @@ import {
   buildIndexType,
   buildIndexXid,
 } from "./keyBuilders.js";
-import type {
-  BaseQueryOptions,
-  FabricEntity,
-  QueryByAliasParams,
-  QueryByClassParams,
-  QueryByOuParams,
-  QueryByTypeParams,
-  QueryByXidParams,
-  QueryResult,
-} from "./types.js";
+import type { BaseQueryOptions, FabricEntity, QueryResult } from "./types.js";
 
 /**
  * Calculate the suffix based on archived/deleted flags
@@ -88,90 +80,196 @@ async function executeQuery<T extends FabricEntity>(
 }
 
 /**
+ * Query parameters for queryByOu
+ */
+interface QueryByOuParams extends BaseQueryOptions {
+  model: string;
+  ou: string;
+}
+
+/**
  * Query entities by organizational unit (parent hierarchy)
  * Uses indexOu GSI
  *
- * @param params.archived - Query archived entities instead of active ones
- * @param params.deleted - Query deleted entities instead of active ones
- * @throws ConfigurationError if both archived and deleted are true
+ * Note: This is a regular async function (not serviceHandler) because it accepts
+ * complex startKey objects that can't be coerced by vocabulary's type system.
  */
-export async function queryByOu<T extends FabricEntity = FabricEntity>(
-  params: QueryByOuParams,
-): Promise<QueryResult<T>> {
-  const { archived, deleted, model, ou, ...options } = params;
+export async function queryByOu({
+  archived = false,
+  ascending = false,
+  deleted = false,
+  limit,
+  model,
+  ou,
+  startKey,
+}: QueryByOuParams): Promise<QueryResult<FabricEntity>> {
   const suffix = calculateSuffix({ archived, deleted });
   const keyValue = buildIndexOu(ou, model) + suffix;
-  return executeQuery<T>(INDEX_OU, keyValue, options);
+  return executeQuery<FabricEntity>(INDEX_OU, keyValue, {
+    ascending,
+    limit,
+    startKey,
+  });
 }
 
 /**
  * Query a single entity by human-friendly alias
  * Uses indexAlias GSI
- *
- * @param params.archived - Query archived entities instead of active ones
- * @param params.deleted - Query deleted entities instead of active ones
- * @throws ConfigurationError if both archived and deleted are true
- * @returns The matching entity or null if not found
  */
-export async function queryByAlias<T extends FabricEntity = FabricEntity>(
-  params: QueryByAliasParams,
-): Promise<T | null> {
-  const { alias, archived, deleted, model, ou } = params;
-  const suffix = calculateSuffix({ archived, deleted });
-  const keyValue = buildIndexAlias(ou, model, alias) + suffix;
-  const result = await executeQuery<T>(INDEX_ALIAS, keyValue, { limit: 1 });
-  return result.items[0] ?? null;
+export const queryByAlias = serviceHandler({
+  alias: "queryByAlias",
+  description: "Query a single entity by human-friendly alias",
+  input: {
+    alias: { type: String, description: "Human-friendly alias" },
+    archived: {
+      type: Boolean,
+      default: false,
+      required: false,
+      description: "Query archived entities instead of active ones",
+    },
+    deleted: {
+      type: Boolean,
+      default: false,
+      required: false,
+      description: "Query deleted entities instead of active ones",
+    },
+    model: { type: String, description: "Entity model name" },
+    ou: { type: String, description: "Organizational unit (@ for root)" },
+  },
+  service: async ({
+    alias,
+    archived,
+    deleted,
+    model,
+    ou,
+  }): Promise<FabricEntity | null> => {
+    const aliasStr = alias as string;
+    const archivedBool = archived as boolean | undefined;
+    const deletedBool = deleted as boolean | undefined;
+    const modelStr = model as string;
+    const ouStr = ou as string;
+
+    const suffix = calculateSuffix({ archived: archivedBool, deleted: deletedBool });
+    const keyValue = buildIndexAlias(ouStr, modelStr, aliasStr) + suffix;
+    const result = await executeQuery<FabricEntity>(INDEX_ALIAS, keyValue, {
+      limit: 1,
+    });
+    return result.items[0] ?? null;
+  },
+});
+
+/**
+ * Query parameters for queryByClass
+ */
+interface QueryByClassParams extends BaseQueryOptions {
+  model: string;
+  ou: string;
+  recordClass: string;
 }
 
 /**
  * Query entities by category classification
  * Uses indexClass GSI
  *
- * @param params.archived - Query archived entities instead of active ones
- * @param params.deleted - Query deleted entities instead of active ones
- * @throws ConfigurationError if both archived and deleted are true
+ * Note: This is a regular async function (not serviceHandler) because it accepts
+ * complex startKey objects that can't be coerced by vocabulary's type system.
  */
-export async function queryByClass<T extends FabricEntity = FabricEntity>(
-  params: QueryByClassParams,
-): Promise<QueryResult<T>> {
-  const { archived, deleted, model, ou, recordClass, ...options } = params;
+export async function queryByClass({
+  archived = false,
+  ascending = false,
+  deleted = false,
+  limit,
+  model,
+  ou,
+  recordClass,
+  startKey,
+}: QueryByClassParams): Promise<QueryResult<FabricEntity>> {
   const suffix = calculateSuffix({ archived, deleted });
   const keyValue = buildIndexClass(ou, model, recordClass) + suffix;
-  return executeQuery<T>(INDEX_CLASS, keyValue, options);
+  return executeQuery<FabricEntity>(INDEX_CLASS, keyValue, {
+    ascending,
+    limit,
+    startKey,
+  });
+}
+
+/**
+ * Query parameters for queryByType
+ */
+interface QueryByTypeParams extends BaseQueryOptions {
+  model: string;
+  ou: string;
+  type: string;
 }
 
 /**
  * Query entities by type classification
  * Uses indexType GSI
  *
- * @param params.archived - Query archived entities instead of active ones
- * @param params.deleted - Query deleted entities instead of active ones
- * @throws ConfigurationError if both archived and deleted are true
+ * Note: This is a regular async function (not serviceHandler) because it accepts
+ * complex startKey objects that can't be coerced by vocabulary's type system.
  */
-export async function queryByType<T extends FabricEntity = FabricEntity>(
-  params: QueryByTypeParams,
-): Promise<QueryResult<T>> {
-  const { archived, deleted, model, ou, type, ...options } = params;
+export async function queryByType({
+  archived = false,
+  ascending = false,
+  deleted = false,
+  limit,
+  model,
+  ou,
+  startKey,
+  type,
+}: QueryByTypeParams): Promise<QueryResult<FabricEntity>> {
   const suffix = calculateSuffix({ archived, deleted });
   const keyValue = buildIndexType(ou, model, type) + suffix;
-  return executeQuery<T>(INDEX_TYPE, keyValue, options);
+  return executeQuery<FabricEntity>(INDEX_TYPE, keyValue, {
+    ascending,
+    limit,
+    startKey,
+  });
 }
 
 /**
  * Query a single entity by external ID
  * Uses indexXid GSI
- *
- * @param params.archived - Query archived entities instead of active ones
- * @param params.deleted - Query deleted entities instead of active ones
- * @throws ConfigurationError if both archived and deleted are true
- * @returns The matching entity or null if not found
  */
-export async function queryByXid<T extends FabricEntity = FabricEntity>(
-  params: QueryByXidParams,
-): Promise<T | null> {
-  const { archived, deleted, model, ou, xid } = params;
-  const suffix = calculateSuffix({ archived, deleted });
-  const keyValue = buildIndexXid(ou, model, xid) + suffix;
-  const result = await executeQuery<T>(INDEX_XID, keyValue, { limit: 1 });
-  return result.items[0] ?? null;
-}
+export const queryByXid = serviceHandler({
+  alias: "queryByXid",
+  description: "Query a single entity by external ID",
+  input: {
+    archived: {
+      type: Boolean,
+      default: false,
+      required: false,
+      description: "Query archived entities instead of active ones",
+    },
+    deleted: {
+      type: Boolean,
+      default: false,
+      required: false,
+      description: "Query deleted entities instead of active ones",
+    },
+    model: { type: String, description: "Entity model name" },
+    ou: { type: String, description: "Organizational unit (@ for root)" },
+    xid: { type: String, description: "External ID" },
+  },
+  service: async ({
+    archived,
+    deleted,
+    model,
+    ou,
+    xid,
+  }): Promise<FabricEntity | null> => {
+    const archivedBool = archived as boolean | undefined;
+    const deletedBool = deleted as boolean | undefined;
+    const modelStr = model as string;
+    const ouStr = ou as string;
+    const xidStr = xid as string;
+
+    const suffix = calculateSuffix({ archived: archivedBool, deleted: deletedBool });
+    const keyValue = buildIndexXid(ouStr, modelStr, xidStr) + suffix;
+    const result = await executeQuery<FabricEntity>(INDEX_XID, keyValue, {
+      limit: 1,
+    });
+    return result.items[0] ?? null;
+  },
+});

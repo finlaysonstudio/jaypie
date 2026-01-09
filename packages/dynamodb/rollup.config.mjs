@@ -10,7 +10,7 @@ const onwarn = (warning, defaultHandler) => {
 };
 
 export default [
-  // ES modules version
+  // ES modules version - main
   {
     input: "src/index.ts",
     output: {
@@ -28,7 +28,7 @@ export default [
       }),
     ],
   },
-  // CommonJS version
+  // CommonJS version - main
   {
     input: "src/index.ts",
     output: {
@@ -45,6 +45,46 @@ export default [
         tsconfig: "./tsconfig.json",
         declaration: true,
         outDir: "dist/cjs",
+      }),
+    ],
+  },
+  // ES modules version - mcp
+  // NOTE: declaration: false because main build generates correct .d.ts files
+  {
+    input: "src/mcp/index.ts",
+    output: {
+      dir: "dist/esm/mcp",
+      format: "es",
+      sourcemap: true,
+    },
+    onwarn,
+    plugins: [
+      autoExternal(),
+      typescript({
+        tsconfig: "./tsconfig.json",
+        declaration: false,
+        outDir: "dist/esm/mcp",
+      }),
+    ],
+  },
+  // CommonJS version - mcp
+  // NOTE: declaration: false because main build generates correct .d.ts files
+  {
+    input: "src/mcp/index.ts",
+    output: {
+      dir: "dist/cjs/mcp",
+      format: "cjs",
+      sourcemap: true,
+      exports: "named",
+      entryFileNames: "[name].cjs",
+    },
+    onwarn,
+    plugins: [
+      autoExternal(),
+      typescript({
+        tsconfig: "./tsconfig.json",
+        declaration: false,
+        outDir: "dist/cjs/mcp",
       }),
     ],
   },

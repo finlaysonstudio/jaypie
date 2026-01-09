@@ -21,6 +21,7 @@ const onwarn = (warning, defaultHandler) => {
 const external = [
   "@jaypie/aws",
   "@jaypie/datadog",
+  "@jaypie/dynamodb",
   "@jaypie/errors",
   "@jaypie/express",
   "@jaypie/kit",
@@ -29,6 +30,7 @@ const external = [
   "@jaypie/logger",
   "@jaypie/mongoose",
   "@jaypie/textract",
+  "@jaypie/vocabulary",
   "amazon-textract-response-parser",
   "express",
   "fs/promises",
