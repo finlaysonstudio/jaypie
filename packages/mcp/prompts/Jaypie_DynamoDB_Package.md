@@ -545,3 +545,118 @@ const { items: all } = await queryByOu({
 // Permanent deletion (use sparingly)
 await destroyEntity({ id: "123", model: "record" });
 ```
+
+## MCP Integration
+
+The package provides MCP (Model Context Protocol) tools via `@jaypie/dynamodb/mcp` subpath export.
+
+### Installation
+
+```bash
+npm install @jaypie/dynamodb @modelcontextprotocol/sdk
+```
+
+### Environment Variables
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `DYNAMODB_TABLE_NAME` | Yes | - | Table name for operations |
+| `DYNAMODB_ENDPOINT` | No | - | Local endpoint (e.g., `http://127.0.0.1:8000`) |
+| `AWS_REGION` | No | `us-east-1` | AWS region |
+| `PROJECT_NAME` | No | `jaypie` | Container name prefix for docker-compose |
+
+### Register MCP Tools
+
+```typescript
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { registerDynamoDbTools } from "@jaypie/dynamodb/mcp";
+
+const server = new McpServer({ name: "my-server", version: "1.0.0" });
+
+const { tools } = registerDynamoDbTools({ server });
+// tools: ["dynamodb_get", "dynamodb_put", "dynamodb_update", ...]
+```
+
+### Available MCP Tools
+
+#### Entity Operations
+| Tool | Description |
+|------|-------------|
+| `dynamodb_get` | Get entity by id and model |
+| `dynamodb_put` | Create or replace an entity |
+| `dynamodb_update` | Update entity fields |
+| `dynamodb_delete` | Soft delete (sets deletedAt) |
+| `dynamodb_archive` | Archive entity (sets archivedAt) |
+| `dynamodb_destroy` | Hard delete (permanent) |
+
+#### Query Operations
+| Tool | Description |
+|------|-------------|
+| `dynamodb_query_ou` | Query by organizational unit |
+| `dynamodb_query_alias` | Query by human-friendly alias |
+| `dynamodb_query_class` | Query by category classification |
+| `dynamodb_query_type` | Query by type classification |
+| `dynamodb_query_xid` | Query by external ID |
+
+#### Admin Operations (Enabled by Default)
+| Tool | Description |
+|------|-------------|
+| `dynamodb_status` | Check DynamoDB connection status |
+| `dynamodb_create_table` | Create table with Jaypie GSI schema |
+| `dynamodb_generate_docker_compose` | Generate docker-compose.yml for local dev |
+
+### Disable Admin Tools
+
+```typescript
+const { tools } = registerDynamoDbTools({
+  server,
+  includeAdmin: false,  // Exclude admin tools
+});
+```
+
+### Auto-Initialization
+
+MCP tools auto-initialize the DynamoDB client from environment variables. Manual `initClient()` is not required when using MCP tools.
+
+### Local Development with MCP
+
+Generate docker-compose and create table:
+
+```typescript
+// Use dynamodb_generate_docker_compose tool to get:
+// - docker-compose.yml content
+// - Environment variables (.env format)
+
+// Start local DynamoDB
+// docker compose up -d
+
+// Use dynamodb_create_table tool to create table with full GSI schema
+```
+
+### Example MCP Tool Usage
+
+```json
+// dynamodb_put
+{
+  "id": "abc-123",
+  "model": "record",
+  "name": "My Record",
+  "ou": "@",
+  "alias": "my-record",
+  "class": "memory"
+}
+
+// dynamodb_query_ou
+{
+  "model": "record",
+  "ou": "@",
+  "limit": 10
+}
+
+// dynamodb_update
+{
+  "id": "abc-123",
+  "model": "record",
+  "name": "Updated Name"
+}
+```

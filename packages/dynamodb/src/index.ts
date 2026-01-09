@@ -52,22 +52,9 @@ export {
 
 // Types
 export type {
-  ArchiveEntityParams,
-  DeleteEntityParams,
-  GetEntityParams,
-  PutEntityParams,
-  UpdateEntityParams,
-} from "./entities.js";
-
-export type {
   BaseQueryOptions,
   DynamoClientConfig,
   FabricEntity,
   ParentReference,
-  QueryByAliasParams,
-  QueryByClassParams,
-  QueryByOuParams,
-  QueryByTypeParams,
-  QueryByXidParams,
   QueryResult,
 } from "./types.js";

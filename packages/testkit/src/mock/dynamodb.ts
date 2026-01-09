@@ -1,20 +1,10 @@
 import * as original from "@jaypie/dynamodb";
 import type {
-  ArchiveEntityParams,
   BaseQueryOptions,
-  DeleteEntityParams,
   DynamoClientConfig,
   FabricEntity,
-  GetEntityParams,
   ParentReference,
-  PutEntityParams,
-  QueryByAliasParams,
-  QueryByClassParams,
-  QueryByOuParams,
-  QueryByTypeParams,
-  QueryByXidParams,
   QueryResult,
-  UpdateEntityParams,
 } from "@jaypie/dynamodb";
 
 import { createMockFunction, createMockResolvedFunction } from "./utils";
@@ -80,76 +70,102 @@ export const resetClient = createMockFunction(() => {
   // No-op in mock
 });
 
-// Entity operations - return mock data
+// Entity operations - service handler pattern (callable with object params)
 export const getEntity = createMockFunction<
-  <T extends FabricEntity = FabricEntity>(
-    params: GetEntityParams,
-  ) => Promise<T | null>
+  (params: { id: string; model: string }) => Promise<FabricEntity | null>
 >(async () => null);
 
 export const putEntity = createMockFunction<
-  <T extends FabricEntity>(params: PutEntityParams<T>) => Promise<T>
->(async <T extends FabricEntity>(params: PutEntityParams<T>) =>
+  (params: { entity: FabricEntity }) => Promise<FabricEntity>
+>(async (params: { entity: FabricEntity }) =>
   original.indexEntity(params.entity),
 );
 
 export const updateEntity = createMockFunction<
-  <T extends FabricEntity>(params: UpdateEntityParams<T>) => Promise<T>
->(async <T extends FabricEntity>(params: UpdateEntityParams<T>) => ({
+  (params: { entity: FabricEntity }) => Promise<FabricEntity>
+>(async (params: { entity: FabricEntity }) => ({
   ...original.indexEntity(params.entity),
   updatedAt: new Date().toISOString(),
 }));
 
 export const deleteEntity = createMockFunction<
-  (params: DeleteEntityParams) => Promise<boolean>
+  (params: { id: string; model: string }) => Promise<boolean>
 >(async () => true);
 
 export const archiveEntity = createMockFunction<
-  (params: ArchiveEntityParams) => Promise<boolean>
+  (params: { id: string; model: string }) => Promise<boolean>
 >(async () => true);
 
 export const destroyEntity = createMockFunction<
-  (params: DeleteEntityParams) => Promise<boolean>
+  (params: { id: string; model: string }) => Promise<boolean>
 >(async () => true);
 
-// Query functions - return empty results by default (use object params)
+// Query functions - service handler pattern (callable with object params)
 export const queryByOu = createMockFunction<
-  <T extends FabricEntity = FabricEntity>(
-    params: QueryByOuParams,
-  ) => Promise<QueryResult<T>>
+  (params: {
+    model: string;
+    ou: string;
+    archived?: boolean;
+    ascending?: boolean;
+    deleted?: boolean;
+    limit?: number;
+    startKey?: Record<string, unknown>;
+  }) => Promise<QueryResult<FabricEntity>>
 >(async () => ({
   items: [],
   lastEvaluatedKey: undefined,
 }));
 
 export const queryByAlias = createMockFunction<
-  <T extends FabricEntity = FabricEntity>(
-    params: QueryByAliasParams,
-  ) => Promise<T | null>
+  (params: {
+    alias: string;
+    archived?: boolean;
+    deleted?: boolean;
+    model: string;
+    ou: string;
+  }) => Promise<FabricEntity | null>
 >(async () => null);
 
 export const queryByClass = createMockFunction<
-  <T extends FabricEntity = FabricEntity>(
-    params: QueryByClassParams,
-  ) => Promise<QueryResult<T>>
+  (params: {
+    archived?: boolean;
+    ascending?: boolean;
+    deleted?: boolean;
+    limit?: number;
+    model: string;
+    ou: string;
+    recordClass: string;
+    startKey?: Record<string, unknown>;
+  }) => Promise<QueryResult<FabricEntity>>
 >(async () => ({
   items: [],
   lastEvaluatedKey: undefined,
 }));
 
 export const queryByType = createMockFunction<
-  <T extends FabricEntity = FabricEntity>(
-    params: QueryByTypeParams,
-  ) => Promise<QueryResult<T>>
+  (params: {
+    archived?: boolean;
+    ascending?: boolean;
+    deleted?: boolean;
+    limit?: number;
+    model: string;
+    ou: string;
+    startKey?: Record<string, unknown>;
+    type: string;
+  }) => Promise<QueryResult<FabricEntity>>
 >(async () => ({
   items: [],
   lastEvaluatedKey: undefined,
 }));
 
 export const queryByXid = createMockFunction<
-  <T extends FabricEntity = FabricEntity>(
-    params: QueryByXidParams,
-  ) => Promise<T | null>
+  (params: {
+    archived?: boolean;
+    deleted?: boolean;
+    model: string;
+    ou: string;
+    xid: string;
+  }) => Promise<FabricEntity | null>
 >(async () => null);
 
 // Re-export types for convenience
