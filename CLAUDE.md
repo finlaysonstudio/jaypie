@@ -143,3 +143,4 @@ Utilize these MCP when provided. When they are unavailable but would be useful, 
 - Do not bump a package twice in a branch. Versions are only published when merged into main. Check the current version on NPM when unsure
 - Avoid default exports
 - Do not preserve backwards compatibility in unreleased changes or pre-1.0 packages
+- Question the user if a feature is requested that is near-identical to something that already exists

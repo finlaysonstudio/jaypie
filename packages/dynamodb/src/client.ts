@@ -4,6 +4,11 @@ import { ConfigurationError } from "@jaypie/errors";
 
 import type { DynamoClientConfig } from "./types.js";
 
+// Environment variable names
+const ENV_AWS_REGION = "AWS_REGION";
+const ENV_DYNAMODB_TABLE_NAME = "DYNAMODB_TABLE_NAME";
+
+// Defaults
 const DEFAULT_REGION = "us-east-1";
 const LOCAL_CREDENTIALS = {
   accessKeyId: "local",
@@ -28,8 +33,10 @@ function isLocalEndpoint(endpoint?: string): boolean {
  *
  * @param config - Client configuration
  */
-export function initClient(config: DynamoClientConfig): void {
-  const { endpoint, region = DEFAULT_REGION } = config;
+export function initClient(config: DynamoClientConfig = {}): void {
+  const { endpoint } = config;
+  const region =
+    config.region ?? process.env[ENV_AWS_REGION] ?? DEFAULT_REGION;
 
   // Auto-detect local mode and use dummy credentials
   const credentials =
@@ -48,7 +55,7 @@ export function initClient(config: DynamoClientConfig): void {
     },
   });
 
-  tableName = config.tableName;
+  tableName = config.tableName ?? process.env[ENV_DYNAMODB_TABLE_NAME] ?? null;
 }
 
 /**

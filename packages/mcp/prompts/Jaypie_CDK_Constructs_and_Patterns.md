@@ -314,7 +314,7 @@ const table = new JaypieDynamoDb(this, "MyTable", {
 // Connect table to Lambda
 new JaypieLambda(this, "Worker", {
   code: "dist",
-  tables: [table], // Grants read/write, sets CDK_ENV_DYNAMO_TABLE
+  tables: [table], // Grants read/write, sets DYNAMODB_TABLE_NAME
 });
 ```
 
