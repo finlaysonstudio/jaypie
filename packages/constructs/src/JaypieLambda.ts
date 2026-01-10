@@ -31,7 +31,7 @@ export interface JaypieLambdaProps {
   /**
    * DynamoDB tables to grant read/write access to the Lambda function.
    * Each table is granted read/write access and if exactly one table is provided,
-   * the CDK_ENV_DYNAMO_TABLE environment variable is set to the table name.
+   * the DYNAMODB_TABLE_NAME environment variable is set to the table name.
    */
   tables?: dynamodb.ITable[];
   /**
@@ -255,7 +255,7 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
 
     // Add table name to environment if there's exactly one table
     if (tables.length === 1) {
-      this._lambda.addEnvironment("CDK_ENV_DYNAMO_TABLE", tables[0].tableName);
+      this._lambda.addEnvironment("DYNAMODB_TABLE_NAME", tables[0].tableName);
     }
 
     // Configure provisioned concurrency if specified

@@ -38,7 +38,7 @@ export interface JaypieNextjsProps {
   /**
    * DynamoDB tables to grant read/write access to the Next.js server function.
    * Each table is granted read/write access and if exactly one table is provided,
-   * the CDK_ENV_DYNAMO_TABLE environment variable is set to the table name.
+   * the DYNAMODB_TABLE_NAME environment variable is set to the table name.
    */
   tables?: dynamodb.ITable[];
   /**
@@ -189,7 +189,7 @@ export class JaypieNextJs extends Construct {
     // Add table name to environment if there's exactly one table
     if (tables.length === 1) {
       nextjs.serverFunction.lambdaFunction.addEnvironment(
-        "CDK_ENV_DYNAMO_TABLE",
+        "DYNAMODB_TABLE_NAME",
         tables[0].tableName,
       );
     }

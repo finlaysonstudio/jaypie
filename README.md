@@ -1005,7 +1005,7 @@ const worker = new JaypieQueuedLambda(this, 'Worker', {
 | `roleTag` | `string` | No | Role tag for resource management |
 | `runtime` | `lambda.Runtime` | No | Lambda runtime, default NODEJS_22_X |
 | `secrets` | `JaypieEnvSecret[]` | No | JaypieEnvSecrets to inject |
-| `tables` | `dynamodb.ITable[]` | No | DynamoDB tables to grant read/write access; sets CDK_ENV_DYNAMO_TABLE env var if exactly one table |
+| `tables` | `dynamodb.ITable[]` | No | DynamoDB tables to grant read/write access; sets DYNAMODB_TABLE_NAME env var if exactly one table |
 | `timeout` | `Duration \| number` | No | Lambda timeout duration or number of seconds, defaults to CDK.DURATION.LAMBDA_WORKER (900 seconds) |
 | `vendorTag` | `string` | No | Vendor tag for resource management |
 | `visibilityTimeout` | `Duration \| number` | No | SQS visibility timeout |
@@ -1045,7 +1045,7 @@ const lambda = new JaypieLambda(this, 'Function', {
 | `roleTag` | `string` | No | Role tag for resource management |
 | `runtime` | `lambda.Runtime` | No | Lambda runtime, default NODEJS_22_X |
 | `secrets` | `JaypieEnvSecret[]` | No | JaypieEnvSecrets to inject |
-| `tables` | `dynamodb.ITable[]` | No | DynamoDB tables to grant read/write access; sets CDK_ENV_DYNAMO_TABLE env var if exactly one table |
+| `tables` | `dynamodb.ITable[]` | No | DynamoDB tables to grant read/write access; sets DYNAMODB_TABLE_NAME env var if exactly one table |
 | `timeout` | `Duration \| number` | No | Lambda timeout duration or number of seconds, defaults to CDK.DURATION.LAMBDA_WORKER (900 seconds) |
 | `vendorTag` | `string` | No | Vendor tag for resource management |
 
