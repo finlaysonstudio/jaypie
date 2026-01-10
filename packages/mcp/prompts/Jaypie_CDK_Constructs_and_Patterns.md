@@ -291,6 +291,76 @@ Common usage:
 - `resolveHostedZone(scope, { zone })`: Gets IHostedZone from string or object
 - `extendDatadogRole(lambda)`: Adds Datadog IAM permissions when CDK_ENV_DATADOG_ROLE_ARN set
 
+### DynamoDB Tables
+
+Use `JaypieDynamoDb` for single-table design with Jaypie GSI patterns:
+```typescript
+// Shorthand: tableName becomes "myApp", construct id is "JaypieDynamoDb-myApp"
+const table = new JaypieDynamoDb(this, "myApp");
+
+// No GSIs
+const table = new JaypieDynamoDb(this, "MyTable", {
+  globalSecondaryIndexes: false,
+});
+
+// Use only specific GSIs
+const table = new JaypieDynamoDb(this, "MyTable", {
+  globalSecondaryIndexes: [
+    JaypieDynamoDb.GlobalSecondaryIndex.Ou,
+    JaypieDynamoDb.GlobalSecondaryIndex.Type,
+  ],
+});
+
+// Connect table to Lambda
+new JaypieLambda(this, "Worker", {
+  code: "dist",
+  tables: [table], // Grants read/write, sets CDK_ENV_DYNAMO_TABLE
+});
+```
+
+Features:
+- Default partition key: `model` (string), sort key: `id` (string)
+- PAY_PER_REQUEST billing mode by default
+- RETAIN removal policy in production, DESTROY otherwise
+- GSI options: `true`/omit = all five, `false` = none, array = specific GSIs
+- Static constants: `JaypieDynamoDb.GlobalSecondaryIndex.*` and `JaypieDynamoDb.GlobalSecondaryIndexes`
+- All GSIs use partition key (string) + `sequence` (number) sort key
+- Implements `ITableV2` interface
+
+For single-table design patterns, key builders, and query utilities, see `Jaypie_DynamoDB_Package.md`.
+
+### Next.js Applications
+
+Use `JaypieNextJs` for Next.js deployments with CloudFront and custom domains:
+```typescript
+const nextjs = new JaypieNextJs(this, "Web", {
+  domainName: "app.example.com",
+  hostedZone: "example.com",
+  nextjsPath: "../nextjs", // Path to Next.js project
+  environment: ["NODE_ENV", { CUSTOM_VAR: "value" }],
+  secrets: ["AUTH0_CLIENT_SECRET", "AUTH0_SECRET"],
+  tables: [dynamoTable],
+});
+```
+
+Features:
+- Uses `cdk-nextjs-standalone` under the hood
+- CloudFront distribution with SSL certificate
+- Custom domain via Route53
+- Automatic Datadog integration
+- Parameter Store/Secrets Manager layer
+- Server-side function with secrets and tables access
+- NEXT_PUBLIC_* environment variables automatically included
+- `domainName` accepts string or config object: `{ component, domain, env, subdomain }`
+
+Properties exposed:
+- `bucket`: S3 bucket for static assets
+- `distribution`: CloudFront distribution
+- `domain`: Route53 domain configuration
+- `serverFunction`: Next.js server Lambda function
+- `imageOptimizationFunction`: Image optimization Lambda
+- `url`: CloudFront distribution URL
+
 ## Additional Constructs
 
 Other constructs available but not commonly used:

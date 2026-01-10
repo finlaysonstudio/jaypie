@@ -37,8 +37,10 @@ export interface JaypieNextjsProps {
   domainName?: string | DomainNameConfig;
   /**
    * DynamoDB tables to grant read/write access to the Next.js server function.
+   * Each table is granted read/write access and if exactly one table is provided,
+   * the CDK_ENV_DYNAMO_TABLE environment variable is set to the table name.
    */
-  dynamoTables?: dynamodb.ITable[];
+  tables?: dynamodb.ITable[];
   /**
    * Environment variables for the Next.js application.
    *
@@ -179,16 +181,16 @@ export class JaypieNextJs extends Construct {
     });
 
     // Grant read/write permissions for DynamoDB tables
-    const dynamoTables = props?.dynamoTables || [];
-    dynamoTables.forEach((table) => {
+    const tables = props?.tables || [];
+    tables.forEach((table) => {
       table.grantReadWriteData(nextjs.serverFunction.lambdaFunction);
     });
 
     // Add table name to environment if there's exactly one table
-    if (dynamoTables.length === 1) {
+    if (tables.length === 1) {
       nextjs.serverFunction.lambdaFunction.addEnvironment(
         "CDK_ENV_DYNAMO_TABLE",
-        dynamoTables[0].tableName,
+        tables[0].tableName,
       );
     }
 
