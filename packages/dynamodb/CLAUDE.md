@@ -95,10 +95,10 @@ All query functions use object parameters:
 
 ```typescript
 interface DynamoClientConfig {
-  tableName: string;
+  credentials?: { accessKeyId: string; secretAccessKey: string };  // For local dev
   endpoint?: string;   // For local dev
-  region?: string;     // Default: "us-east-1"
-  credentials?: { accessKeyId: string; secretAccessKey: string };
+  region?: string;     // Falls back to AWS_REGION, then "us-east-1"
+  tableName?: string;  // Falls back to DYNAMODB_TABLE_NAME env var
 }
 
 interface ParentReference {
@@ -186,9 +186,13 @@ Example: Messages under a chat have `ou = "chat#abc-123"`
 import { initClient, APEX, queryByOu } from "@jaypie/dynamodb";
 
 // Initialize once at app startup
+// In production: uses DYNAMODB_TABLE_NAME and AWS_REGION env vars
+initClient();
+
+// Or with explicit config (for local dev)
 initClient({
-  tableName: "my-table",
-  endpoint: process.env.DYNAMODB_ENDPOINT,  // Optional for local dev
+  endpoint: process.env.DYNAMODB_ENDPOINT,  // For local dev only
+  tableName: "my-table",                    // Overrides DYNAMODB_TABLE_NAME
 });
 
 // Use anywhere

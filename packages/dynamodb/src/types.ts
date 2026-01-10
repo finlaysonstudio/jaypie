@@ -2,17 +2,17 @@
  * DynamoDB client configuration
  */
 export interface DynamoClientConfig {
-  /** DynamoDB table name */
-  tableName: string;
-  /** Optional endpoint URL for local development (e.g., "http://127.0.0.1:8100") */
-  endpoint?: string;
-  /** AWS region (default: "us-east-1") */
-  region?: string;
   /** Optional credentials for local development */
   credentials?: {
     accessKeyId: string;
     secretAccessKey: string;
   };
+  /** Optional endpoint URL for local development (e.g., "http://127.0.0.1:8100") */
+  endpoint?: string;
+  /** AWS region (falls back to AWS_REGION env var, then "us-east-1") */
+  region?: string;
+  /** DynamoDB table name (falls back to DYNAMODB_TABLE_NAME env var) */
+  tableName?: string;
 }
 
 /**
