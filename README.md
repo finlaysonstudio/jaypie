@@ -800,6 +800,53 @@ const nsRecord = new JaypieDnsRecord(this, 'SubdomainNS', {
 | `ttl` | `Duration` | No | Time to live, defaults to 5 minutes |
 | `comment` | `string` | No | Optional comment for the DNS record |
 
+#### `JaypieDynamoDb`
+
+Creates a DynamoDB table with Jaypie single-table design patterns. Includes five Global Secondary Indexes for common access patterns.
+
+```typescript
+// Shorthand: tableName becomes "myApp", construct id is "JaypieDynamoDb-myApp"
+const table = new JaypieDynamoDb(this, "myApp");
+
+// With explicit configuration - no GSIs
+const table = new JaypieDynamoDb(this, "MyTable", {
+  tableName: "custom-table-name",
+  globalSecondaryIndexes: false, // No GSIs
+});
+
+// Use only specific GSIs
+const table = new JaypieDynamoDb(this, "MyTable", {
+  globalSecondaryIndexes: [
+    JaypieDynamoDb.GlobalSecondaryIndex.Ou,
+    JaypieDynamoDb.GlobalSecondaryIndex.Type,
+  ],
+});
+```
+
+| Property | Type | Required | Description |
+| -------- | ---- | -------- | ----------- |
+| `billing` | `Billing` | No | DynamoDB billing mode; defaults to `Billing.onDemand()` (PAY_PER_REQUEST) |
+| `globalSecondaryIndexes` | `boolean \| GlobalSecondaryIndexPropsV2[]` | No | `true`/omit: all five GSIs, `false`: none, array: specific GSIs |
+| `partitionKey` | `Attribute` | No | Partition key; defaults to `{ name: "model", type: STRING }` |
+| `project` | `string` | No | Project tag value |
+| `removalPolicy` | `RemovalPolicy` | No | RETAIN in production, DESTROY otherwise |
+| `roleTag` | `string` | No | Role tag for resource management |
+| `service` | `string` | No | Service tag value |
+| `sortKey` | `Attribute` | No | Sort key; defaults to `{ name: "id", type: STRING }` |
+| `vendorTag` | `string` | No | Vendor tag for resource management |
+
+The construct also accepts all standard DynamoDB TablePropsV2 properties.
+
+**Static Constants:**
+- `JaypieDynamoDb.GlobalSecondaryIndex.Alias` - Human-friendly lookup index
+- `JaypieDynamoDb.GlobalSecondaryIndex.Class` - Category filtering index
+- `JaypieDynamoDb.GlobalSecondaryIndex.Ou` - Organizational unit (hierarchical) index
+- `JaypieDynamoDb.GlobalSecondaryIndex.Type` - Type filtering index
+- `JaypieDynamoDb.GlobalSecondaryIndex.Xid` - External ID lookup index
+- `JaypieDynamoDb.GlobalSecondaryIndexes` - Array of all five default GSIs
+
+All GSIs use the index name as the partition key (string) and `sequence` (number) as the sort key.
+
 #### `JaypieEventsRule`
 
 Creates an EventBridge rule that targets a Lambda function. Automatically resolves the Datadog forwarder function if no target is specified, making it ideal for routing AWS service events to Datadog for monitoring.
@@ -958,6 +1005,7 @@ const worker = new JaypieQueuedLambda(this, 'Worker', {
 | `roleTag` | `string` | No | Role tag for resource management |
 | `runtime` | `lambda.Runtime` | No | Lambda runtime, default NODEJS_22_X |
 | `secrets` | `JaypieEnvSecret[]` | No | JaypieEnvSecrets to inject |
+| `tables` | `dynamodb.ITable[]` | No | DynamoDB tables to grant read/write access; sets CDK_ENV_DYNAMO_TABLE env var if exactly one table |
 | `timeout` | `Duration \| number` | No | Lambda timeout duration or number of seconds, defaults to CDK.DURATION.LAMBDA_WORKER (900 seconds) |
 | `vendorTag` | `string` | No | Vendor tag for resource management |
 | `visibilityTimeout` | `Duration \| number` | No | SQS visibility timeout |
@@ -997,6 +1045,7 @@ const lambda = new JaypieLambda(this, 'Function', {
 | `roleTag` | `string` | No | Role tag for resource management |
 | `runtime` | `lambda.Runtime` | No | Lambda runtime, default NODEJS_22_X |
 | `secrets` | `JaypieEnvSecret[]` | No | JaypieEnvSecrets to inject |
+| `tables` | `dynamodb.ITable[]` | No | DynamoDB tables to grant read/write access; sets CDK_ENV_DYNAMO_TABLE env var if exactly one table |
 | `timeout` | `Duration \| number` | No | Lambda timeout duration or number of seconds, defaults to CDK.DURATION.LAMBDA_WORKER (900 seconds) |
 | `vendorTag` | `string` | No | Vendor tag for resource management |
 

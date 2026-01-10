@@ -30,8 +30,10 @@ export interface JaypieLambdaProps {
   description?: string;
   /**
    * DynamoDB tables to grant read/write access to the Lambda function.
+   * Each table is granted read/write access and if exactly one table is provided,
+   * the CDK_ENV_DYNAMO_TABLE environment variable is set to the table name.
    */
-  dynamoTables?: dynamodb.ITable[];
+  tables?: dynamodb.ITable[];
   /**
    * Environment variables for the Lambda function.
    *
@@ -102,7 +104,7 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
       deadLetterQueueEnabled,
       deadLetterTopic,
       description,
-      dynamoTables = [],
+      tables = [],
       environment: environmentInput,
       envSecrets = {},
       ephemeralStorageSize,
@@ -247,13 +249,13 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
     });
 
     // Grant read/write permissions for DynamoDB tables
-    dynamoTables.forEach((table) => {
+    tables.forEach((table) => {
       table.grantReadWriteData(this._lambda);
     });
 
     // Add table name to environment if there's exactly one table
-    if (dynamoTables.length === 1) {
-      this._lambda.addEnvironment("CDK_ENV_DYNAMO_TABLE", dynamoTables[0].tableName);
+    if (tables.length === 1) {
+      this._lambda.addEnvironment("CDK_ENV_DYNAMO_TABLE", tables[0].tableName);
     }
 
     // Configure provisioned concurrency if specified
