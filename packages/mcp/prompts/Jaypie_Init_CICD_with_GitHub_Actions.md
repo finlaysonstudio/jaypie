@@ -1115,6 +1115,22 @@ The environment must be created in GitHub repository settings before the workflo
 - Verify the AWS role has permissions to access any Secrets Manager secrets
 - Review CloudFormation events in the AWS Console for specific errors
 
+### Error: "Cannot retrieve value from context provider hosted-zone"
+
+Stacks using context providers must extend `JaypieAppStack`, not `cdk.Stack`:
+
+```typescript
+// Wrong
+import * as cdk from "aws-cdk-lib";
+export class AppStack extends cdk.Stack { ... }
+
+// Correct
+import { JaypieAppStack } from "@jaypie/constructs";
+export class AppStack extends JaypieAppStack { ... }
+```
+
+`JaypieAppStack` automatically sets `env` with `CDK_DEFAULT_ACCOUNT` and `CDK_DEFAULT_REGION`.
+
 ### Variables Not Being Applied
 
 - Composite actions cannot access `vars.*` directly

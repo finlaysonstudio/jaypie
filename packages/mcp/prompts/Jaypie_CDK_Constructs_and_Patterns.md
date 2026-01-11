@@ -153,10 +153,42 @@ Note: API Gateway has a 29-second timeout limit. For longer streaming operations
 
 ### Stack Types
 
-Use specialized stacks for different purposes:
+Always extend Jaypie stack classes instead of raw CDK classes:
+
+| Use | Instead of |
+|-----|------------|
+| `JaypieAppStack` | `cdk.Stack` |
+| `JaypieInfrastructureStack` | `cdk.Stack` |
+
+Jaypie stacks automatically configure:
+- `env` with `CDK_DEFAULT_ACCOUNT` and `CDK_DEFAULT_REGION` (required for context providers)
+- Standard tagging
+- Removal policies based on environment
+
 ```typescript
 new JaypieAppStack(scope, "AppStack");  // Application resources
 new JaypieInfrastructureStack(scope, "InfraStack");  // Infrastructure resources
+```
+
+#### Error: Using cdk.Stack with Context Providers
+
+Using `cdk.Stack` directly with constructs that need context providers causes:
+
+```
+ValidationError: Cannot retrieve value from context provider hosted-zone since
+account/region are not specified at the stack level.
+```
+
+**Solution:** Change the base class:
+
+```typescript
+// Wrong
+import * as cdk from "aws-cdk-lib";
+export class AppStack extends cdk.Stack { ... }
+
+// Correct
+import { JaypieAppStack } from "@jaypie/constructs";
+export class AppStack extends JaypieAppStack { ... }
 ```
 
 ### Secrets Management
