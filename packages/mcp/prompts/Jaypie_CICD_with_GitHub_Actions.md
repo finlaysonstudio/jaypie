@@ -190,6 +190,25 @@ Pass secrets only to steps that need them:
 
 Never expose secrets in logs or workflow outputs.
 
+## CDK Stack Names
+
+The `stack-name` parameter in deploy workflows must match the stack ID defined in `packages/cdk/bin/cdk.ts`:
+
+```typescript
+// bin/cdk.ts
+new AppStack(app, "AppStack");  // "AppStack" is the stack ID
+```
+
+```yaml
+# deploy-*.yml
+- name: Deploy CDK Stack
+  uses: ./.github/actions/cdk-deploy
+  with:
+    stack-name: AppStack  # Must match the stack ID above
+```
+
+If you rename the stack ID (e.g., to "MyProjectAppStack" for clarity in AWS), update all deploy workflows to match. Mismatched names cause "No stacks match the name(s)" errors.
+
 ## Integrations
 
 ### AWS

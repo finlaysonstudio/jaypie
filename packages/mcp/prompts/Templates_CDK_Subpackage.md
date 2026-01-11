@@ -22,6 +22,8 @@ new InfrastructureStack(app, "InfrastructureStack");
 new AppStack(app, "AppStack");
 ```
 
+> **Important:** The second argument to `new AppStack(app, "AppStack")` is the stack ID used by CloudFormation. This must exactly match the `stack-name` parameter in your GitHub Actions deploy workflows. If you customize this value (e.g., `"MyProjectAppStack"`), update `.github/workflows/deploy-*.yml` accordingly.
+
 ## lib/cdk-app.ts
 
 ```typescript
