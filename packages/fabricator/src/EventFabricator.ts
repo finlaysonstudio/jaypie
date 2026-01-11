@@ -1,10 +1,16 @@
 import { Fabricator, type FabricatorOptions } from "./Fabricator.js";
+import { DerivedEvaluator } from "./derived/DerivedEvaluator.js";
+import type {
+  DerivedConfig,
+  EventWithDerivedMeta,
+  TimestampedEvent,
+} from "./derived/types.js";
+import { mergeTemplates } from "./templates/mergeTemplates.js";
 import type { TemporalTemplate } from "./templates/types.js";
 import { DAY_NAME_TO_NUMBER, MONTH_NAME_TO_NUMBER } from "./templates/types.js";
-import { mergeTemplates } from "./templates/mergeTemplates.js";
-import { shiftHoursForTimezone } from "./temporal/shiftHoursForTimezone.js";
-import { getDaysInYear } from "./temporal/iterateYear.js";
 import { getISOWeekNumber } from "./temporal/isoWeek.js";
+import { getDaysInYear } from "./temporal/iterateYear.js";
+import { shiftHoursForTimezone } from "./temporal/shiftHoursForTimezone.js";
 
 //
 // Constants
@@ -16,9 +22,12 @@ const DEFAULT_ANNUAL_COUNT = 1000;
 // Types
 //
 
-export interface EventFabricatorOptions extends FabricatorOptions {
+export interface EventFabricatorOptions<T extends TimestampedEvent = TimestampedEvent>
+  extends FabricatorOptions {
   /** Number of events to generate per year (default: 1000) */
   annualCount?: number;
+  /** Derived event configuration */
+  derived?: DerivedConfig<T>;
   /** Template name(s) or template object(s) for time distribution */
   template?: string | string[] | TemporalTemplate | TemporalTemplate[];
   /** IANA timezone identifier for shifting hour weights to UTC */
@@ -65,15 +74,18 @@ export interface CreateEventParams {
  *
  * const events = generator.events({ year: 2025 });
  */
-export abstract class EventFabricator<T = Fabricator> extends Fabricator {
+export abstract class EventFabricator<
+  T extends TimestampedEvent = TimestampedEvent,
+> extends Fabricator {
   protected readonly annualCount: number;
   protected readonly dateWeights?: Record<number, number>;
   protected readonly dayWeights?: Record<number | string, number>;
+  protected readonly derivedConfig?: DerivedConfig<T>;
   protected readonly hourlyWeights?: Record<number, number>;
   protected readonly monthlyWeights?: Record<number | string, number>;
   protected readonly weeklyWeights?: Record<number, number>;
 
-  constructor(options: EventFabricatorOptions = {}) {
+  constructor(options: EventFabricatorOptions<T> = {}) {
     super({
       generator: options.generator,
       name: options.name,
@@ -81,6 +93,7 @@ export abstract class EventFabricator<T = Fabricator> extends Fabricator {
     });
 
     this.annualCount = options.annualCount ?? DEFAULT_ANNUAL_COUNT;
+    this.derivedConfig = options.derived;
 
     // Resolve templates if provided
     let templateWeights: TemporalTemplate | undefined;
@@ -207,7 +220,121 @@ export abstract class EventFabricator<T = Fabricator> extends Fabricator {
       });
     });
 
+    // If derived config exists, process derived events
+    if (this.derivedConfig) {
+      const withMeta = this.processDerived(allEvents, targetYear);
+      return withMeta.map((item) => item.event);
+    }
+
     return allEvents;
+  }
+
+  /**
+   * Generates events with derived event metadata attached
+   * Useful for analyzing event relationships
+   */
+  eventsWithMeta(config: EventGenerationConfig = {}): EventWithDerivedMeta<T>[] {
+    // Generate primary events without derived event processing
+    const targetYear = config.year ?? new Date().getFullYear();
+    const count = config.count ?? this.annualCount;
+
+    // Get all days in the year
+    const days = getDaysInYear(targetYear);
+
+    // Calculate weight for each day
+    const dayWeights = days.map((day) => {
+      const month = day.getUTCMonth() + 1;
+      const week = getISOWeekNumber(day);
+      const dayOfWeek = day.getUTCDay();
+      const date = day.getUTCDate();
+
+      let weight = 1;
+      weight *= this.getWeight(this.monthlyWeights, month);
+      weight *= this.getWeight(this.weeklyWeights, week);
+      weight *= this.getWeight(this.dayWeights, dayOfWeek);
+      weight *= this.getWeight(this.dateWeights, date);
+      return weight;
+    });
+
+    // Normalize weights
+    const totalWeight = dayWeights.reduce((sum, w) => sum + w, 0);
+    const normalizedWeights =
+      totalWeight > 0 ? dayWeights.map((w) => w / totalWeight) : dayWeights;
+
+    // Distribute events across days using weighted random
+    const eventsPerDay = new Array(days.length).fill(0) as number[];
+    const fabricatorWithYearSeed = new Fabricator({
+      seed: `${this.id}-year-${targetYear}`,
+    });
+
+    for (let i = 0; i < count; i++) {
+      const rand = fabricatorWithYearSeed.random();
+      let cumulative = 0;
+      for (let d = 0; d < days.length; d++) {
+        cumulative += normalizedWeights[d];
+        if (rand <= cumulative) {
+          eventsPerDay[d]++;
+          break;
+        }
+      }
+    }
+
+    // Generate events for each day
+    const primaryEvents: T[] = [];
+    let eventIndex = 0;
+
+    days.forEach((day, dayIndex) => {
+      const dayCount = eventsPerDay[dayIndex];
+      if (dayCount === 0) return;
+
+      const timestamps = this.generateDayTimestamps(
+        day,
+        dayCount,
+        fabricatorWithYearSeed,
+      );
+
+      timestamps.forEach((ts) => {
+        const seed = `${this.id}-event-${eventIndex}`;
+        primaryEvents.push(
+          this.createEvent({
+            index: eventIndex,
+            seed,
+            timestamp: new Date(ts),
+          }),
+        );
+        eventIndex++;
+      });
+    });
+
+    // If no derived config, wrap primary events with basic metadata
+    if (!this.derivedConfig) {
+      return primaryEvents.map((event) => ({
+        depth: 0,
+        event,
+      }));
+    }
+
+    return this.processDerived(primaryEvents, targetYear);
+  }
+
+  /**
+   * Process derived events using the evaluator
+   */
+  private processDerived(
+    primaryEvents: T[],
+    targetYear: number,
+  ): EventWithDerivedMeta<T>[] {
+    if (!this.derivedConfig) {
+      return primaryEvents.map((event) => ({ depth: 0, event }));
+    }
+
+    const evaluator = new DerivedEvaluator({
+      derivedConfig: this.derivedConfig,
+      fabricatorId: this.id,
+      targetYear,
+    });
+
+    return evaluator.processEvents(primaryEvents);
   }
 
   /**

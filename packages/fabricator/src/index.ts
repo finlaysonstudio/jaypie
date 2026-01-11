@@ -59,6 +59,9 @@ export {
   type EventGenerationConfig,
 } from "./EventFabricator.js";
 
+// Export derived event system
+export * from "./derived/index.js";
+
 // Export templates
 export * from "./templates/index.js";
 

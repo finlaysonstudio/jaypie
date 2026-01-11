@@ -359,3 +359,259 @@ class TenantFabricator {
 4. **Seed Flexibility**: Accepts strings, numbers, or UUIDs as seeds
 5. **Hierarchical Generation**: Nested fabricators enable deterministic tree structures for complex data models
 6. **Identity & Naming**: Every fabricator has a unique ID and name for tracking and debugging
+
+## EventFabricator: Temporal Event Generation
+
+### Overview
+
+`EventFabricator` is an abstract base class for generating temporally-distributed events across a year. It builds on `Fabricator` to add:
+- Annual event counts with configurable distribution
+- Temporal templates for hour, day, week, month, and date weighting
+- Timezone-aware hour shifting
+- Derived event system for cascading events
+
+### Basic Usage
+
+```typescript
+import {
+  EventFabricator,
+  HOURS_BUSINESS,
+  DAYS_WEEKDAYS_ONLY,
+  type CreateEventParams,
+} from "@jaypie/fabricator";
+
+interface SimpleEvent {
+  id: string;
+  timestamp: Date;
+}
+
+class SimpleEventFabricator extends EventFabricator<SimpleEvent> {
+  protected createEvent({ seed, timestamp }: CreateEventParams): SimpleEvent {
+    return { id: seed, timestamp };
+  }
+}
+
+const fab = new SimpleEventFabricator({
+  seed: "my-events",
+  annualCount: 1000,
+  template: [HOURS_BUSINESS, DAYS_WEEKDAYS_ONLY],
+});
+
+const events = fab.events({ year: 2025 });
+// Returns 1000 events during business hours on weekdays
+```
+
+### Temporal Templates
+
+Templates control event distribution. They can be combined:
+
+**Hour Templates:**
+- `HOURS_BUSINESS` - 8am-5pm
+- `HOURS_RETAIL` - 10am-8pm
+- `HOURS_EVENING` - 6pm-10pm
+- `HOURS_24_7` - All hours equal
+
+**Day Templates:**
+- `DAYS_WEEKDAYS_ONLY` - Mon-Fri only
+- `DAYS_NO_SUNDAY` - All but Sunday
+- `DAYS_NO_MONDAY` - All but Monday
+
+**Curve Templates (gradual peaks):**
+- `CURVE_EVENING_PEAK` - Peaks at 7pm
+- `CURVE_ECOMMERCE` - Peaks at 8pm
+- `CURVE_MIDDAY_PEAK` - Peaks at 11am
+
+**Spike Templates (sharp peaks):**
+- `SPIKE_MORNING` - 7-8am peak
+- `SPIKE_LUNCH` - 12-1pm peak
+- `SPIKE_EVENING` - 6-7pm peak
+
+**Boost/Lull Templates (multipliers):**
+- `BOOST_SUMMER`, `LULL_SUMMER`
+- `BOOST_WINTER`, `LULL_WINTER`
+- `BOOST_WEEKENDS`, `LULL_WEEKENDS`
+- `BOOST_HOLIDAY_SEASON` - Nov-Dec 1.5x
+
+```typescript
+const fab = new MyFabricator({
+  template: [
+    HOURS_BUSINESS,
+    DAYS_WEEKDAYS_ONLY,
+    BOOST_HOLIDAY_SEASON,
+    CURVE_MIDDAY_PEAK,
+  ],
+});
+```
+
+## Derived Events: Cascading Event Generation
+
+### Overview
+
+The derived event system allows events to spawn follow-up events based on probabilistic rules. This is ideal for modeling:
+- Financial transactions with voids, refunds, chargebacks
+- Subscription renewals with payment retries
+- Any event chains with cause-and-effect relationships
+
+### Configuration
+
+```typescript
+import {
+  EventFabricator,
+  CHANCE,
+  type DerivedConfig,
+  type TimestampedEvent,
+} from "@jaypie/fabricator";
+
+interface Transaction extends TimestampedEvent {
+  id: string;
+  amount: number;
+  type: "purchase" | "void" | "refund" | "chargeback";
+  parentId?: string;
+  timestamp: Date;
+}
+
+const derivedConfig: DerivedConfig<Transaction> = {
+  rules: [
+    {
+      name: "void",
+      probability: CHANCE.RARE,  // 2.1%
+      condition: (parent) => parent.type === "purchase",
+      timing: { mode: "same-day" },
+      createDerived: ({ parent, seed, timestamp }) => ({
+        id: seed,
+        type: "void",
+        amount: -parent.amount,
+        timestamp,
+        parentId: parent.id,
+      }),
+    },
+    {
+      name: "refund",
+      probability: 0.10,  // 10%
+      timing: {
+        mode: "range",
+        delayMin: 1,
+        delayMax: 14,
+        unit: "days",
+      },
+      createDerived: ({ parent, seed, timestamp }) => ({
+        id: seed,
+        type: "refund",
+        amount: -parent.amount,
+        timestamp,
+        parentId: parent.id,
+      }),
+    },
+  ],
+  boundaryBehavior: "include",  // include | exclude | clamp
+  maxDepth: 4,  // Prevent infinite chains
+};
+```
+
+### Timing Modes
+
+```typescript
+interface DerivedTiming {
+  mode: "same-day" | "fixed" | "range" | "recurring";
+  delayMin?: number;
+  delayMax?: number;
+  unit?: "days" | "weeks" | "months" | "hours" | "minutes" | "seconds";
+  interval?: number;          // For recurring
+  maxRecurrences?: number;    // For recurring
+  until?: Date | "end-of-year";
+}
+```
+
+**Examples:**
+- Same day: `{ mode: "same-day" }`
+- Fixed delay: `{ mode: "fixed", delayMin: 7, unit: "days" }`
+- Range: `{ mode: "range", delayMin: 1, delayMax: 14, unit: "days" }`
+- Monthly recurring: `{ mode: "recurring", interval: 1, unit: "months", until: "end-of-year" }`
+
+### Nested Derived Events (Chains)
+
+Derived events can spawn their own derived events:
+
+```typescript
+{
+  name: "chargeback",
+  probability: CHANCE.RARE,
+  timing: { mode: "range", delayMin: 30, delayMax: 90, unit: "days" },
+  createDerived: ({ parent, seed, timestamp }) => ({
+    id: seed,
+    type: "chargeback",
+    amount: -parent.amount,
+    timestamp,
+    parentId: parent.id,
+  }),
+  derived: [  // Nested rules for chargebacks
+    {
+      name: "representment",
+      probability: 0.70,  // 70% of chargebacks
+      timing: { mode: "range", delayMin: 7, delayMax: 21, unit: "days" },
+      createDerived: ({ parent, seed, timestamp }) => ({
+        id: seed,
+        type: "representment",
+        amount: Math.abs(parent.amount),  // Re-charge
+        timestamp,
+        parentId: parent.id,
+      }),
+    },
+  ],
+}
+```
+
+### Using with EventFabricator
+
+```typescript
+class TransactionFabricator extends EventFabricator<Transaction> {
+  constructor(options = {}) {
+    super({
+      ...options,
+      derived: derivedConfig,
+      template: [HOURS_BUSINESS, DAYS_WEEKDAYS_ONLY],
+    });
+  }
+
+  protected createEvent({ seed, timestamp }: CreateEventParams): Transaction {
+    const fab = new Fabricator({ seed });
+    return {
+      id: seed,
+      type: "purchase",
+      amount: fab.random({ min: 10, max: 500, currency: true }),
+      timestamp,
+    };
+  }
+}
+
+const fab = new TransactionFabricator({
+  seed: "my-business",
+  annualCount: 1000,
+});
+
+// Get all events including derived events
+const events = fab.events({ year: 2025 });
+
+// Get events with metadata (parent refs, depth, rule names)
+const eventsWithMeta = fab.eventsWithMeta({ year: 2025 });
+```
+
+### Event Metadata
+
+`eventsWithMeta()` returns events with relationship data:
+
+```typescript
+interface EventWithDerivedMeta<T> {
+  event: T;
+  depth: number;        // 0 = primary, 1 = first derived, etc.
+  parentSeed?: string;  // Seed of parent event
+  ruleName?: string;    // Rule that created this derived event
+}
+```
+
+### Key Properties
+
+1. **Deterministic**: Same seed produces same derived event cascade
+2. **Chronological**: All events (primary + derived) sorted by timestamp
+3. **Depth-Limited**: `maxDepth` prevents infinite chains
+4. **Boundary Control**: Events outside target year can be included, excluded, or clamped
