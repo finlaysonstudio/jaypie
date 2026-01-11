@@ -53,9 +53,6 @@ Jaypie strives to be "mockable-first," meaning all components should be easily t
 npm install jaypie
 ```
 
-`@jaypie/core` is included in `jaypie`.  
-Almost every Jaypie package requires core.  
-
 #### Included Packages
 
 These packages are included in `jaypie`.  
@@ -78,14 +75,6 @@ Matchers (including all jest-extended matchers), mocks, and utilities to test Ja
 npm install --save-dev @jaypie/testkit
 ```
 
-#### WebKit
-
-Frontend utilities for Jaypie.
-
-```bash
-npm install @jaypie/webkit
-```
-
 ### Example
 
 ```javascript
@@ -101,8 +90,7 @@ export const handler = lambdaHandler(async({event}) => {
 }, { name: "example"});
 ```
 
-This example would then be deployed to AWS via CDK or similar orchestration.  
-See [@jaypie/cdk](https://github.com/finlaysonstudio/jaypie-cdk).  
+This example would then be deployed to AWS via CDK or similar orchestration.
 
 ## 📖 Reference
 
@@ -370,11 +358,17 @@ import {
 
 #### `JaypieEnvSecret`
 
-Manages build-environment secrets, allowing consumer environments (personal environments) to import from provider environments (sandbox).  
+Manages build-environment secrets, allowing consumer environments (personal environments) to import from provider environments (sandbox).
 
-Most Jaypie projects will not need to specify `consumer` or `provider` properties, as the construct will automatically handle the correct behavior based on the environment.  
+Most Jaypie projects will not need to specify `consumer` or `provider` properties, as the construct will automatically handle the correct behavior based on the environment.
 
 ```typescript
+// Shorthand: if the second parameter is an environment variable key with a non-empty value,
+// it will be used as envKey and the construct id becomes "EnvSecret_${envKey}"
+const mongoSecret = new JaypieEnvSecret(this, "MONGODB_URI");
+// Equivalent to: new JaypieEnvSecret(this, "EnvSecret_MONGODB_URI", { envKey: "MONGODB_URI" })
+
+// Explicit configuration
 const mongoConnectionString = new JaypieEnvSecret(
   this,
   "MongoConnectionString",
@@ -395,6 +389,8 @@ const mongoConnectionString = new JaypieEnvSecret(
 | `roleTag` | `string` | No | Role tag for resource management |
 | `vendorTag` | `string` | No | Vendor tag for resource management |
 | `value` | `string` | No | Direct secret value if not using envKey |
+
+**Shorthand Behavior**: When the second parameter (normally the construct id) matches an environment variable key with a non-empty string value, and no `envKey` is provided in props, the construct treats it as the `envKey` and generates the id as `EnvSecret_${envKey}`.
 
 ##### Convenience Secrets
 
@@ -804,6 +800,53 @@ const nsRecord = new JaypieDnsRecord(this, 'SubdomainNS', {
 | `ttl` | `Duration` | No | Time to live, defaults to 5 minutes |
 | `comment` | `string` | No | Optional comment for the DNS record |
 
+#### `JaypieDynamoDb`
+
+Creates a DynamoDB table with Jaypie single-table design patterns. Includes five Global Secondary Indexes for common access patterns.
+
+```typescript
+// Shorthand: tableName becomes "myApp", construct id is "JaypieDynamoDb-myApp"
+const table = new JaypieDynamoDb(this, "myApp");
+
+// With explicit configuration - no GSIs
+const table = new JaypieDynamoDb(this, "MyTable", {
+  tableName: "custom-table-name",
+  globalSecondaryIndexes: false, // No GSIs
+});
+
+// Use only specific GSIs
+const table = new JaypieDynamoDb(this, "MyTable", {
+  globalSecondaryIndexes: [
+    JaypieDynamoDb.GlobalSecondaryIndex.Ou,
+    JaypieDynamoDb.GlobalSecondaryIndex.Type,
+  ],
+});
+```
+
+| Property | Type | Required | Description |
+| -------- | ---- | -------- | ----------- |
+| `billing` | `Billing` | No | DynamoDB billing mode; defaults to `Billing.onDemand()` (PAY_PER_REQUEST) |
+| `globalSecondaryIndexes` | `boolean \| GlobalSecondaryIndexPropsV2[]` | No | `true`/omit: all five GSIs, `false`: none, array: specific GSIs |
+| `partitionKey` | `Attribute` | No | Partition key; defaults to `{ name: "model", type: STRING }` |
+| `project` | `string` | No | Project tag value |
+| `removalPolicy` | `RemovalPolicy` | No | RETAIN in production, DESTROY otherwise |
+| `roleTag` | `string` | No | Role tag for resource management |
+| `service` | `string` | No | Service tag value |
+| `sortKey` | `Attribute` | No | Sort key; defaults to `{ name: "id", type: STRING }` |
+| `vendorTag` | `string` | No | Vendor tag for resource management |
+
+The construct also accepts all standard DynamoDB TablePropsV2 properties.
+
+**Static Constants:**
+- `JaypieDynamoDb.GlobalSecondaryIndex.Alias` - Human-friendly lookup index
+- `JaypieDynamoDb.GlobalSecondaryIndex.Class` - Category filtering index
+- `JaypieDynamoDb.GlobalSecondaryIndex.Ou` - Organizational unit (hierarchical) index
+- `JaypieDynamoDb.GlobalSecondaryIndex.Type` - Type filtering index
+- `JaypieDynamoDb.GlobalSecondaryIndex.Xid` - External ID lookup index
+- `JaypieDynamoDb.GlobalSecondaryIndexes` - Array of all five default GSIs
+
+All GSIs use the index name as the partition key (string) and `sequence` (number) as the sort key.
+
 #### `JaypieEventsRule`
 
 Creates an EventBridge rule that targets a Lambda function. Automatically resolves the Datadog forwarder function if no target is specified, making it ideal for routing AWS service events to Datadog for monitoring.
@@ -962,7 +1005,8 @@ const worker = new JaypieQueuedLambda(this, 'Worker', {
 | `roleTag` | `string` | No | Role tag for resource management |
 | `runtime` | `lambda.Runtime` | No | Lambda runtime, default NODEJS_22_X |
 | `secrets` | `JaypieEnvSecret[]` | No | JaypieEnvSecrets to inject |
-| `timeout` | `Duration \| number` | No | Lambda timeout duration or number of seconds, defaults to CDK.DURATION.LAMBDA_WORKER (120 seconds) |
+| `tables` | `dynamodb.ITable[]` | No | DynamoDB tables to grant read/write access; sets DYNAMODB_TABLE_NAME env var if exactly one table |
+| `timeout` | `Duration \| number` | No | Lambda timeout duration or number of seconds, defaults to CDK.DURATION.LAMBDA_WORKER (900 seconds) |
 | `vendorTag` | `string` | No | Vendor tag for resource management |
 | `visibilityTimeout` | `Duration \| number` | No | SQS visibility timeout |
 
@@ -1001,7 +1045,8 @@ const lambda = new JaypieLambda(this, 'Function', {
 | `roleTag` | `string` | No | Role tag for resource management |
 | `runtime` | `lambda.Runtime` | No | Lambda runtime, default NODEJS_22_X |
 | `secrets` | `JaypieEnvSecret[]` | No | JaypieEnvSecrets to inject |
-| `timeout` | `Duration \| number` | No | Lambda timeout duration or number of seconds, defaults to CDK.DURATION.LAMBDA_WORKER (120 seconds) |
+| `tables` | `dynamodb.ITable[]` | No | DynamoDB tables to grant read/write access; sets DYNAMODB_TABLE_NAME env var if exactly one table |
+| `timeout` | `Duration \| number` | No | Lambda timeout duration or number of seconds, defaults to CDK.DURATION.LAMBDA_WORKER (900 seconds) |
 | `vendorTag` | `string` | No | Vendor tag for resource management |
 
 When provided with a Datadog API key (via `datadogApiKeyArn` or environment variables), the construct automatically:
@@ -1175,18 +1220,6 @@ See `HTTP` for status codes.
 * `HTTP.CONTENT.TEXT`
 * `HTTP.HEADER`: ...
 * `HTTP.METHOD`: `GET`, `POST`, ...
-
-#### `VALIDATE`
-
-* `VALIDATE.ANY` - Default
-* `VALIDATE.ARRAY`
-* `VALIDATE.CLASS`
-* `VALIDATE.FUNCTION`
-* `VALIDATE.NUMBER`
-* `VALIDATE.NULL`
-* `VALIDATE.OBJECT`
-* `VALIDATE.STRING`
-* `VALIDATE.UNDEFINED`
 
 #### Internal Constants
 
@@ -1702,50 +1735,6 @@ The `v4` function from the `uuid` package.
 import { uuid } from "jaypie";
 
 const id = uuid();
-```
-
-#### `validate`
-
-```javascript
-import { validate, VALIDATE } from "jaypie";
-
-validate(argument, {
-  type: VALIDATE.ANY,
-  falsy: false,     // When `true`, allows "falsy" values that match the type (e.g., `0`, `""`)
-  required: true,   // When `false`, allows `undefined` as a valid value
-  throws: true      // When `false`, returns `false` instead of throwing error
-});
-```
-
-##### Validate Convenience Functions
-
-``` javascript
-import { validate } from "jaypie";
-
-validate.array(argument);
-validate.class(argument);
-validate.function(argument);
-validate.null(argument);
-validate.number(argument);
-validate.object(argument);
-validate.string(argument);
-validate.undefined(argument);
-```
-
-##### Intuitive Validate Types
-
-_Does not include any, class, or undefined_
-
-``` javascript
-validate(argument, {
-  // One of:
-  type: Array,
-  type: Function,
-  type: Number,
-  type: null,
-  type: Object,
-  type: String,
-})
 ```
 
 ### Jaypie Handler
@@ -2420,6 +2409,75 @@ const result = await Llm.operate("What time is it?", {
 });
 ```
 
+#### Files and Images
+
+Send files and images to LLMs using the simplified array syntax with automatic file loading and provider-specific format translation:
+
+```javascript
+import { Llm } from "jaypie";
+
+const llm = new Llm();
+
+// Image from local filesystem
+const imageResult = await llm.operate([
+  "Extract text from this image",
+  { image: "/path/to/photo.png" }
+]);
+
+// PDF from local filesystem
+const pdfResult = await llm.operate([
+  "Summarize this document",
+  { file: "/path/to/document.pdf" }
+]);
+
+// From S3 bucket
+const s3Result = await llm.operate([
+  "Analyze this file",
+  { file: "documents/report.pdf", bucket: "my-bucket" }
+]);
+
+// Extract specific PDF pages
+const pagesResult = await llm.operate([
+  "Read pages 1-3",
+  { file: "large-doc.pdf", pages: [1, 2, 3] }
+]);
+
+// With pre-loaded base64 data (skips file loading)
+const base64Result = await llm.operate([
+  "Describe this image",
+  { image: "photo.jpg", data: base64String }
+]);
+
+// Multiple files and text
+const multiResult = await llm.operate([
+  "Compare these documents",
+  { file: "doc1.pdf" },
+  { file: "doc2.pdf" },
+  "Focus on the methodology section"
+]);
+```
+
+##### File Resolution Order
+
+1. If `data` is present → uses base64 directly
+2. If `bucket` is present → loads from S3
+3. If `CDK_ENV_BUCKET` env var exists → loads from that S3 bucket
+4. Otherwise → loads from local filesystem (relative to `process.cwd()`)
+
+##### Input Types
+
+| Property | Description |
+|----------|-------------|
+| `file` | Path to file (PDF or other document) |
+| `image` | Path to image file |
+| `bucket` | S3 bucket name (optional, uses `CDK_ENV_BUCKET` if not set) |
+| `pages` | Array of page numbers to extract from PDF (optional, extracts all if omitted) |
+| `data` | Base64-encoded file data (optional, skips file loading if provided) |
+
+##### Supported Image Extensions
+
+Files with these extensions are auto-detected as images: `png`, `jpg`, `jpeg`, `gif`, `webp`, `svg`, `bmp`, `ico`, `tiff`, `avif`
+
 ### TestKit
 
 ```bash
@@ -2756,26 +2814,6 @@ const event = sqsTestRecords(
 );
 ```
 
-### WebKit
-
-Browser-optimized, framework-agnostic frontend utilities for Jaypie.  
-
-```bash
-npm install @jaypie/webkit
-```
-
-#### WebKit Reference
-
-```
-import { 
-  uuid
-} from '@jaypie/webkit'
-```
-
-##### `uuid`
-
-The `v4` function from the `uuid` package.  
-
 ## 🛣️ Roadmap
 
 * 1.2 - Converted to TypeScript?  
@@ -2786,10 +2824,9 @@ The `v4` function from the `uuid` package.
 * Complete conversion to TypeScript.  
 * Incomplete: aws, core, datadog, express, jaypie, lambda, mongoose.  
 * Nicely organized VitePress documentation 😅.  
-* More packages: auth0, commander, hygen, llm.  
-* Mongoose project schema.  
-* Better mocking of Mongoose.  
-* @jaypie/constructs replaces @jaypie/cdk.  
+* More packages: auth0, commander, hygen, llm.
+* Mongoose project schema.
+* Better mocking of Mongoose.
 
 ## 📝 Changelog
 
@@ -2817,8 +2854,8 @@ For example,
 
 Process for minor releases:  
 
-* Update core, eslint (no internal dependencies).  
-* Update aws, cdk, express, lambda (depend on core).  
+* Update core, eslint (no internal dependencies).
+* Update aws, constructs, express, lambda.
 * Update datadog, mongoose (depend on aws).  
 * Update jaypie (depends on above).  
 * Update testkit (depends on jaypie).  

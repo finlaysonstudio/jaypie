@@ -1,9 +1,9 @@
 {
   "name": "@jaypie/eslint",
-  "version": "1.1.24",
+  "version": "1.2.1",
   "repository": {
     "type": "git",
-    "url": "https://github.com/finlaysonstudio/jaypie"
+    "url": "git+https://github.com/finlaysonstudio/jaypie.git"
   },
   "license": "MIT",
   "author": "Finlayson Studio",

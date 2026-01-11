@@ -44,9 +44,8 @@ export class JaypieQueuedLambda
       handler = "index.handler",
       initialPolicy,
       layers = [],
+      logGroup,
       logRetention = CDK.LAMBDA.LOG_RETENTION,
-      logRetentionRole,
-      logRetentionRetryOptions,
       maxEventAge,
       memorySize = CDK.LAMBDA.MEMORY_SIZE,
       paramsAndSecrets,
@@ -57,7 +56,9 @@ export class JaypieQueuedLambda
       reservedConcurrentExecutions,
       retryAttempts,
       roleTag,
-      runtime = lambda.Runtime.NODEJS_22_X,
+      runtime = new lambda.Runtime("nodejs24.x", lambda.RuntimeFamily.NODEJS, {
+        supportsInlineCode: true,
+      }),
       runtimeManagementMode,
       secrets = [],
       securityGroups,
@@ -105,9 +106,8 @@ export class JaypieQueuedLambda
       handler,
       initialPolicy,
       layers,
+      logGroup,
       logRetention,
-      logRetentionRole,
-      logRetentionRetryOptions,
       maxEventAge,
       memorySize,
       paramsAndSecrets,
@@ -304,6 +304,13 @@ export class JaypieQueuedLambda
   }
 
   // IQueue implementation
+  public get queueRef() {
+    return {
+      queueUrl: this._queue.queueUrl,
+      queueArn: this._queue.queueArn,
+    };
+  }
+
   public get fifo(): boolean {
     return this._queue.fifo;
   }

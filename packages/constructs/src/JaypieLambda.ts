@@ -1,16 +1,21 @@
 import { Construct } from "constructs";
 import { Duration, Stack, RemovalPolicy, Tags } from "aws-cdk-lib";
-import * as lambda from "aws-cdk-lib/aws-lambda";
-import { CDK } from "./constants";
-import * as iam from "aws-cdk-lib/aws-iam";
 import * as cloudwatch from "aws-cdk-lib/aws-cloudwatch";
+import * as dynamodb from "aws-cdk-lib/aws-dynamodb";
 import * as ec2 from "aws-cdk-lib/aws-ec2";
+import * as iam from "aws-cdk-lib/aws-iam";
+import * as lambda from "aws-cdk-lib/aws-lambda";
+import * as logs from "aws-cdk-lib/aws-logs";
 import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
-import { JaypieEnvSecret } from "./JaypieEnvSecret.js";
+import { CDK } from "./constants";
 import {
   addDatadogLayers,
+  EnvironmentInput,
   jaypieLambdaEnv,
+  resolveEnvironment,
   resolveParamsAndSecrets,
+  resolveSecrets,
+  SecretsArrayItem,
 } from "./helpers/index.js";
 
 export interface JaypieLambdaProps {
@@ -23,16 +28,30 @@ export interface JaypieLambdaProps {
   deadLetterQueueEnabled?: boolean;
   deadLetterTopic?: import("aws-cdk-lib/aws-sns").ITopic;
   description?: string;
-  environment?: { [key: string]: string };
+  /**
+   * DynamoDB tables to grant read/write access to the Lambda function.
+   * Each table is granted read/write access and if exactly one table is provided,
+   * the DYNAMODB_TABLE_NAME environment variable is set to the table name.
+   */
+  tables?: dynamodb.ITable[];
+  /**
+   * Environment variables for the Lambda function.
+   *
+   * Supports both legacy object syntax and new array syntax:
+   * - Object: { KEY: "value" } - directly sets environment variables
+   * - Array: ["KEY1", "KEY2", { KEY3: "value" }]
+   *   - Strings: lookup value from process.env
+   *   - Objects: merge key-value pairs directly
+   */
+  environment?: EnvironmentInput;
   envSecrets?: { [key: string]: secretsmanager.ISecret };
   ephemeralStorageSize?: import("aws-cdk-lib").Size;
   filesystem?: lambda.FileSystem;
   handler: string;
   initialPolicy?: iam.PolicyStatement[];
   layers?: lambda.ILayerVersion[];
-  logRetention?: number;
-  logRetentionRole?: iam.IRole;
-  logRetentionRetryOptions?: lambda.LogRetentionRetryOptions;
+  logGroup?: logs.ILogGroup;
+  logRetention?: logs.RetentionDays | number;
   maxEventAge?: Duration;
   memorySize?: number;
   paramsAndSecrets?: lambda.ParamsAndSecretsLayerVersion | boolean;
@@ -50,7 +69,15 @@ export interface JaypieLambdaProps {
   roleTag?: string;
   runtime?: lambda.Runtime;
   runtimeManagementMode?: lambda.RuntimeManagementMode;
-  secrets?: JaypieEnvSecret[];
+  /**
+   * Secrets to make available to the Lambda function.
+   *
+   * Supports both JaypieEnvSecret instances and strings:
+   * - JaypieEnvSecret: used directly
+   * - String: creates a JaypieEnvSecret with the string as envKey
+   *   (reuses existing secrets within the same scope)
+   */
+  secrets?: SecretsArrayItem[];
   securityGroups?: ec2.ISecurityGroup[];
   timeout?: Duration | number;
   tracing?: lambda.Tracing;
@@ -77,16 +104,16 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
       deadLetterQueueEnabled,
       deadLetterTopic,
       description,
-      environment: initialEnvironment = {},
+      tables = [],
+      environment: environmentInput,
       envSecrets = {},
       ephemeralStorageSize,
       filesystem,
       handler = "index.handler",
       initialPolicy,
       layers = [],
+      logGroup,
       logRetention = CDK.LAMBDA.LOG_RETENTION,
-      logRetentionRole,
-      logRetentionRetryOptions,
       maxEventAge,
       memorySize = CDK.LAMBDA.MEMORY_SIZE,
       paramsAndSecrets,
@@ -97,9 +124,11 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
       reservedConcurrentExecutions,
       retryAttempts,
       roleTag = CDK.ROLE.PROCESSING,
-      runtime = lambda.Runtime.NODEJS_22_X,
+      runtime = new lambda.Runtime("nodejs24.x", lambda.RuntimeFamily.NODEJS, {
+        supportsInlineCode: true,
+      }),
       runtimeManagementMode,
-      secrets = [],
+      secrets: secretsInput = [],
       securityGroups,
       timeout = Duration.seconds(CDK.DURATION.LAMBDA_WORKER),
       tracing,
@@ -108,8 +137,14 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
       vpcSubnets,
     } = props;
 
+    // Resolve environment from array or object syntax
+    const initialEnvironment = resolveEnvironment(environmentInput);
+
     // Get base environment with defaults
     const environment = jaypieLambdaEnv({ initialEnvironment });
+
+    // Resolve secrets from mixed array (strings and JaypieEnvSecret instances)
+    const secrets = resolveSecrets(scope, secretsInput);
 
     const codeAsset =
       typeof code === "string" ? lambda.Code.fromAsset(code) : code;
@@ -127,21 +162,32 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
     );
 
     // Process JaypieEnvSecret array
-    const jaypieSecretsEnvironment = secrets.reduce((acc, secret) => {
-      if (secret.envKey) {
-        return {
-          ...acc,
-          [`SECRET_${secret.envKey}`]: secret.secretName,
-        };
-      }
-      return acc;
-    }, {});
+    const jaypieSecretsEnvironment = secrets.reduce<{ [key: string]: string }>(
+      (acc, secret) => {
+        if (secret.envKey) {
+          return {
+            ...acc,
+            [`SECRET_${secret.envKey}`]: secret.secretName,
+          };
+        }
+        return acc;
+      },
+      {},
+    );
 
     // Add ParamsAndSecrets layer if configured
     const resolvedParamsAndSecrets = resolveParamsAndSecrets({
       paramsAndSecrets,
       options: paramsAndSecretsOptions,
     });
+
+    // Create LogGroup if not provided
+    const resolvedLogGroup =
+      logGroup ??
+      new logs.LogGroup(this, "LogGroup", {
+        retention: logRetention as logs.RetentionDays,
+        removalPolicy: RemovalPolicy.DESTROY,
+      });
 
     // Create Lambda Function
     this._lambda = new lambda.Function(this, "Function", {
@@ -163,9 +209,7 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
       handler,
       initialPolicy,
       layers: resolvedLayers,
-      logRetention,
-      logRetentionRole,
-      logRetentionRetryOptions,
+      logGroup: resolvedLogGroup,
       maxEventAge,
       memorySize,
       paramsAndSecrets: resolvedParamsAndSecrets,
@@ -203,6 +247,16 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
     secrets.forEach((secret) => {
       secret.grantRead(this._lambda);
     });
+
+    // Grant read/write permissions for DynamoDB tables
+    tables.forEach((table) => {
+      table.grantReadWriteData(this._lambda);
+    });
+
+    // Add table name to environment if there's exactly one table
+    if (tables.length === 1) {
+      this._lambda.addEnvironment("DYNAMODB_TABLE_NAME", tables[0].tableName);
+    }
 
     // Configure provisioned concurrency if specified
     if (provisionedConcurrentExecutions !== undefined) {

@@ -16,8 +16,13 @@ export {
   JaypieDatadogForwarder,
   JaypieDatadogForwarderProps,
 } from "./JaypieDatadogForwarder";
+export {
+  JaypieDistribution,
+  JaypieDistributionProps,
+} from "./JaypieDistribution";
 export { JaypieDatadogSecret } from "./JaypieDatadogSecret";
 export { JaypieDnsRecord, JaypieDnsRecordProps } from "./JaypieDnsRecord";
+export { JaypieDynamoDb, JaypieDynamoDbProps } from "./JaypieDynamoDb";
 export { JaypieEnvSecret } from "./JaypieEnvSecret";
 export { JaypieEventsRule, JaypieEventsRuleProps } from "./JaypieEventsRule";
 export {
@@ -30,9 +35,13 @@ export {
   JaypieHostedZoneRecordProps,
 } from "./JaypieHostedZone";
 export { JaypieInfrastructureStack } from "./JaypieInfrastructureStack";
-export { JaypieLambda } from "./JaypieLambda";
+export { JaypieLambda, JaypieLambdaProps } from "./JaypieLambda";
 export { JaypieMongoDbSecret } from "./JaypieMongoDbSecret";
-export { JaypieNextJs } from "./JaypieNextJs";
+export {
+  DomainNameConfig,
+  JaypieNextJs,
+  JaypieNextjsProps,
+} from "./JaypieNextJs";
 export { JaypieOpenAiSecret } from "./JaypieOpenAiSecret";
 export {
   JaypieOrganizationTrail,
@@ -49,6 +58,10 @@ export {
 } from "./JaypieSsoSyncApplication";
 export { JaypieQueuedLambda } from "./JaypieQueuedLambda";
 export { JaypieStack, JaypieStackProps } from "./JaypieStack";
+export {
+  JaypieStaticWebBucket,
+  JaypieStaticWebBucketProps,
+} from "./JaypieStaticWebBucket";
 export { JaypieTraceSigningKeySecret } from "./JaypieTraceSigningKeySecret";
 export { JaypieWebDeploymentBucket } from "./JaypieWebDeploymentBucket";
 export * from "./helpers";

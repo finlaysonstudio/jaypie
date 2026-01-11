@@ -8,12 +8,10 @@ import {
 
 import * as original from "@jaypie/llm";
 
-// Constants for mock values
-const TAG = "LLM";
-
 export const LLM = original.LLM;
 
 const mockOperate = createMockResolvedFunction({
+  content: "_MOCK_OUTPUT_TEXT",
   history: [
     {
       content: "_MOCK_USER_INPUT",
@@ -39,6 +37,7 @@ const mockOperate = createMockResolvedFunction({
     },
   ],
   provider: "_MOCK_PROVIDER",
+  reasoning: [],
   responses: [
     {
       id: "_MOCK_RESPONSE_ID",
@@ -60,7 +59,6 @@ const mockOperate = createMockResolvedFunction({
       model: "_MOCK_MODEL",
     },
   ],
-  content: "_MOCK_OUTPUT_TEXT",
 });
 const mockSend = createMockResolvedFunction("_MOCK_LLM_RESPONSE");
 export const Llm = Object.assign(
@@ -108,6 +106,30 @@ export const LlmMessageRole = createMockWrappedObject(original.LlmMessageRole, {
 export const LlmMessageType = createMockWrappedObject(original.LlmMessageType, {
   isClass: true,
 });
+export const LlmStreamChunkType = createMockWrappedObject(
+  original.LlmStreamChunkType,
+  {
+    isClass: true,
+  },
+);
+
+// Provider mocks
+export const GeminiProvider = createMockWrappedObject(original.GeminiProvider, {
+  isClass: true,
+});
+export const OpenRouterProvider = createMockWrappedObject(
+  original.OpenRouterProvider,
+  {
+    isClass: true,
+  },
+);
+
+// Type guards and utilities - re-export from original (these are pure functions)
+export const extractReasoning = original.extractReasoning;
+export const isLlmOperateInput = original.isLlmOperateInput;
+export const isLlmOperateInputContent = original.isLlmOperateInputContent;
+export const isLlmOperateInputFile = original.isLlmOperateInputFile;
+export const isLlmOperateInputImage = original.isLlmOperateInputImage;
 
 // Tool collections
 export const toolkit = new original.JaypieToolkit([

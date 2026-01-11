@@ -11,7 +11,7 @@ const toBeClass = (received: unknown): MatcherResult => {
     try {
       new (received as any)();
       pass = true;
-    } catch (error) {
+    } catch {
       pass = false;
     }
   }

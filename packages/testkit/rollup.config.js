@@ -5,20 +5,38 @@ import { dts } from "rollup-plugin-dts";
 import { nodeResolve } from "@rollup/plugin-node-resolve";
 import commonjs from "@rollup/plugin-commonjs";
 
+// Filter out warnings we can't control
+const onwarn = (warning, defaultHandler) => {
+  // TS2307 warnings for @jaypie/* packages (external workspace dependencies)
+  if (warning.plugin === "typescript" && warning.message.includes("@jaypie/")) {
+    return;
+  }
+  // Circular dependency warnings from AWS SDK (known issue in their packages)
+  if (warning.code === "CIRCULAR_DEPENDENCY" && warning.ids?.some((id) => id.includes("@aws-sdk/"))) {
+    return;
+  }
+  defaultHandler(warning);
+};
+
 const external = [
   "@jaypie/aws",
-  "@jaypie/core",
   "@jaypie/datadog",
+  "@jaypie/dynamodb",
+  "@jaypie/errors",
   "@jaypie/express",
+  "@jaypie/kit",
   "@jaypie/lambda",
   "@jaypie/llm",
+  "@jaypie/logger",
   "@jaypie/mongoose",
   "@jaypie/textract",
+  "@jaypie/vocabulary",
   "amazon-textract-response-parser",
   "express",
   "fs/promises",
   "jest-extended",
   "jest-json-schema",
+  "module",
   "mongoose",
   "node:util",
   "path",
@@ -31,6 +49,7 @@ export default [
   {
     external,
     input: "src/index.ts",
+    onwarn,
     output: {
       dir: "dist",
       format: "es",
@@ -55,6 +74,7 @@ export default [
   {
     external,
     input: "src/mock/index.ts",
+    onwarn,
     output: {
       dir: "dist/mock",
       format: "es",

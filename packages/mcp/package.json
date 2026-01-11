@@ -1,18 +1,18 @@
 {
   "name": "@jaypie/mcp",
-  "version": "0.1.8",
+  "version": "0.2.6",
   "description": "Jaypie MCP",
   "repository": {
     "type": "git",
-    "url": "https://github.com/finlaysonstudio/jaypie"
+    "url": "git+https://github.com/finlaysonstudio/jaypie.git"
   },
   "license": "MIT",
   "author": "Finlayson Studio",
   "type": "module",
   "exports": {
     ".": {
-      "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
     }
   },
   "main": "dist/index.js",
@@ -25,7 +25,7 @@
     "prompts"
   ],
   "scripts": {
-    "build": "rollup --config",
+    "build": "rollup --config && chmod +x dist/index.js",
     "format": "eslint . --fix",
     "lint": "eslint .",
     "prepare": "npm run build",
@@ -34,14 +34,19 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@jaypie/llm": "^1.2.2",
     "@modelcontextprotocol/sdk": "^1.17.0",
     "commander": "^14.0.0",
     "gray-matter": "^4.0.3",
-    "zod": "^3.23.8"
+    "zod": "^4.1.13"
   },
   "devDependencies": {
+    "@rollup/plugin-replace": "^6.0.3",
+    "@rollup/plugin-typescript": "^12.3.0",
     "@types/express": "^5.0.3",
-    "express": "^5.1.0"
+    "express": "^5.1.0",
+    "rollup": "^4.53.3",
+    "typescript": "^5.9.3"
   },
   "publishConfig": {
     "access": "public"

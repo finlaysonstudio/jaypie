@@ -1,24 +1,28 @@
 {
   "name": "@jaypie/core",
-  "version": "1.1.18",
+  "version": "1.2.1",
   "repository": {
     "type": "git",
-    "url": "https://github.com/finlaysonstudio/jaypie"
+    "url": "git+https://github.com/finlaysonstudio/jaypie.git"
   },
   "license": "MIT",
   "author": "Finlayson Studio",
+  "sideEffects": false,
   "type": "module",
   "exports": {
     ".": {
-      "types": "./index.d.ts",
-      "default": {
-        "require": "./dist/jaypie-core.cjs",
-        "default": "./src/index.js"
-      }
+      "types": "./dist/esm/index.d.ts",
+      "require": "./dist/cjs/index.cjs",
+      "import": "./dist/esm/index.js",
+      "default": "./dist/esm/index.js"
     }
   },
-  "main": "src/index.js",
-  "types": "index.d.ts",
+  "main": "./dist/cjs/index.cjs",
+  "module": "./dist/esm/index.js",
+  "types": "./dist/esm/index.d.ts",
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "rollup --config",
     "format": "npm run format:package && npm run format:lint",
@@ -26,44 +30,17 @@
     "format:package": "sort-package-json ./package.json",
     "lint": "eslint .",
     "test": "vitest run .",
-    "test:spec:Client": "vitest run ./src/__tests__/Client.spec.js",
-    "test:spec:arguments.lib": "vitest run ./src/lib/__tests__/arguments.lib.spec.js",
-    "test:spec:axiosResponseVar.pipeline": "vitest run ./src/core/__tests__/axiosResponseVar.pipeline.spec.js",
-    "test:spec:constants": "vitest run ./src/core/__tests__/constants.spec.js",
-    "test:spec:core": "vitest run ./src/__tests__/core.spec.js",
-    "test:spec:envsKey": "vitest run ./src/lib/functions/__tests__/envsKey.spec.js",
-    "test:spec:errorVar.pipeline": "vitest run ./src/core/__tests__/errorVar.pipeline.spec.js",
-    "test:spec:errors.lib": "vitest run ./src/lib/__tests__/errors.lib.spec.js",
-    "test:spec:force.function": "vitest run ./src/lib/arguments/__tests__/force.function.spec.js",
-    "test:spec:forceVar.function": "vitest run ./src/core/__tests__/forceVar.function.spec.js",
-    "test:spec:functions.lib": "vitest run ./src/lib/__tests__/functions.lib.spec.js",
-    "test:spec:http.lib": "vitest run ./src/lib/__tests__/http.lib.spec.js",
-    "test:spec:index": "vitest run ./src/__tests__/index.spec.js",
-    "test:spec:isClass.function": "vitest run ./src/lib/arguments/__tests__/isClass.function.spec.js",
-    "test:spec:isJaypieError.function": "vitest run ./src/lib/errors/__tests__/isJaypieError.function.spec.js",
-    "test:spec:jaypieHandler.module": "vitest run ./src/__tests__/jaypieHandler.module.spec.js",
-    "test:spec:knowdev.lib": "vitest run ./src/core/__tests__/knowdev.lib.spec.js",
-    "test:spec:lambdaHandler.module": "vitest run ./src/__tests__/lambdaHandler.module.spec.js",
-    "test:spec:lib:arguments:optional.function": "vitest run ./src/lib/arguments/__tests__/optional.function.spec.js",
-    "test:spec:lib:arguments:required.function": "vitest run ./src/lib/arguments/__tests__/required.function.spec.js",
-    "test:spec:lib:client:index": "vitest run ./test/client/__tests__/index.spec.js",
-    "test:spec:lib:functions:safeParseFloat.function": "vitest run ./src/lib/functions/__tests__/safeParseFloat.function.spec.js",
-    "test:spec:lib:log:formatAsJsonString.function": "vitest run ./src/lib/log/util/__tests__/formatAsJsonString.spec.js",
-    "test:spec:log.lib": "vitest run ./src/lib/__tests__/log.lib.spec.js",
-    "test:spec:logTags.function": "vitest run ./src/core/__tests__/logTags.function.spec.js",
-    "test:spec:logVar.function": "vitest run ./src/core/__tests__/logVar.function.spec.js",
-    "test:spec:logger.module": "vitest run ./src/core/__tests__/logger.module.spec.js",
-    "test:spec:logger:Logger.class": "vitest run ./src/lib/log/__tests__/Logger.spec.js",
-    "test:spec:logger:json": "vitest run ./src/lib/log/__tests__/json-logger.spec.js",
-    "test:spec:logger:var": "vitest run ./src/lib/log/__tests__/var.spec.js",
-    "test:spec:sleep.function": "vitest run ./src/lib/functions/__tests__/sleep.function.spec.js",
-    "test:spec:validate.function": "vitest run ./src/lib/arguments/__tests__/validate.function.spec.js",
-    "typecheck": "echo '[TODO] Convert @jaypie/core to TypeScript'"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@jaypie/logger": "^1.1.0",
-    "jsonapi-serializer": "^3.6.9",
-    "uuid": "^11.0.5"
+    "@jaypie/errors": "^1.2.1",
+    "@jaypie/kit": "^1.2.1",
+    "@jaypie/logger": "^1.2.1"
+  },
+  "devDependencies": {
+    "@rollup/plugin-typescript": "^12.1.2",
+    "@types/node": "^22.13.1",
+    "typescript": "^5.3.3"
   },
   "publishConfig": {
     "access": "public"

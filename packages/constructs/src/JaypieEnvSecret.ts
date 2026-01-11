@@ -73,12 +73,26 @@ export class JaypieEnvSecret extends Construct implements ISecret {
   private readonly _envKey?: string;
   private readonly _secret: secretsmanager.ISecret;
 
-  constructor(scope: Construct, id: string, props?: JaypieEnvSecretProps) {
+  constructor(
+    scope: Construct,
+    idOrEnvKey: string,
+    props?: JaypieEnvSecretProps,
+  ) {
+    // Check if idOrEnvKey should be treated as envKey:
+    // - No props provided OR props.envKey is not set
+    // - AND idOrEnvKey exists as a non-empty string in process.env
+    const treatAsEnvKey =
+      (!props || props.envKey === undefined) &&
+      typeof process.env[idOrEnvKey] === "string" &&
+      process.env[idOrEnvKey] !== "";
+
+    const id = treatAsEnvKey ? `EnvSecret_${idOrEnvKey}` : idOrEnvKey;
+
     super(scope, id);
 
     const {
       consumer = checkEnvIsConsumer(),
-      envKey,
+      envKey: envKeyProp,
       export: exportParam,
       generateSecretString,
       provider = checkEnvIsProvider(),
@@ -86,6 +100,8 @@ export class JaypieEnvSecret extends Construct implements ISecret {
       vendorTag,
       value,
     } = props || {};
+
+    const envKey = treatAsEnvKey ? idOrEnvKey : envKeyProp;
 
     this._envKey = envKey;
 
@@ -115,9 +131,10 @@ export class JaypieEnvSecret extends Construct implements ISecret {
 
       const secretProps: secretsmanager.SecretProps = {
         generateSecretString,
-        secretStringValue: !generateSecretString && secretValue
-          ? SecretValue.unsafePlainText(secretValue)
-          : undefined,
+        secretStringValue:
+          !generateSecretString && secretValue
+            ? SecretValue.unsafePlainText(secretValue)
+            : undefined,
       };
 
       this._secret = new secretsmanager.Secret(this, id, secretProps);
@@ -211,6 +228,12 @@ export class JaypieEnvSecret extends Construct implements ISecret {
 
   public attach(target: ISecretAttachmentTarget): ISecret {
     return this._secret.attach(target);
+  }
+
+  public cfnDynamicReferenceKey(
+    options?: Parameters<ISecret["cfnDynamicReferenceKey"]>[0],
+  ): string {
+    return this._secret.cfnDynamicReferenceKey(options);
   }
 
   public get envKey(): string | undefined {

@@ -16,10 +16,12 @@ Create and integrate tools that enable LLMs to perform specific functions beyond
 Implement the `LlmTool` interface:
 
 ```typescript
+import { z } from "zod/v4";
+
 interface LlmTool {
   description: string;
   name: string;
-  parameters: JsonObject;
+  parameters: JsonObject | z.ZodType;  // JSON Schema or Zod schema
   type: "function" | string;
   call: (args?: JsonObject) => Promise<AnyValue> | AnyValue;
 }
@@ -28,11 +30,11 @@ interface LlmTool {
 Properties:
 - `description`: Clear explanation of tool functionality
 - `name`: Unique identifier
-- `parameters`: JSON Schema defining input parameters
+- `parameters`: JSON Schema or Zod schema defining input parameters
 - `type`: Usually "function" (OpenAI convention)
 - `call`: Implementation function executed on invocation
 
-## Example: Dice Roller
+## Example: Dice Roller (JSON Schema)
 
 ```typescript
 import { LlmTool } from "../types/LlmTool.interface.js";
@@ -84,6 +86,27 @@ export const roll: LlmTool = {
 };
 ```
 
+## Example: Weather Tool (Zod Schema)
+
+```typescript
+import { z } from "zod/v4";
+import { LlmTool } from "jaypie";
+
+export const getWeather: LlmTool = {
+  description: "Get current weather for a city",
+  name: "get_weather",
+  parameters: z.object({
+    city: z.string().describe("City name"),
+    unit: z.enum(["celsius", "fahrenheit"]).describe("Temperature unit"),
+  }),
+  type: "function",
+  call: async ({ city, unit }) => {
+    // Implementation here
+    return { city, temperature: 72, unit };
+  },
+};
+```
+
 ## Best Practices
 
 ### Input Validation
@@ -104,17 +127,25 @@ Implement robust error handling to prevent crashes and provide meaningful messag
 import { Llm } from "jaypie";
 import { roll } from "./tools/roll.js";
 
-const llm = new Llm({
-  provider: "openai",
-  model: "gpt-4o"
+// Create Llm instance
+const llm = new Llm("openai", { model: "gpt-4o" });
+
+// Use tools with operate
+const response = await llm.operate("Roll 3d20 and tell me the result", {
+  tools: [roll],
 });
 
-const response = await llm.operate([
-  { role: "user", content: "Roll 3d20 and tell me the result" },
-  {
-    tools: [roll],
-  },
-]);
+// Or use Toolkit for additional features
+import { Toolkit } from "jaypie";
+
+const toolkit = new Toolkit([roll], {
+  explain: true,  // Requires model to explain why it's calling tools
+  log: true,      // Log tool calls (default)
+});
+
+const result = await llm.operate("Roll some dice", {
+  tools: toolkit,
+});
 ```
 
 ## References

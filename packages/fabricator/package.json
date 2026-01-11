@@ -5,12 +5,12 @@
   "type": "module",
   "exports": {
     ".": {
-      "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
     },
     "./constants": {
-      "import": "./dist/constants.js",
-      "types": "./dist/constants.d.ts"
+      "types": "./dist/constants.d.ts",
+      "import": "./dist/constants.js"
     }
   },
   "main": "./dist/index.js",
@@ -28,7 +28,7 @@
   },
   "dependencies": {
     "@faker-js/faker": "^9.3.0",
-    "@jaypie/errors": "^1.1.7",
+    "@jaypie/errors": "^1.2.1",
     "random": "^5.4.1",
     "uuid": "^13.0.0"
   },

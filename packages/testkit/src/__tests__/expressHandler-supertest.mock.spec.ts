@@ -1,5 +1,6 @@
 import express from "express";
-import { HTTP, NotFoundError } from "@jaypie/core";
+import { NotFoundError } from "@jaypie/errors";
+import { HTTP } from "@jaypie/kit";
 import request from "supertest";
 import { describe, expect, it } from "vitest";
 

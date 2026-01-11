@@ -1,12 +1,13 @@
 {
   "name": "jaypie",
-  "version": "1.1.76",
+  "version": "1.2.2",
   "repository": {
     "type": "git",
-    "url": "https://github.com/finlaysonstudio/jaypie"
+    "url": "git+https://github.com/finlaysonstudio/jaypie.git"
   },
   "license": "MIT",
   "author": "Finlayson Studio",
+  "sideEffects": false,
   "type": "module",
   "exports": {
     ".": {
@@ -28,20 +29,17 @@
     "format:package": "sort-package-json ./package.json",
     "lint": "eslint .",
     "test": "vitest run .",
-    "test:spec:dynamicExport.function": "vitest run ./src/__tests__/dynamicExport.function.spec.js",
-    "test:spec:index": "vitest run ./src/__tests__/index.spec.js",
-    "test:spec:mongoose.package": "vitest run ./src/__tests__/mongoose.package.spec.js",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@jaypie/aws": "^1.1.22",
-    "@jaypie/core": "^1.1.18",
-    "@jaypie/datadog": "^1.1.12",
-    "@jaypie/express": "^1.1.17",
-    "@jaypie/kit": "^1.1.1",
-    "@jaypie/lambda": "^1.1.6",
-    "@jaypie/llm": "^1.1.29",
-    "@jaypie/mongoose": "^1.1.1"
+    "@jaypie/aws": "^1.2.2",
+    "@jaypie/core": "^1.2.1",
+    "@jaypie/datadog": "^1.2.1",
+    "@jaypie/errors": "^1.2.1",
+    "@jaypie/express": "^1.2.2",
+    "@jaypie/kit": "^1.2.1",
+    "@jaypie/lambda": "^1.2.2",
+    "@jaypie/logger": "^1.2.1"
   },
   "devDependencies": {
     "@jaypie/types": "^0.1.7",
@@ -54,6 +52,18 @@
     "eslint-plugin-vitest": "^0.5.4",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.46.1"
+  },
+  "peerDependencies": {
+    "@jaypie/llm": "^1.2.1",
+    "@jaypie/mongoose": "^1.2.1"
+  },
+  "peerDependenciesMeta": {
+    "@jaypie/llm": {
+      "optional": true
+    },
+    "@jaypie/mongoose": {
+      "optional": true
+    }
   },
   "publishConfig": {
     "access": "public"

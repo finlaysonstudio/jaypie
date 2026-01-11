@@ -1,15 +1,10 @@
 import { readFile } from "fs/promises";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
-import { beforeAll, vi } from "vitest";
+import { beforeAll } from "vitest";
 import { TextractDocument } from "amazon-textract-response-parser";
 import type { TextractPageAdaptable } from "@jaypie/textract";
-import type { JsonReturn } from "@jaypie/types";
-import {
-  createMockWrappedFunction,
-  createMockFunction,
-  createMockWrappedObject,
-} from "./utils";
+import { createMockWrappedFunction, createMockWrappedObject } from "./utils";
 import * as original from "@jaypie/textract";
 
 // Constants for mock values

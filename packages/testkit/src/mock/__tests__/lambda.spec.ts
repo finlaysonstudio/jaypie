@@ -1,11 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { lambdaHandler } from "../lambda.js";
-import {
-  BadRequestError,
-  HTTP,
-  UnavailableError,
-  jaypieHandler,
-} from "../core.js";
+import { HTTP, jaypieHandler } from "../core.js";
 
 describe("lambdaHandler", () => {
   beforeEach(() => {
@@ -172,7 +167,10 @@ describe("Jaypie Lambda", () => {
         it("Works with the options object first", async () => {
           // Arrange
           const mockFunction = vi.fn();
-          const handler = lambdaHandler({ unavailable: true } as any, mockFunction as any);
+          const handler = lambdaHandler(
+            { unavailable: true } as any,
+            mockFunction as any,
+          );
           const event = {};
           const context = {};
           // Act

@@ -7,7 +7,7 @@ export default [
   // Jaypie
   //
   ...jaypie,
-  
+
   //
   //
   // Global ignores
@@ -57,7 +57,7 @@ export default [
     ],
     ...jest.configs["flat/recommended"],
   },
-  
+
   //
   //
   // MCP: Allow gray-matter import
@@ -74,7 +74,10 @@ export default [
   // Documentation: TypeScript/TSX files (allow imports)
   //
   {
-    files: ["packages/documentation/**/*.ts", "packages/documentation/**/*.tsx"],
+    files: [
+      "packages/documentation/**/*.ts",
+      "packages/documentation/**/*.tsx",
+    ],
     rules: {
       "import-x/default": "off",
       "import-x/no-unresolved": [

@@ -1,10 +1,7 @@
 import { getEnvSecret } from "@jaypie/aws";
-import {
-  ConfigurationError,
-  log as defaultLog,
-  placeholders as replacePlaceholders,
-  JAYPIE,
-} from "@jaypie/core";
+import { ConfigurationError } from "@jaypie/errors";
+import { JAYPIE, placeholders as replacePlaceholders } from "@jaypie/kit";
+import { log as defaultLog } from "@jaypie/logger";
 import { JsonObject, NaturalSchema } from "@jaypie/types";
 import { OpenAI } from "openai";
 import { zodResponseFormat } from "openai/helpers/zod";
@@ -112,27 +109,27 @@ export async function createStructuredCompletion(
       ? responseSchema
       : naturalZodSchema(responseSchema as NaturalSchema);
 
-    const responseFormat = zodResponseFormat(zodSchema as any, "response");
+  const responseFormat = zodResponseFormat(zodSchema as any, "response");
 
-    const jsonSchema = z.toJSONSchema(zodSchema);
+  const jsonSchema = z.toJSONSchema(zodSchema);
 
-    // Temporary hack because OpenAI requires additional_properties to be false on all objects
-    const checks = [jsonSchema];
-    while (checks.length > 0) {
-      const current = checks[0];
-      if (current.type == "object") {
-        current.additionalProperties = false;
-      }
-      Object.keys(current).forEach((key) => {
-        if (typeof current[key] == "object" && current[key] !== null) {
-          checks.push(current[key] as any);
-        }
-      });
-      checks.shift();
+  // Temporary hack because OpenAI requires additional_properties to be false on all objects
+  const checks = [jsonSchema];
+  while (checks.length > 0) {
+    const current = checks[0];
+    if (current.type == "object") {
+      current.additionalProperties = false;
     }
-    responseFormat.json_schema.schema = jsonSchema;
+    Object.keys(current).forEach((key) => {
+      if (typeof current[key] == "object" && current[key] !== null) {
+        checks.push(current[key] as any);
+      }
+    });
+    checks.shift();
+  }
+  responseFormat.json_schema.schema = jsonSchema;
 
-  const completion = await client.beta.chat.completions.parse({
+  const completion = await client.chat.completions.parse({
     messages,
     model,
     response_format: responseFormat,

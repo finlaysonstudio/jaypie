@@ -73,6 +73,7 @@ describe("LLM Mocks", () => {
         model: "_MOCK_MODEL",
         output: expect.any(Array),
         provider: "_MOCK_PROVIDER",
+        reasoning: expect.any(Array),
         responses: expect.any(Array),
         status: "completed",
         usage: expect.any(Object),

@@ -5,8 +5,10 @@ vi.mock("./helpers", () => ({
   addDatadogLayers: vi.fn(),
   envHostname: vi.fn(() => "test.example.com"),
   jaypieLambdaEnv: vi.fn(() => ({ NODE_ENV: "test" })),
+  resolveEnvironment: vi.fn((env) => (Array.isArray(env) ? {} : env || {})),
   resolveHostedZone: vi.fn(() => ({ hostedZoneId: "Z123456789" })),
   resolveParamsAndSecrets: vi.fn(() => ({})),
+  resolveSecrets: vi.fn(() => []),
 }));
 
 vi.mock("cdk-nextjs-standalone", () => ({

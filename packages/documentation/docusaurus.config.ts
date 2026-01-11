@@ -32,7 +32,8 @@ const config: Config = {
       {
         docs: {
           sidebarPath: "./sidebars.ts",
-          editUrl: "https://github.com/finlaysonstudio/jaypie/tree/main/packages/documentation/",
+          editUrl:
+            "https://github.com/finlaysonstudio/jaypie/tree/main/packages/documentation/",
         },
         blog: false,
         theme: {

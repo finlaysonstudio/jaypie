@@ -1,6 +1,13 @@
-import { JsonObject, NaturalSchema } from "@jaypie/types";
-import Anthropic from "@anthropic-ai/sdk";
+import type Anthropic from "@anthropic-ai/sdk";
+import { JsonObject } from "@jaypie/types";
 import { PROVIDER } from "../../constants.js";
+import {
+  anthropicAdapter,
+  createOperateLoop,
+  createStreamLoop,
+  OperateLoop,
+  StreamLoop,
+} from "../../operate/index.js";
 import {
   LlmHistory,
   LlmInputMessage,
@@ -10,20 +17,22 @@ import {
   LlmProvider,
   LlmHistoryItem,
 } from "../../types/LlmProvider.interface.js";
-import { operate } from "./operate.js";
+import { LlmStreamChunk } from "../../types/LlmStreamChunk.interface.js";
 import {
+  createStructuredCompletion,
+  createTextCompletion,
+  formatSystemMessage,
   getLogger,
   initializeClient,
   prepareMessages,
-  formatSystemMessage,
-  createTextCompletion,
-  createStructuredCompletion,
 } from "./index.js";
 
 // Main class implementation
 export class AnthropicProvider implements LlmProvider {
   private model: string;
   private _client?: Anthropic;
+  private _operateLoop?: OperateLoop;
+  private _streamLoop?: StreamLoop;
   private apiKey?: string;
   private log = getLogger();
   private conversationHistory: LlmHistoryItem[] = [];
@@ -43,6 +52,32 @@ export class AnthropicProvider implements LlmProvider {
 
     this._client = await initializeClient({ apiKey: this.apiKey });
     return this._client;
+  }
+
+  private async getOperateLoop(): Promise<OperateLoop> {
+    if (this._operateLoop) {
+      return this._operateLoop;
+    }
+
+    const client = await this.getClient();
+    this._operateLoop = createOperateLoop({
+      adapter: anthropicAdapter,
+      client,
+    });
+    return this._operateLoop;
+  }
+
+  private async getStreamLoop(): Promise<StreamLoop> {
+    if (this._streamLoop) {
+      return this._streamLoop;
+    }
+
+    const client = await this.getClient();
+    this._streamLoop = createStreamLoop({
+      adapter: anthropicAdapter,
+      client,
+    });
+    return this._streamLoop;
   }
 
   // Main send method
@@ -80,11 +115,10 @@ export class AnthropicProvider implements LlmProvider {
     input: string | LlmHistory | LlmInputMessage,
     options: LlmOperateOptions = {},
   ): Promise<LlmOperateResponse> {
-    const client = await this.getClient();
-    options.model = options?.model || this.model;
+    const operateLoop = await this.getOperateLoop();
+    const mergedOptions = { ...options, model: options.model ?? this.model };
 
     // Create a merged history including both the tracked history and any explicitly provided history
-    const mergedOptions = { ...options };
     if (this.conversationHistory.length > 0) {
       // If options.history exists, merge with instance history, otherwise use instance history
       mergedOptions.history = options.history
@@ -92,8 +126,8 @@ export class AnthropicProvider implements LlmProvider {
         : [...this.conversationHistory];
     }
 
-    // Call operate with the updated options
-    const response = await operate(input, mergedOptions, { client });
+    // Execute operate loop
+    const response = await operateLoop.execute(input, mergedOptions);
 
     // Update conversation history with the new history from the response
     if (response.history && response.history.length > 0) {
@@ -101,5 +135,23 @@ export class AnthropicProvider implements LlmProvider {
     }
 
     return response;
+  }
+
+  async *stream(
+    input: string | LlmHistory | LlmInputMessage,
+    options: LlmOperateOptions = {},
+  ): AsyncIterable<LlmStreamChunk> {
+    const streamLoop = await this.getStreamLoop();
+    const mergedOptions = { ...options, model: options.model ?? this.model };
+
+    // Create a merged history including both the tracked history and any explicitly provided history
+    if (this.conversationHistory.length > 0) {
+      mergedOptions.history = options.history
+        ? [...this.conversationHistory, ...options.history]
+        : [...this.conversationHistory];
+    }
+
+    // Execute stream loop
+    yield* streamLoop.execute(input, mergedOptions);
   }
 }

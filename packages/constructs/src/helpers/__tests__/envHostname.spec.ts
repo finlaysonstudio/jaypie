@@ -62,6 +62,31 @@ describe("envHostname", () => {
       });
       expect(result).toBe("example.com");
     });
+
+    it("treats @ as undefined for subdomain", () => {
+      const result = envHostname({
+        subdomain: "@",
+        domain: "example.com",
+      });
+      expect(result).toBe("example.com");
+    });
+
+    it("treats empty string as undefined for subdomain", () => {
+      const result = envHostname({
+        subdomain: "",
+        domain: "example.com",
+      });
+      expect(result).toBe("example.com");
+    });
+
+    it("falls back to CDK_ENV_SUBDOMAIN when subdomain is @", () => {
+      process.env.CDK_ENV_SUBDOMAIN = "fallback";
+      const result = envHostname({
+        subdomain: "@",
+        domain: "example.com",
+      });
+      expect(result).toBe("fallback.example.com");
+    });
   });
 
   describe("Observability", () => {
@@ -183,6 +208,64 @@ describe("envHostname", () => {
         domain: "example.com",
       });
       expect(result).toBe("example.com");
+    });
+  });
+
+  describe("Deduplication", () => {
+    it("does not duplicate env when domain already contains it", () => {
+      const result = envHostname({
+        domain: "sandbox.findustryai.com",
+        env: "sandbox",
+        subdomain: "evaluations",
+      });
+      expect(result).toBe("evaluations.sandbox.findustryai.com");
+    });
+
+    it("does not duplicate subdomain when domain already contains it", () => {
+      const result = envHostname({
+        domain: "evaluations.sandbox.findustryai.com",
+        env: "sandbox",
+        subdomain: "evaluations",
+      });
+      expect(result).toBe("evaluations.sandbox.findustryai.com");
+    });
+
+    it("does not duplicate component when domain already contains it", () => {
+      const result = envHostname({
+        component: "api",
+        domain: "api.sandbox.findustryai.com",
+        env: "sandbox",
+      });
+      expect(result).toBe("api.sandbox.findustryai.com");
+    });
+
+    it("does not duplicate any part when domain contains all parts", () => {
+      const result = envHostname({
+        component: "api",
+        domain: "api.evaluations.sandbox.findustryai.com",
+        env: "sandbox",
+        subdomain: "evaluations",
+      });
+      expect(result).toBe("api.evaluations.sandbox.findustryai.com");
+    });
+
+    it("adds parts not already in domain", () => {
+      const result = envHostname({
+        component: "api",
+        domain: "sandbox.findustryai.com",
+        env: "sandbox",
+        subdomain: "evaluations",
+      });
+      expect(result).toBe("api.evaluations.sandbox.findustryai.com");
+    });
+
+    it("handles environment variables with deduplication", () => {
+      process.env.CDK_ENV_HOSTED_ZONE = "sandbox.findustryai.com";
+      process.env.PROJECT_ENV = "sandbox";
+      process.env.CDK_ENV_SUBDOMAIN = "evaluations";
+
+      const result = envHostname({});
+      expect(result).toBe("evaluations.sandbox.findustryai.com");
     });
   });
 });

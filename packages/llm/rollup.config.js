@@ -1,5 +1,13 @@
 import typescript from "@rollup/plugin-typescript";
 
+// Filter out TS2307 warnings for @jaypie/* packages (external workspace dependencies)
+const onwarn = (warning, defaultHandler) => {
+  if (warning.plugin === "typescript" && warning.message.includes("@jaypie/")) {
+    return;
+  }
+  defaultHandler(warning);
+};
+
 export default [
   // ES modules version
   {
@@ -9,6 +17,7 @@ export default [
       format: "es",
       sourcemap: true,
     },
+    onwarn,
     plugins: [
       typescript({
         tsconfig: "./tsconfig.json",
@@ -19,12 +28,18 @@ export default [
     ],
     external: [
       "@anthropic-ai/sdk",
+      "@google/genai",
       "@jaypie/aws",
-      "@jaypie/core",
       "@jaypie/errors",
+      "@jaypie/kit",
+      "@jaypie/logger",
+      "@openrouter/sdk",
+      "fs/promises",
       "openai",
       "openai/helpers/zod",
       "openmeteo",
+      "path",
+      "pdf-lib",
       "random",
       "z-schema",
       "zod",
@@ -41,6 +56,7 @@ export default [
       exports: "named",
       entryFileNames: "[name].cjs",
     },
+    onwarn,
     plugins: [
       typescript({
         tsconfig: "./tsconfig.json",
@@ -51,12 +67,18 @@ export default [
     ],
     external: [
       "@anthropic-ai/sdk",
+      "@google/genai",
       "@jaypie/aws",
-      "@jaypie/core",
       "@jaypie/errors",
+      "@jaypie/kit",
+      "@jaypie/logger",
+      "@openrouter/sdk",
+      "fs/promises",
       "openai",
       "openai/helpers/zod",
       "openmeteo",
+      "path",
+      "pdf-lib",
       "random",
       "z-schema",
       "zod",

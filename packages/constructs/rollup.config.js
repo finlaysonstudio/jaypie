@@ -1,9 +1,18 @@
 import typescript from "@rollup/plugin-typescript";
 
+// Filter out TS2307 warnings for @jaypie/* packages (external workspace dependencies)
+const onwarn = (warning, defaultHandler) => {
+  if (warning.plugin === "typescript" && warning.message.includes("@jaypie/")) {
+    return;
+  }
+  defaultHandler(warning);
+};
+
 export default [
   // ES modules version
   {
     input: "src/index.ts",
+    onwarn,
     output: {
       dir: "dist/esm",
       format: "es",
@@ -17,7 +26,6 @@ export default [
       }),
     ],
     external: [
-      "@jaypie/cdk",
       "@jaypie/errors",
       "aws-cdk-lib",
       "aws-cdk-lib/aws-apigateway",
@@ -25,9 +33,12 @@ export default [
       "aws-cdk-lib/aws-cloudfront",
       "aws-cdk-lib/aws-cloudfront-origins",
       "aws-cdk-lib/aws-cloudtrail",
+      "aws-cdk-lib/aws-cloudwatch",
+      "aws-cdk-lib/aws-dynamodb",
       "aws-cdk-lib/aws-events",
       "aws-cdk-lib/aws-events-targets",
       "aws-cdk-lib/aws-iam",
+      "aws-cdk-lib/aws-kms",
       "aws-cdk-lib/aws-lambda",
       "aws-cdk-lib/aws-lambda-event-sources",
       "aws-cdk-lib/aws-logs",
@@ -49,6 +60,7 @@ export default [
   // CommonJS version
   {
     input: "src/index.ts",
+    onwarn,
     output: {
       dir: "dist/cjs",
       format: "cjs",
@@ -64,7 +76,6 @@ export default [
       }),
     ],
     external: [
-      "@jaypie/cdk",
       "@jaypie/errors",
       "aws-cdk-lib",
       "aws-cdk-lib/aws-apigateway",
@@ -72,9 +83,12 @@ export default [
       "aws-cdk-lib/aws-cloudfront",
       "aws-cdk-lib/aws-cloudfront-origins",
       "aws-cdk-lib/aws-cloudtrail",
+      "aws-cdk-lib/aws-cloudwatch",
+      "aws-cdk-lib/aws-dynamodb",
       "aws-cdk-lib/aws-events",
       "aws-cdk-lib/aws-events-targets",
       "aws-cdk-lib/aws-iam",
+      "aws-cdk-lib/aws-kms",
       "aws-cdk-lib/aws-lambda",
       "aws-cdk-lib/aws-lambda-event-sources",
       "aws-cdk-lib/aws-logs",

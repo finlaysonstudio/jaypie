@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 import { vi } from "vitest";
 
 import { LlmTool } from "@jaypie/llm";
@@ -28,9 +29,7 @@ function createMockFunction<T extends (...args: any[]) => any>(
  * Creates a mock function that resolves to a value when awaited
  * Internal utility to create async mock functions
  */
-function createMockResolvedFunction<T>(
-  value: T,
-): ReturnType<typeof vi.fn> {
+function createMockResolvedFunction<T>(value: T): ReturnType<typeof vi.fn> {
   return _createJaypieMock().mockResolvedValue(value);
 }
 
@@ -46,6 +45,7 @@ function createMockReturnedFunction<T>(value: T): ReturnType<typeof vi.fn> {
  * Creates a mock function that wraps another function
  * Internal utility to create mock functions that wrap another function
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function createMockWrappedFunction<T = any>(
   fn: (...args: unknown[]) => unknown,
   fallbackOrOptions:

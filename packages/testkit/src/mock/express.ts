@@ -1,12 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-function-type */
 
-import {
-  createMockFunction,
-  createMockReturnedFunction,
-  createMockResolvedFunction,
-  createMockWrappedFunction,
-} from "./utils";
-import { BadRequestError, UnhandledError } from "@jaypie/core";
+import { createMockFunction, createMockWrappedFunction } from "./utils";
+import { BadRequestError, UnhandledError } from "@jaypie/errors";
 import { force, jaypieHandler } from "./core";
 import * as original from "@jaypie/express";
 
@@ -34,9 +29,12 @@ export const forbiddenRoute = createMockWrappedFunction(
   { error: `_MOCK_FORBIDDEN_ROUTE_[${TAG}]` },
 );
 
-export const goneRoute = createMockWrappedFunction(original.goneRoute as (...args: unknown[]) => unknown, {
-  error: `_MOCK_GONE_ROUTE_[${TAG}]`,
-});
+export const goneRoute = createMockWrappedFunction(
+  original.goneRoute as (...args: unknown[]) => unknown,
+  {
+    error: `_MOCK_GONE_ROUTE_[${TAG}]`,
+  },
+);
 
 export const methodNotAllowedRoute = createMockWrappedFunction(
   original.methodNotAllowedRoute as (...args: unknown[]) => unknown,
@@ -48,9 +46,12 @@ export const noContentRoute = createMockWrappedFunction(
   { status: 204 },
 );
 
-export const notFoundRoute = createMockWrappedFunction(original.notFoundRoute as (...args: unknown[]) => unknown, {
-  error: `_MOCK_NOT_FOUND_ROUTE_[${TAG}]`,
-});
+export const notFoundRoute = createMockWrappedFunction(
+  original.notFoundRoute as (...args: unknown[]) => unknown,
+  {
+    error: `_MOCK_NOT_FOUND_ROUTE_[${TAG}]`,
+  },
+);
 
 export const notImplementedRoute = createMockWrappedFunction(
   original.notImplementedRoute as any,
@@ -60,7 +61,7 @@ export const notImplementedRoute = createMockWrappedFunction(
 export const expressHttpCodeHandler = createMockWrappedFunction(
   original.expressHttpCodeHandler as any,
   (...args: any[]) => {
-    const [req, res, next] = args;
+    const [, res] = args;
     return res.status(200).send();
   },
 );
@@ -85,6 +86,74 @@ export interface ExpressHandlerOptions {
 }
 
 type ExpressHandlerParameter = ExpressHandlerFunction | ExpressHandlerOptions;
+
+export interface ExpressStreamHandlerOptions {
+  locals?: Record<string, any>;
+  setup?: any[] | Function;
+  teardown?: any[] | Function;
+  unavailable?: boolean;
+  validate?: any[] | Function;
+  contentType?: string;
+}
+
+export type ExpressStreamHandlerFunction = (
+  req: any,
+  res: any,
+  ...extra: any[]
+) => Promise<void>;
+
+type ExpressStreamHandlerParameter =
+  | ExpressStreamHandlerFunction
+  | ExpressStreamHandlerOptions;
+
+export const expressStreamHandler = createMockFunction<
+  (
+    handlerOrProps: ExpressStreamHandlerParameter,
+    propsOrHandler?: ExpressStreamHandlerParameter,
+  ) => (req: any, res: any, ...extra: any[]) => Promise<void>
+>((handlerOrProps, propsOrHandler) => {
+  let handler: ExpressStreamHandlerFunction;
+  let props: ExpressStreamHandlerOptions;
+
+  if (
+    typeof handlerOrProps === "object" &&
+    typeof propsOrHandler === "function"
+  ) {
+    handler = propsOrHandler;
+    props = handlerOrProps;
+  } else if (typeof handlerOrProps === "function") {
+    handler = handlerOrProps;
+    props = (propsOrHandler || {}) as ExpressStreamHandlerOptions;
+  } else {
+    throw new BadRequestError("handler must be a function");
+  }
+
+  return async (req = {}, res: any = {}, ...extra: unknown[]) => {
+    // Set SSE headers if res has setHeader method
+    if (typeof res.setHeader === "function") {
+      res.setHeader("Content-Type", props.contentType || "text/event-stream");
+      res.setHeader("Cache-Control", "no-cache");
+      res.setHeader("Connection", "keep-alive");
+      res.setHeader("X-Accel-Buffering", "no");
+      if (typeof res.flushHeaders === "function") {
+        res.flushHeaders();
+      }
+    }
+
+    try {
+      await handler(req, res, ...extra);
+    } finally {
+      // End the response if possible
+      if (typeof res.end === "function") {
+        try {
+          res.end();
+        } catch {
+          // Response may already be ended
+        }
+      }
+    }
+  };
+});
 
 export const expressHandler = createMockFunction<
   (
@@ -205,7 +274,7 @@ export const expressHandler = createMockFunction<
         } else if (typeof response === "string") {
           try {
             res.status(status).json(JSON.parse(response));
-          } catch (error) {
+          } catch {
             res.status(status).send(response);
           }
         } else if (response === true) {

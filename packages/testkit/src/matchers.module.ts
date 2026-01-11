@@ -28,7 +28,7 @@ import toThrowJaypieError, {
 } from "./matchers/toThrowJaypieError.matcher.js";
 
 // Combine all matchers
-const matchers = {
+const matchers: Record<string, (...args: any[]) => any> = {
   // Custom Jaypie matchers
   toBeCalledAboveTrace,
   toBeCalledWithInitialParams,

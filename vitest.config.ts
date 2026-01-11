@@ -18,9 +18,9 @@ export default defineConfig({
       "packages/llm",
       "packages/mcp",
       "packages/mongoose",
+      "packages/repokit",
       "packages/testkit",
       "packages/textract",
-      "packages/webkit",
     ],
   },
 });

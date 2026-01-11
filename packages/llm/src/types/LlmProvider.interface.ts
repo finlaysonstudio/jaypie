@@ -7,6 +7,7 @@ import {
 } from "@jaypie/types";
 import { z } from "zod/v4";
 import { LlmTool } from "./LlmTool.interface.js";
+import { LlmStreamChunk } from "./LlmStreamChunk.interface.js";
 import { Toolkit } from "../tools/Toolkit.class.js";
 
 // Enums
@@ -79,6 +80,60 @@ export interface LlmInputMessage {
   role: LlmMessageRole;
   type?: LlmMessageType.Message;
 }
+
+// LlmOperateInput - Simplified input format with automatic file resolution
+
+/**
+ * File input that can be loaded from local filesystem, S3, or provided as base64 data.
+ * For PDFs, specific pages can be extracted via the `pages` property.
+ * If the file extension is an image type, it will be treated as an image internally.
+ */
+export interface LlmOperateInputFile {
+  /** Path or filename (extension determines type via /\.(\w+)$/) */
+  file: string;
+  /** S3 bucket name (if present, load from S3) */
+  bucket?: string;
+  /** Specific pages to extract from PDF (omit = all pages) */
+  pages?: number[];
+  /** Base64 data (if present, use directly instead of loading from file) */
+  data?: string;
+}
+
+/**
+ * Image input that can be loaded from local filesystem, S3, or provided as base64 data.
+ */
+export interface LlmOperateInputImage {
+  /** Path or filename */
+  image: string;
+  /** S3 bucket name (if present, load from S3) */
+  bucket?: string;
+  /** Base64 data (if present, use directly instead of loading from file) */
+  data?: string;
+}
+
+/**
+ * Content item in LlmOperateInput array.
+ * Can be a string (text), file object, or image object.
+ */
+export type LlmOperateInputContent =
+  | string
+  | LlmOperateInputFile
+  | LlmOperateInputImage;
+
+/**
+ * Simplified input format for operate() that supports automatic file resolution.
+ * Files/images are loaded from local filesystem, S3, or provided data.
+ *
+ * @example
+ * ```typescript
+ * const input: LlmOperateInput = [
+ *   "Extract text from these documents",
+ *   { file: "document.pdf", bucket: "my-bucket", pages: [1, 2, 3] },
+ *   { image: "photo.png" },  // loads from local filesystem
+ * ];
+ * ```
+ */
+export type LlmOperateInput = LlmOperateInputContent[];
 
 // Output
 export interface LlmOutputContentText {
@@ -270,6 +325,7 @@ export interface LlmOperateResponse {
   model?: string;
   output: LlmOutput;
   provider?: string;
+  reasoning: string[];
   responses: JsonReturn[];
   status: LlmResponseStatus;
   usage: LlmUsage;
@@ -279,11 +335,15 @@ export interface LlmOperateResponse {
 
 export interface LlmProvider {
   operate?(
-    input: string | LlmHistory | LlmInputMessage,
+    input: string | LlmHistory | LlmInputMessage | LlmOperateInput,
     options?: LlmOperateOptions,
   ): Promise<LlmOperateResponse>;
   send(
     message: string,
     options?: LlmMessageOptions,
   ): Promise<string | JsonObject>;
+  stream?(
+    input: string | LlmHistory | LlmInputMessage | LlmOperateInput,
+    options?: LlmOperateOptions,
+  ): AsyncIterable<LlmStreamChunk>;
 }

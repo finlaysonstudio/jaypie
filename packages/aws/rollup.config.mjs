@@ -1,24 +1,51 @@
+import typescript from "@rollup/plugin-typescript";
 import autoExternal from "rollup-plugin-auto-external";
-import commonjs from "@rollup/plugin-commonjs";
-import resolve from "@rollup/plugin-node-resolve";
-import json from "@rollup/plugin-json";
 
-export default {
-  input: "src/index.js", // Path to your main JavaScript file
-  output: [
-    {
-      file: "dist/jaypie-aws.cjs", // Output file for CommonJS
-      format: "cjs", // CommonJS format
-    },
-    {
-      file: "dist/jaypie-aws.esm.js", // Output file for ES Module
-      format: "esm", // ES Module format
-    },
-  ],
-  plugins: [
-    autoExternal(), // Automatically exclude dependencies from the bundle
-    resolve(), // Tells Rollup how to find node modules
-    commonjs(), // Converts CommonJS modules to ES6
-    json(),
-  ],
+// Filter out TS2307 warnings for @jaypie/* packages (external workspace dependencies)
+const onwarn = (warning, defaultHandler) => {
+  if (warning.plugin === "typescript" && warning.message.includes("@jaypie/")) {
+    return;
+  }
+  defaultHandler(warning);
 };
+
+export default [
+  // ES modules version
+  {
+    input: "src/index.ts",
+    output: {
+      dir: "dist/esm",
+      format: "es",
+      sourcemap: true,
+    },
+    onwarn,
+    plugins: [
+      autoExternal(),
+      typescript({
+        tsconfig: "./tsconfig.json",
+        declaration: true,
+        outDir: "dist/esm",
+      }),
+    ],
+  },
+  // CommonJS version
+  {
+    input: "src/index.ts",
+    output: {
+      dir: "dist/cjs",
+      format: "cjs",
+      sourcemap: true,
+      exports: "named",
+      entryFileNames: "[name].cjs",
+    },
+    onwarn,
+    plugins: [
+      autoExternal(),
+      typescript({
+        tsconfig: "./tsconfig.json",
+        declaration: true,
+        outDir: "dist/cjs",
+      }),
+    ],
+  },
+];

@@ -1,0 +1,580 @@
+import { BadGatewayError, TooManyRequestsError } from "@jaypie/errors";
+import { JsonObject } from "@jaypie/types";
+
+import { Toolkit } from "../tools/Toolkit.class.js";
+import {
+  LlmHistory,
+  LlmInputMessage,
+  LlmMessageRole,
+  LlmMessageType,
+  LlmOperateInput,
+  LlmOperateOptions,
+  LlmOperateResponse,
+  LlmOutputMessage,
+  LlmToolCall,
+  LlmToolResult,
+} from "../types/LlmProvider.interface.js";
+import { log, maxTurnsFromOptions } from "../util/index.js";
+import { ProviderAdapter } from "./adapters/ProviderAdapter.interface.js";
+import { HookRunner, hookRunner, LlmHooks } from "./hooks/index.js";
+import { InputProcessor, inputProcessor } from "./input/index.js";
+import {
+  createResponseBuilder,
+  ResponseBuilderConfig,
+} from "./response/index.js";
+import {
+  defaultRetryPolicy,
+  ErrorClassifier,
+  RetryExecutor,
+  RetryPolicy,
+} from "./retry/index.js";
+import {
+  OperateContext,
+  OperateLoopState,
+  OperateRequest,
+  ProviderToolDefinition,
+} from "./types.js";
+
+//
+//
+// Types
+//
+
+export interface OperateLoopConfig {
+  adapter: ProviderAdapter;
+  client: unknown;
+  hookRunner?: HookRunner;
+  inputProcessor?: InputProcessor;
+  retryPolicy?: RetryPolicy;
+}
+
+//
+//
+// Constants
+//
+
+const ERROR = {
+  BAD_FUNCTION_CALL: "Bad Function Call",
+};
+
+//
+//
+// Helpers
+//
+
+/**
+ * Create an ErrorClassifier from a ProviderAdapter
+ */
+function createErrorClassifier(adapter: ProviderAdapter): ErrorClassifier {
+  return {
+    isRetryable: (error: unknown) => adapter.isRetryableError(error),
+    isKnownError: (error: unknown) => {
+      const classified = adapter.classifyError(error);
+      return classified.category !== "unknown";
+    },
+  };
+}
+
+//
+//
+// Main
+//
+
+/**
+ * OperateLoop implements the core multi-turn conversation loop.
+ * It orchestrates provider adapters, retry logic, hook execution, and tool calling.
+ *
+ * This class uses Template Method + Strategy patterns:
+ * - Template Method: The execute() method defines the algorithm skeleton
+ * - Strategy: Provider adapters handle provider-specific operations
+ */
+export class OperateLoop {
+  private readonly adapter: ProviderAdapter;
+  private readonly client: unknown;
+  private readonly hookRunnerInstance: HookRunner;
+  private readonly inputProcessorInstance: InputProcessor;
+  private readonly retryPolicy: RetryPolicy;
+
+  constructor(config: OperateLoopConfig) {
+    this.adapter = config.adapter;
+    this.client = config.client;
+    this.hookRunnerInstance = config.hookRunner ?? hookRunner;
+    this.inputProcessorInstance = config.inputProcessor ?? inputProcessor;
+    this.retryPolicy = config.retryPolicy ?? defaultRetryPolicy;
+  }
+
+  /**
+   * Execute the operate loop for multi-turn conversations with tool calling.
+   */
+  async execute(
+    input: string | LlmHistory | LlmInputMessage | LlmOperateInput,
+    options: LlmOperateOptions = {},
+  ): Promise<LlmOperateResponse> {
+    // Log what was passed to operate
+    log.trace("[operate] Starting operate loop");
+    log.var({ "operate.input": input });
+    log.var({ "operate.options": options });
+
+    // Initialize state
+    const state = await this.initializeState(input, options);
+    const context = this.createContext(options);
+
+    // Build initial request
+    let request = this.buildInitialRequest(state, options);
+
+    // Multi-turn loop
+    while (state.currentTurn < state.maxTurns) {
+      state.currentTurn++;
+
+      // Execute one turn with retry logic
+      const shouldContinue = await this.executeOneTurn(
+        request,
+        state,
+        context,
+        options,
+      );
+
+      if (!shouldContinue) {
+        break;
+      }
+
+      // Rebuild request with updated history for next turn
+      request = {
+        format: state.formattedFormat,
+        instructions: options.instructions,
+        messages: state.currentInput,
+        model: options.model ?? this.adapter.defaultModel,
+        providerOptions: options.providerOptions,
+        system: options.system,
+        tools: state.formattedTools,
+        user: options.user,
+      };
+    }
+
+    return state.responseBuilder.build();
+  }
+
+  //
+  // Private Methods
+  //
+
+  private async initializeState(
+    input: string | LlmHistory | LlmInputMessage | LlmOperateInput,
+    options: LlmOperateOptions,
+  ): Promise<OperateLoopState> {
+    // Process input with placeholders
+    const processedInput = await this.inputProcessorInstance.process(
+      input,
+      options,
+    );
+
+    // Determine max turns
+    const maxTurns = maxTurnsFromOptions(options);
+
+    // Initialize response builder
+    const responseBuilderConfig: ResponseBuilderConfig = {
+      model: options.model ?? this.adapter.defaultModel,
+      provider: this.adapter.name,
+    };
+    const responseBuilder = createResponseBuilder(responseBuilderConfig);
+
+    // Set initial history
+    responseBuilder.setHistory([...processedInput.history]);
+
+    // Get toolkit
+    let toolkit: Toolkit | undefined;
+    if (options.tools) {
+      if (options.tools instanceof Toolkit) {
+        toolkit = options.tools;
+      } else if (Array.isArray(options.tools) && options.tools.length > 0) {
+        const explain = options.explain ?? false;
+        toolkit = new Toolkit(options.tools, { explain });
+      }
+    }
+
+    // Format output schema through adapter if provided
+    let formattedFormat: JsonObject | undefined;
+    if (options.format) {
+      formattedFormat = this.adapter.formatOutputSchema(
+        options.format,
+      ) as JsonObject;
+    }
+
+    // Format tools through adapter
+    // If format is provided but no toolkit, create an empty toolkit
+    // so that structured_output tool can be added for providers that need it
+    // (Anthropic, OpenRouter use tool-based structured output)
+    let formattedTools: ProviderToolDefinition[] | undefined;
+    if (toolkit) {
+      formattedTools = this.adapter.formatTools(toolkit, formattedFormat);
+    } else if (formattedFormat) {
+      // Create empty toolkit just for structured output
+      const emptyToolkit = new Toolkit([]);
+      formattedTools = this.adapter.formatTools(emptyToolkit, formattedFormat);
+      // Only include if there are tools (structured_output was added)
+      if (formattedTools.length === 0) {
+        formattedTools = undefined;
+      }
+    }
+
+    return {
+      currentInput: processedInput.history,
+      currentTurn: 0,
+      formattedFormat,
+      formattedTools,
+      maxTurns,
+      responseBuilder,
+      toolkit,
+    };
+  }
+
+  private createContext(options: LlmOperateOptions): OperateContext {
+    return {
+      hooks: options.hooks ?? {},
+      options,
+    };
+  }
+
+  private buildInitialRequest(
+    state: OperateLoopState,
+    options: LlmOperateOptions,
+  ): OperateRequest {
+    return {
+      format: state.formattedFormat,
+      instructions: options.instructions,
+      messages: state.currentInput,
+      model: options.model ?? this.adapter.defaultModel,
+      providerOptions: options.providerOptions,
+      system: options.system,
+      tools: state.formattedTools,
+      user: options.user,
+    };
+  }
+
+  private async executeOneTurn(
+    request: OperateRequest,
+    state: OperateLoopState,
+    context: OperateContext,
+    options: LlmOperateOptions,
+  ): Promise<boolean> {
+    // Create error classifier from adapter
+    const errorClassifier = createErrorClassifier(this.adapter);
+
+    // Create retry executor for this turn
+    const retryExecutor = new RetryExecutor({
+      errorClassifier,
+      hookRunner: this.hookRunnerInstance,
+      policy: this.retryPolicy,
+    });
+
+    // Build provider-specific request
+    const providerRequest = this.adapter.buildRequest(request);
+
+    // Log what was passed to the model
+    log.trace("[operate] Calling model");
+    log.var({ "operate.request": providerRequest });
+
+    // Execute beforeEachModelRequest hook
+    await this.hookRunnerInstance.runBeforeModelRequest(context.hooks, {
+      input: state.currentInput,
+      options,
+      providerRequest,
+    });
+
+    // Execute with retry (RetryExecutor handles error hooks and throws appropriate errors)
+    const response = await retryExecutor.execute(
+      () => this.adapter.executeRequest(this.client, providerRequest),
+      {
+        context: {
+          input: state.currentInput,
+          options,
+          providerRequest,
+        },
+        hooks: context.hooks as LlmHooks,
+      },
+    );
+
+    // Log what was returned from the model
+    log.trace("[operate] Model response received");
+    log.var({ "operate.response": response });
+
+    // Parse response
+    const parsed = this.adapter.parseResponse(response, options);
+
+    // Track usage
+    if (parsed.usage) {
+      state.responseBuilder.addUsage(parsed.usage);
+    }
+
+    // Add raw response
+
+    state.responseBuilder.addResponse(parsed.raw as any);
+
+    // Execute afterEachModelResponse hook
+    const currentUsage = state.responseBuilder.build().usage;
+    await this.hookRunnerInstance.runAfterModelResponse(context.hooks, {
+      content: parsed.content ?? "",
+      input: state.currentInput,
+      options,
+      providerRequest,
+      providerResponse: response,
+      usage: currentUsage,
+    });
+
+    // Check for structured output (Anthropic magic tool pattern)
+    if (this.adapter.hasStructuredOutput(response)) {
+      const structuredOutput = this.adapter.extractStructuredOutput(response);
+      if (structuredOutput) {
+        state.responseBuilder.setContent(structuredOutput);
+        state.responseBuilder.complete();
+        return false; // Stop loop
+      }
+    }
+
+    // Handle tool calls
+    if (parsed.hasToolCalls) {
+      const toolCalls = this.adapter.extractToolCalls(response);
+
+      if (toolCalls.length > 0 && state.toolkit && state.maxTurns > 1) {
+        // Track updated provider request for tool results
+        let currentProviderRequest = providerRequest;
+
+        // Add all response output items to the request BEFORE processing tool calls
+        // This is critical for OpenAI which requires reasoning items to be present
+        // when function_call items reference them
+        const responseItems = this.adapter.responseToHistoryItems(response);
+        this.appendResponseItemsToRequest(
+          currentProviderRequest,
+          responseItems,
+        );
+
+        // Process each tool call
+        for (const toolCall of toolCalls) {
+          try {
+            // Execute beforeEachTool hook
+            await this.hookRunnerInstance.runBeforeTool(context.hooks, {
+              args: toolCall.arguments,
+              toolName: toolCall.name,
+            });
+
+            // Call the tool
+            log.trace(`[operate] Calling tool - ${toolCall.name}`);
+            const result = await state.toolkit.call({
+              arguments: toolCall.arguments,
+              name: toolCall.name,
+            });
+
+            // Execute afterEachTool hook
+            await this.hookRunnerInstance.runAfterTool(context.hooks, {
+              args: toolCall.arguments,
+              result,
+              toolName: toolCall.name,
+            });
+
+            // Format result and append to request
+            const formattedResult = {
+              callId: toolCall.callId,
+              output: JSON.stringify(result),
+              success: true,
+            };
+
+            // Update provider request with tool result
+            currentProviderRequest = this.adapter.appendToolResult(
+              currentProviderRequest,
+              toolCall,
+              formattedResult,
+            );
+
+            // Sync state from updated request
+            this.syncInputFromRequest(state, currentProviderRequest);
+
+            // Add tool result to history
+            const toolResultFormatted = this.adapter.formatToolResult(
+              toolCall,
+              formattedResult,
+            );
+            state.responseBuilder.appendToHistory(
+              toolResultFormatted as LlmInputMessage,
+            );
+          } catch (error) {
+            // Execute onToolError hook
+            await this.hookRunnerInstance.runOnToolError(context.hooks, {
+              args: toolCall.arguments,
+              error: error as Error,
+              toolName: toolCall.name,
+            });
+
+            // Set error on response
+            const jaypieError = new BadGatewayError();
+            const detail = [
+              `Error executing function call ${toolCall.name}.`,
+              (error as Error).message,
+            ].join("\n");
+            state.responseBuilder.setError({
+              detail,
+              status: jaypieError.status,
+              title: ERROR.BAD_FUNCTION_CALL,
+            });
+
+            log.error(`Error executing function call ${toolCall.name}`);
+            log.var({ error });
+          }
+        }
+
+        // Check if we've reached max turns
+        if (state.currentTurn >= state.maxTurns) {
+          const error = new TooManyRequestsError();
+          const detail = `Model requested function call but exceeded ${state.maxTurns} turns`;
+          log.warn(detail);
+          state.responseBuilder.setError({
+            detail,
+            status: error.status,
+            title: error.title,
+          });
+          state.responseBuilder.incomplete();
+          return false; // Stop loop
+        }
+
+        return true; // Continue to next turn
+      }
+    }
+
+    // No tool calls or no toolkit - we're done
+    state.responseBuilder.setContent(parsed.content);
+    state.responseBuilder.complete();
+
+    // Add final history items
+    const historyItems = this.adapter.responseToHistoryItems(parsed.raw);
+    for (const item of historyItems) {
+      state.responseBuilder.appendToHistory(item);
+    }
+
+    return false; // Stop loop
+  }
+
+  /**
+   * Sync the current input state from the updated provider request.
+   * This is necessary because appendToolResult modifies the provider-specific request,
+   * and we need to keep our state in sync.
+   */
+  private syncInputFromRequest(
+    state: OperateLoopState,
+    updatedRequest: unknown,
+  ): void {
+    // Extract input/messages from the updated request
+    // This is provider-specific but follows common patterns
+    const request = updatedRequest as Record<string, unknown>;
+
+    if (Array.isArray(request.input)) {
+      // OpenAI format
+      state.currentInput = request.input as LlmHistory;
+    } else if (Array.isArray(request.messages)) {
+      // Anthropic format
+      state.currentInput = request.messages as LlmHistory;
+    } else if (Array.isArray(request.contents)) {
+      // Gemini format - convert contents to history items
+      state.currentInput = this.convertGeminiContentsToHistory(
+        request.contents as Array<{
+          role: string;
+          parts?: Array<Record<string, unknown>>;
+        }>,
+      );
+    }
+  }
+
+  /**
+   * Convert Gemini contents format to internal history format.
+   */
+  private convertGeminiContentsToHistory(
+    contents: Array<{ role: string; parts?: Array<Record<string, unknown>> }>,
+  ): LlmHistory {
+    const history: LlmHistory = [];
+
+    for (const content of contents) {
+      if (!content.parts) continue;
+
+      for (const part of content.parts) {
+        if (part.text && typeof part.text === "string") {
+          // Regular text message
+          history.push({
+            role:
+              content.role === "model"
+                ? LlmMessageRole.Assistant
+                : LlmMessageRole.User,
+            content: part.text,
+            type: LlmMessageType.Message,
+          } as LlmOutputMessage);
+        } else if (part.functionCall) {
+          // Function call
+          const fc = part.functionCall as {
+            name?: string;
+            args?: Record<string, unknown>;
+            id?: string;
+          };
+          // Preserve thoughtSignature for Gemini 3 models (required for tool calls)
+          const thoughtSignature = (part as { thoughtSignature?: string })
+            .thoughtSignature;
+          history.push({
+            type: LlmMessageType.FunctionCall,
+            name: fc.name || "",
+            arguments: JSON.stringify(fc.args || {}),
+            call_id: fc.id || "",
+            id: fc.id || "",
+            ...(thoughtSignature && { thoughtSignature }),
+          } as unknown as LlmToolCall);
+        } else if (part.functionResponse) {
+          // Function response
+          const fr = part.functionResponse as {
+            name?: string;
+            response?: Record<string, unknown>;
+          };
+          // Store name in the object even though it's not part of LlmToolResult type
+          // This allows round-trip conversion back to Gemini format
+          history.push({
+            type: LlmMessageType.FunctionCallOutput,
+            output: JSON.stringify(fr.response || {}),
+            call_id: "",
+            name: fr.name || "",
+          } as LlmToolResult & { name: string });
+        }
+      }
+    }
+
+    return history;
+  }
+
+  /**
+   * Append response items to the provider request.
+   * This adds all output items from a response (including reasoning, function_calls, etc.)
+   * to the request's input/messages array.
+   *
+   * This is critical for OpenAI which requires reasoning items to be present
+   * when function_call items reference them.
+   */
+  private appendResponseItemsToRequest(
+    request: unknown,
+    responseItems: LlmHistory,
+  ): void {
+    const requestObj = request as Record<string, unknown>;
+
+    if (Array.isArray(requestObj.input)) {
+      // OpenAI format
+      requestObj.input.push(...responseItems);
+    } else if (Array.isArray(requestObj.messages)) {
+      // Anthropic format
+      requestObj.messages.push(...responseItems);
+    }
+  }
+}
+
+//
+//
+// Factory
+//
+
+/**
+ * Create an OperateLoop instance with the specified configuration.
+ */
+export function createOperateLoop(config: OperateLoopConfig): OperateLoop {
+  return new OperateLoop(config);
+}

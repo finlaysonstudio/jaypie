@@ -23,15 +23,25 @@ export function envHostname({
 
   const resolvedComponent =
     component === "@" || component === "" ? undefined : component;
-  const resolvedSubdomain = subdomain || process.env.CDK_ENV_SUBDOMAIN;
+  const providedSubdomain =
+    subdomain === "@" || subdomain === "" ? undefined : subdomain;
+  const resolvedSubdomain = providedSubdomain || process.env.CDK_ENV_SUBDOMAIN;
   const resolvedEnv = env || process.env.PROJECT_ENV;
   const filteredEnv =
     resolvedEnv === CDK.ENV.PRODUCTION ? undefined : resolvedEnv;
 
+  // Check if parts are already contained in the domain to avoid duplication
+  const domainParts = resolvedDomain.split(".");
+
+  const isPartInDomain = (part: string | undefined): boolean => {
+    if (!part) return false;
+    return domainParts.includes(part);
+  };
+
   const parts = [
-    resolvedComponent,
-    resolvedSubdomain,
-    filteredEnv,
+    isPartInDomain(resolvedComponent) ? undefined : resolvedComponent,
+    isPartInDomain(resolvedSubdomain) ? undefined : resolvedSubdomain,
+    isPartInDomain(filteredEnv) ? undefined : filteredEnv,
     resolvedDomain,
   ].filter((part) => part);
 
