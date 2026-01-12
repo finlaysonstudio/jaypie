@@ -1,30 +1,663 @@
 /**
- * Any CSS included here will be global. The classic template
- * bundles Infima by default. Infima is a CSS framework designed to
- * work well for content-centric websites.
+ * Jaypie Documentation
+ * Aesthetic: Warm, minimal, soft, luxury-adjacent
+ * Dark mode default with light mode option
  */
 
-/* You can override the default Infima variables here. */
+/* Google Fonts - Refined typography choices */
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Source+Sans+3:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=JetBrains+Mono:wght@400;500&display=swap');
+
+/* ============================================
+   CSS CUSTOM PROPERTIES
+   ============================================ */
+
 :root {
-  --ifm-color-primary: #2e8555;
-  --ifm-color-primary-dark: #29784c;
-  --ifm-color-primary-darker: #277148;
-  --ifm-color-primary-darkest: #205d3b;
-  --ifm-color-primary-light: #33925d;
-  --ifm-color-primary-lighter: #359962;
-  --ifm-color-primary-lightest: #3cad6e;
-  --ifm-code-font-size: 95%;
-  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.1);
+  /* Typography */
+  --jp-font-display: 'Cormorant Garamond', Georgia, serif;
+  --jp-font-body: 'Source Sans 3', -apple-system, BlinkMacSystemFont, sans-serif;
+  --jp-font-mono: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+
+  /* Earthy Yellow Accent Scale */
+  --jp-yellow: #FFE787;
+  --jp-yellow-soft: #FFF4CC;
+  --jp-yellow-muted: #E6D078;
+  --jp-yellow-deep: #D4B85A;
+
+  /* Warm Neutrals */
+  --jp-warm-50: #FDFCFA;
+  --jp-warm-100: #F8F6F1;
+  --jp-warm-200: #EDE9E0;
+  --jp-warm-300: #D9D3C5;
+  --jp-warm-400: #B8B0A0;
+  --jp-warm-500: #8A8275;
+  --jp-warm-600: #5C564C;
+  --jp-warm-700: #3D3935;
+  --jp-warm-800: #2A2825;
+  --jp-warm-900: #1C1B19;
+  --jp-warm-950: #121110;
+
+  /* Bird/Logo Colors */
+  --jp-bird-dark: #2D2926;
+  --jp-bird-brown: #4A433B;
+
+  /* Spacing Scale */
+  --jp-space-xs: 0.25rem;
+  --jp-space-sm: 0.5rem;
+  --jp-space-md: 1rem;
+  --jp-space-lg: 1.5rem;
+  --jp-space-xl: 2.5rem;
+  --jp-space-2xl: 4rem;
+  --jp-space-3xl: 6rem;
+
+  /* Transitions */
+  --jp-transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --jp-transition-base: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+  --jp-transition-slow: 400ms cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Shadows - soft, warm */
+  --jp-shadow-sm: 0 1px 2px rgba(44, 41, 38, 0.04);
+  --jp-shadow-md: 0 4px 12px rgba(44, 41, 38, 0.06);
+  --jp-shadow-lg: 0 12px 32px rgba(44, 41, 38, 0.08);
 }
 
-/* For readability concerns, you should choose a lighter palette in dark mode. */
-[data-theme="dark"] {
-  --ifm-color-primary: #25c2a0;
-  --ifm-color-primary-dark: #21af90;
-  --ifm-color-primary-darker: #1fa588;
-  --ifm-color-primary-darkest: #1a8870;
-  --ifm-color-primary-light: #29d5b0;
-  --ifm-color-primary-lighter: #32d8b4;
-  --ifm-color-primary-lightest: #4fddbf;
-  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
+/* ============================================
+   LIGHT MODE (Secondary)
+   ============================================ */
+
+:root {
+  --ifm-color-primary: var(--jp-bird-brown);
+  --ifm-color-primary-dark: var(--jp-bird-dark);
+  --ifm-color-primary-darker: #252320;
+  --ifm-color-primary-darkest: #1C1B19;
+  --ifm-color-primary-light: #5C554B;
+  --ifm-color-primary-lighter: #6E665A;
+  --ifm-color-primary-lightest: #8A8275;
+
+  --ifm-background-color: var(--jp-warm-50);
+  --ifm-background-surface-color: var(--jp-warm-100);
+  --ifm-font-color-base: var(--jp-warm-800);
+  --ifm-font-color-secondary: var(--jp-warm-600);
+
+  --ifm-font-family-base: var(--jp-font-body);
+  --ifm-font-family-monospace: var(--jp-font-mono);
+  --ifm-heading-font-family: var(--jp-font-display);
+
+  --ifm-code-font-size: 0.875rem;
+  --ifm-code-background: var(--jp-warm-100);
+  --ifm-code-border-radius: 0.25rem;
+
+  --ifm-global-radius: 0.5rem;
+  --ifm-global-shadow-lw: var(--jp-shadow-sm);
+  --ifm-global-shadow-md: var(--jp-shadow-md);
+  --ifm-global-shadow-tl: var(--jp-shadow-lg);
+
+  --ifm-navbar-background-color: var(--jp-warm-50);
+  --ifm-navbar-shadow: none;
+  --ifm-footer-background-color: var(--jp-warm-100);
+
+  --ifm-link-color: var(--jp-bird-brown);
+  --ifm-link-hover-color: var(--jp-bird-dark);
+
+  --ifm-menu-color: var(--jp-warm-700);
+  --ifm-menu-color-active: var(--jp-bird-dark);
+  --ifm-menu-color-background-active: transparent;
+
+  --ifm-toc-border-color: transparent;
+  --ifm-hr-border-color: transparent;
+
+  --docusaurus-highlighted-code-line-bg: rgba(255, 231, 135, 0.15);
+
+  /* Custom accent */
+  --jp-accent: var(--jp-yellow-deep);
+  --jp-accent-soft: var(--jp-yellow);
+}
+
+/* ============================================
+   DARK MODE (Default/Primary)
+   ============================================ */
+
+[data-theme='dark'] {
+  --ifm-color-primary: var(--jp-yellow);
+  --ifm-color-primary-dark: var(--jp-yellow-muted);
+  --ifm-color-primary-darker: var(--jp-yellow-deep);
+  --ifm-color-primary-darkest: #C4A84A;
+  --ifm-color-primary-light: var(--jp-yellow-soft);
+  --ifm-color-primary-lighter: #FFF8DD;
+  --ifm-color-primary-lightest: #FFFBEE;
+
+  --ifm-background-color: var(--jp-warm-950);
+  --ifm-background-surface-color: var(--jp-warm-900);
+  --ifm-font-color-base: var(--jp-warm-200);
+  --ifm-font-color-secondary: var(--jp-warm-400);
+
+  --ifm-code-background: var(--jp-warm-900);
+
+  --ifm-navbar-background-color: var(--jp-warm-950);
+  --ifm-footer-background-color: var(--jp-warm-900);
+
+  --ifm-link-color: var(--jp-yellow);
+  --ifm-link-hover-color: var(--jp-yellow-soft);
+
+  --ifm-menu-color: var(--jp-warm-300);
+  --ifm-menu-color-active: var(--jp-yellow);
+
+  --ifm-toc-border-color: transparent;
+  --ifm-hr-border-color: transparent;
+
+  --docusaurus-highlighted-code-line-bg: rgba(255, 231, 135, 0.08);
+
+  /* Custom accent */
+  --jp-accent: var(--jp-yellow);
+  --jp-accent-soft: var(--jp-yellow-soft);
+
+  /* Shadows in dark mode */
+  --jp-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.2);
+  --jp-shadow-md: 0 4px 16px rgba(0, 0, 0, 0.25);
+  --jp-shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.3);
+}
+
+/* ============================================
+   GLOBAL STYLES
+   ============================================ */
+
+html {
+  font-feature-settings: 'kern' 1, 'liga' 1, 'calt' 1;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  letter-spacing: 0.01em;
+}
+
+/* Typography refinements */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--jp-font-display);
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+h1 {
+  font-weight: 300;
+  font-size: 2.75rem;
+}
+
+h2 {
+  font-size: 2rem;
+}
+
+h3 {
+  font-size: 1.5rem;
+}
+
+/* Refined paragraph spacing */
+p {
+  line-height: 1.7;
+}
+
+/* Links - subtle underline on hover */
+a {
+  text-decoration: none;
+  transition: color var(--jp-transition-fast);
+}
+
+a:hover {
+  text-decoration: none;
+}
+
+/* Code blocks */
+code {
+  font-family: var(--jp-font-mono);
+  font-weight: 400;
+  padding: 0.15em 0.4em;
+  background: var(--ifm-code-background);
+  border-radius: var(--ifm-code-border-radius);
+  font-size: var(--ifm-code-font-size);
+}
+
+pre code {
+  padding: 0;
+  background: transparent;
+}
+
+/* ============================================
+   NAVBAR
+   ============================================ */
+
+.navbar {
+  padding: var(--jp-space-md) var(--jp-space-xl);
+  border-bottom: none;
+  backdrop-filter: blur(12px);
+  background: rgba(253, 252, 250, 0.85);
+}
+
+[data-theme='dark'] .navbar {
+  background: rgba(18, 17, 16, 0.85);
+}
+
+.navbar__brand {
+  margin-right: var(--jp-space-xl);
+}
+
+.navbar__title {
+  font-family: var(--jp-font-display);
+  font-weight: 400;
+  font-size: 1.35rem;
+  letter-spacing: -0.01em;
+}
+
+.navbar__logo {
+  height: 2rem;
+  margin-right: var(--jp-space-sm);
+  transition: transform var(--jp-transition-base);
+}
+
+.navbar__brand:hover .navbar__logo {
+  transform: translateY(-1px);
+}
+
+.navbar__link {
+  font-weight: 400;
+  font-size: 0.9rem;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  opacity: 0.7;
+  transition: opacity var(--jp-transition-fast);
+}
+
+.navbar__link:hover,
+.navbar__link--active {
+  opacity: 1;
+}
+
+/* Toggle button refinement */
+.navbar__toggle {
+  color: var(--ifm-font-color-base);
+}
+
+/* Color mode toggle */
+.navbar .clean-btn[class*="toggleButton"] {
+  opacity: 0.6;
+  transition: opacity var(--jp-transition-fast);
+}
+
+.navbar .clean-btn[class*="toggleButton"]:hover {
+  opacity: 1;
+}
+
+/* ============================================
+   SIDEBAR
+   ============================================ */
+
+.menu {
+  padding: var(--jp-space-lg);
+}
+
+.menu__link {
+  font-size: 0.9rem;
+  padding: var(--jp-space-sm) var(--jp-space-md);
+  border-radius: var(--ifm-global-radius);
+  transition: all var(--jp-transition-fast);
+  border-left: 2px solid transparent;
+  margin-left: 0;
+}
+
+.menu__link:hover {
+  background: transparent;
+  color: var(--ifm-menu-color-active);
+  border-left-color: var(--jp-accent);
+}
+
+.menu__link--active {
+  background: transparent;
+  color: var(--ifm-menu-color-active);
+  border-left-color: var(--jp-accent);
+  font-weight: 500;
+}
+
+.menu__list-item-collapsible {
+  border-radius: var(--ifm-global-radius);
+}
+
+.menu__list-item-collapsible:hover {
+  background: transparent;
+}
+
+.menu__caret {
+  opacity: 0.5;
+}
+
+/* Category labels */
+.menu__link--sublist-caret {
+  font-family: var(--jp-font-display);
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ifm-font-color-secondary);
+}
+
+/* ============================================
+   TABLE OF CONTENTS
+   ============================================ */
+
+.table-of-contents {
+  border-left: none;
+  padding-left: var(--jp-space-lg);
+}
+
+.table-of-contents__link {
+  font-size: 0.85rem;
+  opacity: 0.6;
+  transition: opacity var(--jp-transition-fast);
+}
+
+.table-of-contents__link:hover,
+.table-of-contents__link--active {
+  opacity: 1;
+  color: var(--ifm-font-color-base);
+}
+
+.table-of-contents__link--active {
+  font-weight: 500;
+}
+
+/* ============================================
+   CONTENT AREA
+   ============================================ */
+
+.markdown {
+  --ifm-heading-margin-top: var(--jp-space-2xl);
+  --ifm-heading-margin-bottom: var(--jp-space-lg);
+}
+
+.markdown h1:first-child {
+  margin-top: 0;
+}
+
+.markdown > p {
+  margin-bottom: var(--jp-space-lg);
+}
+
+/* Blockquotes - elegant styling */
+.markdown blockquote {
+  border-left: none;
+  padding: var(--jp-space-lg) var(--jp-space-xl);
+  margin: var(--jp-space-xl) 0;
+  background: var(--ifm-background-surface-color);
+  border-radius: var(--ifm-global-radius);
+  font-style: italic;
+  position: relative;
+}
+
+.markdown blockquote::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--jp-accent);
+  border-radius: 3px;
+}
+
+/* Code blocks */
+.prism-code {
+  border-radius: var(--ifm-global-radius);
+  padding: var(--jp-space-lg);
+}
+
+/* Tables - minimal, no borders */
+table {
+  border-collapse: collapse;
+  margin: var(--jp-space-xl) 0;
+}
+
+table th,
+table td {
+  border: none;
+  padding: var(--jp-space-md) var(--jp-space-lg);
+  text-align: left;
+}
+
+table th {
+  font-family: var(--jp-font-display);
+  font-weight: 500;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ifm-font-color-secondary);
+  padding-bottom: var(--jp-space-sm);
+}
+
+table tbody tr {
+  transition: background var(--jp-transition-fast);
+}
+
+table tbody tr:nth-child(even) {
+  background: var(--ifm-background-surface-color);
+}
+
+/* ============================================
+   FOOTER
+   ============================================ */
+
+.footer {
+  padding: var(--jp-space-3xl) var(--jp-space-xl) var(--jp-space-xl);
+  border-top: none;
+}
+
+.footer__title {
+  font-family: var(--jp-font-display);
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: var(--jp-space-lg);
+  color: var(--ifm-font-color-secondary);
+}
+
+.footer__link-item {
+  font-size: 0.9rem;
+  opacity: 0.7;
+  transition: opacity var(--jp-transition-fast);
+  line-height: 2;
+}
+
+.footer__link-item:hover {
+  opacity: 1;
+  text-decoration: none;
+}
+
+.footer__copyright {
+  margin-top: var(--jp-space-2xl);
+  padding-top: var(--jp-space-xl);
+  font-size: 0.8rem;
+  opacity: 0.5;
+  text-align: center;
+}
+
+[data-theme='dark'] .footer__copyright {
+  border-top: 1px solid var(--jp-warm-800);
+}
+
+:root .footer__copyright {
+  border-top: 1px solid var(--jp-warm-200);
+}
+
+/* ============================================
+   BUTTONS
+   ============================================ */
+
+.button {
+  font-family: var(--jp-font-body);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  border-radius: var(--ifm-global-radius);
+  transition: all var(--jp-transition-base);
+  cursor: pointer;
+}
+
+.button--primary {
+  background: var(--jp-accent);
+  border: none;
+  color: var(--jp-warm-900);
+}
+
+.button--primary:hover {
+  background: var(--jp-yellow-soft);
+  color: var(--jp-warm-900);
+  transform: translateY(-1px);
+  box-shadow: var(--jp-shadow-md);
+}
+
+.button--secondary {
+  background: transparent;
+  border: 1px solid var(--jp-warm-400);
+  color: var(--ifm-font-color-base);
+}
+
+[data-theme='dark'] .button--secondary {
+  border-color: var(--jp-warm-600);
+}
+
+.button--secondary:hover {
+  background: var(--ifm-background-surface-color);
+  border-color: var(--jp-accent);
+  color: var(--ifm-font-color-base);
+}
+
+/* ============================================
+   ADMONITIONS
+   ============================================ */
+
+.admonition {
+  border: none;
+  border-radius: var(--ifm-global-radius);
+  padding: var(--jp-space-lg);
+}
+
+.admonition-heading {
+  font-family: var(--jp-font-display);
+  font-weight: 500;
+}
+
+/* ============================================
+   SEARCH
+   ============================================ */
+
+.DocSearch-Button {
+  border-radius: var(--ifm-global-radius);
+}
+
+/* ============================================
+   ANIMATIONS & EFFECTS
+   ============================================ */
+
+/* Subtle page load fade */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.main-wrapper {
+  animation: fadeIn 0.4s ease-out;
+}
+
+/* Focus states - accessible but subtle */
+:focus-visible {
+  outline: 2px solid var(--jp-accent);
+  outline-offset: 2px;
+}
+
+/* Selection styling */
+::selection {
+  background: var(--jp-yellow);
+  color: var(--jp-warm-900);
+}
+
+/* ============================================
+   RESPONSIVE REFINEMENTS
+   ============================================ */
+
+@media (max-width: 996px) {
+  .navbar {
+    padding: var(--jp-space-md);
+  }
+
+  h1 {
+    font-size: 2rem;
+  }
+
+  h2 {
+    font-size: 1.5rem;
+  }
+}
+
+/* ============================================
+   DOCUSAURUS OVERRIDES
+   ============================================ */
+
+/* Remove default card borders */
+.card {
+  border: none;
+  box-shadow: var(--jp-shadow-sm);
+}
+
+/* Pagination */
+.pagination-nav__link {
+  border: none;
+  background: var(--ifm-background-surface-color);
+  border-radius: var(--ifm-global-radius);
+  padding: var(--jp-space-lg);
+  transition: all var(--jp-transition-base);
+}
+
+.pagination-nav__link:hover {
+  background: var(--ifm-background-surface-color);
+  transform: translateY(-2px);
+  box-shadow: var(--jp-shadow-md);
+}
+
+.pagination-nav__label {
+  font-family: var(--jp-font-display);
+  font-size: 1.1rem;
+}
+
+.pagination-nav__sublabel {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  opacity: 0.6;
+}
+
+/* Breadcrumbs */
+.breadcrumbs__link {
+  font-size: 0.85rem;
+  opacity: 0.6;
+}
+
+.breadcrumbs__link:hover {
+  opacity: 1;
+}
+
+/* Version badge */
+.badge {
+  border-radius: var(--ifm-global-radius);
+  font-weight: 500;
+}
+
+/* Theme toggle in navbar - hide text, show icon only */
+[data-theme] .navbar [class*="colorModeToggle"] {
+  opacity: 0.7;
+}
+
+[data-theme] .navbar [class*="colorModeToggle"]:hover {
+  opacity: 1;
 }

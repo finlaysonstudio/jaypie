@@ -4,7 +4,7 @@ import { themes as prismThemes } from "prism-react-renderer";
 
 const config: Config = {
   title: "Jaypie",
-  tagline: "Event-driven JavaScript library for AWS",
+  tagline: "Event-driven TypeScript for AWS",
   favicon: "img/favicon.ico",
 
   url: "https://jaypie.finlayson.studio",
@@ -44,11 +44,16 @@ const config: Config = {
   ],
 
   themeConfig: {
+    colorMode: {
+      defaultMode: "dark",
+      disableSwitch: false,
+      respectPrefersColorScheme: true,
+    },
     image: "img/jaypie-social-card.jpg",
     navbar: {
       title: "Jaypie",
       logo: {
-        alt: "Jaypie Logo",
+        alt: "Jaypie",
         src: "img/logo.svg",
       },
       items: [
@@ -56,7 +61,7 @@ const config: Config = {
           type: "docSidebar",
           sidebarId: "tutorialSidebar",
           position: "left",
-          label: "Documentation",
+          label: "Docs",
         },
         {
           href: "https://github.com/finlaysonstudio/jaypie",
@@ -69,45 +74,41 @@ const config: Config = {
       style: "dark",
       links: [
         {
-          title: "Main Packages",
+          title: "Documentation",
           items: [
             {
-              label: "Core",
-              to: "/docs/api/core",
+              label: "Getting Started",
+              to: "/docs/intro",
             },
             {
-              label: "Express",
-              to: "/docs/api/express",
-            },
-            {
-              label: "Lambda",
-              to: "/docs/api/lambda",
-            },
-            {
-              label: "LLM",
-              to: "/docs/api/llm",
+              label: "API Reference",
+              to: "/docs/api/kit",
             },
           ],
         },
         {
-          title: "Extra Packages",
+          title: "Packages",
           items: [
             {
-              label: "Constructs",
+              label: "jaypie",
+              to: "/docs/api/kit",
+            },
+            {
+              label: "@jaypie/llm",
+              to: "/docs/api/llm",
+            },
+            {
+              label: "@jaypie/constructs",
               to: "/docs/api/constructs",
             },
             {
-              label: "MCP",
-              to: "/docs/api/mcp",
-            },
-            {
-              label: "Textract",
-              to: "/docs/api/textract",
+              label: "@jaypie/testkit",
+              to: "/docs/api/testkit",
             },
           ],
         },
         {
-          title: "More",
+          title: "Links",
           items: [
             {
               label: "GitHub",
@@ -115,12 +116,12 @@ const config: Config = {
             },
             {
               label: "npm",
-              href: "https://www.npmjs.com/package/@jaypie/jaypie",
+              href: "https://www.npmjs.com/package/jaypie",
             },
           ],
         },
       ],
-      copyright: `Built with Docusaurus. Published by Finlayson Studio. Available under the MIT License.`,
+      copyright: `Finlayson Studio · MIT License`,
     },
     prism: {
       theme: prismThemes.github,
