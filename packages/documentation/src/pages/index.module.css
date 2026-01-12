@@ -77,7 +77,7 @@
 }
 
 .heroEyebrow {
-  font-family: var(--jp-font-body);
+  font-family: var(--jp-font-system);
   font-size: 0.75rem;
   font-weight: 500;
   letter-spacing: 0.15em;
@@ -89,7 +89,7 @@
 }
 
 .heroTitle {
-  font-family: var(--jp-font-display);
+  font-family: var(--jp-font-brand);
   font-size: clamp(3rem, 9vw, 5rem);
   font-weight: 400;
   letter-spacing: -0.03em;
@@ -101,9 +101,9 @@
 }
 
 .heroSubtitle {
-  font-family: var(--jp-font-body);
-  font-size: 1.25rem;
-  font-weight: 300;
+  font-family: var(--jp-font-system);
+  font-size: 1.05rem;
+  font-weight: 400;
   line-height: 1.6;
   color: var(--ifm-font-color-secondary);
   margin: 0 auto 3rem;
@@ -138,10 +138,11 @@
   display: inline-flex;
   align-items: center;
   padding: 0.875rem 2rem;
-  font-family: var(--jp-font-body);
-  font-size: 0.9rem;
+  font-family: var(--jp-font-user);
+  font-size: 0.85rem;
   font-weight: 500;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   text-decoration: none;
   color: var(--jp-warm-900);
   background: var(--jp-accent);
@@ -162,10 +163,11 @@
   display: inline-flex;
   align-items: center;
   padding: 0.875rem 2rem;
-  font-family: var(--jp-font-body);
-  font-size: 0.9rem;
+  font-family: var(--jp-font-user);
+  font-size: 0.85rem;
   font-weight: 500;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   text-decoration: none;
   color: var(--ifm-font-color-base);
   background: transparent;
@@ -206,9 +208,9 @@
 }
 
 .sectionTitle {
-  font-family: var(--jp-font-display);
+  font-family: var(--jp-font-heading);
   font-size: 2rem;
-  font-weight: 500;
+  font-weight: 400;
   letter-spacing: -0.025em;
   margin: 0 0 1rem;
   color: var(--ifm-font-color-base);
@@ -216,8 +218,8 @@
 
 .sectionSubtitle {
   font-family: var(--jp-font-body);
-  font-size: 1.1rem;
-  font-weight: 300;
+  font-size: 0.95rem;
+  font-weight: 400;
   color: var(--ifm-font-color-secondary);
   margin: 0;
 }
@@ -240,9 +242,9 @@
 }
 
 .capabilityTitle {
-  font-family: var(--jp-font-display);
+  font-family: var(--jp-font-heading);
   font-size: 1.2rem;
-  font-weight: 500;
+  font-weight: 400;
   letter-spacing: -0.01em;
   margin: 0 0 0.75rem;
   color: var(--ifm-font-color-base);
@@ -263,7 +265,7 @@
 
 .capabilityDescription {
   font-family: var(--jp-font-body);
-  font-size: 1rem;
+  font-size: 0.9rem;
   font-weight: 400;
   line-height: 1.7;
   color: var(--ifm-font-color-secondary);
@@ -301,9 +303,9 @@
 }
 
 .installTitle {
-  font-family: var(--jp-font-display);
+  font-family: var(--jp-font-heading);
   font-size: 1.75rem;
-  font-weight: 500;
+  font-weight: 400;
   letter-spacing: -0.02em;
   margin: 0 0 0.5rem;
   color: var(--ifm-font-color-base);
@@ -311,7 +313,7 @@
 
 .installDescription {
   font-family: var(--jp-font-body);
-  font-size: 1rem;
+  font-size: 0.9rem;
   font-weight: 400;
   color: var(--ifm-font-color-secondary);
   margin: 0;
@@ -456,7 +458,7 @@
 }
 
 .textLink {
-  font-family: var(--jp-font-body);
+  font-family: var(--jp-font-user);
   font-size: 0.9rem;
   font-weight: 500;
   color: var(--ifm-font-color-secondary);
@@ -492,7 +494,7 @@
 }
 
 .philosophyQuote p {
-  font-family: var(--jp-font-display);
+  font-family: var(--jp-font-heading);
   font-size: clamp(1.35rem, 3.5vw, 1.85rem);
   font-weight: 400;
   font-style: normal;
@@ -599,9 +601,9 @@
 }
 
 .packageTableTitle {
-  font-family: var(--jp-font-display);
+  font-family: var(--jp-font-heading);
   font-size: 1.1rem;
-  font-weight: 500;
+  font-weight: 400;
   margin: 0 0 0.5rem;
   color: var(--ifm-font-color-base);
 }
@@ -702,9 +704,9 @@
 }
 
 .patternTitle {
-  font-family: var(--jp-font-display);
+  font-family: var(--jp-font-heading);
   font-size: 0.95rem;
-  font-weight: 500;
+  font-weight: 400;
   margin: 0 0 1rem;
   color: var(--ifm-font-color-base);
 }
@@ -732,7 +734,7 @@
    ============================================ */
 
 .footerText {
-  font-family: var(--jp-font-body);
+  font-family: var(--jp-font-system);
   font-size: 0.95rem;
   font-weight: 400;
   color: var(--ifm-font-color-secondary);
