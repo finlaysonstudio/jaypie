@@ -90,9 +90,9 @@
 
 .heroTitle {
   font-family: var(--jp-font-display);
-  font-size: clamp(3.5rem, 10vw, 6rem);
-  font-weight: 300;
-  letter-spacing: -0.04em;
+  font-size: clamp(3rem, 9vw, 5rem);
+  font-weight: 400;
+  letter-spacing: -0.03em;
   line-height: 1;
   margin: 0 0 1.5rem;
   color: var(--ifm-font-color-base);
@@ -207,9 +207,9 @@
 
 .sectionTitle {
   font-family: var(--jp-font-display);
-  font-size: 2.5rem;
-  font-weight: 300;
-  letter-spacing: -0.02em;
+  font-size: 2rem;
+  font-weight: 500;
+  letter-spacing: -0.025em;
   margin: 0 0 1rem;
   color: var(--ifm-font-color-base);
 }
@@ -241,8 +241,8 @@
 
 .capabilityTitle {
   font-family: var(--jp-font-display);
-  font-size: 1.35rem;
-  font-weight: 400;
+  font-size: 1.2rem;
+  font-weight: 500;
   letter-spacing: -0.01em;
   margin: 0 0 0.75rem;
   color: var(--ifm-font-color-base);
@@ -302,8 +302,8 @@
 
 .installTitle {
   font-family: var(--jp-font-display);
-  font-size: 2rem;
-  font-weight: 300;
+  font-size: 1.75rem;
+  font-weight: 500;
   letter-spacing: -0.02em;
   margin: 0 0 0.5rem;
   color: var(--ifm-font-color-base);
@@ -493,10 +493,10 @@
 
 .philosophyQuote p {
   font-family: var(--jp-font-display);
-  font-size: clamp(1.5rem, 4vw, 2.25rem);
-  font-weight: 300;
-  font-style: italic;
-  line-height: 1.4;
+  font-size: clamp(1.35rem, 3.5vw, 1.85rem);
+  font-weight: 400;
+  font-style: normal;
+  line-height: 1.5;
   letter-spacing: -0.01em;
   color: var(--ifm-font-color-secondary);
   margin: 0;
@@ -504,15 +504,15 @@
 }
 
 .philosophyQuote p::before {
-  content: '"';
+  content: '';
   position: absolute;
-  left: -0.5em;
-  top: -0.1em;
-  font-size: 3em;
-  line-height: 1;
-  color: var(--jp-accent);
-  opacity: 0.3;
-  font-style: normal;
+  left: 50%;
+  top: -2rem;
+  transform: translateX(-50%);
+  width: 40px;
+  height: 3px;
+  background: var(--jp-accent);
+  opacity: 0.6;
 }
 
 /* ============================================

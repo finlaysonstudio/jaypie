@@ -4,8 +4,8 @@
  * Dark mode default with light mode option
  */
 
-/* Google Fonts - Refined typography choices */
-@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Source+Sans+3:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=JetBrains+Mono:wght@400;500&display=swap');
+/* Google Fonts - Modern, intentional typography */
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap');
 
 /* ============================================
    CSS CUSTOM PROPERTIES
@@ -13,8 +13,8 @@
 
 :root {
   /* Typography */
-  --jp-font-display: 'Cormorant Garamond', Georgia, serif;
-  --jp-font-body: 'Source Sans 3', -apple-system, BlinkMacSystemFont, sans-serif;
+  --jp-font-display: 'Outfit', system-ui, sans-serif;
+  --jp-font-body: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
   --jp-font-mono: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
 
   /* Earthy Yellow Accent Scale */
@@ -173,22 +173,22 @@ body {
 /* Typography refinements */
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--jp-font-display);
-  font-weight: 400;
-  letter-spacing: -0.02em;
-  line-height: 1.2;
+  font-weight: 500;
+  letter-spacing: -0.025em;
+  line-height: 1.15;
 }
 
 h1 {
-  font-weight: 300;
-  font-size: 2.75rem;
+  font-weight: 400;
+  font-size: 2.5rem;
 }
 
 h2 {
-  font-size: 2rem;
+  font-size: 1.75rem;
 }
 
 h3 {
-  font-size: 1.5rem;
+  font-size: 1.35rem;
 }
 
 /* Refined paragraph spacing */
