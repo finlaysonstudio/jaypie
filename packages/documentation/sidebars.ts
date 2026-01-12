@@ -84,6 +84,11 @@ const sidebars: SidebarsConfig = {
       id: "criticisms",
       label: "Criticisms",
     },
+    {
+      type: "doc",
+      id: "publisher",
+      label: "Publisher",
+    },
   ],
 };
 
