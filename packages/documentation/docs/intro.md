@@ -1,144 +1,129 @@
+---
+sidebar_position: 2
+---
+
 # Introduction
 
-Complete-stack approach to multi-environment cloud application patterns. Aligns infrastructure, execution, and observability.
+**Use this page when:** starting with Jaypie, understanding what packages to install, or getting a quick reference for common patterns.
 
-**Stack:** AWS/CDK, Datadog, TypeScript
+## What is Jaypie?
 
-**Runtime:** Node.js 20, 22, 24, 25
+Jaypie is a TypeScript framework for AWS Lambda and Express applications with integrated CDK constructs and Datadog observability.
+
+| Layer | Package | Purpose |
+|-------|---------|---------|
+| Infrastructure | `@jaypie/constructs` | CDK constructs for Lambda, API Gateway, CloudFront |
+| Handlers | `@jaypie/express`, `@jaypie/lambda` | Handler wrappers with lifecycle and error formatting |
+| Observability | `@jaypie/logger`, `@jaypie/datadog` | Structured logging, metrics |
+| Testing | `@jaypie/testkit` | Mocks and matchers |
+| Utilities | `@jaypie/kit`, `@jaypie/errors` | Type coercion, error classes |
 
 ## Installation
+
+### Core (Most Projects)
 
 ```bash
 npm install jaypie
 ```
 
-Optional peer dependencies:
+### With CDK
 
 ```bash
-npm install @jaypie/llm        # LLM provider integrations
-npm install @jaypie/mongoose   # MongoDB utilities
-npm install @jaypie/constructs # CDK constructs
+npm install jaypie @jaypie/constructs aws-cdk-lib constructs
 ```
 
-## Handler Pattern
+### With LLM
 
-### Basic Usage
+```bash
+npm install jaypie @jaypie/llm
+```
+
+### Development
+
+```bash
+npm install -D @jaypie/testkit @jaypie/eslint @jaypie/repokit vitest
+```
+
+## Quick Reference
+
+### Handler Pattern
 
 ```typescript
-import { expressHandler, log } from "jaypie";
+import { expressHandler, log, NotFoundError } from "jaypie";
 
 export default expressHandler(
   async (req, res) => {
-    log.info("Processing");
-    return { data: "result" };
+    log.trace("[getUser] fetching");
+    const user = await db.users.findById(req.params.id);
+    if (!user) throw NotFoundError();
+    return { data: user };
   },
   {
-    secrets: ["API_KEY"],
-    validate: [(req) => req.body.id],
-    setup: [() => initDb()],
-    teardown: [() => closeDb()],
+    name: "getUser",
+    secrets: ["MONGODB_URI"],
+    validate: [(req) => req.params.id],
+    setup: [async () => await connectDb()],
+    teardown: [async () => await disconnectDb()],
   }
 );
 ```
 
 ### Handler Options
 
-| Option | Type | Description |
-|--------|------|-------------|
-| `secrets` | `string[]` | AWS Secrets Manager names to load into `process.env` |
-| `validate` | `Function[]` | Run before handler. Throw or return false to reject. |
-| `setup` | `Function[]` | Run after validation, before handler. |
-| `teardown` | `Function[]` | Always runs, even on error. |
-| `unavailable` | `boolean` | Return 503 immediately. |
-| `name` | `string` | Handler name for logging. |
-| `throw` | `boolean` | Re-throw errors instead of returning error response. |
+| Option | Type | Purpose |
+|--------|------|---------|
+| `name` | `string` | Handler name for logging |
+| `secrets` | `string[]` | Load from AWS Secrets Manager |
+| `validate` | `Function[]` | Validation (throw or return false) |
+| `setup` | `Function[]` | Run before handler |
+| `teardown` | `Function[]` | Run after handler (always) |
 
-### Lifecycle Flow
+### Response Mapping
 
-Handlers execute in this sequence:
+| Return | Status |
+|--------|--------|
+| `object` | 200 |
+| `null`/`undefined` | 204 |
+| `true` | 201 |
+| Thrown error | Error status |
 
-1. **Logger initialization** - Re-init logger, tag with `invoke` and `handler` name
-2. **Secrets loading** - If `secrets` provided, load via `loadEnvSecrets`
-3. **Validate** - Run validation functions (throw or return false to reject)
-4. **Setup** - Run setup functions
-5. **Handler** - Execute main handler logic
-6. **Teardown** - Run teardown functions (always runs, even on error)
-7. **Response** - Return result or error body
+## Error Classes
 
-### Streaming Handlers
-
-For Server-Sent Events (SSE) responses:
-
-```typescript
-import { lambdaStreamHandler } from "jaypie";
-
-export const handler = awslambda.streamifyResponse(
-  lambdaStreamHandler(async (event, context) => {
-    context.responseStream.write("event: data\ndata: {}\n\n");
-  }, {
-    contentType: "text/event-stream",
-  })
-);
-```
-
-Express streaming:
-
-```typescript
-import { expressStreamHandler } from "jaypie";
-
-export default expressStreamHandler(async (req, res, context) => {
-  context.responseStream.write("event: message\ndata: hello\n\n");
-});
-```
-
-## Error Handling
-
-**Never throw vanilla `Error`. Always use Jaypie error classes.**
-
-### Usage
-
-```typescript
-import { BadRequestError, NotFoundError, isJaypieError } from "jaypie";
-
-// Throws 400 with JSON:API body - both forms work
-throw BadRequestError("Missing required field");
-throw new BadRequestError("Missing required field");
-
-// Throws 404
-throw NotFoundError("User not found");
-
-// Type guard for safe property access
-if (isJaypieError(error)) {
-  return res.status(error.status).json(error.body());
-}
-```
-
-### Error Classes
-
-| Error | Status | Use Case |
+| Class | Status | Use When |
 |-------|--------|----------|
 | `BadRequestError` | 400 | Invalid input |
-| `UnauthorizedError` | 401 | Authentication required |
-| `ForbiddenError` | 403 | Permission denied |
-| `NotFoundError` | 404 | Resource not found |
-| `MethodNotAllowedError` | 405 | HTTP method not supported |
-| `GoneError` | 410 | Resource no longer available |
-| `TeapotError` | 418 | Easter egg |
-| `TooManyRequestsError` | 429 | Rate limited |
-| `InternalError` | 500 | Generic server error |
-| `ConfigurationError` | 500 | Application misconfiguration |
-| `NotImplementedError` | 400 | Feature not implemented |
-| `BadGatewayError` | 502 | Upstream service error |
-| `UnavailableError` | 503 | Service unavailable |
-| `GatewayTimeoutError` | 504 | Upstream timeout |
-| `RejectedError` | 403 | Request rejected before processing |
-
-### Dynamic Error Creation
+| `UnauthorizedError` | 401 | No/invalid auth |
+| `ForbiddenError` | 403 | No permission |
+| `NotFoundError` | 404 | Resource missing |
+| `InternalError` | 500 | Server error |
+| `ConfigurationError` | 500 | Missing config |
+| `BadGatewayError` | 502 | External service error |
+| `UnavailableError` | 503 | Service down |
 
 ```typescript
-import { jaypieErrorFromStatus } from "jaypie";
+import { BadRequestError, NotFoundError } from "jaypie";
 
-const error = jaypieErrorFromStatus(404, "User not found");
+throw BadRequestError("Email required");
+throw NotFoundError();
+```
+
+## Logging
+
+| Level | Use Case |
+|-------|----------|
+| `trace` | Happy path |
+| `debug` | Unexpected but handled |
+| `info` | Significant events (rare) |
+| `warn` | Concerning situations |
+| `error` | Failures |
+
+```typescript
+import { log } from "jaypie";
+
+log.trace("[functionName] starting");
+log.var({ userId: "123" });  // Single key
+log.debug("Cache miss");
+log.error("Service failed");
 ```
 
 ## Utilities
@@ -148,13 +133,10 @@ const error = jaypieErrorFromStatus(404, "User not found");
 ```typescript
 import { force } from "jaypie";
 
-// Parse with safe defaults
-const count = force.number(process.env.COUNT);      // 0 if invalid
-const enabled = force.boolean("false");             // false
-const items = force.array(singleItem);              // [singleItem]
-const config = force.object(maybeConfig, "data");   // { data: maybeConfig } or {}
-const name = force.string(value, "default");        // "default" if undefined
-const positive = force.positive(value);             // 0 if negative
+force.boolean("true");      // true
+force.number("42");         // 42
+force.array("item");        // ["item"]
+force.string(null, "default"); // "default"
 ```
 
 ### Environment Checks
@@ -162,17 +144,9 @@ const positive = force.positive(value);             // 0 if negative
 ```typescript
 import { isProductionEnv, isLocalEnv, isNodeTestEnv } from "jaypie";
 
-if (isProductionEnv()) {
-  // PROJECT_ENV === "production" OR PROJECT_PRODUCTION === "true"
-}
-
-if (isLocalEnv()) {
-  // Development/local environment
-}
-
-if (isNodeTestEnv()) {
-  // NODE_ENV === "test"
-}
+if (isProductionEnv()) { /* production */ }
+if (isLocalEnv()) { /* local dev */ }
+if (isNodeTestEnv()) { /* testing */ }
 ```
 
 ### Other Utilities
@@ -180,149 +154,29 @@ if (isNodeTestEnv()) {
 ```typescript
 import { uuid, sleep, cloneDeep } from "jaypie";
 
-const id = uuid();                    // UUID v4
-await sleep(1000);                    // Promise-based delay (ms)
-const copy = cloneDeep(original);     // Deep clone
+const id = uuid();
+await sleep(1000);
+const copy = cloneDeep(original);
 ```
 
-## Logging
+## Environment Variables
 
-### Basic Usage
+| Variable | Purpose |
+|----------|---------|
+| `PROJECT_ENV` | Environment: local, sandbox, production |
+| `PROJECT_KEY` | Project identifier |
+| `LOG_LEVEL` | trace, debug, info, warn, error |
+| `SECRET_*` | Secret references (fetched from Secrets Manager) |
+| `CDK_ENV_QUEUE_URL` | Default SQS queue |
+| `CDK_ENV_BUCKET` | Default S3 bucket |
 
-```typescript
-import { log } from "jaypie";
+## Testing Setup
 
-log.trace("Verbose tracing");
-log.debug("Debug output");
-log.info("Informational");
-log.warn("Warning");
-log.error("Error");
-log.fatal("Critical error");
-```
-
-### Variable Logging
-
-Structured logging for key-value pairs:
+**vitest.config.ts:**
 
 ```typescript
-log.debug.var({ userId: "123" });
-// Output: { log: "debug", message: "123", var: "userId", data: "123", dataType: "string" }
-```
+import { defineConfig } from "vitest/config";
 
-### Request Tagging
-
-```typescript
-// Tag all subsequent logs
-log.tag({ requestId: "abc-123" });
-
-// Create child logger with additional context
-const userLog = log.with({ userId: "456" });
-userLog.info("User action");
-```
-
-### Lambda Initialization
-
-Reset logger between Lambda invocations:
-
-```typescript
-log.init();  // Clears tags, resets state
-```
-
-## AWS Integration
-
-### Secrets Resolution
-
-The `getEnvSecret` function checks environment variables in order:
-
-1. `SECRET_{name}` - Explicit secret reference (fetches from Secrets Manager)
-2. `{name}_SECRET` - Alternative secret reference (fetches from Secrets Manager)
-3. `{name}` - Direct value (returns as-is)
-
-```typescript
-import { getEnvSecret, getSecret, loadEnvSecrets } from "jaypie";
-
-// Resolves using pattern above
-const apiKey = await getEnvSecret("API_KEY");
-
-// Direct fetch by AWS secret name
-const dbUri = await getSecret("prod/mongodb-uri");
-
-// Load multiple secrets into process.env
-await loadEnvSecrets("API_KEY", "DB_PASSWORD");
-```
-
-### SQS Messaging
-
-```typescript
-import { sendMessage, getMessages, getSingletonMessage } from "jaypie";
-
-// Send message (uses CDK_ENV_QUEUE_URL by default)
-await sendMessage({ userId: "123", action: "created" });
-
-// Parse SQS/SNS event into message bodies
-const messages = getMessages(event);
-
-// Get exactly one message or throw BadGatewayError
-const message = getSingletonMessage(event);
-```
-
-## LLM Integration
-
-Requires `@jaypie/llm` peer dependency.
-
-### Basic Usage
-
-```typescript
-import Llm from "@jaypie/llm";
-
-// Auto-detect provider from model
-const response = await Llm.operate("Hello", { model: "claude-sonnet-4" });
-
-// Or instantiate with provider
-const llm = new Llm("openai", { model: "gpt-4o" });
-const result = await llm.operate("What is 2+2?");
-```
-
-### With Tools
-
-```typescript
-import Llm, { Toolkit } from "@jaypie/llm";
-
-const toolkit = new Toolkit([
-  {
-    name: "get_weather",
-    description: "Get current weather for a city",
-    parameters: {
-      type: "object",
-      properties: { city: { type: "string" } },
-      required: ["city"],
-    },
-    call: async ({ city }) => `Weather in ${city}: sunny, 72F`,
-  },
-]);
-
-const response = await Llm.operate("What's the weather in NYC?", {
-  model: "claude-sonnet-4",
-  tools: toolkit,
-});
-```
-
-### Streaming
-
-```typescript
-for await (const chunk of Llm.stream("Tell me a story")) {
-  process.stdout.write(chunk.content || "");
-}
-```
-
-## Testing
-
-Requires `@jaypie/testkit` dev dependency.
-
-### Setup
-
-```typescript
-// vitest.config.ts
 export default defineConfig({
   test: {
     setupFiles: ["@jaypie/testkit/testSetup"],
@@ -330,183 +184,65 @@ export default defineConfig({
 });
 ```
 
-Or manually extend matchers:
-
-```typescript
-import { expect } from "vitest";
-import { matchers } from "@jaypie/testkit";
-
-expect.extend(matchers);
-```
-
-### Mocking Jaypie
+**Mock Jaypie:**
 
 ```typescript
 import { vi } from "vitest";
 
-// Mock entire jaypie package
 vi.mock("jaypie", async () => {
   const testkit = await import("@jaypie/testkit/mock");
   return testkit;
 });
-
-// Or mock specific packages
-vi.mock("@jaypie/express", async () => {
-  const testkit = await import("@jaypie/testkit/mock");
-  return { expressHandler: testkit.expressHandler };
-});
 ```
 
-### Custom Matchers
+**Custom Matchers:**
 
 ```typescript
-// Error matchers
-expect(() => fn()).toThrowJaypieError();
 expect(() => fn()).toThrowBadRequestError();
 expect(() => fn()).toThrowNotFoundError();
-
-// Type matchers
-expect(MyClass).toBeClass();
-expect(mockFn).toBeMockFunction();
-
-// Format matchers
 expect(value).toMatchUuid();
-expect(value).toMatchJwt();
-expect(value).toMatchBase64();
-expect(value).toMatchMongoId();
-
-// Schema matchers
-import { jsonApiSchema } from "@jaypie/testkit";
-expect(response).toMatchSchema(jsonApiSchema);
-```
-
-### Log Spying
-
-```typescript
-import { log } from "jaypie";
-import { spyLog, restoreLog } from "@jaypie/testkit";
-
-beforeEach(() => {
-  spyLog(log);
-});
-
-afterEach(() => {
-  restoreLog(log);
-});
-
-it("logs correctly", () => {
-  myFunction();
-  expect(log.info).toHaveBeenCalledWith("expected message");
-});
 ```
 
 ## CDK Constructs
 
-Requires `@jaypie/constructs` dependency.
-
 ```typescript
-import { JaypieLambda, JaypieDistribution } from "@jaypie/constructs";
+import { JaypieLambda, JaypieApiGateway } from "@jaypie/constructs";
 
-const fn = new JaypieLambda(this, "Api", {
-  code: "dist",
-  handler: "index.handler",
-  secrets: ["MONGODB_URI"],
+const api = new JaypieLambda(this, "Api", {
+  code: "../api/dist",
+  handler: "handler.handler",
+  secrets: [mongoSecret],
 });
 
-new JaypieDistribution(this, "Dist", {
-  handler: fn,
+new JaypieApiGateway(this, "Gateway", {
+  handler: api,
   host: "api.example.com",
   zone: "example.com",
 });
 ```
 
-Constructs apply Datadog layers, tags, and log forwarding automatically.
-
-## Code Guidelines
-
-### Function Parameters
-
-Use object parameters:
+## LLM Integration
 
 ```typescript
-// Preferred: object parameters
-function createUser({ name, email, role }) { ... }
+import Llm from "@jaypie/llm";
 
-// Allowed: single required + config object
-function fetchUser(userId, { includeProfile, cache } = {}) { ... }
+const response = await Llm.operate("What is 2+2?", {
+  model: "claude-sonnet-4",
+});
 
-// Never: ordered parameters
-function badFunction(name, email, role, active) { ... }  // Don't do this
+// Streaming
+for await (const chunk of Llm.stream("Tell me a story")) {
+  process.stdout.write(chunk.content || "");
+}
 ```
 
-### Alphabetization
+## Next Steps
 
-Alphabetize imports, object keys, and any lists where order doesn't matter:
-
-```typescript
-import { BadRequestError, log, NotFoundError, uuid } from "jaypie";
-
-const config = {
-  apiKey: "...",
-  database: "...",
-  timeout: 5000,
-};
-```
-
-## Packages
-
-### Core
-
-| Package | Exports |
-|---------|---------|
-| `jaypie` | Re-exports aws, datadog, errors, express, kit, lambda, logger |
-| `@jaypie/kit` | `force`, `uuid`, `sleep`, `jaypieHandler`, `JAYPIE`, `HTTP` |
-| `@jaypie/errors` | Error classes, `isJaypieError`, `jaypieErrorFromStatus` |
-| `@jaypie/logger` | `log` with trace ID support |
-
-### Handlers
-
-| Package | Exports |
-|---------|---------|
-| `@jaypie/express` | `expressHandler`, `expressStreamHandler`, `cors` |
-| `@jaypie/lambda` | `lambdaHandler`, `lambdaStreamHandler` |
-
-### Infrastructure
-
-| Package | Exports |
-|---------|---------|
-| `@jaypie/constructs` | `JaypieLambda`, `JaypieDistribution`, `JaypieEnvSecret`, `CDK` |
-
-### Integrations
-
-| Package | Exports |
-|---------|---------|
-| `@jaypie/aws` | `getSecret`, `getEnvSecret`, `sendMessage`, `getMessages`, `loadEnvSecrets` |
-| `@jaypie/datadog` | `submitMetric`, `DATADOG` |
-| `@jaypie/llm` | `Llm`, `Toolkit`, providers: Anthropic, OpenAI, Gemini, OpenRouter |
-| `@jaypie/mongoose` | `connectMongo`, `disconnect` |
-
-### Testing
-
-| Package | Exports |
-|---------|---------|
-| `@jaypie/testkit` | Mock factories, custom matchers, `spyLog`, `restoreLog` |
-
-## Environment Variables
-
-| Variable | Purpose |
-|----------|---------|
-| `PROJECT_ENV` | Environment: local, sandbox, production |
-| `PROJECT_KEY` | Project identifier for logging |
-| `LOG_LEVEL` | trace, debug, info, warn, error |
-| `LOG_FORMAT` | json, text |
-| `SECRET_*` | Pattern for secrets: `SECRET_MONGODB_URI` fetches from Secrets Manager |
-| `CDK_ENV_QUEUE_URL` | Default SQS queue URL |
-| `ANTHROPIC_API_KEY` | Anthropic API key for LLM |
-| `OPENAI_API_KEY` | OpenAI API key for LLM |
-
-## Links
-
-- [API Reference](/docs/api/kit)
-- [GitHub](https://github.com/finlaysonstudio/jaypie)
-- [npm](https://www.npmjs.com/package/jaypie)
+| Goal | Page |
+|------|------|
+| Understand handlers | [Handler Lifecycle](/docs/core/handler-lifecycle) |
+| Build Express API | [Express on Lambda](/docs/guides/express-lambda) |
+| Set up CDK | [CDK Infrastructure](/docs/guides/cdk-infrastructure) |
+| Write tests | [Testing](/docs/guides/testing) |
+| Add LLM | [LLM Integration](/docs/guides/llm-integration) |
+| CI/CD setup | [CI/CD](/docs/guides/cicd) |

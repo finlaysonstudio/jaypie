@@ -146,12 +146,16 @@ const config: Config = {
           title: "Documentation",
           items: [
             {
-              label: "Getting Started",
+              label: "Introduction",
               to: "/docs/intro",
             },
             {
-              label: "API Reference",
-              to: "/docs/api/kit",
+              label: "Core Concepts",
+              to: "/docs/core/handler-lifecycle",
+            },
+            {
+              label: "How-To Guides",
+              to: "/docs/guides/express-lambda",
             },
           ],
         },
@@ -160,19 +164,19 @@ const config: Config = {
           items: [
             {
               label: "jaypie",
-              to: "/docs/api/kit",
+              to: "/docs/packages/jaypie",
             },
             {
               label: "@jaypie/llm",
-              to: "/docs/api/llm",
+              to: "/docs/packages/llm",
             },
             {
               label: "@jaypie/constructs",
-              to: "/docs/api/constructs",
+              to: "/docs/packages/constructs",
             },
             {
               label: "@jaypie/testkit",
-              to: "/docs/api/testkit",
+              to: "/docs/packages/testkit",
             },
           ],
         },

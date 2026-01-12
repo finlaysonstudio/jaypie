@@ -21,8 +21,8 @@ function Hero(): React.ReactElement {
           <Link className={styles.primaryButton} to="/docs/intro">
             Documentation
           </Link>
-          <Link className={styles.secondaryButton} to="/docs/api/kit">
-            API Reference
+          <Link className={styles.secondaryButton} to="/docs/packages/jaypie">
+            Packages
           </Link>
         </div>
       </div>
@@ -132,102 +132,87 @@ function PackageRow({
 function Packages(): React.ReactElement {
   const corePackages: PackageRowProps[] = [
     {
-      href: "/docs/api/kit",
+      href: "/docs/packages/jaypie",
       name: "jaypie",
-      purpose: "Main package: re-exports aws, errors, express, kit, lambda, logger",
+      purpose: "Main package: re-exports express, lambda, errors, kit, logger",
     },
     {
-      href: "/docs/api/constructs",
-      name: "@jaypie/constructs",
-      purpose: "CDK constructs with Datadog integration",
-    },
-    {
-      href: "/docs/api/errors",
-      name: "@jaypie/errors",
-      purpose: "JSON:API error classes",
-    },
-    {
-      href: "/docs/api/eslint",
-      name: "@jaypie/eslint",
-      purpose: "ESLint configuration",
-    },
-    {
-      href: "/docs/api/express",
+      href: "/docs/packages/express",
       name: "@jaypie/express",
       purpose: "Express handler wrapper",
     },
     {
-      href: "/docs/api/kit",
-      name: "@jaypie/kit",
-      purpose: "Utilities: force, uuid, constants",
-    },
-    {
-      href: "/docs/api/lambda",
+      href: "/docs/packages/lambda",
       name: "@jaypie/lambda",
       purpose: "Lambda handler wrapper",
     },
     {
-      href: "/docs/api/llm",
-      name: "@jaypie/llm",
-      purpose: "LLM provider abstraction",
+      href: "/docs/packages/errors",
+      name: "@jaypie/errors",
+      purpose: "JSON:API error classes",
     },
     {
-      href: "/docs/api/logger",
+      href: "/docs/packages/logger",
       name: "@jaypie/logger",
       purpose: "Structured logging",
     },
     {
-      href: "/docs/api/repokit",
-      name: "@jaypie/repokit",
-      purpose: "Repository tooling",
+      href: "/docs/packages/kit",
+      name: "@jaypie/kit",
+      purpose: "Utilities: force, uuid, sleep",
     },
     {
-      href: "/docs/api/testkit",
+      href: "/docs/packages/constructs",
+      name: "@jaypie/constructs",
+      purpose: "CDK constructs with Datadog integration",
+    },
+    {
+      href: "/docs/packages/llm",
+      name: "@jaypie/llm",
+      purpose: "LLM provider abstraction",
+    },
+    {
+      href: "/docs/packages/testkit",
       name: "@jaypie/testkit",
       purpose: "Mocks and matchers",
+    },
+    {
+      href: "/docs/packages/eslint",
+      name: "@jaypie/eslint",
+      purpose: "ESLint configuration",
+    },
+    {
+      href: "/docs/packages/repokit",
+      name: "@jaypie/repokit",
+      purpose: "Repository tooling",
     },
   ];
 
   const experimentalPackages: PackageRowProps[] = [
     {
-      href: "/docs/api/aws",
-      name: "@jaypie/aws",
-      purpose: "AWS SDK utilities",
-    },
-    {
-      href: "/docs/api/datadog",
-      name: "@jaypie/datadog",
-      purpose: "Datadog metrics submission",
-    },
-    {
-      href: "/docs/intro",
+      href: "/docs/experimental/dynamodb",
       name: "@jaypie/dynamodb",
-      purpose: "DynamoDB utilities and patterns",
+      purpose: "DynamoDB single-table patterns",
     },
     {
-      href: "/docs/intro",
+      href: "/docs/experimental/fabricator",
       name: "@jaypie/fabricator",
       purpose: "Test data generation",
     },
     {
-      href: "/docs/api/mcp",
+      href: "/docs/experimental/mcp",
       name: "@jaypie/mcp",
       purpose: "Model Context Protocol server",
     },
     {
-      href: "/docs/api/mongoose",
-      name: "@jaypie/mongoose",
-      purpose: "MongoDB connection utilities",
-    },
-    {
-      href: "/docs/api/textract",
+      href: "/docs/experimental/textract",
       name: "@jaypie/textract",
-      purpose: "AWS Textract document processing",
+      purpose: "AWS Textract utilities",
     },
     {
-      href: "/docs/intro",
+      href: "/docs/experimental/vocabulary",
       name: "@jaypie/vocabulary",
-      purpose: "Vocabulary and text utilities",
+      purpose: "Service handler adapters",
     },
   ];
 
