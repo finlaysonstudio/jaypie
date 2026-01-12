@@ -3,8 +3,9 @@ import type * as Preset from "@docusaurus/preset-classic";
 import { themes as prismThemes } from "prism-react-renderer";
 
 const config: Config = {
-  title: "Jaypie",
-  tagline: "Event-driven TypeScript for AWS",
+  title: "Jaypie is TypeScript AWS/CDK + Datadog Application Patterns",
+  tagline:
+    "Complete-stack approach to multi-environment cloud application patterns. Aligns infrastructure, execution, and observability.",
   favicon: "img/favicon.ico",
 
   url: "https://jaypie.finlayson.studio",
@@ -25,6 +26,74 @@ const config: Config = {
     defaultLocale: "en",
     locales: ["en"],
   },
+
+  headTags: [
+    {
+      tagName: "meta",
+      attributes: {
+        property: "og:title",
+        content: "Jaypie is TypeScript AWS/CDK + Datadog Application Patterns",
+      },
+    },
+    {
+      tagName: "meta",
+      attributes: {
+        property: "og:description",
+        content:
+          "Complete-stack approach to multi-environment cloud application patterns. Aligns infrastructure, execution, and observability.",
+      },
+    },
+    {
+      tagName: "meta",
+      attributes: {
+        property: "og:type",
+        content: "website",
+      },
+    },
+    {
+      tagName: "meta",
+      attributes: {
+        property: "og:url",
+        content: "https://jaypie.finlayson.studio",
+      },
+    },
+    {
+      tagName: "meta",
+      attributes: {
+        property: "og:image",
+        content: "https://jaypie.finlayson.studio/img/jaypie-social-card.jpg",
+      },
+    },
+    {
+      tagName: "meta",
+      attributes: {
+        name: "twitter:card",
+        content: "summary_large_image",
+      },
+    },
+    {
+      tagName: "meta",
+      attributes: {
+        name: "twitter:title",
+        content: "Jaypie is TypeScript AWS/CDK + Datadog Application Patterns",
+      },
+    },
+    {
+      tagName: "meta",
+      attributes: {
+        name: "twitter:description",
+        content:
+          "Complete-stack approach to multi-environment cloud application patterns. Aligns infrastructure, execution, and observability.",
+      },
+    },
+    {
+      tagName: "meta",
+      attributes: {
+        name: "twitter:image",
+        content: "https://jaypie.finlayson.studio/img/jaypie-social-card.jpg",
+      },
+    },
+  ],
 
   presets: [
     [

@@ -557,7 +557,8 @@
 
   .capabilities,
   .packages,
-  .philosophy {
+  .philosophy,
+  .patterns {
     padding: 5rem 1.5rem;
   }
 
@@ -572,4 +573,169 @@
   .packageCard {
     padding: 1.5rem;
   }
+}
+
+/* ============================================
+   PACKAGE TABLES (New Style)
+   ============================================ */
+
+.packageTables {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3rem;
+}
+
+@media (max-width: 900px) {
+  .packageTables {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+}
+
+.packageTable {
+  background: var(--ifm-background-color);
+  border-radius: 0.5rem;
+  padding: 1.5rem;
+}
+
+.packageTableTitle {
+  font-family: var(--jp-font-display);
+  font-size: 1.1rem;
+  font-weight: 500;
+  margin: 0 0 0.5rem;
+  color: var(--ifm-font-color-base);
+}
+
+.packageTableNote {
+  font-family: var(--jp-font-body);
+  font-size: 0.8rem;
+  color: var(--ifm-font-color-secondary);
+  margin: 0 0 1rem;
+  font-style: italic;
+}
+
+.packageTableRows {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.packageRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  padding: 0.6rem 0;
+  text-decoration: none;
+  border-bottom: 1px solid var(--jp-warm-200);
+  transition: all 150ms ease;
+  cursor: pointer;
+}
+
+[data-theme='dark'] .packageRow {
+  border-bottom-color: var(--jp-warm-800);
+}
+
+.packageRow:last-child {
+  border-bottom: none;
+}
+
+.packageRow:hover {
+  text-decoration: none;
+}
+
+.packageRow:hover .packageRowName {
+  color: var(--jp-accent);
+}
+
+.packageRowName {
+  font-family: var(--jp-font-mono);
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--ifm-font-color-base);
+  white-space: nowrap;
+  transition: color 150ms ease;
+}
+
+.packageRowPurpose {
+  font-family: var(--jp-font-body);
+  font-size: 0.85rem;
+  color: var(--ifm-font-color-secondary);
+  text-align: right;
+}
+
+/* ============================================
+   PATTERNS SECTION
+   ============================================ */
+
+.patterns {
+  padding: 8rem 2rem;
+  background: var(--ifm-background-color);
+}
+
+.patternsInner {
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.patternsHeader {
+  text-align: center;
+  margin-bottom: 3rem;
+}
+
+.patternsGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.5rem;
+}
+
+@media (max-width: 768px) {
+  .patternsGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.patternBlock {
+  background: var(--ifm-background-surface-color);
+  border-radius: 0.5rem;
+  padding: 1.5rem;
+}
+
+.patternTitle {
+  font-family: var(--jp-font-display);
+  font-size: 0.95rem;
+  font-weight: 500;
+  margin: 0 0 1rem;
+  color: var(--ifm-font-color-base);
+}
+
+.patternCode {
+  margin: 0;
+  padding: 1rem;
+  background: var(--ifm-background-color);
+  border-radius: 0.375rem;
+  overflow-x: auto;
+}
+
+.patternCode code {
+  font-family: var(--jp-font-mono);
+  font-size: 0.8rem;
+  line-height: 1.6;
+  color: var(--ifm-font-color-base);
+  background: transparent;
+  padding: 0;
+  white-space: pre;
+}
+
+/* ============================================
+   FOOTER TEXT
+   ============================================ */
+
+.footerText {
+  font-family: var(--jp-font-body);
+  font-size: 0.95rem;
+  font-weight: 400;
+  color: var(--ifm-font-color-secondary);
+  margin: 0;
+  letter-spacing: 0.02em;
 }

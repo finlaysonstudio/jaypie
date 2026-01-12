@@ -11,18 +11,18 @@ function Hero(): React.ReactElement {
         <div className={styles.heroOrb2} />
       </div>
       <div className={styles.heroContent}>
-        <p className={styles.heroEyebrow}>Event-Driven TypeScript</p>
+        <p className={styles.heroEyebrow}>AWS/CDK · Datadog · TypeScript</p>
         <h1 className={styles.heroTitle}>Jaypie</h1>
         <p className={styles.heroSubtitle}>
-          A complete stack approach to multi-environment cloud applications.
-          Lifecycle management, secrets, queues, and infrastructure—unified.
+          Complete-stack approach to multi-environment cloud application
+          patterns. Aligns infrastructure, execution, and observability.
         </p>
         <div className={styles.heroActions}>
           <Link className={styles.primaryButton} to="/docs/intro">
-            Get Started
+            Documentation
           </Link>
           <Link className={styles.secondaryButton} to="/docs/api/kit">
-            Explore API
+            API Reference
           </Link>
         </div>
       </div>
@@ -35,7 +35,10 @@ interface CapabilityProps {
   title: string;
 }
 
-function Capability({ description, title }: CapabilityProps): React.ReactElement {
+function Capability({
+  description,
+  title,
+}: CapabilityProps): React.ReactElement {
   return (
     <div className={styles.capability}>
       <h3 className={styles.capabilityTitle}>{title}</h3>
@@ -48,23 +51,23 @@ function Capabilities(): React.ReactElement {
   const capabilities: CapabilityProps[] = [
     {
       description:
-        "Single handler function manages validate, setup, execute, and teardown phases for Lambda and Express.",
-      title: "Unified Lifecycle",
+        "lambdaHandler and expressHandler share the same lifecycle: validate, setup, execute, teardown. Secrets loaded automatically. Errors formatted as JSON:API.",
+      title: "Handler Lifecycle",
     },
     {
       description:
-        "Pre-built CDK constructs encode production patterns. S3 to SQS to Lambda. API Gateway to Express.",
-      title: "Infrastructure as Code",
+        "CDK constructs (JaypieLambda, JaypieDistribution) and runtime packages share environment variables, secrets patterns, and tagging conventions.",
+      title: "Infrastructure + Runtime",
     },
     {
       description:
-        "Native support for AI interactions with conversation history, tool calling, and multi-turn reasoning.",
-      title: "LLM-First Design",
+        "Request-scoped logging with trace IDs. Datadog Lambda layers and log forwarding configured via constructs. Metrics submission via submitMetric().",
+      title: "Observability",
     },
     {
       description:
-        "Complete test isolation with mocks for external services. Deterministic, fast, reliable.",
-      title: "Comprehensive Testing",
+        "@jaypie/testkit provides mock factories for all packages. Custom matchers: toThrowJaypieError, toMatchUuid, toBeClass.",
+      title: "Testing",
     },
   ];
 
@@ -72,9 +75,9 @@ function Capabilities(): React.ReactElement {
     <section className={styles.capabilities}>
       <div className={styles.capabilitiesInner}>
         <div className={styles.capabilitiesHeader}>
-          <h2 className={styles.sectionTitle}>Capabilities</h2>
+          <h2 className={styles.sectionTitle}>What Jaypie Does</h2>
           <p className={styles.sectionSubtitle}>
-            Everything you need for serverless TypeScript applications on AWS.
+            Shared patterns across infrastructure, execution, and testing.
           </p>
         </div>
         <div className={styles.capabilitiesGrid}>
@@ -92,9 +95,9 @@ function Install(): React.ReactElement {
     <section className={styles.install}>
       <div className={styles.installInner}>
         <div className={styles.installContent}>
-          <h2 className={styles.installTitle}>Begin</h2>
+          <h2 className={styles.installTitle}>Install</h2>
           <p className={styles.installDescription}>
-            Install the unified package or individual modules as needed.
+            Main package or individual @jaypie/* packages.
           </p>
         </div>
         <div className={styles.installCode}>
@@ -107,53 +110,124 @@ function Install(): React.ReactElement {
   );
 }
 
-interface PackageCardProps {
-  description: string;
+interface PackageRowProps {
   href: string;
   name: string;
+  purpose: string;
 }
 
-function PackageCard({ description, href, name }: PackageCardProps): React.ReactElement {
+function PackageRow({
+  href,
+  name,
+  purpose,
+}: PackageRowProps): React.ReactElement {
   return (
-    <Link to={href} className={styles.packageCard}>
-      <span className={styles.packageName}>{name}</span>
-      <span className={styles.packageDescription}>{description}</span>
-      <span className={styles.packageArrow}>→</span>
+    <Link to={href} className={styles.packageRow}>
+      <span className={styles.packageRowName}>{name}</span>
+      <span className={styles.packageRowPurpose}>{purpose}</span>
     </Link>
   );
 }
 
 function Packages(): React.ReactElement {
-  const packages: PackageCardProps[] = [
+  const corePackages: PackageRowProps[] = [
     {
-      description: "Handler lifecycle, logging, secrets, queues",
       href: "/docs/api/kit",
       name: "jaypie",
+      purpose: "Main package: re-exports aws, errors, express, kit, lambda, logger",
     },
     {
-      description: "CDK constructs for AWS infrastructure",
       href: "/docs/api/constructs",
       name: "@jaypie/constructs",
+      purpose: "CDK constructs with Datadog integration",
     },
     {
-      description: "LLM provider interface",
-      href: "/docs/api/llm",
-      name: "@jaypie/llm",
+      href: "/docs/api/errors",
+      name: "@jaypie/errors",
+      purpose: "JSON:API error classes",
     },
     {
-      description: "Express.js handler utilities",
+      href: "/docs/api/eslint",
+      name: "@jaypie/eslint",
+      purpose: "ESLint configuration",
+    },
+    {
       href: "/docs/api/express",
       name: "@jaypie/express",
+      purpose: "Express handler wrapper",
     },
     {
-      description: "Lambda handler utilities",
+      href: "/docs/api/kit",
+      name: "@jaypie/kit",
+      purpose: "Utilities: force, uuid, constants",
+    },
+    {
       href: "/docs/api/lambda",
       name: "@jaypie/lambda",
+      purpose: "Lambda handler wrapper",
     },
     {
-      description: "Testing mocks and utilities",
+      href: "/docs/api/llm",
+      name: "@jaypie/llm",
+      purpose: "LLM provider abstraction",
+    },
+    {
+      href: "/docs/api/logger",
+      name: "@jaypie/logger",
+      purpose: "Structured logging",
+    },
+    {
+      href: "/docs/api/repokit",
+      name: "@jaypie/repokit",
+      purpose: "Repository tooling",
+    },
+    {
       href: "/docs/api/testkit",
       name: "@jaypie/testkit",
+      purpose: "Mocks and matchers",
+    },
+  ];
+
+  const experimentalPackages: PackageRowProps[] = [
+    {
+      href: "/docs/api/aws",
+      name: "@jaypie/aws",
+      purpose: "AWS SDK utilities",
+    },
+    {
+      href: "/docs/api/datadog",
+      name: "@jaypie/datadog",
+      purpose: "Datadog metrics submission",
+    },
+    {
+      href: "/docs/intro",
+      name: "@jaypie/dynamodb",
+      purpose: "DynamoDB utilities and patterns",
+    },
+    {
+      href: "/docs/intro",
+      name: "@jaypie/fabricator",
+      purpose: "Test data generation",
+    },
+    {
+      href: "/docs/api/mcp",
+      name: "@jaypie/mcp",
+      purpose: "Model Context Protocol server",
+    },
+    {
+      href: "/docs/api/mongoose",
+      name: "@jaypie/mongoose",
+      purpose: "MongoDB connection utilities",
+    },
+    {
+      href: "/docs/api/textract",
+      name: "@jaypie/textract",
+      purpose: "AWS Textract document processing",
+    },
+    {
+      href: "/docs/intro",
+      name: "@jaypie/vocabulary",
+      purpose: "Vocabulary and text utilities",
     },
   ];
 
@@ -162,35 +236,92 @@ function Packages(): React.ReactElement {
       <div className={styles.packagesInner}>
         <div className={styles.packagesHeader}>
           <h2 className={styles.sectionTitle}>Packages</h2>
-          <p className={styles.sectionSubtitle}>
-            Modular by design. Use what you need.
-          </p>
         </div>
-        <div className={styles.packagesGrid}>
-          {packages.map((pkg, idx) => (
-            <PackageCard key={idx} {...pkg} />
-          ))}
-        </div>
-        <div className={styles.packagesMore}>
-          <Link to="/docs/intro" className={styles.textLink}>
-            View all packages →
-          </Link>
+        <div className={styles.packageTables}>
+          <div className={styles.packageTable}>
+            <h3 className={styles.packageTableTitle}>Core</h3>
+            <div className={styles.packageTableRows}>
+              {corePackages.map((pkg, idx) => (
+                <PackageRow key={idx} {...pkg} />
+              ))}
+            </div>
+          </div>
+          <div className={styles.packageTable}>
+            <h3 className={styles.packageTableTitle}>Experimental</h3>
+            <p className={styles.packageTableNote}>APIs may change.</p>
+            <div className={styles.packageTableRows}>
+              {experimentalPackages.map((pkg, idx) => (
+                <PackageRow key={idx} {...pkg} />
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     </section>
   );
 }
 
-function Philosophy(): React.ReactElement {
+function Patterns(): React.ReactElement {
+  return (
+    <section className={styles.patterns}>
+      <div className={styles.patternsInner}>
+        <div className={styles.patternsHeader}>
+          <h2 className={styles.sectionTitle}>Common Patterns</h2>
+        </div>
+        <div className={styles.patternsGrid}>
+          <div className={styles.patternBlock}>
+            <h3 className={styles.patternTitle}>Type coercion</h3>
+            <pre className={styles.patternCode}>
+              <code>{`import { force } from "jaypie";
+
+force.boolean("true")    // true
+force.number("42")       // 42
+force.array(singleItem)  // [singleItem]`}</code>
+            </pre>
+          </div>
+          <div className={styles.patternBlock}>
+            <h3 className={styles.patternTitle}>Environment checks</h3>
+            <pre className={styles.patternCode}>
+              <code>{`import { isProductionEnv, isLocalEnv } from "jaypie";
+
+if (isProductionEnv()) {
+  // production-only
+}
+if (isLocalEnv()) {
+  // local development
+}`}</code>
+            </pre>
+          </div>
+          <div className={styles.patternBlock}>
+            <h3 className={styles.patternTitle}>UUID generation</h3>
+            <pre className={styles.patternCode}>
+              <code>{`import { uuid } from "jaypie";
+
+const id = uuid();`}</code>
+            </pre>
+          </div>
+          <div className={styles.patternBlock}>
+            <h3 className={styles.patternTitle}>Error handling</h3>
+            <pre className={styles.patternCode}>
+              <code>{`import { BadRequestError } from "jaypie";
+
+throw BadRequestError("Invalid input");
+// Returns 400 with JSON:API body`}</code>
+            </pre>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function Footer(): React.ReactElement {
   return (
     <section className={styles.philosophy}>
       <div className={styles.philosophyInner}>
-        <blockquote className={styles.philosophyQuote}>
-          <p>
-            One language. One runtime. From infrastructure to application to
-            testing. TypeScript everywhere.
-          </p>
-        </blockquote>
+        <p className={styles.footerText}>
+          TypeScript · Node.js 20-25 · AWS Lambda · Express.js · Vitest
+        </p>
       </div>
     </section>
   );
@@ -199,15 +330,16 @@ function Philosophy(): React.ReactElement {
 export default function Home(): React.ReactElement {
   return (
     <Layout
-      description="Event-driven TypeScript library for building serverless applications on AWS"
-      title="Jaypie"
+      description="Complete-stack approach to multi-environment cloud application patterns. Aligns infrastructure, execution, and observability."
+      title="Jaypie is TypeScript AWS/CDK + Datadog Application Patterns"
     >
       <main className={styles.main}>
         <Hero />
         <Capabilities />
         <Install />
         <Packages />
-        <Philosophy />
+        <Patterns />
+        <Footer />
       </main>
     </Layout>
   );

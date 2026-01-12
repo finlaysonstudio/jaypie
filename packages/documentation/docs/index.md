@@ -5,57 +5,96 @@ slug: /
 
 # Jaypie
 
-**Event-driven JavaScript library for building serverless applications on AWS**
+Complete-stack approach to multi-environment cloud application patterns. Aligns infrastructure, execution, and observability.
 
-Jaypie is an opinionated library that embodies a "JavaScript Only" philosophy, enabling developers to use a single language across backend, infrastructure, and tooling.
+**Stack:** AWS/CDK, Datadog, TypeScript
 
-## Core Features
-
-### Unified Handler Lifecycle
-
-Single `jaypieHandler` function manages validate → setup → handler → teardown phases for both Lambda and Express.
-
-### Event-Driven Patterns
-
-Pre-built CDK constructs encode best practices (S3→SQS→Lambda, API Gateway→Express).
-
-### LLM-First
-
-Native support for AI interactions with conversation history, tool calling, and multi-turn reasoning.
-
-### Infrastructure as Code
-
-All infrastructure defined in TypeScript via AWS CDK - no YAML or JSON configuration files.
-
-### Comprehensive Testing
-
-Complete test isolation with mocks for all external services via `@jaypie/testkit`.
-
-## Getting Started
-
-Install the main Jaypie package:
+## Install
 
 ```bash
-npm install @jaypie/jaypie
+npm install jaypie
 ```
 
-Or install individual packages as needed:
+## Usage
 
-```bash
-npm install @jaypie/core @jaypie/express @jaypie/lambda
+```typescript
+import { expressHandler, log } from "jaypie";
+
+export default expressHandler(async (req, res) => {
+  log.info("Request received");
+  return { message: "Hello" };
+});
 ```
 
-## Architecture
+## What It Does
 
-Jaypie follows an event-driven architecture centered around:
+| Area | Description |
+|------|-------------|
+| Handler Lifecycle | `lambdaHandler`, `expressHandler` share validate/setup/execute/teardown. Automatic secrets loading. |
+| Infrastructure | CDK constructs: `JaypieLambda`, `JaypieDistribution`, `JaypieEnvSecret`. Shared env vars and tagging. |
+| Observability | Request-scoped logging with trace IDs. Datadog Lambda layers via constructs. `submitMetric()`. |
+| Errors | `@jaypie/errors`: `BadRequestError`, `NotFoundError`, etc. JSON:API format. |
+| Testing | `@jaypie/testkit`: Mock factories for all packages. Custom matchers. |
 
-1. **Handler Lifecycle**: Consistent request/event processing across platforms
-2. **Event Sources**: S3, SQS, API Gateway, and more
-3. **Infrastructure**: CDK constructs for common patterns
-4. **Observability**: Built-in logging and metrics
+## Core Packages
 
-## Next Steps
+| Package | Purpose |
+|---------|---------|
+| `jaypie` | Main package: re-exports aws, errors, express, kit, lambda, logger |
+| `@jaypie/constructs` | CDK constructs with Datadog integration |
+| `@jaypie/errors` | JSON:API error classes |
+| `@jaypie/eslint` | ESLint configuration |
+| `@jaypie/express` | Express handler wrapper |
+| `@jaypie/kit` | Utilities: force, uuid, constants |
+| `@jaypie/lambda` | Lambda handler wrapper |
+| `@jaypie/llm` | LLM provider abstraction |
+| `@jaypie/logger` | Structured logging |
+| `@jaypie/repokit` | Repository tooling |
+| `@jaypie/testkit` | Mocks and matchers |
 
-- Explore the [API Reference](/docs/api/core) for detailed package documentation
-- Check out the [GitHub repository](https://github.com/finlaysonstudio/jaypie)
-- View packages on [npm](https://www.npmjs.com/package/@jaypie/jaypie)
+## Experimental Packages
+
+These packages are in active development. APIs may change.
+
+| Package | Purpose |
+|---------|---------|
+| `@jaypie/dynamodb` | DynamoDB utilities and patterns |
+| `@jaypie/fabricator` | Test data generation |
+| `@jaypie/mcp` | Model Context Protocol server |
+| `@jaypie/textract` | AWS Textract document processing |
+| `@jaypie/vocabulary` | Vocabulary and text utilities |
+
+## Common Patterns
+
+### Type coercion
+
+```typescript
+import { force } from "jaypie";
+
+force.boolean("true")     // true
+force.number("42")        // 42
+force.array(singleItem)   // [singleItem]
+```
+
+### UUID generation
+
+```typescript
+import { uuid } from "jaypie";
+const id = uuid();
+```
+
+### Environment checks
+
+```typescript
+import { isProductionEnv, isLocalEnv } from "jaypie";
+
+if (isProductionEnv()) {
+  // production-only
+}
+```
+
+## Links
+
+- [Introduction](/docs/intro)
+- [API Reference](/docs/api/kit)
+- [GitHub](https://github.com/finlaysonstudio/jaypie)
