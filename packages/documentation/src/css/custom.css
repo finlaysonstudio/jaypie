@@ -255,6 +255,11 @@ pre code {
   padding: var(--jp-space-lg) 0;
 }
 
+/* Remove sidebar border */
+.theme-doc-sidebar-container {
+  border-right: none !important;
+}
+
 /* Align sidebar with main content breadcrumb */
 .theme-doc-sidebar-container {
   margin-top: 0;
@@ -264,63 +269,92 @@ pre code {
   padding-top: 0;
 }
 
-/* Brand item - first sidebar link */
-.menu__list > li:first-child > .menu__link {
-  font-family: var(--jp-font-brand);
-  font-size: 1.25rem;
-  font-weight: 400;
-  letter-spacing: -0.01em;
-  margin-bottom: var(--jp-space-sm);
-  border-left: none;
-}
-
-.menu__list > li:first-child > .menu__link:hover {
-  border-left: none;
-  background: transparent;
-}
-
+/* All menu links - base styles */
 .menu__link {
   font-family: var(--jp-font-system);
   font-size: 0.9rem;
+  font-weight: 400;
   padding: var(--jp-space-sm) var(--jp-space-md);
-  border-radius: var(--ifm-global-radius);
+  border-radius: 0;
   transition: all var(--jp-transition-fast);
-  border-left: 2px solid transparent;
   margin-left: 0;
 }
 
 .menu__link:hover {
   background: transparent;
   color: var(--ifm-menu-color-active);
-  border-left-color: var(--jp-accent);
 }
 
 .menu__link--active {
   background: transparent;
   color: var(--ifm-menu-color-active);
-  border-left-color: var(--jp-accent);
-  font-weight: 500;
+  font-weight: 400;
+}
+
+/* Brand item - ONLY the very first sidebar link (Jaypie) at root level */
+.menu > .menu__list > li:first-child > .menu__link {
+  font-family: var(--jp-font-brand);
+  font-size: 1.25rem;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  text-transform: none;
+  margin-bottom: var(--jp-space-sm);
+}
+
+/* Top-level doc links (Introduction, Criticisms, Publisher) - uppercase, root level only */
+.menu > .menu__list > li:not(:first-child) > .menu__link:not(.menu__link--sublist-caret) {
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+/* Category labels (with chevrons) - same color as other top-level items */
+.menu__link--sublist-caret {
+  font-family: var(--jp-font-system);
+  font-size: 0.85rem;
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ifm-menu-color);
+}
+
+/* Subnav items - normal style, NOT uppercase */
+.menu__list .menu__list .menu__link {
+  font-family: var(--jp-font-system);
+  font-size: 0.9rem;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+/* Package names in subnav - use mono font */
+.menu__list .menu__list .menu__link[href*="/docs/packages/"],
+.menu__list .menu__list .menu__link[href*="/docs/experimental/"] {
+  font-family: var(--jp-font-mono);
+  font-size: 0.85rem;
 }
 
 .menu__list-item-collapsible {
-  border-radius: var(--ifm-global-radius);
+  border-radius: 0;
 }
 
 .menu__list-item-collapsible:hover {
   background: transparent;
 }
 
+/* Chevrons - smaller and thinner */
 .menu__caret {
-  opacity: 0.5;
+  opacity: 0.4;
 }
 
-/* Category labels */
-.menu__link--sublist-caret {
-  font-family: var(--jp-font-system);
-  font-size: 0.85rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--ifm-font-color-secondary);
+.menu__caret::before {
+  transform: scale(0.7);
+  border-width: 1px;
+}
+
+.menu__link--sublist-caret::after {
+  background-size: 1.1rem 1.1rem;
+  opacity: 0.4;
 }
 
 /* ============================================

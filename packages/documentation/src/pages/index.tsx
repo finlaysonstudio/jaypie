@@ -14,8 +14,9 @@ function Hero(): React.ReactElement {
         <p className={styles.heroEyebrow}>AWS/CDK · Datadog · TypeScript</p>
         <h1 className={styles.heroTitle}>Jaypie</h1>
         <p className={styles.heroSubtitle}>
-          Complete-stack approach to multi-environment cloud application
-          patterns. Aligns infrastructure, execution, and observability.
+          <span style={{ whiteSpace: "nowrap" }}>Complete-stack approach to</span>{" "}
+          <span style={{ whiteSpace: "nowrap" }}>multi-environment cloud applications.</span>{" "}
+          <span style={{ whiteSpace: "nowrap" }}>Aligns infrastructure, execution, and observability.</span>
         </p>
         <div className={styles.heroActions}>
           <Link className={styles.primaryButton} to="/docs">
@@ -314,7 +315,7 @@ function Footer(): React.ReactElement {
 export default function Home(): React.ReactElement {
   return (
     <Layout
-      description="Complete-stack approach to multi-environment cloud application patterns. Aligns infrastructure, execution, and observability."
+      description="Complete-stack approach to multi-environment cloud applications. Aligns infrastructure, execution, and observability."
       title="Jaypie is TypeScript AWS/CDK + Datadog Application Patterns"
     >
       <main className={styles.main}>
