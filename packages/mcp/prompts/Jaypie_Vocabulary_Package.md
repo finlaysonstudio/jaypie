@@ -162,6 +162,7 @@ Context callbacks connect to adapter registration:
 | `String` | `"string"`, `""` | String coercion |
 | `Number` | `"number"` | Number coercion |
 | `Boolean` | `"boolean"` | Boolean coercion |
+| `Date` | `DateType` | Date coercion (ISO strings, timestamps) |
 | `Array` | `"array"`, `[]` | Array coercion |
 | `Object` | `"object"`, `{}` | Object coercion |
 | `[String]` | `[""]` | Typed array of strings |
@@ -171,6 +172,7 @@ Context callbacks connect to adapter registration:
 | `/regex/` | - | String with regex validation |
 | `["a", "b"]` | - | Validated string (must match) |
 | `[1, 2, 3]` | - | Validated number (must match) |
+| `StatusType` | - | Validated status ("pending", "processing", etc.) |
 
 ### Coercion Examples
 
@@ -201,6 +203,14 @@ coerce([1, 2], [String]);    // → ["1", "2"]
 coerce({ value: "42" }, Number);  // → 42
 coerce(["true"], Boolean);        // → true
 coerce('{"value": 5}', Number);   // → 5
+
+// Date coercion
+import { coerceToDate, coerceFromDate } from "@jaypie/vocabulary";
+
+coerceToDate("2026-01-15T10:30:00Z");  // → Date object
+coerceToDate(1736942400000);            // → Date from timestamp
+coerceFromDate(new Date(), String);     // → ISO string
+coerceFromDate(new Date(), Number);     // → Unix timestamp (ms)
 ```
 
 ### RegExp Type Shorthand
@@ -234,6 +244,30 @@ input: {
 input: {
   priority: { type: [1, 2, 3, 4, 5] },        // Must be 1-5
 }
+```
+
+### StatusType
+
+A predefined validated string type for common status values:
+
+```typescript
+import { StatusType, isStatus, STATUS_VALUES } from "@jaypie/vocabulary";
+
+// StatusType is: ["canceled", "complete", "error", "pending", "processing", "queued", "sending"]
+
+const handler = serviceHandler({
+  input: {
+    status: { type: StatusType, default: "pending" },
+  },
+  service: ({ status }) => status,
+});
+
+await handler({ status: "processing" });  // ✓
+await handler({ status: "invalid" });     // ✗ BadRequestError
+
+// Type guard
+isStatus("pending");   // → true
+isStatus("unknown");   // → false
 ```
 
 ## Entity Types
@@ -302,6 +336,40 @@ progress?:
     nextPercentageCheckpoint?: Number
 ```
 
+### BaseEntity Utilities
+
+Field constants and utility functions for working with entities:
+
+```typescript
+import {
+  // Field name constants
+  BASE_ENTITY_FIELDS,           // All field names as constants
+  BASE_ENTITY_REQUIRED_FIELDS,  // ["createdAt", "id", "model", "updatedAt"]
+  BASE_ENTITY_AUTO_FIELDS,      // ["createdAt", "history", "id", "updatedAt"]
+  BASE_ENTITY_TIMESTAMP_FIELDS, // ["archivedAt", "createdAt", "deletedAt", "updatedAt"]
+
+  // Type guards
+  isBaseEntity,        // Check if value is a complete BaseEntity
+  hasBaseEntityShape,  // Check if value has minimum shape (id + model)
+
+  // Field helpers
+  isAutoField,         // Check if field is auto-generated
+  isTimestampField,    // Check if field is a timestamp
+
+  // Utilities
+  createBaseEntityInput,  // Create minimal input with required model
+  pickBaseEntityFields,   // Extract only BaseEntity fields from object
+} from "@jaypie/vocabulary";
+
+// Example: Check if a field should be auto-generated
+isAutoField("id");        // → true
+isAutoField("name");      // → false
+
+// Example: Extract BaseEntity fields from mixed object
+const mixed = { id: "123", model: "record", customField: "value" };
+pickBaseEntityFields(mixed);  // → { id: "123", model: "record" }
+```
+
 ## TypeScript Types
 
 ```typescript
@@ -315,20 +383,22 @@ import type {
   Job,
   MessageEntity,
   Progress,
+  Status,
 
   // Message types
   Message,
   MessageLevel,
 
   // Coercion types
-  CoercionType,
-  ScalarType,
-  CompositeType,
-  TypedArrayType,
-  ValidatedStringType,
-  ValidatedNumberType,
-  RegExpType,
   ArrayElementType,
+  CoercionType,
+  CompositeType,
+  DateCoercionType,
+  RegExpType,
+  ScalarType,
+  TypedArrayType,
+  ValidatedNumberType,
+  ValidatedStringType,
 
   // Service handler types
   InputFieldDefinition,
@@ -358,6 +428,20 @@ interface Message {
 ### Main Export (`@jaypie/vocabulary`)
 
 ```typescript
+// BaseEntity utilities
+export {
+  BASE_ENTITY_AUTO_FIELDS,
+  BASE_ENTITY_FIELDS,
+  BASE_ENTITY_REQUIRED_FIELDS,
+  BASE_ENTITY_TIMESTAMP_FIELDS,
+  createBaseEntityInput,
+  hasBaseEntityShape,
+  isAutoField,
+  isBaseEntity,
+  isTimestampField,
+  pickBaseEntityFields,
+} from "./base-entity.js";
+
 // Coercion functions
 export {
   coerce,
@@ -370,17 +454,28 @@ export {
   coerceToString,
 } from "./coerce.js";
 
+// Date coercion
+export {
+  coerceFromDate,
+  coerceToDate,
+  DateType,
+  isDateType,
+  isValidDate,
+} from "./coerce-date.js";
+
+// Status type
+export { isStatus, STATUS_VALUES, StatusType } from "./status.js";
+
 // Service Handler
 export { serviceHandler } from "./serviceHandler.js";
 
-// Adapter namespaces
-export * as commander from "./commander/index.js";
-export * as lambda from "./lambda/index.js";
+// LLM adapter (re-exported, no optional deps)
 export * as llm from "./llm/index.js";
-export * as mcp from "./mcp/index.js";
 
-// Types (including Message vocabulary and ServiceContext)
-export type { Message, MessageLevel, ServiceContext } from "./types.js";
+// Note: Other adapters have optional dependencies and must be imported directly:
+//   import { registerServiceCommand } from "@jaypie/vocabulary/commander";
+//   import { lambdaServiceHandler } from "@jaypie/vocabulary/lambda";
+//   import { registerMcpTool } from "@jaypie/vocabulary/mcp";
 
 // Version
 export const VOCABULARY_VERSION: string;
