@@ -164,7 +164,7 @@ function Packages(): React.ReactElement {
     {
       href: "/docs/packages/constructs",
       name: "@jaypie/constructs",
-      purpose: "CDK constructs with Datadog integration",
+      purpose: "CDK constructs",
     },
     {
       href: "/docs/packages/llm",
@@ -224,7 +224,7 @@ function Packages(): React.ReactElement {
         </div>
         <div className={styles.packageTables}>
           <div className={styles.packageTable}>
-            <h3 className={styles.packageTableTitle}>Core</h3>
+            <h3 className={styles.packageTableTitle}>Core 1.2</h3>
             <div className={styles.packageTableRows}>
               {corePackages.map((pkg, idx) => (
                 <PackageRow key={idx} {...pkg} />
@@ -232,8 +232,7 @@ function Packages(): React.ReactElement {
             </div>
           </div>
           <div className={styles.packageTable}>
-            <h3 className={styles.packageTableTitle}>Experimental</h3>
-            <p className={styles.packageTableNote}>APIs may change.</p>
+            <h3 className={styles.packageTableTitle}>Experimental 0.x</h3>
             <div className={styles.packageTableRows}>
               {experimentalPackages.map((pkg, idx) => (
                 <PackageRow key={idx} {...pkg} />
