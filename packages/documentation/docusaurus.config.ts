@@ -3,8 +3,9 @@ import type * as Preset from "@docusaurus/preset-classic";
 import { themes as prismThemes } from "prism-react-renderer";
 
 const config: Config = {
-  title: "Jaypie",
-  tagline: "Event-driven JavaScript library for AWS",
+  title: "Jaypie is TypeScript AWS/CDK + Datadog Application Patterns",
+  tagline:
+    "Complete-stack approach to multi-environment cloud application patterns. Aligns infrastructure, execution, and observability.",
   favicon: "img/favicon.ico",
 
   url: "https://jaypie.finlayson.studio",
@@ -26,6 +27,74 @@ const config: Config = {
     locales: ["en"],
   },
 
+  headTags: [
+    {
+      tagName: "meta",
+      attributes: {
+        property: "og:title",
+        content: "Jaypie is TypeScript AWS/CDK + Datadog Application Patterns",
+      },
+    },
+    {
+      tagName: "meta",
+      attributes: {
+        property: "og:description",
+        content:
+          "Complete-stack approach to multi-environment cloud application patterns. Aligns infrastructure, execution, and observability.",
+      },
+    },
+    {
+      tagName: "meta",
+      attributes: {
+        property: "og:type",
+        content: "website",
+      },
+    },
+    {
+      tagName: "meta",
+      attributes: {
+        property: "og:url",
+        content: "https://jaypie.finlayson.studio",
+      },
+    },
+    {
+      tagName: "meta",
+      attributes: {
+        property: "og:image",
+        content: "https://jaypie.finlayson.studio/img/jaypie-social-card.jpg",
+      },
+    },
+    {
+      tagName: "meta",
+      attributes: {
+        name: "twitter:card",
+        content: "summary_large_image",
+      },
+    },
+    {
+      tagName: "meta",
+      attributes: {
+        name: "twitter:title",
+        content: "Jaypie is TypeScript AWS/CDK + Datadog Application Patterns",
+      },
+    },
+    {
+      tagName: "meta",
+      attributes: {
+        name: "twitter:description",
+        content:
+          "Complete-stack approach to multi-environment cloud application patterns. Aligns infrastructure, execution, and observability.",
+      },
+    },
+    {
+      tagName: "meta",
+      attributes: {
+        name: "twitter:image",
+        content: "https://jaypie.finlayson.studio/img/jaypie-social-card.jpg",
+      },
+    },
+  ],
+
   presets: [
     [
       "classic",
@@ -44,11 +113,17 @@ const config: Config = {
   ],
 
   themeConfig: {
+    colorMode: {
+      defaultMode: "dark",
+      disableSwitch: false,
+      respectPrefersColorScheme: true,
+    },
     image: "img/jaypie-social-card.jpg",
     navbar: {
       title: "Jaypie",
       logo: {
-        alt: "Jaypie Logo",
+        alt: "Jaypie",
+        href: "/",
         src: "img/logo.svg",
       },
       items: [
@@ -56,7 +131,7 @@ const config: Config = {
           type: "docSidebar",
           sidebarId: "tutorialSidebar",
           position: "left",
-          label: "Documentation",
+          label: "Docs",
         },
         {
           href: "https://github.com/finlaysonstudio/jaypie",
@@ -69,58 +144,62 @@ const config: Config = {
       style: "dark",
       links: [
         {
-          title: "Main Packages",
+          title: "Docs",
           items: [
             {
-              label: "Core",
-              to: "/docs/api/core",
+              label: "Introduction",
+              to: "/docs",
             },
             {
-              label: "Express",
-              to: "/docs/api/express",
+              label: "Core Concepts",
+              to: "/docs/core/handler-lifecycle",
             },
             {
-              label: "Lambda",
-              to: "/docs/api/lambda",
+              label: "How-To Guides",
+              to: "/docs/guides/express-lambda",
             },
             {
-              label: "LLM",
-              to: "/docs/api/llm",
+              label: "Architecture",
+              to: "/docs/architecture/project-structure",
             },
           ],
         },
         {
-          title: "Extra Packages",
+          title: "Reference",
           items: [
             {
-              label: "Constructs",
-              to: "/docs/api/constructs",
+              label: "Packages",
+              to: "/docs/packages/jaypie",
             },
             {
-              label: "MCP",
-              to: "/docs/api/mcp",
+              label: "Experimental",
+              to: "/docs/experimental/dynamodb",
             },
             {
-              label: "Textract",
-              to: "/docs/api/textract",
+              label: "Criticisms",
+              to: "/docs/criticisms",
             },
           ],
         },
         {
-          title: "More",
+          title: "Development",
           items: [
+            {
+              label: "Contributing",
+              to: "/docs/contributing/development-process",
+            },
             {
               label: "GitHub",
               href: "https://github.com/finlaysonstudio/jaypie",
             },
             {
-              label: "npm",
-              href: "https://www.npmjs.com/package/@jaypie/jaypie",
+              label: "Publisher",
+              to: "/docs/publisher",
             },
           ],
         },
       ],
-      copyright: `Built with Docusaurus. Published by Finlayson Studio. Available under the MIT License.`,
+      copyright: `Published by Finlayson Studio. Released under the MIT License. Created with Docusaurus. Available on GitHub.`,
     },
     prism: {
       theme: prismThemes.github,
