@@ -15,7 +15,6 @@ import {
   coerceToNumber,
   coerceToObject,
   coerceToString,
-  commander,
   createBaseEntityInput,
   DateType,
   hasBaseEntityShape,
@@ -25,7 +24,7 @@ import {
   isStatus,
   isTimestampField,
   isValidDate,
-  lambda,
+  llm,
   pickBaseEntityFields,
   serviceHandler,
   STATUS_VALUES,
@@ -88,19 +87,19 @@ describe("vocabulary/index", () => {
       expect(typeof isStatus).toBe("function");
     });
 
-    it("exports commander namespace", () => {
-      expect(commander).toBeDefined();
-      expect(commander.createCommanderOptions).toBeDefined();
-      expect(commander.parseCommanderOptions).toBeDefined();
-      expect(typeof commander.createCommanderOptions).toBe("function");
-      expect(typeof commander.parseCommanderOptions).toBe("function");
+    it("exports llm namespace (only adapter without optional deps)", () => {
+      expect(llm).toBeDefined();
+      expect(llm.createLlmTool).toBeDefined();
+      expect(llm.inputToJsonSchema).toBeDefined();
+      expect(typeof llm.createLlmTool).toBe("function");
+      expect(typeof llm.inputToJsonSchema).toBe("function");
     });
 
-    it("exports lambda namespace", () => {
-      expect(lambda).toBeDefined();
-      expect(lambda.lambdaServiceHandler).toBeDefined();
-      expect(typeof lambda.lambdaServiceHandler).toBe("function");
-    });
+    // Note: commander, lambda, and mcp adapters have optional dependencies
+    // and must be imported directly from their sub-paths:
+    //   import { registerServiceCommand } from "@jaypie/vocabulary/commander";
+    //   import { lambdaServiceHandler } from "@jaypie/vocabulary/lambda";
+    //   import { registerMcpTool } from "@jaypie/vocabulary/mcp";
   });
 
   describe("Happy Paths", () => {
@@ -109,7 +108,7 @@ describe("vocabulary/index", () => {
     });
 
     it("VOCABULARY_VERSION matches package version", () => {
-      expect(VOCABULARY_VERSION).toBe("0.1.6");
+      expect(VOCABULARY_VERSION).toBe("0.1.8");
     });
   });
 });

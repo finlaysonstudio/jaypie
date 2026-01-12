@@ -3,124 +3,91 @@ import type { SidebarsConfig } from "@docusaurus/plugin-content-docs";
 const sidebars: SidebarsConfig = {
   tutorialSidebar: [
     {
+      type: "link",
+      label: "🐦‍⬛ Jaypie",
+      href: "/",
+    },
+    {
       type: "doc",
       id: "intro",
       label: "Introduction",
     },
     {
       type: "category",
-      label: "API Reference",
+      label: "Core Concepts",
       items: [
-        {
-          type: "category",
-          label: "Main Packages",
-          items: [
-            {
-              type: "doc",
-              id: "api/aws",
-              label: "@jaypie/aws",
-            },
-            {
-              type: "doc",
-              id: "api/core",
-              label: "@jaypie/core",
-            },
-            {
-              type: "doc",
-              id: "api/datadog",
-              label: "@jaypie/datadog",
-            },
-            {
-              type: "doc",
-              id: "api/errors",
-              label: "@jaypie/errors",
-            },
-            {
-              type: "doc",
-              id: "api/express",
-              label: "@jaypie/express",
-            },
-            {
-              type: "doc",
-              id: "api/kit",
-              label: "@jaypie/kit",
-            },
-            {
-              type: "doc",
-              id: "api/lambda",
-              label: "@jaypie/lambda",
-            },
-            {
-              type: "doc",
-              id: "api/llm",
-              label: "@jaypie/llm",
-            },
-            {
-              type: "doc",
-              id: "api/logger",
-              label: "@jaypie/logger",
-            },
-            {
-              type: "doc",
-              id: "api/mongoose",
-              label: "@jaypie/mongoose",
-            },
-          ],
-        },
-        {
-          type: "category",
-          label: "Extra Packages",
-          items: [
-            {
-              type: "doc",
-              id: "api/constructs",
-              label: "@jaypie/constructs",
-            },
-            {
-              type: "doc",
-              id: "api/mcp",
-              label: "@jaypie/mcp",
-            },
-            {
-              type: "doc",
-              id: "api/textract",
-              label: "@jaypie/textract",
-            },
-          ],
-        },
-        {
-          type: "category",
-          label: "Utility Packages",
-          items: [
-            {
-              type: "doc",
-              id: "api/eslint",
-              label: "@jaypie/eslint",
-            },
-            {
-              type: "doc",
-              id: "api/testkit",
-              label: "@jaypie/testkit",
-            },
-            {
-              type: "doc",
-              id: "api/types",
-              label: "@jaypie/types",
-            },
-          ],
-        },
-        {
-          type: "category",
-          label: "Deprecated Packages",
-          items: [
-            {
-              type: "doc",
-              id: "api/cdk",
-              label: "@jaypie/cdk",
-            },
-          ],
-        },
+        "core/handler-lifecycle",
+        "core/error-handling",
+        "core/logging",
+        "core/environment",
       ],
+    },
+    {
+      type: "category",
+      label: "How-To Guides",
+      items: [
+        "guides/express-lambda",
+        "guides/cdk-infrastructure",
+        "guides/testing",
+        "guides/llm-integration",
+        "guides/cicd",
+      ],
+    },
+    {
+      type: "category",
+      label: "Packages",
+      items: [
+        "packages/jaypie",
+        "packages/express",
+        "packages/lambda",
+        "packages/constructs",
+        "packages/llm",
+        "packages/errors",
+        "packages/logger",
+        "packages/kit",
+        "packages/testkit",
+        "packages/eslint",
+        "packages/repokit",
+      ],
+    },
+    {
+      type: "category",
+      label: "Experimental",
+      items: [
+        "experimental/dynamodb",
+        "experimental/fabricator",
+        "experimental/mcp",
+        "experimental/textract",
+        "experimental/vocabulary",
+      ],
+    },
+    {
+      type: "category",
+      label: "Architecture",
+      items: [
+        "architecture/project-structure",
+        "architecture/vocabulary-system",
+        "architecture/patterns",
+      ],
+    },
+    {
+      type: "category",
+      label: "Contributing",
+      items: [
+        "contributing/development-process",
+        "contributing/branch-management",
+        "contributing/writing-docs",
+      ],
+    },
+    {
+      type: "doc",
+      id: "criticisms",
+      label: "Criticisms",
+    },
+    {
+      type: "doc",
+      id: "publisher",
+      label: "Publisher",
     },
   ],
 };

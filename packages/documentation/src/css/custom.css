@@ -1,30 +1,870 @@
 /**
- * Any CSS included here will be global. The classic template
- * bundles Infima by default. Infima is a CSS framework designed to
- * work well for content-centric websites.
+ * Jaypie Documentation
+ * Aesthetic: Warm, minimal, soft, luxury-adjacent
+ * Dark mode default with light mode option
  */
 
-/* You can override the default Infima variables here. */
+/* Google Fonts - Nostrus Typography System */
+@import url('https://fonts.googleapis.com/css2?family=Faculty+Glyphic&family=Inter:wght@400;500;600&family=Noto+Sans+Mono:wght@400;500&family=Noto+Sans:wght@400;500;600&family=Noto+Serif:ital,wght@0,400;0,500;1,400&display=swap');
+
+/* ============================================
+   CSS CUSTOM PROPERTIES
+   ============================================ */
+
 :root {
-  --ifm-color-primary: #2e8555;
-  --ifm-color-primary-dark: #29784c;
-  --ifm-color-primary-darker: #277148;
-  --ifm-color-primary-darkest: #205d3b;
-  --ifm-color-primary-light: #33925d;
-  --ifm-color-primary-lighter: #359962;
-  --ifm-color-primary-lightest: #3cad6e;
-  --ifm-code-font-size: 95%;
-  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.1);
+  /* Typography - Nostrus Font System */
+  --jp-font-brand: 'Faculty Glyphic', Georgia, serif;
+  --jp-font-heading: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --jp-font-body: 'Noto Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --jp-font-user: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --jp-font-system: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --jp-font-mono: 'Noto Sans Mono', 'SF Mono', Consolas, monospace;
+
+  /* Legacy aliases */
+  --jp-font-display: var(--jp-font-heading);
+
+  /* Amber Accent Scale (Nostrus palette) */
+  --jp-amber-50: #faf6ee;
+  --jp-amber-100: #f4ebda;
+  --jp-amber-200: #e8d5b5;
+  --jp-amber-300: #d4b888;
+  --jp-amber-400: #b89456;
+  --jp-amber-500: #96703a;
+  --jp-amber-600: #78582e;
+  --jp-amber-700: #5c4324;
+  --jp-amber-800: #42301a;
+  --jp-amber-900: #261c10;
+
+  /* Warm Neutrals (Boar palette) */
+  --jp-warm-50: #f8f6f5;
+  --jp-warm-100: #edebea;
+  --jp-warm-200: #d8d5d3;
+  --jp-warm-300: #bfbbb8;
+  --jp-warm-400: #9a9592;
+  --jp-warm-500: #706b68;
+  --jp-warm-600: #565250;
+  --jp-warm-700: #403d3b;
+  --jp-warm-750: #343231;
+  --jp-warm-800: #282726;
+  --jp-warm-900: #161514;
+  --jp-warm-950: #0c0b0b;
+
+  /* Bird/Logo Colors */
+  --jp-bird-dark: #2D2926;
+  --jp-bird-brown: #4A433B;
+
+  /* Spacing Scale */
+  --jp-space-xs: 0.25rem;
+  --jp-space-sm: 0.5rem;
+  --jp-space-md: 1rem;
+  --jp-space-lg: 1.5rem;
+  --jp-space-xl: 2.5rem;
+  --jp-space-2xl: 4rem;
+  --jp-space-3xl: 6rem;
+
+  /* Transitions */
+  --jp-transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --jp-transition-base: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+  --jp-transition-slow: 400ms cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Shadows - soft, warm */
+  --jp-shadow-sm: 0 1px 2px rgba(44, 41, 38, 0.04);
+  --jp-shadow-md: 0 4px 12px rgba(44, 41, 38, 0.06);
+  --jp-shadow-lg: 0 12px 32px rgba(44, 41, 38, 0.08);
 }
 
-/* For readability concerns, you should choose a lighter palette in dark mode. */
-[data-theme="dark"] {
-  --ifm-color-primary: #25c2a0;
-  --ifm-color-primary-dark: #21af90;
-  --ifm-color-primary-darker: #1fa588;
-  --ifm-color-primary-darkest: #1a8870;
-  --ifm-color-primary-light: #29d5b0;
-  --ifm-color-primary-lighter: #32d8b4;
-  --ifm-color-primary-lightest: #4fddbf;
-  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
+/* ============================================
+   LIGHT MODE (Secondary)
+   ============================================ */
+
+:root {
+  --ifm-color-primary: var(--jp-bird-brown);
+  --ifm-color-primary-dark: var(--jp-bird-dark);
+  --ifm-color-primary-darker: #252320;
+  --ifm-color-primary-darkest: #1C1B19;
+  --ifm-color-primary-light: #5C554B;
+  --ifm-color-primary-lighter: #6E665A;
+  --ifm-color-primary-lightest: #8A8275;
+
+  --ifm-background-color: var(--jp-warm-50);
+  --ifm-background-surface-color: var(--jp-warm-100);
+  --ifm-font-color-base: var(--jp-warm-800);
+  --ifm-font-color-secondary: var(--jp-warm-600);
+
+  --ifm-font-family-base: var(--jp-font-body);
+  --ifm-font-family-monospace: var(--jp-font-mono);
+  --ifm-heading-font-family: var(--jp-font-heading);
+
+  --ifm-code-font-size: 0.875rem;
+  --ifm-code-background: var(--jp-warm-100);
+  --ifm-code-border-radius: 0.25rem;
+
+  --ifm-global-radius: 0.5rem;
+  --ifm-global-shadow-lw: var(--jp-shadow-sm);
+  --ifm-global-shadow-md: var(--jp-shadow-md);
+  --ifm-global-shadow-tl: var(--jp-shadow-lg);
+
+  --ifm-navbar-background-color: var(--jp-warm-50);
+  --ifm-navbar-shadow: none;
+  --ifm-footer-background-color: var(--jp-warm-200);
+
+  --ifm-link-color: var(--jp-bird-brown);
+  --ifm-link-hover-color: var(--jp-bird-dark);
+
+  --ifm-menu-color: var(--jp-warm-700);
+  --ifm-menu-color-active: var(--jp-bird-dark);
+  --ifm-menu-color-background-active: transparent;
+
+  --ifm-toc-border-color: transparent;
+  --ifm-hr-border-color: transparent;
+
+  --docusaurus-highlighted-code-line-bg: rgba(184, 148, 86, 0.15);
+
+  /* Custom accent */
+  --jp-accent: var(--jp-amber-500);
+  --jp-accent-soft: var(--jp-amber-300);
+}
+
+/* ============================================
+   DARK MODE (Default/Primary)
+   ============================================ */
+
+[data-theme='dark'] {
+  --ifm-color-primary: var(--jp-amber-300);
+  --ifm-color-primary-dark: var(--jp-amber-400);
+  --ifm-color-primary-darker: var(--jp-amber-500);
+  --ifm-color-primary-darkest: var(--jp-amber-600);
+  --ifm-color-primary-light: var(--jp-amber-200);
+  --ifm-color-primary-lighter: var(--jp-amber-100);
+  --ifm-color-primary-lightest: var(--jp-amber-50);
+
+  --ifm-background-color: var(--jp-warm-950);
+  --ifm-background-surface-color: var(--jp-warm-900);
+  --ifm-font-color-base: var(--jp-warm-200);
+  --ifm-font-color-secondary: var(--jp-warm-400);
+
+  --ifm-code-background: var(--jp-warm-900);
+
+  --ifm-navbar-background-color: var(--jp-warm-950);
+  --ifm-footer-background-color: var(--jp-warm-800);
+
+  --ifm-link-color: var(--jp-amber-300);
+  --ifm-link-hover-color: var(--jp-amber-200);
+
+  --ifm-menu-color: var(--jp-warm-300);
+  --ifm-menu-color-active: var(--jp-amber-300);
+
+  --ifm-toc-border-color: transparent;
+  --ifm-hr-border-color: transparent;
+
+  --docusaurus-highlighted-code-line-bg: rgba(212, 184, 136, 0.1);
+
+  /* Custom accent */
+  --jp-accent: var(--jp-amber-300);
+  --jp-accent-soft: var(--jp-amber-200);
+
+  /* Shadows in dark mode */
+  --jp-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.2);
+  --jp-shadow-md: 0 4px 16px rgba(0, 0, 0, 0.25);
+  --jp-shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.3);
+}
+
+/* ============================================
+   GLOBAL STYLES
+   ============================================ */
+
+html {
+  font-feature-settings: 'kern' 1, 'liga' 1, 'calt' 1;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  letter-spacing: 0.01em;
+}
+
+/* Typography refinements */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--jp-font-display);
+  font-weight: 500;
+  letter-spacing: -0.025em;
+  line-height: 1.15;
+}
+
+h1 {
+  font-weight: 400;
+  font-size: 2.5rem;
+}
+
+h2 {
+  font-size: 1.75rem;
+}
+
+h3 {
+  font-size: 1.35rem;
+}
+
+/* Refined paragraph spacing */
+p {
+  line-height: 1.7;
+}
+
+/* Links - subtle underline on hover */
+a {
+  text-decoration: none;
+  transition: color var(--jp-transition-fast);
+}
+
+a:hover {
+  text-decoration: none;
+}
+
+/* Code blocks */
+code {
+  font-family: var(--jp-font-mono);
+  font-weight: 400;
+  padding: 0.15em 0.4em;
+  background: var(--ifm-code-background);
+  border-radius: var(--ifm-code-border-radius);
+  font-size: var(--ifm-code-font-size);
+}
+
+pre code {
+  padding: 0;
+  background: transparent;
+}
+
+/* ============================================
+   NAVBAR - Hidden, using sidebar for navigation
+   ============================================ */
+
+.navbar {
+  display: none;
+}
+
+/* Adjust main content to account for hidden navbar */
+.main-wrapper {
+  padding-top: 0;
+}
+
+/* ============================================
+   SIDEBAR
+   ============================================ */
+
+.menu {
+  padding: var(--jp-space-lg) 0;
+}
+
+/* Remove sidebar border */
+.theme-doc-sidebar-container {
+  border-right: none !important;
+}
+
+/* Align sidebar with main content breadcrumb */
+.theme-doc-sidebar-container {
+  margin-top: 0;
+}
+
+.theme-doc-sidebar-menu {
+  padding-top: 0;
+}
+
+/* All menu links - base styles */
+.menu__link {
+  font-family: var(--jp-font-system);
+  font-size: 0.9rem;
+  font-weight: 400;
+  padding: var(--jp-space-sm) var(--jp-space-md);
+  border-radius: 0;
+  transition: all var(--jp-transition-fast);
+  margin-left: 0;
+}
+
+.menu__link:hover {
+  background: transparent;
+  color: var(--ifm-menu-color-active);
+}
+
+.menu__link--active {
+  background: transparent;
+  color: var(--ifm-menu-color-active);
+  font-weight: 400;
+}
+
+/* Brand item - ONLY the very first sidebar link (Jaypie) at root level */
+.menu > .menu__list > li:first-child > .menu__link {
+  font-family: var(--jp-font-brand);
+  font-size: 1.25rem;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  text-transform: none;
+  margin-bottom: var(--jp-space-sm);
+}
+
+/* Top-level doc links (Introduction, Criticisms, Publisher) - uppercase, root level only */
+.menu > .menu__list > li:not(:first-child) > .menu__link:not(.menu__link--sublist-caret) {
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+/* Category labels (with chevrons) - same color as other top-level items */
+.menu__link--sublist-caret {
+  font-family: var(--jp-font-system);
+  font-size: 0.85rem;
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ifm-menu-color);
+}
+
+/* Subnav items - normal style, NOT uppercase */
+.menu__list .menu__list .menu__link {
+  font-family: var(--jp-font-system);
+  font-size: 0.9rem;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+/* Package names in subnav - use mono font */
+.menu__list .menu__list .menu__link[href*="/docs/packages/"],
+.menu__list .menu__list .menu__link[href*="/docs/experimental/"] {
+  font-family: var(--jp-font-mono);
+  font-size: 0.85rem;
+}
+
+.menu__list-item-collapsible {
+  border-radius: 0;
+}
+
+.menu__list-item-collapsible:hover {
+  background: transparent;
+}
+
+/* Chevrons - smaller and thinner */
+.menu__caret {
+  opacity: 0.4;
+}
+
+.menu__caret::before {
+  transform: scale(0.7);
+  border-width: 1px;
+}
+
+.menu__link--sublist-caret::after {
+  background-size: 1.1rem 1.1rem;
+  opacity: 0.4;
+}
+
+/* ============================================
+   TABLE OF CONTENTS
+   ============================================ */
+
+.table-of-contents {
+  border-left: none;
+  padding-left: var(--jp-space-lg);
+  padding-top: 0;
+}
+
+/* Align TOC with main content */
+.theme-doc-toc-desktop {
+  padding-top: 0;
+}
+
+.table-of-contents__link {
+  font-size: 0.85rem;
+  opacity: 0.6;
+  transition: opacity var(--jp-transition-fast);
+}
+
+.table-of-contents__link:hover,
+.table-of-contents__link--active {
+  opacity: 1;
+  color: var(--ifm-font-color-base);
+}
+
+.table-of-contents__link--active {
+  font-weight: 500;
+}
+
+/* ============================================
+   CONTENT AREA
+   ============================================ */
+
+.markdown {
+  --ifm-heading-margin-top: var(--jp-space-2xl);
+  --ifm-heading-margin-bottom: var(--jp-space-lg);
+}
+
+.markdown h1:first-child {
+  margin-top: 0;
+}
+
+.markdown > p {
+  margin-bottom: var(--jp-space-lg);
+}
+
+/* Blockquotes - elegant styling */
+.markdown blockquote {
+  border-left: none;
+  padding: var(--jp-space-lg) var(--jp-space-xl);
+  margin: var(--jp-space-xl) 0;
+  background: var(--ifm-background-surface-color);
+  border-radius: var(--ifm-global-radius);
+  font-style: italic;
+  position: relative;
+}
+
+.markdown blockquote::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--jp-accent);
+  border-radius: 3px;
+}
+
+/* Code blocks - aligned to palette (slate) */
+.prism-code {
+  border-radius: var(--ifm-global-radius);
+  padding: var(--jp-space-lg);
+  background-color: #2b2c2f !important; /* slate-800 */
+}
+
+html:not([data-theme='dark']) .prism-code {
+  background-color: #f3f4f6 !important; /* slate-50 */
+}
+
+/* ============================================
+   SYNTAX HIGHLIGHTING - All palette colors
+   ============================================ */
+
+/* Keywords (import, export, const, if, return, etc.) - purple */
+.token.keyword,
+.token.atrule,
+.token.builtin {
+  color: #b49dc4 !important; /* purple-300 */
+}
+
+/* Strings - green */
+.token.string,
+.token.attr-value {
+  color: #8fb69a !important; /* green-300 */
+}
+
+/* Functions - amber */
+.token.function {
+  color: #d4b888 !important; /* amber-300 */
+}
+
+/* Comments - slate muted */
+.token.comment,
+.token.prolog,
+.token.doctype,
+.token.cdata {
+  color: #8a8d93 !important; /* slate-400 */
+  font-style: italic;
+}
+
+/* Numbers, booleans - orange */
+.token.number,
+.token.boolean {
+  color: #e8c19f !important; /* orange-300 */
+}
+
+/* Class names, tags - cyan */
+.token.class-name,
+.token.tag {
+  color: #7faabb !important; /* cyan-300 */
+}
+
+/* Operators, punctuation - slate light */
+.token.operator,
+.token.punctuation {
+  color: #aeadab !important; /* bore-300 */
+}
+
+/* Properties - pink */
+.token.property {
+  color: #c49aab !important; /* pink-300 */
+}
+
+/* Variables, parameters - slate light */
+.token.variable,
+.token.parameter {
+  color: #c8cbcf !important; /* slate-200 */
+}
+
+/* Plain text */
+.prism-code .token.plain {
+  color: #c8cbcf !important; /* slate-200 */
+}
+
+/* ============================================
+   LIGHT MODE SYNTAX OVERRIDES
+   ============================================ */
+
+html:not([data-theme='dark']) .token.keyword,
+html:not([data-theme='dark']) .token.atrule,
+html:not([data-theme='dark']) .token.builtin {
+  color: #70548a !important; /* purple-500 */
+}
+
+html:not([data-theme='dark']) .token.string,
+html:not([data-theme='dark']) .token.attr-value {
+  color: #3d6b4d !important; /* green-500 */
+}
+
+html:not([data-theme='dark']) .token.function {
+  color: #96703a !important; /* amber-500 */
+}
+
+html:not([data-theme='dark']) .token.comment,
+html:not([data-theme='dark']) .token.prolog,
+html:not([data-theme='dark']) .token.doctype,
+html:not([data-theme='dark']) .token.cdata {
+  color: #686b70 !important; /* slate-500 */
+}
+
+html:not([data-theme='dark']) .token.number,
+html:not([data-theme='dark']) .token.boolean {
+  color: #a86d3d !important; /* orange-500 */
+}
+
+html:not([data-theme='dark']) .token.class-name,
+html:not([data-theme='dark']) .token.tag {
+  color: #35656d !important; /* cyan-500 */
+}
+
+html:not([data-theme='dark']) .token.operator,
+html:not([data-theme='dark']) .token.punctuation {
+  color: #6c6b6a !important; /* bore-500 */
+}
+
+html:not([data-theme='dark']) .token.property {
+  color: #864e62 !important; /* pink-500 */
+}
+
+html:not([data-theme='dark']) .token.variable,
+html:not([data-theme='dark']) .token.parameter {
+  color: #3d3f42 !important; /* slate-700 */
+}
+
+html:not([data-theme='dark']) .prism-code .token.plain {
+  color: #3d3f42 !important; /* slate-700 */
+}
+
+/* Tables - minimal, no borders */
+table {
+  border-collapse: collapse;
+  margin: var(--jp-space-xl) 0;
+}
+
+table th,
+table td {
+  border: none;
+  padding: var(--jp-space-md) var(--jp-space-lg);
+  text-align: left;
+}
+
+table th {
+  font-family: var(--jp-font-system);
+  font-weight: 500;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ifm-font-color-secondary);
+  padding-bottom: var(--jp-space-sm);
+}
+
+table tbody tr {
+  transition: background var(--jp-transition-fast);
+}
+
+table tbody tr:nth-child(even) {
+  background: var(--ifm-background-surface-color);
+}
+
+/* ============================================
+   FOOTER
+   ============================================ */
+
+.footer {
+  padding: var(--jp-space-3xl) var(--jp-space-xl) var(--jp-space-xl);
+  border-top: none;
+}
+
+.footer__title {
+  font-family: var(--jp-font-system);
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: var(--jp-space-lg);
+  color: var(--ifm-font-color-secondary);
+}
+
+.footer__link-item {
+  font-family: var(--jp-font-system);
+  font-size: 0.9rem;
+  opacity: 0.7;
+  transition: opacity var(--jp-transition-fast);
+  line-height: 2;
+}
+
+.footer__link-item:hover {
+  opacity: 1;
+  text-decoration: none;
+}
+
+.footer__copyright {
+  font-family: var(--jp-font-system);
+  margin-top: var(--jp-space-2xl);
+  padding-top: var(--jp-space-xl);
+  font-size: 0.8rem;
+  opacity: 0.5;
+  text-align: center;
+}
+
+[data-theme='dark'] .footer__copyright {
+  border-top: none;
+}
+
+:root .footer__copyright {
+  border-top: none;
+}
+
+/* Footer color toggle - match other column link styles */
+.footer-color-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--jp-space-sm);
+}
+
+.footer-toggle-label {
+  font-size: 0.9rem;
+  color: var(--ifm-footer-link-color);
+  transition: color 150ms ease;
+}
+
+.footer-color-toggle:hover .footer-toggle-label {
+  color: #78582e; /* amber-600 */
+}
+
+[data-theme='dark'] .footer-color-toggle:hover .footer-toggle-label {
+  color: #d4b888; /* amber-300 */
+}
+
+/* Footer colors - using slate palette */
+/* Light mode: slate-100 bg, slate-700 titles, slate-500 links, amber-600 hover */
+.footer {
+  background-color: #e2e4e7 !important; /* slate-100 */
+  --ifm-footer-title-color: #3d3f42; /* slate-700 */
+  --ifm-footer-link-color: #686b70; /* slate-500 */
+}
+
+.footer .footer__link-item:hover {
+  color: #78582e; /* amber-600 */
+}
+
+/* Dark mode: slate-800 bg, slate-200 titles, slate-400 links, amber-300 hover */
+[data-theme='dark'] .footer {
+  background-color: #2b2c2f !important; /* slate-800 */
+  --ifm-footer-title-color: #c8cbcf; /* slate-200 */
+  --ifm-footer-link-color: #8a8d93; /* slate-400 */
+}
+
+[data-theme='dark'] .footer .footer__link-item:hover {
+  color: #d4b888; /* amber-300 */
+}
+
+/* Copyright text - same as titles */
+.footer__copyright {
+  color: #3d3f42; /* slate-700, same as titles */
+}
+
+[data-theme='dark'] .footer__copyright {
+  color: #c8cbcf; /* slate-200, same as titles */
+}
+
+/* ============================================
+   BUTTONS
+   ============================================ */
+
+.button {
+  font-family: var(--jp-font-user);
+  font-weight: 500;
+  font-size: 0.85rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border-radius: var(--ifm-global-radius);
+  transition: all var(--jp-transition-base);
+  cursor: pointer;
+}
+
+.button--primary {
+  background: var(--jp-accent);
+  border: none;
+  color: var(--jp-warm-900);
+}
+
+.button--primary:hover {
+  background: var(--jp-amber-300);
+  color: var(--jp-warm-900);
+  transform: translateY(-1px);
+  box-shadow: var(--jp-shadow-md);
+}
+
+.button--secondary {
+  background: transparent;
+  border: 1px solid var(--jp-warm-400);
+  color: var(--ifm-font-color-base);
+}
+
+[data-theme='dark'] .button--secondary {
+  border-color: var(--jp-warm-600);
+}
+
+.button--secondary:hover {
+  background: var(--ifm-background-surface-color);
+  border-color: var(--jp-accent);
+  color: var(--ifm-font-color-base);
+}
+
+/* ============================================
+   ADMONITIONS
+   ============================================ */
+
+.admonition {
+  border: none;
+  border-radius: var(--ifm-global-radius);
+  padding: var(--jp-space-lg);
+}
+
+.admonition-heading {
+  font-family: var(--jp-font-display);
+  font-weight: 500;
+}
+
+/* ============================================
+   SEARCH
+   ============================================ */
+
+.DocSearch-Button {
+  border-radius: var(--ifm-global-radius);
+}
+
+/* ============================================
+   ANIMATIONS & EFFECTS
+   ============================================ */
+
+/* Subtle page load fade */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.main-wrapper {
+  animation: fadeIn 0.4s ease-out;
+}
+
+/* Focus states - accessible but subtle */
+:focus-visible {
+  outline: 2px solid var(--jp-accent);
+  outline-offset: 2px;
+}
+
+/* Selection styling */
+::selection {
+  background: var(--jp-amber-300);
+  color: var(--jp-warm-900);
+}
+
+/* ============================================
+   RESPONSIVE REFINEMENTS
+   ============================================ */
+
+@media (max-width: 996px) {
+  .navbar {
+    padding: var(--jp-space-md);
+  }
+
+  h1 {
+    font-size: 2rem;
+  }
+
+  h2 {
+    font-size: 1.5rem;
+  }
+}
+
+/* ============================================
+   DOCUSAURUS OVERRIDES
+   ============================================ */
+
+/* Remove default card borders */
+.card {
+  border: none;
+  box-shadow: var(--jp-shadow-sm);
+}
+
+/* Pagination */
+.pagination-nav__link {
+  border: none;
+  background: var(--ifm-background-surface-color);
+  border-radius: var(--ifm-global-radius);
+  padding: var(--jp-space-lg);
+  transition: all var(--jp-transition-base);
+}
+
+.pagination-nav__link:hover {
+  background: var(--ifm-background-surface-color);
+  transform: translateY(-2px);
+  box-shadow: var(--jp-shadow-md);
+}
+
+.pagination-nav__label {
+  font-family: var(--jp-font-heading);
+  font-size: 1.1rem;
+}
+
+.pagination-nav__sublabel {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  opacity: 0.6;
+}
+
+/* Breadcrumbs */
+.breadcrumbs__link {
+  font-size: 0.85rem;
+  opacity: 0.6;
+}
+
+.breadcrumbs__link:hover {
+  opacity: 1;
+}
+
+/* Version badge */
+.badge {
+  border-radius: var(--ifm-global-radius);
+  font-weight: 500;
+}
+
+/* Theme toggle in navbar - hide text, show icon only */
+[data-theme] .navbar [class*="colorModeToggle"] {
+  opacity: 0.7;
+}
+
+[data-theme] .navbar [class*="colorModeToggle"]:hover {
+  opacity: 1;
 }
