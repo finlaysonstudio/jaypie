@@ -143,7 +143,7 @@ const config: Config = {
       style: "dark",
       links: [
         {
-          title: "Documentation",
+          title: "Docs",
           items: [
             {
               label: "Introduction",
@@ -157,32 +157,36 @@ const config: Config = {
               label: "How-To Guides",
               to: "/docs/guides/express-lambda",
             },
+            {
+              label: "Architecture",
+              to: "/docs/architecture/project-structure",
+            },
           ],
         },
         {
-          title: "Packages",
+          title: "Reference",
           items: [
             {
-              label: "jaypie",
+              label: "Packages",
               to: "/docs/packages/jaypie",
             },
             {
-              label: "@jaypie/llm",
-              to: "/docs/packages/llm",
+              label: "Experimental",
+              to: "/docs/experimental/dynamodb",
             },
             {
-              label: "@jaypie/constructs",
-              to: "/docs/packages/constructs",
-            },
-            {
-              label: "@jaypie/testkit",
-              to: "/docs/packages/testkit",
+              label: "Criticisms",
+              to: "/docs/criticisms",
             },
           ],
         },
         {
-          title: "Links",
+          title: "Community",
           items: [
+            {
+              label: "Contributing",
+              to: "/docs/contributing/development-process",
+            },
             {
               label: "GitHub",
               href: "https://github.com/finlaysonstudio/jaypie",
@@ -191,10 +195,14 @@ const config: Config = {
               label: "npm",
               href: "https://www.npmjs.com/package/jaypie",
             },
+            {
+              label: "Publisher",
+              to: "/docs/publisher",
+            },
           ],
         },
       ],
-      copyright: `Finlayson Studio · MIT License`,
+      copyright: `Published by Finlayson Studio under the MIT License with Docusaurus`,
     },
     prism: {
       theme: prismThemes.github,
