@@ -66,6 +66,7 @@ They may be installed separately in the future.
 | `@jaypie/lambda` | `lambdaHandler` | Lambda entry point |
 | `@jaypie/llm` | `Llm` | LLM helpers |
 | `@jaypie/mongoose` | `connect`, `connectFromSecretEnv`, `disconnect`, `mongoose` | MongoDB management |
+| `@jaypie/vocabulary` | `coerce`, `serviceHandler`, `StatusType` | Type coercion and service handler patterns |
 
 #### TestKit
 
