@@ -9,6 +9,7 @@ This package provides utilities for:
 - **Key Builders**: Composite key construction for five GSIs
 - **Entity Operations**: CRUD operations with soft delete and archive support
 - **Query Utilities**: Named query functions (not gsi1, gsi2, etc.)
+- **Seed and Export**: Idempotent seeding and data export for migrations
 - **Client Management**: Singleton DynamoDB Document Client
 
 ## Directory Structure
@@ -22,6 +23,7 @@ src/
 ├── index.ts             # Package exports
 ├── keyBuilders.ts       # Key builder and entity utilities
 ├── queries.ts           # Query functions for each GSI
+├── seedExport.ts        # Seed and export utilities
 └── types.ts             # TypeScript interfaces
 ```
 
@@ -91,6 +93,17 @@ All query functions use object parameters:
 | `queryByType({ model, ou, type, ...options })` | Required: model, ou, type | Filter by type |
 | `queryByXid({ model, ou, xid })` | Required: all | Lookup by external ID (returns single or null) |
 
+### Seed and Export Functions
+
+Generic utilities for bootstrapping and migrating DynamoDB data:
+
+| Export | Description |
+|--------|-------------|
+| `seedEntityIfNotExists(entity)` | Seed a single entity if it doesn't already exist by alias |
+| `seedEntities(entities, options?)` | Seed multiple entities (idempotent) with optional replace/dryRun |
+| `exportEntities(model, ou, limit?)` | Export entities by model + ou, sorted by sequence ascending |
+| `exportEntitiesToJson(model, ou, pretty?)` | Export as JSON string (default: pretty printed) |
+
 ### Types
 
 ```typescript
@@ -147,6 +160,22 @@ interface FabricEntity {
   updatedAt: string;
   archivedAt?: string;        // Set by archiveEntity
   deletedAt?: string;         // Set by deleteEntity
+}
+
+interface SeedResult {
+  created: string[];          // Aliases of entities that were created
+  skipped: string[];          // Aliases of entities that were skipped (already exist)
+  errors: Array<{ alias: string; error: string }>;  // Error details
+}
+
+interface SeedOptions {
+  replace?: boolean;          // Overwrite existing entities (default: false)
+  dryRun?: boolean;           // Preview without writing (default: false)
+}
+
+interface ExportResult<T extends FabricEntity = FabricEntity> {
+  entities: T[];              // Exported entities
+  count: number;              // Number of entities exported
 }
 ```
 
@@ -330,6 +359,64 @@ const indexed = indexEntity(entity, DELETED_SUFFIX);
 // indexed.indexOu === "@#record#deleted"
 ```
 
+### Seed and Export
+
+```typescript
+import {
+  APEX,
+  exportEntities,
+  exportEntitiesToJson,
+  seedEntities,
+  seedEntityIfNotExists,
+} from "@jaypie/dynamodb";
+
+// Seed a single entity if it doesn't exist
+const created = await seedEntityIfNotExists({
+  alias: "config-main",
+  model: "config",
+  name: "Main Configuration",
+  ou: APEX,
+});
+// Returns true if created, false if already exists
+
+// Seed multiple entities (idempotent)
+const result = await seedEntities([
+  { alias: "vocab-en", model: "vocabulary", name: "English", ou: APEX },
+  { alias: "vocab-es", model: "vocabulary", name: "Spanish", ou: APEX },
+]);
+// result.created: ["vocab-en", "vocab-es"] or []
+// result.skipped: entities that already existed
+// result.errors: any entities that failed to seed
+
+// Dry run to preview what would be seeded
+const preview = await seedEntities(
+  [{ alias: "new-item", model: "item", ou: APEX }],
+  { dryRun: true }
+);
+// No entities written, but created/skipped arrays populated
+
+// Replace existing entities
+await seedEntities(
+  [{ alias: "config-main", model: "config", name: "Updated Config", ou: APEX }],
+  { replace: true }
+);
+
+// Export all entities of a type
+const { entities, count } = await exportEntities("vocabulary", APEX);
+// entities: array of FabricEntity sorted by sequence ascending
+// count: number of entities
+
+// Export with limit
+const { entities: limited } = await exportEntities("vocabulary", APEX, 10);
+
+// Export as JSON string
+const json = await exportEntitiesToJson("vocabulary", APEX);
+// Pretty printed by default
+
+const compact = await exportEntitiesToJson("vocabulary", APEX, false);
+// Compact JSON
+```
+
 ## Testing
 
 Mock implementations are provided in `@jaypie/testkit`:
@@ -337,9 +424,13 @@ Mock implementations are provided in `@jaypie/testkit`:
 ```typescript
 import {
   APEX,
-  queryByOu,
+  exportEntities,
+  exportEntitiesToJson,
   indexEntity,
   putEntity,
+  queryByOu,
+  seedEntities,
+  seedEntityIfNotExists,
 } from "@jaypie/testkit/mock";
 ```
 
