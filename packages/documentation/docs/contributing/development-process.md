@@ -4,7 +4,6 @@ sidebar_position: 1
 
 # Development Process
 
-**Use this page when:** contributing to Jaypie packages, understanding the development workflow, or preparing changes for review.
 
 **Prerequisites:** Git, Node.js 20+, npm
 

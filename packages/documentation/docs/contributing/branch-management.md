@@ -4,7 +4,6 @@ sidebar_position: 2
 
 # Branch Management
 
-**Use this page when:** creating branches for Jaypie contributions, preparing pull requests, or understanding Git workflow.
 
 **Prerequisites:** Git
 

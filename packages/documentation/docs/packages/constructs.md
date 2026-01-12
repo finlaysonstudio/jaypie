@@ -4,7 +4,6 @@ sidebar_position: 4
 
 # @jaypie/constructs
 
-**Use this page when:** deploying Jaypie applications to AWS with CDK, or configuring Lambda, API Gateway, or CloudFront resources.
 
 **Prerequisites:** `npm install @jaypie/constructs aws-cdk-lib constructs`
 

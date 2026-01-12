@@ -4,7 +4,6 @@ sidebar_position: 3
 
 # @jaypie/lambda
 
-**Use this page when:** building AWS Lambda functions with Jaypie patterns, or processing SQS/SNS events.
 
 **Prerequisites:** `npm install jaypie` or `npm install @jaypie/lambda`
 

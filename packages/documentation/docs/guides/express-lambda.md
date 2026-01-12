@@ -4,7 +4,6 @@ sidebar_position: 1
 
 # Express on Lambda
 
-**Use this page when:** creating a new Express.js application that runs on AWS Lambda, or migrating an existing Express app to Lambda.
 
 **Prerequisites:**
 - Existing Jaypie monorepo or new project

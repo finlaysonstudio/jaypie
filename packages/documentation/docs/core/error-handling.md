@@ -4,7 +4,6 @@ sidebar_position: 2
 
 # Error Handling
 
-**Use this page when:** throwing errors in Jaypie applications, handling errors from external services, or understanding JSON:API error format.
 
 **Prerequisites:** `npm install jaypie` (includes `@jaypie/errors`)
 

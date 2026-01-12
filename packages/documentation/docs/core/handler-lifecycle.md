@@ -4,7 +4,6 @@ sidebar_position: 1
 
 # Handler Lifecycle
 
-**Use this page when:** implementing Express or Lambda handlers with Jaypie, or understanding the execution flow of Jaypie handlers.
 
 **Prerequisites:** `npm install jaypie`
 

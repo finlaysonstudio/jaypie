@@ -4,7 +4,6 @@ sidebar_position: 2
 
 # @jaypie/express
 
-**Use this page when:** building Express.js applications with Jaypie patterns, implementing route handlers, or configuring CORS.
 
 **Prerequisites:** `npm install jaypie` or `npm install @jaypie/express`
 

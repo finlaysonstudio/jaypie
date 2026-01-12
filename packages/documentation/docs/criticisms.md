@@ -4,7 +4,6 @@ sidebar_position: 99
 
 # Jaypie Criticisms
 
-**Use this page when:** evaluating whether Jaypie is right for your project, understanding limitations, or comparing alternatives.
 
 ## Overview
 

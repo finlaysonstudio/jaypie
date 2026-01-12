@@ -4,7 +4,6 @@ sidebar_position: 1
 
 # Project Structure
 
-**Use this page when:** setting up a new Jaypie monorepo, configuring workspace packages, or understanding project conventions.
 
 **Prerequisites:** Node.js 20+, npm
 

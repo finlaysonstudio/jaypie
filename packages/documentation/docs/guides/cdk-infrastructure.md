@@ -4,7 +4,6 @@ sidebar_position: 2
 
 # CDK Infrastructure
 
-**Use this page when:** setting up AWS CDK infrastructure for Jaypie applications, or understanding Jaypie CDK construct patterns.
 
 **Prerequisites:**
 - `npm install @jaypie/constructs aws-cdk-lib constructs`

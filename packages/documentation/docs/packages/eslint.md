@@ -4,7 +4,6 @@ sidebar_position: 10
 
 # @jaypie/eslint
 
-**Use this page when:** setting up ESLint for Jaypie projects or troubleshooting lint configuration.
 
 **Prerequisites:** `npm install -D @jaypie/eslint eslint`
 

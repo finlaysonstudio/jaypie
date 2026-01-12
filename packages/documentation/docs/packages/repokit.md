@@ -4,7 +4,6 @@ sidebar_position: 11
 
 # @jaypie/repokit
 
-**Use this page when:** setting up development tooling for Jaypie projects or understanding bundled CLI tools.
 
 **Prerequisites:** `npm install -D @jaypie/repokit`
 

@@ -4,7 +4,6 @@ sidebar_position: 6
 
 # @jaypie/errors
 
-**Use this page when:** throwing errors in Jaypie applications or handling error responses.
 
 **Prerequisites:** `npm install jaypie` or `npm install @jaypie/errors`
 

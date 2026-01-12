@@ -4,7 +4,6 @@ sidebar_position: 1
 
 # jaypie
 
-**Use this page when:** starting a new Jaypie project or understanding what the main package provides.
 
 **Prerequisites:** Node.js 20+
 

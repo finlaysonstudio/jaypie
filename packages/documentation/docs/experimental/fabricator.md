@@ -4,7 +4,6 @@ sidebar_position: 2
 
 # @jaypie/fabricator
 
-**Use this page when:** generating deterministic test data, creating realistic mock data, or building temporal event sequences.
 
 **Prerequisites:** `npm install @jaypie/fabricator`
 

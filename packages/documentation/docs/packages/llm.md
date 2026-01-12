@@ -4,7 +4,6 @@ sidebar_position: 5
 
 # @jaypie/llm
 
-**Use this page when:** integrating large language models into Jaypie applications, creating tools for function calling, or streaming LLM responses.
 
 **Prerequisites:** `npm install @jaypie/llm` and API key for provider
 

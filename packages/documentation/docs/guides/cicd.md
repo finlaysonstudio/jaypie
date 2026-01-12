@@ -4,7 +4,6 @@ sidebar_position: 5
 
 # CI/CD with GitHub Actions
 
-**Use this page when:** setting up continuous integration and deployment for Jaypie projects, or configuring environment-specific deployments.
 
 **Prerequisites:**
 - GitHub repository

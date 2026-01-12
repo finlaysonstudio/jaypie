@@ -4,7 +4,6 @@ sidebar_position: 3
 
 # Patterns and Anti-Patterns
 
-**Use this page when:** reviewing code for Jaypie conventions, understanding best practices, or avoiding common mistakes.
 
 **Prerequisites:** Familiarity with Jaypie basics
 

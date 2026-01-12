@@ -4,7 +4,6 @@ sidebar_position: 7
 
 # @jaypie/logger
 
-**Use this page when:** implementing structured logging in Jaypie applications or understanding log levels.
 
 **Prerequisites:** `npm install jaypie` or `npm install @jaypie/logger`
 

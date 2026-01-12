@@ -4,7 +4,6 @@ sidebar_position: 8
 
 # @jaypie/kit
 
-**Use this page when:** using Jaypie utility functions for type coercion, UUID generation, or environment checks.
 
 **Prerequisites:** `npm install jaypie` or `npm install @jaypie/kit`
 

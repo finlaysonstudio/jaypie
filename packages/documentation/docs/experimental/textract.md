@@ -4,7 +4,6 @@ sidebar_position: 4
 
 # @jaypie/textract
 
-**Use this page when:** processing documents with AWS Textract or extracting text from images and PDFs.
 
 **Prerequisites:** `npm install @jaypie/textract` and AWS credentials
 

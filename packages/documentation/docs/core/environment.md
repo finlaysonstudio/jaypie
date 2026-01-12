@@ -4,7 +4,6 @@ sidebar_position: 4
 
 # Environment Variables and Secrets
 
-**Use this page when:** configuring Jaypie applications for different environments, loading secrets from AWS Secrets Manager, or understanding environment variable conventions.
 
 **Prerequisites:** `npm install jaypie`
 

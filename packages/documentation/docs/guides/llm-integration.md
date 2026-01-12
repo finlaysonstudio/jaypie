@@ -4,7 +4,6 @@ sidebar_position: 4
 
 # LLM Integration
 
-**Use this page when:** integrating large language models into Jaypie applications, creating tools for LLM function calling, or streaming LLM responses.
 
 **Prerequisites:**
 - `npm install @jaypie/llm`

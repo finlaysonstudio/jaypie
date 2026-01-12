@@ -4,7 +4,6 @@ sidebar_position: 5
 
 # @jaypie/vocabulary
 
-**Use this page when:** creating service handlers with type coercion, or integrating handlers with CLI, Lambda, LLM, or MCP.
 
 **Prerequisites:** `npm install @jaypie/vocabulary`
 

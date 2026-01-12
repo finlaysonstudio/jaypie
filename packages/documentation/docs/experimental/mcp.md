@@ -4,7 +4,6 @@ sidebar_position: 3
 
 # @jaypie/mcp
 
-**Use this page when:** building Model Context Protocol servers or exposing service handlers as MCP tools.
 
 **Prerequisites:** `npm install @jaypie/mcp`
 

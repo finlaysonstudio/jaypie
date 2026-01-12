@@ -22,7 +22,6 @@ TypeScript framework for AWS Lambda and Express applications with CDK constructs
 
 ## Getting Started
 
-**Use this section when:** starting with Jaypie, understanding what packages to install, or getting a quick reference for common patterns.
 
 ## What is Jaypie?
 

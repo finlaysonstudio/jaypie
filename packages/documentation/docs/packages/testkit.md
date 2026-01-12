@@ -4,7 +4,6 @@ sidebar_position: 9
 
 # @jaypie/testkit
 
-**Use this page when:** writing tests for Jaypie applications, mocking Jaypie packages, or using custom matchers.
 
 **Prerequisites:** `npm install -D @jaypie/testkit vitest`
 

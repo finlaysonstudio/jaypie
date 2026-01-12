@@ -4,7 +4,6 @@ sidebar_position: 1
 
 # @jaypie/dynamodb
 
-**Use this page when:** implementing single-table DynamoDB patterns with Jaypie or working with the FabricEntity interface.
 
 **Prerequisites:** `npm install @jaypie/dynamodb`
 

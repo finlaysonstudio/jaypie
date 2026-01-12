@@ -4,7 +4,6 @@ sidebar_position: 2
 
 # Vocabulary System
 
-**Use this page when:** creating reusable service handlers, understanding type coercion, or building handlers that work across multiple contexts.
 
 **Prerequisites:** Understanding of service handlers
 

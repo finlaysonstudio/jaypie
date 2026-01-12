@@ -4,7 +4,6 @@ sidebar_position: 3
 
 # Writing Documentation
 
-**Use this page when:** contributing documentation to Jaypie, writing prompt guides, or maintaining README files.
 
 **Prerequisites:** Familiarity with Markdown
 
@@ -30,7 +29,6 @@ sidebar_position: N
 
 # Page Title
 
-**Use this page when:** [1-2 sentence trigger for when to read this]
 
 **Prerequisites:** [packages to install, files that must exist]
 
