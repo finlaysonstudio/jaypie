@@ -35,8 +35,8 @@
   border-radius: 50%;
   background: radial-gradient(
     circle at center,
-    rgba(255, 231, 135, 0.08) 0%,
-    rgba(255, 231, 135, 0.02) 40%,
+    rgba(212, 184, 136, 0.08) 0%,
+    rgba(212, 184, 136, 0.02) 40%,
     transparent 70%
   );
   top: -200px;
@@ -51,8 +51,8 @@
   border-radius: 50%;
   background: radial-gradient(
     circle at center,
-    rgba(255, 231, 135, 0.06) 0%,
-    rgba(255, 231, 135, 0.01) 50%,
+    rgba(212, 184, 136, 0.06) 0%,
+    rgba(212, 184, 136, 0.01) 50%,
     transparent 70%
   );
   bottom: -150px;
@@ -151,9 +151,9 @@
 }
 
 .primaryButton:hover {
-  background: var(--jp-yellow-soft);
+  background: var(--jp-amber-200);
   transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(255, 231, 135, 0.2);
+  box-shadow: 0 8px 24px rgba(212, 184, 136, 0.25);
   text-decoration: none;
   color: var(--jp-warm-900);
 }
@@ -181,7 +181,7 @@
 
 .secondaryButton:hover {
   border-color: var(--jp-accent);
-  background: rgba(255, 231, 135, 0.05);
+  background: rgba(212, 184, 136, 0.08);
   text-decoration: none;
   color: var(--ifm-font-color-base);
 }
@@ -522,8 +522,8 @@
 [data-theme='dark'] .heroOrb1 {
   background: radial-gradient(
     circle at center,
-    rgba(255, 231, 135, 0.06) 0%,
-    rgba(255, 231, 135, 0.01) 40%,
+    rgba(212, 184, 136, 0.06) 0%,
+    rgba(212, 184, 136, 0.01) 40%,
     transparent 70%
   );
 }
@@ -531,14 +531,14 @@
 [data-theme='dark'] .heroOrb2 {
   background: radial-gradient(
     circle at center,
-    rgba(255, 231, 135, 0.04) 0%,
-    rgba(255, 231, 135, 0.01) 50%,
+    rgba(212, 184, 136, 0.04) 0%,
+    rgba(212, 184, 136, 0.01) 50%,
     transparent 70%
   );
 }
 
 [data-theme='dark'] .primaryButton:hover {
-  box-shadow: 0 8px 32px rgba(255, 231, 135, 0.15);
+  box-shadow: 0 8px 32px rgba(212, 184, 136, 0.2);
 }
 
 /* ============================================

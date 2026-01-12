@@ -5,7 +5,7 @@ const sidebars: SidebarsConfig = {
     {
       type: "doc",
       id: "index",
-      label: "Jaypie",
+      label: "🐦‍⬛ Jaypie",
     },
     {
       type: "doc",

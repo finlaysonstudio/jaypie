@@ -181,7 +181,7 @@ const config: Config = {
           ],
         },
         {
-          title: "Community",
+          title: "Development",
           items: [
             {
               label: "Contributing",
@@ -192,17 +192,13 @@ const config: Config = {
               href: "https://github.com/finlaysonstudio/jaypie",
             },
             {
-              label: "npm",
-              href: "https://www.npmjs.com/package/jaypie",
-            },
-            {
               label: "Publisher",
               to: "/docs/publisher",
             },
           ],
         },
       ],
-      copyright: `Published by Finlayson Studio under the MIT License with Docusaurus`,
+      copyright: `Published by Finlayson Studio. Released under the MIT License. Created with Docusaurus. Available on GitHub.`,
     },
     prism: {
       theme: prismThemes.github,
