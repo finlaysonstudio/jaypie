@@ -10,7 +10,7 @@ Jaypie standard application component vocabulary - provides type coercion and se
 | Type | Utility library |
 | Dependencies | `@jaypie/errors` |
 | Peer Dependencies | `@jaypie/aws` (optional), `@jaypie/lambda` (optional), `@modelcontextprotocol/sdk` (optional), `commander` (optional) |
-| Exports | Coercion functions, serviceHandler, commander/lambda/llm/mcp adapters, TypeScript types |
+| Exports | Coercion functions, serviceHandler, llm adapter; commander/lambda/mcp via sub-paths |
 
 ## Internal Structure
 
@@ -646,11 +646,13 @@ progress?:
 // Coercion
 export { coerce, coerceFromArray, coerceFromObject, coerceToArray, coerceToBoolean, coerceToNumber, coerceToObject, coerceToString } from "./coerce.js";
 
-// Adapter namespaces
-export * as commander from "./commander/index.js";
-export * as lambda from "./lambda/index.js";
+// LLM adapter namespace (re-exported, no optional deps)
 export * as llm from "./llm/index.js";
-export * as mcp from "./mcp/index.js";
+
+// Note: Other adapters have optional dependencies and must be imported directly:
+//   import { registerServiceCommand } from "@jaypie/vocabulary/commander";
+//   import { lambdaServiceHandler } from "@jaypie/vocabulary/lambda";
+//   import { registerMcpTool } from "@jaypie/vocabulary/mcp";
 
 // Service Handler
 export { serviceHandler } from "./serviceHandler.js";

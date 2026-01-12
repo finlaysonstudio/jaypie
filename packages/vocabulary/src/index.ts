@@ -49,17 +49,13 @@ export {
 export { isStatus, STATUS_VALUES, StatusType } from "./status.js";
 export type { Status } from "./status.js";
 
-// Commander adapter (re-exported for convenience)
-export * as commander from "./commander/index.js";
-
-// Lambda adapter (re-exported for convenience)
-export * as lambda from "./lambda/index.js";
-
-// LLM adapter (re-exported for convenience)
+// LLM adapter (re-exported for convenience - no optional deps)
 export * as llm from "./llm/index.js";
 
-// MCP adapter (re-exported for convenience)
-export * as mcp from "./mcp/index.js";
+// Note: Other adapters have optional dependencies and must be imported directly:
+//   import { registerServiceCommand } from "@jaypie/vocabulary/commander";
+//   import { lambdaServiceHandler } from "@jaypie/vocabulary/lambda";
+//   import { registerMcpTool } from "@jaypie/vocabulary/mcp";
 
 // Service Handler
 export { serviceHandler } from "./serviceHandler.js";
@@ -86,4 +82,4 @@ export type {
 } from "./types.js";
 
 // Version
-export const VOCABULARY_VERSION = "0.1.6";
+export const VOCABULARY_VERSION = "0.1.8";
