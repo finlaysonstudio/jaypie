@@ -8,7 +8,7 @@ sidebar_position: 101
 
 Jaypie is published by Finlayson Studio under the MIT License.
 
-Finlayson Studio provides independent research and development for private clients. Inquiries by referral.
+Finlayson Studio provides independent research and development to private clients. Inquiries by referral.
 
 ## MIT License
 

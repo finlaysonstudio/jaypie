@@ -123,6 +123,7 @@ const config: Config = {
       title: "Jaypie",
       logo: {
         alt: "Jaypie",
+        href: "/",
         src: "img/logo.svg",
       },
       items: [
@@ -147,7 +148,7 @@ const config: Config = {
           items: [
             {
               label: "Introduction",
-              to: "/docs/intro",
+              to: "/docs",
             },
             {
               label: "Core Concepts",

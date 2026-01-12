@@ -1,10 +1,28 @@
 ---
-sidebar_position: 2
+sidebar_position: 1
+slug: /
 ---
 
-# Introduction
+# Jaypie
 
-**Use this page when:** starting with Jaypie, understanding what packages to install, or getting a quick reference for common patterns.
+TypeScript framework for AWS Lambda and Express applications with CDK constructs and Datadog observability.
+
+**Stack:** AWS Lambda, CDK, Express.js, Datadog, TypeScript, Node.js 20-25
+
+## Documentation
+
+| Section | Description |
+|---------|-------------|
+| [Core Concepts](/docs/core/handler-lifecycle) | Handler lifecycle, errors, logging, environment |
+| [How-To Guides](/docs/guides/express-lambda) | Step-by-step guides for common tasks |
+| [Packages](/docs/packages/jaypie) | API reference for each package |
+| [Experimental](/docs/experimental/dynamodb) | Unstable packages in development |
+| [Architecture](/docs/architecture/project-structure) | Project structure, patterns |
+| [Contributing](/docs/contributing/development-process) | Development workflow |
+
+## Getting Started
+
+**Use this section when:** starting with Jaypie, understanding what packages to install, or getting a quick reference for common patterns.
 
 ## What is Jaypie?
 
@@ -236,6 +254,44 @@ for await (const chunk of Llm.stream("Tell me a story")) {
 }
 ```
 
+## Packages
+
+### Core
+
+| Package | Purpose |
+|---------|---------|
+| [`jaypie`](/docs/packages/jaypie) | Main package: re-exports express, lambda, errors, kit, logger |
+| [`@jaypie/express`](/docs/packages/express) | Express handler wrapper |
+| [`@jaypie/lambda`](/docs/packages/lambda) | Lambda handler wrapper |
+| [`@jaypie/errors`](/docs/packages/errors) | JSON:API error classes |
+| [`@jaypie/logger`](/docs/packages/logger) | Structured logging |
+| [`@jaypie/kit`](/docs/packages/kit) | Utilities: force, uuid, sleep |
+
+### Infrastructure
+
+| Package | Purpose |
+|---------|---------|
+| [`@jaypie/constructs`](/docs/packages/constructs) | CDK constructs with Datadog |
+| [`@jaypie/llm`](/docs/packages/llm) | LLM provider abstraction |
+
+### Development
+
+| Package | Purpose |
+|---------|---------|
+| [`@jaypie/testkit`](/docs/packages/testkit) | Mocks and matchers |
+| [`@jaypie/eslint`](/docs/packages/eslint) | ESLint configuration |
+| [`@jaypie/repokit`](/docs/packages/repokit) | Repository tooling |
+
+### Experimental
+
+| Package | Purpose |
+|---------|---------|
+| [`@jaypie/dynamodb`](/docs/experimental/dynamodb) | DynamoDB single-table patterns |
+| [`@jaypie/fabricator`](/docs/experimental/fabricator) | Test data generation |
+| [`@jaypie/mcp`](/docs/experimental/mcp) | Model Context Protocol server |
+| [`@jaypie/textract`](/docs/experimental/textract) | AWS Textract utilities |
+| [`@jaypie/vocabulary`](/docs/experimental/vocabulary) | Service handler adapters |
+
 ## Next Steps
 
 | Goal | Page |
@@ -246,3 +302,8 @@ for await (const chunk of Llm.stream("Tell me a story")) {
 | Write tests | [Testing](/docs/guides/testing) |
 | Add LLM | [LLM Integration](/docs/guides/llm-integration) |
 | CI/CD setup | [CI/CD](/docs/guides/cicd) |
+
+## Links
+
+- [GitHub](https://github.com/finlaysonstudio/jaypie)
+- [npm](https://www.npmjs.com/package/jaypie)

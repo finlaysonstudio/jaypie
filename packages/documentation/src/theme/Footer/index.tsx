@@ -11,7 +11,7 @@ interface FooterLinkColumn {
   items: FooterLinkItemProps["item"][];
 }
 
-function LinkColumn({ title, items }: FooterLinkColumn): JSX.Element {
+function LinkColumn({ title, items }: FooterLinkColumn): React.ReactElement {
   return (
     <div className="col footer__col">
       {title && <div className="footer__title">{title}</div>}
@@ -26,7 +26,7 @@ function LinkColumn({ title, items }: FooterLinkColumn): JSX.Element {
   );
 }
 
-function ToolsColumn(): JSX.Element {
+function ToolsColumn(): React.ReactElement {
   const { colorMode, setColorMode } = useColorMode();
 
   return (
@@ -38,6 +38,7 @@ function ToolsColumn(): JSX.Element {
             <ColorModeToggle
               value={colorMode}
               onChange={setColorMode}
+              respectPrefersColorScheme={true}
             />
             <span className="footer-toggle-label">
               {colorMode === "dark" ? "Dark" : "Light"}
@@ -49,7 +50,7 @@ function ToolsColumn(): JSX.Element {
   );
 }
 
-function Footer(): JSX.Element | null {
+function Footer(): React.ReactElement | null {
   const { footer } = useThemeConfig();
   if (!footer) {
     return null;

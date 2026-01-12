@@ -18,7 +18,7 @@ function Hero(): React.ReactElement {
           patterns. Aligns infrastructure, execution, and observability.
         </p>
         <div className={styles.heroActions}>
-          <Link className={styles.primaryButton} to="/docs/intro">
+          <Link className={styles.primaryButton} to="/docs">
             Documentation
           </Link>
           <Link className={styles.secondaryButton} to="/docs/packages/jaypie">
