@@ -227,7 +227,7 @@ function expressHandler<T>(
     });
 
     // Update the public logger with the request ID
-    const invokeUuid = getCurrentInvokeUuid();
+    const invokeUuid = getCurrentInvokeUuid(req);
     if (invokeUuid) {
       logger.tag({ invoke: invokeUuid });
       logger.tag({ shortInvoke: invokeUuid.slice(0, 8) });

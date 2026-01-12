@@ -1,6 +1,6 @@
 {
   "name": "@jaypie/express",
-  "version": "1.2.2",
+  "version": "1.2.3",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/finlaysonstudio/jaypie.git"
@@ -31,10 +31,13 @@
     "test": "vitest run .",
     "test:spec:constants": "vitest run ./src/__tests__/constants.spec.ts",
     "test:spec:cors.helper": "vitest run ./src/__tests__/cors.helper.spec.ts",
+    "test:spec:createServer": "vitest run ./src/__tests__/createServer.spec.ts",
     "test:spec:decorateResponse.helper": "vitest run ./src/__tests__/decorateResponse.helper.spec.ts",
     "test:spec:echo.handler": "vitest run ./src/__tests__/echo.handler.spec.ts",
     "test:spec:expressHandler": "vitest run ./src/__tests__/expressHandler.spec.ts",
+    "test:spec:expressStreamHandler": "vitest run ./src/__tests__/expressStreamHandler.spec.ts",
     "test:spec:getCurrentInvokeUuid.adapter": "vitest run ./src/__tests__/getCurrentInvokeUuid.adapter.spec.ts",
+    "test:spec:getCurrentInvokeUuid.webadapter": "vitest run ./src/__tests__/getCurrentInvokeUuid.webadapter.spec.ts",
     "test:spec:http.handler": "vitest run ./src/__tests__/http.handler.spec.ts",
     "test:spec:index": "vitest run ./src/__tests__/index.spec.ts",
     "test:spec:routes": "vitest run ./src/__tests__/routes.spec.ts",
