@@ -40,6 +40,7 @@
 | `@jaypie/testkit` | Testing mocks and utilities |
 | `@jaypie/textract` | AWS Textract utilities |
 | `@jaypie/types` | Core TypeScript type definitions |
+| `@jaypie/vocabulary` | Type coercion, service handlers, and adapters for CLI/Lambda/LLM/MCP |
 | `@jaypie/documentation` | Documentation site (private) |
 
 ## CI/CD Workflows
