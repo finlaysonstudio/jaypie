@@ -407,6 +407,50 @@ expressHandler automatically sets these headers:
 
 When Datadog environment variables are configured, expressHandler automatically submits metrics for each request including status code and path.
 
+## Server Creation
+
+Use `createServer` to quickly set up an Express server with standard Jaypie middleware.
+
+### Basic Server Usage
+
+```typescript
+import express from "express";
+import { createServer, expressHandler } from "jaypie";
+
+const app = express();
+
+app.get("/", expressHandler(async (req, res) => {
+  return { message: "Hello World" };
+}));
+
+const { server, port } = await createServer(app);
+console.log(`Server running on port ${port}`);
+```
+
+### Server Options
+
+```typescript
+import { createServer } from "jaypie";
+import type { CreateServerOptions } from "jaypie";
+
+const options: CreateServerOptions = {
+  port: 3000,              // Port to listen on (default: PORT env var or 8080)
+  cors: { origin: "*" },   // CORS config (false to disable)
+  jsonLimit: "10mb",       // JSON body parser limit (default: "1mb")
+  middleware: [myMiddleware], // Additional middleware to apply
+};
+
+const { server, port } = await createServer(app, options);
+```
+
+### Server Result
+
+```typescript
+import type { ServerResult } from "jaypie";
+
+// { server: Server, port: number }
+```
+
 ## Streaming Responses
 
 Use `expressStreamHandler` for Server-Sent Events (SSE) streaming responses. Ideal for real-time updates, LLM streaming, and long-running operations.
@@ -497,3 +541,33 @@ import type {
   JaypieStreamHandlerValidate,
 } from "jaypie";
 ```
+
+## Invoke UUID Detection
+
+Use `getCurrentInvokeUuid` to get the current request ID. Automatically detects the environment (Lambda, Lambda Web Adapter, or local development).
+
+### Basic Usage
+
+```typescript
+import { getCurrentInvokeUuid } from "jaypie";
+
+const handler = expressHandler(async (req, res) => {
+  const invokeUuid = getCurrentInvokeUuid(req);
+  // Returns AWS request ID in Lambda, or generates a local UUID
+  return { requestId: invokeUuid };
+});
+```
+
+### Environment Detection
+
+The function adapts to different runtime environments:
+
+1. **Lambda (native)**: Uses `awsRequestId` from Lambda context
+2. **Lambda Web Adapter**: Extracts from `x-amzn-request-id` header or `_X_AMZN_TRACE_ID` env var
+3. **Local development**: Generates a UUID for consistent tracing
+
+### Lambda Web Adapter Headers
+
+When running Express behind AWS Lambda Web Adapter, the function extracts the request ID from:
+- `x-amzn-request-id` header (set by Lambda Web Adapter)
+- `_X_AMZN_TRACE_ID` environment variable (X-Ray trace ID, set by Lambda runtime)

@@ -62,7 +62,7 @@ They may be installed separately in the future.
 | ------- | ------- | ----------- |
 | `@jaypie/aws` |  `getEnvSecret`, `getMessages`, `getSecret`, `getSingletonMessage`, `getTextractJob`, `sendBatchMessages`, `sendMessage`, `sendTextractJob` | AWS helpers |
 | `@jaypie/datadog` | `submitDistribution`, `submitMetric`, `submitMetricSet` | Datadog helpers |
-| `@jaypie/express` | `badRequestRoute`, `cors`, `echoRoute`, `expressHandler`, `expressHttpCodeHandler`, `forbiddenRoute`, `goneRoute`, `methodNotAllowedRoute`, `noContentRoute`, `notFoundRoute`, `notImplementedRoute`, | Express entry point |
+| `@jaypie/express` | `badRequestRoute`, `cors`, `createServer`, `echoRoute`, `expressHandler`, `expressHttpCodeHandler`, `expressStreamHandler`, `forbiddenRoute`, `getCurrentInvokeUuid`, `goneRoute`, `methodNotAllowedRoute`, `noContentRoute`, `notFoundRoute`, `notImplementedRoute` | Express entry point |
 | `@jaypie/lambda` | `lambdaHandler` | Lambda entry point |
 | `@jaypie/llm` | `Llm` | LLM helpers |
 | `@jaypie/mongoose` | `connect`, `connectFromSecretEnv`, `disconnect`, `mongoose` | MongoDB management |
