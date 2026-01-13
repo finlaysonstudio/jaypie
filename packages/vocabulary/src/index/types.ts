@@ -49,7 +49,7 @@ export interface ModelSchema {
 // =============================================================================
 
 /**
- * Default indexes matching the original FabricEntity GSI pattern.
+ * Default indexes for the DynamoDB GSI pattern.
  * These are used when a model does not specify custom indexes.
  */
 export const DEFAULT_INDEXES: IndexDefinition[] = [

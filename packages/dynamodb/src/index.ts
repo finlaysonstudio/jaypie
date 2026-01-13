@@ -68,8 +68,6 @@ export {
 export type {
   BaseQueryOptions,
   DynamoClientConfig,
-  /** @deprecated Use StorableEntity instead */
-  FabricEntity,
   ParentReference,
   QueryResult,
   StorableEntity,

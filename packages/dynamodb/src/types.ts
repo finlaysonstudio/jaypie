@@ -110,7 +110,7 @@ export interface QueryByXidParams {
 /**
  * Result of a query operation
  */
-export interface QueryResult<T = FabricEntity> {
+export interface QueryResult<T = StorableEntity> {
   /** Array of matching entities */
   items: T[];
   /** Pagination cursor for next page (undefined if no more results) */
@@ -156,10 +156,3 @@ export interface StorableEntity
   /** Soft-delete timestamp */
   deletedAt?: string;
 }
-
-/**
- * Base entity interface for DynamoDB single-table design
- *
- * @deprecated Use StorableEntity instead. FabricEntity will be removed in v0.3.0.
- */
-export type FabricEntity = StorableEntity;

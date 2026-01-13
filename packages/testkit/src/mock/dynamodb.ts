@@ -3,7 +3,6 @@ import type {
   BaseQueryOptions,
   DynamoClientConfig,
   ExportResult,
-  FabricEntity,
   ParentReference,
   QueryParams,
   QueryResult,
@@ -61,8 +60,8 @@ export const calculateOu = createMockFunction<
 >((parent) => original.calculateOu(parent));
 
 export const indexEntity = createMockFunction<
-  <T extends FabricEntity>(entity: T, suffix?: string) => T
->(<T extends FabricEntity>(entity: T, suffix?: string) =>
+  <T extends StorableEntity>(entity: T, suffix?: string) => T
+>(<T extends StorableEntity>(entity: T, suffix?: string) =>
   original.indexEntity(entity, suffix),
 );
 
@@ -87,18 +86,18 @@ export const resetClient = createMockFunction(() => {
 
 // Entity operations - service handler pattern (callable with object params)
 export const getEntity = createMockFunction<
-  (params: { id: string; model: string }) => Promise<FabricEntity | null>
+  (params: { id: string; model: string }) => Promise<StorableEntity | null>
 >(async () => null);
 
 export const putEntity = createMockFunction<
-  (params: { entity: FabricEntity }) => Promise<FabricEntity>
->(async (params: { entity: FabricEntity }) =>
+  (params: { entity: StorableEntity }) => Promise<StorableEntity>
+>(async (params: { entity: StorableEntity }) =>
   original.indexEntity(params.entity),
 );
 
 export const updateEntity = createMockFunction<
-  (params: { entity: FabricEntity }) => Promise<FabricEntity>
->(async (params: { entity: FabricEntity }) => ({
+  (params: { entity: StorableEntity }) => Promise<StorableEntity>
+>(async (params: { entity: StorableEntity }) => ({
   ...original.indexEntity(params.entity),
   updatedAt: new Date().toISOString(),
 }));
@@ -125,7 +124,7 @@ export const queryByOu = createMockFunction<
     deleted?: boolean;
     limit?: number;
     startKey?: Record<string, unknown>;
-  }) => Promise<QueryResult<FabricEntity>>
+  }) => Promise<QueryResult<StorableEntity>>
 >(async () => ({
   items: [],
   lastEvaluatedKey: undefined,
@@ -138,7 +137,7 @@ export const queryByAlias = createMockFunction<
     deleted?: boolean;
     model: string;
     ou: string;
-  }) => Promise<FabricEntity | null>
+  }) => Promise<StorableEntity | null>
 >(async () => null);
 
 export const queryByClass = createMockFunction<
@@ -151,7 +150,7 @@ export const queryByClass = createMockFunction<
     ou: string;
     recordClass: string;
     startKey?: Record<string, unknown>;
-  }) => Promise<QueryResult<FabricEntity>>
+  }) => Promise<QueryResult<StorableEntity>>
 >(async () => ({
   items: [],
   lastEvaluatedKey: undefined,
@@ -167,7 +166,7 @@ export const queryByType = createMockFunction<
     ou: string;
     startKey?: Record<string, unknown>;
     type: string;
-  }) => Promise<QueryResult<FabricEntity>>
+  }) => Promise<QueryResult<StorableEntity>>
 >(async () => ({
   items: [],
   lastEvaluatedKey: undefined,
@@ -180,7 +179,7 @@ export const queryByXid = createMockFunction<
     model: string;
     ou: string;
     xid: string;
-  }) => Promise<FabricEntity | null>
+  }) => Promise<StorableEntity | null>
 >(async () => null);
 
 // Unified query function with auto-detect
@@ -202,11 +201,11 @@ export const query = createMockFunction<
 
 // Seed and export utilities
 export const seedEntityIfNotExists = createMockFunction<
-  <T extends Partial<FabricEntity>>(entity: T) => Promise<boolean>
+  <T extends Partial<StorableEntity>>(entity: T) => Promise<boolean>
 >(async () => true);
 
 export const seedEntities = createMockFunction<
-  <T extends Partial<FabricEntity>>(
+  <T extends Partial<StorableEntity>>(
     entities: T[],
     options?: SeedOptions,
   ) => Promise<SeedResult>
@@ -217,7 +216,7 @@ export const seedEntities = createMockFunction<
 }));
 
 export const exportEntities = createMockFunction<
-  <T extends FabricEntity>(
+  <T extends StorableEntity>(
     model: string,
     ou: string,
     limit?: number,
@@ -235,7 +234,6 @@ export const exportEntitiesToJson = createMockFunction<
 export type {
   BaseQueryOptions,
   ExportResult,
-  FabricEntity,
   ParentReference,
   QueryParams,
   QueryResult,

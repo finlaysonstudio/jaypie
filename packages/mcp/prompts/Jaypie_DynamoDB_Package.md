@@ -61,14 +61,14 @@ initClient({
 });
 ```
 
-## FabricEntity Interface
+## StorableEntity Interface
 
-All entities must implement `FabricEntity`:
+All entities must implement `StorableEntity`:
 
 ```typescript
-import type { FabricEntity } from "@jaypie/dynamodb";
+import type { StorableEntity } from "@jaypie/dynamodb";
 
-interface MyRecord extends FabricEntity {
+interface MyRecord extends StorableEntity {
   // Primary Key (required)
   model: string;      // e.g., "record"
   id: string;         // UUID
@@ -313,7 +313,7 @@ const result = await queryByOu({
 import { APEX, queryByOu } from "@jaypie/dynamodb";
 
 let startKey: Record<string, unknown> | undefined;
-const allItems: FabricEntity[] = [];
+const allItems: StorableEntity[] = [];
 
 do {
   const { items, lastEvaluatedKey } = await queryByOu({
@@ -482,7 +482,7 @@ Export entities by model and organizational unit:
 import { APEX, exportEntities } from "@jaypie/dynamodb";
 
 const { entities, count } = await exportEntities("vocabulary", APEX);
-// entities: FabricEntity[] sorted by sequence ascending
+// entities: StorableEntity[] sorted by sequence ascending
 // count: number of entities
 
 // With limit
@@ -517,7 +517,7 @@ interface SeedOptions {
   dryRun?: boolean;    // Preview without writing (default: false)
 }
 
-interface ExportResult<T extends FabricEntity = FabricEntity> {
+interface ExportResult<T extends StorableEntity = StorableEntity> {
   entities: T[];       // Exported entities
   count: number;       // Number of entities
 }

@@ -8,7 +8,7 @@ import {
   seedEntities,
   seedEntityIfNotExists,
 } from "../seedExport.js";
-import type { FabricEntity } from "../types.js";
+import type { StorableEntity } from "../types.js";
 
 // Mock the modules
 vi.mock("../entities.js", async () => {
@@ -31,7 +31,7 @@ vi.mock("../queries.js", async () => {
 describe("Seed and Export Utilities", () => {
   const now = new Date().toISOString();
 
-  const createTestEntity = (overrides: Partial<FabricEntity> = {}): FabricEntity => ({
+  const createTestEntity = (overrides: Partial<StorableEntity> = {}): StorableEntity => ({
     alias: "test-alias",
     createdAt: now,
     id: "test-id-123",
@@ -235,7 +235,7 @@ describe("Seed and Export Utilities", () => {
     it("records errors for entities missing required fields", async () => {
       const result = await seedEntities([
         { alias: "valid", model: "record", ou: "@" },
-        { alias: "invalid", name: "Missing OU" } as Partial<FabricEntity>,
+        { alias: "invalid", name: "Missing OU" } as Partial<StorableEntity>,
       ]);
 
       expect(result.errors.length).toBe(1);

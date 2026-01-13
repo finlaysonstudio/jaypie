@@ -127,12 +127,12 @@ interface BaseQueryOptions {
   startKey?: Record<string, unknown>;  // Pagination cursor
 }
 
-interface QueryResult<T = FabricEntity> {
+interface QueryResult<T = StorableEntity> {
   items: T[];
   lastEvaluatedKey?: Record<string, unknown>;
 }
 
-interface FabricEntity {
+interface StorableEntity {
   // Primary Key
   model: string;              // Partition key
   id: string;                 // Sort key (UUID)
@@ -173,7 +173,7 @@ interface SeedOptions {
   dryRun?: boolean;           // Preview without writing (default: false)
 }
 
-interface ExportResult<T extends FabricEntity = FabricEntity> {
+interface ExportResult<T extends StorableEntity = StorableEntity> {
   entities: T[];              // Exported entities
   count: number;              // Number of entities exported
 }
@@ -403,7 +403,7 @@ await seedEntities(
 
 // Export all entities of a type
 const { entities, count } = await exportEntities("vocabulary", APEX);
-// entities: array of FabricEntity sorted by sequence ascending
+// entities: array of StorableEntity sorted by sequence ascending
 // count: number of entities
 
 // Export with limit

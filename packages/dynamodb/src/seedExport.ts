@@ -1,6 +1,6 @@
 import { putEntity } from "./entities.js";
 import { queryByAlias, queryByOu } from "./queries.js";
-import type { FabricEntity } from "./types.js";
+import type { StorableEntity } from "./types.js";
 
 /**
  * Result of a seed operation
@@ -27,7 +27,7 @@ export interface SeedOptions {
 /**
  * Result of an export operation
  */
-export interface ExportResult<T extends FabricEntity = FabricEntity> {
+export interface ExportResult<T extends StorableEntity = StorableEntity> {
   /** Number of entities exported */
   count: number;
   /** Exported entities */
@@ -40,7 +40,7 @@ export interface ExportResult<T extends FabricEntity = FabricEntity> {
  * @param entity - Partial entity with at least alias, model, and ou
  * @returns true if entity was created, false if it already exists
  */
-export async function seedEntityIfNotExists<T extends Partial<FabricEntity>>(
+export async function seedEntityIfNotExists<T extends Partial<StorableEntity>>(
   entity: T,
 ): Promise<boolean> {
   if (!entity.alias || !entity.model || !entity.ou) {
@@ -62,7 +62,7 @@ export async function seedEntityIfNotExists<T extends Partial<FabricEntity>>(
 
   // Generate required fields if missing
   const now = new Date().toISOString();
-  const completeEntity: FabricEntity = {
+  const completeEntity: StorableEntity = {
     createdAt: entity.createdAt ?? now,
     id: entity.id ?? crypto.randomUUID(),
     model: entity.model,
@@ -71,7 +71,7 @@ export async function seedEntityIfNotExists<T extends Partial<FabricEntity>>(
     sequence: entity.sequence ?? Date.now(),
     updatedAt: entity.updatedAt ?? now,
     ...entity,
-  } as FabricEntity;
+  } as StorableEntity;
 
   await putEntity({ entity: completeEntity });
   return true;
@@ -89,7 +89,7 @@ export async function seedEntityIfNotExists<T extends Partial<FabricEntity>>(
  * @param options - Seed options
  * @returns Result with created, skipped, and errors arrays
  */
-export async function seedEntities<T extends Partial<FabricEntity>>(
+export async function seedEntities<T extends Partial<StorableEntity>>(
   entities: T[],
   options: SeedOptions = {},
 ): Promise<SeedResult> {
@@ -134,7 +134,7 @@ export async function seedEntities<T extends Partial<FabricEntity>>(
 
       // Generate required fields if missing
       const now = new Date().toISOString();
-      const completeEntity: FabricEntity = {
+      const completeEntity: StorableEntity = {
         createdAt: entity.createdAt ?? now,
         id: entity.id ?? crypto.randomUUID(),
         model: entity.model,
@@ -143,7 +143,7 @@ export async function seedEntities<T extends Partial<FabricEntity>>(
         sequence: entity.sequence ?? Date.now(),
         updatedAt: entity.updatedAt ?? now,
         ...entity,
-      } as FabricEntity;
+      } as StorableEntity;
 
       await putEntity({ entity: completeEntity });
       result.created.push(alias);
@@ -168,7 +168,7 @@ export async function seedEntities<T extends Partial<FabricEntity>>(
  * @param limit - Optional maximum number of entities to export
  * @returns Export result with entities and count
  */
-export async function exportEntities<T extends FabricEntity>(
+export async function exportEntities<T extends StorableEntity>(
   model: string,
   ou: string,
   limit?: number,

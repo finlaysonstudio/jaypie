@@ -11,7 +11,7 @@ import { APEX, SEPARATOR } from "./constants.js";
 import type { ParentReference, StorableEntity } from "./types.js";
 
 // =============================================================================
-// Legacy Key Builders (kept for backwards compatibility)
+// Key Builders
 // =============================================================================
 
 /**

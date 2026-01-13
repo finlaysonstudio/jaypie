@@ -18,7 +18,7 @@ import {
   buildIndexType,
   buildIndexXid,
 } from "./keyBuilders.js";
-import type { BaseQueryOptions, FabricEntity, QueryResult } from "./types.js";
+import type { BaseQueryOptions, StorableEntity, QueryResult } from "./types.js";
 
 /**
  * Calculate the suffix based on archived/deleted flags
@@ -46,7 +46,7 @@ function calculateSuffix({
 /**
  * Execute a GSI query with common options
  */
-async function executeQuery<T extends FabricEntity>(
+async function executeQuery<T extends StorableEntity>(
   indexName: string,
   keyValue: string,
   options: BaseQueryOptions = {},
@@ -102,10 +102,10 @@ export async function queryByOu({
   model,
   ou,
   startKey,
-}: QueryByOuParams): Promise<QueryResult<FabricEntity>> {
+}: QueryByOuParams): Promise<QueryResult<StorableEntity>> {
   const suffix = calculateSuffix({ archived, deleted });
   const keyValue = buildIndexOu(ou, model) + suffix;
-  return executeQuery<FabricEntity>(INDEX_OU, keyValue, {
+  return executeQuery<StorableEntity>(INDEX_OU, keyValue, {
     ascending,
     limit,
     startKey,
@@ -142,7 +142,7 @@ export const queryByAlias = serviceHandler({
     deleted,
     model,
     ou,
-  }): Promise<FabricEntity | null> => {
+  }): Promise<StorableEntity | null> => {
     const aliasStr = alias as string;
     const archivedBool = archived as boolean | undefined;
     const deletedBool = deleted as boolean | undefined;
@@ -151,7 +151,7 @@ export const queryByAlias = serviceHandler({
 
     const suffix = calculateSuffix({ archived: archivedBool, deleted: deletedBool });
     const keyValue = buildIndexAlias(ouStr, modelStr, aliasStr) + suffix;
-    const result = await executeQuery<FabricEntity>(INDEX_ALIAS, keyValue, {
+    const result = await executeQuery<StorableEntity>(INDEX_ALIAS, keyValue, {
       limit: 1,
     });
     return result.items[0] ?? null;
@@ -183,10 +183,10 @@ export async function queryByClass({
   ou,
   recordClass,
   startKey,
-}: QueryByClassParams): Promise<QueryResult<FabricEntity>> {
+}: QueryByClassParams): Promise<QueryResult<StorableEntity>> {
   const suffix = calculateSuffix({ archived, deleted });
   const keyValue = buildIndexClass(ou, model, recordClass) + suffix;
-  return executeQuery<FabricEntity>(INDEX_CLASS, keyValue, {
+  return executeQuery<StorableEntity>(INDEX_CLASS, keyValue, {
     ascending,
     limit,
     startKey,
@@ -218,10 +218,10 @@ export async function queryByType({
   ou,
   startKey,
   type,
-}: QueryByTypeParams): Promise<QueryResult<FabricEntity>> {
+}: QueryByTypeParams): Promise<QueryResult<StorableEntity>> {
   const suffix = calculateSuffix({ archived, deleted });
   const keyValue = buildIndexType(ou, model, type) + suffix;
-  return executeQuery<FabricEntity>(INDEX_TYPE, keyValue, {
+  return executeQuery<StorableEntity>(INDEX_TYPE, keyValue, {
     ascending,
     limit,
     startKey,
@@ -258,7 +258,7 @@ export const queryByXid = serviceHandler({
     model,
     ou,
     xid,
-  }): Promise<FabricEntity | null> => {
+  }): Promise<StorableEntity | null> => {
     const archivedBool = archived as boolean | undefined;
     const deletedBool = deleted as boolean | undefined;
     const modelStr = model as string;
@@ -267,7 +267,7 @@ export const queryByXid = serviceHandler({
 
     const suffix = calculateSuffix({ archived: archivedBool, deleted: deletedBool });
     const keyValue = buildIndexXid(ouStr, modelStr, xidStr) + suffix;
-    const result = await executeQuery<FabricEntity>(INDEX_XID, keyValue, {
+    const result = await executeQuery<StorableEntity>(INDEX_XID, keyValue, {
       limit: 1,
     });
     return result.items[0] ?? null;
