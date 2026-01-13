@@ -54,6 +54,7 @@ packages/constructs/
 |-----------|-------------|
 | `JaypieLambda` | Full-featured Lambda with Datadog, secrets, VPC support |
 | `JaypieExpressLambda` | Lambda optimized for Express APIs (30s timeout, API role) |
+| `JaypieStreamingLambda` | Lambda with AWS Lambda Web Adapter for streaming responses |
 | `JaypieQueuedLambda` | Lambda with SQS queue integration (FIFO by default) |
 | `JaypieBucketQueuedLambda` | Lambda triggered by S3 bucket events via queue |
 
@@ -113,6 +114,15 @@ The `CDK` constant provides standardized values:
 - `CDK.TAG.*` - Tag key names
 - `CDK.VENDOR.*` - Third-party vendor tags
 
+The `LAMBDA_WEB_ADAPTER` constant provides AWS Lambda Web Adapter configuration:
+
+- `LAMBDA_WEB_ADAPTER.ACCOUNT` - AWS account hosting the layer (753240598075)
+- `LAMBDA_WEB_ADAPTER.VERSION` - Layer version (25)
+- `LAMBDA_WEB_ADAPTER.LAYER.ARM64` - ARM64 layer name
+- `LAMBDA_WEB_ADAPTER.LAYER.X86` - x86_64 layer name
+- `LAMBDA_WEB_ADAPTER.DEFAULT_PORT` - Default port (8000)
+- `LAMBDA_WEB_ADAPTER.INVOKE_MODE.*` - Invoke modes (BUFFERED, RESPONSE_STREAM)
+
 ## Environment Variables
 
 Required by various constructs:
@@ -156,6 +166,27 @@ import { JaypieDistribution, JaypieExpressLambda } from "@jaypie/constructs";
 const api = new JaypieExpressLambda(this, "Api", { code: "dist/api", handler: "index.handler" });
 new JaypieDistribution(this, "Distribution", {
   handler: api,
+  host: "api.example.com",
+  zone: "example.com",
+});
+```
+
+### Streaming Lambda with Web Adapter
+
+```typescript
+import { JaypieStreamingLambda, JaypieDistribution } from "@jaypie/constructs";
+
+// Create streaming Lambda with AWS Lambda Web Adapter
+const streamingLambda = new JaypieStreamingLambda(this, "StreamingApi", {
+  code: "dist/api",
+  handler: "run.sh",
+  streaming: true,  // Enables RESPONSE_STREAM invoke mode
+  port: 8000,       // Port your app listens on (default: 8000)
+});
+
+// Use with CloudFront (auto-detects invokeMode)
+new JaypieDistribution(this, "Distribution", {
+  handler: streamingLambda,
   host: "api.example.com",
   zone: "example.com",
 });

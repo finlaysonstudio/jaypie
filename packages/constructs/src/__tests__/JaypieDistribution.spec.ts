@@ -337,6 +337,54 @@ describe("JaypieDistribution", () => {
       expect(functionUrl.Properties.InvokeMode).toBe("BUFFERED");
     });
 
+    it("auto-detects invokeMode from handler with invokeMode property", () => {
+      const stack = new Stack();
+      const fn = new lambda.Function(stack, "TestFunction", {
+        code: lambda.Code.fromInline("exports.handler = () => {}"),
+        handler: "index.handler",
+        runtime: lambda.Runtime.NODEJS_20_X,
+      });
+
+      // Simulate a handler with invokeMode property (like JaypieStreamingLambda)
+      const handlerWithInvokeMode = Object.assign(fn, {
+        invokeMode: lambda.InvokeMode.RESPONSE_STREAM,
+      });
+
+      new JaypieDistribution(stack, "TestDistribution", {
+        handler: handlerWithInvokeMode,
+      });
+      const template = Template.fromStack(stack);
+
+      const functionUrl = findFunctionUrl(template);
+      expect(functionUrl).toBeDefined();
+      expect(functionUrl.Properties.InvokeMode).toBe("RESPONSE_STREAM");
+    });
+
+    it("explicit invokeMode prop overrides auto-detected invokeMode", () => {
+      const stack = new Stack();
+      const fn = new lambda.Function(stack, "TestFunction", {
+        code: lambda.Code.fromInline("exports.handler = () => {}"),
+        handler: "index.handler",
+        runtime: lambda.Runtime.NODEJS_20_X,
+      });
+
+      // Simulate a handler with invokeMode property
+      const handlerWithInvokeMode = Object.assign(fn, {
+        invokeMode: lambda.InvokeMode.BUFFERED,
+      });
+
+      // Explicit invokeMode prop should override handler's invokeMode
+      new JaypieDistribution(stack, "TestDistribution", {
+        handler: handlerWithInvokeMode,
+        invokeMode: lambda.InvokeMode.RESPONSE_STREAM,
+      });
+      const template = Template.fromStack(stack);
+
+      const functionUrl = findFunctionUrl(template);
+      expect(functionUrl).toBeDefined();
+      expect(functionUrl.Properties.InvokeMode).toBe("RESPONSE_STREAM");
+    });
+
     it("passes through additional Distribution props", () => {
       const stack = new Stack();
       const bucket = new s3.Bucket(stack, "TestBucket");

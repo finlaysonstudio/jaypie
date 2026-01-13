@@ -430,6 +430,99 @@ try {
 }
 ```
 
+## Seed and Export Utilities
+
+Idempotent seeding and data export for migrations and bootstrapping.
+
+### seedEntityIfNotExists
+
+Seed a single entity if it doesn't already exist (checked by alias):
+
+```typescript
+import { APEX, seedEntityIfNotExists } from "@jaypie/dynamodb";
+
+const created = await seedEntityIfNotExists({
+  alias: "config-main",
+  model: "config",
+  name: "Main Configuration",
+  ou: APEX,
+});
+// Returns true if created, false if already exists
+```
+
+### seedEntities
+
+Seed multiple entities with idempotency:
+
+```typescript
+import { APEX, seedEntities } from "@jaypie/dynamodb";
+
+const result = await seedEntities([
+  { alias: "vocab-en", model: "vocabulary", name: "English", ou: APEX },
+  { alias: "vocab-es", model: "vocabulary", name: "Spanish", ou: APEX },
+]);
+// result.created: aliases of created entities
+// result.skipped: aliases of entities that already existed
+// result.errors: { alias, error } for failed operations
+
+// Dry run (preview without writing)
+const preview = await seedEntities(entities, { dryRun: true });
+
+// Replace existing entities
+await seedEntities(entities, { replace: true });
+```
+
+Auto-generates `id` (UUID), `createdAt`, `updatedAt`, and `sequence` if missing.
+
+### exportEntities
+
+Export entities by model and organizational unit:
+
+```typescript
+import { APEX, exportEntities } from "@jaypie/dynamodb";
+
+const { entities, count } = await exportEntities("vocabulary", APEX);
+// entities: FabricEntity[] sorted by sequence ascending
+// count: number of entities
+
+// With limit
+const { entities: limited } = await exportEntities("vocabulary", APEX, 100);
+```
+
+### exportEntitiesToJson
+
+Export as JSON string:
+
+```typescript
+import { APEX, exportEntitiesToJson } from "@jaypie/dynamodb";
+
+const json = await exportEntitiesToJson("vocabulary", APEX);
+// Pretty printed by default
+
+const compact = await exportEntitiesToJson("vocabulary", APEX, false);
+// Compact JSON
+```
+
+### SeedResult Interface
+
+```typescript
+interface SeedResult {
+  created: string[];   // Aliases of created entities
+  skipped: string[];   // Aliases of skipped entities (already exist)
+  errors: Array<{ alias: string; error: string }>;
+}
+
+interface SeedOptions {
+  replace?: boolean;   // Overwrite existing (default: false)
+  dryRun?: boolean;    // Preview without writing (default: false)
+}
+
+interface ExportResult<T extends FabricEntity = FabricEntity> {
+  entities: T[];       // Exported entities
+  count: number;       // Number of entities
+}
+```
+
 ## Testing
 
 Mock implementations in `@jaypie/testkit`:
@@ -445,9 +538,17 @@ vi.mock("@jaypie/dynamodb", async () => {
 // Key builders and indexEntity work correctly (delegate to real implementations)
 // Query functions return empty results by default
 // Entity operations return sensible defaults
+// Seed functions return { created: [], skipped: [], errors: [] } by default
+// Export functions return { entities: [], count: 0 } by default
 
 // Customize mock behavior:
-import { queryByOu, getEntity, putEntity } from "@jaypie/testkit/mock";
+import {
+  exportEntities,
+  getEntity,
+  putEntity,
+  queryByOu,
+  seedEntities,
+} from "@jaypie/testkit/mock";
 
 queryByOu.mockResolvedValue({
   items: [{ id: "123", name: "Test" }],
@@ -455,6 +556,17 @@ queryByOu.mockResolvedValue({
 });
 
 getEntity.mockResolvedValue({ id: "123", model: "record", name: "Test" });
+
+seedEntities.mockResolvedValue({
+  created: ["entity-1", "entity-2"],
+  skipped: [],
+  errors: [],
+});
+
+exportEntities.mockResolvedValue({
+  entities: [{ id: "123", model: "record" }],
+  count: 1,
+});
 ```
 
 ## Best Practices

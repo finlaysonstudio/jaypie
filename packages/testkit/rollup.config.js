@@ -12,7 +12,10 @@ const onwarn = (warning, defaultHandler) => {
     return;
   }
   // Circular dependency warnings from AWS SDK (known issue in their packages)
-  if (warning.code === "CIRCULAR_DEPENDENCY" && warning.ids?.some((id) => id.includes("@aws-sdk/"))) {
+  if (
+    warning.code === "CIRCULAR_DEPENDENCY" &&
+    warning.ids?.some((id) => id.includes("@aws-sdk/"))
+  ) {
     return;
   }
   defaultHandler(warning);

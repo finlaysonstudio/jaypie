@@ -102,54 +102,52 @@ Preconfigured with API-optimized timeouts and role tags.
 
 ### Streaming Lambda Functions
 
-Enable Lambda Response Streaming via Function URLs for real-time SSE responses:
+Use `JaypieStreamingLambda` for Express apps with AWS Lambda Web Adapter and streaming support:
 
+```typescript
+import { JaypieStreamingLambda, JaypieDistribution } from "@jaypie/constructs";
+
+// Create streaming Lambda with Web Adapter
+const streamingLambda = new JaypieStreamingLambda(this, "StreamingApi", {
+  code: "dist/api",
+  handler: "run.sh",           // Shell script to start Express app
+  streaming: true,             // Enables RESPONSE_STREAM invoke mode
+  port: 8000,                  // Port your app listens on (default: 8000)
+});
+
+// CloudFront auto-detects invokeMode from JaypieStreamingLambda
+new JaypieDistribution(this, "Distribution", {
+  handler: streamingLambda,
+  host: "api.example.com",
+  zone: "example.com",
+});
+```
+
+Features:
+- Automatically adds AWS Lambda Web Adapter layer (supports ARM64 and x86_64)
+- Sets `AWS_LAMBDA_EXEC_WRAPPER` and `AWS_LWA_INVOKE_MODE` environment variables
+- Exposes `invokeMode` property for auto-detection by `JaypieDistribution`
+- Use `streaming: false` for buffered mode (traditional Lambda behavior)
+
+For direct Function URL access (bypass CloudFront):
 ```typescript
 import { FunctionUrlAuthType, InvokeMode } from "aws-cdk-lib/aws-lambda";
 
 const streamingLambda = new JaypieLambda(this, "StreamingFunction", {
   code: "dist",
   handler: "stream.handler",
-  timeout: Duration.minutes(5), // Longer timeout for streaming
-});
-
-// Add Function URL with streaming enabled
-const functionUrl = streamingLambda.addFunctionUrl({
-  authType: FunctionUrlAuthType.NONE,     // Public access
-  // authType: FunctionUrlAuthType.AWS_IAM, // IAM authentication
-  invokeMode: InvokeMode.RESPONSE_STREAM, // Enable streaming
-});
-
-// Output the URL
-new cdk.CfnOutput(this, "StreamingUrl", {
-  value: functionUrl.url,
-});
-```
-
-Features:
-- `RESPONSE_STREAM` invoke mode enables real-time streaming
-- Works with `lambdaStreamHandler` from `@jaypie/lambda`
-- Use `FunctionUrlAuthType.AWS_IAM` for authenticated endpoints
-- Combine with API Gateway for custom domains via `JaypieApiGateway`
-
-For Express-based streaming with custom domains:
-```typescript
-// Express app with streaming routes
-const expressLambda = new JaypieExpressLambda(this, "ExpressStream", {
-  code: "dist",
-  handler: "app.handler",
   timeout: Duration.minutes(5),
 });
 
-// API Gateway handles the domain routing
-new JaypieApiGateway(this, "Api", {
-  handler: expressLambda,
-  host: "api.example.com",
-  zone: "example.com",
+const functionUrl = streamingLambda.addFunctionUrl({
+  authType: FunctionUrlAuthType.NONE,
+  invokeMode: InvokeMode.RESPONSE_STREAM,
 });
+
+new cdk.CfnOutput(this, "StreamingUrl", { value: functionUrl.url });
 ```
 
-Note: API Gateway has a 29-second timeout limit. For longer streaming operations, use Function URLs directly.
+Note: API Gateway has a 29-second timeout limit. For longer streaming operations, use Function URLs or CloudFront with Lambda Function URLs.
 
 ### Stack Types
 

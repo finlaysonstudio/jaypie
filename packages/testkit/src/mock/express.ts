@@ -1,6 +1,11 @@
 /* eslint-disable @typescript-eslint/no-unsafe-function-type */
 
-import { createMockFunction, createMockWrappedFunction } from "./utils";
+import {
+  createMockFunction,
+  createMockResolvedFunction,
+  createMockReturnedFunction,
+  createMockWrappedFunction,
+} from "./utils";
 import { BadRequestError, UnhandledError } from "@jaypie/errors";
 import { force, jaypieHandler } from "./core";
 import * as original from "@jaypie/express";
@@ -67,6 +72,15 @@ export const expressHttpCodeHandler = createMockWrappedFunction(
 );
 
 export const cors = createMockWrappedFunction(original.cors as any);
+
+export const createServer = createMockResolvedFunction<{
+  port: number;
+  server: { close: () => void };
+}>({ port: 8080, server: { close: () => {} } });
+
+export const getCurrentInvokeUuid = createMockReturnedFunction<
+  string | undefined
+>("mock-invoke-uuid-12345678");
 
 // Type definitions needed for the expressHandler
 interface WithJsonFunction {

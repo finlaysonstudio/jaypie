@@ -1,5 +1,5 @@
 // Export CDK constants
-export { CDK } from "./constants";
+export { CDK, LAMBDA_WEB_ADAPTER } from "./constants";
 
 export {
   JaypieAccountLoggingBucket,
@@ -16,20 +16,20 @@ export {
   JaypieDatadogForwarder,
   JaypieDatadogForwarderProps,
 } from "./JaypieDatadogForwarder";
+export { JaypieDatadogSecret } from "./JaypieDatadogSecret";
 export {
   JaypieDistribution,
   JaypieDistributionProps,
 } from "./JaypieDistribution";
-export { JaypieDatadogSecret } from "./JaypieDatadogSecret";
 export { JaypieDnsRecord, JaypieDnsRecordProps } from "./JaypieDnsRecord";
 export { JaypieDynamoDb, JaypieDynamoDbProps } from "./JaypieDynamoDb";
 export { JaypieEnvSecret } from "./JaypieEnvSecret";
 export { JaypieEventsRule, JaypieEventsRuleProps } from "./JaypieEventsRule";
+export { JaypieExpressLambda } from "./JaypieExpressLambda";
 export {
   JaypieGitHubDeployRole,
   JaypieGitHubDeployRoleProps,
 } from "./JaypieGitHubDeployRole";
-export { JaypieExpressLambda } from "./JaypieExpressLambda";
 export {
   JaypieHostedZone,
   JaypieHostedZoneRecordProps,
@@ -47,6 +47,7 @@ export {
   JaypieOrganizationTrail,
   JaypieOrganizationTrailProps,
 } from "./JaypieOrganizationTrail";
+export { JaypieQueuedLambda } from "./JaypieQueuedLambda";
 export {
   AccountAssignments,
   JaypieSsoPermissions,
@@ -56,12 +57,15 @@ export {
   JaypieSsoSyncApplication,
   JaypieSsoSyncApplicationProps,
 } from "./JaypieSsoSyncApplication";
-export { JaypieQueuedLambda } from "./JaypieQueuedLambda";
 export { JaypieStack, JaypieStackProps } from "./JaypieStack";
 export {
   JaypieStaticWebBucket,
   JaypieStaticWebBucketProps,
 } from "./JaypieStaticWebBucket";
+export {
+  JaypieStreamingLambda,
+  JaypieStreamingLambdaProps,
+} from "./JaypieStreamingLambda";
 export { JaypieTraceSigningKeySecret } from "./JaypieTraceSigningKeySecret";
 export { JaypieWebDeploymentBucket } from "./JaypieWebDeploymentBucket";
 export * from "./helpers";

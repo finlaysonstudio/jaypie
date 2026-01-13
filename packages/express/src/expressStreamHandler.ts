@@ -1,7 +1,7 @@
 import type { Request, Response } from "express";
 import { loadEnvSecrets } from "@jaypie/aws";
 import { BadRequestError, UnhandledError } from "@jaypie/errors";
-import { force, getHeaderFrom, HTTP, JAYPIE, jaypieHandler } from "@jaypie/kit";
+import { force, getHeaderFrom, JAYPIE, jaypieHandler } from "@jaypie/kit";
 import { log as publicLogger } from "@jaypie/logger";
 import { DATADOG, hasDatadogEnv, submitMetric } from "@jaypie/datadog";
 
@@ -261,7 +261,7 @@ function expressStreamHandler(
     });
 
     // Update the public logger with the request ID
-    const invokeUuid = getCurrentInvokeUuid();
+    const invokeUuid = getCurrentInvokeUuid(req);
     if (invokeUuid) {
       logger.tag({ invoke: invokeUuid });
       logger.tag({ shortInvoke: invokeUuid.slice(0, 8) });

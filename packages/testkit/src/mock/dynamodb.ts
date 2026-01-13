@@ -2,9 +2,12 @@ import * as original from "@jaypie/dynamodb";
 import type {
   BaseQueryOptions,
   DynamoClientConfig,
+  ExportResult,
   FabricEntity,
   ParentReference,
   QueryResult,
+  SeedOptions,
+  SeedResult,
 } from "@jaypie/dynamodb";
 
 import { createMockFunction, createMockResolvedFunction } from "./utils";
@@ -168,5 +171,44 @@ export const queryByXid = createMockFunction<
   }) => Promise<FabricEntity | null>
 >(async () => null);
 
+// Seed and export utilities
+export const seedEntityIfNotExists = createMockFunction<
+  <T extends Partial<FabricEntity>>(entity: T) => Promise<boolean>
+>(async () => true);
+
+export const seedEntities = createMockFunction<
+  <T extends Partial<FabricEntity>>(
+    entities: T[],
+    options?: SeedOptions,
+  ) => Promise<SeedResult>
+>(async () => ({
+  created: [],
+  errors: [],
+  skipped: [],
+}));
+
+export const exportEntities = createMockFunction<
+  <T extends FabricEntity>(
+    model: string,
+    ou: string,
+    limit?: number,
+  ) => Promise<ExportResult<T>>
+>(async () => ({
+  count: 0,
+  entities: [],
+}));
+
+export const exportEntitiesToJson = createMockFunction<
+  (model: string, ou: string, pretty?: boolean) => Promise<string>
+>(async () => "[]");
+
 // Re-export types for convenience
-export type { BaseQueryOptions, FabricEntity, ParentReference, QueryResult };
+export type {
+  BaseQueryOptions,
+  ExportResult,
+  FabricEntity,
+  ParentReference,
+  QueryResult,
+  SeedOptions,
+  SeedResult,
+};

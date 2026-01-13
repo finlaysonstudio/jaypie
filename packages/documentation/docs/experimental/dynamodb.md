@@ -42,6 +42,15 @@ npm install @jaypie/dynamodb
 | `queryByType` | Query by type |
 | `queryByXid` | Query by external ID |
 
+### Seed and Export Functions
+
+| Function | Purpose |
+|----------|---------|
+| `seedEntityIfNotExists` | Seed single entity if not exists |
+| `seedEntities` | Bulk seed with idempotency |
+| `exportEntities` | Export entities by model/ou |
+| `exportEntitiesToJson` | Export as JSON string |
+
 ## FabricEntity Interface
 
 All entities implement this interface:
@@ -224,6 +233,53 @@ new JaypieDynamoDb(this, "Table", {
   tableName: "entities",
 });
 // Creates table with 5 GSIs
+```
+
+## Seed and Export
+
+Utilities for bootstrapping and migrating data.
+
+### Seed Entities
+
+```typescript
+import { APEX, seedEntities, seedEntityIfNotExists } from "@jaypie/dynamodb";
+
+// Seed single entity if not exists
+const created = await seedEntityIfNotExists({
+  alias: "config-main",
+  model: "config",
+  ou: APEX,
+});
+// Returns true if created, false if exists
+
+// Bulk seed with idempotency
+const result = await seedEntities([
+  { alias: "en", model: "lang", ou: APEX },
+  { alias: "es", model: "lang", ou: APEX },
+]);
+// result.created: ["en", "es"]
+// result.skipped: [] (existing entities)
+// result.errors: []
+
+// Options
+await seedEntities(entities, { dryRun: true });  // Preview
+await seedEntities(entities, { replace: true }); // Overwrite
+```
+
+### Export Entities
+
+```typescript
+import { APEX, exportEntities, exportEntitiesToJson } from "@jaypie/dynamodb";
+
+// Export entities
+const { entities, count } = await exportEntities("lang", APEX);
+
+// With limit
+const { entities: limited } = await exportEntities("lang", APEX, 10);
+
+// Export as JSON
+const json = await exportEntitiesToJson("lang", APEX);        // Pretty
+const compact = await exportEntitiesToJson("lang", APEX, false); // Compact
 ```
 
 ## MCP Tools

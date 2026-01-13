@@ -50,6 +50,14 @@ export {
   queryByXid,
 } from "./queries.js";
 
+// Seed and export utilities
+export {
+  exportEntities,
+  exportEntitiesToJson,
+  seedEntities,
+  seedEntityIfNotExists,
+} from "./seedExport.js";
+
 // Types
 export type {
   BaseQueryOptions,
@@ -58,3 +66,5 @@ export type {
   ParentReference,
   QueryResult,
 } from "./types.js";
+
+export type { ExportResult, SeedOptions, SeedResult } from "./seedExport.js";

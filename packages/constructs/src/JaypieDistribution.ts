@@ -51,8 +51,10 @@ export interface JaypieDistributionProps extends Omit<
    */
   host?: string;
   /**
-   * Invoke mode for Lambda Function URLs
-   * @default InvokeMode.BUFFERED
+   * Invoke mode for Lambda Function URLs.
+   * If not provided, auto-detects from handler if it has an invokeMode property
+   * (e.g., JaypieStreamingLambda).
+   * @default InvokeMode.BUFFERED (or auto-detected from handler)
    */
   invokeMode?: lambda.InvokeMode;
   /**
@@ -151,12 +153,21 @@ export class JaypieDistribution
     // IFunction before IFunctionUrl (IFunction doesn't have functionUrlId)
     let origin: cloudfront.IOrigin | undefined;
     if (handler) {
+      // Auto-detect invoke mode from handler (e.g., JaypieStreamingLambda)
+      // Explicit invokeMode prop takes precedence over auto-detection
+      const resolvedInvokeMode =
+        invokeMode !== lambda.InvokeMode.BUFFERED
+          ? invokeMode // Explicit non-default value, use it
+          : this.hasInvokeMode(handler)
+            ? handler.invokeMode // Auto-detect from handler
+            : invokeMode; // Use default BUFFERED
+
       if (this.isIFunction(handler)) {
         // Create FunctionUrl for the Lambda function
         const functionUrl = new lambda.FunctionUrl(this, "FunctionUrl", {
           function: handler,
           authType: lambda.FunctionUrlAuthType.NONE,
-          invokeMode,
+          invokeMode: resolvedInvokeMode,
         });
         this.functionUrl = functionUrl;
         origin = new origins.FunctionUrlOrigin(functionUrl);
@@ -327,6 +338,18 @@ export class JaypieDistribution
       "functionArn" in handler &&
       "functionName" in handler &&
       !("url" in handler)
+    );
+  }
+
+  private hasInvokeMode(
+    handler: unknown,
+  ): handler is { invokeMode: lambda.InvokeMode } {
+    // Check if handler has an invokeMode property (e.g., JaypieStreamingLambda)
+    return (
+      typeof handler === "object" &&
+      handler !== null &&
+      "invokeMode" in handler &&
+      typeof (handler as { invokeMode: unknown }).invokeMode === "string"
     );
   }
 
