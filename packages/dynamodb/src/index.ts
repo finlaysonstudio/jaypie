@@ -32,16 +32,18 @@ export {
 
 // Key builders and entity utilities
 export {
+  buildCompositeKey,
   buildIndexAlias,
   buildIndexClass,
   buildIndexOu,
   buildIndexType,
   buildIndexXid,
   calculateOu,
+  DEFAULT_INDEXES,
   indexEntity,
 } from "./keyBuilders.js";
 
-// Query utilities
+// Query utilities (legacy named functions)
 export {
   queryByAlias,
   queryByClass,
@@ -49,6 +51,10 @@ export {
   queryByType,
   queryByXid,
 } from "./queries.js";
+
+// Unified query function with auto-detect
+export { query } from "./query.js";
+export type { QueryParams } from "./query.js";
 
 // Seed and export utilities
 export {
@@ -62,9 +68,11 @@ export {
 export type {
   BaseQueryOptions,
   DynamoClientConfig,
+  /** @deprecated Use StorableEntity instead */
   FabricEntity,
   ParentReference,
   QueryResult,
+  StorableEntity,
 } from "./types.js";
 
 export type { ExportResult, SeedOptions, SeedResult } from "./seedExport.js";

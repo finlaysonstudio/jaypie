@@ -1,14 +1,9 @@
-// Primary markers
-export const APEX = "@"; // Root-level marker (DynamoDB prohibits empty strings)
-export const SEPARATOR = "#"; // Composite key separator
+// Re-export shared constants from vocabulary
+export { APEX, ARCHIVED_SUFFIX, DELETED_SUFFIX, SEPARATOR } from "@jaypie/vocabulary";
 
-// GSI names
+// GSI names (derived from DEFAULT_INDEXES)
 export const INDEX_ALIAS = "indexAlias";
 export const INDEX_CLASS = "indexClass";
 export const INDEX_OU = "indexOu";
 export const INDEX_TYPE = "indexType";
 export const INDEX_XID = "indexXid";
-
-// Index suffixes for soft state
-export const ARCHIVED_SUFFIX = "#archived";
-export const DELETED_SUFFIX = "#deleted";

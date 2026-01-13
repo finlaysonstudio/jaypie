@@ -1,5 +1,18 @@
+import {
+  buildCompositeKey as vocabBuildCompositeKey,
+  calculateOu as vocabCalculateOu,
+  DEFAULT_INDEXES,
+  getModelIndexes,
+  type IndexableEntity,
+  populateIndexKeys as vocabPopulateIndexKeys,
+} from "@jaypie/vocabulary";
+
 import { APEX, SEPARATOR } from "./constants.js";
-import type { FabricEntity, ParentReference } from "./types.js";
+import type { ParentReference, StorableEntity } from "./types.js";
+
+// =============================================================================
+// Legacy Key Builders (kept for backwards compatibility)
+// =============================================================================
 
 /**
  * Build the indexOu key for hierarchical queries
@@ -67,6 +80,26 @@ export function buildIndexXid(ou: string, model: string, xid: string): string {
   return `${ou}${SEPARATOR}${model}${SEPARATOR}${xid}`;
 }
 
+// =============================================================================
+// New Vocabulary-Based Functions
+// =============================================================================
+
+/**
+ * Build a composite key from entity fields
+ *
+ * @param entity - Entity with fields to extract
+ * @param fields - Field names to combine with SEPARATOR
+ * @param suffix - Optional suffix to append (e.g., "#deleted")
+ * @returns Composite key string
+ */
+export function buildCompositeKey(
+  entity: IndexableEntity,
+  fields: string[],
+  suffix?: string,
+): string {
+  return vocabBuildCompositeKey(entity, fields, suffix);
+}
+
 /**
  * Calculate the organizational unit from a parent reference
  * @param parent - Optional parent entity reference
@@ -76,11 +109,15 @@ export function calculateOu(parent?: ParentReference): string {
   if (!parent) {
     return APEX;
   }
-  return `${parent.model}${SEPARATOR}${parent.id}`;
+  return vocabCalculateOu(parent);
 }
 
 /**
  * Auto-populate GSI index keys on an entity
+ *
+ * Uses the model's registered indexes (from vocabulary registry) or
+ * DEFAULT_INDEXES if no custom indexes are registered.
+ *
  * - indexOu is always populated from ou + model
  * - indexAlias is populated only when alias is present
  * - indexClass is populated only when class is present
@@ -91,35 +128,14 @@ export function calculateOu(parent?: ParentReference): string {
  * @param suffix - Optional suffix to append to all index keys (e.g., "#deleted", "#archived")
  * @returns The entity with populated index keys
  */
-export function indexEntity<T extends FabricEntity>(
+export function indexEntity<T extends StorableEntity>(
   entity: T,
   suffix: string = "",
 ): T {
-  const result = { ...entity };
-
-  // indexOu is always set (from ou + model)
-  result.indexOu = buildIndexOu(entity.ou, entity.model) + suffix;
-
-  // Optional indexes - only set when the source field is present
-  if (entity.alias !== undefined) {
-    result.indexAlias =
-      buildIndexAlias(entity.ou, entity.model, entity.alias) + suffix;
-  }
-
-  if (entity.class !== undefined) {
-    result.indexClass =
-      buildIndexClass(entity.ou, entity.model, entity.class) + suffix;
-  }
-
-  if (entity.type !== undefined) {
-    result.indexType =
-      buildIndexType(entity.ou, entity.model, entity.type) + suffix;
-  }
-
-  if (entity.xid !== undefined) {
-    result.indexXid =
-      buildIndexXid(entity.ou, entity.model, entity.xid) + suffix;
-  }
-
-  return result;
+  const indexes = getModelIndexes(entity.model);
+  // Cast through unknown to bridge the type gap between StorableEntity and IndexableEntity
+  return vocabPopulateIndexKeys(entity as unknown as IndexableEntity, indexes, suffix) as unknown as T;
 }
+
+// Re-export DEFAULT_INDEXES for convenience
+export { DEFAULT_INDEXES };

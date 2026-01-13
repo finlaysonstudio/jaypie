@@ -3,75 +3,147 @@ import {
   DescribeTableCommand,
   DynamoDBClient,
 } from "@aws-sdk/client-dynamodb";
+import {
+  DEFAULT_INDEXES,
+  getAllRegisteredIndexes,
+  type IndexDefinition,
+} from "@jaypie/vocabulary";
 import { serviceHandler } from "@jaypie/vocabulary";
 
 const DEFAULT_ENDPOINT = "http://127.0.0.1:8000";
 const DEFAULT_REGION = "us-east-1";
 const DEFAULT_TABLE_NAME = "jaypie-local";
 
+// =============================================================================
+// Index to GSI Conversion
+// =============================================================================
+
+/**
+ * Generate an index name from pk fields (if not provided)
+ */
+function generateIndexName(pk: string[]): string {
+  const suffix = pk
+    .map((field) => field.charAt(0).toUpperCase() + field.slice(1))
+    .join("");
+  return `index${suffix}`;
+}
+
+/**
+ * Collect all unique indexes from DEFAULT_INDEXES and registered models
+ */
+function collectAllIndexes(): IndexDefinition[] {
+  const indexMap = new Map<string, IndexDefinition>();
+
+  // Add DEFAULT_INDEXES first
+  for (const index of DEFAULT_INDEXES) {
+    const name = index.name ?? generateIndexName(index.pk as string[]);
+    indexMap.set(name, { ...index, name });
+  }
+
+  // Add registered model indexes (will not overwrite if name already exists)
+  for (const index of getAllRegisteredIndexes()) {
+    const name = index.name ?? generateIndexName(index.pk as string[]);
+    if (!indexMap.has(name)) {
+      indexMap.set(name, { ...index, name });
+    }
+  }
+
+  return Array.from(indexMap.values());
+}
+
+/**
+ * Build attribute definitions from indexes
+ */
+function buildAttributeDefinitions(
+  indexes: IndexDefinition[],
+): Array<{ AttributeName: string; AttributeType: "S" | "N" }> {
+  const attrs = new Map<string, "S" | "N">();
+
+  // Primary key attributes
+  attrs.set("model", "S");
+  attrs.set("id", "S");
+  attrs.set("sequence", "N");
+
+  // GSI attributes (partition keys are always strings)
+  for (const index of indexes) {
+    const indexName = index.name ?? generateIndexName(index.pk as string[]);
+    attrs.set(indexName, "S");
+  }
+
+  // Sort keys (sequence is always a number, others would be strings)
+  // Note: Currently all indexes use sequence as SK, so this is mostly future-proofing
+  for (const index of indexes) {
+    const sk = index.sk ?? ["sequence"];
+    for (const skField of sk) {
+      if (!attrs.has(skField as string)) {
+        // Assume string unless it's sequence
+        attrs.set(
+          skField as string,
+          skField === "sequence" ? "N" : "S",
+        );
+      }
+    }
+  }
+
+  return Array.from(attrs.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([name, type]) => ({
+      AttributeName: name,
+      AttributeType: type,
+    }));
+}
+
+/**
+ * Build GSI definitions from indexes
+ */
+function buildGSIs(
+  indexes: IndexDefinition[],
+): Array<{
+  IndexName: string;
+  KeySchema: Array<{ AttributeName: string; KeyType: "HASH" | "RANGE" }>;
+  Projection: { ProjectionType: "ALL" };
+}> {
+  const gsiProjection = { ProjectionType: "ALL" as const };
+
+  return indexes.map((index) => {
+    const indexName = index.name ?? generateIndexName(index.pk as string[]);
+    const sk = index.sk ?? ["sequence"];
+
+    // For GSIs, the partition key attribute name IS the index name
+    // (e.g., indexOu stores the composite key value "@#record")
+    return {
+      IndexName: indexName,
+      KeySchema: [
+        { AttributeName: indexName, KeyType: "HASH" as const },
+        // Use first SK field as the range key attribute
+        { AttributeName: sk[0] as string, KeyType: "RANGE" as const },
+      ],
+      Projection: gsiProjection,
+    };
+  });
+}
+
+// =============================================================================
+// Table Creation
+// =============================================================================
+
 /**
  * DynamoDB table schema with Jaypie GSI pattern
+ *
+ * Collects indexes from:
+ * 1. DEFAULT_INDEXES (5 standard GSIs)
+ * 2. Any custom indexes registered via registerModel()
  */
 function createTableParams(
   tableName: string,
   billingMode: "PAY_PER_REQUEST" | "PROVISIONED",
 ) {
-  const gsiProjection = { ProjectionType: "ALL" as const };
+  const allIndexes = collectAllIndexes();
 
   return {
-    AttributeDefinitions: [
-      { AttributeName: "id", AttributeType: "S" as const },
-      { AttributeName: "indexAlias", AttributeType: "S" as const },
-      { AttributeName: "indexClass", AttributeType: "S" as const },
-      { AttributeName: "indexOu", AttributeType: "S" as const },
-      { AttributeName: "indexType", AttributeType: "S" as const },
-      { AttributeName: "indexXid", AttributeType: "S" as const },
-      { AttributeName: "model", AttributeType: "S" as const },
-      { AttributeName: "sequence", AttributeType: "N" as const },
-    ],
+    AttributeDefinitions: buildAttributeDefinitions(allIndexes),
     BillingMode: billingMode,
-    GlobalSecondaryIndexes: [
-      {
-        IndexName: "indexOu",
-        KeySchema: [
-          { AttributeName: "indexOu", KeyType: "HASH" as const },
-          { AttributeName: "sequence", KeyType: "RANGE" as const },
-        ],
-        Projection: gsiProjection,
-      },
-      {
-        IndexName: "indexAlias",
-        KeySchema: [
-          { AttributeName: "indexAlias", KeyType: "HASH" as const },
-          { AttributeName: "sequence", KeyType: "RANGE" as const },
-        ],
-        Projection: gsiProjection,
-      },
-      {
-        IndexName: "indexClass",
-        KeySchema: [
-          { AttributeName: "indexClass", KeyType: "HASH" as const },
-          { AttributeName: "sequence", KeyType: "RANGE" as const },
-        ],
-        Projection: gsiProjection,
-      },
-      {
-        IndexName: "indexType",
-        KeySchema: [
-          { AttributeName: "indexType", KeyType: "HASH" as const },
-          { AttributeName: "sequence", KeyType: "RANGE" as const },
-        ],
-        Projection: gsiProjection,
-      },
-      {
-        IndexName: "indexXid",
-        KeySchema: [
-          { AttributeName: "indexXid", KeyType: "HASH" as const },
-          { AttributeName: "sequence", KeyType: "RANGE" as const },
-        ],
-        Projection: gsiProjection,
-      },
-    ],
+    GlobalSecondaryIndexes: buildGSIs(allIndexes),
     KeySchema: [
       { AttributeName: "model", KeyType: "HASH" as const },
       { AttributeName: "id", KeyType: "RANGE" as const },

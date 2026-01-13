@@ -1,3 +1,5 @@
+import type { BaseEntity } from "@jaypie/vocabulary";
+
 /**
  * DynamoDB client configuration
  */
@@ -116,9 +118,15 @@ export interface QueryResult<T = FabricEntity> {
 }
 
 /**
- * Base entity interface for DynamoDB single-table design
+ * Entity with required fields for DynamoDB storage.
+ *
+ * Extends BaseEntity from @jaypie/vocabulary with:
+ * - Required storage fields (id, model, name, ou, sequence)
+ * - String timestamps (DynamoDB uses ISO 8601 strings, not Date objects)
+ * - GSI index keys (auto-populated by indexEntity)
  */
-export interface FabricEntity {
+export interface StorableEntity
+  extends Omit<BaseEntity, "archivedAt" | "createdAt" | "deletedAt" | "updatedAt"> {
   // Primary Key
   /** Partition key (e.g., "record", "message") */
   model: string;
@@ -140,17 +148,7 @@ export interface FabricEntity {
   indexType?: string;
   indexXid?: string;
 
-  // Optional fields (trigger index population when present)
-  /** Human-friendly slug/alias */
-  alias?: string;
-  /** Category classification */
-  class?: string;
-  /** Type classification */
-  type?: string;
-  /** External ID for integration with external systems */
-  xid?: string;
-
-  // Timestamps (ISO 8601)
+  // Timestamps (ISO 8601 strings - DynamoDB doesn't store Date objects)
   createdAt: string;
   updatedAt: string;
   /** Archive timestamp (for inactive but preserved records) */
@@ -158,3 +156,10 @@ export interface FabricEntity {
   /** Soft-delete timestamp */
   deletedAt?: string;
 }
+
+/**
+ * Base entity interface for DynamoDB single-table design
+ *
+ * @deprecated Use StorableEntity instead. FabricEntity will be removed in v0.3.0.
+ */
+export type FabricEntity = StorableEntity;

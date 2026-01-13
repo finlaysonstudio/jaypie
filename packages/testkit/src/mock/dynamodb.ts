@@ -5,16 +5,20 @@ import type {
   ExportResult,
   FabricEntity,
   ParentReference,
+  QueryParams,
   QueryResult,
   SeedOptions,
   SeedResult,
+  StorableEntity,
 } from "@jaypie/dynamodb";
+import type { IndexableEntity } from "@jaypie/vocabulary";
 
 import { createMockFunction, createMockResolvedFunction } from "./utils";
 
 // Re-export constants (no need to mock, just pass through)
 export const APEX = original.APEX;
 export const ARCHIVED_SUFFIX = original.ARCHIVED_SUFFIX;
+export const DEFAULT_INDEXES = original.DEFAULT_INDEXES;
 export const DELETED_SUFFIX = original.DELETED_SUFFIX;
 export const INDEX_ALIAS = original.INDEX_ALIAS;
 export const INDEX_CLASS = original.INDEX_CLASS;
@@ -24,6 +28,14 @@ export const INDEX_XID = original.INDEX_XID;
 export const SEPARATOR = original.SEPARATOR;
 
 // Key builder functions - use createMockFunction with typed implementations
+export const buildCompositeKey = createMockFunction<
+  (
+    entity: Record<string, unknown> & { model: string },
+    fields: string[],
+    suffix?: string,
+  ) => string
+>((entity, fields, suffix) => original.buildCompositeKey(entity, fields, suffix));
+
 export const buildIndexAlias = createMockFunction<
   (ou: string, model: string, alias: string) => string
 >((ou, model, alias) => original.buildIndexAlias(ou, model, alias));
@@ -171,6 +183,23 @@ export const queryByXid = createMockFunction<
   }) => Promise<FabricEntity | null>
 >(async () => null);
 
+// Unified query function with auto-detect
+export const query = createMockFunction<
+  <T extends StorableEntity = StorableEntity>(params: {
+    archived?: boolean;
+    ascending?: boolean;
+    deleted?: boolean;
+    filter?: Partial<T>;
+    limit?: number;
+    model: string;
+    ou?: string;
+    startKey?: Record<string, unknown>;
+  }) => Promise<QueryResult<T>>
+>(async () => ({
+  items: [],
+  lastEvaluatedKey: undefined,
+}));
+
 // Seed and export utilities
 export const seedEntityIfNotExists = createMockFunction<
   <T extends Partial<FabricEntity>>(entity: T) => Promise<boolean>
@@ -208,7 +237,10 @@ export type {
   ExportResult,
   FabricEntity,
   ParentReference,
+  QueryParams,
   QueryResult,
   SeedOptions,
   SeedResult,
+  StorableEntity,
 };
+export type { IndexableEntity };
