@@ -542,6 +542,107 @@ import type {
 } from "jaypie";
 ```
 
+## Lambda Handlers
+
+Create Lambda handlers from Express apps using `createLambdaHandler` and `createLambdaStreamHandler`. These functions wrap Express applications to run directly on AWS Lambda Function URLs without requiring a separate Lambda adapter library.
+
+### Buffered Handler
+
+Use `createLambdaHandler` for standard Lambda responses where the entire response is buffered before sending.
+
+```typescript
+import express from "express";
+import { createLambdaHandler, expressHandler } from "jaypie";
+
+const app = express();
+
+app.get("/", expressHandler(async (req, res) => {
+  return { message: "Hello from Lambda!" };
+}));
+
+// Export for Lambda Function URL
+export const handler = createLambdaHandler(app);
+```
+
+### Streaming Handler
+
+Use `createLambdaStreamHandler` for Lambda response streaming, ideal for Server-Sent Events (SSE) and real-time updates.
+
+```typescript
+import express from "express";
+import { createLambdaStreamHandler, expressStreamHandler } from "jaypie";
+
+const app = express();
+
+app.get("/stream", expressStreamHandler(async (req, res) => {
+  res.write("event: message\ndata: {\"text\": \"Hello\"}\n\n");
+  res.write("event: message\ndata: {\"text\": \"World\"}\n\n");
+}));
+
+// Export for Lambda Function URL with streaming
+export const handler = createLambdaStreamHandler(app);
+```
+
+### Combined Usage
+
+A typical Lambda Express application with both buffered and streaming endpoints:
+
+```typescript
+import express from "express";
+import {
+  createLambdaHandler,
+  createLambdaStreamHandler,
+  expressHandler,
+  expressStreamHandler,
+  cors,
+} from "jaypie";
+
+const app = express();
+app.use(express.json());
+app.use(cors());
+
+// Standard buffered route
+app.get("/api/data", expressHandler(async (req, res) => {
+  return { data: "buffered response" };
+}));
+
+// SSE streaming route
+app.get("/api/stream", expressStreamHandler(async (req, res) => {
+  for (let i = 0; i < 5; i++) {
+    res.write(`event: update\ndata: {"count": ${i}}\n\n`);
+  }
+}));
+
+// Choose handler based on your needs
+// For buffered: export const handler = createLambdaHandler(app);
+// For streaming: export const handler = createLambdaStreamHandler(app);
+export const handler = createLambdaHandler(app);
+```
+
+### Lambda Context Access
+
+Both handlers expose Lambda context on the request object:
+
+```typescript
+app.get("/", expressHandler(async (req, res) => {
+  // Access Lambda context directly on request
+  const awsRequestId = (req as any)._lambdaContext?.awsRequestId;
+  return { requestId: awsRequestId };
+}));
+```
+
+### TypeScript Types
+
+```typescript
+import type {
+  LambdaHandler,
+  LambdaStreamHandler,
+  LambdaContext,
+  FunctionUrlEvent,
+  LambdaResponse,
+} from "jaypie";
+```
+
 ## Invoke UUID Detection
 
 Use `getCurrentInvokeUuid` to get the current request ID. Automatically detects the environment (Lambda, Lambda Web Adapter, or local development).

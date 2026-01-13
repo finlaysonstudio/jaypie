@@ -1,6 +1,6 @@
 import type { Request } from "express";
-import { getCurrentInvoke } from "@codegenie/serverless-express";
 
+import { getCurrentInvoke } from "./adapter/index.js";
 import getWebAdapterUuid from "./getCurrentInvokeUuid.webadapter.js";
 
 //
@@ -27,16 +27,24 @@ function isWebAdapterMode(req?: Request): boolean {
 }
 
 /**
- * Adapter for the "@codegenie/serverless-express" uuid
+ * Get UUID from Jaypie Lambda adapter context.
+ * This is set by createLambdaHandler/createLambdaStreamHandler.
  */
-function getServerlessExpressUuid(): string | undefined {
+function getJaypieAdapterUuid(): string | undefined {
   const currentInvoke = getCurrentInvoke();
-  if (
-    currentInvoke &&
-    currentInvoke.context &&
-    currentInvoke.context.awsRequestId
-  ) {
+  if (currentInvoke?.context?.awsRequestId) {
     return currentInvoke.context.awsRequestId;
+  }
+  return undefined;
+}
+
+/**
+ * Get UUID from request object if it has Lambda context attached.
+ * The Jaypie adapter attaches _lambdaContext to the request.
+ */
+function getRequestContextUuid(req?: Request): string | undefined {
+  if (req && (req as any)._lambdaContext?.awsRequestId) {
+    return (req as any)._lambdaContext.awsRequestId;
   }
   return undefined;
 }
@@ -48,25 +56,31 @@ function getServerlessExpressUuid(): string | undefined {
 
 /**
  * Get the current invoke UUID from Lambda context.
- * Works in both serverless-express mode and Lambda Web Adapter mode.
+ * Works with Jaypie Lambda adapter and Lambda Web Adapter mode.
  *
- * @param req - Optional Express request object. Required for Web Adapter mode
- *              to extract the x-amzn-request-id header.
+ * @param req - Optional Express request object. Used to extract context
+ *              from Web Adapter headers or Jaypie adapter's _lambdaContext.
  * @returns The AWS request ID or undefined if not in Lambda context
  */
 function getCurrentInvokeUuid(req?: Request): string | undefined {
-  // If request is provided and has Web Adapter header, use Web Adapter mode
+  // Priority 1: Web Adapter mode (header-based)
   if (isWebAdapterMode(req)) {
     return getWebAdapterUuid(req);
   }
 
-  // Try serverless-express mode first
-  const serverlessExpressUuid = getServerlessExpressUuid();
-  if (serverlessExpressUuid) {
-    return serverlessExpressUuid;
+  // Priority 2: Request has Lambda context attached (Jaypie adapter)
+  const requestContextUuid = getRequestContextUuid(req);
+  if (requestContextUuid) {
+    return requestContextUuid;
   }
 
-  // If no request but we might be in Web Adapter mode, try env var fallback
+  // Priority 3: Global context from Jaypie adapter
+  const jaypieAdapterUuid = getJaypieAdapterUuid();
+  if (jaypieAdapterUuid) {
+    return jaypieAdapterUuid;
+  }
+
+  // Fallback: Web Adapter env var
   return getWebAdapterUuid();
 }
 

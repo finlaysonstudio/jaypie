@@ -1,0 +1,304 @@
+import { describe, expect, it } from "vitest";
+
+import { createLambdaRequest, LambdaRequest } from "../LambdaRequest.js";
+import type { FunctionUrlEvent, LambdaContext } from "../types.js";
+
+//
+//
+// Test Fixtures
+//
+
+const mockContext: LambdaContext = {
+  awsRequestId: "test-request-id-12345",
+  functionName: "test-function",
+  functionVersion: "$LATEST",
+  invokedFunctionArn: "arn:aws:lambda:us-east-1:123456789:function:test",
+  logGroupName: "/aws/lambda/test",
+  logStreamName: "2024/01/01/[$LATEST]abc123",
+  memoryLimitInMB: "128",
+};
+
+const createMockEvent = (
+  overrides: Partial<FunctionUrlEvent> = {},
+): FunctionUrlEvent => ({
+  body: undefined,
+  cookies: undefined,
+  headers: {
+    "content-type": "application/json",
+    host: "abc123.lambda-url.us-east-1.on.aws",
+    "user-agent": "test-agent",
+  },
+  isBase64Encoded: false,
+  rawPath: "/api/users",
+  rawQueryString: "",
+  requestContext: {
+    accountId: "123456789",
+    apiId: "abc123",
+    domainName: "abc123.lambda-url.us-east-1.on.aws",
+    domainPrefix: "abc123",
+    http: {
+      method: "GET",
+      path: "/api/users",
+      protocol: "HTTP/1.1",
+      sourceIp: "192.168.1.1",
+      userAgent: "test-agent",
+    },
+    requestId: "req-123",
+    routeKey: "$default",
+    stage: "$default",
+    time: "01/Jan/2024:00:00:00 +0000",
+    timeEpoch: 1704067200000,
+  },
+  routeKey: "$default",
+  version: "2.0",
+  ...overrides,
+});
+
+//
+//
+// Tests
+//
+
+describe("LambdaRequest", () => {
+  describe("createLambdaRequest", () => {
+    it("creates request from Function URL event", () => {
+      const event = createMockEvent();
+      const req = createLambdaRequest(event, mockContext);
+
+      expect(req).toBeInstanceOf(LambdaRequest);
+      expect(req.method).toBe("GET");
+      expect(req.url).toBe("/api/users");
+      expect(req.path).toBe("/api/users");
+      expect(req.originalUrl).toBe("/api/users");
+    });
+
+    it("includes query string in URL", () => {
+      const event = createMockEvent({
+        rawQueryString: "page=1&limit=10",
+      });
+      const req = createLambdaRequest(event, mockContext);
+
+      expect(req.url).toBe("/api/users?page=1&limit=10");
+      expect(req.path).toBe("/api/users");
+    });
+
+    it("normalizes headers to lowercase", () => {
+      const event = createMockEvent({
+        headers: {
+          "Content-Type": "application/json",
+          "X-Custom-Header": "custom-value",
+        },
+      });
+      const req = createLambdaRequest(event, mockContext);
+
+      expect(req.headers["content-type"]).toBe("application/json");
+      expect(req.headers["x-custom-header"]).toBe("custom-value");
+    });
+
+    it("normalizes cookies array to Cookie header", () => {
+      const event = createMockEvent({
+        cookies: ["session=abc123", "user=john"],
+      });
+      const req = createLambdaRequest(event, mockContext);
+
+      expect(req.headers.cookie).toBe("session=abc123; user=john");
+    });
+
+    it("preserves existing cookie header over cookies array", () => {
+      const event = createMockEvent({
+        cookies: ["new=cookie"],
+        headers: {
+          cookie: "existing=cookie",
+          "content-type": "application/json",
+        },
+      });
+      const req = createLambdaRequest(event, mockContext);
+
+      expect(req.headers.cookie).toBe("existing=cookie");
+    });
+
+    it("stores Lambda context for getCurrentInvokeUuid", () => {
+      const event = createMockEvent();
+      const req = createLambdaRequest(event, mockContext);
+
+      expect(req._lambdaContext).toBe(mockContext);
+      expect(req._lambdaContext.awsRequestId).toBe("test-request-id-12345");
+    });
+
+    it("stores Lambda event for reference", () => {
+      const event = createMockEvent();
+      const req = createLambdaRequest(event, mockContext);
+
+      expect(req._lambdaEvent).toBe(event);
+    });
+
+    it("sets remote address from sourceIp", () => {
+      const event = createMockEvent();
+      const req = createLambdaRequest(event, mockContext);
+
+      expect(req.socket.remoteAddress).toBe("192.168.1.1");
+      expect(req.connection.remoteAddress).toBe("192.168.1.1");
+    });
+
+    it("handles POST method", () => {
+      const event = createMockEvent({
+        requestContext: {
+          ...createMockEvent().requestContext,
+          http: {
+            ...createMockEvent().requestContext.http,
+            method: "POST",
+          },
+        },
+      });
+      const req = createLambdaRequest(event, mockContext);
+
+      expect(req.method).toBe("POST");
+    });
+  });
+
+  describe("body handling", () => {
+    it("handles string body", async () => {
+      const event = createMockEvent({
+        body: '{"name":"John"}',
+      });
+      const req = createLambdaRequest(event, mockContext);
+
+      const chunks: Buffer[] = [];
+      for await (const chunk of req) {
+        chunks.push(chunk as Buffer);
+      }
+      const body = Buffer.concat(chunks).toString();
+
+      expect(body).toBe('{"name":"John"}');
+      expect(req.complete).toBe(true);
+    });
+
+    it("handles base64 encoded body", async () => {
+      const originalBody = '{"name":"John"}';
+      const base64Body = Buffer.from(originalBody).toString("base64");
+      const event = createMockEvent({
+        body: base64Body,
+        isBase64Encoded: true,
+      });
+      const req = createLambdaRequest(event, mockContext);
+
+      const chunks: Buffer[] = [];
+      for await (const chunk of req) {
+        chunks.push(chunk as Buffer);
+      }
+      const body = Buffer.concat(chunks).toString();
+
+      expect(body).toBe('{"name":"John"}');
+    });
+
+    it("handles empty body", async () => {
+      const event = createMockEvent({
+        body: undefined,
+      });
+      const req = createLambdaRequest(event, mockContext);
+
+      const chunks: Buffer[] = [];
+      for await (const chunk of req) {
+        chunks.push(chunk as Buffer);
+      }
+
+      expect(chunks.length).toBe(0);
+      expect(req.complete).toBe(true);
+    });
+  });
+
+  describe("Express helper methods", () => {
+    it("get() returns header value", () => {
+      const event = createMockEvent({
+        headers: {
+          "content-type": "application/json",
+        },
+      });
+      const req = createLambdaRequest(event, mockContext);
+
+      expect(req.get("Content-Type")).toBe("application/json");
+      expect(req.get("content-type")).toBe("application/json");
+    });
+
+    it("header() is alias for get()", () => {
+      const event = createMockEvent({
+        headers: {
+          "x-custom": "value",
+        },
+      });
+      const req = createLambdaRequest(event, mockContext);
+
+      expect(req.header("X-Custom")).toBe("value");
+    });
+
+    it("get() returns undefined for missing header", () => {
+      const event = createMockEvent();
+      const req = createLambdaRequest(event, mockContext);
+
+      expect(req.get("x-missing")).toBeUndefined();
+    });
+  });
+
+  describe("socket mock", () => {
+    it("sets encrypted based on protocol", () => {
+      const event = createMockEvent({
+        requestContext: {
+          ...createMockEvent().requestContext,
+          http: {
+            ...createMockEvent().requestContext.http,
+            protocol: "HTTPS/1.1",
+          },
+        },
+      });
+      const req = createLambdaRequest(event, mockContext);
+
+      expect(req.socket.encrypted).toBe(true);
+    });
+
+    it("sets encrypted to false for HTTP", () => {
+      const event = createMockEvent();
+      const req = createLambdaRequest(event, mockContext);
+
+      expect(req.socket.encrypted).toBe(false);
+    });
+
+    it("destroy() is a no-op", () => {
+      const event = createMockEvent();
+      const req = createLambdaRequest(event, mockContext);
+
+      expect(() => req.socket.destroy()).not.toThrow();
+    });
+  });
+
+  describe("default properties", () => {
+    it("sets httpVersion", () => {
+      const event = createMockEvent();
+      const req = createLambdaRequest(event, mockContext);
+
+      expect(req.httpVersion).toBe("1.1");
+      expect(req.httpVersionMajor).toBe(1);
+      expect(req.httpVersionMinor).toBe(1);
+    });
+
+    it("initializes baseUrl as empty string", () => {
+      const event = createMockEvent();
+      const req = createLambdaRequest(event, mockContext);
+
+      expect(req.baseUrl).toBe("");
+    });
+
+    it("initializes params as empty object", () => {
+      const event = createMockEvent();
+      const req = createLambdaRequest(event, mockContext);
+
+      expect(req.params).toEqual({});
+    });
+
+    it("initializes query as empty object", () => {
+      const event = createMockEvent();
+      const req = createLambdaRequest(event, mockContext);
+
+      expect(req.query).toEqual({});
+    });
+  });
+});

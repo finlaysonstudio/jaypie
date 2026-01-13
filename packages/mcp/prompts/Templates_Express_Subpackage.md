@@ -9,10 +9,14 @@ Templates for creating an Express subpackage that runs on AWS Lambda in a Jaypie
 ## index.ts
 
 ```typescript
-import serverlessExpress from "@codegenie/serverless-express";
+import { createLambdaHandler } from "jaypie";
 import app from "./src/app.js";
 
-export default serverlessExpress({ app });
+// Lambda handler for Function URL
+export const handler = createLambdaHandler(app);
+
+// For streaming responses (SSE), use:
+// export const handler = createLambdaStreamHandler(app);
 
 if (process.env.NODE_ENV === "development") {
   app.listen(8080);
