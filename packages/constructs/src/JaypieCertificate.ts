@@ -75,8 +75,8 @@ function sanitizeDomain(domain: string): string {
 export interface JaypieCertificateProps {
   /**
    * Import certificate from a provider stack instead of creating one.
-   * Auto-detected from PROJECT_ENV (personal/ephemeral = consumer).
-   * @default auto-detected from environment
+   * When true, imports the certificate ARN via CloudFormation export.
+   * @default false
    */
   consumer?: boolean;
   /**
@@ -86,19 +86,20 @@ export interface JaypieCertificateProps {
   domainName?: string;
   /**
    * Export name override for cross-stack sharing.
+   * Only used when provider is true.
    * @default Generated from environment and domain
    */
   export?: string;
   /**
    * Construct ID override. When not provided, ID is auto-generated from domain.
    * Use this to align with certificates created by other constructs.
-   * @default Auto-generated as "Certificate-{sanitized-domain}"
+   * @default Auto-generated as "JaypieCert-{sanitized-domain}"
    */
   id?: string;
   /**
    * Export certificate ARN for other stacks to import.
-   * Auto-detected from PROJECT_ENV (sandbox = provider).
-   * @default auto-detected from environment
+   * When true, creates a CloudFormation export that consumer stacks can import.
+   * @default false
    */
   provider?: boolean;
   /**
@@ -154,11 +155,11 @@ export interface JaypieCertificateProps {
  * });
  *
  * @example
- * // Provider/consumer pattern for cross-stack sharing
- * // In sandbox stack:
+ * // Optional: Provider/consumer pattern for cross-stack sharing
+ * // In sandbox stack (explicitly export):
  * new JaypieCertificate(this, { provider: true });
  *
- * // In personal build:
+ * // In personal build (explicitly import):
  * new JaypieCertificate(this, { consumer: true });
  */
 export class JaypieCertificate extends Construct implements acm.ICertificate {
@@ -215,10 +216,10 @@ export class JaypieCertificate extends Construct implements acm.ICertificate {
     super(scope, id);
 
     const {
-      consumer = checkEnvIsConsumer(),
+      consumer = false,
       domainName: propsDomainName,
       export: exportParam,
-      provider = checkEnvIsProvider(),
+      provider = false,
       roleTag = CDK.ROLE.API,
       zone: propsZone,
     } = props;

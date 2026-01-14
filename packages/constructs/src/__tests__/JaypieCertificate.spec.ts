@@ -368,7 +368,7 @@ describe("JaypieCertificate", () => {
       expect(exportedOutput?.Export?.Name).toBeDefined();
     });
 
-    it("auto-detects provider from PROJECT_ENV=sandbox", () => {
+    it("does not export when provider is not explicitly set", () => {
       process.env.PROJECT_ENV = "sandbox";
       process.env.PROJECT_KEY = "testproject";
 
@@ -384,8 +384,9 @@ describe("JaypieCertificate", () => {
       const template = Template.fromStack(stack);
 
       const outputs = template.findOutputs("*");
+      // Should have CertificateArn output but no export
       const exportedOutput = Object.values(outputs).find((o) => o.Export);
-      expect(exportedOutput).toBeDefined();
+      expect(exportedOutput).toBeUndefined();
     });
 
     it("imports certificate when consumer is true", () => {
@@ -401,31 +402,25 @@ describe("JaypieCertificate", () => {
       expect(cert.certificate).toBeDefined();
     });
 
-    it("auto-detects consumer from PROJECT_ENV=personal", () => {
+    it("creates own certificate in personal build when consumer not specified", () => {
       process.env.PROJECT_ENV = "personal";
       process.env.PROJECT_KEY = "testproject";
 
       const stack = new Stack();
+      const hostedZone = new route53.HostedZone(stack, "TestZone", {
+        zoneName: "example.com",
+      });
 
-      // Consumer doesn't need zone
+      // Without consumer: true, should create its own certificate
       const cert = new JaypieCertificate(stack, "TestCert", {
         domainName: "api.example.com",
+        zone: hostedZone,
       });
 
       expect(cert).toBeDefined();
-    });
-
-    it("auto-detects consumer from CDK_ENV_PERSONAL", () => {
-      process.env.CDK_ENV_PERSONAL = "true";
-      process.env.PROJECT_KEY = "testproject";
-
-      const stack = new Stack();
-
-      const cert = new JaypieCertificate(stack, "TestCert", {
-        domainName: "api.example.com",
-      });
-
-      expect(cert).toBeDefined();
+      const template = Template.fromStack(stack);
+      const certificates = findCertificates(template);
+      expect(certificates.length).toBe(1);
     });
   });
 
