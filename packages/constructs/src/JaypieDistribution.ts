@@ -60,8 +60,8 @@ export interface JaypieDistributionProps extends Omit<
   /**
    * Origin read timeout - how long CloudFront waits for a response from the origin.
    * This is the maximum time allowed for the origin to respond.
-   * @default CDK.DURATION.CLOUDFRONT_API (180 seconds)
-   * @max Duration.seconds(180)
+   * @default CDK.DURATION.CLOUDFRONT_API (120 seconds)
+   * @max Duration.seconds(120)
    */
   originReadTimeout?: Duration;
   /**
