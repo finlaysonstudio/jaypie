@@ -47,7 +47,7 @@ describe("JaypieDistribution", () => {
     it("creates required resources with IOrigin handler", () => {
       const stack = new Stack();
       const bucket = new s3.Bucket(stack, "TestBucket");
-      const origin = new origins.S3Origin(bucket);
+      const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
 
       const construct = new JaypieDistribution(stack, "TestDistribution", {
         handler: origin,
@@ -114,7 +114,7 @@ describe("JaypieDistribution", () => {
 
       const stack = new Stack();
       const bucket = new s3.Bucket(stack, "TestBucket");
-      const origin = new origins.S3Origin(bucket);
+      const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
 
       expect(() => {
         new JaypieDistribution(stack, "TestDistribution", {
@@ -128,7 +128,7 @@ describe("JaypieDistribution", () => {
 
       const stack = new Stack();
       const bucket = new s3.Bucket(stack, "TestBucket");
-      const origin = new origins.S3Origin(bucket);
+      const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
 
       expect(() => {
         new JaypieDistribution(stack, "TestDistribution", {
@@ -142,7 +142,7 @@ describe("JaypieDistribution", () => {
 
       const stack = new Stack();
       const bucket = new s3.Bucket(stack, "TestBucket");
-      const origin = new origins.S3Origin(bucket);
+      const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
 
       expect(() => {
         new JaypieDistribution(stack, "TestDistribution", {
@@ -154,7 +154,7 @@ describe("JaypieDistribution", () => {
     it("throws when host prop is invalid", () => {
       const stack = new Stack();
       const bucket = new s3.Bucket(stack, "TestBucket");
-      const origin = new origins.S3Origin(bucket);
+      const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
 
       expect(() => {
         new JaypieDistribution(stack, "TestDistribution", {
@@ -169,7 +169,7 @@ describe("JaypieDistribution", () => {
     it("creates distribution with S3 origin", () => {
       const stack = new Stack();
       const bucket = new s3.Bucket(stack, "TestBucket");
-      const origin = new origins.S3Origin(bucket);
+      const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
 
       const construct = new JaypieDistribution(stack, "TestDistribution", {
         handler: origin,
@@ -203,7 +203,7 @@ describe("JaypieDistribution", () => {
     it("creates distribution with defaultBehavior override", () => {
       const stack = new Stack();
       const bucket = new s3.Bucket(stack, "TestBucket");
-      const origin = new origins.S3Origin(bucket);
+      const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
 
       const construct = new JaypieDistribution(stack, "TestDistribution", {
         defaultBehavior: {
@@ -225,7 +225,7 @@ describe("JaypieDistribution", () => {
     it("uses CACHING_DISABLED by default when handler is provided", () => {
       const stack = new Stack();
       const bucket = new s3.Bucket(stack, "TestBucket");
-      const origin = new origins.S3Origin(bucket);
+      const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
 
       new JaypieDistribution(stack, "TestDistribution", {
         handler: origin,
@@ -244,7 +244,7 @@ describe("JaypieDistribution", () => {
     it("uses REDIRECT_TO_HTTPS by default when handler is provided", () => {
       const stack = new Stack();
       const bucket = new s3.Bucket(stack, "TestBucket");
-      const origin = new origins.S3Origin(bucket);
+      const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
 
       new JaypieDistribution(stack, "TestDistribution", {
         handler: origin,
@@ -262,7 +262,7 @@ describe("JaypieDistribution", () => {
     it("adds role tag when provided", () => {
       const stack = new Stack();
       const bucket = new s3.Bucket(stack, "TestBucket");
-      const origin = new origins.S3Origin(bucket);
+      const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
 
       new JaypieDistribution(stack, "TestDistribution", {
         handler: origin,
@@ -283,7 +283,7 @@ describe("JaypieDistribution", () => {
     it("uses default HOSTING role tag", () => {
       const stack = new Stack();
       const bucket = new s3.Bucket(stack, "TestBucket");
-      const origin = new origins.S3Origin(bucket);
+      const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
 
       new JaypieDistribution(stack, "TestDistribution", {
         handler: origin,
@@ -388,7 +388,7 @@ describe("JaypieDistribution", () => {
     it("passes through additional Distribution props", () => {
       const stack = new Stack();
       const bucket = new s3.Bucket(stack, "TestBucket");
-      const origin = new origins.S3Origin(bucket);
+      const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
 
       new JaypieDistribution(stack, "TestDistribution", {
         handler: origin,
@@ -408,7 +408,7 @@ describe("JaypieDistribution", () => {
     it("exposes host property when provided", () => {
       const stack = new Stack();
       const bucket = new s3.Bucket(stack, "TestBucket");
-      const origin = new origins.S3Origin(bucket);
+      const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
 
       // Note: Without zone, host is set but no certificate or DNS record is created
       const construct = new JaypieDistribution(stack, "TestDistribution", {
@@ -424,7 +424,7 @@ describe("JaypieDistribution", () => {
 
       const stack = new Stack();
       const bucket = new s3.Bucket(stack, "TestBucket");
-      const origin = new origins.S3Origin(bucket);
+      const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
 
       const construct = new JaypieDistribution(stack, "TestDistribution", {
         handler: origin,
@@ -439,7 +439,7 @@ describe("JaypieDistribution", () => {
 
       const stack = new Stack();
       const bucket = new s3.Bucket(stack, "TestBucket");
-      const origin = new origins.S3Origin(bucket);
+      const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
 
       // Certificate and DNS require zone lookup which needs account/region
       // This test verifies the host is correctly constructed from env vars
@@ -457,7 +457,7 @@ describe("JaypieDistribution", () => {
 
       const stack = new Stack();
       const bucket = new s3.Bucket(stack, "TestBucket");
-      const origin = new origins.S3Origin(bucket);
+      const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
 
       // Certificate and DNS require zone lookup which needs account/region
       // This test verifies the host is correctly constructed from env vars
@@ -474,7 +474,7 @@ describe("JaypieDistribution", () => {
 
       const stack = new Stack();
       const bucket = new s3.Bucket(stack, "TestBucket");
-      const origin = new origins.S3Origin(bucket);
+      const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
 
       const construct = new JaypieDistribution(stack, "TestDistribution", {
         handler: origin,
@@ -490,7 +490,7 @@ describe("JaypieDistribution", () => {
 
       const stack = new Stack();
       const bucket = new s3.Bucket(stack, "TestBucket");
-      const origin = new origins.S3Origin(bucket);
+      const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
 
       // certificate: false should prevent zone lookup and certificate creation
       const construct = new JaypieDistribution(stack, "TestDistribution", {
@@ -505,7 +505,7 @@ describe("JaypieDistribution", () => {
     it("uses provided certificate when passed", () => {
       const stack = new Stack();
       const bucket = new s3.Bucket(stack, "TestBucket");
-      const origin = new origins.S3Origin(bucket);
+      const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
       const certificate = new acm.Certificate(stack, "TestCert", {
         domainName: "api.example.com",
       });
@@ -529,7 +529,7 @@ describe("JaypieDistribution", () => {
     it("implements IDistribution by delegating to underlying distribution", () => {
       const stack = new Stack();
       const bucket = new s3.Bucket(stack, "TestBucket");
-      const origin = new origins.S3Origin(bucket);
+      const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
 
       const construct = new JaypieDistribution(stack, "TestDistribution", {
         handler: origin,
@@ -550,7 +550,7 @@ describe("JaypieDistribution", () => {
     it("applies removal policy to distribution", () => {
       const stack = new Stack();
       const bucket = new s3.Bucket(stack, "TestBucket");
-      const origin = new origins.S3Origin(bucket);
+      const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
 
       const construct = new JaypieDistribution(stack, "TestDistribution", {
         handler: origin,
@@ -569,7 +569,7 @@ describe("JaypieDistribution", () => {
     it("grants permissions", () => {
       const stack = new Stack();
       const bucket = new s3.Bucket(stack, "TestBucket");
-      const origin = new origins.S3Origin(bucket);
+      const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
       const fn = new lambda.Function(stack, "TestFunction", {
         code: lambda.Code.fromInline("exports.handler = () => {}"),
         handler: "index.handler",
@@ -603,7 +603,7 @@ describe("JaypieDistribution", () => {
     it("creates log bucket by default", () => {
       const stack = new Stack();
       const bucket = new s3.Bucket(stack, "TestBucket");
-      const origin = new origins.S3Origin(bucket);
+      const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
 
       const construct = new JaypieDistribution(stack, "TestDistribution", {
         handler: origin,
@@ -618,7 +618,7 @@ describe("JaypieDistribution", () => {
     it("configures distribution with logging enabled", () => {
       const stack = new Stack();
       const bucket = new s3.Bucket(stack, "TestBucket");
-      const origin = new origins.S3Origin(bucket);
+      const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
 
       new JaypieDistribution(stack, "TestDistribution", {
         handler: origin,
@@ -636,7 +636,7 @@ describe("JaypieDistribution", () => {
     it("creates log bucket with lifecycle rules", () => {
       const stack = new Stack();
       const bucket = new s3.Bucket(stack, "TestBucket");
-      const origin = new origins.S3Origin(bucket);
+      const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
 
       new JaypieDistribution(stack, "TestDistribution", {
         handler: origin,
@@ -661,7 +661,7 @@ describe("JaypieDistribution", () => {
     it("adds storage role tag to log bucket", () => {
       const stack = new Stack();
       const bucket = new s3.Bucket(stack, "TestBucket");
-      const origin = new origins.S3Origin(bucket);
+      const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
 
       new JaypieDistribution(stack, "TestDistribution", {
         handler: origin,
@@ -684,7 +684,7 @@ describe("JaypieDistribution", () => {
     it("disables logging when destination is false", () => {
       const stack = new Stack();
       const bucket = new s3.Bucket(stack, "TestBucket");
-      const origin = new origins.S3Origin(bucket);
+      const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
 
       const construct = new JaypieDistribution(stack, "TestDistribution", {
         handler: origin,
@@ -705,7 +705,7 @@ describe("JaypieDistribution", () => {
     it("sets up S3 notification for log bucket", () => {
       const stack = new Stack();
       const bucket = new s3.Bucket(stack, "TestBucket");
-      const origin = new origins.S3Origin(bucket);
+      const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
 
       new JaypieDistribution(stack, "TestDistribution", {
         handler: origin,

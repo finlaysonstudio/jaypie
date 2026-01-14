@@ -10,7 +10,7 @@ import {
   calculateOu,
   indexEntity,
 } from "../keyBuilders.js";
-import type { FabricEntity } from "../types.js";
+import type { StorableEntity } from "../types.js";
 
 describe("Key Builders", () => {
   describe("buildIndexOu", () => {
@@ -107,7 +107,7 @@ describe("calculateOu", () => {
 describe("indexEntity", () => {
   const now = new Date().toISOString();
 
-  const createBaseEntity = (): FabricEntity => ({
+  const createBaseEntity = (): StorableEntity => ({
     createdAt: now,
     id: "test-id-123",
     model: "record",

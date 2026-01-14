@@ -9,7 +9,7 @@ import {
   putEntity,
   updateEntity,
 } from "../entities.js";
-import type { FabricEntity } from "../types.js";
+import type { StorableEntity } from "../types.js";
 
 // Mock the client module
 const mockSend = vi.fn();
@@ -22,7 +22,7 @@ vi.spyOn(clientModule, "getTableName").mockReturnValue("test-table");
 describe("Entity Operations", () => {
   const now = new Date().toISOString();
 
-  const createTestEntity = (): FabricEntity => ({
+  const createTestEntity = (): StorableEntity => ({
     createdAt: now,
     id: "test-id-123",
     model: "record",

@@ -4,7 +4,7 @@ import { serviceHandler } from "@jaypie/vocabulary";
 import { getDocClient, getTableName } from "./client.js";
 import { ARCHIVED_SUFFIX, DELETED_SUFFIX } from "./constants.js";
 import { indexEntity } from "./keyBuilders.js";
-import type { FabricEntity } from "./types.js";
+import type { StorableEntity } from "./types.js";
 
 /**
  * Calculate suffix based on entity's archived/deleted state
@@ -38,7 +38,7 @@ export const getEntity = serviceHandler({
     id: { type: String, description: "Entity ID (sort key)" },
     model: { type: String, description: "Entity model (partition key)" },
   },
-  service: async ({ id, model }): Promise<FabricEntity | null> => {
+  service: async ({ id, model }): Promise<StorableEntity | null> => {
     const docClient = getDocClient();
     const tableName = getTableName();
 
@@ -48,7 +48,7 @@ export const getEntity = serviceHandler({
     });
 
     const response = await docClient.send(command);
-    return (response.Item as FabricEntity) ?? null;
+    return (response.Item as StorableEntity) ?? null;
   },
 });
 
@@ -57,13 +57,13 @@ export const getEntity = serviceHandler({
  * Auto-populates GSI index keys via indexEntity
  *
  * Note: This is a regular async function (not serviceHandler) because it accepts
- * complex FabricEntity objects that can't be coerced by vocabulary's type system.
+ * complex StorableEntity objects that can't be coerced by vocabulary's type system.
  */
 export async function putEntity({
   entity,
 }: {
-  entity: FabricEntity;
-}): Promise<FabricEntity> {
+  entity: StorableEntity;
+}): Promise<StorableEntity> {
   const docClient = getDocClient();
   const tableName = getTableName();
 
@@ -84,13 +84,13 @@ export async function putEntity({
  * Auto-populates GSI index keys and sets updatedAt
  *
  * Note: This is a regular async function (not serviceHandler) because it accepts
- * complex FabricEntity objects that can't be coerced by vocabulary's type system.
+ * complex StorableEntity objects that can't be coerced by vocabulary's type system.
  */
 export async function updateEntity({
   entity,
 }: {
-  entity: FabricEntity;
-}): Promise<FabricEntity> {
+  entity: StorableEntity;
+}): Promise<StorableEntity> {
   const docClient = getDocClient();
   const tableName = getTableName();
 

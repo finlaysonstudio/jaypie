@@ -51,12 +51,12 @@ npm install @jaypie/dynamodb
 | `exportEntities` | Export entities by model/ou |
 | `exportEntitiesToJson` | Export as JSON string |
 
-## FabricEntity Interface
+## StorableEntity Interface
 
 All entities implement this interface:
 
 ```typescript
-interface FabricEntity {
+interface StorableEntity {
   model: string;      // Entity type (e.g., "user", "order")
   id: string;         // Unique identifier
   ou: string;         // Organizational unit

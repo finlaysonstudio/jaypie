@@ -48,9 +48,40 @@ export {
   isValidDate,
 } from "./coerce-date.js";
 
+// Helpers
+export { computeResolvedName, resolveWithFallback } from "./helpers/index.js";
+export type { ResolvedNameEntity } from "./helpers/index.js";
+
 // Constants
 export { APEX, SEPARATOR, SYSTEM_MODELS } from "./constants.js";
 export type { SystemModel } from "./constants.js";
+
+// Index (DynamoDB index definitions and key builders)
+export {
+  ARCHIVED_SUFFIX,
+  buildCompositeKey,
+  calculateIndexSuffix,
+  calculateOu,
+  clearRegistry,
+  DEFAULT_INDEXES,
+  DEFAULT_SORT_KEY,
+  DELETED_SUFFIX,
+  generateIndexName,
+  getAllRegisteredIndexes,
+  getModelIndexes,
+  getModelSchema,
+  getRegisteredModels,
+  isModelRegistered,
+  populateIndexKeys,
+  registerModel,
+  tryBuildCompositeKey,
+} from "./index/index.js";
+export type {
+  IndexableEntity,
+  IndexDefinition,
+  IndexField,
+  ModelSchema,
+} from "./index/index.js";
 
 // LLM adapter (re-exported for convenience - no optional deps)
 export * as llm from "./llm/index.js";
@@ -119,4 +150,4 @@ export type {
 } from "./types.js";
 
 // Version
-export const VOCABULARY_VERSION = "0.1.8";
+export const VOCABULARY_VERSION = "0.2.0";

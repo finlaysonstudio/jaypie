@@ -85,6 +85,16 @@ export interface BaseEntity {
   type?: string;
 
   // -------------------------------------------------------------------------
+  // Storage (optional - only when persisted to DynamoDB)
+  // -------------------------------------------------------------------------
+
+  /** Organizational unit: APEX ("@") or "{parent.model}#{parent.id}" */
+  ou?: string;
+
+  /** Timestamp for chronological ordering (Date.now()) */
+  sequence?: number;
+
+  // -------------------------------------------------------------------------
   // Content
   // -------------------------------------------------------------------------
 
@@ -266,6 +276,10 @@ export const BASE_ENTITY_FIELDS = {
   CLASS: "class",
   MODEL: "model",
   TYPE: "type",
+
+  // Storage
+  OU: "ou",
+  SEQUENCE: "sequence",
 
   // Time
   ARCHIVED_AT: "archivedAt",

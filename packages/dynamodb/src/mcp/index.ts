@@ -15,7 +15,7 @@ import {
   queryByXid,
   updateEntity,
 } from "../index.js";
-import type { FabricEntity } from "../types.js";
+import type { StorableEntity } from "../types.js";
 import {
   createTableHandler,
   dockerComposeHandler,
@@ -78,7 +78,7 @@ const mcpPutEntity = serviceHandler({
   },
   service: async (input) => {
     const now = new Date().toISOString();
-    const entity: FabricEntity = {
+    const entity: StorableEntity = {
       alias: input.alias as string | undefined,
       class: input.class as string | undefined,
       createdAt: now,
@@ -124,7 +124,7 @@ const mcpUpdateEntity = serviceHandler({
       return { error: "Entity not found", id: input.id, model: input.model };
     }
     // Merge updates
-    const entity: FabricEntity = {
+    const entity: StorableEntity = {
       ...existing,
       ...(input.alias !== undefined && { alias: input.alias as string }),
       ...(input.class !== undefined && { class: input.class as string }),

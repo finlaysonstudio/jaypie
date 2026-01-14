@@ -1,3 +1,5 @@
+import type { BaseEntity } from "@jaypie/vocabulary";
+
 /**
  * DynamoDB client configuration
  */
@@ -108,7 +110,7 @@ export interface QueryByXidParams {
 /**
  * Result of a query operation
  */
-export interface QueryResult<T = FabricEntity> {
+export interface QueryResult<T = StorableEntity> {
   /** Array of matching entities */
   items: T[];
   /** Pagination cursor for next page (undefined if no more results) */
@@ -116,9 +118,15 @@ export interface QueryResult<T = FabricEntity> {
 }
 
 /**
- * Base entity interface for DynamoDB single-table design
+ * Entity with required fields for DynamoDB storage.
+ *
+ * Extends BaseEntity from @jaypie/vocabulary with:
+ * - Required storage fields (id, model, name, ou, sequence)
+ * - String timestamps (DynamoDB uses ISO 8601 strings, not Date objects)
+ * - GSI index keys (auto-populated by indexEntity)
  */
-export interface FabricEntity {
+export interface StorableEntity
+  extends Omit<BaseEntity, "archivedAt" | "createdAt" | "deletedAt" | "updatedAt"> {
   // Primary Key
   /** Partition key (e.g., "record", "message") */
   model: string;
@@ -140,17 +148,7 @@ export interface FabricEntity {
   indexType?: string;
   indexXid?: string;
 
-  // Optional fields (trigger index population when present)
-  /** Human-friendly slug/alias */
-  alias?: string;
-  /** Category classification */
-  class?: string;
-  /** Type classification */
-  type?: string;
-  /** External ID for integration with external systems */
-  xid?: string;
-
-  // Timestamps (ISO 8601)
+  // Timestamps (ISO 8601 strings - DynamoDB doesn't store Date objects)
   createdAt: string;
   updatedAt: string;
   /** Archive timestamp (for inactive but preserved records) */

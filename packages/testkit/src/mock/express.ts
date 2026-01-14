@@ -16,6 +16,21 @@ const HTTP = {
   CODE: { OK: 200, CREATED: 201, NO_CONTENT: 204, INTERNAL_ERROR: 500 },
 };
 
+// Re-export Lambda adapter classes directly (these are not mocked)
+export const createLambdaHandler = createMockWrappedFunction(
+  original.createLambdaHandler as (...args: unknown[]) => unknown,
+);
+export const createLambdaStreamHandler = createMockWrappedFunction(
+  original.createLambdaStreamHandler as (...args: unknown[]) => unknown,
+);
+export const getCurrentInvoke = createMockReturnedFunction<{
+  context: unknown;
+  event: unknown;
+}>({ context: undefined, event: undefined });
+export const LambdaRequest = original.LambdaRequest;
+export const LambdaResponseBuffered = original.LambdaResponseBuffered;
+export const LambdaResponseStreaming = original.LambdaResponseStreaming;
+
 export const EXPRESS = original.EXPRESS;
 
 // Add Express route functions
