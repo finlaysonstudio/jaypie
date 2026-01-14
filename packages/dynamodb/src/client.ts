@@ -35,8 +35,7 @@ function isLocalEndpoint(endpoint?: string): boolean {
  */
 export function initClient(config: DynamoClientConfig = {}): void {
   const { endpoint } = config;
-  const region =
-    config.region ?? process.env[ENV_AWS_REGION] ?? DEFAULT_REGION;
+  const region = config.region ?? process.env[ENV_AWS_REGION] ?? DEFAULT_REGION;
 
   // Auto-detect local mode and use dummy credentials
   const credentials =

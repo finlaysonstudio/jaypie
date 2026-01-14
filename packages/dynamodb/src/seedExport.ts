@@ -44,9 +44,7 @@ export async function seedEntityIfNotExists<T extends Partial<StorableEntity>>(
   entity: T,
 ): Promise<boolean> {
   if (!entity.alias || !entity.model || !entity.ou) {
-    throw new Error(
-      "Entity must have alias, model, and ou to check existence",
-    );
+    throw new Error("Entity must have alias, model, and ou to check existence");
   }
 
   // Check if entity already exists

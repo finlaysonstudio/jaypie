@@ -1,6 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { registerMcpTool } from "@jaypie/vocabulary/mcp";
-import { serviceHandler, type ServiceHandlerFunction } from "@jaypie/vocabulary";
+import { registerMcpTool } from "@jaypie/fabric/mcp";
+import { createService, type Service } from "@jaypie/fabric";
 
 import {
   archiveEntity,
@@ -38,9 +38,7 @@ export interface RegisterDynamoDbToolsResult {
 /**
  * Wrap a handler to auto-initialize before execution
  */
-function wrapWithInit(
-  handler: ServiceHandlerFunction,
-): ServiceHandlerFunction {
+function wrapWithInit(handler: Service): Service {
   const wrapped = async (input: Record<string, unknown>) => {
     ensureInitialized();
     return handler(input);
@@ -51,7 +49,7 @@ function wrapWithInit(
     description: handler.description,
     input: handler.input,
   });
-  return wrapped as ServiceHandlerFunction;
+  return wrapped as Service;
 }
 
 // MCP-specific serviceHandler wrappers for functions with complex inputs
@@ -61,9 +59,10 @@ function wrapWithInit(
  * MCP wrapper for putEntity
  * Accepts entity JSON directly from LLM
  */
-const mcpPutEntity = serviceHandler({
+const mcpPutEntity = createService({
   alias: "dynamodb_put",
-  description: "Create or replace an entity in DynamoDB (auto-indexes GSI keys)",
+  description:
+    "Create or replace an entity in DynamoDB (auto-indexes GSI keys)",
   input: {
     // Required entity fields
     id: { type: String, description: "Entity ID (sort key)" },
@@ -71,8 +70,16 @@ const mcpPutEntity = serviceHandler({
     name: { type: String, description: "Entity name" },
     ou: { type: String, description: "Organizational unit (@ for root)" },
     // Optional fields
-    alias: { type: String, required: false, description: "Human-friendly alias" },
-    class: { type: String, required: false, description: "Category classification" },
+    alias: {
+      type: String,
+      required: false,
+      description: "Human-friendly alias",
+    },
+    class: {
+      type: String,
+      required: false,
+      description: "Category classification",
+    },
     type: { type: String, required: false, description: "Type classification" },
     xid: { type: String, required: false, description: "External ID" },
   },
@@ -99,9 +106,10 @@ const mcpPutEntity = serviceHandler({
  * MCP wrapper for updateEntity
  * Accepts entity JSON directly from LLM
  */
-const mcpUpdateEntity = serviceHandler({
+const mcpUpdateEntity = createService({
   alias: "dynamodb_update",
-  description: "Update an entity in DynamoDB (sets updatedAt, re-indexes GSI keys)",
+  description:
+    "Update an entity in DynamoDB (sets updatedAt, re-indexes GSI keys)",
   input: {
     // Required fields to identify the entity
     id: { type: String, description: "Entity ID (sort key)" },
@@ -109,8 +117,16 @@ const mcpUpdateEntity = serviceHandler({
     // Fields that can be updated
     name: { type: String, required: false, description: "Entity name" },
     ou: { type: String, required: false, description: "Organizational unit" },
-    alias: { type: String, required: false, description: "Human-friendly alias" },
-    class: { type: String, required: false, description: "Category classification" },
+    alias: {
+      type: String,
+      required: false,
+      description: "Human-friendly alias",
+    },
+    class: {
+      type: String,
+      required: false,
+      description: "Category classification",
+    },
     type: { type: String, required: false, description: "Type classification" },
     xid: { type: String, required: false, description: "External ID" },
   },
@@ -141,7 +157,7 @@ const mcpUpdateEntity = serviceHandler({
  * MCP wrapper for queryByOu
  * Note: Pagination via startKey is not exposed to MCP; use limit instead
  */
-const mcpQueryByOu = serviceHandler({
+const mcpQueryByOu = createService({
   alias: "dynamodb_query_ou",
   description: "Query entities by organizational unit (parent hierarchy)",
   input: {
@@ -187,7 +203,7 @@ const mcpQueryByOu = serviceHandler({
  * MCP wrapper for queryByClass
  * Note: Pagination via startKey is not exposed to MCP; use limit instead
  */
-const mcpQueryByClass = serviceHandler({
+const mcpQueryByClass = createService({
   alias: "dynamodb_query_class",
   description: "Query entities by category classification",
   input: {
@@ -235,7 +251,7 @@ const mcpQueryByClass = serviceHandler({
  * MCP wrapper for queryByType
  * Note: Pagination via startKey is not exposed to MCP; use limit instead
  */
-const mcpQueryByType = serviceHandler({
+const mcpQueryByType = createService({
   alias: "dynamodb_query_type",
   description: "Query entities by type classification",
   input: {

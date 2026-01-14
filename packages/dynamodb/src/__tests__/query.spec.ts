@@ -3,7 +3,7 @@
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ConfigurationError } from "@jaypie/errors";
-import { clearRegistry, registerModel } from "@jaypie/vocabulary";
+import { clearRegistry, registerModel } from "@jaypie/fabric";
 
 import { initClient, resetClient } from "../client.js";
 import { query } from "../query.js";
@@ -57,7 +57,9 @@ describe("query", () => {
       expect(mockSend).toHaveBeenCalledOnce();
       const command = mockSend.mock.calls[0][0];
       expect(command.input.IndexName).toBe("indexOu");
-      expect(command.input.ExpressionAttributeValues[":pkValue"]).toBe("@#record");
+      expect(command.input.ExpressionAttributeValues[":pkValue"]).toBe(
+        "@#record",
+      );
     });
 
     it("selects indexAlias when alias is in filter", async () => {
@@ -124,9 +126,7 @@ describe("query", () => {
       // Register a model with no default indexes
       registerModel({
         model: "custom",
-        indexes: [
-          { name: "indexCustom", pk: ["customField", "model"] },
-        ],
+        indexes: [{ name: "indexCustom", pk: ["customField", "model"] }],
       });
 
       await expect(

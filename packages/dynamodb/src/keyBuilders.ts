@@ -1,11 +1,11 @@
 import {
-  buildCompositeKey as vocabBuildCompositeKey,
-  calculateOu as vocabCalculateOu,
+  buildCompositeKey as fabricBuildCompositeKey,
+  calculateOu as fabricCalculateOu,
   DEFAULT_INDEXES,
   getModelIndexes,
-  type IndexableEntity,
-  populateIndexKeys as vocabPopulateIndexKeys,
-} from "@jaypie/vocabulary";
+  type IndexableModel,
+  populateIndexKeys as fabricPopulateIndexKeys,
+} from "@jaypie/fabric";
 
 import { APEX, SEPARATOR } from "./constants.js";
 import type { ParentReference, StorableEntity } from "./types.js";
@@ -93,11 +93,11 @@ export function buildIndexXid(ou: string, model: string, xid: string): string {
  * @returns Composite key string
  */
 export function buildCompositeKey(
-  entity: IndexableEntity,
+  entity: IndexableModel,
   fields: string[],
   suffix?: string,
 ): string {
-  return vocabBuildCompositeKey(entity, fields, suffix);
+  return fabricBuildCompositeKey(entity, fields, suffix);
 }
 
 /**
@@ -109,7 +109,7 @@ export function calculateOu(parent?: ParentReference): string {
   if (!parent) {
     return APEX;
   }
-  return vocabCalculateOu(parent);
+  return fabricCalculateOu(parent);
 }
 
 /**
@@ -133,8 +133,12 @@ export function indexEntity<T extends StorableEntity>(
   suffix: string = "",
 ): T {
   const indexes = getModelIndexes(entity.model);
-  // Cast through unknown to bridge the type gap between StorableEntity and IndexableEntity
-  return vocabPopulateIndexKeys(entity as unknown as IndexableEntity, indexes, suffix) as unknown as T;
+  // Cast through unknown to bridge the type gap between StorableEntity and IndexableModel
+  return fabricPopulateIndexKeys(
+    entity as unknown as IndexableModel,
+    indexes,
+    suffix,
+  ) as unknown as T;
 }
 
 // Re-export DEFAULT_INDEXES for convenience

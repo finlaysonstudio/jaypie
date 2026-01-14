@@ -31,7 +31,9 @@ vi.mock("../queries.js", async () => {
 describe("Seed and Export Utilities", () => {
   const now = new Date().toISOString();
 
-  const createTestEntity = (overrides: Partial<StorableEntity> = {}): StorableEntity => ({
+  const createTestEntity = (
+    overrides: Partial<StorableEntity> = {},
+  ): StorableEntity => ({
     alias: "test-alias",
     createdAt: now,
     id: "test-id-123",
@@ -200,7 +202,9 @@ describe("Seed and Export Utilities", () => {
 
     it("replaces entities when replace option is true", async () => {
       const existingEntity = createTestEntity({ id: "existing-id" });
-      vi.mocked(queriesModule.queryByAlias).mockResolvedValueOnce(existingEntity);
+      vi.mocked(queriesModule.queryByAlias).mockResolvedValueOnce(
+        existingEntity,
+      );
       vi.mocked(entitiesModule.putEntity).mockResolvedValue(createTestEntity());
 
       const result = await seedEntities(

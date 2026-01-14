@@ -1,4 +1,4 @@
-import type { BaseEntity } from "@jaypie/vocabulary";
+import type { BaseModel } from "@jaypie/fabric";
 
 /**
  * DynamoDB client configuration
@@ -120,13 +120,15 @@ export interface QueryResult<T = StorableEntity> {
 /**
  * Entity with required fields for DynamoDB storage.
  *
- * Extends BaseEntity from @jaypie/vocabulary with:
+ * Extends BaseModel from @jaypie/fabric with:
  * - Required storage fields (id, model, name, ou, sequence)
  * - String timestamps (DynamoDB uses ISO 8601 strings, not Date objects)
  * - GSI index keys (auto-populated by indexEntity)
  */
-export interface StorableEntity
-  extends Omit<BaseEntity, "archivedAt" | "createdAt" | "deletedAt" | "updatedAt"> {
+export interface StorableEntity extends Omit<
+  BaseModel,
+  "archivedAt" | "createdAt" | "deletedAt" | "updatedAt"
+> {
   // Primary Key
   /** Partition key (e.g., "record", "message") */
   model: string;

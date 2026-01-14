@@ -1,5 +1,5 @@
 import { QueryCommand } from "@aws-sdk/lib-dynamodb";
-import { serviceHandler } from "@jaypie/vocabulary";
+import { createService } from "@jaypie/fabric";
 
 import { getDocClient, getTableName } from "./client.js";
 import {
@@ -91,7 +91,7 @@ interface QueryByOuParams extends BaseQueryOptions {
  * Query entities by organizational unit (parent hierarchy)
  * Uses indexOu GSI
  *
- * Note: This is a regular async function (not serviceHandler) because it accepts
+ * Note: This is a regular async function (not createService) because it accepts
  * complex startKey objects that can't be coerced by vocabulary's type system.
  */
 export async function queryByOu({
@@ -116,7 +116,7 @@ export async function queryByOu({
  * Query a single entity by human-friendly alias
  * Uses indexAlias GSI
  */
-export const queryByAlias = serviceHandler({
+export const queryByAlias = createService({
   alias: "queryByAlias",
   description: "Query a single entity by human-friendly alias",
   input: {
@@ -149,7 +149,10 @@ export const queryByAlias = serviceHandler({
     const modelStr = model as string;
     const ouStr = ou as string;
 
-    const suffix = calculateSuffix({ archived: archivedBool, deleted: deletedBool });
+    const suffix = calculateSuffix({
+      archived: archivedBool,
+      deleted: deletedBool,
+    });
     const keyValue = buildIndexAlias(ouStr, modelStr, aliasStr) + suffix;
     const result = await executeQuery<StorableEntity>(INDEX_ALIAS, keyValue, {
       limit: 1,
@@ -171,7 +174,7 @@ interface QueryByClassParams extends BaseQueryOptions {
  * Query entities by category classification
  * Uses indexClass GSI
  *
- * Note: This is a regular async function (not serviceHandler) because it accepts
+ * Note: This is a regular async function (not createService) because it accepts
  * complex startKey objects that can't be coerced by vocabulary's type system.
  */
 export async function queryByClass({
@@ -206,7 +209,7 @@ interface QueryByTypeParams extends BaseQueryOptions {
  * Query entities by type classification
  * Uses indexType GSI
  *
- * Note: This is a regular async function (not serviceHandler) because it accepts
+ * Note: This is a regular async function (not createService) because it accepts
  * complex startKey objects that can't be coerced by vocabulary's type system.
  */
 export async function queryByType({
@@ -232,7 +235,7 @@ export async function queryByType({
  * Query a single entity by external ID
  * Uses indexXid GSI
  */
-export const queryByXid = serviceHandler({
+export const queryByXid = createService({
   alias: "queryByXid",
   description: "Query a single entity by external ID",
   input: {
@@ -265,7 +268,10 @@ export const queryByXid = serviceHandler({
     const ouStr = ou as string;
     const xidStr = xid as string;
 
-    const suffix = calculateSuffix({ archived: archivedBool, deleted: deletedBool });
+    const suffix = calculateSuffix({
+      archived: archivedBool,
+      deleted: deletedBool,
+    });
     const keyValue = buildIndexXid(ouStr, modelStr, xidStr) + suffix;
     const result = await executeQuery<StorableEntity>(INDEX_XID, keyValue, {
       limit: 1,

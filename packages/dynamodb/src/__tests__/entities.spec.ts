@@ -254,9 +254,7 @@ describe("Entity Operations", () => {
       await archiveEntity({ id: "test-id-123", model: "record" });
       const putCommand = mockSend.mock.calls[1][0];
       expect(putCommand.input.Item.indexOu).toBe("@#record#archived");
-      expect(putCommand.input.Item.indexClass).toBe(
-        "@#record#memory#archived",
-      );
+      expect(putCommand.input.Item.indexClass).toBe("@#record#memory#archived");
     });
   });
 

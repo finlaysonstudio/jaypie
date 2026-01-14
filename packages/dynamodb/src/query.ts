@@ -12,7 +12,7 @@ import {
   DEFAULT_INDEXES,
   getModelIndexes,
   type IndexDefinition,
-} from "@jaypie/vocabulary";
+} from "@jaypie/fabric";
 
 import { getDocClient, getTableName } from "./client.js";
 import { ARCHIVED_SUFFIX, DELETED_SUFFIX } from "./constants.js";

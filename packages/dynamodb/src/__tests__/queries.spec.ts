@@ -308,7 +308,12 @@ describe("Query Functions", () => {
       });
 
       it("queryByType appends #deleted suffix when deleted: true", async () => {
-        await queryByType({ deleted: true, model: "record", ou: "@", type: "note" });
+        await queryByType({
+          deleted: true,
+          model: "record",
+          ou: "@",
+          type: "note",
+        });
         const command = mockSend.mock.calls[0][0];
         expect(command.input.ExpressionAttributeValues[":pkValue"]).toBe(
           "@#record#note#deleted",
@@ -329,7 +334,12 @@ describe("Query Functions", () => {
       });
 
       it("queryByXid appends #deleted suffix when deleted: true", async () => {
-        await queryByXid({ deleted: true, model: "record", ou: "@", xid: "ext-123" });
+        await queryByXid({
+          deleted: true,
+          model: "record",
+          ou: "@",
+          xid: "ext-123",
+        });
         const command = mockSend.mock.calls[0][0];
         expect(command.input.ExpressionAttributeValues[":pkValue"]).toBe(
           "@#record#ext-123#deleted",
@@ -401,7 +411,12 @@ describe("Query Functions", () => {
 
     describe("combined archived and deleted", () => {
       it("queryByOu appends #archived#deleted suffix when both are true", async () => {
-        await queryByOu({ archived: true, deleted: true, model: "record", ou: "@" });
+        await queryByOu({
+          archived: true,
+          deleted: true,
+          model: "record",
+          ou: "@",
+        });
         const command = mockSend.mock.calls[0][0];
         expect(command.input.ExpressionAttributeValues[":pkValue"]).toBe(
           "@#record#archived#deleted",
