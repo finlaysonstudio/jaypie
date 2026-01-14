@@ -58,6 +58,13 @@ export interface JaypieDistributionProps extends Omit<
    */
   invokeMode?: lambda.InvokeMode;
   /**
+   * Origin read timeout - how long CloudFront waits for a response from the origin.
+   * This is the maximum time allowed for the origin to respond.
+   * @default CDK.DURATION.CLOUDFRONT_API (180 seconds)
+   * @max Duration.seconds(180)
+   */
+  originReadTimeout?: Duration;
+  /**
    * Role tag for tagging resources
    * @default CDK.ROLE.HOSTING
    */
@@ -93,6 +100,7 @@ export class JaypieDistribution
       handler,
       host: propsHost,
       invokeMode = lambda.InvokeMode.BUFFERED,
+      originReadTimeout = Duration.seconds(CDK.DURATION.CLOUDFRONT_API),
       roleTag = CDK.ROLE.API,
       zone: propsZone,
       ...distributionProps
@@ -170,9 +178,13 @@ export class JaypieDistribution
           invokeMode: resolvedInvokeMode,
         });
         this.functionUrl = functionUrl;
-        origin = new origins.FunctionUrlOrigin(functionUrl);
+        origin = new origins.FunctionUrlOrigin(functionUrl, {
+          readTimeout: originReadTimeout,
+        });
       } else if (this.isIFunctionUrl(handler)) {
-        origin = new origins.FunctionUrlOrigin(handler);
+        origin = new origins.FunctionUrlOrigin(handler, {
+          readTimeout: originReadTimeout,
+        });
       } else if (this.isIOrigin(handler)) {
         origin = handler;
       }
