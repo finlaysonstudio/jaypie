@@ -30,6 +30,7 @@ import {
   isValidHostname,
   isValidSubdomain,
   mergeDomain,
+  resolveCertificate,
 } from "./helpers";
 import { JaypieHostedZone } from "./JaypieHostedZone";
 
@@ -246,20 +247,18 @@ export class JaypieWebDeploymentBucket extends Construct implements s3.IBucket {
         hostedZone = zone;
       }
 
-      // Create certificate if not provided
-      if (props.certificate !== false) {
-        this.certificate =
-          typeof props.certificate === "object"
-            ? props.certificate
-            : new acm.Certificate(this, "Certificate", {
-                domainName: host,
-                validation: acm.CertificateValidation.fromDns(hostedZone),
-              });
+      // Use resolveCertificate to create certificate at stack level (enables reuse when swapping constructs)
+      this.certificate = resolveCertificate(this, {
+        certificate: props.certificate,
+        domainName: host,
+        roleTag,
+        zone: hostedZone,
+      });
 
+      if (this.certificate) {
         new CfnOutput(this, "CertificateArn", {
           value: this.certificate.certificateArn,
         });
-        Tags.of(this.certificate).add(CDK.TAG.ROLE, roleTag);
       }
 
       // Create CloudFront distribution

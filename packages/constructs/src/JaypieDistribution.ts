@@ -15,6 +15,7 @@ import {
   isValidHostname,
   isValidSubdomain,
   mergeDomain,
+  resolveCertificate,
   resolveHostedZone,
 } from "./helpers";
 import { resolveDatadogForwarderFunction } from "./helpers/resolveDatadogForwarderFunction";
@@ -217,19 +218,13 @@ export class JaypieDistribution
     if (host && zone && certificateProp !== false) {
       hostedZone = resolveHostedZone(this, { zone });
 
-      if (certificateProp === true) {
-        certificateToUse = new acm.Certificate(
-          this,
-          constructEnvName("Certificate"),
-          {
-            domainName: host,
-            validation: acm.CertificateValidation.fromDns(hostedZone),
-          },
-        );
-        Tags.of(certificateToUse).add(CDK.TAG.ROLE, roleTag);
-      } else if (typeof certificateProp === "object") {
-        certificateToUse = certificateProp;
-      }
+      // Use resolveCertificate to create certificate at stack level (enables reuse when swapping constructs)
+      certificateToUse = resolveCertificate(this, {
+        certificate: certificateProp,
+        domainName: host,
+        roleTag,
+        zone: hostedZone,
+      });
 
       this.certificate = certificateToUse;
     }
