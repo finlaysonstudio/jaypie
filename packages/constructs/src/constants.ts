@@ -71,7 +71,7 @@ export const CDK = {
   },
   DURATION: {
     EXPRESS_API: 30,
-    CLOUDFRONT_API: 180,
+    CLOUDFRONT_API: 120,
     LAMBDA_MAXIMUM: 900,
     LAMBDA_WORKER: 900,
   },
