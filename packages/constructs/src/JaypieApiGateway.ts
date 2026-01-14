@@ -5,7 +5,12 @@ import * as apiGateway from "aws-cdk-lib/aws-apigateway";
 import * as route53 from "aws-cdk-lib/aws-route53";
 import * as route53Targets from "aws-cdk-lib/aws-route53-targets";
 import { CDK } from "./constants";
-import { constructEnvName, mergeDomain, resolveHostedZone } from "./helpers";
+import {
+  constructEnvName,
+  mergeDomain,
+  resolveCertificate,
+  resolveHostedZone,
+} from "./helpers";
 
 export interface JaypieApiGatewayProps extends apiGateway.LambdaRestApiProps {
   certificate?: boolean | acm.ICertificate;
@@ -56,7 +61,6 @@ export class JaypieApiGateway extends Construct implements apiGateway.IRestApi {
     }
 
     const apiGatewayName = name || constructEnvName("ApiGateway");
-    const certificateName = constructEnvName("Certificate");
     const apiDomainName = constructEnvName("ApiDomainName");
 
     let hostedZone: route53.IHostedZone | undefined;
@@ -65,15 +69,13 @@ export class JaypieApiGateway extends Construct implements apiGateway.IRestApi {
     if (host && zone) {
       hostedZone = resolveHostedZone(this, { zone });
 
-      if (certificate === true) {
-        certificateToUse = new acm.Certificate(this, certificateName, {
-          domainName: host,
-          validation: acm.CertificateValidation.fromDns(hostedZone),
-        });
-        Tags.of(certificateToUse).add(CDK.TAG.ROLE, CDK.ROLE.HOSTING);
-      } else if (typeof certificate === "object") {
-        certificateToUse = certificate;
-      }
+      // Use resolveCertificate to create certificate at stack level (enables reuse when swapping constructs)
+      certificateToUse = resolveCertificate(this, {
+        certificate,
+        domainName: host,
+        roleTag: CDK.ROLE.HOSTING,
+        zone: hostedZone,
+      });
 
       this._certificate = certificateToUse;
       this._host = host;

@@ -7,6 +7,12 @@ export {
   extendDatadogRole,
   ExtendDatadogRoleOptions,
 } from "./extendDatadogRole";
+export {
+  clearAllCertificateCaches,
+  clearCertificateCache,
+  resolveCertificate,
+  ResolveCertificateOptions,
+} from "./resolveCertificate";
 export { isEnv, isProductionEnv, isSandboxEnv } from "./isEnv";
 export { isValidHostname } from "./isValidHostname";
 export { isValidSubdomain } from "./isValidSubdomain";
