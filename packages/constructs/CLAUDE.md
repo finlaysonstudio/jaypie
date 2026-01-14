@@ -24,6 +24,7 @@ packages/constructs/
 │   │   ├── isValidSubdomain.ts
 │   │   ├── jaypieLambdaEnv.ts
 │   │   ├── mergeDomain.ts
+│   │   ├── resolveCertificate.ts
 │   │   ├── resolveDatadogForwarderFunction.ts
 │   │   ├── resolveDatadogLayers.ts
 │   │   ├── resolveDatadogLoggingDestination.ts
@@ -62,6 +63,7 @@ packages/constructs/
 
 | Construct | Description |
 |-----------|-------------|
+| `JaypieCertificate` | Standalone ACM certificate with provider/consumer pattern |
 | `JaypieDistribution` | CloudFront distribution with SSL, DNS, logging |
 | `JaypieHostedZone` | Route53 hosted zone with query logging |
 | `JaypieDnsRecord` | DNS record management |
@@ -202,6 +204,26 @@ new JaypieEnvSecret(this, "SharedSecret", { provider: true, value: "secret-value
 new JaypieEnvSecret(this, "SharedSecret"); // consumer: true auto-detected
 ```
 
+### Shared Certificate (swap constructs without teardown)
+
+```typescript
+import { JaypieCertificate, JaypieDistribution, JaypieApiGateway } from "@jaypie/constructs";
+
+// Create standalone certificate
+const cert = new JaypieCertificate(this, "ApiCert", {
+  domainName: "api.example.com",
+  zone: "example.com",
+});
+
+// Use with any certificate-accepting construct
+new JaypieDistribution(this, "Dist", { handler: api, certificate: cert });
+// OR swap to ApiGateway without recreating certificate
+new JaypieApiGateway(this, "Api", { handler: lambda, certificate: cert });
+
+// Certificate also auto-shared when using certificate: true with same domain
+// JaypieDistribution and JaypieApiGateway share stack-level certificates
+```
+
 ## Helper Functions
 
 | Function | Description |
@@ -213,9 +235,10 @@ new JaypieEnvSecret(this, "SharedSecret"); // consumer: true auto-detected
 | `isEnv(env)` / `isProductionEnv()` / `isSandboxEnv()` | Environment checks |
 | `isValidHostname(str)` / `isValidSubdomain(str)` | Validation helpers |
 | `mergeDomain(subdomain, zone)` | Combine subdomain and zone |
+| `resolveCertificate(scope, opts)` | Get or create stack-level certificate (enables sharing) |
 | `resolveEnvironment(input)` | Parse environment array/object syntax |
-| `resolveSecrets(scope, input)` | Parse secrets array syntax |
 | `resolveHostedZone(scope, { zone })` | Get or import hosted zone |
+| `resolveSecrets(scope, input)` | Parse secrets array syntax |
 | `addDatadogLayers(fn, opts)` | Add Datadog Lambda layers |
 | `extendDatadogRole(scope, opts)` | Extend Datadog IAM role |
 | `jaypieLambdaEnv(opts)` | Get standard Lambda environment |
@@ -245,3 +268,30 @@ npm run format     # Auto-fix lint issues
 3. **Environment-Aware**: Constructs adapt behavior based on `PROJECT_ENV` (e.g., provider/consumer secrets)
 4. **Interface Implementation**: Constructs implement CDK interfaces (IFunction, IQueue, IDistribution) for composability
 5. **Node.js 24**: Default runtime is `nodejs24.x`
+6. **Flexible Constructor Signatures**: Some constructs support multiple calling patterns:
+   - `(scope)` - uses environment defaults
+   - `(scope, props)` - ID auto-generated from key property (e.g., domain name)
+   - `(scope, id, props)` - explicit ID
+
+### Flexible Constructor Pattern
+
+Constructs like `JaypieCertificate` support flexible constructor signatures for convenience:
+
+```typescript
+// Minimal - uses environment variables
+new JaypieCertificate(this);
+
+// With options - ID auto-generated as "JaypieCert-{domain}"
+new JaypieCertificate(this, {
+  domainName: "api.example.com",
+  zone: "example.com",
+});
+
+// Explicit ID - when you need specific construct ID
+new JaypieCertificate(this, "MyApiCert", {
+  domainName: "api.example.com",
+  zone: "example.com",
+});
+```
+
+The certificate is created at the stack level via `resolveCertificate()` and cached by domain. This means multiple constructs using the same domain share the same certificate, enabling seamless swapping between constructs like `JaypieDistribution` and `JaypieApiGateway` without recreating the certificate.
