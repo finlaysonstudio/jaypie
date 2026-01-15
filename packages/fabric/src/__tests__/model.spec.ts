@@ -1,39 +1,39 @@
 /**
- * Tests for BaseModel types and utilities
+ * Tests for FabricModel types and utilities
  */
 
 import { describe, expect, it } from "vitest";
 
 import {
-  BASE_MODEL_AUTO_FIELDS,
-  BASE_MODEL_FIELDS,
-  BASE_MODEL_REQUIRED_FIELDS,
-  BASE_MODEL_TIMESTAMP_FIELDS,
-  createBaseModelInput,
-  hasBaseModelShape,
+  createFabricModelInput,
+  FABRIC_MODEL_AUTO_FIELDS,
+  FABRIC_MODEL_FIELDS,
+  FABRIC_MODEL_REQUIRED_FIELDS,
+  FABRIC_MODEL_TIMESTAMP_FIELDS,
+  hasFabricModelShape,
   isAutoField,
-  isBaseModel,
+  isFabricModel,
   isTimestampField,
-  pickBaseModelFields,
-  type BaseModel,
-  type BaseModelInput,
-  type JobModel,
-  type MessageModel,
-  type Progress,
+  pickFabricModelFields,
+  type FabricJob,
+  type FabricMessage,
+  type FabricModel,
+  type FabricModelInput,
+  type FabricProgress,
 } from "../models/base.js";
 
 // =============================================================================
 // Test Fixtures
 // =============================================================================
 
-const validModel: BaseModel = {
+const validModel: FabricModel = {
   createdAt: new Date("2026-01-01"),
   id: "123e4567-e89b-12d3-a456-426614174000",
   model: "record",
   updatedAt: new Date("2026-01-01"),
 };
 
-const fullModel: BaseModel = {
+const fullModel: FabricModel = {
   ...validModel,
   abbreviation: "T",
   alias: "test-model",
@@ -61,85 +61,85 @@ const fullModel: BaseModel = {
 // Constants
 // =============================================================================
 
-describe("BASE_MODEL_FIELDS", () => {
+describe("FABRIC_MODEL_FIELDS", () => {
   it("contains all expected fields", () => {
-    expect(BASE_MODEL_FIELDS.ID).toBe("id");
-    expect(BASE_MODEL_FIELDS.MODEL).toBe("model");
-    expect(BASE_MODEL_FIELDS.CREATED_AT).toBe("createdAt");
-    expect(BASE_MODEL_FIELDS.UPDATED_AT).toBe("updatedAt");
+    expect(FABRIC_MODEL_FIELDS.ID).toBe("id");
+    expect(FABRIC_MODEL_FIELDS.MODEL).toBe("model");
+    expect(FABRIC_MODEL_FIELDS.CREATED_AT).toBe("createdAt");
+    expect(FABRIC_MODEL_FIELDS.UPDATED_AT).toBe("updatedAt");
   });
 
   it("contains schema fields", () => {
-    expect(BASE_MODEL_FIELDS.CLASS).toBe("class");
-    expect(BASE_MODEL_FIELDS.MODEL).toBe("model");
-    expect(BASE_MODEL_FIELDS.TYPE).toBe("type");
+    expect(FABRIC_MODEL_FIELDS.CLASS).toBe("class");
+    expect(FABRIC_MODEL_FIELDS.MODEL).toBe("model");
+    expect(FABRIC_MODEL_FIELDS.TYPE).toBe("type");
   });
 
   it("contains optional identity fields", () => {
-    expect(BASE_MODEL_FIELDS.ABBREVIATION).toBe("abbreviation");
-    expect(BASE_MODEL_FIELDS.ALIAS).toBe("alias");
-    expect(BASE_MODEL_FIELDS.DESCRIPTION).toBe("description");
-    expect(BASE_MODEL_FIELDS.LABEL).toBe("label");
-    expect(BASE_MODEL_FIELDS.NAME).toBe("name");
-    expect(BASE_MODEL_FIELDS.XID).toBe("xid");
+    expect(FABRIC_MODEL_FIELDS.ABBREVIATION).toBe("abbreviation");
+    expect(FABRIC_MODEL_FIELDS.ALIAS).toBe("alias");
+    expect(FABRIC_MODEL_FIELDS.DESCRIPTION).toBe("description");
+    expect(FABRIC_MODEL_FIELDS.LABEL).toBe("label");
+    expect(FABRIC_MODEL_FIELDS.NAME).toBe("name");
+    expect(FABRIC_MODEL_FIELDS.XID).toBe("xid");
   });
 
   it("contains content fields", () => {
-    expect(BASE_MODEL_FIELDS.CONTENT).toBe("content");
-    expect(BASE_MODEL_FIELDS.METADATA).toBe("metadata");
+    expect(FABRIC_MODEL_FIELDS.CONTENT).toBe("content");
+    expect(FABRIC_MODEL_FIELDS.METADATA).toBe("metadata");
   });
 
   it("contains display fields", () => {
-    expect(BASE_MODEL_FIELDS.EMOJI).toBe("emoji");
-    expect(BASE_MODEL_FIELDS.ICON).toBe("icon");
+    expect(FABRIC_MODEL_FIELDS.EMOJI).toBe("emoji");
+    expect(FABRIC_MODEL_FIELDS.ICON).toBe("icon");
   });
 
   it("contains lifecycle fields", () => {
-    expect(BASE_MODEL_FIELDS.ARCHIVED_AT).toBe("archivedAt");
-    expect(BASE_MODEL_FIELDS.DELETED_AT).toBe("deletedAt");
-    expect(BASE_MODEL_FIELDS.HISTORY).toBe("history");
+    expect(FABRIC_MODEL_FIELDS.ARCHIVED_AT).toBe("archivedAt");
+    expect(FABRIC_MODEL_FIELDS.DELETED_AT).toBe("deletedAt");
+    expect(FABRIC_MODEL_FIELDS.HISTORY).toBe("history");
   });
 });
 
-describe("BASE_MODEL_REQUIRED_FIELDS", () => {
+describe("FABRIC_MODEL_REQUIRED_FIELDS", () => {
   it("lists all required fields", () => {
-    expect(BASE_MODEL_REQUIRED_FIELDS).toContain("id");
-    expect(BASE_MODEL_REQUIRED_FIELDS).toContain("model");
-    expect(BASE_MODEL_REQUIRED_FIELDS).toContain("createdAt");
-    expect(BASE_MODEL_REQUIRED_FIELDS).toContain("updatedAt");
+    expect(FABRIC_MODEL_REQUIRED_FIELDS).toContain("id");
+    expect(FABRIC_MODEL_REQUIRED_FIELDS).toContain("model");
+    expect(FABRIC_MODEL_REQUIRED_FIELDS).toContain("createdAt");
+    expect(FABRIC_MODEL_REQUIRED_FIELDS).toContain("updatedAt");
   });
 
   it("does not include optional fields", () => {
-    expect(BASE_MODEL_REQUIRED_FIELDS).not.toContain("class");
-    expect(BASE_MODEL_REQUIRED_FIELDS).not.toContain("content");
-    expect(BASE_MODEL_REQUIRED_FIELDS).not.toContain("label");
-    expect(BASE_MODEL_REQUIRED_FIELDS).not.toContain("alias");
-    expect(BASE_MODEL_REQUIRED_FIELDS).not.toContain("metadata");
-    expect(BASE_MODEL_REQUIRED_FIELDS).not.toContain("name");
-    expect(BASE_MODEL_REQUIRED_FIELDS).not.toContain("type");
+    expect(FABRIC_MODEL_REQUIRED_FIELDS).not.toContain("class");
+    expect(FABRIC_MODEL_REQUIRED_FIELDS).not.toContain("content");
+    expect(FABRIC_MODEL_REQUIRED_FIELDS).not.toContain("label");
+    expect(FABRIC_MODEL_REQUIRED_FIELDS).not.toContain("alias");
+    expect(FABRIC_MODEL_REQUIRED_FIELDS).not.toContain("metadata");
+    expect(FABRIC_MODEL_REQUIRED_FIELDS).not.toContain("name");
+    expect(FABRIC_MODEL_REQUIRED_FIELDS).not.toContain("type");
   });
 });
 
-describe("BASE_MODEL_AUTO_FIELDS", () => {
+describe("FABRIC_MODEL_AUTO_FIELDS", () => {
   it("lists auto-generated fields", () => {
-    expect(BASE_MODEL_AUTO_FIELDS).toContain("id");
-    expect(BASE_MODEL_AUTO_FIELDS).toContain("createdAt");
-    expect(BASE_MODEL_AUTO_FIELDS).toContain("updatedAt");
-    expect(BASE_MODEL_AUTO_FIELDS).toContain("history");
+    expect(FABRIC_MODEL_AUTO_FIELDS).toContain("id");
+    expect(FABRIC_MODEL_AUTO_FIELDS).toContain("createdAt");
+    expect(FABRIC_MODEL_AUTO_FIELDS).toContain("updatedAt");
+    expect(FABRIC_MODEL_AUTO_FIELDS).toContain("history");
   });
 
   it("does not include user-provided fields", () => {
-    expect(BASE_MODEL_AUTO_FIELDS).not.toContain("name");
-    expect(BASE_MODEL_AUTO_FIELDS).not.toContain("content");
+    expect(FABRIC_MODEL_AUTO_FIELDS).not.toContain("name");
+    expect(FABRIC_MODEL_AUTO_FIELDS).not.toContain("content");
   });
 });
 
-describe("BASE_MODEL_TIMESTAMP_FIELDS", () => {
+describe("FABRIC_MODEL_TIMESTAMP_FIELDS", () => {
   it("lists all timestamp fields", () => {
-    expect(BASE_MODEL_TIMESTAMP_FIELDS).toContain("createdAt");
-    expect(BASE_MODEL_TIMESTAMP_FIELDS).toContain("updatedAt");
-    expect(BASE_MODEL_TIMESTAMP_FIELDS).toContain("archivedAt");
-    expect(BASE_MODEL_TIMESTAMP_FIELDS).toContain("deletedAt");
+    expect(FABRIC_MODEL_TIMESTAMP_FIELDS).toContain("createdAt");
+    expect(FABRIC_MODEL_TIMESTAMP_FIELDS).toContain("updatedAt");
+    expect(FABRIC_MODEL_TIMESTAMP_FIELDS).toContain("archivedAt");
+    expect(FABRIC_MODEL_TIMESTAMP_FIELDS).toContain("deletedAt");
   });
 });
 
@@ -147,61 +147,61 @@ describe("BASE_MODEL_TIMESTAMP_FIELDS", () => {
 // Type Guards
 // =============================================================================
 
-describe("isBaseModel", () => {
+describe("isFabricModel", () => {
   it("returns true for valid model", () => {
-    expect(isBaseModel(validModel)).toBe(true);
+    expect(isFabricModel(validModel)).toBe(true);
   });
 
   it("returns true for full model", () => {
-    expect(isBaseModel(fullModel)).toBe(true);
+    expect(isFabricModel(fullModel)).toBe(true);
   });
 
   it("returns false for null", () => {
-    expect(isBaseModel(null)).toBe(false);
+    expect(isFabricModel(null)).toBe(false);
   });
 
   it("returns false for undefined", () => {
-    expect(isBaseModel(undefined)).toBe(false);
+    expect(isFabricModel(undefined)).toBe(false);
   });
 
   it("returns false for non-object", () => {
-    expect(isBaseModel("string")).toBe(false);
-    expect(isBaseModel(123)).toBe(false);
+    expect(isFabricModel("string")).toBe(false);
+    expect(isFabricModel(123)).toBe(false);
   });
 
   it("returns false for missing required fields", () => {
-    expect(isBaseModel({ id: "123" })).toBe(false);
-    expect(isBaseModel({ ...validModel, id: undefined })).toBe(false);
-    expect(isBaseModel({ ...validModel, model: undefined })).toBe(false);
+    expect(isFabricModel({ id: "123" })).toBe(false);
+    expect(isFabricModel({ ...validModel, id: undefined })).toBe(false);
+    expect(isFabricModel({ ...validModel, model: undefined })).toBe(false);
   });
 
   it("returns false for wrong field types", () => {
-    expect(isBaseModel({ ...validModel, id: 123 })).toBe(false);
-    expect(isBaseModel({ ...validModel, createdAt: "2026-01-01" })).toBe(
+    expect(isFabricModel({ ...validModel, id: 123 })).toBe(false);
+    expect(isFabricModel({ ...validModel, createdAt: "2026-01-01" })).toBe(
       false,
     );
   });
 });
 
-describe("hasBaseModelShape", () => {
+describe("hasFabricModelShape", () => {
   it("returns true for minimal shape", () => {
-    expect(hasBaseModelShape({ id: "123", model: "record" })).toBe(true);
+    expect(hasFabricModelShape({ id: "123", model: "record" })).toBe(true);
   });
 
   it("returns true for full model", () => {
-    expect(hasBaseModelShape(fullModel)).toBe(true);
+    expect(hasFabricModelShape(fullModel)).toBe(true);
   });
 
   it("returns false for null", () => {
-    expect(hasBaseModelShape(null)).toBe(false);
+    expect(hasFabricModelShape(null)).toBe(false);
   });
 
   it("returns false for missing id", () => {
-    expect(hasBaseModelShape({ model: "record" })).toBe(false);
+    expect(hasFabricModelShape({ model: "record" })).toBe(false);
   });
 
   it("returns false for missing model", () => {
-    expect(hasBaseModelShape({ id: "123" })).toBe(false);
+    expect(hasFabricModelShape({ id: "123" })).toBe(false);
   });
 });
 
@@ -209,9 +209,9 @@ describe("hasBaseModelShape", () => {
 // Utility Functions
 // =============================================================================
 
-describe("createBaseModelInput", () => {
+describe("createFabricModelInput", () => {
   it("creates input with required fields", () => {
-    const input = createBaseModelInput({
+    const input = createFabricModelInput({
       model: "record",
     });
 
@@ -219,7 +219,7 @@ describe("createBaseModelInput", () => {
   });
 
   it("includes optional fields from overrides", () => {
-    const input = createBaseModelInput({
+    const input = createFabricModelInput({
       alias: "test",
       class: "memory",
       content: "Content",
@@ -238,23 +238,23 @@ describe("createBaseModelInput", () => {
   });
 
   it("does not include auto fields", () => {
-    const input = createBaseModelInput({
+    const input = createFabricModelInput({
       model: "record",
-    }) as BaseModelInput & { id?: string };
+    }) as FabricModelInput & { id?: string };
 
     expect(input.id).toBeUndefined();
   });
 });
 
-describe("pickBaseModelFields", () => {
-  it("extracts only BaseModel fields", () => {
+describe("pickFabricModelFields", () => {
+  it("extracts only FabricModel fields", () => {
     const obj = {
       ...fullModel,
       anotherExtra: 123,
       extraField: "should be removed",
     };
 
-    const result = pickBaseModelFields(obj);
+    const result = pickFabricModelFields(obj);
 
     expect(result.id).toBe(fullModel.id);
     expect(result.name).toBe(fullModel.name);
@@ -265,7 +265,7 @@ describe("pickBaseModelFields", () => {
 
   it("handles partial objects", () => {
     const partial = { id: "123", name: "Test" };
-    const result = pickBaseModelFields(partial as Partial<BaseModel>);
+    const result = pickFabricModelFields(partial as Partial<FabricModel>);
 
     expect(result.id).toBe("123");
     expect(result.name).toBe("Test");
@@ -307,9 +307,9 @@ describe("isAutoField", () => {
 // Extended Model Types
 // =============================================================================
 
-describe("MessageModel type", () => {
-  it("extends BaseModel with required content", () => {
-    const message: MessageModel = {
+describe("FabricMessage type", () => {
+  it("extends FabricModel with required content", () => {
+    const message: FabricMessage = {
       content: "Hello, world!",
       createdAt: new Date("2026-01-01"),
       id: "msg-123",
@@ -322,7 +322,7 @@ describe("MessageModel type", () => {
   });
 
   it("supports optional type field", () => {
-    const message: MessageModel = {
+    const message: FabricMessage = {
       content: "Hello from assistant",
       createdAt: new Date("2026-01-01"),
       id: "msg-123",
@@ -335,9 +335,9 @@ describe("MessageModel type", () => {
   });
 });
 
-describe("Progress type", () => {
+describe("FabricProgress type", () => {
   it("allows all optional fields", () => {
-    const progress: Progress = {};
+    const progress: FabricProgress = {};
     expect(progress.elapsedTime).toBeUndefined();
     expect(progress.estimatedTime).toBeUndefined();
     expect(progress.percentageComplete).toBeUndefined();
@@ -345,7 +345,7 @@ describe("Progress type", () => {
   });
 
   it("supports all progress fields", () => {
-    const progress: Progress = {
+    const progress: FabricProgress = {
       elapsedTime: 5000,
       estimatedTime: 10000,
       nextPercentageCheckpoint: 75,
@@ -359,9 +359,9 @@ describe("Progress type", () => {
   });
 });
 
-describe("JobModel type", () => {
-  it("extends BaseModel with required status", () => {
-    const job: JobModel = {
+describe("FabricJob type", () => {
+  it("extends FabricModel with required status", () => {
+    const job: FabricJob = {
       createdAt: new Date("2026-01-01"),
       id: "job-123",
       model: "job",
@@ -374,7 +374,7 @@ describe("JobModel type", () => {
   });
 
   it("supports all job-specific fields", () => {
-    const job: JobModel = {
+    const job: FabricJob = {
       class: "evaluation",
       completedAt: new Date("2026-01-02"),
       createdAt: new Date("2026-01-01"),

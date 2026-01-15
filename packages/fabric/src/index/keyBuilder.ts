@@ -22,8 +22,8 @@ import {
 /**
  * Model with fields for indexing.
  *
- * Does not extend BaseModel to allow flexibility with timestamp types
- * (DynamoDB uses string timestamps, BaseModel uses Date objects).
+ * Does not extend FabricModel to allow flexibility with timestamp types
+ * (DynamoDB uses string timestamps, FabricModel uses Date objects).
  */
 export interface IndexableModel {
   /** Schema reference (required for indexing) */

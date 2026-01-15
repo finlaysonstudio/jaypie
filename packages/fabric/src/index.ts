@@ -1,31 +1,28 @@
 // @jaypie/fabric
 
-// BaseModel (formerly BaseEntity)
+// FabricModel (core model types)
 export {
-  BASE_MODEL_AUTO_FIELDS,
-  BASE_MODEL_FIELDS,
-  BASE_MODEL_REQUIRED_FIELDS,
-  BASE_MODEL_TIMESTAMP_FIELDS,
-  createBaseModelInput,
-  hasBaseModelShape,
+  createFabricModelInput,
+  FABRIC_MODEL_AUTO_FIELDS,
+  FABRIC_MODEL_FIELDS,
+  FABRIC_MODEL_REQUIRED_FIELDS,
+  FABRIC_MODEL_TIMESTAMP_FIELDS,
+  hasFabricModelShape,
   isAutoField,
-  isBaseModel,
+  isFabricModel,
   isTimestampField,
-  pickBaseModelFields,
+  pickFabricModelFields,
 } from "./models/base.js";
 export type {
-  BaseModel,
-  BaseModelFilter,
-  BaseModelInput,
-  BaseModelUpdate,
-  HistoryEntry,
-  JobModel,
-  MessageModel,
-  Progress,
+  FabricHistoryEntry,
+  FabricJob,
+  FabricMessage,
+  FabricModel,
+  FabricModelFilter,
+  FabricModelInput,
+  FabricModelUpdate,
+  FabricProgress,
 } from "./models/base.js";
-
-// Commander adapter (re-exported for convenience)
-export * as commander from "./commander/index.js";
 
 // Constants
 export { APEX, SEPARATOR, SYSTEM_MODELS } from "./constants.js";
@@ -83,12 +80,10 @@ export type {
   ModelSchema,
 } from "./index/index.js";
 
-// LLM adapter (re-exported for convenience - no optional deps)
-export * as llm from "./llm/index.js";
-
-// Note: Other adapters have optional dependencies and must be imported directly:
+// Note: Adapters must be imported from their sub-paths:
 //   import { fabricCommand } from "@jaypie/fabric/commander";
 //   import { fabricLambda } from "@jaypie/fabric/lambda";
+//   import { fabricTool } from "@jaypie/fabric/llm";
 //   import { fabricMcp } from "@jaypie/fabric/mcp";
 
 // Meta-modeling types

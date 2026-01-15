@@ -6,16 +6,16 @@
  * GSIs and auto-detect which index to use for queries.
  */
 
-import type { BaseModel } from "../models/base.js";
+import type { FabricModel } from "../models/base.js";
 
 // =============================================================================
 // Types
 // =============================================================================
 
 /**
- * Index field - can be a BaseModel field name or custom field
+ * Index field - can be a FabricModel field name or custom field
  */
-export type IndexField = keyof BaseModel | string;
+export type IndexField = keyof FabricModel | string;
 
 /**
  * Single index definition

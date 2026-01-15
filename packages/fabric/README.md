@@ -10,14 +10,14 @@ npm install @jaypie/fabric
 
 ## Usage
 
-### createService
+### fabricService
 
 Create validated service endpoints with automatic type conversion:
 
 ```typescript
-import { createService } from "@jaypie/fabric";
+import { fabricService } from "@jaypie/fabric";
 
-const divisionHandler = createService({
+const divisionHandler = fabricService({
   alias: "division",
   description: "Divides two numbers",
   input: {
@@ -44,27 +44,27 @@ await divisionHandler({ numerator: 1, denominator: 0 }); // throws BadRequestErr
 await divisionHandler('{ "numerator": "18" }'); // =3; String parses as JSON
 ```
 
-### Type Conversion
+### Type Conversion (Fabric Functions)
 
 ```typescript
-import { convert, convertToNumber, convertToBoolean, convertToString } from "@jaypie/fabric";
+import { fabric, fabricNumber, fabricBoolean, fabricString } from "@jaypie/fabric";
 
-convertToBoolean("true");     // true
-convertToBoolean(1);          // true
-convertToNumber("42");        // 42
-convertToNumber(true);        // 1
-convertToString(true);        // "true"
-convertToString(42);          // "42"
+fabricBoolean("true");     // true
+fabricBoolean(1);          // true
+fabricNumber("42");        // 42
+fabricNumber(true);        // 1
+fabricString(true);        // "true"
+fabricString(42);          // "42"
 ```
 
 ### Commander Adapter
 
 ```typescript
 import { Command } from "commander";
-import { createService } from "@jaypie/fabric";
-import { registerServiceCommand } from "@jaypie/fabric/commander";
+import { fabricService } from "@jaypie/fabric";
+import { fabricCommand } from "@jaypie/fabric/commander";
 
-const handler = createService({
+const handler = fabricService({
   alias: "greet",
   description: "Greet a user",
   input: {
@@ -78,7 +78,7 @@ const handler = createService({
 });
 
 const program = new Command();
-registerServiceCommand({ handler, program });
+fabricCommand({ service: handler, program });
 program.parse();
 // Usage: greet --user Alice -l
 ```
@@ -86,10 +86,10 @@ program.parse();
 ### Lambda Adapter
 
 ```typescript
-import { createService } from "@jaypie/fabric";
-import { createLambdaService } from "@jaypie/fabric/lambda";
+import { fabricService } from "@jaypie/fabric";
+import { fabricLambda } from "@jaypie/fabric/lambda";
 
-const evaluationsHandler = createService({
+const evaluationsHandler = fabricService({
   alias: "evaluationsHandler",
   input: {
     count: { type: Number, default: 1 },
@@ -102,8 +102,7 @@ const evaluationsHandler = createService({
   }),
 });
 
-export const handler = createLambdaService({
-  handler: evaluationsHandler,
+export const handler = fabricLambda(evaluationsHandler, {
   secrets: ["ANTHROPIC_API_KEY", "OPENAI_API_KEY"],
 });
 ```
@@ -111,11 +110,11 @@ export const handler = createLambdaService({
 ### LLM Adapter
 
 ```typescript
-import { createService } from "@jaypie/fabric";
-import { createLlmTool } from "@jaypie/fabric/llm";
+import { fabricService } from "@jaypie/fabric";
+import { fabricTool } from "@jaypie/fabric/llm";
 import { Toolkit } from "@jaypie/llm";
 
-const handler = createService({
+const handler = fabricService({
   alias: "greet",
   description: "Greet a user by name",
   input: {
@@ -128,7 +127,7 @@ const handler = createService({
   },
 });
 
-const { tool } = createLlmTool({ handler });
+const { tool } = fabricTool({ service: handler });
 const toolkit = new Toolkit([tool]);
 ```
 
@@ -136,10 +135,10 @@ const toolkit = new Toolkit([tool]);
 
 ```typescript
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { createService } from "@jaypie/fabric";
-import { registerMcpTool } from "@jaypie/fabric/mcp";
+import { fabricService } from "@jaypie/fabric";
+import { fabricMcp } from "@jaypie/fabric/mcp";
 
-const handler = createService({
+const handler = fabricService({
   alias: "greet",
   description: "Greet a user by name",
   input: {
@@ -153,7 +152,7 @@ const handler = createService({
 });
 
 const server = new McpServer({ name: "my-server", version: "1.0.0" });
-registerMcpTool({ handler, server });
+fabricMcp({ service: handler, server });
 ```
 
 ## API
@@ -162,21 +161,21 @@ registerMcpTool({ handler, server });
 
 | Export | Description |
 |--------|-------------|
-| `createService` | Factory function for validated service endpoints |
-| `convert` | Master conversion dispatcher |
-| `convertToBoolean` | Convert to boolean |
-| `convertToNumber` | Convert to number |
-| `convertToString` | Convert to string |
-| `convertToArray` | Wrap in array |
+| `fabricService` | Factory function for validated service endpoints |
+| `fabric` | Master conversion dispatcher |
+| `fabricBoolean` | Convert to boolean |
+| `fabricNumber` | Convert to number |
+| `fabricString` | Convert to string |
+| `fabricArray` | Wrap in array |
 | `convertFromArray` | Extract from single-element array |
-| `convertToObject` | Wrap in `{ value: ... }` |
+| `fabricObject` | Wrap in `{ value: ... }` |
 | `convertFromObject` | Extract `.value` from object |
-| `convertToDate` | Convert to Date |
+| `fabricDate` | Convert to Date |
 | `convertFromDate` | Convert from Date to string |
-| `BaseModel` | Base type for models |
-| `MessageModel` | Message model type |
-| `JobModel` | Job model type |
-| `Progress` | Progress tracking type |
+| `FabricModel` | Base type for models |
+| `FabricMessage` | Message model type |
+| `FabricJob` | Job model type |
+| `FabricProgress` | Progress tracking type |
 | `registerModel` | Register custom indexes for a model |
 | `getModelIndexes` | Get indexes for a model |
 | `populateIndexKeys` | Populate GSI keys on an entity |

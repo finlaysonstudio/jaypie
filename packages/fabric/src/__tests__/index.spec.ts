@@ -1,14 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  BASE_MODEL_AUTO_FIELDS,
-  BASE_MODEL_FIELDS,
-  BASE_MODEL_REQUIRED_FIELDS,
-  BASE_MODEL_TIMESTAMP_FIELDS,
   convertFromArray,
   convertFromDate,
   convertFromObject,
-  createBaseModelInput,
+  createFabricModelInput,
   DateType,
   fabric,
   fabricArray,
@@ -18,16 +14,19 @@ import {
   fabricObject,
   fabricService,
   fabricString,
+  FABRIC_MODEL_AUTO_FIELDS,
+  FABRIC_MODEL_FIELDS,
+  FABRIC_MODEL_REQUIRED_FIELDS,
+  FABRIC_MODEL_TIMESTAMP_FIELDS,
   FABRIC_VERSION,
-  hasBaseModelShape,
+  hasFabricModelShape,
   isAutoField,
-  isBaseModel,
   isDateType,
+  isFabricModel,
   isStatus,
   isTimestampField,
   isValidDate,
-  llm,
-  pickBaseModelFields,
+  pickFabricModelFields,
   STATUS_VALUES,
   StatusType,
 } from "..";
@@ -65,15 +64,15 @@ describe("fabric/index", () => {
       expect(DateType).toBe(Date);
     });
 
-    it("exports BaseModel types and utilities", () => {
-      expect(BASE_MODEL_FIELDS).toBeDefined();
-      expect(BASE_MODEL_REQUIRED_FIELDS).toBeDefined();
-      expect(BASE_MODEL_AUTO_FIELDS).toBeDefined();
-      expect(BASE_MODEL_TIMESTAMP_FIELDS).toBeDefined();
-      expect(isBaseModel).toBeDefined();
-      expect(hasBaseModelShape).toBeDefined();
-      expect(createBaseModelInput).toBeDefined();
-      expect(pickBaseModelFields).toBeDefined();
+    it("exports FabricModel types and utilities", () => {
+      expect(FABRIC_MODEL_FIELDS).toBeDefined();
+      expect(FABRIC_MODEL_REQUIRED_FIELDS).toBeDefined();
+      expect(FABRIC_MODEL_AUTO_FIELDS).toBeDefined();
+      expect(FABRIC_MODEL_TIMESTAMP_FIELDS).toBeDefined();
+      expect(isFabricModel).toBeDefined();
+      expect(hasFabricModelShape).toBeDefined();
+      expect(createFabricModelInput).toBeDefined();
+      expect(pickFabricModelFields).toBeDefined();
       expect(isTimestampField).toBeDefined();
       expect(isAutoField).toBeDefined();
     });
@@ -87,18 +86,10 @@ describe("fabric/index", () => {
       expect(typeof isStatus).toBe("function");
     });
 
-    it("exports llm namespace (only adapter without optional deps)", () => {
-      expect(llm).toBeDefined();
-      expect(llm.fabricTool).toBeDefined();
-      expect(llm.inputToJsonSchema).toBeDefined();
-      expect(typeof llm.fabricTool).toBe("function");
-      expect(typeof llm.inputToJsonSchema).toBe("function");
-    });
-
-    // Note: commander, lambda, and mcp adapters have optional dependencies
-    // and must be imported directly from their sub-paths:
+    // Note: All adapters must be imported from their sub-paths:
     //   import { fabricCommand } from "@jaypie/fabric/commander";
     //   import { fabricLambda } from "@jaypie/fabric/lambda";
+    //   import { fabricTool } from "@jaypie/fabric/llm";
     //   import { fabricMcp } from "@jaypie/fabric/mcp";
   });
 

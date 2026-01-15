@@ -47,7 +47,7 @@ src/
 │   ├── fabricMcp.ts               # Register fabricService as MCP tool
 │   └── types.ts                   # MCP adapter types
 ├── models/
-│   └── base.ts                    # BaseModel, JobModel, MessageModel, Progress types
+│   └── base.ts                    # FabricModel, FabricJob, FabricMessage, Progress types
 ├── convert.ts                     # Type conversion utilities
 ├── convert-date.ts                # Date conversion utilities
 ├── index.ts                       # Package exports
@@ -187,14 +187,14 @@ Located in `models/base.ts`:
 
 | Type | Description |
 |------|-------------|
-| `BaseModel` | Base type for all models with id, model (required) and optional name, class, type, content |
-| `BaseModelInput` | Input for creating models (omits auto-generated fields) |
-| `BaseModelUpdate` | Partial input for updating models |
-| `BaseModelFilter` | Filter options for listing models |
-| `HistoryEntry` | Reverse delta recording previous values of changed fields |
-| `MessageModel` | Message model extending BaseModel with required content field |
+| `FabricModel` | Base type for all models with id, model (required) and optional name, class, type, content |
+| `FabricModelInput` | Input for creating models (omits auto-generated fields) |
+| `FabricModelUpdate` | Partial input for updating models |
+| `FabricModelFilter` | Filter options for listing models |
+| `FabricHistoryEntry` | Reverse delta recording previous values of changed fields |
+| `FabricMessage` | Message model extending FabricModel with required content field |
 | `Progress` | Tracks job execution progress |
-| `JobModel` | Job model extending BaseModel with status (required), startedAt, completedAt, messages, progress |
+| `FabricJob` | Job model extending FabricModel with status (required), startedAt, completedAt, messages, progress |
 | `IndexDefinition` | GSI index definition with name, pk, sk |
 | `IndexableModel` | Model with indexable fields |
 
@@ -214,7 +214,7 @@ export * as llm from "./llm/index.js";
 export { fabricService } from "./service.js";
 
 // Models
-export { BaseModel, JobModel, MessageModel, Progress } from "./models/base.js";
+export { FabricModel, FabricJob, FabricMessage, Progress } from "./models/base.js";
 
 // Index Utilities
 export { buildCompositeKey, calculateOu, clearRegistry, DEFAULT_INDEXES, getAllRegisteredIndexes, getModelIndexes, populateIndexKeys, registerModel } from "./index/index.js";
@@ -284,9 +284,9 @@ export type { FabricMcpConfig, FabricMcpResult, McpToolContentItem, McpToolRespo
 | `createLlmTool` | `fabricTool` |
 | `registerMcpTool` | `fabricMcp` |
 | `registerServiceCommand` | `fabricCommand` |
-| `BaseEntity` | `BaseModel` |
-| `MessageEntity` | `MessageModel` |
-| `Job` | `JobModel` |
+| `BaseEntity` | `FabricModel` |
+| `MessageEntity` | `FabricMessage` |
+| `Job` | `FabricJob` |
 | `IndexableEntity` | `IndexableModel` |
 | `VOCABULARY_VERSION` | `FABRIC_VERSION` |
 

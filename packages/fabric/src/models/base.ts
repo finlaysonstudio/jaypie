@@ -1,5 +1,5 @@
 /**
- * BaseModel - Core model vocabulary for @jaypie/fabric
+ * FabricModel - Core model vocabulary for @jaypie/fabric
  *
  * Defines the standard fields and structure for all fabric models.
  * Provides a consistent, reusable vocabulary across applications.
@@ -10,12 +10,12 @@
 // =============================================================================
 
 /**
- * HistoryEntry - Reverse delta recording previous values of changed fields
+ * FabricHistoryEntry - Reverse delta recording previous values of changed fields
  *
  * Stores the previous state of fields before an update was applied.
  * Walk backwards through history to reconstruct earlier versions.
  */
-export interface HistoryEntry {
+export interface FabricHistoryEntry {
   /** Previous values of fields that were changed */
   delta: Record<string, unknown>;
   /** When this change was recorded (the updatedAt from before the change) */
@@ -23,11 +23,11 @@ export interface HistoryEntry {
 }
 
 // =============================================================================
-// BaseModel
+// FabricModel
 // =============================================================================
 
 /**
- * BaseModel - Base type for all fabric models
+ * FabricModel - Base type for all fabric models
  *
  * All fields are part of the standard vocabulary for high reuse.
  * Optional fields may be omitted when not applicable.
@@ -41,7 +41,7 @@ export interface HistoryEntry {
  * - Time: createdAt, updatedAt, archivedAt, deletedAt
  * - History: history
  */
-export interface BaseModel {
+export interface FabricModel {
   // -------------------------------------------------------------------------
   // Identity (required)
   // -------------------------------------------------------------------------
@@ -135,21 +135,21 @@ export interface BaseModel {
   // -------------------------------------------------------------------------
 
   /** Reverse deltas tracking changes over time */
-  history?: HistoryEntry[];
+  history?: FabricHistoryEntry[];
 }
 
 // =============================================================================
-// MessageModel
+// FabricMessage
 // =============================================================================
 
 /**
- * MessageModel - A message model that extends BaseModel
+ * FabricMessage - A message model that extends FabricModel
  *
  * Used for chat messages, notifications, logs, and other content-focused models.
  * The content field contains the actual message text.
  */
-export interface MessageModel extends BaseModel {
-  /** The actual message content (inherited from BaseModel) */
+export interface FabricMessage extends FabricModel {
+  /** The actual message content (inherited from FabricModel) */
   content: string;
 
   /** Message type (e.g., "assistant", "user", "system") */
@@ -157,13 +157,13 @@ export interface MessageModel extends BaseModel {
 }
 
 // =============================================================================
-// Progress
+// FabricProgress
 // =============================================================================
 
 /**
- * Progress - Tracks job execution progress
+ * FabricProgress - Tracks job execution progress
  */
-export interface Progress {
+export interface FabricProgress {
   /** Time elapsed in milliseconds */
   elapsedTime?: number;
 
@@ -178,15 +178,15 @@ export interface Progress {
 }
 
 // =============================================================================
-// JobModel
+// FabricJob
 // =============================================================================
 
 /**
- * JobModel - A job model that extends BaseModel
+ * FabricJob - A job model that extends FabricModel
  *
  * Used for tracking asynchronous tasks, background processes, and batch operations.
  */
-export interface JobModel extends BaseModel {
+export interface FabricJob extends FabricModel {
   /** Job class (e.g., "evaluation", "export", "import") */
   class?: string;
 
@@ -194,10 +194,10 @@ export interface JobModel extends BaseModel {
   completedAt?: Date | null;
 
   /** Messages generated during job execution */
-  messages?: MessageModel[];
+  messages?: FabricMessage[];
 
   /** Job execution progress */
-  progress?: Progress;
+  progress?: FabricProgress;
 
   /** When the job started processing */
   startedAt?: Date | null;
@@ -214,26 +214,26 @@ export interface JobModel extends BaseModel {
 // =============================================================================
 
 /**
- * Input for creating a new BaseModel
+ * Input for creating a new FabricModel
  * Omits auto-generated fields: id, createdAt, updatedAt, history
  */
-export type BaseModelInput = Omit<
-  BaseModel,
+export type FabricModelInput = Omit<
+  FabricModel,
   "createdAt" | "history" | "id" | "updatedAt"
 >;
 
 /**
- * Partial input for updating a BaseModel
+ * Partial input for updating a FabricModel
  * History is managed automatically by the store
  */
-export type BaseModelUpdate = Partial<
-  Omit<BaseModel, "createdAt" | "history" | "id">
+export type FabricModelUpdate = Partial<
+  Omit<FabricModel, "createdAt" | "history" | "id">
 >;
 
 /**
  * Filter options for listing models
  */
-export interface BaseModelFilter {
+export interface FabricModelFilter {
   alias?: string;
   class?: string;
   model?: string;
@@ -246,10 +246,10 @@ export interface BaseModelFilter {
 // =============================================================================
 
 /**
- * BaseModel field names as constants
+ * FabricModel field names as constants
  * Useful for building queries, validation, and serialization
  */
-export const BASE_MODEL_FIELDS = {
+export const FABRIC_MODEL_FIELDS = {
   // Content
   CONTENT: "content",
   METADATA: "metadata",
@@ -289,33 +289,33 @@ export const BASE_MODEL_FIELDS = {
 } as const;
 
 /**
- * Required fields for BaseModel
+ * Required fields for FabricModel
  */
-export const BASE_MODEL_REQUIRED_FIELDS = [
-  BASE_MODEL_FIELDS.CREATED_AT,
-  BASE_MODEL_FIELDS.ID,
-  BASE_MODEL_FIELDS.MODEL,
-  BASE_MODEL_FIELDS.UPDATED_AT,
+export const FABRIC_MODEL_REQUIRED_FIELDS = [
+  FABRIC_MODEL_FIELDS.CREATED_AT,
+  FABRIC_MODEL_FIELDS.ID,
+  FABRIC_MODEL_FIELDS.MODEL,
+  FABRIC_MODEL_FIELDS.UPDATED_AT,
 ] as const;
 
 /**
  * Auto-generated fields (set by store, not by user)
  */
-export const BASE_MODEL_AUTO_FIELDS = [
-  BASE_MODEL_FIELDS.CREATED_AT,
-  BASE_MODEL_FIELDS.HISTORY,
-  BASE_MODEL_FIELDS.ID,
-  BASE_MODEL_FIELDS.UPDATED_AT,
+export const FABRIC_MODEL_AUTO_FIELDS = [
+  FABRIC_MODEL_FIELDS.CREATED_AT,
+  FABRIC_MODEL_FIELDS.HISTORY,
+  FABRIC_MODEL_FIELDS.ID,
+  FABRIC_MODEL_FIELDS.UPDATED_AT,
 ] as const;
 
 /**
  * Timestamp fields
  */
-export const BASE_MODEL_TIMESTAMP_FIELDS = [
-  BASE_MODEL_FIELDS.ARCHIVED_AT,
-  BASE_MODEL_FIELDS.CREATED_AT,
-  BASE_MODEL_FIELDS.DELETED_AT,
-  BASE_MODEL_FIELDS.UPDATED_AT,
+export const FABRIC_MODEL_TIMESTAMP_FIELDS = [
+  FABRIC_MODEL_FIELDS.ARCHIVED_AT,
+  FABRIC_MODEL_FIELDS.CREATED_AT,
+  FABRIC_MODEL_FIELDS.DELETED_AT,
+  FABRIC_MODEL_FIELDS.UPDATED_AT,
 ] as const;
 
 // =============================================================================
@@ -323,9 +323,9 @@ export const BASE_MODEL_TIMESTAMP_FIELDS = [
 // =============================================================================
 
 /**
- * Check if a value is a BaseModel
+ * Check if a value is a FabricModel
  */
-export function isBaseModel(value: unknown): value is BaseModel {
+export function isFabricModel(value: unknown): value is FabricModel {
   if (typeof value !== "object" || value === null) {
     return false;
   }
@@ -341,9 +341,9 @@ export function isBaseModel(value: unknown): value is BaseModel {
 }
 
 /**
- * Check if a value has the minimum BaseModel shape (for partial objects)
+ * Check if a value has the minimum FabricModel shape (for partial objects)
  */
-export function hasBaseModelShape(value: unknown): boolean {
+export function hasFabricModelShape(value: unknown): boolean {
   if (typeof value !== "object" || value === null) {
     return false;
   }
@@ -357,27 +357,27 @@ export function hasBaseModelShape(value: unknown): boolean {
 // =============================================================================
 
 /**
- * Create a minimal BaseModelInput with required fields
+ * Create a minimal FabricModelInput with required fields
  */
-export function createBaseModelInput(
-  overrides: Partial<BaseModelInput> & {
+export function createFabricModelInput(
+  overrides: Partial<FabricModelInput> & {
     model: string;
   },
-): BaseModelInput {
+): FabricModelInput {
   return {
     ...overrides,
   };
 }
 
 /**
- * Extract only BaseModel fields from an object
+ * Extract only FabricModel fields from an object
  * Useful for sanitizing input or preparing for storage
  */
-export function pickBaseModelFields<T extends Partial<BaseModel>>(
+export function pickFabricModelFields<T extends Partial<FabricModel>>(
   obj: T,
-): Partial<BaseModel> {
-  const fields = Object.values(BASE_MODEL_FIELDS);
-  const result: Partial<BaseModel> = {};
+): Partial<FabricModel> {
+  const fields = Object.values(FABRIC_MODEL_FIELDS);
+  const result: Partial<FabricModel> = {};
 
   for (const field of fields) {
     if (field in obj) {
@@ -395,8 +395,8 @@ export function pickBaseModelFields<T extends Partial<BaseModel>>(
  */
 export function isTimestampField(
   field: string,
-): field is (typeof BASE_MODEL_TIMESTAMP_FIELDS)[number] {
-  return (BASE_MODEL_TIMESTAMP_FIELDS as readonly string[]).includes(field);
+): field is (typeof FABRIC_MODEL_TIMESTAMP_FIELDS)[number] {
+  return (FABRIC_MODEL_TIMESTAMP_FIELDS as readonly string[]).includes(field);
 }
 
 /**
@@ -404,6 +404,6 @@ export function isTimestampField(
  */
 export function isAutoField(
   field: string,
-): field is (typeof BASE_MODEL_AUTO_FIELDS)[number] {
-  return (BASE_MODEL_AUTO_FIELDS as readonly string[]).includes(field);
+): field is (typeof FABRIC_MODEL_AUTO_FIELDS)[number] {
+  return (FABRIC_MODEL_AUTO_FIELDS as readonly string[]).includes(field);
 }
