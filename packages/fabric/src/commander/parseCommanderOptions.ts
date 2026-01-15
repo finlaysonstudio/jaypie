@@ -1,6 +1,6 @@
 // Parse Commander.js options back to handler input format
 
-import { fabricDate, isDateType } from "../convert-date.js";
+import { fabricDate, isDateType } from "../resolve-date.js";
 import type { ConversionType } from "../types.js";
 import type { ParseCommanderOptionsConfig } from "./types.js";
 

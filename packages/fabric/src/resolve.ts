@@ -2,7 +2,7 @@
 
 import { BadRequestError } from "@jaypie/errors";
 
-import { fabricDate, isDateType } from "./convert-date.js";
+import { fabricDate, isDateType } from "./resolve-date.js";
 import type { ConversionType, TypedArrayType } from "./types.js";
 
 /**
@@ -245,12 +245,12 @@ export function fabricArray(value: unknown): unknown[] | undefined {
 }
 
 /**
- * Convert a value from an array to a scalar
+ * Resolve a value from an array to a scalar
  * - Single-element arrays become that element
  * - Multi-element arrays throw BadRequestError
  * - Non-arrays pass through
  */
-export function convertFromArray(value: unknown): unknown {
+export function resolveFromArray(value: unknown): unknown {
   if (value === undefined || value === null) {
     return undefined;
   }
@@ -295,12 +295,12 @@ export function fabricObject(value: unknown): { value: unknown } | undefined {
 }
 
 /**
- * Convert a value from an object to its value property
+ * Resolve a value from an object to its value property
  * - Objects with a value property return that value
  * - Objects without a value throw BadRequestError
  * - Scalars pass through
  */
-export function convertFromObject(value: unknown): unknown {
+export function resolveFromObject(value: unknown): unknown {
   if (value === undefined || value === null) {
     return undefined;
   }

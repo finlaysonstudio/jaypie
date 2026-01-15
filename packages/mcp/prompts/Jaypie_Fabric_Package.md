@@ -205,12 +205,12 @@ fabricBoolean(["true"]);        // → true
 fabricNumber('{"value": 5}');   // → 5
 
 // Date conversion
-import { fabricDate, convertFromDate } from "@jaypie/fabric";
+import { fabricDate, resolveFromDate } from "@jaypie/fabric";
 
 fabricDate("2026-01-15T10:30:00Z");  // → Date object
 fabricDate(1736942400000);            // → Date from timestamp
-convertFromDate(new Date(), String);  // → ISO string
-convertFromDate(new Date(), Number);  // → Unix timestamp (ms)
+resolveFromDate(new Date(), String);  // → ISO string
+resolveFromDate(new Date(), Number);  // → Unix timestamp (ms)
 ```
 
 ### RegExp Type Shorthand
@@ -451,26 +451,26 @@ export {
   pickFabricModelFields,
 } from "./models/base.js";
 
-// Conversion functions
+// Resolution functions
 export {
   fabric,
-  convertFromArray,
-  convertFromObject,
   fabricArray,
   fabricBoolean,
   fabricNumber,
   fabricObject,
   fabricString,
-} from "./convert.js";
+  resolveFromArray,
+  resolveFromObject,
+} from "./resolve.js";
 
-// Date conversion
+// Date resolution
 export {
-  convertFromDate,
   fabricDate,
   DateType,
   isDateType,
   isValidDate,
-} from "./convert-date.js";
+  resolveFromDate,
+} from "./resolve-date.js";
 
 // Status type
 export { isStatus, STATUS_VALUES, StatusType } from "./status.js";

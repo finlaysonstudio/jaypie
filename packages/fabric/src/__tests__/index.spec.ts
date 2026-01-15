@@ -1,9 +1,6 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  convertFromArray,
-  convertFromDate,
-  convertFromObject,
   createFabricModelInput,
   DateType,
   fabric,
@@ -27,6 +24,9 @@ import {
   isTimestampField,
   isValidDate,
   pickFabricModelFields,
+  resolveFromArray,
+  resolveFromDate,
+  resolveFromObject,
   STATUS_VALUES,
   StatusType,
 } from "..";
@@ -51,14 +51,14 @@ describe("fabric/index", () => {
 
     it("exports composite fabric functions", () => {
       expect(fabricArray).toBeDefined();
-      expect(convertFromArray).toBeDefined();
+      expect(resolveFromArray).toBeDefined();
       expect(fabricObject).toBeDefined();
-      expect(convertFromObject).toBeDefined();
+      expect(resolveFromObject).toBeDefined();
     });
 
     it("exports date fabric functions", () => {
       expect(fabricDate).toBeDefined();
-      expect(convertFromDate).toBeDefined();
+      expect(resolveFromDate).toBeDefined();
       expect(isValidDate).toBeDefined();
       expect(isDateType).toBeDefined();
       expect(DateType).toBe(Date);

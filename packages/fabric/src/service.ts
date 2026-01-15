@@ -3,7 +3,7 @@
 import { BadRequestError } from "@jaypie/errors";
 
 import { FABRIC_VERSION } from "./constants.js";
-import { fabric } from "./convert.js";
+import { fabric } from "./resolve.js";
 import type {
   ConversionType,
   InputFieldDefinition,

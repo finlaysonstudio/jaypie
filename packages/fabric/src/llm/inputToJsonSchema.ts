@@ -1,6 +1,6 @@
 // Convert fabric input definitions to JSON Schema
 
-import { isDateType } from "../convert-date.js";
+import { isDateType } from "../resolve-date.js";
 import type { ConversionType, InputFieldDefinition } from "../types.js";
 
 /**

@@ -89,12 +89,12 @@ export function fabricDate(value: unknown): Date {
 }
 
 /**
- * Convert a value from a Date to another type
+ * Resolve a value from a Date to another type
  *
  * @param value - Date to convert
  * @param targetType - Target type (String, Number)
  */
-export function convertFromDate(
+export function resolveFromDate(
   value: Date,
   targetType: typeof Number | typeof String,
 ): number | string {

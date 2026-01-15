@@ -2,17 +2,17 @@ import { BadRequestError } from "@jaypie/errors";
 import { describe, expect, it } from "vitest";
 
 import {
-  convertFromArray,
-  convertFromObject,
   fabric,
   fabricArray,
   fabricBoolean,
   fabricNumber,
   fabricObject,
   fabricString,
+  resolveFromArray,
+  resolveFromObject,
 } from "..";
 
-describe("convert", () => {
+describe("resolve", () => {
   describe("convertToBoolean", () => {
     describe("Happy Paths", () => {
       it("returns undefined for undefined", () => {
@@ -344,37 +344,37 @@ describe("convert", () => {
     });
   });
 
-  describe("convertFromArray", () => {
+  describe("resolveFromArray", () => {
     describe("Happy Paths", () => {
       it("returns undefined for undefined", () => {
-        expect(convertFromArray(undefined)).toBeUndefined();
+        expect(resolveFromArray(undefined)).toBeUndefined();
       });
 
       it("returns undefined for null", () => {
-        expect(convertFromArray(null)).toBeUndefined();
+        expect(resolveFromArray(null)).toBeUndefined();
       });
 
       it("returns undefined for empty array", () => {
-        expect(convertFromArray([])).toBeUndefined();
+        expect(resolveFromArray([])).toBeUndefined();
       });
 
       it("unwraps single-element arrays", () => {
-        expect(convertFromArray([42])).toBe(42);
-        expect(convertFromArray(["hello"])).toBe("hello");
-        expect(convertFromArray([true])).toBe(true);
+        expect(resolveFromArray([42])).toBe(42);
+        expect(resolveFromArray(["hello"])).toBe("hello");
+        expect(resolveFromArray([true])).toBe(true);
       });
 
       it("passes through non-arrays", () => {
-        expect(convertFromArray(42)).toBe(42);
-        expect(convertFromArray("hello")).toBe("hello");
-        expect(convertFromArray({ a: 1 })).toEqual({ a: 1 });
+        expect(resolveFromArray(42)).toBe(42);
+        expect(resolveFromArray("hello")).toBe("hello");
+        expect(resolveFromArray({ a: 1 })).toEqual({ a: 1 });
       });
     });
 
     describe("Error Cases", () => {
       it("throws on multi-element array", () => {
-        expect(() => convertFromArray([1, 2])).toThrow(BadRequestError);
-        expect(() => convertFromArray([1, 2, 3])).toThrow(BadRequestError);
+        expect(() => resolveFromArray([1, 2])).toThrow(BadRequestError);
+        expect(() => resolveFromArray([1, 2, 3])).toThrow(BadRequestError);
       });
     });
   });
@@ -416,37 +416,37 @@ describe("convert", () => {
     });
   });
 
-  describe("convertFromObject", () => {
+  describe("resolveFromObject", () => {
     describe("Happy Paths", () => {
       it("returns undefined for undefined", () => {
-        expect(convertFromObject(undefined)).toBeUndefined();
+        expect(resolveFromObject(undefined)).toBeUndefined();
       });
 
       it("returns undefined for null", () => {
-        expect(convertFromObject(null)).toBeUndefined();
+        expect(resolveFromObject(null)).toBeUndefined();
       });
 
       it("extracts value from objects", () => {
-        expect(convertFromObject({ value: 42 })).toBe(42);
-        expect(convertFromObject({ value: "hello" })).toBe("hello");
-        expect(convertFromObject({ value: [1, 2, 3] })).toEqual([1, 2, 3]);
+        expect(resolveFromObject({ value: 42 })).toBe(42);
+        expect(resolveFromObject({ value: "hello" })).toBe("hello");
+        expect(resolveFromObject({ value: [1, 2, 3] })).toEqual([1, 2, 3]);
       });
 
       it("passes through scalars", () => {
-        expect(convertFromObject(42)).toBe(42);
-        expect(convertFromObject("hello")).toBe("hello");
-        expect(convertFromObject(true)).toBe(true);
+        expect(resolveFromObject(42)).toBe(42);
+        expect(resolveFromObject("hello")).toBe("hello");
+        expect(resolveFromObject(true)).toBe(true);
       });
 
       it("passes through arrays", () => {
-        expect(convertFromObject([1, 2, 3])).toEqual([1, 2, 3]);
+        expect(resolveFromObject([1, 2, 3])).toEqual([1, 2, 3]);
       });
     });
 
     describe("Error Cases", () => {
       it("throws on object without value property", () => {
-        expect(() => convertFromObject({ a: 1 })).toThrow(BadRequestError);
-        expect(() => convertFromObject({})).toThrow(BadRequestError);
+        expect(() => resolveFromObject({ a: 1 })).toThrow(BadRequestError);
+        expect(() => resolveFromObject({})).toThrow(BadRequestError);
       });
     });
   });

@@ -1315,7 +1315,9 @@ describe("HTTP Adapter", () => {
           const context = createStreamContext(writer);
 
           // Should not throw
-          expect(() => context.streamEvent(createCompleteEvent())).not.toThrow();
+          expect(() =>
+            context.streamEvent(createCompleteEvent()),
+          ).not.toThrow();
         });
       });
     });

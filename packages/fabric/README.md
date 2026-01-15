@@ -389,11 +389,11 @@ const indexed = populateIndexKeys(record, DEFAULT_INDEXES);
 | `fabricNumber` | Convert to number |
 | `fabricString` | Convert to string |
 | `fabricArray` | Wrap in array |
-| `convertFromArray` | Extract from single-element array |
+| `resolveFromArray` | Extract from single-element array |
 | `fabricObject` | Wrap in `{ value: ... }` |
-| `convertFromObject` | Extract `.value` from object |
+| `resolveFromObject` | Extract `.value` from object |
 | `fabricDate` | Convert to Date |
-| `convertFromDate` | Convert from Date to string |
+| `resolveFromDate` | Resolve from Date to string |
 | `FabricModel` | Base type for models |
 | `FabricMessage` | Message model type |
 | `FabricJob` | Job model type |

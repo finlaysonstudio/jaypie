@@ -28,26 +28,26 @@ export type {
 export { APEX, FABRIC_VERSION, SEPARATOR, SYSTEM_MODELS } from "./constants.js";
 export type { SystemModel } from "./constants.js";
 
-// Fabric functions (type conversion)
+// Fabric functions (type resolution)
 export {
-  convertFromArray,
-  convertFromObject,
   fabric,
   fabricArray,
   fabricBoolean,
   fabricNumber,
   fabricObject,
   fabricString,
-} from "./convert.js";
+  resolveFromArray,
+  resolveFromObject,
+} from "./resolve.js";
 
 // Date fabrication
 export {
-  convertFromDate,
   DateType,
   fabricDate,
   isDateType,
   isValidDate,
-} from "./convert-date.js";
+  resolveFromDate,
+} from "./resolve-date.js";
 
 // Helpers
 export { computeResolvedName, resolveWithFallback } from "./helpers/index.js";

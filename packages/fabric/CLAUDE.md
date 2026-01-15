@@ -17,8 +17,8 @@ Jaypie modeling framework - provides type conversion and service handler pattern
 ```
 src/
 ├── __tests__/
-│   ├── convert.spec.ts           # Conversion function tests
-│   ├── convert-date.spec.ts      # Date conversion tests
+│   ├── resolve.spec.ts           # Resolution function tests
+│   ├── resolve-date.spec.ts      # Date resolution tests
 │   ├── commander.spec.ts         # Commander adapter tests
 │   ├── http.spec.ts              # HTTP adapter tests
 │   ├── index.spec.ts             # Export verification tests
@@ -57,8 +57,8 @@ src/
 │   └── types.ts                   # MCP adapter types
 ├── models/
 │   └── base.ts                    # FabricModel, FabricJob, FabricMessage, Progress types
-├── convert.ts                     # Type conversion utilities
-├── convert-date.ts                # Date conversion utilities
+├── resolve.ts                     # Type resolution utilities
+├── resolve-date.ts                # Date resolution utilities
 ├── index.ts                       # Package exports
 ├── index/                         # Index utilities for DynamoDB GSIs
 │   ├── index.ts                   # Module exports
@@ -83,9 +83,9 @@ Located in `convert.ts`. Handle flexible type conversion with predictable behavi
 | `fabricNumber` | Convert to number (`"true"` -> `1`, booleans -> `0`/`1`) |
 | `fabricString` | Convert to string (booleans -> `"true"`/`"false"`) |
 | `fabricArray` | Wrap non-arrays in array |
-| `convertFromArray` | Extract single-element array to scalar |
+| `resolveFromArray` | Extract single-element array to scalar |
 | `fabricObject` | Wrap in `{ value: ... }` structure |
-| `convertFromObject` | Extract `.value` from object |
+| `resolveFromObject` | Extract `.value` from object |
 
 Key behaviors:
 - Empty string `""` becomes `undefined`
@@ -211,8 +211,8 @@ Located in `models/base.ts`:
 
 ```typescript
 // Fabric functions (type conversion)
-export { fabric, fabricArray, fabricBoolean, fabricNumber, fabricObject, fabricString, convertFromArray, convertFromObject } from "./convert.js";
-export { fabricDate, convertFromDate, isValidDate, isDateType, DateType } from "./convert-date.js";
+export { fabric, fabricArray, fabricBoolean, fabricNumber, fabricObject, fabricString, resolveFromArray, resolveFromObject } from "./resolve.js";
+export { fabricDate, resolveFromDate, isValidDate, isDateType, DateType } from "./resolve-date.js";
 
 // LLM adapter namespace (re-exported, no optional deps)
 export * as llm from "./llm/index.js";
@@ -302,11 +302,11 @@ export { DEFAULT_HTTP_METHODS, HttpStreamEventType } from "./types.js";
 | `coerceToNumber` | `fabricNumber` |
 | `coerceToString` | `fabricString` |
 | `coerceToArray` | `fabricArray` |
-| `coerceFromArray` | `convertFromArray` |
+| `coerceFromArray` | `resolveFromArray` |
 | `coerceToObject` | `fabricObject` |
-| `coerceFromObject` | `convertFromObject` |
+| `coerceFromObject` | `resolveFromObject` |
 | `coerceToDate` | `fabricDate` |
-| `coerceFromDate` | `convertFromDate` |
+| `coerceFromDate` | `resolveFromDate` |
 | `serviceHandler` | `fabricService` |
 | `ServiceHandlerFunction` | `Service` |
 | `ServiceHandlerConfig` | `ServiceConfig` |

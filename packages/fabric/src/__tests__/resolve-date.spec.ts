@@ -1,15 +1,15 @@
 /**
- * Tests for Date conversion
+ * Tests for Date resolution
  */
 
 import { describe, expect, it } from "vitest";
 
 import {
-  convertFromDate,
   fabricDate,
   isDateType,
   isValidDate,
-} from "../convert-date.js";
+  resolveFromDate,
+} from "../resolve-date.js";
 
 // =============================================================================
 // isValidDate
@@ -140,29 +140,29 @@ describe("fabricDate", () => {
 });
 
 // =============================================================================
-// convertFromDate
+// resolveFromDate
 // =============================================================================
 
-describe("convertFromDate", () => {
+describe("resolveFromDate", () => {
   const testDate = new Date("2026-01-01T12:00:00.000Z");
 
   describe("to String", () => {
-    it("converts to ISO string", () => {
-      const result = convertFromDate(testDate, String);
+    it("resolves to ISO string", () => {
+      const result = resolveFromDate(testDate, String);
       expect(result).toBe("2026-01-01T12:00:00.000Z");
     });
   });
 
   describe("to Number", () => {
-    it("converts to timestamp", () => {
-      const result = convertFromDate(testDate, Number);
+    it("resolves to timestamp", () => {
+      const result = resolveFromDate(testDate, Number);
       expect(result).toBe(testDate.getTime());
     });
   });
 
   describe("invalid conversions", () => {
     it("throws for invalid Date", () => {
-      expect(() => convertFromDate(new Date("invalid"), String)).toThrow(
+      expect(() => resolveFromDate(new Date("invalid"), String)).toThrow(
         "Invalid Date",
       );
     });
