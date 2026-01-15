@@ -1,48 +1,48 @@
 ---
-description: Core guide to Jaypie Vocabulary for type coercion, service handlers, and entity types
+description: Core guide to Jaypie Fabric for type conversion, service handlers, and model types
 ---
 
-# Jaypie Vocabulary Package
+# Jaypie Fabric Package
 
-Jaypie Vocabulary (`@jaypie/vocabulary`) provides type coercion utilities and service handler patterns for consistent input handling across Jaypie applications.
+Jaypie Fabric (`@jaypie/fabric`) provides type conversion utilities, service handler patterns, and model types for consistent input handling across Jaypie applications.
 
 ## Related Adapter Guides
 
-Vocabulary includes adapters for integrating service handlers with various platforms. See these guides for platform-specific integration:
+Fabric includes adapters for integrating service handlers with various platforms. See these guides for platform-specific integration:
 
 | Guide | Import | Description |
 |-------|--------|-------------|
-| [Jaypie_Vocabulary_Commander.md](Jaypie_Vocabulary_Commander.md) | `@jaypie/vocabulary/commander` | Commander.js CLI integration with callbacks |
-| [Jaypie_Vocabulary_Lambda.md](Jaypie_Vocabulary_Lambda.md) | `@jaypie/vocabulary/lambda` | AWS Lambda handler wrapping |
-| [Jaypie_Vocabulary_LLM.md](Jaypie_Vocabulary_LLM.md) | `@jaypie/vocabulary/llm` | LLM tool creation for `@jaypie/llm` Toolkit |
-| [Jaypie_Vocabulary_MCP.md](Jaypie_Vocabulary_MCP.md) | `@jaypie/vocabulary/mcp` | MCP server tool registration |
+| [Jaypie_Fabric_Commander.md](Jaypie_Fabric_Commander.md) | `@jaypie/fabric/commander` | Commander.js CLI integration with callbacks |
+| [Jaypie_Fabric_Lambda.md](Jaypie_Fabric_Lambda.md) | `@jaypie/fabric/lambda` | AWS Lambda handler wrapping |
+| [Jaypie_Fabric_LLM.md](Jaypie_Fabric_LLM.md) | `@jaypie/fabric/llm` | LLM tool creation for `@jaypie/llm` Toolkit |
+| [Jaypie_Fabric_MCP.md](Jaypie_Fabric_MCP.md) | `@jaypie/fabric/mcp` | MCP server tool registration |
 
 ## Installation
 
 ```bash
-npm install @jaypie/vocabulary
+npm install @jaypie/fabric
 ```
 
 ## Core Concepts
 
 ### Design Philosophy
 
-Vocabulary follows the "Fabric" philosophy:
+Fabric follows the "Fabric" philosophy:
 - **Smooth, pliable** - Things that feel right should work
 - **Catch bad passes** - Invalid inputs throw clear errors
 
 This means `"true"` works where `true` is expected, `"42"` works where `42` is expected, and invalid conversions fail fast with `BadRequestError`.
 
-## serviceHandler
+## fabricService
 
-Factory function that creates validated service endpoints with automatic type coercion.
+Factory function that creates validated service endpoints with automatic type conversion.
 
 ### Basic Usage
 
 ```typescript
-import { serviceHandler } from "@jaypie/vocabulary";
+import { fabricService } from "@jaypie/fabric";
 
-const divisionHandler = serviceHandler({
+const divisionHandler = fabricService({
   alias: "division",
   description: "Divides two numbers",
   input: {
@@ -63,7 +63,7 @@ const divisionHandler = serviceHandler({
 
 await divisionHandler();                              // → 4
 await divisionHandler({ numerator: 24 });             // → 8
-await divisionHandler({ numerator: "14", denominator: "7" }); // → 2 (coerced)
+await divisionHandler({ numerator: "14", denominator: "7" }); // → 2 (converted)
 await divisionHandler('{"numerator": "18"}');         // → 6 (JSON parsed)
 ```
 
@@ -72,7 +72,7 @@ await divisionHandler('{"numerator": "18"}');         // → 6 (JSON parsed)
 Config properties are attached directly to the handler for introspection:
 
 ```typescript
-const handler = serviceHandler({
+const handler = fabricService({
   alias: "greet",
   description: "Greet a user",
   input: { name: { type: String } },
@@ -88,11 +88,11 @@ handler.input;       // { name: { type: String } }
 
 | Property | Type | Description |
 |----------|------|-------------|
-| `type` | `CoercionType` | Required. The target type for coercion |
+| `type` | `ConversionType` | Required. The target type for conversion |
 | `default` | `unknown` | Default value if not provided |
 | `description` | `string` | Field description (used in CLI help) |
 | `required` | `boolean` | Whether field is required (default: true unless default set) |
-| `validate` | `function \| RegExp \| array` | Validation after coercion |
+| `validate` | `function \| RegExp \| array` | Validation after conversion |
 | `flag` | `string` | Override long flag name for Commander.js |
 | `letter` | `string` | Short switch letter for Commander.js |
 
@@ -101,7 +101,7 @@ handler.input;       // { name: { type: String } }
 When no `service` function is provided, the handler returns the processed input:
 
 ```typescript
-const validateUser = serviceHandler({
+const validateUser = fabricService({
   input: {
     age: { type: Number, validate: (v) => v >= 18 },
     email: { type: /^[^@]+@[^@]+\.[^@]+$/ },
@@ -124,7 +124,7 @@ interface ServiceContext {
   sendMessage?: (message: Message) => void | Promise<void>;
 }
 
-const handler = serviceHandler({
+const handler = fabricService({
   input: { jobId: { type: String } },
   service: async ({ jobId }, context) => {
     context?.sendMessage?.({ content: `Starting job ${jobId}` });
@@ -153,18 +153,18 @@ Context callbacks connect to adapter registration:
 
 **Note:** Any error that escapes the service (is thrown) is treated as fatal and routes to `onFatal`.
 
-## Type Coercion
+## Type Conversion
 
 ### Supported Types
 
 | Type | Aliases | Description |
 |------|---------|-------------|
-| `String` | `"string"`, `""` | String coercion |
-| `Number` | `"number"` | Number coercion |
-| `Boolean` | `"boolean"` | Boolean coercion |
-| `Date` | `DateType` | Date coercion (ISO strings, timestamps) |
-| `Array` | `"array"`, `[]` | Array coercion |
-| `Object` | `"object"`, `{}` | Object coercion |
+| `String` | `"string"`, `""` | String conversion |
+| `Number` | `"number"` | Number conversion |
+| `Boolean` | `"boolean"` | Boolean conversion |
+| `Date` | `DateType` | Date conversion (ISO strings, timestamps) |
+| `Array` | `"array"`, `[]` | Array conversion |
+| `Object` | `"object"`, `{}` | Object conversion |
 | `[String]` | `[""]` | Typed array of strings |
 | `[Number]` | - | Typed array of numbers |
 | `[Boolean]` | - | Typed array of booleans |
@@ -174,51 +174,51 @@ Context callbacks connect to adapter registration:
 | `[1, 2, 3]` | - | Validated number (must match) |
 | `StatusType` | - | Validated status ("pending", "processing", etc.) |
 
-### Coercion Examples
+### Conversion Examples
 
 ```typescript
-import { coerce } from "@jaypie/vocabulary";
+import { fabric, fabricBoolean, fabricNumber, fabricString } from "@jaypie/fabric";
 
-// Boolean coercion
-coerce("true", Boolean);     // → true
-coerce("false", Boolean);    // → false
-coerce(1, Boolean);          // → true
-coerce(0, Boolean);          // → false
+// Boolean conversion
+fabricBoolean("true");     // → true
+fabricBoolean("false");    // → false
+fabricBoolean(1);          // → true
+fabricBoolean(0);          // → false
 
-// Number coercion
-coerce("42", Number);        // → 42
-coerce("true", Number);      // → 1
-coerce("false", Number);     // → 0
+// Number conversion
+fabricNumber("42");        // → 42
+fabricNumber("true");      // → 1
+fabricNumber("false");     // → 0
 
-// String coercion
-coerce(true, String);        // → "true"
-coerce(42, String);          // → "42"
+// String conversion
+fabricString(true);        // → "true"
+fabricString(42);          // → "42"
 
-// Array coercion
-coerce("1,2,3", [Number]);   // → [1, 2, 3]
-coerce("a\tb\tc", [String]); // → ["a", "b", "c"]
-coerce([1, 2], [String]);    // → ["1", "2"]
+// Array conversion
+fabric("1,2,3", [Number]);   // → [1, 2, 3]
+fabric("a\tb\tc", [String]); // → ["a", "b", "c"]
+fabric([1, 2], [String]);    // → ["1", "2"]
 
 // Unwrapping
-coerce({ value: "42" }, Number);  // → 42
-coerce(["true"], Boolean);        // → true
-coerce('{"value": 5}', Number);   // → 5
+fabricNumber({ value: "42" });  // → 42
+fabricBoolean(["true"]);        // → true
+fabricNumber('{"value": 5}');   // → 5
 
-// Date coercion
-import { coerceToDate, coerceFromDate } from "@jaypie/vocabulary";
+// Date conversion
+import { fabricDate, convertFromDate } from "@jaypie/fabric";
 
-coerceToDate("2026-01-15T10:30:00Z");  // → Date object
-coerceToDate(1736942400000);            // → Date from timestamp
-coerceFromDate(new Date(), String);     // → ISO string
-coerceFromDate(new Date(), Number);     // → Unix timestamp (ms)
+fabricDate("2026-01-15T10:30:00Z");  // → Date object
+fabricDate(1736942400000);            // → Date from timestamp
+convertFromDate(new Date(), String);  // → ISO string
+convertFromDate(new Date(), Number);  // → Unix timestamp (ms)
 ```
 
 ### RegExp Type Shorthand
 
-A bare RegExp coerces to String and validates:
+A bare RegExp converts to String and validates:
 
 ```typescript
-const handler = serviceHandler({
+const handler = fabricService({
   input: {
     email: { type: /^[^@]+@[^@]+\.[^@]+$/ },
   },
@@ -251,11 +251,11 @@ input: {
 A predefined validated string type for common status values:
 
 ```typescript
-import { StatusType, isStatus, STATUS_VALUES } from "@jaypie/vocabulary";
+import { StatusType, isStatus, STATUS_VALUES } from "@jaypie/fabric";
 
 // StatusType is: ["canceled", "complete", "error", "pending", "processing", "queued", "sending"]
 
-const handler = serviceHandler({
+const handler = fabricService({
   input: {
     status: { type: StatusType, default: "pending" },
   },
@@ -270,31 +270,31 @@ isStatus("pending");   // → true
 isStatus("unknown");   // → false
 ```
 
-## Entity Types
+## Model Types
 
-The vocabulary provides standard entity types for consistent data modeling:
+Fabric provides standard model types for consistent data modeling:
 
 ```typescript
 import type {
-  BaseEntity,
-  BaseEntityInput,
-  BaseEntityUpdate,
-  BaseEntityFilter,
-  HistoryEntry,
-  Job,
-  MessageEntity,
-  Progress,
-} from "@jaypie/vocabulary";
+  FabricModel,
+  FabricModelInput,
+  FabricModelUpdate,
+  FabricModelFilter,
+  FabricHistoryEntry,
+  FabricJob,
+  FabricMessage,
+  FabricProgress,
+} from "@jaypie/fabric";
 ```
 
-### BaseEntity (base for all entities)
+### FabricModel (base for all models)
 
 ```
 model: <varies>
 id: String (auto)
 createdAt: Date (auto)
 updatedAt: Date (auto)
-history?: [HistoryEntry] (auto)
+history?: [FabricHistoryEntry] (auto)
 name?: String
 label?: String
 abbreviation?: String
@@ -311,7 +311,7 @@ archivedAt?: Date
 deletedAt?: Date
 ```
 
-### MessageEntity (extends BaseEntity)
+### FabricMessage (extends FabricModel)
 
 ```
 model: message
@@ -319,7 +319,7 @@ content: String (required)
 type?: String (e.g., "assistant", "user", "system")
 ```
 
-### Job (extends BaseEntity)
+### FabricJob (extends FabricModel)
 
 ```
 model: job
@@ -328,72 +328,81 @@ class?: String (e.g., "evaluation", "export", "import")
 status: String (required)
 startedAt?: Date
 completedAt?: Date
-messages?: [MessageEntity]
-progress?:
-    elapsedTime?: Number
-    estimatedTime?: Number
-    percentageComplete?: Number
-    nextPercentageCheckpoint?: Number
+messages?: [FabricMessage]
+progress?: FabricProgress (value object, not a model)
 ```
 
-### BaseEntity Utilities
+### FabricProgress (value object)
 
-Field constants and utility functions for working with entities:
+FabricProgress is a **value object** (not a model) embedded in FabricJob:
+
+```typescript
+interface FabricProgress {
+  elapsedTime?: number;
+  estimatedTime?: number;
+  percentageComplete?: number;
+  nextPercentageCheckpoint?: number;
+}
+```
+
+### FabricModel Utilities
+
+Field constants and utility functions for working with models:
 
 ```typescript
 import {
   // Field name constants
-  BASE_ENTITY_FIELDS,           // All field names as constants
-  BASE_ENTITY_REQUIRED_FIELDS,  // ["createdAt", "id", "model", "updatedAt"]
-  BASE_ENTITY_AUTO_FIELDS,      // ["createdAt", "history", "id", "updatedAt"]
-  BASE_ENTITY_TIMESTAMP_FIELDS, // ["archivedAt", "createdAt", "deletedAt", "updatedAt"]
+  FABRIC_MODEL_FIELDS,           // All field names as constants
+  FABRIC_MODEL_REQUIRED_FIELDS,  // ["createdAt", "id", "model", "updatedAt"]
+  FABRIC_MODEL_AUTO_FIELDS,      // ["createdAt", "history", "id", "updatedAt"]
+  FABRIC_MODEL_TIMESTAMP_FIELDS, // ["archivedAt", "createdAt", "deletedAt", "updatedAt"]
 
   // Type guards
-  isBaseEntity,        // Check if value is a complete BaseEntity
-  hasBaseEntityShape,  // Check if value has minimum shape (id + model)
+  isFabricModel,        // Check if value is a complete FabricModel
+  hasFabricModelShape,  // Check if value has minimum shape (id + model)
 
   // Field helpers
   isAutoField,         // Check if field is auto-generated
   isTimestampField,    // Check if field is a timestamp
 
   // Utilities
-  createBaseEntityInput,  // Create minimal input with required model
-  pickBaseEntityFields,   // Extract only BaseEntity fields from object
-} from "@jaypie/vocabulary";
+  createFabricModelInput,  // Create minimal input with required model
+  pickFabricModelFields,   // Extract only FabricModel fields from object
+} from "@jaypie/fabric";
 
 // Example: Check if a field should be auto-generated
 isAutoField("id");        // → true
 isAutoField("name");      // → false
 
-// Example: Extract BaseEntity fields from mixed object
+// Example: Extract FabricModel fields from mixed object
 const mixed = { id: "123", model: "record", customField: "value" };
-pickBaseEntityFields(mixed);  // → { id: "123", model: "record" }
+pickFabricModelFields(mixed);  // → { id: "123", model: "record" }
 ```
 
 ## TypeScript Types
 
 ```typescript
 import type {
-  // Entity types
-  BaseEntity,
-  BaseEntityFilter,
-  BaseEntityInput,
-  BaseEntityUpdate,
-  HistoryEntry,
-  Job,
-  MessageEntity,
-  Progress,
+  // Model types
+  FabricModel,
+  FabricModelFilter,
+  FabricModelInput,
+  FabricModelUpdate,
+  FabricHistoryEntry,
+  FabricJob,
+  FabricMessage,
+  FabricProgress,
   Status,
 
   // Message types
   Message,
   MessageLevel,
 
-  // Coercion types
+  // Conversion types
   ArrayElementType,
-  CoercionType,
+  ConversionType,
   CompositeType,
-  DateCoercionType,
+  DateConversionType,
   RegExpType,
   ScalarType,
   TypedArrayType,
@@ -404,10 +413,10 @@ import type {
   InputFieldDefinition,
   ServiceContext,
   ServiceFunction,
-  ServiceHandlerConfig,
-  ServiceHandlerFunction,
+  ServiceConfig,
+  Service,
   ValidateFunction,
-} from "@jaypie/vocabulary";
+} from "@jaypie/fabric";
 ```
 
 ### Message Type
@@ -425,80 +434,80 @@ interface Message {
 
 ## Exports
 
-### Main Export (`@jaypie/vocabulary`)
+### Main Export (`@jaypie/fabric`)
 
 ```typescript
-// BaseEntity utilities
+// FabricModel utilities
 export {
-  BASE_ENTITY_AUTO_FIELDS,
-  BASE_ENTITY_FIELDS,
-  BASE_ENTITY_REQUIRED_FIELDS,
-  BASE_ENTITY_TIMESTAMP_FIELDS,
-  createBaseEntityInput,
-  hasBaseEntityShape,
+  FABRIC_MODEL_AUTO_FIELDS,
+  FABRIC_MODEL_FIELDS,
+  FABRIC_MODEL_REQUIRED_FIELDS,
+  FABRIC_MODEL_TIMESTAMP_FIELDS,
+  createFabricModelInput,
+  hasFabricModelShape,
   isAutoField,
-  isBaseEntity,
+  isFabricModel,
   isTimestampField,
-  pickBaseEntityFields,
-} from "./base-entity.js";
+  pickFabricModelFields,
+} from "./models/base.js";
 
-// Coercion functions
+// Conversion functions
 export {
-  coerce,
-  coerceFromArray,
-  coerceFromObject,
-  coerceToArray,
-  coerceToBoolean,
-  coerceToNumber,
-  coerceToObject,
-  coerceToString,
-} from "./coerce.js";
+  fabric,
+  convertFromArray,
+  convertFromObject,
+  fabricArray,
+  fabricBoolean,
+  fabricNumber,
+  fabricObject,
+  fabricString,
+} from "./convert.js";
 
-// Date coercion
+// Date conversion
 export {
-  coerceFromDate,
-  coerceToDate,
+  convertFromDate,
+  fabricDate,
   DateType,
   isDateType,
   isValidDate,
-} from "./coerce-date.js";
+} from "./convert-date.js";
 
 // Status type
 export { isStatus, STATUS_VALUES, StatusType } from "./status.js";
 
 // Service Handler
-export { serviceHandler } from "./serviceHandler.js";
+export { fabricService } from "./service.js";
 
 // LLM adapter (re-exported, no optional deps)
 export * as llm from "./llm/index.js";
 
 // Note: Other adapters have optional dependencies and must be imported directly:
-//   import { registerServiceCommand } from "@jaypie/vocabulary/commander";
-//   import { lambdaServiceHandler } from "@jaypie/vocabulary/lambda";
-//   import { registerMcpTool } from "@jaypie/vocabulary/mcp";
+//   import { fabricCommand } from "@jaypie/fabric/commander";
+//   import { fabricLambda } from "@jaypie/fabric/lambda";
+//   import { fabricMcp } from "@jaypie/fabric/mcp";
 
 // Version
-export const VOCABULARY_VERSION: string;
+export const FABRIC_VERSION: string;
 ```
 
 ## Error Handling
 
-Invalid coercions throw `BadRequestError` from `@jaypie/errors`:
+Invalid conversions throw `BadRequestError` from `@jaypie/errors`:
 
 ```typescript
 import { BadRequestError } from "@jaypie/errors";
 
 // These throw BadRequestError:
-await handler({ numerator: "not-a-number" });  // Cannot coerce to Number
+await handler({ numerator: "not-a-number" });  // Cannot convert to Number
 await handler({ priority: 10 });                // Validation fails (not in [1,2,3,4,5])
 await handler({});                              // Missing required field
 ```
 
 ## Integration with Other Packages
 
-Vocabulary is designed to be consumed by:
+Fabric is designed to be consumed by:
 - **`@jaypie/lambda`** - Lambda handler input processing
 - **`@jaypie/express`** - Express route input validation
-- **`@jaypie/llm`** - LLM tool parameter coercion via the llm adapter
+- **`@jaypie/llm`** - LLM tool parameter conversion via the llm adapter
 - **`@jaypie/mcp`** - MCP server tool registration via the mcp adapter
 - **CLI packages** - Commander.js integration via the commander adapter

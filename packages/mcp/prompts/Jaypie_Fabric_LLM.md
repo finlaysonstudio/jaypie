@@ -1,27 +1,27 @@
 ---
-description: LLM tool creation from serviceHandler for use with @jaypie/llm Toolkit
+description: LLM tool creation from fabricService for use with @jaypie/llm Toolkit
 ---
 
-# Jaypie Vocabulary LLM Adapter
+# Jaypie Fabric LLM Adapter
 
-The LLM adapter (`@jaypie/vocabulary/llm`) creates LLM tools from Jaypie service handlers for use with `@jaypie/llm` Toolkit, automatically generating JSON Schema from input definitions.
+The LLM adapter (`@jaypie/fabric/llm`) creates LLM tools from Jaypie service handlers for use with `@jaypie/llm` Toolkit, automatically generating JSON Schema from input definitions.
 
-**See also:** [Jaypie_Vocabulary_Package.md](Jaypie_Vocabulary_Package.md) for core serviceHandler documentation.
+**See also:** [Jaypie_Fabric_Package.md](Jaypie_Fabric_Package.md) for core fabricService documentation.
 
 ## Installation
 
 ```bash
-npm install @jaypie/vocabulary @jaypie/llm
+npm install @jaypie/fabric @jaypie/llm
 ```
 
 ## Quick Start
 
 ```typescript
-import { serviceHandler } from "@jaypie/vocabulary";
-import { createLlmTool } from "@jaypie/vocabulary/llm";
+import { fabricService } from "@jaypie/fabric";
+import { fabricTool } from "@jaypie/fabric/llm";
 import { Toolkit } from "@jaypie/llm";
 
-const handler = serviceHandler({
+const handler = fabricService({
   alias: "greet",
   description: "Greet a user by name",
   input: {
@@ -34,19 +34,19 @@ const handler = serviceHandler({
   },
 });
 
-const { tool } = createLlmTool({ handler });
+const { tool } = fabricTool({ service: handler });
 const toolkit = new Toolkit([tool]);
 ```
 
-## createLlmTool
+## fabricTool
 
-Creates an LLM tool from a serviceHandler.
+Creates an LLM tool from a fabricService.
 
 ### Options
 
 | Option | Type | Description |
 |--------|------|-------------|
-| `handler` | `ServiceHandlerFunction` | Required. The service handler to adapt |
+| `service` | `Service` | Required. The service handler to adapt |
 | `name` | `string` | Override tool name (defaults to handler.alias) |
 | `description` | `string` | Override tool description (defaults to handler.description) |
 | `message` | `string \| function` | Custom message for logging |
@@ -59,10 +59,10 @@ Creates an LLM tool from a serviceHandler.
 ### Basic Usage
 
 ```typescript
-import { serviceHandler } from "@jaypie/vocabulary";
-import { createLlmTool } from "@jaypie/vocabulary/llm";
+import { fabricService } from "@jaypie/fabric";
+import { fabricTool } from "@jaypie/fabric/llm";
 
-const calculateHandler = serviceHandler({
+const calculateHandler = fabricService({
   alias: "calculate",
   description: "Perform a mathematical calculation",
   input: {
@@ -80,7 +80,7 @@ const calculateHandler = serviceHandler({
   },
 });
 
-const { tool } = createLlmTool({ handler: calculateHandler });
+const { tool } = fabricTool({ service: calculateHandler });
 
 // Tool has these properties:
 // tool.name: "calculate"
@@ -92,8 +92,8 @@ const { tool } = createLlmTool({ handler: calculateHandler });
 ### Overriding Name and Description
 
 ```typescript
-const { tool } = createLlmTool({
-  handler,
+const { tool } = fabricTool({
+  service: handler,
   name: "math_calculator",
   description: "A tool for performing basic math operations",
 });
@@ -102,7 +102,7 @@ const { tool } = createLlmTool({
 ### Excluding Fields
 
 ```typescript
-const handler = serviceHandler({
+const handler = fabricService({
   alias: "search",
   input: {
     query: { type: String },
@@ -112,8 +112,8 @@ const handler = serviceHandler({
   service: async (params) => { /* ... */ },
 });
 
-const { tool } = createLlmTool({
-  handler,
+const { tool } = fabricTool({
+  service: handler,
   exclude: ["_internalId"],  // Not exposed to LLM
 });
 ```
@@ -123,7 +123,7 @@ const { tool } = createLlmTool({
 Services can use context callbacks to report progress, errors, and completion:
 
 ```typescript
-const handler = serviceHandler({
+const handler = fabricService({
   alias: "evaluate",
   input: { jobId: { type: String } },
   service: async ({ jobId }, context) => {
@@ -139,8 +139,8 @@ const handler = serviceHandler({
   },
 });
 
-const { tool } = createLlmTool({
-  handler,
+const { tool } = fabricTool({
+  service: handler,
   onComplete: (result) => console.log("Tool completed:", result),
   onError: (error) => console.warn("Recoverable error:", error),
   onFatal: (error) => console.error("Fatal error:", error),
@@ -152,10 +152,10 @@ const { tool } = createLlmTool({
 
 ## inputToJsonSchema
 
-Converts vocabulary input definitions to JSON Schema:
+Converts fabric input definitions to JSON Schema:
 
 ```typescript
-import { inputToJsonSchema } from "@jaypie/vocabulary/llm";
+import { inputToJsonSchema } from "@jaypie/fabric/llm";
 
 const schema = inputToJsonSchema({
   userName: { type: String, description: "User's name" },
@@ -177,8 +177,8 @@ const schema = inputToJsonSchema({
 
 ### Type Mappings
 
-| Vocabulary Type | JSON Schema |
-|-----------------|-------------|
+| Fabric Type | JSON Schema |
+|-------------|-------------|
 | `String` | `{ type: "string" }` |
 | `Number` | `{ type: "number" }` |
 | `Boolean` | `{ type: "boolean" }` |
@@ -201,12 +201,12 @@ const schema = inputToJsonSchema(handler.input, {
 ## Complete Example
 
 ```typescript
-import { serviceHandler } from "@jaypie/vocabulary";
-import { createLlmTool } from "@jaypie/vocabulary/llm";
+import { fabricService } from "@jaypie/fabric";
+import { fabricTool } from "@jaypie/fabric/llm";
 import { Llm, Toolkit } from "@jaypie/llm";
 
 // Define service handlers
-const weatherHandler = serviceHandler({
+const weatherHandler = fabricService({
   alias: "get_weather",
   description: "Get current weather for a location",
   input: {
@@ -224,7 +224,7 @@ const weatherHandler = serviceHandler({
   },
 });
 
-const searchHandler = serviceHandler({
+const searchHandler = fabricService({
   alias: "search_web",
   description: "Search the web for information",
   input: {
@@ -237,8 +237,8 @@ const searchHandler = serviceHandler({
 });
 
 // Create tools
-const { tool: weatherTool } = createLlmTool({ handler: weatherHandler });
-const { tool: searchTool } = createLlmTool({ handler: searchHandler });
+const { tool: weatherTool } = fabricTool({ service: weatherHandler });
+const { tool: searchTool } = fabricTool({ service: searchHandler });
 
 // Use with Toolkit
 const toolkit = new Toolkit([weatherTool, searchTool]);
@@ -251,14 +251,14 @@ const response = await llm.ask("What's the weather in Tokyo?");
 
 ```typescript
 import type {
-  CreateLlmToolConfig,
-  CreateLlmToolResult,
+  FabricToolConfig,
+  FabricToolResult,
   LlmTool,
   OnCompleteCallback,
   OnErrorCallback,
   OnFatalCallback,
   OnMessageCallback,
-} from "@jaypie/vocabulary/llm";
+} from "@jaypie/fabric/llm";
 ```
 
 ### Type Definitions
@@ -271,8 +271,8 @@ interface LlmTool {
   function: (params: Record<string, unknown>) => Promise<unknown>;
 }
 
-interface CreateLlmToolConfig {
-  handler: ServiceHandlerFunction;
+interface FabricToolConfig {
+  service: Service;
   name?: string;
   description?: string;
   message?: string | ((params: Record<string, unknown>) => string);
@@ -283,7 +283,7 @@ interface CreateLlmToolConfig {
   onMessage?: OnMessageCallback;
 }
 
-interface CreateLlmToolResult {
+interface FabricToolResult {
   tool: LlmTool;
 }
 ```
@@ -291,13 +291,13 @@ interface CreateLlmToolResult {
 ## Exports
 
 ```typescript
-// @jaypie/vocabulary/llm
-export { createLlmTool } from "./createLlmTool.js";
+// @jaypie/fabric/llm
+export { fabricTool } from "./fabricTool.js";
 export { inputToJsonSchema } from "./inputToJsonSchema.js";
 
 export type {
-  CreateLlmToolConfig,
-  CreateLlmToolResult,
+  FabricToolConfig,
+  FabricToolResult,
   LlmTool,
   OnCompleteCallback,
   OnErrorCallback,
@@ -308,5 +308,5 @@ export type {
 
 ## Related
 
-- [Jaypie_Vocabulary_Package.md](Jaypie_Vocabulary_Package.md) - Core serviceHandler and type coercion
+- [Jaypie_Fabric_Package.md](Jaypie_Fabric_Package.md) - Core fabricService and type conversion
 - [Jaypie_Llm_Tools.md](Jaypie_Llm_Tools.md) - LLM tools and Toolkit usage

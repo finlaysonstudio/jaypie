@@ -6,7 +6,7 @@ Jaypie modeling framework - provides type conversion and service handler pattern
 
 | Attribute | Value |
 |-----------|-------|
-| Status | Initial development (0.0.x) |
+| Status | Initial development (0.1.x) |
 | Type | Utility library |
 | Dependencies | `@jaypie/errors` |
 | Peer Dependencies | `@jaypie/aws` (optional), `@jaypie/lambda` (optional), `@modelcontextprotocol/sdk` (optional), `commander` (optional) |
@@ -51,13 +51,11 @@ src/
 ├── convert.ts                     # Type conversion utilities
 ├── convert-date.ts                # Date conversion utilities
 ├── index.ts                       # Package exports
-├── index/                         # Index utilities
-│   ├── buildCompositeKey.ts
-│   ├── calculateOu.ts
-│   ├── defaultIndexes.ts
-│   ├── index.ts
-│   ├── populateIndexKeys.ts
-│   └── registry.ts
+├── index/                         # Index utilities for DynamoDB GSIs
+│   ├── index.ts                   # Module exports
+│   ├── keyBuilder.ts              # buildCompositeKey, calculateOu, populateIndexKeys
+│   ├── registry.ts                # Model registry for custom indexes
+│   └── types.ts                   # IndexDefinition, IndexableModel types
 ├── service.ts                     # Service handler factory
 ├── status.ts                      # Status type and validators
 └── types.ts                       # TypeScript type definitions
@@ -193,7 +191,7 @@ Located in `models/base.ts`:
 | `FabricModelFilter` | Filter options for listing models |
 | `FabricHistoryEntry` | Reverse delta recording previous values of changed fields |
 | `FabricMessage` | Message model extending FabricModel with required content field |
-| `Progress` | Tracks job execution progress |
+| `FabricProgress` | Value object (not a model) tracking job execution progress |
 | `FabricJob` | Job model extending FabricModel with status (required), startedAt, completedAt, messages, progress |
 | `IndexDefinition` | GSI index definition with name, pk, sk |
 | `IndexableModel` | Model with indexable fields |

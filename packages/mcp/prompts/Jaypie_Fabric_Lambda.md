@@ -1,27 +1,27 @@
 ---
-description: AWS Lambda integration with serviceHandler for event processing and callbacks
+description: AWS Lambda integration with fabricService for event processing and callbacks
 include: "**/lambda/**"
 ---
 
-# Jaypie Vocabulary Lambda Adapter
+# Jaypie Fabric Lambda Adapter
 
-The Lambda adapter (`@jaypie/vocabulary/lambda`) wraps Jaypie service handlers for use as AWS Lambda handlers, providing automatic event parsing, secrets management, and lifecycle hooks.
+The Lambda adapter (`@jaypie/fabric/lambda`) wraps Jaypie service handlers for use as AWS Lambda handlers, providing automatic event parsing, secrets management, and lifecycle hooks.
 
-**See also:** [Jaypie_Vocabulary_Package.md](Jaypie_Vocabulary_Package.md) for core serviceHandler documentation.
+**See also:** [Jaypie_Fabric_Package.md](Jaypie_Fabric_Package.md) for core fabricService documentation.
 
 ## Installation
 
 ```bash
-npm install @jaypie/vocabulary
+npm install @jaypie/fabric
 ```
 
 ## Quick Start
 
 ```typescript
-import { serviceHandler } from "@jaypie/vocabulary";
-import { lambdaServiceHandler } from "@jaypie/vocabulary/lambda";
+import { fabricService } from "@jaypie/fabric";
+import { fabricLambda } from "@jaypie/fabric/lambda";
 
-const handler = serviceHandler({
+const handler = fabricService({
   alias: "processOrder",
   input: { orderId: { type: String } },
   service: async ({ orderId }) => {
@@ -29,18 +29,18 @@ const handler = serviceHandler({
   },
 });
 
-export const lambdaHandler = lambdaServiceHandler({ handler });
+export const lambdaHandler = fabricLambda({ service: handler });
 ```
 
-## lambdaServiceHandler
+## fabricLambda
 
-Wraps a serviceHandler for use as an AWS Lambda handler.
+Wraps a fabricService for use as an AWS Lambda handler.
 
 ### Options
 
 | Option | Type | Description |
 |--------|------|-------------|
-| `handler` | `ServiceHandlerFunction` | Required. The service handler to wrap |
+| `service` | `Service` | Required. The service handler to wrap |
 | `chaos` | `string` | Chaos testing mode |
 | `name` | `string` | Override handler name for logging (default: handler.alias) |
 | `onComplete` | `OnCompleteCallback` | Called with handler's return value on success |
@@ -59,10 +59,10 @@ Wraps a serviceHandler for use as an AWS Lambda handler.
 Services can use context callbacks to report progress, errors, and completion:
 
 ```typescript
-import { serviceHandler } from "@jaypie/vocabulary";
-import { lambdaServiceHandler } from "@jaypie/vocabulary/lambda";
+import { fabricService } from "@jaypie/fabric";
+import { fabricLambda } from "@jaypie/fabric/lambda";
 
-const handler = serviceHandler({
+const handler = fabricService({
   alias: "evaluate",
   input: { jobId: { type: String } },
   service: async ({ jobId }, context) => {
@@ -84,8 +84,8 @@ const handler = serviceHandler({
   },
 });
 
-export const lambdaHandler = lambdaServiceHandler({
-  handler,
+export const lambdaHandler = fabricLambda({
+  service: handler,
   onComplete: (response) => {
     console.log("Done:", JSON.stringify(response, null, 2));
   },
@@ -110,8 +110,8 @@ export const lambdaHandler = lambdaServiceHandler({
 Automatically loads AWS Secrets Manager values into `process.env`:
 
 ```typescript
-export const lambdaHandler = lambdaServiceHandler({
-  handler,
+export const lambdaHandler = fabricLambda({
+  service: handler,
   secrets: ["ANTHROPIC_API_KEY", "DATABASE_URL"],
 });
 // Before handler runs, secrets are fetched and available as:
@@ -126,8 +126,8 @@ export const lambdaHandler = lambdaServiceHandler({
 Functions to run before the handler:
 
 ```typescript
-export const lambdaHandler = lambdaServiceHandler({
-  handler,
+export const lambdaHandler = fabricLambda({
+  service: handler,
   setup: [
     async () => {
       await initializeDatabase();
@@ -144,8 +144,8 @@ export const lambdaHandler = lambdaServiceHandler({
 Functions to run after the handler (always runs, even on error):
 
 ```typescript
-export const lambdaHandler = lambdaServiceHandler({
-  handler,
+export const lambdaHandler = fabricLambda({
+  service: handler,
   teardown: [
     async () => {
       await closeConnections();
@@ -159,8 +159,8 @@ export const lambdaHandler = lambdaServiceHandler({
 Validation functions to run before handler. If any returns falsy or throws, handler is skipped:
 
 ```typescript
-export const lambdaHandler = lambdaServiceHandler({
-  handler,
+export const lambdaHandler = fabricLambda({
+  service: handler,
   validate: [
     (event) => event.headers?.authorization !== undefined,
     async (event) => {
@@ -197,11 +197,11 @@ const results = await lambdaHandler(sqsBatchEvent);
 ## Complete Example
 
 ```typescript
-import { serviceHandler } from "@jaypie/vocabulary";
-import { lambdaServiceHandler } from "@jaypie/vocabulary/lambda";
+import { fabricService } from "@jaypie/fabric";
+import { fabricLambda } from "@jaypie/fabric/lambda";
 import log from "@jaypie/logger";
 
-const processOrderHandler = serviceHandler({
+const processOrderHandler = fabricService({
   alias: "processOrder",
   description: "Process an incoming order",
   input: {
@@ -224,8 +224,8 @@ const processOrderHandler = serviceHandler({
   },
 });
 
-export const handler = lambdaServiceHandler({
-  handler: processOrderHandler,
+export const handler = fabricLambda({
+  service: processOrderHandler,
   name: "order-processor",
   secrets: ["DATABASE_URL", "STRIPE_API_KEY"],
   setup: [
@@ -265,8 +265,8 @@ Errors are caught and returned as structured error responses:
 Set `throw: true` to re-throw errors (useful for SQS retry behavior):
 
 ```typescript
-export const lambdaHandler = lambdaServiceHandler({
-  handler,
+export const lambdaHandler = fabricLambda({
+  service: handler,
   throw: true, // Errors will propagate, triggering SQS retry
 });
 ```
@@ -275,28 +275,26 @@ export const lambdaHandler = lambdaServiceHandler({
 
 ```typescript
 import type {
+  FabricLambdaConfig,
+  FabricLambdaOptions,
   LambdaContext,
-  LambdaServiceHandlerConfig,
-  LambdaServiceHandlerOptions,
-  LambdaServiceHandlerResult,
   OnCompleteCallback,
   OnErrorCallback,
   OnFatalCallback,
   OnMessageCallback,
-} from "@jaypie/vocabulary/lambda";
+} from "@jaypie/fabric/lambda";
 ```
 
 ## Exports
 
 ```typescript
-// @jaypie/vocabulary/lambda
-export { lambdaServiceHandler } from "./lambdaServiceHandler.js";
+// @jaypie/fabric/lambda
+export { fabricLambda } from "./fabricLambda.js";
 
 export type {
+  FabricLambdaConfig,
+  FabricLambdaOptions,
   LambdaContext,
-  LambdaServiceHandlerConfig,
-  LambdaServiceHandlerOptions,
-  LambdaServiceHandlerResult,
   OnCompleteCallback,
   OnErrorCallback,
   OnFatalCallback,
@@ -306,5 +304,5 @@ export type {
 
 ## Related
 
-- [Jaypie_Vocabulary_Package.md](Jaypie_Vocabulary_Package.md) - Core serviceHandler and type coercion
+- [Jaypie_Fabric_Package.md](Jaypie_Fabric_Package.md) - Core fabricService and type conversion
 - [Jaypie_Init_Lambda_Package.md](Jaypie_Init_Lambda_Package.md) - Setting up Lambda projects

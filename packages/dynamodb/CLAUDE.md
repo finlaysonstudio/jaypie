@@ -18,10 +18,10 @@ This package provides utilities for:
 src/
 ├── __tests__/           # Test files
 ├── client.ts            # Client initialization and management
-├── constants.ts         # APEX, SEPARATOR, GSI index names
+├── constants.ts         # Re-exports from @jaypie/fabric (APEX, SEPARATOR, etc.)
 ├── entities.ts          # Entity CRUD operations
 ├── index.ts             # Package exports
-├── keyBuilders.ts       # Key builder and entity utilities
+├── keyBuilders.ts       # Key builders (wraps @jaypie/fabric utilities)
 ├── queries.ts           # Query functions for each GSI
 ├── seedExport.ts        # Seed and export utilities
 └── types.ts             # TypeScript interfaces
@@ -445,6 +445,10 @@ npm run typecheck # Type check
 npm run lint      # Lint code
 npm run format    # Auto-fix lint issues
 ```
+
+## Dependencies
+
+- `@jaypie/fabric` - Index utilities (`APEX`, `SEPARATOR`, `calculateOu`, `buildCompositeKey`, `populateIndexKeys`)
 
 ## Peer Dependencies
 

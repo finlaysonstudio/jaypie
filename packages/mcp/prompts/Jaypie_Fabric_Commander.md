@@ -1,28 +1,28 @@
 ---
-description: Commander.js CLI integration with serviceHandler callbacks (onMessage, onComplete, onError, onFatal)
+description: Commander.js CLI integration with fabricService callbacks (onMessage, onComplete, onError, onFatal)
 include: "**/cli/**"
 ---
 
-# Jaypie Vocabulary Commander Adapter
+# Jaypie Fabric Commander Adapter
 
-The Commander adapter (`@jaypie/vocabulary/commander`) integrates Jaypie service handlers with Commander.js CLI applications, providing automatic option generation, type coercion, and callback hooks for progress reporting.
+The Commander adapter (`@jaypie/fabric/commander`) integrates Jaypie service handlers with Commander.js CLI applications, providing automatic option generation, type conversion, and callback hooks for progress reporting.
 
-**See also:** [Jaypie_Vocabulary_Package.md](Jaypie_Vocabulary_Package.md) for core serviceHandler documentation.
+**See also:** [Jaypie_Fabric_Package.md](Jaypie_Fabric_Package.md) for core fabricService documentation.
 
 ## Installation
 
 ```bash
-npm install @jaypie/vocabulary commander
+npm install @jaypie/fabric commander
 ```
 
 ## Quick Start
 
 ```typescript
 import { Command } from "commander";
-import { serviceHandler } from "@jaypie/vocabulary";
-import { registerServiceCommand } from "@jaypie/vocabulary/commander";
+import { fabricService } from "@jaypie/fabric";
+import { fabricCommand } from "@jaypie/fabric/commander";
 
-const handler = serviceHandler({
+const handler = fabricService({
   alias: "greet",
   description: "Greet a user",
   input: {
@@ -36,12 +36,12 @@ const handler = serviceHandler({
 });
 
 const program = new Command();
-registerServiceCommand({ handler, program });
+fabricCommand({ service: handler, program });
 program.parse();
 // Usage: greet --user Alice -l
 ```
 
-## registerServiceCommand
+## fabricCommand
 
 The primary function for registering a service handler as a Commander command.
 
@@ -49,7 +49,7 @@ The primary function for registering a service handler as a Commander command.
 
 | Option | Type | Description |
 |--------|------|-------------|
-| `handler` | `ServiceHandlerFunction` | Required. The service handler to register |
+| `service` | `Service` | Required. The service handler to register |
 | `program` | `Command` | Required. Commander program or command |
 | `name` | `string` | Override command name (default: handler.alias) |
 | `description` | `string` | Override description (default: handler.description) |
@@ -68,10 +68,10 @@ Receives progress messages sent by the service via `context.sendMessage`:
 
 ```typescript
 import { Command } from "commander";
-import { serviceHandler } from "@jaypie/vocabulary";
-import { registerServiceCommand } from "@jaypie/vocabulary/commander";
+import { fabricService } from "@jaypie/fabric";
+import { fabricCommand } from "@jaypie/fabric/commander";
 
-const handler = serviceHandler({
+const handler = fabricService({
   alias: "process",
   input: { jobId: { type: String, letter: "j" } },
   service: async ({ jobId }, context) => {
@@ -91,8 +91,8 @@ const handler = serviceHandler({
 });
 
 const program = new Command();
-registerServiceCommand({
-  handler,
+fabricCommand({
+  service: handler,
   program,
   onMessage: (msg) => {
     // msg: { content: string, level?: "trace"|"debug"|"info"|"warn"|"error" }
@@ -110,8 +110,8 @@ program.parse();
 Called with the handler's return value on successful completion:
 
 ```typescript
-registerServiceCommand({
-  handler,
+fabricCommand({
+  service: handler,
   program,
   onComplete: (response) => {
     // Called after service completes successfully
@@ -130,8 +130,8 @@ registerServiceCommand({
 Receives errors that the service explicitly reports via `context.onError()`. Use this for recoverable errors that don't halt execution:
 
 ```typescript
-registerServiceCommand({
-  handler,
+fabricCommand({
+  service: handler,
   program,
   onError: (error) => {
     // Log recoverable errors
@@ -145,8 +145,8 @@ registerServiceCommand({
 Receives fatal errors - either thrown errors or errors reported via `context.onFatal()`. Any error that escapes the service (is thrown) is treated as fatal:
 
 ```typescript
-registerServiceCommand({
-  handler,
+fabricCommand({
+  service: handler,
   program,
   onFatal: (error) => {
     console.error("Fatal error:", error.message);
@@ -164,10 +164,10 @@ registerServiceCommand({
 
 ```typescript
 import { Command } from "commander";
-import { serviceHandler } from "@jaypie/vocabulary";
-import { registerServiceCommand } from "@jaypie/vocabulary/commander";
+import { fabricService } from "@jaypie/fabric";
+import { fabricCommand } from "@jaypie/fabric/commander";
 
-const evaluateHandler = serviceHandler({
+const evaluateHandler = fabricService({
   alias: "evaluate",
   description: "Run an evaluation job",
   input: {
@@ -231,8 +231,8 @@ const evaluateHandler = serviceHandler({
 const program = new Command();
 program.version("1.0.0").description("Evaluation CLI");
 
-registerServiceCommand({
-  handler: evaluateHandler,
+fabricCommand({
+  service: evaluateHandler,
   program,
   onMessage: (msg) => {
     const prefix = msg.level === "warn" ? "WARNING: " :
@@ -309,13 +309,13 @@ For more control, use `createCommanderOptions` and `parseCommanderOptions`:
 
 ```typescript
 import { Command } from "commander";
-import { serviceHandler } from "@jaypie/vocabulary";
+import { fabricService } from "@jaypie/fabric";
 import {
   createCommanderOptions,
   parseCommanderOptions,
-} from "@jaypie/vocabulary/commander";
+} from "@jaypie/fabric/commander";
 
-const handler = serviceHandler({
+const handler = fabricService({
   input: {
     userName: { type: String, description: "User name" },
     maxRetries: { type: Number, default: 3 },
@@ -351,14 +351,14 @@ import type {
   CommanderOptionOverride,
   CreateCommanderOptionsConfig,
   CreateCommanderOptionsResult,
+  FabricCommandConfig,
+  FabricCommandResult,
   OnCompleteCallback,
   OnErrorCallback,
   OnFatalCallback,
   OnMessageCallback,
   ParseCommanderOptionsConfig,
-  RegisterServiceCommandConfig,
-  RegisterServiceCommandResult,
-} from "@jaypie/vocabulary/commander";
+} from "@jaypie/fabric/commander";
 ```
 
 ### Callback Type Definitions
@@ -386,26 +386,26 @@ type OnFatalCallback = (error: unknown) => void | Promise<void>;
 ## Exports
 
 ```typescript
-// @jaypie/vocabulary/commander
+// @jaypie/fabric/commander
 export { createCommanderOptions } from "./createCommanderOptions.js";
 export { parseCommanderOptions } from "./parseCommanderOptions.js";
-export { registerServiceCommand } from "./registerServiceCommand.js";
+export { fabricCommand } from "./fabricCommand.js";
 
 export type {
   CommanderOptionOverride,
   CreateCommanderOptionsConfig,
   CreateCommanderOptionsResult,
+  FabricCommandConfig,
+  FabricCommandResult,
   OnCompleteCallback,
   OnErrorCallback,
   OnFatalCallback,
   OnMessageCallback,
   ParseCommanderOptionsConfig,
-  RegisterServiceCommandConfig,
-  RegisterServiceCommandResult,
 } from "./types.js";
 ```
 
 ## Related
 
 - [Jaypie_Commander_CLI_Package.md](Jaypie_Commander_CLI_Package.md) - Setting up a Commander CLI project from scratch
-- [Jaypie_Vocabulary_Package.md](Jaypie_Vocabulary_Package.md) - Core serviceHandler and type coercion
+- [Jaypie_Fabric_Package.md](Jaypie_Fabric_Package.md) - Core fabricService and type conversion

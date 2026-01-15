@@ -2,20 +2,20 @@
 sidebar_position: 2
 ---
 
-# Vocabulary System
+# Fabric System
 
 
 **Prerequisites:** Understanding of service handlers
 
 ## Overview
 
-The Vocabulary system provides a pattern for creating handlers with typed inputs that automatically coerce values and work across CLI, Lambda, LLM, and MCP contexts.
+The Fabric system provides a pattern for creating handlers with typed inputs that automatically convert values and work across CLI, Lambda, LLM, and MCP contexts.
 
 ## Core Concept
 
 Service handlers define their input schema declaratively, enabling:
 
-- **Type coercion** - `"true"` becomes `true`, `"42"` becomes `42`
+- **Type conversion** - `"true"` becomes `true`, `"42"` becomes `42`
 - **Validation** - Required fields, custom validators
 - **Adapter generation** - Auto-generate CLI options, LLM tool schemas, etc.
 
@@ -24,30 +24,30 @@ Service handlers define their input schema declaratively, enabling:
 ### Definition
 
 ```typescript
-import { serviceHandler } from "@jaypie/vocabulary";
+import { fabricService } from "@jaypie/fabric";
 
-const createUser = serviceHandler({
-  name: "create_user",
+const createUser = fabricService({
+  alias: "create_user",
   description: "Create a new user",
   input: {
     name: {
-      type: "string",
+      type: String,
       required: true,
       description: "User's full name",
     },
     email: {
-      type: "string",
+      type: String,
       required: true,
       description: "User's email address",
     },
     age: {
-      type: "number",
+      type: Number,
       required: false,
       default: 0,
       description: "User's age",
     },
   },
-  handler: async ({ name, email, age }) => {
+  service: async ({ name, email, age }) => {
     return await db.users.create({ name, email, age });
   },
 });
@@ -55,17 +55,16 @@ const createUser = serviceHandler({
 
 ### Input Types
 
-| Type | Description | Coercion |
+| Type | Description | Conversion |
 |------|-------------|----------|
-| `string` | Text value | `.toString()` |
-| `number` | Numeric value | `parseFloat()`, NaN → default |
-| `boolean` | True/false | `"true"`, `"1"`, `1` → true |
-| `array` | List of values | Single → `[value]` |
-| `object` | Object value | JSON parse if string |
-| `date` | Date value | `new Date()` |
-| `uuid` | UUID string | Validation |
+| `String` | Text value | `.toString()` |
+| `Number` | Numeric value | `parseFloat()`, NaN → default |
+| `Boolean` | True/false | `"true"`, `"1"`, `1` → true |
+| `Array` | List of values | Single → `[value]` |
+| `Object` | Object value | JSON parse if string |
+| `Date` | Date value | `new Date()` |
 
-## Type Coercion Philosophy
+## Type Conversion Philosophy
 
 "Smooth, pliable" - inputs should work naturally:
 
@@ -102,11 +101,9 @@ handler({ email: null }); // if required
 ### Commander CLI
 
 ```typescript
-import { registerServiceCommand } from "@jaypie/vocabulary";
+import { fabricCommand } from "@jaypie/fabric/commander";
 
-registerServiceCommand(program, createUser, {
-  onComplete: (result) => console.log(result),
-});
+fabricCommand({ service: createUser, program });
 
 // Generates:
 // my-cli create_user --name "Alice" --email "alice@example.com" --age 25
@@ -115,9 +112,10 @@ registerServiceCommand(program, createUser, {
 ### Lambda
 
 ```typescript
-import { lambdaServiceHandler } from "@jaypie/vocabulary";
+import { fabricLambda } from "@jaypie/fabric/lambda";
 
-export const handler = lambdaServiceHandler(createUser, {
+export const handler = fabricLambda({
+  service: createUser,
   secrets: ["MONGODB_URI"],
 });
 
@@ -130,32 +128,31 @@ export const handler = lambdaServiceHandler(createUser, {
 ### LLM Tool
 
 ```typescript
-import { createLlmTool } from "@jaypie/vocabulary";
+import { fabricTool } from "@jaypie/fabric/llm";
 
-const tool = createLlmTool(createUser);
+const { tool } = fabricTool({ service: createUser });
 // Generates JSON Schema for tool parameters
 ```
 
 ### MCP Tool
 
 ```typescript
-import { registerMcpTool } from "@jaypie/vocabulary";
+import { fabricMcp } from "@jaypie/fabric/mcp";
 
-registerMcpTool(server, createUser);
+fabricMcp({ service: createUser, server });
 // Registers as MCP tool with schema
 ```
 
 ## JSON Schema Mapping
 
-| Vocabulary | JSON Schema |
-|------------|-------------|
-| `string` | `{ type: "string" }` |
-| `number` | `{ type: "number" }` |
-| `boolean` | `{ type: "boolean" }` |
-| `array` | `{ type: "array" }` |
-| `object` | `{ type: "object" }` |
-| `date` | `{ type: "string", format: "date-time" }` |
-| `uuid` | `{ type: "string", format: "uuid" }` |
+| Fabric | JSON Schema |
+|--------|-------------|
+| `String` | `{ type: "string" }` |
+| `Number` | `{ type: "number" }` |
+| `Boolean` | `{ type: "boolean" }` |
+| `Array` | `{ type: "array" }` |
+| `Object` | `{ type: "object" }` |
+| `Date` | `{ type: "string", format: "date-time" }` |
 
 Required fields go in JSON Schema `required` array.
 
@@ -167,10 +164,9 @@ Required fields go in JSON Schema `required` array.
 {
   input: {
     email: {
-      type: "string",
+      type: String,
       required: true,
       validate: (value) => value.includes("@"),
-      errorMessage: "Invalid email format",
     },
   },
 }
@@ -182,7 +178,7 @@ Required fields go in JSON Schema `required` array.
 {
   input: {
     age: {
-      type: "number",
+      type: Number,
       validate: (value) => {
         if (value < 0) throw BadRequestError("Age cannot be negative");
         if (value > 150) throw BadRequestError("Age too high");
@@ -198,7 +194,9 @@ Required fields go in JSON Schema `required` array.
 Adapters support lifecycle callbacks:
 
 ```typescript
-registerServiceCommand(program, handler, {
+fabricCommand({
+  service: handler,
+  program,
   onMessage: (message) => {
     // Progress updates
     console.log(message);
@@ -235,20 +233,17 @@ Errors propagate through all adapters:
 ### Adapter Pattern
 
 ```typescript
-function myAdapter(handler, options) {
+function myAdapter(service, options) {
   return async (rawInput) => {
     // 1. Extract input from context
     const extracted = extractInput(rawInput);
 
-    // 2. Coerce types
-    const coerced = coerceInput(handler.input, extracted);
-
-    // 3. Validate
-    validateInput(handler.input, coerced);
+    // 2. Convert types (handled by fabricService)
+    // 3. Validate (handled by fabricService)
 
     // 4. Execute handler
     try {
-      const result = await handler.handler(coerced);
+      const result = await service(extracted);
       options.onComplete?.(result);
       return result;
     } catch (error) {
@@ -261,7 +256,7 @@ function myAdapter(handler, options) {
 
 ## Related
 
-- [Vocabulary](/docs/experimental/vocabulary) - Full API reference
+- [Fabric](/docs/experimental/vocabulary) - Full API reference
 - [@jaypie/llm](/docs/packages/llm) - LLM integration
 - [@jaypie/mcp](/docs/experimental/mcp) - MCP integration
 - [@jaypie/lambda](/docs/packages/lambda) - Lambda handlers

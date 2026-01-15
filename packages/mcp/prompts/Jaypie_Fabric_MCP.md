@@ -1,27 +1,27 @@
 ---
-description: MCP server tool registration from serviceHandler
+description: MCP server tool registration from fabricService
 ---
 
-# Jaypie Vocabulary MCP Adapter
+# Jaypie Fabric MCP Adapter
 
-The MCP adapter (`@jaypie/vocabulary/mcp`) registers Jaypie service handlers as MCP (Model Context Protocol) tools for use with MCP servers.
+The MCP adapter (`@jaypie/fabric/mcp`) registers Jaypie service handlers as MCP (Model Context Protocol) tools for use with MCP servers.
 
-**See also:** [Jaypie_Vocabulary_Package.md](Jaypie_Vocabulary_Package.md) for core serviceHandler documentation.
+**See also:** [Jaypie_Fabric_Package.md](Jaypie_Fabric_Package.md) for core fabricService documentation.
 
 ## Installation
 
 ```bash
-npm install @jaypie/vocabulary @modelcontextprotocol/sdk
+npm install @jaypie/fabric @modelcontextprotocol/sdk
 ```
 
 ## Quick Start
 
 ```typescript
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { serviceHandler } from "@jaypie/vocabulary";
-import { registerMcpTool } from "@jaypie/vocabulary/mcp";
+import { fabricService } from "@jaypie/fabric";
+import { fabricMcp } from "@jaypie/fabric/mcp";
 
-const handler = serviceHandler({
+const handler = fabricService({
   alias: "greet",
   description: "Greet a user by name",
   input: {
@@ -35,18 +35,18 @@ const handler = serviceHandler({
 });
 
 const server = new McpServer({ name: "my-server", version: "1.0.0" });
-registerMcpTool({ handler, server });
+fabricMcp({ service: handler, server });
 ```
 
-## registerMcpTool
+## fabricMcp
 
-Registers a serviceHandler as an MCP tool.
+Registers a fabricService as an MCP tool.
 
 ### Options
 
 | Option | Type | Description |
 |--------|------|-------------|
-| `handler` | `ServiceHandlerFunction` | Required. The service handler to adapt |
+| `service` | `Service` | Required. The service handler to adapt |
 | `server` | `McpServer` | Required. The MCP server to register with |
 | `name` | `string` | Override tool name (defaults to handler.alias) |
 | `description` | `string` | Override tool description (defaults to handler.description) |
@@ -59,10 +59,10 @@ Registers a serviceHandler as an MCP tool.
 
 ```typescript
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { serviceHandler } from "@jaypie/vocabulary";
-import { registerMcpTool } from "@jaypie/vocabulary/mcp";
+import { fabricService } from "@jaypie/fabric";
+import { fabricMcp } from "@jaypie/fabric/mcp";
 
-const calculateHandler = serviceHandler({
+const calculateHandler = fabricService({
   alias: "calculate",
   description: "Perform a mathematical calculation",
   input: {
@@ -81,14 +81,14 @@ const calculateHandler = serviceHandler({
 });
 
 const server = new McpServer({ name: "calculator", version: "1.0.0" });
-registerMcpTool({ handler: calculateHandler, server });
+fabricMcp({ service: calculateHandler, server });
 ```
 
 ### Overriding Name and Description
 
 ```typescript
-registerMcpTool({
-  handler,
+fabricMcp({
+  service: handler,
   server,
   name: "math_calculate",
   description: "A tool for performing basic math operations",
@@ -100,7 +100,7 @@ registerMcpTool({
 Services can use context callbacks to report progress, errors, and completion:
 
 ```typescript
-const handler = serviceHandler({
+const handler = fabricService({
   alias: "evaluate",
   input: { jobId: { type: String } },
   service: async ({ jobId }, context) => {
@@ -116,8 +116,8 @@ const handler = serviceHandler({
   },
 });
 
-registerMcpTool({
-  handler,
+fabricMcp({
+  service: handler,
   server,
   onComplete: (result) => console.log("Tool completed:", result),
   onError: (error) => console.warn("Recoverable error:", error),
@@ -165,11 +165,11 @@ For string responses:
 ```typescript
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { serviceHandler } from "@jaypie/vocabulary";
-import { registerMcpTool } from "@jaypie/vocabulary/mcp";
+import { fabricService } from "@jaypie/fabric";
+import { fabricMcp } from "@jaypie/fabric/mcp";
 
 // Define handlers
-const weatherHandler = serviceHandler({
+const weatherHandler = fabricService({
   alias: "get_weather",
   description: "Get current weather for a location",
   input: {
@@ -187,7 +187,7 @@ const weatherHandler = serviceHandler({
   },
 });
 
-const searchHandler = serviceHandler({
+const searchHandler = fabricService({
   alias: "search",
   description: "Search for information",
   input: {
@@ -205,8 +205,8 @@ const server = new McpServer({
   version: "1.0.0",
 });
 
-registerMcpTool({ handler: weatherHandler, server });
-registerMcpTool({ handler: searchHandler, server });
+fabricMcp({ service: weatherHandler, server });
+fabricMcp({ service: searchHandler, server });
 
 // Start server
 const transport = new StdioServerTransport();
@@ -233,15 +233,15 @@ input: {
 
 ```typescript
 import type {
+  FabricMcpConfig,
+  FabricMcpResult,
   McpToolContentItem,
   McpToolResponse,
   OnCompleteCallback,
   OnErrorCallback,
   OnFatalCallback,
   OnMessageCallback,
-  RegisterMcpToolConfig,
-  RegisterMcpToolResult,
-} from "@jaypie/vocabulary/mcp";
+} from "@jaypie/fabric/mcp";
 ```
 
 ### Type Definitions
@@ -256,8 +256,8 @@ interface McpToolResponse {
   content: McpToolContentItem[];
 }
 
-interface RegisterMcpToolConfig {
-  handler: ServiceHandlerFunction;
+interface FabricMcpConfig {
+  service: Service;
   server: McpServer;
   name?: string;
   description?: string;
@@ -267,7 +267,7 @@ interface RegisterMcpToolConfig {
   onMessage?: OnMessageCallback;
 }
 
-interface RegisterMcpToolResult {
+interface FabricMcpResult {
   name: string;
 }
 ```
@@ -275,22 +275,22 @@ interface RegisterMcpToolResult {
 ## Exports
 
 ```typescript
-// @jaypie/vocabulary/mcp
-export { registerMcpTool } from "./registerMcpTool.js";
+// @jaypie/fabric/mcp
+export { fabricMcp } from "./fabricMcp.js";
 
 export type {
+  FabricMcpConfig,
+  FabricMcpResult,
   McpToolContentItem,
   McpToolResponse,
   OnCompleteCallback,
   OnErrorCallback,
   OnFatalCallback,
   OnMessageCallback,
-  RegisterMcpToolConfig,
-  RegisterMcpToolResult,
 } from "./types.js";
 ```
 
 ## Related
 
-- [Jaypie_Vocabulary_Package.md](Jaypie_Vocabulary_Package.md) - Core serviceHandler and type coercion
-- [Jaypie_Vocabulary_LLM.md](Jaypie_Vocabulary_LLM.md) - LLM tool creation (similar pattern)
+- [Jaypie_Fabric_Package.md](Jaypie_Fabric_Package.md) - Core fabricService and type conversion
+- [Jaypie_Fabric_LLM.md](Jaypie_Fabric_LLM.md) - LLM tool creation (similar pattern)
