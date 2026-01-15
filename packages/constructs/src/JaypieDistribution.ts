@@ -1,4 +1,4 @@
-import { Duration, RemovalPolicy, Stack, Tags } from "aws-cdk-lib";
+import { Duration, Fn, RemovalPolicy, Stack, Tags } from "aws-cdk-lib";
 import * as acm from "aws-cdk-lib/aws-certificatemanager";
 import * as cloudfront from "aws-cdk-lib/aws-cloudfront";
 import * as origins from "aws-cdk-lib/aws-cloudfront-origins";
@@ -22,7 +22,7 @@ import { resolveDatadogForwarderFunction } from "./helpers/resolveDatadogForward
 
 export interface JaypieDistributionProps extends Omit<
   cloudfront.DistributionProps,
-  "certificate" | "defaultBehavior"
+  "certificate" | "defaultBehavior" | "logBucket"
 > {
   /**
    * SSL certificate for the CloudFront distribution
@@ -37,10 +37,19 @@ export interface JaypieDistributionProps extends Omit<
    * Log destination configuration for CloudFront access logs
    * - LambdaDestination: Use a specific Lambda destination for S3 notifications
    * - true: Use Datadog forwarder for S3 notifications (default)
-   * - false: Disable logging entirely
+   * - false: Disable S3 notifications (logging still occurs if logBucket is set)
    * @default true
    */
   destination?: LambdaDestination | boolean;
+  /**
+   * External log bucket for CloudFront access logs.
+   * - IBucket: Use existing bucket directly
+   * - string: Bucket name to import
+   * - { exportName: string }: CloudFormation export name to import
+   * - true: Use account logging bucket (CDK.IMPORT.LOG_BUCKET)
+   * @default undefined (creates new bucket if destination !== false)
+   */
+  logBucket?: s3.IBucket | string | { exportName: string } | true;
   /**
    * The origin handler - can be an IOrigin, IFunctionUrl, or IFunction
    * If IFunction, a FunctionUrl will be created with auth NONE
@@ -101,6 +110,7 @@ export class JaypieDistribution
       handler,
       host: propsHost,
       invokeMode = lambda.InvokeMode.BUFFERED,
+      logBucket: logBucketProp,
       originReadTimeout = Duration.seconds(CDK.DURATION.CLOUDFRONT_API),
       roleTag = CDK.ROLE.API,
       zone: propsZone,
@@ -229,12 +239,16 @@ export class JaypieDistribution
       this.certificate = certificateToUse;
     }
 
-    // Create log bucket if logging is enabled
-    let logBucket: s3.Bucket | undefined;
-    if (destinationProp !== false) {
-      logBucket = new s3.Bucket(this, constructEnvName("LogBucket"), {
-        objectOwnership: s3.ObjectOwnership.OBJECT_WRITER,
-        removalPolicy: RemovalPolicy.DESTROY,
+    // Resolve or create log bucket
+    let logBucket: s3.IBucket | undefined;
+    const isExternalBucket = logBucketProp !== undefined;
+
+    if (logBucketProp !== undefined) {
+      // Use external bucket
+      logBucket = this.resolveLogBucket(logBucketProp);
+    } else if (destinationProp !== false) {
+      // Create new bucket (original behavior)
+      const createdBucket = new s3.Bucket(this, constructEnvName("LogBucket"), {
         autoDeleteObjects: true,
         lifecycleRules: [
           {
@@ -247,22 +261,28 @@ export class JaypieDistribution
             ],
           },
         ],
+        objectOwnership: s3.ObjectOwnership.OBJECT_WRITER,
+        removalPolicy: RemovalPolicy.DESTROY,
       });
-      Tags.of(logBucket).add(CDK.TAG.ROLE, CDK.ROLE.STORAGE);
+      Tags.of(createdBucket).add(CDK.TAG.ROLE, CDK.ROLE.STORAGE);
+      logBucket = createdBucket;
+    }
 
-      // Add S3 notification to Datadog forwarder
+    // Add S3 notifications if we have a bucket and destination is not false
+    if (logBucket && destinationProp !== false && !isExternalBucket) {
+      // Only add notifications to buckets we created (not external buckets)
       const lambdaDestination =
         destinationProp === true
           ? new LambdaDestination(resolveDatadogForwarderFunction(this))
           : destinationProp;
 
-      logBucket.addEventNotification(
+      (logBucket as s3.Bucket).addEventNotification(
         s3.EventType.OBJECT_CREATED,
         lambdaDestination,
       );
-
-      this.logBucket = logBucket;
     }
+
+    this.logBucket = logBucket;
 
     // Create the CloudFront distribution
     this.distribution = new cloudfront.Distribution(
@@ -358,6 +378,41 @@ export class JaypieDistribution
       "invokeMode" in handler &&
       typeof (handler as { invokeMode: unknown }).invokeMode === "string"
     );
+  }
+
+  private isExportNameObject(
+    value: unknown,
+  ): value is { exportName: string } {
+    return (
+      typeof value === "object" &&
+      value !== null &&
+      "exportName" in value &&
+      typeof (value as { exportName: string }).exportName === "string"
+    );
+  }
+
+  private resolveLogBucket(
+    logBucketProp: s3.IBucket | string | { exportName: string } | true,
+  ): s3.IBucket {
+    // true = use account logging bucket
+    if (logBucketProp === true) {
+      const bucketName = Fn.importValue(CDK.IMPORT.LOG_BUCKET);
+      return s3.Bucket.fromBucketName(this, "ImportedLogBucket", bucketName);
+    }
+
+    // { exportName: string } = import from CloudFormation export
+    if (this.isExportNameObject(logBucketProp)) {
+      const bucketName = Fn.importValue(logBucketProp.exportName);
+      return s3.Bucket.fromBucketName(this, "ImportedLogBucket", bucketName);
+    }
+
+    // string = bucket name
+    if (typeof logBucketProp === "string") {
+      return s3.Bucket.fromBucketName(this, "ImportedLogBucket", logBucketProp);
+    }
+
+    // IBucket = use directly
+    return logBucketProp;
   }
 
   // Implement IDistribution interface
