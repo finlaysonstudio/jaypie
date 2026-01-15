@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   createCommanderOptions,
+  FabricCommander,
   parseCommanderOptions,
   fabricCommand,
 } from "../commander/index.js";
@@ -1643,6 +1644,317 @@ describe("Commander Adapter", () => {
         // Original should be unchanged
         expect(originalService.alias).toBe("foo");
         expect(originalService.description).toBe("Foo service");
+      });
+    });
+  });
+
+  describe("FabricCommander", () => {
+    describe("Array form", () => {
+      it("creates program with array of services", () => {
+        const service1 = fabricService({
+          alias: "greet",
+          service: () => "Hello!",
+        });
+        const service2 = fabricService({
+          alias: "farewell",
+          service: () => "Goodbye!",
+        });
+
+        const cli = new FabricCommander([service1, service2]);
+
+        expect(cli.command).toBeInstanceOf(Command);
+        expect(cli.command.commands).toHaveLength(2);
+        expect(cli.command.commands[0].name()).toBe("greet");
+        expect(cli.command.commands[1].name()).toBe("farewell");
+      });
+
+      it("works with empty services array", () => {
+        const cli = new FabricCommander([]);
+
+        expect(cli.command).toBeInstanceOf(Command);
+        expect(cli.command.commands).toHaveLength(0);
+      });
+    });
+
+    describe("Config form", () => {
+      it("sets program name", () => {
+        const service = fabricService({
+          alias: "test",
+          service: () => "result",
+        });
+
+        const cli = new FabricCommander({
+          name: "my-cli",
+          services: [service],
+        });
+
+        expect(cli.command.name()).toBe("my-cli");
+      });
+
+      it("sets program version", () => {
+        const service = fabricService({
+          alias: "test",
+          service: () => "result",
+        });
+
+        const cli = new FabricCommander({
+          services: [service],
+          version: "1.2.3",
+        });
+
+        expect(cli.command.version()).toBe("1.2.3");
+      });
+
+      it("sets program description", () => {
+        const service = fabricService({
+          alias: "test",
+          service: () => "result",
+        });
+
+        const cli = new FabricCommander({
+          description: "My CLI application",
+          services: [service],
+        });
+
+        expect(cli.command.description()).toBe("My CLI application");
+      });
+
+      it("sets all program metadata together", () => {
+        const service = fabricService({
+          alias: "test",
+          service: () => "result",
+        });
+
+        const cli = new FabricCommander({
+          description: "My CLI application",
+          name: "my-cli",
+          services: [service],
+          version: "1.0.0",
+        });
+
+        expect(cli.command.name()).toBe("my-cli");
+        expect(cli.command.version()).toBe("1.0.0");
+        expect(cli.command.description()).toBe("My CLI application");
+      });
+    });
+
+    describe("Inline service definitions", () => {
+      it("accepts inline service definitions in services array", () => {
+        const cli = new FabricCommander({
+          services: [
+            {
+              alias: "greet",
+              description: "Greet a user",
+              input: { name: { type: String } },
+              service: ({ name }) => `Hello, ${name}!`,
+            },
+          ],
+        });
+
+        expect(cli.command.commands).toHaveLength(1);
+        expect(cli.command.commands[0].name()).toBe("greet");
+        expect(cli.command.commands[0].description()).toBe("Greet a user");
+      });
+
+      it("mixes pre-instantiated and inline services", () => {
+        const preInstantiated = fabricService({
+          alias: "ping",
+          service: () => "pong",
+        });
+
+        const cli = new FabricCommander({
+          services: [
+            preInstantiated,
+            {
+              alias: "greet",
+              service: ({ name }) => `Hello, ${name}!`,
+            },
+          ],
+        });
+
+        expect(cli.command.commands).toHaveLength(2);
+        expect(cli.command.commands[0].name()).toBe("ping");
+        expect(cli.command.commands[1].name()).toBe("greet");
+      });
+    });
+
+    describe("Shared callbacks", () => {
+      it("applies shared onComplete to all commands", async () => {
+        const results: unknown[] = [];
+        const service1 = fabricService({
+          alias: "cmd1",
+          service: () => "result1",
+        });
+        const service2 = fabricService({
+          alias: "cmd2",
+          service: () => "result2",
+        });
+
+        const cli = new FabricCommander({
+          onComplete: (response) => {
+            results.push(response);
+          },
+          services: [service1, service2],
+        });
+        cli.command.exitOverride();
+
+        await cli.parseAsync(["node", "test", "cmd1"]);
+        expect(results).toEqual(["result1"]);
+      });
+
+      it("applies shared onError to all commands", async () => {
+        let capturedError: unknown;
+        const service = fabricService({
+          alias: "failing",
+          service: () => {
+            throw new Error("Service failed");
+          },
+        });
+
+        const cli = new FabricCommander({
+          onError: (error) => {
+            capturedError = error;
+          },
+          services: [service],
+        });
+        cli.command.exitOverride();
+
+        await cli.parseAsync(["node", "test", "failing"]);
+        expect(capturedError).toBeInstanceOf(Error);
+        expect((capturedError as Error).message).toBe("Service failed");
+      });
+
+      it("applies shared onFatal to all commands", async () => {
+        let capturedError: unknown;
+        const service = fabricService({
+          alias: "failing",
+          service: () => {
+            throw new Error("Fatal error");
+          },
+        });
+
+        const cli = new FabricCommander({
+          onFatal: (error) => {
+            capturedError = error;
+          },
+          services: [service],
+        });
+        cli.command.exitOverride();
+
+        await cli.parseAsync(["node", "test", "failing"]);
+        expect(capturedError).toBeInstanceOf(Error);
+        expect((capturedError as Error).message).toBe("Fatal error");
+      });
+
+      it("applies shared onMessage to all commands", async () => {
+        const messages: unknown[] = [];
+        const service = fabricService({
+          alias: "test",
+          service: (_input, context) => {
+            context?.sendMessage?.({ content: "Hello" });
+            return "done";
+          },
+        });
+
+        const cli = new FabricCommander({
+          onMessage: (msg) => {
+            messages.push(msg);
+          },
+          services: [service],
+        });
+        cli.command.exitOverride();
+
+        await cli.parseAsync(["node", "test", "test"]);
+        expect(messages).toHaveLength(1);
+        expect(messages[0]).toEqual({ content: "Hello" });
+      });
+    });
+
+    describe("parse methods", () => {
+      it("parse() returns this for chaining", () => {
+        let executed = false;
+        const service = fabricService({
+          alias: "test",
+          service: () => {
+            executed = true;
+            return "result";
+          },
+        });
+
+        const cli = new FabricCommander([service]);
+        cli.command.exitOverride();
+
+        // Parse and execute the test command
+        const result = cli.parse(["node", "script", "test"]);
+        expect(result).toBe(cli);
+        // Note: action is async, so executed may not be true yet
+        // The important thing is parse returns this
+      });
+
+      it("parseAsync() returns promise that resolves to this", async () => {
+        const service = fabricService({
+          alias: "test",
+          service: () => "result",
+        });
+
+        const cli = new FabricCommander([service]);
+        cli.command.exitOverride();
+
+        const result = await cli.parseAsync(["node", "test", "test"]);
+        expect(result).toBe(cli);
+      });
+
+      it("exposes underlying Command for advanced use", () => {
+        const cli = new FabricCommander([]);
+
+        expect(cli.command).toBeInstanceOf(Command);
+        // Can add additional options, configure, etc.
+        cli.command.option("--debug", "Enable debug mode");
+        expect(cli.command.opts()).toEqual({});
+      });
+    });
+
+    describe("Full integration", () => {
+      it("complete CLI example with multiple commands", async () => {
+        const results: unknown[] = [];
+
+        const cli = new FabricCommander({
+          description: "Example CLI",
+          name: "example",
+          onComplete: (response) => results.push(response),
+          services: [
+            {
+              alias: "greet",
+              description: "Greet someone",
+              input: {
+                name: { type: String, default: "World" },
+              },
+              service: ({ name }) => `Hello, ${name}!`,
+            },
+            {
+              alias: "add",
+              description: "Add two numbers",
+              input: {
+                a: { type: Number },
+                b: { type: Number },
+              },
+              service: ({ a, b }) => a + b,
+            },
+          ],
+          version: "1.0.0",
+        });
+        cli.command.exitOverride();
+
+        // Test greet command
+        await cli.parseAsync(["node", "test", "greet", "--name", "Alice"]);
+        expect(results[0]).toBe("Hello, Alice!");
+
+        // Clear results for next test
+        results.length = 0;
+
+        // Test add command
+        await cli.parseAsync(["node", "test", "add", "--a", "5", "--b", "3"]);
+        expect(results[0]).toBe(8);
       });
     });
   });
