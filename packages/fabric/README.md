@@ -155,6 +155,115 @@ const server = new McpServer({ name: "my-server", version: "1.0.0" });
 fabricMcp({ service: handler, server });
 ```
 
+### Modeling
+
+FabricModel provides a standard vocabulary for entities. All fields are optional except `id` and `model`, enabling high reuse across different entity types.
+
+```typescript
+import type { FabricModel } from "@jaypie/fabric";
+
+const record: FabricModel = {
+  // Identity (required)
+  id: "550e8400-e29b-41d4-a716-446655440000",
+  model: "record",
+
+  // Identity (optional)
+  name: "December 12, 2026 Session",      // Full name, first reference
+  label: "December 12",                    // Short name, second reference
+  abbreviation: "12/12",                   // Shortest form
+  alias: "2026-12-12",                     // Slug for human lookup
+  xid: "external-system-id",               // External identifier
+  description: "Daily session notes",
+
+  // Schema
+  class: "memory",                         // Category (varies by model)
+  type: "session",                         // Type (varies by model)
+
+  // Content
+  content: "Session notes here...",
+  metadata: { tags: ["work", "planning"] },
+
+  // Display
+  emoji: "📝",
+  icon: "lucide#notebook",
+
+  // Timestamps
+  createdAt: new Date(),
+  updatedAt: new Date(),
+  archivedAt: null,                        // Set when archived
+  deletedAt: null,                         // Set when soft-deleted
+};
+```
+
+#### Specialized Models
+
+**FabricJob** extends FabricModel for async tasks:
+
+```typescript
+import type { FabricJob } from "@jaypie/fabric";
+
+const job: FabricJob = {
+  id: "job-123",
+  model: "job",
+  status: "processing",                    // Required: current state
+  startedAt: new Date(),
+  completedAt: null,
+  progress: {                              // FabricProgress (value object)
+    percentageComplete: 45,
+    elapsedTime: 12000,
+    estimatedTime: 30000,
+  },
+  messages: [],                            // Execution log
+  createdAt: new Date(),
+  updatedAt: new Date(),
+};
+```
+
+**FabricMessage** extends FabricModel for content-focused entities:
+
+```typescript
+import type { FabricMessage } from "@jaypie/fabric";
+
+const message: FabricMessage = {
+  id: "msg-456",
+  model: "message",
+  content: "Hello, world!",                // Required
+  type: "user",                            // e.g., "user", "assistant", "system"
+  createdAt: new Date(),
+  updatedAt: new Date(),
+};
+```
+
+#### Indexing
+
+When persisting models to DynamoDB, use index utilities to build GSI keys:
+
+```typescript
+import { APEX, calculateOu, populateIndexKeys, DEFAULT_INDEXES } from "@jaypie/fabric";
+
+// Root-level entity
+const record = {
+  model: "record",
+  ou: APEX,                                // "@" for root level
+  alias: "2026-12-12",
+  sequence: Date.now(),
+  // ...other fields
+};
+
+// Child entity (belongs to a parent)
+const message = {
+  model: "message",
+  ou: calculateOu({ model: "chat", id: "chat-123" }),  // "chat#chat-123"
+  sequence: Date.now(),
+  // ...other fields
+};
+
+// Auto-populate GSI keys
+const indexed = populateIndexKeys(record, DEFAULT_INDEXES);
+// indexed.indexOu = "@#record"
+// indexed.indexAlias = "@#record#2026-12-12"
+```
+
 ## API
 
 ### Main Export (`@jaypie/fabric`)
