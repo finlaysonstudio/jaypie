@@ -1,5 +1,5 @@
 import { putEntity } from "./entities.js";
-import { queryByAlias, queryByOu } from "./queries.js";
+import { queryByAlias, queryByScope } from "./queries.js";
 import type { StorableEntity } from "./types.js";
 
 /**
@@ -37,21 +37,21 @@ export interface ExportResult<T extends StorableEntity = StorableEntity> {
 /**
  * Seed a single entity if it doesn't already exist
  *
- * @param entity - Partial entity with at least alias, model, and ou
+ * @param entity - Partial entity with at least alias, model, and scope
  * @returns true if entity was created, false if it already exists
  */
 export async function seedEntityIfNotExists<T extends Partial<StorableEntity>>(
   entity: T,
 ): Promise<boolean> {
-  if (!entity.alias || !entity.model || !entity.ou) {
-    throw new Error("Entity must have alias, model, and ou to check existence");
+  if (!entity.alias || !entity.model || !entity.scope) {
+    throw new Error("Entity must have alias, model, and scope to check existence");
   }
 
   // Check if entity already exists
   const existing = await queryByAlias({
     alias: entity.alias,
     model: entity.model,
-    ou: entity.ou,
+    scope: entity.scope,
   });
 
   if (existing) {
@@ -65,7 +65,7 @@ export async function seedEntityIfNotExists<T extends Partial<StorableEntity>>(
     id: entity.id ?? crypto.randomUUID(),
     model: entity.model,
     name: entity.name ?? entity.alias,
-    ou: entity.ou,
+    scope: entity.scope,
     sequence: entity.sequence ?? Date.now(),
     updatedAt: entity.updatedAt ?? now,
     ...entity,
@@ -102,8 +102,8 @@ export async function seedEntities<T extends Partial<StorableEntity>>(
     const alias = entity.alias ?? entity.name ?? "unknown";
 
     try {
-      if (!entity.model || !entity.ou) {
-        throw new Error("Entity must have model and ou");
+      if (!entity.model || !entity.scope) {
+        throw new Error("Entity must have model and scope");
       }
 
       // For entities with alias, check existence
@@ -111,7 +111,7 @@ export async function seedEntities<T extends Partial<StorableEntity>>(
         const existing = await queryByAlias({
           alias: entity.alias,
           model: entity.model,
-          ou: entity.ou,
+          scope: entity.scope,
         });
 
         if (existing && !replace) {
@@ -137,7 +137,7 @@ export async function seedEntities<T extends Partial<StorableEntity>>(
         id: entity.id ?? crypto.randomUUID(),
         model: entity.model,
         name: entity.name ?? entity.alias ?? "Unnamed",
-        ou: entity.ou,
+        scope: entity.scope,
         sequence: entity.sequence ?? Date.now(),
         updatedAt: entity.updatedAt ?? now,
         ...entity,
@@ -156,19 +156,19 @@ export async function seedEntities<T extends Partial<StorableEntity>>(
 }
 
 /**
- * Export entities by model and organizational unit
+ * Export entities by model and scope
  *
- * - Paginates through all matching entities via queryByOu
+ * - Paginates through all matching entities via queryByScope
  * - Returns entities sorted by sequence (ascending)
  *
  * @param model - The entity model name
- * @param ou - The organizational unit
+ * @param scope - The scope (APEX or "{parent.model}#{parent.id}")
  * @param limit - Optional maximum number of entities to export
  * @returns Export result with entities and count
  */
 export async function exportEntities<T extends StorableEntity>(
   model: string,
-  ou: string,
+  scope: string,
   limit?: number,
 ): Promise<ExportResult<T>> {
   const entities: T[] = [];
@@ -179,11 +179,11 @@ export async function exportEntities<T extends StorableEntity>(
     const batchLimit =
       remaining !== undefined ? Math.min(remaining, 100) : undefined;
 
-    const { items, lastEvaluatedKey } = await queryByOu({
+    const { items, lastEvaluatedKey } = await queryByScope({
       ascending: true,
       limit: batchLimit,
       model,
-      ou,
+      scope,
       startKey,
     });
 
@@ -205,15 +205,15 @@ export async function exportEntities<T extends StorableEntity>(
  * Export entities as a JSON string
  *
  * @param model - The entity model name
- * @param ou - The organizational unit
+ * @param scope - The scope (APEX or "{parent.model}#{parent.id}")
  * @param pretty - Format JSON with indentation (default: true)
  * @returns JSON string of exported entities
  */
 export async function exportEntitiesToJson(
   model: string,
-  ou: string,
+  scope: string,
   pretty: boolean = true,
 ): Promise<string> {
-  const { entities } = await exportEntities(model, ou);
+  const { entities } = await exportEntities(model, scope);
   return pretty ? JSON.stringify(entities, null, 2) : JSON.stringify(entities);
 }

@@ -88,8 +88,8 @@ export interface FabricModel {
   // Storage (optional - only when persisted to DynamoDB)
   // -------------------------------------------------------------------------
 
-  /** Organizational unit: APEX ("@") or "{parent.model}#{parent.id}" */
-  ou?: string;
+  /** Scope: APEX ("@") or "{parent.model}#{parent.id}" */
+  scope?: string;
 
   /** Timestamp for chronological ordering (Date.now()) */
   sequence?: number;
@@ -278,7 +278,7 @@ export const FABRIC_MODEL_FIELDS = {
   TYPE: "type",
 
   // Storage
-  OU: "ou",
+  SCOPE: "scope",
   SEQUENCE: "sequence",
 
   // Time

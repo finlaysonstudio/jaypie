@@ -10,7 +10,7 @@ import {
   putEntity,
   queryByAlias,
   queryByClass,
-  queryByOu,
+  queryByScope,
   queryByType,
   queryByXid,
   updateEntity,
@@ -68,7 +68,7 @@ const mcpPutEntity = fabricService({
     id: { type: String, description: "Entity ID (sort key)" },
     model: { type: String, description: "Entity model name (partition key)" },
     name: { type: String, description: "Entity name" },
-    ou: { type: String, description: "Organizational unit (@ for root)" },
+    scope: { type: String, description: "Scope (@ for root)" },
     // Optional fields
     alias: {
       type: String,
@@ -92,7 +92,7 @@ const mcpPutEntity = fabricService({
       id: input.id as string,
       model: input.model as string,
       name: input.name as string,
-      ou: input.ou as string,
+      scope: input.scope as string,
       sequence: Date.now(),
       type: input.type as string | undefined,
       updatedAt: now,
@@ -116,7 +116,7 @@ const mcpUpdateEntity = fabricService({
     model: { type: String, description: "Entity model name (partition key)" },
     // Fields that can be updated
     name: { type: String, required: false, description: "Entity name" },
-    ou: { type: String, required: false, description: "Organizational unit" },
+    scope: { type: String, required: false, description: "Scope" },
     alias: {
       type: String,
       required: false,
@@ -145,7 +145,7 @@ const mcpUpdateEntity = fabricService({
       ...(input.alias !== undefined && { alias: input.alias as string }),
       ...(input.class !== undefined && { class: input.class as string }),
       ...(input.name !== undefined && { name: input.name as string }),
-      ...(input.ou !== undefined && { ou: input.ou as string }),
+      ...(input.scope !== undefined && { scope: input.scope as string }),
       ...(input.type !== undefined && { type: input.type as string }),
       ...(input.xid !== undefined && { xid: input.xid as string }),
     };
@@ -154,15 +154,15 @@ const mcpUpdateEntity = fabricService({
 });
 
 /**
- * MCP wrapper for queryByOu
+ * MCP wrapper for queryByScope
  * Note: Pagination via startKey is not exposed to MCP; use limit instead
  */
-const mcpQueryByOu = fabricService({
-  alias: "dynamodb_query_ou",
-  description: "Query entities by organizational unit (parent hierarchy)",
+const mcpQueryByScope = fabricService({
+  alias: "dynamodb_query_scope",
+  description: "Query entities by scope (parent hierarchy)",
   input: {
     model: { type: String, description: "Entity model name" },
-    ou: { type: String, description: "Organizational unit (@ for root)" },
+    scope: { type: String, description: "Scope (@ for root)" },
     archived: {
       type: Boolean,
       default: false,
@@ -188,13 +188,13 @@ const mcpQueryByOu = fabricService({
     },
   },
   service: async (input) => {
-    return queryByOu({
+    return queryByScope({
       archived: input.archived as boolean,
       ascending: input.ascending as boolean,
       deleted: input.deleted as boolean,
       limit: input.limit as number | undefined,
       model: input.model as string,
-      ou: input.ou as string,
+      scope: input.scope as string,
     });
   },
 });
@@ -208,7 +208,7 @@ const mcpQueryByClass = fabricService({
   description: "Query entities by category classification",
   input: {
     model: { type: String, description: "Entity model name" },
-    ou: { type: String, description: "Organizational unit (@ for root)" },
+    scope: { type: String, description: "Scope (@ for root)" },
     recordClass: { type: String, description: "Category classification" },
     archived: {
       type: Boolean,
@@ -241,7 +241,7 @@ const mcpQueryByClass = fabricService({
       deleted: input.deleted as boolean,
       limit: input.limit as number | undefined,
       model: input.model as string,
-      ou: input.ou as string,
+      scope: input.scope as string,
       recordClass: input.recordClass as string,
     });
   },
@@ -256,7 +256,7 @@ const mcpQueryByType = fabricService({
   description: "Query entities by type classification",
   input: {
     model: { type: String, description: "Entity model name" },
-    ou: { type: String, description: "Organizational unit (@ for root)" },
+    scope: { type: String, description: "Scope (@ for root)" },
     type: { type: String, description: "Type classification" },
     archived: {
       type: Boolean,
@@ -289,7 +289,7 @@ const mcpQueryByType = fabricService({
       deleted: input.deleted as boolean,
       limit: input.limit as number | undefined,
       model: input.model as string,
-      ou: input.ou as string,
+      scope: input.scope as string,
       type: input.type as string,
     });
   },
@@ -349,11 +349,11 @@ export function registerDynamoDbTools(
 
   // Query operations
   fabricMcp({
-    service: wrapWithInit(mcpQueryByOu),
-    name: "dynamodb_query_ou",
+    service: wrapWithInit(mcpQueryByScope),
+    name: "dynamodb_query_scope",
     server,
   });
-  tools.push("dynamodb_query_ou");
+  tools.push("dynamodb_query_scope");
 
   fabricMcp({
     service: wrapWithInit(queryByAlias),

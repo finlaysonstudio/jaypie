@@ -39,8 +39,8 @@ export interface QueryParams<T = StorableEntity> {
   limit?: number;
   /** Model name (required) */
   model: string;
-  /** Organizational unit (APEX or "{parent.model}#{parent.id}") */
-  ou?: string;
+  /** Scope (APEX or "{parent.model}#{parent.id}") */
+  scope?: string;
   /** Pagination cursor from previous query */
   startKey?: Record<string, unknown>;
 }
@@ -84,8 +84,8 @@ function buildFilterObject<T>(params: QueryParams<T>): Record<string, unknown> {
     model: params.model,
   };
 
-  if (params.ou !== undefined) {
-    result.ou = params.ou;
+  if (params.scope !== undefined) {
+    result.scope = params.scope;
   }
 
   if (params.filter) {
@@ -173,14 +173,14 @@ function selectBestIndex(
  * specific query function (queryByOu, queryByAlias, etc.) to use.
  *
  * @example
- * // Uses indexOu (pk: ["ou", "model"])
- * const allMessages = await query({ model: "message", ou: `chat#${chatId}` });
+ * // Uses indexScope (pk: ["scope", "model"])
+ * const allMessages = await query({ model: "message", scope: `chat#${chatId}` });
  *
  * @example
- * // Uses indexAlias (pk: ["ou", "model", "alias"])
+ * // Uses indexAlias (pk: ["scope", "model", "alias"])
  * const byAlias = await query({
  *   model: "record",
- *   ou: "@",
+ *   scope: "@",
  *   filter: { alias: "my-record" },
  * });
  *

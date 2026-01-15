@@ -37,7 +37,7 @@ describe("JaypieDynamoDb", () => {
       expect(JaypieDynamoDb.GlobalSecondaryIndex).toBeDefined();
       expect(JaypieDynamoDb.GlobalSecondaryIndex.Alias).toBeDefined();
       expect(JaypieDynamoDb.GlobalSecondaryIndex.Class).toBeDefined();
-      expect(JaypieDynamoDb.GlobalSecondaryIndex.Ou).toBeDefined();
+      expect(JaypieDynamoDb.GlobalSecondaryIndex.Scope).toBeDefined();
       expect(JaypieDynamoDb.GlobalSecondaryIndex.Type).toBeDefined();
       expect(JaypieDynamoDb.GlobalSecondaryIndex.Xid).toBeDefined();
     });
@@ -135,7 +135,7 @@ describe("JaypieDynamoDb", () => {
       const gsiNames = gsis.map((gsi: { IndexName: string }) => gsi.IndexName);
       expect(gsiNames).toContain("indexAlias");
       expect(gsiNames).toContain("indexClass");
-      expect(gsiNames).toContain("indexOu");
+      expect(gsiNames).toContain("indexScope");
       expect(gsiNames).toContain("indexType");
       expect(gsiNames).toContain("indexXid");
     });
@@ -248,7 +248,7 @@ describe("JaypieDynamoDb", () => {
       new JaypieDynamoDb(stack, "TestTable", {
         tableName: "test-table",
         globalSecondaryIndexes: [
-          JaypieDynamoDb.GlobalSecondaryIndex.Ou,
+          JaypieDynamoDb.GlobalSecondaryIndex.Scope,
           JaypieDynamoDb.GlobalSecondaryIndex.Type,
         ],
       });
@@ -261,7 +261,7 @@ describe("JaypieDynamoDb", () => {
       expect(gsis).toHaveLength(2);
 
       const gsiNames = gsis.map((gsi: { IndexName: string }) => gsi.IndexName);
-      expect(gsiNames).toContain("indexOu");
+      expect(gsiNames).toContain("indexScope");
       expect(gsiNames).toContain("indexType");
       expect(gsiNames).not.toContain("indexAlias");
     });

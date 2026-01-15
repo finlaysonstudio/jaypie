@@ -28,8 +28,8 @@ import {
 export interface IndexableModel {
   /** Schema reference (required for indexing) */
   model: string;
-  /** Organizational unit (optional) */
-  ou?: string;
+  /** Scope (optional) */
+  scope?: string;
   /** Chronological ordering timestamp (optional) */
   sequence?: number;
   /** Archived timestamp - presence triggers #archived suffix */
@@ -167,12 +167,12 @@ export function populateIndexKeys<T extends IndexableModel>(
 }
 
 /**
- * Calculate organizational unit from parent reference
+ * Calculate scope from parent reference
  *
  * @param parent - Parent model with model and id
- * @returns OU string ("{parent.model}#{parent.id}") or APEX ("@") if no parent
+ * @returns Scope string ("{parent.model}#{parent.id}") or APEX ("@") if no parent
  */
-export function calculateOu(parent?: { id: string; model: string }): string {
+export function calculateScope(parent?: { id: string; model: string }): string {
   if (!parent) {
     return "@"; // APEX
   }

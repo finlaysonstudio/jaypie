@@ -18,7 +18,7 @@ export interface DynamoClientConfig {
 }
 
 /**
- * Parent reference for calculating OU
+ * Parent reference for calculating scope
  */
 export interface ParentReference {
   id: string;
@@ -42,13 +42,13 @@ export interface BaseQueryOptions {
 }
 
 /**
- * Parameters for queryByOu
+ * Parameters for queryByScope
  */
-export interface QueryByOuParams extends BaseQueryOptions {
+export interface QueryByScopeParams extends BaseQueryOptions {
   /** The entity model name */
   model: string;
-  /** The organizational unit (APEX or "{parent.model}#{parent.id}") */
-  ou: string;
+  /** The scope (APEX or "{parent.model}#{parent.id}") */
+  scope: string;
 }
 
 /**
@@ -63,8 +63,8 @@ export interface QueryByAliasParams {
   deleted?: boolean;
   /** The entity model name */
   model: string;
-  /** The organizational unit */
-  ou: string;
+  /** The scope */
+  scope: string;
 }
 
 /**
@@ -73,8 +73,8 @@ export interface QueryByAliasParams {
 export interface QueryByClassParams extends BaseQueryOptions {
   /** The entity model name */
   model: string;
-  /** The organizational unit */
-  ou: string;
+  /** The scope */
+  scope: string;
   /** The category classification */
   recordClass: string;
 }
@@ -85,8 +85,8 @@ export interface QueryByClassParams extends BaseQueryOptions {
 export interface QueryByTypeParams extends BaseQueryOptions {
   /** The entity model name */
   model: string;
-  /** The organizational unit */
-  ou: string;
+  /** The scope */
+  scope: string;
   /** The type classification */
   type: string;
 }
@@ -101,8 +101,8 @@ export interface QueryByXidParams {
   deleted?: boolean;
   /** The entity model name */
   model: string;
-  /** The organizational unit */
-  ou: string;
+  /** The scope */
+  scope: string;
   /** The external ID */
   xid: string;
 }
@@ -121,7 +121,7 @@ export interface QueryResult<T = StorableEntity> {
  * Entity with required fields for DynamoDB storage.
  *
  * Extends FabricModel from @jaypie/fabric with:
- * - Required storage fields (id, model, name, ou, sequence)
+ * - Required storage fields (id, model, name, scope, sequence)
  * - String timestamps (DynamoDB uses ISO 8601 strings, not Date objects)
  * - GSI index keys (auto-populated by indexEntity)
  */
@@ -138,15 +138,15 @@ export interface StorableEntity extends Omit<
   // Required fields
   /** Human-readable name */
   name: string;
-  /** Organizational unit: APEX ("@") or "{parent.model}#{parent.id}" */
-  ou: string;
+  /** Scope: APEX ("@") or "{parent.model}#{parent.id}" */
+  scope: string;
   /** Timestamp for chronological ordering (Date.now()) */
   sequence: number;
 
   // GSI Keys (auto-populated by indexEntity)
   indexAlias?: string;
   indexClass?: string;
-  indexOu?: string;
+  indexScope?: string;
   indexType?: string;
   indexXid?: string;
 

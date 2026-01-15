@@ -15,7 +15,7 @@ import { isProductionEnv } from "./helpers/isEnv";
 const GSI_NAMES = {
   ALIAS: "indexAlias",
   CLASS: "indexClass",
-  OU: "indexOu",
+  SCOPE: "indexScope",
   TYPE: "indexType",
   XID: "indexXid",
 } as const;
@@ -43,9 +43,9 @@ const GlobalSecondaryIndex = {
     projectionType: dynamodb.ProjectionType.ALL,
     sortKey: { name: "sequence", type: dynamodb.AttributeType.NUMBER },
   } as dynamodb.GlobalSecondaryIndexPropsV2,
-  Ou: {
-    indexName: GSI_NAMES.OU,
-    partitionKey: { name: GSI_NAMES.OU, type: dynamodb.AttributeType.STRING },
+  Scope: {
+    indexName: GSI_NAMES.SCOPE,
+    partitionKey: { name: GSI_NAMES.SCOPE, type: dynamodb.AttributeType.STRING },
     projectionType: dynamodb.ProjectionType.ALL,
     sortKey: { name: "sequence", type: dynamodb.AttributeType.NUMBER },
   } as dynamodb.GlobalSecondaryIndexPropsV2,
@@ -70,7 +70,7 @@ const GlobalSecondaryIndex = {
 const GlobalSecondaryIndexes: dynamodb.GlobalSecondaryIndexPropsV2[] = [
   GlobalSecondaryIndex.Alias,
   GlobalSecondaryIndex.Class,
-  GlobalSecondaryIndex.Ou,
+  GlobalSecondaryIndex.Scope,
   GlobalSecondaryIndex.Type,
   GlobalSecondaryIndex.Xid,
 ];
@@ -86,7 +86,7 @@ export interface JaypieDynamoDbProps extends Omit<
 > {
   /**
    * Configure GSIs for the table.
-   * - `undefined` or `true`: Creates all five Jaypie GSIs (Alias, Class, Ou, Type, Xid)
+   * - `undefined` or `true`: Creates all five Jaypie GSIs (Alias, Class, Scope, Type, Xid)
    * - `false`: No GSIs
    * - Array: Use the specified GSIs
    */
@@ -149,7 +149,7 @@ export interface JaypieDynamoDbProps extends Omit<
  * // Use only specific GSIs
  * const table = new JaypieDynamoDb(this, "MyTable", {
  *   globalSecondaryIndexes: [
- *     JaypieDynamoDb.GlobalSecondaryIndex.Ou,
+ *     JaypieDynamoDb.GlobalSecondaryIndex.Scope,
  *     JaypieDynamoDb.GlobalSecondaryIndex.Type,
  *   ],
  * });

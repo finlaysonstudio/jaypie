@@ -58,7 +58,7 @@ export {
   ARCHIVED_SUFFIX,
   buildCompositeKey,
   calculateIndexSuffix,
-  calculateOu,
+  calculateScope,
   clearRegistry,
   DEFAULT_INDEXES,
   DEFAULT_SORT_KEY,

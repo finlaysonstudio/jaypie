@@ -8,7 +8,7 @@ import {
   ARCHIVED_SUFFIX,
   buildCompositeKey,
   calculateIndexSuffix,
-  calculateOu,
+  calculateScope,
   clearRegistry,
   DEFAULT_INDEXES,
   DELETED_SUFFIX,
@@ -43,11 +43,11 @@ describe("Index Constants", () => {
     expect(DEFAULT_INDEXES).toHaveLength(5);
   });
 
-  it("DEFAULT_INDEXES contains indexOu", () => {
-    const indexOu = DEFAULT_INDEXES.find((i) => i.name === "indexOu");
-    expect(indexOu).toBeDefined();
-    expect(indexOu?.pk).toEqual(["ou", "model"]);
-    expect(indexOu?.sk).toEqual(["sequence"]);
+  it("DEFAULT_INDEXES contains indexScope", () => {
+    const indexScope = DEFAULT_INDEXES.find((i) => i.name === "indexScope");
+    expect(indexScope).toBeDefined();
+    expect(indexScope?.pk).toEqual(["scope", "model"]);
+    expect(indexScope?.sk).toEqual(["sequence"]);
   });
 
   it("DEFAULT_INDEXES contains sparse indexes", () => {
@@ -62,26 +62,26 @@ describe("Index Constants", () => {
 
 describe("buildCompositeKey", () => {
   it("builds a key from entity fields", () => {
-    const entity = { ou: "@", model: "record" };
-    const key = buildCompositeKey(entity, ["ou", "model"]);
+    const entity = { scope: "@", model: "record" };
+    const key = buildCompositeKey(entity, ["scope", "model"]);
     expect(key).toBe("@#record");
   });
 
   it("builds a key with multiple fields", () => {
-    const entity = { ou: "@", model: "record", alias: "my-alias" };
-    const key = buildCompositeKey(entity, ["ou", "model", "alias"]);
+    const entity = { scope: "@", model: "record", alias: "my-alias" };
+    const key = buildCompositeKey(entity, ["scope", "model", "alias"]);
     expect(key).toBe("@#record#my-alias");
   });
 
   it("appends suffix when provided", () => {
-    const entity = { ou: "@", model: "record" };
-    const key = buildCompositeKey(entity, ["ou", "model"], "#deleted");
+    const entity = { scope: "@", model: "record" };
+    const key = buildCompositeKey(entity, ["scope", "model"], "#deleted");
     expect(key).toBe("@#record#deleted");
   });
 
   it("throws when field is missing", () => {
-    const entity = { ou: "@" };
-    expect(() => buildCompositeKey(entity, ["ou", "model"])).toThrow(
+    const entity = { scope: "@" };
+    expect(() => buildCompositeKey(entity, ["scope", "model"])).toThrow(
       "Missing field for index key: model",
     );
   });
@@ -89,26 +89,26 @@ describe("buildCompositeKey", () => {
 
 describe("tryBuildCompositeKey", () => {
   it("returns key when all fields present", () => {
-    const entity = { ou: "@", model: "record" };
-    const key = tryBuildCompositeKey(entity, ["ou", "model"]);
+    const entity = { scope: "@", model: "record" };
+    const key = tryBuildCompositeKey(entity, ["scope", "model"]);
     expect(key).toBe("@#record");
   });
 
   it("returns undefined when field is missing", () => {
-    const entity = { ou: "@" };
-    const key = tryBuildCompositeKey(entity, ["ou", "model"]);
+    const entity = { scope: "@" };
+    const key = tryBuildCompositeKey(entity, ["scope", "model"]);
     expect(key).toBeUndefined();
   });
 });
 
 describe("generateIndexName", () => {
   it("generates name from pk fields", () => {
-    expect(generateIndexName(["ou", "model"])).toBe("indexOuModel");
+    expect(generateIndexName(["scope", "model"])).toBe("indexScopeModel");
   });
 
   it("capitalizes each field", () => {
-    expect(generateIndexName(["ou", "model", "alias"])).toBe(
-      "indexOuModelAlias",
+    expect(generateIndexName(["scope", "model", "alias"])).toBe(
+      "indexScopeModelAlias",
     );
   });
 });
@@ -139,13 +139,13 @@ describe("calculateIndexSuffix", () => {
   });
 });
 
-describe("calculateOu", () => {
+describe("calculateScope", () => {
   it("returns APEX when no parent", () => {
-    expect(calculateOu()).toBe(APEX);
+    expect(calculateScope()).toBe(APEX);
   });
 
-  it("returns parent OU when parent provided", () => {
-    expect(calculateOu({ model: "chat", id: "abc-123" })).toBe("chat#abc-123");
+  it("returns parent scope when parent provided", () => {
+    expect(calculateScope({ model: "chat", id: "abc-123" })).toBe("chat#abc-123");
   });
 });
 
@@ -153,27 +153,27 @@ describe("populateIndexKeys", () => {
   it("populates index keys on entity", () => {
     const entity = {
       model: "record",
-      ou: "@",
+      scope: "@",
       sequence: 12345,
     };
     const indexes: IndexDefinition[] = [
-      { name: "indexOu", pk: ["ou", "model"], sk: ["sequence"] },
+      { name: "indexScope", pk: ["scope", "model"], sk: ["sequence"] },
     ];
 
     const result = populateIndexKeys(entity, indexes);
-    expect(result.indexOu).toBe("@#record");
+    expect(result.indexScope).toBe("@#record");
   });
 
   it("respects sparse flag - skips when field missing", () => {
     const entity = {
       model: "record",
-      ou: "@",
+      scope: "@",
       sequence: 12345,
     };
     const indexes: IndexDefinition[] = [
       {
         name: "indexAlias",
-        pk: ["ou", "model", "alias"],
+        pk: ["scope", "model", "alias"],
         sk: ["sequence"],
         sparse: true,
       },
@@ -186,14 +186,14 @@ describe("populateIndexKeys", () => {
   it("populates sparse index when field present", () => {
     const entity = {
       model: "record",
-      ou: "@",
+      scope: "@",
       alias: "my-alias",
       sequence: 12345,
     };
     const indexes: IndexDefinition[] = [
       {
         name: "indexAlias",
-        pk: ["ou", "model", "alias"],
+        pk: ["scope", "model", "alias"],
         sk: ["sequence"],
         sparse: true,
       },
@@ -206,30 +206,30 @@ describe("populateIndexKeys", () => {
   it("applies deleted suffix", () => {
     const entity = {
       model: "record",
-      ou: "@",
+      scope: "@",
       deletedAt: new Date(),
       sequence: 12345,
     };
     const indexes: IndexDefinition[] = [
-      { name: "indexOu", pk: ["ou", "model"], sk: ["sequence"] },
+      { name: "indexScope", pk: ["scope", "model"], sk: ["sequence"] },
     ];
 
     const result = populateIndexKeys(entity, indexes);
-    expect(result.indexOu).toBe("@#record#deleted");
+    expect(result.indexScope).toBe("@#record#deleted");
   });
 
   it("applies explicit suffix override", () => {
     const entity = {
       model: "record",
-      ou: "@",
+      scope: "@",
       sequence: 12345,
     };
     const indexes: IndexDefinition[] = [
-      { name: "indexOu", pk: ["ou", "model"], sk: ["sequence"] },
+      { name: "indexScope", pk: ["scope", "model"], sk: ["sequence"] },
     ];
 
     const result = populateIndexKeys(entity, indexes, "#custom");
-    expect(result.indexOu).toBe("@#record#custom");
+    expect(result.indexScope).toBe("@#record#custom");
   });
 });
 
@@ -316,7 +316,7 @@ describe("Model Registry", () => {
     it("collects indexes from all registered models", () => {
       registerModel({
         model: "chat",
-        indexes: [{ name: "indexChat", pk: ["ou", "model"] }],
+        indexes: [{ name: "indexChat", pk: ["scope", "model"] }],
       });
       registerModel({
         model: "message",
@@ -332,11 +332,11 @@ describe("Model Registry", () => {
     it("deduplicates by name", () => {
       registerModel({
         model: "chat",
-        indexes: [{ name: "sharedIndex", pk: ["ou", "model"] }],
+        indexes: [{ name: "sharedIndex", pk: ["scope", "model"] }],
       });
       registerModel({
         model: "message",
-        indexes: [{ name: "sharedIndex", pk: ["ou", "model"] }],
+        indexes: [{ name: "sharedIndex", pk: ["scope", "model"] }],
       });
 
       const allIndexes = getAllRegisteredIndexes();

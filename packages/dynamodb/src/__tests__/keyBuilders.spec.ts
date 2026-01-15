@@ -4,27 +4,27 @@ import { APEX } from "../constants.js";
 import {
   buildIndexAlias,
   buildIndexClass,
-  buildIndexOu,
+  buildIndexScope,
   buildIndexType,
   buildIndexXid,
-  calculateOu,
+  calculateScope,
   indexEntity,
 } from "../keyBuilders.js";
 import type { StorableEntity } from "../types.js";
 
 describe("Key Builders", () => {
-  describe("buildIndexOu", () => {
+  describe("buildIndexScope", () => {
     it("is a function", () => {
-      expect(buildIndexOu).toBeFunction();
+      expect(buildIndexScope).toBeFunction();
     });
 
-    it("builds key from ou and model", () => {
-      const result = buildIndexOu("@", "record");
+    it("builds key from scope and model", () => {
+      const result = buildIndexScope("@", "record");
       expect(result).toBe("@#record");
     });
 
-    it("works with hierarchical ou", () => {
-      const result = buildIndexOu("chat#abc-123", "message");
+    it("works with hierarchical scope", () => {
+      const result = buildIndexScope("chat#abc-123", "message");
       expect(result).toBe("chat#abc-123#message");
     });
   });
@@ -34,12 +34,12 @@ describe("Key Builders", () => {
       expect(buildIndexAlias).toBeFunction();
     });
 
-    it("builds key from ou, model, and alias", () => {
+    it("builds key from scope, model, and alias", () => {
       const result = buildIndexAlias("@", "record", "2026-01-07");
       expect(result).toBe("@#record#2026-01-07");
     });
 
-    it("works with hierarchical ou", () => {
+    it("works with hierarchical scope", () => {
       const result = buildIndexAlias(
         "chat#abc-123",
         "message",
@@ -54,7 +54,7 @@ describe("Key Builders", () => {
       expect(buildIndexClass).toBeFunction();
     });
 
-    it("builds key from ou, model, and class", () => {
+    it("builds key from scope, model, and class", () => {
       const result = buildIndexClass("@", "record", "memory");
       expect(result).toBe("@#record#memory");
     });
@@ -65,7 +65,7 @@ describe("Key Builders", () => {
       expect(buildIndexType).toBeFunction();
     });
 
-    it("builds key from ou, model, and type", () => {
+    it("builds key from scope, model, and type", () => {
       const result = buildIndexType("@", "record", "note");
       expect(result).toBe("@#record#note");
     });
@@ -76,30 +76,30 @@ describe("Key Builders", () => {
       expect(buildIndexXid).toBeFunction();
     });
 
-    it("builds key from ou, model, and xid", () => {
+    it("builds key from scope, model, and xid", () => {
       const result = buildIndexXid("@", "record", "ext-12345");
       expect(result).toBe("@#record#ext-12345");
     });
   });
 });
 
-describe("calculateOu", () => {
+describe("calculateScope", () => {
   it("is a function", () => {
-    expect(calculateOu).toBeFunction();
+    expect(calculateScope).toBeFunction();
   });
 
   it("returns APEX when no parent provided", () => {
-    const result = calculateOu();
+    const result = calculateScope();
     expect(result).toBe(APEX);
   });
 
   it("returns APEX when undefined parent provided", () => {
-    const result = calculateOu(undefined);
+    const result = calculateScope(undefined);
     expect(result).toBe(APEX);
   });
 
   it("returns composite key when parent provided", () => {
-    const result = calculateOu({ model: "chat", id: "abc-123" });
+    const result = calculateScope({ model: "chat", id: "abc-123" });
     expect(result).toBe("chat#abc-123");
   });
 });
@@ -112,7 +112,7 @@ describe("indexEntity", () => {
     id: "test-id-123",
     model: "record",
     name: "Test Record",
-    ou: APEX,
+    scope: APEX,
     sequence: Date.now(),
     updatedAt: now,
   });
@@ -121,10 +121,10 @@ describe("indexEntity", () => {
     expect(indexEntity).toBeFunction();
   });
 
-  it("always populates indexOu", () => {
+  it("always populates indexScope", () => {
     const entity = createBaseEntity();
     const result = indexEntity(entity);
-    expect(result.indexOu).toBe("@#record");
+    expect(result.indexScope).toBe("@#record");
   });
 
   it("does not modify other properties", () => {
@@ -133,7 +133,7 @@ describe("indexEntity", () => {
     expect(result.id).toBe(entity.id);
     expect(result.model).toBe(entity.model);
     expect(result.name).toBe(entity.name);
-    expect(result.ou).toBe(entity.ou);
+    expect(result.scope).toBe(entity.scope);
   });
 
   it("populates indexAlias when alias is present", () => {
@@ -193,30 +193,30 @@ describe("indexEntity", () => {
       xid: "ext-12345",
     };
     const result = indexEntity(entity);
-    expect(result.indexOu).toBe("@#record");
+    expect(result.indexScope).toBe("@#record");
     expect(result.indexAlias).toBe("@#record#my-alias");
     expect(result.indexClass).toBe("@#record#memory");
     expect(result.indexType).toBe("@#record#note");
     expect(result.indexXid).toBe("@#record#ext-12345");
   });
 
-  it("works with hierarchical ou", () => {
+  it("works with hierarchical scope", () => {
     const entity = {
       ...createBaseEntity(),
       alias: "first-message",
       model: "message",
-      ou: "chat#abc-123",
+      scope: "chat#abc-123",
     };
     const result = indexEntity(entity);
-    expect(result.indexOu).toBe("chat#abc-123#message");
+    expect(result.indexScope).toBe("chat#abc-123#message");
     expect(result.indexAlias).toBe("chat#abc-123#message#first-message");
   });
 
   describe("suffix parameter", () => {
-    it("appends suffix to indexOu", () => {
+    it("appends suffix to indexScope", () => {
       const entity = createBaseEntity();
       const result = indexEntity(entity, "#deleted");
-      expect(result.indexOu).toBe("@#record#deleted");
+      expect(result.indexScope).toBe("@#record#deleted");
     });
 
     it("appends suffix to all present index keys", () => {
@@ -226,7 +226,7 @@ describe("indexEntity", () => {
         class: "memory",
       };
       const result = indexEntity(entity, "#archived");
-      expect(result.indexOu).toBe("@#record#archived");
+      expect(result.indexScope).toBe("@#record#archived");
       expect(result.indexAlias).toBe("@#record#my-alias#archived");
       expect(result.indexClass).toBe("@#record#memory#archived");
     });
@@ -234,9 +234,9 @@ describe("indexEntity", () => {
     it("defaults to empty string (no suffix)", () => {
       const entity = createBaseEntity();
       const result = indexEntity(entity);
-      expect(result.indexOu).toBe("@#record");
-      expect(result.indexOu).not.toContain("#deleted");
-      expect(result.indexOu).not.toContain("#archived");
+      expect(result.indexScope).toBe("@#record");
+      expect(result.indexScope).not.toContain("#deleted");
+      expect(result.indexScope).not.toContain("#archived");
     });
   });
 });

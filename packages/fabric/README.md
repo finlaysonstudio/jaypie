@@ -239,12 +239,12 @@ const message: FabricMessage = {
 When persisting models to DynamoDB, use index utilities to build GSI keys:
 
 ```typescript
-import { APEX, calculateOu, populateIndexKeys, DEFAULT_INDEXES } from "@jaypie/fabric";
+import { APEX, calculateScope, populateIndexKeys, DEFAULT_INDEXES } from "@jaypie/fabric";
 
 // Root-level entity
 const record = {
   model: "record",
-  ou: APEX,                                // "@" for root level
+  scope: APEX,                                // "@" for root level
   alias: "2026-12-12",
   sequence: Date.now(),
   // ...other fields
@@ -253,14 +253,14 @@ const record = {
 // Child entity (belongs to a parent)
 const message = {
   model: "message",
-  ou: calculateOu({ model: "chat", id: "chat-123" }),  // "chat#chat-123"
+  scope: calculateScope({ model: "chat", id: "chat-123" }),  // "chat#chat-123"
   sequence: Date.now(),
   // ...other fields
 };
 
 // Auto-populate GSI keys
 const indexed = populateIndexKeys(record, DEFAULT_INDEXES);
-// indexed.indexOu = "@#record"
+// indexed.indexScope = "@#record"
 // indexed.indexAlias = "@#record#2026-12-12"
 ```
 
@@ -289,7 +289,7 @@ const indexed = populateIndexKeys(record, DEFAULT_INDEXES);
 | `getModelIndexes` | Get indexes for a model |
 | `populateIndexKeys` | Populate GSI keys on an entity |
 | `buildCompositeKey` | Build composite key from fields |
-| `calculateOu` | Calculate organizational unit |
+| `calculateScope` | Calculate scope |
 | `DEFAULT_INDEXES` | Default GSI indexes |
 | `APEX` | Root-level marker (`"@"`) |
 | `SEPARATOR` | Composite key separator (`"#"`) |

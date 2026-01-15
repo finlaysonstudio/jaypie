@@ -24,7 +24,7 @@ vi.mock("../queries.js", async () => {
   return {
     ...actual,
     queryByAlias: vi.fn(),
-    queryByOu: vi.fn(),
+    queryByScope: vi.fn(),
   };
 });
 
@@ -39,7 +39,7 @@ describe("Seed and Export Utilities", () => {
     id: "test-id-123",
     model: "record",
     name: "Test Record",
-    ou: "@",
+    scope: "@",
     sequence: Date.now(),
     updatedAt: now,
     ...overrides,
@@ -60,20 +60,20 @@ describe("Seed and Export Utilities", () => {
 
     it("throws when alias is missing", async () => {
       await expect(
-        seedEntityIfNotExists({ model: "record", ou: "@" }),
-      ).rejects.toThrow("Entity must have alias, model, and ou");
+        seedEntityIfNotExists({ model: "record", scope: "@" }),
+      ).rejects.toThrow("Entity must have alias, model, and scope");
     });
 
     it("throws when model is missing", async () => {
       await expect(
-        seedEntityIfNotExists({ alias: "test", ou: "@" }),
-      ).rejects.toThrow("Entity must have alias, model, and ou");
+        seedEntityIfNotExists({ alias: "test", scope: "@" }),
+      ).rejects.toThrow("Entity must have alias, model, and scope");
     });
 
-    it("throws when ou is missing", async () => {
+    it("throws when scope is missing", async () => {
       await expect(
         seedEntityIfNotExists({ alias: "test", model: "record" }),
-      ).rejects.toThrow("Entity must have alias, model, and ou");
+      ).rejects.toThrow("Entity must have alias, model, and scope");
     });
 
     it("returns false when entity already exists", async () => {
@@ -83,7 +83,7 @@ describe("Seed and Export Utilities", () => {
       const result = await seedEntityIfNotExists({
         alias: "test-alias",
         model: "record",
-        ou: "@",
+        scope: "@",
       });
       expect(result).toBe(false);
       expect(entitiesModule.putEntity).not.toHaveBeenCalled();
@@ -98,7 +98,7 @@ describe("Seed and Export Utilities", () => {
       const result = await seedEntityIfNotExists({
         alias: "new-alias",
         model: "record",
-        ou: "@",
+        scope: "@",
       });
 
       expect(result).toBe(true);
@@ -114,7 +114,7 @@ describe("Seed and Export Utilities", () => {
       await seedEntityIfNotExists({
         alias: "new-alias",
         model: "record",
-        ou: "@",
+        scope: "@",
       });
 
       const callArg = vi.mocked(entitiesModule.putEntity).mock.calls[0][0];
@@ -131,7 +131,7 @@ describe("Seed and Export Utilities", () => {
       await seedEntityIfNotExists({
         alias: "new-alias",
         model: "record",
-        ou: "@",
+        scope: "@",
       });
 
       const callArg = vi.mocked(entitiesModule.putEntity).mock.calls[0][0];
@@ -147,7 +147,7 @@ describe("Seed and Export Utilities", () => {
       await seedEntityIfNotExists({
         alias: "my-alias",
         model: "record",
-        ou: "@",
+        scope: "@",
       });
 
       const callArg = vi.mocked(entitiesModule.putEntity).mock.calls[0][0];
@@ -174,8 +174,8 @@ describe("Seed and Export Utilities", () => {
       vi.mocked(entitiesModule.putEntity).mockResolvedValue(createTestEntity());
 
       const result = await seedEntities([
-        { alias: "entity-1", model: "record", ou: "@" },
-        { alias: "entity-2", model: "record", ou: "@" },
+        { alias: "entity-1", model: "record", scope: "@" },
+        { alias: "entity-2", model: "record", scope: "@" },
       ]);
 
       expect(result.created).toEqual(["entity-1", "entity-2"]);
@@ -191,8 +191,8 @@ describe("Seed and Export Utilities", () => {
       vi.mocked(entitiesModule.putEntity).mockResolvedValue(createTestEntity());
 
       const result = await seedEntities([
-        { alias: "existing", model: "record", ou: "@" },
-        { alias: "new-one", model: "record", ou: "@" },
+        { alias: "existing", model: "record", scope: "@" },
+        { alias: "new-one", model: "record", scope: "@" },
       ]);
 
       expect(result.created).toEqual(["new-one"]);
@@ -208,7 +208,7 @@ describe("Seed and Export Utilities", () => {
       vi.mocked(entitiesModule.putEntity).mockResolvedValue(createTestEntity());
 
       const result = await seedEntities(
-        [{ alias: "existing", model: "record", ou: "@" }],
+        [{ alias: "existing", model: "record", scope: "@" }],
         { replace: true },
       );
 
@@ -226,8 +226,8 @@ describe("Seed and Export Utilities", () => {
 
       const result = await seedEntities(
         [
-          { alias: "entity-1", model: "record", ou: "@" },
-          { alias: "entity-2", model: "record", ou: "@" },
+          { alias: "entity-1", model: "record", scope: "@" },
+          { alias: "entity-2", model: "record", scope: "@" },
         ],
         { dryRun: true },
       );
@@ -238,13 +238,13 @@ describe("Seed and Export Utilities", () => {
 
     it("records errors for entities missing required fields", async () => {
       const result = await seedEntities([
-        { alias: "valid", model: "record", ou: "@" },
-        { alias: "invalid", name: "Missing OU" } as Partial<StorableEntity>,
+        { alias: "valid", model: "record", scope: "@" },
+        { alias: "invalid", name: "Missing scope" } as Partial<StorableEntity>,
       ]);
 
       expect(result.errors.length).toBe(1);
       expect(result.errors[0].alias).toBe("invalid");
-      expect(result.errors[0].error).toContain("model and ou");
+      expect(result.errors[0].error).toContain("model and scope");
     });
 
     it("uses name as alias identifier when alias is missing", async () => {
@@ -252,7 +252,7 @@ describe("Seed and Export Utilities", () => {
       vi.mocked(entitiesModule.putEntity).mockResolvedValue(createTestEntity());
 
       const result = await seedEntities([
-        { model: "record", name: "Named Entity", ou: "@" },
+        { model: "record", name: "Named Entity", scope: "@" },
       ]);
 
       expect(result.created).toEqual(["Named Entity"]);
@@ -265,7 +265,7 @@ describe("Seed and Export Utilities", () => {
     });
 
     it("returns empty result when no entities", async () => {
-      vi.mocked(queriesModule.queryByOu).mockResolvedValueOnce({
+      vi.mocked(queriesModule.queryByScope).mockResolvedValueOnce({
         items: [],
         lastEvaluatedKey: undefined,
       });
@@ -281,7 +281,7 @@ describe("Seed and Export Utilities", () => {
         createTestEntity({ id: "1", sequence: 1 }),
         createTestEntity({ id: "2", sequence: 2 }),
       ];
-      vi.mocked(queriesModule.queryByOu).mockResolvedValueOnce({
+      vi.mocked(queriesModule.queryByScope).mockResolvedValueOnce({
         items: entities,
         lastEvaluatedKey: undefined,
       });
@@ -296,7 +296,7 @@ describe("Seed and Export Utilities", () => {
       const page1 = [createTestEntity({ id: "1", sequence: 1 })];
       const page2 = [createTestEntity({ id: "2", sequence: 2 })];
 
-      vi.mocked(queriesModule.queryByOu)
+      vi.mocked(queriesModule.queryByScope)
         .mockResolvedValueOnce({
           items: page1,
           lastEvaluatedKey: { id: "1", model: "record" },
@@ -310,18 +310,18 @@ describe("Seed and Export Utilities", () => {
 
       expect(result.entities.length).toBe(2);
       expect(result.count).toBe(2);
-      expect(queriesModule.queryByOu).toHaveBeenCalledTimes(2);
+      expect(queriesModule.queryByScope).toHaveBeenCalledTimes(2);
     });
 
     it("respects limit parameter", async () => {
-      vi.mocked(queriesModule.queryByOu).mockResolvedValueOnce({
+      vi.mocked(queriesModule.queryByScope).mockResolvedValueOnce({
         items: [createTestEntity()],
         lastEvaluatedKey: undefined,
       });
 
       await exportEntities("record", "@", 5);
 
-      expect(queriesModule.queryByOu).toHaveBeenCalledWith(
+      expect(queriesModule.queryByScope).toHaveBeenCalledWith(
         expect.objectContaining({ limit: 5 }),
       );
     });
@@ -332,7 +332,7 @@ describe("Seed and Export Utilities", () => {
         createTestEntity({ id: "2" }),
       ];
 
-      vi.mocked(queriesModule.queryByOu).mockResolvedValueOnce({
+      vi.mocked(queriesModule.queryByScope).mockResolvedValueOnce({
         items: page1,
         lastEvaluatedKey: { id: "2", model: "record" },
       });
@@ -340,18 +340,18 @@ describe("Seed and Export Utilities", () => {
       const result = await exportEntities("record", "@", 2);
 
       expect(result.count).toBe(2);
-      expect(queriesModule.queryByOu).toHaveBeenCalledTimes(1);
+      expect(queriesModule.queryByScope).toHaveBeenCalledTimes(1);
     });
 
     it("queries with ascending order", async () => {
-      vi.mocked(queriesModule.queryByOu).mockResolvedValueOnce({
+      vi.mocked(queriesModule.queryByScope).mockResolvedValueOnce({
         items: [],
         lastEvaluatedKey: undefined,
       });
 
       await exportEntities("record", "@");
 
-      expect(queriesModule.queryByOu).toHaveBeenCalledWith(
+      expect(queriesModule.queryByScope).toHaveBeenCalledWith(
         expect.objectContaining({ ascending: true }),
       );
     });
@@ -364,7 +364,7 @@ describe("Seed and Export Utilities", () => {
 
     it("returns JSON string", async () => {
       const entities = [createTestEntity({ id: "1" })];
-      vi.mocked(queriesModule.queryByOu).mockResolvedValueOnce({
+      vi.mocked(queriesModule.queryByScope).mockResolvedValueOnce({
         items: entities,
         lastEvaluatedKey: undefined,
       });
@@ -377,7 +377,7 @@ describe("Seed and Export Utilities", () => {
 
     it("formats JSON with indentation by default", async () => {
       const entities = [createTestEntity({ id: "1" })];
-      vi.mocked(queriesModule.queryByOu).mockResolvedValueOnce({
+      vi.mocked(queriesModule.queryByScope).mockResolvedValueOnce({
         items: entities,
         lastEvaluatedKey: undefined,
       });
@@ -390,7 +390,7 @@ describe("Seed and Export Utilities", () => {
 
     it("returns compact JSON when pretty is false", async () => {
       const entities = [createTestEntity({ id: "1" })];
-      vi.mocked(queriesModule.queryByOu).mockResolvedValueOnce({
+      vi.mocked(queriesModule.queryByScope).mockResolvedValueOnce({
         items: entities,
         lastEvaluatedKey: undefined,
       });
@@ -401,7 +401,7 @@ describe("Seed and Export Utilities", () => {
     });
 
     it("returns empty array JSON when no entities", async () => {
-      vi.mocked(queriesModule.queryByOu).mockResolvedValueOnce({
+      vi.mocked(queriesModule.queryByScope).mockResolvedValueOnce({
         items: [],
         lastEvaluatedKey: undefined,
       });

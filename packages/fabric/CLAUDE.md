@@ -53,7 +53,7 @@ src/
 ├── index.ts                       # Package exports
 ├── index/                         # Index utilities for DynamoDB GSIs
 │   ├── index.ts                   # Module exports
-│   ├── keyBuilder.ts              # buildCompositeKey, calculateOu, populateIndexKeys
+│   ├── keyBuilder.ts              # buildCompositeKey, calculateScope, populateIndexKeys
 │   ├── registry.ts                # Model registry for custom indexes
 │   └── types.ts                   # IndexDefinition, IndexableModel types
 ├── service.ts                     # Service handler factory
@@ -153,7 +153,7 @@ Located in `src/index/`. Utilities for DynamoDB single-table design patterns:
 | `getAllRegisteredIndexes()` | Get all registered custom indexes |
 | `populateIndexKeys(entity, indexes, suffix?)` | Populate GSI keys on an entity |
 | `buildCompositeKey(entity, fields, suffix?)` | Build composite key from entity fields |
-| `calculateOu(parent?)` | Calculate organizational unit |
+| `calculateScope(parent?)` | Calculate scope |
 | `DEFAULT_INDEXES` | Standard GSI definitions |
 
 ### Types
@@ -215,7 +215,7 @@ export { fabricService } from "./service.js";
 export { FabricModel, FabricJob, FabricMessage, Progress } from "./models/base.js";
 
 // Index Utilities
-export { buildCompositeKey, calculateOu, clearRegistry, DEFAULT_INDEXES, getAllRegisteredIndexes, getModelIndexes, populateIndexKeys, registerModel } from "./index/index.js";
+export { buildCompositeKey, calculateScope, clearRegistry, DEFAULT_INDEXES, getAllRegisteredIndexes, getModelIndexes, populateIndexKeys, registerModel } from "./index/index.js";
 
 // Constants
 export { APEX, ARCHIVED_SUFFIX, DELETED_SUFFIX, SEPARATOR } from "./constants.js";

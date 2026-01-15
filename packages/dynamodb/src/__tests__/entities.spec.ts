@@ -27,7 +27,7 @@ describe("Entity Operations", () => {
     id: "test-id-123",
     model: "record",
     name: "Test Record",
-    ou: "@",
+    scope: "@",
     sequence: Date.now(),
     updatedAt: now,
   });
@@ -76,7 +76,7 @@ describe("Entity Operations", () => {
     it("returns the indexed entity", async () => {
       const entity = createTestEntity();
       const result = await putEntity({ entity });
-      expect(result.indexOu).toBe("@#record");
+      expect(result.indexScope).toBe("@#record");
     });
 
     it("calls docClient.send with PutCommand", async () => {
@@ -92,7 +92,7 @@ describe("Entity Operations", () => {
     it("auto-populates index keys", async () => {
       const entity = { ...createTestEntity(), alias: "my-alias" };
       const result = await putEntity({ entity });
-      expect(result.indexOu).toBe("@#record");
+      expect(result.indexScope).toBe("@#record");
       expect(result.indexAlias).toBe("@#record#my-alias");
     });
   });
@@ -126,7 +126,7 @@ describe("Entity Operations", () => {
     it("auto-populates index keys", async () => {
       const entity = { ...createTestEntity(), type: "note" };
       const result = await updateEntity({ entity });
-      expect(result.indexOu).toBe("@#record");
+      expect(result.indexScope).toBe("@#record");
       expect(result.indexType).toBe("@#record#note");
     });
   });
@@ -180,7 +180,7 @@ describe("Entity Operations", () => {
       mockSend.mockResolvedValueOnce({});
       await deleteEntity({ id: "test-id-123", model: "record" });
       const putCommand = mockSend.mock.calls[1][0];
-      expect(putCommand.input.Item.indexOu).toBe("@#record#deleted");
+      expect(putCommand.input.Item.indexScope).toBe("@#record#deleted");
     });
 
     it("re-indexes all present index keys with #deleted suffix", async () => {
@@ -189,7 +189,7 @@ describe("Entity Operations", () => {
       mockSend.mockResolvedValueOnce({});
       await deleteEntity({ id: "test-id-123", model: "record" });
       const putCommand = mockSend.mock.calls[1][0];
-      expect(putCommand.input.Item.indexOu).toBe("@#record#deleted");
+      expect(putCommand.input.Item.indexScope).toBe("@#record#deleted");
       expect(putCommand.input.Item.indexAlias).toBe(
         "@#record#my-alias#deleted",
       );
@@ -244,7 +244,7 @@ describe("Entity Operations", () => {
       mockSend.mockResolvedValueOnce({});
       await archiveEntity({ id: "test-id-123", model: "record" });
       const putCommand = mockSend.mock.calls[1][0];
-      expect(putCommand.input.Item.indexOu).toBe("@#record#archived");
+      expect(putCommand.input.Item.indexScope).toBe("@#record#archived");
     });
 
     it("re-indexes all present index keys with #archived suffix", async () => {
@@ -253,7 +253,7 @@ describe("Entity Operations", () => {
       mockSend.mockResolvedValueOnce({});
       await archiveEntity({ id: "test-id-123", model: "record" });
       const putCommand = mockSend.mock.calls[1][0];
-      expect(putCommand.input.Item.indexOu).toBe("@#record#archived");
+      expect(putCommand.input.Item.indexScope).toBe("@#record#archived");
       expect(putCommand.input.Item.indexClass).toBe("@#record#memory#archived");
     });
   });
@@ -290,7 +290,7 @@ describe("Entity Operations", () => {
       mockSend.mockResolvedValueOnce({});
       await deleteEntity({ id: "test-id-123", model: "record" });
       const putCommand = mockSend.mock.calls[1][0];
-      expect(putCommand.input.Item.indexOu).toBe("@#record#archived#deleted");
+      expect(putCommand.input.Item.indexScope).toBe("@#record#archived#deleted");
       expect(putCommand.input.Item.archivedAt).toBe("2026-01-01T00:00:00.000Z");
       expect(putCommand.input.Item.deletedAt).toBeDefined();
     });
@@ -304,7 +304,7 @@ describe("Entity Operations", () => {
       mockSend.mockResolvedValueOnce({});
       await archiveEntity({ id: "test-id-123", model: "record" });
       const putCommand = mockSend.mock.calls[1][0];
-      expect(putCommand.input.Item.indexOu).toBe("@#record#archived#deleted");
+      expect(putCommand.input.Item.indexScope).toBe("@#record#archived#deleted");
       expect(putCommand.input.Item.deletedAt).toBe("2026-01-01T00:00:00.000Z");
       expect(putCommand.input.Item.archivedAt).toBeDefined();
     });
@@ -320,7 +320,7 @@ describe("Entity Operations", () => {
       mockSend.mockResolvedValueOnce({});
       await deleteEntity({ id: "test-id-123", model: "record" });
       const putCommand = mockSend.mock.calls[1][0];
-      expect(putCommand.input.Item.indexOu).toBe("@#record#archived#deleted");
+      expect(putCommand.input.Item.indexScope).toBe("@#record#archived#deleted");
       expect(putCommand.input.Item.indexAlias).toBe(
         "@#record#my-alias#archived#deleted",
       );

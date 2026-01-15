@@ -53,11 +53,11 @@ export interface ModelSchema {
  * These are used when a model does not specify custom indexes.
  */
 export const DEFAULT_INDEXES: IndexDefinition[] = [
-  { name: "indexOu", pk: ["ou", "model"], sk: ["sequence"] },
-  { name: "indexAlias", pk: ["ou", "model", "alias"], sk: ["sequence"], sparse: true },
-  { name: "indexClass", pk: ["ou", "model", "class"], sk: ["sequence"], sparse: true },
-  { name: "indexType", pk: ["ou", "model", "type"], sk: ["sequence"], sparse: true },
-  { name: "indexXid", pk: ["ou", "model", "xid"], sk: ["sequence"], sparse: true },
+  { name: "indexScope", pk: ["scope", "model"], sk: ["sequence"] },
+  { name: "indexAlias", pk: ["scope", "model", "alias"], sk: ["sequence"], sparse: true },
+  { name: "indexClass", pk: ["scope", "model", "class"], sk: ["sequence"], sparse: true },
+  { name: "indexType", pk: ["scope", "model", "type"], sk: ["sequence"], sparse: true },
+  { name: "indexXid", pk: ["scope", "model", "xid"], sk: ["sequence"], sparse: true },
 ];
 
 // =============================================================================

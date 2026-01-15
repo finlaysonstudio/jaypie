@@ -25,7 +25,7 @@ export {
 export {
   buildCompositeKey,
   calculateIndexSuffix,
-  calculateOu,
+  calculateScope,
   generateIndexName,
   type IndexableModel,
   populateIndexKeys,
