@@ -227,20 +227,18 @@ const customService = fabricHttp({
 
 #### HTTP Streaming
 
-Enable SSE or NDJSON streaming for long-running tasks or LLM responses:
+Enable NDJSON streaming for long-running tasks or LLM responses:
 
 ```typescript
-import { fabricHttp, pipeLlmStream, createStreamContext } from "@jaypie/fabric/http";
+import { fabricHttp, pipeLlmStream } from "@jaypie/fabric/http";
 import Llm from "@jaypie/llm";
 
 const streamingService = fabricHttp({
   alias: "chat",
   input: { message: { type: String } },
-  // Enable streaming (SSE by default)
-  stream: true,
-  // Or configure: stream: { format: "ndjson", includeTools: true }
+  stream: true, // Enable NDJSON streaming
   service: async function* ({ message }, context) {
-    // Send progress messages
+    // Send progress messages (streamed as message events)
     context.sendMessage({ content: "Processing...", level: "info" });
 
     // Stream LLM response
@@ -250,10 +248,25 @@ const streamingService = fabricHttp({
 });
 ```
 
+Stream events use NDJSON format with `stream` as the discriminator field:
+
+```json
+{"stream":"message","content":"Processing...","level":"info"}
+{"stream":"text","content":"Hello"}
+{"stream":"tool_call","toolCall":{"id":"...","name":"...","arguments":"..."}}
+{"stream":"tool_result","toolResult":{"id":"...","name":"...","result":"..."}}
+{"stream":"data","data":{"result":42}}
+{"stream":"error","error":{"status":500,"title":"Error"}}
+{"stream":"noop"}
+{"stream":"complete"}
+```
+
 Streaming utilities:
 - `pipeLlmStream(llmStream)` - Convert @jaypie/llm stream to HTTP events
 - `createStreamContext(writer)` - Create context with `streamText()` and `streamEvent()` methods
-- `formatSseEvent(event)` / `formatNdjsonEvent(event)` - Format events for output
+- `createCompleteEvent()` - Create stream completion event
+- `createNoopEvent()` - Create keep-alive signal (empty event)
+- `formatNdjsonEvent(event)` / `formatSseEvent(event)` - Format events for output
 
 ### Modeling
 

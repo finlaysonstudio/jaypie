@@ -285,11 +285,11 @@ export { buildCorsHeaders, buildPreflightHeaders, DEFAULT_CORS_CONFIG, DEFAULT_C
 export { createHttpContext, defaultHttpTransform, parseBody, parsePathParams, parseQueryString, transformHttpToInput } from "./httpTransform.js";
 
 // Streaming utilities
-export { collectStreamEvents, createDataEvent, createDoneEvent, createErrorEvent, createMessageEvent, createStreamContext, createTextEvent, createToolCallEvent, createToolResultEvent, DEFAULT_STREAM_CONFIG, formatNdjsonEvent, formatSseEvent, formatStreamEvent, getStreamContentType, isAsyncIterable, isStreamingEnabled, llmChunkToHttpEvent, normalizeStreamConfig, pipeLlmStream, pipeLlmStreamToWriter, wrapServiceForStreaming } from "./stream.js";
+export { collectStreamEvents, createCompleteEvent, createDataEvent, createErrorEvent, createMessageEvent, createNoopEvent, createStreamContext, createTextEvent, createToolCallEvent, createToolResultEvent, DEFAULT_STREAM_CONFIG, formatNdjsonEvent, formatSseEvent, formatStreamEvent, getStreamContentType, isAsyncIterable, isStreamingEnabled, llmChunkToHttpEvent, normalizeStreamConfig, pipeLlmStream, pipeLlmStreamToWriter, wrapServiceForStreaming } from "./stream.js";
 export type { HttpStreamContext, LlmStreamChunk, PipeLlmStreamOptions, StreamWriter } from "./stream.js";
 
 // Types
-export type { AuthorizationConfig, AuthorizationFunction, CorsConfig, CorsHeaders, CorsOption, DataResponse, ErrorObject, ErrorResponse, FabricHttpConfig, FabricHttpService, HttpContext, HttpMethod, HttpStreamEvent, HttpStreamEventBase, HttpStreamEventData, HttpStreamEventDone, HttpStreamEventError, HttpStreamEventMessage, HttpStreamEventText, HttpStreamEventToolCall, HttpStreamEventToolResult, HttpTransformFunction, StreamConfig, StreamingServiceFunction, StreamOption } from "./types.js";
+export type { AuthorizationConfig, AuthorizationFunction, CorsConfig, CorsHeaders, CorsOption, DataResponse, ErrorObject, ErrorResponse, FabricHttpConfig, FabricHttpService, HttpContext, HttpMethod, HttpStreamEvent, HttpStreamEventBase, HttpStreamEventComplete, HttpStreamEventData, HttpStreamEventError, HttpStreamEventMessage, HttpStreamEventNoop, HttpStreamEventText, HttpStreamEventToolCall, HttpStreamEventToolResult, HttpTransformFunction, StreamConfig, StreamingServiceFunction, StreamOption } from "./types.js";
 export { DEFAULT_HTTP_METHODS, HttpStreamEventType } from "./types.js";
 ```
 
