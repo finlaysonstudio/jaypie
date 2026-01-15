@@ -1,6 +1,6 @@
 {
   "name": "@jaypie/dynamodb",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/finlaysonstudio/jaypie.git"
@@ -41,7 +41,7 @@
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.726.1",
     "@aws-sdk/lib-dynamodb": "^3.726.1",
-    "@jaypie/fabric": "^0.0.1"
+    "@jaypie/fabric": "^0.1.0"
   },
   "devDependencies": {
     "@rollup/plugin-typescript": "^12.1.2",

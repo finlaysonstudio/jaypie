@@ -1,6 +1,6 @@
 {
   "name": "@jaypie/fabric",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "Jaypie modeling framework with type conversion, service handlers, and adapters",
   "repository": {
     "type": "git",
