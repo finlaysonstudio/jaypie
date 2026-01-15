@@ -57,6 +57,7 @@ export function fabricHttp<
     cors = true,
     http = defaultHttpTransform as HttpTransformFunction<TInput>,
     service: serviceConfig,
+    stream = false,
     ...baseConfig
   } = config;
 
@@ -144,9 +145,10 @@ export function fabricHttp<
   }
 
   // Add HTTP-specific properties
-  httpService.http = http;
   httpService.authorization = authorization;
   httpService.cors = cors;
+  httpService.http = http;
+  httpService.stream = stream;
 
   return httpService;
 }
@@ -161,8 +163,9 @@ export function isFabricHttpService<
 >(value: unknown): value is FabricHttpService<TInput, TOutput, TAuth> {
   return (
     isFabricService<TInput, TOutput>(value) &&
-    "http" in value &&
     "authorization" in value &&
-    "cors" in value
+    "cors" in value &&
+    "http" in value &&
+    "stream" in value
   );
 }

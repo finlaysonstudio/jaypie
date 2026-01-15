@@ -135,6 +135,9 @@ export interface FabricHttpConfig<
 
   /** CORS configuration (enabled by default) */
   cors?: CorsOption;
+
+  /** Streaming configuration (disabled by default) */
+  stream?: StreamOption;
 }
 
 /**
@@ -151,6 +154,8 @@ export interface FabricHttpService<
   authorization: AuthorizationConfig<TAuth>;
   /** CORS configuration */
   cors: CorsOption;
+  /** Streaming configuration */
+  stream: StreamOption;
 }
 
 // #endregion
@@ -172,5 +177,153 @@ export type HttpMethod =
  * Default HTTP methods for fabric services
  */
 export const DEFAULT_HTTP_METHODS: HttpMethod[] = ["GET", "POST", "DELETE"];
+
+// #endregion
+
+// #region Streaming
+
+/**
+ * HTTP stream event types for SSE/NDJSON streaming
+ */
+export enum HttpStreamEventType {
+  /** Stream complete */
+  Complete = "complete",
+  /** Final response data */
+  Data = "data",
+  /** Error event */
+  Error = "error",
+  /** Fabric progress message (from sendMessage) */
+  Message = "message",
+  /** Keep-alive signal (no content) */
+  Noop = "noop",
+  /** LLM text chunk */
+  Text = "text",
+  /** LLM tool call event */
+  ToolCall = "tool_call",
+  /** LLM tool result event */
+  ToolResult = "tool_result",
+}
+
+/**
+ * Base stream event structure
+ */
+export interface HttpStreamEventBase {
+  stream: HttpStreamEventType;
+}
+
+/**
+ * Message event - progress updates from sendMessage
+ */
+export interface HttpStreamEventMessage extends HttpStreamEventBase {
+  stream: HttpStreamEventType.Message;
+  content: string;
+  level?: "trace" | "debug" | "info" | "warn" | "error";
+}
+
+/**
+ * Text event - LLM text chunk
+ */
+export interface HttpStreamEventText extends HttpStreamEventBase {
+  stream: HttpStreamEventType.Text;
+  content: string;
+}
+
+/**
+ * Tool call event - LLM requesting tool execution
+ */
+export interface HttpStreamEventToolCall extends HttpStreamEventBase {
+  stream: HttpStreamEventType.ToolCall;
+  toolCall: {
+    id: string;
+    name: string;
+    arguments: string;
+  };
+}
+
+/**
+ * Tool result event - result from tool execution
+ */
+export interface HttpStreamEventToolResult extends HttpStreamEventBase {
+  stream: HttpStreamEventType.ToolResult;
+  toolResult: {
+    id: string;
+    name: string;
+    result: unknown;
+  };
+}
+
+/**
+ * Data event - final response data
+ */
+export interface HttpStreamEventData<T = unknown> extends HttpStreamEventBase {
+  stream: HttpStreamEventType.Data;
+  data: T;
+}
+
+/**
+ * Error event
+ */
+export interface HttpStreamEventError extends HttpStreamEventBase {
+  stream: HttpStreamEventType.Error;
+  error: {
+    status: number | string;
+    title: string;
+    detail?: string;
+  };
+}
+
+/**
+ * Complete event - stream complete
+ */
+export interface HttpStreamEventComplete extends HttpStreamEventBase {
+  stream: HttpStreamEventType.Complete;
+}
+
+/**
+ * Noop event - keep-alive signal
+ */
+export interface HttpStreamEventNoop extends HttpStreamEventBase {
+  stream: HttpStreamEventType.Noop;
+}
+
+/**
+ * Union of all stream event types
+ */
+export type HttpStreamEvent =
+  | HttpStreamEventComplete
+  | HttpStreamEventData
+  | HttpStreamEventError
+  | HttpStreamEventMessage
+  | HttpStreamEventNoop
+  | HttpStreamEventText
+  | HttpStreamEventToolCall
+  | HttpStreamEventToolResult;
+
+/**
+ * Stream configuration options (internal)
+ */
+export interface StreamConfig {
+  /** Output format - NDJSON (default) or SSE */
+  format?: "ndjson" | "sse";
+  /** Keep-alive heartbeat interval in ms (default: 15000) */
+  heartbeat?: number;
+  /** Include tool calls/results in stream (default: true) */
+  includeTools?: boolean;
+}
+
+/**
+ * Stream option - true to enable streaming, false to disable
+ */
+export type StreamOption = boolean;
+
+/**
+ * Streaming service function that yields events
+ */
+export type StreamingServiceFunction<
+  TInput extends Record<string, unknown> = Record<string, unknown>,
+> = (
+  input: TInput,
+  context: unknown,
+) => AsyncIterable<HttpStreamEvent> | Promise<AsyncIterable<HttpStreamEvent>>;
 
 // #endregion

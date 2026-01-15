@@ -6,24 +6,48 @@ import { fabricService } from "../service.js";
 import {
   buildCorsHeaders,
   buildPreflightHeaders,
+  collectStreamEvents,
+  createDataEvent,
+  createCompleteEvent,
+  createErrorEvent,
   createHttpContext,
+  createMessageEvent,
+  createNoopEvent,
+  createStreamContext,
+  createTextEvent,
+  createToolCallEvent,
+  createToolResultEvent,
   DEFAULT_CORS_CONFIG,
   DEFAULT_CORS_METHODS,
+  DEFAULT_STREAM_CONFIG,
   defaultHttpTransform,
   extractToken,
   fabricHttp,
+  formatNdjsonEvent,
+  formatSseEvent,
+  formatStreamEvent,
   getAllowedOrigin,
   getAuthHeader,
+  getStreamContentType,
+  HttpStreamEventType,
+  isAsyncIterable,
   isAuthorizationRequired,
   isFabricHttpService,
   isPreflightRequest,
+  isStreamingEnabled,
+  llmChunkToHttpEvent,
   normalizeCorsConfig,
+  normalizeStreamConfig,
   parseBody,
   parsePathParams,
   parseQueryString,
+  pipeLlmStream,
+  pipeLlmStreamToWriter,
   transformHttpToInput,
   validateAuthorization,
+  wrapServiceForStreaming,
 } from "../http/index.js";
+import type { HttpStreamEvent, LlmStreamChunk } from "../http/index.js";
 
 describe("HTTP Adapter", () => {
   beforeEach(() => {
@@ -947,6 +971,697 @@ describe("HTTP Adapter", () => {
 
       it("returns false for null", () => {
         expect(isFabricHttpService(null)).toBe(false);
+      });
+    });
+  });
+
+  // #endregion
+
+  // #region Streaming
+
+  describe("Streaming", () => {
+    describe("DEFAULT_STREAM_CONFIG", () => {
+      it("has correct default values", () => {
+        expect(DEFAULT_STREAM_CONFIG).toEqual({
+          format: "ndjson",
+          heartbeat: 15000,
+          includeTools: true,
+        });
+      });
+    });
+
+    describe("HttpStreamEventType", () => {
+      it("has correct enum values", () => {
+        expect(HttpStreamEventType.Message).toBe("message");
+        expect(HttpStreamEventType.Text).toBe("text");
+        expect(HttpStreamEventType.ToolCall).toBe("tool_call");
+        expect(HttpStreamEventType.ToolResult).toBe("tool_result");
+        expect(HttpStreamEventType.Data).toBe("data");
+        expect(HttpStreamEventType.Error).toBe("error");
+        expect(HttpStreamEventType.Complete).toBe("complete");
+      });
+    });
+
+    describe("normalizeStreamConfig", () => {
+      it("is a function", () => {
+        expect(normalizeStreamConfig).toBeFunction();
+      });
+
+      it("returns undefined for undefined", () => {
+        expect(normalizeStreamConfig(undefined)).toBeUndefined();
+      });
+
+      it("returns undefined for false", () => {
+        expect(normalizeStreamConfig(false)).toBeUndefined();
+      });
+
+      it("returns defaults for true", () => {
+        expect(normalizeStreamConfig(true)).toEqual(DEFAULT_STREAM_CONFIG);
+      });
+    });
+
+    describe("isStreamingEnabled", () => {
+      it("is a function", () => {
+        expect(isStreamingEnabled).toBeFunction();
+      });
+
+      it("returns false for undefined", () => {
+        expect(isStreamingEnabled(undefined)).toBe(false);
+      });
+
+      it("returns false for false", () => {
+        expect(isStreamingEnabled(false)).toBe(false);
+      });
+
+      it("returns true for true", () => {
+        expect(isStreamingEnabled(true)).toBe(true);
+      });
+    });
+
+    describe("Event Formatting", () => {
+      describe("formatSseEvent", () => {
+        it("is a function", () => {
+          expect(formatSseEvent).toBeFunction();
+        });
+
+        it("formats text event as SSE", () => {
+          const event = createTextEvent("Hello");
+          const result = formatSseEvent(event);
+          expect(result).toBe(
+            'event: text\ndata: {"stream":"text","content":"Hello"}\n\n',
+          );
+        });
+
+        it("formats message event as SSE", () => {
+          const event = createMessageEvent("Processing...", "info");
+          const result = formatSseEvent(event);
+          expect(result).toContain("event: message\n");
+          expect(result).toContain('"stream":"message"');
+          expect(result).toContain('"content":"Processing..."');
+          expect(result).toContain('"level":"info"');
+        });
+
+        it("formats complete event as SSE", () => {
+          const event = createCompleteEvent();
+          const result = formatSseEvent(event);
+          expect(result).toBe(
+            'event: complete\ndata: {"stream":"complete"}\n\n',
+          );
+        });
+      });
+
+      describe("formatNdjsonEvent", () => {
+        it("is a function", () => {
+          expect(formatNdjsonEvent).toBeFunction();
+        });
+
+        it("formats event as NDJSON", () => {
+          const event = createTextEvent("Hello");
+          const result = formatNdjsonEvent(event);
+          expect(result).toBe('{"stream":"text","content":"Hello"}\n');
+        });
+      });
+
+      describe("formatStreamEvent", () => {
+        it("is a function", () => {
+          expect(formatStreamEvent).toBeFunction();
+        });
+
+        it("uses NDJSON format by default", () => {
+          const event = createTextEvent("Hello");
+          const config = normalizeStreamConfig(true)!;
+          const result = formatStreamEvent(event, config);
+          expect(result).toBe('{"stream":"text","content":"Hello"}\n');
+        });
+
+        it("uses SSE format when specified", () => {
+          const event = createTextEvent("Hello");
+          const config = { format: "sse" as const };
+          const result = formatStreamEvent(event, config);
+          expect(result).toContain("event: text\n");
+        });
+      });
+
+      describe("getStreamContentType", () => {
+        it("is a function", () => {
+          expect(getStreamContentType).toBeFunction();
+        });
+
+        it("returns application/x-ndjson by default", () => {
+          const config = normalizeStreamConfig(true)!;
+          expect(getStreamContentType(config)).toBe("application/x-ndjson");
+        });
+
+        it("returns text/event-stream for SSE", () => {
+          const config = { format: "sse" as const };
+          expect(getStreamContentType(config)).toBe("text/event-stream");
+        });
+      });
+    });
+
+    describe("Event Creators", () => {
+      describe("createMessageEvent", () => {
+        it("creates message event without level", () => {
+          const event = createMessageEvent("Processing");
+          expect(event).toEqual({
+            stream: HttpStreamEventType.Message,
+            content: "Processing",
+          });
+        });
+
+        it("creates message event with level", () => {
+          const event = createMessageEvent("Warning", "warn");
+          expect(event).toEqual({
+            stream: HttpStreamEventType.Message,
+            content: "Warning",
+            level: "warn",
+          });
+        });
+      });
+
+      describe("createTextEvent", () => {
+        it("creates text event", () => {
+          const event = createTextEvent("Hello");
+          expect(event).toEqual({
+            stream: HttpStreamEventType.Text,
+            content: "Hello",
+          });
+        });
+      });
+
+      describe("createToolCallEvent", () => {
+        it("creates tool call event", () => {
+          const event = createToolCallEvent({
+            id: "call-123",
+            name: "get_weather",
+            arguments: '{"city":"NYC"}',
+          });
+          expect(event).toEqual({
+            stream: HttpStreamEventType.ToolCall,
+            toolCall: {
+              id: "call-123",
+              name: "get_weather",
+              arguments: '{"city":"NYC"}',
+            },
+          });
+        });
+      });
+
+      describe("createToolResultEvent", () => {
+        it("creates tool result event", () => {
+          const event = createToolResultEvent({
+            id: "call-123",
+            name: "get_weather",
+            result: { temp: 72 },
+          });
+          expect(event).toEqual({
+            stream: HttpStreamEventType.ToolResult,
+            toolResult: {
+              id: "call-123",
+              name: "get_weather",
+              result: { temp: 72 },
+            },
+          });
+        });
+      });
+
+      describe("createDataEvent", () => {
+        it("creates data event with any data", () => {
+          const event = createDataEvent({ name: "Alice", age: 30 });
+          expect(event).toEqual({
+            stream: HttpStreamEventType.Data,
+            data: { name: "Alice", age: 30 },
+          });
+        });
+
+        it("creates data event with primitive", () => {
+          const event = createDataEvent("result");
+          expect(event).toEqual({
+            stream: HttpStreamEventType.Data,
+            data: "result",
+          });
+        });
+      });
+
+      describe("createErrorEvent", () => {
+        it("creates error event", () => {
+          const event = createErrorEvent({
+            status: 400,
+            title: "Bad Request",
+            detail: "Invalid input",
+          });
+          expect(event).toEqual({
+            stream: HttpStreamEventType.Error,
+            error: {
+              status: 400,
+              title: "Bad Request",
+              detail: "Invalid input",
+            },
+          });
+        });
+
+        it("creates error event without detail", () => {
+          const event = createErrorEvent({
+            status: 500,
+            title: "Internal Error",
+          });
+          expect(event.error.detail).toBeUndefined();
+        });
+      });
+
+      describe("createCompleteEvent", () => {
+        it("creates complete event", () => {
+          const event = createCompleteEvent();
+          expect(event).toEqual({
+            stream: HttpStreamEventType.Complete,
+          });
+        });
+      });
+
+      describe("createNoopEvent", () => {
+        it("creates noop event", () => {
+          const event = createNoopEvent();
+          expect(event).toEqual({
+            stream: HttpStreamEventType.Noop,
+          });
+        });
+      });
+    });
+
+    describe("Stream Context", () => {
+      describe("createStreamContext", () => {
+        it("is a function", () => {
+          expect(createStreamContext).toBeFunction();
+        });
+
+        it("creates context with streamText method", () => {
+          const writer = vi.fn();
+          const context = createStreamContext(writer);
+
+          context.streamText("Hello");
+
+          expect(writer).toHaveBeenCalledWith({
+            stream: HttpStreamEventType.Text,
+            content: "Hello",
+          });
+        });
+
+        it("creates context with streamEvent method", () => {
+          const writer = vi.fn();
+          const context = createStreamContext(writer);
+          const event = createDataEvent({ foo: "bar" });
+
+          context.streamEvent(event);
+
+          expect(writer).toHaveBeenCalledWith(event);
+        });
+
+        it("creates context with sendMessage that streams", () => {
+          const writer = vi.fn();
+          const context = createStreamContext(writer);
+
+          context.sendMessage!({ content: "Processing...", level: "info" });
+
+          expect(writer).toHaveBeenCalledWith({
+            stream: HttpStreamEventType.Message,
+            content: "Processing...",
+            level: "info",
+          });
+        });
+
+        it("preserves base context properties", () => {
+          const writer = vi.fn();
+          const context = createStreamContext(writer, {
+            auth: { userId: "123" },
+          });
+
+          expect(context.auth).toEqual({ userId: "123" });
+        });
+
+        it("swallows writer errors in streamText", () => {
+          const writer = vi.fn().mockImplementation(() => {
+            throw new Error("Connection closed");
+          });
+          const context = createStreamContext(writer);
+
+          // Should not throw
+          expect(() => context.streamText("Hello")).not.toThrow();
+        });
+
+        it("swallows writer errors in streamEvent", () => {
+          const writer = vi.fn().mockImplementation(() => {
+            throw new Error("Connection closed");
+          });
+          const context = createStreamContext(writer);
+
+          // Should not throw
+          expect(() => context.streamEvent(createCompleteEvent())).not.toThrow();
+        });
+      });
+    });
+
+    describe("Async Generator Utilities", () => {
+      describe("isAsyncIterable", () => {
+        it("is a function", () => {
+          expect(isAsyncIterable).toBeFunction();
+        });
+
+        it("returns true for async generator", () => {
+          async function* gen() {
+            yield 1;
+          }
+          expect(isAsyncIterable(gen())).toBe(true);
+        });
+
+        it("returns true for object with Symbol.asyncIterator", () => {
+          const iterable = {
+            async *[Symbol.asyncIterator]() {
+              yield 1;
+            },
+          };
+          expect(isAsyncIterable(iterable)).toBe(true);
+        });
+
+        it("returns false for plain object", () => {
+          expect(isAsyncIterable({ foo: "bar" })).toBe(false);
+        });
+
+        it("returns false for null", () => {
+          expect(isAsyncIterable(null)).toBe(false);
+        });
+
+        it("returns false for array", () => {
+          expect(isAsyncIterable([1, 2, 3])).toBe(false);
+        });
+      });
+
+      describe("collectStreamEvents", () => {
+        it("is a function", () => {
+          expect(collectStreamEvents).toBeFunction();
+        });
+
+        it("collects all events from async iterable", async () => {
+          async function* gen(): AsyncIterable<HttpStreamEvent> {
+            yield createTextEvent("Hello");
+            yield createTextEvent("World");
+            yield createCompleteEvent();
+          }
+
+          const events = await collectStreamEvents(gen());
+
+          expect(events).toHaveLength(3);
+          expect(events[0]).toEqual(createTextEvent("Hello"));
+          expect(events[1]).toEqual(createTextEvent("World"));
+          expect(events[2]).toEqual(createCompleteEvent());
+        });
+      });
+
+      describe("wrapServiceForStreaming", () => {
+        it("is a function", () => {
+          expect(wrapServiceForStreaming).toBeFunction();
+        });
+
+        it("wraps non-async-iterable as data + complete events", async () => {
+          const result = { name: "Alice" };
+          const events = await collectStreamEvents(
+            wrapServiceForStreaming(result),
+          );
+
+          expect(events).toHaveLength(2);
+          expect(events[0]).toEqual(createDataEvent(result));
+          expect(events[1]).toEqual(createCompleteEvent());
+        });
+
+        it("passes through async iterable", async () => {
+          async function* gen(): AsyncIterable<HttpStreamEvent> {
+            yield createTextEvent("Hello");
+            yield createCompleteEvent();
+          }
+
+          const events = await collectStreamEvents(
+            wrapServiceForStreaming(gen()),
+          );
+
+          expect(events).toHaveLength(2);
+          expect(events[0]).toEqual(createTextEvent("Hello"));
+          expect(events[1]).toEqual(createCompleteEvent());
+        });
+      });
+    });
+
+    describe("LLM Stream Integration", () => {
+      describe("llmChunkToHttpEvent", () => {
+        it("is a function", () => {
+          expect(llmChunkToHttpEvent).toBeFunction();
+        });
+
+        it("converts text chunk", () => {
+          const chunk: LlmStreamChunk = {
+            type: "text",
+            content: "Hello",
+          };
+          const event = llmChunkToHttpEvent(chunk);
+          expect(event).toEqual(createTextEvent("Hello"));
+        });
+
+        it("converts done chunk", () => {
+          const chunk: LlmStreamChunk = {
+            type: "done",
+            usage: { inputTokens: 10, outputTokens: 20 },
+          };
+          const event = llmChunkToHttpEvent(chunk);
+          expect(event).toEqual(createCompleteEvent());
+        });
+
+        it("converts error chunk", () => {
+          const chunk: LlmStreamChunk = {
+            type: "error",
+            error: {
+              status: 500,
+              title: "Server Error",
+              detail: "Something went wrong",
+            },
+          };
+          const event = llmChunkToHttpEvent(chunk);
+          expect(event).toEqual(
+            createErrorEvent({
+              status: 500,
+              title: "Server Error",
+              detail: "Something went wrong",
+            }),
+          );
+        });
+
+        it("filters out tool_call by default", () => {
+          const chunk: LlmStreamChunk = {
+            type: "tool_call",
+            toolCall: {
+              id: "call-123",
+              name: "get_weather",
+              arguments: "{}",
+            },
+          };
+          const event = llmChunkToHttpEvent(chunk);
+          expect(event).toBeUndefined();
+        });
+
+        it("includes tool_call when includeTools is true", () => {
+          const chunk: LlmStreamChunk = {
+            type: "tool_call",
+            toolCall: {
+              id: "call-123",
+              name: "get_weather",
+              arguments: "{}",
+            },
+          };
+          const event = llmChunkToHttpEvent(chunk, { includeTools: true });
+          expect(event).toEqual(
+            createToolCallEvent({
+              id: "call-123",
+              name: "get_weather",
+              arguments: "{}",
+            }),
+          );
+        });
+
+        it("filters out tool_result by default", () => {
+          const chunk: LlmStreamChunk = {
+            type: "tool_result",
+            toolResult: {
+              id: "call-123",
+              name: "get_weather",
+              result: { temp: 72 },
+            },
+          };
+          const event = llmChunkToHttpEvent(chunk);
+          expect(event).toBeUndefined();
+        });
+
+        it("includes tool_result when includeTools is true", () => {
+          const chunk: LlmStreamChunk = {
+            type: "tool_result",
+            toolResult: {
+              id: "call-123",
+              name: "get_weather",
+              result: { temp: 72 },
+            },
+          };
+          const event = llmChunkToHttpEvent(chunk, { includeTools: true });
+          expect(event).toEqual(
+            createToolResultEvent({
+              id: "call-123",
+              name: "get_weather",
+              result: { temp: 72 },
+            }),
+          );
+        });
+
+        it("returns undefined for unknown chunk type", () => {
+          const chunk: LlmStreamChunk = {
+            type: "unknown" as string,
+          };
+          const event = llmChunkToHttpEvent(chunk);
+          expect(event).toBeUndefined();
+        });
+      });
+
+      describe("pipeLlmStream", () => {
+        it("is a function", () => {
+          expect(pipeLlmStream).toBeFunction();
+        });
+
+        it("converts LLM stream to HTTP stream events", async () => {
+          async function* llmStream(): AsyncIterable<LlmStreamChunk> {
+            yield { type: "text", content: "Hello" };
+            yield { type: "text", content: " World" };
+            yield { type: "done", usage: {} };
+          }
+
+          const events = await collectStreamEvents(pipeLlmStream(llmStream()));
+
+          expect(events).toHaveLength(3);
+          expect(events[0]).toEqual(createTextEvent("Hello"));
+          expect(events[1]).toEqual(createTextEvent(" World"));
+          expect(events[2]).toEqual(createCompleteEvent());
+        });
+
+        it("filters tool events by default", async () => {
+          async function* llmStream(): AsyncIterable<LlmStreamChunk> {
+            yield { type: "text", content: "Hello" };
+            yield {
+              type: "tool_call",
+              toolCall: { id: "1", name: "test", arguments: "{}" },
+            };
+            yield {
+              type: "tool_result",
+              toolResult: { id: "1", name: "test", result: {} },
+            };
+            yield { type: "text", content: " World" };
+            yield { type: "done", usage: {} };
+          }
+
+          const events = await collectStreamEvents(pipeLlmStream(llmStream()));
+
+          expect(events).toHaveLength(3);
+          expect(events[0]).toEqual(createTextEvent("Hello"));
+          expect(events[1]).toEqual(createTextEvent(" World"));
+          expect(events[2]).toEqual(createCompleteEvent());
+        });
+
+        it("includes tool events when includeTools is true", async () => {
+          async function* llmStream(): AsyncIterable<LlmStreamChunk> {
+            yield { type: "text", content: "Hello" };
+            yield {
+              type: "tool_call",
+              toolCall: { id: "1", name: "test", arguments: "{}" },
+            };
+            yield {
+              type: "tool_result",
+              toolResult: { id: "1", name: "test", result: {} },
+            };
+            yield { type: "done", usage: {} };
+          }
+
+          const events = await collectStreamEvents(
+            pipeLlmStream(llmStream(), { includeTools: true }),
+          );
+
+          expect(events).toHaveLength(4);
+          expect(events[0]).toEqual(createTextEvent("Hello"));
+          expect(events[1].stream).toBe(HttpStreamEventType.ToolCall);
+          expect(events[2].stream).toBe(HttpStreamEventType.ToolResult);
+          expect(events[3]).toEqual(createCompleteEvent());
+        });
+      });
+
+      describe("pipeLlmStreamToWriter", () => {
+        it("is a function", () => {
+          expect(pipeLlmStreamToWriter).toBeFunction();
+        });
+
+        it("writes events to writer function", async () => {
+          const writer = vi.fn();
+
+          async function* llmStream(): AsyncIterable<LlmStreamChunk> {
+            yield { type: "text", content: "Hello" };
+            yield { type: "done", usage: {} };
+          }
+
+          await pipeLlmStreamToWriter(llmStream(), writer);
+
+          expect(writer).toHaveBeenCalledTimes(2);
+          expect(writer).toHaveBeenNthCalledWith(1, createTextEvent("Hello"));
+          expect(writer).toHaveBeenNthCalledWith(2, createCompleteEvent());
+        });
+
+        it("awaits async writer", async () => {
+          const order: string[] = [];
+          const writer = vi.fn().mockImplementation(async () => {
+            await new Promise((resolve) => setTimeout(resolve, 10));
+            order.push("written");
+          });
+
+          async function* llmStream(): AsyncIterable<LlmStreamChunk> {
+            yield { type: "text", content: "Hello" };
+            order.push("yielded");
+          }
+
+          await pipeLlmStreamToWriter(llmStream(), writer);
+
+          // Writer await completes before generator resumes after yield
+          expect(order).toEqual(["written", "yielded"]);
+        });
+      });
+    });
+
+    describe("fabricHttp with stream", () => {
+      it("attaches stream: true", () => {
+        const httpService = fabricHttp({
+          alias: "test",
+          stream: true,
+          service: () => "result",
+        });
+
+        expect(httpService.stream).toBe(true);
+      });
+
+      it("defaults stream to false", () => {
+        const httpService = fabricHttp({
+          alias: "test",
+          service: () => "result",
+        });
+
+        expect(httpService.stream).toBe(false);
+      });
+
+      it("isFabricHttpService checks for stream property", () => {
+        const httpService = fabricHttp({
+          alias: "test",
+          stream: true,
+          service: () => "result",
+        });
+
+        expect(isFabricHttpService(httpService)).toBe(true);
       });
     });
   });

@@ -225,6 +225,36 @@ const customService = fabricHttp({
 });
 ```
 
+#### HTTP Streaming
+
+Enable SSE or NDJSON streaming for long-running tasks or LLM responses:
+
+```typescript
+import { fabricHttp, pipeLlmStream, createStreamContext } from "@jaypie/fabric/http";
+import Llm from "@jaypie/llm";
+
+const streamingService = fabricHttp({
+  alias: "chat",
+  input: { message: { type: String } },
+  // Enable streaming (SSE by default)
+  stream: true,
+  // Or configure: stream: { format: "ndjson", includeTools: true }
+  service: async function* ({ message }, context) {
+    // Send progress messages
+    context.sendMessage({ content: "Processing...", level: "info" });
+
+    // Stream LLM response
+    const llmStream = Llm.stream(message);
+    yield* pipeLlmStream(llmStream);
+  },
+});
+```
+
+Streaming utilities:
+- `pipeLlmStream(llmStream)` - Convert @jaypie/llm stream to HTTP events
+- `createStreamContext(writer)` - Create context with `streamText()` and `streamEvent()` methods
+- `formatSseEvent(event)` / `formatNdjsonEvent(event)` - Format events for output
+
 ### Modeling
 
 FabricModel provides a standard vocabulary for entities. All fields are optional except `id` and `model`, enabling high reuse across different entity types.
