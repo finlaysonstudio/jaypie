@@ -673,5 +673,185 @@ describe("MCP Adapter", () => {
         });
       });
     });
+
+    describe("inline service definition (short-form)", () => {
+      it("accepts inline function with alias, description, input", async () => {
+        let capturedInput: unknown;
+        const mockServer = createMockServer();
+        const result = fabricMcp({
+          alias: "greet",
+          description: "Greet a user",
+          input: {
+            userName: { type: String },
+            loud: { type: Boolean, default: false },
+          },
+          server: mockServer as unknown as Parameters<
+            typeof fabricMcp
+          >[0]["server"],
+          service: ({ loud, userName }) => {
+            capturedInput = { loud, userName };
+            const greeting = `Hello, ${userName}!`;
+            return loud ? greeting.toUpperCase() : greeting;
+          },
+        });
+
+        expect(result.name).toBe("greet");
+        expect(mockServer.registeredTools[0].name).toBe("greet");
+        expect(mockServer.registeredTools[0].description).toBe("Greet a user");
+
+        const handler = mockServer.registeredTools[0].handler;
+        const response = await handler({ userName: "Alice", loud: true });
+
+        expect(capturedInput).toEqual({ loud: true, userName: "Alice" });
+        expect(response).toEqual({
+          content: [{ text: "HELLO, ALICE!", type: "text" }],
+        });
+      });
+
+      it("defaults to 'tool' when no alias provided for inline function", () => {
+        const mockServer = createMockServer();
+        const result = fabricMcp({
+          server: mockServer as unknown as Parameters<
+            typeof fabricMcp
+          >[0]["server"],
+          service: () => "result",
+        });
+
+        expect(result.name).toBe("tool");
+        expect(mockServer.registeredTools[0].name).toBe("tool");
+      });
+
+      it("uses name over alias for inline function", () => {
+        const mockServer = createMockServer();
+        const result = fabricMcp({
+          alias: "greet",
+          name: "hello",
+          server: mockServer as unknown as Parameters<
+            typeof fabricMcp
+          >[0]["server"],
+          service: () => "result",
+        });
+
+        expect(result.name).toBe("hello");
+        expect(mockServer.registeredTools[0].name).toBe("hello");
+      });
+    });
+
+    describe("pre-instantiated service with overrides", () => {
+      it("overrides alias with config alias", () => {
+        const service = fabricService({
+          alias: "original",
+          service: () => "result",
+        });
+
+        const mockServer = createMockServer();
+        const result = fabricMcp({
+          alias: "overridden",
+          server: mockServer as unknown as Parameters<
+            typeof fabricMcp
+          >[0]["server"],
+          service,
+        });
+
+        expect(result.name).toBe("overridden");
+        expect(mockServer.registeredTools[0].name).toBe("overridden");
+      });
+
+      it("overrides description with config description", () => {
+        const service = fabricService({
+          alias: "test",
+          description: "Original description",
+          service: () => "result",
+        });
+
+        const mockServer = createMockServer();
+        fabricMcp({
+          description: "Overridden description",
+          server: mockServer as unknown as Parameters<
+            typeof fabricMcp
+          >[0]["server"],
+          service,
+        });
+
+        expect(mockServer.registeredTools[0].description).toBe(
+          "Overridden description",
+        );
+      });
+
+      it("inherits description when not overridden", () => {
+        const service = fabricService({
+          alias: "test",
+          description: "Original description",
+          service: () => "result",
+        });
+
+        const mockServer = createMockServer();
+        fabricMcp({
+          alias: "overridden",
+          server: mockServer as unknown as Parameters<
+            typeof fabricMcp
+          >[0]["server"],
+          service,
+        });
+
+        expect(mockServer.registeredTools[0].description).toBe(
+          "Original description",
+        );
+      });
+
+      it("overrides input definitions", async () => {
+        let capturedInput: unknown;
+        const service = fabricService({
+          alias: "original",
+          input: {
+            name: { type: String },
+          },
+          service: (input) => {
+            capturedInput = input;
+            return input;
+          },
+        });
+
+        const mockServer = createMockServer();
+        fabricMcp({
+          input: {
+            name: { type: String },
+            count: { type: Number, default: 10 },
+          },
+          server: mockServer as unknown as Parameters<
+            typeof fabricMcp
+          >[0]["server"],
+          service,
+        });
+
+        const handler = mockServer.registeredTools[0].handler;
+        await handler({ name: "Alice" });
+
+        // Should have both name and count (from overridden input)
+        expect(capturedInput).toEqual({ name: "Alice", count: 10 });
+      });
+
+      it("preserves original service when using with overrides", async () => {
+        const originalService = fabricService({
+          alias: "foo",
+          description: "Foo service",
+          service: () => "original",
+        });
+
+        const mockServer = createMockServer();
+        // Use with overrides
+        fabricMcp({
+          alias: "bar",
+          server: mockServer as unknown as Parameters<
+            typeof fabricMcp
+          >[0]["server"],
+          service: originalService,
+        });
+
+        // Original should be unchanged
+        expect(originalService.alias).toBe("foo");
+        expect(originalService.description).toBe("Foo service");
+      });
+    });
   });
 });

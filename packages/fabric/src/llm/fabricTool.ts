@@ -1,5 +1,6 @@
 // Fabric an LLM tool from a service
 
+import { resolveService } from "../resolveService.js";
 import type { Message, ServiceContext } from "../types.js";
 import { inputToJsonSchema } from "./inputToJsonSchema.js";
 import type { FabricToolConfig, FabricToolResult, LlmTool } from "./types.js";
@@ -44,22 +45,32 @@ import type { FabricToolConfig, FabricToolResult, LlmTool } from "./types.js";
  */
 export function fabricTool(config: FabricToolConfig): FabricToolResult {
   const {
+    alias,
     description,
     exclude,
+    input,
     message,
     name,
     onComplete,
     onError,
     onFatal,
     onMessage,
-    service,
+    service: serviceOrFunction,
   } = config;
+
+  // Resolve inline service or apply overrides to pre-instantiated service
+  const service = resolveService({
+    alias,
+    description,
+    input,
+    service: serviceOrFunction,
+  });
 
   // Determine tool name (priority: name > service.alias > "tool")
   const toolName = name ?? service.alias ?? "tool";
 
-  // Determine tool description (priority: description > service.description)
-  const toolDescription = description ?? service.description ?? "";
+  // Determine tool description
+  const toolDescription = service.description ?? "";
 
   // Convert input definitions to JSON Schema
   const parameters = inputToJsonSchema(service.input, { exclude });

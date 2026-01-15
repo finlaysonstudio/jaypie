@@ -1,6 +1,11 @@
 // Type definitions for @jaypie/fabric/lambda
 
-import type { Message, Service } from "../types.js";
+import type {
+  InputFieldDefinition,
+  Message,
+  Service,
+  ServiceFunction,
+} from "../types.js";
 
 /** Callback called when handler completes successfully */
 export type OnCompleteCallback = (response: unknown) => void | Promise<void>;
@@ -55,10 +60,22 @@ export interface FabricLambdaOptions {
 
 /**
  * Configuration for fabricLambda
+ *
+ * Supports two patterns:
+ * 1. Pre-instantiated service: `{ service: myService }`
+ * 2. Inline service definition: `{ alias, description, input, service: (input) => result }`
+ *
+ * When passing a pre-instantiated Service, `alias`, `description`, and `input` act as overrides.
  */
 export interface FabricLambdaConfig extends FabricLambdaOptions {
-  /** The service to wrap */
-  service: Service;
+  /** Service alias (used as name for logging if `name` not provided) - for inline or override */
+  alias?: string;
+  /** Service description - for inline or override */
+  description?: string;
+  /** Input field definitions - for inline service or override */
+  input?: Record<string, InputFieldDefinition>;
+  /** The service - either a pre-instantiated Service or an inline function */
+  service: Service | ServiceFunction<Record<string, unknown>, unknown>;
 }
 
 /**

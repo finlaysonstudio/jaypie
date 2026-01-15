@@ -1,5 +1,6 @@
 // Fabric a service as an MCP tool
 
+import { resolveService } from "../resolveService.js";
 import type { Message, ServiceContext } from "../types.js";
 import type { FabricMcpConfig, FabricMcpResult } from "./types.js";
 
@@ -57,21 +58,31 @@ function formatResult(value: unknown): string {
  */
 export function fabricMcp(config: FabricMcpConfig): FabricMcpResult {
   const {
+    alias,
     description,
+    input,
     name,
     onComplete,
     onError,
     onFatal,
     onMessage,
     server,
-    service,
+    service: serviceOrFunction,
   } = config;
+
+  // Resolve inline service or apply overrides to pre-instantiated service
+  const service = resolveService({
+    alias,
+    description,
+    input,
+    service: serviceOrFunction,
+  });
 
   // Determine tool name (priority: name > service.alias > "tool")
   const toolName = name ?? service.alias ?? "tool";
 
-  // Determine tool description (priority: description > service.description)
-  const toolDescription = description ?? service.description ?? "";
+  // Determine tool description
+  const toolDescription = service.description ?? "";
 
   // Create context callbacks that wrap with error swallowing
   const sendMessage = onMessage

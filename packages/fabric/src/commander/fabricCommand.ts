@@ -1,9 +1,10 @@
 // Fabric a service as a Commander command
 
+import { resolveService } from "../resolveService.js";
 import type { Message, ServiceContext } from "../types.js";
-import type { FabricCommandConfig, FabricCommandResult } from "./types.js";
 import { createCommanderOptions } from "./createCommanderOptions.js";
 import { parseCommanderOptions } from "./parseCommanderOptions.js";
+import type { FabricCommandConfig, FabricCommandResult } from "./types.js";
 
 /**
  * Fabric a service as a Commander.js command
@@ -48,8 +49,10 @@ import { parseCommanderOptions } from "./parseCommanderOptions.js";
  */
 
 export function fabricCommand({
+  alias,
   description,
   exclude,
+  input,
   name,
   onComplete,
   onError,
@@ -57,13 +60,21 @@ export function fabricCommand({
   onMessage,
   overrides,
   program,
-  service,
+  service: serviceOrFunction,
 }: FabricCommandConfig): FabricCommandResult {
+  // Resolve inline service or apply overrides to pre-instantiated service
+  const service = resolveService({
+    alias,
+    description,
+    input,
+    service: serviceOrFunction,
+  });
+
   // Determine command name (priority: name > service.alias > "command")
   const commandName = name ?? service.alias ?? "command";
 
-  // Determine command description (priority: description > service.description)
-  const commandDescription = description ?? service.description;
+  // Determine command description
+  const commandDescription = service.description;
 
   // Create the command
   const command = program.command(commandName);

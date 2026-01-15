@@ -683,5 +683,162 @@ describe("LLM Adapter", () => {
         expect(result).toBe("completed");
       });
     });
+
+    describe("inline service definition (short-form)", () => {
+      it("accepts inline function with alias, description, input", async () => {
+        let capturedInput: unknown;
+        const { tool } = fabricTool({
+          alias: "greet",
+          description: "Greet a user",
+          input: {
+            userName: { type: String },
+            loud: { type: Boolean, default: false },
+          },
+          service: ({ loud, userName }) => {
+            capturedInput = { loud, userName };
+            const greeting = `Hello, ${userName}!`;
+            return loud ? greeting.toUpperCase() : greeting;
+          },
+        });
+
+        expect(tool.name).toBe("greet");
+        expect(tool.description).toBe("Greet a user");
+
+        const result = await tool.call({ userName: "Alice", loud: true });
+
+        expect(capturedInput).toEqual({ loud: true, userName: "Alice" });
+        expect(result).toBe("HELLO, ALICE!");
+      });
+
+      it("generates JSON schema from inline input definitions", () => {
+        const { tool } = fabricTool({
+          alias: "test",
+          input: {
+            name: { type: String, description: "User name" },
+            count: { type: Number, default: 10 },
+          },
+          service: () => "result",
+        });
+
+        // Note: default values don't appear in JSON schema, but they affect required array
+        expect(tool.parameters).toEqual({
+          properties: {
+            count: { type: "number" },
+            name: { description: "User name", type: "string" },
+          },
+          required: ["name"],
+          type: "object",
+        });
+      });
+
+      it("defaults to 'tool' when no alias provided for inline function", () => {
+        const { tool } = fabricTool({
+          service: () => "result",
+        });
+
+        expect(tool.name).toBe("tool");
+      });
+
+      it("uses name over alias for inline function", () => {
+        const { tool } = fabricTool({
+          alias: "greet",
+          name: "hello",
+          service: () => "result",
+        });
+
+        expect(tool.name).toBe("hello");
+      });
+    });
+
+    describe("pre-instantiated service with overrides", () => {
+      it("overrides alias with config alias", () => {
+        const service = fabricService({
+          alias: "original",
+          service: () => "result",
+        });
+
+        const { tool } = fabricTool({
+          alias: "overridden",
+          service,
+        });
+
+        expect(tool.name).toBe("overridden");
+      });
+
+      it("overrides description with config description", () => {
+        const service = fabricService({
+          alias: "test",
+          description: "Original description",
+          service: () => "result",
+        });
+
+        const { tool } = fabricTool({
+          description: "Overridden description",
+          service,
+        });
+
+        expect(tool.description).toBe("Overridden description");
+      });
+
+      it("inherits description when not overridden", () => {
+        const service = fabricService({
+          alias: "test",
+          description: "Original description",
+          service: () => "result",
+        });
+
+        const { tool } = fabricTool({
+          alias: "overridden",
+          service,
+        });
+
+        expect(tool.description).toBe("Original description");
+      });
+
+      it("overrides input definitions", async () => {
+        let capturedInput: unknown;
+        const service = fabricService({
+          alias: "original",
+          input: {
+            name: { type: String },
+          },
+          service: (input) => {
+            capturedInput = input;
+            return input;
+          },
+        });
+
+        const { tool } = fabricTool({
+          input: {
+            name: { type: String },
+            count: { type: Number, default: 10 },
+          },
+          service,
+        });
+
+        await tool.call({ name: "Alice" });
+
+        // Should have both name and count (from overridden input)
+        expect(capturedInput).toEqual({ name: "Alice", count: 10 });
+      });
+
+      it("preserves original service when using with overrides", async () => {
+        const originalService = fabricService({
+          alias: "foo",
+          description: "Foo service",
+          service: () => "original",
+        });
+
+        // Use with overrides
+        fabricTool({
+          alias: "bar",
+          service: originalService,
+        });
+
+        // Original should be unchanged
+        expect(originalService.alias).toBe("foo");
+        expect(originalService.description).toBe("Foo service");
+      });
+    });
   });
 });

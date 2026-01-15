@@ -1489,5 +1489,161 @@ describe("Commander Adapter", () => {
         expect((errors[2] as Error).message).toBe("Error 3");
       });
     });
+
+    describe("inline service definition (short-form)", () => {
+      it("accepts inline function with alias, description, input", async () => {
+        let capturedInput: unknown;
+        const { command } = fabricCommand({
+          alias: "greet",
+          description: "Greet a user",
+          input: {
+            userName: { type: String, flag: "user", letter: "u" },
+            loud: { type: Boolean, letter: "l", default: false },
+          },
+          program,
+          service: ({ loud, userName }) => {
+            const greeting = `Hello, ${userName}!`;
+            capturedInput = { loud, userName };
+            return loud ? greeting.toUpperCase() : greeting;
+          },
+        });
+
+        expect(command.name()).toBe("greet");
+        expect(command.description()).toBe("Greet a user");
+
+        await program.parseAsync([
+          "node",
+          "test",
+          "greet",
+          "--user",
+          "Alice",
+          "-l",
+        ]);
+
+        expect(capturedInput).toEqual({ loud: true, userName: "Alice" });
+      });
+
+      it("defaults to 'command' when no alias provided for inline function", () => {
+        const { command } = fabricCommand({
+          program,
+          service: () => "result",
+        });
+
+        expect(command.name()).toBe("command");
+      });
+
+      it("uses name over alias for inline function", () => {
+        const { command } = fabricCommand({
+          alias: "greet",
+          name: "hello",
+          program,
+          service: () => "result",
+        });
+
+        expect(command.name()).toBe("hello");
+      });
+    });
+
+    describe("pre-instantiated service with overrides", () => {
+      it("overrides alias with config alias", () => {
+        const service = fabricService({
+          alias: "original",
+          service: () => "result",
+        });
+
+        const { command } = fabricCommand({
+          alias: "overridden",
+          program,
+          service,
+        });
+
+        expect(command.name()).toBe("overridden");
+      });
+
+      it("overrides description with config description", () => {
+        const service = fabricService({
+          alias: "test",
+          description: "Original description",
+          service: () => "result",
+        });
+
+        const { command } = fabricCommand({
+          description: "Overridden description",
+          program,
+          service,
+        });
+
+        expect(command.description()).toBe("Overridden description");
+      });
+
+      it("inherits description when not overridden", () => {
+        const service = fabricService({
+          alias: "test",
+          description: "Original description",
+          service: () => "result",
+        });
+
+        const { command } = fabricCommand({
+          alias: "overridden",
+          program,
+          service,
+        });
+
+        expect(command.description()).toBe("Original description");
+      });
+
+      it("overrides input definitions", async () => {
+        let capturedInput: unknown;
+        const service = fabricService({
+          alias: "original",
+          input: {
+            name: { type: String },
+          },
+          service: (input) => {
+            capturedInput = input;
+            return input;
+          },
+        });
+
+        fabricCommand({
+          input: {
+            name: { type: String },
+            count: { type: Number, default: 10 },
+          },
+          program,
+          service,
+        });
+
+        await program.parseAsync([
+          "node",
+          "test",
+          "original",
+          "--name",
+          "Alice",
+        ]);
+
+        // Should have both name and count (from overridden input)
+        expect(capturedInput).toEqual({ name: "Alice", count: 10 });
+      });
+
+      it("preserves original service when using with overrides", async () => {
+        const originalService = fabricService({
+          alias: "foo",
+          description: "Foo service",
+          service: () => "original",
+        });
+
+        // Use with overrides
+        fabricCommand({
+          alias: "bar",
+          program,
+          service: originalService,
+        });
+
+        // Original should be unchanged
+        expect(originalService.alias).toBe("foo");
+        expect(originalService.description).toBe("Foo service");
+      });
+    });
   });
 });

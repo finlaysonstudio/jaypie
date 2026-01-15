@@ -115,6 +115,8 @@ export type {
 
 // Service
 export { fabricService } from "./service.js";
+export { resolveService } from "./resolveService.js";
+export type { ResolveServiceConfig } from "./resolveService.js";
 
 // Status Type
 export { isStatus, STATUS_VALUES, StatusType } from "./status.js";

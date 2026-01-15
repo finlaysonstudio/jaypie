@@ -852,5 +852,125 @@ describe("Lambda Adapter", () => {
         expect((result as EvalResult).jobId).toMatch(/^job-/);
       });
     });
+
+    describe("inline service definition (short-form)", () => {
+      it("accepts inline function with alias, description, input", async () => {
+        let capturedInput: unknown;
+        const handler = fabricLambda({
+          alias: "greet",
+          description: "Greet a user",
+          input: {
+            userName: { type: String },
+            loud: { type: Boolean, default: false },
+          },
+          service: ({ loud, userName }) => {
+            capturedInput = { loud, userName };
+            const greeting = `Hello, ${userName}!`;
+            return loud ? greeting.toUpperCase() : greeting;
+          },
+        });
+
+        const result = await handler({ userName: "Alice", loud: true });
+
+        expect(capturedInput).toEqual({ loud: true, userName: "Alice" });
+        expect(result).toBe("HELLO, ALICE!");
+      });
+
+      it("passes name from alias to lambdaHandler options", () => {
+        const handler = fabricLambda({
+          alias: "test-service",
+          service: () => "result",
+        });
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        expect((handler as any)._options.name).toBe("test-service");
+      });
+
+      it("accepts inline function without alias", async () => {
+        const handler = fabricLambda({
+          service: () => "result",
+        });
+
+        const result = await handler({});
+
+        expect(result).toBe("result");
+      });
+    });
+
+    describe("pre-instantiated service with overrides", () => {
+      it("overrides alias with config alias", () => {
+        const service = fabricService({
+          alias: "original",
+          service: () => "result",
+        });
+
+        const handler = fabricLambda({
+          alias: "overridden",
+          service,
+        });
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        expect((handler as any)._options.name).toBe("overridden");
+      });
+
+      it("inherits alias when not overridden", () => {
+        const service = fabricService({
+          alias: "original",
+          service: () => "result",
+        });
+
+        const handler = fabricLambda({
+          service,
+        });
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        expect((handler as any)._options.name).toBe("original");
+      });
+
+      it("overrides input definitions", async () => {
+        let capturedInput: unknown;
+        const service = fabricService({
+          alias: "original",
+          input: {
+            name: { type: String },
+          },
+          service: (input) => {
+            capturedInput = input;
+            return input;
+          },
+        });
+
+        const handler = fabricLambda({
+          input: {
+            name: { type: String },
+            count: { type: Number, default: 10 },
+          },
+          service,
+        });
+
+        await handler({ name: "Alice" });
+
+        // Should have both name and count (from overridden input)
+        expect(capturedInput).toEqual({ name: "Alice", count: 10 });
+      });
+
+      it("preserves original service when using with overrides", async () => {
+        const originalService = fabricService({
+          alias: "foo",
+          description: "Foo service",
+          service: () => "original",
+        });
+
+        // Use with overrides
+        fabricLambda({
+          alias: "bar",
+          service: originalService,
+        });
+
+        // Original should be unchanged
+        expect(originalService.alias).toBe("foo");
+        expect(originalService.description).toBe("Foo service");
+      });
+    });
   });
 });

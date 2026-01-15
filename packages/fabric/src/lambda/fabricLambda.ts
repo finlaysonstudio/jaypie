@@ -3,7 +3,8 @@
 import { getMessages } from "@jaypie/aws";
 import { lambdaHandler } from "@jaypie/lambda";
 
-import type { Message, Service, ServiceContext } from "../types.js";
+import { resolveService } from "../resolveService.js";
+import type { Message, Service, ServiceContext, ServiceFunction } from "../types.js";
 import type {
   FabricLambdaConfig,
   FabricLambdaOptions,
@@ -12,10 +13,30 @@ import type {
 } from "./types.js";
 
 /**
- * Type guard to check if a value is a Service (has been fabricated)
+ * Type guard to check if a value is a pre-instantiated Service
+ * A Service is a function with ServiceConfig properties attached
  */
 function isService(value: unknown): value is Service {
-  return typeof value === "function";
+  return (
+    typeof value === "function" &&
+    ("alias" in value ||
+      "description" in value ||
+      "input" in value ||
+      "service" in value)
+  );
+}
+
+/**
+ * Type guard to check if a value is a config object (has service property)
+ */
+function isConfig(value: unknown): value is FabricLambdaConfig {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "service" in value &&
+    (typeof (value as FabricLambdaConfig).service === "function" ||
+      isService((value as FabricLambdaConfig).service))
+  );
 }
 
 /**
@@ -52,20 +73,41 @@ function isService(value: unknown): value is Service {
  * ```
  */
 export function fabricLambda<TResult = unknown>(
-  serviceOrConfig: FabricLambdaConfig | Service,
+  serviceOrConfig:
+    | FabricLambdaConfig
+    | Service
+    | ServiceFunction<Record<string, unknown>, unknown>,
   options: FabricLambdaOptions = {},
 ): FabricLambdaResult<TResult | TResult[]> {
-  // Normalize arguments
+  // Normalize arguments and resolve service
   let service: Service;
   let opts: FabricLambdaOptions;
 
-  if (isService(serviceOrConfig)) {
+  if (isConfig(serviceOrConfig)) {
+    // Config object with service property
+    const {
+      alias,
+      description,
+      input,
+      service: configService,
+      ...configOpts
+    } = serviceOrConfig;
+    // Resolve inline service or apply overrides
+    service = resolveService({
+      alias,
+      description,
+      input,
+      service: configService,
+    });
+    opts = configOpts;
+  } else if (isService(serviceOrConfig)) {
+    // Pre-instantiated Service passed directly
     service = serviceOrConfig;
     opts = options;
   } else {
-    const { service: configService, ...configOpts } = serviceOrConfig;
-    service = configService;
-    opts = configOpts;
+    // Plain function passed directly - wrap it
+    service = resolveService({ service: serviceOrConfig });
+    opts = options;
   }
 
   // Use service.alias as the name for logging (can be overridden via options.name)

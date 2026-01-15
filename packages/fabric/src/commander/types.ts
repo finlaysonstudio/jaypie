@@ -2,7 +2,12 @@
 
 import type { Command, Option } from "commander";
 
-import type { InputFieldDefinition, Message, Service } from "../types.js";
+import type {
+  InputFieldDefinition,
+  Message,
+  Service,
+  ServiceFunction,
+} from "../types.js";
 
 /**
  * Callback function called when the command completes successfully
@@ -75,13 +80,23 @@ export interface CreateCommanderOptionsResult {
 
 /**
  * Configuration for fabricCommand
+ *
+ * Supports two patterns:
+ * 1. Pre-instantiated service: `{ program, service: myService }`
+ * 2. Inline service definition: `{ program, alias, description, input, service: (input) => result }`
+ *
+ * When passing a pre-instantiated Service, `alias`, `description`, and `input` act as overrides.
  */
 export interface FabricCommandConfig {
+  /** Service alias (used as command name if `name` not provided) - for inline or override */
+  alias?: string;
   /** Override the command description (defaults to service.description) */
   description?: string;
   /** Field names to exclude from options */
   exclude?: string[];
-  /** Override the command name (defaults to service.alias) */
+  /** Input field definitions - for inline service or override */
+  input?: Record<string, InputFieldDefinition>;
+  /** Override the command name (defaults to alias or service.alias) */
   name?: string;
   /** Callback called when command completes successfully */
   onComplete?: OnCompleteCallback;
@@ -95,8 +110,8 @@ export interface FabricCommandConfig {
   overrides?: Record<string, CommanderOptionOverride>;
   /** The Commander program or command to register on */
   program: Command;
-  /** The service to register */
-  service: Service;
+  /** The service - either a pre-instantiated Service or an inline function */
+  service: Service | ServiceFunction<Record<string, unknown>, unknown>;
 }
 
 /**

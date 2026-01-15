@@ -1,6 +1,11 @@
 // LLM adapter types for @jaypie/fabric
 
-import type { Message, Service } from "../types.js";
+import type {
+  InputFieldDefinition,
+  Message,
+  Service,
+  ServiceFunction,
+} from "../types.js";
 
 /** Callback called when tool completes successfully */
 export type OnCompleteCallback = (response: unknown) => void | Promise<void>;
@@ -16,15 +21,25 @@ export type OnMessageCallback = (message: Message) => void | Promise<void>;
 
 /**
  * Configuration for fabricating an LLM tool from a service
+ *
+ * Supports two patterns:
+ * 1. Pre-instantiated service: `{ service: myService }`
+ * 2. Inline service definition: `{ alias, description, input, service: (input) => result }`
+ *
+ * When passing a pre-instantiated Service, `alias`, `description`, and `input` act as overrides.
  */
 export interface FabricToolConfig {
+  /** Service alias (used as tool name if `name` not provided) - for inline or override */
+  alias?: string;
   /** Override the tool description (defaults to service.description) */
   description?: string;
   /** Fields to exclude from the tool parameters */
   exclude?: string[];
+  /** Input field definitions - for inline service or override */
+  input?: Record<string, InputFieldDefinition>;
   /** Custom message for logging (string or function) */
   message?: string | ((args?: Record<string, unknown>) => string);
-  /** Override the tool name (defaults to service.alias) */
+  /** Override the tool name (defaults to alias or service.alias) */
   name?: string;
   /** Callback called when tool completes successfully */
   onComplete?: OnCompleteCallback;
@@ -34,8 +49,8 @@ export interface FabricToolConfig {
   onFatal?: OnFatalCallback;
   /** Callback for receiving messages from service */
   onMessage?: OnMessageCallback;
-  /** The service to adapt */
-  service: Service;
+  /** The service - either a pre-instantiated Service or an inline function */
+  service: Service | ServiceFunction<Record<string, unknown>, unknown>;
 }
 
 /**
