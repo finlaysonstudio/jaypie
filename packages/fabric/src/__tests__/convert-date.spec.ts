@@ -134,9 +134,7 @@ describe("fabricDate", () => {
 
     it("throws for boolean", () => {
       expect(() => fabricDate(true)).toThrow("Cannot convert boolean to Date");
-      expect(() => fabricDate(false)).toThrow(
-        "Cannot convert boolean to Date",
-      );
+      expect(() => fabricDate(false)).toThrow("Cannot convert boolean to Date");
     });
   });
 });

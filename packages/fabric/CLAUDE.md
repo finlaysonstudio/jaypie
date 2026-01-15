@@ -10,7 +10,7 @@ Jaypie modeling framework - provides type conversion and service handler pattern
 | Type | Utility library |
 | Dependencies | `@jaypie/errors` |
 | Peer Dependencies | `@jaypie/aws` (optional), `@jaypie/lambda` (optional), `@modelcontextprotocol/sdk` (optional), `commander` (optional) |
-| Exports | Fabric functions, fabricService, llm adapter; commander/lambda/mcp via sub-paths |
+| Exports | Fabric functions, fabricService, llm adapter; commander/http/lambda/mcp via sub-paths |
 
 ## Internal Structure
 
@@ -20,6 +20,7 @@ src/
 │   ├── convert.spec.ts           # Conversion function tests
 │   ├── convert-date.spec.ts      # Date conversion tests
 │   ├── commander.spec.ts         # Commander adapter tests
+│   ├── http.spec.ts              # HTTP adapter tests
 │   ├── index.spec.ts             # Export verification tests
 │   ├── lambda.spec.ts            # Lambda adapter tests
 │   ├── llm.spec.ts               # LLM adapter tests
@@ -33,6 +34,13 @@ src/
 │   ├── parseCommanderOptions.ts   # Parse Commander opts to handler input
 │   ├── fabricCommand.ts           # Register handler as Commander command
 │   └── types.ts                   # Commander adapter types
+├── http/
+│   ├── authorization.ts           # Token extraction and validation
+│   ├── cors.ts                    # CORS configuration and headers
+│   ├── fabricHttp.ts              # HTTP service wrapper
+│   ├── httpTransform.ts           # HTTP context transformation
+│   ├── index.ts                   # HTTP module exports
+│   └── types.ts                   # HTTP adapter types
 ├── lambda/
 │   ├── fabricLambda.ts            # Wrap fabricService for Lambda
 │   ├── index.ts                   # Lambda module exports
@@ -257,6 +265,27 @@ export type { FabricToolConfig, FabricToolResult, LlmTool, OnCompleteCallback, O
 ```typescript
 export { fabricMcp } from "./fabricMcp.js";
 export type { FabricMcpConfig, FabricMcpResult, McpToolContentItem, McpToolResponse, OnCompleteCallback, OnErrorCallback, OnFatalCallback, OnMessageCallback } from "./types.js";
+```
+
+### HTTP Export (`@jaypie/fabric/http`)
+
+```typescript
+// Main exports
+export { fabricHttp, isFabricHttpService } from "./fabricHttp.js";
+export type { HttpServiceContext } from "./fabricHttp.js";
+
+// Authorization utilities
+export { extractToken, getAuthHeader, isAuthorizationRequired, validateAuthorization } from "./authorization.js";
+
+// CORS utilities
+export { buildCorsHeaders, buildPreflightHeaders, DEFAULT_CORS_CONFIG, DEFAULT_CORS_METHODS, getAllowedOrigin, isPreflightRequest, normalizeCorsConfig } from "./cors.js";
+
+// HTTP transformation utilities
+export { createHttpContext, defaultHttpTransform, parseBody, parsePathParams, parseQueryString, transformHttpToInput } from "./httpTransform.js";
+
+// Types
+export type { AuthorizationConfig, AuthorizationFunction, CorsConfig, CorsHeaders, CorsOption, DataResponse, ErrorObject, ErrorResponse, FabricHttpConfig, FabricHttpService, HttpContext, HttpMethod, HttpTransformFunction } from "./types.js";
+export { DEFAULT_HTTP_METHODS } from "./types.js";
 ```
 
 ## Migration from @jaypie/vocabulary

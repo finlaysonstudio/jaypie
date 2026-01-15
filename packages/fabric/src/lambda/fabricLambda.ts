@@ -4,7 +4,12 @@ import { getMessages } from "@jaypie/aws";
 import { lambdaHandler } from "@jaypie/lambda";
 
 import { resolveService } from "../resolveService.js";
-import type { Message, Service, ServiceContext, ServiceFunction } from "../types.js";
+import type {
+  Message,
+  Service,
+  ServiceContext,
+  ServiceFunction,
+} from "../types.js";
 import type {
   FabricLambdaConfig,
   FabricLambdaOptions,

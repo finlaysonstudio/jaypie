@@ -1,7 +1,11 @@
 // Resolve inline service definitions to full Service objects
 
 import { fabricService } from "./service.js";
-import type { InputFieldDefinition, Service, ServiceFunction } from "./types.js";
+import type {
+  InputFieldDefinition,
+  Service,
+  ServiceFunction,
+} from "./types.js";
 
 /**
  * Configuration for resolving a service

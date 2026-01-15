@@ -142,4 +142,3 @@ export type {
   ValidatedStringType,
   ValidateFunction,
 } from "./types.js";
-

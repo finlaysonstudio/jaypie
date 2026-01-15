@@ -2,7 +2,11 @@
 
 import { Command } from "commander";
 
-import type { InputFieldDefinition, Service, ServiceFunction } from "../types.js";
+import type {
+  InputFieldDefinition,
+  Service,
+  ServiceFunction,
+} from "../types.js";
 import { fabricCommand } from "./fabricCommand.js";
 import type {
   OnCompleteCallback,
@@ -65,7 +69,9 @@ function isServicesArray(
 /**
  * Type guard to check if a service entry is an inline definition
  */
-function isInlineDefinition(entry: ServiceEntry): entry is InlineServiceDefinition {
+function isInlineDefinition(
+  entry: ServiceEntry,
+): entry is InlineServiceDefinition {
   return (
     typeof entry === "object" &&
     entry !== null &&

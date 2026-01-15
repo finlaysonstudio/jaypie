@@ -155,6 +155,76 @@ const server = new McpServer({ name: "my-server", version: "1.0.0" });
 fabricMcp({ service: handler, server });
 ```
 
+### HTTP Adapter
+
+Create HTTP-aware services with built-in authorization and CORS support:
+
+```typescript
+import { fabricService } from "@jaypie/fabric";
+import { fabricHttp } from "@jaypie/fabric/http";
+
+// Inline service definition
+const userService = fabricHttp({
+  alias: "users",
+  description: "User management API",
+  input: {
+    id: { type: String },
+    name: { type: String, required: false },
+  },
+  // Authorization: function receives token from Authorization header
+  // (Bearer prefix removed, whitespace stripped)
+  authorization: async (token) => {
+    const user = await validateJwt(token);
+    if (!user) throw new UnauthorizedError();
+    return user; // Available in context.auth
+  },
+  // CORS enabled by default, customize as needed
+  cors: {
+    origin: ["https://app.example.com"],
+    credentials: true,
+  },
+  service: ({ id, name }, context) => {
+    console.log("Authenticated user:", context.auth);
+    return { id, name };
+  },
+});
+
+// Or wrap an existing fabricService
+const coreService = fabricService({
+  alias: "division",
+  input: {
+    numerator: { type: Number },
+    denominator: { type: Number },
+  },
+  service: ({ numerator, denominator }) => numerator / denominator,
+});
+
+const divisionApi = fabricHttp({
+  service: coreService,
+  authorization: false, // Public endpoint
+});
+```
+
+#### HTTP Transformation
+
+Customize how HTTP context maps to service input:
+
+```typescript
+const customService = fabricHttp({
+  alias: "custom",
+  input: {
+    userId: { type: String },
+    action: { type: String },
+  },
+  // Transform HTTP context to service input
+  http: ({ headers, params, body }) => ({
+    userId: headers.get("x-user-id") ?? params.userId,
+    action: body.action,
+  }),
+  service: ({ userId, action }) => performAction(userId, action),
+});
+```
+
 ### Modeling
 
 FabricModel provides a standard vocabulary for entities. All fields are optional except `id` and `model`, enabling high reuse across different entity types.
@@ -301,6 +371,7 @@ const indexed = populateIndexKeys(record, DEFAULT_INDEXES);
 | Path | Description |
 |------|-------------|
 | `@jaypie/fabric/commander` | Commander.js CLI adapter |
+| `@jaypie/fabric/http` | HTTP adapter with authorization and CORS |
 | `@jaypie/fabric/lambda` | AWS Lambda adapter |
 | `@jaypie/fabric/llm` | LLM tool adapter |
 | `@jaypie/fabric/mcp` | MCP server adapter |

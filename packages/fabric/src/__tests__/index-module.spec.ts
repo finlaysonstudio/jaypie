@@ -145,7 +145,9 @@ describe("calculateScope", () => {
   });
 
   it("returns parent scope when parent provided", () => {
-    expect(calculateScope({ model: "chat", id: "abc-123" })).toBe("chat#abc-123");
+    expect(calculateScope({ model: "chat", id: "abc-123" })).toBe(
+      "chat#abc-123",
+    );
   });
 });
 

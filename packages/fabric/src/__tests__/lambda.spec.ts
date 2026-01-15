@@ -24,17 +24,21 @@ vi.mock("@jaypie/aws", () => ({
 // Mock @jaypie/lambda
 vi.mock("@jaypie/lambda", () => ({
   lambdaHandler: vi.fn(
-    (handler: (event: unknown, context?: unknown) => Promise<unknown>, options) => {
-    // Return a function that captures the options for testing
-    const wrappedHandler = async (
-      event: unknown,
-      context?: unknown,
-    ): Promise<unknown> => {
-      return handler(event, context);
-    };
-    wrappedHandler._options = options;
-    return wrappedHandler;
-  }),
+    (
+      handler: (event: unknown, context?: unknown) => Promise<unknown>,
+      options,
+    ) => {
+      // Return a function that captures the options for testing
+      const wrappedHandler = async (
+        event: unknown,
+        context?: unknown,
+      ): Promise<unknown> => {
+        return handler(event, context);
+      };
+      wrappedHandler._options = options;
+      return wrappedHandler;
+    },
+  ),
 }));
 
 describe("Lambda Adapter", () => {
@@ -882,7 +886,6 @@ describe("Lambda Adapter", () => {
           service: () => "result",
         });
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         expect((handler as any)._options.name).toBe("test-service");
       });
 
@@ -909,7 +912,6 @@ describe("Lambda Adapter", () => {
           service,
         });
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         expect((handler as any)._options.name).toBe("overridden");
       });
 
@@ -923,7 +925,6 @@ describe("Lambda Adapter", () => {
           service,
         });
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         expect((handler as any)._options.name).toBe("original");
       });
 
