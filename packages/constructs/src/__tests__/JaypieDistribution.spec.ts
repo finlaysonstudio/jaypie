@@ -728,5 +728,138 @@ describe("JaypieDistribution", () => {
 
       expect(template).toBeDefined();
     });
+
+    describe("External Log Bucket", () => {
+      it("uses logBucket: true to import from CDK.IMPORT.LOG_BUCKET", () => {
+        const stack = new Stack();
+        const bucket = new s3.Bucket(stack, "TestBucket");
+        const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
+
+        const construct = new JaypieDistribution(stack, "TestDistribution", {
+          handler: origin,
+          logBucket: true,
+        });
+        const template = Template.fromStack(stack);
+
+        // Should have reference to external bucket (not creating new log bucket)
+        // Only 1 S3 bucket created (origin bucket), log bucket is imported
+        template.resourceCountIs("AWS::S3::Bucket", 1);
+
+        // logBucket should be set
+        expect(construct.logBucket).toBeDefined();
+
+        // Distribution should have logging configured
+        const distribution = findDistribution(template);
+        expect(distribution.Properties.DistributionConfig.Logging).toBeDefined();
+      });
+
+      it("uses logBucket with bucket name string", () => {
+        const stack = new Stack();
+        const bucket = new s3.Bucket(stack, "TestBucket");
+        const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
+
+        const construct = new JaypieDistribution(stack, "TestDistribution", {
+          handler: origin,
+          logBucket: "my-existing-log-bucket",
+        });
+        const template = Template.fromStack(stack);
+
+        // Should not create a new log bucket
+        template.resourceCountIs("AWS::S3::Bucket", 1);
+
+        // logBucket should be set
+        expect(construct.logBucket).toBeDefined();
+
+        // Distribution should have logging configured
+        const distribution = findDistribution(template);
+        expect(distribution.Properties.DistributionConfig.Logging).toBeDefined();
+      });
+
+      it("uses logBucket with { exportName } object", () => {
+        const stack = new Stack();
+        const bucket = new s3.Bucket(stack, "TestBucket");
+        const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
+
+        const construct = new JaypieDistribution(stack, "TestDistribution", {
+          handler: origin,
+          logBucket: { exportName: "my-custom-bucket-export" },
+        });
+        const template = Template.fromStack(stack);
+
+        // Should not create a new log bucket
+        template.resourceCountIs("AWS::S3::Bucket", 1);
+
+        // logBucket should be set
+        expect(construct.logBucket).toBeDefined();
+
+        // Distribution should have logging configured
+        const distribution = findDistribution(template);
+        expect(distribution.Properties.DistributionConfig.Logging).toBeDefined();
+      });
+
+      it("uses logBucket with IBucket directly", () => {
+        const stack = new Stack();
+        const originBucket = new s3.Bucket(stack, "TestBucket");
+        const origin = origins.S3BucketOrigin.withOriginAccessControl(originBucket);
+        const externalLogBucket = new s3.Bucket(stack, "ExternalLogBucket", {
+          objectOwnership: s3.ObjectOwnership.OBJECT_WRITER,
+        });
+
+        const construct = new JaypieDistribution(stack, "TestDistribution", {
+          handler: origin,
+          logBucket: externalLogBucket,
+        });
+        const template = Template.fromStack(stack);
+
+        // Should have two buckets (origin and external log bucket we created)
+        template.resourceCountIs("AWS::S3::Bucket", 2);
+
+        // logBucket should be the external bucket
+        expect(construct.logBucket).toBe(externalLogBucket);
+
+        // Distribution should have logging configured
+        const distribution = findDistribution(template);
+        expect(distribution.Properties.DistributionConfig.Logging).toBeDefined();
+      });
+
+      it("does not add notifications to external buckets", () => {
+        const stack = new Stack();
+        const bucket = new s3.Bucket(stack, "TestBucket");
+        const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
+
+        new JaypieDistribution(stack, "TestDistribution", {
+          handler: origin,
+          logBucket: true,
+        });
+        const template = Template.fromStack(stack);
+
+        // Should NOT have bucket notification configuration since external bucket
+        const notifications = template.findResources("Custom::S3BucketNotifications");
+        expect(Object.keys(notifications).length).toBe(0);
+      });
+
+      it("allows logBucket with destination: false (logs without notifications)", () => {
+        const stack = new Stack();
+        const bucket = new s3.Bucket(stack, "TestBucket");
+        const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
+
+        const construct = new JaypieDistribution(stack, "TestDistribution", {
+          handler: origin,
+          logBucket: true,
+          destination: false,
+        });
+        const template = Template.fromStack(stack);
+
+        // Should not create a new log bucket
+        template.resourceCountIs("AWS::S3::Bucket", 1);
+
+        // logBucket should still be set (external bucket)
+        expect(construct.logBucket).toBeDefined();
+
+        // Distribution should have logging configured
+        const distribution = findDistribution(template);
+        expect(distribution.Properties.DistributionConfig.Logging).toBeDefined();
+      });
+    });
   });
 });
