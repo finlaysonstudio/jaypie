@@ -5,8 +5,6 @@
  * specifying type, validation, and metadata for each field.
  */
 
-import type { FieldCategory } from "./fieldCategory.js";
-
 // =============================================================================
 // Interfaces
 // =============================================================================
@@ -29,8 +27,6 @@ export interface ValidationRule {
 export interface FieldDefinition {
   /** Field identifier (unique within model) */
   alias: string;
-  /** Field category */
-  category?: FieldCategory;
   /** Default value */
   defaultValue?: unknown;
   /** Description */

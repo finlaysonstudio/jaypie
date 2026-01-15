@@ -1,4 +1,4 @@
-import type { BaseModel } from "@jaypie/fabric";
+import type { FabricModel } from "@jaypie/fabric";
 
 /**
  * DynamoDB client configuration
@@ -120,13 +120,13 @@ export interface QueryResult<T = StorableEntity> {
 /**
  * Entity with required fields for DynamoDB storage.
  *
- * Extends BaseModel from @jaypie/fabric with:
+ * Extends FabricModel from @jaypie/fabric with:
  * - Required storage fields (id, model, name, ou, sequence)
  * - String timestamps (DynamoDB uses ISO 8601 strings, not Date objects)
  * - GSI index keys (auto-populated by indexEntity)
  */
 export interface StorableEntity extends Omit<
-  BaseModel,
+  FabricModel,
   "archivedAt" | "createdAt" | "deletedAt" | "updatedAt"
 > {
   // Primary Key

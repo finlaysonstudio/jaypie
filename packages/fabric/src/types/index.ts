@@ -24,10 +24,6 @@ export type {
   ElementaryTypeDefinition,
 } from "./elementaryTypes.js";
 
-// Field Category
-export { FIELD_CATEGORIES, isFieldCategory } from "./fieldCategory.js";
-export type { FieldCategory } from "./fieldCategory.js";
-
 // Field Definition
 export { isFieldDefinition } from "./fieldDefinition.js";
 export type {

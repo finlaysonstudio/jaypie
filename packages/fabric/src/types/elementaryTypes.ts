@@ -70,7 +70,6 @@ export function isElementaryType(value: unknown): value is ElementaryType {
  */
 export const BOOLEAN_TYPE: ElementaryTypeDefinition = {
   alias: "boolean",
-  category: "state",
   defaultValue: false,
   description: "True/false toggle",
   icon: "lucide#toggle-left",
@@ -84,7 +83,6 @@ export const BOOLEAN_TYPE: ElementaryTypeDefinition = {
  */
 export const DATE_TYPE: ElementaryTypeDefinition = {
   alias: "date",
-  category: "state",
   description: "Date value (YYYY-MM-DD)",
   formatPattern: "YYYY-MM-DD",
   icon: "lucide#calendar",
@@ -98,7 +96,6 @@ export const DATE_TYPE: ElementaryTypeDefinition = {
  */
 export const DATETIME_TYPE: ElementaryTypeDefinition = {
   alias: "datetime",
-  category: "state",
   description: "Date and time value (ISO 8601)",
   formatPattern: "YYYY-MM-DDTHH:mm:ssZ",
   icon: "lucide#calendar-clock",
@@ -112,7 +109,6 @@ export const DATETIME_TYPE: ElementaryTypeDefinition = {
  */
 export const DOLLARS_TYPE: ElementaryTypeDefinition = {
   alias: "dollars",
-  category: "state",
   description: "Currency value formatted as $X.XX",
   formatPattern: "$0,0.00",
   icon: "lucide#dollar-sign",
@@ -130,7 +126,6 @@ export const DOLLARS_TYPE: ElementaryTypeDefinition = {
  */
 export const MULTISELECT_TYPE: ElementaryTypeDefinition = {
   alias: "multiselect",
-  category: "state",
   description: "Multiple selections from predefined options",
   icon: "lucide#list-checks",
   inputComponent: "multiselect",
@@ -144,7 +139,6 @@ export const MULTISELECT_TYPE: ElementaryTypeDefinition = {
  */
 export const NUMBER_TYPE: ElementaryTypeDefinition = {
   alias: "number",
-  category: "state",
   description: "Numeric value (integer or decimal)",
   icon: "lucide#hash",
   inputComponent: "input[type=number]",
@@ -158,7 +152,6 @@ export const NUMBER_TYPE: ElementaryTypeDefinition = {
  */
 export const REFERENCE_TYPE: ElementaryTypeDefinition = {
   alias: "reference",
-  category: "metadata",
   description: "Link to another model by id or alias",
   icon: "lucide#link",
   inputComponent: "entity-picker",
@@ -172,7 +165,6 @@ export const REFERENCE_TYPE: ElementaryTypeDefinition = {
  */
 export const SELECT_TYPE: ElementaryTypeDefinition = {
   alias: "select",
-  category: "state",
   description: "Single selection from predefined options",
   icon: "lucide#list",
   inputComponent: "select",
@@ -186,7 +178,6 @@ export const SELECT_TYPE: ElementaryTypeDefinition = {
  */
 export const TEXT_TYPE: ElementaryTypeDefinition = {
   alias: "text",
-  category: "state",
   description: "Single-line text input",
   icon: "lucide#type",
   inputComponent: "input",
@@ -199,7 +190,6 @@ export const TEXT_TYPE: ElementaryTypeDefinition = {
  */
 export const TEXTAREA_TYPE: ElementaryTypeDefinition = {
   alias: "textarea",
-  category: "state",
   description: "Multi-line text input",
   icon: "lucide#align-left",
   inputComponent: "textarea",

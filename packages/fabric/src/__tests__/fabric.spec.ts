@@ -5,11 +5,9 @@ import {
   computeResolvedName,
   ELEMENTARY_TYPE_REGISTRY,
   ELEMENTARY_TYPES,
-  FIELD_CATEGORIES,
   getAllElementaryTypes,
   getElementaryType,
   isElementaryType,
-  isFieldCategory,
   isFieldDefinition,
   resolveWithFallback,
   SEPARATOR,
@@ -47,43 +45,6 @@ describe("Constants", () => {
 });
 
 // =============================================================================
-// Field Categories
-// =============================================================================
-
-describe("Field Categories", () => {
-  describe("FIELD_CATEGORIES", () => {
-    it("contains all four categories", () => {
-      expect(FIELD_CATEGORIES).toContain("identity");
-      expect(FIELD_CATEGORIES).toContain("input");
-      expect(FIELD_CATEGORIES).toContain("metadata");
-      expect(FIELD_CATEGORIES).toContain("state");
-    });
-
-    it("has exactly 4 elements", () => {
-      expect(FIELD_CATEGORIES).toHaveLength(4);
-    });
-  });
-
-  describe("isFieldCategory", () => {
-    it("returns true for valid categories", () => {
-      expect(isFieldCategory("identity")).toBe(true);
-      expect(isFieldCategory("input")).toBe(true);
-      expect(isFieldCategory("metadata")).toBe(true);
-      expect(isFieldCategory("state")).toBe(true);
-    });
-
-    it("returns false for invalid categories", () => {
-      expect(isFieldCategory("invalid")).toBe(false);
-      expect(isFieldCategory("")).toBe(false);
-      expect(isFieldCategory(null)).toBe(false);
-      expect(isFieldCategory(undefined)).toBe(false);
-      expect(isFieldCategory(123)).toBe(false);
-      expect(isFieldCategory({})).toBe(false);
-    });
-  });
-});
-
-// =============================================================================
 // Field Definitions
 // =============================================================================
 
@@ -97,7 +58,6 @@ describe("Field Definitions", () => {
     it("returns true for definitions with optional fields", () => {
       const def = {
         alias: "test",
-        category: "state" as const,
         description: "A test field",
         name: "Test",
         type: "text",
