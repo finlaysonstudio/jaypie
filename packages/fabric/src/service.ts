@@ -2,6 +2,7 @@
 
 import { BadRequestError } from "@jaypie/errors";
 
+import { FABRIC_VERSION } from "./constants.js";
 import { fabric } from "./convert.js";
 import type {
   ConversionType,
@@ -280,6 +281,7 @@ export function fabricService<
 
   // Attach config properties directly to handler for flat access
   const typedHandler = handler as Service<TInput, TOutput>;
+  typedHandler.$fabric = FABRIC_VERSION;
   if (config.alias !== undefined) typedHandler.alias = config.alias;
   if (config.description !== undefined)
     typedHandler.description = config.description;

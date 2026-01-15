@@ -25,7 +25,7 @@ export type {
 } from "./models/base.js";
 
 // Constants
-export { APEX, SEPARATOR, SYSTEM_MODELS } from "./constants.js";
+export { APEX, FABRIC_VERSION, SEPARATOR, SYSTEM_MODELS } from "./constants.js";
 export type { SystemModel } from "./constants.js";
 
 // Fabric functions (type conversion)
@@ -143,5 +143,3 @@ export type {
   ValidateFunction,
 } from "./types.js";
 
-// Version
-export const FABRIC_VERSION = "0.0.1";

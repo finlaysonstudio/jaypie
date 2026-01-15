@@ -14,16 +14,10 @@ import type {
 
 /**
  * Type guard to check if a value is a pre-instantiated Service
- * A Service is a function with ServiceConfig properties attached
+ * A Service is a function with the `$fabric` property set by fabricService
  */
 function isService(value: unknown): value is Service {
-  return (
-    typeof value === "function" &&
-    ("alias" in value ||
-      "description" in value ||
-      "input" in value ||
-      "service" in value)
-  );
+  return typeof value === "function" && "$fabric" in value;
 }
 
 /**
@@ -34,8 +28,7 @@ function isConfig(value: unknown): value is FabricLambdaConfig {
     typeof value === "object" &&
     value !== null &&
     "service" in value &&
-    (typeof (value as FabricLambdaConfig).service === "function" ||
-      isService((value as FabricLambdaConfig).service))
+    typeof (value as FabricLambdaConfig).service === "function"
   );
 }
 

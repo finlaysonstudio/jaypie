@@ -22,20 +22,12 @@ export interface ResolveServiceConfig<
 
 /**
  * Type guard to check if a value is a pre-instantiated Service
- * A Service is a function with an `alias` property (or other ServiceConfig props)
+ * A Service is a function with the `$fabric` property set by fabricService
  */
 function isService<TInput extends Record<string, unknown>, TOutput>(
   value: Service<TInput, TOutput> | ServiceFunction<TInput, TOutput>,
 ): value is Service<TInput, TOutput> {
-  // A Service is a function that has ServiceConfig properties attached
-  // Check for any of the config properties that fabricService attaches
-  return (
-    typeof value === "function" &&
-    ("alias" in value ||
-      "description" in value ||
-      "input" in value ||
-      "service" in value)
-  );
+  return typeof value === "function" && "$fabric" in value;
 }
 
 /**

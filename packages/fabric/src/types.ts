@@ -140,4 +140,6 @@ export interface Service<
     input?: Partial<TInput> | string,
     context?: ServiceContext,
   ): Promise<TOutput>;
+  /** Fabric version identifier - used to detect pre-instantiated Services */
+  $fabric?: string;
 }

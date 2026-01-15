@@ -9,6 +9,9 @@
 /** Root organizational unit */
 export const APEX = "@";
 
+/** Fabric version - used to identify pre-instantiated Services */
+export const FABRIC_VERSION = "0.1.0";
+
 /** Composite key separator */
 export const SEPARATOR = "#";
 

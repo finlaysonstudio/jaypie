@@ -99,7 +99,7 @@ describe("fabric/index", () => {
     });
 
     it("FABRIC_VERSION matches package version", () => {
-      expect(FABRIC_VERSION).toBe("0.0.1");
+      expect(FABRIC_VERSION).toBe("0.1.0");
     });
   });
 });
