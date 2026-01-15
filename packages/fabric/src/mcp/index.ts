@@ -1,13 +1,13 @@
 // MCP adapter exports for @jaypie/fabric
 
-export { registerMcpTool } from "./registerMcpTool.js";
+export { fabricMcp } from "./fabricMcp.js";
 export type {
+  FabricMcpConfig,
+  FabricMcpResult,
   McpToolContentItem,
   McpToolResponse,
   OnCompleteCallback,
   OnErrorCallback,
   OnFatalCallback,
   OnMessageCallback,
-  RegisterMcpToolConfig,
-  RegisterMcpToolResult,
 } from "./types.js";

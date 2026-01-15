@@ -5,19 +5,19 @@ import {
   BASE_MODEL_FIELDS,
   BASE_MODEL_REQUIRED_FIELDS,
   BASE_MODEL_TIMESTAMP_FIELDS,
-  convert,
   convertFromArray,
   convertFromDate,
   convertFromObject,
-  convertToArray,
-  convertToBoolean,
-  convertToDate,
-  convertToNumber,
-  convertToObject,
-  convertToString,
   createBaseModelInput,
-  createService,
   DateType,
+  fabric,
+  fabricArray,
+  fabricBoolean,
+  fabricDate,
+  fabricNumber,
+  fabricObject,
+  fabricService,
+  fabricString,
   FABRIC_VERSION,
   hasBaseModelShape,
   isAutoField,
@@ -38,27 +38,27 @@ describe("fabric/index", () => {
       expect(FABRIC_VERSION).toBeDefined();
     });
 
-    it("exports createService", () => {
-      expect(createService).toBeDefined();
-      expect(typeof createService).toBe("function");
+    it("exports fabricService", () => {
+      expect(fabricService).toBeDefined();
+      expect(typeof fabricService).toBe("function");
     });
 
-    it("exports scalar convert functions", () => {
-      expect(convert).toBeDefined();
-      expect(convertToBoolean).toBeDefined();
-      expect(convertToNumber).toBeDefined();
-      expect(convertToString).toBeDefined();
+    it("exports scalar fabric functions", () => {
+      expect(fabric).toBeDefined();
+      expect(fabricBoolean).toBeDefined();
+      expect(fabricNumber).toBeDefined();
+      expect(fabricString).toBeDefined();
     });
 
-    it("exports composite convert functions", () => {
-      expect(convertToArray).toBeDefined();
+    it("exports composite fabric functions", () => {
+      expect(fabricArray).toBeDefined();
       expect(convertFromArray).toBeDefined();
-      expect(convertToObject).toBeDefined();
+      expect(fabricObject).toBeDefined();
       expect(convertFromObject).toBeDefined();
     });
 
-    it("exports date convert functions", () => {
-      expect(convertToDate).toBeDefined();
+    it("exports date fabric functions", () => {
+      expect(fabricDate).toBeDefined();
       expect(convertFromDate).toBeDefined();
       expect(isValidDate).toBeDefined();
       expect(isDateType).toBeDefined();
@@ -89,17 +89,17 @@ describe("fabric/index", () => {
 
     it("exports llm namespace (only adapter without optional deps)", () => {
       expect(llm).toBeDefined();
-      expect(llm.createLlmTool).toBeDefined();
+      expect(llm.fabricTool).toBeDefined();
       expect(llm.inputToJsonSchema).toBeDefined();
-      expect(typeof llm.createLlmTool).toBe("function");
+      expect(typeof llm.fabricTool).toBe("function");
       expect(typeof llm.inputToJsonSchema).toBe("function");
     });
 
     // Note: commander, lambda, and mcp adapters have optional dependencies
     // and must be imported directly from their sub-paths:
-    //   import { registerServiceCommand } from "@jaypie/fabric/commander";
-    //   import { createLambdaService } from "@jaypie/fabric/lambda";
-    //   import { registerMcpTool } from "@jaypie/fabric/mcp";
+    //   import { fabricCommand } from "@jaypie/fabric/commander";
+    //   import { fabricLambda } from "@jaypie/fabric/lambda";
+    //   import { fabricMcp } from "@jaypie/fabric/mcp";
   });
 
   describe("Happy Paths", () => {

@@ -5,14 +5,21 @@ import { lambdaHandler } from "@jaypie/lambda";
 
 import type { Message, Service, ServiceContext } from "../types.js";
 import type {
-  CreateLambdaServiceConfig,
-  CreateLambdaServiceOptions,
-  CreateLambdaServiceResult,
+  FabricLambdaConfig,
+  FabricLambdaOptions,
+  FabricLambdaResult,
   LambdaContext,
 } from "./types.js";
 
 /**
- * Create a Lambda handler that wraps a service
+ * Type guard to check if a value is a Service (has been fabricated)
+ */
+function isService(value: unknown): value is Service {
+  return typeof value === "function";
+}
+
+/**
+ * Fabric a Lambda handler that wraps a service
  *
  * This function creates a Lambda-compatible handler that:
  * - Uses getMessages() to extract messages from SQS/SNS events
@@ -20,46 +27,49 @@ import type {
  * - Returns the single response if one message, or an array of responses if multiple
  * - Integrates with lambdaHandler for lifecycle management (secrets, setup, teardown, etc.)
  *
- * @param handlerOrConfig - The service function or configuration object
+ * @param serviceOrConfig - The service function or configuration object
  * @param options - Lambda handler options (secrets, setup, teardown, etc.)
  * @returns A Lambda handler function
  *
  * @example
  * ```typescript
- * import { createLambdaService } from "@jaypie/fabric/lambda";
+ * import { fabricLambda } from "@jaypie/fabric/lambda";
  * import { myService } from "./services";
  *
+ * // Direct service style
+ * export const handler = fabricLambda(myService);
+ *
  * // Config object style
- * export const handler = createLambdaService({
- *   handler: myService,
+ * export const handler2 = fabricLambda({
+ *   service: myService,
  *   secrets: ["ANTHROPIC_API_KEY", "OPENAI_API_KEY"],
  * });
  *
- * // Handler with options style
- * export const handler2 = createLambdaService(myService, {
+ * // Service with options style
+ * export const handler3 = fabricLambda(myService, {
  *   secrets: ["ANTHROPIC_API_KEY"],
  * });
  * ```
  */
-export function createLambdaService<TResult = unknown>(
-  handlerOrConfig: CreateLambdaServiceConfig | Service,
-  options: CreateLambdaServiceOptions = {},
-): CreateLambdaServiceResult<TResult | TResult[]> {
+export function fabricLambda<TResult = unknown>(
+  serviceOrConfig: FabricLambdaConfig | Service,
+  options: FabricLambdaOptions = {},
+): FabricLambdaResult<TResult | TResult[]> {
   // Normalize arguments
-  let handler: Service;
-  let opts: CreateLambdaServiceOptions;
+  let service: Service;
+  let opts: FabricLambdaOptions;
 
-  if (typeof handlerOrConfig === "function") {
-    handler = handlerOrConfig;
+  if (isService(serviceOrConfig)) {
+    service = serviceOrConfig;
     opts = options;
   } else {
-    const { handler: configHandler, ...configOpts } = handlerOrConfig;
-    handler = configHandler;
+    const { service: configService, ...configOpts } = serviceOrConfig;
+    service = configService;
     opts = configOpts;
   }
 
-  // Use handler.alias as the name for logging (can be overridden via options.name)
-  const name = opts.name ?? handler.alias;
+  // Use service.alias as the name for logging (can be overridden via options.name)
+  const name = opts.name ?? service.alias;
 
   // Create context callbacks that wrap the registration callbacks with error swallowing
   // Callback failures should never halt service execution
@@ -113,7 +123,7 @@ export function createLambdaService<TResult = unknown>(
     const results: TResult[] = [];
     for (const message of messages) {
       try {
-        const result = await handler(
+        const result = await service(
           message as Record<string, unknown>,
           context,
         );

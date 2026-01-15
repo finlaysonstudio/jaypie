@@ -1,6 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { registerMcpTool } from "@jaypie/fabric/mcp";
-import { createService, type Service } from "@jaypie/fabric";
+import { fabricMcp } from "@jaypie/fabric/mcp";
+import { fabricService, type Service } from "@jaypie/fabric";
 
 import {
   archiveEntity,
@@ -53,13 +53,13 @@ function wrapWithInit(handler: Service): Service {
 }
 
 // MCP-specific serviceHandler wrappers for functions with complex inputs
-// Note: These wrap the regular async functions to make them work with registerMcpTool
+// Note: These wrap the regular async functions to make them work with fabricMcp
 
 /**
  * MCP wrapper for putEntity
  * Accepts entity JSON directly from LLM
  */
-const mcpPutEntity = createService({
+const mcpPutEntity = fabricService({
   alias: "dynamodb_put",
   description:
     "Create or replace an entity in DynamoDB (auto-indexes GSI keys)",
@@ -106,7 +106,7 @@ const mcpPutEntity = createService({
  * MCP wrapper for updateEntity
  * Accepts entity JSON directly from LLM
  */
-const mcpUpdateEntity = createService({
+const mcpUpdateEntity = fabricService({
   alias: "dynamodb_update",
   description:
     "Update an entity in DynamoDB (sets updatedAt, re-indexes GSI keys)",
@@ -157,7 +157,7 @@ const mcpUpdateEntity = createService({
  * MCP wrapper for queryByOu
  * Note: Pagination via startKey is not exposed to MCP; use limit instead
  */
-const mcpQueryByOu = createService({
+const mcpQueryByOu = fabricService({
   alias: "dynamodb_query_ou",
   description: "Query entities by organizational unit (parent hierarchy)",
   input: {
@@ -203,7 +203,7 @@ const mcpQueryByOu = createService({
  * MCP wrapper for queryByClass
  * Note: Pagination via startKey is not exposed to MCP; use limit instead
  */
-const mcpQueryByClass = createService({
+const mcpQueryByClass = fabricService({
   alias: "dynamodb_query_class",
   description: "Query entities by category classification",
   input: {
@@ -251,7 +251,7 @@ const mcpQueryByClass = createService({
  * MCP wrapper for queryByType
  * Note: Pagination via startKey is not exposed to MCP; use limit instead
  */
-const mcpQueryByType = createService({
+const mcpQueryByType = fabricService({
   alias: "dynamodb_query_type",
   description: "Query entities by type classification",
   input: {
@@ -305,79 +305,79 @@ export function registerDynamoDbTools(
   const tools: string[] = [];
 
   // Entity operations
-  registerMcpTool({
-    handler: wrapWithInit(getEntity),
+  fabricMcp({
+    service: wrapWithInit(getEntity),
     name: "dynamodb_get",
     server,
   });
   tools.push("dynamodb_get");
 
-  registerMcpTool({
-    handler: wrapWithInit(mcpPutEntity),
+  fabricMcp({
+    service: wrapWithInit(mcpPutEntity),
     name: "dynamodb_put",
     server,
   });
   tools.push("dynamodb_put");
 
-  registerMcpTool({
-    handler: wrapWithInit(mcpUpdateEntity),
+  fabricMcp({
+    service: wrapWithInit(mcpUpdateEntity),
     name: "dynamodb_update",
     server,
   });
   tools.push("dynamodb_update");
 
-  registerMcpTool({
-    handler: wrapWithInit(deleteEntity),
+  fabricMcp({
+    service: wrapWithInit(deleteEntity),
     name: "dynamodb_delete",
     server,
   });
   tools.push("dynamodb_delete");
 
-  registerMcpTool({
-    handler: wrapWithInit(archiveEntity),
+  fabricMcp({
+    service: wrapWithInit(archiveEntity),
     name: "dynamodb_archive",
     server,
   });
   tools.push("dynamodb_archive");
 
-  registerMcpTool({
-    handler: wrapWithInit(destroyEntity),
+  fabricMcp({
+    service: wrapWithInit(destroyEntity),
     name: "dynamodb_destroy",
     server,
   });
   tools.push("dynamodb_destroy");
 
   // Query operations
-  registerMcpTool({
-    handler: wrapWithInit(mcpQueryByOu),
+  fabricMcp({
+    service: wrapWithInit(mcpQueryByOu),
     name: "dynamodb_query_ou",
     server,
   });
   tools.push("dynamodb_query_ou");
 
-  registerMcpTool({
-    handler: wrapWithInit(queryByAlias),
+  fabricMcp({
+    service: wrapWithInit(queryByAlias),
     name: "dynamodb_query_alias",
     server,
   });
   tools.push("dynamodb_query_alias");
 
-  registerMcpTool({
-    handler: wrapWithInit(mcpQueryByClass),
+  fabricMcp({
+    service: wrapWithInit(mcpQueryByClass),
     name: "dynamodb_query_class",
     server,
   });
   tools.push("dynamodb_query_class");
 
-  registerMcpTool({
-    handler: wrapWithInit(mcpQueryByType),
+  fabricMcp({
+    service: wrapWithInit(mcpQueryByType),
     name: "dynamodb_query_type",
     server,
   });
   tools.push("dynamodb_query_type");
 
-  registerMcpTool({
-    handler: wrapWithInit(queryByXid),
+  fabricMcp({
+    service: wrapWithInit(queryByXid),
     name: "dynamodb_query_xid",
     server,
   });
@@ -385,13 +385,13 @@ export function registerDynamoDbTools(
 
   // Admin tools (MCP-only)
   if (includeAdmin) {
-    registerMcpTool({ handler: statusHandler, server });
+    fabricMcp({ service: statusHandler, server });
     tools.push("dynamodb_status");
 
-    registerMcpTool({ handler: createTableHandler, server });
+    fabricMcp({ service: createTableHandler, server });
     tools.push("dynamodb_create_table");
 
-    registerMcpTool({ handler: dockerComposeHandler, server });
+    fabricMcp({ service: dockerComposeHandler, server });
     tools.push("dynamodb_generate_docker_compose");
   }
 

@@ -1,10 +1,10 @@
 // LLM adapter exports for @jaypie/fabric
 
-export { createLlmTool } from "./createLlmTool.js";
+export { fabricTool } from "./fabricTool.js";
 export { inputToJsonSchema } from "./inputToJsonSchema.js";
 export type {
-  CreateLlmToolConfig,
-  CreateLlmToolResult,
+  FabricToolConfig,
+  FabricToolResult,
   LlmTool,
   OnCompleteCallback,
   OnErrorCallback,

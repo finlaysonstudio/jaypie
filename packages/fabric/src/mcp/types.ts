@@ -17,14 +17,12 @@ export type OnFatalCallback = (error: unknown) => void | Promise<void>;
 export type OnMessageCallback = (message: Message) => void | Promise<void>;
 
 /**
- * Configuration for registering an MCP tool from a service
+ * Configuration for fabricating an MCP tool from a service
  */
-export interface RegisterMcpToolConfig {
-  /** Override the tool description (defaults to handler.description) */
+export interface FabricMcpConfig {
+  /** Override the tool description (defaults to service.description) */
   description?: string;
-  /** The service to adapt */
-  handler: Service;
-  /** Override the tool name (defaults to handler.alias) */
+  /** Override the tool name (defaults to service.alias) */
   name?: string;
   /** Callback called when tool completes successfully */
   onComplete?: OnCompleteCallback;
@@ -36,6 +34,8 @@ export interface RegisterMcpToolConfig {
   onMessage?: OnMessageCallback;
   /** The MCP server to register the tool with */
   server: McpServer;
+  /** The service to adapt */
+  service: Service;
 }
 
 /**
@@ -54,8 +54,8 @@ export interface McpToolResponse {
 }
 
 /**
- * Result of registering an MCP tool
+ * Result of fabricating an MCP tool
  */
-export interface RegisterMcpToolResult {
+export interface FabricMcpResult {
   name: string;
 }

@@ -31,11 +31,11 @@ describe("Status Type", () => {
       expect(StatusType).toEqual([...STATUS_VALUES]);
     });
 
-    it("can be used as a validated string type in createService", async () => {
-      // Import createService to test integration
-      const { createService } = await import("../service.js");
+    it("can be used as a validated string type in fabricService", async () => {
+      // Import fabricService to test integration
+      const { fabricService } = await import("../service.js");
 
-      const handler = createService({
+      const handler = fabricService({
         input: {
           status: { type: StatusType, description: "Current status" },
         },
@@ -48,9 +48,9 @@ describe("Status Type", () => {
     });
 
     it("rejects invalid status values", async () => {
-      const { createService } = await import("../service.js");
+      const { fabricService } = await import("../service.js");
 
-      const handler = createService({
+      const handler = fabricService({
         input: {
           status: { type: StatusType },
         },

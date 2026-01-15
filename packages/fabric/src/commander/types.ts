@@ -74,16 +74,14 @@ export interface CreateCommanderOptionsResult {
 }
 
 /**
- * Configuration for registerServiceCommand
+ * Configuration for fabricCommand
  */
-export interface RegisterServiceCommandConfig {
-  /** Override the command description (defaults to handler.description) */
+export interface FabricCommandConfig {
+  /** Override the command description (defaults to service.description) */
   description?: string;
   /** Field names to exclude from options */
   exclude?: string[];
-  /** The service to register */
-  handler: Service;
-  /** Override the command name (defaults to handler.alias) */
+  /** Override the command name (defaults to service.alias) */
   name?: string;
   /** Callback called when command completes successfully */
   onComplete?: OnCompleteCallback;
@@ -97,12 +95,14 @@ export interface RegisterServiceCommandConfig {
   overrides?: Record<string, CommanderOptionOverride>;
   /** The Commander program or command to register on */
   program: Command;
+  /** The service to register */
+  service: Service;
 }
 
 /**
- * Result from registerServiceCommand
+ * Result from fabricCommand
  */
-export interface RegisterServiceCommandResult {
+export interface FabricCommandResult {
   /** The created command */
   command: Command;
   /** The message callback, returned for external use (e.g., emitting progress messages) */

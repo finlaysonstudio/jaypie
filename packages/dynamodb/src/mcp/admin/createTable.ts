@@ -4,8 +4,8 @@ import {
   DynamoDBClient,
 } from "@aws-sdk/client-dynamodb";
 import {
-  createService,
   DEFAULT_INDEXES,
+  fabricService,
   getAllRegisteredIndexes,
   type IndexDefinition,
 } from "@jaypie/fabric";
@@ -150,7 +150,7 @@ function createTableParams(
 /**
  * Create DynamoDB table with Jaypie GSI schema
  */
-export const createTableHandler = createService({
+export const createTableHandler = fabricService({
   alias: "dynamodb_create_table",
   description: "Create DynamoDB table with Jaypie GSI schema",
   input: {

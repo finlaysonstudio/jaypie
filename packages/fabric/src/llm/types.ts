@@ -15,18 +15,16 @@ export type OnFatalCallback = (error: unknown) => void | Promise<void>;
 export type OnMessageCallback = (message: Message) => void | Promise<void>;
 
 /**
- * Configuration for creating an LLM tool from a service
+ * Configuration for fabricating an LLM tool from a service
  */
-export interface CreateLlmToolConfig {
-  /** Override the tool description (defaults to handler.description) */
+export interface FabricToolConfig {
+  /** Override the tool description (defaults to service.description) */
   description?: string;
   /** Fields to exclude from the tool parameters */
   exclude?: string[];
-  /** The service to adapt */
-  handler: Service;
   /** Custom message for logging (string or function) */
   message?: string | ((args?: Record<string, unknown>) => string);
-  /** Override the tool name (defaults to handler.alias) */
+  /** Override the tool name (defaults to service.alias) */
   name?: string;
   /** Callback called when tool completes successfully */
   onComplete?: OnCompleteCallback;
@@ -36,6 +34,8 @@ export interface CreateLlmToolConfig {
   onFatal?: OnFatalCallback;
   /** Callback for receiving messages from service */
   onMessage?: OnMessageCallback;
+  /** The service to adapt */
+  service: Service;
 }
 
 /**
@@ -56,8 +56,8 @@ export interface LlmTool {
 }
 
 /**
- * Result of creating an LLM tool
+ * Result of fabricating an LLM tool
  */
-export interface CreateLlmToolResult {
+export interface FabricToolResult {
   tool: LlmTool;
 }

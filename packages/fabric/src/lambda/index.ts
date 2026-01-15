@@ -1,12 +1,12 @@
 // @jaypie/fabric/lambda
 // Lambda adapter utilities
 
-export { createLambdaService } from "./createLambdaService.js";
+export { fabricLambda } from "./fabricLambda.js";
 
 export type {
-  CreateLambdaServiceConfig,
-  CreateLambdaServiceOptions,
-  CreateLambdaServiceResult,
+  FabricLambdaConfig,
+  FabricLambdaOptions,
+  FabricLambdaResult,
   LambdaContext,
   OnCompleteCallback,
   OnErrorCallback,

@@ -6,9 +6,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createCommanderOptions,
   parseCommanderOptions,
-  registerServiceCommand,
+  fabricCommand,
 } from "../commander/index.js";
-import { createService } from "../service.js";
+import { fabricService } from "../service.js";
 import type { InputFieldDefinition } from "../types.js";
 
 describe("Commander Adapter", () => {
@@ -185,8 +185,8 @@ describe("Commander Adapter", () => {
       expect(options[0].hidden).toBe(true);
     });
 
-    it("works with createService.input", () => {
-      const handler = createService({
+    it("works with fabricService.input", () => {
+      const handler = fabricService({
         input: {
           name: { type: String, description: "User name" },
           age: { type: Number, default: 25 },
@@ -342,8 +342,8 @@ describe("Commander Adapter", () => {
       expect(result).toEqual({ priority: 3 });
     });
 
-    it("works with createService.input", () => {
-      const handler = createService({
+    it("works with fabricService.input", () => {
+      const handler = fabricService({
         input: {
           name: { type: String },
           age: { type: Number },
@@ -404,7 +404,7 @@ describe("Commander Adapter", () => {
         expect(result.eventDate).toBe(date);
       });
 
-      it("returns invalid date string as-is for createService to handle", () => {
+      it("returns invalid date string as-is for fabricService to handle", () => {
         const input: Record<string, InputFieldDefinition> = {
           badDate: { type: Date },
         };
@@ -412,7 +412,7 @@ describe("Commander Adapter", () => {
           { badDate: "not-a-date" },
           { input },
         );
-        // parseCommanderOptions returns as-is, createService will throw
+        // parseCommanderOptions returns as-is, fabricService will throw
         expect(result.badDate).toBe("not-a-date");
       });
     });
@@ -501,7 +501,7 @@ describe("Commander Adapter", () => {
     });
 
     it("creates working Commander options from handler input", () => {
-      const handler = createService({
+      const handler = fabricService({
         input: {
           name: { type: String, description: "User name" },
           count: { type: Number, default: 1 },
@@ -530,7 +530,7 @@ describe("Commander Adapter", () => {
     });
 
     it("round-trips options through Commander", async () => {
-      const handler = createService({
+      const handler = fabricService({
         input: {
           userName: { type: String },
           maxRetries: { type: Number, default: 3 },
@@ -560,7 +560,7 @@ describe("Commander Adapter", () => {
     });
   });
 
-  describe("registerServiceCommand", () => {
+  describe("fabricCommand", () => {
     let program: Command;
 
     beforeEach(() => {
@@ -569,7 +569,7 @@ describe("Commander Adapter", () => {
     });
 
     it("registers a command with handler alias as name", () => {
-      const handler = createService({
+      const handler = fabricService({
         alias: "greet",
         input: {
           name: { type: String },
@@ -577,13 +577,13 @@ describe("Commander Adapter", () => {
         service: ({ name }) => `Hello, ${name}!`,
       });
 
-      const { command } = registerServiceCommand({ handler, program });
+      const { command } = fabricCommand({ program, service: handler });
 
       expect(command.name()).toBe("greet");
     });
 
     it("registers a command with handler description", () => {
-      const handler = createService({
+      const handler = fabricService({
         alias: "greet",
         description: "Greet a user",
         input: {
@@ -592,13 +592,13 @@ describe("Commander Adapter", () => {
         service: ({ name }) => `Hello, ${name}!`,
       });
 
-      const { command } = registerServiceCommand({ handler, program });
+      const { command } = fabricCommand({ program, service: handler });
 
       expect(command.description()).toBe("Greet a user");
     });
 
     it("uses custom name over handler alias", () => {
-      const handler = createService({
+      const handler = fabricService({
         alias: "greet",
         input: {
           name: { type: String },
@@ -606,8 +606,8 @@ describe("Commander Adapter", () => {
         service: ({ name }) => `Hello, ${name}!`,
       });
 
-      const { command } = registerServiceCommand({
-        handler,
+      const { command } = fabricCommand({
+        service: handler,
         name: "hello",
         program,
       });
@@ -616,7 +616,7 @@ describe("Commander Adapter", () => {
     });
 
     it("uses custom description over handler description", () => {
-      const handler = createService({
+      const handler = fabricService({
         alias: "greet",
         description: "Handler description",
         input: {
@@ -625,9 +625,9 @@ describe("Commander Adapter", () => {
         service: ({ name }) => `Hello, ${name}!`,
       });
 
-      const { command } = registerServiceCommand({
+      const { command } = fabricCommand({
         description: "Custom description",
-        handler,
+        service: handler,
         program,
       });
 
@@ -635,20 +635,20 @@ describe("Commander Adapter", () => {
     });
 
     it("defaults to 'command' when no alias or name provided", () => {
-      const handler = createService({
+      const handler = fabricService({
         input: {
           name: { type: String },
         },
         service: ({ name }) => `Hello, ${name}!`,
       });
 
-      const { command } = registerServiceCommand({ handler, program });
+      const { command } = fabricCommand({ program, service: handler });
 
       expect(command.name()).toBe("command");
     });
 
     it("creates options from handler input", () => {
-      const handler = createService({
+      const handler = fabricService({
         alias: "test",
         input: {
           name: { type: String, description: "User name" },
@@ -657,7 +657,7 @@ describe("Commander Adapter", () => {
         service: (input) => input,
       });
 
-      registerServiceCommand({ handler, program });
+      fabricCommand({ program, service: handler });
 
       // Parse to trigger option creation
       program.parse(["node", "test", "test", "--name", "Alice"]);
@@ -669,7 +669,7 @@ describe("Commander Adapter", () => {
     });
 
     it("excludes specified fields from options", () => {
-      const handler = createService({
+      const handler = fabricService({
         alias: "test",
         input: {
           name: { type: String },
@@ -678,9 +678,9 @@ describe("Commander Adapter", () => {
         service: (input) => input,
       });
 
-      registerServiceCommand({
+      fabricCommand({
         exclude: ["secret"],
-        handler,
+        service: handler,
         program,
       });
 
@@ -690,7 +690,7 @@ describe("Commander Adapter", () => {
     });
 
     it("applies overrides to options", () => {
-      const handler = createService({
+      const handler = fabricService({
         alias: "test",
         input: {
           verbose: { type: Boolean },
@@ -698,8 +698,8 @@ describe("Commander Adapter", () => {
         service: (input) => input,
       });
 
-      registerServiceCommand({
-        handler,
+      fabricCommand({
+        service: handler,
         overrides: { verbose: { short: "v" } },
         program,
       });
@@ -710,7 +710,7 @@ describe("Commander Adapter", () => {
     });
 
     it("respects flag and letter in input definitions", () => {
-      const handler = createService({
+      const handler = fabricService({
         alias: "test",
         input: {
           userName: { type: String, flag: "user", letter: "u" },
@@ -718,7 +718,7 @@ describe("Commander Adapter", () => {
         service: (input) => input,
       });
 
-      registerServiceCommand({ handler, program });
+      fabricCommand({ program, service: handler });
 
       const testCommand = program.commands.find((c) => c.name() === "test");
       expect(testCommand!.options[0].flags).toBe("-u, --user <userName>");
@@ -726,7 +726,7 @@ describe("Commander Adapter", () => {
 
     it("executes handler when command is invoked", async () => {
       let capturedInput: unknown;
-      const handler = createService({
+      const handler = fabricService({
         alias: "test",
         input: {
           name: { type: String },
@@ -738,7 +738,7 @@ describe("Commander Adapter", () => {
         },
       });
 
-      registerServiceCommand({ handler, program });
+      fabricCommand({ program, service: handler });
 
       await program.parseAsync(["node", "test", "test", "--name", "Bob"]);
 
@@ -747,7 +747,7 @@ describe("Commander Adapter", () => {
 
     it("coerces types when executing handler", async () => {
       let capturedInput: unknown;
-      const handler = createService({
+      const handler = fabricService({
         alias: "test",
         input: {
           count: { type: Number },
@@ -759,7 +759,7 @@ describe("Commander Adapter", () => {
         },
       });
 
-      registerServiceCommand({ handler, program });
+      fabricCommand({ program, service: handler });
 
       await program.parseAsync([
         "node",
@@ -774,7 +774,7 @@ describe("Commander Adapter", () => {
     });
 
     it("handles boolean flags with --no- prefix", () => {
-      const handler = createService({
+      const handler = fabricService({
         alias: "test",
         input: {
           verbose: { type: Boolean, default: true },
@@ -782,7 +782,7 @@ describe("Commander Adapter", () => {
         service: (input) => input,
       });
 
-      registerServiceCommand({ handler, program });
+      fabricCommand({ program, service: handler });
 
       // Boolean fields create both --flag and --no-flag options
       const testCommand = program.commands.find((c) => c.name() === "test");
@@ -792,7 +792,7 @@ describe("Commander Adapter", () => {
 
     it("--no-<flag> sets boolean to false", async () => {
       let capturedInput: unknown;
-      const handler = createService({
+      const handler = fabricService({
         alias: "test",
         input: {
           save: { type: Boolean, default: true, description: "Save results" },
@@ -803,7 +803,7 @@ describe("Commander Adapter", () => {
         },
       });
 
-      registerServiceCommand({ handler, program });
+      fabricCommand({ program, service: handler });
 
       await program.parseAsync(["node", "test", "test", "--no-save"]);
 
@@ -812,7 +812,7 @@ describe("Commander Adapter", () => {
 
     it("--<flag> sets boolean to true when default is false", async () => {
       let capturedInput: unknown;
-      const handler = createService({
+      const handler = fabricService({
         alias: "test",
         input: {
           dryRun: {
@@ -827,7 +827,7 @@ describe("Commander Adapter", () => {
         },
       });
 
-      registerServiceCommand({ handler, program });
+      fabricCommand({ program, service: handler });
 
       await program.parseAsync(["node", "test", "test", "--dry-run"]);
 
@@ -836,7 +836,7 @@ describe("Commander Adapter", () => {
 
     it("works with handler that has no input", async () => {
       let called = false;
-      const handler = createService({
+      const handler = fabricService({
         alias: "ping",
         service: () => {
           called = true;
@@ -844,7 +844,7 @@ describe("Commander Adapter", () => {
         },
       });
 
-      registerServiceCommand({ handler, program });
+      fabricCommand({ program, service: handler });
 
       await program.parseAsync(["node", "test", "ping"]);
 
@@ -853,7 +853,7 @@ describe("Commander Adapter", () => {
 
     it("full integration: greet command example", async () => {
       let capturedResult: unknown;
-      const handler = createService({
+      const handler = fabricService({
         alias: "greet",
         description: "Greet a user",
         input: {
@@ -867,7 +867,7 @@ describe("Commander Adapter", () => {
         },
       });
 
-      registerServiceCommand({ handler, program });
+      fabricCommand({ program, service: handler });
 
       await program.parseAsync([
         "node",
@@ -883,7 +883,7 @@ describe("Commander Adapter", () => {
 
     it("coerces Date type through full command flow", async () => {
       let capturedInput: unknown;
-      const handler = createService({
+      const handler = fabricService({
         alias: "schedule",
         input: {
           startDate: { type: Date, description: "Start date" },
@@ -894,7 +894,7 @@ describe("Commander Adapter", () => {
         },
       });
 
-      registerServiceCommand({ handler, program });
+      fabricCommand({ program, service: handler });
 
       await program.parseAsync([
         "node",
@@ -913,7 +913,7 @@ describe("Commander Adapter", () => {
     describe("onComplete callback", () => {
       it("calls onComplete with handler response", async () => {
         let capturedResponse: unknown;
-        const handler = createService({
+        const handler = fabricService({
           alias: "test",
           input: {
             value: { type: Number, default: 42 },
@@ -921,8 +921,8 @@ describe("Commander Adapter", () => {
           service: ({ value }) => ({ doubled: value * 2 }),
         });
 
-        registerServiceCommand({
-          handler,
+        fabricCommand({
+          service: handler,
           onComplete: (response) => {
             capturedResponse = response;
           },
@@ -935,12 +935,12 @@ describe("Commander Adapter", () => {
       });
 
       it("does not require onComplete callback", async () => {
-        const handler = createService({
+        const handler = fabricService({
           alias: "test",
           service: () => "result",
         });
 
-        registerServiceCommand({ handler, program });
+        fabricCommand({ program, service: handler });
 
         // Should not throw
         await expect(
@@ -950,13 +950,13 @@ describe("Commander Adapter", () => {
 
       it("supports async onComplete callback", async () => {
         let completed = false;
-        const handler = createService({
+        const handler = fabricService({
           alias: "test",
           service: () => "result",
         });
 
-        registerServiceCommand({
-          handler,
+        fabricCommand({
+          service: handler,
           onComplete: async () => {
             await new Promise((resolve) => setTimeout(resolve, 10));
             completed = true;
@@ -973,15 +973,15 @@ describe("Commander Adapter", () => {
     describe("onError callback", () => {
       it("calls onError when handler throws", async () => {
         let capturedError: unknown;
-        const handler = createService({
+        const handler = fabricService({
           alias: "test",
           service: () => {
             throw new Error("Handler failed");
           },
         });
 
-        registerServiceCommand({
-          handler,
+        fabricCommand({
+          service: handler,
           onError: (error) => {
             capturedError = error;
           },
@@ -995,14 +995,14 @@ describe("Commander Adapter", () => {
       });
 
       it("re-throws error when no onError callback provided", async () => {
-        const handler = createService({
+        const handler = fabricService({
           alias: "test",
           service: () => {
             throw new Error("Handler failed");
           },
         });
 
-        registerServiceCommand({ handler, program });
+        fabricCommand({ program, service: handler });
 
         await expect(
           program.parseAsync(["node", "test", "test"]),
@@ -1011,15 +1011,15 @@ describe("Commander Adapter", () => {
 
       it("supports async onError callback", async () => {
         let errorHandled = false;
-        const handler = createService({
+        const handler = fabricService({
           alias: "test",
           service: () => {
             throw new Error("Handler failed");
           },
         });
 
-        registerServiceCommand({
-          handler,
+        fabricCommand({
+          service: handler,
           onError: async () => {
             await new Promise((resolve) => setTimeout(resolve, 10));
             errorHandled = true;
@@ -1035,14 +1035,14 @@ describe("Commander Adapter", () => {
 
     describe("onMessage callback", () => {
       it("returns onMessage in result", () => {
-        const handler = createService({
+        const handler = fabricService({
           alias: "test",
           service: () => "result",
         });
 
         const onMessage = vi.fn();
-        const result = registerServiceCommand({
-          handler,
+        const result = fabricCommand({
+          service: handler,
           onMessage,
           program,
         });
@@ -1051,12 +1051,12 @@ describe("Commander Adapter", () => {
       });
 
       it("does not include onMessage when not provided", () => {
-        const handler = createService({
+        const handler = fabricService({
           alias: "test",
           service: () => "result",
         });
 
-        const result = registerServiceCommand({ handler, program });
+        const result = fabricCommand({ program, service: handler });
 
         expect(result.onMessage).toBeUndefined();
       });
@@ -1065,7 +1065,7 @@ describe("Commander Adapter", () => {
     describe("sendMessage in service context", () => {
       it("service can call sendMessage and onMessage receives the message", async () => {
         const messages: unknown[] = [];
-        const handler = createService({
+        const handler = fabricService({
           alias: "test",
           service: (_input, context) => {
             context?.sendMessage?.({ content: "Starting..." });
@@ -1074,8 +1074,8 @@ describe("Commander Adapter", () => {
           },
         });
 
-        registerServiceCommand({
-          handler,
+        fabricCommand({
+          service: handler,
           onMessage: (msg) => {
             messages.push(msg);
           },
@@ -1091,7 +1091,7 @@ describe("Commander Adapter", () => {
 
       it("service works when onMessage is not provided", async () => {
         let contextReceived: unknown;
-        const handler = createService({
+        const handler = fabricService({
           alias: "test",
           service: (_input, context) => {
             contextReceived = context;
@@ -1101,7 +1101,7 @@ describe("Commander Adapter", () => {
           },
         });
 
-        registerServiceCommand({ handler, program });
+        fabricCommand({ program, service: handler });
 
         await program.parseAsync(["node", "test", "test"]);
 
@@ -1113,7 +1113,7 @@ describe("Commander Adapter", () => {
 
       it("errors in onMessage are swallowed and do not halt execution", async () => {
         let serviceCompleted = false;
-        const handler = createService({
+        const handler = fabricService({
           alias: "test",
           service: (_input, context) => {
             context?.sendMessage?.({ content: "Before error" });
@@ -1122,8 +1122,8 @@ describe("Commander Adapter", () => {
           },
         });
 
-        registerServiceCommand({
-          handler,
+        fabricCommand({
+          service: handler,
           onMessage: () => {
             throw new Error("onMessage failed!");
           },
@@ -1139,7 +1139,7 @@ describe("Commander Adapter", () => {
 
       it("async onMessage errors are swallowed", async () => {
         let serviceCompleted = false;
-        const handler = createService({
+        const handler = fabricService({
           alias: "test",
           service: async (_input, context) => {
             await context?.sendMessage?.({ content: "Async message" });
@@ -1148,8 +1148,8 @@ describe("Commander Adapter", () => {
           },
         });
 
-        registerServiceCommand({
-          handler,
+        fabricCommand({
+          service: handler,
           onMessage: async () => {
             await new Promise((resolve) => setTimeout(resolve, 5));
             throw new Error("Async onMessage failed!");
@@ -1165,7 +1165,7 @@ describe("Commander Adapter", () => {
 
       it("async onMessage callbacks work correctly", async () => {
         const messages: unknown[] = [];
-        const handler = createService({
+        const handler = fabricService({
           alias: "test",
           service: async (_input, context) => {
             await context?.sendMessage?.({ content: "First" });
@@ -1174,8 +1174,8 @@ describe("Commander Adapter", () => {
           },
         });
 
-        registerServiceCommand({
-          handler,
+        fabricCommand({
+          service: handler,
           onMessage: async (msg) => {
             await new Promise((resolve) => setTimeout(resolve, 5));
             messages.push(msg);
@@ -1194,15 +1194,15 @@ describe("Commander Adapter", () => {
     describe("onFatal callback", () => {
       it("calls onFatal for any thrown error", async () => {
         let capturedError: unknown;
-        const handler = createService({
+        const handler = fabricService({
           alias: "test",
           service: () => {
             throw new Error("Service error");
           },
         });
 
-        registerServiceCommand({
-          handler,
+        fabricCommand({
+          service: handler,
           onFatal: (error) => {
             capturedError = error;
           },
@@ -1217,15 +1217,15 @@ describe("Commander Adapter", () => {
 
       it("calls onFatal (not onError) when both callbacks provided and error is thrown", async () => {
         let errorCallback: string | undefined;
-        const handler = createService({
+        const handler = fabricService({
           alias: "test",
           service: () => {
             throw new Error("Thrown error");
           },
         });
 
-        registerServiceCommand({
-          handler,
+        fabricCommand({
+          service: handler,
           onError: () => {
             errorCallback = "onError";
           },
@@ -1243,15 +1243,15 @@ describe("Commander Adapter", () => {
 
       it("falls back to onError when onFatal not provided", async () => {
         let capturedError: unknown;
-        const handler = createService({
+        const handler = fabricService({
           alias: "test",
           service: () => {
             throw new Error("Service error");
           },
         });
 
-        registerServiceCommand({
-          handler,
+        fabricCommand({
+          service: handler,
           onError: (error) => {
             capturedError = error;
           },
@@ -1265,14 +1265,14 @@ describe("Commander Adapter", () => {
       });
 
       it("re-throws error when no error callbacks provided", async () => {
-        const handler = createService({
+        const handler = fabricService({
           alias: "test",
           service: () => {
             throw new Error("Unhandled error");
           },
         });
 
-        registerServiceCommand({ handler, program });
+        fabricCommand({ program, service: handler });
 
         await expect(
           program.parseAsync(["node", "test", "test"]),
@@ -1281,15 +1281,15 @@ describe("Commander Adapter", () => {
 
       it("supports async onFatal callback", async () => {
         let fatalHandled = false;
-        const handler = createService({
+        const handler = fabricService({
           alias: "test",
           service: () => {
             throw new Error("Fatal error");
           },
         });
 
-        registerServiceCommand({
-          handler,
+        fabricCommand({
+          service: handler,
           onFatal: async () => {
             await new Promise((resolve) => setTimeout(resolve, 10));
             fatalHandled = true;
@@ -1306,7 +1306,7 @@ describe("Commander Adapter", () => {
     describe("context.onError and context.onFatal", () => {
       it("service can call context.onError for recoverable errors", async () => {
         let capturedError: unknown;
-        const handler = createService({
+        const handler = fabricService({
           alias: "test",
           service: async (_input, context) => {
             // Service catches its own error and reports it as recoverable
@@ -1319,8 +1319,8 @@ describe("Commander Adapter", () => {
           },
         });
 
-        registerServiceCommand({
-          handler,
+        fabricCommand({
+          service: handler,
           onError: (error) => {
             capturedError = error;
           },
@@ -1335,7 +1335,7 @@ describe("Commander Adapter", () => {
 
       it("service can call context.onFatal for fatal errors", async () => {
         let capturedError: unknown;
-        const handler = createService({
+        const handler = fabricService({
           alias: "test",
           service: async (_input, context) => {
             // Service explicitly reports a fatal error
@@ -1344,8 +1344,8 @@ describe("Commander Adapter", () => {
           },
         });
 
-        registerServiceCommand({
-          handler,
+        fabricCommand({
+          service: handler,
           onFatal: (error) => {
             capturedError = error;
           },
@@ -1360,7 +1360,7 @@ describe("Commander Adapter", () => {
 
       it("context.onError is undefined when onError not registered", async () => {
         let contextReceived: unknown;
-        const handler = createService({
+        const handler = fabricService({
           alias: "test",
           service: (_input, context) => {
             contextReceived = context;
@@ -1370,8 +1370,8 @@ describe("Commander Adapter", () => {
           },
         });
 
-        registerServiceCommand({
-          handler,
+        fabricCommand({
+          service: handler,
           onFatal: () => {},
           program,
         });
@@ -1386,7 +1386,7 @@ describe("Commander Adapter", () => {
 
       it("context.onFatal is undefined when onFatal not registered", async () => {
         let contextReceived: unknown;
-        const handler = createService({
+        const handler = fabricService({
           alias: "test",
           service: (_input, context) => {
             contextReceived = context;
@@ -1396,8 +1396,8 @@ describe("Commander Adapter", () => {
           },
         });
 
-        registerServiceCommand({
-          handler,
+        fabricCommand({
+          service: handler,
           onError: () => {},
           program,
         });
@@ -1412,7 +1412,7 @@ describe("Commander Adapter", () => {
 
       it("errors in context.onError callback are swallowed", async () => {
         let serviceCompleted = false;
-        const handler = createService({
+        const handler = fabricService({
           alias: "test",
           service: async (_input, context) => {
             await context?.onError?.(new Error("test"));
@@ -1421,8 +1421,8 @@ describe("Commander Adapter", () => {
           },
         });
 
-        registerServiceCommand({
-          handler,
+        fabricCommand({
+          service: handler,
           onError: () => {
             throw new Error("Callback failed");
           },
@@ -1437,7 +1437,7 @@ describe("Commander Adapter", () => {
 
       it("errors in context.onFatal callback are swallowed", async () => {
         let serviceCompleted = false;
-        const handler = createService({
+        const handler = fabricService({
           alias: "test",
           service: async (_input, context) => {
             await context?.onFatal?.(new Error("test"));
@@ -1446,8 +1446,8 @@ describe("Commander Adapter", () => {
           },
         });
 
-        registerServiceCommand({
-          handler,
+        fabricCommand({
+          service: handler,
           onFatal: () => {
             throw new Error("Callback failed");
           },
@@ -1462,7 +1462,7 @@ describe("Commander Adapter", () => {
 
       it("service can report multiple errors via context", async () => {
         const errors: unknown[] = [];
-        const handler = createService({
+        const handler = fabricService({
           alias: "test",
           service: async (_input, context) => {
             // Report multiple recoverable errors
@@ -1473,8 +1473,8 @@ describe("Commander Adapter", () => {
           },
         });
 
-        registerServiceCommand({
-          handler,
+        fabricCommand({
+          service: handler,
           onError: (error) => {
             errors.push(error);
           },

@@ -10,7 +10,7 @@ Jaypie modeling framework - provides type conversion and service handler pattern
 | Type | Utility library |
 | Dependencies | `@jaypie/errors` |
 | Peer Dependencies | `@jaypie/aws` (optional), `@jaypie/lambda` (optional), `@modelcontextprotocol/sdk` (optional), `commander` (optional) |
-| Exports | Conversion functions, createService, llm adapter; commander/lambda/mcp via sub-paths |
+| Exports | Fabric functions, fabricService, llm adapter; commander/lambda/mcp via sub-paths |
 
 ## Internal Structure
 
@@ -31,20 +31,20 @@ src/
 │   ├── createCommanderOptions.ts  # Generate Commander Options from config
 │   ├── index.ts                   # Commander module exports
 │   ├── parseCommanderOptions.ts   # Parse Commander opts to handler input
-│   ├── registerServiceCommand.ts  # Register handler as Commander command
+│   ├── fabricCommand.ts           # Register handler as Commander command
 │   └── types.ts                   # Commander adapter types
 ├── lambda/
-│   ├── createLambdaService.ts     # Wrap createService for Lambda
+│   ├── fabricLambda.ts            # Wrap fabricService for Lambda
 │   ├── index.ts                   # Lambda module exports
 │   └── types.ts                   # Lambda adapter types
 ├── llm/
-│   ├── createLlmTool.ts           # Create LLM tool from createService
+│   ├── fabricTool.ts              # Create LLM tool from fabricService
 │   ├── index.ts                   # LLM module exports
 │   ├── inputToJsonSchema.ts       # Convert input definitions to JSON Schema
 │   └── types.ts                   # LLM adapter types
 ├── mcp/
 │   ├── index.ts                   # MCP module exports
-│   ├── registerMcpTool.ts         # Register createService as MCP tool
+│   ├── fabricMcp.ts               # Register fabricService as MCP tool
 │   └── types.ts                   # MCP adapter types
 ├── models/
 │   └── base.ts                    # BaseModel, JobModel, MessageModel, Progress types
@@ -65,19 +65,19 @@ src/
 
 ## Core Concepts
 
-### Conversion Functions
+### Fabric Functions (Type Conversion)
 
 Located in `convert.ts`. Handle flexible type conversion with predictable behavior:
 
 | Function | Purpose |
 |----------|---------|
-| `convert(value, type)` | Master conversion dispatcher |
-| `convertToBoolean` | Convert to boolean (`"true"` -> `true`, positive numbers -> `true`) |
-| `convertToNumber` | Convert to number (`"true"` -> `1`, booleans -> `0`/`1`) |
-| `convertToString` | Convert to string (booleans -> `"true"`/`"false"`) |
-| `convertToArray` | Wrap non-arrays in array |
+| `fabric(value, type)` | Master conversion dispatcher |
+| `fabricBoolean` | Convert to boolean (`"true"` -> `true`, positive numbers -> `true`) |
+| `fabricNumber` | Convert to number (`"true"` -> `1`, booleans -> `0`/`1`) |
+| `fabricString` | Convert to string (booleans -> `"true"`/`"false"`) |
+| `fabricArray` | Wrap non-arrays in array |
 | `convertFromArray` | Extract single-element array to scalar |
-| `convertToObject` | Wrap in `{ value: ... }` structure |
+| `fabricObject` | Wrap in `{ value: ... }` structure |
 | `convertFromObject` | Extract `.value` from object |
 
 Key behaviors:
@@ -86,18 +86,18 @@ Key behaviors:
 - Invalid conversions throw `BadRequestError`
 - Multi-value arrays cannot convert to scalars (throws `BadRequestError`)
 
-**Unwrapping** (scalar conversions only - `convertToBoolean`, `convertToNumber`, `convertToString`):
+**Unwrapping** (scalar conversions only - `fabricBoolean`, `fabricNumber`, `fabricString`):
 - Objects with `value` property unwrap: `{value: "true"}` → `true`
 - Single-element arrays unwrap: `[true]` → `true`
 - JSON strings parse and unwrap: `'{"value":"true"}'` → `true`, `'[42]'` → `42`
 - Nested structures unwrap recursively: `[{value: "true"}]` → `true`
 
-### createService
+### fabricService
 
 Located in `service.ts`. Factory function that creates validated service endpoints:
 
 ```typescript
-const handler = createService({
+const handler = fabricService({
   alias: "optional-name",
   description: "Optional description",
   input: {
@@ -128,19 +128,19 @@ Handler features:
 Typed arrays (`[String]`, `[Number]`, `[Boolean]`, `[Object]`, `[]`) convert each element:
 
 ```typescript
-convert([1, 2, 3], [String])      // → ["1", "2", "3"]
-convert(["1", "2"], [Number])     // → [1, 2]
-convert([1, 0], [Boolean])        // → [true, false]
-convert([1, 2], [Object])         // → [{ value: 1 }, { value: 2 }]
-convert([1, "a", true], [])       // → [1, "a", true] (untyped, no element conversion)
+fabric([1, 2, 3], [String])      // → ["1", "2", "3"]
+fabric(["1", "2"], [Number])     // → [1, 2]
+fabric([1, 0], [Boolean])        // → [true, false]
+fabric([1, 2], [Object])         // → [{ value: 1 }, { value: 2 }]
+fabric([1, "a", true], [])       // → [1, "a", true] (untyped, no element conversion)
 ```
 
 **String Splitting**: Strings with commas or tabs are automatically split before conversion:
 
 ```typescript
-convert("1,2,3", [Number])        // → [1, 2, 3]
-convert("a, b, c", [String])      // → ["a", "b", "c"] (whitespace trimmed)
-convert("true\tfalse", [Boolean]) // → [true, false]
+fabric("1,2,3", [Number])        // → [1, 2, 3]
+fabric("a, b, c", [String])      // → ["a", "b", "c"] (whitespace trimmed)
+fabric("true\tfalse", [Boolean]) // → [true, false]
 ```
 
 ### Index Utilities
@@ -203,15 +203,15 @@ Located in `models/base.ts`:
 ### Main Export (`@jaypie/fabric`)
 
 ```typescript
-// Conversion
-export { convert, convertFromArray, convertFromObject, convertToArray, convertToBoolean, convertToNumber, convertToObject, convertToString } from "./convert.js";
-export { convertFromDate, convertToDate } from "./convert-date.js";
+// Fabric functions (type conversion)
+export { fabric, fabricArray, fabricBoolean, fabricNumber, fabricObject, fabricString, convertFromArray, convertFromObject } from "./convert.js";
+export { fabricDate, convertFromDate, isValidDate, isDateType, DateType } from "./convert-date.js";
 
 // LLM adapter namespace (re-exported, no optional deps)
 export * as llm from "./llm/index.js";
 
 // Service Handler
-export { createService } from "./service.js";
+export { fabricService } from "./service.js";
 
 // Models
 export { BaseModel, JobModel, MessageModel, Progress } from "./models/base.js";
@@ -235,52 +235,55 @@ export const FABRIC_VERSION: string;
 ```typescript
 export { createCommanderOptions } from "./createCommanderOptions.js";
 export { parseCommanderOptions } from "./parseCommanderOptions.js";
-export { registerServiceCommand } from "./registerServiceCommand.js";
-export type { CommanderOptionOverride, CreateCommanderOptionsConfig, CreateCommanderOptionsResult, OnCompleteCallback, OnErrorCallback, OnFatalCallback, OnMessageCallback, ParseCommanderOptionsConfig, RegisterServiceCommandConfig, RegisterServiceCommandResult } from "./types.js";
+export { fabricCommand } from "./fabricCommand.js";
+export type { CommanderOptionOverride, CreateCommanderOptionsConfig, CreateCommanderOptionsResult, FabricCommandConfig, FabricCommandResult, OnCompleteCallback, OnErrorCallback, OnFatalCallback, OnMessageCallback, ParseCommanderOptionsConfig } from "./types.js";
 ```
 
 ### Lambda Export (`@jaypie/fabric/lambda`)
 
 ```typescript
-export { createLambdaService } from "./createLambdaService.js";
-export type { CreateLambdaServiceConfig, CreateLambdaServiceOptions, LambdaContext, OnCompleteCallback, OnErrorCallback, OnFatalCallback, OnMessageCallback } from "./types.js";
+export { fabricLambda } from "./fabricLambda.js";
+export type { FabricLambdaConfig, FabricLambdaOptions, LambdaContext, OnCompleteCallback, OnErrorCallback, OnFatalCallback, OnMessageCallback } from "./types.js";
 ```
 
 ### LLM Export (`@jaypie/fabric/llm`)
 
 ```typescript
-export { createLlmTool } from "./createLlmTool.js";
+export { fabricTool } from "./fabricTool.js";
 export { inputToJsonSchema } from "./inputToJsonSchema.js";
-export type { CreateLlmToolConfig, CreateLlmToolResult, LlmTool, OnCompleteCallback, OnErrorCallback, OnFatalCallback, OnMessageCallback } from "./types.js";
+export type { FabricToolConfig, FabricToolResult, LlmTool, OnCompleteCallback, OnErrorCallback, OnFatalCallback, OnMessageCallback } from "./types.js";
 ```
 
 ### MCP Export (`@jaypie/fabric/mcp`)
 
 ```typescript
-export { registerMcpTool } from "./registerMcpTool.js";
-export type { McpToolContentItem, McpToolResponse, OnCompleteCallback, OnErrorCallback, OnFatalCallback, OnMessageCallback, RegisterMcpToolConfig, RegisterMcpToolResult } from "./types.js";
+export { fabricMcp } from "./fabricMcp.js";
+export type { FabricMcpConfig, FabricMcpResult, McpToolContentItem, McpToolResponse, OnCompleteCallback, OnErrorCallback, OnFatalCallback, OnMessageCallback } from "./types.js";
 ```
 
 ## Migration from @jaypie/vocabulary
 
 | Old (vocabulary) | New (fabric) |
 |------------------|--------------|
-| `coerce` | `convert` |
-| `coerceToBoolean` | `convertToBoolean` |
-| `coerceToNumber` | `convertToNumber` |
-| `coerceToString` | `convertToString` |
-| `coerceToArray` | `convertToArray` |
+| `coerce` | `fabric` |
+| `coerceToBoolean` | `fabricBoolean` |
+| `coerceToNumber` | `fabricNumber` |
+| `coerceToString` | `fabricString` |
+| `coerceToArray` | `fabricArray` |
 | `coerceFromArray` | `convertFromArray` |
-| `coerceToObject` | `convertToObject` |
+| `coerceToObject` | `fabricObject` |
 | `coerceFromObject` | `convertFromObject` |
-| `coerceToDate` | `convertToDate` |
+| `coerceToDate` | `fabricDate` |
 | `coerceFromDate` | `convertFromDate` |
-| `serviceHandler` | `createService` |
+| `serviceHandler` | `fabricService` |
 | `ServiceHandlerFunction` | `Service` |
 | `ServiceHandlerConfig` | `ServiceConfig` |
 | `CoercionType` | `ConversionType` |
-| `lambdaServiceHandler` | `createLambdaService` |
-| `LambdaServiceHandlerConfig` | `CreateLambdaServiceConfig` |
+| `lambdaServiceHandler` | `fabricLambda` |
+| `LambdaServiceHandlerConfig` | `FabricLambdaConfig` |
+| `createLlmTool` | `fabricTool` |
+| `registerMcpTool` | `fabricMcp` |
+| `registerServiceCommand` | `fabricCommand` |
 | `BaseEntity` | `BaseModel` |
 | `MessageEntity` | `MessageModel` |
 | `Job` | `JobModel` |

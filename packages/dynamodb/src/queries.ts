@@ -1,5 +1,5 @@
 import { QueryCommand } from "@aws-sdk/lib-dynamodb";
-import { createService } from "@jaypie/fabric";
+import { fabricService } from "@jaypie/fabric";
 
 import { getDocClient, getTableName } from "./client.js";
 import {
@@ -91,7 +91,7 @@ interface QueryByOuParams extends BaseQueryOptions {
  * Query entities by organizational unit (parent hierarchy)
  * Uses indexOu GSI
  *
- * Note: This is a regular async function (not createService) because it accepts
+ * Note: This is a regular async function (not fabricService) because it accepts
  * complex startKey objects that can't be coerced by vocabulary's type system.
  */
 export async function queryByOu({
@@ -116,7 +116,7 @@ export async function queryByOu({
  * Query a single entity by human-friendly alias
  * Uses indexAlias GSI
  */
-export const queryByAlias = createService({
+export const queryByAlias = fabricService({
   alias: "queryByAlias",
   description: "Query a single entity by human-friendly alias",
   input: {
@@ -174,7 +174,7 @@ interface QueryByClassParams extends BaseQueryOptions {
  * Query entities by category classification
  * Uses indexClass GSI
  *
- * Note: This is a regular async function (not createService) because it accepts
+ * Note: This is a regular async function (not fabricService) because it accepts
  * complex startKey objects that can't be coerced by vocabulary's type system.
  */
 export async function queryByClass({
@@ -209,7 +209,7 @@ interface QueryByTypeParams extends BaseQueryOptions {
  * Query entities by type classification
  * Uses indexType GSI
  *
- * Note: This is a regular async function (not createService) because it accepts
+ * Note: This is a regular async function (not fabricService) because it accepts
  * complex startKey objects that can't be coerced by vocabulary's type system.
  */
 export async function queryByType({
@@ -235,7 +235,7 @@ export async function queryByType({
  * Query a single entity by external ID
  * Uses indexXid GSI
  */
-export const queryByXid = createService({
+export const queryByXid = fabricService({
   alias: "queryByXid",
   description: "Query a single entity by external ID",
   input: {

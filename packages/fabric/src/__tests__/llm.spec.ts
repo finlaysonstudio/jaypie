@@ -2,8 +2,8 @@
 
 import { describe, expect, it } from "vitest";
 
-import { createLlmTool, inputToJsonSchema } from "../llm/index.js";
-import { createService } from "../service.js";
+import { fabricTool, inputToJsonSchema } from "../llm/index.js";
+import { fabricService } from "../service.js";
 import type { InputFieldDefinition } from "../types.js";
 
 describe("LLM Adapter", () => {
@@ -227,90 +227,90 @@ describe("LLM Adapter", () => {
     });
   });
 
-  describe("createLlmTool", () => {
+  describe("fabricTool", () => {
     it("creates a tool with handler alias as name", () => {
-      const handler = createService({
+      const handler = fabricService({
         alias: "greet",
         service: () => "Hello!",
       });
 
-      const { tool } = createLlmTool({ handler });
+      const { tool } = fabricTool({ service: handler });
 
       expect(tool.name).toBe("greet");
     });
 
     it("creates a tool with handler description", () => {
-      const handler = createService({
+      const handler = fabricService({
         alias: "greet",
         description: "Greet a user",
         service: () => "Hello!",
       });
 
-      const { tool } = createLlmTool({ handler });
+      const { tool } = fabricTool({ service: handler });
 
       expect(tool.description).toBe("Greet a user");
     });
 
     it("uses custom name over handler alias", () => {
-      const handler = createService({
+      const handler = fabricService({
         alias: "greet",
         service: () => "Hello!",
       });
 
-      const { tool } = createLlmTool({ handler, name: "hello" });
+      const { tool } = fabricTool({ service: handler, name: "hello" });
 
       expect(tool.name).toBe("hello");
     });
 
     it("uses custom description over handler description", () => {
-      const handler = createService({
+      const handler = fabricService({
         alias: "greet",
         description: "Handler description",
         service: () => "Hello!",
       });
 
-      const { tool } = createLlmTool({
+      const { tool } = fabricTool({
         description: "Custom description",
-        handler,
+        service: handler,
       });
 
       expect(tool.description).toBe("Custom description");
     });
 
     it("defaults to 'tool' when no alias or name provided", () => {
-      const handler = createService({
+      const handler = fabricService({
         service: () => "Hello!",
       });
 
-      const { tool } = createLlmTool({ handler });
+      const { tool } = fabricTool({ service: handler });
 
       expect(tool.name).toBe("tool");
     });
 
     it("defaults to empty description when none provided", () => {
-      const handler = createService({
+      const handler = fabricService({
         alias: "test",
         service: () => "Hello!",
       });
 
-      const { tool } = createLlmTool({ handler });
+      const { tool } = fabricTool({ service: handler });
 
       expect(tool.description).toBe("");
     });
 
     it("sets type to function", () => {
-      const handler = createService({
+      const handler = fabricService({
         alias: "test",
         service: () => "Hello!",
       });
 
-      const { tool } = createLlmTool({ handler });
+      const { tool } = fabricTool({ service: handler });
 
       expect(tool.type).toBe("function");
     });
 
     it("converts handler input to JSON Schema parameters", () => {
-      const handler = createService({
+      const handler = fabricService({
         alias: "greet",
         input: {
           name: { type: String, description: "User name" },
@@ -322,7 +322,7 @@ describe("LLM Adapter", () => {
         },
       });
 
-      const { tool } = createLlmTool({ handler });
+      const { tool } = fabricTool({ service: handler });
 
       expect(tool.parameters).toEqual({
         properties: {
@@ -335,7 +335,7 @@ describe("LLM Adapter", () => {
     });
 
     it("excludes specified fields from parameters", () => {
-      const handler = createService({
+      const handler = fabricService({
         alias: "test",
         input: {
           name: { type: String },
@@ -344,9 +344,9 @@ describe("LLM Adapter", () => {
         service: (input) => input,
       });
 
-      const { tool } = createLlmTool({
+      const { tool } = fabricTool({
         exclude: ["secret"],
-        handler,
+        service: handler,
       });
 
       expect(tool.parameters.properties).toHaveProperty("name");
@@ -354,7 +354,7 @@ describe("LLM Adapter", () => {
     });
 
     it("call function invokes the handler", async () => {
-      const handler = createService({
+      const handler = fabricService({
         alias: "greet",
         input: {
           name: { type: String },
@@ -362,7 +362,7 @@ describe("LLM Adapter", () => {
         service: ({ name }) => `Hello, ${name}!`,
       });
 
-      const { tool } = createLlmTool({ handler });
+      const { tool } = fabricTool({ service: handler });
 
       const result = await tool.call({ name: "Alice" });
 
@@ -370,7 +370,7 @@ describe("LLM Adapter", () => {
     });
 
     it("call function handles async handlers", async () => {
-      const handler = createService({
+      const handler = fabricService({
         alias: "delay",
         input: {
           ms: { type: Number },
@@ -381,7 +381,7 @@ describe("LLM Adapter", () => {
         },
       });
 
-      const { tool } = createLlmTool({ handler });
+      const { tool } = fabricTool({ service: handler });
 
       const result = await tool.call({ ms: 10 });
 
@@ -389,12 +389,12 @@ describe("LLM Adapter", () => {
     });
 
     it("call function handles handlers with no input", async () => {
-      const handler = createService({
+      const handler = fabricService({
         alias: "ping",
         service: () => "pong",
       });
 
-      const { tool } = createLlmTool({ handler });
+      const { tool } = fabricTool({ service: handler });
 
       const result = await tool.call();
 
@@ -402,13 +402,13 @@ describe("LLM Adapter", () => {
     });
 
     it("includes string message when provided", () => {
-      const handler = createService({
+      const handler = fabricService({
         alias: "test",
         service: () => "result",
       });
 
-      const { tool } = createLlmTool({
-        handler,
+      const { tool } = fabricTool({
+        service: handler,
         message: "Executing test",
       });
 
@@ -416,7 +416,7 @@ describe("LLM Adapter", () => {
     });
 
     it("includes function message when provided", () => {
-      const handler = createService({
+      const handler = fabricService({
         alias: "greet",
         input: {
           name: { type: String },
@@ -427,8 +427,8 @@ describe("LLM Adapter", () => {
       const messageFunc = (args?: Record<string, unknown>) =>
         `Greeting ${args?.name}`;
 
-      const { tool } = createLlmTool({
-        handler,
+      const { tool } = fabricTool({
+        service: handler,
         message: messageFunc,
       });
 
@@ -436,18 +436,18 @@ describe("LLM Adapter", () => {
     });
 
     it("does not include message when not provided", () => {
-      const handler = createService({
+      const handler = fabricService({
         alias: "test",
         service: () => "result",
       });
 
-      const { tool } = createLlmTool({ handler });
+      const { tool } = fabricTool({ service: handler });
 
       expect(tool.message).toBeUndefined();
     });
 
     it("full integration: creates working LLM tool from handler", async () => {
-      const handler = createService({
+      const handler = fabricService({
         alias: "calculate",
         description: "Calculate the sum of two numbers",
         input: {
@@ -457,7 +457,7 @@ describe("LLM Adapter", () => {
         service: ({ a, b }) => a + b,
       });
 
-      const { tool } = createLlmTool({ handler });
+      const { tool } = fabricTool({ service: handler });
 
       expect(tool.name).toBe("calculate");
       expect(tool.description).toBe("Calculate the sum of two numbers");
@@ -479,7 +479,7 @@ describe("LLM Adapter", () => {
       it("passes context with sendMessage to service when onMessage is provided", async () => {
         const messages: Array<{ content: string; level?: string }> = [];
 
-        const handler = createService({
+        const handler = fabricService({
           alias: "test",
           input: { name: { type: String } },
           service: ({ name }, context) => {
@@ -488,8 +488,8 @@ describe("LLM Adapter", () => {
           },
         });
 
-        const { tool } = createLlmTool({
-          handler,
+        const { tool } = fabricTool({
+          service: handler,
           onMessage: (msg) => {
             messages.push(msg);
           },
@@ -502,7 +502,7 @@ describe("LLM Adapter", () => {
       });
 
       it("swallows errors in onMessage callback", async () => {
-        const handler = createService({
+        const handler = fabricService({
           alias: "test",
           service: (_, context) => {
             context?.sendMessage?.({ content: "Message" });
@@ -511,8 +511,8 @@ describe("LLM Adapter", () => {
         });
 
         let callCount = 0;
-        const { tool } = createLlmTool({
-          handler,
+        const { tool } = fabricTool({
+          service: handler,
           onMessage: () => {
             callCount++;
             throw new Error("onMessage error");
@@ -530,14 +530,14 @@ describe("LLM Adapter", () => {
       it("calls onComplete with result on success", async () => {
         let completedValue: unknown;
 
-        const handler = createService({
+        const handler = fabricService({
           alias: "test",
           input: { value: { type: Number } },
           service: ({ value }) => value * 2,
         });
 
-        const { tool } = createLlmTool({
-          handler,
+        const { tool } = fabricTool({
+          service: handler,
           onComplete: (result) => {
             completedValue = result;
           },
@@ -549,13 +549,13 @@ describe("LLM Adapter", () => {
       });
 
       it("swallows errors in onComplete callback", async () => {
-        const handler = createService({
+        const handler = fabricService({
           alias: "test",
           service: () => "result",
         });
 
-        const { tool } = createLlmTool({
-          handler,
+        const { tool } = fabricTool({
+          service: handler,
           onComplete: () => {
             throw new Error("onComplete error");
           },
@@ -571,15 +571,15 @@ describe("LLM Adapter", () => {
       it("calls onFatal when handler throws", async () => {
         let fatalError: unknown;
 
-        const handler = createService({
+        const handler = fabricService({
           alias: "test",
           service: () => {
             throw new Error("Service error");
           },
         });
 
-        const { tool } = createLlmTool({
-          handler,
+        const { tool } = fabricTool({
+          service: handler,
           onFatal: (error) => {
             fatalError = error;
           },
@@ -593,15 +593,15 @@ describe("LLM Adapter", () => {
       it("falls back to onError when onFatal is not provided", async () => {
         let errorValue: unknown;
 
-        const handler = createService({
+        const handler = fabricService({
           alias: "test",
           service: () => {
             throw new Error("Service error");
           },
         });
 
-        const { tool } = createLlmTool({
-          handler,
+        const { tool } = fabricTool({
+          service: handler,
           onError: (error) => {
             errorValue = error;
           },
@@ -615,7 +615,7 @@ describe("LLM Adapter", () => {
       it("passes context.onError to service for recoverable errors", async () => {
         let recoveredError: unknown;
 
-        const handler = createService({
+        const handler = fabricService({
           alias: "test",
           service: (_, context) => {
             context?.onError?.(new Error("Recoverable error"));
@@ -623,8 +623,8 @@ describe("LLM Adapter", () => {
           },
         });
 
-        const { tool } = createLlmTool({
-          handler,
+        const { tool } = fabricTool({
+          service: handler,
           onError: (error) => {
             recoveredError = error;
           },
@@ -640,7 +640,7 @@ describe("LLM Adapter", () => {
       it("passes context.onFatal to service for explicit fatal errors", async () => {
         let fatalError: unknown;
 
-        const handler = createService({
+        const handler = fabricService({
           alias: "test",
           service: (_, context) => {
             context?.onFatal?.(new Error("Fatal error"));
@@ -648,8 +648,8 @@ describe("LLM Adapter", () => {
           },
         });
 
-        const { tool } = createLlmTool({
-          handler,
+        const { tool } = fabricTool({
+          service: handler,
           onFatal: (error) => {
             fatalError = error;
           },
@@ -663,7 +663,7 @@ describe("LLM Adapter", () => {
       });
 
       it("swallows errors in context.onError callback", async () => {
-        const handler = createService({
+        const handler = fabricService({
           alias: "test",
           service: (_, context) => {
             context?.onError?.(new Error("Test error"));
@@ -671,8 +671,8 @@ describe("LLM Adapter", () => {
           },
         });
 
-        const { tool } = createLlmTool({
-          handler,
+        const { tool } = fabricTool({
+          service: handler,
           onError: () => {
             throw new Error("Callback error");
           },

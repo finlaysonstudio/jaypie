@@ -31,23 +31,23 @@ export * as commander from "./commander/index.js";
 export { APEX, SEPARATOR, SYSTEM_MODELS } from "./constants.js";
 export type { SystemModel } from "./constants.js";
 
-// Conversion (formerly Coercion)
+// Fabric functions (type conversion)
 export {
-  convert,
   convertFromArray,
   convertFromObject,
-  convertToArray,
-  convertToBoolean,
-  convertToNumber,
-  convertToObject,
-  convertToString,
+  fabric,
+  fabricArray,
+  fabricBoolean,
+  fabricNumber,
+  fabricObject,
+  fabricString,
 } from "./convert.js";
 
-// Date Conversion
+// Date fabrication
 export {
   convertFromDate,
-  convertToDate,
   DateType,
+  fabricDate,
   isDateType,
   isValidDate,
 } from "./convert-date.js";
@@ -87,9 +87,9 @@ export type {
 export * as llm from "./llm/index.js";
 
 // Note: Other adapters have optional dependencies and must be imported directly:
-//   import { registerServiceCommand } from "@jaypie/fabric/commander";
-//   import { createLambdaService } from "@jaypie/fabric/lambda";
-//   import { registerMcpTool } from "@jaypie/fabric/mcp";
+//   import { fabricCommand } from "@jaypie/fabric/commander";
+//   import { fabricLambda } from "@jaypie/fabric/lambda";
+//   import { fabricMcp } from "@jaypie/fabric/mcp";
 
 // Meta-modeling types
 export {
@@ -121,8 +121,8 @@ export type {
   ValidationRule,
 } from "./types/index.js";
 
-// Service (formerly ServiceHandler)
-export { createService } from "./service.js";
+// Service
+export { fabricService } from "./service.js";
 
 // Status Type
 export { isStatus, STATUS_VALUES, StatusType } from "./status.js";

@@ -2,7 +2,7 @@
 
 import { BadRequestError } from "@jaypie/errors";
 
-import { convert } from "./convert.js";
+import { fabric } from "./convert.js";
 import type {
   ConversionType,
   InputFieldDefinition,
@@ -209,8 +209,8 @@ async function processField(
     validation = definition.type; // The array becomes the validation
   }
 
-  // Convert to target type
-  const convertedValue = convert(processedValue, actualType);
+  // Fabric to target type
+  const convertedValue = fabric(processedValue, actualType);
 
   // Check if required field is missing
   if (convertedValue === undefined && isFieldRequired(definition)) {
@@ -226,17 +226,17 @@ async function processField(
 }
 
 /**
- * Create a service function
+ * Fabric a service function
  *
  * Service builds a function that initiates a "controller" step that:
  * - Parses the input if it is a string to object
- * - Converts each input field to its type
+ * - Fabrics each input field to its type
  * - Calls the validation function or regular expression or checks the array
  * - Calls the service function and returns the response
  *
  * The returned function has config properties for introspection.
  */
-export function createService<
+export function fabricService<
   TInput extends Record<string, unknown> = Record<string, unknown>,
   TOutput = unknown,
 >(config: ServiceConfig<TInput, TOutput>): Service<TInput, TOutput> {

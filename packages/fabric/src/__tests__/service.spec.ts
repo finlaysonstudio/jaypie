@@ -1,10 +1,10 @@
 import { BadRequestError } from "@jaypie/errors";
 import { describe, expect, it } from "vitest";
 
-import { createService } from "..";
+import { fabricService } from "..";
 
 // Example from README: division handler
-const divisionHandler = createService({
+const divisionHandler = fabricService({
   alias: "division",
   description: "Divides two numbers",
   input: {
@@ -29,21 +29,21 @@ const divisionHandler = createService({
   }) => numerator / denominator,
 });
 
-describe("createService", () => {
+describe("fabricService", () => {
   describe("Base Cases", () => {
     it("is a function", () => {
-      expect(typeof createService).toBe("function");
+      expect(typeof fabricService).toBe("function");
     });
 
     it("returns a function", () => {
-      const handler = createService({
+      const handler = fabricService({
         service: () => "test",
       });
       expect(typeof handler).toBe("function");
     });
 
     it("returns a Promise", async () => {
-      const handler = createService({
+      const handler = fabricService({
         service: () => "test",
       });
       const result = handler();
@@ -60,7 +60,7 @@ describe("createService", () => {
         },
         service: ({ value }: { value: number }) => value * 2,
       };
-      const handler = createService(config);
+      const handler = fabricService(config);
 
       expect(handler.alias).toBe("test-handler");
       expect(handler.description).toBe("A test handler");
@@ -69,7 +69,7 @@ describe("createService", () => {
     });
 
     it("handler has all original config properties", () => {
-      const handler = createService({
+      const handler = fabricService({
         alias: "division",
         description: "Divides numbers",
         input: {
@@ -157,7 +157,7 @@ describe("createService", () => {
   describe("Features", () => {
     describe("Input Parsing", () => {
       it("handles empty input", async () => {
-        const handler = createService({
+        const handler = fabricService({
           input: {
             value: { default: 42, type: Number },
           },
@@ -167,7 +167,7 @@ describe("createService", () => {
       });
 
       it("handles undefined input", async () => {
-        const handler = createService({
+        const handler = fabricService({
           input: {
             value: { default: 42, type: Number },
           },
@@ -177,7 +177,7 @@ describe("createService", () => {
       });
 
       it("parses JSON string input", async () => {
-        const handler = createService({
+        const handler = fabricService({
           input: {
             value: { type: Number },
           },
@@ -187,14 +187,14 @@ describe("createService", () => {
       });
 
       it("throws on invalid JSON", async () => {
-        const handler = createService({
+        const handler = fabricService({
           service: () => "test",
         });
         await expect(handler("not json")).rejects.toThrow(BadRequestError);
       });
 
       it("throws on non-object JSON", async () => {
-        const handler = createService({
+        const handler = fabricService({
           service: () => "test",
         });
         await expect(handler("[1, 2, 3]")).rejects.toThrow(BadRequestError);
@@ -203,7 +203,7 @@ describe("createService", () => {
 
     describe("Type Conversion", () => {
       it("converts string to number", async () => {
-        const handler = createService({
+        const handler = fabricService({
           input: {
             value: { type: Number },
           },
@@ -213,7 +213,7 @@ describe("createService", () => {
       });
 
       it("converts string to boolean", async () => {
-        const handler = createService({
+        const handler = fabricService({
           input: {
             value: { type: Boolean },
           },
@@ -224,7 +224,7 @@ describe("createService", () => {
       });
 
       it("converts number to string", async () => {
-        const handler = createService({
+        const handler = fabricService({
           input: {
             value: { type: String },
           },
@@ -234,7 +234,7 @@ describe("createService", () => {
       });
 
       it("converts number to boolean", async () => {
-        const handler = createService({
+        const handler = fabricService({
           input: {
             value: { type: Boolean },
           },
@@ -246,7 +246,7 @@ describe("createService", () => {
       });
 
       it("converts boolean to number", async () => {
-        const handler = createService({
+        const handler = fabricService({
           input: {
             value: { type: Number },
           },
@@ -257,7 +257,7 @@ describe("createService", () => {
       });
 
       it("converts boolean to string", async () => {
-        const handler = createService({
+        const handler = fabricService({
           input: {
             value: { type: String },
           },
@@ -270,7 +270,7 @@ describe("createService", () => {
 
     describe("Validation", () => {
       it("validates with function returning false", async () => {
-        const handler = createService({
+        const handler = fabricService({
           input: {
             value: {
               type: Number,
@@ -284,7 +284,7 @@ describe("createService", () => {
       });
 
       it("validates with function throwing", async () => {
-        const handler = createService({
+        const handler = fabricService({
           input: {
             value: {
               type: Number,
@@ -301,7 +301,7 @@ describe("createService", () => {
       });
 
       it("validates with async function", async () => {
-        const handler = createService({
+        const handler = fabricService({
           input: {
             value: {
               type: Number,
@@ -318,7 +318,7 @@ describe("createService", () => {
       });
 
       it("validates with RegExp", async () => {
-        const handler = createService({
+        const handler = fabricService({
           input: {
             value: {
               type: String,
@@ -337,7 +337,7 @@ describe("createService", () => {
       });
 
       it("validates with array of allowed values", async () => {
-        const handler = createService({
+        const handler = fabricService({
           input: {
             value: {
               type: String,
@@ -354,7 +354,7 @@ describe("createService", () => {
       });
 
       it("validates with array containing RegExp", async () => {
-        const handler = createService({
+        const handler = fabricService({
           input: {
             value: {
               type: String,
@@ -371,7 +371,7 @@ describe("createService", () => {
       });
 
       it("validates with array containing async function", async () => {
-        const handler = createService({
+        const handler = fabricService({
           input: {
             value: {
               type: Number,
@@ -390,7 +390,7 @@ describe("createService", () => {
       });
 
       it("skips validation for undefined values when not required", async () => {
-        const handler = createService({
+        const handler = fabricService({
           input: {
             value: {
               required: false,
@@ -406,7 +406,7 @@ describe("createService", () => {
 
     describe("Required Fields", () => {
       it("throws when required field is missing (no default)", async () => {
-        const handler = createService({
+        const handler = fabricService({
           input: {
             value: { type: Number },
           },
@@ -419,7 +419,7 @@ describe("createService", () => {
       });
 
       it("does not throw when field has default", async () => {
-        const handler = createService({
+        const handler = fabricService({
           input: {
             value: { default: 42, type: Number },
           },
@@ -429,7 +429,7 @@ describe("createService", () => {
       });
 
       it("does not throw when required: false", async () => {
-        const handler = createService({
+        const handler = fabricService({
           input: {
             value: { required: false, type: Number },
           },
@@ -439,7 +439,7 @@ describe("createService", () => {
       });
 
       it("throws when required field is empty string (converts to undefined)", async () => {
-        const handler = createService({
+        const handler = fabricService({
           input: {
             value: { type: String },
           },
@@ -449,7 +449,7 @@ describe("createService", () => {
       });
 
       it("does not throw when required: true with default (default takes precedence)", async () => {
-        const handler = createService({
+        const handler = fabricService({
           input: {
             value: { default: 42, required: true, type: Number },
           },
@@ -459,7 +459,7 @@ describe("createService", () => {
       });
 
       it("throws on missing required field even with other fields provided", async () => {
-        const handler = createService({
+        const handler = fabricService({
           input: {
             a: { type: Number },
             b: { type: Number },
@@ -474,7 +474,7 @@ describe("createService", () => {
 
     describe("Default Values", () => {
       it("applies default when value is undefined", async () => {
-        const handler = createService({
+        const handler = fabricService({
           input: {
             value: { default: 42, type: Number },
           },
@@ -484,7 +484,7 @@ describe("createService", () => {
       });
 
       it("does not apply default when value is provided", async () => {
-        const handler = createService({
+        const handler = fabricService({
           input: {
             value: { default: 42, type: Number },
           },
@@ -496,7 +496,7 @@ describe("createService", () => {
 
     describe("String Type Notation", () => {
       it('accepts "number" as type', async () => {
-        const handler = createService({
+        const handler = fabricService({
           input: {
             value: { type: "number" },
           },
@@ -506,7 +506,7 @@ describe("createService", () => {
       });
 
       it('accepts "string" as type', async () => {
-        const handler = createService({
+        const handler = fabricService({
           input: {
             value: { type: "string" },
           },
@@ -516,7 +516,7 @@ describe("createService", () => {
       });
 
       it('accepts "boolean" as type', async () => {
-        const handler = createService({
+        const handler = fabricService({
           input: {
             value: { type: "boolean" },
           },
@@ -528,7 +528,7 @@ describe("createService", () => {
 
     describe("Async Service", () => {
       it("supports async service function", async () => {
-        const handler = createService({
+        const handler = fabricService({
           input: {
             value: { type: Number },
           },
@@ -543,7 +543,7 @@ describe("createService", () => {
 
     describe("Bare RegExp Type Shorthand", () => {
       it("accepts bare RegExp as type shorthand for validated string", async () => {
-        const handler = createService({
+        const handler = fabricService({
           input: {
             email: { type: /^[^@]+@[^@]+\.[^@]+$/ },
           },
@@ -555,7 +555,7 @@ describe("createService", () => {
       });
 
       it("throws BadRequestError when value does not match RegExp", async () => {
-        const handler = createService({
+        const handler = fabricService({
           input: {
             email: { type: /^[^@]+@[^@]+\.[^@]+$/ },
           },
@@ -567,7 +567,7 @@ describe("createService", () => {
       });
 
       it("converts value to string before validation", async () => {
-        const handler = createService({
+        const handler = fabricService({
           input: {
             code: { type: /^\d+$/ },
           },
@@ -578,7 +578,7 @@ describe("createService", () => {
       });
 
       it("supports default value with bare RegExp", async () => {
-        const handler = createService({
+        const handler = fabricService({
           input: {
             code: { default: "ABC123", type: /^[A-Z]+\d+$/ },
           },
@@ -589,7 +589,7 @@ describe("createService", () => {
       });
 
       it("supports required: false with bare RegExp", async () => {
-        const handler = createService({
+        const handler = fabricService({
           input: {
             code: { required: false, type: /^[A-Z]+$/ },
           },
@@ -599,7 +599,7 @@ describe("createService", () => {
       });
 
       it("works with no service (validation only)", async () => {
-        const handler = createService({
+        const handler = fabricService({
           input: {
             email: { type: /^[^@]+@[^@]+\.[^@]+$/ },
             name: { type: String },
@@ -614,7 +614,7 @@ describe("createService", () => {
       });
 
       it("real-world example: URL validation", async () => {
-        const handler = createService({
+        const handler = fabricService({
           input: {
             url: { type: /^https?:\/\/.+/ },
           },
@@ -634,7 +634,7 @@ describe("createService", () => {
 
     describe("Validated String Shorthand", () => {
       it('accepts ["value1", "value2"] as type shorthand for validated string', async () => {
-        const handler = createService({
+        const handler = fabricService({
           input: {
             currency: { type: ["dec", "sps"] },
           },
@@ -645,7 +645,7 @@ describe("createService", () => {
       });
 
       it("throws BadRequestError when value not in allowed list", async () => {
-        const handler = createService({
+        const handler = fabricService({
           input: {
             currency: { type: ["dec", "sps"] },
           },
@@ -657,7 +657,7 @@ describe("createService", () => {
       });
 
       it("converts value to string before validation", async () => {
-        const handler = createService({
+        const handler = fabricService({
           input: {
             code: { type: ["1", "2", "3"] },
           },
@@ -668,7 +668,7 @@ describe("createService", () => {
       });
 
       it("accepts RegExp in validation array", async () => {
-        const handler = createService({
+        const handler = fabricService({
           input: {
             value: { type: [/^test-/, "special"] },
           },
@@ -683,7 +683,7 @@ describe("createService", () => {
       });
 
       it("accepts array with only RegExp", async () => {
-        const handler = createService({
+        const handler = fabricService({
           input: {
             email: { type: [/^[^@]+@[^@]+\.[^@]+$/] },
           },
@@ -698,7 +698,7 @@ describe("createService", () => {
       });
 
       it("supports default value with validated string", async () => {
-        const handler = createService({
+        const handler = fabricService({
           input: {
             currency: { default: "dec", type: ["dec", "sps"] },
           },
@@ -709,7 +709,7 @@ describe("createService", () => {
       });
 
       it("supports required: false with validated string", async () => {
-        const handler = createService({
+        const handler = fabricService({
           input: {
             currency: { required: false, type: ["dec", "sps"] },
           },
@@ -719,7 +719,7 @@ describe("createService", () => {
       });
 
       it("still distinguishes [String] as typed array", async () => {
-        const handler = createService({
+        const handler = fabricService({
           input: {
             values: { type: [String] },
           },
@@ -734,7 +734,7 @@ describe("createService", () => {
       });
 
       it("still distinguishes [] as untyped array", async () => {
-        const handler = createService({
+        const handler = fabricService({
           input: {
             values: { type: [] },
           },
@@ -748,7 +748,7 @@ describe("createService", () => {
       });
 
       it("real-world example: sendMoney handler", async () => {
-        const sendMoneyHandler = createService({
+        const sendMoneyHandler = fabricService({
           input: {
             amount: { type: Number },
             currency: { type: ["dec", "sps"] },
@@ -781,7 +781,7 @@ describe("createService", () => {
 
     describe("No Service (Validation Only)", () => {
       it("returns processed input when no service is provided", async () => {
-        const handler = createService({
+        const handler = fabricService({
           input: {
             age: { type: Number },
             email: { type: String },
@@ -792,7 +792,7 @@ describe("createService", () => {
       });
 
       it("applies defaults when no service is provided", async () => {
-        const handler = createService({
+        const handler = fabricService({
           input: {
             count: { default: 10, type: Number },
             name: { type: String },
@@ -803,7 +803,7 @@ describe("createService", () => {
       });
 
       it("validates input when no service is provided", async () => {
-        const handler = createService({
+        const handler = fabricService({
           input: {
             value: { type: Number, validate: (v) => (v as number) > 0 },
           },
@@ -813,7 +813,7 @@ describe("createService", () => {
       });
 
       it("validates with validated string shorthand when no service", async () => {
-        const handler = createService({
+        const handler = fabricService({
           input: {
             status: { type: ["active", "inactive"] },
           },
@@ -827,7 +827,7 @@ describe("createService", () => {
       });
 
       it("parses JSON string input when no service", async () => {
-        const handler = createService({
+        const handler = fabricService({
           input: {
             value: { type: Number },
           },
@@ -837,13 +837,13 @@ describe("createService", () => {
       });
 
       it("returns parsed input when no input definitions and no service", async () => {
-        const handler = createService({});
+        const handler = fabricService({});
         const result = await handler({ foo: "bar", num: 42 });
         expect(result).toEqual({ foo: "bar", num: 42 });
       });
 
       it("enforces required fields when no service", async () => {
-        const handler = createService({
+        const handler = fabricService({
           input: {
             required: { type: String },
           },
@@ -854,7 +854,7 @@ describe("createService", () => {
       });
 
       it("real-world example: validateUser", async () => {
-        const validateUser = createService({
+        const validateUser = fabricService({
           input: {
             age: { type: Number, validate: (v) => (v as number) >= 18 },
             email: { type: [/^[^@]+@[^@]+\.[^@]+$/] },
@@ -885,7 +885,7 @@ describe("createService", () => {
 
     describe("Validated Number Shorthand", () => {
       it("accepts [1, 2, 3] as type shorthand for validated number", async () => {
-        const handler = createService({
+        const handler = fabricService({
           input: {
             level: { type: [1, 2, 3] },
           },
@@ -897,7 +897,7 @@ describe("createService", () => {
       });
 
       it("throws BadRequestError when value not in allowed list", async () => {
-        const handler = createService({
+        const handler = fabricService({
           input: {
             level: { type: [1, 2, 3] },
           },
@@ -908,7 +908,7 @@ describe("createService", () => {
       });
 
       it("converts value to number before validation", async () => {
-        const handler = createService({
+        const handler = fabricService({
           input: {
             level: { type: [1, 2, 3] },
           },
@@ -919,7 +919,7 @@ describe("createService", () => {
       });
 
       it("supports default value with validated number", async () => {
-        const handler = createService({
+        const handler = fabricService({
           input: {
             level: { default: 1, type: [1, 2, 3] },
           },
@@ -930,7 +930,7 @@ describe("createService", () => {
       });
 
       it("supports required: false with validated number", async () => {
-        const handler = createService({
+        const handler = fabricService({
           input: {
             level: { required: false, type: [1, 2, 3] },
           },
@@ -940,7 +940,7 @@ describe("createService", () => {
       });
 
       it("still distinguishes [Number] as typed array", async () => {
-        const handler = createService({
+        const handler = fabricService({
           input: {
             values: { type: [Number] },
           },
@@ -953,7 +953,7 @@ describe("createService", () => {
       });
 
       it("validates against exact number values", async () => {
-        const handler = createService({
+        const handler = fabricService({
           input: {
             rating: { type: [0.5, 1, 1.5, 2] },
           },
@@ -967,7 +967,7 @@ describe("createService", () => {
       });
 
       it("real-world example: priority levels", async () => {
-        const taskHandler = createService({
+        const taskHandler = fabricService({
           input: {
             priority: { type: [1, 2, 3, 4, 5] },
             title: { type: String },

@@ -1,4 +1,4 @@
-import { createService } from "@jaypie/fabric";
+import { fabricService } from "@jaypie/fabric";
 
 import { getTableName, isInitialized } from "../../client.js";
 import { ensureInitialized } from "../autoInit.js";
@@ -6,7 +6,7 @@ import { ensureInitialized } from "../autoInit.js";
 /**
  * Check DynamoDB connection status and configuration
  */
-export const statusHandler = createService({
+export const statusHandler = fabricService({
   alias: "dynamodb_status",
   description: "Check DynamoDB connection status and configuration",
   service: async () => {

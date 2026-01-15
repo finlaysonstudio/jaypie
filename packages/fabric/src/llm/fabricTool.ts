@@ -1,44 +1,29 @@
-// Register a service as an MCP tool
+// Fabric an LLM tool from a service
 
 import type { Message, ServiceContext } from "../types.js";
-import type { RegisterMcpToolConfig, RegisterMcpToolResult } from "./types.js";
+import { inputToJsonSchema } from "./inputToJsonSchema.js";
+import type { FabricToolConfig, FabricToolResult, LlmTool } from "./types.js";
 
 /**
- * Format a value as a string for MCP response
- */
-function formatResult(value: unknown): string {
-  if (value === undefined || value === null) {
-    return "";
-  }
-  if (typeof value === "string") {
-    return value;
-  }
-  if (typeof value === "object") {
-    return JSON.stringify(value, null, 2);
-  }
-  return String(value);
-}
-
-/**
- * Register a fabric service as an MCP tool
+ * Fabric an LLM tool from a fabric service
  *
- * This function registers a service with an MCP server.
+ * This function creates an LLM tool compatible with @jaypie/llm Toolkit.
  * It automatically:
- * - Uses handler.alias as the tool name (or custom name)
- * - Uses handler.description as the tool description (or custom)
- * - Delegates validation to the service
- * - Wraps the service and formats the response
+ * - Uses service.alias as the tool name (or custom name)
+ * - Uses service.description as the tool description (or custom)
+ * - Converts input definitions to JSON Schema parameters
+ * - Wraps the service as the tool's call function
  *
- * @param config - Configuration including handler, server, and optional overrides
- * @returns An object containing the registered tool name
+ * @param config - Configuration including service and optional overrides
+ * @returns An object containing the fabricated LLM tool
  *
  * @example
  * ```typescript
- * import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
- * import { createService } from "@jaypie/fabric";
- * import { registerMcpTool } from "@jaypie/fabric/mcp";
+ * import { fabricService } from "@jaypie/fabric";
+ * import { fabricTool } from "@jaypie/fabric/llm";
+ * import { Toolkit } from "@jaypie/llm";
  *
- * const handler = createService({
+ * const myService = fabricService({
  *   alias: "greet",
  *   description: "Greet a user by name",
  *   input: {
@@ -51,29 +36,33 @@ function formatResult(value: unknown): string {
  *   },
  * });
  *
- * const server = new McpServer({ name: "my-server", version: "1.0.0" });
- * registerMcpTool({ handler, server });
+ * const { tool } = fabricTool({ service: myService });
+ *
+ * // Use with Toolkit
+ * const toolkit = new Toolkit([tool]);
  * ```
  */
-export function registerMcpTool(
-  config: RegisterMcpToolConfig,
-): RegisterMcpToolResult {
+export function fabricTool(config: FabricToolConfig): FabricToolResult {
   const {
     description,
-    handler,
+    exclude,
+    message,
     name,
     onComplete,
     onError,
     onFatal,
     onMessage,
-    server,
+    service,
   } = config;
 
-  // Determine tool name (priority: name > handler.alias > "tool")
-  const toolName = name ?? handler.alias ?? "tool";
+  // Determine tool name (priority: name > service.alias > "tool")
+  const toolName = name ?? service.alias ?? "tool";
 
-  // Determine tool description (priority: description > handler.description)
-  const toolDescription = description ?? handler.description ?? "";
+  // Determine tool description (priority: description > service.description)
+  const toolDescription = description ?? service.description ?? "";
+
+  // Convert input definitions to JSON Schema
+  const parameters = inputToJsonSchema(service.input, { exclude });
 
   // Create context callbacks that wrap with error swallowing
   const sendMessage = onMessage
@@ -113,11 +102,10 @@ export function registerMcpTool(
     sendMessage,
   };
 
-  // Register the tool with the MCP server
-  // Use empty schema - service validates inputs
-  server.tool(toolName, toolDescription, {}, async (args) => {
+  // Create the call function that invokes the service
+  const call = async (args?: Record<string, unknown>): Promise<unknown> => {
     try {
-      const result = await handler(args as Record<string, unknown>, context);
+      const result = await service(args, context);
 
       // Call onComplete if provided
       if (onComplete) {
@@ -128,14 +116,7 @@ export function registerMcpTool(
         }
       }
 
-      return {
-        content: [
-          {
-            text: formatResult(result),
-            type: "text" as const,
-          },
-        ],
-      };
+      return result;
     } catch (error) {
       // Any thrown error is fatal
       if (onFatal) {
@@ -145,7 +126,21 @@ export function registerMcpTool(
       }
       throw error;
     }
-  });
+  };
 
-  return { name: toolName };
+  // Build the tool
+  const tool: LlmTool = {
+    call,
+    description: toolDescription,
+    name: toolName,
+    parameters,
+    type: "function",
+  };
+
+  // Add message if provided
+  if (message !== undefined) {
+    tool.message = message;
+  }
+
+  return { tool };
 }

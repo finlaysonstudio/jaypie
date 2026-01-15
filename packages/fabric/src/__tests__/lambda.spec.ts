@@ -2,8 +2,8 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { createLambdaService } from "../lambda/index.js";
-import { createService } from "../service.js";
+import { fabricLambda } from "../lambda/index.js";
+import { fabricService } from "../service.js";
 
 // Mock @jaypie/aws
 vi.mock("@jaypie/aws", () => ({
@@ -23,7 +23,8 @@ vi.mock("@jaypie/aws", () => ({
 
 // Mock @jaypie/lambda
 vi.mock("@jaypie/lambda", () => ({
-  lambdaHandler: vi.fn((handler, options) => {
+  lambdaHandler: vi.fn(
+    (handler: (event: unknown, context?: unknown) => Promise<unknown>, options) => {
     // Return a function that captures the options for testing
     const wrappedHandler = async (
       event: unknown,
@@ -45,25 +46,25 @@ describe("Lambda Adapter", () => {
     vi.restoreAllMocks();
   });
 
-  describe("createLambdaService", () => {
+  describe("fabricLambda", () => {
     it("is a function", () => {
-      expect(createLambdaService).toBeFunction();
+      expect(fabricLambda).toBeFunction();
     });
 
     describe("Basic Functionality", () => {
       it("creates a lambda handler from a service handler", () => {
-        const handler = createService({
+        const handler = fabricService({
           alias: "test",
           service: (input) => input,
         });
 
-        const lambdaHandler = createLambdaService({ handler });
+        const lambdaHandler = fabricLambda({ service: handler });
 
         expect(lambdaHandler).toBeFunction();
       });
 
       it("processes a single message and returns single result", async () => {
-        const handler = createService({
+        const handler = fabricService({
           alias: "test",
           input: {
             name: { type: String },
@@ -71,7 +72,7 @@ describe("Lambda Adapter", () => {
           service: ({ name }) => `Hello, ${name}!`,
         });
 
-        const lambdaHandler = createLambdaService({ handler });
+        const lambdaHandler = fabricLambda({ service: handler });
 
         const result = await lambdaHandler({ name: "Alice" });
 
@@ -79,7 +80,7 @@ describe("Lambda Adapter", () => {
       });
 
       it("processes multiple messages and returns array of results", async () => {
-        const handler = createService({
+        const handler = fabricService({
           alias: "test",
           input: {
             value: { type: Number },
@@ -87,7 +88,7 @@ describe("Lambda Adapter", () => {
           service: ({ value }) => value * 2,
         });
 
-        const lambdaHandler = createLambdaService({ handler });
+        const lambdaHandler = fabricLambda({ service: handler });
 
         const result = await lambdaHandler([
           { value: 1 },
@@ -99,7 +100,7 @@ describe("Lambda Adapter", () => {
       });
 
       it("parses SQS event records", async () => {
-        const handler = createService({
+        const handler = fabricService({
           alias: "test",
           input: {
             id: { type: String },
@@ -107,7 +108,7 @@ describe("Lambda Adapter", () => {
           service: ({ id }) => `processed-${id}`,
         });
 
-        const lambdaHandler = createLambdaService({ handler });
+        const lambdaHandler = fabricLambda({ service: handler });
 
         const sqsEvent = {
           Records: [
@@ -124,12 +125,12 @@ describe("Lambda Adapter", () => {
 
     describe("Function Signature", () => {
       it("accepts handler as first argument with options object", () => {
-        const handler = createService({
+        const handler = fabricService({
           alias: "test",
           service: () => "result",
         });
 
-        const lambdaHandler = createLambdaService(handler, {
+        const lambdaHandler = fabricLambda(handler, {
           secrets: ["MY_SECRET"],
         });
 
@@ -142,13 +143,13 @@ describe("Lambda Adapter", () => {
       });
 
       it("accepts config object with handler property", () => {
-        const handler = createService({
+        const handler = fabricService({
           alias: "test",
           service: () => "result",
         });
 
-        const lambdaHandler = createLambdaService({
-          handler,
+        const lambdaHandler = fabricLambda({
+          service: handler,
           secrets: ["MY_SECRET"],
         });
 
@@ -163,12 +164,12 @@ describe("Lambda Adapter", () => {
 
     describe("Handler Alias", () => {
       it("uses handler.alias as the name for logging", () => {
-        const handler = createService({
+        const handler = fabricService({
           alias: "myService",
           service: () => "result",
         });
 
-        const lambdaHandler = createLambdaService({ handler });
+        const lambdaHandler = fabricLambda({ service: handler });
 
         expect(
           (lambdaHandler as { _options?: { name?: string } })._options?.name,
@@ -176,13 +177,13 @@ describe("Lambda Adapter", () => {
       });
 
       it("allows name override via options", () => {
-        const handler = createService({
+        const handler = fabricService({
           alias: "originalName",
           service: () => "result",
         });
 
-        const lambdaHandler = createLambdaService({
-          handler,
+        const lambdaHandler = fabricLambda({
+          service: handler,
           name: "overriddenName",
         });
 
@@ -192,11 +193,11 @@ describe("Lambda Adapter", () => {
       });
 
       it("uses undefined name when handler has no alias and no name override", () => {
-        const handler = createService({
+        const handler = fabricService({
           service: () => "result",
         });
 
-        const lambdaHandler = createLambdaService({ handler });
+        const lambdaHandler = fabricLambda({ service: handler });
 
         expect(
           (lambdaHandler as { _options?: { name?: string } })._options?.name,
@@ -206,13 +207,13 @@ describe("Lambda Adapter", () => {
 
     describe("Lambda Handler Options", () => {
       it("passes secrets option to lambdaHandler", () => {
-        const handler = createService({
+        const handler = fabricService({
           alias: "test",
           service: () => "result",
         });
 
-        const lambdaHandler = createLambdaService({
-          handler,
+        const lambdaHandler = fabricLambda({
+          service: handler,
           secrets: ["API_KEY", "DB_SECRET"],
         });
 
@@ -224,13 +225,13 @@ describe("Lambda Adapter", () => {
 
       it("passes setup option to lambdaHandler", () => {
         const setupFn = vi.fn();
-        const handler = createService({
+        const handler = fabricService({
           alias: "test",
           service: () => "result",
         });
 
-        const lambdaHandler = createLambdaService({
-          handler,
+        const lambdaHandler = fabricLambda({
+          service: handler,
           setup: [setupFn],
         });
 
@@ -242,13 +243,13 @@ describe("Lambda Adapter", () => {
 
       it("passes teardown option to lambdaHandler", () => {
         const teardownFn = vi.fn();
-        const handler = createService({
+        const handler = fabricService({
           alias: "test",
           service: () => "result",
         });
 
-        const lambdaHandler = createLambdaService({
-          handler,
+        const lambdaHandler = fabricLambda({
+          service: handler,
           teardown: [teardownFn],
         });
 
@@ -260,13 +261,13 @@ describe("Lambda Adapter", () => {
 
       it("passes validate option to lambdaHandler", () => {
         const validateFn = vi.fn();
-        const handler = createService({
+        const handler = fabricService({
           alias: "test",
           service: () => "result",
         });
 
-        const lambdaHandler = createLambdaService({
-          handler,
+        const lambdaHandler = fabricLambda({
+          service: handler,
           validate: [validateFn],
         });
 
@@ -277,13 +278,13 @@ describe("Lambda Adapter", () => {
       });
 
       it("passes throw option to lambdaHandler", () => {
-        const handler = createService({
+        const handler = fabricService({
           alias: "test",
           service: () => "result",
         });
 
-        const lambdaHandler = createLambdaService({
-          handler,
+        const lambdaHandler = fabricLambda({
+          service: handler,
           throw: true,
         });
 
@@ -293,13 +294,13 @@ describe("Lambda Adapter", () => {
       });
 
       it("passes unavailable option to lambdaHandler", () => {
-        const handler = createService({
+        const handler = fabricService({
           alias: "test",
           service: () => "result",
         });
 
-        const lambdaHandler = createLambdaService({
-          handler,
+        const lambdaHandler = fabricLambda({
+          service: handler,
           unavailable: true,
         });
 
@@ -310,13 +311,13 @@ describe("Lambda Adapter", () => {
       });
 
       it("passes chaos option to lambdaHandler", () => {
-        const handler = createService({
+        const handler = fabricService({
           alias: "test",
           service: () => "result",
         });
 
-        const lambdaHandler = createLambdaService({
-          handler,
+        const lambdaHandler = fabricLambda({
+          service: handler,
           chaos: "full",
         });
 
@@ -328,7 +329,7 @@ describe("Lambda Adapter", () => {
 
     describe("Edge Cases", () => {
       it("handles empty array of messages", async () => {
-        const handler = createService({
+        const handler = fabricService({
           alias: "test",
           service: ({ value }) => value,
         });
@@ -337,7 +338,7 @@ describe("Lambda Adapter", () => {
         const { getMessages } = await import("@jaypie/aws");
         vi.mocked(getMessages).mockReturnValueOnce([]);
 
-        const lambdaHandler = createLambdaService({ handler });
+        const lambdaHandler = fabricLambda({ service: handler });
 
         const result = await lambdaHandler(undefined);
 
@@ -345,12 +346,12 @@ describe("Lambda Adapter", () => {
       });
 
       it("handles handler without input definitions", async () => {
-        const handler = createService({
+        const handler = fabricService({
           alias: "test",
           service: (input) => ({ received: input }),
         });
 
-        const lambdaHandler = createLambdaService({ handler });
+        const lambdaHandler = fabricLambda({ service: handler });
 
         const result = await lambdaHandler({ foo: "bar" });
 
@@ -358,7 +359,7 @@ describe("Lambda Adapter", () => {
       });
 
       it("handles async service function", async () => {
-        const handler = createService({
+        const handler = fabricService({
           alias: "test",
           input: {
             delay: { type: Number, default: 0 },
@@ -369,7 +370,7 @@ describe("Lambda Adapter", () => {
           },
         });
 
-        const lambdaHandler = createLambdaService({ handler });
+        const lambdaHandler = fabricLambda({ service: handler });
 
         const result = await lambdaHandler({ delay: 10 });
 
@@ -381,7 +382,7 @@ describe("Lambda Adapter", () => {
       it("passes context with sendMessage to service when onMessage is provided", async () => {
         const messages: Array<{ content: string; level?: string }> = [];
 
-        const handler = createService({
+        const handler = fabricService({
           alias: "test",
           input: { name: { type: String } },
           service: ({ name }, context) => {
@@ -390,8 +391,8 @@ describe("Lambda Adapter", () => {
           },
         });
 
-        const lambdaHandler = createLambdaService({
-          handler,
+        const lambdaHandler = fabricLambda({
+          service: handler,
           onMessage: (msg) => {
             messages.push(msg);
           },
@@ -406,7 +407,7 @@ describe("Lambda Adapter", () => {
       it("supports message levels", async () => {
         const messages: Array<{ content: string; level?: string }> = [];
 
-        const handler = createService({
+        const handler = fabricService({
           alias: "test",
           service: (_, context) => {
             context?.sendMessage?.({ content: "Debug info", level: "debug" });
@@ -415,8 +416,8 @@ describe("Lambda Adapter", () => {
           },
         });
 
-        const lambdaHandler = createLambdaService({
-          handler,
+        const lambdaHandler = fabricLambda({
+          service: handler,
           onMessage: (msg) => {
             messages.push(msg);
           },
@@ -431,7 +432,7 @@ describe("Lambda Adapter", () => {
       });
 
       it("service works when onMessage is not provided", async () => {
-        const handler = createService({
+        const handler = fabricService({
           alias: "test",
           service: (_, context) => {
             // Safely call sendMessage even when not provided
@@ -440,7 +441,7 @@ describe("Lambda Adapter", () => {
           },
         });
 
-        const lambdaHandler = createLambdaService({ handler });
+        const lambdaHandler = fabricLambda({ service: handler });
 
         const result = await lambdaHandler({});
 
@@ -448,7 +449,7 @@ describe("Lambda Adapter", () => {
       });
 
       it("swallows errors in onMessage and continues execution", async () => {
-        const handler = createService({
+        const handler = fabricService({
           alias: "test",
           service: (_, context) => {
             context?.sendMessage?.({ content: "Before error" });
@@ -459,8 +460,8 @@ describe("Lambda Adapter", () => {
         });
 
         let callCount = 0;
-        const lambdaHandler = createLambdaService({
-          handler,
+        const lambdaHandler = fabricLambda({
+          service: handler,
           onMessage: () => {
             callCount++;
             if (callCount === 2) {
@@ -479,7 +480,7 @@ describe("Lambda Adapter", () => {
       it("supports async onMessage callbacks", async () => {
         const messages: string[] = [];
 
-        const handler = createService({
+        const handler = fabricService({
           alias: "test",
           service: async (_, context) => {
             await context?.sendMessage?.({ content: "Step 1" });
@@ -488,8 +489,8 @@ describe("Lambda Adapter", () => {
           },
         });
 
-        const lambdaHandler = createLambdaService({
-          handler,
+        const lambdaHandler = fabricLambda({
+          service: handler,
           onMessage: async (msg) => {
             await new Promise((resolve) => setTimeout(resolve, 5));
             messages.push(msg.content);
@@ -505,7 +506,7 @@ describe("Lambda Adapter", () => {
       it("sends messages for each message in batch processing", async () => {
         const messages: string[] = [];
 
-        const handler = createService({
+        const handler = fabricService({
           alias: "test",
           input: { id: { type: String } },
           service: ({ id }, context) => {
@@ -514,8 +515,8 @@ describe("Lambda Adapter", () => {
           },
         });
 
-        const lambdaHandler = createLambdaService({
-          handler,
+        const lambdaHandler = fabricLambda({
+          service: handler,
           onMessage: (msg) => {
             messages.push(msg.content);
           },
@@ -540,14 +541,14 @@ describe("Lambda Adapter", () => {
       it("calls onComplete with result on success", async () => {
         let completedValue: unknown;
 
-        const handler = createService({
+        const handler = fabricService({
           alias: "test",
           input: { value: { type: Number } },
           service: ({ value }) => value * 2,
         });
 
-        const lambdaHandler = createLambdaService({
-          handler,
+        const lambdaHandler = fabricLambda({
+          service: handler,
           onComplete: (result) => {
             completedValue = result;
           },
@@ -561,14 +562,14 @@ describe("Lambda Adapter", () => {
       it("calls onComplete with array for multiple messages", async () => {
         let completedValue: unknown;
 
-        const handler = createService({
+        const handler = fabricService({
           alias: "test",
           input: { value: { type: Number } },
           service: ({ value }) => value * 2,
         });
 
-        const lambdaHandler = createLambdaService({
-          handler,
+        const lambdaHandler = fabricLambda({
+          service: handler,
           onComplete: (result) => {
             completedValue = result;
           },
@@ -580,13 +581,13 @@ describe("Lambda Adapter", () => {
       });
 
       it("swallows errors in onComplete callback", async () => {
-        const handler = createService({
+        const handler = fabricService({
           alias: "test",
           service: () => "result",
         });
 
-        const lambdaHandler = createLambdaService({
-          handler,
+        const lambdaHandler = fabricLambda({
+          service: handler,
           onComplete: () => {
             throw new Error("onComplete error");
           },
@@ -601,13 +602,13 @@ describe("Lambda Adapter", () => {
       it("supports async onComplete callback", async () => {
         let completedValue: unknown;
 
-        const handler = createService({
+        const handler = fabricService({
           alias: "test",
           service: () => "result",
         });
 
-        const lambdaHandler = createLambdaService({
-          handler,
+        const lambdaHandler = fabricLambda({
+          service: handler,
           onComplete: async (result) => {
             await new Promise((resolve) => setTimeout(resolve, 5));
             completedValue = result;
@@ -624,15 +625,15 @@ describe("Lambda Adapter", () => {
       it("calls onFatal when handler throws", async () => {
         let fatalError: unknown;
 
-        const handler = createService({
+        const handler = fabricService({
           alias: "test",
           service: () => {
             throw new Error("Service error");
           },
         });
 
-        const lambdaHandler = createLambdaService({
-          handler,
+        const lambdaHandler = fabricLambda({
+          service: handler,
           onFatal: (error) => {
             fatalError = error;
           },
@@ -646,15 +647,15 @@ describe("Lambda Adapter", () => {
       it("falls back to onError when onFatal is not provided", async () => {
         let errorValue: unknown;
 
-        const handler = createService({
+        const handler = fabricService({
           alias: "test",
           service: () => {
             throw new Error("Service error");
           },
         });
 
-        const lambdaHandler = createLambdaService({
-          handler,
+        const lambdaHandler = fabricLambda({
+          service: handler,
           onError: (error) => {
             errorValue = error;
           },
@@ -669,15 +670,15 @@ describe("Lambda Adapter", () => {
         let fatalCalled = false;
         let errorCalled = false;
 
-        const handler = createService({
+        const handler = fabricService({
           alias: "test",
           service: () => {
             throw new Error("Service error");
           },
         });
 
-        const lambdaHandler = createLambdaService({
-          handler,
+        const lambdaHandler = fabricLambda({
+          service: handler,
           onError: () => {
             errorCalled = true;
           },
@@ -694,7 +695,7 @@ describe("Lambda Adapter", () => {
       it("passes context.onError to service for recoverable errors", async () => {
         let recoveredError: unknown;
 
-        const handler = createService({
+        const handler = fabricService({
           alias: "test",
           service: (_, context) => {
             context?.onError?.(new Error("Recoverable error"));
@@ -702,8 +703,8 @@ describe("Lambda Adapter", () => {
           },
         });
 
-        const lambdaHandler = createLambdaService({
-          handler,
+        const lambdaHandler = fabricLambda({
+          service: handler,
           onError: (error) => {
             recoveredError = error;
           },
@@ -719,7 +720,7 @@ describe("Lambda Adapter", () => {
       it("passes context.onFatal to service for explicit fatal errors", async () => {
         let fatalError: unknown;
 
-        const handler = createService({
+        const handler = fabricService({
           alias: "test",
           service: (_, context) => {
             context?.onFatal?.(new Error("Fatal error"));
@@ -727,8 +728,8 @@ describe("Lambda Adapter", () => {
           },
         });
 
-        const lambdaHandler = createLambdaService({
-          handler,
+        const lambdaHandler = fabricLambda({
+          service: handler,
           onFatal: (error) => {
             fatalError = error;
           },
@@ -742,7 +743,7 @@ describe("Lambda Adapter", () => {
       });
 
       it("swallows errors in context.onError callback", async () => {
-        const handler = createService({
+        const handler = fabricService({
           alias: "test",
           service: (_, context) => {
             context?.onError?.(new Error("Test error"));
@@ -750,8 +751,8 @@ describe("Lambda Adapter", () => {
           },
         });
 
-        const lambdaHandler = createLambdaService({
-          handler,
+        const lambdaHandler = fabricLambda({
+          service: handler,
           onError: () => {
             throw new Error("Callback error");
           },
@@ -764,7 +765,7 @@ describe("Lambda Adapter", () => {
       });
 
       it("swallows errors in context.onFatal callback", async () => {
-        const handler = createService({
+        const handler = fabricService({
           alias: "test",
           service: (_, context) => {
             context?.onFatal?.(new Error("Test error"));
@@ -772,8 +773,8 @@ describe("Lambda Adapter", () => {
           },
         });
 
-        const lambdaHandler = createLambdaService({
-          handler,
+        const lambdaHandler = fabricLambda({
+          service: handler,
           onFatal: () => {
             throw new Error("Callback error");
           },
@@ -800,7 +801,7 @@ describe("Lambda Adapter", () => {
           plan: string;
         }
 
-        const evaluationsHandler = createService<EvalInput, EvalResult>({
+        const evaluationsHandler = fabricService<EvalInput, EvalResult>({
           alias: "evaluationsHandler",
           input: {
             count: { type: Number, default: 1 },
@@ -813,8 +814,8 @@ describe("Lambda Adapter", () => {
           }),
         });
 
-        const handler = createLambdaService({
-          handler: evaluationsHandler,
+        const handler = fabricLambda({
+          service: evaluationsHandler,
           secrets: [
             "ANTHROPIC_API_KEY",
             "GEMINI_API_KEY",

@@ -1,6 +1,6 @@
 // Parse Commander.js options back to handler input format
 
-import { convertToDate, isDateType } from "../convert-date.js";
+import { fabricDate, isDateType } from "../convert-date.js";
 import type { ConversionType } from "../types.js";
 import type { ParseCommanderOptionsConfig } from "./types.js";
 
@@ -138,7 +138,7 @@ function convertValue(value: unknown, type: ConversionType): unknown {
       return value;
     }
     try {
-      return convertToDate(value);
+      return fabricDate(value);
     } catch {
       // If conversion fails, return as-is and let createService handle it
       return value;

@@ -25,7 +25,7 @@ export function isValidDate(value: unknown): value is Date {
  *
  * @throws BadRequestError if value cannot be converted to valid Date
  */
-export function convertToDate(value: unknown): Date {
+export function fabricDate(value: unknown): Date {
   // Already a Date
   if (value instanceof Date) {
     if (Number.isNaN(value.getTime())) {
@@ -41,7 +41,7 @@ export function convertToDate(value: unknown): Date {
 
   // Object with value property (fabric pattern)
   if (typeof value === "object" && value !== null && "value" in value) {
-    return convertToDate((value as { value: unknown }).value);
+    return fabricDate((value as { value: unknown }).value);
   }
 
   // Number (timestamp in milliseconds)
@@ -78,7 +78,7 @@ export function convertToDate(value: unknown): Date {
   // Arrays - attempt single element extraction
   if (Array.isArray(value)) {
     if (value.length === 1) {
-      return convertToDate(value[0]);
+      return fabricDate(value[0]);
     }
     throw new BadRequestError(
       `Cannot convert array with ${value.length} elements to Date`,
@@ -114,11 +114,11 @@ export function convertFromDate(
 }
 
 /**
- * Date type constant for use in createService input definitions
+ * Date type constant for use in fabricService input definitions
  *
  * Usage:
  * ```typescript
- * const handler = createService({
+ * const handler = fabricService({
  *   input: {
  *     startDate: { type: Date },
  *     endDate: { type: Date, default: undefined }

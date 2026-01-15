@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   convertFromDate,
-  convertToDate,
+  fabricDate,
   isDateType,
   isValidDate,
 } from "../convert-date.js";
@@ -34,86 +34,86 @@ describe("isValidDate", () => {
 });
 
 // =============================================================================
-// convertToDate
+// fabricDate
 // =============================================================================
 
-describe("convertToDate", () => {
+describe("fabricDate", () => {
   describe("from Date", () => {
     it("returns valid Date as-is", () => {
       const date = new Date("2026-01-01");
-      const result = convertToDate(date);
+      const result = fabricDate(date);
       expect(result).toBe(date);
     });
 
     it("throws for invalid Date", () => {
-      expect(() => convertToDate(new Date("invalid"))).toThrow("Invalid Date");
+      expect(() => fabricDate(new Date("invalid"))).toThrow("Invalid Date");
     });
   });
 
   describe("from Number", () => {
     it("converts timestamp to Date", () => {
       const timestamp = 1704067200000; // 2024-01-01T00:00:00.000Z
-      const result = convertToDate(timestamp);
+      const result = fabricDate(timestamp);
       expect(result).toBeInstanceOf(Date);
       expect(result.getTime()).toBe(timestamp);
     });
 
     it("throws for NaN", () => {
-      expect(() => convertToDate(NaN)).toThrow("Cannot convert NaN to Date");
+      expect(() => fabricDate(NaN)).toThrow("Cannot convert NaN to Date");
     });
   });
 
   describe("from String", () => {
     it("converts ISO string to Date", () => {
-      const result = convertToDate("2026-01-01T00:00:00.000Z");
+      const result = fabricDate("2026-01-01T00:00:00.000Z");
       expect(result).toBeInstanceOf(Date);
       expect(result.toISOString()).toBe("2026-01-01T00:00:00.000Z");
     });
 
     it("converts date string to Date", () => {
-      const result = convertToDate("2026-01-01");
+      const result = fabricDate("2026-01-01");
       expect(result).toBeInstanceOf(Date);
     });
 
     it("throws for empty string", () => {
-      expect(() => convertToDate("")).toThrow("Cannot convert empty string");
+      expect(() => fabricDate("")).toThrow("Cannot convert empty string");
     });
 
     it("throws for whitespace string", () => {
-      expect(() => convertToDate("   ")).toThrow("Cannot convert empty string");
+      expect(() => fabricDate("   ")).toThrow("Cannot convert empty string");
     });
 
     it("throws for invalid date string", () => {
-      expect(() => convertToDate("not a date")).toThrow("Cannot convert");
+      expect(() => fabricDate("not a date")).toThrow("Cannot convert");
     });
   });
 
   describe("from Object with value", () => {
     it("unwraps and converts value property", () => {
-      const result = convertToDate({ value: "2026-01-01" });
+      const result = fabricDate({ value: "2026-01-01" });
       expect(result).toBeInstanceOf(Date);
     });
 
     it("handles nested value objects", () => {
-      const result = convertToDate({ value: { value: "2026-01-01" } });
+      const result = fabricDate({ value: { value: "2026-01-01" } });
       expect(result).toBeInstanceOf(Date);
     });
   });
 
   describe("from Array", () => {
     it("converts single-element array", () => {
-      const result = convertToDate(["2026-01-01"]);
+      const result = fabricDate(["2026-01-01"]);
       expect(result).toBeInstanceOf(Date);
     });
 
     it("throws for multi-element array", () => {
-      expect(() => convertToDate(["2026-01-01", "2026-01-02"])).toThrow(
+      expect(() => fabricDate(["2026-01-01", "2026-01-02"])).toThrow(
         "Cannot convert array with 2 elements",
       );
     });
 
     it("throws for empty array", () => {
-      expect(() => convertToDate([])).toThrow(
+      expect(() => fabricDate([])).toThrow(
         "Cannot convert array with 0 elements",
       );
     });
@@ -121,20 +121,20 @@ describe("convertToDate", () => {
 
   describe("from invalid types", () => {
     it("throws for null", () => {
-      expect(() => convertToDate(null)).toThrow(
+      expect(() => fabricDate(null)).toThrow(
         "Cannot convert null or undefined",
       );
     });
 
     it("throws for undefined", () => {
-      expect(() => convertToDate(undefined)).toThrow(
+      expect(() => fabricDate(undefined)).toThrow(
         "Cannot convert null or undefined",
       );
     });
 
     it("throws for boolean", () => {
-      expect(() => convertToDate(true)).toThrow("Cannot convert boolean to Date");
-      expect(() => convertToDate(false)).toThrow(
+      expect(() => fabricDate(true)).toThrow("Cannot convert boolean to Date");
+      expect(() => fabricDate(false)).toThrow(
         "Cannot convert boolean to Date",
       );
     });

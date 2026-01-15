@@ -1,8 +1,8 @@
-// Conversion functions for @jaypie/fabric
+// Fabric functions for @jaypie/fabric
 
 import { BadRequestError } from "@jaypie/errors";
 
-import { convertToDate, isDateType } from "./convert-date.js";
+import { fabricDate, isDateType } from "./convert-date.js";
 import type { ConversionType, TypedArrayType } from "./types.js";
 
 /**
@@ -94,7 +94,7 @@ function prepareForScalarConversion(value: unknown): unknown {
  * - Numbers: positive = true, zero or negative = false
  * - Boolean passes through
  */
-export function convertToBoolean(value: unknown): boolean | undefined {
+export function fabricBoolean(value: unknown): boolean | undefined {
   // Prepare value by parsing JSON and unwrapping arrays/objects
   const prepared = prepareForScalarConversion(value);
 
@@ -146,7 +146,7 @@ export function convertToBoolean(value: unknown): boolean | undefined {
  * - Boolean true becomes 1, false becomes 0
  * - Number passes through
  */
-export function convertToNumber(value: unknown): number | undefined {
+export function fabricNumber(value: unknown): number | undefined {
   // Prepare value by parsing JSON and unwrapping arrays/objects
   const prepared = prepareForScalarConversion(value);
 
@@ -194,7 +194,7 @@ export function convertToNumber(value: unknown): number | undefined {
  * - Number converts to string representation
  * - String passes through
  */
-export function convertToString(value: unknown): string | undefined {
+export function fabricString(value: unknown): string | undefined {
   // Prepare value by parsing JSON and unwrapping arrays/objects
   const prepared = prepareForScalarConversion(value);
 
@@ -230,7 +230,7 @@ export function convertToString(value: unknown): string | undefined {
  * - Multi-value arrays throw BadRequestError
  * - undefined/null become undefined
  */
-export function convertToArray(value: unknown): unknown[] | undefined {
+export function fabricArray(value: unknown): unknown[] | undefined {
   if (value === undefined || value === null) {
     return undefined;
   }
@@ -276,7 +276,7 @@ export function convertFromArray(value: unknown): unknown {
  * - Objects without a value attribute throw BadRequestError
  * - undefined/null become undefined
  */
-export function convertToObject(value: unknown): { value: unknown } | undefined {
+export function fabricObject(value: unknown): { value: unknown } | undefined {
   if (value === undefined || value === null) {
     return undefined;
   }
@@ -415,7 +415,7 @@ function getArrayElementType(
  * - Wraps non-arrays in an array
  * - Converts each element to the specified element type
  */
-function convertToTypedArray(
+function fabricTypedArray(
   value: unknown,
   elementType: "boolean" | "number" | "object" | "string" | undefined,
 ): unknown[] | undefined {
@@ -426,7 +426,7 @@ function convertToTypedArray(
   processed = splitStringForArray(processed);
 
   // Convert to array (wraps non-arrays)
-  const array = convertToArray(processed);
+  const array = fabricArray(processed);
 
   if (array === undefined) {
     return undefined;
@@ -442,13 +442,13 @@ function convertToTypedArray(
     try {
       switch (elementType) {
         case "boolean":
-          return convertToBoolean(element);
+          return fabricBoolean(element);
         case "number":
-          return convertToNumber(element);
+          return fabricNumber(element);
         case "object":
-          return convertToObject(element);
+          return fabricObject(element);
         case "string":
-          return convertToString(element);
+          return fabricString(element);
         default:
           throw new BadRequestError(`Unknown element type: ${elementType}`);
       }
@@ -464,33 +464,33 @@ function convertToTypedArray(
 }
 
 /**
- * Convert a value to the specified type
+ * Fabric a value to the specified type
  */
-export function convert(value: unknown, type: ConversionType): unknown {
+export function fabric(value: unknown, type: ConversionType): unknown {
   // Check for Date type first
   if (isDateType(type)) {
-    return convertToDate(value);
+    return fabricDate(value);
   }
 
   // Check for typed array types
   if (isTypedArrayType(type)) {
     const elementType = getArrayElementType(type);
-    return convertToTypedArray(value, elementType);
+    return fabricTypedArray(value, elementType);
   }
 
   const normalizedType = normalizeType(type);
 
   switch (normalizedType) {
     case "array":
-      return convertToArray(value);
+      return fabricArray(value);
     case "boolean":
-      return convertToBoolean(value);
+      return fabricBoolean(value);
     case "number":
-      return convertToNumber(value);
+      return fabricNumber(value);
     case "object":
-      return convertToObject(value);
+      return fabricObject(value);
     case "string":
-      return convertToString(value);
+      return fabricString(value);
     default:
       throw new BadRequestError(`Unknown type: ${String(type)}`);
   }

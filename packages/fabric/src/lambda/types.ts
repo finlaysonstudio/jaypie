@@ -24,12 +24,12 @@ type LifecycleFunction = (...args: unknown[]) => void | Promise<void>;
 type ValidatorFunction = (...args: unknown[]) => unknown | Promise<unknown>;
 
 /**
- * Options for createLambdaService
+ * Options for fabricLambda
  */
-export interface CreateLambdaServiceOptions {
+export interface FabricLambdaOptions {
   /** Chaos testing mode */
   chaos?: string;
-  /** Override the handler name for logging (defaults to handler.alias) */
+  /** Override the service name for logging (defaults to service.alias) */
   name?: string;
   /** Callback called when handler completes successfully */
   onComplete?: OnCompleteCallback;
@@ -54,17 +54,17 @@ export interface CreateLambdaServiceOptions {
 }
 
 /**
- * Configuration for createLambdaService
+ * Configuration for fabricLambda
  */
-export interface CreateLambdaServiceConfig extends CreateLambdaServiceOptions {
+export interface FabricLambdaConfig extends FabricLambdaOptions {
   /** The service to wrap */
-  handler: Service;
+  service: Service;
 }
 
 /**
  * The returned Lambda handler function
  */
-export type CreateLambdaServiceResult<TResult = unknown> = (
+export type FabricLambdaResult<TResult = unknown> = (
   event: unknown,
   context?: LambdaContext,
   ...args: unknown[]

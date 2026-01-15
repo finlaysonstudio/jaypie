@@ -1,37 +1,34 @@
-// Register a service as a Commander command
+// Fabric a service as a Commander command
 
 import type { Message, ServiceContext } from "../types.js";
-import type {
-  RegisterServiceCommandConfig,
-  RegisterServiceCommandResult,
-} from "./types.js";
+import type { FabricCommandConfig, FabricCommandResult } from "./types.js";
 import { createCommanderOptions } from "./createCommanderOptions.js";
 import { parseCommanderOptions } from "./parseCommanderOptions.js";
 
 /**
- * Register a service as a Commander.js command
+ * Fabric a service as a Commander.js command
  *
  * This function creates a command from a service, automatically:
- * - Creating the command with the handler's alias (or custom name)
- * - Adding a description from the handler's description (or custom)
+ * - Creating the command with the service's alias (or custom name)
+ * - Adding a description from the service's description (or custom)
  * - Converting input definitions to Commander options
- * - Wiring up the action to call the handler with parsed input
+ * - Wiring up the action to call the service with parsed input
  *
  * Error handling:
  * - Services can call context.onError() for recoverable errors
  * - Services can call context.onFatal() for fatal errors
  * - Any error that throws out of the service is treated as fatal
  *
- * @param config - Configuration including handler, program, and optional overrides
+ * @param config - Configuration including service, program, and optional overrides
  * @returns An object containing the created command
  *
  * @example
  * ```typescript
  * import { Command } from "commander";
- * import { createService } from "@jaypie/fabric";
- * import { registerServiceCommand } from "@jaypie/fabric/commander";
+ * import { fabricService } from "@jaypie/fabric";
+ * import { fabricCommand } from "@jaypie/fabric/commander";
  *
- * const handler = createService({
+ * const myService = fabricService({
  *   alias: "greet",
  *   description: "Greet a user",
  *   input: {
@@ -45,15 +42,14 @@ import { parseCommanderOptions } from "./parseCommanderOptions.js";
  * });
  *
  * const program = new Command();
- * registerServiceCommand({ handler, program });
+ * fabricCommand({ program, service: myService });
  * program.parse();
  * ```
  */
 
-export function registerServiceCommand({
+export function fabricCommand({
   description,
   exclude,
-  handler,
   name,
   onComplete,
   onError,
@@ -61,12 +57,13 @@ export function registerServiceCommand({
   onMessage,
   overrides,
   program,
-}: RegisterServiceCommandConfig): RegisterServiceCommandResult {
-  // Determine command name (priority: name > handler.alias > "command")
-  const commandName = name ?? handler.alias ?? "command";
+  service,
+}: FabricCommandConfig): FabricCommandResult {
+  // Determine command name (priority: name > service.alias > "command")
+  const commandName = name ?? service.alias ?? "command";
 
-  // Determine command description (priority: description > handler.description)
-  const commandDescription = description ?? handler.description;
+  // Determine command description (priority: description > service.description)
+  const commandDescription = description ?? service.description;
 
   // Create the command
   const command = program.command(commandName);
@@ -76,9 +73,9 @@ export function registerServiceCommand({
     command.description(commandDescription);
   }
 
-  // Create and add options from handler input
-  if (handler.input) {
-    const { options } = createCommanderOptions(handler.input, {
+  // Create and add options from service input
+  if (service.input) {
+    const { options } = createCommanderOptions(service.input, {
       exclude,
       overrides,
     });
@@ -87,10 +84,10 @@ export function registerServiceCommand({
 
   // Wire up the action
   command.action(async (options): Promise<void> => {
-    // Parse Commander options to handler input format
+    // Parse Commander options to service input format
     const input = parseCommanderOptions(options, {
       exclude,
-      input: handler.input,
+      input: service.input,
     });
 
     // Create context callbacks that wrap the registration callbacks with error swallowing
@@ -133,8 +130,8 @@ export function registerServiceCommand({
     };
 
     try {
-      // Call the handler with context
-      const response = await handler(input, context);
+      // Call the service with context
+      const response = await service(input, context);
 
       // Call onComplete callback if provided
       if (onComplete) {

@@ -1,5 +1,5 @@
 import { DeleteCommand, GetCommand, PutCommand } from "@aws-sdk/lib-dynamodb";
-import { createService } from "@jaypie/fabric";
+import { fabricService } from "@jaypie/fabric";
 
 import { getDocClient, getTableName } from "./client.js";
 import { ARCHIVED_SUFFIX, DELETED_SUFFIX } from "./constants.js";
@@ -31,7 +31,7 @@ function calculateEntitySuffix(entity: {
 /**
  * Get a single entity by primary key
  */
-export const getEntity = createService({
+export const getEntity = fabricService({
   alias: "getEntity",
   description: "Get a single entity by primary key",
   input: {
@@ -56,7 +56,7 @@ export const getEntity = createService({
  * Put (create or replace) an entity
  * Auto-populates GSI index keys via indexEntity
  *
- * Note: This is a regular async function (not createService) because it accepts
+ * Note: This is a regular async function (not fabricService) because it accepts
  * complex StorableEntity objects that can't be coerced by vocabulary's type system.
  */
 export async function putEntity({
@@ -83,7 +83,7 @@ export async function putEntity({
  * Update an existing entity
  * Auto-populates GSI index keys and sets updatedAt
  *
- * Note: This is a regular async function (not createService) because it accepts
+ * Note: This is a regular async function (not fabricService) because it accepts
  * complex StorableEntity objects that can't be coerced by vocabulary's type system.
  */
 export async function updateEntity({
@@ -113,7 +113,7 @@ export async function updateEntity({
  * Soft delete an entity by setting deletedAt timestamp
  * Re-indexes with appropriate suffix based on archived/deleted state
  */
-export const deleteEntity = createService({
+export const deleteEntity = fabricService({
   alias: "deleteEntity",
   description: "Soft delete an entity (sets deletedAt timestamp)",
   input: {
@@ -157,7 +157,7 @@ export const deleteEntity = createService({
  * Archive an entity by setting archivedAt timestamp
  * Re-indexes with appropriate suffix based on archived/deleted state
  */
-export const archiveEntity = createService({
+export const archiveEntity = fabricService({
   alias: "archiveEntity",
   description: "Archive an entity (sets archivedAt timestamp)",
   input: {
@@ -201,7 +201,7 @@ export const archiveEntity = createService({
  * Hard delete an entity (permanently removes from table)
  * Use with caution - prefer deleteEntity for soft delete
  */
-export const destroyEntity = createService({
+export const destroyEntity = fabricService({
   alias: "destroyEntity",
   description: "Hard delete an entity (permanently removes from table)",
   input: {

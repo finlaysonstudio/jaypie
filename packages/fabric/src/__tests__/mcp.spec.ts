@@ -2,11 +2,11 @@
 
 import { describe, expect, it, vi } from "vitest";
 
-import { registerMcpTool } from "../mcp/index.js";
-import { createService } from "../service.js";
+import { fabricMcp } from "../mcp/index.js";
+import { fabricService } from "../service.js";
 
 describe("MCP Adapter", () => {
-  describe("registerMcpTool", () => {
+  describe("fabricMcp", () => {
     function createMockServer() {
       const registeredTools: Array<{
         description: string;
@@ -31,16 +31,16 @@ describe("MCP Adapter", () => {
     }
 
     it("registers a tool with handler alias as name", () => {
-      const handler = createService({
+      const handler = fabricService({
         alias: "greet",
         service: () => "Hello!",
       });
 
       const mockServer = createMockServer();
-      const result = registerMcpTool({
-        handler,
+      const result = fabricMcp({
+        service: handler,
         server: mockServer as unknown as Parameters<
-          typeof registerMcpTool
+          typeof fabricMcp
         >[0]["server"],
       });
 
@@ -50,17 +50,17 @@ describe("MCP Adapter", () => {
     });
 
     it("registers a tool with handler description", () => {
-      const handler = createService({
+      const handler = fabricService({
         alias: "greet",
         description: "Greet a user",
         service: () => "Hello!",
       });
 
       const mockServer = createMockServer();
-      registerMcpTool({
-        handler,
+      fabricMcp({
+        service: handler,
         server: mockServer as unknown as Parameters<
-          typeof registerMcpTool
+          typeof fabricMcp
         >[0]["server"],
       });
 
@@ -68,17 +68,17 @@ describe("MCP Adapter", () => {
     });
 
     it("uses custom name over handler alias", () => {
-      const handler = createService({
+      const handler = fabricService({
         alias: "greet",
         service: () => "Hello!",
       });
 
       const mockServer = createMockServer();
-      const result = registerMcpTool({
-        handler,
+      const result = fabricMcp({
+        service: handler,
         name: "hello",
         server: mockServer as unknown as Parameters<
-          typeof registerMcpTool
+          typeof fabricMcp
         >[0]["server"],
       });
 
@@ -87,18 +87,18 @@ describe("MCP Adapter", () => {
     });
 
     it("uses custom description over handler description", () => {
-      const handler = createService({
+      const handler = fabricService({
         alias: "greet",
         description: "Handler description",
         service: () => "Hello!",
       });
 
       const mockServer = createMockServer();
-      registerMcpTool({
+      fabricMcp({
         description: "Custom description",
-        handler,
+        service: handler,
         server: mockServer as unknown as Parameters<
-          typeof registerMcpTool
+          typeof fabricMcp
         >[0]["server"],
       });
 
@@ -108,15 +108,15 @@ describe("MCP Adapter", () => {
     });
 
     it("defaults to 'tool' when no alias or name provided", () => {
-      const handler = createService({
+      const handler = fabricService({
         service: () => "Hello!",
       });
 
       const mockServer = createMockServer();
-      const result = registerMcpTool({
-        handler,
+      const result = fabricMcp({
+        service: handler,
         server: mockServer as unknown as Parameters<
-          typeof registerMcpTool
+          typeof fabricMcp
         >[0]["server"],
       });
 
@@ -124,16 +124,16 @@ describe("MCP Adapter", () => {
     });
 
     it("defaults to empty description when none provided", () => {
-      const handler = createService({
+      const handler = fabricService({
         alias: "test",
         service: () => "Hello!",
       });
 
       const mockServer = createMockServer();
-      registerMcpTool({
-        handler,
+      fabricMcp({
+        service: handler,
         server: mockServer as unknown as Parameters<
-          typeof registerMcpTool
+          typeof fabricMcp
         >[0]["server"],
       });
 
@@ -141,7 +141,7 @@ describe("MCP Adapter", () => {
     });
 
     it("registers with empty schema (service handler validates)", () => {
-      const handler = createService({
+      const handler = fabricService({
         alias: "greet",
         input: {
           loud: { default: false, type: Boolean },
@@ -154,10 +154,10 @@ describe("MCP Adapter", () => {
       });
 
       const mockServer = createMockServer();
-      registerMcpTool({
-        handler,
+      fabricMcp({
+        service: handler,
         server: mockServer as unknown as Parameters<
-          typeof registerMcpTool
+          typeof fabricMcp
         >[0]["server"],
       });
 
@@ -166,7 +166,7 @@ describe("MCP Adapter", () => {
     });
 
     it("handler returns MCP-formatted response", async () => {
-      const handler = createService({
+      const handler = fabricService({
         alias: "greet",
         input: {
           name: { type: String },
@@ -175,10 +175,10 @@ describe("MCP Adapter", () => {
       });
 
       const mockServer = createMockServer();
-      registerMcpTool({
-        handler,
+      fabricMcp({
+        service: handler,
         server: mockServer as unknown as Parameters<
-          typeof registerMcpTool
+          typeof fabricMcp
         >[0]["server"],
       });
 
@@ -196,7 +196,7 @@ describe("MCP Adapter", () => {
     });
 
     it("handler formats object results as JSON", async () => {
-      const handler = createService({
+      const handler = fabricService({
         alias: "data",
         input: {
           id: { type: Number },
@@ -205,10 +205,10 @@ describe("MCP Adapter", () => {
       });
 
       const mockServer = createMockServer();
-      registerMcpTool({
-        handler,
+      fabricMcp({
+        service: handler,
         server: mockServer as unknown as Parameters<
-          typeof registerMcpTool
+          typeof fabricMcp
         >[0]["server"],
       });
 
@@ -226,7 +226,7 @@ describe("MCP Adapter", () => {
     });
 
     it("handler formats number results as string", async () => {
-      const handler = createService({
+      const handler = fabricService({
         alias: "add",
         input: {
           a: { type: Number },
@@ -236,10 +236,10 @@ describe("MCP Adapter", () => {
       });
 
       const mockServer = createMockServer();
-      registerMcpTool({
-        handler,
+      fabricMcp({
+        service: handler,
         server: mockServer as unknown as Parameters<
-          typeof registerMcpTool
+          typeof fabricMcp
         >[0]["server"],
       });
 
@@ -257,16 +257,16 @@ describe("MCP Adapter", () => {
     });
 
     it("handler returns empty string for undefined result", async () => {
-      const handler = createService({
+      const handler = fabricService({
         alias: "noop",
         service: () => undefined,
       });
 
       const mockServer = createMockServer();
-      registerMcpTool({
-        handler,
+      fabricMcp({
+        service: handler,
         server: mockServer as unknown as Parameters<
-          typeof registerMcpTool
+          typeof fabricMcp
         >[0]["server"],
       });
 
@@ -284,16 +284,16 @@ describe("MCP Adapter", () => {
     });
 
     it("handler returns empty string for null result", async () => {
-      const handler = createService({
+      const handler = fabricService({
         alias: "noop",
         service: () => null,
       });
 
       const mockServer = createMockServer();
-      registerMcpTool({
-        handler,
+      fabricMcp({
+        service: handler,
         server: mockServer as unknown as Parameters<
-          typeof registerMcpTool
+          typeof fabricMcp
         >[0]["server"],
       });
 
@@ -311,7 +311,7 @@ describe("MCP Adapter", () => {
     });
 
     it("handles async handlers", async () => {
-      const handler = createService({
+      const handler = fabricService({
         alias: "delay",
         input: {
           ms: { type: Number },
@@ -323,10 +323,10 @@ describe("MCP Adapter", () => {
       });
 
       const mockServer = createMockServer();
-      registerMcpTool({
-        handler,
+      fabricMcp({
+        service: handler,
         server: mockServer as unknown as Parameters<
-          typeof registerMcpTool
+          typeof fabricMcp
         >[0]["server"],
       });
 
@@ -344,16 +344,16 @@ describe("MCP Adapter", () => {
     });
 
     it("handles handlers with no input", async () => {
-      const handler = createService({
+      const handler = fabricService({
         alias: "ping",
         service: () => "pong",
       });
 
       const mockServer = createMockServer();
-      registerMcpTool({
-        handler,
+      fabricMcp({
+        service: handler,
         server: mockServer as unknown as Parameters<
-          typeof registerMcpTool
+          typeof fabricMcp
         >[0]["server"],
       });
 
@@ -371,7 +371,7 @@ describe("MCP Adapter", () => {
     });
 
     it("full integration: creates working MCP tool from handler", async () => {
-      const handler = createService({
+      const handler = fabricService({
         alias: "calculate",
         description: "Calculate the sum of two numbers",
         input: {
@@ -382,10 +382,10 @@ describe("MCP Adapter", () => {
       });
 
       const mockServer = createMockServer();
-      const result = registerMcpTool({
-        handler,
+      const result = fabricMcp({
+        service: handler,
         server: mockServer as unknown as Parameters<
-          typeof registerMcpTool
+          typeof fabricMcp
         >[0]["server"],
       });
 
@@ -412,7 +412,7 @@ describe("MCP Adapter", () => {
       it("passes context with sendMessage to service when onMessage is provided", async () => {
         const messages: Array<{ content: string; level?: string }> = [];
 
-        const handler = createService({
+        const handler = fabricService({
           alias: "test",
           input: { name: { type: String } },
           service: ({ name }, context) => {
@@ -422,13 +422,13 @@ describe("MCP Adapter", () => {
         });
 
         const mockServer = createMockServer();
-        registerMcpTool({
-          handler,
+        fabricMcp({
+          service: handler,
           onMessage: (msg) => {
             messages.push(msg);
           },
           server: mockServer as unknown as Parameters<
-            typeof registerMcpTool
+            typeof fabricMcp
           >[0]["server"],
         });
 
@@ -442,7 +442,7 @@ describe("MCP Adapter", () => {
       });
 
       it("swallows errors in onMessage callback", async () => {
-        const handler = createService({
+        const handler = fabricService({
           alias: "test",
           service: (_, context) => {
             context?.sendMessage?.({ content: "Message" });
@@ -452,14 +452,14 @@ describe("MCP Adapter", () => {
 
         let callCount = 0;
         const mockServer = createMockServer();
-        registerMcpTool({
-          handler,
+        fabricMcp({
+          service: handler,
           onMessage: () => {
             callCount++;
             throw new Error("onMessage error");
           },
           server: mockServer as unknown as Parameters<
-            typeof registerMcpTool
+            typeof fabricMcp
           >[0]["server"],
         });
 
@@ -477,20 +477,20 @@ describe("MCP Adapter", () => {
       it("calls onComplete with result on success", async () => {
         let completedValue: unknown;
 
-        const handler = createService({
+        const handler = fabricService({
           alias: "test",
           input: { value: { type: Number } },
           service: ({ value }) => value * 2,
         });
 
         const mockServer = createMockServer();
-        registerMcpTool({
-          handler,
+        fabricMcp({
+          service: handler,
           onComplete: (result) => {
             completedValue = result;
           },
           server: mockServer as unknown as Parameters<
-            typeof registerMcpTool
+            typeof fabricMcp
           >[0]["server"],
         });
 
@@ -501,19 +501,19 @@ describe("MCP Adapter", () => {
       });
 
       it("swallows errors in onComplete callback", async () => {
-        const handler = createService({
+        const handler = fabricService({
           alias: "test",
           service: () => "result",
         });
 
         const mockServer = createMockServer();
-        registerMcpTool({
-          handler,
+        fabricMcp({
+          service: handler,
           onComplete: () => {
             throw new Error("onComplete error");
           },
           server: mockServer as unknown as Parameters<
-            typeof registerMcpTool
+            typeof fabricMcp
           >[0]["server"],
         });
 
@@ -530,7 +530,7 @@ describe("MCP Adapter", () => {
       it("calls onFatal when handler throws", async () => {
         let fatalError: unknown;
 
-        const handler = createService({
+        const handler = fabricService({
           alias: "test",
           service: () => {
             throw new Error("Service error");
@@ -538,13 +538,13 @@ describe("MCP Adapter", () => {
         });
 
         const mockServer = createMockServer();
-        registerMcpTool({
-          handler,
+        fabricMcp({
+          service: handler,
           onFatal: (error) => {
             fatalError = error;
           },
           server: mockServer as unknown as Parameters<
-            typeof registerMcpTool
+            typeof fabricMcp
           >[0]["server"],
         });
 
@@ -557,7 +557,7 @@ describe("MCP Adapter", () => {
       it("falls back to onError when onFatal is not provided", async () => {
         let errorValue: unknown;
 
-        const handler = createService({
+        const handler = fabricService({
           alias: "test",
           service: () => {
             throw new Error("Service error");
@@ -565,13 +565,13 @@ describe("MCP Adapter", () => {
         });
 
         const mockServer = createMockServer();
-        registerMcpTool({
-          handler,
+        fabricMcp({
+          service: handler,
           onError: (error) => {
             errorValue = error;
           },
           server: mockServer as unknown as Parameters<
-            typeof registerMcpTool
+            typeof fabricMcp
           >[0]["server"],
         });
 
@@ -584,7 +584,7 @@ describe("MCP Adapter", () => {
       it("passes context.onError to service for recoverable errors", async () => {
         let recoveredError: unknown;
 
-        const handler = createService({
+        const handler = fabricService({
           alias: "test",
           service: (_, context) => {
             context?.onError?.(new Error("Recoverable error"));
@@ -593,13 +593,13 @@ describe("MCP Adapter", () => {
         });
 
         const mockServer = createMockServer();
-        registerMcpTool({
-          handler,
+        fabricMcp({
+          service: handler,
           onError: (error) => {
             recoveredError = error;
           },
           server: mockServer as unknown as Parameters<
-            typeof registerMcpTool
+            typeof fabricMcp
           >[0]["server"],
         });
 
@@ -616,7 +616,7 @@ describe("MCP Adapter", () => {
       it("passes context.onFatal to service for explicit fatal errors", async () => {
         let fatalError: unknown;
 
-        const handler = createService({
+        const handler = fabricService({
           alias: "test",
           service: (_, context) => {
             context?.onFatal?.(new Error("Fatal error"));
@@ -625,13 +625,13 @@ describe("MCP Adapter", () => {
         });
 
         const mockServer = createMockServer();
-        registerMcpTool({
-          handler,
+        fabricMcp({
+          service: handler,
           onFatal: (error) => {
             fatalError = error;
           },
           server: mockServer as unknown as Parameters<
-            typeof registerMcpTool
+            typeof fabricMcp
           >[0]["server"],
         });
 
@@ -646,7 +646,7 @@ describe("MCP Adapter", () => {
       });
 
       it("swallows errors in context.onError callback", async () => {
-        const handler = createService({
+        const handler = fabricService({
           alias: "test",
           service: (_, context) => {
             context?.onError?.(new Error("Test error"));
@@ -655,13 +655,13 @@ describe("MCP Adapter", () => {
         });
 
         const mockServer = createMockServer();
-        registerMcpTool({
-          handler,
+        fabricMcp({
+          service: handler,
           onError: () => {
             throw new Error("Callback error");
           },
           server: mockServer as unknown as Parameters<
-            typeof registerMcpTool
+            typeof fabricMcp
           >[0]["server"],
         });
 
