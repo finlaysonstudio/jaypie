@@ -80,11 +80,8 @@ export type {
   ModelSchema,
 } from "./index/index.js";
 
-// Note: Adapters must be imported from their sub-paths:
-//   import { fabricCommand } from "@jaypie/fabric/commander";
-//   import { fabricLambda } from "@jaypie/fabric/lambda";
-//   import { fabricTool } from "@jaypie/fabric/llm";
-//   import { fabricMcp } from "@jaypie/fabric/mcp";
+// Note: Adapters (commander, http, lambda, llm, mcp) must be imported from sub-paths.
+// See README.md for usage examples.
 
 // Meta-modeling types
 export {
