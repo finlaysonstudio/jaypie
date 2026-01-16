@@ -1,4 +1,5 @@
 import type { OutgoingHttpHeaders } from "node:http";
+import { ServerResponse } from "node:http";
 import { Writable } from "node:stream";
 
 import type { LambdaResponse } from "./types.js";
@@ -7,6 +8,13 @@ import type { LambdaResponse } from "./types.js";
 //
 // Constants
 //
+
+// Get Node's internal kOutHeaders symbol from ServerResponse prototype.
+// This is needed for compatibility with Datadog dd-trace instrumentation,
+// which patches HTTP methods and expects this internal state to exist.
+const kOutHeaders = Object.getOwnPropertySymbols(ServerResponse.prototype).find(
+  (s) => s.toString() === "Symbol(kOutHeaders)",
+);
 
 const BINARY_CONTENT_TYPE_PATTERNS = [
   /^application\/octet-stream$/,
@@ -43,6 +51,11 @@ export class LambdaResponseBuffered extends Writable {
 
   constructor() {
     super();
+    // Initialize Node's internal kOutHeaders for dd-trace compatibility.
+    // dd-trace patches HTTP methods and expects this internal state.
+    if (kOutHeaders) {
+      (this as Record<symbol, unknown>)[kOutHeaders] = Object.create(null);
+    }
   }
 
   //
@@ -68,7 +81,18 @@ export class LambdaResponseBuffered extends Writable {
       // In production, log warning but don't throw to match Express behavior
       return this;
     }
-    this._headers.set(name.toLowerCase(), String(value));
+    const lowerName = name.toLowerCase();
+    this._headers.set(lowerName, String(value));
+    // Sync with kOutHeaders for dd-trace compatibility
+    // Node stores as { 'header-name': ['Header-Name', value] }
+    if (kOutHeaders) {
+      const outHeaders = (
+        this as unknown as Record<symbol, Record<string, unknown>>
+      )[kOutHeaders];
+      if (outHeaders) {
+        outHeaders[lowerName] = [name, String(value)];
+      }
+    }
     return this;
   }
 
@@ -77,7 +101,17 @@ export class LambdaResponseBuffered extends Writable {
   }
 
   removeHeader(name: string): void {
-    this._headers.delete(name.toLowerCase());
+    const lowerName = name.toLowerCase();
+    this._headers.delete(lowerName);
+    // Sync with kOutHeaders for dd-trace compatibility
+    if (kOutHeaders) {
+      const outHeaders = (
+        this as unknown as Record<symbol, Record<string, unknown>>
+      )[kOutHeaders];
+      if (outHeaders) {
+        delete outHeaders[lowerName];
+      }
+    }
   }
 
   getHeaders(): OutgoingHttpHeaders {
