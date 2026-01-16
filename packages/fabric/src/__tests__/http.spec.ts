@@ -7,8 +7,8 @@ import {
   buildCorsHeaders,
   buildPreflightHeaders,
   collectStreamEvents,
-  createDataEvent,
   createCompleteEvent,
+  createDataEvent,
   createErrorEvent,
   createHttpContext,
   createMessageEvent,
@@ -1664,6 +1664,608 @@ describe("HTTP Adapter", () => {
         });
 
         expect(isFabricHttpService(httpService)).toBe(true);
+      });
+    });
+  });
+
+  // #endregion
+
+  // #region FabricHttpServer
+
+  describe("FabricHttpServer", () => {
+    // Import dynamically to avoid hoisting issues
+    let FabricHttpServer: typeof import("../http/index.js").FabricHttpServer;
+    let isFabricHttpServer: typeof import("../http/index.js").isFabricHttpServer;
+
+    beforeEach(async () => {
+      const httpModule = await import("../http/index.js");
+      FabricHttpServer = httpModule.FabricHttpServer;
+      isFabricHttpServer = httpModule.isFabricHttpServer;
+    });
+
+    describe("FabricHttpServer factory", () => {
+      it("is a function", () => {
+        expect(FabricHttpServer).toBeFunction();
+      });
+
+      it("creates a handler function", () => {
+        const userService = fabricHttp({
+          alias: "users",
+          service: () => ({ name: "test" }),
+        });
+
+        const server = FabricHttpServer({
+          services: [userService],
+        });
+
+        expect(server).toBeFunction();
+      });
+
+      it("attaches services metadata", () => {
+        const userService = fabricHttp({
+          alias: "users",
+          service: () => ({ name: "test" }),
+        });
+
+        const server = FabricHttpServer({
+          services: [userService],
+        });
+
+        expect(server.services).toEqual([userService]);
+      });
+
+      it("attaches routes metadata", () => {
+        const userService = fabricHttp({
+          alias: "users",
+          service: () => ({ name: "test" }),
+        });
+
+        const server = FabricHttpServer({
+          services: [userService],
+        });
+
+        expect(server.routes).toHaveLength(1);
+        expect(server.routes[0].path).toBe("/users");
+      });
+
+      it("attaches prefix metadata", () => {
+        const userService = fabricHttp({
+          alias: "users",
+          service: () => ({ name: "test" }),
+        });
+
+        const server = FabricHttpServer({
+          services: [userService],
+          prefix: "/api",
+        });
+
+        expect(server.prefix).toBe("/api");
+      });
+    });
+
+    describe("API Gateway v1 event handling", () => {
+      it("handles GET request", async () => {
+        const userService = fabricHttp({
+          alias: "users",
+          service: () => ({ name: "Alice" }),
+        });
+
+        const server = FabricHttpServer({
+          services: [userService],
+        });
+
+        const event = {
+          httpMethod: "GET",
+          path: "/users",
+          headers: {},
+          body: null,
+          queryStringParameters: null,
+        };
+
+        const response = await server(event);
+
+        expect(response.statusCode).toBe(200);
+        expect(JSON.parse(response.body)).toEqual({
+          data: { name: "Alice" },
+        });
+      });
+
+      it("handles POST request with body", async () => {
+        const userService = fabricHttp({
+          alias: "users",
+          service: (input) => ({ received: input }),
+        });
+
+        const server = FabricHttpServer({
+          services: [userService],
+        });
+
+        const event = {
+          httpMethod: "POST",
+          path: "/users",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: "Bob" }),
+          queryStringParameters: null,
+        };
+
+        const response = await server(event);
+
+        expect(response.statusCode).toBe(200);
+        expect(JSON.parse(response.body)).toEqual({
+          data: { received: { name: "Bob" } },
+        });
+      });
+
+      it("handles query parameters", async () => {
+        const userService = fabricHttp({
+          alias: "users",
+          service: (input) => ({ received: input }),
+        });
+
+        const server = FabricHttpServer({
+          services: [userService],
+        });
+
+        const event = {
+          httpMethod: "GET",
+          path: "/users",
+          headers: {},
+          body: null,
+          queryStringParameters: { page: "1", limit: "10" },
+        };
+
+        const response = await server(event);
+
+        expect(response.statusCode).toBe(200);
+        const body = JSON.parse(response.body);
+        expect(body.data.received.page).toBe("1");
+        expect(body.data.received.limit).toBe("10");
+      });
+    });
+
+    describe("API Gateway v2 event handling", () => {
+      it("handles GET request", async () => {
+        const userService = fabricHttp({
+          alias: "users",
+          service: () => ({ name: "Alice" }),
+        });
+
+        const server = FabricHttpServer({
+          services: [userService],
+        });
+
+        const event = {
+          rawPath: "/users",
+          rawQueryString: "",
+          headers: {},
+          requestContext: {
+            http: {
+              method: "GET",
+              path: "/users",
+            },
+          },
+        };
+
+        const response = await server(event);
+
+        expect(response.statusCode).toBe(200);
+        expect(JSON.parse(response.body)).toEqual({
+          data: { name: "Alice" },
+        });
+      });
+
+      it("handles POST request with body", async () => {
+        const userService = fabricHttp({
+          alias: "users",
+          service: (input) => ({ received: input }),
+        });
+
+        const server = FabricHttpServer({
+          services: [userService],
+        });
+
+        const event = {
+          rawPath: "/users",
+          rawQueryString: "",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ name: "Bob" }),
+          requestContext: {
+            http: {
+              method: "POST",
+              path: "/users",
+            },
+          },
+        };
+
+        const response = await server(event);
+
+        expect(response.statusCode).toBe(200);
+        expect(JSON.parse(response.body)).toEqual({
+          data: { received: { name: "Bob" } },
+        });
+      });
+
+      it("handles query string", async () => {
+        const userService = fabricHttp({
+          alias: "users",
+          service: (input) => ({ received: input }),
+        });
+
+        const server = FabricHttpServer({
+          services: [userService],
+        });
+
+        const event = {
+          rawPath: "/users",
+          rawQueryString: "page=1&limit=10",
+          headers: {},
+          requestContext: {
+            http: {
+              method: "GET",
+              path: "/users",
+            },
+          },
+        };
+
+        const response = await server(event);
+
+        expect(response.statusCode).toBe(200);
+        const body = JSON.parse(response.body);
+        expect(body.data.received.page).toBe("1");
+        expect(body.data.received.limit).toBe("10");
+      });
+    });
+
+    describe("route matching", () => {
+      it("matches path by alias", async () => {
+        const userService = fabricHttp({
+          alias: "users",
+          service: () => ({ type: "users" }),
+        });
+        const productService = fabricHttp({
+          alias: "products",
+          service: () => ({ type: "products" }),
+        });
+
+        const server = FabricHttpServer({
+          services: [userService, productService],
+        });
+
+        const userResponse = await server({
+          httpMethod: "GET",
+          path: "/users",
+          headers: {},
+          body: null,
+        });
+        const productResponse = await server({
+          httpMethod: "GET",
+          path: "/products",
+          headers: {},
+          body: null,
+        });
+
+        expect(JSON.parse(userResponse.body).data.type).toBe("users");
+        expect(JSON.parse(productResponse.body).data.type).toBe("products");
+      });
+
+      it("matches path with custom path", async () => {
+        const userService = fabricHttp({
+          alias: "users",
+          service: () => ({ found: true }),
+        });
+
+        const server = FabricHttpServer({
+          services: [{ service: userService, path: "/api/v1/users" }],
+        });
+
+        const response = await server({
+          httpMethod: "GET",
+          path: "/api/v1/users",
+          headers: {},
+          body: null,
+        });
+
+        expect(response.statusCode).toBe(200);
+      });
+
+      it("extracts path parameters", async () => {
+        const userService = fabricHttp({
+          alias: "users",
+          http: ({ params }) => ({ id: params.id }),
+          service: (input) => ({ userId: input.id }),
+        });
+
+        const server = FabricHttpServer({
+          services: [{ service: userService, path: "/users/:id" }],
+        });
+
+        const response = await server({
+          httpMethod: "GET",
+          path: "/users/123",
+          headers: {},
+          body: null,
+        });
+
+        expect(response.statusCode).toBe(200);
+        expect(JSON.parse(response.body)).toEqual({
+          data: { userId: "123" },
+        });
+      });
+
+      it("respects prefix", async () => {
+        const userService = fabricHttp({
+          alias: "users",
+          service: () => ({ found: true }),
+        });
+
+        const server = FabricHttpServer({
+          services: [userService],
+          prefix: "/api",
+        });
+
+        const response = await server({
+          httpMethod: "GET",
+          path: "/api/users",
+          headers: {},
+          body: null,
+        });
+
+        expect(response.statusCode).toBe(200);
+      });
+
+      it("returns 404 for unmatched path", async () => {
+        const userService = fabricHttp({
+          alias: "users",
+          service: () => ({}),
+        });
+
+        const server = FabricHttpServer({
+          services: [userService],
+        });
+
+        const response = await server({
+          httpMethod: "GET",
+          path: "/unknown",
+          headers: {},
+          body: null,
+        });
+
+        expect(response.statusCode).toBe(404);
+        expect(JSON.parse(response.body).errors[0].title).toBe("Not Found");
+      });
+
+      it("returns 405 for unmatched method", async () => {
+        const userService = fabricHttp({
+          alias: "users",
+          service: () => ({}),
+        });
+
+        const server = FabricHttpServer({
+          services: [{ service: userService, methods: ["GET"] }],
+        });
+
+        const response = await server({
+          httpMethod: "PUT",
+          path: "/users",
+          headers: {},
+          body: null,
+        });
+
+        expect(response.statusCode).toBe(405);
+        expect(JSON.parse(response.body).errors[0].title).toBe("Method Not Allowed");
+        expect(response.headers["Allow"]).toBe("GET");
+      });
+    });
+
+    describe("CORS handling", () => {
+      it("handles preflight request", async () => {
+        const userService = fabricHttp({
+          alias: "users",
+          service: () => ({}),
+        });
+
+        const server = FabricHttpServer({
+          services: [userService],
+        });
+
+        const response = await server({
+          httpMethod: "OPTIONS",
+          path: "/users",
+          headers: {
+            origin: "https://example.com",
+            "access-control-request-method": "POST",
+          },
+          body: null,
+        });
+
+        expect(response.statusCode).toBe(204);
+        expect(response.headers["Access-Control-Allow-Origin"]).toBe("*");
+        expect(response.headers["Access-Control-Allow-Methods"]).toBeDefined();
+      });
+
+      it("adds CORS headers to response", async () => {
+        const userService = fabricHttp({
+          alias: "users",
+          service: () => ({ name: "test" }),
+        });
+
+        const server = FabricHttpServer({
+          services: [userService],
+        });
+
+        const response = await server({
+          httpMethod: "GET",
+          path: "/users",
+          headers: { origin: "https://example.com" },
+          body: null,
+        });
+
+        expect(response.headers["Access-Control-Allow-Origin"]).toBe("*");
+      });
+
+      it("disables CORS when cors: false", async () => {
+        const userService = fabricHttp({
+          alias: "users",
+          service: () => ({ name: "test" }),
+        });
+
+        const server = FabricHttpServer({
+          services: [userService],
+          cors: false,
+        });
+
+        const response = await server({
+          httpMethod: "GET",
+          path: "/users",
+          headers: { origin: "https://example.com" },
+          body: null,
+        });
+
+        expect(response.headers["Access-Control-Allow-Origin"]).toBeUndefined();
+      });
+    });
+
+    describe("error handling", () => {
+      it("returns 500 for service errors", async () => {
+        const errorService = fabricHttp({
+          alias: "error",
+          service: () => {
+            throw new Error("Something went wrong");
+          },
+        });
+
+        const server = FabricHttpServer({
+          services: [errorService],
+        });
+
+        const response = await server({
+          httpMethod: "GET",
+          path: "/error",
+          headers: {},
+          body: null,
+        });
+
+        expect(response.statusCode).toBe(500);
+        expect(JSON.parse(response.body).errors[0].title).toBe("Internal Server Error");
+        // Detail should be hidden for 500 errors
+        expect(JSON.parse(response.body).errors[0].detail).toBeUndefined();
+      });
+
+      it("returns correct status for JaypieError", async () => {
+        const { BadRequestError } = await import("@jaypie/errors");
+
+        const errorService = fabricHttp({
+          alias: "error",
+          service: () => {
+            throw new BadRequestError("Invalid input");
+          },
+        });
+
+        const server = FabricHttpServer({
+          services: [errorService],
+        });
+
+        const response = await server({
+          httpMethod: "GET",
+          path: "/error",
+          headers: {},
+          body: null,
+        });
+
+        expect(response.statusCode).toBe(400);
+        expect(JSON.parse(response.body).errors[0].title).toBe("Bad Request");
+        expect(JSON.parse(response.body).errors[0].detail).toBe("Invalid input");
+      });
+    });
+
+    describe("isFabricHttpServer", () => {
+      it("is a function", () => {
+        expect(isFabricHttpServer).toBeFunction();
+      });
+
+      it("returns true for FabricHttpServer", () => {
+        const userService = fabricHttp({
+          alias: "users",
+          service: () => ({}),
+        });
+
+        const server = FabricHttpServer({
+          services: [userService],
+        });
+
+        expect(isFabricHttpServer(server)).toBe(true);
+      });
+
+      it("returns false for plain function", () => {
+        expect(isFabricHttpServer(() => {})).toBe(false);
+      });
+
+      it("returns false for object with services but no routes", () => {
+        const obj = { services: [] };
+        expect(isFabricHttpServer(obj)).toBe(false);
+      });
+
+      it("returns false for null", () => {
+        expect(isFabricHttpServer(null)).toBe(false);
+      });
+    });
+
+    describe("service configuration", () => {
+      it("accepts direct service", () => {
+        const userService = fabricHttp({
+          alias: "users",
+          service: () => ({ type: "direct" }),
+        });
+
+        const server = FabricHttpServer({
+          services: [userService],
+        });
+
+        expect(server.services).toHaveLength(1);
+      });
+
+      it("accepts service config object", () => {
+        const userService = fabricHttp({
+          alias: "users",
+          service: () => ({ type: "config" }),
+        });
+
+        const server = FabricHttpServer({
+          services: [{ service: userService, path: "/custom" }],
+        });
+
+        expect(server.routes[0].path).toBe("/custom");
+      });
+
+      it("accepts mixed service types", () => {
+        const userService = fabricHttp({
+          alias: "users",
+          service: () => ({}),
+        });
+        const productService = fabricHttp({
+          alias: "products",
+          service: () => ({}),
+        });
+
+        const server = FabricHttpServer({
+          services: [
+            userService,
+            { service: productService, path: "/custom-products" },
+          ],
+        });
+
+        expect(server.services).toHaveLength(2);
+        expect(server.routes[0].path).toBe("/users");
+        expect(server.routes[1].path).toBe("/custom-products");
+      });
+
+      it("throws for invalid service entry", () => {
+        expect(() => {
+          FabricHttpServer({
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            services: [{ invalid: true } as any],
+          });
+        }).toThrow("Each service entry must be a FabricHttpService");
       });
     });
   });

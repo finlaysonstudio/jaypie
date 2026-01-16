@@ -44,6 +44,7 @@ src/
 │   ├── authorization.ts           # Token extraction and validation
 │   ├── cors.ts                    # CORS configuration and headers
 │   ├── fabricHttp.ts              # HTTP service wrapper
+│   ├── FabricHttpServer.ts        # Standalone Lambda/server for multi-service routing
 │   ├── httpTransform.ts           # HTTP context transformation
 │   ├── index.ts                   # HTTP module exports
 │   ├── stream.ts                  # SSE/NDJSON streaming utilities
@@ -289,6 +290,9 @@ export type { FabricExpressConfig, FabricExpressMiddleware, FabricExpressRouter,
 export { fabricHttp, isFabricHttpService } from "./fabricHttp.js";
 export type { HttpServiceContext } from "./fabricHttp.js";
 
+// FabricHttpServer - standalone Lambda/server
+export { FabricHttpServer, isFabricHttpServer } from "./FabricHttpServer.js";
+
 // Authorization utilities
 export { extractToken, getAuthHeader, isAuthorizationRequired, validateAuthorization } from "./authorization.js";
 
@@ -303,7 +307,7 @@ export { collectStreamEvents, createCompleteEvent, createDataEvent, createErrorE
 export type { HttpStreamContext, LlmStreamChunk, PipeLlmStreamOptions, StreamWriter } from "./stream.js";
 
 // Types
-export type { AuthorizationConfig, AuthorizationFunction, CorsConfig, CorsHeaders, CorsOption, DataResponse, ErrorObject, ErrorResponse, FabricHttpConfig, FabricHttpService, HttpContext, HttpMethod, HttpStreamEvent, HttpStreamEventBase, HttpStreamEventComplete, HttpStreamEventData, HttpStreamEventError, HttpStreamEventMessage, HttpStreamEventNoop, HttpStreamEventText, HttpStreamEventToolCall, HttpStreamEventToolResult, HttpTransformFunction, StreamConfig, StreamingServiceFunction, StreamOption } from "./types.js";
+export type { ApiGatewayEvent, ApiGatewayResponse, ApiGatewayV1Event, ApiGatewayV2Event, AuthorizationConfig, AuthorizationFunction, CorsConfig, CorsHeaders, CorsOption, DataResponse, ErrorObject, ErrorResponse, FabricHttpConfig, FabricHttpServer, FabricHttpServerConfig, FabricHttpServerHandler, FabricHttpServerRoute, FabricHttpServerServiceEntry, FabricHttpService, HttpContext, HttpMethod, HttpStreamEvent, HttpStreamEventBase, HttpStreamEventComplete, HttpStreamEventData, HttpStreamEventError, HttpStreamEventMessage, HttpStreamEventNoop, HttpStreamEventText, HttpStreamEventToolCall, HttpStreamEventToolResult, HttpTransformFunction, RegisteredRoute, RouteMatch, StreamConfig, StreamingServiceFunction, StreamOption } from "./types.js";
 export { DEFAULT_HTTP_METHODS, HttpStreamEventType } from "./types.js";
 ```
 

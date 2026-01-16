@@ -327,3 +327,135 @@ export type StreamingServiceFunction<
 ) => AsyncIterable<HttpStreamEvent> | Promise<AsyncIterable<HttpStreamEvent>>;
 
 // #endregion
+
+// #region FabricHttpServer Config
+
+/**
+ * Route entry for FabricHttpServer - service with path and method configuration
+ */
+export interface FabricHttpServerRoute<
+  TInput extends Record<string, unknown> = Record<string, unknown>,
+  TOutput = unknown,
+  TAuth = unknown,
+> {
+  /** The FabricHttpService to handle requests */
+  service: FabricHttpService<TInput, TOutput, TAuth>;
+  /** Route path pattern (defaults to /${alias}) */
+  path?: string;
+  /** Allowed HTTP methods (defaults to DEFAULT_HTTP_METHODS) */
+  methods?: HttpMethod[];
+}
+
+/**
+ * Service entry - either a FabricHttpService or a route config
+ */
+export type FabricHttpServerServiceEntry =
+  | FabricHttpService
+  | FabricHttpServerRoute;
+
+/**
+ * Configuration for FabricHttpServer
+ */
+export interface FabricHttpServerConfig {
+  /** Array of services or route configs to register */
+  services: FabricHttpServerServiceEntry[];
+  /** Server-level authorization (applied to all services unless overridden) */
+  authorization?: AuthorizationConfig;
+  /** Server-level CORS config (applied to all services unless overridden) */
+  cors?: CorsOption;
+  /** Path prefix for all routes (e.g., "/api") */
+  prefix?: string;
+}
+
+/**
+ * API Gateway v1 (REST API) event format
+ */
+export interface ApiGatewayV1Event {
+  body: string | null;
+  headers: Record<string, string>;
+  httpMethod: string;
+  path: string;
+  pathParameters?: Record<string, string> | null;
+  queryStringParameters?: Record<string, string> | null;
+  requestContext?: {
+    requestId?: string;
+  };
+}
+
+/**
+ * API Gateway v2 (HTTP API) event format
+ */
+export interface ApiGatewayV2Event {
+  body?: string;
+  headers: Record<string, string>;
+  rawPath: string;
+  rawQueryString?: string;
+  requestContext: {
+    http: {
+      method: string;
+      path: string;
+    };
+    requestId?: string;
+  };
+  pathParameters?: Record<string, string>;
+  queryStringParameters?: Record<string, string>;
+}
+
+/**
+ * Union of API Gateway event types
+ */
+export type ApiGatewayEvent = ApiGatewayV1Event | ApiGatewayV2Event;
+
+/**
+ * API Gateway response format (compatible with v1 and v2)
+ */
+export interface ApiGatewayResponse {
+  statusCode: number;
+  headers: Record<string, string>;
+  body: string;
+}
+
+/**
+ * Registered route with resolved path and methods
+ */
+export interface RegisteredRoute {
+  /** Compiled path pattern */
+  path: string;
+  /** Path segments for matching */
+  segments: string[];
+  /** Allowed methods */
+  methods: HttpMethod[];
+  /** The service to handle requests */
+  service: FabricHttpService;
+}
+
+/**
+ * Match result from route matching
+ */
+export interface RouteMatch {
+  /** The matched route */
+  route: RegisteredRoute;
+  /** Extracted path parameters */
+  params: Record<string, string>;
+}
+
+/**
+ * FabricHttpServer handler function
+ */
+export type FabricHttpServerHandler = (
+  event: ApiGatewayEvent,
+) => Promise<ApiGatewayResponse>;
+
+/**
+ * FabricHttpServer with metadata
+ */
+export interface FabricHttpServer extends FabricHttpServerHandler {
+  /** Registered services */
+  services: FabricHttpService[];
+  /** Route prefix */
+  prefix?: string;
+  /** Registered routes */
+  routes: RegisteredRoute[];
+}
+
+// #endregion

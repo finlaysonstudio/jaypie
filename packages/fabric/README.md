@@ -311,6 +311,49 @@ Streaming utilities:
 - `createNoopEvent()` - Create keep-alive signal (empty event)
 - `formatNdjsonEvent(event)` / `formatSseEvent(event)` - Format events for output
 
+#### FabricHttpServer (Standalone Lambda)
+
+Route multiple services in a single Lambda function without Express:
+
+```typescript
+import { fabricHttp, FabricHttpServer } from "@jaypie/fabric/http";
+import { lambdaHandler } from "@jaypie/lambda";
+
+// Create HTTP services
+const userService = fabricHttp({
+  alias: "users",
+  input: { id: { type: String, required: false } },
+  service: ({ id }) => id ? getUser(id) : listUsers(),
+});
+
+const productService = fabricHttp({
+  alias: "products",
+  service: () => listProducts(),
+});
+
+// Create standalone server
+const server = FabricHttpServer({
+  services: [
+    userService,
+    productService,
+    { service: userService, path: "/users/:id", methods: ["GET", "PUT"] },
+  ],
+  prefix: "/api",  // Optional path prefix
+  cors: true,      // Server-level CORS (default: true)
+});
+
+// Export as Lambda handler
+export const handler = lambdaHandler(server);
+// Routes: /api/users, /api/products, /api/users/:id
+```
+
+FabricHttpServer handles:
+- API Gateway v1 (REST API) and v2 (HTTP API) event formats
+- Route matching by path pattern and HTTP method
+- CORS preflight requests and response headers
+- JSON:API formatted responses (`{ data }` / `{ errors }`)
+- 404 Not Found and 405 Method Not Allowed responses
+
 ### Modeling
 
 FabricModel provides a standard vocabulary for entities. All fields are optional except `id` and `model`, enabling high reuse across different entity types.

@@ -4,6 +4,9 @@
 export { fabricHttp, isFabricHttpService } from "./fabricHttp.js";
 export type { HttpServiceContext } from "./fabricHttp.js";
 
+// FabricHttpServer - standalone Lambda/server
+export { FabricHttpServer, isFabricHttpServer } from "./FabricHttpServer.js";
+
 // Authorization utilities
 export {
   extractToken,
@@ -67,6 +70,10 @@ export type {
 
 // Types
 export type {
+  ApiGatewayEvent,
+  ApiGatewayResponse,
+  ApiGatewayV1Event,
+  ApiGatewayV2Event,
   AuthorizationConfig,
   AuthorizationFunction,
   CorsConfig,
@@ -76,6 +83,11 @@ export type {
   ErrorObject,
   ErrorResponse,
   FabricHttpConfig,
+  FabricHttpServer as FabricHttpServerInterface,
+  FabricHttpServerConfig,
+  FabricHttpServerHandler,
+  FabricHttpServerRoute,
+  FabricHttpServerServiceEntry,
   FabricHttpService,
   HttpContext,
   HttpMethod,
@@ -90,6 +102,8 @@ export type {
   HttpStreamEventToolCall,
   HttpStreamEventToolResult,
   HttpTransformFunction,
+  RegisteredRoute,
+  RouteMatch,
   StreamConfig,
   StreamingServiceFunction,
   StreamOption,
