@@ -100,9 +100,13 @@ interface ExtendedResponse extends Response {
   };
 }
 
-// Extended response type for Lambda mock responses with direct _headers access
+// Extended response type for Lambda mock responses with direct internal access
 interface LambdaMockResponse extends Response {
+  _chunks?: Buffer[];
   _headers?: Map<string, string | string[]>;
+  _headersSent?: boolean;
+  _resolve?: ((result: unknown) => void) | null;
+  buildResult?: () => unknown;
 }
 
 type ExpressHandler<T> = (
@@ -129,26 +133,37 @@ const logger = publicLogger as unknown as ExtendedLogger;
 //
 
 /**
- * Check if response is a Lambda mock response with direct _headers access.
+ * Check if response is a Lambda mock response with direct internal access.
  */
 function isLambdaMockResponse(res: Response): res is LambdaMockResponse {
-  return (res as LambdaMockResponse)._headers instanceof Map;
+  const mock = res as LambdaMockResponse;
+  return (
+    mock._headers instanceof Map &&
+    Array.isArray(mock._chunks) &&
+    typeof mock.buildResult === "function"
+  );
 }
 
 /**
  * Safely send a JSON response, avoiding dd-trace interception.
- * For Lambda mock responses, directly sets headers and writes to stream.
+ * For Lambda mock responses, directly manipulates internal state instead of
+ * using stream methods (write/end) which dd-trace intercepts.
  */
-function safeSendJson(
-  res: Response,
-  statusCode: number,
-  data: unknown,
-): void {
+function safeSendJson(res: Response, statusCode: number, data: unknown): void {
   if (isLambdaMockResponse(res)) {
-    // Direct access for Lambda mock responses - bypasses dd-trace
+    // Direct internal state manipulation - bypasses dd-trace completely
     res._headers!.set("content-type", "application/json");
     res.statusCode = statusCode;
-    res.end(JSON.stringify(data));
+
+    // Directly push to chunks array instead of using stream write/end
+    const chunk = Buffer.from(JSON.stringify(data));
+    res._chunks!.push(chunk);
+    res._headersSent = true;
+
+    // Signal completion if a promise is waiting
+    if (res._resolve) {
+      res._resolve(res.buildResult!());
+    }
     return;
   }
   // Fall back to standard Express methods for real responses
@@ -157,7 +172,8 @@ function safeSendJson(
 
 /**
  * Safely send a response body, avoiding dd-trace interception.
- * For Lambda mock responses, directly writes to stream.
+ * For Lambda mock responses, directly manipulates internal state instead of
+ * using stream methods (write/end) which dd-trace intercepts.
  */
 function safeSend(
   res: Response,
@@ -165,12 +181,18 @@ function safeSend(
   body?: string,
 ): void {
   if (isLambdaMockResponse(res)) {
-    // Direct access for Lambda mock responses - bypasses dd-trace
+    // Direct internal state manipulation - bypasses dd-trace completely
     res.statusCode = statusCode;
+
     if (body !== undefined) {
-      res.end(body);
-    } else {
-      res.end();
+      const chunk = Buffer.from(body);
+      res._chunks!.push(chunk);
+    }
+    res._headersSent = true;
+
+    // Signal completion if a promise is waiting
+    if (res._resolve) {
+      res._resolve(res.buildResult!());
     }
     return;
   }

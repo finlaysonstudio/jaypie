@@ -44,10 +44,12 @@ export class LambdaResponseBuffered extends Writable {
     remoteAddress: "127.0.0.1",
   };
 
-  private _chunks: Buffer[] = [];
-  private _headers: Map<string, string | string[]> = new Map();
-  private _headersSent: boolean = false;
-  private _resolve: ((result: LambdaResponse) => void) | null = null;
+  // Internal state exposed for direct manipulation by safe response methods
+  // that need to bypass dd-trace interception of stream methods
+  public _chunks: Buffer[] = [];
+  public _headers: Map<string, string | string[]> = new Map();
+  public _headersSent: boolean = false;
+  public _resolve: ((result: LambdaResponse) => void) | null = null;
 
   constructor() {
     super();
@@ -297,7 +299,7 @@ export class LambdaResponseBuffered extends Writable {
   // Private helpers
   //
 
-  private buildResult(): LambdaResponse {
+  public buildResult(): LambdaResponse {
     const body = Buffer.concat(this._chunks);
     const contentType = (this.getHeader("content-type") as string) || "";
 
