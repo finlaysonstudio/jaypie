@@ -100,6 +100,11 @@ interface ExtendedResponse extends Response {
   };
 }
 
+// Extended response type for Lambda mock responses with direct _headers access
+interface LambdaMockResponse extends Response {
+  _headers?: Map<string, string | string[]>;
+}
+
 type ExpressHandler<T> = (
   req: Request,
   res: Response,
@@ -117,6 +122,65 @@ interface ResponseWithJson {
 
 // Cast logger to extended interface for runtime features not in type definitions
 const logger = publicLogger as unknown as ExtendedLogger;
+
+//
+//
+// Helpers - Safe response methods to bypass dd-trace interception
+//
+
+/**
+ * Check if response is a Lambda mock response with direct _headers access.
+ */
+function isLambdaMockResponse(res: Response): res is LambdaMockResponse {
+  return (res as LambdaMockResponse)._headers instanceof Map;
+}
+
+/**
+ * Safely send a JSON response, avoiding dd-trace interception.
+ * For Lambda mock responses, directly sets headers and writes to stream.
+ */
+function safeSendJson(
+  res: Response,
+  statusCode: number,
+  data: unknown,
+): void {
+  if (isLambdaMockResponse(res)) {
+    // Direct access for Lambda mock responses - bypasses dd-trace
+    res._headers!.set("content-type", "application/json");
+    res.statusCode = statusCode;
+    res.end(JSON.stringify(data));
+    return;
+  }
+  // Fall back to standard Express methods for real responses
+  res.status(statusCode).json(data);
+}
+
+/**
+ * Safely send a response body, avoiding dd-trace interception.
+ * For Lambda mock responses, directly writes to stream.
+ */
+function safeSend(
+  res: Response,
+  statusCode: number,
+  body?: string,
+): void {
+  if (isLambdaMockResponse(res)) {
+    // Direct access for Lambda mock responses - bypasses dd-trace
+    res.statusCode = statusCode;
+    if (body !== undefined) {
+      res.end(body);
+    } else {
+      res.end();
+    }
+    return;
+  }
+  // Fall back to standard Express methods for real responses
+  if (body !== undefined) {
+    res.status(statusCode).send(body);
+  } else {
+    res.status(statusCode).send();
+  }
+}
 
 //
 //
@@ -421,24 +485,28 @@ function expressHandler<T>(
               typeof (response as unknown as ResponseWithJson).json ===
               "function"
             ) {
-              res.json((response as unknown as ResponseWithJson).json());
+              safeSendJson(
+                res,
+                status,
+                (response as unknown as ResponseWithJson).json(),
+              );
             } else {
-              res.status(status).json(response);
+              safeSendJson(res, status, response);
             }
           } else if (typeof response === "string") {
             try {
-              res.status(status).json(JSON.parse(response));
+              safeSendJson(res, status, JSON.parse(response));
             } catch {
-              res.status(status).send(response);
+              safeSend(res, status, response);
             }
           } else if (response === true) {
-            res.status(HTTP.CODE.CREATED).send();
+            safeSend(res, HTTP.CODE.CREATED);
           } else {
-            res.status(status).send(response as unknown as string);
+            safeSend(res, status, response as unknown as string);
           }
         } else {
           // No response
-          res.status(HTTP.CODE.NO_CONTENT).send();
+          safeSend(res, HTTP.CODE.NO_CONTENT);
         }
       } else {
         // Resolve illegal call to res.end(), res.json(), or res.send()
