@@ -82,6 +82,55 @@ describe("LambdaResponseBuffered", () => {
     });
   });
 
+  describe("headers proxy", () => {
+    it("allows direct header access via headers property", () => {
+      const res = new LambdaResponseBuffered();
+      res.setHeader("content-type", "application/json");
+
+      expect(res.headers["content-type"]).toBe("application/json");
+    });
+
+    it("allows setting headers via headers property", () => {
+      const res = new LambdaResponseBuffered();
+      res.headers["x-custom"] = "value";
+
+      expect(res.getHeader("x-custom")).toBe("value");
+    });
+
+    it("allows deleting headers via headers property", () => {
+      const res = new LambdaResponseBuffered();
+      res.setHeader("x-custom", "value");
+      delete res.headers["x-custom"];
+
+      expect(res.hasHeader("x-custom")).toBe(false);
+    });
+
+    it("supports 'in' operator for checking header existence", () => {
+      const res = new LambdaResponseBuffered();
+      res.setHeader("x-custom", "value");
+
+      expect("x-custom" in res.headers).toBe(true);
+      expect("x-missing" in res.headers).toBe(false);
+    });
+
+    it("supports Object.keys() for header enumeration", () => {
+      const res = new LambdaResponseBuffered();
+      res.setHeader("content-type", "application/json");
+      res.setHeader("x-custom", "value");
+
+      const keys = Object.keys(res.headers);
+
+      expect(keys).toContain("content-type");
+      expect(keys).toContain("x-custom");
+    });
+
+    it("returns undefined for missing headers", () => {
+      const res = new LambdaResponseBuffered();
+
+      expect(res.headers["x-missing"]).toBeUndefined();
+    });
+  });
+
   describe("writeHead()", () => {
     it("sets status code", () => {
       const res = new LambdaResponseBuffered();

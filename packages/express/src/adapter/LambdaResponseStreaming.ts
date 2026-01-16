@@ -93,6 +93,46 @@ export class LambdaResponseStreaming extends Writable {
     return Array.from(this._headers.keys());
   }
 
+  /**
+   * Proxy for direct header access (e.g., res.headers['content-type']).
+   * Required for compatibility with middleware like helmet that access headers directly.
+   */
+  get headers(): Record<string, string | string[] | undefined> {
+    return new Proxy(
+      {},
+      {
+        deleteProperty: (_target, prop) => {
+          this.removeHeader(String(prop));
+          return true;
+        },
+        get: (_target, prop) => {
+          if (typeof prop === "symbol") return undefined;
+          return this.getHeader(String(prop));
+        },
+        getOwnPropertyDescriptor: (_target, prop) => {
+          if (this.hasHeader(String(prop))) {
+            return {
+              configurable: true,
+              enumerable: true,
+              value: this.getHeader(String(prop)),
+            };
+          }
+          return undefined;
+        },
+        has: (_target, prop) => {
+          return this.hasHeader(String(prop));
+        },
+        ownKeys: () => {
+          return this.getHeaderNames();
+        },
+        set: (_target, prop, value) => {
+          this.setHeader(String(prop), value);
+          return true;
+        },
+      },
+    );
+  }
+
   writeHead(
     statusCode: number,
     statusMessageOrHeaders?: OutgoingHttpHeaders | string,
