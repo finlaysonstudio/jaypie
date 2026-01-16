@@ -354,6 +354,159 @@ FabricHttpServer handles:
 - JSON:API formatted responses (`{ data }` / `{ errors }`)
 - 404 Not Found and 405 Method Not Allowed responses
 
+### Data Adapter (FabricData)
+
+Generate CRUD HTTP services for Jaypie models backed by DynamoDB:
+
+```typescript
+import { FabricData } from "@jaypie/fabric/data";
+import { FabricHttpServer } from "@jaypie/fabric/http";
+
+// Basic usage - creates all CRUD services
+const recordServices = FabricData({ model: "record" });
+
+// Use with FabricHttpServer
+const server = FabricHttpServer({
+  services: recordServices.services,
+  prefix: "/api",
+});
+
+export const handler = server.handler;
+// Routes: POST /api/records, GET /api/records, GET /api/records/:id,
+//         POST /api/records/:id, DELETE /api/records/:id, POST /api/records/:id/archive
+```
+
+#### Route Mapping
+
+| Operation | HTTP Method | Route | DynamoDB Function |
+|-----------|-------------|-------|-------------------|
+| create | POST | `/{model}` | `putEntity` |
+| list | GET | `/{model}` | `queryByScope` |
+| read | GET | `/{model}/:id` | `getEntity` |
+| update | POST | `/{model}/:id` | `updateEntity` |
+| delete | DELETE | `/{model}/:id` | `deleteEntity` |
+| archive | POST | `/{model}/:id/archive` | `archiveEntity` |
+| *custom* | POST | `/{model}/:id/{action}` | custom service |
+
+Custom operations are defined in the `execute` array and create routes like `/records/:id/publish`.
+
+#### Configuration
+
+```typescript
+const services = FabricData({
+  // Model: string or config object
+  model: "record",  // Or: { alias: "record", name: "Record", description: "..." }
+
+  // Authorization for all operations
+  authorization: async (token) => {
+    const user = await validateJwt(token);
+    if (!user) throw new UnauthorizedError();
+    return user;
+  },
+
+  // CORS configuration
+  cors: { origin: "*" },
+
+  // Scope calculator (default: APEX "@")
+  // Determines how entities are grouped for queries
+  scope: ({ params }) => `chat#${params.chatId}`,
+
+  // Pagination limits
+  defaultLimit: 20,  // Default items per page
+  maxLimit: 100,     // Maximum items per page
+
+  // Per-operation configuration
+  operations: {
+    read: { authorization: false },         // Public read
+    list: { authorization: false },         // Public list
+    delete: { authorization: requireAdmin }, // Admin-only delete
+    archive: false,                          // Disable archive
+    create: {
+      // Transform input before saving
+      transform: (input, existing) => ({
+        ...input,
+        createdBy: input.userId,
+      }),
+    },
+  },
+});
+```
+
+#### Custom Execute Actions
+
+Add custom actions that operate on entities:
+
+```typescript
+const services = FabricData({
+  model: "record",
+  execute: [
+    {
+      alias: "publish",
+      description: "Publish a record",
+      authorization: requireEditor,
+      input: {
+        publishDate: { type: Date, required: false },
+        notify: { type: Boolean, default: false },
+      },
+      service: async (entity, { publishDate, notify }) => {
+        // entity is the fetched record
+        const { updateEntity } = await import("@jaypie/dynamodb");
+        await updateEntity({
+          entity: {
+            ...entity,
+            metadata: { ...entity.metadata, publishedAt: publishDate ?? new Date() },
+          },
+        });
+        if (notify) await sendNotification(entity);
+        return { published: true };
+      },
+    },
+    {
+      alias: "duplicate",
+      description: "Create a copy of a record",
+      service: async (entity) => {
+        const { putEntity } = await import("@jaypie/dynamodb");
+        const duplicate = {
+          ...entity,
+          id: crypto.randomUUID(),
+          name: `${entity.name} (Copy)`,
+        };
+        delete duplicate.alias;
+        return putEntity({ entity: duplicate });
+      },
+    },
+  ],
+});
+// Routes: POST /records/:id/publish, POST /records/:id/duplicate
+```
+
+#### List Pagination
+
+The list operation supports pagination via cursor:
+
+```typescript
+// First request
+GET /api/records?limit=10
+
+// Response
+{
+  "data": {
+    "items": [...],
+    "nextKey": "eyJpZCI6Ii4uLiJ9"  // Base64 encoded cursor
+  }
+}
+
+// Next page
+GET /api/records?limit=10&cursor=eyJpZCI6Ii4uLiJ9
+```
+
+Query parameters:
+- `limit` - Items per page (default: 20, max: 100)
+- `cursor` - Pagination cursor from previous response
+- `ascending` - Sort ascending by sequence (default: false)
+- `archived` - Include archived entities (default: false)
+- `deleted` - Include deleted entities (default: false)
+
 ### Modeling
 
 FabricModel provides a standard vocabulary for entities. All fields are optional except `id` and `model`, enabling high reuse across different entity types.
@@ -500,6 +653,7 @@ const indexed = populateIndexKeys(record, DEFAULT_INDEXES);
 | Path | Description |
 |------|-------------|
 | `@jaypie/fabric/commander` | Commander.js CLI adapter |
+| `@jaypie/fabric/data` | DynamoDB CRUD service generator |
 | `@jaypie/fabric/express` | Express middleware adapter |
 | `@jaypie/fabric/http` | HTTP adapter with authorization and CORS |
 | `@jaypie/fabric/lambda` | AWS Lambda adapter |

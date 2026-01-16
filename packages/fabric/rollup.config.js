@@ -10,6 +10,7 @@ const onwarn = (warning, defaultHandler) => {
 
 const external = [
   "@jaypie/aws",
+  "@jaypie/dynamodb",
   "@jaypie/errors",
   "@jaypie/lambda",
   "@modelcontextprotocol/sdk/server/mcp.js",
@@ -292,6 +293,46 @@ export default [
         tsconfig: "./tsconfig.json",
         declaration: false,
         outDir: "dist/cjs/express",
+      }),
+    ],
+    external,
+  },
+  // ES modules version - data
+  // NOTE: declaration: false because main build generates correct .d.ts files
+  {
+    input: "src/data/index.ts",
+    output: {
+      dir: "dist/esm/data",
+      format: "es",
+      sourcemap: true,
+    },
+    onwarn,
+    plugins: [
+      typescript({
+        tsconfig: "./tsconfig.json",
+        declaration: false,
+        outDir: "dist/esm/data",
+      }),
+    ],
+    external,
+  },
+  // CommonJS version - data
+  // NOTE: declaration: false because main build generates correct .d.ts files
+  {
+    input: "src/data/index.ts",
+    output: {
+      dir: "dist/cjs/data",
+      format: "cjs",
+      sourcemap: true,
+      exports: "named",
+      entryFileNames: "[name].cjs",
+    },
+    onwarn,
+    plugins: [
+      typescript({
+        tsconfig: "./tsconfig.json",
+        declaration: false,
+        outDir: "dist/cjs/data",
       }),
     ],
     external,

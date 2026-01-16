@@ -45,6 +45,11 @@
       "types": "./dist/esm/express/index.d.ts",
       "import": "./dist/esm/express/index.js",
       "require": "./dist/cjs/express/index.cjs"
+    },
+    "./data": {
+      "types": "./dist/esm/data/index.d.ts",
+      "import": "./dist/esm/data/index.js",
+      "require": "./dist/cjs/data/index.cjs"
     }
   },
   "main": "./dist/cjs/index.cjs",
@@ -85,6 +90,7 @@
   },
   "peerDependencies": {
     "@jaypie/aws": "*",
+    "@jaypie/dynamodb": "*",
     "@jaypie/lambda": "*",
     "@modelcontextprotocol/sdk": ">=1.0.0",
     "commander": ">=12.0.0",
@@ -92,6 +98,9 @@
   },
   "peerDependenciesMeta": {
     "@jaypie/aws": {
+      "optional": true
+    },
+    "@jaypie/dynamodb": {
       "optional": true
     },
     "@jaypie/lambda": {

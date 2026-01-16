@@ -9,8 +9,8 @@ Jaypie modeling framework - provides type conversion and service handler pattern
 | Status | Initial development (0.1.x) |
 | Type | Utility library |
 | Dependencies | `@jaypie/errors` |
-| Peer Dependencies | `@jaypie/aws` (optional), `@jaypie/lambda` (optional), `@modelcontextprotocol/sdk` (optional), `commander` (optional), `express` (optional) |
-| Exports | Fabric functions, fabricService, llm adapter; commander/express/http/lambda/mcp via sub-paths |
+| Peer Dependencies | `@jaypie/aws` (optional), `@jaypie/dynamodb` (optional), `@jaypie/lambda` (optional), `@modelcontextprotocol/sdk` (optional), `commander` (optional), `express` (optional) |
+| Exports | Fabric functions, fabricService, llm adapter; commander/data/express/http/lambda/mcp via sub-paths |
 
 ## Internal Structure
 
@@ -18,6 +18,7 @@ Jaypie modeling framework - provides type conversion and service handler pattern
 src/
 ├── __tests__/
 │   ├── commander.spec.ts         # Commander adapter tests
+│   ├── data.spec.ts              # FabricData adapter tests
 │   ├── express.spec.ts           # Express adapter tests
 │   ├── http.spec.ts              # HTTP adapter tests
 │   ├── index.spec.ts             # Export verification tests
@@ -35,6 +36,20 @@ src/
 │   ├── parseCommanderOptions.ts   # Parse Commander opts to handler input
 │   ├── fabricCommand.ts           # Register handler as Commander command
 │   └── types.ts                   # Commander adapter types
+├── data/
+│   ├── FabricData.ts              # CRUD service generator for DynamoDB
+│   ├── index.ts                   # Data module exports
+│   ├── services/                  # Service factories
+│   │   ├── archive.ts             # Archive service factory
+│   │   ├── create.ts              # Create service factory
+│   │   ├── delete.ts              # Delete service factory
+│   │   ├── execute.ts             # Custom action service factory
+│   │   ├── index.ts               # Barrel export
+│   │   ├── list.ts                # List service factory
+│   │   ├── read.ts                # Read service factory
+│   │   └── update.ts              # Update service factory
+│   ├── transforms.ts              # HTTP transformation utilities
+│   └── types.ts                   # FabricData type definitions
 ├── express/
 │   ├── fabricExpress.ts           # Express middleware from FabricHttpService
 │   ├── FabricRouter.ts            # Multi-service Express Router
@@ -195,6 +210,69 @@ Located in `types.ts`:
 | `ServiceConfig` | Full handler configuration |
 | `Service` | The returned async handler |
 
+### FabricData
+
+Located in `src/data/`. Generates CRUD HTTP services for Jaypie models backed by DynamoDB:
+
+```typescript
+import { FabricData } from "@jaypie/fabric/data";
+
+// Basic usage - creates 6 CRUD services
+const recordServices = FabricData({ model: "record" });
+// Routes: POST /records, GET /records, GET /records/:id,
+//         POST /records/:id, DELETE /records/:id, POST /records/:id/archive
+
+// Use with FabricHttpServer
+const server = new FabricHttpServer({
+  services: recordServices.services,
+  prefix: "/api",
+});
+```
+
+**Operations**:
+
+| Operation | HTTP Method | Route | DynamoDB Function |
+|-----------|-------------|-------|-------------------|
+| create | POST | `/{model}` | `putEntity` |
+| list | GET | `/{model}` | `queryByScope` |
+| read | GET | `/{model}/:id` | `getEntity` |
+| update | POST | `/{model}/:id` | `updateEntity` |
+| delete | DELETE | `/{model}/:id` | `deleteEntity` |
+| archive | POST | `/{model}/:id/archive` | `archiveEntity` |
+| *custom* | POST | `/{model}/:id/{action}` | custom service |
+
+Custom operations are defined in the `execute` array.
+
+**Configuration**:
+
+```typescript
+const services = FabricData({
+  model: "record",  // Or: { alias: "record", name: "Record" }
+  authorization: validateToken,  // Applied to all operations
+  cors: { origin: "*" },
+  scope: ({ params }) => `chat#${params.chatId}`,  // Dynamic scope
+  defaultLimit: 20,
+  maxLimit: 100,
+  operations: {
+    read: { authorization: false },  // Public read
+    delete: { authorization: requireAdmin },
+    archive: false,  // Disabled
+  },
+  execute: [
+    {
+      alias: "publish",
+      description: "Publish a record",
+      authorization: requireEditor,
+      input: { publishDate: { type: Date, required: false } },
+      service: async (entity, { publishDate }) => {
+        // Custom action logic
+        return { published: true };
+      },
+    },
+  ],
+});
+```
+
 ### Model Types
 
 Located in `models/base.ts`:
@@ -242,6 +320,25 @@ export type { IndexableModel, IndexDefinition } from "./index/index.js";
 
 // Version
 export const FABRIC_VERSION: string;
+```
+
+### Data Export (`@jaypie/fabric/data`)
+
+```typescript
+// Main function
+export { FabricData, isFabricDataResult } from "./FabricData.js";
+
+// Transform utilities
+export { APEX, calculateScopeFromConfig, capitalize, decodeCursor, encodeCursor, extractId, extractScopeContext, pluralize, transformArchive, transformCreate, transformDelete, transformExecute, transformList, transformRead, transformUpdate } from "./transforms.js";
+
+// Service factories (for advanced customization)
+export { createArchiveService, createCreateService, createDeleteService, createExecuteService, createListService, createReadService, createUpdateService } from "./services/index.js";
+
+// Types
+export type { FabricDataConfig, FabricDataContext, FabricDataExecuteConfig, FabricDataListOptions, FabricDataListResponse, FabricDataOperationConfig, FabricDataOperationOption, FabricDataOperations, FabricDataResult, FabricModelConfig, ResolvedModelConfig, ResolvedOperationConfig, ScopeContext, ScopeFunction } from "./types.js";
+
+// Constants
+export { DEFAULT_LIMIT, MAX_LIMIT } from "./types.js";
 ```
 
 ### Commander Export (`@jaypie/fabric/commander`)
