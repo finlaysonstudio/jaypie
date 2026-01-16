@@ -207,17 +207,22 @@ export class LambdaResponseStreaming extends Writable {
   /**
    * Express-style alias for getHeader().
    * Used by middleware like decorateResponse that use res.get().
+   * Note: Directly accesses _headers to avoid prototype chain issues with bundled code.
    */
   get(name: string): number | string | string[] | undefined {
-    return this.getHeader(name);
+    return this._headers.get(name.toLowerCase());
   }
 
   /**
    * Express-style alias for setHeader().
    * Used by middleware like decorateResponse that use res.set().
+   * Note: Directly accesses _headers to avoid prototype chain issues with bundled code.
    */
   set(name: string, value: number | string | string[]): this {
-    return this.setHeader(name, value);
+    if (!this._headersSent) {
+      this._headers.set(name.toLowerCase(), String(value));
+    }
+    return this;
   }
 
   status(code: number): this {
