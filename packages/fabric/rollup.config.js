@@ -14,6 +14,7 @@ const external = [
   "@jaypie/lambda",
   "@modelcontextprotocol/sdk/server/mcp.js",
   "commander",
+  "express",
 ];
 
 export default [
@@ -251,6 +252,46 @@ export default [
         tsconfig: "./tsconfig.json",
         declaration: false,
         outDir: "dist/cjs/mcp",
+      }),
+    ],
+    external,
+  },
+  // ES modules version - express
+  // NOTE: declaration: false because main build generates correct .d.ts files
+  {
+    input: "src/express/index.ts",
+    output: {
+      dir: "dist/esm/express",
+      format: "es",
+      sourcemap: true,
+    },
+    onwarn,
+    plugins: [
+      typescript({
+        tsconfig: "./tsconfig.json",
+        declaration: false,
+        outDir: "dist/esm/express",
+      }),
+    ],
+    external,
+  },
+  // CommonJS version - express
+  // NOTE: declaration: false because main build generates correct .d.ts files
+  {
+    input: "src/express/index.ts",
+    output: {
+      dir: "dist/cjs/express",
+      format: "cjs",
+      sourcemap: true,
+      exports: "named",
+      entryFileNames: "[name].cjs",
+    },
+    onwarn,
+    plugins: [
+      typescript({
+        tsconfig: "./tsconfig.json",
+        declaration: false,
+        outDir: "dist/cjs/express",
       }),
     ],
     external,

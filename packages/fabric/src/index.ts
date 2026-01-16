@@ -80,7 +80,7 @@ export type {
   ModelSchema,
 } from "./index/index.js";
 
-// Note: Adapters (commander, http, lambda, llm, mcp) must be imported from sub-paths.
+// Note: Adapters (commander, express, http, lambda, llm, mcp) must be imported from sub-paths.
 // See README.md for usage examples.
 
 // Meta-modeling types

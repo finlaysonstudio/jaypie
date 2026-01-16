@@ -40,6 +40,11 @@
       "types": "./dist/esm/mcp/index.d.ts",
       "import": "./dist/esm/mcp/index.js",
       "require": "./dist/cjs/mcp/index.cjs"
+    },
+    "./express": {
+      "types": "./dist/esm/express/index.d.ts",
+      "import": "./dist/esm/express/index.js",
+      "require": "./dist/cjs/express/index.cjs"
     }
   },
   "main": "./dist/cjs/index.cjs",
@@ -63,6 +68,7 @@
     "@jaypie/testkit": "*",
     "@modelcontextprotocol/sdk": "^1.17.0",
     "@rollup/plugin-typescript": "^12.1.2",
+    "@types/express": "^5.0.0",
     "@types/node": "^22.13.1",
     "@typescript-eslint/eslint-plugin": "^8.18.2",
     "@typescript-eslint/parser": "^8.18.2",
@@ -70,6 +76,7 @@
     "eslint-config-prettier": "^10.0.1",
     "eslint-plugin-prettier": "^5.2.1",
     "eslint-plugin-vitest": "^0.5.4",
+    "express": "^5.0.1",
     "jest-extended": "^7.0.0",
     "rollup": "^4.12.0",
     "typescript": "^5.3.3",
@@ -80,7 +87,8 @@
     "@jaypie/aws": "*",
     "@jaypie/lambda": "*",
     "@modelcontextprotocol/sdk": ">=1.0.0",
-    "commander": ">=12.0.0"
+    "commander": ">=12.0.0",
+    "express": ">=4.0.0"
   },
   "peerDependenciesMeta": {
     "@jaypie/aws": {
@@ -93,6 +101,9 @@
       "optional": true
     },
     "commander": {
+      "optional": true
+    },
+    "express": {
       "optional": true
     }
   },

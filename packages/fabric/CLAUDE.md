@@ -9,23 +9,24 @@ Jaypie modeling framework - provides type conversion and service handler pattern
 | Status | Initial development (0.1.x) |
 | Type | Utility library |
 | Dependencies | `@jaypie/errors` |
-| Peer Dependencies | `@jaypie/aws` (optional), `@jaypie/lambda` (optional), `@modelcontextprotocol/sdk` (optional), `commander` (optional) |
-| Exports | Fabric functions, fabricService, llm adapter; commander/http/lambda/mcp via sub-paths |
+| Peer Dependencies | `@jaypie/aws` (optional), `@jaypie/lambda` (optional), `@modelcontextprotocol/sdk` (optional), `commander` (optional), `express` (optional) |
+| Exports | Fabric functions, fabricService, llm adapter; commander/express/http/lambda/mcp via sub-paths |
 
 ## Internal Structure
 
 ```
 src/
 ├── __tests__/
-│   ├── resolve.spec.ts           # Resolution function tests
-│   ├── resolve-date.spec.ts      # Date resolution tests
 │   ├── commander.spec.ts         # Commander adapter tests
+│   ├── express.spec.ts           # Express adapter tests
 │   ├── http.spec.ts              # HTTP adapter tests
 │   ├── index.spec.ts             # Export verification tests
 │   ├── lambda.spec.ts            # Lambda adapter tests
 │   ├── llm.spec.ts               # LLM adapter tests
 │   ├── mcp.spec.ts               # MCP adapter tests
 │   ├── model.spec.ts             # Model type tests
+│   ├── resolve.spec.ts           # Resolution function tests
+│   ├── resolve-date.spec.ts      # Date resolution tests
 │   ├── service.spec.ts           # Service handler tests
 │   └── status.spec.ts            # Status type tests
 ├── commander/
@@ -34,6 +35,11 @@ src/
 │   ├── parseCommanderOptions.ts   # Parse Commander opts to handler input
 │   ├── fabricCommand.ts           # Register handler as Commander command
 │   └── types.ts                   # Commander adapter types
+├── express/
+│   ├── fabricExpress.ts           # Express middleware from FabricHttpService
+│   ├── FabricRouter.ts            # Multi-service Express Router
+│   ├── index.ts                   # Express module exports
+│   └── types.ts                   # Express adapter types
 ├── http/
 │   ├── authorization.ts           # Token extraction and validation
 │   ├── cors.ts                    # CORS configuration and headers
@@ -74,7 +80,7 @@ src/
 
 ### Fabric Functions (Type Conversion)
 
-Located in `convert.ts`. Handle flexible type conversion with predictable behavior:
+Located in `resolve.ts`. Handle flexible type conversion with predictable behavior:
 
 | Function | Purpose |
 |----------|---------|
@@ -266,6 +272,14 @@ export type { FabricToolConfig, FabricToolResult, LlmTool, OnCompleteCallback, O
 ```typescript
 export { fabricMcp } from "./fabricMcp.js";
 export type { FabricMcpConfig, FabricMcpResult, McpToolContentItem, McpToolResponse, OnCompleteCallback, OnErrorCallback, OnFatalCallback, OnMessageCallback } from "./types.js";
+```
+
+### Express Export (`@jaypie/fabric/express`)
+
+```typescript
+export { fabricExpress, isFabricExpressMiddleware } from "./fabricExpress.js";
+export { FabricRouter, isFabricExpressRouter } from "./FabricRouter.js";
+export type { FabricExpressConfig, FabricExpressMiddleware, FabricExpressRouter, FabricRouterConfig, FabricRouterServiceEntry, Request, Response, Router } from "./types.js";
 ```
 
 ### HTTP Export (`@jaypie/fabric/http`)

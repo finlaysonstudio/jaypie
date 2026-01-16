@@ -155,6 +155,49 @@ const server = new McpServer({ name: "my-server", version: "1.0.0" });
 fabricMcp({ service: handler, server });
 ```
 
+### Express Adapter
+
+```typescript
+import { Router } from "express";
+import { fabricHttp } from "@jaypie/fabric/http";
+import { fabricExpress, FabricRouter } from "@jaypie/fabric/express";
+
+// Create a fabricHttp service
+const userService = fabricHttp({
+  alias: "users",
+  input: {
+    id: { type: String, required: false },
+  },
+  service: ({ id }) => id ? getUser(id) : listUsers(),
+});
+
+// Option 1: Single service as middleware
+const middleware = fabricExpress({ service: userService });
+router.use("/api", middleware);
+// Routes: GET/POST/DELETE /api/users
+
+// Option 2: Multiple services with FabricRouter
+const productService = fabricHttp({
+  alias: "products",
+  service: () => listProducts(),
+});
+
+const router = FabricRouter({
+  services: [
+    userService,
+    productService,
+    {
+      service: userService,
+      path: "/users/:id",
+      methods: ["GET", "PUT", "DELETE"],
+    },
+  ],
+});
+
+app.use("/v1", router);
+// Routes: /v1/users, /v1/products, /v1/users/:id
+```
+
 ### HTTP Adapter
 
 Create HTTP-aware services with built-in authorization and CORS support:
@@ -414,6 +457,7 @@ const indexed = populateIndexKeys(record, DEFAULT_INDEXES);
 | Path | Description |
 |------|-------------|
 | `@jaypie/fabric/commander` | Commander.js CLI adapter |
+| `@jaypie/fabric/express` | Express middleware adapter |
 | `@jaypie/fabric/http` | HTTP adapter with authorization and CORS |
 | `@jaypie/fabric/lambda` | AWS Lambda adapter |
 | `@jaypie/fabric/llm` | LLM tool adapter |
