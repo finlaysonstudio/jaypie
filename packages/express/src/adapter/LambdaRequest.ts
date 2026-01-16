@@ -1,7 +1,12 @@
 import type { IncomingHttpHeaders } from "node:http";
 import { Readable } from "node:stream";
 
-import type { FunctionUrlEvent, LambdaContext } from "./types.js";
+import type {
+  ApiGatewayV1Event,
+  FunctionUrlEvent,
+  LambdaContext,
+  LambdaEvent,
+} from "./types.js";
 
 //
 //
@@ -12,7 +17,7 @@ interface LambdaRequestOptions {
   body?: Buffer | null;
   headers: Record<string, string>;
   lambdaContext: LambdaContext;
-  lambdaEvent: FunctionUrlEvent;
+  lambdaEvent: LambdaEvent;
   method: string;
   protocol: string;
   remoteAddress: string;
@@ -58,7 +63,7 @@ export class LambdaRequest extends Readable {
 
   // Jaypie-specific: store Lambda context for getCurrentInvokeUuid
   public readonly _lambdaContext: LambdaContext;
-  public readonly _lambdaEvent: FunctionUrlEvent;
+  public readonly _lambdaEvent: LambdaEvent;
 
   // Internal state
   private bodyBuffer: Buffer | null;
@@ -133,20 +138,73 @@ export class LambdaRequest extends Readable {
 
 //
 //
+// Type Guards
+//
+
+/**
+ * Check if event is a Function URL / HTTP API v2 event.
+ */
+function isFunctionUrlEvent(event: LambdaEvent): event is FunctionUrlEvent {
+  return "requestContext" in event && "http" in event.requestContext;
+}
+
+/**
+ * Check if event is an API Gateway REST API v1 event.
+ */
+function isApiGatewayV1Event(event: LambdaEvent): event is ApiGatewayV1Event {
+  return "httpMethod" in event;
+}
+
+//
+//
 // Factory Function
 //
 
 /**
- * Create a LambdaRequest from a Function URL event.
+ * Create a LambdaRequest from a Lambda event (Function URL, HTTP API v2, or REST API v1).
  */
 export function createLambdaRequest(
-  event: FunctionUrlEvent,
+  event: LambdaEvent,
   context: LambdaContext,
 ): LambdaRequest {
-  // Build URL with query string
-  const url = event.rawQueryString
-    ? `${event.rawPath}?${event.rawQueryString}`
-    : event.rawPath;
+  let url: string;
+  let method: string;
+  let protocol: string;
+  let remoteAddress: string;
+  const headers = { ...event.headers };
+
+  if (isFunctionUrlEvent(event)) {
+    // Function URL / HTTP API v2 format
+    url = event.rawQueryString
+      ? `${event.rawPath}?${event.rawQueryString}`
+      : event.rawPath;
+    method = event.requestContext.http.method;
+    protocol = event.requestContext.http.protocol.split("/")[0].toLowerCase();
+    remoteAddress = event.requestContext.http.sourceIp;
+
+    // Normalize cookies into Cookie header if not already present
+    if (event.cookies && event.cookies.length > 0 && !headers.cookie) {
+      headers.cookie = event.cookies.join("; ");
+    }
+  } else if (isApiGatewayV1Event(event)) {
+    // API Gateway REST API v1 format
+    const queryParams = event.queryStringParameters;
+    if (queryParams && Object.keys(queryParams).length > 0) {
+      const queryString = new URLSearchParams(
+        queryParams as Record<string, string>,
+      ).toString();
+      url = `${event.path}?${queryString}`;
+    } else {
+      url = event.path;
+    }
+    method = event.httpMethod;
+    protocol = event.requestContext.protocol.split("/")[0].toLowerCase();
+    remoteAddress = event.requestContext.identity.sourceIp;
+  } else {
+    throw new Error(
+      "Unsupported Lambda event format. Expected Function URL, HTTP API v2, or REST API v1 event.",
+    );
+  }
 
   // Decode body if present
   let body: Buffer | null = null;
@@ -156,20 +214,14 @@ export function createLambdaRequest(
       : Buffer.from(event.body, "utf8");
   }
 
-  // Normalize cookies into Cookie header if not already present
-  const headers = { ...event.headers };
-  if (event.cookies && event.cookies.length > 0 && !headers.cookie) {
-    headers.cookie = event.cookies.join("; ");
-  }
-
   return new LambdaRequest({
     body,
     headers,
     lambdaContext: context,
     lambdaEvent: event,
-    method: event.requestContext.http.method,
-    protocol: event.requestContext.http.protocol.split("/")[0].toLowerCase(),
-    remoteAddress: event.requestContext.http.sourceIp,
+    method,
+    protocol,
+    remoteAddress,
     url,
   });
 }

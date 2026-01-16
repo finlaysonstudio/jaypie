@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import { createLambdaRequest, LambdaRequest } from "../LambdaRequest.js";
-import type { FunctionUrlEvent, LambdaContext } from "../types.js";
+import type {
+  ApiGatewayV1Event,
+  FunctionUrlEvent,
+  LambdaContext,
+} from "../types.js";
 
 //
 //
@@ -51,6 +55,36 @@ const createMockEvent = (
   },
   routeKey: "$default",
   version: "2.0",
+  ...overrides,
+});
+
+const createMockV1Event = (
+  overrides: Partial<ApiGatewayV1Event> = {},
+): ApiGatewayV1Event => ({
+  body: null,
+  headers: {
+    "content-type": "application/json",
+    Host: "api.example.com",
+    "User-Agent": "test-agent",
+  },
+  httpMethod: "GET",
+  isBase64Encoded: false,
+  path: "/api/users",
+  queryStringParameters: null,
+  requestContext: {
+    accountId: "123456789",
+    apiId: "abc123",
+    domainName: "api.example.com",
+    httpMethod: "GET",
+    identity: {
+      sourceIp: "192.168.1.1",
+      userAgent: "test-agent",
+    },
+    path: "/api/users",
+    protocol: "HTTP/1.1",
+    requestId: "req-123",
+    stage: "prod",
+  },
   ...overrides,
 });
 
@@ -299,6 +333,110 @@ describe("LambdaRequest", () => {
       const req = createLambdaRequest(event, mockContext);
 
       expect(req.query).toEqual({});
+    });
+  });
+
+  describe("API Gateway REST API v1 events", () => {
+    it("creates request from API Gateway v1 event", () => {
+      const event = createMockV1Event();
+      const req = createLambdaRequest(event, mockContext);
+
+      expect(req).toBeInstanceOf(LambdaRequest);
+      expect(req.method).toBe("GET");
+      expect(req.url).toBe("/api/users");
+      expect(req.path).toBe("/api/users");
+    });
+
+    it("includes query string in URL from queryStringParameters", () => {
+      const event = createMockV1Event({
+        queryStringParameters: { page: "1", limit: "10" },
+      });
+      const req = createLambdaRequest(event, mockContext);
+
+      expect(req.url).toBe("/api/users?page=1&limit=10");
+      expect(req.path).toBe("/api/users");
+    });
+
+    it("handles POST method", () => {
+      const event = createMockV1Event({
+        httpMethod: "POST",
+        requestContext: {
+          ...createMockV1Event().requestContext,
+          httpMethod: "POST",
+        },
+      });
+      const req = createLambdaRequest(event, mockContext);
+
+      expect(req.method).toBe("POST");
+    });
+
+    it("sets remote address from identity.sourceIp", () => {
+      const event = createMockV1Event();
+      const req = createLambdaRequest(event, mockContext);
+
+      expect(req.socket.remoteAddress).toBe("192.168.1.1");
+    });
+
+    it("handles string body", async () => {
+      const event = createMockV1Event({
+        body: '{"name":"John"}',
+      });
+      const req = createLambdaRequest(event, mockContext);
+
+      const chunks: Buffer[] = [];
+      for await (const chunk of req) {
+        chunks.push(chunk as Buffer);
+      }
+      const body = Buffer.concat(chunks).toString();
+
+      expect(body).toBe('{"name":"John"}');
+    });
+
+    it("handles base64 encoded body", async () => {
+      const originalBody = '{"name":"John"}';
+      const base64Body = Buffer.from(originalBody).toString("base64");
+      const event = createMockV1Event({
+        body: base64Body,
+        isBase64Encoded: true,
+      });
+      const req = createLambdaRequest(event, mockContext);
+
+      const chunks: Buffer[] = [];
+      for await (const chunk of req) {
+        chunks.push(chunk as Buffer);
+      }
+      const body = Buffer.concat(chunks).toString();
+
+      expect(body).toBe('{"name":"John"}');
+    });
+
+    it("handles null body", async () => {
+      const event = createMockV1Event({
+        body: null,
+      });
+      const req = createLambdaRequest(event, mockContext);
+
+      const chunks: Buffer[] = [];
+      for await (const chunk of req) {
+        chunks.push(chunk as Buffer);
+      }
+
+      expect(chunks.length).toBe(0);
+    });
+
+    it("stores Lambda context for getCurrentInvokeUuid", () => {
+      const event = createMockV1Event();
+      const req = createLambdaRequest(event, mockContext);
+
+      expect(req._lambdaContext).toBe(mockContext);
+      expect(req._lambdaContext.awsRequestId).toBe("test-request-id-12345");
+    });
+
+    it("stores Lambda event for reference", () => {
+      const event = createMockV1Event();
+      const req = createLambdaRequest(event, mockContext);
+
+      expect(req._lambdaEvent).toBe(event);
     });
   });
 });

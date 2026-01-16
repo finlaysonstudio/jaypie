@@ -8,9 +8,11 @@ export {
   LambdaResponseStreaming,
 } from "./adapter/index.js";
 export type {
+  ApiGatewayV1Event,
   CreateLambdaHandlerOptions,
   FunctionUrlEvent,
   LambdaContext,
+  LambdaEvent,
   LambdaHandler,
   LambdaResponse,
   LambdaStreamHandler,
