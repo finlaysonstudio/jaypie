@@ -175,6 +175,22 @@ export class LambdaResponseBuffered extends Writable {
   // Express compatibility methods
   //
 
+  /**
+   * Express-style alias for getHeader().
+   * Used by middleware like decorateResponse that use res.get().
+   */
+  get(name: string): number | string | string[] | undefined {
+    return this.getHeader(name);
+  }
+
+  /**
+   * Express-style alias for setHeader().
+   * Used by middleware like decorateResponse that use res.set().
+   */
+  set(name: string, value: number | string | string[]): this {
+    return this.setHeader(name, value);
+  }
+
   status(code: number): this {
     this.statusCode = code;
     return this;
@@ -191,6 +207,26 @@ export class LambdaResponseBuffered extends Writable {
       return this.json(body);
     }
     this.end(body);
+    return this;
+  }
+
+  /**
+   * Add a field to the Vary response header.
+   * Used by CORS middleware to indicate response varies by Origin.
+   */
+  vary(field: string): this {
+    const existing = this.getHeader("vary");
+    if (!existing) {
+      this.setHeader("vary", field);
+    } else {
+      // Append to existing Vary header if field not already present
+      const fields = String(existing)
+        .split(",")
+        .map((f) => f.trim().toLowerCase());
+      if (!fields.includes(field.toLowerCase())) {
+        this.setHeader("vary", `${existing}, ${field}`);
+      }
+    }
     return this;
   }
 

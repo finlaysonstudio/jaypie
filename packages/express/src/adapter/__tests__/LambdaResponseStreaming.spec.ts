@@ -104,6 +104,34 @@ describe("LambdaResponseStreaming", () => {
 
       expect(res.hasHeader("x-custom")).toBe(false);
     });
+
+    it("get() is alias for getHeader()", () => {
+      const res = new LambdaResponseStreaming(mockResponseStream);
+      res.setHeader("x-custom", "value");
+
+      expect(res.get("x-custom")).toBe("value");
+      expect(res.get("X-Custom")).toBe("value"); // case-insensitive
+    });
+
+    it("get() returns undefined for missing header", () => {
+      const res = new LambdaResponseStreaming(mockResponseStream);
+
+      expect(res.get("x-missing")).toBeUndefined();
+    });
+
+    it("set() is alias for setHeader()", () => {
+      const res = new LambdaResponseStreaming(mockResponseStream);
+      res.set("x-custom", "value");
+
+      expect(res.getHeader("x-custom")).toBe("value");
+    });
+
+    it("set() returns this for chaining", () => {
+      const res = new LambdaResponseStreaming(mockResponseStream);
+      const result = res.set("x-custom", "value");
+
+      expect(result).toBe(res);
+    });
   });
 
   describe("headers proxy", () => {
@@ -152,6 +180,38 @@ describe("LambdaResponseStreaming", () => {
       const res = new LambdaResponseStreaming(mockResponseStream);
 
       expect(res.headers["x-missing"]).toBeUndefined();
+    });
+  });
+
+  describe("vary()", () => {
+    it("sets Vary header", () => {
+      const res = new LambdaResponseStreaming(mockResponseStream);
+      res.vary("Origin");
+
+      expect(res.getHeader("vary")).toBe("Origin");
+    });
+
+    it("appends to existing Vary header", () => {
+      const res = new LambdaResponseStreaming(mockResponseStream);
+      res.vary("Origin");
+      res.vary("Accept");
+
+      expect(res.getHeader("vary")).toBe("Origin, Accept");
+    });
+
+    it("does not duplicate existing field", () => {
+      const res = new LambdaResponseStreaming(mockResponseStream);
+      res.vary("Origin");
+      res.vary("origin"); // lowercase duplicate
+
+      expect(res.getHeader("vary")).toBe("Origin");
+    });
+
+    it("returns this for chaining", () => {
+      const res = new LambdaResponseStreaming(mockResponseStream);
+      const result = res.vary("Origin");
+
+      expect(result).toBe(res);
     });
   });
 
