@@ -1,6 +1,12 @@
 import autoExternal from "rollup-plugin-auto-external";
 import typescript from "@rollup/plugin-typescript";
 
+// Externals not caught by auto-external (peer deps + node: prefixed builtins)
+const external = [
+  "express",
+  /^node:/,
+];
+
 // Filter out TS2307 warnings for @jaypie/* packages (external workspace dependencies)
 const onwarn = (warning, defaultHandler) => {
   if (warning.plugin === "typescript" && warning.message.includes("@jaypie/")) {
@@ -12,6 +18,7 @@ const onwarn = (warning, defaultHandler) => {
 export default [
   // ES modules version
   {
+    external,
     input: "src/index.ts",
     output: {
       dir: "dist/esm",
@@ -30,6 +37,7 @@ export default [
   },
   // CommonJS version
   {
+    external,
     input: "src/index.ts",
     output: {
       dir: "dist/cjs",

@@ -170,6 +170,9 @@ function safeSendJson(res: Response, statusCode: number, data: unknown): void {
     res._chunks!.push(chunk);
     res._headersSent = true;
 
+    // Mark as ended so getResult() resolves immediately
+    (res as LambdaMockResponse & { _ended?: boolean })._ended = true;
+
     // Signal completion if a promise is waiting
     if (res._resolve) {
       res._resolve(res.buildResult!());
@@ -202,6 +205,9 @@ function safeSend(
       res._chunks!.push(chunk);
     }
     res._headersSent = true;
+
+    // Mark as ended so getResult() resolves immediately
+    (res as LambdaMockResponse & { _ended?: boolean })._ended = true;
 
     // Signal completion if a promise is waiting
     if (res._resolve) {
