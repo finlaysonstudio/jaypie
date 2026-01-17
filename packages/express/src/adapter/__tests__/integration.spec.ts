@@ -105,11 +105,10 @@ const createMockEvent = (
 // Tests
 //
 
-// NOTE: These integration tests are currently skipped due to an issue with
+// NOTE: These integration tests were previously skipped due to an issue with
 // Express's async finalhandler calling methods on a real ServerResponse
-// instead of our mock. The core adapter functionality is verified by unit tests.
-// TODO: Fix integration tests to properly mock Express's async behavior
-describe.skip("Lambda Adapter Integration", () => {
+// instead of our mock. Re-enabled to debug dd-trace compatibility issues.
+describe("Lambda Adapter Integration", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });

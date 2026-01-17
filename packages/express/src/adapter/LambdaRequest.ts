@@ -79,6 +79,16 @@ export class LambdaRequest extends Readable {
     this.headers = this.normalizeHeaders(options.headers);
     this.bodyBuffer = options.body ?? null;
 
+    // Parse query string from URL
+    const queryIndex = options.url.indexOf("?");
+    if (queryIndex !== -1) {
+      const queryString = options.url.slice(queryIndex + 1);
+      const params = new URLSearchParams(queryString);
+      for (const [key, value] of params) {
+        this.query[key] = value;
+      }
+    }
+
     // Store Lambda context
     this._lambdaContext = options.lambdaContext;
     this._lambdaEvent = options.lambdaEvent;
@@ -90,6 +100,19 @@ export class LambdaRequest extends Readable {
       remoteAddress: options.remoteAddress,
     };
     this.connection = this.socket;
+
+    // Schedule body push for next tick to ensure stream is ready
+    // This is needed for body parsers that consume the stream
+    if (this.bodyBuffer && this.bodyBuffer.length > 0) {
+      process.nextTick(() => {
+        if (!this.bodyPushed) {
+          this.push(this.bodyBuffer);
+          this.push(null);
+          this.bodyPushed = true;
+          this.complete = true;
+        }
+      });
+    }
   }
 
   //
@@ -212,6 +235,14 @@ export function createLambdaRequest(
     body = event.isBase64Encoded
       ? Buffer.from(event.body, "base64")
       : Buffer.from(event.body, "utf8");
+
+    // Add content-length header if not present (required for body parsers)
+    const hasContentLength = Object.keys(headers).some(
+      (k) => k.toLowerCase() === "content-length",
+    );
+    if (!hasContentLength) {
+      headers["content-length"] = String(body.length);
+    }
   }
 
   return new LambdaRequest({

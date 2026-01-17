@@ -47,6 +47,7 @@ export class LambdaResponseBuffered extends Writable {
   // Internal state exposed for direct manipulation by safe response methods
   // that need to bypass dd-trace interception of stream methods
   public _chunks: Buffer[] = [];
+  public _ended: boolean = false; // Track ended state since writableEnded is lost after prototype change
   public _headers: Map<string, string | string[]> = new Map();
   public _headersSent: boolean = false;
   public _resolve: ((result: LambdaResponse) => void) | null = null;
@@ -58,6 +59,33 @@ export class LambdaResponseBuffered extends Writable {
     if (kOutHeaders) {
       (this as Record<symbol, unknown>)[kOutHeaders] = Object.create(null);
     }
+
+    // CRITICAL: Define key methods as instance properties to survive Express's
+    // setPrototypeOf(res, app.response) in middleware/init.js which would
+    // otherwise replace our prototype with ServerResponse.prototype.
+    // Instance properties take precedence over prototype properties.
+    this.getHeader = this.getHeader.bind(this);
+    this.setHeader = this.setHeader.bind(this);
+    this.removeHeader = this.removeHeader.bind(this);
+    this.hasHeader = this.hasHeader.bind(this);
+    this.getHeaders = this.getHeaders.bind(this);
+    this.getHeaderNames = this.getHeaderNames.bind(this);
+    this.writeHead = this.writeHead.bind(this);
+    this.get = this.get.bind(this);
+    this.set = this.set.bind(this);
+    this.status = this.status.bind(this);
+    this.json = this.json.bind(this);
+    this.send = this.send.bind(this);
+    this.vary = this.vary.bind(this);
+    this.end = this.end.bind(this);
+    this.write = this.write.bind(this);
+    // Also bind internal Writable methods that are called via prototype chain
+    this._write = this._write.bind(this);
+    this._final = this._final.bind(this);
+    // Bind result-building methods
+    this.getResult = this.getResult.bind(this);
+    this.buildResult = this.buildResult.bind(this);
+    this.isBinaryContentType = this.isBinaryContentType.bind(this);
   }
 
   //
@@ -111,7 +139,8 @@ export class LambdaResponseBuffered extends Writable {
 
   getResult(): Promise<LambdaResponse> {
     return new Promise((resolve) => {
-      if (this.writableEnded) {
+      // Use _ended instead of writableEnded since Express's setPrototypeOf breaks the getter
+      if (this._ended) {
         resolve(this.buildResult());
       } else {
         this._resolve = resolve;
@@ -341,6 +370,7 @@ export class LambdaResponseBuffered extends Writable {
   }
 
   _final(callback: (error?: Error | null) => void): void {
+    this._ended = true;
     if (this._resolve) {
       this._resolve(this.buildResult());
     }

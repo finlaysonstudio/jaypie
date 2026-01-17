@@ -71,6 +71,30 @@ export class LambdaResponseStreaming extends Writable {
     if (kOutHeaders) {
       (this as Record<symbol, unknown>)[kOutHeaders] = Object.create(null);
     }
+
+    // CRITICAL: Define key methods as instance properties to survive Express's
+    // setPrototypeOf(res, app.response) in middleware/init.js which would
+    // otherwise replace our prototype with ServerResponse.prototype.
+    // Instance properties take precedence over prototype properties.
+    this.getHeader = this.getHeader.bind(this);
+    this.setHeader = this.setHeader.bind(this);
+    this.removeHeader = this.removeHeader.bind(this);
+    this.hasHeader = this.hasHeader.bind(this);
+    this.getHeaders = this.getHeaders.bind(this);
+    this.getHeaderNames = this.getHeaderNames.bind(this);
+    this.writeHead = this.writeHead.bind(this);
+    this.flushHeaders = this.flushHeaders.bind(this);
+    this.get = this.get.bind(this);
+    this.set = this.set.bind(this);
+    this.status = this.status.bind(this);
+    this.json = this.json.bind(this);
+    this.send = this.send.bind(this);
+    this.vary = this.vary.bind(this);
+    this.end = this.end.bind(this);
+    this.write = this.write.bind(this);
+    // Also bind internal Writable methods that are called via prototype chain
+    this._write = this._write.bind(this);
+    this._final = this._final.bind(this);
   }
 
   //
