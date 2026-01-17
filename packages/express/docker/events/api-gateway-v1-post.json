@@ -1,0 +1,18 @@
+{
+  "httpMethod": "POST",
+  "path": "/echo",
+  "headers": { "content-type": "application/json", "host": "localhost" },
+  "queryStringParameters": null,
+  "body": "{\"test\": \"data\", \"number\": 42}",
+  "isBase64Encoded": false,
+  "requestContext": {
+    "accountId": "123456789012",
+    "apiId": "test",
+    "httpMethod": "POST",
+    "identity": { "sourceIp": "127.0.0.1" },
+    "path": "/echo",
+    "protocol": "HTTP/1.1",
+    "requestId": "test-request-id",
+    "stage": "local"
+  }
+}

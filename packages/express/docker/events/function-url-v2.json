@@ -1,0 +1,28 @@
+{
+  "version": "2.0",
+  "rawPath": "/",
+  "rawQueryString": "",
+  "headers": { "content-type": "application/json", "host": "test.lambda-url.us-east-1.on.aws" },
+  "cookies": [],
+  "body": null,
+  "isBase64Encoded": false,
+  "requestContext": {
+    "accountId": "123456789012",
+    "apiId": "test",
+    "domainName": "test.lambda-url.us-east-1.on.aws",
+    "domainPrefix": "test",
+    "http": {
+      "method": "GET",
+      "path": "/",
+      "protocol": "HTTP/1.1",
+      "sourceIp": "127.0.0.1",
+      "userAgent": "curl/7.64.1"
+    },
+    "requestId": "test-request-id",
+    "routeKey": "$default",
+    "stage": "$default",
+    "time": "01/Jan/2024:00:00:00 +0000",
+    "timeEpoch": 1704067200000
+  },
+  "routeKey": "$default"
+}
