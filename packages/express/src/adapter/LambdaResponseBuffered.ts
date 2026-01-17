@@ -61,6 +61,51 @@ export class LambdaResponseBuffered extends Writable {
   }
 
   //
+  // Internal bypass methods - completely avoid prototype chain lookup
+  // These directly access _headers Map, safe from dd-trace interception
+  //
+
+  _internalGetHeader(name: string): string | undefined {
+    const value = this._headers.get(name.toLowerCase());
+    return value ? String(value) : undefined;
+  }
+
+  _internalSetHeader(name: string, value: string): void {
+    if (!this._headersSent) {
+      const lowerName = name.toLowerCase();
+      this._headers.set(lowerName, value);
+      // Also sync kOutHeaders for any code that expects it
+      if (kOutHeaders) {
+        const outHeaders = (
+          this as unknown as Record<symbol, Record<string, unknown>>
+        )[kOutHeaders];
+        if (outHeaders) {
+          outHeaders[lowerName] = [name, value];
+        }
+      }
+    }
+  }
+
+  _internalHasHeader(name: string): boolean {
+    return this._headers.has(name.toLowerCase());
+  }
+
+  _internalRemoveHeader(name: string): void {
+    if (!this._headersSent) {
+      const lowerName = name.toLowerCase();
+      this._headers.delete(lowerName);
+      if (kOutHeaders) {
+        const outHeaders = (
+          this as unknown as Record<symbol, Record<string, unknown>>
+        )[kOutHeaders];
+        if (outHeaders) {
+          delete outHeaders[lowerName];
+        }
+      }
+    }
+  }
+
+  //
   // Promise-based API for getting final result
   //
 

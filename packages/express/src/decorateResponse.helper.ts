@@ -14,9 +14,12 @@ interface DecorateResponseOptions {
   version?: string;
 }
 
-// Extended response type that may have _headers Map (Lambda adapter)
+// Extended response type that may have _headers Map and internal bypass methods (Lambda adapter)
 interface ExtendedResponse extends Response {
   _headers?: Map<string, string | string[]>;
+  // Internal bypass methods added for dd-trace compatibility
+  _internalGetHeader?: (name: string) => string | undefined;
+  _internalSetHeader?: (name: string, value: string) => void;
 }
 
 //
@@ -34,7 +37,11 @@ function safeGetHeader(
   name: string,
 ): string | undefined {
   try {
-    // Try direct _headers access first (Lambda adapter, avoids dd-trace)
+    // Try internal method first (completely bypasses dd-trace)
+    if (typeof res._internalGetHeader === "function") {
+      return res._internalGetHeader(name);
+    }
+    // Fall back to _headers Map access (Lambda adapter, avoids dd-trace)
     if (res._headers instanceof Map) {
       const value = res._headers.get(name.toLowerCase());
       return value ? String(value) : undefined;
@@ -66,7 +73,12 @@ function safeSetHeader(
   value: string,
 ): void {
   try {
-    // Try direct _headers access first (Lambda adapter, avoids dd-trace)
+    // Try internal method first (completely bypasses dd-trace)
+    if (typeof res._internalSetHeader === "function") {
+      res._internalSetHeader(name, value);
+      return;
+    }
+    // Fall back to _headers Map access (Lambda adapter, avoids dd-trace)
     if (res._headers instanceof Map) {
       res._headers.set(name.toLowerCase(), value);
       return;

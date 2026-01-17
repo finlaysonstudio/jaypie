@@ -55,8 +55,10 @@ export class LambdaResponseStreaming extends Writable {
     remoteAddress: "127.0.0.1",
   };
 
-  private _headers: Map<string, string | string[]> = new Map();
-  private _headersSent: boolean = false;
+  // Internal state exposed for direct manipulation by safe response methods
+  // that need to bypass dd-trace interception
+  public _headers: Map<string, string | string[]> = new Map();
+  public _headersSent: boolean = false;
   private _pendingWrites: PendingWrite[] = [];
   private _responseStream: ResponseStream;
   private _wrappedStream: ResponseStream | null = null;
@@ -68,6 +70,51 @@ export class LambdaResponseStreaming extends Writable {
     // dd-trace patches HTTP methods and expects this internal state.
     if (kOutHeaders) {
       (this as Record<symbol, unknown>)[kOutHeaders] = Object.create(null);
+    }
+  }
+
+  //
+  // Internal bypass methods - completely avoid prototype chain lookup
+  // These directly access _headers Map, safe from dd-trace interception
+  //
+
+  _internalGetHeader(name: string): string | undefined {
+    const value = this._headers.get(name.toLowerCase());
+    return value ? String(value) : undefined;
+  }
+
+  _internalSetHeader(name: string, value: string): void {
+    if (!this._headersSent) {
+      const lowerName = name.toLowerCase();
+      this._headers.set(lowerName, value);
+      // Also sync kOutHeaders for any code that expects it
+      if (kOutHeaders) {
+        const outHeaders = (
+          this as unknown as Record<symbol, Record<string, unknown>>
+        )[kOutHeaders];
+        if (outHeaders) {
+          outHeaders[lowerName] = [name, value];
+        }
+      }
+    }
+  }
+
+  _internalHasHeader(name: string): boolean {
+    return this._headers.has(name.toLowerCase());
+  }
+
+  _internalRemoveHeader(name: string): void {
+    if (!this._headersSent) {
+      const lowerName = name.toLowerCase();
+      this._headers.delete(lowerName);
+      if (kOutHeaders) {
+        const outHeaders = (
+          this as unknown as Record<symbol, Record<string, unknown>>
+        )[kOutHeaders];
+        if (outHeaders) {
+          delete outHeaders[lowerName];
+        }
+      }
     }
   }
 

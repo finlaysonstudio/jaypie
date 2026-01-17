@@ -107,6 +107,11 @@ interface LambdaMockResponse extends Response {
   _headersSent?: boolean;
   _resolve?: ((result: unknown) => void) | null;
   buildResult?: () => unknown;
+  // Internal bypass methods for dd-trace compatibility
+  _internalGetHeader?: (name: string) => string | undefined;
+  _internalSetHeader?: (name: string, value: string) => void;
+  _internalHasHeader?: (name: string) => boolean;
+  _internalRemoveHeader?: (name: string) => void;
 }
 
 type ExpressHandler<T> = (
@@ -151,8 +156,13 @@ function isLambdaMockResponse(res: Response): res is LambdaMockResponse {
  */
 function safeSendJson(res: Response, statusCode: number, data: unknown): void {
   if (isLambdaMockResponse(res)) {
-    // Direct internal state manipulation - bypasses dd-trace completely
-    res._headers!.set("content-type", "application/json");
+    // Use internal method to set header (completely bypasses dd-trace)
+    if (typeof res._internalSetHeader === "function") {
+      res._internalSetHeader("content-type", "application/json");
+    } else {
+      // Fall back to direct _headers manipulation
+      res._headers!.set("content-type", "application/json");
+    }
     res.statusCode = statusCode;
 
     // Directly push to chunks array instead of using stream write/end
