@@ -346,7 +346,8 @@ export class LambdaResponseBuffered extends Writable {
 
   public buildResult(): LambdaResponse {
     const body = Buffer.concat(this._chunks);
-    const contentType = (this.getHeader("content-type") as string) || "";
+    // Use direct _headers access to bypass dd-trace interception
+    const contentType = (this._headers.get("content-type") as string) || "";
 
     // Determine if response should be base64 encoded
     const isBase64Encoded = this.isBinaryContentType(contentType);
