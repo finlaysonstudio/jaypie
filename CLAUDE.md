@@ -80,6 +80,8 @@ npm test                    # Run all tests in non-watch mode (vitest run)
 npm test -w <package-name>  # Run tests for specific workspace package
 ```
 Do not execute `vitest` without `vitest run`. By default `vitest` executes with `watch` and does not terminate.
+
+**Local Lambda Testing**: `packages/express/docker/` provides Docker and SAM CLI setups for testing the Express-to-Lambda adapter locally. See the directory's CLAUDE.md for details.
 ### Building
 ```bash
 npm run build               # Build all workspace packages
