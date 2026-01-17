@@ -556,12 +556,14 @@ function expressHandler<T>(
         );
       }
     } catch (error) {
-      log.fatal("Express encountered an error while sending the response");
-      log.var({ responseError: error });
-      // Log full stack trace for debugging
-      if (error instanceof Error && error.stack) {
-        log.error(error.stack);
+      // Use console.error for raw stack trace to ensure it appears in CloudWatch
+      if (error instanceof Error) {
+        console.error("Express response error stack trace:", error.stack);
       }
+      log.fatal(
+        `Express encountered an error while sending the response: ${error instanceof Error ? error.message : String(error)}`,
+      );
+      log.var({ responseError: error });
     }
 
     // Log response
