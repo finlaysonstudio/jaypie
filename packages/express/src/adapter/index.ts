@@ -109,6 +109,7 @@ export function createLambdaHandler(
     event: LambdaEvent,
     context: LambdaContext,
   ): Promise<LambdaResponse> => {
+    let result: LambdaResponse | undefined;
     try {
       // Set current invoke for getCurrentInvokeUuid
       setCurrentInvoke(event, context);
@@ -122,8 +123,44 @@ export function createLambdaHandler(
       // Run Express app
       await runExpressApp(app, req, res);
 
-      // Return Lambda response
-      return res.getResult();
+      // Get Lambda response - await explicitly to ensure we have the result
+      result = await res.getResult();
+
+      // Debug: Log the response before returning
+      console.log(
+        "[createLambdaHandler] Returning response:",
+        JSON.stringify({
+          statusCode: result.statusCode,
+          headers: result.headers,
+          bodyLength: result.body?.length,
+          isBase64Encoded: result.isBase64Encoded,
+        }),
+      );
+
+      return result;
+    } catch (error) {
+      // Log any unhandled errors
+      console.error("[createLambdaHandler] Unhandled error:", error);
+      if (error instanceof Error) {
+        console.error("[createLambdaHandler] Stack:", error.stack);
+      }
+
+      // Return a proper error response instead of throwing
+      return {
+        statusCode: 500,
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          errors: [
+            {
+              status: 500,
+              title: "Internal Server Error",
+              detail:
+                error instanceof Error ? error.message : "Unknown error occurred",
+            },
+          ],
+        }),
+        isBase64Encoded: false,
+      };
     } finally {
       // Clear current invoke context
       clearCurrentInvoke();
