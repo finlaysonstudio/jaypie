@@ -333,18 +333,19 @@ export class LambdaResponseStreaming extends Writable {
   /**
    * Add a field to the Vary response header.
    * Used by CORS middleware to indicate response varies by Origin.
+   * Uses direct _headers access to bypass dd-trace interception.
    */
   vary(field: string): this {
-    const existing = this.getHeader("vary");
+    const existing = this._headers.get("vary");
     if (!existing) {
-      this.setHeader("vary", field);
+      this._headers.set("vary", field);
     } else {
       // Append to existing Vary header if field not already present
       const fields = String(existing)
         .split(",")
         .map((f) => f.trim().toLowerCase());
       if (!fields.includes(field.toLowerCase())) {
-        this.setHeader("vary", `${existing}, ${field}`);
+        this._headers.set("vary", `${existing}, ${field}`);
       }
     }
     return this;
