@@ -180,37 +180,41 @@ export class LambdaResponseBuffered extends Writable {
   /**
    * Proxy for direct header access (e.g., res.headers['content-type']).
    * Required for compatibility with middleware like helmet that access headers directly.
+   * Uses direct _headers access to bypass dd-trace interception.
    */
   get headers(): Record<string, string | string[] | undefined> {
     return new Proxy(
       {},
       {
         deleteProperty: (_target, prop) => {
-          this.removeHeader(String(prop));
+          this._headers.delete(String(prop).toLowerCase());
           return true;
         },
         get: (_target, prop) => {
           if (typeof prop === "symbol") return undefined;
-          return this.getHeader(String(prop));
+          return this._headers.get(String(prop).toLowerCase());
         },
         getOwnPropertyDescriptor: (_target, prop) => {
-          if (this.hasHeader(String(prop))) {
+          const lowerProp = String(prop).toLowerCase();
+          if (this._headers.has(lowerProp)) {
             return {
               configurable: true,
               enumerable: true,
-              value: this.getHeader(String(prop)),
+              value: this._headers.get(lowerProp),
             };
           }
           return undefined;
         },
         has: (_target, prop) => {
-          return this.hasHeader(String(prop));
+          return this._headers.has(String(prop).toLowerCase());
         },
         ownKeys: () => {
-          return this.getHeaderNames();
+          return Array.from(this._headers.keys());
         },
         set: (_target, prop, value) => {
-          this.setHeader(String(prop), value);
+          if (!this._headersSent) {
+            this._headers.set(String(prop).toLowerCase(), value);
+          }
           return true;
         },
       },
@@ -237,9 +241,10 @@ export class LambdaResponseBuffered extends Writable {
     }
 
     if (headersToSet) {
+      // Use direct _headers access to bypass dd-trace interception
       for (const [key, value] of Object.entries(headersToSet)) {
         if (value !== undefined) {
-          this.setHeader(key, value as string);
+          this._headers.set(key.toLowerCase(), String(value));
         }
       }
     }
@@ -283,7 +288,8 @@ export class LambdaResponseBuffered extends Writable {
   }
 
   json(data: unknown): this {
-    this.setHeader("content-type", "application/json");
+    // Use direct _headers access to bypass dd-trace interception
+    this._headers.set("content-type", "application/json");
     this.end(JSON.stringify(data));
     return this;
   }
