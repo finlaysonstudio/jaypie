@@ -11,8 +11,8 @@ Resources:
   ExpressFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: ../
-      Handler: docker/handler.handler
+      CodeUri: ./
+      Handler: handler.handler
       Events:
         Root:
           Type: Api
@@ -24,12 +24,3 @@ Resources:
           Properties:
             Path: /{proxy+}
             Method: ANY
-    Metadata:
-      BuildMethod: esbuild
-      BuildProperties:
-        Minify: false
-        Target: es2022
-        EntryPoints:
-          - docker/handler.mjs
-        External:
-          - express
