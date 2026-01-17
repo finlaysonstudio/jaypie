@@ -9,6 +9,10 @@ import type { LambdaResponse } from "./types.js";
 // Constants
 //
 
+// Symbol to identify Lambda mock responses. Uses Symbol.for() to ensure
+// the same symbol is used across bundles/realms. Survives prototype manipulation.
+export const JAYPIE_LAMBDA_MOCK = Symbol.for("@jaypie/express/LambdaMock");
+
 // Get Node's internal kOutHeaders symbol from ServerResponse prototype.
 // This is needed for compatibility with Datadog dd-trace instrumentation,
 // which patches HTTP methods and expects this internal state to exist.
@@ -54,6 +58,9 @@ export class LambdaResponseBuffered extends Writable {
 
   constructor() {
     super();
+    // Mark as Lambda mock response for identification in expressHandler
+    (this as Record<symbol, unknown>)[JAYPIE_LAMBDA_MOCK] = true;
+
     // Initialize Node's internal kOutHeaders for dd-trace compatibility.
     // dd-trace patches HTTP methods and expects this internal state.
     if (kOutHeaders) {

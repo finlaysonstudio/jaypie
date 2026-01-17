@@ -5,6 +5,7 @@ import { force, getHeaderFrom, HTTP, JAYPIE, jaypieHandler } from "@jaypie/kit";
 import { log as publicLogger } from "@jaypie/logger";
 import { DATADOG, hasDatadogEnv, submitMetric } from "@jaypie/datadog";
 
+import { JAYPIE_LAMBDA_MOCK } from "./adapter/LambdaResponseBuffered.js";
 import getCurrentInvokeUuid from "./getCurrentInvokeUuid.adapter.js";
 import decorateResponse from "./decorateResponse.helper.js";
 import summarizeRequest from "./summarizeRequest.helper.js";
@@ -139,14 +140,10 @@ const logger = publicLogger as unknown as ExtendedLogger;
 
 /**
  * Check if response is a Lambda mock response with direct internal access.
+ * Uses Symbol marker to survive prototype chain modifications from Express and dd-trace.
  */
 function isLambdaMockResponse(res: Response): res is LambdaMockResponse {
-  const mock = res as LambdaMockResponse;
-  return (
-    mock._headers instanceof Map &&
-    Array.isArray(mock._chunks) &&
-    typeof mock.buildResult === "function"
-  );
+  return (res as unknown as Record<symbol, unknown>)[JAYPIE_LAMBDA_MOCK] === true;
 }
 
 /**
@@ -569,12 +566,19 @@ function expressHandler<T>(
       }
     } catch (error) {
       // Use console.error for raw stack trace to ensure it appears in CloudWatch
-      if (error instanceof Error) {
-        console.error("Express response error stack trace:", error.stack);
-      }
-      log.fatal(
-        `Express encountered an error while sending the response: ${error instanceof Error ? error.message : String(error)}`,
-      );
+      // Handle both Error objects and plain thrown values
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : typeof error === "object" && error !== null
+            ? JSON.stringify(error)
+            : String(error);
+      const errorStack =
+        error instanceof Error
+          ? error.stack
+          : new Error("Stack trace").stack?.replace("Error: Stack trace", `Error: ${errorMessage}`);
+      console.error("Express response error stack trace:", errorStack);
+      log.fatal(`Express encountered an error while sending the response: ${errorMessage}`);
       log.var({ responseError: error });
     }
 
