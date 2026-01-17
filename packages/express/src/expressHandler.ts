@@ -558,6 +558,10 @@ function expressHandler<T>(
     } catch (error) {
       log.fatal("Express encountered an error while sending the response");
       log.var({ responseError: error });
+      // Log full stack trace for debugging
+      if (error instanceof Error && error.stack) {
+        log.error(error.stack);
+      }
     }
 
     // Log response
