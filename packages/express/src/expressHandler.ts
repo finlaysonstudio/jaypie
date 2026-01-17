@@ -174,6 +174,8 @@ function safeSendJson(res: Response, statusCode: number, data: unknown): void {
     if (res._resolve) {
       res._resolve(res.buildResult!());
     }
+    // Emit "finish" event so runExpressApp's promise resolves
+    res.emit("finish");
     return;
   }
   // Fall back to standard Express methods for real responses
@@ -204,6 +206,8 @@ function safeSend(
     if (res._resolve) {
       res._resolve(res.buildResult!());
     }
+    // Emit "finish" event so runExpressApp's promise resolves
+    res.emit("finish");
     return;
   }
   // Fall back to standard Express methods for real responses
