@@ -5,7 +5,7 @@ sidebar_position: 1
 # Development Process
 
 
-**Prerequisites:** Git, Node.js 20+, npm
+**Prerequisites:** Git, Node.js 22+, npm
 
 ## Overview
 

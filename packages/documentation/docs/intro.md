@@ -7,7 +7,7 @@ slug: /
 
 TypeScript framework for AWS Lambda and Express applications with CDK constructs and Datadog observability.
 
-**Stack:** AWS Lambda, CDK, Express.js, Datadog, TypeScript, Node.js 20-25
+**Stack:** AWS Lambda, CDK, Express.js, Datadog, TypeScript, Node.js 22-25
 
 ## Documentation
 

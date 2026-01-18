@@ -16,8 +16,9 @@ export default [
     ignores: [
       "**/prompts/templates/**",
       "LOCAL/**",
-      "packages/documentation/build/**",
       "packages/documentation/.docusaurus/**",
+      "packages/documentation/build/**",
+      "packages/express/docker/**",
     ],
   },
 

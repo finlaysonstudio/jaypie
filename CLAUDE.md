@@ -10,7 +10,7 @@
 - Additional packages provide special functions
 ## Technology Stack
 - **Language**: TypeScript with ESM modules
-- **Runtime**: Node.js 20, 22, 24, 25 (tested across all versions)
+- **Runtime**: Node.js 22, 24, 25 (tested across all versions)
 - **Package Manager**: npm with workspaces (monorepo)
 - **Testing**: Vitest
 - **Building**: Rollup with vite-plugin-dts for type declarations
@@ -46,7 +46,7 @@
 ## CI/CD Workflows
 - **npm-check.yml**: Runs on `feat/*`, `fix/*`, `devin/*` branches
   - Lint, typecheck, and unit tests in parallel
-  - Tests across Node.js 20, 22, 24, 25
+  - Tests across Node.js 22, 24, 25
   - Optional Datadog test tracing
   - Conditional LLM client tests when `packages/llm` changes
 - **npm-deploy.yml**: Runs on `main` branch and `deploy-*`/`rc-*` tags

@@ -383,7 +383,7 @@ jobs:
       - name: Setup Node.js and Cache
         uses: ./.github/actions/setup-node-and-cache
         with:
-          node-version: 20
+          node-version: 24
 
       - name: Install and Build
         uses: ./.github/actions/npm-install-build
@@ -404,7 +404,7 @@ jobs:
         id: setup-cache
         uses: ./.github/actions/setup-node-and-cache
         with:
-          node-version: 20
+          node-version: 24
 
       - name: Install dependencies
         if: steps.setup-cache.outputs.node-modules-cache-hit != 'true'
@@ -421,7 +421,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: [20.x, 22.x]
+        node-version: [22.x, 24.x]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -500,7 +500,7 @@ jobs:
       - name: Setup Node.js and Cache
         uses: ./.github/actions/setup-node-and-cache
         with:
-          node-version: 20
+          node-version: 24
 
       - name: Install and Build
         uses: ./.github/actions/npm-install-build
@@ -521,7 +521,7 @@ jobs:
         id: setup-cache
         uses: ./.github/actions/setup-node-and-cache
         with:
-          node-version: 20
+          node-version: 24
 
       - name: Install dependencies
         if: steps.setup-cache.outputs.node-modules-cache-hit != 'true'
@@ -538,7 +538,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: [20.x, 22.x]
+        node-version: [22.x, 24.x]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -626,7 +626,7 @@ jobs:
       - name: Setup Node.js and Cache
         uses: ./.github/actions/setup-node-and-cache
         with:
-          node-version: 20
+          node-version: 24
 
       - name: Install and Build
         uses: ./.github/actions/npm-install-build
@@ -647,7 +647,7 @@ jobs:
         id: setup-cache
         uses: ./.github/actions/setup-node-and-cache
         with:
-          node-version: 20
+          node-version: 24
 
       - name: Install dependencies
         if: steps.setup-cache.outputs.node-modules-cache-hit != 'true'
@@ -664,7 +664,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: [20.x, 22.x]
+        node-version: [22.x, 24.x]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -716,7 +716,7 @@ jobs:
         id: setup-cache
         uses: ./.github/actions/setup-node-and-cache
         with:
-          node-version: 20
+          node-version: 24
 
       - name: Install dependencies
         if: steps.setup-cache.outputs.node-modules-cache-hit != 'true'
@@ -733,7 +733,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: [20.x, 22.x]
+        node-version: [22.x, 24.x]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -812,7 +812,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
 
       - name: Configure Git
         run: |

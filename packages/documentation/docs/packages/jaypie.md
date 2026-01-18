@@ -5,7 +5,7 @@ sidebar_position: 1
 # jaypie
 
 
-**Prerequisites:** Node.js 20+
+**Prerequisites:** Node.js 22+
 
 ## Overview
 
