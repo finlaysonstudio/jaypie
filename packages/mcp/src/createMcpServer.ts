@@ -1554,7 +1554,7 @@ export function createMcpServer(
         .string()
         .optional()
         .describe(
-          'CloudWatch filter pattern (e.g., \'ERROR\', \'{ $.level = "error" }\')',
+          "CloudWatch filter pattern (e.g., 'ERROR', '{ $.level = \"error\" }')",
         ),
       startTime: z
         .string()
@@ -1631,11 +1631,9 @@ export function createMcpServer(
         content: [
           {
             type: "text" as const,
-            text: [
-              `Found ${events.length} log events:`,
-              "",
-              formatted,
-            ].join("\n"),
+            text: [`Found ${events.length} log events:`, "", formatted].join(
+              "\n",
+            ),
           },
         ],
       };

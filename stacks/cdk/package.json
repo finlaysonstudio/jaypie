@@ -11,6 +11,8 @@
     "cdk": "cdk",
     "deploy": "cdk deploy",
     "diff": "cdk diff",
+    "format": "eslint --fix --quiet .",
+    "lint": "eslint --quiet .",
     "synth": "cdk synth",
     "test": "vitest run .",
     "typecheck": "tsc --noEmit"

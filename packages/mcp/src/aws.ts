@@ -205,7 +205,10 @@ function parseAwsError(
   if (stderr.includes("ExpiredToken") || stderr.includes("Token has expired")) {
     return "AWS credentials have expired. Run 'aws sso login' or refresh your credentials.";
   }
-  if (stderr.includes("NoCredentialProviders") || stderr.includes("Unable to locate credentials")) {
+  if (
+    stderr.includes("NoCredentialProviders") ||
+    stderr.includes("Unable to locate credentials")
+  ) {
     return "No AWS credentials found. Configure credentials with 'aws configure' or 'aws sso login'.";
   }
   if (stderr.includes("AccessDenied") || stderr.includes("Access Denied")) {
@@ -216,14 +219,21 @@ function parseAwsError(
   }
   if (stderr.includes("ValidationException")) {
     const match = stderr.match(/ValidationException[^:]*:\s*(.+)/);
-    return match ? `Validation error: ${match[1].trim()}` : "Validation error in request parameters.";
+    return match
+      ? `Validation error: ${match[1].trim()}`
+      : "Validation error in request parameters.";
   }
-  if (stderr.includes("ThrottlingException") || stderr.includes("Rate exceeded")) {
+  if (
+    stderr.includes("ThrottlingException") ||
+    stderr.includes("Rate exceeded")
+  ) {
     return "AWS API rate limit exceeded. Wait a moment and try again.";
   }
   if (stderr.includes("InvalidParameterValue")) {
     const match = stderr.match(/InvalidParameterValue[^:]*:\s*(.+)/);
-    return match ? `Invalid parameter: ${match[1].trim()}` : "Invalid parameter value provided.";
+    return match
+      ? `Invalid parameter: ${match[1].trim()}`
+      : "Invalid parameter value provided.";
   }
   return stderr.trim();
 }
@@ -563,7 +573,10 @@ export async function scanDynamoDB(
     args.push("--filter-expression", options.filterExpression);
   }
   if (options.expressionAttributeValues) {
-    args.push("--expression-attribute-values", options.expressionAttributeValues);
+    args.push(
+      "--expression-attribute-values",
+      options.expressionAttributeValues,
+    );
   }
   if (options.limit) {
     args.push("--limit", String(options.limit));
@@ -583,9 +596,12 @@ export async function queryDynamoDB(
   logger: Logger = nullLogger,
 ): Promise<AwsCommandResult<{ Items: Record<string, unknown>[] }>> {
   const args = [
-    "--table-name", options.tableName,
-    "--key-condition-expression", options.keyConditionExpression,
-    "--expression-attribute-values", options.expressionAttributeValues,
+    "--table-name",
+    options.tableName,
+    "--key-condition-expression",
+    options.keyConditionExpression,
+    "--expression-attribute-values",
+    options.expressionAttributeValues,
   ];
   if (options.indexName) {
     args.push("--index-name", options.indexName);
@@ -657,12 +673,16 @@ export async function getSQSQueueAttributes(
 export async function receiveSQSMessage(
   options: SQSReceiveMessageOptions,
   logger: Logger = nullLogger,
-): Promise<AwsCommandResult<{ Messages: Array<{
-  MessageId: string;
-  ReceiptHandle: string;
-  Body: string;
-  Attributes?: Record<string, string>;
-}> }>> {
+): Promise<
+  AwsCommandResult<{
+    Messages: Array<{
+      MessageId: string;
+      ReceiptHandle: string;
+      Body: string;
+      Attributes?: Record<string, string>;
+    }>;
+  }>
+> {
   const args = ["--queue-url", options.queueUrl];
   if (options.maxNumberOfMessages) {
     args.push("--max-number-of-messages", String(options.maxNumberOfMessages));

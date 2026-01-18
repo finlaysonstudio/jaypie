@@ -325,7 +325,8 @@ aws_access_key_id = AKIAIOSFODNN7EXAMPLE
         mockSuccessfulSpawn(mockSpawn, mockExecutions);
 
         const result = await listStepFunctionExecutions({
-          stateMachineArn: "arn:aws:states:us-east-1:123456789:stateMachine:test",
+          stateMachineArn:
+            "arn:aws:states:us-east-1:123456789:stateMachine:test",
         });
 
         expect(result.success).toBe(true);
@@ -336,7 +337,8 @@ aws_access_key_id = AKIAIOSFODNN7EXAMPLE
         mockSuccessfulSpawn(mockSpawn, { executions: [] });
 
         await listStepFunctionExecutions({
-          stateMachineArn: "arn:aws:states:us-east-1:123456789:stateMachine:test",
+          stateMachineArn:
+            "arn:aws:states:us-east-1:123456789:stateMachine:test",
           statusFilter: "RUNNING",
         });
 
@@ -370,7 +372,8 @@ aws_access_key_id = AKIAIOSFODNN7EXAMPLE
           Functions: [
             {
               FunctionName: "my-function",
-              FunctionArn: "arn:aws:lambda:us-east-1:123456789:function:my-function",
+              FunctionArn:
+                "arn:aws:lambda:us-east-1:123456789:function:my-function",
               Runtime: "nodejs20.x",
               MemorySize: 128,
               CodeSize: 1024,
@@ -389,9 +392,30 @@ aws_access_key_id = AKIAIOSFODNN7EXAMPLE
       it("filters by function name prefix", async () => {
         const mockFunctions = {
           Functions: [
-            { FunctionName: "my-function-a", Runtime: "nodejs20.x", MemorySize: 128, CodeSize: 1024, LastModified: "", FunctionArn: "" },
-            { FunctionName: "my-function-b", Runtime: "nodejs20.x", MemorySize: 128, CodeSize: 1024, LastModified: "", FunctionArn: "" },
-            { FunctionName: "other-function", Runtime: "nodejs20.x", MemorySize: 128, CodeSize: 1024, LastModified: "", FunctionArn: "" },
+            {
+              FunctionName: "my-function-a",
+              Runtime: "nodejs20.x",
+              MemorySize: 128,
+              CodeSize: 1024,
+              LastModified: "",
+              FunctionArn: "",
+            },
+            {
+              FunctionName: "my-function-b",
+              Runtime: "nodejs20.x",
+              MemorySize: 128,
+              CodeSize: 1024,
+              LastModified: "",
+              FunctionArn: "",
+            },
+            {
+              FunctionName: "other-function",
+              Runtime: "nodejs20.x",
+              MemorySize: 128,
+              CodeSize: 1024,
+              LastModified: "",
+              FunctionArn: "",
+            },
           ],
         };
         mockSuccessfulSpawn(mockSpawn, mockFunctions);
@@ -508,7 +532,8 @@ aws_access_key_id = AKIAIOSFODNN7EXAMPLE
           Stacks: [
             {
               StackName: "my-stack",
-              StackId: "arn:aws:cloudformation:us-east-1:123456789:stack/my-stack",
+              StackId:
+                "arn:aws:cloudformation:us-east-1:123456789:stack/my-stack",
               StackStatus: "CREATE_COMPLETE",
               CreationTime: "2024-01-15T10:00:00Z",
             },
