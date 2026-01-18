@@ -24,17 +24,25 @@ stacks/cdk/
 
 ### DocumentationStack
 
-Deploys the Jaypie documentation site to jaypie.net.
+Deploys the Jaypie documentation site. The hostname is **environment-aware**:
+- **production**: `jaypie.net` (apex domain)
+- **sandbox**: `sandbox.jaypie.net`
+- **development**: `development.jaypie.net`
+
+This is handled automatically by `envHostname()` from `@jaypie/constructs`, which reads `PROJECT_ENV` to determine the appropriate hostname prefix.
 
 **Resources Created:**
 - S3 bucket for static website hosting
 - CloudFront distribution with SSL
-- Route53 DNS records for jaypie.net apex
+- Route53 DNS records
 - IAM role for GitHub Actions deployment (if CDK_ENV_REPO is set)
 
-**Environment Variables:**
-- `PROJECT_ENV` - Environment (production, sandbox, etc.)
+**Critical Environment Variables:**
+- `PROJECT_ENV` - **Required**. Determines the deployment hostname (production, sandbox, development)
+- `CDK_ENV_HOSTED_ZONE` - Route53 hosted zone (default: "jaypie.net")
 - `PROJECT_KEY` - Project identifier
+- `PROJECT_SPONSOR` - Organization name
+- `PROJECT_NONCE` - Unique resource identifier
 - `CDK_DEFAULT_ACCOUNT` - AWS account ID
 - `CDK_DEFAULT_REGION` - AWS region
 - `CDK_ENV_REPO` - GitHub repository for deploy role (e.g., "finlaysonstudio/jaypie")
@@ -148,12 +156,15 @@ Variables are configured at different levels in GitHub Settings:
 | `PROJECT_SERVICE` | Service name | `stacks` |
 
 #### Environment Level
-| Variable | Description | Required |
-|----------|-------------|----------|
-| `AWS_ROLE_ARN` | IAM role ARN for OIDC | Yes |
-| `DATADOG_API_KEY_ARN` | Datadog API key ARN | No |
-| `PROJECT_ENV` | Environment identifier | Yes |
-| `PROJECT_NONCE` | Unique resource identifier | No |
+
+**CRITICAL**: `PROJECT_ENV` must be configured for each GitHub environment. This determines the deployment hostname (e.g., `sandbox` → `sandbox.jaypie.net`, `production` → `jaypie.net`).
+
+| Variable | Description | Required | Example Values |
+|----------|-------------|----------|----------------|
+| `AWS_ROLE_ARN` | IAM role ARN for OIDC | Yes | `arn:aws:iam::123456789012:role/deploy-role` |
+| `DATADOG_API_KEY_ARN` | Datadog API key ARN | No | |
+| `PROJECT_ENV` | Environment identifier | **Yes** | `sandbox`, `development`, `production` |
+| `PROJECT_NONCE` | Unique resource identifier | No | `abc123` |
 
 #### Stack-Specific Variables (Environment Level)
 | Variable | Description | Stack |
@@ -202,8 +213,30 @@ Add to workflow:
 
 3. **Hosted Zone**: Ensure `jaypie.net` hosted zone exists in Route53
 
+## Troubleshooting
+
+### Stack deploys to wrong hostname (e.g., production apex instead of sandbox subdomain)
+
+**Cause**: `PROJECT_ENV` is not set or is set incorrectly in the GitHub environment.
+
+**Solution**: Ensure each GitHub environment has `PROJECT_ENV` configured:
+1. Go to GitHub Settings → Environments
+2. Select the environment (sandbox, development, production)
+3. Add/verify the `PROJECT_ENV` variable matches the environment name
+
+### CDK can't find stack
+
+**Cause**: Using the class name instead of the stack ID.
+
+**Solution**: Use the stack ID from `bin/app.ts`. For example:
+```typescript
+new DocumentationStack(app, "JaypieDocumentation");  // Stack ID is "JaypieDocumentation"
+```
+Deploy with: `cdk deploy JaypieDocumentation`
+
 ## Notes
 
 - This package is `private: true` and not published to npm
 - Uses `@jaypie/constructs` for consistent infrastructure patterns
 - All stacks extend JaypieAppStack for standard naming and tagging
+- Stacks use `envHostname()` from `@jaypie/constructs` for environment-aware hostnames

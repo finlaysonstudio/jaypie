@@ -559,6 +559,47 @@ new AppStack(app, "AppStack");  // "AppStack" is the stack ID
 
 If you rename the stack ID (e.g., to "MyProjectAppStack" for clarity in AWS), update all deploy workflows to match. Mismatched names cause "No stacks match the name(s)" errors.
 
+## Environment-Aware Hostnames
+
+Jaypie CDK constructs use `envHostname()` from `@jaypie/constructs` to determine deployment hostnames based on `PROJECT_ENV`:
+
+| `PROJECT_ENV` | Example Hostname |
+|---------------|------------------|
+| `production` | `example.com` (apex domain) |
+| `sandbox` | `sandbox.example.com` |
+| `development` | `development.example.com` |
+| `personal` | `personal.example.com` |
+
+:::caution Critical Configuration
+If `PROJECT_ENV` is not set or is set incorrectly in the GitHub environment, deployments may target the wrong hostname (e.g., deploying sandbox changes to production apex).
+:::
+
+### How It Works
+
+1. The `setup-environment` action reads `${{ vars.PROJECT_ENV }}` from the GitHub environment
+2. This is exported as `PROJECT_ENV` to `$GITHUB_ENV`
+3. CDK constructs read `process.env.PROJECT_ENV` via `envHostname()`
+4. For production, the environment prefix is omitted (apex domain)
+5. For all other environments, the prefix is prepended
+
+### Using envHostname in Stacks
+
+```typescript
+import { envHostname, JaypieAppStack, JaypieStaticWebBucket } from "@jaypie/constructs";
+
+export class MyStack extends JaypieAppStack {
+  constructor(scope: Construct, id: string) {
+    super(scope, id);
+
+    const zone = process.env.CDK_ENV_HOSTED_ZONE ?? "example.com";
+    // Returns "example.com" for production, "sandbox.example.com" for sandbox
+    const host = envHostname({ domain: zone });
+
+    new JaypieStaticWebBucket(this, "Bucket", { host, zone });
+  }
+}
+```
+
 ## AWS Integration
 
 Use OIDC authentication with `aws-actions/configure-aws-credentials@v4`:
@@ -607,6 +648,14 @@ Use `npm run lint` and `npm run test`. Verify the test script uses `vitest run` 
 1. Verify AWS credentials configured
 2. Check stack name matches between CDK and workflow
 3. Review CloudFormation events for specific errors
+
+### Deployment Targets Wrong Hostname
+
+If sandbox deploys to production URL or vice versa:
+1. Go to GitHub Settings → Environments
+2. Select the environment (sandbox, development, production)
+3. Verify `PROJECT_ENV` variable exists and matches the environment name exactly
+4. Ensure the CDK stack uses `envHostname()` rather than hardcoded hostnames
 
 ### Test Matrix Fails on Specific Node Version
 

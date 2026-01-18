@@ -308,6 +308,34 @@ new AppStack(app, "AppStack");  // "AppStack" is the stack ID
 
 If you rename the stack ID (e.g., to "MyProjectAppStack" for clarity in AWS), update all deploy workflows to match. Mismatched names cause "No stacks match the name(s)" errors.
 
+## Environment-Aware Hostnames
+
+Jaypie CDK constructs use `envHostname()` from `@jaypie/constructs` to determine deployment hostnames based on `PROJECT_ENV`:
+
+| `PROJECT_ENV` | Example Hostname |
+|---------------|------------------|
+| `production` | `example.com` (apex domain) |
+| `sandbox` | `sandbox.example.com` |
+| `development` | `development.example.com` |
+| `personal` | `personal.example.com` |
+
+**CRITICAL**: If `PROJECT_ENV` is not set or is set incorrectly in the GitHub environment, deployments may target the wrong hostname (e.g., deploying sandbox changes to production apex).
+
+### How It Works
+
+1. The `setup-environment` action reads `${{ vars.PROJECT_ENV }}` from the GitHub environment
+2. This is exported as `PROJECT_ENV` to `$GITHUB_ENV`
+3. CDK constructs read `process.env.PROJECT_ENV` via `envHostname()`
+4. For production, the environment prefix is omitted (apex domain)
+5. For all other environments, the prefix is prepended
+
+### Troubleshooting Wrong Hostname
+
+If deployment targets the wrong hostname:
+1. Go to GitHub Settings → Environments
+2. Select the environment (sandbox, development, production)
+3. Verify `PROJECT_ENV` variable matches the environment name exactly
+
 ## Integrations
 
 ### AWS
