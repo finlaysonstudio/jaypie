@@ -33,37 +33,28 @@ describe("JaypieDynamoDb", () => {
   });
 
   describe("Static Constants", () => {
-    it("exposes GlobalSecondaryIndex constants", () => {
-      expect(JaypieDynamoDb.GlobalSecondaryIndex).toBeDefined();
-      expect(JaypieDynamoDb.GlobalSecondaryIndex.Alias).toBeDefined();
-      expect(JaypieDynamoDb.GlobalSecondaryIndex.Class).toBeDefined();
-      expect(JaypieDynamoDb.GlobalSecondaryIndex.Scope).toBeDefined();
-      expect(JaypieDynamoDb.GlobalSecondaryIndex.Type).toBeDefined();
-      expect(JaypieDynamoDb.GlobalSecondaryIndex.Xid).toBeDefined();
+    it("exposes DEFAULT_INDEXES from @jaypie/fabric", () => {
+      expect(JaypieDynamoDb.DEFAULT_INDEXES).toBeDefined();
+      expect(JaypieDynamoDb.DEFAULT_INDEXES).toBeArray();
+      expect(JaypieDynamoDb.DEFAULT_INDEXES).toHaveLength(5);
     });
 
-    it("exposes GlobalSecondaryIndexes array", () => {
-      expect(JaypieDynamoDb.GlobalSecondaryIndexes).toBeDefined();
-      expect(JaypieDynamoDb.GlobalSecondaryIndexes).toBeArray();
-      expect(JaypieDynamoDb.GlobalSecondaryIndexes).toHaveLength(5);
+    it("DEFAULT_INDEXES has correct structure", () => {
+      const scopeIndex = JaypieDynamoDb.DEFAULT_INDEXES.find(
+        (idx) => idx.name === "indexScope",
+      );
+      expect(scopeIndex).toBeDefined();
+      expect(scopeIndex?.pk).toEqual(["scope", "model"]);
+      expect(scopeIndex?.sk).toEqual(["sequence"]);
     });
 
-    it("GlobalSecondaryIndex.Alias has correct structure", () => {
-      expect(JaypieDynamoDb.GlobalSecondaryIndex.Alias.indexName).toBe(
-        "indexAlias",
-      );
-      expect(JaypieDynamoDb.GlobalSecondaryIndex.Alias.partitionKey?.name).toBe(
-        "indexAlias",
-      );
-      expect(JaypieDynamoDb.GlobalSecondaryIndex.Alias.partitionKey?.type).toBe(
-        dynamodb.AttributeType.STRING,
-      );
-      expect(JaypieDynamoDb.GlobalSecondaryIndex.Alias.sortKey?.name).toBe(
-        "sequence",
-      );
-      expect(JaypieDynamoDb.GlobalSecondaryIndex.Alias.sortKey?.type).toBe(
-        dynamodb.AttributeType.NUMBER,
-      );
+    it("DEFAULT_INDEXES includes all five GSIs", () => {
+      const names = JaypieDynamoDb.DEFAULT_INDEXES.map((idx) => idx.name);
+      expect(names).toContain("indexScope");
+      expect(names).toContain("indexAlias");
+      expect(names).toContain("indexClass");
+      expect(names).toContain("indexType");
+      expect(names).toContain("indexXid");
     });
   });
 
@@ -118,7 +109,7 @@ describe("JaypieDynamoDb", () => {
       expect(tableResource?.Properties?.BillingMode).toBe("PAY_PER_REQUEST");
     });
 
-    it("creates all five GSIs by default", () => {
+    it("creates no GSIs by default", () => {
       const stack = new Stack();
       new JaypieDynamoDb(stack, "TestTable", {
         tableName: "test-table",
@@ -128,16 +119,7 @@ describe("JaypieDynamoDb", () => {
       const tables = template.findResources("AWS::DynamoDB::GlobalTable");
       const tableResource = Object.values(tables)[0];
 
-      const gsis = tableResource?.Properties?.GlobalSecondaryIndexes;
-      expect(gsis).toBeDefined();
-      expect(gsis).toHaveLength(5);
-
-      const gsiNames = gsis.map((gsi: { IndexName: string }) => gsi.IndexName);
-      expect(gsiNames).toContain("indexAlias");
-      expect(gsiNames).toContain("indexClass");
-      expect(gsiNames).toContain("indexScope");
-      expect(gsiNames).toContain("indexType");
-      expect(gsiNames).toContain("indexXid");
+      expect(tableResource?.Properties?.GlobalSecondaryIndexes).toBeUndefined();
     });
 
     // Note: Tag introspection tests removed per CLAUDE.md guidelines
@@ -200,39 +182,11 @@ describe("JaypieDynamoDb", () => {
   });
 
   describe("GSI Configuration", () => {
-    it("allows disabling GSIs with empty array", () => {
+    it("allows creating all default GSIs with DEFAULT_INDEXES", () => {
       const stack = new Stack();
       new JaypieDynamoDb(stack, "TestTable", {
         tableName: "test-table",
-        globalSecondaryIndexes: [],
-      });
-      const template = Template.fromStack(stack);
-
-      const tables = template.findResources("AWS::DynamoDB::GlobalTable");
-      const tableResource = Object.values(tables)[0];
-
-      expect(tableResource?.Properties?.GlobalSecondaryIndexes).toBeUndefined();
-    });
-
-    it("allows disabling GSIs with false", () => {
-      const stack = new Stack();
-      new JaypieDynamoDb(stack, "TestTable", {
-        tableName: "test-table",
-        globalSecondaryIndexes: false,
-      });
-      const template = Template.fromStack(stack);
-
-      const tables = template.findResources("AWS::DynamoDB::GlobalTable");
-      const tableResource = Object.values(tables)[0];
-
-      expect(tableResource?.Properties?.GlobalSecondaryIndexes).toBeUndefined();
-    });
-
-    it("creates all GSIs with true", () => {
-      const stack = new Stack();
-      new JaypieDynamoDb(stack, "TestTable", {
-        tableName: "test-table",
-        globalSecondaryIndexes: true,
+        indexes: JaypieDynamoDb.DEFAULT_INDEXES,
       });
       const template = Template.fromStack(stack);
 
@@ -240,17 +194,38 @@ describe("JaypieDynamoDb", () => {
       const tableResource = Object.values(tables)[0];
 
       const gsis = tableResource?.Properties?.GlobalSecondaryIndexes;
+      expect(gsis).toBeDefined();
       expect(gsis).toHaveLength(5);
+
+      const gsiNames = gsis.map((gsi: { IndexName: string }) => gsi.IndexName);
+      expect(gsiNames).toContain("indexAlias");
+      expect(gsiNames).toContain("indexClass");
+      expect(gsiNames).toContain("indexScope");
+      expect(gsiNames).toContain("indexType");
+      expect(gsiNames).toContain("indexXid");
     });
 
-    it("allows selecting specific GSIs", () => {
+    it("allows disabling GSIs with empty array", () => {
       const stack = new Stack();
       new JaypieDynamoDb(stack, "TestTable", {
         tableName: "test-table",
-        globalSecondaryIndexes: [
-          JaypieDynamoDb.GlobalSecondaryIndex.Scope,
-          JaypieDynamoDb.GlobalSecondaryIndex.Type,
-        ],
+        indexes: [],
+      });
+      const template = Template.fromStack(stack);
+
+      const tables = template.findResources("AWS::DynamoDB::GlobalTable");
+      const tableResource = Object.values(tables)[0];
+
+      expect(tableResource?.Properties?.GlobalSecondaryIndexes).toBeUndefined();
+    });
+
+    it("allows selecting specific GSIs from DEFAULT_INDEXES", () => {
+      const stack = new Stack();
+      new JaypieDynamoDb(stack, "TestTable", {
+        tableName: "test-table",
+        indexes: JaypieDynamoDb.DEFAULT_INDEXES.filter(
+          (idx) => idx.name === "indexScope" || idx.name === "indexType",
+        ),
       });
       const template = Template.fromStack(stack);
 
@@ -264,6 +239,29 @@ describe("JaypieDynamoDb", () => {
       expect(gsiNames).toContain("indexScope");
       expect(gsiNames).toContain("indexType");
       expect(gsiNames).not.toContain("indexAlias");
+    });
+
+    it("allows custom IndexDefinition format", () => {
+      const stack = new Stack();
+      new JaypieDynamoDb(stack, "TestTable", {
+        tableName: "test-table",
+        indexes: [
+          { name: "customIndex", pk: ["scope", "model"], sk: ["sequence"] },
+          { pk: ["scope", "model", "customField"], sk: ["sequence"] },
+        ],
+      });
+      const template = Template.fromStack(stack);
+
+      const tables = template.findResources("AWS::DynamoDB::GlobalTable");
+      const tableResource = Object.values(tables)[0];
+
+      const gsis = tableResource?.Properties?.GlobalSecondaryIndexes;
+      expect(gsis).toHaveLength(2);
+
+      const gsiNames = gsis.map((gsi: { IndexName: string }) => gsi.IndexName);
+      expect(gsiNames).toContain("customIndex");
+      // Auto-generated name from pk fields
+      expect(gsiNames).toContain("indexScopeModelCustomField");
     });
   });
 

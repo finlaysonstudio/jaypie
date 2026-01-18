@@ -85,6 +85,7 @@ packages/constructs/
 | `JaypieAccountLoggingBucket` | Centralized logging bucket |
 | `JaypieDatadogBucket` | S3 bucket with Datadog forwarding |
 | `JaypieDatadogForwarder` | Datadog log forwarder Lambda |
+| `JaypieDynamoDb` | DynamoDB table with Jaypie single-table design |
 | `JaypieStaticWebBucket` | Static website hosting bucket |
 | `JaypieWebDeploymentBucket` | Web deployment artifacts bucket |
 
@@ -187,6 +188,31 @@ new JaypieDistribution(this, "Distribution", {
 ```
 
 Note: Streaming requires Lambda Function URLs (not API Gateway). `JaypieDistribution` uses Function URLs by default.
+
+### DynamoDB with Jaypie Single-Table Design
+
+```typescript
+import { JaypieDynamoDb, IndexDefinition } from "@jaypie/constructs";
+
+// Basic table (no GSIs by default)
+const table = new JaypieDynamoDb(this, "myApp");
+
+// With standard Jaypie GSIs (indexScope, indexAlias, indexClass, indexType, indexXid)
+const tableWithIndexes = new JaypieDynamoDb(this, "myApp", {
+  indexes: JaypieDynamoDb.DEFAULT_INDEXES,
+});
+
+// With custom indexes using IndexDefinition from @jaypie/fabric
+const customTable = new JaypieDynamoDb(this, "myApp", {
+  indexes: [
+    { pk: ["scope", "model"], sk: ["sequence"] },           // indexScopeModel
+    { pk: ["scope", "model", "type"], sparse: true },       // indexScopeModelType
+    { name: "byAlias", pk: ["alias"], sk: ["createdAt"] },  // custom name
+  ],
+});
+```
+
+Note: `JaypieDynamoDb` uses `IndexDefinition` from `@jaypie/fabric` for GSI configuration, enabling consistent index definitions across CDK and runtime code.
 
 ### Provider/Consumer Secrets Pattern
 
