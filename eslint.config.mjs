@@ -17,8 +17,8 @@ export default [
       "**/prompts/templates/**",
       "LOCAL/**",
       "packages/express/docker/**",
-      "sites/documentation/.docusaurus/**",
-      "sites/documentation/build/**",
+      "stacks/documentation/.docusaurus/**",
+      "stacks/documentation/build/**",
     ],
   },
 
@@ -76,8 +76,8 @@ export default [
   //
   {
     files: [
-      "sites/**/*.ts",
-      "sites/**/*.tsx",
+      "stacks/**/*.ts",
+      "stacks/**/*.tsx",
     ],
     rules: {
       "import-x/default": "off",
@@ -93,7 +93,7 @@ export default [
   // Sites: CommonJS
   //
   {
-    files: ["sites/**/*.js"],
+    files: ["stacks/**/*.js"],
     languageOptions: {
       ecmaVersion: "latest",
       sourceType: "script",

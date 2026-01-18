@@ -1,0 +1,28 @@
+name: NPM Install and Build
+description: Install dependencies and build the project
+
+inputs:
+  use-ci:
+    description: Use npm ci instead of npm install (recommended for CI/CD)
+    required: false
+    default: "true"
+  build-command:
+    description: NPM script to run for building
+    required: false
+    default: build
+
+runs:
+  using: composite
+  steps:
+    - name: Install dependencies
+      shell: bash
+      run: |
+        if [ "${{ inputs.use-ci }}" = "true" ]; then
+          npm ci
+        else
+          npm install
+        fi
+
+    - name: Build project
+      shell: bash
+      run: npm run ${{ inputs.build-command }}

@@ -6,6 +6,14 @@ description: step-by-step guide to initialize GitHub Actions CI/CD for Jaypie pr
 
 This guide walks through setting up GitHub Actions CI/CD from scratch for a Jaypie project.
 
+## Workspace Naming Conventions
+
+| Directory | Purpose |
+|-----------|---------|
+| `packages/` | Default workspace for npm packages (preferred when only one namespace needed) |
+| `stacks/` | CDK-deployed infrastructure and sites (as opposed to npm-published) |
+| `workspaces/` | Generic workspace for other work |
+
 ## Prerequisites
 
 - GitHub repository with Jaypie project structure
@@ -31,9 +39,9 @@ Create the following structure:
 │       └── action.yml
 └── workflows/
     ├── check-production.yml
-    ├── deploy-development.yml
-    ├── deploy-production.yml
-    ├── deploy-sandbox.yml
+    ├── deploy-env-development.yml
+    ├── deploy-env-production.yml
+    ├── deploy-env-sandbox.yml
     └── version.yml
 ```
 
@@ -85,7 +93,7 @@ inputs:
   node-version:
     description: Node.js version to use
     required: false
-    default: "20"
+    default: "24"
 
 outputs:
   node-modules-cache-hit:
@@ -111,6 +119,7 @@ runs:
         path: |
           node_modules
           packages/*/node_modules
+          stacks/*/node_modules
         key: ${{ runner.os }}-node-${{ inputs.node-version }}-modules-${{ hashFiles('**/package-lock.json') }}
         restore-keys: |
           ${{ runner.os }}-node-${{ inputs.node-version }}-modules-
@@ -162,41 +171,55 @@ Configures environment variables with sensible defaults. Customize the defaults 
 
 ```yaml
 name: Setup Environment Variables
-description: Configure environment variables with sensible defaults
+description: |
+  Configure environment variables with sensible defaults for Jaypie projects.
+
+  Variable Scoping (GitHub Settings):
+  - Organization: AWS_REGION, LOG_LEVEL, MODULE_LOG_LEVEL, PROJECT_SPONSOR
+  - Repository: AWS_HOSTED_ZONE, PROJECT_KEY, PROJECT_SERVICE
+  - Environment: AWS_ROLE_ARN, DATADOG_API_KEY_ARN, PROJECT_ENV, PROJECT_NONCE
+
+  Environment Secrets:
+  - By default, no secrets are required
+  - Dependencies add secrets (e.g., Auth0 adds AUTH0_CLIENT_SECRET)
+  - Secrets are passed to CDK via JaypieEnvSecret construct
 
 inputs:
+  # Organization-level variables
   aws-region:
-    description: AWS region
-    required: false
-  aws-role-arn:
-    description: AWS IAM role ARN
-    required: false
-  datadog-api-key-arn:
-    description: Datadog API key ARN
-    required: false
-  aws-hosted-zone:
-    description: Route53 hosted zone
+    description: AWS region (org-level)
     required: false
   log-level:
-    description: Application log level
+    description: Application log level (org-level)
     required: false
   module-log-level:
-    description: Module log level
-    required: false
-  project-env:
-    description: Project environment
-    required: false
-  project-key:
-    description: Project key
-    required: false
-  project-nonce:
-    description: Project nonce
-    required: false
-  project-service:
-    description: Project service name
+    description: Module log level (org-level)
     required: false
   project-sponsor:
-    description: Project sponsor
+    description: Project sponsor (org-level)
+    required: false
+  # Repository-level variables
+  aws-hosted-zone:
+    description: Route53 hosted zone (repo-level)
+    required: false
+  project-key:
+    description: Project key (repo-level)
+    required: false
+  project-service:
+    description: Project service name (repo-level)
+    required: false
+  # Environment-level variables
+  aws-role-arn:
+    description: AWS IAM role ARN (env-level)
+    required: false
+  datadog-api-key-arn:
+    description: Datadog API key ARN (env-level)
+    required: false
+  project-env:
+    description: Project environment (env-level)
+    required: false
+  project-nonce:
+    description: Project nonce (env-level)
     required: false
 
 outputs:
@@ -217,16 +240,9 @@ runs:
       id: set-env
       shell: bash
       run: |
-        # Read from inputs and apply defaults using bash parameter expansion
+        # Organization-level variables (with defaults)
         AWS_REGION="${{ inputs.aws-region }}"
         AWS_REGION="${AWS_REGION:-us-east-1}"
-
-        AWS_ROLE_ARN="${{ inputs.aws-role-arn }}"
-
-        DATADOG_API_KEY_ARN="${{ inputs.datadog-api-key-arn }}"
-
-        HOSTED_ZONE="${{ inputs.aws-hosted-zone }}"
-        HOSTED_ZONE="${HOSTED_ZONE:-example.com}"
 
         LOG_LEVEL="${{ inputs.log-level }}"
         LOG_LEVEL="${LOG_LEVEL:-debug}"
@@ -234,27 +250,38 @@ runs:
         MODULE_LOG_LEVEL="${{ inputs.module-log-level }}"
         MODULE_LOG_LEVEL="${MODULE_LOG_LEVEL:-warn}"
 
-        PROJECT_ENV="${{ inputs.project-env }}"
-        PROJECT_ENV="${PROJECT_ENV:-sandbox}"
+        PROJECT_SPONSOR="${{ inputs.project-sponsor }}"
+        PROJECT_SPONSOR="${PROJECT_SPONSOR:-myorg}"
+
+        # Repository-level variables (with defaults)
+        HOSTED_ZONE="${{ inputs.aws-hosted-zone }}"
+        HOSTED_ZONE="${HOSTED_ZONE:-example.com}"
 
         PROJECT_KEY="${{ inputs.project-key }}"
         PROJECT_KEY="${PROJECT_KEY:-myapp}"
 
+        PROJECT_SERVICE="${{ inputs.project-service }}"
+        PROJECT_SERVICE="${PROJECT_SERVICE:-stacks}"
+
+        # Environment-level variables (with defaults)
+        AWS_ROLE_ARN="${{ inputs.aws-role-arn }}"
+
+        DATADOG_API_KEY_ARN="${{ inputs.datadog-api-key-arn }}"
+
+        PROJECT_ENV="${{ inputs.project-env }}"
+        PROJECT_ENV="${PROJECT_ENV:-sandbox}"
+
         PROJECT_NONCE="${{ inputs.project-nonce }}"
         PROJECT_NONCE="${PROJECT_NONCE:-$(echo $RANDOM | md5sum | head -c 8)}"
 
-        PROJECT_SERVICE="${{ inputs.project-service }}"
-        PROJECT_SERVICE="${PROJECT_SERVICE:-myapp}"
-
-        PROJECT_SPONSOR="${{ inputs.project-sponsor }}"
-        PROJECT_SPONSOR="${PROJECT_SPONSOR:-myorg}"
-
-        # Extract version from package.json
+        # Derived from package.json
         PROJECT_VERSION=$(node -p "require('./package.json').version")
 
-        # Export all environment variables
+        # Export all environment variables for CDK
         echo "AWS_REGION=${AWS_REGION}" >> $GITHUB_ENV
         echo "AWS_ROLE_ARN=${AWS_ROLE_ARN}" >> $GITHUB_ENV
+        echo "CDK_DEFAULT_ACCOUNT=${{ github.repository_owner }}" >> $GITHUB_ENV
+        echo "CDK_DEFAULT_REGION=${AWS_REGION}" >> $GITHUB_ENV
         echo "CDK_ENV_DATADOG_API_KEY_ARN=${DATADOG_API_KEY_ARN}" >> $GITHUB_ENV
         echo "CDK_ENV_HOSTED_ZONE=${HOSTED_ZONE}" >> $GITHUB_ENV
         echo "CDK_ENV_REPO=${{ github.repository }}" >> $GITHUB_ENV
@@ -268,7 +295,7 @@ runs:
         echo "PROJECT_SPONSOR=${PROJECT_SPONSOR}" >> $GITHUB_ENV
         echo "PROJECT_VERSION=${PROJECT_VERSION}" >> $GITHUB_ENV
 
-        # Set outputs
+        # Set outputs for subsequent steps
         echo "aws-region=${AWS_REGION}" >> $GITHUB_OUTPUT
         echo "aws-role-arn=${AWS_ROLE_ARN}" >> $GITHUB_OUTPUT
         echo "project-env=${PROJECT_ENV}" >> $GITHUB_OUTPUT
@@ -326,7 +353,7 @@ runs:
 
 Create workflow files in `.github/workflows/`.
 
-### deploy-sandbox.yml
+### deploy-env-sandbox.yml
 
 Deploys to sandbox on feature branches. Lint and test run in parallel with deploy.
 
@@ -337,14 +364,12 @@ on:
   push:
     branches:
       - feat/*
-      - main
       - sandbox/*
     tags:
       - sandbox-*
 
 concurrency:
-  group: deploy-sandbox
-  cancel-in-progress: true
+  group: deploy-env-sandbox
 
 jobs:
   deploy:
@@ -362,10 +387,10 @@ jobs:
         id: setup-env
         uses: ./.github/actions/setup-environment
         with:
+          aws-hosted-zone: ${{ vars.AWS_HOSTED_ZONE }}
           aws-region: ${{ vars.AWS_REGION }}
           aws-role-arn: ${{ vars.AWS_ROLE_ARN }}
           datadog-api-key-arn: ${{ vars.DATADOG_API_KEY_ARN }}
-          aws-hosted-zone: ${{ vars.AWS_HOSTED_ZONE }}
           log-level: ${{ vars.LOG_LEVEL }}
           module-log-level: ${{ vars.MODULE_LOG_LEVEL }}
           project-env: ${{ vars.PROJECT_ENV }}
@@ -377,8 +402,8 @@ jobs:
       - name: Configure AWS Credentials
         uses: ./.github/actions/configure-aws
         with:
-          role-arn: ${{ steps.setup-env.outputs.aws-role-arn }}
           aws-region: ${{ steps.setup-env.outputs.aws-region }}
+          role-arn: ${{ steps.setup-env.outputs.aws-role-arn }}
 
       - name: Setup Node.js and Cache
         uses: ./.github/actions/setup-node-and-cache
@@ -421,7 +446,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: [22.x, 24.x]
+        node-version: [22, 24]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -443,7 +468,7 @@ jobs:
         run: npm test
 ```
 
-### deploy-development.yml
+### deploy-env-development.yml
 
 Deploys to development from main branch. Requires lint and test to pass.
 
@@ -459,8 +484,7 @@ on:
       - development-*
 
 concurrency:
-  group: deploy-development
-  cancel-in-progress: true
+  group: deploy-env-development
 
 jobs:
   deploy:
@@ -479,10 +503,10 @@ jobs:
         id: setup-env
         uses: ./.github/actions/setup-environment
         with:
+          aws-hosted-zone: ${{ vars.AWS_HOSTED_ZONE }}
           aws-region: ${{ vars.AWS_REGION }}
           aws-role-arn: ${{ vars.AWS_ROLE_ARN }}
           datadog-api-key-arn: ${{ vars.DATADOG_API_KEY_ARN }}
-          aws-hosted-zone: ${{ vars.AWS_HOSTED_ZONE }}
           log-level: ${{ vars.LOG_LEVEL }}
           module-log-level: ${{ vars.MODULE_LOG_LEVEL }}
           project-env: ${{ vars.PROJECT_ENV }}
@@ -494,8 +518,8 @@ jobs:
       - name: Configure AWS Credentials
         uses: ./.github/actions/configure-aws
         with:
-          role-arn: ${{ steps.setup-env.outputs.aws-role-arn }}
           aws-region: ${{ steps.setup-env.outputs.aws-region }}
+          role-arn: ${{ steps.setup-env.outputs.aws-role-arn }}
 
       - name: Setup Node.js and Cache
         uses: ./.github/actions/setup-node-and-cache
@@ -538,7 +562,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: [22.x, 24.x]
+        node-version: [22, 24]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -560,9 +584,9 @@ jobs:
         run: npm test
 ```
 
-### deploy-production.yml
+### deploy-env-production.yml
 
-Deploys to production from version tags. Requires lint and test to pass. Does not cancel in-progress builds.
+Deploys to production from version tags. Requires lint and test to pass.
 
 ```yaml
 name: Build to Production
@@ -575,8 +599,7 @@ on:
       - 'v1.*'
 
 concurrency:
-  group: deploy-production
-  cancel-in-progress: false
+  group: deploy-env-production
 
 jobs:
   deploy:
@@ -605,10 +628,10 @@ jobs:
         id: setup-env
         uses: ./.github/actions/setup-environment
         with:
+          aws-hosted-zone: ${{ vars.AWS_HOSTED_ZONE }}
           aws-region: ${{ vars.AWS_REGION }}
           aws-role-arn: ${{ vars.AWS_ROLE_ARN }}
           datadog-api-key-arn: ${{ vars.DATADOG_API_KEY_ARN }}
-          aws-hosted-zone: ${{ vars.AWS_HOSTED_ZONE }}
           log-level: ${{ vars.LOG_LEVEL }}
           module-log-level: ${{ vars.MODULE_LOG_LEVEL }}
           project-env: ${{ vars.PROJECT_ENV }}
@@ -620,8 +643,8 @@ jobs:
       - name: Configure AWS Credentials
         uses: ./.github/actions/configure-aws
         with:
-          role-arn: ${{ steps.setup-env.outputs.aws-role-arn }}
           aws-region: ${{ steps.setup-env.outputs.aws-region }}
+          role-arn: ${{ steps.setup-env.outputs.aws-role-arn }}
 
       - name: Setup Node.js and Cache
         uses: ./.github/actions/setup-node-and-cache
@@ -664,7 +687,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: [22.x, 24.x]
+        node-version: [22, 24]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -702,7 +725,6 @@ on:
 
 concurrency:
   group: check-production
-  cancel-in-progress: true
 
 jobs:
   lint:
@@ -733,7 +755,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: [22.x, 24.x]
+        node-version: [22, 24]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -863,9 +885,17 @@ jobs:
           git push
 ```
 
-## Step 3: Configure GitHub Environments
+## Step 3: Configure GitHub Variables
 
-Create environments in your GitHub repository settings. Each environment contains variables and secrets for that deployment target.
+Variables are configured at different levels in GitHub Settings.
+
+### Variable Scoping
+
+| Level | Variables | Where to Configure |
+|-------|-----------|-------------------|
+| Organization | AWS_REGION, LOG_LEVEL, MODULE_LOG_LEVEL, PROJECT_SPONSOR | Settings → Actions → Variables |
+| Repository | AWS_HOSTED_ZONE, PROJECT_KEY, PROJECT_SERVICE | Settings → Actions secrets and variables → Variables |
+| Environment | AWS_ROLE_ARN, DATADOG_API_KEY_ARN, PROJECT_ENV, PROJECT_NONCE | Settings → Environments → [env] → Variables |
 
 ### Creating an Environment
 
@@ -876,26 +906,26 @@ Create environments in your GitHub repository settings. Each environment contain
 5. Click **Configure environment**
 6. Under **Environment variables**, click **Add variable** for each variable
 
-### Required Variables (per environment)
+### Required Variables (Environment Level)
 
 | Variable | Description | Example |
 |----------|-------------|---------|
 | `AWS_ROLE_ARN` | IAM role ARN for OIDC (deployment fails without this) | `arn:aws:iam::123456789:role/DeployRole` |
+| `PROJECT_ENV` | Environment identifier | `sandbox`, `development`, `production` |
 
-### Optional Variables (per environment)
+### Optional Variables
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `AWS_REGION` | AWS region | `us-east-1` |
-| `AWS_HOSTED_ZONE` | Route53 hosted zone | `example.com` |
-| `DATADOG_API_KEY_ARN` | Secrets Manager ARN for Datadog | (none) |
-| `LOG_LEVEL` | Application log level | `debug` |
-| `MODULE_LOG_LEVEL` | Module log level | `warn` |
-| `PROJECT_ENV` | Environment name | `sandbox` |
-| `PROJECT_KEY` | Project identifier | (from package.json name) |
-| `PROJECT_NONCE` | Unique identifier for resources | (random) |
-| `PROJECT_SERVICE` | Service name | (from package.json name) |
-| `PROJECT_SPONSOR` | Organization name | (from repository owner) |
+| Variable | Level | Description | Default |
+|----------|-------|-------------|---------|
+| `AWS_REGION` | Org | AWS region | `us-east-1` |
+| `AWS_HOSTED_ZONE` | Repo | Route53 hosted zone | `example.com` |
+| `DATADOG_API_KEY_ARN` | Env | Secrets Manager ARN for Datadog | (none) |
+| `LOG_LEVEL` | Org | Application log level | `debug` |
+| `MODULE_LOG_LEVEL` | Org | Module log level | `warn` |
+| `PROJECT_KEY` | Repo | Project identifier | (from package.json name) |
+| `PROJECT_NONCE` | Env | Unique identifier for resources | (random) |
+| `PROJECT_SERVICE` | Repo | Service name | `stacks` |
+| `PROJECT_SPONSOR` | Org | Organization name | (from repository owner) |
 
 ### Auto-Generated Variables
 
@@ -903,15 +933,41 @@ These variables are set automatically from GitHub context:
 
 | Variable | Source | Description |
 |----------|--------|-------------|
+| `CDK_DEFAULT_ACCOUNT` | `${{ github.repository_owner }}` | Repository owner |
+| `CDK_DEFAULT_REGION` | `AWS_REGION` | Same as AWS region |
 | `CDK_ENV_REPO` | `${{ github.repository }}` | Repository name (owner/repo) |
 | `PROJECT_COMMIT` | `${{ github.sha }}` | Current commit SHA |
 | `PROJECT_VERSION` | `package.json` | Version from package.json |
 
 ### Environment Secrets
 
-Add secrets for sensitive values. Secrets are passed to actions via `${{ secrets.SECRET_NAME }}`.
+By default, no secrets are required. Dependencies add secrets as needed.
+
+Secrets are passed to CDK via `JaypieEnvSecret` construct and made available at runtime.
 
 Navigate to: **Settings → Environments → [environment] → Environment secrets**
+
+#### Example: Auth0 Integration
+
+When adding Auth0 authentication:
+
+**Environment Variables:**
+- `AUTH0_AUDIENCE` - API identifier
+- `AUTH0_CLIENT_ID` - Application client ID
+- `AUTH0_DOMAIN` - Auth0 tenant domain
+
+**Environment Secrets:**
+- `AUTH0_CLIENT_SECRET` - Application client secret
+
+Add to workflow:
+```yaml
+- name: Deploy CDK Stack
+  uses: ./.github/actions/cdk-deploy
+  with:
+    stack-name: AppStack
+  env:
+    AUTH0_CLIENT_SECRET: ${{ secrets.AUTH0_CLIENT_SECRET }}
+```
 
 ### Deployment Protection Rules (Optional)
 
@@ -946,15 +1002,6 @@ jobs:
         with:
           role-arn: ${{ steps.setup-env.outputs.aws-role-arn }}
           aws-region: ${{ steps.setup-env.outputs.aws-region }}
-```
-
-The action uses bash parameter expansion to apply defaults:
-
-```bash
-AWS_REGION="${{ inputs.aws-region }}"
-AWS_REGION="${AWS_REGION:-us-east-1}"  # Default if empty
-echo "AWS_REGION=${AWS_REGION}" >> $GITHUB_ENV
-echo "aws-region=${AWS_REGION}" >> $GITHUB_OUTPUT
 ```
 
 ### Environment Configuration by Target
@@ -1080,7 +1127,6 @@ on:
 
 concurrency:
   group: deploy-personal-build-${{ github.actor }}
-  cancel-in-progress: true
 
 jobs:
   deploy:
@@ -1137,3 +1183,4 @@ export class AppStack extends JaypieAppStack { ... }
 - Verify variables are passed as inputs to `setup-environment`
 - Check the environment name in the job matches the GitHub environment name
 - Verify variable names match exactly (case-sensitive)
+

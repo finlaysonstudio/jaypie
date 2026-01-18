@@ -1,8 +1,8 @@
 {
-  "name": "@jaypie/sites-cdk",
+  "name": "@jaypie/stacks-cdk",
   "version": "0.0.1",
   "private": true,
-  "description": "CDK infrastructure for Jaypie sites",
+  "description": "CDK infrastructure for Jaypie stacks",
   "license": "MIT",
   "author": "Finlayson Studio",
   "type": "module",

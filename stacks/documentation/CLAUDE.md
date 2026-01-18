@@ -1,6 +1,6 @@
 # @jaypie/documentation
 
-Documentation site for the Jaypie monorepo, built with Docusaurus.
+Documentation stack for the Jaypie monorepo, built with Docusaurus and deployed via CDK.
 
 ## Purpose
 

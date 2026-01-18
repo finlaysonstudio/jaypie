@@ -7,7 +7,7 @@
   "type": "module",
   "workspaces": [
     "packages/*",
-    "sites/*"
+    "stacks/*"
   ],
   "scripts": {
     "build": "npm run build --workspaces --if-present",
@@ -30,13 +30,13 @@
     "docker:express": "npm run docker:build --workspace packages/express && npm run docker:run --workspace packages/express",
     "docker:express:build": "npm run docker:build --workspace packages/express",
     "docker:express:run": "npm run docker:run --workspace packages/express",
-    "docs:build": "npm run build --workspace sites/documentation",
-    "docs:extract": "npm run extract --workspace sites/documentation",
-    "docs:serve": "npm run serve --workspace sites/documentation",
-    "docs:start": "npm run start --workspace sites/documentation",
+    "docs:build": "npm run build --workspace stacks/documentation",
+    "docs:extract": "npm run extract --workspace stacks/documentation",
+    "docs:serve": "npm run serve --workspace stacks/documentation",
+    "docs:start": "npm run start --workspace stacks/documentation",
     "format": "npm run format:package && npm run format:lint",
     "format:lint": "eslint --fix --quiet .",
-    "format:package": "sort-package-json ./package.json ./packages/*/package.json ./sites/*/package.json",
+    "format:package": "sort-package-json ./package.json ./packages/*/package.json ./stacks/*/package.json",
     "lint": "eslint --quiet .",
     "test": "vitest run",
     "test:aws": "npm run test --workspace packages/aws",
