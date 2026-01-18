@@ -62,7 +62,7 @@ They may be installed separately in the future.
 | ------- | ------- | ----------- |
 | `@jaypie/aws` |  `getEnvSecret`, `getMessages`, `getSecret`, `getSingletonMessage`, `getTextractJob`, `sendBatchMessages`, `sendMessage`, `sendTextractJob` | AWS helpers |
 | `@jaypie/datadog` | `submitDistribution`, `submitMetric`, `submitMetricSet` | Datadog helpers |
-| `@jaypie/express` | `badRequestRoute`, `cors`, `createServer`, `echoRoute`, `expressHandler`, `expressHttpCodeHandler`, `expressStreamHandler`, `forbiddenRoute`, `getCurrentInvokeUuid`, `goneRoute`, `methodNotAllowedRoute`, `noContentRoute`, `notFoundRoute`, `notImplementedRoute` | Express entry point |
+| `@jaypie/express` | `badRequestRoute`, `cors`, `echoRoute`, `expressHandler`, `expressHttpCodeHandler`, `expressStreamHandler`, `forbiddenRoute`, `getCurrentInvokeUuid`, `goneRoute`, `methodNotAllowedRoute`, `noContentRoute`, `notFoundRoute`, `notImplementedRoute` | Express entry point |
 | `@jaypie/lambda` | `lambdaHandler` | Lambda entry point |
 | `@jaypie/llm` | `Llm` | LLM helpers |
 | `@jaypie/mongoose` | `connect`, `connectFromSecretEnv`, `disconnect`, `mongoose` | MongoDB management |
@@ -803,23 +803,26 @@ const nsRecord = new JaypieDnsRecord(this, 'SubdomainNS', {
 
 #### `JaypieDynamoDb`
 
-Creates a DynamoDB table with Jaypie single-table design patterns. Includes five Global Secondary Indexes for common access patterns.
+Creates a DynamoDB table with Jaypie single-table design patterns. Uses `IndexDefinition` from `@jaypie/fabric` for GSI configuration.
 
 ```typescript
+import { JaypieDynamoDb, IndexDefinition } from "@jaypie/constructs";
+
 // Shorthand: tableName becomes "myApp", construct id is "JaypieDynamoDb-myApp"
+// No GSIs by default
 const table = new JaypieDynamoDb(this, "myApp");
 
-// With explicit configuration - no GSIs
-const table = new JaypieDynamoDb(this, "MyTable", {
-  tableName: "custom-table-name",
-  globalSecondaryIndexes: false, // No GSIs
+// With all standard Jaypie GSIs
+const tableWithIndexes = new JaypieDynamoDb(this, "myApp", {
+  indexes: JaypieDynamoDb.DEFAULT_INDEXES,
 });
 
-// Use only specific GSIs
-const table = new JaypieDynamoDb(this, "MyTable", {
-  globalSecondaryIndexes: [
-    JaypieDynamoDb.GlobalSecondaryIndex.Ou,
-    JaypieDynamoDb.GlobalSecondaryIndex.Type,
+// With custom indexes
+const customTable = new JaypieDynamoDb(this, "MyTable", {
+  tableName: "custom-table-name",
+  indexes: [
+    { pk: ["scope", "model"], sk: ["sequence"] },
+    { pk: ["scope", "model", "type"], sparse: true },
   ],
 });
 ```
@@ -827,7 +830,7 @@ const table = new JaypieDynamoDb(this, "MyTable", {
 | Property | Type | Required | Description |
 | -------- | ---- | -------- | ----------- |
 | `billing` | `Billing` | No | DynamoDB billing mode; defaults to `Billing.onDemand()` (PAY_PER_REQUEST) |
-| `globalSecondaryIndexes` | `boolean \| GlobalSecondaryIndexPropsV2[]` | No | `true`/omit: all five GSIs, `false`: none, array: specific GSIs |
+| `indexes` | `IndexDefinition[]` | No | GSI definitions from `@jaypie/fabric`; no GSIs by default |
 | `partitionKey` | `Attribute` | No | Partition key; defaults to `{ name: "model", type: STRING }` |
 | `project` | `string` | No | Project tag value |
 | `removalPolicy` | `RemovalPolicy` | No | RETAIN in production, DESTROY otherwise |
@@ -839,12 +842,7 @@ const table = new JaypieDynamoDb(this, "MyTable", {
 The construct also accepts all standard DynamoDB TablePropsV2 properties.
 
 **Static Constants:**
-- `JaypieDynamoDb.GlobalSecondaryIndex.Alias` - Human-friendly lookup index
-- `JaypieDynamoDb.GlobalSecondaryIndex.Class` - Category filtering index
-- `JaypieDynamoDb.GlobalSecondaryIndex.Ou` - Organizational unit (hierarchical) index
-- `JaypieDynamoDb.GlobalSecondaryIndex.Type` - Type filtering index
-- `JaypieDynamoDb.GlobalSecondaryIndex.Xid` - External ID lookup index
-- `JaypieDynamoDb.GlobalSecondaryIndexes` - Array of all five default GSIs
+- `JaypieDynamoDb.DEFAULT_INDEXES` - Array of five standard Jaypie GSI definitions (indexScope, indexAlias, indexClass, indexType, indexXid)
 
 All GSIs use the index name as the partition key (string) and `sequence` (number) as the sort key.
 

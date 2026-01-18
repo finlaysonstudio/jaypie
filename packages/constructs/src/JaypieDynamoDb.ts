@@ -1,6 +1,14 @@
 import { Construct } from "constructs";
 import { RemovalPolicy, Tags } from "aws-cdk-lib";
 import * as dynamodb from "aws-cdk-lib/aws-dynamodb";
+
+import {
+  DEFAULT_INDEXES,
+  DEFAULT_SORT_KEY,
+  generateIndexName,
+  type IndexDefinition,
+} from "@jaypie/fabric";
+
 import { CDK } from "./constants";
 import { isProductionEnv } from "./helpers/isEnv";
 
@@ -9,71 +17,47 @@ import { isProductionEnv } from "./helpers/isEnv";
 // Constants
 //
 
-/**
- * GSI attribute names used in Jaypie single-table design
- */
-const GSI_NAMES = {
-  ALIAS: "indexAlias",
-  CLASS: "indexClass",
-  OU: "indexOu",
-  TYPE: "indexType",
-  XID: "indexXid",
-} as const;
+/** Composite key separator used in GSI partition keys */
+const SEPARATOR = "#";
+
+//
+//
+// Helper Functions
+//
 
 /**
- * Individual GSI definitions for Jaypie single-table design.
- * All GSIs use a string partition key and numeric sort key (sequence).
+ * Convert IndexDefinition[] from @jaypie/fabric to CDK GlobalSecondaryIndexPropsV2[]
+ *
+ * @param indexes - Array of IndexDefinition from @jaypie/fabric
+ * @returns Array of CDK GlobalSecondaryIndexPropsV2
  */
-const GlobalSecondaryIndex = {
-  Alias: {
-    indexName: GSI_NAMES.ALIAS,
-    partitionKey: {
-      name: GSI_NAMES.ALIAS,
-      type: dynamodb.AttributeType.STRING,
-    },
-    projectionType: dynamodb.ProjectionType.ALL,
-    sortKey: { name: "sequence", type: dynamodb.AttributeType.NUMBER },
-  } as dynamodb.GlobalSecondaryIndexPropsV2,
-  Class: {
-    indexName: GSI_NAMES.CLASS,
-    partitionKey: {
-      name: GSI_NAMES.CLASS,
-      type: dynamodb.AttributeType.STRING,
-    },
-    projectionType: dynamodb.ProjectionType.ALL,
-    sortKey: { name: "sequence", type: dynamodb.AttributeType.NUMBER },
-  } as dynamodb.GlobalSecondaryIndexPropsV2,
-  Ou: {
-    indexName: GSI_NAMES.OU,
-    partitionKey: { name: GSI_NAMES.OU, type: dynamodb.AttributeType.STRING },
-    projectionType: dynamodb.ProjectionType.ALL,
-    sortKey: { name: "sequence", type: dynamodb.AttributeType.NUMBER },
-  } as dynamodb.GlobalSecondaryIndexPropsV2,
-  Type: {
-    indexName: GSI_NAMES.TYPE,
-    partitionKey: { name: GSI_NAMES.TYPE, type: dynamodb.AttributeType.STRING },
-    projectionType: dynamodb.ProjectionType.ALL,
-    sortKey: { name: "sequence", type: dynamodb.AttributeType.NUMBER },
-  } as dynamodb.GlobalSecondaryIndexPropsV2,
-  Xid: {
-    indexName: GSI_NAMES.XID,
-    partitionKey: { name: GSI_NAMES.XID, type: dynamodb.AttributeType.STRING },
-    projectionType: dynamodb.ProjectionType.ALL,
-    sortKey: { name: "sequence", type: dynamodb.AttributeType.NUMBER },
-  } as dynamodb.GlobalSecondaryIndexPropsV2,
-} as const;
+function indexesToGsi(
+  indexes: IndexDefinition[],
+): dynamodb.GlobalSecondaryIndexPropsV2[] {
+  return indexes.map((index) => {
+    // Generate index name from pk fields if not provided
+    const indexName = index.name ?? generateIndexName(index.pk);
 
-/**
- * Array of all default Jaypie GSI definitions.
- * Used when no globalSecondaryIndexes are provided.
- */
-const GlobalSecondaryIndexes: dynamodb.GlobalSecondaryIndexPropsV2[] = [
-  GlobalSecondaryIndex.Alias,
-  GlobalSecondaryIndex.Class,
-  GlobalSecondaryIndex.Ou,
-  GlobalSecondaryIndex.Type,
-  GlobalSecondaryIndex.Xid,
-];
+    // Sort key defaults to ["sequence"] if not provided
+    const skFields = index.sk ?? DEFAULT_SORT_KEY;
+
+    return {
+      indexName,
+      partitionKey: {
+        name: indexName,
+        type: dynamodb.AttributeType.STRING,
+      },
+      projectionType: dynamodb.ProjectionType.ALL,
+      sortKey:
+        skFields.length === 1 && skFields[0] === "sequence"
+          ? { name: "sequence", type: dynamodb.AttributeType.NUMBER }
+          : {
+              name: skFields.join(SEPARATOR),
+              type: dynamodb.AttributeType.STRING,
+            },
+    };
+  });
+}
 
 //
 //
@@ -85,12 +69,32 @@ export interface JaypieDynamoDbProps extends Omit<
   "globalSecondaryIndexes" | "partitionKey" | "sortKey"
 > {
   /**
-   * Configure GSIs for the table.
-   * - `undefined` or `true`: Creates all five Jaypie GSIs (Alias, Class, Ou, Type, Xid)
-   * - `false`: No GSIs
-   * - Array: Use the specified GSIs
+   * Configure GSIs for the table using @jaypie/fabric IndexDefinition format.
+   * - `undefined`: No GSIs (default)
+   * - Array of IndexDefinition: Use the specified indexes
+   *
+   * Use `JaypieDynamoDb.DEFAULT_INDEXES` for the standard Jaypie GSIs.
+   *
+   * @example
+   * // No GSIs (default)
+   * new JaypieDynamoDb(this, "myTable");
+   *
+   * @example
+   * // With default Jaypie indexes
+   * new JaypieDynamoDb(this, "myTable", {
+   *   indexes: JaypieDynamoDb.DEFAULT_INDEXES,
+   * });
+   *
+   * @example
+   * // With custom indexes
+   * new JaypieDynamoDb(this, "myTable", {
+   *   indexes: [
+   *     { pk: ["scope", "model"], sk: ["sequence"] },
+   *     { pk: ["scope", "model", "type"], sk: ["sequence"], sparse: true },
+   *   ],
+   * });
    */
-  globalSecondaryIndexes?: boolean | dynamodb.GlobalSecondaryIndexPropsV2[];
+  indexes?: IndexDefinition[];
   /**
    * Partition key attribute definition.
    * @default { name: "model", type: AttributeType.STRING }
@@ -132,38 +136,34 @@ export interface JaypieDynamoDbProps extends Omit<
  * - Sort key: `id` (String)
  * - Billing: PAY_PER_REQUEST (on-demand)
  * - Removal policy: RETAIN in production, DESTROY otherwise
- * - Five GSIs for different access patterns (can be overridden)
+ * - No GSIs by default (use `indexes` prop to add them)
  *
  * @example
  * // Shorthand: tableName becomes "myApp", construct id is "JaypieDynamoDb-myApp"
  * const table = new JaypieDynamoDb(this, "myApp");
  *
  * @example
- * // Full configuration
- * const table = new JaypieDynamoDb(this, "MyTable", {
- *   tableName: "custom-table-name",
- *   globalSecondaryIndexes: [], // Disable GSIs
+ * // With default Jaypie indexes
+ * const table = new JaypieDynamoDb(this, "myApp", {
+ *   indexes: JaypieDynamoDb.DEFAULT_INDEXES,
  * });
  *
  * @example
- * // Use only specific GSIs
+ * // With custom indexes
  * const table = new JaypieDynamoDb(this, "MyTable", {
- *   globalSecondaryIndexes: [
- *     JaypieDynamoDb.GlobalSecondaryIndex.Ou,
- *     JaypieDynamoDb.GlobalSecondaryIndex.Type,
+ *   tableName: "custom-table-name",
+ *   indexes: [
+ *     { pk: ["scope", "model"] },
+ *     { pk: ["scope", "model", "type"], sparse: true },
  *   ],
  * });
  */
 export class JaypieDynamoDb extends Construct implements dynamodb.ITableV2 {
   /**
-   * Individual GSI definitions for Jaypie single-table design
+   * Default Jaypie GSI definitions from @jaypie/fabric.
+   * Pass to `indexes` prop to create all standard GSIs.
    */
-  public static readonly GlobalSecondaryIndex = GlobalSecondaryIndex;
-
-  /**
-   * Array of all default Jaypie GSI definitions
-   */
-  public static readonly GlobalSecondaryIndexes = GlobalSecondaryIndexes;
+  public static readonly DEFAULT_INDEXES = DEFAULT_INDEXES;
 
   private readonly _table: dynamodb.TableV2;
 
@@ -178,7 +178,7 @@ export class JaypieDynamoDb extends Construct implements dynamodb.ITableV2 {
 
     const {
       billing = dynamodb.Billing.onDemand(),
-      globalSecondaryIndexes: gsiInput,
+      indexes,
       partitionKey = {
         name: "model",
         type: dynamodb.AttributeType.STRING,
@@ -194,13 +194,8 @@ export class JaypieDynamoDb extends Construct implements dynamodb.ITableV2 {
       ...restProps
     } = props;
 
-    // Resolve GSI configuration: undefined/true = all, false = none, array = use as-is
-    const globalSecondaryIndexes =
-      gsiInput === false
-        ? undefined
-        : Array.isArray(gsiInput)
-          ? gsiInput
-          : GlobalSecondaryIndexes;
+    // Convert IndexDefinition[] to CDK GSI props
+    const globalSecondaryIndexes = indexes ? indexesToGsi(indexes) : undefined;
 
     this._table = new dynamodb.TableV2(this, "Table", {
       billing,

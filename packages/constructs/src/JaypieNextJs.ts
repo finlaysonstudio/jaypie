@@ -9,6 +9,7 @@ import {
   addDatadogLayers,
   envHostname,
   EnvironmentInput,
+  HostConfig,
   jaypieLambdaEnv,
   resolveEnvironment,
   resolveHostedZone,
@@ -17,12 +18,10 @@ import {
   SecretsArrayItem,
 } from "./helpers";
 
-export interface DomainNameConfig {
-  component?: string;
-  domain?: string;
-  env?: string;
-  subdomain?: string;
-}
+/**
+ * @deprecated Use HostConfig instead. This alias is kept for backwards compatibility.
+ */
+export type DomainNameConfig = HostConfig;
 
 export interface JaypieNextjsProps {
   datadogApiKeyArn?: string;

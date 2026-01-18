@@ -194,13 +194,24 @@ new JaypieWebDeploymentBucket(this, "Web", {
 
 ### JaypieDynamoDb
 
-DynamoDB table with Jaypie GSI patterns.
+DynamoDB table with Jaypie single-table design patterns.
 
 ```typescript
-new JaypieDynamoDb(this, "Table", {
-  tableName: "entities",
+// Basic table (no GSIs by default)
+new JaypieDynamoDb(this, "myApp");
+
+// With standard Jaypie GSIs
+new JaypieDynamoDb(this, "myApp", {
+  indexes: JaypieDynamoDb.DEFAULT_INDEXES,
 });
-// Creates table with 5 GSIs for Jaypie query patterns
+
+// With custom indexes using IndexDefinition from @jaypie/fabric
+new JaypieDynamoDb(this, "myApp", {
+  indexes: [
+    { pk: ["scope", "model"], sk: ["sequence"] },
+    { pk: ["scope", "model", "type"], sparse: true },
+  ],
+});
 ```
 
 ### JaypieEnvSecret

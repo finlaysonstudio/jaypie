@@ -21,21 +21,21 @@ All entities share a single DynamoDB table with:
 - **Primary Key**: `model` (partition) + `id` (sort)
 - **Five GSIs**: All use `sequence` as sort key for chronological ordering
 
-### Organizational Unit (OU)
+### Scope
 
-The `ou` field creates hierarchical relationships:
-- Root entities: `ou = "@"` (APEX constant)
-- Child entities: `ou = "{parent.model}#{parent.id}"`
+The `scope` field creates hierarchical relationships:
+- Root entities: `scope = "@"` (APEX constant)
+- Child entities: `scope = "{parent.model}#{parent.id}"`
 
 ### GSI Pattern
 
 | GSI Name | Partition Key | Use Case |
 |----------|---------------|----------|
-| `indexOu` | `{ou}#{model}` | List all entities under a parent |
-| `indexAlias` | `{ou}#{model}#{alias}` | Human-friendly slug lookup |
-| `indexClass` | `{ou}#{model}#{class}` | Category filtering |
-| `indexType` | `{ou}#{model}#{type}` | Type filtering |
-| `indexXid` | `{ou}#{model}#{xid}` | External system ID lookup |
+| `indexScope` | `{scope}#{model}` | List all entities under a parent |
+| `indexAlias` | `{scope}#{model}#{alias}` | Human-friendly slug lookup |
+| `indexClass` | `{scope}#{model}#{class}` | Category filtering |
+| `indexType` | `{scope}#{model}#{type}` | Type filtering |
+| `indexXid` | `{scope}#{model}#{xid}` | External system ID lookup |
 
 ## Client Initialization
 
@@ -75,7 +75,7 @@ interface MyRecord extends StorableEntity {
 
   // Required fields
   name: string;
-  ou: string;         // APEX or hierarchical
+  scope: string;      // APEX or hierarchical
   sequence: number;   // Date.now()
 
   // Timestamps (ISO 8601)
@@ -108,7 +108,7 @@ const record = await putEntity({
     model: "record",
     id: crypto.randomUUID(),
     name: "Daily Log",
-    ou: APEX,
+    scope: APEX,
     sequence: Date.now(),
     alias: "2026-01-07",    // Optional
     class: "memory",        // Optional
@@ -118,7 +118,7 @@ const record = await putEntity({
 });
 
 // Result includes auto-populated indexes:
-// indexOu: "@#record"
+// indexScope: "@#record"
 // indexAlias: "@#record#2026-01-07"
 // indexClass: "@#record#memory"
 ```
@@ -187,16 +187,16 @@ await destroyEntity({ id: "123", model: "record" });
 
 ### Hierarchical Entities
 
-Use `calculateOu` to derive OU from parent:
+Use `calculateScope` to derive scope from parent:
 
 ```typescript
-import { calculateOu, putEntity, queryByOu } from "@jaypie/dynamodb";
+import { calculateScope, putEntity, queryByScope } from "@jaypie/dynamodb";
 
 // Parent reference
 const chat = { model: "chat", id: "abc-123" };
 
-// Calculate child OU
-const messageOu = calculateOu(chat); // "chat#abc-123"
+// Calculate child scope
+const messageScope = calculateScope(chat); // "chat#abc-123"
 
 // Create child entity
 const message = await putEntity({
@@ -204,39 +204,39 @@ const message = await putEntity({
     model: "message",
     id: crypto.randomUUID(),
     name: "First message",
-    ou: messageOu,
+    scope: messageScope,
     sequence: Date.now(),
     createdAt: now,
     updatedAt: now,
   },
 });
-// indexOu: "chat#abc-123#message"
+// indexScope: "chat#abc-123#message"
 
 // Query all messages in chat
-const { items } = await queryByOu({ model: "message", ou: messageOu });
+const { items } = await queryByScope({ model: "message", scope: messageScope });
 ```
 
 ## Query Functions
 
 All queries use object parameters and filter soft-deleted and archived records by default.
 
-### queryByOu - List by Parent
+### queryByScope - List by Parent
 
 List all entities of a model under a parent:
 
 ```typescript
-import { APEX, queryByOu } from "@jaypie/dynamodb";
+import { APEX, queryByScope } from "@jaypie/dynamodb";
 
 // Root-level records
-const { items, lastEvaluatedKey } = await queryByOu({
+const { items, lastEvaluatedKey } = await queryByScope({
   model: "record",
-  ou: APEX,
+  scope: APEX,
 });
 
 // Messages under a chat
-const { items: messages } = await queryByOu({
+const { items: messages } = await queryByScope({
   model: "message",
-  ou: "chat#abc-123",
+  scope: "chat#abc-123",
 });
 ```
 
@@ -250,7 +250,7 @@ import { APEX, queryByAlias } from "@jaypie/dynamodb";
 const record = await queryByAlias({
   alias: "2026-01-07",
   model: "record",
-  ou: APEX,
+  scope: APEX,
 });
 // Returns entity or null
 ```
@@ -263,14 +263,14 @@ import { APEX, queryByClass, queryByType } from "@jaypie/dynamodb";
 // All memory records
 const { items } = await queryByClass({
   model: "record",
-  ou: APEX,
+  scope: APEX,
   recordClass: "memory",
 });
 
 // All note-type records
 const { items: notes } = await queryByType({
   model: "record",
-  ou: APEX,
+  scope: APEX,
   type: "note",
 });
 ```
@@ -284,7 +284,7 @@ import { APEX, queryByXid } from "@jaypie/dynamodb";
 
 const record = await queryByXid({
   model: "record",
-  ou: APEX,
+  scope: APEX,
   xid: "ext-12345",
 });
 // Returns entity or null
@@ -295,9 +295,9 @@ const record = await queryByXid({
 ```typescript
 import type { BaseQueryOptions } from "@jaypie/dynamodb";
 
-const result = await queryByOu({
+const result = await queryByScope({
   model: "record",
-  ou: APEX,
+  scope: APEX,
   // BaseQueryOptions:
   limit: 25,                // Max items to return
   ascending: true,          // Oldest first (default: false = newest first)
@@ -310,15 +310,15 @@ const result = await queryByOu({
 ### Pagination
 
 ```typescript
-import { APEX, queryByOu } from "@jaypie/dynamodb";
+import { APEX, queryByScope } from "@jaypie/dynamodb";
 
 let startKey: Record<string, unknown> | undefined;
 const allItems: StorableEntity[] = [];
 
 do {
-  const { items, lastEvaluatedKey } = await queryByOu({
+  const { items, lastEvaluatedKey } = await queryByScope({
     model: "record",
-    ou: APEX,
+    scope: APEX,
     limit: 100,
     startKey,
   });
@@ -337,11 +337,11 @@ import { indexEntity } from "@jaypie/dynamodb";
 const indexed = indexEntity({
   model: "record",
   id: "123",
-  ou: "@",
+  scope: "@",
   alias: "my-alias",
   // ...
 });
-// indexOu: "@#record"
+// indexScope: "@#record"
 // indexAlias: "@#record#my-alias"
 ```
 
@@ -349,14 +349,14 @@ Use individual key builders for manual key construction:
 
 ```typescript
 import {
-  buildIndexOu,
+  buildIndexScope,
   buildIndexAlias,
   buildIndexClass,
   buildIndexType,
   buildIndexXid,
 } from "@jaypie/dynamodb";
 
-buildIndexOu("@", "record");                    // "@#record"
+buildIndexScope("@", "record");                 // "@#record"
 buildIndexAlias("@", "record", "my-alias");     // "@#record#my-alias"
 buildIndexClass("@", "record", "memory");       // "@#record#memory"
 buildIndexType("@", "record", "note");          // "@#record#note"
@@ -369,7 +369,7 @@ buildIndexXid("@", "record", "ext-123");        // "@#record#ext-123"
 import {
   APEX,           // "@" - Root-level marker
   SEPARATOR,      // "#" - Composite key separator
-  INDEX_OU,       // "indexOu"
+  INDEX_SCOPE,    // "indexScope"
   INDEX_ALIAS,    // "indexAlias"
   INDEX_CLASS,    // "indexClass"
   INDEX_TYPE,     // "indexType"
@@ -385,7 +385,7 @@ AttributeDefinitions:
     AttributeType: S
   - AttributeName: id
     AttributeType: S
-  - AttributeName: indexOu
+  - AttributeName: indexScope
     AttributeType: S
   - AttributeName: indexAlias
     AttributeType: S
@@ -405,9 +405,9 @@ KeySchema:
     KeyType: RANGE
 
 GlobalSecondaryIndexes:
-  - IndexName: indexOu
+  - IndexName: indexScope
     KeySchema:
-      - AttributeName: indexOu
+      - AttributeName: indexScope
         KeyType: HASH
       - AttributeName: sequence
         KeyType: RANGE
@@ -445,7 +445,7 @@ const created = await seedEntityIfNotExists({
   alias: "config-main",
   model: "config",
   name: "Main Configuration",
-  ou: APEX,
+  scope: APEX,
 });
 // Returns true if created, false if already exists
 ```
@@ -458,8 +458,8 @@ Seed multiple entities with idempotency:
 import { APEX, seedEntities } from "@jaypie/dynamodb";
 
 const result = await seedEntities([
-  { alias: "vocab-en", model: "vocabulary", name: "English", ou: APEX },
-  { alias: "vocab-es", model: "vocabulary", name: "Spanish", ou: APEX },
+  { alias: "vocab-en", model: "vocabulary", name: "English", scope: APEX },
+  { alias: "vocab-es", model: "vocabulary", name: "Spanish", scope: APEX },
 ]);
 // result.created: aliases of created entities
 // result.skipped: aliases of entities that already existed
@@ -476,7 +476,7 @@ Auto-generates `id` (UUID), `createdAt`, `updatedAt`, and `sequence` if missing.
 
 ### exportEntities
 
-Export entities by model and organizational unit:
+Export entities by model and scope:
 
 ```typescript
 import { APEX, exportEntities } from "@jaypie/dynamodb";
@@ -546,11 +546,11 @@ import {
   exportEntities,
   getEntity,
   putEntity,
-  queryByOu,
+  queryByScope,
   seedEntities,
 } from "@jaypie/testkit/mock";
 
-queryByOu.mockResolvedValue({
+queryByScope.mockResolvedValue({
   items: [{ id: "123", name: "Test" }],
   lastEvaluatedKey: undefined,
 });
@@ -644,12 +644,12 @@ await deleteEntity({ id: "123", model: "record" });
 await archiveEntity({ id: "123", model: "record" });
 
 // Queries exclude both by default
-const { items } = await queryByOu({ model: "record", ou: APEX });
+const { items } = await queryByScope({ model: "record", scope: APEX });
 
 // Include if needed
-const { items: all } = await queryByOu({
+const { items: all } = await queryByScope({
   model: "record",
-  ou: APEX,
+  scope: APEX,
   includeDeleted: true,
   includeArchived: true,
 });
@@ -704,7 +704,7 @@ const { tools } = registerDynamoDbTools({ server });
 #### Query Operations
 | Tool | Description |
 |------|-------------|
-| `dynamodb_query_ou` | Query by organizational unit |
+| `dynamodb_query_scope` | Query by scope |
 | `dynamodb_query_alias` | Query by human-friendly alias |
 | `dynamodb_query_class` | Query by category classification |
 | `dynamodb_query_type` | Query by type classification |
@@ -753,15 +753,15 @@ Generate docker-compose and create table:
   "id": "abc-123",
   "model": "record",
   "name": "My Record",
-  "ou": "@",
+  "scope": "@",
   "alias": "my-record",
   "class": "memory"
 }
 
-// dynamodb_query_ou
+// dynamodb_query_scope
 {
   "model": "record",
-  "ou": "@",
+  "scope": "@",
   "limit": 10
 }
 

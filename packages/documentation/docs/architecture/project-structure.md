@@ -5,7 +5,7 @@ sidebar_position: 1
 # Project Structure
 
 
-**Prerequisites:** Node.js 20+, npm
+**Prerequisites:** Node.js 22+, npm
 
 ## Overview
 

@@ -4,7 +4,7 @@ import * as clientModule from "../client.js";
 import {
   queryByAlias,
   queryByClass,
-  queryByOu,
+  queryByScope,
   queryByType,
   queryByXid,
 } from "../queries.js";
@@ -27,30 +27,30 @@ describe("Query Functions", () => {
     vi.clearAllMocks();
   });
 
-  describe("queryByOu", () => {
+  describe("queryByScope", () => {
     it("is a function", () => {
-      expect(queryByOu).toBeFunction();
+      expect(queryByScope).toBeFunction();
     });
 
     it("returns QueryResult with items array", async () => {
-      const result = await queryByOu({ model: "record", ou: "@" });
+      const result = await queryByScope({ model: "record", scope: "@" });
       expect(result).toHaveProperty("items");
       expect(result.items).toBeArray();
     });
 
     it("calls docClient.send with QueryCommand", async () => {
-      await queryByOu({ model: "record", ou: "@" });
+      await queryByScope({ model: "record", scope: "@" });
       expect(mockSend).toHaveBeenCalledTimes(1);
     });
 
-    it("uses indexOu GSI", async () => {
-      await queryByOu({ model: "record", ou: "@" });
+    it("uses indexScope GSI", async () => {
+      await queryByScope({ model: "record", scope: "@" });
       const command = mockSend.mock.calls[0][0];
-      expect(command.input.IndexName).toBe("indexOu");
+      expect(command.input.IndexName).toBe("indexScope");
     });
 
     it("builds correct key value", async () => {
-      await queryByOu({ model: "record", ou: "@" });
+      await queryByScope({ model: "record", scope: "@" });
       const command = mockSend.mock.calls[0][0];
       expect(command.input.ExpressionAttributeValues[":pkValue"]).toBe(
         "@#record",
@@ -58,32 +58,32 @@ describe("Query Functions", () => {
     });
 
     it("defaults to descending order (most recent first)", async () => {
-      await queryByOu({ model: "record", ou: "@" });
+      await queryByScope({ model: "record", scope: "@" });
       const command = mockSend.mock.calls[0][0];
       expect(command.input.ScanIndexForward).toBe(false);
     });
 
     it("supports ascending order option", async () => {
-      await queryByOu({ ascending: true, model: "record", ou: "@" });
+      await queryByScope({ ascending: true, model: "record", scope: "@" });
       const command = mockSend.mock.calls[0][0];
       expect(command.input.ScanIndexForward).toBe(true);
     });
 
     it("does not use FilterExpression (exclusion via index suffix)", async () => {
-      await queryByOu({ model: "record", ou: "@" });
+      await queryByScope({ model: "record", scope: "@" });
       const command = mockSend.mock.calls[0][0];
       expect(command.input.FilterExpression).toBeUndefined();
     });
 
     it("supports limit option", async () => {
-      await queryByOu({ limit: 10, model: "record", ou: "@" });
+      await queryByScope({ limit: 10, model: "record", scope: "@" });
       const command = mockSend.mock.calls[0][0];
       expect(command.input.Limit).toBe(10);
     });
 
     it("supports pagination with startKey", async () => {
       const startKey = { id: "some-id", model: "record" };
-      await queryByOu({ model: "record", ou: "@", startKey });
+      await queryByScope({ model: "record", scope: "@", startKey });
       const command = mockSend.mock.calls[0][0];
       expect(command.input.ExclusiveStartKey).toEqual(startKey);
     });
@@ -91,12 +91,12 @@ describe("Query Functions", () => {
     it("returns lastEvaluatedKey for pagination", async () => {
       const lastKey = { id: "last-id", model: "record" };
       mockSend.mockResolvedValueOnce({ Items: [], LastEvaluatedKey: lastKey });
-      const result = await queryByOu({ model: "record", ou: "@" });
+      const result = await queryByScope({ model: "record", scope: "@" });
       expect(result.lastEvaluatedKey).toEqual(lastKey);
     });
 
-    it("works with hierarchical ou", async () => {
-      await queryByOu({ model: "message", ou: "chat#abc-123" });
+    it("works with hierarchical scope", async () => {
+      await queryByScope({ model: "message", scope: "chat#abc-123" });
       const command = mockSend.mock.calls[0][0];
       expect(command.input.ExpressionAttributeValues[":pkValue"]).toBe(
         "chat#abc-123#message",
@@ -114,7 +114,7 @@ describe("Query Functions", () => {
       const result = await queryByAlias({
         alias: "my-alias",
         model: "record",
-        ou: "@",
+        scope: "@",
       });
       expect(result).toBeNull();
     });
@@ -125,19 +125,19 @@ describe("Query Functions", () => {
       const result = await queryByAlias({
         alias: "my-alias",
         model: "record",
-        ou: "@",
+        scope: "@",
       });
       expect(result).toEqual(mockItem);
     });
 
     it("uses indexAlias GSI", async () => {
-      await queryByAlias({ alias: "my-alias", model: "record", ou: "@" });
+      await queryByAlias({ alias: "my-alias", model: "record", scope: "@" });
       const command = mockSend.mock.calls[0][0];
       expect(command.input.IndexName).toBe("indexAlias");
     });
 
     it("builds correct key value", async () => {
-      await queryByAlias({ alias: "my-alias", model: "record", ou: "@" });
+      await queryByAlias({ alias: "my-alias", model: "record", scope: "@" });
       const command = mockSend.mock.calls[0][0];
       expect(command.input.ExpressionAttributeValues[":pkValue"]).toBe(
         "@#record#my-alias",
@@ -145,7 +145,7 @@ describe("Query Functions", () => {
     });
 
     it("limits to 1 result", async () => {
-      await queryByAlias({ alias: "my-alias", model: "record", ou: "@" });
+      await queryByAlias({ alias: "my-alias", model: "record", scope: "@" });
       const command = mockSend.mock.calls[0][0];
       expect(command.input.Limit).toBe(1);
     });
@@ -159,7 +159,7 @@ describe("Query Functions", () => {
     it("returns QueryResult with items array", async () => {
       const result = await queryByClass({
         model: "record",
-        ou: "@",
+        scope: "@",
         recordClass: "memory",
       });
       expect(result).toHaveProperty("items");
@@ -167,13 +167,13 @@ describe("Query Functions", () => {
     });
 
     it("uses indexClass GSI", async () => {
-      await queryByClass({ model: "record", ou: "@", recordClass: "memory" });
+      await queryByClass({ model: "record", scope: "@", recordClass: "memory" });
       const command = mockSend.mock.calls[0][0];
       expect(command.input.IndexName).toBe("indexClass");
     });
 
     it("builds correct key value", async () => {
-      await queryByClass({ model: "record", ou: "@", recordClass: "memory" });
+      await queryByClass({ model: "record", scope: "@", recordClass: "memory" });
       const command = mockSend.mock.calls[0][0];
       expect(command.input.ExpressionAttributeValues[":pkValue"]).toBe(
         "@#record#memory",
@@ -185,7 +185,7 @@ describe("Query Functions", () => {
         ascending: true,
         limit: 5,
         model: "record",
-        ou: "@",
+        scope: "@",
         recordClass: "memory",
       });
       const command = mockSend.mock.calls[0][0];
@@ -202,7 +202,7 @@ describe("Query Functions", () => {
     it("returns QueryResult with items array", async () => {
       const result = await queryByType({
         model: "record",
-        ou: "@",
+        scope: "@",
         type: "note",
       });
       expect(result).toHaveProperty("items");
@@ -210,13 +210,13 @@ describe("Query Functions", () => {
     });
 
     it("uses indexType GSI", async () => {
-      await queryByType({ model: "record", ou: "@", type: "note" });
+      await queryByType({ model: "record", scope: "@", type: "note" });
       const command = mockSend.mock.calls[0][0];
       expect(command.input.IndexName).toBe("indexType");
     });
 
     it("builds correct key value", async () => {
-      await queryByType({ model: "record", ou: "@", type: "note" });
+      await queryByType({ model: "record", scope: "@", type: "note" });
       const command = mockSend.mock.calls[0][0];
       expect(command.input.ExpressionAttributeValues[":pkValue"]).toBe(
         "@#record#note",
@@ -228,7 +228,7 @@ describe("Query Functions", () => {
         ascending: true,
         limit: 5,
         model: "record",
-        ou: "@",
+        scope: "@",
         type: "note",
       });
       const command = mockSend.mock.calls[0][0];
@@ -246,7 +246,7 @@ describe("Query Functions", () => {
       mockSend.mockResolvedValueOnce({ Items: [] });
       const result = await queryByXid({
         model: "record",
-        ou: "@",
+        scope: "@",
         xid: "ext-123",
       });
       expect(result).toBeNull();
@@ -257,20 +257,20 @@ describe("Query Functions", () => {
       mockSend.mockResolvedValueOnce({ Items: [mockItem] });
       const result = await queryByXid({
         model: "record",
-        ou: "@",
+        scope: "@",
         xid: "ext-123",
       });
       expect(result).toEqual(mockItem);
     });
 
     it("uses indexXid GSI", async () => {
-      await queryByXid({ model: "record", ou: "@", xid: "ext-123" });
+      await queryByXid({ model: "record", scope: "@", xid: "ext-123" });
       const command = mockSend.mock.calls[0][0];
       expect(command.input.IndexName).toBe("indexXid");
     });
 
     it("builds correct key value", async () => {
-      await queryByXid({ model: "record", ou: "@", xid: "ext-123" });
+      await queryByXid({ model: "record", scope: "@", xid: "ext-123" });
       const command = mockSend.mock.calls[0][0];
       expect(command.input.ExpressionAttributeValues[":pkValue"]).toBe(
         "@#record#ext-123",
@@ -278,7 +278,7 @@ describe("Query Functions", () => {
     });
 
     it("limits to 1 result", async () => {
-      await queryByXid({ model: "record", ou: "@", xid: "ext-123" });
+      await queryByXid({ model: "record", scope: "@", xid: "ext-123" });
       const command = mockSend.mock.calls[0][0];
       expect(command.input.Limit).toBe(1);
     });
@@ -286,8 +286,8 @@ describe("Query Functions", () => {
 
   describe("Soft State Query Options", () => {
     describe("deleted flag", () => {
-      it("queryByOu appends #deleted suffix when deleted: true", async () => {
-        await queryByOu({ deleted: true, model: "record", ou: "@" });
+      it("queryByScope appends #deleted suffix when deleted: true", async () => {
+        await queryByScope({ deleted: true, model: "record", scope: "@" });
         const command = mockSend.mock.calls[0][0];
         expect(command.input.ExpressionAttributeValues[":pkValue"]).toBe(
           "@#record#deleted",
@@ -298,7 +298,7 @@ describe("Query Functions", () => {
         await queryByClass({
           deleted: true,
           model: "record",
-          ou: "@",
+          scope: "@",
           recordClass: "memory",
         });
         const command = mockSend.mock.calls[0][0];
@@ -308,7 +308,12 @@ describe("Query Functions", () => {
       });
 
       it("queryByType appends #deleted suffix when deleted: true", async () => {
-        await queryByType({ deleted: true, model: "record", ou: "@", type: "note" });
+        await queryByType({
+          deleted: true,
+          model: "record",
+          scope: "@",
+          type: "note",
+        });
         const command = mockSend.mock.calls[0][0];
         expect(command.input.ExpressionAttributeValues[":pkValue"]).toBe(
           "@#record#note#deleted",
@@ -320,7 +325,7 @@ describe("Query Functions", () => {
           alias: "my-alias",
           deleted: true,
           model: "record",
-          ou: "@",
+          scope: "@",
         });
         const command = mockSend.mock.calls[0][0];
         expect(command.input.ExpressionAttributeValues[":pkValue"]).toBe(
@@ -329,7 +334,12 @@ describe("Query Functions", () => {
       });
 
       it("queryByXid appends #deleted suffix when deleted: true", async () => {
-        await queryByXid({ deleted: true, model: "record", ou: "@", xid: "ext-123" });
+        await queryByXid({
+          deleted: true,
+          model: "record",
+          scope: "@",
+          xid: "ext-123",
+        });
         const command = mockSend.mock.calls[0][0];
         expect(command.input.ExpressionAttributeValues[":pkValue"]).toBe(
           "@#record#ext-123#deleted",
@@ -338,8 +348,8 @@ describe("Query Functions", () => {
     });
 
     describe("archived flag", () => {
-      it("queryByOu appends #archived suffix when archived: true", async () => {
-        await queryByOu({ archived: true, model: "record", ou: "@" });
+      it("queryByScope appends #archived suffix when archived: true", async () => {
+        await queryByScope({ archived: true, model: "record", scope: "@" });
         const command = mockSend.mock.calls[0][0];
         expect(command.input.ExpressionAttributeValues[":pkValue"]).toBe(
           "@#record#archived",
@@ -350,7 +360,7 @@ describe("Query Functions", () => {
         await queryByClass({
           archived: true,
           model: "record",
-          ou: "@",
+          scope: "@",
           recordClass: "memory",
         });
         const command = mockSend.mock.calls[0][0];
@@ -363,7 +373,7 @@ describe("Query Functions", () => {
         await queryByType({
           archived: true,
           model: "record",
-          ou: "@",
+          scope: "@",
           type: "note",
         });
         const command = mockSend.mock.calls[0][0];
@@ -377,7 +387,7 @@ describe("Query Functions", () => {
           alias: "my-alias",
           archived: true,
           model: "record",
-          ou: "@",
+          scope: "@",
         });
         const command = mockSend.mock.calls[0][0];
         expect(command.input.ExpressionAttributeValues[":pkValue"]).toBe(
@@ -389,7 +399,7 @@ describe("Query Functions", () => {
         await queryByXid({
           archived: true,
           model: "record",
-          ou: "@",
+          scope: "@",
           xid: "ext-123",
         });
         const command = mockSend.mock.calls[0][0];
@@ -400,8 +410,13 @@ describe("Query Functions", () => {
     });
 
     describe("combined archived and deleted", () => {
-      it("queryByOu appends #archived#deleted suffix when both are true", async () => {
-        await queryByOu({ archived: true, deleted: true, model: "record", ou: "@" });
+      it("queryByScope appends #archived#deleted suffix when both are true", async () => {
+        await queryByScope({
+          archived: true,
+          deleted: true,
+          model: "record",
+          scope: "@",
+        });
         const command = mockSend.mock.calls[0][0];
         expect(command.input.ExpressionAttributeValues[":pkValue"]).toBe(
           "@#record#archived#deleted",
@@ -413,7 +428,7 @@ describe("Query Functions", () => {
           archived: true,
           deleted: true,
           model: "record",
-          ou: "@",
+          scope: "@",
           recordClass: "memory",
         });
         const command = mockSend.mock.calls[0][0];
@@ -427,7 +442,7 @@ describe("Query Functions", () => {
           archived: true,
           deleted: true,
           model: "record",
-          ou: "@",
+          scope: "@",
           type: "note",
         });
         const command = mockSend.mock.calls[0][0];
@@ -442,7 +457,7 @@ describe("Query Functions", () => {
           archived: true,
           deleted: true,
           model: "record",
-          ou: "@",
+          scope: "@",
         });
         const command = mockSend.mock.calls[0][0];
         expect(command.input.ExpressionAttributeValues[":pkValue"]).toBe(
@@ -455,7 +470,7 @@ describe("Query Functions", () => {
           archived: true,
           deleted: true,
           model: "record",
-          ou: "@",
+          scope: "@",
           xid: "ext-123",
         });
         const command = mockSend.mock.calls[0][0];

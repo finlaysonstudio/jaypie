@@ -8,9 +8,11 @@ export {
   LambdaResponseStreaming,
 } from "./adapter/index.js";
 export type {
+  ApiGatewayV1Event,
   CreateLambdaHandlerOptions,
   FunctionUrlEvent,
   LambdaContext,
+  LambdaEvent,
   LambdaHandler,
   LambdaResponse,
   LambdaStreamHandler,
@@ -21,8 +23,6 @@ export type {
 export { EXPRESS } from "./constants.js";
 export { default as cors } from "./cors.helper.js";
 export type { CorsConfig } from "./cors.helper.js";
-export { default as createServer } from "./createServer.js";
-export type { CreateServerOptions, ServerResult } from "./createServer.js";
 export { default as expressHandler } from "./expressHandler.js";
 export type {
   ExpressHandlerLocals,

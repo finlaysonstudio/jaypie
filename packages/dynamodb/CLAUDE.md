@@ -18,10 +18,10 @@ This package provides utilities for:
 src/
 ├── __tests__/           # Test files
 ├── client.ts            # Client initialization and management
-├── constants.ts         # APEX, SEPARATOR, GSI index names
+├── constants.ts         # Re-exports from @jaypie/fabric (APEX, SEPARATOR, etc.)
 ├── entities.ts          # Entity CRUD operations
 ├── index.ts             # Package exports
-├── keyBuilders.ts       # Key builder and entity utilities
+├── keyBuilders.ts       # Key builders (wraps @jaypie/fabric utilities)
 ├── queries.ts           # Query functions for each GSI
 ├── seedExport.ts        # Seed and export utilities
 └── types.ts             # TypeScript interfaces
@@ -38,7 +38,7 @@ src/
 | `DELETED_SUFFIX` | `"#deleted"` | Suffix appended to GSI keys on delete |
 | `INDEX_ALIAS` | `"indexAlias"` | Human-friendly lookup GSI name |
 | `INDEX_CLASS` | `"indexClass"` | Category filtering GSI name |
-| `INDEX_OU` | `"indexOu"` | Hierarchical queries GSI name |
+| `INDEX_SCOPE` | `"indexScope"` | Hierarchical queries GSI name |
 | `INDEX_TYPE` | `"indexType"` | Type filtering GSI name |
 | `INDEX_XID` | `"indexXid"` | External ID lookup GSI name |
 | `SEPARATOR` | `"#"` | Composite key separator |
@@ -47,17 +47,17 @@ src/
 
 | Export | Description |
 |--------|-------------|
-| `buildIndexOu(ou, model)` | Returns `"{ou}#{model}"` |
-| `buildIndexAlias(ou, model, alias)` | Returns `"{ou}#{model}#{alias}"` |
-| `buildIndexClass(ou, model, recordClass)` | Returns `"{ou}#{model}#{class}"` |
-| `buildIndexType(ou, model, type)` | Returns `"{ou}#{model}#{type}"` |
-| `buildIndexXid(ou, model, xid)` | Returns `"{ou}#{model}#{xid}"` |
+| `buildIndexScope(scope, model)` | Returns `"{scope}#{model}"` |
+| `buildIndexAlias(scope, model, alias)` | Returns `"{scope}#{model}#{alias}"` |
+| `buildIndexClass(scope, model, recordClass)` | Returns `"{scope}#{model}#{class}"` |
+| `buildIndexType(scope, model, type)` | Returns `"{scope}#{model}#{type}"` |
+| `buildIndexXid(scope, model, xid)` | Returns `"{scope}#{model}#{xid}"` |
 
 ### Entity Utilities
 
 | Export | Description |
 |--------|-------------|
-| `calculateOu(parent?)` | Returns `APEX` if no parent, else `"{parent.model}#{parent.id}"` |
+| `calculateScope(parent?)` | Returns `APEX` if no parent, else `"{parent.model}#{parent.id}"` |
 | `indexEntity(entity, suffix?)` | Auto-populates GSI keys on entity based on present fields, with optional suffix |
 
 ### Entity Operations
@@ -87,11 +87,11 @@ All query functions use object parameters:
 
 | Export | Parameters | Description |
 |--------|------------|-------------|
-| `queryByOu({ model, ou, ...options })` | Required: model, ou | List entities by parent (hierarchical) |
-| `queryByAlias({ alias, model, ou })` | Required: all | Lookup by human-friendly slug (returns single or null) |
-| `queryByClass({ model, ou, recordClass, ...options })` | Required: model, ou, recordClass | Filter by category |
-| `queryByType({ model, ou, type, ...options })` | Required: model, ou, type | Filter by type |
-| `queryByXid({ model, ou, xid })` | Required: all | Lookup by external ID (returns single or null) |
+| `queryByScope({ model, scope, ...options })` | Required: model, scope | List entities by parent (hierarchical) |
+| `queryByAlias({ alias, model, scope })` | Required: all | Lookup by human-friendly slug (returns single or null) |
+| `queryByClass({ model, scope, recordClass, ...options })` | Required: model, scope, recordClass | Filter by category |
+| `queryByType({ model, scope, type, ...options })` | Required: model, scope, type | Filter by type |
+| `queryByXid({ model, scope, xid })` | Required: all | Lookup by external ID (returns single or null) |
 
 ### Seed and Export Functions
 
@@ -101,8 +101,8 @@ Generic utilities for bootstrapping and migrating DynamoDB data:
 |--------|-------------|
 | `seedEntityIfNotExists(entity)` | Seed a single entity if it doesn't already exist by alias |
 | `seedEntities(entities, options?)` | Seed multiple entities (idempotent) with optional replace/dryRun |
-| `exportEntities(model, ou, limit?)` | Export entities by model + ou, sorted by sequence ascending |
-| `exportEntitiesToJson(model, ou, pretty?)` | Export as JSON string (default: pretty printed) |
+| `exportEntities(model, scope, limit?)` | Export entities by model + scope, sorted by sequence ascending |
+| `exportEntitiesToJson(model, scope, pretty?)` | Export as JSON string (default: pretty printed) |
 
 ### Types
 
@@ -139,13 +139,13 @@ interface StorableEntity {
 
   // Required
   name: string;
-  ou: string;                 // APEX or "{parent.model}#{parent.id}"
+  scope: string;              // APEX or "{parent.model}#{parent.id}"
   sequence: number;           // Date.now() for chronological ordering
 
   // GSI Keys (auto-populated by indexEntity)
   indexAlias?: string;
   indexClass?: string;
-  indexOu?: string;
+  indexScope?: string;
   indexType?: string;
   indexXid?: string;
 
@@ -187,32 +187,32 @@ All GSIs use `sequence` (number) as the sort key for chronological ordering.
 
 | GSI Name | Partition Key Pattern | Purpose |
 |----------|----------------------|---------|
-| `indexOu` | `{ou}#{model}` | List by parent |
-| `indexAlias` | `{ou}#{model}#{alias}` | Human-friendly lookup |
-| `indexClass` | `{ou}#{model}#{class}` | Category filter |
-| `indexType` | `{ou}#{model}#{type}` | Type filter |
-| `indexXid` | `{ou}#{model}#{xid}` | External ID lookup |
+| `indexScope` | `{scope}#{model}` | List by parent |
+| `indexAlias` | `{scope}#{model}#{alias}` | Human-friendly lookup |
+| `indexClass` | `{scope}#{model}#{class}` | Category filter |
+| `indexType` | `{scope}#{model}#{type}` | Type filter |
+| `indexXid` | `{scope}#{model}#{xid}` | External ID lookup |
 
 ### Primary Key
 
 - **Partition Key**: `model` (e.g., "record", "message", "chat")
 - **Sort Key**: `id` (UUID)
 
-### OU (Organizational Unit)
+### Scope
 
-The `ou` field enables hierarchical queries:
+The `scope` field enables hierarchical queries:
 
-- Root-level entities: `ou = APEX` ("@")
-- Child entities: `ou = "{parent.model}#{parent.id}"`
+- Root-level entities: `scope = APEX` ("@")
+- Child entities: `scope = "{parent.model}#{parent.id}"`
 
-Example: Messages under a chat have `ou = "chat#abc-123"`
+Example: Messages under a chat have `scope = "chat#abc-123"`
 
 ## Usage Examples
 
 ### Initialize Client
 
 ```typescript
-import { initClient, APEX, queryByOu } from "@jaypie/dynamodb";
+import { initClient, APEX, queryByScope } from "@jaypie/dynamodb";
 
 // Initialize once at app startup
 // In production: uses DYNAMODB_TABLE_NAME and AWS_REGION env vars
@@ -225,7 +225,7 @@ initClient({
 });
 
 // Use anywhere
-const { items } = await queryByOu({ model: "record", ou: APEX });
+const { items } = await queryByScope({ model: "record", scope: APEX });
 ```
 
 ### Create Entity
@@ -239,7 +239,7 @@ const record = await putEntity({
     model: "record",
     id: crypto.randomUUID(),
     name: "Daily Log",
-    ou: APEX,
+    scope: APEX,
     sequence: Date.now(),
     alias: "2026-01-07",
     class: "memory",
@@ -247,7 +247,7 @@ const record = await putEntity({
     updatedAt: now,
   },
 });
-// indexOu: "@#record" (auto-populated)
+// indexScope: "@#record" (auto-populated)
 // indexAlias: "@#record#2026-01-07" (auto-populated)
 // indexClass: "@#record#memory" (auto-populated)
 ```
@@ -255,27 +255,27 @@ const record = await putEntity({
 ### Hierarchical Entities
 
 ```typescript
-import { calculateOu, putEntity, queryByOu } from "@jaypie/dynamodb";
+import { calculateScope, putEntity, queryByScope } from "@jaypie/dynamodb";
 
 // Create child entity
 const chat = { model: "chat", id: "abc-123" };
-const messageOu = calculateOu(chat); // "chat#abc-123"
+const messageScope = calculateScope(chat); // "chat#abc-123"
 
 const message = await putEntity({
   entity: {
     model: "message",
     id: crypto.randomUUID(),
     name: "Message 1",
-    ou: messageOu,
+    scope: messageScope,
     sequence: Date.now(),
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
 });
-// indexOu: "chat#abc-123#message" (auto-populated)
+// indexScope: "chat#abc-123#message" (auto-populated)
 
 // Query all messages in chat
-const { items } = await queryByOu({ model: "message", ou: messageOu });
+const { items } = await queryByScope({ model: "message", scope: messageScope });
 ```
 
 ### Query with Options
@@ -285,7 +285,7 @@ import { APEX, queryByClass } from "@jaypie/dynamodb";
 
 const { items, lastEvaluatedKey } = await queryByClass({
   model: "record",
-  ou: APEX,
+  scope: APEX,
   recordClass: "memory",
   limit: 10,
   ascending: true,          // Oldest first
@@ -294,7 +294,7 @@ const { items, lastEvaluatedKey } = await queryByClass({
 // Pagination
 const nextPage = await queryByClass({
   model: "record",
-  ou: APEX,
+  scope: APEX,
   recordClass: "memory",
   startKey: lastEvaluatedKey,
 });
@@ -313,40 +313,40 @@ import {
   destroyEntity,
   getEntity,
   indexEntity,
-  queryByOu
+  queryByScope
 } from "@jaypie/dynamodb";
 
 // Soft delete - sets deletedAt, re-indexes with #deleted suffix
-// indexOu changes from "@#record" to "@#record#deleted"
+// indexScope changes from "@#record" to "@#record#deleted"
 await deleteEntity({ id: "123", model: "record" });
 
 // Archive - sets archivedAt, re-indexes with #archived suffix
-// indexOu changes from "@#record" to "@#record#archived"
+// indexScope changes from "@#record" to "@#record#archived"
 await archiveEntity({ id: "456", model: "record" });
 
 // Hard delete - permanently removes from table
 await destroyEntity({ id: "789", model: "record" });
 
 // Query deleted entities using the deleted flag
-const { items: deletedItems } = await queryByOu({
+const { items: deletedItems } = await queryByScope({
   deleted: true,
   model: "record",
-  ou: APEX,
+  scope: APEX,
 });
 
 // Query archived entities using the archived flag
-const { items: archivedItems } = await queryByOu({
+const { items: archivedItems } = await queryByScope({
   archived: true,
   model: "record",
-  ou: APEX,
+  scope: APEX,
 });
 
 // Query entities that are both archived AND deleted
-const { items: archivedAndDeleted } = await queryByOu({
+const { items: archivedAndDeleted } = await queryByScope({
   archived: true,
   deleted: true,
   model: "record",
-  ou: APEX,
+  scope: APEX,
 });
 // Uses combined suffix: #archived#deleted
 
@@ -354,9 +354,9 @@ const { items: archivedAndDeleted } = await queryByOu({
 const deletedEntity = await getEntity({ id: "123", model: "record" });
 
 // The indexEntity function accepts an optional suffix parameter for manual indexing
-const entity = { model: "record", ou: "@", id: "123", ... };
+const entity = { model: "record", scope: "@", id: "123", ... };
 const indexed = indexEntity(entity, DELETED_SUFFIX);
-// indexed.indexOu === "@#record#deleted"
+// indexed.indexScope === "@#record#deleted"
 ```
 
 ### Seed and Export
@@ -375,14 +375,14 @@ const created = await seedEntityIfNotExists({
   alias: "config-main",
   model: "config",
   name: "Main Configuration",
-  ou: APEX,
+  scope: APEX,
 });
 // Returns true if created, false if already exists
 
 // Seed multiple entities (idempotent)
 const result = await seedEntities([
-  { alias: "vocab-en", model: "vocabulary", name: "English", ou: APEX },
-  { alias: "vocab-es", model: "vocabulary", name: "Spanish", ou: APEX },
+  { alias: "vocab-en", model: "vocabulary", name: "English", scope: APEX },
+  { alias: "vocab-es", model: "vocabulary", name: "Spanish", scope: APEX },
 ]);
 // result.created: ["vocab-en", "vocab-es"] or []
 // result.skipped: entities that already existed
@@ -390,14 +390,14 @@ const result = await seedEntities([
 
 // Dry run to preview what would be seeded
 const preview = await seedEntities(
-  [{ alias: "new-item", model: "item", ou: APEX }],
+  [{ alias: "new-item", model: "item", scope: APEX }],
   { dryRun: true }
 );
 // No entities written, but created/skipped arrays populated
 
 // Replace existing entities
 await seedEntities(
-  [{ alias: "config-main", model: "config", name: "Updated Config", ou: APEX }],
+  [{ alias: "config-main", model: "config", name: "Updated Config", scope: APEX }],
   { replace: true }
 );
 
@@ -428,7 +428,7 @@ import {
   exportEntitiesToJson,
   indexEntity,
   putEntity,
-  queryByOu,
+  queryByScope,
   seedEntities,
   seedEntityIfNotExists,
 } from "@jaypie/testkit/mock";
@@ -445,6 +445,10 @@ npm run typecheck # Type check
 npm run lint      # Lint code
 npm run format    # Auto-fix lint issues
 ```
+
+## Dependencies
+
+- `@jaypie/fabric` - Index utilities (`APEX`, `SEPARATOR`, `calculateScope`, `buildCompositeKey`, `populateIndexKeys`)
 
 ## Peer Dependencies
 

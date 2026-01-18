@@ -10,7 +10,7 @@
 - Additional packages provide special functions
 ## Technology Stack
 - **Language**: TypeScript with ESM modules
-- **Runtime**: Node.js 20, 22, 24, 25 (tested across all versions)
+- **Runtime**: Node.js 22, 24, 25 (tested across all versions)
 - **Package Manager**: npm with workspaces (monorepo)
 - **Testing**: Vitest
 - **Building**: Rollup with vite-plugin-dts for type declarations
@@ -46,7 +46,7 @@
 ## CI/CD Workflows
 - **npm-check.yml**: Runs on `feat/*`, `fix/*`, `devin/*` branches
   - Lint, typecheck, and unit tests in parallel
-  - Tests across Node.js 20, 22, 24, 25
+  - Tests across Node.js 22, 24, 25
   - Optional Datadog test tracing
   - Conditional LLM client tests when `packages/llm` changes
 - **npm-deploy.yml**: Runs on `main` branch and `deploy-*`/`rc-*` tags
@@ -80,6 +80,8 @@ npm test                    # Run all tests in non-watch mode (vitest run)
 npm test -w <package-name>  # Run tests for specific workspace package
 ```
 Do not execute `vitest` without `vitest run`. By default `vitest` executes with `watch` and does not terminate.
+
+**Local Lambda Testing**: `packages/express/docker/` provides Docker and SAM CLI setups for testing the Express-to-Lambda adapter locally. See the directory's CLAUDE.md for details.
 ### Building
 ```bash
 npm run build               # Build all workspace packages

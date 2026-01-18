@@ -1,11 +1,14 @@
 // Export CDK constants
-export { CDK, LAMBDA_WEB_ADAPTER } from "./constants";
+export { CDK } from "./constants";
 
 export {
   JaypieAccountLoggingBucket,
   JaypieAccountLoggingBucketProps,
 } from "./JaypieAccountLoggingBucket";
-export { JaypieApiGateway } from "./JaypieApiGateway";
+export {
+  JaypieApiGateway,
+  JaypieApiGatewayProps,
+} from "./JaypieApiGateway";
 export { JaypieAppStack } from "./JaypieAppStack";
 export { JaypieBucketQueuedLambda } from "./JaypieBucketQueuedLambda";
 export {
@@ -27,6 +30,8 @@ export {
 } from "./JaypieDistribution";
 export { JaypieDnsRecord, JaypieDnsRecordProps } from "./JaypieDnsRecord";
 export { JaypieDynamoDb, JaypieDynamoDbProps } from "./JaypieDynamoDb";
+// Re-export IndexDefinition type for custom GSI definitions
+export type { IndexDefinition } from "@jaypie/fabric";
 export { JaypieEnvSecret } from "./JaypieEnvSecret";
 export { JaypieEventsRule, JaypieEventsRuleProps } from "./JaypieEventsRule";
 export { JaypieExpressLambda } from "./JaypieExpressLambda";
@@ -66,10 +71,6 @@ export {
   JaypieStaticWebBucket,
   JaypieStaticWebBucketProps,
 } from "./JaypieStaticWebBucket";
-export {
-  JaypieStreamingLambda,
-  JaypieStreamingLambdaProps,
-} from "./JaypieStreamingLambda";
 export { JaypieTraceSigningKeySecret } from "./JaypieTraceSigningKeySecret";
 export { JaypieWebDeploymentBucket } from "./JaypieWebDeploymentBucket";
 export * from "./helpers";

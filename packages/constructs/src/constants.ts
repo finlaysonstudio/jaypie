@@ -1,18 +1,3 @@
-export const LAMBDA_WEB_ADAPTER = {
-  ACCOUNT: "753240598075",
-  DEFAULT_PORT: 8000,
-  EXEC_WRAPPER: "/opt/bootstrap",
-  INVOKE_MODE: {
-    BUFFERED: "BUFFERED",
-    RESPONSE_STREAM: "RESPONSE_STREAM",
-  },
-  LAYER: {
-    ARM64: "LambdaAdapterLayerArm64",
-    X86: "LambdaAdapterLayerX86",
-  },
-  VERSION: 25,
-};
-
 export const CDK = {
   ACCOUNT: {
     DEVELOPMENT: "development",

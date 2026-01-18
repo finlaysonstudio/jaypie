@@ -6,7 +6,7 @@ import {
   DELETED_SUFFIX,
   INDEX_ALIAS,
   INDEX_CLASS,
-  INDEX_OU,
+  INDEX_SCOPE,
   INDEX_TYPE,
   INDEX_XID,
   SEPARATOR,
@@ -42,8 +42,8 @@ describe("Constants", () => {
       expect(INDEX_CLASS).toBe("indexClass");
     });
 
-    it("INDEX_OU is 'indexOu'", () => {
-      expect(INDEX_OU).toBe("indexOu");
+    it("INDEX_SCOPE is 'indexScope'", () => {
+      expect(INDEX_SCOPE).toBe("indexScope");
     });
 
     it("INDEX_TYPE is 'indexType'", () => {

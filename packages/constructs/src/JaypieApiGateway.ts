@@ -7,6 +7,8 @@ import * as route53Targets from "aws-cdk-lib/aws-route53-targets";
 import { CDK } from "./constants";
 import {
   constructEnvName,
+  envHostname,
+  HostConfig,
   mergeDomain,
   resolveCertificate,
   resolveHostedZone,
@@ -14,7 +16,23 @@ import {
 
 export interface JaypieApiGatewayProps extends apiGateway.LambdaRestApiProps {
   certificate?: boolean | acm.ICertificate;
-  host?: string;
+  /**
+   * The domain name for the API Gateway.
+   *
+   * Supports both string and config object:
+   * - String: used directly as the domain name (e.g., "api.example.com")
+   * - Object: passed to envHostname() to construct the domain name
+   *   - { subdomain, domain, env, component }
+   *
+   * @example
+   * // Direct string
+   * host: "api.example.com"
+   *
+   * @example
+   * // Config object - resolves using envHostname()
+   * host: { subdomain: "api" }
+   */
+  host?: string | HostConfig;
   name?: string;
   roleTag?: string;
   zone?: string | route53.IHostedZone;
@@ -45,19 +63,22 @@ export class JaypieApiGateway extends Construct implements apiGateway.IRestApi {
     }
 
     // Determine host from props or environment
-    let host = propsHost;
-    if (!host) {
-      if (process.env.CDK_ENV_API_HOST_NAME) {
-        host = process.env.CDK_ENV_API_HOST_NAME;
-      } else if (
-        process.env.CDK_ENV_API_SUBDOMAIN &&
-        process.env.CDK_ENV_API_HOSTED_ZONE
-      ) {
-        host = mergeDomain(
-          process.env.CDK_ENV_API_SUBDOMAIN,
-          process.env.CDK_ENV_API_HOSTED_ZONE,
-        );
-      }
+    let host: string | undefined;
+    if (typeof propsHost === "string") {
+      host = propsHost;
+    } else if (typeof propsHost === "object") {
+      // Resolve host from HostConfig using envHostname()
+      host = envHostname(propsHost);
+    } else if (process.env.CDK_ENV_API_HOST_NAME) {
+      host = process.env.CDK_ENV_API_HOST_NAME;
+    } else if (
+      process.env.CDK_ENV_API_SUBDOMAIN &&
+      process.env.CDK_ENV_API_HOSTED_ZONE
+    ) {
+      host = mergeDomain(
+        process.env.CDK_ENV_API_SUBDOMAIN,
+        process.env.CDK_ENV_API_HOSTED_ZONE,
+      );
     }
 
     const apiGatewayName = name || constructEnvName("ApiGateway");

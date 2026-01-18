@@ -3,7 +3,7 @@
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ConfigurationError } from "@jaypie/errors";
-import { clearRegistry, registerModel } from "@jaypie/vocabulary";
+import { clearRegistry, registerModel } from "@jaypie/fabric";
 
 import { initClient, resetClient } from "../client.js";
 import { query } from "../query.js";
@@ -51,19 +51,21 @@ describe("query", () => {
   });
 
   describe("index auto-detection", () => {
-    it("selects indexOu when only ou and model provided", async () => {
-      await query({ model: "record", ou: "@" });
+    it("selects indexScope when only scope and model provided", async () => {
+      await query({ model: "record", scope: "@" });
 
       expect(mockSend).toHaveBeenCalledOnce();
       const command = mockSend.mock.calls[0][0];
-      expect(command.input.IndexName).toBe("indexOu");
-      expect(command.input.ExpressionAttributeValues[":pkValue"]).toBe("@#record");
+      expect(command.input.IndexName).toBe("indexScope");
+      expect(command.input.ExpressionAttributeValues[":pkValue"]).toBe(
+        "@#record",
+      );
     });
 
     it("selects indexAlias when alias is in filter", async () => {
       await query({
         model: "record",
-        ou: "@",
+        scope: "@",
         filter: { alias: "my-record" },
       });
 
@@ -78,7 +80,7 @@ describe("query", () => {
     it("selects indexClass when class is in filter", async () => {
       await query({
         model: "record",
-        ou: "@",
+        scope: "@",
         filter: { class: "memory" },
       });
 
@@ -93,7 +95,7 @@ describe("query", () => {
     it("selects indexType when type is in filter", async () => {
       await query({
         model: "record",
-        ou: "@",
+        scope: "@",
         filter: { type: "note" },
       });
 
@@ -108,7 +110,7 @@ describe("query", () => {
     it("selects indexXid when xid is in filter", async () => {
       await query({
         model: "record",
-        ou: "@",
+        scope: "@",
         filter: { xid: "ext-123" },
       });
 
@@ -124,9 +126,7 @@ describe("query", () => {
       // Register a model with no default indexes
       registerModel({
         model: "custom",
-        indexes: [
-          { name: "indexCustom", pk: ["customField", "model"] },
-        ],
+        indexes: [{ name: "indexCustom", pk: ["customField", "model"] }],
       });
 
       await expect(
@@ -144,7 +144,7 @@ describe("query", () => {
         model: "message",
         indexes: [
           { name: "indexChat", pk: ["chatId", "model"], sk: ["createdAt"] },
-          { name: "indexOu", pk: ["ou", "model"], sk: ["sequence"] },
+          { name: "indexScope", pk: ["scope", "model"], sk: ["sequence"] },
         ],
       });
 
@@ -162,17 +162,17 @@ describe("query", () => {
     });
 
     it("falls back to DEFAULT_INDEXES for unregistered models", async () => {
-      await query({ model: "unregistered", ou: "@" });
+      await query({ model: "unregistered", scope: "@" });
 
       expect(mockSend).toHaveBeenCalledOnce();
       const command = mockSend.mock.calls[0][0];
-      expect(command.input.IndexName).toBe("indexOu");
+      expect(command.input.IndexName).toBe("indexScope");
     });
   });
 
   describe("query options", () => {
     it("applies archived suffix", async () => {
-      await query({ model: "record", ou: "@", archived: true });
+      await query({ model: "record", scope: "@", archived: true });
 
       const command = mockSend.mock.calls[0][0];
       expect(command.input.ExpressionAttributeValues[":pkValue"]).toBe(
@@ -181,7 +181,7 @@ describe("query", () => {
     });
 
     it("applies deleted suffix", async () => {
-      await query({ model: "record", ou: "@", deleted: true });
+      await query({ model: "record", scope: "@", deleted: true });
 
       const command = mockSend.mock.calls[0][0];
       expect(command.input.ExpressionAttributeValues[":pkValue"]).toBe(
@@ -190,7 +190,7 @@ describe("query", () => {
     });
 
     it("applies combined archived+deleted suffix", async () => {
-      await query({ model: "record", ou: "@", archived: true, deleted: true });
+      await query({ model: "record", scope: "@", archived: true, deleted: true });
 
       const command = mockSend.mock.calls[0][0];
       expect(command.input.ExpressionAttributeValues[":pkValue"]).toBe(
@@ -199,21 +199,21 @@ describe("query", () => {
     });
 
     it("respects limit option", async () => {
-      await query({ model: "record", ou: "@", limit: 10 });
+      await query({ model: "record", scope: "@", limit: 10 });
 
       const command = mockSend.mock.calls[0][0];
       expect(command.input.Limit).toBe(10);
     });
 
     it("respects ascending option", async () => {
-      await query({ model: "record", ou: "@", ascending: true });
+      await query({ model: "record", scope: "@", ascending: true });
 
       const command = mockSend.mock.calls[0][0];
       expect(command.input.ScanIndexForward).toBe(true);
     });
 
     it("defaults to descending order", async () => {
-      await query({ model: "record", ou: "@" });
+      await query({ model: "record", scope: "@" });
 
       const command = mockSend.mock.calls[0][0];
       expect(command.input.ScanIndexForward).toBe(false);
@@ -221,7 +221,7 @@ describe("query", () => {
 
     it("passes startKey for pagination", async () => {
       const startKey = { model: "record", id: "abc" };
-      await query({ model: "record", ou: "@", startKey });
+      await query({ model: "record", scope: "@", startKey });
 
       const command = mockSend.mock.calls[0][0];
       expect(command.input.ExclusiveStartKey).toEqual(startKey);
@@ -236,7 +236,7 @@ describe("query", () => {
       ];
       mockSend.mockResolvedValue({ Items: mockItems });
 
-      const result = await query({ model: "record", ou: "@" });
+      const result = await query({ model: "record", scope: "@" });
 
       expect(result.items).toEqual(mockItems);
     });
@@ -244,7 +244,7 @@ describe("query", () => {
     it("returns empty array when no items", async () => {
       mockSend.mockResolvedValue({ Items: undefined });
 
-      const result = await query({ model: "record", ou: "@" });
+      const result = await query({ model: "record", scope: "@" });
 
       expect(result.items).toEqual([]);
     });
@@ -256,7 +256,7 @@ describe("query", () => {
         LastEvaluatedKey: lastKey,
       });
 
-      const result = await query({ model: "record", ou: "@" });
+      const result = await query({ model: "record", scope: "@" });
 
       expect(result.lastEvaluatedKey).toEqual(lastKey);
     });

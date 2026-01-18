@@ -6,8 +6,8 @@ import LambdaResponseStreaming from "./LambdaResponseStreaming.js";
 import type {
   AwsLambdaGlobal,
   CreateLambdaHandlerOptions,
-  FunctionUrlEvent,
   LambdaContext,
+  LambdaEvent,
   LambdaHandler,
   LambdaResponse,
   LambdaStreamHandler,
@@ -27,8 +27,7 @@ declare const awslambda: AwsLambdaGlobal | undefined;
 // Current Invoke Context
 //
 
-let currentInvoke: { context: LambdaContext; event: FunctionUrlEvent } | null =
-  null;
+let currentInvoke: { context: LambdaContext; event: LambdaEvent } | null = null;
 
 /**
  * Get the current Lambda invoke context.
@@ -36,7 +35,7 @@ let currentInvoke: { context: LambdaContext; event: FunctionUrlEvent } | null =
  */
 export function getCurrentInvoke(): {
   context: LambdaContext;
-  event: FunctionUrlEvent;
+  event: LambdaEvent;
 } | null {
   return currentInvoke;
 }
@@ -45,10 +44,7 @@ export function getCurrentInvoke(): {
  * Set the current Lambda invoke context.
  * Called at the start of each Lambda invocation.
  */
-function setCurrentInvoke(
-  event: FunctionUrlEvent,
-  context: LambdaContext,
-): void {
+function setCurrentInvoke(event: LambdaEvent, context: LambdaContext): void {
   currentInvoke = { context, event };
 }
 
@@ -110,9 +106,10 @@ export function createLambdaHandler(
   _options?: CreateLambdaHandlerOptions,
 ): LambdaHandler {
   return async (
-    event: FunctionUrlEvent,
+    event: LambdaEvent,
     context: LambdaContext,
   ): Promise<LambdaResponse> => {
+    let result: LambdaResponse | undefined;
     try {
       // Set current invoke for getCurrentInvokeUuid
       setCurrentInvoke(event, context);
@@ -126,8 +123,44 @@ export function createLambdaHandler(
       // Run Express app
       await runExpressApp(app, req, res);
 
-      // Return Lambda response
-      return res.getResult();
+      // Get Lambda response - await explicitly to ensure we have the result
+      result = await res.getResult();
+
+      // Debug: Log the response before returning
+      console.log(
+        "[createLambdaHandler] Returning response:",
+        JSON.stringify({
+          statusCode: result.statusCode,
+          headers: result.headers,
+          bodyLength: result.body?.length,
+          isBase64Encoded: result.isBase64Encoded,
+        }),
+      );
+
+      return result;
+    } catch (error) {
+      // Log any unhandled errors
+      console.error("[createLambdaHandler] Unhandled error:", error);
+      if (error instanceof Error) {
+        console.error("[createLambdaHandler] Stack:", error.stack);
+      }
+
+      // Return a proper error response instead of throwing
+      return {
+        statusCode: 500,
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          errors: [
+            {
+              status: 500,
+              title: "Internal Server Error",
+              detail:
+                error instanceof Error ? error.message : "Unknown error occurred",
+            },
+          ],
+        }),
+        isBase64Encoded: false,
+      };
     } finally {
       // Clear current invoke context
       clearCurrentInvoke();
@@ -167,7 +200,7 @@ export function createLambdaStreamHandler(
   // @ts-expect-error awslambda is a Lambda runtime global
   return awslambda.streamifyResponse(
     async (
-      event: FunctionUrlEvent,
+      event: LambdaEvent,
       responseStream: ResponseStream,
       context: LambdaContext,
     ): Promise<void> => {
@@ -200,11 +233,13 @@ export { LambdaRequest, createLambdaRequest } from "./LambdaRequest.js";
 export { LambdaResponseBuffered } from "./LambdaResponseBuffered.js";
 export { LambdaResponseStreaming } from "./LambdaResponseStreaming.js";
 export type {
+  ApiGatewayV1Event,
   AwsLambdaGlobal,
   CreateLambdaHandlerOptions,
   FunctionUrlEvent,
   HttpResponseStreamMetadata,
   LambdaContext,
+  LambdaEvent,
   LambdaHandler,
   LambdaHandlerFactory,
   LambdaResponse,

@@ -28,6 +28,7 @@ const sidebars: SidebarsConfig = {
       items: [
         "guides/express-lambda",
         "guides/cdk-infrastructure",
+        "guides/streaming",
         "guides/testing",
         "guides/llm-integration",
         "guides/cicd",

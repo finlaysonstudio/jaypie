@@ -34,7 +34,7 @@ export function resolveDatadogLayers(
   const datadogNodeLayer = lambda.LayerVersion.fromLayerVersionArn(
     scope,
     `DatadogNodeLayer-${layerIdSuffix}`,
-    `arn:aws:lambda:${resolvedRegion}:464622532012:layer:Datadog-Node20-x:${CDK.DATADOG.LAYER.NODE}`,
+    `arn:aws:lambda:${resolvedRegion}:464622532012:layer:Datadog-Node24-x:${CDK.DATADOG.LAYER.NODE}`,
   );
 
   // Create Datadog Extension layer

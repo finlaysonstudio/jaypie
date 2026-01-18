@@ -1,0 +1,20 @@
+{
+  "name": "jaypie-express-lambda-test",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "files": [
+    "dist",
+    "events",
+    "handler.mjs"
+  ],
+  "dependencies": {
+    "@jaypie/aws": "^1.2.2",
+    "@jaypie/datadog": "^1.2.1",
+    "@jaypie/errors": "^1.2.1",
+    "@jaypie/kit": "^1.2.1",
+    "@jaypie/logger": "^1.2.1",
+    "cors": "^2.8.5",
+    "express": "^4.21.2"
+  }
+}

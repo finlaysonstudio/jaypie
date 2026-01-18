@@ -1,0 +1,18 @@
+{
+  "httpMethod": "GET",
+  "path": "/",
+  "headers": { "content-type": "application/json", "host": "localhost" },
+  "queryStringParameters": null,
+  "body": null,
+  "isBase64Encoded": false,
+  "requestContext": {
+    "accountId": "123456789012",
+    "apiId": "test",
+    "httpMethod": "GET",
+    "identity": { "sourceIp": "127.0.0.1" },
+    "path": "/",
+    "protocol": "HTTP/1.1",
+    "requestId": "test-request-id",
+    "stage": "local"
+  }
+}

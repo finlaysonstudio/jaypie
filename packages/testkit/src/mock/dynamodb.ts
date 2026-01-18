@@ -21,7 +21,7 @@ export const DEFAULT_INDEXES = original.DEFAULT_INDEXES;
 export const DELETED_SUFFIX = original.DELETED_SUFFIX;
 export const INDEX_ALIAS = original.INDEX_ALIAS;
 export const INDEX_CLASS = original.INDEX_CLASS;
-export const INDEX_OU = original.INDEX_OU;
+export const INDEX_SCOPE = original.INDEX_SCOPE;
 export const INDEX_TYPE = original.INDEX_TYPE;
 export const INDEX_XID = original.INDEX_XID;
 export const SEPARATOR = original.SEPARATOR;
@@ -36,28 +36,28 @@ export const buildCompositeKey = createMockFunction<
 >((entity, fields, suffix) => original.buildCompositeKey(entity, fields, suffix));
 
 export const buildIndexAlias = createMockFunction<
-  (ou: string, model: string, alias: string) => string
->((ou, model, alias) => original.buildIndexAlias(ou, model, alias));
+  (scope: string, model: string, alias: string) => string
+>((scope, model, alias) => original.buildIndexAlias(scope, model, alias));
 
 export const buildIndexClass = createMockFunction<
-  (ou: string, model: string, recordClass: string) => string
->((ou, model, recordClass) => original.buildIndexClass(ou, model, recordClass));
+  (scope: string, model: string, recordClass: string) => string
+>((scope, model, recordClass) => original.buildIndexClass(scope, model, recordClass));
 
-export const buildIndexOu = createMockFunction<
-  (ou: string, model: string) => string
->((ou, model) => original.buildIndexOu(ou, model));
+export const buildIndexScope = createMockFunction<
+  (scope: string, model: string) => string
+>((scope, model) => original.buildIndexScope(scope, model));
 
 export const buildIndexType = createMockFunction<
-  (ou: string, model: string, type: string) => string
->((ou, model, type) => original.buildIndexType(ou, model, type));
+  (scope: string, model: string, type: string) => string
+>((scope, model, type) => original.buildIndexType(scope, model, type));
 
 export const buildIndexXid = createMockFunction<
-  (ou: string, model: string, xid: string) => string
->((ou, model, xid) => original.buildIndexXid(ou, model, xid));
+  (scope: string, model: string, xid: string) => string
+>((scope, model, xid) => original.buildIndexXid(scope, model, xid));
 
-export const calculateOu = createMockFunction<
+export const calculateScope = createMockFunction<
   (parent?: ParentReference) => string
->((parent) => original.calculateOu(parent));
+>((parent) => original.calculateScope(parent));
 
 export const indexEntity = createMockFunction<
   <T extends StorableEntity>(entity: T, suffix?: string) => T
@@ -115,10 +115,10 @@ export const destroyEntity = createMockFunction<
 >(async () => true);
 
 // Query functions - service handler pattern (callable with object params)
-export const queryByOu = createMockFunction<
+export const queryByScope = createMockFunction<
   (params: {
     model: string;
-    ou: string;
+    scope: string;
     archived?: boolean;
     ascending?: boolean;
     deleted?: boolean;
@@ -136,7 +136,7 @@ export const queryByAlias = createMockFunction<
     archived?: boolean;
     deleted?: boolean;
     model: string;
-    ou: string;
+    scope: string;
   }) => Promise<StorableEntity | null>
 >(async () => null);
 
@@ -147,7 +147,7 @@ export const queryByClass = createMockFunction<
     deleted?: boolean;
     limit?: number;
     model: string;
-    ou: string;
+    scope: string;
     recordClass: string;
     startKey?: Record<string, unknown>;
   }) => Promise<QueryResult<StorableEntity>>
@@ -163,7 +163,7 @@ export const queryByType = createMockFunction<
     deleted?: boolean;
     limit?: number;
     model: string;
-    ou: string;
+    scope: string;
     startKey?: Record<string, unknown>;
     type: string;
   }) => Promise<QueryResult<StorableEntity>>
@@ -177,7 +177,7 @@ export const queryByXid = createMockFunction<
     archived?: boolean;
     deleted?: boolean;
     model: string;
-    ou: string;
+    scope: string;
     xid: string;
   }) => Promise<StorableEntity | null>
 >(async () => null);
@@ -191,7 +191,7 @@ export const query = createMockFunction<
     filter?: Partial<T>;
     limit?: number;
     model: string;
-    ou?: string;
+    scope?: string;
     startKey?: Record<string, unknown>;
   }) => Promise<QueryResult<T>>
 >(async () => ({
@@ -218,7 +218,7 @@ export const seedEntities = createMockFunction<
 export const exportEntities = createMockFunction<
   <T extends StorableEntity>(
     model: string,
-    ou: string,
+    scope: string,
     limit?: number,
   ) => Promise<ExportResult<T>>
 >(async () => ({
@@ -227,7 +227,7 @@ export const exportEntities = createMockFunction<
 }));
 
 export const exportEntitiesToJson = createMockFunction<
-  (model: string, ou: string, pretty?: boolean) => Promise<string>
+  (model: string, scope: string, pretty?: boolean) => Promise<string>
 >(async () => "[]");
 
 // Re-export types for convenience

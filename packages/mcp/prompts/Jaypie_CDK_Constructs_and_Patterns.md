@@ -102,32 +102,26 @@ Preconfigured with API-optimized timeouts and role tags.
 
 ### Streaming Lambda Functions
 
-Use `JaypieStreamingLambda` for Express apps with AWS Lambda Web Adapter and streaming support:
+For streaming responses (SSE, real-time updates), use `createLambdaStreamHandler` from `@jaypie/express` with `JaypieDistribution`:
 
 ```typescript
-import { JaypieStreamingLambda, JaypieDistribution } from "@jaypie/constructs";
+import { JaypieExpressLambda, JaypieDistribution } from "@jaypie/constructs";
+import * as lambda from "aws-cdk-lib/aws-lambda";
 
-// Create streaming Lambda with Web Adapter
-const streamingLambda = new JaypieStreamingLambda(this, "StreamingApi", {
+// Create Lambda (handler uses createLambdaStreamHandler internally)
+const streamingApi = new JaypieExpressLambda(this, "StreamingApi", {
   code: "dist/api",
-  handler: "run.sh",           // Shell script to start Express app
-  streaming: true,             // Enables RESPONSE_STREAM invoke mode
-  port: 8000,                  // Port your app listens on (default: 8000)
+  handler: "index.handler",
 });
 
-// CloudFront auto-detects invokeMode from JaypieStreamingLambda
+// Use with CloudFront and RESPONSE_STREAM invoke mode
 new JaypieDistribution(this, "Distribution", {
-  handler: streamingLambda,
+  handler: streamingApi,
+  invokeMode: lambda.InvokeMode.RESPONSE_STREAM,
   host: "api.example.com",
   zone: "example.com",
 });
 ```
-
-Features:
-- Automatically adds AWS Lambda Web Adapter layer (supports ARM64 and x86_64)
-- Sets `AWS_LAMBDA_EXEC_WRAPPER` and `AWS_LWA_INVOKE_MODE` environment variables
-- Exposes `invokeMode` property for auto-detection by `JaypieDistribution`
-- Use `streaming: false` for buffered mode (traditional Lambda behavior)
 
 For direct Function URL access (bypass CloudFront):
 ```typescript
@@ -147,7 +141,7 @@ const functionUrl = streamingLambda.addFunctionUrl({
 new cdk.CfnOutput(this, "StreamingUrl", { value: functionUrl.url });
 ```
 
-Note: API Gateway has a 29-second timeout limit. For longer streaming operations, use Function URLs or CloudFront with Lambda Function URLs.
+Note: Streaming requires Lambda Function URLs (not API Gateway). `JaypieDistribution` uses Function URLs by default.
 
 ### Stack Types
 
@@ -323,21 +317,22 @@ Common usage:
 
 ### DynamoDB Tables
 
-Use `JaypieDynamoDb` for single-table design with Jaypie GSI patterns:
+Use `JaypieDynamoDb` for single-table design with Jaypie patterns:
 ```typescript
 // Shorthand: tableName becomes "myApp", construct id is "JaypieDynamoDb-myApp"
 const table = new JaypieDynamoDb(this, "myApp");
 
-// No GSIs
-const table = new JaypieDynamoDb(this, "MyTable", {
-  globalSecondaryIndexes: false,
+// With standard Jaypie GSIs (indexScope, indexAlias, indexClass, indexType, indexXid)
+const tableWithIndexes = new JaypieDynamoDb(this, "myApp", {
+  indexes: JaypieDynamoDb.DEFAULT_INDEXES,
 });
 
-// Use only specific GSIs
-const table = new JaypieDynamoDb(this, "MyTable", {
-  globalSecondaryIndexes: [
-    JaypieDynamoDb.GlobalSecondaryIndex.Ou,
-    JaypieDynamoDb.GlobalSecondaryIndex.Type,
+// With custom indexes using IndexDefinition from @jaypie/fabric
+const customTable = new JaypieDynamoDb(this, "myApp", {
+  indexes: [
+    { pk: ["scope", "model"], sk: ["sequence"] },           // indexScopeModel
+    { pk: ["scope", "model", "type"], sparse: true },       // indexScopeModelType
+    { name: "byAlias", pk: ["alias"], sk: ["createdAt"] },  // custom name
   ],
 });
 
@@ -352,9 +347,9 @@ Features:
 - Default partition key: `model` (string), sort key: `id` (string)
 - PAY_PER_REQUEST billing mode by default
 - RETAIN removal policy in production, DESTROY otherwise
-- GSI options: `true`/omit = all five, `false` = none, array = specific GSIs
-- Static constants: `JaypieDynamoDb.GlobalSecondaryIndex.*` and `JaypieDynamoDb.GlobalSecondaryIndexes`
-- All GSIs use partition key (string) + `sequence` (number) sort key
+- No GSIs by default - use `indexes` prop to add them
+- `JaypieDynamoDb.DEFAULT_INDEXES` provides standard Jaypie GSIs from `@jaypie/fabric`
+- Uses `IndexDefinition` from `@jaypie/fabric` for GSI configuration
 - Implements `ITableV2` interface
 
 For single-table design patterns, key builders, and query utilities, see `Jaypie_DynamoDB_Package.md`.

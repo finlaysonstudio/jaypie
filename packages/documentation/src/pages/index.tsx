@@ -305,7 +305,7 @@ function Footer(): React.ReactElement {
     <section className={styles.philosophy}>
       <div className={styles.philosophyInner}>
         <p className={styles.footerText}>
-          TypeScript · Node.js 20-25 · AWS Lambda · Express.js · Vitest
+          TypeScript · Node.js 22-25 · AWS Lambda · Express.js · Vitest
         </p>
       </div>
     </section>

@@ -19,6 +19,43 @@ export interface LambdaContext {
 
 //
 //
+// API Gateway REST API Event (v1 format)
+//
+
+export interface ApiGatewayV1Event {
+  body?: string | null;
+  headers: Record<string, string>;
+  httpMethod: string;
+  isBase64Encoded: boolean;
+  multiValueHeaders?: Record<string, string[]>;
+  multiValueQueryStringParameters?: Record<string, string[]> | null;
+  path: string;
+  pathParameters?: Record<string, string> | null;
+  queryStringParameters?: Record<string, string> | null;
+  requestContext: {
+    accountId: string;
+    apiId: string;
+    domainName?: string;
+    httpMethod: string;
+    identity: {
+      sourceIp: string;
+      userAgent?: string;
+    };
+    path: string;
+    protocol: string;
+    requestId: string;
+    requestTime?: string;
+    requestTimeEpoch?: number;
+    resourceId?: string;
+    resourcePath?: string;
+    stage: string;
+  };
+  resource?: string;
+  stageVariables?: Record<string, string> | null;
+}
+
+//
+//
 // Function URL Event (v2 format)
 //
 
@@ -50,6 +87,13 @@ export interface FunctionUrlEvent {
   routeKey: string;
   version: "2.0";
 }
+
+//
+//
+// Union type for all supported Lambda events
+//
+
+export type LambdaEvent = ApiGatewayV1Event | FunctionUrlEvent;
 
 //
 //
@@ -105,12 +149,12 @@ export interface AwsLambdaGlobal {
 //
 
 export type LambdaHandler = (
-  event: FunctionUrlEvent,
+  event: LambdaEvent,
   context: LambdaContext,
 ) => Promise<LambdaResponse>;
 
 export type LambdaStreamHandler = (
-  event: FunctionUrlEvent,
+  event: LambdaEvent,
   context: LambdaContext,
 ) => Promise<void>;
 

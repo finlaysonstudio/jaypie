@@ -1,4 +1,4 @@
-import { serviceHandler } from "@jaypie/vocabulary";
+import { fabricService } from "@jaypie/fabric";
 
 const DEFAULT_ADMIN_PORT = 8001;
 const DEFAULT_DYNAMODB_PORT = 8000;
@@ -8,7 +8,7 @@ const DEFAULT_TABLE_NAME = "jaypie-local";
 /**
  * Generate docker-compose.yml for local DynamoDB development
  */
-export const dockerComposeHandler = serviceHandler({
+export const dockerComposeHandler = fabricService({
   alias: "dynamodb_generate_docker_compose",
   description: "Generate docker-compose.yml for local DynamoDB development",
   input: {

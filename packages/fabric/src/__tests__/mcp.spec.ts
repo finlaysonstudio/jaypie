@@ -1,0 +1,857 @@
+// Tests for MCP adapter
+
+import { describe, expect, it, vi } from "vitest";
+
+import { fabricMcp } from "../mcp/index.js";
+import { fabricService } from "../service.js";
+
+describe("MCP Adapter", () => {
+  describe("fabricMcp", () => {
+    function createMockServer() {
+      const registeredTools: Array<{
+        description: string;
+        handler: (args: Record<string, unknown>) => Promise<unknown>;
+        name: string;
+        schema: Record<string, unknown>;
+      }> = [];
+
+      return {
+        registeredTools,
+        tool: vi.fn(
+          (
+            name: string,
+            description: string,
+            schema: Record<string, unknown>,
+            handler: (args: Record<string, unknown>) => Promise<unknown>,
+          ) => {
+            registeredTools.push({ description, handler, name, schema });
+          },
+        ),
+      };
+    }
+
+    it("registers a tool with handler alias as name", () => {
+      const handler = fabricService({
+        alias: "greet",
+        service: () => "Hello!",
+      });
+
+      const mockServer = createMockServer();
+      const result = fabricMcp({
+        service: handler,
+        server: mockServer as unknown as Parameters<
+          typeof fabricMcp
+        >[0]["server"],
+      });
+
+      expect(result.name).toBe("greet");
+      expect(mockServer.tool).toHaveBeenCalledTimes(1);
+      expect(mockServer.registeredTools[0].name).toBe("greet");
+    });
+
+    it("registers a tool with handler description", () => {
+      const handler = fabricService({
+        alias: "greet",
+        description: "Greet a user",
+        service: () => "Hello!",
+      });
+
+      const mockServer = createMockServer();
+      fabricMcp({
+        service: handler,
+        server: mockServer as unknown as Parameters<
+          typeof fabricMcp
+        >[0]["server"],
+      });
+
+      expect(mockServer.registeredTools[0].description).toBe("Greet a user");
+    });
+
+    it("uses custom name over handler alias", () => {
+      const handler = fabricService({
+        alias: "greet",
+        service: () => "Hello!",
+      });
+
+      const mockServer = createMockServer();
+      const result = fabricMcp({
+        service: handler,
+        name: "hello",
+        server: mockServer as unknown as Parameters<
+          typeof fabricMcp
+        >[0]["server"],
+      });
+
+      expect(result.name).toBe("hello");
+      expect(mockServer.registeredTools[0].name).toBe("hello");
+    });
+
+    it("uses custom description over handler description", () => {
+      const handler = fabricService({
+        alias: "greet",
+        description: "Handler description",
+        service: () => "Hello!",
+      });
+
+      const mockServer = createMockServer();
+      fabricMcp({
+        description: "Custom description",
+        service: handler,
+        server: mockServer as unknown as Parameters<
+          typeof fabricMcp
+        >[0]["server"],
+      });
+
+      expect(mockServer.registeredTools[0].description).toBe(
+        "Custom description",
+      );
+    });
+
+    it("defaults to 'tool' when no alias or name provided", () => {
+      const handler = fabricService({
+        service: () => "Hello!",
+      });
+
+      const mockServer = createMockServer();
+      const result = fabricMcp({
+        service: handler,
+        server: mockServer as unknown as Parameters<
+          typeof fabricMcp
+        >[0]["server"],
+      });
+
+      expect(result.name).toBe("tool");
+    });
+
+    it("defaults to empty description when none provided", () => {
+      const handler = fabricService({
+        alias: "test",
+        service: () => "Hello!",
+      });
+
+      const mockServer = createMockServer();
+      fabricMcp({
+        service: handler,
+        server: mockServer as unknown as Parameters<
+          typeof fabricMcp
+        >[0]["server"],
+      });
+
+      expect(mockServer.registeredTools[0].description).toBe("");
+    });
+
+    it("registers with empty schema (service handler validates)", () => {
+      const handler = fabricService({
+        alias: "greet",
+        input: {
+          loud: { default: false, type: Boolean },
+          name: { description: "User name", type: String },
+        },
+        service: ({ name, loud }) => {
+          const greeting = `Hello, ${name}!`;
+          return loud ? greeting.toUpperCase() : greeting;
+        },
+      });
+
+      const mockServer = createMockServer();
+      fabricMcp({
+        service: handler,
+        server: mockServer as unknown as Parameters<
+          typeof fabricMcp
+        >[0]["server"],
+      });
+
+      const schema = mockServer.registeredTools[0].schema;
+      expect(schema).toEqual({});
+    });
+
+    it("handler returns MCP-formatted response", async () => {
+      const handler = fabricService({
+        alias: "greet",
+        input: {
+          name: { type: String },
+        },
+        service: ({ name }) => `Hello, ${name}!`,
+      });
+
+      const mockServer = createMockServer();
+      fabricMcp({
+        service: handler,
+        server: mockServer as unknown as Parameters<
+          typeof fabricMcp
+        >[0]["server"],
+      });
+
+      const registeredHandler = mockServer.registeredTools[0].handler;
+      const result = await registeredHandler({ name: "Alice" });
+
+      expect(result).toEqual({
+        content: [
+          {
+            text: "Hello, Alice!",
+            type: "text",
+          },
+        ],
+      });
+    });
+
+    it("handler formats object results as JSON", async () => {
+      const handler = fabricService({
+        alias: "data",
+        input: {
+          id: { type: Number },
+        },
+        service: ({ id }) => ({ id, name: "test" }),
+      });
+
+      const mockServer = createMockServer();
+      fabricMcp({
+        service: handler,
+        server: mockServer as unknown as Parameters<
+          typeof fabricMcp
+        >[0]["server"],
+      });
+
+      const registeredHandler = mockServer.registeredTools[0].handler;
+      const result = await registeredHandler({ id: 1 });
+
+      expect(result).toEqual({
+        content: [
+          {
+            text: JSON.stringify({ id: 1, name: "test" }, null, 2),
+            type: "text",
+          },
+        ],
+      });
+    });
+
+    it("handler formats number results as string", async () => {
+      const handler = fabricService({
+        alias: "add",
+        input: {
+          a: { type: Number },
+          b: { type: Number },
+        },
+        service: ({ a, b }) => a + b,
+      });
+
+      const mockServer = createMockServer();
+      fabricMcp({
+        service: handler,
+        server: mockServer as unknown as Parameters<
+          typeof fabricMcp
+        >[0]["server"],
+      });
+
+      const registeredHandler = mockServer.registeredTools[0].handler;
+      const result = await registeredHandler({ a: 5, b: 3 });
+
+      expect(result).toEqual({
+        content: [
+          {
+            text: "8",
+            type: "text",
+          },
+        ],
+      });
+    });
+
+    it("handler returns empty string for undefined result", async () => {
+      const handler = fabricService({
+        alias: "noop",
+        service: () => undefined,
+      });
+
+      const mockServer = createMockServer();
+      fabricMcp({
+        service: handler,
+        server: mockServer as unknown as Parameters<
+          typeof fabricMcp
+        >[0]["server"],
+      });
+
+      const registeredHandler = mockServer.registeredTools[0].handler;
+      const result = await registeredHandler({});
+
+      expect(result).toEqual({
+        content: [
+          {
+            text: "",
+            type: "text",
+          },
+        ],
+      });
+    });
+
+    it("handler returns empty string for null result", async () => {
+      const handler = fabricService({
+        alias: "noop",
+        service: () => null,
+      });
+
+      const mockServer = createMockServer();
+      fabricMcp({
+        service: handler,
+        server: mockServer as unknown as Parameters<
+          typeof fabricMcp
+        >[0]["server"],
+      });
+
+      const registeredHandler = mockServer.registeredTools[0].handler;
+      const result = await registeredHandler({});
+
+      expect(result).toEqual({
+        content: [
+          {
+            text: "",
+            type: "text",
+          },
+        ],
+      });
+    });
+
+    it("handles async handlers", async () => {
+      const handler = fabricService({
+        alias: "delay",
+        input: {
+          ms: { type: Number },
+        },
+        service: async ({ ms }) => {
+          await new Promise((resolve) => setTimeout(resolve, ms));
+          return "done";
+        },
+      });
+
+      const mockServer = createMockServer();
+      fabricMcp({
+        service: handler,
+        server: mockServer as unknown as Parameters<
+          typeof fabricMcp
+        >[0]["server"],
+      });
+
+      const registeredHandler = mockServer.registeredTools[0].handler;
+      const result = await registeredHandler({ ms: 10 });
+
+      expect(result).toEqual({
+        content: [
+          {
+            text: "done",
+            type: "text",
+          },
+        ],
+      });
+    });
+
+    it("handles handlers with no input", async () => {
+      const handler = fabricService({
+        alias: "ping",
+        service: () => "pong",
+      });
+
+      const mockServer = createMockServer();
+      fabricMcp({
+        service: handler,
+        server: mockServer as unknown as Parameters<
+          typeof fabricMcp
+        >[0]["server"],
+      });
+
+      const registeredHandler = mockServer.registeredTools[0].handler;
+      const result = await registeredHandler({});
+
+      expect(result).toEqual({
+        content: [
+          {
+            text: "pong",
+            type: "text",
+          },
+        ],
+      });
+    });
+
+    it("full integration: creates working MCP tool from handler", async () => {
+      const handler = fabricService({
+        alias: "calculate",
+        description: "Calculate the sum of two numbers",
+        input: {
+          a: { description: "First number", type: Number },
+          b: { description: "Second number", type: Number },
+        },
+        service: ({ a, b }) => a + b,
+      });
+
+      const mockServer = createMockServer();
+      const result = fabricMcp({
+        service: handler,
+        server: mockServer as unknown as Parameters<
+          typeof fabricMcp
+        >[0]["server"],
+      });
+
+      expect(result.name).toBe("calculate");
+      expect(mockServer.registeredTools[0].name).toBe("calculate");
+      expect(mockServer.registeredTools[0].description).toBe(
+        "Calculate the sum of two numbers",
+      );
+
+      const registeredHandler = mockServer.registeredTools[0].handler;
+      const handlerResult = await registeredHandler({ a: 5, b: 3 });
+
+      expect(handlerResult).toEqual({
+        content: [
+          {
+            text: "8",
+            type: "text",
+          },
+        ],
+      });
+    });
+
+    describe("sendMessage and onMessage", () => {
+      it("passes context with sendMessage to service when onMessage is provided", async () => {
+        const messages: Array<{ content: string; level?: string }> = [];
+
+        const handler = fabricService({
+          alias: "test",
+          input: { name: { type: String } },
+          service: ({ name }, context) => {
+            context?.sendMessage?.({ content: `Processing ${name}` });
+            return `Hello, ${name}!`;
+          },
+        });
+
+        const mockServer = createMockServer();
+        fabricMcp({
+          service: handler,
+          onMessage: (msg) => {
+            messages.push(msg);
+          },
+          server: mockServer as unknown as Parameters<
+            typeof fabricMcp
+          >[0]["server"],
+        });
+
+        const registeredHandler = mockServer.registeredTools[0].handler;
+        const result = await registeredHandler({ name: "Alice" });
+
+        expect(result).toEqual({
+          content: [{ text: "Hello, Alice!", type: "text" }],
+        });
+        expect(messages).toEqual([{ content: "Processing Alice" }]);
+      });
+
+      it("swallows errors in onMessage callback", async () => {
+        const handler = fabricService({
+          alias: "test",
+          service: (_, context) => {
+            context?.sendMessage?.({ content: "Message" });
+            return "completed";
+          },
+        });
+
+        let callCount = 0;
+        const mockServer = createMockServer();
+        fabricMcp({
+          service: handler,
+          onMessage: () => {
+            callCount++;
+            throw new Error("onMessage error");
+          },
+          server: mockServer as unknown as Parameters<
+            typeof fabricMcp
+          >[0]["server"],
+        });
+
+        const registeredHandler = mockServer.registeredTools[0].handler;
+        const result = await registeredHandler({});
+
+        expect(result).toEqual({
+          content: [{ text: "completed", type: "text" }],
+        });
+        expect(callCount).toBe(1);
+      });
+    });
+
+    describe("onComplete callback", () => {
+      it("calls onComplete with result on success", async () => {
+        let completedValue: unknown;
+
+        const handler = fabricService({
+          alias: "test",
+          input: { value: { type: Number } },
+          service: ({ value }) => value * 2,
+        });
+
+        const mockServer = createMockServer();
+        fabricMcp({
+          service: handler,
+          onComplete: (result) => {
+            completedValue = result;
+          },
+          server: mockServer as unknown as Parameters<
+            typeof fabricMcp
+          >[0]["server"],
+        });
+
+        const registeredHandler = mockServer.registeredTools[0].handler;
+        await registeredHandler({ value: 21 });
+
+        expect(completedValue).toBe(42);
+      });
+
+      it("swallows errors in onComplete callback", async () => {
+        const handler = fabricService({
+          alias: "test",
+          service: () => "result",
+        });
+
+        const mockServer = createMockServer();
+        fabricMcp({
+          service: handler,
+          onComplete: () => {
+            throw new Error("onComplete error");
+          },
+          server: mockServer as unknown as Parameters<
+            typeof fabricMcp
+          >[0]["server"],
+        });
+
+        const registeredHandler = mockServer.registeredTools[0].handler;
+        const result = await registeredHandler({});
+
+        expect(result).toEqual({
+          content: [{ text: "result", type: "text" }],
+        });
+      });
+    });
+
+    describe("onError and onFatal callbacks", () => {
+      it("calls onFatal when handler throws", async () => {
+        let fatalError: unknown;
+
+        const handler = fabricService({
+          alias: "test",
+          service: () => {
+            throw new Error("Service error");
+          },
+        });
+
+        const mockServer = createMockServer();
+        fabricMcp({
+          service: handler,
+          onFatal: (error) => {
+            fatalError = error;
+          },
+          server: mockServer as unknown as Parameters<
+            typeof fabricMcp
+          >[0]["server"],
+        });
+
+        const registeredHandler = mockServer.registeredTools[0].handler;
+        await expect(registeredHandler({})).rejects.toThrow("Service error");
+        expect(fatalError).toBeInstanceOf(Error);
+        expect((fatalError as Error).message).toBe("Service error");
+      });
+
+      it("falls back to onError when onFatal is not provided", async () => {
+        let errorValue: unknown;
+
+        const handler = fabricService({
+          alias: "test",
+          service: () => {
+            throw new Error("Service error");
+          },
+        });
+
+        const mockServer = createMockServer();
+        fabricMcp({
+          service: handler,
+          onError: (error) => {
+            errorValue = error;
+          },
+          server: mockServer as unknown as Parameters<
+            typeof fabricMcp
+          >[0]["server"],
+        });
+
+        const registeredHandler = mockServer.registeredTools[0].handler;
+        await expect(registeredHandler({})).rejects.toThrow("Service error");
+        expect(errorValue).toBeInstanceOf(Error);
+        expect((errorValue as Error).message).toBe("Service error");
+      });
+
+      it("passes context.onError to service for recoverable errors", async () => {
+        let recoveredError: unknown;
+
+        const handler = fabricService({
+          alias: "test",
+          service: (_, context) => {
+            context?.onError?.(new Error("Recoverable error"));
+            return "continued";
+          },
+        });
+
+        const mockServer = createMockServer();
+        fabricMcp({
+          service: handler,
+          onError: (error) => {
+            recoveredError = error;
+          },
+          server: mockServer as unknown as Parameters<
+            typeof fabricMcp
+          >[0]["server"],
+        });
+
+        const registeredHandler = mockServer.registeredTools[0].handler;
+        const result = await registeredHandler({});
+
+        expect(result).toEqual({
+          content: [{ text: "continued", type: "text" }],
+        });
+        expect(recoveredError).toBeInstanceOf(Error);
+        expect((recoveredError as Error).message).toBe("Recoverable error");
+      });
+
+      it("passes context.onFatal to service for explicit fatal errors", async () => {
+        let fatalError: unknown;
+
+        const handler = fabricService({
+          alias: "test",
+          service: (_, context) => {
+            context?.onFatal?.(new Error("Fatal error"));
+            return "continued";
+          },
+        });
+
+        const mockServer = createMockServer();
+        fabricMcp({
+          service: handler,
+          onFatal: (error) => {
+            fatalError = error;
+          },
+          server: mockServer as unknown as Parameters<
+            typeof fabricMcp
+          >[0]["server"],
+        });
+
+        const registeredHandler = mockServer.registeredTools[0].handler;
+        const result = await registeredHandler({});
+
+        expect(result).toEqual({
+          content: [{ text: "continued", type: "text" }],
+        });
+        expect(fatalError).toBeInstanceOf(Error);
+        expect((fatalError as Error).message).toBe("Fatal error");
+      });
+
+      it("swallows errors in context.onError callback", async () => {
+        const handler = fabricService({
+          alias: "test",
+          service: (_, context) => {
+            context?.onError?.(new Error("Test error"));
+            return "completed";
+          },
+        });
+
+        const mockServer = createMockServer();
+        fabricMcp({
+          service: handler,
+          onError: () => {
+            throw new Error("Callback error");
+          },
+          server: mockServer as unknown as Parameters<
+            typeof fabricMcp
+          >[0]["server"],
+        });
+
+        const registeredHandler = mockServer.registeredTools[0].handler;
+        const result = await registeredHandler({});
+
+        expect(result).toEqual({
+          content: [{ text: "completed", type: "text" }],
+        });
+      });
+    });
+
+    describe("inline service definition (short-form)", () => {
+      it("accepts inline function with alias, description, input", async () => {
+        let capturedInput: unknown;
+        const mockServer = createMockServer();
+        const result = fabricMcp({
+          alias: "greet",
+          description: "Greet a user",
+          input: {
+            userName: { type: String },
+            loud: { type: Boolean, default: false },
+          },
+          server: mockServer as unknown as Parameters<
+            typeof fabricMcp
+          >[0]["server"],
+          service: ({ loud, userName }) => {
+            capturedInput = { loud, userName };
+            const greeting = `Hello, ${userName}!`;
+            return loud ? greeting.toUpperCase() : greeting;
+          },
+        });
+
+        expect(result.name).toBe("greet");
+        expect(mockServer.registeredTools[0].name).toBe("greet");
+        expect(mockServer.registeredTools[0].description).toBe("Greet a user");
+
+        const handler = mockServer.registeredTools[0].handler;
+        const response = await handler({ userName: "Alice", loud: true });
+
+        expect(capturedInput).toEqual({ loud: true, userName: "Alice" });
+        expect(response).toEqual({
+          content: [{ text: "HELLO, ALICE!", type: "text" }],
+        });
+      });
+
+      it("defaults to 'tool' when no alias provided for inline function", () => {
+        const mockServer = createMockServer();
+        const result = fabricMcp({
+          server: mockServer as unknown as Parameters<
+            typeof fabricMcp
+          >[0]["server"],
+          service: () => "result",
+        });
+
+        expect(result.name).toBe("tool");
+        expect(mockServer.registeredTools[0].name).toBe("tool");
+      });
+
+      it("uses name over alias for inline function", () => {
+        const mockServer = createMockServer();
+        const result = fabricMcp({
+          alias: "greet",
+          name: "hello",
+          server: mockServer as unknown as Parameters<
+            typeof fabricMcp
+          >[0]["server"],
+          service: () => "result",
+        });
+
+        expect(result.name).toBe("hello");
+        expect(mockServer.registeredTools[0].name).toBe("hello");
+      });
+    });
+
+    describe("pre-instantiated service with overrides", () => {
+      it("overrides alias with config alias", () => {
+        const service = fabricService({
+          alias: "original",
+          service: () => "result",
+        });
+
+        const mockServer = createMockServer();
+        const result = fabricMcp({
+          alias: "overridden",
+          server: mockServer as unknown as Parameters<
+            typeof fabricMcp
+          >[0]["server"],
+          service,
+        });
+
+        expect(result.name).toBe("overridden");
+        expect(mockServer.registeredTools[0].name).toBe("overridden");
+      });
+
+      it("overrides description with config description", () => {
+        const service = fabricService({
+          alias: "test",
+          description: "Original description",
+          service: () => "result",
+        });
+
+        const mockServer = createMockServer();
+        fabricMcp({
+          description: "Overridden description",
+          server: mockServer as unknown as Parameters<
+            typeof fabricMcp
+          >[0]["server"],
+          service,
+        });
+
+        expect(mockServer.registeredTools[0].description).toBe(
+          "Overridden description",
+        );
+      });
+
+      it("inherits description when not overridden", () => {
+        const service = fabricService({
+          alias: "test",
+          description: "Original description",
+          service: () => "result",
+        });
+
+        const mockServer = createMockServer();
+        fabricMcp({
+          alias: "overridden",
+          server: mockServer as unknown as Parameters<
+            typeof fabricMcp
+          >[0]["server"],
+          service,
+        });
+
+        expect(mockServer.registeredTools[0].description).toBe(
+          "Original description",
+        );
+      });
+
+      it("overrides input definitions", async () => {
+        let capturedInput: unknown;
+        const service = fabricService({
+          alias: "original",
+          input: {
+            name: { type: String },
+          },
+          service: (input) => {
+            capturedInput = input;
+            return input;
+          },
+        });
+
+        const mockServer = createMockServer();
+        fabricMcp({
+          input: {
+            name: { type: String },
+            count: { type: Number, default: 10 },
+          },
+          server: mockServer as unknown as Parameters<
+            typeof fabricMcp
+          >[0]["server"],
+          service,
+        });
+
+        const handler = mockServer.registeredTools[0].handler;
+        await handler({ name: "Alice" });
+
+        // Should have both name and count (from overridden input)
+        expect(capturedInput).toEqual({ name: "Alice", count: 10 });
+      });
+
+      it("preserves original service when using with overrides", async () => {
+        const originalService = fabricService({
+          alias: "foo",
+          description: "Foo service",
+          service: () => "original",
+        });
+
+        const mockServer = createMockServer();
+        // Use with overrides
+        fabricMcp({
+          alias: "bar",
+          server: mockServer as unknown as Parameters<
+            typeof fabricMcp
+          >[0]["server"],
+          service: originalService,
+        });
+
+        // Original should be unchanged
+        expect(originalService.alias).toBe("foo");
+        expect(originalService.description).toBe("Foo service");
+      });
+    });
+  });
+});

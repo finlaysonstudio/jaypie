@@ -14,7 +14,7 @@ export {
   DELETED_SUFFIX,
   INDEX_ALIAS,
   INDEX_CLASS,
-  INDEX_OU,
+  INDEX_SCOPE,
   INDEX_TYPE,
   INDEX_XID,
   SEPARATOR,
@@ -35,10 +35,10 @@ export {
   buildCompositeKey,
   buildIndexAlias,
   buildIndexClass,
-  buildIndexOu,
+  buildIndexScope,
   buildIndexType,
   buildIndexXid,
-  calculateOu,
+  calculateScope,
   DEFAULT_INDEXES,
   indexEntity,
 } from "./keyBuilders.js";
@@ -47,7 +47,7 @@ export {
 export {
   queryByAlias,
   queryByClass,
-  queryByOu,
+  queryByScope,
   queryByType,
   queryByXid,
 } from "./queries.js";

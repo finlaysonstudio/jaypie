@@ -2,20 +2,20 @@
 sidebar_position: 5
 ---
 
-# @jaypie/vocabulary
+# @jaypie/fabric
 
-**Prerequisites:** `npm install @jaypie/vocabulary`
+**Prerequisites:** `npm install @jaypie/fabric`
 
 **Status:** Experimental - APIs may change
 
 ## Overview
 
-`@jaypie/vocabulary` provides type coercion utilities and service handler patterns for consistent input handling across Jaypie applications. It follows the "Fabric" philosophy: things that feel right should work, and invalid inputs throw clear errors.
+`@jaypie/fabric` provides type conversion utilities and service handler patterns for consistent input handling across Jaypie applications. It follows the "Fabric" philosophy: things that feel right should work, and invalid inputs throw clear errors.
 
 ## Installation
 
 ```bash
-npm install @jaypie/vocabulary
+npm install @jaypie/fabric
 ```
 
 ## Quick Reference
@@ -24,23 +24,23 @@ npm install @jaypie/vocabulary
 
 | Export | Import Path | Purpose |
 |--------|-------------|---------|
-| `serviceHandler` | `@jaypie/vocabulary` | Create handler with typed inputs |
-| `coerce` | `@jaypie/vocabulary` | Type coercion utilities |
-| `StatusType` | `@jaypie/vocabulary` | Standard status values |
-| `registerServiceCommand` | `@jaypie/vocabulary/commander` | CLI adapter (Commander.js) |
-| `lambdaServiceHandler` | `@jaypie/vocabulary/lambda` | Lambda adapter |
-| `createLlmTool` | `@jaypie/vocabulary/llm` | LLM tool adapter |
-| `registerMcpTool` | `@jaypie/vocabulary/mcp` | MCP tool adapter |
+| `fabricService` | `@jaypie/fabric` | Create handler with typed inputs |
+| `fabric` | `@jaypie/fabric` | Type conversion utilities |
+| `StatusType` | `@jaypie/fabric` | Standard status values |
+| `fabricCommand` | `@jaypie/fabric/commander` | CLI adapter (Commander.js) |
+| `fabricLambda` | `@jaypie/fabric/lambda` | Lambda adapter |
+| `fabricTool` | `@jaypie/fabric/llm` | LLM tool adapter |
+| `fabricMcp` | `@jaypie/fabric/mcp` | MCP tool adapter |
 
 ### Supported Types
 
 | Type | Aliases | Description |
 |------|---------|-------------|
-| `String` | `"string"` | String coercion |
+| `String` | `"string"` | String conversion |
 | `Number` | `"number"` | Number parsing |
 | `Boolean` | `"boolean"` | Boolean parsing |
-| `Array` | `[]` | Array coercion |
-| `Object` | `{}` | Object coercion |
+| `Array` | `[]` | Array conversion |
+| `Object` | `{}` | Object conversion |
 | `[String]` | - | Typed array of strings |
 | `[Number]` | - | Typed array of numbers |
 | `/regex/` | - | String with regex validation |
@@ -53,9 +53,9 @@ npm install @jaypie/vocabulary
 ### Basic Handler
 
 ```typescript
-import { serviceHandler } from "@jaypie/vocabulary";
+import { fabricService } from "@jaypie/fabric";
 
-const divisionHandler = serviceHandler({
+const divisionHandler = fabricService({
   alias: "division",
   description: "Divides two numbers",
   input: {
@@ -76,7 +76,7 @@ const divisionHandler = serviceHandler({
 
 await divisionHandler();                              // → 4
 await divisionHandler({ numerator: 24 });             // → 8
-await divisionHandler({ numerator: "14", denominator: "7" }); // → 2 (coerced)
+await divisionHandler({ numerator: "14", denominator: "7" }); // → 2 (converted)
 await divisionHandler('{"numerator": "18"}');         // → 6 (JSON parsed)
 ```
 
@@ -84,11 +84,11 @@ await divisionHandler('{"numerator": "18"}');         // → 6 (JSON parsed)
 
 | Property | Type | Description |
 |----------|------|-------------|
-| `type` | `CoercionType` | Required. The target type for coercion |
+| `type` | `ConversionType` | Required. The target type for conversion |
 | `default` | `unknown` | Default value if not provided |
 | `description` | `string` | Field description (used in CLI help) |
 | `required` | `boolean` | Whether field is required (default: true unless default set) |
-| `validate` | `function \| RegExp \| array` | Validation after coercion |
+| `validate` | `function \| RegExp \| array` | Validation after conversion |
 | `flag` | `string` | Override long flag name for Commander.js |
 | `letter` | `string` | Short switch letter for Commander.js |
 
@@ -97,7 +97,7 @@ await divisionHandler('{"numerator": "18"}');         // → 6 (JSON parsed)
 Config properties are attached directly to the handler:
 
 ```typescript
-const handler = serviceHandler({
+const handler = fabricService({
   alias: "greet",
   description: "Greet a user",
   input: { name: { type: String } },
@@ -114,7 +114,7 @@ handler.input;       // { name: { type: String } }
 Services receive an optional second parameter with context utilities:
 
 ```typescript
-const handler = serviceHandler({
+const handler = fabricService({
   input: { jobId: { type: String } },
   service: async ({ jobId }, context) => {
     context?.sendMessage?.({ content: `Starting job ${jobId}` });
@@ -146,7 +146,7 @@ Context callbacks connect to adapter registration:
 When no `service` function is provided, the handler returns the processed input:
 
 ```typescript
-const validateUser = serviceHandler({
+const validateUser = fabricService({
   input: {
     age: { type: Number, validate: (v) => v >= 18 },
     email: { type: /^[^@]+@[^@]+\.[^@]+$/ },
@@ -158,45 +158,45 @@ await validateUser({ age: "25", email: "bob@example.com" });
 // → { age: 25, email: "bob@example.com", role: "user" }
 ```
 
-## Type Coercion
+## Type Conversion
 
-### Coercion Examples
+### Conversion Examples
 
 ```typescript
-import { coerce } from "@jaypie/vocabulary";
+import { fabric } from "@jaypie/fabric";
 
-// Boolean coercion
-coerce("true", Boolean);     // → true
-coerce("false", Boolean);    // → false
-coerce(1, Boolean);          // → true
-coerce(0, Boolean);          // → false
+// Boolean conversion
+fabric("true", Boolean);     // → true
+fabric("false", Boolean);    // → false
+fabric(1, Boolean);          // → true
+fabric(0, Boolean);          // → false
 
-// Number coercion
-coerce("42", Number);        // → 42
-coerce("true", Number);      // → 1
-coerce("false", Number);     // → 0
+// Number conversion
+fabric("42", Number);        // → 42
+fabric("true", Number);      // → 1
+fabric("false", Number);     // → 0
 
-// String coercion
-coerce(true, String);        // → "true"
-coerce(42, String);          // → "42"
+// String conversion
+fabric(true, String);        // → "true"
+fabric(42, String);          // → "42"
 
-// Array coercion
-coerce("1,2,3", [Number]);   // → [1, 2, 3]
-coerce("a\tb\tc", [String]); // → ["a", "b", "c"]
-coerce([1, 2], [String]);    // → ["1", "2"]
+// Array conversion
+fabric("1,2,3", [Number]);   // → [1, 2, 3]
+fabric("a\tb\tc", [String]); // → ["a", "b", "c"]
+fabric([1, 2], [String]);    // → ["1", "2"]
 
 // Unwrapping
-coerce({ value: "42" }, Number);  // → 42
-coerce(["true"], Boolean);        // → true
-coerce('{"value": 5}', Number);   // → 5
+fabric({ value: "42" }, Number);  // → 42
+fabric(["true"], Boolean);        // → true
+fabric('{"value": 5}', Number);   // → 5
 ```
 
 ### RegExp Type Shorthand
 
-A bare RegExp coerces to String and validates:
+A bare RegExp converts to String and validates:
 
 ```typescript
-const handler = serviceHandler({
+const handler = fabricService({
   input: {
     email: { type: /^[^@]+@[^@]+\.[^@]+$/ },
   },
@@ -229,11 +229,11 @@ input: {
 A predefined validated string type for common status values:
 
 ```typescript
-import { StatusType, isStatus } from "@jaypie/vocabulary";
+import { StatusType, isStatus } from "@jaypie/fabric";
 
 // StatusType is: ["canceled", "complete", "error", "pending", "processing", "queued", "sending"]
 
-const handler = serviceHandler({
+const handler = fabricService({
   input: {
     status: { type: StatusType, default: "pending" },
   },
@@ -254,10 +254,10 @@ Integrate with Commander.js:
 
 ```typescript
 import { Command } from "commander";
-import { serviceHandler } from "@jaypie/vocabulary";
-import { registerServiceCommand } from "@jaypie/vocabulary/commander";
+import { fabricService } from "@jaypie/fabric";
+import { fabricCommand } from "@jaypie/fabric/commander";
 
-const handler = serviceHandler({
+const handler = fabricService({
   alias: "greet",
   description: "Greet a user",
   input: {
@@ -271,8 +271,8 @@ const handler = serviceHandler({
 });
 
 const program = new Command();
-registerServiceCommand({
-  handler,
+fabricCommand({
+  service: handler,
   program,
   onMessage: (msg) => console.log(msg.content),
   onComplete: (result) => console.log(result),
@@ -289,10 +289,10 @@ program.parse();
 ## Lambda Adapter
 
 ```typescript
-import { serviceHandler } from "@jaypie/vocabulary";
-import { lambdaServiceHandler } from "@jaypie/vocabulary/lambda";
+import { fabricService } from "@jaypie/fabric";
+import { fabricLambda } from "@jaypie/fabric/lambda";
 
-const processOrderHandler = serviceHandler({
+const processOrderHandler = fabricService({
   alias: "processOrder",
   input: {
     orderId: { type: String },
@@ -304,8 +304,8 @@ const processOrderHandler = serviceHandler({
   },
 });
 
-export const handler = lambdaServiceHandler({
-  handler: processOrderHandler,
+export const handler = fabricLambda({
+  service: processOrderHandler,
   secrets: ["MONGODB_URI"],
   setup: [connectDb],
   teardown: [disconnectDb],
@@ -326,11 +326,11 @@ Lambda adapter automatically extracts input from:
 Convert handler to LLM tool:
 
 ```typescript
-import { serviceHandler } from "@jaypie/vocabulary";
-import { createLlmTool } from "@jaypie/vocabulary/llm";
+import { fabricService } from "@jaypie/fabric";
+import { fabricTool } from "@jaypie/fabric/llm";
 import { Llm, Toolkit } from "@jaypie/llm";
 
-const weatherHandler = serviceHandler({
+const weatherHandler = fabricService({
   alias: "get_weather",
   description: "Get current weather for a location",
   input: {
@@ -343,7 +343,7 @@ const weatherHandler = serviceHandler({
   },
 });
 
-const { tool } = createLlmTool({ handler: weatherHandler });
+const { tool } = fabricTool({ service: weatherHandler });
 const toolkit = new Toolkit([tool]);
 const llm = new Llm({ toolkit });
 
@@ -352,8 +352,8 @@ const response = await llm.ask("What's the weather in Tokyo?");
 
 ### Type Mapping
 
-| Vocabulary Type | JSON Schema |
-|-----------------|-------------|
+| Fabric Type | JSON Schema |
+|-------------|-------------|
 | `String` | `{ type: "string" }` |
 | `Number` | `{ type: "number" }` |
 | `Boolean` | `{ type: "boolean" }` |
@@ -367,10 +367,10 @@ Register as MCP tool:
 
 ```typescript
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { serviceHandler } from "@jaypie/vocabulary";
-import { registerMcpTool } from "@jaypie/vocabulary/mcp";
+import { fabricService } from "@jaypie/fabric";
+import { fabricMcp } from "@jaypie/fabric/mcp";
 
-const handler = serviceHandler({
+const handler = fabricService({
   alias: "calculate",
   description: "Perform a calculation",
   input: {
@@ -389,18 +389,18 @@ const handler = serviceHandler({
 });
 
 const server = new McpServer({ name: "calculator", version: "1.0.0" });
-registerMcpTool({ handler, server });
+fabricMcp({ service: handler, server });
 ```
 
-## Entity Types
+## Model Types
 
-Standard entity types for consistent data modeling:
+Standard model types for consistent data modeling:
 
 ```typescript
-import type { BaseEntity, Job, MessageEntity } from "@jaypie/vocabulary";
+import type { FabricModel, FabricJob, FabricMessage } from "@jaypie/fabric";
 ```
 
-### BaseEntity Fields
+### FabricModel Fields
 
 ```
 model: <varies>
@@ -418,16 +418,16 @@ archivedAt?: Date
 deletedAt?: Date
 ```
 
-### Job Entity
+### FabricJob
 
 ```typescript
-// Job extends BaseEntity
+// FabricJob extends FabricModel
 {
   model: "job",
   status: "pending" | "processing" | "complete" | "error" | ...,
   startedAt?: Date,
   completedAt?: Date,
-  messages?: MessageEntity[],
+  messages?: FabricMessage[],
   progress?: {
     percentageComplete?: number,
     estimatedTime?: number,
@@ -442,7 +442,7 @@ Errors are propagated through all adapters:
 ```typescript
 import { NotFoundError } from "@jaypie/errors";
 
-const handler = serviceHandler({
+const handler = fabricService({
   input: { userId: { type: String } },
   service: async ({ userId }) => {
     const user = await db.users.findById(userId);
@@ -459,10 +459,10 @@ const handler = serviceHandler({
 // MCP: Returns MCP error response
 ```
 
-Invalid coercions throw `BadRequestError`:
+Invalid conversions throw `BadRequestError`:
 
 ```typescript
-await handler({ numerator: "not-a-number" });  // Cannot coerce to Number
+await handler({ numerator: "not-a-number" });  // Cannot convert to Number
 await handler({ priority: 10 });                // Validation fails
 await handler({});                              // Missing required field
 ```
@@ -481,7 +481,7 @@ describe("getUser", () => {
     expect(result).toHaveProperty("id", "abc-123");
   });
 
-  it("coerces string input", async () => {
+  it("converts string input", async () => {
     const result = await divisionHandler({ numerator: "24" });
     expect(result).toBe(8);
   });

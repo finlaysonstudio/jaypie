@@ -2,7 +2,7 @@ export { addDatadogLayers } from "./addDatadogLayers";
 export { constructEnvName } from "./constructEnvName";
 export { constructStackName } from "./constructStackName";
 export { constructTagger } from "./constructTagger";
-export { envHostname } from "./envHostname";
+export { envHostname, HostConfig } from "./envHostname";
 export {
   extendDatadogRole,
   ExtendDatadogRoleOptions,

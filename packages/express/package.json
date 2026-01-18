@@ -1,6 +1,6 @@
 {
   "name": "@jaypie/express",
-  "version": "1.2.4-rc0",
+  "version": "1.2.4-rc24",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/finlaysonstudio/jaypie.git"
@@ -24,10 +24,20 @@
   ],
   "scripts": {
     "build": "rollup --config",
+    "docker:build": "npm run build && docker build -f docker/Dockerfile -t jaypie-express-lambda .",
+    "docker:invoke": "curl -s -X POST 'http://localhost:9000/2015-03-31/functions/function/invocations' -d @docker/events/api-gateway-v1-get.json",
+    "docker:invoke:404": "curl -s -X POST 'http://localhost:9000/2015-03-31/functions/function/invocations' -d @docker/events/api-gateway-v1-404.json",
+    "docker:invoke:echo": "curl -s -X POST 'http://localhost:9000/2015-03-31/functions/function/invocations' -d @docker/events/api-gateway-v1-post.json",
+    "docker:invoke:stream": "curl -s -X POST 'http://localhost:9000/2015-03-31/functions/function/invocations' -d @docker/events/api-gateway-v1-stream.json",
+    "docker:invoke:v2": "curl -s -X POST 'http://localhost:9000/2015-03-31/functions/function/invocations' -d @docker/events/function-url-v2.json",
+    "docker:run": "docker stop lambda-test 2>/dev/null; docker run --rm --name lambda-test -p 9000:8080 jaypie-express-lambda",
     "format": "npm run format:package && npm run format:lint",
     "format:lint": "eslint --fix .",
     "format:package": "sort-package-json ./package.json",
     "lint": "eslint .",
+    "sam:build": "npm run build && cp -r dist docker/ && cd docker && sam build",
+    "sam:invoke": "cd docker && sam local invoke ExpressFunction -e events/api-gateway-v1-get.json",
+    "sam:start": "cd docker && sam local start-api --warm-containers EAGER",
     "test": "vitest run .",
     "test:spec:constants": "vitest run ./src/__tests__/constants.spec.ts",
     "test:spec:cors.helper": "vitest run ./src/__tests__/cors.helper.spec.ts",

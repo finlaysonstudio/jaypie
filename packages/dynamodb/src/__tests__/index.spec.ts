@@ -24,9 +24,9 @@ describe("@jaypie/dynamodb exports", () => {
       expect(dynamodb.INDEX_CLASS).toBe("indexClass");
     });
 
-    it("exports INDEX_OU", () => {
-      expect(dynamodb.INDEX_OU).toBeDefined();
-      expect(dynamodb.INDEX_OU).toBe("indexOu");
+    it("exports INDEX_SCOPE", () => {
+      expect(dynamodb.INDEX_SCOPE).toBeDefined();
+      expect(dynamodb.INDEX_SCOPE).toBe("indexScope");
     });
 
     it("exports INDEX_TYPE", () => {
@@ -59,8 +59,8 @@ describe("@jaypie/dynamodb exports", () => {
       expect(dynamodb.buildIndexClass).toBeFunction();
     });
 
-    it("exports buildIndexOu", () => {
-      expect(dynamodb.buildIndexOu).toBeFunction();
+    it("exports buildIndexScope", () => {
+      expect(dynamodb.buildIndexScope).toBeFunction();
     });
 
     it("exports buildIndexType", () => {
@@ -71,8 +71,8 @@ describe("@jaypie/dynamodb exports", () => {
       expect(dynamodb.buildIndexXid).toBeFunction();
     });
 
-    it("exports calculateOu", () => {
-      expect(dynamodb.calculateOu).toBeFunction();
+    it("exports calculateScope", () => {
+      expect(dynamodb.calculateScope).toBeFunction();
     });
 
     it("exports indexEntity", () => {
@@ -129,8 +129,8 @@ describe("@jaypie/dynamodb exports", () => {
   });
 
   describe("Query Functions", () => {
-    it("exports queryByOu", () => {
-      expect(dynamodb.queryByOu).toBeFunction();
+    it("exports queryByScope", () => {
+      expect(dynamodb.queryByScope).toBeFunction();
     });
 
     it("exports queryByAlias", () => {

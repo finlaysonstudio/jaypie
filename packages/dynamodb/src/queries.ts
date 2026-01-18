@@ -1,5 +1,5 @@
 import { QueryCommand } from "@aws-sdk/lib-dynamodb";
-import { serviceHandler } from "@jaypie/vocabulary";
+import { fabricService } from "@jaypie/fabric";
 
 import { getDocClient, getTableName } from "./client.js";
 import {
@@ -7,14 +7,14 @@ import {
   DELETED_SUFFIX,
   INDEX_ALIAS,
   INDEX_CLASS,
-  INDEX_OU,
+  INDEX_SCOPE,
   INDEX_TYPE,
   INDEX_XID,
 } from "./constants.js";
 import {
   buildIndexAlias,
   buildIndexClass,
-  buildIndexOu,
+  buildIndexScope,
   buildIndexType,
   buildIndexXid,
 } from "./keyBuilders.js";
@@ -80,32 +80,32 @@ async function executeQuery<T extends StorableEntity>(
 }
 
 /**
- * Query parameters for queryByOu
+ * Query parameters for queryByScope
  */
-interface QueryByOuParams extends BaseQueryOptions {
+interface QueryByScopeParams extends BaseQueryOptions {
   model: string;
-  ou: string;
+  scope: string;
 }
 
 /**
- * Query entities by organizational unit (parent hierarchy)
- * Uses indexOu GSI
+ * Query entities by scope (parent hierarchy)
+ * Uses indexScope GSI
  *
- * Note: This is a regular async function (not serviceHandler) because it accepts
+ * Note: This is a regular async function (not fabricService) because it accepts
  * complex startKey objects that can't be coerced by vocabulary's type system.
  */
-export async function queryByOu({
+export async function queryByScope({
   archived = false,
   ascending = false,
   deleted = false,
   limit,
   model,
-  ou,
+  scope,
   startKey,
-}: QueryByOuParams): Promise<QueryResult<StorableEntity>> {
+}: QueryByScopeParams): Promise<QueryResult<StorableEntity>> {
   const suffix = calculateSuffix({ archived, deleted });
-  const keyValue = buildIndexOu(ou, model) + suffix;
-  return executeQuery<StorableEntity>(INDEX_OU, keyValue, {
+  const keyValue = buildIndexScope(scope, model) + suffix;
+  return executeQuery<StorableEntity>(INDEX_SCOPE, keyValue, {
     ascending,
     limit,
     startKey,
@@ -116,7 +116,7 @@ export async function queryByOu({
  * Query a single entity by human-friendly alias
  * Uses indexAlias GSI
  */
-export const queryByAlias = serviceHandler({
+export const queryByAlias = fabricService({
   alias: "queryByAlias",
   description: "Query a single entity by human-friendly alias",
   input: {
@@ -134,23 +134,26 @@ export const queryByAlias = serviceHandler({
       description: "Query deleted entities instead of active ones",
     },
     model: { type: String, description: "Entity model name" },
-    ou: { type: String, description: "Organizational unit (@ for root)" },
+    scope: { type: String, description: "Scope (@ for root)" },
   },
   service: async ({
     alias,
     archived,
     deleted,
     model,
-    ou,
+    scope,
   }): Promise<StorableEntity | null> => {
     const aliasStr = alias as string;
     const archivedBool = archived as boolean | undefined;
     const deletedBool = deleted as boolean | undefined;
     const modelStr = model as string;
-    const ouStr = ou as string;
+    const scopeStr = scope as string;
 
-    const suffix = calculateSuffix({ archived: archivedBool, deleted: deletedBool });
-    const keyValue = buildIndexAlias(ouStr, modelStr, aliasStr) + suffix;
+    const suffix = calculateSuffix({
+      archived: archivedBool,
+      deleted: deletedBool,
+    });
+    const keyValue = buildIndexAlias(scopeStr, modelStr, aliasStr) + suffix;
     const result = await executeQuery<StorableEntity>(INDEX_ALIAS, keyValue, {
       limit: 1,
     });
@@ -163,7 +166,7 @@ export const queryByAlias = serviceHandler({
  */
 interface QueryByClassParams extends BaseQueryOptions {
   model: string;
-  ou: string;
+  scope: string;
   recordClass: string;
 }
 
@@ -171,7 +174,7 @@ interface QueryByClassParams extends BaseQueryOptions {
  * Query entities by category classification
  * Uses indexClass GSI
  *
- * Note: This is a regular async function (not serviceHandler) because it accepts
+ * Note: This is a regular async function (not fabricService) because it accepts
  * complex startKey objects that can't be coerced by vocabulary's type system.
  */
 export async function queryByClass({
@@ -180,12 +183,12 @@ export async function queryByClass({
   deleted = false,
   limit,
   model,
-  ou,
+  scope,
   recordClass,
   startKey,
 }: QueryByClassParams): Promise<QueryResult<StorableEntity>> {
   const suffix = calculateSuffix({ archived, deleted });
-  const keyValue = buildIndexClass(ou, model, recordClass) + suffix;
+  const keyValue = buildIndexClass(scope, model, recordClass) + suffix;
   return executeQuery<StorableEntity>(INDEX_CLASS, keyValue, {
     ascending,
     limit,
@@ -198,7 +201,7 @@ export async function queryByClass({
  */
 interface QueryByTypeParams extends BaseQueryOptions {
   model: string;
-  ou: string;
+  scope: string;
   type: string;
 }
 
@@ -206,7 +209,7 @@ interface QueryByTypeParams extends BaseQueryOptions {
  * Query entities by type classification
  * Uses indexType GSI
  *
- * Note: This is a regular async function (not serviceHandler) because it accepts
+ * Note: This is a regular async function (not fabricService) because it accepts
  * complex startKey objects that can't be coerced by vocabulary's type system.
  */
 export async function queryByType({
@@ -215,12 +218,12 @@ export async function queryByType({
   deleted = false,
   limit,
   model,
-  ou,
+  scope,
   startKey,
   type,
 }: QueryByTypeParams): Promise<QueryResult<StorableEntity>> {
   const suffix = calculateSuffix({ archived, deleted });
-  const keyValue = buildIndexType(ou, model, type) + suffix;
+  const keyValue = buildIndexType(scope, model, type) + suffix;
   return executeQuery<StorableEntity>(INDEX_TYPE, keyValue, {
     ascending,
     limit,
@@ -232,7 +235,7 @@ export async function queryByType({
  * Query a single entity by external ID
  * Uses indexXid GSI
  */
-export const queryByXid = serviceHandler({
+export const queryByXid = fabricService({
   alias: "queryByXid",
   description: "Query a single entity by external ID",
   input: {
@@ -249,24 +252,27 @@ export const queryByXid = serviceHandler({
       description: "Query deleted entities instead of active ones",
     },
     model: { type: String, description: "Entity model name" },
-    ou: { type: String, description: "Organizational unit (@ for root)" },
+    scope: { type: String, description: "Scope (@ for root)" },
     xid: { type: String, description: "External ID" },
   },
   service: async ({
     archived,
     deleted,
     model,
-    ou,
+    scope,
     xid,
   }): Promise<StorableEntity | null> => {
     const archivedBool = archived as boolean | undefined;
     const deletedBool = deleted as boolean | undefined;
     const modelStr = model as string;
-    const ouStr = ou as string;
+    const scopeStr = scope as string;
     const xidStr = xid as string;
 
-    const suffix = calculateSuffix({ archived: archivedBool, deleted: deletedBool });
-    const keyValue = buildIndexXid(ouStr, modelStr, xidStr) + suffix;
+    const suffix = calculateSuffix({
+      archived: archivedBool,
+      deleted: deletedBool,
+    });
+    const keyValue = buildIndexXid(scopeStr, modelStr, xidStr) + suffix;
     const result = await executeQuery<StorableEntity>(INDEX_XID, keyValue, {
       limit: 1,
     });

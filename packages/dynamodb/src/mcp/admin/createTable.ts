@@ -5,10 +5,10 @@ import {
 } from "@aws-sdk/client-dynamodb";
 import {
   DEFAULT_INDEXES,
+  fabricService,
   getAllRegisteredIndexes,
   type IndexDefinition,
-} from "@jaypie/vocabulary";
-import { serviceHandler } from "@jaypie/vocabulary";
+} from "@jaypie/fabric";
 
 const DEFAULT_ENDPOINT = "http://127.0.0.1:8000";
 const DEFAULT_REGION = "us-east-1";
@@ -77,10 +77,7 @@ function buildAttributeDefinitions(
     for (const skField of sk) {
       if (!attrs.has(skField as string)) {
         // Assume string unless it's sequence
-        attrs.set(
-          skField as string,
-          skField === "sequence" ? "N" : "S",
-        );
+        attrs.set(skField as string, skField === "sequence" ? "N" : "S");
       }
     }
   }
@@ -96,9 +93,7 @@ function buildAttributeDefinitions(
 /**
  * Build GSI definitions from indexes
  */
-function buildGSIs(
-  indexes: IndexDefinition[],
-): Array<{
+function buildGSIs(indexes: IndexDefinition[]): Array<{
   IndexName: string;
   KeySchema: Array<{ AttributeName: string; KeyType: "HASH" | "RANGE" }>;
   Projection: { ProjectionType: "ALL" };
@@ -155,7 +150,7 @@ function createTableParams(
 /**
  * Create DynamoDB table with Jaypie GSI schema
  */
-export const createTableHandler = serviceHandler({
+export const createTableHandler = fabricService({
   alias: "dynamodb_create_table",
   description: "Create DynamoDB table with Jaypie GSI schema",
   input: {

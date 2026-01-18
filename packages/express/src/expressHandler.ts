@@ -5,6 +5,7 @@ import { force, getHeaderFrom, HTTP, JAYPIE, jaypieHandler } from "@jaypie/kit";
 import { log as publicLogger } from "@jaypie/logger";
 import { DATADOG, hasDatadogEnv, submitMetric } from "@jaypie/datadog";
 
+import { JAYPIE_LAMBDA_MOCK } from "./adapter/LambdaResponseBuffered.js";
 import getCurrentInvokeUuid from "./getCurrentInvokeUuid.adapter.js";
 import decorateResponse from "./decorateResponse.helper.js";
 import summarizeRequest from "./summarizeRequest.helper.js";
@@ -100,6 +101,20 @@ interface ExtendedResponse extends Response {
   };
 }
 
+// Extended response type for Lambda mock responses with direct internal access
+interface LambdaMockResponse extends Response {
+  _chunks?: Buffer[];
+  _headers?: Map<string, string | string[]>;
+  _headersSent?: boolean;
+  _resolve?: ((result: unknown) => void) | null;
+  buildResult?: () => unknown;
+  // Internal bypass methods for dd-trace compatibility
+  _internalGetHeader?: (name: string) => string | undefined;
+  _internalSetHeader?: (name: string, value: string) => void;
+  _internalHasHeader?: (name: string) => boolean;
+  _internalRemoveHeader?: (name: string) => void;
+}
+
 type ExpressHandler<T> = (
   req: Request,
   res: Response,
@@ -117,6 +132,96 @@ interface ResponseWithJson {
 
 // Cast logger to extended interface for runtime features not in type definitions
 const logger = publicLogger as unknown as ExtendedLogger;
+
+//
+//
+// Helpers - Safe response methods to bypass dd-trace interception
+//
+
+/**
+ * Check if response is a Lambda mock response with direct internal access.
+ * Uses Symbol marker to survive prototype chain modifications from Express and dd-trace.
+ */
+function isLambdaMockResponse(res: Response): res is LambdaMockResponse {
+  return (res as unknown as Record<symbol, unknown>)[JAYPIE_LAMBDA_MOCK] === true;
+}
+
+/**
+ * Safely send a JSON response, avoiding dd-trace interception.
+ * For Lambda mock responses, directly manipulates internal state instead of
+ * using stream methods (write/end) which dd-trace intercepts.
+ */
+function safeSendJson(res: Response, statusCode: number, data: unknown): void {
+  if (isLambdaMockResponse(res)) {
+    // Use internal method to set header (completely bypasses dd-trace)
+    if (typeof res._internalSetHeader === "function") {
+      res._internalSetHeader("content-type", "application/json");
+    } else {
+      // Fall back to direct _headers manipulation
+      res._headers!.set("content-type", "application/json");
+    }
+    res.statusCode = statusCode;
+
+    // Directly push to chunks array instead of using stream write/end
+    const chunk = Buffer.from(JSON.stringify(data));
+    res._chunks!.push(chunk);
+    res._headersSent = true;
+
+    // Mark as ended so getResult() resolves immediately
+    (res as LambdaMockResponse & { _ended?: boolean })._ended = true;
+
+    // Signal completion if a promise is waiting
+    if (res._resolve) {
+      res._resolve(res.buildResult!());
+    }
+    // Emit "finish" event so runExpressApp's promise resolves
+    console.log("[safeSendJson] Emitting finish event");
+    res.emit("finish");
+    return;
+  }
+  // Fall back to standard Express methods for real responses
+  res.status(statusCode).json(data);
+}
+
+/**
+ * Safely send a response body, avoiding dd-trace interception.
+ * For Lambda mock responses, directly manipulates internal state instead of
+ * using stream methods (write/end) which dd-trace intercepts.
+ */
+function safeSend(
+  res: Response,
+  statusCode: number,
+  body?: string,
+): void {
+  if (isLambdaMockResponse(res)) {
+    // Direct internal state manipulation - bypasses dd-trace completely
+    res.statusCode = statusCode;
+
+    if (body !== undefined) {
+      const chunk = Buffer.from(body);
+      res._chunks!.push(chunk);
+    }
+    res._headersSent = true;
+
+    // Mark as ended so getResult() resolves immediately
+    (res as LambdaMockResponse & { _ended?: boolean })._ended = true;
+
+    // Signal completion if a promise is waiting
+    if (res._resolve) {
+      res._resolve(res.buildResult!());
+    }
+    // Emit "finish" event so runExpressApp's promise resolves
+    console.log("[safeSend] Emitting finish event");
+    res.emit("finish");
+    return;
+  }
+  // Fall back to standard Express methods for real responses
+  if (body !== undefined) {
+    res.status(statusCode).send(body);
+  } else {
+    res.status(statusCode).send();
+  }
+}
 
 //
 //
@@ -421,24 +526,28 @@ function expressHandler<T>(
               typeof (response as unknown as ResponseWithJson).json ===
               "function"
             ) {
-              res.json((response as unknown as ResponseWithJson).json());
+              safeSendJson(
+                res,
+                status,
+                (response as unknown as ResponseWithJson).json(),
+              );
             } else {
-              res.status(status).json(response);
+              safeSendJson(res, status, response);
             }
           } else if (typeof response === "string") {
             try {
-              res.status(status).json(JSON.parse(response));
+              safeSendJson(res, status, JSON.parse(response));
             } catch {
-              res.status(status).send(response);
+              safeSend(res, status, response);
             }
           } else if (response === true) {
-            res.status(HTTP.CODE.CREATED).send();
+            safeSend(res, HTTP.CODE.CREATED);
           } else {
-            res.status(status).send(response as unknown as string);
+            safeSend(res, status, response as unknown as string);
           }
         } else {
           // No response
-          res.status(HTTP.CODE.NO_CONTENT).send();
+          safeSend(res, HTTP.CODE.NO_CONTENT);
         }
       } else {
         // Resolve illegal call to res.end(), res.json(), or res.send()
@@ -456,7 +565,20 @@ function expressHandler<T>(
         );
       }
     } catch (error) {
-      log.fatal("Express encountered an error while sending the response");
+      // Use console.error for raw stack trace to ensure it appears in CloudWatch
+      // Handle both Error objects and plain thrown values
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : typeof error === "object" && error !== null
+            ? JSON.stringify(error)
+            : String(error);
+      const errorStack =
+        error instanceof Error
+          ? error.stack
+          : new Error("Stack trace").stack?.replace("Error: Stack trace", `Error: ${errorMessage}`);
+      console.error("Express response error stack trace:", errorStack);
+      log.fatal(`Express encountered an error while sending the response: ${errorMessage}`);
       log.var({ responseError: error });
     }
 

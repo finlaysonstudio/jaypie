@@ -14,6 +14,89 @@ interface DecorateResponseOptions {
   version?: string;
 }
 
+// Extended response type that may have _headers Map and internal bypass methods (Lambda adapter)
+interface ExtendedResponse extends Response {
+  _headers?: Map<string, string | string[]>;
+  // Internal bypass methods added for dd-trace compatibility
+  _internalGetHeader?: (name: string) => string | undefined;
+  _internalSetHeader?: (name: string, value: string) => void;
+}
+
+//
+//
+// Helpers
+//
+
+/**
+ * Safely get a header value from response.
+ * Handles both Express Response and Lambda adapter responses.
+ * Defensive against dd-trace instrumentation issues.
+ */
+function safeGetHeader(
+  res: ExtendedResponse,
+  name: string,
+): string | undefined {
+  try {
+    // Try internal method first (completely bypasses dd-trace)
+    if (typeof res._internalGetHeader === "function") {
+      return res._internalGetHeader(name);
+    }
+    // Fall back to _headers Map access (Lambda adapter, avoids dd-trace)
+    if (res._headers instanceof Map) {
+      const value = res._headers.get(name.toLowerCase());
+      return value ? String(value) : undefined;
+    }
+    // Fall back to getHeader (more standard than get)
+    if (typeof res.getHeader === "function") {
+      const value = res.getHeader(name);
+      return value ? String(value) : undefined;
+    }
+    // Last resort: try get
+    if (typeof res.get === "function") {
+      const value = res.get(name);
+      return value ? String(value) : undefined;
+    }
+  } catch {
+    // Silently fail - caller will handle missing value
+  }
+  return undefined;
+}
+
+/**
+ * Safely set a header value on response.
+ * Handles both Express Response and Lambda adapter responses.
+ * Defensive against dd-trace instrumentation issues.
+ */
+function safeSetHeader(
+  res: ExtendedResponse,
+  name: string,
+  value: string,
+): void {
+  try {
+    // Try internal method first (completely bypasses dd-trace)
+    if (typeof res._internalSetHeader === "function") {
+      res._internalSetHeader(name, value);
+      return;
+    }
+    // Fall back to _headers Map access (Lambda adapter, avoids dd-trace)
+    if (res._headers instanceof Map) {
+      res._headers.set(name.toLowerCase(), value);
+      return;
+    }
+    // Fall back to setHeader (more standard than set)
+    if (typeof res.setHeader === "function") {
+      res.setHeader(name, value);
+      return;
+    }
+    // Last resort: try set
+    if (typeof res.set === "function") {
+      res.set(name, value);
+    }
+  } catch {
+    // Silently fail - header just won't be set
+  }
+}
+
 //
 //
 // Main
@@ -39,6 +122,8 @@ const decorateResponse = (
     return;
   }
 
+  const extRes = res as ExtendedResponse;
+
   try {
     //
     //
@@ -46,37 +131,39 @@ const decorateResponse = (
     //
 
     // X-Powered-By, override "Express" but nothing else
-    if (
-      !res.get(HTTP.HEADER.POWERED_BY) ||
-      res.get(HTTP.HEADER.POWERED_BY) === "Express"
-    ) {
-      res.set(HTTP.HEADER.POWERED_BY, JAYPIE.LIB.EXPRESS);
+    const currentPoweredBy = safeGetHeader(extRes, HTTP.HEADER.POWERED_BY);
+    if (!currentPoweredBy || currentPoweredBy === "Express") {
+      safeSetHeader(extRes, HTTP.HEADER.POWERED_BY, JAYPIE.LIB.EXPRESS);
     }
 
     // X-Project-Environment
     if (process.env.PROJECT_ENV) {
-      res.set(HTTP.HEADER.PROJECT.ENVIRONMENT, process.env.PROJECT_ENV);
+      safeSetHeader(
+        extRes,
+        HTTP.HEADER.PROJECT.ENVIRONMENT,
+        process.env.PROJECT_ENV,
+      );
     }
 
     // X-Project-Handler
     if (handler) {
-      res.set(HTTP.HEADER.PROJECT.HANDLER, handler);
+      safeSetHeader(extRes, HTTP.HEADER.PROJECT.HANDLER, handler);
     }
 
     // X-Project-Invocation
     const currentInvoke = getCurrentInvokeUuid();
     if (currentInvoke) {
-      res.set(HTTP.HEADER.PROJECT.INVOCATION, currentInvoke);
+      safeSetHeader(extRes, HTTP.HEADER.PROJECT.INVOCATION, currentInvoke);
     }
 
     // X-Project-Key
     if (process.env.PROJECT_KEY) {
-      res.set(HTTP.HEADER.PROJECT.KEY, process.env.PROJECT_KEY);
+      safeSetHeader(extRes, HTTP.HEADER.PROJECT.KEY, process.env.PROJECT_KEY);
     }
 
     // X-Project-Version
     if (version) {
-      res.set(HTTP.HEADER.PROJECT.VERSION, version);
+      safeSetHeader(extRes, HTTP.HEADER.PROJECT.VERSION, version);
     }
 
     //

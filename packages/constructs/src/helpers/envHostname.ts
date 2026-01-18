@@ -1,17 +1,23 @@
 import { ConfigurationError } from "@jaypie/errors";
 import { CDK } from "../constants";
 
+/**
+ * Configuration for resolving a hostname from parts.
+ * Used by envHostname() to construct domain names from environment and config.
+ */
+export interface HostConfig {
+  component?: string;
+  domain?: string;
+  env?: string;
+  subdomain?: string;
+}
+
 export function envHostname({
   component,
   domain,
   env,
   subdomain,
-}: {
-  component?: string;
-  domain?: string;
-  env?: string;
-  subdomain?: string;
-} = {}) {
+}: HostConfig = {}) {
   const resolvedDomain =
     domain || process.env.CDK_ENV_DOMAIN || process.env.CDK_ENV_HOSTED_ZONE;
 
