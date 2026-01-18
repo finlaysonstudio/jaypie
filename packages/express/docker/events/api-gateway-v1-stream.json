@@ -1,0 +1,18 @@
+{
+  "httpMethod": "GET",
+  "path": "/stream",
+  "headers": { "accept": "text/event-stream", "host": "localhost" },
+  "queryStringParameters": { "seconds": "3" },
+  "body": null,
+  "isBase64Encoded": false,
+  "requestContext": {
+    "accountId": "123456789012",
+    "apiId": "test",
+    "httpMethod": "GET",
+    "identity": { "sourceIp": "127.0.0.1" },
+    "path": "/stream",
+    "protocol": "HTTP/1.1",
+    "requestId": "stream-request-id",
+    "stage": "local"
+  }
+}

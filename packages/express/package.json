@@ -28,6 +28,7 @@
     "docker:invoke": "curl -s -X POST 'http://localhost:9000/2015-03-31/functions/function/invocations' -d @docker/events/api-gateway-v1-get.json",
     "docker:invoke:404": "curl -s -X POST 'http://localhost:9000/2015-03-31/functions/function/invocations' -d @docker/events/api-gateway-v1-404.json",
     "docker:invoke:echo": "curl -s -X POST 'http://localhost:9000/2015-03-31/functions/function/invocations' -d @docker/events/api-gateway-v1-post.json",
+    "docker:invoke:stream": "curl -s -X POST 'http://localhost:9000/2015-03-31/functions/function/invocations' -d @docker/events/api-gateway-v1-stream.json",
     "docker:invoke:v2": "curl -s -X POST 'http://localhost:9000/2015-03-31/functions/function/invocations' -d @docker/events/function-url-v2.json",
     "docker:run": "docker stop lambda-test 2>/dev/null; docker run --rm --name lambda-test -p 9000:8080 jaypie-express-lambda",
     "format": "npm run format:package && npm run format:lint",
