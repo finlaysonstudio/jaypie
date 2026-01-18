@@ -14,10 +14,6 @@ vi.mock("../adapter/index.js", () => ({
   })),
 }));
 
-vi.mock("../getCurrentInvokeUuid.webadapter.js", () => ({
-  default: vi.fn(() => undefined),
-}));
-
 // Subject (import after mocks)
 import getCurrentInvokeUuid from "../getCurrentInvokeUuid.adapter.js";
 import { getCurrentInvoke } from "../adapter/index.js";
@@ -73,42 +69,15 @@ describe("GetCurrentInvokeUuid Adapter", () => {
     });
   });
 
-  describe("with Web Adapter mode", () => {
-    it("returns undefined when web adapter returns undefined", async () => {
-      // Import fresh to get the mock
-      const webAdapterMock =
-        await import("../getCurrentInvokeUuid.webadapter.js");
-      vi.mocked(webAdapterMock.default).mockReturnValue("WEB.ADAPTER.UUID");
-
+  describe("fallback to global context", () => {
+    it("uses global context when request has no _lambdaContext", () => {
       const mockReq = {
-        headers: {
-          "x-amzn-request-id": "header-request-id",
-        },
+        headers: {},
       } as any;
 
       const response = getCurrentInvokeUuid(mockReq);
-      expect(response).toBe("WEB.ADAPTER.UUID");
-    });
-  });
-
-  describe("priority order", () => {
-    it("uses web adapter header first when present", async () => {
-      const webAdapterMock =
-        await import("../getCurrentInvokeUuid.webadapter.js");
-      vi.mocked(webAdapterMock.default).mockReturnValue("WEB.ADAPTER.UUID");
-
-      const mockReq = {
-        _lambdaContext: {
-          awsRequestId: "REQUEST.UUID",
-        },
-        headers: {
-          "x-amzn-request-id": "header-id",
-        },
-      } as any;
-
-      const response = getCurrentInvokeUuid(mockReq);
-      // Web adapter mode takes priority
-      expect(response).toBe("WEB.ADAPTER.UUID");
+      expect(response).toBe("MOCK.UUID");
+      expect(getCurrentInvoke).toHaveBeenCalled();
     });
   });
 });

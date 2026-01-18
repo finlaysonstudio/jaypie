@@ -345,7 +345,7 @@ describe("JaypieDistribution", () => {
         runtime: lambda.Runtime.NODEJS_20_X,
       });
 
-      // Simulate a handler with invokeMode property (like JaypieStreamingLambda)
+      // Simulate a handler with invokeMode property for streaming
       const handlerWithInvokeMode = Object.assign(fn, {
         invokeMode: lambda.InvokeMode.RESPONSE_STREAM,
       });

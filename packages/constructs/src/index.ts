@@ -1,5 +1,5 @@
 // Export CDK constants
-export { CDK, LAMBDA_WEB_ADAPTER } from "./constants";
+export { CDK } from "./constants";
 
 export {
   JaypieAccountLoggingBucket,
@@ -69,10 +69,6 @@ export {
   JaypieStaticWebBucket,
   JaypieStaticWebBucketProps,
 } from "./JaypieStaticWebBucket";
-export {
-  JaypieStreamingLambda,
-  JaypieStreamingLambdaProps,
-} from "./JaypieStreamingLambda";
 export { JaypieTraceSigningKeySecret } from "./JaypieTraceSigningKeySecret";
 export { JaypieWebDeploymentBucket } from "./JaypieWebDeploymentBucket";
 export * from "./helpers";

@@ -2,7 +2,6 @@
 
 import {
   createMockFunction,
-  createMockResolvedFunction,
   createMockReturnedFunction,
   createMockWrappedFunction,
 } from "./utils";
@@ -87,11 +86,6 @@ export const expressHttpCodeHandler = createMockWrappedFunction(
 );
 
 export const cors = createMockWrappedFunction(original.cors as any);
-
-export const createServer = createMockResolvedFunction<{
-  port: number;
-  server: { close: () => void };
-}>({ port: 8080, server: { close: () => {} } });
 
 export const getCurrentInvokeUuid = createMockReturnedFunction<
   string | undefined

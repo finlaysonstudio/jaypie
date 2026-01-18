@@ -55,7 +55,6 @@ packages/constructs/
 |-----------|-------------|
 | `JaypieLambda` | Full-featured Lambda with Datadog, secrets, VPC support |
 | `JaypieExpressLambda` | Lambda optimized for Express APIs (30s timeout, API role) |
-| `JaypieStreamingLambda` | Lambda with AWS Lambda Web Adapter for streaming responses |
 | `JaypieQueuedLambda` | Lambda with SQS queue integration (FIFO by default) |
 | `JaypieBucketQueuedLambda` | Lambda triggered by S3 bucket events via queue |
 
@@ -116,15 +115,6 @@ The `CDK` constant provides standardized values:
 - `CDK.TAG.*` - Tag key names
 - `CDK.VENDOR.*` - Third-party vendor tags
 
-The `LAMBDA_WEB_ADAPTER` constant provides AWS Lambda Web Adapter configuration:
-
-- `LAMBDA_WEB_ADAPTER.ACCOUNT` - AWS account hosting the layer (753240598075)
-- `LAMBDA_WEB_ADAPTER.VERSION` - Layer version (25)
-- `LAMBDA_WEB_ADAPTER.LAYER.ARM64` - ARM64 layer name
-- `LAMBDA_WEB_ADAPTER.LAYER.X86` - x86_64 layer name
-- `LAMBDA_WEB_ADAPTER.DEFAULT_PORT` - Default port (8000)
-- `LAMBDA_WEB_ADAPTER.INVOKE_MODE.*` - Invoke modes (BUFFERED, RESPONSE_STREAM)
-
 ## Environment Variables
 
 Required by various constructs:
@@ -173,26 +163,30 @@ new JaypieDistribution(this, "Distribution", {
 });
 ```
 
-### Streaming Lambda with Web Adapter
+### Streaming Lambda
+
+For streaming responses, use `createLambdaStreamHandler` from `@jaypie/express` with `JaypieDistribution`:
 
 ```typescript
-import { JaypieStreamingLambda, JaypieDistribution } from "@jaypie/constructs";
+import { JaypieExpressLambda, JaypieDistribution } from "@jaypie/constructs";
+import * as lambda from "aws-cdk-lib/aws-lambda";
 
-// Create streaming Lambda with AWS Lambda Web Adapter
-const streamingLambda = new JaypieStreamingLambda(this, "StreamingApi", {
+// Create Lambda (handler uses createLambdaStreamHandler internally)
+const streamingApi = new JaypieExpressLambda(this, "StreamingApi", {
   code: "dist/api",
-  handler: "run.sh",
-  streaming: true,  // Enables RESPONSE_STREAM invoke mode
-  port: 8000,       // Port your app listens on (default: 8000)
+  handler: "index.handler",
 });
 
-// Use with CloudFront (auto-detects invokeMode)
+// Use with CloudFront and RESPONSE_STREAM invoke mode
 new JaypieDistribution(this, "Distribution", {
-  handler: streamingLambda,
+  handler: streamingApi,
+  invokeMode: lambda.InvokeMode.RESPONSE_STREAM,
   host: "api.example.com",
   zone: "example.com",
 });
 ```
+
+Note: Streaming requires Lambda Function URLs (not API Gateway). `JaypieDistribution` uses Function URLs by default.
 
 ### Provider/Consumer Secrets Pattern
 

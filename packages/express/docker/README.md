@@ -36,20 +36,6 @@ curl -X POST http://localhost:3000/_sys/echo -H 'Content-Type: application/json'
 curl http://localhost:3000/stream
 ```
 
-### Method 3: Lambda Web Adapter (Real Streaming)
-
-Best for testing real-time streaming responses locally.
-
-```bash
-# From packages/express directory
-node docker/handler-lwa.mjs
-
-# In another terminal - watch streaming in real-time
-curl -N http://localhost:8000/stream?seconds=6
-```
-
-This runs Express as a real HTTP server, exactly how it runs in AWS with Lambda Web Adapter.
-
 ## Test Handler
 
 The test handler (`handler.mjs`) implements a common server pattern:
@@ -63,32 +49,32 @@ The test handler (`handler.mjs`) implements a common server pattern:
 
 ## Streaming
 
-### Why Streaming Doesn't Work in Docker/RIE
+### Why Real-Time Streaming Doesn't Work Locally
 
 The `createLambdaStreamHandler` uses `awslambda.streamifyResponse()` which only exists in the real AWS Lambda runtime. The Docker Runtime Interface Emulator (RIE) doesn't include this global.
 
-### Two Approaches to Lambda Streaming
+**What works locally:**
+- The `/stream` endpoint demonstrates `res.write()` and `res.end()` working correctly
+- Chunks are collected and returned as a single buffered response
 
-| Approach | Local Testing | Real-Time Streaming |
-|----------|---------------|---------------------|
-| `createLambdaStreamHandler` | No (`awslambda` global missing) | Yes (Function URL) |
-| Lambda Web Adapter (`app.listen`) | Yes (`node handler-lwa.mjs`) | Yes (LWA layer) |
+**For real-time streaming:**
+- Deploy to AWS with a Lambda Function URL
+- Use `invokeMode: lambda.InvokeMode.RESPONSE_STREAM` in `JaypieDistribution`
 
-### Deploying Real Streaming
-
-Use `JaypieStreamingLambda` from `@jaypie/constructs`:
+### Deploying Streaming
 
 ```typescript
-import { JaypieStreamingLambda, JaypieDistribution } from "@jaypie/constructs";
+import { JaypieExpressLambda, JaypieDistribution } from "@jaypie/constructs";
+import * as lambda from "aws-cdk-lib/aws-lambda";
 
-const streamingApi = new JaypieStreamingLambda(this, "StreamingApi", {
+const api = new JaypieExpressLambda(this, "Api", {
   code: "dist/api",
-  handler: "run.sh",  // Script that runs: exec node handler.mjs
-  streaming: true,    // Enables RESPONSE_STREAM invoke mode
+  handler: "index.handler",  // Uses createLambdaStreamHandler
 });
 
 new JaypieDistribution(this, "Distribution", {
-  handler: streamingApi,
+  handler: api,
+  invokeMode: lambda.InvokeMode.RESPONSE_STREAM,
   host: "api.example.com",
   zone: "example.com",
 });
@@ -140,10 +126,9 @@ docker logs lambda-test
 
 - Docker
 - AWS SAM CLI (for Method 2): `brew install aws-sam-cli`
-- Node.js (for Method 3 local streaming)
 
 ## Notes
 
-- Docker method uses port 9000, SAM uses port 3000, LWA uses port 8000
+- Docker method uses port 9000, SAM uses port 3000
 - The `/stream` endpoint in Docker returns a buffered response (all chunks at once)
-- For real-time streaming, use Lambda Web Adapter approach (Method 3)
+- For real-time streaming, deploy to AWS with `RESPONSE_STREAM` invoke mode

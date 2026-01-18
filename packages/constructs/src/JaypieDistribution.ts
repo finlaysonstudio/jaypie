@@ -78,9 +78,8 @@ export interface JaypieDistributionProps extends Omit<
   host?: string | HostConfig;
   /**
    * Invoke mode for Lambda Function URLs.
-   * If not provided, auto-detects from handler if it has an invokeMode property
-   * (e.g., JaypieStreamingLambda).
-   * @default InvokeMode.BUFFERED (or auto-detected from handler)
+   * Use RESPONSE_STREAM for streaming responses with createLambdaStreamHandler.
+   * @default InvokeMode.BUFFERED
    */
   invokeMode?: lambda.InvokeMode;
   /**
@@ -197,7 +196,7 @@ export class JaypieDistribution
     // IFunction before IFunctionUrl (IFunction doesn't have functionUrlId)
     let origin: cloudfront.IOrigin | undefined;
     if (handler) {
-      // Auto-detect invoke mode from handler (e.g., JaypieStreamingLambda)
+      // Auto-detect invoke mode from handler if it has an invokeMode property
       // Explicit invokeMode prop takes precedence over auto-detection
       const resolvedInvokeMode =
         invokeMode !== lambda.InvokeMode.BUFFERED
@@ -396,7 +395,7 @@ export class JaypieDistribution
   private hasInvokeMode(
     handler: unknown,
   ): handler is { invokeMode: lambda.InvokeMode } {
-    // Check if handler has an invokeMode property (e.g., JaypieStreamingLambda)
+    // Check if handler has an invokeMode property for streaming support
     return (
       typeof handler === "object" &&
       handler !== null &&

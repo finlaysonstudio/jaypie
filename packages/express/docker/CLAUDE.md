@@ -43,17 +43,6 @@ curl -X POST http://localhost:3000/_sys/echo -d '{"test":"data"}'
 curl http://localhost:3000/stream
 ```
 
-### Method 3: Lambda Web Adapter (Real Streaming)
-
-For testing real-time streaming locally, use the LWA handler directly:
-
-```bash
-node docker/handler-lwa.mjs
-curl -N http://localhost:8000/stream
-```
-
-This runs Express as a real HTTP server, exactly how it runs in AWS with Lambda Web Adapter.
-
 ## File Structure
 
 ```
@@ -61,8 +50,7 @@ docker/
 ├── CLAUDE.md           # This file
 ├── README.md           # User documentation
 ├── Dockerfile          # Lambda container image
-├── handler.mjs         # Test Express app (buffered Lambda)
-├── handler-lwa.mjs     # Lambda Web Adapter example (streaming)
+├── handler.mjs         # Test Express app
 ├── package.json        # Dependencies for SAM build
 ├── template.yaml       # SAM template
 ├── events/             # Sample Lambda events
@@ -80,47 +68,39 @@ docker/
 The `handler.mjs` implements:
 - `GET /` → 204 No Content (health check)
 - `ALL /_sys/echo` → Echoes request details
-- `GET /stream` → SSE stream (buffered in Docker, demonstrates res.write/res.end)
+- `GET /stream` → SSE stream (demonstrates res.write/res.end)
 - `*` → 404 Not Found
 
-## Streaming Support
+## Streaming
 
-### Why Streaming Doesn't Work in Docker/RIE
+### Why Real-Time Streaming Doesn't Work Locally
 
-The `createLambdaStreamHandler` uses `awslambda.streamifyResponse()` which only exists in the real AWS Lambda runtime. The Runtime Interface Emulator (RIE) doesn't include this global.
+The `createLambdaStreamHandler` uses `awslambda.streamifyResponse()` which only exists in the real AWS Lambda runtime. The Runtime Interface Emulator (RIE) in Docker doesn't include this global.
 
-### Two Approaches to Lambda Streaming
+**What works locally:**
+- The `/stream` endpoint demonstrates `res.write()` and `res.end()` working correctly
+- Chunks are collected and returned as a single buffered response
+- Verifies the streaming code path without real-time delivery
 
-| Approach | Handler | Local Testing | Deploy With |
-|----------|---------|---------------|-------------|
-| Direct Lambda Streaming | `createLambdaStreamHandler` | Not possible | Function URL + `RESPONSE_STREAM` |
-| Lambda Web Adapter | `app.listen()` | `node handler-lwa.mjs` | `JaypieStreamingLambda` |
+**For real-time streaming:**
+- Deploy to AWS with a Lambda Function URL
+- Use `invokeMode: lambda.InvokeMode.RESPONSE_STREAM` in `JaypieDistribution`
+- Streaming will work in production even though it can't be tested locally
 
-### Lambda Web Adapter Approach (Recommended for Streaming)
+### Deploying Streaming
 
-Lambda Web Adapter runs your Express app as a real HTTP server. This allows:
-- Local testing with plain Node.js
-- Real-time streaming responses
-- Standard Express patterns (`res.write`, `res.end`, `res.flushHeaders`)
-
-**Local test:**
-```bash
-node docker/handler-lwa.mjs
-curl -N http://localhost:8000/stream?seconds=6
-```
-
-**Deploy with CDK:**
 ```typescript
-import { JaypieStreamingLambda, JaypieDistribution } from "@jaypie/constructs";
+import { JaypieExpressLambda, JaypieDistribution } from "@jaypie/constructs";
+import * as lambda from "aws-cdk-lib/aws-lambda";
 
-const streamingApi = new JaypieStreamingLambda(this, "StreamingApi", {
+const api = new JaypieExpressLambda(this, "Api", {
   code: "dist/api",
-  handler: "run.sh",  // Shell script: exec node handler-lwa.mjs
-  streaming: true,    // Enables RESPONSE_STREAM invoke mode
+  handler: "index.handler",  // Uses createLambdaStreamHandler
 });
 
 new JaypieDistribution(this, "Distribution", {
-  handler: streamingApi,
+  handler: api,
+  invokeMode: lambda.InvokeMode.RESPONSE_STREAM,
   host: "api.example.com",
   zone: "example.com",
 });
@@ -128,10 +108,9 @@ new JaypieDistribution(this, "Distribution", {
 
 ## Modifying the Test Handler
 
-1. Edit `handler.mjs` (buffered) or `handler-lwa.mjs` (streaming)
+1. Edit `handler.mjs`
 2. For Docker: `npm run docker:build && npm run docker:run`
 3. For SAM: `npm run sam:build && npm run sam:start`
-4. For LWA local: `node docker/handler-lwa.mjs`
 
 ## Event Formats
 
