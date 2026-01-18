@@ -137,9 +137,10 @@ export interface JaypieDynamoDbProps extends Omit<
  * - Billing: PAY_PER_REQUEST (on-demand)
  * - Removal policy: RETAIN in production, DESTROY otherwise
  * - No GSIs by default (use `indexes` prop to add them)
+ * - Table name: CDK-generated (includes stack name and unique suffix)
  *
  * @example
- * // Shorthand: tableName becomes "myApp", construct id is "JaypieDynamoDb-myApp"
+ * // Shorthand: construct id is "JaypieDynamoDb-myApp", table name is CDK-generated
  * const table = new JaypieDynamoDb(this, "myApp");
  *
  * @example
@@ -149,7 +150,7 @@ export interface JaypieDynamoDbProps extends Omit<
  * });
  *
  * @example
- * // With custom indexes
+ * // With explicit table name (overrides CDK-generated name)
  * const table = new JaypieDynamoDb(this, "MyTable", {
  *   tableName: "custom-table-name",
  *   indexes: [
@@ -169,10 +170,10 @@ export class JaypieDynamoDb extends Construct implements dynamodb.ITableV2 {
 
   constructor(scope: Construct, id: string, props: JaypieDynamoDbProps = {}) {
     // Determine if this is shorthand usage: new JaypieDynamoDb(this, "myApp")
-    // In shorthand, id becomes the tableName and construct id is prefixed
+    // In shorthand, construct id is prefixed for clarity; tableName left undefined
+    // so CDK generates it with stack prefix (e.g., cdk-sponsor-project-env-nonce-app-JaypieDynamoDb-myApp-Table-XXXXX)
     const isShorthand = !props.tableName && !id.includes("-");
     const constructId = isShorthand ? `JaypieDynamoDb-${id}` : id;
-    const tableName = props.tableName ?? (isShorthand ? id : undefined);
 
     super(scope, constructId);
 
@@ -203,7 +204,6 @@ export class JaypieDynamoDb extends Construct implements dynamodb.ITableV2 {
       partitionKey,
       removalPolicy,
       sortKey,
-      tableName,
       ...restProps,
     });
 
