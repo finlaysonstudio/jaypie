@@ -16,7 +16,8 @@ packages/mcp/
 │   ├── index.ts           # CLI entrypoint, exports createMcpServer and mcpExpressHandler
 │   ├── createMcpServer.ts # Core MCP server factory with tool definitions
 │   ├── mcpExpressHandler.ts # Express middleware for HTTP transport
-│   └── datadog.ts         # Datadog API integration (logs, monitors, synthetics, metrics, RUM)
+│   ├── datadog.ts         # Datadog API integration (logs, monitors, synthetics, metrics, RUM)
+│   └── aws.ts             # AWS CLI integration (Step Functions, Lambda, CloudWatch, S3, DynamoDB, SQS)
 ├── prompts/               # Markdown guides served via list_prompts/read_prompt tools
 └── dist/                  # Built output
 ```
@@ -42,6 +43,24 @@ import type { CreateMcpServerOptions, McpExpressHandlerOptions } from "@jaypie/m
 - `datadog_synthetics` - List synthetic tests or get results for a specific test
 - `datadog_metrics` - Query timeseries metrics
 - `datadog_rum` - Search Real User Monitoring events
+
+### AWS CLI Tools (require AWS CLI installed and configured)
+- `aws_list_profiles` - List available AWS profiles from ~/.aws/config and credentials
+- `aws_stepfunctions_list_executions` - List Step Function executions for a state machine
+- `aws_stepfunctions_stop_execution` - Stop a running Step Function execution
+- `aws_lambda_list_functions` - List Lambda functions with optional prefix filtering
+- `aws_lambda_get_function` - Get configuration and details for a specific Lambda function
+- `aws_logs_filter_log_events` - Search CloudWatch Logs with pattern and time range filtering
+- `aws_s3_list_objects` - List objects in an S3 bucket with optional prefix filtering
+- `aws_cloudformation_describe_stack` - Get details and status of a CloudFormation stack
+- `aws_dynamodb_describe_table` - Get metadata about a DynamoDB table including key schema and indexes
+- `aws_dynamodb_scan` - Scan a DynamoDB table (use sparingly on large tables)
+- `aws_dynamodb_query` - Query a DynamoDB table by partition key
+- `aws_dynamodb_get_item` - Get a single item from a DynamoDB table by primary key
+- `aws_sqs_list_queues` - List SQS queues with optional prefix filtering
+- `aws_sqs_get_queue_attributes` - Get queue attributes including message counts
+- `aws_sqs_receive_message` - Peek at messages in an SQS queue (does not delete)
+- `aws_sqs_purge_queue` - Delete all messages from an SQS queue (irreversible)
 
 ## Usage Patterns
 
@@ -85,6 +104,17 @@ When adding new prompts:
 3. Prompts are automatically available via `list_prompts` and `read_prompt`
 
 ## Environment Variables
+
+### AWS CLI Integration
+| Variable | Description |
+|----------|-------------|
+| `AWS_PROFILE` | Default profile if not specified per-call |
+| `AWS_REGION` or `AWS_DEFAULT_REGION` | Default region if not specified |
+
+AWS tools use the host's existing credential chain:
+- `~/.aws/credentials` and `~/.aws/config` files
+- Environment variables (`AWS_ACCESS_KEY_ID`, etc.)
+- SSO sessions established via `aws sso login`
 
 ### Datadog Integration
 | Variable | Description |
