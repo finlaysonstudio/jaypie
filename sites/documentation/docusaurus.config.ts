@@ -8,7 +8,7 @@ const config: Config = {
     "Complete-stack approach to multi-environment cloud application patterns. Aligns infrastructure, execution, and observability.",
   favicon: "img/favicon.ico",
 
-  url: "https://jaypie.finlayson.studio",
+  url: "https://jaypie.net",
   baseUrl: "/",
 
   organizationName: "finlaysonstudio",
@@ -54,14 +54,14 @@ const config: Config = {
       tagName: "meta",
       attributes: {
         property: "og:url",
-        content: "https://jaypie.finlayson.studio",
+        content: "https://jaypie.net",
       },
     },
     {
       tagName: "meta",
       attributes: {
         property: "og:image",
-        content: "https://jaypie.finlayson.studio/img/jaypie-social-card.jpg",
+        content: "https://jaypie.net/img/jaypie-social-card.jpg",
       },
     },
     {
@@ -90,7 +90,7 @@ const config: Config = {
       tagName: "meta",
       attributes: {
         name: "twitter:image",
-        content: "https://jaypie.finlayson.studio/img/jaypie-social-card.jpg",
+        content: "https://jaypie.net/img/jaypie-social-card.jpg",
       },
     },
   ],
@@ -102,7 +102,7 @@ const config: Config = {
         docs: {
           sidebarPath: "./sidebars.ts",
           editUrl:
-            "https://github.com/finlaysonstudio/jaypie/tree/main/packages/documentation/",
+            "https://github.com/finlaysonstudio/jaypie/tree/main/sites/documentation/",
         },
         blog: false,
         theme: {

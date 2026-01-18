@@ -16,9 +16,9 @@ export default [
     ignores: [
       "**/prompts/templates/**",
       "LOCAL/**",
-      "packages/documentation/.docusaurus/**",
-      "packages/documentation/build/**",
       "packages/express/docker/**",
+      "sites/documentation/.docusaurus/**",
+      "sites/documentation/build/**",
     ],
   },
 
@@ -72,12 +72,12 @@ export default [
 
   //
   //
-  // Documentation: TypeScript/TSX files (allow imports)
+  // Sites: TypeScript/TSX files (allow imports)
   //
   {
     files: [
-      "packages/documentation/**/*.ts",
-      "packages/documentation/**/*.tsx",
+      "sites/**/*.ts",
+      "sites/**/*.tsx",
     ],
     rules: {
       "import-x/default": "off",
@@ -90,10 +90,10 @@ export default [
 
   //
   //
-  // Documentation: CommonJS
+  // Sites: CommonJS
   //
   {
-    files: ["packages/documentation/**/*.js"],
+    files: ["sites/**/*.js"],
     languageOptions: {
       ecmaVersion: "latest",
       sourceType: "script",
