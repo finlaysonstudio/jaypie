@@ -62,7 +62,7 @@ jobs:
         uses: ./.github/actions/cdk-deploy
         with:
           cdk-package-path: stacks/cdk
-          stack-name: DocumentationStack
+          stack-name: JaypieDocumentation
 
   lint:
     name: Lint
