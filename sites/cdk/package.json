@@ -1,0 +1,30 @@
+{
+  "name": "@jaypie/sites-cdk",
+  "version": "0.0.1",
+  "private": true,
+  "description": "CDK infrastructure for Jaypie sites",
+  "license": "MIT",
+  "author": "Finlayson Studio",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "cdk": "cdk",
+    "deploy": "cdk deploy",
+    "diff": "cdk diff",
+    "synth": "cdk synth",
+    "test": "vitest run .",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@jaypie/constructs": "*",
+    "aws-cdk-lib": "^2.232.1",
+    "constructs": "^10.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.1",
+    "aws-cdk": "^2.232.1",
+    "tsx": "^4.20.6",
+    "typescript": "^5.3.3",
+    "vitest": "^3.0.5"
+  }
+}
