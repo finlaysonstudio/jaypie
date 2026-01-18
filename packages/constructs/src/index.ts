@@ -5,7 +5,10 @@ export {
   JaypieAccountLoggingBucket,
   JaypieAccountLoggingBucketProps,
 } from "./JaypieAccountLoggingBucket";
-export { JaypieApiGateway } from "./JaypieApiGateway";
+export {
+  JaypieApiGateway,
+  JaypieApiGatewayProps,
+} from "./JaypieApiGateway";
 export { JaypieAppStack } from "./JaypieAppStack";
 export { JaypieBucketQueuedLambda } from "./JaypieBucketQueuedLambda";
 export {

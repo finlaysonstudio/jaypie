@@ -12,6 +12,8 @@ import { Construct } from "constructs";
 import { CDK } from "./constants";
 import {
   constructEnvName,
+  envHostname,
+  HostConfig,
   isValidHostname,
   isValidSubdomain,
   mergeDomain,
@@ -56,10 +58,24 @@ export interface JaypieDistributionProps extends Omit<
    */
   handler?: cloudfront.IOrigin | lambda.IFunctionUrl | lambda.IFunction;
   /**
-   * The domain name for the distribution
+   * The domain name for the distribution.
+   *
+   * Supports both string and config object:
+   * - String: used directly as the domain name (e.g., "api.example.com")
+   * - Object: passed to envHostname() to construct the domain name
+   *   - { subdomain, domain, env, component }
+   *
    * @default mergeDomain(CDK_ENV_API_SUBDOMAIN, CDK_ENV_API_HOSTED_ZONE || CDK_ENV_HOSTED_ZONE)
+   *
+   * @example
+   * // Direct string
+   * host: "api.example.com"
+   *
+   * @example
+   * // Config object - resolves using envHostname()
+   * host: { subdomain: "api" }
    */
-  host?: string;
+  host?: string | HostConfig;
   /**
    * Invoke mode for Lambda Function URLs.
    * If not provided, auto-detects from handler if it has an invokeMode property
@@ -140,8 +156,17 @@ export class JaypieDistribution
     }
 
     // Determine host from props or environment
-    let host = propsHost;
-    if (!host) {
+    let host: string | undefined;
+    if (typeof propsHost === "string") {
+      host = propsHost;
+    } else if (typeof propsHost === "object") {
+      // Resolve host from HostConfig using envHostname()
+      try {
+        host = envHostname(propsHost);
+      } catch {
+        host = undefined;
+      }
+    } else {
       try {
         if (process.env.CDK_ENV_API_HOST_NAME) {
           host = process.env.CDK_ENV_API_HOST_NAME;
