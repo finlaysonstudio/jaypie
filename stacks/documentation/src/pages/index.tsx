@@ -14,9 +14,15 @@ function Hero(): React.ReactElement {
         <p className={styles.heroEyebrow}>AWS/CDK · Datadog · TypeScript</p>
         <h1 className={styles.heroTitle}>Jaypie</h1>
         <p className={styles.heroSubtitle}>
-          <span style={{ whiteSpace: "nowrap" }}>Complete-stack approach to</span>{" "}
-          <span style={{ whiteSpace: "nowrap" }}>multi-environment cloud applications.</span>{" "}
-          <span style={{ whiteSpace: "nowrap" }}>Aligns infrastructure, execution, and observability.</span>
+          <span style={{ whiteSpace: "nowrap" }}>
+            Complete-stack approach to
+          </span>{" "}
+          <span style={{ whiteSpace: "nowrap" }}>
+            multi-environment cloud applications.
+          </span>{" "}
+          <span style={{ whiteSpace: "nowrap" }}>
+            Aligns infrastructure, execution, and observability.
+          </span>
         </p>
         <div className={styles.heroActions}>
           <Link className={styles.primaryButton} to="/docs">
@@ -52,23 +58,23 @@ function Capabilities(): React.ReactElement {
   const capabilities: CapabilityProps[] = [
     {
       description:
-        "lambdaHandler and expressHandler share the same lifecycle: validate, setup, execute, teardown. Secrets loaded automatically. Errors formatted as JSON:API.",
-      title: "Handler Lifecycle",
+        "JaypieLambda, JaypieDistribution, and more CDK constructs for AWS infrastructure with consistent patterns.",
+      title: "Serverless CDK Constructs",
     },
     {
       description:
-        "CDK constructs (JaypieLambda, JaypieDistribution) and runtime packages share environment variables, secrets patterns, and tagging conventions.",
-      title: "Infrastructure + Runtime",
+        "Lambda layers, log forwarding, and metrics submission configured automatically via constructs.",
+      title: "Datadog Instrumentation",
     },
     {
       description:
-        "Request-scoped logging with trace IDs. Datadog Lambda layers and log forwarding configured via constructs. Metrics submission via submitMetric().",
-      title: "Observability",
+        "Handler lifecycle, secrets management, error handling, and logging patterns for production applications.",
+      title: "Industrial Application Patterns",
     },
     {
       description:
         "@jaypie/testkit provides mock factories for all packages. Custom matchers: toThrowJaypieError, toMatchUuid, toBeClass.",
-      title: "Testing",
+      title: "Complete Mock Coverage",
     },
   ];
 
@@ -76,35 +82,12 @@ function Capabilities(): React.ReactElement {
     <section className={styles.capabilities}>
       <div className={styles.capabilitiesInner}>
         <div className={styles.capabilitiesHeader}>
-          <h2 className={styles.sectionTitle}>What Jaypie Does</h2>
-          <p className={styles.sectionSubtitle}>
-            Shared patterns across infrastructure, execution, and testing.
-          </p>
+          <h2 className={styles.sectionTitle}>What Jaypie Provides</h2>
         </div>
         <div className={styles.capabilitiesGrid}>
           {capabilities.map((capability, idx) => (
             <Capability key={idx} {...capability} />
           ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function Install(): React.ReactElement {
-  return (
-    <section className={styles.install}>
-      <div className={styles.installInner}>
-        <div className={styles.installContent}>
-          <h2 className={styles.installTitle}>Install</h2>
-          <p className={styles.installDescription}>
-            Main package or individual @jaypie/* packages.
-          </p>
-        </div>
-        <div className={styles.installCode}>
-          <div className={styles.codeBlock}>
-            <code>npm install jaypie</code>
-          </div>
         </div>
       </div>
     </section>
@@ -131,21 +114,16 @@ function PackageRow({
 }
 
 function Packages(): React.ReactElement {
-  const corePackages: PackageRowProps[] = [
+  const mainPackages: PackageRowProps[] = [
     {
       href: "/docs/packages/jaypie",
       name: "jaypie",
       purpose: "Main package: re-exports express, lambda, errors, kit, logger",
     },
     {
-      href: "/docs/packages/express",
-      name: "@jaypie/express",
-      purpose: "Express handler wrapper",
-    },
-    {
-      href: "/docs/packages/lambda",
-      name: "@jaypie/lambda",
-      purpose: "Lambda handler wrapper",
+      href: "/docs/api/datadog",
+      name: "@jaypie/datadog",
+      purpose: "Datadog integration utilities",
     },
     {
       href: "/docs/packages/errors",
@@ -153,9 +131,9 @@ function Packages(): React.ReactElement {
       purpose: "JSON:API error classes",
     },
     {
-      href: "/docs/packages/logger",
-      name: "@jaypie/logger",
-      purpose: "Structured logging",
+      href: "/docs/packages/express",
+      name: "@jaypie/express",
+      purpose: "Express handler wrapper",
     },
     {
       href: "/docs/packages/kit",
@@ -163,19 +141,17 @@ function Packages(): React.ReactElement {
       purpose: "Utilities: force, uuid, sleep",
     },
     {
+      href: "/docs/packages/lambda",
+      name: "@jaypie/lambda",
+      purpose: "Lambda handler wrapper",
+    },
+  ];
+
+  const libraryPackages: PackageRowProps[] = [
+    {
       href: "/docs/packages/constructs",
       name: "@jaypie/constructs",
       purpose: "CDK constructs",
-    },
-    {
-      href: "/docs/packages/llm",
-      name: "@jaypie/llm",
-      purpose: "LLM provider abstraction",
-    },
-    {
-      href: "/docs/packages/testkit",
-      name: "@jaypie/testkit",
-      purpose: "Mocks and matchers",
     },
     {
       href: "/docs/packages/eslint",
@@ -183,9 +159,19 @@ function Packages(): React.ReactElement {
       purpose: "ESLint configuration",
     },
     {
+      href: "/docs/packages/llm",
+      name: "@jaypie/llm",
+      purpose: "LLM provider abstraction",
+    },
+    {
       href: "/docs/packages/repokit",
       name: "@jaypie/repokit",
       purpose: "Repository tooling",
+    },
+    {
+      href: "/docs/packages/testkit",
+      name: "@jaypie/testkit",
+      purpose: "Mocks and matchers",
     },
   ];
 
@@ -194,6 +180,11 @@ function Packages(): React.ReactElement {
       href: "/docs/experimental/dynamodb",
       name: "@jaypie/dynamodb",
       purpose: "DynamoDB single-table patterns",
+    },
+    {
+      href: "/docs/experimental/fabric",
+      name: "@jaypie/fabric",
+      purpose: "Data fabric utilities",
     },
     {
       href: "/docs/experimental/fabricator",
@@ -210,11 +201,6 @@ function Packages(): React.ReactElement {
       name: "@jaypie/textract",
       purpose: "AWS Textract utilities",
     },
-    {
-      href: "/docs/experimental/vocabulary",
-      name: "@jaypie/vocabulary",
-      purpose: "Service handler adapters",
-    },
   ];
 
   return (
@@ -225,15 +211,23 @@ function Packages(): React.ReactElement {
         </div>
         <div className={styles.packageTables}>
           <div className={styles.packageTable}>
-            <h3 className={styles.packageTableTitle}>Core 1.2</h3>
+            <h3 className={styles.packageTableTitle}>1.2 Main</h3>
             <div className={styles.packageTableRows}>
-              {corePackages.map((pkg, idx) => (
+              {mainPackages.map((pkg, idx) => (
                 <PackageRow key={idx} {...pkg} />
               ))}
             </div>
           </div>
           <div className={styles.packageTable}>
-            <h3 className={styles.packageTableTitle}>Experimental 0.x</h3>
+            <h3 className={styles.packageTableTitle}>1.2 Library</h3>
+            <div className={styles.packageTableRows}>
+              {libraryPackages.map((pkg, idx) => (
+                <PackageRow key={idx} {...pkg} />
+              ))}
+            </div>
+          </div>
+          <div className={styles.packageTable}>
+            <h3 className={styles.packageTableTitle}>0.x Experimental</h3>
             <div className={styles.packageTableRows}>
               {experimentalPackages.map((pkg, idx) => (
                 <PackageRow key={idx} {...pkg} />
@@ -251,47 +245,47 @@ function Patterns(): React.ReactElement {
     <section className={styles.patterns}>
       <div className={styles.patternsInner}>
         <div className={styles.patternsHeader}>
-          <h2 className={styles.sectionTitle}>Common Patterns</h2>
+          <h2 className={styles.sectionTitle}>Complete Stack</h2>
         </div>
         <div className={styles.patternsGrid}>
           <div className={styles.patternBlock}>
-            <h3 className={styles.patternTitle}>Type coercion</h3>
+            <h3 className={styles.patternTitle}>CDK</h3>
             <pre className={styles.patternCode}>
-              <code>{`import { force } from "jaypie";
+              <code>{`import { JaypieLambda } from "@jaypie/constructs";
 
-force.boolean("true")    // true
-force.number("42")       // 42
-force.array(singleItem)  // [singleItem]`}</code>
+new JaypieLambda(this, "Handler", {
+  entry: "src/handler.ts",
+  secrets: ["MONGODB_URI"],
+});`}</code>
             </pre>
           </div>
           <div className={styles.patternBlock}>
-            <h3 className={styles.patternTitle}>Environment checks</h3>
+            <h3 className={styles.patternTitle}>Express</h3>
             <pre className={styles.patternCode}>
-              <code>{`import { isProductionEnv, isLocalEnv } from "jaypie";
+              <code>{`import { expressHandler } from "jaypie";
 
-if (isProductionEnv()) {
-  // production-only
-}
-if (isLocalEnv()) {
-  // local development
-}`}</code>
+export default expressHandler(async (req, res) => {
+  return { message: "Hello, World!" };
+});`}</code>
             </pre>
           </div>
           <div className={styles.patternBlock}>
-            <h3 className={styles.patternTitle}>UUID generation</h3>
+            <h3 className={styles.patternTitle}>Test</h3>
             <pre className={styles.patternCode}>
-              <code>{`import { uuid } from "jaypie";
+              <code>{`import { matchers, mockLogFactory } from "@jaypie/testkit";
 
-const id = uuid();`}</code>
+expect.extend(matchers);
+vi.mock("jaypie", mockLogFactory);`}</code>
             </pre>
           </div>
           <div className={styles.patternBlock}>
-            <h3 className={styles.patternTitle}>Error handling</h3>
+            <h3 className={styles.patternTitle}>CI/CD</h3>
             <pre className={styles.patternCode}>
-              <code>{`import { BadRequestError } from "jaypie";
-
-throw BadRequestError("Invalid input");
-// Returns 400 with JSON:API body`}</code>
+              <code>{`# npm-check.yml
+- run: npm run lint
+- run: npm run typecheck
+- run: npm run test
+- run: npm run build`}</code>
             </pre>
           </div>
         </div>
@@ -321,7 +315,6 @@ export default function Home(): React.ReactElement {
       <main className={styles.main}>
         <Hero />
         <Capabilities />
-        <Install />
         <Packages />
         <Patterns />
         <Footer />
