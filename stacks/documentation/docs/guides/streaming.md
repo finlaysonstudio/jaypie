@@ -4,7 +4,7 @@ sidebar_position: 6
 
 # Streaming
 
-Jaypie provides comprehensive streaming support for real-time responses, LLM streaming, and Server-Sent Events (SSE). This guide covers the three streaming patterns and when to use each.
+Jaypie provides comprehensive streaming support for real-time responses, LLM streaming, Server-Sent Events (SSE), and newline-delimited JSON (NLJSON). This guide covers the three streaming patterns and when to use each.
 
 ## Overview
 
@@ -34,9 +34,38 @@ Streaming enables real-time data delivery to clients without waiting for the ent
 3. **Is this an Express app not on Lambda?**
    - Yes: Use `expressStreamHandler`
 
+## Stream Formats
+
+Jaypie supports two stream output formats via the `format` option:
+
+| Format | Content-Type | Use Case |
+|--------|--------------|----------|
+| `"sse"` (default) | `text/event-stream` | Browser EventSource API, real-time UI |
+| `"nljson"` | `application/x-ndjson` | Machine-to-machine, log processing |
+
+### Format Comparison
+
+| Aspect | SSE | NLJSON |
+|--------|-----|--------|
+| Data format | `event: <type>\ndata: {...}\n\n` | `{...}\n` |
+| Error format | `event: error\ndata: {...}\n\n` | `{"error":{...}}\n` |
+| Browser support | Native EventSource | Manual parsing |
+
+```typescript
+// SSE format (default)
+lambdaStreamHandler(handler, { format: "sse" });
+expressStreamHandler(handler, { format: "sse" });
+
+// NLJSON format
+lambdaStreamHandler(handler, { format: "nljson" });
+expressStreamHandler(handler, { format: "nljson" });
+```
+
 ## Lambda Response Streaming
 
 For pure Lambda functions without Express, use `lambdaStreamHandler`. This enables AWS Lambda Response Streaming through Function URLs.
+
+**Note:** `lambdaStreamHandler` automatically wraps with `awslambda.streamifyResponse()` in the Lambda runtime. You no longer need to wrap manually.
 
 ### Basic Example
 
@@ -44,7 +73,8 @@ For pure Lambda functions without Express, use `lambdaStreamHandler`. This enabl
 import { lambdaStreamHandler } from "jaypie";
 import type { StreamHandlerContext } from "@jaypie/lambda";
 
-const handler = lambdaStreamHandler(
+// Auto-wrapped with awslambda.streamifyResponse() in Lambda runtime
+export const handler = lambdaStreamHandler(
   async (event, context: StreamHandlerContext) => {
     const { responseStream } = context;
 
@@ -59,10 +89,6 @@ const handler = lambdaStreamHandler(
   },
   { name: "progressHandler" }
 );
-
-// Wrap for Lambda streaming
-declare const awslambda: { streamifyResponse: <T>(h: T) => T };
-export default awslambda.streamifyResponse(handler);
 ```
 
 ### With LLM
@@ -70,7 +96,8 @@ export default awslambda.streamifyResponse(handler);
 ```typescript
 import { lambdaStreamHandler, createLambdaStream, Llm } from "jaypie";
 
-const handler = lambdaStreamHandler(
+// Auto-wrapped with awslambda.streamifyResponse() in Lambda runtime
+export const handler = lambdaStreamHandler(
   async (event, context) => {
     const llm = new Llm("anthropic");
     const stream = llm.stream(event.prompt);
@@ -81,9 +108,6 @@ const handler = lambdaStreamHandler(
     secrets: ["ANTHROPIC_API_KEY"],
   }
 );
-
-declare const awslambda: { streamifyResponse: <T>(h: T) => T };
-export default awslambda.streamifyResponse(handler);
 ```
 
 ### Options
@@ -91,12 +115,13 @@ export default awslambda.streamifyResponse(handler);
 | Option | Type | Description |
 |--------|------|-------------|
 | `name` | `string` | Handler name for logging |
-| `contentType` | `string` | Response content type (default: `text/event-stream`) |
+| `format` | `StreamFormat` | Stream format: `"sse"` (default) or `"nljson"` |
+| `contentType` | `string` | Response content type (auto-set from format) |
 | `secrets` | `string[]` | AWS Secrets Manager secrets to load |
 | `setup` | `Function[]` | Setup functions |
 | `teardown` | `Function[]` | Teardown functions (always run) |
 | `validate` | `Function[]` | Validation functions |
-| `throw` | `boolean` | Re-throw errors instead of SSE error |
+| `throw` | `boolean` | Re-throw errors instead of streaming error |
 
 ## Express SSE Streaming
 
@@ -135,10 +160,23 @@ app.post("/chat", chatRoute);
 
 | Header | Value |
 |--------|-------|
-| `Content-Type` | `text/event-stream` |
+| `Content-Type` | `text/event-stream` (SSE) or `application/x-ndjson` (NLJSON) |
 | `Cache-Control` | `no-cache` |
 | `Connection` | `keep-alive` |
 | `X-Accel-Buffering` | `no` |
+
+### Options
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `name` | `string` | Handler name for logging |
+| `format` | `StreamFormat` | Stream format: `"sse"` (default) or `"nljson"` |
+| `contentType` | `string` | Response content type (auto-set from format) |
+| `secrets` | `string[]` | Secrets to load |
+| `setup` | `Function[]` | Setup functions |
+| `teardown` | `Function[]` | Teardown functions |
+| `validate` | `Function[]` | Validation functions |
+| `locals` | `object` | Values to set on `req.locals` |
 
 ## Express on Lambda Streaming
 
@@ -221,66 +259,115 @@ if (isLambda) {
 }
 ```
 
-### formatSSE
+### formatSse
 
 Format a chunk as an SSE event string:
 
 ```typescript
-import { formatSSE } from "jaypie";
+import { formatSse } from "jaypie";
 
 const chunk = { type: "message", content: "Hello" };
-const sse = formatSSE(chunk);
+const sse = formatSse(chunk);
 // "event: message\ndata: {\"type\":\"message\",\"content\":\"Hello\"}\n\n"
 ```
 
-### streamToSSE
+### formatNljson
+
+Format a chunk as a newline-delimited JSON string:
+
+```typescript
+import { formatNljson } from "jaypie";
+
+const chunk = { type: "message", content: "Hello" };
+const nljson = formatNljson(chunk);
+// "{\"type\":\"message\",\"content\":\"Hello\"}\n"
+```
+
+### formatStreamError
+
+Format an error based on stream format:
+
+```typescript
+import { formatStreamError } from "jaypie";
+
+const errorBody = { errors: [{ status: 500, title: "Error" }] };
+
+// SSE format (default)
+formatStreamError(errorBody, "sse");
+// "event: error\ndata: {...}\n\n"
+
+// NLJSON format
+formatStreamError(errorBody, "nljson");
+// "{\"error\":{...}}\n"
+```
+
+### getContentTypeForFormat
+
+Get the content type for a stream format:
+
+```typescript
+import { getContentTypeForFormat } from "jaypie";
+
+getContentTypeForFormat("sse");    // "text/event-stream"
+getContentTypeForFormat("nljson"); // "application/x-ndjson"
+```
+
+### streamToSse
 
 Convert an async iterable to SSE-formatted strings:
 
 ```typescript
-import { streamToSSE } from "jaypie";
+import { streamToSse } from "jaypie";
 
-for await (const event of streamToSSE(dataStream)) {
+for await (const event of streamToSse(dataStream)) {
   responseStream.write(event);
 }
 ```
 
 ## CDK/Infrastructure Setup
 
-Enable Lambda Response Streaming in CDK:
+Enable Lambda Response Streaming in CDK using `JaypieDistribution`:
 
 ```typescript
-import { JaypieLambda } from "@jaypie/constructs";
-import { FunctionUrlAuthType, InvokeMode } from "aws-cdk-lib/aws-lambda";
+import { JaypieExpressLambda, JaypieDistribution } from "@jaypie/constructs";
 import { Duration } from "aws-cdk-lib";
 
-const streamingFunction = new JaypieLambda(this, "StreamingFunction", {
+const streamingFunction = new JaypieExpressLambda(this, "StreamingFunction", {
   code: "dist",
   handler: "index.handler",
   timeout: Duration.minutes(5), // Streaming may need longer timeout
 });
 
-// Add Function URL with streaming mode
-streamingFunction.addFunctionUrl({
-  authType: FunctionUrlAuthType.NONE, // or AWS_IAM
-  invokeMode: InvokeMode.RESPONSE_STREAM,
+// Create distribution with streaming enabled
+new JaypieDistribution(this, "Distribution", {
+  handler: streamingFunction,
+  streaming: true,
+  host: "api.example.com",
+  zone: "example.com",
 });
 ```
 
 ## Error Handling
 
-Errors in streaming handlers are written as SSE error events:
+Errors in streaming handlers are written to the stream in the configured format:
 
+**SSE format (default):**
 ```
 event: error
 data: {"errors":[{"status":500,"title":"Internal Error"}]}
+
+```
+
+**NLJSON format:**
+```json
+{"error":{"errors":[{"status":500,"title":"Internal Error"}]}}
 ```
 
 For `lambdaStreamHandler`, use the `throw` option to re-throw errors instead:
 
 ```typescript
-const handler = lambdaStreamHandler(fn, {
-  throw: true, // Re-throw instead of SSE error
+export const handler = lambdaStreamHandler(fn, {
+  throw: true, // Re-throw instead of streaming error
 });
 ```
 

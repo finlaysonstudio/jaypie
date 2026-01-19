@@ -300,7 +300,7 @@ describe("JaypieDistribution", () => {
       });
     });
 
-    it("configures invokeMode for Lambda FunctionUrl", () => {
+    it("configures streaming for Lambda FunctionUrl", () => {
       const stack = new Stack();
       const fn = new lambda.Function(stack, "TestFunction", {
         code: lambda.Code.fromInline("exports.handler = () => {}"),
@@ -310,7 +310,7 @@ describe("JaypieDistribution", () => {
 
       new JaypieDistribution(stack, "TestDistribution", {
         handler: fn,
-        invokeMode: lambda.InvokeMode.RESPONSE_STREAM,
+        streaming: true,
       });
       const template = Template.fromStack(stack);
 
@@ -319,7 +319,7 @@ describe("JaypieDistribution", () => {
       expect(functionUrl.Properties.InvokeMode).toBe("RESPONSE_STREAM");
     });
 
-    it("uses BUFFERED invokeMode by default", () => {
+    it("uses BUFFERED mode by default (streaming: false)", () => {
       const stack = new Stack();
       const fn = new lambda.Function(stack, "TestFunction", {
         code: lambda.Code.fromInline("exports.handler = () => {}"),
@@ -335,54 +335,6 @@ describe("JaypieDistribution", () => {
       const functionUrl = findFunctionUrl(template);
       expect(functionUrl).toBeDefined();
       expect(functionUrl.Properties.InvokeMode).toBe("BUFFERED");
-    });
-
-    it("auto-detects invokeMode from handler with invokeMode property", () => {
-      const stack = new Stack();
-      const fn = new lambda.Function(stack, "TestFunction", {
-        code: lambda.Code.fromInline("exports.handler = () => {}"),
-        handler: "index.handler",
-        runtime: lambda.Runtime.NODEJS_20_X,
-      });
-
-      // Simulate a handler with invokeMode property for streaming
-      const handlerWithInvokeMode = Object.assign(fn, {
-        invokeMode: lambda.InvokeMode.RESPONSE_STREAM,
-      });
-
-      new JaypieDistribution(stack, "TestDistribution", {
-        handler: handlerWithInvokeMode,
-      });
-      const template = Template.fromStack(stack);
-
-      const functionUrl = findFunctionUrl(template);
-      expect(functionUrl).toBeDefined();
-      expect(functionUrl.Properties.InvokeMode).toBe("RESPONSE_STREAM");
-    });
-
-    it("explicit invokeMode prop overrides auto-detected invokeMode", () => {
-      const stack = new Stack();
-      const fn = new lambda.Function(stack, "TestFunction", {
-        code: lambda.Code.fromInline("exports.handler = () => {}"),
-        handler: "index.handler",
-        runtime: lambda.Runtime.NODEJS_20_X,
-      });
-
-      // Simulate a handler with invokeMode property
-      const handlerWithInvokeMode = Object.assign(fn, {
-        invokeMode: lambda.InvokeMode.BUFFERED,
-      });
-
-      // Explicit invokeMode prop should override handler's invokeMode
-      new JaypieDistribution(stack, "TestDistribution", {
-        handler: handlerWithInvokeMode,
-        invokeMode: lambda.InvokeMode.RESPONSE_STREAM,
-      });
-      const template = Template.fromStack(stack);
-
-      const functionUrl = findFunctionUrl(template);
-      expect(functionUrl).toBeDefined();
-      expect(functionUrl.Properties.InvokeMode).toBe("RESPONSE_STREAM");
     });
 
     it("passes through additional Distribution props", () => {
@@ -750,7 +702,9 @@ describe("JaypieDistribution", () => {
 
         // Distribution should have logging configured
         const distribution = findDistribution(template);
-        expect(distribution.Properties.DistributionConfig.Logging).toBeDefined();
+        expect(
+          distribution.Properties.DistributionConfig.Logging,
+        ).toBeDefined();
       });
 
       it("uses logBucket with bucket name string", () => {
@@ -772,7 +726,9 @@ describe("JaypieDistribution", () => {
 
         // Distribution should have logging configured
         const distribution = findDistribution(template);
-        expect(distribution.Properties.DistributionConfig.Logging).toBeDefined();
+        expect(
+          distribution.Properties.DistributionConfig.Logging,
+        ).toBeDefined();
       });
 
       it("uses logBucket with { exportName } object", () => {
@@ -794,13 +750,16 @@ describe("JaypieDistribution", () => {
 
         // Distribution should have logging configured
         const distribution = findDistribution(template);
-        expect(distribution.Properties.DistributionConfig.Logging).toBeDefined();
+        expect(
+          distribution.Properties.DistributionConfig.Logging,
+        ).toBeDefined();
       });
 
       it("uses logBucket with IBucket directly", () => {
         const stack = new Stack();
         const originBucket = new s3.Bucket(stack, "TestBucket");
-        const origin = origins.S3BucketOrigin.withOriginAccessControl(originBucket);
+        const origin =
+          origins.S3BucketOrigin.withOriginAccessControl(originBucket);
         const externalLogBucket = new s3.Bucket(stack, "ExternalLogBucket", {
           objectOwnership: s3.ObjectOwnership.OBJECT_WRITER,
         });
@@ -819,7 +778,9 @@ describe("JaypieDistribution", () => {
 
         // Distribution should have logging configured
         const distribution = findDistribution(template);
-        expect(distribution.Properties.DistributionConfig.Logging).toBeDefined();
+        expect(
+          distribution.Properties.DistributionConfig.Logging,
+        ).toBeDefined();
       });
 
       it("does not add notifications to external buckets", () => {
@@ -834,7 +795,9 @@ describe("JaypieDistribution", () => {
         const template = Template.fromStack(stack);
 
         // Should NOT have bucket notification configuration since external bucket
-        const notifications = template.findResources("Custom::S3BucketNotifications");
+        const notifications = template.findResources(
+          "Custom::S3BucketNotifications",
+        );
         expect(Object.keys(notifications).length).toBe(0);
       });
 
@@ -858,7 +821,9 @@ describe("JaypieDistribution", () => {
 
         // Distribution should have logging configured
         const distribution = findDistribution(template);
-        expect(distribution.Properties.DistributionConfig.Logging).toBeDefined();
+        expect(
+          distribution.Properties.DistributionConfig.Logging,
+        ).toBeDefined();
       });
     });
   });

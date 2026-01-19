@@ -482,6 +482,14 @@ streamingLambda.addFunctionUrl({
   authType: FunctionUrlAuthType.NONE, // or AWS_IAM for auth
   invokeMode: InvokeMode.RESPONSE_STREAM,
 });
+
+// Or use JaypieDistribution with streaming: true for CloudFront integration
+new JaypieDistribution(this, "Distribution", {
+  handler: streamingLambda,
+  streaming: true,
+  host: "api.example.com",
+  zone: "example.com",
+});
 ```
 
 ### Error Handling in Streams

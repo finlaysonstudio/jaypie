@@ -6,6 +6,7 @@ import { restoreLog, spyLog } from "@jaypie/testkit";
 
 import lambdaStreamHandler from "../lambdaStreamHandler.js";
 import type {
+  AwsStreamingHandler,
   ResponseStream,
   StreamHandlerContext,
 } from "../lambdaStreamHandler.js";
@@ -103,7 +104,8 @@ describe("lambdaStreamHandler", () => {
       });
       const responseStream = createMockResponseStream();
 
-      await handler({}, responseStream, {});
+      // Cast to raw streaming handler for testing (without awslambda.streamifyResponse)
+      await (handler as unknown as AwsStreamingHandler)({}, responseStream, {});
 
       expect(responseStream.write).toHaveBeenCalled();
       const errorChunk = responseStream.chunks.find((c) =>
@@ -119,7 +121,8 @@ describe("lambdaStreamHandler", () => {
       });
       const responseStream = createMockResponseStream();
 
-      await handler({}, responseStream, {});
+      // Cast to raw streaming handler for testing (without awslambda.streamifyResponse)
+      await (handler as unknown as AwsStreamingHandler)({}, responseStream, {});
 
       expect(responseStream.write).toHaveBeenCalled();
       const errorChunk = responseStream.chunks.find((c) =>
@@ -141,7 +144,12 @@ describe("lambdaStreamHandler", () => {
       const event = { test: "event" };
       const context = { awsRequestId: "123" };
 
-      await handler(event, responseStream, context);
+      // Cast to raw streaming handler for testing (without awslambda.streamifyResponse)
+      await (handler as unknown as AwsStreamingHandler)(
+        event,
+        responseStream,
+        context,
+      );
 
       expect(mockHandler).toHaveBeenCalled();
       const [receivedEvent, receivedContext] = mockHandler.mock.calls[0];
@@ -154,7 +162,8 @@ describe("lambdaStreamHandler", () => {
       const handler = lambdaStreamHandler(async () => {});
       const responseStream = createMockResponseStream();
 
-      await handler({}, responseStream, {});
+      // Cast to raw streaming handler for testing (without awslambda.streamifyResponse)
+      await (handler as unknown as AwsStreamingHandler)({}, responseStream, {});
 
       expect(responseStream.end).toHaveBeenCalled();
     });
@@ -163,7 +172,8 @@ describe("lambdaStreamHandler", () => {
       const handler = lambdaStreamHandler(async () => {});
       const responseStream = createMockResponseStream();
 
-      await handler({}, responseStream, {});
+      // Cast to raw streaming handler for testing (without awslambda.streamifyResponse)
+      await (handler as unknown as AwsStreamingHandler)({}, responseStream, {});
 
       expect(responseStream.setContentType).toHaveBeenCalledWith(
         "text/event-stream",
@@ -176,7 +186,8 @@ describe("lambdaStreamHandler", () => {
       });
       const responseStream = createMockResponseStream();
 
-      await handler({}, responseStream, {});
+      // Cast to raw streaming handler for testing (without awslambda.streamifyResponse)
+      await (handler as unknown as AwsStreamingHandler)({}, responseStream, {});
 
       expect(responseStream.setContentType).toHaveBeenCalledWith(
         "application/json",
@@ -203,7 +214,8 @@ describe("lambdaStreamHandler", () => {
       const handler = lambdaStreamHandler(async () => {}, { setup: [setup] });
       const responseStream = createMockResponseStream();
 
-      await handler({}, responseStream, {});
+      // Cast to raw streaming handler for testing (without awslambda.streamifyResponse)
+      await (handler as unknown as AwsStreamingHandler)({}, responseStream, {});
 
       expect(setup).toHaveBeenCalled();
     });
@@ -215,7 +227,8 @@ describe("lambdaStreamHandler", () => {
       });
       const responseStream = createMockResponseStream();
 
-      await handler({}, responseStream, {});
+      // Cast to raw streaming handler for testing (without awslambda.streamifyResponse)
+      await (handler as unknown as AwsStreamingHandler)({}, responseStream, {});
 
       expect(teardown).toHaveBeenCalled();
     });
@@ -233,7 +246,8 @@ describe("lambdaStreamHandler", () => {
       );
       const responseStream = createMockResponseStream();
 
-      await handler({}, responseStream, {});
+      // Cast to raw streaming handler for testing (without awslambda.streamifyResponse)
+      await (handler as unknown as AwsStreamingHandler)({}, responseStream, {});
 
       expect(responseStream.chunks).toContain("event: test\ndata: {}\n\n");
     });
@@ -248,9 +262,91 @@ describe("lambdaStreamHandler", () => {
       );
       const responseStream = createMockResponseStream();
 
-      await handler({}, responseStream, {});
+      // Cast to raw streaming handler for testing (without awslambda.streamifyResponse)
+      await (handler as unknown as AwsStreamingHandler)({}, responseStream, {});
 
       expect(responseStream.chunks).toHaveLength(3);
+    });
+  });
+
+  //
+  // Format Options
+  //
+  describe("Format Options", () => {
+    it("uses SSE format by default", async () => {
+      const handler = lambdaStreamHandler(async () => {
+        throw new BadRequestError("Test error");
+      });
+      const responseStream = createMockResponseStream();
+
+      // Cast to raw streaming handler for testing
+      await (handler as unknown as AwsStreamingHandler)({}, responseStream, {});
+
+      const errorChunk = responseStream.chunks.find((c) =>
+        c.includes("event: error"),
+      );
+      expect(errorChunk).toBeDefined();
+      expect(errorChunk).toContain("event: error\ndata:");
+    });
+
+    it("uses NLJSON format when specified", async () => {
+      const handler = lambdaStreamHandler(
+        async () => {
+          throw new BadRequestError("Test error");
+        },
+        { format: "nljson" },
+      );
+      const responseStream = createMockResponseStream();
+
+      // Cast to raw streaming handler for testing
+      await (handler as unknown as AwsStreamingHandler)({}, responseStream, {});
+
+      // NLJSON format wraps the error body in an { error: ... } object
+      const errorChunk = responseStream.chunks.find((c) =>
+        c.includes('"error"'),
+      );
+      expect(errorChunk).toBeDefined();
+      expect(errorChunk).not.toContain("event:");
+      expect(errorChunk).toEndWith("\n");
+    });
+
+    it("sets application/x-ndjson content type for NLJSON format", async () => {
+      const handler = lambdaStreamHandler(async () => {}, { format: "nljson" });
+      const responseStream = createMockResponseStream();
+
+      // Cast to raw streaming handler for testing
+      await (handler as unknown as AwsStreamingHandler)({}, responseStream, {});
+
+      expect(responseStream.setContentType).toHaveBeenCalledWith(
+        "application/x-ndjson",
+      );
+    });
+
+    it("sets text/event-stream content type for SSE format", async () => {
+      const handler = lambdaStreamHandler(async () => {}, { format: "sse" });
+      const responseStream = createMockResponseStream();
+
+      // Cast to raw streaming handler for testing
+      await (handler as unknown as AwsStreamingHandler)({}, responseStream, {});
+
+      expect(responseStream.setContentType).toHaveBeenCalledWith(
+        "text/event-stream",
+      );
+    });
+
+    it("allows custom content type to override format default", async () => {
+      const handler = lambdaStreamHandler(async () => {}, {
+        format: "nljson",
+        contentType: "application/json",
+      });
+      const responseStream = createMockResponseStream();
+
+      // Cast to raw streaming handler for testing
+      await (handler as unknown as AwsStreamingHandler)({}, responseStream, {});
+
+      expect(responseStream.setContentType).toHaveBeenCalledWith(
+        "application/json",
+      );
     });
   });
 });

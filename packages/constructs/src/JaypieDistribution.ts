@@ -77,11 +77,11 @@ export interface JaypieDistributionProps extends Omit<
    */
   host?: string | HostConfig;
   /**
-   * Invoke mode for Lambda Function URLs.
-   * Use RESPONSE_STREAM for streaming responses with createLambdaStreamHandler.
-   * @default InvokeMode.BUFFERED
+   * Enable response streaming for Lambda Function URLs.
+   * Use with createLambdaStreamHandler for SSE/streaming responses.
+   * @default false
    */
-  invokeMode?: lambda.InvokeMode;
+  streaming?: boolean;
   /**
    * Origin read timeout - how long CloudFront waits for a response from the origin.
    * This is the maximum time allowed for the origin to respond.
@@ -124,10 +124,10 @@ export class JaypieDistribution
       destination: destinationProp = true,
       handler,
       host: propsHost,
-      invokeMode = lambda.InvokeMode.BUFFERED,
       logBucket: logBucketProp,
       originReadTimeout = Duration.seconds(CDK.DURATION.CLOUDFRONT_API),
       roleTag = CDK.ROLE.API,
+      streaming = false,
       zone: propsZone,
       ...distributionProps
     } = props;
@@ -196,14 +196,9 @@ export class JaypieDistribution
     // IFunction before IFunctionUrl (IFunction doesn't have functionUrlId)
     let origin: cloudfront.IOrigin | undefined;
     if (handler) {
-      // Auto-detect invoke mode from handler if it has an invokeMode property
-      // Explicit invokeMode prop takes precedence over auto-detection
-      const resolvedInvokeMode =
-        invokeMode !== lambda.InvokeMode.BUFFERED
-          ? invokeMode // Explicit non-default value, use it
-          : this.hasInvokeMode(handler)
-            ? handler.invokeMode // Auto-detect from handler
-            : invokeMode; // Use default BUFFERED
+      const resolvedInvokeMode = streaming
+        ? lambda.InvokeMode.RESPONSE_STREAM
+        : lambda.InvokeMode.BUFFERED;
 
       if (this.isIFunction(handler)) {
         // Create FunctionUrl for the Lambda function
@@ -392,21 +387,7 @@ export class JaypieDistribution
     );
   }
 
-  private hasInvokeMode(
-    handler: unknown,
-  ): handler is { invokeMode: lambda.InvokeMode } {
-    // Check if handler has an invokeMode property for streaming support
-    return (
-      typeof handler === "object" &&
-      handler !== null &&
-      "invokeMode" in handler &&
-      typeof (handler as { invokeMode: unknown }).invokeMode === "string"
-    );
-  }
-
-  private isExportNameObject(
-    value: unknown,
-  ): value is { exportName: string } {
+  private isExportNameObject(value: unknown): value is { exportName: string } {
     return (
       typeof value === "object" &&
       value !== null &&

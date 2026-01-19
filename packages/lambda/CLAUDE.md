@@ -32,7 +32,7 @@ src/
 | Export | Description |
 |--------|-------------|
 | `lambdaHandler` | Wraps standard Lambda functions with lifecycle management |
-| `lambdaStreamHandler` | Wraps streaming Lambda functions (for `awslambda.streamifyResponse`) |
+| `lambdaStreamHandler` | Wraps streaming Lambda functions (auto-wraps with `awslambda.streamifyResponse`) |
 
 ### Types
 
@@ -42,10 +42,13 @@ src/
 | `LambdaHandlerFunction` | Standard handler function signature |
 | `LambdaHandlerOptions` | Options for standard handler (chaos, name, secrets, setup, teardown, throw, unavailable, validate) |
 | `LambdaStreamContext` | Streaming Lambda context |
-| `LambdaStreamHandlerOptions` | Options for streaming handler (adds `contentType`) |
+| `LambdaStreamHandlerOptions` | Options for streaming handler (adds `contentType`, `format`) |
 | `StreamHandlerContext` | Extended context with `responseStream` |
 | `ResponseStream` | Stream writer interface (`write`, `end`, `setContentType`) |
 | `AwsStreamingHandler` | Raw AWS streaming handler signature |
+| `LambdaHandler` | Wrapped Lambda handler type (after `awslambda.streamifyResponse`) |
+| `RawStreamingHandler` | Alias for `AwsStreamingHandler` (for testing) |
+| `StreamFormat` | Stream output format: `"sse"` or `"nljson"` (re-exported from `@jaypie/aws`) |
 
 ## Usage
 
@@ -73,13 +76,20 @@ export const handler = lambdaHandler(
 ```typescript
 import { lambdaStreamHandler } from "@jaypie/lambda";
 
-export const handler = awslambda.streamifyResponse(
-  lambdaStreamHandler(async (event, context) => {
-    context.responseStream.write("event: data\ndata: {}\n\n");
-  }, {
-    contentType: "text/event-stream",
-  })
-);
+// Auto-wrapped with awslambda.streamifyResponse() in Lambda runtime
+export const handler = lambdaStreamHandler(async (event, context) => {
+  context.responseStream.write("event: data\ndata: {}\n\n");
+});
+```
+
+#### Format Options
+
+```typescript
+// SSE format (default) - text/event-stream
+export const sseHandler = lambdaStreamHandler(myHandler, { format: "sse" });
+
+// NLJSON format - application/x-ndjson
+export const nljsonHandler = lambdaStreamHandler(myHandler, { format: "nljson" });
 ```
 
 ### Parameter Order Flexibility
@@ -99,7 +109,8 @@ lambdaHandler({ name: "test" }, myFunction);
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `chaos` | `string` | - | Chaos testing mode |
-| `contentType` | `string` | `"text/event-stream"` | Content type (streaming only) |
+| `contentType` | `string` | Based on format | Content type (streaming only) |
+| `format` | `StreamFormat` | `"sse"` | Stream format: `"sse"` or `"nljson"` (streaming only) |
 | `name` | `string` | function name | Handler name for logging |
 | `secrets` | `string[]` | `[]` | AWS secrets to load into `process.env` |
 | `setup` | `Function[]` | `[]` | Functions to run before handler |
@@ -150,7 +161,9 @@ const { lambdaHandler } = original.lambda;
 
 - **Jaypie errors** (`isProjectError: true`): Returns error body, logs at debug level
 - **Unhandled errors**: Wrapped in `UnhandledError`, logs at fatal level
-- **Streaming errors**: Written as SSE `event: error` to stream
+- **Streaming errors**: Written to stream in the configured format:
+  - SSE: `event: error\ndata: {...}\n\n`
+  - NLJSON: `{"error":{...}}\n`
 - **With `throw: true`**: Re-throws error instead of returning error response
 
 ## Commands

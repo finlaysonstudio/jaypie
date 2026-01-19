@@ -106,7 +106,6 @@ For streaming responses (SSE, real-time updates), use `createLambdaStreamHandler
 
 ```typescript
 import { JaypieExpressLambda, JaypieDistribution } from "@jaypie/constructs";
-import * as lambda from "aws-cdk-lib/aws-lambda";
 
 // Create Lambda (handler uses createLambdaStreamHandler internally)
 const streamingApi = new JaypieExpressLambda(this, "StreamingApi", {
@@ -114,10 +113,10 @@ const streamingApi = new JaypieExpressLambda(this, "StreamingApi", {
   handler: "index.handler",
 });
 
-// Use with CloudFront and RESPONSE_STREAM invoke mode
+// Use with CloudFront and streaming enabled
 new JaypieDistribution(this, "Distribution", {
   handler: streamingApi,
-  invokeMode: lambda.InvokeMode.RESPONSE_STREAM,
+  streaming: true,
   host: "api.example.com",
   zone: "example.com",
 });
@@ -135,13 +134,13 @@ const streamingLambda = new JaypieLambda(this, "StreamingFunction", {
 
 const functionUrl = streamingLambda.addFunctionUrl({
   authType: FunctionUrlAuthType.NONE,
-  invokeMode: InvokeMode.RESPONSE_STREAM,
+  invokeMode: InvokeMode.RESPONSE_STREAM, // Direct Function URL still uses InvokeMode
 });
 
 new cdk.CfnOutput(this, "StreamingUrl", { value: functionUrl.url });
 ```
 
-Note: Streaming requires Lambda Function URLs (not API Gateway). `JaypieDistribution` uses Function URLs by default.
+Note: Streaming requires Lambda Function URLs (not API Gateway). `JaypieDistribution` uses Function URLs by default and accepts `streaming: true` for a cleaner API.
 
 ### Stack Types
 

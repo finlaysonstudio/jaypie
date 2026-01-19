@@ -1,5 +1,5 @@
 /**
- * JaypieStream provides SSE (Server-Sent Events) streaming utilities
+ * JaypieStream provides SSE (Server-Sent Events) and NLJSON streaming utilities
  * for Lambda and Express handlers.
  */
 
@@ -7,6 +7,13 @@
 //
 // Types
 //
+
+/**
+ * Stream output format
+ * - "sse": Server-Sent Events format (default)
+ * - "nljson": Newline-delimited JSON format
+ */
+export type StreamFormat = "nljson" | "sse";
 
 /**
  * Generic stream chunk interface compatible with LLM streaming
@@ -19,7 +26,7 @@ export interface StreamChunk {
 /**
  * SSE event structure
  */
-export interface SSEEvent {
+export interface SseEvent {
   data: string;
   event?: string;
   id?: string;
@@ -51,20 +58,74 @@ export interface ExpressStreamResponse {
 /**
  * Format a chunk as an SSE event
  */
-export function formatSSE(chunk: StreamChunk): string {
+export function formatSse(chunk: StreamChunk): string {
   const event = chunk.type;
   const data = JSON.stringify(chunk);
   return `event: ${event}\ndata: ${data}\n\n`;
 }
 
 /**
+ * Format a chunk as NLJSON (newline-delimited JSON)
+ */
+export function formatNljson(
+  chunk: StreamChunk | Record<string, unknown>,
+): string {
+  return JSON.stringify(chunk) + "\n";
+}
+
+/**
+ * Error body interface for Jaypie errors
+ */
+interface JaypieErrorBody {
+  error?: unknown;
+  [key: string]: unknown;
+}
+
+/**
+ * Format an error as an SSE error event
+ */
+export function formatStreamErrorSse(errorBody: JaypieErrorBody): string {
+  return `event: error\ndata: ${JSON.stringify(errorBody)}\n\n`;
+}
+
+/**
+ * Format an error as NLJSON
+ */
+export function formatStreamErrorNljson(errorBody: JaypieErrorBody): string {
+  return JSON.stringify({ error: errorBody }) + "\n";
+}
+
+/**
+ * Format an error based on the stream format
+ */
+export function formatStreamError(
+  errorBody: JaypieErrorBody,
+  format: StreamFormat = "sse",
+): string {
+  if (format === "nljson") {
+    return formatStreamErrorNljson(errorBody);
+  }
+  return formatStreamErrorSse(errorBody);
+}
+
+/**
+ * Get the content type for a stream format
+ */
+export function getContentTypeForFormat(format: StreamFormat): string {
+  if (format === "nljson") {
+    return "application/x-ndjson";
+  }
+  return "text/event-stream";
+}
+
+/**
  * Create an async generator that yields SSE-formatted strings from stream chunks
  */
-export async function* streamToSSE(
+export async function* streamToSse(
   stream: AsyncIterable<StreamChunk>,
 ): AsyncIterable<string> {
   for await (const chunk of stream) {
-    yield formatSSE(chunk);
+    yield formatSse(chunk);
   }
 }
 
@@ -91,7 +152,7 @@ export async function createLambdaStream(
 ): Promise<void> {
   try {
     for await (const chunk of stream) {
-      const sseData = formatSSE(chunk);
+      const sseData = formatSse(chunk);
       writer.write(sseData);
     }
   } finally {
@@ -129,7 +190,7 @@ export async function createExpressStream(
 
   try {
     for await (const chunk of stream) {
-      const sseData = formatSSE(chunk);
+      const sseData = formatSse(chunk);
       res.write(sseData);
     }
   } finally {
@@ -177,8 +238,8 @@ export class JaypieStream {
   /**
    * Convert to SSE-formatted strings
    */
-  toSSE(): AsyncIterable<string> {
-    return streamToSSE(this.source);
+  toSse(): AsyncIterable<string> {
+    return streamToSse(this.source);
   }
 }
 

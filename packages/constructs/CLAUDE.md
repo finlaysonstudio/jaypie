@@ -170,7 +170,6 @@ For streaming responses, use `createLambdaStreamHandler` from `@jaypie/express` 
 
 ```typescript
 import { JaypieExpressLambda, JaypieDistribution } from "@jaypie/constructs";
-import * as lambda from "aws-cdk-lib/aws-lambda";
 
 // Create Lambda (handler uses createLambdaStreamHandler internally)
 const streamingApi = new JaypieExpressLambda(this, "StreamingApi", {
@@ -178,10 +177,10 @@ const streamingApi = new JaypieExpressLambda(this, "StreamingApi", {
   handler: "index.handler",
 });
 
-// Use with CloudFront and RESPONSE_STREAM invoke mode
+// Use with CloudFront and streaming enabled
 new JaypieDistribution(this, "Distribution", {
   handler: streamingApi,
-  invokeMode: lambda.InvokeMode.RESPONSE_STREAM,
+  streaming: true,
   host: "api.example.com",
   zone: "example.com",
 });

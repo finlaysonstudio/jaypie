@@ -14,13 +14,19 @@ export {
   createExpressStream,
   createJaypieStream,
   createLambdaStream,
-  formatSSE,
+  formatNljson,
+  formatSse,
+  formatStreamError,
+  formatStreamErrorNljson,
+  formatStreamErrorSse,
+  getContentTypeForFormat,
   JaypieStream,
-  streamToSSE,
+  streamToSse,
 } from "./streaming/JaypieStream.js";
 export type {
   ExpressStreamResponse,
   LambdaStreamWriter,
-  SSEEvent,
+  SseEvent,
   StreamChunk,
+  StreamFormat,
 } from "./streaming/JaypieStream.js";
