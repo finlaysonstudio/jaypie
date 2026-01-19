@@ -30,9 +30,6 @@
     "format:package": "sort-package-json ./package.json",
     "lint": "eslint .",
     "test": "vitest run .",
-    "test:spec:connect.function": "vitest run ./src/__tests__/connect.function.spec.ts",
-    "test:spec:connectFromSecretEnv.function": "vitest run ./src/__tests__/connectFromSecretEnv.function.spec.ts",
-    "test:spec:index": "vitest run ./src/__tests__/index.spec.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

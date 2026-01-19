@@ -30,8 +30,6 @@
     "format:package": "sort-package-json ./package.json",
     "lint": "eslint .",
     "test": "vitest run .",
-    "test:spec:index": "vitest run ./src/__tests__/index.spec.ts",
-    "test:spec:lambdaHandler": "vitest run ./src/__tests__/lambdaHandler.spec.ts",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
