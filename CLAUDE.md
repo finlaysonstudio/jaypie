@@ -41,7 +41,21 @@
 | `@jaypie/textract` | AWS Textract utilities |
 | `@jaypie/types` | Core TypeScript type definitions |
 | `@jaypie/vocabulary` | Type coercion, service handlers, and adapters for CLI/Lambda/LLM/MCP |
-| `@jaypie/documentation` | Documentation site (private) |
+
+## Workspace Naming Conventions
+
+| Directory | Purpose |
+|-----------|---------|
+| `packages/` | Default workspace for npm packages (preferred when only one namespace needed) |
+| `stacks/` | CDK-deployed infrastructure and sites (as opposed to npm-published) |
+| `workspaces/` | Generic workspace for other work |
+
+## Stacks Structure
+
+| Stack | Description |
+|-------|-------------|
+| `@jaypie/documentation` | Documentation site at jaypie.net (private) |
+| `@jaypie/stacks-cdk` | CDK infrastructure for Jaypie stacks (private) |
 
 ## CI/CD Workflows
 - **npm-check.yml**: Runs on `feat/*`, `fix/*`, `devin/*` branches
@@ -108,10 +122,10 @@ Always prefer `format` when linting.
 - Keep README.md and CLAUDE.md current
 ### Completion Criteria
 Before completing any work, ensure the workspace is "green" by running these commands for the affected package(s):
-1. `npm run typecheck --workspace packages/<package-name>`
-2. `npm run build --workspace packages/<package-name>`
-3. `npm run test --workspace packages/<package-name>`
-4. `npm run format packages/<package-name>`
+1. `npm run typecheck --workspace packages/<package-name>` (or `stacks/<stack-name>`)
+2. `npm run build --workspace packages/<package-name>` (or `stacks/<stack-name>`)
+3. `npm run test --workspace packages/<package-name>` (or `stacks/<stack-name>`)
+4. `npm run format packages/<package-name>` (or `stacks/<stack-name>`)
 ### Error Handling
 - Never throw vanilla `Error`
 - Use `@jaypie/errors` package (ConfigurationError, etc.) for proper error types

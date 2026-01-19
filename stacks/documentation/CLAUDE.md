@@ -1,10 +1,10 @@
 # @jaypie/documentation
 
-Documentation site for the Jaypie monorepo, built with Docusaurus.
+Documentation stack for the Jaypie monorepo, built with Docusaurus and deployed via CDK.
 
 ## Purpose
 
-This package generates and hosts the public documentation at https://jaypie.finlayson.studio. It includes:
+This package generates and hosts the public documentation at https://jaypie.net. It includes:
 - API reference documentation for all Jaypie packages
 - Getting started guides and tutorials
 - Package overviews and architecture documentation
@@ -73,7 +73,7 @@ Edit `src/pages/index.tsx` to modify:
 
 ### Site Settings (docusaurus.config.ts)
 
-- **URL**: https://jaypie.finlayson.studio
+- **URL**: https://jaypie.net
 - **Organization**: finlaysonstudio
 - **Project**: jaypie
 - **Theme**: Classic preset with Prism syntax highlighting

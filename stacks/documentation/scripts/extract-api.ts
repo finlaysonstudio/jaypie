@@ -13,7 +13,7 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const PACKAGES_DIR = path.resolve(__dirname, "../../");
+const PACKAGES_DIR = path.resolve(__dirname, "../../../packages");
 const TEMP_DIR = path.resolve(__dirname, "../temp");
 
 const TS_PACKAGES = [

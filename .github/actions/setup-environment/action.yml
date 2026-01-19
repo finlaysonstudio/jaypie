@@ -1,0 +1,129 @@
+name: Setup Environment Variables
+description: |
+  Configure environment variables with sensible defaults for Jaypie projects.
+
+  Variable Scoping (GitHub Settings):
+  - Organization: AWS_REGION, LOG_LEVEL, MODULE_LOG_LEVEL, PROJECT_SPONSOR
+  - Repository: AWS_HOSTED_ZONE, PROJECT_KEY, PROJECT_SERVICE
+  - Environment: AWS_ROLE_ARN, DATADOG_API_KEY_ARN, PROJECT_ENV, PROJECT_NONCE
+
+  Environment Secrets:
+  - By default, no secrets are required
+  - Dependencies add secrets (e.g., Auth0 adds AUTH0_CLIENT_SECRET)
+  - Secrets are passed to CDK via JaypieEnvSecret construct
+
+inputs:
+  # Organization-level variables
+  aws-region:
+    description: AWS region (org-level)
+    required: false
+  log-level:
+    description: Application log level (org-level)
+    required: false
+  module-log-level:
+    description: Module log level (org-level)
+    required: false
+  project-sponsor:
+    description: Project sponsor (org-level)
+    required: false
+  # Repository-level variables
+  aws-hosted-zone:
+    description: Route53 hosted zone (repo-level)
+    required: false
+  project-key:
+    description: Project key (repo-level)
+    required: false
+  project-service:
+    description: Project service name (repo-level)
+    required: false
+  # Environment-level variables
+  aws-role-arn:
+    description: AWS IAM role ARN (env-level)
+    required: false
+  datadog-api-key-arn:
+    description: Datadog API key ARN (env-level)
+    required: false
+  project-env:
+    description: Project environment (env-level)
+    required: false
+  project-nonce:
+    description: Project nonce (env-level)
+    required: false
+
+outputs:
+  aws-region:
+    description: Resolved AWS region
+    value: ${{ steps.set-env.outputs.aws-region }}
+  aws-role-arn:
+    description: Resolved AWS role ARN
+    value: ${{ steps.set-env.outputs.aws-role-arn }}
+  project-env:
+    description: Resolved project environment
+    value: ${{ steps.set-env.outputs.project-env }}
+
+runs:
+  using: composite
+  steps:
+    - name: Set environment variables
+      id: set-env
+      shell: bash
+      run: |
+        # Organization-level variables (with defaults)
+        AWS_REGION="${{ inputs.aws-region }}"
+        AWS_REGION="${AWS_REGION:-us-east-1}"
+
+        LOG_LEVEL="${{ inputs.log-level }}"
+        LOG_LEVEL="${LOG_LEVEL:-debug}"
+
+        MODULE_LOG_LEVEL="${{ inputs.module-log-level }}"
+        MODULE_LOG_LEVEL="${MODULE_LOG_LEVEL:-warn}"
+
+        PROJECT_SPONSOR="${{ inputs.project-sponsor }}"
+        PROJECT_SPONSOR="${PROJECT_SPONSOR:-finlaysonstudio}"
+
+        # Repository-level variables (with defaults)
+        HOSTED_ZONE="${{ inputs.aws-hosted-zone }}"
+        HOSTED_ZONE="${HOSTED_ZONE:-jaypie.net}"
+
+        PROJECT_KEY="${{ inputs.project-key }}"
+        PROJECT_KEY="${PROJECT_KEY:-jaypie}"
+
+        PROJECT_SERVICE="${{ inputs.project-service }}"
+        PROJECT_SERVICE="${PROJECT_SERVICE:-stacks}"
+
+        # Environment-level variables (with defaults)
+        AWS_ROLE_ARN="${{ inputs.aws-role-arn }}"
+
+        DATADOG_API_KEY_ARN="${{ inputs.datadog-api-key-arn }}"
+
+        PROJECT_ENV="${{ inputs.project-env }}"
+        PROJECT_ENV="${PROJECT_ENV:-sandbox}"
+
+        PROJECT_NONCE="${{ inputs.project-nonce }}"
+        PROJECT_NONCE="${PROJECT_NONCE:-$(echo $RANDOM | md5sum | head -c 8)}"
+
+        # Derived from package.json
+        PROJECT_VERSION=$(node -p "require('./package.json').version")
+
+        # Export all environment variables for CDK
+        echo "AWS_REGION=${AWS_REGION}" >> $GITHUB_ENV
+        echo "AWS_ROLE_ARN=${AWS_ROLE_ARN}" >> $GITHUB_ENV
+        echo "CDK_DEFAULT_ACCOUNT=${{ github.repository_owner }}" >> $GITHUB_ENV
+        echo "CDK_DEFAULT_REGION=${AWS_REGION}" >> $GITHUB_ENV
+        echo "CDK_ENV_DATADOG_API_KEY_ARN=${DATADOG_API_KEY_ARN}" >> $GITHUB_ENV
+        echo "CDK_ENV_HOSTED_ZONE=${HOSTED_ZONE}" >> $GITHUB_ENV
+        echo "CDK_ENV_REPO=${{ github.repository }}" >> $GITHUB_ENV
+        echo "LOG_LEVEL=${LOG_LEVEL}" >> $GITHUB_ENV
+        echo "MODULE_LOG_LEVEL=${MODULE_LOG_LEVEL}" >> $GITHUB_ENV
+        echo "PROJECT_COMMIT=${{ github.sha }}" >> $GITHUB_ENV
+        echo "PROJECT_ENV=${PROJECT_ENV}" >> $GITHUB_ENV
+        echo "PROJECT_KEY=${PROJECT_KEY}" >> $GITHUB_ENV
+        echo "PROJECT_NONCE=${PROJECT_NONCE}" >> $GITHUB_ENV
+        echo "PROJECT_SERVICE=${PROJECT_SERVICE}" >> $GITHUB_ENV
+        echo "PROJECT_SPONSOR=${PROJECT_SPONSOR}" >> $GITHUB_ENV
+        echo "PROJECT_VERSION=${PROJECT_VERSION}" >> $GITHUB_ENV
+
+        # Set outputs for subsequent steps
+        echo "aws-region=${AWS_REGION}" >> $GITHUB_OUTPUT
+        echo "aws-role-arn=${AWS_ROLE_ARN}" >> $GITHUB_OUTPUT
+        echo "project-env=${PROJECT_ENV}" >> $GITHUB_OUTPUT

@@ -1,0 +1,42 @@
+name: Setup Node.js and Cache Dependencies
+description: Checkout code, setup Node.js with npm cache, and configure dependency caching
+
+inputs:
+  node-version:
+    description: Node.js version to use
+    required: false
+    default: "24"
+
+outputs:
+  node-modules-cache-hit:
+    description: Whether node_modules cache was hit
+    value: ${{ steps.cache-node-modules.outputs.cache-hit }}
+
+runs:
+  using: composite
+  steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js ${{ inputs.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        cache: npm
+        node-version: ${{ inputs.node-version }}
+
+    - name: Cache node_modules
+      id: cache-node-modules
+      uses: actions/cache@v4
+      with:
+        path: |
+          node_modules
+          packages/*/node_modules
+          stacks/*/node_modules
+        key: ${{ runner.os }}-node-${{ inputs.node-version }}-modules-${{ hashFiles('**/package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-node-${{ inputs.node-version }}-modules-
+
+    - name: Cache Status
+      shell: bash
+      run: |
+        echo "Node modules cache: ${{ steps.cache-node-modules.outputs.cache-hit == 'true' && '✓ HIT' || '✗ MISS' }}"

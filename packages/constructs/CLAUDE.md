@@ -194,12 +194,18 @@ Note: Streaming requires Lambda Function URLs (not API Gateway). `JaypieDistribu
 ```typescript
 import { JaypieDynamoDb, IndexDefinition } from "@jaypie/constructs";
 
-// Basic table (no GSIs by default)
+// Basic table - table name is CDK-generated (includes stack name and unique suffix)
+// e.g., cdk-sponsor-project-env-nonce-app-JaypieDynamoDbmyAppTable-XXXXX
 const table = new JaypieDynamoDb(this, "myApp");
 
 // With standard Jaypie GSIs (indexScope, indexAlias, indexClass, indexType, indexXid)
 const tableWithIndexes = new JaypieDynamoDb(this, "myApp", {
   indexes: JaypieDynamoDb.DEFAULT_INDEXES,
+});
+
+// With explicit table name (overrides CDK-generated name)
+const namedTable = new JaypieDynamoDb(this, "myApp", {
+  tableName: "my-explicit-table-name",
 });
 
 // With custom indexes using IndexDefinition from @jaypie/fabric
@@ -212,7 +218,7 @@ const customTable = new JaypieDynamoDb(this, "myApp", {
 });
 ```
 
-Note: `JaypieDynamoDb` uses `IndexDefinition` from `@jaypie/fabric` for GSI configuration, enabling consistent index definitions across CDK and runtime code.
+Note: `JaypieDynamoDb` uses `IndexDefinition` from `@jaypie/fabric` for GSI configuration, enabling consistent index definitions across CDK and runtime code. Table names default to CDK-generated names for proper namespacing across environments; use the `tableName` prop only when an explicit name is required.
 
 ### Provider/Consumer Secrets Pattern
 

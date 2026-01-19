@@ -16,6 +16,24 @@ import {
   searchDatadogRum,
 } from "./datadog.js";
 import { debugLlmCall, listLlmProviders, type LlmProvider } from "./llm.js";
+import {
+  describeDynamoDBTable,
+  describeStack,
+  filterLogEvents,
+  getDynamoDBItem,
+  getLambdaFunction,
+  getSQSQueueAttributes,
+  listAwsProfiles,
+  listLambdaFunctions,
+  listS3Objects,
+  listSQSQueues,
+  listStepFunctionExecutions,
+  purgeSQSQueue,
+  queryDynamoDB,
+  receiveSQSMessage,
+  scanDynamoDB,
+  stopStepFunctionExecution,
+} from "./aws.js";
 
 // Build-time constants injected by rollup
 declare const __BUILD_VERSION_STRING__: string;
@@ -1209,6 +1227,1129 @@ export function createMcpServer(
   );
 
   log.info("Registered tool: llm_list_providers");
+
+  // AWS CLI Tools
+
+  // AWS List Profiles
+  server.tool(
+    "aws_list_profiles",
+    "List available AWS profiles from ~/.aws/config and credentials.",
+    {},
+    async () => {
+      log.info("Tool called: aws_list_profiles");
+
+      const result = await listAwsProfiles(log);
+
+      if (!result.success) {
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: `Error listing profiles: ${result.error}`,
+            },
+          ],
+        };
+      }
+
+      const profiles = result.data || [];
+      if (profiles.length === 0) {
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: "No AWS profiles found. Configure profiles in ~/.aws/config or ~/.aws/credentials.",
+            },
+          ],
+        };
+      }
+
+      const formatted = profiles
+        .map((p) => `- ${p.name} (${p.source})`)
+        .join("\n");
+
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: [
+              `Found ${profiles.length} AWS profiles:`,
+              "",
+              formatted,
+              "",
+              "Use the 'profile' parameter in other AWS tools to specify which profile to use.",
+            ].join("\n"),
+          },
+        ],
+      };
+    },
+  );
+
+  log.info("Registered tool: aws_list_profiles");
+
+  // Step Functions: List Executions
+  server.tool(
+    "aws_stepfunctions_list_executions",
+    "List Step Function executions for a state machine. Useful for finding stuck or running executions.",
+    {
+      stateMachineArn: z.string().describe("ARN of the state machine"),
+      statusFilter: z
+        .enum([
+          "RUNNING",
+          "SUCCEEDED",
+          "FAILED",
+          "TIMED_OUT",
+          "ABORTED",
+          "PENDING_REDRIVE",
+        ])
+        .optional()
+        .describe("Filter by execution status"),
+      profile: z.string().optional().describe("AWS profile to use"),
+      region: z.string().optional().describe("AWS region"),
+      maxResults: z
+        .number()
+        .optional()
+        .describe("Max results (1-1000, default 100)"),
+    },
+    async ({ stateMachineArn, statusFilter, profile, region, maxResults }) => {
+      log.info("Tool called: aws_stepfunctions_list_executions");
+
+      const result = await listStepFunctionExecutions(
+        {
+          stateMachineArn,
+          statusFilter,
+          profile,
+          region,
+          maxResults,
+        },
+        log,
+      );
+
+      if (!result.success) {
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: `Error: ${result.error}`,
+            },
+          ],
+        };
+      }
+
+      const executions = result.data?.executions || [];
+      if (executions.length === 0) {
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: `No ${statusFilter || ""} executions found for state machine.`,
+            },
+          ],
+        };
+      }
+
+      const formatted = executions
+        .map((e) => `- ${e.name} (${e.status}) started ${e.startDate}`)
+        .join("\n");
+
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: [
+              `Found ${executions.length} executions:`,
+              "",
+              formatted,
+              "",
+              "Use aws_stepfunctions_stop_execution to stop running executions.",
+            ].join("\n"),
+          },
+        ],
+      };
+    },
+  );
+
+  log.info("Registered tool: aws_stepfunctions_list_executions");
+
+  // Step Functions: Stop Execution
+  server.tool(
+    "aws_stepfunctions_stop_execution",
+    "Stop a running Step Function execution. Use with caution - this will abort the workflow.",
+    {
+      executionArn: z.string().describe("ARN of the execution to stop"),
+      cause: z
+        .string()
+        .optional()
+        .describe("Description of why the execution was stopped"),
+      profile: z.string().optional().describe("AWS profile to use"),
+      region: z.string().optional().describe("AWS region"),
+    },
+    async ({ executionArn, cause, profile, region }) => {
+      log.info("Tool called: aws_stepfunctions_stop_execution");
+
+      const result = await stopStepFunctionExecution(
+        {
+          executionArn,
+          cause,
+          profile,
+          region,
+        },
+        log,
+      );
+
+      if (!result.success) {
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: `Error stopping execution: ${result.error}`,
+            },
+          ],
+        };
+      }
+
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: `Execution stopped successfully at ${result.data?.stopDate || "unknown time"}.`,
+          },
+        ],
+      };
+    },
+  );
+
+  log.info("Registered tool: aws_stepfunctions_stop_execution");
+
+  // Lambda: List Functions
+  server.tool(
+    "aws_lambda_list_functions",
+    "List Lambda functions in the account. Filter by function name prefix.",
+    {
+      functionNamePrefix: z
+        .string()
+        .optional()
+        .describe("Filter by function name prefix"),
+      profile: z.string().optional().describe("AWS profile to use"),
+      region: z.string().optional().describe("AWS region"),
+      maxResults: z.number().optional().describe("Max results to return"),
+    },
+    async ({ functionNamePrefix, profile, region, maxResults }) => {
+      log.info("Tool called: aws_lambda_list_functions");
+
+      const result = await listLambdaFunctions(
+        {
+          functionNamePrefix,
+          profile,
+          region,
+          maxResults,
+        },
+        log,
+      );
+
+      if (!result.success) {
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: `Error: ${result.error}`,
+            },
+          ],
+        };
+      }
+
+      const functions = result.data?.Functions || [];
+      if (functions.length === 0) {
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: functionNamePrefix
+                ? `No functions found with prefix "${functionNamePrefix}".`
+                : "No Lambda functions found in this account/region.",
+            },
+          ],
+        };
+      }
+
+      const formatted = functions
+        .map(
+          (f) =>
+            `- ${f.FunctionName} (${f.Runtime || "unknown runtime"}, ${f.MemorySize}MB)`,
+        )
+        .join("\n");
+
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: [
+              `Found ${functions.length} Lambda functions:`,
+              "",
+              formatted,
+              "",
+              "Use aws_lambda_get_function for details on a specific function.",
+            ].join("\n"),
+          },
+        ],
+      };
+    },
+  );
+
+  log.info("Registered tool: aws_lambda_list_functions");
+
+  // Lambda: Get Function
+  server.tool(
+    "aws_lambda_get_function",
+    "Get configuration and details for a specific Lambda function.",
+    {
+      functionName: z.string().describe("Function name or ARN"),
+      profile: z.string().optional().describe("AWS profile to use"),
+      region: z.string().optional().describe("AWS region"),
+    },
+    async ({ functionName, profile, region }) => {
+      log.info("Tool called: aws_lambda_get_function");
+
+      const result = await getLambdaFunction(
+        {
+          functionName,
+          profile,
+          region,
+        },
+        log,
+      );
+
+      if (!result.success) {
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: `Error: ${result.error}`,
+            },
+          ],
+        };
+      }
+
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: JSON.stringify(result.data, null, 2),
+          },
+        ],
+      };
+    },
+  );
+
+  log.info("Registered tool: aws_lambda_get_function");
+
+  // CloudWatch Logs: Filter Log Events
+  server.tool(
+    "aws_logs_filter_log_events",
+    "Search CloudWatch Logs for a log group. Filter by pattern and time range.",
+    {
+      logGroupName: z
+        .string()
+        .describe("Log group name (e.g., /aws/lambda/my-function)"),
+      filterPattern: z
+        .string()
+        .optional()
+        .describe(
+          "CloudWatch filter pattern (e.g., 'ERROR', '{ $.level = \"error\" }')",
+        ),
+      startTime: z
+        .string()
+        .optional()
+        .describe(
+          "Start time (ISO 8601 or relative like 'now-1h'). Defaults to 'now-15m'.",
+        ),
+      endTime: z
+        .string()
+        .optional()
+        .describe("End time (ISO 8601 or 'now'). Defaults to 'now'."),
+      profile: z.string().optional().describe("AWS profile to use"),
+      region: z.string().optional().describe("AWS region"),
+      limit: z
+        .number()
+        .optional()
+        .describe("Max events to return (default 100)"),
+    },
+    async ({
+      logGroupName,
+      filterPattern,
+      startTime,
+      endTime,
+      profile,
+      region,
+      limit,
+    }) => {
+      log.info("Tool called: aws_logs_filter_log_events");
+
+      const result = await filterLogEvents(
+        {
+          logGroupName,
+          filterPattern,
+          startTime: startTime || "now-15m",
+          endTime: endTime || "now",
+          limit: limit || 100,
+          profile,
+          region,
+        },
+        log,
+      );
+
+      if (!result.success) {
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: `Error: ${result.error}`,
+            },
+          ],
+        };
+      }
+
+      const events = result.data?.events || [];
+      if (events.length === 0) {
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: `No log events found matching the filter in ${logGroupName}.`,
+            },
+          ],
+        };
+      }
+
+      const formatted = events
+        .map((e) => {
+          const timestamp = new Date(e.timestamp).toISOString();
+          return `[${timestamp}] ${e.message}`;
+        })
+        .join("\n");
+
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: [`Found ${events.length} log events:`, "", formatted].join(
+              "\n",
+            ),
+          },
+        ],
+      };
+    },
+  );
+
+  log.info("Registered tool: aws_logs_filter_log_events");
+
+  // S3: List Objects
+  server.tool(
+    "aws_s3_list_objects",
+    "List objects in an S3 bucket with optional prefix filtering.",
+    {
+      bucket: z.string().describe("S3 bucket name"),
+      prefix: z.string().optional().describe("Object key prefix filter"),
+      profile: z.string().optional().describe("AWS profile to use"),
+      region: z.string().optional().describe("AWS region"),
+      maxResults: z.number().optional().describe("Max results to return"),
+    },
+    async ({ bucket, prefix, profile, region, maxResults }) => {
+      log.info("Tool called: aws_s3_list_objects");
+
+      const result = await listS3Objects(
+        {
+          bucket,
+          prefix,
+          profile,
+          region,
+          maxResults,
+        },
+        log,
+      );
+
+      if (!result.success) {
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: `Error: ${result.error}`,
+            },
+          ],
+        };
+      }
+
+      const objects = result.data?.Contents || [];
+      if (objects.length === 0) {
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: prefix
+                ? `No objects found with prefix "${prefix}" in bucket ${bucket}.`
+                : `Bucket ${bucket} is empty.`,
+            },
+          ],
+        };
+      }
+
+      const formatted = objects
+        .map((o) => {
+          const size =
+            o.Size < 1024
+              ? `${o.Size}B`
+              : o.Size < 1024 * 1024
+                ? `${(o.Size / 1024).toFixed(1)}KB`
+                : `${(o.Size / (1024 * 1024)).toFixed(1)}MB`;
+          return `- ${o.Key} (${size}, ${o.LastModified})`;
+        })
+        .join("\n");
+
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: [
+              `Found ${objects.length} objects in ${bucket}:`,
+              "",
+              formatted,
+            ].join("\n"),
+          },
+        ],
+      };
+    },
+  );
+
+  log.info("Registered tool: aws_s3_list_objects");
+
+  // CloudFormation: Describe Stack
+  server.tool(
+    "aws_cloudformation_describe_stack",
+    "Get details and status of a CloudFormation stack.",
+    {
+      stackName: z.string().describe("Stack name or ARN"),
+      profile: z.string().optional().describe("AWS profile to use"),
+      region: z.string().optional().describe("AWS region"),
+    },
+    async ({ stackName, profile, region }) => {
+      log.info("Tool called: aws_cloudformation_describe_stack");
+
+      const result = await describeStack(
+        {
+          stackName,
+          profile,
+          region,
+        },
+        log,
+      );
+
+      if (!result.success) {
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: `Error: ${result.error}`,
+            },
+          ],
+        };
+      }
+
+      const stack = result.data?.Stacks?.[0];
+      if (!stack) {
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: `Stack "${stackName}" not found.`,
+            },
+          ],
+        };
+      }
+
+      const outputs = stack.Outputs?.map(
+        (o) => `  - ${o.OutputKey}: ${o.OutputValue}`,
+      ).join("\n");
+      const params = stack.Parameters?.map(
+        (p) => `  - ${p.ParameterKey}: ${p.ParameterValue}`,
+      ).join("\n");
+
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: [
+              `Stack: ${stack.StackName}`,
+              `Status: ${stack.StackStatus}`,
+              stack.StackStatusReason
+                ? `Reason: ${stack.StackStatusReason}`
+                : null,
+              `Created: ${stack.CreationTime}`,
+              stack.LastUpdatedTime
+                ? `Last Updated: ${stack.LastUpdatedTime}`
+                : null,
+              stack.Description ? `Description: ${stack.Description}` : null,
+              "",
+              outputs ? `Outputs:\n${outputs}` : null,
+              params ? `Parameters:\n${params}` : null,
+            ]
+              .filter(Boolean)
+              .join("\n"),
+          },
+        ],
+      };
+    },
+  );
+
+  log.info("Registered tool: aws_cloudformation_describe_stack");
+
+  // DynamoDB: Describe Table
+  server.tool(
+    "aws_dynamodb_describe_table",
+    "Get metadata about a DynamoDB table including key schema, indexes, and provisioned capacity.",
+    {
+      tableName: z.string().describe("DynamoDB table name"),
+      profile: z.string().optional().describe("AWS profile to use"),
+      region: z.string().optional().describe("AWS region"),
+    },
+    async ({ tableName, profile, region }) => {
+      log.info("Tool called: aws_dynamodb_describe_table");
+
+      const result = await describeDynamoDBTable(
+        {
+          tableName,
+          profile,
+          region,
+        },
+        log,
+      );
+
+      if (!result.success) {
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: `Error: ${result.error}`,
+            },
+          ],
+        };
+      }
+
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: JSON.stringify(result.data?.Table, null, 2),
+          },
+        ],
+      };
+    },
+  );
+
+  log.info("Registered tool: aws_dynamodb_describe_table");
+
+  // DynamoDB: Scan
+  server.tool(
+    "aws_dynamodb_scan",
+    "Scan a DynamoDB table. Use sparingly on large tables - prefer query when possible.",
+    {
+      tableName: z.string().describe("DynamoDB table name"),
+      filterExpression: z
+        .string()
+        .optional()
+        .describe("Filter expression (e.g., 'status = :s')"),
+      expressionAttributeValues: z
+        .string()
+        .optional()
+        .describe(
+          'JSON object of attribute values (e.g., \'{\\":s\\":{\\"S\\":\\"active\\"}}\')',
+        ),
+      limit: z.number().optional().describe("Max items to return (default 25)"),
+      profile: z.string().optional().describe("AWS profile to use"),
+      region: z.string().optional().describe("AWS region"),
+    },
+    async ({
+      tableName,
+      filterExpression,
+      expressionAttributeValues,
+      limit,
+      profile,
+      region,
+    }) => {
+      log.info("Tool called: aws_dynamodb_scan");
+
+      const result = await scanDynamoDB(
+        {
+          tableName,
+          filterExpression,
+          expressionAttributeValues,
+          limit: limit || 25,
+          profile,
+          region,
+        },
+        log,
+      );
+
+      if (!result.success) {
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: `Error: ${result.error}`,
+            },
+          ],
+        };
+      }
+
+      const items = result.data?.Items || [];
+      if (items.length === 0) {
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: `No items found in table ${tableName}.`,
+            },
+          ],
+        };
+      }
+
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: [
+              `Found ${items.length} items:`,
+              "",
+              JSON.stringify(items, null, 2),
+            ].join("\n"),
+          },
+        ],
+      };
+    },
+  );
+
+  log.info("Registered tool: aws_dynamodb_scan");
+
+  // DynamoDB: Query
+  server.tool(
+    "aws_dynamodb_query",
+    "Query a DynamoDB table by partition key. More efficient than scan for targeted lookups.",
+    {
+      tableName: z.string().describe("DynamoDB table name"),
+      keyConditionExpression: z
+        .string()
+        .describe("Key condition (e.g., 'pk = :pk')"),
+      expressionAttributeValues: z
+        .string()
+        .describe("JSON object of attribute values"),
+      indexName: z.string().optional().describe("GSI or LSI name to query"),
+      filterExpression: z
+        .string()
+        .optional()
+        .describe("Additional filter expression"),
+      limit: z.number().optional().describe("Max items to return"),
+      scanIndexForward: z
+        .boolean()
+        .optional()
+        .describe("Sort ascending (true) or descending (false)"),
+      profile: z.string().optional().describe("AWS profile to use"),
+      region: z.string().optional().describe("AWS region"),
+    },
+    async ({
+      tableName,
+      keyConditionExpression,
+      expressionAttributeValues,
+      indexName,
+      filterExpression,
+      limit,
+      scanIndexForward,
+      profile,
+      region,
+    }) => {
+      log.info("Tool called: aws_dynamodb_query");
+
+      const result = await queryDynamoDB(
+        {
+          tableName,
+          keyConditionExpression,
+          expressionAttributeValues,
+          indexName,
+          filterExpression,
+          limit,
+          scanIndexForward,
+          profile,
+          region,
+        },
+        log,
+      );
+
+      if (!result.success) {
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: `Error: ${result.error}`,
+            },
+          ],
+        };
+      }
+
+      const items = result.data?.Items || [];
+      if (items.length === 0) {
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: `No items found matching the query.`,
+            },
+          ],
+        };
+      }
+
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: [
+              `Found ${items.length} items:`,
+              "",
+              JSON.stringify(items, null, 2),
+            ].join("\n"),
+          },
+        ],
+      };
+    },
+  );
+
+  log.info("Registered tool: aws_dynamodb_query");
+
+  // DynamoDB: Get Item
+  server.tool(
+    "aws_dynamodb_get_item",
+    "Get a single item from a DynamoDB table by its primary key.",
+    {
+      tableName: z.string().describe("DynamoDB table name"),
+      key: z
+        .string()
+        .describe(
+          'JSON object of the primary key (e.g., \'{\\"pk\\":{\\"S\\":\\"user#123\\"},\\"sk\\":{\\"S\\":\\"profile\\"}}\')',
+        ),
+      profile: z.string().optional().describe("AWS profile to use"),
+      region: z.string().optional().describe("AWS region"),
+    },
+    async ({ tableName, key, profile, region }) => {
+      log.info("Tool called: aws_dynamodb_get_item");
+
+      const result = await getDynamoDBItem(
+        {
+          tableName,
+          key,
+          profile,
+          region,
+        },
+        log,
+      );
+
+      if (!result.success) {
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: `Error: ${result.error}`,
+            },
+          ],
+        };
+      }
+
+      if (!result.data?.Item) {
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: `Item not found with the specified key.`,
+            },
+          ],
+        };
+      }
+
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: JSON.stringify(result.data.Item, null, 2),
+          },
+        ],
+      };
+    },
+  );
+
+  log.info("Registered tool: aws_dynamodb_get_item");
+
+  // SQS: List Queues
+  server.tool(
+    "aws_sqs_list_queues",
+    "List SQS queues in the account. Filter by queue name prefix.",
+    {
+      queueNamePrefix: z
+        .string()
+        .optional()
+        .describe("Filter by queue name prefix"),
+      profile: z.string().optional().describe("AWS profile to use"),
+      region: z.string().optional().describe("AWS region"),
+    },
+    async ({ queueNamePrefix, profile, region }) => {
+      log.info("Tool called: aws_sqs_list_queues");
+
+      const result = await listSQSQueues(
+        {
+          queueNamePrefix,
+          profile,
+          region,
+        },
+        log,
+      );
+
+      if (!result.success) {
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: `Error: ${result.error}`,
+            },
+          ],
+        };
+      }
+
+      const queues = result.data?.QueueUrls || [];
+      if (queues.length === 0) {
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: queueNamePrefix
+                ? `No queues found with prefix "${queueNamePrefix}".`
+                : "No SQS queues found in this account/region.",
+            },
+          ],
+        };
+      }
+
+      const formatted = queues.map((url) => `- ${url}`).join("\n");
+
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: [
+              `Found ${queues.length} queues:`,
+              "",
+              formatted,
+              "",
+              "Use aws_sqs_get_queue_attributes for details on a specific queue.",
+            ].join("\n"),
+          },
+        ],
+      };
+    },
+  );
+
+  log.info("Registered tool: aws_sqs_list_queues");
+
+  // SQS: Get Queue Attributes
+  server.tool(
+    "aws_sqs_get_queue_attributes",
+    "Get attributes for an SQS queue including approximate message count, visibility timeout, and dead-letter config.",
+    {
+      queueUrl: z.string().describe("SQS queue URL"),
+      profile: z.string().optional().describe("AWS profile to use"),
+      region: z.string().optional().describe("AWS region"),
+    },
+    async ({ queueUrl, profile, region }) => {
+      log.info("Tool called: aws_sqs_get_queue_attributes");
+
+      const result = await getSQSQueueAttributes(
+        {
+          queueUrl,
+          profile,
+          region,
+        },
+        log,
+      );
+
+      if (!result.success) {
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: `Error: ${result.error}`,
+            },
+          ],
+        };
+      }
+
+      const attrs = result.data?.Attributes;
+      if (!attrs) {
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: `No attributes found for queue.`,
+            },
+          ],
+        };
+      }
+
+      const formatted = Object.entries(attrs)
+        .map(([key, value]) => `- ${key}: ${value}`)
+        .join("\n");
+
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: [`Queue Attributes:`, "", formatted].join("\n"),
+          },
+        ],
+      };
+    },
+  );
+
+  log.info("Registered tool: aws_sqs_get_queue_attributes");
+
+  // SQS: Receive Message
+  server.tool(
+    "aws_sqs_receive_message",
+    "Receive messages from an SQS queue for inspection. Messages are returned to the queue after visibility timeout.",
+    {
+      queueUrl: z.string().describe("SQS queue URL"),
+      maxNumberOfMessages: z
+        .number()
+        .optional()
+        .describe("Max messages to receive (1-10, default 1)"),
+      visibilityTimeout: z
+        .number()
+        .optional()
+        .describe("Seconds to hide message (default 30)"),
+      profile: z.string().optional().describe("AWS profile to use"),
+      region: z.string().optional().describe("AWS region"),
+    },
+    async ({
+      queueUrl,
+      maxNumberOfMessages,
+      visibilityTimeout,
+      profile,
+      region,
+    }) => {
+      log.info("Tool called: aws_sqs_receive_message");
+
+      const result = await receiveSQSMessage(
+        {
+          queueUrl,
+          maxNumberOfMessages: maxNumberOfMessages || 1,
+          visibilityTimeout: visibilityTimeout || 30,
+          profile,
+          region,
+        },
+        log,
+      );
+
+      if (!result.success) {
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: `Error: ${result.error}`,
+            },
+          ],
+        };
+      }
+
+      const messages = result.data?.Messages || [];
+      if (messages.length === 0) {
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: `No messages available in the queue.`,
+            },
+          ],
+        };
+      }
+
+      const formatted = messages
+        .map((m, i) => {
+          return [
+            `Message ${i + 1}:`,
+            `  ID: ${m.MessageId}`,
+            `  Body: ${m.Body}`,
+            m.Attributes
+              ? `  Attributes: ${JSON.stringify(m.Attributes)}`
+              : null,
+          ]
+            .filter(Boolean)
+            .join("\n");
+        })
+        .join("\n\n");
+
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: [
+              `Received ${messages.length} messages (will be returned to queue after visibility timeout):`,
+              "",
+              formatted,
+            ].join("\n"),
+          },
+        ],
+      };
+    },
+  );
+
+  log.info("Registered tool: aws_sqs_receive_message");
+
+  // SQS: Purge Queue
+  server.tool(
+    "aws_sqs_purge_queue",
+    "Delete all messages from an SQS queue. Use with caution - this is irreversible.",
+    {
+      queueUrl: z.string().describe("SQS queue URL"),
+      profile: z.string().optional().describe("AWS profile to use"),
+      region: z.string().optional().describe("AWS region"),
+    },
+    async ({ queueUrl, profile, region }) => {
+      log.info("Tool called: aws_sqs_purge_queue");
+
+      const result = await purgeSQSQueue(
+        {
+          queueUrl,
+          profile,
+          region,
+        },
+        log,
+      );
+
+      if (!result.success) {
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: `Error: ${result.error}`,
+            },
+          ],
+        };
+      }
+
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: `Queue purged successfully. All messages have been deleted.`,
+          },
+        ],
+      };
+    },
+  );
+
+  log.info("Registered tool: aws_sqs_purge_queue");
 
   log.info("MCP server configuration complete");
 

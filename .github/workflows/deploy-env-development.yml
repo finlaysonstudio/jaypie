@@ -1,0 +1,115 @@
+name: Build Stacks to Development
+
+on:
+  push:
+    branches:
+      - main
+      - development/*
+    tags:
+      - development-*
+    paths:
+      - 'stacks/**'
+      - '.github/actions/**'
+      - '.github/workflows/deploy-env-*.yml'
+      - '.github/workflows/deploy-stack-*.yml'
+
+concurrency:
+  group: deploy-env-development
+
+jobs:
+  deploy:
+    environment: development
+    name: Deploy to AWS
+    needs: [lint, test]
+    permissions:
+      contents: read
+      id-token: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Environment
+        id: setup-env
+        uses: ./.github/actions/setup-environment
+        with:
+          aws-hosted-zone: ${{ vars.AWS_HOSTED_ZONE }}
+          aws-region: ${{ vars.AWS_REGION }}
+          aws-role-arn: ${{ vars.AWS_ROLE_ARN }}
+          datadog-api-key-arn: ${{ vars.DATADOG_API_KEY_ARN }}
+          log-level: ${{ vars.LOG_LEVEL }}
+          module-log-level: ${{ vars.MODULE_LOG_LEVEL }}
+          project-env: ${{ vars.PROJECT_ENV }}
+          project-key: ${{ vars.PROJECT_KEY }}
+          project-nonce: ${{ vars.PROJECT_NONCE }}
+          project-service: ${{ vars.PROJECT_SERVICE }}
+          project-sponsor: ${{ vars.PROJECT_SPONSOR }}
+
+      - name: Configure AWS Credentials
+        uses: ./.github/actions/configure-aws
+        with:
+          aws-region: ${{ steps.setup-env.outputs.aws-region }}
+          role-arn: ${{ steps.setup-env.outputs.aws-role-arn }}
+
+      - name: Setup Node.js and Cache
+        uses: ./.github/actions/setup-node-and-cache
+        with:
+          node-version: 24
+
+      - name: Install and Build
+        uses: ./.github/actions/npm-install-build
+
+      - name: Deploy CDK Stack
+        uses: ./.github/actions/cdk-deploy
+        with:
+          cdk-package-path: stacks/cdk
+          stack-name: JaypieDocumentation
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js and Cache
+        id: setup-cache
+        uses: ./.github/actions/setup-node-and-cache
+        with:
+          node-version: 24
+
+      - name: Install dependencies
+        if: steps.setup-cache.outputs.node-modules-cache-hit != 'true'
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Run Lint
+        run: npm run lint
+
+  test:
+    name: Unit Test
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [22, 24]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node-version }} and Cache
+        id: setup-cache
+        uses: ./.github/actions/setup-node-and-cache
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Install dependencies
+        if: steps.setup-cache.outputs.node-modules-cache-hit != 'true'
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Run Tests
+        run: npm test

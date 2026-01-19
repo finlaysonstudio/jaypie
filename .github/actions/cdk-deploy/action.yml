@@ -1,0 +1,41 @@
+name: CDK Build and Deploy
+description: Build and deploy AWS CDK stack with caching
+
+inputs:
+  stack-name:
+    description: CDK stack name to deploy
+    required: true
+  cdk-package-path:
+    description: Path to CDK package
+    required: false
+    default: packages/cdk
+
+runs:
+  using: composite
+  steps:
+    - name: Cache CDK build
+      id: cache-cdk
+      uses: actions/cache@v4
+      with:
+        path: ${{ inputs.cdk-package-path }}/dist
+        key: ${{ runner.os }}-cdk-build-${{ hashFiles(format('{0}/package.json', inputs.cdk-package-path), format('{0}/package-lock.json', inputs.cdk-package-path), format('{0}/tsconfig.json', inputs.cdk-package-path), format('{0}/bin/**', inputs.cdk-package-path), format('{0}/lib/**', inputs.cdk-package-path)) }}
+        restore-keys: |
+          ${{ runner.os }}-cdk-build-
+
+    - name: CDK Cache Status
+      shell: bash
+      run: |
+        if [ "${{ steps.cache-cdk.outputs.cache-hit }}" == "true" ]; then
+          echo "✓ CDK build cache HIT - skipping rebuild"
+        else
+          echo "✗ CDK build cache MISS - will rebuild"
+        fi
+
+    - name: Build CDK
+      if: steps.cache-cdk.outputs.cache-hit != 'true'
+      shell: bash
+      run: npm --prefix ${{ inputs.cdk-package-path }} run build
+
+    - name: Deploy CDK Stack
+      shell: bash
+      run: npm --workspace ${{ inputs.cdk-package-path }} run cdk deploy -- ${{ inputs.stack-name }} --require-approval never
