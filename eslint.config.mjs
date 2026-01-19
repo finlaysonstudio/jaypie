@@ -19,6 +19,8 @@ export default [
       "packages/express/docker/**",
       "stacks/documentation/.docusaurus/**",
       "stacks/documentation/build/**",
+      "stacks/garden/.next/**",
+      "stacks/garden/out/**",
     ],
   },
 

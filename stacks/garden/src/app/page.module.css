@@ -1,0 +1,67 @@
+.main {
+  align-items: center;
+  display: flex;
+  height: 100vh;
+  justify-content: center;
+  position: relative;
+  width: 100%;
+}
+
+.navBox {
+  background: rgba(122, 102, 82, 0.05);
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  display: flex;
+  gap: 0;
+  left: 16px;
+  padding: 0;
+  position: absolute;
+  top: 16px;
+  transition: all 0.15s ease;
+}
+
+.navBox:has(.iconButton:hover) {
+  background: transparent;
+  box-shadow: none;
+}
+
+.iconButton {
+  align-items: center;
+  border-radius: 7px;
+  cursor: pointer;
+  display: flex;
+  height: 48px;
+  justify-content: center;
+  transition: all 0.15s ease;
+  width: 48px;
+}
+
+.iconButton:last-child {
+  transform: translateY(1px);
+}
+
+.iconButton svg {
+  color: rgba(207, 203, 199, 0.5);
+  stroke-width: var(--icon-stroke-thin);
+  transition:
+    color 0.15s ease,
+    stroke-width 0.15s ease;
+}
+
+.iconButton:hover {
+  background: rgba(122, 102, 82, 0.1);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.iconButton:hover svg {
+  color: var(--text-primary);
+  stroke-width: var(--icon-stroke-normal);
+}
+
+.hero {
+  font-family: var(--font-brand);
+  font-size: clamp(2.5rem, 8vw, 5rem);
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  text-align: center;
+}

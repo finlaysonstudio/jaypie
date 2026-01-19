@@ -1,0 +1,173 @@
+/* Google Fonts - must be first */
+@import url("https://fonts.googleapis.com/css2?family=Faculty+Glyphic&family=Inter:wght@400;500;600&family=Noto+Sans:ital,wght@0,400;0,500;1,400&family=Noto+Sans+Mono:wght@400;500&family=Noto+Serif:ital,wght@0,400;0,500;1,400&family=Noto+Serif+Display:ital,wght@0,400;0,500;1,400&display=swap");
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* Jaypie Design System */
+:root {
+  /* Zinc palette for backgrounds (boar), gray for foregrounds (bore) */
+  --bg-primary: #282726; /* zinc-800 */
+  --bg-secondary: #161514; /* zinc-900 */
+  --bg-light: #f8f6f5; /* zinc-50 */
+  --text-primary: #cccbca; /* gray-200 */
+  --text-muted: #6c6b6a; /* gray-500 */
+
+  /* Accent colors (brown palette) */
+  --accent-bronze: #7a6652; /* brown-500 */
+  --accent-bronze-hover: #635242; /* brown-600 */
+
+  /* Layout */
+  --corner-size: 48px;
+  --border-color: rgba(207, 203, 199, 0.1);
+
+  /* Typography */
+  --font-brand: "Faculty Glyphic", serif;
+  --font-heading: "Faculty Glyphic", serif;
+  --font-body: "Noto Serif", serif;
+  --font-user: "Noto Sans", system-ui, sans-serif;
+  --font-system: "Inter", system-ui, sans-serif;
+  --font-ui: "Inter", system-ui, sans-serif;
+  --font-footer: "Inter", system-ui, sans-serif;
+  --font-code: "Noto Sans Mono", ui-monospace, SFMono-Regular, Monaco, Consolas,
+    monospace;
+
+  /* Icon stroke */
+  --icon-stroke-thin: 1;
+  --icon-stroke-normal: 1.5;
+}
+
+html,
+body {
+  height: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+body {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+}
+
+/* Font utility classes */
+.font-brand {
+  font-family: var(--font-brand);
+}
+
+.font-heading {
+  font-family: var(--font-heading);
+}
+
+.font-body {
+  font-family: var(--font-body);
+}
+
+.font-user {
+  font-family: var(--font-user);
+}
+
+.font-system {
+  font-family: var(--font-system);
+}
+
+.font-ui {
+  font-family: var(--font-ui);
+}
+
+.font-footer {
+  font-family: var(--font-footer);
+}
+
+.font-code {
+  font-family: var(--font-code);
+}
+
+/* Corner buttons - equal size clickable areas */
+.corner-button {
+  align-items: center;
+  cursor: pointer;
+  display: flex;
+  height: var(--corner-size);
+  justify-content: center;
+  transition: all 0.15s ease;
+  width: var(--corner-size);
+}
+
+.corner-button svg {
+  stroke-width: var(--icon-stroke-thin);
+  transition: stroke-width 0.15s ease;
+}
+
+.corner-button:hover svg {
+  stroke-width: var(--icon-stroke-normal);
+}
+
+/* Grid layout borders */
+.grid-border-right {
+  border-right: 1px solid var(--border-color);
+}
+
+.grid-border-bottom {
+  border-bottom: 1px solid var(--border-color);
+}
+
+.grid-border-top {
+  border-top: 1px solid var(--border-color);
+}
+
+/* Scrollbar styling - overlay style */
+::-webkit-scrollbar {
+  height: 8px;
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 4px;
+  transition: background 0.2s ease;
+}
+
+/* Show scrollbar on hover or when actively scrolling */
+*:hover::-webkit-scrollbar-thumb,
+*:active::-webkit-scrollbar-thumb {
+  background: var(--accent-bronze);
+}
+
+*:hover::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-bronze-hover);
+}
+
+/* Firefox */
+* {
+  scrollbar-color: transparent transparent;
+  scrollbar-width: thin;
+}
+
+*:hover {
+  scrollbar-color: var(--accent-bronze) transparent;
+}
+
+/* Input styling */
+input[type="text"],
+textarea {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+input[type="text"]:focus,
+textarea:focus {
+  outline: none;
+}
+
+input[type="text"]::placeholder,
+textarea::placeholder {
+  color: var(--text-muted);
+}
