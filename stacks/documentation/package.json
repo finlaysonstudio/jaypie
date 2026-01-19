@@ -1,6 +1,6 @@
 {
   "name": "@jaypie/documentation",
-  "version": "1.2.3",
+  "version": "1.2.4",
   "private": true,
   "description": "Documentation site for Jaypie monorepo",
   "license": "MIT",

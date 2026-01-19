@@ -84,14 +84,13 @@ The `createLambdaStreamHandler` uses `awslambda.streamifyResponse()` which only 
 
 **For real-time streaming:**
 - Deploy to AWS with a Lambda Function URL
-- Use `invokeMode: lambda.InvokeMode.RESPONSE_STREAM` in `JaypieDistribution`
+- Use `streaming: true` in `JaypieDistribution`
 - Streaming will work in production even though it can't be tested locally
 
 ### Deploying Streaming
 
 ```typescript
 import { JaypieExpressLambda, JaypieDistribution } from "@jaypie/constructs";
-import * as lambda from "aws-cdk-lib/aws-lambda";
 
 const api = new JaypieExpressLambda(this, "Api", {
   code: "dist/api",
@@ -100,7 +99,7 @@ const api = new JaypieExpressLambda(this, "Api", {
 
 new JaypieDistribution(this, "Distribution", {
   handler: api,
-  invokeMode: lambda.InvokeMode.RESPONSE_STREAM,
+  streaming: true,
   host: "api.example.com",
   zone: "example.com",
 });

@@ -1,7 +1,30 @@
-import { loadEnvSecrets } from "@jaypie/aws";
+import {
+  formatStreamError,
+  getContentTypeForFormat,
+  loadEnvSecrets,
+} from "@jaypie/aws";
+import type { StreamFormat } from "@jaypie/aws";
 import { ConfigurationError, UnhandledError } from "@jaypie/errors";
 import { JAYPIE, jaypieHandler } from "@jaypie/kit";
 import { log as publicLogger } from "@jaypie/logger";
+
+//
+//
+// Globals
+//
+
+// Declare awslambda global for Lambda runtime
+declare const awslambda:
+  | {
+      streamifyResponse: <T>(
+        handler: (
+          event: T,
+          responseStream: ResponseStream,
+          context: LambdaStreamContext,
+        ) => Promise<void>,
+      ) => (event: T, context: LambdaStreamContext) => Promise<void>;
+    }
+  | undefined;
 
 //
 //
@@ -38,6 +61,7 @@ type LifecycleFunction = (...args: unknown[]) => void | Promise<void>;
 export interface LambdaStreamHandlerOptions {
   chaos?: string;
   contentType?: string;
+  format?: StreamFormat;
   name?: string;
   secrets?: string[];
   setup?: LifecycleFunction[];
@@ -88,21 +112,27 @@ interface JaypieLibLogger {
   };
 }
 
+/**
+ * Wrapped Lambda handler (after awslambda.streamifyResponse)
+ */
+export type LambdaHandler<TEvent = unknown> = (
+  event: TEvent,
+  context: LambdaStreamContext,
+) => Promise<void>;
+
 //
 //
 // Helper
 //
 
 /**
- * Format an error as an SSE error event
+ * Get error body from an error
  */
-function formatErrorSSE(error: JaypieError | Error): string {
+function getErrorBody(error: JaypieError | Error): Record<string, unknown> {
   const isJaypieError = (error as JaypieError).isProjectError;
-  const body = isJaypieError
-    ? (error as JaypieError).body()
-    : new UnhandledError().body();
-
-  return `event: error\ndata: ${JSON.stringify(body)}\n\n`;
+  return isJaypieError
+    ? ((error as JaypieError).body() as unknown as Record<string, unknown>)
+    : (new UnhandledError().body() as unknown as Record<string, unknown>);
 }
 
 //
@@ -112,26 +142,30 @@ function formatErrorSSE(error: JaypieError | Error): string {
 
 /**
  * Creates a streaming Lambda handler compatible with AWS Lambda Response Streaming.
+ * Automatically wraps with awslambda.streamifyResponse() in Lambda environment.
  *
- * Usage with awslambda.streamifyResponse:
+ * Usage:
  * ```ts
- * export const handler = awslambda.streamifyResponse(
- *   lambdaStreamHandler(async (event, context) => {
- *     const llmStream = llm.stream("Hello");
- *     await createLambdaStream(llmStream, context.responseStream);
- *   })
- * );
+ * export const handler = lambdaStreamHandler(async (event, context) => {
+ *   const llmStream = llm.stream("Hello");
+ *   await createLambdaStream(llmStream, context.responseStream);
+ * });
  * ```
  *
  * The handler receives an extended context with `responseStream` for direct access
  * to the Lambda response stream writer.
+ *
+ * Supports both SSE (default) and NLJSON formats:
+ * ```ts
+ * export const handler = lambdaStreamHandler(myHandler, { format: "nljson" });
+ * ```
  */
 const lambdaStreamHandler = function <TEvent = unknown>(
   handler: LambdaStreamHandlerFunction<TEvent> | LambdaStreamHandlerOptions,
   options:
     | LambdaStreamHandlerOptions
     | LambdaStreamHandlerFunction<TEvent> = {},
-): AwsStreamingHandler<TEvent> {
+): LambdaHandler<TEvent> {
   // If handler is an object and options is a function, swap them
   if (typeof handler === "object" && typeof options === "function") {
     const temp = handler;
@@ -140,9 +174,10 @@ const lambdaStreamHandler = function <TEvent = unknown>(
   }
 
   const opts = options as LambdaStreamHandlerOptions;
+  const format: StreamFormat = opts.format ?? "sse";
   let {
     chaos,
-    contentType = "text/event-stream",
+    contentType = getContentTypeForFormat(format),
     name,
     secrets,
     setup = [],
@@ -177,7 +212,7 @@ const lambdaStreamHandler = function <TEvent = unknown>(
   // Setup
   //
 
-  return async (
+  const innerHandler: AwsStreamingHandler<TEvent> = async (
     event: TEvent = {} as TEvent,
     responseStream: ResponseStream,
     context: LambdaStreamContext = {},
@@ -271,15 +306,16 @@ const lambdaStreamHandler = function <TEvent = unknown>(
       if ((error as JaypieError).isProjectError) {
         log.debug("Caught jaypie error");
         log.info.var({ jaypieError: error });
-        // Write error as SSE event
-        responseStream.write(formatErrorSSE(error as JaypieError));
       } else {
         // Otherwise, flag unhandled errors as fatal
         log.fatal("Caught unhandled error");
         log.info.var({ unhandledError: (error as Error).message });
-        // Write unhandled error as SSE event
-        responseStream.write(formatErrorSSE(error as Error));
       }
+
+      // Write error in the appropriate format
+      const errorBody = getErrorBody(error as JaypieError | Error);
+      responseStream.write(formatStreamError(errorBody, format));
+
       if (shouldThrow) {
         libLogger.debug(
           `Throwing error instead of streaming response (throw=${shouldThrow})`,
@@ -299,6 +335,20 @@ const lambdaStreamHandler = function <TEvent = unknown>(
       (publicLogger as unknown as JaypieLogger).untag("handler");
     }
   };
+
+  //
+  //
+  // Auto-wrap with awslambda.streamifyResponse()
+  //
+
+  // Check if awslambda global exists (Lambda runtime)
+  if (typeof awslambda !== "undefined" && awslambda?.streamifyResponse) {
+    return awslambda.streamifyResponse(innerHandler);
+  }
+
+  // For testing - return a handler that accepts a mock response stream
+  // This allows tests to pass a mock stream directly
+  return innerHandler as unknown as LambdaHandler<TEvent>;
 };
 
 //
@@ -307,3 +357,6 @@ const lambdaStreamHandler = function <TEvent = unknown>(
 //
 
 export default lambdaStreamHandler;
+
+// Also export the raw handler type for testing purposes
+export type { AwsStreamingHandler as RawStreamingHandler };

@@ -59,11 +59,41 @@ export const sendTextractJob = createMockFunction<
 });
 
 // Streaming utilities
-export const formatSSE = createMockFunction<
+export const formatNljson = createMockFunction<
+  (chunk: Record<string, unknown>) => string
+>((chunk) => JSON.stringify(chunk) + "\n");
+
+export const formatSse = createMockFunction<
   (chunk: { type: string; [key: string]: unknown }) => string
 >((chunk) => `event: ${chunk.type}\ndata: ${JSON.stringify(chunk)}\n\n`);
 
-export const streamToSSE = createMockFunction<
+export const formatStreamError = createMockFunction<
+  (errorBody: Record<string, unknown>, format?: string) => string
+>((errorBody, format = "sse") => {
+  if (format === "nljson") {
+    return JSON.stringify({ error: errorBody }) + "\n";
+  }
+  return `event: error\ndata: ${JSON.stringify(errorBody)}\n\n`;
+});
+
+export const formatStreamErrorNljson = createMockFunction<
+  (errorBody: Record<string, unknown>) => string
+>((errorBody) => JSON.stringify({ error: errorBody }) + "\n");
+
+export const formatStreamErrorSse = createMockFunction<
+  (errorBody: Record<string, unknown>) => string
+>((errorBody) => `event: error\ndata: ${JSON.stringify(errorBody)}\n\n`);
+
+export const getContentTypeForFormat = createMockFunction<
+  (format: string) => string
+>((format) => {
+  if (format === "nljson") {
+    return "application/x-ndjson";
+  }
+  return "text/event-stream";
+});
+
+export const streamToSse = createMockFunction<
   (stream: AsyncIterable<unknown>) => AsyncIterable<string>
 >(async function* (stream) {
   for await (const chunk of stream) {
@@ -138,7 +168,7 @@ export class JaypieStream {
     return this.source[Symbol.asyncIterator]();
   }
 
-  toSSE(): AsyncIterable<string> {
+  toSse(): AsyncIterable<string> {
     const source = this.source;
     return {
       async *[Symbol.asyncIterator]() {

@@ -5,16 +5,10 @@ export {
   JaypieAccountLoggingBucket,
   JaypieAccountLoggingBucketProps,
 } from "./JaypieAccountLoggingBucket";
-export {
-  JaypieApiGateway,
-  JaypieApiGatewayProps,
-} from "./JaypieApiGateway";
+export { JaypieApiGateway, JaypieApiGatewayProps } from "./JaypieApiGateway";
 export { JaypieAppStack } from "./JaypieAppStack";
 export { JaypieBucketQueuedLambda } from "./JaypieBucketQueuedLambda";
-export {
-  JaypieCertificate,
-  JaypieCertificateProps,
-} from "./JaypieCertificate";
+export { JaypieCertificate, JaypieCertificateProps } from "./JaypieCertificate";
 export {
   JaypieDatadogBucket,
   JaypieDatadogBucketProps,

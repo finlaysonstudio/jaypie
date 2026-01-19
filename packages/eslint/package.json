@@ -1,6 +1,6 @@
 {
   "name": "@jaypie/eslint",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/finlaysonstudio/jaypie.git"
@@ -28,8 +28,6 @@
     "format:package": "sort-package-json ./package.json",
     "lint": "eslint .",
     "test": "vitest run .",
-    "test:spec:index": "vitest run ./index.spec.js",
-    "test:spec:typescript": "vitest run ./__tests__/typescript.spec.js",
     "typecheck": "echo '[TODO] Convert @jaypie/eslint to TypeScript'"
   },
   "dependencies": {

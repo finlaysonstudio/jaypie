@@ -4,9 +4,9 @@ import {
   createExpressStream,
   createJaypieStream,
   createLambdaStream,
-  formatSSE,
+  formatSse,
   JaypieStream,
-  streamToSSE,
+  streamToSse,
   StreamChunk,
 } from "../streaming/JaypieStream.js";
 
@@ -39,11 +39,11 @@ async function* createMockStream(): AsyncIterable<StreamChunk> {
 
 describe("JaypieStream", () => {
   //
-  // formatSSE
+  // formatSse
   //
-  describe("formatSSE", () => {
+  describe("formatSse", () => {
     it("formats a chunk as SSE event", () => {
-      const result = formatSSE(mockChunk);
+      const result = formatSse(mockChunk);
       expect(result).toBe(
         'event: text\ndata: {"type":"text","content":"Hello world"}\n\n',
       );
@@ -51,24 +51,24 @@ describe("JaypieStream", () => {
 
     it("uses chunk.type as the event name", () => {
       const chunk: StreamChunk = { type: "custom_event", value: 42 };
-      const result = formatSSE(chunk);
+      const result = formatSse(chunk);
       expect(result).toContain("event: custom_event");
     });
 
     it("includes the full chunk as JSON in data", () => {
       const chunk: StreamChunk = { type: "test", nested: { foo: "bar" } };
-      const result = formatSSE(chunk);
+      const result = formatSse(chunk);
       expect(result).toContain('data: {"type":"test","nested":{"foo":"bar"}}');
     });
   });
 
   //
-  // streamToSSE
+  // streamToSse
   //
-  describe("streamToSSE", () => {
+  describe("streamToSse", () => {
     it("converts async iterable to SSE strings", async () => {
       const results: string[] = [];
-      for await (const sse of streamToSSE(createMockStream())) {
+      for await (const sse of streamToSse(createMockStream())) {
         results.push(sse);
       }
       expect(results).toHaveLength(3);
@@ -172,11 +172,11 @@ describe("JaypieStream", () => {
       expect(results).toHaveLength(3);
     });
 
-    it("has toSSE method", async () => {
+    it("has toSse method", async () => {
       const stream = new JaypieStream(createMockStream());
       const results: string[] = [];
 
-      for await (const sse of stream.toSSE()) {
+      for await (const sse of stream.toSse()) {
         results.push(sse);
       }
 

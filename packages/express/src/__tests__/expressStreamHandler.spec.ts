@@ -255,4 +255,84 @@ describe("expressStreamHandler", () => {
       expect(res.end).toHaveBeenCalled();
     });
   });
+
+  //
+  // Format Options
+  //
+  describe("Format Options", () => {
+    it("uses SSE format by default", async () => {
+      const handler = expressStreamHandler(async () => {
+        throw new BadRequestError("Test error");
+      });
+      const req = createMockRequest();
+      const res = createMockResponse();
+
+      await handler(req as Request, res as unknown as Response);
+
+      const errorChunk = res.chunks.find((c) => c.includes("event: error"));
+      expect(errorChunk).toBeDefined();
+      expect(errorChunk).toContain("event: error\ndata:");
+    });
+
+    it("uses NLJSON format when specified", async () => {
+      const handler = expressStreamHandler(
+        async () => {
+          throw new BadRequestError("Test error");
+        },
+        { format: "nljson" },
+      );
+      const req = createMockRequest();
+      const res = createMockResponse();
+
+      await handler(req as Request, res as unknown as Response);
+
+      // NLJSON format wraps the error body in an { error: ... } object
+      const errorChunk = res.chunks.find((c) => c.includes('"error"'));
+      expect(errorChunk).toBeDefined();
+      expect(errorChunk).not.toContain("event:");
+      expect(errorChunk).toMatch(/\n$/);
+    });
+
+    it("sets application/x-ndjson content type for NLJSON format", async () => {
+      const handler = expressStreamHandler(async () => {}, { format: "nljson" });
+      const req = createMockRequest();
+      const res = createMockResponse();
+
+      await handler(req as Request, res as unknown as Response);
+
+      expect(res.setHeader).toHaveBeenCalledWith(
+        "Content-Type",
+        "application/x-ndjson",
+      );
+    });
+
+    it("sets text/event-stream content type for SSE format", async () => {
+      const handler = expressStreamHandler(async () => {}, { format: "sse" });
+      const req = createMockRequest();
+      const res = createMockResponse();
+
+      await handler(req as Request, res as unknown as Response);
+
+      expect(res.setHeader).toHaveBeenCalledWith(
+        "Content-Type",
+        "text/event-stream",
+      );
+    });
+
+    it("allows custom content type to override format default", async () => {
+      const handler = expressStreamHandler(async () => {}, {
+        format: "nljson",
+        contentType: "application/json",
+      });
+      const req = createMockRequest();
+      const res = createMockResponse();
+
+      await handler(req as Request, res as unknown as Response);
+
+      expect(res.setHeader).toHaveBeenCalledWith(
+        "Content-Type",
+        "application/json",
+      );
+    });
+  });
 });

@@ -1,6 +1,6 @@
 {
   "name": "@jaypie/aws",
-  "version": "1.2.3",
+  "version": "1.2.4",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/finlaysonstudio/jaypie.git"
@@ -30,15 +30,6 @@
     "format:package": "sort-package-json ./package.json",
     "lint": "eslint .",
     "test": "vitest run .",
-    "test:spec:getMessages.function": "vitest run ./src/__tests__/getMessages.function.spec.ts",
-    "test:spec:getSecret.function": "vitest run ./src/__tests__/getSecret.function.spec.ts",
-    "test:spec:getSingletonMessage.function": "vitest run ./src/__tests__/getSingletonMessage.function.spec.ts",
-    "test:spec:getTextractJob.function": "vitest run ./src/__tests__/getTextractJob.function.spec.ts",
-    "test:spec:index": "vitest run ./src/__tests__/index.spec.ts",
-    "test:spec:sendBatchMessages.function": "vitest run ./src/__tests__/sendBatchMessages.function.spec.ts",
-    "test:spec:sendMessage.function": "vitest run ./src/__tests__/sendMessage.function.spec.ts",
-    "test:spec:sendTextractJob.function": "vitest run ./src/__tests__/sendTextractJob.function.spec.ts",
-    "test:spec:validateQueueUrl.util": "vitest run ./src/__tests__/validateQueueUrl.util.spec.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

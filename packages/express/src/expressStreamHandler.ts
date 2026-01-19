@@ -1,5 +1,10 @@
 import type { Request, Response } from "express";
-import { loadEnvSecrets } from "@jaypie/aws";
+import {
+  formatStreamError,
+  getContentTypeForFormat,
+  loadEnvSecrets,
+} from "@jaypie/aws";
+import type { StreamFormat } from "@jaypie/aws";
 import { BadRequestError, UnhandledError } from "@jaypie/errors";
 import { force, getHeaderFrom, JAYPIE, jaypieHandler } from "@jaypie/kit";
 import { log as publicLogger } from "@jaypie/logger";
@@ -78,6 +83,7 @@ export type ExpressStreamHandlerLocals = (
 export interface ExpressStreamHandlerOptions {
   chaos?: string;
   contentType?: string;
+  format?: StreamFormat;
   locals?: Record<string, unknown | ExpressStreamHandlerLocals>;
   name?: string;
   secrets?: string[];
@@ -124,15 +130,13 @@ const logger = publicLogger as unknown as ExtendedLogger;
 //
 
 /**
- * Format an error as an SSE error event
+ * Get error body from an error
  */
-function formatErrorSSE(error: JaypieError | Error): string {
+function getErrorBody(error: JaypieError | Error): Record<string, unknown> {
   const isJaypieError = (error as JaypieError).isProjectError;
-  const body = isJaypieError
+  return isJaypieError
     ? ((error as JaypieError).body?.() ?? { error: error.message })
-    : new UnhandledError().body();
-
-  return `event: error\ndata: ${JSON.stringify(body)}\n\n`;
+    : (new UnhandledError().body() as unknown as Record<string, unknown>);
 }
 
 //
@@ -192,9 +196,10 @@ function expressStreamHandler(
   //
   // Validate
   //
+  const format: StreamFormat = options.format ?? "sse";
   let {
     chaos,
-    contentType = "text/event-stream",
+    contentType = getContentTypeForFormat(format),
     locals,
     name,
     secrets,
@@ -377,9 +382,10 @@ function expressStreamHandler(
         log.info.var({ unhandledError: (error as Error).message });
       }
 
-      // Write error as SSE event
+      // Write error in the appropriate format
       try {
-        res.write(formatErrorSSE(error as Error));
+        const errorBody = getErrorBody(error as Error);
+        res.write(formatStreamError(errorBody, format));
       } catch {
         // Response may already be closed
         log.warn("Failed to write error to stream - response may be closed");

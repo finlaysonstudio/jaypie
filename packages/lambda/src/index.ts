@@ -14,9 +14,14 @@ export type {
 } from "./lambdaHandler.js";
 export type {
   AwsStreamingHandler,
+  LambdaHandler,
   LambdaStreamContext,
   LambdaStreamHandlerFunction,
   LambdaStreamHandlerOptions,
+  RawStreamingHandler,
   ResponseStream,
   StreamHandlerContext,
 } from "./lambdaStreamHandler.js";
+
+// Re-export StreamFormat from @jaypie/aws for convenience
+export type { StreamFormat } from "@jaypie/aws";

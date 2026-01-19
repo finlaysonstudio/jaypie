@@ -1,6 +1,6 @@
 {
   "name": "@jaypie/datadog",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/finlaysonstudio/jaypie.git"
@@ -30,11 +30,6 @@
     "format:package": "sort-package-json ./package.json",
     "lint": "eslint .",
     "test": "vitest run .",
-    "test:spec:constants": "vitest run ./src/__tests__/constants.spec.ts",
-    "test:spec:index": "vitest run ./src/__tests__/index.spec.ts",
-    "test:spec:objectToKeyValueArray.pipeline": "vitest run ./src/__tests__/objectToKeyValueArray.pipeline.spec.ts",
-    "test:spec:submitMetric.adapter": "vitest run ./src/__tests__/submitMetric.adapter.spec.ts",
-    "test:spec:submitMetricSet.adapter": "vitest run ./src/__tests__/submitMetricSet.adapter.spec.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

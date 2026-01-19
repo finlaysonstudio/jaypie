@@ -8,7 +8,7 @@ This package provides utilities for:
 - **Secrets Management**: Fetching secrets from AWS Secrets Manager
 - **SQS Messaging**: Sending and receiving messages from SQS queues
 - **Textract**: OCR document processing via AWS Textract
-- **SSE Streaming**: Server-Sent Events streaming for Lambda and Express
+- **Streaming**: SSE and NLJSON streaming for Lambda and Express
 
 ## Directory Structure
 
@@ -56,7 +56,7 @@ src/
 | `sendTextractJob({ bucket, key, ... })` | Start async Textract job |
 | `getTextractJob(jobId)` | Get results of completed Textract job |
 
-### Streaming (SSE)
+### Streaming
 
 | Export | Description |
 |--------|-------------|
@@ -64,22 +64,28 @@ src/
 | `createJaypieStream(source)` | Factory for JaypieStream |
 | `createLambdaStream(stream, writer)` | Stream to Lambda response writer |
 | `createExpressStream(stream, res)` | Stream to Express response |
-| `formatSSE(chunk)` | Format chunk as SSE event string |
-| `streamToSSE(stream)` | Convert async iterable to SSE strings |
+| `formatSse(chunk)` | Format chunk as SSE event string |
+| `formatNljson(chunk)` | Format chunk as NLJSON string |
+| `formatStreamError(errorBody, format)` | Format error based on stream format |
+| `formatStreamErrorSse(errorBody)` | Format error as SSE event |
+| `formatStreamErrorNljson(errorBody)` | Format error as NLJSON |
+| `getContentTypeForFormat(format)` | Get content type for stream format |
+| `streamToSse(stream)` | Convert async iterable to SSE strings |
 
 ### Types
 
 ```typescript
 ExpressStreamResponse
 LambdaStreamWriter
-SSEEvent
+SseEvent
 StreamChunk
+StreamFormat  // "sse" | "nljson"
 ```
 
 ## Usage in Other Packages
 
 ### @jaypie/lambda, @jaypie/express
-Uses `loadEnvSecrets` to load secrets during handler initialization.
+Uses `loadEnvSecrets` to load secrets during handler initialization. Also uses `formatStreamError`, `getContentTypeForFormat` for streaming handlers.
 
 ### @jaypie/llm
 Uses `getEnvSecret` to fetch API keys for LLM providers (Anthropic, OpenAI, Gemini, OpenRouter).
