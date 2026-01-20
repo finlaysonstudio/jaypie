@@ -1,0 +1,70 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: "IAM for github-actions (naming: iam-github-actions-oidc-provider)"
+
+Parameters:
+  GithubRepoParam:
+    Type: String
+    Default: finlaysonstudio/finlaysonstudio-aws
+    Description: "GitHub repo, e.g., my_org/project"
+  NonceParam:
+    Type: String
+    Default: "15def2b9" # 3/29/2024: random string for iam-github-actions-oidc-provider
+    Description: "A random string, usually eight hex. Ideally this is unique per environment"
+  ThumbprintListParam:
+    Type: String
+    Default: 6938fd4d98bab03faadb97b34396831e3780aea1,1c58a3a8518e8759bf075b76b750d4f2df264fcd
+    Description: A thumbprint of an Open ID Connector is a SHA1 hash of the public certificate of the host
+
+Resources:
+  OidcProvider:
+    Type: AWS::IAM::OIDCProvider
+    Properties:
+      Url: "https://token.actions.githubusercontent.com"
+      ClientIdList:
+        - "sts.amazonaws.com"
+      ThumbprintList: !Split [",", !Ref ThumbprintListParam]
+  GitHubDeployIamRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: "/"
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Action: sts:AssumeRoleWithWebIdentity
+            Principal:
+              Federated: !Ref OidcProvider
+            Condition:
+              StringLike:
+                token.actions.githubusercontent.com:sub: !Sub repo:${GithubRepoParam}:*
+      MaxSessionDuration: 3600
+      Description: Github Actions Role
+      Policies:
+      - PolicyName: !Sub "GitHubDeployIamRolePolicy-${NonceParam}"
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          # This grants broad permissions for cdk deployments
+          - Effect: "Allow"
+            Action:
+              - cloudformation:*
+              - route53:ListHostedZones*
+              - ssm:*
+            Resource: "*"
+          # This grants assume role permissions for cdk deployments
+          - Effect: "Allow"
+            Action:
+              - sts:AssumeRole
+              - iam:PassRole
+            Resource:
+              - arn:aws:iam::*:role/cdk-readOnlyRole
+              - arn:aws:iam::*:role/cdk-hnb659fds-file-publishing-*
+              - arn:aws:iam::*:role/cdk-hnb659fds-deploy-role-*
+
+Outputs:
+  OidcProviderArn:
+    Value: !Ref OidcProvider
+    Export:
+      Name: github-oidc-provider
+  GitHubDeployIamRoleArn:
+    Description: IAM role for GitHub
+    Value: !GetAtt GitHubDeployIamRole.Arn

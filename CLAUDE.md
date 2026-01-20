@@ -55,6 +55,8 @@
 | Stack | Description |
 |-------|-------------|
 | `@jaypie/documentation` | Documentation site at jaypie.net (private) |
+| `@jaypie/garden-api` | Garden streaming API deployed via CDK (private) |
+| `@jaypie/garden-nextjs` | Garden Next.js frontend site (private) |
 | `@jaypie/stacks-cdk` | CDK infrastructure for Jaypie stacks (private) |
 
 ## CI/CD Workflows

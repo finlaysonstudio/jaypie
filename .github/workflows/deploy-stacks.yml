@@ -1,0 +1,93 @@
+name: Deploy Stacks (Manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'sandbox'
+        type: choice
+        options:
+          - sandbox
+          - development
+          - production
+      stacks:
+        description: 'Stacks to deploy (space-separated, or "all")'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - JaypieDocumentation
+          - JaypieGardenApi
+          - JaypieGardenNextjs
+          - JaypieGardenApi JaypieGardenNextjs
+      custom_stacks:
+        description: 'Custom stack list (overrides above if provided)'
+        required: false
+        type: string
+
+concurrency:
+  group: deploy-stacks-${{ github.event.inputs.environment }}
+
+jobs:
+  deploy:
+    environment: ${{ github.event.inputs.environment }}
+    name: Deploy to ${{ github.event.inputs.environment }}
+    permissions:
+      contents: read
+      id-token: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Determine stacks to deploy
+        id: stacks
+        run: |
+          if [ -n "${{ github.event.inputs.custom_stacks }}" ]; then
+            STACKS="${{ github.event.inputs.custom_stacks }}"
+          elif [ "${{ github.event.inputs.stacks }}" == "all" ]; then
+            STACKS="JaypieDocumentation JaypieGardenApi JaypieGardenNextjs"
+          else
+            STACKS="${{ github.event.inputs.stacks }}"
+          fi
+          echo "stacks=$STACKS" >> $GITHUB_OUTPUT
+          echo "::notice::Deploying stacks: $STACKS"
+
+      - name: Setup Environment
+        id: setup-env
+        uses: ./.github/actions/setup-environment
+        with:
+          aws-hosted-zone: ${{ vars.AWS_HOSTED_ZONE }}
+          aws-region: ${{ vars.AWS_REGION }}
+          aws-role-arn: ${{ vars.AWS_ROLE_ARN }}
+          datadog-api-key-arn: ${{ vars.DATADOG_API_KEY_ARN }}
+          log-level: ${{ vars.LOG_LEVEL }}
+          module-log-level: ${{ vars.MODULE_LOG_LEVEL }}
+          project-env: ${{ vars.PROJECT_ENV }}
+          project-key: ${{ vars.PROJECT_KEY }}
+          project-nonce: ${{ vars.PROJECT_NONCE }}
+          project-service: ${{ vars.PROJECT_SERVICE }}
+          project-sponsor: ${{ vars.PROJECT_SPONSOR }}
+
+      - name: Configure AWS Credentials
+        uses: ./.github/actions/configure-aws
+        with:
+          aws-region: ${{ steps.setup-env.outputs.aws-region }}
+          role-arn: ${{ steps.setup-env.outputs.aws-role-arn }}
+
+      - name: Setup Node.js and Cache
+        uses: ./.github/actions/setup-node-and-cache
+        with:
+          node-version: 24
+
+      - name: Install and Build
+        uses: ./.github/actions/npm-install-build
+
+      - name: Deploy CDK Stacks
+        uses: ./.github/actions/cdk-deploy
+        with:
+          cdk-package-path: stacks/cdk
+          stack-name: ${{ steps.stacks.outputs.stacks }}

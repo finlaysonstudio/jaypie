@@ -181,12 +181,16 @@ export class JaypieEnvSecret extends Construct implements ISecret {
     return this._secret.secretArn;
   }
 
+  public get secretFullArn(): string | undefined {
+    return this._secret.secretFullArn;
+  }
+
   public get secretName(): string {
     return this._secret.secretName;
   }
 
-  public get secretFullArn(): string | undefined {
-    return this._secret.secretFullArn;
+  public get secretRef(): secretsmanager.SecretReference {
+    return this._secret.secretRef;
   }
 
   public get encryptionKey(): IKey | undefined {

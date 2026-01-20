@@ -353,6 +353,10 @@ export class JaypieCertificate extends Construct implements acm.ICertificate {
   }
 
   // ICertificate implementation
+  public get certificateRef(): acm.CertificateReference {
+    return this.certificate.certificateRef;
+  }
+
   public metricDaysToExpiry(
     props?: import("aws-cdk-lib/aws-cloudwatch").MetricOptions,
   ): import("aws-cdk-lib/aws-cloudwatch").Metric {

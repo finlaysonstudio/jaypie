@@ -59,11 +59,47 @@ jobs:
       - name: Install and Build
         uses: ./.github/actions/npm-install-build
 
-      - name: Deploy CDK Stack
+      - name: Deploy CDK Stacks
         uses: ./.github/actions/cdk-deploy
         with:
           cdk-package-path: stacks/cdk
-          stack-name: JaypieDocumentation
+          stack-name: JaypieDocumentation JaypieGardenApi JaypieGardenNextjs
+
+      - name: Build documentation site
+        run: npm run docs:build
+
+      - name: Fetch documentation deployment outputs
+        id: docs-outputs
+        run: |
+          DOCS_STACK_NAME=cdk-${{ vars.PROJECT_SPONSOR }}-${{ vars.PROJECT_KEY }}-${{ vars.PROJECT_ENV }}-${{ vars.PROJECT_NONCE }}-documentation
+          echo "DOCS_STACK_NAME=$DOCS_STACK_NAME" >> $GITHUB_ENV
+
+          BUCKET_NAME=$(aws cloudformation describe-stacks --stack-name $DOCS_STACK_NAME --query "Stacks[0].Outputs[?OutputKey=='DestinationBucketName'].OutputValue" --output text)
+          echo "DOCS_BUCKET_NAME=$BUCKET_NAME" >> $GITHUB_ENV
+
+          DEPLOY_ROLE_ARN=$(aws cloudformation describe-stacks --stack-name $DOCS_STACK_NAME --query "Stacks[0].Outputs[?OutputKey=='DestinationBucketDeployRoleArn'].OutputValue" --output text)
+          echo "DOCS_DEPLOY_ROLE_ARN=$DEPLOY_ROLE_ARN" >> $GITHUB_ENV
+
+          DISTRIBUTION_ID=$(aws cloudformation describe-stacks --stack-name $DOCS_STACK_NAME --query "Stacks[0].Outputs[?OutputKey=='DistributionId'].OutputValue" --output text)
+          echo "DOCS_DISTRIBUTION_ID=$DISTRIBUTION_ID" >> $GITHUB_ENV
+
+      - name: Assume documentation deploy role
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.DOCS_DEPLOY_ROLE_ARN }}
+          role-session-name: DocsDeployGitHubSession
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Deploy documentation to S3
+        run: |
+          aws s3 sync stacks/documentation/build/ s3://${{ env.DOCS_BUCKET_NAME }}/ --delete
+
+      - name: Invalidate CloudFront cache
+        if: env.DOCS_DISTRIBUTION_ID != '' && env.DOCS_DISTRIBUTION_ID != 'None'
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id ${{ env.DOCS_DISTRIBUTION_ID }} \
+            --paths "/*"
 
   lint:
     name: Lint

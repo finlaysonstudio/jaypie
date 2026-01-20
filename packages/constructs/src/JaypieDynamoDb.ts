@@ -257,6 +257,10 @@ export class JaypieDynamoDb extends Construct implements dynamodb.ITableV2 {
     return this._table.tableName;
   }
 
+  public get tableRef(): dynamodb.TableReference {
+    return this._table.tableRef;
+  }
+
   public get tableStreamArn(): string | undefined {
     return this._table.tableStreamArn;
   }

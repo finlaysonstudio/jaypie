@@ -503,6 +503,92 @@ await handler({ priority: 10 });                // Validation fails (not in [1,2
 await handler({});                              // Missing required field
 ```
 
+## ServiceSuite
+
+ServiceSuite groups fabricService instances for discovery, metadata export, and direct execution. Useful for exposing services through MCP or other interfaces.
+
+### Creating a ServiceSuite
+
+```typescript
+import { createServiceSuite, fabricService } from "@jaypie/fabric";
+
+const suite = createServiceSuite({
+  name: "myapp",
+  version: "1.0.0",
+});
+```
+
+### Registering Services
+
+```typescript
+const greetService = fabricService({
+  alias: "greet",
+  description: "Greet a user",
+  input: {
+    name: { type: String, required: true, description: "User's name" },
+  },
+  service: ({ name }) => `Hello, ${name}!`,
+});
+
+const echoService = fabricService({
+  alias: "echo",
+  description: "Echo input back",
+  input: {
+    message: { type: String, default: "Hello", description: "Message to echo" },
+  },
+  service: ({ message }) => message,
+});
+
+suite.register(greetService, "utils");
+suite.register(echoService, "utils");
+```
+
+### Suite Properties and Methods
+
+```typescript
+// Properties
+suite.name;        // "myapp"
+suite.version;     // "1.0.0"
+suite.categories;  // ["utils"] - sorted array of registered categories
+suite.services;    // Array of ServiceMeta for all registered services
+
+// Methods
+suite.getService("greet");              // ServiceMeta | undefined
+suite.getServicesByCategory("utils");   // ServiceMeta[]
+await suite.execute("greet", { name: "Alice" });  // "Hello, Alice!"
+```
+
+### ServiceMeta Structure
+
+```typescript
+interface ServiceMeta {
+  name: string;        // Service alias
+  description: string; // Service description
+  category: string;    // Category from registration
+  inputs: ServiceInput[];  // Input parameter definitions
+  executable?: boolean;    // True if service can run with no inputs
+}
+
+interface ServiceInput {
+  name: string;
+  type: string;      // "string", "number", "boolean", "object", "array"
+  required: boolean;
+  description: string;
+  enum?: string[];   // For validated string/number types
+}
+```
+
+### TypeScript Types
+
+```typescript
+import type {
+  CreateServiceSuiteConfig,
+  ServiceInput,
+  ServiceMeta,
+  ServiceSuite,
+} from "@jaypie/fabric";
+```
+
 ## Integration with Other Packages
 
 Fabric is designed to be consumed by:
