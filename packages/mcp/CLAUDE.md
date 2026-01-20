@@ -99,6 +99,7 @@ The `skills/` directory contains Jaypie development documentation accessed via t
 ```yaml
 ---
 description: Brief description shown in skill("index") listing
+related: alias1, alias2
 ---
 
 # Skill Title
@@ -106,32 +107,15 @@ description: Brief description shown in skill("index") listing
 Content...
 ```
 
-Available skills include:
-- `aws` - AWS integration and CLI tools
-- `cdk` - CDK constructs and patterns
-- `cicd` - GitHub Actions CI/CD
-- `datadog` - Datadog integration
-- `debugging` - Debugging techniques
-- `dns` - DNS and domain configuration
-- `dynamodb` - DynamoDB patterns
-- `errors` - Error handling
-- `fabric` - Fabric service patterns
-- `index` - Introduction and skill directory
-- `introduction` - Jaypie overview
-- `logs` - Logging patterns
-- `mocks` - Testing mocks via @jaypie/testkit
-- `models` - Data models
-- `secrets` - Secret management
-- `services` - Service patterns
-- `style` - Code style conventions
-- `tests` - Testing patterns
-- `tools` - Available MCP tools
-- `topics` - Topic index
-- `variables` - Environment variables
+Available skills (25 total):
+- **Infrastructure**: aws, cdk, cicd, datadog, dns, dynamodb, secrets, variables
+- **Development**: debugging, errors, logs, mocks, style, tests, writing
+- **Patterns**: fabric, models, services, tools
+- **Reference**: agents, index, jaypie, legacy, releasenotes, topics
 
 When adding new skills:
 1. Create `skills/<alias>.md` with lowercase alphanumeric alias (hyphens/underscores allowed)
-2. Add frontmatter with `description`
+2. Add frontmatter with `description` and optionally `related` (comma-separated aliases)
 3. Skills are automatically available via `skill(alias)`
 
 ## Prompts Directory (Deprecated)
