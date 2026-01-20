@@ -13,6 +13,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./suite": {
+      "types": "./dist/suite.d.ts",
+      "import": "./dist/suite.js"
     }
   },
   "main": "dist/index.js",
@@ -35,6 +39,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@jaypie/fabric": "^0.1.0",
     "@jaypie/llm": "^1.2.2",
     "@modelcontextprotocol/sdk": "^1.17.0",
     "commander": "^14.0.0",

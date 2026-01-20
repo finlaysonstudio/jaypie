@@ -16,7 +16,7 @@ const onwarn = (warning, defaultHandler) => {
 };
 
 export default {
-  input: "src/index.ts",
+  input: ["src/index.ts", "src/suite.ts"],
   onwarn,
   output: {
     dir: "dist",
@@ -38,6 +38,7 @@ export default {
   ],
   external: [
     "@jaypie/errors",
+    "@jaypie/fabric",
     "@jaypie/llm",
     "@modelcontextprotocol/sdk/server/mcp.js",
     "@modelcontextprotocol/sdk/server/stdio.js",

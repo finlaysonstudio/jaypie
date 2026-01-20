@@ -115,6 +115,15 @@ export { fabricService } from "./service.js";
 export { resolveService } from "./resolveService.js";
 export type { ResolveServiceConfig } from "./resolveService.js";
 
+// ServiceSuite
+export { createServiceSuite } from "./ServiceSuite.js";
+export type {
+  CreateServiceSuiteConfig,
+  ServiceInput,
+  ServiceMeta,
+  ServiceSuite,
+} from "./ServiceSuite.js";
+
 // Status Type
 export { isStatus, STATUS_VALUES, StatusType } from "./status.js";
 export type { Status } from "./status.js";
