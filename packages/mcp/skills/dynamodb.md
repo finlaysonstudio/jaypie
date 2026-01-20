@@ -1,5 +1,6 @@
 ---
 description: DynamoDB patterns and queries
+related: aws, cdk, models
 ---
 
 # DynamoDB Patterns
@@ -137,8 +138,3 @@ AWS_ACCESS_KEY_ID=local AWS_SECRET_ACCESS_KEY=local \
   --endpoint-url http://127.0.0.1:8000
 ```
 
-## See Also
-
-- `skill("aws")` - AWS integration
-- `skill("cdk")` - CDK constructs
-- `skill("models")` - Data models

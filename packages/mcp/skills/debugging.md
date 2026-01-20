@@ -1,5 +1,6 @@
 ---
 description: Debugging techniques and troubleshooting
+related: logs, datadog, errors
 ---
 
 # Debugging Techniques
@@ -62,17 +63,17 @@ datadog_logs --query "@dd.cold_start:true" --from "now-1h"
 
 ### Connection Timeouts
 
-For MongoDB/database timeouts:
+For database or external service timeouts:
 
 ```typescript
-// Ensure connection is established before handler
-import { connectMongoose } from "@jaypie/mongoose";
+// Check Lambda timeout settings
+aws_lambda_get_function --functionName "my-function"
 
-export const handler = async (event) => {
-  await connectMongoose();  // Handles reconnection
-  // ... handler logic
-};
+// Look for timeout patterns in logs
+datadog_logs --query "timeout OR ETIMEDOUT" --from "now-1h"
 ```
+
+Increase Lambda timeout or optimize slow operations.
 
 ## Local Testing
 
@@ -145,8 +146,3 @@ aws_sqs_get_queue_attributes --queueUrl "https://..."
 aws_sqs_receive_message --queueUrl "https://..." --maxNumberOfMessages 5
 ```
 
-## See Also
-
-- `skill("logs")` - Logging patterns
-- `skill("datadog")` - Datadog tools
-- `skill("errors")` - Error handling

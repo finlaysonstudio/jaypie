@@ -1,5 +1,6 @@
 ---
 description: Available MCP tools reference
+related: aws, datadog, debugging
 ---
 
 # MCP Tools Reference
@@ -21,7 +22,7 @@ Tools available through the Jaypie MCP server.
 
 ```
 skill("index")          # List all skills
-skill("introduction")   # Jaypie overview
+skill("jaypie")         # Jaypie overview
 skill("tests")          # Testing patterns
 ```
 
@@ -124,8 +125,3 @@ aws_sqs_receive_message --queueUrl "https://..." --maxNumberOfMessages 5
 datadog_monitors --status '["Alert", "Warn"]'
 ```
 
-## See Also
-
-- `skill("aws")` - AWS integration guide
-- `skill("datadog")` - Datadog guide
-- `skill("debugging")` - Debugging techniques

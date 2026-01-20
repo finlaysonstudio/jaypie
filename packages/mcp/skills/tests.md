@@ -1,5 +1,6 @@
 ---
 description: Testing patterns with Vitest
+related: mocks, errors
 ---
 
 # Testing Patterns
@@ -206,7 +207,3 @@ Aim for meaningful coverage, not 100%:
 - Skip trivial getters/setters
 - Skip generated code
 
-## See Also
-
-- `skill("mocks")` - Mock patterns
-- `skill("errors")` - Error testing

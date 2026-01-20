@@ -1,5 +1,6 @@
 ---
 description: Mock patterns via @jaypie/testkit
+related: tests, errors
 ---
 
 # Testing Mocks
@@ -67,14 +68,9 @@ vi.mock("@jaypie/aws", async () => {
 });
 ```
 
-### Mongoose
+### Legacy Mocks
 
-```typescript
-vi.mock("@jaypie/mongoose", async () => {
-  const { mockMongoose } = await import("@jaypie/testkit");
-  return mockMongoose(vi);
-});
-```
+For legacy packages, see `skill("legacy")`.
 
 ## Using Mocks in Tests
 
@@ -176,7 +172,3 @@ export function mockJaypie(vi) {
 }
 ```
 
-## See Also
-
-- `skill("tests")` - Testing patterns
-- `skill("errors")` - Error testing

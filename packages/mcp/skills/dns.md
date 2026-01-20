@@ -1,5 +1,6 @@
 ---
 description: DNS and domain configuration
+related: cdk, aws
 ---
 
 # DNS Configuration
@@ -131,7 +132,3 @@ dig @ns-123.awsdns-45.com app.example.com
 openssl s_client -connect app.example.com:443 -servername app.example.com
 ```
 
-## See Also
-
-- `skill("cdk")` - CDK constructs
-- `skill("aws")` - AWS integration

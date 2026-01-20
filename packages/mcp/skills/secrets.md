@@ -1,5 +1,6 @@
 ---
 description: Secret management with AWS Secrets Manager
+related: aws, cdk, variables
 ---
 
 # Secret Management
@@ -152,8 +153,3 @@ lambdaFunction.addToRolePolicy(new PolicyStatement({
 }));
 ```
 
-## See Also
-
-- `skill("aws")` - AWS integration
-- `skill("cdk")` - CDK constructs
-- `skill("variables")` - Environment variables

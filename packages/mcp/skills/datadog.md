@@ -1,5 +1,6 @@
 ---
 description: Datadog integration and observability
+related: logs, debugging, aws
 ---
 
 # Datadog Integration
@@ -126,8 +127,3 @@ environment: {
 }
 ```
 
-## See Also
-
-- `skill("logs")` - Logging patterns
-- `skill("debugging")` - Debugging techniques
-- `skill("aws")` - AWS integration

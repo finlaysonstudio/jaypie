@@ -1,5 +1,6 @@
 ---
 description: GitHub Actions CI/CD workflows
+related: tests, cdk
 ---
 
 # CI/CD with GitHub Actions
@@ -149,7 +150,3 @@ Run jobs only when specific files change:
   if: steps.changes.outputs.src == 'true'
 ```
 
-## See Also
-
-- `skill("tests")` - Testing patterns
-- `skill("cdk")` - CDK deployment

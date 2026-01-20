@@ -1,5 +1,6 @@
 ---
 description: AWS integration, CLI tools, and cloud services
+related: cdk, dynamodb, secrets, logs
 ---
 
 # AWS Integration
@@ -104,9 +105,3 @@ export AWS_PROFILE=development
 aws_lambda_list_functions --profile production --region us-west-2
 ```
 
-## See Also
-
-- `skill("cdk")` - CDK constructs
-- `skill("dynamodb")` - DynamoDB patterns
-- `skill("secrets")` - Secret management
-- `skill("logs")` - CloudWatch logging

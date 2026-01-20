@@ -9,7 +9,7 @@ Quick reference for finding the right skill for your task.
 ## By Task
 
 ### Starting a New Project
-- `skill("introduction")` - Jaypie overview
+- `skill("jaypie")` - Jaypie overview
 - `skill("style")` - Code conventions
 - `skill("cdk")` - Infrastructure setup
 
@@ -41,7 +41,7 @@ Quick reference for finding the right skill for your task.
 ## By Package
 
 ### jaypie (main package)
-- `skill("introduction")` - Overview
+- `skill("jaypie")` - Overview
 - `skill("errors")` - Error types
 - `skill("logs")` - Logging
 - `skill("secrets")` - Secret access
@@ -57,8 +57,8 @@ Quick reference for finding the right skill for your task.
 - `skill("fabric")` - Service patterns
 - `skill("services")` - Service layer
 
-### @jaypie/mongoose
-- `skill("models")` - Data models
+### Legacy Packages
+- `skill("legacy")` - Deprecated patterns
 
 ## By Concept
 
@@ -80,7 +80,7 @@ Quick reference for finding the right skill for your task.
 - `skill("debugging")` - Debug techniques
 
 ### Data
-- `skill("models")` - Mongoose models
+- `skill("models")` - Data models and types
 - `skill("dynamodb")` - DynamoDB patterns
 
 ## Quick Answers

@@ -465,7 +465,14 @@ export function createMcpServer(
           // Try to read index.md if it exists
           try {
             const indexPath = path.join(SKILLS_PATH, "index.md");
-            indexContent = await fs.readFile(indexPath, "utf-8");
+            const rawContent = await fs.readFile(indexPath, "utf-8");
+            // Strip frontmatter if present
+            if (rawContent.startsWith("---")) {
+              const parsed = matter(rawContent);
+              indexContent = parsed.content.trim();
+            } else {
+              indexContent = rawContent;
+            }
           } catch {
             // No index.md, that's fine
           }

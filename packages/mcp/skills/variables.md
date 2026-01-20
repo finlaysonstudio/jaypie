@@ -1,5 +1,6 @@
 ---
 description: Environment variables reference
+related: secrets, cdk, datadog
 ---
 
 # Environment Variables
@@ -143,8 +144,3 @@ const isLocal = process.env.PROJECT_ENV === "local";
 const isDevelopment = !isProduction;
 ```
 
-## See Also
-
-- `skill("secrets")` - Secret management
-- `skill("cdk")` - CDK configuration
-- `skill("datadog")` - Datadog setup

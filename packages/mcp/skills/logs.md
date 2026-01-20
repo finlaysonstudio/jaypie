@@ -1,5 +1,6 @@
 ---
 description: Logging patterns and conventions
+related: debugging, datadog, variables
 ---
 
 # Logging Patterns
@@ -157,8 +158,3 @@ export const handler = lambdaHandler(async (event) => {
 });
 ```
 
-## See Also
-
-- `skill("debugging")` - Debugging techniques
-- `skill("datadog")` - Datadog integration
-- `skill("variables")` - Environment variables

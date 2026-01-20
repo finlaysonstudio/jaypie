@@ -1,5 +1,6 @@
 ---
 description: CDK constructs and deployment patterns
+related: aws, dynamodb, cicd
 ---
 
 # CDK Constructs
@@ -138,8 +139,3 @@ const handler = new JaypieLambda(this, "Handler", {
 });
 ```
 
-## See Also
-
-- `skill("aws")` - AWS CLI tools
-- `skill("dynamodb")` - DynamoDB patterns
-- `skill("cicd")` - CI/CD deployment

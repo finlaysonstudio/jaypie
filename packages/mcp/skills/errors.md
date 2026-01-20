@@ -1,5 +1,6 @@
 ---
 description: Error handling with @jaypie/errors
+related: debugging, logs, tests
 ---
 
 # Error Handling
@@ -139,8 +140,3 @@ it("includes context in error", async () => {
 });
 ```
 
-## See Also
-
-- `skill("debugging")` - Debugging techniques
-- `skill("logs")` - Logging patterns
-- `skill("tests")` - Testing errors

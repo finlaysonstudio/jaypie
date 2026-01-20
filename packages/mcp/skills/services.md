@@ -1,5 +1,6 @@
 ---
 description: Service layer patterns and architecture
+related: fabric, models, tests
 ---
 
 # Service Layer Patterns
@@ -102,39 +103,41 @@ export function createNotificationService(
 
 ## Transaction Patterns
 
-For operations that must succeed together:
+For DynamoDB operations that must succeed together, use TransactWriteItems:
 
 ```typescript
-import mongoose from "mongoose";
+import { TransactWriteItemsCommand } from "@aws-sdk/client-dynamodb";
 
 export async function transferFunds(fromId: string, toId: string, amount: number) {
-  const session = await mongoose.startSession();
+  const from = await getAccount(fromId);
 
-  try {
-    session.startTransaction();
-
-    const from = await Account.findById(fromId).session(session);
-    const to = await Account.findById(toId).session(session);
-
-    if (from.balance < amount) {
-      throw new BadRequestError("Insufficient funds");
-    }
-
-    from.balance -= amount;
-    to.balance += amount;
-
-    await from.save();
-    await to.save();
-
-    await session.commitTransaction();
-
-    log.info("Transfer completed", { fromId, toId, amount });
-  } catch (error) {
-    await session.abortTransaction();
-    throw error;
-  } finally {
-    session.endSession();
+  if (from.balance < amount) {
+    throw new BadRequestError("Insufficient funds");
   }
+
+  const command = new TransactWriteItemsCommand({
+    TransactItems: [
+      {
+        Update: {
+          TableName: TABLE_NAME,
+          Key: { pk: { S: `ACCOUNT#${fromId}` }, sk: { S: "BALANCE" } },
+          UpdateExpression: "SET balance = balance - :amount",
+          ExpressionAttributeValues: { ":amount": { N: String(amount) } },
+        },
+      },
+      {
+        Update: {
+          TableName: TABLE_NAME,
+          Key: { pk: { S: `ACCOUNT#${toId}` }, sk: { S: "BALANCE" } },
+          UpdateExpression: "SET balance = balance + :amount",
+          ExpressionAttributeValues: { ":amount": { N: String(amount) } },
+        },
+      },
+    ],
+  });
+
+  await dynamoClient.send(command);
+  log.info("Transfer completed", { fromId, toId, amount });
 }
 ```
 
@@ -170,8 +173,3 @@ describe("getUser", () => {
 });
 ```
 
-## See Also
-
-- `skill("fabric")` - Fabric services
-- `skill("models")` - Data models
-- `skill("tests")` - Testing services

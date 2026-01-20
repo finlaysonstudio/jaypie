@@ -1,5 +1,6 @@
 ---
 description: Code style conventions and patterns
+related: errors, tests
 ---
 
 # Code Style
@@ -187,7 +188,3 @@ export default [...jaypie];
 
 Always run `npm run format` before committing.
 
-## See Also
-
-- `skill("errors")` - Error handling
-- `skill("tests")` - Testing patterns
