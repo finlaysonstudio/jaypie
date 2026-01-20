@@ -19,6 +19,7 @@ packages/mcp/
 │   ├── datadog.ts            # Datadog API integration (https-based)
 │   └── llm.ts                # LLM debug utilities
 ├── prompts/                  # Markdown guides served via list_prompts/read_prompt tools
+├── release-notes/            # Version history by package (e.g., release-notes/mcp/0.3.2.md)
 └── dist/                     # Built output
 ```
 
@@ -50,15 +51,17 @@ import { createMcpServer } from "@jaypie/mcp";
 const server = createMcpServer({ version: "1.0.0", verbose: true });
 ```
 
-## MCP Tools (27 total)
+## MCP Tools (29 total)
 
-### Documentation Tools (3)
+### Documentation Tools (5)
 
 | Tool | Description |
 |------|-------------|
 | `list_prompts` | Lists all `.md` files in `prompts/` with descriptions and required file patterns |
 | `read_prompt` | Returns content of a specific prompt file |
 | `version` | Returns package version string |
+| `list_release_notes` | Lists release notes by package, supports `since_version` filtering |
+| `read_release_note` | Returns full content of a specific release note |
 
 ### AWS CLI Tools (16)
 
@@ -224,6 +227,35 @@ Markdown content here...
 ```
 
 Prompts are automatically available via `list_prompts` and `read_prompt` tools.
+
+## Adding New Release Notes
+
+Release notes are organized by package in `release-notes/`:
+
+```
+release-notes/
+├── jaypie/
+│   └── 1.2.3.md
+└── mcp/
+    └── 0.3.2.md
+```
+
+Each release note uses YAML frontmatter:
+
+```yaml
+---
+version: 0.3.2
+date: 2025-01-19
+summary: Brief one-line summary for listing
+---
+
+## Changes
+
+- Feature 1
+- Bug fix 2
+```
+
+Release notes are automatically available via `list_release_notes` and `read_release_note` tools. The `since_version` parameter allows clients to query only releases newer than a specific version.
 
 ## Exports
 
