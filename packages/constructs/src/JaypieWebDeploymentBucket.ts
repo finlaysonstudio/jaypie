@@ -232,6 +232,11 @@ export class JaypieWebDeploymentBucket extends Construct implements s3.IBucket {
       new CfnOutput(this, "DestinationBucketDeployRoleArn", {
         value: bucketDeployRole.roleArn,
       });
+
+      // Output the bucket name for workflows
+      new CfnOutput(this, "DestinationBucketName", {
+        value: this.bucket.bucketName,
+      });
     }
 
     // Create CloudFront distribution and certificate if host and zone are provided
@@ -298,6 +303,11 @@ export class JaypieWebDeploymentBucket extends Construct implements s3.IBucket {
       Tags.of(record).add(CDK.TAG.ROLE, CDK.ROLE.NETWORKING);
 
       this.distributionDomainName = this.distribution.distributionDomainName;
+
+      // Output the distribution ID for cache invalidation
+      new CfnOutput(this, "DistributionId", {
+        value: this.distribution.distributionId,
+      });
     }
   }
 

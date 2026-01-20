@@ -140,11 +140,11 @@ Reusable actions in `.github/actions/`:
 
 | Workflow | File | Purpose |
 |----------|------|---------|
-| Build Stacks to Sandbox | `deploy-env-sandbox.yml` | Deploy CDK infrastructure to sandbox |
-| Build Stacks to Development | `deploy-env-development.yml` | Deploy CDK infrastructure to development |
-| Build Stacks to Production | `deploy-env-production.yml` | Deploy CDK infrastructure to production |
+| Build Stacks to Sandbox | `deploy-env-sandbox.yml` | Deploy CDK infrastructure + documentation content to sandbox |
+| Build Stacks to Development | `deploy-env-development.yml` | Deploy CDK infrastructure + documentation content to development |
+| Build Stacks to Production | `deploy-env-production.yml` | Deploy CDK infrastructure + documentation content to production |
 | Deploy Stacks (Manual) | `deploy-stacks.yml` | Manual workflow_dispatch to deploy specific stacks |
-| Deploy Documentation Stack | `deploy-stack-documentation.yml` | Deploy documentation content to S3 |
+| Deploy Documentation Stack | `deploy-stack-documentation.yml` | Deploy documentation content only (manual or on doc changes) |
 
 ### Deployment Triggers
 
@@ -169,11 +169,21 @@ Use `workflow_dispatch` to manually deploy specific stacks to any environment:
    - Common combinations (e.g., `JaypieGardenApi JaypieGardenNextjs`)
 5. Or provide a custom stack list in the text field
 
-#### Stack Content Deployments (`deploy-stack-*.yml`)
+#### Stack Content Deployments
 
-| Stack | Trigger |
-|-------|---------|
-| documentation | Push to `main` with changes in `stacks/documentation/**`, `stack-documentation-*` tags |
+**Documentation** is deployed automatically as part of `deploy-env-*.yml` workflows alongside CDK infrastructure. This ensures the documentation site content is always deployed when the bucket/CloudFront infrastructure is deployed.
+
+The deployment process:
+1. CDK deploys infrastructure (S3 bucket, CloudFront, deploy role)
+2. Workflow fetches outputs from CloudFormation (`DestinationBucketName`, `DestinationBucketDeployRoleArn`, `DistributionId`)
+3. Workflow assumes the deploy role and syncs content to S3
+4. CloudFront cache is invalidated
+
+No manual GitHub variable configuration is needed for documentation deployment - all values are retrieved dynamically from CloudFormation stack outputs.
+
+The separate `deploy-stack-documentation.yml` workflow can be used for:
+- Manual deployment via `workflow_dispatch` to any environment
+- Deploying documentation-only changes (without CDK changes) on `feat/*` or `sandbox/*` branches
 
 **Note:** Garden stacks don't need separate content workflows:
 - `JaypieGardenNextjs` uses `cdk-nextjs-standalone` which deploys assets during CDK
@@ -217,12 +227,6 @@ Variables are configured at different levels in GitHub Settings:
 | `DATADOG_API_KEY_ARN` | Datadog API key ARN | No | |
 | `PROJECT_ENV` | Environment identifier | **Yes** | `sandbox`, `development`, `production` |
 | `PROJECT_NONCE` | Unique resource identifier | No | `abc123` |
-
-#### Stack-Specific Variables (Environment Level)
-| Variable | Description | Stack |
-|----------|-------------|-------|
-| `DOCS_S3_BUCKET` | S3 bucket name | documentation |
-| `DOCS_CLOUDFRONT_DISTRIBUTION_ID` | CloudFront distribution ID | documentation |
 
 ### Environment Secrets
 
