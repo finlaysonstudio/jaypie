@@ -1,0 +1,31 @@
+{
+  "name": "@jaypie/garden-api",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Jaypie Garden streaming API",
+  "license": "MIT",
+  "author": "Finlayson Studio",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx watch index.ts",
+    "format": "eslint --fix --quiet .",
+    "lint": "eslint --quiet .",
+    "start": "node dist/index.js",
+    "test": "vitest run .",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@codegenie/serverless-express": "^4.17.1",
+    "express": "^4.22.1",
+    "jaypie": "^1.2.3"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
+  },
+  "engines": {
+    "node": ">=22.0"
+  }
+}

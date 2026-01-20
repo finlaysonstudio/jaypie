@@ -1,8 +1,8 @@
 {
-  "name": "@jaypie/garden",
+  "name": "@jaypie/garden-nextjs",
   "version": "0.0.1",
   "private": true,
-  "description": "Jaypie Garden site",
+  "description": "Jaypie Garden Next.js site",
   "license": "MIT",
   "author": "Finlayson Studio",
   "scripts": {
