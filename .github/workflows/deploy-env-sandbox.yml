@@ -58,11 +58,11 @@ jobs:
       - name: Install and Build
         uses: ./.github/actions/npm-install-build
 
-      - name: Deploy CDK Stack
+      - name: Deploy CDK Stacks
         uses: ./.github/actions/cdk-deploy
         with:
           cdk-package-path: stacks/cdk
-          stack-name: JaypieDocumentation
+          stack-name: JaypieDocumentation JaypieGardenApi JaypieGardenNextjs
 
   lint:
     name: Lint
