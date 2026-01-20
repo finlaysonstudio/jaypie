@@ -1,6 +1,6 @@
 {
   "name": "@jaypie/mcp",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "Jaypie MCP",
   "repository": {
     "type": "git",
@@ -22,7 +22,8 @@
   },
   "files": [
     "dist",
-    "prompts"
+    "prompts",
+    "release-notes"
   ],
   "scripts": {
     "build": "rollup --config && chmod +x dist/index.js",
@@ -38,12 +39,14 @@
     "@modelcontextprotocol/sdk": "^1.17.0",
     "commander": "^14.0.0",
     "gray-matter": "^4.0.3",
+    "semver": "^7.7.3",
     "zod": "^4.1.13"
   },
   "devDependencies": {
     "@rollup/plugin-replace": "^6.0.3",
     "@rollup/plugin-typescript": "^12.3.0",
     "@types/express": "^5.0.3",
+    "@types/semver": "^7.7.1",
     "express": "^5.1.0",
     "rollup": "^4.53.3",
     "typescript": "^5.9.3"

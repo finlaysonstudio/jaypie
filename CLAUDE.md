@@ -156,6 +156,7 @@ Utilize these MCP when provided. When they are unavailable but would be useful, 
 ### Development Notes (memories)
 - Whenever a new export is added to a package, make sure to update the exports of packages/testkit or tests will fail
 - After any functionality changes, check @packages/mcp/prompts and update relevant documentation
+- Add release notes to `packages/mcp/release-notes/<package>/<version>.md` for version bumps with frontmatter (version, date, summary)
 - Updating mcp or testkit requires bumping the package version (patch)
 - Do not bump a package twice in a branch. Versions are only published when merged into main. Check the current version on NPM when unsure
 - Avoid default exports

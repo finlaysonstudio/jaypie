@@ -19,6 +19,7 @@ packages/mcp/
 │   ├── datadog.ts         # Datadog API integration (logs, monitors, synthetics, metrics, RUM)
 │   └── aws.ts             # AWS CLI integration (Step Functions, Lambda, CloudWatch, S3, DynamoDB, SQS)
 ├── prompts/               # Markdown guides served via list_prompts/read_prompt tools
+├── release-notes/         # Version history organized by package (e.g., release-notes/mcp/0.3.2.md)
 └── dist/                  # Built output
 ```
 
@@ -35,6 +36,8 @@ import type { CreateMcpServerOptions, McpExpressHandlerOptions } from "@jaypie/m
 - `list_prompts` - Lists all `.md` files in `prompts/` with descriptions and required file patterns
 - `read_prompt` - Returns content of a specific prompt file
 - `version` - Returns package version string
+- `list_release_notes` - Lists release notes by package, supports `since_version` filtering
+- `read_release_note` - Returns full content of a specific release note
 
 ### Datadog Tools (require DATADOG_API_KEY and DATADOG_APP_KEY)
 - `datadog_logs` - Search individual log entries
@@ -103,6 +106,38 @@ When adding new prompts:
 2. Add frontmatter with `description` and `include` when applicable
 3. Prompts are automatically available via `list_prompts` and `read_prompt`
 
+## Release Notes Directory
+
+The `release-notes/` directory contains version history organized by package name:
+
+```
+release-notes/
+├── jaypie/
+│   └── 1.2.3.md
+└── mcp/
+    └── 0.3.2.md
+```
+
+Release note files use YAML frontmatter:
+
+```yaml
+---
+version: 0.3.2
+date: 2025-01-19
+summary: Brief one-line summary for listing
+---
+
+## Changes
+
+- Feature 1
+- Bug fix 2
+```
+
+When adding release notes:
+1. Create `release-notes/<package>/<version>.md` for each version bump
+2. Add frontmatter with `version`, `date`, and `summary`
+3. Notes are automatically available via `list_release_notes` and `read_release_note`
+
 ## Environment Variables
 
 ### AWS CLI Integration
@@ -144,7 +179,8 @@ npm run format     # eslint --fix
 
 - `@modelcontextprotocol/sdk` - MCP protocol implementation
 - `commander` - CLI argument parsing
-- `gray-matter` - YAML frontmatter parsing for prompts
+- `gray-matter` - YAML frontmatter parsing for prompts and release notes
+- `semver` - Version comparison for release notes filtering
 - `zod` - Schema validation for tool parameters
 
 ## Integration with Other Packages

@@ -4,6 +4,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 import matter from "gray-matter";
+import { gt } from "semver";
 
 import {
   aggregateDatadogLogs,
@@ -45,6 +46,7 @@ const BUILD_VERSION_STRING =
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const PROMPTS_PATH = path.join(__dirname, "..", "prompts");
+const RELEASE_NOTES_PATH = path.join(__dirname, "..", "release-notes");
 
 export interface CreateMcpServerOptions {
   version?: string;
@@ -69,6 +71,12 @@ interface FrontMatter {
   description?: string;
   include?: string;
   globs?: string;
+}
+
+interface ReleaseNoteFrontMatter {
+  date?: string;
+  summary?: string;
+  version?: string;
 }
 
 async function parseMarkdownFile(filePath: string): Promise<{
@@ -112,6 +120,118 @@ function formatPromptListItem(prompt: {
   } else {
     return `* ${filename}`;
   }
+}
+
+async function parseReleaseNoteFile(filePath: string): Promise<{
+  date?: string;
+  filename: string;
+  summary?: string;
+  version?: string;
+}> {
+  try {
+    const content = await fs.readFile(filePath, "utf-8");
+    const filename = path.basename(filePath, ".md");
+
+    if (content.startsWith("---")) {
+      const parsed = matter(content);
+      const frontMatter = parsed.data as ReleaseNoteFrontMatter;
+      return {
+        date: frontMatter.date,
+        filename,
+        summary: frontMatter.summary,
+        version: frontMatter.version || filename,
+      };
+    }
+
+    return { filename, version: filename };
+  } catch {
+    return { filename: path.basename(filePath, ".md") };
+  }
+}
+
+function formatReleaseNoteListItem(note: {
+  date?: string;
+  filename: string;
+  packageName: string;
+  summary?: string;
+  version?: string;
+}): string {
+  const { date, packageName, summary, version } = note;
+  const parts = [`* ${packageName}@${version}`];
+
+  if (date) {
+    parts.push(`(${date})`);
+  }
+
+  if (summary) {
+    parts.push(`- ${summary}`);
+  }
+
+  return parts.join(" ");
+}
+
+async function getPackageReleaseNotes(
+  packageName: string,
+): Promise<
+  Array<{
+    date?: string;
+    filename: string;
+    packageName: string;
+    summary?: string;
+    version?: string;
+  }>
+> {
+  const packageDir = path.join(RELEASE_NOTES_PATH, packageName);
+  try {
+    const files = await fs.readdir(packageDir);
+    const mdFiles = files.filter((file) => file.endsWith(".md"));
+
+    const notes = await Promise.all(
+      mdFiles.map(async (file) => {
+        const parsed = await parseReleaseNoteFile(path.join(packageDir, file));
+        return { ...parsed, packageName };
+      }),
+    );
+
+    // Sort by version descending (newest first)
+    return notes.sort((a, b) => {
+      if (!a.version || !b.version) return 0;
+      try {
+        return gt(a.version, b.version) ? -1 : 1;
+      } catch {
+        // If semver comparison fails, fall back to string comparison
+        return b.version.localeCompare(a.version);
+      }
+    });
+  } catch {
+    return [];
+  }
+}
+
+function filterReleaseNotesSince(
+  notes: Array<{
+    date?: string;
+    filename: string;
+    packageName: string;
+    summary?: string;
+    version?: string;
+  }>,
+  sinceVersion: string,
+): Array<{
+  date?: string;
+  filename: string;
+  packageName: string;
+  summary?: string;
+  version?: string;
+}> {
+  return notes.filter((note) => {
+    if (!note.version) return false;
+    try {
+      return gt(note.version, sinceVersion);
+    } catch {
+      return false;
+    }
+  });
 }
 
 /**
@@ -274,6 +394,180 @@ export function createMcpServer(
   );
 
   log.info("Registered tool: version");
+
+  // Release Notes Tools
+  server.tool(
+    "list_release_notes",
+    "List available release notes for Jaypie packages. Filter by package name and/or get only versions newer than a specified version.",
+    {
+      package: z
+        .string()
+        .optional()
+        .describe(
+          "Filter by package name (e.g., 'jaypie', 'mcp'). If not provided, lists release notes for all packages.",
+        ),
+      since_version: z
+        .string()
+        .optional()
+        .describe(
+          "Only show versions newer than this (e.g., '1.0.0'). Uses semver comparison.",
+        ),
+    },
+    async ({ package: packageFilter, since_version: sinceVersion }) => {
+      log.info("Tool called: list_release_notes");
+      log.info(`Release notes directory: ${RELEASE_NOTES_PATH}`);
+
+      try {
+        // Get list of package directories
+        const entries = await fs.readdir(RELEASE_NOTES_PATH, {
+          withFileTypes: true,
+        });
+        const packageDirs = entries
+          .filter((entry) => entry.isDirectory())
+          .map((entry) => entry.name);
+
+        log.info(`Found ${packageDirs.length} package directories`);
+
+        // Filter by package if specified
+        const packagesToList = packageFilter
+          ? packageDirs.filter((pkg) => pkg === packageFilter)
+          : packageDirs;
+
+        if (packagesToList.length === 0 && packageFilter) {
+          return {
+            content: [
+              {
+                type: "text" as const,
+                text: `No release notes found for package "${packageFilter}".`,
+              },
+            ],
+          };
+        }
+
+        // Get release notes for each package
+        const allNotes = await Promise.all(
+          packagesToList.map((pkg) => getPackageReleaseNotes(pkg)),
+        );
+        let flatNotes = allNotes.flat();
+
+        // Filter by since_version if specified
+        if (sinceVersion) {
+          flatNotes = filterReleaseNotesSince(flatNotes, sinceVersion);
+        }
+
+        if (flatNotes.length === 0) {
+          const filterDesc = sinceVersion
+            ? ` newer than ${sinceVersion}`
+            : "";
+          return {
+            content: [
+              {
+                type: "text" as const,
+                text: `No release notes found${filterDesc}.`,
+              },
+            ],
+          };
+        }
+
+        const formattedList = flatNotes
+          .map(formatReleaseNoteListItem)
+          .join("\n");
+
+        log.info(`Successfully listed ${flatNotes.length} release notes`);
+
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: formattedList,
+            },
+          ],
+        };
+      } catch (error) {
+        log.error("Error listing release notes:", error);
+
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: `Error listing release notes: ${error instanceof Error ? error.message : "Unknown error"}`,
+            },
+          ],
+        };
+      }
+    },
+  );
+
+  log.info("Registered tool: list_release_notes");
+
+  server.tool(
+    "read_release_note",
+    "Read the full content of a specific release note. Call list_release_notes first to see available versions.",
+    {
+      package: z
+        .string()
+        .describe("Package name (e.g., 'jaypie', 'mcp')"),
+      version: z
+        .string()
+        .describe("Version number (e.g., '1.2.3')"),
+    },
+    async ({ package: packageName, version }) => {
+      log.info(
+        `Tool called: read_release_note (package: ${packageName}, version: ${version})`,
+      );
+
+      try {
+        const filePath = path.join(
+          RELEASE_NOTES_PATH,
+          packageName,
+          `${version}.md`,
+        );
+
+        log.info(`Reading file: ${filePath}`);
+
+        const content = await fs.readFile(filePath, "utf-8");
+
+        log.info(
+          `Successfully read release note for ${packageName}@${version} (${content.length} bytes)`,
+        );
+
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: content,
+            },
+          ],
+        };
+      } catch (error) {
+        if ((error as { code?: string }).code === "ENOENT") {
+          log.error(`Release note not found: ${packageName}@${version}`);
+
+          return {
+            content: [
+              {
+                type: "text" as const,
+                text: `Error: Release note for "${packageName}@${version}" not found. Use list_release_notes to see available versions.`,
+              },
+            ],
+          };
+        }
+
+        log.error("Error reading release note:", error);
+
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: `Error reading release note: ${error instanceof Error ? error.message : "Unknown error"}`,
+            },
+          ],
+        };
+      }
+    },
+  );
+
+  log.info("Registered tool: read_release_note");
 
   // Datadog Logs Tool
   server.tool(

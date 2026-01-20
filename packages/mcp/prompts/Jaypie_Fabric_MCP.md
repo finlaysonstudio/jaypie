@@ -213,9 +213,29 @@ const transport = new StdioServerTransport();
 await server.connect(transport);
 ```
 
-## Input Validation
+## Input Validation and Schema Generation
 
-The adapter delegates input validation to the service handler. Invalid inputs result in errors:
+The adapter automatically converts fabric input definitions to Zod schemas for the MCP SDK, enabling proper parameter validation and type inference:
+
+```typescript
+// Fabric input definitions:
+input: {
+  name: { type: String, description: "User name" },
+  count: { type: Number, default: 10 },
+  active: { type: Boolean, required: false },
+  status: { type: ["pending", "active", "done"] },
+  tags: { type: [String] },
+}
+
+// Automatically generates equivalent Zod schemas:
+// name: z.string().describe("User name")
+// count: z.number().optional().default(10)
+// active: z.boolean().optional()
+// status: z.enum(["active", "done", "pending"])
+// tags: z.array(z.string())
+```
+
+The adapter also delegates input validation to the service handler. Invalid inputs result in errors:
 
 ```typescript
 // If handler expects:

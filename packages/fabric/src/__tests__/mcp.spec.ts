@@ -1,8 +1,10 @@
 // Tests for MCP adapter
 
 import { describe, expect, it, vi } from "vitest";
+import { z } from "zod";
 
 import { fabricMcp } from "../mcp/index.js";
+import { inputToZodShape } from "../mcp/inputToZodShape.js";
 import { fabricService } from "../service.js";
 
 describe("MCP Adapter", () => {
@@ -140,7 +142,7 @@ describe("MCP Adapter", () => {
       expect(mockServer.registeredTools[0].description).toBe("");
     });
 
-    it("registers with empty schema (service handler validates)", () => {
+    it("registers with Zod schema generated from input definitions", () => {
       const handler = fabricService({
         alias: "greet",
         input: {
@@ -151,6 +153,29 @@ describe("MCP Adapter", () => {
           const greeting = `Hello, ${name}!`;
           return loud ? greeting.toUpperCase() : greeting;
         },
+      });
+
+      const mockServer = createMockServer();
+      fabricMcp({
+        service: handler,
+        server: mockServer as unknown as Parameters<
+          typeof fabricMcp
+        >[0]["server"],
+      });
+
+      const schema = mockServer.registeredTools[0].schema;
+      // Schema should have Zod types for each input field
+      expect(schema).toHaveProperty("loud");
+      expect(schema).toHaveProperty("name");
+      // Verify they are Zod types
+      expect(schema.loud._def).toBeDefined();
+      expect(schema.name._def).toBeDefined();
+    });
+
+    it("registers with empty schema when no input defined", () => {
+      const handler = fabricService({
+        alias: "ping",
+        service: () => "pong",
       });
 
       const mockServer = createMockServer();
@@ -852,6 +877,139 @@ describe("MCP Adapter", () => {
         expect(originalService.alias).toBe("foo");
         expect(originalService.description).toBe("Foo service");
       });
+    });
+  });
+
+  describe("inputToZodShape", () => {
+    it("returns empty object for undefined input", () => {
+      const shape = inputToZodShape(z, undefined);
+      expect(shape).toEqual({});
+    });
+
+    it("returns empty object for empty input", () => {
+      const shape = inputToZodShape(z, {});
+      expect(shape).toEqual({});
+    });
+
+    it("converts Boolean type to z.boolean()", () => {
+      const shape = inputToZodShape(z, {
+        flag: { type: Boolean },
+      });
+      expect(shape.flag._def.type).toBe("boolean");
+    });
+
+    it("converts Number type to z.number()", () => {
+      const shape = inputToZodShape(z, {
+        count: { type: Number },
+      });
+      expect(shape.count._def.type).toBe("number");
+    });
+
+    it("converts String type to z.string()", () => {
+      const shape = inputToZodShape(z, {
+        name: { type: String },
+      });
+      expect(shape.name._def.type).toBe("string");
+    });
+
+    it("converts Object type to z.record()", () => {
+      const shape = inputToZodShape(z, {
+        data: { type: Object },
+      });
+      expect(shape.data._def.type).toBe("record");
+    });
+
+    it("converts Array type to z.array()", () => {
+      const shape = inputToZodShape(z, {
+        items: { type: Array },
+      });
+      expect(shape.items._def.type).toBe("array");
+    });
+
+    it("converts typed array [String] to z.array(z.string())", () => {
+      const shape = inputToZodShape(z, {
+        names: { type: [String] },
+      });
+      expect(shape.names._def.type).toBe("array");
+      expect(shape.names._def.element._def.type).toBe("string");
+    });
+
+    it("converts typed array [Number] to z.array(z.number())", () => {
+      const shape = inputToZodShape(z, {
+        counts: { type: [Number] },
+      });
+      expect(shape.counts._def.type).toBe("array");
+      expect(shape.counts._def.element._def.type).toBe("number");
+    });
+
+    it("converts typed array [Boolean] to z.array(z.boolean())", () => {
+      const shape = inputToZodShape(z, {
+        flags: { type: [Boolean] },
+      });
+      expect(shape.flags._def.type).toBe("array");
+      expect(shape.flags._def.element._def.type).toBe("boolean");
+    });
+
+    it("converts validated string enum to z.enum()", () => {
+      const shape = inputToZodShape(z, {
+        status: { type: ["pending", "active", "done"] },
+      });
+      expect(shape.status._def.type).toBe("enum");
+      expect(Object.keys(shape.status._def.entries).sort()).toEqual([
+        "active",
+        "done",
+        "pending",
+      ]);
+    });
+
+    it("adds description to Zod type", () => {
+      const shape = inputToZodShape(z, {
+        name: { description: "User name", type: String },
+      });
+      expect(shape.name.description).toBe("User name");
+    });
+
+    it("makes field optional when required: false", () => {
+      const shape = inputToZodShape(z, {
+        name: { required: false, type: String },
+      });
+      expect(shape.name._def.type).toBe("optional");
+    });
+
+    it("makes field optional with default when default is provided", () => {
+      const shape = inputToZodShape(z, {
+        count: { default: 10, type: Number },
+      });
+      expect(shape.count._def.type).toBe("default");
+    });
+
+    it("sorts keys alphabetically", () => {
+      const shape = inputToZodShape(z, {
+        zebra: { type: String },
+        apple: { type: String },
+        mango: { type: String },
+      });
+      const keys = Object.keys(shape);
+      expect(keys).toEqual(["apple", "mango", "zebra"]);
+    });
+
+    it("handles complex input with multiple types", () => {
+      const shape = inputToZodShape(z, {
+        active: { default: true, type: Boolean },
+        count: { type: Number },
+        name: { description: "User name", type: String },
+        optional: { required: false, type: String },
+        status: { type: ["pending", "done"] },
+        tags: { type: [String] },
+      });
+
+      expect(Object.keys(shape)).toHaveLength(6);
+      expect(shape.active._def.type).toBe("default");
+      expect(shape.count._def.type).toBe("number");
+      expect(shape.name._def.type).toBe("string");
+      expect(shape.optional._def.type).toBe("optional");
+      expect(shape.status._def.type).toBe("enum");
+      expect(shape.tags._def.type).toBe("array");
     });
   });
 });
