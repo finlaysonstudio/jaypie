@@ -1,6 +1,6 @@
 {
   "name": "@jaypie/mcp",
-  "version": "0.3.3",
+  "version": "0.3.4",
   "description": "Jaypie MCP",
   "repository": {
     "type": "git",
@@ -27,7 +27,8 @@
   "files": [
     "dist",
     "prompts",
-    "release-notes"
+    "release-notes",
+    "skills"
   ],
   "scripts": {
     "build": "rollup --config && chmod +x dist/index.js",
