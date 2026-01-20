@@ -50,7 +50,7 @@ Uses [Lucide React](https://lucide.dev) for icons.
 
 ```bash
 npm run dev               # Start dev server with hot reload
-npm run build             # Build static site to /out
+npm run build             # Build standalone server to .next/standalone/
 npm run start             # Start production server
 npm run typecheck         # Type check code
 npm run lint              # Lint code
@@ -59,5 +59,5 @@ npm run lint              # Lint code
 ## Notes
 
 - This package is `private: true` and not published to npm
-- Uses Next.js App Router with static export
-- Output directory is `/out` for static hosting
+- Uses Next.js App Router with standalone output for Lambda SSR deployment
+- Output directory is `.next/standalone/` for cdk-nextjs-standalone
