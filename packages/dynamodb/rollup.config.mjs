@@ -66,6 +66,7 @@ export default [
         outDir: "dist/esm/mcp",
       }),
     ],
+    external: ["@jaypie/fabric/mcp"],
   },
   // CommonJS version - mcp
   // NOTE: declaration: false because main build generates correct .d.ts files
@@ -87,5 +88,6 @@ export default [
         outDir: "dist/cjs/mcp",
       }),
     ],
+    external: ["@jaypie/fabric/mcp"],
   },
 ];

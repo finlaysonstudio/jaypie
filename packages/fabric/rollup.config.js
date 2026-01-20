@@ -1,9 +1,16 @@
 import typescript from "@rollup/plugin-typescript";
 
-// Filter out TS2307 warnings for @jaypie/* packages (external workspace dependencies)
+// Filter out expected warnings:
+// - TS2307: Cannot find module '@jaypie/*' (external workspace dependencies)
+// - TS5055: Cannot write file because it would overwrite input file (declaration files from previous build)
 const onwarn = (warning, defaultHandler) => {
-  if (warning.plugin === "typescript" && warning.message.includes("@jaypie/")) {
-    return;
+  if (warning.plugin === "typescript") {
+    if (warning.message.includes("@jaypie/")) {
+      return;
+    }
+    if (warning.message.includes("TS5055")) {
+      return;
+    }
   }
   defaultHandler(warning);
 };
@@ -16,6 +23,7 @@ const external = [
   "@modelcontextprotocol/sdk/server/mcp.js",
   "commander",
   "express",
+  "zod",
 ];
 
 export default [
