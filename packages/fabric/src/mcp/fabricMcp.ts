@@ -1,7 +1,10 @@
 // Fabric a service as an MCP tool
 
+import { z } from "zod";
+
 import { resolveService } from "../resolveService.js";
 import type { Message, ServiceContext } from "../types.js";
+import { inputToZodShape } from "./inputToZodShape.js";
 import type { FabricMcpConfig, FabricMcpResult } from "./types.js";
 
 /**
@@ -122,9 +125,11 @@ export function fabricMcp(config: FabricMcpConfig): FabricMcpResult {
     sendMessage,
   };
 
+  // Convert input definitions to Zod schema for MCP SDK
+  const zodSchema = inputToZodShape(z, service.input);
+
   // Register the tool with the MCP server
-  // Use empty schema - service validates inputs
-  server.tool(toolName, toolDescription, {}, async (args) => {
+  server.tool(toolName, toolDescription, zodSchema, async (args) => {
     try {
       const result = await service(args as Record<string, unknown>, context);
 
