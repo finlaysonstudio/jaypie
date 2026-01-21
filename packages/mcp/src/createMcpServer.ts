@@ -45,7 +45,6 @@ const BUILD_VERSION_STRING =
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const PROMPTS_PATH = path.join(__dirname, "..", "prompts");
 const RELEASE_NOTES_PATH = path.join(__dirname, "..", "release-notes");
 const SKILLS_PATH = path.join(__dirname, "..", "skills");
 
@@ -68,59 +67,10 @@ function createLogger(verbose: boolean) {
   };
 }
 
-interface FrontMatter {
-  description?: string;
-  include?: string;
-  globs?: string;
-}
-
 interface ReleaseNoteFrontMatter {
   date?: string;
   summary?: string;
   version?: string;
-}
-
-async function parseMarkdownFile(filePath: string): Promise<{
-  filename: string;
-  description?: string;
-  include?: string;
-}> {
-  try {
-    const content = await fs.readFile(filePath, "utf-8");
-    const filename = path.basename(filePath);
-
-    if (content.startsWith("---")) {
-      const parsed = matter(content);
-      const frontMatter = parsed.data as FrontMatter;
-      return {
-        filename,
-        description: frontMatter.description,
-        include: frontMatter.include || frontMatter.globs,
-      };
-    }
-
-    return { filename };
-  } catch {
-    return { filename: path.basename(filePath) };
-  }
-}
-
-function formatPromptListItem(prompt: {
-  filename: string;
-  description?: string;
-  include?: string;
-}): string {
-  const { filename, description, include } = prompt;
-
-  if (description && include) {
-    return `* ${filename}: ${description} - Required for ${include}`;
-  } else if (description) {
-    return `* ${filename}: ${description}`;
-  } else if (include) {
-    return `* ${filename} - Required for ${include}`;
-  } else {
-    return `* ${filename}`;
-  }
 }
 
 async function parseReleaseNoteFile(filePath: string): Promise<{
@@ -303,7 +253,6 @@ export function createMcpServer(
   const log = createLogger(verbose);
 
   log.info("Creating MCP server instance");
-  log.info(`Prompts directory: ${PROMPTS_PATH}`);
 
   const server = new McpServer(
     {
@@ -317,117 +266,7 @@ export function createMcpServer(
 
   log.info("Registering tools...");
 
-  server.tool(
-    "list_prompts",
-    "[DEPRECATED: Use skill('index') instead] List available Jaypie development prompts and guides. Use this FIRST when starting work on a Jaypie project to discover relevant documentation. Returns filenames, descriptions, and which file patterns each prompt applies to (e.g., 'Required for packages/express/**').",
-    {},
-    async () => {
-      log.info("Tool called: list_prompts");
-      log.info(`Reading directory: ${PROMPTS_PATH}`);
-
-      try {
-        const files = await fs.readdir(PROMPTS_PATH);
-        const mdFiles = files.filter((file) => file.endsWith(".md"));
-
-        log.info(`Found ${mdFiles.length} .md files`);
-
-        const prompts = await Promise.all(
-          mdFiles.map((file) =>
-            parseMarkdownFile(path.join(PROMPTS_PATH, file)),
-          ),
-        );
-
-        const formattedList = prompts.map(formatPromptListItem).join("\n");
-
-        log.info("Successfully listed prompts");
-
-        return {
-          content: [
-            {
-              type: "text" as const,
-              text:
-                formattedList || "No .md files found in the prompts directory.",
-            },
-          ],
-        };
-      } catch (error) {
-        log.error("Error listing prompts:", error);
-
-        return {
-          content: [
-            {
-              type: "text" as const,
-              text: `Error listing prompts: ${error instanceof Error ? error.message : "Unknown error"}`,
-            },
-          ],
-        };
-      }
-    },
-  );
-
-  log.info("Registered tool: list_prompts");
-
-  server.tool(
-    "read_prompt",
-    "[DEPRECATED: Use skill(alias) instead] Read a Jaypie prompt/guide by filename. Call list_prompts first to see available prompts. These contain best practices, templates, code patterns, and step-by-step guides for Jaypie development tasks.",
-    {
-      filename: z
-        .string()
-        .describe(
-          "The prompt filename from list_prompts (e.g., 'Jaypie_Express_Package.md', 'Development_Process.md')",
-        ),
-    },
-    async ({ filename }) => {
-      log.info(`Tool called: read_prompt (filename: ${filename})`);
-
-      try {
-        const filePath = path.join(PROMPTS_PATH, filename);
-
-        log.info(`Reading file: ${filePath}`);
-
-        const content = await fs.readFile(filePath, "utf-8");
-
-        log.info(`Successfully read ${filename} (${content.length} bytes)`);
-
-        return {
-          content: [
-            {
-              type: "text" as const,
-              text: content,
-            },
-          ],
-        };
-      } catch (error) {
-        if ((error as { code?: string }).code === "ENOENT") {
-          log.error(`File not found: ${filename}`);
-
-          return {
-            content: [
-              {
-                type: "text" as const,
-                text: `Error: Prompt file "${filename}" not found in prompts directory`,
-              },
-            ],
-          };
-        }
-
-        log.error("Error reading prompt file:", error);
-
-        return {
-          content: [
-            {
-              type: "text" as const,
-              text: `Error reading prompt file: ${error instanceof Error ? error.message : "Unknown error"}`,
-            },
-          ],
-        };
-      }
-    },
-  );
-
-  log.info("Registered tool: read_prompt");
-
-  // Skill tool - new unified documentation access
+  // Skill tool - unified documentation access
   server.tool(
     "skill",
     "Access Jaypie development documentation. Pass a skill alias (e.g., 'aws', 'tests', 'errors') to get that documentation. Pass 'index' or no argument to list all available skills.",

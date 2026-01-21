@@ -118,8 +118,8 @@ describe("Dist Execution", () => {
 
       const tools = toolsListResponse?.result.tools || [];
       const toolNames = tools.map((tool: { name: string }) => tool.name);
-      expect(toolNames).toContain("list_prompts");
-      expect(toolNames).toContain("read_prompt");
+      expect(toolNames).toContain("skill");
+      expect(toolNames).toContain("version");
     });
 
     it("responds to initialize JSON-RPC command", async () => {
@@ -223,7 +223,7 @@ describe("Dist Execution", () => {
       expect(toolsResponse?.result).toHaveProperty("tools");
     });
 
-    it("handles tool call for list_prompts", async () => {
+    it("handles tool call for version", async () => {
       const input =
         JSON.stringify({
           jsonrpc: "2.0",
@@ -243,7 +243,7 @@ describe("Dist Execution", () => {
           jsonrpc: "2.0",
           method: "tools/call",
           params: {
-            name: "list_prompts",
+            name: "version",
             arguments: {},
           },
           id: 2,
@@ -299,8 +299,8 @@ describe("Dist Execution", () => {
             const toolNames = parsed.result.tools.map(
               (tool: { name: string }) => tool.name,
             );
-            expect(toolNames).toContain("list_prompts");
-            expect(toolNames).toContain("read_prompt");
+            expect(toolNames).toContain("skill");
+            expect(toolNames).toContain("version");
             break;
           }
         } catch {
