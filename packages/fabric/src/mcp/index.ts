@@ -1,7 +1,12 @@
 // MCP adapter exports for @jaypie/fabric
 
 export { fabricMcp } from "./fabricMcp.js";
-export { FabricMcpServer, isFabricMcpServer } from "./FabricMcpServer.js";
+export {
+  createMcpServerFromSuite,
+  FabricMcpServer,
+  isFabricMcpServer,
+} from "./FabricMcpServer.js";
+export type { CreateMcpServerFromSuiteConfig } from "./FabricMcpServer.js";
 export type {
   FabricMcpConfig,
   FabricMcpResult,

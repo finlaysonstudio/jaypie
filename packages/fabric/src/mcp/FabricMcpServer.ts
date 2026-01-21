@@ -3,6 +3,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
 import { isService } from "../service.js";
+import type { ServiceSuite } from "../ServiceSuite.js";
 import type { Service, ServiceFunction } from "../types.js";
 import { fabricMcp } from "./fabricMcp.js";
 import type {
@@ -10,6 +11,10 @@ import type {
   FabricMcpServerConfig,
   FabricMcpServerServiceEntry,
   FabricMcpServerToolConfig,
+  OnCompleteCallback,
+  OnErrorCallback,
+  OnFatalCallback,
+  OnMessageCallback,
   RegisteredTool,
 } from "./types.js";
 
@@ -182,4 +187,64 @@ export function isFabricMcpServer(
     "name" in value &&
     "version" in value
   );
+}
+
+/**
+ * Configuration for creating an MCP server from a ServiceSuite
+ */
+export interface CreateMcpServerFromSuiteConfig {
+  /** Override the server name (defaults to suite.name) */
+  name?: string;
+  /** Server-level callback called when tools complete successfully */
+  onComplete?: OnCompleteCallback;
+  /** Server-level error callback applied to all tools */
+  onError?: OnErrorCallback;
+  /** Server-level fatal callback applied to all tools */
+  onFatal?: OnFatalCallback;
+  /** Server-level message callback applied to all tools */
+  onMessage?: OnMessageCallback;
+  /** Override the server version (defaults to suite.version) */
+  version?: string;
+}
+
+/**
+ * Create a FabricMcpServer from a ServiceSuite
+ *
+ * This bridge function connects ServiceSuites (which group services by category)
+ * to FabricMcpServer (which registers services as MCP tools).
+ *
+ * @example
+ * ```typescript
+ * import { createServiceSuite, fabricService } from "@jaypie/fabric";
+ * import { createMcpServerFromSuite } from "@jaypie/fabric/mcp";
+ *
+ * const suite = createServiceSuite({ name: "my-suite", version: "1.0.0" });
+ * suite.register(myService, "category");
+ *
+ * const server = createMcpServerFromSuite(suite);
+ * // server is ready to handle MCP protocol requests
+ * ```
+ */
+export function createMcpServerFromSuite(
+  suite: ServiceSuite,
+  config: CreateMcpServerFromSuiteConfig = {},
+): FabricMcpServerType {
+  const {
+    name = suite.name,
+    onComplete,
+    onError,
+    onFatal,
+    onMessage,
+    version = suite.version,
+  } = config;
+
+  return FabricMcpServer({
+    name,
+    onComplete,
+    onError,
+    onFatal,
+    onMessage,
+    services: suite.getServiceFunctions(),
+    version,
+  });
 }

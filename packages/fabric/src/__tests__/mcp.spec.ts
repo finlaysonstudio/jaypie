@@ -1245,4 +1245,108 @@ describe("MCP Adapter", () => {
       expect(isFabricMcpServer(fake)).toBe(false);
     });
   });
+
+  describe("createMcpServerFromSuite", async () => {
+    const { createMcpServerFromSuite } = await import("../mcp/index.js");
+    const { createServiceSuite } = await import("../ServiceSuite.js");
+
+    it("creates an MCP server from a suite", () => {
+      const suite = createServiceSuite({ name: "test-suite", version: "2.0.0" });
+      const greetService = fabricService({
+        alias: "greet",
+        description: "Greet someone",
+        service: () => "Hello!",
+      });
+      suite.register(greetService, "utils");
+
+      const server = createMcpServerFromSuite(suite);
+
+      expect(server.name).toBe("test-suite");
+      expect(server.version).toBe("2.0.0");
+      expect(server.tools).toHaveLength(1);
+      expect(server.tools[0].name).toBe("greet");
+    });
+
+    it("uses suite name and version by default", () => {
+      const suite = createServiceSuite({ name: "my-suite", version: "3.0.0" });
+
+      const server = createMcpServerFromSuite(suite);
+
+      expect(server.name).toBe("my-suite");
+      expect(server.version).toBe("3.0.0");
+    });
+
+    it("allows overriding name and version", () => {
+      const suite = createServiceSuite({ name: "original", version: "1.0.0" });
+
+      const server = createMcpServerFromSuite(suite, {
+        name: "override-name",
+        version: "9.9.9",
+      });
+
+      expect(server.name).toBe("override-name");
+      expect(server.version).toBe("9.9.9");
+    });
+
+    it("registers all services from suite as tools", () => {
+      const suite = createServiceSuite({ name: "test", version: "1.0.0" });
+      const service1 = fabricService({
+        alias: "service-1",
+        service: () => "1",
+      });
+      const service2 = fabricService({
+        alias: "service-2",
+        service: () => "2",
+      });
+      const service3 = fabricService({
+        alias: "service-3",
+        service: () => "3",
+      });
+
+      suite.register(service1, "category-a");
+      suite.register(service2, "category-b");
+      suite.register(service3, "category-a");
+
+      const server = createMcpServerFromSuite(suite);
+
+      expect(server.tools).toHaveLength(3);
+      expect(server.tools.map((t) => t.name).sort()).toEqual([
+        "service-1",
+        "service-2",
+        "service-3",
+      ]);
+    });
+
+    it("returns a FabricMcpServer instance", () => {
+      const suite = createServiceSuite({ name: "test", version: "1.0.0" });
+
+      const server = createMcpServerFromSuite(suite);
+
+      expect(isFabricMcpServer(server)).toBe(true);
+    });
+
+    it("accepts callback options", () => {
+      const suite = createServiceSuite({ name: "test", version: "1.0.0" });
+      const completedValues: unknown[] = [];
+
+      const server = createMcpServerFromSuite(suite, {
+        onComplete: (result) => {
+          completedValues.push(result);
+        },
+      });
+
+      // Server created without errors
+      expect(server).toBeDefined();
+      expect(completedValues).toEqual([]);
+    });
+
+    it("works with empty suite", () => {
+      const suite = createServiceSuite({ name: "empty", version: "0.0.1" });
+
+      const server = createMcpServerFromSuite(suite);
+
+      expect(server.tools).toHaveLength(0);
+      expect(server.services).toHaveLength(0);
+    });
+  });
 });
