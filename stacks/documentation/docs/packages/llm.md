@@ -307,5 +307,5 @@ async function askLlm(prompt) {
 ## Related
 
 - [LLM Integration](/docs/guides/llm-integration) - Complete guide
-- [Vocabulary LLM](/docs/experimental/vocabulary) - Service handler conversion
+- [Fabric](/docs/experimental/fabric) - Service handler conversion
 - [@jaypie/express](/docs/packages/express) - Streaming handlers

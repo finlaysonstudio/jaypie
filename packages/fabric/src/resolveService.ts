@@ -1,6 +1,6 @@
 // Resolve inline service definitions to full Service objects
 
-import { fabricService } from "./service.js";
+import { fabricService, isService } from "./service.js";
 import type {
   InputFieldDefinition,
   Service,
@@ -22,16 +22,6 @@ export interface ResolveServiceConfig<
   input?: Record<string, InputFieldDefinition>;
   /** The service - either a pre-instantiated Service or an inline function */
   service: Service<TInput, TOutput> | ServiceFunction<TInput, TOutput>;
-}
-
-/**
- * Type guard to check if a value is a pre-instantiated Service
- * A Service is a function with the `$fabric` property set by fabricService
- */
-function isService<TInput extends Record<string, unknown>, TOutput>(
-  value: Service<TInput, TOutput> | ServiceFunction<TInput, TOutput>,
-): value is Service<TInput, TOutput> {
-  return typeof value === "function" && "$fabric" in value;
 }
 
 /**
@@ -74,7 +64,7 @@ export function resolveService<
 >(config: ResolveServiceConfig<TInput, TOutput>): Service<TInput, TOutput> {
   const { alias, description, input, service } = config;
 
-  if (isService(service)) {
+  if (isService<TInput, TOutput>(service)) {
     // Service is pre-instantiated - config fields act as overrides
     // Create new Service with merged properties (config overrides service)
     return fabricService({

@@ -10,7 +10,6 @@ import * as llm from "./llm";
 import * as logger from "./logger";
 import * as mongoose from "./mongoose";
 import * as textract from "./textract";
-import * as vocabulary from "./vocabulary";
 
 // Re-export all mocks
 export * from "./aws";
@@ -24,7 +23,6 @@ export * from "./llm";
 export * from "./logger";
 export * from "./mongoose";
 export * from "./textract";
-export * from "./vocabulary";
 
 // Export default object with all mocks
 const mock: Record<string, any> = {
@@ -60,9 +58,6 @@ const mock: Record<string, any> = {
 
   // Textract module
   ...textract,
-
-  // Vocabulary module
-  ...vocabulary,
 };
 
 export default mock;

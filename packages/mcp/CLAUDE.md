@@ -14,12 +14,13 @@ This package serves two purposes:
 packages/mcp/
 ├── src/
 │   ├── index.ts           # CLI entrypoint, exports createMcpServer and mcpExpressHandler
-│   ├── createMcpServer.ts # Core MCP server factory with tool definitions
+│   ├── createMcpServer.ts # MCP server factory using ServiceSuite
+│   ├── suite.ts           # ServiceSuite with all service definitions
 │   ├── mcpExpressHandler.ts # Express middleware for HTTP transport
 │   ├── datadog.ts         # Datadog API integration (logs, monitors, synthetics, metrics, RUM)
+│   ├── llm.ts             # LLM provider integration tools
 │   └── aws.ts             # AWS CLI integration (Step Functions, Lambda, CloudWatch, S3, DynamoDB, SQS)
-├── skills/                # Markdown skill files served via skill tool (preferred)
-├── prompts/               # Markdown guides served via list_prompts/read_prompt tools (deprecated)
+├── skills/                # Markdown skill files served via skill tool
 ├── release-notes/         # Version history organized by package (e.g., release-notes/mcp/0.3.2.md)
 └── dist/                  # Built output
 ```
@@ -38,8 +39,6 @@ import type { CreateMcpServerOptions, McpExpressHandlerOptions } from "@jaypie/m
 - `version` - Returns package version string
 - `list_release_notes` - Lists release notes by package, supports `since_version` filtering
 - `read_release_note` - Returns full content of a specific release note
-- `list_prompts` - **[DEPRECATED]** Use `skill("index")` instead
-- `read_prompt` - **[DEPRECATED]** Use `skill(alias)` instead
 
 ### Datadog Tools (require DATADOG_API_KEY and DATADOG_APP_KEY)
 - `datadog_logs` - Search individual log entries
@@ -118,23 +117,6 @@ When adding new skills:
 2. Add frontmatter with `description` and optionally `related` (comma-separated aliases)
 3. Skills are automatically available via `skill(alias)`
 
-## Prompts Directory (Deprecated)
-
-> **Note:** The `prompts/` directory is deprecated. Use `skills/` instead.
-
-The `prompts/` directory contains legacy Jaypie development guides. Prompt files use optional YAML frontmatter:
-
-```yaml
----
-description: Brief description shown in list_prompts
-include: "packages/express/**"  # File patterns this guide applies to
----
-```
-
-When adding new documentation:
-1. **Prefer skills/** - Add new documentation to the `skills/` directory
-2. Legacy prompts remain available via `list_prompts` and `read_prompt` for backwards compatibility
-
 ## Release Notes Directory
 
 The `release-notes/` directory contains version history organized by package name:
@@ -208,14 +190,44 @@ npm run format     # eslint --fix
 
 - `@modelcontextprotocol/sdk` - MCP protocol implementation
 - `commander` - CLI argument parsing
-- `gray-matter` - YAML frontmatter parsing for prompts and release notes
+- `gray-matter` - YAML frontmatter parsing for skills and release notes
 - `semver` - Version comparison for release notes filtering
 - `zod` - Schema validation for tool parameters
 
 ## Integration with Other Packages
 
-This package is used by AI agents when working on any Jaypie project. The prompts provide context about:
+This package is used by AI agents when working on any Jaypie project. The skills provide context about:
 - Package-specific conventions (Express, CDK, Lambda)
 - Development workflows and testing patterns
 - Error handling and logging standards
 - Project structure and initialization guides
+
+## Architecture
+
+The MCP server uses `@jaypie/fabric`'s ServiceSuite pattern:
+
+1. **suite.ts** - Defines all services using `fabricService` and registers them with a `ServiceSuite` by category (docs, datadog, llm, aws)
+2. **createMcpServer.ts** - Uses `createMcpServerFromSuite()` to convert the suite into an MCP server
+3. Services are automatically converted to MCP tools with Zod schema validation
+
+```typescript
+// suite.ts
+const suite = createServiceSuite({ name: "jaypie", version: "0.3.4" });
+suite.register(skillService, "docs");
+suite.register(datadogLogsService, "datadog");
+// ...
+
+// createMcpServer.ts
+import { createMcpServerFromSuite } from "@jaypie/fabric/mcp";
+import { suite } from "./suite.js";
+
+export function createMcpServer(options = {}) {
+  return createMcpServerFromSuite(suite, { version: options.version });
+}
+```
+
+This architecture enables:
+- **Single source of truth** - Services defined once in `suite.ts`
+- **Automatic schema conversion** - No duplicate Zod definitions
+- **Testability** - Services can be tested independently via suite
+- **Extensibility** - Same suite can feed multiple transports (MCP, HTTP, CLI)

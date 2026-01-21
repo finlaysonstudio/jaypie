@@ -10,7 +10,7 @@ import type {
   SeedResult,
   StorableEntity,
 } from "@jaypie/dynamodb";
-import type { IndexableEntity } from "@jaypie/vocabulary";
+import type { IndexableModel } from "@jaypie/fabric";
 
 import { createMockFunction, createMockResolvedFunction } from "./utils";
 
@@ -241,4 +241,4 @@ export type {
   SeedResult,
   StorableEntity,
 };
-export type { IndexableEntity };
+export type { IndexableModel };

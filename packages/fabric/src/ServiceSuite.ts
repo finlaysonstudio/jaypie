@@ -54,6 +54,14 @@ export interface ServiceSuite {
   /** Register a fabricService into the suite */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   register(service: Service<any, any>, category: string): void;
+
+  /** Get all registered service functions (for transport adapters like FabricMcpServer) */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  getServiceFunctions(): Service<any, any>[];
+
+  /** Get a specific service function by name */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  getServiceFunction(name: string): Service<any, any> | undefined;
 }
 
 /**
@@ -232,6 +240,16 @@ export function createServiceSuite(config: CreateServiceSuiteConfig): ServiceSui
 
       serviceRegistry.set(serviceName, { service, meta });
       categorySet.add(category);
+    },
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    getServiceFunctions(): Service<any, any>[] {
+      return Array.from(serviceRegistry.values()).map((entry) => entry.service);
+    },
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    getServiceFunction(serviceName: string): Service<any, any> | undefined {
+      return serviceRegistry.get(serviceName)?.service;
     },
   };
 

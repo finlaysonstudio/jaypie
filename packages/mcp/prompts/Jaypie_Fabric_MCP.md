@@ -160,13 +160,98 @@ For string responses:
 }
 ```
 
+## FabricMcpServer
+
+For registering multiple services at once, use `FabricMcpServer` which creates an MCP server with all services registered as tools:
+
+```typescript
+import { fabricService } from "@jaypie/fabric";
+import { FabricMcpServer } from "@jaypie/fabric/mcp";
+
+const greetService = fabricService({
+  alias: "greet",
+  description: "Greet a user",
+  input: { name: { type: String } },
+  service: ({ name }) => `Hello, ${name}!`,
+});
+
+const echoService = fabricService({
+  alias: "echo",
+  description: "Echo back input",
+  input: { message: { type: String } },
+  service: ({ message }) => message,
+});
+
+const server = FabricMcpServer({
+  name: "my-server",
+  version: "1.0.0",
+  services: [greetService, echoService],
+});
+```
+
+### FabricMcpServer Options
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `name` | `string` | Required. Server name |
+| `version` | `string` | Required. Server version |
+| `services` | `FabricMcpServerServiceEntry[]` | Required. Array of services to register |
+| `onComplete` | `OnCompleteCallback` | Server-level callback for all tools |
+| `onError` | `OnErrorCallback` | Server-level error callback for all tools |
+| `onFatal` | `OnFatalCallback` | Server-level fatal callback for all tools |
+| `onMessage` | `OnMessageCallback` | Server-level message callback for all tools |
+
+### Service Entry Types
+
+Services can be passed in three ways:
+
+```typescript
+// 1. Direct service
+services: [greetService]
+
+// 2. Tool config with custom name/description
+services: [
+  { service: greetService, name: "hello", description: "Custom description" }
+]
+
+// 3. Tool config with entry-level callbacks (override server-level)
+services: [
+  {
+    service: greetService,
+    onComplete: (result) => console.log("Completed:", result),
+  }
+]
+```
+
+### Server Metadata
+
+The returned server has attached metadata for introspection:
+
+```typescript
+const server = FabricMcpServer({ name, version, services });
+
+server.name;      // "my-server"
+server.version;   // "1.0.0"
+server.services;  // Array of registered Service objects
+server.tools;     // Array of { name, description, service }
+```
+
+### Type Guard
+
+```typescript
+import { isFabricMcpServer } from "@jaypie/fabric/mcp";
+
+if (isFabricMcpServer(server)) {
+  console.log(server.tools.map(t => t.name));
+}
+```
+
 ## Complete Example
 
 ```typescript
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { fabricService } from "@jaypie/fabric";
-import { fabricMcp } from "@jaypie/fabric/mcp";
+import { FabricMcpServer } from "@jaypie/fabric/mcp";
 
 // Define handlers
 const weatherHandler = fabricService({
@@ -199,14 +284,12 @@ const searchHandler = fabricService({
   },
 });
 
-// Create server and register tools
-const server = new McpServer({
+// Create server with all tools registered
+const server = FabricMcpServer({
   name: "my-mcp-server",
   version: "1.0.0",
+  services: [weatherHandler, searchHandler],
 });
-
-fabricMcp({ service: weatherHandler, server });
-fabricMcp({ service: searchHandler, server });
 
 // Start server
 const transport = new StdioServerTransport();
@@ -255,12 +338,17 @@ input: {
 import type {
   FabricMcpConfig,
   FabricMcpResult,
+  FabricMcpServerConfig,
+  FabricMcpServerServiceEntry,
+  FabricMcpServerToolConfig,
+  FabricMcpServerType,
   McpToolContentItem,
   McpToolResponse,
   OnCompleteCallback,
   OnErrorCallback,
   OnFatalCallback,
   OnMessageCallback,
+  RegisteredTool,
 } from "@jaypie/fabric/mcp";
 ```
 
@@ -290,6 +378,44 @@ interface FabricMcpConfig {
 interface FabricMcpResult {
   name: string;
 }
+
+interface FabricMcpServerConfig {
+  name: string;
+  version: string;
+  services: FabricMcpServerServiceEntry[];
+  onComplete?: OnCompleteCallback;
+  onError?: OnErrorCallback;
+  onFatal?: OnFatalCallback;
+  onMessage?: OnMessageCallback;
+}
+
+interface FabricMcpServerToolConfig {
+  service: Service | ServiceFunction;
+  name?: string;
+  description?: string;
+  onComplete?: OnCompleteCallback;
+  onError?: OnErrorCallback;
+  onFatal?: OnFatalCallback;
+  onMessage?: OnMessageCallback;
+}
+
+type FabricMcpServerServiceEntry =
+  | Service
+  | ServiceFunction
+  | FabricMcpServerToolConfig;
+
+interface RegisteredTool {
+  name: string;
+  description: string;
+  service: Service;
+}
+
+interface FabricMcpServer extends McpServer {
+  name: string;
+  version: string;
+  services: Service[];
+  tools: RegisteredTool[];
+}
 ```
 
 ## Exports
@@ -297,16 +423,22 @@ interface FabricMcpResult {
 ```typescript
 // @jaypie/fabric/mcp
 export { fabricMcp } from "./fabricMcp.js";
+export { FabricMcpServer, isFabricMcpServer } from "./FabricMcpServer.js";
 
 export type {
   FabricMcpConfig,
   FabricMcpResult,
+  FabricMcpServer as FabricMcpServerType,
+  FabricMcpServerConfig,
+  FabricMcpServerServiceEntry,
+  FabricMcpServerToolConfig,
   McpToolContentItem,
   McpToolResponse,
   OnCompleteCallback,
   OnErrorCallback,
   OnFatalCallback,
   OnMessageCallback,
+  RegisteredTool,
 } from "./types.js";
 ```
 

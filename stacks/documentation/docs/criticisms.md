@@ -66,7 +66,7 @@ Jaypie is TypeScript-first. While JavaScript works, you lose significant value w
 
 **Criticism:** Pre-1.0 packages have breaking changes.
 
-**Response:** True. Experimental packages (`@jaypie/dynamodb`, `@jaypie/vocabulary`) are unstable. Core packages (`jaypie`, `@jaypie/express`, `@jaypie/lambda`) are stable.
+**Response:** True. Experimental packages (`@jaypie/dynamodb`, `@jaypie/fabric`) are unstable. Core packages (`jaypie`, `@jaypie/express`, `@jaypie/lambda`) are stable.
 
 ## Alternatives
 

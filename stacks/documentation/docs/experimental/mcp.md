@@ -34,15 +34,15 @@ npm install @jaypie/mcp
 
 ```typescript
 import { registerMcpTool } from "@jaypie/mcp";
-import { serviceHandler } from "@jaypie/vocabulary";
+import { fabricService } from "@jaypie/fabric";
 
-const getUserHandler = serviceHandler({
-  name: "get_user",
+const getUserHandler = fabricService({
+  alias: "get_user",
   description: "Get user by ID",
   input: {
-    userId: { type: "string", required: true },
+    userId: { type: String },
   },
-  handler: async ({ userId }) => {
+  service: async ({ userId }) => {
     const user = await db.users.findById(userId);
     return user;
   },
@@ -71,7 +71,7 @@ registerMcpTool(server, handler, {
 
 Service handlers automatically convert to MCP tools:
 
-| Vocabulary Type | JSON Schema Type |
+| Fabric Type | JSON Schema Type |
 |-----------------|------------------|
 | `string` | `string` |
 | `number` | `number` |
@@ -141,18 +141,17 @@ const handler = serviceHandler({
 
 ## Input Validation
 
-Input validation from vocabulary is enforced:
+Input validation from fabric is enforced:
 
 ```typescript
-const handler = serviceHandler({
+const handler = fabricService({
   input: {
     email: {
-      type: "string",
-      required: true,
+      type: String,
       validate: (value) => value.includes("@"),
     },
   },
-  handler: async ({ email }) => {
+  service: async ({ email }) => {
     // email is guaranteed valid
   },
 });
@@ -229,6 +228,6 @@ Environment variables:
 
 ## Related
 
-- [Vocabulary](/docs/experimental/vocabulary) - Service handler patterns
+- [Fabric](/docs/experimental/fabric) - Service handler patterns
 - [LLM Integration](/docs/guides/llm-integration) - LLM tools
 - [@jaypie/llm](/docs/packages/llm) - LLM package

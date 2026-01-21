@@ -29,6 +29,7 @@ src/
 │   ├── resolve.spec.ts           # Resolution function tests
 │   ├── resolve-date.spec.ts      # Date resolution tests
 │   ├── service.spec.ts           # Service handler tests
+│   ├── service-suite.spec.ts     # ServiceSuite tests
 │   └── status.spec.ts            # Status type tests
 ├── commander/
 │   ├── createCommanderOptions.ts  # Generate Commander Options from config
@@ -74,8 +75,10 @@ src/
 │   ├── inputToJsonSchema.ts       # Convert input definitions to JSON Schema
 │   └── types.ts                   # LLM adapter types
 ├── mcp/
-│   ├── index.ts                   # MCP module exports
+│   ├── FabricMcpServer.ts         # Standalone MCP server for multi-service tool registration
 │   ├── fabricMcp.ts               # Register fabricService as MCP tool
+│   ├── index.ts                   # MCP module exports
+│   ├── inputToZodShape.ts         # Convert input definitions to Zod schema
 │   └── types.ts                   # MCP adapter types
 ├── models/
 │   └── base.ts                    # FabricModel, FabricJob, FabricMessage, Progress types
@@ -88,6 +91,7 @@ src/
 │   ├── registry.ts                # Model registry for custom indexes
 │   └── types.ts                   # IndexDefinition, IndexableModel types
 ├── service.ts                     # Service handler factory
+├── ServiceSuite.ts                # Service grouping and execution
 ├── status.ts                      # Status type and validators
 └── types.ts                       # TypeScript type definitions
 ```
@@ -151,6 +155,60 @@ Handler features:
 - Always returns a Promise
 - **Optional service**: When `service` is omitted, returns the processed input (validation-only mode)
 - **Flat properties**: Config properties attached directly to handler (`handler.alias`, `handler.input`, etc.)
+
+### ServiceSuite
+
+Located in `ServiceSuite.ts`. Groups `fabricService` instances by category with metadata and execution capabilities:
+
+```typescript
+import { createServiceSuite, fabricService } from "@jaypie/fabric";
+
+const suite = createServiceSuite({ name: "my-suite", version: "1.0.0" });
+
+const greetService = fabricService({
+  alias: "greet",
+  description: "Greet a user",
+  input: { name: { type: String } },
+  service: ({ name }) => `Hello, ${name}!`,
+});
+
+suite.register(greetService, "utils");
+
+// Access metadata
+suite.services;              // ServiceMeta[] - metadata for all services
+suite.categories;            // string[] - registered categories
+suite.getService("greet");   // ServiceMeta | undefined
+suite.getServicesByCategory("utils"); // ServiceMeta[]
+
+// Execute services
+await suite.execute("greet", { name: "World" }); // "Hello, World!"
+
+// Access service functions (for transport adapters)
+suite.getServiceFunctions();      // Service[] - all registered services
+suite.getServiceFunction("greet"); // Service | undefined
+```
+
+**Key Methods**:
+
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `register(service, category)` | void | Register a fabricService with a category |
+| `execute(name, inputs)` | Promise | Execute a service by name |
+| `getService(name)` | ServiceMeta | Get service metadata by name |
+| `getServicesByCategory(category)` | ServiceMeta[] | Get all services in a category |
+| `getServiceFunctions()` | Service[] | Get all service functions (for transport adapters) |
+| `getServiceFunction(name)` | Service | Get a specific service function |
+
+**Integration with Transport Adapters**:
+
+ServiceSuites connect to transport adapters via `getServiceFunctions()`:
+
+```typescript
+import { createMcpServerFromSuite } from "@jaypie/fabric/mcp";
+
+const server = createMcpServerFromSuite(suite);
+// All suite services are now registered as MCP tools
+```
 
 ### Typed Arrays
 
@@ -305,6 +363,10 @@ export * as llm from "./llm/index.js";
 // Service Handler
 export { fabricService } from "./service.js";
 
+// ServiceSuite
+export { createServiceSuite } from "./ServiceSuite.js";
+export type { ServiceMeta, ServiceSuite, ServiceSuiteConfig } from "./ServiceSuite.js";
+
 // Models
 export { FabricModel, FabricJob, FabricMessage, Progress } from "./models/base.js";
 
@@ -369,7 +431,9 @@ export type { FabricToolConfig, FabricToolResult, LlmTool, OnCompleteCallback, O
 
 ```typescript
 export { fabricMcp } from "./fabricMcp.js";
-export type { FabricMcpConfig, FabricMcpResult, McpToolContentItem, McpToolResponse, OnCompleteCallback, OnErrorCallback, OnFatalCallback, OnMessageCallback } from "./types.js";
+export { createMcpServerFromSuite, FabricMcpServer, isFabricMcpServer } from "./FabricMcpServer.js";
+export type { CreateMcpServerFromSuiteConfig } from "./FabricMcpServer.js";
+export type { FabricMcpConfig, FabricMcpResult, FabricMcpServer as FabricMcpServerType, FabricMcpServerConfig, FabricMcpServerServiceEntry, FabricMcpServerToolConfig, McpToolContentItem, McpToolResponse, OnCompleteCallback, OnErrorCallback, OnFatalCallback, OnMessageCallback, RegisteredTool } from "./types.js";
 ```
 
 ### Express Export (`@jaypie/fabric/express`)

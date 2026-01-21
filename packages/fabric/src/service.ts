@@ -227,6 +227,16 @@ async function processField(
 }
 
 /**
+ * Type guard to check if a value is a pre-instantiated Service
+ * A Service is a function with the `$fabric` property set by fabricService
+ */
+export function isService<TInput extends Record<string, unknown>, TOutput>(
+  value: unknown,
+): value is Service<TInput, TOutput> {
+  return typeof value === "function" && "$fabric" in value;
+}
+
+/**
  * Fabric a service function
  *
  * Service builds a function that initiates a "controller" step that:

@@ -54,10 +54,18 @@ program.addCommand(fabricCommand(greetService));
 ### MCP Tool
 
 ```typescript
-import { fabricMcpTool } from "@jaypie/fabric";
+import { fabricMcp, FabricMcpServer } from "@jaypie/fabric/mcp";
 
-server.tool(...fabricMcpTool(greetService));
-// Available as MCP tool "greet"
+// Single service registration
+fabricMcp({ service: greetService, server });
+
+// Multi-service server (preferred)
+const server = FabricMcpServer({
+  name: "my-server",
+  version: "1.0.0",
+  services: [greetService, searchService],
+});
+// Available as MCP tools "greet" and "search"
 ```
 
 ### LLM Tool
@@ -97,6 +105,25 @@ const suite = createServiceSuite({
 
 suite.register(userService, "users");
 suite.register(userListService, "users");
+
+// Access services
+suite.services;                    // ServiceMeta[] - metadata for listing
+suite.getServiceFunctions();       // Service[] - actual functions
+suite.execute("user_get", { id }); // Direct execution
+```
+
+### Suite to MCP Server
+
+Connect suites directly to MCP:
+
+```typescript
+import { createMcpServerFromSuite } from "@jaypie/fabric/mcp";
+
+const server = createMcpServerFromSuite(suite, {
+  name: "users-api",    // Optional override
+  version: "1.0.0",
+});
+// All suite services now available as MCP tools
 ```
 
 ## Input Validation
