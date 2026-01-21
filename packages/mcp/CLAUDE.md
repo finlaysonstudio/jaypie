@@ -14,9 +14,11 @@ This package serves two purposes:
 packages/mcp/
 ├── src/
 │   ├── index.ts           # CLI entrypoint, exports createMcpServer and mcpExpressHandler
-│   ├── createMcpServer.ts # Core MCP server factory with tool definitions
+│   ├── createMcpServer.ts # MCP server factory using ServiceSuite
+│   ├── suite.ts           # ServiceSuite with all service definitions
 │   ├── mcpExpressHandler.ts # Express middleware for HTTP transport
 │   ├── datadog.ts         # Datadog API integration (logs, monitors, synthetics, metrics, RUM)
+│   ├── llm.ts             # LLM provider integration tools
 │   └── aws.ts             # AWS CLI integration (Step Functions, Lambda, CloudWatch, S3, DynamoDB, SQS)
 ├── skills/                # Markdown skill files served via skill tool
 ├── release-notes/         # Version history organized by package (e.g., release-notes/mcp/0.3.2.md)
@@ -199,3 +201,33 @@ This package is used by AI agents when working on any Jaypie project. The skills
 - Development workflows and testing patterns
 - Error handling and logging standards
 - Project structure and initialization guides
+
+## Architecture
+
+The MCP server uses `@jaypie/fabric`'s ServiceSuite pattern:
+
+1. **suite.ts** - Defines all services using `fabricService` and registers them with a `ServiceSuite` by category (docs, datadog, llm, aws)
+2. **createMcpServer.ts** - Uses `createMcpServerFromSuite()` to convert the suite into an MCP server
+3. Services are automatically converted to MCP tools with Zod schema validation
+
+```typescript
+// suite.ts
+const suite = createServiceSuite({ name: "jaypie", version: "0.3.4" });
+suite.register(skillService, "docs");
+suite.register(datadogLogsService, "datadog");
+// ...
+
+// createMcpServer.ts
+import { createMcpServerFromSuite } from "@jaypie/fabric/mcp";
+import { suite } from "./suite.js";
+
+export function createMcpServer(options = {}) {
+  return createMcpServerFromSuite(suite, { version: options.version });
+}
+```
+
+This architecture enables:
+- **Single source of truth** - Services defined once in `suite.ts`
+- **Automatic schema conversion** - No duplicate Zod definitions
+- **Testability** - Services can be tested independently via suite
+- **Extensibility** - Same suite can feed multiple transports (MCP, HTTP, CLI)

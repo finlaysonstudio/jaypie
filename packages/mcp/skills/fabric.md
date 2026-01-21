@@ -105,6 +105,25 @@ const suite = createServiceSuite({
 
 suite.register(userService, "users");
 suite.register(userListService, "users");
+
+// Access services
+suite.services;                    // ServiceMeta[] - metadata for listing
+suite.getServiceFunctions();       // Service[] - actual functions
+suite.execute("user_get", { id }); // Direct execution
+```
+
+### Suite to MCP Server
+
+Connect suites directly to MCP:
+
+```typescript
+import { createMcpServerFromSuite } from "@jaypie/fabric/mcp";
+
+const server = createMcpServerFromSuite(suite, {
+  name: "users-api",    // Optional override
+  version: "1.0.0",
+});
+// All suite services now available as MCP tools
 ```
 
 ## Input Validation
