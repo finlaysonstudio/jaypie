@@ -56,6 +56,8 @@ function executeDistWithInput(input: string): Promise<{
     child.stdin.write(input + "\n");
     child.stdin.end();
 
+    // Use longer timeout for CI environments (especially Node 22.x)
+    const FALLBACK_TIMEOUT = process.env.CI ? 10000 : 3000;
     setTimeout(() => {
       if (outputTimer) {
         clearTimeout(outputTimer);
@@ -68,7 +70,7 @@ function executeDistWithInput(input: string): Promise<{
           exitCode: null,
         });
       }
-    }, 3000);
+    }, FALLBACK_TIMEOUT);
   });
 }
 
@@ -307,6 +309,277 @@ describe("Dist Execution", () => {
       }
 
       expect(foundTools).toBe(true);
+    });
+  });
+
+  describe("Skill Tool", () => {
+    it("includes skill tool in tools/list response", async () => {
+      const input = JSON.stringify({
+        jsonrpc: "2.0",
+        method: "tools/list",
+        id: 1,
+      });
+
+      const result = await executeDistWithInput(input);
+
+      expect(result.stdout).toBeTruthy();
+
+      const lines = result.stdout
+        .trim()
+        .split("\n")
+        .filter((line) => line.trim());
+
+      let toolsListResponse = null;
+      for (const line of lines) {
+        try {
+          const parsed = JSON.parse(line);
+          if (parsed.id === 1 && parsed.result?.tools) {
+            toolsListResponse = parsed;
+            break;
+          }
+        } catch {
+          // Skip non-JSON lines
+        }
+      }
+
+      expect(toolsListResponse).toBeTruthy();
+      const toolNames = toolsListResponse?.result.tools.map(
+        (tool: { name: string }) => tool.name,
+      );
+      expect(toolNames).toContain("skill");
+    });
+
+    it("handles skill('index') call to list all skills", async () => {
+      const input =
+        JSON.stringify({
+          jsonrpc: "2.0",
+          method: "initialize",
+          params: {
+            protocolVersion: "2024-11-05",
+            capabilities: {},
+            clientInfo: {
+              name: "test-client",
+              version: "1.0.0",
+            },
+          },
+          id: 1,
+        }) +
+        "\n" +
+        JSON.stringify({
+          jsonrpc: "2.0",
+          method: "tools/call",
+          params: {
+            name: "skill",
+            arguments: { alias: "index" },
+          },
+          id: 2,
+        });
+
+      const result = await executeDistWithInput(input);
+
+      expect(result.stdout).toBeTruthy();
+
+      const lines = result.stdout
+        .trim()
+        .split("\n")
+        .filter((line) => line.trim());
+
+      let toolCallResponse = null;
+      for (const line of lines) {
+        try {
+          const parsed = JSON.parse(line);
+          if (parsed.id === 2 && parsed.result) {
+            toolCallResponse = parsed;
+            break;
+          }
+        } catch {
+          // Skip non-JSON lines
+        }
+      }
+
+      expect(toolCallResponse).toBeTruthy();
+      expect(toolCallResponse?.result).toHaveProperty("content");
+      expect(Array.isArray(toolCallResponse?.result.content)).toBe(true);
+
+      // Content should list available skills
+      const textContent = toolCallResponse?.result.content.find(
+        (c: { type: string }) => c.type === "text",
+      );
+      expect(textContent).toBeTruthy();
+      expect(textContent?.text).toContain("Available Skills");
+      expect(textContent?.text).toContain("aws");
+      expect(textContent?.text).toContain("tests");
+    });
+
+    it("handles skill('aws') call to get specific skill content", async () => {
+      const input =
+        JSON.stringify({
+          jsonrpc: "2.0",
+          method: "initialize",
+          params: {
+            protocolVersion: "2024-11-05",
+            capabilities: {},
+            clientInfo: {
+              name: "test-client",
+              version: "1.0.0",
+            },
+          },
+          id: 1,
+        }) +
+        "\n" +
+        JSON.stringify({
+          jsonrpc: "2.0",
+          method: "tools/call",
+          params: {
+            name: "skill",
+            arguments: { alias: "aws" },
+          },
+          id: 2,
+        });
+
+      const result = await executeDistWithInput(input);
+
+      expect(result.stdout).toBeTruthy();
+
+      const lines = result.stdout
+        .trim()
+        .split("\n")
+        .filter((line) => line.trim());
+
+      let toolCallResponse = null;
+      for (const line of lines) {
+        try {
+          const parsed = JSON.parse(line);
+          if (parsed.id === 2 && parsed.result) {
+            toolCallResponse = parsed;
+            break;
+          }
+        } catch {
+          // Skip non-JSON lines
+        }
+      }
+
+      expect(toolCallResponse).toBeTruthy();
+      expect(toolCallResponse?.result).toHaveProperty("content");
+
+      const textContent = toolCallResponse?.result.content.find(
+        (c: { type: string }) => c.type === "text",
+      );
+      expect(textContent).toBeTruthy();
+      // AWS skill should contain AWS-related content
+      expect(textContent?.text).toContain("AWS");
+    });
+
+    it("rejects path traversal attempts in skill alias", async () => {
+      const input =
+        JSON.stringify({
+          jsonrpc: "2.0",
+          method: "initialize",
+          params: {
+            protocolVersion: "2024-11-05",
+            capabilities: {},
+            clientInfo: {
+              name: "test-client",
+              version: "1.0.0",
+            },
+          },
+          id: 1,
+        }) +
+        "\n" +
+        JSON.stringify({
+          jsonrpc: "2.0",
+          method: "tools/call",
+          params: {
+            name: "skill",
+            arguments: { alias: "../../../etc/passwd" },
+          },
+          id: 2,
+        });
+
+      const result = await executeDistWithInput(input);
+
+      expect(result.stdout).toBeTruthy();
+
+      const lines = result.stdout
+        .trim()
+        .split("\n")
+        .filter((line) => line.trim());
+
+      let toolCallResponse = null;
+      for (const line of lines) {
+        try {
+          const parsed = JSON.parse(line);
+          if (parsed.id === 2) {
+            toolCallResponse = parsed;
+            break;
+          }
+        } catch {
+          // Skip non-JSON lines
+        }
+      }
+
+      expect(toolCallResponse).toBeTruthy();
+      // Should return an error message for invalid alias
+      const textContent = toolCallResponse?.result?.content?.find(
+        (c: { type: string }) => c.type === "text",
+      );
+      expect(textContent?.text).toContain("Invalid skill alias");
+    });
+
+    it("returns error for non-existent skill", async () => {
+      const input =
+        JSON.stringify({
+          jsonrpc: "2.0",
+          method: "initialize",
+          params: {
+            protocolVersion: "2024-11-05",
+            capabilities: {},
+            clientInfo: {
+              name: "test-client",
+              version: "1.0.0",
+            },
+          },
+          id: 1,
+        }) +
+        "\n" +
+        JSON.stringify({
+          jsonrpc: "2.0",
+          method: "tools/call",
+          params: {
+            name: "skill",
+            arguments: { alias: "nonexistent-skill-xyz" },
+          },
+          id: 2,
+        });
+
+      const result = await executeDistWithInput(input);
+
+      expect(result.stdout).toBeTruthy();
+
+      const lines = result.stdout
+        .trim()
+        .split("\n")
+        .filter((line) => line.trim());
+
+      let toolCallResponse = null;
+      for (const line of lines) {
+        try {
+          const parsed = JSON.parse(line);
+          if (parsed.id === 2) {
+            toolCallResponse = parsed;
+            break;
+          }
+        } catch {
+          // Skip non-JSON lines
+        }
+      }
+
+      expect(toolCallResponse).toBeTruthy();
+      // Should return an error message for non-existent skill
+      const textContent = toolCallResponse?.result?.content?.find(
+        (c: { type: string }) => c.type === "text",
+      );
+      expect(textContent?.text).toContain("not found");
     });
   });
 });

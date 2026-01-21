@@ -49,6 +49,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const PROMPTS_PATH = path.join(__dirname, "..", "prompts");
 const RELEASE_NOTES_PATH = path.join(__dirname, "..", "release-notes");
+const SKILLS_PATH = path.join(__dirname, "..", "skills");
 
 // Silent logger for direct execution
 const log = {
@@ -160,9 +161,60 @@ function formatReleaseNoteListItem(note: {
   return parts.join(" ");
 }
 
-async function getPackageReleaseNotes(
-  packageName: string,
-): Promise<
+// Skill helper functions
+interface SkillFrontMatter {
+  description?: string;
+}
+
+function isValidSkillAlias(alias: string): boolean {
+  const normalized = alias.toLowerCase().trim();
+  // Reject if contains path separators or traversal
+  if (
+    normalized.includes("/") ||
+    normalized.includes("\\") ||
+    normalized.includes("..")
+  ) {
+    return false;
+  }
+  // Only allow alphanumeric, hyphens, underscores
+  return /^[a-z0-9_-]+$/.test(normalized);
+}
+
+async function parseSkillFile(filePath: string): Promise<{
+  alias: string;
+  description?: string;
+}> {
+  try {
+    const content = await fs.readFile(filePath, "utf-8");
+    const alias = path.basename(filePath, ".md");
+
+    if (content.startsWith("---")) {
+      const parsed = matter(content);
+      const frontMatter = parsed.data as SkillFrontMatter;
+      return {
+        alias,
+        description: frontMatter.description,
+      };
+    }
+
+    return { alias };
+  } catch {
+    return { alias: path.basename(filePath, ".md") };
+  }
+}
+
+function formatSkillListItem(skill: {
+  alias: string;
+  description?: string;
+}): string {
+  const { alias, description } = skill;
+  if (description) {
+    return `* ${alias} - ${description}`;
+  }
+  return `* ${alias}`;
+}
+
+async function getPackageReleaseNotes(packageName: string): Promise<
   Array<{
     date?: string;
     filename: string;
@@ -233,10 +285,81 @@ const version = fabricService({
   service: async () => BUILD_VERSION_STRING,
 });
 
+const skill = fabricService({
+  alias: "skill",
+  description:
+    "Access Jaypie development documentation. Pass a skill alias (e.g., 'aws', 'tests', 'errors') to get that documentation. Pass 'index' or no argument to list all available skills.",
+  input: {
+    alias: {
+      type: String,
+      required: false,
+      description:
+        "Skill alias (e.g., 'aws', 'tests'). Omit or use 'index' to list all skills.",
+    },
+  },
+  service: async ({ alias: inputAlias }: { alias?: string }) => {
+    const alias = (inputAlias || "index").toLowerCase().trim();
+
+    // Security: validate alias to prevent path traversal
+    if (!isValidSkillAlias(alias)) {
+      throw new Error(
+        `Invalid skill alias "${alias}". Use alphanumeric characters, hyphens, and underscores only.`,
+      );
+    }
+
+    // If requesting index, return list of all skills with descriptions
+    if (alias === "index") {
+      const indexPath = path.join(SKILLS_PATH, "index.md");
+      let indexContent = "";
+
+      try {
+        indexContent = await fs.readFile(indexPath, "utf-8");
+        // Strip frontmatter for display
+        if (indexContent.startsWith("---")) {
+          const parsed = matter(indexContent);
+          indexContent = parsed.content.trim();
+        }
+      } catch {
+        // Index file doesn't exist, will just show skill list
+      }
+
+      // Get all skill files
+      const files = await fs.readdir(SKILLS_PATH);
+      const mdFiles = files.filter(
+        (file) => file.endsWith(".md") && file !== "index.md",
+      );
+
+      const skills = await Promise.all(
+        mdFiles.map((file) => parseSkillFile(path.join(SKILLS_PATH, file))),
+      );
+
+      // Sort alphabetically
+      skills.sort((a, b) => a.alias.localeCompare(b.alias));
+
+      const skillList = skills.map(formatSkillListItem).join("\n");
+
+      if (indexContent) {
+        return `${indexContent}\n\n## Available Skills\n\n${skillList}`;
+      }
+      return `# Jaypie Skills\n\n## Available Skills\n\n${skillList}`;
+    }
+
+    // Read specific skill file
+    const skillPath = path.join(SKILLS_PATH, `${alias}.md`);
+    try {
+      return await fs.readFile(skillPath, "utf-8");
+    } catch {
+      throw new Error(
+        `Skill "${alias}" not found. Use skill("index") to list available skills.`,
+      );
+    }
+  },
+});
+
 const listPrompts = fabricService({
   alias: "list_prompts",
   description:
-    "List available Jaypie development prompts and guides. Use this FIRST when starting work on a Jaypie project to discover relevant documentation. Returns filenames, descriptions, and which file patterns each prompt applies to (e.g., 'Required for packages/express/**').",
+    "[DEPRECATED: Use skill('index') instead] List available Jaypie development prompts and guides. Use this FIRST when starting work on a Jaypie project to discover relevant documentation. Returns filenames, descriptions, and which file patterns each prompt applies to (e.g., 'Required for packages/express/**').",
   input: {},
   service: async () => {
     const files = await fs.readdir(PROMPTS_PATH);
@@ -244,14 +367,17 @@ const listPrompts = fabricService({
     const prompts = await Promise.all(
       mdFiles.map((file) => parseMarkdownFile(path.join(PROMPTS_PATH, file))),
     );
-    return prompts.map(formatPromptListItem).join("\n") || "No .md files found in the prompts directory.";
+    return (
+      prompts.map(formatPromptListItem).join("\n") ||
+      "No .md files found in the prompts directory."
+    );
   },
 });
 
 const readPrompt = fabricService({
   alias: "read_prompt",
   description:
-    "Read a Jaypie prompt/guide by filename. Call list_prompts first to see available prompts. These contain best practices, templates, code patterns, and step-by-step guides for Jaypie development tasks.",
+    "[DEPRECATED: Use skill(alias) instead] Read a Jaypie prompt/guide by filename. Call list_prompts first to see available prompts. These contain best practices, templates, code patterns, and step-by-step guides for Jaypie development tasks.",
   input: {
     filename: {
       type: String,
@@ -291,8 +417,12 @@ const listReleaseNotes = fabricService({
     package?: string;
     since_version?: string;
   }) => {
-    const entries = await fs.readdir(RELEASE_NOTES_PATH, { withFileTypes: true });
-    const packageDirs = entries.filter((entry) => entry.isDirectory()).map((entry) => entry.name);
+    const entries = await fs.readdir(RELEASE_NOTES_PATH, {
+      withFileTypes: true,
+    });
+    const packageDirs = entries
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => entry.name);
     const packagesToList = packageFilter
       ? packageDirs.filter((pkg) => pkg === packageFilter)
       : packageDirs;
@@ -335,7 +465,13 @@ const readReleaseNote = fabricService({
       description: "Version number (e.g., '1.2.3')",
     },
   },
-  service: async ({ package: packageName, version: ver }: { package: string; version: string }) => {
+  service: async ({
+    package: packageName,
+    version: ver,
+  }: {
+    package: string;
+    version: string;
+  }) => {
     const filePath = path.join(RELEASE_NOTES_PATH, packageName, `${ver}.md`);
     return fs.readFile(filePath, "utf-8");
   },
@@ -371,7 +507,8 @@ const datadogLogs = fabricService({
     service: {
       type: String,
       required: false,
-      description: "Override the service name. If not provided, uses DD_SERVICE env var.",
+      description:
+        "Override the service name. If not provided, uses DD_SERVICE env var.",
     },
     from: {
       type: String,
@@ -382,7 +519,8 @@ const datadogLogs = fabricService({
     to: {
       type: String,
       required: false,
-      description: "End time. Formats: 'now', relative ('now-5m'), or ISO 8601. Defaults to 'now'.",
+      description:
+        "End time. Formats: 'now', relative ('now-5m'), or ISO 8601. Defaults to 'now'.",
     },
     limit: {
       type: Number,
@@ -392,7 +530,8 @@ const datadogLogs = fabricService({
     sort: {
       type: ["timestamp", "-timestamp"] as const,
       required: false,
-      description: "Sort order: 'timestamp' (oldest first) or '-timestamp' (newest first, default).",
+      description:
+        "Sort order: 'timestamp' (oldest first) or '-timestamp' (newest first, default).",
     },
   },
   service: async (input: {
@@ -407,7 +546,9 @@ const datadogLogs = fabricService({
   }) => {
     const credentials = getDatadogCredentials();
     if (!credentials) {
-      throw new Error("Datadog credentials not found. Set DATADOG_API_KEY and DATADOG_APP_KEY.");
+      throw new Error(
+        "Datadog credentials not found. Set DATADOG_API_KEY and DATADOG_APP_KEY.",
+      );
     }
     const result = await searchDatadogLogs(credentials, input, log);
     if (!result.success) {
@@ -443,12 +584,14 @@ const datadogLogAnalytics = fabricService({
     env: {
       type: String,
       required: false,
-      description: "Override the environment filter. If not provided, uses DD_ENV env var.",
+      description:
+        "Override the environment filter. If not provided, uses DD_ENV env var.",
     },
     service: {
       type: String,
       required: false,
-      description: "Override the service name filter. If not provided, uses DD_SERVICE env var.",
+      description:
+        "Override the service name filter. If not provided, uses DD_SERVICE env var.",
     },
     from: {
       type: String,
@@ -459,7 +602,8 @@ const datadogLogAnalytics = fabricService({
     to: {
       type: String,
       required: false,
-      description: "End time. Formats: 'now', relative ('now-5m'), or ISO 8601. Defaults to 'now'.",
+      description:
+        "End time. Formats: 'now', relative ('now-5m'), or ISO 8601. Defaults to 'now'.",
     },
     aggregation: {
       type: ["count", "avg", "sum", "min", "max", "cardinality"] as const,
@@ -487,12 +631,18 @@ const datadogLogAnalytics = fabricService({
   }) => {
     const credentials = getDatadogCredentials();
     if (!credentials) {
-      throw new Error("Datadog credentials not found. Set DATADOG_API_KEY and DATADOG_APP_KEY.");
+      throw new Error(
+        "Datadog credentials not found. Set DATADOG_API_KEY and DATADOG_APP_KEY.",
+      );
     }
     const compute = input.aggregation
       ? [{ aggregation: input.aggregation, metric: input.metric }]
       : [{ aggregation: "count" as const }];
-    const result = await aggregateDatadogLogs(credentials, { ...input, compute }, log);
+    const result = await aggregateDatadogLogs(
+      credentials,
+      { ...input, compute },
+      log,
+    );
     if (!result.success) {
       throw new Error(result.error);
     }
@@ -514,12 +664,14 @@ const datadogMonitors = fabricService({
     tags: {
       type: Array,
       required: false,
-      description: "Filter monitors by resource tags (tags on the monitored resources).",
+      description:
+        "Filter monitors by resource tags (tags on the monitored resources).",
     },
     monitorTags: {
       type: Array,
       required: false,
-      description: "Filter monitors by monitor tags (tags on the monitor itself).",
+      description:
+        "Filter monitors by monitor tags (tags on the monitor itself).",
     },
     name: {
       type: String,
@@ -535,7 +687,9 @@ const datadogMonitors = fabricService({
   }) => {
     const credentials = getDatadogCredentials();
     if (!credentials) {
-      throw new Error("Datadog credentials not found. Set DATADOG_API_KEY and DATADOG_APP_KEY.");
+      throw new Error(
+        "Datadog credentials not found. Set DATADOG_API_KEY and DATADOG_APP_KEY.",
+      );
     }
     const result = await listDatadogMonitors(credentials, input, log);
     if (!result.success) {
@@ -567,13 +721,23 @@ const datadogSynthetics = fabricService({
         "If provided, fetches recent results for this specific test (public_id). Otherwise lists all tests.",
     },
   },
-  service: async (input: { type?: "api" | "browser"; tags?: string[]; testId?: string }) => {
+  service: async (input: {
+    type?: "api" | "browser";
+    tags?: string[];
+    testId?: string;
+  }) => {
     const credentials = getDatadogCredentials();
     if (!credentials) {
-      throw new Error("Datadog credentials not found. Set DATADOG_API_KEY and DATADOG_APP_KEY.");
+      throw new Error(
+        "Datadog credentials not found. Set DATADOG_API_KEY and DATADOG_APP_KEY.",
+      );
     }
     if (input.testId) {
-      const result = await getDatadogSyntheticResults(credentials, input.testId, log);
+      const result = await getDatadogSyntheticResults(
+        credentials,
+        input.testId,
+        log,
+      );
       if (!result.success) {
         throw new Error(result.error);
       }
@@ -607,13 +771,16 @@ const datadogMetrics = fabricService({
     to: {
       type: String,
       required: false,
-      description: "End time. Formats: 'now' or Unix timestamp. Defaults to 'now'.",
+      description:
+        "End time. Formats: 'now' or Unix timestamp. Defaults to 'now'.",
     },
   },
   service: async (input: { query: string; from?: string; to?: string }) => {
     const credentials = getDatadogCredentials();
     if (!credentials) {
-      throw new Error("Datadog credentials not found. Set DATADOG_API_KEY and DATADOG_APP_KEY.");
+      throw new Error(
+        "Datadog credentials not found. Set DATADOG_API_KEY and DATADOG_APP_KEY.",
+      );
     }
     const now = Math.floor(Date.now() / 1000);
     const fromStr = input.from || "1h";
@@ -666,7 +833,8 @@ const datadogRum = fabricService({
     to: {
       type: String,
       required: false,
-      description: "End time. Formats: 'now', relative ('now-5m'), or ISO 8601. Defaults to 'now'.",
+      description:
+        "End time. Formats: 'now', relative ('now-5m'), or ISO 8601. Defaults to 'now'.",
     },
     limit: {
       type: Number,
@@ -674,10 +842,17 @@ const datadogRum = fabricService({
       description: "Max events to return (1-1000). Defaults to 50.",
     },
   },
-  service: async (input: { query?: string; from?: string; to?: string; limit?: number }) => {
+  service: async (input: {
+    query?: string;
+    from?: string;
+    to?: string;
+    limit?: number;
+  }) => {
     const credentials = getDatadogCredentials();
     if (!credentials) {
-      throw new Error("Datadog credentials not found. Set DATADOG_API_KEY and DATADOG_APP_KEY.");
+      throw new Error(
+        "Datadog credentials not found. Set DATADOG_API_KEY and DATADOG_APP_KEY.",
+      );
     }
     const result = await searchDatadogRum(credentials, input, log);
     if (!result.success) {
@@ -720,7 +895,11 @@ const llmDebugCall = fabricService({
     message: string;
   }) => {
     const result = await debugLlmCall(
-      { provider: input.provider as LlmProvider, model: input.model, message: input.message },
+      {
+        provider: input.provider as LlmProvider,
+        model: input.model,
+        message: input.message,
+      },
       log,
     );
     if (!result.success) {
@@ -732,7 +911,8 @@ const llmDebugCall = fabricService({
 
 const llmListProviders = fabricService({
   alias: "llm_list_providers",
-  description: "List available LLM providers with their default and reasoning-capable models.",
+  description:
+    "List available LLM providers with their default and reasoning-capable models.",
   input: {},
   service: async () => listLlmProviders(),
 });
@@ -743,7 +923,8 @@ const llmListProviders = fabricService({
 
 const awsListProfiles = fabricService({
   alias: "aws_list_profiles",
-  description: "List available AWS profiles from ~/.aws/config and credentials.",
+  description:
+    "List available AWS profiles from ~/.aws/config and credentials.",
   input: {},
   service: async () => {
     const result = await listAwsProfiles(log);
@@ -765,7 +946,14 @@ const awsStepfunctionsListExecutions = fabricService({
       description: "ARN of the state machine",
     },
     statusFilter: {
-      type: ["RUNNING", "SUCCEEDED", "FAILED", "TIMED_OUT", "ABORTED", "PENDING_REDRIVE"] as const,
+      type: [
+        "RUNNING",
+        "SUCCEEDED",
+        "FAILED",
+        "TIMED_OUT",
+        "ABORTED",
+        "PENDING_REDRIVE",
+      ] as const,
       required: false,
       description: "Filter by execution status",
     },
@@ -787,7 +975,13 @@ const awsStepfunctionsListExecutions = fabricService({
   },
   service: async (input: {
     stateMachineArn: string;
-    statusFilter?: "RUNNING" | "SUCCEEDED" | "FAILED" | "TIMED_OUT" | "ABORTED" | "PENDING_REDRIVE";
+    statusFilter?:
+      | "RUNNING"
+      | "SUCCEEDED"
+      | "FAILED"
+      | "TIMED_OUT"
+      | "ABORTED"
+      | "PENDING_REDRIVE";
     profile?: string;
     region?: string;
     maxResults?: number;
@@ -842,7 +1036,8 @@ const awsStepfunctionsStopExecution = fabricService({
 
 const awsLambdaListFunctions = fabricService({
   alias: "aws_lambda_list_functions",
-  description: "List Lambda functions in the account. Filter by function name prefix.",
+  description:
+    "List Lambda functions in the account. Filter by function name prefix.",
   input: {
     functionNamePrefix: {
       type: String,
@@ -899,7 +1094,11 @@ const awsLambdaGetFunction = fabricService({
       description: "AWS region",
     },
   },
-  service: async (input: { functionName: string; profile?: string; region?: string }) => {
+  service: async (input: {
+    functionName: string;
+    profile?: string;
+    region?: string;
+  }) => {
     const result = await getLambdaFunction(input, log);
     if (!result.success) {
       throw new Error(result.error);
@@ -910,7 +1109,8 @@ const awsLambdaGetFunction = fabricService({
 
 const awsLogsFilterLogEvents = fabricService({
   alias: "aws_logs_filter_log_events",
-  description: "Search CloudWatch Logs for a log group. Filter by pattern and time range.",
+  description:
+    "Search CloudWatch Logs for a log group. Filter by pattern and time range.",
   input: {
     logGroupName: {
       type: String,
@@ -1040,7 +1240,11 @@ const awsCloudformationDescribeStack = fabricService({
       description: "AWS region",
     },
   },
-  service: async (input: { stackName: string; profile?: string; region?: string }) => {
+  service: async (input: {
+    stackName: string;
+    profile?: string;
+    region?: string;
+  }) => {
     const result = await describeStack(input, log);
     if (!result.success) {
       throw new Error(result.error);
@@ -1070,7 +1274,11 @@ const awsDynamodbDescribeTable = fabricService({
       description: "AWS region",
     },
   },
-  service: async (input: { tableName: string; profile?: string; region?: string }) => {
+  service: async (input: {
+    tableName: string;
+    profile?: string;
+    region?: string;
+  }) => {
     const result = await describeDynamoDBTable(input, log);
     if (!result.success) {
       throw new Error(result.error);
@@ -1124,7 +1332,10 @@ const awsDynamodbScan = fabricService({
     profile?: string;
     region?: string;
   }) => {
-    const result = await scanDynamoDB({ ...input, limit: input.limit || 25 }, log);
+    const result = await scanDynamoDB(
+      { ...input, limit: input.limit || 25 },
+      log,
+    );
     if (!result.success) {
       throw new Error(result.error);
     }
@@ -1228,7 +1439,12 @@ const awsDynamodbGetItem = fabricService({
       description: "AWS region",
     },
   },
-  service: async (input: { tableName: string; key: string; profile?: string; region?: string }) => {
+  service: async (input: {
+    tableName: string;
+    key: string;
+    profile?: string;
+    region?: string;
+  }) => {
     const result = await getDynamoDBItem(input, log);
     if (!result.success) {
       throw new Error(result.error);
@@ -1257,7 +1473,11 @@ const awsSqsListQueues = fabricService({
       description: "AWS region",
     },
   },
-  service: async (input: { queueNamePrefix?: string; profile?: string; region?: string }) => {
+  service: async (input: {
+    queueNamePrefix?: string;
+    profile?: string;
+    region?: string;
+  }) => {
     const result = await listSQSQueues(input, log);
     if (!result.success) {
       throw new Error(result.error);
@@ -1287,7 +1507,11 @@ const awsSqsGetQueueAttributes = fabricService({
       description: "AWS region",
     },
   },
-  service: async (input: { queueUrl: string; profile?: string; region?: string }) => {
+  service: async (input: {
+    queueUrl: string;
+    profile?: string;
+    region?: string;
+  }) => {
     const result = await getSQSQueueAttributes(input, log);
     if (!result.success) {
       throw new Error(result.error);
@@ -1370,7 +1594,11 @@ const awsSqsPurgeQueue = fabricService({
       description: "AWS region",
     },
   },
-  service: async (input: { queueUrl: string; profile?: string; region?: string }) => {
+  service: async (input: {
+    queueUrl: string;
+    profile?: string;
+    region?: string;
+  }) => {
     const result = await purgeSQSQueue(input, log);
     if (!result.success) {
       throw new Error(result.error);
@@ -1383,7 +1611,7 @@ const awsSqsPurgeQueue = fabricService({
 // SUITE CREATION
 // =============================================================================
 
-const VERSION = "0.3.2";
+const VERSION = "0.3.4";
 
 export const suite = createServiceSuite({
   name: "jaypie",
@@ -1391,6 +1619,7 @@ export const suite = createServiceSuite({
 });
 
 // Register docs services
+suite.register(skill, "docs");
 suite.register(version, "docs");
 suite.register(listPrompts, "docs");
 suite.register(readPrompt, "docs");

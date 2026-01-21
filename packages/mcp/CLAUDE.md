@@ -18,7 +18,8 @@ packages/mcp/
 │   ├── mcpExpressHandler.ts # Express middleware for HTTP transport
 │   ├── datadog.ts         # Datadog API integration (logs, monitors, synthetics, metrics, RUM)
 │   └── aws.ts             # AWS CLI integration (Step Functions, Lambda, CloudWatch, S3, DynamoDB, SQS)
-├── prompts/               # Markdown guides served via list_prompts/read_prompt tools
+├── skills/                # Markdown skill files served via skill tool (preferred)
+├── prompts/               # Markdown guides served via list_prompts/read_prompt tools (deprecated)
 ├── release-notes/         # Version history organized by package (e.g., release-notes/mcp/0.3.2.md)
 └── dist/                  # Built output
 ```
@@ -33,11 +34,12 @@ import type { CreateMcpServerOptions, McpExpressHandlerOptions } from "@jaypie/m
 ## MCP Tools Provided
 
 ### Documentation Tools
-- `list_prompts` - Lists all `.md` files in `prompts/` with descriptions and required file patterns
-- `read_prompt` - Returns content of a specific prompt file
+- `skill` - Access Jaypie development documentation by alias (e.g., `skill("aws")`, `skill("tests")`). Use `skill("index")` to list all available skills.
 - `version` - Returns package version string
 - `list_release_notes` - Lists release notes by package, supports `since_version` filtering
 - `read_release_note` - Returns full content of a specific release note
+- `list_prompts` - **[DEPRECATED]** Use `skill("index")` instead
+- `read_prompt` - **[DEPRECATED]** Use `skill(alias)` instead
 
 ### Datadog Tools (require DATADOG_API_KEY and DATADOG_APP_KEY)
 - `datadog_logs` - Search individual log entries
@@ -90,9 +92,37 @@ import { createMcpServer } from "@jaypie/mcp";
 const server = createMcpServer({ version: "1.0.0", verbose: true });
 ```
 
-## Prompts Directory
+## Skills Directory
 
-The `prompts/` directory contains Jaypie development guides. Prompt files use optional YAML frontmatter:
+The `skills/` directory contains Jaypie development documentation accessed via the `skill` tool. Skill files use YAML frontmatter:
+
+```yaml
+---
+description: Brief description shown in skill("index") listing
+related: alias1, alias2
+---
+
+# Skill Title
+
+Content...
+```
+
+Available skills (25 total):
+- **Infrastructure**: aws, cdk, cicd, datadog, dns, dynamodb, secrets, variables
+- **Development**: debugging, errors, logs, mocks, style, tests, writing
+- **Patterns**: fabric, models, services, tools
+- **Reference**: agents, index, jaypie, legacy, releasenotes, topics
+
+When adding new skills:
+1. Create `skills/<alias>.md` with lowercase alphanumeric alias (hyphens/underscores allowed)
+2. Add frontmatter with `description` and optionally `related` (comma-separated aliases)
+3. Skills are automatically available via `skill(alias)`
+
+## Prompts Directory (Deprecated)
+
+> **Note:** The `prompts/` directory is deprecated. Use `skills/` instead.
+
+The `prompts/` directory contains legacy Jaypie development guides. Prompt files use optional YAML frontmatter:
 
 ```yaml
 ---
@@ -101,10 +131,9 @@ include: "packages/express/**"  # File patterns this guide applies to
 ---
 ```
 
-When adding new prompts:
-1. Use descriptive filenames like `Jaypie_Feature_Name.md`
-2. Add frontmatter with `description` and `include` when applicable
-3. Prompts are automatically available via `list_prompts` and `read_prompt`
+When adding new documentation:
+1. **Prefer skills/** - Add new documentation to the `skills/` directory
+2. Legacy prompts remain available via `list_prompts` and `read_prompt` for backwards compatibility
 
 ## Release Notes Directory
 

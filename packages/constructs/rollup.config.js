@@ -27,6 +27,7 @@ export default [
     ],
     external: [
       "@jaypie/errors",
+      "@jaypie/fabric",
       "aws-cdk-lib",
       "aws-cdk-lib/aws-apigateway",
       "aws-cdk-lib/aws-certificatemanager",
@@ -77,6 +78,7 @@ export default [
     ],
     external: [
       "@jaypie/errors",
+      "@jaypie/fabric",
       "aws-cdk-lib",
       "aws-cdk-lib/aws-apigateway",
       "aws-cdk-lib/aws-certificatemanager",

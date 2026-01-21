@@ -47,6 +47,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const PROMPTS_PATH = path.join(__dirname, "..", "prompts");
 const RELEASE_NOTES_PATH = path.join(__dirname, "..", "release-notes");
+const SKILLS_PATH = path.join(__dirname, "..", "skills");
 
 export interface CreateMcpServerOptions {
   version?: string;
@@ -170,9 +171,7 @@ function formatReleaseNoteListItem(note: {
   return parts.join(" ");
 }
 
-async function getPackageReleaseNotes(
-  packageName: string,
-): Promise<
+async function getPackageReleaseNotes(packageName: string): Promise<
   Array<{
     date?: string;
     filename: string;
@@ -234,6 +233,59 @@ function filterReleaseNotesSince(
   });
 }
 
+// Skill helpers
+interface SkillFrontMatter {
+  description?: string;
+}
+
+function isValidSkillAlias(alias: string): boolean {
+  const normalized = alias.toLowerCase().trim();
+  // Reject if contains path separators or traversal
+  if (
+    normalized.includes("/") ||
+    normalized.includes("\\") ||
+    normalized.includes("..")
+  ) {
+    return false;
+  }
+  // Only allow alphanumeric, hyphens, underscores
+  return /^[a-z0-9_-]+$/.test(normalized);
+}
+
+async function parseSkillFile(filePath: string): Promise<{
+  alias: string;
+  description?: string;
+}> {
+  try {
+    const content = await fs.readFile(filePath, "utf-8");
+    const alias = path.basename(filePath, ".md");
+
+    if (content.startsWith("---")) {
+      const parsed = matter(content);
+      const frontMatter = parsed.data as SkillFrontMatter;
+      return {
+        alias,
+        description: frontMatter.description,
+      };
+    }
+
+    return { alias };
+  } catch {
+    return { alias: path.basename(filePath, ".md") };
+  }
+}
+
+function formatSkillListItem(skill: {
+  alias: string;
+  description?: string;
+}): string {
+  const { alias, description } = skill;
+  if (description) {
+    return `* ${alias} - ${description}`;
+  }
+  return `* ${alias}`;
+}
+
 /**
  * Creates and configures an MCP server instance with Jaypie tools
  * @param options - Configuration options (or legacy version string)
@@ -267,7 +319,7 @@ export function createMcpServer(
 
   server.tool(
     "list_prompts",
-    "List available Jaypie development prompts and guides. Use this FIRST when starting work on a Jaypie project to discover relevant documentation. Returns filenames, descriptions, and which file patterns each prompt applies to (e.g., 'Required for packages/express/**').",
+    "[DEPRECATED: Use skill('index') instead] List available Jaypie development prompts and guides. Use this FIRST when starting work on a Jaypie project to discover relevant documentation. Returns filenames, descriptions, and which file patterns each prompt applies to (e.g., 'Required for packages/express/**').",
     {},
     async () => {
       log.info("Tool called: list_prompts");
@@ -317,7 +369,7 @@ export function createMcpServer(
 
   server.tool(
     "read_prompt",
-    "Read a Jaypie prompt/guide by filename. Call list_prompts first to see available prompts. These contain best practices, templates, code patterns, and step-by-step guides for Jaypie development tasks.",
+    "[DEPRECATED: Use skill(alias) instead] Read a Jaypie prompt/guide by filename. Call list_prompts first to see available prompts. These contain best practices, templates, code patterns, and step-by-step guides for Jaypie development tasks.",
     {
       filename: z
         .string()
@@ -374,6 +426,155 @@ export function createMcpServer(
   );
 
   log.info("Registered tool: read_prompt");
+
+  // Skill tool - new unified documentation access
+  server.tool(
+    "skill",
+    "Access Jaypie development documentation. Pass a skill alias (e.g., 'aws', 'tests', 'errors') to get that documentation. Pass 'index' or no argument to list all available skills.",
+    {
+      alias: z
+        .string()
+        .optional()
+        .describe(
+          "Skill alias (e.g., 'aws', 'tests', 'errors'). Omit or use 'index' to list all skills.",
+        ),
+    },
+    async ({ alias }) => {
+      const effectiveAlias = alias?.toLowerCase().trim() || "index";
+
+      log.info(`Tool called: skill (alias: ${effectiveAlias})`);
+
+      // Validate alias for path traversal
+      if (!isValidSkillAlias(effectiveAlias)) {
+        log.error(`Invalid skill alias: ${effectiveAlias}`);
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: `Error: Invalid skill alias "${alias}". Aliases may only contain letters, numbers, hyphens, and underscores.`,
+            },
+          ],
+        };
+      }
+
+      try {
+        // Handle index: return index.md content plus list of all skills
+        if (effectiveAlias === "index") {
+          let indexContent = "";
+
+          // Try to read index.md if it exists
+          try {
+            const indexPath = path.join(SKILLS_PATH, "index.md");
+            const rawContent = await fs.readFile(indexPath, "utf-8");
+            // Strip frontmatter if present
+            if (rawContent.startsWith("---")) {
+              const parsed = matter(rawContent);
+              indexContent = parsed.content.trim();
+            } else {
+              indexContent = rawContent;
+            }
+          } catch {
+            // No index.md, that's fine
+          }
+
+          // Get list of all skills
+          const files = await fs.readdir(SKILLS_PATH);
+          const mdFiles = files.filter(
+            (file) => file.endsWith(".md") && file !== "index.md",
+          );
+
+          const skills = await Promise.all(
+            mdFiles.map((file) => parseSkillFile(path.join(SKILLS_PATH, file))),
+          );
+
+          // Sort alphabetically
+          skills.sort((a, b) => a.alias.localeCompare(b.alias));
+
+          const skillList = skills.map(formatSkillListItem).join("\n");
+
+          const resultText = indexContent
+            ? `${indexContent}\n\n## Available Skills\n\n${skillList}`
+            : `# Jaypie Skills\n\n## Available Skills\n\n${skillList}`;
+
+          log.info("Successfully returned skill index");
+
+          return {
+            content: [
+              {
+                type: "text" as const,
+                text: resultText,
+              },
+            ],
+          };
+        }
+
+        // Read specific skill file
+        const skillPath = path.join(SKILLS_PATH, `${effectiveAlias}.md`);
+
+        log.info(`Reading skill file: ${skillPath}`);
+
+        const content = await fs.readFile(skillPath, "utf-8");
+
+        log.info(
+          `Successfully read skill ${effectiveAlias} (${content.length} bytes)`,
+        );
+
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: content,
+            },
+          ],
+        };
+      } catch (error) {
+        if ((error as { code?: string }).code === "ENOENT") {
+          log.error(`Skill not found: ${effectiveAlias}`);
+
+          // Suggest available skills
+          try {
+            const files = await fs.readdir(SKILLS_PATH);
+            const available = files
+              .filter((f) => f.endsWith(".md"))
+              .map((f) => f.replace(".md", ""))
+              .sort()
+              .join(", ");
+
+            return {
+              content: [
+                {
+                  type: "text" as const,
+                  text: `Error: Skill "${effectiveAlias}" not found.\n\nAvailable skills: ${available}\n\nUse skill("index") to see all skills with descriptions.`,
+                },
+              ],
+            };
+          } catch {
+            return {
+              content: [
+                {
+                  type: "text" as const,
+                  text: `Error: Skill "${effectiveAlias}" not found. Use skill("index") to list available skills.`,
+                },
+              ],
+            };
+          }
+        }
+
+        log.error("Error reading skill:", error);
+
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: `Error reading skill: ${error instanceof Error ? error.message : "Unknown error"}`,
+            },
+          ],
+        };
+      }
+    },
+  );
+
+  log.info("Registered tool: skill");
 
   server.tool(
     "version",
@@ -456,9 +657,7 @@ export function createMcpServer(
         }
 
         if (flatNotes.length === 0) {
-          const filterDesc = sinceVersion
-            ? ` newer than ${sinceVersion}`
-            : "";
+          const filterDesc = sinceVersion ? ` newer than ${sinceVersion}` : "";
           return {
             content: [
               {
@@ -504,12 +703,8 @@ export function createMcpServer(
     "read_release_note",
     "Read the full content of a specific release note. Call list_release_notes first to see available versions.",
     {
-      package: z
-        .string()
-        .describe("Package name (e.g., 'jaypie', 'mcp')"),
-      version: z
-        .string()
-        .describe("Version number (e.g., '1.2.3')"),
+      package: z.string().describe("Package name (e.g., 'jaypie', 'mcp')"),
+      version: z.string().describe("Version number (e.g., '1.2.3')"),
     },
     async ({ package: packageName, version }) => {
       log.info(
