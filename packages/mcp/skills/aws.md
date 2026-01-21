@@ -1,75 +1,17 @@
 ---
-description: AWS integration, CLI tools, and cloud services
-related: cdk, dynamodb, secrets, logs
+description: AWS integration and cloud services code patterns
+related: cdk, dynamodb, secrets, logs, tools-aws
 ---
 
 # AWS Integration
 
-Jaypie integrates with AWS services through SDK utilities and CLI tools available via the MCP.
+Jaypie integrates with AWS services through the `@jaypie/aws` package and CDK constructs.
 
-## MCP AWS Tools
+## MCP Tools
 
-The Jaypie MCP provides AWS tools that use your local AWS credentials:
+For interactive AWS tools (Lambda, S3, SQS, CloudWatch, Step Functions, CloudFormation), see **tools-aws**.
 
-### Lambda Functions
-```
-aws_lambda_list_functions     - List functions with optional prefix filter
-aws_lambda_get_function       - Get function configuration and details
-```
-
-### Step Functions
-```
-aws_stepfunctions_list_executions  - List executions for a state machine
-aws_stepfunctions_stop_execution   - Stop a running execution
-```
-
-### CloudWatch Logs
-```
-aws_logs_filter_log_events    - Search logs with patterns and time ranges
-```
-
-### S3
-```
-aws_s3_list_objects           - List bucket objects with prefix filtering
-```
-
-### DynamoDB
-```
-aws_dynamodb_describe_table   - Get table metadata and indexes
-aws_dynamodb_scan             - Scan table (use sparingly)
-aws_dynamodb_query            - Query by partition key
-aws_dynamodb_get_item         - Get single item by key
-```
-
-### SQS
-```
-aws_sqs_list_queues           - List queues with prefix filter
-aws_sqs_get_queue_attributes  - Get queue attributes
-aws_sqs_receive_message       - Peek at queue messages
-aws_sqs_purge_queue           - Delete all messages (irreversible)
-```
-
-### CloudFormation
-```
-aws_cloudformation_describe_stack  - Get stack details and outputs
-```
-
-## Credential Management
-
-Tools use the host's AWS credential chain:
-1. Environment variables (`AWS_ACCESS_KEY_ID`, etc.)
-2. `~/.aws/credentials` and `~/.aws/config`
-3. SSO sessions via `aws sso login`
-
-```bash
-# List available profiles
-aws_list_profiles
-
-# Use a specific profile
-aws_lambda_list_functions --profile production
-```
-
-## Jaypie AWS Package
+## @jaypie/aws Package
 
 The `@jaypie/aws` package provides SDK utilities:
 
@@ -83,6 +25,14 @@ const apiKey = await getSecret("my-api-key");
 await sendMessage(queueUrl, { action: "process", id: "123" });
 ```
 
+### Available Functions
+
+| Function | Description |
+|----------|-------------|
+| `getSecret(name)` | Retrieve secret from Secrets Manager |
+| `sendMessage(queueUrl, body)` | Send message to SQS queue |
+| `textract(bucket, key)` | Extract text from document |
+
 ## Environment-Based Configuration
 
 Use CDK environment variables in Lambda:
@@ -92,16 +42,97 @@ Use CDK environment variables in Lambda:
 | `CDK_ENV_BUCKET` | S3 bucket name |
 | `CDK_ENV_QUEUE_URL` | SQS queue URL |
 | `CDK_ENV_SNS_TOPIC_ARN` | SNS topic ARN |
+| `CDK_ENV_SNS_ROLE_ARN` | SNS role ARN |
 
-## Profile Selection
+```typescript
+import { sendMessage } from "@jaypie/aws";
 
-When working with multiple AWS accounts:
+// Use environment variable for queue URL
+await sendMessage(process.env.CDK_ENV_QUEUE_URL, {
+  action: "process",
+  documentId: "doc-123",
+});
+```
+
+## Credential Management
+
+### Local Development
+
+Configure credentials via environment or files:
 
 ```bash
 # Set default profile
 export AWS_PROFILE=development
 
-# Or specify per-command via MCP tools
-aws_lambda_list_functions --profile production --region us-west-2
+# Or use named profiles
+export AWS_PROFILE=production
+```
+
+Credential chain priority:
+1. Environment variables (`AWS_ACCESS_KEY_ID`, etc.)
+2. `~/.aws/credentials` and `~/.aws/config`
+3. SSO sessions via `aws sso login`
+
+### Lambda Runtime
+
+Lambda functions automatically receive credentials via the IAM role. Use CDK to grant permissions:
+
+```typescript
+import { JaypieLambda } from "@jaypie/constructs";
+
+const handler = new JaypieLambda(this, "Handler", {
+  entry: "src/handler.ts",
+});
+
+// Grant S3 access
+bucket.grantReadWrite(handler);
+
+// Grant SQS access
+queue.grantSendMessages(handler);
+
+// Grant Secrets Manager access
+secret.grantRead(handler);
+```
+
+## Error Handling
+
+Handle AWS errors with Jaypie patterns:
+
+```typescript
+import { getSecret } from "@jaypie/aws";
+import { ConfigurationError, log } from "jaypie";
+
+async function getApiKey() {
+  try {
+    return await getSecret("my-api-key");
+  } catch (error) {
+    log.error("Failed to retrieve API key", { error });
+    throw new ConfigurationError("API key not configured");
+  }
+}
+```
+
+## Testing
+
+Mock AWS functions in tests:
+
+```typescript
+import { getSecret, sendMessage } from "@jaypie/aws";
+import { vi } from "vitest";
+
+vi.mock("@jaypie/aws");
+
+describe("Handler", () => {
+  it("sends message to queue", async () => {
+    vi.mocked(sendMessage).mockResolvedValue({ MessageId: "123" });
+
+    await handler({ documentId: "doc-123" });
+
+    expect(sendMessage).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({ documentId: "doc-123" })
+    );
+  });
+});
 ```
 
