@@ -256,7 +256,7 @@ function myAdapter(service, options) {
 
 ## Related
 
-- [Fabric](/docs/experimental/vocabulary) - Full API reference
+- [Fabric](/docs/experimental/fabric) - Full API reference
 - [@jaypie/llm](/docs/packages/llm) - LLM integration
 - [@jaypie/mcp](/docs/experimental/mcp) - MCP integration
 - [@jaypie/lambda](/docs/packages/lambda) - Lambda handlers

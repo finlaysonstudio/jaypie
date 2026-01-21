@@ -286,10 +286,10 @@ for await (const chunk of Llm.stream("Tell me a story")) {
 | Package | Purpose |
 |---------|---------|
 | [`@jaypie/dynamodb`](/docs/experimental/dynamodb) | DynamoDB single-table patterns |
+| [`@jaypie/fabric`](/docs/experimental/fabric) | Service handler adapters |
 | [`@jaypie/fabricator`](/docs/experimental/fabricator) | Test data generation |
 | [`@jaypie/mcp`](/docs/experimental/mcp) | Model Context Protocol server |
 | [`@jaypie/textract`](/docs/experimental/textract) | AWS Textract utilities |
-| [`@jaypie/vocabulary`](/docs/experimental/vocabulary) | Service handler adapters |
 
 ## Next Steps
 

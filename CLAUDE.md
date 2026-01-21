@@ -28,6 +28,7 @@
 | `@jaypie/errors` | Error types (ConfigurationError, etc.) |
 | `@jaypie/eslint` | Opinionated ESLint configuration |
 | `@jaypie/express` | Express.js handler utilities |
+| `@jaypie/fabric` | Type coercion, service handlers, and adapters for CLI/Lambda/LLM/MCP |
 | `@jaypie/fabricator` | Data fabrication utilities |
 | `@jaypie/kit` | Utility functions for Jaypie applications |
 | `@jaypie/lambda` | AWS Lambda handler utilities |
@@ -40,7 +41,6 @@
 | `@jaypie/testkit` | Testing mocks and utilities |
 | `@jaypie/textract` | AWS Textract utilities |
 | `@jaypie/types` | Core TypeScript type definitions |
-| `@jaypie/vocabulary` | Type coercion, service handlers, and adapters for CLI/Lambda/LLM/MCP |
 
 ## Workspace Naming Conventions
 

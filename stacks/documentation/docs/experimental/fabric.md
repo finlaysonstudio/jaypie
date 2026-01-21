@@ -1,5 +1,5 @@
 ---
-sidebar_position: 2
+sidebar_position: 5
 ---
 
 # @jaypie/fabric
@@ -10,7 +10,7 @@ sidebar_position: 2
 
 ## Overview
 
-`@jaypie/fabric` provides type conversion and service handler patterns for consistent input handling across Jaypie applications.
+`@jaypie/fabric` provides type conversion utilities and service handler patterns for consistent input handling across Jaypie applications. It follows the "Fabric" philosophy: things that feel right should work, and invalid inputs throw clear errors.
 
 ## Installation
 
@@ -20,259 +20,483 @@ npm install @jaypie/fabric
 
 ## Quick Reference
 
-### Type Conversion Functions
+### Core Exports
 
-| Function | Purpose |
-|----------|---------|
-| `fabric` | Master conversion dispatcher |
-| `fabricBoolean` | Convert to boolean |
-| `fabricNumber` | Convert to number |
-| `fabricString` | Convert to string |
-| `fabricArray` | Wrap non-arrays in array |
-| `fabricObject` | Wrap in `{ value: ... }` structure |
-| `fabricDate` | Convert to Date object |
+| Export | Import Path | Purpose |
+|--------|-------------|---------|
+| `fabricService` | `@jaypie/fabric` | Create handler with typed inputs |
+| `fabric` | `@jaypie/fabric` | Type conversion utilities |
+| `StatusType` | `@jaypie/fabric` | Standard status values |
+| `fabricCommand` | `@jaypie/fabric/commander` | CLI adapter (Commander.js) |
+| `fabricLambda` | `@jaypie/fabric/lambda` | Lambda adapter |
+| `fabricTool` | `@jaypie/fabric/llm` | LLM tool adapter |
+| `fabricMcp` | `@jaypie/fabric/mcp` | MCP tool adapter |
 
-### Service Handler
+### Supported Types
 
-| Export | Purpose |
-|--------|---------|
-| `fabricService` | Create validated service endpoints |
-| `FabricModel` | Base type for models |
-| `FabricJob` | Job model with status tracking |
-| `FabricMessage` | Message model with content |
-
-## Type Conversion
-
-Convert values between types with predictable behavior:
-
-```typescript
-import { fabric, fabricBoolean, fabricNumber, fabricString } from "@jaypie/fabric";
-
-// Boolean conversion
-fabricBoolean("true");      // true
-fabricBoolean(1);           // true
-fabricBoolean("false");     // false
-fabricBoolean(0);           // false
-
-// Number conversion
-fabricNumber("42");         // 42
-fabricNumber(true);         // 1
-fabricNumber(false);        // 0
-
-// String conversion
-fabricString(true);         // "true"
-fabricString(42);           // "42"
-
-// Master dispatcher
-fabric("true", Boolean);    // true
-fabric("42", Number);       // 42
-fabric(42, String);         // "42"
-```
-
-### Unwrapping Behavior
-
-Scalar conversions automatically unwrap nested structures:
-
-```typescript
-// Objects with value property
-fabric({ value: "true" }, Boolean);      // true
-
-// Single-element arrays
-fabric([42], Number);                    // 42
-
-// JSON strings
-fabric('{"value":"true"}', Boolean);     // true
-fabric('[42]', Number);                  // 42
-```
-
-### Typed Arrays
-
-Convert arrays with element type conversion:
-
-```typescript
-fabric([1, 2, 3], [String]);      // ["1", "2", "3"]
-fabric(["1", "2"], [Number]);     // [1, 2]
-fabric([1, 0], [Boolean]);        // [true, false]
-
-// String splitting
-fabric("1,2,3", [Number]);        // [1, 2, 3]
-fabric("a, b, c", [String]);      // ["a", "b", "c"]
-```
+| Type | Aliases | Description |
+|------|---------|-------------|
+| `String` | `"string"` | String conversion |
+| `Number` | `"number"` | Number parsing |
+| `Boolean` | `"boolean"` | Boolean parsing |
+| `Array` | `[]` | Array conversion |
+| `Object` | `{}` | Object conversion |
+| `[String]` | - | Typed array of strings |
+| `[Number]` | - | Typed array of numbers |
+| `/regex/` | - | String with regex validation |
+| `["a", "b"]` | - | Validated string (must match) |
+| `[1, 2, 3]` | - | Validated number (must match) |
+| `StatusType` | - | Standard status values |
 
 ## Service Handler
 
-Create validated service endpoints with automatic type conversion:
+### Basic Handler
 
 ```typescript
 import { fabricService } from "@jaypie/fabric";
 
-const calculator = fabricService({
-  alias: "add",
-  description: "Add two numbers",
+const divisionHandler = fabricService({
+  alias: "division",
+  description: "Divides two numbers",
   input: {
-    a: { type: Number, description: "First number" },
-    b: { type: Number, description: "Second number" },
+    numerator: {
+      type: Number,
+      default: 12,
+      description: "Number on top",
+    },
+    denominator: {
+      type: Number,
+      default: 3,
+      description: "Number on bottom",
+      validate: (value) => value !== 0,
+    },
   },
-  service: ({ a, b }) => a + b,
+  service: ({ numerator, denominator }) => numerator / denominator,
 });
 
-await calculator({ a: "5", b: "3" }); // 8
-await calculator('{"a": 5, "b": 3}'); // 8
+await divisionHandler();                              // → 4
+await divisionHandler({ numerator: 24 });             // → 8
+await divisionHandler({ numerator: "14", denominator: "7" }); // → 2 (converted)
+await divisionHandler('{"numerator": "18"}');         // → 6 (JSON parsed)
 ```
 
-### Input Field Options
+### Input Field Definition
 
-| Option | Type | Purpose |
-|--------|------|---------|
-| `type` | `ConversionType` | Boolean, Number, String, Array, Object |
-| `default` | any | Default value if not provided |
-| `description` | string | Field description |
-| `required` | boolean | Required unless default is set |
-| `validate` | function/RegExp/array | Validation rules |
+| Property | Type | Description |
+|----------|------|-------------|
+| `type` | `ConversionType` | Required. The target type for conversion |
+| `default` | `unknown` | Default value if not provided |
+| `description` | `string` | Field description (used in CLI help) |
+| `required` | `boolean` | Whether field is required (default: true unless default set) |
+| `validate` | `function \| RegExp \| array` | Validation after conversion |
+| `flag` | `string` | Override long flag name for Commander.js |
+| `letter` | `string` | Short switch letter for Commander.js |
 
-### Validation
+### Handler Properties
+
+Config properties are attached directly to the handler:
+
+```typescript
+const handler = fabricService({
+  alias: "greet",
+  description: "Greet a user",
+  input: { name: { type: String } },
+  service: ({ name }) => `Hello, ${name}!`,
+});
+
+handler.alias;       // "greet"
+handler.description; // "Greet a user"
+handler.input;       // { name: { type: String } }
+```
+
+### ServiceContext
+
+Services receive an optional second parameter with context utilities:
+
+```typescript
+const handler = fabricService({
+  input: { jobId: { type: String } },
+  service: async ({ jobId }, context) => {
+    context?.sendMessage?.({ content: `Starting job ${jobId}` });
+
+    // Handle recoverable errors without throwing
+    try {
+      await riskyOperation();
+    } catch (err) {
+      context?.onError?.(err);  // Reports error but continues
+    }
+
+    // Or report fatal errors explicitly
+    if (criticalFailure) {
+      context?.onFatal?.(new Error("Cannot continue"));
+    }
+
+    return { jobId, status: "complete" };
+  },
+});
+```
+
+Context callbacks connect to adapter registration:
+- `sendMessage` → `onMessage` callback
+- `onError` → `onError` callback (recoverable errors)
+- `onFatal` → `onFatal` callback (fatal errors)
+
+### Validation-Only Mode
+
+When no `service` function is provided, the handler returns the processed input:
+
+```typescript
+const validateUser = fabricService({
+  input: {
+    age: { type: Number, validate: (v) => v >= 18 },
+    email: { type: /^[^@]+@[^@]+\.[^@]+$/ },
+    role: { type: ["admin", "user", "guest"], default: "user" },
+  },
+});
+
+await validateUser({ age: "25", email: "bob@example.com" });
+// → { age: 25, email: "bob@example.com", role: "user" }
+```
+
+## Type Conversion
+
+### Conversion Examples
+
+```typescript
+import { fabric } from "@jaypie/fabric";
+
+// Boolean conversion
+fabric("true", Boolean);     // → true
+fabric("false", Boolean);    // → false
+fabric(1, Boolean);          // → true
+fabric(0, Boolean);          // → false
+
+// Number conversion
+fabric("42", Number);        // → 42
+fabric("true", Number);      // → 1
+fabric("false", Number);     // → 0
+
+// String conversion
+fabric(true, String);        // → "true"
+fabric(42, String);          // → "42"
+
+// Array conversion
+fabric("1,2,3", [Number]);   // → [1, 2, 3]
+fabric("a\tb\tc", [String]); // → ["a", "b", "c"]
+fabric([1, 2], [String]);    // → ["1", "2"]
+
+// Unwrapping
+fabric({ value: "42" }, Number);  // → 42
+fabric(["true"], Boolean);        // → true
+fabric('{"value": 5}', Number);   // → 5
+```
+
+### RegExp Type Shorthand
+
+A bare RegExp converts to String and validates:
 
 ```typescript
 const handler = fabricService({
   input: {
-    email: {
-      type: String,
-      validate: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-    },
-    age: {
-      type: Number,
-      validate: (v) => v >= 0 && v <= 120,
-    },
-    status: {
-      type: String,
-      validate: ["active", "inactive", "pending"],
-    },
+    email: { type: /^[^@]+@[^@]+\.[^@]+$/ },
   },
-  service: (input) => input,
+  service: ({ email }) => email,
 });
+
+await handler({ email: "bob@example.com" });  // ✓
+await handler({ email: "invalid" });          // ✗ BadRequestError
 ```
 
-## Sub-path Exports
+### Validated Type Shorthand
 
-### Commander (`@jaypie/fabric/commander`)
-
-Register services as CLI commands:
+Arrays of literals validate against allowed values:
 
 ```typescript
+// String validation
+input: {
+  currency: { type: ["usd", "eur", "gbp"] },  // Must be one of these
+  pattern: { type: [/^test-/, "special"] },   // Matches regex OR equals "special"
+}
+
+// Number validation
+input: {
+  priority: { type: [1, 2, 3, 4, 5] },        // Must be 1-5
+}
+```
+
+### StatusType
+
+A predefined validated string type for common status values:
+
+```typescript
+import { StatusType, isStatus } from "@jaypie/fabric";
+
+// StatusType is: ["canceled", "complete", "error", "pending", "processing", "queued", "sending"]
+
+const handler = fabricService({
+  input: {
+    status: { type: StatusType, default: "pending" },
+  },
+  service: ({ status }) => status,
+});
+
+await handler({ status: "processing" });  // ✓
+await handler({ status: "invalid" });     // ✗ BadRequestError
+
+// Type guard
+isStatus("pending");   // → true
+isStatus("unknown");   // → false
+```
+
+## CLI Adapter
+
+Integrate with Commander.js:
+
+```typescript
+import { Command } from "commander";
+import { fabricService } from "@jaypie/fabric";
 import { fabricCommand } from "@jaypie/fabric/commander";
 
-fabricCommand(program, myService);
+const handler = fabricService({
+  alias: "greet",
+  description: "Greet a user",
+  input: {
+    userName: { type: String, flag: "user", letter: "u" },
+    loud: { type: Boolean, letter: "l", default: false },
+  },
+  service: ({ loud, userName }) => {
+    const greeting = `Hello, ${userName}!`;
+    return loud ? greeting.toUpperCase() : greeting;
+  },
+});
+
+const program = new Command();
+fabricCommand({
+  service: handler,
+  program,
+  onMessage: (msg) => console.log(msg.content),
+  onComplete: (result) => console.log(result),
+  onError: (error) => console.warn("Warning:", error.message),
+  onFatal: (error) => {
+    console.error("Fatal:", error.message);
+    process.exit(1);
+  },
+});
+program.parse();
+// Usage: greet --user Alice -l
 ```
 
-### Lambda (`@jaypie/fabric/lambda`)
-
-Wrap services for AWS Lambda:
+## Lambda Adapter
 
 ```typescript
+import { fabricService } from "@jaypie/fabric";
 import { fabricLambda } from "@jaypie/fabric/lambda";
 
-export const handler = fabricLambda(myService);
-```
+const processOrderHandler = fabricService({
+  alias: "processOrder",
+  input: {
+    orderId: { type: String },
+    priority: { type: [1, 2, 3], default: 2 },
+  },
+  service: async ({ orderId, priority }, context) => {
+    context?.sendMessage?.({ content: `Processing order ${orderId}` });
+    return { orderId, status: "complete", priority };
+  },
+});
 
-### Express (`@jaypie/fabric/express`)
-
-Create Express middleware:
-
-```typescript
-import { fabricExpress, FabricRouter } from "@jaypie/fabric/express";
-
-app.post("/api", fabricExpress(myService));
-
-// Multi-service router
-const router = new FabricRouter({
-  services: [service1, service2],
+export const handler = fabricLambda({
+  service: processOrderHandler,
+  secrets: ["MONGODB_URI"],
+  setup: [connectDb],
+  teardown: [disconnectDb],
+  onMessage: (msg) => console.log(msg.content),
 });
 ```
 
-### HTTP (`@jaypie/fabric/http`)
+### Event Extraction
 
-HTTP service wrapper with CORS and authorization:
+Lambda adapter automatically extracts input from:
 
-```typescript
-import { fabricHttp, FabricHttpServer } from "@jaypie/fabric/http";
+- Direct invocation
+- SQS events (including batches)
+- SNS events
 
-const httpService = fabricHttp(myService, {
-  cors: { origin: "*" },
-  authorization: validateToken,
-});
-```
+## LLM Tool Adapter
 
-### LLM (`@jaypie/fabric/llm`)
-
-Create LLM tools:
+Convert handler to LLM tool:
 
 ```typescript
+import { fabricService } from "@jaypie/fabric";
 import { fabricTool } from "@jaypie/fabric/llm";
+import { Llm, Toolkit } from "@jaypie/llm";
 
-const tool = fabricTool(myService);
-// Returns { name, description, parameters, execute }
-```
-
-### MCP (`@jaypie/fabric/mcp`)
-
-Register MCP tools:
-
-```typescript
-import { fabricMcp, FabricMcpServer } from "@jaypie/fabric/mcp";
-
-// Single service registration
-fabricMcp({ service: myService, server: mcpServer });
-
-// Multi-service server (preferred)
-const server = FabricMcpServer({
-  name: "my-server",
-  version: "1.0.0",
-  services: [service1, service2],
+const weatherHandler = fabricService({
+  alias: "get_weather",
+  description: "Get current weather for a location",
+  input: {
+    location: { type: String, description: "City name" },
+    units: { type: ["celsius", "fahrenheit"], default: "celsius" },
+  },
+  service: async ({ location, units }) => {
+    const weather = await fetchWeather(location);
+    return { location, temperature: weather.temp, units };
+  },
 });
 
-// Server has metadata for introspection
-server.name;      // "my-server"
-server.services;  // Array of registered services
-server.tools;     // Array of { name, description, service }
+const { tool } = fabricTool({ service: weatherHandler });
+const toolkit = new Toolkit([tool]);
+const llm = new Llm({ toolkit });
+
+const response = await llm.ask("What's the weather in Tokyo?");
 ```
 
-### Data (`@jaypie/fabric/data`)
+### Type Mapping
 
-Generate CRUD services for DynamoDB:
+| Fabric Type | JSON Schema |
+|-------------|-------------|
+| `String` | `{ type: "string" }` |
+| `Number` | `{ type: "number" }` |
+| `Boolean` | `{ type: "boolean" }` |
+| `[String]` | `{ type: "array", items: { type: "string" } }` |
+| `/regex/` | `{ type: "string", pattern: "..." }` |
+| `["a", "b"]` | `{ type: "string", enum: ["a", "b"] }` |
+
+## MCP Tool Adapter
+
+Register as MCP tool:
 
 ```typescript
-import { FabricData } from "@jaypie/fabric/data";
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { fabricService } from "@jaypie/fabric";
+import { fabricMcp } from "@jaypie/fabric/mcp";
 
-const recordServices = FabricData({ model: "record" });
-// Creates: create, list, read, update, delete, archive
+const handler = fabricService({
+  alias: "calculate",
+  description: "Perform a calculation",
+  input: {
+    operation: { type: ["add", "subtract", "multiply", "divide"] },
+    a: { type: Number },
+    b: { type: Number },
+  },
+  service: ({ operation, a, b }) => {
+    switch (operation) {
+      case "add": return a + b;
+      case "subtract": return a - b;
+      case "multiply": return a * b;
+      case "divide": return a / b;
+    }
+  },
+});
+
+const server = new McpServer({ name: "calculator", version: "1.0.0" });
+fabricMcp({ service: handler, server });
 ```
 
-## Index Utilities
+## Model Types
 
-Utilities for DynamoDB single-table patterns:
+Standard model types for consistent data modeling:
 
 ```typescript
-import {
-  APEX,
-  buildCompositeKey,
-  calculateScope,
-  DEFAULT_INDEXES,
-  populateIndexKeys,
-} from "@jaypie/fabric";
+import type { FabricModel, FabricJob, FabricMessage } from "@jaypie/fabric";
+```
 
-// Calculate scope from parent
-const scope = calculateScope({ model: "chat", id: "abc-123" });
-// "chat#abc-123"
+### FabricModel Fields
 
-// Root scope
-const rootScope = calculateScope(); // "@" (APEX)
+```
+model: <varies>
+id: String (auto)
+createdAt: Date (auto)
+updatedAt: Date (auto)
+name?: String
+alias?: String
+description?: String
+class?: String
+type?: String
+content?: String
+metadata?: Object
+archivedAt?: Date
+deletedAt?: Date
+```
 
-// Build composite key
-const key = buildCompositeKey(entity, ["scope", "model"]);
-// "chat#abc-123#message"
+### FabricJob
+
+```typescript
+// FabricJob extends FabricModel
+{
+  model: "job",
+  status: "pending" | "processing" | "complete" | "error" | ...,
+  startedAt?: Date,
+  completedAt?: Date,
+  messages?: FabricMessage[],
+  progress?: {
+    percentageComplete?: number,
+    estimatedTime?: number,
+  },
+}
+```
+
+## Error Handling
+
+Errors are propagated through all adapters:
+
+```typescript
+import { NotFoundError } from "@jaypie/errors";
+
+const handler = fabricService({
+  input: { userId: { type: String } },
+  service: async ({ userId }) => {
+    const user = await db.users.findById(userId);
+    if (!user) {
+      throw NotFoundError("User not found");
+    }
+    return user;
+  },
+});
+
+// CLI: Prints error message, exits with code 1
+// Lambda: Returns error response
+// LLM: Tool returns error to model
+// MCP: Returns MCP error response
+```
+
+Invalid conversions throw `BadRequestError`:
+
+```typescript
+await handler({ numerator: "not-a-number" });  // Cannot convert to Number
+await handler({ priority: 10 });                // Validation fails
+await handler({});                              // Missing required field
+```
+
+## Testing
+
+```typescript
+import { describe, expect, it } from "vitest";
+import { matchers } from "@jaypie/testkit";
+
+expect.extend(matchers);
+
+describe("getUser", () => {
+  it("returns user", async () => {
+    const result = await getUser({ userId: "abc-123" });
+    expect(result).toHaveProperty("id", "abc-123");
+  });
+
+  it("converts string input", async () => {
+    const result = await divisionHandler({ numerator: "24" });
+    expect(result).toBe(8);
+  });
+
+  it("throws NotFoundError", async () => {
+    await expect(
+      getUser({ userId: "invalid" })
+    ).rejects.toThrowNotFoundError();
+  });
+});
 ```
 
 ## Related
 
-- [@jaypie/dynamodb](/docs/experimental/dynamodb) - DynamoDB utilities
-- [@jaypie/vocabulary](/docs/experimental/vocabulary) - Legacy service adapters (deprecated)
+- [LLM Integration](/docs/guides/llm-integration) - LLM tools
+- [@jaypie/llm](/docs/packages/llm) - LLM package
+- [@jaypie/mcp](/docs/experimental/mcp) - MCP server
+- [@jaypie/lambda](/docs/packages/lambda) - Lambda handlers

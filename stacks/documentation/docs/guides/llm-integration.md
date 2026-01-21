@@ -380,4 +380,4 @@ await Llm.operate(prompt, {
 - [Express on Lambda](/docs/guides/express-lambda) - Building APIs with LLM
 - [Handler Lifecycle](/docs/core/handler-lifecycle) - Integrating LLM in handlers
 - [@jaypie/llm](/docs/packages/llm) - Full API reference
-- [Vocabulary LLM](/docs/experimental/vocabulary) - Service handler to LLM tool conversion
+- [Fabric](/docs/experimental/fabric) - Service handler to LLM tool conversion

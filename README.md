@@ -64,9 +64,9 @@ They may be installed separately in the future.
 | `@jaypie/datadog` | `submitDistribution`, `submitMetric`, `submitMetricSet` | Datadog helpers |
 | `@jaypie/express` | `badRequestRoute`, `cors`, `echoRoute`, `expressHandler`, `expressHttpCodeHandler`, `expressStreamHandler`, `forbiddenRoute`, `getCurrentInvokeUuid`, `goneRoute`, `methodNotAllowedRoute`, `noContentRoute`, `notFoundRoute`, `notImplementedRoute` | Express entry point |
 | `@jaypie/lambda` | `lambdaHandler` | Lambda entry point |
+| `@jaypie/fabric` | `fabric`, `fabricService`, `StatusType` | Type coercion and service handler patterns |
 | `@jaypie/llm` | `Llm` | LLM helpers |
 | `@jaypie/mongoose` | `connect`, `connectFromSecretEnv`, `disconnect`, `mongoose` | MongoDB management |
-| `@jaypie/vocabulary` | `coerce`, `serviceHandler`, `StatusType` | Type coercion and service handler patterns |
 
 #### TestKit
 

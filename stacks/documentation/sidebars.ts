@@ -56,10 +56,10 @@ const sidebars: SidebarsConfig = {
       label: "Experimental",
       items: [
         "experimental/dynamodb",
+        "experimental/fabric",
         "experimental/fabricator",
         "experimental/mcp",
         "experimental/textract",
-        "experimental/vocabulary",
       ],
     },
     {
@@ -67,7 +67,7 @@ const sidebars: SidebarsConfig = {
       label: "Architecture",
       items: [
         "architecture/project-structure",
-        "architecture/vocabulary-system",
+        "architecture/fabric-system",
         "architecture/patterns",
       ],
     },
