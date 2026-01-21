@@ -56,6 +56,8 @@ function executeDistWithInput(input: string): Promise<{
     child.stdin.write(input + "\n");
     child.stdin.end();
 
+    // Use longer timeout for CI environments (especially Node 22.x)
+    const FALLBACK_TIMEOUT = process.env.CI ? 10000 : 3000;
     setTimeout(() => {
       if (outputTimer) {
         clearTimeout(outputTimer);
@@ -68,7 +70,7 @@ function executeDistWithInput(input: string): Promise<{
           exitCode: null,
         });
       }
-    }, 3000);
+    }, FALLBACK_TIMEOUT);
   });
 }
 
