@@ -74,3 +74,81 @@ export interface McpToolResponse {
 export interface FabricMcpResult {
   name: string;
 }
+
+// =============================================================================
+// FabricMcpServer Types
+// =============================================================================
+
+/**
+ * Service entry for FabricMcpServer - either a raw Service or a tool config
+ */
+export interface FabricMcpServerToolConfig {
+  /** Override the service description */
+  description?: string;
+  /** Override the tool name */
+  name?: string;
+  /** Callback called when tool completes successfully */
+  onComplete?: OnCompleteCallback;
+  /** Callback for recoverable errors */
+  onError?: OnErrorCallback;
+  /** Callback for fatal errors */
+  onFatal?: OnFatalCallback;
+  /** Callback for receiving messages from service */
+  onMessage?: OnMessageCallback;
+  /** The service to register as a tool */
+  service: Service | ServiceFunction<Record<string, unknown>, unknown>;
+}
+
+/**
+ * Service entry type for FabricMcpServer services array
+ */
+export type FabricMcpServerServiceEntry =
+  | Service
+  | ServiceFunction<Record<string, unknown>, unknown>
+  | FabricMcpServerToolConfig;
+
+/**
+ * Registered tool information
+ */
+export interface RegisteredTool {
+  /** Tool description */
+  description: string;
+  /** Tool name */
+  name: string;
+  /** The resolved service */
+  service: Service;
+}
+
+/**
+ * Configuration for FabricMcpServer
+ */
+export interface FabricMcpServerConfig {
+  /** Server name */
+  name: string;
+  /** Server-level callbacks applied to all tools */
+  onComplete?: OnCompleteCallback;
+  /** Server-level error callback applied to all tools */
+  onError?: OnErrorCallback;
+  /** Server-level fatal callback applied to all tools */
+  onFatal?: OnFatalCallback;
+  /** Server-level message callback applied to all tools */
+  onMessage?: OnMessageCallback;
+  /** Array of services to register as tools */
+  services: FabricMcpServerServiceEntry[];
+  /** Server version */
+  version: string;
+}
+
+/**
+ * FabricMcpServer type - McpServer with attached metadata
+ */
+export interface FabricMcpServer extends McpServer {
+  /** Server name */
+  name: string;
+  /** Array of registered services */
+  services: Service[];
+  /** Array of registered tool information */
+  tools: RegisteredTool[];
+  /** Server version */
+  version: string;
+}

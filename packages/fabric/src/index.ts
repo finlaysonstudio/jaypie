@@ -111,7 +111,7 @@ export type {
 } from "./types/index.js";
 
 // Service
-export { fabricService } from "./service.js";
+export { fabricService, isService } from "./service.js";
 export { resolveService } from "./resolveService.js";
 export type { ResolveServiceConfig } from "./resolveService.js";
 

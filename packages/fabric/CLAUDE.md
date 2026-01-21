@@ -74,8 +74,10 @@ src/
 │   ├── inputToJsonSchema.ts       # Convert input definitions to JSON Schema
 │   └── types.ts                   # LLM adapter types
 ├── mcp/
-│   ├── index.ts                   # MCP module exports
+│   ├── FabricMcpServer.ts         # Standalone MCP server for multi-service tool registration
 │   ├── fabricMcp.ts               # Register fabricService as MCP tool
+│   ├── index.ts                   # MCP module exports
+│   ├── inputToZodShape.ts         # Convert input definitions to Zod schema
 │   └── types.ts                   # MCP adapter types
 ├── models/
 │   └── base.ts                    # FabricModel, FabricJob, FabricMessage, Progress types
@@ -369,7 +371,8 @@ export type { FabricToolConfig, FabricToolResult, LlmTool, OnCompleteCallback, O
 
 ```typescript
 export { fabricMcp } from "./fabricMcp.js";
-export type { FabricMcpConfig, FabricMcpResult, McpToolContentItem, McpToolResponse, OnCompleteCallback, OnErrorCallback, OnFatalCallback, OnMessageCallback } from "./types.js";
+export { FabricMcpServer, isFabricMcpServer } from "./FabricMcpServer.js";
+export type { FabricMcpConfig, FabricMcpResult, FabricMcpServer as FabricMcpServerType, FabricMcpServerConfig, FabricMcpServerServiceEntry, FabricMcpServerToolConfig, McpToolContentItem, McpToolResponse, OnCompleteCallback, OnErrorCallback, OnFatalCallback, OnMessageCallback, RegisteredTool } from "./types.js";
 ```
 
 ### Express Export (`@jaypie/fabric/express`)

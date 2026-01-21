@@ -218,9 +218,22 @@ const tool = fabricTool(myService);
 Register MCP tools:
 
 ```typescript
-import { fabricMcp } from "@jaypie/fabric/mcp";
+import { fabricMcp, FabricMcpServer } from "@jaypie/fabric/mcp";
 
-fabricMcp(mcpServer, myService);
+// Single service registration
+fabricMcp({ service: myService, server: mcpServer });
+
+// Multi-service server (preferred)
+const server = FabricMcpServer({
+  name: "my-server",
+  version: "1.0.0",
+  services: [service1, service2],
+});
+
+// Server has metadata for introspection
+server.name;      // "my-server"
+server.services;  // Array of registered services
+server.tools;     // Array of { name, description, service }
 ```
 
 ### Data (`@jaypie/fabric/data`)

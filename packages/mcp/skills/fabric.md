@@ -54,10 +54,18 @@ program.addCommand(fabricCommand(greetService));
 ### MCP Tool
 
 ```typescript
-import { fabricMcpTool } from "@jaypie/fabric";
+import { fabricMcp, FabricMcpServer } from "@jaypie/fabric/mcp";
 
-server.tool(...fabricMcpTool(greetService));
-// Available as MCP tool "greet"
+// Single service registration
+fabricMcp({ service: greetService, server });
+
+// Multi-service server (preferred)
+const server = FabricMcpServer({
+  name: "my-server",
+  version: "1.0.0",
+  services: [greetService, searchService],
+});
+// Available as MCP tools "greet" and "search"
 ```
 
 ### LLM Tool

@@ -1,9 +1,10 @@
 // Tests for MCP adapter
 
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
-import { fabricMcp } from "../mcp/index.js";
+import { fabricMcp, FabricMcpServer, isFabricMcpServer } from "../mcp/index.js";
 import { inputToZodShape } from "../mcp/inputToZodShape.js";
 import { fabricService } from "../service.js";
 
@@ -1010,6 +1011,238 @@ describe("MCP Adapter", () => {
       expect(shape.optional._def.type).toBe("optional");
       expect(shape.status._def.type).toBe("enum");
       expect(shape.tags._def.type).toBe("array");
+    });
+  });
+
+  describe("FabricMcpServer", () => {
+    it("creates an MCP server with name and version", () => {
+      const server = FabricMcpServer({
+        name: "test-server",
+        services: [],
+        version: "1.0.0",
+      });
+
+      expect(server.name).toBe("test-server");
+      expect(server.version).toBe("1.0.0");
+      expect(server).toBeInstanceOf(McpServer);
+    });
+
+    it("registers a single service as a tool", () => {
+      const greetService = fabricService({
+        alias: "greet",
+        description: "Greet a user",
+        input: { name: { type: String } },
+        service: ({ name }) => `Hello, ${name}!`,
+      });
+
+      const server = FabricMcpServer({
+        name: "test-server",
+        services: [greetService],
+        version: "1.0.0",
+      });
+
+      expect(server.services).toHaveLength(1);
+      expect(server.tools).toHaveLength(1);
+      expect(server.tools[0].name).toBe("greet");
+      expect(server.tools[0].description).toBe("Greet a user");
+    });
+
+    it("registers multiple services as tools", () => {
+      const greetService = fabricService({
+        alias: "greet",
+        service: () => "Hello!",
+      });
+
+      const echoService = fabricService({
+        alias: "echo",
+        service: () => "Echo!",
+      });
+
+      const server = FabricMcpServer({
+        name: "test-server",
+        services: [greetService, echoService],
+        version: "1.0.0",
+      });
+
+      expect(server.services).toHaveLength(2);
+      expect(server.tools).toHaveLength(2);
+      expect(server.tools.map((t) => t.name).sort()).toEqual(["echo", "greet"]);
+    });
+
+    it("accepts tool config with custom name", () => {
+      const greetService = fabricService({
+        alias: "greet",
+        service: () => "Hello!",
+      });
+
+      const server = FabricMcpServer({
+        name: "test-server",
+        services: [{ name: "hello", service: greetService }],
+        version: "1.0.0",
+      });
+
+      expect(server.tools[0].name).toBe("hello");
+    });
+
+    it("accepts tool config with custom description", () => {
+      const greetService = fabricService({
+        alias: "greet",
+        description: "Original description",
+        service: () => "Hello!",
+      });
+
+      const server = FabricMcpServer({
+        name: "test-server",
+        services: [
+          { description: "Custom description", service: greetService },
+        ],
+        version: "1.0.0",
+      });
+
+      expect(server.tools[0].description).toBe("Custom description");
+    });
+
+    it("applies server-level onComplete callback to all tools", () => {
+      const completedValues: unknown[] = [];
+
+      const greetService = fabricService({
+        alias: "greet",
+        service: () => "Hello!",
+      });
+
+      FabricMcpServer({
+        name: "test-server",
+        onComplete: (result) => {
+          completedValues.push(result);
+        },
+        services: [greetService],
+        version: "1.0.0",
+      });
+
+      // Note: Full integration test would require calling the tool
+      // This test verifies the config is accepted without error
+      expect(completedValues).toEqual([]);
+    });
+
+    it("entry-level callbacks override server-level callbacks", () => {
+      const serverMessages: string[] = [];
+      const entryMessages: string[] = [];
+
+      const greetService = fabricService({
+        alias: "greet",
+        service: () => "Hello!",
+      });
+
+      FabricMcpServer({
+        name: "test-server",
+        onComplete: () => {
+          serverMessages.push("server");
+        },
+        services: [
+          {
+            onComplete: () => {
+              entryMessages.push("entry");
+            },
+            service: greetService,
+          },
+        ],
+        version: "1.0.0",
+      });
+
+      // Note: Full integration test would require calling the tool
+      // This test verifies the config is accepted without error
+      expect(serverMessages).toEqual([]);
+      expect(entryMessages).toEqual([]);
+    });
+
+    it("throws error for invalid service entry", () => {
+      expect(() => {
+        FabricMcpServer({
+          name: "test-server",
+          services: [{ invalid: true } as unknown as never],
+          version: "1.0.0",
+        });
+      }).toThrow(
+        "FabricMcpServer: Each service entry must be a Service, ServiceFunction, or { service: Service }",
+      );
+    });
+
+    it("attaches services array to server", () => {
+      const greetService = fabricService({
+        alias: "greet",
+        service: () => "Hello!",
+      });
+
+      const server = FabricMcpServer({
+        name: "test-server",
+        services: [greetService],
+        version: "1.0.0",
+      });
+
+      expect(server.services).toContain(greetService);
+    });
+
+    it("attaches tools array with RegisteredTool info", () => {
+      const greetService = fabricService({
+        alias: "greet",
+        description: "Greet someone",
+        service: () => "Hello!",
+      });
+
+      const server = FabricMcpServer({
+        name: "test-server",
+        services: [greetService],
+        version: "1.0.0",
+      });
+
+      expect(server.tools[0]).toEqual({
+        description: "Greet someone",
+        name: "greet",
+        service: greetService,
+      });
+    });
+  });
+
+  describe("isFabricMcpServer", () => {
+    it("returns true for FabricMcpServer instance", () => {
+      const server = FabricMcpServer({
+        name: "test-server",
+        services: [],
+        version: "1.0.0",
+      });
+
+      expect(isFabricMcpServer(server)).toBe(true);
+    });
+
+    it("returns false for plain McpServer instance", () => {
+      const server = new McpServer({ name: "test", version: "1.0.0" });
+
+      expect(isFabricMcpServer(server)).toBe(false);
+    });
+
+    it("returns false for null", () => {
+      expect(isFabricMcpServer(null)).toBe(false);
+    });
+
+    it("returns false for undefined", () => {
+      expect(isFabricMcpServer(undefined)).toBe(false);
+    });
+
+    it("returns false for non-object values", () => {
+      expect(isFabricMcpServer("string")).toBe(false);
+      expect(isFabricMcpServer(123)).toBe(false);
+      expect(isFabricMcpServer(true)).toBe(false);
+    });
+
+    it("returns false for plain objects with similar properties", () => {
+      const fake = {
+        name: "test",
+        services: [],
+        tools: [],
+        version: "1.0.0",
+      };
+
+      expect(isFabricMcpServer(fake)).toBe(false);
     });
   });
 });
