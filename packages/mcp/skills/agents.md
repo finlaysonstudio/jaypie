@@ -11,11 +11,11 @@ Add to CLAUDE.md or AGENTS.md:
 
 Query `mcp__jaypie__skill(alias: String)` for development guidance:
 
-Contents: index, releasenotes, topics
-Development: debugging, errors, logs, mocks, style, tests, writing
+Contents: index, releasenotes
+Development: documentation, errors, logs, mocks, style, tests
 Infrastructure: aws, cdk, cicd, datadog, dns, dynamodb, secrets, variables
 Patterns: fabric, models, services, tools
-Meta: agents, jaypie, legacy
+Meta: agents, issues, jaypie
 ```
 
 Or, for one line,
