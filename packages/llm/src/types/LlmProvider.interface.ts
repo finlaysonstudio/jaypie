@@ -197,6 +197,19 @@ export type LlmHistoryItem =
 
 export type LlmHistory = LlmHistoryItem[];
 
+/**
+ * Configuration for a fallback provider.
+ * Used when the primary provider fails with an unrecoverable error.
+ */
+export interface LlmFallbackConfig {
+  /** Provider name (e.g., "openai", "anthropic", "gemini") */
+  provider: string;
+  /** Model to use with this provider (optional, uses provider default if not specified) */
+  model?: string;
+  /** API key for this provider (optional, uses environment variable if not specified) */
+  apiKey?: string;
+}
+
 export interface LlmMessageOptions {
   data?: NaturalMap;
   model?: string;
@@ -211,6 +224,8 @@ export interface LlmMessageOptions {
 export interface LlmOperateOptions {
   data?: NaturalMap;
   explain?: boolean;
+  /** Chain of fallback providers to try if primary fails. Set to false to disable instance-level fallback. */
+  fallback?: LlmFallbackConfig[] | false;
   format?: JsonObject | NaturalSchema | z.ZodType;
   history?: LlmHistory;
   hooks?: {
@@ -302,6 +317,8 @@ export interface LlmOperateOptions {
 
 export interface LlmOptions {
   apiKey?: string;
+  /** Chain of fallback providers to try if primary fails */
+  fallback?: LlmFallbackConfig[];
   model?: string;
 }
 
@@ -321,9 +338,14 @@ export type LlmUsage = LlmUsageItem[];
 export interface LlmOperateResponse {
   content?: string | JsonObject;
   error?: LlmError;
+  /** Number of providers attempted (1 = primary only, >1 = fallback(s) used) */
+  fallbackAttempts?: number;
+  /** Whether a fallback provider was used instead of the primary */
+  fallbackUsed?: boolean;
   history: LlmHistory;
   model?: string;
   output: LlmOutput;
+  /** Which provider actually handled the request */
   provider?: string;
   reasoning: string[];
   responses: JsonReturn[];

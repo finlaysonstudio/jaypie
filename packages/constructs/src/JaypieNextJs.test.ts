@@ -11,11 +11,18 @@ vi.mock("./helpers", () => ({
   resolveSecrets: vi.fn(() => []),
 }));
 
+const mockAddEnvironment = vi.fn();
+
 vi.mock("cdk-nextjs-standalone", () => ({
   Nextjs: vi.fn().mockImplementation(() => ({
+    distribution: {
+      distributionDomain: "d123456789.cloudfront.net",
+    },
     imageOptimizationFunction: {},
     serverFunction: {
-      lambdaFunction: {},
+      lambdaFunction: {
+        addEnvironment: mockAddEnvironment,
+      },
     },
   })),
 }));
@@ -67,5 +74,38 @@ describe("JaypieNextJs", () => {
         hostedZone: "Z123456789",
       });
     }).not.toThrow();
+  });
+
+  it("should accept domainProps: false for CloudFront-only deployment", () => {
+    expect(() => {
+      new JaypieNextJs(stack, "NextjsConstruct", {
+        domainProps: false,
+      });
+    }).not.toThrow();
+  });
+
+  it("should have undefined domainName when domainProps is false", () => {
+    const construct = new JaypieNextJs(stack, "NextjsConstruct", {
+      domainProps: false,
+    });
+    expect(construct.domainName).toBeUndefined();
+  });
+
+  it("should set NEXT_PUBLIC_SITE_URL to CloudFront URL when domainProps is false", () => {
+    mockAddEnvironment.mockClear();
+    new JaypieNextJs(stack, "NextjsConstruct", {
+      domainProps: false,
+    });
+    expect(mockAddEnvironment).toHaveBeenCalledWith(
+      "NEXT_PUBLIC_SITE_URL",
+      "https://d123456789.cloudfront.net",
+    );
+  });
+
+  it("should have domainName when domainProps is not false", () => {
+    const construct = new JaypieNextJs(stack, "NextjsConstruct", {
+      domainName: "custom.example.com",
+    });
+    expect(construct.domainName).toBe("custom.example.com");
   });
 });

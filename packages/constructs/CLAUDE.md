@@ -219,6 +219,28 @@ const customTable = new JaypieDynamoDb(this, "myApp", {
 
 Note: `JaypieDynamoDb` uses `IndexDefinition` from `@jaypie/fabric` for GSI configuration, enabling consistent index definitions across CDK and runtime code. Table names default to CDK-generated names for proper namespacing across environments; use the `tableName` prop only when an explicit name is required.
 
+### Next.js Deployment
+
+```typescript
+import { JaypieNextJs } from "@jaypie/constructs";
+
+// With custom domain
+new JaypieNextJs(this, "MyApp", {
+  domainName: "app.example.com",
+  hostedZone: "example.com",
+  nextjsPath: "../nextjs",
+});
+
+// CloudFront URL only (no custom domain)
+new JaypieNextJs(this, "MyApp", {
+  domainProps: false,  // Forces CloudFront-only deployment
+  nextjsPath: "../nextjs",
+});
+// Access via: https://d123456789.cloudfront.net
+```
+
+When `domainProps: false`, no Route53/certificate configuration is created and `NEXT_PUBLIC_SITE_URL` is automatically set to the CloudFront distribution URL.
+
 ### Provider/Consumer Secrets Pattern
 
 ```typescript

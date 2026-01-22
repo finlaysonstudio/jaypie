@@ -1,8 +1,10 @@
 import { JsonObject } from "@jaypie/types";
 import { ConfigurationError, NotImplementedError } from "@jaypie/errors";
+import log from "@jaypie/logger";
 import { DEFAULT, LlmProviderName, PROVIDER } from "./constants.js";
 import { determineModelProvider } from "./util/determineModelProvider.js";
 import {
+  LlmFallbackConfig,
   LlmHistory,
   LlmInputMessage,
   LlmMessageOptions,
@@ -19,15 +21,16 @@ import { OpenAiProvider } from "./providers/openai/index.js";
 import { OpenRouterProvider } from "./providers/openrouter/index.js";
 
 class Llm implements LlmProvider {
-  private _provider: LlmProviderName;
+  private _fallbackConfig?: LlmFallbackConfig[];
   private _llm: LlmProvider;
   private _options: LlmOptions;
+  private _provider: LlmProviderName;
 
   constructor(
     providerName: LlmProviderName | string = DEFAULT.PROVIDER.NAME,
     options: LlmOptions = {},
   ) {
-    const { model } = options;
+    const { fallback, model } = options;
     let finalProvider = providerName;
     let finalModel = model;
 
@@ -64,6 +67,7 @@ class Llm implements LlmProvider {
       }
     }
 
+    this._fallbackConfig = fallback;
     this._provider = finalProvider as LlmProviderName;
     this._options = { ...options, model: finalModel };
     this._llm = this.createProvider(
@@ -111,6 +115,36 @@ class Llm implements LlmProvider {
     return this._llm.send(message, options);
   }
 
+  /**
+   * Resolves the fallback chain from instance config and per-call options.
+   * Per-call options take precedence over instance config.
+   * Returns empty array if fallback is disabled.
+   */
+  private resolveFallbackChain(
+    options: LlmOperateOptions,
+  ): LlmFallbackConfig[] {
+    // Per-call `fallback: false` disables fallback entirely
+    if (options.fallback === false) {
+      return [];
+    }
+    // Per-call fallback array overrides instance config
+    if (Array.isArray(options.fallback)) {
+      return options.fallback;
+    }
+    // Use instance config if available
+    return this._fallbackConfig || [];
+  }
+
+  /**
+   * Creates a fallback Llm instance lazily when needed.
+   */
+  private createFallbackInstance(config: LlmFallbackConfig): Llm {
+    return new Llm(config.provider, {
+      apiKey: config.apiKey,
+      model: config.model,
+    });
+  }
+
   async operate(
     input: string | LlmHistory | LlmInputMessage | LlmOperateInput,
     options: LlmOperateOptions = {},
@@ -120,7 +154,57 @@ class Llm implements LlmProvider {
         `Provider ${this._provider} does not support operate method`,
       );
     }
-    return this._llm.operate(input, options);
+
+    const fallbackChain = this.resolveFallbackChain(options);
+    const optionsWithoutFallback = { ...options, fallback: false as const };
+
+    let lastError: Error | undefined;
+    let attempts = 0;
+
+    // Try primary provider first
+    attempts++;
+    try {
+      const response = await this._llm.operate(input, optionsWithoutFallback);
+      return {
+        ...response,
+        fallbackAttempts: attempts,
+        fallbackUsed: false,
+        provider: response.provider || this._provider,
+      };
+    } catch (error) {
+      lastError = error as Error;
+      log.warn(`Provider ${this._provider} failed`, {
+        error: lastError.message,
+        fallbacksRemaining: fallbackChain.length,
+      });
+    }
+
+    // Try fallback providers
+    for (const fallbackConfig of fallbackChain) {
+      attempts++;
+      try {
+        const fallbackInstance = this.createFallbackInstance(fallbackConfig);
+        const response = await fallbackInstance.operate(
+          input,
+          optionsWithoutFallback,
+        );
+        return {
+          ...response,
+          fallbackAttempts: attempts,
+          fallbackUsed: true,
+          provider: response.provider || fallbackConfig.provider,
+        };
+      } catch (error) {
+        lastError = error as Error;
+        log.warn(`Fallback provider ${fallbackConfig.provider} failed`, {
+          error: lastError.message,
+          fallbacksRemaining: fallbackChain.length - attempts + 1,
+        });
+      }
+    }
+
+    // All providers failed, throw the last error
+    throw lastError;
   }
 
   async *stream(
@@ -151,12 +235,13 @@ class Llm implements LlmProvider {
   static async operate(
     input: string | LlmHistory | LlmInputMessage | LlmOperateInput,
     options?: LlmOperateOptions & {
-      llm?: LlmProviderName;
       apiKey?: string;
+      fallback?: LlmFallbackConfig[] | false;
+      llm?: LlmProviderName;
       model?: string;
     },
   ): Promise<LlmOperateResponse> {
-    const { llm, apiKey, model, ...operateOptions } = options || {};
+    const { apiKey, fallback, llm, model, ...operateOptions } = options || {};
 
     let finalLlm = llm;
     let finalModel = model;
@@ -175,8 +260,19 @@ class Llm implements LlmProvider {
       }
     }
 
-    const instance = new Llm(finalLlm, { apiKey, model: finalModel });
-    return instance.operate(input, operateOptions);
+    // Resolve fallback for static method: pass to instance if array, pass to operate options if false
+    const instanceFallback = Array.isArray(fallback) ? fallback : undefined;
+    const operateFallback = fallback === false ? false : undefined;
+
+    const instance = new Llm(finalLlm, {
+      apiKey,
+      fallback: instanceFallback,
+      model: finalModel,
+    });
+    return instance.operate(input, {
+      ...operateOptions,
+      ...(operateFallback !== undefined && { fallback: operateFallback }),
+    });
   }
 
   static stream(

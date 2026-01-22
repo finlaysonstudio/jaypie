@@ -1,6 +1,6 @@
 ---
 description: Available MCP tools reference
-related: aws, datadog, debugging
+related: tools-aws, tools-dynamodb, tools-datadog, debugging
 ---
 
 # MCP Tools Reference
@@ -28,16 +28,25 @@ skill("tests")          # Testing patterns
 
 ## AWS Tools
 
+Tools for Lambda, S3, SQS, CloudWatch Logs, Step Functions, and CloudFormation.
+
+See **tools-aws** for complete documentation.
+
 | Tool | Description |
 |------|-------------|
 | `aws_list_profiles` | List AWS profiles from ~/.aws |
-| `aws_lambda_list_functions` | List Lambda functions |
-| `aws_lambda_get_function` | Get Lambda function details |
-| `aws_logs_filter_log_events` | Search CloudWatch Logs |
-| `aws_s3_list_objects` | List S3 bucket objects |
-| `aws_cloudformation_describe_stack` | Get CloudFormation stack details |
+| `aws_lambda_*` | Lambda function management |
+| `aws_logs_*` | CloudWatch Logs search |
+| `aws_s3_*` | S3 bucket operations |
+| `aws_sqs_*` | SQS queue operations |
+| `aws_stepfunctions_*` | Step Functions management |
+| `aws_cloudformation_*` | CloudFormation stack details |
 
-### DynamoDB
+## DynamoDB Tools
+
+Tools for querying, scanning, and inspecting DynamoDB tables.
+
+See **tools-dynamodb** for complete documentation.
 
 | Tool | Description |
 |------|-------------|
@@ -46,23 +55,11 @@ skill("tests")          # Testing patterns
 | `aws_dynamodb_scan` | Full table scan |
 | `aws_dynamodb_get_item` | Get single item |
 
-### SQS
-
-| Tool | Description |
-|------|-------------|
-| `aws_sqs_list_queues` | List SQS queues |
-| `aws_sqs_get_queue_attributes` | Get queue attributes |
-| `aws_sqs_receive_message` | Peek at messages |
-| `aws_sqs_purge_queue` | Delete all messages |
-
-### Step Functions
-
-| Tool | Description |
-|------|-------------|
-| `aws_stepfunctions_list_executions` | List state machine executions |
-| `aws_stepfunctions_stop_execution` | Stop running execution |
-
 ## Datadog Tools
+
+Tools for logs, monitors, metrics, synthetics, and RUM.
+
+See **tools-datadog** for complete documentation.
 
 | Tool | Description |
 |------|-------------|
@@ -92,36 +89,4 @@ skill("tests")          # Testing patterns
 - `DD_ENV` - Default environment filter
 - `DD_SERVICE` - Default service filter
 - `DD_SOURCE` - Default log source
-
-## Common Patterns
-
-### Debug Lambda Issues
-
-```
-# Check function config
-aws_lambda_get_function --functionName "my-function"
-
-# Search recent logs
-aws_logs_filter_log_events --logGroupName "/aws/lambda/my-function" --filterPattern "ERROR"
-
-# Or via Datadog
-datadog_logs --query "service:my-function status:error" --from "now-1h"
-```
-
-### Check Queue Health
-
-```
-# Get queue depth
-aws_sqs_get_queue_attributes --queueUrl "https://..."
-
-# Peek at messages
-aws_sqs_receive_message --queueUrl "https://..." --maxNumberOfMessages 5
-```
-
-### Monitor Status
-
-```
-# Check alerting monitors
-datadog_monitors --status '["Alert", "Warn"]'
-```
 

@@ -69,6 +69,8 @@ describe("LLM Mocks", () => {
       const result = await llm.operate("How's the weather?");
       expect(result).toEqual({
         content: "_MOCK_OUTPUT_TEXT",
+        fallbackAttempts: 1,
+        fallbackUsed: false,
         history: expect.any(Array),
         model: "_MOCK_MODEL",
         output: expect.any(Array),

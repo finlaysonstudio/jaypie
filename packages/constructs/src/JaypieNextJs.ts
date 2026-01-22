@@ -32,8 +32,16 @@ export interface JaypieNextjsProps {
    * - String: used directly as the domain name
    * - Object: passed to envHostname() to construct the domain name
    *   - { component, domain, env, subdomain }
+   *
+   * To deploy without a domain (CloudFront URL only), set domainProps: false
    */
   domainName?: string | DomainNameConfig;
+  /**
+   * Set to false to deploy without a custom domain.
+   * When false, the application will only be accessible via CloudFront URL.
+   * This overrides any domainName configuration.
+   */
+  domainProps?: false;
   /**
    * DynamoDB tables to grant read/write access to the Next.js server function.
    * Each table is granted read/write access and if exactly one table is provided,
@@ -66,19 +74,26 @@ export interface JaypieNextjsProps {
 
 export class JaypieNextJs extends Construct {
   private readonly _nextjs: Nextjs;
-  public readonly domainName: string;
+  public readonly domainName?: string;
 
   constructor(scope: Construct, id: string, props?: JaypieNextjsProps) {
     super(scope, id);
 
-    const domainName =
-      typeof props?.domainName === "string"
+    // Determine if we should use a custom domain
+    const useDomain = props?.domainProps !== false;
+
+    // Resolve domain name only if using a custom domain
+    const domainName = useDomain
+      ? typeof props?.domainName === "string"
         ? props.domainName
-        : envHostname(props?.domainName);
+        : envHostname(props?.domainName)
+      : undefined;
     this.domainName = domainName;
-    const domainNameSanitized = domainName
-      .replace(/\./g, "-")
-      .replace(/[^a-zA-Z0-9]/g, "_");
+
+    // Use domain name or construct ID for cache policy naming
+    const cachePolicyIdentifier = domainName
+      ? domainName.replace(/\./g, "-").replace(/[^a-zA-Z0-9]/g, "_")
+      : id.replace(/[^a-zA-Z0-9]/g, "_");
 
     // Resolve environment from array or object syntax
     const environment = resolveEnvironment(props?.environment);
@@ -130,27 +145,32 @@ export class JaypieNextJs extends Construct {
 
     const nextjs = new Nextjs(this, "NextJsApp", {
       nextjsPath,
-      domainProps: {
-        domainName,
-        hostedZone: resolveHostedZone(this, {
-          zone: props?.hostedZone,
+      // Only configure custom domain if useDomain is true
+      ...(useDomain &&
+        domainName && {
+          domainProps: {
+            domainName,
+            hostedZone: resolveHostedZone(this, {
+              zone: props?.hostedZone,
+            }),
+          },
         }),
-      },
       environment: {
         ...jaypieLambdaEnv(),
         ...environment,
         ...secretsEnvironment,
         ...jaypieSecretsEnvironment,
         ...nextPublicEnv,
-        NEXT_PUBLIC_SITE_URL: `https://${domainName}`,
+        // NEXT_PUBLIC_SITE_URL will be set after construct creation for CloudFront URL
+        ...(domainName && { NEXT_PUBLIC_SITE_URL: `https://${domainName}` }),
       },
       overrides: {
         nextjsDistribution: {
           imageCachePolicyProps: {
-            cachePolicyName: `NextJsImageCachePolicy-${domainNameSanitized}`,
+            cachePolicyName: `NextJsImageCachePolicy-${cachePolicyIdentifier}`,
           },
           serverCachePolicyProps: {
-            cachePolicyName: `NextJsServerCachePolicy-${domainNameSanitized}`,
+            cachePolicyName: `NextJsServerCachePolicy-${cachePolicyIdentifier}`,
           },
         },
         nextjsImage: {
@@ -165,6 +185,14 @@ export class JaypieNextJs extends Construct {
         },
       },
     });
+
+    // Set NEXT_PUBLIC_SITE_URL to CloudFront URL when no custom domain
+    if (!domainName) {
+      nextjs.serverFunction.lambdaFunction.addEnvironment(
+        "NEXT_PUBLIC_SITE_URL",
+        `https://${nextjs.distribution.distributionDomain}`,
+      );
+    }
 
     addDatadogLayers(nextjs.imageOptimizationFunction);
     addDatadogLayers(nextjs.serverFunction.lambdaFunction);
