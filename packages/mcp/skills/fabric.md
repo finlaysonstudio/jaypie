@@ -103,8 +103,8 @@ const suite = createServiceSuite({
   version: "1.0.0",
 });
 
-suite.register(userService, "users");
-suite.register(userListService, "users");
+suite.register(userService, { category: "users" });
+suite.register(userListService, { category: "users" });
 
 // Access services
 suite.services;                    // ServiceMeta[] - metadata for listing

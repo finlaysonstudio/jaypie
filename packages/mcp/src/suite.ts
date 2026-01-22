@@ -1619,39 +1619,39 @@ export const suite = createServiceSuite({
 });
 
 // Register docs services
-suite.register(skill, "docs");
-suite.register(version, "docs");
-suite.register(listPrompts, "docs");
-suite.register(readPrompt, "docs");
-suite.register(listReleaseNotes, "docs");
-suite.register(readReleaseNote, "docs");
+suite.register(skill, { category: "docs" });
+suite.register(version, { category: "docs" });
+suite.register(listPrompts, { category: "docs" });
+suite.register(readPrompt, { category: "docs" });
+suite.register(listReleaseNotes, { category: "docs" });
+suite.register(readReleaseNote, { category: "docs" });
 
 // Register Datadog services
-suite.register(datadogLogs, "datadog");
-suite.register(datadogLogAnalytics, "datadog");
-suite.register(datadogMonitors, "datadog");
-suite.register(datadogSynthetics, "datadog");
-suite.register(datadogMetrics, "datadog");
-suite.register(datadogRum, "datadog");
+suite.register(datadogLogs, { category: "datadog" });
+suite.register(datadogLogAnalytics, { category: "datadog" });
+suite.register(datadogMonitors, { category: "datadog" });
+suite.register(datadogSynthetics, { category: "datadog" });
+suite.register(datadogMetrics, { category: "datadog" });
+suite.register(datadogRum, { category: "datadog" });
 
 // Register LLM services
-suite.register(llmDebugCall, "llm");
-suite.register(llmListProviders, "llm");
+suite.register(llmDebugCall, { category: "llm" });
+suite.register(llmListProviders, { category: "llm" });
 
 // Register AWS services
-suite.register(awsListProfiles, "aws");
-suite.register(awsStepfunctionsListExecutions, "aws");
-suite.register(awsStepfunctionsStopExecution, "aws");
-suite.register(awsLambdaListFunctions, "aws");
-suite.register(awsLambdaGetFunction, "aws");
-suite.register(awsLogsFilterLogEvents, "aws");
-suite.register(awsS3ListObjects, "aws");
-suite.register(awsCloudformationDescribeStack, "aws");
-suite.register(awsDynamodbDescribeTable, "aws");
-suite.register(awsDynamodbScan, "aws");
-suite.register(awsDynamodbQuery, "aws");
-suite.register(awsDynamodbGetItem, "aws");
-suite.register(awsSqsListQueues, "aws");
-suite.register(awsSqsGetQueueAttributes, "aws");
-suite.register(awsSqsReceiveMessage, "aws");
-suite.register(awsSqsPurgeQueue, "aws");
+suite.register(awsListProfiles, { category: "aws" });
+suite.register(awsStepfunctionsListExecutions, { category: "aws" });
+suite.register(awsStepfunctionsStopExecution, { category: "aws" });
+suite.register(awsLambdaListFunctions, { category: "aws" });
+suite.register(awsLambdaGetFunction, { category: "aws" });
+suite.register(awsLogsFilterLogEvents, { category: "aws" });
+suite.register(awsS3ListObjects, { category: "aws" });
+suite.register(awsCloudformationDescribeStack, { category: "aws" });
+suite.register(awsDynamodbDescribeTable, { category: "aws" });
+suite.register(awsDynamodbScan, { category: "aws" });
+suite.register(awsDynamodbQuery, { category: "aws" });
+suite.register(awsDynamodbGetItem, { category: "aws" });
+suite.register(awsSqsListQueues, { category: "aws" });
+suite.register(awsSqsGetQueueAttributes, { category: "aws" });
+suite.register(awsSqsReceiveMessage, { category: "aws" });
+suite.register(awsSqsPurgeQueue, { category: "aws" });

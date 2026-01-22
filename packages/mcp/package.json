@@ -1,6 +1,6 @@
 {
   "name": "@jaypie/mcp",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "description": "Jaypie MCP",
   "repository": {
     "type": "git",
@@ -39,7 +39,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@jaypie/fabric": "^0.1.0",
+    "@jaypie/fabric": "^0.2.0",
     "@jaypie/llm": "^1.2.2",
     "@modelcontextprotocol/sdk": "^1.17.0",
     "commander": "^14.0.0",

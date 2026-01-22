@@ -213,8 +213,8 @@ The MCP server uses `@jaypie/fabric`'s ServiceSuite pattern:
 ```typescript
 // suite.ts
 const suite = createServiceSuite({ name: "jaypie", version: "0.3.4" });
-suite.register(skillService, "docs");
-suite.register(datadogLogsService, "datadog");
+suite.register(skillService, { category: "docs" });
+suite.register(datadogLogsService, { category: "datadog" });
 // ...
 
 // createMcpServer.ts
