@@ -12,6 +12,8 @@ export const LLM = original.LLM;
 
 const mockOperate = createMockResolvedFunction({
   content: "_MOCK_OUTPUT_TEXT",
+  fallbackAttempts: 1,
+  fallbackUsed: false,
   history: [
     {
       content: "_MOCK_USER_INPUT",

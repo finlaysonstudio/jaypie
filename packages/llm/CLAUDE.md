@@ -100,6 +100,42 @@ const llm = new Llm("openai", { model: "gpt-4o" });
 const result = await llm.operate("What is 2+2?");
 ```
 
+### Fallback Providers
+
+Configure a chain of fallback providers that automatically retry failed calls when the primary provider fails with an unrecoverable error.
+
+```typescript
+import Llm from "@jaypie/llm";
+
+// Instance-level fallback configuration
+const llm = new Llm("anthropic", {
+  model: "claude-sonnet-4",
+  fallback: [
+    { provider: "openai", model: "gpt-4o" },
+    { provider: "gemini", model: "gemini-2.0-flash" },
+  ],
+});
+
+// Per-call override
+const response = await llm.operate(input, {
+  fallback: [{ provider: "openai", model: "gpt-4o" }],
+});
+
+// Disable fallback for specific call
+const response = await llm.operate(input, { fallback: false });
+
+// Static method with fallback
+const response = await Llm.operate(input, {
+  model: "claude-sonnet-4",
+  fallback: [{ provider: "openai", model: "gpt-4o" }],
+});
+```
+
+**Response metadata:**
+- `provider`: Which provider actually handled the request
+- `fallbackUsed`: `true` if a fallback provider was used
+- `fallbackAttempts`: Number of providers tried (1 = primary only)
+
 ### With Tools
 
 ```typescript

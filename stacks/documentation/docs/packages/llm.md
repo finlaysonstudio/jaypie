@@ -53,12 +53,13 @@ const response = await Llm.operate("What is 2+2?", {
 
 | Option | Type | Description |
 |--------|------|-------------|
+| `fallback` | `LlmFallbackConfig[] \| false` | Fallback provider chain |
+| `maxTokens` | `number` | Maximum response tokens |
 | `model` | `string` | Model identifier |
+| `responseFormat` | `object` | Structured output format |
 | `system` | `string` | System prompt |
 | `temperature` | `number` | Response randomness (0-1) |
-| `maxTokens` | `number` | Maximum response tokens |
 | `tools` | `Toolkit` | Available tools |
-| `responseFormat` | `object` | Structured output format |
 
 ## Llm.stream
 
@@ -71,6 +72,45 @@ for await (const chunk of Llm.stream("Tell me a story")) {
   process.stdout.write(chunk.content || "");
 }
 ```
+
+## Fallback Providers
+
+Configure a chain of fallback providers that automatically retry failed calls when the primary provider fails.
+
+```typescript
+import Llm from "@jaypie/llm";
+
+// Instance-level configuration
+const llm = new Llm("anthropic", {
+  model: "claude-sonnet-4",
+  fallback: [
+    { provider: "openai", model: "gpt-4o" },
+    { provider: "gemini", model: "gemini-2.0-flash" },
+  ],
+});
+
+// Per-call override
+const response = await llm.operate(input, {
+  fallback: [{ provider: "openai", model: "gpt-4o" }],
+});
+
+// Disable fallback for specific call
+const response = await llm.operate(input, { fallback: false });
+
+// Static method with fallback
+const response = await Llm.operate(input, {
+  model: "claude-sonnet-4",
+  fallback: [{ provider: "openai", model: "gpt-4o" }],
+});
+```
+
+### Fallback Response Metadata
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `provider` | `string` | Which provider handled the request |
+| `fallbackUsed` | `boolean` | Whether a fallback was used |
+| `fallbackAttempts` | `number` | Number of providers tried |
 
 ## Instance Methods
 
