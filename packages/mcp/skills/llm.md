@@ -240,6 +240,43 @@ const response = await Llm.operate(input, {
 });
 ```
 
+## Fallback Providers
+
+Configure a chain of fallback providers that automatically retry failed calls when the primary provider fails:
+
+```typescript
+// Instance-level configuration
+const llm = new Llm("anthropic", {
+  model: "claude-sonnet-4",
+  fallback: [
+    { provider: "openai", model: "gpt-4o" },
+    { provider: "gemini", model: "gemini-2.0-flash" },
+  ],
+});
+
+// Per-call override
+const response = await llm.operate(input, {
+  fallback: [{ provider: "openai", model: "gpt-4o" }],
+});
+
+// Disable fallback for specific call
+const response = await llm.operate(input, { fallback: false });
+
+// Static method with fallback
+const response = await Llm.operate(input, {
+  model: "claude-sonnet-4",
+  fallback: [{ provider: "openai", model: "gpt-4o" }],
+});
+```
+
+### Fallback Response Metadata
+
+```typescript
+response.provider;        // Which provider handled the request
+response.fallbackUsed;    // true if a fallback was used
+response.fallbackAttempts; // Number of providers tried (1 = primary only)
+```
+
 ## Instance Usage
 
 For repeated calls with same configuration:
@@ -316,12 +353,14 @@ describe("LLM Integration", () => {
 4. **Use structured output** - More reliable than parsing free text
 5. **Track usage** - Monitor `response.usage` for cost management
 6. **Handle incomplete status** - Check `response.status` for tool errors or limits
+7. **Configure fallbacks** - Set up fallback providers for resilience against outages
 
 ## Common Options
 
 ```typescript
 interface LlmOperateOptions {
   data?: Record<string, any>;           // Placeholder substitution data
+  fallback?: LlmFallbackConfig[] | false; // Fallback provider chain
   format?: JsonObject | ZodType;        // Structured output schema
   history?: LlmHistory;                 // Previous conversation
   hooks?: LlmHooks;                     // Lifecycle callbacks
@@ -331,6 +370,12 @@ interface LlmOperateOptions {
   tools?: LlmTool[] | Toolkit;         // Available tools
   turns?: boolean | number;             // Max conversation turns
   user?: string;                        // User ID for logging
+}
+
+interface LlmFallbackConfig {
+  provider: string;   // Provider name (e.g., "openai", "anthropic", "gemini")
+  model?: string;     // Model to use (optional, uses provider default)
+  apiKey?: string;    // API key (optional, uses environment variable)
 }
 ```
 
