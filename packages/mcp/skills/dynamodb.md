@@ -1,20 +1,15 @@
 ---
-description: DynamoDB patterns and queries
-related: aws, cdk, models
+description: DynamoDB code patterns, key design, and queries
+related: aws, cdk, models, tools-dynamodb
 ---
 
 # DynamoDB Patterns
 
 Best practices for DynamoDB with Jaypie applications.
 
-## MCP DynamoDB Tools
+## MCP Tools
 
-```
-aws_dynamodb_describe_table   - Get table schema and indexes
-aws_dynamodb_query            - Query by partition key (efficient)
-aws_dynamodb_scan             - Full table scan (use sparingly)
-aws_dynamodb_get_item         - Get single item by key
-```
+For interactive DynamoDB tools (query, scan, get-item, describe-table), see **tools-dynamodb**.
 
 ## Key Design
 
@@ -48,21 +43,7 @@ Use prefixed keys for multiple entity types:
 | List user orders | pk = USER#123, sk begins_with ORDER# |
 | Get specific order | pk = USER#123, sk = ORDER#2024-01-15#abc |
 
-## Query Examples
-
-### Query via MCP
-
-```
-# Get user profile
-aws_dynamodb_get_item --tableName "MyTable" --key '{"pk":{"S":"USER#123"},"sk":{"S":"PROFILE"}}'
-
-# List user orders
-aws_dynamodb_query --tableName "MyTable" \
-  --keyConditionExpression "pk = :pk AND begins_with(sk, :prefix)" \
-  --expressionAttributeValues '{":pk":{"S":"USER#123"},":prefix":{"S":"ORDER#"}}'
-```
-
-### Query in Code
+## Query in Code
 
 ```typescript
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
@@ -98,10 +79,15 @@ const result = await client.send(new QueryCommand({
 
 Query pending orders:
 
-```
-aws_dynamodb_query --tableName "MyTable" --indexName "gsi1" \
-  --keyConditionExpression "gsi1pk = :status" \
-  --expressionAttributeValues '{":status":{"S":"ORDER#pending"}}'
+```typescript
+const result = await client.send(new QueryCommand({
+  TableName: process.env.CDK_ENV_TABLE,
+  IndexName: "gsi1",
+  KeyConditionExpression: "gsi1pk = :status",
+  ExpressionAttributeValues: {
+    ":status": "ORDER#pending",
+  },
+}));
 ```
 
 ## CDK Table Definition
@@ -136,5 +122,28 @@ AWS_ACCESS_KEY_ID=local AWS_SECRET_ACCESS_KEY=local \
   --key-schema AttributeName=pk,KeyType=HASH AttributeName=sk,KeyType=RANGE \
   --billing-mode PAY_PER_REQUEST \
   --endpoint-url http://127.0.0.1:8000
+```
+
+## Testing
+
+Mock DynamoDB in tests:
+
+```typescript
+import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
+import { vi } from "vitest";
+
+vi.mock("@aws-sdk/client-dynamodb");
+
+describe("OrderService", () => {
+  it("queries user orders", async () => {
+    vi.mocked(DynamoDBClient.prototype.send).mockResolvedValue({
+      Items: [{ pk: "USER#123", sk: "ORDER#abc" }],
+    });
+
+    const orders = await getOrders("123");
+
+    expect(orders).toHaveLength(1);
+  });
+});
 ```
 
