@@ -92,7 +92,9 @@ export class RetryExecutor {
             error,
           });
 
-          throw new BadGatewayError();
+          const errorMessage =
+            error instanceof Error ? error.message : String(error);
+          throw new BadGatewayError(errorMessage);
         }
 
         // Check if error is not retryable
@@ -107,7 +109,9 @@ export class RetryExecutor {
             error,
           });
 
-          throw new BadGatewayError();
+          const errorMessage =
+            error instanceof Error ? error.message : String(error);
+          throw new BadGatewayError(errorMessage);
         }
 
         // Warn if this is an unknown error type

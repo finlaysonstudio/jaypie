@@ -20,8 +20,8 @@ vi.mock("@jaypie/kit", () => ({
 
 vi.mock("@jaypie/errors", () => ({
   BadGatewayError: class BadGatewayError extends Error {
-    constructor() {
-      super("Bad Gateway");
+    constructor(message = "Bad Gateway") {
+      super(message);
       this.name = "BadGatewayError";
     }
   },
@@ -154,7 +154,7 @@ describe("RetryExecutor", () => {
 
       await expect(
         executor.execute(operation, { context: mockContext }),
-      ).rejects.toThrow("Bad Gateway");
+      ).rejects.toThrow("Non-retryable");
 
       expect(operation).toHaveBeenCalledTimes(1);
     });
@@ -164,10 +164,46 @@ describe("RetryExecutor", () => {
 
       await expect(
         executor.execute(operation, { context: mockContext }),
-      ).rejects.toThrow("Bad Gateway");
+      ).rejects.toThrow("Retryable");
 
       // Initial attempt + 3 retries
       expect(operation).toHaveBeenCalledTimes(4);
+    });
+
+    it("preserves original error message on non-retryable error", async () => {
+      const customMessage = "You exceeded your current quota... limit: 0";
+      const customError = new Error(customMessage);
+      // Make it non-retryable by not being a RetryableError instance
+      const operation = vi.fn().mockRejectedValue(customError);
+
+      await expect(
+        executor.execute(operation, { context: mockContext }),
+      ).rejects.toThrow(customMessage);
+
+      expect(operation).toHaveBeenCalledTimes(1);
+    });
+
+    it("preserves original error message after exhausting retries", async () => {
+      const retryableErrorWithMessage = new RetryableError();
+      retryableErrorWithMessage.message = "Custom retry error message";
+      const operation = vi.fn().mockRejectedValue(retryableErrorWithMessage);
+
+      await expect(
+        executor.execute(operation, { context: mockContext }),
+      ).rejects.toThrow("Custom retry error message");
+
+      // Initial attempt + 3 retries
+      expect(operation).toHaveBeenCalledTimes(4);
+    });
+
+    it("converts non-Error objects to string in error message", async () => {
+      const operation = vi.fn().mockRejectedValue("string error");
+
+      await expect(
+        executor.execute(operation, { context: mockContext }),
+      ).rejects.toThrow("string error");
+
+      expect(operation).toHaveBeenCalledTimes(1);
     });
   });
 
