@@ -39,6 +39,7 @@ export default {
   external: [
     "@jaypie/errors",
     "@jaypie/fabric",
+    "@jaypie/fabric/mcp",
     "@jaypie/llm",
     "@modelcontextprotocol/sdk/server/mcp.js",
     "@modelcontextprotocol/sdk/server/stdio.js",
