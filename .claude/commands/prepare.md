@@ -1,4 +1,10 @@
-# 📝 Update Documentation
+# 📋 Prepare Release
+
+1. Version
+
+Check all subpackages edited on this branch had their version numbers patched. Patch any edited packages without version changes. If a dependency of `jaypie` is versioned, `jaypie`'s version should be updated.
+
+2. Documentation and Skills
 
 Be sure to update impacted documentation for anything changed in this branch:
 
