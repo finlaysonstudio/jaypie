@@ -144,28 +144,6 @@ throw new NotFoundError("User not found", {
 });
 ```
 
-## Avoid Over-Engineering
-
-### No Premature Abstraction
-
-```typescript
-// BAD - Unnecessary abstraction for one use
-const formatName = (name) => name.toUpperCase();
-const processUser = (user) => ({ ...user, name: formatName(user.name) });
-
-// GOOD - Simple and direct
-const processUser = (user) => ({ ...user, name: user.name.toUpperCase() });
-```
-
-### Minimal Changes
-
-Only modify what's requested:
-
-- Bug fix? Fix the bug, nothing else.
-- Add feature? Add only that feature.
-- Don't add docstrings to unchanged code.
-- Don't refactor surrounding code.
-
 ## Naming Conventions
 
 | Type | Convention | Example |
@@ -173,7 +151,7 @@ Only modify what's requested:
 | Functions | camelCase | `getUser`, `createOrder` |
 | Classes | PascalCase | `UserService`, `OrderModel` |
 | Constants | SCREAMING_SNAKE | `MAX_RETRIES`, `API_URL` |
-| Files | kebab-case | `user-service.ts`, `order-model.ts` |
+| Files | camelCase | `userService.ts`, `orderModel.ts` |
 | Types/Interfaces | PascalCase | `UserInput`, `IUserService` |
 
 ## Lint Rules
@@ -187,4 +165,3 @@ export default [...jaypie];
 ```
 
 Always run `npm run format` before committing.
-
