@@ -219,7 +219,7 @@ export interface CreateMcpServerFromSuiteConfig {
  * import { createMcpServerFromSuite } from "@jaypie/fabric/mcp";
  *
  * const suite = createServiceSuite({ name: "my-suite", version: "1.0.0" });
- * suite.register(myService, "category");
+ * suite.register(myService, { category: "category" });
  *
  * const server = createMcpServerFromSuite(suite);
  * // server is ready to handle MCP protocol requests

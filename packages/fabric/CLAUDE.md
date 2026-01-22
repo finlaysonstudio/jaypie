@@ -172,7 +172,7 @@ const greetService = fabricService({
   service: ({ name }) => `Hello, ${name}!`,
 });
 
-suite.register(greetService, "utils");
+suite.register(greetService, { category: "utils" });
 
 // Access metadata
 suite.services;              // ServiceMeta[] - metadata for all services
@@ -192,7 +192,7 @@ suite.getServiceFunction("greet"); // Service | undefined
 
 | Method | Returns | Description |
 |--------|---------|-------------|
-| `register(service, category)` | void | Register a fabricService with a category |
+| `register(service, { category })` | void | Register a fabricService with a category |
 | `execute(name, inputs)` | Promise | Execute a service by name |
 | `getService(name)` | ServiceMeta | Get service metadata by name |
 | `getServicesByCategory(category)` | ServiceMeta[] | Get all services in a category |

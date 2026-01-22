@@ -27,7 +27,7 @@ describe("ServiceSuite", () => {
         service: () => "result",
       });
 
-      suite.register(service, "test-category");
+      suite.register(service, { category: "test-category" });
 
       expect(suite.services.length).toBe(1);
       expect(suite.services[0].name).toBe("test-service");
@@ -42,7 +42,7 @@ describe("ServiceSuite", () => {
         service: () => "result",
       });
 
-      expect(() => suite.register(service, "test-category")).toThrow(
+      expect(() => suite.register(service, { category: "test-category" })).toThrow(
         "Service must have an alias to be registered",
       );
     });
@@ -66,8 +66,8 @@ describe("ServiceSuite", () => {
         service: () => "result-2",
       });
 
-      suite.register(service1, "category-a");
-      suite.register(service2, "category-b");
+      suite.register(service1, { category: "category-a" });
+      suite.register(service2, { category: "category-b" });
 
       const functions = suite.getServiceFunctions();
       expect(functions.length).toBe(2);
@@ -85,7 +85,7 @@ describe("ServiceSuite", () => {
         service: ({ message }: { message: string }) => `Echo: ${message}`,
       });
 
-      suite.register(service, "utils");
+      suite.register(service, { category: "utils" });
 
       const functions = suite.getServiceFunctions();
       expect(functions.length).toBe(1);
@@ -109,7 +109,7 @@ describe("ServiceSuite", () => {
         service: () => "result",
       });
 
-      suite.register(service, "category");
+      suite.register(service, { category: "category" });
 
       const func = suite.getServiceFunction("my-service");
       expect(func).toBe(service);
@@ -126,7 +126,7 @@ describe("ServiceSuite", () => {
         service: ({ a, b }: { a: number; b: number }) => a + b,
       });
 
-      suite.register(service, "math");
+      suite.register(service, { category: "math" });
 
       const func = suite.getServiceFunction("adder");
       expect(func).toBeDefined();
@@ -147,7 +147,7 @@ describe("ServiceSuite", () => {
         service: ({ name }: { name: string }) => `Hello, ${name}!`,
       });
 
-      suite.register(service, "utils");
+      suite.register(service, { category: "utils" });
 
       const result = await suite.execute("greeter", { name: "World" });
       expect(result).toBe("Hello, World!");
@@ -171,7 +171,7 @@ describe("ServiceSuite", () => {
         service: () => "result",
       });
 
-      suite.register(service, "category");
+      suite.register(service, { category: "category" });
 
       const meta = suite.getService("test-service");
       expect(meta).toBeDefined();
@@ -202,9 +202,9 @@ describe("ServiceSuite", () => {
         service: () => "c",
       });
 
-      suite.register(service1, "math");
-      suite.register(service2, "math");
-      suite.register(service3, "utils");
+      suite.register(service1, { category: "math" });
+      suite.register(service2, { category: "math" });
+      suite.register(service3, { category: "utils" });
 
       const mathServices = suite.getServicesByCategory("math");
       expect(mathServices.length).toBe(2);

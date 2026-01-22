@@ -1257,7 +1257,7 @@ describe("MCP Adapter", () => {
         description: "Greet someone",
         service: () => "Hello!",
       });
-      suite.register(greetService, "utils");
+      suite.register(greetService, { category: "utils" });
 
       const server = createMcpServerFromSuite(suite);
 
@@ -1303,9 +1303,9 @@ describe("MCP Adapter", () => {
         service: () => "3",
       });
 
-      suite.register(service1, "category-a");
-      suite.register(service2, "category-b");
-      suite.register(service3, "category-a");
+      suite.register(service1, { category: "category-a" });
+      suite.register(service2, { category: "category-b" });
+      suite.register(service3, { category: "category-a" });
 
       const server = createMcpServerFromSuite(suite);
 
