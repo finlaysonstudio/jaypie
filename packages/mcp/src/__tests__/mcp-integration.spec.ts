@@ -6,13 +6,11 @@ describe("MCP Integration", () => {
     // This test verifies that zod schemas work correctly with MCP tool definitions
     // The original issue was "keyValidator._parse is not a function"
 
-    // Define a schema similar to what's used in the read_prompt tool
+    // Define a schema similar to what's used in the skill tool
     const schema = {
       filename: z
         .string()
-        .describe(
-          "The name of the prompt file to read (e.g., example_prompt.md)",
-        ),
+        .describe("The skill alias to read (e.g., 'aws', 'tests')"),
     };
 
     // This should work without throwing "keyValidator._parse is not a function"

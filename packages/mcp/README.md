@@ -35,9 +35,10 @@ AWS tools use the host's existing credential chain:
 ## MCP Tools
 
 ### Documentation Tools
-- `list_prompts` - Lists Jaypie development prompts and guides
-- `read_prompt` - Returns content of a specific prompt file
+- `skill` - Access Jaypie development documentation by alias
 - `version` - Returns package version string
+- `list_release_notes` - List available release notes
+- `read_release_note` - Read specific release note content
 
 ### AWS CLI Tools (16 tools)
 - Step Functions: `aws_stepfunctions_list_executions`, `aws_stepfunctions_stop_execution`

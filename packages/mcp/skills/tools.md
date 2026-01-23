@@ -12,8 +12,6 @@ Tools available through the Jaypie MCP server.
 | Tool | Description |
 |------|-------------|
 | `skill` | Access Jaypie skill documentation |
-| `list_prompts` | List prompt files (deprecated, use skill) |
-| `read_prompt` | Read prompt file (deprecated, use skill) |
 | `version` | Get MCP server version |
 | `list_release_notes` | List package release notes |
 | `read_release_note` | Read specific release note |

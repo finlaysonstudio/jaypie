@@ -47,7 +47,6 @@ const BUILD_VERSION_STRING =
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const PROMPTS_PATH = path.join(__dirname, "..", "prompts");
 const RELEASE_NOTES_PATH = path.join(__dirname, "..", "release-notes");
 const SKILLS_PATH = path.join(__dirname, "..", "skills");
 
@@ -58,59 +57,10 @@ const log = {
 };
 
 // Helper functions from createMcpServer.ts
-interface FrontMatter {
-  description?: string;
-  include?: string;
-  globs?: string;
-}
-
 interface ReleaseNoteFrontMatter {
   date?: string;
   summary?: string;
   version?: string;
-}
-
-async function parseMarkdownFile(filePath: string): Promise<{
-  filename: string;
-  description?: string;
-  include?: string;
-}> {
-  try {
-    const content = await fs.readFile(filePath, "utf-8");
-    const filename = path.basename(filePath);
-
-    if (content.startsWith("---")) {
-      const parsed = matter(content);
-      const frontMatter = parsed.data as FrontMatter;
-      return {
-        filename,
-        description: frontMatter.description,
-        include: frontMatter.include || frontMatter.globs,
-      };
-    }
-
-    return { filename };
-  } catch {
-    return { filename: path.basename(filePath) };
-  }
-}
-
-function formatPromptListItem(prompt: {
-  filename: string;
-  description?: string;
-  include?: string;
-}): string {
-  const { filename, description, include } = prompt;
-
-  if (description && include) {
-    return `* ${filename}: ${description} - Required for ${include}`;
-  } else if (description) {
-    return `* ${filename}: ${description}`;
-  } else if (include) {
-    return `* ${filename} - Required for ${include}`;
-  } else {
-    return `* ${filename}`;
-  }
 }
 
 async function parseReleaseNoteFile(filePath: string): Promise<{
@@ -353,42 +303,6 @@ const skill = fabricService({
         `Skill "${alias}" not found. Use skill("index") to list available skills.`,
       );
     }
-  },
-});
-
-const listPrompts = fabricService({
-  alias: "list_prompts",
-  description:
-    "[DEPRECATED: Use skill('index') instead] List available Jaypie development prompts and guides. Use this FIRST when starting work on a Jaypie project to discover relevant documentation. Returns filenames, descriptions, and which file patterns each prompt applies to (e.g., 'Required for packages/express/**').",
-  input: {},
-  service: async () => {
-    const files = await fs.readdir(PROMPTS_PATH);
-    const mdFiles = files.filter((file) => file.endsWith(".md"));
-    const prompts = await Promise.all(
-      mdFiles.map((file) => parseMarkdownFile(path.join(PROMPTS_PATH, file))),
-    );
-    return (
-      prompts.map(formatPromptListItem).join("\n") ||
-      "No .md files found in the prompts directory."
-    );
-  },
-});
-
-const readPrompt = fabricService({
-  alias: "read_prompt",
-  description:
-    "[DEPRECATED: Use skill(alias) instead] Read a Jaypie prompt/guide by filename. Call list_prompts first to see available prompts. These contain best practices, templates, code patterns, and step-by-step guides for Jaypie development tasks.",
-  input: {
-    filename: {
-      type: String,
-      required: true,
-      description:
-        "The prompt filename from list_prompts (e.g., 'Jaypie_Express_Package.md', 'Development_Process.md')",
-    },
-  },
-  service: async ({ filename }: { filename: string }) => {
-    const filePath = path.join(PROMPTS_PATH, filename);
-    return fs.readFile(filePath, "utf-8");
   },
 });
 
@@ -1621,8 +1535,6 @@ export const suite = createServiceSuite({
 // Register docs services
 suite.register(skill, { category: "docs" });
 suite.register(version, { category: "docs" });
-suite.register(listPrompts, { category: "docs" });
-suite.register(readPrompt, { category: "docs" });
 suite.register(listReleaseNotes, { category: "docs" });
 suite.register(readReleaseNote, { category: "docs" });
 
