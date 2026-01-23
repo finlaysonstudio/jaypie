@@ -142,9 +142,15 @@ const handler = fabricService({
       validate: (v) => v > 0, // Optional: function, RegExp, or array
     },
   },
-  service: (input) => input.fieldName * 2,
+  service: (input, context) => input.fieldName * 2,
+  serializer: ({ input, output }, context) => {
+    // Runs after service - can transform output
+    return { data: output, meta: { timestamp: Date.now() } };
+  },
 });
 ```
+
+**Lifecycle**: `Input → Parse → Field Processing (validation) → Service → Serializer → Output`
 
 Handler features:
 - Accepts object or JSON string input
@@ -152,9 +158,21 @@ Handler features:
 - Applies defaults before conversion
 - **Required validation**: Fields are required unless they have a `default` OR `required: false`
 - Runs validation (sync or async) after conversion
+- **Serializer hook**: Runs after service. Can transform output or return void to use original
 - Always returns a Promise
 - **Optional service**: When `service` is omitted, returns the processed input (validation-only mode)
 - **Flat properties**: Config properties attached directly to handler (`handler.alias`, `handler.input`, etc.)
+
+**Serializer Hook**:
+
+| Hook | Signature | Timing | Return Behavior |
+|------|-----------|--------|-----------------|
+| `serializer` | `({ input, output }, context?) => output \| void` | After service | `void`/`undefined`/`null` = use original output |
+
+- Errors from serializer propagate normally (no special catching)
+- Supports async functions
+
+**Note**: For setup/teardown lifecycles (validate, setup, teardown), use transport adapters like `fabricLambda` which wrap services with `lambdaHandler`.
 
 ### ServiceSuite
 
@@ -265,6 +283,7 @@ Located in `types.ts`:
 | `InputFieldDefinition` | Field config with type, default, description, flag, letter, required, validate |
 | `ValidateFunction` | `(value) => boolean \| void \| Promise<...>` |
 | `ServiceFunction<TInput, TOutput>` | The actual service logic |
+| `SerializerFunction<TInput, TOutput, TSerializedOutput>` | Serializer hook signature |
 | `ServiceConfig` | Full handler configuration |
 | `Service` | The returned async handler |
 

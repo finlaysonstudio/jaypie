@@ -139,6 +139,7 @@ export type {
   MessageLevel,
   RegExpType,
   ScalarType,
+  SerializerFunction,
   Service,
   ServiceConfig,
   ServiceContext,
