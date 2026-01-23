@@ -10,10 +10,11 @@
     "stacks/*"
   ],
   "scripts": {
-    "build": "npm run build --workspaces --if-present",
+    "build": "npm run build:core-deps && npm run build --workspaces --if-present",
     "build:aws": "npm run build --workspace packages/aws",
     "build:constructs": "npm run build --workspace packages/constructs",
     "build:core": "npm run build --workspace packages/core",
+    "build:core-deps": "npm run build -w packages/types && npm run build -w packages/errors && npm run build -w packages/fabric",
     "build:datadog": "npm run build --workspace packages/datadog",
     "build:errors": "npm run build --workspace packages/errors",
     "build:express": "npm run build --workspace packages/express",
