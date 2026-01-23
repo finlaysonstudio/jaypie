@@ -52,7 +52,6 @@ Arguably composition, identity, instance, and relation would form a more complet
 - sequence: computed scalar, usually normalized createdAt or name
 - state: mutable data the entity tracks
 - status: canceled, complete, error, pending, processing, queued, sending
-- tags: array of category-value pairs `[{role:operator}]`
 - updatedAt: timestamp
 - value: computed scalar the entity evaluates to
 - xid: convenient machine lookup string modeled as an external identifier; possibly but not guaranteed to be unique with model and scope
