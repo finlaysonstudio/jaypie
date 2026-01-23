@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { APEX } from "../constants.js";
 import {
   buildIndexAlias,
-  buildIndexClass,
+  buildIndexCategory,
   buildIndexScope,
   buildIndexType,
   buildIndexXid,
@@ -49,13 +49,13 @@ describe("Key Builders", () => {
     });
   });
 
-  describe("buildIndexClass", () => {
+  describe("buildIndexCategory", () => {
     it("is a function", () => {
-      expect(buildIndexClass).toBeFunction();
+      expect(buildIndexCategory).toBeFunction();
     });
 
-    it("builds key from scope, model, and class", () => {
-      const result = buildIndexClass("@", "record", "memory");
+    it("builds key from scope, model, and category", () => {
+      const result = buildIndexCategory("@", "record", "memory");
       expect(result).toBe("@#record#memory");
     });
   });
@@ -148,16 +148,16 @@ describe("indexEntity", () => {
     expect(result.indexAlias).toBeUndefined();
   });
 
-  it("populates indexClass when class is present", () => {
-    const entity = { ...createBaseEntity(), class: "memory" };
+  it("populates indexCategory when category is present", () => {
+    const entity = { ...createBaseEntity(), category: "memory" };
     const result = indexEntity(entity);
-    expect(result.indexClass).toBe("@#record#memory");
+    expect(result.indexCategory).toBe("@#record#memory");
   });
 
-  it("does not populate indexClass when class is missing", () => {
+  it("does not populate indexCategory when category is missing", () => {
     const entity = createBaseEntity();
     const result = indexEntity(entity);
-    expect(result.indexClass).toBeUndefined();
+    expect(result.indexCategory).toBeUndefined();
   });
 
   it("populates indexType when type is present", () => {
@@ -188,14 +188,14 @@ describe("indexEntity", () => {
     const entity = {
       ...createBaseEntity(),
       alias: "my-alias",
-      class: "memory",
+      category: "memory",
       type: "note",
       xid: "ext-12345",
     };
     const result = indexEntity(entity);
     expect(result.indexScope).toBe("@#record");
     expect(result.indexAlias).toBe("@#record#my-alias");
-    expect(result.indexClass).toBe("@#record#memory");
+    expect(result.indexCategory).toBe("@#record#memory");
     expect(result.indexType).toBe("@#record#note");
     expect(result.indexXid).toBe("@#record#ext-12345");
   });
@@ -223,12 +223,12 @@ describe("indexEntity", () => {
       const entity = {
         ...createBaseEntity(),
         alias: "my-alias",
-        class: "memory",
+        category: "memory",
       };
       const result = indexEntity(entity, "#archived");
       expect(result.indexScope).toBe("@#record#archived");
       expect(result.indexAlias).toBe("@#record#my-alias#archived");
-      expect(result.indexClass).toBe("@#record#memory#archived");
+      expect(result.indexCategory).toBe("@#record#memory#archived");
     });
 
     it("defaults to empty string (no suffix)", () => {

@@ -37,7 +37,7 @@ src/
 | `ARCHIVED_SUFFIX` | `"#archived"` | Suffix appended to GSI keys on archive |
 | `DELETED_SUFFIX` | `"#deleted"` | Suffix appended to GSI keys on delete |
 | `INDEX_ALIAS` | `"indexAlias"` | Human-friendly lookup GSI name |
-| `INDEX_CLASS` | `"indexClass"` | Category filtering GSI name |
+| `INDEX_CATEGORY` | `"indexCategory"` | Category filtering GSI name |
 | `INDEX_SCOPE` | `"indexScope"` | Hierarchical queries GSI name |
 | `INDEX_TYPE` | `"indexType"` | Type filtering GSI name |
 | `INDEX_XID` | `"indexXid"` | External ID lookup GSI name |
@@ -49,7 +49,7 @@ src/
 |--------|-------------|
 | `buildIndexScope(scope, model)` | Returns `"{scope}#{model}"` |
 | `buildIndexAlias(scope, model, alias)` | Returns `"{scope}#{model}#{alias}"` |
-| `buildIndexClass(scope, model, recordClass)` | Returns `"{scope}#{model}#{class}"` |
+| `buildIndexCategory(scope, model, category)` | Returns `"{scope}#{model}#{category}"` |
 | `buildIndexType(scope, model, type)` | Returns `"{scope}#{model}#{type}"` |
 | `buildIndexXid(scope, model, xid)` | Returns `"{scope}#{model}#{xid}"` |
 
@@ -89,7 +89,7 @@ All query functions use object parameters:
 |--------|------------|-------------|
 | `queryByScope({ model, scope, ...options })` | Required: model, scope | List entities by parent (hierarchical) |
 | `queryByAlias({ alias, model, scope })` | Required: all | Lookup by human-friendly slug (returns single or null) |
-| `queryByClass({ model, scope, recordClass, ...options })` | Required: model, scope, recordClass | Filter by category |
+| `queryByCategory({ model, scope, category, ...options })` | Required: model, scope, category | Filter by category |
 | `queryByType({ model, scope, type, ...options })` | Required: model, scope, type | Filter by type |
 | `queryByXid({ model, scope, xid })` | Required: all | Lookup by external ID (returns single or null) |
 
@@ -144,14 +144,14 @@ interface StorableEntity {
 
   // GSI Keys (auto-populated by indexEntity)
   indexAlias?: string;
-  indexClass?: string;
+  indexCategory?: string;
   indexScope?: string;
   indexType?: string;
   indexXid?: string;
 
   // Optional (trigger index population when present)
   alias?: string;
-  class?: string;
+  category?: string;
   type?: string;
   xid?: string;
 
@@ -189,7 +189,7 @@ All GSIs use `sequence` (number) as the sort key for chronological ordering.
 |----------|----------------------|---------|
 | `indexScope` | `{scope}#{model}` | List by parent |
 | `indexAlias` | `{scope}#{model}#{alias}` | Human-friendly lookup |
-| `indexClass` | `{scope}#{model}#{class}` | Category filter |
+| `indexCategory` | `{scope}#{model}#{category}` | Category filter |
 | `indexType` | `{scope}#{model}#{type}` | Type filter |
 | `indexXid` | `{scope}#{model}#{xid}` | External ID lookup |
 
@@ -242,14 +242,14 @@ const record = await putEntity({
     scope: APEX,
     sequence: Date.now(),
     alias: "2026-01-07",
-    class: "memory",
+    category: "memory",
     createdAt: now,
     updatedAt: now,
   },
 });
 // indexScope: "@#record" (auto-populated)
 // indexAlias: "@#record#2026-01-07" (auto-populated)
-// indexClass: "@#record#memory" (auto-populated)
+// indexCategory: "@#record#memory" (auto-populated)
 ```
 
 ### Hierarchical Entities
@@ -281,21 +281,21 @@ const { items } = await queryByScope({ model: "message", scope: messageScope });
 ### Query with Options
 
 ```typescript
-import { APEX, queryByClass } from "@jaypie/dynamodb";
+import { APEX, queryByCategory } from "@jaypie/dynamodb";
 
-const { items, lastEvaluatedKey } = await queryByClass({
+const { items, lastEvaluatedKey } = await queryByCategory({
   model: "record",
   scope: APEX,
-  recordClass: "memory",
+  category: "memory",
   limit: 10,
   ascending: true,          // Oldest first
 });
 
 // Pagination
-const nextPage = await queryByClass({
+const nextPage = await queryByCategory({
   model: "record",
   scope: APEX,
-  recordClass: "memory",
+  category: "memory",
   startKey: lastEvaluatedKey,
 });
 ```

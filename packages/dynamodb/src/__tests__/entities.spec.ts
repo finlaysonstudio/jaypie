@@ -248,13 +248,13 @@ describe("Entity Operations", () => {
     });
 
     it("re-indexes all present index keys with #archived suffix", async () => {
-      const mockEntity = { ...createTestEntity(), class: "memory" };
+      const mockEntity = { ...createTestEntity(), category: "memory" };
       mockSend.mockResolvedValueOnce({ Item: mockEntity });
       mockSend.mockResolvedValueOnce({});
       await archiveEntity({ id: "test-id-123", model: "record" });
       const putCommand = mockSend.mock.calls[1][0];
       expect(putCommand.input.Item.indexScope).toBe("@#record#archived");
-      expect(putCommand.input.Item.indexClass).toBe("@#record#memory#archived");
+      expect(putCommand.input.Item.indexCategory).toBe("@#record#memory#archived");
     });
   });
 
@@ -314,7 +314,7 @@ describe("Entity Operations", () => {
         ...createTestEntity(),
         alias: "my-alias",
         archivedAt: "2026-01-01T00:00:00.000Z",
-        class: "memory",
+        category: "memory",
       };
       mockSend.mockResolvedValueOnce({ Item: archivedEntity });
       mockSend.mockResolvedValueOnce({});
@@ -324,7 +324,7 @@ describe("Entity Operations", () => {
       expect(putCommand.input.Item.indexAlias).toBe(
         "@#record#my-alias#archived#deleted",
       );
-      expect(putCommand.input.Item.indexClass).toBe(
+      expect(putCommand.input.Item.indexCategory).toBe(
         "@#record#memory#archived#deleted",
       );
     });

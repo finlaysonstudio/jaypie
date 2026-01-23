@@ -5,7 +5,7 @@ import {
   ARCHIVED_SUFFIX,
   DELETED_SUFFIX,
   INDEX_ALIAS,
-  INDEX_CLASS,
+  INDEX_CATEGORY,
   INDEX_SCOPE,
   INDEX_TYPE,
   INDEX_XID,
@@ -38,8 +38,8 @@ describe("Constants", () => {
       expect(INDEX_ALIAS).toBe("indexAlias");
     });
 
-    it("INDEX_CLASS is 'indexClass'", () => {
-      expect(INDEX_CLASS).toBe("indexClass");
+    it("INDEX_CATEGORY is 'indexCategory'", () => {
+      expect(INDEX_CATEGORY).toBe("indexCategory");
     });
 
     it("INDEX_SCOPE is 'indexScope'", () => {

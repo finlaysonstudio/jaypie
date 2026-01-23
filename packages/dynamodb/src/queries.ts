@@ -6,14 +6,14 @@ import {
   ARCHIVED_SUFFIX,
   DELETED_SUFFIX,
   INDEX_ALIAS,
-  INDEX_CLASS,
+  INDEX_CATEGORY,
   INDEX_SCOPE,
   INDEX_TYPE,
   INDEX_XID,
 } from "./constants.js";
 import {
   buildIndexAlias,
-  buildIndexClass,
+  buildIndexCategory,
   buildIndexScope,
   buildIndexType,
   buildIndexXid,
@@ -162,34 +162,34 @@ export const queryByAlias = fabricService({
 });
 
 /**
- * Query parameters for queryByClass
+ * Query parameters for queryByCategory
  */
-interface QueryByClassParams extends BaseQueryOptions {
+interface QueryByCategoryParams extends BaseQueryOptions {
+  category: string;
   model: string;
   scope: string;
-  recordClass: string;
 }
 
 /**
  * Query entities by category classification
- * Uses indexClass GSI
+ * Uses indexCategory GSI
  *
  * Note: This is a regular async function (not fabricService) because it accepts
  * complex startKey objects that can't be coerced by vocabulary's type system.
  */
-export async function queryByClass({
+export async function queryByCategory({
   archived = false,
   ascending = false,
+  category,
   deleted = false,
   limit,
   model,
   scope,
-  recordClass,
   startKey,
-}: QueryByClassParams): Promise<QueryResult<StorableEntity>> {
+}: QueryByCategoryParams): Promise<QueryResult<StorableEntity>> {
   const suffix = calculateSuffix({ archived, deleted });
-  const keyValue = buildIndexClass(scope, model, recordClass) + suffix;
-  return executeQuery<StorableEntity>(INDEX_CLASS, keyValue, {
+  const keyValue = buildIndexCategory(scope, model, category) + suffix;
+  return executeQuery<StorableEntity>(INDEX_CATEGORY, keyValue, {
     ascending,
     limit,
     startKey,

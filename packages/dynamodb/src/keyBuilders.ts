@@ -40,18 +40,18 @@ export function buildIndexAlias(
 }
 
 /**
- * Build the indexClass key for category filtering
+ * Build the indexCategory key for category filtering
  * @param scope - The scope
  * @param model - The entity model name
- * @param recordClass - The category classification
- * @returns Composite key: "{scope}#{model}#{class}"
+ * @param category - The category classification
+ * @returns Composite key: "{scope}#{model}#{category}"
  */
-export function buildIndexClass(
+export function buildIndexCategory(
   scope: string,
   model: string,
-  recordClass: string,
+  category: string,
 ): string {
-  return `${scope}${SEPARATOR}${model}${SEPARATOR}${recordClass}`;
+  return `${scope}${SEPARATOR}${model}${SEPARATOR}${category}`;
 }
 
 /**
@@ -120,7 +120,7 @@ export function calculateScope(parent?: ParentReference): string {
  *
  * - indexScope is always populated from scope + model
  * - indexAlias is populated only when alias is present
- * - indexClass is populated only when class is present
+ * - indexCategory is populated only when category is present
  * - indexType is populated only when type is present
  * - indexXid is populated only when xid is present
  *

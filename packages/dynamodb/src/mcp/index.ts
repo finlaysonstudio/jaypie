@@ -9,7 +9,7 @@ import {
   getEntity,
   putEntity,
   queryByAlias,
-  queryByClass,
+  queryByCategory,
   queryByScope,
   queryByType,
   queryByXid,
@@ -75,7 +75,7 @@ const mcpPutEntity = fabricService({
       required: false,
       description: "Human-friendly alias",
     },
-    class: {
+    category: {
       type: String,
       required: false,
       description: "Category classification",
@@ -87,7 +87,7 @@ const mcpPutEntity = fabricService({
     const now = new Date().toISOString();
     const entity: StorableEntity = {
       alias: input.alias as string | undefined,
-      class: input.class as string | undefined,
+      category: input.category as string | undefined,
       createdAt: now,
       id: input.id as string,
       model: input.model as string,
@@ -122,7 +122,7 @@ const mcpUpdateEntity = fabricService({
       required: false,
       description: "Human-friendly alias",
     },
-    class: {
+    category: {
       type: String,
       required: false,
       description: "Category classification",
@@ -143,7 +143,7 @@ const mcpUpdateEntity = fabricService({
     const entity: StorableEntity = {
       ...existing,
       ...(input.alias !== undefined && { alias: input.alias as string }),
-      ...(input.class !== undefined && { class: input.class as string }),
+      ...(input.category !== undefined && { category: input.category as string }),
       ...(input.name !== undefined && { name: input.name as string }),
       ...(input.scope !== undefined && { scope: input.scope as string }),
       ...(input.type !== undefined && { type: input.type as string }),
@@ -200,16 +200,16 @@ const mcpQueryByScope = fabricService({
 });
 
 /**
- * MCP wrapper for queryByClass
+ * MCP wrapper for queryByCategory
  * Note: Pagination via startKey is not exposed to MCP; use limit instead
  */
-const mcpQueryByClass = fabricService({
-  alias: "dynamodb_query_class",
+const mcpQueryByCategory = fabricService({
+  alias: "dynamodb_query_category",
   description: "Query entities by category classification",
   input: {
+    category: { type: String, description: "Category classification" },
     model: { type: String, description: "Entity model name" },
     scope: { type: String, description: "Scope (@ for root)" },
-    recordClass: { type: String, description: "Category classification" },
     archived: {
       type: Boolean,
       default: false,
@@ -235,14 +235,14 @@ const mcpQueryByClass = fabricService({
     },
   },
   service: async (input) => {
-    return queryByClass({
+    return queryByCategory({
       archived: input.archived as boolean,
       ascending: input.ascending as boolean,
+      category: input.category as string,
       deleted: input.deleted as boolean,
       limit: input.limit as number | undefined,
       model: input.model as string,
       scope: input.scope as string,
-      recordClass: input.recordClass as string,
     });
   },
 });
@@ -363,11 +363,11 @@ export function registerDynamoDbTools(
   tools.push("dynamodb_query_alias");
 
   fabricMcp({
-    service: wrapWithInit(mcpQueryByClass),
-    name: "dynamodb_query_class",
+    service: wrapWithInit(mcpQueryByCategory),
+    name: "dynamodb_query_category",
     server,
   });
-  tools.push("dynamodb_query_class");
+  tools.push("dynamodb_query_category");
 
   fabricMcp({
     service: wrapWithInit(mcpQueryByType),
