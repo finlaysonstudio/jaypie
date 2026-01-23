@@ -50,6 +50,11 @@
       "types": "./dist/esm/data/index.d.ts",
       "import": "./dist/esm/data/index.js",
       "require": "./dist/cjs/data/index.cjs"
+    },
+    "./websocket": {
+      "types": "./dist/esm/websocket/index.d.ts",
+      "import": "./dist/esm/websocket/index.js",
+      "require": "./dist/cjs/websocket/index.cjs"
     }
   },
   "main": "./dist/cjs/index.cjs",

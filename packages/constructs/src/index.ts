@@ -67,6 +67,12 @@ export {
 } from "./JaypieStaticWebBucket";
 export { JaypieTraceSigningKeySecret } from "./JaypieTraceSigningKeySecret";
 export { JaypieWebDeploymentBucket } from "./JaypieWebDeploymentBucket";
+export { JaypieWebSocket, JaypieWebSocketProps } from "./JaypieWebSocket";
+export { JaypieWebSocketLambda } from "./JaypieWebSocketLambda";
+export {
+  JaypieWebSocketTable,
+  JaypieWebSocketTableProps,
+} from "./JaypieWebSocketTable";
 export * from "./helpers";
 
 // * No default export
