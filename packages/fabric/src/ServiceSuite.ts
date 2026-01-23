@@ -222,8 +222,9 @@ export function createServiceSuite(config: CreateServiceSuiteConfig): ServiceSui
     register(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       service: Service<any, any>,
-      { category }: { category: string },
+      options: { category: string },
     ): void {
+      const { category } = options;
       const serviceName = service.alias;
       if (!serviceName) {
         throw new Error("Service must have an alias to be registered");
