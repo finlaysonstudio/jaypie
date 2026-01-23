@@ -1,6 +1,6 @@
 ---
-description: Fabric service patterns and adapters
-related: services, errors, tools
+description: Fabric service patterns and adapters (pre-1.0)
+related: handlers, services, errors, tools
 ---
 
 # Fabric Services
