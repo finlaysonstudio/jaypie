@@ -1,8 +1,6 @@
 ---
-description:
-related:
-  agents: Prompts to improve agent adoption in AGENTS.md, CLAUDE.md, etc.
-  index: All available skills
+description: About the Jaypie skill system
+related: agents, index
 ---
 
 # Jaypie Skills
@@ -11,13 +9,14 @@ related:
 - Written for agents
 - Balance brevity and rigor
 
-Look up skills by their "alias:"
-`mcp__jaypie__skills(index)`
+Look up skills by alias: `mcp__jaypie__skill(alias)`
 
-## Essentials
+## Categories
 
-Contents: index, releasenotes
-Development: documentation, errors, logs, mocks, style, tests
-Infrastructure: aws, cdk, cicd, datadog, dns, dynamodb, secrets, variables
-Patterns: fabric, models, services, vocabulary
-Meta: issues, jaypie, skills, tools
+| Category | Skills |
+|----------|--------|
+| contents | index, releasenotes |
+| development | documentation, errors, logs, mocks, style, tests |
+| infrastructure | aws, cdk, cicd, datadog, dns, dynamodb, secrets, variables |
+| patterns | fabric, models, services, vocabulary |
+| meta | issues, jaypie, skills, tools |

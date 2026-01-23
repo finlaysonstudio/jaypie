@@ -17,6 +17,8 @@ The "Fabric Vocabulary" attempts to reserve words for implied uses and encourage
 6. Event: an entity that happens rather than is
 7. State: configuration of attributes at a point
 8. Context: scope in which propositions hold
+9. Model: category bound to a specification of attributes; defines entity identity and structure
+10. Service: responds to event inputs and performs actions that transforms state within context
 
 Arguably composition, identity, instance, and relation would form a more complete vocabulary.
 
@@ -59,6 +61,7 @@ Arguably composition, identity, instance, and relation would form a more complet
 ### Discouraged Words => Replacements
 
 - class => category, tags; reserved
+- context => metadata; reserved
 - data => input, state; `data` is a parameter passed for interpolation or response field signaling success
 - jaypie; reserved
 - key => alias; make api or secret keys explicit in name
