@@ -10,14 +10,14 @@ import type {
   SeedResult,
   StorableEntity,
 } from "@jaypie/dynamodb";
-import type { IndexableModel } from "@jaypie/fabric";
+import type { IndexableModel, IndexDefinition } from "@jaypie/fabric";
 
 import { createMockFunction, createMockResolvedFunction } from "./utils";
 
 // Re-export constants (no need to mock, just pass through)
 export const APEX = original.APEX;
 export const ARCHIVED_SUFFIX = original.ARCHIVED_SUFFIX;
-export const DEFAULT_INDEXES = original.DEFAULT_INDEXES;
+export const DEFAULT_INDEXES: IndexDefinition[] = original.DEFAULT_INDEXES;
 export const DELETED_SUFFIX = original.DELETED_SUFFIX;
 export const INDEX_ALIAS = original.INDEX_ALIAS;
 export const INDEX_CLASS = original.INDEX_CLASS;

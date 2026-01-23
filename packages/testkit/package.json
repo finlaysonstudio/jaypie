@@ -40,6 +40,7 @@
   },
   "devDependencies": {
     "@jaypie/dynamodb": "*",
+    "@jaypie/fabric": "*",
     "@jaypie/types": "*",
     "@rollup/plugin-commonjs": "^28.0.3",
     "@rollup/plugin-json": "^6.1.0",
