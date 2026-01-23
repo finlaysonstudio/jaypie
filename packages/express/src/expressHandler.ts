@@ -143,7 +143,9 @@ const logger = publicLogger as unknown as ExtendedLogger;
  * Uses Symbol marker to survive prototype chain modifications from Express and dd-trace.
  */
 function isLambdaMockResponse(res: Response): res is LambdaMockResponse {
-  return (res as unknown as Record<symbol, unknown>)[JAYPIE_LAMBDA_MOCK] === true;
+  return (
+    (res as unknown as Record<symbol, unknown>)[JAYPIE_LAMBDA_MOCK] === true
+  );
 }
 
 /**
@@ -188,11 +190,7 @@ function safeSendJson(res: Response, statusCode: number, data: unknown): void {
  * For Lambda mock responses, directly manipulates internal state instead of
  * using stream methods (write/end) which dd-trace intercepts.
  */
-function safeSend(
-  res: Response,
-  statusCode: number,
-  body?: string,
-): void {
+function safeSend(res: Response, statusCode: number, body?: string): void {
   if (isLambdaMockResponse(res)) {
     // Direct internal state manipulation - bypasses dd-trace completely
     res.statusCode = statusCode;
@@ -576,9 +574,14 @@ function expressHandler<T>(
       const errorStack =
         error instanceof Error
           ? error.stack
-          : new Error("Stack trace").stack?.replace("Error: Stack trace", `Error: ${errorMessage}`);
+          : new Error("Stack trace").stack?.replace(
+              "Error: Stack trace",
+              `Error: ${errorMessage}`,
+            );
       console.error("Express response error stack trace:", errorStack);
-      log.fatal(`Express encountered an error while sending the response: ${errorMessage}`);
+      log.fatal(
+        `Express encountered an error while sending the response: ${errorMessage}`,
+      );
       log.var({ responseError: error });
     }
 

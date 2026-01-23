@@ -88,7 +88,9 @@ export interface WebSocketContext {
   domainName: string;
   queryStringParameters: Record<string, string> | null;
   routeKey: string;
-  send: (data: unknown) => Promise<{ connectionValid: boolean; success: boolean }>;
+  send: (
+    data: unknown,
+  ) => Promise<{ connectionValid: boolean; success: boolean }>;
   stage: string;
 }
 
@@ -129,10 +131,12 @@ export const websocketHandler = createMockFunction<
           string
         >) ?? null,
       routeKey:
-        ((event as Record<string, unknown>)?.requestContext as Record<
-          string,
-          string
-        >)?.routeKey ?? "$default",
+        (
+          (event as Record<string, unknown>)?.requestContext as Record<
+            string,
+            string
+          >
+        )?.routeKey ?? "$default",
       send: async () => ({ connectionValid: true, success: true }),
       stage: "production",
     };

@@ -5,13 +5,19 @@ import { createServiceSuite, fabricService } from "../index.js";
 describe("ServiceSuite", () => {
   describe("createServiceSuite", () => {
     it("should create a suite with name and version", () => {
-      const suite = createServiceSuite({ name: "test-suite", version: "1.0.0" });
+      const suite = createServiceSuite({
+        name: "test-suite",
+        version: "1.0.0",
+      });
       expect(suite.name).toBe("test-suite");
       expect(suite.version).toBe("1.0.0");
     });
 
     it("should start with empty services and categories", () => {
-      const suite = createServiceSuite({ name: "test-suite", version: "1.0.0" });
+      const suite = createServiceSuite({
+        name: "test-suite",
+        version: "1.0.0",
+      });
       expect(suite.services).toEqual([]);
       expect(suite.categories).toEqual([]);
     });
@@ -19,7 +25,10 @@ describe("ServiceSuite", () => {
 
   describe("register", () => {
     it("should register a service with a category", () => {
-      const suite = createServiceSuite({ name: "test-suite", version: "1.0.0" });
+      const suite = createServiceSuite({
+        name: "test-suite",
+        version: "1.0.0",
+      });
       const service = fabricService({
         alias: "test-service",
         description: "A test service",
@@ -36,27 +45,36 @@ describe("ServiceSuite", () => {
     });
 
     it("should throw if service has no alias", () => {
-      const suite = createServiceSuite({ name: "test-suite", version: "1.0.0" });
+      const suite = createServiceSuite({
+        name: "test-suite",
+        version: "1.0.0",
+      });
       const service = fabricService({
         input: {},
         service: () => "result",
       });
 
-      expect(() => suite.register(service, { category: "test-category" })).toThrow(
-        "Service must have an alias to be registered",
-      );
+      expect(() =>
+        suite.register(service, { category: "test-category" }),
+      ).toThrow("Service must have an alias to be registered");
     });
   });
 
   describe("getServiceFunctions", () => {
     it("should return an empty array when no services are registered", () => {
-      const suite = createServiceSuite({ name: "test-suite", version: "1.0.0" });
+      const suite = createServiceSuite({
+        name: "test-suite",
+        version: "1.0.0",
+      });
       const functions = suite.getServiceFunctions();
       expect(functions).toEqual([]);
     });
 
     it("should return all registered service functions", () => {
-      const suite = createServiceSuite({ name: "test-suite", version: "1.0.0" });
+      const suite = createServiceSuite({
+        name: "test-suite",
+        version: "1.0.0",
+      });
       const service1 = fabricService({
         alias: "service-1",
         service: () => "result-1",
@@ -76,7 +94,10 @@ describe("ServiceSuite", () => {
     });
 
     it("should return callable service functions", async () => {
-      const suite = createServiceSuite({ name: "test-suite", version: "1.0.0" });
+      const suite = createServiceSuite({
+        name: "test-suite",
+        version: "1.0.0",
+      });
       const service = fabricService({
         alias: "echo",
         input: {
@@ -97,13 +118,19 @@ describe("ServiceSuite", () => {
 
   describe("getServiceFunction", () => {
     it("should return undefined for unknown service", () => {
-      const suite = createServiceSuite({ name: "test-suite", version: "1.0.0" });
+      const suite = createServiceSuite({
+        name: "test-suite",
+        version: "1.0.0",
+      });
       const func = suite.getServiceFunction("unknown");
       expect(func).toBeUndefined();
     });
 
     it("should return the service function by name", () => {
-      const suite = createServiceSuite({ name: "test-suite", version: "1.0.0" });
+      const suite = createServiceSuite({
+        name: "test-suite",
+        version: "1.0.0",
+      });
       const service = fabricService({
         alias: "my-service",
         service: () => "result",
@@ -116,7 +143,10 @@ describe("ServiceSuite", () => {
     });
 
     it("should return a callable function", async () => {
-      const suite = createServiceSuite({ name: "test-suite", version: "1.0.0" });
+      const suite = createServiceSuite({
+        name: "test-suite",
+        version: "1.0.0",
+      });
       const service = fabricService({
         alias: "adder",
         input: {
@@ -138,7 +168,10 @@ describe("ServiceSuite", () => {
 
   describe("execute", () => {
     it("should execute a service by name", async () => {
-      const suite = createServiceSuite({ name: "test-suite", version: "1.0.0" });
+      const suite = createServiceSuite({
+        name: "test-suite",
+        version: "1.0.0",
+      });
       const service = fabricService({
         alias: "greeter",
         input: {
@@ -154,7 +187,10 @@ describe("ServiceSuite", () => {
     });
 
     it("should throw for unknown service", async () => {
-      const suite = createServiceSuite({ name: "test-suite", version: "1.0.0" });
+      const suite = createServiceSuite({
+        name: "test-suite",
+        version: "1.0.0",
+      });
 
       await expect(suite.execute("unknown", {})).rejects.toThrow(
         'Service "unknown" not found',
@@ -164,7 +200,10 @@ describe("ServiceSuite", () => {
 
   describe("getService", () => {
     it("should return service metadata by name", () => {
-      const suite = createServiceSuite({ name: "test-suite", version: "1.0.0" });
+      const suite = createServiceSuite({
+        name: "test-suite",
+        version: "1.0.0",
+      });
       const service = fabricService({
         alias: "test-service",
         description: "A test service",
@@ -180,7 +219,10 @@ describe("ServiceSuite", () => {
     });
 
     it("should return undefined for unknown service", () => {
-      const suite = createServiceSuite({ name: "test-suite", version: "1.0.0" });
+      const suite = createServiceSuite({
+        name: "test-suite",
+        version: "1.0.0",
+      });
       const meta = suite.getService("unknown");
       expect(meta).toBeUndefined();
     });
@@ -188,7 +230,10 @@ describe("ServiceSuite", () => {
 
   describe("getServicesByCategory", () => {
     it("should return services by category", () => {
-      const suite = createServiceSuite({ name: "test-suite", version: "1.0.0" });
+      const suite = createServiceSuite({
+        name: "test-suite",
+        version: "1.0.0",
+      });
       const service1 = fabricService({
         alias: "service-a",
         service: () => "a",
@@ -208,7 +253,10 @@ describe("ServiceSuite", () => {
 
       const mathServices = suite.getServicesByCategory("math");
       expect(mathServices.length).toBe(2);
-      expect(mathServices.map((s) => s.name)).toEqual(["service-a", "service-b"]);
+      expect(mathServices.map((s) => s.name)).toEqual([
+        "service-a",
+        "service-b",
+      ]);
 
       const utilsServices = suite.getServicesByCategory("utils");
       expect(utilsServices.length).toBe(1);
@@ -216,7 +264,10 @@ describe("ServiceSuite", () => {
     });
 
     it("should return empty array for unknown category", () => {
-      const suite = createServiceSuite({ name: "test-suite", version: "1.0.0" });
+      const suite = createServiceSuite({
+        name: "test-suite",
+        version: "1.0.0",
+      });
       const services = suite.getServicesByCategory("unknown");
       expect(services).toEqual([]);
     });

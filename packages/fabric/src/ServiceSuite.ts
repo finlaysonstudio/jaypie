@@ -52,15 +52,15 @@ export interface ServiceSuite {
   execute(name: string, inputs: Record<string, unknown>): Promise<unknown>;
 
   /** Register a fabricService into the suite */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   register(service: Service<any, any>, options: { category: string }): void;
 
   /** Get all registered service functions (for transport adapters like FabricMcpServer) */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   getServiceFunctions(): Service<any, any>[];
 
   /** Get a specific service function by name */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   getServiceFunction(name: string): Service<any, any> | undefined;
 }
 
@@ -103,7 +103,9 @@ function deriveTypeString(type: InputFieldDefinition["type"]): string {
       return "array";
     }
     // If all elements are strings (or RegExp), it's a validated string enum
-    if (type.every((item) => typeof item === "string" || item instanceof RegExp)) {
+    if (
+      type.every((item) => typeof item === "string" || item instanceof RegExp)
+    ) {
       return "string";
     }
     // If all elements are numbers, it's a validated number enum
@@ -124,13 +126,21 @@ function deriveTypeString(type: InputFieldDefinition["type"]): string {
 /**
  * Extract enum values if the type is a validated string/number array
  */
-function extractEnumValues(type: InputFieldDefinition["type"]): string[] | undefined {
+function extractEnumValues(
+  type: InputFieldDefinition["type"],
+): string[] | undefined {
   if (!Array.isArray(type)) return undefined;
   if (type.length === 0) return undefined;
 
   // Check if it's a validated string enum (array of strings, possibly with RegExp)
-  const stringValues = type.filter((item): item is string => typeof item === "string");
-  if (stringValues.length > 0 && stringValues.length === type.filter((item) => typeof item === "string").length) {
+  const stringValues = type.filter(
+    (item): item is string => typeof item === "string",
+  );
+  if (
+    stringValues.length > 0 &&
+    stringValues.length ===
+      type.filter((item) => typeof item === "string").length
+  ) {
     // All non-RegExp items are strings
     return stringValues;
   }
@@ -152,8 +162,7 @@ function extractInputs(
   if (!inputDefinitions) return [];
 
   return Object.entries(inputDefinitions).map(([name, def]) => {
-    const required =
-      def.required !== false && def.default === undefined;
+    const required = def.required !== false && def.default === undefined;
     const enumValues = extractEnumValues(def.type);
 
     return {
@@ -176,14 +185,18 @@ function hasRequiredInputs(inputs: ServiceInput[]): boolean {
 /**
  * Create a ServiceSuite instance
  */
-export function createServiceSuite(config: CreateServiceSuiteConfig): ServiceSuite {
+export function createServiceSuite(
+  config: CreateServiceSuiteConfig,
+): ServiceSuite {
   const { name, version } = config;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const serviceRegistry = new Map<string, {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    service: Service<any, any>;
-    meta: ServiceMeta;
-  }>();
+
+  const serviceRegistry = new Map<
+    string,
+    {
+      service: Service<any, any>;
+      meta: ServiceMeta;
+    }
+  >();
   const categorySet = new Set<string>();
 
   const suite: ServiceSuite = {
@@ -214,16 +227,14 @@ export function createServiceSuite(config: CreateServiceSuiteConfig): ServiceSui
     ): Promise<unknown> {
       const entry = serviceRegistry.get(serviceName);
       if (!entry) {
-        throw new Error(`Service "${serviceName}" not found in suite "${name}"`);
+        throw new Error(
+          `Service "${serviceName}" not found in suite "${name}"`,
+        );
       }
       return entry.service(inputs);
     },
 
-    register(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      service: Service<any, any>,
-      options: { category: string },
-    ): void {
+    register(service: Service<any, any>, options: { category: string }): void {
       const { category } = options;
       const serviceName = service.alias;
       if (!serviceName) {
@@ -243,12 +254,10 @@ export function createServiceSuite(config: CreateServiceSuiteConfig): ServiceSui
       categorySet.add(category);
     },
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     getServiceFunctions(): Service<any, any>[] {
       return Array.from(serviceRegistry.values()).map((entry) => entry.service);
     },
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     getServiceFunction(serviceName: string): Service<any, any> | undefined {
       return serviceRegistry.get(serviceName)?.service;
     },

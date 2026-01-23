@@ -28,9 +28,16 @@ vi.mock("@jaypie/lambda", () => ({
         queryStringParameters: (event as Record<string, unknown>)
           ?.queryStringParameters as Record<string, string>,
         routeKey: (event as Record<string, unknown>)?.requestContext
-          ? ((event as Record<string, unknown>).requestContext as Record<string, string>).routeKey
+          ? (
+              (event as Record<string, unknown>).requestContext as Record<
+                string,
+                string
+              >
+            ).routeKey
           : "$default",
-        send: vi.fn().mockResolvedValue({ connectionValid: true, success: true }),
+        send: vi
+          .fn()
+          .mockResolvedValue({ connectionValid: true, success: true }),
         stage: "production",
       };
       return handler(event, wsContext);

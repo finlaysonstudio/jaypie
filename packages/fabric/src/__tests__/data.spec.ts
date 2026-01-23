@@ -33,7 +33,9 @@ vi.mock("@jaypie/dynamodb", () => ({
     ...entity,
     indexScope: "@#record",
   })),
-  queryByScope: vi.fn().mockResolvedValue({ items: [], lastEvaluatedKey: undefined }),
+  queryByScope: vi
+    .fn()
+    .mockResolvedValue({ items: [], lastEvaluatedKey: undefined }),
   updateEntity: vi.fn().mockImplementation(async ({ entity }) => ({
     ...entity,
     updatedAt: new Date().toISOString(),
@@ -527,9 +529,15 @@ describe("FabricData", () => {
         },
       });
 
-      const readService = result.services.find((s) => s.alias === "read-record");
-      const deleteService = result.services.find((s) => s.alias === "delete-record");
-      const createService = result.services.find((s) => s.alias === "create-record");
+      const readService = result.services.find(
+        (s) => s.alias === "read-record",
+      );
+      const deleteService = result.services.find(
+        (s) => s.alias === "delete-record",
+      );
+      const createService = result.services.find(
+        (s) => s.alias === "create-record",
+      );
 
       expect(readService?.authorization).toBe(false);
       expect(deleteService?.authorization).toBe(adminAuth);

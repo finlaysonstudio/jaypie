@@ -33,7 +33,9 @@ export const buildCompositeKey = createMockFunction<
     fields: string[],
     suffix?: string,
   ) => string
->((entity, fields, suffix) => original.buildCompositeKey(entity, fields, suffix));
+>((entity, fields, suffix) =>
+  original.buildCompositeKey(entity, fields, suffix),
+);
 
 export const buildIndexAlias = createMockFunction<
   (scope: string, model: string, alias: string) => string
@@ -41,7 +43,9 @@ export const buildIndexAlias = createMockFunction<
 
 export const buildIndexCategory = createMockFunction<
   (scope: string, model: string, category: string) => string
->((scope, model, category) => original.buildIndexCategory(scope, model, category));
+>((scope, model, category) =>
+  original.buildIndexCategory(scope, model, category),
+);
 
 export const buildIndexScope = createMockFunction<
   (scope: string, model: string) => string

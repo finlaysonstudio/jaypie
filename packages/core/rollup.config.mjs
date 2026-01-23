@@ -3,20 +3,13 @@ import autoExternal from "rollup-plugin-auto-external";
 
 // Filter out TS2307 warnings for @jaypie/* packages (external workspace dependencies)
 const onwarn = (warning, defaultHandler) => {
-  if (
-    warning.plugin === "typescript" &&
-    warning.message.includes("@jaypie/")
-  ) {
+  if (warning.plugin === "typescript" && warning.message.includes("@jaypie/")) {
     return;
   }
   defaultHandler(warning);
 };
 
-const external = [
-  "@jaypie/errors",
-  "@jaypie/kit",
-  "@jaypie/logger",
-];
+const external = ["@jaypie/errors", "@jaypie/kit", "@jaypie/logger"];
 
 export default [
   // ES modules version

@@ -1,5 +1,9 @@
 import type { HttpContext } from "../http/types.js";
-import type { FabricDataListOptions, ScopeContext, ScopeFunction } from "./types.js";
+import type {
+  FabricDataListOptions,
+  ScopeContext,
+  ScopeFunction,
+} from "./types.js";
 import { DEFAULT_LIMIT, MAX_LIMIT } from "./types.js";
 
 /**
@@ -129,7 +133,8 @@ export function transformList(
   const startKey = query.get("cursor") ?? query.get("startKey") ?? undefined;
 
   // Parse sort order
-  const ascending = query.get("ascending") === "true" || query.get("sort") === "asc";
+  const ascending =
+    query.get("ascending") === "true" || query.get("sort") === "asc";
 
   // Parse archived/deleted flags
   const archived = query.get("archived") === "true";

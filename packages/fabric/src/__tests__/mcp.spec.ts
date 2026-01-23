@@ -1251,7 +1251,10 @@ describe("MCP Adapter", () => {
     const { createServiceSuite } = await import("../ServiceSuite.js");
 
     it("creates an MCP server from a suite", () => {
-      const suite = createServiceSuite({ name: "test-suite", version: "2.0.0" });
+      const suite = createServiceSuite({
+        name: "test-suite",
+        version: "2.0.0",
+      });
       const greetService = fabricService({
         alias: "greet",
         description: "Greet someone",

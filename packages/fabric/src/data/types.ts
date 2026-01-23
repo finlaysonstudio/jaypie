@@ -39,9 +39,7 @@ export interface ScopeContext {
  * Function that calculates scope for queries and new entities
  * Returns APEX ("@") for root-level entities or "{parent.model}#{parent.id}" for children
  */
-export type ScopeFunction = (
-  context: ScopeContext,
-) => string | Promise<string>;
+export type ScopeFunction = (context: ScopeContext) => string | Promise<string>;
 
 // #endregion
 
@@ -50,13 +48,17 @@ export type ScopeFunction = (
 /**
  * Per-operation configuration for FabricData
  */
-export interface FabricDataOperationConfig<T extends FabricModel = FabricModel> {
+export interface FabricDataOperationConfig<
+  T extends FabricModel = FabricModel,
+> {
   /** Override authorization for this operation */
   authorization?: AuthorizationConfig;
   /** Enable/disable this operation (default: true) */
   enabled?: boolean;
   /** Custom HTTP transform for this operation */
-  http?: (context: HttpContext) => Record<string, unknown> | Promise<Record<string, unknown>>;
+  http?: (
+    context: HttpContext,
+  ) => Record<string, unknown> | Promise<Record<string, unknown>>;
   /** Transform input before saving (create/update only) */
   transform?: (
     input: Record<string, unknown>,

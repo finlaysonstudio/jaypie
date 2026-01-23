@@ -1,6 +1,10 @@
 import type { FabricModel } from "../../models/base.js";
 import { fabricHttp } from "../../http/fabricHttp.js";
-import type { FabricHttpService, HttpContext, HttpTransformFunction } from "../../http/types.js";
+import type {
+  FabricHttpService,
+  HttpContext,
+  HttpTransformFunction,
+} from "../../http/types.js";
 import type { ServiceContext } from "../../types.js";
 import type {
   FabricDataConfig,
@@ -37,7 +41,11 @@ export function createListService<T extends FabricModel = FabricModel>(
   // Build the HTTP transform function
   const httpTransform: HttpTransformFunction<Record<string, unknown>> =
     operationConfig.http ??
-    ((context: HttpContext) => transformList(context, defaultLimit, maxLimit) as unknown as Record<string, unknown>);
+    ((context: HttpContext) =>
+      transformList(context, defaultLimit, maxLimit) as unknown as Record<
+        string,
+        unknown
+      >);
 
   return fabricHttp({
     alias: `list-${pluralAlias}`,
@@ -84,7 +92,10 @@ export function createListService<T extends FabricModel = FabricModel>(
       const { queryByScope } = await import("@jaypie/dynamodb");
 
       // Calculate scope
-      const scopeConfig = globalConfig.scope as ScopeFunction | string | undefined;
+      const scopeConfig = globalConfig.scope as
+        | ScopeFunction
+        | string
+        | undefined;
       const httpContext = context?.http;
       const scope = httpContext
         ? await calculateScopeFromConfig(scopeConfig, httpContext)
@@ -99,7 +110,8 @@ export function createListService<T extends FabricModel = FabricModel>(
         maxLimit,
       );
       const startKey = decodeCursor(
-        (input.cursor as string | undefined) ?? (input.startKey as string | undefined),
+        (input.cursor as string | undefined) ??
+          (input.startKey as string | undefined),
       );
 
       // Query entities

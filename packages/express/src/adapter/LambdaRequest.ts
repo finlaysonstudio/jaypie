@@ -178,7 +178,9 @@ function normalizeQueryKey(key: string): string {
  * Parse a query string into a record with proper array handling.
  * Handles bracket notation (e.g., `param[]`) and multi-value parameters.
  */
-function parseQueryString(queryString: string): Record<string, string | string[]> {
+function parseQueryString(
+  queryString: string,
+): Record<string, string | string[]> {
   const result: Record<string, string | string[]> = {};
   const params = new URLSearchParams(queryString);
 
@@ -216,7 +218,8 @@ function buildQueryFromMultiValue(
 
     if (existingValues === undefined) {
       // First occurrence - use array if multiple values or bracket notation
-      result[key] = values.length === 1 && !rawKey.endsWith("[]") ? values[0] : values;
+      result[key] =
+        values.length === 1 && !rawKey.endsWith("[]") ? values[0] : values;
     } else if (Array.isArray(existingValues)) {
       existingValues.push(...values);
     } else {

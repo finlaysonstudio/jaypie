@@ -39,7 +39,7 @@ export interface RegisterDynamoDbToolsResult {
  * Wrap a handler to auto-initialize before execution
  * Uses explicit type assertion to allow any Service type to be wrapped
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+
 function wrapWithInit(handler: Service<any, any, any>): Service {
   const wrapped = async (input: Record<string, unknown>) => {
     ensureInitialized();
@@ -145,7 +145,9 @@ const mcpUpdateEntity = fabricService({
     const entity: StorableEntity = {
       ...existing,
       ...(input.alias !== undefined && { alias: input.alias as string }),
-      ...(input.category !== undefined && { category: input.category as string }),
+      ...(input.category !== undefined && {
+        category: input.category as string,
+      }),
       ...(input.name !== undefined && { name: input.name as string }),
       ...(input.scope !== undefined && { scope: input.scope as string }),
       ...(input.type !== undefined && { type: input.type as string }),

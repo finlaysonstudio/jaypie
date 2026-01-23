@@ -18,7 +18,13 @@ const BUILD_VERSION_STRING =
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 // From dist/suites/docs/, go up 3 levels to package root where skills/ and release-notes/ live
-const RELEASE_NOTES_PATH = path.join(__dirname, "..", "..", "..", "release-notes");
+const RELEASE_NOTES_PATH = path.join(
+  __dirname,
+  "..",
+  "..",
+  "..",
+  "release-notes",
+);
 const SKILLS_PATH = path.join(__dirname, "..", "..", "..", "skills");
 
 // =============================================================================
@@ -274,10 +280,7 @@ export const versionService = fabricService({
 // =============================================================================
 
 async function getReleaseNotesHelp(): Promise<string> {
-  return fs.readFile(
-    path.join(__dirname, "release-notes", "help.md"),
-    "utf-8",
-  );
+  return fs.readFile(path.join(__dirname, "release-notes", "help.md"), "utf-8");
 }
 
 interface ReleaseNotesInput {

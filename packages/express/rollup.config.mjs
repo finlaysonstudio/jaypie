@@ -2,10 +2,7 @@ import autoExternal from "rollup-plugin-auto-external";
 import typescript from "@rollup/plugin-typescript";
 
 // Externals not caught by auto-external (peer deps + node: prefixed builtins)
-const external = [
-  "express",
-  /^node:/,
-];
+const external = ["express", /^node:/];
 
 // Filter out TS2307 warnings for @jaypie/* packages (external workspace dependencies)
 const onwarn = (warning, defaultHandler) => {

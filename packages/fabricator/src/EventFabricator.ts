@@ -22,8 +22,9 @@ const DEFAULT_ANNUAL_COUNT = 1000;
 // Types
 //
 
-export interface EventFabricatorOptions<T extends TimestampedEvent = TimestampedEvent>
-  extends FabricatorOptions {
+export interface EventFabricatorOptions<
+  T extends TimestampedEvent = TimestampedEvent,
+> extends FabricatorOptions {
   /** Number of events to generate per year (default: 1000) */
   annualCount?: number;
   /** Derived event configuration */
@@ -233,7 +234,9 @@ export abstract class EventFabricator<
    * Generates events with derived event metadata attached
    * Useful for analyzing event relationships
    */
-  eventsWithMeta(config: EventGenerationConfig = {}): EventWithDerivedMeta<T>[] {
+  eventsWithMeta(
+    config: EventGenerationConfig = {},
+  ): EventWithDerivedMeta<T>[] {
     // Generate primary events without derived event processing
     const targetYear = config.year ?? new Date().getFullYear();
     const count = config.count ?? this.annualCount;

@@ -254,7 +254,9 @@ describe("Entity Operations", () => {
       await archiveEntity({ id: "test-id-123", model: "record" });
       const putCommand = mockSend.mock.calls[1][0];
       expect(putCommand.input.Item.indexScope).toBe("@#record#archived");
-      expect(putCommand.input.Item.indexCategory).toBe("@#record#memory#archived");
+      expect(putCommand.input.Item.indexCategory).toBe(
+        "@#record#memory#archived",
+      );
     });
   });
 
@@ -290,7 +292,9 @@ describe("Entity Operations", () => {
       mockSend.mockResolvedValueOnce({});
       await deleteEntity({ id: "test-id-123", model: "record" });
       const putCommand = mockSend.mock.calls[1][0];
-      expect(putCommand.input.Item.indexScope).toBe("@#record#archived#deleted");
+      expect(putCommand.input.Item.indexScope).toBe(
+        "@#record#archived#deleted",
+      );
       expect(putCommand.input.Item.archivedAt).toBe("2026-01-01T00:00:00.000Z");
       expect(putCommand.input.Item.deletedAt).toBeDefined();
     });
@@ -304,7 +308,9 @@ describe("Entity Operations", () => {
       mockSend.mockResolvedValueOnce({});
       await archiveEntity({ id: "test-id-123", model: "record" });
       const putCommand = mockSend.mock.calls[1][0];
-      expect(putCommand.input.Item.indexScope).toBe("@#record#archived#deleted");
+      expect(putCommand.input.Item.indexScope).toBe(
+        "@#record#archived#deleted",
+      );
       expect(putCommand.input.Item.deletedAt).toBe("2026-01-01T00:00:00.000Z");
       expect(putCommand.input.Item.archivedAt).toBeDefined();
     });
@@ -320,7 +326,9 @@ describe("Entity Operations", () => {
       mockSend.mockResolvedValueOnce({});
       await deleteEntity({ id: "test-id-123", model: "record" });
       const putCommand = mockSend.mock.calls[1][0];
-      expect(putCommand.input.Item.indexScope).toBe("@#record#archived#deleted");
+      expect(putCommand.input.Item.indexScope).toBe(
+        "@#record#archived#deleted",
+      );
       expect(putCommand.input.Item.indexAlias).toBe(
         "@#record#my-alias#archived#deleted",
       );

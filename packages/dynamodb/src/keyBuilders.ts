@@ -76,7 +76,11 @@ export function buildIndexType(
  * @param xid - The external ID
  * @returns Composite key: "{scope}#{model}#{xid}"
  */
-export function buildIndexXid(scope: string, model: string, xid: string): string {
+export function buildIndexXid(
+  scope: string,
+  model: string,
+  xid: string,
+): string {
   return `${scope}${SEPARATOR}${model}${SEPARATOR}${xid}`;
 }
 

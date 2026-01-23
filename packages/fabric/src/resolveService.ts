@@ -25,7 +25,9 @@ export interface ResolveServiceConfig<
   /** Serializer function - runs after service */
   serializer?: SerializerFunction<TInput, TOutput, TSerializedOutput>;
   /** The service - either a pre-instantiated Service or an inline function */
-  service: Service<TInput, TOutput, TSerializedOutput> | ServiceFunction<TInput, TOutput>;
+  service:
+    | Service<TInput, TOutput, TSerializedOutput>
+    | ServiceFunction<TInput, TOutput>;
 }
 
 /**
