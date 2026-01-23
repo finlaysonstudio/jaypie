@@ -35,7 +35,7 @@ export interface FabricHistoryEntry {
  * Field Groups:
  * - Identity (required): id
  * - Identity (optional): name, label, abbreviation, alias, xid, description
- * - Schema: model, class, type
+ * - Schema: model, category, type
  * - Content: content, metadata
  * - Display: emoji, icon
  * - Time: createdAt, updatedAt, archivedAt, deletedAt
@@ -76,7 +76,7 @@ export interface FabricModel {
   // -------------------------------------------------------------------------
 
   /** Varies by model (e.g., "memory", "reflection", "session") */
-  class?: string;
+  category?: string;
 
   /** Schema reference (e.g., "record", "job", "person") */
   model: string;
@@ -187,8 +187,8 @@ export interface FabricProgress {
  * Used for tracking asynchronous tasks, background processes, and batch operations.
  */
 export interface FabricJob extends FabricModel {
-  /** Job class (e.g., "evaluation", "export", "import") */
-  class?: string;
+  /** Job category (e.g., "evaluation", "export", "import") */
+  category?: string;
 
   /** When the job finished (success or failure) */
   completedAt?: Date | null;
@@ -235,7 +235,7 @@ export type FabricModelUpdate = Partial<
  */
 export interface FabricModelFilter {
   alias?: string;
-  class?: string;
+  category?: string;
   model?: string;
   type?: string;
   xid?: string;
@@ -273,7 +273,7 @@ export const FABRIC_MODEL_FIELDS = {
   ID: "id",
 
   // Schema
-  CLASS: "class",
+  CATEGORY: "category",
   MODEL: "model",
   TYPE: "type",
 

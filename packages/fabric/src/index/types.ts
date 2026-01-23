@@ -61,8 +61,8 @@ export const DEFAULT_INDEXES: IndexDefinition[] = [
     sparse: true,
   },
   {
-    name: "indexClass",
-    pk: ["scope", "model", "class"],
+    name: "indexCategory",
+    pk: ["scope", "model", "category"],
     sk: ["sequence"],
     sparse: true,
   },

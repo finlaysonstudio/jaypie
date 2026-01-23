@@ -6,7 +6,7 @@ Jaypie modeling framework - provides type conversion and service handler pattern
 
 | Attribute | Value |
 |-----------|-------|
-| Status | Initial development (0.1.x) |
+| Status | Initial development (0.2.x) |
 | Type | Utility library |
 | Dependencies | `@jaypie/errors` |
 | Peer Dependencies | `@jaypie/aws` (optional), `@jaypie/dynamodb` (optional), `@jaypie/lambda` (optional), `@modelcontextprotocol/sdk` (optional), `commander` (optional), `express` (optional) |
@@ -356,7 +356,7 @@ Located in `models/base.ts`:
 
 | Type | Description |
 |------|-------------|
-| `FabricModel` | Base type for all models with id, model (required) and optional name, class, type, content |
+| `FabricModel` | Base type for all models with id, model (required) and optional name, category, type, content |
 | `FabricModelInput` | Input for creating models (omits auto-generated fields) |
 | `FabricModelUpdate` | Partial input for updating models |
 | `FabricModelFilter` | Filter options for listing models |
