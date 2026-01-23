@@ -20,7 +20,7 @@ Some tasks should not be listed to avoid suboptimal pathing.
 Query `mcp__jaypie__skill(alias: String)` for development guidance:
 
 Contents: index, releasenotes
-Development: documentation, errors, logs, mocks, style, tests
+Development: documentation, errors, logs, mocks, streaming, style, tests, websockets
 Infrastructure: aws, cdk, cicd, datadog, dns, dynamodb, express, lambda, secrets, variables
 Patterns: fabric, models, services, vocabulary
 Meta: issues, jaypie, skills, tools

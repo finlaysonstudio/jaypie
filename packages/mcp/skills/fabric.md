@@ -1,6 +1,6 @@
 ---
 description: Fabric service patterns and adapters (pre-1.0)
-related: handlers, services, errors, tools
+related: errors, handlers, services, tools, websockets
 ---
 
 # Fabric Services
@@ -189,3 +189,6 @@ const service = fabricService({
 4. **Input Documentation**: Describe what each input expects
 5. **Return Types**: Return JSON-serializable data
 
+## See Also
+
+- **`skill("websockets")`** - `fabricWebSocket` adapter for WebSocket Lambda handlers
