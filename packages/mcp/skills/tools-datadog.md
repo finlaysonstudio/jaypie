@@ -1,22 +1,29 @@
 ---
-description: Datadog MCP tools for logs, monitors, metrics, synthetics, and RUM
+description: Datadog MCP tool for logs, monitors, metrics, synthetics, and RUM
 related: datadog, tools, debugging, logs
 ---
 
-# Datadog MCP Tools
+# Datadog MCP Tool
 
-Tools for querying Datadog observability data via the Jaypie MCP.
+Unified tool for querying Datadog observability data via the Jaypie MCP.
 
-## Available Tools
+## Usage
 
-| Tool | Description |
-|------|-------------|
-| `datadog_logs` | Search individual log entries |
-| `datadog_log_analytics` | Aggregate logs with groupBy |
-| `datadog_monitors` | List and check monitor status |
-| `datadog_synthetics` | List synthetic tests and results |
-| `datadog_metrics` | Query timeseries metrics |
-| `datadog_rum` | Search Real User Monitoring events |
+```
+datadog()                                # Show help with all commands
+datadog("command", { ...params })        # Execute a command
+```
+
+## Available Commands
+
+| Command | Description |
+|---------|-------------|
+| `logs` | Search individual log entries |
+| `log_analytics` | Aggregate logs with groupBy |
+| `monitors` | List and check monitor status |
+| `synthetics` | List synthetic tests and results |
+| `metrics` | Query timeseries metrics |
+| `rum` | Search Real User Monitoring events |
 
 ## Environment Variables
 
@@ -36,19 +43,19 @@ Search individual log entries:
 
 ```
 # Search error logs
-datadog_logs --query "status:error" --from "now-1h"
+datadog("logs", { query: "status:error", from: "now-1h" })
 
 # Search by service
-datadog_logs --query "service:my-api status:error" --from "now-15m"
+datadog("logs", { query: "service:my-api status:error", from: "now-15m" })
 
 # Search by attribute
-datadog_logs --query "@http.status_code:500" --from "now-1h"
+datadog("logs", { query: "@http.status_code:500", from: "now-1h" })
 
 # Wildcard search
-datadog_logs --query "*timeout*" --from "now-30m"
+datadog("logs", { query: "*timeout*", from: "now-30m" })
 
 # Limit results
-datadog_logs --query "status:error" --from "now-1h" --limit 100
+datadog("logs", { query: "status:error", from: "now-1h", limit: 100 })
 ```
 
 ## Log Analytics
@@ -57,19 +64,21 @@ Aggregate logs for statistics:
 
 ```
 # Count errors by service
-datadog_log_analytics --groupBy '["service"]' --query "status:error"
+datadog("log_analytics", { groupBy: ["service"], query: "status:error" })
 
 # Count by status code
-datadog_log_analytics --groupBy '["@http.status_code"]' --query "*"
+datadog("log_analytics", { groupBy: ["@http.status_code"], query: "*" })
 
 # Multiple groupings
-datadog_log_analytics --groupBy '["service", "status"]' --query "*"
+datadog("log_analytics", { groupBy: ["service", "status"], query: "*" })
 
 # Average response time
-datadog_log_analytics --groupBy '["service"]' \
-  --aggregation "avg" \
-  --metric "@duration" \
-  --query "*"
+datadog("log_analytics", {
+  groupBy: ["service"],
+  aggregation: "avg",
+  metric: "@duration",
+  query: "*"
+})
 ```
 
 ## Monitors
@@ -78,16 +87,16 @@ Check monitor status:
 
 ```
 # List all monitors
-datadog_monitors
+datadog("monitors")
 
 # Filter alerting monitors
-datadog_monitors --status '["Alert", "Warn"]'
+datadog("monitors", { status: ["Alert", "Warn"] })
 
 # Filter by name
-datadog_monitors --name "my-api"
+datadog("monitors", { name: "my-api" })
 
 # Filter by tags
-datadog_monitors --tags '["env:production"]'
+datadog("monitors", { tags: ["env:production"] })
 ```
 
 ## Synthetics
@@ -96,14 +105,14 @@ List synthetic tests:
 
 ```
 # List all tests
-datadog_synthetics
+datadog("synthetics")
 
 # Filter by type
-datadog_synthetics --type "api"
-datadog_synthetics --type "browser"
+datadog("synthetics", { type: "api" })
+datadog("synthetics", { type: "browser" })
 
 # Get results for specific test
-datadog_synthetics --testId "abc-123-def"
+datadog("synthetics", { testId: "abc-123-def" })
 ```
 
 ## Metrics
@@ -112,13 +121,13 @@ Query timeseries metrics:
 
 ```
 # CPU usage
-datadog_metrics --query "avg:system.cpu.user{*}" --from "1h"
+datadog("metrics", { query: "avg:system.cpu.user{*}", from: "1h" })
 
 # Lambda invocations
-datadog_metrics --query "sum:aws.lambda.invocations{function:my-func}.as_count()" --from "1h"
+datadog("metrics", { query: "sum:aws.lambda.invocations{function:my-func}.as_count()", from: "1h" })
 
 # Lambda duration
-datadog_metrics --query "max:aws.lambda.duration{env:production}" --from "30m"
+datadog("metrics", { query: "max:aws.lambda.duration{env:production}", from: "30m" })
 ```
 
 ## RUM Events
@@ -127,16 +136,16 @@ Search Real User Monitoring events:
 
 ```
 # Search all events
-datadog_rum --from "now-1h"
+datadog("rum", { from: "now-1h" })
 
 # Filter by type
-datadog_rum --query "@type:error" --from "now-1h"
+datadog("rum", { query: "@type:error", from: "now-1h" })
 
 # Filter by session
-datadog_rum --query "@session.id:abc123" --from "now-1h"
+datadog("rum", { query: "@session.id:abc123", from: "now-1h" })
 
 # Filter by URL
-datadog_rum --query "@view.url:*checkout*" --from "now-1h"
+datadog("rum", { query: "@view.url:*checkout*", from: "now-1h" })
 ```
 
 ## Query Syntax
@@ -165,26 +174,26 @@ now-1d                          # Last day
 
 ```
 # Search recent errors
-datadog_logs --query "service:my-function status:error" --from "now-1h"
+datadog("logs", { query: "service:my-function status:error", from: "now-1h" })
 
 # Check error counts by service
-datadog_log_analytics --groupBy '["service"]' --query "status:error" --from "now-1h"
+datadog("log_analytics", { groupBy: ["service"], query: "status:error", from: "now-1h" })
 ```
 
 ### Monitor Status Check
 
 ```
 # Check alerting monitors
-datadog_monitors --status '["Alert", "Warn"]'
+datadog("monitors", { status: ["Alert", "Warn"] })
 ```
 
 ### Frontend Issues
 
 ```
 # Search RUM errors
-datadog_rum --query "@type:error" --from "now-1h"
+datadog("rum", { query: "@type:error", from: "now-1h" })
 
 # Check synthetic test results
-datadog_synthetics --testId "my-checkout-test"
+datadog("synthetics", { testId: "my-checkout-test" })
 ```
 

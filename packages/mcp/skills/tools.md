@@ -5,7 +5,7 @@ related: tools-aws, tools-dynamodb, tools-datadog, debugging
 
 # MCP Tools Reference
 
-Tools available through the Jaypie MCP server.
+Tools available through the Jaypie MCP server. All tools use a unified router-style API.
 
 ## Documentation Tools
 
@@ -13,8 +13,7 @@ Tools available through the Jaypie MCP server.
 |------|-------------|
 | `skill` | Access Jaypie skill documentation |
 | `version` | Get MCP server version |
-| `list_release_notes` | List package release notes |
-| `read_release_note` | Read specific release note |
+| `release_notes` | Browse package release notes |
 
 ### Using Skills
 
@@ -24,56 +23,72 @@ skill("jaypie")         # Jaypie overview
 skill("tests")          # Testing patterns
 ```
 
-## AWS Tools
+### Release Notes
 
-Tools for Lambda, S3, SQS, CloudWatch Logs, Step Functions, and CloudFormation.
+```
+release_notes()                                    # Show help
+release_notes("list")                              # List all release notes
+release_notes("list", { package: "mcp" })          # Filter by package
+release_notes("read", { package: "mcp", version: "0.5.0" })  # Read specific note
+```
+
+## AWS Tool
+
+Unified tool for Lambda, S3, SQS, CloudWatch Logs, Step Functions, CloudFormation, and DynamoDB.
 
 See **tools-aws** for complete documentation.
 
-| Tool | Description |
-|------|-------------|
-| `aws_list_profiles` | List AWS profiles from ~/.aws |
-| `aws_lambda_*` | Lambda function management |
-| `aws_logs_*` | CloudWatch Logs search |
-| `aws_s3_*` | S3 bucket operations |
-| `aws_sqs_*` | SQS queue operations |
-| `aws_stepfunctions_*` | Step Functions management |
-| `aws_cloudformation_*` | CloudFormation stack details |
+```
+aws()                   # Show help with all commands
+aws("list_profiles")    # List AWS profiles
+aws("lambda_list_functions", { region: "us-east-1" })
+aws("dynamodb_query", { tableName: "...", keyConditionExpression: "..." })
+```
 
-## DynamoDB Tools
+| Command | Description |
+|---------|-------------|
+| `list_profiles` | List AWS profiles from ~/.aws |
+| `lambda_list_functions`, `lambda_get_function` | Lambda management |
+| `logs_filter_log_events` | CloudWatch Logs search |
+| `s3_list_objects` | S3 bucket operations |
+| `sqs_list_queues`, `sqs_get_queue_attributes`, `sqs_receive_message`, `sqs_purge_queue` | SQS operations |
+| `stepfunctions_list_executions`, `stepfunctions_stop_execution` | Step Functions |
+| `cloudformation_describe_stack` | CloudFormation stack details |
+| `dynamodb_describe_table`, `dynamodb_query`, `dynamodb_scan`, `dynamodb_get_item` | DynamoDB |
 
-Tools for querying, scanning, and inspecting DynamoDB tables.
+## Datadog Tool
 
-See **tools-dynamodb** for complete documentation.
-
-| Tool | Description |
-|------|-------------|
-| `aws_dynamodb_describe_table` | Get table metadata |
-| `aws_dynamodb_query` | Query by partition key |
-| `aws_dynamodb_scan` | Full table scan |
-| `aws_dynamodb_get_item` | Get single item |
-
-## Datadog Tools
-
-Tools for logs, monitors, metrics, synthetics, and RUM.
+Unified tool for logs, monitors, metrics, synthetics, and RUM.
 
 See **tools-datadog** for complete documentation.
 
-| Tool | Description |
-|------|-------------|
-| `datadog_logs` | Search log entries |
-| `datadog_log_analytics` | Aggregate logs with groupBy |
-| `datadog_monitors` | List and check monitors |
-| `datadog_synthetics` | List synthetic tests |
-| `datadog_metrics` | Query timeseries metrics |
-| `datadog_rum` | Search RUM events |
+```
+datadog()               # Show help with all commands
+datadog("logs", { query: "status:error", from: "now-1h" })
+datadog("monitors", { status: ["Alert", "Warn"] })
+```
 
-## LLM Tools
+| Command | Description |
+|---------|-------------|
+| `logs` | Search log entries |
+| `log_analytics` | Aggregate logs with groupBy |
+| `monitors` | List and check monitors |
+| `synthetics` | List synthetic tests |
+| `metrics` | Query timeseries metrics |
+| `rum` | Search RUM events |
 
-| Tool | Description |
-|------|-------------|
-| `llm_debug_call` | Debug LLM API call |
-| `llm_list_providers` | List available LLM providers |
+## LLM Tool
+
+```
+llm()                   # Show help
+llm("list_providers")   # List available LLM providers
+llm("debug_call", { provider: "openai", message: "Hello" })
+```
+
+| Command | Description |
+|---------|-------------|
+| `list_providers` | List available LLM providers |
+| `debug_call` | Debug LLM API call |
 
 ## Environment Variables
 
