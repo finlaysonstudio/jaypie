@@ -118,15 +118,29 @@ export type ServiceFunction<TInput, TOutput> = (
   context?: ServiceContext,
 ) => TOutput | Promise<TOutput>;
 
+// Serializer function signature - runs after service
+// Returns transformed output or void/undefined to use original
+export type SerializerFunction<TInput, TOutput, TSerializedOutput = TOutput> = (
+  data: { input: TInput; output: TOutput },
+  context?: ServiceContext,
+) =>
+  | TSerializedOutput
+  | void
+  | undefined
+  | Promise<TSerializedOutput | void | undefined>;
+
 // Service configuration
 // When service is omitted, the handler returns the processed input (TInput)
 export interface ServiceConfig<
   TInput extends Record<string, unknown> = Record<string, unknown>,
   TOutput = unknown,
+  TSerializedOutput = TOutput,
 > {
   alias?: string;
   description?: string;
   input?: Record<string, InputFieldDefinition>;
+  /** Runs after service - can transform output */
+  serializer?: SerializerFunction<TInput, TOutput, TSerializedOutput>;
   service?: ServiceFunction<TInput, TOutput>;
 }
 
@@ -135,11 +149,12 @@ export interface ServiceConfig<
 export interface Service<
   TInput extends Record<string, unknown> = Record<string, unknown>,
   TOutput = unknown,
-> extends ServiceConfig<TInput, TOutput> {
+  TSerializedOutput = TOutput,
+> extends ServiceConfig<TInput, TOutput, TSerializedOutput> {
   (
     input?: Partial<TInput> | string,
     context?: ServiceContext,
-  ): Promise<TOutput>;
+  ): Promise<TSerializedOutput>;
   /** Fabric version identifier - used to detect pre-instantiated Services */
   $fabric?: string;
 }

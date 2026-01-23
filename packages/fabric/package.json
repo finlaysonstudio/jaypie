@@ -1,6 +1,6 @@
 {
   "name": "@jaypie/fabric",
-  "version": "0.1.4",
+  "version": "0.2.0",
   "description": "Jaypie modeling framework with type conversion, service handlers, and adapters",
   "repository": {
     "type": "git",
@@ -67,7 +67,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@jaypie/errors": "^1.2.1"
+    "@jaypie/errors": "*"
   },
   "devDependencies": {
     "@jaypie/testkit": "*",

@@ -33,7 +33,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@jaypie/aws": "^1.2.1"
+    "@jaypie/aws": "*"
   },
   "devDependencies": {
     "@rollup/plugin-typescript": "^12.1.2",
@@ -42,9 +42,9 @@
     "typescript": "^5.3.3"
   },
   "peerDependencies": {
-    "@jaypie/errors": "^1.2.1",
-    "@jaypie/kit": "^1.2.1",
-    "@jaypie/logger": "^1.2.1",
+    "@jaypie/errors": "*",
+    "@jaypie/kit": "*",
+    "@jaypie/logger": "*",
     "mongoose": "^8.3.0"
   },
   "publishConfig": {

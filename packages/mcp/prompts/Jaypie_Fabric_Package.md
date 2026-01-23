@@ -539,8 +539,8 @@ const echoService = fabricService({
   service: ({ message }) => message,
 });
 
-suite.register(greetService, "utils");
-suite.register(echoService, "utils");
+suite.register(greetService, { category: "utils" });
+suite.register(echoService, { category: "utils" });
 ```
 
 ### Suite Properties and Methods

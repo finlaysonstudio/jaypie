@@ -3,6 +3,7 @@
 import { fabricService, isService } from "./service.js";
 import type {
   InputFieldDefinition,
+  SerializerFunction,
   Service,
   ServiceFunction,
 } from "./types.js";
@@ -13,6 +14,7 @@ import type {
 export interface ResolveServiceConfig<
   TInput extends Record<string, unknown> = Record<string, unknown>,
   TOutput = unknown,
+  TSerializedOutput = TOutput,
 > {
   /** Service alias (used as name for adapters) */
   alias?: string;
@@ -20,8 +22,10 @@ export interface ResolveServiceConfig<
   description?: string;
   /** Input field definitions */
   input?: Record<string, InputFieldDefinition>;
+  /** Serializer function - runs after service */
+  serializer?: SerializerFunction<TInput, TOutput, TSerializedOutput>;
   /** The service - either a pre-instantiated Service or an inline function */
-  service: Service<TInput, TOutput> | ServiceFunction<TInput, TOutput>;
+  service: Service<TInput, TOutput, TSerializedOutput> | ServiceFunction<TInput, TOutput>;
 }
 
 /**
@@ -36,6 +40,7 @@ export interface ResolveServiceConfig<
  * - `alias` overrides service.alias
  * - `description` overrides service.description
  * - `input` overrides service.input
+ * - `serializer` overrides service.serializer
  *
  * The original Service is never mutated - a new Service is created when overrides
  * are applied.
@@ -61,16 +66,20 @@ export interface ResolveServiceConfig<
 export function resolveService<
   TInput extends Record<string, unknown> = Record<string, unknown>,
   TOutput = unknown,
->(config: ResolveServiceConfig<TInput, TOutput>): Service<TInput, TOutput> {
-  const { alias, description, input, service } = config;
+  TSerializedOutput = TOutput,
+>(
+  config: ResolveServiceConfig<TInput, TOutput, TSerializedOutput>,
+): Service<TInput, TOutput, TSerializedOutput> {
+  const { alias, description, input, serializer, service } = config;
 
-  if (isService<TInput, TOutput>(service)) {
+  if (isService<TInput, TOutput, TSerializedOutput>(service)) {
     // Service is pre-instantiated - config fields act as overrides
     // Create new Service with merged properties (config overrides service)
     return fabricService({
       alias: alias ?? service.alias,
       description: description ?? service.description,
       input: input ?? service.input,
+      serializer: serializer ?? service.serializer,
       service: service.service,
     });
   }
@@ -80,6 +89,7 @@ export function resolveService<
     alias,
     description,
     input,
+    serializer,
     service,
   });
 }

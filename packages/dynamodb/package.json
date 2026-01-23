@@ -1,6 +1,6 @@
 {
   "name": "@jaypie/dynamodb",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/finlaysonstudio/jaypie.git"
@@ -41,7 +41,7 @@
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.726.1",
     "@aws-sdk/lib-dynamodb": "^3.726.1",
-    "@jaypie/fabric": "^0.1.0"
+    "@jaypie/fabric": "*"
   },
   "devDependencies": {
     "@rollup/plugin-typescript": "^12.1.2",
@@ -49,9 +49,9 @@
     "typescript": "^5.3.3"
   },
   "peerDependencies": {
-    "@jaypie/errors": "^1.2.1",
-    "@jaypie/kit": "^1.2.1",
-    "@jaypie/logger": "^1.2.1",
+    "@jaypie/errors": "*",
+    "@jaypie/kit": "*",
+    "@jaypie/logger": "*",
     "@modelcontextprotocol/sdk": ">=1.0.0"
   },
   "peerDependenciesMeta": {

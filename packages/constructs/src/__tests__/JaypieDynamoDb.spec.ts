@@ -52,7 +52,7 @@ describe("JaypieDynamoDb", () => {
       const names = JaypieDynamoDb.DEFAULT_INDEXES.map((idx) => idx.name);
       expect(names).toContain("indexScope");
       expect(names).toContain("indexAlias");
-      expect(names).toContain("indexClass");
+      expect(names).toContain("indexCategory");
       expect(names).toContain("indexType");
       expect(names).toContain("indexXid");
     });
@@ -199,7 +199,7 @@ describe("JaypieDynamoDb", () => {
 
       const gsiNames = gsis.map((gsi: { IndexName: string }) => gsi.IndexName);
       expect(gsiNames).toContain("indexAlias");
-      expect(gsiNames).toContain("indexClass");
+      expect(gsiNames).toContain("indexCategory");
       expect(gsiNames).toContain("indexScope");
       expect(gsiNames).toContain("indexType");
       expect(gsiNames).toContain("indexXid");

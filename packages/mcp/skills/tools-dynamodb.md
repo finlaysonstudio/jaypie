@@ -1,27 +1,33 @@
 ---
-description: DynamoDB MCP tools for table queries, scans, and item retrieval
+description: DynamoDB commands in the AWS MCP tool for table queries, scans, and item retrieval
 related: dynamodb, tools, tools-aws
 ---
 
-# DynamoDB MCP Tools
+# DynamoDB MCP Commands
 
-Tools for interacting with DynamoDB tables via the Jaypie MCP.
+DynamoDB commands in the unified AWS tool for interacting with DynamoDB tables.
 
-## Available Tools
+## Usage
 
-| Tool | Description |
-|------|-------------|
-| `aws_dynamodb_describe_table` | Get table schema, indexes, and metadata |
-| `aws_dynamodb_query` | Query by partition key (efficient) |
-| `aws_dynamodb_scan` | Full table scan (use sparingly) |
-| `aws_dynamodb_get_item` | Get single item by primary key |
+```
+aws("dynamodb_command", { ...params })
+```
+
+## Available Commands
+
+| Command | Description |
+|---------|-------------|
+| `dynamodb_describe_table` | Get table schema, indexes, and metadata |
+| `dynamodb_query` | Query by partition key (efficient) |
+| `dynamodb_scan` | Full table scan (use sparingly) |
+| `dynamodb_get_item` | Get single item by primary key |
 
 ## Describe Table
 
 Get table metadata including key schema, indexes, and throughput:
 
 ```
-aws_dynamodb_describe_table --tableName "MyTable"
+aws("dynamodb_describe_table", { tableName: "MyTable" })
 ```
 
 Returns:
@@ -36,19 +42,26 @@ Query is the most efficient way to retrieve items:
 
 ```
 # Simple partition key query
-aws_dynamodb_query --tableName "MyTable" \
-  --keyConditionExpression "pk = :pk" \
-  --expressionAttributeValues '{":pk":{"S":"USER#123"}}'
+aws("dynamodb_query", {
+  tableName: "MyTable",
+  keyConditionExpression: "pk = :pk",
+  expressionAttributeValues: '{":pk":{"S":"USER#123"}}'
+})
 
 # With sort key condition
-aws_dynamodb_query --tableName "MyTable" \
-  --keyConditionExpression "pk = :pk AND begins_with(sk, :prefix)" \
-  --expressionAttributeValues '{":pk":{"S":"USER#123"},":prefix":{"S":"ORDER#"}}'
+aws("dynamodb_query", {
+  tableName: "MyTable",
+  keyConditionExpression: "pk = :pk AND begins_with(sk, :prefix)",
+  expressionAttributeValues: '{":pk":{"S":"USER#123"},":prefix":{"S":"ORDER#"}}'
+})
 
 # Query GSI
-aws_dynamodb_query --tableName "MyTable" --indexName "gsi1" \
-  --keyConditionExpression "gsi1pk = :status" \
-  --expressionAttributeValues '{":status":{"S":"ORDER#pending"}}'
+aws("dynamodb_query", {
+  tableName: "MyTable",
+  indexName: "gsi1",
+  keyConditionExpression: "gsi1pk = :status",
+  expressionAttributeValues: '{":status":{"S":"ORDER#pending"}}'
+})
 ```
 
 ## Get Single Item
@@ -57,12 +70,16 @@ Retrieve a specific item by its full primary key:
 
 ```
 # Simple key
-aws_dynamodb_get_item --tableName "MyTable" \
-  --key '{"pk":{"S":"USER#123"}}'
+aws("dynamodb_get_item", {
+  tableName: "MyTable",
+  key: '{"pk":{"S":"USER#123"}}'
+})
 
 # Composite key (partition + sort)
-aws_dynamodb_get_item --tableName "MyTable" \
-  --key '{"pk":{"S":"USER#123"},"sk":{"S":"PROFILE"}}'
+aws("dynamodb_get_item", {
+  tableName: "MyTable",
+  key: '{"pk":{"S":"USER#123"},"sk":{"S":"PROFILE"}}'
+})
 ```
 
 ## Scan Table
@@ -71,15 +88,17 @@ Full table scan - use sparingly on large tables:
 
 ```
 # Scan all items
-aws_dynamodb_scan --tableName "MyTable"
+aws("dynamodb_scan", { tableName: "MyTable" })
 
 # With filter (applied after scan, not efficient for filtering)
-aws_dynamodb_scan --tableName "MyTable" \
-  --filterExpression "status = :status" \
-  --expressionAttributeValues '{":status":{"S":"active"}}'
+aws("dynamodb_scan", {
+  tableName: "MyTable",
+  filterExpression: "status = :status",
+  expressionAttributeValues: '{":status":{"S":"active"}}'
+})
 
 # Limit results
-aws_dynamodb_scan --tableName "MyTable" --limit 10
+aws("dynamodb_scan", { tableName: "MyTable", limit: 10 })
 ```
 
 ## DynamoDB Attribute Format
@@ -100,41 +119,50 @@ All values use DynamoDB's attribute value format:
 ### Get User Profile
 
 ```
-aws_dynamodb_get_item --tableName "DataTable" \
-  --key '{"pk":{"S":"USER#123"},"sk":{"S":"PROFILE"}}'
+aws("dynamodb_get_item", {
+  tableName: "DataTable",
+  key: '{"pk":{"S":"USER#123"},"sk":{"S":"PROFILE"}}'
+})
 ```
 
 ### List User Orders
 
 ```
-aws_dynamodb_query --tableName "DataTable" \
-  --keyConditionExpression "pk = :pk AND begins_with(sk, :prefix)" \
-  --expressionAttributeValues '{":pk":{"S":"USER#123"},":prefix":{"S":"ORDER#"}}'
+aws("dynamodb_query", {
+  tableName: "DataTable",
+  keyConditionExpression: "pk = :pk AND begins_with(sk, :prefix)",
+  expressionAttributeValues: '{":pk":{"S":"USER#123"},":prefix":{"S":"ORDER#"}}'
+})
 ```
 
 ### Find Pending Orders (via GSI)
 
 ```
-aws_dynamodb_query --tableName "DataTable" --indexName "gsi1" \
-  --keyConditionExpression "gsi1pk = :status" \
-  --expressionAttributeValues '{":status":{"S":"ORDER#pending"}}'
+aws("dynamodb_query", {
+  tableName: "DataTable",
+  indexName: "gsi1",
+  keyConditionExpression: "gsi1pk = :status",
+  expressionAttributeValues: '{":status":{"S":"ORDER#pending"}}'
+})
 ```
 
 ### Check Table Schema
 
 ```
-aws_dynamodb_describe_table --tableName "DataTable"
+aws("dynamodb_describe_table", { tableName: "DataTable" })
 ```
 
 ## Profile and Region
 
-All DynamoDB tools support profile and region flags:
+All DynamoDB commands support profile and region options:
 
 ```
-aws_dynamodb_query --tableName "MyTable" \
-  --profile production \
-  --region us-west-2 \
-  --keyConditionExpression "pk = :pk" \
-  --expressionAttributeValues '{":pk":{"S":"USER#123"}}'
+aws("dynamodb_query", {
+  tableName: "MyTable",
+  profile: "production",
+  region: "us-west-2",
+  keyConditionExpression: "pk = :pk",
+  expressionAttributeValues: '{":pk":{"S":"USER#123"}}'
+})
 ```
 

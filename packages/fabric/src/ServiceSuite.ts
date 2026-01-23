@@ -53,7 +53,7 @@ export interface ServiceSuite {
 
   /** Register a fabricService into the suite */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  register(service: Service<any, any>, category: string): void;
+  register(service: Service<any, any>, options: { category: string }): void;
 
   /** Get all registered service functions (for transport adapters like FabricMcpServer) */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -222,7 +222,7 @@ export function createServiceSuite(config: CreateServiceSuiteConfig): ServiceSui
     register(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       service: Service<any, any>,
-      category: string,
+      { category }: { category: string },
     ): void {
       const serviceName = service.alias;
       if (!serviceName) {

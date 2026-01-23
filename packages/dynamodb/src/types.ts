@@ -68,15 +68,15 @@ export interface QueryByAliasParams {
 }
 
 /**
- * Parameters for queryByClass
+ * Parameters for queryByCategory
  */
-export interface QueryByClassParams extends BaseQueryOptions {
+export interface QueryByCategoryParams extends BaseQueryOptions {
+  /** The category classification */
+  category: string;
   /** The entity model name */
   model: string;
   /** The scope */
   scope: string;
-  /** The category classification */
-  recordClass: string;
 }
 
 /**
@@ -145,7 +145,7 @@ export interface StorableEntity extends Omit<
 
   // GSI Keys (auto-populated by indexEntity)
   indexAlias?: string;
-  indexClass?: string;
+  indexCategory?: string;
   indexScope?: string;
   indexType?: string;
   indexXid?: string;

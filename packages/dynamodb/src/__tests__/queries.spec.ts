@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as clientModule from "../client.js";
 import {
   queryByAlias,
-  queryByClass,
+  queryByCategory,
   queryByScope,
   queryByType,
   queryByXid,
@@ -151,29 +151,29 @@ describe("Query Functions", () => {
     });
   });
 
-  describe("queryByClass", () => {
+  describe("queryByCategory", () => {
     it("is a function", () => {
-      expect(queryByClass).toBeFunction();
+      expect(queryByCategory).toBeFunction();
     });
 
     it("returns QueryResult with items array", async () => {
-      const result = await queryByClass({
+      const result = await queryByCategory({
+        category: "memory",
         model: "record",
         scope: "@",
-        recordClass: "memory",
       });
       expect(result).toHaveProperty("items");
       expect(result.items).toBeArray();
     });
 
-    it("uses indexClass GSI", async () => {
-      await queryByClass({ model: "record", scope: "@", recordClass: "memory" });
+    it("uses indexCategory GSI", async () => {
+      await queryByCategory({ category: "memory", model: "record", scope: "@" });
       const command = mockSend.mock.calls[0][0];
-      expect(command.input.IndexName).toBe("indexClass");
+      expect(command.input.IndexName).toBe("indexCategory");
     });
 
     it("builds correct key value", async () => {
-      await queryByClass({ model: "record", scope: "@", recordClass: "memory" });
+      await queryByCategory({ category: "memory", model: "record", scope: "@" });
       const command = mockSend.mock.calls[0][0];
       expect(command.input.ExpressionAttributeValues[":pkValue"]).toBe(
         "@#record#memory",
@@ -181,12 +181,12 @@ describe("Query Functions", () => {
     });
 
     it("supports query options", async () => {
-      await queryByClass({
+      await queryByCategory({
         ascending: true,
+        category: "memory",
         limit: 5,
         model: "record",
         scope: "@",
-        recordClass: "memory",
       });
       const command = mockSend.mock.calls[0][0];
       expect(command.input.ScanIndexForward).toBe(true);
@@ -294,12 +294,12 @@ describe("Query Functions", () => {
         );
       });
 
-      it("queryByClass appends #deleted suffix when deleted: true", async () => {
-        await queryByClass({
+      it("queryByCategory appends #deleted suffix when deleted: true", async () => {
+        await queryByCategory({
+          category: "memory",
           deleted: true,
           model: "record",
           scope: "@",
-          recordClass: "memory",
         });
         const command = mockSend.mock.calls[0][0];
         expect(command.input.ExpressionAttributeValues[":pkValue"]).toBe(
@@ -356,12 +356,12 @@ describe("Query Functions", () => {
         );
       });
 
-      it("queryByClass appends #archived suffix when archived: true", async () => {
-        await queryByClass({
+      it("queryByCategory appends #archived suffix when archived: true", async () => {
+        await queryByCategory({
           archived: true,
+          category: "memory",
           model: "record",
           scope: "@",
-          recordClass: "memory",
         });
         const command = mockSend.mock.calls[0][0];
         expect(command.input.ExpressionAttributeValues[":pkValue"]).toBe(
@@ -423,13 +423,13 @@ describe("Query Functions", () => {
         );
       });
 
-      it("queryByClass appends #archived#deleted suffix when both are true", async () => {
-        await queryByClass({
+      it("queryByCategory appends #archived#deleted suffix when both are true", async () => {
+        await queryByCategory({
           archived: true,
+          category: "memory",
           deleted: true,
           model: "record",
           scope: "@",
-          recordClass: "memory",
         });
         const command = mockSend.mock.calls[0][0];
         expect(command.input.ExpressionAttributeValues[":pkValue"]).toBe(

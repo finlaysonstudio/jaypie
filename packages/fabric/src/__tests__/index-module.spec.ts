@@ -52,7 +52,7 @@ describe("Index Constants", () => {
 
   it("DEFAULT_INDEXES contains sparse indexes", () => {
     const sparseIndexes = DEFAULT_INDEXES.filter((i) => i.sparse);
-    expect(sparseIndexes).toHaveLength(4); // alias, class, type, xid
+    expect(sparseIndexes).toHaveLength(4); // alias, category, type, xid
   });
 });
 

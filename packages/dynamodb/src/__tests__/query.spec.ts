@@ -77,16 +77,16 @@ describe("query", () => {
       );
     });
 
-    it("selects indexClass when class is in filter", async () => {
+    it("selects indexCategory when category is in filter", async () => {
       await query({
         model: "record",
         scope: "@",
-        filter: { class: "memory" },
+        filter: { category: "memory" },
       });
 
       expect(mockSend).toHaveBeenCalledOnce();
       const command = mockSend.mock.calls[0][0];
-      expect(command.input.IndexName).toBe("indexClass");
+      expect(command.input.IndexName).toBe("indexCategory");
       expect(command.input.ExpressionAttributeValues[":pkValue"]).toBe(
         "@#record#memory",
       );

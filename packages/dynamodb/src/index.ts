@@ -13,7 +13,7 @@ export {
   ARCHIVED_SUFFIX,
   DELETED_SUFFIX,
   INDEX_ALIAS,
-  INDEX_CLASS,
+  INDEX_CATEGORY,
   INDEX_SCOPE,
   INDEX_TYPE,
   INDEX_XID,
@@ -34,7 +34,7 @@ export {
 export {
   buildCompositeKey,
   buildIndexAlias,
-  buildIndexClass,
+  buildIndexCategory,
   buildIndexScope,
   buildIndexType,
   buildIndexXid,
@@ -46,7 +46,7 @@ export {
 // Query utilities (legacy named functions)
 export {
   queryByAlias,
-  queryByClass,
+  queryByCategory,
   queryByScope,
   queryByType,
   queryByXid,

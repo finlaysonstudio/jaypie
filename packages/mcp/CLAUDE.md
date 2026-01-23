@@ -1,6 +1,6 @@
 # @jaypie/mcp
 
-MCP (Model Context Protocol) server for Jaypie development. Provides tools for AI agents to access Jaypie documentation, development guides, and Datadog observability data.
+MCP (Model Context Protocol) server for Jaypie development. Provides tools for AI agents to access Jaypie documentation, development guides, and observability data.
 
 ## Package Overview
 
@@ -13,16 +13,30 @@ This package serves two purposes:
 ```
 packages/mcp/
 ├── src/
-│   ├── index.ts           # CLI entrypoint, exports createMcpServer and mcpExpressHandler
-│   ├── createMcpServer.ts # MCP server factory using ServiceSuite
-│   ├── suite.ts           # ServiceSuite with all service definitions
-│   ├── mcpExpressHandler.ts # Express middleware for HTTP transport
-│   ├── datadog.ts         # Datadog API integration (logs, monitors, synthetics, metrics, RUM)
-│   ├── llm.ts             # LLM provider integration tools
-│   └── aws.ts             # AWS CLI integration (Step Functions, Lambda, CloudWatch, S3, DynamoDB, SQS)
-├── skills/                # Markdown skill files served via skill tool
-├── release-notes/         # Version history organized by package (e.g., release-notes/mcp/0.3.2.md)
-└── dist/                  # Built output
+│   ├── index.ts              # CLI entrypoint, exports createMcpServer and mcpExpressHandler
+│   ├── createMcpServer.ts    # MCP server factory using ServiceSuite
+│   ├── suite.ts              # ServiceSuite registration (simplified)
+│   ├── mcpExpressHandler.ts  # Express middleware for HTTP transport
+│   └── suites/               # Modular suite implementations
+│       ├── aws/
+│       │   ├── index.ts      # Unified aws service
+│       │   ├── help.md       # AWS help documentation
+│       │   └── aws.ts        # AWS CLI functions
+│       ├── datadog/
+│       │   ├── index.ts      # Unified datadog service
+│       │   ├── help.md       # Datadog help documentation
+│       │   └── datadog.ts    # Datadog API functions
+│       ├── llm/
+│       │   ├── index.ts      # Unified llm service
+│       │   ├── help.md       # LLM help documentation
+│       │   └── llm.ts        # LLM functions
+│       └── docs/
+│           ├── index.ts      # skill, version, release_notes services
+│           └── release-notes/
+│               └── help.md   # Release notes help
+├── skills/                   # Markdown skill files served via skill tool
+├── release-notes/            # Version history organized by package
+└── dist/                     # Built output
 ```
 
 ## Exports
@@ -32,39 +46,48 @@ import { createMcpServer, mcpExpressHandler } from "@jaypie/mcp";
 import type { CreateMcpServerOptions, McpExpressHandlerOptions } from "@jaypie/mcp";
 ```
 
-## MCP Tools Provided
+## MCP Tools (6 Unified Tools)
+
+The MCP server provides 6 consolidated router-style tools (down from 26 individual tools):
 
 ### Documentation Tools
-- `skill` - Access Jaypie development documentation by alias (e.g., `skill("aws")`, `skill("tests")`). Use `skill("index")` to list all available skills.
-- `version` - Returns package version string
-- `list_release_notes` - Lists release notes by package, supports `since_version` filtering
-- `read_release_note` - Returns full content of a specific release note
+- **`skill`** - Access Jaypie development documentation
+  - `skill("index")` or `skill()` - List all available skills
+  - `skill("aws")`, `skill("tests")` - Get specific documentation
 
-### Datadog Tools (require DATADOG_API_KEY and DATADOG_APP_KEY)
-- `datadog_logs` - Search individual log entries
-- `datadog_log_analytics` - Aggregate logs with groupBy operations
-- `datadog_monitors` - List and filter monitors by status/tags
-- `datadog_synthetics` - List synthetic tests or get results for a specific test
-- `datadog_metrics` - Query timeseries metrics
-- `datadog_rum` - Search Real User Monitoring events
+- **`version`** - Returns package version string
 
-### AWS CLI Tools (require AWS CLI installed and configured)
-- `aws_list_profiles` - List available AWS profiles from ~/.aws/config and credentials
-- `aws_stepfunctions_list_executions` - List Step Function executions for a state machine
-- `aws_stepfunctions_stop_execution` - Stop a running Step Function execution
-- `aws_lambda_list_functions` - List Lambda functions with optional prefix filtering
-- `aws_lambda_get_function` - Get configuration and details for a specific Lambda function
-- `aws_logs_filter_log_events` - Search CloudWatch Logs with pattern and time range filtering
-- `aws_s3_list_objects` - List objects in an S3 bucket with optional prefix filtering
-- `aws_cloudformation_describe_stack` - Get details and status of a CloudFormation stack
-- `aws_dynamodb_describe_table` - Get metadata about a DynamoDB table including key schema and indexes
-- `aws_dynamodb_scan` - Scan a DynamoDB table (use sparingly on large tables)
-- `aws_dynamodb_query` - Query a DynamoDB table by partition key
-- `aws_dynamodb_get_item` - Get a single item from a DynamoDB table by primary key
-- `aws_sqs_list_queues` - List SQS queues with optional prefix filtering
-- `aws_sqs_get_queue_attributes` - Get queue attributes including message counts
-- `aws_sqs_receive_message` - Peek at messages in an SQS queue (does not delete)
-- `aws_sqs_purge_queue` - Delete all messages from an SQS queue (irreversible)
+- **`release_notes`** - Browse package release notes
+  - `release_notes()` or `release_notes("help")` - Show help
+  - `release_notes("list")` - List all release notes
+  - `release_notes("list", { package: "mcp" })` - Filter by package
+  - `release_notes("read", { package: "mcp", version: "0.5.0" })` - Read specific note
+
+### AWS Tool (requires AWS CLI installed)
+- **`aws`** - Access AWS services via CLI
+  - `aws()` or `aws("help")` - Show help with all commands
+  - `aws("list_profiles")` - List AWS profiles
+  - `aws("lambda_list_functions", { region: "us-east-1" })` - Lambda operations
+  - `aws("dynamodb_query", { tableName: "...", keyConditionExpression: "..." })` - DynamoDB
+
+  **Commands**: `list_profiles`, `lambda_list_functions`, `lambda_get_function`, `stepfunctions_list_executions`, `stepfunctions_stop_execution`, `logs_filter_log_events`, `s3_list_objects`, `cloudformation_describe_stack`, `dynamodb_describe_table`, `dynamodb_scan`, `dynamodb_query`, `dynamodb_get_item`, `sqs_list_queues`, `sqs_get_queue_attributes`, `sqs_receive_message`, `sqs_purge_queue`
+
+### Datadog Tool (requires DATADOG_API_KEY and DATADOG_APP_KEY)
+- **`datadog`** - Access Datadog observability data
+  - `datadog()` or `datadog("help")` - Show help
+  - `datadog("logs", { query: "status:error" })` - Search logs
+  - `datadog("log_analytics", { groupBy: ["service"] })` - Aggregate logs
+  - `datadog("monitors", { status: ["Alert"] })` - List monitors
+
+  **Commands**: `logs`, `log_analytics`, `monitors`, `synthetics`, `metrics`, `rum`
+
+### LLM Tool
+- **`llm`** - Debug LLM provider responses
+  - `llm()` or `llm("help")` - Show help
+  - `llm("list_providers")` - List available providers
+  - `llm("debug_call", { provider: "openai", message: "Hello" })` - Test API call
+
+  **Commands**: `list_providers`, `debug_call`
 
 ## Usage Patterns
 
@@ -106,12 +129,6 @@ related: alias1, alias2
 Content...
 ```
 
-Available skills (25 total):
-- **Infrastructure**: aws, cdk, cicd, datadog, dns, dynamodb, secrets, variables
-- **Development**: debugging, errors, logs, mocks, style, tests, writing
-- **Patterns**: fabric, models, services, tools
-- **Reference**: agents, index, jaypie, legacy, releasenotes, topics
-
 When adding new skills:
 1. Create `skills/<alias>.md` with lowercase alphanumeric alias (hyphens/underscores allowed)
 2. Add frontmatter with `description` and optionally `related` (comma-separated aliases)
@@ -126,16 +143,16 @@ release-notes/
 ├── jaypie/
 │   └── 1.2.3.md
 └── mcp/
-    └── 0.3.2.md
+    └── 0.5.0.md
 ```
 
 Release note files use YAML frontmatter:
 
 ```yaml
 ---
-version: 0.3.2
-date: 2025-01-19
-summary: Brief one-line summary for listing
+version: 0.5.0
+date: 2025-01-22
+summary: Consolidate 26 tools into 6 unified router-style tools
 ---
 
 ## Changes
@@ -147,7 +164,7 @@ summary: Brief one-line summary for listing
 When adding release notes:
 1. Create `release-notes/<package>/<version>.md` for each version bump
 2. Add frontmatter with `version`, `date`, and `summary`
-3. Notes are automatically available via `list_release_notes` and `read_release_note`
+3. Notes are automatically available via `release_notes("list")` and `release_notes("read", ...)`
 
 ## Environment Variables
 
@@ -157,11 +174,6 @@ When adding release notes:
 | `AWS_PROFILE` | Default profile if not specified per-call |
 | `AWS_REGION` or `AWS_DEFAULT_REGION` | Default region if not specified |
 
-AWS tools use the host's existing credential chain:
-- `~/.aws/credentials` and `~/.aws/config` files
-- Environment variables (`AWS_ACCESS_KEY_ID`, etc.)
-- SSO sessions established via `aws sso login`
-
 ### Datadog Integration
 | Variable | Description |
 |----------|-------------|
@@ -170,11 +182,18 @@ AWS tools use the host's existing credential chain:
 | `DD_ENV` | Default environment filter |
 | `DD_SERVICE` | Default service filter |
 | `DD_SOURCE` | Default log source (defaults to "lambda") |
-| `DD_QUERY` | Default query terms appended to searches |
+
+### LLM Integration
+| Variable | Description |
+|----------|-------------|
+| `OPENAI_API_KEY` | OpenAI API key |
+| `ANTHROPIC_API_KEY` | Anthropic API key |
+| `GOOGLE_API_KEY` | Google/Gemini API key |
+| `OPENROUTER_API_KEY` | OpenRouter API key |
 
 ## Build Configuration
 
-Uses Rollup with TypeScript. Version string is injected at build time via `@rollup/plugin-replace`.
+Uses Rollup with TypeScript. Help markdown files are copied to dist via `rollup-plugin-copy`.
 
 ## Commands
 
@@ -192,42 +211,28 @@ npm run format     # eslint --fix
 - `commander` - CLI argument parsing
 - `gray-matter` - YAML frontmatter parsing for skills and release notes
 - `semver` - Version comparison for release notes filtering
-- `zod` - Schema validation for tool parameters
-
-## Integration with Other Packages
-
-This package is used by AI agents when working on any Jaypie project. The skills provide context about:
-- Package-specific conventions (Express, CDK, Lambda)
-- Development workflows and testing patterns
-- Error handling and logging standards
-- Project structure and initialization guides
+- `rollup-plugin-copy` - Copy help.md files to dist
 
 ## Architecture
 
-The MCP server uses `@jaypie/fabric`'s ServiceSuite pattern:
+The MCP server uses `@jaypie/fabric`'s ServiceSuite pattern with modular organization:
 
-1. **suite.ts** - Defines all services using `fabricService` and registers them with a `ServiceSuite` by category (docs, datadog, llm, aws)
-2. **createMcpServer.ts** - Uses `createMcpServerFromSuite()` to convert the suite into an MCP server
-3. Services are automatically converted to MCP tools with Zod schema validation
-
-```typescript
-// suite.ts
-const suite = createServiceSuite({ name: "jaypie", version: "0.3.4" });
-suite.register(skillService, "docs");
-suite.register(datadogLogsService, "datadog");
-// ...
-
-// createMcpServer.ts
-import { createMcpServerFromSuite } from "@jaypie/fabric/mcp";
-import { suite } from "./suite.js";
-
-export function createMcpServer(options = {}) {
-  return createMcpServerFromSuite(suite, { version: options.version });
-}
+```
+suite.ts (simplified registration)
+    └── suites/
+        ├── aws/index.ts      → awsService (16 commands)
+        ├── datadog/index.ts  → datadogService (6 commands)
+        ├── llm/index.ts      → llmService (2 commands)
+        └── docs/index.ts     → skillService, versionService, releaseNotesService
 ```
 
+Each suite directory contains:
+- `index.ts` - Unified service with command router
+- `help.md` - Documentation returned when command is omitted
+- `<domain>.ts` - Implementation functions (for testability)
+
 This architecture enables:
-- **Single source of truth** - Services defined once in `suite.ts`
-- **Automatic schema conversion** - No duplicate Zod definitions
-- **Testability** - Services can be tested independently via suite
-- **Extensibility** - Same suite can feed multiple transports (MCP, HTTP, CLI)
+- **Progressive disclosure** - Tools return help when no command is provided
+- **Modular organization** - Each domain is self-contained
+- **Reduced tool count** - 26 tools → 6 tools (cleaner MCP interface)
+- **Testability** - Implementation functions tested independently

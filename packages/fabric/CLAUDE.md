@@ -6,7 +6,7 @@ Jaypie modeling framework - provides type conversion and service handler pattern
 
 | Attribute | Value |
 |-----------|-------|
-| Status | Initial development (0.1.x) |
+| Status | Initial development (0.2.x) |
 | Type | Utility library |
 | Dependencies | `@jaypie/errors` |
 | Peer Dependencies | `@jaypie/aws` (optional), `@jaypie/dynamodb` (optional), `@jaypie/lambda` (optional), `@modelcontextprotocol/sdk` (optional), `commander` (optional), `express` (optional) |
@@ -142,9 +142,15 @@ const handler = fabricService({
       validate: (v) => v > 0, // Optional: function, RegExp, or array
     },
   },
-  service: (input) => input.fieldName * 2,
+  service: (input, context) => input.fieldName * 2,
+  serializer: ({ input, output }, context) => {
+    // Runs after service - can transform output
+    return { data: output, meta: { timestamp: Date.now() } };
+  },
 });
 ```
+
+**Lifecycle**: `Input → Parse → Field Processing (validation) → Service → Serializer → Output`
 
 Handler features:
 - Accepts object or JSON string input
@@ -152,9 +158,21 @@ Handler features:
 - Applies defaults before conversion
 - **Required validation**: Fields are required unless they have a `default` OR `required: false`
 - Runs validation (sync or async) after conversion
+- **Serializer hook**: Runs after service. Can transform output or return void to use original
 - Always returns a Promise
 - **Optional service**: When `service` is omitted, returns the processed input (validation-only mode)
 - **Flat properties**: Config properties attached directly to handler (`handler.alias`, `handler.input`, etc.)
+
+**Serializer Hook**:
+
+| Hook | Signature | Timing | Return Behavior |
+|------|-----------|--------|-----------------|
+| `serializer` | `({ input, output }, context?) => output \| void` | After service | `void`/`undefined`/`null` = use original output |
+
+- Errors from serializer propagate normally (no special catching)
+- Supports async functions
+
+**Note**: For setup/teardown lifecycles (validate, setup, teardown), use transport adapters like `fabricLambda` which wrap services with `lambdaHandler`.
 
 ### ServiceSuite
 
@@ -172,7 +190,7 @@ const greetService = fabricService({
   service: ({ name }) => `Hello, ${name}!`,
 });
 
-suite.register(greetService, "utils");
+suite.register(greetService, { category: "utils" });
 
 // Access metadata
 suite.services;              // ServiceMeta[] - metadata for all services
@@ -192,7 +210,7 @@ suite.getServiceFunction("greet"); // Service | undefined
 
 | Method | Returns | Description |
 |--------|---------|-------------|
-| `register(service, category)` | void | Register a fabricService with a category |
+| `register(service, { category })` | void | Register a fabricService with a category |
 | `execute(name, inputs)` | Promise | Execute a service by name |
 | `getService(name)` | ServiceMeta | Get service metadata by name |
 | `getServicesByCategory(category)` | ServiceMeta[] | Get all services in a category |
@@ -265,6 +283,7 @@ Located in `types.ts`:
 | `InputFieldDefinition` | Field config with type, default, description, flag, letter, required, validate |
 | `ValidateFunction` | `(value) => boolean \| void \| Promise<...>` |
 | `ServiceFunction<TInput, TOutput>` | The actual service logic |
+| `SerializerFunction<TInput, TOutput, TSerializedOutput>` | Serializer hook signature |
 | `ServiceConfig` | Full handler configuration |
 | `Service` | The returned async handler |
 
@@ -337,7 +356,7 @@ Located in `models/base.ts`:
 
 | Type | Description |
 |------|-------------|
-| `FabricModel` | Base type for all models with id, model (required) and optional name, class, type, content |
+| `FabricModel` | Base type for all models with id, model (required) and optional name, category, type, content |
 | `FabricModelInput` | Input for creating models (omits auto-generated fields) |
 | `FabricModelUpdate` | Partial input for updating models |
 | `FabricModelFilter` | Filter options for listing models |

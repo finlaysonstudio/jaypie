@@ -7,6 +7,7 @@ import { fabric } from "./resolve.js";
 import type {
   ConversionType,
   InputFieldDefinition,
+  SerializerFunction,
   Service,
   ServiceConfig,
   ServiceContext,
@@ -230,42 +231,78 @@ async function processField(
  * Type guard to check if a value is a pre-instantiated Service
  * A Service is a function with the `$fabric` property set by fabricService
  */
-export function isService<TInput extends Record<string, unknown>, TOutput>(
-  value: unknown,
-): value is Service<TInput, TOutput> {
+export function isService<
+  TInput extends Record<string, unknown>,
+  TOutput,
+  TSerializedOutput = TOutput,
+>(value: unknown): value is Service<TInput, TOutput, TSerializedOutput> {
   return typeof value === "function" && "$fabric" in value;
+}
+
+/**
+ * Run serializer hook if provided
+ * Returns transformed output or original if serializer returns undefined/null/void
+ */
+async function runSerializer<TInput, TOutput, TSerializedOutput>(
+  data: { input: TInput; output: TOutput },
+  serializer: SerializerFunction<TInput, TOutput, TSerializedOutput> | undefined,
+  context: ServiceContext | undefined,
+): Promise<TOutput | TSerializedOutput> {
+  if (!serializer) {
+    return data.output;
+  }
+
+  const result = await serializer(data, context);
+  if (result !== undefined && result !== null) {
+    return result;
+  }
+  return data.output;
 }
 
 /**
  * Fabric a service function
  *
- * Service builds a function that initiates a "controller" step that:
+ * Service builds a function that:
  * - Parses the input if it is a string to object
  * - Fabrics each input field to its type
  * - Calls the validation function or regular expression or checks the array
- * - Calls the service function and returns the response
+ * - Calls the service function
+ * - Calls the serializer hook (can transform output)
+ * - Returns the response
  *
  * The returned function has config properties for introspection.
  */
 export function fabricService<
   TInput extends Record<string, unknown> = Record<string, unknown>,
   TOutput = unknown,
->(config: ServiceConfig<TInput, TOutput>): Service<TInput, TOutput> {
-  const { input: inputDefinitions, service } = config;
+  TSerializedOutput = TOutput,
+>(
+  config: ServiceConfig<TInput, TOutput, TSerializedOutput>,
+): Service<TInput, TOutput, TSerializedOutput> {
+  const { input: inputDefinitions, serializer, service } = config;
 
   const handler = async (
     rawInput?: Partial<TInput> | string,
     context?: ServiceContext,
-  ): Promise<TOutput> => {
+  ): Promise<TSerializedOutput> => {
     // Parse input (handles string JSON)
     const parsedInput = parseInput(rawInput);
 
     // If no input definitions, pass through to service or return parsed input
     if (!inputDefinitions) {
+      let output: TOutput;
       if (service) {
-        return service(parsedInput as TInput, context);
+        output = await service(parsedInput as TInput, context);
+      } else {
+        output = parsedInput as unknown as TOutput;
       }
-      return parsedInput as TOutput;
+
+      // Run serializer
+      return (await runSerializer(
+        { input: parsedInput as TInput, output },
+        serializer,
+        context,
+      )) as TSerializedOutput;
     }
 
     // Process all fields in parallel
@@ -277,25 +314,36 @@ export function fabricService<
     );
 
     // Build processed input object
-    const processedInput: Record<string, unknown> = {};
+    const processedInputObj: Record<string, unknown> = {};
     entries.forEach(([fieldName], index) => {
-      processedInput[fieldName] = processedValues[index];
+      processedInputObj[fieldName] = processedValues[index];
     });
 
-    // Return processed input if no service, otherwise call service
+    // Call service or return processed input
+    let output: TOutput;
     if (service) {
-      return service(processedInput as TInput, context);
+      output = await service(processedInputObj as TInput, context);
+    } else {
+      output = processedInputObj as unknown as TOutput;
     }
-    return processedInput as TOutput;
+
+    // Run serializer hook
+    return (await runSerializer(
+      { input: processedInputObj as TInput, output },
+      serializer,
+      context,
+    )) as TSerializedOutput;
   };
 
   // Attach config properties directly to handler for flat access
-  const typedHandler = handler as Service<TInput, TOutput>;
+  const typedHandler = handler as Service<TInput, TOutput, TSerializedOutput>;
   typedHandler.$fabric = FABRIC_VERSION;
   if (config.alias !== undefined) typedHandler.alias = config.alias;
   if (config.description !== undefined)
     typedHandler.description = config.description;
   if (config.input !== undefined) typedHandler.input = config.input;
+  if (config.serializer !== undefined)
+    typedHandler.serializer = config.serializer;
   if (config.service !== undefined) typedHandler.service = config.service;
 
   return typedHandler;

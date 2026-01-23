@@ -10,17 +10,17 @@ import type {
   SeedResult,
   StorableEntity,
 } from "@jaypie/dynamodb";
-import type { IndexableModel } from "@jaypie/fabric";
+import type { IndexableModel, IndexDefinition } from "@jaypie/fabric";
 
 import { createMockFunction, createMockResolvedFunction } from "./utils";
 
 // Re-export constants (no need to mock, just pass through)
 export const APEX = original.APEX;
 export const ARCHIVED_SUFFIX = original.ARCHIVED_SUFFIX;
-export const DEFAULT_INDEXES = original.DEFAULT_INDEXES;
+export const DEFAULT_INDEXES: IndexDefinition[] = original.DEFAULT_INDEXES;
 export const DELETED_SUFFIX = original.DELETED_SUFFIX;
 export const INDEX_ALIAS = original.INDEX_ALIAS;
-export const INDEX_CLASS = original.INDEX_CLASS;
+export const INDEX_CATEGORY = original.INDEX_CATEGORY;
 export const INDEX_SCOPE = original.INDEX_SCOPE;
 export const INDEX_TYPE = original.INDEX_TYPE;
 export const INDEX_XID = original.INDEX_XID;
@@ -39,9 +39,9 @@ export const buildIndexAlias = createMockFunction<
   (scope: string, model: string, alias: string) => string
 >((scope, model, alias) => original.buildIndexAlias(scope, model, alias));
 
-export const buildIndexClass = createMockFunction<
-  (scope: string, model: string, recordClass: string) => string
->((scope, model, recordClass) => original.buildIndexClass(scope, model, recordClass));
+export const buildIndexCategory = createMockFunction<
+  (scope: string, model: string, category: string) => string
+>((scope, model, category) => original.buildIndexCategory(scope, model, category));
 
 export const buildIndexScope = createMockFunction<
   (scope: string, model: string) => string
@@ -140,15 +140,15 @@ export const queryByAlias = createMockFunction<
   }) => Promise<StorableEntity | null>
 >(async () => null);
 
-export const queryByClass = createMockFunction<
+export const queryByCategory = createMockFunction<
   (params: {
     archived?: boolean;
     ascending?: boolean;
+    category: string;
     deleted?: boolean;
     limit?: number;
     model: string;
     scope: string;
-    recordClass: string;
     startKey?: Record<string, unknown>;
   }) => Promise<QueryResult<StorableEntity>>
 >(async () => ({

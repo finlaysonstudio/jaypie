@@ -31,5 +31,5 @@ Meta: issues, jaypie, skills, tools
 The one-line version tells the agent how to find out more about Jaypie skills.
 
 ```markdown
-`mcp__jaypie__skill(skills)`: Discover Jaypie development skills and tools available in this repository.
+Call `mcp__jaypie__skill("skills")` to discover Jaypie development skills and tools available in this repository.
 ```

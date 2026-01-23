@@ -994,5 +994,196 @@ describe("fabricService", () => {
         ).rejects.toThrow(BadRequestError);
       });
     });
+
+    describe("Serializer Hook", () => {
+      it("serializer runs after service", async () => {
+        const callOrder: string[] = [];
+        const handler = fabricService({
+          service: () => {
+            callOrder.push("service");
+            return { raw: true };
+          },
+          serializer: () => {
+            callOrder.push("serializer");
+            return { serialized: true };
+          },
+        });
+
+        await handler({});
+        expect(callOrder).toEqual(["service", "serializer"]);
+      });
+
+      it("serializer can transform output", async () => {
+        const handler = fabricService({
+          input: {
+            value: { type: Number },
+          },
+          service: ({ value }: { value: number }) => ({ result: value }),
+          serializer: ({ output }) => ({
+            ...output,
+            transformed: true,
+          }),
+        });
+
+        await expect(handler({ value: 42 })).resolves.toEqual({
+          result: 42,
+          transformed: true,
+        });
+      });
+
+      it("serializer returning undefined uses original output", async () => {
+        const handler = fabricService({
+          service: () => ({ original: true }),
+          serializer: () => {
+            // Return undefined - original should be used
+          },
+        });
+
+        await expect(handler({})).resolves.toEqual({ original: true });
+      });
+
+      it("serializer returning null uses original output", async () => {
+        const handler = fabricService({
+          service: () => ({ original: true }),
+          serializer: () => {
+            return null as unknown as undefined;
+          },
+        });
+
+        await expect(handler({})).resolves.toEqual({ original: true });
+      });
+
+      it("serializer receives processed input", async () => {
+        const handler = fabricService({
+          input: {
+            value: { type: Number },
+          },
+          service: ({ value }: { value: number }) => ({ result: value }),
+          serializer: ({ input, output }) => ({
+            ...output,
+            inputValue: (input as { value: number }).value,
+          }),
+        });
+
+        const result = await handler({ value: 42 });
+        expect(result).toEqual({ inputValue: 42, result: 42 });
+      });
+
+      it("serializer receives context", async () => {
+        const handler = fabricService({
+          service: () => ({ data: "test" }),
+          serializer: (_data, context) => ({
+            hasContext: context !== undefined,
+          }),
+        });
+
+        const result = await handler({}, {});
+        expect(result).toEqual({ hasContext: true });
+      });
+
+      it("async serializer is awaited", async () => {
+        const handler = fabricService({
+          service: () => ({ value: 42 }),
+          serializer: async ({ output }) => {
+            await new Promise((resolve) => setTimeout(resolve, 10));
+            return { ...output, async: true };
+          },
+        });
+
+        await expect(handler({})).resolves.toEqual({ async: true, value: 42 });
+      });
+
+      it("error in serializer propagates normally", async () => {
+        const handler = fabricService({
+          service: () => "done",
+          serializer: () => {
+            throw new BadRequestError("Serializer error");
+          },
+        });
+
+        await expect(handler({})).rejects.toThrow(BadRequestError);
+        await expect(handler({})).rejects.toThrow("Serializer error");
+      });
+
+      it("serializer is attached to handler", () => {
+        const mySerializer = () => ({ done: true });
+        const handler = fabricService({
+          serializer: mySerializer,
+          service: () => "done",
+        });
+
+        expect(handler.serializer).toBe(mySerializer);
+      });
+    });
+
+    describe("Serializer with Validation", () => {
+      it("full lifecycle: validation → service → serializer", async () => {
+        const callOrder: string[] = [];
+        const handler = fabricService({
+          input: {
+            value: {
+              type: Number,
+              validate: () => {
+                callOrder.push("validate");
+                return true;
+              },
+            },
+          },
+          service: () => {
+            callOrder.push("service");
+            return "result";
+          },
+          serializer: () => {
+            callOrder.push("serializer");
+            return "serialized";
+          },
+        });
+
+        await handler({ value: 42 });
+        expect(callOrder).toEqual(["validate", "service", "serializer"]);
+      });
+
+      it("works without service (validation-only mode)", async () => {
+        const handler = fabricService({
+          input: {
+            value: { type: Number },
+          },
+          serializer: ({ output }) => ({
+            ...output,
+            serialized: true,
+          }),
+        });
+
+        // Input 42 → no service → serializer adds flag
+        await expect(handler({ value: 42 })).resolves.toEqual({
+          serialized: true,
+          value: 42,
+        });
+      });
+
+      it("real-world example: response formatting", async () => {
+        const apiHandler = fabricService({
+          input: {
+            userId: { type: String },
+          },
+          service: ({ userId }: { userId: string }) => ({
+            id: userId,
+            name: `User ${userId}`,
+          }),
+          serializer: ({ output }) => ({
+            data: output,
+            meta: {
+              timestamp: Date.now(),
+            },
+          }),
+        });
+
+        const result = await apiHandler({ userId: "123" });
+        expect(result).toMatchObject({
+          data: { id: "123", name: "User 123" },
+          meta: { timestamp: expect.any(Number) },
+        });
+      });
+    });
   });
 });

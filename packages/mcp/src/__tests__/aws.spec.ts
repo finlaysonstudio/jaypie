@@ -21,7 +21,8 @@ import {
   getSQSQueueAttributes,
   receiveSQSMessage,
   purgeSQSQueue,
-} from "../aws.js";
+  type AwsProfile,
+} from "../suites/aws/aws.js";
 
 // Mock child_process.spawn
 vi.mock("node:child_process", () => ({
@@ -252,9 +253,9 @@ region = eu-west-1
 
         expect(result.success).toBe(true);
         expect(result.data).toHaveLength(3);
-        expect(result.data?.map((p) => p.name)).toContain("default");
-        expect(result.data?.map((p) => p.name)).toContain("dev");
-        expect(result.data?.map((p) => p.name)).toContain("prod");
+        expect(result.data?.map((p: AwsProfile) => p.name)).toContain("default");
+        expect(result.data?.map((p: AwsProfile) => p.name)).toContain("dev");
+        expect(result.data?.map((p: AwsProfile) => p.name)).toContain("prod");
       });
 
       it("parses profiles from credentials file", async () => {

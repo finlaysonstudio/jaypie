@@ -28,7 +28,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@jaypie/logger": "^1.2.1",
+    "@jaypie/logger": "*",
     "amazon-textract-response-parser": "^0.4.3"
   },
   "devDependencies": {

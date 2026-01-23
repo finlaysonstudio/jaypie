@@ -38,7 +38,7 @@ const fullModel: FabricModel = {
   abbreviation: "T",
   alias: "test-model",
   archivedAt: null,
-  class: "memory",
+  category: "memory",
   content: "Test content",
   deletedAt: null,
   description: "A test model",
@@ -70,7 +70,7 @@ describe("FABRIC_MODEL_FIELDS", () => {
   });
 
   it("contains schema fields", () => {
-    expect(FABRIC_MODEL_FIELDS.CLASS).toBe("class");
+    expect(FABRIC_MODEL_FIELDS.CATEGORY).toBe("category");
     expect(FABRIC_MODEL_FIELDS.MODEL).toBe("model");
     expect(FABRIC_MODEL_FIELDS.TYPE).toBe("type");
   });
@@ -110,7 +110,7 @@ describe("FABRIC_MODEL_REQUIRED_FIELDS", () => {
   });
 
   it("does not include optional fields", () => {
-    expect(FABRIC_MODEL_REQUIRED_FIELDS).not.toContain("class");
+    expect(FABRIC_MODEL_REQUIRED_FIELDS).not.toContain("category");
     expect(FABRIC_MODEL_REQUIRED_FIELDS).not.toContain("content");
     expect(FABRIC_MODEL_REQUIRED_FIELDS).not.toContain("label");
     expect(FABRIC_MODEL_REQUIRED_FIELDS).not.toContain("alias");
@@ -221,7 +221,7 @@ describe("createFabricModelInput", () => {
   it("includes optional fields from overrides", () => {
     const input = createFabricModelInput({
       alias: "test",
-      class: "memory",
+      category: "memory",
       content: "Content",
       emoji: "🧪",
       model: "record",
@@ -230,7 +230,7 @@ describe("createFabricModelInput", () => {
     });
 
     expect(input.alias).toBe("test");
-    expect(input.class).toBe("memory");
+    expect(input.category).toBe("memory");
     expect(input.content).toBe("Content");
     expect(input.emoji).toBe("🧪");
     expect(input.name).toBe("Test");
@@ -375,7 +375,7 @@ describe("FabricJob type", () => {
 
   it("supports all job-specific fields", () => {
     const job: FabricJob = {
-      class: "evaluation",
+      category: "evaluation",
       completedAt: new Date("2026-01-02"),
       createdAt: new Date("2026-01-01"),
       id: "job-123",
@@ -402,7 +402,7 @@ describe("FabricJob type", () => {
       updatedAt: new Date("2026-01-02"),
     };
 
-    expect(job.class).toBe("evaluation");
+    expect(job.category).toBe("evaluation");
     expect(job.completedAt).toEqual(new Date("2026-01-02"));
     expect(job.messages).toHaveLength(1);
     expect(job.messages?.[0].content).toBe("Job started");

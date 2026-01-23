@@ -32,8 +32,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@jaypie/aws": "^1.2.1",
-    "@jaypie/errors": "^1.2.1",
+    "@jaypie/aws": "*",
+    "@jaypie/errors": "*",
     "openai": "^6.9.1",
     "openmeteo": "^1.2.1",
     "pdf-lib": "^1.17.1",
@@ -50,8 +50,8 @@
   "peerDependencies": {
     "@anthropic-ai/sdk": "^0.71.0",
     "@google/genai": "^1.30.0",
-    "@jaypie/kit": "^1.2.1",
-    "@jaypie/logger": "^1.2.1",
+    "@jaypie/kit": "*",
+    "@jaypie/logger": "*",
     "@openrouter/sdk": "^0.1.27"
   },
   "peerDependenciesMeta": {
