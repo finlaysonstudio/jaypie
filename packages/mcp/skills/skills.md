@@ -17,6 +17,6 @@ Look up skills by alias: `mcp__jaypie__skill(alias)`
 |----------|--------|
 | contents | index, releasenotes |
 | development | documentation, errors, logs, mocks, style, tests |
-| infrastructure | aws, cdk, cicd, datadog, dns, dynamodb, secrets, variables |
-| patterns | fabric, models, services, vocabulary |
+| infrastructure | aws, cdk, cicd, datadog, dns, dynamodb, express, lambda, secrets, variables |
+| patterns | fabric, handlers, models, services, vocabulary |
 | meta | issues, jaypie, skills, tools |
