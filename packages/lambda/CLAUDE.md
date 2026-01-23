@@ -33,6 +33,7 @@ src/
 |--------|-------------|
 | `lambdaHandler` | Wraps standard Lambda functions with lifecycle management |
 | `lambdaStreamHandler` | Wraps streaming Lambda functions (auto-wraps with `awslambda.streamifyResponse`) |
+| `websocketHandler` | Wraps WebSocket Lambda functions with send/broadcast helpers |
 
 ### Types
 
@@ -49,6 +50,8 @@ src/
 | `LambdaHandler` | Wrapped Lambda handler type (after `awslambda.streamifyResponse`) |
 | `RawStreamingHandler` | Alias for `AwsStreamingHandler` (for testing) |
 | `StreamFormat` | Stream output format: `"sse"` or `"nljson"` (re-exported from `@jaypie/aws`) |
+| `WebSocketContext` | WebSocket handler context with routeKey, connectionId, send, broadcast |
+| `WebSocketHandlerOptions` | Options for WebSocket handler |
 
 ## Usage
 
@@ -80,6 +83,24 @@ import { lambdaStreamHandler } from "@jaypie/lambda";
 export const handler = lambdaStreamHandler(async (event, context) => {
   context.responseStream.write("event: data\ndata: {}\n\n");
 });
+```
+
+### WebSocket Handler
+
+```typescript
+import { websocketHandler } from "@jaypie/lambda";
+
+export const handler = websocketHandler(async (event, context) => {
+  const { routeKey, connectionId, body } = context;
+
+  // Send to this connection
+  await context.send({ received: true });
+
+  // Broadcast to multiple connections
+  await context.broadcast(connectionIds, { message: "hello" });
+
+  return { statusCode: 200 };
+}, { name: "chat", secrets: ["MONGODB_URI"] });
 ```
 
 #### Format Options
