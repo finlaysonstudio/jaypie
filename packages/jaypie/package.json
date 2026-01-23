@@ -32,17 +32,17 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@jaypie/aws": "^1.2.4",
-    "@jaypie/core": "^1.2.1",
-    "@jaypie/datadog": "^1.2.2",
-    "@jaypie/errors": "^1.2.1",
-    "@jaypie/express": "^1.2.4",
-    "@jaypie/kit": "^1.2.1",
-    "@jaypie/lambda": "^1.2.3",
-    "@jaypie/logger": "^1.2.1"
+    "@jaypie/aws": "*",
+    "@jaypie/core": "*",
+    "@jaypie/datadog": "*",
+    "@jaypie/errors": "*",
+    "@jaypie/express": "*",
+    "@jaypie/kit": "*",
+    "@jaypie/lambda": "*",
+    "@jaypie/logger": "*"
   },
   "devDependencies": {
-    "@jaypie/types": "^0.1.7",
+    "@jaypie/types": "*",
     "@rollup/plugin-typescript": "^12.1.4",
     "@types/node": "^24.8.1",
     "@typescript-eslint/eslint-plugin": "^8.46.1",
@@ -54,8 +54,8 @@
     "typescript-eslint": "^8.46.1"
   },
   "peerDependencies": {
-    "@jaypie/llm": "^1.2.1",
-    "@jaypie/mongoose": "^1.2.2"
+    "@jaypie/llm": "*",
+    "@jaypie/mongoose": "*"
   },
   "peerDependenciesMeta": {
     "@jaypie/llm": {

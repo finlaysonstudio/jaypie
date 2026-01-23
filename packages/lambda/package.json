@@ -38,10 +38,10 @@
     "typescript": "^5.3.3"
   },
   "peerDependencies": {
-    "@jaypie/aws": "^1.2.2",
-    "@jaypie/errors": "^1.2.1",
-    "@jaypie/kit": "^1.2.1",
-    "@jaypie/logger": "^1.2.1"
+    "@jaypie/aws": "*",
+    "@jaypie/errors": "*",
+    "@jaypie/kit": "*",
+    "@jaypie/logger": "*"
   },
   "publishConfig": {
     "access": "public"

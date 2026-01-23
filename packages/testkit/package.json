@@ -57,10 +57,10 @@
     "vitest": "^3.0.5"
   },
   "peerDependencies": {
-    "@jaypie/dynamodb": ">=0.1.0",
-    "@jaypie/errors": "^1.2.1",
-    "@jaypie/kit": "^1.2.1",
-    "@jaypie/logger": "^1.2.1",
+    "@jaypie/dynamodb": "*",
+    "@jaypie/errors": "*",
+    "@jaypie/kit": "*",
+    "@jaypie/logger": "*",
     "vitest": ">=1.0.0"
   },
   "peerDependenciesMeta": {

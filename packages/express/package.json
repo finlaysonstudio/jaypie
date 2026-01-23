@@ -43,8 +43,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@jaypie/datadog": "^1.2.1",
-    "@jaypie/errors": "^1.2.1",
+    "@jaypie/datadog": "*",
+    "@jaypie/errors": "*",
     "cors": "^2.8.5"
   },
   "devDependencies": {
@@ -56,9 +56,9 @@
     "typescript": "^5.3.3"
   },
   "peerDependencies": {
-    "@jaypie/aws": "^1.2.2",
-    "@jaypie/kit": "^1.2.1",
-    "@jaypie/logger": "^1.2.1"
+    "@jaypie/aws": "*",
+    "@jaypie/kit": "*",
+    "@jaypie/logger": "*"
   },
   "publishConfig": {
     "access": "public"

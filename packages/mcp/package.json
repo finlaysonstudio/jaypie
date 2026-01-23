@@ -39,8 +39,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@jaypie/fabric": "^0.2.0",
-    "@jaypie/llm": "^1.2.2",
+    "@jaypie/fabric": "*",
+    "@jaypie/llm": "*",
     "@modelcontextprotocol/sdk": "^1.17.0",
     "commander": "^14.0.0",
     "gray-matter": "^4.0.3",

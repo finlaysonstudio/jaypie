@@ -67,7 +67,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@jaypie/errors": "^1.2.1"
+    "@jaypie/errors": "*"
   },
   "devDependencies": {
     "@jaypie/testkit": "*",

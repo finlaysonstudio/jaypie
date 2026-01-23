@@ -48,9 +48,9 @@
     "typescript": "^5.3.3"
   },
   "peerDependencies": {
-    "@jaypie/errors": "^1.2.1",
-    "@jaypie/kit": "^1.2.1",
-    "@jaypie/logger": "^1.2.1"
+    "@jaypie/errors": "*",
+    "@jaypie/kit": "*",
+    "@jaypie/logger": "*"
   },
   "publishConfig": {
     "access": "public"
