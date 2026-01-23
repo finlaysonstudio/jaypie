@@ -111,6 +111,7 @@ Avoid words defined elsewhere (services, terminology)
 ## File Systems and Monorepos
 
 - bin: scripts
+- docs: markdown, etc
 - etc: configurations
 - lib: usually within a src directory, modules of encapsulated logic that could be refactored out later
 - LOCAL: human local scratch directory, include in gitignore
