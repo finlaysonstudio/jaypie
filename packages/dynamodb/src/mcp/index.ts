@@ -37,8 +37,10 @@ export interface RegisterDynamoDbToolsResult {
 
 /**
  * Wrap a handler to auto-initialize before execution
+ * Uses explicit type assertion to allow any Service type to be wrapped
  */
-function wrapWithInit(handler: Service): Service {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function wrapWithInit(handler: Service<any, any, any>): Service {
   const wrapped = async (input: Record<string, unknown>) => {
     ensureInitialized();
     return handler(input);
