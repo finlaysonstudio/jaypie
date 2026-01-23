@@ -20,6 +20,7 @@ interface LambdaRequestOptions {
   lambdaEvent: LambdaEvent;
   method: string;
   protocol: string;
+  query?: Record<string, string | string[]>;
   remoteAddress: string;
   url: string;
 }
@@ -79,13 +80,14 @@ export class LambdaRequest extends Readable {
     this.headers = this.normalizeHeaders(options.headers);
     this.bodyBuffer = options.body ?? null;
 
-    // Parse query string from URL
-    const queryIndex = options.url.indexOf("?");
-    if (queryIndex !== -1) {
-      const queryString = options.url.slice(queryIndex + 1);
-      const params = new URLSearchParams(queryString);
-      for (const [key, value] of params) {
-        this.query[key] = value;
+    // Use pre-parsed query if provided, otherwise parse from URL
+    if (options.query) {
+      this.query = options.query;
+    } else {
+      const queryIndex = options.url.indexOf("?");
+      if (queryIndex !== -1) {
+        const queryString = options.url.slice(queryIndex + 1);
+        this.query = parseQueryString(queryString);
       }
     }
 
@@ -161,6 +163,73 @@ export class LambdaRequest extends Readable {
 
 //
 //
+// Helper Functions
+//
+
+/**
+ * Normalize bracket notation in query parameter key.
+ * Removes trailing `[]` from keys (e.g., `filterByStatus[]` → `filterByStatus`).
+ */
+function normalizeQueryKey(key: string): string {
+  return key.endsWith("[]") ? key.slice(0, -2) : key;
+}
+
+/**
+ * Parse a query string into a record with proper array handling.
+ * Handles bracket notation (e.g., `param[]`) and multi-value parameters.
+ */
+function parseQueryString(queryString: string): Record<string, string | string[]> {
+  const result: Record<string, string | string[]> = {};
+  const params = new URLSearchParams(queryString);
+
+  for (const [rawKey, value] of params) {
+    const key = normalizeQueryKey(rawKey);
+    const existing = result[key];
+
+    if (existing === undefined) {
+      // First occurrence - check if it's bracket notation to determine if it should be an array
+      result[key] = rawKey.endsWith("[]") ? [value] : value;
+    } else if (Array.isArray(existing)) {
+      existing.push(value);
+    } else {
+      // Convert to array when we encounter a second value
+      result[key] = [existing, value];
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Build query object from API Gateway v1 multiValueQueryStringParameters.
+ * Normalizes bracket notation and preserves array values.
+ */
+function buildQueryFromMultiValue(
+  multiValueParams: Record<string, string[]> | null | undefined,
+): Record<string, string | string[]> {
+  const result: Record<string, string | string[]> = {};
+  if (!multiValueParams) return result;
+
+  for (const [rawKey, values] of Object.entries(multiValueParams)) {
+    const key = normalizeQueryKey(rawKey);
+    const existingValues = result[key];
+
+    if (existingValues === undefined) {
+      // First occurrence - use array if multiple values or bracket notation
+      result[key] = values.length === 1 && !rawKey.endsWith("[]") ? values[0] : values;
+    } else if (Array.isArray(existingValues)) {
+      existingValues.push(...values);
+    } else {
+      // Convert to array and merge
+      result[key] = [existingValues, ...values];
+    }
+  }
+
+  return result;
+}
+
+//
+//
 // Type Guards
 //
 
@@ -193,6 +262,7 @@ export function createLambdaRequest(
   let url: string;
   let method: string;
   let protocol: string;
+  let query: Record<string, string | string[]> | undefined;
   let remoteAddress: string;
   const headers = { ...event.headers };
 
@@ -205,13 +275,26 @@ export function createLambdaRequest(
     protocol = event.requestContext.http.protocol.split("/")[0].toLowerCase();
     remoteAddress = event.requestContext.http.sourceIp;
 
+    // Parse query string with proper multi-value and bracket notation support
+    if (event.rawQueryString) {
+      query = parseQueryString(event.rawQueryString);
+    }
+
     // Normalize cookies into Cookie header if not already present
     if (event.cookies && event.cookies.length > 0 && !headers.cookie) {
       headers.cookie = event.cookies.join("; ");
     }
   } else if (isApiGatewayV1Event(event)) {
     // API Gateway REST API v1 format
+    // Use multiValueQueryStringParameters for proper array support
+    const multiValueParams = event.multiValueQueryStringParameters;
     const queryParams = event.queryStringParameters;
+
+    if (multiValueParams && Object.keys(multiValueParams).length > 0) {
+      query = buildQueryFromMultiValue(multiValueParams);
+    }
+
+    // Build URL with query string
     if (queryParams && Object.keys(queryParams).length > 0) {
       const queryString = new URLSearchParams(
         queryParams as Record<string, string>,
@@ -220,6 +303,7 @@ export function createLambdaRequest(
     } else {
       url = event.path;
     }
+
     method = event.httpMethod;
     protocol = event.requestContext.protocol.split("/")[0].toLowerCase();
     remoteAddress = event.requestContext.identity.sourceIp;
@@ -252,6 +336,7 @@ export function createLambdaRequest(
     lambdaEvent: event,
     method,
     protocol,
+    query,
     remoteAddress,
     url,
   });

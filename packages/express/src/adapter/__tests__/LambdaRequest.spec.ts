@@ -438,5 +438,134 @@ describe("LambdaRequest", () => {
 
       expect(req._lambdaEvent).toBe(event);
     });
+
+    describe("multi-value query parameters", () => {
+      it("handles multiValueQueryStringParameters with array values", () => {
+        const event = createMockV1Event({
+          multiValueQueryStringParameters: {
+            filterByStatus: ["APPROVED", "RESOLVED"],
+          },
+          queryStringParameters: { filterByStatus: "RESOLVED" },
+        });
+        const req = createLambdaRequest(event, mockContext);
+
+        expect(req.query.filterByStatus).toEqual(["APPROVED", "RESOLVED"]);
+      });
+
+      it("normalizes bracket notation (filterByStatus[] -> filterByStatus)", () => {
+        const event = createMockV1Event({
+          multiValueQueryStringParameters: {
+            "filterByStatus[]": ["APPROVED", "RESOLVED"],
+          },
+          queryStringParameters: { "filterByStatus[]": "RESOLVED" },
+        });
+        const req = createLambdaRequest(event, mockContext);
+
+        expect(req.query.filterByStatus).toEqual(["APPROVED", "RESOLVED"]);
+        expect(req.query["filterByStatus[]"]).toBeUndefined();
+      });
+
+      it("keeps single values as strings when not using bracket notation", () => {
+        const event = createMockV1Event({
+          multiValueQueryStringParameters: {
+            page: ["1"],
+            limit: ["10"],
+          },
+          queryStringParameters: { page: "1", limit: "10" },
+        });
+        const req = createLambdaRequest(event, mockContext);
+
+        expect(req.query.page).toBe("1");
+        expect(req.query.limit).toBe("10");
+      });
+
+      it("keeps single values as arrays when using bracket notation", () => {
+        const event = createMockV1Event({
+          multiValueQueryStringParameters: {
+            "tags[]": ["javascript"],
+          },
+          queryStringParameters: { "tags[]": "javascript" },
+        });
+        const req = createLambdaRequest(event, mockContext);
+
+        expect(req.query.tags).toEqual(["javascript"]);
+      });
+
+      it("handles mixed single and multi-value parameters", () => {
+        const event = createMockV1Event({
+          multiValueQueryStringParameters: {
+            page: ["1"],
+            "status[]": ["ACTIVE", "PENDING"],
+          },
+          queryStringParameters: { page: "1", "status[]": "PENDING" },
+        });
+        const req = createLambdaRequest(event, mockContext);
+
+        expect(req.query.page).toBe("1");
+        expect(req.query.status).toEqual(["ACTIVE", "PENDING"]);
+      });
+
+      it("falls back to URL parsing when multiValueQueryStringParameters is null", () => {
+        const event = createMockV1Event({
+          multiValueQueryStringParameters: null,
+          queryStringParameters: { page: "1" },
+        });
+        const req = createLambdaRequest(event, mockContext);
+
+        expect(req.url).toBe("/api/users?page=1");
+        // Query is parsed from URL when no pre-built query is provided
+        expect(req.query.page).toBe("1");
+      });
+    });
+  });
+
+  describe("Function URL multi-value query parameters", () => {
+    it("handles duplicate query parameters", () => {
+      const event = createMockEvent({
+        rawQueryString: "status=ACTIVE&status=PENDING",
+      });
+      const req = createLambdaRequest(event, mockContext);
+
+      expect(req.query.status).toEqual(["ACTIVE", "PENDING"]);
+    });
+
+    it("normalizes bracket notation in rawQueryString", () => {
+      const event = createMockEvent({
+        rawQueryString: "filterByStatus[]=APPROVED&filterByStatus[]=RESOLVED",
+      });
+      const req = createLambdaRequest(event, mockContext);
+
+      expect(req.query.filterByStatus).toEqual(["APPROVED", "RESOLVED"]);
+      expect(req.query["filterByStatus[]"]).toBeUndefined();
+    });
+
+    it("keeps single values as strings without bracket notation", () => {
+      const event = createMockEvent({
+        rawQueryString: "page=1&limit=10",
+      });
+      const req = createLambdaRequest(event, mockContext);
+
+      expect(req.query.page).toBe("1");
+      expect(req.query.limit).toBe("10");
+    });
+
+    it("keeps single values as arrays with bracket notation", () => {
+      const event = createMockEvent({
+        rawQueryString: "tags[]=javascript",
+      });
+      const req = createLambdaRequest(event, mockContext);
+
+      expect(req.query.tags).toEqual(["javascript"]);
+    });
+
+    it("handles mixed bracket and non-bracket notation", () => {
+      const event = createMockEvent({
+        rawQueryString: "page=1&status[]=ACTIVE&status[]=PENDING",
+      });
+      const req = createLambdaRequest(event, mockContext);
+
+      expect(req.query.page).toBe("1");
+      expect(req.query.status).toEqual(["ACTIVE", "PENDING"]);
+    });
   });
 });
