@@ -1,5 +1,5 @@
 import { Construct } from "constructs";
-import { ArnFormat, RemovalPolicy, Stack, Tags } from "aws-cdk-lib";
+import { RemovalPolicy, Tags } from "aws-cdk-lib";
 import * as acm from "aws-cdk-lib/aws-certificatemanager";
 import * as apigatewayv2 from "aws-cdk-lib/aws-apigatewayv2";
 import * as apigatewayv2Integrations from "aws-cdk-lib/aws-apigatewayv2-integrations";
@@ -375,20 +375,11 @@ export class JaypieWebSocket extends Construct {
 
   /**
    * Grant a Lambda function permission to manage WebSocket connections
-   * (post to connections, delete connections).
+   * (post messages to connections, get connection info, delete connections).
    */
   public grantManageConnections(grantee: lambda.IFunction): iam.Grant {
-    return iam.Grant.addToPrincipal({
-      actions: ["execute-api:ManageConnections"],
-      grantee: grantee.grantPrincipal,
-      resourceArns: [
-        Stack.of(this).formatArn({
-          arnFormat: ArnFormat.SLASH_RESOURCE_SLASH_RESOURCE_NAME,
-          resource: this._api.apiId,
-          resourceName: `${this._stage.stageName}/POST/@connections/*`,
-          service: "execute-api",
-        }),
-      ],
-    });
+    // Use the CDK's built-in grantManageConnections which properly grants
+    // permissions for all @connections methods (POST, GET, DELETE) across all stages
+    return this._api.grantManageConnections(grantee);
   }
 }
