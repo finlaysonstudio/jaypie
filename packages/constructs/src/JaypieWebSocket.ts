@@ -385,7 +385,7 @@ export class JaypieWebSocket extends Construct {
         Stack.of(this).formatArn({
           arnFormat: ArnFormat.SLASH_RESOURCE_SLASH_RESOURCE_NAME,
           resource: this._api.apiId,
-          resourceName: `${this._stage.stageName}/*`,
+          resourceName: `${this._stage.stageName}/POST/@connections/*`,
           service: "execute-api",
         }),
       ],

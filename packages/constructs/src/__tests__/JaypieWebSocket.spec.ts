@@ -187,6 +187,30 @@ describe("JaypieWebSocket", () => {
       expect(ws.callbackUrl).toBeDefined();
     });
   });
+
+  describe("grantManageConnections", () => {
+    it("Grants execute-api:ManageConnections with @connections path", () => {
+      const stack = createTestStack();
+      const handler = createTestLambda(stack, "Handler");
+
+      new JaypieWebSocket(stack, "TestWs", {
+        handler,
+      });
+
+      const template = Template.fromStack(stack);
+      const policies = template.findResources("AWS::IAM::Policy");
+      const policyResource = Object.values(policies)[0];
+      const statement = policyResource.Properties.PolicyDocument.Statement[0];
+
+      expect(statement.Action).toBe("execute-api:ManageConnections");
+      expect(statement.Effect).toBe("Allow");
+
+      // Verify the ARN includes @connections path
+      const resourceArn = statement.Resource["Fn::Join"][1];
+      const arnSuffix = resourceArn[resourceArn.length - 1];
+      expect(arnSuffix).toBe("/production/POST/@connections/*");
+    });
+  });
 });
 
 describe("JaypieWebSocketLambda", () => {
