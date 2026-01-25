@@ -138,7 +138,8 @@ export class DerivedEvaluator<T extends TimestampedEvent> {
       case "range": {
         const unit = timing.unit ?? "days";
         const minDelay = (timing.delayMin ?? 1) * MS_PER_UNIT[unit];
-        const maxDelay = (timing.delayMax ?? timing.delayMin ?? 7) * MS_PER_UNIT[unit];
+        const maxDelay =
+          (timing.delayMax ?? timing.delayMin ?? 7) * MS_PER_UNIT[unit];
         const delay = minDelay + fab.random() * (maxDelay - minDelay);
         return [new Date(parentTime + Math.floor(delay))];
       }
@@ -180,7 +181,9 @@ export class DerivedEvaluator<T extends TimestampedEvent> {
   /**
    * Evaluate all applicable rules for an event
    */
-  private evaluateRules(item: EventWithDerivedMeta<T>): EventWithDerivedMeta<T>[] {
+  private evaluateRules(
+    item: EventWithDerivedMeta<T>,
+  ): EventWithDerivedMeta<T>[] {
     // Check depth limit
     if (item.depth >= this.maxDepth) {
       return [];
@@ -194,10 +197,7 @@ export class DerivedEvaluator<T extends TimestampedEvent> {
       : this.config.rules;
 
     for (const rule of rules) {
-      const ruleDerived = this.evaluateRule(
-        rule as DerivedRule<T, T>,
-        item,
-      );
+      const ruleDerived = this.evaluateRule(rule as DerivedRule<T, T>, item);
       derivedEvents.push(...ruleDerived);
     }
 
@@ -304,8 +304,9 @@ export class DerivedEvaluator<T extends TimestampedEvent> {
    * Find nested rules for a given parent rule name
    */
   private findNestedRules(ruleName: string): DerivedRule<T, unknown>[] {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const findInRules = (rules: DerivedRule<any, any>[]): DerivedRule<T, unknown>[] => {
+    const findInRules = (
+      rules: DerivedRule<any, any>[],
+    ): DerivedRule<T, unknown>[] => {
       for (const rule of rules) {
         if (rule.name === ruleName && rule.derived) {
           return rule.derived as DerivedRule<T, unknown>[];

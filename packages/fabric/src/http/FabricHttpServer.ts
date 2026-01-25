@@ -34,8 +34,13 @@ import { DEFAULT_HTTP_METHODS } from "./types.js";
 /**
  * Check if event is API Gateway v2 format
  */
-function isApiGatewayV2Event(event: ApiGatewayEvent): event is ApiGatewayV2Event {
-  return "requestContext" in event && "http" in (event as ApiGatewayV2Event).requestContext;
+function isApiGatewayV2Event(
+  event: ApiGatewayEvent,
+): event is ApiGatewayV2Event {
+  return (
+    "requestContext" in event &&
+    "http" in (event as ApiGatewayV2Event).requestContext
+  );
 }
 
 /**
@@ -103,7 +108,10 @@ function matchRoute(
   const routeSegments = route.segments;
 
   // Check segment count (allow route to have optional params)
-  if (requestSegments.length < routeSegments.filter((s) => !s.endsWith("?")).length) {
+  if (
+    requestSegments.length <
+    routeSegments.filter((s) => !s.endsWith("?")).length
+  ) {
     return undefined;
   }
   if (requestSegments.length > routeSegments.length) {
@@ -302,10 +310,18 @@ export function FabricHttpServer(
   /**
    * Main request handler
    */
-  const handler = async (event: ApiGatewayEvent): Promise<ApiGatewayResponse> => {
+  const handler = async (
+    event: ApiGatewayEvent,
+  ): Promise<ApiGatewayResponse> => {
     // Extract request data from API Gateway event
-    const { body, headers, method, path: requestPath, queryString, pathParams } =
-      extractRequestData(event);
+    const {
+      body,
+      headers,
+      method,
+      path: requestPath,
+      queryString,
+      pathParams,
+    } = extractRequestData(event);
 
     // Normalize headers to Headers object for consistency
     const headersObj = new Headers(headers);
@@ -336,7 +352,11 @@ export function FabricHttpServer(
     }
 
     // Build CORS headers for response
-    const corsHeaders = buildCorsHeaders(serverCorsConfig, origin, allowedMethods);
+    const corsHeaders = buildCorsHeaders(
+      serverCorsConfig,
+      origin,
+      allowedMethods,
+    );
     const responseHeaders: Record<string, string> = {
       "Content-Type": "application/json",
     };

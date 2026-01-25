@@ -2052,7 +2052,9 @@ describe("HTTP Adapter", () => {
         });
 
         expect(response.statusCode).toBe(405);
-        expect(JSON.parse(response.body).errors[0].title).toBe("Method Not Allowed");
+        expect(JSON.parse(response.body).errors[0].title).toBe(
+          "Method Not Allowed",
+        );
         expect(response.headers["Allow"]).toBe("GET");
       });
     });
@@ -2146,7 +2148,9 @@ describe("HTTP Adapter", () => {
         });
 
         expect(response.statusCode).toBe(500);
-        expect(JSON.parse(response.body).errors[0].title).toBe("Internal Server Error");
+        expect(JSON.parse(response.body).errors[0].title).toBe(
+          "Internal Server Error",
+        );
         // Detail should be hidden for 500 errors
         expect(JSON.parse(response.body).errors[0].detail).toBeUndefined();
       });
@@ -2174,7 +2178,9 @@ describe("HTTP Adapter", () => {
 
         expect(response.statusCode).toBe(400);
         expect(JSON.parse(response.body).errors[0].title).toBe("Bad Request");
-        expect(JSON.parse(response.body).errors[0].detail).toBe("Invalid input");
+        expect(JSON.parse(response.body).errors[0].detail).toBe(
+          "Invalid input",
+        );
       });
     });
 
@@ -2262,7 +2268,6 @@ describe("HTTP Adapter", () => {
       it("throws for invalid service entry", () => {
         expect(() => {
           FabricHttpServer({
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             services: [{ invalid: true } as any],
           });
         }).toThrow("Each service entry must be a FabricHttpService");

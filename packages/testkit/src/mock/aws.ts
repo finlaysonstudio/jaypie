@@ -183,3 +183,31 @@ export class JaypieStream {
 export const createJaypieStream = createMockFunction<
   (source: AsyncIterable<unknown>) => JaypieStream
 >((source) => new JaypieStream(source));
+
+// WebSocket utilities
+export const sendToConnection = createMockFunction<
+  (options: {
+    callbackUrl?: string;
+    connectionId: string;
+    data: unknown;
+    domainName?: string;
+    stage?: string;
+  }) => Promise<{ connectionValid: boolean; success: boolean }>
+>(async () => ({ connectionValid: true, success: true }));
+
+export const broadcastToConnections = createMockFunction<
+  (options: {
+    callbackUrl?: string;
+    connectionIds: string[];
+    data: unknown;
+    domainName?: string;
+    stage?: string;
+  }) => Promise<{ staleConnections: string[]; successCount: number }>
+>(async (options) => ({
+  staleConnections: [],
+  successCount: options?.connectionIds?.length ?? 0,
+}));
+
+export const clearWebSocketClientCache = createMockFunction<() => void>(
+  () => {},
+);

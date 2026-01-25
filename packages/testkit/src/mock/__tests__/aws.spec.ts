@@ -52,7 +52,9 @@ describe("AWS Mocks", () => {
 
   describe("Error Conditions", () => {
     it("sendTextractJob throws error for missing parameters", async () => {
-      await expect(sendTextractJob({} as any)).rejects.toThrow("Bucket and key are required");
+      await expect(sendTextractJob({} as any)).rejects.toThrow(
+        "Bucket and key are required",
+      );
     });
   });
 

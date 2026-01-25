@@ -446,6 +446,13 @@ export { inputToJsonSchema } from "./inputToJsonSchema.js";
 export type { FabricToolConfig, FabricToolResult, LlmTool, OnCompleteCallback, OnErrorCallback, OnFatalCallback, OnMessageCallback } from "./types.js";
 ```
 
+### WebSocket Export (`@jaypie/fabric/websocket`)
+
+```typescript
+export { fabricWebSocket } from "./fabricWebSocket.js";
+export type { FabricWebSocketConfig, FabricWebSocketOptions } from "./types.js";
+```
+
 ### MCP Export (`@jaypie/fabric/mcp`)
 
 ```typescript

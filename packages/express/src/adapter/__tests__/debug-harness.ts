@@ -80,27 +80,30 @@ async function runDebugTest() {
   // Debug: Check prototype chain
   console.log("\nPrototype chain analysis:");
   console.log("  res.constructor.name:", res.constructor.name);
-  console.log("  res has own removeHeader:", Object.prototype.hasOwnProperty.call(res, 'removeHeader'));
-  console.log("  removeHeader in res:", 'removeHeader' in res);
+  console.log(
+    "  res has own removeHeader:",
+    Object.prototype.hasOwnProperty.call(res, "removeHeader"),
+  );
+  console.log("  removeHeader in res:", "removeHeader" in res);
   console.log("  typeof res.removeHeader:", typeof res.removeHeader);
 
   // Override removeHeader to trace calls
   const originalRemoveHeader = res.removeHeader.bind(res);
-  res.removeHeader = function(name: string) {
+  res.removeHeader = function (name: string) {
     console.log("OUR removeHeader called with:", name);
     return originalRemoveHeader(name);
   };
 
   // Override setHeader to trace calls
   const originalSetHeader = res.setHeader.bind(res);
-  res.setHeader = function(name: string, value: any) {
+  res.setHeader = function (name: string, value: any) {
     console.log("OUR setHeader called with:", name, "=", value);
     return originalSetHeader(name, value);
   } as typeof res.setHeader;
 
   // Override json to trace calls
   const originalJson = res.json.bind(res);
-  res.json = function(this: typeof res, data: unknown) {
+  res.json = function (this: typeof res, data: unknown) {
     console.log("OUR json() called with:", data);
     console.log("  this.json === res.json:", this.json === res.json);
     console.log("  this.constructor.name:", this.constructor.name);
@@ -109,14 +112,14 @@ async function runDebugTest() {
 
   // Override getHeader to trace calls
   const originalGetHeader = res.getHeader.bind(res);
-  res.getHeader = function(name: string) {
+  res.getHeader = function (name: string) {
     console.log("OUR getHeader called with:", name);
     return originalGetHeader(name);
   } as typeof res.getHeader;
 
   // Override get to trace calls
   const originalGet = res.get.bind(res);
-  res.get = function(name: string) {
+  res.get = function (name: string) {
     console.log("OUR get() called with:", name);
     return originalGet(name);
   } as typeof res.get;
@@ -144,7 +147,10 @@ async function runDebugTest() {
   // Override end to trace calls
   const originalEnd = res.end.bind(res);
   res.end = function (...args: Parameters<typeof originalEnd>) {
-    console.log("res.end() called with args:", args.map(a => typeof a === 'function' ? '[callback]' : a));
+    console.log(
+      "res.end() called with args:",
+      args.map((a) => (typeof a === "function" ? "[callback]" : a)),
+    );
     console.log("Stack trace:", new Error().stack);
     return originalEnd(...args);
   } as typeof res.end;

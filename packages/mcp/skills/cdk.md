@@ -1,6 +1,6 @@
 ---
 description: CDK constructs and deployment patterns
-related: aws, dynamodb, cicd
+related: aws, cicd, dynamodb, streaming, websockets
 ---
 
 # CDK Constructs
@@ -139,3 +139,7 @@ const handler = new JaypieLambda(this, "Handler", {
 });
 ```
 
+## See Also
+
+- **`skill("streaming")`** - JaypieDistribution with `streaming: true` for response streaming
+- **`skill("websockets")`** - JaypieWebSocket and JaypieWebSocketTable constructs

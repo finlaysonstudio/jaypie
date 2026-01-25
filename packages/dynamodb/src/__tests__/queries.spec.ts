@@ -167,13 +167,21 @@ describe("Query Functions", () => {
     });
 
     it("uses indexCategory GSI", async () => {
-      await queryByCategory({ category: "memory", model: "record", scope: "@" });
+      await queryByCategory({
+        category: "memory",
+        model: "record",
+        scope: "@",
+      });
       const command = mockSend.mock.calls[0][0];
       expect(command.input.IndexName).toBe("indexCategory");
     });
 
     it("builds correct key value", async () => {
-      await queryByCategory({ category: "memory", model: "record", scope: "@" });
+      await queryByCategory({
+        category: "memory",
+        model: "record",
+        scope: "@",
+      });
       const command = mockSend.mock.calls[0][0];
       expect(command.input.ExpressionAttributeValues[":pkValue"]).toBe(
         "@#record#memory",

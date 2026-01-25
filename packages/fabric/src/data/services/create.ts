@@ -10,10 +10,7 @@ import type {
   ResolvedOperationConfig,
   ScopeFunction,
 } from "../types.js";
-import {
-  calculateScopeFromConfig,
-  transformCreate,
-} from "../transforms.js";
+import { calculateScopeFromConfig, transformCreate } from "../transforms.js";
 
 interface CreateServiceContext extends ServiceContext {
   http?: HttpContext;
@@ -44,7 +41,10 @@ export function createCreateService<T extends FabricModel = FabricModel>(
       const { putEntity } = await import("@jaypie/dynamodb");
 
       // Calculate scope
-      const scopeConfig = globalConfig.scope as ScopeFunction | string | undefined;
+      const scopeConfig = globalConfig.scope as
+        | ScopeFunction
+        | string
+        | undefined;
       const httpContext = context?.http;
       const scope = httpContext
         ? await calculateScopeFromConfig(scopeConfig, httpContext)

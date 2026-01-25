@@ -67,6 +67,9 @@ packages/constructs/
 | `JaypieHostedZone` | Route53 hosted zone with query logging |
 | `JaypieDnsRecord` | DNS record management |
 | `JaypieApiGateway` | API Gateway configuration |
+| `JaypieWebSocket` | WebSocket API Gateway v2 with custom domain |
+| `JaypieWebSocketLambda` | Lambda optimized for WebSocket handlers |
+| `JaypieWebSocketTable` | DynamoDB table for connection tracking |
 
 ### Secrets
 

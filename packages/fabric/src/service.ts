@@ -245,7 +245,9 @@ export function isService<
  */
 async function runSerializer<TInput, TOutput, TSerializedOutput>(
   data: { input: TInput; output: TOutput },
-  serializer: SerializerFunction<TInput, TOutput, TSerializedOutput> | undefined,
+  serializer:
+    | SerializerFunction<TInput, TOutput, TSerializedOutput>
+    | undefined,
   context: ServiceContext | undefined,
 ): Promise<TOutput | TSerializedOutput> {
   if (!serializer) {

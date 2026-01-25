@@ -42,9 +42,7 @@ export function createMcpServer(
     console.error(
       `[jaypie-mcp] Registered ${suite.services.length} tools from suite`,
     );
-    console.error(
-      `[jaypie-mcp] Categories: ${suite.categories.join(", ")}`,
-    );
+    console.error(`[jaypie-mcp] Categories: ${suite.categories.join(", ")}`);
   }
 
   return server;

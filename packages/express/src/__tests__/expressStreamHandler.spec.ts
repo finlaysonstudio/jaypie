@@ -294,7 +294,9 @@ describe("expressStreamHandler", () => {
     });
 
     it("sets application/x-ndjson content type for NLJSON format", async () => {
-      const handler = expressStreamHandler(async () => {}, { format: "nljson" });
+      const handler = expressStreamHandler(async () => {}, {
+        format: "nljson",
+      });
       const req = createMockRequest();
       const res = createMockResponse();
 

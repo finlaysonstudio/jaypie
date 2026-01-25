@@ -1,4 +1,10 @@
-import { cors, echoRoute, EXPRESS, noContentRoute, notFoundRoute } from "jaypie";
+import {
+  cors,
+  echoRoute,
+  EXPRESS,
+  noContentRoute,
+  notFoundRoute,
+} from "jaypie";
 import express from "express";
 
 const app = express();

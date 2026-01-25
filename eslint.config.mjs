@@ -77,10 +77,7 @@ export default [
   // Sites: TypeScript/TSX files (allow imports)
   //
   {
-    files: [
-      "stacks/**/*.ts",
-      "stacks/**/*.tsx",
-    ],
+    files: ["stacks/**/*.ts", "stacks/**/*.tsx"],
     rules: {
       "import-x/default": "off",
       "import-x/no-unresolved": [

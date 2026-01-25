@@ -1,6 +1,6 @@
 ---
 description: AWS Lambda handler wrappers with lifecycle management
-related: handlers, express, aws, cdk, services
+related: aws, cdk, express, handlers, services, streaming, websockets
 ---
 
 # Lambda Handler
@@ -157,3 +157,8 @@ new JaypieLambda(this, "Handler", {
   secrets: ["MY_SECRET"],
 });
 ```
+
+## See Also
+
+- **`skill("streaming")`** - Full guide to `lambdaStreamHandler`, formats, and streaming utilities
+- **`skill("websockets")`** - WebSocket handler patterns with `send()` and `broadcast()`

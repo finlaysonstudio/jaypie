@@ -30,3 +30,16 @@ export type {
   StreamChunk,
   StreamFormat,
 } from "./streaming/JaypieStream.js";
+
+// WebSocket utilities
+export {
+  broadcastToConnections,
+  clearClientCache as clearWebSocketClientCache,
+  sendToConnection,
+} from "./websocket/index.js";
+export type {
+  BroadcastOptions,
+  BroadcastResult,
+  SendToConnectionOptions,
+  SendToConnectionResult,
+} from "./websocket/index.js";

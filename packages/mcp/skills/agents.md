@@ -21,7 +21,7 @@ Query `mcp__jaypie__skill(alias: String)` for development guidance:
 
 Contents: index, releasenotes
 Development: documentation, errors, logs, mocks, style, tests
-Infrastructure: aws, cdk, cicd, datadog, dns, dynamodb, express, lambda, secrets, variables
+Infrastructure: aws, cdk, cicd, datadog, dns, dynamodb, express, lambda, secrets, streaming, variables, websockets
 Patterns: fabric, models, services, vocabulary
 Meta: issues, jaypie, skills, tools
 ```

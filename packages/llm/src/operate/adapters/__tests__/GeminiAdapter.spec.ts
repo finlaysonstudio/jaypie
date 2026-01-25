@@ -57,7 +57,7 @@ describe("GeminiAdapter", () => {
     describe("buildRequest", () => {
       it("builds basic request", () => {
         const request: OperateRequest = {
-          model: "gemini-2.5-flash",
+          model: PROVIDER.GEMINI.MODEL.SMALL,
           messages: [
             {
               content: "Hello",
@@ -69,7 +69,7 @@ describe("GeminiAdapter", () => {
 
         const result = geminiAdapter.buildRequest(request);
 
-        expect(result.model).toBe("gemini-2.5-flash");
+        expect(result.model).toBe(PROVIDER.GEMINI.MODEL.SMALL);
         expect(result.contents).toHaveLength(1);
         expect(result.contents[0].role).toBe("user");
         expect(result.contents[0].parts?.[0].text).toBe("Hello");
@@ -77,7 +77,7 @@ describe("GeminiAdapter", () => {
 
       it("includes system instruction when provided", () => {
         const request: OperateRequest = {
-          model: "gemini-2.5-flash",
+          model: PROVIDER.GEMINI.MODEL.SMALL,
           messages: [],
           system: "You are helpful",
         };
@@ -89,7 +89,7 @@ describe("GeminiAdapter", () => {
 
       it("appends instructions to last message", () => {
         const request: OperateRequest = {
-          model: "gemini-2.5-flash",
+          model: PROVIDER.GEMINI.MODEL.SMALL,
           messages: [
             {
               content: "Hello",
@@ -108,7 +108,7 @@ describe("GeminiAdapter", () => {
 
       it("includes tools when provided", () => {
         const request: OperateRequest = {
-          model: "gemini-2.5-flash",
+          model: PROVIDER.GEMINI.MODEL.SMALL,
           messages: [],
           tools: [
             {
@@ -130,7 +130,7 @@ describe("GeminiAdapter", () => {
 
       it("includes format when provided", () => {
         const request: OperateRequest = {
-          model: "gemini-2.5-flash",
+          model: PROVIDER.GEMINI.MODEL.SMALL,
           messages: [],
           format: { type: "object", properties: { name: { type: "string" } } },
         };
@@ -288,20 +288,26 @@ describe("GeminiAdapter", () => {
           },
         };
 
-        const result = geminiAdapter.extractUsage(response, "gemini-2.5-flash");
+        const result = geminiAdapter.extractUsage(
+          response,
+          PROVIDER.GEMINI.MODEL.SMALL,
+        );
 
         expect(result.input).toBe(100);
         expect(result.output).toBe(200);
         expect(result.total).toBe(300);
         expect(result.reasoning).toBe(50);
         expect(result.provider).toBe(PROVIDER.GEMINI.NAME);
-        expect(result.model).toBe("gemini-2.5-flash");
+        expect(result.model).toBe(PROVIDER.GEMINI.MODEL.SMALL);
       });
 
       it("returns zeros when no usage metadata", () => {
         const response = {};
 
-        const result = geminiAdapter.extractUsage(response, "gemini-2.5-flash");
+        const result = geminiAdapter.extractUsage(
+          response,
+          PROVIDER.GEMINI.MODEL.SMALL,
+        );
 
         expect(result.input).toBe(0);
         expect(result.output).toBe(0);
@@ -663,7 +669,7 @@ describe("GeminiAdapter", () => {
 
     it("maps assistant role to model", () => {
       const request: OperateRequest = {
-        model: "gemini-2.5-flash",
+        model: PROVIDER.GEMINI.MODEL.SMALL,
         messages: [
           {
             content: "Previous response",
@@ -680,7 +686,7 @@ describe("GeminiAdapter", () => {
 
     it("maps system role to user for contents", () => {
       const request: OperateRequest = {
-        model: "gemini-2.5-flash",
+        model: PROVIDER.GEMINI.MODEL.SMALL,
         messages: [
           {
             content: "System message",
@@ -699,7 +705,7 @@ describe("GeminiAdapter", () => {
 
     it("handles function call history items", () => {
       const request: OperateRequest = {
-        model: "gemini-2.5-flash",
+        model: PROVIDER.GEMINI.MODEL.SMALL,
         messages: [
           {
             type: LlmMessageType.FunctionCall,
@@ -720,7 +726,7 @@ describe("GeminiAdapter", () => {
 
     it("handles function call output history items", () => {
       const request: OperateRequest = {
-        model: "gemini-2.5-flash",
+        model: PROVIDER.GEMINI.MODEL.SMALL,
         messages: [
           {
             type: LlmMessageType.FunctionCallOutput,

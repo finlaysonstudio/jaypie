@@ -72,6 +72,13 @@ src/
 | `getContentTypeForFormat(format)` | Get content type for stream format |
 | `streamToSse(stream)` | Convert async iterable to SSE strings |
 
+### WebSocket
+
+| Export | Description |
+|--------|-------------|
+| `sendToConnection(data, { connectionId, domainName, stage })` | Send data to a WebSocket connection |
+| `broadcastToConnections(data, { connectionIds, domainName, stage })` | Broadcast to multiple connections |
+
 ### Types
 
 ```typescript

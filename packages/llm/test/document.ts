@@ -3,7 +3,7 @@ import { config } from "dotenv";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
 
-import { Llm, LlmOperateInput } from "../src/index.js";
+import { LLM, Llm, LlmOperateInput } from "../src/index.js";
 
 config();
 
@@ -28,10 +28,10 @@ const REQUIRED_STRINGS = [
 
 // Models to test for each provider
 const MODELS = {
-  anthropic: "claude-opus-4-1",
-  gemini: "gemini-2.5-pro",
-  openai: "gpt-5",
-  openrouter: "openai/gpt-4o",
+  anthropic: LLM.PROVIDER.ANTHROPIC.MODEL.LARGE,
+  gemini: LLM.PROVIDER.GEMINI.MODEL.LARGE,
+  openai: LLM.PROVIDER.OPENAI.MODEL.LARGE,
+  openrouter: LLM.PROVIDER.OPENROUTER.MODEL.DEFAULT,
 } as const;
 
 //

@@ -1,9 +1,8 @@
 import React from "react";
-import { useThemeConfig } from "@docusaurus/theme-common";
+import { useThemeConfig, useColorMode } from "@docusaurus/theme-common";
 import FooterCopyright from "@theme/Footer/Copyright";
 import FooterLinkItem from "@theme/Footer/LinkItem";
 import ColorModeToggle from "@theme/ColorModeToggle";
-import { useColorMode } from "@docusaurus/theme-common";
 import type { Props as FooterLinkItemProps } from "@theme/Footer/LinkItem";
 
 interface FooterLinkColumn {

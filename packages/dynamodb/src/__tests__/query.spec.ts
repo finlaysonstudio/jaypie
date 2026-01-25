@@ -190,7 +190,12 @@ describe("query", () => {
     });
 
     it("applies combined archived+deleted suffix", async () => {
-      await query({ model: "record", scope: "@", archived: true, deleted: true });
+      await query({
+        model: "record",
+        scope: "@",
+        archived: true,
+        deleted: true,
+      });
 
       const command = mockSend.mock.calls[0][0];
       expect(command.input.ExpressionAttributeValues[":pkValue"]).toBe(

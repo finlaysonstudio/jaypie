@@ -155,7 +155,9 @@ export function createLambdaHandler(
               status: 500,
               title: "Internal Server Error",
               detail:
-                error instanceof Error ? error.message : "Unknown error occurred",
+                error instanceof Error
+                  ? error.message
+                  : "Unknown error occurred",
             },
           ],
         }),

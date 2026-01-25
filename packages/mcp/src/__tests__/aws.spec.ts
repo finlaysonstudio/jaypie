@@ -253,7 +253,9 @@ region = eu-west-1
 
         expect(result.success).toBe(true);
         expect(result.data).toHaveLength(3);
-        expect(result.data?.map((p: AwsProfile) => p.name)).toContain("default");
+        expect(result.data?.map((p: AwsProfile) => p.name)).toContain(
+          "default",
+        );
         expect(result.data?.map((p: AwsProfile) => p.name)).toContain("dev");
         expect(result.data?.map((p: AwsProfile) => p.name)).toContain("prod");
       });

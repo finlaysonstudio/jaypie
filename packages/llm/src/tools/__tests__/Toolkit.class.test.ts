@@ -93,9 +93,9 @@ describe("Toolkit", () => {
 
       expect(tools).toHaveLength(1);
       expect(tools[0].type).toBe("function");
-      expect(
-        (tools[0].parameters as JsonObject).properties,
-      ).not.toHaveProperty("__Explanation");
+      expect((tools[0].parameters as JsonObject).properties).not.toHaveProperty(
+        "__Explanation",
+      );
     });
 
     it("should add the explain property to all tools", () => {

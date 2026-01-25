@@ -1,6 +1,6 @@
 ---
 description: Using @jaypie/llm for unified LLM access
-related: fabric, tools, tests
+related: fabric, streaming, tests, tools
 ---
 
 # @jaypie/llm
@@ -379,3 +379,6 @@ interface LlmFallbackConfig {
 }
 ```
 
+## See Also
+
+- **`skill("streaming")`** - Streaming LLM responses to Lambda and Express with `createLambdaStream`

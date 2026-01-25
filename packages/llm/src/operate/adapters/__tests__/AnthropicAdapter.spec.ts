@@ -107,7 +107,7 @@ describe("AnthropicAdapter", () => {
     describe("buildRequest", () => {
       it("builds basic request", () => {
         const request: OperateRequest = {
-          model: "claude-opus-4",
+          model: PROVIDER.ANTHROPIC.MODEL.LARGE,
           messages: [
             {
               content: "Hello",
@@ -119,7 +119,7 @@ describe("AnthropicAdapter", () => {
 
         const result = anthropicAdapter.buildRequest(request);
 
-        expect(result.model).toBe("claude-opus-4");
+        expect(result.model).toBe(PROVIDER.ANTHROPIC.MODEL.LARGE);
         expect(result.messages).toHaveLength(1);
         // Type property should be removed for Anthropic
         expect(
@@ -129,7 +129,7 @@ describe("AnthropicAdapter", () => {
 
       it("includes system when provided", () => {
         const request: OperateRequest = {
-          model: "claude-opus-4",
+          model: PROVIDER.ANTHROPIC.MODEL.LARGE,
           messages: [],
           system: "You are helpful",
         };
@@ -142,7 +142,7 @@ describe("AnthropicAdapter", () => {
       it("filters out system messages from messages array", () => {
         // Anthropic only accepts system as a top-level field, not as a message role
         const request: OperateRequest = {
-          model: "claude-opus-4",
+          model: PROVIDER.ANTHROPIC.MODEL.LARGE,
           messages: [
             {
               content: "You are a helpful assistant",
@@ -170,7 +170,7 @@ describe("AnthropicAdapter", () => {
 
       it("appends instructions to last message", () => {
         const request: OperateRequest = {
-          model: "claude-opus-4",
+          model: PROVIDER.ANTHROPIC.MODEL.LARGE,
           messages: [
             {
               content: "Hello",
@@ -189,7 +189,7 @@ describe("AnthropicAdapter", () => {
 
       it("includes tools when provided", () => {
         const request: OperateRequest = {
-          model: "claude-opus-4",
+          model: PROVIDER.ANTHROPIC.MODEL.LARGE,
           messages: [],
           tools: [
             {
@@ -212,7 +212,7 @@ describe("AnthropicAdapter", () => {
         const response = {
           content: [{ type: "text", text: "Hello there!" }],
           stop_reason: "end_turn",
-          model: "claude-opus-4",
+          model: PROVIDER.ANTHROPIC.MODEL.LARGE,
           usage: {
             input_tokens: 10,
             output_tokens: 20,
@@ -232,7 +232,7 @@ describe("AnthropicAdapter", () => {
             { type: "tool_use", id: "tool-123", name: "test", input: {} },
           ],
           stop_reason: "tool_use",
-          model: "claude-opus-4",
+          model: PROVIDER.ANTHROPIC.MODEL.LARGE,
           usage: {
             input_tokens: 10,
             output_tokens: 20,
@@ -290,14 +290,17 @@ describe("AnthropicAdapter", () => {
           },
         };
 
-        const result = anthropicAdapter.extractUsage(response, "claude-opus-4");
+        const result = anthropicAdapter.extractUsage(
+          response,
+          PROVIDER.ANTHROPIC.MODEL.LARGE,
+        );
 
         expect(result.input).toBe(100);
         expect(result.output).toBe(200);
         expect(result.total).toBe(300);
         expect(result.reasoning).toBe(0); // Anthropic doesn't expose this
         expect(result.provider).toBe(PROVIDER.ANTHROPIC.NAME);
-        expect(result.model).toBe("claude-opus-4");
+        expect(result.model).toBe(PROVIDER.ANTHROPIC.MODEL.LARGE);
       });
     });
   });
@@ -518,7 +521,7 @@ describe("AnthropicAdapter", () => {
 
     it("sets tool_choice to any when structured output tool present", () => {
       const request: OperateRequest = {
-        model: "claude-opus-4",
+        model: PROVIDER.ANTHROPIC.MODEL.LARGE,
         messages: [],
         tools: [
           {

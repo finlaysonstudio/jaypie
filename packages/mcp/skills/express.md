@@ -1,6 +1,6 @@
 ---
 description: Express.js handler for AWS Lambda with API Gateway support
-related: handlers, lambda, aws, cdk, services
+related: aws, cdk, handlers, lambda, services, streaming
 ---
 
 # Express Integration
@@ -152,3 +152,7 @@ new JaypieLambda(this, "Api", {
 ## Local Testing
 
 The package includes Docker/SAM CLI setups for local testing in `packages/express/docker/`. See that directory's documentation for details.
+
+## See Also
+
+- **`skill("streaming")`** - Full guide to `expressStreamHandler` and `createLambdaStreamHandler`

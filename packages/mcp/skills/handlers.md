@@ -1,6 +1,6 @@
 ---
 description: Overview of Jaypie handler patterns and lifecycle management
-related: lambda, express, fabric, services
+related: express, fabric, lambda, services, streaming, websockets
 ---
 
 # Jaypie Handlers
@@ -165,3 +165,8 @@ import { original } from "@jaypie/testkit";
 const { lambdaHandler } = original.lambda;
 const { expressHandler } = original.express;
 ```
+
+## See Also
+
+- **`skill("streaming")`** - Response streaming with SSE and NLJSON for real-time data delivery
+- **`skill("websockets")`** - WebSocket APIs for bidirectional real-time communication

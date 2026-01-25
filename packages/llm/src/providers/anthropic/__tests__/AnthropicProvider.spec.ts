@@ -535,9 +535,11 @@ describe("AnthropicProvider", () => {
           name: z.string(),
         });
 
-        await expect(provider.operate("Hello, World", {
+        await expect(
+          provider.operate("Hello, World", {
             format: GreetingFormat,
-          })).rejects.toThrowError("Model returned invalid JSON");
+          }),
+        ).rejects.toThrowError("Model returned invalid JSON");
       });
 
       it("sets tool_choice to 'any' when structured output is requested", async () => {

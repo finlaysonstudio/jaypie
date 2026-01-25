@@ -320,9 +320,9 @@ describe("Llm Class", () => {
           fallback: [{ provider: PROVIDER.ANTHROPIC.NAME }],
         });
 
-        await expect(
-          llm.operate("test", { fallback: false }),
-        ).rejects.toThrow("Primary failed");
+        await expect(llm.operate("test", { fallback: false })).rejects.toThrow(
+          "Primary failed",
+        );
         expect(anthropicOperateMock).not.toHaveBeenCalled();
       });
     });

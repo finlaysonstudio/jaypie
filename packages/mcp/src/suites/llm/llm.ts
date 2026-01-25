@@ -2,7 +2,7 @@
  * LLM debugging utilities for inspecting raw provider responses
  */
 
-import { Llm } from "@jaypie/llm";
+import { LLM, Llm } from "@jaypie/llm";
 
 export type LlmProvider = "anthropic" | "gemini" | "openai" | "openrouter";
 
@@ -32,17 +32,10 @@ interface Logger {
 
 // Default models for each provider
 const DEFAULT_MODELS: Record<LlmProvider, string> = {
-  anthropic: "claude-sonnet-4-20250514",
-  gemini: "gemini-2.0-flash",
-  openai: "gpt-4o-mini",
-  openrouter: "openai/gpt-4o-mini",
-};
-
-// Reasoning-capable models for testing reasoning extraction
-export const REASONING_MODELS: Record<string, string> = {
-  "openai-o3-mini": "o3-mini",
-  "openai-o1-preview": "o1-preview",
-  "openai-o1-mini": "o1-mini",
+  anthropic: LLM.PROVIDER.ANTHROPIC.MODEL.SMALL,
+  gemini: LLM.PROVIDER.GEMINI.MODEL.SMALL,
+  openai: LLM.PROVIDER.OPENAI.MODEL.SMALL,
+  openrouter: LLM.PROVIDER.OPENROUTER.MODEL.SMALL,
 };
 
 /**
@@ -102,40 +95,4 @@ export async function debugLlmCall(
       error: error instanceof Error ? error.message : String(error),
     };
   }
-}
-
-/**
- * List available providers and their default/reasoning models
- */
-export function listLlmProviders(): {
-  providers: Array<{
-    name: LlmProvider;
-    defaultModel: string;
-    reasoningModels: string[];
-  }>;
-} {
-  return {
-    providers: [
-      {
-        name: "openai",
-        defaultModel: DEFAULT_MODELS.openai,
-        reasoningModels: ["o3-mini", "o1-preview", "o1-mini"],
-      },
-      {
-        name: "anthropic",
-        defaultModel: DEFAULT_MODELS.anthropic,
-        reasoningModels: [], // Anthropic doesn't expose reasoning the same way
-      },
-      {
-        name: "gemini",
-        defaultModel: DEFAULT_MODELS.gemini,
-        reasoningModels: [], // Gemini has thoughtsTokenCount but unclear on content
-      },
-      {
-        name: "openrouter",
-        defaultModel: DEFAULT_MODELS.openrouter,
-        reasoningModels: ["openai/o3-mini", "openai/o1-preview"],
-      },
-    ],
-  };
 }
