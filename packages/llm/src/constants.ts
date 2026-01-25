@@ -13,9 +13,9 @@ const FIRST_CLASS_PROVIDER = {
   },
   OPENAI: {
     DEFAULT: "gpt-5.2" as const,
-    LARGE: "gpt-5.2" as const,
-    SMALL: "gpt-5.2-mini" as const,
-    TINY: "gpt-5.2-nano" as const,
+    LARGE: "gpt-5.2-pro" as const,
+    SMALL: "gpt-5-mini" as const,
+    TINY: "gpt-5-nano" as const,
   },
   OPENROUTER: {
     DEFAULT: "z-ai/glm-4.7" as const,
