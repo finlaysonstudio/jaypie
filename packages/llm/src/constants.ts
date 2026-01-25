@@ -32,10 +32,10 @@ export const PROVIDER = {
     // The model format is: provider/model-name (e.g., "openai/gpt-4", "anthropic/claude-3-opus")
     MODEL: {
       // Default uses env var OPENROUTER_MODEL if set, otherwise a reasonable default
-      DEFAULT: "z-ai/glm-4.7" as const,
-      SMALL: "z-ai/glm-4.7" as const,
-      LARGE: "z-ai/glm-4.7" as const,
-      TINY: "z-ai/glm-4.7" as const,
+      DEFAULT: FIRST_CLASS_PROVIDER.OPENROUTER.DEFAULT,
+      LARGE: FIRST_CLASS_PROVIDER.OPENROUTER.LARGE,
+      SMALL: FIRST_CLASS_PROVIDER.OPENROUTER.SMALL,
+      TINY: FIRST_CLASS_PROVIDER.OPENROUTER.TINY,
     },
     MODEL_MATCH_WORDS: ["openrouter"] as const,
     NAME: "openrouter" as const,
@@ -49,10 +49,10 @@ export const PROVIDER = {
   GEMINI: {
     // https://ai.google.dev/gemini-api/docs/models
     MODEL: {
-      DEFAULT: "gemini-3-pro-preview" as const,
-      LARGE: "gemini-3-pro-preview" as const,
-      SMALL: "gemini-3-flash-preview" as const,
-      TINY: "gemini-3-flash-preview" as const,
+      DEFAULT: FIRST_CLASS_PROVIDER.GEMINI.DEFAULT,
+      LARGE: FIRST_CLASS_PROVIDER.GEMINI.LARGE,
+      SMALL: FIRST_CLASS_PROVIDER.GEMINI.SMALL,
+      TINY: FIRST_CLASS_PROVIDER.GEMINI.TINY,
     },
     MODEL_MATCH_WORDS: ["gemini", "google"] as const,
     NAME: "gemini" as const,
@@ -64,10 +64,10 @@ export const PROVIDER = {
   ANTHROPIC: {
     // https://docs.anthropic.com/en/docs/about-claude/models/overview
     MODEL: {
-      DEFAULT: "claude-sonnet-4-5" as const,
-      LARGE: "claude-opus-4-5" as const,
-      SMALL: "claude-sonnet-4-5" as const,
-      TINY: "claude-haiku-4-5" as const,
+      DEFAULT: FIRST_CLASS_PROVIDER.ANTHROPIC.DEFAULT,
+      LARGE: FIRST_CLASS_PROVIDER.ANTHROPIC.LARGE,
+      SMALL: FIRST_CLASS_PROVIDER.ANTHROPIC.SMALL,
+      TINY: FIRST_CLASS_PROVIDER.ANTHROPIC.TINY,
     },
     MODEL_MATCH_WORDS: [
       "anthropic",
@@ -96,10 +96,10 @@ export const PROVIDER = {
   OPENAI: {
     // https://platform.openai.com/docs/models
     MODEL: {
-      DEFAULT: "gpt-5.1" as const,
-      LARGE: "gpt-5.1" as const,
-      SMALL: "gpt-5.1-mini" as const,
-      TINY: "gpt-5.1-nano" as const,
+      DEFAULT: FIRST_CLASS_PROVIDER.OPENAI.DEFAULT,
+      LARGE: FIRST_CLASS_PROVIDER.OPENAI.LARGE,
+      SMALL: FIRST_CLASS_PROVIDER.OPENAI.SMALL,
+      TINY: FIRST_CLASS_PROVIDER.OPENAI.TINY,
     },
     MODEL_MATCH_WORDS: ["openai", "gpt", /^o\d/],
     NAME: "openai" as const,

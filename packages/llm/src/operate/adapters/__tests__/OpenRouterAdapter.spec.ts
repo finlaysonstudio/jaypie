@@ -59,7 +59,7 @@ describe("OpenRouterAdapter", () => {
     describe("buildRequest", () => {
       it("builds basic request", () => {
         const request: OperateRequest = {
-          model: "openai/gpt-4",
+          model: PROVIDER.OPENROUTER.MODEL.DEFAULT,
           messages: [
             {
               content: "Hello",
@@ -71,13 +71,13 @@ describe("OpenRouterAdapter", () => {
 
         const result = openRouterAdapter.buildRequest(request);
 
-        expect(result.model).toBe("openai/gpt-4");
+        expect(result.model).toBe(PROVIDER.OPENROUTER.MODEL.DEFAULT);
         expect(result.messages).toHaveLength(1);
       });
 
       it("includes system message when provided", () => {
         const request: OperateRequest = {
-          model: "openai/gpt-4",
+          model: PROVIDER.OPENROUTER.MODEL.DEFAULT,
           messages: [
             {
               content: "Hello",
@@ -96,7 +96,7 @@ describe("OpenRouterAdapter", () => {
 
       it("appends instructions to last message", () => {
         const request: OperateRequest = {
-          model: "openai/gpt-4",
+          model: PROVIDER.OPENROUTER.MODEL.DEFAULT,
           messages: [
             {
               content: "Hello",
@@ -115,7 +115,7 @@ describe("OpenRouterAdapter", () => {
 
       it("includes tools when provided", () => {
         const request: OperateRequest = {
-          model: "openai/gpt-4",
+          model: PROVIDER.OPENROUTER.MODEL.DEFAULT,
           messages: [],
           tools: [
             {
@@ -136,7 +136,7 @@ describe("OpenRouterAdapter", () => {
 
       it("includes user when provided", () => {
         const request: OperateRequest = {
-          model: "openai/gpt-4",
+          model: PROVIDER.OPENROUTER.MODEL.DEFAULT,
           messages: [],
           user: "user-123",
         };
@@ -151,7 +151,7 @@ describe("OpenRouterAdapter", () => {
       it("parses response with text content", () => {
         const response = {
           id: "resp-123",
-          model: "openai/gpt-4",
+          model: PROVIDER.OPENROUTER.MODEL.DEFAULT,
           choices: [
             {
               index: 0,
@@ -179,7 +179,7 @@ describe("OpenRouterAdapter", () => {
       it("detects tool use", () => {
         const response = {
           id: "resp-123",
-          model: "openai/gpt-4",
+          model: PROVIDER.OPENROUTER.MODEL.DEFAULT,
           choices: [
             {
               index: 0,
@@ -214,7 +214,7 @@ describe("OpenRouterAdapter", () => {
       it("extracts tool calls from response", () => {
         const response = {
           id: "resp-123",
-          model: "openai/gpt-4",
+          model: PROVIDER.OPENROUTER.MODEL.DEFAULT,
           choices: [
             {
               index: 0,
@@ -248,7 +248,7 @@ describe("OpenRouterAdapter", () => {
       it("returns empty array when no tool calls", () => {
         const response = {
           id: "resp-123",
-          model: "openai/gpt-4",
+          model: PROVIDER.OPENROUTER.MODEL.DEFAULT,
           choices: [
             {
               index: 0,
@@ -277,20 +277,26 @@ describe("OpenRouterAdapter", () => {
           },
         };
 
-        const result = openRouterAdapter.extractUsage(response, "openai/gpt-4");
+        const result = openRouterAdapter.extractUsage(
+          response,
+          PROVIDER.OPENROUTER.MODEL.DEFAULT,
+        );
 
         expect(result.input).toBe(100);
         expect(result.output).toBe(200);
         expect(result.total).toBe(300);
         expect(result.reasoning).toBe(0);
         expect(result.provider).toBe(PROVIDER.OPENROUTER.NAME);
-        expect(result.model).toBe("openai/gpt-4");
+        expect(result.model).toBe(PROVIDER.OPENROUTER.MODEL.DEFAULT);
       });
 
       it("returns zeros when usage is missing", () => {
         const response = {};
 
-        const result = openRouterAdapter.extractUsage(response, "openai/gpt-4");
+        const result = openRouterAdapter.extractUsage(
+          response,
+          PROVIDER.OPENROUTER.MODEL.DEFAULT,
+        );
 
         expect(result.input).toBe(0);
         expect(result.output).toBe(0);
@@ -367,7 +373,7 @@ describe("OpenRouterAdapter", () => {
     describe("appendToolResult", () => {
       it("appends assistant message and tool result", () => {
         const request = {
-          model: "openai/gpt-4",
+          model: PROVIDER.OPENROUTER.MODEL.DEFAULT,
           messages: [{ role: "user", content: "Hello" }],
         };
         const toolCall = {
@@ -724,7 +730,7 @@ describe("OpenRouterAdapter", () => {
 
     it("sets tool_choice to auto (many OpenRouter models don't support required)", () => {
       const request: OperateRequest = {
-        model: "openai/gpt-4",
+        model: PROVIDER.OPENROUTER.MODEL.DEFAULT,
         messages: [],
         tools: [
           {
@@ -775,7 +781,7 @@ describe("OpenRouterAdapter", () => {
 
     it("converts messages with different roles correctly", () => {
       const request: OperateRequest = {
-        model: "openai/gpt-4",
+        model: PROVIDER.OPENROUTER.MODEL.DEFAULT,
         messages: [
           {
             content: "System prompt",

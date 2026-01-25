@@ -133,7 +133,7 @@ describe("OpenAiAdapter", () => {
     describe("buildRequest", () => {
       it("builds basic request", () => {
         const request: OperateRequest = {
-          model: "gpt-5",
+          model: PROVIDER.OPENAI.MODEL.LARGE,
           messages: [
             {
               content: "Hello",
@@ -148,13 +148,13 @@ describe("OpenAiAdapter", () => {
           unknown
         >;
 
-        expect(result.model).toBe("gpt-5");
+        expect(result.model).toBe(PROVIDER.OPENAI.MODEL.LARGE);
         expect(result.input).toEqual(request.messages);
       });
 
       it("includes user when provided", () => {
         const request: OperateRequest = {
-          model: "gpt-5",
+          model: PROVIDER.OPENAI.MODEL.LARGE,
           messages: [],
           user: "test-user",
         };
@@ -169,7 +169,7 @@ describe("OpenAiAdapter", () => {
 
       it("includes instructions when provided", () => {
         const request: OperateRequest = {
-          model: "gpt-5",
+          model: PROVIDER.OPENAI.MODEL.LARGE,
           messages: [],
           instructions: "Be helpful",
         };
@@ -184,7 +184,7 @@ describe("OpenAiAdapter", () => {
 
       it("includes tools when provided", () => {
         const request: OperateRequest = {
-          model: "gpt-5",
+          model: PROVIDER.OPENAI.MODEL.LARGE,
           messages: [],
           tools: [
             {
@@ -299,20 +299,26 @@ describe("OpenAiAdapter", () => {
           },
         };
 
-        const result = openAiAdapter.extractUsage(response, "gpt-5");
+        const result = openAiAdapter.extractUsage(
+          response,
+          PROVIDER.OPENAI.MODEL.LARGE,
+        );
 
         expect(result.input).toBe(100);
         expect(result.output).toBe(200);
         expect(result.total).toBe(300);
         expect(result.reasoning).toBe(50);
         expect(result.provider).toBe(PROVIDER.OPENAI.NAME);
-        expect(result.model).toBe("gpt-5");
+        expect(result.model).toBe(PROVIDER.OPENAI.MODEL.LARGE);
       });
 
       it("handles missing usage", () => {
         const response = {};
 
-        const result = openAiAdapter.extractUsage(response, "gpt-5");
+        const result = openAiAdapter.extractUsage(
+          response,
+          PROVIDER.OPENAI.MODEL.LARGE,
+        );
 
         expect(result.input).toBe(0);
         expect(result.output).toBe(0);

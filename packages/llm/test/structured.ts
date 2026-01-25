@@ -1,7 +1,7 @@
 /* eslint-disable no-console */
 import { config } from "dotenv";
 
-import { Llm } from "../src/index.js";
+import { LLM, Llm } from "../src/index.js";
 
 config();
 
@@ -18,10 +18,10 @@ const REQUEST =
 
 // Models to test for each provider
 const MODELS = {
-  anthropic: "claude-sonnet-4-20250514",
-  gemini: "gemini-2.0-flash",
-  openai: "gpt-4o-mini",
-  openrouter: "openai/gpt-4o-mini",
+  anthropic: LLM.PROVIDER.ANTHROPIC.MODEL.SMALL,
+  gemini: LLM.PROVIDER.GEMINI.MODEL.SMALL,
+  openai: LLM.PROVIDER.OPENAI.MODEL.SMALL,
+  openrouter: LLM.PROVIDER.OPENROUTER.MODEL.SMALL,
 } as const;
 
 // Natural schema format for structured output

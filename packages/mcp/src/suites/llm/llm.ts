@@ -2,7 +2,7 @@
  * LLM debugging utilities for inspecting raw provider responses
  */
 
-import { Llm } from "@jaypie/llm";
+import { LLM, Llm } from "@jaypie/llm";
 
 export type LlmProvider = "anthropic" | "gemini" | "openai" | "openrouter";
 
@@ -32,10 +32,10 @@ interface Logger {
 
 // Default models for each provider
 const DEFAULT_MODELS: Record<LlmProvider, string> = {
-  anthropic: "claude-sonnet-4-20250514",
-  gemini: "gemini-2.0-flash",
-  openai: "gpt-4o-mini",
-  openrouter: "openai/gpt-4o-mini",
+  anthropic: LLM.PROVIDER.ANTHROPIC.MODEL.SMALL,
+  gemini: LLM.PROVIDER.GEMINI.MODEL.SMALL,
+  openai: LLM.PROVIDER.OPENAI.MODEL.SMALL,
+  openrouter: LLM.PROVIDER.OPENROUTER.MODEL.SMALL,
 };
 
 // Reasoning-capable models for testing reasoning extraction
