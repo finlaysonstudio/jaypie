@@ -1,3 +1,30 @@
+const FIRST_CLASS_PROVIDER = {
+  ANTHROPIC: {
+    DEFAULT: "claude-sonnet-4-5" as const,
+    LARGE: "claude-opus-4-5" as const,
+    SMALL: "claude-sonnet-4-5" as const,
+    TINY: "claude-haiku-4-5" as const,
+  },
+  GEMINI: {
+    DEFAULT: "gemini-3-pro-preview" as const,
+    LARGE: "gemini-3-pro-preview" as const,
+    SMALL: "gemini-3-flash-preview" as const,
+    TINY: "gemini-3-flash-preview" as const,
+  },
+  OPENAI: {
+    DEFAULT: "gpt-5.2" as const,
+    LARGE: "gpt-5.2" as const,
+    SMALL: "gpt-5.2-mini" as const,
+    TINY: "gpt-5.2-nano" as const,
+  },
+  OPENROUTER: {
+    DEFAULT: "z-ai/glm-4.7" as const,
+    LARGE: "z-ai/glm-4.7" as const,
+    SMALL: "z-ai/glm-4.7" as const,
+    TINY: "z-ai/glm-4.7" as const,
+  },
+};
+
 export const PROVIDER = {
   OPENROUTER: {
     // https://openrouter.ai/models
