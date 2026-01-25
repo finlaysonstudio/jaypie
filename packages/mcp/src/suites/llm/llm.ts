@@ -40,9 +40,9 @@ const DEFAULT_MODELS: Record<LlmProvider, string> = {
 
 // Reasoning-capable models for testing reasoning extraction
 export const REASONING_MODELS: Record<string, string> = {
-  "openai-o3-mini": "o3-mini",
-  "openai-o1-preview": "o1-preview",
   "openai-o1-mini": "o1-mini",
+  "openai-o1-preview": "o1-preview",
+  "openai-o3-mini": "o3-mini",
 };
 
 /**
@@ -117,11 +117,6 @@ export function listLlmProviders(): {
   return {
     providers: [
       {
-        name: "openai",
-        defaultModel: DEFAULT_MODELS.openai,
-        reasoningModels: ["o3-mini", "o1-preview", "o1-mini"],
-      },
-      {
         name: "anthropic",
         defaultModel: DEFAULT_MODELS.anthropic,
         reasoningModels: [], // Anthropic doesn't expose reasoning the same way
@@ -130,6 +125,11 @@ export function listLlmProviders(): {
         name: "gemini",
         defaultModel: DEFAULT_MODELS.gemini,
         reasoningModels: [], // Gemini has thoughtsTokenCount but unclear on content
+      },
+      {
+        name: "openai",
+        defaultModel: DEFAULT_MODELS.openai,
+        reasoningModels: ["o1-mini", "o1-preview", "o3-mini"],
       },
       {
         name: "openrouter",
