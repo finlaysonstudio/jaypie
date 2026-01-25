@@ -6,7 +6,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { debugLlmCall, listLlmProviders, type LlmProvider } from "./llm.js";
+import { debugLlmCall, type LlmProvider } from "./llm.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -30,7 +30,7 @@ interface LlmInput {
 export const llmService = fabricService({
   alias: "llm",
   description:
-    "Debug LLM provider responses. Commands: list_providers, debug_call. Call with no args for help.",
+    "Debug LLM provider responses. Commands: debug_call. Call with no args for help.",
   input: {
     command: {
       description: "Command to execute (omit for help)",
@@ -57,10 +57,6 @@ export const llmService = fabricService({
     const p = params || {};
 
     switch (command) {
-      case "list_providers": {
-        return listLlmProviders();
-      }
-
       case "debug_call": {
         if (!p.provider) throw new Error("provider is required");
         if (!p.message) throw new Error("message is required");
