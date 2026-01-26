@@ -4,7 +4,7 @@ Guide the Jaypie merge process.
 
 1. Run a clean NPM Check workflow
 2. Create PR
-3. Merge once checks pass
+3. Merge once checks pass (use `--merge`, not `--squash`)
 4. Run a clean NPM Deploy workflow
 
 ## Clean NPM Check
