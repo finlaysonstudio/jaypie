@@ -1,3 +1,4 @@
+import { Stack } from "aws-cdk-lib";
 import * as dynamodb from "aws-cdk-lib/aws-dynamodb";
 import { IHostedZone } from "aws-cdk-lib/aws-route53";
 import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
@@ -104,7 +105,8 @@ export class JaypieNextJs extends Construct {
     const paramsAndSecrets = resolveParamsAndSecrets();
 
     // Resolve secrets from mixed array (strings and JaypieEnvSecret instances)
-    const secrets = resolveSecrets(scope, props?.secrets);
+    // Use Stack.of(this) to ensure secrets are shared at stack level across all constructs
+    const secrets = resolveSecrets(Stack.of(this), props?.secrets);
 
     // Process secrets environment variables
     const secretsEnvironment = Object.entries(envSecrets).reduce(
