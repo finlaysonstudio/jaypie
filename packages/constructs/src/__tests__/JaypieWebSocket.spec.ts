@@ -189,7 +189,7 @@ describe("JaypieWebSocket", () => {
   });
 
   describe("grantManageConnections", () => {
-    it("Grants execute-api:ManageConnections with @connections path", () => {
+    it("Grants execute-api:ManageConnections with @connections path for all methods", () => {
       const stack = createTestStack();
       const handler = createTestLambda(stack, "Handler");
 
@@ -205,10 +205,12 @@ describe("JaypieWebSocket", () => {
       expect(statement.Action).toBe("execute-api:ManageConnections");
       expect(statement.Effect).toBe("Allow");
 
-      // Verify the ARN includes @connections path
+      // Verify the ARN includes @connections path for all stages and methods
+      // CDK's grantManageConnections uses: arn:...:api-id/*/*/@connections/*
+      // (first /* for stage, second /* for method)
       const resourceArn = statement.Resource["Fn::Join"][1];
       const arnSuffix = resourceArn[resourceArn.length - 1];
-      expect(arnSuffix).toBe("/production/POST/@connections/*");
+      expect(arnSuffix).toBe("/*/*/@connections/*");
     });
   });
 });
