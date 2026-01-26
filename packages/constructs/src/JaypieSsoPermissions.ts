@@ -293,6 +293,7 @@ export class JaypieSsoPermissions extends Construct {
                 "cloudformation:*",
                 "cloudwatch:*",
                 "cost-optimization-hub:*",
+                "dynamodb:*",
                 "ec2:*",
                 "iam:Get*",
                 "iam:List*",

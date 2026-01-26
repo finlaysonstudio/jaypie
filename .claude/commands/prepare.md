@@ -13,3 +13,7 @@ Be sure to update impacted documentation for anything changed in this branch:
 * Any relevant skills in packages/mcp/skills/
 * Release notes in packages/mcp/release-notes/ for version bumps
 * Any relevant documentation in stacks/documentation/docs/
+
+3. Request to Shepard Deploy
+
+If approved, follow `/shepherd` process to merge and monitor
