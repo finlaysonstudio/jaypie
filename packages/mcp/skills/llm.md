@@ -142,6 +142,27 @@ const greetTool = fabricLlmTool(greetService);
 const toolkit = new Toolkit([greetTool]);
 ```
 
+### Explain Mode
+
+Explain mode adds transparency to tool calling by requiring the LLM to state its reasoning when invoking tools.
+
+```typescript
+// Enable via Toolkit constructor
+const toolkit = new Toolkit([myTool], { explain: true });
+
+// Or via operate options
+const response = await Llm.operate("What's the weather?", {
+  model: "gpt-5.1",
+  tools: myTools,
+  explain: true,
+});
+```
+
+When enabled:
+- Each tool receives an `__Explanation` parameter requiring the model to state why it's calling the tool
+- The explanation is stripped before the tool executes (tools receive clean arguments)
+- Useful for debugging and understanding LLM decision-making
+
 ## Structured Output
 
 ### Natural Schema
