@@ -81,7 +81,8 @@ Provider Class → OperateLoop → ProviderAdapter → Provider API
 ### Key Components
 
 - **Llm** (`Llm.ts`): Main facade that auto-selects provider based on model name
-- **OperateLoop** (`operate/OperateLoop.ts`): Handles multi-turn conversations, tool execution, retry logic
+- **OperateLoop** (`operate/OperateLoop.ts`): Handles multi-turn conversations, tool execution, retry logic (non-streaming)
+- **StreamLoop** (`operate/StreamLoop.ts`): Streaming variant with automatic tool execution (yields chunks as they arrive)
 - **ProviderAdapter** (`operate/adapters/`): Translates between standardized format and provider APIs
 - **Toolkit** (`tools/Toolkit.class.ts`): Container for LlmTool definitions with call execution
 
@@ -155,11 +156,70 @@ const response = await Llm.operate("What's the weather in NYC?", {
 });
 ```
 
-### Streaming
+### Streaming with Automatic Tool Execution
+
+The `stream()` method provides real-time streaming while **automatically executing tools** - combining the responsiveness of streaming with the full tool-calling lifecycle of `operate()`.
 
 ```typescript
+import Llm, { Toolkit, LlmStreamChunkType } from "@jaypie/llm";
+
+const toolkit = new Toolkit([
+  {
+    name: "get_weather",
+    description: "Get current weather",
+    parameters: { type: "object", properties: { city: { type: "string" } } },
+    call: async ({ city }) => `Weather in ${city}: sunny, 72°F`,
+  },
+]);
+
+// Stream with tools - tools are executed automatically
+for await (const chunk of Llm.stream("What's the weather in NYC?", { tools: toolkit })) {
+  switch (chunk.type) {
+    case LlmStreamChunkType.Text:
+      // Real-time text as tokens arrive
+      process.stdout.write(chunk.content);
+      break;
+    case LlmStreamChunkType.ToolCall:
+      // Tool was requested (informational - already being executed)
+      console.log(`\n[Calling ${chunk.toolCall.name}...]`);
+      break;
+    case LlmStreamChunkType.ToolResult:
+      // Tool finished executing
+      console.log(`[Result: ${JSON.stringify(chunk.toolResult.result)}]`);
+      break;
+    case LlmStreamChunkType.Done:
+      // Stream complete, usage available
+      console.log(`\n[Tokens: ${chunk.usage.reduce((sum, u) => sum + u.total, 0)}]`);
+      break;
+    case LlmStreamChunkType.Error:
+      console.error(`Error: ${chunk.error.title}`);
+      break;
+  }
+}
+```
+
+**Key behaviors:**
+- Text chunks stream in real-time as tokens are generated
+- When the LLM requests a tool, `stream()` executes it automatically
+- Tool results are fed back to the LLM and streaming continues
+- Multi-turn conversations work seamlessly (use `turns` option)
+- All lifecycle hooks (`beforeEachTool`, `afterEachTool`, etc.) are supported
+
+**Stream chunk types:**
+| Type | Description |
+|------|-------------|
+| `text` | Streamed text content |
+| `tool_call` | LLM requested a tool (informational) |
+| `tool_result` | Tool execution completed |
+| `done` | Stream finished with usage stats |
+| `error` | Error occurred |
+
+**Simple streaming (no tools):**
+```typescript
 for await (const chunk of Llm.stream("Tell me a story")) {
-  console.log(chunk);
+  if (chunk.type === LlmStreamChunkType.Text) {
+    process.stdout.write(chunk.content);
+  }
 }
 ```
 
