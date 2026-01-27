@@ -1,10 +1,12 @@
-import { Stack } from "aws-cdk-lib";
+import { Duration, Stack } from "aws-cdk-lib";
 import * as dynamodb from "aws-cdk-lib/aws-dynamodb";
 import { IHostedZone } from "aws-cdk-lib/aws-route53";
 import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
 import { Nextjs } from "cdk-nextjs-standalone";
 import { Construct } from "constructs";
 import * as path from "path";
+
+import { CDK } from "./constants";
 
 import {
   addDatadogLayers,
@@ -178,11 +180,13 @@ export class JaypieNextJs extends Construct {
         nextjsImage: {
           functionProps: {
             paramsAndSecrets,
+            timeout: Duration.seconds(CDK.DURATION.LAMBDA_WORKER),
           },
         },
         nextjsServer: {
           functionProps: {
             paramsAndSecrets,
+            timeout: Duration.seconds(CDK.DURATION.LAMBDA_WORKER),
           },
         },
       },
