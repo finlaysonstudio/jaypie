@@ -148,22 +148,64 @@ export class AnthropicAdapter extends BaseProviderAdapter {
 
   buildRequest(request: OperateRequest): Anthropic.MessageCreateParams {
     // Convert messages to Anthropic format
-    // Filter out system messages - Anthropic only accepts system as a top-level field
-    const messages: Anthropic.MessageParam[] = request.messages
-      .filter((msg) => {
-        const role = (msg as { role?: string }).role;
-        return role !== "system";
-      })
-      .map((msg) => {
-        const typedMsg = msg as {
-          role: string;
-          content: string | LlmInputContent[];
-        };
-        return {
+    // Handle different message types: regular messages, function calls, and function outputs
+    const messages: Anthropic.MessageParam[] = [];
+
+    for (const msg of request.messages) {
+      const typedMsg = msg as {
+        type?: string;
+        role?: string;
+        content?: string | LlmInputContent[];
+        name?: string;
+        arguments?: string;
+        call_id?: string;
+        output?: string;
+      };
+
+      // Skip system messages - Anthropic only accepts system as a top-level field
+      if (typedMsg.role === "system") {
+        continue;
+      }
+
+      // Handle FunctionCall messages - convert to assistant message with tool_use
+      if (typedMsg.type === LlmMessageType.FunctionCall) {
+        messages.push({
+          role: "assistant",
+          content: [
+            {
+              type: "tool_use",
+              id: typedMsg.call_id || "",
+              name: typedMsg.name || "",
+              input: JSON.parse(typedMsg.arguments || "{}"),
+            },
+          ],
+        });
+        continue;
+      }
+
+      // Handle FunctionCallOutput messages - convert to user message with tool_result
+      if (typedMsg.type === LlmMessageType.FunctionCallOutput) {
+        messages.push({
+          role: "user",
+          content: [
+            {
+              type: "tool_result",
+              tool_use_id: typedMsg.call_id || "",
+              content: typedMsg.output || "",
+            },
+          ],
+        });
+        continue;
+      }
+
+      // Handle regular messages with role and content
+      if (typedMsg.role && typedMsg.content !== undefined) {
+        messages.push({
           role: typedMsg.role as "user" | "assistant",
           content: convertContentToAnthropic(typedMsg.content),
-        } as Anthropic.MessageParam;
-      });
+        } as Anthropic.MessageParam);
+      }
+    }
 
     // Append instructions to last message if provided
     if (request.instructions && messages.length > 0) {

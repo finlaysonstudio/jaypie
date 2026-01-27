@@ -22,6 +22,11 @@ Guide the Jaypie merge process.
 - Report once NPM Deploy finishes successfully
 - Report errors in other jobs but do not resolve unless asked
 
+## Prune Branches
+
+- Return to main, fetch, and pull
+- Delete the local and remote feature branches
+
 ## Known Issues
 
 Do not worry about Build Stacks to Development, Build Stacks to Sandbox, or Deploy Documentation Stack. These stacks are still in beta.

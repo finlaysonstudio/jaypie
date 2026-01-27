@@ -145,6 +145,77 @@ describe("OpenRouterAdapter", () => {
 
         expect(result.user).toBe("user-123");
       });
+
+      it("handles FunctionCall messages from StreamLoop (issue #165)", () => {
+        const request: OperateRequest = {
+          model: PROVIDER.OPENROUTER.MODEL.DEFAULT,
+          messages: [
+            {
+              role: LlmMessageRole.User,
+              content: "List items",
+              type: LlmMessageType.Message,
+            },
+            // This is how StreamLoop adds tool calls to history
+            {
+              type: LlmMessageType.FunctionCall,
+              name: "list_items",
+              arguments: "{}",
+              call_id: "call_123",
+              id: "call_123",
+            } as any,
+          ],
+        };
+
+        const result = openRouterAdapter.buildRequest(request);
+
+        expect(result.messages).toHaveLength(2);
+        expect(result.messages[0].role).toBe("user");
+        expect(result.messages[1].role).toBe("assistant");
+        expect(result.messages[1].toolCalls).toEqual([
+          {
+            id: "call_123",
+            type: "function",
+            function: {
+              name: "list_items",
+              arguments: "{}",
+            },
+          },
+        ]);
+      });
+
+      it("handles FunctionCallOutput messages from StreamLoop (issue #165)", () => {
+        const request: OperateRequest = {
+          model: PROVIDER.OPENROUTER.MODEL.DEFAULT,
+          messages: [
+            {
+              role: LlmMessageRole.User,
+              content: "List items",
+              type: LlmMessageType.Message,
+            },
+            {
+              type: LlmMessageType.FunctionCall,
+              name: "list_items",
+              arguments: "{}",
+              call_id: "call_123",
+              id: "call_123",
+            } as any,
+            // This is how StreamLoop adds tool results to history
+            {
+              type: LlmMessageType.FunctionCallOutput,
+              output: '{"items":[{"id":"1"}]}',
+              call_id: "call_123",
+              name: "list_items",
+            } as any,
+          ],
+        };
+
+        const result = openRouterAdapter.buildRequest(request);
+
+        expect(result.messages).toHaveLength(3);
+        expect(result.messages[2].role).toBe("tool");
+        expect(result.messages[2].toolCallId).toBe("call_123");
+        expect(result.messages[2].content).toBe('{"items":[{"id":"1"}]}');
+      });
     });
 
     describe("parseResponse", () => {
