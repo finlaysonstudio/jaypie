@@ -1,6 +1,6 @@
 {
   "name": "@jaypie/mcp",
-  "version": "0.6.6",
+  "version": "0.7.0",
   "description": "Jaypie MCP",
   "repository": {
     "type": "git",
@@ -41,6 +41,7 @@
   "dependencies": {
     "@jaypie/fabric": "*",
     "@jaypie/llm": "*",
+    "@jaypie/tildeskill": "*",
     "@modelcontextprotocol/sdk": "^1.17.0",
     "commander": "^14.0.0",
     "gray-matter": "^4.0.3",

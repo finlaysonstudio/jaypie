@@ -2,6 +2,12 @@
  * Docs Suite - Documentation services (skill, version, release_notes)
  */
 import { fabricService } from "@jaypie/fabric";
+import {
+  createMarkdownStore,
+  isValidAlias,
+  normalizeAlias,
+  type SkillRecord,
+} from "@jaypie/tildeskill";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -27,6 +33,9 @@ const RELEASE_NOTES_PATH = path.join(
 );
 const SKILLS_PATH = path.join(__dirname, "..", "..", "..", "skills");
 
+// Create skill store using tildeskill
+const skillStore = createMarkdownStore({ path: SKILLS_PATH });
+
 // =============================================================================
 // HELPER FUNCTIONS
 // =============================================================================
@@ -35,22 +44,6 @@ interface ReleaseNoteFrontMatter {
   date?: string;
   summary?: string;
   version?: string;
-}
-
-interface SkillFrontMatter {
-  description?: string;
-}
-
-function isValidSkillAlias(alias: string): boolean {
-  const normalized = alias.toLowerCase().trim();
-  if (
-    normalized.includes("/") ||
-    normalized.includes("\\") ||
-    normalized.includes("..")
-  ) {
-    return false;
-  }
-  return /^[a-z0-9_-]+$/.test(normalized);
 }
 
 async function parseReleaseNoteFile(filePath: string): Promise<{
@@ -101,33 +94,7 @@ function formatReleaseNoteListItem(note: {
   return parts.join(" ");
 }
 
-async function parseSkillFile(filePath: string): Promise<{
-  alias: string;
-  description?: string;
-}> {
-  try {
-    const content = await fs.readFile(filePath, "utf-8");
-    const alias = path.basename(filePath, ".md");
-
-    if (content.startsWith("---")) {
-      const parsed = matter(content);
-      const frontMatter = parsed.data as SkillFrontMatter;
-      return {
-        alias,
-        description: frontMatter.description,
-      };
-    }
-
-    return { alias };
-  } catch {
-    return { alias: path.basename(filePath, ".md") };
-  }
-}
-
-function formatSkillListItem(skill: {
-  alias: string;
-  description?: string;
-}): string {
+function formatSkillListItem(skill: SkillRecord): string {
   const { alias, description } = skill;
   if (description) {
     return `* ${alias} - ${description}`;
@@ -212,39 +179,22 @@ export const skillService = fabricService({
     },
   },
   service: async ({ alias: inputAlias }: { alias?: string }) => {
-    const alias = (inputAlias || "index").toLowerCase().trim();
+    const alias = normalizeAlias(inputAlias || "index");
 
-    if (!isValidSkillAlias(alias)) {
+    if (!isValidAlias(alias)) {
       throw new Error(
         `Invalid skill alias "${alias}". Use alphanumeric characters, hyphens, and underscores only.`,
       );
     }
 
     if (alias === "index") {
-      const indexPath = path.join(SKILLS_PATH, "index.md");
-      let indexContent = "";
+      // Get index content
+      const indexRecord = await skillStore.get("index");
+      const indexContent = indexRecord?.content || "";
 
-      try {
-        indexContent = await fs.readFile(indexPath, "utf-8");
-        if (indexContent.startsWith("---")) {
-          const parsed = matter(indexContent);
-          indexContent = parsed.content.trim();
-        }
-      } catch {
-        // Index file doesn't exist, will just show skill list
-      }
-
-      const files = await fs.readdir(SKILLS_PATH);
-      const mdFiles = files.filter(
-        (file) => file.endsWith(".md") && file !== "index.md",
-      );
-
-      const skills = await Promise.all(
-        mdFiles.map((file) => parseSkillFile(path.join(SKILLS_PATH, file))),
-      );
-
-      skills.sort((a, b) => a.alias.localeCompare(b.alias));
-
+      // List all skills except index
+      const allSkills = await skillStore.list();
+      const skills = allSkills.filter((s) => s.alias !== "index");
       const skillList = skills.map(formatSkillListItem).join("\n");
 
       if (indexContent) {
@@ -253,14 +203,16 @@ export const skillService = fabricService({
       return `# Jaypie Skills\n\n## Available Skills\n\n${skillList}`;
     }
 
-    const skillPath = path.join(SKILLS_PATH, `${alias}.md`);
-    try {
-      return await fs.readFile(skillPath, "utf-8");
-    } catch {
+    const skill = await skillStore.get(alias);
+    if (!skill) {
       throw new Error(
         `Skill "${alias}" not found. Use skill("index") to list available skills.`,
       );
     }
+
+    // Return raw file content for non-index skills (preserve frontmatter)
+    const skillPath = path.join(SKILLS_PATH, `${alias}.md`);
+    return fs.readFile(skillPath, "utf-8");
   },
 });
 

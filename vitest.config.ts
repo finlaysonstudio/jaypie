@@ -21,6 +21,7 @@ export default defineConfig({
       "packages/repokit",
       "packages/testkit",
       "packages/textract",
+      "packages/tildeskill",
     ],
   },
 });
