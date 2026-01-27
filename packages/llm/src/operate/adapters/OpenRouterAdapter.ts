@@ -818,6 +818,29 @@ export class OpenRouterAdapter extends BaseProviderAdapter {
             ),
           });
         }
+      } else if (message.type === LlmMessageType.FunctionCall) {
+        // Handle FunctionCall messages from StreamLoop (issue #165)
+        openRouterMessages.push({
+          role: "assistant",
+          content: null,
+          toolCalls: [
+            {
+              id: message.call_id as string,
+              type: "function" as const,
+              function: {
+                name: message.name as string,
+                arguments: (message.arguments as string) || "{}",
+              },
+            },
+          ],
+        });
+      } else if (message.type === LlmMessageType.FunctionCallOutput) {
+        // Handle FunctionCallOutput messages from StreamLoop (issue #165)
+        openRouterMessages.push({
+          role: "tool",
+          toolCallId: message.call_id as string,
+          content: (message.output as string) || "",
+        });
       }
     }
 

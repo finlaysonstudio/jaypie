@@ -205,6 +205,117 @@ describe("AnthropicAdapter", () => {
         expect(result.tools).toHaveLength(1);
         expect(result.tool_choice).toEqual({ type: "auto" });
       });
+
+      it("handles FunctionCall messages from StreamLoop (issue #165)", () => {
+        const request: OperateRequest = {
+          model: PROVIDER.ANTHROPIC.MODEL.LARGE,
+          messages: [
+            {
+              role: LlmMessageRole.User,
+              content: "List items",
+              type: LlmMessageType.Message,
+            },
+            // This is how StreamLoop adds tool calls to history
+            {
+              type: LlmMessageType.FunctionCall,
+              name: "list_items",
+              arguments: "{}",
+              call_id: "toolu_123",
+              id: "toolu_123",
+            } as any,
+          ],
+        };
+
+        const result = anthropicAdapter.buildRequest(request);
+
+        expect(result.messages).toHaveLength(2);
+        expect(result.messages[0].role).toBe("user");
+        expect(result.messages[1].role).toBe("assistant");
+        expect(result.messages[1].content).toEqual([
+          {
+            type: "tool_use",
+            id: "toolu_123",
+            name: "list_items",
+            input: {},
+          },
+        ]);
+      });
+
+      it("handles FunctionCallOutput messages from StreamLoop (issue #165)", () => {
+        const request: OperateRequest = {
+          model: PROVIDER.ANTHROPIC.MODEL.LARGE,
+          messages: [
+            {
+              role: LlmMessageRole.User,
+              content: "List items",
+              type: LlmMessageType.Message,
+            },
+            {
+              type: LlmMessageType.FunctionCall,
+              name: "list_items",
+              arguments: "{}",
+              call_id: "toolu_123",
+              id: "toolu_123",
+            } as any,
+            // This is how StreamLoop adds tool results to history
+            {
+              type: LlmMessageType.FunctionCallOutput,
+              output: '{"items":[{"id":"1","name":"test"}]}',
+              call_id: "toolu_123",
+              name: "list_items",
+            } as any,
+          ],
+        };
+
+        const result = anthropicAdapter.buildRequest(request);
+
+        expect(result.messages).toHaveLength(3);
+        expect(result.messages[2].role).toBe("user");
+        expect(result.messages[2].content).toEqual([
+          {
+            type: "tool_result",
+            tool_use_id: "toolu_123",
+            content: '{"items":[{"id":"1","name":"test"}]}',
+          },
+        ]);
+      });
+
+      it("handles complete multi-turn conversation with tools (issue #165)", () => {
+        const request: OperateRequest = {
+          model: PROVIDER.ANTHROPIC.MODEL.LARGE,
+          messages: [
+            {
+              role: LlmMessageRole.User,
+              content: "List items",
+              type: LlmMessageType.Message,
+            },
+            {
+              type: LlmMessageType.FunctionCall,
+              name: "list_items",
+              arguments: "{}",
+              call_id: "toolu_123",
+              id: "toolu_123",
+            } as any,
+            {
+              type: LlmMessageType.FunctionCallOutput,
+              output: '{"items":[{"id":"1"}]}',
+              call_id: "toolu_123",
+              name: "list_items",
+            } as any,
+          ],
+        };
+
+        // This should not throw "Cannot read properties of undefined (reading 'map')"
+        const result = anthropicAdapter.buildRequest(request);
+
+        expect(result.messages).toHaveLength(3);
+        // First message: user request
+        expect(result.messages[0].role).toBe("user");
+        // Second message: assistant tool use
+        expect(result.messages[1].role).toBe("assistant");
+        // Third message: user tool result
+        expect(result.messages[2].role).toBe("user");
+      });
     });
 
     describe("parseResponse", () => {
