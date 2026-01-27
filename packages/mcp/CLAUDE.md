@@ -132,7 +132,10 @@ Content...
 When adding new skills:
 1. Create `skills/<alias>.md` with lowercase alphanumeric alias (hyphens/underscores allowed)
 2. Add frontmatter with `description` and optionally `related` (comma-separated aliases)
-3. Skills are automatically available via `skill(alias)`
+3. Run `npm run build -w packages/mcp` to copy skills to dist
+4. Skills are then available via `skill(alias)`
+
+**Important**: Always rebuild after editing skills or release notes - files are copied to `dist/` during build.
 
 ## Release Notes Directory
 
@@ -164,7 +167,8 @@ summary: Consolidate 26 tools into 6 unified router-style tools
 When adding release notes:
 1. Create `release-notes/<package>/<version>.md` for each version bump
 2. Add frontmatter with `version`, `date`, and `summary`
-3. Notes are automatically available via `release_notes("list")` and `release_notes("read", ...)`
+3. Run `npm run build -w packages/mcp` to include new notes
+4. Notes are then available via `release_notes("list")` and `release_notes("read", ...)`
 
 ## Environment Variables
 
