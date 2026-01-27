@@ -62,6 +62,7 @@ export default {
     "@jaypie/fabric",
     "@jaypie/fabric/mcp",
     "@jaypie/llm",
+    "@jaypie/tildeskill",
     "@modelcontextprotocol/sdk/server/mcp.js",
     "@modelcontextprotocol/sdk/server/stdio.js",
     "@modelcontextprotocol/sdk/server/streamableHttp.js",
