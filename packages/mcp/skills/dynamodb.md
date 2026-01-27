@@ -147,3 +147,19 @@ describe("OrderService", () => {
 });
 ```
 
+## Migration: class to category (v0.4.0)
+
+Version 0.4.0 renamed `class` → `category` and `indexClass` → `indexCategory`.
+
+**If your table was created with an older version:**
+
+1. **Local dev**: Delete and recreate the table using MCP `createTable`
+2. **Production**: See `packages/dynamodb/CLAUDE.md` for migration script
+
+| Old | New |
+|-----|-----|
+| `class` | `category` |
+| `indexClass` | `indexCategory` |
+| `INDEX_CLASS` | `INDEX_CATEGORY` |
+| `queryByClass()` | `queryByCategory()` |
+

@@ -446,6 +446,83 @@ npm run lint      # Lint code
 npm run format    # Auto-fix lint issues
 ```
 
+## Migration Guide
+
+### Migrating from `class` to `category` (v0.4.0+)
+
+Version 0.4.0 renamed the `class` field to `category` and the `indexClass` GSI to `indexCategory`. If you have existing tables created with an older version, you have two options:
+
+#### Option 1: Recreate Table (Recommended for Development)
+
+```bash
+# Delete and recreate the local table
+AWS_ACCESS_KEY_ID=local AWS_SECRET_ACCESS_KEY=local \
+  aws dynamodb delete-table --table-name jaypie-local \
+  --endpoint-url http://127.0.0.1:8000
+
+# Use the MCP createTable tool or run:
+# The createTable MCP tool will create the table with correct GSIs
+```
+
+#### Option 2: Migrate Existing Table (Production)
+
+For production tables, you need to:
+
+1. **Create the new GSI** (`indexCategory`)
+2. **Backfill data** - copy `class` values to `category` and populate `indexCategory`
+3. **Update application code** to use `category` instead of `class`
+4. **Remove old GSI** (`indexClass`) after migration is complete
+
+```typescript
+// Example migration script
+import { DynamoDBClient, UpdateItemCommand } from "@aws-sdk/client-dynamodb";
+import { ScanCommand } from "@aws-sdk/lib-dynamodb";
+import { buildIndexCategory } from "@jaypie/dynamodb";
+
+async function migrateClassToCategory(tableName: string) {
+  const client = new DynamoDBClient({});
+
+  // Scan for items with 'class' field
+  const scanResult = await client.send(new ScanCommand({
+    TableName: tableName,
+    FilterExpression: "attribute_exists(#cls)",
+    ExpressionAttributeNames: { "#cls": "class" },
+  }));
+
+  for (const item of scanResult.Items ?? []) {
+    if (item.class && !item.category) {
+      // Copy class to category and build indexCategory
+      const indexCategory = buildIndexCategory(
+        item.scope,
+        item.model,
+        item.class
+      );
+
+      await client.send(new UpdateItemCommand({
+        TableName: tableName,
+        Key: { model: { S: item.model }, id: { S: item.id } },
+        UpdateExpression: "SET category = :cat, indexCategory = :idx REMOVE #cls",
+        ExpressionAttributeNames: { "#cls": "class" },
+        ExpressionAttributeValues: {
+          ":cat": { S: item.class },
+          ":idx": { S: indexCategory },
+        },
+      }));
+    }
+  }
+}
+```
+
+#### Field Mapping
+
+| Old (pre-0.4.0) | New (0.4.0+) |
+|-----------------|--------------|
+| `class` | `category` |
+| `indexClass` | `indexCategory` |
+| `INDEX_CLASS` | `INDEX_CATEGORY` |
+| `buildIndexClass()` | `buildIndexCategory()` |
+| `queryByClass()` | `queryByCategory()` |
+
 ## Dependencies
 
 - `@jaypie/fabric` - Index utilities (`APEX`, `SEPARATOR`, `calculateScope`, `buildCompositeKey`, `populateIndexKeys`)

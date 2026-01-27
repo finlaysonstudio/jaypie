@@ -2,7 +2,7 @@
 
 1. Version
 
-Check all subpackages edited on this branch had their version numbers patched. Patch any edited packages without version changes. If a dependency of `jaypie` is versioned, `jaypie`'s version should be updated.
+Check all subpackages edited on this branch had their version numbers patched. Patch any edited packages without version changes. If a dependency of `jaypie` is versioned, `jaypie`'s version should be updated. If `@jaypie/mcp` skills or release-notes are updated, patch `@jaypie/mcp`.
 
 2. Documentation and Skills
 
