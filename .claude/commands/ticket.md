@@ -1,6 +1,6 @@
 # 🎟️ Ticket
 
-Work on GitHub issue $ARGUMENTS
+Work GitHub issue
 
 1. Fetch the issue using GitHub MCP
 2. Validate: check it's not already fixed or invalid
@@ -8,8 +8,15 @@ Work on GitHub issue $ARGUMENTS
    - If not possible, discuss limitations in plan
 3. Investigate and propose a plan before implementing (skip plan if operator says "just fix it")
    - If the issue seems misguided or there's a better approach, say so
-4. Create branch `fix/issue-$ARGUMENTS` or `feat/issue-$ARGUMENTS` (skip on branches other than main)
+4. Create branch `fix/issue-NNN` or `feat/issue-NNN` (skip on branches other than main)
 5. Implement and verify
-6. Report results, propose running `/prepare`
+6. Report results, propose running `/prepare` unless directed to run prepare
+7. If the user says "shepherd" they want `/prepare` and `shepherd` run
 
 Do not commit or push unless told.
+
+## User Input
+
+<input>
+$ARGUMENTS
+</input>

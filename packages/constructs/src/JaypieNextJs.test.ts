@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { Stack, App } from "aws-cdk-lib";
+import { Duration, Stack, App } from "aws-cdk-lib";
+
+import { CDK } from "./constants";
 
 vi.mock("./helpers", () => ({
   addDatadogLayers: vi.fn(),
@@ -12,19 +14,23 @@ vi.mock("./helpers", () => ({
 }));
 
 const mockAddEnvironment = vi.fn();
+const mockNextjsConstructor = vi.fn();
 
 vi.mock("cdk-nextjs-standalone", () => ({
-  Nextjs: vi.fn().mockImplementation(() => ({
-    distribution: {
-      distributionDomain: "d123456789.cloudfront.net",
-    },
-    imageOptimizationFunction: {},
-    serverFunction: {
-      lambdaFunction: {
-        addEnvironment: mockAddEnvironment,
+  Nextjs: vi.fn().mockImplementation((...args) => {
+    mockNextjsConstructor(...args);
+    return {
+      distribution: {
+        distributionDomain: "d123456789.cloudfront.net",
       },
-    },
-  })),
+      imageOptimizationFunction: {},
+      serverFunction: {
+        lambdaFunction: {
+          addEnvironment: mockAddEnvironment,
+        },
+      },
+    };
+  }),
 }));
 
 import { JaypieNextJs } from "./JaypieNextJs";
@@ -36,6 +42,7 @@ describe("JaypieNextJs", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockNextjsConstructor.mockClear();
     originalEnv = process.env;
     process.env = { ...originalEnv };
     delete process.env.CDK_ENV_DATADOG_API_KEY_ARN;
@@ -107,5 +114,19 @@ describe("JaypieNextJs", () => {
       domainName: "custom.example.com",
     });
     expect(construct.domainName).toBe("custom.example.com");
+  });
+
+  it("should set 900 second timeout on server and image functions", () => {
+    new JaypieNextJs(stack, "NextjsConstruct");
+    expect(mockNextjsConstructor).toHaveBeenCalled();
+    const constructorArgs = mockNextjsConstructor.mock.calls[0];
+    const props = constructorArgs[2];
+    const expectedTimeout = Duration.seconds(CDK.DURATION.LAMBDA_WORKER);
+    expect(props.overrides.nextjsServer.functionProps.timeout).toEqual(
+      expectedTimeout,
+    );
+    expect(props.overrides.nextjsImage.functionProps.timeout).toEqual(
+      expectedTimeout,
+    );
   });
 });
