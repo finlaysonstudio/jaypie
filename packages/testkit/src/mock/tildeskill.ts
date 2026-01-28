@@ -7,6 +7,9 @@ import {
 import type { SkillRecord, SkillStore } from "@jaypie/tildeskill";
 
 // Core utilities
+export const expandIncludes = createMockFunction(
+  async (_store: SkillStore, record: SkillRecord) => record.content,
+);
 export const isValidAlias = createMockReturnedFunction(true);
 export const normalizeAlias = createMockFunction((alias: string) =>
   alias.toLowerCase().trim(),
@@ -23,39 +26,21 @@ export const validateAlias = createMockFunction((alias: string) =>
 );
 
 // Store factories
-function createMockStore(initial: SkillRecord[] = []): SkillStore {
-  const store = new Map<string, SkillRecord>();
-  for (const record of initial) {
-    store.set(record.alias.toLowerCase(), record);
-  }
-
+function createMockStore(): SkillStore {
   return {
     get: createMockResolvedFunction(null),
+    getByNickname: createMockResolvedFunction(null),
     list: createMockResolvedFunction([]),
     put: createMockResolvedFunction({
       alias: "mock",
       content: "# Mock",
     } as SkillRecord),
+    search: createMockResolvedFunction([]),
   };
 }
 
 export const createMarkdownStore = createMockFunction(() => createMockStore());
 export const createMemoryStore = createMockFunction(
-  (initial?: SkillRecord[]) => {
-    const store = new Map<string, SkillRecord>();
-    if (initial) {
-      for (const record of initial) {
-        store.set(record.alias.toLowerCase(), record);
-      }
-    }
-
-    return {
-      get: createMockResolvedFunction(null),
-      list: createMockResolvedFunction([]),
-      put: createMockResolvedFunction({
-        alias: "mock",
-        content: "# Mock",
-      } as SkillRecord),
-    } as SkillStore;
-  },
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  (_initial?: SkillRecord[]) => createMockStore(),
 );
