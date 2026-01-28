@@ -26,6 +26,7 @@ npm install @jaypie/tildeskill
 |--------|---------|
 | `createMarkdownStore` | File-based store (reads .md files) |
 | `createMemoryStore` | In-memory store (for testing) |
+| `expandIncludes` | Expand included skills into content |
 | `isValidAlias` | Check if alias is valid |
 | `validateAlias` | Validate and normalize alias (throws on invalid) |
 | `normalizeAlias` | Normalize alias to lowercase |
@@ -34,8 +35,9 @@ npm install @jaypie/tildeskill
 
 | Type | Description |
 |------|-------------|
-| `SkillRecord` | Skill document with alias, content, description, related |
-| `SkillStore` | Store interface with get, list, put methods |
+| `SkillRecord` | Skill document with alias, content, description, includes, name, nicknames, related, tags |
+| `SkillStore` | Store interface with get, getByNickname, list, put, search methods |
+| `ListFilter` | Filter options for list (namespace, tag) |
 
 ## Store Factories
 
@@ -79,6 +81,47 @@ const skill = await store.get("test");
 await store.put({ alias: "new", content: "# New Skill" });
 ```
 
+## Include Expansion
+
+Compose skills by including other skills' content:
+
+```typescript
+import { expandIncludes, createMemoryStore } from "@jaypie/tildeskill";
+
+const store = createMemoryStore([
+  { alias: "base", content: "Base content" },
+  { alias: "main", content: "Main content", includes: ["base"] },
+]);
+
+const record = await store.get("main");
+const expanded = await expandIncludes(store, record);
+// expanded = "Base content\n\nMain content"
+```
+
+Features:
+- Recursively expands nested includes
+- Prevents circular references
+- Skips missing includes silently
+
+## Filtering and Search
+
+```typescript
+// Filter by namespace prefix
+const kitSkills = await store.list({ namespace: "kit:" });
+
+// Filter by tag
+const cloudSkills = await store.list({ tag: "cloud" });
+
+// Combined filters
+const kitCloudSkills = await store.list({ namespace: "kit:", tag: "cloud" });
+
+// Search across alias, name, description, content, and tags
+const results = await store.search("lambda");
+
+// Lookup by nickname (alternate alias)
+const skill = await store.getByNickname("amazon");
+```
+
 ## Skill File Format
 
 Skill files use YAML frontmatter followed by markdown content:
@@ -86,7 +129,11 @@ Skill files use YAML frontmatter followed by markdown content:
 ```yaml
 ---
 description: Brief description shown in skill listings
+includes: base-skill, common-utils
+name: Display Title
+nicknames: alt-name, another-alias
 related: alias1, alias2, alias3
+tags: category1, category2
 ---
 
 # Skill Title
@@ -99,7 +146,13 @@ Markdown content with documentation, code examples, etc.
 | Field | Type | Description |
 |-------|------|-------------|
 | `description` | `string` | Brief description for listings |
+| `includes` | `string` | Comma-separated list of skills to auto-expand |
+| `name` | `string` | Display title for the skill |
+| `nicknames` | `string` | Comma-separated alternate lookup keys |
 | `related` | `string` | Comma-separated list of related skill aliases |
+| `tags` | `string` | Comma-separated categorization tags |
+
+All frontmatter fields accept either comma-separated strings or YAML arrays.
 
 ## Validation Utilities
 

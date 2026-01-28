@@ -13,6 +13,9 @@ This package provides a storage abstraction for skill/vocabulary documents with 
 - Loading skills from markdown files with YAML frontmatter
 - In-memory storage for testing
 - Consistent alias normalization and validation
+- Filtering by namespace and tags
+- Searching across alias, name, description, content, and tags
+- Include expansion for composable skills
 
 ## Installation
 
@@ -27,13 +30,24 @@ interface SkillRecord {
   alias: string;              // Lookup key (normalized lowercase)
   content: string;            // Markdown body
   description?: string;       // Brief description from frontmatter
+  includes?: string[];        // Auto-expand these skill aliases on lookup
+  name?: string;              // Display title for the skill
+  nicknames?: string[];       // Alternate lookup keys for getByNickname
   related?: string[];         // Related skill aliases
+  tags?: string[];            // Categorization tags
+}
+
+interface ListFilter {
+  namespace?: string;         // Namespace prefix matching (e.g., "kit:*")
+  tag?: string;               // Filter by tag
 }
 
 interface SkillStore {
   get(alias: string): Promise<SkillRecord | null>;
-  list(): Promise<SkillRecord[]>;
+  getByNickname(nickname: string): Promise<SkillRecord | null>;
+  list(filter?: ListFilter): Promise<SkillRecord[]>;
   put(record: SkillRecord): Promise<SkillRecord>;
+  search(term: string): Promise<SkillRecord[]>;
 }
 ```
 
@@ -69,6 +83,37 @@ const store = createMemoryStore([
 const skill = await store.get("test");
 ```
 
+## Include Expansion
+
+```typescript
+import { expandIncludes, createMemoryStore } from "@jaypie/tildeskill";
+
+const store = createMemoryStore([
+  { alias: "base", content: "Base content" },
+  { alias: "main", content: "Main content", includes: ["base"] },
+]);
+
+const record = await store.get("main");
+const expanded = await expandIncludes(store, record);
+// expanded = "Base content\n\nMain content"
+```
+
+## Filtering and Search
+
+```typescript
+// Filter by namespace prefix
+const kitSkills = await store.list({ namespace: "kit:" });
+
+// Filter by tag
+const cloudSkills = await store.list({ tag: "cloud" });
+
+// Search across alias, name, description, content, and tags
+const results = await store.search("lambda");
+
+// Lookup by nickname
+const skill = await store.getByNickname("amazon");
+```
+
 ## Validation Utilities
 
 ```typescript
@@ -93,13 +138,19 @@ Skill files use YAML frontmatter:
 ```yaml
 ---
 description: Brief description shown in listings
+includes: base-skill, common-utils
+name: Display Title
+nicknames: alt-name, another-alias
 related: alias1, alias2, alias3
+tags: category1, category2
 ---
 
 # Skill Title
 
 Markdown content...
 ```
+
+All frontmatter fields accept either comma-separated strings or YAML arrays.
 
 ## Testing with Mocks
 
