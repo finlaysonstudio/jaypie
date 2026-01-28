@@ -129,4 +129,22 @@ describe("JaypieNextJs", () => {
       expectedTimeout,
     );
   });
+
+  it("should pass streaming: true to Nextjs when streaming prop is true", () => {
+    new JaypieNextJs(stack, "NextjsConstruct", {
+      streaming: true,
+    });
+    expect(mockNextjsConstructor).toHaveBeenCalled();
+    const constructorArgs = mockNextjsConstructor.mock.calls[0];
+    const props = constructorArgs[2];
+    expect(props.streaming).toBe(true);
+  });
+
+  it("should not pass streaming prop to Nextjs when streaming is not specified", () => {
+    new JaypieNextJs(stack, "NextjsConstruct");
+    expect(mockNextjsConstructor).toHaveBeenCalled();
+    const constructorArgs = mockNextjsConstructor.mock.calls[0];
+    const props = constructorArgs[2];
+    expect(props.streaming).toBeUndefined();
+  });
 });

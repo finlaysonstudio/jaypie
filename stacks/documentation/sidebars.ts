@@ -60,6 +60,7 @@ const sidebars: SidebarsConfig = {
         "experimental/fabricator",
         "experimental/mcp",
         "experimental/textract",
+        "experimental/tildeskill",
       ],
     },
     {

@@ -1,6 +1,6 @@
 ---
 description: About the Jaypie skill system
-related: agents, index
+related: agents, index, tildeskill
 ---
 
 # Jaypie Skills

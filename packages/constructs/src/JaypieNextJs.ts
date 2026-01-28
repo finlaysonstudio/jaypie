@@ -46,12 +46,6 @@ export interface JaypieNextjsProps {
    */
   domainProps?: false;
   /**
-   * DynamoDB tables to grant read/write access to the Next.js server function.
-   * Each table is granted read/write access and if exactly one table is provided,
-   * the DYNAMODB_TABLE_NAME environment variable is set to the table name.
-   */
-  tables?: dynamodb.ITable[];
-  /**
    * Environment variables for the Next.js application.
    *
    * Supports both legacy object syntax and new array syntax:
@@ -73,6 +67,17 @@ export interface JaypieNextjsProps {
    *   (reuses existing secrets within the same scope)
    */
   secrets?: SecretsArrayItem[];
+  /**
+   * Enable response streaming for the Next.js server function.
+   * When true, enables Lambda response streaming for faster TTFB.
+   */
+  streaming?: boolean;
+  /**
+   * DynamoDB tables to grant read/write access to the Next.js server function.
+   * Each table is granted read/write access and if exactly one table is provided,
+   * the DYNAMODB_TABLE_NAME environment variable is set to the table name.
+   */
+  tables?: dynamodb.ITable[];
 }
 
 export class JaypieNextJs extends Construct {
@@ -159,6 +164,7 @@ export class JaypieNextJs extends Construct {
             }),
           },
         }),
+      ...(props?.streaming && { streaming: true }),
       environment: {
         ...jaypieLambdaEnv(),
         ...environment,

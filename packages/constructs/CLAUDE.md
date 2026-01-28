@@ -240,6 +240,13 @@ new JaypieNextJs(this, "MyApp", {
   nextjsPath: "../nextjs",
 });
 // Access via: https://d123456789.cloudfront.net
+
+// With response streaming enabled
+new JaypieNextJs(this, "MyApp", {
+  domainName: "app.example.com",
+  nextjsPath: "../nextjs",
+  streaming: true,  // Enables Lambda response streaming for faster TTFB
+});
 ```
 
 When `domainProps: false`, no Route53/certificate configuration is created and `NEXT_PUBLIC_SITE_URL` is automatically set to the CloudFront distribution URL.
