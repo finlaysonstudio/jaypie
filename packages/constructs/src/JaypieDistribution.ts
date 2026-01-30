@@ -218,6 +218,14 @@ export class JaypieDistribution
       } else if (this.isIOrigin(handler)) {
         origin = handler;
       }
+
+      // Set PROJECT_BASE_URL on the Lambda if host is resolved and handler supports it
+      if (host && this.isIFunction(handler) && "addEnvironment" in handler) {
+        (handler as lambda.Function).addEnvironment(
+          "PROJECT_BASE_URL",
+          `https://${host}`,
+        );
+      }
     }
 
     // Build default behavior

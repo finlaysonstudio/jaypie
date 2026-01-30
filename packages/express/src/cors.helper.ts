@@ -36,6 +36,39 @@ const ensureProtocol = (url: string | undefined): string | undefined => {
   return HTTPS_PROTOCOL + url;
 };
 
+const extractHostname = (origin: string): string | undefined => {
+  try {
+    const url = new URL(origin);
+    return url.hostname;
+  } catch {
+    return undefined;
+  }
+};
+
+const isOriginAllowed = (requestOrigin: string, allowed: string): boolean => {
+  const normalizedAllowed = ensureProtocol(allowed) as string;
+  const normalizedRequest = ensureProtocol(requestOrigin) as string;
+
+  const allowedHostname = extractHostname(normalizedAllowed);
+  const requestHostname = extractHostname(normalizedRequest);
+
+  if (!allowedHostname || !requestHostname) {
+    return false;
+  }
+
+  // Exact match
+  if (requestHostname === allowedHostname) {
+    return true;
+  }
+
+  // Subdomain match
+  if (requestHostname.endsWith(`.${allowedHostname}`)) {
+    return true;
+  }
+
+  return false;
+};
+
 export const dynamicOriginCallbackHandler = (
   origin?: string | string[],
 ): ((requestOrigin: string | undefined, callback: CorsCallback) => void) => {
@@ -79,7 +112,7 @@ export const dynamicOriginCallbackHandler = (
       if (allowed instanceof RegExp) {
         return allowed.test(requestOrigin);
       }
-      return requestOrigin.includes(allowed);
+      return isOriginAllowed(requestOrigin, allowed);
     });
 
     if (isAllowed) {

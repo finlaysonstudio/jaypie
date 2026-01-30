@@ -1,6 +1,6 @@
 ---
 description: Express.js handler for AWS Lambda with API Gateway support
-related: aws, cdk, handlers, lambda, services, streaming
+related: aws, cdk, cors, handlers, lambda, services, streaming
 ---
 
 # Express Integration

@@ -92,6 +92,68 @@ describe("Cors Helper", () => {
         originHandler(origin, callback);
         expect(callback).toHaveBeenCalledWith(null, true);
       });
+
+      describe("Subdomain Matching", () => {
+        it("allows subdomain when base domain is allowed", () => {
+          const originHandler = dynamicOriginCallbackHandler("example.com");
+          const origin = "https://app.example.com";
+          const callback = vi.fn();
+          originHandler(origin, callback);
+          expect(callback).toHaveBeenCalledWith(null, true);
+        });
+
+        it("allows nested subdomains when base domain is allowed", () => {
+          const originHandler = dynamicOriginCallbackHandler("example.com");
+          const origin = "https://sub.app.example.com";
+          const callback = vi.fn();
+          originHandler(origin, callback);
+          expect(callback).toHaveBeenCalledWith(null, true);
+        });
+
+        it("allows exact match for base domain", () => {
+          const originHandler = dynamicOriginCallbackHandler("example.com");
+          const origin = "https://example.com";
+          const callback = vi.fn();
+          originHandler(origin, callback);
+          expect(callback).toHaveBeenCalledWith(null, true);
+        });
+
+        it("allows origin without protocol prefix in config", () => {
+          const originHandler = dynamicOriginCallbackHandler("example.com");
+          const origin = "https://example.com";
+          const callback = vi.fn();
+          originHandler(origin, callback);
+          expect(callback).toHaveBeenCalledWith(null, true);
+        });
+      });
+
+      describe("Security - Domain Matching", () => {
+        it("rejects domains that contain the allowed domain as substring", () => {
+          const originHandler = dynamicOriginCallbackHandler("example.com");
+          const origin = "https://notexample.com";
+          const callback = vi.fn();
+          originHandler(origin, callback);
+          // Should NOT be allowed - notexample.com is not a subdomain of example.com
+          expect(callback).not.toHaveBeenCalledWith(null, true);
+        });
+
+        it("rejects domains with allowed domain as suffix but not subdomain", () => {
+          const originHandler = dynamicOriginCallbackHandler("example.com");
+          const origin = "https://fakeexample.com";
+          const callback = vi.fn();
+          originHandler(origin, callback);
+          // Should NOT be allowed - fakeexample.com is not a subdomain of example.com
+          expect(callback).not.toHaveBeenCalledWith(null, true);
+        });
+
+        it("rejects completely different domains", () => {
+          const originHandler = dynamicOriginCallbackHandler("example.com");
+          const origin = "https://evil.com";
+          const callback = vi.fn();
+          originHandler(origin, callback);
+          expect(callback).not.toHaveBeenCalledWith(null, true);
+        });
+      });
     });
   });
 });
