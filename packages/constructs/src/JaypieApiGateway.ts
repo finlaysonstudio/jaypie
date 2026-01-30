@@ -2,6 +2,7 @@ import { Construct } from "constructs";
 import { RemovalPolicy, Stack, Tags } from "aws-cdk-lib";
 import * as acm from "aws-cdk-lib/aws-certificatemanager";
 import * as apiGateway from "aws-cdk-lib/aws-apigateway";
+import * as lambda from "aws-cdk-lib/aws-lambda";
 import * as route53 from "aws-cdk-lib/aws-route53";
 import * as route53Targets from "aws-cdk-lib/aws-route53-targets";
 import { CDK } from "./constants";
@@ -78,6 +79,14 @@ export class JaypieApiGateway extends Construct implements apiGateway.IRestApi {
       host = mergeDomain(
         process.env.CDK_ENV_API_SUBDOMAIN,
         process.env.CDK_ENV_API_HOSTED_ZONE,
+      );
+    }
+
+    // Set PROJECT_BASE_URL on the Lambda if host is resolved and handler supports it
+    if (host && "addEnvironment" in handler) {
+      (handler as lambda.Function).addEnvironment(
+        "PROJECT_BASE_URL",
+        `https://${host}`,
       );
     }
 

@@ -475,6 +475,51 @@ describe("JaypieDistribution", () => {
       // Without zone, certificate isn't applied to the distribution
       expect(construct.host).toBe("api.example.com");
     });
+
+    it("sets PROJECT_BASE_URL on Lambda function when host is provided", () => {
+      const stack = new Stack();
+      const fn = new lambda.Function(stack, "TestFunction", {
+        code: lambda.Code.fromInline("exports.handler = () => {}"),
+        handler: "index.handler",
+        runtime: lambda.Runtime.NODEJS_20_X,
+      });
+
+      new JaypieDistribution(stack, "TestDistribution", {
+        handler: fn,
+        host: "api.example.com",
+      });
+      const template = Template.fromStack(stack);
+
+      // Verify the Lambda function has PROJECT_BASE_URL set
+      template.hasResourceProperties("AWS::Lambda::Function", {
+        Environment: {
+          Variables: {
+            PROJECT_BASE_URL: "https://api.example.com",
+          },
+        },
+      });
+    });
+
+    it("does not set PROJECT_BASE_URL when host is not provided", () => {
+      const stack = new Stack();
+      const fn = new lambda.Function(stack, "TestFunction", {
+        code: lambda.Code.fromInline("exports.handler = () => {}"),
+        handler: "index.handler",
+        runtime: lambda.Runtime.NODEJS_20_X,
+      });
+
+      new JaypieDistribution(stack, "TestDistribution", {
+        handler: fn,
+      });
+      const template = Template.fromStack(stack);
+
+      // Verify the Lambda function does NOT have PROJECT_BASE_URL
+      const lambdaFunctions = template.findResources("AWS::Lambda::Function");
+      const lambdaProps = Object.values(lambdaFunctions)[0]?.Properties;
+      expect(
+        lambdaProps?.Environment?.Variables?.PROJECT_BASE_URL,
+      ).toBeUndefined();
+    });
   });
 
   describe("IDistribution Implementation", () => {

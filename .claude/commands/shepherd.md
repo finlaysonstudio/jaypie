@@ -7,6 +7,11 @@ Guide the Jaypie merge process.
 3. Merge once checks pass (use `--merge`, not `--squash`)
 4. Run a clean NPM Deploy workflow
 
+## Prepare the Release
+
+- Follow `/prepare` if this command did not immediately follow prepare
+- Prepare confirms dependencies, documentation, and versions are up to date
+
 ## Clean NPM Check
 
 - Push the branch

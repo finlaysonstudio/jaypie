@@ -37,8 +37,25 @@ When called with no arguments, `cors()` allows origins based on environment vari
 | No `Origin` header (curl, mobile, server-to-server) | ✅ Always |
 | Origin matches `BASE_URL` env var | ✅ Yes |
 | Origin matches `PROJECT_BASE_URL` env var | ✅ Yes |
+| Origin is subdomain of allowed origin | ✅ Yes |
 | `PROJECT_ENV=sandbox` and origin is `localhost[:port]` | ✅ Yes |
 | Any other cross-origin request | ❌ Rejected |
+
+### Subdomain Matching
+
+When you allow a domain, all subdomains of that domain are also automatically allowed:
+
+```typescript
+// Allow example.com and all its subdomains
+app.use(cors({ origin: "example.com" }));
+// Allows: https://example.com, https://app.example.com, https://sub.app.example.com
+// Rejects: https://notexample.com, https://fakeexample.com
+
+// Protocol prefix is optional in config
+app.use(cors({ origin: "example.com" }));  // Same as https://example.com
+```
+
+This is secure because it uses proper hostname extraction and suffix matching with a dot separator—domains like `notexample.com` or `fakeexample.com` are correctly rejected.
 
 **Important:** With no environment variables set and not in sandbox mode, `cors()` rejects all cross-origin browser requests. This is secure by default—you must explicitly configure allowed origins.
 
@@ -66,10 +83,12 @@ app.use(cors());
 | Feature | Standard `cors` | Jaypie `cors` |
 |---------|-----------------|---------------|
 | **Origin Validation** | Static or manual callback | Dynamic environment-aware callback |
+| **Subdomain Matching** | Manual implementation | Automatic (subdomains of allowed origins permitted) |
 | **Environment URLs** | Not supported | Reads `BASE_URL`, `PROJECT_BASE_URL` |
 | **Sandbox Mode** | Manual localhost config | Auto-allows localhost in sandbox |
 | **Error Response** | Generic CORS error | Returns `CorsError` with JSON body |
 | **No-Origin Requests** | Configurable | Always allowed (mobile apps, curl) |
+| **Protocol Prefix** | Required in config | Optional (defaults to `https://`) |
 
 ### Jaypie-Specific Behavior
 
@@ -201,15 +220,22 @@ Jaypie's `cors` uses a dynamic origin callback that checks origins in this order
 4. **Configured Origins** - Check origins passed to `cors({ origin: [...] })`
 5. **Sandbox Localhost** - In sandbox mode, allow localhost with any port
 
+For each allowed origin, the validation checks:
+- **Exact hostname match** - `example.com` matches `https://example.com`
+- **Subdomain match** - `example.com` matches `https://app.example.com`
+
 ```typescript
 // Simplified origin validation logic
 const isAllowed =
   origin === "*" ||
   !requestOrigin ||
-  requestOrigin.includes(process.env.BASE_URL) ||
-  requestOrigin.includes(process.env.PROJECT_BASE_URL) ||
-  configuredOrigins.some(o => requestOrigin.includes(o)) ||
+  isOriginAllowed(requestOrigin, process.env.BASE_URL) ||
+  isOriginAllowed(requestOrigin, process.env.PROJECT_BASE_URL) ||
+  configuredOrigins.some(o => isOriginAllowed(requestOrigin, o)) ||
   (isSandbox && requestOrigin.match(/^http:\/\/localhost(:\d+)?$/));
+
+// Where isOriginAllowed checks for exact match OR subdomain match
+// e.g., "app.example.com".endsWith(".example.com") → true
 ```
 
 ## Error Responses
