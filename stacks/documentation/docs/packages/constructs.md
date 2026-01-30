@@ -30,6 +30,7 @@ npm install @jaypie/constructs aws-cdk-lib constructs
 | `JaypieApiGateway` | REST API with custom domain |
 | `JaypieWebDeploymentBucket` | Static site with CloudFront |
 | `JaypieDynamoDb` | DynamoDB with GSI patterns |
+| `JaypieNextJs` | Next.js deployment via cdk-nextjs-standalone |
 | `JaypieEnvSecret` | Secret reference for injection |
 
 ### Stack Classes
@@ -191,6 +192,66 @@ Creates table with:
 - Primary key: `model` (PK), `id` (SK)
 - No GSIs by default - use `indexes` prop to add them
 - `DEFAULT_INDEXES` provides 5 standard GSIs (scope, alias, class, type, xid)
+
+## JaypieNextJs
+
+Next.js deployment using `cdk-nextjs-standalone`.
+
+```typescript
+import { JaypieNextJs } from "@jaypie/constructs";
+
+// With custom domain
+new JaypieNextJs(this, "App", {
+  domainName: "app.example.com",
+  hostedZone: "example.com",
+  nextjsPath: "../nextjs",
+});
+
+// CloudFront URL only (no custom domain)
+new JaypieNextJs(this, "App", {
+  domainProps: false,
+  nextjsPath: "../nextjs",
+});
+
+// With response streaming
+new JaypieNextJs(this, "App", {
+  nextjsPath: "../nextjs",
+  streaming: true,
+});
+```
+
+### Options
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `nextjsPath` | `string` | Path to Next.js application |
+| `domainName` | `string` | Custom domain name |
+| `hostedZone` | `string` | Route53 hosted zone |
+| `domainProps` | `false` | Set to false for CloudFront-only deployment |
+| `streaming` | `boolean` | Enable Lambda response streaming |
+| `secrets` | `JaypieEnvSecret[]` | Secrets to inject |
+| `tables` | `ITable[]` | DynamoDB tables to grant access |
+
+### Streaming Requirement
+
+When using `streaming: true`, you must also create `open-next.config.ts` in your Next.js app:
+
+```typescript
+// nextjs/open-next.config.ts
+import type { OpenNextConfig } from "@opennextjs/aws/types/open-next.js";
+
+const config = {
+  default: {
+    override: {
+      wrapper: "aws-lambda-streaming",
+    },
+  },
+} satisfies OpenNextConfig;
+
+export default config;
+```
+
+Without this, the Lambda returns a JSON envelope instead of streamed HTML because Lambda's `RESPONSE_STREAM` invoke mode requires the OpenNext streaming wrapper.
 
 ## JaypieEnvSecret
 

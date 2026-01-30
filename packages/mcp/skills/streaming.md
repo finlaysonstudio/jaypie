@@ -76,6 +76,8 @@ export const handler = lambdaStreamHandler(async (event, context) => {
 
 ## CDK Configuration
 
+### JaypieDistribution
+
 ```typescript
 import { JaypieLambda, JaypieDistribution } from "@jaypie/constructs";
 
@@ -89,6 +91,40 @@ new JaypieDistribution(this, "Api", {
   host: "api.example.com",
 });
 ```
+
+### JaypieNextJs Streaming
+
+For Next.js applications with `JaypieNextJs`, streaming requires **two** configurations:
+
+1. **CDK** - Set `streaming: true` in the construct
+2. **Next.js App** - Create `open-next.config.ts` with the streaming wrapper
+
+```typescript
+// CDK Stack
+import { JaypieNextJs } from "@jaypie/constructs";
+
+new JaypieNextJs(this, "App", {
+  nextjsPath: "../nextjs",
+  streaming: true,
+});
+```
+
+```typescript
+// nextjs/open-next.config.ts (required for streaming)
+import type { OpenNextConfig } from "@opennextjs/aws/types/open-next.js";
+
+const config = {
+  default: {
+    override: {
+      wrapper: "aws-lambda-streaming",
+    },
+  },
+} satisfies OpenNextConfig;
+
+export default config;
+```
+
+**Important:** Without `open-next.config.ts`, the Lambda returns a JSON envelope `{ statusCode, headers, body }` instead of streaming HTML. This is because `cdk-nextjs-standalone` configures the Lambda Function URL with `RESPONSE_STREAM` invoke mode, but OpenNext also needs to be configured to use the streaming wrapper.
 
 ## Error Handling
 

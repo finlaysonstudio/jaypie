@@ -251,6 +251,25 @@ new JaypieNextJs(this, "MyApp", {
 
 When `domainProps: false`, no Route53/certificate configuration is created and `NEXT_PUBLIC_SITE_URL` is automatically set to the CloudFront distribution URL.
 
+**Streaming Requirement:** When using `streaming: true`, you must also configure OpenNext in your Next.js app. Create `open-next.config.ts` at the same level as `next.config.js`:
+
+```typescript
+// nextjs/open-next.config.ts
+import type { OpenNextConfig } from "@opennextjs/aws/types/open-next.js";
+
+const config = {
+  default: {
+    override: {
+      wrapper: "aws-lambda-streaming",
+    },
+  },
+} satisfies OpenNextConfig;
+
+export default config;
+```
+
+Without this configuration, the Lambda Function URL returns a JSON envelope `{ statusCode, headers, body }` instead of streaming HTML, because Lambda's `RESPONSE_STREAM` invoke mode requires the handler to use `streamifyResponse` (which OpenNext's `aws-lambda-streaming` wrapper provides).
+
 ### Provider/Consumer Secrets Pattern
 
 ```typescript
