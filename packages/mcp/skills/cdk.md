@@ -139,7 +139,24 @@ const handler = new JaypieLambda(this, "Handler", {
 });
 ```
 
+## JaypieNextJs
+
+Deploy Next.js applications:
+
+```typescript
+import { JaypieNextJs } from "@jaypie/constructs";
+
+new JaypieNextJs(this, "App", {
+  nextjsPath: "../nextjs",
+  domainName: "app.example.com",
+  hostedZone: "example.com",
+  streaming: true,  // Optional: enables response streaming
+});
+```
+
+**Streaming Note:** When `streaming: true`, also create `open-next.config.ts` in your Next.js app with `wrapper: "aws-lambda-streaming"`. See `skill("streaming")` for details.
+
 ## See Also
 
-- **`skill("streaming")`** - JaypieDistribution with `streaming: true` for response streaming
+- **`skill("streaming")`** - JaypieDistribution and JaypieNextJs streaming configuration
 - **`skill("websockets")`** - JaypieWebSocket and JaypieWebSocketTable constructs

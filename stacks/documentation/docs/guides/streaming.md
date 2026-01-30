@@ -347,6 +347,47 @@ new JaypieDistribution(this, "Distribution", {
 });
 ```
 
+### JaypieNextJs Streaming
+
+For Next.js applications deployed with `JaypieNextJs`, streaming requires configuration in **both** the CDK construct and the Next.js application:
+
+**1. CDK Stack:**
+
+```typescript
+import { JaypieNextJs } from "@jaypie/constructs";
+
+new JaypieNextJs(this, "App", {
+  domainName: "app.example.com",
+  nextjsPath: "../nextjs",
+  streaming: true,  // Enables RESPONSE_STREAM invoke mode on Function URL
+});
+```
+
+**2. Next.js Application:**
+
+Create `open-next.config.ts` at the same level as your `next.config.js`:
+
+```typescript
+// nextjs/open-next.config.ts
+import type { OpenNextConfig } from "@opennextjs/aws/types/open-next.js";
+
+const config = {
+  default: {
+    override: {
+      wrapper: "aws-lambda-streaming",
+    },
+  },
+} satisfies OpenNextConfig;
+
+export default config;
+```
+
+:::warning Why Both Are Required
+The `streaming: true` prop configures the Lambda Function URL with `InvokeMode: RESPONSE_STREAM`, but the Lambda handler must also be "streamified" using OpenNext's `aws-lambda-streaming` wrapper.
+
+Without `open-next.config.ts`, the browser receives a JSON envelope `{ statusCode, headers, body }` instead of streamed HTML because the Lambda handler returns a standard response object rather than writing to the response stream.
+:::
+
 ## Error Handling
 
 Errors in streaming handlers are written to the stream in the configured format:
