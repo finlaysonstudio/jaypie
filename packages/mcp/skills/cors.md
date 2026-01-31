@@ -317,6 +317,36 @@ app.use(cors({
 | `PROJECT_ENV` | Set to `sandbox` to enable localhost access |
 | `PROJECT_SANDBOX_MODE` | Set to `true` to enable localhost access |
 
+## Lambda Streaming Compatibility
+
+Jaypie's `cors` middleware is designed to work seamlessly with Lambda response streaming (`createLambdaStreamHandler`). Unlike the standard `cors` package, Jaypie's implementation handles OPTIONS preflight requests early and terminates them immediately, preventing the response stream from hanging.
+
+This is critical because:
+- Browser CORS preflight requests (OPTIONS) must complete quickly with a 204 response
+- Lambda streaming keeps the response stream open for streaming data
+- Without early termination, OPTIONS requests would hang waiting for streaming data that never comes
+
+No special configuration is needed—Jaypie's `cors` automatically detects OPTIONS requests and handles them appropriately.
+
+```typescript
+import express from "express";
+import { cors, createLambdaStreamHandler } from "@jaypie/express";
+
+const app = express();
+
+// CORS works automatically with streaming
+app.use(cors({ origin: "https://example.com" }));
+
+app.post("/stream", (req, res) => {
+  res.setHeader("Content-Type", "text/event-stream");
+  res.write("data: hello\n\n");
+  res.end();
+});
+
+// Deploy with Lambda streaming - CORS preflight works correctly
+export const handler = createLambdaStreamHandler(app);
+```
+
 ## See Also
 
 - **`skill("express")`** - Express handler and Lambda adapter documentation

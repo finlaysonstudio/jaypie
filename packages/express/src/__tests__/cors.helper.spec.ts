@@ -40,8 +40,10 @@ describe("Cors Helper", () => {
     it("When middleware is called, it calls the mocked express cors function", () => {
       const cors = corsHelper();
       const callback = vi.fn();
+      const mockReq = { method: "GET", headers: {} } as unknown as Request;
+      const mockRes = {} as unknown as Response;
       expect(callback).not.toHaveBeenCalled();
-      cors(null as unknown as Request, null as unknown as Response, callback);
+      cors(mockReq, mockRes, callback);
       expect(callback).toHaveBeenCalled();
     });
   });
