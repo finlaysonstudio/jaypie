@@ -349,6 +349,50 @@ describe("LambdaResponseStreaming", () => {
         });
       });
     });
+
+    it("handles 204 No Content response (CORS preflight)", async () => {
+      const res = new LambdaResponseStreaming(mockResponseStream);
+
+      // Simulate what CORS middleware does for OPTIONS requests
+      res.statusCode = 204;
+      res.setHeader("Content-Length", "0");
+      res.setHeader("Access-Control-Allow-Origin", "https://example.com");
+      res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE");
+
+      const finishPromise = new Promise<void>((resolve) => {
+        res.on("finish", () => resolve());
+      });
+
+      res.end();
+
+      await finishPromise;
+
+      expect(res.headersSent).toBe(true);
+      expect(awslambda.HttpResponseStream.from).toHaveBeenCalledWith(
+        mockResponseStream,
+        expect.objectContaining({
+          statusCode: 204,
+          headers: expect.objectContaining({
+            "content-length": "0",
+            "access-control-allow-origin": "https://example.com",
+          }),
+        }),
+      );
+      expect(mockWrappedStream.end).toHaveBeenCalled();
+    });
+
+    it("emits finish event for empty responses", async () => {
+      const res = new LambdaResponseStreaming(mockResponseStream);
+      const finishSpy = vi.fn();
+      res.on("finish", finishSpy);
+
+      res.end();
+
+      // Wait for async operations
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      expect(finishSpy).toHaveBeenCalled();
+    });
   });
 
   describe("json()", () => {

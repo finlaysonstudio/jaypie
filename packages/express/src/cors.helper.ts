@@ -144,6 +144,14 @@ const corsHelper = (
 
 //
 //
+// Constants
+//
+
+const HTTP_CODE_NO_CONTENT = 204;
+const HTTP_METHOD_OPTIONS = "OPTIONS";
+
+//
+//
 // Export
 //
 
@@ -152,11 +160,86 @@ interface CorsErrorWithBody extends Error {
   body: () => Record<string, unknown>;
 }
 
+/**
+ * CORS middleware with Lambda streaming support.
+ *
+ * For OPTIONS preflight requests, this middleware handles them early and
+ * terminates the response immediately. This is critical for Lambda streaming
+ * handlers where the response stream would otherwise stay open waiting for
+ * streaming data that never comes.
+ *
+ * For regular requests, delegates to the standard cors package behavior.
+ */
 export default (
   config?: CorsConfig,
 ): ((req: Request, res: Response, next: NextFunction) => void) => {
   const cors = corsHelper(config);
+  const { origin, overrides = {} } = config || {};
+  const originHandler = dynamicOriginCallbackHandler(origin);
+
   return (req: Request, res: Response, next: NextFunction) => {
+    // Handle OPTIONS preflight requests early for Lambda streaming compatibility.
+    // The standard cors package would eventually call res.end(), but with Lambda
+    // streaming, we need to ensure the response is terminated immediately without
+    // going through any async middleware chains that might keep the stream open.
+    if (req.method === HTTP_METHOD_OPTIONS) {
+      const requestOrigin = req.headers.origin;
+
+      originHandler(requestOrigin, (error, isAllowed) => {
+        if (error || !isAllowed) {
+          // Origin not allowed - send CORS error
+          const corsError = error as CorsErrorWithBody;
+          if (corsError?.status && corsError?.body) {
+            res.status(corsError.status);
+            res.setHeader("Content-Type", "application/json");
+            res.json(corsError.body());
+          } else {
+            // Fallback for non-CorsError errors
+            res.status(HTTP_CODE_NO_CONTENT);
+            res.end();
+          }
+          return;
+        }
+
+        // Origin is allowed - send preflight response
+        // Set CORS headers
+        if (requestOrigin) {
+          res.setHeader("Access-Control-Allow-Origin", requestOrigin);
+        }
+        res.setHeader("Vary", "Origin");
+
+        // Allow all methods by default (or use overrides if specified)
+        const methods =
+          (overrides.methods as string) || "GET,HEAD,PUT,PATCH,POST,DELETE";
+        res.setHeader("Access-Control-Allow-Methods", methods);
+
+        // Reflect requested headers (standard cors behavior)
+        const requestedHeaders = req.headers["access-control-request-headers"];
+        if (requestedHeaders) {
+          res.setHeader("Access-Control-Allow-Headers", requestedHeaders);
+        }
+
+        // Handle credentials if configured
+        if (overrides.credentials === true) {
+          res.setHeader("Access-Control-Allow-Credentials", "true");
+        }
+
+        // Handle max age if configured
+        if (overrides.maxAge !== undefined) {
+          res.setHeader("Access-Control-Max-Age", String(overrides.maxAge));
+        }
+
+        // Send 204 No Content response and terminate immediately
+        // This is critical for Lambda streaming - we must end the response
+        // synchronously to prevent the stream from hanging.
+        res.statusCode = HTTP_CODE_NO_CONTENT;
+        res.setHeader("Content-Length", "0");
+        res.end();
+      });
+      return;
+    }
+
+    // For non-OPTIONS requests, use the standard cors middleware
     cors(req, res, (error?: Error | null) => {
       if (error) {
         const corsError = error as CorsErrorWithBody;

@@ -49,6 +49,7 @@ import {
   createLambdaStreamHandler,
   getCurrentInvoke,
 } from "../index.js";
+import cors from "../../cors.helper.js";
 
 //
 //
@@ -390,6 +391,89 @@ describe("Lambda Adapter Integration", () => {
       await handler(createMockEvent(), mockContext);
 
       expect(getCurrentInvoke()).toBeNull();
+    });
+
+    it("handles CORS OPTIONS preflight requests without hanging", async () => {
+      const app = express();
+      app.use(cors({ origin: "https://example.com" }));
+      app.post("/api/chat", (_req, res) => {
+        res.json({ message: "Hello" });
+      });
+
+      const handler = createLambdaStreamHandler(app);
+      const optionsEvent = createMockEvent({
+        headers: {
+          ...createMockEvent().headers,
+          origin: "https://example.com",
+          "access-control-request-method": "POST",
+          "access-control-request-headers": "content-type",
+        },
+        requestContext: {
+          ...createMockEvent().requestContext,
+          http: {
+            ...createMockEvent().requestContext.http,
+            method: "OPTIONS",
+          },
+        },
+      });
+
+      // This should complete without timing out
+      // If CORS OPTIONS hangs, this test will timeout
+      await handler(optionsEvent, mockContext);
+
+      // Verify the stream was properly ended
+      expect(mockWrappedStream.end).toHaveBeenCalled();
+    });
+
+    it("handles CORS OPTIONS with streaming and properly ends response", async () => {
+      // Track HttpResponseStream.from calls
+      const fromCalls: Array<{
+        metadata: { statusCode: number; headers: Record<string, string> };
+      }> = [];
+      (
+        awslambda.HttpResponseStream.from as ReturnType<typeof vi.fn>
+      ).mockImplementation(
+        (
+          stream: ResponseStream,
+          metadata: { statusCode: number; headers: Record<string, string> },
+        ) => {
+          fromCalls.push({ metadata });
+          return mockWrappedStream;
+        },
+      );
+
+      const app = express();
+      app.use(cors({ origin: "https://example.com" }));
+      app.post("/api/stream", (_req, res) => {
+        res.setHeader("Content-Type", "text/event-stream");
+        res.write("data: hello\n\n");
+        res.end();
+      });
+
+      const handler = createLambdaStreamHandler(app);
+      const optionsEvent = createMockEvent({
+        headers: {
+          ...createMockEvent().headers,
+          origin: "https://example.com",
+          "access-control-request-method": "POST",
+        },
+        requestContext: {
+          ...createMockEvent().requestContext,
+          http: {
+            ...createMockEvent().requestContext.http,
+            method: "OPTIONS",
+          },
+        },
+      });
+
+      await handler(optionsEvent, mockContext);
+
+      // Verify cors middleware sent a 204 response with proper headers
+      expect(fromCalls.length).toBeGreaterThan(0);
+      const lastCall = fromCalls[fromCalls.length - 1];
+      expect(lastCall.metadata.statusCode).toBe(204);
+      expect(lastCall.metadata.headers["content-length"]).toBe("0");
+      expect(mockWrappedStream.end).toHaveBeenCalled();
     });
   });
 });
