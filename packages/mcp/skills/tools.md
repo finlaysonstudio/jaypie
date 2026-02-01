@@ -1,6 +1,6 @@
 ---
 description: Available MCP tools reference
-related: tools-aws, tools-dynamodb, tools-datadog, debugging
+related: tools-aws, tools-datadog, tools-dynamodb, tools-llm, debugging
 ---
 
 # MCP Tools Reference
@@ -79,6 +79,10 @@ datadog("monitors", { status: ["Alert", "Warn"] })
 
 ## LLM Tool
 
+Debug and inspect LLM provider responses.
+
+See **tools-llm** for complete documentation.
+
 ```
 llm()                   # Show help
 llm("list_providers")   # List available LLM providers
@@ -102,4 +106,10 @@ llm("debug_call", { provider: "openai", message: "Hello" })
 - `DD_ENV` - Default environment filter
 - `DD_SERVICE` - Default service filter
 - `DD_SOURCE` - Default log source
+
+### LLM Tools
+- `OPENAI_API_KEY` - OpenAI API key
+- `ANTHROPIC_API_KEY` - Anthropic API key
+- `GOOGLE_API_KEY` - Google/Gemini API key
+- `OPENROUTER_API_KEY` - OpenRouter API key
 

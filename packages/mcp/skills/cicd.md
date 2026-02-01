@@ -1,11 +1,19 @@
 ---
 description: GitHub Actions CI/CD workflows
-related: tests, cdk
+related: cicd-actions, cicd-deploy, cicd-environments, cdk, tests
 ---
 
 # CI/CD with GitHub Actions
 
 Jaypie projects use GitHub Actions for continuous integration and deployment.
+
+## Sub-Skills
+
+| Skill | Description |
+|-------|-------------|
+| `cicd-actions` | Reusable composite actions for workflows |
+| `cicd-deploy` | CDK deployment workflows (sandbox, production) |
+| `cicd-environments` | GitHub Environments configuration |
 
 ## Standard Workflows
 
