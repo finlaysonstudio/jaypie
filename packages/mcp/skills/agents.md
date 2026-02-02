@@ -24,12 +24,16 @@ Complete stack styles, techniques, and traditions.
 - Check ~tools (`mcp__jaypie__skill("tools")`) for all tools or ~tools-aws, ~tools-datadog, and ~tools-dynamodb individually
 - File bugs, documentation, features, and other issues with `mcp__jaypie__skill("issues")`
 
+### Code
+
+- `log.trace` happy path, `log.debug` things that should stand out. Avoid info. Use warn when recoverable. Use error when unrecoverable or "really bad"
+
 ### Skills
 
 `mcp__jaypie__skill(alias: String)`
 
 Contents: index, releasenotes
-Development: documentation, errors, logs, mocks, monorepo, style, subpackages, tests
+Development: documentation, errors, llm, logs, mocks, monorepo, style, subpackages, tests
 Infrastructure: aws, cdk, cicd, datadog, dns, dynamodb, express, lambda, secrets, streaming, variables, websockets
 Patterns: fabric, handlers, models, services, vocabulary
 Meta: issues, jaypie, skills, tools
