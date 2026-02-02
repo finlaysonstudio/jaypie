@@ -126,17 +126,6 @@ export function createLambdaHandler(
       // Get Lambda response - await explicitly to ensure we have the result
       result = await res.getResult();
 
-      // Debug: Log the response before returning
-      console.log(
-        "[createLambdaHandler] Returning response:",
-        JSON.stringify({
-          statusCode: result.statusCode,
-          headers: result.headers,
-          bodyLength: result.body?.length,
-          isBase64Encoded: result.isBase64Encoded,
-        }),
-      );
-
       return result;
     } catch (error) {
       // Log any unhandled errors

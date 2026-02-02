@@ -137,6 +137,68 @@ describe("Express Backend", () => {
         expect(res.body.req.method).toEqual("POST");
         expect(res.body.req.body).toEqual({}); // it converts empty body to an empty object
       });
+      it("DELETE /resource/123", async () => {
+        const app = express();
+        const route = echoHandler();
+        app.use(route);
+        const res = await request(app).delete("/resource/123");
+        expect(res.statusCode).toEqual(200);
+        expect(res.body).toMatchSchema(SCHEMA.ECHO_RESPONSE);
+        expect(res.body.req.url).toEqual("/resource/123");
+        expect(res.body.req.method).toEqual("DELETE");
+      });
+      it("PUT /", async () => {
+        const app = express();
+        // eslint-disable-next-line import-x/no-named-as-default-member
+        app.use(express.json());
+        const route = echoHandler();
+        app.use(route);
+        const res = await request(app).put("/").send({ name: "updated" });
+        expect(res.statusCode).toEqual(200);
+        expect(res.body).toMatchSchema(SCHEMA.ECHO_RESPONSE);
+        expect(res.body.req.url).toEqual("/");
+        expect(res.body.req.method).toEqual("PUT");
+        expect(res.body.req.body).toEqual({ name: "updated" });
+      });
+      it("PATCH /", async () => {
+        const app = express();
+        // eslint-disable-next-line import-x/no-named-as-default-member
+        app.use(express.json());
+        const route = echoHandler();
+        app.use(route);
+        const res = await request(app).patch("/").send({ field: "value" });
+        expect(res.statusCode).toEqual(200);
+        expect(res.body).toMatchSchema(SCHEMA.ECHO_RESPONSE);
+        expect(res.body.req.url).toEqual("/");
+        expect(res.body.req.method).toEqual("PATCH");
+        expect(res.body.req.body).toEqual({ field: "value" });
+      });
+      it("HEAD /", async () => {
+        const app = express();
+        const route = echoHandler();
+        app.use(route);
+        const res = await request(app).head("/");
+        // HEAD requests return 200 but no body
+        expect(res.statusCode).toEqual(200);
+        // HEAD responses should have no body (text is undefined for HEAD)
+        expect(res.body).toEqual({});
+      });
+      it("OPTIONS /", async () => {
+        const app = express();
+        const route = echoHandler();
+        // Add a simple OPTIONS handler since echo doesn't handle it by default
+        app.options("/", (_req, res) => {
+          res.setHeader(
+            "Allow",
+            "GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS",
+          );
+          res.status(204).end();
+        });
+        app.use(route);
+        const res = await request(app).options("/");
+        expect(res.statusCode).toEqual(204);
+        expect(res.headers["allow"]).toContain("OPTIONS");
+      });
     });
   });
 });
