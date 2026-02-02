@@ -31,6 +31,8 @@ Guide the Jaypie merge process.
 
 - Return to main, fetch, and pull
 - Delete the local and remote feature branches
+- Delete local branches orphaned during this session (e.g., changing branch name)
+- Propose and confirm with operator additional local branches without a remote tracking branch (orphans) to delete
 
 ## Known Issues
 
