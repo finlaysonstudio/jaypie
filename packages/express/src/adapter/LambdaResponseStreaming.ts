@@ -76,6 +76,12 @@ export class LambdaResponseStreaming extends Writable {
     // Survives prototype manipulation from Express and dd-trace.
     (this as unknown as Record<symbol, unknown>)[JAYPIE_LAMBDA_STREAMING] =
       true;
+    // DIAGNOSTIC: Log symbol assignment
+    console.log("[DIAG:LambdaResponseStreaming:constructor] Symbol set", {
+      symbolValue: (this as unknown as Record<symbol, unknown>)[
+        JAYPIE_LAMBDA_STREAMING
+      ],
+    });
     // Initialize Node's internal kOutHeaders for dd-trace compatibility.
     // dd-trace patches HTTP methods and expects this internal state.
     if (kOutHeaders) {
@@ -300,7 +306,20 @@ export class LambdaResponseStreaming extends Writable {
   }
 
   flushHeaders(): void {
-    if (this._headersSent) return;
+    // DIAGNOSTIC: Log every flushHeaders call with stack trace
+    const caller = new Error().stack?.split("\n").slice(1, 5).join("\n");
+    console.log("[DIAG:LambdaResponseStreaming:flushHeaders] Called", {
+      statusCode: this.statusCode,
+      headersSent: this._headersSent,
+      caller,
+    });
+
+    if (this._headersSent) {
+      console.log(
+        "[DIAG:LambdaResponseStreaming:flushHeaders] Already sent, returning early",
+      );
+      return;
+    }
 
     const headers: Record<string, string> = {};
     for (const [key, value] of this._headers) {
@@ -311,6 +330,14 @@ export class LambdaResponseStreaming extends Writable {
       headers,
       statusCode: this.statusCode,
     };
+
+    // DIAGNOSTIC: Log what we're sending to Lambda
+    console.log(
+      "[DIAG:LambdaResponseStreaming:flushHeaders] Creating wrapped stream",
+      {
+        metadata,
+      },
+    );
 
     // Wrap the stream with metadata using awslambda global
     this._wrappedStream = awslambda.HttpResponseStream.from(
@@ -353,6 +380,14 @@ export class LambdaResponseStreaming extends Writable {
   }
 
   status(code: number): this {
+    // DIAGNOSTIC: Log status code changes
+    const caller = new Error().stack?.split("\n").slice(1, 4).join("\n");
+    console.log("[DIAG:LambdaResponseStreaming:status] Setting status", {
+      newCode: code,
+      previousCode: this.statusCode,
+      headersSent: this._headersSent,
+      caller,
+    });
     this.statusCode = code;
     return this;
   }
@@ -406,10 +441,20 @@ export class LambdaResponseStreaming extends Writable {
       ? chunk
       : Buffer.from(chunk, encoding);
 
+    // DIAGNOSTIC: Log every write
+    console.log("[DIAG:LambdaResponseStreaming:_write] Called", {
+      chunkLength: buffer.length,
+      headersSent: this._headersSent,
+      statusCode: this.statusCode,
+    });
+
     if (!this._headersSent) {
       // Buffer writes until headers are sent
       this._pendingWrites.push({ callback: () => callback(), chunk: buffer });
       // Auto-flush headers on first write
+      console.log(
+        "[DIAG:LambdaResponseStreaming:_write] Auto-flushing headers on first write",
+      );
       this.flushHeaders();
     } else {
       this._wrappedStream!.write(buffer);
@@ -418,7 +463,17 @@ export class LambdaResponseStreaming extends Writable {
   }
 
   _final(callback: (error?: Error | null) => void): void {
+    // DIAGNOSTIC: Log _final call
+    console.log("[DIAG:LambdaResponseStreaming:_final] Called", {
+      headersSent: this._headersSent,
+      statusCode: this.statusCode,
+      hasWrappedStream: !!this._wrappedStream,
+    });
+
     if (!this._headersSent) {
+      console.log(
+        "[DIAG:LambdaResponseStreaming:_final] Headers not sent, flushing now",
+      );
       this.flushHeaders();
     }
     this._wrappedStream?.end();

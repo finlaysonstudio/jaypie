@@ -154,10 +154,18 @@ function isLambdaMockResponse(res: Response): res is LambdaMockResponse {
  * Uses Symbol marker to survive prototype chain modifications from Express and dd-trace.
  */
 function isLambdaStreamingResponse(res: Response): boolean {
-  return (
-    (res as unknown as Record<symbol, unknown>)[JAYPIE_LAMBDA_STREAMING] ===
-    true
-  );
+  const symbolValue = (res as unknown as Record<symbol, unknown>)[
+    JAYPIE_LAMBDA_STREAMING
+  ];
+  const result = symbolValue === true;
+  // DIAGNOSTIC: Log symbol check
+  console.log("[DIAG:expressHandler:isLambdaStreamingResponse] Check", {
+    symbolValue,
+    result,
+    resConstructorName: res?.constructor?.name,
+    hasFlushHeaders: typeof res.flushHeaders === "function",
+  });
+  return result;
 }
 
 /**
@@ -194,17 +202,31 @@ function safeSendJson(res: Response, statusCode: number, data: unknown): void {
     return;
   }
   // Fall back to standard Express methods for real responses
+  // DIAGNOSTIC: Log before setting status
+  console.log("[DIAG:expressHandler:safeSendJson] Before res.status()", {
+    statusCode,
+    currentStatusCode: res.statusCode,
+  });
   res.status(statusCode);
+  console.log("[DIAG:expressHandler:safeSendJson] After res.status()", {
+    statusCode,
+    newStatusCode: res.statusCode,
+  });
   // CRITICAL: For Lambda streaming responses, flush headers before send to
   // initialize the stream wrapper. This ensures the status code is captured
   // before any writes occur (which would auto-flush with default 200).
   // Uses Symbol marker for reliable detection that survives prototype manipulation.
-  if (
-    isLambdaStreamingResponse(res) &&
-    typeof res.flushHeaders === "function"
-  ) {
+  const isStreaming = isLambdaStreamingResponse(res);
+  console.log("[DIAG:expressHandler:safeSendJson] Streaming check", {
+    isStreaming,
+  });
+  if (isStreaming && typeof res.flushHeaders === "function") {
+    console.log(
+      "[DIAG:expressHandler:safeSendJson] Calling flushHeaders explicitly",
+    );
     res.flushHeaders();
   }
+  console.log("[DIAG:expressHandler:safeSendJson] Calling res.json()");
   res.json(data);
 }
 
@@ -237,20 +259,36 @@ function safeSend(res: Response, statusCode: number, body?: string): void {
     return;
   }
   // Fall back to standard Express methods for real responses
+  // DIAGNOSTIC: Log before setting status
+  console.log("[DIAG:expressHandler:safeSend] Before res.status()", {
+    statusCode,
+    currentStatusCode: res.statusCode,
+    hasBody: body !== undefined,
+  });
   res.status(statusCode);
+  console.log("[DIAG:expressHandler:safeSend] After res.status()", {
+    statusCode,
+    newStatusCode: res.statusCode,
+  });
   // CRITICAL: For Lambda streaming responses, flush headers before send to
   // initialize the stream wrapper. This ensures the status code is captured
   // before any writes occur (which would auto-flush with default 200).
   // Uses Symbol marker for reliable detection that survives prototype manipulation.
-  if (
-    isLambdaStreamingResponse(res) &&
-    typeof res.flushHeaders === "function"
-  ) {
+  const isStreaming = isLambdaStreamingResponse(res);
+  console.log("[DIAG:expressHandler:safeSend] Streaming check", {
+    isStreaming,
+  });
+  if (isStreaming && typeof res.flushHeaders === "function") {
+    console.log(
+      "[DIAG:expressHandler:safeSend] Calling flushHeaders explicitly",
+    );
     res.flushHeaders();
   }
   if (body !== undefined) {
+    console.log("[DIAG:expressHandler:safeSend] Calling res.send(body)");
     res.send(body);
   } else {
+    console.log("[DIAG:expressHandler:safeSend] Calling res.send() (no body)");
     res.send();
   }
 }
