@@ -50,6 +50,7 @@ import {
   getCurrentInvoke,
 } from "../index.js";
 import cors from "../../cors.helper.js";
+import expressHandler from "../../expressHandler.js";
 
 //
 //
@@ -518,6 +519,61 @@ describe("Lambda Adapter Integration", () => {
 
       // Critical: flushHeaders must be called BEFORE stream end
       // This ensures _wrappedStream exists when _final() calls _wrappedStream.end()
+      expect(operationOrder).toContain("flushHeaders");
+      expect(operationOrder).toContain("streamEnd");
+      expect(operationOrder.indexOf("flushHeaders")).toBeLessThan(
+        operationOrder.indexOf("streamEnd"),
+      );
+    });
+
+    it("flushes headers before ending stream for NO_CONTENT responses via expressHandler (issue #178)", async () => {
+      // This test verifies the fix for issue #178 where httpHandler(NO_CONTENT)
+      // routes would hang because flushHeaders wasn't called before end()
+      const operationOrder: string[] = [];
+
+      (
+        awslambda.HttpResponseStream.from as ReturnType<typeof vi.fn>
+      ).mockImplementation(() => {
+        operationOrder.push("flushHeaders");
+        return {
+          write: vi.fn(),
+          end: vi.fn(() => {
+            operationOrder.push("streamEnd");
+          }),
+        };
+      });
+
+      const app = express();
+      // Simulate httpHandler(HTTP.CODE.NO_CONTENT) - returns null for 204
+      app.get(
+        "/health",
+        expressHandler(
+          async () => {
+            // Returning null triggers NO_CONTENT (204) response
+            return null;
+          },
+          { name: "_noContent" },
+        ),
+      );
+
+      const handler = createLambdaStreamHandler(app);
+      const getEvent = createMockEvent({
+        requestContext: {
+          ...createMockEvent().requestContext,
+          http: {
+            ...createMockEvent().requestContext.http,
+            method: "GET",
+            path: "/health",
+          },
+        },
+        rawPath: "/health",
+      });
+
+      await handler(getEvent, mockContext);
+
+      // Critical: flushHeaders must be called BEFORE stream end
+      // This ensures _wrappedStream exists when _final() calls _wrappedStream.end()
+      // Without this fix, the Lambda would hang because _wrappedStream is null
       expect(operationOrder).toContain("flushHeaders");
       expect(operationOrder).toContain("streamEnd");
       expect(operationOrder.indexOf("flushHeaders")).toBeLessThan(

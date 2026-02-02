@@ -182,7 +182,14 @@ function safeSendJson(res: Response, statusCode: number, data: unknown): void {
     return;
   }
   // Fall back to standard Express methods for real responses
-  res.status(statusCode).json(data);
+  res.status(statusCode);
+  // CRITICAL: For Lambda streaming responses, flush headers before send to
+  // initialize the stream wrapper. Check for _responseStream which is unique
+  // to LambdaResponseStreaming (regular Express res doesn't have this).
+  if ("_responseStream" in res && typeof res.flushHeaders === "function") {
+    res.flushHeaders();
+  }
+  res.json(data);
 }
 
 /**
@@ -214,10 +221,17 @@ function safeSend(res: Response, statusCode: number, body?: string): void {
     return;
   }
   // Fall back to standard Express methods for real responses
+  res.status(statusCode);
+  // CRITICAL: For Lambda streaming responses, flush headers before send to
+  // initialize the stream wrapper. Check for _responseStream which is unique
+  // to LambdaResponseStreaming (regular Express res doesn't have this).
+  if ("_responseStream" in res && typeof res.flushHeaders === "function") {
+    res.flushHeaders();
+  }
   if (body !== undefined) {
-    res.status(statusCode).send(body);
+    res.send(body);
   } else {
-    res.status(statusCode).send();
+    res.send();
   }
 }
 
