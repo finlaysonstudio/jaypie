@@ -196,6 +196,9 @@ export default (
           } else {
             // Fallback for non-CorsError errors
             res.status(HTTP_CODE_NO_CONTENT);
+            if (typeof res.flushHeaders === "function") {
+              res.flushHeaders();
+            }
             res.end();
           }
           return;
@@ -232,8 +235,14 @@ export default (
         // Send 204 No Content response and terminate immediately
         // This is critical for Lambda streaming - we must end the response
         // synchronously to prevent the stream from hanging.
+        // CRITICAL: Flush headers first to initialize the Lambda stream wrapper.
+        // Without this, _wrappedStream may be null when _final() is called,
+        // causing the Lambda response stream to never close.
         res.statusCode = HTTP_CODE_NO_CONTENT;
         res.setHeader("Content-Length", "0");
+        if (typeof res.flushHeaders === "function") {
+          res.flushHeaders();
+        }
         res.end();
       });
       return;

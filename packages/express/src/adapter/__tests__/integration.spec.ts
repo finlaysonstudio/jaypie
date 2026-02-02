@@ -475,5 +475,54 @@ describe("Lambda Adapter Integration", () => {
       expect(lastCall.metadata.headers["content-length"]).toBe("0");
       expect(mockWrappedStream.end).toHaveBeenCalled();
     });
+
+    it("flushes headers before ending stream for OPTIONS requests", async () => {
+      // Track the order of operations to ensure flushHeaders is called before end
+      const operationOrder: string[] = [];
+
+      (
+        awslambda.HttpResponseStream.from as ReturnType<typeof vi.fn>
+      ).mockImplementation(() => {
+        operationOrder.push("flushHeaders");
+        return {
+          write: vi.fn(),
+          end: vi.fn(() => {
+            operationOrder.push("streamEnd");
+          }),
+        };
+      });
+
+      const app = express();
+      app.use(cors({ origin: "https://example.com" }));
+      app.post("/api/data", (_req, res) => {
+        res.json({ ok: true });
+      });
+
+      const handler = createLambdaStreamHandler(app);
+      const optionsEvent = createMockEvent({
+        headers: {
+          ...createMockEvent().headers,
+          origin: "https://example.com",
+          "access-control-request-method": "POST",
+        },
+        requestContext: {
+          ...createMockEvent().requestContext,
+          http: {
+            ...createMockEvent().requestContext.http,
+            method: "OPTIONS",
+          },
+        },
+      });
+
+      await handler(optionsEvent, mockContext);
+
+      // Critical: flushHeaders must be called BEFORE stream end
+      // This ensures _wrappedStream exists when _final() calls _wrappedStream.end()
+      expect(operationOrder).toContain("flushHeaders");
+      expect(operationOrder).toContain("streamEnd");
+      expect(operationOrder.indexOf("flushHeaders")).toBeLessThan(
+        operationOrder.indexOf("streamEnd"),
+      );
+    });
   });
 });
