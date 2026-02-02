@@ -110,8 +110,8 @@ Located in `resolve.ts`. Handle flexible type conversion with predictable behavi
 | `fabricString` | Convert to string (booleans -> `"true"`/`"false"`) |
 | `fabricArray` | Wrap non-arrays in array |
 | `resolveFromArray` | Extract single-element array to scalar |
-| `fabricObject` | Wrap in `{ value: ... }` structure |
-| `resolveFromObject` | Extract `.value` from object |
+| `fabricObject` | Pass through objects; wrap scalars/arrays in `{ value: ... }` |
+| `resolveFromObject` | Extract `.value` if present; pass through otherwise |
 
 Key behaviors:
 - Empty string `""` becomes `undefined`
