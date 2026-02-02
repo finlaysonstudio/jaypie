@@ -408,10 +408,14 @@ describe("resolve", () => {
       });
     });
 
-    describe("Error Cases", () => {
-      it("throws on object without value property", () => {
-        expect(() => fabricObject({ a: 1 })).toThrow(BadRequestError);
-        expect(() => fabricObject({})).toThrow(BadRequestError);
+    describe("Passthrough", () => {
+      it("passes through object without value property", () => {
+        expect(fabricObject({ a: 1 })).toEqual({ a: 1 });
+        expect(fabricObject({})).toEqual({});
+        expect(fabricObject({ query: "test", from: "now-1h" })).toEqual({
+          from: "now-1h",
+          query: "test",
+        });
       });
     });
   });
@@ -443,10 +447,14 @@ describe("resolve", () => {
       });
     });
 
-    describe("Error Cases", () => {
-      it("throws on object without value property", () => {
-        expect(() => resolveFromObject({ a: 1 })).toThrow(BadRequestError);
-        expect(() => resolveFromObject({})).toThrow(BadRequestError);
+    describe("Passthrough", () => {
+      it("passes through object without value property", () => {
+        expect(resolveFromObject({ a: 1 })).toEqual({ a: 1 });
+        expect(resolveFromObject({})).toEqual({});
+        expect(resolveFromObject({ query: "test", from: "now-1h" })).toEqual({
+          from: "now-1h",
+          query: "test",
+        });
       });
     });
   });
@@ -595,10 +603,11 @@ describe("resolve", () => {
         expect(fabric([1, 2], [{}])).toEqual([{ value: 1 }, { value: 2 }]);
       });
 
-      it("throws on object without value property", () => {
-        expect(() => fabric([{ foo: "bar" }], [Object])).toThrow(
-          BadRequestError,
-        );
+      it("passes through object without value property", () => {
+        expect(fabric([{ foo: "bar" }], [Object])).toEqual([{ foo: "bar" }]);
+        expect(fabric([{ query: "test" }], [Object])).toEqual([
+          { query: "test" },
+        ]);
       });
     });
 
