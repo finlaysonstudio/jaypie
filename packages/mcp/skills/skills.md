@@ -16,7 +16,7 @@ Look up skills by alias: `mcp__jaypie__skill(alias)`
 | Category | Skills |
 |----------|--------|
 | contents | index, releasenotes |
-| development | documentation, errors, logs, mocks, monorepo, style, subpackages, tests |
+| development | documentation, errors, llm, logs, mocks, monorepo, style, subpackages, tests |
 | infrastructure | aws, cdk, cicd, datadog, dns, dynamodb, express, lambda, secrets, streaming, variables, websockets |
 | patterns | fabric, handlers, models, services, vocabulary |
 | meta | issues, jaypie, skills, tools |
