@@ -13,6 +13,12 @@ import type {
 // Constants
 //
 
+// Symbol to identify Lambda streaming responses. Uses Symbol.for() to ensure
+// the same symbol is used across bundles/realms. Survives prototype manipulation.
+export const JAYPIE_LAMBDA_STREAMING = Symbol.for(
+  "@jaypie/express/LambdaStreaming",
+);
+
 // Get Node's internal kOutHeaders symbol from ServerResponse prototype.
 // This is needed for compatibility with Datadog dd-trace instrumentation,
 // which patches HTTP methods and expects this internal state to exist.
@@ -66,6 +72,10 @@ export class LambdaResponseStreaming extends Writable {
   constructor(responseStream: ResponseStream) {
     super();
     this._responseStream = responseStream;
+    // Mark as Lambda streaming response using Symbol for reliable detection.
+    // Survives prototype manipulation from Express and dd-trace.
+    (this as unknown as Record<symbol, unknown>)[JAYPIE_LAMBDA_STREAMING] =
+      true;
     // Initialize Node's internal kOutHeaders for dd-trace compatibility.
     // dd-trace patches HTTP methods and expects this internal state.
     if (kOutHeaders) {

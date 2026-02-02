@@ -250,5 +250,95 @@ describe("Express handler", () => {
         expect(res.headers["content-type"]).toBeUndefined();
       });
     });
+
+    describe("HTTP method support", () => {
+      it("DELETE request", async () => {
+        const mockFunction = vi.fn(() => ({ deleted: true }));
+        const handler = expressHandler(mockFunction, { name: "handler" });
+        const app = express();
+        app.use(handler);
+        const res = await request(app).delete("/resource/123");
+        expect(res.status).toEqual(HTTP.CODE.OK);
+        expect(res.body).toEqual({ deleted: true });
+      });
+
+      it("PUT request with body", async () => {
+        const mockFunction = vi.fn((req) => ({
+          method: req.method,
+          updated: req.body,
+        }));
+        const handler = expressHandler(mockFunction, { name: "handler" });
+        const app = express();
+        // eslint-disable-next-line import-x/no-named-as-default-member
+        app.use(express.json());
+        app.use(handler);
+        const res = await request(app)
+          .put("/resource/123")
+          .send({ name: "updated" });
+        expect(res.status).toEqual(HTTP.CODE.OK);
+        expect(res.body.method).toEqual("PUT");
+        expect(res.body.updated).toEqual({ name: "updated" });
+      });
+
+      it("PATCH request with body", async () => {
+        const mockFunction = vi.fn((req) => ({
+          method: req.method,
+          patched: req.body,
+        }));
+        const handler = expressHandler(mockFunction, { name: "handler" });
+        const app = express();
+        // eslint-disable-next-line import-x/no-named-as-default-member
+        app.use(express.json());
+        app.use(handler);
+        const res = await request(app)
+          .patch("/resource/123")
+          .send({ field: "value" });
+        expect(res.status).toEqual(HTTP.CODE.OK);
+        expect(res.body.method).toEqual("PATCH");
+        expect(res.body.patched).toEqual({ field: "value" });
+      });
+
+      it("HEAD request returns headers only", async () => {
+        const mockFunction = vi.fn((_req, res) => {
+          res.setHeader("X-Custom-Header", "test-value");
+          return { data: "should not appear in response" };
+        });
+        const handler = expressHandler(mockFunction, { name: "handler" });
+        const app = express();
+        app.use(handler);
+        const res = await request(app).head("/");
+        expect(res.status).toEqual(HTTP.CODE.OK);
+        expect(res.headers["x-custom-header"]).toEqual("test-value");
+        // HEAD responses should have no body (body is empty object for HEAD)
+        expect(res.body).toEqual({});
+      });
+
+      it("OPTIONS request (CORS preflight)", async () => {
+        const mockFunction = vi.fn(() => ({ ok: true }));
+        const handler = expressHandler(mockFunction, { name: "handler" });
+        const app = express();
+        // Enable CORS for all origins
+        app.use((_req, res, next) => {
+          res.setHeader("Access-Control-Allow-Origin", "*");
+          res.setHeader(
+            "Access-Control-Allow-Methods",
+            "GET, POST, PUT, PATCH, DELETE, OPTIONS",
+          );
+          res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+          next();
+        });
+        app.options("*", (_req, res) => {
+          res.status(HTTP.CODE.NO_CONTENT).end();
+        });
+        app.use(handler);
+        const res = await request(app)
+          .options("/")
+          .set("Origin", "https://example.com")
+          .set("Access-Control-Request-Method", "POST");
+        expect(res.status).toEqual(HTTP.CODE.NO_CONTENT);
+        expect(res.headers["access-control-allow-origin"]).toEqual("*");
+        expect(res.headers["access-control-allow-methods"]).toContain("POST");
+      });
+    });
   });
 });

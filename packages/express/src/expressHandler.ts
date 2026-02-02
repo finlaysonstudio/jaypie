@@ -6,6 +6,7 @@ import { log as publicLogger } from "@jaypie/logger";
 import { DATADOG, hasDatadogEnv, submitMetric } from "@jaypie/datadog";
 
 import { JAYPIE_LAMBDA_MOCK } from "./adapter/LambdaResponseBuffered.js";
+import { JAYPIE_LAMBDA_STREAMING } from "./adapter/LambdaResponseStreaming.js";
 import getCurrentInvokeUuid from "./getCurrentInvokeUuid.adapter.js";
 import decorateResponse from "./decorateResponse.helper.js";
 import summarizeRequest from "./summarizeRequest.helper.js";
@@ -149,6 +150,17 @@ function isLambdaMockResponse(res: Response): res is LambdaMockResponse {
 }
 
 /**
+ * Check if response is a Lambda streaming response.
+ * Uses Symbol marker to survive prototype chain modifications from Express and dd-trace.
+ */
+function isLambdaStreamingResponse(res: Response): boolean {
+  return (
+    (res as unknown as Record<symbol, unknown>)[JAYPIE_LAMBDA_STREAMING] ===
+    true
+  );
+}
+
+/**
  * Safely send a JSON response, avoiding dd-trace interception.
  * For Lambda mock responses, directly manipulates internal state instead of
  * using stream methods (write/end) which dd-trace intercepts.
@@ -184,9 +196,13 @@ function safeSendJson(res: Response, statusCode: number, data: unknown): void {
   // Fall back to standard Express methods for real responses
   res.status(statusCode);
   // CRITICAL: For Lambda streaming responses, flush headers before send to
-  // initialize the stream wrapper. Check for _responseStream which is unique
-  // to LambdaResponseStreaming (regular Express res doesn't have this).
-  if ("_responseStream" in res && typeof res.flushHeaders === "function") {
+  // initialize the stream wrapper. This ensures the status code is captured
+  // before any writes occur (which would auto-flush with default 200).
+  // Uses Symbol marker for reliable detection that survives prototype manipulation.
+  if (
+    isLambdaStreamingResponse(res) &&
+    typeof res.flushHeaders === "function"
+  ) {
     res.flushHeaders();
   }
   res.json(data);
@@ -223,9 +239,13 @@ function safeSend(res: Response, statusCode: number, body?: string): void {
   // Fall back to standard Express methods for real responses
   res.status(statusCode);
   // CRITICAL: For Lambda streaming responses, flush headers before send to
-  // initialize the stream wrapper. Check for _responseStream which is unique
-  // to LambdaResponseStreaming (regular Express res doesn't have this).
-  if ("_responseStream" in res && typeof res.flushHeaders === "function") {
+  // initialize the stream wrapper. This ensures the status code is captured
+  // before any writes occur (which would auto-flush with default 200).
+  // Uses Symbol marker for reliable detection that survives prototype manipulation.
+  if (
+    isLambdaStreamingResponse(res) &&
+    typeof res.flushHeaders === "function"
+  ) {
     res.flushHeaders();
   }
   if (body !== undefined) {

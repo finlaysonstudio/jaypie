@@ -158,6 +158,153 @@ describe("Lambda Adapter Integration", () => {
       expect(JSON.parse(result.body)).toEqual({ created: true, name: "John" });
     });
 
+    it("handles DELETE request", async () => {
+      const app = express();
+      app.delete("/users/:id", (req, res) => {
+        res.json({ deleted: true, id: req.params.id });
+      });
+
+      const handler = createLambdaHandler(app);
+      const event = createMockEvent({
+        rawPath: "/users/123",
+        requestContext: {
+          ...createMockEvent().requestContext,
+          http: {
+            ...createMockEvent().requestContext.http,
+            method: "DELETE",
+            path: "/users/123",
+          },
+        },
+      });
+
+      const result = await handler(event, mockContext);
+
+      expect(result.statusCode).toBe(200);
+      expect(JSON.parse(result.body)).toEqual({ deleted: true, id: "123" });
+    });
+
+    it("handles PUT request with JSON body", async () => {
+      const app = express();
+      app.use(express.json());
+      app.put("/users/:id", (req, res) => {
+        res.json({ updated: true, id: req.params.id, name: req.body.name });
+      });
+
+      const handler = createLambdaHandler(app);
+      const event = createMockEvent({
+        body: JSON.stringify({ name: "Jane" }),
+        rawPath: "/users/456",
+        requestContext: {
+          ...createMockEvent().requestContext,
+          http: {
+            ...createMockEvent().requestContext.http,
+            method: "PUT",
+            path: "/users/456",
+          },
+        },
+      });
+
+      const result = await handler(event, mockContext);
+
+      expect(result.statusCode).toBe(200);
+      expect(JSON.parse(result.body)).toEqual({
+        id: "456",
+        name: "Jane",
+        updated: true,
+      });
+    });
+
+    it("handles PATCH request with JSON body", async () => {
+      const app = express();
+      app.use(express.json());
+      app.patch("/users/:id", (req, res) => {
+        res.json({ patched: true, id: req.params.id, field: req.body.field });
+      });
+
+      const handler = createLambdaHandler(app);
+      const event = createMockEvent({
+        body: JSON.stringify({ field: "email" }),
+        rawPath: "/users/789",
+        requestContext: {
+          ...createMockEvent().requestContext,
+          http: {
+            ...createMockEvent().requestContext.http,
+            method: "PATCH",
+            path: "/users/789",
+          },
+        },
+      });
+
+      const result = await handler(event, mockContext);
+
+      expect(result.statusCode).toBe(200);
+      expect(JSON.parse(result.body)).toEqual({
+        field: "email",
+        id: "789",
+        patched: true,
+      });
+    });
+
+    it("handles HEAD request (returns headers only, no body)", async () => {
+      const app = express();
+      app.head("/status", (_req, res) => {
+        res.setHeader("X-Custom-Header", "test-value");
+        res.status(200).end();
+      });
+
+      const handler = createLambdaHandler(app);
+      const event = createMockEvent({
+        rawPath: "/status",
+        requestContext: {
+          ...createMockEvent().requestContext,
+          http: {
+            ...createMockEvent().requestContext.http,
+            method: "HEAD",
+            path: "/status",
+          },
+        },
+      });
+
+      const result = await handler(event, mockContext);
+
+      expect(result.statusCode).toBe(200);
+      expect(result.headers["x-custom-header"]).toBe("test-value");
+      // HEAD requests should not have a body
+      expect(result.body).toBe("");
+    });
+
+    it("handles OPTIONS request", async () => {
+      const app = express();
+      // Explicit OPTIONS handler
+      app.options("/api/data", (_req, res) => {
+        res.setHeader("Allow", "GET, POST, PUT, PATCH, DELETE, OPTIONS");
+        res.status(204).end();
+      });
+      app.post("/api/data", (_req, res) => {
+        res.json({ ok: true });
+      });
+
+      const handler = createLambdaHandler(app);
+      const event = createMockEvent({
+        rawPath: "/api/data",
+        requestContext: {
+          ...createMockEvent().requestContext,
+          http: {
+            ...createMockEvent().requestContext.http,
+            method: "OPTIONS",
+            path: "/api/data",
+          },
+        },
+      });
+
+      const result = await handler(event, mockContext);
+
+      expect(result.statusCode).toBe(204);
+      expect(result.headers["allow"]).toBe(
+        "GET, POST, PUT, PATCH, DELETE, OPTIONS",
+      );
+    });
+
     it("handles query parameters", async () => {
       const app = express();
       app.get("/search", (req, res) => {
