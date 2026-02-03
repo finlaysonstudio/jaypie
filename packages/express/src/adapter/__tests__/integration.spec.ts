@@ -569,25 +569,39 @@ describe("Lambda Adapter Integration", () => {
       // If CORS OPTIONS hangs, this test will timeout
       await handler(optionsEvent, mockContext);
 
-      // Verify the stream was properly ended
-      expect(mockWrappedStream.end).toHaveBeenCalled();
+      // For 204 responses (CORS preflight), the test should complete without hanging.
+      // The actual stream operations happen inside the streamifyResponse mock.
+      // If this test completes, the 204 response was handled correctly.
     });
 
     it("handles CORS OPTIONS with streaming and properly ends response", async () => {
-      // Track HttpResponseStream.from calls
-      const fromCalls: Array<{
-        metadata: { statusCode: number; headers: Record<string, string> };
-      }> = [];
+      // Track writes to verify 204 bypass behavior
+      const capturedWrites: string[] = [];
+      let streamEnded = false;
+
+      // Override streamifyResponse to capture the response stream operations
       (
-        awslambda.HttpResponseStream.from as ReturnType<typeof vi.fn>
+        awslambda.streamifyResponse as ReturnType<typeof vi.fn>
       ).mockImplementation(
-        (
-          stream: ResponseStream,
-          metadata: { statusCode: number; headers: Record<string, string> },
-        ) => {
-          fromCalls.push({ metadata });
-          return mockWrappedStream;
-        },
+        <TEvent>(
+          handler: (
+            event: TEvent,
+            responseStream: ResponseStream,
+            context: LambdaContext,
+          ) => Promise<void>,
+        ) =>
+          async (event: TEvent, context: LambdaContext): Promise<void> => {
+            const captureStream: ResponseStream = {
+              write: vi.fn((data: unknown) => {
+                capturedWrites.push(String(data));
+                return true;
+              }),
+              end: vi.fn(() => {
+                streamEnded = true;
+              }),
+            };
+            await handler(event, captureStream, context);
+          },
       );
 
       const app = express();
@@ -616,29 +630,62 @@ describe("Lambda Adapter Integration", () => {
 
       await handler(optionsEvent, mockContext);
 
-      // Verify cors middleware sent a 204 response with proper headers
-      expect(fromCalls.length).toBeGreaterThan(0);
-      const lastCall = fromCalls[fromCalls.length - 1];
-      expect(lastCall.metadata.statusCode).toBe(204);
-      expect(lastCall.metadata.headers["content-length"]).toBe("0");
-      expect(mockWrappedStream.end).toHaveBeenCalled();
+      // For 204 responses, HttpResponseStream.from is NOT called (bypass for issue #178)
+      // Verify metadata was written directly to response stream
+      expect(capturedWrites.length).toBeGreaterThan(0);
+      // First write should be JSON metadata
+      const metadataWrite = capturedWrites.find((write) => {
+        try {
+          const parsed = JSON.parse(write);
+          return parsed.statusCode === 204;
+        } catch {
+          return false;
+        }
+      });
+      expect(metadataWrite).toBeDefined();
+      const metadata = JSON.parse(metadataWrite!);
+      expect(metadata.statusCode).toBe(204);
+      expect(metadata.headers["content-length"]).toBe("0");
+      expect(streamEnded).toBe(true);
     });
 
-    it("flushes headers before ending stream for OPTIONS requests", async () => {
-      // Track the order of operations to ensure flushHeaders is called before end
+    it("writes metadata before ending stream for OPTIONS requests (204 bypass)", async () => {
+      // Track the order of operations for 204 response handling
       const operationOrder: string[] = [];
 
+      // Override streamifyResponse to track operations
       (
-        awslambda.HttpResponseStream.from as ReturnType<typeof vi.fn>
-      ).mockImplementation(() => {
-        operationOrder.push("flushHeaders");
-        return {
-          write: vi.fn(),
-          end: vi.fn(() => {
-            operationOrder.push("streamEnd");
-          }),
-        };
-      });
+        awslambda.streamifyResponse as ReturnType<typeof vi.fn>
+      ).mockImplementation(
+        <TEvent>(
+          handler: (
+            event: TEvent,
+            responseStream: ResponseStream,
+            context: LambdaContext,
+          ) => Promise<void>,
+        ) =>
+          async (event: TEvent, context: LambdaContext): Promise<void> => {
+            const trackingStream: ResponseStream = {
+              write: vi.fn((data: unknown) => {
+                try {
+                  const parsed = JSON.parse(String(data));
+                  if (parsed.statusCode === 204) {
+                    operationOrder.push("metadataWrite");
+                  }
+                } catch {
+                  if (data === "\0\0\0\0\0\0\0\0") {
+                    operationOrder.push("separatorWrite");
+                  }
+                }
+                return true;
+              }),
+              end: vi.fn(() => {
+                operationOrder.push("streamEnd");
+              }),
+            };
+            await handler(event, trackingStream, context);
+          },
+      );
 
       const app = express();
       app.use(cors({ origin: "https://example.com" }));
@@ -664,31 +711,53 @@ describe("Lambda Adapter Integration", () => {
 
       await handler(optionsEvent, mockContext);
 
-      // Critical: flushHeaders must be called BEFORE stream end
-      // This ensures _wrappedStream exists when _final() calls _wrappedStream.end()
-      expect(operationOrder).toContain("flushHeaders");
+      // For 204 responses: metadata write + separator write, then stream end
+      expect(operationOrder).toContain("metadataWrite");
       expect(operationOrder).toContain("streamEnd");
-      expect(operationOrder.indexOf("flushHeaders")).toBeLessThan(
+      expect(operationOrder.indexOf("metadataWrite")).toBeLessThan(
         operationOrder.indexOf("streamEnd"),
       );
     });
 
-    it("flushes headers before ending stream for NO_CONTENT responses via expressHandler (issue #178)", async () => {
+    it("writes metadata directly for NO_CONTENT responses via expressHandler (issue #178)", async () => {
       // This test verifies the fix for issue #178 where httpHandler(NO_CONTENT)
-      // routes would hang because flushHeaders wasn't called before end()
+      // routes would hang because Lambda ignores metadata when no body is written.
+      // The fix bypasses HttpResponseStream.from for 204 and writes metadata directly.
       const operationOrder: string[] = [];
 
+      // Override streamifyResponse to track operations
       (
-        awslambda.HttpResponseStream.from as ReturnType<typeof vi.fn>
-      ).mockImplementation(() => {
-        operationOrder.push("flushHeaders");
-        return {
-          write: vi.fn(),
-          end: vi.fn(() => {
-            operationOrder.push("streamEnd");
-          }),
-        };
-      });
+        awslambda.streamifyResponse as ReturnType<typeof vi.fn>
+      ).mockImplementation(
+        <TEvent>(
+          handler: (
+            event: TEvent,
+            responseStream: ResponseStream,
+            context: LambdaContext,
+          ) => Promise<void>,
+        ) =>
+          async (event: TEvent, context: LambdaContext): Promise<void> => {
+            const trackingStream: ResponseStream = {
+              write: vi.fn((data: unknown) => {
+                try {
+                  const parsed = JSON.parse(String(data));
+                  if (parsed.statusCode === 204) {
+                    operationOrder.push("metadataWrite");
+                  }
+                } catch {
+                  if (data === "\0\0\0\0\0\0\0\0") {
+                    operationOrder.push("separatorWrite");
+                  }
+                }
+                return true;
+              }),
+              end: vi.fn(() => {
+                operationOrder.push("streamEnd");
+              }),
+            };
+            await handler(event, trackingStream, context);
+          },
+      );
 
       const app = express();
       // Simulate httpHandler(HTTP.CODE.NO_CONTENT) - returns null for 204
@@ -718,12 +787,12 @@ describe("Lambda Adapter Integration", () => {
 
       await handler(getEvent, mockContext);
 
-      // Critical: flushHeaders must be called BEFORE stream end
-      // This ensures _wrappedStream exists when _final() calls _wrappedStream.end()
-      // Without this fix, the Lambda would hang because _wrappedStream is null
-      expect(operationOrder).toContain("flushHeaders");
+      // For 204 responses, metadata is written directly to response stream
+      // This bypasses HttpResponseStream.from which would cause Lambda to ignore
+      // our metadata since no body content is written
+      expect(operationOrder).toContain("metadataWrite");
       expect(operationOrder).toContain("streamEnd");
-      expect(operationOrder.indexOf("flushHeaders")).toBeLessThan(
+      expect(operationOrder.indexOf("metadataWrite")).toBeLessThan(
         operationOrder.indexOf("streamEnd"),
       );
     });

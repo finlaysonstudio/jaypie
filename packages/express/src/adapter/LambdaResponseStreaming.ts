@@ -76,12 +76,6 @@ export class LambdaResponseStreaming extends Writable {
     // Survives prototype manipulation from Express and dd-trace.
     (this as unknown as Record<symbol, unknown>)[JAYPIE_LAMBDA_STREAMING] =
       true;
-    // DIAGNOSTIC: Log symbol assignment
-    console.log("[DIAG:LambdaResponseStreaming:constructor] Symbol set", {
-      symbolValue: (this as unknown as Record<symbol, unknown>)[
-        JAYPIE_LAMBDA_STREAMING
-      ],
-    });
     // Initialize Node's internal kOutHeaders for dd-trace compatibility.
     // dd-trace patches HTTP methods and expects this internal state.
     if (kOutHeaders) {
@@ -306,18 +300,7 @@ export class LambdaResponseStreaming extends Writable {
   }
 
   flushHeaders(): void {
-    // DIAGNOSTIC: Log every flushHeaders call with stack trace
-    const caller = new Error().stack?.split("\n").slice(1, 5).join("\n");
-    console.log("[DIAG:LambdaResponseStreaming:flushHeaders] Called", {
-      statusCode: this.statusCode,
-      headersSent: this._headersSent,
-      caller,
-    });
-
     if (this._headersSent) {
-      console.log(
-        "[DIAG:LambdaResponseStreaming:flushHeaders] Already sent, returning early",
-      );
       return;
     }
 
@@ -331,15 +314,20 @@ export class LambdaResponseStreaming extends Writable {
       statusCode: this.statusCode,
     };
 
-    // DIAGNOSTIC: Log what we're sending to Lambda
-    console.log(
-      "[DIAG:LambdaResponseStreaming:flushHeaders] Creating wrapped stream",
-      {
-        metadata,
-      },
-    );
+    // For 204 No Content, write metadata directly without wrapped stream.
+    // Lambda streaming ignores metadata when no body content is written,
+    // so we write the prelude manually and skip creating a wrapped stream.
+    if (this.statusCode === 204) {
+      const prelude = JSON.stringify(metadata);
+      this._responseStream.write(prelude);
+      // Metadata separator (8 null bytes) signals end of prelude
+      this._responseStream.write("\0\0\0\0\0\0\0\0");
+      this._headersSent = true;
+      // Don't create wrapped stream - 204 has no body
+      return;
+    }
 
-    // Wrap the stream with metadata using awslambda global
+    // Normal streaming: create wrapped stream
     this._wrappedStream = awslambda.HttpResponseStream.from(
       this._responseStream,
       metadata,
@@ -380,14 +368,6 @@ export class LambdaResponseStreaming extends Writable {
   }
 
   status(code: number): this {
-    // DIAGNOSTIC: Log status code changes
-    const caller = new Error().stack?.split("\n").slice(1, 4).join("\n");
-    console.log("[DIAG:LambdaResponseStreaming:status] Setting status", {
-      newCode: code,
-      previousCode: this.statusCode,
-      headersSent: this._headersSent,
-      caller,
-    });
     this.statusCode = code;
     return this;
   }
@@ -441,20 +421,10 @@ export class LambdaResponseStreaming extends Writable {
       ? chunk
       : Buffer.from(chunk, encoding);
 
-    // DIAGNOSTIC: Log every write
-    console.log("[DIAG:LambdaResponseStreaming:_write] Called", {
-      chunkLength: buffer.length,
-      headersSent: this._headersSent,
-      statusCode: this.statusCode,
-    });
-
     if (!this._headersSent) {
       // Buffer writes until headers are sent
       this._pendingWrites.push({ callback: () => callback(), chunk: buffer });
       // Auto-flush headers on first write
-      console.log(
-        "[DIAG:LambdaResponseStreaming:_write] Auto-flushing headers on first write",
-      );
       this.flushHeaders();
     } else {
       this._wrappedStream!.write(buffer);
@@ -463,28 +433,15 @@ export class LambdaResponseStreaming extends Writable {
   }
 
   _final(callback: (error?: Error | null) => void): void {
-    // DIAGNOSTIC: Log _final call
-    console.log("[DIAG:LambdaResponseStreaming:_final] Called", {
-      headersSent: this._headersSent,
-      statusCode: this.statusCode,
-      hasWrappedStream: !!this._wrappedStream,
-    });
-
     if (!this._headersSent) {
-      console.log(
-        "[DIAG:LambdaResponseStreaming:_final] Headers not sent, flushing now",
-      );
       this.flushHeaders();
     }
 
     if (this._wrappedStream) {
-      // FIX #178: Write empty chunk to force Lambda to process metadata
-      // Without this, 204 responses have no writes and Lambda ignores our statusCode/headers
-      console.log(
-        "[DIAG:LambdaResponseStreaming:_final] Writing empty chunk for metadata",
-      );
-      this._wrappedStream.write("");
       this._wrappedStream.end();
+    } else {
+      // 204 case: headers were written directly, just end the response stream
+      this._responseStream.end();
     }
     // Use setImmediate to ensure stream operations complete before callback
     setImmediate(callback);

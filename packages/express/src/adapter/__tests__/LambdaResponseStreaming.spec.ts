@@ -368,17 +368,22 @@ describe("LambdaResponseStreaming", () => {
       await finishPromise;
 
       expect(res.headersSent).toBe(true);
-      expect(awslambda.HttpResponseStream.from).toHaveBeenCalledWith(
-        mockResponseStream,
-        expect.objectContaining({
-          statusCode: 204,
-          headers: expect.objectContaining({
-            "content-length": "0",
-            "access-control-allow-origin": "https://example.com",
-          }),
-        }),
+      // For 204 responses, we bypass the wrapped stream and write metadata directly
+      // This is the fix for issue #178 - Lambda ignores metadata when no body is written
+      expect(awslambda.HttpResponseStream.from).not.toHaveBeenCalled();
+      // Verify metadata was written directly to response stream
+      expect(mockResponseStream.write).toHaveBeenCalledTimes(2); // metadata JSON + separator
+      const firstWriteCall = (
+        mockResponseStream.write as ReturnType<typeof vi.fn>
+      ).mock.calls[0][0];
+      const metadata = JSON.parse(firstWriteCall);
+      expect(metadata.statusCode).toBe(204);
+      expect(metadata.headers["content-length"]).toBe("0");
+      expect(metadata.headers["access-control-allow-origin"]).toBe(
+        "https://example.com",
       );
-      expect(mockWrappedStream.end).toHaveBeenCalled();
+      // Verify response stream was ended directly (not wrapped stream)
+      expect(mockResponseStream.end).toHaveBeenCalled();
     });
 
     it("emits finish event for empty responses", async () => {

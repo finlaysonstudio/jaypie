@@ -48,10 +48,7 @@ describe("Http Handler", () => {
     // Make a request
     const res = await request(app).get("/");
     // Check the response
-    // DIAGNOSTIC: Header includes version suffix during #178 investigation
-    expect(res.headers["x-powered-by"]).toMatch(
-      new RegExp(`^${JAYPIE.LIB.EXPRESS}(@\\d+\\.\\d+\\.\\d+(-dev)?)?$`),
-    );
+    expect(res.headers["x-powered-by"]).toEqual(JAYPIE.LIB.EXPRESS);
   });
   it("Returns 200 by default", async () => {
     // Setup express to use our route
