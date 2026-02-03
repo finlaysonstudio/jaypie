@@ -166,6 +166,46 @@ function filterReleaseNotesSince(
 // SKILL SERVICE
 // =============================================================================
 
+/**
+ * Generate alternative spellings for plural/singular matching
+ */
+function getAlternativeSpellings(alias: string): string[] {
+  const alternatives: string[] = [];
+
+  if (alias.endsWith("es")) {
+    // "indexes" -> try "indexe" and "index"
+    alternatives.push(alias.slice(0, -1)); // Remove "s" -> "indexe"
+    alternatives.push(alias.slice(0, -2)); // Remove "es" -> "index"
+  } else if (alias.endsWith("s")) {
+    // "skills" -> try "skill"
+    alternatives.push(alias.slice(0, -1)); // Remove "s" -> "skill"
+  } else {
+    // "fish" -> try "fishs" and "fishes"
+    alternatives.push(alias + "s");
+    alternatives.push(alias + "es");
+  }
+
+  return alternatives;
+}
+
+/**
+ * Add alias to frontmatter indicating the canonical skill name
+ */
+function addAliasToFrontmatter(content: string, matchedAlias: string): string {
+  if (content.startsWith("---")) {
+    // Find the end of frontmatter
+    const endIndex = content.indexOf("---", 3);
+    if (endIndex !== -1) {
+      // Insert alias before the closing ---
+      const beforeClose = content.slice(0, endIndex);
+      const afterClose = content.slice(endIndex);
+      return `${beforeClose}alias: ${matchedAlias}\n${afterClose}`;
+    }
+  }
+  // No frontmatter exists, create one
+  return `---\nalias: ${matchedAlias}\n---\n\n${content}`;
+}
+
 export const skillService = fabricService({
   alias: "skill",
   description:
@@ -203,7 +243,22 @@ export const skillService = fabricService({
       return `# Jaypie Skills\n\n## Available Skills\n\n${skillList}`;
     }
 
-    const skill = await skillStore.get(alias);
+    // Try exact match first
+    let skill = await skillStore.get(alias);
+    let matchedAlias = alias;
+
+    // If no exact match, try alternative spellings (plural/singular)
+    if (!skill) {
+      const alternatives = getAlternativeSpellings(alias);
+      for (const alt of alternatives) {
+        skill = await skillStore.get(alt);
+        if (skill) {
+          matchedAlias = alt;
+          break;
+        }
+      }
+    }
+
     if (!skill) {
       throw new Error(
         `Skill "${alias}" not found. Use skill("index") to list available skills.`,
@@ -211,8 +266,15 @@ export const skillService = fabricService({
     }
 
     // Return raw file content for non-index skills (preserve frontmatter)
-    const skillPath = path.join(SKILLS_PATH, `${alias}.md`);
-    return fs.readFile(skillPath, "utf-8");
+    const skillPath = path.join(SKILLS_PATH, `${matchedAlias}.md`);
+    let content = await fs.readFile(skillPath, "utf-8");
+
+    // If we matched via alternative spelling, add alias to indicate canonical name
+    if (matchedAlias !== alias) {
+      content = addAliasToFrontmatter(content, matchedAlias);
+    }
+
+    return content;
   },
 });
 
