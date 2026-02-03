@@ -7,7 +7,7 @@
   "author": "Finlayson Studio",
   "type": "module",
   "scripts": {
-    "build": "tsc && echo '{\"type\":\"module\"}' > dist/package.json",
+    "build": "esbuild index.ts --bundle --platform=node --target=node22 --outfile=dist/index.js --format=esm --banner:js=\"import { createRequire } from 'module'; const require = createRequire(import.meta.url);\" && echo '{\"type\":\"module\"}' > dist/package.json",
     "dev": "tsx watch index.ts",
     "format": "eslint --fix --quiet .",
     "lint": "eslint --quiet .",
@@ -22,6 +22,7 @@
   },
   "devDependencies": {
     "@types/express": "^5.0.6",
+    "esbuild": "^0.27.2",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3"
   },
