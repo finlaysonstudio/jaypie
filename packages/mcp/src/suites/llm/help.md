@@ -30,7 +30,7 @@ Supported providers: `openai`, `anthropic`, `gemini`, `openrouter`
 |----------|-------------|
 | `OPENAI_API_KEY` | OpenAI API key |
 | `ANTHROPIC_API_KEY` | Anthropic API key |
-| `GOOGLE_API_KEY` | Google/Gemini API key |
+| `GOOGLE_API_KEY` or `GEMINI_API_KEY` | Google/Gemini API key |
 | `OPENROUTER_API_KEY` | OpenRouter API key |
 
 ## Examples

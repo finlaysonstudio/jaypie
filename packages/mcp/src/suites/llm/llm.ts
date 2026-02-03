@@ -62,7 +62,9 @@ const TOTAL_PROVIDERS = 4;
  */
 export function validateLlmSetup(): LlmValidationResult {
   const anthropicAvailable = Boolean(process.env.ANTHROPIC_API_KEY);
-  const googleAvailable = Boolean(process.env.GOOGLE_API_KEY);
+  const googleAvailable = Boolean(
+    process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY,
+  );
   const openaiAvailable = Boolean(process.env.OPENAI_API_KEY);
   const openrouterAvailable = Boolean(process.env.OPENROUTER_API_KEY);
 
