@@ -133,11 +133,11 @@ const decorateResponse = (
     // X-Powered-By, override "Express" but nothing else
     const currentPoweredBy = safeGetHeader(extRes, HTTP.HEADER.POWERED_BY);
     if (!currentPoweredBy || currentPoweredBy === "Express") {
-      // DIAGNOSTIC: Include diag marker to verify build deployment
+      // DIAGNOSTIC: Include dev marker to verify build deployment
       safeSetHeader(
         extRes,
         HTTP.HEADER.POWERED_BY,
-        `${JAYPIE.LIB.EXPRESS}#diag-178`,
+        `${JAYPIE.LIB.EXPRESS}#dev-178`,
       );
     }
 
