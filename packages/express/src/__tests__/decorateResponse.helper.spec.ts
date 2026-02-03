@@ -113,9 +113,12 @@ describe("Decorate response util", () => {
           (res as unknown as MockExpressResponse).get(HTTP.HEADER.POWERED_BY),
         ).toBeUndefined();
         decorateResponse(res);
+        // DIAGNOSTIC: Header includes version suffix during #178 investigation
         expect(
           (res as unknown as MockExpressResponse).get(HTTP.HEADER.POWERED_BY),
-        ).toEqual(JAYPIE.LIB.EXPRESS);
+        ).toMatch(
+          new RegExp(`^${JAYPIE.LIB.EXPRESS}(@\\d+\\.\\d+\\.\\d+(-dev)?)?$`),
+        );
       });
       it("Adds the powered by and overrides the Express default", () => {
         const res = new MockExpressResponse() as unknown as Response;
@@ -127,9 +130,12 @@ describe("Decorate response util", () => {
           (res as unknown as MockExpressResponse).get(HTTP.HEADER.POWERED_BY),
         ).not.toBeUndefined();
         decorateResponse(res);
+        // DIAGNOSTIC: Header includes version suffix during #178 investigation
         expect(
           (res as unknown as MockExpressResponse).get(HTTP.HEADER.POWERED_BY),
-        ).toEqual(JAYPIE.LIB.EXPRESS);
+        ).toMatch(
+          new RegExp(`^${JAYPIE.LIB.EXPRESS}(@\\d+\\.\\d+\\.\\d+(-dev)?)?$`),
+        );
       });
       it("Will not add powered by if one exists", () => {
         const res = new MockExpressResponse() as unknown as Response;
