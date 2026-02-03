@@ -65,6 +65,7 @@ export class LambdaResponseStreaming extends Writable {
   // that need to bypass dd-trace interception
   public _headers: Map<string, string | string[]> = new Map();
   public _headersSent: boolean = false;
+  private _convertedFrom204: boolean = false;
   private _pendingWrites: PendingWrite[] = [];
   private _responseStream: ResponseStream;
   private _wrappedStream: ResponseStream | null = null;
@@ -309,25 +310,23 @@ export class LambdaResponseStreaming extends Writable {
       headers[key] = Array.isArray(value) ? value.join(", ") : String(value);
     }
 
-    const metadata: HttpResponseStreamMetadata = {
-      headers,
-      statusCode: this.statusCode,
-    };
-
-    // For 204 No Content, write metadata directly without wrapped stream.
-    // Lambda streaming ignores metadata when no body content is written,
-    // so we write the prelude manually and skip creating a wrapped stream.
-    if (this.statusCode === 204) {
-      const prelude = JSON.stringify(metadata);
-      this._responseStream.write(prelude);
-      // Metadata separator (8 null bytes) signals end of prelude
-      this._responseStream.write("\0\0\0\0\0\0\0\0");
-      this._headersSent = true;
-      // Don't create wrapped stream - 204 has no body
-      return;
+    // Lambda streaming requires body content for metadata to be transmitted.
+    // Convert 204 No Content to 200 OK with empty JSON body as workaround.
+    // See: https://github.com/finlaysonstudio/jaypie/issues/178
+    let statusCode = this.statusCode;
+    if (statusCode === 204) {
+      statusCode = 200;
+      this._convertedFrom204 = true;
+      // Set content-type for the JSON body we'll send
+      headers["content-type"] = "application/json";
     }
 
-    // Normal streaming: create wrapped stream
+    const metadata: HttpResponseStreamMetadata = {
+      headers,
+      statusCode,
+    };
+
+    // Create wrapped stream with metadata
     this._wrappedStream = awslambda.HttpResponseStream.from(
       this._responseStream,
       metadata,
@@ -437,11 +436,14 @@ export class LambdaResponseStreaming extends Writable {
       this.flushHeaders();
     }
 
+    // For converted 204 responses, write empty JSON body
+    // Lambda streaming requires body content for metadata to be transmitted
+    if (this._convertedFrom204 && this._wrappedStream) {
+      this._wrappedStream.write("{}");
+    }
+
     if (this._wrappedStream) {
       this._wrappedStream.end();
-    } else {
-      // 204 case: headers were written directly, just end the response stream
-      this._responseStream.end();
     }
     // Use setImmediate to ensure stream operations complete before callback
     setImmediate(callback);

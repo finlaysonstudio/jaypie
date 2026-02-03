@@ -350,7 +350,7 @@ describe("LambdaResponseStreaming", () => {
       });
     });
 
-    it("handles 204 No Content response (CORS preflight)", async () => {
+    it("handles 204 No Content response (CORS preflight) by converting to 200", async () => {
       const res = new LambdaResponseStreaming(mockResponseStream);
 
       // Simulate what CORS middleware does for OPTIONS requests
@@ -368,22 +368,21 @@ describe("LambdaResponseStreaming", () => {
       await finishPromise;
 
       expect(res.headersSent).toBe(true);
-      // For 204 responses, we bypass the wrapped stream and write metadata directly
-      // This is the fix for issue #178 - Lambda ignores metadata when no body is written
-      expect(awslambda.HttpResponseStream.from).not.toHaveBeenCalled();
-      // Verify metadata was written directly to response stream
-      expect(mockResponseStream.write).toHaveBeenCalledTimes(2); // metadata JSON + separator
-      const firstWriteCall = (
-        mockResponseStream.write as ReturnType<typeof vi.fn>
-      ).mock.calls[0][0];
-      const metadata = JSON.parse(firstWriteCall);
-      expect(metadata.statusCode).toBe(204);
-      expect(metadata.headers["content-length"]).toBe("0");
-      expect(metadata.headers["access-control-allow-origin"]).toBe(
-        "https://example.com",
+      // For 204 responses, we convert to 200 with {} body (issue #178 workaround)
+      // Lambda streaming requires body content for metadata to be transmitted
+      expect(awslambda.HttpResponseStream.from).toHaveBeenCalledWith(
+        mockResponseStream,
+        expect.objectContaining({
+          statusCode: 200, // Converted from 204
+          headers: expect.objectContaining({
+            "content-type": "application/json",
+            "access-control-allow-origin": "https://example.com",
+          }),
+        }),
       );
-      // Verify response stream was ended directly (not wrapped stream)
-      expect(mockResponseStream.end).toHaveBeenCalled();
+      // Verify {} body was written
+      expect(mockWrappedStream.write).toHaveBeenCalledWith("{}");
+      expect(mockWrappedStream.end).toHaveBeenCalled();
     });
 
     it("emits finish event for empty responses", async () => {

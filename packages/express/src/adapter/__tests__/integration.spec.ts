@@ -574,34 +574,21 @@ describe("Lambda Adapter Integration", () => {
       // If this test completes, the 204 response was handled correctly.
     });
 
-    it("handles CORS OPTIONS with streaming and properly ends response", async () => {
-      // Track writes to verify 204 bypass behavior
-      const capturedWrites: string[] = [];
-      let streamEnded = false;
-
-      // Override streamifyResponse to capture the response stream operations
+    it("handles CORS OPTIONS with streaming by converting 204 to 200", async () => {
+      // Track HttpResponseStream.from calls to verify 204 -> 200 conversion
+      const fromCalls: Array<{
+        metadata: { statusCode: number; headers: Record<string, string> };
+      }> = [];
       (
-        awslambda.streamifyResponse as ReturnType<typeof vi.fn>
+        awslambda.HttpResponseStream.from as ReturnType<typeof vi.fn>
       ).mockImplementation(
-        <TEvent>(
-          handler: (
-            event: TEvent,
-            responseStream: ResponseStream,
-            context: LambdaContext,
-          ) => Promise<void>,
-        ) =>
-          async (event: TEvent, context: LambdaContext): Promise<void> => {
-            const captureStream: ResponseStream = {
-              write: vi.fn((data: unknown) => {
-                capturedWrites.push(String(data));
-                return true;
-              }),
-              end: vi.fn(() => {
-                streamEnded = true;
-              }),
-            };
-            await handler(event, captureStream, context);
-          },
+        (
+          stream: ResponseStream,
+          metadata: { statusCode: number; headers: Record<string, string> },
+        ) => {
+          fromCalls.push({ metadata });
+          return mockWrappedStream;
+        },
       );
 
       const app = express();
@@ -630,61 +617,33 @@ describe("Lambda Adapter Integration", () => {
 
       await handler(optionsEvent, mockContext);
 
-      // For 204 responses, HttpResponseStream.from is NOT called (bypass for issue #178)
-      // Verify metadata was written directly to response stream
-      expect(capturedWrites.length).toBeGreaterThan(0);
-      // First write should be JSON metadata
-      const metadataWrite = capturedWrites.find((write) => {
-        try {
-          const parsed = JSON.parse(write);
-          return parsed.statusCode === 204;
-        } catch {
-          return false;
-        }
-      });
-      expect(metadataWrite).toBeDefined();
-      const metadata = JSON.parse(metadataWrite!);
-      expect(metadata.statusCode).toBe(204);
-      expect(metadata.headers["content-length"]).toBe("0");
-      expect(streamEnded).toBe(true);
+      // For 204 responses, we convert to 200 with {} body (issue #178 workaround)
+      expect(fromCalls.length).toBeGreaterThan(0);
+      const lastCall = fromCalls[fromCalls.length - 1];
+      expect(lastCall.metadata.statusCode).toBe(200); // Converted from 204
+      expect(lastCall.metadata.headers["content-type"]).toBe(
+        "application/json",
+      );
+      // Verify {} body was written
+      expect(mockWrappedStream.write).toHaveBeenCalledWith("{}");
+      expect(mockWrappedStream.end).toHaveBeenCalled();
     });
 
-    it("writes metadata before ending stream for OPTIONS requests (204 bypass)", async () => {
-      // Track the order of operations for 204 response handling
-      const operationOrder: string[] = [];
-
-      // Override streamifyResponse to track operations
+    it("converts 204 to 200 for OPTIONS requests (issue #178 workaround)", async () => {
+      // Track HttpResponseStream.from calls
+      const fromCalls: Array<{
+        metadata: { statusCode: number; headers: Record<string, string> };
+      }> = [];
       (
-        awslambda.streamifyResponse as ReturnType<typeof vi.fn>
+        awslambda.HttpResponseStream.from as ReturnType<typeof vi.fn>
       ).mockImplementation(
-        <TEvent>(
-          handler: (
-            event: TEvent,
-            responseStream: ResponseStream,
-            context: LambdaContext,
-          ) => Promise<void>,
-        ) =>
-          async (event: TEvent, context: LambdaContext): Promise<void> => {
-            const trackingStream: ResponseStream = {
-              write: vi.fn((data: unknown) => {
-                try {
-                  const parsed = JSON.parse(String(data));
-                  if (parsed.statusCode === 204) {
-                    operationOrder.push("metadataWrite");
-                  }
-                } catch {
-                  if (data === "\0\0\0\0\0\0\0\0") {
-                    operationOrder.push("separatorWrite");
-                  }
-                }
-                return true;
-              }),
-              end: vi.fn(() => {
-                operationOrder.push("streamEnd");
-              }),
-            };
-            await handler(event, trackingStream, context);
-          },
+        (
+          stream: ResponseStream,
+          metadata: { statusCode: number; headers: Record<string, string> },
+        ) => {
+          fromCalls.push({ metadata });
+          return mockWrappedStream;
+        },
       );
 
       const app = express();
@@ -711,52 +670,31 @@ describe("Lambda Adapter Integration", () => {
 
       await handler(optionsEvent, mockContext);
 
-      // For 204 responses: metadata write + separator write, then stream end
-      expect(operationOrder).toContain("metadataWrite");
-      expect(operationOrder).toContain("streamEnd");
-      expect(operationOrder.indexOf("metadataWrite")).toBeLessThan(
-        operationOrder.indexOf("streamEnd"),
-      );
+      // 204 responses are converted to 200 with {} body
+      expect(fromCalls.length).toBeGreaterThan(0);
+      const lastCall = fromCalls[fromCalls.length - 1];
+      expect(lastCall.metadata.statusCode).toBe(200);
+      expect(mockWrappedStream.write).toHaveBeenCalledWith("{}");
+      expect(mockWrappedStream.end).toHaveBeenCalled();
     });
 
-    it("writes metadata directly for NO_CONTENT responses via expressHandler (issue #178)", async () => {
+    it("converts 204 to 200 for NO_CONTENT responses via expressHandler (issue #178)", async () => {
       // This test verifies the fix for issue #178 where httpHandler(NO_CONTENT)
-      // routes would hang because Lambda ignores metadata when no body is written.
-      // The fix bypasses HttpResponseStream.from for 204 and writes metadata directly.
-      const operationOrder: string[] = [];
-
-      // Override streamifyResponse to track operations
+      // routes would hang because Lambda streaming requires body content.
+      // The fix converts 204 to 200 with {} body.
+      const fromCalls: Array<{
+        metadata: { statusCode: number; headers: Record<string, string> };
+      }> = [];
       (
-        awslambda.streamifyResponse as ReturnType<typeof vi.fn>
+        awslambda.HttpResponseStream.from as ReturnType<typeof vi.fn>
       ).mockImplementation(
-        <TEvent>(
-          handler: (
-            event: TEvent,
-            responseStream: ResponseStream,
-            context: LambdaContext,
-          ) => Promise<void>,
-        ) =>
-          async (event: TEvent, context: LambdaContext): Promise<void> => {
-            const trackingStream: ResponseStream = {
-              write: vi.fn((data: unknown) => {
-                try {
-                  const parsed = JSON.parse(String(data));
-                  if (parsed.statusCode === 204) {
-                    operationOrder.push("metadataWrite");
-                  }
-                } catch {
-                  if (data === "\0\0\0\0\0\0\0\0") {
-                    operationOrder.push("separatorWrite");
-                  }
-                }
-                return true;
-              }),
-              end: vi.fn(() => {
-                operationOrder.push("streamEnd");
-              }),
-            };
-            await handler(event, trackingStream, context);
-          },
+        (
+          stream: ResponseStream,
+          metadata: { statusCode: number; headers: Record<string, string> },
+        ) => {
+          fromCalls.push({ metadata });
+          return mockWrappedStream;
+        },
       );
 
       const app = express();
@@ -787,14 +725,12 @@ describe("Lambda Adapter Integration", () => {
 
       await handler(getEvent, mockContext);
 
-      // For 204 responses, metadata is written directly to response stream
-      // This bypasses HttpResponseStream.from which would cause Lambda to ignore
-      // our metadata since no body content is written
-      expect(operationOrder).toContain("metadataWrite");
-      expect(operationOrder).toContain("streamEnd");
-      expect(operationOrder.indexOf("metadataWrite")).toBeLessThan(
-        operationOrder.indexOf("streamEnd"),
-      );
+      // 204 responses are converted to 200 with {} body
+      expect(fromCalls.length).toBeGreaterThan(0);
+      const lastCall = fromCalls[fromCalls.length - 1];
+      expect(lastCall.metadata.statusCode).toBe(200);
+      expect(mockWrappedStream.write).toHaveBeenCalledWith("{}");
+      expect(mockWrappedStream.end).toHaveBeenCalled();
     });
   });
 });
