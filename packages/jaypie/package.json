@@ -36,7 +36,7 @@
     "@jaypie/core": "^1.2.1",
     "@jaypie/datadog": "^1.2.2",
     "@jaypie/errors": "^1.2.1",
-    "@jaypie/express": "1.2.11-dev.1",
+    "@jaypie/express": ">=1.2.11-dev.0",
     "@jaypie/kit": "^1.2.1",
     "@jaypie/lambda": "^1.2.3",
     "@jaypie/logger": "^1.2.1"
