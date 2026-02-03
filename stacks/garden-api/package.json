@@ -7,7 +7,7 @@
   "author": "Finlayson Studio",
   "type": "module",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && echo '{\"type\":\"module\"}' > dist/package.json",
     "dev": "tsx watch index.ts",
     "format": "eslint --fix --quiet .",
     "lint": "eslint --quiet .",
