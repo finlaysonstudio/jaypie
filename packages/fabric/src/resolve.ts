@@ -269,25 +269,23 @@ export function resolveFromArray(value: unknown): unknown {
 }
 
 /**
- * Convert a value to an object with a value property
+ * Convert a value to an object
  * - Scalars become { value: scalar }
  * - Arrays become { value: array }
- * - Objects with a value attribute pass through
- * - Objects without a value attribute throw BadRequestError
+ * - Objects pass through as-is (including those with or without value attribute)
  * - undefined/null become undefined
  */
-export function fabricObject(value: unknown): { value: unknown } | undefined {
+export function fabricObject(
+  value: unknown,
+): Record<string, unknown> | undefined {
   if (value === undefined || value === null) {
     return undefined;
   }
 
   // Check if already an object (but not an array)
   if (typeof value === "object" && !Array.isArray(value)) {
-    const obj = value as Record<string, unknown>;
-    if ("value" in obj) {
-      return obj as { value: unknown };
-    }
-    throw new BadRequestError("Object must have a value attribute");
+    // Pass through any object as-is
+    return value as Record<string, unknown>;
   }
 
   // Scalars and arrays become { value: ... }
@@ -297,7 +295,7 @@ export function fabricObject(value: unknown): { value: unknown } | undefined {
 /**
  * Resolve a value from an object to its value property
  * - Objects with a value property return that value
- * - Objects without a value throw BadRequestError
+ * - Objects without a value property pass through as-is
  * - Scalars pass through
  */
 export function resolveFromObject(value: unknown): unknown {
@@ -310,7 +308,8 @@ export function resolveFromObject(value: unknown): unknown {
     if ("value" in obj) {
       return obj.value;
     }
-    throw new BadRequestError("Object must have a value attribute");
+    // Pass through objects without value property
+    return value;
   }
 
   return value;

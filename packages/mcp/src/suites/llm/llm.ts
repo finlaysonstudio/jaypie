@@ -25,6 +25,23 @@ export interface LlmDebugCallResult {
   error?: string;
 }
 
+// Validation types
+export interface LlmProviderStatus {
+  available: boolean;
+}
+
+export interface LlmValidationResult {
+  success: boolean;
+  providers: {
+    anthropic: LlmProviderStatus;
+    google: LlmProviderStatus;
+    openai: LlmProviderStatus;
+    openrouter: LlmProviderStatus;
+  };
+  availableCount: number;
+  totalProviders: number;
+}
+
 interface Logger {
   info: (message: string, ...args: unknown[]) => void;
   error: (message: string, ...args: unknown[]) => void;
@@ -37,6 +54,39 @@ const DEFAULT_MODELS: Record<LlmProvider, string> = {
   openai: LLM.PROVIDER.OPENAI.MODEL.SMALL,
   openrouter: LLM.PROVIDER.OPENROUTER.MODEL.SMALL,
 };
+
+const TOTAL_PROVIDERS = 4;
+
+/**
+ * Validate LLM setup without making API calls
+ */
+export function validateLlmSetup(): LlmValidationResult {
+  const anthropicAvailable = Boolean(process.env.ANTHROPIC_API_KEY);
+  const googleAvailable = Boolean(
+    process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY,
+  );
+  const openaiAvailable = Boolean(process.env.OPENAI_API_KEY);
+  const openrouterAvailable = Boolean(process.env.OPENROUTER_API_KEY);
+
+  const availableCount = [
+    anthropicAvailable,
+    googleAvailable,
+    openaiAvailable,
+    openrouterAvailable,
+  ].filter(Boolean).length;
+
+  return {
+    availableCount,
+    providers: {
+      anthropic: { available: anthropicAvailable },
+      google: { available: googleAvailable },
+      openai: { available: openaiAvailable },
+      openrouter: { available: openrouterAvailable },
+    },
+    success: availableCount > 0,
+    totalProviders: TOTAL_PROVIDERS,
+  };
+}
 
 /**
  * Make a debug LLM call and return the raw response data for inspection

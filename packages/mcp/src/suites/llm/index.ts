@@ -6,7 +6,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { debugLlmCall, type LlmProvider } from "./llm.js";
+import { debugLlmCall, validateLlmSetup, type LlmProvider } from "./llm.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -20,11 +20,12 @@ async function getHelp(): Promise<string> {
   return fs.readFile(path.join(__dirname, "help.md"), "utf-8");
 }
 
-// Input type for the unified LLM service
+// Flattened input type for the unified LLM service
 interface LlmInput {
+  command?: string;
   message?: string;
   model?: string;
-  provider?: LlmProvider;
+  provider?: string;
 }
 
 export const llmService = fabricService({
@@ -37,26 +38,37 @@ export const llmService = fabricService({
       required: false,
       type: String,
     },
-    input: {
-      description: "Command parameters",
+    message: {
+      description: "Message to send to the LLM provider",
       required: false,
-      type: Object,
+      type: String,
+    },
+    model: {
+      description:
+        "Model to use (provider-specific, e.g., gpt-4, claude-3-sonnet)",
+      required: false,
+      type: String,
+    },
+    provider: {
+      description: "LLM provider: anthropic, openai, google, openrouter",
+      required: false,
+      type: String,
     },
   },
-  service: async ({
-    command,
-    input: params,
-  }: {
-    command?: string;
-    input?: LlmInput;
-  }) => {
+  service: async (params: LlmInput) => {
+    const { command } = params;
+
     if (!command || command === "help") {
       return getHelp();
     }
 
-    const p = params || {};
+    const p = params;
 
     switch (command) {
+      case "validate": {
+        return validateLlmSetup();
+      }
+
       case "debug_call": {
         if (!p.provider) throw new Error("provider is required");
         if (!p.message) throw new Error("message is required");
@@ -64,7 +76,7 @@ export const llmService = fabricService({
           {
             message: p.message,
             model: p.model,
-            provider: p.provider,
+            provider: p.provider as LlmProvider,
           },
           log,
         );
