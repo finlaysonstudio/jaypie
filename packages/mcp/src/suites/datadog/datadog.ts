@@ -148,6 +148,13 @@ export interface DatadogRumResult {
   error?: string;
 }
 
+// Validation types
+export interface DatadogValidationResult {
+  success: boolean;
+  apiKey: { present: boolean; source: string | null };
+  appKey: { present: boolean; source: string | null };
+}
+
 export interface DatadogLogEntry {
   id: string;
   timestamp?: string;
@@ -205,6 +212,33 @@ export function getDatadogCredentials(): DatadogCredentials | null {
   }
 
   return { apiKey, appKey };
+}
+
+/**
+ * Validate Datadog setup without making API calls
+ */
+export function validateDatadogSetup(): DatadogValidationResult {
+  const apiKeySource = process.env.DATADOG_API_KEY
+    ? "DATADOG_API_KEY"
+    : process.env.DD_API_KEY
+      ? "DD_API_KEY"
+      : null;
+
+  const appKeySource = process.env.DATADOG_APP_KEY
+    ? "DATADOG_APP_KEY"
+    : process.env.DATADOG_APPLICATION_KEY
+      ? "DATADOG_APPLICATION_KEY"
+      : process.env.DD_APP_KEY
+        ? "DD_APP_KEY"
+        : process.env.DD_APPLICATION_KEY
+          ? "DD_APPLICATION_KEY"
+          : null;
+
+  return {
+    apiKey: { present: apiKeySource !== null, source: apiKeySource },
+    appKey: { present: appKeySource !== null, source: appKeySource },
+    success: apiKeySource !== null && appKeySource !== null,
+  };
 }
 
 /**

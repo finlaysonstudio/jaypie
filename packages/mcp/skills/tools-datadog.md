@@ -46,6 +46,19 @@ datadog({ command: "logs", query: "...", ... })    # Execute a command
 | `testId` | string | Synthetic test ID for getting results |
 | `type` | string | Synthetic test type: api or browser |
 
+## Validation
+
+Check Datadog API key configuration without making API calls:
+
+```
+datadog({ command: "validate" })
+```
+
+Returns:
+- `apiKey` - { present: boolean, source: "DATADOG_API_KEY" | "DD_API_KEY" | null }
+- `appKey` - { present: boolean, source: "DATADOG_APP_KEY" | "DATADOG_APPLICATION_KEY" | "DD_APP_KEY" | "DD_APPLICATION_KEY" | null }
+- `success` - true if both keys are present
+
 ## Environment Variables
 
 Configure defaults via environment:

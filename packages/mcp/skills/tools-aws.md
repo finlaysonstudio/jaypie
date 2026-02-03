@@ -150,6 +150,19 @@ See **tools-dynamodb** for DynamoDB-specific documentation.
 | `limit` | number | Maximum number of results |
 | `maxResults` | number | Maximum number of results |
 
+## Validation
+
+Check AWS CLI availability and list profiles without making API calls:
+
+```
+aws({ command: "validate" })
+```
+
+Returns:
+- `cliAvailable` - Whether AWS CLI is installed
+- `cliVersion` - AWS CLI version string
+- `profiles` - List of configured profiles from ~/.aws/config and ~/.aws/credentials
+
 ## Credential Management
 
 Tools use the host's AWS credential chain:

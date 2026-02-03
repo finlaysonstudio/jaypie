@@ -15,6 +15,7 @@ import {
   queryDatadogMetrics,
   searchDatadogLogs,
   searchDatadogRum,
+  validateDatadogSetup,
 } from "./datadog.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -174,6 +175,10 @@ export const datadogService = fabricService({
     };
 
     switch (command) {
+      case "validate": {
+        return validateDatadogSetup();
+      }
+
       case "logs": {
         const result = await searchDatadogLogs(
           credentials,

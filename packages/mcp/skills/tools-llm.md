@@ -20,7 +20,22 @@ llm({ command: "...", ...params })            # Execute a command
 
 | Command | Description |
 |---------|-------------|
+| `validate` | Check which API keys are configured |
 | `debug_call` | Make a debug call to an LLM provider |
+
+## Validation
+
+Check which LLM provider API keys are configured without making API calls:
+
+```
+llm({ command: "validate" })
+```
+
+Returns:
+- `providers` - Status for each provider: anthropic, google, openai, openrouter
+- `availableCount` - Number of providers with API keys configured
+- `totalProviders` - Total number of supported providers (4)
+- `success` - true if at least one provider is available
 
 ## Debug Call
 
@@ -60,7 +75,7 @@ All parameters are passed at the top level (flat structure):
 |----------|-------------|
 | `OPENAI_API_KEY` | OpenAI API key |
 | `ANTHROPIC_API_KEY` | Anthropic API key |
-| `GOOGLE_API_KEY` | Google/Gemini API key |
+| `GOOGLE_API_KEY` or `GEMINI_API_KEY` | Google/Gemini API key |
 | `OPENROUTER_API_KEY` | OpenRouter API key |
 
 ## Supported Providers

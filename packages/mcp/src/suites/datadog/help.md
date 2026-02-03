@@ -6,6 +6,7 @@ Access Datadog observability data. Requires `DATADOG_API_KEY` and `DATADOG_APP_K
 
 | Command | Description | Required Parameters |
 |---------|-------------|---------------------|
+| `validate` | Validate Datadog setup (no API calls) | - |
 | `logs` | Search individual log entries | - |
 | `log_analytics` | Aggregate logs by fields | `groupBy` (comma-separated) |
 | `monitors` | List and filter monitors | - |

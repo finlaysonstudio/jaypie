@@ -6,6 +6,7 @@ Debug and inspect LLM provider responses. Useful for understanding how providers
 
 | Command | Description | Required Parameters |
 |---------|-------------|---------------------|
+| `validate` | Validate LLM setup (check API keys) | - |
 | `debug_call` | Make a debug call and inspect response | `provider`, `message` |
 
 ## Parameters
@@ -29,7 +30,7 @@ Supported providers: `openai`, `anthropic`, `gemini`, `openrouter`
 |----------|-------------|
 | `OPENAI_API_KEY` | OpenAI API key |
 | `ANTHROPIC_API_KEY` | Anthropic API key |
-| `GOOGLE_API_KEY` | Google/Gemini API key |
+| `GOOGLE_API_KEY` or `GEMINI_API_KEY` | Google/Gemini API key |
 | `OPENROUTER_API_KEY` | OpenRouter API key |
 
 ## Examples
