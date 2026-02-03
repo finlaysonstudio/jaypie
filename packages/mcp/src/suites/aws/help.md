@@ -6,6 +6,7 @@ Access AWS services through the AWS CLI. Requires AWS CLI installed and configur
 
 | Command | Description | Required Parameters |
 |---------|-------------|---------------------|
+| `validate` | Validate AWS setup (CLI availability, profiles) | - |
 | `list_profiles` | List AWS profiles | - |
 | `lambda_list_functions` | List Lambda functions | - |
 | `lambda_get_function` | Get function details | `functionName` |

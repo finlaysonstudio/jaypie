@@ -6,7 +6,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { debugLlmCall, type LlmProvider } from "./llm.js";
+import { debugLlmCall, validateLlmSetup, type LlmProvider } from "./llm.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -65,6 +65,10 @@ export const llmService = fabricService({
     const p = params;
 
     switch (command) {
+      case "validate": {
+        return validateLlmSetup();
+      }
+
       case "debug_call": {
         if (!p.provider) throw new Error("provider is required");
         if (!p.message) throw new Error("message is required");

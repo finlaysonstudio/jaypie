@@ -23,6 +23,7 @@ import {
   receiveSQSMessage,
   scanDynamoDB,
   stopStepFunctionExecution,
+  validateAwsSetup,
 } from "./aws.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -232,6 +233,10 @@ export const awsService = fabricService({
     const p = params;
 
     switch (command) {
+      case "validate": {
+        return validateAwsSetup();
+      }
+
       case "list_profiles": {
         const result = await listAwsProfiles(log);
         if (!result.success) throw new Error(result.error);

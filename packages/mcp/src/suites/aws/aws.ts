@@ -194,6 +194,14 @@ export interface AwsProfile {
   sso_start_url?: string;
 }
 
+// Validation types
+export interface AwsValidationResult {
+  success: boolean;
+  cliAvailable: boolean;
+  cliVersion?: string;
+  profiles: AwsProfile[];
+}
+
 /**
  * Parse AWS CLI error messages into user-friendly descriptions
  */
@@ -342,6 +350,55 @@ export async function executeAwsCommand<T>(
       }
     });
   });
+}
+
+/**
+ * Check if AWS CLI is available and get its version
+ */
+async function checkAwsCliVersion(): Promise<{
+  available: boolean;
+  version?: string;
+}> {
+  return new Promise((resolve) => {
+    const proc = spawn("aws", ["--version"]);
+    let stdout = "";
+
+    proc.stdout.on("data", (data) => {
+      stdout += data.toString();
+    });
+
+    proc.on("close", (code) => {
+      if (code === 0) {
+        // Output is like "aws-cli/2.15.0 Python/3.11.6 Darwin/23.2.0 source/arm64"
+        const match = stdout.match(/aws-cli\/([\d.]+)/);
+        resolve({
+          available: true,
+          version: match ? match[1] : stdout.trim(),
+        });
+      } else {
+        resolve({ available: false });
+      }
+    });
+
+    proc.on("error", () => {
+      resolve({ available: false });
+    });
+  });
+}
+
+/**
+ * Validate AWS setup without making API calls
+ */
+export async function validateAwsSetup(): Promise<AwsValidationResult> {
+  const cliCheck = await checkAwsCliVersion();
+  const profilesResult = await listAwsProfiles();
+
+  return {
+    cliAvailable: cliCheck.available,
+    cliVersion: cliCheck.version,
+    profiles: profilesResult.success ? (profilesResult.data ?? []) : [],
+    success: cliCheck.available,
+  };
 }
 
 /**

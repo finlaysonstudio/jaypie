@@ -6,6 +6,7 @@ Debug and inspect LLM provider responses. Useful for understanding how providers
 
 | Command | Description | Required Parameters |
 |---------|-------------|---------------------|
+| `validate` | Validate LLM setup (check API keys) | - |
 | `debug_call` | Make a debug call and inspect response | `provider`, `message` |
 
 ## Parameters
