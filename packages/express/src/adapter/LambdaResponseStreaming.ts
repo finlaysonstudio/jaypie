@@ -476,8 +476,18 @@ export class LambdaResponseStreaming extends Writable {
       );
       this.flushHeaders();
     }
-    this._wrappedStream?.end();
-    callback();
+
+    if (this._wrappedStream) {
+      // FIX #178: Write empty chunk to force Lambda to process metadata
+      // Without this, 204 responses have no writes and Lambda ignores our statusCode/headers
+      console.log(
+        "[DIAG:LambdaResponseStreaming:_final] Writing empty chunk for metadata",
+      );
+      this._wrappedStream.write("");
+      this._wrappedStream.end();
+    }
+    // Use setImmediate to ensure stream operations complete before callback
+    setImmediate(callback);
   }
 }
 
