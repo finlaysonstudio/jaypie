@@ -9,47 +9,41 @@ Debug and inspect LLM provider responses. Useful for understanding how providers
 
 ## Usage
 
+All parameters are passed at the top level (flat structure):
+
 ```
-llm()                                    # Show help
-llm("command", { ...params })            # Execute a command
+llm()                                         # Show help
+llm({ command: "...", ...params })            # Execute a command
 ```
 
 ## Commands
 
 | Command | Description |
 |---------|-------------|
-| `list_providers` | List available LLM providers and their status |
 | `debug_call` | Make a debug call to an LLM provider |
-
-## List Providers
-
-Check which providers are configured:
-
-```
-llm("list_providers")
-```
-
-Returns provider availability based on environment variables.
 
 ## Debug Call
 
 Make a test call to inspect the raw response:
 
 ```
-llm("debug_call", { provider: "openai", message: "Hello, world!" })
-llm("debug_call", { provider: "anthropic", message: "Hello, world!" })
-llm("debug_call", { provider: "openai", model: "o3-mini", message: "What is 15 * 17?" })
+llm({ command: "debug_call", provider: "openai", message: "Hello, world!" })
+llm({ command: "debug_call", provider: "anthropic", message: "Hello, world!" })
+llm({ command: "debug_call", provider: "openai", model: "o3-mini", message: "What is 15 * 17?" })
 ```
 
-### Parameters
+## Parameters
 
-| Parameter | Required | Description |
-|-----------|----------|-------------|
-| `provider` | Yes | Provider name: `openai`, `anthropic`, `gemini`, `openrouter` |
-| `message` | Yes | Message to send |
-| `model` | No | Specific model to use |
+All parameters are passed at the top level (flat structure):
 
-### Response Fields
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `command` | string | Command to execute (omit for help) |
+| `provider` | string | LLM provider: anthropic, openai, google, openrouter |
+| `message` | string | Message to send to the LLM provider |
+| `model` | string | Model to use (provider-specific, e.g., gpt-4, claude-3-sonnet) |
+
+## Response Fields
 
 | Field | Description |
 |-------|-------------|
@@ -83,14 +77,14 @@ llm("debug_call", { provider: "openai", model: "o3-mini", message: "What is 15 *
 ### Compare Provider Responses
 
 ```
-llm("debug_call", { provider: "openai", message: "Explain recursion briefly" })
-llm("debug_call", { provider: "anthropic", message: "Explain recursion briefly" })
+llm({ command: "debug_call", provider: "openai", message: "Explain recursion briefly" })
+llm({ command: "debug_call", provider: "anthropic", message: "Explain recursion briefly" })
 ```
 
 ### Test Reasoning Models
 
 ```
-llm("debug_call", { provider: "openai", model: "o3-mini", message: "Solve: If 3x + 5 = 14, what is x?" })
+llm({ command: "debug_call", provider: "openai", model: "o3-mini", message: "Solve: If 3x + 5 = 14, what is x?" })
 ```
 
 ### Check Token Usage

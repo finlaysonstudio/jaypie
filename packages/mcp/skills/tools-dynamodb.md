@@ -9,8 +9,10 @@ DynamoDB commands in the unified AWS tool for interacting with DynamoDB tables.
 
 ## Usage
 
+All parameters are passed at the top level (flat structure):
+
 ```
-aws("dynamodb_command", { ...params })
+aws({ command: "dynamodb_command", ...params })
 ```
 
 ## Available Commands
@@ -27,7 +29,7 @@ aws("dynamodb_command", { ...params })
 Get table metadata including key schema, indexes, and throughput:
 
 ```
-aws("dynamodb_describe_table", { tableName: "MyTable" })
+aws({ command: "dynamodb_describe_table", tableName: "MyTable" })
 ```
 
 Returns:
@@ -42,21 +44,24 @@ Query is the most efficient way to retrieve items:
 
 ```
 # Simple partition key query
-aws("dynamodb_query", {
+aws({
+  command: "dynamodb_query",
   tableName: "MyTable",
   keyConditionExpression: "pk = :pk",
   expressionAttributeValues: '{":pk":{"S":"USER#123"}}'
 })
 
 # With sort key condition
-aws("dynamodb_query", {
+aws({
+  command: "dynamodb_query",
   tableName: "MyTable",
   keyConditionExpression: "pk = :pk AND begins_with(sk, :prefix)",
   expressionAttributeValues: '{":pk":{"S":"USER#123"},":prefix":{"S":"ORDER#"}}'
 })
 
 # Query GSI
-aws("dynamodb_query", {
+aws({
+  command: "dynamodb_query",
   tableName: "MyTable",
   indexName: "gsi1",
   keyConditionExpression: "gsi1pk = :status",
@@ -70,13 +75,15 @@ Retrieve a specific item by its full primary key:
 
 ```
 # Simple key
-aws("dynamodb_get_item", {
+aws({
+  command: "dynamodb_get_item",
   tableName: "MyTable",
   key: '{"pk":{"S":"USER#123"}}'
 })
 
 # Composite key (partition + sort)
-aws("dynamodb_get_item", {
+aws({
+  command: "dynamodb_get_item",
   tableName: "MyTable",
   key: '{"pk":{"S":"USER#123"},"sk":{"S":"PROFILE"}}'
 })
@@ -88,17 +95,18 @@ Full table scan - use sparingly on large tables:
 
 ```
 # Scan all items
-aws("dynamodb_scan", { tableName: "MyTable" })
+aws({ command: "dynamodb_scan", tableName: "MyTable" })
 
 # With filter (applied after scan, not efficient for filtering)
-aws("dynamodb_scan", {
+aws({
+  command: "dynamodb_scan",
   tableName: "MyTable",
   filterExpression: "status = :status",
   expressionAttributeValues: '{":status":{"S":"active"}}'
 })
 
 # Limit results
-aws("dynamodb_scan", { tableName: "MyTable", limit: 10 })
+aws({ command: "dynamodb_scan", tableName: "MyTable", limit: 10 })
 ```
 
 ## DynamoDB Attribute Format
@@ -119,7 +127,8 @@ All values use DynamoDB's attribute value format:
 ### Get User Profile
 
 ```
-aws("dynamodb_get_item", {
+aws({
+  command: "dynamodb_get_item",
   tableName: "DataTable",
   key: '{"pk":{"S":"USER#123"},"sk":{"S":"PROFILE"}}'
 })
@@ -128,7 +137,8 @@ aws("dynamodb_get_item", {
 ### List User Orders
 
 ```
-aws("dynamodb_query", {
+aws({
+  command: "dynamodb_query",
   tableName: "DataTable",
   keyConditionExpression: "pk = :pk AND begins_with(sk, :prefix)",
   expressionAttributeValues: '{":pk":{"S":"USER#123"},":prefix":{"S":"ORDER#"}}'
@@ -138,7 +148,8 @@ aws("dynamodb_query", {
 ### Find Pending Orders (via GSI)
 
 ```
-aws("dynamodb_query", {
+aws({
+  command: "dynamodb_query",
   tableName: "DataTable",
   indexName: "gsi1",
   keyConditionExpression: "gsi1pk = :status",
@@ -149,7 +160,7 @@ aws("dynamodb_query", {
 ### Check Table Schema
 
 ```
-aws("dynamodb_describe_table", { tableName: "DataTable" })
+aws({ command: "dynamodb_describe_table", tableName: "DataTable" })
 ```
 
 ## Profile and Region
@@ -157,7 +168,8 @@ aws("dynamodb_describe_table", { tableName: "DataTable" })
 All DynamoDB commands support profile and region options:
 
 ```
-aws("dynamodb_query", {
+aws({
+  command: "dynamodb_query",
   tableName: "MyTable",
   profile: "production",
   region: "us-west-2",
@@ -165,4 +177,3 @@ aws("dynamodb_query", {
   expressionAttributeValues: '{":pk":{"S":"USER#123"}}'
 })
 ```
-
