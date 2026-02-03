@@ -137,7 +137,7 @@ const decorateResponse = (
       safeSetHeader(
         extRes,
         HTTP.HEADER.POWERED_BY,
-        `${JAYPIE.LIB.EXPRESS}#dev-178`,
+        `${JAYPIE.LIB.EXPRESS}@1.2.11-dev`,
       );
     }
 
