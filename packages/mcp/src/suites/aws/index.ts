@@ -37,7 +37,7 @@ async function getHelp(): Promise<string> {
   return fs.readFile(path.join(__dirname, "help.md"), "utf-8");
 }
 
-// Input type for the unified AWS service
+// Flattened input type for the unified AWS service
 interface AwsInput {
   bucket?: string;
   cause?: string;
@@ -65,13 +65,7 @@ interface AwsInput {
   stackName?: string;
   startTime?: string;
   stateMachineArn?: string;
-  statusFilter?:
-    | "RUNNING"
-    | "SUCCEEDED"
-    | "FAILED"
-    | "TIMED_OUT"
-    | "ABORTED"
-    | "PENDING_REDRIVE";
+  statusFilter?: string;
   tableName?: string;
   visibilityTimeout?: number;
 }
@@ -81,29 +75,161 @@ export const awsService = fabricService({
   description:
     "Access AWS services via CLI. Commands: list_profiles, lambda_*, stepfunctions_*, logs_*, s3_*, cloudformation_*, dynamodb_*, sqs_*. Call with no args for help.",
   input: {
+    bucket: {
+      description: "S3 bucket name",
+      required: false,
+      type: String,
+    },
+    cause: {
+      description: "Cause for stopping Step Functions execution",
+      required: false,
+      type: String,
+    },
     command: {
       description: "Command to execute (omit for help)",
       required: false,
       type: String,
     },
-    input: {
-      description: "Command parameters",
+    endTime: {
+      description: "End time for log filtering (e.g., now)",
       required: false,
-      type: Object,
+      type: String,
+    },
+    executionArn: {
+      description: "Step Functions execution ARN",
+      required: false,
+      type: String,
+    },
+    expressionAttributeValues: {
+      description: "DynamoDB expression attribute values (JSON string)",
+      required: false,
+      type: String,
+    },
+    filterExpression: {
+      description: "DynamoDB filter expression",
+      required: false,
+      type: String,
+    },
+    filterPattern: {
+      description: "CloudWatch Logs filter pattern",
+      required: false,
+      type: String,
+    },
+    functionName: {
+      description: "Lambda function name",
+      required: false,
+      type: String,
+    },
+    functionNamePrefix: {
+      description: "Lambda function name prefix filter",
+      required: false,
+      type: String,
+    },
+    indexName: {
+      description: "DynamoDB index name",
+      required: false,
+      type: String,
+    },
+    key: {
+      description: "DynamoDB item key (JSON string)",
+      required: false,
+      type: String,
+    },
+    keyConditionExpression: {
+      description: "DynamoDB key condition expression",
+      required: false,
+      type: String,
+    },
+    limit: {
+      description: "Maximum number of results",
+      required: false,
+      type: Number,
+    },
+    logGroupName: {
+      description: "CloudWatch Logs group name",
+      required: false,
+      type: String,
+    },
+    maxNumberOfMessages: {
+      description: "SQS max messages to receive",
+      required: false,
+      type: Number,
+    },
+    maxResults: {
+      description: "Maximum number of results",
+      required: false,
+      type: Number,
+    },
+    prefix: {
+      description: "S3 object prefix filter",
+      required: false,
+      type: String,
+    },
+    profile: {
+      description: "AWS profile name",
+      required: false,
+      type: String,
+    },
+    queueNamePrefix: {
+      description: "SQS queue name prefix filter",
+      required: false,
+      type: String,
+    },
+    queueUrl: {
+      description: "SQS queue URL",
+      required: false,
+      type: String,
+    },
+    region: {
+      description: "AWS region (e.g., us-east-1)",
+      required: false,
+      type: String,
+    },
+    scanIndexForward: {
+      description: "DynamoDB scan direction (true=ascending)",
+      required: false,
+      type: Boolean,
+    },
+    stackName: {
+      description: "CloudFormation stack name",
+      required: false,
+      type: String,
+    },
+    startTime: {
+      description: "Start time for log filtering (e.g., now-15m)",
+      required: false,
+      type: String,
+    },
+    stateMachineArn: {
+      description: "Step Functions state machine ARN",
+      required: false,
+      type: String,
+    },
+    statusFilter: {
+      description:
+        "Step Functions status filter: RUNNING, SUCCEEDED, FAILED, TIMED_OUT, ABORTED, PENDING_REDRIVE",
+      required: false,
+      type: String,
+    },
+    tableName: {
+      description: "DynamoDB table name",
+      required: false,
+      type: String,
+    },
+    visibilityTimeout: {
+      description: "SQS message visibility timeout in seconds",
+      required: false,
+      type: Number,
     },
   },
-  service: async ({
-    command,
-    input: params,
-  }: {
-    command?: string;
-    input?: AwsInput;
-  }) => {
+  service: async (params: AwsInput) => {
+    const { command } = params;
+
     if (!command || command === "help") {
       return getHelp();
     }
 
-    const p = params || {};
+    const p = params;
 
     switch (command) {
       case "list_profiles": {
@@ -148,7 +274,14 @@ export const awsService = fabricService({
             profile: p.profile,
             region: p.region,
             stateMachineArn: p.stateMachineArn,
-            statusFilter: p.statusFilter,
+            statusFilter: p.statusFilter as
+              | "RUNNING"
+              | "SUCCEEDED"
+              | "FAILED"
+              | "TIMED_OUT"
+              | "ABORTED"
+              | "PENDING_REDRIVE"
+              | undefined,
           },
           log,
         );

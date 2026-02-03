@@ -9,9 +9,11 @@ Unified tool for interacting with AWS services via the Jaypie MCP. Uses your loc
 
 ## Usage
 
+All parameters are passed at the top level (flat structure):
+
 ```
-aws()                                    # Show help with all commands
-aws("command", { ...params })            # Execute a command
+aws()                                         # Show help with all commands
+aws({ command: "...", ...params })            # Execute a command
 ```
 
 ## Lambda Functions
@@ -23,13 +25,13 @@ aws("command", { ...params })            # Execute a command
 
 ```
 # List all functions
-aws("lambda_list_functions")
+aws({ command: "lambda_list_functions" })
 
 # Filter by prefix
-aws("lambda_list_functions", { functionNamePrefix: "my-api" })
+aws({ command: "lambda_list_functions", functionNamePrefix: "my-api" })
 
 # Get function details
-aws("lambda_get_function", { functionName: "my-api-handler" })
+aws({ command: "lambda_get_function", functionName: "my-api-handler" })
 ```
 
 ## Step Functions
@@ -41,10 +43,10 @@ aws("lambda_get_function", { functionName: "my-api-handler" })
 
 ```
 # List recent executions
-aws("stepfunctions_list_executions", { stateMachineArn: "arn:aws:states:..." })
+aws({ command: "stepfunctions_list_executions", stateMachineArn: "arn:aws:states:..." })
 
 # Stop a running execution
-aws("stepfunctions_stop_execution", { executionArn: "arn:aws:states:..." })
+aws({ command: "stepfunctions_stop_execution", executionArn: "arn:aws:states:..." })
 ```
 
 ## CloudWatch Logs
@@ -55,10 +57,10 @@ aws("stepfunctions_stop_execution", { executionArn: "arn:aws:states:..." })
 
 ```
 # Search for errors in Lambda logs
-aws("logs_filter_log_events", { logGroupName: "/aws/lambda/my-function", filterPattern: "ERROR" })
+aws({ command: "logs_filter_log_events", logGroupName: "/aws/lambda/my-function", filterPattern: "ERROR" })
 
 # Search with time range
-aws("logs_filter_log_events", { logGroupName: "/aws/lambda/my-function", startTime: "now-1h" })
+aws({ command: "logs_filter_log_events", logGroupName: "/aws/lambda/my-function", startTime: "now-1h" })
 ```
 
 ## S3
@@ -69,10 +71,10 @@ aws("logs_filter_log_events", { logGroupName: "/aws/lambda/my-function", startTi
 
 ```
 # List all objects
-aws("s3_list_objects", { bucket: "my-bucket" })
+aws({ command: "s3_list_objects", bucket: "my-bucket" })
 
 # Filter by prefix
-aws("s3_list_objects", { bucket: "my-bucket", prefix: "uploads/" })
+aws({ command: "s3_list_objects", bucket: "my-bucket", prefix: "uploads/" })
 ```
 
 ## SQS
@@ -86,16 +88,16 @@ aws("s3_list_objects", { bucket: "my-bucket", prefix: "uploads/" })
 
 ```
 # List queues
-aws("sqs_list_queues", { queueNamePrefix: "my-app" })
+aws({ command: "sqs_list_queues", queueNamePrefix: "my-app" })
 
 # Check queue depth
-aws("sqs_get_queue_attributes", { queueUrl: "https://sqs..." })
+aws({ command: "sqs_get_queue_attributes", queueUrl: "https://sqs..." })
 
 # Peek at messages
-aws("sqs_receive_message", { queueUrl: "https://sqs...", maxNumberOfMessages: 5 })
+aws({ command: "sqs_receive_message", queueUrl: "https://sqs...", maxNumberOfMessages: 5 })
 
 # Purge queue (careful!)
-aws("sqs_purge_queue", { queueUrl: "https://sqs..." })
+aws({ command: "sqs_purge_queue", queueUrl: "https://sqs..." })
 ```
 
 ## CloudFormation
@@ -106,7 +108,7 @@ aws("sqs_purge_queue", { queueUrl: "https://sqs..." })
 
 ```
 # Get stack details
-aws("cloudformation_describe_stack", { stackName: "MyStack" })
+aws({ command: "cloudformation_describe_stack", stackName: "MyStack" })
 ```
 
 ## DynamoDB
@@ -120,6 +122,34 @@ See **tools-dynamodb** for DynamoDB-specific documentation.
 | `dynamodb_scan` | Full table scan |
 | `dynamodb_get_item` | Get single item |
 
+## Parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `command` | string | Command to execute (omit for help) |
+| `profile` | string | AWS profile name |
+| `region` | string | AWS region (e.g., us-east-1) |
+| `functionName` | string | Lambda function name |
+| `functionNamePrefix` | string | Lambda function name prefix filter |
+| `stateMachineArn` | string | Step Functions state machine ARN |
+| `executionArn` | string | Step Functions execution ARN |
+| `statusFilter` | string | Step Functions status: RUNNING, SUCCEEDED, FAILED, TIMED_OUT, ABORTED, PENDING_REDRIVE |
+| `logGroupName` | string | CloudWatch Logs group name |
+| `filterPattern` | string | CloudWatch Logs filter pattern |
+| `startTime` | string | Start time (e.g., now-15m) |
+| `endTime` | string | End time (e.g., now) |
+| `bucket` | string | S3 bucket name |
+| `prefix` | string | S3 object prefix filter |
+| `stackName` | string | CloudFormation stack name |
+| `tableName` | string | DynamoDB table name |
+| `keyConditionExpression` | string | DynamoDB key condition expression |
+| `expressionAttributeValues` | string | DynamoDB expression attribute values (JSON string) |
+| `queueUrl` | string | SQS queue URL |
+| `queueNamePrefix` | string | SQS queue name prefix filter |
+| `maxNumberOfMessages` | number | SQS max messages to receive |
+| `limit` | number | Maximum number of results |
+| `maxResults` | number | Maximum number of results |
+
 ## Credential Management
 
 Tools use the host's AWS credential chain:
@@ -129,10 +159,10 @@ Tools use the host's AWS credential chain:
 
 ```
 # List available profiles
-aws("list_profiles")
+aws({ command: "list_profiles" })
 
 # Use a specific profile (supported on all commands)
-aws("lambda_list_functions", { profile: "production", region: "us-west-2" })
+aws({ command: "lambda_list_functions", profile: "production", region: "us-west-2" })
 ```
 
 ## Environment Variables
@@ -148,19 +178,18 @@ aws("lambda_list_functions", { profile: "production", region: "us-west-2" })
 
 ```
 # Check function config
-aws("lambda_get_function", { functionName: "my-function" })
+aws({ command: "lambda_get_function", functionName: "my-function" })
 
 # Search recent logs
-aws("logs_filter_log_events", { logGroupName: "/aws/lambda/my-function", filterPattern: "ERROR" })
+aws({ command: "logs_filter_log_events", logGroupName: "/aws/lambda/my-function", filterPattern: "ERROR" })
 ```
 
 ### Check Queue Health
 
 ```
 # Get queue depth
-aws("sqs_get_queue_attributes", { queueUrl: "https://..." })
+aws({ command: "sqs_get_queue_attributes", queueUrl: "https://..." })
 
 # Peek at messages
-aws("sqs_receive_message", { queueUrl: "https://...", maxNumberOfMessages: 5 })
+aws({ command: "sqs_receive_message", queueUrl: "https://...", maxNumberOfMessages: 5 })
 ```
-
