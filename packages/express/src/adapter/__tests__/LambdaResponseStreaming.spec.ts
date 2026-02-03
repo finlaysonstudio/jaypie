@@ -238,10 +238,12 @@ describe("LambdaResponseStreaming", () => {
 
       expect(awslambda.HttpResponseStream.from).toHaveBeenCalledWith(
         mockResponseStream,
-        {
-          headers: { "content-type": "text/event-stream" },
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            "content-type": "text/event-stream",
+          }),
           statusCode: 200,
-        },
+        }),
       );
     });
   });
@@ -254,10 +256,12 @@ describe("LambdaResponseStreaming", () => {
 
       expect(awslambda.HttpResponseStream.from).toHaveBeenCalledWith(
         mockResponseStream,
-        {
-          headers: { "content-type": "text/event-stream" },
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            "content-type": "text/event-stream",
+          }),
           statusCode: 200,
-        },
+        }),
       );
     });
 

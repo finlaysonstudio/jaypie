@@ -310,6 +310,9 @@ export class LambdaResponseStreaming extends Writable {
       headers[key] = Array.isArray(value) ? value.join(", ") : String(value);
     }
 
+    // Add version header for deployment verification
+    headers["x-jaypie-streaming"] = "1.2.11-dev.6";
+
     // Lambda streaming requires body content for metadata to be transmitted.
     // Convert 204 No Content to 200 OK with empty JSON body as workaround.
     // See: https://github.com/finlaysonstudio/jaypie/issues/178
