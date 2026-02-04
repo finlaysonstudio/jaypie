@@ -296,4 +296,3 @@ Deploy with: `cdk deploy JaypieDocumentation`
 - Uses `@jaypie/constructs` for consistent infrastructure patterns
 - All stacks extend JaypieAppStack for standard naming and tagging
 - Stacks use `envHostname()` from `@jaypie/constructs` for environment-aware hostnames
-# Updated for CDK rebuild
