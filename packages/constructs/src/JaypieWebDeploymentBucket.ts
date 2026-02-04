@@ -178,8 +178,9 @@ export class JaypieWebDeploymentBucket extends Construct implements s3.IBucket {
       repo = `repo:${process.env.CDK_ENV_REPO}:*`;
     }
 
+    let bucketDeployRole: Role | undefined;
     if (repo) {
-      const bucketDeployRole = new Role(this, "DestinationBucketDeployRole", {
+      bucketDeployRole = new Role(this, "DestinationBucketDeployRole", {
         assumedBy: new FederatedPrincipal(
           Fn.importValue(CDK.IMPORT.OIDC_PROVIDER),
           {
@@ -308,6 +309,19 @@ export class JaypieWebDeploymentBucket extends Construct implements s3.IBucket {
       new CfnOutput(this, "DistributionId", {
         value: this.distribution.distributionId,
       });
+
+      // Add CloudFront invalidation permission to deploy role if it exists
+      if (bucketDeployRole) {
+        bucketDeployRole.addToPolicy(
+          new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: ["cloudfront:CreateInvalidation"],
+            resources: [
+              `arn:aws:cloudfront::${Stack.of(this).account}:distribution/${this.distribution.distributionId}`,
+            ],
+          }),
+        );
+      }
     }
   }
 

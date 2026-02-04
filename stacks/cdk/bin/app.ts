@@ -6,8 +6,20 @@ import { GardenNextjsStack } from "../lib/garden-nextjs-stack";
 
 const app = new cdk.App();
 
-new DocumentationStack(app, "JaypieDocumentation");
-new GardenApiStack(app, "JaypieGardenApi");
-new GardenNextjsStack(app, "JaypieGardenNextjs");
+// Support selective stack synthesis via context: -c stacks=JaypieGardenApi
+const stacksContext = app.node.tryGetContext("stacks") as string | undefined;
+const selectedStacks = stacksContext?.split(",").map((s) => s.trim()) ?? [];
+const shouldInclude = (stackId: string) =>
+  selectedStacks.length === 0 || selectedStacks.includes(stackId);
+
+if (shouldInclude("JaypieDocumentation")) {
+  new DocumentationStack(app, "JaypieDocumentation");
+}
+if (shouldInclude("JaypieGardenApi")) {
+  new GardenApiStack(app, "JaypieGardenApi");
+}
+if (shouldInclude("JaypieGardenNextjs")) {
+  new GardenNextjsStack(app, "JaypieGardenNextjs");
+}
 
 app.synth();

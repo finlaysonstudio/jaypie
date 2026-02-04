@@ -3,11 +3,9 @@
 cdk.out
 
 .DS_Store
+.open-next
 node_modules
 dist
-
-# Generated repomix files
-/prompts/context
 
 # local env files
 .aider*
