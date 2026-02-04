@@ -28,6 +28,7 @@
     "build:types": "npm run build --workspace packages/types",
     "build:webkit": "npm run build --workspace packages/webkit",
     "clean": "rimraf ./packages/*/dist",
+    "deploy:garden-api:sandbox": "npm run deploy:sandbox --workspace stacks/cdk",
     "docker:express": "npm run docker:build --workspace packages/express && npm run docker:run --workspace packages/express",
     "docker:express:build": "npm run docker:build --workspace packages/express",
     "docker:express:run": "npm run docker:run --workspace packages/express",

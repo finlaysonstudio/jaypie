@@ -10,6 +10,7 @@
     "build": "tsc",
     "cdk": "cdk",
     "deploy": "cdk deploy",
+    "deploy:sandbox": "bash scripts/deploy-sandbox.sh",
     "diff": "cdk diff",
     "format": "eslint --fix --quiet .",
     "lint": "eslint --quiet .",
