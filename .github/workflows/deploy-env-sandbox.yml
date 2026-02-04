@@ -3,7 +3,10 @@ name: Build Stacks to Sandbox
 on:
   push:
     branches:
+      - branch/*
+      - claude/*
       - feat/*
+      - fix/*
       - sandbox/*
     tags:
       - sandbox-*
