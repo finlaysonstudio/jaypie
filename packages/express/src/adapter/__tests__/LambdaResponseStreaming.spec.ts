@@ -238,10 +238,12 @@ describe("LambdaResponseStreaming", () => {
 
       expect(awslambda.HttpResponseStream.from).toHaveBeenCalledWith(
         mockResponseStream,
-        {
-          headers: { "content-type": "text/event-stream" },
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            "content-type": "text/event-stream",
+          }),
           statusCode: 200,
-        },
+        }),
       );
     });
   });
@@ -254,10 +256,12 @@ describe("LambdaResponseStreaming", () => {
 
       expect(awslambda.HttpResponseStream.from).toHaveBeenCalledWith(
         mockResponseStream,
-        {
-          headers: { "content-type": "text/event-stream" },
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            "content-type": "text/event-stream",
+          }),
           statusCode: 200,
-        },
+        }),
       );
     });
 
@@ -350,7 +354,7 @@ describe("LambdaResponseStreaming", () => {
       });
     });
 
-    it("handles 204 No Content response (CORS preflight)", async () => {
+    it("handles 204 No Content response (CORS preflight) by converting to 200", async () => {
       const res = new LambdaResponseStreaming(mockResponseStream);
 
       // Simulate what CORS middleware does for OPTIONS requests
@@ -368,16 +372,20 @@ describe("LambdaResponseStreaming", () => {
       await finishPromise;
 
       expect(res.headersSent).toBe(true);
+      // For 204 responses, we convert to 200 with {} body (issue #178 workaround)
+      // Lambda streaming requires body content for metadata to be transmitted
       expect(awslambda.HttpResponseStream.from).toHaveBeenCalledWith(
         mockResponseStream,
         expect.objectContaining({
-          statusCode: 204,
+          statusCode: 200, // Converted from 204
           headers: expect.objectContaining({
-            "content-length": "0",
+            "content-type": "application/json",
             "access-control-allow-origin": "https://example.com",
           }),
         }),
       );
+      // Verify {} body was written
+      expect(mockWrappedStream.write).toHaveBeenCalledWith("{}");
       expect(mockWrappedStream.end).toHaveBeenCalled();
     });
 

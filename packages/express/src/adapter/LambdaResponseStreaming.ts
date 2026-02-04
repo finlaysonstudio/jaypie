@@ -65,6 +65,7 @@ export class LambdaResponseStreaming extends Writable {
   // that need to bypass dd-trace interception
   public _headers: Map<string, string | string[]> = new Map();
   public _headersSent: boolean = false;
+  private _convertedFrom204: boolean = false;
   private _pendingWrites: PendingWrite[] = [];
   private _responseStream: ResponseStream;
   private _wrappedStream: ResponseStream | null = null;
@@ -300,19 +301,32 @@ export class LambdaResponseStreaming extends Writable {
   }
 
   flushHeaders(): void {
-    if (this._headersSent) return;
+    if (this._headersSent) {
+      return;
+    }
 
     const headers: Record<string, string> = {};
     for (const [key, value] of this._headers) {
       headers[key] = Array.isArray(value) ? value.join(", ") : String(value);
     }
 
+    // Lambda streaming requires body content for metadata to be transmitted.
+    // Convert 204 No Content to 200 OK with empty JSON body as workaround.
+    // See: https://github.com/finlaysonstudio/jaypie/issues/178
+    let statusCode = this.statusCode;
+    if (statusCode === 204) {
+      statusCode = 200;
+      this._convertedFrom204 = true;
+      // Set content-type for the JSON body we'll send
+      headers["content-type"] = "application/json";
+    }
+
     const metadata: HttpResponseStreamMetadata = {
       headers,
-      statusCode: this.statusCode,
+      statusCode,
     };
 
-    // Wrap the stream with metadata using awslambda global
+    // Create wrapped stream with metadata
     this._wrappedStream = awslambda.HttpResponseStream.from(
       this._responseStream,
       metadata,
@@ -421,8 +435,18 @@ export class LambdaResponseStreaming extends Writable {
     if (!this._headersSent) {
       this.flushHeaders();
     }
-    this._wrappedStream?.end();
-    callback();
+
+    // For converted 204 responses, write empty JSON body
+    // Lambda streaming requires body content for metadata to be transmitted
+    if (this._convertedFrom204 && this._wrappedStream) {
+      this._wrappedStream.write("{}");
+    }
+
+    if (this._wrappedStream) {
+      this._wrappedStream.end();
+    }
+    // Use setImmediate to ensure stream operations complete before callback
+    setImmediate(callback);
   }
 }
 

@@ -2,8 +2,7 @@
   "app": "npx tsx bin/app.ts",
   "context": {
     "@aws-cdk/aws-lambda:recognizeLayerVersion": true,
-    "@aws-cdk/core:stackRelativeExports": true,
-    "@aws-cdk/aws-s3:grantWriteWithoutAcl": true
+    "@aws-cdk/core:stackRelativeExports": true
   },
   "watch": {
     "include": [

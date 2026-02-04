@@ -6,6 +6,7 @@ on:
       - main
     tags:
       - deploy-*
+      - dev-*
       - rc-*
 
 env:
@@ -31,6 +32,29 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
       - run: npm ci
       - run: npm run build
+      - name: Publish dev packages
+        if: startsWith(github.ref, 'refs/tags/dev-')
+        run: |
+          for pkg in packages/*/; do
+            if [ -f "$pkg/package.json" ]; then
+              private=$(node -p "require('./$pkg/package.json').private || false")
+              if [ "$private" != "true" ]; then
+                name=$(node -p "require('./$pkg/package.json').name")
+                version=$(node -p "require('./$pkg/package.json').version")
+                # Only process dev versions
+                if [[ "$version" == *"-dev."* ]]; then
+                  if ! npm view "$name@$version" version >/dev/null 2>&1; then
+                    echo "Publishing $name@$version with tag dev"
+                    npm publish "$pkg" --provenance --tag dev
+                  else
+                    echo "Skipping $name@$version (already published)"
+                  fi
+                fi
+              fi
+            fi
+          done
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - name: Publish RC packages
         if: startsWith(github.ref, 'refs/tags/rc-')
         run: |
@@ -52,8 +76,10 @@ jobs:
               fi
             fi
           done
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - name: Publish packages to npm
-        if: ${{ !startsWith(github.ref, 'refs/tags/rc-') }}
+        if: ${{ !startsWith(github.ref, 'refs/tags/rc-') && !startsWith(github.ref, 'refs/tags/dev-') }}
         run: |
           for pkg in packages/*/; do
             if [ -f "$pkg/package.json" ]; then
@@ -70,6 +96,8 @@ jobs:
               fi
             fi
           done
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
   lint:
     name: Lint (in parallel)
     runs-on: ubuntu-latest

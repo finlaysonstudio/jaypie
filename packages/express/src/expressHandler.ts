@@ -189,7 +189,6 @@ function safeSendJson(res: Response, statusCode: number, data: unknown): void {
       res._resolve(res.buildResult!());
     }
     // Emit "finish" event so runExpressApp's promise resolves
-    console.log("[safeSendJson] Emitting finish event");
     res.emit("finish");
     return;
   }
@@ -232,7 +231,6 @@ function safeSend(res: Response, statusCode: number, body?: string): void {
       res._resolve(res.buildResult!());
     }
     // Emit "finish" event so runExpressApp's promise resolves
-    console.log("[safeSend] Emitting finish event");
     res.emit("finish");
     return;
   }
