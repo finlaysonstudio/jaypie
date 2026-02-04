@@ -307,6 +307,7 @@ export class JaypieSsoPermissions extends Construct {
                 "servicecatalog:*",
                 "sns:*",
                 "sqs:*",
+                "ssm:*",
                 "states:*",
                 "tag:*",
                 "uxc:*",
