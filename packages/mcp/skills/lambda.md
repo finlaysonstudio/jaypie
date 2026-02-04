@@ -158,6 +158,36 @@ new JaypieLambda(this, "Handler", {
 });
 ```
 
+## ESM Deployment
+
+Lambda handlers using ESM require Node.js to recognize the module format.
+
+### Recommended: Use .mjs extension
+
+Files with `.mjs` extension are always treated as ESM by Node.js. Bundle with esbuild:
+
+```javascript
+await build({
+  format: "esm",
+  outfile: "dist/index.mjs",
+  // ...
+});
+```
+
+See `skill("express")` for the full esbuild config including the createRequire banner.
+
+### Alternative: Emit package.json
+
+If using `.js` extension, include `{"type":"module"}` in the dist folder.
+
+### Why This Matters
+
+Without the ESM signal, Lambda fails with:
+
+```
+Runtime.UserCodeSyntaxError: SyntaxError: Cannot use import statement outside a module
+```
+
 ## See Also
 
 - **`skill("streaming")`** - Full guide to `lambdaStreamHandler`, formats, and streaming utilities

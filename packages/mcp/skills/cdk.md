@@ -34,6 +34,19 @@ const handler = new JaypieLambda(this, "ApiHandler", {
 });
 ```
 
+#### Pre-built Code
+
+When using `code` instead of `entry` for pre-built bundles:
+
+```typescript
+new JaypieLambda(this, "Api", {
+  code: "../api/dist",     // Pre-built bundle directory
+  handler: "index.handler", // Lambda finds index.mjs automatically
+});
+```
+
+For ESM bundles, use `.mjs` extension or include `package.json` with `"type": "module"` in dist. See `skill("express")` for full esbuild config.
+
 ### JaypieQueue
 
 SQS queue with DLQ and Lambda trigger:

@@ -153,6 +153,71 @@ new JaypieLambda(this, "Api", {
 
 The package includes Docker/SAM CLI setups for local testing in `packages/express/docker/`. See that directory's documentation for details.
 
+## Lambda ESM Bundling
+
+When deploying Express to Lambda with ESM, use esbuild with `.mjs` output.
+
+### Config File Approach
+
+Create `esbuild.config.mjs`:
+
+```javascript
+import { build } from "esbuild";
+import { builtinModules } from "module";
+
+await build({
+  entryPoints: ["index.ts"],
+  bundle: true,
+  minify: true,
+  platform: "node",
+  target: "node24",
+  format: "esm",
+  outfile: "dist/index.mjs",
+  external: [
+    "@aws-sdk/*",
+    ...builtinModules,
+    ...builtinModules.map(m => `node:${m}`),
+  ],
+  banner: {
+    js: `import { createRequire } from "module";
+import { fileURLToPath } from "url";
+import { dirname } from "path";
+const require = createRequire(import.meta.url);
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);`,
+  },
+});
+```
+
+Add to package.json:
+
+```json
+{
+  "scripts": {
+    "build": "node esbuild.config.mjs"
+  }
+}
+```
+
+### Why .mjs?
+
+Node.js always treats `.mjs` files as ESM, regardless of `package.json`. No need to emit extra files.
+
+### Why createRequire banner?
+
+Some dependencies use `require()` even when bundled. The banner provides CommonJS shims for `require`, `__filename`, and `__dirname`.
+
+### CDK Integration
+
+Reference the `.mjs` file in your CDK stack:
+
+```typescript
+new JaypieLambda(this, "Api", {
+  code: "../api/dist",     // Pre-built bundle
+  handler: "index.handler", // Lambda finds index.mjs automatically
+});
+```
+
 ## See Also
 
 - **`skill("streaming")`** - Full guide to `expressStreamHandler` and `createLambdaStreamHandler`
