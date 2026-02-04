@@ -76,18 +76,14 @@ jobs:
           DOCS_STACK_NAME=cdk-${{ vars.PROJECT_SPONSOR }}-${{ vars.PROJECT_KEY }}-${{ vars.PROJECT_ENV }}-${{ vars.PROJECT_NONCE }}-documentation
           echo "DOCS_STACK_NAME=$DOCS_STACK_NAME" >> $GITHUB_ENV
 
-          # Debug: List all stack outputs to find correct keys
-          echo "=== All CloudFormation Outputs ==="
-          aws cloudformation describe-stacks --stack-name $DOCS_STACK_NAME --query "Stacks[0].Outputs[*].[OutputKey,OutputValue]" --output table || echo "Failed to list outputs"
-
-          # Output keys include the construct ID path: DocumentationBucket + OutputName
-          BUCKET_NAME=$(aws cloudformation describe-stacks --stack-name $DOCS_STACK_NAME --query "Stacks[0].Outputs[?OutputKey=='DocumentationBucketDestinationBucketName'].OutputValue" --output text)
+          # CDK adds hash suffixes to output keys, so use contains() for partial matching
+          BUCKET_NAME=$(aws cloudformation describe-stacks --stack-name $DOCS_STACK_NAME --query "Stacks[0].Outputs[?contains(OutputKey,'DestinationBucketName')].OutputValue" --output text)
           echo "DOCS_BUCKET_NAME=$BUCKET_NAME" >> $GITHUB_ENV
 
-          DEPLOY_ROLE_ARN=$(aws cloudformation describe-stacks --stack-name $DOCS_STACK_NAME --query "Stacks[0].Outputs[?OutputKey=='DocumentationBucketDestinationBucketDeployRoleArn'].OutputValue" --output text)
+          DEPLOY_ROLE_ARN=$(aws cloudformation describe-stacks --stack-name $DOCS_STACK_NAME --query "Stacks[0].Outputs[?contains(OutputKey,'DeployRoleArn')].OutputValue" --output text)
           echo "DOCS_DEPLOY_ROLE_ARN=$DEPLOY_ROLE_ARN" >> $GITHUB_ENV
 
-          DISTRIBUTION_ID=$(aws cloudformation describe-stacks --stack-name $DOCS_STACK_NAME --query "Stacks[0].Outputs[?OutputKey=='DocumentationBucketDistributionId'].OutputValue" --output text)
+          DISTRIBUTION_ID=$(aws cloudformation describe-stacks --stack-name $DOCS_STACK_NAME --query "Stacks[0].Outputs[?contains(OutputKey,'DistributionId')].OutputValue" --output text)
           echo "DOCS_DISTRIBUTION_ID=$DISTRIBUTION_ID" >> $GITHUB_ENV
 
       - name: Assume documentation deploy role
