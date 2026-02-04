@@ -7,12 +7,12 @@
   "author": "Finlayson Studio",
   "type": "module",
   "scripts": {
-    "build": "tsc",
+    "build": "node esbuild.config.mjs",
     "clean": "rimraf dist",
     "dev": "tsx watch index.ts",
     "format": "eslint --fix --quiet .",
     "lint": "eslint --quiet .",
-    "start": "node dist/index.js",
+    "start": "node dist/index.mjs",
     "test": "vitest run .",
     "typecheck": "tsc --noEmit"
   },
