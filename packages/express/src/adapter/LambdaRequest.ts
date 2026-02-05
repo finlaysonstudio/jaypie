@@ -103,18 +103,21 @@ export class LambdaRequest extends Readable {
     };
     this.connection = this.socket;
 
-    // Schedule body push for next tick to ensure stream is ready
-    // This is needed for body parsers that consume the stream
-    if (this.bodyBuffer && this.bodyBuffer.length > 0) {
-      process.nextTick(() => {
-        if (!this.bodyPushed) {
+    // Schedule body push for next tick to ensure stream is ready.
+    // This is needed for body parsers that consume the stream.
+    // CRITICAL: Always schedule the push, even for empty bodies, to ensure
+    // the stream emits 'end'. Otherwise, middleware that waits for the request
+    // stream to end (like body parsers) will hang forever on GET requests.
+    process.nextTick(() => {
+      if (!this.bodyPushed) {
+        if (this.bodyBuffer && this.bodyBuffer.length > 0) {
           this.push(this.bodyBuffer);
-          this.push(null);
-          this.bodyPushed = true;
-          this.complete = true;
         }
-      });
-    }
+        this.push(null); // Signal end of stream
+        this.bodyPushed = true;
+        this.complete = true;
+      }
+    });
   }
 
   //
