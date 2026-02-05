@@ -10,6 +10,7 @@
     "build": "tsc",
     "cdk": "cdk",
     "deploy": "cdk deploy",
+    "deploy:documentation:sandbox": "bash scripts/deploy-documentation-sandbox.sh",
     "deploy:garden-api:sandbox": "bash scripts/deploy-garden-api-sandbox.sh",
     "deploy:garden-nextjs:sandbox": "bash scripts/deploy-garden-nextjs-sandbox.sh",
     "diff": "cdk diff",

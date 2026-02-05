@@ -194,17 +194,21 @@ function safeSendJson(res: Response, statusCode: number, data: unknown): void {
   }
   // Fall back to standard Express methods for real responses
   res.status(statusCode);
-  // CRITICAL: For Lambda streaming responses, flush headers before send to
-  // initialize the stream wrapper. This ensures the status code is captured
-  // before any writes occur (which would auto-flush with default 200).
+  // CRITICAL: For Lambda streaming responses, set content-type BEFORE flushing
+  // headers, then flush to initialize the stream wrapper with all headers.
   // Uses Symbol marker for reliable detection that survives prototype manipulation.
-  if (
-    isLambdaStreamingResponse(res) &&
-    typeof res.flushHeaders === "function"
-  ) {
-    res.flushHeaders();
+  if (isLambdaStreamingResponse(res)) {
+    // Set content-type before flushing so it's included in the metadata
+    res.setHeader("content-type", "application/json");
+    if (typeof res.flushHeaders === "function") {
+      res.flushHeaders();
+    }
+    // Write JSON directly and end the stream (don't call res.json which would
+    // try to set content-type again after headers are already sent)
+    res.end(JSON.stringify(data));
+  } else {
+    res.json(data);
   }
-  res.json(data);
 }
 
 /**
@@ -240,16 +244,22 @@ function safeSend(res: Response, statusCode: number, body?: string): void {
   // initialize the stream wrapper. This ensures the status code is captured
   // before any writes occur (which would auto-flush with default 200).
   // Uses Symbol marker for reliable detection that survives prototype manipulation.
-  if (
-    isLambdaStreamingResponse(res) &&
-    typeof res.flushHeaders === "function"
-  ) {
-    res.flushHeaders();
-  }
-  if (body !== undefined) {
-    res.send(body);
+  if (isLambdaStreamingResponse(res)) {
+    if (typeof res.flushHeaders === "function") {
+      res.flushHeaders();
+    }
+    // Write directly to stream and end (bypass Express send middleware)
+    if (body !== undefined) {
+      res.end(body);
+    } else {
+      res.end();
+    }
   } else {
-    res.send();
+    if (body !== undefined) {
+      res.send(body);
+    } else {
+      res.send();
+    }
   }
 }
 
