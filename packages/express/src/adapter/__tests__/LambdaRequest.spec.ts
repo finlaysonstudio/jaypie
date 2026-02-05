@@ -239,6 +239,41 @@ describe("LambdaRequest", () => {
       expect(chunks.length).toBe(0);
       expect(req.complete).toBe(true);
     });
+
+    it("emits 'end' event for GET requests without body (issue #187)", async () => {
+      // This test verifies that the request stream properly emits 'end' even
+      // for GET requests without a body. Without this, middleware that waits
+      // for the request stream to end (like body parsers) will hang forever.
+      const event = createMockEvent({
+        body: undefined,
+        requestContext: {
+          ...createMockEvent().requestContext,
+          http: {
+            ...createMockEvent().requestContext.http,
+            method: "GET",
+          },
+        },
+      });
+      const req = createLambdaRequest(event, mockContext);
+
+      // Wait for the 'end' event with a timeout
+      const endPromise = new Promise<void>((resolve, reject) => {
+        const timeout = setTimeout(() => {
+          reject(new Error("Stream never emitted 'end' event - would hang!"));
+        }, 100);
+
+        req.on("end", () => {
+          clearTimeout(timeout);
+          resolve();
+        });
+
+        // Must resume the stream to receive events
+        req.resume();
+      });
+
+      await endPromise;
+      expect(req.complete).toBe(true);
+    });
   });
 
   describe("Express helper methods", () => {

@@ -755,6 +755,80 @@ describe("Lambda Adapter Integration", () => {
       });
     });
 
+    it("handles GET requests through body-parsing middleware without hanging (issue #187)", async () => {
+      // This test verifies that GET requests without a body properly complete
+      // even when the app uses express.json() middleware. Before the fix,
+      // the request stream would never emit 'end', causing middleware that
+      // waits for the stream to hang forever.
+      const fromCalls: Array<{
+        metadata: { statusCode: number; headers: Record<string, string> };
+      }> = [];
+      const writtenData: string[] = [];
+      (
+        awslambda.HttpResponseStream.from as ReturnType<typeof vi.fn>
+      ).mockImplementation(
+        (
+          stream: ResponseStream,
+          metadata: { statusCode: number; headers: Record<string, string> },
+        ) => {
+          fromCalls.push({ metadata });
+          return {
+            ...mockWrappedStream,
+            write: vi.fn((data: string | Buffer) => {
+              writtenData.push(
+                typeof data === "string" ? data : data.toString(),
+              );
+              return true;
+            }),
+          };
+        },
+      );
+
+      const app = express();
+      // Use express.json() middleware - this can cause hangs if the request
+      // stream doesn't properly emit 'end' for GET requests without body
+      app.use(express.json());
+
+      // Simulate auth middleware that might wait for body processing
+      app.use((_req, _res, next) => {
+        // Auth middleware that runs before routes
+        next();
+      });
+
+      // GET endpoint with middleware chain
+      app.get(
+        "/chat/tools",
+        expressHandler(
+          async () => {
+            return { tools: ["search", "calculate"] };
+          },
+          { name: "get-chat-tools" },
+        ),
+      );
+
+      const handler = createLambdaStreamHandler(app);
+      const getEvent = createMockEvent({
+        requestContext: {
+          ...createMockEvent().requestContext,
+          http: {
+            ...createMockEvent().requestContext.http,
+            method: "GET",
+            path: "/chat/tools",
+          },
+        },
+        rawPath: "/chat/tools",
+      });
+
+      // This would hang before the fix because the request stream never ended
+      await handler(getEvent, mockContext);
+
+      // Verify the response completed successfully
+      expect(fromCalls.length).toBeGreaterThan(0);
+      expect(writtenData.length).toBeGreaterThan(0);
+      const parsedResponse = JSON.parse(writtenData.join(""));
+      expect(parsedResponse).toEqual({ tools: ["search", "calculate"] });
+    });
+
     it("converts 204 to 200 for NO_CONTENT responses via expressHandler (issue #178)", async () => {
       // This test verifies the fix for issue #178 where httpHandler(NO_CONTENT)
       // routes would hang because Lambda streaming requires body content.
