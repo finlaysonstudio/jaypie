@@ -678,6 +678,83 @@ describe("Lambda Adapter Integration", () => {
       expect(mockWrappedStream.end).toHaveBeenCalled();
     });
 
+    it("handles non-streaming expressHandler endpoints without hanging (issue #187)", async () => {
+      // This test verifies the fix for issue #187 where expressHandler endpoints
+      // that return data (non-streaming) would hang when used with createLambdaStreamHandler.
+      // The issue is that res.json() calls weren't properly writing to the Lambda stream.
+      const fromCalls: Array<{
+        metadata: { statusCode: number; headers: Record<string, string> };
+      }> = [];
+      const writtenData: string[] = [];
+      (
+        awslambda.HttpResponseStream.from as ReturnType<typeof vi.fn>
+      ).mockImplementation(
+        (
+          stream: ResponseStream,
+          metadata: { statusCode: number; headers: Record<string, string> },
+        ) => {
+          fromCalls.push({ metadata });
+          return {
+            ...mockWrappedStream,
+            write: vi.fn((data: string | Buffer) => {
+              writtenData.push(
+                typeof data === "string" ? data : data.toString(),
+              );
+              return true;
+            }),
+          };
+        },
+      );
+
+      const app = express();
+      // Non-streaming endpoint using expressHandler that returns data
+      app.get(
+        "/chat",
+        expressHandler(
+          async () => {
+            return {
+              conversation: { id: "123" },
+              messages: [{ text: "hello" }],
+            };
+          },
+          { name: "get-chat" },
+        ),
+      );
+
+      const handler = createLambdaStreamHandler(app);
+      const getEvent = createMockEvent({
+        requestContext: {
+          ...createMockEvent().requestContext,
+          http: {
+            ...createMockEvent().requestContext.http,
+            method: "GET",
+            path: "/chat",
+          },
+        },
+        rawPath: "/chat",
+      });
+
+      // This should complete without timing out
+      await handler(getEvent, mockContext);
+
+      // Verify the response was properly written
+      expect(fromCalls.length).toBeGreaterThan(0);
+      const lastCall = fromCalls[fromCalls.length - 1];
+      expect(lastCall.metadata.statusCode).toBe(200);
+      expect(lastCall.metadata.headers["content-type"]).toBe(
+        "application/json",
+      );
+
+      // Verify the JSON data was written to the stream
+      expect(writtenData.length).toBeGreaterThan(0);
+      const writtenJson = writtenData.join("");
+      const parsedResponse = JSON.parse(writtenJson);
+      expect(parsedResponse).toEqual({
+        conversation: { id: "123" },
+        messages: [{ text: "hello" }],
+      });
+    });
+
     it("converts 204 to 200 for NO_CONTENT responses via expressHandler (issue #178)", async () => {
       // This test verifies the fix for issue #178 where httpHandler(NO_CONTENT)
       // routes would hang because Lambda streaming requires body content.
