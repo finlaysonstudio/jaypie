@@ -37,7 +37,7 @@ export PROJECT_VERSION=$(node -p "require('$REPO_ROOT/package.json').version")
 
 # Deploy CDK infrastructure
 echo "🚀 Deploying JaypieDocumentation infrastructure to sandbox..."
-cd "$REPO_ROOT/stacks/cdk"
+cd "$REPO_ROOT/workspaces/cdk"
 npx cdk deploy JaypieDocumentation --profile "$AWS_PROFILE" --require-approval never -c stacks=JaypieDocumentation
 
 # Get CloudFormation outputs
@@ -63,7 +63,7 @@ npm run docs:build
 
 # Sync to S3
 echo "📤 Syncing documentation to S3..."
-aws s3 sync "$REPO_ROOT/stacks/documentation/build" "s3://$BUCKET_NAME" --delete --profile "$AWS_PROFILE"
+aws s3 sync "$REPO_ROOT/workspaces/documentation/build" "s3://$BUCKET_NAME" --delete --profile "$AWS_PROFILE"
 
 # Invalidate CloudFront cache
 if [ -n "$DISTRIBUTION_ID" ] && [ "$DISTRIBUTION_ID" != "None" ]; then

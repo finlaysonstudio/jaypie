@@ -37,7 +37,7 @@ export PROJECT_VERSION=$(node -p "require('$REPO_ROOT/package.json').version")
 
 # Deploy via CDK (cdk-nextjs-standalone handles the build)
 echo "🚀 Deploying JaypieGardenNextjs to sandbox..."
-cd "$REPO_ROOT/stacks/cdk"
+cd "$REPO_ROOT/workspaces/cdk"
 npx cdk deploy JaypieGardenNextjs --profile "$AWS_PROFILE" --require-approval never -c stacks=JaypieGardenNextjs
 
 echo "✅ Deployment complete!"

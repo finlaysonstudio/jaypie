@@ -39,14 +39,14 @@ export PROJECT_VERSION=$(node -p "require('$REPO_ROOT/package.json').version")
 cd "$REPO_ROOT"
 
 echo "🧹 Cleaning garden-api..."
-npm run clean --workspace stacks/garden-api
+npm run clean --workspace workspaces/garden-api
 
 echo "🔨 Building garden-api..."
-npm run build --workspace stacks/garden-api
+npm run build --workspace workspaces/garden-api
 
 # Deploy via CDK
 echo "🚀 Deploying JaypieGardenApi to sandbox..."
-cd "$REPO_ROOT/stacks/cdk"
+cd "$REPO_ROOT/workspaces/cdk"
 npx cdk deploy JaypieGardenApi --profile "$AWS_PROFILE" --require-approval never -c stacks=JaypieGardenApi
 
 echo "✅ Deployment complete!"
