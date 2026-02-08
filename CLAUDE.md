@@ -1,23 +1,19 @@
-# CLAUDE.md
-## Repository Overview
+# Project Guidelines
+## Overview
 - Jaypie provides a complete stack approach to multi-environment cloud application patterns.
 - `@jaypie/constructs` helps define AWS buckets, distributions, lambda, queues, and secrets.
 - `jaypie` provides access to secrets, error handling, event parsing, lifecycle management, logging, and queue messaging.
 - `@jaypie/llm` provides an interface for calling popular large language model providers
 - `@jaypie/testkit` provides a mocking pattern for the `jaypie` package and many utility packages
-- `@jaypie/eslint` are opinionated lint rules
-- `@jaypie/repokit` provides common repository tools
-- Additional packages provide special functions
-## Technology Stack
-- **Language**: TypeScript with ESM modules
-- **Runtime**: Node.js 22, 24, 25 (tested across all versions)
-- **Package Manager**: npm with workspaces (monorepo)
-- **Testing**: Vitest
-- **Building**: Rollup with vite-plugin-dts for type declarations
-- **Linting**: ESLint 9 with custom `@jaypie/eslint` config
-- **Formatting**: Prettier, sort-package-json
-
-## Package Structure
+## Technology
+- TypeScript with ESM modules
+- Node.js 22, 24, 25 (tested across all versions)
+- npm with workspaces (monorepo)
+- Vitest
+- Rollup with vite-plugin-dts for type declarations
+- ESLint 9 with custom `@jaypie/eslint` config
+- Prettier, sort-package-json
+## Packages
 | Package | Description |
 |---------|-------------|
 | `jaypie` | Main package: secrets, error handling, event parsing, lifecycle, logging, queues |
@@ -41,35 +37,19 @@
 | `@jaypie/testkit` | Testing mocks and utilities |
 | `@jaypie/textract` | AWS Textract utilities |
 | `@jaypie/types` | Core TypeScript type definitions |
-
-## Workspace Naming Conventions
-
+## Workspace Naming
 | Directory | Purpose |
 |-----------|---------|
 | `packages/` | Default workspace for npm packages (preferred when only one namespace needed) |
 | `workspaces/` | CDK-deployed infrastructure, sites, and other non-npm work |
-
-## Workspaces Structure
-
+## Workspaces
 | Workspace | Description |
 |-----------|-------------|
 | `@jaypie/documentation` | Documentation site at jaypie.net (private) |
 | `@jaypie/garden-api` | Garden streaming API deployed via CDK (private); use sandbox to reproduce errors and validate functionality |
 | `@jaypie/garden-nextjs` | Garden Next.js frontend site (private); use sandbox to reproduce errors and validate functionality |
 | `@jaypie/workspaces-cdk` | CDK infrastructure for Jaypie stacks (private) |
-
-## CI/CD Workflows
-- **npm-check.yml**: Runs on `feat/*`, `fix/*`, `devin/*` branches
-  - Lint, typecheck, and unit tests in parallel
-  - Tests across Node.js 22, 24, 25
-  - Optional Datadog test tracing
-  - Conditional LLM client tests when `packages/llm` changes
-- **npm-deploy.yml**: Runs on `main` branch and `deploy-*`/`rc-*` tags
-  - Publishes packages to npm with provenance
-  - RC tags publish with `--tag rc`
-  - Skips already-published versions
-
-## Environment Variables
+## Environment
 | Variable | Description |
 |----------|-------------|
 | `PROJECT_ENV` | Environment identifier (local, meta, production) |
@@ -88,32 +68,10 @@
 | `ANTHROPIC_API_KEY` | Anthropic API key for LLM |
 | `OPENAI_API_KEY` | OpenAI API key for LLM |
 | `AWS_SESSION_TOKEN` | AWS session token (set by Lambda runtime) |
-## Commands
-### Testing
-```bash
-npm test                    # Run all tests in non-watch mode (vitest run)
-npm test -w <package-name>  # Run tests for specific workspace package
-```
-Do not execute `vitest` without `vitest run`. By default `vitest` executes with `watch` and does not terminate.
-
-**Local Lambda Testing**: `packages/express/docker/` provides Docker and SAM CLI setups for testing the Express-to-Lambda adapter locally. See the directory's CLAUDE.md for details.
-### Building
-```bash
-npm run build               # Build all workspace packages
-npm run build -w <package-name>  # Build specific workspace package
-```
-### Type Checking
-```bash
-npm run typecheck           # Type check all workspace packages
-npm run typecheck -w <package-name>  # Type check specific package
-```
-### Linting
-```bash
-npm run lint                # Lint code (uses @jaypie/eslint config)
-npm run format              # Auto-fix linting issues
-npm run format:package      # Sort package.json files
-```
-Always prefer `format` when linting.
+## Commands and Skills
+- `.claude/skills/build/SKILL.md` for build, CI/CD, and publishing
+- `.claude/skills/test/SKILL.md` for testing commands and patterns
+- `.claude/skills/green/SKILL.md` for completion criteria
 ## Guidelines
 ### Actions
 - Do not commit changes or push without explicit user request
@@ -121,12 +79,6 @@ Always prefer `format` when linting.
 - Run `npm i --package-lock-only` after versioning
 - Reference npm workspaces by **path** not name
 - Keep README.md and CLAUDE.md current
-### Completion Criteria
-Before completing any work, ensure the workspace is "green" by running these commands for the affected package(s):
-1. `npm run typecheck --workspace packages/<package-name>` (or `workspaces/<workspace-name>`)
-2. `npm run build --workspace packages/<package-name>` (or `workspaces/<workspace-name>`)
-3. `npm run test --workspace packages/<package-name>` (or `workspaces/<workspace-name>`)
-4. `npm run format packages/<package-name>` (or `workspaces/<workspace-name>`)
 ### Error Handling
 - Never throw vanilla `Error`
 - Use `@jaypie/errors` package (ConfigurationError, etc.) for proper error types
