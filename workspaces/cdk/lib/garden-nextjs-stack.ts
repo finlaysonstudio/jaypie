@@ -1,3 +1,4 @@
+import * as dynamodb from "aws-cdk-lib/aws-dynamodb";
 import { Construct } from "constructs";
 import { envHostname, JaypieAppStack, JaypieNextJs } from "@jaypie/constructs";
 
@@ -9,6 +10,10 @@ export interface GardenNextjsStackProps {
    * @default envHostname({ subdomain: "garden" }) - e.g., "garden.jaypie.net" for production
    */
   host?: string;
+  /**
+   * DynamoDB table to grant read/write access to the Next.js server function
+   */
+  table?: dynamodb.ITable;
   /**
    * Override the default hosted zone
    * @default CDK_ENV_HOSTED_ZONE or "jaypie.net"
@@ -34,6 +39,7 @@ export class GardenNextjsStack extends JaypieAppStack {
       domainName: host,
       hostedZone: zone,
       nextjsPath: "../garden-nextjs",
+      ...(props.table ? { tables: [props.table] } : {}),
     });
   }
 }
