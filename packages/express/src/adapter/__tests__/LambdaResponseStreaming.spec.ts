@@ -391,15 +391,14 @@ describe("LambdaResponseStreaming", () => {
 
     it("emits finish event for empty responses", async () => {
       const res = new LambdaResponseStreaming(mockResponseStream);
-      const finishSpy = vi.fn();
-      res.on("finish", finishSpy);
+
+      const finishPromise = new Promise<void>((resolve) => {
+        res.on("finish", resolve);
+      });
 
       res.end();
 
-      // Wait for async operations
-      await new Promise((resolve) => setTimeout(resolve, 10));
-
-      expect(finishSpy).toHaveBeenCalled();
+      await finishPromise;
     });
   });
 
