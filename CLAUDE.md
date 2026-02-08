@@ -54,8 +54,8 @@
 | Workspace | Description |
 |-----------|-------------|
 | `@jaypie/documentation` | Documentation site at jaypie.net (private) |
-| `@jaypie/garden-api` | Garden streaming API deployed via CDK (private) |
-| `@jaypie/garden-nextjs` | Garden Next.js frontend site (private) |
+| `@jaypie/garden-api` | Garden streaming API deployed via CDK (private); use sandbox to reproduce errors and validate functionality |
+| `@jaypie/garden-nextjs` | Garden Next.js frontend site (private); use sandbox to reproduce errors and validate functionality |
 | `@jaypie/workspaces-cdk` | CDK infrastructure for Jaypie stacks (private) |
 
 ## CI/CD Workflows
@@ -141,7 +141,7 @@ Before completing any work, ensure the workspace is "green" by running these com
 #### Function Definitions
 - Function definitions use object parameters: `function myFunction({ param1, param2 })`
 - If there is a single required value `function myFunction(requiredParam)` or `function myFunction(requiredParam, { param2, param3 })` is allowed
-- Ordered parameters should never be used: `function dontUseOrderedParams(a, b, c)`
+- Ordered parameters should never be used: `function doNotUseOrderedParams(a, b, c)`
 - Any function that can accept no params (e.g., a config-only function with complete defaults) should allow zero params
 ### Technology
 * Use TypeScript wherever possible
