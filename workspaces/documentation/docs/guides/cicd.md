@@ -21,8 +21,7 @@ Jaypie projects use GitHub Actions for CI/CD with environment-specific deploymen
 | Directory | Purpose |
 |-----------|---------|
 | `packages/` | Default workspace for npm packages (preferred when only one namespace needed) |
-| `stacks/` | CDK-deployed infrastructure and sites (as opposed to npm-published) |
-| `workspaces/` | Generic workspace for other work |
+| `workspaces/` | CDK-deployed infrastructure, sites, and other non-npm work |
 
 ## Environments
 

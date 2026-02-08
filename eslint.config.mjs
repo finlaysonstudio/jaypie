@@ -17,10 +17,10 @@ export default [
       "**/prompts/templates/**",
       "LOCAL/**",
       "packages/express/docker/**",
-      "stacks/documentation/.docusaurus/**",
-      "stacks/documentation/build/**",
-      "stacks/garden-nextjs/.next/**",
-      "stacks/garden-nextjs/out/**",
+      "workspaces/documentation/.docusaurus/**",
+      "workspaces/documentation/build/**",
+      "workspaces/garden-nextjs/.next/**",
+      "workspaces/garden-nextjs/out/**",
     ],
   },
 
@@ -77,7 +77,7 @@ export default [
   // Sites: TypeScript/TSX files (allow imports)
   //
   {
-    files: ["stacks/**/*.ts", "stacks/**/*.tsx"],
+    files: ["workspaces/**/*.ts", "workspaces/**/*.tsx"],
     rules: {
       "import-x/default": "off",
       "import-x/no-unresolved": [
@@ -92,7 +92,7 @@ export default [
   // Sites: CommonJS
   //
   {
-    files: ["stacks/**/*.js"],
+    files: ["workspaces/**/*.js"],
     languageOptions: {
       ecmaVersion: "latest",
       sourceType: "script",

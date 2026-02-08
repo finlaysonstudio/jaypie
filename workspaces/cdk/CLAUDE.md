@@ -1,4 +1,4 @@
-# @jaypie/stacks-cdk
+# @jaypie/workspaces-cdk
 
 CDK infrastructure for Jaypie stacks.
 
@@ -9,7 +9,7 @@ This package contains AWS CDK stacks for deploying Jaypie-related infrastructure
 ## Directory Structure
 
 ```
-stacks/cdk/
+workspaces/cdk/
 ├── bin/
 │   └── app.ts           # CDK app entry point
 ├── lib/
@@ -215,7 +215,7 @@ Variables are configured at different levels in GitHub Settings:
 |----------|-------------|---------|
 | `AWS_HOSTED_ZONE` | Route53 hosted zone | `jaypie.net` |
 | `PROJECT_KEY` | Project identifier | `jaypie` |
-| `PROJECT_SERVICE` | Service name | `stacks` |
+| `PROJECT_SERVICE` | Service name | `workspaces` |
 
 #### Environment Level
 

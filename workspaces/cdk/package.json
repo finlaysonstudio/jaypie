@@ -1,5 +1,5 @@
 {
-  "name": "@jaypie/stacks-cdk",
+  "name": "@jaypie/workspaces-cdk",
   "version": "0.0.1",
   "private": true,
   "description": "CDK infrastructure for Jaypie stacks",

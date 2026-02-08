@@ -47,17 +47,16 @@
 | Directory | Purpose |
 |-----------|---------|
 | `packages/` | Default workspace for npm packages (preferred when only one namespace needed) |
-| `stacks/` | CDK-deployed infrastructure and sites (as opposed to npm-published) |
-| `workspaces/` | Generic workspace for other work |
+| `workspaces/` | CDK-deployed infrastructure, sites, and other non-npm work |
 
-## Stacks Structure
+## Workspaces Structure
 
-| Stack | Description |
-|-------|-------------|
+| Workspace | Description |
+|-----------|-------------|
 | `@jaypie/documentation` | Documentation site at jaypie.net (private) |
 | `@jaypie/garden-api` | Garden streaming API deployed via CDK (private) |
 | `@jaypie/garden-nextjs` | Garden Next.js frontend site (private) |
-| `@jaypie/stacks-cdk` | CDK infrastructure for Jaypie stacks (private) |
+| `@jaypie/workspaces-cdk` | CDK infrastructure for Jaypie stacks (private) |
 
 ## CI/CD Workflows
 - **npm-check.yml**: Runs on `feat/*`, `fix/*`, `devin/*` branches
@@ -124,10 +123,10 @@ Always prefer `format` when linting.
 - Keep README.md and CLAUDE.md current
 ### Completion Criteria
 Before completing any work, ensure the workspace is "green" by running these commands for the affected package(s):
-1. `npm run typecheck --workspace packages/<package-name>` (or `stacks/<stack-name>`)
-2. `npm run build --workspace packages/<package-name>` (or `stacks/<stack-name>`)
-3. `npm run test --workspace packages/<package-name>` (or `stacks/<stack-name>`)
-4. `npm run format packages/<package-name>` (or `stacks/<stack-name>`)
+1. `npm run typecheck --workspace packages/<package-name>` (or `workspaces/<workspace-name>`)
+2. `npm run build --workspace packages/<package-name>` (or `workspaces/<workspace-name>`)
+3. `npm run test --workspace packages/<package-name>` (or `workspaces/<workspace-name>`)
+4. `npm run format packages/<package-name>` (or `workspaces/<workspace-name>`)
 ### Error Handling
 - Never throw vanilla `Error`
 - Use `@jaypie/errors` package (ConfigurationError, etc.) for proper error types

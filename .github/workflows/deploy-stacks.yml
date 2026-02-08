@@ -89,5 +89,5 @@ jobs:
       - name: Deploy CDK Stacks
         uses: ./.github/actions/cdk-deploy
         with:
-          cdk-package-path: stacks/cdk
+          cdk-package-path: workspaces/cdk
           stack-name: ${{ steps.stacks.outputs.stacks }}

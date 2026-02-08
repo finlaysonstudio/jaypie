@@ -80,10 +80,10 @@ const bucket = new JaypieBucket(this, "AssetsBucket", {
 
 ## Stack Structure
 
-Organize stacks in the `stacks/` directory:
+Organize stacks in the `workspaces/` directory:
 
 ```
-stacks/
+workspaces/
 ├── cdk/
 │   ├── src/
 │   │   ├── app.ts        # CDK app entry
