@@ -197,12 +197,14 @@ new JaypieWebDeploymentBucket(this, "Web", {
 DynamoDB table with Jaypie single-table design patterns.
 
 ```typescript
+import { DEFAULT_INDEXES } from "@jaypie/fabric";
+
 // Basic table (no GSIs by default)
 new JaypieDynamoDb(this, "myApp");
 
 // With standard Jaypie GSIs
 new JaypieDynamoDb(this, "myApp", {
-  indexes: JaypieDynamoDb.DEFAULT_INDEXES,
+  indexes: DEFAULT_INDEXES,
 });
 
 // With custom indexes using IndexDefinition from @jaypie/fabric

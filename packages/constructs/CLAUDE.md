@@ -195,6 +195,7 @@ Note: Streaming requires Lambda Function URLs (not API Gateway). `JaypieDistribu
 
 ```typescript
 import { JaypieDynamoDb, IndexDefinition } from "@jaypie/constructs";
+import { DEFAULT_INDEXES } from "@jaypie/fabric";
 
 // Basic table - table name is CDK-generated (includes stack name and unique suffix)
 // e.g., cdk-sponsor-project-env-nonce-app-JaypieDynamoDbmyAppTable-XXXXX
@@ -202,7 +203,7 @@ const table = new JaypieDynamoDb(this, "myApp");
 
 // With standard Jaypie GSIs (indexScope, indexAlias, indexClass, indexType, indexXid)
 const tableWithIndexes = new JaypieDynamoDb(this, "myApp", {
-  indexes: JaypieDynamoDb.DEFAULT_INDEXES,
+  indexes: DEFAULT_INDEXES,
 });
 
 // With explicit table name (overrides CDK-generated name)

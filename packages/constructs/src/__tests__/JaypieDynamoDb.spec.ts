@@ -2,6 +2,7 @@ import { describe, expect, it, beforeEach, afterEach } from "vitest";
 import { Stack, RemovalPolicy } from "aws-cdk-lib";
 import { Template } from "aws-cdk-lib/assertions";
 import * as dynamodb from "aws-cdk-lib/aws-dynamodb";
+import { DEFAULT_INDEXES } from "@jaypie/fabric";
 import { JaypieDynamoDb } from "../JaypieDynamoDb.js";
 
 describe("JaypieDynamoDb", () => {
@@ -29,32 +30,6 @@ describe("JaypieDynamoDb", () => {
       expect(construct).toBeDefined();
       expect(construct.node.id).toBe("JaypieDynamoDb-myApp");
       template.hasResource("AWS::DynamoDB::GlobalTable", {});
-    });
-  });
-
-  describe("Static Constants", () => {
-    it("exposes DEFAULT_INDEXES from @jaypie/fabric", () => {
-      expect(JaypieDynamoDb.DEFAULT_INDEXES).toBeDefined();
-      expect(JaypieDynamoDb.DEFAULT_INDEXES).toBeArray();
-      expect(JaypieDynamoDb.DEFAULT_INDEXES).toHaveLength(5);
-    });
-
-    it("DEFAULT_INDEXES has correct structure", () => {
-      const scopeIndex = JaypieDynamoDb.DEFAULT_INDEXES.find(
-        (idx) => idx.name === "indexScope",
-      );
-      expect(scopeIndex).toBeDefined();
-      expect(scopeIndex?.pk).toEqual(["scope", "model"]);
-      expect(scopeIndex?.sk).toEqual(["sequence"]);
-    });
-
-    it("DEFAULT_INDEXES includes all five GSIs", () => {
-      const names = JaypieDynamoDb.DEFAULT_INDEXES.map((idx) => idx.name);
-      expect(names).toContain("indexScope");
-      expect(names).toContain("indexAlias");
-      expect(names).toContain("indexCategory");
-      expect(names).toContain("indexType");
-      expect(names).toContain("indexXid");
     });
   });
 
@@ -186,7 +161,7 @@ describe("JaypieDynamoDb", () => {
       const stack = new Stack();
       new JaypieDynamoDb(stack, "TestTable", {
         tableName: "test-table",
-        indexes: JaypieDynamoDb.DEFAULT_INDEXES,
+        indexes: DEFAULT_INDEXES,
       });
       const template = Template.fromStack(stack);
 
@@ -223,7 +198,7 @@ describe("JaypieDynamoDb", () => {
       const stack = new Stack();
       new JaypieDynamoDb(stack, "TestTable", {
         tableName: "test-table",
-        indexes: JaypieDynamoDb.DEFAULT_INDEXES.filter(
+        indexes: DEFAULT_INDEXES.filter(
           (idx) => idx.name === "indexScope" || idx.name === "indexType",
         ),
       });
