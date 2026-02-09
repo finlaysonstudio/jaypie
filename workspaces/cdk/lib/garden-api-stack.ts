@@ -41,6 +41,7 @@ export class GardenApiStack extends JaypieAppStack {
     this.lambda = new JaypieExpressLambda(this, "GardenApiLambda", {
       code: "../garden-api/dist",
       handler: "index.handler",
+      secrets: ["PROJECT_ADMIN_SEED"],
       ...(props.table ? { tables: [props.table] } : {}),
     });
 
