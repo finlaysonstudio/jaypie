@@ -89,7 +89,7 @@ runs:
         PROJECT_KEY="${PROJECT_KEY:-jaypie}"
 
         PROJECT_SERVICE="${{ inputs.project-service }}"
-        PROJECT_SERVICE="${PROJECT_SERVICE:-stacks}"
+        PROJECT_SERVICE="${PROJECT_SERVICE:-workspaces}"
 
         # Environment-level variables (with defaults)
         AWS_ROLE_ARN="${{ inputs.aws-role-arn }}"

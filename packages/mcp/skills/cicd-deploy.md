@@ -248,7 +248,7 @@ jobs:
 Use consistent stack naming with environment and nonce:
 
 ```typescript
-// stacks/cdk/src/app.ts
+// workspaces/cdk/src/app.ts
 const env = process.env.PROJECT_ENV || "sandbox";
 const nonce = process.env.PROJECT_NONCE || "dev";
 

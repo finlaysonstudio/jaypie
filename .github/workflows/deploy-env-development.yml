@@ -8,7 +8,7 @@ on:
     tags:
       - development-*
     paths:
-      - 'stacks/**'
+      - 'workspaces/**'
       - '.github/actions/**'
       - '.github/workflows/deploy-env-*.yml'
       - '.github/workflows/deploy-stack-*.yml'
@@ -62,8 +62,8 @@ jobs:
       - name: Deploy CDK Stacks
         uses: ./.github/actions/cdk-deploy
         with:
-          cdk-package-path: stacks/cdk
-          stack-name: JaypieDocumentation JaypieGardenApi JaypieGardenNextjs
+          cdk-package-path: workspaces/cdk
+          stack-name: JaypieDocumentation JaypieGardenData JaypieGardenApi JaypieGardenNextjs
 
       - name: Build documentation site
         run: npm run docs:build
@@ -93,7 +93,7 @@ jobs:
 
       - name: Deploy documentation to S3
         run: |
-          aws s3 sync stacks/documentation/build/ s3://${{ env.DOCS_BUCKET_NAME }}/ --delete
+          aws s3 sync workspaces/documentation/build/ s3://${{ env.DOCS_BUCKET_NAME }}/ --delete
 
       - name: Invalidate CloudFront cache
         if: env.DOCS_DISTRIBUTION_ID != '' && env.DOCS_DISTRIBUTION_ID != 'None'

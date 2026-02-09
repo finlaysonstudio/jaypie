@@ -1,3 +1,4 @@
+import * as dynamodb from "aws-cdk-lib/aws-dynamodb";
 import { Construct } from "constructs";
 import {
   envHostname,
@@ -14,6 +15,10 @@ export interface GardenApiStackProps {
    * @default envHostname({ subdomain: "garden-api" }) - e.g., "garden-api.jaypie.net" for production
    */
   host?: string;
+  /**
+   * DynamoDB table to grant read/write access to the Lambda function
+   */
+  table?: dynamodb.ITable;
   /**
    * Override the default hosted zone
    * @default CDK_ENV_HOSTED_ZONE or "jaypie.net"
@@ -36,6 +41,7 @@ export class GardenApiStack extends JaypieAppStack {
     this.lambda = new JaypieExpressLambda(this, "GardenApiLambda", {
       code: "../garden-api/dist",
       handler: "index.handler",
+      ...(props.table ? { tables: [props.table] } : {}),
     });
 
     this.distribution = new JaypieDistribution(this, "GardenApiDistribution", {

@@ -1,4 +1,4 @@
-# @jaypie/stacks-cdk
+# @jaypie/workspaces-cdk
 
 CDK infrastructure for Jaypie stacks.
 
@@ -9,13 +9,14 @@ This package contains AWS CDK stacks for deploying Jaypie-related infrastructure
 ## Directory Structure
 
 ```
-stacks/cdk/
+workspaces/cdk/
 ├── bin/
 │   └── app.ts           # CDK app entry point
 ├── lib/
 │   ├── index.ts         # Package exports
 │   ├── documentation-stack.ts  # Documentation site stack
 │   ├── garden-api-stack.ts     # Garden API (streaming Lambda)
+│   ├── garden-data-stack.ts    # Garden shared DynamoDB table
 │   └── garden-nextjs-stack.ts  # Garden Next.js site
 ├── cdk.json             # CDK configuration
 ├── package.json
@@ -48,6 +49,22 @@ This is handled automatically by `envHostname()` from `@jaypie/constructs`, whic
 - `CDK_DEFAULT_ACCOUNT` - AWS account ID
 - `CDK_DEFAULT_REGION` - AWS region
 - `CDK_ENV_REPO` - GitHub repository for deploy role (e.g., "finlaysonstudio/jaypie")
+
+### GardenDataStack
+
+Shared DynamoDB table for Garden stacks. Uses `JaypieDynamoDb` with default indexes from `@jaypie/fabric`.
+
+**Resources Created:**
+- DynamoDB table (PAY_PER_REQUEST billing)
+- Default partition key: `model` (String)
+- Default sort key: `id` (String)
+
+**Stack ID:** `JaypieGardenData`
+
+**Cross-Stack Usage:**
+The table is passed as a prop to `GardenApiStack` and `GardenNextjsStack`. CDK handles cross-stack references automatically. When a single table is provided, consumer stacks receive:
+- IAM read/write permissions on the table
+- `DYNAMODB_TABLE_NAME` environment variable set to the table name
 
 ### GardenApiStack
 
@@ -166,7 +183,7 @@ Use `workflow_dispatch` to manually deploy specific stacks to any environment:
 4. Select stacks to deploy:
    - `all` - All stacks
    - Individual stack names
-   - Common combinations (e.g., `JaypieGardenApi JaypieGardenNextjs`)
+   - Common combinations (e.g., `JaypieGardenData JaypieGardenApi JaypieGardenNextjs`)
 5. Or provide a custom stack list in the text field
 
 #### Stack Content Deployments
@@ -215,7 +232,7 @@ Variables are configured at different levels in GitHub Settings:
 |----------|-------------|---------|
 | `AWS_HOSTED_ZONE` | Route53 hosted zone | `jaypie.net` |
 | `PROJECT_KEY` | Project identifier | `jaypie` |
-| `PROJECT_SERVICE` | Service name | `stacks` |
+| `PROJECT_SERVICE` | Service name | `workspaces` |
 
 #### Environment Level
 

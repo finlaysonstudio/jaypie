@@ -35,18 +35,9 @@ export PROJECT_SERVICE="${PROJECT_SERVICE:-jaypie}"
 export PROJECT_SPONSOR="${PROJECT_SPONSOR:-finlaysonstudio}"
 export PROJECT_VERSION=$(node -p "require('$REPO_ROOT/package.json').version")
 
-# Clean and build garden-api (must run from repo root for workspace commands)
-cd "$REPO_ROOT"
-
-echo "🧹 Cleaning garden-api..."
-npm run clean --workspace stacks/garden-api
-
-echo "🔨 Building garden-api..."
-npm run build --workspace stacks/garden-api
-
-# Deploy via CDK
-echo "🚀 Deploying JaypieGardenApi to sandbox..."
-cd "$REPO_ROOT/stacks/cdk"
-npx cdk deploy JaypieGardenApi --profile "$AWS_PROFILE" --require-approval never -c stacks=JaypieGardenApi
+# Deploy via CDK (cdk-nextjs-standalone handles the build)
+echo "🚀 Deploying JaypieGardenNextjs to sandbox..."
+cd "$REPO_ROOT/workspaces/cdk"
+npx cdk deploy JaypieGardenNextjs --profile "$AWS_PROFILE" --require-approval never -c stacks=JaypieGardenNextjs
 
 echo "✅ Deployment complete!"

@@ -53,7 +53,7 @@ project/
 ├── packages/           # npm packages
 │   ├── api/           # Express API
 │   └── lib/           # Shared library
-├── stacks/            # CDK infrastructure
+├── workspaces/        # CDK infrastructure
 │   └── cdk/           # CDK app
 └── package.json       # Root workspace config
 ```

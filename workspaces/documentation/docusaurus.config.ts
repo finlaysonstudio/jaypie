@@ -102,7 +102,7 @@ const config: Config = {
         docs: {
           sidebarPath: "./sidebars.ts",
           editUrl:
-            "https://github.com/finlaysonstudio/jaypie/tree/main/stacks/documentation/",
+            "https://github.com/finlaysonstudio/jaypie/tree/main/workspaces/documentation/",
         },
         blog: false,
         theme: {

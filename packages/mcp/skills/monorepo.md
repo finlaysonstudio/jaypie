@@ -138,7 +138,7 @@ npm install --save-dev @jaypie/eslint @jaypie/testkit eslint rimraf sort-package
 | Directory | Purpose |
 |-----------|---------|
 | `packages/` | npm packages (default workspace) |
-| `stacks/` | CDK-deployed infrastructure and sites |
+| `workspaces/` | CDK-deployed infrastructure and sites |
 
 ## Scripts Reference
 

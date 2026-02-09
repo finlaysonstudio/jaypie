@@ -7,7 +7,7 @@ on:
       - feat/*
       - sandbox/*
     paths:
-      - 'stacks/documentation/**'
+      - 'workspaces/documentation/**'
     tags:
       - stack-documentation-*
       - sandbox-*
@@ -55,7 +55,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: documentation-build
-          path: stacks/documentation/build
+          path: workspaces/documentation/build
           retention-days: 1
 
   deploy-sandbox:

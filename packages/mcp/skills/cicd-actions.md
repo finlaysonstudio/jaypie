@@ -187,7 +187,7 @@ runs:
         path: |
           node_modules
           packages/*/node_modules
-          stacks/*/node_modules
+          workspaces/*/node_modules
         key: ${{ runner.os }}-node-${{ inputs.node-version }}-${{ hashFiles('**/package-lock.json') }}
         restore-keys: |
           ${{ runner.os }}-node-${{ inputs.node-version }}-
@@ -198,8 +198,8 @@ runs:
       with:
         path: |
           packages/*/dist
-          stacks/*/dist
-          stacks/*/.open-next
+          workspaces/*/dist
+          workspaces/*/.open-next
         key: ${{ runner.os }}-build-${{ github.sha }}
         restore-keys: |
           ${{ runner.os }}-build-
@@ -255,7 +255,7 @@ inputs:
   working-directory:
     description: 'Working directory for CDK commands'
     required: false
-    default: 'stacks/cdk'
+    default: 'workspaces/cdk'
   require-approval:
     description: 'CDK approval mode (never, any-change, broadening)'
     required: false
