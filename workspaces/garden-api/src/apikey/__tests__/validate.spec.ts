@@ -12,6 +12,10 @@ vi.mock("@jaypie/errors", async () => {
   return actual;
 });
 
+vi.mock("@jaypie/fabric", () => ({
+  registerModel: vi.fn(),
+}));
+
 vi.mock("@jaypie/logger", () => ({
   log: {
     debug: vi.fn(),

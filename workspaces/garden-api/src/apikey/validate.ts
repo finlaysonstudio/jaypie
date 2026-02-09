@@ -5,10 +5,23 @@ import {
   queryByAlias,
 } from "@jaypie/dynamodb";
 import { ForbiddenError, UnauthorizedError } from "@jaypie/errors";
+import { type IndexDefinition, registerModel } from "@jaypie/fabric";
 import { log } from "@jaypie/logger";
 
 import { isValidApiKeyFormat } from "./checksum.js";
 import { generateKeyFromSeed, hashKey } from "./generate.js";
+
+//
+//
+// Model Registration
+//
+
+const APIKEY_INDEXES: IndexDefinition[] = [
+  { name: "indexAlias", pk: ["scope", "model", "alias"], sk: ["sequence"], sparse: true },
+  { name: "indexScope", pk: ["scope", "model"], sk: ["sequence"] },
+];
+
+registerModel({ model: "apikey", indexes: APIKEY_INDEXES });
 
 //
 //
