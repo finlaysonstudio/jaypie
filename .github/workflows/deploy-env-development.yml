@@ -63,7 +63,7 @@ jobs:
         uses: ./.github/actions/cdk-deploy
         with:
           cdk-package-path: workspaces/cdk
-          stack-name: JaypieDocumentation JaypieGardenApi JaypieGardenNextjs
+          stack-name: JaypieDocumentation JaypieGardenData JaypieGardenApi JaypieGardenNextjs
 
       - name: Build documentation site
         run: npm run docs:build
