@@ -57,6 +57,7 @@ async function validateApiKey(token: string): Promise<ValidateResult> {
           alias: hash,
           category: "owner",
           createdAt: now,
+          label: token.slice(-4),
           id: crypto.randomUUID(),
           model: "apikey",
           name: "Owner Key",

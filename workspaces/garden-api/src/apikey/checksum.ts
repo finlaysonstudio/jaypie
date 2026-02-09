@@ -1,8 +1,8 @@
 const BASE62 = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 const BASE62_SET = new Set(BASE62);
 const BODY_LENGTH = 32;
-const KEY_LENGTH = 41;
-const PREFIX = "sk-jpi-";
+const KEY_LENGTH = 43;
+const PREFIX = "sk_jpi_";
 
 //
 //
@@ -16,7 +16,9 @@ function computeChecksum(body: string): string {
   }
   const c0 = BASE62[sum % 62];
   const c1 = BASE62[(sum * 7 + 13) % 62];
-  return `${c0}${c1}`;
+  const c2 = BASE62[(sum * 11 + 29) % 62];
+  const c3 = BASE62[(sum * 17 + 37) % 62];
+  return `${c0}${c1}${c2}${c3}`;
 }
 
 function isValidApiKeyFormat(key: string): boolean {

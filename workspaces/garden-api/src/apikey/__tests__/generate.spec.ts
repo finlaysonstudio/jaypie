@@ -20,12 +20,12 @@ describe("generateKeyFromSeed", () => {
 
   it("generates a key with correct prefix", () => {
     const key = generateKeyFromSeed("test-seed");
-    expect(key).toMatch(/^sk-jpi-/);
+    expect(key).toMatch(/^sk_jpi_/);
   });
 
   it("generates a key with correct length", () => {
     const key = generateKeyFromSeed("test-seed");
-    expect(key).toHaveLength(41);
+    expect(key).toHaveLength(43);
   });
 
   it("is deterministic for the same seed", () => {
@@ -47,13 +47,13 @@ describe("hashKey", () => {
   });
 
   it("returns a hex string", () => {
-    const hash = hashKey("sk-jpi-test");
+    const hash = hashKey("sk_jpi_test");
     expect(hash).toMatch(/^[0-9a-f]{64}$/);
   });
 
   it("is deterministic", () => {
-    const hash1 = hashKey("sk-jpi-test");
-    const hash2 = hashKey("sk-jpi-test");
+    const hash1 = hashKey("sk_jpi_test");
+    const hash2 = hashKey("sk_jpi_test");
     expect(hash1).toBe(hash2);
   });
 

@@ -38,11 +38,11 @@ describe("extractToken", () => {
   });
 
   it("extracts token from Bearer header", () => {
-    expect(extractToken("Bearer sk-jpi-abc123")).toBe("sk-jpi-abc123");
+    expect(extractToken("Bearer sk_jpi_abc123")).toBe("sk_jpi_abc123");
   });
 
   it("is case-insensitive for Bearer prefix", () => {
-    expect(extractToken("bearer sk-jpi-abc123")).toBe("sk-jpi-abc123");
+    expect(extractToken("bearer sk_jpi_abc123")).toBe("sk_jpi_abc123");
   });
 
   it("returns undefined for missing header", () => {
@@ -50,7 +50,7 @@ describe("extractToken", () => {
   });
 
   it("returns undefined for malformed header", () => {
-    expect(extractToken("sk-jpi-abc123")).toBeUndefined();
+    expect(extractToken("sk_jpi_abc123")).toBeUndefined();
   });
 
   it("returns undefined for empty string", () => {
@@ -116,6 +116,7 @@ describe("validateApiKey", () => {
         entity: expect.objectContaining({
           alias: SEED_HASH,
           category: "owner",
+          label: SEED_KEY.slice(-4),
           model: "apikey",
           scope: "@",
           type: "seed",

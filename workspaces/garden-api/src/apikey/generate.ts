@@ -5,7 +5,7 @@ import { computeChecksum } from "./checksum.js";
 const BASE62 = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 const BODY_LENGTH = 32;
 const HMAC_CONTEXT = "jaypie-garden-owner-key-v1";
-const PREFIX = "sk-jpi-";
+const PREFIX = "sk_jpi_";
 
 //
 //

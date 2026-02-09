@@ -12,9 +12,9 @@ describe("computeChecksum", () => {
     expect(typeof computeChecksum).toBe("function");
   });
 
-  it("returns a 2-character string", () => {
+  it("returns a 4-character string", () => {
     const result = computeChecksum("a".repeat(32));
-    expect(result).toHaveLength(2);
+    expect(result).toHaveLength(4);
   });
 
   it("is deterministic", () => {
@@ -37,7 +37,7 @@ describe("computeChecksum", () => {
 
 describe("isValidApiKeyFormat", () => {
   const VALID_BODY = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef";
-  const VALID_KEY = `sk-jpi-${VALID_BODY}${computeChecksum(VALID_BODY)}`;
+  const VALID_KEY = `sk_jpi_${VALID_BODY}${computeChecksum(VALID_BODY)}`;
 
   it("is a function", () => {
     expect(typeof isValidApiKeyFormat).toBe("function");
@@ -48,22 +48,22 @@ describe("isValidApiKeyFormat", () => {
   });
 
   it("returns false for wrong prefix", () => {
-    const bad = `sk-xyz-${VALID_BODY}${computeChecksum(VALID_BODY)}`;
+    const bad = `sk_xyz_${VALID_BODY}${computeChecksum(VALID_BODY)}`;
     expect(isValidApiKeyFormat(bad)).toBe(false);
   });
 
   it("returns false for wrong length", () => {
-    expect(isValidApiKeyFormat("sk-jpi-short")).toBe(false);
+    expect(isValidApiKeyFormat("sk_jpi_short")).toBe(false);
   });
 
   it("returns false for invalid characters in body", () => {
     const badBody = "ABCDEFGHIJKLMNOPQRSTUVWXYZ!@#$%^";
-    const bad = `sk-jpi-${badBody}${computeChecksum(badBody)}`;
+    const bad = `sk_jpi_${badBody}${computeChecksum(badBody)}`;
     expect(isValidApiKeyFormat(bad)).toBe(false);
   });
 
   it("returns false for wrong checksum", () => {
-    const bad = `sk-jpi-${VALID_BODY}ZZ`;
+    const bad = `sk_jpi_${VALID_BODY}ZZZZ`;
     expect(isValidApiKeyFormat(bad)).toBe(false);
   });
 
