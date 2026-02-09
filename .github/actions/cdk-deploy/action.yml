@@ -38,4 +38,6 @@ runs:
 
     - name: Deploy CDK Stack
       shell: bash
-      run: npm --workspace ${{ inputs.cdk-package-path }} run cdk deploy -- ${{ inputs.stack-name }} --require-approval never
+      run: |
+        STACKS_CSV=$(echo "${{ inputs.stack-name }}" | tr ' ' ',')
+        npm --workspace ${{ inputs.cdk-package-path }} run cdk deploy -- ${{ inputs.stack-name }} --require-approval never -c stacks="$STACKS_CSV"
