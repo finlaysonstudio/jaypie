@@ -92,7 +92,7 @@ The construct auto-detects consumer mode for personal/ephemeral environments (`P
 
 ## Generated Secrets
 
-For secrets without a source value (e.g., database passwords):
+For secrets that don't come from an external source, use `generateSecretString`. CloudFormation generates the value on the **first deploy only** and preserves it across subsequent deploys. The value is never visible in templates, logs, or CI/CD output — it exists only inside AWS Secrets Manager and is retrievable at runtime.
 
 ```typescript
 new JaypieEnvSecret(this, "DB_PASSWORD", {
@@ -102,6 +102,93 @@ new JaypieEnvSecret(this, "DB_PASSWORD", {
   },
 });
 ```
+
+This is the preferred pattern for any secret that can be randomly generated. No GitHub secret or workflow variable is needed — the CDK deploy creates and manages the value automatically.
+
+### Base62 Generated Secrets
+
+For secrets that must be base62-safe (`0-9A-Za-z` only), such as seeds and signing keys:
+
+```typescript
+new JaypieEnvSecret(this, "AdminSeed", {
+  envKey: "PROJECT_ADMIN_SEED",
+  generateSecretString: {
+    excludePunctuation: true,
+    includeSpace: false,
+    passwordLength: 64,
+  },
+});
+```
+
+With `excludePunctuation: true` and `includeSpace: false`, the generated value contains only base62 characters.
+
+## Seeds and API Keys in Workflows
+
+Seeds are secrets used to derive deterministic values (like API keys) at runtime. The generated-secret pattern is ideal for seeds because:
+
+1. **Set once**: CloudFormation generates the value on the first deploy. Subsequent deploys do not regenerate it.
+2. **Never known**: No human ever sees the seed value. It exists only in Secrets Manager.
+3. **Retrievable at runtime**: `loadEnvSecrets("PROJECT_ADMIN_SEED")` populates `process.env` for the handler to derive keys from.
+4. **Environment-isolated**: Each environment (sandbox, development, production) generates its own independent seed.
+
+### CDK Pattern
+
+Create the secret with `generateSecretString` and pass it to the Lambda:
+
+```typescript
+import { JaypieEnvSecret, JaypieExpressLambda } from "@jaypie/constructs";
+
+const adminSeed = new JaypieEnvSecret(this, "ProjectAdminSeed", {
+  envKey: "PROJECT_ADMIN_SEED",
+  generateSecretString: {
+    excludePunctuation: true,
+    includeSpace: false,
+    passwordLength: 64,
+  },
+});
+
+new JaypieExpressLambda(this, "ApiLambda", {
+  code: "dist",
+  handler: "index.handler",
+  secrets: [adminSeed],
+});
+```
+
+### Runtime Usage
+
+The handler loads the seed at startup and derives keys:
+
+```typescript
+import { expressHandler } from "jaypie";
+
+export default expressHandler(handler, {
+  secrets: ["PROJECT_ADMIN_SEED"],
+  setup: () => initClient(),
+});
+```
+
+At runtime, `process.env.PROJECT_ADMIN_SEED` contains the generated seed value. Application code uses it to derive API keys via HMAC, validate presented keys, and auto-provision on first use.
+
+### Workflow Integration
+
+No special workflow steps are needed for generated secrets. The CDK deploy step handles everything:
+
+```yaml
+- name: Deploy CDK Stacks
+  uses: ./.github/actions/cdk-deploy
+  with:
+    stack-name: JaypieGardenApi
+```
+
+On the first deploy, CloudFormation generates the seed. On subsequent deploys, the seed is preserved. The workflow never needs to generate, store, or pass the seed value.
+
+### Why Not GitHub Secrets?
+
+For externally-provided credentials (API keys from vendors, database URIs), GitHub environment secrets and env vars are the right approach. But for **internally-generated** secrets like seeds:
+
+- `generateSecretString` is simpler — no manual setup per environment
+- The value is never exposed to CI/CD logs or GitHub settings
+- CloudFormation guarantees idempotent creation — first deploy sets, updates preserve
 
 ## Tagging
 
