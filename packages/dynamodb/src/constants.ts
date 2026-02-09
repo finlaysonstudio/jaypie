@@ -6,7 +6,7 @@ export {
   SEPARATOR,
 } from "@jaypie/fabric";
 
-// GSI names (derived from DEFAULT_INDEXES)
+// GSI names
 export const INDEX_ALIAS = "indexAlias";
 export const INDEX_CATEGORY = "indexCategory";
 export const INDEX_SCOPE = "indexScope";

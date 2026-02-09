@@ -40,45 +40,9 @@ export interface IndexDefinition {
 export interface ModelSchema {
   /** The model name (e.g., "record", "message", "chat") */
   model: string;
-  /** Custom indexes for this model (uses DEFAULT_INDEXES if not specified) */
+  /** Custom indexes for this model (empty array if not specified) */
   indexes?: IndexDefinition[];
 }
-
-// =============================================================================
-// Default Indexes
-// =============================================================================
-
-/**
- * Default indexes for the DynamoDB GSI pattern.
- * These are used when a model does not specify custom indexes.
- */
-export const DEFAULT_INDEXES: IndexDefinition[] = [
-  { name: "indexScope", pk: ["scope", "model"], sk: ["sequence"] },
-  {
-    name: "indexAlias",
-    pk: ["scope", "model", "alias"],
-    sk: ["sequence"],
-    sparse: true,
-  },
-  {
-    name: "indexCategory",
-    pk: ["scope", "model", "category"],
-    sk: ["sequence"],
-    sparse: true,
-  },
-  {
-    name: "indexType",
-    pk: ["scope", "model", "type"],
-    sk: ["sequence"],
-    sparse: true,
-  },
-  {
-    name: "indexXid",
-    pk: ["scope", "model", "xid"],
-    sk: ["sequence"],
-    sparse: true,
-  },
-];
 
 // =============================================================================
 // Constants

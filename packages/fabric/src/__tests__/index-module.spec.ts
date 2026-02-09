@@ -10,7 +10,6 @@ import {
   calculateIndexSuffix,
   calculateScope,
   clearRegistry,
-  DEFAULT_INDEXES,
   DELETED_SUFFIX,
   generateIndexName,
   getAllRegisteredIndexes,
@@ -38,22 +37,6 @@ describe("Index Constants", () => {
     expect(DELETED_SUFFIX).toBe("#deleted");
   });
 
-  it("exports DEFAULT_INDEXES", () => {
-    expect(DEFAULT_INDEXES).toBeInstanceOf(Array);
-    expect(DEFAULT_INDEXES).toHaveLength(5);
-  });
-
-  it("DEFAULT_INDEXES contains indexScope", () => {
-    const indexScope = DEFAULT_INDEXES.find((i) => i.name === "indexScope");
-    expect(indexScope).toBeDefined();
-    expect(indexScope?.pk).toEqual(["scope", "model"]);
-    expect(indexScope?.sk).toEqual(["sequence"]);
-  });
-
-  it("DEFAULT_INDEXES contains sparse indexes", () => {
-    const sparseIndexes = DEFAULT_INDEXES.filter((i) => i.sparse);
-    expect(sparseIndexes).toHaveLength(4); // alias, category, type, xid
-  });
 });
 
 // =============================================================================
@@ -273,9 +256,9 @@ describe("Model Registry", () => {
   });
 
   describe("getModelIndexes", () => {
-    it("returns DEFAULT_INDEXES for unregistered model", () => {
+    it("returns empty array for unregistered model", () => {
       const indexes = getModelIndexes("unknown");
-      expect(indexes).toEqual(DEFAULT_INDEXES);
+      expect(indexes).toEqual([]);
     });
 
     it("returns custom indexes for registered model", () => {
@@ -288,10 +271,10 @@ describe("Model Registry", () => {
       expect(indexes).toEqual(customIndexes);
     });
 
-    it("returns DEFAULT_INDEXES when model has no custom indexes", () => {
+    it("returns empty array when model has no custom indexes", () => {
       registerModel({ model: "simple" });
       const indexes = getModelIndexes("simple");
-      expect(indexes).toEqual(DEFAULT_INDEXES);
+      expect(indexes).toEqual([]);
     });
   });
 

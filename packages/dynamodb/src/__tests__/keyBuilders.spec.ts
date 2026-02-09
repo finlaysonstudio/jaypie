@@ -1,4 +1,5 @@
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
+import { type IndexDefinition, registerModel } from "@jaypie/fabric";
 
 import { APEX } from "../constants.js";
 import {
@@ -11,6 +12,19 @@ import {
   indexEntity,
 } from "../keyBuilders.js";
 import type { StorableEntity } from "../types.js";
+
+const STANDARD_INDEXES: IndexDefinition[] = [
+  { name: "indexScope", pk: ["scope", "model"], sk: ["sequence"] },
+  { name: "indexAlias", pk: ["scope", "model", "alias"], sk: ["sequence"], sparse: true },
+  { name: "indexCategory", pk: ["scope", "model", "category"], sk: ["sequence"], sparse: true },
+  { name: "indexType", pk: ["scope", "model", "type"], sk: ["sequence"], sparse: true },
+  { name: "indexXid", pk: ["scope", "model", "xid"], sk: ["sequence"], sparse: true },
+];
+
+beforeAll(() => {
+  registerModel({ model: "record", indexes: STANDARD_INDEXES });
+  registerModel({ model: "message", indexes: STANDARD_INDEXES });
+});
 
 describe("Key Builders", () => {
   describe("buildIndexScope", () => {

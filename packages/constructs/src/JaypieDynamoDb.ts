@@ -72,18 +72,9 @@ export interface JaypieDynamoDbProps extends Omit<
    * - `undefined`: No GSIs (default)
    * - Array of IndexDefinition: Use the specified indexes
    *
-   * Import `DEFAULT_INDEXES` from `@jaypie/fabric` for the standard Jaypie GSIs.
-   *
    * @example
    * // No GSIs (default)
    * new JaypieDynamoDb(this, "myTable");
-   *
-   * @example
-   * // With default Jaypie indexes
-   * import { DEFAULT_INDEXES } from "@jaypie/fabric";
-   * new JaypieDynamoDb(this, "myTable", {
-   *   indexes: DEFAULT_INDEXES,
-   * });
    *
    * @example
    * // With custom indexes
@@ -142,13 +133,6 @@ export interface JaypieDynamoDbProps extends Omit<
  * @example
  * // Shorthand: construct id is "JaypieDynamoDb-myApp", table name is CDK-generated
  * const table = new JaypieDynamoDb(this, "myApp");
- *
- * @example
- * // With default Jaypie indexes
- * import { DEFAULT_INDEXES } from "@jaypie/fabric";
- * const table = new JaypieDynamoDb(this, "myApp", {
- *   indexes: DEFAULT_INDEXES,
- * });
  *
  * @example
  * // With explicit table name (overrides CDK-generated name)

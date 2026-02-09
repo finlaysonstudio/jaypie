@@ -3,7 +3,15 @@
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ConfigurationError } from "@jaypie/errors";
-import { clearRegistry, registerModel } from "@jaypie/fabric";
+import { clearRegistry, type IndexDefinition, registerModel } from "@jaypie/fabric";
+
+const STANDARD_INDEXES: IndexDefinition[] = [
+  { name: "indexScope", pk: ["scope", "model"], sk: ["sequence"] },
+  { name: "indexAlias", pk: ["scope", "model", "alias"], sk: ["sequence"], sparse: true },
+  { name: "indexCategory", pk: ["scope", "model", "category"], sk: ["sequence"], sparse: true },
+  { name: "indexType", pk: ["scope", "model", "type"], sk: ["sequence"], sparse: true },
+  { name: "indexXid", pk: ["scope", "model", "xid"], sk: ["sequence"], sparse: true },
+];
 
 import { initClient, resetClient } from "../client.js";
 import { query } from "../query.js";
@@ -36,6 +44,9 @@ describe("query", () => {
     vi.clearAllMocks();
     resetClient();
     clearRegistry();
+
+    // Register "record" model with standard indexes for tests
+    registerModel({ model: "record", indexes: STANDARD_INDEXES });
 
     // Initialize client with test config
     initClient({
@@ -161,12 +172,10 @@ describe("query", () => {
       );
     });
 
-    it("falls back to DEFAULT_INDEXES for unregistered models", async () => {
-      await query({ model: "unregistered", scope: "@" });
-
-      expect(mockSend).toHaveBeenCalledOnce();
-      const command = mockSend.mock.calls[0][0];
-      expect(command.input.IndexName).toBe("indexScope");
+    it("throws ConfigurationError for unregistered models (no indexes)", async () => {
+      await expect(
+        query({ model: "unregistered", scope: "@" }),
+      ).rejects.toThrow(ConfigurationError);
     });
   });
 

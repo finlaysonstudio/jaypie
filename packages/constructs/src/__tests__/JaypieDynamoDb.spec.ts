@@ -2,8 +2,16 @@ import { describe, expect, it, beforeEach, afterEach } from "vitest";
 import { Stack, RemovalPolicy } from "aws-cdk-lib";
 import { Template } from "aws-cdk-lib/assertions";
 import * as dynamodb from "aws-cdk-lib/aws-dynamodb";
-import { DEFAULT_INDEXES } from "@jaypie/fabric";
+import type { IndexDefinition } from "@jaypie/fabric";
 import { JaypieDynamoDb } from "../JaypieDynamoDb.js";
+
+const STANDARD_INDEXES: IndexDefinition[] = [
+  { name: "indexScope", pk: ["scope", "model"], sk: ["sequence"] },
+  { name: "indexAlias", pk: ["scope", "model", "alias"], sk: ["sequence"], sparse: true },
+  { name: "indexCategory", pk: ["scope", "model", "category"], sk: ["sequence"], sparse: true },
+  { name: "indexType", pk: ["scope", "model", "type"], sk: ["sequence"], sparse: true },
+  { name: "indexXid", pk: ["scope", "model", "xid"], sk: ["sequence"], sparse: true },
+];
 
 describe("JaypieDynamoDb", () => {
   describe("Base Cases", () => {
@@ -157,11 +165,11 @@ describe("JaypieDynamoDb", () => {
   });
 
   describe("GSI Configuration", () => {
-    it("allows creating all default GSIs with DEFAULT_INDEXES", () => {
+    it("allows creating all default GSIs with STANDARD_INDEXES", () => {
       const stack = new Stack();
       new JaypieDynamoDb(stack, "TestTable", {
         tableName: "test-table",
-        indexes: DEFAULT_INDEXES,
+        indexes: STANDARD_INDEXES,
       });
       const template = Template.fromStack(stack);
 
@@ -194,11 +202,11 @@ describe("JaypieDynamoDb", () => {
       expect(tableResource?.Properties?.GlobalSecondaryIndexes).toBeUndefined();
     });
 
-    it("allows selecting specific GSIs from DEFAULT_INDEXES", () => {
+    it("allows selecting specific GSIs from STANDARD_INDEXES", () => {
       const stack = new Stack();
       new JaypieDynamoDb(stack, "TestTable", {
         tableName: "test-table",
-        indexes: DEFAULT_INDEXES.filter(
+        indexes: STANDARD_INDEXES.filter(
           (idx) => idx.name === "indexScope" || idx.name === "indexType",
         ),
       });
