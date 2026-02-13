@@ -1,7 +1,6 @@
 import {
   buildCompositeKey as fabricBuildCompositeKey,
   calculateScope as fabricCalculateScope,
-  DEFAULT_INDEXES,
   getModelIndexes,
   type IndexableModel,
   populateIndexKeys as fabricPopulateIndexKeys,
@@ -119,8 +118,7 @@ export function calculateScope(parent?: ParentReference): string {
 /**
  * Auto-populate GSI index keys on an entity
  *
- * Uses the model's registered indexes (from vocabulary registry) or
- * DEFAULT_INDEXES if no custom indexes are registered.
+ * Uses the model's registered indexes (from the fabric registry).
  *
  * - indexScope is always populated from scope + model
  * - indexAlias is populated only when alias is present
@@ -145,5 +143,3 @@ export function indexEntity<T extends StorableEntity>(
   ) as unknown as T;
 }
 
-// Re-export DEFAULT_INDEXES for convenience
-export { DEFAULT_INDEXES };

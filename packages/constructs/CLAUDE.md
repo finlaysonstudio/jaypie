@@ -63,7 +63,7 @@ packages/constructs/
 | Construct | Description |
 |-----------|-------------|
 | `JaypieCertificate` | Standalone ACM certificate with provider/consumer pattern |
-| `JaypieDistribution` | CloudFront distribution with SSL, DNS, logging |
+| `JaypieDistribution` | CloudFront distribution with SSL, DNS, logging, security headers |
 | `JaypieHostedZone` | Route53 hosted zone with query logging |
 | `JaypieDnsRecord` | DNS record management |
 | `JaypieApiGateway` | API Gateway configuration |
@@ -167,6 +167,35 @@ new JaypieDistribution(this, "Distribution", {
 });
 ```
 
+#### Security Headers
+
+`JaypieDistribution` ships with default security response headers (analogous to `helmet` for Express). Headers are applied via a `ResponseHeadersPolicy` attached to the auto-generated default behavior.
+
+**Default headers**: HSTS, X-Content-Type-Options (nosniff), X-Frame-Options (DENY), Referrer-Policy, Content-Security-Policy, Permissions-Policy, Cross-Origin-Opener-Policy, Cross-Origin-Resource-Policy, Server removal.
+
+```typescript
+// Defaults enabled (no config needed)
+new JaypieDistribution(this, "Dist", { handler });
+
+// Disable security headers
+new JaypieDistribution(this, "Dist", { handler, securityHeaders: false });
+
+// Override specific headers
+new JaypieDistribution(this, "Dist", {
+  handler,
+  securityHeaders: {
+    contentSecurityPolicy: "default-src 'self';",
+    frameOption: HeadersFrameOption.SAMEORIGIN,
+  },
+});
+
+// Full custom policy
+new JaypieDistribution(this, "Dist", {
+  handler,
+  responseHeadersPolicy: myCustomPolicy,
+});
+```
+
 ### Streaming Lambda
 
 For streaming responses, use `createLambdaStreamHandler` from `@jaypie/express` with `JaypieDistribution`:
@@ -199,11 +228,6 @@ import { JaypieDynamoDb, IndexDefinition } from "@jaypie/constructs";
 // Basic table - table name is CDK-generated (includes stack name and unique suffix)
 // e.g., cdk-sponsor-project-env-nonce-app-JaypieDynamoDbmyAppTable-XXXXX
 const table = new JaypieDynamoDb(this, "myApp");
-
-// With standard Jaypie GSIs (indexScope, indexAlias, indexClass, indexType, indexXid)
-const tableWithIndexes = new JaypieDynamoDb(this, "myApp", {
-  indexes: JaypieDynamoDb.DEFAULT_INDEXES,
-});
 
 // With explicit table name (overrides CDK-generated name)
 const namedTable = new JaypieDynamoDb(this, "myApp", {

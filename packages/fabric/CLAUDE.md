@@ -255,13 +255,12 @@ Located in `src/index/`. Utilities for DynamoDB single-table design patterns:
 | Function | Purpose |
 |----------|---------|
 | `registerModel({ model, indexes })` | Register custom indexes for a model |
-| `getModelIndexes(model)` | Get indexes for a model (custom or DEFAULT_INDEXES) |
+| `getModelIndexes(model)` | Get indexes for a model (custom or empty array) |
 | `clearRegistry()` | Clear all registered models (for testing) |
 | `getAllRegisteredIndexes()` | Get all registered custom indexes |
 | `populateIndexKeys(entity, indexes, suffix?)` | Populate GSI keys on an entity |
 | `buildCompositeKey(entity, fields, suffix?)` | Build composite key from entity fields |
 | `calculateScope(parent?)` | Calculate scope |
-| `DEFAULT_INDEXES` | Standard GSI definitions |
 
 ### Types
 
@@ -390,7 +389,7 @@ export type { ServiceMeta, ServiceSuite, ServiceSuiteConfig } from "./ServiceSui
 export { FabricModel, FabricJob, FabricMessage, Progress } from "./models/base.js";
 
 // Index Utilities
-export { buildCompositeKey, calculateScope, clearRegistry, DEFAULT_INDEXES, getAllRegisteredIndexes, getModelIndexes, populateIndexKeys, registerModel } from "./index/index.js";
+export { buildCompositeKey, calculateScope, clearRegistry, getAllRegisteredIndexes, getModelIndexes, populateIndexKeys, registerModel } from "./index/index.js";
 
 // Constants
 export { APEX, ARCHIVED_SUFFIX, DELETED_SUFFIX, SEPARATOR } from "./constants.js";

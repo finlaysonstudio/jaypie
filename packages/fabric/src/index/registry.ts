@@ -6,7 +6,6 @@
  */
 
 import {
-  DEFAULT_INDEXES,
   type IndexDefinition,
   type ModelSchema,
 } from "./types.js";
@@ -47,14 +46,14 @@ export function getModelSchema(model: string): ModelSchema | undefined {
  * Get index definitions for a model
  *
  * Returns the model's custom indexes if registered,
- * otherwise returns DEFAULT_INDEXES.
+ * otherwise returns an empty array.
  *
  * @param model - Model name to get indexes for
  * @returns Array of index definitions
  */
 export function getModelIndexes(model: string): IndexDefinition[] {
   const schema = MODEL_REGISTRY.get(model);
-  return schema?.indexes ?? DEFAULT_INDEXES;
+  return schema?.indexes ?? [];
 }
 
 /**

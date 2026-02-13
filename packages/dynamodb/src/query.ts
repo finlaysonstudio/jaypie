@@ -9,7 +9,6 @@
 import { QueryCommand } from "@aws-sdk/lib-dynamodb";
 import { ConfigurationError } from "@jaypie/errors";
 import {
-  DEFAULT_INDEXES,
   getModelIndexes,
   type IndexDefinition,
 } from "@jaypie/fabric";
@@ -206,7 +205,7 @@ export async function query<T extends StorableEntity = StorableEntity>(
   // Build the combined filter object
   const filterFields = buildFilterObject(params);
 
-  // Get indexes for this model (custom or DEFAULT_INDEXES)
+  // Get indexes for this model
   const indexes = getModelIndexes(model);
 
   // Select the best matching index
@@ -259,4 +258,4 @@ function generateIndexName(pk: string[]): string {
 }
 
 // Re-export for convenience
-export { DEFAULT_INDEXES, getModelIndexes };
+export { getModelIndexes };

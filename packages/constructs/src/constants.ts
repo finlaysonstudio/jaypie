@@ -99,6 +99,12 @@ export const CDK = {
   PROJECT: {
     INFRASTRUCTURE: "infrastructure",
   },
+  SECURITY_HEADERS: {
+    CONTENT_SECURITY_POLICY:
+      "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https:; frame-ancestors 'none'; base-uri 'self'; form-action 'self';",
+    HSTS_MAX_AGE: 63072000, // 2 years
+    PERMISSIONS_POLICY: "camera=(), microphone=(), geolocation=(), payment=()",
+  },
   ROLE: {
     API: "api",
     DEPLOY: "deploy",

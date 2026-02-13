@@ -4,6 +4,7 @@ import {
   envHostname,
   JaypieAppStack,
   JaypieDistribution,
+  JaypieEnvSecret,
   JaypieExpressLambda,
 } from "@jaypie/constructs";
 
@@ -38,9 +39,19 @@ export class GardenApiStack extends JaypieAppStack {
       props.host ??
       envHostname({ component: "api", domain: zone, subdomain: "garden" });
 
+    const adminSeed = new JaypieEnvSecret(this, "ProjectAdminSeed", {
+      envKey: "PROJECT_ADMIN_SEED",
+      generateSecretString: {
+        excludePunctuation: true,
+        includeSpace: false,
+        passwordLength: 64,
+      },
+    });
+
     this.lambda = new JaypieExpressLambda(this, "GardenApiLambda", {
       code: "../garden-api/dist",
       handler: "index.handler",
+      secrets: [adminSeed],
       ...(props.table ? { tables: [props.table] } : {}),
     });
 

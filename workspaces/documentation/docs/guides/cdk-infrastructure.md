@@ -200,11 +200,6 @@ DynamoDB table with Jaypie single-table design patterns.
 // Basic table (no GSIs by default)
 new JaypieDynamoDb(this, "myApp");
 
-// With standard Jaypie GSIs
-new JaypieDynamoDb(this, "myApp", {
-  indexes: JaypieDynamoDb.DEFAULT_INDEXES,
-});
-
 // With custom indexes using IndexDefinition from @jaypie/fabric
 new JaypieDynamoDb(this, "myApp", {
   indexes: [

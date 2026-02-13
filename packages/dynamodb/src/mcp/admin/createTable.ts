@@ -4,7 +4,6 @@ import {
   DynamoDBClient,
 } from "@aws-sdk/client-dynamodb";
 import {
-  DEFAULT_INDEXES,
   fabricService,
   getAllRegisteredIndexes,
   type IndexDefinition,
@@ -29,18 +28,11 @@ function generateIndexName(pk: string[]): string {
 }
 
 /**
- * Collect all unique indexes from DEFAULT_INDEXES and registered models
+ * Collect all unique indexes from registered models
  */
 function collectAllIndexes(): IndexDefinition[] {
   const indexMap = new Map<string, IndexDefinition>();
 
-  // Add DEFAULT_INDEXES first
-  for (const index of DEFAULT_INDEXES) {
-    const name = index.name ?? generateIndexName(index.pk as string[]);
-    indexMap.set(name, { ...index, name });
-  }
-
-  // Add registered model indexes (will not overwrite if name already exists)
   for (const index of getAllRegisteredIndexes()) {
     const name = index.name ?? generateIndexName(index.pk as string[]);
     if (!indexMap.has(name)) {
@@ -125,9 +117,7 @@ function buildGSIs(indexes: IndexDefinition[]): Array<{
 /**
  * DynamoDB table schema with Jaypie GSI pattern
  *
- * Collects indexes from:
- * 1. DEFAULT_INDEXES (5 standard GSIs)
- * 2. Any custom indexes registered via registerModel()
+ * Collects indexes from models registered via registerModel()
  */
 function createTableParams(
   tableName: string,

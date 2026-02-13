@@ -1,4 +1,5 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { type IndexDefinition, registerModel } from "@jaypie/fabric";
 
 import * as clientModule from "../client.js";
 import {
@@ -10,6 +11,18 @@ import {
   updateEntity,
 } from "../entities.js";
 import type { StorableEntity } from "../types.js";
+
+const STANDARD_INDEXES: IndexDefinition[] = [
+  { name: "indexScope", pk: ["scope", "model"], sk: ["sequence"] },
+  { name: "indexAlias", pk: ["scope", "model", "alias"], sk: ["sequence"], sparse: true },
+  { name: "indexCategory", pk: ["scope", "model", "category"], sk: ["sequence"], sparse: true },
+  { name: "indexType", pk: ["scope", "model", "type"], sk: ["sequence"], sparse: true },
+  { name: "indexXid", pk: ["scope", "model", "xid"], sk: ["sequence"], sparse: true },
+];
+
+beforeAll(() => {
+  registerModel({ model: "record", indexes: STANDARD_INDEXES });
+});
 
 // Mock the client module
 const mockSend = vi.fn();

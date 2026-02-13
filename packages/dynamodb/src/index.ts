@@ -39,7 +39,6 @@ export {
   buildIndexType,
   buildIndexXid,
   calculateScope,
-  DEFAULT_INDEXES,
   indexEntity,
 } from "./keyBuilders.js";
 

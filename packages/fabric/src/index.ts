@@ -60,7 +60,6 @@ export {
   calculateIndexSuffix,
   calculateScope,
   clearRegistry,
-  DEFAULT_INDEXES,
   DEFAULT_SORT_KEY,
   DELETED_SUFFIX,
   generateIndexName,

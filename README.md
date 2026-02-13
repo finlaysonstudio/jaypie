@@ -806,16 +806,11 @@ const nsRecord = new JaypieDnsRecord(this, 'SubdomainNS', {
 Creates a DynamoDB table with Jaypie single-table design patterns. Uses `IndexDefinition` from `@jaypie/fabric` for GSI configuration.
 
 ```typescript
-import { JaypieDynamoDb, IndexDefinition } from "@jaypie/constructs";
+import { JaypieDynamoDb } from "@jaypie/constructs";
 
 // Shorthand: tableName becomes "myApp", construct id is "JaypieDynamoDb-myApp"
 // No GSIs by default
 const table = new JaypieDynamoDb(this, "myApp");
-
-// With all standard Jaypie GSIs
-const tableWithIndexes = new JaypieDynamoDb(this, "myApp", {
-  indexes: JaypieDynamoDb.DEFAULT_INDEXES,
-});
 
 // With custom indexes
 const customTable = new JaypieDynamoDb(this, "MyTable", {
@@ -841,10 +836,7 @@ const customTable = new JaypieDynamoDb(this, "MyTable", {
 
 The construct also accepts all standard DynamoDB TablePropsV2 properties.
 
-**Static Constants:**
-- `JaypieDynamoDb.DEFAULT_INDEXES` - Array of five standard Jaypie GSI definitions (indexScope, indexAlias, indexClass, indexType, indexXid)
-
-All GSIs use the index name as the partition key (string) and `sequence` (number) as the sort key.
+All GSIs use the index name as the partition key (string) and `sequence` (number) as the sort key. Define indexes explicitly per model using `IndexDefinition` from `@jaypie/fabric`.
 
 #### `JaypieEventsRule`
 

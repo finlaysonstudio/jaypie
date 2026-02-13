@@ -3,7 +3,6 @@ import { RemovalPolicy, Tags } from "aws-cdk-lib";
 import * as dynamodb from "aws-cdk-lib/aws-dynamodb";
 
 import {
-  DEFAULT_INDEXES,
   DEFAULT_SORT_KEY,
   generateIndexName,
   type IndexDefinition,
@@ -73,17 +72,9 @@ export interface JaypieDynamoDbProps extends Omit<
    * - `undefined`: No GSIs (default)
    * - Array of IndexDefinition: Use the specified indexes
    *
-   * Use `JaypieDynamoDb.DEFAULT_INDEXES` for the standard Jaypie GSIs.
-   *
    * @example
    * // No GSIs (default)
    * new JaypieDynamoDb(this, "myTable");
-   *
-   * @example
-   * // With default Jaypie indexes
-   * new JaypieDynamoDb(this, "myTable", {
-   *   indexes: JaypieDynamoDb.DEFAULT_INDEXES,
-   * });
    *
    * @example
    * // With custom indexes
@@ -144,12 +135,6 @@ export interface JaypieDynamoDbProps extends Omit<
  * const table = new JaypieDynamoDb(this, "myApp");
  *
  * @example
- * // With default Jaypie indexes
- * const table = new JaypieDynamoDb(this, "myApp", {
- *   indexes: JaypieDynamoDb.DEFAULT_INDEXES,
- * });
- *
- * @example
  * // With explicit table name (overrides CDK-generated name)
  * const table = new JaypieDynamoDb(this, "MyTable", {
  *   tableName: "custom-table-name",
@@ -160,12 +145,6 @@ export interface JaypieDynamoDbProps extends Omit<
  * });
  */
 export class JaypieDynamoDb extends Construct implements dynamodb.ITableV2 {
-  /**
-   * Default Jaypie GSI definitions from @jaypie/fabric.
-   * Pass to `indexes` prop to create all standard GSIs.
-   */
-  public static readonly DEFAULT_INDEXES = DEFAULT_INDEXES;
-
   private readonly _table: dynamodb.TableV2;
 
   constructor(scope: Construct, id: string, props: JaypieDynamoDbProps = {}) {

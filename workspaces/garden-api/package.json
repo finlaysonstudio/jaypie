@@ -18,6 +18,8 @@
   },
   "dependencies": {
     "@codegenie/serverless-express": "^4.17.1",
+    "@jaypie/dynamodb": "^0.4.1",
+    "@jaypie/fabric": "^0.2.2",
     "express": "^4.22.1",
     "jaypie": "^1.2.3"
   },

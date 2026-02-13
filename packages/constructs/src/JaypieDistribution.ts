@@ -22,6 +22,15 @@ import {
 } from "./helpers";
 import { resolveDatadogForwarderFunction } from "./helpers/resolveDatadogForwarderFunction";
 
+export interface SecurityHeadersOverrides {
+  contentSecurityPolicy?: string;
+  frameOption?: cloudfront.HeadersFrameOption;
+  hstsIncludeSubdomains?: boolean;
+  hstsMaxAge?: number;
+  permissionsPolicy?: string;
+  referrerPolicy?: cloudfront.HeadersReferrerPolicy;
+}
+
 export interface JaypieDistributionProps extends Omit<
   cloudfront.DistributionProps,
   "certificate" | "defaultBehavior" | "logBucket"
@@ -90,6 +99,19 @@ export interface JaypieDistributionProps extends Omit<
    */
   originReadTimeout?: Duration;
   /**
+   * Full override for the response headers policy.
+   * When provided, bypasses all default security header logic.
+   */
+  responseHeadersPolicy?: cloudfront.IResponseHeadersPolicy;
+  /**
+   * Security headers configuration.
+   * - true/undefined: apply sensible defaults (HSTS, X-Frame-Options, CSP, etc.)
+   * - false: disable security headers entirely
+   * - SecurityHeadersOverrides object: merge overrides with defaults
+   * @default true
+   */
+  securityHeaders?: boolean | SecurityHeadersOverrides;
+  /**
    * Role tag for tagging resources
    * @default CDK.ROLE.HOSTING
    */
@@ -114,6 +136,7 @@ export class JaypieDistribution
   public readonly functionUrl?: lambda.FunctionUrl;
   public readonly host?: string;
   public readonly logBucket?: s3.IBucket;
+  public readonly responseHeadersPolicy?: cloudfront.IResponseHeadersPolicy;
 
   constructor(scope: Construct, id: string, props: JaypieDistributionProps) {
     super(scope, id);
@@ -126,7 +149,9 @@ export class JaypieDistribution
       host: propsHost,
       logBucket: logBucketProp,
       originReadTimeout = Duration.seconds(CDK.DURATION.CLOUDFRONT_API),
+      responseHeadersPolicy: responseHeadersPolicyProp,
       roleTag = CDK.ROLE.API,
+      securityHeaders: securityHeadersProp,
       streaming = false,
       zone: propsZone,
       ...distributionProps
@@ -228,6 +253,75 @@ export class JaypieDistribution
       }
     }
 
+    // Resolve response headers policy for security headers
+    let resolvedResponseHeadersPolicy:
+      | cloudfront.IResponseHeadersPolicy
+      | undefined;
+    if (responseHeadersPolicyProp) {
+      resolvedResponseHeadersPolicy = responseHeadersPolicyProp;
+    } else if (securityHeadersProp !== false) {
+      const overrides =
+        typeof securityHeadersProp === "object" ? securityHeadersProp : {};
+      resolvedResponseHeadersPolicy = new cloudfront.ResponseHeadersPolicy(
+        this,
+        "SecurityHeaders",
+        {
+          customHeadersBehavior: {
+            customHeaders: [
+              {
+                header: "Cross-Origin-Opener-Policy",
+                override: true,
+                value: "same-origin",
+              },
+              {
+                header: "Cross-Origin-Resource-Policy",
+                override: true,
+                value: "same-origin",
+              },
+              {
+                header: "Permissions-Policy",
+                override: true,
+                value:
+                  overrides.permissionsPolicy ??
+                  CDK.SECURITY_HEADERS.PERMISSIONS_POLICY,
+              },
+            ],
+          },
+          removeHeaders: ["Server"],
+          securityHeadersBehavior: {
+            contentSecurityPolicy: {
+              contentSecurityPolicy:
+                overrides.contentSecurityPolicy ??
+                CDK.SECURITY_HEADERS.CONTENT_SECURITY_POLICY,
+              override: true,
+            },
+            contentTypeOptions: { override: true },
+            frameOptions: {
+              frameOption:
+                overrides.frameOption ?? cloudfront.HeadersFrameOption.DENY,
+              override: true,
+            },
+            referrerPolicy: {
+              referrerPolicy:
+                overrides.referrerPolicy ??
+                cloudfront.HeadersReferrerPolicy
+                  .STRICT_ORIGIN_WHEN_CROSS_ORIGIN,
+              override: true,
+            },
+            strictTransportSecurity: {
+              accessControlMaxAge: Duration.seconds(
+                overrides.hstsMaxAge ?? CDK.SECURITY_HEADERS.HSTS_MAX_AGE,
+              ),
+              includeSubdomains: overrides.hstsIncludeSubdomains ?? true,
+              override: true,
+              preload: true,
+            },
+          },
+        },
+      );
+    }
+    this.responseHeadersPolicy = resolvedResponseHeadersPolicy;
+
     // Build default behavior
     let defaultBehavior: cloudfront.BehaviorOptions;
     if (propsDefaultBehavior) {
@@ -239,6 +333,9 @@ export class JaypieDistribution
         origin,
         originRequestPolicy:
           cloudfront.OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER,
+        ...(resolvedResponseHeadersPolicy
+          ? { responseHeadersPolicy: resolvedResponseHeadersPolicy }
+          : {}),
         viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
       };
     } else {

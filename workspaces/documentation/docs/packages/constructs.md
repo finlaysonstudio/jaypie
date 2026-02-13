@@ -174,11 +174,6 @@ import { JaypieDynamoDb } from "@jaypie/constructs";
 // Basic table (no GSIs by default)
 new JaypieDynamoDb(this, "myApp");
 
-// With standard Jaypie GSIs
-new JaypieDynamoDb(this, "myApp", {
-  indexes: JaypieDynamoDb.DEFAULT_INDEXES,
-});
-
 // With custom indexes
 new JaypieDynamoDb(this, "myApp", {
   indexes: [
@@ -191,7 +186,7 @@ new JaypieDynamoDb(this, "myApp", {
 Creates table with:
 - Primary key: `model` (PK), `id` (SK)
 - No GSIs by default - use `indexes` prop to add them
-- `DEFAULT_INDEXES` provides 5 standard GSIs (scope, alias, class, type, xid)
+- Define indexes explicitly using `IndexDefinition` from `@jaypie/fabric`
 
 ## JaypieNextJs
 

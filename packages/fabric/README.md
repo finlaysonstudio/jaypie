@@ -591,7 +591,16 @@ const message: FabricMessage = {
 When persisting models to DynamoDB, use index utilities to build GSI keys:
 
 ```typescript
-import { APEX, calculateScope, populateIndexKeys, DEFAULT_INDEXES } from "@jaypie/fabric";
+import { APEX, calculateScope, populateIndexKeys, registerModel } from "@jaypie/fabric";
+
+// Register model indexes
+registerModel({
+  model: "record",
+  indexes: [
+    { name: "indexScope", pk: ["scope", "model"], sk: ["sequence"] },
+    { name: "indexAlias", pk: ["scope", "model", "alias"], sk: ["sequence"], sparse: true },
+  ],
+});
 
 // Root-level entity
 const record = {
@@ -610,8 +619,12 @@ const message = {
   // ...other fields
 };
 
-// Auto-populate GSI keys
-const indexed = populateIndexKeys(record, DEFAULT_INDEXES);
+// Auto-populate GSI keys (uses registered indexes)
+const indexes = [
+  { name: "indexScope", pk: ["scope", "model"], sk: ["sequence"] },
+  { name: "indexAlias", pk: ["scope", "model", "alias"], sk: ["sequence"], sparse: true },
+];
+const indexed = populateIndexKeys(record, indexes);
 // indexed.indexScope = "@#record"
 // indexed.indexAlias = "@#record#2026-12-12"
 ```
@@ -642,7 +655,6 @@ const indexed = populateIndexKeys(record, DEFAULT_INDEXES);
 | `populateIndexKeys` | Populate GSI keys on an entity |
 | `buildCompositeKey` | Build composite key from fields |
 | `calculateScope` | Calculate scope |
-| `DEFAULT_INDEXES` | Default GSI indexes |
 | `APEX` | Root-level marker (`"@"`) |
 | `SEPARATOR` | Composite key separator (`"#"`) |
 | `ARCHIVED_SUFFIX` | Suffix for archived entities |
