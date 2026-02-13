@@ -169,6 +169,40 @@ new JaypieNextJs(this, "App", {
 
 **Streaming Note:** When `streaming: true`, also create `open-next.config.ts` in your Next.js app with `wrapper: "aws-lambda-streaming"`. See `skill("streaming")` for details.
 
+## Security Headers
+
+`JaypieDistribution` ships with default security response headers via a `ResponseHeadersPolicy` (analogous to `helmet` for Express):
+
+- HSTS (2-year max-age, includeSubDomains, preload)
+- X-Content-Type-Options (nosniff)
+- X-Frame-Options (DENY)
+- Referrer-Policy (strict-origin-when-cross-origin)
+- Content-Security-Policy (conservative defaults)
+- Permissions-Policy (camera, microphone, geolocation, payment disabled)
+- Cross-Origin-Opener-Policy (same-origin)
+- Cross-Origin-Resource-Policy (same-origin)
+- Server header removed
+
+```typescript
+// Disable security headers
+new JaypieDistribution(this, "Dist", { handler, securityHeaders: false });
+
+// Override specific headers
+new JaypieDistribution(this, "Dist", {
+  handler,
+  securityHeaders: {
+    contentSecurityPolicy: "default-src 'self';",
+    frameOption: HeadersFrameOption.SAMEORIGIN,
+  },
+});
+
+// Full custom policy override
+new JaypieDistribution(this, "Dist", {
+  handler,
+  responseHeadersPolicy: myCustomPolicy,
+});
+```
+
 ## See Also
 
 - **`skill("streaming")`** - JaypieDistribution and JaypieNextJs streaming configuration
