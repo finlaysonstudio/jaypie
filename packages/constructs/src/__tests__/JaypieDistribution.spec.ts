@@ -872,4 +872,382 @@ describe("JaypieDistribution", () => {
       });
     });
   });
+
+  describe("Security Headers", () => {
+    // Helper to find ResponseHeadersPolicy resources
+    function findResponseHeadersPolicies(template: Template) {
+      return template.findResources("AWS::CloudFront::ResponseHeadersPolicy");
+    }
+
+    it("creates a ResponseHeadersPolicy by default", () => {
+      const stack = new Stack();
+      const bucket = new s3.Bucket(stack, "TestBucket");
+      const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
+
+      const construct = new JaypieDistribution(stack, "TestDistribution", {
+        handler: origin,
+      });
+      const template = Template.fromStack(stack);
+
+      expect(construct.responseHeadersPolicy).toBeDefined();
+      const policies = findResponseHeadersPolicies(template);
+      expect(Object.keys(policies).length).toBe(1);
+    });
+
+    it("attaches policy to the default behavior", () => {
+      const stack = new Stack();
+      const bucket = new s3.Bucket(stack, "TestBucket");
+      const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
+
+      new JaypieDistribution(stack, "TestDistribution", {
+        handler: origin,
+      });
+      const template = Template.fromStack(stack);
+
+      const distribution = findDistribution(template);
+      const defaultBehavior =
+        distribution.Properties.DistributionConfig.DefaultCacheBehavior;
+      expect(defaultBehavior.ResponseHeadersPolicyId).toBeDefined();
+    });
+
+    it("sets Strict-Transport-Security header", () => {
+      const stack = new Stack();
+      const bucket = new s3.Bucket(stack, "TestBucket");
+      const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
+
+      new JaypieDistribution(stack, "TestDistribution", {
+        handler: origin,
+      });
+      const template = Template.fromStack(stack);
+
+      template.hasResourceProperties("AWS::CloudFront::ResponseHeadersPolicy", {
+        ResponseHeadersPolicyConfig: {
+          SecurityHeadersConfig: {
+            StrictTransportSecurity: {
+              AccessControlMaxAgeSec: CDK.SECURITY_HEADERS.HSTS_MAX_AGE,
+              IncludeSubdomains: true,
+              Override: true,
+              Preload: true,
+            },
+          },
+        },
+      });
+    });
+
+    it("sets X-Content-Type-Options nosniff", () => {
+      const stack = new Stack();
+      const bucket = new s3.Bucket(stack, "TestBucket");
+      const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
+
+      new JaypieDistribution(stack, "TestDistribution", {
+        handler: origin,
+      });
+      const template = Template.fromStack(stack);
+
+      template.hasResourceProperties("AWS::CloudFront::ResponseHeadersPolicy", {
+        ResponseHeadersPolicyConfig: {
+          SecurityHeadersConfig: {
+            ContentTypeOptions: {
+              Override: true,
+            },
+          },
+        },
+      });
+    });
+
+    it("sets X-Frame-Options to DENY by default", () => {
+      const stack = new Stack();
+      const bucket = new s3.Bucket(stack, "TestBucket");
+      const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
+
+      new JaypieDistribution(stack, "TestDistribution", {
+        handler: origin,
+      });
+      const template = Template.fromStack(stack);
+
+      template.hasResourceProperties("AWS::CloudFront::ResponseHeadersPolicy", {
+        ResponseHeadersPolicyConfig: {
+          SecurityHeadersConfig: {
+            FrameOptions: {
+              FrameOption: "DENY",
+              Override: true,
+            },
+          },
+        },
+      });
+    });
+
+    it("sets Referrer-Policy to strict-origin-when-cross-origin", () => {
+      const stack = new Stack();
+      const bucket = new s3.Bucket(stack, "TestBucket");
+      const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
+
+      new JaypieDistribution(stack, "TestDistribution", {
+        handler: origin,
+      });
+      const template = Template.fromStack(stack);
+
+      template.hasResourceProperties("AWS::CloudFront::ResponseHeadersPolicy", {
+        ResponseHeadersPolicyConfig: {
+          SecurityHeadersConfig: {
+            ReferrerPolicy: {
+              ReferrerPolicy: "strict-origin-when-cross-origin",
+              Override: true,
+            },
+          },
+        },
+      });
+    });
+
+    it("sets Content-Security-Policy from defaults", () => {
+      const stack = new Stack();
+      const bucket = new s3.Bucket(stack, "TestBucket");
+      const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
+
+      new JaypieDistribution(stack, "TestDistribution", {
+        handler: origin,
+      });
+      const template = Template.fromStack(stack);
+
+      template.hasResourceProperties("AWS::CloudFront::ResponseHeadersPolicy", {
+        ResponseHeadersPolicyConfig: {
+          SecurityHeadersConfig: {
+            ContentSecurityPolicy: {
+              ContentSecurityPolicy:
+                CDK.SECURITY_HEADERS.CONTENT_SECURITY_POLICY,
+              Override: true,
+            },
+          },
+        },
+      });
+    });
+
+    it("sets Permissions-Policy custom header", () => {
+      const stack = new Stack();
+      const bucket = new s3.Bucket(stack, "TestBucket");
+      const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
+
+      new JaypieDistribution(stack, "TestDistribution", {
+        handler: origin,
+      });
+      const template = Template.fromStack(stack);
+
+      template.hasResourceProperties("AWS::CloudFront::ResponseHeadersPolicy", {
+        ResponseHeadersPolicyConfig: {
+          CustomHeadersConfig: {
+            Items: Match.arrayWith([
+              Match.objectLike({
+                Header: "Permissions-Policy",
+                Override: true,
+                Value: CDK.SECURITY_HEADERS.PERMISSIONS_POLICY,
+              }),
+            ]),
+          },
+        },
+      });
+    });
+
+    it("sets Cross-Origin-Opener-Policy custom header", () => {
+      const stack = new Stack();
+      const bucket = new s3.Bucket(stack, "TestBucket");
+      const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
+
+      new JaypieDistribution(stack, "TestDistribution", {
+        handler: origin,
+      });
+      const template = Template.fromStack(stack);
+
+      template.hasResourceProperties("AWS::CloudFront::ResponseHeadersPolicy", {
+        ResponseHeadersPolicyConfig: {
+          CustomHeadersConfig: {
+            Items: Match.arrayWith([
+              Match.objectLike({
+                Header: "Cross-Origin-Opener-Policy",
+                Override: true,
+                Value: "same-origin",
+              }),
+            ]),
+          },
+        },
+      });
+    });
+
+    it("sets Cross-Origin-Resource-Policy custom header", () => {
+      const stack = new Stack();
+      const bucket = new s3.Bucket(stack, "TestBucket");
+      const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
+
+      new JaypieDistribution(stack, "TestDistribution", {
+        handler: origin,
+      });
+      const template = Template.fromStack(stack);
+
+      template.hasResourceProperties("AWS::CloudFront::ResponseHeadersPolicy", {
+        ResponseHeadersPolicyConfig: {
+          CustomHeadersConfig: {
+            Items: Match.arrayWith([
+              Match.objectLike({
+                Header: "Cross-Origin-Resource-Policy",
+                Override: true,
+                Value: "same-origin",
+              }),
+            ]),
+          },
+        },
+      });
+    });
+
+    it("removes Server header", () => {
+      const stack = new Stack();
+      const bucket = new s3.Bucket(stack, "TestBucket");
+      const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
+
+      new JaypieDistribution(stack, "TestDistribution", {
+        handler: origin,
+      });
+      const template = Template.fromStack(stack);
+
+      template.hasResourceProperties("AWS::CloudFront::ResponseHeadersPolicy", {
+        ResponseHeadersPolicyConfig: {
+          RemoveHeadersConfig: {
+            Items: Match.arrayWith([
+              Match.objectLike({
+                Header: "Server",
+              }),
+            ]),
+          },
+        },
+      });
+    });
+
+    it("disables security headers when securityHeaders is false", () => {
+      const stack = new Stack();
+      const bucket = new s3.Bucket(stack, "TestBucket");
+      const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
+
+      const construct = new JaypieDistribution(stack, "TestDistribution", {
+        handler: origin,
+        securityHeaders: false,
+      });
+      const template = Template.fromStack(stack);
+
+      expect(construct.responseHeadersPolicy).toBeUndefined();
+      const policies = findResponseHeadersPolicies(template);
+      expect(Object.keys(policies).length).toBe(0);
+    });
+
+    it("overrides contentSecurityPolicy while retaining other defaults", () => {
+      const stack = new Stack();
+      const bucket = new s3.Bucket(stack, "TestBucket");
+      const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
+
+      const customCsp = "default-src 'none';";
+      new JaypieDistribution(stack, "TestDistribution", {
+        handler: origin,
+        securityHeaders: { contentSecurityPolicy: customCsp },
+      });
+      const template = Template.fromStack(stack);
+
+      template.hasResourceProperties("AWS::CloudFront::ResponseHeadersPolicy", {
+        ResponseHeadersPolicyConfig: {
+          SecurityHeadersConfig: {
+            ContentSecurityPolicy: {
+              ContentSecurityPolicy: customCsp,
+              Override: true,
+            },
+            // Other defaults still present
+            FrameOptions: {
+              FrameOption: "DENY",
+              Override: true,
+            },
+          },
+        },
+      });
+    });
+
+    it("overrides frameOption to SAMEORIGIN", () => {
+      const stack = new Stack();
+      const bucket = new s3.Bucket(stack, "TestBucket");
+      const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
+
+      new JaypieDistribution(stack, "TestDistribution", {
+        handler: origin,
+        securityHeaders: {
+          frameOption: cloudfront.HeadersFrameOption.SAMEORIGIN,
+        },
+      });
+      const template = Template.fromStack(stack);
+
+      template.hasResourceProperties("AWS::CloudFront::ResponseHeadersPolicy", {
+        ResponseHeadersPolicyConfig: {
+          SecurityHeadersConfig: {
+            FrameOptions: {
+              FrameOption: "SAMEORIGIN",
+              Override: true,
+            },
+          },
+        },
+      });
+    });
+
+    it("uses full override with responseHeadersPolicy prop", () => {
+      const stack = new Stack();
+      const bucket = new s3.Bucket(stack, "TestBucket");
+      const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
+
+      const customPolicy = new cloudfront.ResponseHeadersPolicy(
+        stack,
+        "CustomPolicy",
+        {
+          securityHeadersBehavior: {
+            contentTypeOptions: { override: true },
+          },
+        },
+      );
+
+      const construct = new JaypieDistribution(stack, "TestDistribution", {
+        handler: origin,
+        responseHeadersPolicy: customPolicy,
+      });
+      const template = Template.fromStack(stack);
+
+      expect(construct.responseHeadersPolicy).toBe(customPolicy);
+      // Only the custom policy, no auto-generated one
+      const policies = findResponseHeadersPolicies(template);
+      expect(Object.keys(policies).length).toBe(1);
+    });
+
+    it("does not inject policy when defaultBehavior is provided", () => {
+      const stack = new Stack();
+      const bucket = new s3.Bucket(stack, "TestBucket");
+      const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
+
+      new JaypieDistribution(stack, "TestDistribution", {
+        defaultBehavior: {
+          origin,
+          cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED,
+          viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.HTTPS_ONLY,
+        },
+      });
+      const template = Template.fromStack(stack);
+
+      // Policy is created but NOT auto-attached to defaultBehavior
+      const distribution = findDistribution(template);
+      const defaultBehavior =
+        distribution.Properties.DistributionConfig.DefaultCacheBehavior;
+      expect(defaultBehavior.ResponseHeadersPolicyId).toBeUndefined();
+    });
+
+    it("exposes responseHeadersPolicy property", () => {
+      const stack = new Stack();
+      const bucket = new s3.Bucket(stack, "TestBucket");
+      const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
+
+      const construct = new JaypieDistribution(stack, "TestDistribution", {
+        handler: origin,
+      });
+
+      expect(construct.responseHeadersPolicy).toBeDefined();
+    });
+  });
 });
