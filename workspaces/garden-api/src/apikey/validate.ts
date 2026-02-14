@@ -1,9 +1,4 @@
-import {
-  APEX,
-  initClient,
-  putEntity,
-  queryByAlias,
-} from "@jaypie/dynamodb";
+import { APEX, initClient, putEntity, queryByAlias } from "@jaypie/dynamodb";
 import { ForbiddenError, UnauthorizedError } from "@jaypie/errors";
 import { type IndexDefinition, registerModel } from "@jaypie/fabric";
 import { log } from "@jaypie/logger";
@@ -17,7 +12,12 @@ import { generateKeyFromSeed, hashKey } from "./generate.js";
 //
 
 const APIKEY_INDEXES: IndexDefinition[] = [
-  { name: "indexAlias", pk: ["scope", "model", "alias"], sk: ["sequence"], sparse: true },
+  {
+    name: "indexAlias",
+    pk: ["scope", "model", "alias"],
+    sk: ["sequence"],
+    sparse: true,
+  },
   { name: "indexScope", pk: ["scope", "model"], sk: ["sequence"] },
 ];
 

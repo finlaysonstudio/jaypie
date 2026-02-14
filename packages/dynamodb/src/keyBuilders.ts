@@ -142,4 +142,3 @@ export function indexEntity<T extends StorableEntity>(
     suffix,
   ) as unknown as T;
 }
-

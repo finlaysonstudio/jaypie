@@ -5,10 +5,7 @@
  * DynamoDB reads from this registry to create GSIs and select indexes for queries.
  */
 
-import {
-  type IndexDefinition,
-  type ModelSchema,
-} from "./types.js";
+import { type IndexDefinition, type ModelSchema } from "./types.js";
 
 // =============================================================================
 // Registry

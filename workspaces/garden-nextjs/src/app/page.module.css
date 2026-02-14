@@ -8,21 +8,13 @@
 }
 
 .navBox {
-  background: rgba(122, 102, 82, 0.05);
   border-radius: 8px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
   display: flex;
   gap: 0;
   left: 16px;
   padding: 0;
   position: absolute;
   top: 16px;
-  transition: all 0.15s ease;
-}
-
-.navBox:has(.iconButton:hover) {
-  background: transparent;
-  box-shadow: none;
 }
 
 .iconButton {
@@ -46,6 +38,18 @@
   transition:
     color 0.15s ease,
     stroke-width 0.15s ease;
+}
+
+/* Menu icon gets background by default */
+.iconButton:first-child {
+  background: rgba(122, 102, 82, 0.05);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+/* When birdhouse is hovered, menu loses background */
+.navBox:has(.iconButton:last-child:hover) .iconButton:first-child {
+  background: transparent;
+  box-shadow: none;
 }
 
 .iconButton:hover {
