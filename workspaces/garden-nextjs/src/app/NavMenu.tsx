@@ -15,6 +15,7 @@ import {
 import Link from "next/link";
 import { useState } from "react";
 
+import { type ConnectionStatus, useStatus } from "../lib/useStatus";
 import styles from "./page.module.css";
 
 const NAV_ITEMS = [
@@ -22,13 +23,6 @@ const NAV_ITEMS = [
   { href: "/colors", icon: SwatchBook, label: "Colors" },
   { icon: Component, label: "Components" },
 ];
-
-type ConnectionStatus =
-  | "authenticated"
-  | "connected"
-  | "disconnected"
-  | "uninitiated"
-  | "unknown";
 
 const STATUS_ICONS: Record<ConnectionStatus, typeof CircleHelp> = {
   authenticated: CircleCheck,
@@ -40,7 +34,7 @@ const STATUS_ICONS: Record<ConnectionStatus, typeof CircleHelp> = {
 
 export function NavMenu() {
   const [isOpen, setIsOpen] = useState(false);
-  const [status] = useState<ConnectionStatus>("unknown");
+  const status = useStatus();
   const StatusIcon = STATUS_ICONS[status];
 
   return (
