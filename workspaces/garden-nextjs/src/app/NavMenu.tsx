@@ -1,6 +1,6 @@
 "use client";
 
-import { Birdhouse, Component, Menu, SwatchBook, UserLock } from "lucide-react";
+import { Birdhouse, Component, Menu, Squircle, SwatchBook, UserLock } from "lucide-react";
 import { useState } from "react";
 
 import styles from "./page.module.css";
@@ -33,17 +33,28 @@ export function NavMenu() {
         </div>
       </div>
       {!isOpen && (
-        <div className={styles.navBox}>
+        <>
+          <div className={styles.navBox}>
+            <div
+              className={styles.iconButton}
+              onClick={() => setIsOpen(true)}
+            >
+              <Menu size={20} />
+            </div>
+            <div className={styles.iconButton}>
+              <Birdhouse size={18} />
+            </div>
+          </div>
           <div
-            className={styles.iconButton}
+            className={styles.statusPill}
             onClick={() => setIsOpen(true)}
           >
-            <Menu size={20} />
+            <div className={styles.statusPillIcon}>
+              <Squircle size={8} fill="currentColor" strokeWidth={0} />
+            </div>
+            <div className={styles.statusPillText}>Status</div>
           </div>
-          <div className={styles.iconButton}>
-            <Birdhouse size={18} />
-          </div>
-        </div>
+        </>
       )}
       {isOpen && (
         <div className={styles.sideMenuOverlay} onClick={() => setIsOpen(false)} />
