@@ -76,23 +76,6 @@
   stroke-width: var(--icon-stroke-normal);
 }
 
-.statusDot {
-  align-items: center;
-  display: inline-flex;
-  flex-shrink: 0;
-  height: 20px;
-  justify-content: center;
-  width: 20px;
-}
-
-.statusDot::after {
-  background: var(--status-color, #a66e82);
-  border-radius: 50%;
-  content: "";
-  height: 8px;
-  width: 8px;
-}
-
 .sideMenuFooter {
   margin-top: auto;
   padding: 8px 8px 16px;
