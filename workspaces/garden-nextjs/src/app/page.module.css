@@ -31,12 +31,15 @@
 .sideMenu {
   background: var(--bg-secondary);
   border-right: 1px solid var(--border-color);
+  box-shadow: 2px 0 4px rgba(0, 0, 0, 0.5);
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
   height: 100%;
   overflow-y: auto;
+  position: relative;
   width: 280px;
+  z-index: 1;
 }
 
 .menuCanvas {
