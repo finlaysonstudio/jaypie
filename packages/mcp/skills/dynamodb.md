@@ -65,7 +65,9 @@ const result = await client.send(new QueryCommand({
 
 ## GSI Patterns
 
-### By-Status Index
+Start with zero GSIs. Add indexes only when a real access pattern requires them — GSIs cost money and can always be added later.
+
+### By-Status Index (example)
 
 ```typescript
 // GSI for querying by status across all users
@@ -92,18 +94,18 @@ const result = await client.send(new QueryCommand({
 
 ## CDK Table Definition
 
-```typescript
-import { JaypieTable } from "@jaypie/constructs";
+Start with a basic table and add indexes only when access patterns demand them.
 
-const table = new JaypieTable(this, "DataTable", {
-  partitionKey: { name: "pk", type: AttributeType.STRING },
-  sortKey: { name: "sk", type: AttributeType.STRING },
-  globalSecondaryIndexes: [
-    {
-      indexName: "gsi1",
-      partitionKey: { name: "gsi1pk", type: AttributeType.STRING },
-      sortKey: { name: "gsi1sk", type: AttributeType.STRING },
-    },
+```typescript
+import { JaypieDynamoDb } from "@jaypie/constructs";
+
+// Recommended: start with no indexes
+const table = new JaypieDynamoDb(this, "myApp");
+
+// Add indexes later when driven by real access patterns
+const table = new JaypieDynamoDb(this, "myApp", {
+  indexes: [
+    { pk: ["scope", "model"], sk: ["sequence"] },
   ],
 });
 ```
