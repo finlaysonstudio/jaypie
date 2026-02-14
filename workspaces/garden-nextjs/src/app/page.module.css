@@ -15,6 +15,79 @@
   padding: 0;
   position: absolute;
   top: 16px;
+  z-index: 3;
+}
+
+.sideMenu {
+  background: var(--bg-secondary);
+  border-right: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  left: 0;
+  overflow-y: auto;
+  position: absolute;
+  top: 0;
+  transform: translateX(-100%);
+  transition: transform 0.2s ease;
+  width: 280px;
+  z-index: 2;
+}
+
+.sideMenuOpen {
+  transform: translateX(0);
+}
+
+.sideMenuNav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 16px 8px 8px;
+}
+
+.navItem {
+  align-items: center;
+  border-radius: 7px;
+  color: rgba(207, 203, 199, 0.5);
+  cursor: pointer;
+  display: flex;
+  font-family: var(--font-ui);
+  font-size: 0.875rem;
+  gap: 12px;
+  padding: 14px 22px;
+  text-decoration: none;
+  transition: all 0.15s ease;
+}
+
+.navItem svg {
+  flex-shrink: 0;
+  stroke-width: var(--icon-stroke-thin);
+  transition:
+    color 0.15s ease,
+    stroke-width 0.15s ease;
+}
+
+.navItem:hover {
+  background: rgba(122, 102, 82, 0.1);
+  color: var(--text-primary);
+}
+
+.navItem:hover svg {
+  stroke-width: var(--icon-stroke-normal);
+}
+
+.sideMenuFooter {
+  margin-top: auto;
+  padding: 8px;
+}
+
+.sideMenuOverlay {
+  height: 100%;
+  left: 0;
+  position: absolute;
+  top: 0;
+  width: 100%;
+  z-index: 1;
 }
 
 .iconButton {
@@ -52,12 +125,14 @@
   box-shadow: none;
 }
 
-.iconButton:hover {
+.iconButton:hover,
+.iconButtonActive {
   background: rgba(122, 102, 82, 0.1);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
-.iconButton:hover svg {
+.iconButton:hover svg,
+.iconButtonActive svg {
   color: var(--text-primary);
   stroke-width: var(--icon-stroke-normal);
 }
