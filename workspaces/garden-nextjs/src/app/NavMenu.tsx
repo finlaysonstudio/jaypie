@@ -1,6 +1,6 @@
 "use client";
 
-import { Birdhouse, Component, Menu, Squircle, SwatchBook, UserLock } from "lucide-react";
+import { Birdhouse, Component, Menu, SwatchBook, UserLock } from "lucide-react";
 import { useState } from "react";
 
 import styles from "./page.module.css";
@@ -27,6 +27,10 @@ export function NavMenu() {
         </nav>
         <div className={styles.sideMenuFooter}>
           <a className={styles.navItem}>
+            <span className={styles.statusDot} />
+            <span>Status</span>
+          </a>
+          <a className={styles.navItem}>
             <UserLock size={20} />
             <span>Authenticate</span>
           </a>
@@ -44,15 +48,6 @@ export function NavMenu() {
             <div className={styles.iconButton}>
               <Birdhouse size={18} />
             </div>
-          </div>
-          <div
-            className={styles.statusPill}
-            onClick={() => setIsOpen(true)}
-          >
-            <div className={styles.statusPillIcon}>
-              <Squircle size={8} fill="currentColor" strokeWidth={0} />
-            </div>
-            <div className={styles.statusPillText}>Status</div>
           </div>
         </>
       )}
