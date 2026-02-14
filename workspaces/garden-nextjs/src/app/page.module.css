@@ -86,11 +86,11 @@
 }
 
 .statusDot::after {
-  background: #4e8f82;
+  background: var(--status-color, #a66e82);
   border-radius: 50%;
   content: "";
-  height: 6px;
-  width: 6px;
+  height: 8px;
+  width: 8px;
 }
 
 .sideMenuFooter {
