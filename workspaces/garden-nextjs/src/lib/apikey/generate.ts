@@ -1,6 +1,6 @@
 import { createHmac, createHash } from "node:crypto";
 
-import { computeChecksum } from "./checksum.js";
+import { computeChecksum } from "./checksum";
 
 const BASE62 = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 const BODY_LENGTH = 32;

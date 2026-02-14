@@ -1,7 +1,7 @@
 import { APEX, initClient, queryByScope } from "@jaypie/dynamodb";
 import { log } from "@jaypie/logger";
 
-import { extractToken, validateApiKey } from "../../lib/apikey/validate.js";
+import { extractToken, validateApiKey } from "../../lib/apikey/validate";
 
 //
 //
@@ -35,7 +35,9 @@ interface StatusResponse {
 
 export async function GET(request: Request): Promise<Response> {
   try {
-    initClient();
+    initClient({
+      endpoint: process.env.DYNAMODB_ENDPOINT,
+    });
   } catch (error) {
     log.error("Failed to initialize DynamoDB client", { error });
     const body: StatusResponse = {

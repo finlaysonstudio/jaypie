@@ -4,7 +4,7 @@ import {
   Birdhouse,
   CircleAlert,
   CircleCheck,
-  CircleDot,
+  CircleSlash,
   CircleHelp,
   CircleMinus,
   Component,
@@ -28,7 +28,7 @@ const STATUS_ICONS: Record<ConnectionStatus, typeof CircleHelp> = {
   authenticated: CircleCheck,
   connected: CircleMinus,
   disconnected: CircleAlert,
-  uninitiated: CircleDot,
+  uninitiated: CircleSlash,
   unknown: CircleHelp,
 };
 
