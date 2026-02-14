@@ -39,50 +39,53 @@ export function NavMenu() {
 
   return (
     <>
-      <div className={`${styles.sideMenu} ${isOpen ? styles.sideMenuOpen : ""}`}>
-        <nav className={styles.sideMenuNav}>
-          {NAV_ITEMS.map(({ href, icon: Icon, label }) =>
-            href ? (
-              <Link className={styles.navItem} href={href} key={label}>
-                <Icon size={20} />
-                <span>{label}</span>
-              </Link>
-            ) : (
-              <a className={styles.navItem} key={label}>
-                <Icon size={20} />
-                <span>{label}</span>
+      {isOpen && (
+        <div className={styles.menuContainer}>
+          <div className={styles.sideMenu}>
+            <nav className={styles.sideMenuNav}>
+              {NAV_ITEMS.map(({ href, icon: Icon, label }) =>
+                href ? (
+                  <Link className={styles.navItem} href={href} key={label}>
+                    <Icon size={20} />
+                    <span>{label}</span>
+                  </Link>
+                ) : (
+                  <a className={styles.navItem} key={label}>
+                    <Icon size={20} />
+                    <span>{label}</span>
+                  </a>
+                ),
+              )}
+            </nav>
+            <div className={styles.sideMenuFooter}>
+              <a className={styles.navItem}>
+                <StatusIcon size={20} />
+                <span>Status</span>
               </a>
-            ),
-          )}
-        </nav>
-        <div className={styles.sideMenuFooter}>
-          <a className={styles.navItem}>
-            <StatusIcon size={20} />
-            <span>Status</span>
-          </a>
-          <a className={styles.navItem}>
-            <UserLock size={20} />
-            <span>Authenticate</span>
-          </a>
-        </div>
-      </div>
-      {!isOpen && (
-        <>
-          <div className={styles.navBox}>
-            <div
-              className={styles.iconButton}
-              onClick={() => setIsOpen(true)}
-            >
-              <Menu size={20} />
-            </div>
-            <div className={styles.iconButton}>
-              <Birdhouse size={18} />
+              <a className={styles.navItem}>
+                <UserLock size={20} />
+                <span>Authenticate</span>
+              </a>
             </div>
           </div>
-        </>
+          <div
+            className={styles.menuCanvas}
+            onClick={() => setIsOpen(false)}
+          />
+        </div>
       )}
-      {isOpen && (
-        <div className={styles.sideMenuOverlay} onClick={() => setIsOpen(false)} />
+      {!isOpen && (
+        <div className={styles.navBox}>
+          <div
+            className={styles.iconButton}
+            onClick={() => setIsOpen(true)}
+          >
+            <Menu size={20} />
+          </div>
+          <div className={styles.iconButton}>
+            <Birdhouse size={18} />
+          </div>
+        </div>
       )}
     </>
   );
