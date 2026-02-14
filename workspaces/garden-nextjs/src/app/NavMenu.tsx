@@ -1,13 +1,14 @@
 "use client";
 
 import { Birdhouse, Component, Menu, SwatchBook, UserLock } from "lucide-react";
+import Link from "next/link";
 import { useState } from "react";
 
 import styles from "./page.module.css";
 
 const NAV_ITEMS = [
-  { icon: Birdhouse, label: "Home" },
-  { icon: SwatchBook, label: "Colors" },
+  { href: "/", icon: Birdhouse, label: "Home" },
+  { href: "/colors", icon: SwatchBook, label: "Colors" },
   { icon: Component, label: "Components" },
 ];
 
@@ -18,12 +19,19 @@ export function NavMenu() {
     <>
       <div className={`${styles.sideMenu} ${isOpen ? styles.sideMenuOpen : ""}`}>
         <nav className={styles.sideMenuNav}>
-          {NAV_ITEMS.map(({ icon: Icon, label }) => (
-            <a className={styles.navItem} key={label}>
-              <Icon size={20} />
-              <span>{label}</span>
-            </a>
-          ))}
+          {NAV_ITEMS.map(({ href, icon: Icon, label }) =>
+            href ? (
+              <Link className={styles.navItem} href={href} key={label}>
+                <Icon size={20} />
+                <span>{label}</span>
+              </Link>
+            ) : (
+              <a className={styles.navItem} key={label}>
+                <Icon size={20} />
+                <span>{label}</span>
+              </a>
+            ),
+          )}
         </nav>
         <div className={styles.sideMenuFooter}>
           <a className={styles.navItem}>
