@@ -9,7 +9,7 @@ import {
   CircleMinus,
   Component,
   Lock,
-  LockOpen,
+  KeyRound,
   Menu,
   PowerOff,
   SwatchBook,
@@ -96,26 +96,25 @@ function AuthModal({
     const storedKey = localStorage.getItem("garden-api-key") ?? "";
     const hint = storedKey.slice(-4);
     return (
-      <div
-        className={styles.authModal}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className={styles.statusHeaderRow}>
-          <div
-            className={`${styles.statusHeader} ${styles.statusAuthenticated}`}
-          >
-            <LockOpen className={styles.statusHeaderIcon} size={18} />
-            <span className={styles.statusHeaderValue}>authenticated</span>
+      <div className={styles.authWrapper} onClick={(e) => e.stopPropagation()}>
+        <div className={styles.authModal}>
+          <div className={styles.statusHeaderRow}>
+            <div
+              className={`${styles.statusHeader} ${styles.statusAuthenticated}`}
+            >
+              <KeyRound className={styles.statusHeaderIcon} size={18} />
+              <span className={styles.statusHeaderValue}>authenticated</span>
+            </div>
           </div>
+          <span className={styles.authHint}>Key: ****{hint}</span>
+          <button
+            className={styles.authSignOut}
+            onClick={() => clearAuth()}
+            type="button"
+          >
+            Sign out
+          </button>
         </div>
-        <span className={styles.authHint}>Key: ****{hint}</span>
-        <button
-          className={styles.authSignOut}
-          onClick={() => clearAuth()}
-          type="button"
-        >
-          Sign out
-        </button>
       </div>
     );
   }
@@ -236,7 +235,7 @@ export function NavMenu() {
                   </div>
                   <div className={styles.statusAuthDetail}>
                     {response?.authenticated ? (
-                      <LockOpen className={styles.statusRowIcon} size={14} />
+                      <KeyRound className={styles.statusRowIcon} size={14} />
                     ) : (
                       <Lock className={styles.statusRowIcon} size={14} />
                     )}

@@ -79,8 +79,22 @@ export async function GET(request: Request): Promise<Response> {
     return Response.json(body, { status: 500 });
   }
 
-  // Not initialized → warn
-  if (!initialized) {
+  // Check authenticated: validate Bearer token
+  let authenticated = false;
+  const authorization = request.headers.get("authorization") ?? undefined;
+  const token = extractToken(authorization);
+
+  if (token) {
+    try {
+      await validateApiKey(token);
+      authenticated = true;
+    } catch {
+      authenticated = false;
+    }
+  }
+
+  // Not initialized → warn (but still check auth for seed bootstrap)
+  if (!initialized && !authenticated) {
     const body: StatusResponse = {
       authenticated: false,
       initialized: false,
@@ -94,20 +108,6 @@ export async function GET(request: Request): Promise<Response> {
       status: "warn",
     };
     return Response.json(body);
-  }
-
-  // Check authenticated: validate Bearer token
-  let authenticated = false;
-  const authorization = request.headers.get("authorization") ?? undefined;
-  const token = extractToken(authorization);
-
-  if (token) {
-    try {
-      await validateApiKey(token);
-      authenticated = true;
-    } catch {
-      authenticated = false;
-    }
   }
 
   const body: StatusResponse = {
