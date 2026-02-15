@@ -9,20 +9,34 @@ type ConnectionStatus =
   | "uninitiated"
   | "unknown";
 
+interface StatusMessage {
+  content: string;
+  level: string;
+  type: string;
+}
+
 interface StatusResponse {
   authenticated: boolean;
   initiated?: boolean;
+  messages?: StatusMessage[];
   status: string;
 }
 
-export function useStatus(): ConnectionStatus {
+interface StatusData {
+  connectionStatus: ConnectionStatus;
+  response: StatusResponse | null;
+}
+
+export function useStatus(): StatusData {
   const [connectionStatus, setConnectionStatus] =
     useState<ConnectionStatus>("unknown");
+  const [response, setResponse] = useState<StatusResponse | null>(null);
 
   useEffect(() => {
     fetch("/status")
       .then((res) => res.json() as Promise<StatusResponse>)
       .then((data) => {
+        setResponse(data);
         if (data.status === "error") {
           setConnectionStatus("disconnected");
         } else if (data.initiated === false) {
@@ -38,7 +52,7 @@ export function useStatus(): ConnectionStatus {
       });
   }, []);
 
-  return connectionStatus;
+  return { connectionStatus, response };
 }
 
-export type { ConnectionStatus };
+export type { ConnectionStatus, StatusData, StatusMessage, StatusResponse };

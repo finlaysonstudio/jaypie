@@ -34,8 +34,9 @@ const STATUS_ICONS: Record<ConnectionStatus, typeof CircleHelp> = {
 
 export function NavMenu() {
   const [isOpen, setIsOpen] = useState(false);
-  const status = useStatus();
-  const StatusIcon = STATUS_ICONS[status];
+  const [showStatus, setShowStatus] = useState(false);
+  const { connectionStatus, response } = useStatus();
+  const StatusIcon = STATUS_ICONS[connectionStatus];
 
   return (
     <>
@@ -58,7 +59,10 @@ export function NavMenu() {
               )}
             </nav>
             <div className={styles.sideMenuFooter}>
-              <a className={styles.navItem}>
+              <a
+                className={styles.navItem}
+                onClick={() => setShowStatus(!showStatus)}
+              >
                 <StatusIcon size={20} />
                 <span>Status</span>
               </a>
@@ -70,8 +74,41 @@ export function NavMenu() {
           </div>
           <div
             className={styles.menuCanvas}
-            onClick={() => setIsOpen(false)}
-          />
+            onClick={() => {
+              setIsOpen(false);
+              setShowStatus(false);
+            }}
+          >
+            {showStatus && (
+              <div
+                className={styles.statusModal}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className={styles.statusRow}>
+                  <StatusIcon size={16} />
+                  <span className={styles.statusLabel}>Status</span>
+                  <span className={styles.statusValue}>{connectionStatus}</span>
+                </div>
+                <div className={styles.statusRow}>
+                  <span className={styles.statusLabel}>Authenticated</span>
+                  <span className={styles.statusValue}>
+                    {response?.authenticated ? "yes" : "no"}
+                  </span>
+                </div>
+                {response?.initiated === false && (
+                  <div className={styles.statusRow}>
+                    <span className={styles.statusLabel}>Initiated</span>
+                    <span className={styles.statusValue}>no</span>
+                  </div>
+                )}
+                {response?.messages?.map((msg, i) => (
+                  <div className={styles.statusMessage} key={i}>
+                    {msg.content}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
       {!isOpen && (

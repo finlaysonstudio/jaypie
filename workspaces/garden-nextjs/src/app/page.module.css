@@ -43,11 +43,57 @@
 }
 
 .menuCanvas {
+  align-items: center;
   backdrop-filter: blur(1px);
   background: rgba(0, 0, 0, 0.7);
   cursor: pointer;
+  display: flex;
   flex: 1;
   height: 100%;
+  justify-content: center;
+}
+
+.statusModal {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  box-shadow: 2px 0 4px rgba(0, 0, 0, 0.5);
+  cursor: default;
+  display: flex;
+  flex-direction: column;
+  font-family: var(--font-ui);
+  font-size: 0.875rem;
+  gap: 8px;
+  max-width: 360px;
+  padding: 20px;
+  width: 100%;
+}
+
+.statusRow {
+  align-items: center;
+  color: rgba(207, 203, 199, 0.5);
+  display: flex;
+  gap: 8px;
+}
+
+.statusRow svg {
+  flex-shrink: 0;
+  stroke-width: var(--icon-stroke-thin);
+}
+
+.statusLabel {
+  flex: 1;
+}
+
+.statusValue {
+  color: var(--text-primary);
+}
+
+.statusMessage {
+  border-top: 1px solid var(--border-color);
+  color: rgba(207, 203, 199, 0.5);
+  font-size: 0.8125rem;
+  padding-top: 8px;
 }
 
 .sideMenuNav {
