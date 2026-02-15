@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+
+const STORAGE_KEY = "garden-api-key";
 
 type ConnectionStatus =
   | "authenticated"
@@ -23,8 +25,32 @@ interface StatusResponse {
 }
 
 interface StatusData {
+  authenticate: (key: string) => Promise<boolean>;
+  clearAuth: () => void;
   connectionStatus: ConnectionStatus;
   response: StatusResponse | null;
+}
+
+function getStoredKey(): string | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem(STORAGE_KEY);
+}
+
+function fetchStatus(apiKey?: string | null): Promise<StatusResponse> {
+  const headers: HeadersInit = {};
+  if (apiKey) {
+    headers["Authorization"] = `Bearer ${apiKey}`;
+  }
+  return fetch("/status", { headers }).then(
+    (res) => res.json() as Promise<StatusResponse>,
+  );
+}
+
+function deriveConnectionStatus(data: StatusResponse): ConnectionStatus {
+  if (data.status === "error") return "disconnected";
+  if (data.initialized === false) return "uninitialized";
+  if (data.authenticated) return "authenticated";
+  return "connected";
 }
 
 export function useStatus(): StatusData {
@@ -32,27 +58,43 @@ export function useStatus(): StatusData {
     useState<ConnectionStatus>("unknown");
   const [response, setResponse] = useState<StatusResponse | null>(null);
 
+  const applyResponse = useCallback((data: StatusResponse) => {
+    setResponse(data);
+    setConnectionStatus(deriveConnectionStatus(data));
+  }, []);
+
   useEffect(() => {
-    fetch("/status")
-      .then((res) => res.json() as Promise<StatusResponse>)
-      .then((data) => {
-        setResponse(data);
-        if (data.status === "error") {
-          setConnectionStatus("disconnected");
-        } else if (data.initialized === false) {
-          setConnectionStatus("uninitialized");
-        } else if (data.authenticated) {
-          setConnectionStatus("authenticated");
-        } else {
-          setConnectionStatus("connected");
-        }
-      })
+    const storedKey = getStoredKey();
+    fetchStatus(storedKey)
+      .then(applyResponse)
       .catch(() => {
         setConnectionStatus("disconnected");
       });
-  }, []);
+  }, [applyResponse]);
 
-  return { connectionStatus, response };
+  const authenticate = useCallback(
+    async (key: string): Promise<boolean> => {
+      const data = await fetchStatus(key);
+      applyResponse(data);
+      if (data.authenticated) {
+        localStorage.setItem(STORAGE_KEY, key);
+        return true;
+      }
+      return false;
+    },
+    [applyResponse],
+  );
+
+  const clearAuth = useCallback(() => {
+    localStorage.removeItem(STORAGE_KEY);
+    fetchStatus()
+      .then(applyResponse)
+      .catch(() => {
+        setConnectionStatus("disconnected");
+      });
+  }, [applyResponse]);
+
+  return { authenticate, clearAuth, connectionStatus, response };
 }
 
 export type { ConnectionStatus, StatusData, StatusMessage, StatusResponse };
