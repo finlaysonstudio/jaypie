@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  Ban,
   Birdhouse,
   CircleAlert,
   CircleCheck,
@@ -9,8 +10,8 @@ import {
   Component,
   Lock,
   LockOpen,
-  PowerOff,
   Menu,
+  PowerOff,
   SwatchBook,
   UserLock,
 } from "lucide-react";
@@ -55,12 +56,14 @@ function AuthModal({
   const [apiKey, setApiKey] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [attempted, setAttempted] = useState(false);
   const isAuthenticated = connectionStatus === "authenticated";
 
   const isValid = apiKey.length > 0 && isValidApiKeyFormat(apiKey);
-  const showInvalid = apiKey.length > 0 && !isValid;
+  const showInvalid = attempted && apiKey.length > 0 && !isValid;
 
   const handleSubmit = async () => {
+    setAttempted(true);
     if (!isValid || submitting) return;
     setSubmitting(true);
     setError("");
@@ -119,9 +122,10 @@ function AuthModal({
       </div>
       <input
         autoFocus
-        className={`${styles.authInput} ${showInvalid ? styles.authInputInvalid : ""}`}
+        className={`${styles.authInput}${showInvalid ? ` ${styles.authInputInvalid}` : ""}`}
         onChange={(e) => {
           setApiKey(e.target.value);
+          setAttempted(false);
           setError("");
         }}
         onKeyDown={(e) => {
@@ -131,18 +135,26 @@ function AuthModal({
         type="text"
         value={apiKey}
       />
-      {showInvalid && (
-        <span className={styles.authError}>Invalid key format</span>
-      )}
-      {error && <span className={styles.authError}>{error}</span>}
       <button
-        className={styles.authSubmit}
-        disabled={!isValid || submitting}
+        className={`${styles.authSubmit}${isValid ? ` ${styles.authSubmitReady}` : ""}`}
+        disabled={submitting}
         onClick={handleSubmit}
         type="button"
       >
         {submitting ? "Authenticating..." : "Authenticate"}
       </button>
+      {showInvalid && (
+        <div className={styles.authError}>
+          <Ban size={20} />
+          <span>Invalid key format</span>
+        </div>
+      )}
+      {error && (
+        <div className={styles.authError}>
+          <Ban size={20} />
+          <span>{error}</span>
+        </div>
+      )}
     </div>
   );
 }

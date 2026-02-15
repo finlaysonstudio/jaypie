@@ -196,25 +196,40 @@
 }
 
 .authError {
-  color: #c9a099; /* red-300 */
-  font-size: 0.75rem;
+  align-items: center;
+  color: #8b5e56; /* red-500, muted */
+  display: flex;
+  font-family: var(--font-ui);
+  font-size: 0.875rem;
+  gap: 12px;
+}
+
+.authError svg {
+  stroke-width: var(--icon-stroke-thin);
 }
 
 .authSubmit {
-  background: var(--accent-bronze);
+  background: var(--bg-primary);
   border: none;
   border-radius: 6px;
-  color: #f8f6f5;
-  cursor: pointer;
+  color: var(--text-muted);
   font-family: var(--font-ui);
   font-size: 0.875rem;
   font-weight: 500;
   padding: 10px 14px;
-  transition: background 0.15s ease;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
   width: 100%;
 }
 
-.authSubmit:hover:not(:disabled) {
+.authSubmitReady {
+  background: var(--accent-bronze);
+  color: #f8f6f5;
+  cursor: pointer;
+}
+
+.authSubmitReady:hover {
   background: var(--accent-bronze-hover);
 }
 
