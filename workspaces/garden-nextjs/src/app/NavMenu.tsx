@@ -4,10 +4,12 @@ import {
   Birdhouse,
   CircleAlert,
   CircleCheck,
-  CircleSlash,
   CircleHelp,
   CircleMinus,
   Component,
+  Lock,
+  LockOpen,
+  PowerOff,
   Menu,
   SwatchBook,
   UserLock,
@@ -28,8 +30,16 @@ const STATUS_ICONS: Record<ConnectionStatus, typeof CircleHelp> = {
   authenticated: CircleCheck,
   connected: CircleMinus,
   disconnected: CircleAlert,
-  uninitiated: CircleSlash,
+  uninitialized: PowerOff,
   unknown: CircleHelp,
+};
+
+const STATUS_STYLES: Record<ConnectionStatus, string> = {
+  authenticated: styles.statusAuthenticated,
+  connected: styles.statusConnected,
+  disconnected: styles.statusDisconnected,
+  uninitialized: styles.statusUninitialized,
+  unknown: styles.statusUnknown,
 };
 
 export function NavMenu() {
@@ -37,6 +47,7 @@ export function NavMenu() {
   const [showStatus, setShowStatus] = useState(false);
   const { connectionStatus, response } = useStatus();
   const StatusIcon = STATUS_ICONS[connectionStatus];
+  const statusStyle = STATUS_STYLES[connectionStatus];
 
   return (
     <>
@@ -73,7 +84,7 @@ export function NavMenu() {
             </div>
           </div>
           <div
-            className={styles.menuCanvas}
+            className={`${styles.menuCanvas} ${showStatus ? styles.menuCanvasModal : ""}`}
             onClick={() => {
               setIsOpen(false);
               setShowStatus(false);
@@ -84,23 +95,24 @@ export function NavMenu() {
                 className={styles.statusModal}
                 onClick={(e) => e.stopPropagation()}
               >
-                <div className={styles.statusRow}>
-                  <StatusIcon size={16} />
-                  <span className={styles.statusLabel}>Status</span>
-                  <span className={styles.statusValue}>{connectionStatus}</span>
-                </div>
-                <div className={styles.statusRow}>
-                  <span className={styles.statusLabel}>Authenticated</span>
-                  <span className={styles.statusValue}>
-                    {response?.authenticated ? "yes" : "no"}
-                  </span>
-                </div>
-                {response?.initiated === false && (
-                  <div className={styles.statusRow}>
-                    <span className={styles.statusLabel}>Initiated</span>
-                    <span className={styles.statusValue}>no</span>
+                <div className={styles.statusHeaderRow}>
+                  <div className={`${styles.statusHeader} ${statusStyle}`}>
+                    <StatusIcon className={styles.statusHeaderIcon} size={18} />
+                    <span className={styles.statusHeaderValue}>
+                      {connectionStatus}
+                    </span>
                   </div>
-                )}
+                  <div className={styles.statusAuthDetail}>
+                    {response?.authenticated ? (
+                      <LockOpen className={styles.statusRowIcon} size={14} />
+                    ) : (
+                      <Lock className={styles.statusRowIcon} size={14} />
+                    )}
+                    <span className={styles.statusLabel}>
+                      {response?.authenticated ? "" : "NOT "}AUTHENTICATED
+                    </span>
+                  </div>
+                </div>
                 {response?.messages?.map((msg, i) => (
                   <div className={styles.statusMessage} key={i}>
                     {msg.content}

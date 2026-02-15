@@ -51,6 +51,14 @@
   flex: 1;
   height: 100%;
   justify-content: center;
+  transition:
+    backdrop-filter 0.2s ease,
+    background 0.2s ease;
+}
+
+.menuCanvasModal {
+  backdrop-filter: blur(4px);
+  background: rgba(0, 0, 0, 0.85);
 }
 
 .statusModal {
@@ -62,38 +70,89 @@
   display: flex;
   flex-direction: column;
   font-family: var(--font-ui);
-  font-size: 0.875rem;
-  gap: 8px;
+  gap: 24px;
   max-width: 360px;
-  padding: 20px;
+  padding: 36px 24px;
   width: 100%;
 }
 
-.statusRow {
+/* Status header row: pill + auth detail side by side */
+.statusHeaderRow {
   align-items: center;
-  color: rgba(207, 203, 199, 0.5);
   display: flex;
-  gap: 8px;
+  gap: 12px;
 }
 
-.statusRow svg {
+/* Hero: connection status as a colored pill */
+.statusHeader {
+  align-items: center;
+  border-radius: 6px;
+  display: inline-flex;
+  gap: 8px;
+  padding: 8px 14px;
+  width: fit-content;
+}
+
+.statusHeaderIcon {
+  flex-shrink: 0;
+  stroke-width: var(--icon-stroke-normal);
+}
+
+.statusHeaderValue {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+/* Status colors — Jaypie palette: dark bg, light fg */
+.statusAuthenticated {
+  background: #1b2f22; /* green-800 */
+  color: #8fb69a; /* green-300 */
+}
+
+.statusConnected {
+  background: #3b3418; /* yellow-800 */
+  color: #cfc07e; /* yellow-300 */
+}
+
+.statusDisconnected {
+  background: #3d211d; /* red-800 */
+  color: #c9a099; /* red-300 */
+}
+
+.statusUninitialized {
+  background: #8b5533; /* orange-600 */
+  color: #f9ede2; /* orange-100 */
+}
+
+.statusUnknown {
+  background: #3a2129; /* pink-800 */
+  color: #c49aab; /* pink-300 */
+}
+
+.statusAuthDetail {
+  align-items: center;
+  display: flex;
+  gap: 6px;
+}
+
+.statusRowIcon {
+  color: var(--text-muted);
   flex-shrink: 0;
   stroke-width: var(--icon-stroke-thin);
 }
 
 .statusLabel {
-  flex: 1;
-}
-
-.statusValue {
-  color: var(--text-primary);
+  color: var(--text-muted);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.05em;
 }
 
 .statusMessage {
-  border-top: 1px solid var(--border-color);
-  color: rgba(207, 203, 199, 0.5);
+  color: rgba(207, 203, 199, 0.6);
   font-size: 0.8125rem;
-  padding-top: 8px;
+  line-height: 1.4;
 }
 
 .sideMenuNav {

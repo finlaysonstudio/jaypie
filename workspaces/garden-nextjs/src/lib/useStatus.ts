@@ -6,7 +6,7 @@ type ConnectionStatus =
   | "authenticated"
   | "connected"
   | "disconnected"
-  | "uninitiated"
+  | "uninitialized"
   | "unknown";
 
 interface StatusMessage {
@@ -17,7 +17,7 @@ interface StatusMessage {
 
 interface StatusResponse {
   authenticated: boolean;
-  initiated?: boolean;
+  initialized?: boolean;
   messages?: StatusMessage[];
   status: string;
 }
@@ -39,8 +39,8 @@ export function useStatus(): StatusData {
         setResponse(data);
         if (data.status === "error") {
           setConnectionStatus("disconnected");
-        } else if (data.initiated === false) {
-          setConnectionStatus("uninitiated");
+        } else if (data.initialized === false) {
+          setConnectionStatus("uninitialized");
         } else if (data.authenticated) {
           setConnectionStatus("authenticated");
         } else {

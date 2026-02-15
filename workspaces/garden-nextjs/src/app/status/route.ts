@@ -23,7 +23,7 @@ interface StatusError {
 interface StatusResponse {
   authenticated: boolean;
   errors?: StatusError[];
-  initiated?: boolean;
+  initialized?: boolean;
   messages?: StatusMessage[];
   status: string;
 }
@@ -54,22 +54,22 @@ export async function GET(request: Request): Promise<Response> {
     return Response.json(body, { status: 500 });
   }
 
-  // Check initiated: are there any apikey records?
-  let initiated = false;
+  // Check initialized: are there any apikey records?
+  let initialized = false;
   try {
     const { items } = await queryByScope({
       limit: 1,
       model: "apikey",
       scope: APEX,
     });
-    initiated = items.length > 0;
+    initialized = items.length > 0;
   } catch (error) {
-    log.error("Failed to query DynamoDB for initiation status", { error });
+    log.error("Failed to query DynamoDB for initialization status", { error });
     const body: StatusResponse = {
       authenticated: false,
       errors: [
         {
-          detail: "Unable to check initiation status",
+          detail: "Unable to check initialization status",
           status: 500,
           title: "Database Error",
         },
@@ -79,14 +79,14 @@ export async function GET(request: Request): Promise<Response> {
     return Response.json(body, { status: 500 });
   }
 
-  // Not initiated → warn
-  if (!initiated) {
+  // Not initialized → warn
+  if (!initialized) {
     const body: StatusResponse = {
       authenticated: false,
-      initiated: false,
+      initialized: false,
       messages: [
         {
-          content: "Garden has not been initiated. No API keys found.",
+          content: "Garden has not been initialized. No API keys found.",
           level: "warn",
           type: "text",
         },
