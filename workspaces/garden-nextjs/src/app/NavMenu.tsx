@@ -16,7 +16,7 @@ import {
   UserLock,
 } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { isValidApiKeyFormat } from "../lib/apikey/checksum";
 import { type ConnectionStatus, useStatus } from "../lib/useStatus";
@@ -70,7 +70,7 @@ function AuthModal({
     try {
       const success = await authenticate(apiKey);
       if (!success) {
-        setError("Key rejected by server");
+        setError("Invalid key");
       } else {
         setApiKey("");
       }
@@ -80,6 +80,17 @@ function AuthModal({
       setSubmitting(false);
     }
   };
+
+  const autoSubmittedRef = useRef(false);
+  useEffect(() => {
+    if (isValid && !autoSubmittedRef.current) {
+      autoSubmittedRef.current = true;
+      handleSubmit();
+    }
+    if (!isValid) {
+      autoSubmittedRef.current = false;
+    }
+  }, [isValid]);
 
   if (isAuthenticated) {
     const storedKey = localStorage.getItem("garden-api-key") ?? "";
@@ -110,51 +121,42 @@ function AuthModal({
   }
 
   return (
-    <div
-      className={styles.authModal}
-      onClick={(e) => e.stopPropagation()}
-    >
-      <div className={styles.statusHeaderRow}>
-        <div className={styles.statusAuthDetail}>
-          <Lock className={styles.statusRowIcon} size={14} />
-          <span className={styles.statusLabel}>AUTHENTICATE</span>
+    <div className={styles.authWrapper} onClick={(e) => e.stopPropagation()}>
+      <div className={styles.authModal}>
+        <div className={styles.statusHeaderRow}>
+          <div className={styles.statusAuthDetail}>
+            <Lock className={styles.statusRowIcon} size={14} />
+            <span className={styles.statusLabel}>AUTHENTICATE</span>
+          </div>
         </div>
+        <input
+          autoFocus
+          className={`${styles.authInput}${showInvalid ? ` ${styles.authInputInvalid}` : ""}`}
+          onChange={(e) => {
+            setApiKey(e.target.value);
+            setAttempted(false);
+            setError("");
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") handleSubmit();
+          }}
+          placeholder="sk_jpi_..."
+          type="text"
+          value={apiKey}
+        />
+        <button
+          className={`${styles.authSubmit}${isValid ? ` ${styles.authSubmitReady}` : ""}`}
+          disabled={submitting}
+          onClick={handleSubmit}
+          type="button"
+        >
+          {submitting ? "Authenticating..." : "Authenticate"}
+        </button>
       </div>
-      <input
-        autoFocus
-        className={`${styles.authInput}${showInvalid ? ` ${styles.authInputInvalid}` : ""}`}
-        onChange={(e) => {
-          setApiKey(e.target.value);
-          setAttempted(false);
-          setError("");
-        }}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") handleSubmit();
-        }}
-        placeholder="sk_jpi_..."
-        type="text"
-        value={apiKey}
-      />
-      <button
-        className={`${styles.authSubmit}${isValid ? ` ${styles.authSubmitReady}` : ""}`}
-        disabled={submitting}
-        onClick={handleSubmit}
-        type="button"
-      >
-        {submitting ? "Authenticating..." : "Authenticate"}
-      </button>
-      {showInvalid && (
-        <div className={styles.authError}>
-          <Ban size={20} />
-          <span>Invalid key format</span>
-        </div>
-      )}
-      {error && (
-        <div className={styles.authError}>
-          <Ban size={20} />
-          <span>{error}</span>
-        </div>
-      )}
+      <div className={`${styles.authError}${showInvalid || error ? ` ${styles.authErrorVisible}` : ""}`}>
+        <Ban size={20} />
+        <span>{showInvalid ? "Invalid key" : error || "\u00A0"}</span>
+      </div>
     </div>
   );
 }
