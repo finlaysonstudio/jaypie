@@ -8,21 +8,320 @@
 }
 
 .navBox {
-  background: rgba(122, 102, 82, 0.05);
   border-radius: 8px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
   display: flex;
   gap: 0;
   left: 16px;
   padding: 0;
   position: absolute;
   top: 16px;
+  z-index: 3;
+}
+
+.menuContainer {
+  display: flex;
+  height: 100%;
+  left: 0;
+  position: absolute;
+  top: 0;
+  width: 100%;
+  z-index: 2;
+}
+
+.sideMenu {
+  background: var(--bg-secondary);
+  border-right: 1px solid var(--border-color);
+  box-shadow: 2px 0 4px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  height: 100%;
+  overflow-y: auto;
+  position: relative;
+  width: 280px;
+  z-index: 1;
+}
+
+.menuCanvas {
+  align-items: center;
+  backdrop-filter: blur(1px);
+  background: rgba(0, 0, 0, 0.7);
+  cursor: pointer;
+  display: flex;
+  flex: 1;
+  height: 100%;
+  justify-content: center;
+  transition:
+    backdrop-filter 0.2s ease,
+    background 0.2s ease;
+}
+
+.menuCanvasModal {
+  backdrop-filter: blur(4px);
+  background: rgba(0, 0, 0, 0.85);
+}
+
+.statusModal {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  box-shadow: 2px 0 4px rgba(0, 0, 0, 0.5);
+  cursor: default;
+  display: flex;
+  flex-direction: column;
+  font-family: var(--font-ui);
+  gap: 24px;
+  margin: 0 36px;
+  max-width: 480px;
+  padding: 36px 24px;
+  width: 100%;
+}
+
+/* Status header row: pill + auth detail side by side */
+.statusHeaderRow {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 36px;
+}
+
+/* Hero: connection status as a colored pill */
+.statusHeader {
+  align-items: center;
+  border-radius: 6px;
+  display: inline-flex;
+  gap: 8px;
+  padding: 8px 14px;
+  width: fit-content;
+}
+
+.statusHeaderIcon {
+  flex-shrink: 0;
+  stroke-width: var(--icon-stroke-normal);
+}
+
+.statusHeaderValue {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+/* Status colors — Jaypie palette: dark bg, light fg */
+.statusAuthenticated {
+  background: #1b2f22; /* green-800 */
+  color: #8fb69a; /* green-300 */
+}
+
+.statusConnected {
+  background: #3b3418; /* yellow-800 */
+  color: #cfc07e; /* yellow-300 */
+}
+
+.statusDisconnected {
+  background: #3d211d; /* red-800 */
+  color: #c9a099; /* red-300 */
+}
+
+.statusUninitialized {
+  background: #8b5533; /* orange-600 */
+  color: #f9ede2; /* orange-100 */
+}
+
+.statusUnknown {
+  background: #3a2129; /* pink-800 */
+  color: #c49aab; /* pink-300 */
+}
+
+.statusAuthDetail {
+  align-items: center;
+  display: flex;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.statusRowIcon {
+  color: var(--text-muted);
+  flex-shrink: 0;
+  stroke-width: var(--icon-stroke-thin);
+}
+
+.statusLabel {
+  color: var(--text-muted);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+}
+
+.statusMessage {
+  color: rgba(207, 203, 199, 0.6);
+  font-size: 0.8125rem;
+  line-height: 1.4;
+}
+
+/* Auth wrapper — stable size for centering */
+.authWrapper {
+  cursor: default;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  margin: 0 36px;
+  max-width: 480px;
+  width: 100%;
+}
+
+/* Auth modal — mirrors statusModal structure */
+.authModal {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  box-shadow: 2px 0 4px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  font-family: var(--font-ui);
+  gap: 20px;
+  padding: 36px 24px;
+  width: 100%;
+}
+
+.authInput {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: var(--text-primary);
+  font-family: var(--font-code);
+  font-size: 0.8125rem;
+  padding: 10px 14px;
+  width: 100%;
+}
+
+.authInput:focus {
+  border-color: var(--accent-bronze);
+  outline: none;
+}
+
+.authInputInvalid {
+  border-color: #8b5e56; /* red-500 */
+}
+
+.authError {
+  align-items: center;
+  background: #3d211d; /* red-800 */
+  border: 1px solid rgba(201, 160, 153, 0.2); /* red-300 faint border */
+  border-radius: 8px;
+  color: #c9a099; /* red-300 */
+  display: flex;
+  font-family: var(--font-ui);
+  font-size: 0.875rem;
+  gap: 12px;
+  opacity: 0;
+  padding: 14px 24px;
+  transition: opacity 0.15s ease;
+  width: 100%;
+}
+
+.authErrorVisible {
+  opacity: 1;
+}
+
+.authError svg {
+  flex-shrink: 0;
+  stroke-width: var(--icon-stroke-thin);
+}
+
+.authSubmit {
+  background: var(--bg-primary);
+  border: none;
+  border-radius: 6px;
+  color: var(--text-muted);
+  font-family: var(--font-ui);
+  font-size: 0.875rem;
+  font-weight: 500;
+  padding: 10px 14px;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+  width: 100%;
+}
+
+.authSubmitReady {
+  background: var(--accent-bronze);
+  color: #f8f6f5;
+  cursor: pointer;
+}
+
+.authSubmitReady:hover {
+  background: var(--accent-bronze-hover);
+}
+
+.authSubmit:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.authHint {
+  color: var(--text-muted);
+  font-family: var(--font-code);
+  font-size: 0.75rem;
+}
+
+.authSignOut {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-family: var(--font-ui);
+  font-size: 0.8125rem;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  transition: color 0.15s ease;
+}
+
+.authSignOut:hover {
+  color: var(--text-primary);
+}
+
+.sideMenuNav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 16px 8px 8px;
+}
+
+.navItem {
+  align-items: center;
+  border-radius: 7px;
+  color: rgba(207, 203, 199, 0.5);
+  cursor: pointer;
+  display: flex;
+  font-family: var(--font-ui);
+  font-size: 0.875rem;
+  gap: 12px;
+  padding: 14px 22px;
+  text-decoration: none;
   transition: all 0.15s ease;
 }
 
-.navBox:has(.iconButton:hover) {
-  background: transparent;
-  box-shadow: none;
+.navItem svg {
+  flex-shrink: 0;
+  stroke-width: var(--icon-stroke-thin);
+  transition:
+    color 0.15s ease,
+    stroke-width 0.15s ease;
+}
+
+.navItem:hover {
+  background: rgba(122, 102, 82, 0.1);
+  color: var(--text-primary);
+}
+
+.navItem:hover svg {
+  stroke-width: var(--icon-stroke-normal);
+}
+
+.sideMenuFooter {
+  margin-top: auto;
+  padding: 8px 8px 16px;
 }
 
 .iconButton {
@@ -48,12 +347,26 @@
     stroke-width 0.15s ease;
 }
 
-.iconButton:hover {
+/* Menu icon gets background by default */
+.iconButton:first-child {
+  background: rgba(122, 102, 82, 0.05);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+/* When birdhouse is hovered, menu loses background */
+.navBox:has(.iconButton:last-child:hover) .iconButton:first-child {
+  background: transparent;
+  box-shadow: none;
+}
+
+.iconButton:hover,
+.iconButtonActive {
   background: rgba(122, 102, 82, 0.1);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
-.iconButton:hover svg {
+.iconButton:hover svg,
+.iconButtonActive svg {
   color: var(--text-primary);
   stroke-width: var(--icon-stroke-normal);
 }

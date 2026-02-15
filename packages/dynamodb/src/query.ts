@@ -8,10 +8,7 @@
 
 import { QueryCommand } from "@aws-sdk/lib-dynamodb";
 import { ConfigurationError } from "@jaypie/errors";
-import {
-  getModelIndexes,
-  type IndexDefinition,
-} from "@jaypie/fabric";
+import { getModelIndexes, type IndexDefinition } from "@jaypie/fabric";
 
 import { getDocClient, getTableName } from "./client.js";
 import { ARCHIVED_SUFFIX, DELETED_SUFFIX } from "./constants.js";

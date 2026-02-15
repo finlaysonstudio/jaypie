@@ -3,8 +3,8 @@ import { ForbiddenError, UnauthorizedError } from "@jaypie/errors";
 import { type IndexDefinition, registerModel } from "@jaypie/fabric";
 import { log } from "@jaypie/logger";
 
-import { isValidApiKeyFormat } from "./checksum.js";
-import { generateKeyFromSeed, hashKey } from "./generate.js";
+import { isValidApiKeyFormat } from "./checksum";
+import { generateKeyFromSeed, hashKey } from "./generate";
 
 //
 //

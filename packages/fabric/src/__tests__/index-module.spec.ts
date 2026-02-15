@@ -36,7 +36,6 @@ describe("Index Constants", () => {
   it("exports DELETED_SUFFIX", () => {
     expect(DELETED_SUFFIX).toBe("#deleted");
   });
-
 });
 
 // =============================================================================

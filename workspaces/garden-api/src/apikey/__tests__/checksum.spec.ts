@@ -68,9 +68,8 @@ describe("isValidApiKeyFormat", () => {
   });
 
   it("returns false for non-string input", () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     expect(isValidApiKeyFormat(undefined as any)).toBe(false);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     expect(isValidApiKeyFormat(123 as any)).toBe(false);
   });
 

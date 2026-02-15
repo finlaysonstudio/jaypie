@@ -3,14 +3,38 @@
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ConfigurationError } from "@jaypie/errors";
-import { clearRegistry, type IndexDefinition, registerModel } from "@jaypie/fabric";
+import {
+  clearRegistry,
+  type IndexDefinition,
+  registerModel,
+} from "@jaypie/fabric";
 
 const STANDARD_INDEXES: IndexDefinition[] = [
   { name: "indexScope", pk: ["scope", "model"], sk: ["sequence"] },
-  { name: "indexAlias", pk: ["scope", "model", "alias"], sk: ["sequence"], sparse: true },
-  { name: "indexCategory", pk: ["scope", "model", "category"], sk: ["sequence"], sparse: true },
-  { name: "indexType", pk: ["scope", "model", "type"], sk: ["sequence"], sparse: true },
-  { name: "indexXid", pk: ["scope", "model", "xid"], sk: ["sequence"], sparse: true },
+  {
+    name: "indexAlias",
+    pk: ["scope", "model", "alias"],
+    sk: ["sequence"],
+    sparse: true,
+  },
+  {
+    name: "indexCategory",
+    pk: ["scope", "model", "category"],
+    sk: ["sequence"],
+    sparse: true,
+  },
+  {
+    name: "indexType",
+    pk: ["scope", "model", "type"],
+    sk: ["sequence"],
+    sparse: true,
+  },
+  {
+    name: "indexXid",
+    pk: ["scope", "model", "xid"],
+    sk: ["sequence"],
+    sparse: true,
+  },
 ];
 
 import { initClient, resetClient } from "../client.js";
