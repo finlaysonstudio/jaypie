@@ -65,6 +65,33 @@ export const brown: ColorShades = {
   900: "#201b16",
 };
 
+// Brand palettes
+export const ink: ColorShades = {
+  50: "#f8f5f7",
+  100: "#ede9ec",
+  200: "#d9d3d7",
+  300: "#c0b7bd",
+  400: "#9b9097",
+  500: "#726870",
+  600: "#585058",
+  700: "#413940",
+  800: "#2a2428",
+  900: "#161013",
+};
+
+export const mist: ColorShades = {
+  50: "#f5f6f8",
+  100: "#e5e9ee",
+  200: "#d5dbe2",
+  300: "#b7c0ca",
+  400: "#929da9",
+  500: "#6d7a89",
+  600: "#55616d",
+  700: "#3f4953",
+  800: "#2b323a",
+  900: "#181c22",
+};
+
 // Standard color palettes
 export const amber: ColorShades = {
   50: "#faf6ee",
@@ -311,7 +338,9 @@ export const colors = {
   gray,
   green,
   indigo,
+  ink,
   lime,
+  mist,
   orange,
   pink,
   purple,

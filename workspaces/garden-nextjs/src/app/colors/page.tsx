@@ -145,9 +145,9 @@ function ColorCard({ name, shades }: { name: string; shades: string[] }) {
 // Page
 //
 
-// Neutrals → warm → cool spectrum
+// Cool → warm → brown spectrum
 const COLOR_ORDER = [
-  "zinc", "gray", "slate", "brown",
+  "mist", "slate", "gray", "ink", "zinc", "brown",
   "orange", "amber", "yellow", "lime",
   "green", "emerald", "teal", "cyan",
   "sky", "blue", "indigo", "violet",
