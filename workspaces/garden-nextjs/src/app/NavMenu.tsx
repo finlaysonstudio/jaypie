@@ -4,6 +4,7 @@ import {
   Ban,
   Birdhouse,
   ChevronLeft,
+  Search,
   CircleAlert,
   CircleCheck,
   CircleHelp,
@@ -188,6 +189,13 @@ export function NavMenu() {
                 }}
               >
                 <ChevronLeft size={20} />
+              </div>
+              <div className={styles.searchBox}>
+                <input
+                  className={styles.searchInput}
+                  type="text"
+                />
+                <Search className={styles.searchIcon} size={16} />
               </div>
             </div>
             <nav className={styles.sideMenuNav}>
