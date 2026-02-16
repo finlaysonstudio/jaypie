@@ -48,10 +48,12 @@ function AuthModal({
   authenticate,
   clearAuth,
   connectionStatus,
+  hint,
 }: {
   authenticate: (key: string) => Promise<boolean>;
   clearAuth: () => void;
   connectionStatus: ConnectionStatus;
+  hint: string | null;
 }) {
   const [apiKey, setApiKey] = useState("");
   const [error, setError] = useState("");
@@ -93,8 +95,6 @@ function AuthModal({
   }, [isValid]);
 
   if (isAuthenticated) {
-    const storedKey = localStorage.getItem("garden-api-key") ?? "";
-    const hint = storedKey.slice(-4);
     return (
       <div className={styles.authWrapper} onClick={(e) => e.stopPropagation()}>
         <div className={styles.authModal}>
@@ -164,7 +164,7 @@ export function NavMenu() {
   const [isOpen, setIsOpen] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
   const [showStatus, setShowStatus] = useState(false);
-  const { authenticate, clearAuth, connectionStatus, response } = useStatus();
+  const { authenticate, clearAuth, connectionStatus, hint: sessionHint, response } = useStatus();
   const StatusIcon = STATUS_ICONS[connectionStatus];
   const statusStyle = STATUS_STYLES[connectionStatus];
 
@@ -256,6 +256,7 @@ export function NavMenu() {
                 authenticate={authenticate}
                 clearAuth={clearAuth}
                 connectionStatus={connectionStatus}
+                hint={sessionHint}
               />
             )}
           </div>

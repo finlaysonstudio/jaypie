@@ -4,6 +4,7 @@ import { expressHandler } from "jaypie";
 import type { Request } from "express";
 
 import { extractToken, validateApiKey } from "../apikey/index.js";
+import { isSessionToken, validateSession } from "../session/validate.js";
 
 //
 //
@@ -15,6 +16,9 @@ const keyTestRoute = expressHandler(
     const token = extractToken(req.headers.authorization);
     if (!token) {
       throw new UnauthorizedError();
+    }
+    if (isSessionToken(token)) {
+      return await validateSession(token);
     }
     return await validateApiKey(token);
   },

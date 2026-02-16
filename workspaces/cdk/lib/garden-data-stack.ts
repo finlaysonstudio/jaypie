@@ -42,6 +42,9 @@ export class GardenDataStack extends JaypieAppStack {
   constructor(scope: Construct, id?: string, props: GardenDataStackProps = {}) {
     super(scope, id ?? "JaypieGardenDataStack", { key: "garden-data" });
 
-    this.table = new JaypieDynamoDb(this, "GardenTable", { indexes });
+    this.table = new JaypieDynamoDb(this, "GardenTable", {
+      indexes,
+      timeToLiveAttribute: "ttl",
+    });
   }
 }
