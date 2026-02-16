@@ -9,6 +9,7 @@ import {
   CircleMinus,
   Component,
   Lock,
+  Proportions,
   KeyRound,
   Menu,
   PowerOff,
@@ -26,6 +27,7 @@ const NAV_ITEMS = [
   { href: "/", icon: Birdhouse, label: "Home" },
   { href: "/colors", icon: SwatchBook, label: "Colors" },
   { icon: Component, label: "Components" },
+  { href: "/dimensions", icon: Proportions, label: "Dimensions" },
 ];
 
 const STATUS_ICONS: Record<ConnectionStatus, typeof CircleHelp> = {
