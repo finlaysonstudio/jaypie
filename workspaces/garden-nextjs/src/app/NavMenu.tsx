@@ -293,6 +293,9 @@ export function NavMenu() {
           >
             <Menu size={20} />
           </div>
+          <div className={styles.iconButton}>
+            <Birdhouse size={18} />
+          </div>
         </div>
       )}
     </>
