@@ -3,6 +3,7 @@
 import {
   Ban,
   Birdhouse,
+  ChevronLeft,
   CircleAlert,
   CircleCheck,
   CircleHelp,
@@ -177,6 +178,18 @@ export function NavMenu() {
       {isOpen && (
         <div className={styles.menuContainer}>
           <div className={styles.sideMenu}>
+            <div className={styles.sideMenuHeader}>
+              <div
+                className={styles.iconButton}
+                onClick={() => {
+                  setIsOpen(false);
+                  setShowAuth(false);
+                  setShowStatus(false);
+                }}
+              >
+                <ChevronLeft size={20} />
+              </div>
+            </div>
             <nav className={styles.sideMenuNav}>
               {NAV_ITEMS.map(({ href, icon: Icon, label }) =>
                 href ? (
@@ -271,9 +284,6 @@ export function NavMenu() {
             onClick={() => setIsOpen(true)}
           >
             <Menu size={20} />
-          </div>
-          <div className={styles.iconButton}>
-            <Birdhouse size={18} />
           </div>
         </div>
       )}
