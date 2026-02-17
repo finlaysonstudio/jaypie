@@ -137,6 +137,11 @@ export class OpenAiAdapter extends BaseProviderAdapter {
       Object.assign(openaiRequest, request.providerOptions);
     }
 
+    // First-class temperature takes precedence over providerOptions
+    if (request.temperature !== undefined) {
+      openaiRequest.temperature = request.temperature;
+    }
+
     return openaiRequest;
   }
 

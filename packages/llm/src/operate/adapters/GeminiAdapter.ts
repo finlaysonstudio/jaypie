@@ -162,6 +162,14 @@ export class GeminiAdapter extends BaseProviderAdapter {
       };
     }
 
+    // First-class temperature takes precedence over providerOptions
+    if (request.temperature !== undefined) {
+      geminiRequest.config = {
+        ...geminiRequest.config,
+        temperature: request.temperature,
+      };
+    }
+
     return geminiRequest;
   }
 

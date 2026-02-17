@@ -310,6 +310,7 @@ export interface LlmOperateOptions {
   };
   providerOptions?: JsonObject;
   system?: string;
+  temperature?: number;
   tools?: LlmTool[] | Toolkit;
   turns?: boolean | number;
   user?: string;
