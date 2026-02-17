@@ -413,6 +413,19 @@
   stroke-width: var(--icon-stroke-normal);
 }
 
+.iconButtonGhost {
+  background: transparent;
+  box-shadow: none;
+}
+
+.iconButtonGhost svg {
+  color: rgba(207, 203, 199, 0.5);
+}
+
+.iconButtonGhost:hover svg {
+  color: var(--text-primary);
+}
+
 .hero {
   font-family: var(--font-brand);
   font-size: clamp(2.5rem, 8vw, 5rem);

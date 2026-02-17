@@ -164,7 +164,7 @@ function AuthModal({
   );
 }
 
-export function NavMenu({ pageIcon: PageIcon = Birdhouse }: { pageIcon?: typeof Birdhouse }) {
+export function NavMenu({ hideMenu, onPageIconClick, pageIcon: PageIcon = Birdhouse }: { hideMenu?: boolean; onPageIconClick?: () => void; pageIcon?: typeof Birdhouse }) {
   const [isOpen, setIsOpen] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
   const [showStatus, setShowStatus] = useState(false);
@@ -289,12 +289,17 @@ export function NavMenu({ pageIcon: PageIcon = Birdhouse }: { pageIcon?: typeof 
         <div className={styles.navBox}>
           <div
             className={styles.iconButton}
-            onClick={() => setIsOpen(true)}
+            onClick={hideMenu ? undefined : () => setIsOpen(true)}
+            style={hideMenu ? { visibility: "hidden" } : undefined}
           >
             <Menu size={20} />
           </div>
-          <div className={styles.iconButton}>
-            <PageIcon size={18} />
+          <div
+            className={`${styles.iconButton}${hideMenu ? ` ${styles.iconButtonGhost}` : ""}`}
+            onClick={onPageIconClick}
+            style={onPageIconClick ? { cursor: "pointer" } : undefined}
+          >
+            <PageIcon size={20} />
           </div>
         </div>
       )}
