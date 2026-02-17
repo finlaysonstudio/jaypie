@@ -164,7 +164,7 @@ function AuthModal({
   );
 }
 
-export function NavMenu() {
+export function NavMenu({ pageIcon: PageIcon = Birdhouse }: { pageIcon?: typeof Birdhouse }) {
   const [isOpen, setIsOpen] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
   const [showStatus, setShowStatus] = useState(false);
@@ -294,7 +294,7 @@ export function NavMenu() {
             <Menu size={20} />
           </div>
           <div className={styles.iconButton}>
-            <Birdhouse size={18} />
+            <PageIcon size={18} />
           </div>
         </div>
       )}
