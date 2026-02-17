@@ -3,10 +3,30 @@
   padding: 80px 128px;
 }
 
+.gridPage {
+  min-height: 100vh;
+  overflow: hidden;
+  padding: 80px 128px;
+  position: relative;
+}
+
 .title {
   font-family: var(--font-brand);
   font-size: clamp(1.5rem, 4vw, 2.5rem);
   font-weight: 400;
   letter-spacing: -0.02em;
   margin-bottom: 24px;
+  position: relative;
+  z-index: 1;
+}
+
+.grid {
+  inset: 0;
+  position: fixed;
+}
+
+.grid path {
+  fill: none;
+  stroke: rgba(207, 203, 199, 0.12);
+  stroke-width: 0.5;
 }

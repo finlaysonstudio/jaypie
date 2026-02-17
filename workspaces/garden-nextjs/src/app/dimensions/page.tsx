@@ -5,6 +5,7 @@ import { useState } from "react";
 
 import { NavMenu } from "../NavMenu";
 
+import { HandDrawnGrid } from "./HandDrawnGrid";
 import styles from "./dimensions.module.css";
 
 export default function DimensionsPage() {
@@ -14,15 +15,14 @@ export default function DimensionsPage() {
     setView((v) => (v === "dimensions" ? "grid" : "dimensions"));
 
   return (
-    <div className={styles.page}>
+    <div className={view === "grid" ? styles.gridPage : styles.page}>
       <NavMenu
         hideMenu={view === "grid"}
         onPageIconClick={toggleView}
         pageIcon={view === "dimensions" ? Proportions : Grid3X3}
       />
-      <h1 className={styles.title}>
-        {view === "dimensions" ? "Dimensions" : "Grid"}
-      </h1>
+      {view === "grid" && <HandDrawnGrid />}
+      <h1 className={styles.title}>Dimensions</h1>
     </div>
   );
 }
