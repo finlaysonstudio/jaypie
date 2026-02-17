@@ -1,6 +1,11 @@
 import { createHash } from "node:crypto";
 
-import { APEX, queryByAlias, updateEntity, type StorableEntity } from "@jaypie/dynamodb";
+import {
+  APEX,
+  queryByAlias,
+  updateEntity,
+  type StorableEntity,
+} from "@jaypie/dynamodb";
 import { ForbiddenError, UnauthorizedError } from "@jaypie/errors";
 import { type IndexDefinition, registerModel } from "@jaypie/fabric";
 import { log } from "@jaypie/logger";
