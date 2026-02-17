@@ -1,11 +1,11 @@
 .page {
-  max-width: 576px;
+  max-width: 544px;
   min-height: 100vh;
   padding: 80px 16px;
 }
 
 .gridPage {
-  max-width: 576px;
+  max-width: 544px;
   min-height: 100vh;
   overflow: hidden;
   padding: 80px 16px;
@@ -18,55 +18,6 @@
   font-weight: 400;
   letter-spacing: -0.02em;
   margin-bottom: 24px;
-  position: relative;
-  z-index: 1;
-}
-
-.boxRow {
-  display: flex;
-  position: relative;
-  z-index: 1;
-}
-
-.iconBox {
-  align-items: center;
-  background: #191918; /* gray-900 */
-  color: var(--text-muted);
-  display: flex;
-  flex-shrink: 0;
-  height: 48px;
-  justify-content: center;
-  min-width: 48px;
-  position: relative;
-  width: 48px;
-  z-index: 1;
-}
-
-.labelBox {
-  align-items: center;
-  background: #2c2c2b; /* gray-800 */
-  color: var(--text-muted);
-  display: flex;
-  font-family: var(--font-ui);
-  height: 48px;
-  padding: 0 8px;
-  width: 192px;
-}
-
-.card {
-  background: #3f4953; /* mist-700 */
-  height: 192px;
-  margin-left: -16px;
-  margin-top: 24px;
-  min-width: 272px;
-  overflow: hidden;
-  position: relative;
-  width: 100%;
-  z-index: 1;
-}
-
-.cardContent {
-  padding: 16px;
   position: relative;
   z-index: 1;
 }
@@ -92,14 +43,24 @@
   z-index: 1;
 }
 
-.wideSquare {
+.splitBox {
   background: #3f4953; /* mist-700 */
-  height: 272px;
+  height: 80px;
   margin-left: -16px;
   margin-top: 24px;
   overflow: hidden;
   position: relative;
   width: 544px;
+  z-index: 1;
+}
+
+.lorem {
+  color: var(--text-muted);
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  line-height: 1.75;
+  margin-top: 48px;
+  position: relative;
   z-index: 1;
 }
 
