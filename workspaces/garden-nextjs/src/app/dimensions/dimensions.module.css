@@ -33,8 +33,10 @@
   background: #191918; /* gray-900 */
   color: var(--text-muted);
   display: flex;
+  flex-shrink: 0;
   height: 48px;
   justify-content: center;
+  min-width: 48px;
   position: relative;
   width: 48px;
   z-index: 1;
@@ -54,7 +56,9 @@
 .card {
   background: #3f4953; /* mist-700 */
   height: 192px;
+  margin-left: -16px;
   margin-top: 24px;
+  min-width: 272px;
   overflow: hidden;
   position: relative;
   width: 100%;
@@ -80,6 +84,7 @@
 .minBox {
   background: #3f4953; /* mist-700 */
   height: 80px;
+  margin-left: -16px;
   margin-top: 24px;
   overflow: hidden;
   position: relative;
@@ -90,6 +95,7 @@
 .wideSquare {
   background: #3f4953; /* mist-700 */
   height: 272px;
+  margin-left: -16px;
   margin-top: 24px;
   overflow: hidden;
   position: relative;
