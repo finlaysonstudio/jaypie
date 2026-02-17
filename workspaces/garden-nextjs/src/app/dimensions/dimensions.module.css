@@ -1,12 +1,14 @@
 .page {
+  max-width: 576px;
   min-height: 100vh;
-  padding: 80px 128px;
+  padding: 80px 16px;
 }
 
 .gridPage {
+  max-width: 576px;
   min-height: 100vh;
   overflow: hidden;
-  padding: 80px 128px;
+  padding: 80px 16px;
   position: relative;
 }
 
