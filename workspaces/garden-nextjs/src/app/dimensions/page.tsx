@@ -38,6 +38,19 @@ export default function DimensionsPage() {
           <line x1="0" x2="100%" y1="80" y2="80" />
         </svg>
       </div>
+      <p className={styles.rule}>Absolute minimum width: 176</p>
+      <div className={styles.absMinBox}>
+        <svg className={styles.cardGrid} height="100%" width="100%">
+          <line x1="16" x2="16" y1="0" y2="100%" />
+          <line x1="64" x2="64" y1="0" y2="100%" />
+          <line x1="112" x2="112" y1="0" y2="100%" />
+          <line x1="160" x2="160" y1="0" y2="100%" />
+          <line x1="176" x2="176" y1="0" y2="100%" />
+          <line x1="0" x2="100%" y1="16" y2="16" />
+          <line x1="0" x2="100%" y1="64" y2="64" />
+          <line x1="0" x2="100%" y1="80" y2="80" />
+        </svg>
+      </div>
       <p className={styles.rule}>Maximum content width: 544 (with padding), 512 (without)</p>
       <p className={styles.rule}>sm: 544</p>
       <div className={styles.splitBox}>

@@ -1,12 +1,14 @@
 .page {
   max-width: 544px;
   min-height: 100vh;
+  min-width: 176px;
   padding: 80px 16px;
 }
 
 .gridPage {
   max-width: 544px;
   min-height: 100vh;
+  min-width: 176px;
   overflow: hidden;
   padding: 80px 16px;
   position: relative;
@@ -29,6 +31,17 @@
   line-height: 1.5;
   margin-top: 24px;
   position: relative;
+  z-index: 1;
+}
+
+.absMinBox {
+  background: #3f4953; /* mist-700 */
+  height: 80px;
+  margin-left: -16px;
+  margin-top: 24px;
+  overflow: hidden;
+  position: relative;
+  width: 176px;
   z-index: 1;
 }
 
