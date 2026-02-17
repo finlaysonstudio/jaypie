@@ -23,7 +23,7 @@ export default function DimensionsPage() {
       />
       {view === "grid" && <HandDrawnGrid />}
       <h1 className={styles.title}>Dimensions</h1>
-      <p className={styles.rule}>Minimum supported width: 272</p>
+      <p className={styles.rule}>Minimum supported width: 272 (xs)</p>
       <div className={styles.minBox}>
         <svg className={styles.cardGrid} height="100%" width="100%">
           <line x1="16" x2="16" y1="0" y2="100%" />
@@ -38,7 +38,7 @@ export default function DimensionsPage() {
           <line x1="0" x2="100%" y1="80" y2="80" />
         </svg>
       </div>
-      <p className={styles.rule}>Absolute minimum width: 176</p>
+      <p className={styles.rule}>Absolute minimum width: 176 (xxs)</p>
       <div className={styles.absMinBox}>
         <svg className={styles.cardGrid} height="100%" width="100%">
           <line x1="16" x2="16" y1="0" y2="100%" />
@@ -53,6 +53,9 @@ export default function DimensionsPage() {
       </div>
       <p className={styles.rule}>Maximum content width: 544 (with padding), 512 (without)</p>
       <p className={styles.rule}>sm: 544</p>
+      <p className={styles.rule}>
+        Small is the minimum width for a split-screen layout.
+      </p>
       <div className={styles.splitBox}>
         <svg className={styles.cardGrid} height="100%" width="100%">
           <line x1="16" x2="16" y1="0" y2="100%" />
@@ -74,6 +77,10 @@ export default function DimensionsPage() {
           <line x1="0" x2="100%" y1="80" y2="80" />
         </svg>
       </div>
+      <p className={styles.rule}>md: 656</p>
+      <p className={styles.rule}>
+        Medium is the narrowest a full-width content can sit beside the menu.
+      </p>
       <p className={styles.lorem}>
         Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod
         tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim
