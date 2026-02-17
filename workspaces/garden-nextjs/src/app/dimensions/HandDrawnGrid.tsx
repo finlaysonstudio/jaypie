@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import styles from "./dimensions.module.css";
 
 // Fixed grid positions (cumulative)
-const X_POSITIONS = [16, 64, 112, 128];
+const X_POSITIONS = [16, 64, 112, 128, 560, 672];
 const Y_POSITIONS = [16, 64, 80];
 
 export function HandDrawnGrid() {
@@ -26,8 +26,6 @@ export function HandDrawnGrid() {
 
     for (const x of X_POSITIONS) {
       lines.push({ d: `M ${x} 0 L ${x} ${size.height}`, key: `vl${x}` });
-      const rx = size.width - x;
-      lines.push({ d: `M ${rx} 0 L ${rx} ${size.height}`, key: `vr${x}` });
     }
 
     for (const y of Y_POSITIONS) {

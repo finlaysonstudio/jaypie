@@ -50,7 +50,7 @@
 }
 
 .card {
-  background: #545352; /* gray-600 */
+  background: #3f4953; /* mist-700 */
   height: 192px;
   margin-top: 24px;
   overflow: hidden;
@@ -62,6 +62,36 @@
 .cardContent {
   padding: 16px;
   position: relative;
+  z-index: 1;
+}
+
+.rule {
+  color: var(--text-muted);
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  line-height: 1.5;
+  margin-top: 24px;
+  position: relative;
+  z-index: 1;
+}
+
+.minBox {
+  background: #3f4953; /* mist-700 */
+  height: 80px;
+  margin-top: 24px;
+  overflow: hidden;
+  position: relative;
+  width: 272px;
+  z-index: 1;
+}
+
+.wideSquare {
+  background: #3f4953; /* mist-700 */
+  height: 272px;
+  margin-top: 24px;
+  overflow: hidden;
+  position: relative;
+  width: 544px;
   z-index: 1;
 }
 
