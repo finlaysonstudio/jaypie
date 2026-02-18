@@ -111,6 +111,7 @@ Utilize these MCP when provided. When they are unavailable but would be useful, 
 - After any functionality changes, check @packages/mcp/prompts and update relevant documentation
 - Add release notes to `packages/mcp/release-notes/<package>/<version>.md` for version bumps with frontmatter (version, date, summary)
 - Updating mcp or testkit requires bumping the package version (patch)
+- NEVER update major or minor versions without explicit instructions. Even if a new feature is added, only use patch.
 - Do not bump a package twice in a branch. Versions are only published when merged into main. Check the current version on NPM when unsure
 - Avoid default exports
 - Do not preserve backwards compatibility in unreleased changes or pre-1.0 packages
