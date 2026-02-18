@@ -9,7 +9,7 @@
   "scripts": {
     "build": "node esbuild.config.mjs",
     "clean": "rimraf dist",
-    "dev": "tsx watch index.ts",
+    "dev": "tsx watch --env-file .env index.ts",
     "format": "eslint --fix --quiet .",
     "lint": "eslint --quiet .",
     "start": "node dist/index.mjs",
