@@ -93,6 +93,8 @@ export interface OperateRequest {
   format?: JsonObject;
   /** Provider-specific options */
   providerOptions?: JsonObject;
+  /** Sampling temperature (0-2 for most providers) */
+  temperature?: number;
   /** User identifier for tracking */
   user?: string;
 }

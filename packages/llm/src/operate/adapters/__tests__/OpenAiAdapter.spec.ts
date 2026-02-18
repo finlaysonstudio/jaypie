@@ -462,6 +462,57 @@ describe("OpenAiAdapter", () => {
       expect(result.model).toBe(PROVIDER.OPENAI.MODEL.DEFAULT);
     });
 
+    it("sets temperature on request when provided", () => {
+      const request: OperateRequest = {
+        model: PROVIDER.OPENAI.MODEL.DEFAULT,
+        messages: [
+          {
+            content: "Hello",
+            role: LlmMessageRole.User,
+            type: LlmMessageType.Message,
+          },
+        ],
+        temperature: 0.7,
+      };
+
+      const result = openAiAdapter.buildRequest(request) as Record<
+        string,
+        unknown
+      >;
+
+      expect(result.temperature).toBe(0.7);
+    });
+
+    it("temperature takes precedence over providerOptions", () => {
+      const request: OperateRequest = {
+        model: PROVIDER.OPENAI.MODEL.DEFAULT,
+        messages: [],
+        providerOptions: { temperature: 0.3 },
+        temperature: 0.9,
+      };
+
+      const result = openAiAdapter.buildRequest(request) as Record<
+        string,
+        unknown
+      >;
+
+      expect(result.temperature).toBe(0.9);
+    });
+
+    it("does not set temperature when not provided", () => {
+      const request: OperateRequest = {
+        model: PROVIDER.OPENAI.MODEL.DEFAULT,
+        messages: [],
+      };
+
+      const result = openAiAdapter.buildRequest(request) as Record<
+        string,
+        unknown
+      >;
+
+      expect(result.temperature).toBeUndefined();
+    });
+
     it("handles response with reasoning items", () => {
       const response = {
         output: [

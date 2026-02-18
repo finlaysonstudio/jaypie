@@ -799,6 +799,54 @@ describe("OpenRouterAdapter", () => {
       expect(result.model).toBe(PROVIDER.OPENROUTER.MODEL.DEFAULT);
     });
 
+    it("sets temperature on request when provided", () => {
+      const request: OperateRequest = {
+        model: PROVIDER.OPENROUTER.MODEL.DEFAULT,
+        messages: [
+          {
+            content: "Hello",
+            role: LlmMessageRole.User,
+            type: LlmMessageType.Message,
+          },
+        ],
+        temperature: 0.7,
+      };
+
+      const result = openRouterAdapter.buildRequest(
+        request,
+      ) as unknown as Record<string, unknown>;
+
+      expect(result.temperature).toBe(0.7);
+    });
+
+    it("temperature takes precedence over providerOptions", () => {
+      const request: OperateRequest = {
+        model: PROVIDER.OPENROUTER.MODEL.DEFAULT,
+        messages: [],
+        providerOptions: { temperature: 0.3 },
+        temperature: 0.9,
+      };
+
+      const result = openRouterAdapter.buildRequest(
+        request,
+      ) as unknown as Record<string, unknown>;
+
+      expect(result.temperature).toBe(0.9);
+    });
+
+    it("does not set temperature when not provided", () => {
+      const request: OperateRequest = {
+        model: PROVIDER.OPENROUTER.MODEL.DEFAULT,
+        messages: [],
+      };
+
+      const result = openRouterAdapter.buildRequest(
+        request,
+      ) as unknown as Record<string, unknown>;
+
+      expect(result.temperature).toBeUndefined();
+    });
+
     it("sets tool_choice to auto (many OpenRouter models don't support required)", () => {
       const request: OperateRequest = {
         model: PROVIDER.OPENROUTER.MODEL.DEFAULT,

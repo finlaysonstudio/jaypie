@@ -2,6 +2,7 @@ import { APEX, initClient, queryByScope } from "@jaypie/dynamodb";
 import { log } from "@jaypie/logger";
 
 import { extractToken, validateApiKey } from "../../lib/apikey/validate";
+import { isSessionToken, validateSession } from "../../lib/session/validate";
 
 //
 //
@@ -79,17 +80,39 @@ export async function GET(request: Request): Promise<Response> {
     return Response.json(body, { status: 500 });
   }
 
-  // Check authenticated: validate Bearer token
+  // Check authenticated: cookie first, then Bearer token
   let authenticated = false;
-  const authorization = request.headers.get("authorization") ?? undefined;
-  const token = extractToken(authorization);
 
-  if (token) {
+  // 1. Check httpOnly cookie (XSS-safe)
+  const cookieHeader = request.headers.get("cookie") ?? "";
+  const cookieMatch = cookieHeader.match(/garden-session=([^\s;]+)/);
+  const cookieToken = cookieMatch?.[1];
+
+  if (cookieToken && isSessionToken(cookieToken)) {
     try {
-      await validateApiKey(token);
+      await validateSession(cookieToken);
       authenticated = true;
     } catch {
       authenticated = false;
+    }
+  }
+
+  // 2. Check Bearer token (session or API key)
+  if (!authenticated) {
+    const authorization = request.headers.get("authorization") ?? undefined;
+    const token = extractToken(authorization);
+
+    if (token) {
+      try {
+        if (isSessionToken(token)) {
+          await validateSession(token);
+        } else {
+          await validateApiKey(token);
+        }
+        authenticated = true;
+      } catch {
+        authenticated = false;
+      }
     }
   }
 

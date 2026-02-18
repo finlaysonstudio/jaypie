@@ -281,11 +281,53 @@
   color: var(--text-primary);
 }
 
+.sideMenuHeader {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  padding: 16px 16px 0;
+}
+
+.searchBox {
+  align-items: center;
+  background: rgba(122, 102, 82, 0.05);
+  border-radius: 7px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex: 1;
+  gap: 8px;
+  height: 48px;
+  padding: 0 12px;
+}
+
+.searchIcon {
+  color: rgba(207, 203, 199, 0.4);
+  flex-shrink: 0;
+  stroke-width: var(--icon-stroke-thin);
+}
+
+.searchInput,
+.searchInput[type="text"] {
+  appearance: none;
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  font-size: 0.875rem;
+  height: 100%;
+  outline: none;
+  width: 100%;
+}
+
+.searchBox:focus-within .searchIcon {
+  color: rgba(207, 203, 199, 0.7);
+}
+
 .sideMenuNav {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  padding: 16px 8px 8px;
+  padding: 16px 16px 8px;
 }
 
 .navItem {
@@ -296,8 +338,8 @@
   display: flex;
   font-family: var(--font-ui);
   font-size: 0.875rem;
-  gap: 12px;
-  padding: 14px 22px;
+  gap: 20px;
+  padding: 14px 22px 14px 14px;
   text-decoration: none;
   transition: all 0.15s ease;
 }
@@ -321,7 +363,7 @@
 
 .sideMenuFooter {
   margin-top: auto;
-  padding: 8px 8px 16px;
+  padding: 8px 16px 16px;
 }
 
 .iconButton {
@@ -369,6 +411,19 @@
 .iconButtonActive svg {
   color: var(--text-primary);
   stroke-width: var(--icon-stroke-normal);
+}
+
+.iconButtonGhost {
+  background: transparent;
+  box-shadow: none;
+}
+
+.iconButtonGhost svg {
+  color: rgba(207, 203, 199, 0.5);
+}
+
+.iconButtonGhost:hover svg {
+  color: var(--text-primary);
 }
 
 .hero {

@@ -149,6 +149,7 @@ export class StreamLoop {
           model: options.model ?? this.adapter.defaultModel,
           providerOptions: options.providerOptions,
           system: options.system,
+          temperature: options.temperature,
           tools: state.formattedTools,
           user: options.user,
         };
@@ -234,6 +235,7 @@ export class StreamLoop {
       model: options.model ?? this.adapter.defaultModel,
       providerOptions: options.providerOptions,
       system: options.system,
+      temperature: options.temperature,
       tools: state.formattedTools,
       user: options.user,
     };

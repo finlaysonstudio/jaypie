@@ -630,6 +630,48 @@ describe("AnthropicAdapter", () => {
       expect(result.model).toBe(PROVIDER.ANTHROPIC.MODEL.DEFAULT);
     });
 
+    it("sets temperature on request when provided", () => {
+      const request: OperateRequest = {
+        model: PROVIDER.ANTHROPIC.MODEL.LARGE,
+        messages: [
+          {
+            content: "Hello",
+            role: LlmMessageRole.User,
+            type: LlmMessageType.Message,
+          },
+        ],
+        temperature: 0.7,
+      };
+
+      const result = anthropicAdapter.buildRequest(request);
+
+      expect(result.temperature).toBe(0.7);
+    });
+
+    it("temperature takes precedence over providerOptions", () => {
+      const request: OperateRequest = {
+        model: PROVIDER.ANTHROPIC.MODEL.LARGE,
+        messages: [],
+        providerOptions: { temperature: 0.3 },
+        temperature: 0.9,
+      };
+
+      const result = anthropicAdapter.buildRequest(request);
+
+      expect(result.temperature).toBe(0.9);
+    });
+
+    it("does not set temperature when not provided", () => {
+      const request: OperateRequest = {
+        model: PROVIDER.ANTHROPIC.MODEL.LARGE,
+        messages: [],
+      };
+
+      const result = anthropicAdapter.buildRequest(request);
+
+      expect(result.temperature).toBeUndefined();
+    });
+
     it("sets tool_choice to any when structured output tool present", () => {
       const request: OperateRequest = {
         model: PROVIDER.ANTHROPIC.MODEL.LARGE,

@@ -667,6 +667,48 @@ describe("GeminiAdapter", () => {
       expect(result.model).toBe(PROVIDER.GEMINI.MODEL.DEFAULT);
     });
 
+    it("sets temperature in config when provided", () => {
+      const request: OperateRequest = {
+        model: PROVIDER.GEMINI.MODEL.SMALL,
+        messages: [
+          {
+            content: "Hello",
+            role: LlmMessageRole.User,
+            type: LlmMessageType.Message,
+          },
+        ],
+        temperature: 0.7,
+      };
+
+      const result = geminiAdapter.buildRequest(request);
+
+      expect(result.config?.temperature).toBe(0.7);
+    });
+
+    it("temperature takes precedence over providerOptions", () => {
+      const request: OperateRequest = {
+        model: PROVIDER.GEMINI.MODEL.SMALL,
+        messages: [],
+        providerOptions: { temperature: 0.3 },
+        temperature: 0.9,
+      };
+
+      const result = geminiAdapter.buildRequest(request);
+
+      expect(result.config?.temperature).toBe(0.9);
+    });
+
+    it("does not set temperature when not provided", () => {
+      const request: OperateRequest = {
+        model: PROVIDER.GEMINI.MODEL.SMALL,
+        messages: [],
+      };
+
+      const result = geminiAdapter.buildRequest(request);
+
+      expect(result.config?.temperature).toBeUndefined();
+    });
+
     it("maps assistant role to model", () => {
       const request: OperateRequest = {
         model: PROVIDER.GEMINI.MODEL.SMALL,

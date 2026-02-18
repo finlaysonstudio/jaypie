@@ -1,0 +1,108 @@
+.page {
+  margin-left: auto;
+  max-width: 544px;
+  min-height: 100vh;
+  min-width: 176px;
+  padding: 80px 16px;
+}
+
+.gridPage {
+  margin-left: auto;
+  max-width: 544px;
+  min-height: 100vh;
+  min-width: 176px;
+  overflow: hidden;
+  padding: 80px 16px;
+}
+
+.title {
+  font-family: var(--font-brand);
+  font-size: 2.5rem;
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  margin-bottom: 24px;
+  position: relative;
+  z-index: 1;
+}
+
+.rule {
+  color: var(--text-muted);
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  line-height: 1.5;
+  margin-top: 24px;
+  position: relative;
+  z-index: 1;
+}
+
+.absMinBox {
+  background: #3f4953; /* mist-700 */
+  height: 80px;
+  margin-left: -16px;
+  margin-top: 24px;
+  overflow: hidden;
+  position: relative;
+  width: 176px;
+  z-index: 1;
+}
+
+.minBox {
+  background: #3f4953; /* mist-700 */
+  height: 80px;
+  margin-left: -16px;
+  margin-top: 24px;
+  overflow: hidden;
+  position: relative;
+  width: 272px;
+  z-index: 1;
+}
+
+.splitBox {
+  background: #3f4953; /* mist-700 */
+  height: 80px;
+  margin-left: -16px;
+  margin-top: 24px;
+  overflow: hidden;
+  position: relative;
+  width: 544px;
+  z-index: 1;
+}
+
+.lorem {
+  color: var(--text-muted);
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  line-height: 1.75;
+  margin-top: 48px;
+  position: relative;
+  z-index: 1;
+}
+
+.cardGrid {
+  inset: 0;
+  position: absolute;
+}
+
+.cardGrid line {
+  stroke: #282726; /* zinc-800 */
+  stroke-width: 0.5;
+}
+
+.grid {
+  inset: 0;
+  position: fixed;
+}
+
+.grid path {
+  fill: none;
+  stroke: rgba(207, 203, 199, 0.12);
+  stroke-width: 0.5;
+}
+
+@media (min-width: 656px) {
+  .page,
+  .gridPage {
+    margin-left: 112px;
+    padding-top: 16px;
+  }
+}

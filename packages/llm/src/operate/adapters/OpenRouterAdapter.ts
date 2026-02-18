@@ -235,6 +235,12 @@ export class OpenRouterAdapter extends BaseProviderAdapter {
       Object.assign(openRouterRequest, request.providerOptions);
     }
 
+    // First-class temperature takes precedence over providerOptions
+    if (request.temperature !== undefined) {
+      (openRouterRequest as unknown as Record<string, unknown>).temperature =
+        request.temperature;
+    }
+
     return openRouterRequest;
   }
 

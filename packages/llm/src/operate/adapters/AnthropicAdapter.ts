@@ -251,6 +251,11 @@ export class AnthropicAdapter extends BaseProviderAdapter {
       Object.assign(anthropicRequest, request.providerOptions);
     }
 
+    // First-class temperature takes precedence over providerOptions
+    if (request.temperature !== undefined) {
+      anthropicRequest.temperature = request.temperature;
+    }
+
     return anthropicRequest;
   }
 

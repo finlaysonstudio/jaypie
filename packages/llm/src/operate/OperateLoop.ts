@@ -146,6 +146,7 @@ export class OperateLoop {
         model: options.model ?? this.adapter.defaultModel,
         providerOptions: options.providerOptions,
         system: options.system,
+        temperature: options.temperature,
         tools: state.formattedTools,
         user: options.user,
       };
@@ -246,6 +247,7 @@ export class OperateLoop {
       model: options.model ?? this.adapter.defaultModel,
       providerOptions: options.providerOptions,
       system: options.system,
+      temperature: options.temperature,
       tools: state.formattedTools,
       user: options.user,
     };

@@ -3,12 +3,15 @@
 import {
   Ban,
   Birdhouse,
+  ChevronLeft,
+  Search,
   CircleAlert,
   CircleCheck,
   CircleHelp,
   CircleMinus,
   Component,
   Lock,
+  Proportions,
   KeyRound,
   Menu,
   PowerOff,
@@ -26,6 +29,7 @@ const NAV_ITEMS = [
   { href: "/", icon: Birdhouse, label: "Home" },
   { href: "/colors", icon: SwatchBook, label: "Colors" },
   { icon: Component, label: "Components" },
+  { href: "/dimensions", icon: Proportions, label: "Dimensions" },
 ];
 
 const STATUS_ICONS: Record<ConnectionStatus, typeof CircleHelp> = {
@@ -48,10 +52,12 @@ function AuthModal({
   authenticate,
   clearAuth,
   connectionStatus,
+  hint,
 }: {
   authenticate: (key: string) => Promise<boolean>;
   clearAuth: () => void;
   connectionStatus: ConnectionStatus;
+  hint: string | null;
 }) {
   const [apiKey, setApiKey] = useState("");
   const [error, setError] = useState("");
@@ -93,8 +99,6 @@ function AuthModal({
   }, [isValid]);
 
   if (isAuthenticated) {
-    const storedKey = localStorage.getItem("garden-api-key") ?? "";
-    const hint = storedKey.slice(-4);
     return (
       <div className={styles.authWrapper} onClick={(e) => e.stopPropagation()}>
         <div className={styles.authModal}>
@@ -160,11 +164,11 @@ function AuthModal({
   );
 }
 
-export function NavMenu() {
+export function NavMenu({ hideMenu, onPageIconClick, pageIcon: PageIcon = Birdhouse }: { hideMenu?: boolean; onPageIconClick?: () => void; pageIcon?: typeof Birdhouse }) {
   const [isOpen, setIsOpen] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
   const [showStatus, setShowStatus] = useState(false);
-  const { authenticate, clearAuth, connectionStatus, response } = useStatus();
+  const { authenticate, clearAuth, connectionStatus, hint: sessionHint, response } = useStatus();
   const StatusIcon = STATUS_ICONS[connectionStatus];
   const statusStyle = STATUS_STYLES[connectionStatus];
 
@@ -175,6 +179,25 @@ export function NavMenu() {
       {isOpen && (
         <div className={styles.menuContainer}>
           <div className={styles.sideMenu}>
+            <div className={styles.sideMenuHeader}>
+              <div
+                className={styles.iconButton}
+                onClick={() => {
+                  setIsOpen(false);
+                  setShowAuth(false);
+                  setShowStatus(false);
+                }}
+              >
+                <ChevronLeft size={20} />
+              </div>
+              <div className={styles.searchBox}>
+                <input
+                  className={styles.searchInput}
+                  type="text"
+                />
+                <Search className={styles.searchIcon} size={16} />
+              </div>
+            </div>
             <nav className={styles.sideMenuNav}>
               {NAV_ITEMS.map(({ href, icon: Icon, label }) =>
                 href ? (
@@ -256,6 +279,7 @@ export function NavMenu() {
                 authenticate={authenticate}
                 clearAuth={clearAuth}
                 connectionStatus={connectionStatus}
+                hint={sessionHint}
               />
             )}
           </div>
@@ -265,12 +289,17 @@ export function NavMenu() {
         <div className={styles.navBox}>
           <div
             className={styles.iconButton}
-            onClick={() => setIsOpen(true)}
+            onClick={hideMenu ? undefined : () => setIsOpen(true)}
+            style={hideMenu ? { visibility: "hidden" } : undefined}
           >
             <Menu size={20} />
           </div>
-          <div className={styles.iconButton}>
-            <Birdhouse size={18} />
+          <div
+            className={`${styles.iconButton}${hideMenu ? ` ${styles.iconButtonGhost}` : ""}`}
+            onClick={onPageIconClick}
+            style={onPageIconClick ? { cursor: "pointer" } : undefined}
+          >
+            <PageIcon size={20} />
           </div>
         </div>
       )}

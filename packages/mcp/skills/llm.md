@@ -388,6 +388,7 @@ interface LlmOperateOptions {
   instructions?: string;                // Additional instructions
   model?: string;                       // Model override
   system?: string;                      // System prompt
+  temperature?: number;                 // Sampling temperature (0-2)
   tools?: LlmTool[] | Toolkit;         // Available tools
   turns?: boolean | number;             // Max conversation turns
   user?: string;                        // User ID for logging
