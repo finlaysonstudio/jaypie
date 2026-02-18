@@ -30,7 +30,8 @@ src/
 │   │   └── ResponseBuilder.ts
 │   ├── retry/                # Retry logic
 │   │   ├── RetryExecutor.ts
-│   │   └── RetryPolicy.ts
+│   │   ├── RetryPolicy.ts
+│   │   └── isTransientNetworkError.ts  # Network error detection
 │   └── types.ts              # Internal types
 ├── providers/                # Provider implementations
 │   ├── anthropic/
@@ -82,7 +83,7 @@ Provider Class → OperateLoop → ProviderAdapter → Provider API
 
 - **Llm** (`Llm.ts`): Main facade that auto-selects provider based on model name
 - **OperateLoop** (`operate/OperateLoop.ts`): Handles multi-turn conversations, tool execution, retry logic (non-streaming)
-- **StreamLoop** (`operate/StreamLoop.ts`): Streaming variant with automatic tool execution (yields chunks as they arrive)
+- **StreamLoop** (`operate/StreamLoop.ts`): Streaming variant with automatic tool execution, retry for transient network errors (yields chunks as they arrive)
 - **ProviderAdapter** (`operate/adapters/`): Translates between standardized format and provider APIs
 - **Toolkit** (`tools/Toolkit.class.ts`): Container for LlmTool definitions with call execution
 
