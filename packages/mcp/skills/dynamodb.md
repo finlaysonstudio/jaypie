@@ -112,6 +112,34 @@ const table = new JaypieDynamoDb(this, "myApp", {
 
 ## Local Development
 
+Use docker-compose for local DynamoDB. The `@jaypie/dynamodb` MCP tool can generate a `docker-compose.yml` with custom ports.
+
+### Suggested package.json Scripts
+
+```json
+{
+  "scripts": {
+    "dynamo:init": "docker compose up -d && npm run dynamo:create-table",
+    "dynamo:create-table": "AWS_ACCESS_KEY_ID=local AWS_SECRET_ACCESS_KEY=local aws dynamodb create-table --table-name jaypie-local --attribute-definitions AttributeName=pk,AttributeType=S AttributeName=sk,AttributeType=S --key-schema AttributeName=pk,KeyType=HASH AttributeName=sk,KeyType=RANGE --billing-mode PAY_PER_REQUEST --endpoint-url http://127.0.0.1:9060 2>/dev/null || true",
+    "dynamo:remove": "docker compose down -v",
+    "dynamo:start": "docker compose up -d",
+    "dynamo:stop": "docker compose down"
+  }
+}
+```
+
+| Script | Description |
+|--------|-------------|
+| `dynamo:init` | Start containers and create the default table |
+| `dynamo:create-table` | Create the local table (idempotent) |
+| `dynamo:remove` | Stop containers and delete data volumes |
+| `dynamo:start` | Start containers (data persists) |
+| `dynamo:stop` | Stop containers (data persists) |
+
+Adjust the `--endpoint-url` port and `--table-name` to match your `docker-compose.yml`.
+
+### Manual Setup
+
 ```bash
 # Start local DynamoDB
 docker run -p 8000:8000 amazon/dynamodb-local

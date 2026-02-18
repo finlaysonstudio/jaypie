@@ -7,7 +7,7 @@
   "author": "Finlayson Studio",
   "scripts": {
     "build": "next build",
-    "dev": "next dev",
+    "dev": "next dev --port 3160",
     "lint": "next lint",
     "start": "next start",
     "typecheck": "tsc --noEmit"
