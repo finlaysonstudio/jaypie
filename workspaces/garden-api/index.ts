@@ -6,5 +6,5 @@ import app from "./src/app.js";
 export const handler = createLambdaStreamHandler(app);
 
 if (process.env.NODE_ENV === "development") {
-  app.listen(8080);
+  app.listen(8060);
 }
