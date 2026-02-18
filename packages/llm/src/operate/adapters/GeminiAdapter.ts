@@ -26,6 +26,7 @@ import {
   StandardToolCall,
   StandardToolResult,
 } from "../types.js";
+import { isTransientNetworkError } from "../retry/isTransientNetworkError.js";
 import { BaseProviderAdapter } from "./ProviderAdapter.interface.js";
 import {
   GeminiContent,
@@ -587,6 +588,15 @@ export class GeminiAdapter extends BaseProviderAdapter {
       errorMessage.includes("connection") ||
       errorMessage.includes("ECONNREFUSED")
     ) {
+      return {
+        error,
+        category: ErrorCategory.Retryable,
+        shouldRetry: true,
+      };
+    }
+
+    // Check for transient network errors (ECONNRESET, etc.)
+    if (isTransientNetworkError(error)) {
       return {
         error,
         category: ErrorCategory.Retryable,

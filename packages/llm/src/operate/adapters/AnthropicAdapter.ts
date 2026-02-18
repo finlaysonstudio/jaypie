@@ -26,6 +26,7 @@ import {
   StandardToolCall,
   StandardToolResult,
 } from "../types.js";
+import { isTransientNetworkError } from "../retry/isTransientNetworkError.js";
 import { BaseProviderAdapter } from "./ProviderAdapter.interface.js";
 
 //
@@ -598,6 +599,15 @@ export class AnthropicAdapter extends BaseProviderAdapter {
         error,
         category: ErrorCategory.Unrecoverable,
         shouldRetry: false,
+      };
+    }
+
+    // Check for transient network errors (ECONNRESET, etc.)
+    if (isTransientNetworkError(error)) {
+      return {
+        error,
+        category: ErrorCategory.Retryable,
+        shouldRetry: true,
       };
     }
 

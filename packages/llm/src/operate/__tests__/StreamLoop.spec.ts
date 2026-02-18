@@ -17,6 +17,7 @@ import {
   LlmStreamChunkType,
 } from "../../types/LlmStreamChunk.interface.js";
 import { ErrorCategory, ParsedResponse } from "../types.js";
+import { RetryPolicy } from "../retry/RetryPolicy.js";
 import { Toolkit } from "../../tools/Toolkit.class.js";
 
 //
@@ -1160,6 +1161,155 @@ describe("StreamLoop", () => {
       await collectChunks(loop.execute("Hello", { format }));
 
       expect(mockAdapter.formatOutputSchema).toHaveBeenCalledWith(format);
+    });
+  });
+
+  // Retry Logic
+  describe("Retry Logic", () => {
+    it("retries on connection error before any chunks are yielded", async () => {
+      let callCount = 0;
+      mockAdapter.executeStreamRequest = vi.fn(
+        async function* (): AsyncIterable<LlmStreamChunk> {
+          callCount++;
+          if (callCount === 1) {
+            throw new Error("read ECONNRESET");
+          }
+          yield { type: LlmStreamChunkType.Text, content: "Success" };
+          yield {
+            type: LlmStreamChunkType.Done,
+            usage: [
+              {
+                input: 10,
+                output: 5,
+                reasoning: 0,
+                total: 15,
+                provider: "mock",
+                model: "mock-model",
+              },
+            ],
+          };
+        },
+      );
+
+      // Classify ECONNRESET as retryable
+      mockAdapter.classifyError = vi.fn(() => ({
+        error: new Error("read ECONNRESET"),
+        category: ErrorCategory.Retryable,
+        shouldRetry: true,
+      }));
+
+      const loop = new StreamLoop({
+        adapter: mockAdapter,
+        client: mockClient,
+        retryPolicy: new RetryPolicy({ maxRetries: 3, initialDelayMs: 1 }),
+      });
+
+      const chunks = await collectChunks(loop.execute("Hello"));
+
+      // Should have retried and succeeded
+      expect(mockAdapter.executeStreamRequest).toHaveBeenCalledTimes(2);
+      const textChunks = chunks.filter(
+        (c) => c.type === LlmStreamChunkType.Text,
+      );
+      expect(textChunks).toHaveLength(1);
+      expect(textChunks[0]).toMatchObject({ content: "Success" });
+    });
+
+    it("emits error chunk when stream fails after chunks were yielded", async () => {
+      mockAdapter.executeStreamRequest = vi.fn(
+        async function* (): AsyncIterable<LlmStreamChunk> {
+          yield { type: LlmStreamChunkType.Text, content: "Partial" };
+          throw new Error("connection lost mid-stream");
+        },
+      );
+
+      mockAdapter.classifyError = vi.fn(() => ({
+        error: new Error("connection lost mid-stream"),
+        category: ErrorCategory.Retryable,
+        shouldRetry: true,
+      }));
+
+      const loop = new StreamLoop({
+        adapter: mockAdapter,
+        client: mockClient,
+        retryPolicy: new RetryPolicy({ maxRetries: 3, initialDelayMs: 1 }),
+      });
+
+      const chunks = await collectChunks(loop.execute("Hello"));
+
+      // Should NOT have retried (chunks were already yielded)
+      expect(mockAdapter.executeStreamRequest).toHaveBeenCalledTimes(1);
+
+      // Should have the partial text + error + done chunks
+      const textChunks = chunks.filter(
+        (c) => c.type === LlmStreamChunkType.Text,
+      );
+      expect(textChunks).toHaveLength(1);
+
+      const errorChunks = chunks.filter(
+        (c) => c.type === LlmStreamChunkType.Error,
+      );
+      expect(errorChunks).toHaveLength(1);
+      expect(errorChunks[0]).toMatchObject({
+        type: LlmStreamChunkType.Error,
+        error: { status: 502, title: "Stream Error" },
+      });
+    });
+
+    it("throws BadGatewayError when retries are exhausted", async () => {
+      mockAdapter.executeStreamRequest = vi.fn(
+        // eslint-disable-next-line require-yield
+        async function* (): AsyncIterable<LlmStreamChunk> {
+          throw new Error("persistent failure");
+        },
+      );
+
+      mockAdapter.classifyError = vi.fn(() => ({
+        error: new Error("persistent failure"),
+        category: ErrorCategory.Retryable,
+        shouldRetry: true,
+      }));
+
+      const loop = new StreamLoop({
+        adapter: mockAdapter,
+        client: mockClient,
+        retryPolicy: new RetryPolicy({ maxRetries: 2, initialDelayMs: 1 }),
+      });
+
+      await expect(collectChunks(loop.execute("Hello"))).rejects.toThrow(
+        "Bad Gateway",
+      );
+
+      // Should have attempted 3 times (initial + 2 retries)
+      expect(mockAdapter.executeStreamRequest).toHaveBeenCalledTimes(3);
+    });
+
+    it("does not retry non-retryable errors", async () => {
+      mockAdapter.executeStreamRequest = vi.fn(
+        // eslint-disable-next-line require-yield
+        async function* (): AsyncIterable<LlmStreamChunk> {
+          throw new Error("authentication failed");
+        },
+      );
+
+      mockAdapter.classifyError = vi.fn(() => ({
+        error: new Error("authentication failed"),
+        category: ErrorCategory.Unrecoverable,
+        shouldRetry: false,
+      }));
+
+      const loop = new StreamLoop({
+        adapter: mockAdapter,
+        client: mockClient,
+        retryPolicy: new RetryPolicy({ maxRetries: 3, initialDelayMs: 1 }),
+      });
+
+      await expect(collectChunks(loop.execute("Hello"))).rejects.toThrow(
+        "Bad Gateway",
+      );
+
+      // Should have only attempted once
+      expect(mockAdapter.executeStreamRequest).toHaveBeenCalledTimes(1);
     });
   });
 });

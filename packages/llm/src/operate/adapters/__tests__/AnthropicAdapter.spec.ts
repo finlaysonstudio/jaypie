@@ -614,6 +614,28 @@ describe("AnthropicAdapter", () => {
         expect(result.category).toBe(ErrorCategory.Unknown);
         expect(result.shouldRetry).toBe(true);
       });
+
+      it("classifies ECONNRESET as retryable", () => {
+        const error = new Error("read ECONNRESET");
+        (error as unknown as { code: string }).code = "ECONNRESET";
+
+        const result = anthropicAdapter.classifyError(error);
+
+        expect(result.category).toBe(ErrorCategory.Retryable);
+        expect(result.shouldRetry).toBe(true);
+      });
+
+      it("classifies TypeError: terminated with ECONNRESET cause as retryable", () => {
+        const cause = new Error("read ECONNRESET");
+        (cause as unknown as { code: string }).code = "ECONNRESET";
+        const error = new TypeError("terminated");
+        (error as unknown as { cause: Error }).cause = cause;
+
+        const result = anthropicAdapter.classifyError(error);
+
+        expect(result.category).toBe(ErrorCategory.Retryable);
+        expect(result.shouldRetry).toBe(true);
+      });
     });
   });
 

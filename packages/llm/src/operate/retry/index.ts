@@ -9,6 +9,8 @@ export {
 } from "./RetryPolicy.js";
 export type { RetryPolicyConfig } from "./RetryPolicy.js";
 
+export { isTransientNetworkError } from "./isTransientNetworkError.js";
+
 export { RetryExecutor } from "./RetryExecutor.js";
 export type {
   ErrorClassifier,

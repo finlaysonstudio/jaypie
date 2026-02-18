@@ -28,6 +28,7 @@ import {
   StandardToolCall,
   StandardToolResult,
 } from "../types.js";
+import { isTransientNetworkError } from "../retry/isTransientNetworkError.js";
 import { BaseProviderAdapter } from "./ProviderAdapter.interface.js";
 
 //
@@ -671,6 +672,15 @@ export class OpenRouterAdapter extends BaseProviderAdapter {
         category: ErrorCategory.RateLimit,
         shouldRetry: false,
         suggestedDelayMs: 60000,
+      };
+    }
+
+    // Check for transient network errors (ECONNRESET, etc.)
+    if (isTransientNetworkError(error)) {
+      return {
+        error,
+        category: ErrorCategory.Retryable,
+        shouldRetry: true,
       };
     }
 

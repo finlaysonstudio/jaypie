@@ -1,4 +1,5 @@
 import { BadGatewayError, TooManyRequestsError } from "@jaypie/errors";
+import { sleep } from "@jaypie/kit";
 import { JsonObject } from "@jaypie/types";
 
 import { Toolkit } from "../tools/Toolkit.class.js";
@@ -22,6 +23,7 @@ import { log, maxTurnsFromOptions } from "../util/index.js";
 import { ProviderAdapter } from "./adapters/ProviderAdapter.interface.js";
 import { HookRunner, hookRunner } from "./hooks/index.js";
 import { InputProcessor, inputProcessor } from "./input/index.js";
+import { defaultRetryPolicy, RetryPolicy } from "./retry/index.js";
 import {
   OperateContext,
   OperateRequest,
@@ -39,6 +41,7 @@ export interface StreamLoopConfig {
   client: unknown;
   hookRunner?: HookRunner;
   inputProcessor?: InputProcessor;
+  retryPolicy?: RetryPolicy;
 }
 
 interface StreamLoopState {
@@ -75,12 +78,14 @@ export class StreamLoop {
   private readonly client: unknown;
   private readonly hookRunnerInstance: HookRunner;
   private readonly inputProcessorInstance: InputProcessor;
+  private readonly retryPolicy: RetryPolicy;
 
   constructor(config: StreamLoopConfig) {
     this.adapter = config.adapter;
     this.client = config.client;
     this.hookRunnerInstance = config.hookRunner ?? hookRunner;
     this.inputProcessorInstance = config.inputProcessor ?? inputProcessor;
+    this.retryPolicy = config.retryPolicy ?? defaultRetryPolicy;
   }
 
   /**
@@ -263,37 +268,91 @@ export class StreamLoop {
     // Collect tool calls from the stream
     const collectedToolCalls: StandardToolCall[] = [];
 
-    // Execute streaming request
-    const streamGenerator = this.adapter.executeStreamRequest!(
-      this.client,
-      providerRequest,
-    );
+    // Retry loop for connection-level failures
+    let attempt = 0;
+    let chunksYielded = false;
 
-    for await (const chunk of streamGenerator) {
-      // Pass through text chunks
-      if (chunk.type === LlmStreamChunkType.Text) {
-        yield chunk;
-      }
+    while (true) {
+      try {
+        // Execute streaming request
+        const streamGenerator = this.adapter.executeStreamRequest!(
+          this.client,
+          providerRequest,
+        );
 
-      // Collect tool calls
-      if (chunk.type === LlmStreamChunkType.ToolCall) {
-        collectedToolCalls.push({
-          callId: chunk.toolCall.id,
-          name: chunk.toolCall.name,
-          arguments: chunk.toolCall.arguments,
-          raw: chunk.toolCall,
-        });
-        yield chunk;
-      }
+        for await (const chunk of streamGenerator) {
+          // Pass through text chunks
+          if (chunk.type === LlmStreamChunkType.Text) {
+            chunksYielded = true;
+            yield chunk;
+          }
 
-      // Track usage from done chunk (but don't yield it yet - we'll emit our own)
-      if (chunk.type === LlmStreamChunkType.Done && chunk.usage) {
-        state.usageItems.push(...chunk.usage);
-      }
+          // Collect tool calls
+          if (chunk.type === LlmStreamChunkType.ToolCall) {
+            chunksYielded = true;
+            collectedToolCalls.push({
+              callId: chunk.toolCall.id,
+              name: chunk.toolCall.name,
+              arguments: chunk.toolCall.arguments,
+              raw: chunk.toolCall,
+            });
+            yield chunk;
+          }
 
-      // Pass through error chunks
-      if (chunk.type === LlmStreamChunkType.Error) {
-        yield chunk;
+          // Track usage from done chunk (but don't yield it yet - we'll emit our own)
+          if (chunk.type === LlmStreamChunkType.Done && chunk.usage) {
+            state.usageItems.push(...chunk.usage);
+          }
+
+          // Pass through error chunks
+          if (chunk.type === LlmStreamChunkType.Error) {
+            chunksYielded = true;
+            yield chunk;
+          }
+        }
+
+        // Stream completed successfully
+        if (attempt > 0) {
+          log.debug(`Stream request succeeded after ${attempt} retries`);
+        }
+        break;
+      } catch (error: unknown) {
+        // If chunks were already yielded, we can't transparently retry
+        if (chunksYielded) {
+          const errorMessage =
+            error instanceof Error ? error.message : String(error);
+          log.error("Stream failed after partial data was delivered");
+          log.var({ error });
+          yield {
+            type: LlmStreamChunkType.Error,
+            error: {
+              detail: errorMessage,
+              status: 502,
+              title: "Stream Error",
+            },
+          };
+          return { shouldContinue: false };
+        }
+
+        // Check if we've exhausted retries or error is not retryable
+        if (
+          !this.retryPolicy.shouldRetry(attempt) ||
+          !this.adapter.isRetryableError(error)
+        ) {
+          log.error(
+            `Stream request failed after ${this.retryPolicy.maxRetries} retries`,
+          );
+          log.var({ error });
+          const errorMessage =
+            error instanceof Error ? error.message : String(error);
+          throw new BadGatewayError(errorMessage);
+        }
+
+        const delay = this.retryPolicy.getDelayForAttempt(attempt);
+        log.warn(`Stream request failed. Retrying in ${delay}ms...`);
+        log.var({ error });
+        await sleep(delay);
+        attempt++;
       }
     }
 
