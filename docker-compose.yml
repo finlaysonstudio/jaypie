@@ -1,0 +1,30 @@
+name: jaypie-dynamodb-stack
+
+services:
+  dynamodb:
+    image: amazon/dynamodb-local:latest
+    container_name: jaypie-dynamodb
+    command: "-jar DynamoDBLocal.jar -sharedDb -dbPath /data"
+    ports:
+      - "9060:8000"
+    working_dir: /home/dynamodblocal
+    volumes:
+      - dynamodb_data:/data
+    user: "0:0"
+
+  dynamodb-admin:
+    image: aaronshaf/dynamodb-admin:latest
+    container_name: jaypie-dynamodb-admin
+    ports:
+      - "9160:8001"
+    environment:
+      - DYNAMO_ENDPOINT=http://dynamodb:8000
+      - AWS_REGION=us-east-1
+      - AWS_ACCESS_KEY_ID=local
+      - AWS_SECRET_ACCESS_KEY=local
+    depends_on:
+      - dynamodb
+
+volumes:
+  dynamodb_data:
+    driver: local
