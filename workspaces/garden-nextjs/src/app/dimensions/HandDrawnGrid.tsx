@@ -32,6 +32,14 @@ export function HandDrawnGrid() {
       lines.push({ d: `M 0 ${y} L ${size.width} ${y}`, key: `h${y}` });
     }
 
+    for (const y of Y_POSITIONS) {
+      const bottomY = size.height - y;
+      lines.push({
+        d: `M 0 ${bottomY} L ${size.width} ${bottomY}`,
+        key: `hb${y}`,
+      });
+    }
+
     return lines;
   }, [size.height, size.width]);
 
