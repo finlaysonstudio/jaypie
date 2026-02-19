@@ -1047,6 +1047,56 @@ describe("JaypieDistribution", () => {
       });
     });
 
+    it("sets Cache-Control custom header", () => {
+      const stack = new Stack();
+      const bucket = new s3.Bucket(stack, "TestBucket");
+      const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
+
+      new JaypieDistribution(stack, "TestDistribution", {
+        handler: origin,
+      });
+      const template = Template.fromStack(stack);
+
+      template.hasResourceProperties("AWS::CloudFront::ResponseHeadersPolicy", {
+        ResponseHeadersPolicyConfig: {
+          CustomHeadersConfig: {
+            Items: Match.arrayWith([
+              Match.objectLike({
+                Header: "Cache-Control",
+                Override: true,
+                Value: "no-store, no-cache, must-revalidate, proxy-revalidate",
+              }),
+            ]),
+          },
+        },
+      });
+    });
+
+    it("sets Cross-Origin-Embedder-Policy custom header", () => {
+      const stack = new Stack();
+      const bucket = new s3.Bucket(stack, "TestBucket");
+      const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
+
+      new JaypieDistribution(stack, "TestDistribution", {
+        handler: origin,
+      });
+      const template = Template.fromStack(stack);
+
+      template.hasResourceProperties("AWS::CloudFront::ResponseHeadersPolicy", {
+        ResponseHeadersPolicyConfig: {
+          CustomHeadersConfig: {
+            Items: Match.arrayWith([
+              Match.objectLike({
+                Header: "Cross-Origin-Embedder-Policy",
+                Override: true,
+                Value: "unsafe-none",
+              }),
+            ]),
+          },
+        },
+      });
+    });
+
     it("sets Cross-Origin-Opener-Policy custom header", () => {
       const stack = new Stack();
       const bucket = new s3.Bucket(stack, "TestBucket");

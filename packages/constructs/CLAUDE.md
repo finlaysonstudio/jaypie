@@ -171,7 +171,7 @@ new JaypieDistribution(this, "Distribution", {
 
 `JaypieDistribution` ships with default security response headers (analogous to `helmet` for Express). Headers are applied via a `ResponseHeadersPolicy` attached to the auto-generated default behavior.
 
-**Default headers**: HSTS, X-Content-Type-Options (nosniff), X-Frame-Options (DENY), Referrer-Policy, Content-Security-Policy, Permissions-Policy, Cross-Origin-Opener-Policy, Cross-Origin-Resource-Policy, Server removal.
+**Default headers**: Cache-Control, HSTS, X-Content-Type-Options (nosniff), X-Frame-Options (DENY), Referrer-Policy, Content-Security-Policy, Permissions-Policy, Cross-Origin-Embedder-Policy, Cross-Origin-Opener-Policy, Cross-Origin-Resource-Policy, Server removal.
 
 ```typescript
 // Defaults enabled (no config needed)

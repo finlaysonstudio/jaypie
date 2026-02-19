@@ -269,6 +269,16 @@ export class JaypieDistribution
           customHeadersBehavior: {
             customHeaders: [
               {
+                header: "Cache-Control",
+                override: true,
+                value: "no-store, no-cache, must-revalidate, proxy-revalidate",
+              },
+              {
+                header: "Cross-Origin-Embedder-Policy",
+                override: true,
+                value: "unsafe-none",
+              },
+              {
                 header: "Cross-Origin-Opener-Policy",
                 override: true,
                 value: "same-origin",
