@@ -42,4 +42,21 @@ export const LEVEL_VALUES: Record<string, number> = {
   warn: 30,
 };
 
+export const DATADOG_TRANSPORT = {
+  ENV: {
+    API_KEY: "DATADOG_API_KEY",
+    DD_ENV: "DD_ENV",
+    DD_HOST: "DD_HOST",
+    DD_SERVICE: "DD_SERVICE",
+    DD_SITE: "DD_SITE",
+    FORWARDING: "DATADOG_LOCAL_FORWARDING",
+    PROJECT_ENV: "PROJECT_ENV",
+    PROJECT_HOST: "PROJECT_HOST",
+    PROJECT_SERVICE: "PROJECT_SERVICE",
+  },
+  FLUSH_INTERVAL_MS: 5000,
+  INTAKE_PATH: "/api/v2/logs",
+  MAX_BATCH_SIZE: 100,
+} as const;
+
 export const PSEUDO_LEVELS = ["ALL", "SILENT"];

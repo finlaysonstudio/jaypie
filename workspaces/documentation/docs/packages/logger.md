@@ -245,6 +245,33 @@ if (!process.env.MONGODB_URI) {
 }
 ```
 
+## Datadog Log Forwarding
+
+For local dev, eval runs, and CI where CloudWatch subscription filters aren't available, enable direct HTTP forwarding to Datadog's Logs API:
+
+```bash
+DATADOG_LOCAL_FORWARDING=true DATADOG_API_KEY=your-key npm run dev
+```
+
+Zero code changes — the logger auto-detects the env vars and ships logs alongside normal console output.
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `DATADOG_LOCAL_FORWARDING` | Enable forwarding | `false` |
+| `DATADOG_API_KEY` | Datadog API key (required) | — |
+| `DD_SITE` | Datadog intake site | `datadoghq.com` |
+| `DD_SERVICE` / `PROJECT_SERVICE` | Service tag | `unknown` |
+| `DD_ENV` / `PROJECT_ENV` | Environment tag | `local` |
+| `DD_HOST` / `PROJECT_HOST` | Hostname tag | `os.hostname()` |
+
+```typescript
+import { isDatadogForwardingEnabled } from "@jaypie/logger";
+
+if (isDatadogForwardingEnabled()) {
+  // Transport is active
+}
+```
+
 ## Testing
 
 ```typescript

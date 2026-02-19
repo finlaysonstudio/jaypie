@@ -1,3 +1,5 @@
+import { vi } from "vitest";
+
 import { createMockWrappedFunction } from "./utils";
 import {
   FORMAT,
@@ -13,6 +15,9 @@ export const createLogger = createMockWrappedFunction(
   originalCreateLogger as any,
   mockLog,
 );
+
+export const _resetDatadogTransport = vi.fn();
+export const isDatadogForwardingEnabled = vi.fn().mockReturnValue(false);
 
 export { FORMAT, LEVEL, Logger };
 

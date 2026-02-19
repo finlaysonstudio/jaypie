@@ -12,15 +12,16 @@ This package provides two logger implementations:
 
 ```
 src/
-├── index.ts           # Exports: log (default), Logger, JaypieLogger, createLogger, FORMAT, LEVEL
-├── Logger.ts          # Core Logger class with level methods and .var() support
-├── JaypieLogger.ts    # Wrapper with init(), lib(), tag(), with() methods
-├── constants.ts       # FORMAT, LEVEL, LEVEL_VALUES, DEFAULT configuration
-├── forceVar.ts        # Normalizes key/value pairs for .var() logging
-├── logTags.ts         # Extracts PROJECT_* environment variables as tags
-├── logVar.ts          # Applies pipelines to logged variables
-├── pipelines.ts       # Filters for axios responses and errors
-└── utils.ts           # stringify, forceString, out, parse utilities
+├── index.ts              # Exports: log (default), Logger, JaypieLogger, createLogger, FORMAT, LEVEL, isDatadogForwardingEnabled, _resetDatadogTransport
+├── Logger.ts             # Core Logger class with level methods and .var() support
+├── JaypieLogger.ts       # Wrapper with init(), lib(), tag(), with() methods
+├── constants.ts          # FORMAT, LEVEL, LEVEL_VALUES, DEFAULT, DATADOG_TRANSPORT configuration
+├── datadogTransport.ts   # Opt-in HTTP transport for shipping logs to Datadog Logs API
+├── forceVar.ts           # Normalizes key/value pairs for .var() logging
+├── logTags.ts            # Extracts PROJECT_* environment variables as tags
+├── logVar.ts             # Applies pipelines to logged variables
+├── pipelines.ts          # Filters for axios responses and errors
+└── utils.ts              # stringify, forceString, out, parse utilities
 ```
 
 ## Usage in Other Packages
@@ -59,6 +60,15 @@ Defined in `constants.ts` with numeric values for comparison:
 - `MODULE_LOGGER` - Enable library loggers (boolean)
 - `MODULE_LOG_LEVEL` - Override level for library loggers
 - `PROJECT_*` - Auto-tagged: COMMIT, ENV, KEY, SERVICE, SPONSOR, VERSION
+
+#### Datadog Log Forwarding
+
+- `DATADOG_LOCAL_FORWARDING` - Set to `true` to enable direct HTTP log forwarding
+- `DATADOG_API_KEY` - Datadog API key (required when forwarding is enabled)
+- `DD_SITE` - Datadog intake site (default: `datadoghq.com`)
+- `DD_SERVICE` / `PROJECT_SERVICE` - Service name tag (default: `unknown`)
+- `DD_ENV` / `PROJECT_ENV` - Environment tag (default: `local`)
+- `DD_HOST` / `PROJECT_HOST` - Hostname tag (default: `os.hostname()`)
 
 ### Variable Logging
 
@@ -104,6 +114,11 @@ Factory function returning a `JaypieLogger` instance.
 ### Logger Class
 
 Lower-level class used internally by JaypieLogger. Supports `json` or `text` format output.
+
+### Datadog Transport Functions
+
+- `isDatadogForwardingEnabled()` - Returns `true` when `DATADOG_LOCAL_FORWARDING=true` and `DATADOG_API_KEY` is present
+- `_resetDatadogTransport()` - Destroys the singleton transport; called by `init()` to re-read env vars between Lambda invocations
 
 ## Testing Notes
 

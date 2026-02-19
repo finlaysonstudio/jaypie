@@ -76,6 +76,9 @@
     "test:webkit": "npm run test --workspace packages/webkit",
     "typecheck": "npm run typecheck --workspaces"
   },
+  "overrides": {
+    "@microsoft/api-extractor": "7.56.3"
+  },
   "devDependencies": {
     "@jaypie/eslint": "*",
     "@jaypie/repokit": "*",
