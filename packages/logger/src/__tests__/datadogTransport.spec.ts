@@ -256,6 +256,7 @@ describe("datadogTransport", () => {
     });
 
     it("falls back to PROJECT_SERVICE", () => {
+      vi.stubEnv("DD_SERVICE", "");
       vi.stubEnv("PROJECT_SERVICE", "proj-svc");
       vi.stubEnv("DATADOG_LOCAL_FORWARDING", "true");
       vi.stubEnv("DATADOG_API_KEY", "test-key");
@@ -269,6 +270,8 @@ describe("datadogTransport", () => {
     });
 
     it("defaults service to 'unknown'", () => {
+      vi.stubEnv("DD_SERVICE", "");
+      vi.stubEnv("PROJECT_SERVICE", "");
       vi.stubEnv("DATADOG_LOCAL_FORWARDING", "true");
       vi.stubEnv("DATADOG_API_KEY", "test-key");
 
@@ -295,6 +298,8 @@ describe("datadogTransport", () => {
     });
 
     it("uses os.hostname as fallback for hostname", () => {
+      vi.stubEnv("DD_HOST", "");
+      vi.stubEnv("PROJECT_HOST", "");
       vi.stubEnv("DATADOG_LOCAL_FORWARDING", "true");
       vi.stubEnv("DATADOG_API_KEY", "test-key");
 
