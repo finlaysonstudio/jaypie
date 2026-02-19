@@ -3,7 +3,7 @@
   max-width: 544px;
   min-height: 100vh;
   min-width: 176px;
-  padding: 80px 16px;
+  padding: 16px 16px 80px;
 }
 
 .gridPage {
@@ -12,7 +12,7 @@
   min-height: 100vh;
   min-width: 176px;
   overflow: hidden;
-  padding: 80px 16px;
+  padding: 16px 16px 80px;
 }
 
 .title {
@@ -103,6 +103,6 @@
   .page,
   .gridPage {
     margin-left: 112px;
-    padding-top: 16px;
+    padding-bottom: 16px;
   }
 }
