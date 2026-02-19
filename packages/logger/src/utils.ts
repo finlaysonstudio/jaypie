@@ -1,4 +1,5 @@
 import { LEVEL } from "./constants";
+import { getDatadogTransport } from "./datadogTransport";
 
 export function forceString(value: unknown, defaultValue = ""): string {
   if (value === null) return "null";
@@ -104,6 +105,15 @@ export function out(
   } catch (error) {
     console.warn(error);
     console.log(lineStr);
+  }
+
+  try {
+    const transport = getDatadogTransport();
+    if (transport) {
+      transport.send(lineStr, level);
+    }
+  } catch {
+    // Transport errors must never affect logging
   }
 }
 

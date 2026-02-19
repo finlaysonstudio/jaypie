@@ -50,6 +50,37 @@ log.error("Payment failed", {
 });
 ```
 
+## Direct Log Forwarding (Non-Lambda)
+
+For local dev, eval runs, and CI where CloudWatch subscription filters aren't available, enable direct HTTP forwarding to Datadog's Logs API:
+
+```bash
+DATADOG_LOCAL_FORWARDING=true DATADOG_API_KEY=your-key npm run dev
+```
+
+This activates automatically in `@jaypie/logger` — zero code changes needed. Logs are batched (flush every 5s or 100 entries) and shipped via HTTPS to `http-intake.logs.{DD_SITE}/api/v2/logs`.
+
+### Environment Variables
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `DATADOG_LOCAL_FORWARDING` | Enable forwarding (`true`/`false`) | `false` |
+| `DATADOG_API_KEY` | Datadog API key (required) | — |
+| `DD_SITE` | Datadog intake site | `datadoghq.com` |
+| `DD_SERVICE` / `PROJECT_SERVICE` | Service tag | `unknown` |
+| `DD_ENV` / `PROJECT_ENV` | Environment tag | `local` |
+| `DD_HOST` / `PROJECT_HOST` | Hostname tag | `os.hostname()` |
+
+### Inspection
+
+```typescript
+import { isDatadogForwardingEnabled } from "@jaypie/logger";
+
+if (isDatadogForwardingEnabled()) {
+  // Transport is active
+}
+```
+
 ## @jaypie/datadog Package
 
 The `@jaypie/datadog` package provides utilities:

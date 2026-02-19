@@ -1,5 +1,6 @@
 import Logger from "./Logger";
 import { DEFAULT, FORMAT, LEVEL } from "./constants";
+import { _resetDatadogTransport } from "./datadogTransport";
 import { logTags } from "./logTags";
 import { logVar } from "./logVar";
 
@@ -95,6 +96,7 @@ class JaypieLogger {
   }
 
   public init(): void {
+    _resetDatadogTransport();
     for (const logger of this._loggers) {
       if ("init" in logger && typeof logger.init === "function") {
         (logger as Logger & { init: () => void }).init();

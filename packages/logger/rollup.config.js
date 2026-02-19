@@ -16,7 +16,7 @@ export default [
         outDir: "dist/esm",
       }),
     ],
-    external: [],
+    external: ["node:https", "node:os"],
   },
   // CommonJS version
   {
@@ -35,6 +35,6 @@ export default [
         outDir: "dist/cjs",
       }),
     ],
-    external: [],
+    external: ["node:https", "node:os"],
   },
 ];
