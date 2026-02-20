@@ -18,6 +18,22 @@
   z-index: 3;
 }
 
+.navBoxBorderless::after {
+  display: none;
+}
+
+.navBox::after {
+  background: #282726; /* zinc-800 */
+  box-shadow: 0 -1px 2px #0000001A; /* black @ 10% */
+  bottom: 0;
+  content: "";
+  height: 80px;
+  left: 0;
+  pointer-events: none;
+  position: fixed;
+  right: 0;
+}
+
 .menuContainer {
   display: flex;
   height: 100%;
@@ -373,8 +389,10 @@
   display: flex;
   height: 48px;
   justify-content: center;
+  position: relative;
   transition: all 0.15s ease;
   width: 48px;
+  z-index: 1;
 }
 
 .iconButton:last-child {
@@ -424,6 +442,17 @@
 
 .iconButtonGhost:hover svg {
   color: var(--text-primary);
+}
+
+@media (min-width: 656px) {
+  .navBox {
+    bottom: auto;
+    top: 16px;
+  }
+
+  .navBox::after {
+    display: none;
+  }
 }
 
 .hero {

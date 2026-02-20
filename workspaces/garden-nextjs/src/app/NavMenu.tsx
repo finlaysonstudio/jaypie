@@ -286,7 +286,7 @@ export function NavMenu({ hideMenu, onPageIconClick, pageIcon: PageIcon = Birdho
         </div>
       )}
       {!isOpen && (
-        <div className={styles.navBox}>
+        <div className={`${styles.navBox}${hideMenu ? ` ${styles.navBoxBorderless}` : ""}`}>
           <div
             className={styles.iconButton}
             onClick={hideMenu ? undefined : () => setIsOpen(true)}
