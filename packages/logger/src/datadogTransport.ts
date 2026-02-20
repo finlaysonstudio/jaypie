@@ -44,6 +44,7 @@ interface DatadogLogEntry {
   message: string;
   service: string;
   status: string;
+  [key: string]: unknown;
 }
 
 class DatadogLogTransport {
@@ -86,13 +87,30 @@ class DatadogLogTransport {
   }
 
   send(line: string, level: string): void {
+    let message: string = line;
+    let extra: Record<string, unknown> = {};
+    if (typeof line === "string") {
+      try {
+        const parsed = JSON.parse(line);
+        if (parsed && typeof parsed === "object") {
+          if (parsed.message) {
+            message = parsed.message;
+            const { log: _, message: __, ...rest } = parsed;
+            extra = rest;
+          }
+        }
+      } catch {
+        // Not JSON — use line as-is
+      }
+    }
     const entry: DatadogLogEntry = {
       ddsource: this._ddsource,
       ddtags: `env:${this._env}`,
       hostname: this._hostname,
-      message: line,
+      message,
       service: this._service,
       status: LEVEL_TO_STATUS[level] || "info",
+      ...extra,
     };
     this._buffer.push(entry);
     if (this._buffer.length >= DATADOG_TRANSPORT.MAX_BATCH_SIZE) {
