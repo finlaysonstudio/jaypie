@@ -2,6 +2,7 @@
 
 import {
   Ban,
+  Bird,
   Birdhouse,
   BookType,
   ChevronLeft,
@@ -168,7 +169,7 @@ function AuthModal({
   );
 }
 
-export function NavMenu({ hideMenu, onPageIconClick, pageIcon: PageIcon = Birdhouse }: { hideMenu?: boolean; onPageIconClick?: () => void; pageIcon?: typeof Birdhouse }) {
+export function NavMenu({ hideMenu, onPageIconClick, pageIcon: PageIcon = Bird }: { hideMenu?: boolean; onPageIconClick?: () => void; pageIcon?: typeof Bird }) {
   const [isOpen, setIsOpen] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
   const [showStatus, setShowStatus] = useState(false);

@@ -1,6 +1,6 @@
 "use client";
 
-import { Copy, CopyCheck } from "lucide-react";
+import { Copy, CopyCheck, SwatchBook } from "lucide-react";
 import { useState } from "react";
 
 import { colors, type ColorShades } from "../../lib/colors";
@@ -163,7 +163,7 @@ const COLOR_DATA = COLOR_ORDER.map((name) => ({
 export default function ColorsPage() {
   return (
     <div className={styles.page}>
-      <NavMenu />
+      <NavMenu pageIcon={SwatchBook} />
       <h1 className={styles.title}>Colors</h1>
       <div className={styles.grid}>
         {COLOR_DATA.map((color) => (
