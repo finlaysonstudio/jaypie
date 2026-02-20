@@ -786,6 +786,52 @@ describe("OpenRouterAdapter", () => {
     });
   });
 
+  // AbortSignal Support
+  describe("AbortSignal Support", () => {
+    describe("executeRequest", () => {
+      it("passes signal to SDK call when provided", async () => {
+        const mockSend = vi.fn().mockResolvedValue({
+          id: "resp-1",
+          choices: [{ message: { role: "assistant", content: "Hi" } }],
+        });
+        const mockClient = { chat: { send: mockSend } };
+        const request = {
+          model: PROVIDER.OPENROUTER.MODEL.DEFAULT,
+          messages: [{ role: "user", content: "Hello" }],
+        };
+        const controller = new AbortController();
+
+        await openRouterAdapter.executeRequest(
+          mockClient,
+          request,
+          controller.signal,
+        );
+
+        expect(mockSend).toHaveBeenCalledTimes(1);
+        const [, options] = mockSend.mock.calls[0];
+        expect(options).toEqual({ signal: controller.signal });
+      });
+
+      it("does not pass options when no signal provided", async () => {
+        const mockSend = vi.fn().mockResolvedValue({
+          id: "resp-1",
+          choices: [{ message: { role: "assistant", content: "Hi" } }],
+        });
+        const mockClient = { chat: { send: mockSend } };
+        const request = {
+          model: PROVIDER.OPENROUTER.MODEL.DEFAULT,
+          messages: [{ role: "user", content: "Hello" }],
+        };
+
+        await openRouterAdapter.executeRequest(mockClient, request);
+
+        expect(mockSend).toHaveBeenCalledTimes(1);
+        const [, options] = mockSend.mock.calls[0];
+        expect(options).toBeUndefined();
+      });
+    });
+  });
+
   // Specific Scenarios
   describe("Specific Scenarios", () => {
     it("uses default model when not specified", () => {

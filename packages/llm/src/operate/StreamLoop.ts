@@ -273,11 +273,14 @@ export class StreamLoop {
     let chunksYielded = false;
 
     while (true) {
+      const controller = new AbortController();
+
       try {
         // Execute streaming request
         const streamGenerator = this.adapter.executeStreamRequest!(
           this.client,
           providerRequest,
+          controller.signal,
         );
 
         for await (const chunk of streamGenerator) {
@@ -317,6 +320,9 @@ export class StreamLoop {
         }
         break;
       } catch (error: unknown) {
+        // Abort the previous request to kill lingering socket callbacks
+        controller.abort("retry");
+
         // If chunks were already yielded, we can't transparently retry
         if (chunksYielded) {
           const errorMessage =

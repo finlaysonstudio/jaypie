@@ -57,22 +57,27 @@ export class RetryExecutor {
   }
 
   /**
-   * Execute an operation with retry logic
+   * Execute an operation with retry logic.
+   * Each attempt receives an AbortSignal. On failure, the signal is aborted
+   * before sleeping — this kills lingering socket callbacks from the previous
+   * request and prevents stale async errors from escaping the retry loop.
    *
-   * @param operation - The async operation to execute
+   * @param operation - The async operation to execute (receives AbortSignal)
    * @param options - Execution options including context and hooks
    * @returns The result of the operation
    * @throws BadGatewayError if all retries are exhausted or error is not retryable
    */
   async execute<T>(
-    operation: () => Promise<T>,
+    operation: ((signal: AbortSignal) => Promise<T>) | (() => Promise<T>),
     options: ExecuteOptions,
   ): Promise<T> {
     let attempt = 0;
 
     while (true) {
+      const controller = new AbortController();
+
       try {
-        const result = await operation();
+        const result = await operation(controller.signal);
 
         if (attempt > 0) {
           log.debug(`API call succeeded after ${attempt} retries`);
@@ -80,6 +85,9 @@ export class RetryExecutor {
 
         return result;
       } catch (error: unknown) {
+        // Abort the previous request to kill lingering socket callbacks
+        controller.abort("retry");
+
         // Check if we've exhausted retries
         if (!this.policy.shouldRetry(attempt)) {
           log.error(`API call failed after ${this.policy.maxRetries} retries`);
