@@ -87,20 +87,27 @@ export interface ProviderAdapter {
    *
    * @param client - The provider's SDK client instance
    * @param request - Provider-specific request object (from buildRequest)
+   * @param signal - Optional AbortSignal to cancel the request on retry
    * @returns Raw provider response
    */
-  executeRequest(client: unknown, request: unknown): Promise<unknown>;
+  executeRequest(
+    client: unknown,
+    request: unknown,
+    signal?: AbortSignal,
+  ): Promise<unknown>;
 
   /**
    * Execute a streaming API request to the provider
    *
    * @param client - The provider's SDK client instance
    * @param request - Provider-specific request object (from buildRequest)
+   * @param signal - Optional AbortSignal to cancel the request on retry
    * @returns AsyncIterable of stream chunks
    */
   executeStreamRequest?(
     client: unknown,
     request: unknown,
+    signal?: AbortSignal,
   ): AsyncIterable<LlmStreamChunk>;
 
   //
@@ -253,7 +260,11 @@ export abstract class BaseProviderAdapter implements ProviderAdapter {
   abstract formatOutputSchema(
     schema: JsonObject | NaturalSchema | z.ZodType,
   ): JsonObject;
-  abstract executeRequest(client: unknown, request: unknown): Promise<unknown>;
+  abstract executeRequest(
+    client: unknown,
+    request: unknown,
+    signal?: AbortSignal,
+  ): Promise<unknown>;
   abstract parseResponse(
     response: unknown,
     options?: LlmOperateOptions,
