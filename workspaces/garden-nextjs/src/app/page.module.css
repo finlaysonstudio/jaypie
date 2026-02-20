@@ -11,10 +11,11 @@
   border-radius: 8px;
   bottom: 16px;
   display: flex;
-  gap: 0;
-  left: 16px;
+  flex-direction: row-reverse;
+  gap: 16px;
   padding: 0;
   position: fixed;
+  right: 16px;
   z-index: 3;
 }
 
@@ -23,15 +24,7 @@
 }
 
 .navBox::after {
-  background: #282726; /* zinc-800 */
-  box-shadow: 0 -1px 2px #0000001A; /* black @ 10% */
-  bottom: 0;
-  content: "";
-  height: 80px;
-  left: 0;
-  pointer-events: none;
-  position: fixed;
-  right: 0;
+  display: none;
 }
 
 .menuContainer {
@@ -447,12 +440,13 @@
 @media (min-width: 656px) {
   .navBox {
     bottom: auto;
+    flex-direction: row;
+    gap: 0;
+    left: 16px;
+    right: auto;
     top: 16px;
   }
 
-  .navBox::after {
-    display: none;
-  }
 }
 
 .hero {
