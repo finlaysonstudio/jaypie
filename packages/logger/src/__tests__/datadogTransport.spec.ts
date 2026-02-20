@@ -172,6 +172,66 @@ describe("datadogTransport", () => {
       const body = lastWrittenBody() as any[];
       expect(body[0].status).toBe("critical");
     });
+
+    it("extracts message from JSON string as DD message", () => {
+      const transport = getDatadogTransport()!;
+      transport.send(
+        JSON.stringify({ log: "trace", message: "Creating evaluation" }),
+        "trace",
+      );
+      transport.flush();
+      const body = lastWrittenBody() as any[];
+      expect(body[0].message).toBe("Creating evaluation");
+    });
+
+    it("excludes 'log' field from entry (level is in status)", () => {
+      const transport = getDatadogTransport()!;
+      transport.send(
+        JSON.stringify({
+          log: "trace",
+          message: "Creating evaluation",
+          project: "garden",
+        }),
+        "trace",
+      );
+      transport.flush();
+      const body = lastWrittenBody() as any[];
+      expect(body[0]).not.toHaveProperty("log");
+    });
+
+    it("spreads extra JSON fields as top-level attributes", () => {
+      const transport = getDatadogTransport()!;
+      transport.send(
+        JSON.stringify({
+          log: "info",
+          message: "User login",
+          project: "garden",
+          requestId: "abc-123",
+        }),
+        "info",
+      );
+      transport.flush();
+      const body = lastWrittenBody() as any[];
+      expect(body[0].project).toBe("garden");
+      expect(body[0].requestId).toBe("abc-123");
+    });
+
+    it("falls back to raw string for non-JSON input", () => {
+      const transport = getDatadogTransport()!;
+      transport.send("plain text message", "info");
+      transport.flush();
+      const body = lastWrittenBody() as any[];
+      expect(body[0].message).toBe("plain text message");
+    });
+
+    it("falls back to full JSON string when message field is missing", () => {
+      const transport = getDatadogTransport()!;
+      const line = JSON.stringify({ log: "info", data: "some data" });
+      transport.send(line, "info");
+      transport.flush();
+      const body = lastWrittenBody() as any[];
+      expect(body[0].message).toBe(line);
+    });
   });
 
   describe("DatadogLogTransport.flush", () => {
