@@ -3,6 +3,7 @@
 import {
   Ban,
   Birdhouse,
+  BookType,
   ChevronLeft,
   Search,
   CircleAlert,
@@ -15,6 +16,7 @@ import {
   KeyRound,
   Menu,
   PowerOff,
+  RulerDimensionLine,
   SwatchBook,
   UserLock,
 } from "lucide-react";
@@ -28,8 +30,10 @@ import styles from "./page.module.css";
 const NAV_ITEMS = [
   { href: "/", icon: Birdhouse, label: "Home" },
   { href: "/colors", icon: SwatchBook, label: "Colors" },
-  { icon: Component, label: "Components" },
+  { href: "/components", icon: Component, label: "Components" },
   { href: "/dimensions", icon: Proportions, label: "Dimensions" },
+  { href: "/fonts", icon: BookType, label: "Fonts" },
+  { href: "/layout", icon: RulerDimensionLine, label: "Layout" },
 ];
 
 const STATUS_ICONS: Record<ConnectionStatus, typeof CircleHelp> = {

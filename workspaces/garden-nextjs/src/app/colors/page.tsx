@@ -4,6 +4,7 @@ import { Copy, CopyCheck } from "lucide-react";
 import { useState } from "react";
 
 import { colors, type ColorShades } from "../../lib/colors";
+import { NavMenu } from "../NavMenu";
 
 import styles from "./colors.module.css";
 
@@ -162,6 +163,7 @@ const COLOR_DATA = COLOR_ORDER.map((name) => ({
 export default function ColorsPage() {
   return (
     <div className={styles.page}>
+      <NavMenu />
       <h1 className={styles.title}>Colors</h1>
       <div className={styles.grid}>
         {COLOR_DATA.map((color) => (

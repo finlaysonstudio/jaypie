@@ -1,6 +1,16 @@
 .page {
+  margin: 0 auto;
+  max-width: 544px;
   min-height: 100vh;
-  padding: 24px;
+  min-width: 176px;
+  padding: 16px 16px 96px;
+}
+
+@media (min-width: 656px) {
+  .page {
+    margin: 0 auto 0 112px;
+    padding-bottom: 16px;
+  }
 }
 
 .title {

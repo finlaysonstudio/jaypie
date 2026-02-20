@@ -1,0 +1,70 @@
+.page {
+  margin: 0 auto;
+  max-width: 544px;
+  min-height: 100vh;
+  min-width: 176px;
+  padding: 16px 16px 96px;
+}
+
+.title {
+  font-family: var(--font-brand);
+  font-size: 2.5rem;
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  margin-bottom: 24px;
+}
+
+.fontList {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.fontCard {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.fontSample {
+  color: var(--text-primary);
+  font-size: 1.25rem;
+  line-height: 1.5;
+}
+
+.fontMeta {
+  align-items: baseline;
+  display: flex;
+  flex-wrap: wrap;
+  font-family: var(--font-code);
+  font-size: 0.75rem;
+  gap: 12px;
+}
+
+.fontFamily {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.fontVariable {
+  color: var(--text-muted);
+}
+
+.fontAliases {
+  color: var(--text-muted);
+  opacity: 0.6;
+}
+
+.fontDescription {
+  color: var(--text-muted);
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+@media (min-width: 656px) {
+  .page {
+    margin: 0 auto 0 112px;
+    padding-bottom: 16px;
+  }
+}
