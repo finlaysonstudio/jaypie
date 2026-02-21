@@ -185,8 +185,134 @@ export default function ColorsPage() {
             />
           </div>
         </div>
+        <div className={styles.usageSwatchRow}>
+          <div
+            className={styles.usageSwatch}
+            style={{ backgroundColor: "#161514" }}
+          />
+          <div className={styles.usageSwatchInfo}>
+            <CopyText
+              copyValue="--bg-secondary"
+              display="--bg-secondary"
+              style={{ color: "#fafafa" }}
+            />
+            <CopyText
+              copyValue="161514"
+              display="#161514"
+              style={{ color: "#fafafa", fontSize: "12px" }}
+            />
+          </div>
+        </div>
+        <div className={styles.usageSwatchRow}>
+          <div
+            className={styles.usageSwatch}
+            style={{ backgroundColor: "#f8f6f5" }}
+          />
+          <div className={styles.usageSwatchInfo}>
+            <CopyText
+              copyValue="--bg-light"
+              display="--bg-light"
+              style={{ color: "#fafafa" }}
+            />
+            <CopyText
+              copyValue="f8f6f5"
+              display="#f8f6f5"
+              style={{ color: "#fafafa", fontSize: "12px" }}
+            />
+          </div>
+        </div>
         <h2 className={styles.usageHeading}>Foregrounds</h2>
+        <div className={styles.usageSwatchRow}>
+          <div
+            className={styles.usageSwatch}
+            style={{ backgroundColor: "#cccbca" }}
+          />
+          <div className={styles.usageSwatchInfo}>
+            <CopyText
+              copyValue="--text-primary"
+              display="--text-primary"
+              style={{ color: "#fafafa" }}
+            />
+            <CopyText
+              copyValue="cccbca"
+              display="#cccbca"
+              style={{ color: "#fafafa", fontSize: "12px" }}
+            />
+          </div>
+        </div>
+        <div className={styles.usageSwatchRow}>
+          <div
+            className={styles.usageSwatch}
+            style={{ backgroundColor: "#6c6b6a" }}
+          />
+          <div className={styles.usageSwatchInfo}>
+            <CopyText
+              copyValue="--text-muted"
+              display="--text-muted"
+              style={{ color: "#fafafa" }}
+            />
+            <CopyText
+              copyValue="6c6b6a"
+              display="#6c6b6a"
+              style={{ color: "#fafafa", fontSize: "12px" }}
+            />
+          </div>
+        </div>
+        <div className={styles.usageSwatchRow}>
+          <div
+            className={styles.usageSwatch}
+            style={{ backgroundColor: "#7a6652" }}
+          />
+          <div className={styles.usageSwatchInfo}>
+            <CopyText
+              copyValue="--accent-bronze"
+              display="--accent-bronze"
+              style={{ color: "#fafafa" }}
+            />
+            <CopyText
+              copyValue="7a6652"
+              display="#7a6652"
+              style={{ color: "#fafafa", fontSize: "12px" }}
+            />
+          </div>
+        </div>
+        <div className={styles.usageSwatchRow}>
+          <div
+            className={styles.usageSwatch}
+            style={{ backgroundColor: "#635242" }}
+          />
+          <div className={styles.usageSwatchInfo}>
+            <CopyText
+              copyValue="--accent-bronze-hover"
+              display="--accent-bronze-hover"
+              style={{ color: "#fafafa" }}
+            />
+            <CopyText
+              copyValue="635242"
+              display="#635242"
+              style={{ color: "#fafafa", fontSize: "12px" }}
+            />
+          </div>
+        </div>
         <h2 className={styles.usageHeading}>Borders and Shadows</h2>
+        <div className={styles.usageSwatchRow}>
+          <div
+            className={styles.usageSwatch}
+            style={{ backgroundColor: "rgba(207, 203, 199, 0.1)" }}
+          />
+          <div className={styles.usageSwatchInfo}>
+            <CopyText
+              copyValue="--border-color"
+              display="--border-color"
+              style={{ color: "#fafafa" }}
+            />
+            <CopyText
+              copyValue="rgba(207, 203, 199, 0.1)"
+              display="rgba(207, 203, 199, 0.1)"
+              style={{ color: "#fafafa", fontSize: "12px" }}
+            />
+          </div>
+        </div>
       </div>
       <div className={styles.grid}>
         {COLOR_DATA.map((color) => (
