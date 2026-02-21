@@ -21,6 +21,47 @@
   margin-bottom: 24px;
 }
 
+/* Usage card */
+.usageCard {
+  background: #3f3e3e; /* gray-700 */
+  border-radius: 8px;
+  margin-bottom: 48px;
+  padding: 16px;
+}
+
+.usageHeading {
+  font-family: var(--font-ui);
+  font-size: 1rem;
+  font-weight: 400;
+  margin: 0;
+  padding: 8px 0;
+  text-transform: uppercase;
+}
+
+.usageSwatchRow {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  padding: 4px 0;
+}
+
+.usageSwatch {
+  border-radius: 4px;
+  flex-shrink: 0;
+  height: 48px;
+  width: 48px;
+}
+
+.usageSwatchInfo {
+  align-items: flex-start;
+  display: flex;
+  flex-direction: column;
+  font-family: var(--font-code);
+  font-size: 0.875rem;
+  gap: 2px;
+}
+
+
 .grid {
   display: grid;
   gap: 16px;

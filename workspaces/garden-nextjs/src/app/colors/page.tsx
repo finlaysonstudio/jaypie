@@ -165,6 +165,29 @@ export default function ColorsPage() {
     <div className={styles.page}>
       <NavMenu pageIcon={SwatchBook} />
       <h1 className={styles.title}>Colors</h1>
+      <div className={styles.usageCard}>
+        <h2 className={styles.usageHeading}>Backgrounds</h2>
+        <div className={styles.usageSwatchRow}>
+          <div
+            className={styles.usageSwatch}
+            style={{ backgroundColor: "#282726" }}
+          />
+          <div className={styles.usageSwatchInfo}>
+            <CopyText
+              copyValue="--bg-primary"
+              display="--bg-primary"
+              style={{ color: "#fafafa" }}
+            />
+            <CopyText
+              copyValue="282726"
+              display="#282726"
+              style={{ color: "#fafafa", fontSize: "12px" }}
+            />
+          </div>
+        </div>
+        <h2 className={styles.usageHeading}>Foregrounds</h2>
+        <h2 className={styles.usageHeading}>Borders and Shadows</h2>
+      </div>
       <div className={styles.grid}>
         {COLOR_DATA.map((color) => (
           <ColorCard
