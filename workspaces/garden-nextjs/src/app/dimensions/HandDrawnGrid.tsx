@@ -6,7 +6,7 @@ import styles from "./dimensions.module.css";
 
 // Fixed grid positions (cumulative)
 const X_POSITIONS = [16, 64, 112, 128, 160, 176, 256, 272, 288, 528, 544, 640, 656];
-const X_RIGHT_POSITIONS = [16, 64, 80, 128, 144];
+const X_RIGHT_POSITIONS = [16, 64, 112, 128];
 const Y_POSITIONS = [16, 64, 80];
 
 export function HandDrawnGrid() {
