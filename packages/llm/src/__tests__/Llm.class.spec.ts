@@ -58,7 +58,7 @@ afterEach(() => {
   });
   geminiOperateMock.mockResolvedValue({
     content: "Mocked Gemini operate response",
-    provider: "gemini",
+    provider: "google",
   });
 });
 
@@ -278,7 +278,7 @@ describe("Llm Class", () => {
         expect(result.content).toBe("Mocked Gemini operate response");
         expect(result.fallbackUsed).toBe(true);
         expect(result.fallbackAttempts).toBe(3);
-        expect(result.provider).toBe("gemini");
+        expect(result.provider).toBe("google");
       });
 
       it("throws last error when all providers fail", async () => {
@@ -309,7 +309,7 @@ describe("Llm Class", () => {
           fallback: [{ provider: PROVIDER.GEMINI.NAME }],
         });
 
-        expect(result.provider).toBe("gemini");
+        expect(result.provider).toBe("google");
         expect(anthropicOperateMock).not.toHaveBeenCalled();
       });
 

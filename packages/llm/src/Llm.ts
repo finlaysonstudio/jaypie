@@ -34,6 +34,13 @@ class Llm implements LlmProvider {
     let finalProvider = providerName;
     let finalModel = model;
 
+    // Legacy: accept "gemini" but warn
+    if (providerName === "gemini") {
+      log.warn(
+        `Provider "gemini" is deprecated, use "${PROVIDER.GEMINI.NAME}" instead`,
+      );
+    }
+
     if (model) {
       const modelDetermined = determineModelProvider(model);
       finalModel = modelDetermined.model;

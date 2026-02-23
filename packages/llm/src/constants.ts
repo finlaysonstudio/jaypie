@@ -67,7 +67,7 @@ export const PROVIDER = {
       TINY: FIRST_CLASS_PROVIDER.GEMINI.TINY,
     },
     MODEL_MATCH_WORDS: ["gemini", "google"] as const,
-    NAME: "gemini" as const,
+    NAME: "google" as const,
     ROLE: {
       MODEL: "model" as const,
       USER: "user" as const,
