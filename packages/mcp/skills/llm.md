@@ -23,14 +23,14 @@ console.log(response.content); // "4"
 |----------|----------------|---------------|
 | OpenAI | "openai", "gpt", /^o\d/ | gpt-5.1 |
 | Anthropic | "anthropic", "claude", "haiku", "opus", "sonnet" | claude-sonnet-4-5 |
-| Gemini | "gemini", "google" | gemini-3-pro-preview |
+| Google | "google", "gemini" | gemini-3-pro-preview |
 | OpenRouter | "openrouter" | z-ai/glm-4.7 |
 
 ```typescript
 // Provider auto-detected from model
 await Llm.operate(input, { model: "gpt-5.1" });      // OpenAI
 await Llm.operate(input, { model: "claude-opus-4" }); // Anthropic
-await Llm.operate(input, { model: "gemini-3" });     // Gemini
+await Llm.operate(input, { model: "gemini-3" });     // Google
 ```
 
 ## Core Methods
@@ -271,7 +271,7 @@ const llm = new Llm("anthropic", {
   model: "claude-sonnet-4",
   fallback: [
     { provider: "openai", model: "gpt-4o" },
-    { provider: "gemini", model: "gemini-2.0-flash" },
+    { provider: "google", model: "gemini-2.0-flash" },
   ],
 });
 
@@ -395,7 +395,7 @@ interface LlmOperateOptions {
 }
 
 interface LlmFallbackConfig {
-  provider: string;   // Provider name (e.g., "openai", "anthropic", "gemini")
+  provider: string;   // Provider name (e.g., "openai", "anthropic", "google")
   model?: string;     // Model to use (optional, uses provider default)
   apiKey?: string;    // API key (optional, uses environment variable)
 }

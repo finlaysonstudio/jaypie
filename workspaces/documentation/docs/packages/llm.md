@@ -85,7 +85,7 @@ const llm = new Llm("anthropic", {
   model: "claude-sonnet-4",
   fallback: [
     { provider: "openai", model: "gpt-4o" },
-    { provider: "gemini", model: "gemini-2.0-flash" },
+    { provider: "google", model: "gemini-2.0-flash" },
   ],
 });
 
