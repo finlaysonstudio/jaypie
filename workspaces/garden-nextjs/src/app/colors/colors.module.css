@@ -21,6 +21,91 @@
   margin-bottom: 24px;
 }
 
+/* Navigation card */
+.navCard {
+  border: 1px solid var(--bg-secondary);
+  border-radius: 8px;
+  margin-bottom: 24px;
+  overflow: hidden;
+}
+
+.navCardSection {
+  padding: 16px;
+}
+
+.navCardSectionTop {
+  background: var(--bg-primary);
+}
+
+.navCardSectionBottom {
+  background: var(--bg-secondary);
+}
+
+.navCardSubheading {
+  color: var(--text-muted);
+  font-family: var(--font-ui);
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+  padding: 8px 0 4px;
+  text-transform: uppercase;
+}
+
+.navCardSubheading:first-child {
+  padding-top: 0;
+}
+
+.navIconExample {
+  margin-top: 12px;
+}
+
+.navIconRow {
+  display: flex;
+  gap: 0;
+}
+
+.navIconBox {
+  align-items: center;
+  border-radius: 7px;
+  display: inline-flex;
+  height: 48px;
+  justify-content: center;
+  width: 48px;
+}
+
+.navIconBox:not([data-hover]) {
+  background: rgba(122, 102, 82, 0.05);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  color: rgba(207, 203, 199, 0.5);
+}
+
+.navIconBox[data-hover] {
+  background: rgba(122, 102, 82, 0.1);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  color: var(--text-primary);
+}
+
+.navIconLabels {
+  color: var(--text-muted);
+  display: flex;
+  font-family: var(--font-code);
+  font-size: 0.6875rem;
+  gap: 0;
+}
+
+.navIconLabels span {
+  text-align: center;
+  width: 48px;
+}
+
+/* Card label (outside cards) */
+.cardLabel {
+  font-family: var(--font-ui);
+  font-size: 1rem;
+  font-weight: 400;
+  margin: 0 0 8px;
+  text-transform: uppercase;
+}
+
 /* Usage card */
 .usageCard {
   background: #3f3e3e; /* gray-700 */

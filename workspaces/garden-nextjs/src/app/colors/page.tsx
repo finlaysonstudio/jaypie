@@ -1,6 +1,6 @@
 "use client";
 
-import { Copy, CopyCheck, SwatchBook } from "lucide-react";
+import { Copy, CopyCheck, Menu, SwatchBook } from "lucide-react";
 import { useState } from "react";
 
 import { colors, type ColorShades } from "../../lib/colors";
@@ -239,6 +239,35 @@ export default function ColorsPage() {
     <div className={styles.page}>
       <NavMenu pageIcon={SwatchBook} />
       <h1 className={styles.title}>Colors</h1>
+      <h2 className={styles.cardLabel}>Navigation</h2>
+      <div className={styles.navCard}>
+        <div className={`${styles.navCardSection} ${styles.navCardSectionTop}`}>
+          <div className={styles.navCardSubheading}>Active</div>
+          <UsageSwatch color="rgba(122, 102, 82, 0.05)" name="icon-bg" value="rgba(122, 102, 82, 0.05)" />
+          <UsageSwatch color="rgba(207, 203, 199, 0.5)" name="icon-fg" value="rgba(207, 203, 199, 0.5)" />
+          <div className={styles.navCardSubheading}>Hover</div>
+          <UsageSwatch color="rgba(122, 102, 82, 0.1)" name="icon-bg-hover" value="rgba(122, 102, 82, 0.1)" />
+          <UsageSwatch color="#cccbca" name="icon-fg-hover" value="var(--text-primary)" />
+          <div className={styles.navIconExample}>
+            <div className={styles.navIconRow}>
+              <div className={styles.navIconBox}>
+                <Menu size={20} strokeWidth={1} />
+              </div>
+              <div className={styles.navIconBox} data-hover="true">
+                <Menu size={20} strokeWidth={1.5} />
+              </div>
+            </div>
+            <div className={styles.navIconLabels}>
+              <span>stroke: 1</span>
+              <span>stroke: 1.5</span>
+            </div>
+          </div>
+        </div>
+        <div className={`${styles.navCardSection} ${styles.navCardSectionBottom}`}>
+          <UsageSwatch color="#7a6652" name="--accent-bronze" value="#7a6652" />
+        </div>
+      </div>
+      <h2 className={styles.cardLabel}>Basics</h2>
       <div className={styles.usageCard}>
         {USAGE_SECTIONS.map((section) => (
           <div key={section.heading}>
