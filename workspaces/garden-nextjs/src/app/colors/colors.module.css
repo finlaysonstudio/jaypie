@@ -54,19 +54,18 @@
   padding-top: 0;
 }
 
-.navIconExample {
-  margin-top: 12px;
-}
-
-.navIconRow {
+.navIconSwatchRow {
+  align-items: center;
   display: flex;
-  gap: 0;
+  gap: 12px;
+  padding: 4px 0;
 }
 
 .navIconBox {
   align-items: center;
   border-radius: 7px;
   display: inline-flex;
+  flex-shrink: 0;
   height: 48px;
   justify-content: center;
   width: 48px;
@@ -82,19 +81,6 @@
   background: rgba(122, 102, 82, 0.1);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
   color: var(--text-primary);
-}
-
-.navIconLabels {
-  color: var(--text-muted);
-  display: flex;
-  font-family: var(--font-code);
-  font-size: 0.6875rem;
-  gap: 0;
-}
-
-.navIconLabels span {
-  text-align: center;
-  width: 48px;
 }
 
 /* Card label (outside cards) */
@@ -150,6 +136,91 @@
   color: #fafafa;
   font-family: var(--font-ui);
   font-size: 0.875rem;
+}
+
+/* Color Mixer card */
+.mixerCard {
+  background: #3f3e3e;
+  border-radius: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+  margin-bottom: 24px;
+  overflow: hidden;
+  padding: 16px;
+}
+
+.mixerLayout {
+  align-items: flex-start;
+  display: flex;
+  gap: 8px;
+}
+
+.mixerSwatch {
+  align-items: center;
+  border-radius: 4px;
+  display: flex;
+  flex-shrink: 0;
+  height: 80px;
+  justify-content: center;
+  width: 80px;
+}
+
+.mixerSwatchInner {
+  border-radius: 4px;
+  height: 48px;
+  width: 48px;
+}
+
+.mixerControls {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-left: 8px;
+  min-width: 0;
+}
+
+.mixerField {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+}
+
+.mixerLabel {
+  color: var(--text-muted);
+  font-family: var(--font-code);
+  font-size: 0.75rem;
+  min-width: 44px;
+}
+
+.mixerInput {
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--text-muted);
+  color: #fafafa;
+  font-family: var(--font-code);
+  font-size: 0.875rem;
+  outline: none;
+  padding: 2px 4px;
+  width: 80px;
+}
+
+.mixerInput:focus {
+  border-bottom-color: var(--accent-bronze);
+}
+
+.mixerResultRow {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+}
+
+.mixerResult {
+  align-items: center;
+  display: flex;
+  font-family: var(--font-code);
+  font-size: 0.875rem;
+  margin-left: 8px;
 }
 
 .grid {

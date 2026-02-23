@@ -91,6 +91,103 @@ function CopyText({
   );
 }
 
+function hexToRgb(hex: string): [number, number, number] {
+  const h = hex.replace("#", "").padEnd(6, "0").slice(0, 6);
+  return [
+    parseInt(h.slice(0, 2), 16),
+    parseInt(h.slice(2, 4), 16),
+    parseInt(h.slice(4, 6), 16),
+  ];
+}
+
+function blendColor(base: string, fore: string, alpha: string): string {
+  const a = parseInt(alpha || "0", 16) / 255;
+  const [br, bg, bb] = hexToRgb(base);
+  const [fr, fg, fb] = hexToRgb(fore);
+  const r = Math.round(fr * a + br * (1 - a));
+  const g = Math.round(fg * a + bg * (1 - a));
+  const b = Math.round(fb * a + bb * (1 - a));
+  return `#${[r, g, b].map((c) => c.toString(16).padStart(2, "0")).join("")}`;
+}
+
+function ColorMixer() {
+  const [base, setBase] = useState("2b323a");
+  const [fore, setFore] = useState("cccbca");
+  const [alpha, setAlpha] = useState("88");
+
+  const result = blendColor(base, fore, alpha);
+  const alphaNum = parseInt(alpha || "0", 16) / 255;
+
+  return (
+    <div className={styles.mixerCard}>
+      <div className={styles.mixerLayout}>
+        <div
+          className={styles.mixerSwatch}
+          style={{ backgroundColor: `#${base}` }}
+        >
+          <div
+            className={styles.mixerSwatchInner}
+            style={{ backgroundColor: `#${fore}` }}
+          />
+        </div>
+        <div className={styles.mixerControls}>
+          <div className={styles.mixerField}>
+            <span className={styles.mixerLabel}>base</span>
+            <input
+              className={styles.mixerInput}
+              maxLength={6}
+              onChange={(e) => setBase(e.target.value)}
+              type="text"
+              value={base}
+            />
+          </div>
+          <div className={styles.mixerField}>
+            <span className={styles.mixerLabel}>fore</span>
+            <input
+              className={styles.mixerInput}
+              maxLength={6}
+              onChange={(e) => setFore(e.target.value)}
+              type="text"
+              value={fore}
+            />
+          </div>
+          <div className={styles.mixerField}>
+            <span className={styles.mixerLabel}>alpha</span>
+            <input
+              className={styles.mixerInput}
+              maxLength={2}
+              onChange={(e) => setAlpha(e.target.value)}
+              style={{ width: 40 }}
+              type="text"
+              value={alpha}
+            />
+          </div>
+        </div>
+      </div>
+      <div className={styles.mixerResultRow}>
+        <div
+          className={styles.mixerSwatch}
+          style={{ backgroundColor: `#${base}` }}
+        >
+          <div
+            className={styles.mixerSwatchInner}
+            style={{
+              backgroundColor: `rgba(${hexToRgb(fore).join(",")},${alphaNum})`,
+            }}
+          />
+        </div>
+        <div className={styles.mixerResult}>
+          <CopyText
+            copyValue={result.slice(1)}
+            display={result}
+            style={{ color: "#fafafa" }}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ColorCard({ name, shades }: { name: string; shades: string[] }) {
   const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
   const [lockedIdx, setLockedIdx] = useState(5);
@@ -239,6 +336,8 @@ export default function ColorsPage() {
     <div className={styles.page}>
       <NavMenu pageIcon={SwatchBook} />
       <h1 className={styles.title}>Colors</h1>
+      <h2 className={styles.cardLabel}>Color Mixer</h2>
+      <ColorMixer />
       <h2 className={styles.cardLabel}>Navigation</h2>
       <div className={styles.navCard}>
         <div className={`${styles.navCardSection} ${styles.navCardSectionTop}`}>
@@ -248,17 +347,21 @@ export default function ColorsPage() {
           <div className={styles.navCardSubheading}>Hover</div>
           <UsageSwatch color="rgba(122, 102, 82, 0.1)" name="icon-bg-hover" value="rgba(122, 102, 82, 0.1)" />
           <UsageSwatch color="#cccbca" name="icon-fg-hover" value="var(--text-primary)" />
-          <div className={styles.navIconExample}>
-            <div className={styles.navIconRow}>
-              <div className={styles.navIconBox}>
-                <Menu size={20} strokeWidth={1} />
-              </div>
-              <div className={styles.navIconBox} data-hover="true">
-                <Menu size={20} strokeWidth={1.5} />
-              </div>
+          <div className={styles.navIconSwatchRow}>
+            <div className={styles.navIconBox}>
+              <Menu size={20} strokeWidth={1} />
             </div>
-            <div className={styles.navIconLabels}>
+            <div className={styles.usageSwatchInfo}>
+              <span className={styles.usageSwatchLabel}>active</span>
               <span>stroke: 1</span>
+            </div>
+          </div>
+          <div className={styles.navIconSwatchRow}>
+            <div className={styles.navIconBox} data-hover="true">
+              <Menu size={20} strokeWidth={1.5} />
+            </div>
+            <div className={styles.usageSwatchInfo}>
+              <span className={styles.usageSwatchLabel}>hover</span>
               <span>stroke: 1.5</span>
             </div>
           </div>
