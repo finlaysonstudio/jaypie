@@ -1,0 +1,165 @@
+.page {
+  margin: 0 auto;
+  max-width: 544px;
+  min-height: 100vh;
+  min-width: 176px;
+  padding: 16px 16px 96px;
+}
+
+.title {
+  font-family: var(--font-brand);
+  font-size: 2.5rem;
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  margin-bottom: 48px;
+}
+
+/* Sections */
+
+.specimen {
+  margin-bottom: 48px;
+}
+
+.meta {
+  align-items: baseline;
+  display: flex;
+  flex-wrap: wrap;
+  font-family: var(--font-code);
+  font-size: 0.6875rem;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.variable {
+  color: var(--text-muted);
+}
+
+.alias {
+  color: var(--text-muted);
+  opacity: 0.5;
+}
+
+.familyName {
+  color: var(--text-muted);
+  opacity: 0.5;
+}
+
+.description {
+  color: var(--text-muted);
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  line-height: 1.6;
+  margin-top: 12px;
+}
+
+/* Faculty Glyphic */
+
+.brandHero {
+  font-family: var(--font-brand);
+  font-size: clamp(2.5rem, 10vw, 4rem);
+  font-weight: 400;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+}
+
+.brandAlphabet {
+  color: var(--text-muted);
+  font-family: var(--font-brand);
+  font-size: 0.875rem;
+  letter-spacing: 0.08em;
+  line-height: 2;
+  margin-top: 24px;
+  opacity: 0.6;
+}
+
+/* Noto Serif */
+
+.bodyLede {
+  font-family: var(--font-body);
+  font-size: 1.25rem;
+  line-height: 1.6;
+}
+
+.bodyParagraph {
+  color: var(--text-muted);
+  font-family: var(--font-body);
+  font-size: 0.9375rem;
+  line-height: 1.75;
+  margin-top: 16px;
+}
+
+/* Noto Sans */
+
+.userContext {
+  background: #161514; /* zinc-900 */
+  border-radius: 8px;
+  padding: 20px;
+}
+
+.userMessage {
+  font-family: var(--font-user);
+  font-size: 0.9375rem;
+  line-height: 1.6;
+}
+
+.userCaption {
+  color: var(--text-muted);
+  font-family: var(--font-user);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  margin-top: 12px;
+  opacity: 0.7;
+}
+
+/* Inter */
+
+.uiSamples {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.uiChip {
+  background: #7A66520D; /* brown-500 @ 5% */
+  border-radius: 7px;
+  color: var(--text-muted);
+  font-family: var(--font-ui);
+  font-size: 0.875rem;
+  padding: 10px 18px;
+}
+
+.uiLabel {
+  color: var(--text-muted);
+  font-family: var(--font-ui);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  margin-top: 16px;
+  opacity: 0.5;
+}
+
+/* Noto Sans Mono */
+
+.codeBlock {
+  background: #161514; /* zinc-900 */
+  border-radius: 8px;
+  font-family: var(--font-code);
+  font-size: 0.8125rem;
+  line-height: 2;
+  padding: 20px;
+}
+
+.codeMuted {
+  opacity: 0.4;
+}
+
+.codeValue {
+  color: #cfc07e; /* yellow-300 */
+}
+
+@media (min-width: 656px) {
+  .page {
+    margin: 0 auto 0 112px;
+    padding-bottom: 16px;
+  }
+}

@@ -1,9 +1,10 @@
 "use client";
 
-import { Copy, CopyCheck } from "lucide-react";
+import { Copy, CopyCheck, Menu, SwatchBook } from "lucide-react";
 import { useState } from "react";
 
 import { colors, type ColorShades } from "../../lib/colors";
+import { NavMenu } from "../NavMenu";
 
 import styles from "./colors.module.css";
 
@@ -90,6 +91,103 @@ function CopyText({
   );
 }
 
+function hexToRgb(hex: string): [number, number, number] {
+  const h = hex.replace("#", "").padEnd(6, "0").slice(0, 6);
+  return [
+    parseInt(h.slice(0, 2), 16),
+    parseInt(h.slice(2, 4), 16),
+    parseInt(h.slice(4, 6), 16),
+  ];
+}
+
+function blendColor(base: string, fore: string, alpha: string): string {
+  const a = parseInt(alpha || "0", 16) / 255;
+  const [br, bg, bb] = hexToRgb(base);
+  const [fr, fg, fb] = hexToRgb(fore);
+  const r = Math.round(fr * a + br * (1 - a));
+  const g = Math.round(fg * a + bg * (1 - a));
+  const b = Math.round(fb * a + bb * (1 - a));
+  return `#${[r, g, b].map((c) => c.toString(16).padStart(2, "0")).join("")}`;
+}
+
+function ColorMixer() {
+  const [base, setBase] = useState("2b323a");
+  const [fore, setFore] = useState("cccbca");
+  const [alpha, setAlpha] = useState("88");
+
+  const result = blendColor(base, fore, alpha);
+  const alphaNum = parseInt(alpha || "0", 16) / 255;
+
+  return (
+    <div className={styles.mixerCard}>
+      <div className={styles.mixerLayout}>
+        <div
+          className={styles.mixerSwatch}
+          style={{ backgroundColor: `#${base}` }}
+        >
+          <div
+            className={styles.mixerSwatchInner}
+            style={{ backgroundColor: `#${fore}` }}
+          />
+        </div>
+        <div className={styles.mixerControls}>
+          <div className={styles.mixerField}>
+            <span className={styles.mixerLabel}>base</span>
+            <input
+              className={styles.mixerInput}
+              maxLength={6}
+              onChange={(e) => setBase(e.target.value)}
+              type="text"
+              value={base}
+            />
+          </div>
+          <div className={styles.mixerField}>
+            <span className={styles.mixerLabel}>fore</span>
+            <input
+              className={styles.mixerInput}
+              maxLength={6}
+              onChange={(e) => setFore(e.target.value)}
+              type="text"
+              value={fore}
+            />
+          </div>
+          <div className={styles.mixerField}>
+            <span className={styles.mixerLabel}>alpha</span>
+            <input
+              className={styles.mixerInput}
+              maxLength={2}
+              onChange={(e) => setAlpha(e.target.value)}
+              style={{ width: 40 }}
+              type="text"
+              value={alpha}
+            />
+          </div>
+        </div>
+      </div>
+      <div className={styles.mixerResultRow}>
+        <div
+          className={styles.mixerSwatch}
+          style={{ backgroundColor: `#${base}` }}
+        >
+          <div
+            className={styles.mixerSwatchInner}
+            style={{
+              backgroundColor: `rgba(${hexToRgb(fore).join(",")},${alphaNum})`,
+            }}
+          />
+        </div>
+        <div className={styles.mixerResult}>
+          <CopyText
+            copyValue={result.slice(1)}
+            display={result}
+            style={{ color: "#fafafa" }}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ColorCard({ name, shades }: { name: string; shades: string[] }) {
   const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
   const [lockedIdx, setLockedIdx] = useState(5);
@@ -145,6 +243,80 @@ function ColorCard({ name, shades }: { name: string; shades: string[] }) {
 // Page
 //
 
+// Usage card data
+const USAGE_SECTIONS: { heading: string; swatches: { color: string; name: string; value: string }[] }[] = [
+  {
+    heading: "Backgrounds",
+    swatches: [
+      { color: "#282726", name: "--bg-primary", value: "#282726" },
+      { color: "#161514", name: "--bg-secondary", value: "#161514" },
+      { color: "#f8f6f5", name: "--bg-light", value: "#f8f6f5" },
+    ],
+  },
+  {
+    heading: "Foregrounds",
+    swatches: [
+      { color: "#cccbca", name: "--text-primary", value: "#cccbca" },
+      { color: "#6c6b6a", name: "--text-muted", value: "#6c6b6a" },
+      { color: "#7a6652", name: "--accent-bronze", value: "#7a6652" },
+      { color: "#635242", name: "--accent-bronze-hover", value: "#635242" },
+    ],
+  },
+  {
+    heading: "Borders and Shadows",
+    swatches: [
+      { color: "rgba(207, 203, 199, 0.1)", name: "--border-color", value: "rgba(207, 203, 199, 0.1)" },
+    ],
+  },
+  {
+    heading: "Statuses",
+    swatches: [
+      { color: "#1b2f22", name: "authenticated-bg", value: "#1b2f22" },
+      { color: "#8fb69a", name: "authenticated-text", value: "#8fb69a" },
+      { color: "#3b3418", name: "connected-bg", value: "#3b3418" },
+      { color: "#cfc07e", name: "connected-text", value: "#cfc07e" },
+      { color: "#3d211d", name: "disconnected-bg", value: "#3d211d" },
+      { color: "#c9a099", name: "disconnected-text", value: "#c9a099" },
+      { color: "#8b5533", name: "uninitialized-bg", value: "#8b5533" },
+      { color: "#f9ede2", name: "uninitialized-text", value: "#f9ede2" },
+      { color: "#3a2129", name: "unknown-bg", value: "#3a2129" },
+      { color: "#c49aab", name: "unknown-text", value: "#c49aab" },
+    ],
+  },
+  {
+    heading: "Navigation",
+    swatches: [
+      { color: "rgba(0, 0, 0, 0.7)", name: "menu-backdrop", value: "rgba(0, 0, 0, 0.7)" },
+      { color: "rgba(0, 0, 0, 0.85)", name: "modal-backdrop", value: "rgba(0, 0, 0, 0.85)" },
+      { color: "rgba(207, 203, 199, 0.5)", name: "nav-text", value: "rgba(207, 203, 199, 0.5)" },
+      { color: "rgba(207, 203, 199, 0.4)", name: "search-icon", value: "rgba(207, 203, 199, 0.4)" },
+      { color: "rgba(122, 102, 82, 0.1)", name: "nav-hover", value: "rgba(122, 102, 82, 0.1)" },
+      { color: "rgba(122, 102, 82, 0.05)", name: "icon-bg", value: "rgba(122, 102, 82, 0.05)" },
+    ],
+  },
+];
+
+function UsageSwatch({ color, name, value }: { color: string; name: string; value: string }) {
+  const isVariable = name.startsWith("--");
+  return (
+    <div className={styles.usageSwatchRow}>
+      <div className={styles.usageSwatch} style={{ backgroundColor: color }} />
+      <div className={styles.usageSwatchInfo}>
+        {isVariable ? (
+          <CopyText copyValue={name} display={name} style={{ color: "#fafafa" }} />
+        ) : (
+          <span className={styles.usageSwatchLabel}>{name}</span>
+        )}
+        <CopyText
+          copyValue={value.replace("#", "")}
+          display={value}
+          style={{ color: "#fafafa", fontSize: "12px" }}
+        />
+      </div>
+    </div>
+  );
+}
+
 // Cool → warm → brown spectrum
 const COLOR_ORDER = [
   "mist", "slate", "gray", "ink", "zinc", "brown",
@@ -162,7 +334,53 @@ const COLOR_DATA = COLOR_ORDER.map((name) => ({
 export default function ColorsPage() {
   return (
     <div className={styles.page}>
+      <NavMenu pageIcon={SwatchBook} />
       <h1 className={styles.title}>Colors</h1>
+      <h2 className={styles.cardLabel}>Color Mixer</h2>
+      <ColorMixer />
+      <h2 className={styles.cardLabel}>Navigation</h2>
+      <div className={styles.navCard}>
+        <div className={`${styles.navCardSection} ${styles.navCardSectionTop}`}>
+          <div className={styles.navCardSubheading}>Active</div>
+          <UsageSwatch color="rgba(122, 102, 82, 0.05)" name="icon-bg" value="rgba(122, 102, 82, 0.05)" />
+          <UsageSwatch color="rgba(207, 203, 199, 0.5)" name="icon-fg" value="rgba(207, 203, 199, 0.5)" />
+          <div className={styles.navCardSubheading}>Hover</div>
+          <UsageSwatch color="rgba(122, 102, 82, 0.1)" name="icon-bg-hover" value="rgba(122, 102, 82, 0.1)" />
+          <UsageSwatch color="#cccbca" name="icon-fg-hover" value="var(--text-primary)" />
+          <div className={styles.navIconSwatchRow}>
+            <div className={styles.navIconBox}>
+              <Menu size={20} strokeWidth={1} />
+            </div>
+            <div className={styles.usageSwatchInfo}>
+              <span className={styles.usageSwatchLabel}>active</span>
+              <span>stroke: 1</span>
+            </div>
+          </div>
+          <div className={styles.navIconSwatchRow}>
+            <div className={styles.navIconBox} data-hover="true">
+              <Menu size={20} strokeWidth={1.5} />
+            </div>
+            <div className={styles.usageSwatchInfo}>
+              <span className={styles.usageSwatchLabel}>hover</span>
+              <span>stroke: 1.5</span>
+            </div>
+          </div>
+        </div>
+        <div className={`${styles.navCardSection} ${styles.navCardSectionBottom}`}>
+          <UsageSwatch color="#7a6652" name="--accent-bronze" value="#7a6652" />
+        </div>
+      </div>
+      <h2 className={styles.cardLabel}>Basics</h2>
+      <div className={styles.usageCard}>
+        {USAGE_SECTIONS.map((section) => (
+          <div key={section.heading}>
+            <h2 className={styles.usageHeading}>{section.heading}</h2>
+            {section.swatches.map((swatch) => (
+              <UsageSwatch key={swatch.name} {...swatch} />
+            ))}
+          </div>
+        ))}
+      </div>
       <div className={styles.grid}>
         {COLOR_DATA.map((color) => (
           <ColorCard

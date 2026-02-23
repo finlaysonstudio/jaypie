@@ -1,6 +1,16 @@
 .page {
+  margin: 0 auto;
+  max-width: 544px;
   min-height: 100vh;
-  padding: 24px;
+  min-width: 176px;
+  padding: 16px 16px 96px;
+}
+
+@media (min-width: 656px) {
+  .page {
+    margin: 0 auto 0 112px;
+    padding-bottom: 16px;
+  }
 }
 
 .title {
@@ -9,6 +19,208 @@
   font-weight: 400;
   letter-spacing: -0.02em;
   margin-bottom: 24px;
+}
+
+/* Navigation card */
+.navCard {
+  border: 1px solid var(--bg-secondary);
+  border-radius: 8px;
+  margin-bottom: 24px;
+  overflow: hidden;
+}
+
+.navCardSection {
+  padding: 16px;
+}
+
+.navCardSectionTop {
+  background: var(--bg-primary);
+}
+
+.navCardSectionBottom {
+  background: var(--bg-secondary);
+}
+
+.navCardSubheading {
+  color: var(--text-muted);
+  font-family: var(--font-ui);
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+  padding: 8px 0 4px;
+  text-transform: uppercase;
+}
+
+.navCardSubheading:first-child {
+  padding-top: 0;
+}
+
+.navIconSwatchRow {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  padding: 4px 0;
+}
+
+.navIconBox {
+  align-items: center;
+  border-radius: 7px;
+  display: inline-flex;
+  flex-shrink: 0;
+  height: 48px;
+  justify-content: center;
+  width: 48px;
+}
+
+.navIconBox:not([data-hover]) {
+  background: rgba(122, 102, 82, 0.05);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  color: rgba(207, 203, 199, 0.5);
+}
+
+.navIconBox[data-hover] {
+  background: rgba(122, 102, 82, 0.1);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  color: var(--text-primary);
+}
+
+/* Card label (outside cards) */
+.cardLabel {
+  font-family: var(--font-ui);
+  font-size: 1rem;
+  font-weight: 400;
+  margin: 0 0 8px;
+  text-transform: uppercase;
+}
+
+/* Usage card */
+.usageCard {
+  background: #3f3e3e; /* gray-700 */
+  border-radius: 8px;
+  margin-bottom: 48px;
+  padding: 16px;
+}
+
+.usageHeading {
+  font-family: var(--font-ui);
+  font-size: 1rem;
+  font-weight: 400;
+  margin: 0;
+  padding: 8px 0;
+  text-transform: uppercase;
+}
+
+.usageSwatchRow {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  padding: 4px 0;
+}
+
+.usageSwatch {
+  border-radius: 4px;
+  flex-shrink: 0;
+  height: 48px;
+  width: 48px;
+}
+
+.usageSwatchInfo {
+  align-items: flex-start;
+  display: flex;
+  flex-direction: column;
+  font-family: var(--font-code);
+  font-size: 0.875rem;
+  gap: 2px;
+}
+
+.usageSwatchLabel {
+  color: #fafafa;
+  font-family: var(--font-ui);
+  font-size: 0.875rem;
+}
+
+/* Color Mixer card */
+.mixerCard {
+  background: #3f3e3e;
+  border-radius: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+  margin-bottom: 24px;
+  overflow: hidden;
+  padding: 16px;
+}
+
+.mixerLayout {
+  align-items: flex-start;
+  display: flex;
+  gap: 8px;
+}
+
+.mixerSwatch {
+  align-items: center;
+  border-radius: 4px;
+  display: flex;
+  flex-shrink: 0;
+  height: 80px;
+  justify-content: center;
+  width: 80px;
+}
+
+.mixerSwatchInner {
+  border-radius: 4px;
+  height: 48px;
+  width: 48px;
+}
+
+.mixerControls {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-left: 8px;
+  min-width: 0;
+}
+
+.mixerField {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+}
+
+.mixerLabel {
+  color: var(--text-muted);
+  font-family: var(--font-code);
+  font-size: 0.75rem;
+  min-width: 44px;
+}
+
+.mixerInput {
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--text-muted);
+  color: #fafafa;
+  font-family: var(--font-code);
+  font-size: 0.875rem;
+  outline: none;
+  padding: 2px 4px;
+  width: 80px;
+}
+
+.mixerInput:focus {
+  border-bottom-color: var(--accent-bronze);
+}
+
+.mixerResultRow {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+}
+
+.mixerResult {
+  align-items: center;
+  display: flex;
+  font-family: var(--font-code);
+  font-size: 0.875rem;
+  margin-left: 8px;
 }
 
 .grid {

@@ -2,7 +2,9 @@
 
 import {
   Ban,
+  Bird,
   Birdhouse,
+  BookType,
   ChevronLeft,
   Search,
   CircleAlert,
@@ -15,6 +17,7 @@ import {
   KeyRound,
   Menu,
   PowerOff,
+  RulerDimensionLine,
   SwatchBook,
   UserLock,
 } from "lucide-react";
@@ -28,8 +31,10 @@ import styles from "./page.module.css";
 const NAV_ITEMS = [
   { href: "/", icon: Birdhouse, label: "Home" },
   { href: "/colors", icon: SwatchBook, label: "Colors" },
-  { icon: Component, label: "Components" },
+  { href: "/components", icon: Component, label: "Components" },
   { href: "/dimensions", icon: Proportions, label: "Dimensions" },
+  { href: "/fonts", icon: BookType, label: "Fonts" },
+  { href: "/layout", icon: RulerDimensionLine, label: "Layout" },
 ];
 
 const STATUS_ICONS: Record<ConnectionStatus, typeof CircleHelp> = {
@@ -164,7 +169,7 @@ function AuthModal({
   );
 }
 
-export function NavMenu({ hideMenu, onPageIconClick, pageIcon: PageIcon = Birdhouse }: { hideMenu?: boolean; onPageIconClick?: () => void; pageIcon?: typeof Birdhouse }) {
+export function NavMenu({ hideMenu, onPageIconClick, pageIcon: PageIcon = Bird }: { hideMenu?: boolean; onPageIconClick?: () => void; pageIcon?: typeof Bird }) {
   const [isOpen, setIsOpen] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
   const [showStatus, setShowStatus] = useState(false);
@@ -286,7 +291,7 @@ export function NavMenu({ hideMenu, onPageIconClick, pageIcon: PageIcon = Birdho
         </div>
       )}
       {!isOpen && (
-        <div className={styles.navBox}>
+        <div className={`${styles.navBox}${hideMenu ? ` ${styles.navBoxBorderless}` : ""}`}>
           <div
             className={styles.iconButton}
             onClick={hideMenu ? undefined : () => setIsOpen(true)}

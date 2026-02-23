@@ -9,13 +9,22 @@
 
 .navBox {
   border-radius: 8px;
+  bottom: 16px;
   display: flex;
+  flex-direction: row-reverse;
   gap: 0;
-  left: 16px;
   padding: 0;
-  position: absolute;
-  top: 16px;
+  position: fixed;
+  right: 16px;
   z-index: 3;
+}
+
+.navBoxBorderless::after {
+  display: none;
+}
+
+.navBox::after {
+  display: none;
 }
 
 .menuContainer {
@@ -373,8 +382,10 @@
   display: flex;
   height: 48px;
   justify-content: center;
+  position: relative;
   transition: all 0.15s ease;
   width: 48px;
+  z-index: 1;
 }
 
 .iconButton:last-child {
@@ -424,6 +435,18 @@
 
 .iconButtonGhost:hover svg {
   color: var(--text-primary);
+}
+
+@media (min-width: 656px) {
+  .navBox {
+    bottom: auto;
+    flex-direction: row;
+    gap: 0;
+    left: 16px;
+    right: auto;
+    top: 16px;
+  }
+
 }
 
 .hero {

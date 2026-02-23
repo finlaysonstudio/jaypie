@@ -1,18 +1,18 @@
 .page {
-  margin-left: auto;
+  margin: 0 auto;
   max-width: 544px;
   min-height: 100vh;
   min-width: 176px;
-  padding: 80px 16px;
+  padding: 16px 16px 96px;
 }
 
 .gridPage {
-  margin-left: auto;
+  margin: 0 auto;
   max-width: 544px;
   min-height: 100vh;
   min-width: 176px;
   overflow: hidden;
-  padding: 80px 16px;
+  padding: 16px 16px 96px;
 }
 
 .title {
@@ -102,7 +102,7 @@
 @media (min-width: 656px) {
   .page,
   .gridPage {
-    margin-left: 112px;
-    padding-top: 16px;
+    margin: 0 auto 0 112px;
+    padding-bottom: 16px;
   }
 }
