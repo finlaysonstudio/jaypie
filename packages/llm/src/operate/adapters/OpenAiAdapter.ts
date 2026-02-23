@@ -206,15 +206,25 @@ export class OpenAiAdapter extends BaseProviderAdapter {
   // API Execution
   //
 
-  async executeRequest(client: unknown, request: unknown): Promise<unknown> {
+  async executeRequest(
+    client: unknown,
+    request: unknown,
+    signal?: AbortSignal,
+  ): Promise<unknown> {
     const openai = client as OpenAI;
-    // @ts-expect-error OpenAI SDK types don't match our request format exactly
-    return await openai.responses.create(request);
+    try {
+      // @ts-expect-error OpenAI SDK types don't match our request format exactly
+      return await openai.responses.create(request, signal ? { signal } : undefined);
+    } catch (error) {
+      if (signal?.aborted) return undefined;
+      throw error;
+    }
   }
 
   async *executeStreamRequest(
     client: unknown,
     request: unknown,
+    signal?: AbortSignal,
   ): AsyncIterable<LlmStreamChunk> {
     const openai = client as OpenAI;
     const baseRequest = request as Record<string, unknown>;
@@ -225,6 +235,7 @@ export class OpenAiAdapter extends BaseProviderAdapter {
 
     const stream = await openai.responses.create(
       streamRequest as Parameters<typeof openai.responses.create>[0],
+      signal ? { signal } : undefined,
     );
 
     // Track current function call being built

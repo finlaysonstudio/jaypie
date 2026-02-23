@@ -325,16 +325,24 @@ export class AnthropicAdapter extends BaseProviderAdapter {
   async executeRequest(
     client: unknown,
     request: unknown,
+    signal?: AbortSignal,
   ): Promise<Anthropic.Message> {
     const anthropic = client as Anthropic;
-    return (await anthropic.messages.create(
-      request as Anthropic.MessageCreateParams,
-    )) as Anthropic.Message;
+    try {
+      return (await anthropic.messages.create(
+        request as Anthropic.MessageCreateParams,
+        signal ? { signal } : undefined,
+      )) as Anthropic.Message;
+    } catch (error) {
+      if (signal?.aborted) return undefined as unknown as Anthropic.Message;
+      throw error;
+    }
   }
 
   async *executeStreamRequest(
     client: unknown,
     request: unknown,
+    signal?: AbortSignal,
   ): AsyncIterable<LlmStreamChunk> {
     const anthropic = client as Anthropic;
     const streamRequest = {
@@ -342,7 +350,10 @@ export class AnthropicAdapter extends BaseProviderAdapter {
       stream: true,
     } as Anthropic.MessageCreateParamsStreaming;
 
-    const stream = await anthropic.messages.create(streamRequest);
+    const stream = await anthropic.messages.create(
+      streamRequest,
+      signal ? { signal } : undefined,
+    );
 
     // Track current tool call being built
     let currentToolCall: {

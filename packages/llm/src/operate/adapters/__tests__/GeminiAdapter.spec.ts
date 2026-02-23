@@ -654,6 +654,58 @@ describe("GeminiAdapter", () => {
     });
   });
 
+  // AbortSignal Support
+  describe("AbortSignal Support", () => {
+    describe("executeRequest", () => {
+      it("suppresses errors after signal is aborted", async () => {
+        const controller = new AbortController();
+        controller.abort("retry");
+
+        const mockGenerateContent = vi
+          .fn()
+          .mockRejectedValue(new TypeError("terminated"));
+        const mockClient = {
+          models: { generateContent: mockGenerateContent },
+        };
+        const request = {
+          model: "gemini-2.0-flash",
+          contents: [],
+        };
+
+        const result = await geminiAdapter.executeRequest(
+          mockClient,
+          request,
+          controller.signal,
+        );
+
+        expect(result).toBeUndefined();
+      });
+
+      it("throws errors when signal is not aborted", async () => {
+        const controller = new AbortController();
+
+        const mockGenerateContent = vi
+          .fn()
+          .mockRejectedValue(new Error("real error"));
+        const mockClient = {
+          models: { generateContent: mockGenerateContent },
+        };
+        const request = {
+          model: "gemini-2.0-flash",
+          contents: [],
+        };
+
+        await expect(
+          geminiAdapter.executeRequest(
+            mockClient,
+            request,
+            controller.signal,
+          ),
+        ).rejects.toThrow("real error");
+      });
+    });
+  });
+
   // Specific Scenarios
   describe("Specific Scenarios", () => {
     it("uses default model when not specified", () => {

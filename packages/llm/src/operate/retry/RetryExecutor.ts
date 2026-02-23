@@ -2,6 +2,7 @@ import { sleep } from "@jaypie/kit";
 import { BadGatewayError } from "@jaypie/errors";
 
 import { log } from "../../util/index.js";
+import { isTransientNetworkError } from "./isTransientNetworkError.js";
 import {
   HookRunner,
   hookRunner as defaultHookRunner,
@@ -138,7 +139,18 @@ export class RetryExecutor {
           error,
         });
 
-        await sleep(delay);
+        // Guard against stale socket errors that fire during sleep
+        const staleHandler = (reason: unknown) => {
+          if (isTransientNetworkError(reason)) {
+            log.trace("Suppressed stale socket error during retry sleep");
+          }
+        };
+        process.on("unhandledRejection", staleHandler);
+        try {
+          await sleep(delay);
+        } finally {
+          process.removeListener("unhandledRejection", staleHandler);
+        }
         attempt++;
       }
     }
