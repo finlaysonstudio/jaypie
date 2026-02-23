@@ -287,6 +287,63 @@ describe("RetryExecutor", () => {
     });
   });
 
+  // Stale Socket Error Guard
+  describe("Stale Socket Error Guard", () => {
+    let executor: RetryExecutor;
+    const mockContext = {
+      input: "test",
+      options: {},
+      providerRequest: {},
+    };
+
+    beforeEach(() => {
+      executor = new RetryExecutor({
+        errorClassifier: createTestErrorClassifier(),
+        policy: new RetryPolicy({ maxRetries: 3 }),
+      });
+    });
+
+    afterEach(() => {
+      vi.clearAllMocks();
+    });
+
+    it("registers unhandledRejection handler during sleep", async () => {
+      const processSpy = vi.spyOn(process, "on");
+
+      const operation = vi
+        .fn()
+        .mockRejectedValueOnce(new RetryableError())
+        .mockResolvedValue("success");
+
+      await executor.execute(operation, { context: mockContext });
+
+      expect(processSpy).toHaveBeenCalledWith(
+        "unhandledRejection",
+        expect.any(Function),
+      );
+
+      processSpy.mockRestore();
+    });
+
+    it("removes unhandledRejection handler after sleep", async () => {
+      const removeSpy = vi.spyOn(process, "removeListener");
+
+      const operation = vi
+        .fn()
+        .mockRejectedValueOnce(new RetryableError())
+        .mockResolvedValue("success");
+
+      await executor.execute(operation, { context: mockContext });
+
+      expect(removeSpy).toHaveBeenCalledWith(
+        "unhandledRejection",
+        expect.any(Function),
+      );
+
+      removeSpy.mockRestore();
+    });
+  });
+
   // Features
   describe("Features", () => {
     afterEach(() => {

@@ -2,6 +2,7 @@ import { BadGatewayError, TooManyRequestsError } from "@jaypie/errors";
 import { sleep } from "@jaypie/kit";
 import { JsonObject } from "@jaypie/types";
 
+import { isTransientNetworkError } from "./retry/isTransientNetworkError.js";
 import { Toolkit } from "../tools/Toolkit.class.js";
 import {
   LlmHistory,
@@ -357,7 +358,19 @@ export class StreamLoop {
         const delay = this.retryPolicy.getDelayForAttempt(attempt);
         log.warn(`Stream request failed. Retrying in ${delay}ms...`);
         log.var({ error });
-        await sleep(delay);
+
+        // Guard against stale socket errors that fire during sleep
+        const staleHandler = (reason: unknown) => {
+          if (isTransientNetworkError(reason)) {
+            log.trace("Suppressed stale socket error during retry sleep");
+          }
+        };
+        process.on("unhandledRejection", staleHandler);
+        try {
+          await sleep(delay);
+        } finally {
+          process.removeListener("unhandledRejection", staleHandler);
+        }
         attempt++;
       }
     }

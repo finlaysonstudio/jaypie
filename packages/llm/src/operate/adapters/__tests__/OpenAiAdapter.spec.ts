@@ -446,6 +446,83 @@ describe("OpenAiAdapter", () => {
     });
   });
 
+  // AbortSignal Support
+  describe("AbortSignal Support", () => {
+    describe("executeRequest", () => {
+      it("passes signal to SDK call when provided", async () => {
+        const mockCreate = vi.fn().mockResolvedValue({
+          output: [{ type: "message", content: [{ type: "output_text", text: "Hi" }] }],
+          usage: { input_tokens: 1, output_tokens: 1, total_tokens: 2 },
+        });
+        const mockClient = { responses: { create: mockCreate } };
+        const request = { model: "gpt-4o", input: [] };
+        const controller = new AbortController();
+
+        await openAiAdapter.executeRequest(
+          mockClient,
+          request,
+          controller.signal,
+        );
+
+        expect(mockCreate).toHaveBeenCalledTimes(1);
+        const [, options] = mockCreate.mock.calls[0];
+        expect(options).toEqual({ signal: controller.signal });
+      });
+
+      it("does not pass options when no signal provided", async () => {
+        const mockCreate = vi.fn().mockResolvedValue({
+          output: [],
+          usage: { input_tokens: 0, output_tokens: 0, total_tokens: 0 },
+        });
+        const mockClient = { responses: { create: mockCreate } };
+        const request = { model: "gpt-4o", input: [] };
+
+        await openAiAdapter.executeRequest(mockClient, request);
+
+        expect(mockCreate).toHaveBeenCalledTimes(1);
+        const [, options] = mockCreate.mock.calls[0];
+        expect(options).toBeUndefined();
+      });
+
+      it("suppresses errors after signal is aborted", async () => {
+        const controller = new AbortController();
+        controller.abort("retry");
+
+        const mockCreate = vi
+          .fn()
+          .mockRejectedValue(new TypeError("terminated"));
+        const mockClient = { responses: { create: mockCreate } };
+        const request = { model: "gpt-4o", input: [] };
+
+        const result = await openAiAdapter.executeRequest(
+          mockClient,
+          request,
+          controller.signal,
+        );
+
+        expect(result).toBeUndefined();
+      });
+
+      it("throws errors when signal is not aborted", async () => {
+        const controller = new AbortController();
+
+        const mockCreate = vi
+          .fn()
+          .mockRejectedValue(new Error("real error"));
+        const mockClient = { responses: { create: mockCreate } };
+        const request = { model: "gpt-4o", input: [] };
+
+        await expect(
+          openAiAdapter.executeRequest(
+            mockClient,
+            request,
+            controller.signal,
+          ),
+        ).rejects.toThrow("real error");
+      });
+    });
+  });
+
   // Specific Scenarios
   describe("Specific Scenarios", () => {
     it("uses default model when not specified", () => {

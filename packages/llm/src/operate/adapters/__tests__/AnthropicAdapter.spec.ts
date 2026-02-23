@@ -639,6 +639,105 @@ describe("AnthropicAdapter", () => {
     });
   });
 
+  // AbortSignal Support
+  describe("AbortSignal Support", () => {
+    describe("executeRequest", () => {
+      it("passes signal to SDK call when provided", async () => {
+        const mockCreate = vi.fn().mockResolvedValue({
+          content: [{ type: "text", text: "Hi" }],
+          stop_reason: "end_turn",
+          usage: { input_tokens: 1, output_tokens: 1 },
+        });
+        const mockClient = { messages: { create: mockCreate } };
+        const request = {
+          model: "claude-sonnet-4-20250514",
+          messages: [{ role: "user", content: "Hello" }],
+          max_tokens: 1024,
+          stream: false,
+        };
+        const controller = new AbortController();
+
+        await anthropicAdapter.executeRequest(
+          mockClient,
+          request,
+          controller.signal,
+        );
+
+        expect(mockCreate).toHaveBeenCalledTimes(1);
+        const [, options] = mockCreate.mock.calls[0];
+        expect(options).toEqual({ signal: controller.signal });
+      });
+
+      it("does not pass options when no signal provided", async () => {
+        const mockCreate = vi.fn().mockResolvedValue({
+          content: [{ type: "text", text: "Hi" }],
+          stop_reason: "end_turn",
+          usage: { input_tokens: 1, output_tokens: 1 },
+        });
+        const mockClient = { messages: { create: mockCreate } };
+        const request = {
+          model: "claude-sonnet-4-20250514",
+          messages: [{ role: "user", content: "Hello" }],
+          max_tokens: 1024,
+          stream: false,
+        };
+
+        await anthropicAdapter.executeRequest(mockClient, request);
+
+        expect(mockCreate).toHaveBeenCalledTimes(1);
+        const [, options] = mockCreate.mock.calls[0];
+        expect(options).toBeUndefined();
+      });
+
+      it("suppresses errors after signal is aborted", async () => {
+        const controller = new AbortController();
+        controller.abort("retry");
+
+        const mockCreate = vi
+          .fn()
+          .mockRejectedValue(new TypeError("terminated"));
+        const mockClient = { messages: { create: mockCreate } };
+        const request = {
+          model: "claude-sonnet-4-20250514",
+          messages: [],
+          max_tokens: 1024,
+          stream: false,
+        };
+
+        const result = await anthropicAdapter.executeRequest(
+          mockClient,
+          request,
+          controller.signal,
+        );
+
+        expect(result).toBeUndefined();
+      });
+
+      it("throws errors when signal is not aborted", async () => {
+        const controller = new AbortController();
+
+        const mockCreate = vi
+          .fn()
+          .mockRejectedValue(new Error("real error"));
+        const mockClient = { messages: { create: mockCreate } };
+        const request = {
+          model: "claude-sonnet-4-20250514",
+          messages: [],
+          max_tokens: 1024,
+          stream: false,
+        };
+
+        await expect(
+          anthropicAdapter.executeRequest(
+            mockClient,
+            request,
+            controller.signal,
+          ),
+        ).rejects.toThrow("real error");
+      });
+    });
+  });
+
   // Specific Scenarios
   describe("Specific Scenarios", () => {
     it("uses default model when not specified", () => {

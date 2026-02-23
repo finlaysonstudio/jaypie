@@ -812,6 +812,49 @@ describe("OpenRouterAdapter", () => {
         expect(options).toEqual({ signal: controller.signal });
       });
 
+      it("suppresses errors after signal is aborted", async () => {
+        const controller = new AbortController();
+        controller.abort("retry");
+
+        const mockSend = vi
+          .fn()
+          .mockRejectedValue(new TypeError("terminated"));
+        const mockClient = { chat: { send: mockSend } };
+        const request = {
+          model: PROVIDER.OPENROUTER.MODEL.DEFAULT,
+          messages: [{ role: "user", content: "Hello" }],
+        };
+
+        const result = await openRouterAdapter.executeRequest(
+          mockClient,
+          request,
+          controller.signal,
+        );
+
+        expect(result).toBeUndefined();
+      });
+
+      it("throws errors when signal is not aborted", async () => {
+        const controller = new AbortController();
+
+        const mockSend = vi
+          .fn()
+          .mockRejectedValue(new Error("real error"));
+        const mockClient = { chat: { send: mockSend } };
+        const request = {
+          model: PROVIDER.OPENROUTER.MODEL.DEFAULT,
+          messages: [{ role: "user", content: "Hello" }],
+        };
+
+        await expect(
+          openRouterAdapter.executeRequest(
+            mockClient,
+            request,
+            controller.signal,
+          ),
+        ).rejects.toThrow("real error");
+      });
+
       it("does not pass options when no signal provided", async () => {
         const mockSend = vi.fn().mockResolvedValue({
           id: "resp-1",

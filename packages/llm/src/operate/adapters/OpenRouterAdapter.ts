@@ -314,22 +314,28 @@ export class OpenRouterAdapter extends BaseProviderAdapter {
     const openRouter = client as OpenRouter;
     const openRouterRequest = request as OpenRouterRequest;
 
-    const response = await openRouter.chat.send(
-      {
-        model: openRouterRequest.model,
-        messages: openRouterRequest.messages as Parameters<
-          typeof openRouter.chat.send
-        >[0]["messages"],
-        tools: openRouterRequest.tools as Parameters<
-          typeof openRouter.chat.send
-        >[0]["tools"],
-        toolChoice: openRouterRequest.tool_choice,
-        user: openRouterRequest.user,
-      },
-      signal ? { signal } : undefined,
-    );
+    try {
+      const response = await openRouter.chat.send(
+        {
+          model: openRouterRequest.model,
+          messages: openRouterRequest.messages as Parameters<
+            typeof openRouter.chat.send
+          >[0]["messages"],
+          tools: openRouterRequest.tools as Parameters<
+            typeof openRouter.chat.send
+          >[0]["tools"],
+          toolChoice: openRouterRequest.tool_choice,
+          user: openRouterRequest.user,
+        },
+        signal ? { signal } : undefined,
+      );
 
-    return response as unknown as OpenRouterResponse;
+      return response as unknown as OpenRouterResponse;
+    } catch (error) {
+      if (signal?.aborted)
+        return undefined as unknown as OpenRouterResponse;
+      throw error;
+    }
   }
 
   async *executeStreamRequest(
