@@ -146,6 +146,80 @@ function ColorCard({ name, shades }: { name: string; shades: string[] }) {
 // Page
 //
 
+// Usage card data
+const USAGE_SECTIONS: { heading: string; swatches: { color: string; name: string; value: string }[] }[] = [
+  {
+    heading: "Backgrounds",
+    swatches: [
+      { color: "#282726", name: "--bg-primary", value: "#282726" },
+      { color: "#161514", name: "--bg-secondary", value: "#161514" },
+      { color: "#f8f6f5", name: "--bg-light", value: "#f8f6f5" },
+    ],
+  },
+  {
+    heading: "Foregrounds",
+    swatches: [
+      { color: "#cccbca", name: "--text-primary", value: "#cccbca" },
+      { color: "#6c6b6a", name: "--text-muted", value: "#6c6b6a" },
+      { color: "#7a6652", name: "--accent-bronze", value: "#7a6652" },
+      { color: "#635242", name: "--accent-bronze-hover", value: "#635242" },
+    ],
+  },
+  {
+    heading: "Borders and Shadows",
+    swatches: [
+      { color: "rgba(207, 203, 199, 0.1)", name: "--border-color", value: "rgba(207, 203, 199, 0.1)" },
+    ],
+  },
+  {
+    heading: "Statuses",
+    swatches: [
+      { color: "#1b2f22", name: "authenticated-bg", value: "#1b2f22" },
+      { color: "#8fb69a", name: "authenticated-text", value: "#8fb69a" },
+      { color: "#3b3418", name: "connected-bg", value: "#3b3418" },
+      { color: "#cfc07e", name: "connected-text", value: "#cfc07e" },
+      { color: "#3d211d", name: "disconnected-bg", value: "#3d211d" },
+      { color: "#c9a099", name: "disconnected-text", value: "#c9a099" },
+      { color: "#8b5533", name: "uninitialized-bg", value: "#8b5533" },
+      { color: "#f9ede2", name: "uninitialized-text", value: "#f9ede2" },
+      { color: "#3a2129", name: "unknown-bg", value: "#3a2129" },
+      { color: "#c49aab", name: "unknown-text", value: "#c49aab" },
+    ],
+  },
+  {
+    heading: "Navigation",
+    swatches: [
+      { color: "rgba(0, 0, 0, 0.7)", name: "menu-backdrop", value: "rgba(0, 0, 0, 0.7)" },
+      { color: "rgba(0, 0, 0, 0.85)", name: "modal-backdrop", value: "rgba(0, 0, 0, 0.85)" },
+      { color: "rgba(207, 203, 199, 0.5)", name: "nav-text", value: "rgba(207, 203, 199, 0.5)" },
+      { color: "rgba(207, 203, 199, 0.4)", name: "search-icon", value: "rgba(207, 203, 199, 0.4)" },
+      { color: "rgba(122, 102, 82, 0.1)", name: "nav-hover", value: "rgba(122, 102, 82, 0.1)" },
+      { color: "rgba(122, 102, 82, 0.05)", name: "icon-bg", value: "rgba(122, 102, 82, 0.05)" },
+    ],
+  },
+];
+
+function UsageSwatch({ color, name, value }: { color: string; name: string; value: string }) {
+  const isVariable = name.startsWith("--");
+  return (
+    <div className={styles.usageSwatchRow}>
+      <div className={styles.usageSwatch} style={{ backgroundColor: color }} />
+      <div className={styles.usageSwatchInfo}>
+        {isVariable ? (
+          <CopyText copyValue={name} display={name} style={{ color: "#fafafa" }} />
+        ) : (
+          <span className={styles.usageSwatchLabel}>{name}</span>
+        )}
+        <CopyText
+          copyValue={value.replace("#", "")}
+          display={value}
+          style={{ color: "#fafafa", fontSize: "12px" }}
+        />
+      </div>
+    </div>
+  );
+}
+
 // Cool → warm → brown spectrum
 const COLOR_ORDER = [
   "mist", "slate", "gray", "ink", "zinc", "brown",
@@ -166,153 +240,14 @@ export default function ColorsPage() {
       <NavMenu pageIcon={SwatchBook} />
       <h1 className={styles.title}>Colors</h1>
       <div className={styles.usageCard}>
-        <h2 className={styles.usageHeading}>Backgrounds</h2>
-        <div className={styles.usageSwatchRow}>
-          <div
-            className={styles.usageSwatch}
-            style={{ backgroundColor: "#282726" }}
-          />
-          <div className={styles.usageSwatchInfo}>
-            <CopyText
-              copyValue="--bg-primary"
-              display="--bg-primary"
-              style={{ color: "#fafafa" }}
-            />
-            <CopyText
-              copyValue="282726"
-              display="#282726"
-              style={{ color: "#fafafa", fontSize: "12px" }}
-            />
+        {USAGE_SECTIONS.map((section) => (
+          <div key={section.heading}>
+            <h2 className={styles.usageHeading}>{section.heading}</h2>
+            {section.swatches.map((swatch) => (
+              <UsageSwatch key={swatch.name} {...swatch} />
+            ))}
           </div>
-        </div>
-        <div className={styles.usageSwatchRow}>
-          <div
-            className={styles.usageSwatch}
-            style={{ backgroundColor: "#161514" }}
-          />
-          <div className={styles.usageSwatchInfo}>
-            <CopyText
-              copyValue="--bg-secondary"
-              display="--bg-secondary"
-              style={{ color: "#fafafa" }}
-            />
-            <CopyText
-              copyValue="161514"
-              display="#161514"
-              style={{ color: "#fafafa", fontSize: "12px" }}
-            />
-          </div>
-        </div>
-        <div className={styles.usageSwatchRow}>
-          <div
-            className={styles.usageSwatch}
-            style={{ backgroundColor: "#f8f6f5" }}
-          />
-          <div className={styles.usageSwatchInfo}>
-            <CopyText
-              copyValue="--bg-light"
-              display="--bg-light"
-              style={{ color: "#fafafa" }}
-            />
-            <CopyText
-              copyValue="f8f6f5"
-              display="#f8f6f5"
-              style={{ color: "#fafafa", fontSize: "12px" }}
-            />
-          </div>
-        </div>
-        <h2 className={styles.usageHeading}>Foregrounds</h2>
-        <div className={styles.usageSwatchRow}>
-          <div
-            className={styles.usageSwatch}
-            style={{ backgroundColor: "#cccbca" }}
-          />
-          <div className={styles.usageSwatchInfo}>
-            <CopyText
-              copyValue="--text-primary"
-              display="--text-primary"
-              style={{ color: "#fafafa" }}
-            />
-            <CopyText
-              copyValue="cccbca"
-              display="#cccbca"
-              style={{ color: "#fafafa", fontSize: "12px" }}
-            />
-          </div>
-        </div>
-        <div className={styles.usageSwatchRow}>
-          <div
-            className={styles.usageSwatch}
-            style={{ backgroundColor: "#6c6b6a" }}
-          />
-          <div className={styles.usageSwatchInfo}>
-            <CopyText
-              copyValue="--text-muted"
-              display="--text-muted"
-              style={{ color: "#fafafa" }}
-            />
-            <CopyText
-              copyValue="6c6b6a"
-              display="#6c6b6a"
-              style={{ color: "#fafafa", fontSize: "12px" }}
-            />
-          </div>
-        </div>
-        <div className={styles.usageSwatchRow}>
-          <div
-            className={styles.usageSwatch}
-            style={{ backgroundColor: "#7a6652" }}
-          />
-          <div className={styles.usageSwatchInfo}>
-            <CopyText
-              copyValue="--accent-bronze"
-              display="--accent-bronze"
-              style={{ color: "#fafafa" }}
-            />
-            <CopyText
-              copyValue="7a6652"
-              display="#7a6652"
-              style={{ color: "#fafafa", fontSize: "12px" }}
-            />
-          </div>
-        </div>
-        <div className={styles.usageSwatchRow}>
-          <div
-            className={styles.usageSwatch}
-            style={{ backgroundColor: "#635242" }}
-          />
-          <div className={styles.usageSwatchInfo}>
-            <CopyText
-              copyValue="--accent-bronze-hover"
-              display="--accent-bronze-hover"
-              style={{ color: "#fafafa" }}
-            />
-            <CopyText
-              copyValue="635242"
-              display="#635242"
-              style={{ color: "#fafafa", fontSize: "12px" }}
-            />
-          </div>
-        </div>
-        <h2 className={styles.usageHeading}>Borders and Shadows</h2>
-        <div className={styles.usageSwatchRow}>
-          <div
-            className={styles.usageSwatch}
-            style={{ backgroundColor: "rgba(207, 203, 199, 0.1)" }}
-          />
-          <div className={styles.usageSwatchInfo}>
-            <CopyText
-              copyValue="--border-color"
-              display="--border-color"
-              style={{ color: "#fafafa" }}
-            />
-            <CopyText
-              copyValue="rgba(207, 203, 199, 0.1)"
-              display="rgba(207, 203, 199, 0.1)"
-              style={{ color: "#fafafa", fontSize: "12px" }}
-            />
-          </div>
-        </div>
+        ))}
       </div>
       <div className={styles.grid}>
         {COLOR_DATA.map((color) => (

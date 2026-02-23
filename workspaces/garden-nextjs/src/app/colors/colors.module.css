@@ -61,6 +61,11 @@
   gap: 2px;
 }
 
+.usageSwatchLabel {
+  color: #fafafa;
+  font-family: var(--font-ui);
+  font-size: 0.875rem;
+}
 
 .grid {
   display: grid;
