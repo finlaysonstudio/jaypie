@@ -111,6 +111,17 @@ export class GeminiProvider implements LlmProvider {
       try {
         return JSON.parse(text);
       } catch {
+        // Strip markdown code fences and retry (Gemini sometimes wraps JSON in fences)
+        const jsonMatch =
+          text.match(/```(?:json)?\s*([\s\S]*?)\s*```/) ||
+          text.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          try {
+            return JSON.parse(jsonMatch[1] || jsonMatch[0]);
+          } catch {
+            // Fall through to return original text
+          }
+        }
         return text || "";
       }
     }

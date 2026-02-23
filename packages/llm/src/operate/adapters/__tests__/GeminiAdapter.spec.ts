@@ -698,6 +698,100 @@ describe("GeminiAdapter", () => {
       expect(result.config?.temperature).toBe(0.9);
     });
 
+    describe("parseResponse with code-fenced JSON (Issue #211)", () => {
+      it("parses code-fenced JSON when format is provided", () => {
+        const jsonData = { Decision: "Yes", Summary: "Test", Confidence: 0.9 };
+        const response = {
+          candidates: [
+            {
+              content: {
+                role: "model",
+                parts: [
+                  {
+                    text: "```json\n" + JSON.stringify(jsonData) + "\n```",
+                  },
+                ],
+              },
+              finishReason: "STOP",
+            },
+          ],
+          usageMetadata: {
+            promptTokenCount: 10,
+            candidatesTokenCount: 20,
+            totalTokenCount: 30,
+          },
+        };
+
+        const result = geminiAdapter.parseResponse(response, {
+          format: { type: "object" },
+        });
+
+        expect(result.content).toEqual(jsonData);
+        expect(typeof result.content).toBe("object");
+      });
+
+      it("parses code-fenced JSON with extra whitespace", () => {
+        const jsonData = { name: "test" };
+        const response = {
+          candidates: [
+            {
+              content: {
+                role: "model",
+                parts: [
+                  {
+                    text:
+                      "```json\n  " + JSON.stringify(jsonData) + "  \n```",
+                  },
+                ],
+              },
+              finishReason: "STOP",
+            },
+          ],
+          usageMetadata: {
+            promptTokenCount: 10,
+            candidatesTokenCount: 20,
+            totalTokenCount: 30,
+          },
+        };
+
+        const result = geminiAdapter.parseResponse(response, {
+          format: { type: "object" },
+        });
+
+        expect(result.content).toEqual(jsonData);
+      });
+
+      it("parses plain code-fenced content (no json tag)", () => {
+        const jsonData = { key: "value" };
+        const response = {
+          candidates: [
+            {
+              content: {
+                role: "model",
+                parts: [
+                  {
+                    text: "```\n" + JSON.stringify(jsonData) + "\n```",
+                  },
+                ],
+              },
+              finishReason: "STOP",
+            },
+          ],
+          usageMetadata: {
+            promptTokenCount: 10,
+            candidatesTokenCount: 20,
+            totalTokenCount: 30,
+          },
+        };
+
+        const result = geminiAdapter.parseResponse(response, {
+          format: { type: "object" },
+        });
+
+        expect(result.content).toEqual(jsonData);
+      });
+    });
+
     it("does not set temperature when not provided", () => {
       const request: OperateRequest = {
         model: PROVIDER.GEMINI.MODEL.SMALL,

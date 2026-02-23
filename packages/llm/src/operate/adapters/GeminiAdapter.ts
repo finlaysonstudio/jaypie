@@ -887,7 +887,17 @@ export class GeminiAdapter extends BaseProviderAdapter {
       try {
         return JSON.parse(textContent);
       } catch {
-        // If parsing fails, return the original string
+        // Strip markdown code fences and retry (Gemini sometimes wraps JSON in fences)
+        const jsonMatch =
+          textContent.match(/```(?:json)?\s*([\s\S]*?)\s*```/) ||
+          textContent.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          try {
+            return JSON.parse(jsonMatch[1] || jsonMatch[0]);
+          } catch {
+            // Fall through to return original string
+          }
+        }
         return textContent;
       }
     }

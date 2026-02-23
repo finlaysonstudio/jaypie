@@ -135,6 +135,37 @@ describe("GeminiProvider", () => {
         });
       });
 
+      it("Strips code fences from JSON response (Issue #211)", async () => {
+        const mockParsedResponse = {
+          Decision: "Yes",
+          Summary: "Test",
+          Confidence: 0.9,
+        };
+
+        const mockResponse = {
+          text:
+            "```json\n" + JSON.stringify(mockParsedResponse) + "\n```",
+        };
+
+        const mockGenerateContent = vi.fn().mockResolvedValue(mockResponse);
+        vi.mocked(GoogleGenAI).mockImplementation(
+          () =>
+            ({
+              models: {
+                generateContent: mockGenerateContent,
+              },
+            }) as any,
+        );
+
+        const provider = new GeminiProvider();
+        const response = await provider.send("Hello", {
+          response: { Decision: String, Summary: String, Confidence: Number },
+        });
+
+        expect(response).toEqual(mockParsedResponse);
+        expect(typeof response).toBe("object");
+      });
+
       it("Returns raw text if JSON parsing fails", async () => {
         const mockResponse = {
           text: "Not valid JSON",
