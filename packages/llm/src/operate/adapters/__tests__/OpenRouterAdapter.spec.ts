@@ -786,6 +786,95 @@ describe("OpenRouterAdapter", () => {
     });
   });
 
+  // AbortSignal Support
+  describe("AbortSignal Support", () => {
+    describe("executeRequest", () => {
+      it("passes signal to SDK call when provided", async () => {
+        const mockSend = vi.fn().mockResolvedValue({
+          id: "resp-1",
+          choices: [{ message: { role: "assistant", content: "Hi" } }],
+        });
+        const mockClient = { chat: { send: mockSend } };
+        const request = {
+          model: PROVIDER.OPENROUTER.MODEL.DEFAULT,
+          messages: [{ role: "user", content: "Hello" }],
+        };
+        const controller = new AbortController();
+
+        await openRouterAdapter.executeRequest(
+          mockClient,
+          request,
+          controller.signal,
+        );
+
+        expect(mockSend).toHaveBeenCalledTimes(1);
+        const [, options] = mockSend.mock.calls[0];
+        expect(options).toEqual({ signal: controller.signal });
+      });
+
+      it("suppresses errors after signal is aborted", async () => {
+        const controller = new AbortController();
+        controller.abort("retry");
+
+        const mockSend = vi
+          .fn()
+          .mockRejectedValue(new TypeError("terminated"));
+        const mockClient = { chat: { send: mockSend } };
+        const request = {
+          model: PROVIDER.OPENROUTER.MODEL.DEFAULT,
+          messages: [{ role: "user", content: "Hello" }],
+        };
+
+        const result = await openRouterAdapter.executeRequest(
+          mockClient,
+          request,
+          controller.signal,
+        );
+
+        expect(result).toBeUndefined();
+      });
+
+      it("throws errors when signal is not aborted", async () => {
+        const controller = new AbortController();
+
+        const mockSend = vi
+          .fn()
+          .mockRejectedValue(new Error("real error"));
+        const mockClient = { chat: { send: mockSend } };
+        const request = {
+          model: PROVIDER.OPENROUTER.MODEL.DEFAULT,
+          messages: [{ role: "user", content: "Hello" }],
+        };
+
+        await expect(
+          openRouterAdapter.executeRequest(
+            mockClient,
+            request,
+            controller.signal,
+          ),
+        ).rejects.toThrow("real error");
+      });
+
+      it("does not pass options when no signal provided", async () => {
+        const mockSend = vi.fn().mockResolvedValue({
+          id: "resp-1",
+          choices: [{ message: { role: "assistant", content: "Hi" } }],
+        });
+        const mockClient = { chat: { send: mockSend } };
+        const request = {
+          model: PROVIDER.OPENROUTER.MODEL.DEFAULT,
+          messages: [{ role: "user", content: "Hello" }],
+        };
+
+        await openRouterAdapter.executeRequest(mockClient, request);
+
+        expect(mockSend).toHaveBeenCalledTimes(1);
+        const [, options] = mockSend.mock.calls[0];
+        expect(options).toBeUndefined();
+      });
+    });
+  });
+
   // Specific Scenarios
   describe("Specific Scenarios", () => {
     it("uses default model when not specified", () => {

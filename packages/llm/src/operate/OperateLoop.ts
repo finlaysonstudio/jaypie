@@ -285,7 +285,8 @@ export class OperateLoop {
 
     // Execute with retry (RetryExecutor handles error hooks and throws appropriate errors)
     const response = await retryExecutor.execute(
-      () => this.adapter.executeRequest(this.client, providerRequest),
+      (signal) =>
+        this.adapter.executeRequest(this.client, providerRequest, signal),
       {
         context: {
           input: state.currentInput,

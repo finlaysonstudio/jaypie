@@ -207,6 +207,143 @@ describe("RetryExecutor", () => {
     });
   });
 
+  // AbortSignal Support
+  describe("AbortSignal Support", () => {
+    let executor: RetryExecutor;
+    const mockContext = {
+      input: "test",
+      options: {},
+      providerRequest: {},
+    };
+
+    beforeEach(() => {
+      executor = new RetryExecutor({
+        errorClassifier: createTestErrorClassifier(),
+        policy: new RetryPolicy({ maxRetries: 3 }),
+      });
+    });
+
+    afterEach(() => {
+      vi.clearAllMocks();
+    });
+
+    it("passes an AbortSignal to the operation", async () => {
+      const operation = vi.fn().mockResolvedValue("success");
+
+      await executor.execute(operation, { context: mockContext });
+
+      expect(operation).toHaveBeenCalledTimes(1);
+      const signal = operation.mock.calls[0][0];
+      expect(signal).toBeInstanceOf(AbortSignal);
+      expect(signal.aborted).toBe(false);
+    });
+
+    it("aborts the signal on error before retrying", async () => {
+      const signals: AbortSignal[] = [];
+      const operation = vi
+        .fn()
+        .mockImplementationOnce((signal: AbortSignal) => {
+          signals.push(signal);
+          return Promise.reject(new RetryableError());
+        })
+        .mockImplementationOnce((signal: AbortSignal) => {
+          signals.push(signal);
+          return Promise.resolve("success");
+        });
+
+      await executor.execute(operation, { context: mockContext });
+
+      expect(signals).toHaveLength(2);
+      expect(signals[0].aborted).toBe(true);
+      expect(signals[0].reason).toBe("retry");
+      expect(signals[1].aborted).toBe(false);
+    });
+
+    it("provides a fresh non-aborted signal on each attempt", async () => {
+      const signals: AbortSignal[] = [];
+      const operation = vi
+        .fn()
+        .mockImplementationOnce((signal: AbortSignal) => {
+          signals.push(signal);
+          return Promise.reject(new RetryableError());
+        })
+        .mockImplementationOnce((signal: AbortSignal) => {
+          signals.push(signal);
+          return Promise.reject(new RetryableError());
+        })
+        .mockImplementationOnce((signal: AbortSignal) => {
+          signals.push(signal);
+          return Promise.resolve("done");
+        });
+
+      await executor.execute(operation, { context: mockContext });
+
+      expect(signals).toHaveLength(3);
+      // First two should be aborted (they failed)
+      expect(signals[0].aborted).toBe(true);
+      expect(signals[1].aborted).toBe(true);
+      // Last one succeeded, should not be aborted
+      expect(signals[2].aborted).toBe(false);
+    });
+  });
+
+  // Stale Socket Error Guard
+  describe("Stale Socket Error Guard", () => {
+    let executor: RetryExecutor;
+    const mockContext = {
+      input: "test",
+      options: {},
+      providerRequest: {},
+    };
+
+    beforeEach(() => {
+      executor = new RetryExecutor({
+        errorClassifier: createTestErrorClassifier(),
+        policy: new RetryPolicy({ maxRetries: 3 }),
+      });
+    });
+
+    afterEach(() => {
+      vi.clearAllMocks();
+    });
+
+    it("registers unhandledRejection handler during sleep", async () => {
+      const processSpy = vi.spyOn(process, "on");
+
+      const operation = vi
+        .fn()
+        .mockRejectedValueOnce(new RetryableError())
+        .mockResolvedValue("success");
+
+      await executor.execute(operation, { context: mockContext });
+
+      expect(processSpy).toHaveBeenCalledWith(
+        "unhandledRejection",
+        expect.any(Function),
+      );
+
+      processSpy.mockRestore();
+    });
+
+    it("removes unhandledRejection handler after sleep", async () => {
+      const removeSpy = vi.spyOn(process, "removeListener");
+
+      const operation = vi
+        .fn()
+        .mockRejectedValueOnce(new RetryableError())
+        .mockResolvedValue("success");
+
+      await executor.execute(operation, { context: mockContext });
+
+      expect(removeSpy).toHaveBeenCalledWith(
+        "unhandledRejection",
+        expect.any(Function),
+      );
+
+      removeSpy.mockRestore();
+    });
+  });
+
   // Features
   describe("Features", () => {
     afterEach(() => {

@@ -239,25 +239,34 @@ export class GeminiAdapter extends BaseProviderAdapter {
   async executeRequest(
     client: unknown,
     request: unknown,
+    signal?: AbortSignal,
   ): Promise<GeminiRawResponse> {
     const genAI = client as GoogleGenAI;
     const geminiRequest = request as GeminiRequest;
 
-    // Cast config to any to bypass strict type checking between our internal types
-    // and the SDK's types. The SDK will validate at runtime.
-    const response = await genAI.models.generateContent({
-      model: geminiRequest.model,
-      contents: geminiRequest.contents as any,
-      config: geminiRequest.config as any,
-    });
+    try {
+      // Cast config to any to bypass strict type checking between our internal types
+      // and the SDK's types. The SDK will validate at runtime.
+      const response = await genAI.models.generateContent({
+        model: geminiRequest.model,
+        contents: geminiRequest.contents as any,
+        config: geminiRequest.config as any,
+      });
 
-    return response as unknown as GeminiRawResponse;
+      return response as unknown as GeminiRawResponse;
+    } catch (error) {
+      if (signal?.aborted) return undefined as unknown as GeminiRawResponse;
+      throw error;
+    }
   }
 
   async *executeStreamRequest(
     client: unknown,
     request: unknown,
+    signal?: AbortSignal,
   ): AsyncIterable<LlmStreamChunk> {
+    // signal is accepted for interface conformance; Gemini SDK does not natively support it
+    void signal;
     const genAI = client as GoogleGenAI;
     const geminiRequest = request as GeminiRequest;
 

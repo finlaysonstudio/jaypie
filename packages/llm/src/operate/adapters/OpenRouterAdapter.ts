@@ -309,45 +309,59 @@ export class OpenRouterAdapter extends BaseProviderAdapter {
   async executeRequest(
     client: unknown,
     request: unknown,
+    signal?: AbortSignal,
   ): Promise<OpenRouterResponse> {
     const openRouter = client as OpenRouter;
     const openRouterRequest = request as OpenRouterRequest;
 
-    const response = await openRouter.chat.send({
-      model: openRouterRequest.model,
-      messages: openRouterRequest.messages as Parameters<
-        typeof openRouter.chat.send
-      >[0]["messages"],
-      tools: openRouterRequest.tools as Parameters<
-        typeof openRouter.chat.send
-      >[0]["tools"],
-      toolChoice: openRouterRequest.tool_choice,
-      user: openRouterRequest.user,
-    });
+    try {
+      const response = await openRouter.chat.send(
+        {
+          model: openRouterRequest.model,
+          messages: openRouterRequest.messages as Parameters<
+            typeof openRouter.chat.send
+          >[0]["messages"],
+          tools: openRouterRequest.tools as Parameters<
+            typeof openRouter.chat.send
+          >[0]["tools"],
+          toolChoice: openRouterRequest.tool_choice,
+          user: openRouterRequest.user,
+        },
+        signal ? { signal } : undefined,
+      );
 
-    return response as unknown as OpenRouterResponse;
+      return response as unknown as OpenRouterResponse;
+    } catch (error) {
+      if (signal?.aborted)
+        return undefined as unknown as OpenRouterResponse;
+      throw error;
+    }
   }
 
   async *executeStreamRequest(
     client: unknown,
     request: unknown,
+    signal?: AbortSignal,
   ): AsyncIterable<LlmStreamChunk> {
     const openRouter = client as OpenRouter;
     const openRouterRequest = request as OpenRouterRequest;
 
     // Use chat.send with stream: true for streaming responses
-    const stream = await openRouter.chat.send({
-      model: openRouterRequest.model,
-      messages: openRouterRequest.messages as Parameters<
-        typeof openRouter.chat.send
-      >[0]["messages"],
-      tools: openRouterRequest.tools as Parameters<
-        typeof openRouter.chat.send
-      >[0]["tools"],
-      toolChoice: openRouterRequest.tool_choice,
-      user: openRouterRequest.user,
-      stream: true,
-    });
+    const stream = await openRouter.chat.send(
+      {
+        model: openRouterRequest.model,
+        messages: openRouterRequest.messages as Parameters<
+          typeof openRouter.chat.send
+        >[0]["messages"],
+        tools: openRouterRequest.tools as Parameters<
+          typeof openRouter.chat.send
+        >[0]["tools"],
+        toolChoice: openRouterRequest.tool_choice,
+        user: openRouterRequest.user,
+        stream: true,
+      },
+      signal ? { signal } : undefined,
+    );
 
     // Track current tool call being built
     let currentToolCall: {
