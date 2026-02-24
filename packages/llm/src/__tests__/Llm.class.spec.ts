@@ -108,6 +108,18 @@ describe("Llm Class", () => {
     expect(llm["_provider"]).toBe(PROVIDER.OPENAI.NAME);
   });
 
+  it("Preserves model when model name is passed as first argument (#213)", () => {
+    const llm = new Llm("gemini-3-flash-preview");
+    expect(llm["_provider"]).toBe(PROVIDER.GEMINI.NAME);
+    expect(llm["_options"].model).toBe("gemini-3-flash-preview");
+  });
+
+  it("Preserves non-default OpenAI model passed as first argument (#213)", () => {
+    const llm = new Llm("gpt-5-mini");
+    expect(llm["_provider"]).toBe(PROVIDER.OPENAI.NAME);
+    expect(llm["_options"].model).toBe("gpt-5-mini");
+  });
+
   it("Throws ConfigurationError for unsupported provider", () => {
     expect(() => {
       new Llm("unsupported-provider" as any);

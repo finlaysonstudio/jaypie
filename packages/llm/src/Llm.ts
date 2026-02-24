@@ -58,6 +58,10 @@ class Llm implements LlmProvider {
         );
       }
       finalProvider = providerDetermined.provider;
+      // When providerName is actually a model name, extract the model (#213)
+      if (!finalModel && providerName !== providerDetermined.provider) {
+        finalModel = providerDetermined.model;
+      }
     }
 
     // Handle conflicts: if both providerName and model specify different providers
