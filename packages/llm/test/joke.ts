@@ -29,9 +29,8 @@ function getProviderAndModel(): { provider?: string; model?: string } {
   return { provider: "gpt-5" };
 }
 
-async function main() {
+async function main(provider?: string, model?: string) {
   try {
-    const { provider, model } = getProviderAndModel();
     console.log(
       `Provider: ${provider || "(inferred)"}, Model: ${model || "(default)"}`,
     );
@@ -55,8 +54,23 @@ async function main() {
 }
 
 async function run() {
-  const success = await main();
-  if (!success) {
+  const { provider, model } = getProviderAndModel();
+
+  // Support comma-separated providers (e.g., APP_PROVIDER=anthropic,google,openai)
+  const providers = provider?.includes(",")
+    ? provider.split(",").map((p) => p.trim())
+    : [provider];
+
+  let hasError = false;
+  for (const p of providers) {
+    const success = await main(p, model);
+    if (!success) {
+      console.error(`\n❌ Failed for provider "${p}"`);
+      hasError = true;
+    }
+  }
+
+  if (hasError) {
     console.error("\n💀 Exiting with failure");
     process.exit(1);
   } else {
