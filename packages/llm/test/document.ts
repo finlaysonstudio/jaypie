@@ -141,7 +141,7 @@ async function testImageAnthropic(): Promise<boolean> {
 }
 
 async function testImageGemini(): Promise<boolean> {
-  const provider = "gemini";
+  const provider = "google";
   const model = MODELS.gemini;
 
   try {
@@ -280,7 +280,7 @@ async function testPdfAnthropic(): Promise<boolean> {
 }
 
 async function testPdfGemini(): Promise<boolean> {
-  const provider = "gemini";
+  const provider = "google";
   const model = MODELS.gemini;
 
   try {
@@ -379,6 +379,7 @@ async function runImageTests(): Promise<{ passed: number; failed: number }> {
         case "anthropic":
           success = await testImageAnthropic();
           break;
+        case "google":
         case "gemini":
           success = await testImageGemini();
           break;
@@ -442,6 +443,7 @@ async function runPdfTests(): Promise<{ passed: number; failed: number }> {
         case "anthropic":
           success = await testPdfAnthropic();
           break;
+        case "google":
         case "gemini":
           success = await testPdfGemini();
           break;

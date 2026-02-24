@@ -215,7 +215,7 @@ async function testAnthropic(): Promise<boolean> {
 }
 
 async function testGemini(): Promise<boolean> {
-  return testProvider("gemini", MODELS.gemini);
+  return testProvider("google", MODELS.gemini);
 }
 
 async function testOpenRouter(): Promise<boolean> {
@@ -260,6 +260,7 @@ async function runTests(): Promise<{ failed: number; passed: number }> {
         case "anthropic":
           success = await testAnthropic();
           break;
+        case "google":
         case "gemini":
           success = await testGemini();
           break;
