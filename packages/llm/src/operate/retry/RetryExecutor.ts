@@ -74,85 +74,108 @@ export class RetryExecutor {
   ): Promise<T> {
     let attempt = 0;
 
-    while (true) {
-      const controller = new AbortController();
+    // Persistent guard against stale socket errors (TypeError: terminated).
+    // Installed after the first abort and kept alive through subsequent attempts
+    // so that asynchronous undici socket teardown errors that fire between
+    // sleep completion and the next operation's await are caught.
+    let staleGuard: ((reason: unknown) => void) | undefined;
 
-      try {
-        const result = await operation(controller.signal);
-
-        if (attempt > 0) {
-          log.debug(`API call succeeded after ${attempt} retries`);
+    const installGuard = () => {
+      if (staleGuard) return;
+      staleGuard = (reason: unknown) => {
+        if (isTransientNetworkError(reason)) {
+          log.trace("Suppressed stale socket error during retry");
         }
+      };
+      process.on("unhandledRejection", staleGuard);
+    };
 
-        return result;
-      } catch (error: unknown) {
-        // Abort the previous request to kill lingering socket callbacks
-        controller.abort("retry");
-
-        // Check if we've exhausted retries
-        if (!this.policy.shouldRetry(attempt)) {
-          log.error(`API call failed after ${this.policy.maxRetries} retries`);
-          log.var({ error });
-
-          await this.hookRunner.runOnUnrecoverableError(options.hooks, {
-            input: options.context.input as never,
-            options: options.context.options as never,
-            providerRequest: options.context.providerRequest,
-            error,
-          });
-
-          const errorMessage =
-            error instanceof Error ? error.message : String(error);
-          throw new BadGatewayError(errorMessage);
-        }
-
-        // Check if error is not retryable
-        if (!this.errorClassifier.isRetryable(error)) {
-          log.error("API call failed with non-retryable error");
-          log.var({ error });
-
-          await this.hookRunner.runOnUnrecoverableError(options.hooks, {
-            input: options.context.input as never,
-            options: options.context.options as never,
-            providerRequest: options.context.providerRequest,
-            error,
-          });
-
-          const errorMessage =
-            error instanceof Error ? error.message : String(error);
-          throw new BadGatewayError(errorMessage);
-        }
-
-        // Warn if this is an unknown error type
-        if (!this.errorClassifier.isKnownError(error)) {
-          log.warn("API returned unknown error type, will retry");
-          log.var({ error });
-        }
-
-        const delay = this.policy.getDelayForAttempt(attempt);
-        log.warn(`API call failed. Retrying in ${delay}ms...`);
-
-        await this.hookRunner.runOnRetryableError(options.hooks, {
-          input: options.context.input as never,
-          options: options.context.options as never,
-          providerRequest: options.context.providerRequest,
-          error,
-        });
-
-        // Guard against stale socket errors that fire during sleep
-        const staleHandler = (reason: unknown) => {
-          if (isTransientNetworkError(reason)) {
-            log.trace("Suppressed stale socket error during retry sleep");
-          }
-        };
-        process.on("unhandledRejection", staleHandler);
-        try {
-          await sleep(delay);
-        } finally {
-          process.removeListener("unhandledRejection", staleHandler);
-        }
-        attempt++;
+    const removeGuard = () => {
+      if (staleGuard) {
+        process.removeListener("unhandledRejection", staleGuard);
+        staleGuard = undefined;
       }
+    };
+
+    try {
+      while (true) {
+        const controller = new AbortController();
+
+        try {
+          const result = await operation(controller.signal);
+
+          if (attempt > 0) {
+            log.debug(`API call succeeded after ${attempt} retries`);
+          }
+
+          return result;
+        } catch (error: unknown) {
+          // Abort the previous request to kill lingering socket callbacks
+          controller.abort("retry");
+
+          // Install the guard immediately after abort — stale socket errors
+          // can fire on any subsequent microtask boundary (during hook calls,
+          // sleep, or the next operation attempt)
+          installGuard();
+
+          // Check if we've exhausted retries
+          if (!this.policy.shouldRetry(attempt)) {
+            log.error(
+              `API call failed after ${this.policy.maxRetries} retries`,
+            );
+            log.var({ error });
+
+            await this.hookRunner.runOnUnrecoverableError(options.hooks, {
+              input: options.context.input as never,
+              options: options.context.options as never,
+              providerRequest: options.context.providerRequest,
+              error,
+            });
+
+            const errorMessage =
+              error instanceof Error ? error.message : String(error);
+            throw new BadGatewayError(errorMessage);
+          }
+
+          // Check if error is not retryable
+          if (!this.errorClassifier.isRetryable(error)) {
+            log.error("API call failed with non-retryable error");
+            log.var({ error });
+
+            await this.hookRunner.runOnUnrecoverableError(options.hooks, {
+              input: options.context.input as never,
+              options: options.context.options as never,
+              providerRequest: options.context.providerRequest,
+              error,
+            });
+
+            const errorMessage =
+              error instanceof Error ? error.message : String(error);
+            throw new BadGatewayError(errorMessage);
+          }
+
+          // Warn if this is an unknown error type
+          if (!this.errorClassifier.isKnownError(error)) {
+            log.warn("API returned unknown error type, will retry");
+            log.var({ error });
+          }
+
+          const delay = this.policy.getDelayForAttempt(attempt);
+          log.warn(`API call failed. Retrying in ${delay}ms...`);
+
+          await this.hookRunner.runOnRetryableError(options.hooks, {
+            input: options.context.input as never,
+            options: options.context.options as never,
+            providerRequest: options.context.providerRequest,
+            error,
+          });
+
+          await sleep(delay);
+          attempt++;
+        }
+      }
+    } finally {
+      removeGuard();
     }
   }
 }
