@@ -6,7 +6,12 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { debugLlmCall, validateLlmSetup, type LlmProvider } from "./llm.js";
+import {
+  debugLlmCall,
+  inferProvider,
+  validateLlmSetup,
+  type LlmProvider,
+} from "./llm.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -70,13 +75,19 @@ export const llmService = fabricService({
       }
 
       case "debug_call": {
-        if (!p.provider) throw new Error("provider is required");
+        const provider =
+          (p.provider as LlmProvider) ||
+          (p.model ? inferProvider(p.model) : undefined);
+        if (!provider)
+          throw new Error(
+            "provider is required (or use a model name that starts with claude-, gemini-, gpt-, o1-, o3-, o4-, or chatgpt-)",
+          );
         if (!p.message) throw new Error("message is required");
         const result = await debugLlmCall(
           {
             message: p.message,
             model: p.model,
-            provider: p.provider as LlmProvider,
+            provider,
           },
           log,
         );

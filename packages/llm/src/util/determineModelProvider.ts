@@ -27,7 +27,7 @@ export function determineModelProvider(input?: string): {
       provider: PROVIDER.ANTHROPIC.NAME,
     };
   }
-  if (input === PROVIDER.GEMINI.NAME) {
+  if (input === PROVIDER.GEMINI.NAME || input === "gemini") {
     return {
       model: PROVIDER.GEMINI.MODEL.DEFAULT,
       provider: PROVIDER.GEMINI.NAME,

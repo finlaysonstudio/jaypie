@@ -4,7 +4,7 @@
 
 import { LLM, Llm } from "@jaypie/llm";
 
-export type LlmProvider = "anthropic" | "gemini" | "openai" | "openrouter";
+export type LlmProvider = "anthropic" | "google" | "openai" | "openrouter";
 
 export interface LlmDebugCallParams {
   provider: LlmProvider;
@@ -47,10 +47,28 @@ interface Logger {
   error: (message: string, ...args: unknown[]) => void;
 }
 
+/**
+ * Infer provider from model string prefix
+ */
+export function inferProvider(model: string): LlmProvider | undefined {
+  const m = model.toLowerCase();
+  if (m.startsWith("claude-")) return "anthropic";
+  if (m.startsWith("gemini-")) return "google";
+  if (
+    m.startsWith("chatgpt-") ||
+    m.startsWith("gpt-") ||
+    m.startsWith("o1-") ||
+    m.startsWith("o3-") ||
+    m.startsWith("o4-")
+  )
+    return "openai";
+  return undefined;
+}
+
 // Default models for each provider
 const DEFAULT_MODELS: Record<LlmProvider, string> = {
   anthropic: LLM.PROVIDER.ANTHROPIC.MODEL.SMALL,
-  gemini: LLM.PROVIDER.GEMINI.MODEL.SMALL,
+  google: LLM.PROVIDER.GEMINI.MODEL.SMALL,
   openai: LLM.PROVIDER.OPENAI.MODEL.SMALL,
   openrouter: LLM.PROVIDER.OPENROUTER.MODEL.SMALL,
 };

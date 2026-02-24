@@ -58,7 +58,7 @@ afterEach(() => {
   });
   geminiOperateMock.mockResolvedValue({
     content: "Mocked Gemini operate response",
-    provider: "gemini",
+    provider: "google",
   });
 });
 
@@ -106,6 +106,18 @@ describe("Llm Class", () => {
   it("Falls back to original provider when model provider cannot be determined", () => {
     const llm = new Llm(PROVIDER.OPENAI.NAME, { model: "unknown-model" });
     expect(llm["_provider"]).toBe(PROVIDER.OPENAI.NAME);
+  });
+
+  it("Preserves model when model name is passed as first argument (#213)", () => {
+    const llm = new Llm("gemini-3-flash-preview");
+    expect(llm["_provider"]).toBe(PROVIDER.GEMINI.NAME);
+    expect(llm["_options"].model).toBe("gemini-3-flash-preview");
+  });
+
+  it("Preserves non-default OpenAI model passed as first argument (#213)", () => {
+    const llm = new Llm("gpt-5-mini");
+    expect(llm["_provider"]).toBe(PROVIDER.OPENAI.NAME);
+    expect(llm["_options"].model).toBe("gpt-5-mini");
   });
 
   it("Throws ConfigurationError for unsupported provider", () => {
@@ -278,7 +290,7 @@ describe("Llm Class", () => {
         expect(result.content).toBe("Mocked Gemini operate response");
         expect(result.fallbackUsed).toBe(true);
         expect(result.fallbackAttempts).toBe(3);
-        expect(result.provider).toBe("gemini");
+        expect(result.provider).toBe("google");
       });
 
       it("throws last error when all providers fail", async () => {
@@ -309,7 +321,7 @@ describe("Llm Class", () => {
           fallback: [{ provider: PROVIDER.GEMINI.NAME }],
         });
 
-        expect(result.provider).toBe("gemini");
+        expect(result.provider).toBe("google");
         expect(anthropicOperateMock).not.toHaveBeenCalled();
       });
 
