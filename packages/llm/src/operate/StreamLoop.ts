@@ -273,106 +273,123 @@ export class StreamLoop {
     let attempt = 0;
     let chunksYielded = false;
 
-    while (true) {
-      const controller = new AbortController();
+    // Persistent guard against stale socket errors (TypeError: terminated).
+    // Installed after the first abort and kept alive through subsequent attempts.
+    let staleGuard: ((reason: unknown) => void) | undefined;
 
-      try {
-        // Execute streaming request
-        const streamGenerator = this.adapter.executeStreamRequest!(
-          this.client,
-          providerRequest,
-          controller.signal,
-        );
-
-        for await (const chunk of streamGenerator) {
-          // Pass through text chunks
-          if (chunk.type === LlmStreamChunkType.Text) {
-            chunksYielded = true;
-            yield chunk;
-          }
-
-          // Collect tool calls
-          if (chunk.type === LlmStreamChunkType.ToolCall) {
-            chunksYielded = true;
-            collectedToolCalls.push({
-              callId: chunk.toolCall.id,
-              name: chunk.toolCall.name,
-              arguments: chunk.toolCall.arguments,
-              raw: chunk.toolCall,
-            });
-            yield chunk;
-          }
-
-          // Track usage from done chunk (but don't yield it yet - we'll emit our own)
-          if (chunk.type === LlmStreamChunkType.Done && chunk.usage) {
-            state.usageItems.push(...chunk.usage);
-          }
-
-          // Pass through error chunks
-          if (chunk.type === LlmStreamChunkType.Error) {
-            chunksYielded = true;
-            yield chunk;
-          }
+    const installGuard = () => {
+      if (staleGuard) return;
+      staleGuard = (reason: unknown) => {
+        if (isTransientNetworkError(reason)) {
+          log.trace("Suppressed stale socket error during retry");
         }
+      };
+      process.on("unhandledRejection", staleGuard);
+    };
 
-        // Stream completed successfully
-        if (attempt > 0) {
-          log.debug(`Stream request succeeded after ${attempt} retries`);
-        }
-        break;
-      } catch (error: unknown) {
-        // Abort the previous request to kill lingering socket callbacks
-        controller.abort("retry");
-
-        // If chunks were already yielded, we can't transparently retry
-        if (chunksYielded) {
-          const errorMessage =
-            error instanceof Error ? error.message : String(error);
-          log.error("Stream failed after partial data was delivered");
-          log.var({ error });
-          yield {
-            type: LlmStreamChunkType.Error,
-            error: {
-              detail: errorMessage,
-              status: 502,
-              title: "Stream Error",
-            },
-          };
-          return { shouldContinue: false };
-        }
-
-        // Check if we've exhausted retries or error is not retryable
-        if (
-          !this.retryPolicy.shouldRetry(attempt) ||
-          !this.adapter.isRetryableError(error)
-        ) {
-          log.error(
-            `Stream request failed after ${this.retryPolicy.maxRetries} retries`,
-          );
-          log.var({ error });
-          const errorMessage =
-            error instanceof Error ? error.message : String(error);
-          throw new BadGatewayError(errorMessage);
-        }
-
-        const delay = this.retryPolicy.getDelayForAttempt(attempt);
-        log.warn(`Stream request failed. Retrying in ${delay}ms...`);
-        log.var({ error });
-
-        // Guard against stale socket errors that fire during sleep
-        const staleHandler = (reason: unknown) => {
-          if (isTransientNetworkError(reason)) {
-            log.trace("Suppressed stale socket error during retry sleep");
-          }
-        };
-        process.on("unhandledRejection", staleHandler);
-        try {
-          await sleep(delay);
-        } finally {
-          process.removeListener("unhandledRejection", staleHandler);
-        }
-        attempt++;
+    const removeGuard = () => {
+      if (staleGuard) {
+        process.removeListener("unhandledRejection", staleGuard);
+        staleGuard = undefined;
       }
+    };
+
+    try {
+      while (true) {
+        const controller = new AbortController();
+
+        try {
+          // Execute streaming request
+          const streamGenerator = this.adapter.executeStreamRequest!(
+            this.client,
+            providerRequest,
+            controller.signal,
+          );
+
+          for await (const chunk of streamGenerator) {
+            // Pass through text chunks
+            if (chunk.type === LlmStreamChunkType.Text) {
+              chunksYielded = true;
+              yield chunk;
+            }
+
+            // Collect tool calls
+            if (chunk.type === LlmStreamChunkType.ToolCall) {
+              chunksYielded = true;
+              collectedToolCalls.push({
+                callId: chunk.toolCall.id,
+                name: chunk.toolCall.name,
+                arguments: chunk.toolCall.arguments,
+                raw: chunk.toolCall,
+              });
+              yield chunk;
+            }
+
+            // Track usage from done chunk (but don't yield it yet - we'll emit our own)
+            if (chunk.type === LlmStreamChunkType.Done && chunk.usage) {
+              state.usageItems.push(...chunk.usage);
+            }
+
+            // Pass through error chunks
+            if (chunk.type === LlmStreamChunkType.Error) {
+              chunksYielded = true;
+              yield chunk;
+            }
+          }
+
+          // Stream completed successfully
+          if (attempt > 0) {
+            log.debug(`Stream request succeeded after ${attempt} retries`);
+          }
+          break;
+        } catch (error: unknown) {
+          // Abort the previous request to kill lingering socket callbacks
+          controller.abort("retry");
+
+          // Install the guard immediately after abort
+          installGuard();
+
+          // If chunks were already yielded, we can't transparently retry
+          if (chunksYielded) {
+            const errorMessage =
+              error instanceof Error ? error.message : String(error);
+            log.error("Stream failed after partial data was delivered");
+            log.var({ error });
+            yield {
+              type: LlmStreamChunkType.Error,
+              error: {
+                detail: errorMessage,
+                status: 502,
+                title: "Stream Error",
+              },
+            };
+            return { shouldContinue: false };
+          }
+
+          // Check if we've exhausted retries or error is not retryable
+          if (
+            !this.retryPolicy.shouldRetry(attempt) ||
+            !this.adapter.isRetryableError(error)
+          ) {
+            log.error(
+              `Stream request failed after ${this.retryPolicy.maxRetries} retries`,
+            );
+            log.var({ error });
+            const errorMessage =
+              error instanceof Error ? error.message : String(error);
+            throw new BadGatewayError(errorMessage);
+          }
+
+          const delay = this.retryPolicy.getDelayForAttempt(attempt);
+          log.warn(`Stream request failed. Retrying in ${delay}ms...`);
+          log.var({ error });
+
+          await sleep(delay);
+          attempt++;
+        }
+      }
+    } finally {
+      removeGuard();
     }
 
     // Execute afterEachModelResponse hook

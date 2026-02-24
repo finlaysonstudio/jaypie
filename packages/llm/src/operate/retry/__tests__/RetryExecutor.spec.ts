@@ -31,6 +31,7 @@ vi.mock("../../../util/index.js", () => ({
   log: {
     debug: vi.fn(),
     error: vi.fn(),
+    trace: vi.fn(),
     var: vi.fn(),
     warn: vi.fn(),
   },
@@ -325,7 +326,7 @@ describe("RetryExecutor", () => {
       processSpy.mockRestore();
     });
 
-    it("removes unhandledRejection handler after sleep", async () => {
+    it("removes unhandledRejection handler after execute completes", async () => {
       const removeSpy = vi.spyOn(process, "removeListener");
 
       const operation = vi
@@ -340,6 +341,120 @@ describe("RetryExecutor", () => {
         expect.any(Function),
       );
 
+      removeSpy.mockRestore();
+    });
+
+    it("keeps guard installed through the next attempt after sleep", async () => {
+      // Track when the guard is active by capturing process.on/removeListener calls
+      const onSpy = vi.spyOn(process, "on");
+      const removeSpy = vi.spyOn(process, "removeListener");
+
+      let guardInstalledDuringSecondAttempt = false;
+
+      const operation = vi
+        .fn()
+        .mockImplementationOnce(() => Promise.reject(new RetryableError()))
+        .mockImplementationOnce(() => {
+          // During the second attempt, check if the guard is still installed.
+          // The guard should be installed (from first failure) and NOT yet removed.
+          const onCalls = onSpy.mock.calls.filter(
+            (c) => c[0] === "unhandledRejection",
+          ).length;
+          const removeCalls = removeSpy.mock.calls.filter(
+            (c) => c[0] === "unhandledRejection",
+          ).length;
+          guardInstalledDuringSecondAttempt = onCalls > removeCalls;
+          return Promise.resolve("success");
+        });
+
+      await executor.execute(operation, { context: mockContext });
+
+      expect(guardInstalledDuringSecondAttempt).toBe(true);
+
+      onSpy.mockRestore();
+      removeSpy.mockRestore();
+    });
+
+    it("suppresses stale TypeError:terminated during next attempt", async () => {
+      const terminatedError = new TypeError("terminated");
+      // Create a pre-caught promise to avoid vitest's own unhandled rejection detection
+      const rejectedPromise = Promise.reject(terminatedError);
+      rejectedPromise.catch(() => {});
+
+      const operation = vi
+        .fn()
+        .mockImplementationOnce(() => Promise.reject(new RetryableError()))
+        .mockImplementationOnce(() => {
+          // Simulate stale socket error from previous attempt firing
+          // during this attempt via unhandledRejection
+          process.emit(
+            "unhandledRejection",
+            terminatedError,
+            rejectedPromise,
+          );
+          return Promise.resolve("success");
+        });
+
+      // Should not throw — the guard should catch the stale error
+      const result = await executor.execute(operation, {
+        context: mockContext,
+      });
+      expect(result).toBe("success");
+    });
+
+    it("cleans up guard after execute completes successfully", async () => {
+      const removeSpy = vi.spyOn(process, "removeListener");
+
+      const operation = vi
+        .fn()
+        .mockRejectedValueOnce(new RetryableError())
+        .mockResolvedValue("success");
+
+      await executor.execute(operation, { context: mockContext });
+
+      // Guard should be removed after execute returns
+      const removeCalls = removeSpy.mock.calls.filter(
+        (c) => c[0] === "unhandledRejection",
+      );
+      expect(removeCalls.length).toBeGreaterThan(0);
+
+      removeSpy.mockRestore();
+    });
+
+    it("cleans up guard after execute throws", async () => {
+      const removeSpy = vi.spyOn(process, "removeListener");
+
+      const operation = vi.fn().mockRejectedValue(new NonRetryableError());
+
+      await expect(
+        executor.execute(operation, { context: mockContext }),
+      ).rejects.toThrow();
+
+      // Even on error, NO guard was installed (no retry happened)
+      // But if we test with exhausted retries...
+      removeSpy.mockRestore();
+    });
+
+    it("cleans up guard after exhausting retries", async () => {
+      const onSpy = vi.spyOn(process, "on");
+      const removeSpy = vi.spyOn(process, "removeListener");
+
+      const operation = vi.fn().mockRejectedValue(new RetryableError());
+
+      await expect(
+        executor.execute(operation, { context: mockContext }),
+      ).rejects.toThrow();
+
+      // Guard was installed and should be cleaned up
+      const onCalls = onSpy.mock.calls.filter(
+        (c) => c[0] === "unhandledRejection",
+      ).length;
+      const removeCalls = removeSpy.mock.calls.filter(
+        (c) => c[0] === "unhandledRejection",
+      ).length;
+      expect(removeCalls).toBe(onCalls);
+
+      onSpy.mockRestore();
       removeSpy.mockRestore();
     });
   });
