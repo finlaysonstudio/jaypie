@@ -46,6 +46,7 @@
     "dynamo:remove": "docker compose down -v",
     "dynamo:start": "docker compose up -d",
     "dynamo:stop": "docker compose down",
+    "garden": "npm run dev --workspace workspaces/garden-nextjs",
     "format": "npm run format:package && npm run format:lint",
     "format:lint": "eslint --fix .",
     "format:package": "sort-package-json ./package.json ./packages/*/package.json ./workspaces/*/package.json",
