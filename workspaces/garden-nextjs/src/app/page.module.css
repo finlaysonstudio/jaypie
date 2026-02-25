@@ -38,7 +38,7 @@
 }
 
 .sideMenu {
-  background: var(--bg-secondary);
+  background: var(--bg-subsurface);
   border-right: 1px solid var(--border-color);
   box-shadow: 2px 0 4px rgba(0, 0, 0, 0.5);
   display: flex;
@@ -402,8 +402,8 @@
 
 /* Menu icon gets background by default */
 .iconButton:first-child {
-  background: rgba(122, 102, 82, 0.05);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  background: var(--bg-secondary);
+  box-shadow: 0 1px 2px #0000001a;
 }
 
 /* When birdhouse is hovered, menu loses background */
@@ -414,8 +414,8 @@
 
 .iconButton:hover,
 .iconButtonActive {
-  background: rgba(122, 102, 82, 0.1);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  background: var(--bg-secondary-surface);
+  box-shadow: 0 1px 2px #0000001a;
 }
 
 .iconButton:hover svg,

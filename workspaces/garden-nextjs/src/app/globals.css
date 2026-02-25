@@ -9,12 +9,36 @@
 
 /* Jaypie Design System */
 :root {
-  /* Zinc palette for backgrounds (boar), gray for foregrounds (bore) */
+  /* Backgrounds */
   --bg-primary: #282726; /* zinc-800 */
-  --bg-secondary: #161514; /* zinc-900 */
+  --bg-surface: #403d3b; /* zinc-700 */
+  --bg-subsurface: #161514; /* zinc-900 */
+
+  --bg-secondary: #2d2a28;
+  --bg-secondary-surface: #302c29;
+  --bg-secondary-subsurface: #171615;
+
+  --bg-alt: #2a2428; /* ink-800 */
+  --bg-alt-surface: #413940; /* ink-700 */
+  --bg-alt-subsurface: #161013; /* ink-900 */
+
   --bg-light: #f8f6f5; /* zinc-50 */
-  --text-primary: #cccbca; /* gray-200 */
-  --text-muted: #6c6b6a; /* gray-500 */
+
+  /* Foregrounds */
+  --text-focus: #edebea;
+  --text-primary: #d8d5d3;
+  --text-muted: #9a9896;
+  --text-subtle: #6b6968;
+
+  --text-secondary-focus: #ddd3c9;
+  --text-secondary-primary: #c4b5a6;
+  --text-secondary-muted: #8d8379;
+  --text-secondary-subtle: #635d57;
+
+  --text-alt-focus: #e5e9ee;
+  --text-alt-primary: #d5dbe2;
+  --text-alt-muted: #989ba0;
+  --text-alt-subtle: #6a6b6e;
 
   /* Accent colors (brown palette) */
   --accent-bronze: #7a6652; /* brown-500 */
