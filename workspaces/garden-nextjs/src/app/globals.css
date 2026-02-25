@@ -1,5 +1,5 @@
 /* Google Fonts - must be first */
-@import url("https://fonts.googleapis.com/css2?family=Faculty+Glyphic&family=Inter:wght@400;500;600&family=Noto+Sans:ital,wght@0,400;0,500;1,400&family=Noto+Sans+Mono:wght@400;500&family=Noto+Serif:ital,wght@0,400;0,500;1,400&family=Noto+Serif+Display:ital,wght@0,400;0,500;1,400&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Faculty+Glyphic&family=Inter:wght@100;200;300;400;500;600&family=Noto+Sans:ital,wght@0,400;0,500;1,400&family=Noto+Sans+Mono:wght@400;500&family=Noto+Serif:ital,wght@0,400;0,500;1,400&family=Noto+Serif+Display:ital,wght@0,400;0,500;1,400&display=swap");
 
 * {
   box-sizing: border-box;
@@ -26,7 +26,7 @@
 
   /* Typography */
   --font-brand: "Faculty Glyphic", serif;
-  --font-heading: "Faculty Glyphic", serif;
+  --font-heading: "Inter", system-ui, sans-serif;
   --font-body: "Noto Serif", serif;
   --font-user: "Noto Sans", system-ui, sans-serif;
   --font-system: "Inter", system-ui, sans-serif;
@@ -51,6 +51,7 @@ body {
   background: var(--bg-primary);
   color: var(--text-primary);
   font-family: var(--font-body);
+  font-size: 16px;
 }
 
 /* Font utility classes */

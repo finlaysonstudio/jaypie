@@ -16,11 +16,12 @@
 }
 
 .title {
-  font-family: var(--font-brand);
-  font-size: 2.5rem;
-  font-weight: 400;
-  letter-spacing: -0.02em;
+  font-family: var(--font-heading);
+  font-size: 20px;
+  font-weight: 100;
+  letter-spacing: 0.04em;
   margin-bottom: 24px;
+  margin-top: 13px;
   position: relative;
   z-index: 1;
 }
@@ -28,7 +29,6 @@
 .rule {
   color: var(--text-muted);
   font-family: var(--font-body);
-  font-size: 0.875rem;
   line-height: 1.5;
   margin-top: 24px;
   position: relative;
@@ -71,7 +71,6 @@
 .lorem {
   color: var(--text-muted);
   font-family: var(--font-body);
-  font-size: 0.875rem;
   line-height: 1.75;
   margin-top: 48px;
   position: relative;
