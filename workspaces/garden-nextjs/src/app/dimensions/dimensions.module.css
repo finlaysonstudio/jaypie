@@ -16,6 +16,7 @@
 }
 
 .title {
+  color: var(--text-secondary-primary);
   font-family: var(--font-heading);
   font-size: 20px;
   font-weight: 100;

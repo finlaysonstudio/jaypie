@@ -393,7 +393,7 @@
 }
 
 .iconButton svg {
-  color: rgba(207, 203, 199, 0.5);
+  color: var(--text-secondary-muted);
   stroke-width: var(--icon-stroke-thin);
   transition:
     color 0.15s ease,
@@ -420,7 +420,7 @@
 
 .iconButton:hover svg,
 .iconButtonActive svg {
-  color: var(--text-primary);
+  color: var(--text-secondary-primary);
   stroke-width: var(--icon-stroke-normal);
 }
 
@@ -430,11 +430,11 @@
 }
 
 .iconButtonGhost svg {
-  color: rgba(207, 203, 199, 0.5);
+  color: var(--text-secondary-muted);
 }
 
 .iconButtonGhost:hover svg {
-  color: var(--text-primary);
+  color: var(--text-secondary-primary);
 }
 
 @media (min-width: 656px) {
