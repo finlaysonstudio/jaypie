@@ -57,6 +57,10 @@ class MockExpressResponse {
     return this._headers[key.toLowerCase()];
   }
 
+  removeHeader(key: string): void {
+    delete this._headers[key.toLowerCase()];
+  }
+
   set(key: string, value: string): void {
     this._headers[key.toLowerCase()] = value;
   }
@@ -107,43 +111,16 @@ describe("Decorate response util", () => {
       });
     });
     describe("Powered by", () => {
-      it("Adds the powered by", () => {
-        const res = new MockExpressResponse() as unknown as Response;
-        expect(
-          (res as unknown as MockExpressResponse).get(HTTP.HEADER.POWERED_BY),
-        ).toBeUndefined();
-        decorateResponse(res);
-        expect(
-          (res as unknown as MockExpressResponse).get(HTTP.HEADER.POWERED_BY),
-        ).toEqual(JAYPIE.LIB.EXPRESS);
-      });
-      it("Adds the powered by and overrides the Express default", () => {
+      it("Removes x-powered-by", () => {
         const res = new MockExpressResponse() as unknown as Response;
         (res as unknown as MockExpressResponse).set(
           HTTP.HEADER.POWERED_BY,
           "Express",
         );
-        expect(
-          (res as unknown as MockExpressResponse).get(HTTP.HEADER.POWERED_BY),
-        ).not.toBeUndefined();
         decorateResponse(res);
         expect(
           (res as unknown as MockExpressResponse).get(HTTP.HEADER.POWERED_BY),
-        ).toEqual(JAYPIE.LIB.EXPRESS);
-      });
-      it("Will not add powered by if one exists", () => {
-        const res = new MockExpressResponse() as unknown as Response;
-        (res as unknown as MockExpressResponse).set(
-          HTTP.HEADER.POWERED_BY,
-          "Some other value",
-        );
-        expect(
-          (res as unknown as MockExpressResponse).get(HTTP.HEADER.POWERED_BY),
-        ).not.toBeUndefined();
-        decorateResponse(res);
-        expect(
-          (res as unknown as MockExpressResponse).get(HTTP.HEADER.POWERED_BY),
-        ).toEqual("Some other value");
+        ).toBeUndefined();
       });
     });
     describe("Project environment", () => {

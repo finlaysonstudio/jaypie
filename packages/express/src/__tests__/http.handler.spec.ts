@@ -40,15 +40,16 @@ describe("Http Handler", () => {
     // Check the response
     expect(res.body).not.toBeUndefined();
   });
-  it("Sets the powered-by header", async () => {
+  it("Does not set the powered-by header by default", async () => {
     // Setup express to use our route
     const app = express();
+    app.disable("x-powered-by");
     const route = httpRoute();
     app.use(route);
     // Make a request
     const res = await request(app).get("/");
     // Check the response
-    expect(res.headers["x-powered-by"]).toEqual(JAYPIE.LIB.EXPRESS);
+    expect(res.headers["x-powered-by"]).toBeUndefined();
   });
   it("Returns 200 by default", async () => {
     // Setup express to use our route
