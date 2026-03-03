@@ -204,7 +204,7 @@ Jaypie handlers automatically add response headers:
 
 | Header | Value |
 |--------|-------|
-| `X-Powered-By` | `Jaypie` |
+| `X-Powered-By` | Removed |
 | `X-Project-Key` | `PROJECT_KEY` env var |
 | `X-Project-Env` | `PROJECT_ENV` env var |
 | `X-Invocation` | Unique invocation ID |

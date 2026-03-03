@@ -145,6 +145,15 @@ async function processOrder(orderId) {
 }
 ```
 
+## Auth Sanitization
+
+Authorization headers are automatically redacted before logging to prevent credential leaks:
+
+- `sk-*` tokens → `sk_<last 4 chars>`
+- Other values → `md5_<last 4 chars of hash>`
+
+Handles top-level `authorization` keys and nested `headers.authorization`. Original objects are never mutated.
+
 ## Configuration
 
 | Variable | Values | Default |
