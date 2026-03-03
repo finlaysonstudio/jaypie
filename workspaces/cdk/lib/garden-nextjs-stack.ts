@@ -38,7 +38,7 @@ export class GardenNextjsStack extends JaypieAppStack {
     this.nextjs = new JaypieNextJs(this, "GardenNextjs", {
       domainName: host,
       hostedZone: zone,
-      nextjsPath: "../garden-nextjs",
+      nextjsPath: "../garden-ui",
       ...(props.table ? { tables: [props.table] } : {}),
     });
   }

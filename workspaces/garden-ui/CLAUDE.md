@@ -1,15 +1,15 @@
-# @jaypie/garden-nextjs
+# @jaypie/garden-ui
 
-Jaypie Garden Next.js site deployed via CDK.
+Jaypie Garden UI site deployed via CDK.
 
 ## Purpose
 
-This package hosts the Jaypie Garden Next.js frontend site.
+This package hosts the Jaypie Garden UI frontend site.
 
 ## Directory Structure
 
 ```
-garden-nextjs/
+garden-ui/
 ├── next.config.mjs       # Next.js configuration
 ├── src/
 │   ├── app/

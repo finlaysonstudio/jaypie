@@ -12,7 +12,7 @@
     "deploy": "cdk deploy",
     "deploy:documentation:sandbox": "bash scripts/deploy-documentation-sandbox.sh",
     "deploy:garden-api:sandbox": "bash scripts/deploy-garden-api-sandbox.sh",
-    "deploy:garden-nextjs:sandbox": "bash scripts/deploy-garden-nextjs-sandbox.sh",
+    "deploy:garden-ui:sandbox": "bash scripts/deploy-garden-ui-sandbox.sh",
     "diff": "cdk diff",
     "format": "eslint --fix --quiet .",
     "lint": "eslint --quiet .",
