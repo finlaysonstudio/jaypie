@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { computeChecksum, isValidApiKeyFormat } from "../checksum.js";
+import { computeChecksum } from "../checksum.js";
 
 //
 //
@@ -32,48 +32,5 @@ describe("computeChecksum", () => {
     const base62 = /^[0-9A-Za-z]+$/;
     const result = computeChecksum("Test1234567890ABCDEFGHIJKLMNOPqr");
     expect(result).toMatch(base62);
-  });
-});
-
-describe("isValidApiKeyFormat", () => {
-  const VALID_BODY = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef";
-  const VALID_KEY = `sk_jpi_${VALID_BODY}${computeChecksum(VALID_BODY)}`;
-
-  it("is a function", () => {
-    expect(typeof isValidApiKeyFormat).toBe("function");
-  });
-
-  it("returns true for a valid key", () => {
-    expect(isValidApiKeyFormat(VALID_KEY)).toBe(true);
-  });
-
-  it("returns false for wrong prefix", () => {
-    const bad = `sk_xyz_${VALID_BODY}${computeChecksum(VALID_BODY)}`;
-    expect(isValidApiKeyFormat(bad)).toBe(false);
-  });
-
-  it("returns false for wrong length", () => {
-    expect(isValidApiKeyFormat("sk_jpi_short")).toBe(false);
-  });
-
-  it("returns false for invalid characters in body", () => {
-    const badBody = "ABCDEFGHIJKLMNOPQRSTUVWXYZ!@#$%^";
-    const bad = `sk_jpi_${badBody}${computeChecksum(badBody)}`;
-    expect(isValidApiKeyFormat(bad)).toBe(false);
-  });
-
-  it("returns false for wrong checksum", () => {
-    const bad = `sk_jpi_${VALID_BODY}ZZZZ`;
-    expect(isValidApiKeyFormat(bad)).toBe(false);
-  });
-
-  it("returns false for non-string input", () => {
-    expect(isValidApiKeyFormat(undefined as any)).toBe(false);
-
-    expect(isValidApiKeyFormat(123 as any)).toBe(false);
-  });
-
-  it("returns false for empty string", () => {
-    expect(isValidApiKeyFormat("")).toBe(false);
   });
 });

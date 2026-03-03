@@ -1,35 +1,35 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("@jaypie/dynamodb", () => ({
-  APEX: "@",
-  initClient: vi.fn(),
-  putEntity: vi.fn().mockResolvedValue({}),
-  queryByAlias: vi.fn().mockResolvedValue(null),
-}));
-
-vi.mock("@jaypie/errors", async () => {
-  const actual = await vi.importActual("@jaypie/errors");
-  return actual;
+vi.mock("@jaypie/dynamodb", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@jaypie/dynamodb")>();
+  return {
+    ...actual,
+    initClient: vi.fn(),
+    putEntity: vi.fn().mockResolvedValue({}),
+    queryByAlias: vi.fn().mockResolvedValue(null),
+  };
 });
 
-vi.mock("@jaypie/fabric", () => ({
-  registerModel: vi.fn(),
-}));
-
-vi.mock("@jaypie/logger", () => ({
-  log: {
-    debug: vi.fn(),
-    error: vi.fn(),
-    info: vi.fn(),
-    trace: vi.fn(),
-    warn: vi.fn(),
-  },
-}));
+vi.mock("@jaypie/fabric", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@jaypie/fabric")>();
+  return {
+    ...actual,
+    registerModel: vi.fn(),
+  };
+});
 
 import { putEntity, queryByAlias } from "@jaypie/dynamodb";
 
-import { generateKeyFromSeed, hashKey } from "../generate.js";
+import { generateKeyFromSeed } from "../generate.js";
 import { extractToken, validateApiKey } from "../validate.js";
+
+//
+//
+// Constants
+//
+
+// The testkit mock returns "0".repeat(64) for hashJaypieKey
+const MOCK_HASH = "0".repeat(64);
 
 //
 //
@@ -65,7 +65,6 @@ describe("extractToken", () => {
 describe("validateApiKey", () => {
   const SEED = "test-admin-seed";
   const SEED_KEY = generateKeyFromSeed(SEED);
-  const SEED_HASH = hashKey(SEED_KEY);
 
   beforeEach(() => {
     process.env.PROJECT_ADMIN_SEED = SEED;
@@ -86,7 +85,7 @@ describe("validateApiKey", () => {
 
   it("returns valid result when key found in database", async () => {
     vi.mocked(queryByAlias).mockResolvedValueOnce({
-      alias: SEED_HASH,
+      alias: MOCK_HASH,
       category: "owner",
       createdAt: new Date().toISOString(),
       id: "test-id",
@@ -118,7 +117,7 @@ describe("validateApiKey", () => {
     expect(putEntity).toHaveBeenCalledWith(
       expect.objectContaining({
         entity: expect.objectContaining({
-          alias: SEED_HASH,
+          alias: MOCK_HASH,
           category: "owner",
           label: SEED_KEY.slice(-4),
           model: "apikey",

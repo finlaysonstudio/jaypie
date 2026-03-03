@@ -1,10 +1,17 @@
 import { APEX, initClient, putEntity, queryByAlias } from "@jaypie/dynamodb";
 import { ForbiddenError, UnauthorizedError } from "@jaypie/errors";
 import { type IndexDefinition, registerModel } from "@jaypie/fabric";
+import { hashJaypieKey, validateJaypieKey } from "@jaypie/kit";
 import { log } from "@jaypie/logger";
 
-import { isValidApiKeyFormat } from "./checksum";
-import { generateKeyFromSeed, hashKey } from "./generate";
+import { generateKeyFromSeed } from "./generate";
+
+//
+//
+// Constants
+//
+
+const GARDEN_KEY_OPTIONS = { issuer: "jpi" } as const;
 
 //
 //
@@ -40,13 +47,13 @@ interface ValidateResult {
 
 async function validateApiKey(token: string): Promise<ValidateResult> {
   // Format check
-  if (!isValidApiKeyFormat(token)) {
+  if (!validateJaypieKey(token, GARDEN_KEY_OPTIONS)) {
     log.trace("API key failed format validation");
     throw new UnauthorizedError();
   }
 
   // Hash and look up in DynamoDB
-  const hash = hashKey(token);
+  const hash = hashJaypieKey(token, { salt: "" });
   const entity = await queryByAlias({
     alias: hash,
     model: "apikey",
