@@ -1,6 +1,15 @@
 export { default as envBoolean } from "./functions/envBoolean.js";
 export { default as envsKey } from "./functions/envsKey.js";
 export { default as formatError } from "./functions/formatError.function.js";
+export {
+  generateJaypieKey,
+  hashJaypieKey,
+  validateJaypieKey,
+} from "./functions/jaypieKey.function.js";
+export type {
+  HashOptions,
+  JaypieKeyOptions,
+} from "./functions/jaypieKey.function.js";
 export { default as getHeaderFrom } from "./functions/getHeaderFrom.function.js";
 export { default as getObjectKeyCaseInsensitive } from "./functions/getObjectKeyCaseInsensitive.js";
 export { default as placeholders } from "./functions/placeholders.js";

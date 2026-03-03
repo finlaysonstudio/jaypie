@@ -25,7 +25,7 @@ export default [
         outDir: "dist/esm",
       }),
     ],
-    external: ["@jaypie/errors", "@jaypie/logger", "uuid"],
+    external: ["@jaypie/errors", "@jaypie/logger", "node:crypto", "uuid"],
   },
   // CommonJS version
   {
@@ -45,6 +45,6 @@ export default [
         outDir: "dist/cjs",
       }),
     ],
-    external: ["@jaypie/errors", "@jaypie/logger", "uuid"],
+    external: ["@jaypie/errors", "@jaypie/logger", "node:crypto", "uuid"],
   },
 ];
