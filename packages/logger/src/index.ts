@@ -5,6 +5,7 @@ import {
   _resetDatadogTransport,
   isDatadogForwardingEnabled,
 } from "./datadogTransport";
+import { redactAuth, sanitizeAuth } from "./sanitizeAuth";
 
 export {
   FORMAT,
@@ -13,6 +14,8 @@ export {
   _resetDatadogTransport,
   createLogger,
   isDatadogForwardingEnabled,
+  redactAuth,
+  sanitizeAuth,
 };
 
 export const log = createLogger();

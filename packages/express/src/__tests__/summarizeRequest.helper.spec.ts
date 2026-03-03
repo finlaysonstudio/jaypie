@@ -32,7 +32,23 @@ describe("Summarize Request Helper", () => {
       url: "MOCK_URL",
     });
   });
-  it("Redacts authorization header", () => {
+  it("Redacts authorization header with sk token", () => {
+    const req = {
+      baseUrl: "",
+      body: null,
+      headers: {
+        authorization: "Bearer sk-proj-abc1234",
+        "content-type": "application/json",
+      },
+      method: "GET",
+      query: {},
+      url: "/",
+    } as unknown as Request;
+    const result = summarizeRequest(req);
+    expect(result.headers.authorization).toBe("sk_1234");
+    expect(result.headers["content-type"]).toBe("application/json");
+  });
+  it("Redacts authorization header with non-sk token", () => {
     const req = {
       baseUrl: "",
       body: null,
@@ -45,7 +61,7 @@ describe("Summarize Request Helper", () => {
       url: "/",
     } as unknown as Request;
     const result = summarizeRequest(req);
-    expect(result.headers.authorization).toBe("[REDACTED]");
+    expect(result.headers.authorization).toMatch(/^md5_[a-f0-9]{4}$/);
     expect(result.headers["content-type"]).toBe("application/json");
   });
   it("Redacts cookie and set-cookie headers", () => {
@@ -62,8 +78,8 @@ describe("Summarize Request Helper", () => {
       url: "/",
     } as unknown as Request;
     const result = summarizeRequest(req);
-    expect(result.headers.cookie).toBe("[REDACTED]");
-    expect(result.headers["set-cookie"]).toBe("[REDACTED]");
+    expect(result.headers.cookie).toMatch(/^md5_[a-f0-9]{4}$/);
+    expect(result.headers["set-cookie"]).toMatch(/^md5_[a-f0-9]{4}$/);
     expect(result.headers.host).toBe("example.com");
   });
   it("Does not mutate original headers", () => {

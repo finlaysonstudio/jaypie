@@ -1,11 +1,10 @@
 import type { Request } from "express";
+import { redactAuth } from "@jaypie/logger";
 
 //
 //
 // Constants
 //
-
-const REDACTED = "[REDACTED]";
 
 const SENSITIVE_HEADERS = new Set(["authorization", "cookie", "set-cookie"]);
 
@@ -41,7 +40,7 @@ function summarizeRequest(req: Request): RequestSummary {
   };
   for (const key of Object.keys(headers)) {
     if (SENSITIVE_HEADERS.has(key.toLowerCase())) {
-      headers[key] = REDACTED;
+      headers[key] = redactAuth(headers[key]);
     }
   }
 
