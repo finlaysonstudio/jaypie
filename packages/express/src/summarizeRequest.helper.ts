@@ -1,4 +1,12 @@
 import type { Request } from "express";
+import { redactAuth } from "@jaypie/logger";
+
+//
+//
+// Constants
+//
+
+const SENSITIVE_HEADERS = new Set(["authorization", "cookie", "set-cookie"]);
 
 //
 //
@@ -8,7 +16,7 @@ import type { Request } from "express";
 export interface RequestSummary {
   baseUrl: string;
   body: unknown;
-  headers: Request["headers"];
+  headers: Record<string, string | string[] | undefined>;
   method: string;
   query: Request["query"];
   url: string;
@@ -26,10 +34,20 @@ function summarizeRequest(req: Request): RequestSummary {
     body = body.toString();
   }
 
+  // Redact sensitive headers
+  const headers: Record<string, string | string[] | undefined> = {
+    ...req.headers,
+  };
+  for (const key of Object.keys(headers)) {
+    if (SENSITIVE_HEADERS.has(key.toLowerCase())) {
+      headers[key] = redactAuth(headers[key]);
+    }
+  }
+
   return {
     baseUrl: req.baseUrl,
     body,
-    headers: req.headers,
+    headers,
     method: req.method,
     query: req.query,
     url: req.url,

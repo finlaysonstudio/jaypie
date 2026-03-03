@@ -6,6 +6,8 @@ import {
   LEVEL,
   Logger,
   createLogger as originalCreateLogger,
+  redactAuth,
+  sanitizeAuth,
 } from "@jaypie/logger";
 import { mockLogFactory } from "../mockLog.module.js";
 
@@ -19,6 +21,6 @@ export const createLogger = createMockWrappedFunction(
 export const _resetDatadogTransport = vi.fn();
 export const isDatadogForwardingEnabled = vi.fn().mockReturnValue(false);
 
-export { FORMAT, LEVEL, Logger };
+export { FORMAT, LEVEL, Logger, redactAuth, sanitizeAuth };
 
 export default mockLog;
