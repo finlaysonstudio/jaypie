@@ -19,6 +19,7 @@ interface ExtendedResponse extends Response {
   _headers?: Map<string, string | string[]>;
   // Internal bypass methods added for dd-trace compatibility
   _internalGetHeader?: (name: string) => string | undefined;
+  _internalRemoveHeader?: (name: string) => void;
   _internalSetHeader?: (name: string, value: string) => void;
 }
 
@@ -97,6 +98,32 @@ function safeSetHeader(
   }
 }
 
+/**
+ * Safely remove a header from response.
+ * Handles both Express Response and Lambda adapter responses.
+ * Defensive against dd-trace instrumentation issues.
+ */
+function safeRemoveHeader(res: ExtendedResponse, name: string): void {
+  try {
+    // Try internal method first (completely bypasses dd-trace)
+    if (typeof res._internalRemoveHeader === "function") {
+      res._internalRemoveHeader(name);
+      return;
+    }
+    // Fall back to _headers Map access (Lambda adapter, avoids dd-trace)
+    if (res._headers instanceof Map) {
+      res._headers.delete(name.toLowerCase());
+      return;
+    }
+    // Fall back to removeHeader (standard Node.js http.ServerResponse)
+    if (typeof res.removeHeader === "function") {
+      res.removeHeader(name);
+    }
+  } catch {
+    // Silently fail - header just won't be removed
+  }
+}
+
 //
 //
 // Main
@@ -130,11 +157,8 @@ const decorateResponse = (
     // Decorate Headers
     //
 
-    // X-Powered-By, override "Express" but nothing else
-    const currentPoweredBy = safeGetHeader(extRes, HTTP.HEADER.POWERED_BY);
-    if (!currentPoweredBy || currentPoweredBy === "Express") {
-      safeSetHeader(extRes, HTTP.HEADER.POWERED_BY, JAYPIE.LIB.EXPRESS);
-    }
+    // Remove X-Powered-By
+    safeRemoveHeader(extRes, HTTP.HEADER.POWERED_BY);
 
     // X-Project-Environment
     if (process.env.PROJECT_ENV) {

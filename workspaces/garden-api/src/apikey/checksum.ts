@@ -1,8 +1,5 @@
-const BASE62 = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-const BASE62_SET = new Set(BASE62);
-const BODY_LENGTH = 32;
-const KEY_LENGTH = 43;
-const PREFIX = "sk_jpi_";
+const BASE62 =
+  "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 
 //
 //
@@ -21,30 +18,9 @@ function computeChecksum(body: string): string {
   return `${c0}${c1}${c2}${c3}`;
 }
 
-function isValidApiKeyFormat(key: string): boolean {
-  if (typeof key !== "string") return false;
-  if (key.length !== KEY_LENGTH) return false;
-  if (!key.startsWith(PREFIX)) return false;
-
-  const body = key.slice(PREFIX.length, PREFIX.length + BODY_LENGTH);
-  const checksum = key.slice(PREFIX.length + BODY_LENGTH);
-
-  // Validate all body chars are base62
-  for (const char of body) {
-    if (!BASE62_SET.has(char)) return false;
-  }
-
-  // Validate checksum chars are base62
-  for (const char of checksum) {
-    if (!BASE62_SET.has(char)) return false;
-  }
-
-  return checksum === computeChecksum(body);
-}
-
 //
 //
 // Export
 //
 
-export { computeChecksum, isValidApiKeyFormat };
+export { computeChecksum };

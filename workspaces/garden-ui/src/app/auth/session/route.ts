@@ -1,7 +1,7 @@
 import { initClient } from "@jaypie/dynamodb";
+import { hashJaypieKey } from "@jaypie/kit";
 import { log } from "@jaypie/logger";
 
-import { hashKey } from "../../../lib/apikey/generate";
 import { extractToken, validateApiKey } from "../../../lib/apikey/validate";
 import { createSession, SESSION_TTL_MS } from "../../../lib/session/create";
 
@@ -48,7 +48,7 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   // Create session
-  const apikeyHash = hashKey(token);
+  const apikeyHash = hashJaypieKey(token, { salt: "" });
   const session = await createSession({ apikeyHash, level });
 
   // Set httpOnly cookie and return session token

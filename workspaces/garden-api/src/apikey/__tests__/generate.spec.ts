@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { validateJaypieKey } from "jaypie";
 
-import { isValidApiKeyFormat } from "../checksum.js";
-import { generateKeyFromSeed, hashKey } from "../generate.js";
+import { generateKeyFromSeed } from "../generate.js";
 
 //
 //
@@ -15,7 +15,7 @@ describe("generateKeyFromSeed", () => {
 
   it("generates a key with valid format", () => {
     const key = generateKeyFromSeed("test-seed");
-    expect(isValidApiKeyFormat(key)).toBe(true);
+    expect(validateJaypieKey(key, { issuer: "jpi" })).toBe(true);
   });
 
   it("generates a key with correct prefix", () => {
@@ -38,28 +38,5 @@ describe("generateKeyFromSeed", () => {
     const key1 = generateKeyFromSeed("seed-a");
     const key2 = generateKeyFromSeed("seed-b");
     expect(key1).not.toBe(key2);
-  });
-});
-
-describe("hashKey", () => {
-  it("is a function", () => {
-    expect(typeof hashKey).toBe("function");
-  });
-
-  it("returns a hex string", () => {
-    const hash = hashKey("sk_jpi_test");
-    expect(hash).toMatch(/^[0-9a-f]{64}$/);
-  });
-
-  it("is deterministic", () => {
-    const hash1 = hashKey("sk_jpi_test");
-    const hash2 = hashKey("sk_jpi_test");
-    expect(hash1).toBe(hash2);
-  });
-
-  it("returns different hashes for different keys", () => {
-    const hash1 = hashKey("key-a");
-    const hash2 = hashKey("key-b");
-    expect(hash1).not.toBe(hash2);
   });
 });

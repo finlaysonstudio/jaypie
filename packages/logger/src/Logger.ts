@@ -6,6 +6,7 @@ import {
   LEVEL_VALUES,
   PSEUDO_LEVELS,
 } from "./constants";
+import { sanitizeAuth } from "./sanitizeAuth";
 import { forceString, out, parse, parsesTo, stringify } from "./utils";
 
 type LogLevel = string;
@@ -80,8 +81,9 @@ class Logger {
   ): LogMethod {
     const logFn = (...messages: unknown[]): void => {
       if (LEVEL_VALUES[logLevel] <= LEVEL_VALUES[checkLevel]) {
+        const sanitized = messages.map(sanitizeAuth);
         if (format === FORMAT.JSON) {
-          const message = stringify(...messages);
+          const message = stringify(...sanitized);
           const parses = parsesTo(message);
           const json: LogJson = {
             log: logLevel,
@@ -93,7 +95,7 @@ class Logger {
           }
           out(json, { level: logLevel });
         } else {
-          const message = stringify(...messages);
+          const message = stringify(...sanitized);
           out(message, { level: logLevel });
         }
       }
@@ -115,7 +117,7 @@ class Logger {
           return logFn(messageObject);
         }
       } else {
-        msgObj = messageObject as Record<string, unknown>;
+        msgObj = sanitizeAuth(messageObject) as Record<string, unknown>;
       }
 
       const keys = Object.keys(msgObj);

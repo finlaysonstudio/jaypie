@@ -19,7 +19,7 @@ export default [
       "packages/express/docker/**",
       "workspaces/documentation/.docusaurus/**",
       "workspaces/documentation/build/**",
-      "workspaces/garden-nextjs/**",
+      "workspaces/garden-ui/**",
     ],
   },
 

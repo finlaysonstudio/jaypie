@@ -17,7 +17,7 @@ workspaces/cdk/
 │   ├── documentation-stack.ts  # Documentation site stack
 │   ├── garden-api-stack.ts     # Garden API (streaming Lambda)
 │   ├── garden-data-stack.ts    # Garden shared DynamoDB table
-│   └── garden-nextjs-stack.ts  # Garden Next.js site
+│   └── garden-nextjs-stack.ts  # Garden UI site
 ├── cdk.json             # CDK configuration
 ├── package.json
 └── tsconfig.json

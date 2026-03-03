@@ -98,7 +98,7 @@ Local deploys go to **sandbox only**. Requires AWS SSO login and `.env` configur
 # Deploy individual stacks (sandbox only)
 npm run deploy:documentation:sandbox
 npm run deploy:garden-api:sandbox
-npm run deploy:garden-nextjs:sandbox
+npm run deploy:garden-ui:sandbox
 ```
 
 ### Manual CDK Deploy

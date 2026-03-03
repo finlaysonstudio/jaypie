@@ -1,8 +1,9 @@
-import { createHmac, createHash } from "node:crypto";
+import { createHmac } from "node:crypto";
 
 import { computeChecksum } from "./checksum.js";
 
-const BASE62 = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+const BASE62 =
+  "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 const BODY_LENGTH = 32;
 const HMAC_CONTEXT = "jaypie-garden-owner-key-v1";
 const PREFIX = "sk_jpi_";
@@ -26,13 +27,9 @@ function generateKeyFromSeed(seed: string): string {
   return `${PREFIX}${body}${checksum}`;
 }
 
-function hashKey(key: string): string {
-  return createHash("sha256").update(key).digest("hex");
-}
-
 //
 //
 // Export
 //
 
-export { generateKeyFromSeed, hashKey };
+export { generateKeyFromSeed };

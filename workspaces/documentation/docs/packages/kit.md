@@ -32,6 +32,9 @@ npm install @jaypie/kit
 | `isLocalEnv` | Check for local environment |
 | `isProductionEnv` | Check for production |
 | `isNodeTestEnv` | Check for test environment |
+| `generateJaypieKey` | Generate API keys with checksum |
+| `validateJaypieKey` | Validate API key format and checksum |
+| `hashJaypieKey` | SHA-256 hash API keys |
 
 ## force
 
@@ -176,6 +179,59 @@ import { isNodeTestEnv } from "jaypie";
 if (isNodeTestEnv()) {
   // NODE_ENV === "test"
 }
+```
+
+## API Key Functions
+
+### generateJaypieKey
+
+Generate API keys with embedded checksums:
+
+```typescript
+import { generateJaypieKey } from "jaypie";
+
+const key = generateJaypieKey();
+// "sk_<32 base62 chars><4 char checksum>"
+
+const custom = generateJaypieKey({
+  prefix: "pk",
+  length: 16,
+  issuer: "myapp",
+});
+```
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `checksum` | `boolean` | `true` | Append HMAC checksum |
+| `issuer` | `string` | `undefined` | Issuer identifier for checksum |
+| `length` | `number` | `32` | Random character length |
+| `pool` | `string` | base62 | Character pool |
+| `prefix` | `string` | `"sk"` | Key prefix |
+| `separator` | `string` | `"_"` | Prefix separator |
+
+### validateJaypieKey
+
+Validate key format and checksum:
+
+```typescript
+import { validateJaypieKey } from "jaypie";
+
+validateJaypieKey("sk_abc123...");  // true or false
+validateJaypieKey(key, { issuer: "myapp" });
+```
+
+### hashJaypieKey
+
+Hash keys for storage:
+
+```typescript
+import { hashJaypieKey } from "jaypie";
+
+const hash = hashJaypieKey(key);
+// SHA-256 hash
+
+const salted = hashJaypieKey(key, { salt: "my-salt" });
+// HMAC-SHA256 with salt (also reads PROJECT_SALT env)
 ```
 
 ## Constants

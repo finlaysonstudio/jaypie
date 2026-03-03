@@ -141,6 +141,14 @@ export const formatError = createMockWrappedFunction(
   `_MOCK_FORMAT_ERROR_[${TAG}]`,
 );
 
+export const generateJaypieKey = createMockReturnedFunction(
+  `sk_MOCK00000000000000000000000000abcd`,
+);
+
+export const hashJaypieKey = createMockReturnedFunction(
+  "0".repeat(64),
+);
+
 // Alias for errorFromStatusCode (exported from @jaypie/errors as jaypieErrorFromStatus)
 export const jaypieErrorFromStatus = errorFromStatusCode;
 
@@ -263,6 +271,8 @@ export const uuid = createMockWrappedFunction(
   () => "00000000-0000-0000-0000-000000000000",
   `00000000-0000-0000-0000-000000000000`,
 );
+
+export const validateJaypieKey = createMockReturnedFunction(true);
 
 export const HTTP = kit.HTTP;
 export const JAYPIE = kit.JAYPIE;

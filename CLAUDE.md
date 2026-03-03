@@ -47,7 +47,7 @@
 |-----------|-------------|
 | `@jaypie/documentation` | Documentation site at jaypie.net (private) |
 | `@jaypie/garden-api` | Garden streaming API deployed via CDK (private); use sandbox to reproduce errors and validate functionality |
-| `@jaypie/garden-nextjs` | Garden Next.js frontend site (private); use sandbox to reproduce errors and validate functionality |
+| `@jaypie/garden-ui` | Garden UI frontend site (private); use sandbox to reproduce errors and validate functionality |
 | `@jaypie/workspaces-cdk` | CDK infrastructure for Jaypie stacks (private) |
 ## Environment
 | Variable | Description |

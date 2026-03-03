@@ -111,7 +111,7 @@ app.use(cors({ origin: ["https://a.com", "https://b.com"] }));
 ```typescript
 import { EXPRESS } from "jaypie";
 
-EXPRESS.HEADER.POWERED_BY    // "x-powered-by"
+EXPRESS.HEADER.POWERED_BY    // "x-powered-by" (removed by decorateResponse)
 EXPRESS.HEADER.PROJECT_KEY   // "x-project-key"
 EXPRESS.HEADER.REQUEST_ID    // "x-request-id"
 EXPRESS.PROJECT.EXPRESS      // "@jaypie/express"
