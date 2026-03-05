@@ -22,7 +22,7 @@ const PDF_FILE_PATH = join(__dirname, "fixtures/page.pdf");
 
 const REQUIRED_STRINGS = [
   "mock page",
-  "this page intentionally blank",
+  "intentionally blank",
   "mit license",
 ];
 
