@@ -7,7 +7,7 @@ sidebar_position: 4
 
 **Prerequisites:**
 - `npm install @jaypie/llm`
-- API key for at least one provider (Anthropic, OpenAI, Google, or OpenRouter)
+- API key for at least one provider (Anthropic, Google, OpenAI, OpenRouter, or xAI)
 
 ## Overview
 
@@ -21,9 +21,10 @@ The `Llm` class handles provider-specific implementations while exposing a consi
 | Provider | Models | Env Variable |
 |----------|--------|--------------|
 | Anthropic | claude-sonnet-4, claude-opus-4, claude-haiku | `ANTHROPIC_API_KEY` |
-| OpenAI | gpt-4o, gpt-4o-mini, o1-mini, o3-mini | `OPENAI_API_KEY` |
 | Google | gemini-2.0-flash, gemini-1.5-pro | `GOOGLE_API_KEY` |
+| OpenAI | gpt-4o, gpt-4o-mini, o1-mini, o3-mini | `OPENAI_API_KEY` |
 | OpenRouter | Any supported model | `OPENROUTER_API_KEY` |
+| xAI | grok-4-1-fast-reasoning, grok-3, grok-3-mini | `XAI_API_KEY` |
 
 ### Core Methods
 

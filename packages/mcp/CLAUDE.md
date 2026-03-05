@@ -194,6 +194,7 @@ When adding release notes:
 | `ANTHROPIC_API_KEY` | Anthropic API key |
 | `GOOGLE_API_KEY` | Google/Gemini API key |
 | `OPENROUTER_API_KEY` | OpenRouter API key |
+| `XAI_API_KEY` | xAI (Grok) API key |
 
 ## Build Configuration
 

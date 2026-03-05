@@ -16,13 +16,13 @@ All parameters are passed at the top level (flat structure):
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `command` | string | Command to execute (omit for help) |
-| `provider` | string | LLM provider: anthropic, openai, google, openrouter |
+| `provider` | string | LLM provider: anthropic, google, openai, openrouter, xai |
 | `message` | string | Message to send to the LLM provider |
 | `model` | string | Model to use (provider-specific, e.g., gpt-4, claude-3-sonnet) |
 
 ## Providers
 
-Supported providers: `openai`, `anthropic`, `gemini`, `openrouter`
+Supported providers: `anthropic`, `gemini`, `openai`, `openrouter`, `xai`
 
 ## Environment Variables
 
@@ -32,6 +32,7 @@ Supported providers: `openai`, `anthropic`, `gemini`, `openrouter`
 | `ANTHROPIC_API_KEY` | Anthropic API key |
 | `GOOGLE_API_KEY` or `GEMINI_API_KEY` | Google/Gemini API key |
 | `OPENROUTER_API_KEY` | OpenRouter API key |
+| `XAI_API_KEY` | xAI (Grok) API key |
 
 ## Examples
 
