@@ -172,7 +172,8 @@ jobs:
       - name: Run LLM Client Tests
         run: npm run test:llm:client
         env:
-          APP_PROVIDER: anthropic,openai,xai
+          APP_PROVIDER: anthropic,google,openai,xai
           ANTHROPIC_API_KEY: ${{ secrets.CICD_ANTHROPIC_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.CICD_GEMINI_API_KEY }}
           OPENAI_API_KEY: ${{ secrets.CICD_OPENAI_API_KEY }}
           XAI_API_KEY: ${{ secrets.CICD_XAI_API_KEY }}
