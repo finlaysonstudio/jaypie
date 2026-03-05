@@ -32,6 +32,7 @@ const MODELS = {
   gemini: LLM.PROVIDER.GEMINI.MODEL.LARGE,
   openai: LLM.PROVIDER.OPENAI.MODEL.LARGE,
   openrouter: LLM.PROVIDER.OPENROUTER.MODEL.DEFAULT,
+  xai: LLM.PROVIDER.XAI.MODEL.LARGE,
 } as const;
 
 //
@@ -196,6 +197,44 @@ async function testImageOpenRouter(): Promise<boolean> {
   }
 }
 
+async function testImageXai(): Promise<boolean> {
+  const provider = "xai";
+  const model = MODELS.xai;
+
+  try {
+    console.log(`\n============ Image Test: ${provider} (${model})`);
+
+    const llm = new Llm(provider, { model });
+
+    const input: LlmOperateInput = [REQUEST_IMAGE, { image: IMAGE_FILE_PATH }];
+
+    const result = await llm.operate(input, {
+      user: process?.env?.APP_USER || "[document] Jaypie User",
+    });
+
+    if (result.error) {
+      console.error(`Error for ${provider}:`, result.error);
+      return false;
+    }
+
+    if (!result.content || typeof result.content !== "string") {
+      console.error(`Error: No content returned for ${provider}`);
+      return false;
+    }
+
+    console.log(`Result for ${provider}:`, result.content);
+
+    if (validateContent(result.content, provider)) {
+      console.log(`✅ Image test passed for ${provider}`);
+      return true;
+    }
+    return false;
+  } catch (error) {
+    console.error(`Error for ${provider}:`, error);
+    return false;
+  }
+}
+
 //
 //
 // PDF Tests
@@ -336,6 +375,44 @@ async function testPdfOpenRouter(): Promise<boolean> {
   }
 }
 
+async function testPdfXai(): Promise<boolean> {
+  const provider = "xai";
+  const model = MODELS.xai;
+
+  try {
+    console.log(`\n============ PDF Test: ${provider} (${model})`);
+
+    const llm = new Llm(provider, { model });
+
+    const input: LlmOperateInput = [REQUEST_PDF, { file: PDF_FILE_PATH }];
+
+    const result = await llm.operate(input, {
+      user: process?.env?.APP_USER || "[document] Jaypie User",
+    });
+
+    if (result.error) {
+      console.error(`Error for ${provider}:`, result.error);
+      return false;
+    }
+
+    if (!result.content || typeof result.content !== "string") {
+      console.error(`Error: No content returned for ${provider}`);
+      return false;
+    }
+
+    console.log(`Result for ${provider}:`, result.content);
+
+    if (validateContent(result.content, provider)) {
+      console.log(`✅ PDF test passed for ${provider}`);
+      return true;
+    }
+    return false;
+  } catch (error) {
+    console.error(`Error for ${provider}:`, error);
+    return false;
+  }
+}
+
 //
 //
 // Test Runners
@@ -363,6 +440,7 @@ async function runImageTests(): Promise<{ passed: number; failed: number }> {
       testImageGemini,
       testImageOpenAI,
       testImageOpenRouter,
+      testImageXai,
     ];
     for (const test of tests) {
       const success = await test();
@@ -388,6 +466,9 @@ async function runImageTests(): Promise<{ passed: number; failed: number }> {
           break;
         case "openrouter":
           success = await testImageOpenRouter();
+          break;
+        case "xai":
+          success = await testImageXai();
           break;
         default:
           console.error(`Unknown provider: ${provider}`);
@@ -427,6 +508,7 @@ async function runPdfTests(): Promise<{ passed: number; failed: number }> {
       testPdfGemini,
       testPdfOpenAI,
       testPdfOpenRouter,
+      testPdfXai,
     ];
     for (const test of tests) {
       const success = await test();
@@ -452,6 +534,9 @@ async function runPdfTests(): Promise<{ passed: number; failed: number }> {
           break;
         case "openrouter":
           success = await testPdfOpenRouter();
+          break;
+        case "xai":
+          success = await testPdfXai();
           break;
         default:
           console.error(`Unknown provider: ${provider}`);
