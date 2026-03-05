@@ -32,9 +32,9 @@ llm({ command: "validate" })
 ```
 
 Returns:
-- `providers` - Status for each provider: anthropic, google, openai, openrouter
+- `providers` - Status for each provider: anthropic, google, openai, openrouter, xai
 - `availableCount` - Number of providers with API keys configured
-- `totalProviders` - Total number of supported providers (4)
+- `totalProviders` - Total number of supported providers (5)
 - `success` - true if at least one provider is available
 
 ## Debug Call
@@ -54,7 +54,7 @@ All parameters are passed at the top level (flat structure):
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `command` | string | Command to execute (omit for help) |
-| `provider` | string | LLM provider: anthropic, openai, google, openrouter |
+| `provider` | string | LLM provider: anthropic, google, openai, openrouter, xai |
 | `message` | string | Message to send to the LLM provider |
 | `model` | string | Model to use (provider-specific, e.g., gpt-4, claude-3-sonnet) |
 
@@ -77,15 +77,17 @@ All parameters are passed at the top level (flat structure):
 | `ANTHROPIC_API_KEY` | Anthropic API key |
 | `GOOGLE_API_KEY` or `GEMINI_API_KEY` | Google/Gemini API key |
 | `OPENROUTER_API_KEY` | OpenRouter API key |
+| `XAI_API_KEY` | xAI (Grok) API key |
 
 ## Supported Providers
 
 | Provider | Models |
 |----------|--------|
-| `openai` | gpt-4o, gpt-4o-mini, o1, o3-mini, etc. |
 | `anthropic` | claude-sonnet-4-20250514, claude-opus-4-20250514, etc. |
 | `gemini` | gemini-2.0-flash, gemini-1.5-pro, etc. |
+| `openai` | gpt-4o, gpt-4o-mini, o1, o3-mini, etc. |
 | `openrouter` | Access to multiple providers |
+| `xai` | grok-4-1-fast-reasoning, grok-3, grok-3-mini |
 
 ## Common Patterns
 

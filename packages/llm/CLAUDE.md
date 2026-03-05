@@ -4,7 +4,7 @@ LLM provider abstraction for multi-provider support with unified API.
 
 ## Package Overview
 
-`@jaypie/llm` provides a unified interface for interacting with multiple LLM providers (OpenAI, Anthropic, Gemini, OpenRouter). It supports multi-turn conversations, tool calling, structured output, streaming, and retry logic.
+`@jaypie/llm` provides a unified interface for interacting with multiple LLM providers (OpenAI, Anthropic, Gemini, OpenRouter, xAI). It supports multi-turn conversations, tool calling, structured output, streaming, and retry logic.
 
 ## Directory Structure
 
@@ -21,6 +21,7 @@ src/
 │   │   ├── GeminiAdapter.ts
 │   │   ├── OpenAiAdapter.ts
 │   │   ├── OpenRouterAdapter.ts
+│   │   ├── XaiAdapter.ts
 │   │   └── ProviderAdapter.interface.ts
 │   ├── hooks/                # Lifecycle hooks
 │   │   └── HookRunner.ts
@@ -43,8 +44,11 @@ src/
 │   ├── openai/
 │   │   ├── OpenAiProvider.class.ts
 │   │   └── utils.ts
-│   └── openrouter/
-│       ├── OpenRouterProvider.class.ts
+│   ├── openrouter/
+│   │   ├── OpenRouterProvider.class.ts
+│   │   └── utils.ts
+│   └── xai/
+│       ├── XaiProvider.class.ts
 │       └── utils.ts
 ├── tools/                    # Tool system
 │   ├── Toolkit.class.ts      # Tool container with logging
@@ -228,7 +232,7 @@ for await (const chunk of Llm.stream("Tell me a story")) {
 
 Provider SDKs are peer dependencies (optional except for the provider you use):
 
-- `openai` - OpenAI (required dependency)
+- `openai` - OpenAI and xAI (required dependency; xAI uses the OpenAI SDK with a custom base URL)
 - `@anthropic-ai/sdk` - Anthropic (peer)
 - `@google/genai` - Gemini (peer)
 - `@openrouter/sdk` - OpenRouter (peer)
@@ -239,6 +243,7 @@ Provider SDKs are peer dependencies (optional except for the provider you use):
 - `ANTHROPIC_API_KEY` - Anthropic API key
 - `GOOGLE_API_KEY` - Gemini API key
 - `OPENROUTER_API_KEY` - OpenRouter API key
+- `XAI_API_KEY` - xAI (Grok) API key
 
 Keys are resolved via `getEnvSecret` from `@jaypie/aws` (supports AWS Secrets Manager).
 
@@ -271,7 +276,7 @@ export { LlmMessageRole, LlmMessageType, LlmStreamChunkType };
 export { JaypieToolkit, toolkit, Toolkit, tools };
 
 // Providers (for direct use)
-export { GeminiProvider, OpenRouterProvider };
+export { GeminiProvider, OpenRouterProvider, XaiProvider };
 ```
 
 ## Used By

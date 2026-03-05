@@ -274,6 +274,73 @@ describe("determineModelProvider", () => {
       });
     });
 
+    describe("xAI Detection", () => {
+      it("Returns default model when provider name 'xai' is passed", () => {
+        const result = determineModelProvider(PROVIDER.XAI.NAME);
+        expect(result).toEqual({
+          model: PROVIDER.XAI.MODEL.DEFAULT,
+          provider: PROVIDER.XAI.NAME,
+        });
+      });
+
+      it("Identifies xAI DEFAULT model exactly", () => {
+        const result = determineModelProvider(PROVIDER.XAI.MODEL.DEFAULT);
+        expect(result).toEqual({
+          model: PROVIDER.XAI.MODEL.DEFAULT,
+          provider: PROVIDER.XAI.NAME,
+        });
+      });
+
+      it("Identifies xAI SMALL model exactly", () => {
+        const result = determineModelProvider(PROVIDER.XAI.MODEL.SMALL);
+        expect(result).toEqual({
+          model: PROVIDER.XAI.MODEL.SMALL,
+          provider: PROVIDER.XAI.NAME,
+        });
+      });
+
+      it("Identifies xAI TINY model exactly", () => {
+        const result = determineModelProvider(PROVIDER.XAI.MODEL.TINY);
+        expect(result).toEqual({
+          model: PROVIDER.XAI.MODEL.TINY,
+          provider: PROVIDER.XAI.NAME,
+        });
+      });
+
+      it("Identifies xAI provider when input contains 'grok'", () => {
+        const result = determineModelProvider("grok-custom-model");
+        expect(result).toEqual({
+          model: "grok-custom-model",
+          provider: PROVIDER.XAI.NAME,
+        });
+      });
+
+      it("Identifies xAI provider when input contains 'xai'", () => {
+        const result = determineModelProvider("xai-custom");
+        expect(result).toEqual({
+          model: "xai-custom",
+          provider: PROVIDER.XAI.NAME,
+        });
+      });
+
+      it("Match words are case insensitive for xAI", () => {
+        const result = determineModelProvider("GROK-3");
+        expect(result).toEqual({
+          model: "GROK-3",
+          provider: PROVIDER.XAI.NAME,
+        });
+      });
+
+      it("Correctly identifies all xAI models", () => {
+        const xaiModels = Object.values(PROVIDER.XAI.MODEL);
+        xaiModels.forEach((model) => {
+          const result = determineModelProvider(model);
+          expect(result.provider).toBe(PROVIDER.XAI.NAME);
+          expect(result.model).toBe(model);
+        });
+      });
+    });
+
     describe("OpenRouter Detection", () => {
       it("Identifies OpenRouter when model contains /", () => {
         const result = determineModelProvider("openai/gpt-4");

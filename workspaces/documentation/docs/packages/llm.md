@@ -9,7 +9,7 @@ sidebar_position: 5
 
 ## Overview
 
-`@jaypie/llm` provides a unified interface for calling Anthropic, OpenAI, Google, and OpenRouter models with consistent API patterns.
+`@jaypie/llm` provides a unified interface for calling Anthropic, Google, OpenAI, OpenRouter, and xAI models with consistent API patterns.
 
 ## Installation
 
@@ -32,9 +32,10 @@ npm install @jaypie/llm
 | Provider | Models | Env Variable |
 |----------|--------|--------------|
 | `anthropic` | claude-sonnet-4, claude-opus-4, claude-haiku | `ANTHROPIC_API_KEY` |
-| `openai` | gpt-4o, gpt-4o-mini, o1-mini, o3-mini | `OPENAI_API_KEY` |
 | `google` | gemini-2.0-flash, gemini-1.5-pro | `GOOGLE_API_KEY` |
+| `openai` | gpt-4o, gpt-4o-mini, o1-mini, o3-mini | `OPENAI_API_KEY` |
 | `openrouter` | Various | `OPENROUTER_API_KEY` |
+| `xai` | grok-4-1-fast-reasoning, grok-3, grok-3-mini | `XAI_API_KEY` |
 
 ## Llm.operate
 

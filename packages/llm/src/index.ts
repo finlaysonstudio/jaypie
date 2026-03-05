@@ -47,3 +47,4 @@ export { extractReasoning } from "./util/extractReasoning.js";
 // Providers
 export { GeminiProvider } from "./providers/gemini/index.js";
 export { OpenRouterProvider } from "./providers/openrouter/index.js";
+export { XaiProvider } from "./providers/xai/index.js";

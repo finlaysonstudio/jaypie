@@ -4,7 +4,7 @@
 
 import { LLM, Llm } from "@jaypie/llm";
 
-export type LlmProvider = "anthropic" | "google" | "openai" | "openrouter";
+export type LlmProvider = "anthropic" | "google" | "openai" | "openrouter" | "xai";
 
 export interface LlmDebugCallParams {
   provider: LlmProvider;
@@ -37,6 +37,7 @@ export interface LlmValidationResult {
     google: LlmProviderStatus;
     openai: LlmProviderStatus;
     openrouter: LlmProviderStatus;
+    xai: LlmProviderStatus;
   };
   availableCount: number;
   totalProviders: number;
@@ -62,6 +63,7 @@ export function inferProvider(model: string): LlmProvider | undefined {
     m.startsWith("o4-")
   )
     return "openai";
+  if (m.startsWith("grok-")) return "xai";
   return undefined;
 }
 
@@ -71,9 +73,10 @@ const DEFAULT_MODELS: Record<LlmProvider, string> = {
   google: LLM.PROVIDER.GEMINI.MODEL.SMALL,
   openai: LLM.PROVIDER.OPENAI.MODEL.SMALL,
   openrouter: LLM.PROVIDER.OPENROUTER.MODEL.SMALL,
+  xai: LLM.PROVIDER.XAI.MODEL.SMALL,
 };
 
-const TOTAL_PROVIDERS = 4;
+const TOTAL_PROVIDERS = 5;
 
 /**
  * Validate LLM setup without making API calls
@@ -85,12 +88,14 @@ export function validateLlmSetup(): LlmValidationResult {
   );
   const openaiAvailable = Boolean(process.env.OPENAI_API_KEY);
   const openrouterAvailable = Boolean(process.env.OPENROUTER_API_KEY);
+  const xaiAvailable = Boolean(process.env.XAI_API_KEY);
 
   const availableCount = [
     anthropicAvailable,
     googleAvailable,
     openaiAvailable,
     openrouterAvailable,
+    xaiAvailable,
   ].filter(Boolean).length;
 
   return {
@@ -100,6 +105,7 @@ export function validateLlmSetup(): LlmValidationResult {
       google: { available: googleAvailable },
       openai: { available: openaiAvailable },
       openrouter: { available: openrouterAvailable },
+      xai: { available: xaiAvailable },
     },
     success: availableCount > 0,
     totalProviders: TOTAL_PROVIDERS,

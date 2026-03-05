@@ -21,10 +21,11 @@ console.log(response.content); // "4"
 
 | Provider | Match Keywords | Default Model |
 |----------|----------------|---------------|
-| OpenAI | "openai", "gpt", /^o\d/ | gpt-5.1 |
+| OpenAI | "openai", "gpt", /^o\d/ | gpt-5.2 |
 | Anthropic | "anthropic", "claude", "haiku", "opus", "sonnet" | claude-sonnet-4-5 |
 | Google | "google", "gemini" | gemini-3-pro-preview |
 | OpenRouter | "openrouter" | z-ai/glm-4.7 |
+| xAI | "xai", "grok" | grok-4-1-fast-reasoning |
 
 ```typescript
 // Provider auto-detected from model
@@ -315,10 +316,11 @@ const review2 = await llm.operate(code2);
 ## Environment Variables
 
 ```bash
-OPENAI_API_KEY      # Required for OpenAI
 ANTHROPIC_API_KEY   # Required for Anthropic
 GOOGLE_API_KEY      # Required for Gemini
+OPENAI_API_KEY      # Required for OpenAI
 OPENROUTER_API_KEY  # Required for OpenRouter
+XAI_API_KEY         # Required for xAI (Grok)
 ```
 
 Keys are resolved via `getEnvSecret()` which supports AWS Secrets Manager.

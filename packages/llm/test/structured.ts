@@ -22,6 +22,7 @@ const MODELS = {
   gemini: LLM.PROVIDER.GEMINI.MODEL.SMALL,
   openai: LLM.PROVIDER.OPENAI.MODEL.SMALL,
   openrouter: LLM.PROVIDER.OPENROUTER.MODEL.SMALL,
+  xai: LLM.PROVIDER.XAI.MODEL.SMALL,
 } as const;
 
 // Natural schema format for structured output
@@ -222,6 +223,10 @@ async function testOpenRouter(): Promise<boolean> {
   return testProvider("openrouter", MODELS.openrouter);
 }
 
+async function testXai(): Promise<boolean> {
+  return testProvider("xai", MODELS.xai);
+}
+
 //
 //
 // Test Runners
@@ -244,7 +249,7 @@ async function runTests(): Promise<{ failed: number; passed: number }> {
   if (providers.length === 0) {
     console.log("No providers specified, running all structured JSON tests...");
     // Run all by default
-    const tests = [testAnthropic, testGemini, testOpenAI, testOpenRouter];
+    const tests = [testAnthropic, testGemini, testOpenAI, testOpenRouter, testXai];
     for (const test of tests) {
       const success = await test();
       if (success) {
@@ -269,6 +274,9 @@ async function runTests(): Promise<{ failed: number; passed: number }> {
           break;
         case "openrouter":
           success = await testOpenRouter();
+          break;
+        case "xai":
+          success = await testXai();
           break;
         default:
           console.error(`Unknown provider: ${provider}`);

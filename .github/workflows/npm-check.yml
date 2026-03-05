@@ -102,8 +102,9 @@ jobs:
         if: steps.changes.outputs.llm == 'true'
         run: LOG_LEVEL=trace npm run test:llm:all
         env:
-          APP_PROVIDER: anthropic,google,openai,openrouter
+          APP_PROVIDER: anthropic,google,openai,openrouter,xai
           ANTHROPIC_API_KEY: ${{ secrets.CICD_ANTHROPIC_API_KEY }}
           GEMINI_API_KEY: ${{ secrets.CICD_GEMINI_API_KEY }}
           OPENAI_API_KEY: ${{ secrets.CICD_OPENAI_API_KEY }}
           OPENROUTER_API_KEY: ${{ secrets.CICD_OPENROUTER_API_KEY }}
+          XAI_API_KEY: ${{ secrets.CICD_XAI_API_KEY }}

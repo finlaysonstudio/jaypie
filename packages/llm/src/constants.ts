@@ -23,6 +23,12 @@ const FIRST_CLASS_PROVIDER = {
     SMALL: "z-ai/glm-4.7" as const,
     TINY: "z-ai/glm-4.7" as const,
   },
+  XAI: {
+    DEFAULT: "grok-4-1-fast-reasoning" as const,
+    LARGE: "grok-4-1-fast-reasoning" as const,
+    SMALL: "grok-3" as const,
+    TINY: "grok-3-mini" as const,
+  },
 };
 
 export const PROVIDER = {
@@ -104,13 +110,27 @@ export const PROVIDER = {
       USER: "user" as const,
     },
   },
+  XAI: {
+    // https://docs.x.ai/docs/models
+    API_KEY: "XAI_API_KEY" as const,
+    BASE_URL: "https://api.x.ai/v1" as const,
+    MODEL: {
+      DEFAULT: FIRST_CLASS_PROVIDER.XAI.DEFAULT,
+      LARGE: FIRST_CLASS_PROVIDER.XAI.LARGE,
+      SMALL: FIRST_CLASS_PROVIDER.XAI.SMALL,
+      TINY: FIRST_CLASS_PROVIDER.XAI.TINY,
+    },
+    MODEL_MATCH_WORDS: ["grok", "xai"] as const,
+    NAME: "xai" as const,
+  },
 } as const;
 
 export type LlmProviderName =
   | typeof PROVIDER.ANTHROPIC.NAME
   | typeof PROVIDER.GEMINI.NAME
   | typeof PROVIDER.OPENAI.NAME
-  | typeof PROVIDER.OPENROUTER.NAME;
+  | typeof PROVIDER.OPENROUTER.NAME
+  | typeof PROVIDER.XAI.NAME;
 
 // Last: Defaults
 export const DEFAULT = {
@@ -129,6 +149,7 @@ export const ALL = {
     PROVIDER.ANTHROPIC.MODEL.DEFAULT,
     PROVIDER.GEMINI.MODEL.DEFAULT,
     PROVIDER.OPENAI.MODEL.DEFAULT,
+    PROVIDER.XAI.MODEL.DEFAULT,
   ],
   COMBINED: [
     PROVIDER.ANTHROPIC.MODEL.DEFAULT,
@@ -143,20 +164,27 @@ export const ALL = {
     PROVIDER.OPENAI.MODEL.LARGE,
     PROVIDER.OPENAI.MODEL.SMALL,
     PROVIDER.OPENAI.MODEL.TINY,
+    PROVIDER.XAI.MODEL.DEFAULT,
+    PROVIDER.XAI.MODEL.LARGE,
+    PROVIDER.XAI.MODEL.SMALL,
+    PROVIDER.XAI.MODEL.TINY,
   ],
   LARGE: [
     PROVIDER.ANTHROPIC.MODEL.LARGE,
     PROVIDER.GEMINI.MODEL.LARGE,
     PROVIDER.OPENAI.MODEL.LARGE,
+    PROVIDER.XAI.MODEL.LARGE,
   ],
   SMALL: [
     PROVIDER.ANTHROPIC.MODEL.SMALL,
     PROVIDER.GEMINI.MODEL.SMALL,
     PROVIDER.OPENAI.MODEL.SMALL,
+    PROVIDER.XAI.MODEL.SMALL,
   ],
   TINY: [
     PROVIDER.ANTHROPIC.MODEL.TINY,
     PROVIDER.GEMINI.MODEL.TINY,
     PROVIDER.OPENAI.MODEL.TINY,
+    PROVIDER.XAI.MODEL.TINY,
   ],
 } as const;
