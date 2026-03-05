@@ -19,6 +19,7 @@ import { AnthropicProvider } from "./providers/anthropic/AnthropicProvider.class
 import { GeminiProvider } from "./providers/gemini/GeminiProvider.class.js";
 import { OpenAiProvider } from "./providers/openai/index.js";
 import { OpenRouterProvider } from "./providers/openrouter/index.js";
+import { XaiProvider } from "./providers/xai/index.js";
 
 class Llm implements LlmProvider {
   private _fallbackConfig?: LlmFallbackConfig[];
@@ -114,6 +115,10 @@ class Llm implements LlmProvider {
             apiKey,
           },
         );
+      case PROVIDER.XAI.NAME:
+        return new XaiProvider(model || PROVIDER.XAI.MODEL.DEFAULT, {
+          apiKey,
+        });
       default:
         throw new ConfigurationError(`Unsupported provider: ${providerName}`);
     }

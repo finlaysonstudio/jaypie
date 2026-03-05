@@ -9,6 +9,8 @@ export {
   openAiAdapter,
   OpenRouterAdapter,
   openRouterAdapter,
+  XaiAdapter,
+  xaiAdapter,
 } from "./adapters/index.js";
 export type { ProviderAdapter } from "./adapters/index.js";
 

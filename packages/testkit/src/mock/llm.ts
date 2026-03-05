@@ -125,6 +125,9 @@ export const OpenRouterProvider = createMockWrappedObject(
     isClass: true,
   },
 );
+export const XaiProvider = createMockWrappedObject(original.XaiProvider, {
+  isClass: true,
+});
 
 // Type guards and utilities - re-export from original (these are pure functions)
 export const extractReasoning = original.extractReasoning;

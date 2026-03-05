@@ -45,6 +45,12 @@ export function determineModelProvider(input?: string): {
       provider: PROVIDER.OPENROUTER.NAME,
     };
   }
+  if (input === PROVIDER.XAI.NAME) {
+    return {
+      model: PROVIDER.XAI.MODEL.DEFAULT,
+      provider: PROVIDER.XAI.NAME,
+    };
+  }
 
   // Check if input matches an Anthropic model exactly
   for (const [, modelValue] of Object.entries(PROVIDER.ANTHROPIC.MODEL)) {
@@ -82,6 +88,16 @@ export function determineModelProvider(input?: string): {
       return {
         model: input,
         provider: PROVIDER.OPENROUTER.NAME,
+      };
+    }
+  }
+
+  // Check if input matches an xAI model exactly
+  for (const [, modelValue] of Object.entries(PROVIDER.XAI.MODEL)) {
+    if (input === modelValue) {
+      return {
+        model: input,
+        provider: PROVIDER.XAI.NAME,
       };
     }
   }
@@ -132,6 +148,16 @@ export function determineModelProvider(input?: string): {
           provider: PROVIDER.OPENAI.NAME,
         };
       }
+    }
+  }
+
+  // Check xAI match words
+  for (const matchWord of PROVIDER.XAI.MODEL_MATCH_WORDS) {
+    if (lowerInput.includes(matchWord)) {
+      return {
+        model: input,
+        provider: PROVIDER.XAI.NAME,
+      };
     }
   }
 
