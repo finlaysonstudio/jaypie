@@ -314,6 +314,19 @@ export const violet: ColorShades = {
   900: "#1a1624",
 };
 
+export const pine: ColorShades = {
+  50: "#f3f5f4",
+  100: "#e3eae6",
+  200: "#c6d3cb",
+  300: "#a0b5a8",
+  400: "#768d80",
+  500: "#55685d",
+  600: "#43534a",
+  700: "#323e38",
+  800: "#232925",
+  900: "#151917",
+};
+
 export const yellow: ColorShades = {
   50: "#f9f7ee",
   100: "#f2edd8",
@@ -342,6 +355,7 @@ export const colors = {
   lime,
   mist,
   orange,
+  pine,
   pink,
   purple,
   red,
