@@ -301,6 +301,9 @@ export class OpenAiAdapter extends BaseProviderAdapter {
               id: currentFunctionCall.callId,
               name: currentFunctionCall.name,
               arguments: currentFunctionCall.arguments,
+              // Preserve the item ID (fc_...) separately from call_id (call_...)
+              // OpenAI Responses API requires both with correct prefixes
+              metadata: { itemId: currentFunctionCall.id },
             },
           };
           currentFunctionCall = null;

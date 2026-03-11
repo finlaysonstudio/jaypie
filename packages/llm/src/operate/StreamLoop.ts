@@ -406,13 +406,28 @@ export class StreamLoop {
     if (collectedToolCalls.length > 0 && state.toolkit && state.maxTurns > 1) {
       // Add tool calls to history
       for (const toolCall of collectedToolCalls) {
-        state.currentInput.push({
+        // Extract provider-specific metadata from the stream chunk
+        const metadata =
+          (toolCall.raw as Record<string, unknown>)?.metadata as
+            | Record<string, unknown>
+            | undefined;
+
+        const historyItem: Record<string, unknown> = {
           type: LlmMessageType.FunctionCall,
           name: toolCall.name,
           arguments: toolCall.arguments,
           call_id: toolCall.callId,
-          id: toolCall.callId,
-        } as unknown as LlmToolCall);
+          // Use provider item ID if available (e.g., OpenAI fc_... prefix),
+          // otherwise fall back to callId
+          id: (metadata?.itemId as string) || toolCall.callId,
+        };
+
+        // Preserve provider-specific fields (e.g., Gemini thoughtSignature)
+        if (metadata?.thoughtSignature) {
+          historyItem.thoughtSignature = metadata.thoughtSignature;
+        }
+
+        state.currentInput.push(historyItem as unknown as LlmToolCall);
       }
 
       return { shouldContinue: true, toolCalls: collectedToolCalls };

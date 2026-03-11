@@ -312,6 +312,13 @@ export class GeminiAdapter extends BaseProviderAdapter {
               arguments: functionCall.args || {},
             };
 
+            // Preserve thoughtSignature for Gemini 3 models
+            // Required to maintain tool call context between turns
+            const metadata: Record<string, unknown> | undefined =
+              part.thoughtSignature
+                ? { thoughtSignature: part.thoughtSignature }
+                : undefined;
+
             // Emit the function call immediately
             yield {
               type: LlmStreamChunkType.ToolCall,
@@ -319,6 +326,7 @@ export class GeminiAdapter extends BaseProviderAdapter {
                 id: currentFunctionCall.id,
                 name: currentFunctionCall.name,
                 arguments: JSON.stringify(currentFunctionCall.arguments),
+                metadata,
               },
             };
             currentFunctionCall = null;

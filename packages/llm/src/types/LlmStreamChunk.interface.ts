@@ -24,6 +24,8 @@ export interface LlmStreamChunkToolCall {
     id: string;
     name: string;
     arguments: string;
+    /** Provider-specific metadata preserved through tool-call roundtrip */
+    metadata?: Record<string, unknown>;
   };
 }
 
