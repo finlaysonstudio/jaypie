@@ -100,7 +100,7 @@ export class OpenAiAdapter extends BaseProviderAdapter {
     const model = request.model || this.defaultModel;
     const openaiRequest: Record<string, unknown> = {
       model,
-      input: request.messages,
+      input: this.sanitizeInputItems(request.messages),
     };
 
     if (request.user) {
@@ -544,6 +544,32 @@ export class OpenAiAdapter extends BaseProviderAdapter {
   //
   // Private Helpers
   //
+
+  /**
+   * Sanitize history items for the OpenAI Responses API.
+   * Strips fields not accepted by specific item types (e.g., `name` on
+   * function_call_output items) to prevent 400 "Unknown parameter" errors.
+   */
+  private sanitizeInputItems(messages: LlmHistory): unknown[] {
+    return messages.map((item) => {
+      const typedItem = item as unknown as Record<string, unknown>;
+
+      // function_call_output only accepts: type, call_id, output, id, status
+      if (typedItem.type === LlmMessageType.FunctionCallOutput) {
+        const sanitized: Record<string, unknown> = {
+          type: typedItem.type,
+          call_id: typedItem.call_id,
+          output: typedItem.output,
+        };
+        if (typedItem.id) sanitized.id = typedItem.id;
+        if (typedItem.status) sanitized.status = typedItem.status;
+        return sanitized;
+      }
+
+      // All other items pass through as-is
+      return item;
+    });
+  }
 
   private hasToolCalls(response: OpenAIRawResponse): boolean {
     if (!response.output || !Array.isArray(response.output)) {

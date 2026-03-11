@@ -590,6 +590,56 @@ describe("OpenAiAdapter", () => {
       expect(result.temperature).toBeUndefined();
     });
 
+    it("strips name field from function_call_output items in buildRequest", () => {
+      const request: OperateRequest = {
+        model: PROVIDER.OPENAI.MODEL.LARGE,
+        messages: [
+          {
+            content: "Hello",
+            role: LlmMessageRole.User,
+            type: LlmMessageType.Message,
+          },
+          // Function call with name (valid for OpenAI)
+          {
+            type: LlmMessageType.FunctionCall,
+            name: "test_tool",
+            arguments: "{}",
+            call_id: "call_abc",
+            id: "fc_xyz",
+          } as any,
+          // Function call output with name (invalid for OpenAI)
+          {
+            type: LlmMessageType.FunctionCallOutput,
+            call_id: "call_abc",
+            output: '{"result": "ok"}',
+            name: "test_tool",
+          } as any,
+        ],
+      };
+
+      const result = openAiAdapter.buildRequest(request) as Record<
+        string,
+        unknown
+      >;
+      const input = result.input as Record<string, unknown>[];
+
+      // function_call_output should NOT have name
+      const outputItem = input.find(
+        (i) => i.type === LlmMessageType.FunctionCallOutput,
+      );
+      expect(outputItem).toBeDefined();
+      expect(outputItem!.call_id).toBe("call_abc");
+      expect(outputItem!.output).toBe('{"result": "ok"}');
+      expect(outputItem!).not.toHaveProperty("name");
+
+      // function_call should still have name
+      const callItem = input.find(
+        (i) => i.type === LlmMessageType.FunctionCall,
+      );
+      expect(callItem).toBeDefined();
+      expect((callItem as any).name).toBe("test_tool");
+    });
+
     it("handles response with reasoning items", () => {
       const response = {
         output: [
