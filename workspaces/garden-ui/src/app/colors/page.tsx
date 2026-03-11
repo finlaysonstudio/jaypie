@@ -378,7 +378,7 @@ function UsageSwatch({ color, name, value }: { color: string; name: string; valu
 
 // Cool → warm → brown spectrum
 const COLOR_ORDER = [
-  "mist", "slate", "gray", "ink", "zinc", "brown",
+  "mist", "pine", "slate", "gray", "ink", "zinc", "brown",
   "orange", "amber", "yellow", "lime",
   "green", "emerald", "teal", "cyan",
   "sky", "blue", "indigo", "violet",

@@ -625,6 +625,243 @@ describe("StreamLoop", () => {
         expect(toolResultChunks).toHaveLength(2);
       });
 
+      it("preserves provider item ID (metadata.itemId) in history for OpenAI roundtrip", async () => {
+        const toolkit = new Toolkit([
+          {
+            name: "test_tool",
+            description: "A test tool",
+            parameters: { type: "object" },
+            type: "function",
+            call: vi.fn(() => "result"),
+          },
+        ]);
+
+        let callCount = 0;
+        mockAdapter.executeStreamRequest = vi.fn(
+          async function* (): AsyncIterable<LlmStreamChunk> {
+            callCount++;
+            if (callCount === 1) {
+              // Simulate OpenAI stream: itemId (fc_...) differs from callId (call_...)
+              yield {
+                type: LlmStreamChunkType.ToolCall,
+                toolCall: {
+                  id: "call_abc123",
+                  name: "test_tool",
+                  arguments: "{}",
+                  metadata: { itemId: "fc_xyz789" },
+                },
+              };
+              yield {
+                type: LlmStreamChunkType.Done,
+                usage: [
+                  {
+                    input: 10,
+                    output: 10,
+                    reasoning: 0,
+                    total: 20,
+                    provider: "mock",
+                    model: "mock-model",
+                  },
+                ],
+              };
+            } else {
+              yield { type: LlmStreamChunkType.Text, content: "Done" };
+              yield {
+                type: LlmStreamChunkType.Done,
+                usage: [
+                  {
+                    input: 10,
+                    output: 10,
+                    reasoning: 0,
+                    total: 20,
+                    provider: "mock",
+                    model: "mock-model",
+                  },
+                ],
+              };
+            }
+          },
+        );
+
+        const loop = new StreamLoop({
+          adapter: mockAdapter,
+          client: mockClient,
+        });
+
+        await collectChunks(
+          loop.execute("Call tool", { tools: toolkit, turns: 3 }),
+        );
+
+        // Verify the second call received history with correct IDs
+        const secondCallRequest =
+          mockAdapter.buildRequest.mock.calls[1][0];
+        const functionCallItem = secondCallRequest.messages.find(
+          (m: Record<string, unknown>) =>
+            m.type === LlmMessageType.FunctionCall,
+        );
+
+        // id should be the item ID (fc_...), not the call_id
+        expect(functionCallItem.id).toBe("fc_xyz789");
+        // call_id should be the call ID
+        expect(functionCallItem.call_id).toBe("call_abc123");
+      });
+
+      it("preserves Gemini thoughtSignature metadata in history for roundtrip", async () => {
+        const toolkit = new Toolkit([
+          {
+            name: "test_tool",
+            description: "A test tool",
+            parameters: { type: "object" },
+            type: "function",
+            call: vi.fn(() => "result"),
+          },
+        ]);
+
+        let callCount = 0;
+        mockAdapter.executeStreamRequest = vi.fn(
+          async function* (): AsyncIterable<LlmStreamChunk> {
+            callCount++;
+            if (callCount === 1) {
+              // Simulate Gemini stream with thoughtSignature
+              yield {
+                type: LlmStreamChunkType.ToolCall,
+                toolCall: {
+                  id: "gemini-call-1",
+                  name: "test_tool",
+                  arguments: "{}",
+                  metadata: { thoughtSignature: "sig_abc123def" },
+                },
+              };
+              yield {
+                type: LlmStreamChunkType.Done,
+                usage: [
+                  {
+                    input: 10,
+                    output: 10,
+                    reasoning: 0,
+                    total: 20,
+                    provider: "mock",
+                    model: "mock-model",
+                  },
+                ],
+              };
+            } else {
+              yield { type: LlmStreamChunkType.Text, content: "Done" };
+              yield {
+                type: LlmStreamChunkType.Done,
+                usage: [
+                  {
+                    input: 10,
+                    output: 10,
+                    reasoning: 0,
+                    total: 20,
+                    provider: "mock",
+                    model: "mock-model",
+                  },
+                ],
+              };
+            }
+          },
+        );
+
+        const loop = new StreamLoop({
+          adapter: mockAdapter,
+          client: mockClient,
+        });
+
+        await collectChunks(
+          loop.execute("Call tool", { tools: toolkit, turns: 3 }),
+        );
+
+        // Verify the second call received history with thoughtSignature
+        const secondCallRequest =
+          mockAdapter.buildRequest.mock.calls[1][0];
+        const functionCallItem = secondCallRequest.messages.find(
+          (m: Record<string, unknown>) =>
+            m.type === LlmMessageType.FunctionCall,
+        );
+
+        expect(functionCallItem.thoughtSignature).toBe("sig_abc123def");
+      });
+
+      it("falls back to callId for id when no metadata.itemId is provided", async () => {
+        const toolkit = new Toolkit([
+          {
+            name: "test_tool",
+            description: "A test tool",
+            parameters: { type: "object" },
+            type: "function",
+            call: vi.fn(() => "result"),
+          },
+        ]);
+
+        let callCount = 0;
+        mockAdapter.executeStreamRequest = vi.fn(
+          async function* (): AsyncIterable<LlmStreamChunk> {
+            callCount++;
+            if (callCount === 1) {
+              // No metadata - e.g., Anthropic doesn't need itemId
+              yield {
+                type: LlmStreamChunkType.ToolCall,
+                toolCall: {
+                  id: "toolu_abc123",
+                  name: "test_tool",
+                  arguments: "{}",
+                },
+              };
+              yield {
+                type: LlmStreamChunkType.Done,
+                usage: [
+                  {
+                    input: 10,
+                    output: 10,
+                    reasoning: 0,
+                    total: 20,
+                    provider: "mock",
+                    model: "mock-model",
+                  },
+                ],
+              };
+            } else {
+              yield { type: LlmStreamChunkType.Text, content: "Done" };
+              yield {
+                type: LlmStreamChunkType.Done,
+                usage: [
+                  {
+                    input: 10,
+                    output: 10,
+                    reasoning: 0,
+                    total: 20,
+                    provider: "mock",
+                    model: "mock-model",
+                  },
+                ],
+              };
+            }
+          },
+        );
+
+        const loop = new StreamLoop({
+          adapter: mockAdapter,
+          client: mockClient,
+        });
+
+        await collectChunks(
+          loop.execute("Call tool", { tools: toolkit, turns: 3 }),
+        );
+
+        const secondCallRequest =
+          mockAdapter.buildRequest.mock.calls[1][0];
+        const functionCallItem = secondCallRequest.messages.find(
+          (m: Record<string, unknown>) =>
+            m.type === LlmMessageType.FunctionCall,
+        );
+
+        // Both id and call_id should fall back to callId
+        expect(functionCallItem.id).toBe("toolu_abc123");
+        expect(functionCallItem.call_id).toBe("toolu_abc123");
+      });
+
       it("respects turns limit during streaming", async () => {
         const toolkit = new Toolkit([
           {
