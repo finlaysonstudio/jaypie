@@ -88,7 +88,7 @@ function generateJaypieKey({
   if (issuer) {
     parts.push(issuer);
   }
-  return parts.join(separator) + separator + body + checksumStr;
+  return parts.join(separator) + separator + body + separator + checksumStr;
 }
 
 function hashJaypieKey(key: string, { salt }: HashOptions = {}): string {
@@ -124,16 +124,16 @@ function validateJaypieKey(
   }
   const prefixStr = parts.join(separator) + separator;
 
-  // Check total length
-  const expectedLength = prefixStr.length + length + checksum;
+  // Check total length (prefix + body + separator + checksum)
+  const expectedLength = prefixStr.length + length + separator.length + checksum;
   if (key.length !== expectedLength) return false;
 
   // Check prefix
   if (!key.startsWith(prefixStr)) return false;
 
-  // Extract body and checksum
+  // Extract body and checksum (separated by separator)
   const body = key.slice(prefixStr.length, prefixStr.length + length);
-  const checksumStr = key.slice(prefixStr.length + length);
+  const checksumStr = key.slice(prefixStr.length + length + separator.length);
 
   // Validate all body chars are in pool
   const poolSet = new Set(pool);

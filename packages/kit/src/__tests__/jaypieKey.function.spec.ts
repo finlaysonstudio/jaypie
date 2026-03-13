@@ -35,15 +35,15 @@ describe("generateJaypieKey", () => {
   describe("Happy Paths", () => {
     it("generates a key with default format", () => {
       const key = generateJaypieKey();
-      // sk_ + 32 body + 4 checksum = 39 chars
-      expect(key.length).toBe(39);
+      // sk_ + 32 body + _ + 4 checksum = 40 chars
+      expect(key.length).toBe(40);
       expect(key.startsWith("sk_")).toBe(true);
     });
 
     it("generates a key with issuer", () => {
       const key = generateJaypieKey({ issuer: "jpi" });
-      // sk_jpi_ + 32 body + 4 checksum = 43 chars
-      expect(key.length).toBe(43);
+      // sk_jpi_ + 32 body + _ + 4 checksum = 44 chars
+      expect(key.length).toBe(44);
       expect(key.startsWith("sk_jpi_")).toBe(true);
     });
 
@@ -76,14 +76,14 @@ describe("generateJaypieKey", () => {
 
     it("uses custom length", () => {
       const key = generateJaypieKey({ length: 16 });
-      // sk_ + 16 body + 4 checksum = 23 chars
-      expect(key.length).toBe(23);
+      // sk_ + 16 body + _ + 4 checksum = 24 chars
+      expect(key.length).toBe(24);
     });
 
     it("uses custom checksum length", () => {
       const key = generateJaypieKey({ checksum: 6 });
-      // sk_ + 32 body + 6 checksum = 41 chars
-      expect(key.length).toBe(41);
+      // sk_ + 32 body + _ + 6 checksum = 42 chars
+      expect(key.length).toBe(42);
     });
 
     it("uses custom pool", () => {
@@ -177,7 +177,7 @@ describe("validateJaypieKey", () => {
 
     it("returns false for invalid characters", () => {
       // Build a key-shaped string with invalid chars
-      const invalid = "sk_" + "!".repeat(32) + "!!!!";
+      const invalid = "sk_" + "!".repeat(32) + "_!!!!";
       expect(validateJaypieKey(invalid)).toBe(false);
     });
 
@@ -194,10 +194,10 @@ describe("validateJaypieKey", () => {
   });
 
   describe("Backward Compatibility", () => {
-    it("validates keys matching garden format (sk_jpi_ + 32 body + 4 checksum)", () => {
+    it("validates keys matching garden format (sk_jpi_ + 32 body + _ + 4 checksum)", () => {
       // Generate a key using the garden-compatible parameters
       const key = generateJaypieKey({ issuer: "jpi" });
-      expect(key.length).toBe(43);
+      expect(key.length).toBe(44);
       expect(key.startsWith("sk_jpi_")).toBe(true);
       expect(validateJaypieKey(key, { issuer: "jpi" })).toBe(true);
     });
