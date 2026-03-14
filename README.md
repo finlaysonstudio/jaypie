@@ -387,6 +387,7 @@ const mongoConnectionString = new JaypieEnvSecret(
 | `envKey` | `string` | No | Environment variable to read secret value from |
 | `export` | `string` | No | Custom export name for the secret |
 | `provider` | `boolean` | No | If true, makes secret available to other environments |
+| `removalPolicy` | `boolean \| RemovalPolicy` | No | `true` = RETAIN, `false` = DESTROY, or CDK `RemovalPolicy` |
 | `roleTag` | `string` | No | Role tag for resource management |
 | `vendorTag` | `string` | No | Vendor tag for resource management |
 | `value` | `string` | No | Direct secret value if not using envKey |

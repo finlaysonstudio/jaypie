@@ -64,6 +64,7 @@ export interface JaypieEnvSecretProps {
   export?: string;
   generateSecretString?: secretsmanager.SecretStringGenerator;
   provider?: boolean;
+  removalPolicy?: boolean | RemovalPolicy;
   roleTag?: string;
   vendorTag?: string;
   value?: string;
@@ -96,6 +97,7 @@ export class JaypieEnvSecret extends Construct implements ISecret {
       export: exportParam,
       generateSecretString,
       provider = checkEnvIsProvider(),
+      removalPolicy,
       roleTag,
       vendorTag,
       value,
@@ -138,6 +140,16 @@ export class JaypieEnvSecret extends Construct implements ISecret {
       };
 
       this._secret = new secretsmanager.Secret(this, id, secretProps);
+
+      if (removalPolicy !== undefined) {
+        const policy =
+          typeof removalPolicy === "boolean"
+            ? removalPolicy
+              ? RemovalPolicy.RETAIN
+              : RemovalPolicy.DESTROY
+            : removalPolicy;
+        this._secret.applyRemovalPolicy(policy);
+      }
 
       if (roleTag) {
         Tags.of(this._secret).add(CDK.TAG.ROLE, roleTag);

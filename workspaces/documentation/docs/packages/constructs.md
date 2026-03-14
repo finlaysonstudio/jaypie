@@ -250,14 +250,16 @@ Without this, the Lambda returns a JSON envelope instead of streamed HTML becaus
 
 ## JaypieEnvSecret
 
-Secret reference for Lambda injection.
+Secret reference for Lambda injection. Supports `removalPolicy` as `boolean` (`true` = RETAIN, `false` = DESTROY) or CDK `RemovalPolicy`.
 
 ```typescript
 import { JaypieEnvSecret, JaypieLambda } from "@jaypie/constructs";
+import { isProductionEnv } from "@jaypie/kit";
 
 const mongoSecret = new JaypieEnvSecret(this, "MongoSecret", {
   secretName: "prod/mongodb-uri",
   envName: "MONGODB_URI",
+  removalPolicy: isProductionEnv(),
 });
 
 new JaypieLambda(this, "Api", {

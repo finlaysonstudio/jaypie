@@ -1,5 +1,5 @@
 import { expect, it, describe } from "vitest";
-import { Stack } from "aws-cdk-lib";
+import { RemovalPolicy, Stack } from "aws-cdk-lib";
 import { Template } from "aws-cdk-lib/assertions";
 import { JaypieEnvSecret } from "../JaypieEnvSecret.js";
 import { CDK } from "../constants";
@@ -119,6 +119,45 @@ describe("JaypieSecret", () => {
       });
 
       expect(secret.envKey).toBe("TEST_ENV_KEY");
+    });
+
+    it("applies RETAIN removal policy when removalPolicy is true", () => {
+      const stack = new Stack();
+      new JaypieEnvSecret(stack, "TestSecret", {
+        removalPolicy: true,
+      });
+      const template = Template.fromStack(stack);
+
+      template.hasResource("AWS::SecretsManager::Secret", {
+        DeletionPolicy: "Retain",
+        UpdateReplacePolicy: "Retain",
+      });
+    });
+
+    it("applies DESTROY removal policy when removalPolicy is false", () => {
+      const stack = new Stack();
+      new JaypieEnvSecret(stack, "TestSecret", {
+        removalPolicy: false,
+      });
+      const template = Template.fromStack(stack);
+
+      template.hasResource("AWS::SecretsManager::Secret", {
+        DeletionPolicy: "Delete",
+        UpdateReplacePolicy: "Delete",
+      });
+    });
+
+    it("accepts RemovalPolicy enum directly", () => {
+      const stack = new Stack();
+      new JaypieEnvSecret(stack, "TestSecret", {
+        removalPolicy: RemovalPolicy.RETAIN,
+      });
+      const template = Template.fromStack(stack);
+
+      template.hasResource("AWS::SecretsManager::Secret", {
+        DeletionPolicy: "Retain",
+        UpdateReplacePolicy: "Retain",
+      });
     });
   });
 });

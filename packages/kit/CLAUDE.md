@@ -78,7 +78,7 @@ src/
 
 ### API Key Functions
 
-- `generateJaypieKey({ checksum, issuer, length, pool, prefix, separator })` - Generate API keys (prefix and checksum optional)
+- `generateJaypieKey({ checksum, issuer, length, pool, prefix, seed, separator })` - Generate API keys (prefix and checksum optional, seed for deterministic derivation)
 - `validateJaypieKey(key, options)` - Validate key format/checksum (prefix and checksum not required, accepts `_` or `-`)
 - `hashJaypieKey(key, { salt })` - SHA-256/HMAC-SHA256 key hashing (reads `PROJECT_SALT` env)
 

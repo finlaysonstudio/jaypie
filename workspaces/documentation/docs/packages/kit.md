@@ -209,6 +209,13 @@ generateJaypieKey({ checksum: 0 });          // "sk_<body>"
 generateJaypieKey({ prefix: "", checksum: 0 }); // "<body>"
 ```
 
+Derive a deterministic key from a seed:
+
+```typescript
+const key = generateJaypieKey({ seed: process.env.PROJECT_ADMIN_SEED, issuer: "jaypie" });
+// Same seed + same issuer = same key every time
+```
+
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `checksum` | `number` | `4` | Checksum character count (0 to omit) |
@@ -216,6 +223,7 @@ generateJaypieKey({ prefix: "", checksum: 0 }); // "<body>"
 | `length` | `number` | `32` | Random body character length |
 | `pool` | `string` | base62 | Character pool |
 | `prefix` | `string` | `"sk"` | Key prefix (`""` to omit) |
+| `seed` | `string` | `undefined` | Derive key deterministically via HMAC-SHA256 |
 | `separator` | `string` | `"_"` | Delimiter between segments |
 
 ### validateJaypieKey

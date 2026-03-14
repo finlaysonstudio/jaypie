@@ -6,7 +6,7 @@ const BASE62 =
   "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 const BODY_LENGTH = 32;
 const HMAC_CONTEXT = "jaypie-garden-owner-key-v1";
-const PREFIX = "sk_jpi_";
+const PREFIX = "sk_jaypie_";
 
 //
 //

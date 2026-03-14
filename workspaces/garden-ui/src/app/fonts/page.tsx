@@ -100,7 +100,7 @@ export default function FontsPage() {
           <br />
           <span className={styles.codeMuted}>const</span> key ={" "}
           <span className={styles.codeValue}>
-            &quot;sk_jpi_9f3a&quot;
+            &quot;sk_jaypie_9f3a&quot;
           </span>;
           <br />
           console.log(color, key);

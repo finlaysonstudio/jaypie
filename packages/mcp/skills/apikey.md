@@ -41,6 +41,25 @@ generateJaypieKey({ prefix: "", issuer: "jaypie" });
 // "jaypie_A1b2C3d4E5f6G7h8I9j0K1l2M3n4O5p6_Xq7R"
 ```
 
+### With Seed
+
+Pass `seed` to derive a deterministic key from a secret. Uses HMAC-SHA256 with the `issuer` (defaulting to `"jaypie"`) as the HMAC message:
+
+```typescript
+const key = generateJaypieKey({ seed: process.env.PROJECT_ADMIN_SEED, issuer: "jaypie" });
+// Same seed + same issuer = same key every time
+```
+
+Different issuers produce different keys from the same seed:
+
+```typescript
+generateJaypieKey({ seed: "my-seed", issuer: "alpha" });
+generateJaypieKey({ seed: "my-seed", issuer: "beta" });
+// Two different keys
+```
+
+This is useful for bootstrapping an initial owner key from a shared secret without requiring database access.
+
 ### Options
 
 | Option | Default | Description |
@@ -50,6 +69,7 @@ generateJaypieKey({ prefix: "", issuer: "jaypie" });
 | `length` | `32` | Random body length |
 | `pool` | base62 (`0-9A-Za-z`) | Character pool for body |
 | `prefix` | `"sk"` | Key prefix (`""` to omit) |
+| `seed` | (none) | Derive key deterministically via HMAC-SHA256 |
 | `separator` | `"_"` | Delimiter between segments |
 
 All options are optional. Zero-param call produces `sk_<32 base62>_<4 checksum>`.
@@ -161,12 +181,27 @@ import { generateJaypieKey, hashJaypieKey, validateJaypieKey } from "@jaypie/tes
 
 ## Infrastructure
 
-Use with the generated secrets pattern for `PROJECT_SALT`:
+Use with the generated secrets pattern for `PROJECT_SALT` and `PROJECT_ADMIN_SEED`:
 
 ```typescript
-// CDK
+import { isProductionEnv } from "@jaypie/kit";
+
+// PROJECT_SALT — used by hashJaypieKey to HMAC hash keys for storage.
+// If this value is lost, all stored key hashes become unverifiable.
 new JaypieEnvSecret(this, "ProjectSalt", {
   envKey: "PROJECT_SALT",
+  generateSecretString: {
+    excludePunctuation: true,
+    includeSpace: false,
+    passwordLength: 64,
+  },
+  // Preserve this value if production stack is deleted
+  removalPolicy: isProductionEnv(),
+});
+
+// PROJECT_ADMIN_SEED — used by generateJaypieKey({ seed }) to derive the bootstrap owner key.
+new JaypieEnvSecret(this, "ProjectAdminSeed", {
+  envKey: "PROJECT_ADMIN_SEED",
   generateSecretString: {
     excludePunctuation: true,
     includeSpace: false,
