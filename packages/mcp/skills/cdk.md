@@ -1,6 +1,6 @@
 ---
 description: CDK constructs and deployment patterns
-related: aws, cicd, dynamodb, streaming, websockets
+related: apikey, aws, cicd, dynamodb, express, lambda, secrets, streaming, websockets
 ---
 
 # CDK Constructs
@@ -120,6 +120,79 @@ PROJECT_ENV=sandbox PROJECT_NONCE=dev cdk deploy
 PROJECT_ENV=production PROJECT_NONCE=prod cdk deploy
 ```
 
+## Lambda with DynamoDB Tables
+
+Pass tables to `JaypieLambda` for automatic permissions and environment wiring:
+
+```typescript
+import { JaypieDynamoDb, JaypieLambda } from "@jaypie/constructs";
+
+const table = new JaypieDynamoDb(this, "myApp");
+
+const handler = new JaypieLambda(this, "ApiHandler", {
+  entry: "src/handler.ts",
+  handler: "handler",
+  tables: [table],
+});
+```
+
+**Behavior:**
+
+| Tables Count | Permissions | Environment |
+|-------------|-------------|-------------|
+| 1 table | `grantReadWriteData()` | `DYNAMODB_TABLE_NAME` set automatically |
+| 2+ tables | `grantReadWriteData()` for each | No auto env var — set `CDK_ENV_TABLE` manually |
+
+Single table example — at runtime, use `process.env.DYNAMODB_TABLE_NAME`:
+
+```typescript
+const table = new JaypieDynamoDb(this, "myApp");
+new JaypieLambda(this, "Handler", {
+  tables: [table],
+  // DYNAMODB_TABLE_NAME is set automatically
+});
+```
+
+Multi-table example — set environment variables explicitly:
+
+```typescript
+const usersTable = new JaypieDynamoDb(this, "users");
+const ordersTable = new JaypieDynamoDb(this, "orders");
+
+new JaypieLambda(this, "Handler", {
+  tables: [usersTable, ordersTable],
+  environment: {
+    USERS_TABLE: usersTable.tableName,
+    ORDERS_TABLE: ordersTable.tableName,
+  },
+});
+```
+
+See `skill("dynamodb")` for table key conventions and query patterns.
+
+## Lambda with Secrets
+
+Pass secrets as strings (auto-creates `JaypieEnvSecret`) or as construct instances:
+
+```typescript
+// String shorthand — creates JaypieEnvSecret from env vars at deploy time
+new JaypieLambda(this, "Handler", {
+  secrets: ["MONGODB_URI", "ANTHROPIC_API_KEY"],
+});
+
+// Construct instances — for generated secrets or custom config
+const salt = new JaypieEnvSecret(this, "ProjectSalt", {
+  envKey: "PROJECT_SALT",
+  generateSecretString: { excludePunctuation: true, passwordLength: 64 },
+});
+
+new JaypieLambda(this, "Handler", {
+  secrets: [salt, "ANTHROPIC_API_KEY"],
+});
+```
+
+See `skill("secrets")` for the full secrets pattern including generated secrets and personal environment gotchas.
+
 ## Environment Variables
 
 Pass configuration to Lambda via environment variables:
@@ -207,5 +280,11 @@ new JaypieDistribution(this, "Dist", {
 
 ## See Also
 
+- **`skill("apikey")`** - API key generation, validation, and hashing
+- **`skill("dynamodb")`** - DynamoDB key design and query patterns
+- **`skill("express")`** - Express handler and Lambda adapter
+- **`skill("lambda")`** - Lambda handler wrappers and lifecycle
+- **`skill("secrets")`** - Secret management with JaypieEnvSecret
 - **`skill("streaming")`** - JaypieDistribution and JaypieNextJs streaming configuration
+- **`skill("variables")`** - Environment variables reference
 - **`skill("websockets")`** - JaypieWebSocket and JaypieWebSocketTable constructs

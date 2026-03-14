@@ -1,6 +1,6 @@
 ---
 description: API key generation, validation, and hashing with Jaypie keys
-related: secrets, style, tests
+related: dynamodb, secrets, style, tests
 ---
 
 # API Keys
@@ -42,6 +42,8 @@ generateJaypieKey({ prefix: "", issuer: "jaypie" });
 ```
 
 ### With Seed
+
+> **Version note:** `seed` support requires `jaypie >= 1.2.17` / `@jaypie/kit >= 1.2.2`.
 
 Pass `seed` to derive a deterministic key from a secret. Uses HMAC-SHA256 with the `issuer` (defaulting to `"jaypie"`) as the HMAC message:
 
@@ -211,3 +213,21 @@ new JaypieEnvSecret(this, "ProjectAdminSeed", {
 ```
 
 See `~secrets` for the full secrets management pattern.
+
+## DynamoDB Storage Pattern
+
+Store hashed API keys in DynamoDB for direct lookup without a GSI:
+
+```typescript
+// model = "apikey", id = hash — enables direct get-item lookup
+{ model: "apikey", id: hashJaypieKey(key), ownerId: "user_123", createdAt: "..." }
+```
+
+This uses the `JaypieDynamoDb` default key convention (`model`/`id`). See `skill("dynamodb")` for table setup and query patterns.
+
+## See Also
+
+- **`skill("cdk")`** - CDK constructs for Lambda with secrets and tables
+- **`skill("dynamodb")`** - DynamoDB key conventions and query patterns
+- **`skill("secrets")`** - Generated secrets for PROJECT_SALT and PROJECT_ADMIN_SEED
+- **`skill("recipe-api-server")`** - End-to-end guide for API server with DynamoDB + API keys

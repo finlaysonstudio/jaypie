@@ -1,6 +1,6 @@
 ---
 description: Secret management with AWS Secrets Manager
-related: aws, cdk, variables
+related: apikey, aws, cdk, variables
 ---
 
 # Secret Management
@@ -88,7 +88,49 @@ new JaypieEnvSecret(this, "SHARED_API_KEY", { provider: true });
 new JaypieEnvSecret(this, "SHARED_API_KEY"); // consumer auto-detected
 ```
 
-The construct auto-detects consumer mode for personal/ephemeral environments (`PROJECT_ENV=personal` or `CDK_ENV_PERSONAL=true`).
+### Auto-Detection
+
+The construct auto-detects consumer mode when any of these conditions is true:
+
+| Condition | Trigger |
+|-----------|---------|
+| `PROJECT_ENV=personal` | Personal environment |
+| `CDK_ENV_PERSONAL=true` | Personal environment flag |
+| `CDK_ENV_EPHEMERAL=true` | Legacy ephemeral flag |
+
+When consumer mode is active, the construct **imports** a secret from the sandbox stack via CloudFormation exports instead of creating a new one. The export name follows the pattern: `env-sandbox-{PROJECT_KEY}-{SecretName}`.
+
+### Personal Environment Gotcha
+
+**When adding new generated secrets in a personal environment**, the consumer auto-detection can cause deploy failures:
+
+```
+No export named env-sandbox-myproject-ProjectSalt found
+```
+
+This happens because the personal stack tries to import from sandbox, but sandbox has no such export yet (the secret is new).
+
+**Fix**: Set `consumer: false` for secrets that should be created per-stack:
+
+```typescript
+new JaypieEnvSecret(this, "ProjectSalt", {
+  envKey: "PROJECT_SALT",
+  consumer: false,  // Create in this stack, don't import from sandbox
+  generateSecretString: {
+    excludePunctuation: true,
+    includeSpace: false,
+    passwordLength: 64,
+  },
+});
+```
+
+**When to use `consumer: false`:**
+- Generated secrets (`generateSecretString`) that don't need to be shared
+- Secrets unique to each environment (salts, seeds)
+
+**When to let consumer auto-detect (default):**
+- Shared vendor credentials (API keys, database URIs) that exist in sandbox
+- Secrets that must be identical across sandbox and personal stacks
 
 ## Generated Secrets
 
@@ -273,6 +315,12 @@ secret.grantRead(lambdaFunction);
 ```
 
 Or use the `secrets` array on `JaypieLambda`, which handles permissions automatically.
+
+## See Also
+
+- **`skill("apikey")`** - API key infrastructure using PROJECT_SALT and PROJECT_ADMIN_SEED
+- **`skill("cdk")`** - CDK constructs including JaypieLambda secrets integration
+- **`skill("variables")`** - Environment variables reference
 
 ## Testing
 
