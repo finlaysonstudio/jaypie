@@ -27,6 +27,7 @@ src/
 │   │   ├── getHeaderFrom.function.ts
 │   │   ├── getObjectKeyCaseInsensitive.ts
 │   │   ├── invokeChaos.function.ts  # Chaos engineering support
+│   │   ├── jaypieKey.function.ts    # API key generate/validate/hash
 │   │   ├── placeholders.ts      # String placeholder replacement
 │   │   ├── resolveValue.ts      # Async value resolution
 │   │   ├── safeParseFloat.function.ts
@@ -74,6 +75,12 @@ src/
 - `force.object(value, key)` - Ensure value is an object
 - `force.positive(value)` - Parse positive number (min: 0)
 - `force.string(value, default)` - Ensure value is a string
+
+### API Key Functions
+
+- `generateJaypieKey({ checksum, issuer, length, pool, prefix, separator })` - Generate API keys (prefix and checksum optional)
+- `validateJaypieKey(key, options)` - Validate key format/checksum (prefix and checksum not required, accepts `_` or `-`)
+- `hashJaypieKey(key, { salt })` - SHA-256/HMAC-SHA256 key hashing (reads `PROJECT_SALT` env)
 
 ### Utility Functions
 

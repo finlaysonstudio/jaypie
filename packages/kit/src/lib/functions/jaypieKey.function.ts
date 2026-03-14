@@ -83,12 +83,20 @@ function generateJaypieKey({
     body += pool[bytes[i] % pool.length];
   }
 
-  const checksumStr = computeChecksum(body, pool, checksum);
-  const parts = [prefix];
-  if (issuer) {
-    parts.push(issuer);
+  const parts: string[] = [];
+  if (prefix) parts.push(prefix);
+  if (issuer) parts.push(issuer);
+
+  let result = "";
+  if (parts.length > 0) {
+    result = parts.join(separator) + separator;
   }
-  return parts.join(separator) + separator + body + separator + checksumStr;
+  result += body;
+  if (checksum > 0) {
+    const checksumStr = computeChecksum(body, pool, checksum);
+    result += separator + checksumStr;
+  }
+  return result;
 }
 
 function hashJaypieKey(key: string, { salt }: HashOptions = {}): string {
@@ -112,42 +120,79 @@ function validateJaypieKey(
     length = DEFAULTS.LENGTH,
     pool = DEFAULTS.POOL,
     prefix = DEFAULTS.PREFIX,
-    separator = DEFAULTS.SEPARATOR,
   }: JaypieKeyOptions = {},
 ): boolean {
   if (typeof key !== "string") return false;
 
-  // Build expected prefix string
-  const parts = [prefix];
-  if (issuer) {
-    parts.push(issuer);
-  }
-  const prefixStr = parts.join(separator) + separator;
-
-  // Check total length (prefix + body + separator + checksum)
-  const expectedLength = prefixStr.length + length + separator.length + checksum;
-  if (key.length !== expectedLength) return false;
-
-  // Check prefix
-  if (!key.startsWith(prefixStr)) return false;
-
-  // Extract body and checksum (separated by separator)
-  const body = key.slice(prefixStr.length, prefixStr.length + length);
-  const checksumStr = key.slice(prefixStr.length + length + separator.length);
-
-  // Validate all body chars are in pool
   const poolSet = new Set(pool);
-  for (const char of body) {
-    if (!poolSet.has(char)) return false;
+  const separators = ["_", "-"];
+
+  // Build prefix candidates to try (prefix and checksum are not required)
+  const prefixCandidates = new Set<string>();
+
+  for (const sep of separators) {
+    const parts: string[] = [];
+    if (prefix) parts.push(prefix);
+    if (issuer) parts.push(issuer);
+
+    if (parts.length > 0) {
+      prefixCandidates.add(parts.join(sep) + sep);
+    }
+
+    // Without the prefix part, just issuer
+    if (prefix && issuer) {
+      prefixCandidates.add(issuer + sep);
+    }
   }
 
-  // Validate checksum chars are in pool
-  for (const char of checksumStr) {
-    if (!poolSet.has(char)) return false;
+  // No prefix at all (only when issuer is not specified)
+  if (!issuer) {
+    prefixCandidates.add("");
   }
 
-  // Verify checksum
-  return checksumStr === computeChecksum(body, pool, checksum);
+  for (const prefixStr of prefixCandidates) {
+    if (!key.startsWith(prefixStr)) continue;
+
+    const remainder = key.slice(prefixStr.length);
+    if (remainder.length < length) continue;
+
+    const body = remainder.slice(0, length);
+
+    // Validate all body chars are in pool
+    let bodyValid = true;
+    for (const char of body) {
+      if (!poolSet.has(char)) {
+        bodyValid = false;
+        break;
+      }
+    }
+    if (!bodyValid) continue;
+
+    const tail = remainder.slice(length);
+
+    // No tail — valid (checksum not required)
+    if (tail.length === 0) return true;
+
+    // If checksum is disabled, extra chars means invalid for this interpretation
+    if (checksum <= 0) continue;
+
+    // Try: separator + checksum
+    if (tail.length === 1 + checksum && (tail[0] === "_" || tail[0] === "-")) {
+      const checksumStr = tail.slice(1);
+      if (checksumStr === computeChecksum(body, pool, checksum)) {
+        return true;
+      }
+    }
+
+    // Try: checksum directly (no separator)
+    if (tail.length === checksum) {
+      if (tail === computeChecksum(body, pool, checksum)) {
+        return true;
+      }
+    }
+  }
+
+  return false;
 }
 
 //
