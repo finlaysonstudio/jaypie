@@ -313,14 +313,20 @@ function expressStreamHandler(
     // Preprocess
     //
 
+    // Build a request-local setup list to avoid mutating the shared array
+    const requestSetup: JaypieStreamHandlerSetup[] = [];
+
     // Load secrets into process.env if configured
     if (secrets && secrets.length > 0) {
       const secretsToLoad = secrets;
       const secretsSetup: JaypieStreamHandlerSetup = async () => {
         await loadEnvSecrets(...secretsToLoad);
       };
-      setup.unshift(secretsSetup);
+      requestSetup.push(secretsSetup);
     }
+
+    // Add shared setup functions
+    requestSetup.push(...setup);
 
     if (locals) {
       const keys = Object.keys(locals);
@@ -338,7 +344,7 @@ function expressStreamHandler(
             }
           }
         };
-        setup.push(localsSetup);
+        requestSetup.push(localsSetup);
       }
     }
 
@@ -350,7 +356,7 @@ function expressStreamHandler(
         {
           chaos,
           name,
-          setup,
+          setup: requestSetup,
           teardown,
           unavailable,
           validate,

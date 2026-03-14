@@ -455,14 +455,20 @@ function expressHandler<T>(
     // Preprocess
     //
 
+    // Build a request-local setup list to avoid mutating the shared array
+    const requestSetup: JaypieHandlerSetup[] = [];
+
     // Load secrets into process.env if configured
     if (secrets && secrets.length > 0) {
       const secretsToLoad = secrets;
       const secretsSetup: JaypieHandlerSetup = async () => {
         await loadEnvSecrets(...secretsToLoad);
       };
-      setup.unshift(secretsSetup);
+      requestSetup.push(secretsSetup);
     }
+
+    // Add shared setup functions
+    requestSetup.push(...setup);
 
     if (locals) {
       // Locals
@@ -481,7 +487,7 @@ function expressHandler<T>(
             }
           }
         };
-        setup.push(localsSetup);
+        requestSetup.push(localsSetup);
       }
     }
 
@@ -498,7 +504,7 @@ function expressHandler<T>(
         {
           chaos,
           name,
-          setup,
+          setup: requestSetup,
           teardown,
           unavailable,
           validate,
