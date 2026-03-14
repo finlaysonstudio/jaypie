@@ -11,7 +11,7 @@ import { generateKeyFromSeed } from "./generate.js";
 // Constants
 //
 
-const GARDEN_KEY_OPTIONS = { issuer: "jpi" } as const;
+const GARDEN_KEY_OPTIONS = { issuer: "jaypie" } as const;
 
 //
 //

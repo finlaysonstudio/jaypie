@@ -148,7 +148,7 @@ function AuthModal({
           onKeyDown={(e) => {
             if (e.key === "Enter") handleSubmit();
           }}
-          placeholder="sk_jpi_..."
+          placeholder="sk_jaypie_..."
           type="text"
           value={apiKey}
         />

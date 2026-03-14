@@ -15,7 +15,7 @@ import { log } from "@jaypie/logger";
 // Constants
 //
 
-const SESSION_PREFIX = "ss_jpi_";
+const SESSION_PREFIX = "ss_jaypie_";
 const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 //

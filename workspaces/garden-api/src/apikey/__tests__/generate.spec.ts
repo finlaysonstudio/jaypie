@@ -15,17 +15,17 @@ describe("generateKeyFromSeed", () => {
 
   it("generates a key with valid format", () => {
     const key = generateKeyFromSeed("test-seed");
-    expect(validateJaypieKey(key, { issuer: "jpi" })).toBe(true);
+    expect(validateJaypieKey(key, { issuer: "jaypie" })).toBe(true);
   });
 
   it("generates a key with correct prefix", () => {
     const key = generateKeyFromSeed("test-seed");
-    expect(key).toMatch(/^sk_jpi_/);
+    expect(key).toMatch(/^sk_jaypie_/);
   });
 
   it("generates a key with correct length", () => {
     const key = generateKeyFromSeed("test-seed");
-    expect(key).toHaveLength(43);
+    expect(key).toHaveLength(46);
   });
 
   it("is deterministic for the same seed", () => {

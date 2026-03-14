@@ -1,8 +1,8 @@
 const BASE62 = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 const BASE62_SET = new Set(BASE62);
 const BODY_LENGTH = 32;
-const KEY_LENGTH = 43;
-const PREFIX = "sk_jpi_";
+const KEY_LENGTH = 46;
+const PREFIX = "sk_jaypie_";
 
 //
 //
