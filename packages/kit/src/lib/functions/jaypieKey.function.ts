@@ -7,8 +7,7 @@ import { log } from "@jaypie/logger";
 // Constants
 //
 
-const BASE62 =
-  "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+const BASE62 = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 
 const DEFAULTS = {
   CHECKSUM: 4,
