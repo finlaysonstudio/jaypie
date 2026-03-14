@@ -176,6 +176,12 @@ export interface PaginatedResponse<T> {
 4. **Document fields** - Add JSDoc comments for complex types
 5. **Prefer interfaces** - Use `interface` over `type` for objects
 
+## See Also
+
+- **`skill("dynamodb")`** - DynamoDB key conventions and table patterns
+- **`skill("fabric")`** - Fabric service input schema definitions
+- **`skill("services")`** - Service layer architecture patterns
+
 ## Type Documentation
 
 ```typescript

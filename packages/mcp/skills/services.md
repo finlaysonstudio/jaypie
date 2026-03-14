@@ -173,3 +173,9 @@ describe("getUser", () => {
 });
 ```
 
+## See Also
+
+- **`skill("fabric")`** - Fabric service pattern for multi-platform deployment
+- **`skill("handlers")`** - Handler lifecycle and integration with services
+- **`skill("models")`** - Data model and type definitions
+

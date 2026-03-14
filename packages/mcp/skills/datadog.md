@@ -192,3 +192,10 @@ describe("CheckoutService", () => {
 });
 ```
 
+## See Also
+
+- **`skill("cdk")`** - CDK Lambda construct with Datadog integration
+- **`skill("logs")`** - Logging patterns for structured observability
+- **`skill("tools-datadog")`** - Interactive Datadog MCP tools
+- **`skill("variables")`** - Datadog and environment variables reference
+

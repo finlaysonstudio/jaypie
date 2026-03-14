@@ -140,3 +140,9 @@ it("includes context in error", async () => {
 });
 ```
 
+## See Also
+
+- **`skill("handlers")`** - Handler lifecycle and automatic error formatting
+- **`skill("logs")`** - Logging patterns for error context
+- **`skill("tests")`** - Testing error types with Vitest
+

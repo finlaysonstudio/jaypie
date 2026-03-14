@@ -158,3 +158,9 @@ export const handler = lambdaHandler(async (event) => {
 });
 ```
 
+## See Also
+
+- **`skill("datadog")`** - Datadog integration and log forwarding
+- **`skill("handlers")`** - Handler lifecycle with automatic log context
+- **`skill("variables")`** - LOG_LEVEL and other environment variables
+

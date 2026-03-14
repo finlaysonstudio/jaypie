@@ -165,3 +165,9 @@ export default [...jaypie];
 ```
 
 Always run `npm run format` before committing.
+
+## See Also
+
+- **`skill("documentation")`** - Writing style for Jaypie docs
+- **`skill("errors")`** - Error handling conventions
+- **`skill("tests")`** - Testing patterns and conventions

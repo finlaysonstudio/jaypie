@@ -172,3 +172,8 @@ export function mockJaypie(vi) {
 }
 ```
 
+## See Also
+
+- **`skill("errors")`** - Error types used in mock assertions
+- **`skill("tests")`** - Testing patterns with Vitest
+

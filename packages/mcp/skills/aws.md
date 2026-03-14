@@ -277,3 +277,11 @@ describe("Handler", () => {
   });
 });
 ```
+
+## See Also
+
+- **`skill("cdk")`** - CDK constructs for deploying AWS infrastructure
+- **`skill("dynamodb")`** - DynamoDB key design and query patterns
+- **`skill("lambda")`** - Lambda handler wrappers with secrets loading
+- **`skill("secrets")`** - Secret management with JaypieEnvSecret
+- **`skill("tools-aws")`** - Interactive AWS MCP tools
