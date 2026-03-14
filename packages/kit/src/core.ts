@@ -1,4 +1,4 @@
-import { createLogger } from "@jaypie/logger";
+import { log } from "@jaypie/logger";
 
 //
 //
@@ -9,4 +9,4 @@ import { createLogger } from "@jaypie/logger";
 export { JAYPIE, PROJECT } from "./core/constants.js";
 
 // Logger
-export const log = createLogger();
+export { log };
