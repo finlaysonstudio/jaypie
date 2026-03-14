@@ -32,6 +32,7 @@ interface JaypieKeyOptions {
   length?: number;
   pool?: string;
   prefix?: string;
+  seed?: string;
   separator?: string;
 }
 
@@ -75,9 +76,17 @@ function generateJaypieKey({
   length = DEFAULTS.LENGTH,
   pool = DEFAULTS.POOL,
   prefix = DEFAULTS.PREFIX,
+  seed,
   separator = DEFAULTS.SEPARATOR,
 }: JaypieKeyOptions = {}): string {
-  const bytes = randomBytes(length);
+  let bytes: Buffer;
+  if (seed) {
+    const hmac = createHmac("sha256", seed);
+    hmac.update(issuer ?? "jaypie");
+    bytes = hmac.digest();
+  } else {
+    bytes = randomBytes(length);
+  }
   let body = "";
   for (let i = 0; i < length; i++) {
     body += pool[bytes[i] % pool.length];

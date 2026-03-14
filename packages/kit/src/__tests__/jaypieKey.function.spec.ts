@@ -106,6 +106,59 @@ describe("generateJaypieKey", () => {
     });
   });
 
+  describe("Seed-Based Generation", () => {
+    it("generates a deterministic key from a seed", () => {
+      const key1 = generateJaypieKey({ seed: "my-secret-seed" });
+      const key2 = generateJaypieKey({ seed: "my-secret-seed" });
+      expect(key1).toBe(key2);
+    });
+
+    it("generates different keys for different seeds", () => {
+      const key1 = generateJaypieKey({ seed: "seed-one" });
+      const key2 = generateJaypieKey({ seed: "seed-two" });
+      expect(key1).not.toBe(key2);
+    });
+
+    it("generates different keys for same seed with different issuers", () => {
+      const key1 = generateJaypieKey({ seed: "same-seed", issuer: "alpha" });
+      const key2 = generateJaypieKey({ seed: "same-seed", issuer: "beta" });
+      expect(key1).not.toBe(key2);
+    });
+
+    it("uses 'jaypie' as default HMAC context when no issuer", () => {
+      const key1 = generateJaypieKey({ seed: "test-seed" });
+      const key2 = generateJaypieKey({ seed: "test-seed", issuer: "jaypie" });
+      // No issuer defaults to "jaypie" for HMAC, but key2 includes issuer in prefix
+      // The bodies should be the same since same seed + same HMAC context
+      const body1 = key1.slice("sk_".length, "sk_".length + 32);
+      const body2 = key2.slice("sk_jaypie_".length, "sk_jaypie_".length + 32);
+      expect(body1).toBe(body2);
+    });
+
+    it("produces a valid key that passes validation", () => {
+      const key = generateJaypieKey({ seed: "validate-me", issuer: "jaypie" });
+      expect(validateJaypieKey(key, { issuer: "jaypie" })).toBe(true);
+    });
+
+    it("works with all other options", () => {
+      const key = generateJaypieKey({
+        seed: "full-options",
+        checksum: 6,
+        issuer: "test",
+        prefix: "pk",
+        separator: "-",
+      });
+      expect(key.startsWith("pk-test-")).toBe(true);
+      expect(
+        validateJaypieKey(key, {
+          checksum: 6,
+          issuer: "test",
+          prefix: "pk",
+        }),
+      ).toBe(true);
+    });
+  });
+
   describe("Optional Prefix", () => {
     it("generates without prefix when prefix is empty", () => {
       const key = generateJaypieKey({ prefix: "" });
