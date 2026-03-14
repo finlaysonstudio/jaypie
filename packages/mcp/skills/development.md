@@ -1,6 +1,6 @@
 ---
 description: Coding standards, testing, and documentation
-related: documentation, errors, logs, mocks, monorepo, style, subpackage, tests
+related: apikey, documentation, errors, logs, mocks, monorepo, style, subpackage, tests
 ---
 
 # Development
@@ -11,6 +11,7 @@ Coding standards and practices for Jaypie projects.
 
 | Alias | Description |
 |-------|-------------|
+| `apikey` | API key generation, validation, and hashing |
 | `documentation` | Writing style and documentation |
 | `errors` | Error handling with @jaypie/errors |
 | `logs` | Logging patterns and conventions |

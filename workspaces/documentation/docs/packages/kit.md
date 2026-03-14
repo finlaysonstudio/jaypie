@@ -185,53 +185,63 @@ if (isNodeTestEnv()) {
 
 ### generateJaypieKey
 
-Generate API keys with embedded checksums:
+Generate API keys with base62 body and optional checksum:
 
 ```typescript
 import { generateJaypieKey } from "jaypie";
 
 const key = generateJaypieKey();
-// "sk_<32 base62 chars><4 char checksum>"
+// "sk_<32 base62 chars>_<4 char checksum>"
 
 const custom = generateJaypieKey({
+  issuer: "jaypie",
   prefix: "pk",
   length: 16,
-  issuer: "myapp",
 });
+// "pk_jaypie_<16 base62 chars>_<4 char checksum>"
+```
+
+Prefix and checksum are optional:
+
+```typescript
+generateJaypieKey({ prefix: "" });           // "<body>_<checksum>"
+generateJaypieKey({ checksum: 0 });          // "sk_<body>"
+generateJaypieKey({ prefix: "", checksum: 0 }); // "<body>"
 ```
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `checksum` | `boolean` | `true` | Append HMAC checksum |
-| `issuer` | `string` | `undefined` | Issuer identifier for checksum |
-| `length` | `number` | `32` | Random character length |
+| `checksum` | `number` | `4` | Checksum character count (0 to omit) |
+| `issuer` | `string` | `undefined` | Namespace segment after prefix |
+| `length` | `number` | `32` | Random body character length |
 | `pool` | `string` | base62 | Character pool |
-| `prefix` | `string` | `"sk"` | Key prefix |
-| `separator` | `string` | `"_"` | Prefix separator |
+| `prefix` | `string` | `"sk"` | Key prefix (`""` to omit) |
+| `separator` | `string` | `"_"` | Delimiter between segments |
 
 ### validateJaypieKey
 
-Validate key format and checksum:
+Validate key format and checksum. Prefix and checksum are **not required** — keys without them are still valid. Both `_` and `-` are accepted as separators:
 
 ```typescript
 import { validateJaypieKey } from "jaypie";
 
-validateJaypieKey("sk_abc123...");  // true or false
-validateJaypieKey(key, { issuer: "myapp" });
+validateJaypieKey(key);                          // true
+validateJaypieKey(key, { issuer: "jaypie" });     // true (if generated with issuer)
+validateJaypieKey("tampered" + key);              // false
 ```
 
 ### hashJaypieKey
 
-Hash keys for storage:
+Hash keys for secure storage. Uses HMAC-SHA256 when salted, SHA-256 otherwise:
 
 ```typescript
 import { hashJaypieKey } from "jaypie";
 
 const hash = hashJaypieKey(key);
-// SHA-256 hash
+// SHA-256 hash (reads PROJECT_SALT env, warns if missing)
 
 const salted = hashJaypieKey(key, { salt: "my-salt" });
-// HMAC-SHA256 with salt (also reads PROJECT_SALT env)
+// HMAC-SHA256 with explicit salt
 ```
 
 ## Constants
