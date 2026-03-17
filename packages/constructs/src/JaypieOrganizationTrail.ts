@@ -46,9 +46,21 @@ export interface JaypieOrganizationTrailProps {
 
   /**
    * Whether to enable file validation for the trail
-   * @default false
+   * @default true
    */
   enableFileValidation?: boolean;
+
+  /**
+   * Whether to enable Lambda data events in CloudTrail
+   * @default true
+   */
+  enableLambdaDataEvents?: boolean;
+
+  /**
+   * Whether to enable S3 data events in CloudTrail
+   * @default false (opt-in due to potential high volume/cost)
+   */
+  enableS3DataEvents?: boolean;
 
   /**
    * Number of days before logs expire
@@ -112,7 +124,9 @@ export class JaypieOrganizationTrail extends Construct {
         ? `organization-cloudtrail-${process.env.PROJECT_NONCE}`
         : "organization-cloudtrail",
       enableDatadogNotifications = true,
-      enableFileValidation = false,
+      enableFileValidation = true,
+      enableLambdaDataEvents = true,
+      enableS3DataEvents = false,
       expirationDays = 365,
       glacierTransitionDays = 180,
       infrequentAccessTransitionDays = 30,
@@ -194,6 +208,14 @@ export class JaypieOrganizationTrail extends Construct {
       managementEvents: ReadWriteType.ALL,
       trailName,
     });
+
+    // Add data event selectors
+    if (enableLambdaDataEvents) {
+      this.trail.logAllLambdaDataEvents();
+    }
+    if (enableS3DataEvents) {
+      this.trail.logAllS3DataEvents();
+    }
 
     // Add tags to trail
     cdk.Tags.of(this.trail).add(CDK.TAG.SERVICE, service);
