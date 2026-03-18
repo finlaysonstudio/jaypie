@@ -38,6 +38,15 @@ export interface JaypieWafConfig {
   enabled?: boolean;
 
   /**
+   * WAF logging bucket.
+   * - true/undefined: create a logging bucket with Datadog forwarding (default)
+   * - false: disable WAF logging
+   * - IBucket: use an existing bucket (must have "aws-waf-logs-" prefix)
+   * @default true
+   */
+  logBucket?: boolean | s3.IBucket;
+
+  /**
    * Managed rule group names to apply
    * @default ["AWSManagedRulesCommonRuleSet", "AWSManagedRulesKnownBadInputsRuleSet"]
    */
@@ -178,6 +187,7 @@ export class JaypieDistribution
   public readonly host?: string;
   public readonly logBucket?: s3.IBucket;
   public readonly responseHeadersPolicy?: cloudfront.IResponseHeadersPolicy;
+  public readonly wafLogBucket?: s3.IBucket;
   public readonly webAcl?: wafv2.CfnWebACL;
 
   constructor(scope: Construct, id: string, props: JaypieDistributionProps) {
@@ -491,10 +501,12 @@ export class JaypieDistribution
     this.domainName = this.distribution.domainName;
 
     // Create and attach WAF WebACL
+    let resolvedWebAclArn: string | undefined;
     const wafConfig = this.resolveWafConfig(wafProp);
     if (wafConfig) {
       if (wafConfig.webAclArn) {
         // Use existing WebACL
+        resolvedWebAclArn = wafConfig.webAclArn;
         this.distribution.attachWebAclId(wafConfig.webAclArn);
       } else {
         // Create new WebACL
@@ -557,8 +569,67 @@ export class JaypieDistribution
         });
 
         this.webAcl = webAcl;
+        resolvedWebAclArn = webAcl.attrArn;
         this.distribution.attachWebAclId(webAcl.attrArn);
         Tags.of(webAcl).add(CDK.TAG.ROLE, roleTag);
+      }
+    }
+
+    // Create WAF logging
+    if (resolvedWebAclArn && wafConfig) {
+      const { logBucket: wafLogBucketProp = true } = wafConfig;
+
+      let wafLogBucket: s3.IBucket | undefined;
+      if (wafLogBucketProp === true) {
+        // Create inline WAF logging bucket with Datadog forwarding
+        const createdBucket = new s3.Bucket(
+          this,
+          constructEnvName("WafLogBucket"),
+          {
+            autoDeleteObjects: true,
+            bucketName: `aws-waf-logs-${constructEnvName("waf").toLowerCase()}`,
+            lifecycleRules: [
+              {
+                expiration: Duration.days(90),
+                transitions: [
+                  {
+                    storageClass: s3.StorageClass.INFREQUENT_ACCESS,
+                    transitionAfter: Duration.days(30),
+                  },
+                ],
+              },
+            ],
+            objectOwnership: s3.ObjectOwnership.OBJECT_WRITER,
+            removalPolicy: RemovalPolicy.DESTROY,
+          },
+        );
+        Tags.of(createdBucket).add(CDK.TAG.ROLE, CDK.ROLE.MONITORING);
+
+        // Add Datadog forwarder notification
+        if (destinationProp !== false) {
+          const lambdaDestination =
+            destinationProp === true
+              ? new LambdaDestination(resolveDatadogForwarderFunction(this))
+              : destinationProp;
+          createdBucket.addEventNotification(
+            s3.EventType.OBJECT_CREATED,
+            lambdaDestination,
+          );
+        }
+
+        wafLogBucket = createdBucket;
+      } else if (typeof wafLogBucketProp === "object") {
+        // Use provided IBucket
+        wafLogBucket = wafLogBucketProp;
+      }
+      // wafLogBucketProp === false → no logging
+
+      if (wafLogBucket) {
+        this.wafLogBucket = wafLogBucket;
+        new wafv2.CfnLoggingConfiguration(this, "WafLoggingConfig", {
+          logDestinationConfigs: [wafLogBucket.bucketArn],
+          resourceArn: resolvedWebAclArn,
+        });
       }
     }
 
