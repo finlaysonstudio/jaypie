@@ -21,6 +21,7 @@ export { JaypieDatadogSecret } from "./JaypieDatadogSecret";
 export {
   JaypieDistribution,
   JaypieDistributionProps,
+  JaypieWafConfig,
   SecurityHeadersOverrides,
 } from "./JaypieDistribution";
 export { JaypieDnsRecord, JaypieDnsRecordProps } from "./JaypieDnsRecord";

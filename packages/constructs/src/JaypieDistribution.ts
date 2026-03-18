@@ -7,6 +7,7 @@ import * as route53 from "aws-cdk-lib/aws-route53";
 import * as route53Targets from "aws-cdk-lib/aws-route53-targets";
 import * as s3 from "aws-cdk-lib/aws-s3";
 import { LambdaDestination } from "aws-cdk-lib/aws-s3-notifications";
+import * as wafv2 from "aws-cdk-lib/aws-wafv2";
 import { Construct } from "constructs";
 
 import { CDK } from "./constants";
@@ -21,6 +22,47 @@ import {
   resolveHostedZone,
 } from "./helpers";
 import { resolveDatadogForwarderFunction } from "./helpers/resolveDatadogForwarderFunction";
+
+const DEFAULT_RATE_LIMIT = 2000;
+
+const DEFAULT_MANAGED_RULES = [
+  "AWSManagedRulesCommonRuleSet",
+  "AWSManagedRulesKnownBadInputsRuleSet",
+];
+
+export interface JaypieWafConfig {
+  /**
+   * Whether WAF is enabled
+   * @default true
+   */
+  enabled?: boolean;
+
+  /**
+   * WAF logging bucket.
+   * - true/undefined: create a logging bucket with Datadog forwarding (default)
+   * - false: disable WAF logging
+   * - IBucket: use an existing bucket (must have "aws-waf-logs-" prefix)
+   * @default true
+   */
+  logBucket?: boolean | s3.IBucket;
+
+  /**
+   * Managed rule group names to apply
+   * @default ["AWSManagedRulesCommonRuleSet", "AWSManagedRulesKnownBadInputsRuleSet"]
+   */
+  managedRules?: string[];
+
+  /**
+   * Rate limit per IP per 5-minute window
+   * @default 2000
+   */
+  rateLimitPerIp?: number;
+
+  /**
+   * Use an existing WebACL ARN instead of creating one
+   */
+  webAclArn?: string;
+}
 
 export interface SecurityHeadersOverrides {
   contentSecurityPolicy?: string;
@@ -117,6 +159,14 @@ export interface JaypieDistributionProps extends Omit<
    */
   roleTag?: string;
   /**
+   * WAF WebACL configuration for the CloudFront distribution.
+   * - true/undefined: create and attach a WebACL with sensible defaults
+   * - false: disable WAF
+   * - JaypieWafConfig: customize WAF behavior
+   * @default true
+   */
+  waf?: boolean | JaypieWafConfig;
+  /**
    * The hosted zone for DNS records
    * @default CDK_ENV_API_HOSTED_ZONE || CDK_ENV_HOSTED_ZONE
    */
@@ -137,6 +187,8 @@ export class JaypieDistribution
   public readonly host?: string;
   public readonly logBucket?: s3.IBucket;
   public readonly responseHeadersPolicy?: cloudfront.IResponseHeadersPolicy;
+  public readonly wafLogBucket?: s3.IBucket;
+  public readonly webAcl?: wafv2.CfnWebACL;
 
   constructor(scope: Construct, id: string, props: JaypieDistributionProps) {
     super(scope, id);
@@ -153,6 +205,7 @@ export class JaypieDistribution
       roleTag = CDK.ROLE.API,
       securityHeaders: securityHeadersProp,
       streaming = false,
+      waf: wafProp = true,
       zone: propsZone,
       ...distributionProps
     } = props;
@@ -447,6 +500,139 @@ export class JaypieDistribution
     this.distributionId = this.distribution.distributionId;
     this.domainName = this.distribution.domainName;
 
+    // Create and attach WAF WebACL
+    let resolvedWebAclArn: string | undefined;
+    const wafConfig = this.resolveWafConfig(wafProp);
+    if (wafConfig) {
+      if (wafConfig.webAclArn) {
+        // Use existing WebACL
+        resolvedWebAclArn = wafConfig.webAclArn;
+        this.distribution.attachWebAclId(wafConfig.webAclArn);
+      } else {
+        // Create new WebACL
+        const {
+          managedRules = DEFAULT_MANAGED_RULES,
+          rateLimitPerIp = DEFAULT_RATE_LIMIT,
+        } = wafConfig;
+
+        let priority = 0;
+        const rules: wafv2.CfnWebACL.RuleProperty[] = [];
+
+        // Add managed rule groups
+        for (const ruleName of managedRules) {
+          rules.push({
+            name: ruleName,
+            priority: priority++,
+            overrideAction: { none: {} },
+            statement: {
+              managedRuleGroupStatement: {
+                name: ruleName,
+                vendorName: "AWS",
+              },
+            },
+            visibilityConfig: {
+              cloudWatchMetricsEnabled: true,
+              metricName: ruleName,
+              sampledRequestsEnabled: true,
+            },
+          });
+        }
+
+        // Add rate-based rule
+        rules.push({
+          name: "RateLimitPerIp",
+          priority: priority++,
+          action: { block: {} },
+          statement: {
+            rateBasedStatement: {
+              aggregateKeyType: "IP",
+              limit: rateLimitPerIp,
+            },
+          },
+          visibilityConfig: {
+            cloudWatchMetricsEnabled: true,
+            metricName: "RateLimitPerIp",
+            sampledRequestsEnabled: true,
+          },
+        });
+
+        const webAcl = new wafv2.CfnWebACL(this, "WebAcl", {
+          defaultAction: { allow: {} },
+          name: constructEnvName("WebAcl"),
+          rules,
+          scope: "CLOUDFRONT",
+          visibilityConfig: {
+            cloudWatchMetricsEnabled: true,
+            metricName: constructEnvName("WebAcl"),
+            sampledRequestsEnabled: true,
+          },
+        });
+
+        this.webAcl = webAcl;
+        resolvedWebAclArn = webAcl.attrArn;
+        this.distribution.attachWebAclId(webAcl.attrArn);
+        Tags.of(webAcl).add(CDK.TAG.ROLE, roleTag);
+      }
+    }
+
+    // Create WAF logging
+    if (resolvedWebAclArn && wafConfig) {
+      const { logBucket: wafLogBucketProp = true } = wafConfig;
+
+      let wafLogBucket: s3.IBucket | undefined;
+      if (wafLogBucketProp === true) {
+        // Create inline WAF logging bucket with Datadog forwarding
+        const createdBucket = new s3.Bucket(
+          this,
+          constructEnvName("WafLogBucket"),
+          {
+            autoDeleteObjects: true,
+            bucketName: `aws-waf-logs-${constructEnvName("waf").toLowerCase()}`,
+            lifecycleRules: [
+              {
+                expiration: Duration.days(90),
+                transitions: [
+                  {
+                    storageClass: s3.StorageClass.INFREQUENT_ACCESS,
+                    transitionAfter: Duration.days(30),
+                  },
+                ],
+              },
+            ],
+            objectOwnership: s3.ObjectOwnership.OBJECT_WRITER,
+            removalPolicy: RemovalPolicy.DESTROY,
+          },
+        );
+        Tags.of(createdBucket).add(CDK.TAG.ROLE, CDK.ROLE.MONITORING);
+
+        // Add Datadog forwarder notification
+        if (destinationProp !== false) {
+          const lambdaDestination =
+            destinationProp === true
+              ? new LambdaDestination(resolveDatadogForwarderFunction(this))
+              : destinationProp;
+          createdBucket.addEventNotification(
+            s3.EventType.OBJECT_CREATED,
+            lambdaDestination,
+          );
+        }
+
+        wafLogBucket = createdBucket;
+      } else if (typeof wafLogBucketProp === "object") {
+        // Use provided IBucket
+        wafLogBucket = wafLogBucketProp;
+      }
+      // wafLogBucketProp === false → no logging
+
+      if (wafLogBucket) {
+        this.wafLogBucket = wafLogBucket;
+        new wafv2.CfnLoggingConfiguration(this, "WafLoggingConfig", {
+          logDestinationConfigs: [wafLogBucket.bucketArn],
+          resourceArn: resolvedWebAclArn,
+        });
+      }
+    }
+
     // Create DNS records if we have host and zone
     if (host && hostedZone) {
       const aRecord = new route53.ARecord(this, "AliasRecord", {
@@ -509,6 +695,15 @@ export class JaypieDistribution
       "exportName" in value &&
       typeof (value as { exportName: string }).exportName === "string"
     );
+  }
+
+  private resolveWafConfig(
+    wafProp: boolean | JaypieWafConfig,
+  ): JaypieWafConfig | undefined {
+    if (wafProp === false) return undefined;
+    if (wafProp === true) return {};
+    if (wafProp.enabled === false) return undefined;
+    return wafProp;
   }
 
   private resolveLogBucket(

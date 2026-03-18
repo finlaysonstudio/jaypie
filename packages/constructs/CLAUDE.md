@@ -196,6 +196,36 @@ new JaypieDistribution(this, "Dist", {
 });
 ```
 
+#### WAF (Web Application Firewall)
+
+`JaypieDistribution` attaches a WAFv2 WebACL by default with AWSManagedRulesCommonRuleSet, AWSManagedRulesKnownBadInputsRuleSet, IP rate limiting (2000/5min), and WAF logging to S3 with Datadog forwarding.
+
+```typescript
+// Default: WAF enabled with logging
+new JaypieDistribution(this, "Dist", { handler });
+
+// Disable WAF
+new JaypieDistribution(this, "Dist", { handler, waf: false });
+
+// Customize
+new JaypieDistribution(this, "Dist", {
+  handler,
+  waf: { rateLimitPerIp: 500 },
+});
+
+// Existing WebACL
+new JaypieDistribution(this, "Dist", {
+  handler,
+  waf: { webAclArn: "arn:aws:wafv2:..." },
+});
+
+// Disable WAF logging only
+new JaypieDistribution(this, "Dist", {
+  handler,
+  waf: { logBucket: false },
+});
+```
+
 ### Streaming Lambda
 
 For streaming responses, use `createLambdaStreamHandler` from `@jaypie/express` with `JaypieDistribution`:

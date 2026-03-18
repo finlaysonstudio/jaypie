@@ -608,8 +608,8 @@ describe("JaypieDistribution", () => {
       const template = Template.fromStack(stack);
 
       expect(construct.logBucket).toBeDefined();
-      // Should have two S3 buckets: the origin bucket and the log bucket
-      template.resourceCountIs("AWS::S3::Bucket", 2);
+      // Should have three S3 buckets: the origin bucket, the CF log bucket, and the WAF log bucket
+      template.resourceCountIs("AWS::S3::Bucket", 3);
     });
 
     it("configures distribution with logging enabled", () => {
@@ -690,8 +690,8 @@ describe("JaypieDistribution", () => {
       const template = Template.fromStack(stack);
 
       expect(construct.logBucket).toBeUndefined();
-      // Should only have the origin bucket, no log bucket
-      template.resourceCountIs("AWS::S3::Bucket", 1);
+      // Should have the origin bucket and the WAF log bucket, no CF log bucket
+      template.resourceCountIs("AWS::S3::Bucket", 2);
 
       const distribution = findDistribution(template);
       expect(
@@ -738,9 +738,8 @@ describe("JaypieDistribution", () => {
         });
         const template = Template.fromStack(stack);
 
-        // Should have reference to external bucket (not creating new log bucket)
-        // Only 1 S3 bucket created (origin bucket), log bucket is imported
-        template.resourceCountIs("AWS::S3::Bucket", 1);
+        // Should have origin bucket + WAF log bucket (CF log bucket is imported)
+        template.resourceCountIs("AWS::S3::Bucket", 2);
 
         // logBucket should be set
         expect(construct.logBucket).toBeDefined();
@@ -763,8 +762,8 @@ describe("JaypieDistribution", () => {
         });
         const template = Template.fromStack(stack);
 
-        // Should not create a new log bucket
-        template.resourceCountIs("AWS::S3::Bucket", 1);
+        // Origin bucket + WAF log bucket (CF log bucket imported by name)
+        template.resourceCountIs("AWS::S3::Bucket", 2);
 
         // logBucket should be set
         expect(construct.logBucket).toBeDefined();
@@ -787,8 +786,8 @@ describe("JaypieDistribution", () => {
         });
         const template = Template.fromStack(stack);
 
-        // Should not create a new log bucket
-        template.resourceCountIs("AWS::S3::Bucket", 1);
+        // Origin bucket + WAF log bucket (CF log bucket imported by export)
+        template.resourceCountIs("AWS::S3::Bucket", 2);
 
         // logBucket should be set
         expect(construct.logBucket).toBeDefined();
@@ -815,8 +814,8 @@ describe("JaypieDistribution", () => {
         });
         const template = Template.fromStack(stack);
 
-        // Should have two buckets (origin and external log bucket we created)
-        template.resourceCountIs("AWS::S3::Bucket", 2);
+        // Should have three buckets: origin, external log bucket, and WAF log bucket
+        template.resourceCountIs("AWS::S3::Bucket", 3);
 
         // logBucket should be the external bucket
         expect(construct.logBucket).toBe(externalLogBucket);
@@ -836,10 +835,12 @@ describe("JaypieDistribution", () => {
         new JaypieDistribution(stack, "TestDistribution", {
           handler: origin,
           logBucket: true,
+          waf: { logBucket: false },
         });
         const template = Template.fromStack(stack);
 
-        // Should NOT have bucket notification configuration since external bucket
+        // Should NOT have bucket notification configuration since external CF log bucket
+        // (WAF logging disabled to isolate this test)
         const notifications = template.findResources(
           "Custom::S3BucketNotifications",
         );
@@ -858,8 +859,8 @@ describe("JaypieDistribution", () => {
         });
         const template = Template.fromStack(stack);
 
-        // Should not create a new log bucket
-        template.resourceCountIs("AWS::S3::Bucket", 1);
+        // Origin bucket + WAF log bucket (CF log bucket imported, no new CF log bucket)
+        template.resourceCountIs("AWS::S3::Bucket", 2);
 
         // logBucket should still be set (external bucket)
         expect(construct.logBucket).toBeDefined();
@@ -1298,6 +1299,324 @@ describe("JaypieDistribution", () => {
       });
 
       expect(construct.responseHeadersPolicy).toBeDefined();
+    });
+  });
+
+  describe("WAF", () => {
+    it("creates a WebACL by default", () => {
+      const stack = new Stack();
+      const bucket = new s3.Bucket(stack, "TestBucket");
+      const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
+
+      const construct = new JaypieDistribution(stack, "TestDistribution", {
+        handler: origin,
+      });
+      const template = Template.fromStack(stack);
+
+      expect(construct.webAcl).toBeDefined();
+      template.hasResource("AWS::WAFv2::WebACL", {});
+    });
+
+    it("attaches WebACL to the distribution", () => {
+      const stack = new Stack();
+      const bucket = new s3.Bucket(stack, "TestBucket");
+      const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
+
+      new JaypieDistribution(stack, "TestDistribution", {
+        handler: origin,
+      });
+      const template = Template.fromStack(stack);
+
+      const dist = findDistribution(template);
+      expect(
+        dist?.Properties?.DistributionConfig?.WebACLId,
+      ).toBeDefined();
+    });
+
+    it("includes AWSManagedRulesCommonRuleSet by default", () => {
+      const stack = new Stack();
+      const bucket = new s3.Bucket(stack, "TestBucket");
+      const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
+
+      new JaypieDistribution(stack, "TestDistribution", {
+        handler: origin,
+      });
+      const template = Template.fromStack(stack);
+
+      template.hasResourceProperties("AWS::WAFv2::WebACL", {
+        Rules: Match.arrayWith([
+          Match.objectLike({
+            Name: "AWSManagedRulesCommonRuleSet",
+            Statement: {
+              ManagedRuleGroupStatement: {
+                Name: "AWSManagedRulesCommonRuleSet",
+                VendorName: "AWS",
+              },
+            },
+          }),
+        ]),
+      });
+    });
+
+    it("includes AWSManagedRulesKnownBadInputsRuleSet by default", () => {
+      const stack = new Stack();
+      const bucket = new s3.Bucket(stack, "TestBucket");
+      const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
+
+      new JaypieDistribution(stack, "TestDistribution", {
+        handler: origin,
+      });
+      const template = Template.fromStack(stack);
+
+      template.hasResourceProperties("AWS::WAFv2::WebACL", {
+        Rules: Match.arrayWith([
+          Match.objectLike({
+            Name: "AWSManagedRulesKnownBadInputsRuleSet",
+          }),
+        ]),
+      });
+    });
+
+    it("includes rate-based rule by default", () => {
+      const stack = new Stack();
+      const bucket = new s3.Bucket(stack, "TestBucket");
+      const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
+
+      new JaypieDistribution(stack, "TestDistribution", {
+        handler: origin,
+      });
+      const template = Template.fromStack(stack);
+
+      template.hasResourceProperties("AWS::WAFv2::WebACL", {
+        Rules: Match.arrayWith([
+          Match.objectLike({
+            Name: "RateLimitPerIp",
+            Statement: {
+              RateBasedStatement: {
+                AggregateKeyType: "IP",
+                Limit: 2000,
+              },
+            },
+          }),
+        ]),
+      });
+    });
+
+    it("uses CLOUDFRONT scope", () => {
+      const stack = new Stack();
+      const bucket = new s3.Bucket(stack, "TestBucket");
+      const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
+
+      new JaypieDistribution(stack, "TestDistribution", {
+        handler: origin,
+      });
+      const template = Template.fromStack(stack);
+
+      template.hasResourceProperties("AWS::WAFv2::WebACL", {
+        Scope: "CLOUDFRONT",
+      });
+    });
+
+    it("can be disabled with waf: false", () => {
+      const stack = new Stack();
+      const bucket = new s3.Bucket(stack, "TestBucket");
+      const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
+
+      const construct = new JaypieDistribution(stack, "TestDistribution", {
+        handler: origin,
+        waf: false,
+      });
+      const template = Template.fromStack(stack);
+
+      expect(construct.webAcl).toBeUndefined();
+      template.resourceCountIs("AWS::WAFv2::WebACL", 0);
+    });
+
+    it("can be disabled with waf: { enabled: false }", () => {
+      const stack = new Stack();
+      const bucket = new s3.Bucket(stack, "TestBucket");
+      const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
+
+      const construct = new JaypieDistribution(stack, "TestDistribution", {
+        handler: origin,
+        waf: { enabled: false },
+      });
+      const template = Template.fromStack(stack);
+
+      expect(construct.webAcl).toBeUndefined();
+      template.resourceCountIs("AWS::WAFv2::WebACL", 0);
+    });
+
+    it("supports custom rate limit", () => {
+      const stack = new Stack();
+      const bucket = new s3.Bucket(stack, "TestBucket");
+      const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
+
+      new JaypieDistribution(stack, "TestDistribution", {
+        handler: origin,
+        waf: { rateLimitPerIp: 500 },
+      });
+      const template = Template.fromStack(stack);
+
+      template.hasResourceProperties("AWS::WAFv2::WebACL", {
+        Rules: Match.arrayWith([
+          Match.objectLike({
+            Name: "RateLimitPerIp",
+            Statement: {
+              RateBasedStatement: {
+                Limit: 500,
+              },
+            },
+          }),
+        ]),
+      });
+    });
+
+    it("supports custom managed rules", () => {
+      const stack = new Stack();
+      const bucket = new s3.Bucket(stack, "TestBucket");
+      const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
+
+      new JaypieDistribution(stack, "TestDistribution", {
+        handler: origin,
+        waf: { managedRules: ["AWSManagedRulesCommonRuleSet"] },
+      });
+      const template = Template.fromStack(stack);
+
+      const resources = template.findResources("AWS::WAFv2::WebACL");
+      const webAcl = Object.values(resources)[0];
+      const rules = webAcl?.Properties?.Rules || [];
+      const managedRuleNames = rules
+        .filter((r: any) => r.Statement?.ManagedRuleGroupStatement)
+        .map((r: any) => r.Name);
+      expect(managedRuleNames).toEqual(["AWSManagedRulesCommonRuleSet"]);
+    });
+
+    it("supports existing WebACL ARN", () => {
+      const stack = new Stack();
+      const bucket = new s3.Bucket(stack, "TestBucket");
+      const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
+
+      const construct = new JaypieDistribution(stack, "TestDistribution", {
+        handler: origin,
+        waf: {
+          webAclArn:
+            "arn:aws:wafv2:us-east-1:123456789012:global/webacl/my-acl/abc123",
+        },
+      });
+      const template = Template.fromStack(stack);
+
+      // Should NOT create a new WebACL
+      expect(construct.webAcl).toBeUndefined();
+      template.resourceCountIs("AWS::WAFv2::WebACL", 0);
+
+      // Should attach the provided ARN to the distribution
+      const dist = findDistribution(template);
+      expect(dist?.Properties?.DistributionConfig?.WebACLId).toBe(
+        "arn:aws:wafv2:us-east-1:123456789012:global/webacl/my-acl/abc123",
+      );
+    });
+  });
+
+  describe("WAF Logging", () => {
+    it("creates WAF logging bucket and config by default", () => {
+      const stack = new Stack();
+      const bucket = new s3.Bucket(stack, "TestBucket");
+      const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
+
+      const construct = new JaypieDistribution(stack, "TestDistribution", {
+        handler: origin,
+      });
+      const template = Template.fromStack(stack);
+
+      expect(construct.wafLogBucket).toBeDefined();
+      template.resourceCountIs("AWS::WAFv2::LoggingConfiguration", 1);
+    });
+
+    it("creates bucket with aws-waf-logs- prefix", () => {
+      const stack = new Stack();
+      const bucket = new s3.Bucket(stack, "TestBucket");
+      const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
+
+      new JaypieDistribution(stack, "TestDistribution", {
+        handler: origin,
+      });
+      const template = Template.fromStack(stack);
+
+      // Find the WAF log bucket (not the test bucket or CloudFront log bucket)
+      const buckets = template.findResources("AWS::S3::Bucket");
+      const wafBucket = Object.values(buckets).find((b: any) =>
+        b.Properties?.BucketName?.startsWith?.("aws-waf-logs-"),
+      );
+      expect(wafBucket).toBeDefined();
+    });
+
+    it("can disable WAF logging with waf: { logBucket: false }", () => {
+      const stack = new Stack();
+      const bucket = new s3.Bucket(stack, "TestBucket");
+      const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
+
+      const construct = new JaypieDistribution(stack, "TestDistribution", {
+        handler: origin,
+        waf: { logBucket: false },
+      });
+      const template = Template.fromStack(stack);
+
+      expect(construct.wafLogBucket).toBeUndefined();
+      template.resourceCountIs("AWS::WAFv2::LoggingConfiguration", 0);
+    });
+
+    it("accepts an existing IBucket for WAF logging", () => {
+      const stack = new Stack();
+      const bucket = new s3.Bucket(stack, "TestBucket");
+      const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
+      const wafBucket = new s3.Bucket(stack, "MyWafBucket", {
+        bucketName: "aws-waf-logs-custom",
+      });
+
+      const construct = new JaypieDistribution(stack, "TestDistribution", {
+        handler: origin,
+        waf: { logBucket: wafBucket },
+      });
+      const template = Template.fromStack(stack);
+
+      expect(construct.wafLogBucket).toBeDefined();
+      template.resourceCountIs("AWS::WAFv2::LoggingConfiguration", 1);
+    });
+
+    it("does not create logging when waf: false", () => {
+      const stack = new Stack();
+      const bucket = new s3.Bucket(stack, "TestBucket");
+      const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
+
+      new JaypieDistribution(stack, "TestDistribution", {
+        handler: origin,
+        waf: false,
+      });
+      const template = Template.fromStack(stack);
+
+      template.resourceCountIs("AWS::WAFv2::LoggingConfiguration", 0);
+    });
+
+    it("creates logging with external WebACL ARN", () => {
+      const stack = new Stack();
+      const bucket = new s3.Bucket(stack, "TestBucket");
+      const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
+
+      new JaypieDistribution(stack, "TestDistribution", {
+        handler: origin,
+        waf: {
+          webAclArn:
+            "arn:aws:wafv2:us-east-1:123456789012:global/webacl/my-acl/abc123",
+        },
+      });
+      const template = Template.fromStack(stack);
+
+      template.resourceCountIs("AWS::WAFv2::LoggingConfiguration", 1);
+      template.hasResourceProperties("AWS::WAFv2::LoggingConfiguration", {
+        ResourceArn:
+          "arn:aws:wafv2:us-east-1:123456789012:global/webacl/my-acl/abc123",
+      });
     });
   });
 });

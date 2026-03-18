@@ -9,6 +9,7 @@ import {
   StorageClass,
 } from "aws-cdk-lib/aws-s3";
 import { LambdaDestination } from "aws-cdk-lib/aws-s3-notifications";
+import { CfnAnalyzer } from "aws-cdk-lib/aws-accessanalyzer";
 import { ReadWriteType, Trail } from "aws-cdk-lib/aws-cloudtrail";
 import { Construct } from "constructs";
 
@@ -45,10 +46,28 @@ export interface JaypieOrganizationTrailProps {
   project?: string;
 
   /**
+   * Whether to enable IAM Access Analyzer (organization-level)
+   * @default true
+   */
+  enableAccessAnalyzer?: boolean;
+
+  /**
    * Whether to enable file validation for the trail
-   * @default false
+   * @default true
    */
   enableFileValidation?: boolean;
+
+  /**
+   * Whether to enable Lambda data events in CloudTrail
+   * @default true
+   */
+  enableLambdaDataEvents?: boolean;
+
+  /**
+   * Whether to enable S3 data events in CloudTrail
+   * @default false (opt-in due to potential high volume/cost)
+   */
+  enableS3DataEvents?: boolean;
 
   /**
    * Number of days before logs expire
@@ -76,6 +95,7 @@ export interface JaypieOrganizationTrailProps {
 }
 
 export class JaypieOrganizationTrail extends Construct {
+  public readonly analyzer?: CfnAnalyzer;
   public readonly bucket: IBucket;
   public readonly trail: Trail;
 
@@ -111,8 +131,11 @@ export class JaypieOrganizationTrail extends Construct {
       bucketName = process.env.PROJECT_NONCE
         ? `organization-cloudtrail-${process.env.PROJECT_NONCE}`
         : "organization-cloudtrail",
+      enableAccessAnalyzer = true,
       enableDatadogNotifications = true,
-      enableFileValidation = false,
+      enableFileValidation = true,
+      enableLambdaDataEvents = true,
+      enableS3DataEvents = false,
       expirationDays = 365,
       glacierTransitionDays = 180,
       infrequentAccessTransitionDays = 30,
@@ -195,11 +218,37 @@ export class JaypieOrganizationTrail extends Construct {
       trailName,
     });
 
+    // Add data event selectors
+    if (enableLambdaDataEvents) {
+      this.trail.logAllLambdaDataEvents();
+    }
+    if (enableS3DataEvents) {
+      this.trail.logAllS3DataEvents();
+    }
+
     // Add tags to trail
     cdk.Tags.of(this.trail).add(CDK.TAG.SERVICE, service);
     cdk.Tags.of(this.trail).add(CDK.TAG.ROLE, CDK.ROLE.MONITORING);
     if (project) {
       cdk.Tags.of(this.trail).add(CDK.TAG.PROJECT, project);
+    }
+
+    // Create IAM Access Analyzer
+    if (enableAccessAnalyzer) {
+      const analyzerName = process.env.PROJECT_NONCE
+        ? `organization-access-analyzer-${process.env.PROJECT_NONCE}`
+        : "organization-access-analyzer";
+
+      this.analyzer = new CfnAnalyzer(this, "AccessAnalyzer", {
+        analyzerName,
+        type: "ORGANIZATION",
+      });
+
+      cdk.Tags.of(this.analyzer).add(CDK.TAG.SERVICE, service);
+      cdk.Tags.of(this.analyzer).add(CDK.TAG.ROLE, CDK.ROLE.MONITORING);
+      if (project) {
+        cdk.Tags.of(this.analyzer).add(CDK.TAG.PROJECT, project);
+      }
     }
   }
 }
