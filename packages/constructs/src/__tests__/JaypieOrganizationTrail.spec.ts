@@ -127,4 +127,53 @@ describe("JaypieOrganizationTrail", () => {
       expect(hasS3Selector).toBe(true);
     });
   });
+
+  describe("enableAccessAnalyzer", () => {
+    it("creates an organization-level Access Analyzer by default", () => {
+      const stack = new Stack();
+      const construct = new JaypieOrganizationTrail(stack, "TestTrail", {
+        enableDatadogNotifications: false,
+      });
+      const template = Template.fromStack(stack);
+
+      expect(construct.analyzer).toBeDefined();
+      template.hasResourceProperties("AWS::AccessAnalyzer::Analyzer", {
+        Type: "ORGANIZATION",
+      });
+    });
+
+    it("uses PROJECT_NONCE in analyzer name", () => {
+      const originalNonce = process.env.PROJECT_NONCE;
+      process.env.PROJECT_NONCE = "testnonce";
+      try {
+        const stack = new Stack();
+        new JaypieOrganizationTrail(stack, "TestTrail", {
+          enableDatadogNotifications: false,
+        });
+        const template = Template.fromStack(stack);
+
+        template.hasResourceProperties("AWS::AccessAnalyzer::Analyzer", {
+          AnalyzerName: "organization-access-analyzer-testnonce",
+        });
+      } finally {
+        if (originalNonce === undefined) {
+          delete process.env.PROJECT_NONCE;
+        } else {
+          process.env.PROJECT_NONCE = originalNonce;
+        }
+      }
+    });
+
+    it("can be disabled", () => {
+      const stack = new Stack();
+      const construct = new JaypieOrganizationTrail(stack, "TestTrail", {
+        enableAccessAnalyzer: false,
+        enableDatadogNotifications: false,
+      });
+      const template = Template.fromStack(stack);
+
+      expect(construct.analyzer).toBeUndefined();
+      template.resourceCountIs("AWS::AccessAnalyzer::Analyzer", 0);
+    });
+  });
 });

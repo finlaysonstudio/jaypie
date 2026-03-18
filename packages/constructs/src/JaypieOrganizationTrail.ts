@@ -9,6 +9,7 @@ import {
   StorageClass,
 } from "aws-cdk-lib/aws-s3";
 import { LambdaDestination } from "aws-cdk-lib/aws-s3-notifications";
+import { CfnAnalyzer } from "aws-cdk-lib/aws-accessanalyzer";
 import { ReadWriteType, Trail } from "aws-cdk-lib/aws-cloudtrail";
 import { Construct } from "constructs";
 
@@ -43,6 +44,12 @@ export interface JaypieOrganizationTrailProps {
    * Optional project tag value
    */
   project?: string;
+
+  /**
+   * Whether to enable IAM Access Analyzer (organization-level)
+   * @default true
+   */
+  enableAccessAnalyzer?: boolean;
 
   /**
    * Whether to enable file validation for the trail
@@ -88,6 +95,7 @@ export interface JaypieOrganizationTrailProps {
 }
 
 export class JaypieOrganizationTrail extends Construct {
+  public readonly analyzer?: CfnAnalyzer;
   public readonly bucket: IBucket;
   public readonly trail: Trail;
 
@@ -123,6 +131,7 @@ export class JaypieOrganizationTrail extends Construct {
       bucketName = process.env.PROJECT_NONCE
         ? `organization-cloudtrail-${process.env.PROJECT_NONCE}`
         : "organization-cloudtrail",
+      enableAccessAnalyzer = true,
       enableDatadogNotifications = true,
       enableFileValidation = true,
       enableLambdaDataEvents = true,
@@ -222,6 +231,24 @@ export class JaypieOrganizationTrail extends Construct {
     cdk.Tags.of(this.trail).add(CDK.TAG.ROLE, CDK.ROLE.MONITORING);
     if (project) {
       cdk.Tags.of(this.trail).add(CDK.TAG.PROJECT, project);
+    }
+
+    // Create IAM Access Analyzer
+    if (enableAccessAnalyzer) {
+      const analyzerName = process.env.PROJECT_NONCE
+        ? `organization-access-analyzer-${process.env.PROJECT_NONCE}`
+        : "organization-access-analyzer";
+
+      this.analyzer = new CfnAnalyzer(this, "AccessAnalyzer", {
+        analyzerName,
+        type: "ORGANIZATION",
+      });
+
+      cdk.Tags.of(this.analyzer).add(CDK.TAG.SERVICE, service);
+      cdk.Tags.of(this.analyzer).add(CDK.TAG.ROLE, CDK.ROLE.MONITORING);
+      if (project) {
+        cdk.Tags.of(this.analyzer).add(CDK.TAG.PROJECT, project);
+      }
     }
   }
 }
