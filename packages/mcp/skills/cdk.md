@@ -278,6 +278,74 @@ new JaypieDistribution(this, "Dist", {
 });
 ```
 
+## WAF (Web Application Firewall)
+
+`JaypieDistribution` attaches a WAFv2 WebACL by default with:
+
+- **AWSManagedRulesCommonRuleSet** — OWASP top 10 (SQLi, XSS, etc.)
+- **AWSManagedRulesKnownBadInputsRuleSet** — known bad patterns (Log4j, etc.)
+- **Rate limiting** — 2000 requests per 5 minutes per IP
+- **WAF logging** — S3 bucket with Datadog forwarder notifications
+
+```typescript
+// Default: WAF enabled with logging
+new JaypieDistribution(this, "Dist", { handler });
+
+// Disable WAF entirely
+new JaypieDistribution(this, "Dist", { handler, waf: false });
+
+// Customize rate limit
+new JaypieDistribution(this, "Dist", {
+  handler,
+  waf: { rateLimitPerIp: 500 },
+});
+
+// Use existing WebACL
+new JaypieDistribution(this, "Dist", {
+  handler,
+  waf: { webAclArn: "arn:aws:wafv2:..." },
+});
+
+// Disable WAF logging only
+new JaypieDistribution(this, "Dist", {
+  handler,
+  waf: { logBucket: false },
+});
+
+// Bring your own WAF logging bucket
+new JaypieDistribution(this, "Dist", {
+  handler,
+  waf: { logBucket: myWafBucket },
+});
+```
+
+Cost: $5/month per WebACL + $1/month per rule + $0.60 per million requests. Use `waf: false` to opt out.
+
+## Organization Trail Security Baseline
+
+`JaypieOrganizationTrail` provides organization-wide security monitoring:
+
+- **CloudTrail** with file validation enabled by default
+- **Lambda data events** recorded by default
+- **IAM Access Analyzer** (ORGANIZATION type) enabled by default
+- **S3 data events** opt-in (cost consideration)
+
+```typescript
+const orgTrail = new JaypieOrganizationTrail(this, "OrgTrail");
+// File validation, Lambda data events, and Access Analyzer all on by default
+
+// Opt out of specific features
+new JaypieOrganizationTrail(this, "OrgTrail", {
+  enableAccessAnalyzer: false,
+  enableLambdaDataEvents: false,
+});
+
+// Opt in to S3 data events
+new JaypieOrganizationTrail(this, "OrgTrail", {
+  enableS3DataEvents: true,
+});
+```
+
 ## See Also
 
 - **`skill("apikey")`** - API key generation, validation, and hashing
