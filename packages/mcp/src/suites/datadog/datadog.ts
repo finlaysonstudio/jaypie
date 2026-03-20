@@ -298,8 +298,12 @@ export function buildDatadogQuery(options: DatadogSearchOptions): string {
   const queryParts: string[] = [];
 
   // Add source (parameter > env var > default 'lambda')
-  const effectiveSource = options.source || ddSource || "lambda";
-  queryParts.push(`source:${effectiveSource}`);
+  // Skip default source if the query already contains a source: token
+  const queryHasSource = options.query && /\bsource:/.test(options.query);
+  const effectiveSource = options.source || ddSource || (queryHasSource ? undefined : "lambda");
+  if (effectiveSource) {
+    queryParts.push(`source:${effectiveSource}`);
+  }
 
   // Add env (parameter > env var)
   const effectiveEnv = options.env || ddEnv;
