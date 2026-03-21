@@ -15,7 +15,7 @@ runs:
   steps:
     - name: Cache CDK build
       id: cache-cdk
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: ${{ inputs.cdk-package-path }}/dist
         key: ${{ runner.os }}-cdk-build-${{ hashFiles(format('{0}/package.json', inputs.cdk-package-path), format('{0}/package-lock.json', inputs.cdk-package-path), format('{0}/tsconfig.json', inputs.cdk-package-path), format('{0}/bin/**', inputs.cdk-package-path), format('{0}/lib/**', inputs.cdk-package-path)) }}
