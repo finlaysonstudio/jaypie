@@ -586,7 +586,6 @@ export class JaypieDistribution
           this,
           constructEnvName("WafLogBucket"),
           {
-            autoDeleteObjects: true,
             bucketName: `aws-waf-logs-${constructEnvName("waf").toLowerCase()}`,
             lifecycleRules: [
               {
@@ -600,7 +599,7 @@ export class JaypieDistribution
               },
             ],
             objectOwnership: s3.ObjectOwnership.OBJECT_WRITER,
-            removalPolicy: RemovalPolicy.DESTROY,
+            removalPolicy: RemovalPolicy.RETAIN,
           },
         );
         Tags.of(createdBucket).add(CDK.TAG.ROLE, CDK.ROLE.MONITORING);
