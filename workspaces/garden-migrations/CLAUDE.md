@@ -10,6 +10,7 @@ Runs numbered, idempotent migrations on each CDK deploy. Each migration checks f
 
 ```
 garden-migrations/
+├── cli.ts                                # CLI entry point for local/on-demand use
 ├── index.ts                              # Lambda handler (CloudFormation Custom Resource)
 ├── src/
 │   ├── runner.ts                         # Sequential migration runner
@@ -38,10 +39,18 @@ garden-migrations/
 
 ```bash
 npm run build     # Bundle to dist/index.mjs via esbuild
+npm run migrate   # Run migrations locally (reads .env)
 npm run test      # Run tests
 npm run typecheck # Type check
 npm run lint      # Lint
 npm run format    # Auto-fix lint
+```
+
+From the monorepo root:
+
+```bash
+npm run dynamo:init      # Start DynamoDB, create table, run migrations
+npm run dynamo:migrate   # Run migrations only (DynamoDB must be running)
 ```
 
 ## Notes
