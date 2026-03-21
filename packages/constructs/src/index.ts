@@ -41,6 +41,7 @@ export {
 } from "./JaypieHostedZone";
 export { JaypieInfrastructureStack } from "./JaypieInfrastructureStack";
 export { JaypieLambda, JaypieLambdaProps } from "./JaypieLambda";
+export { JaypieMigration, JaypieMigrationProps } from "./JaypieMigration";
 export { JaypieMongoDbSecret } from "./JaypieMongoDbSecret";
 export {
   DomainNameConfig,

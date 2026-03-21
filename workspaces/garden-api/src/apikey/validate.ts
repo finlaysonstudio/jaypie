@@ -1,10 +1,8 @@
-import { APEX, initClient, putEntity, queryByAlias } from "@jaypie/dynamodb";
+import { APEX, queryByAlias } from "@jaypie/dynamodb";
 import { ForbiddenError, UnauthorizedError } from "@jaypie/errors";
 import { type IndexDefinition, registerModel } from "@jaypie/fabric";
 import { log } from "@jaypie/logger";
 import { hashJaypieKey, validateJaypieKey } from "jaypie";
-
-import { generateKeyFromSeed } from "./generate.js";
 
 //
 //
@@ -63,32 +61,6 @@ async function validateApiKey(token: string): Promise<ValidateResult> {
   if (entity) {
     log.trace("API key found in database");
     return { level: entity.category ?? "owner", valid: true };
-  }
-
-  // Check against seed
-  const seed = process.env.PROJECT_ADMIN_SEED;
-  if (seed) {
-    const seedKey = generateKeyFromSeed(seed);
-    if (token === seedKey) {
-      log.debug("Seed key matched, auto-provisioning");
-      const now = new Date().toISOString();
-      await putEntity({
-        entity: {
-          alias: hash,
-          category: "owner",
-          createdAt: now,
-          label: token.slice(-4),
-          id: crypto.randomUUID(),
-          model: "apikey",
-          name: "Owner Key",
-          scope: APEX,
-          sequence: Date.now(),
-          type: "seed",
-          updatedAt: now,
-        },
-      });
-      return { level: "owner", valid: true };
-    }
   }
 
   log.trace("API key not recognized");

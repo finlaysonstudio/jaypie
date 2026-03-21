@@ -21,7 +21,7 @@ describe("keyTest.route", () => {
     expect(expressHandler).toHaveBeenCalledWith(
       expect.any(Function),
       expect.objectContaining({
-        secrets: ["PROJECT_ADMIN_SEED"],
+        secrets: [],
       }),
     );
   });

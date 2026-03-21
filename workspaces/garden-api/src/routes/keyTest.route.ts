@@ -24,7 +24,7 @@ const keyTestRoute = expressHandler(
   },
   {
     name: "keyTest",
-    secrets: ["PROJECT_ADMIN_SEED"],
+    secrets: [],
     setup: () => {
       initClient({ endpoint: process.env.DYNAMODB_ENDPOINT });
     },
