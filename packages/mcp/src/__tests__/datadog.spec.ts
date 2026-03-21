@@ -20,6 +20,29 @@ describe("Datadog Query Building", () => {
       expect(result).toContain("source:lambda");
     });
 
+    it("omits default source:lambda when query contains source: token", () => {
+      const options = {
+        query: "source:cloudwatch status:error",
+      };
+
+      const result = buildDatadogQuery(options);
+
+      expect(result).not.toContain("source:lambda");
+      expect(result).toContain("source:cloudwatch");
+    });
+
+    it("still adds explicit source param even when query contains source:", () => {
+      const options = {
+        query: "source:cloudwatch status:error",
+        source: "lambda",
+      };
+
+      const result = buildDatadogQuery(options);
+
+      expect(result).toContain("source:lambda");
+      expect(result).toContain("source:cloudwatch");
+    });
+
     it("preserves double quotes in query strings", () => {
       const options = {
         query: '@http.url:"https://example.com/path?param=value"',
