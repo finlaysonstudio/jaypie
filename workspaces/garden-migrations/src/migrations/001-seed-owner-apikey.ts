@@ -48,14 +48,12 @@ async function apply(): Promise<StorableEntity[]> {
 
   const entity: StorableEntity = {
     alias: hash,
-    category: "owner",
     createdAt: now,
     id: crypto.randomUUID(),
     model: APIKEY_MODEL,
-    name: "Owner Key",
+    name: "owner-seed-apikey",
     scope: APEX,
     sequence: Date.now(),
-    type: "seed",
     updatedAt: now,
   };
 

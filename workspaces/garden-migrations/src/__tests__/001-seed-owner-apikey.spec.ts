@@ -58,12 +58,12 @@ describe("001-seed-owner-apikey", () => {
 
     expect(entities).toHaveLength(1);
     expect(entities[0]).toMatchObject({
-      category: "owner",
       model: "apikey",
-      name: "Owner Key",
+      name: "owner-seed-apikey",
       scope: "@",
-      type: "seed",
     });
+    expect(entities[0]).not.toHaveProperty("category");
+    expect(entities[0]).not.toHaveProperty("type");
     expect(entities[0].alias).toBeDefined();
     expect(entities[0].id).toBeDefined();
     expect(entities[0].createdAt).toBeDefined();
