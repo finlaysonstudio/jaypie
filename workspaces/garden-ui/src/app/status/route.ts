@@ -2,6 +2,7 @@ import { APEX, initClient, queryByScope } from "@jaypie/dynamodb";
 import { log } from "@jaypie/logger";
 
 import { extractToken, validateApiKey } from "../../lib/apikey/validate";
+import { getAuthMode } from "../../lib/authMode";
 import { isSessionToken, validateSession } from "../../lib/session/validate";
 
 //
@@ -9,16 +10,16 @@ import { isSessionToken, validateSession } from "../../lib/session/validate";
 // Types
 //
 
-interface StatusMessage {
-  content: string;
-  level: string;
-  type: string;
-}
-
 interface StatusError {
   detail: string;
   status: number;
   title: string;
+}
+
+interface StatusMessage {
+  content: string;
+  level: string;
+  type: string;
 }
 
 interface StatusResponse {
@@ -26,7 +27,9 @@ interface StatusResponse {
   errors?: StatusError[];
   initialized?: boolean;
   messages?: StatusMessage[];
+  mode: "auth0" | "bypass";
   status: string;
+  user?: { email?: string; name?: string };
 }
 
 //
@@ -35,6 +38,43 @@ interface StatusResponse {
 //
 
 export async function GET(request: Request): Promise<Response> {
+  const mode = getAuthMode();
+
+  // Auth0 mode: check Auth0 session
+  if (mode === "auth0") {
+    try {
+      const { auth0 } = await import("../../lib/auth0");
+      const session = await auth0.getSession();
+      const authenticated = !!session;
+
+      const body: StatusResponse = {
+        authenticated,
+        mode,
+        status: "ok",
+        ...(session?.user
+          ? { user: { email: session.user.email, name: session.user.name } }
+          : {}),
+      };
+      return Response.json(body);
+    } catch (error) {
+      log.error("Failed to check Auth0 session", { error });
+      const body: StatusResponse = {
+        authenticated: false,
+        errors: [
+          {
+            detail: "Unable to check authentication status",
+            status: 500,
+            title: "Auth Error",
+          },
+        ],
+        mode,
+        status: "error",
+      };
+      return Response.json(body, { status: 500 });
+    }
+  }
+
+  // Bypass mode: existing DynamoDB logic
   try {
     initClient({
       endpoint: process.env.DYNAMODB_ENDPOINT,
@@ -50,6 +90,7 @@ export async function GET(request: Request): Promise<Response> {
           title: "Database Error",
         },
       ],
+      mode,
       status: "error",
     };
     return Response.json(body, { status: 500 });
@@ -75,6 +116,7 @@ export async function GET(request: Request): Promise<Response> {
           title: "Database Error",
         },
       ],
+      mode,
       status: "error",
     };
     return Response.json(body, { status: 500 });
@@ -128,6 +170,7 @@ export async function GET(request: Request): Promise<Response> {
           type: "text",
         },
       ],
+      mode,
       status: "warn",
     };
     return Response.json(body);
@@ -135,6 +178,7 @@ export async function GET(request: Request): Promise<Response> {
 
   const body: StatusResponse = {
     authenticated,
+    mode,
     status: "ok",
   };
 

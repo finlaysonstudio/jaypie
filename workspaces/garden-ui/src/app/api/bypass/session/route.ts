@@ -2,8 +2,9 @@ import { initClient } from "@jaypie/dynamodb";
 import { hashJaypieKey } from "@jaypie/kit";
 import { log } from "@jaypie/logger";
 
-import { extractToken, validateApiKey } from "../../../lib/apikey/validate";
-import { createSession, SESSION_TTL_MS } from "../../../lib/session/create";
+import { extractToken, validateApiKey } from "../../../../lib/apikey/validate";
+import { getAuthMode } from "../../../../lib/authMode";
+import { createSession, SESSION_TTL_MS } from "../../../../lib/session/create";
 
 //
 //
@@ -19,6 +20,10 @@ const COOKIE_MAX_AGE = Math.floor(SESSION_TTL_MS / 1000);
 //
 
 export async function POST(request: Request): Promise<Response> {
+  if (getAuthMode() !== "bypass") {
+    return Response.json({ error: "Not found" }, { status: 404 });
+  }
+
   try {
     initClient({
       endpoint: process.env.DYNAMODB_ENDPOINT,
@@ -73,6 +78,10 @@ export async function POST(request: Request): Promise<Response> {
 }
 
 export async function DELETE(): Promise<Response> {
+  if (getAuthMode() !== "bypass") {
+    return Response.json({ error: "Not found" }, { status: 404 });
+  }
+
   // Clear the httpOnly cookie
   const cookieValue = [
     `${COOKIE_NAME}=`,

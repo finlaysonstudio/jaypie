@@ -15,6 +15,8 @@ import {
   Lock,
   Proportions,
   KeyRound,
+  LogIn,
+  LogOut,
   Menu,
   PowerOff,
   RulerDimensionLine,
@@ -53,7 +55,81 @@ const STATUS_STYLES: Record<ConnectionStatus, string> = {
   unknown: styles.statusUnknown,
 };
 
-function AuthModal({
+//
+//
+// Auth0 Auth Modal
+//
+
+function Auth0Modal({
+  clearAuth,
+  connectionStatus,
+  login,
+  user,
+}: {
+  clearAuth: () => void;
+  connectionStatus: ConnectionStatus;
+  login: () => void;
+  user: { email?: string; name?: string } | null;
+}) {
+  const isAuthenticated = connectionStatus === "authenticated";
+
+  if (isAuthenticated) {
+    return (
+      <div className={styles.authWrapper} onClick={(e) => e.stopPropagation()}>
+        <div className={styles.authModal}>
+          <div className={styles.statusHeaderRow}>
+            <div
+              className={`${styles.statusHeader} ${styles.statusAuthenticated}`}
+            >
+              <KeyRound className={styles.statusHeaderIcon} size={18} />
+              <span className={styles.statusHeaderValue}>authenticated</span>
+            </div>
+          </div>
+          {user?.name && (
+            <span className={styles.authHint}>{user.name}</span>
+          )}
+          {user?.email && !user.name && (
+            <span className={styles.authHint}>{user.email}</span>
+          )}
+          <button
+            className={styles.authSignOut}
+            onClick={() => clearAuth()}
+            type="button"
+          >
+            Sign out
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className={styles.authWrapper} onClick={(e) => e.stopPropagation()}>
+      <div className={styles.authModal}>
+        <div className={styles.statusHeaderRow}>
+          <div className={styles.statusAuthDetail}>
+            <Lock className={styles.statusRowIcon} size={14} />
+            <span className={styles.statusLabel}>SIGN IN</span>
+          </div>
+        </div>
+        <button
+          className={`${styles.authSubmit} ${styles.authSubmitReady}`}
+          onClick={() => login()}
+          type="button"
+        >
+          Sign in with Auth0
+        </button>
+      </div>
+    </div>
+  );
+}
+
+//
+//
+// Bypass Auth Modal (API Key)
+//
+
+function BypassAuthModal({
   authenticate,
   clearAuth,
   connectionStatus,
@@ -169,14 +245,20 @@ function AuthModal({
   );
 }
 
+//
+//
+// NavMenu
+//
+
 export function NavMenu({ hideMenu, onPageIconClick, pageIcon: PageIcon = Bird }: { hideMenu?: boolean; onPageIconClick?: () => void; pageIcon?: typeof Bird }) {
   const [isOpen, setIsOpen] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
   const [showStatus, setShowStatus] = useState(false);
-  const { authenticate, clearAuth, connectionStatus, hint: sessionHint, response } = useStatus();
+  const { authenticate, clearAuth, connectionStatus, hint: sessionHint, login, mode, response, user } = useStatus();
   const StatusIcon = STATUS_ICONS[connectionStatus];
   const statusStyle = STATUS_STYLES[connectionStatus];
 
+  const isAuth0 = mode === "auth0";
   const hasModal = showAuth || showStatus;
 
   return (
@@ -229,16 +311,36 @@ export function NavMenu({ hideMenu, onPageIconClick, pageIcon: PageIcon = Bird }
                 <StatusIcon size={20} />
                 <span>Status</span>
               </a>
-              <a
-                className={styles.navItem}
-                onClick={() => {
-                  setShowAuth(!showAuth);
-                  setShowStatus(false);
-                }}
-              >
-                <UserLock size={20} />
-                <span>Authenticate</span>
-              </a>
+              {isAuth0 ? (
+                connectionStatus === "authenticated" ? (
+                  <a
+                    className={styles.navItem}
+                    onClick={() => clearAuth()}
+                  >
+                    <LogOut size={20} />
+                    <span>Sign out</span>
+                  </a>
+                ) : (
+                  <a
+                    className={styles.navItem}
+                    onClick={() => login()}
+                  >
+                    <LogIn size={20} />
+                    <span>Sign in</span>
+                  </a>
+                )
+              ) : (
+                <a
+                  className={styles.navItem}
+                  onClick={() => {
+                    setShowAuth(!showAuth);
+                    setShowStatus(false);
+                  }}
+                >
+                  <UserLock size={20} />
+                  <span>Authenticate</span>
+                </a>
+              )}
             </div>
           </div>
           <div
@@ -279,8 +381,16 @@ export function NavMenu({ hideMenu, onPageIconClick, pageIcon: PageIcon = Bird }
                 ))}
               </div>
             )}
-            {showAuth && (
-              <AuthModal
+            {showAuth && isAuth0 && (
+              <Auth0Modal
+                clearAuth={clearAuth}
+                connectionStatus={connectionStatus}
+                login={login}
+                user={user}
+              />
+            )}
+            {showAuth && !isAuth0 && (
+              <BypassAuthModal
                 authenticate={authenticate}
                 clearAuth={clearAuth}
                 connectionStatus={connectionStatus}

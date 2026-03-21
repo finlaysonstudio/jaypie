@@ -5,6 +5,8 @@ import { useCallback, useEffect, useState } from "react";
 const STORAGE_HINT_KEY = "garden-session-hint";
 const STORAGE_TOKEN_KEY = "garden-session-token";
 
+type AuthMode = "auth0" | "bypass" | null;
+
 type ConnectionStatus =
   | "authenticated"
   | "connected"
@@ -28,7 +30,9 @@ interface StatusResponse {
   authenticated: boolean;
   initialized?: boolean;
   messages?: StatusMessage[];
+  mode?: "auth0" | "bypass";
   status: string;
+  user?: { email?: string; name?: string };
 }
 
 interface StatusData {
@@ -36,7 +40,10 @@ interface StatusData {
   clearAuth: () => void;
   connectionStatus: ConnectionStatus;
   hint: string | null;
+  login: () => void;
+  mode: AuthMode;
   response: StatusResponse | null;
+  user: { email?: string; name?: string } | null;
 }
 
 function getStoredToken(): string | null {
@@ -70,11 +77,17 @@ export function useStatus(): StatusData {
   const [connectionStatus, setConnectionStatus] =
     useState<ConnectionStatus>("unknown");
   const [hint, setHint] = useState<string | null>(() => getStoredHint());
+  const [mode, setMode] = useState<AuthMode>(null);
   const [response, setResponse] = useState<StatusResponse | null>(null);
+  const [user, setUser] = useState<{ email?: string; name?: string } | null>(
+    null,
+  );
 
   const applyResponse = useCallback((data: StatusResponse) => {
     setResponse(data);
     setConnectionStatus(deriveConnectionStatus(data));
+    setMode(data.mode ?? null);
+    setUser(data.user ?? null);
   }, []);
 
   useEffect(() => {
@@ -88,10 +101,10 @@ export function useStatus(): StatusData {
 
   const authenticate = useCallback(
     async (key: string): Promise<boolean> => {
-      // Exchange API key for session token
+      // Exchange API key for session token (bypass mode only)
       let session: SessionResponse;
       try {
-        const res = await fetch("/auth/session", {
+        const res = await fetch("/api/bypass/session", {
           body: JSON.stringify({}),
           headers: {
             Authorization: `Bearer ${key}`,
@@ -121,12 +134,17 @@ export function useStatus(): StatusData {
   );
 
   const clearAuth = useCallback(() => {
+    if (mode === "auth0") {
+      window.location.href = "/auth/logout";
+      return;
+    }
+
+    // Bypass mode: clear localStorage and server session
     localStorage.removeItem(STORAGE_TOKEN_KEY);
     localStorage.removeItem(STORAGE_HINT_KEY);
     setHint(null);
 
-    // Clear httpOnly cookie server-side
-    fetch("/auth/session", { method: "DELETE" }).catch(() => {
+    fetch("/api/bypass/session", { method: "DELETE" }).catch(() => {
       // Best effort
     });
 
@@ -135,9 +153,28 @@ export function useStatus(): StatusData {
       .catch(() => {
         setConnectionStatus("disconnected");
       });
-  }, [applyResponse]);
+  }, [applyResponse, mode]);
 
-  return { authenticate, clearAuth, connectionStatus, hint, response };
+  const login = useCallback(() => {
+    window.location.href = "/auth/login";
+  }, []);
+
+  return {
+    authenticate,
+    clearAuth,
+    connectionStatus,
+    hint,
+    login,
+    mode,
+    response,
+    user,
+  };
 }
 
-export type { ConnectionStatus, StatusData, StatusMessage, StatusResponse };
+export type {
+  AuthMode,
+  ConnectionStatus,
+  StatusData,
+  StatusMessage,
+  StatusResponse,
+};
