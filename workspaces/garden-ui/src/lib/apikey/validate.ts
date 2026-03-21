@@ -1,10 +1,8 @@
 import { APEX, initClient, putEntity, queryByAlias } from "@jaypie/dynamodb";
 import { ForbiddenError, UnauthorizedError } from "@jaypie/errors";
 import { type IndexDefinition, registerModel } from "@jaypie/fabric";
-import { hashJaypieKey, validateJaypieKey } from "@jaypie/kit";
+import { generateJaypieKey, hashJaypieKey, validateJaypieKey } from "@jaypie/kit";
 import { log } from "@jaypie/logger";
-
-import { generateKeyFromSeed } from "./generate";
 
 //
 //
@@ -68,7 +66,7 @@ async function validateApiKey(token: string): Promise<ValidateResult> {
   // Check against seed
   const seed = process.env.PROJECT_ADMIN_SEED;
   if (seed) {
-    const seedKey = generateKeyFromSeed(seed);
+    const seedKey = generateJaypieKey({ issuer: "jaypie", seed });
     if (token === seedKey) {
       log.debug("Seed key matched, auto-provisioning");
       const now = new Date().toISOString();

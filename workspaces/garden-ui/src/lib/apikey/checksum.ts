@@ -1,8 +1,11 @@
-const BASE62 = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+const BASE62 =
+  "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 const BASE62_SET = new Set(BASE62);
 const BODY_LENGTH = 32;
-const KEY_LENGTH = 46;
+const CHECKSUM_LENGTH = 4;
+const OFFSETS = [0, 13, 29, 37, 43, 53, 61, 71];
 const PREFIX = "sk_jaypie_";
+const PRIMES = [1, 7, 11, 17, 23, 29, 37, 41];
 
 //
 //
@@ -14,32 +17,52 @@ function computeChecksum(body: string): string {
   for (let i = 0; i < body.length; i++) {
     sum += body.charCodeAt(i);
   }
-  const c0 = BASE62[sum % 62];
-  const c1 = BASE62[(sum * 7 + 13) % 62];
-  const c2 = BASE62[(sum * 11 + 29) % 62];
-  const c3 = BASE62[(sum * 17 + 37) % 62];
-  return `${c0}${c1}${c2}${c3}`;
+  let result = "";
+  for (let i = 0; i < CHECKSUM_LENGTH; i++) {
+    result +=
+      BASE62[
+        (sum * PRIMES[i % PRIMES.length] + OFFSETS[i % OFFSETS.length]) %
+          BASE62.length
+      ];
+  }
+  return result;
 }
 
+/**
+ * Client-safe format validation for Jaypie API keys.
+ * Accepts `sk_jaypie_<body>_<checksum>` and `sk_jaypie_<body><checksum>`.
+ */
 function isValidApiKeyFormat(key: string): boolean {
   if (typeof key !== "string") return false;
-  if (key.length !== KEY_LENGTH) return false;
   if (!key.startsWith(PREFIX)) return false;
 
-  const body = key.slice(PREFIX.length, PREFIX.length + BODY_LENGTH);
-  const checksum = key.slice(PREFIX.length + BODY_LENGTH);
+  const remainder = key.slice(PREFIX.length);
 
-  // Validate all body chars are base62
-  for (const char of body) {
-    if (!BASE62_SET.has(char)) return false;
+  // Validate all remainder chars are base62 or underscore separator
+  for (const char of remainder) {
+    if (!BASE62_SET.has(char) && char !== "_") return false;
   }
 
-  // Validate checksum chars are base62
-  for (const char of checksum) {
-    if (!BASE62_SET.has(char)) return false;
+  // Try: body_checksum (with separator)
+  if (remainder.length === BODY_LENGTH + 1 + CHECKSUM_LENGTH) {
+    const body = remainder.slice(0, BODY_LENGTH);
+    if (remainder[BODY_LENGTH] === "_") {
+      const checksum = remainder.slice(BODY_LENGTH + 1);
+      if (checksum === computeChecksum(body)) return true;
+    }
   }
 
-  return checksum === computeChecksum(body);
+  // Try: bodychecksum (no separator)
+  if (remainder.length === BODY_LENGTH + CHECKSUM_LENGTH) {
+    const body = remainder.slice(0, BODY_LENGTH);
+    const checksum = remainder.slice(BODY_LENGTH);
+    if (checksum === computeChecksum(body)) return true;
+  }
+
+  // Body only (no checksum)
+  if (remainder.length === BODY_LENGTH) return true;
+
+  return false;
 }
 
 //

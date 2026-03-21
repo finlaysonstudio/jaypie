@@ -49,6 +49,7 @@ export async function POST(request: Request): Promise<Response> {
 
   // Create session
   const apikeyHash = hashJaypieKey(token, { salt: "" });
+  const apikeyHint = token.slice(-4);
   const session = await createSession({ apikeyHash, level });
 
   // Set httpOnly cookie and return session token
@@ -62,7 +63,7 @@ export async function POST(request: Request): Promise<Response> {
   ].join("; ");
 
   return Response.json(
-    { hint: session.hint, level: session.level, token: session.token },
+    { hint: apikeyHint, level: session.level, token: session.token },
     {
       headers: {
         "Set-Cookie": cookieValue,

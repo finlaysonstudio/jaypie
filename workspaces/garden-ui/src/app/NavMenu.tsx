@@ -115,7 +115,7 @@ function AuthModal({
               <span className={styles.statusHeaderValue}>authenticated</span>
             </div>
           </div>
-          <span className={styles.authHint}>Key: ****{hint}</span>
+          <span className={styles.authHint}>Key: xxxxxxxx_{hint}</span>
           <button
             className={styles.authSignOut}
             onClick={() => clearAuth()}
