@@ -104,7 +104,7 @@ jobs:
           echo "DOCS_DISTRIBUTION_ID=$DISTRIBUTION_ID" >> $GITHUB_ENV
 
       - name: Assume documentation deploy role
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v6
         with:
           role-to-assume: ${{ env.DOCS_DEPLOY_ROLE_ARN }}
           role-session-name: DocsDeployGitHubSession
@@ -166,7 +166,7 @@ jobs:
           echo "DOCS_DISTRIBUTION_ID=$DISTRIBUTION_ID" >> $GITHUB_ENV
 
       - name: Assume documentation deploy role
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v6
         with:
           role-to-assume: ${{ env.DOCS_DEPLOY_ROLE_ARN }}
           role-session-name: DocsDeployGitHubSession
@@ -227,7 +227,7 @@ jobs:
           echo "DOCS_DISTRIBUTION_ID=$DISTRIBUTION_ID" >> $GITHUB_ENV
 
       - name: Assume documentation deploy role
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v6
         with:
           role-to-assume: ${{ env.DOCS_DEPLOY_ROLE_ARN }}
           role-session-name: DocsDeployGitHubSession
