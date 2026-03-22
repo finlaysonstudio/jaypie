@@ -20,12 +20,16 @@ type ConnectionStatus =
   | "disconnected"
   | "unknown";
 
-interface StatusResponse {
+interface ContextData {
   authenticated: boolean;
   permissions?: string[];
   session?: string;
-  status: string;
   user?: { email?: string; name?: string };
+}
+
+interface ContextResponse {
+  data?: ContextData;
+  errors?: { detail: string; status: number; title: string }[];
 }
 
 interface StatusData {
@@ -33,25 +37,25 @@ interface StatusData {
   connectionStatus: ConnectionStatus;
   login: () => void;
   permissions: string[];
-  response: StatusResponse | null;
+  response: ContextData | null;
   session: string | null;
   user: { email?: string; name?: string } | null;
 }
 
-function fetchStatus(): Promise<StatusResponse> {
+function fetchContext(): Promise<ContextResponse> {
   const headers: HeadersInit = {};
   const deviceId = getDeviceId();
   if (deviceId) {
     headers["x-device-id"] = deviceId;
   }
-  return fetch("/status", { headers }).then(
-    (res) => res.json() as Promise<StatusResponse>,
+  return fetch("/context", { headers }).then(
+    (res) => res.json() as Promise<ContextResponse>,
   );
 }
 
-function deriveConnectionStatus(data: StatusResponse): ConnectionStatus {
-  if (data.status === "error") return "disconnected";
-  if (data.authenticated) return "authenticated";
+function deriveConnectionStatus(res: ContextResponse): ConnectionStatus {
+  if (res.errors) return "disconnected";
+  if (res.data?.authenticated) return "authenticated";
   return "connected";
 }
 
@@ -59,22 +63,24 @@ export function useStatus(): StatusData {
   const [connectionStatus, setConnectionStatus] =
     useState<ConnectionStatus>("unknown");
   const [permissions, setPermissions] = useState<string[]>([]);
-  const [response, setResponse] = useState<StatusResponse | null>(null);
+  const [response, setResponse] = useState<ContextData | null>(null);
   const [session, setSession] = useState<string | null>(null);
   const [user, setUser] = useState<{ email?: string; name?: string } | null>(
     null,
   );
 
-  const applyResponse = useCallback((data: StatusResponse) => {
-    setResponse(data);
-    setConnectionStatus(deriveConnectionStatus(data));
-    setPermissions(data.permissions ?? []);
-    setSession(data.session ?? null);
-    setUser(data.user ?? null);
+  const applyResponse = useCallback((res: ContextResponse) => {
+    setConnectionStatus(deriveConnectionStatus(res));
+    if (res.data) {
+      setResponse(res.data);
+      setPermissions(res.data.permissions ?? []);
+      setSession(res.data.session ?? null);
+      setUser(res.data.user ?? null);
+    }
   }, []);
 
   useEffect(() => {
-    fetchStatus()
+    fetchContext()
       .then(applyResponse)
       .catch(() => {
         setConnectionStatus("disconnected");
@@ -100,4 +106,4 @@ export function useStatus(): StatusData {
   };
 }
 
-export type { ConnectionStatus, StatusData, StatusResponse };
+export type { ConnectionStatus, ContextData, StatusData };

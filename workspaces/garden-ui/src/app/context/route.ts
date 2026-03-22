@@ -11,19 +11,17 @@ import "../../lib/user/upsert";
 // Types
 //
 
-interface StatusError {
+interface ContextData {
+  authenticated: boolean;
+  permissions?: string[];
+  session?: string;
+  user?: { email?: string; name?: string };
+}
+
+interface ContextError {
   detail: string;
   status: number;
   title: string;
-}
-
-interface StatusResponse {
-  authenticated: boolean;
-  errors?: StatusError[];
-  permissions?: string[];
-  session?: string;
-  status: string;
-  user?: { email?: string; name?: string };
 }
 
 //
@@ -77,29 +75,24 @@ export async function GET(request: Request): Promise<Response> {
       }
     }
 
-    const body: StatusResponse = {
+    const data: ContextData = {
       authenticated,
       ...(permissions ? { permissions } : {}),
       ...(session ? { session } : {}),
-      status: "ok",
       ...(auth0Session?.user
         ? { user: { email: auth0Session.user.email, name: auth0Session.user.name } }
         : {}),
     };
-    return Response.json(body);
+    return Response.json({ data });
   } catch (error) {
     log.error("Failed to check Auth0 session", { error });
-    const body: StatusResponse = {
-      authenticated: false,
-      errors: [
-        {
-          detail: "Unable to check authentication status",
-          status: 500,
-          title: "Auth Error",
-        },
-      ],
-      status: "error",
-    };
-    return Response.json(body, { status: 500 });
+    const errors: ContextError[] = [
+      {
+        detail: "Unable to check authentication status",
+        status: 500,
+        title: "Auth Error",
+      },
+    ];
+    return Response.json({ errors }, { status: 500 });
   }
 }
