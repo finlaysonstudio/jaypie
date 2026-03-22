@@ -64,11 +64,13 @@ function Auth0Modal({
   clearAuth,
   connectionStatus,
   login,
+  onClose,
   user,
 }: {
   clearAuth: () => void;
   connectionStatus: ConnectionStatus;
   login: () => void;
+  onClose?: () => void;
   user: { email?: string; name?: string } | null;
 }) {
   const isAuthenticated = connectionStatus === "authenticated";
@@ -91,13 +93,22 @@ function Auth0Modal({
           {user?.email && !user.name && (
             <span className={styles.authHint}>{user.email}</span>
           )}
-          <button
-            className={styles.authSignOut}
-            onClick={() => clearAuth()}
-            type="button"
-          >
-            Sign out
-          </button>
+          <div className={styles.authConfirmRow}>
+            <button
+              className={styles.authConfirmCancel}
+              onClick={() => onClose?.()}
+              type="button"
+            >
+              Cancel
+            </button>
+            <button
+              className={styles.authConfirmSignOut}
+              onClick={() => clearAuth()}
+              type="button"
+            >
+              Sign out
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -315,7 +326,10 @@ export function NavMenu({ hideMenu, onPageIconClick, pageIcon: PageIcon = Bird }
                 connectionStatus === "authenticated" ? (
                   <a
                     className={styles.navItem}
-                    onClick={() => clearAuth()}
+                    onClick={() => {
+                      setShowAuth(true);
+                      setShowStatus(false);
+                    }}
                   >
                     <LogOut size={20} />
                     <span>Sign out</span>
@@ -374,6 +388,12 @@ export function NavMenu({ hideMenu, onPageIconClick, pageIcon: PageIcon = Bird }
                     </span>
                   </div>
                 </div>
+                {response?.authenticated && user?.name && (
+                  <div className={styles.statusMessage}>{user.name}</div>
+                )}
+                {response?.authenticated && user?.email && (
+                  <div className={styles.statusMessage}>{user.email}</div>
+                )}
                 {response?.messages?.map((msg, i) => (
                   <div className={styles.statusMessage} key={i}>
                     {msg.content}
@@ -386,6 +406,7 @@ export function NavMenu({ hideMenu, onPageIconClick, pageIcon: PageIcon = Bird }
                 clearAuth={clearAuth}
                 connectionStatus={connectionStatus}
                 login={login}
+                onClose={() => setShowAuth(false)}
                 user={user}
               />
             )}
