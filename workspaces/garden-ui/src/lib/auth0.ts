@@ -1,5 +1,6 @@
 import { Auth0Client } from "@auth0/nextjs-auth0/server";
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 
 export const auth0 = new Auth0Client({
   allowInsecureRequests: process.env.NODE_ENV !== "production",
@@ -17,15 +18,27 @@ export const auth0 = new Auth0Client({
       try {
         const { initClient } = await import("@jaypie/dynamodb");
         const { upsertUser } = await import("./user/upsert");
+        const { linkSession } = await import("./session");
 
         initClient({
           endpoint: process.env.DYNAMODB_ENDPOINT,
         });
+
         await upsertUser({
           email: session.user.email ?? "",
           name: session.user.name ?? "",
           sub: session.user.sub,
         });
+
+        // Link garden session to user
+        const cookieStore = await cookies();
+        const sessionToken = cookieStore.get("garden-session")?.value;
+        if (sessionToken) {
+          await linkSession(sessionToken, {
+            email: session.user.email ?? "",
+            sub: session.user.sub,
+          });
+        }
       } catch (err) {
         const { log } = await import("@jaypie/logger");
         log.error("Failed to upsert user on login", { error: err });

@@ -11,6 +11,7 @@ type ConnectionStatus =
 interface StatusResponse {
   authenticated: boolean;
   permissions?: string[];
+  session?: string;
   status: string;
   user?: { email?: string; name?: string };
 }
@@ -21,6 +22,7 @@ interface StatusData {
   login: () => void;
   permissions: string[];
   response: StatusResponse | null;
+  session: string | null;
   user: { email?: string; name?: string } | null;
 }
 
@@ -41,6 +43,7 @@ export function useStatus(): StatusData {
     useState<ConnectionStatus>("unknown");
   const [permissions, setPermissions] = useState<string[]>([]);
   const [response, setResponse] = useState<StatusResponse | null>(null);
+  const [session, setSession] = useState<string | null>(null);
   const [user, setUser] = useState<{ email?: string; name?: string } | null>(
     null,
   );
@@ -49,6 +52,7 @@ export function useStatus(): StatusData {
     setResponse(data);
     setConnectionStatus(deriveConnectionStatus(data));
     setPermissions(data.permissions ?? []);
+    setSession(data.session ?? null);
     setUser(data.user ?? null);
   }, []);
 
@@ -74,6 +78,7 @@ export function useStatus(): StatusData {
     login,
     permissions,
     response,
+    session,
     user,
   };
 }

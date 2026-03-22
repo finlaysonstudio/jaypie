@@ -1,7 +1,9 @@
 import { APEX, initClient, queryByXid } from "@jaypie/dynamodb";
 import { log } from "@jaypie/logger";
+import { cookies } from "next/headers";
 
-// Import to ensure user model is registered
+// Import to ensure models are registered
+import "../../lib/session";
 import "../../lib/user/upsert";
 
 //
@@ -19,6 +21,7 @@ interface StatusResponse {
   authenticated: boolean;
   errors?: StatusError[];
   permissions?: string[];
+  session?: string;
   status: string;
   user?: { email?: string; name?: string };
 }
@@ -31,17 +34,29 @@ interface StatusResponse {
 export async function GET(): Promise<Response> {
   try {
     const { auth0 } = await import("../../lib/auth0");
-    const session = await auth0.getSession();
-    const authenticated = !!session;
+    const auth0Session = await auth0.getSession();
+    const authenticated = !!auth0Session;
+
+    // Get garden session hint from cookie
+    let session: string | undefined;
+    try {
+      const cookieStore = await cookies();
+      const sessionToken = cookieStore.get("garden-session")?.value;
+      if (sessionToken) {
+        session = sessionToken.slice(-4);
+      }
+    } catch {
+      // Cookie access may fail in some contexts
+    }
 
     let permissions: string[] | undefined;
-    if (session?.user?.sub) {
+    if (auth0Session?.user?.sub) {
       try {
         initClient({ endpoint: process.env.DYNAMODB_ENDPOINT });
         const userEntity = await queryByXid({
           model: "user",
           scope: APEX,
-          xid: session.user.sub,
+          xid: auth0Session.user.sub,
         });
         if (userEntity) {
           permissions = (userEntity as unknown as { permissions?: string[] }).permissions;
@@ -54,9 +69,10 @@ export async function GET(): Promise<Response> {
     const body: StatusResponse = {
       authenticated,
       ...(permissions ? { permissions } : {}),
+      ...(session ? { session } : {}),
       status: "ok",
-      ...(session?.user
-        ? { user: { email: session.user.email, name: session.user.name } }
+      ...(auth0Session?.user
+        ? { user: { email: auth0Session.user.email, name: auth0Session.user.name } }
         : {}),
     };
     return Response.json(body);
