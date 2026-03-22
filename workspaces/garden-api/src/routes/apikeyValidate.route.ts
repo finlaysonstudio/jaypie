@@ -10,7 +10,7 @@ import { extractToken, validateApiKey } from "../apikey/index.js";
 // Main
 //
 
-const keyTestRoute = expressHandler(
+const apikeyValidateRoute = expressHandler(
   async (req: Request) => {
     const token = extractToken(req.headers.authorization);
     if (!token) {
@@ -19,7 +19,7 @@ const keyTestRoute = expressHandler(
     return await validateApiKey(token);
   },
   {
-    name: "keyTest",
+    name: "apikeyValidate",
     secrets: ["PROJECT_SALT"],
     setup: () => {
       initClient({ endpoint: process.env.DYNAMODB_ENDPOINT });
@@ -32,4 +32,4 @@ const keyTestRoute = expressHandler(
 // Export
 //
 
-export default keyTestRoute;
+export default apikeyValidateRoute;

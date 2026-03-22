@@ -16,7 +16,7 @@ garden-api/
 │   │   ├── validate.ts   # Format check + DynamoDB hash lookup
 │   │   └── index.ts      # Barrel export
 │   ├── routes/
-│   │   └── keyTest.route.ts  # POST /api/key/test endpoint
+│   │   └── apikeyValidate.route.ts  # POST /apikey/validate endpoint
 │   └── app.ts            # Express app configuration
 ├── tsconfig.json         # TypeScript configuration
 └── vitest.config.ts      # Test configuration
@@ -26,7 +26,7 @@ garden-api/
 
 - `GET /` - Returns 204 No Content (health check)
 - `ALL /_sy/echo` - Echo route for debugging requests
-- `POST /api/key/test` - Validate an API key (Bearer token), returns `{ data: { permissions, valid } }`
+- `POST /apikey/validate` - Validate an API key (Bearer token), returns `{ data: { createdAt, id, label, name, permissions, scope, valid } }`
 - `ALL *` - Returns 404 Not Found
 
 ## API Key Validation

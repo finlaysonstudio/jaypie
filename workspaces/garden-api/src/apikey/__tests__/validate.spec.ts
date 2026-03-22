@@ -95,7 +95,15 @@ describe("validateApiKey", () => {
     });
 
     const result = await validateApiKey(TEST_KEY);
-    expect(result).toEqual({ level: "owner", valid: true });
+    expect(result).toEqual({
+      createdAt: expect.any(String),
+      id: "test-id",
+      label: "",
+      name: "Owner Key",
+      permissions: [],
+      scope: "@",
+      valid: true,
+    });
   });
 
   it("throws ForbiddenError when key not found in database", async () => {

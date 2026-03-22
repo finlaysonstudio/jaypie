@@ -34,7 +34,12 @@ registerModel({ model: "apikey", indexes: APIKEY_INDEXES });
 //
 
 interface ValidateResult {
+  createdAt: string;
+  id: string;
+  label: string;
+  name: string;
   permissions: string[];
+  scope: string;
   valid: true;
 }
 
@@ -60,8 +65,23 @@ async function validateApiKey(token: string): Promise<ValidateResult> {
 
   if (entity) {
     log.trace("API key found in database");
-    const permissions = (entity as unknown as { permissions?: string[] }).permissions ?? [];
-    return { permissions, valid: true };
+    const record = entity as unknown as {
+      createdAt?: string;
+      id?: string;
+      label?: string;
+      name?: string;
+      permissions?: string[];
+      scope?: string;
+    };
+    return {
+      createdAt: record.createdAt ?? "",
+      id: record.id ?? "",
+      label: record.label ?? "",
+      name: record.name ?? "",
+      permissions: record.permissions ?? [],
+      scope: record.scope ?? "",
+      valid: true,
+    };
   }
 
   log.trace("API key not recognized");
