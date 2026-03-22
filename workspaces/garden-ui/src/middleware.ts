@@ -1,14 +1,8 @@
 import type { NextRequest } from "next/server";
-import { NextResponse } from "next/server";
 
-import { getAuthMode } from "./lib/authMode";
+import { auth0 } from "./lib/auth0";
 
 export async function middleware(request: NextRequest) {
-  if (getAuthMode() === "bypass") {
-    return NextResponse.next();
-  }
-
-  const { auth0 } = await import("./lib/auth0");
   return await auth0.middleware(request);
 }
 

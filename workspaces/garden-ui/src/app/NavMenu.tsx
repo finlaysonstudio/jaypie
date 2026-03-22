@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  Ban,
   Bird,
   Birdhouse,
   BookType,
@@ -18,15 +17,12 @@ import {
   LogIn,
   LogOut,
   Menu,
-  PowerOff,
   RulerDimensionLine,
   SwatchBook,
-  UserLock,
 } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 
-import { isValidApiKeyFormat } from "../lib/apikey/checksum";
 import { type ConnectionStatus, useStatus } from "../lib/useStatus";
 import styles from "./page.module.css";
 
@@ -43,7 +39,6 @@ const STATUS_ICONS: Record<ConnectionStatus, typeof CircleHelp> = {
   authenticated: CircleCheck,
   connected: CircleMinus,
   disconnected: CircleAlert,
-  uninitialized: PowerOff,
   unknown: CircleHelp,
 };
 
@@ -51,16 +46,15 @@ const STATUS_STYLES: Record<ConnectionStatus, string> = {
   authenticated: styles.statusAuthenticated,
   connected: styles.statusConnected,
   disconnected: styles.statusDisconnected,
-  uninitialized: styles.statusUninitialized,
   unknown: styles.statusUnknown,
 };
 
 //
 //
-// Auth0 Auth Modal
+// Auth Modal
 //
 
-function Auth0Modal({
+function AuthModal({
   clearAuth,
   connectionStatus,
   login,
@@ -137,127 +131,6 @@ function Auth0Modal({
 
 //
 //
-// Bypass Auth Modal (API Key)
-//
-
-function BypassAuthModal({
-  authenticate,
-  clearAuth,
-  connectionStatus,
-  hint,
-}: {
-  authenticate: (key: string) => Promise<boolean>;
-  clearAuth: () => void;
-  connectionStatus: ConnectionStatus;
-  hint: string | null;
-}) {
-  const [apiKey, setApiKey] = useState("");
-  const [error, setError] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-  const [attempted, setAttempted] = useState(false);
-  const isAuthenticated = connectionStatus === "authenticated";
-
-  const isValid = apiKey.length > 0 && isValidApiKeyFormat(apiKey);
-  const showInvalid = attempted && apiKey.length > 0 && !isValid;
-
-  const handleSubmit = async () => {
-    setAttempted(true);
-    if (!isValid || submitting) return;
-    setSubmitting(true);
-    setError("");
-    try {
-      const success = await authenticate(apiKey);
-      if (!success) {
-        setError("Invalid key");
-      } else {
-        setApiKey("");
-      }
-    } catch {
-      setError("Failed to authenticate");
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const autoSubmittedRef = useRef(false);
-  useEffect(() => {
-    if (isValid && !autoSubmittedRef.current) {
-      autoSubmittedRef.current = true;
-      handleSubmit();
-    }
-    if (!isValid) {
-      autoSubmittedRef.current = false;
-    }
-  }, [isValid]);
-
-  if (isAuthenticated) {
-    return (
-      <div className={styles.authWrapper} onClick={(e) => e.stopPropagation()}>
-        <div className={styles.authModal}>
-          <div className={styles.statusHeaderRow}>
-            <div
-              className={`${styles.statusHeader} ${styles.statusAuthenticated}`}
-            >
-              <KeyRound className={styles.statusHeaderIcon} size={18} />
-              <span className={styles.statusHeaderValue}>authenticated</span>
-            </div>
-          </div>
-          <span className={styles.authHint}>Key: xxxxxxxx_{hint}</span>
-          <button
-            className={styles.authSignOut}
-            onClick={() => clearAuth()}
-            type="button"
-          >
-            Sign out
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className={styles.authWrapper} onClick={(e) => e.stopPropagation()}>
-      <div className={styles.authModal}>
-        <div className={styles.statusHeaderRow}>
-          <div className={styles.statusAuthDetail}>
-            <Lock className={styles.statusRowIcon} size={14} />
-            <span className={styles.statusLabel}>AUTHENTICATE</span>
-          </div>
-        </div>
-        <input
-          autoFocus
-          className={`${styles.authInput}${showInvalid ? ` ${styles.authInputInvalid}` : ""}`}
-          onChange={(e) => {
-            setApiKey(e.target.value);
-            setAttempted(false);
-            setError("");
-          }}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") handleSubmit();
-          }}
-          placeholder="sk_jaypie_..."
-          type="text"
-          value={apiKey}
-        />
-        <button
-          className={`${styles.authSubmit}${isValid ? ` ${styles.authSubmitReady}` : ""}`}
-          disabled={submitting}
-          onClick={handleSubmit}
-          type="button"
-        >
-          {submitting ? "Authenticating..." : "Authenticate"}
-        </button>
-      </div>
-      <div className={`${styles.authError}${showInvalid || error ? ` ${styles.authErrorVisible}` : ""}`}>
-        <Ban size={20} />
-        <span>{showInvalid ? "Invalid key" : error || "\u00A0"}</span>
-      </div>
-    </div>
-  );
-}
-
-//
-//
 // NavMenu
 //
 
@@ -265,11 +138,10 @@ export function NavMenu({ hideMenu, onPageIconClick, pageIcon: PageIcon = Bird }
   const [isOpen, setIsOpen] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
   const [showStatus, setShowStatus] = useState(false);
-  const { authenticate, clearAuth, connectionStatus, hint: sessionHint, login, mode, response, user } = useStatus();
+  const { clearAuth, connectionStatus, login, response, user } = useStatus();
   const StatusIcon = STATUS_ICONS[connectionStatus];
   const statusStyle = STATUS_STYLES[connectionStatus];
 
-  const isAuth0 = mode === "auth0";
   const hasModal = showAuth || showStatus;
 
   return (
@@ -322,37 +194,24 @@ export function NavMenu({ hideMenu, onPageIconClick, pageIcon: PageIcon = Bird }
                 <StatusIcon size={20} />
                 <span>Status</span>
               </a>
-              {isAuth0 ? (
-                connectionStatus === "authenticated" ? (
-                  <a
-                    className={styles.navItem}
-                    onClick={() => {
-                      setShowAuth(true);
-                      setShowStatus(false);
-                    }}
-                  >
-                    <LogOut size={20} />
-                    <span>Sign out</span>
-                  </a>
-                ) : (
-                  <a
-                    className={styles.navItem}
-                    onClick={() => login()}
-                  >
-                    <LogIn size={20} />
-                    <span>Sign in</span>
-                  </a>
-                )
-              ) : (
+              {connectionStatus === "authenticated" ? (
                 <a
                   className={styles.navItem}
                   onClick={() => {
-                    setShowAuth(!showAuth);
+                    setShowAuth(true);
                     setShowStatus(false);
                   }}
                 >
-                  <UserLock size={20} />
-                  <span>Authenticate</span>
+                  <LogOut size={20} />
+                  <span>Sign out</span>
+                </a>
+              ) : (
+                <a
+                  className={styles.navItem}
+                  onClick={() => login()}
+                >
+                  <LogIn size={20} />
+                  <span>Sign in</span>
                 </a>
               )}
             </div>
@@ -394,28 +253,15 @@ export function NavMenu({ hideMenu, onPageIconClick, pageIcon: PageIcon = Bird }
                 {response?.authenticated && user?.email && (
                   <div className={styles.statusMessage}>{user.email}</div>
                 )}
-                {response?.messages?.map((msg, i) => (
-                  <div className={styles.statusMessage} key={i}>
-                    {msg.content}
-                  </div>
-                ))}
               </div>
             )}
-            {showAuth && isAuth0 && (
-              <Auth0Modal
+            {showAuth && (
+              <AuthModal
                 clearAuth={clearAuth}
                 connectionStatus={connectionStatus}
                 login={login}
                 onClose={() => setShowAuth(false)}
                 user={user}
-              />
-            )}
-            {showAuth && !isAuth0 && (
-              <BypassAuthModal
-                authenticate={authenticate}
-                clearAuth={clearAuth}
-                connectionStatus={connectionStatus}
-                hint={sessionHint}
               />
             )}
           </div>

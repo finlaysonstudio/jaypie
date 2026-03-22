@@ -1,8 +1,6 @@
 import { Auth0Client } from "@auth0/nextjs-auth0/server";
 import { NextResponse } from "next/server";
 
-import { getAuthMode } from "./authMode";
-
 export const auth0 = new Auth0Client({
   allowInsecureRequests: process.env.NODE_ENV !== "production",
 
@@ -15,7 +13,7 @@ export const auth0 = new Auth0Client({
       );
     }
 
-    if (session && getAuthMode() === "auth0") {
+    if (session) {
       try {
         const { initClient } = await import("@jaypie/dynamodb");
         const { upsertUser } = await import("./user/upsert");

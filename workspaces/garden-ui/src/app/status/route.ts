@@ -1,9 +1,6 @@
-import { APEX, initClient, queryByScope, queryByXid } from "@jaypie/dynamodb";
+import { APEX, initClient, queryByXid } from "@jaypie/dynamodb";
 import { log } from "@jaypie/logger";
 
-import { extractToken, validateApiKey } from "../../lib/apikey/validate";
-import { getAuthMode } from "../../lib/authMode";
-import { isSessionToken, validateSession } from "../../lib/session/validate";
 // Import to ensure user model is registered
 import "../../lib/user/upsert";
 
@@ -18,18 +15,9 @@ interface StatusError {
   title: string;
 }
 
-interface StatusMessage {
-  content: string;
-  level: string;
-  type: string;
-}
-
 interface StatusResponse {
   authenticated: boolean;
   errors?: StatusError[];
-  initialized?: boolean;
-  messages?: StatusMessage[];
-  mode: "auth0" | "bypass";
   permissions?: string[];
   status: string;
   user?: { email?: string; name?: string };
@@ -40,168 +28,51 @@ interface StatusResponse {
 // Handler
 //
 
-export async function GET(request: Request): Promise<Response> {
-  const mode = getAuthMode();
-
-  // Auth0 mode: check Auth0 session
-  if (mode === "auth0") {
-    try {
-      const { auth0 } = await import("../../lib/auth0");
-      const session = await auth0.getSession();
-      const authenticated = !!session;
-
-      let permissions: string[] | undefined;
-      if (session?.user?.sub) {
-        try {
-          initClient({ endpoint: process.env.DYNAMODB_ENDPOINT });
-          const userEntity = await queryByXid({
-            model: "user",
-            scope: APEX,
-            xid: session.user.sub,
-          });
-          if (userEntity) {
-            permissions = (userEntity as unknown as { permissions?: string[] }).permissions;
-          }
-        } catch (err) {
-          log.warn("Failed to look up user permissions", { error: err });
-        }
-      }
-
-      const body: StatusResponse = {
-        authenticated,
-        mode,
-        ...(permissions ? { permissions } : {}),
-        status: "ok",
-        ...(session?.user
-          ? { user: { email: session.user.email, name: session.user.name } }
-          : {}),
-      };
-      return Response.json(body);
-    } catch (error) {
-      log.error("Failed to check Auth0 session", { error });
-      const body: StatusResponse = {
-        authenticated: false,
-        errors: [
-          {
-            detail: "Unable to check authentication status",
-            status: 500,
-            title: "Auth Error",
-          },
-        ],
-        mode,
-        status: "error",
-      };
-      return Response.json(body, { status: 500 });
-    }
-  }
-
-  // Bypass mode: existing DynamoDB logic
+export async function GET(): Promise<Response> {
   try {
-    initClient({
-      endpoint: process.env.DYNAMODB_ENDPOINT,
-    });
-  } catch (error) {
-    log.error("Failed to initialize DynamoDB client", { error });
-    const body: StatusResponse = {
-      authenticated: false,
-      errors: [
-        {
-          detail: "Unable to connect to database",
-          status: 500,
-          title: "Database Error",
-        },
-      ],
-      mode,
-      status: "error",
-    };
-    return Response.json(body, { status: 500 });
-  }
+    const { auth0 } = await import("../../lib/auth0");
+    const session = await auth0.getSession();
+    const authenticated = !!session;
 
-  // Check initialized: are there any apikey records?
-  let initialized = false;
-  try {
-    const { items } = await queryByScope({
-      limit: 1,
-      model: "apikey",
-      scope: APEX,
-    });
-    initialized = items.length > 0;
-  } catch (error) {
-    log.error("Failed to query DynamoDB for initialization status", { error });
-    const body: StatusResponse = {
-      authenticated: false,
-      errors: [
-        {
-          detail: "Unable to check initialization status",
-          status: 500,
-          title: "Database Error",
-        },
-      ],
-      mode,
-      status: "error",
-    };
-    return Response.json(body, { status: 500 });
-  }
-
-  // Check authenticated: cookie first, then Bearer token
-  let authenticated = false;
-
-  // 1. Check httpOnly cookie (XSS-safe)
-  const cookieHeader = request.headers.get("cookie") ?? "";
-  const cookieMatch = cookieHeader.match(/garden-session=([^\s;]+)/);
-  const cookieToken = cookieMatch?.[1];
-
-  if (cookieToken && isSessionToken(cookieToken)) {
-    try {
-      await validateSession(cookieToken);
-      authenticated = true;
-    } catch {
-      authenticated = false;
-    }
-  }
-
-  // 2. Check Bearer token (session or API key)
-  if (!authenticated) {
-    const authorization = request.headers.get("authorization") ?? undefined;
-    const token = extractToken(authorization);
-
-    if (token) {
+    let permissions: string[] | undefined;
+    if (session?.user?.sub) {
       try {
-        if (isSessionToken(token)) {
-          await validateSession(token);
-        } else {
-          await validateApiKey(token);
+        initClient({ endpoint: process.env.DYNAMODB_ENDPOINT });
+        const userEntity = await queryByXid({
+          model: "user",
+          scope: APEX,
+          xid: session.user.sub,
+        });
+        if (userEntity) {
+          permissions = (userEntity as unknown as { permissions?: string[] }).permissions;
         }
-        authenticated = true;
-      } catch {
-        authenticated = false;
+      } catch (err) {
+        log.warn("Failed to look up user permissions", { error: err });
       }
     }
-  }
 
-  // Not initialized → warn
-  if (!initialized && !authenticated) {
     const body: StatusResponse = {
-      authenticated: false,
-      initialized: false,
-      messages: [
-        {
-          content: "Garden has not been initialized. No API keys found.",
-          level: "warn",
-          type: "text",
-        },
-      ],
-      mode,
-      status: "warn",
+      authenticated,
+      ...(permissions ? { permissions } : {}),
+      status: "ok",
+      ...(session?.user
+        ? { user: { email: session.user.email, name: session.user.name } }
+        : {}),
     };
     return Response.json(body);
+  } catch (error) {
+    log.error("Failed to check Auth0 session", { error });
+    const body: StatusResponse = {
+      authenticated: false,
+      errors: [
+        {
+          detail: "Unable to check authentication status",
+          status: 500,
+          title: "Auth Error",
+        },
+      ],
+      status: "error",
+    };
+    return Response.json(body, { status: 500 });
   }
-
-  const body: StatusResponse = {
-    authenticated,
-    mode,
-    status: "ok",
-  };
-
-  return Response.json(body);
 }
