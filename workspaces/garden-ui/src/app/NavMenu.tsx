@@ -26,8 +26,11 @@ import { useState } from "react";
 import { type ConnectionStatus, useStatus } from "../lib/useStatus";
 import styles from "./page.module.css";
 
-const NAV_ITEMS = [
+const PUBLIC_NAV_ITEMS = [
   { href: "/", icon: Birdhouse, label: "Home" },
+];
+
+const PROTECTED_NAV_ITEMS = [
   { href: "/colors", icon: SwatchBook, label: "Colors" },
   { href: "/components", icon: Component, label: "Components" },
   { href: "/dimensions", icon: Proportions, label: "Dimensions" },
@@ -142,6 +145,10 @@ export function NavMenu({ hideMenu, onPageIconClick, pageIcon: PageIcon = Bird }
   const StatusIcon = STATUS_ICONS[connectionStatus];
   const statusStyle = STATUS_STYLES[connectionStatus];
 
+  const isAuthenticated = connectionStatus === "authenticated";
+  const navItems = isAuthenticated
+    ? [...PUBLIC_NAV_ITEMS, ...PROTECTED_NAV_ITEMS]
+    : PUBLIC_NAV_ITEMS;
   const hasModal = showAuth || showStatus;
 
   return (
@@ -169,7 +176,7 @@ export function NavMenu({ hideMenu, onPageIconClick, pageIcon: PageIcon = Bird }
               </div>
             </div>
             <nav className={styles.sideMenuNav}>
-              {NAV_ITEMS.map(({ href, icon: Icon, label }) =>
+              {navItems.map(({ href, icon: Icon, label }) =>
                 href ? (
                   <Link className={styles.navItem} href={href} key={label}>
                     <Icon size={20} />

@@ -1,25 +1,42 @@
 import type { NextRequest } from "next/server";
+import { NextResponse } from "next/server";
 
-import { auth0 } from "./lib/auth0";
+const PROTECTED_PATHS = ["/colors", "/components", "/dimensions", "/fonts", "/layout"];
 
 export async function middleware(request: NextRequest) {
+  const { auth0 } = await import("./lib/auth0");
   const authRes = await auth0.middleware(request);
 
-  // Handle logout: unlink session before Auth0 processes it
-  if (request.nextUrl.pathname === "/auth/logout") {
-    const sessionCookie = request.cookies.get("garden-session")?.value;
-    if (sessionCookie) {
-      try {
-        const { initClient } = await import("@jaypie/dynamodb");
-        const { unlinkSession } = await import("./lib/session");
+  const { pathname } = request.nextUrl;
 
-        initClient({ endpoint: process.env.DYNAMODB_ENDPOINT });
-        await unlinkSession(sessionCookie);
-      } catch {
-        // Best effort — don't block logout
+  // Let Auth0 handle its own routes without interference
+  if (pathname.startsWith("/auth")) {
+    // Unlink garden session on logout
+    if (pathname === "/auth/logout") {
+      const sessionCookie = request.cookies.get("garden-session")?.value;
+      if (sessionCookie) {
+        try {
+          const { initClient } = await import("@jaypie/dynamodb");
+          const { unlinkSession } = await import("./lib/session");
+
+          initClient({ endpoint: process.env.DYNAMODB_ENDPOINT });
+          await unlinkSession(sessionCookie);
+        } catch {
+          // Best effort — don't block logout
+        }
       }
     }
     return authRes;
+  }
+
+  // Protect registered-only routes
+  if (PROTECTED_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`))) {
+    const session = await auth0.getSession(request);
+    if (!session) {
+      return NextResponse.redirect(
+        new URL(`/auth/login?returnTo=${pathname}`, request.url),
+      );
+    }
   }
 
   // Create garden session on first visit
