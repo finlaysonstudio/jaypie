@@ -11,6 +11,7 @@ import {
   CircleHelp,
   CircleMinus,
   Component,
+  Disc,
   KeySquare,
   Lock,
   Proportions,
@@ -33,6 +34,10 @@ const PUBLIC_NAV_ITEMS = [
 
 const ADMIN_NAV_ITEMS = [
   { href: "/apikeys", icon: KeySquare, label: "API Keys" },
+];
+
+const ADMIN_NAV_ITEMS_END = [
+  { href: "/records", icon: Disc, label: "Records" },
 ];
 
 const PROTECTED_NAV_ITEMS = [
@@ -156,6 +161,7 @@ export function NavMenu({ hideMenu, onPageIconClick, pageIcon: PageIcon = Bird }
     ...PUBLIC_NAV_ITEMS,
     ...(isAdmin ? ADMIN_NAV_ITEMS : []),
     ...(isAuthenticated ? PROTECTED_NAV_ITEMS : []),
+    ...(isAdmin ? ADMIN_NAV_ITEMS_END : []),
   ];
   const hasModal = showAuth || showStatus;
 

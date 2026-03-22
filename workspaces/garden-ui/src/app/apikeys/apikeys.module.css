@@ -6,6 +6,13 @@
   padding: 16px 16px 96px;
 }
 
+@media (min-width: 656px) {
+  .page {
+    margin: 0 auto 0 112px;
+    padding-bottom: 16px;
+  }
+}
+
 .title {
   color: var(--text-secondary-primary);
   font-family: var(--font-heading);
@@ -66,15 +73,32 @@
 /* Reveal */
 
 .reveal {
-  background: var(--bg-secondary-subsurface);
-  border: 1px solid var(--border-color);
+  background: #1b2f22;
+  border: 1px solid #26422f;
   border-radius: 8px;
   margin-bottom: 32px;
   padding: 16px;
+  position: relative;
+}
+
+.revealDismiss {
+  background: none;
+  border: none;
+  color: #5e9070;
+  cursor: pointer;
+  padding: 4px;
+  position: absolute;
+  right: 12px;
+  top: 12px;
+  transition: color 0.15s ease;
+}
+
+.revealDismiss:hover {
+  color: #8fb69a;
 }
 
 .revealLabel {
-  color: var(--text-muted);
+  color: #8fb69a;
   font-family: var(--font-ui);
   font-size: 0.6875rem;
   letter-spacing: 0.08em;
@@ -100,7 +124,7 @@
 .revealCopy {
   background: none;
   border: none;
-  color: var(--text-muted);
+  color: #5e9070;
   cursor: pointer;
   flex-shrink: 0;
   padding: 4px;
@@ -108,11 +132,11 @@
 }
 
 .revealCopy:hover {
-  color: var(--text-primary);
+  color: #8fb69a;
 }
 
 .revealWarning {
-  color: var(--text-subtle);
+  color: #8fb69a;
   font-family: var(--font-ui);
   font-size: 0.6875rem;
   margin-top: 8px;

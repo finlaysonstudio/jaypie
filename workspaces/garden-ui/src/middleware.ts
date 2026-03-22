@@ -15,7 +15,7 @@ import {
 // Constants
 //
 
-const PROTECTED_PATHS = ["/apikeys", "/colors", "/components", "/dimensions", "/fonts", "/layout"];
+const PROTECTED_PATHS = ["/apikeys", "/colors", "/components", "/dimensions", "/fonts", "/layout", "/records"];
 
 //
 //
@@ -32,6 +32,30 @@ function ensureClient() {
 //
 
 export async function middleware(request: NextRequest) {
+  // Skip all auth when bypass is enabled (local dev)
+  if (process.env.DANGEROUS_BYPASS_AUTHENTICATION === "true") {
+    const response = NextResponse.next();
+
+    // Still create garden session on first visit
+    if (!request.cookies.has(COOKIE_NAME)) {
+      try {
+        ensureClient();
+        const token = await createSession();
+        response.cookies.set(COOKIE_NAME, token, {
+          httpOnly: true,
+          maxAge: COOKIE_MAX_AGE,
+          path: "/",
+          sameSite: "lax",
+          secure: false,
+        });
+      } catch {
+        // Best effort
+      }
+    }
+
+    return response;
+  }
+
   const authRes = await auth0.middleware(request);
 
   const { pathname } = request.nextUrl;

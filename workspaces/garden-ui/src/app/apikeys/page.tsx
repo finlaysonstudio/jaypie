@@ -1,6 +1,6 @@
 "use client";
 
-import { Copy, CopyCheck, KeySquare } from "lucide-react";
+import { Copy, CopyCheck, KeySquare, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { NavMenu } from "../NavMenu";
@@ -107,6 +107,13 @@ export default function ApiKeysPage() {
 
       {createdKey && (
         <div className={styles.reveal}>
+          <button
+            className={styles.revealDismiss}
+            onClick={() => setCreatedKey(null)}
+            type="button"
+          >
+            <X size={16} />
+          </button>
           <div className={styles.revealLabel}>
             {createdKey.name}
           </div>

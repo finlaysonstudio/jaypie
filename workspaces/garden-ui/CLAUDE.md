@@ -52,6 +52,63 @@ garden-ui/
 - API keys inherit creator's permissions
 - `hasPermission(userPermissions, "namespace:action")` supports `namespace:*` and `*` wildcards
 
+## Adding a New Page
+
+1. Create `src/app/<name>/page.tsx` and `src/app/<name>/<name>.module.css`
+2. Use the standard page structure:
+
+```tsx
+"use client";
+import { IconName } from "lucide-react";
+import { NavMenu } from "../NavMenu";
+import styles from "./<name>.module.css";
+
+export default function MyPage() {
+  return (
+    <div className={styles.page}>
+      <NavMenu pageIcon={IconName} />
+      <h1 className={styles.title}>Page Title</h1>
+      {/* content */}
+    </div>
+  );
+}
+```
+
+3. Required CSS (must include the 656px media query for nav clearance):
+
+```css
+.page {
+  margin: 0 auto;
+  max-width: 544px;
+  min-height: 100vh;
+  min-width: 176px;
+  padding: 16px 16px 96px;
+}
+
+@media (min-width: 656px) {
+  .page {
+    margin: 0 auto 0 112px;
+    padding-bottom: 16px;
+  }
+}
+
+.title {
+  color: var(--text-secondary-primary);
+  font-family: var(--font-heading);
+  font-size: 20px;
+  font-weight: 100;
+  letter-spacing: 0.04em;
+  margin-bottom: 24px;
+  margin-top: 13px;
+}
+```
+
+4. Add the page to `NavMenu.tsx`:
+   - Public: add to `PUBLIC_NAV_ITEMS`
+   - Registered (login required): add to `PROTECTED_NAV_ITEMS`
+   - Admin only: add to `ADMIN_NAV_ITEMS` or `ADMIN_NAV_ITEMS_END`
+5. If the page requires authentication, add the path to `PROTECTED_PATHS` in `src/middleware.ts`
+
 ## API Response Format
 
 All API routes follow `{ data }` / `{ errors }` envelope (see `skill("api")`).
