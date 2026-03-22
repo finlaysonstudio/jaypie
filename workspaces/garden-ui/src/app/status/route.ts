@@ -31,22 +31,33 @@ interface StatusResponse {
 // Handler
 //
 
-export async function GET(): Promise<Response> {
+export async function GET(request: Request): Promise<Response> {
   try {
     const { auth0 } = await import("../../lib/auth0");
     const auth0Session = await auth0.getSession();
     const authenticated = !!auth0Session;
 
-    // Get garden session hint from cookie
+    // Get garden session hint from cookie and store device ID
     let session: string | undefined;
     try {
       const cookieStore = await cookies();
       const sessionToken = cookieStore.get("garden-session")?.value;
       if (sessionToken) {
         session = sessionToken.slice(-4);
+
+        // Store device ID on session if provided
+        const deviceId = request.headers.get("x-device-id");
+        if (deviceId) {
+          const { getSession, updateSessionDeviceId } = await import("../../lib/session");
+          initClient({ endpoint: process.env.DYNAMODB_ENDPOINT });
+          const sessionEntity = await getSession(sessionToken);
+          if (sessionEntity && (sessionEntity as unknown as { deviceId?: string }).deviceId !== deviceId) {
+            await updateSessionDeviceId(sessionToken, deviceId);
+          }
+        }
       }
     } catch {
-      // Cookie access may fail in some contexts
+      // Best effort
     }
 
     let permissions: string[] | undefined;

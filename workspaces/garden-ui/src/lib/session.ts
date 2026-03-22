@@ -156,6 +156,24 @@ async function unlinkSession(token: string): Promise<void> {
   log.trace("Session unlinked");
 }
 
+async function updateSessionDeviceId(
+  token: string,
+  deviceId: string,
+): Promise<void> {
+  const entity = await getSession(token);
+  if (!entity) return;
+
+  const now = new Date().toISOString();
+  const updated = {
+    ...entity,
+    deviceId,
+    updatedAt: now,
+  } as SessionEntity & { deviceId: string };
+
+  await updateEntity({ entity: updated });
+  log.trace("Session device ID updated", { deviceId: deviceId.slice(-4) });
+}
+
 //
 //
 // Export
@@ -168,5 +186,6 @@ export {
   getSession,
   linkSession,
   unlinkSession,
+  updateSessionDeviceId,
 };
 export type { HistoryEvent, SessionEntity };

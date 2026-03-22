@@ -2,6 +2,18 @@
 
 import { useCallback, useEffect, useState } from "react";
 
+const DEVICE_ID_KEY = "garden-device-id";
+
+function getDeviceId(): string {
+  if (typeof window === "undefined") return "";
+  let deviceId = localStorage.getItem(DEVICE_ID_KEY);
+  if (!deviceId) {
+    deviceId = crypto.randomUUID();
+    localStorage.setItem(DEVICE_ID_KEY, deviceId);
+  }
+  return deviceId;
+}
+
 type ConnectionStatus =
   | "authenticated"
   | "connected"
@@ -27,7 +39,12 @@ interface StatusData {
 }
 
 function fetchStatus(): Promise<StatusResponse> {
-  return fetch("/status").then(
+  const headers: HeadersInit = {};
+  const deviceId = getDeviceId();
+  if (deviceId) {
+    headers["x-device-id"] = deviceId;
+  }
+  return fetch("/status", { headers }).then(
     (res) => res.json() as Promise<StatusResponse>,
   );
 }
