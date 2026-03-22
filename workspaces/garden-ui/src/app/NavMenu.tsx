@@ -11,6 +11,7 @@ import {
   CircleHelp,
   CircleMinus,
   Component,
+  KeySquare,
   Lock,
   Proportions,
   KeyRound,
@@ -28,6 +29,10 @@ import styles from "./page.module.css";
 
 const PUBLIC_NAV_ITEMS = [
   { href: "/", icon: Birdhouse, label: "Home" },
+];
+
+const ADMIN_NAV_ITEMS = [
+  { href: "/apikeys", icon: KeySquare, label: "API Keys" },
 ];
 
 const PROTECTED_NAV_ITEMS = [
@@ -141,14 +146,17 @@ export function NavMenu({ hideMenu, onPageIconClick, pageIcon: PageIcon = Bird }
   const [isOpen, setIsOpen] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
   const [showStatus, setShowStatus] = useState(false);
-  const { clearAuth, connectionStatus, login, response, user } = useStatus();
+  const { clearAuth, connectionStatus, login, permissions, response, user } = useStatus();
   const StatusIcon = STATUS_ICONS[connectionStatus];
   const statusStyle = STATUS_STYLES[connectionStatus];
 
   const isAuthenticated = connectionStatus === "authenticated";
-  const navItems = isAuthenticated
-    ? [...PUBLIC_NAV_ITEMS, ...PROTECTED_NAV_ITEMS]
-    : PUBLIC_NAV_ITEMS;
+  const isAdmin = permissions.some((p) => p === "admin:*" || p === "*");
+  const navItems = [
+    ...PUBLIC_NAV_ITEMS,
+    ...(isAdmin ? ADMIN_NAV_ITEMS : []),
+    ...(isAuthenticated ? PROTECTED_NAV_ITEMS : []),
+  ];
   const hasModal = showAuth || showStatus;
 
   return (

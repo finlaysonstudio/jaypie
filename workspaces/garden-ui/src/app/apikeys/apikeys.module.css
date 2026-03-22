@@ -1,0 +1,166 @@
+.page {
+  margin: 0 auto;
+  max-width: 544px;
+  min-height: 100vh;
+  min-width: 176px;
+  padding: 16px 16px 96px;
+}
+
+.title {
+  color: var(--text-secondary-primary);
+  font-family: var(--font-heading);
+  font-size: 20px;
+  font-weight: 100;
+  letter-spacing: 0.04em;
+  margin-bottom: 48px;
+  margin-top: 13px;
+}
+
+/* Create Form */
+
+.createRow {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  margin-bottom: 32px;
+}
+
+.nameInput {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: var(--text-primary);
+  flex: 1;
+  font-family: var(--font-ui);
+  font-size: 0.8125rem;
+  outline: none;
+  padding: 8px 12px;
+}
+
+.nameInput:focus {
+  border-color: var(--text-muted);
+}
+
+.createButton {
+  background: var(--bg-secondary);
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: var(--text-primary);
+  cursor: pointer;
+  font-family: var(--font-ui);
+  font-size: 0.8125rem;
+  padding: 8px 16px;
+  transition: background 0.15s ease;
+  white-space: nowrap;
+}
+
+.createButton:hover {
+  background: var(--bg-secondary-surface);
+}
+
+.createButton:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+/* Reveal */
+
+.reveal {
+  background: var(--bg-secondary-subsurface);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  margin-bottom: 32px;
+  padding: 16px;
+}
+
+.revealLabel {
+  color: var(--text-muted);
+  font-family: var(--font-ui);
+  font-size: 0.6875rem;
+  letter-spacing: 0.08em;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+}
+
+.revealKey {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+}
+
+.revealKeyText {
+  color: var(--text-focus);
+  font-family: var(--font-code);
+  font-size: 0.8125rem;
+  overflow-x: auto;
+  user-select: all;
+  white-space: nowrap;
+}
+
+.revealCopy {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  flex-shrink: 0;
+  padding: 4px;
+  transition: color 0.15s ease;
+}
+
+.revealCopy:hover {
+  color: var(--text-primary);
+}
+
+.revealWarning {
+  color: var(--text-subtle);
+  font-family: var(--font-ui);
+  font-size: 0.6875rem;
+  margin-top: 8px;
+}
+
+/* Key List */
+
+.keyList {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.keyItem {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  padding: 10px 0;
+}
+
+.keyIcon {
+  color: var(--text-subtle);
+  flex-shrink: 0;
+}
+
+.keyInfo {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.keyName {
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  font-size: 0.8125rem;
+}
+
+.keyMeta {
+  color: var(--text-subtle);
+  font-family: var(--font-code);
+  font-size: 0.6875rem;
+}
+
+.empty {
+  color: var(--text-subtle);
+  font-family: var(--font-ui);
+  font-size: 0.8125rem;
+  padding: 16px 0;
+}
