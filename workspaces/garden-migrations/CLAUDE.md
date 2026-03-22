@@ -15,11 +15,9 @@ garden-migrations/
 ├── src/
 │   ├── runner.ts                         # Sequential migration runner
 │   ├── migrations/
-│   │   ├── index.ts                      # Ordered migration array
-│   │   └── 001-seed-owner-apikey.ts      # Seed bootstrap owner API key
+│   │   └── index.ts                      # Ordered migration array
 │   └── __tests__/
-│       ├── runner.spec.ts
-│       └── 001-seed-owner-apikey.spec.ts
+│       └── runner.spec.ts
 ├── esbuild.config.mjs
 ├── package.json
 ├── tsconfig.json
@@ -58,4 +56,4 @@ npm run dynamo:migrate   # Run migrations only (DynamoDB must be running)
 - This package is `private: true` and not published to npm
 - Deployed via `JaypieMigration` CDK construct in `GardenDataStack`
 - Uses `lambdaHandler` from `jaypie` for lifecycle management
-- Secrets loaded: `PROJECT_ADMIN_SEED`
+- Secrets loaded: `PROJECT_SALT`

@@ -41,7 +41,7 @@ export const handler = lambdaHandler(
   },
   {
     name: "garden-migrations",
-    secrets: ["PROJECT_ADMIN_SEED"],
+    secrets: ["PROJECT_SALT"],
     setup: [
       () => {
         initClient({ endpoint: process.env.DYNAMODB_ENDPOINT });

@@ -33,7 +33,7 @@ garden-api/
 
 ## API Key System
 
-Keys use format `sk_jaypie_{32 base62 chars}{4 char checksum}` (46 chars total). The last 4 characters (checksum) serve as a visual hint for key identification. Keys are stored as SHA-256 hashes in DynamoDB (never plaintext) with a `label` field containing the last 4 chars as a hint. The `PROJECT_ADMIN_SEED` secret bootstraps the first owner key via HMAC-SHA256 derivation.
+Keys use format `sk_jaypie_{32 base62 chars}_{4 char checksum}` (47 chars total). The last 4 characters (checksum) serve as a visual hint for key identification. Keys are stored as HMAC-SHA256 hashes (salted with `PROJECT_SALT`) in DynamoDB, never in plaintext.
 
 ## Commands
 

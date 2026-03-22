@@ -179,7 +179,7 @@ export async function GET(request: Request): Promise<Response> {
     }
   }
 
-  // Not initialized → warn (but still check auth for seed bootstrap)
+  // Not initialized → warn
   if (!initialized && !authenticated) {
     const body: StatusResponse = {
       authenticated: false,

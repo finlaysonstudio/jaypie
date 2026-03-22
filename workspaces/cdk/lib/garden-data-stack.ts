@@ -49,16 +49,7 @@ export class GardenDataStack extends JaypieAppStack {
       timeToLiveAttribute: "ttl",
     });
 
-    // Migration Lambda runs on each deploy to seed/migrate DynamoDB data
-    const adminSeed = new JaypieEnvSecret(this, "MigrationAdminSeed", {
-      envKey: "PROJECT_ADMIN_SEED",
-      generateSecretString: {
-        excludePunctuation: true,
-        includeSpace: false,
-        passwordLength: 64,
-      },
-    });
-
+    // Migration Lambda runs on each deploy to migrate DynamoDB data
     const projectSalt = new JaypieEnvSecret(this, "MigrationProjectSalt", {
       envKey: "PROJECT_SALT",
       generateSecretString: {
@@ -70,9 +61,9 @@ export class GardenDataStack extends JaypieAppStack {
 
     new JaypieMigration(this, "GardenMigration", {
       code: "../garden-migrations/dist",
-      dependencies: [this.table, adminSeed, projectSalt],
+      dependencies: [this.table, projectSalt],
       handler: "index.handler",
-      secrets: [adminSeed, projectSalt],
+      secrets: [projectSalt],
       tables: [this.table],
     });
   }
