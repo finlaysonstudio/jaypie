@@ -34,7 +34,6 @@ registerModel({ model: "apikey", indexes: APIKEY_INDEXES });
 //
 
 interface ValidateResult {
-  level: string;
   valid: true;
 }
 
@@ -51,7 +50,7 @@ async function validateApiKey(token: string): Promise<ValidateResult> {
   }
 
   // Hash and look up in DynamoDB
-  const hash = hashJaypieKey(token, { salt: "" });
+  const hash = hashJaypieKey(token);
   const entity = await queryByAlias({
     alias: hash,
     model: "apikey",
@@ -60,7 +59,7 @@ async function validateApiKey(token: string): Promise<ValidateResult> {
 
   if (entity) {
     log.trace("API key found in database");
-    return { level: entity.category ?? "owner", valid: true };
+    return { valid: true };
   }
 
   // Check against seed
@@ -73,7 +72,6 @@ async function validateApiKey(token: string): Promise<ValidateResult> {
       await putEntity({
         entity: {
           alias: hash,
-          category: "owner",
           createdAt: now,
           label: token.slice(-4),
           id: crypto.randomUUID(),
@@ -85,7 +83,7 @@ async function validateApiKey(token: string): Promise<ValidateResult> {
           updatedAt: now,
         },
       });
-      return { level: "owner", valid: true };
+      return { valid: true };
     }
   }
 

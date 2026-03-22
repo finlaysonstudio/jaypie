@@ -44,18 +44,16 @@ export async function POST(request: Request): Promise<Response> {
     return Response.json({ error: "Missing authorization" }, { status: 401 });
   }
 
-  let level: string;
   try {
-    const result = await validateApiKey(token);
-    level = result.level;
+    await validateApiKey(token);
   } catch {
     return Response.json({ error: "Invalid API key" }, { status: 403 });
   }
 
   // Create session
-  const apikeyHash = hashJaypieKey(token, { salt: "" });
+  const apikeyHash = hashJaypieKey(token);
   const apikeyHint = token.slice(-4);
-  const session = await createSession({ apikeyHash, level });
+  const session = await createSession({ apikeyHash });
 
   // Set httpOnly cookie and return session token
   const cookieValue = [
@@ -68,7 +66,7 @@ export async function POST(request: Request): Promise<Response> {
   ].join("; ");
 
   return Response.json(
-    { hint: apikeyHint, level: session.level, token: session.token },
+    { hint: apikeyHint, token: session.token },
     {
       headers: {
         "Set-Cookie": cookieValue,

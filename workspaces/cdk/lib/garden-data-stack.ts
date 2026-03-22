@@ -59,11 +59,20 @@ export class GardenDataStack extends JaypieAppStack {
       },
     });
 
+    const projectSalt = new JaypieEnvSecret(this, "MigrationProjectSalt", {
+      envKey: "PROJECT_SALT",
+      generateSecretString: {
+        excludePunctuation: true,
+        includeSpace: false,
+        passwordLength: 64,
+      },
+    });
+
     new JaypieMigration(this, "GardenMigration", {
       code: "../garden-migrations/dist",
-      dependencies: [this.table, adminSeed],
+      dependencies: [this.table, adminSeed, projectSalt],
       handler: "index.handler",
-      secrets: [adminSeed],
+      secrets: [adminSeed, projectSalt],
       tables: [this.table],
     });
   }

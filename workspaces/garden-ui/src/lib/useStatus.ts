@@ -16,7 +16,6 @@ type ConnectionStatus =
 
 interface SessionResponse {
   hint: string;
-  level: string;
   token: string;
 }
 

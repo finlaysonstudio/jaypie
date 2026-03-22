@@ -43,7 +43,7 @@ async function apply(): Promise<StorableEntity[]> {
   }
 
   const key = generateJaypieKey({ issuer: "jaypie", seed });
-  const hash = hashJaypieKey(key, { salt: "" });
+  const hash = hashJaypieKey(key);
   const now = new Date().toISOString();
 
   const entity: StorableEntity = {

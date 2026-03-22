@@ -10,7 +10,6 @@ import { hashToken, SESSION_PREFIX, SESSION_TTL_MS } from "./create";
 //
 
 interface ValidateSessionResult {
-  level: string;
   valid: true;
 }
 
@@ -62,7 +61,7 @@ async function validateSession(token: string): Promise<ValidateSessionResult> {
   });
 
   log.trace("Session validated");
-  return { level: entity.category ?? "owner", valid: true };
+  return { valid: true };
 }
 
 //

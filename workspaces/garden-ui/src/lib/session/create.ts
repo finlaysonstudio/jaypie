@@ -1,4 +1,4 @@
-import { createHash, randomUUID } from "node:crypto";
+import { createHash, createHmac, randomUUID } from "node:crypto";
 
 import { APEX, putEntity, type StorableEntity } from "@jaypie/dynamodb";
 import { type IndexDefinition, registerModel } from "@jaypie/fabric";
@@ -42,7 +42,6 @@ registerModel({ model: "session", indexes: SESSION_INDEXES });
 
 interface CreateSessionResult {
   hint: string;
-  level: string;
   token: string;
 }
 
@@ -52,6 +51,10 @@ interface CreateSessionResult {
 //
 
 function hashToken(token: string): string {
+  const salt = process.env.PROJECT_SALT;
+  if (salt) {
+    return createHmac("sha256", salt).update(token).digest("hex");
+  }
   return createHash("sha256").update(token).digest("hex");
 }
 
@@ -62,10 +65,8 @@ function hashToken(token: string): string {
 
 async function createSession({
   apikeyHash,
-  level,
 }: {
   apikeyHash: string;
-  level: string;
 }): Promise<CreateSessionResult> {
   const token = `${SESSION_PREFIX}${randomUUID()}`;
   const hash = hashToken(token);
@@ -73,12 +74,11 @@ async function createSession({
   const now = new Date().toISOString();
   const ttl = Math.floor((Date.now() + SESSION_TTL_MS) / 1000);
 
-  log.trace("Creating session", { hint, level });
+  log.trace("Creating session", { hint });
 
   await putEntity({
     entity: {
       alias: hash,
-      category: level,
       createdAt: now,
       id: randomUUID(),
       label: hint,
@@ -92,7 +92,7 @@ async function createSession({
     } as StorableEntity & { ttl: number },
   });
 
-  return { hint, level, token };
+  return { hint, token };
 }
 
 //
