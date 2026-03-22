@@ -251,9 +251,9 @@ export default function RecordsPage() {
                   </div>
                 </div>
                 <div className={styles.cardRight}>
-                  <span className={styles.cardDate}>{formatDateTime(record.createdAt)}</span>
+                  <span className={styles.cardDate}>{formatDateTime(isModified(record) ? record.updatedAt : record.createdAt)}</span>
                   {isModified(record) && (
-                    <span className={styles.cardDate}>{formatDateTime(record.updatedAt)}</span>
+                    <span className={styles.cardDate}>{formatDateTime(record.createdAt)}</span>
                   )}
                 </div>
               </div>
