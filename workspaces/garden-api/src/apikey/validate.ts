@@ -34,7 +34,7 @@ registerModel({ model: "apikey", indexes: APIKEY_INDEXES });
 //
 
 interface ValidateResult {
-  level: string;
+  permissions: string[];
   valid: true;
 }
 
@@ -51,7 +51,7 @@ async function validateApiKey(token: string): Promise<ValidateResult> {
   }
 
   // Hash and look up in DynamoDB
-  const hash = hashJaypieKey(token, { salt: "" });
+  const hash = hashJaypieKey(token);
   const entity = await queryByAlias({
     alias: hash,
     model: "apikey",
@@ -60,7 +60,8 @@ async function validateApiKey(token: string): Promise<ValidateResult> {
 
   if (entity) {
     log.trace("API key found in database");
-    return { level: entity.category ?? "owner", valid: true };
+    const permissions = (entity as unknown as { permissions?: string[] }).permissions ?? [];
+    return { permissions, valid: true };
   }
 
   log.trace("API key not recognized");

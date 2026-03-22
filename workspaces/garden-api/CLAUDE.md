@@ -12,10 +12,8 @@ This package provides a streaming Express API for the Jaypie Garden application.
 garden-api/
 ├── index.ts              # Lambda handler entry point (streaming)
 ├── src/
-│   ├── apikey/           # API key generation, validation, and checksum
-│   │   ├── checksum.ts   # Checksum computation and format validation
-│   │   ├── generate.ts   # Seed-to-key generation and key hashing
-│   │   ├── validate.ts   # Full validation flow with DynamoDB lookup
+│   ├── apikey/           # API key validation
+│   │   ├── validate.ts   # Format check + DynamoDB hash lookup
 │   │   └── index.ts      # Barrel export
 │   ├── routes/
 │   │   └── keyTest.route.ts  # POST /api/key/test endpoint
@@ -28,12 +26,36 @@ garden-api/
 
 - `GET /` - Returns 204 No Content (health check)
 - `ALL /_sy/echo` - Echo route for debugging requests
-- `POST /api/key/test` - Validate an API key (Bearer token)
+- `POST /api/key/test` - Validate an API key (Bearer token), returns `{ data: { permissions, valid } }`
 - `ALL *` - Returns 404 Not Found
 
-## API Key System
+## API Key Validation
 
-Keys use format `sk_jaypie_{32 base62 chars}_{4 char checksum}` (47 chars total). The last 4 characters (checksum) serve as a visual hint for key identification. Keys are stored as HMAC-SHA256 hashes (salted with `PROJECT_SALT`) in DynamoDB, never in plaintext.
+Keys are validated by:
+1. Format check via `validateJaypieKey(token, { issuer: "jaypie" })`
+2. Hash via `hashJaypieKey(token)` — uses `PROJECT_SALT` env var for HMAC-SHA256
+3. DynamoDB lookup by alias (hash) on `apikey` model
+
+Keys are created by `@jaypie/garden-ui` at `/api/apikeys`. Both packages must use the same hashing (no explicit salt override — let `hashJaypieKey` read `PROJECT_SALT`).
+
+## Shared Concerns with garden-ui
+
+> **Keep in sync.** The following patterns are duplicated between `garden-api` and `garden-ui`. When changing one, update the other. Consider abstracting shared logic to a `garden-kit` workspace package.
+
+| Concern | garden-api | garden-ui |
+|---------|-----------|-----------|
+| API key model registration | `src/apikey/validate.ts` | `src/app/api/apikeys/route.ts` |
+| API key format validation | `validateJaypieKey({ issuer: "jaypie" })` | same |
+| API key hashing | `hashJaypieKey(token)` (PROJECT_SALT) | same |
+| User model registration | — | `src/lib/user/upsert.ts` |
+| Session model registration | — | `src/lib/session.ts` |
+
+### Candidates for garden-kit
+
+- `apikey` model registration and indexes
+- `validateApiKey(token)` — format check + hash + DynamoDB lookup
+- `extractToken(authorization)` — Bearer token extraction
+- Shared constants (`GARDEN_KEY_OPTIONS`)
 
 ## Commands
 
@@ -52,3 +74,4 @@ npm run format            # Auto-fix lint issues
 - This package is `private: true` and not published to npm
 - Uses `createLambdaStreamHandler` for streaming responses
 - Deployed via CloudFront with Function URL origin (streaming: true)
+- Secrets loaded: `PROJECT_SALT`
