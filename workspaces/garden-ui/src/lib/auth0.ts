@@ -1,18 +1,33 @@
+import { initClient } from "@jaypie/dynamodb";
+import { log } from "@jaypie/logger";
 import { Auth0Client } from "@auth0/nextjs-auth0/server";
+import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+
+import { linkSession } from "./session";
+import { upsertUser } from "./user/upsert";
+
+//
+//
+// Helpers
+//
+
+function ensureClient() {
+  initClient({ endpoint: process.env.DYNAMODB_ENDPOINT });
+}
+
+//
+//
+// Main
+//
 
 export const auth0 = new Auth0Client({
   allowInsecureRequests: process.env.NODE_ENV !== "production",
 
   async onCallback(error, context, session) {
-    // Run side effects but never let them break the callback
     if (!error && session) {
       try {
-        const { initClient } = await import("@jaypie/dynamodb");
-        const { upsertUser } = await import("./user/upsert");
-        const { linkSession } = await import("./session");
-
-        initClient({ endpoint: process.env.DYNAMODB_ENDPOINT });
+        ensureClient();
 
         await upsertUser({
           email: session.user.email ?? "",
@@ -21,25 +36,19 @@ export const auth0 = new Auth0Client({
         });
 
         // Link garden session to user
-        try {
-          const { cookies: getCookies } = await import("next/headers");
-          const cookieStore = await getCookies();
-          const sessionToken = cookieStore.get("garden-session")?.value;
-          if (sessionToken) {
-            await linkSession(sessionToken, {
-              email: session.user.email ?? "",
-              sub: session.user.sub,
-            });
-          }
-        } catch {
-          // cookies() may not be available in this context
+        const cookieStore = await cookies();
+        const sessionToken = cookieStore.get("garden-session")?.value;
+        if (sessionToken) {
+          await linkSession(sessionToken, {
+            email: session.user.email ?? "",
+            sub: session.user.sub,
+          });
         }
-      } catch {
-        // Best effort — don't break the auth flow
+      } catch (err) {
+        log.error("Failed to upsert user on login", { error: err });
       }
     }
 
-    // Always redirect
     const returnTo = context?.returnTo || "/";
     const base = process.env.APP_BASE_URL || "http://localhost:3160";
     return NextResponse.redirect(new URL(returnTo, base));

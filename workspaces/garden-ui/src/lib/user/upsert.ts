@@ -85,6 +85,7 @@ async function upsertUser({
   const now = new Date().toISOString();
   const entity = {
     alias: email,
+    auth0Sub: sub,
     createdAt: now,
     id: crypto.randomUUID(),
     model: USER_MODEL,
@@ -94,7 +95,7 @@ async function upsertUser({
     sequence: Date.now(),
     updatedAt: now,
     xid: sub,
-  } as StorableEntity & { permissions: string[] };
+  } as StorableEntity & { auth0Sub: string; permissions: string[] };
 
   await putEntity({ entity });
   log.debug("User created", { email, sub });

@@ -1,10 +1,37 @@
+import { initClient } from "@jaypie/dynamodb";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
+import { auth0 } from "./lib/auth0";
+import {
+  COOKIE_MAX_AGE,
+  COOKIE_NAME,
+  createSession,
+  unlinkSession,
+} from "./lib/session";
+
+//
+//
+// Constants
+//
+
 const PROTECTED_PATHS = ["/colors", "/components", "/dimensions", "/fonts", "/layout"];
 
+//
+//
+// Helpers
+//
+
+function ensureClient() {
+  initClient({ endpoint: process.env.DYNAMODB_ENDPOINT });
+}
+
+//
+//
+// Middleware
+//
+
 export async function middleware(request: NextRequest) {
-  const { auth0 } = await import("./lib/auth0");
   const authRes = await auth0.middleware(request);
 
   const { pathname } = request.nextUrl;
@@ -13,13 +40,10 @@ export async function middleware(request: NextRequest) {
   if (pathname.startsWith("/auth")) {
     // Unlink garden session on logout
     if (pathname === "/auth/logout") {
-      const sessionCookie = request.cookies.get("garden-session")?.value;
+      const sessionCookie = request.cookies.get(COOKIE_NAME)?.value;
       if (sessionCookie) {
         try {
-          const { initClient } = await import("@jaypie/dynamodb");
-          const { unlinkSession } = await import("./lib/session");
-
-          initClient({ endpoint: process.env.DYNAMODB_ENDPOINT });
+          ensureClient();
           await unlinkSession(sessionCookie);
         } catch {
           // Best effort — don't block logout
@@ -40,17 +64,9 @@ export async function middleware(request: NextRequest) {
   }
 
   // Create garden session on first visit
-  const hasSession = request.cookies.has("garden-session");
-  if (!hasSession) {
+  if (!request.cookies.has(COOKIE_NAME)) {
     try {
-      const { initClient } = await import("@jaypie/dynamodb");
-      const {
-        COOKIE_MAX_AGE,
-        COOKIE_NAME,
-        createSession,
-      } = await import("./lib/session");
-
-      initClient({ endpoint: process.env.DYNAMODB_ENDPOINT });
+      ensureClient();
       const token = await createSession();
 
       authRes.cookies.set(COOKIE_NAME, token, {
@@ -73,3 +89,5 @@ export const config = {
     "/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt).*)",
   ],
 };
+
+export const runtime = "nodejs";
