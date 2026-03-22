@@ -1,9 +1,11 @@
-import { APEX, initClient, queryByScope } from "@jaypie/dynamodb";
+import { APEX, initClient, queryByScope, queryByXid } from "@jaypie/dynamodb";
 import { log } from "@jaypie/logger";
 
 import { extractToken, validateApiKey } from "../../lib/apikey/validate";
 import { getAuthMode } from "../../lib/authMode";
 import { isSessionToken, validateSession } from "../../lib/session/validate";
+// Import to ensure user model is registered
+import "../../lib/user/upsert";
 
 //
 //
@@ -28,6 +30,7 @@ interface StatusResponse {
   initialized?: boolean;
   messages?: StatusMessage[];
   mode: "auth0" | "bypass";
+  permissions?: string[];
   status: string;
   user?: { email?: string; name?: string };
 }
@@ -47,9 +50,27 @@ export async function GET(request: Request): Promise<Response> {
       const session = await auth0.getSession();
       const authenticated = !!session;
 
+      let permissions: string[] | undefined;
+      if (session?.user?.sub) {
+        try {
+          initClient({ endpoint: process.env.DYNAMODB_ENDPOINT });
+          const userEntity = await queryByXid({
+            model: "user",
+            scope: APEX,
+            xid: session.user.sub,
+          });
+          if (userEntity) {
+            permissions = (userEntity as unknown as { permissions?: string[] }).permissions;
+          }
+        } catch (err) {
+          log.warn("Failed to look up user permissions", { error: err });
+        }
+      }
+
       const body: StatusResponse = {
         authenticated,
         mode,
+        ...(permissions ? { permissions } : {}),
         status: "ok",
         ...(session?.user
           ? { user: { email: session.user.email, name: session.user.name } }

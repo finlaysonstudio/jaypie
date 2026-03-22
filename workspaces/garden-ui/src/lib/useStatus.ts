@@ -30,6 +30,7 @@ interface StatusResponse {
   initialized?: boolean;
   messages?: StatusMessage[];
   mode?: "auth0" | "bypass";
+  permissions?: string[];
   status: string;
   user?: { email?: string; name?: string };
 }
@@ -41,6 +42,7 @@ interface StatusData {
   hint: string | null;
   login: () => void;
   mode: AuthMode;
+  permissions: string[];
   response: StatusResponse | null;
   user: { email?: string; name?: string } | null;
 }
@@ -77,6 +79,7 @@ export function useStatus(): StatusData {
     useState<ConnectionStatus>("unknown");
   const [hint, setHint] = useState<string | null>(() => getStoredHint());
   const [mode, setMode] = useState<AuthMode>(null);
+  const [permissions, setPermissions] = useState<string[]>([]);
   const [response, setResponse] = useState<StatusResponse | null>(null);
   const [user, setUser] = useState<{ email?: string; name?: string } | null>(
     null,
@@ -86,6 +89,7 @@ export function useStatus(): StatusData {
     setResponse(data);
     setConnectionStatus(deriveConnectionStatus(data));
     setMode(data.mode ?? null);
+    setPermissions(data.permissions ?? []);
     setUser(data.user ?? null);
   }, []);
 
@@ -165,6 +169,7 @@ export function useStatus(): StatusData {
     hint,
     login,
     mode,
+    permissions,
     response,
     user,
   };
