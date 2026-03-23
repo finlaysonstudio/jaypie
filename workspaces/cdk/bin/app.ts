@@ -30,6 +30,7 @@ if (shouldInclude("JaypieGardenApi")) {
 }
 if (shouldInclude("JaypieGardenNextjs") && gardenDataStack) {
   new GardenNextjsStack(app, "JaypieGardenNextjs", {
+    auth0ClientSecret: gardenDataStack.auth0ClientSecret,
     auth0Secret: gardenDataStack.auth0Secret,
     salt: gardenDataStack.projectSalt,
     table: gardenDataStack.table,

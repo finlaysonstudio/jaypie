@@ -39,6 +39,7 @@ const indexes: IndexDefinition[] = [
 ];
 
 export class GardenDataStack extends JaypieAppStack {
+  public readonly auth0ClientSecret: JaypieEnvSecret;
   public readonly auth0Secret: JaypieEnvSecret;
   public readonly projectSalt: JaypieEnvSecret;
   public readonly table: JaypieDynamoDb;
@@ -51,7 +52,12 @@ export class GardenDataStack extends JaypieAppStack {
       timeToLiveAttribute: "ttl",
     });
 
-    // Shared AUTH0_SECRET — used by garden-nextjs
+    // Shared AUTH0_CLIENT_SECRET — used by garden-nextjs (from Auth0 dashboard)
+    this.auth0ClientSecret = new JaypieEnvSecret(this, "SharedAuth0ClientSecret", {
+      envKey: "AUTH0_CLIENT_SECRET",
+    });
+
+    // Shared AUTH0_SECRET — used by garden-nextjs (session encryption key)
     this.auth0Secret = new JaypieEnvSecret(this, "SharedAuth0Secret", {
       envKey: "AUTH0_SECRET",
       generateSecretString: {
