@@ -234,7 +234,7 @@ export const skillService = fabricService({
 
       // List all skills except index
       const allSkills = await skillStore.list();
-      const skills = allSkills.filter((s) => s.alias !== "index");
+      const skills = allSkills.filter((s: { alias: string }) => s.alias !== "index");
       const skillList = skills.map(formatSkillListItem).join("\n");
 
       if (indexContent) {

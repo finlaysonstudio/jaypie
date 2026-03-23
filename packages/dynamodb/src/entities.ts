@@ -1,4 +1,9 @@
-import { DeleteCommand, GetCommand, PutCommand } from "@aws-sdk/lib-dynamodb";
+import {
+  DeleteCommand,
+  GetCommand,
+  PutCommand,
+  TransactWriteCommand,
+} from "@aws-sdk/lib-dynamodb";
 import { fabricService } from "@jaypie/fabric";
 
 import { getDocClient, getTableName } from "./client.js";
@@ -221,3 +226,28 @@ export const destroyEntity = fabricService({
     return true;
   },
 });
+
+/**
+ * Write multiple entities atomically using DynamoDB transactions.
+ * Each entity is auto-indexed via indexEntity before writing.
+ * All entities are written to the same table in a single transaction.
+ */
+export async function transactWriteEntities({
+  entities,
+}: {
+  entities: StorableEntity[];
+}): Promise<void> {
+  const docClient = getDocClient();
+  const tableName = getTableName();
+
+  const command = new TransactWriteCommand({
+    TransactItems: entities.map((entity) => ({
+      Put: {
+        Item: indexEntity(entity),
+        TableName: tableName,
+      },
+    })),
+  });
+
+  await docClient.send(command);
+}

@@ -4,27 +4,23 @@ import { expressHandler } from "jaypie";
 import type { Request } from "express";
 
 import { extractToken, validateApiKey } from "../apikey/index.js";
-import { isSessionToken, validateSession } from "../session/validate.js";
 
 //
 //
 // Main
 //
 
-const keyTestRoute = expressHandler(
+const apikeyValidateRoute = expressHandler(
   async (req: Request) => {
     const token = extractToken(req.headers.authorization);
     if (!token) {
       throw new UnauthorizedError();
     }
-    if (isSessionToken(token)) {
-      return await validateSession(token);
-    }
     return await validateApiKey(token);
   },
   {
-    name: "keyTest",
-    secrets: ["PROJECT_ADMIN_SEED"],
+    name: "apikeyValidate",
+    secrets: ["PROJECT_SALT"],
     setup: () => {
       initClient({ endpoint: process.env.DYNAMODB_ENDPOINT });
     },
@@ -36,4 +32,4 @@ const keyTestRoute = expressHandler(
 // Export
 //
 
-export default keyTestRoute;
+export default apikeyValidateRoute;

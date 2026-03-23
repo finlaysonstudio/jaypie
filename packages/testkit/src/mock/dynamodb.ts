@@ -117,6 +117,12 @@ export const destroyEntity = createMockFunction<
   (params: { id: string; model: string }) => Promise<boolean>
 >(async () => true);
 
+export const transactWriteEntities = createMockFunction<
+  (params: { entities: StorableEntity[] }) => Promise<void>
+>(async () => {
+  // No-op in mock
+});
+
 // Query functions - service handler pattern (callable with object params)
 export const queryByScope = createMockFunction<
   (params: {

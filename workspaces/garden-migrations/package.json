@@ -1,0 +1,32 @@
+{
+  "name": "@jaypie/garden-migrations",
+  "version": "0.0.1",
+  "private": true,
+  "description": "DynamoDB migrations for Jaypie Garden",
+  "license": "MIT",
+  "author": "Finlayson Studio",
+  "type": "module",
+  "scripts": {
+    "build": "node esbuild.config.mjs",
+    "clean": "rimraf dist",
+    "migrate": "tsx --env-file ../../.env --env-file .env cli.ts",
+    "format": "eslint --fix --quiet .",
+    "lint": "eslint --quiet .",
+    "test": "vitest run .",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@jaypie/dynamodb": "^0.4.2",
+    "@jaypie/fabric": "^0.2.2",
+    "@jaypie/logger": "^1.2.5",
+    "jaypie": "^1.2.3"
+  },
+  "devDependencies": {
+    "esbuild": "^0.27.2",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
+  },
+  "engines": {
+    "node": ">=22.0"
+  }
+}

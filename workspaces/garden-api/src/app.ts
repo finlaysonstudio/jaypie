@@ -7,7 +7,7 @@ import {
 } from "jaypie";
 import express from "express";
 
-import keyTestRoute from "./routes/keyTest.route.js";
+import apikeyValidateRoute from "./routes/apikeyValidate.route.js";
 
 const app = express();
 
@@ -16,7 +16,7 @@ app.get(EXPRESS.PATH.ROOT, noContentRoute);
 app.use("/_sy/echo", cors(), echoRoute);
 
 // API routes
-app.post("/api/key/test", cors(), keyTestRoute);
+app.post("/apikey/validate", cors(), apikeyValidateRoute);
 
 // Catch-all
 app.all(EXPRESS.PATH.ANY, notFoundRoute);

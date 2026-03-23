@@ -2,142 +2,108 @@
 
 import { useCallback, useEffect, useState } from "react";
 
-const STORAGE_HINT_KEY = "garden-session-hint";
-const STORAGE_TOKEN_KEY = "garden-session-token";
+const DEVICE_ID_KEY = "garden-device-id";
+
+function getDeviceId(): string {
+  if (typeof window === "undefined") return "";
+  let deviceId = localStorage.getItem(DEVICE_ID_KEY);
+  if (!deviceId) {
+    deviceId = crypto.randomUUID();
+    localStorage.setItem(DEVICE_ID_KEY, deviceId);
+  }
+  return deviceId;
+}
 
 type ConnectionStatus =
   | "authenticated"
   | "connected"
   | "disconnected"
-  | "uninitialized"
   | "unknown";
 
-interface SessionResponse {
-  hint: string;
-  level: string;
-  token: string;
-}
-
-interface StatusMessage {
-  content: string;
-  level: string;
-  type: string;
-}
-
-interface StatusResponse {
+interface ContextData {
   authenticated: boolean;
-  initialized?: boolean;
-  messages?: StatusMessage[];
-  status: string;
+  permissions?: string[];
+  session?: string;
+  user?: { email?: string; name?: string };
+}
+
+interface ContextResponse {
+  data?: ContextData;
+  errors?: { detail: string; status: number; title: string }[];
 }
 
 interface StatusData {
-  authenticate: (key: string) => Promise<boolean>;
   clearAuth: () => void;
   connectionStatus: ConnectionStatus;
-  hint: string | null;
-  response: StatusResponse | null;
+  login: () => void;
+  permissions: string[];
+  response: ContextData | null;
+  session: string | null;
+  user: { email?: string; name?: string } | null;
 }
 
-function getStoredToken(): string | null {
-  if (typeof window === "undefined") return null;
-  return localStorage.getItem(STORAGE_TOKEN_KEY);
-}
-
-function getStoredHint(): string | null {
-  if (typeof window === "undefined") return null;
-  return localStorage.getItem(STORAGE_HINT_KEY);
-}
-
-function fetchStatus(sessionToken?: string | null): Promise<StatusResponse> {
+function fetchContext(): Promise<ContextResponse> {
   const headers: HeadersInit = {};
-  if (sessionToken) {
-    headers["Authorization"] = `Bearer ${sessionToken}`;
+  const deviceId = getDeviceId();
+  if (deviceId) {
+    headers["x-device-id"] = deviceId;
   }
-  return fetch("/status", { headers }).then(
-    (res) => res.json() as Promise<StatusResponse>,
+  return fetch("/context", { headers }).then(
+    (res) => res.json() as Promise<ContextResponse>,
   );
 }
 
-function deriveConnectionStatus(data: StatusResponse): ConnectionStatus {
-  if (data.status === "error") return "disconnected";
-  if (data.initialized === false) return "uninitialized";
-  if (data.authenticated) return "authenticated";
+function deriveConnectionStatus(res: ContextResponse): ConnectionStatus {
+  if (res.errors) return "disconnected";
+  if (res.data?.authenticated) return "authenticated";
   return "connected";
 }
 
 export function useStatus(): StatusData {
   const [connectionStatus, setConnectionStatus] =
     useState<ConnectionStatus>("unknown");
-  const [hint, setHint] = useState<string | null>(() => getStoredHint());
-  const [response, setResponse] = useState<StatusResponse | null>(null);
+  const [permissions, setPermissions] = useState<string[]>([]);
+  const [response, setResponse] = useState<ContextData | null>(null);
+  const [session, setSession] = useState<string | null>(null);
+  const [user, setUser] = useState<{ email?: string; name?: string } | null>(
+    null,
+  );
 
-  const applyResponse = useCallback((data: StatusResponse) => {
-    setResponse(data);
-    setConnectionStatus(deriveConnectionStatus(data));
+  const applyResponse = useCallback((res: ContextResponse) => {
+    setConnectionStatus(deriveConnectionStatus(res));
+    if (res.data) {
+      setResponse(res.data);
+      setPermissions(res.data.permissions ?? []);
+      setSession(res.data.session ?? null);
+      setUser(res.data.user ?? null);
+    }
   }, []);
 
   useEffect(() => {
-    const storedToken = getStoredToken();
-    fetchStatus(storedToken)
+    fetchContext()
       .then(applyResponse)
       .catch(() => {
         setConnectionStatus("disconnected");
       });
   }, [applyResponse]);
-
-  const authenticate = useCallback(
-    async (key: string): Promise<boolean> => {
-      // Exchange API key for session token
-      let session: SessionResponse;
-      try {
-        const res = await fetch("/auth/session", {
-          body: JSON.stringify({}),
-          headers: {
-            Authorization: `Bearer ${key}`,
-            "Content-Type": "application/json",
-          },
-          method: "POST",
-        });
-        if (!res.ok) {
-          return false;
-        }
-        session = (await res.json()) as SessionResponse;
-      } catch {
-        return false;
-      }
-
-      // Store session token and hint (never the raw API key)
-      localStorage.setItem(STORAGE_TOKEN_KEY, session.token);
-      localStorage.setItem(STORAGE_HINT_KEY, session.hint);
-      setHint(session.hint);
-
-      // Fetch status with the new session token
-      const data = await fetchStatus(session.token);
-      applyResponse(data);
-      return data.authenticated;
-    },
-    [applyResponse],
-  );
 
   const clearAuth = useCallback(() => {
-    localStorage.removeItem(STORAGE_TOKEN_KEY);
-    localStorage.removeItem(STORAGE_HINT_KEY);
-    setHint(null);
+    window.location.href = "/auth/logout";
+  }, []);
 
-    // Clear httpOnly cookie server-side
-    fetch("/auth/session", { method: "DELETE" }).catch(() => {
-      // Best effort
-    });
+  const login = useCallback(() => {
+    window.location.href = "/auth/login";
+  }, []);
 
-    fetchStatus()
-      .then(applyResponse)
-      .catch(() => {
-        setConnectionStatus("disconnected");
-      });
-  }, [applyResponse]);
-
-  return { authenticate, clearAuth, connectionStatus, hint, response };
+  return {
+    clearAuth,
+    connectionStatus,
+    login,
+    permissions,
+    response,
+    session,
+    user,
+  };
 }
 
-export type { ConnectionStatus, StatusData, StatusMessage, StatusResponse };
+export type { ConnectionStatus, ContextData, StatusData };

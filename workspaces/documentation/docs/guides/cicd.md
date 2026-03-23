@@ -305,7 +305,7 @@ runs:
   using: composite
   steps:
     - name: Configure AWS Credentials
-      uses: aws-actions/configure-aws-credentials@v4
+      uses: aws-actions/configure-aws-credentials@v6
       with:
         role-to-assume: ${{ inputs.aws-role-arn }}
         role-session-name: DeployRoleForGitHubSession
@@ -601,7 +601,7 @@ export class MyStack extends JaypieAppStack {
 
 ## AWS Integration
 
-Use OIDC authentication with `aws-actions/configure-aws-credentials@v4`:
+Use OIDC authentication with `aws-actions/configure-aws-credentials@v6`:
 
 ```yaml
 permissions:
@@ -610,7 +610,7 @@ permissions:
 
 steps:
   - name: Configure AWS Credentials
-    uses: aws-actions/configure-aws-credentials@v4
+    uses: aws-actions/configure-aws-credentials@v6
     with:
       role-to-assume: ${{ vars.AWS_ROLE_ARN }}
       role-session-name: DeployRoleForGitHubSession

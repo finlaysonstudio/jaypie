@@ -27,7 +27,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Environment
         id: setup-env
@@ -85,7 +85,7 @@ jobs:
           echo "DOCS_DISTRIBUTION_ID=$DISTRIBUTION_ID" >> $GITHUB_ENV
 
       - name: Assume documentation deploy role
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v6
         with:
           role-to-assume: ${{ env.DOCS_DEPLOY_ROLE_ARN }}
           role-session-name: DocsDeployGitHubSession
@@ -107,7 +107,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Node.js and Cache
         id: setup-cache
@@ -130,10 +130,10 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: [22, 24]
+        node-version: [24, 25]
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Node.js ${{ matrix.node-version }} and Cache
         id: setup-cache

@@ -1,0 +1,254 @@
+.page {
+  margin: 0 auto;
+  max-width: 544px;
+  min-height: 100vh;
+  min-width: 176px;
+  padding: 16px 16px 96px;
+}
+
+@media (min-width: 656px) {
+  .page {
+    margin: 0 auto 0 112px;
+    padding-bottom: 16px;
+  }
+}
+
+.title {
+  color: var(--text-secondary-primary);
+  font-family: var(--font-heading);
+  font-size: 20px;
+  font-weight: 100;
+  letter-spacing: 0.04em;
+  margin-bottom: 24px;
+  margin-top: 13px;
+}
+
+/* Filter Bar */
+
+.filterBar {
+  margin-bottom: 12px;
+}
+
+.filterToggle {
+  align-items: center;
+  background: none;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: inline-flex;
+  font-family: var(--font-ui);
+  font-size: 0.75rem;
+  gap: 6px;
+  padding: 5px 10px;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.filterToggle:hover {
+  border-color: var(--text-muted);
+  color: var(--text-primary);
+}
+
+.filterToggleActive {
+  border-color: var(--text-muted);
+  color: var(--text-primary);
+}
+
+/* Filters */
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.filterInput {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: var(--text-primary);
+  font-family: var(--font-code);
+  font-size: 0.75rem;
+  outline: none;
+  padding: 6px 10px;
+}
+
+.filterInput:focus {
+  border-color: var(--text-muted);
+}
+
+.filterInputModel {
+  flex: 1;
+  min-width: 100px;
+}
+
+.filterInputScope {
+  flex: 1;
+  min-width: 100px;
+}
+
+.filterSelect {
+  appearance: none;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: var(--text-primary);
+  cursor: pointer;
+  font-family: var(--font-code);
+  font-size: 0.75rem;
+  outline: none;
+  padding: 6px 10px;
+}
+
+.filterInputValue {
+  flex: 2;
+  min-width: 120px;
+}
+
+.filterButton {
+  background: var(--bg-secondary);
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: var(--text-primary);
+  cursor: pointer;
+  font-family: var(--font-ui);
+  font-size: 0.75rem;
+  padding: 6px 14px;
+  transition: background 0.15s ease;
+}
+
+.filterButton:hover {
+  background: var(--bg-secondary-surface);
+}
+
+.filterButton:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+/* Cards */
+
+.cardList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  display: flex;
+  gap: 12px;
+  padding: 10px 14px;
+  width: 100%;
+}
+
+.cardLeft {
+  flex: 1;
+  min-width: 0;
+}
+
+.cardRight {
+  align-items: flex-end;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  gap: 2px;
+}
+
+.cardRow {
+  align-items: baseline;
+  display: flex;
+  gap: 8px;
+}
+
+.cardRow + .cardRow {
+  margin-top: 2px;
+}
+
+.cardModel {
+  color: var(--text-secondary-primary);
+  font-family: var(--font-ui);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.cardId {
+  color: var(--text-subtle);
+  font-family: var(--font-code);
+  font-size: 0.625rem;
+}
+
+.cardDate {
+  color: var(--text-subtle);
+  font-family: var(--font-code);
+  font-size: 0.625rem;
+  white-space: nowrap;
+}
+
+.cardName {
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  font-size: 0.8125rem;
+}
+
+.cardDetails {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin-top: 4px;
+}
+
+.cardDetail {
+  display: flex;
+  gap: 4px;
+}
+
+.cardDetailKey {
+  color: var(--text-subtle);
+  font-family: var(--font-code);
+  font-size: 0.625rem;
+}
+
+.cardDetailValue {
+  color: var(--text-muted);
+  font-family: var(--font-code);
+  font-size: 0.625rem;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Pagination */
+
+.pagination {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin-top: 16px;
+}
+
+/* Empty */
+
+.empty {
+  color: var(--text-subtle);
+  font-family: var(--font-ui);
+  font-size: 0.8125rem;
+  padding: 32px 0;
+  text-align: center;
+}
+
+/* Loading */
+
+.loading {
+  color: var(--text-muted);
+  font-family: var(--font-ui);
+  font-size: 0.8125rem;
+  padding: 32px 0;
+  text-align: center;
+}

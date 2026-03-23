@@ -2,7 +2,8 @@
   "app": "npx tsx bin/app.ts",
   "context": {
     "@aws-cdk/aws-lambda:recognizeLayerVersion": true,
-    "@aws-cdk/core:stackRelativeExports": true
+    "@aws-cdk/core:stackRelativeExports": true,
+    "@aws-cdk/customresources:installLatestAwsSdkDefault": false
   },
   "watch": {
     "include": [

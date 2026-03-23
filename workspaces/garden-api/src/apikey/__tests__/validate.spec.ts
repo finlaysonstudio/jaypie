@@ -1,11 +1,10 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@jaypie/dynamodb", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@jaypie/dynamodb")>();
   return {
     ...actual,
     initClient: vi.fn(),
-    putEntity: vi.fn().mockResolvedValue({}),
     queryByAlias: vi.fn().mockResolvedValue(null),
   };
 });
@@ -18,9 +17,8 @@ vi.mock("@jaypie/fabric", async (importOriginal) => {
   };
 });
 
-import { putEntity, queryByAlias } from "@jaypie/dynamodb";
+import { queryByAlias } from "@jaypie/dynamodb";
 
-import { generateKeyFromSeed } from "../generate.js";
 import { extractToken, validateApiKey } from "../validate.js";
 
 //
@@ -30,6 +28,9 @@ import { extractToken, validateApiKey } from "../validate.js";
 
 // The testkit mock returns "0".repeat(64) for hashJaypieKey
 const MOCK_HASH = "0".repeat(64);
+
+// Any valid-format key (mock validateJaypieKey always returns true)
+const TEST_KEY = "sk_jaypie_any-valid-key";
 
 //
 //
@@ -63,15 +64,7 @@ describe("extractToken", () => {
 });
 
 describe("validateApiKey", () => {
-  const SEED = "test-admin-seed";
-  const SEED_KEY = generateKeyFromSeed(SEED);
-
-  beforeEach(() => {
-    process.env.PROJECT_ADMIN_SEED = SEED;
-  });
-
   afterEach(() => {
-    delete process.env.PROJECT_ADMIN_SEED;
     vi.clearAllMocks();
   });
 
@@ -80,6 +73,10 @@ describe("validateApiKey", () => {
   });
 
   it("throws UnauthorizedError for invalid format", async () => {
+    // Override the mock to return false for this test
+    const { validateJaypieKey } = await import("jaypie");
+    vi.mocked(validateJaypieKey).mockReturnValueOnce(false);
+
     await expect(validateApiKey("bad-key")).rejects.toThrow();
   });
 
@@ -97,49 +94,37 @@ describe("validateApiKey", () => {
       updatedAt: new Date().toISOString(),
     });
 
-    const result = await validateApiKey(SEED_KEY);
-    expect(result).toEqual({ level: "owner", valid: true });
+    const result = await validateApiKey(TEST_KEY);
+    expect(result).toEqual({
+      createdAt: expect.any(String),
+      id: "test-id",
+      label: "",
+      name: "Owner Key",
+      permissions: [],
+      scope: "@",
+      valid: true,
+    });
   });
 
-  it("auto-provisions seed key when not in database", async () => {
+  it("throws ForbiddenError when key not found in database", async () => {
     vi.mocked(queryByAlias).mockResolvedValueOnce(null);
 
-    const result = await validateApiKey(SEED_KEY);
-    expect(result).toEqual({ level: "owner", valid: true });
-    expect(putEntity).toHaveBeenCalledOnce();
+    await expect(validateApiKey(TEST_KEY)).rejects.toThrow();
   });
 
-  it("stores hashed key as alias when provisioning", async () => {
+  it("looks up key by hash alias", async () => {
     vi.mocked(queryByAlias).mockResolvedValueOnce(null);
 
-    await validateApiKey(SEED_KEY);
+    try {
+      await validateApiKey(TEST_KEY);
+    } catch {
+      // Expected to throw
+    }
 
-    expect(putEntity).toHaveBeenCalledWith(
-      expect.objectContaining({
-        entity: expect.objectContaining({
-          alias: MOCK_HASH,
-          category: "owner",
-          label: SEED_KEY.slice(-4),
-          model: "apikey",
-          scope: "@",
-          type: "seed",
-        }),
-      }),
-    );
-  });
-
-  it("throws ForbiddenError for unrecognized valid-format key", async () => {
-    const otherKey = generateKeyFromSeed("different-seed");
-    vi.mocked(queryByAlias).mockResolvedValueOnce(null);
-
-    await expect(validateApiKey(otherKey)).rejects.toThrow();
-  });
-
-  it("throws ForbiddenError when no seed configured and key not in DB", async () => {
-    delete process.env.PROJECT_ADMIN_SEED;
-    const otherKey = generateKeyFromSeed("any-seed");
-    vi.mocked(queryByAlias).mockResolvedValueOnce(null);
-
-    await expect(validateApiKey(otherKey)).rejects.toThrow();
+    expect(queryByAlias).toHaveBeenCalledWith({
+      alias: MOCK_HASH,
+      model: "apikey",
+      scope: "@",
+    });
   });
 });

@@ -2,6 +2,8 @@ import { Construct } from "constructs";
 import {
   JaypieAppStack,
   JaypieDynamoDb,
+  JaypieEnvSecret,
+  JaypieMigration,
   type IndexDefinition,
 } from "@jaypie/constructs";
 
@@ -45,6 +47,24 @@ export class GardenDataStack extends JaypieAppStack {
     this.table = new JaypieDynamoDb(this, "GardenTable", {
       indexes,
       timeToLiveAttribute: "ttl",
+    });
+
+    // Migration Lambda runs on each deploy to migrate DynamoDB data
+    const projectSalt = new JaypieEnvSecret(this, "MigrationProjectSalt", {
+      envKey: "PROJECT_SALT",
+      generateSecretString: {
+        excludePunctuation: true,
+        includeSpace: false,
+        passwordLength: 64,
+      },
+    });
+
+    new JaypieMigration(this, "GardenMigration", {
+      code: "../garden-migrations/dist",
+      dependencies: [this.table, projectSalt],
+      handler: "index.handler",
+      secrets: [projectSalt],
+      tables: [this.table],
     });
   }
 }

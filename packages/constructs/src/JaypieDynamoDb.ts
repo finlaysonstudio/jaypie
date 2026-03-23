@@ -248,6 +248,10 @@ export class JaypieDynamoDb extends Construct implements dynamodb.ITableV2 {
     return this._table.encryptionKey;
   }
 
+  public get grants(): dynamodb.TableGrants {
+    return this._table.grants;
+  }
+
   public applyRemovalPolicy(policy: RemovalPolicy): void {
     this._table.applyRemovalPolicy(policy);
   }

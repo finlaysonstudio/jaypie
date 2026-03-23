@@ -42,7 +42,8 @@
     "docs:serve": "npm run serve --workspace workspaces/documentation",
     "docs:start": "npm run start --workspace workspaces/documentation",
     "dynamo:create-table": "bash scripts/dynamo-create-table.sh",
-    "dynamo:init": "docker compose up -d && npm run dynamo:create-table",
+    "dynamo:init": "docker compose up -d && npm run dynamo:create-table && npm run dynamo:migrate",
+    "dynamo:migrate": "npm run migrate --workspace workspaces/garden-migrations",
     "dynamo:remove": "docker compose down -v",
     "dynamo:start": "docker compose up -d",
     "dynamo:stop": "docker compose down",
@@ -78,7 +79,9 @@
     "typecheck": "npm run typecheck --workspaces"
   },
   "overrides": {
-    "@microsoft/api-extractor": "7.56.3"
+    "@microsoft/api-extractor": "7.57.7",
+    "fast-xml-parser": "5.5.8",
+    "serialize-javascript": "7.0.4"
   },
   "devDependencies": {
     "@jaypie/eslint": "*",

@@ -16,17 +16,17 @@ runs:
   using: composite
   steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
 
     - name: Setup Node.js ${{ inputs.node-version }}
-      uses: actions/setup-node@v4
+      uses: actions/setup-node@v6
       with:
         cache: npm
         node-version: ${{ inputs.node-version }}
 
     - name: Cache node_modules
       id: cache-node-modules
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: |
           node_modules

@@ -1,16 +1,16 @@
 import { describe, expect, it, vi } from "vitest";
 import { expressHandler } from "jaypie";
 
-import keyTestRoute from "../keyTest.route.js";
+import apikeyValidateRoute from "../apikeyValidate.route.js";
 
 //
 //
 // Tests
 //
 
-describe("keyTest.route", () => {
+describe("apikeyValidate.route", () => {
   it("is defined", () => {
-    expect(keyTestRoute).toBeDefined();
+    expect(apikeyValidateRoute).toBeDefined();
   });
 
   it("calls expressHandler", () => {
@@ -21,7 +21,7 @@ describe("keyTest.route", () => {
     expect(expressHandler).toHaveBeenCalledWith(
       expect.any(Function),
       expect.objectContaining({
-        secrets: ["PROJECT_ADMIN_SEED"],
+        secrets: ["PROJECT_SALT"],
       }),
     );
   });
@@ -36,6 +36,6 @@ describe("keyTest.route", () => {
   });
 
   it("is a function (route handler)", () => {
-    expect(typeof keyTestRoute).toBe("function");
+    expect(typeof apikeyValidateRoute).toBe("function");
   });
 });

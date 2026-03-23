@@ -1,6 +1,11 @@
 import * as dynamodb from "aws-cdk-lib/aws-dynamodb";
 import { Construct } from "constructs";
-import { envHostname, JaypieAppStack, JaypieNextJs } from "@jaypie/constructs";
+import {
+  envHostname,
+  JaypieAppStack,
+  JaypieEnvSecret,
+  JaypieNextJs,
+} from "@jaypie/constructs";
 
 const DEFAULT_ZONE = "jaypie.net";
 
@@ -35,10 +40,29 @@ export class GardenNextjsStack extends JaypieAppStack {
     const host =
       props.host ?? envHostname({ domain: zone, subdomain: "garden" });
 
+    const auth0Secret = new JaypieEnvSecret(this, "Auth0Secret", {
+      envKey: "AUTH0_SECRET",
+      generateSecretString: {
+        excludePunctuation: true,
+        includeSpace: false,
+        passwordLength: 64,
+      },
+    });
+
+    const projectSalt = new JaypieEnvSecret(this, "ProjectSalt", {
+      envKey: "PROJECT_SALT",
+      generateSecretString: {
+        excludePunctuation: true,
+        includeSpace: false,
+        passwordLength: 64,
+      },
+    });
+
     this.nextjs = new JaypieNextJs(this, "GardenNextjs", {
       domainName: host,
       hostedZone: zone,
       nextjsPath: "../garden-ui",
+      secrets: [auth0Secret, projectSalt],
       ...(props.table ? { tables: [props.table] } : {}),
     });
   }
