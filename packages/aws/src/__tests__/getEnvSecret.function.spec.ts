@@ -231,7 +231,7 @@ describe("Get Environment Secret Function", () => {
       });
 
       await expect(getEnvSecret("test", { env })).rejects.toThrow(
-        "Bad Request",
+        'Secret fetch failed for "test" (HTTP 400)',
       );
       expect(axios.get).toHaveBeenCalledTimes(1);
     });
@@ -271,7 +271,9 @@ describe("Get Environment Secret Function", () => {
         send: vi.fn(() => Promise.reject(new Error("SDK Error"))),
       }));
 
-      await expect(getEnvSecret("test", { env })).rejects.toThrow("SDK Error");
+      await expect(getEnvSecret("test", { env })).rejects.toThrow(
+        'Secret fetch failed for "test" via AWS SDK',
+      );
       expect(axios.get).toHaveBeenCalledTimes(4); // 1 initial + 3 retries
       expect(SecretsManagerClient).toHaveBeenCalled();
     }, 15000);

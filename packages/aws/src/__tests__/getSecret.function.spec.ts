@@ -160,7 +160,9 @@ describe("Get Secret Function", () => {
         return Promise.reject(error);
       });
 
-      await expect(getSecret(MOCK.SECRET)).rejects.toThrow("Bad Request");
+      await expect(getSecret(MOCK.SECRET)).rejects.toThrow(
+        `Secret fetch failed for "${MOCK.SECRET}" (HTTP 400)`,
+      );
       expect(axios.get).toHaveBeenCalledTimes(1);
     });
   });
@@ -194,7 +196,9 @@ describe("Get Secret Function", () => {
         send: vi.fn(() => Promise.reject(new Error("SDK Error"))),
       }));
 
-      await expect(getSecret(MOCK.SECRET)).rejects.toThrow("SDK Error");
+      await expect(getSecret(MOCK.SECRET)).rejects.toThrow(
+        `Secret fetch failed for "${MOCK.SECRET}" via AWS SDK`,
+      );
       expect(axios.get).toHaveBeenCalledTimes(2); // 1 initial + 1 retry
       expect(SecretsManagerClient).toHaveBeenCalled();
     }, 15000);
