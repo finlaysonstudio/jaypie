@@ -13,7 +13,7 @@ export interface GardenNextjsStackProps {
   /**
    * AUTH0_SECRET from the data stack
    */
-  auth0Secret?: JaypieEnvSecret;
+  auth0Secret: JaypieEnvSecret;
   /**
    * Override the default host for the garden site
    * @default envHostname({ subdomain: "garden" }) - e.g., "garden.jaypie.net" for production
@@ -22,7 +22,7 @@ export interface GardenNextjsStackProps {
   /**
    * PROJECT_SALT secret from the data stack
    */
-  salt?: JaypieEnvSecret;
+  salt: JaypieEnvSecret;
   /**
    * DynamoDB table to grant read/write access to the Next.js server function
    */
@@ -39,36 +39,14 @@ export class GardenNextjsStack extends JaypieAppStack {
 
   constructor(
     scope: Construct,
-    id?: string,
-    props: GardenNextjsStackProps = {},
+    id: string | undefined,
+    props: GardenNextjsStackProps,
   ) {
     super(scope, id ?? "JaypieGardenNextjsStack", { key: "garden-nextjs" });
 
     const zone = props.zone ?? process.env.CDK_ENV_HOSTED_ZONE ?? DEFAULT_ZONE;
     const host =
       props.host ?? envHostname({ domain: zone, subdomain: "garden" });
-
-    const auth0Secret =
-      props.auth0Secret ??
-      new JaypieEnvSecret(this, "Auth0Secret", {
-        envKey: "AUTH0_SECRET",
-        generateSecretString: {
-          excludePunctuation: true,
-          includeSpace: false,
-          passwordLength: 64,
-        },
-      });
-
-    const projectSalt =
-      props.salt ??
-      new JaypieEnvSecret(this, "ProjectSalt", {
-        envKey: "PROJECT_SALT",
-        generateSecretString: {
-          excludePunctuation: true,
-          includeSpace: false,
-          passwordLength: 64,
-        },
-      });
 
     this.nextjs = new JaypieNextJs(this, "GardenNextjs", {
       domainName: host,
@@ -79,7 +57,7 @@ export class GardenNextjsStack extends JaypieAppStack {
       ],
       hostedZone: zone,
       nextjsPath: "../garden-ui",
-      secrets: [auth0Secret, projectSalt],
+      secrets: [props.auth0Secret, props.salt],
       ...(props.table ? { tables: [props.table] } : {}),
     });
   }

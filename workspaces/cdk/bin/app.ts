@@ -28,11 +28,11 @@ if (shouldInclude("JaypieGardenApi")) {
     table: gardenDataStack?.table,
   });
 }
-if (shouldInclude("JaypieGardenNextjs")) {
+if (shouldInclude("JaypieGardenNextjs") && gardenDataStack) {
   new GardenNextjsStack(app, "JaypieGardenNextjs", {
-    auth0Secret: gardenDataStack?.auth0Secret,
-    salt: gardenDataStack?.projectSalt,
-    table: gardenDataStack?.table,
+    auth0Secret: gardenDataStack.auth0Secret,
+    salt: gardenDataStack.projectSalt,
+    table: gardenDataStack.table,
   });
 }
 
