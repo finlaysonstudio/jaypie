@@ -110,6 +110,28 @@ const stack = new ApiStack(app, `api-${env}-${nonce}`, {
 });
 ```
 
+## Resource Naming
+
+CDK logical IDs (the construct `id` parameter) are stack-scoped and unique per stack. However, **physical resource names** set via props like `repositoryName`, `logGroupName`, `clusterName`, `family`, and `ruleName` are account-global. Always include `PROJECT_ENV` and `PROJECT_NONCE` to avoid collisions when multiple stacks deploy to the same account.
+
+```typescript
+// Bad — collides across stacks
+repositoryName: `${prefix}-operations`
+
+// Good — scoped per stack
+repositoryName: `${prefix}-operations-${PROJECT_ENV}-${PROJECT_NONCE}`
+```
+
+Props that need scoping include:
+- ECR: `repositoryName`
+- CloudWatch: `logGroupName`
+- ECS: `clusterName`, `family`
+- EventBridge: `ruleName`
+- SQS: `queueName`
+- Any other prop that sets an account-global physical name
+
+See `skill("variables")` for the role of `PROJECT_ENV` and `PROJECT_NONCE`.
+
 ## Deployment
 
 ```bash
