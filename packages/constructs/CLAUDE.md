@@ -361,7 +361,7 @@ new JaypieApiGateway(this, "Api", { handler: lambda, certificate: cert });
 | `constructStackName(key?)` | Generate stack name from env vars |
 | `constructTagger(construct)` | Apply standard tags to construct |
 | `constructEnvName(name)` | Generate environment-prefixed name |
-| `envHostname()` | Get hostname from environment |
+| `envHostname()` | Get hostname from environment (supports `CDK_ENV_PERSONAL` as leading prefix) |
 | `isEnv(env)` / `isProductionEnv()` / `isSandboxEnv()` | Environment checks |
 | `isValidHostname(str)` / `isValidSubdomain(str)` | Validation helpers |
 | `mergeDomain(subdomain, zone)` | Combine subdomain and zone |
