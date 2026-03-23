@@ -52,7 +52,7 @@ export class GardenDataStack extends JaypieAppStack {
     });
 
     // Shared AUTH0_SECRET — used by garden-nextjs
-    this.auth0Secret = new JaypieEnvSecret(this, "Auth0Secret", {
+    this.auth0Secret = new JaypieEnvSecret(this, "SharedAuth0Secret", {
       envKey: "AUTH0_SECRET",
       generateSecretString: {
         excludePunctuation: true,
