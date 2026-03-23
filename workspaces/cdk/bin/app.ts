@@ -1,6 +1,5 @@
 #!/usr/bin/env node
 import * as cdk from "aws-cdk-lib";
-import { JaypieDynamoDb } from "@jaypie/constructs";
 import { DocumentationStack } from "../lib/documentation-stack";
 import { GardenApiStack } from "../lib/garden-api-stack";
 import { GardenDataStack } from "../lib/garden-data-stack";
@@ -18,17 +17,22 @@ if (shouldInclude("JaypieDocumentation")) {
   new DocumentationStack(app, "JaypieDocumentation");
 }
 
-let gardenTable: JaypieDynamoDb | undefined;
+let gardenDataStack: GardenDataStack | undefined;
 
 if (shouldInclude("JaypieGardenData")) {
-  const dataStack = new GardenDataStack(app, "JaypieGardenData");
-  gardenTable = dataStack.table;
+  gardenDataStack = new GardenDataStack(app, "JaypieGardenData");
 }
 if (shouldInclude("JaypieGardenApi")) {
-  new GardenApiStack(app, "JaypieGardenApi", { table: gardenTable });
+  new GardenApiStack(app, "JaypieGardenApi", {
+    salt: gardenDataStack?.projectSalt,
+    table: gardenDataStack?.table,
+  });
 }
 if (shouldInclude("JaypieGardenNextjs")) {
-  new GardenNextjsStack(app, "JaypieGardenNextjs", { table: gardenTable });
+  new GardenNextjsStack(app, "JaypieGardenNextjs", {
+    salt: gardenDataStack?.projectSalt,
+    table: gardenDataStack?.table,
+  });
 }
 
 app.synth();

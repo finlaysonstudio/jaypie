@@ -16,6 +16,10 @@ export interface GardenNextjsStackProps {
    */
   host?: string;
   /**
+   * PROJECT_SALT secret from the data stack
+   */
+  salt?: JaypieEnvSecret;
+  /**
    * DynamoDB table to grant read/write access to the Next.js server function
    */
   table?: dynamodb.ITable;
@@ -49,14 +53,16 @@ export class GardenNextjsStack extends JaypieAppStack {
       },
     });
 
-    const projectSalt = new JaypieEnvSecret(this, "ProjectSalt", {
-      envKey: "PROJECT_SALT",
-      generateSecretString: {
-        excludePunctuation: true,
-        includeSpace: false,
-        passwordLength: 64,
-      },
-    });
+    const projectSalt =
+      props.salt ??
+      new JaypieEnvSecret(this, "ProjectSalt", {
+        envKey: "PROJECT_SALT",
+        generateSecretString: {
+          excludePunctuation: true,
+          includeSpace: false,
+          passwordLength: 64,
+        },
+      });
 
     this.nextjs = new JaypieNextJs(this, "GardenNextjs", {
       domainName: host,
