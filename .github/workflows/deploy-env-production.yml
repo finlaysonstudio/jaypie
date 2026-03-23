@@ -68,6 +68,10 @@ jobs:
         with:
           cdk-package-path: workspaces/cdk
           stack-name: JaypieDocumentation JaypieGardenData JaypieGardenApi JaypieGardenNextjs
+        env:
+          AUTH0_CLIENT_ID: ${{ vars.AUTH0_CLIENT_ID }}
+          AUTH0_CLIENT_SECRET: ${{ secrets.AUTH0_CLIENT_SECRET }}
+          AUTH0_DOMAIN: ${{ vars.AUTH0_DOMAIN }}
 
       - name: Build documentation site
         run: npm run docs:build

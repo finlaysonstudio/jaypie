@@ -11,6 +11,10 @@ const DEFAULT_ZONE = "jaypie.net";
 
 export interface GardenNextjsStackProps {
   /**
+   * AUTH0_SECRET from the data stack
+   */
+  auth0Secret?: JaypieEnvSecret;
+  /**
    * Override the default host for the garden site
    * @default envHostname({ subdomain: "garden" }) - e.g., "garden.jaypie.net" for production
    */
@@ -44,14 +48,16 @@ export class GardenNextjsStack extends JaypieAppStack {
     const host =
       props.host ?? envHostname({ domain: zone, subdomain: "garden" });
 
-    const auth0Secret = new JaypieEnvSecret(this, "Auth0Secret", {
-      envKey: "AUTH0_SECRET",
-      generateSecretString: {
-        excludePunctuation: true,
-        includeSpace: false,
-        passwordLength: 64,
-      },
-    });
+    const auth0Secret =
+      props.auth0Secret ??
+      new JaypieEnvSecret(this, "Auth0Secret", {
+        envKey: "AUTH0_SECRET",
+        generateSecretString: {
+          excludePunctuation: true,
+          includeSpace: false,
+          passwordLength: 64,
+        },
+      });
 
     const projectSalt =
       props.salt ??
@@ -66,6 +72,11 @@ export class GardenNextjsStack extends JaypieAppStack {
 
     this.nextjs = new JaypieNextJs(this, "GardenNextjs", {
       domainName: host,
+      environment: [
+        "AUTH0_CLIENT_ID",
+        "AUTH0_CLIENT_SECRET",
+        "AUTH0_DOMAIN",
+      ],
       hostedZone: zone,
       nextjsPath: "../garden-ui",
       secrets: [auth0Secret, projectSalt],
