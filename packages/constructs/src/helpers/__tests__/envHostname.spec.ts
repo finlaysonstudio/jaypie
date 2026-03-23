@@ -8,6 +8,7 @@ describe("envHostname", () => {
     process.env = { ...originalEnv };
     delete process.env.CDK_ENV_DOMAIN;
     delete process.env.CDK_ENV_HOSTED_ZONE;
+    delete process.env.CDK_ENV_PERSONAL;
     delete process.env.CDK_ENV_SUBDOMAIN;
     delete process.env.PROJECT_ENV;
   });
@@ -266,6 +267,57 @@ describe("envHostname", () => {
 
       const result = envHostname({});
       expect(result).toBe("evaluations.sandbox.findustryai.com");
+    });
+  });
+
+  describe("CDK_ENV_PERSONAL", () => {
+    it("prepends CDK_ENV_PERSONAL as leading component and preserves base env in domain", () => {
+      process.env.CDK_ENV_PERSONAL = "studio";
+      process.env.CDK_ENV_SUBDOMAIN = "operations";
+      process.env.CDK_ENV_HOSTED_ZONE = "sandbox.findustryai.com";
+      process.env.PROJECT_ENV = "studio"; // overridden by deploy workflow
+
+      const result = envHostname({});
+      expect(result).toBe("studio.operations.sandbox.findustryai.com");
+    });
+
+    it("uses CDK_ENV_PERSONAL as component even when component param is provided", () => {
+      process.env.CDK_ENV_PERSONAL = "studio";
+      process.env.CDK_ENV_HOSTED_ZONE = "sandbox.findustryai.com";
+      process.env.PROJECT_ENV = "studio";
+
+      const result = envHostname({ component: "api" });
+      expect(result).toBe("studio.api.sandbox.findustryai.com");
+    });
+
+    it("does not add personal name to env position when CDK_ENV_PERSONAL matches PROJECT_ENV", () => {
+      process.env.CDK_ENV_PERSONAL = "studio";
+      process.env.CDK_ENV_HOSTED_ZONE = "sandbox.findustryai.com";
+      process.env.PROJECT_ENV = "studio";
+
+      const result = envHostname({});
+      // "studio" should only appear once, as the personal prefix, not also as env
+      expect(result).toBe("studio.sandbox.findustryai.com");
+    });
+
+    it("does not prepend personal name when CDK_ENV_PERSONAL is not set", () => {
+      process.env.CDK_ENV_HOSTED_ZONE = "sandbox.findustryai.com";
+      process.env.PROJECT_ENV = "sandbox";
+
+      const result = envHostname({ component: "api" });
+      expect(result).toBe("api.sandbox.findustryai.com");
+    });
+
+    it("handles CDK_ENV_PERSONAL with explicit domain param", () => {
+      process.env.CDK_ENV_PERSONAL = "studio";
+      process.env.PROJECT_ENV = "studio";
+
+      const result = envHostname({
+        component: "api",
+        domain: "sandbox.findustryai.com",
+        subdomain: "operations",
+      });
+      expect(result).toBe("studio.api.operations.sandbox.findustryai.com");
     });
   });
 });

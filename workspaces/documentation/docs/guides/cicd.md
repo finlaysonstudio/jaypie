@@ -581,6 +581,18 @@ If `PROJECT_ENV` is not set or is set incorrectly in the GitHub environment, dep
 4. For production, the environment prefix is omitted (apex domain)
 5. For all other environments, the prefix is prepended
 
+### Personal Deployments
+
+When `CDK_ENV_PERSONAL` is set (e.g., for developer-specific environments), `envHostname()` automatically:
+
+1. Prepends the personal name as the **leading prefix** in the hostname
+2. Filters `PROJECT_ENV` from the env position when it matches `CDK_ENV_PERSONAL` (since the deploy workflow overrides it)
+
+| Environment Variables | Result |
+|---|---|
+| `CDK_ENV_PERSONAL=studio`, `CDK_ENV_SUBDOMAIN=operations`, `CDK_ENV_HOSTED_ZONE=sandbox.example.com` | `studio.operations.sandbox.example.com` |
+| `CDK_ENV_PERSONAL=studio`, `component=api`, `CDK_ENV_HOSTED_ZONE=sandbox.example.com` | `studio.api.sandbox.example.com` |
+
 ### Using envHostname in Stacks
 
 ```typescript
