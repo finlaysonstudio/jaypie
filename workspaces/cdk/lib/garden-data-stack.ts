@@ -39,6 +39,8 @@ const indexes: IndexDefinition[] = [
 ];
 
 export class GardenDataStack extends JaypieAppStack {
+  public readonly auth0Secret: JaypieEnvSecret;
+  public readonly projectSalt: JaypieEnvSecret;
   public readonly table: JaypieDynamoDb;
 
   constructor(scope: Construct, id?: string, props: GardenDataStackProps = {}) {
@@ -49,8 +51,18 @@ export class GardenDataStack extends JaypieAppStack {
       timeToLiveAttribute: "ttl",
     });
 
-    // Migration Lambda runs on each deploy to migrate DynamoDB data
-    const projectSalt = new JaypieEnvSecret(this, "MigrationProjectSalt", {
+    // Shared AUTH0_SECRET — used by garden-nextjs
+    this.auth0Secret = new JaypieEnvSecret(this, "SharedAuth0Secret", {
+      envKey: "AUTH0_SECRET",
+      generateSecretString: {
+        excludePunctuation: true,
+        includeSpace: false,
+        passwordLength: 64,
+      },
+    });
+
+    // Shared PROJECT_SALT secret — used by garden-api, garden-nextjs, and migrations
+    this.projectSalt = new JaypieEnvSecret(this, "MigrationProjectSalt", {
       envKey: "PROJECT_SALT",
       generateSecretString: {
         excludePunctuation: true,
@@ -61,9 +73,9 @@ export class GardenDataStack extends JaypieAppStack {
 
     new JaypieMigration(this, "GardenMigration", {
       code: "../garden-migrations/dist",
-      dependencies: [this.table, projectSalt],
+      dependencies: [this.table, this.projectSalt],
       handler: "index.handler",
-      secrets: [projectSalt],
+      secrets: [this.projectSalt],
       tables: [this.table],
     });
   }

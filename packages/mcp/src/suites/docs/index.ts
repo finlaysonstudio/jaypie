@@ -24,14 +24,13 @@ const BUILD_VERSION_STRING =
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 // From dist/suites/docs/, go up 3 levels to package root where skills/ and release-notes/ live
-const RELEASE_NOTES_PATH = path.join(
-  __dirname,
-  "..",
-  "..",
-  "..",
-  "release-notes",
-);
-const SKILLS_PATH = path.join(__dirname, "..", "..", "..", "skills");
+// Environment variables allow overriding paths when bundled (e.g., esbuild Lambda)
+const RELEASE_NOTES_PATH =
+  process.env.MCP_RELEASE_NOTES_PATH ||
+  path.join(__dirname, "..", "..", "..", "release-notes");
+const SKILLS_PATH =
+  process.env.MCP_SKILLS_PATH ||
+  path.join(__dirname, "..", "..", "..", "skills");
 
 // Create skill store using tildeskill
 const skillStore = createMarkdownStore({ path: SKILLS_PATH });
