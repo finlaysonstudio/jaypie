@@ -27,6 +27,8 @@ export function envHostname({
     );
   }
 
+  const personal = process.env.CDK_ENV_PERSONAL;
+
   const resolvedComponent =
     component === "@" || component === "" ? undefined : component;
   const providedSubdomain =
@@ -34,7 +36,11 @@ export function envHostname({
   const resolvedSubdomain = providedSubdomain || process.env.CDK_ENV_SUBDOMAIN;
   const resolvedEnv = env || process.env.PROJECT_ENV;
   const filteredEnv =
-    resolvedEnv === CDK.ENV.PRODUCTION ? undefined : resolvedEnv;
+    resolvedEnv === CDK.ENV.PRODUCTION
+      ? undefined
+      : personal && resolvedEnv === personal
+        ? undefined
+        : resolvedEnv;
 
   // Check if parts are already contained in the domain to avoid duplication
   const domainParts = resolvedDomain.split(".");
@@ -45,6 +51,7 @@ export function envHostname({
   };
 
   const parts = [
+    personal && !isPartInDomain(personal) ? personal : undefined,
     isPartInDomain(resolvedComponent) ? undefined : resolvedComponent,
     isPartInDomain(resolvedSubdomain) ? undefined : resolvedSubdomain,
     isPartInDomain(filteredEnv) ? undefined : filteredEnv,
