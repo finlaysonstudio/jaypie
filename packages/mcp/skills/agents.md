@@ -35,7 +35,7 @@ Complete stack styles, techniques, and traditions.
 Contents: index, releasenotes
 Development: apikey, documentation, errors, llm, logs, mocks, monorepo, style, subpackages, tests
 Infrastructure: aws, cdk, cicd, datadog, dns, dynamodb, express, lambda, secrets, streaming, variables, websockets
-Patterns: fabric, handlers, models, services, vocabulary
+Patterns: api, fabric, handlers, models, services, vocabulary
 Meta: issues, jaypie, skills, tools
 ```
 
