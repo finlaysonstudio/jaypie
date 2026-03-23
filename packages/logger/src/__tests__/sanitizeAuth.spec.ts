@@ -68,7 +68,10 @@ describe("sanitizeAuth", () => {
           "content-type": "application/json",
         },
       };
-      const result = sanitizeAuth(obj) as Record<string, Record<string, unknown>>;
+      const result = sanitizeAuth(obj) as Record<
+        string,
+        Record<string, unknown>
+      >;
       expect(result.headers.authorization).toBe("sk_1234");
       expect(result.headers["content-type"]).toBe("application/json");
     });

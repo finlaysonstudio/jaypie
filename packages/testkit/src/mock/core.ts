@@ -145,9 +145,7 @@ export const generateJaypieKey = createMockReturnedFunction(
   `sk_MOCK00000000000000000000000000_abcd`,
 );
 
-export const hashJaypieKey = createMockReturnedFunction(
-  "0".repeat(64),
-);
+export const hashJaypieKey = createMockReturnedFunction("0".repeat(64));
 
 // Alias for errorFromStatusCode (exported from @jaypie/errors as jaypieErrorFromStatus)
 export const jaypieErrorFromStatus = errorFromStatusCode;

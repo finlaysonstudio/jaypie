@@ -716,9 +716,7 @@ describe("AnthropicAdapter", () => {
       it("throws errors when signal is not aborted", async () => {
         const controller = new AbortController();
 
-        const mockCreate = vi
-          .fn()
-          .mockRejectedValue(new Error("real error"));
+        const mockCreate = vi.fn().mockRejectedValue(new Error("real error"));
         const mockClient = { messages: { create: mockCreate } };
         const request = {
           model: "claude-sonnet-4-20250514",

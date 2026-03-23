@@ -9,10 +9,7 @@ import express from "express";
 import type { Request, Response } from "express";
 
 import apikeyValidateRoute from "./routes/apikeyValidate.route.js";
-import {
-  createMcpHandler,
-  mcpAuthMiddleware,
-} from "./routes/mcp.route.js";
+import { createMcpHandler, mcpAuthMiddleware } from "./routes/mcp.route.js";
 
 const app = express();
 

@@ -66,9 +66,9 @@ describe("JaypieMigration", () => {
         (r: any) => r.Properties?.Handler === "index.handler",
       );
 
-      expect(migrationLambda?.Properties?.Environment?.Variables).toHaveProperty(
-        "DYNAMODB_TABLE_NAME",
-      );
+      expect(
+        migrationLambda?.Properties?.Environment?.Variables,
+      ).toHaveProperty("DYNAMODB_TABLE_NAME");
     });
   });
 });

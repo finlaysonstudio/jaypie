@@ -20,11 +20,7 @@ const REQUEST_PDF = "Extract the text from this PDF document.";
 const IMAGE_FILE_PATH = join(__dirname, "fixtures/page.png");
 const PDF_FILE_PATH = join(__dirname, "fixtures/page.pdf");
 
-const REQUIRED_STRINGS = [
-  "mock page",
-  "intentionally blank",
-  "mit license",
-];
+const REQUIRED_STRINGS = ["mock page", "intentionally blank", "mit license"];
 
 // Models to test for each provider
 const MODELS = {

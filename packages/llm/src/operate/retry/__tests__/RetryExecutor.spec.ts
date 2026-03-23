@@ -387,11 +387,7 @@ describe("RetryExecutor", () => {
         .mockImplementationOnce(() => {
           // Simulate stale socket error from previous attempt firing
           // during this attempt via unhandledRejection
-          process.emit(
-            "unhandledRejection",
-            terminatedError,
-            rejectedPromise,
-          );
+          process.emit("unhandledRejection", terminatedError, rejectedPromise);
           return Promise.resolve("success");
         });
 

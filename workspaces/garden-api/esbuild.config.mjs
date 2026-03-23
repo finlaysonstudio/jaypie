@@ -11,9 +11,13 @@ const mcpPath = join(__dirname, "..", "..", "packages", "mcp");
 cpSync(join(mcpPath, "skills"), join(__dirname, "dist", "skills"), {
   recursive: true,
 });
-cpSync(join(mcpPath, "release-notes"), join(__dirname, "dist", "release-notes"), {
-  recursive: true,
-});
+cpSync(
+  join(mcpPath, "release-notes"),
+  join(__dirname, "dist", "release-notes"),
+  {
+    recursive: true,
+  },
+);
 
 await build({
   entryPoints: ["index.ts"],

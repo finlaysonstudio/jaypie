@@ -9,9 +9,9 @@
   "scripts": {
     "build": "node esbuild.config.mjs",
     "clean": "rimraf dist",
-    "migrate": "tsx --env-file ../../.env --env-file .env cli.ts",
     "format": "eslint --fix --quiet .",
     "lint": "eslint --quiet .",
+    "migrate": "tsx --env-file ../../.env --env-file .env cli.ts",
     "test": "vitest run .",
     "typecheck": "tsc --noEmit"
   },

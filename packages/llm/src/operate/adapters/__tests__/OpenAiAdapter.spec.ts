@@ -451,7 +451,9 @@ describe("OpenAiAdapter", () => {
     describe("executeRequest", () => {
       it("passes signal to SDK call when provided", async () => {
         const mockCreate = vi.fn().mockResolvedValue({
-          output: [{ type: "message", content: [{ type: "output_text", text: "Hi" }] }],
+          output: [
+            { type: "message", content: [{ type: "output_text", text: "Hi" }] },
+          ],
           usage: { input_tokens: 1, output_tokens: 1, total_tokens: 2 },
         });
         const mockClient = { responses: { create: mockCreate } };
@@ -506,18 +508,12 @@ describe("OpenAiAdapter", () => {
       it("throws errors when signal is not aborted", async () => {
         const controller = new AbortController();
 
-        const mockCreate = vi
-          .fn()
-          .mockRejectedValue(new Error("real error"));
+        const mockCreate = vi.fn().mockRejectedValue(new Error("real error"));
         const mockClient = { responses: { create: mockCreate } };
         const request = { model: "gpt-4o", input: [] };
 
         await expect(
-          openAiAdapter.executeRequest(
-            mockClient,
-            request,
-            controller.signal,
-          ),
+          openAiAdapter.executeRequest(mockClient, request, controller.signal),
         ).rejects.toThrow("real error");
       });
     });

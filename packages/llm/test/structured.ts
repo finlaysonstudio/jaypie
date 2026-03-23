@@ -249,7 +249,13 @@ async function runTests(): Promise<{ failed: number; passed: number }> {
   if (providers.length === 0) {
     console.log("No providers specified, running all structured JSON tests...");
     // Run all by default
-    const tests = [testAnthropic, testGemini, testOpenAI, testOpenRouter, testXai];
+    const tests = [
+      testAnthropic,
+      testGemini,
+      testOpenAI,
+      testOpenRouter,
+      testXai,
+    ];
     for (const test of tests) {
       const success = await test();
       if (success) {

@@ -12,8 +12,7 @@ import {
 // Constants
 //
 
-const BASE62 =
-  "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+const BASE62 = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 
 //
 //
@@ -318,7 +317,6 @@ describe("validateJaypieKey", () => {
 
   describe("Error Paths", () => {
     it("returns false for non-string", () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       expect(validateJaypieKey(123 as any)).toBe(false);
     });
 

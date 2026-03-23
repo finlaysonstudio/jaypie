@@ -53,9 +53,13 @@ export class GardenDataStack extends JaypieAppStack {
     });
 
     // Shared AUTH0_CLIENT_SECRET — used by garden-nextjs (from Auth0 dashboard)
-    this.auth0ClientSecret = new JaypieEnvSecret(this, "SharedAuth0ClientSecret", {
-      envKey: "AUTH0_CLIENT_SECRET",
-    });
+    this.auth0ClientSecret = new JaypieEnvSecret(
+      this,
+      "SharedAuth0ClientSecret",
+      {
+        envKey: "AUTH0_CLIENT_SECRET",
+      },
+    );
 
     // Shared AUTH0_SECRET — used by garden-nextjs (session encryption key)
     this.auth0Secret = new JaypieEnvSecret(this, "SharedAuth0Secret", {
