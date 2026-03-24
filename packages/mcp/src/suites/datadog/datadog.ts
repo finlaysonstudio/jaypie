@@ -300,7 +300,8 @@ export function buildDatadogQuery(options: DatadogSearchOptions): string {
   // Add source (parameter > env var > default 'lambda')
   // Skip default source if the query already contains a source: token
   const queryHasSource = options.query && /\bsource:/.test(options.query);
-  const effectiveSource = options.source || ddSource || (queryHasSource ? undefined : "lambda");
+  const effectiveSource =
+    options.source || ddSource || (queryHasSource ? undefined : "lambda");
   if (effectiveSource) {
     queryParts.push(`source:${effectiveSource}`);
   }

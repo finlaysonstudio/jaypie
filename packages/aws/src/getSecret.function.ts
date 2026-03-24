@@ -144,7 +144,11 @@ async function getSecret(name: string): Promise<string | undefined> {
       axiosError.response.status >= 400 &&
       axiosError.response.status < 500
     ) {
-      throw error;
+      // Wrap in ConfigurationError to prevent leaking sensitive request details
+      // (AWS session tokens, secret IDs, internal URLs)
+      throw new ConfigurationError(
+        `Secret fetch failed for "${name}" (HTTP ${axiosError.response.status})`,
+      );
     }
 
     // All retries exhausted, fall back to AWS SDK
@@ -167,7 +171,10 @@ async function getSecret(name: string): Promise<string | undefined> {
     } catch (sdkError) {
       logger.error("[@jaypie/aws] Error fetching secret from AWS SDK");
       logger.debug({ error: sdkError });
-      throw sdkError;
+      // Wrap to prevent leaking sensitive AWS SDK details
+      throw new ConfigurationError(
+        `Secret fetch failed for "${name}" via AWS SDK`,
+      );
     }
   }
 }

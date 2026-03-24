@@ -2,9 +2,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mock @jaypie/dynamodb before importing runner
 vi.mock("@jaypie/dynamodb", async () => {
-  const actual = await vi.importActual<typeof import("@jaypie/dynamodb")>(
-    "@jaypie/dynamodb",
-  );
+  const actual =
+    await vi.importActual<typeof import("@jaypie/dynamodb")>(
+      "@jaypie/dynamodb",
+    );
   return {
     ...actual,
     queryByAlias: vi.fn(),

@@ -816,9 +816,7 @@ describe("OpenRouterAdapter", () => {
         const controller = new AbortController();
         controller.abort("retry");
 
-        const mockSend = vi
-          .fn()
-          .mockRejectedValue(new TypeError("terminated"));
+        const mockSend = vi.fn().mockRejectedValue(new TypeError("terminated"));
         const mockClient = { chat: { send: mockSend } };
         const request = {
           model: PROVIDER.OPENROUTER.MODEL.DEFAULT,
@@ -837,9 +835,7 @@ describe("OpenRouterAdapter", () => {
       it("throws errors when signal is not aborted", async () => {
         const controller = new AbortController();
 
-        const mockSend = vi
-          .fn()
-          .mockRejectedValue(new Error("real error"));
+        const mockSend = vi.fn().mockRejectedValue(new Error("real error"));
         const mockClient = { chat: { send: mockSend } };
         const request = {
           model: PROVIDER.OPENROUTER.MODEL.DEFAULT,

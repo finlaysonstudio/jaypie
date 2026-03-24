@@ -1328,9 +1328,7 @@ describe("JaypieDistribution", () => {
       const template = Template.fromStack(stack);
 
       const dist = findDistribution(template);
-      expect(
-        dist?.Properties?.DistributionConfig?.WebACLId,
-      ).toBeDefined();
+      expect(dist?.Properties?.DistributionConfig?.WebACLId).toBeDefined();
     });
 
     it("includes AWSManagedRulesCommonRuleSet by default", () => {

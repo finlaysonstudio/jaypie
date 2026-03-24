@@ -4,7 +4,12 @@
 
 import { LLM, Llm } from "@jaypie/llm";
 
-export type LlmProvider = "anthropic" | "google" | "openai" | "openrouter" | "xai";
+export type LlmProvider =
+  | "anthropic"
+  | "google"
+  | "openai"
+  | "openrouter"
+  | "xai";
 
 export interface LlmDebugCallParams {
   provider: LlmProvider;

@@ -696,11 +696,7 @@ describe("GeminiAdapter", () => {
         };
 
         await expect(
-          geminiAdapter.executeRequest(
-            mockClient,
-            request,
-            controller.signal,
-          ),
+          geminiAdapter.executeRequest(mockClient, request, controller.signal),
         ).rejects.toThrow("real error");
       });
     });
@@ -791,8 +787,7 @@ describe("GeminiAdapter", () => {
                 role: "model",
                 parts: [
                   {
-                    text:
-                      "```json\n  " + JSON.stringify(jsonData) + "  \n```",
+                    text: "```json\n  " + JSON.stringify(jsonData) + "  \n```",
                   },
                 ],
               },

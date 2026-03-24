@@ -11,6 +11,10 @@ const DEFAULT_ZONE = "jaypie.net";
 
 export interface GardenNextjsStackProps {
   /**
+   * AUTH0_CLIENT_SECRET from the data stack
+   */
+  auth0ClientSecret: JaypieEnvSecret;
+  /**
    * AUTH0_SECRET from the data stack
    */
   auth0Secret: JaypieEnvSecret;
@@ -50,14 +54,10 @@ export class GardenNextjsStack extends JaypieAppStack {
 
     this.nextjs = new JaypieNextJs(this, "GardenNextjs", {
       domainName: host,
-      environment: [
-        "AUTH0_CLIENT_ID",
-        "AUTH0_CLIENT_SECRET",
-        "AUTH0_DOMAIN",
-      ],
+      environment: ["AUTH0_CLIENT_ID", "AUTH0_DOMAIN"],
       hostedZone: zone,
       nextjsPath: "../garden-ui",
-      secrets: [props.auth0Secret, props.salt],
+      secrets: [props.auth0ClientSecret, props.auth0Secret, props.salt],
       ...(props.table ? { tables: [props.table] } : {}),
     });
   }

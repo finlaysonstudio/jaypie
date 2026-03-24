@@ -143,8 +143,7 @@ describe("GeminiProvider", () => {
         };
 
         const mockResponse = {
-          text:
-            "```json\n" + JSON.stringify(mockParsedResponse) + "\n```",
+          text: "```json\n" + JSON.stringify(mockParsedResponse) + "\n```",
         };
 
         const mockGenerateContent = vi.fn().mockResolvedValue(mockResponse);

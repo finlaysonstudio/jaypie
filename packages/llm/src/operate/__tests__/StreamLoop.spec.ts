@@ -693,8 +693,7 @@ describe("StreamLoop", () => {
         );
 
         // Verify the second call received history with correct IDs
-        const secondCallRequest =
-          mockAdapter.buildRequest.mock.calls[1][0];
+        const secondCallRequest = mockAdapter.buildRequest.mock.calls[1][0];
         const functionCallItem = secondCallRequest.messages.find(
           (m: Record<string, unknown>) =>
             m.type === LlmMessageType.FunctionCall,
@@ -774,8 +773,7 @@ describe("StreamLoop", () => {
         );
 
         // Verify the second call received history with thoughtSignature
-        const secondCallRequest =
-          mockAdapter.buildRequest.mock.calls[1][0];
+        const secondCallRequest = mockAdapter.buildRequest.mock.calls[1][0];
         const functionCallItem = secondCallRequest.messages.find(
           (m: Record<string, unknown>) =>
             m.type === LlmMessageType.FunctionCall,
@@ -850,8 +848,7 @@ describe("StreamLoop", () => {
           loop.execute("Call tool", { tools: toolkit, turns: 3 }),
         );
 
-        const secondCallRequest =
-          mockAdapter.buildRequest.mock.calls[1][0];
+        const secondCallRequest = mockAdapter.buildRequest.mock.calls[1][0];
         const functionCallItem = secondCallRequest.messages.find(
           (m: Record<string, unknown>) =>
             m.type === LlmMessageType.FunctionCall,

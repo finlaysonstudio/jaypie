@@ -407,10 +407,9 @@ export class StreamLoop {
       // Add tool calls to history
       for (const toolCall of collectedToolCalls) {
         // Extract provider-specific metadata from the stream chunk
-        const metadata =
-          (toolCall.raw as Record<string, unknown>)?.metadata as
-            | Record<string, unknown>
-            | undefined;
+        const metadata = (toolCall.raw as Record<string, unknown>)?.metadata as
+          | Record<string, unknown>
+          | undefined;
 
         const historyItem: Record<string, unknown> = {
           type: LlmMessageType.FunctionCall,

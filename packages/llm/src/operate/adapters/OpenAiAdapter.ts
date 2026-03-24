@@ -214,7 +214,10 @@ export class OpenAiAdapter extends BaseProviderAdapter {
     const openai = client as OpenAI;
     try {
       // @ts-expect-error OpenAI SDK types don't match our request format exactly
-      return await openai.responses.create(request, signal ? { signal } : undefined);
+      return await openai.responses.create(
+        request,
+        signal ? { signal } : undefined,
+      );
     } catch (error) {
       if (signal?.aborted) return undefined;
       throw error;

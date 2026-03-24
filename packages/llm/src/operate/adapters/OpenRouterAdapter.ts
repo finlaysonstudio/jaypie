@@ -332,8 +332,7 @@ export class OpenRouterAdapter extends BaseProviderAdapter {
 
       return response as unknown as OpenRouterResponse;
     } catch (error) {
-      if (signal?.aborted)
-        return undefined as unknown as OpenRouterResponse;
+      if (signal?.aborted) return undefined as unknown as OpenRouterResponse;
       throw error;
     }
   }
