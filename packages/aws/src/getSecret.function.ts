@@ -20,7 +20,7 @@ interface JaypieLogger {
   };
   var: (data: Record<string, unknown>) => void;
   debug: (data: unknown) => void;
-  error: (message: string) => void;
+  error: (message: string | Record<string, unknown>) => void;
   warn: (message: string) => void;
 }
 
