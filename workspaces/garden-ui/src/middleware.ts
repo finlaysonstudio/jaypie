@@ -56,7 +56,18 @@ export async function middleware(request: NextRequest) {
     return response;
   }
 
-  const authRes = await auth0.middleware(request);
+  let authRes;
+  try {
+    authRes = await auth0.middleware(request);
+  } catch (error) {
+    console.error("[middleware] auth0.middleware error", {
+      error: error instanceof Error ? error.message : error,
+      path: request.nextUrl.pathname,
+      hasAuth0Secret: !!process.env.AUTH0_SECRET,
+      hasAuth0ClientSecret: !!process.env.AUTH0_CLIENT_SECRET,
+    });
+    throw error;
+  }
 
   const { pathname } = request.nextUrl;
 

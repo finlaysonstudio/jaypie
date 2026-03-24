@@ -27,6 +27,13 @@ let _auth0: Auth0Client | undefined;
 
 function getAuth0(): Auth0Client {
   if (!_auth0) {
+    console.log("[auth0] Creating Auth0Client", {
+      hasAuth0ClientSecret: !!process.env.AUTH0_CLIENT_SECRET,
+      hasAuth0Domain: !!process.env.AUTH0_DOMAIN,
+      hasAuth0Secret: !!process.env.AUTH0_SECRET,
+      auth0SecretType: typeof process.env.AUTH0_SECRET,
+      auth0SecretLength: process.env.AUTH0_SECRET?.length,
+    });
     _auth0 = new Auth0Client({
       allowInsecureRequests: process.env.NODE_ENV !== "production",
 
