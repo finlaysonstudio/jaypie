@@ -20,7 +20,7 @@ interface JaypieLogger {
   };
   var: (data: Record<string, unknown>) => void;
   debug: (data: unknown) => void;
-  error: (message: string) => void;
+  error: (message: string | Record<string, unknown>) => void;
   warn: (message: string) => void;
 }
 
@@ -112,10 +112,13 @@ async function getSecret(name: string): Promise<string | undefined> {
             axiosError.response.status >= 400 &&
             axiosError.response.status < 500
           ) {
-            logger.error("[@jaypie/aws] Client error from Secrets Extension");
-            logger.debug({
-              error: {
+            logger.error(
+              `[@jaypie/aws] Client error from Secrets Extension (${axiosError.response?.status})`,
+            );
+            logger.error({
+              secretExtensionError: {
                 message: axiosError.message,
+                responseData: axiosError.response?.data,
                 status: axiosError.response?.status,
               },
             });
@@ -138,20 +141,8 @@ async function getSecret(name: string): Promise<string | undefined> {
     return response?.data.SecretString;
   } catch (error) {
     const axiosError = error as AxiosError;
-    // Don't fall back to SDK on client errors (4xx) - these are configuration issues
-    if (
-      axiosError.response?.status &&
-      axiosError.response.status >= 400 &&
-      axiosError.response.status < 500
-    ) {
-      // Wrap in ConfigurationError to prevent leaking sensitive request details
-      // (AWS session tokens, secret IDs, internal URLs)
-      throw new ConfigurationError(
-        `Secret fetch failed for "${name}" (HTTP ${axiosError.response.status})`,
-      );
-    }
 
-    // All retries exhausted, fall back to AWS SDK
+    // All extension errors fall through to AWS SDK fallback
     logger.warn(
       "[@jaypie/aws] Secrets Extension failed after retries, falling back to AWS SDK",
     );
