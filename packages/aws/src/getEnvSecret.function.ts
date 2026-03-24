@@ -136,10 +136,13 @@ async function getEnvSecret(
               axiosError.response.status >= 400 &&
               axiosError.response.status < 500
             ) {
-              logger.error("[@jaypie/aws] Client error from Secrets Extension");
-              logger.debug({
-                error: {
+              logger.error(
+                `[@jaypie/aws] Client error from Secrets Extension (${axiosError.response?.status})`,
+              );
+              logger.error({
+                secretExtensionError: {
                   message: axiosError.message,
+                  responseData: axiosError.response?.data,
                   status: axiosError.response?.status,
                 },
               });
