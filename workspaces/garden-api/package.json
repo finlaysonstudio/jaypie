@@ -24,7 +24,7 @@
     "@jaypie/mcp": "^0.7.42",
     "@modelcontextprotocol/sdk": "^1.27.1",
     "express": "^4.22.1",
-    "jaypie": "^1.2.3"
+    "jaypie": "^1.2.23"
   },
   "devDependencies": {
     "@types/express": "^5.0.6",
