@@ -72,7 +72,7 @@ export class GardenDataStack extends JaypieAppStack {
     });
 
     // Shared PROJECT_SALT secret — used by garden-api, garden-nextjs, and migrations
-    this.projectSalt = new JaypieEnvSecret(this, "MigrationProjectSalt", {
+    this.projectSalt = new JaypieEnvSecret(this, "SharedProjectSalt", {
       envKey: "PROJECT_SALT",
       generateSecretString: {
         excludePunctuation: true,
