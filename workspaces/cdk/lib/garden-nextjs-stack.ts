@@ -54,7 +54,11 @@ export class GardenNextjsStack extends JaypieAppStack {
 
     this.nextjs = new JaypieNextJs(this, "GardenNextjs", {
       domainName: host,
-      environment: ["AUTH0_CLIENT_ID", "AUTH0_DOMAIN"],
+      environment: [
+        "AUTH0_CLIENT_ID",
+        "AUTH0_DOMAIN",
+        { APP_BASE_URL: `https://${host}` },
+      ],
       hostedZone: zone,
       nextjsPath: "../garden-ui",
       secrets: [props.auth0ClientSecret, props.auth0Secret, props.salt],

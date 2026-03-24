@@ -53,6 +53,7 @@ function createAuth0Client(): Auth0Client {
   });
   return new Auth0Client({
     allowInsecureRequests: process.env.NODE_ENV !== "production",
+    appBaseUrl: process.env.APP_BASE_URL || "http://localhost:3160",
 
     async onCallback(error, context, session) {
       if (!error && session) {
