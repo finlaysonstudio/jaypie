@@ -21,36 +21,57 @@ function ensureClient() {
 // Main
 //
 
-export const auth0 = new Auth0Client({
-  allowInsecureRequests: process.env.NODE_ENV !== "production",
+// Lazy-initialize Auth0Client so secrets from loadEnvSecrets (instrumentation.ts)
+// are available in process.env before the client reads them
+let _auth0: Auth0Client | undefined;
 
-  async onCallback(error, context, session) {
-    if (!error && session) {
-      try {
-        ensureClient();
+function getAuth0(): Auth0Client {
+  if (!_auth0) {
+    _auth0 = new Auth0Client({
+      allowInsecureRequests: process.env.NODE_ENV !== "production",
 
-        await upsertUser({
-          email: session.user.email ?? "",
-          name: session.user.name ?? "",
-          sub: session.user.sub,
-        });
+      async onCallback(error, context, session) {
+        if (!error && session) {
+          try {
+            ensureClient();
 
-        // Link garden session to user
-        const cookieStore = await cookies();
-        const sessionToken = cookieStore.get("garden-session")?.value;
-        if (sessionToken) {
-          await linkSession(sessionToken, {
-            email: session.user.email ?? "",
-            sub: session.user.sub,
-          });
+            await upsertUser({
+              email: session.user.email ?? "",
+              name: session.user.name ?? "",
+              sub: session.user.sub,
+            });
+
+            // Link garden session to user
+            const cookieStore = await cookies();
+            const sessionToken = cookieStore.get("garden-session")?.value;
+            if (sessionToken) {
+              await linkSession(sessionToken, {
+                email: session.user.email ?? "",
+                sub: session.user.sub,
+              });
+            }
+          } catch (err) {
+            log.error("Failed to upsert user on login", { error: err });
+          }
         }
-      } catch (err) {
-        log.error("Failed to upsert user on login", { error: err });
-      }
-    }
 
-    const returnTo = context?.returnTo || "/";
-    const base = process.env.APP_BASE_URL || "http://localhost:3160";
-    return NextResponse.redirect(new URL(returnTo, base));
+        const returnTo = context?.returnTo || "/";
+        const base = process.env.APP_BASE_URL || "http://localhost:3160";
+        return NextResponse.redirect(new URL(returnTo, base));
+      },
+    });
+  }
+  return _auth0;
+}
+
+// Proxy defers all property access to the lazily-created Auth0Client instance
+export const auth0 = new Proxy({} as Auth0Client, {
+  get(_target, prop, receiver) {
+    const instance = getAuth0();
+    const value = Reflect.get(instance, prop, receiver);
+    if (typeof value === "function") {
+      return value.bind(instance);
+    }
+    return value;
   },
 });
