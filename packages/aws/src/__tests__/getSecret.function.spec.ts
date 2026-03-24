@@ -151,7 +151,9 @@ describe("Get Secret Function", () => {
       expect(response).toBe(MOCK.SECRET_RESPONSE);
       expect(axios.get).toHaveBeenCalledTimes(2);
     }, 10000);
-    it("Does not retry on 4xx errors", async () => {
+    it("Does not retry on 4xx errors but falls back to SDK", async () => {
+      const { SecretsManagerClient } =
+        await import("@aws-sdk/client-secrets-manager");
       (axios.get as Mock).mockImplementation(() => {
         const error = new Error("Bad Request") as Error & {
           response: { status: number };
@@ -160,10 +162,10 @@ describe("Get Secret Function", () => {
         return Promise.reject(error);
       });
 
-      await expect(getSecret(MOCK.SECRET)).rejects.toThrow(
-        `Secret fetch failed for "${MOCK.SECRET}" (HTTP 400)`,
-      );
+      const response = await getSecret(MOCK.SECRET);
+      expect(response).toBe(MOCK.SECRET_RESPONSE);
       expect(axios.get).toHaveBeenCalledTimes(1);
+      expect(SecretsManagerClient).toHaveBeenCalled();
     });
   });
   describe("SDK Fallback", () => {

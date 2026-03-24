@@ -165,20 +165,8 @@ async function getEnvSecret(
       return response?.data.SecretString;
     } catch (error) {
       const axiosError = error as AxiosError;
-      // Don't fall back to SDK on client errors (4xx) - these are configuration issues
-      if (
-        axiosError.response?.status &&
-        axiosError.response.status >= 400 &&
-        axiosError.response.status < 500
-      ) {
-        // Wrap in ConfigurationError to prevent leaking sensitive request details
-        // (AWS session tokens, secret IDs, internal URLs)
-        throw new ConfigurationError(
-          `Secret fetch failed for "${name}" (HTTP ${axiosError.response.status})`,
-        );
-      }
 
-      // All retries exhausted, fall back to AWS SDK
+      // All extension errors fall through to AWS SDK fallback
       logger.warn(
         "[@jaypie/aws] Secrets Extension failed after retries, falling back to AWS SDK",
       );

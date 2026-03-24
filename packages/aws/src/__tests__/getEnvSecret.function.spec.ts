@@ -219,7 +219,9 @@ describe("Get Environment Secret Function", () => {
       expect(response).toBe(MOCK.SECRET_RESPONSE);
       expect(axios.get).toHaveBeenCalledTimes(2);
     }, 10000);
-    it("Does not retry on 4xx errors", async () => {
+    it("Does not retry on 4xx errors but falls back to SDK", async () => {
+      const { SecretsManagerClient } =
+        await import("@aws-sdk/client-secrets-manager");
       const env = cloneDeep(process.env) as Record<string, string | undefined>;
       env.SECRET_test = "secret1";
       (axios.get as Mock).mockImplementation(() => {
@@ -230,10 +232,10 @@ describe("Get Environment Secret Function", () => {
         return Promise.reject(error);
       });
 
-      await expect(getEnvSecret("test", { env })).rejects.toThrow(
-        'Secret fetch failed for "test" (HTTP 400)',
-      );
+      const response = await getEnvSecret("test", { env });
+      expect(response).toBe(MOCK.SECRET_RESPONSE);
       expect(axios.get).toHaveBeenCalledTimes(1);
+      expect(SecretsManagerClient).toHaveBeenCalled();
     });
   });
 
