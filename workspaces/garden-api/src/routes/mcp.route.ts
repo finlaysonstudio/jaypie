@@ -97,6 +97,7 @@ async function createMcpHandler(): Promise<
   const server = createGardenMcpServer();
 
   const transport = new StreamableHTTPServerTransport({
+    enableJsonResponse: true,
     sessionIdGenerator: undefined, // Stateless — no sessions in Lambda
   });
 
@@ -104,6 +105,11 @@ async function createMcpHandler(): Promise<
 
   return async (req: Request, res: Response): Promise<void> => {
     try {
+      console.log("[mcp] handleRequest", {
+        bodyType: typeof req.body,
+        hasBody: !!req.body,
+        method: req.body?.method,
+      });
       await transport.handleRequest(req, res, req.body);
     } catch (error) {
       if (!res.headersSent) {
