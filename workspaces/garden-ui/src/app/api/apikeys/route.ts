@@ -1,28 +1,9 @@
 import { APEX, initClient, putEntity, queryByScope, queryByXid } from "@jaypie/dynamodb";
-import { type IndexDefinition, registerModel } from "@jaypie/fabric";
+import "@jaypie/garden-models"; // Side-effect: registers all models
 import { generateJaypieKey, hashJaypieKey } from "@jaypie/kit";
 import { log } from "@jaypie/logger";
 
 import { auth0 } from "../../../lib/auth0";
-// Ensure user model is registered
-import "../../../lib/user/upsert";
-
-//
-//
-// Model Registration
-//
-
-const APIKEY_INDEXES: IndexDefinition[] = [
-  {
-    name: "indexAlias",
-    pk: ["scope", "model", "alias"],
-    sk: ["sequence"],
-    sparse: true,
-  },
-  { name: "indexScope", pk: ["scope", "model"], sk: ["sequence"] },
-];
-
-registerModel({ model: "apikey", indexes: APIKEY_INDEXES });
 
 //
 //

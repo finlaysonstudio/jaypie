@@ -6,7 +6,7 @@ import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import type { JSONRPCMessage } from "@modelcontextprotocol/sdk/types.js";
 import type { NextFunction, Request, Response } from "express";
 
-import { extractToken, validateApiKey } from "../apikey/index.js";
+import { extractToken, validateApiKey } from "@jaypie/garden-models";
 
 //
 //

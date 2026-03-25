@@ -2,9 +2,8 @@ import { APEX, initClient, queryByXid } from "@jaypie/dynamodb";
 import { log } from "@jaypie/logger";
 import { cookies } from "next/headers";
 
-// Import to ensure models are registered
-import "../../lib/session";
-import "../../lib/user/upsert";
+// Side-effect: registers all models
+import "@jaypie/garden-models";
 
 //
 //

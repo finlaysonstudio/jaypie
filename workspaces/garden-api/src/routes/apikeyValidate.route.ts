@@ -3,7 +3,7 @@ import { UnauthorizedError } from "@jaypie/errors";
 import { expressHandler } from "jaypie";
 import type { Request } from "express";
 
-import { extractToken, validateApiKey } from "../apikey/index.js";
+import { extractToken, validateApiKey } from "@jaypie/garden-models";
 
 //
 //

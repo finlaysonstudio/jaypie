@@ -1,8 +1,12 @@
 import { APEX, queryByAlias } from "@jaypie/dynamodb";
 import { ForbiddenError, UnauthorizedError } from "@jaypie/errors";
-import { type IndexDefinition, registerModel } from "@jaypie/fabric";
 import { log } from "@jaypie/logger";
 import { hashJaypieKey, validateJaypieKey } from "jaypie";
+
+import type { ValidateResult } from "./types.js";
+
+// Ensure model is registered
+import "./model.js";
 
 //
 //
@@ -10,38 +14,6 @@ import { hashJaypieKey, validateJaypieKey } from "jaypie";
 //
 
 const GARDEN_KEY_OPTIONS = { issuer: "jaypie" } as const;
-
-//
-//
-// Model Registration
-//
-
-const APIKEY_INDEXES: IndexDefinition[] = [
-  {
-    name: "indexAlias",
-    pk: ["scope", "model", "alias"],
-    sk: ["sequence"],
-    sparse: true,
-  },
-  { name: "indexScope", pk: ["scope", "model"], sk: ["sequence"] },
-];
-
-registerModel({ model: "apikey", indexes: APIKEY_INDEXES });
-
-//
-//
-// Types
-//
-
-interface ValidateResult {
-  createdAt: string;
-  id: string;
-  label: string;
-  name: string;
-  permissions: string[];
-  scope: string;
-  valid: true;
-}
 
 //
 //
@@ -112,5 +84,4 @@ function extractToken(authorization: string | undefined): string | undefined {
 // Export
 //
 
-export { extractToken, validateApiKey };
-export type { ValidateResult };
+export { extractToken, GARDEN_KEY_OPTIONS, validateApiKey };
