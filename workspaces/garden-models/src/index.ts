@@ -5,8 +5,8 @@ export {
   extractToken,
   GARDEN_KEY_OPTIONS,
   validateApiKey,
-} from "./apikey/index.js";
-export type { ValidateResult } from "./apikey/index.js";
+} from "./apikey/index";
+export type { ValidateResult } from "./apikey/index";
 
 export {
   COOKIE_MAX_AGE,
@@ -14,8 +14,8 @@ export {
   SESSION_INDEXES,
   SESSION_MODEL,
   SESSION_PREFIX,
-} from "./session/index.js";
-export type { HistoryEvent, SessionEntity } from "./session/index.js";
+} from "./session/index";
+export type { HistoryEvent, SessionEntity } from "./session/index";
 
 export {
   DEFAULT_PERMISSIONS,
@@ -24,5 +24,5 @@ export {
   hasPermission,
   USER_INDEXES,
   USER_MODEL,
-} from "./user/index.js";
-export type { UpsertUserInput, UserEntity } from "./user/index.js";
+} from "./user/index";
+export type { UpsertUserInput, UserEntity } from "./user/index";

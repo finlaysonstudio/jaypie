@@ -3,10 +3,10 @@ import { ForbiddenError, UnauthorizedError } from "@jaypie/errors";
 import { log } from "@jaypie/logger";
 import { hashJaypieKey, validateJaypieKey } from "jaypie";
 
-import type { ValidateResult } from "./types.js";
+import type { ValidateResult } from "./types";
 
 // Ensure model is registered
-import "./model.js";
+import "./model";
 
 //
 //

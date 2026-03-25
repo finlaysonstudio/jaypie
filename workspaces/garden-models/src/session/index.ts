@@ -4,5 +4,5 @@ export {
   SESSION_INDEXES,
   SESSION_MODEL,
   SESSION_PREFIX,
-} from "./model.js";
-export type { HistoryEvent, SessionEntity } from "./types.js";
+} from "./model";
+export type { HistoryEvent, SessionEntity } from "./types";
