@@ -1,7 +1,7 @@
 import { loadEnvSecrets } from "@jaypie/aws";
 import { initClient } from "@jaypie/dynamodb";
 import { ForbiddenError, UnauthorizedError } from "@jaypie/errors";
-import { createMcpServer } from "@jaypie/mcp";
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import type { NextFunction, Request, Response } from "express";
 
@@ -12,7 +12,7 @@ import { extractToken, validateApiKey } from "../apikey/index.js";
 // Constants
 //
 
-const MCP_VERSION = "0.1.0";
+const GARDEN_MCP_VERSION = "0.0.1";
 
 //
 //
@@ -57,16 +57,46 @@ async function mcpAuthMiddleware(
 
 //
 //
+// Garden MCP Server
+//
+
+function createGardenMcpServer(): McpServer {
+  const server = new McpServer({
+    name: "garden",
+    version: GARDEN_MCP_VERSION,
+  });
+
+  server.tool(
+    "version",
+    "Prints the current version and hash",
+    {},
+    async () => {
+      const commit = process.env.PROJECT_COMMIT || "unknown";
+      return {
+        content: [
+          {
+            text: `@jaypie/garden-api@${GARDEN_MCP_VERSION} (${commit})`,
+            type: "text",
+          },
+        ],
+      };
+    },
+  );
+
+  return server;
+}
+
+//
+//
 // MCP Handler
 //
 
 async function createMcpHandler(): Promise<
   (req: Request, res: Response) => Promise<void>
 > {
-  const server = createMcpServer(MCP_VERSION);
+  const server = createGardenMcpServer();
 
   const transport = new StreamableHTTPServerTransport({
-    enableJsonResponse: false,
     sessionIdGenerator: undefined, // Stateless — no sessions in Lambda
   });
 

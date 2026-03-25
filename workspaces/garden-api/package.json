@@ -21,7 +21,6 @@
     "@jaypie/dynamodb": "^0.4.1",
     "@jaypie/errors": "^1.2.1",
     "@jaypie/fabric": "^0.2.2",
-    "@jaypie/mcp": "^0.7.42",
     "@modelcontextprotocol/sdk": "^1.27.1",
     "express": "^4.22.1",
     "jaypie": "^1.2.23"
