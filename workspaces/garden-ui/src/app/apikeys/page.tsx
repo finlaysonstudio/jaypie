@@ -45,6 +45,7 @@ export default function ApiKeysPage() {
   const [creating, setCreating] = useState(false);
   const [copied, setCopied] = useState(false);
   const [createdKey, setCreatedKey] = useState<CreatedKey | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<ApiKeyItem | null>(null);
   const [name, setName] = useState("");
   const [garden, setGarden] = useState("");
 
@@ -90,13 +91,15 @@ export default function ApiKeysPage() {
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
     try {
       await fetch("/api/apikeys", {
-        body: JSON.stringify({ id }),
+        body: JSON.stringify({ id: deleteTarget.id }),
         headers: { "Content-Type": "application/json" },
         method: "DELETE",
       });
+      setDeleteTarget(null);
       await refreshKeys();
     } catch {
       // Best effort
@@ -201,7 +204,7 @@ export default function ApiKeysPage() {
             </div>
             <button
               className={styles.deleteButton}
-              onClick={() => handleDelete(item.id)}
+              onClick={() => setDeleteTarget(item)}
               title="Delete key"
               type="button"
             >
@@ -210,6 +213,33 @@ export default function ApiKeysPage() {
           </div>
         ))}
       </div>
+
+      {deleteTarget && (
+        <div className={styles.modalOverlay} onClick={() => setDeleteTarget(null)}>
+          <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.modalTitle}>Delete API key?</div>
+            <div className={styles.modalHint}>
+              {deleteTarget.name} (xxxxxxxx_{deleteTarget.label})
+            </div>
+            <div className={styles.modalActions}>
+              <button
+                className={styles.modalCancel}
+                onClick={() => setDeleteTarget(null)}
+                type="button"
+              >
+                Cancel
+              </button>
+              <button
+                className={styles.modalDelete}
+                onClick={handleDelete}
+                type="button"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

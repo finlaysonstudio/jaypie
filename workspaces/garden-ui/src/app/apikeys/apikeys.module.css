@@ -211,6 +211,87 @@
   font-size: 0.6875rem;
 }
 
+/* Delete Modal */
+
+.modalOverlay {
+  align-items: center;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  position: fixed;
+  z-index: 100;
+}
+
+.modal {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  box-shadow: 2px 0 4px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  font-family: var(--font-ui);
+  gap: 20px;
+  max-width: 360px;
+  padding: 36px 24px;
+  width: 100%;
+}
+
+.modalTitle {
+  color: var(--text-primary);
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.modalHint {
+  color: var(--text-muted);
+  font-family: var(--font-code);
+  font-size: 0.75rem;
+}
+
+.modalActions {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.modalCancel {
+  background: none;
+  border: 1px solid var(--text-subtle);
+  border-radius: 6px;
+  color: var(--text-muted);
+  cursor: pointer;
+  flex: 1;
+  font-family: var(--font-ui);
+  font-size: 0.8125rem;
+  padding: 6px 12px;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.modalCancel:hover {
+  border-color: var(--text-primary);
+  color: var(--text-primary);
+}
+
+.modalDelete {
+  background: #3d211d;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: #c9a099;
+  cursor: pointer;
+  flex: 1;
+  font-family: var(--font-ui);
+  font-size: 0.8125rem;
+  padding: 6px 12px;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.modalDelete:hover {
+  background: #4a2823;
+  color: #e0c4be;
+}
+
 .empty {
   color: var(--text-subtle);
   font-family: var(--font-ui);
