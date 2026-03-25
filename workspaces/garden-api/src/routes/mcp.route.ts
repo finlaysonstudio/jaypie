@@ -105,12 +105,7 @@ async function createMcpHandler(): Promise<
 
   return async (req: Request, res: Response): Promise<void> => {
     try {
-      console.log("[mcp] handleRequest", {
-        bodyType: typeof req.body,
-        hasBody: !!req.body,
-        method: req.body?.method,
-      });
-      await transport.handleRequest(req, res, req.body);
+      await transport.handleRequest(req, res);
     } catch (error) {
       if (!res.headersSent) {
         res.status(500).json({

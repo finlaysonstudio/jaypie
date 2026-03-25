@@ -21,11 +21,13 @@ app.use("/_sy/echo", cors(), echoRoute);
 app.post("/apikey/validate", cors(), apikeyValidateRoute);
 
 // MCP endpoint (lazy-initialized)
+// Do NOT use express.json() here — the MCP SDK's transport reads the raw body
+// stream itself. If express.json() consumes the stream first, the transport
+// gets an empty body and returns a parse error.
 let mcpHandler: ((req: Request, res: Response) => Promise<void>) | null = null;
 app.post(
   "/mcp",
   cors(),
-  express.json(),
   mcpAuthMiddleware,
   async (req: Request, res: Response) => {
     if (!mcpHandler) {
