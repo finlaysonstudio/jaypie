@@ -156,7 +156,7 @@ export function NavMenu({ hideMenu, onPageIconClick, pageIcon: PageIcon = Bird }
   const statusStyle = STATUS_STYLES[connectionStatus];
 
   const isAuthenticated = connectionStatus === "authenticated";
-  const isAdmin = permissions.some((p) => p === "admin:*" || p === "*");
+  const isAdmin = permissions.some((p) => p === "admin:*" || p === "system:*" || p === "*");
   const navItems = [
     ...PUBLIC_NAV_ITEMS,
     ...(isAdmin ? ADMIN_NAV_ITEMS : []),
