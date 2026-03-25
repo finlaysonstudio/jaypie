@@ -1,3 +1,4 @@
+import { loadEnvSecrets } from "@jaypie/aws";
 import { initClient } from "@jaypie/dynamodb";
 import { ForbiddenError, UnauthorizedError } from "@jaypie/errors";
 import { createMcpServer } from "@jaypie/mcp";
@@ -18,7 +19,15 @@ const MCP_VERSION = "0.1.0";
 // Auth Middleware
 //
 
-let dynamoInitialized = false;
+let initialized = false;
+
+async function ensureInitialized(): Promise<void> {
+  if (!initialized) {
+    await loadEnvSecrets("PROJECT_SALT");
+    initClient({ endpoint: process.env.DYNAMODB_ENDPOINT });
+    initialized = true;
+  }
+}
 
 async function mcpAuthMiddleware(
   req: Request,
@@ -31,10 +40,7 @@ async function mcpAuthMiddleware(
       throw new UnauthorizedError();
     }
 
-    if (!dynamoInitialized) {
-      initClient({ endpoint: process.env.DYNAMODB_ENDPOINT });
-      dynamoInitialized = true;
-    }
+    await ensureInitialized();
 
     await validateApiKey(token);
     next();
