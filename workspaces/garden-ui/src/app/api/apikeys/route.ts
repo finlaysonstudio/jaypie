@@ -3,7 +3,7 @@ import "@jaypie/garden-models"; // Side-effect: registers all models
 import { generateJaypieKey, hashJaypieKey } from "@jaypie/kit";
 import { log } from "@jaypie/logger";
 
-import { auth0 } from "../../../lib/auth0";
+import { requireAuth } from "../../../lib/requireAuth";
 
 //
 //
@@ -11,8 +11,8 @@ import { auth0 } from "../../../lib/auth0";
 //
 
 export async function GET(): Promise<Response> {
-  const session = await auth0.getSession();
-  if (!session) {
+  const auth = await requireAuth();
+  if (!auth) {
     return Response.json({ errors: [{ detail: "Unauthorized", status: 401, title: "Auth Error" }] }, { status: 401 });
   }
 
@@ -39,8 +39,8 @@ export async function GET(): Promise<Response> {
 }
 
 export async function POST(request: Request): Promise<Response> {
-  const session = await auth0.getSession();
-  if (!session) {
+  const auth = await requireAuth();
+  if (!auth) {
     return Response.json({ errors: [{ detail: "Unauthorized", status: 401, title: "Auth Error" }] }, { status: 401 });
   }
 
@@ -61,7 +61,7 @@ export async function POST(request: Request): Promise<Response> {
     const userEntity = await queryByXid({
       model: "user",
       scope: APEX,
-      xid: session.user.sub,
+      xid: auth.sub,
     });
     if (userEntity) {
       userPermissions = (userEntity as unknown as { permissions?: string[] }).permissions ?? ["registered:*"];
@@ -86,7 +86,7 @@ export async function POST(request: Request): Promise<Response> {
         scope: APEX,
         sequence: Date.now(),
         updatedAt: now,
-        xid: session.user.sub,
+        xid: auth.sub,
       } as import("@jaypie/dynamodb").StorableEntity & { permissions: string[] },
     });
 
