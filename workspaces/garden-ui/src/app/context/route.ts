@@ -31,9 +31,14 @@ interface ContextError {
 
 export async function GET(request: Request): Promise<Response> {
   try {
-    const { auth0 } = await import("../../lib/auth0");
-    const auth0Session = await auth0.getSession();
-    const authenticated = !!auth0Session;
+    const isBypass = process.env.DANGEROUS_BYPASS_AUTHENTICATION === "true";
+
+    let auth0Session: { user?: { email?: string; name?: string; sub?: string } } | null = null;
+    if (!isBypass) {
+      const { auth0 } = await import("../../lib/auth0");
+      auth0Session = await auth0.getSession();
+    }
+    const authenticated = isBypass || !!auth0Session;
 
     // Get garden session hint from cookie and store device ID
     let session: string | undefined;
@@ -59,7 +64,9 @@ export async function GET(request: Request): Promise<Response> {
     }
 
     let permissions: string[] | undefined;
-    if (auth0Session?.user?.sub) {
+    if (isBypass) {
+      permissions = ["registered:*", "system:*"];
+    } else if (auth0Session?.user?.sub) {
       try {
         initClient({ endpoint: process.env.DYNAMODB_ENDPOINT });
         const userEntity = await queryByXid({
@@ -75,13 +82,17 @@ export async function GET(request: Request): Promise<Response> {
       }
     }
 
+    const user = isBypass
+      ? { email: "local@jaypie.local", name: "Local Dev" }
+      : auth0Session?.user
+        ? { email: auth0Session.user.email, name: auth0Session.user.name }
+        : undefined;
+
     const data: ContextData = {
       authenticated,
       ...(permissions ? { permissions } : {}),
       ...(session ? { session } : {}),
-      ...(auth0Session?.user
-        ? { user: { email: auth0Session.user.email, name: auth0Session.user.name } }
-        : {}),
+      ...(user ? { user } : {}),
     };
     return Response.json({ data });
   } catch (error) {

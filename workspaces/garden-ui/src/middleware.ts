@@ -32,8 +32,15 @@ function ensureClient() {
 //
 
 export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+
   // Skip all auth when bypass is enabled (local dev)
   if (process.env.DANGEROUS_BYPASS_AUTHENTICATION === "true") {
+    // Redirect /auth/* routes home — no Auth0 in bypass mode
+    if (pathname.startsWith("/auth")) {
+      return NextResponse.redirect(new URL("/", request.url));
+    }
+
     const response = NextResponse.next();
 
     // Still create garden session on first visit
@@ -68,8 +75,6 @@ export async function middleware(request: NextRequest) {
     });
     throw error;
   }
-
-  const { pathname } = request.nextUrl;
 
   // Let Auth0 handle its own routes without interference
   if (pathname.startsWith("/auth")) {
