@@ -105,7 +105,16 @@ async function createMcpHandler(): Promise<
 
   return async (req: Request, res: Response): Promise<void> => {
     try {
-      await transport.handleRequest(req, res);
+      // Manually collect the raw body — the Lambda adapter's LambdaRequest
+      // stream isn't compatible with Hono's getRequestListener conversion.
+      // Passing parsedBody lets the SDK skip reading from the raw stream.
+      const chunks: Buffer[] = [];
+      for await (const chunk of req) {
+        chunks.push(typeof chunk === "string" ? Buffer.from(chunk) : chunk);
+      }
+      const rawBody = Buffer.concat(chunks).toString("utf8");
+      const parsedBody = rawBody ? JSON.parse(rawBody) : undefined;
+      await transport.handleRequest(req, res, parsedBody);
     } catch (error) {
       if (!res.headersSent) {
         res.status(500).json({
