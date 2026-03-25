@@ -9,6 +9,12 @@ export {
 export type { ValidateResult } from "./apikey/index";
 
 export {
+  GARDEN_INDEXES,
+  GARDEN_MODEL,
+} from "./garden/index";
+export type { GardenEntity } from "./garden/index";
+
+export {
   COOKIE_MAX_AGE,
   COOKIE_NAME,
   SESSION_INDEXES,

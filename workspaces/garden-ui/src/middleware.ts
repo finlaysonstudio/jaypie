@@ -15,7 +15,7 @@ import {
 // Constants
 //
 
-const PROTECTED_PATHS = ["/apikeys", "/colors", "/components", "/dimensions", "/fonts", "/layout", "/records"];
+const PROTECTED_PATHS = ["/apikeys", "/colors", "/components", "/dimensions", "/fonts", "/gardens", "/layout", "/records"];
 
 //
 //
