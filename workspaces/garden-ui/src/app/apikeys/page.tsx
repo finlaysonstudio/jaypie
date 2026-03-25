@@ -1,6 +1,6 @@
 "use client";
 
-import { Copy, CopyCheck, KeySquare, X } from "lucide-react";
+import { Copy, CopyCheck, KeySquare, Trash2, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { NavMenu } from "../NavMenu";
@@ -14,6 +14,7 @@ import styles from "./apikeys.module.css";
 
 interface ApiKeyItem {
   createdAt: string;
+  garden?: string;
   id: string;
   label: string;
   name: string;
@@ -21,10 +22,16 @@ interface ApiKeyItem {
 }
 
 interface CreatedKey {
+  garden?: string;
   key: string;
   label: string;
   name: string;
   permissions: string[];
+}
+
+interface GardenItem {
+  id: string;
+  name: string;
 }
 
 //
@@ -34,16 +41,25 @@ interface CreatedKey {
 
 export default function ApiKeysPage() {
   const [keys, setKeys] = useState<ApiKeyItem[]>([]);
+  const [gardens, setGardens] = useState<GardenItem[]>([]);
   const [creating, setCreating] = useState(false);
   const [copied, setCopied] = useState(false);
   const [createdKey, setCreatedKey] = useState<CreatedKey | null>(null);
   const [name, setName] = useState("");
+  const [garden, setGarden] = useState("");
+
+  const refreshKeys = async () => {
+    const res = await fetch("/api/apikeys");
+    const json = await res.json();
+    if (json.data) setKeys(json.data);
+  };
 
   useEffect(() => {
-    fetch("/api/apikeys")
+    refreshKeys().catch(() => {});
+    fetch("/api/gardens")
       .then((res) => res.json())
       .then((res) => {
-        if (res.data) setKeys(res.data);
+        if (res.data) setGardens(res.data);
       })
       .catch(() => {});
   }, []);
@@ -53,7 +69,10 @@ export default function ApiKeysPage() {
     setCreating(true);
     try {
       const res = await fetch("/api/apikeys", {
-        body: JSON.stringify({ name: name || undefined }),
+        body: JSON.stringify({
+          ...(garden ? { garden } : {}),
+          name: name || undefined,
+        }),
         headers: { "Content-Type": "application/json" },
         method: "POST",
       });
@@ -61,10 +80,8 @@ export default function ApiKeysPage() {
       if (json.data) {
         setCreatedKey(json.data);
         setName("");
-        // Refresh list
-        const listRes = await fetch("/api/apikeys");
-        const listJson = await listRes.json();
-        if (listJson.data) setKeys(listJson.data);
+        setGarden("");
+        await refreshKeys();
       }
     } catch {
       // Best effort
@@ -73,11 +90,27 @@ export default function ApiKeysPage() {
     }
   };
 
+  const handleDelete = async (id: string) => {
+    try {
+      await fetch("/api/apikeys", {
+        body: JSON.stringify({ id }),
+        headers: { "Content-Type": "application/json" },
+        method: "DELETE",
+      });
+      await refreshKeys();
+    } catch {
+      // Best effort
+    }
+  };
+
   const handleCopy = async (text: string) => {
     await navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
   };
+
+  const gardenName = (gardenId: string) =>
+    gardens.find((g) => g.id === gardenId)?.name ?? gardenId.slice(0, 8);
 
   return (
     <div className={styles.page}>
@@ -95,6 +128,20 @@ export default function ApiKeysPage() {
           type="text"
           value={name}
         />
+        {gardens.length > 0 && (
+          <select
+            className={styles.gardenSelect}
+            onChange={(e) => setGarden(e.target.value)}
+            value={garden}
+          >
+            <option value="">No garden</option>
+            {gardens.map((g) => (
+              <option key={g.id} value={g.id}>
+                {g.name}
+              </option>
+            ))}
+          </select>
+        )}
         <button
           className={styles.createButton}
           disabled={creating}
@@ -144,6 +191,7 @@ export default function ApiKeysPage() {
               <span className={styles.keyName}>{item.name}</span>
               <span className={styles.keyMeta}>
                 xxxxxxxx_{item.label} &middot; {new Date(item.createdAt).toLocaleDateString()}
+                {item.garden ? ` · ${gardenName(item.garden)}` : ""}
               </span>
               {item.permissions.length > 0 && (
                 <span className={styles.keyMeta}>
@@ -151,6 +199,14 @@ export default function ApiKeysPage() {
                 </span>
               )}
             </div>
+            <button
+              className={styles.deleteButton}
+              onClick={() => handleDelete(item.id)}
+              title="Delete key"
+              type="button"
+            >
+              <Trash2 size={14} />
+            </button>
           </div>
         ))}
       </div>

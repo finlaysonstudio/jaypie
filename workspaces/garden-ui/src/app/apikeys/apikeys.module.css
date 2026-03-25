@@ -48,6 +48,21 @@
   border-color: var(--text-muted);
 }
 
+.gardenSelect {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  font-size: 0.8125rem;
+  outline: none;
+  padding: 8px 12px;
+}
+
+.gardenSelect:focus {
+  border-color: var(--text-muted);
+}
+
 .createButton {
   background: var(--bg-secondary);
   border: 1px solid transparent;
@@ -155,6 +170,20 @@
   display: flex;
   gap: 12px;
   padding: 10px 0;
+}
+
+.deleteButton {
+  background: none;
+  border: none;
+  color: var(--text-subtle);
+  cursor: pointer;
+  flex-shrink: 0;
+  padding: 4px;
+  transition: color 0.15s ease;
+}
+
+.deleteButton:hover {
+  color: #e06c75;
 }
 
 .keyIcon {
