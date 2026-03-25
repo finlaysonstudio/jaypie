@@ -72,7 +72,7 @@ function createGardenMcpServer(): McpServer {
     "Prints the current version and hash",
     {},
     async () => {
-      const commit = process.env.PROJECT_COMMIT || "unknown";
+      const commit = (process.env.PROJECT_COMMIT || "unknown").slice(0, 8);
       return {
         content: [
           {
