@@ -95,9 +95,14 @@ async function validateApiKey(token: string): Promise<ValidateResult> {
 
 function extractToken(authorization: string | undefined): string | undefined {
   if (!authorization) return undefined;
-  const parts = authorization.split(" ");
+  const trimmed = authorization.trim();
+  // Accept "Bearer <token>" or just "<token>"
+  const parts = trimmed.split(" ");
   if (parts.length === 2 && parts[0].toLowerCase() === "bearer") {
     return parts[1];
+  }
+  if (parts.length === 1) {
+    return parts[0];
   }
   return undefined;
 }
