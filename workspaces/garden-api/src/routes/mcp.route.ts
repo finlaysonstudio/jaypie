@@ -2,7 +2,8 @@ import { loadEnvSecrets } from "@jaypie/aws";
 import { initClient } from "@jaypie/dynamodb";
 import { ForbiddenError, UnauthorizedError } from "@jaypie/errors";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
+import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
+import type { JSONRPCMessage } from "@modelcontextprotocol/sdk/types.js";
 import type { NextFunction, Request, Response } from "express";
 
 import { extractToken, validateApiKey } from "../apikey/index.js";
@@ -91,35 +92,53 @@ function createGardenMcpServer(): McpServer {
 // MCP Handler
 //
 
+// Use InMemoryTransport to bridge JSON-RPC messages to the McpServer.
+// StreamableHTTPServerTransport uses Hono's getRequestListener which is
+// incompatible with Lambda's custom LambdaResponseStreaming adapter.
 async function createMcpHandler(): Promise<
   (req: Request, res: Response) => Promise<void>
 > {
   const server = createGardenMcpServer();
+  const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
 
-  const transport = new StreamableHTTPServerTransport({
-    enableJsonResponse: true,
-    sessionIdGenerator: undefined, // Stateless — no sessions in Lambda
-  });
-
-  await server.connect(transport);
+  await server.connect(serverTransport);
 
   return async (req: Request, res: Response): Promise<void> => {
     try {
-      // Manually collect the raw body — the Lambda adapter's LambdaRequest
-      // stream isn't compatible with Hono's getRequestListener conversion.
-      // Passing parsedBody lets the SDK skip reading from the raw stream.
+      // Collect body from Lambda request stream
       const chunks: Buffer[] = [];
       for await (const chunk of req) {
         chunks.push(typeof chunk === "string" ? Buffer.from(chunk) : chunk);
       }
       const rawBody = Buffer.concat(chunks).toString("utf8");
-      const parsedBody = rawBody ? JSON.parse(rawBody) : undefined;
-      await transport.handleRequest(req, res, parsedBody);
+      const message: JSONRPCMessage = JSON.parse(rawBody);
+
+      // Collect response from server
+      const responsePromise = new Promise<JSONRPCMessage>((resolve) => {
+        const originalOnMessage = clientTransport.onmessage;
+        clientTransport.onmessage = (response: JSONRPCMessage) => {
+          // Restore original handler
+          clientTransport.onmessage = originalOnMessage;
+          resolve(response);
+        };
+      });
+
+      // Send message and wait for response
+      await clientTransport.send(message);
+      const response = await responsePromise;
+
+      res.setHeader("Content-Type", "application/json");
+      res.status(200).json(response);
     } catch (error) {
       if (!res.headersSent) {
-        res.status(500).json({
-          error: "Internal server error",
-          message: error instanceof Error ? error.message : "Unknown error",
+        res.status(400).json({
+          error: {
+            code: -32700,
+            message: "Parse error",
+            data: error instanceof Error ? error.message : String(error),
+          },
+          id: null,
+          jsonrpc: "2.0",
         });
       }
     }
