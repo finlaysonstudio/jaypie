@@ -1,6 +1,6 @@
 {
   "name": "@jaypie/garden-api",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "private": true,
   "description": "Jaypie Garden streaming API",
   "license": "MIT",
@@ -20,7 +20,7 @@
     "@codegenie/serverless-express": "^4.17.1",
     "@jaypie/dynamodb": "^0.4.1",
     "@jaypie/errors": "^1.2.1",
-    "@jaypie/garden-models": "^0.0.1",
+    "@jaypie/garden-models": "^0.1.0",
     "@jaypie/tildeskill": "^0.2.0",
     "@modelcontextprotocol/sdk": "^1.27.1",
     "express": "^4.22.1",

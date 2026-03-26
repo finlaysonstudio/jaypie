@@ -9,6 +9,19 @@ export {
 export type { ValidateResult } from "./apikey/index";
 
 export {
+  EDGE_CATEGORIES,
+  EDGE_INDEXES,
+  EDGE_MODEL,
+} from "./edge/index";
+export type { EdgeCategory, EdgeEntity } from "./edge/index";
+
+export {
+  ENTITY_INDEXES,
+  ENTITY_MODEL,
+} from "./entity/index";
+export type { EntityEntity } from "./entity/index";
+
+export {
   GARDEN_INDEXES,
   GARDEN_MODEL,
 } from "./garden/index";
@@ -26,6 +39,13 @@ export {
   NOTE_MODEL,
 } from "./note/index";
 export type { NoteEntity } from "./note/index";
+
+export {
+  TASK_CATEGORIES,
+  TASK_INDEXES,
+  TASK_MODEL,
+} from "./task/index";
+export type { TaskCategory, TaskEntity } from "./task/index";
 
 export {
   COOKIE_MAX_AGE,

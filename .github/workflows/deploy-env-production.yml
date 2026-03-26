@@ -1,6 +1,11 @@
 name: Build Stacks to Production
 
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'workspaces/**'
   workflow_dispatch:
 
 concurrency:
