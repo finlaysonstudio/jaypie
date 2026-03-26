@@ -17,6 +17,14 @@ garden-models/
 │   │   ├── model.ts       # Model registration + indexes
 │   │   ├── types.ts       # ValidateResult
 │   │   └── validate.ts    # validateApiKey, extractToken
+│   ├── edge/
+│   │   ├── index.ts       # Barrel
+│   │   ├── model.ts       # Model registration + indexes
+│   │   └── types.ts       # EdgeCategory, EdgeEntity
+│   ├── entity/
+│   │   ├── index.ts       # Barrel
+│   │   ├── model.ts       # Model registration + indexes
+│   │   └── types.ts       # EntityEntity
 │   ├── note/
 │   │   ├── index.ts       # Barrel
 │   │   ├── model.ts       # Model registration + indexes
@@ -42,6 +50,8 @@ garden-models/
 | Model | Vocabulary | Description |
 |-------|-----------|-------------|
 | apikey | alias (hash), label, name, permissions, scope | API key entities with format validation and DynamoDB lookup |
+| edge | alias (target), category, scope, source, target, xid (source) | Graph edges connecting entities; category is relationship type |
+| entity | alias, category, content, scope, xid | Lightweight placeholder nodes for entities without a dedicated model |
 | note | alias, content, name, scope, xid | Textual notes scoped to a garden, subject referenced via xid |
 | session | alias (hash), events, scope, xid | Device session tracking with history events |
 | task | alias, category, content, scope, xid | Task tracking with workflow state (active, backlog, blocked, done) |
@@ -52,6 +62,8 @@ garden-models/
 ### Constants
 - `APIKEY_MODEL`, `APIKEY_INDEXES` - apikey model name and index definitions
 - `COOKIE_MAX_AGE`, `COOKIE_NAME`, `SESSION_MODEL`, `SESSION_PREFIX`, `SESSION_INDEXES` - session constants
+- `EDGE_CATEGORIES`, `EDGE_MODEL`, `EDGE_INDEXES` - edge constants and index definitions
+- `ENTITY_MODEL`, `ENTITY_INDEXES` - entity model name and index definitions
 - `NOTE_MODEL`, `NOTE_INDEXES` - note model name and index definitions
 - `TASK_CATEGORIES`, `TASK_MODEL`, `TASK_INDEXES` - task constants
 - `DEFAULT_PERMISSIONS`, `USER_MODEL`, `USER_INDEXES` - user constants
@@ -66,6 +78,8 @@ garden-models/
 
 ### Types
 - `ValidateResult` - apikey validation response shape
+- `EdgeCategory`, `EdgeEntity` - edge model types
+- `EntityEntity` - entity model type
 - `HistoryEvent`, `SessionEntity` - session model types
 - `NoteEntity` - note model type
 - `TaskCategory`, `TaskEntity` - task model types
