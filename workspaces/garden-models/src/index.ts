@@ -22,6 +22,12 @@ export {
 export type { JournalCategory, JournalEntity } from "./journal/index";
 
 export {
+  NOTE_INDEXES,
+  NOTE_MODEL,
+} from "./note/index";
+export type { NoteEntity } from "./note/index";
+
+export {
   COOKIE_MAX_AGE,
   COOKIE_NAME,
   SESSION_INDEXES,

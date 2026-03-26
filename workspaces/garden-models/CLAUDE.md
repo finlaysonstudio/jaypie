@@ -17,6 +17,10 @@ garden-models/
 │   │   ├── model.ts       # Model registration + indexes
 │   │   ├── types.ts       # ValidateResult
 │   │   └── validate.ts    # validateApiKey, extractToken
+│   ├── note/
+│   │   ├── index.ts       # Barrel
+│   │   ├── model.ts       # Model registration + indexes
+│   │   └── types.ts       # NoteEntity
 │   ├── session/
 │   │   ├── index.ts       # Barrel
 │   │   ├── model.ts       # Model registration + indexes + constants
@@ -34,6 +38,7 @@ garden-models/
 | Model | Vocabulary | Description |
 |-------|-----------|-------------|
 | apikey | alias (hash), label, name, permissions, scope | API key entities with format validation and DynamoDB lookup |
+| note | alias, content, name, scope, xid | Textual notes scoped to a garden, subject referenced via xid |
 | session | alias (hash), events, scope, xid | Device session tracking with history events |
 | user | alias (email), permissions, scope, xid (auth0 sub) | User entities with Auth0 integration |
 
@@ -42,6 +47,7 @@ garden-models/
 ### Constants
 - `APIKEY_MODEL`, `APIKEY_INDEXES` - apikey model name and index definitions
 - `COOKIE_MAX_AGE`, `COOKIE_NAME`, `SESSION_MODEL`, `SESSION_PREFIX`, `SESSION_INDEXES` - session constants
+- `NOTE_MODEL`, `NOTE_INDEXES` - note model name and index definitions
 - `DEFAULT_PERMISSIONS`, `USER_MODEL`, `USER_INDEXES` - user constants
 - `GARDEN_KEY_OPTIONS` - `{ issuer: "jaypie" }` for key validation
 
@@ -55,6 +61,7 @@ garden-models/
 ### Types
 - `ValidateResult` - apikey validation response shape
 - `HistoryEvent`, `SessionEntity` - session model types
+- `NoteEntity` - note model type
 - `UpsertUserInput`, `UserEntity` - user model types
 
 ## Commands
