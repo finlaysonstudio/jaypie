@@ -1546,4 +1546,105 @@ describe("StreamLoop", () => {
       expect(mockAdapter.executeStreamRequest).toHaveBeenCalledTimes(1);
     });
   });
+
+  describe("Tool Error Handling (Issue #242)", () => {
+    it("adds tool_result to history when tool call throws, preventing orphaned tool_use", async () => {
+      const failingToolFn = vi.fn(() => {
+        throw new Error("DynamoDB connection failed");
+      });
+      const toolkit = new Toolkit([
+        {
+          name: "failing_tool",
+          description: "A tool that throws",
+          parameters: { type: "object" },
+          type: "function",
+          call: failingToolFn,
+        },
+      ]);
+
+      let callCount = 0;
+      mockAdapter.executeStreamRequest = vi.fn(
+        async function* (): AsyncIterable<LlmStreamChunk> {
+          callCount++;
+          if (callCount === 1) {
+            // First turn: request tool call
+            yield {
+              type: LlmStreamChunkType.ToolCall,
+              toolCall: {
+                id: "call-fail-1",
+                name: "failing_tool",
+                arguments: "{}",
+              },
+            };
+            yield {
+              type: LlmStreamChunkType.Done,
+              usage: [
+                {
+                  input: 10,
+                  output: 5,
+                  reasoning: 0,
+                  total: 15,
+                  provider: "mock",
+                  model: "mock-model",
+                },
+              ],
+            };
+          } else {
+            // Second turn: LLM handles the error gracefully
+            yield {
+              type: LlmStreamChunkType.Text,
+              content: "Sorry, the tool failed.",
+            };
+            yield {
+              type: LlmStreamChunkType.Done,
+              usage: [
+                {
+                  input: 20,
+                  output: 10,
+                  reasoning: 0,
+                  total: 30,
+                  provider: "mock",
+                  model: "mock-model",
+                },
+              ],
+            };
+          }
+        },
+      );
+
+      const loop = new StreamLoop({
+        adapter: mockAdapter,
+        client: mockClient,
+      });
+
+      const chunks = await collectChunks(
+        loop.execute("Use the tool", { tools: toolkit, turns: 3 }),
+      );
+
+      // Verify the tool was called
+      expect(failingToolFn).toHaveBeenCalled();
+
+      // Verify we got an error chunk
+      const errorChunks = chunks.filter(
+        (c) => c.type === LlmStreamChunkType.Error,
+      );
+      expect(errorChunks).toHaveLength(1);
+
+      // Verify the conversation continued to a second turn
+      expect(mockAdapter.executeStreamRequest).toHaveBeenCalledTimes(2);
+
+      // Verify the second call's request contains a FunctionCallOutput for the failed tool
+      // buildRequest is called with the OperateRequest which has the messages array
+      // This is the critical assertion: the request messages must include a tool_result
+      // to match the tool_use, otherwise Anthropic API rejects with 400
+      const secondBuildRequestCall = mockAdapter.buildRequest.mock.calls[1][0];
+      const toolResultInHistory = secondBuildRequestCall.messages.find(
+        (msg: { type: string; call_id?: string }) =>
+          msg.type === LlmMessageType.FunctionCallOutput &&
+          msg.call_id === "call-fail-1",
+      );
+      expect(toolResultInHistory).toBeDefined();
+      expect(toolResultInHistory.output).toContain("DynamoDB connection failed");
+    });
+  });
 });
