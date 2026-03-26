@@ -18,10 +18,6 @@ packages/mcp/
 │   ├── suite.ts              # ServiceSuite registration (simplified)
 │   ├── mcpExpressHandler.ts  # Express middleware for HTTP transport
 │   └── suites/               # Modular suite implementations
-│       ├── aws/
-│       │   ├── index.ts      # Unified aws service
-│       │   ├── help.md       # AWS help documentation
-│       │   └── aws.ts        # AWS CLI functions
 │       ├── datadog/
 │       │   ├── index.ts      # Unified datadog service
 │       │   ├── help.md       # Datadog help documentation
@@ -46,14 +42,14 @@ import { createMcpServer, mcpExpressHandler } from "@jaypie/mcp";
 import type { CreateMcpServerOptions, McpExpressHandlerOptions } from "@jaypie/mcp";
 ```
 
-## MCP Tools (6 Unified Tools)
+## MCP Tools (4 Unified Tools)
 
-The MCP server provides 6 consolidated router-style tools (down from 26 individual tools):
+The MCP server provides 4 unified router-style tools:
 
 ### Documentation Tools
 - **`skill`** - Access Jaypie development documentation
   - `skill("index")` or `skill()` - List all available skills
-  - `skill("aws")`, `skill("tests")` - Get specific documentation
+  - `skill("tests")` - Get specific documentation
 
 - **`version`** - Returns package version string
 
@@ -63,15 +59,6 @@ The MCP server provides 6 consolidated router-style tools (down from 26 individu
   - `release_notes("list", { package: "mcp" })` - Filter by package
   - `release_notes("read", { package: "mcp", version: "0.5.0" })` - Read specific note
 
-### AWS Tool (requires AWS CLI installed)
-- **`aws`** - Access AWS services via CLI
-  - `aws()` or `aws("help")` - Show help with all commands
-  - `aws("list_profiles")` - List AWS profiles
-  - `aws("lambda_list_functions", { region: "us-east-1" })` - Lambda operations
-  - `aws("dynamodb_query", { tableName: "...", keyConditionExpression: "..." })` - DynamoDB
-
-  **Commands**: `list_profiles`, `lambda_list_functions`, `lambda_get_function`, `stepfunctions_list_executions`, `stepfunctions_stop_execution`, `logs_filter_log_events`, `s3_list_objects`, `cloudformation_describe_stack`, `dynamodb_describe_table`, `dynamodb_scan`, `dynamodb_query`, `dynamodb_get_item`, `sqs_list_queues`, `sqs_get_queue_attributes`, `sqs_receive_message`, `sqs_purge_queue`
-
 ### Datadog Tool (requires DATADOG_API_KEY and DATADOG_APP_KEY)
 - **`datadog`** - Access Datadog observability data
   - `datadog()` or `datadog("help")` - Show help
@@ -80,14 +67,6 @@ The MCP server provides 6 consolidated router-style tools (down from 26 individu
   - `datadog("monitors", { status: ["Alert"] })` - List monitors
 
   **Commands**: `logs`, `log_analytics`, `monitors`, `synthetics`, `metrics`, `rum`
-
-### LLM Tool
-- **`llm`** - Debug LLM provider responses
-  - `llm()` or `llm("help")` - Show help
-  - `llm("list_providers")` - List available providers
-  - `llm("debug_call", { provider: "openai", message: "Hello" })` - Test API call
-
-  **Commands**: `list_providers`, `debug_call`
 
 ## Usage Patterns
 
@@ -172,12 +151,6 @@ When adding release notes:
 
 ## Environment Variables
 
-### AWS CLI Integration
-| Variable | Description |
-|----------|-------------|
-| `AWS_PROFILE` | Default profile if not specified per-call |
-| `AWS_REGION` or `AWS_DEFAULT_REGION` | Default region if not specified |
-
 ### Datadog Integration
 | Variable | Description |
 |----------|-------------|
@@ -186,15 +159,6 @@ When adding release notes:
 | `DD_ENV` | Default environment filter |
 | `DD_SERVICE` | Default service filter |
 | `DD_SOURCE` | Default log source (defaults to "lambda") |
-
-### LLM Integration
-| Variable | Description |
-|----------|-------------|
-| `OPENAI_API_KEY` | OpenAI API key |
-| `ANTHROPIC_API_KEY` | Anthropic API key |
-| `GOOGLE_API_KEY` | Google/Gemini API key |
-| `OPENROUTER_API_KEY` | OpenRouter API key |
-| `XAI_API_KEY` | xAI (Grok) API key |
 
 ## Build Configuration
 
@@ -225,9 +189,7 @@ The MCP server uses `@jaypie/fabric`'s ServiceSuite pattern with modular organiz
 ```
 suite.ts (simplified registration)
     └── suites/
-        ├── aws/index.ts      → awsService (16 commands)
         ├── datadog/index.ts  → datadogService (6 commands)
-        ├── llm/index.ts      → llmService (2 commands)
         └── docs/index.ts     → skillService, versionService, releaseNotesService
 ```
 
@@ -239,5 +201,5 @@ Each suite directory contains:
 This architecture enables:
 - **Progressive disclosure** - Tools return help when no command is provided
 - **Modular organization** - Each domain is self-contained
-- **Reduced tool count** - 26 tools → 6 tools (cleaner MCP interface)
+- **Reduced tool count** - Consolidated into 4 unified tools
 - **Testability** - Implementation functions tested independently

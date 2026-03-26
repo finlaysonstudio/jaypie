@@ -1,6 +1,6 @@
 ---
 description: Jaypie MCP server tools reference
-related: mcp-aws, mcp-datadog, mcp-dynamodb, mcp-llm, debugging
+related: mcp-datadog, debugging
 ---
 
 # Jaypie MCP
@@ -32,30 +32,6 @@ release_notes("list", { package: "mcp" })          # Filter by package
 release_notes("read", { package: "mcp", version: "0.5.0" })  # Read specific note
 ```
 
-## AWS Tool
-
-Unified tool for Lambda, S3, SQS, CloudWatch Logs, Step Functions, CloudFormation, and DynamoDB.
-
-See **mcp-aws** for complete documentation.
-
-```
-aws()                   # Show help with all commands
-aws("list_profiles")    # List AWS profiles
-aws("lambda_list_functions", { region: "us-east-1" })
-aws("dynamodb_query", { tableName: "...", keyConditionExpression: "..." })
-```
-
-| Command | Description |
-|---------|-------------|
-| `list_profiles` | List AWS profiles from ~/.aws |
-| `lambda_list_functions`, `lambda_get_function` | Lambda management |
-| `logs_filter_log_events` | CloudWatch Logs search |
-| `s3_list_objects` | S3 bucket operations |
-| `sqs_list_queues`, `sqs_get_queue_attributes`, `sqs_receive_message`, `sqs_purge_queue` | SQS operations |
-| `stepfunctions_list_executions`, `stepfunctions_stop_execution` | Step Functions |
-| `cloudformation_describe_stack` | CloudFormation stack details |
-| `dynamodb_describe_table`, `dynamodb_query`, `dynamodb_scan`, `dynamodb_get_item` | DynamoDB |
-
 ## Datadog Tool
 
 Unified tool for logs, monitors, metrics, synthetics, and RUM.
@@ -77,28 +53,7 @@ datadog("monitors", { status: ["Alert", "Warn"] })
 | `metrics` | Query timeseries metrics |
 | `rum` | Search RUM events |
 
-## LLM Tool
-
-Debug and inspect LLM provider responses.
-
-See **mcp-llm** for complete documentation.
-
-```
-llm()                   # Show help
-llm("list_providers")   # List available LLM providers
-llm("debug_call", { provider: "openai", message: "Hello" })
-```
-
-| Command | Description |
-|---------|-------------|
-| `list_providers` | List available LLM providers |
-| `debug_call` | Debug LLM API call |
-
 ## Environment Variables
-
-### AWS Tools
-- `AWS_PROFILE` - Default profile
-- `AWS_REGION` - Default region
 
 ### Datadog Tools
 - `DATADOG_API_KEY` or `DD_API_KEY` - API key
@@ -106,10 +61,3 @@ llm("debug_call", { provider: "openai", message: "Hello" })
 - `DD_ENV` - Default environment filter
 - `DD_SERVICE` - Default service filter
 - `DD_SOURCE` - Default log source
-
-### LLM Tools
-- `OPENAI_API_KEY` - OpenAI API key
-- `ANTHROPIC_API_KEY` - Anthropic API key
-- `GOOGLE_API_KEY` - Google/Gemini API key
-- `OPENROUTER_API_KEY` - OpenRouter API key
-

@@ -1,6 +1,6 @@
 ---
 description: Using @jaypie/llm for unified LLM access
-related: fabric, streaming, tests, tools, mcp-llm
+related: fabric, streaming, tests, tools
 ---
 
 # @jaypie/llm

@@ -20,10 +20,8 @@ export default {
   input: [
     "src/index.ts",
     "src/suite.ts",
-    "src/suites/aws/index.ts",
     "src/suites/datadog/index.ts",
     "src/suites/docs/index.ts",
-    "src/suites/llm/index.ts",
   ],
   onwarn,
   output: {
@@ -47,9 +45,7 @@ export default {
     }),
     copy({
       targets: [
-        { src: "src/suites/aws/help.md", dest: "dist/suites/aws" },
         { src: "src/suites/datadog/help.md", dest: "dist/suites/datadog" },
-        { src: "src/suites/llm/help.md", dest: "dist/suites/llm" },
         {
           src: "src/suites/docs/release-notes/help.md",
           dest: "dist/suites/docs/release-notes",
@@ -61,7 +57,6 @@ export default {
     "@jaypie/errors",
     "@jaypie/fabric",
     "@jaypie/fabric/mcp",
-    "@jaypie/llm",
     "@jaypie/tildeskill",
     "@modelcontextprotocol/sdk/server/mcp.js",
     "@modelcontextprotocol/sdk/server/stdio.js",

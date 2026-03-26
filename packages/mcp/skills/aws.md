@@ -1,16 +1,12 @@
 ---
 description: AWS integration and cloud services code patterns
-related: cdk, dynamodb, mcp-aws, secrets, logs
+related: cdk, dynamodb, secrets, logs
 ---
 
 # AWS Integration
 
 Jaypie integrates with AWS services through the `@jaypie/aws` package and CDK constructs.
 Access `@jaypie/aws` through the main `jaypie` package.
-
-## MCP Tools
-
-For interactive AWS tools (Lambda, S3, SQS, CloudWatch, Step Functions, CloudFormation), see **mcp-aws**.
 
 ## @jaypie/aws Package
 
@@ -284,4 +280,3 @@ describe("Handler", () => {
 - **`skill("dynamodb")`** - DynamoDB key design and query patterns
 - **`skill("lambda")`** - Lambda handler wrappers with secrets loading
 - **`skill("secrets")`** - Secret management with JaypieEnvSecret
-- **`skill("mcp-aws")`** - AWS via the Jaypie MCP
