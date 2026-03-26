@@ -15,6 +15,13 @@ export {
 export type { GardenEntity } from "./garden/index";
 
 export {
+  JOURNAL_CATEGORIES,
+  JOURNAL_INDEXES,
+  JOURNAL_MODEL,
+} from "./journal/index";
+export type { JournalCategory, JournalEntity } from "./journal/index";
+
+export {
   COOKIE_MAX_AGE,
   COOKIE_NAME,
   SESSION_INDEXES,

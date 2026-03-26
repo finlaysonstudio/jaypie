@@ -39,6 +39,7 @@ async function validateApiKey(token: string): Promise<ValidateResult> {
     log.trace("API key found in database");
     const record = entity as unknown as {
       createdAt?: string;
+      garden?: string;
       id?: string;
       label?: string;
       name?: string;
@@ -47,6 +48,7 @@ async function validateApiKey(token: string): Promise<ValidateResult> {
     };
     return {
       createdAt: record.createdAt ?? "",
+      garden: record.garden,
       id: record.id ?? "",
       label: record.label ?? "",
       name: record.name ?? "",

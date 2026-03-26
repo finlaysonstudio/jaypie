@@ -1,5 +1,6 @@
 interface ValidateResult {
   createdAt: string;
+  garden?: string;
   id: string;
   label: string;
   name: string;
