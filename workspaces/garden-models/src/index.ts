@@ -28,6 +28,13 @@ export {
 export type { NoteEntity } from "./note/index";
 
 export {
+  TASK_CATEGORIES,
+  TASK_INDEXES,
+  TASK_MODEL,
+} from "./task/index";
+export type { TaskCategory, TaskEntity } from "./task/index";
+
+export {
   COOKIE_MAX_AGE,
   COOKIE_NAME,
   SESSION_INDEXES,
