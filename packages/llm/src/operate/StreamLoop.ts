@@ -504,6 +504,19 @@ export class StreamLoop {
           },
         };
 
+        // Add error tool_result to history so the tool_use block is not orphaned.
+        // Without this, the next turn's request would have a tool_use without a
+        // matching tool_result, causing Anthropic API to reject with 400.
+        const errorOutput = JSON.stringify({
+          error: (error as Error).message || "Tool execution failed",
+        });
+        state.currentInput.push({
+          type: LlmMessageType.FunctionCallOutput,
+          output: errorOutput,
+          call_id: toolCall.callId,
+          name: toolCall.name,
+        } as LlmToolResult & { name: string });
+
         log.error(`Error executing function call ${toolCall.name}`);
         log.var({ error });
       }

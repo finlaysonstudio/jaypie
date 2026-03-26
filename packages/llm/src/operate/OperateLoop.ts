@@ -33,6 +33,7 @@ import {
   OperateLoopState,
   OperateRequest,
   ProviderToolDefinition,
+  StandardToolResult,
 } from "./types.js";
 
 //
@@ -418,6 +419,25 @@ export class OperateLoop {
               status: jaypieError.status,
               title: ERROR.BAD_FUNCTION_CALL,
             });
+
+            // Add error tool_result to history so the tool_use block is not orphaned.
+            // Without this, the next turn's request would have a tool_use without a
+            // matching tool_result, causing Anthropic API to reject with 400.
+            const errorResult: StandardToolResult = {
+              callId: toolCall.callId,
+              output: JSON.stringify({
+                error: (error as Error).message || "Tool execution failed",
+              }),
+              success: false,
+              error: (error as Error).message,
+            };
+            const toolResultFormatted = this.adapter.formatToolResult(
+              toolCall,
+              errorResult,
+            );
+            state.responseBuilder.appendToHistory(
+              toolResultFormatted as LlmInputMessage,
+            );
 
             log.error(`Error executing function call ${toolCall.name}`);
             log.var({ error });
