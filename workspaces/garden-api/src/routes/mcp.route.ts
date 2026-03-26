@@ -7,6 +7,7 @@ import {
   putEntity,
   queryByCategory,
   queryByScope,
+  queryByXid,
   updateEntity,
 } from "@jaypie/dynamodb";
 import {
@@ -19,9 +20,10 @@ import {
   hasPermission,
   JOURNAL_CATEGORIES,
   JOURNAL_MODEL,
+  NOTE_MODEL,
   validateApiKey,
 } from "@jaypie/garden-models";
-import type { JournalCategory, JournalEntity } from "@jaypie/garden-models";
+import type { JournalCategory, JournalEntity, NoteEntity } from "@jaypie/garden-models";
 import { log } from "@jaypie/logger";
 import {
   createMarkdownStore,
@@ -153,7 +155,73 @@ function formatSkillListItem(skill: SkillRecord): string {
   return description ? `* ${alias} - ${description}` : `* ${alias}`;
 }
 
-async function handleSkillRequest(alias?: string): Promise<string> {
+function buildSkillXid(skillAlias: string): string {
+  return `skill:${skillAlias}`;
+}
+
+async function findSkillNote(scope: string, skillAlias: string): Promise<NoteEntity | null> {
+  const xid = buildSkillXid(skillAlias);
+  const result = await queryByXid({ model: NOTE_MODEL, scope, xid });
+  return (result as NoteEntity) ?? null;
+}
+
+async function handleSkillNote({
+  alias,
+  note,
+  scope,
+}: {
+  alias: string;
+  note: string | false;
+  scope: string;
+}): Promise<{ deleted: string } | { created: string } | { updated: string }> {
+  const xid = buildSkillXid(alias);
+  const existing = await findSkillNote(scope, alias);
+
+  if (note === false) {
+    if (existing) {
+      await deleteEntity({ id: existing.id, model: NOTE_MODEL });
+      log.trace("Skill note deleted", { alias, id: existing.id });
+      return { deleted: existing.id };
+    }
+    return { deleted: "none" };
+  }
+
+  if (existing) {
+    const updated = {
+      ...existing,
+      content: note,
+      updatedAt: new Date().toISOString(),
+    };
+    await updateEntity({ entity: updated });
+    log.trace("Skill note updated", { alias, id: existing.id });
+    return { updated: existing.id };
+  }
+
+  const now = new Date().toISOString();
+  const id = crypto.randomUUID();
+  const entity = {
+    content: note,
+    createdAt: now,
+    id,
+    model: NOTE_MODEL,
+    name: `skill:${alias}`,
+    scope,
+    sequence: Date.now(),
+    updatedAt: now,
+    xid,
+  };
+  await putEntity({ entity });
+  log.trace("Skill note created", { alias, id });
+  return { created: id };
+}
+
+async function handleSkillRequest({
+  alias,
+  note,
+}: {
+  alias?: string;
+  note?: string | false;
+}): Promise<string> {
   const normalized = normalizeAlias(alias || "index");
 
   if (!isValidAlias(normalized)) {
@@ -162,18 +230,20 @@ async function handleSkillRequest(alias?: string): Promise<string> {
     );
   }
 
+  // Note operations require a garden scope
+  if (note !== undefined) {
+    const scope = getGardenScope();
+    const result = await handleSkillNote({ alias: normalized, note, scope });
+    return JSON.stringify(result, null, 2);
+  }
+
   if (normalized === "index") {
-    const indexRecord = await skillStore.get("index");
-    const indexContent = indexRecord?.content || "";
     const allSkills = await skillStore.list();
     const skills = allSkills.filter(
       (s: { alias: string }) => s.alias !== "index",
     );
     const skillList = skills.map(formatSkillListItem).join("\n");
-    if (indexContent) {
-      return `${indexContent}\n\n## Available Skills\n\n${skillList}`;
-    }
-    return `# Jaypie Skills\n\n## Available Skills\n\n${skillList}`;
+    return `# Index of Skills\n\n${skillList}`;
   }
 
   let skill = await skillStore.get(normalized);
@@ -191,6 +261,16 @@ async function handleSkillRequest(alias?: string): Promise<string> {
   }
 
   if (!skill) {
+    // No skill found — check for user notes before throwing
+    try {
+      const scope = getGardenScope();
+      const skillNote = await findSkillNote(scope, normalized);
+      if (skillNote) {
+        return `<UserNotes>\n${skillNote.content}\n</UserNotes>`;
+      }
+    } catch {
+      // No garden context — skip note lookup
+    }
     throw new Error(
       `Skill "${normalized}" not found. Use skill("index") to list available skills.`,
     );
@@ -201,6 +281,17 @@ async function handleSkillRequest(alias?: string): Promise<string> {
 
   if (matchedAlias !== normalized) {
     content = addAliasToFrontmatter(content, matchedAlias);
+  }
+
+  // Append user note if one exists for this skill
+  try {
+    const scope = getGardenScope();
+    const skillNote = await findSkillNote(scope, matchedAlias);
+    if (skillNote) {
+      content += `\n---\n<UserNotes>\n${skillNote.content}\n</UserNotes>`;
+    }
+  } catch {
+    // No garden context — skip note lookup
   }
 
   return content;
@@ -424,10 +515,13 @@ function createGardenMcpServer(): McpServer {
 
   server.tool(
     "skill",
-    "Access Jaypie development documentation. Pass a skill alias (e.g., 'aws', 'tests', 'errors') to get that documentation. Pass 'index' or no argument to list all available skills.",
-    { alias: z.string().optional().describe("Skill alias (e.g., 'aws', 'tests'). Omit or use 'index' to list all skills.") },
-    async ({ alias }) => {
-      const text = await handleSkillRequest(alias);
+    "Access Jaypie development documentation. Pass a skill alias (e.g., 'aws', 'tests', 'errors') to get that documentation. Pass 'index' or no argument to list all available skills. Use 'note' to add/update/delete a user note on a skill.",
+    {
+      alias: z.string().optional().describe("Skill alias (e.g., 'aws', 'tests'). Omit or use 'index' to list all skills."),
+      note: z.union([z.string(), z.literal(false)]).optional().describe("String to create/update a note on the skill, or false to delete an existing note."),
+    },
+    async ({ alias, note }) => {
+      const text = await handleSkillRequest({ alias, note });
       return { content: [{ text, type: "text" as const }] };
     },
   );
