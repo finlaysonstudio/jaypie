@@ -1,10 +1,20 @@
 import { loadEnvSecrets } from "@jaypie/aws";
 import { initClient } from "@jaypie/dynamodb";
 import { ForbiddenError, UnauthorizedError } from "@jaypie/errors";
+import {
+  createMarkdownStore,
+  isValidAlias,
+  normalizeAlias,
+  type SkillRecord,
+} from "@jaypie/tildeskill";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import type { JSONRPCMessage } from "@modelcontextprotocol/sdk/types.js";
 import type { NextFunction, Request, Response } from "express";
+import * as fs from "node:fs/promises";
+import * as path from "node:path";
+import { fileURLToPath } from "node:url";
+import { z } from "zod";
 
 import { extractToken, validateApiKey } from "@jaypie/garden-models";
 
@@ -14,6 +24,15 @@ import { extractToken, validateApiKey } from "@jaypie/garden-models";
 //
 
 const GARDEN_MCP_VERSION = "0.0.1";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+// In prod (esbuild), MCP_SKILLS_PATH is set via banner to dist/skills
+// In dev (tsx), resolve via symlink: src/routes/ -> ../../skills
+const SKILLS_PATH =
+  process.env.MCP_SKILLS_PATH || path.join(__dirname, "..", "..", "skills");
+
+const skillStore = createMarkdownStore({ path: SKILLS_PATH });
 
 //
 //
@@ -58,6 +77,95 @@ async function mcpAuthMiddleware(
 
 //
 //
+// Skill Helpers
+//
+
+function getAlternativeSpellings(alias: string): string[] {
+  const alternatives: string[] = [];
+  if (alias.endsWith("es")) {
+    alternatives.push(alias.slice(0, -1));
+    alternatives.push(alias.slice(0, -2));
+  } else if (alias.endsWith("s")) {
+    alternatives.push(alias.slice(0, -1));
+  } else {
+    alternatives.push(alias + "s");
+    alternatives.push(alias + "es");
+  }
+  return alternatives;
+}
+
+function addAliasToFrontmatter(content: string, matchedAlias: string): string {
+  if (content.startsWith("---")) {
+    const endIndex = content.indexOf("---", 3);
+    if (endIndex !== -1) {
+      const beforeClose = content.slice(0, endIndex);
+      const afterClose = content.slice(endIndex);
+      return `${beforeClose}alias: ${matchedAlias}\n${afterClose}`;
+    }
+  }
+  return `---\nalias: ${matchedAlias}\n---\n\n${content}`;
+}
+
+function formatSkillListItem(skill: SkillRecord): string {
+  const { alias, description } = skill;
+  return description ? `* ${alias} - ${description}` : `* ${alias}`;
+}
+
+async function handleSkillRequest(alias?: string): Promise<string> {
+  const normalized = normalizeAlias(alias || "index");
+
+  if (!isValidAlias(normalized)) {
+    throw new Error(
+      `Invalid skill alias "${normalized}". Use alphanumeric characters, hyphens, and underscores only.`,
+    );
+  }
+
+  if (normalized === "index") {
+    const indexRecord = await skillStore.get("index");
+    const indexContent = indexRecord?.content || "";
+    const allSkills = await skillStore.list();
+    const skills = allSkills.filter(
+      (s: { alias: string }) => s.alias !== "index",
+    );
+    const skillList = skills.map(formatSkillListItem).join("\n");
+    if (indexContent) {
+      return `${indexContent}\n\n## Available Skills\n\n${skillList}`;
+    }
+    return `# Jaypie Skills\n\n## Available Skills\n\n${skillList}`;
+  }
+
+  let skill = await skillStore.get(normalized);
+  let matchedAlias = normalized;
+
+  if (!skill) {
+    const alternatives = getAlternativeSpellings(normalized);
+    for (const alt of alternatives) {
+      skill = await skillStore.get(alt);
+      if (skill) {
+        matchedAlias = alt;
+        break;
+      }
+    }
+  }
+
+  if (!skill) {
+    throw new Error(
+      `Skill "${normalized}" not found. Use skill("index") to list available skills.`,
+    );
+  }
+
+  const skillPath = path.join(SKILLS_PATH, `${matchedAlias}.md`);
+  let content = await fs.readFile(skillPath, "utf-8");
+
+  if (matchedAlias !== normalized) {
+    content = addAliasToFrontmatter(content, matchedAlias);
+  }
+
+  return content;
+}
+
+//
+//
 // Garden MCP Server
 //
 
@@ -66,6 +174,16 @@ function createGardenMcpServer(): McpServer {
     name: "garden",
     version: GARDEN_MCP_VERSION,
   });
+
+  server.tool(
+    "skill",
+    "Access Jaypie development documentation. Pass a skill alias (e.g., 'aws', 'tests', 'errors') to get that documentation. Pass 'index' or no argument to list all available skills.",
+    { alias: z.string().optional().describe("Skill alias (e.g., 'aws', 'tests'). Omit or use 'index' to list all skills.") },
+    async ({ alias }) => {
+      const text = await handleSkillRequest(alias);
+      return { content: [{ text, type: "text" as const }] };
+    },
+  );
 
   server.tool(
     "version",
