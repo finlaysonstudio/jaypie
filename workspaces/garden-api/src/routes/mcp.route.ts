@@ -16,7 +16,11 @@ import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 import { z } from "zod";
 
-import { extractToken, validateApiKey } from "@jaypie/garden-models";
+import {
+  extractToken,
+  hasPermission,
+  validateApiKey,
+} from "@jaypie/garden-models";
 
 //
 //
@@ -24,6 +28,7 @@ import { extractToken, validateApiKey } from "@jaypie/garden-models";
 //
 
 const GARDEN_MCP_VERSION = "0.0.1";
+const MCP_REQUIRED_PERMISSION = "garden:*";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -62,7 +67,10 @@ async function mcpAuthMiddleware(
 
     await ensureInitialized();
 
-    await validateApiKey(token);
+    const result = await validateApiKey(token);
+    if (!hasPermission(result.permissions, MCP_REQUIRED_PERMISSION)) {
+      throw new ForbiddenError();
+    }
     next();
   } catch (error) {
     if (error instanceof UnauthorizedError) {
