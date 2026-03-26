@@ -21,7 +21,7 @@ Complete stack styles, techniques, and traditions.
 
 - Call `mcp__jaypie__skill("skills")` to discover Jaypie development skills and tools available in this repository
 - A `~` before a word or surrounding a word/phrase indicates it can be looked up as in ~skills
-- Check ~tools (`mcp__jaypie__skill("tools")`) for all tools or ~tools-aws, ~tools-datadog, and ~tools-dynamodb individually
+- Check ~mcp (`mcp__jaypie__skill("mcp")`) for all MCP tools or ~mcp-aws, ~mcp-datadog, and ~mcp-dynamodb individually
 - File bugs, documentation, features, and other issues with `mcp__jaypie__skill("issues")`
 
 ### Code

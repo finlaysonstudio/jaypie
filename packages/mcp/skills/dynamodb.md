@@ -1,6 +1,6 @@
 ---
 description: DynamoDB runtime package, key design, entity operations, and queries
-related: apikey, aws, cdk, models, tools-dynamodb
+related: apikey, aws, cdk, models, mcp-dynamodb
 ---
 
 # DynamoDB Patterns
@@ -9,7 +9,7 @@ Jaypie provides `@jaypie/dynamodb` for single-table DynamoDB with entity operati
 
 ## MCP Tools
 
-For interactive DynamoDB tools (query, scan, get-item, describe-table), see **tools-dynamodb**.
+For interactive DynamoDB tools (query, scan, get-item, describe-table), see **mcp-dynamodb**.
 
 ## Key Naming Conventions
 
@@ -441,4 +441,4 @@ Version 0.4.0 renamed `class` → `category` and `indexClass` → `indexCategory
 - **`skill("apikey")`** - API key hash storage in DynamoDB
 - **`skill("cdk")`** - JaypieDynamoDb construct and Lambda table wiring
 - **`skill("models")`** - Data model and type definition patterns
-- **`skill("tools-dynamodb")`** - Interactive DynamoDB MCP tools
+- **`skill("mcp-dynamodb")`** - DynamoDB via the Jaypie MCP

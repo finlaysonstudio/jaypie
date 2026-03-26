@@ -1,11 +1,11 @@
 ---
-description: AWS MCP tool for Lambda, S3, SQS, CloudWatch, Step Functions, CloudFormation
-related: aws, tools, tools-dynamodb
+description: AWS services provided by the Jaypie MCP (Lambda, S3, SQS, CloudWatch, Step Functions, CloudFormation)
+related: aws, mcp, mcp-dynamodb
 ---
 
-# AWS MCP Tool
+# MCP: AWS
 
-Unified tool for interacting with AWS services via the Jaypie MCP. Uses your local AWS credentials.
+AWS services provided by the Jaypie MCP server. Uses your local AWS credentials.
 
 ## Usage
 
@@ -113,7 +113,7 @@ aws({ command: "cloudformation_describe_stack", stackName: "MyStack" })
 
 ## DynamoDB
 
-See **tools-dynamodb** for DynamoDB-specific documentation.
+See **mcp-dynamodb** for DynamoDB-specific documentation.
 
 | Command | Description |
 |---------|-------------|

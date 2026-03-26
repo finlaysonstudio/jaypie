@@ -1,11 +1,11 @@
 ---
-description: DynamoDB commands in the AWS MCP tool for table queries, scans, and item retrieval
-related: dynamodb, tools, tools-aws
+description: DynamoDB provided by the Jaypie MCP (table queries, scans, item retrieval)
+related: dynamodb, mcp, mcp-aws
 ---
 
-# DynamoDB MCP Commands
+# MCP: DynamoDB
 
-DynamoDB commands in the unified AWS tool for interacting with DynamoDB tables.
+DynamoDB commands provided by the Jaypie MCP server via the unified AWS tool.
 
 ## Usage
 

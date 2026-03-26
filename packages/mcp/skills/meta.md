@@ -1,6 +1,6 @@
 ---
-description: About Jaypie, tools, and contributing
-related: issues, jaypie, skills, tools
+description: About Jaypie, MCP, and contributing
+related: issues, jaypie, mcp, skills
 ---
 
 # Meta
@@ -13,5 +13,5 @@ About Jaypie and this skill system.
 |-------|-------------|
 | `issues` | Submitting issues to Jaypie |
 | `jaypie` | Jaypie overview and core concepts |
+| `mcp` | Jaypie MCP server tools reference |
 | `skills` | About the skill system |
-| `tools` | Available MCP tools reference |

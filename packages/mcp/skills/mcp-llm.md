@@ -1,11 +1,11 @@
 ---
-description: LLM MCP tool for debugging provider responses
-related: llm, tools
+description: LLM debugging provided by the Jaypie MCP (provider responses, API inspection)
+related: llm, mcp
 ---
 
-# LLM MCP Tool
+# MCP: LLM
 
-Debug and inspect LLM provider responses. Useful for understanding how providers format responses and troubleshooting API integrations.
+LLM debugging provided by the Jaypie MCP server. Useful for understanding how providers format responses and troubleshooting API integrations.
 
 ## Usage
 

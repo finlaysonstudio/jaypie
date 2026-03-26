@@ -1,11 +1,11 @@
 ---
-description: Datadog MCP tool for logs, monitors, metrics, synthetics, and RUM
-related: datadog, tools, debugging, logs
+description: Datadog observability provided by the Jaypie MCP (logs, monitors, metrics, synthetics, RUM)
+related: datadog, mcp, debugging, logs
 ---
 
-# Datadog MCP Tool
+# MCP: Datadog
 
-Unified tool for querying Datadog observability data via the Jaypie MCP.
+Datadog observability provided by the Jaypie MCP server.
 
 ## Usage
 

@@ -1,6 +1,6 @@
 ---
 description: Datadog integration, logging, and observability code patterns
-related: logs, debugging, aws, tools-datadog
+related: logs, debugging, aws, mcp-datadog
 ---
 
 # Datadog Integration
@@ -9,7 +9,7 @@ Jaypie integrates with Datadog for logging, monitoring, and APM.
 
 ## MCP Tools
 
-For interactive Datadog tools (logs, monitors, metrics, synthetics, RUM), see **tools-datadog**.
+For interactive Datadog tools (logs, monitors, metrics, synthetics, RUM), see **mcp-datadog**.
 
 ## Lambda Integration
 
@@ -196,6 +196,6 @@ describe("CheckoutService", () => {
 
 - **`skill("cdk")`** - CDK Lambda construct with Datadog integration
 - **`skill("logs")`** - Logging patterns for structured observability
-- **`skill("tools-datadog")`** - Interactive Datadog MCP tools
+- **`skill("mcp-datadog")`** - Datadog via the Jaypie MCP
 - **`skill("variables")`** - Datadog and environment variables reference
 

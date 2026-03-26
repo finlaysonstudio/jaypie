@@ -13,7 +13,7 @@ Reference materials for navigating Jaypie.
 |-------|-------------|
 | `development` | Coding standards, testing, and documentation |
 | `infrastructure` | AWS, CDK, CI/CD, and observability |
-| `meta` | About Jaypie, tools, and contributing |
+| `meta` | About Jaypie, MCP, and contributing |
 | `patterns` | Architecture, models, and service patterns |
 
 ## Reference

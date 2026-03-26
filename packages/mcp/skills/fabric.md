@@ -1,6 +1,6 @@
 ---
 description: Fabric service patterns and adapters (pre-1.0)
-related: errors, handlers, services, tools, websockets
+related: errors, handlers, mcp, services, websockets
 ---
 
 # Fabric Services

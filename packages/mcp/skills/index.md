@@ -11,8 +11,8 @@ Query the Jaypie MCP `skill` tool with one of the following alias keywords `mcp_
 | Category | Skills |
 |----------|--------|
 | contents | index, releasenotes |
-| development | apikey, documentation, errors, llm, logs, mocks, monorepo, style, subpackages, tests |
+| development | apikey, documentation, errors, llm, logs, mocks, monorepo, style, subpackages, tests, tools |
 | infrastructure | aws, cdk, cicd, datadog, dns, dynamodb, express, lambda, secrets, streaming, variables, websockets |
 | patterns | api, fabric, handlers, models, services, vocabulary |
 | recipes | recipe-api-server |
-| meta | issues, jaypie, skills, tools |
+| meta | issues, jaypie, mcp, skills |
