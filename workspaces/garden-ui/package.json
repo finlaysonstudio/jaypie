@@ -17,7 +17,7 @@
     "@jaypie/aws": "^1.2.6",
     "@jaypie/dynamodb": "^0.4.2",
     "@jaypie/errors": "^1.2.1",
-    "@jaypie/garden-models": "^0.0.1",
+    "@jaypie/garden-models": "^0.1.0",
     "@jaypie/kit": "^1.2.5",
     "@jaypie/logger": "^1.2.5",
     "lucide-react": "^0.562.0",
