@@ -406,7 +406,7 @@ describe("Dist Execution", () => {
         (c: { type: string }) => c.type === "text",
       );
       expect(textContent).toBeTruthy();
-      expect(textContent?.text).toContain("Available Skills");
+      expect(textContent?.text).toContain("Index of Skills");
       expect(textContent?.text).toContain("aws");
       expect(textContent?.text).toContain("tests");
     });
