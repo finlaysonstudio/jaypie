@@ -44,7 +44,6 @@ Path filter: Only triggers when `workspaces/**`, `.github/actions/**`, or `.gith
 |-------------|------------|-------------------|
 | `sandbox-*` | sandbox | No |
 | `development-*` | development | Yes |
-| `production-*`, `v0.*`, `v1.*` | production | Yes |
 | `stack-documentation-*` | documentation only | No |
 
 ### Manual Trigger
@@ -71,9 +70,6 @@ git tag sandbox-$(date +%s) && git push origin sandbox-$(date +%s)
 
 # Deploy to development
 git tag development-$(date +%s) && git push origin development-$(date +%s)
-
-# Deploy to production
-git tag production-$(date +%s) && git push origin production-$(date +%s)
 ```
 
 ## Local Deploy

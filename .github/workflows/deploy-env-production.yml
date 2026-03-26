@@ -1,11 +1,7 @@
 name: Build Stacks to Production
 
 on:
-  push:
-    tags:
-      - 'production-*'
-      - 'v0.*'
-      - 'v1.*'
+  workflow_dispatch:
 
 concurrency:
   group: deploy-env-production
