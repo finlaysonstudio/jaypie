@@ -295,6 +295,7 @@ export class JaypieSsoPermissions extends Construct {
                 "cost-optimization-hub:*",
                 "dynamodb:*",
                 "ec2:*",
+                "ecr:*",
                 "iam:Get*",
                 "iam:List*",
                 "iam:PassRole",
