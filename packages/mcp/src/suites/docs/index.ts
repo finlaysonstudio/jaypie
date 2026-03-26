@@ -227,21 +227,13 @@ export const skillService = fabricService({
     }
 
     if (alias === "index") {
-      // Get index content
-      const indexRecord = await skillStore.get("index");
-      const indexContent = indexRecord?.content || "";
-
-      // List all skills except index
       const allSkills = await skillStore.list();
       const skills = allSkills.filter(
         (s: { alias: string }) => s.alias !== "index",
       );
       const skillList = skills.map(formatSkillListItem).join("\n");
 
-      if (indexContent) {
-        return `${indexContent}\n\n## Available Skills\n\n${skillList}`;
-      }
-      return `# Jaypie Skills\n\n## Available Skills\n\n${skillList}`;
+      return `# Index of Skills\n\n${skillList}`;
     }
 
     // Try exact match first
