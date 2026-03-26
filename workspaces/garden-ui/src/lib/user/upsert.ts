@@ -5,39 +5,12 @@ import {
   updateEntity,
   type StorableEntity,
 } from "@jaypie/dynamodb";
-import { type IndexDefinition, registerModel } from "@jaypie/fabric";
+import {
+  DEFAULT_PERMISSIONS,
+  USER_MODEL,
+  type UserEntity,
+} from "@jaypie/garden-models";
 import { log } from "@jaypie/logger";
-
-//
-//
-// Constants
-//
-
-const DEFAULT_PERMISSIONS = ["registered:*"];
-const USER_MODEL = "user";
-
-//
-//
-// Model Registration
-//
-
-const USER_INDEXES: IndexDefinition[] = [
-  {
-    name: "indexAlias",
-    pk: ["scope", "model", "alias"],
-    sk: ["sequence"],
-    sparse: true,
-  },
-  { name: "indexScope", pk: ["scope", "model"], sk: ["sequence"] },
-  {
-    name: "indexXid",
-    pk: ["scope", "model", "xid"],
-    sk: ["sequence"],
-    sparse: true,
-  },
-];
-
-registerModel({ model: USER_MODEL, indexes: USER_INDEXES });
 
 //
 //
@@ -95,7 +68,7 @@ async function upsertUser({
     sequence: Date.now(),
     updatedAt: now,
     xid: sub,
-  } as StorableEntity & { auth0Sub: string; permissions: string[] };
+  } as UserEntity;
 
   await putEntity({ entity });
   log.debug("User created", { email, sub });

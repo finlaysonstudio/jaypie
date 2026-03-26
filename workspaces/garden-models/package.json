@@ -1,0 +1,34 @@
+{
+  "name": "@jaypie/garden-models",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Shared models, types, and utilities for Jaypie Garden",
+  "license": "MIT",
+  "author": "Finlayson Studio",
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./src/index.ts",
+      "types": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "format": "eslint --fix --quiet .",
+    "lint": "eslint --quiet .",
+    "test": "vitest run .",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@jaypie/dynamodb": "^0.4.2",
+    "@jaypie/errors": "^1.2.1",
+    "@jaypie/fabric": "^0.2.2",
+    "@jaypie/logger": "^1.2.5",
+    "jaypie": "^1.2.23"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  },
+  "engines": {
+    "node": ">=22.0"
+  }
+}

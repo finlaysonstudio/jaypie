@@ -15,7 +15,7 @@ import {
 // Constants
 //
 
-const PROTECTED_PATHS = ["/apikeys", "/colors", "/components", "/dimensions", "/fonts", "/layout", "/records"];
+const PROTECTED_PATHS = ["/apikeys", "/colors", "/components", "/dimensions", "/fonts", "/gardens", "/layout", "/records"];
 
 //
 //
@@ -32,8 +32,15 @@ function ensureClient() {
 //
 
 export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+
   // Skip all auth when bypass is enabled (local dev)
   if (process.env.DANGEROUS_BYPASS_AUTHENTICATION === "true") {
+    // Redirect /auth/* routes home — no Auth0 in bypass mode
+    if (pathname.startsWith("/auth")) {
+      return NextResponse.redirect(new URL("/", request.url));
+    }
+
     const response = NextResponse.next();
 
     // Still create garden session on first visit
@@ -56,9 +63,18 @@ export async function middleware(request: NextRequest) {
     return response;
   }
 
-  const authRes = await auth0.middleware(request);
-
-  const { pathname } = request.nextUrl;
+  let authRes;
+  try {
+    authRes = await auth0.middleware(request);
+  } catch (error) {
+    console.error("[middleware] auth0.middleware error", {
+      error: error instanceof Error ? error.message : error,
+      path: request.nextUrl.pathname,
+      hasAuth0Secret: !!process.env.AUTH0_SECRET,
+      hasAuth0ClientSecret: !!process.env.AUTH0_CLIENT_SECRET,
+    });
+    throw error;
+  }
 
   // Let Auth0 handle its own routes without interference
   if (pathname.startsWith("/auth")) {

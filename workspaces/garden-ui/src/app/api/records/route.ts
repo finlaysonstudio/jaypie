@@ -12,7 +12,7 @@ import {
 import { log } from "@jaypie/logger";
 import { ScanCommand } from "@aws-sdk/lib-dynamodb";
 
-import { auth0 } from "../../../lib/auth0";
+import { requireAuth } from "../../../lib/requireAuth";
 
 //
 //
@@ -20,8 +20,8 @@ import { auth0 } from "../../../lib/auth0";
 //
 
 export async function GET(request: Request): Promise<Response> {
-  const session = await auth0.getSession();
-  if (!session) {
+  const auth = await requireAuth();
+  if (!auth) {
     return Response.json(
       { errors: [{ detail: "Unauthorized", status: 401, title: "Auth Error" }] },
       { status: 401 },

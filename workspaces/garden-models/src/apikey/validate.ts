@@ -1,8 +1,12 @@
 import { APEX, queryByAlias } from "@jaypie/dynamodb";
 import { ForbiddenError, UnauthorizedError } from "@jaypie/errors";
-import { type IndexDefinition, registerModel } from "@jaypie/fabric";
 import { log } from "@jaypie/logger";
 import { hashJaypieKey, validateJaypieKey } from "jaypie";
+
+import type { ValidateResult } from "./types";
+
+// Ensure model is registered
+import "./model";
 
 //
 //
@@ -10,38 +14,6 @@ import { hashJaypieKey, validateJaypieKey } from "jaypie";
 //
 
 const GARDEN_KEY_OPTIONS = { issuer: "jaypie" } as const;
-
-//
-//
-// Model Registration
-//
-
-const APIKEY_INDEXES: IndexDefinition[] = [
-  {
-    name: "indexAlias",
-    pk: ["scope", "model", "alias"],
-    sk: ["sequence"],
-    sparse: true,
-  },
-  { name: "indexScope", pk: ["scope", "model"], sk: ["sequence"] },
-];
-
-registerModel({ model: "apikey", indexes: APIKEY_INDEXES });
-
-//
-//
-// Types
-//
-
-interface ValidateResult {
-  createdAt: string;
-  id: string;
-  label: string;
-  name: string;
-  permissions: string[];
-  scope: string;
-  valid: true;
-}
 
 //
 //
@@ -67,6 +39,7 @@ async function validateApiKey(token: string): Promise<ValidateResult> {
     log.trace("API key found in database");
     const record = entity as unknown as {
       createdAt?: string;
+      garden?: string;
       id?: string;
       label?: string;
       name?: string;
@@ -75,6 +48,7 @@ async function validateApiKey(token: string): Promise<ValidateResult> {
     };
     return {
       createdAt: record.createdAt ?? "",
+      garden: record.garden,
       id: record.id ?? "",
       label: record.label ?? "",
       name: record.name ?? "",
@@ -95,9 +69,14 @@ async function validateApiKey(token: string): Promise<ValidateResult> {
 
 function extractToken(authorization: string | undefined): string | undefined {
   if (!authorization) return undefined;
-  const parts = authorization.split(" ");
+  const trimmed = authorization.trim();
+  // Accept "Bearer <token>" or just "<token>"
+  const parts = trimmed.split(" ");
   if (parts.length === 2 && parts[0].toLowerCase() === "bearer") {
     return parts[1];
+  }
+  if (parts.length === 1) {
+    return parts[0];
   }
   return undefined;
 }
@@ -107,5 +86,4 @@ function extractToken(authorization: string | undefined): string | undefined {
 // Export
 //
 
-export { extractToken, validateApiKey };
-export type { ValidateResult };
+export { extractToken, GARDEN_KEY_OPTIONS, validateApiKey };

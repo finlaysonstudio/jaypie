@@ -1,6 +1,6 @@
 ---
 description: Skill/vocabulary storage with pluggable backends (pre-1.0)
-related: fabric, mcp, tools
+related: fabric, mcp
 ---
 
 # @jaypie/tildeskill

@@ -1,115 +1,200 @@
 ---
-description: Available MCP tools reference
-related: tools-aws, tools-datadog, tools-dynamodb, tools-llm, debugging
+description: Writing LLM tools with Toolkit, Fabric services, and best practices
+related: fabric, llm, mcp, services
 ---
 
-# MCP Tools Reference
+# Writing Tools
 
-Tools available through the Jaypie MCP server. All tools use a unified router-style API.
+Define tools for LLM agents using `@jaypie/llm` Toolkit or Fabric services.
 
-## Documentation Tools
+## Toolkit Tool Definition
 
-| Tool | Description |
-|------|-------------|
-| `skill` | Access Jaypie skill documentation |
-| `version` | Get MCP server version |
-| `release_notes` | Browse package release notes |
+```typescript
+import { Toolkit } from "@jaypie/llm";
 
-### Using Skills
-
-```
-skill("index")          # List all skills
-skill("jaypie")         # Jaypie overview
-skill("tests")          # Testing patterns
-```
-
-### Release Notes
-
-```
-release_notes()                                    # Show help
-release_notes("list")                              # List all release notes
-release_notes("list", { package: "mcp" })          # Filter by package
-release_notes("read", { package: "mcp", version: "0.5.0" })  # Read specific note
-```
-
-## AWS Tool
-
-Unified tool for Lambda, S3, SQS, CloudWatch Logs, Step Functions, CloudFormation, and DynamoDB.
-
-See **tools-aws** for complete documentation.
-
-```
-aws()                   # Show help with all commands
-aws("list_profiles")    # List AWS profiles
-aws("lambda_list_functions", { region: "us-east-1" })
-aws("dynamodb_query", { tableName: "...", keyConditionExpression: "..." })
+const toolkit = new Toolkit([
+  {
+    name: "get_order",
+    description: "Look up an order by ID",
+    type: "function",
+    parameters: {
+      type: "object",
+      properties: {
+        orderId: { type: "string", description: "Order ID" },
+      },
+      required: ["orderId"],
+    },
+    call: async ({ orderId }) => {
+      return getOrder(orderId);
+    },
+  },
+]);
 ```
 
-| Command | Description |
-|---------|-------------|
-| `list_profiles` | List AWS profiles from ~/.aws |
-| `lambda_list_functions`, `lambda_get_function` | Lambda management |
-| `logs_filter_log_events` | CloudWatch Logs search |
-| `s3_list_objects` | S3 bucket operations |
-| `sqs_list_queues`, `sqs_get_queue_attributes`, `sqs_receive_message`, `sqs_purge_queue` | SQS operations |
-| `stepfunctions_list_executions`, `stepfunctions_stop_execution` | Step Functions |
-| `cloudformation_describe_stack` | CloudFormation stack details |
-| `dynamodb_describe_table`, `dynamodb_query`, `dynamodb_scan`, `dynamodb_get_item` | DynamoDB |
+## Fabric Service as Tool
 
-## Datadog Tool
+Define once, use as LLM tool, MCP tool, Lambda handler, or CLI command:
 
-Unified tool for logs, monitors, metrics, synthetics, and RUM.
+```typescript
+import { fabricService } from "@jaypie/fabric";
+import { fabricLlmTool } from "@jaypie/fabric";
+import { Toolkit } from "@jaypie/llm";
 
-See **tools-datadog** for complete documentation.
+const orderService = fabricService({
+  alias: "get_order",
+  description: "Look up an order by ID",
+  input: {
+    orderId: {
+      type: String,
+      required: true,
+      description: "Order ID to look up",
+    },
+  },
+  service: async ({ orderId }) => {
+    return getOrder(orderId);
+  },
+});
 
-```
-datadog()               # Show help with all commands
-datadog("logs", { query: "status:error", from: "now-1h" })
-datadog("monitors", { status: ["Alert", "Warn"] })
-```
+// As LLM tool
+const toolkit = new Toolkit([fabricLlmTool(orderService)]);
 
-| Command | Description |
-|---------|-------------|
-| `logs` | Search log entries |
-| `log_analytics` | Aggregate logs with groupBy |
-| `monitors` | List and check monitors |
-| `synthetics` | List synthetic tests |
-| `metrics` | Query timeseries metrics |
-| `rum` | Search RUM events |
-
-## LLM Tool
-
-Debug and inspect LLM provider responses.
-
-See **tools-llm** for complete documentation.
-
-```
-llm()                   # Show help
-llm("list_providers")   # List available LLM providers
-llm("debug_call", { provider: "openai", message: "Hello" })
+// As MCP tool
+fabricMcp({ service: orderService, server });
 ```
 
-| Command | Description |
-|---------|-------------|
-| `list_providers` | List available LLM providers |
-| `debug_call` | Debug LLM API call |
+## Service-Backed Tools
 
-## Environment Variables
+Keep business logic in services, tools as thin wrappers:
 
-### AWS Tools
-- `AWS_PROFILE` - Default profile
-- `AWS_REGION` - Default region
+```typescript
+// services/order.ts
+import { log, NotFoundError } from "jaypie";
+import { Order } from "../models/order.js";
 
-### Datadog Tools
-- `DATADOG_API_KEY` or `DD_API_KEY` - API key
-- `DATADOG_APP_KEY` or `DD_APP_KEY` - App key
-- `DD_ENV` - Default environment filter
-- `DD_SERVICE` - Default service filter
-- `DD_SOURCE` - Default log source
+export async function getOrder(orderId: string) {
+  log.debug("Looking up order", { orderId });
+  const order = await Order.findById(orderId);
+  if (!order) {
+    throw new NotFoundError(`Order ${orderId} not found`);
+  }
+  return order;
+}
 
-### LLM Tools
-- `OPENAI_API_KEY` - OpenAI API key
-- `ANTHROPIC_API_KEY` - Anthropic API key
-- `GOOGLE_API_KEY` - Google/Gemini API key
-- `OPENROUTER_API_KEY` - OpenRouter API key
+export async function listOrders({ status, limit = 10 }: {
+  status?: string;
+  limit?: number;
+} = {}) {
+  log.debug("Listing orders", { status, limit });
+  return Order.find({ ...(status && { status }) }, { limit });
+}
+```
 
+```typescript
+// tools/order.ts
+import { fabricService } from "@jaypie/fabric";
+import { getOrder, listOrders } from "../services/order.js";
+
+export const getOrderService = fabricService({
+  alias: "get_order",
+  description: "Look up an order by ID",
+  input: {
+    orderId: { type: String, required: true, description: "Order ID" },
+  },
+  service: async ({ orderId }) => getOrder(orderId),
+});
+
+export const listOrdersService = fabricService({
+  alias: "list_orders",
+  description: "List orders, optionally filtered by status",
+  input: {
+    status: { type: String, required: false, description: "Filter by status" },
+    limit: { type: Number, required: false, description: "Max results (default 10)" },
+  },
+  service: async ({ status, limit }) => listOrders({ status, limit }),
+});
+```
+
+## Wiring Tools to LLM
+
+```typescript
+import Llm, { Toolkit } from "@jaypie/llm";
+import { fabricLlmTool } from "@jaypie/fabric";
+import { getOrderService, listOrdersService } from "./tools/order.js";
+
+const toolkit = new Toolkit([
+  fabricLlmTool(getOrderService),
+  fabricLlmTool(listOrdersService),
+]);
+
+const response = await Llm.operate("Find all pending orders", {
+  model: "claude-sonnet-4",
+  tools: toolkit,
+  turns: 3,
+});
+```
+
+## Built-in Tools
+
+```typescript
+import Llm, { tools, JaypieToolkit } from "@jaypie/llm";
+
+// Individual built-in tools: random, roll, time, weather
+const response = await Llm.operate("Roll 2d6", {
+  model: "gpt-5.1",
+  tools,
+});
+
+// Or use the pre-configured toolkit
+const toolkit = new JaypieToolkit();
+```
+
+## Explain Mode
+
+Require the LLM to state its reasoning before each tool call:
+
+```typescript
+const toolkit = new Toolkit([myTool], { explain: true });
+
+// Or per-call
+const response = await Llm.operate("What's the weather?", {
+  model: "gpt-5.1",
+  tools: myTools,
+  explain: true,
+});
+```
+
+The `__Explanation` parameter is stripped before the tool executes.
+
+## Input Types
+
+Fabric services validate inputs automatically:
+
+```typescript
+input: {
+  name: { type: String, required: true, description: "User name" },
+  count: { type: Number, required: false, description: "Result limit" },
+  status: {
+    type: ["active", "inactive"] as const,
+    required: false,
+    description: "Filter by status",
+  },
+}
+```
+
+## Best Practices
+
+1. **Service layer first** -- business logic in services, tools are thin adapters
+2. **One tool, one action** -- each tool does one thing
+3. **Descriptive names** -- use `noun_verb` format (`order_get`, `user_list`)
+4. **Clear descriptions** -- LLMs choose tools based on description text
+5. **Document parameters** -- every input needs a description
+6. **Return JSON-serializable data** -- tools return data, not formatted text
+7. **Use Jaypie errors** -- `NotFoundError`, `BadRequestError` for clear failure signals
+8. **Set turns > 1** -- multi-tool workflows need room to loop
+
+## See Also
+
+- **`skill("fabric")`** -- Fabric service pattern and adapters
+- **`skill("llm")`** -- Full `@jaypie/llm` reference
+- **`skill("services")`** -- Service layer architecture
+- **`skill("mcp")`** -- Jaypie MCP server tools

@@ -12,6 +12,7 @@ import {
   CircleMinus,
   Component,
   Disc,
+  Fence,
   KeySquare,
   Lock,
   Proportions,
@@ -45,6 +46,7 @@ const PROTECTED_NAV_ITEMS = [
   { href: "/components", icon: Component, label: "Components" },
   { href: "/dimensions", icon: Proportions, label: "Dimensions" },
   { href: "/fonts", icon: BookType, label: "Fonts" },
+  { href: "/gardens", icon: Fence, label: "Gardens", permission: "system:*" },
   { href: "/layout", icon: RulerDimensionLine, label: "Layout" },
 ];
 
@@ -156,11 +158,12 @@ export function NavMenu({ hideMenu, onPageIconClick, pageIcon: PageIcon = Bird }
   const statusStyle = STATUS_STYLES[connectionStatus];
 
   const isAuthenticated = connectionStatus === "authenticated";
-  const isAdmin = permissions.some((p) => p === "admin:*" || p === "*");
+  const isAdmin = permissions.some((p) => p === "admin:*" || p === "system:*" || p === "*");
+  const hasPermission = (perm: string) => permissions.some((p) => p === perm || p === "*");
   const navItems = [
     ...PUBLIC_NAV_ITEMS,
     ...(isAdmin ? ADMIN_NAV_ITEMS : []),
-    ...(isAuthenticated ? PROTECTED_NAV_ITEMS : []),
+    ...(isAuthenticated ? PROTECTED_NAV_ITEMS.filter((item) => !item.permission || hasPermission(item.permission)) : []),
     ...(isAdmin ? ADMIN_NAV_ITEMS_END : []),
   ];
   const hasModal = showAuth || showStatus;

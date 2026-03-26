@@ -1,28 +1,10 @@
-import { APEX, initClient, putEntity, queryByScope, queryByXid } from "@jaypie/dynamodb";
-import { type IndexDefinition, registerModel } from "@jaypie/fabric";
+import { APEX, deleteEntity, initClient, putEntity, queryByScope, queryByXid } from "@jaypie/dynamodb";
+import { GARDEN_MODEL } from "@jaypie/garden-models";
+import "@jaypie/garden-models"; // Side-effect: registers all models
 import { generateJaypieKey, hashJaypieKey } from "@jaypie/kit";
 import { log } from "@jaypie/logger";
 
-import { auth0 } from "../../../lib/auth0";
-// Ensure user model is registered
-import "../../../lib/user/upsert";
-
-//
-//
-// Model Registration
-//
-
-const APIKEY_INDEXES: IndexDefinition[] = [
-  {
-    name: "indexAlias",
-    pk: ["scope", "model", "alias"],
-    sk: ["sequence"],
-    sparse: true,
-  },
-  { name: "indexScope", pk: ["scope", "model"], sk: ["sequence"] },
-];
-
-registerModel({ model: "apikey", indexes: APIKEY_INDEXES });
+import { requireAuth } from "../../../lib/requireAuth";
 
 //
 //
@@ -30,8 +12,8 @@ registerModel({ model: "apikey", indexes: APIKEY_INDEXES });
 //
 
 export async function GET(): Promise<Response> {
-  const session = await auth0.getSession();
-  if (!session) {
+  const auth = await requireAuth();
+  if (!auth) {
     return Response.json({ errors: [{ detail: "Unauthorized", status: 401, title: "Auth Error" }] }, { status: 401 });
   }
 
@@ -42,13 +24,24 @@ export async function GET(): Promise<Response> {
       scope: APEX,
     });
 
-    const keys = items.map((item) => ({
-      createdAt: item.createdAt,
-      id: item.id,
-      label: item.label,
-      name: item.name,
-      permissions: (item as unknown as { permissions?: string[] }).permissions ?? [],
-    }));
+    const keys = items.map((item) => {
+      const record = item as unknown as {
+        createdAt?: string;
+        garden?: string;
+        id?: string;
+        label?: string;
+        name?: string;
+        permissions?: string[];
+      };
+      return {
+        createdAt: record.createdAt ?? "",
+        garden: record.garden,
+        id: record.id ?? "",
+        label: record.label ?? "",
+        name: record.name ?? "",
+        permissions: record.permissions ?? [],
+      };
+    });
 
     return Response.json({ data: keys });
   } catch (err) {
@@ -58,12 +51,12 @@ export async function GET(): Promise<Response> {
 }
 
 export async function POST(request: Request): Promise<Response> {
-  const session = await auth0.getSession();
-  if (!session) {
+  const auth = await requireAuth();
+  if (!auth) {
     return Response.json({ errors: [{ detail: "Unauthorized", status: 401, title: "Auth Error" }] }, { status: 401 });
   }
 
-  let body: { name?: string; permissions?: string[] } = {};
+  let body: { garden?: string; name?: string; permissions?: string[] } = {};
   try {
     body = await request.json();
   } catch {
@@ -80,14 +73,21 @@ export async function POST(request: Request): Promise<Response> {
     const userEntity = await queryByXid({
       model: "user",
       scope: APEX,
-      xid: session.user.sub,
+      xid: auth.sub,
     });
     if (userEntity) {
       userPermissions = (userEntity as unknown as { permissions?: string[] }).permissions ?? ["registered:*"];
     }
 
     // Use provided permissions (subset of user's) or inherit all
-    const keyPermissions = body.permissions ?? userPermissions;
+    const keyPermissions = [...(body.permissions ?? userPermissions)];
+
+    // If garden is specified, add garden:* permission
+    if (body.garden) {
+      if (!keyPermissions.includes("garden:*")) {
+        keyPermissions.push("garden:*");
+      }
+    }
 
     const key = generateJaypieKey({ issuer: "jaypie" });
     const hash = hashJaypieKey(key);
@@ -97,6 +97,7 @@ export async function POST(request: Request): Promise<Response> {
       entity: {
         alias: hash,
         createdAt: now,
+        ...(body.garden ? { garden: body.garden } : {}),
         id: crypto.randomUUID(),
         label: key.slice(-4),
         model: "apikey",
@@ -105,14 +106,15 @@ export async function POST(request: Request): Promise<Response> {
         scope: APEX,
         sequence: Date.now(),
         updatedAt: now,
-        xid: session.user.sub,
-      } as import("@jaypie/dynamodb").StorableEntity & { permissions: string[] },
+        xid: auth.sub,
+      } as import("@jaypie/dynamodb").StorableEntity & { garden?: string; permissions: string[] },
     });
 
-    log.debug("API key created", { label: key.slice(-4), name: keyName });
+    log.debug("API key created", { garden: body.garden, label: key.slice(-4), name: keyName });
 
     return Response.json({
       data: {
+        ...(body.garden ? { garden: body.garden } : {}),
         key,
         label: key.slice(-4),
         name: keyName,
@@ -122,5 +124,33 @@ export async function POST(request: Request): Promise<Response> {
   } catch (err) {
     log.error("Failed to create API key", { error: err });
     return Response.json({ errors: [{ detail: "Failed to create API key", status: 500, title: "Server Error" }] }, { status: 500 });
+  }
+}
+
+export async function DELETE(request: Request): Promise<Response> {
+  const auth = await requireAuth();
+  if (!auth) {
+    return Response.json({ errors: [{ detail: "Unauthorized", status: 401, title: "Auth Error" }] }, { status: 401 });
+  }
+
+  let body: { id?: string } = {};
+  try {
+    body = await request.json();
+  } catch {
+    return Response.json({ errors: [{ detail: "Missing request body", status: 400, title: "Bad Request" }] }, { status: 400 });
+  }
+
+  if (!body.id) {
+    return Response.json({ errors: [{ detail: "Missing id", status: 400, title: "Bad Request" }] }, { status: 400 });
+  }
+
+  try {
+    initClient({ endpoint: process.env.DYNAMODB_ENDPOINT });
+    await deleteEntity({ id: body.id, model: "apikey" });
+    log.debug("API key deleted", { id: body.id });
+    return Response.json({ data: { deleted: true, id: body.id } });
+  } catch (err) {
+    log.error("Failed to delete API key", { error: err });
+    return Response.json({ errors: [{ detail: "Failed to delete API key", status: 500, title: "Server Error" }] }, { status: 500 });
   }
 }

@@ -21,7 +21,7 @@ Complete stack styles, techniques, and traditions.
 
 - Call `mcp__jaypie__skill("skills")` to discover Jaypie development skills and tools available in this repository
 - A `~` before a word or surrounding a word/phrase indicates it can be looked up as in ~skills
-- Check ~tools (`mcp__jaypie__skill("tools")`) for all tools or ~tools-aws, ~tools-datadog, and ~tools-dynamodb individually
+- Check ~mcp (`mcp__jaypie__skill("mcp")`) for all MCP tools or ~mcp-datadog individually
 - File bugs, documentation, features, and other issues with `mcp__jaypie__skill("issues")`
 
 ### Code
@@ -33,10 +33,11 @@ Complete stack styles, techniques, and traditions.
 `mcp__jaypie__skill(alias: String)`
 
 Contents: index, releasenotes
-Development: apikey, documentation, errors, llm, logs, mocks, monorepo, style, subpackages, tests
+Development: apikey, documentation, errors, llm, logs, mocks, monorepo, style, subpackages, tests, tools
 Infrastructure: aws, cdk, cicd, datadog, dns, dynamodb, express, lambda, secrets, streaming, variables, websockets
 Patterns: api, fabric, handlers, models, services, vocabulary
-Meta: issues, jaypie, skills, tools
+Recipes: recipe-api-server
+Meta: issues, jaypie, mcp, skills
 ```
 
 ## Short Version

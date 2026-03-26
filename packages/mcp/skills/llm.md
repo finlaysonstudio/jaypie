@@ -406,3 +406,4 @@ interface LlmFallbackConfig {
 ## See Also
 
 - **`skill("streaming")`** - Streaming LLM responses to Lambda and Express with `createLambdaStream`
+- **`skill("tools")`** - Writing LLM tools with Toolkit and Fabric services
