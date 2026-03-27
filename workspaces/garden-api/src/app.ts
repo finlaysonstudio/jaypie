@@ -15,15 +15,14 @@ const app = express();
 
 // Built-in Jaypie routes
 app.get(EXPRESS.PATH.ROOT, noContentRoute);
-app.use("/_sy/echo", cors(), express.json(), echoRoute);
+app.use("/_sy/echo", cors(), echoRoute);
 
 // API routes
 app.post("/apikey/validate", cors(), apikeyValidateRoute);
 
 // MCP endpoint (lazy-initialized)
-// Do NOT use express.json() here — the MCP SDK's transport reads the raw body
-// stream itself. If express.json() consumes the stream first, the transport
-// gets an empty body and returns a parse error.
+// The MCP SDK transport reads the raw body stream itself.
+// LambdaRequest pre-parses req.body but the stream remains available.
 let mcpHandler: ((req: Request, res: Response) => Promise<void>) | null = null;
 app.post(
   "/mcp",

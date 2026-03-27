@@ -128,7 +128,7 @@ The Lambda adapter provides Express-compatible request properties:
 | `req.path` | URL path without query string |
 | `req.query` | Parsed query parameters (with array support) |
 | `req.headers` | Normalized headers (lowercase keys) |
-| `req.body` | Parsed body (via body-parser middleware) |
+| `req.body` | Pre-parsed body (JSON auto-parsed, text as string; no middleware needed) |
 | `req.params` | Route parameters (set by Express router) |
 | `req._lambdaContext` | Original Lambda context |
 | `req._lambdaEvent` | Original Lambda event |
