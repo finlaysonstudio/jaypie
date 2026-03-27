@@ -15,7 +15,7 @@ const app = express();
 
 // Built-in Jaypie routes
 app.get(EXPRESS.PATH.ROOT, noContentRoute);
-app.use("/_sy/echo", cors(), echoRoute);
+app.use("/_sy/echo", cors(), express.json(), echoRoute);
 
 // API routes
 app.post("/apikey/validate", cors(), apikeyValidateRoute);
