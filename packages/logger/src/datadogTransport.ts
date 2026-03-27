@@ -51,7 +51,7 @@ class DatadogLogTransport {
   private _beforeExitHandler: (() => void) | null = null;
   private _buffer: DatadogLogEntry[] = [];
   private _flushTimer: ReturnType<typeof setInterval> | null = null;
-  private _ddsource = "nodejs";
+  private _ddsource: string;
   private _env: string;
   private _hostname: string;
   private _service: string;
@@ -59,6 +59,10 @@ class DatadogLogTransport {
 
   constructor() {
     const env = process.env;
+    this._ddsource =
+      env[DATADOG_TRANSPORT.ENV.DD_SOURCE] ||
+      env[DATADOG_TRANSPORT.ENV.PROJECT_SOURCE] ||
+      "nodejs";
     this._env =
       env[DATADOG_TRANSPORT.ENV.DD_ENV] ||
       env[DATADOG_TRANSPORT.ENV.PROJECT_ENV] ||

@@ -116,6 +116,8 @@ When adding new skills:
 
 **Important**: Always rebuild after editing skills or release notes - files are copied to `dist/` during build.
 
+**Important**: Keep the skill category listings in sync across `skills/skills.md`, `skills/agents.md`, and the root `CLAUDE.md` Skills section. When adding or removing a skill alias, update all three.
+
 ## Release Notes Directory
 
 The `release-notes/` directory contains version history organized by package name:
