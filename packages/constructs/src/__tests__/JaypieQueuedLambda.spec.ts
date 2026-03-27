@@ -1,5 +1,5 @@
 import { CDK } from "../constants";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { Stack, RemovalPolicy, Duration } from "aws-cdk-lib";
 import { Template, Match } from "aws-cdk-lib/assertions";
 import * as lambda from "aws-cdk-lib/aws-lambda";
@@ -286,6 +286,29 @@ describe("JaypieQueuedLambda", () => {
           },
         },
       });
+    });
+
+    it("forwards environment array syntax to inner Lambda (issue #252)", () => {
+      const stack = new Stack();
+      vi.stubEnv("MY_PROCESS_VAR", "from-env");
+      const construct = new JaypieQueuedLambda(stack, "TestConstruct", {
+        code: lambda.Code.fromInline("exports.handler = () => {}"),
+        environment: [{ MY_VAR: "my-value" }, "MY_PROCESS_VAR"],
+        handler: "index.handler",
+      });
+      const template = Template.fromStack(stack);
+
+      expect(construct).toBeDefined();
+      template.hasResourceProperties("AWS::Lambda::Function", {
+        Environment: {
+          Variables: {
+            CDK_ENV_QUEUE_URL: Match.anyValue(),
+            MY_PROCESS_VAR: "from-env",
+            MY_VAR: "my-value",
+          },
+        },
+      });
+      vi.unstubAllEnvs();
     });
 
     it("configures FIFO queue by default", () => {

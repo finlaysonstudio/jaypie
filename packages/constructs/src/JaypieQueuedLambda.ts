@@ -96,10 +96,7 @@ export class JaypieQueuedLambda
       deadLetterQueueEnabled,
       deadLetterTopic,
       description,
-      environment: {
-        ...environment,
-        CDK_ENV_QUEUE_URL: this._queue.queueUrl,
-      },
+      environment,
       envSecrets,
       ephemeralStorageSize,
       filesystem,
@@ -128,6 +125,13 @@ export class JaypieQueuedLambda
       vpc,
       vpcSubnets,
     });
+
+    // Add queue URL to Lambda environment after construction
+    // (environment prop is passed through to JaypieLambda which handles array/object resolution)
+    this._lambdaConstruct.addEnvironment(
+      "CDK_ENV_QUEUE_URL",
+      this._queue.queueUrl,
+    );
 
     // Set up queue and lambda integration
     this._queue.grantConsumeMessages(this._lambdaConstruct);
