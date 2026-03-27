@@ -240,6 +240,57 @@ describe("LambdaRequest", () => {
       expect(req.complete).toBe(true);
     });
 
+    it("pre-parses JSON body without express.json() middleware (issue #246)", () => {
+      const event = createMockEvent({
+        body: '{"name":"John","age":30}',
+      });
+      const req = createLambdaRequest(event, mockContext);
+
+      expect(req.body).toEqual({ name: "John", age: 30 });
+    });
+
+    it("pre-parses base64-encoded JSON body (issue #246)", () => {
+      const jsonBody = '{"message":"hello"}';
+      const event = createMockEvent({
+        body: Buffer.from(jsonBody).toString("base64"),
+        isBase64Encoded: true,
+      });
+      const req = createLambdaRequest(event, mockContext);
+
+      expect(req.body).toEqual({ message: "hello" });
+    });
+
+    it("falls back to string for non-JSON body", () => {
+      const event = createMockEvent({
+        body: "plain text body",
+      });
+      const req = createLambdaRequest(event, mockContext);
+
+      expect(req.body).toBe("plain text body");
+    });
+
+    it("sets _body flag to signal body-parser to skip", () => {
+      const event = createMockEvent({
+        body: '{"key":"value"}',
+      });
+      const req = createLambdaRequest(event, mockContext);
+
+      expect(
+        (req as unknown as Record<string, boolean>)._body,
+      ).toBe(true);
+    });
+
+    it("does not set _body flag when body is empty", () => {
+      const event = createMockEvent({
+        body: undefined,
+      });
+      const req = createLambdaRequest(event, mockContext);
+
+      expect(
+        (req as unknown as Record<string, boolean>)._body,
+      ).toBeUndefined();
+    });
+
     it("emits 'end' event for GET requests without body (issue #187)", async () => {
       // This test verifies that the request stream properly emits 'end' even
       // for GET requests without a body. Without this, middleware that waits

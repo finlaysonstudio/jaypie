@@ -9,6 +9,14 @@ Jaypie provides structured logging for observability.
 
 ## Basic Usage
 
+- All logging should use `log` from `jaypie`, custom functions should be eliminated
+- Logging should tell a story as the process unfolds; a non-developer should be able to read and follow
+- `log.trace` the happy path at major checkpoints or junctures where logic forks or errors may be thrown
+- `log.debug` things that should stand out, anything off the happy path that might impact operations later
+- Avoid `log.info`. Reserve info for values that must be recorded such as metrics
+- Use `log.warn` when the problem is unexpected and warrants attention but is recoverable. Use `log.debug` for unusual things that are part of normal operations
+- Use `log.error` when unrecoverable or "really bad." Do not use `log.error` just because an error occurs that is part of normal operations (e.g., 404)
+
 ```typescript
 import { log } from "jaypie";
 
@@ -17,37 +25,41 @@ log.debug("Debug information");
 log.info("Informational message");
 log.warn("Warning message");
 log.error("Error message");
-log.fatal("Fatal error");
+log.fatal("Fatal error"); // only used internally in jaypie
 ```
 
-## Structured Logging
+## Logging Objects
 
-Always include context as the second argument:
-
+DO NOT use multiple parameters when logging:
+<BAD>
 ```typescript
-log.info("User logged in", {
-  userId: user.id,
-  email: user.email,
-  method: "oauth",
-});
-
-log.error("Payment failed", {
-  orderId: order.id,
-  amount: order.total,
-  error: error.message,
-});
+log.info("Processing", { id: "my-id" });
 ```
+</BAD>
 
-## Log Levels
+Use `log.var` to log single-key objects that parse in Datadog:
+<GOOD>
+```typescript
+log.trace("Processing", { id: "my-id" });
+log.var({ id: "my-id" });
+```
+</GOOD>
 
-| Level | Use For |
-|-------|---------|
-| trace | Very detailed debugging (loops, iterations) |
-| debug | Development debugging |
-| info | Normal operations, business events |
-| warn | Unexpected but handled situations |
-| error | Errors that need attention |
-| fatal | Application cannot continue |
+Or have the variable name tell the story:
+<GOOD>
+```typescript
+log.var({ Processing: id });
+```
+</GOOD>
+
+Nest multi-key objects under a single key:
+```typescript
+log.var({ Processing: {
+  id,
+  amount,
+  quantity,
+} });
+```
 
 ## Setting Log Level
 
@@ -58,90 +70,6 @@ LOG_LEVEL=debug npm run dev
 LOG_LEVEL=trace npm test
 ```
 
-In production, typically `info` or `warn`.
-
-## Request Context
-
-Include request identifiers for tracing:
-
-```typescript
-log.info("Processing request", {
-  requestId: req.id,
-  path: req.path,
-  userId: req.user?.id,
-});
-```
-
-## Error Logging
-
-Log errors with full context:
-
-```typescript
-try {
-  await riskyOperation();
-} catch (error) {
-  log.error("Operation failed", {
-    error: error.message,
-    stack: error.stack,
-    input: sanitizedInput,
-  });
-  throw error;
-}
-```
-
-## Sensitive Data
-
-Never log sensitive data:
-
-```typescript
-// BAD
-log.info("User auth", { password: user.password });
-
-// GOOD
-log.info("User auth", { userId: user.id, hasPassword: !!user.password });
-```
-
-## Searching Logs
-
-### Via MCP (Datadog)
-
-```
-# Search by requestId
-datadog_logs --query "@requestId:abc-123"
-
-# Search errors
-datadog_logs --query "status:error" --from "now-1h"
-
-# Search by user
-datadog_logs --query "@userId:user-456"
-```
-
-### Via MCP (CloudWatch)
-
-```
-aws_logs_filter_log_events \
-  --logGroupName "/aws/lambda/my-function" \
-  --filterPattern "ERROR"
-```
-
-## Log Format
-
-Jaypie logs are JSON-formatted for Datadog:
-
-```json
-{
-  "level": "info",
-  "message": "User logged in",
-  "timestamp": "2024-01-15T10:00:00.000Z",
-  "userId": "user-123",
-  "method": "oauth",
-  "dd": {
-    "trace_id": "abc123",
-    "span_id": "def456"
-  }
-}
-```
-
 ## Lambda Logging
 
 Lambda handlers automatically add context:
@@ -150,12 +78,20 @@ Lambda handlers automatically add context:
 import { lambdaHandler } from "@jaypie/lambda";
 
 export const handler = lambdaHandler(async (event) => {
-  // Logs automatically include:
-  // - requestId
-  // - functionName
-  // - cold_start indicator
-  log.info("Processing", { customField: "value" });
+  log.trace("Begin Processing");
+}, {
+  name: "exampleHandler"
 });
+```
+
+Logs will include the `env`, `invoke`, and `handler` name. For example:
+
+```json
+{
+  "env": "sandbox",
+  "invoke": "uuid",
+  "handler": "exampleHandler"
+}
 ```
 
 ## See Also
@@ -163,4 +99,3 @@ export const handler = lambdaHandler(async (event) => {
 - **`skill("datadog")`** - Datadog integration and log forwarding
 - **`skill("handlers")`** - Handler lifecycle with automatic log context
 - **`skill("variables")`** - LOG_LEVEL and other environment variables
-

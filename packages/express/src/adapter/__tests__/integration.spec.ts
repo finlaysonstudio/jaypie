@@ -883,5 +883,94 @@ describe("Lambda Adapter Integration", () => {
       expect(mockWrappedStream.write).toHaveBeenCalledWith("{}");
       expect(mockWrappedStream.end).toHaveBeenCalled();
     });
+
+    it("pre-parses JSON body without express.json() middleware (issue #246)", async () => {
+      // LambdaRequest pre-parses JSON bodies eagerly since the full body
+      // is already in memory from the Lambda event. No middleware needed.
+      const writtenData: string[] = [];
+
+      vi.mocked(awslambda.HttpResponseStream.from).mockImplementation(
+        () => {
+          const wrapped: ResponseStream = {
+            write: vi.fn((chunk: string) => {
+              writtenData.push(chunk);
+              return true;
+            }),
+            end: vi.fn(),
+          };
+          return wrapped;
+        },
+      );
+
+      const app = express();
+      // No express.json() — body should still be parsed
+      app.post("/echo", (req, res) => {
+        res.json({ received: req.body });
+      });
+
+      const handler = createLambdaStreamHandler(app);
+      const postEvent = createMockEvent({
+        body: JSON.stringify({ message: "hello" }),
+        rawPath: "/echo",
+        requestContext: {
+          ...createMockEvent().requestContext,
+          http: {
+            ...createMockEvent().requestContext.http,
+            method: "POST",
+            path: "/echo",
+          },
+        },
+      });
+
+      await handler(postEvent, mockContext);
+
+      expect(writtenData.length).toBeGreaterThan(0);
+      const body = JSON.parse(writtenData.join(""));
+      expect(body.received).toEqual({ message: "hello" });
+    });
+
+    it("pre-parses base64-encoded JSON body without middleware (issue #246)", async () => {
+      const writtenData: string[] = [];
+
+      vi.mocked(awslambda.HttpResponseStream.from).mockImplementation(
+        () => {
+          const wrapped: ResponseStream = {
+            write: vi.fn((chunk: string) => {
+              writtenData.push(chunk);
+              return true;
+            }),
+            end: vi.fn(),
+          };
+          return wrapped;
+        },
+      );
+
+      const app = express();
+      app.post("/echo", (req, res) => {
+        res.json({ received: req.body });
+      });
+
+      const handler = createLambdaStreamHandler(app);
+      const jsonBody = JSON.stringify({ message: "hello" });
+      const postEvent = createMockEvent({
+        body: Buffer.from(jsonBody).toString("base64"),
+        isBase64Encoded: true,
+        rawPath: "/echo",
+        requestContext: {
+          ...createMockEvent().requestContext,
+          http: {
+            ...createMockEvent().requestContext.http,
+            method: "POST",
+            path: "/echo",
+          },
+        },
+      });
+
+      await handler(postEvent, mockContext);
+
+      expect(writtenData.length).toBeGreaterThan(0);
+      const body = JSON.parse(writtenData.join(""));
+      expect(body.received).toEqual({ message: "hello" });
+    });
   });
 });

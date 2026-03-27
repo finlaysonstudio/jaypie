@@ -80,6 +80,21 @@ export class LambdaRequest extends Readable {
     this.headers = this.normalizeHeaders(options.headers);
     this.bodyBuffer = options.body ?? null;
 
+    // Pre-parse body: try JSON first, fall back to string.
+    // In Lambda the full body is already in memory, so we parse eagerly
+    // instead of requiring express.json() middleware. The raw stream remains
+    // available for consumers that need it (e.g. MCP transport).
+    if (this.bodyBuffer && this.bodyBuffer.length > 0) {
+      const text = this.bodyBuffer.toString("utf8");
+      try {
+        this.body = JSON.parse(text);
+      } catch {
+        this.body = text;
+      }
+      // Signal to body-parser that body is already parsed (skip reading stream)
+      (this as unknown as Record<string, boolean>)._body = true;
+    }
+
     // Use pre-parsed query if provided, otherwise parse from URL
     if (options.query) {
       this.query = options.query;
