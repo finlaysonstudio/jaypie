@@ -95,7 +95,7 @@ class DatadogLogTransport {
         if (parsed && typeof parsed === "object") {
           if (parsed.message) {
             message = parsed.message;
-            const { log: _, message: __, ...rest } = parsed;
+            const { level: _, message: __, ...rest } = parsed;
             extra = rest;
           }
         }
