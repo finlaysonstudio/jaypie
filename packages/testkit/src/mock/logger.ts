@@ -19,6 +19,7 @@ export const createLogger = createMockWrappedFunction(
 );
 
 export const _resetDatadogTransport = vi.fn();
+export const getDatadogTransport = vi.fn().mockReturnValue(null);
 export const isDatadogForwardingEnabled = vi.fn().mockReturnValue(false);
 
 export { FORMAT, LEVEL, Logger, redactAuth, sanitizeAuth };

@@ -28,7 +28,7 @@ log.error("Error message");
 log.fatal("Fatal error"); // only used internally in jaypie
 ```
 
-## Logging Objects
+## Logging Data
 
 DO NOT use multiple parameters when logging:
 <BAD>
@@ -61,13 +61,15 @@ log.var({ Processing: {
 } });
 ```
 
+Log any important, even scalar, data and filter with `var` in Datadog
+
 ## Setting Log Level
 
 Via environment variable:
 
 ```bash
 LOG_LEVEL=debug npm run dev
-LOG_LEVEL=trace npm test
+LOG_LEVEL=trace MODULE_LOG_LEVEL=warn npm test
 ```
 
 ## Lambda Logging

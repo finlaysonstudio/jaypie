@@ -3,6 +3,7 @@ import { createLogger } from "./JaypieLogger";
 import { FORMAT, LEVEL } from "./constants";
 import {
   _resetDatadogTransport,
+  getDatadogTransport,
   isDatadogForwardingEnabled,
 } from "./datadogTransport";
 import { redactAuth, sanitizeAuth } from "./sanitizeAuth";
@@ -13,6 +14,7 @@ export {
   Logger,
   _resetDatadogTransport,
   createLogger,
+  getDatadogTransport,
   isDatadogForwardingEnabled,
   redactAuth,
   sanitizeAuth,

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { log, Logger, createLogger } from "../index";
+import { getDatadogTransport, log, Logger, createLogger } from "../index";
 
 describe("@jaypie/logger", () => {
   describe("Base Cases", () => {
@@ -14,6 +14,10 @@ describe("@jaypie/logger", () => {
 
     it("exports createLogger function", () => {
       expect(createLogger).toBeDefined();
+    });
+
+    it("exports getDatadogTransport function", () => {
+      expect(typeof getDatadogTransport).toBe("function");
     });
 
     it("log has debug method", () => {
