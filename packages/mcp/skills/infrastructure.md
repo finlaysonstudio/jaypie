@@ -20,6 +20,7 @@ Cloud infrastructure and deployment patterns.
 | `datadog` | Datadog and observability |
 | `dns` | DNS and domain configuration |
 | `dynamodb` | DynamoDB patterns and queries |
+| `migrations` | DynamoDB migration custom resources |
 | `secrets` | AWS Secrets Manager |
 | `variables` | Environment variables reference |
 | `websockets` | WebSocket API Gateway constructs |

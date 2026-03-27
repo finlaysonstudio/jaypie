@@ -1,6 +1,6 @@
 ---
 description: CDK constructs and deployment patterns
-related: apikey, aws, cicd, dynamodb, express, lambda, secrets, streaming, websockets
+related: apikey, aws, cicd, dynamodb, express, lambda, migrations, secrets, streaming, websockets
 ---
 
 # CDK Constructs
