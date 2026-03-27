@@ -8,10 +8,14 @@ description: Updates to Jaypie code, deploy, documentation, and other practices
 - Confirm any implementation before taking action
 - Do not assume a reference to this skill means to run it all
 
-## Workflow Dispatch Actions
+## GitHub Workflow Dispatch Actions
 
 - Prefer workflow dispatch actions over branch names and tagging
 - Most work is agent-driven so "deploy to production" is more natural
+
+## Logs
+
+- Review ~logs and audit logging in the app
 
 ## Scrub
 
@@ -36,4 +40,4 @@ description: Updates to Jaypie code, deploy, documentation, and other practices
 
 - Do not allow imports from subpackages that are exported from `jaypie`
   - Importing from `@jaypie/express` is not allowed because `jaypie` exports it
-  - Importing from `@jaypie/
+  - Importing from `@jaypie/llm` is allowed because `jaypie` does not export it
