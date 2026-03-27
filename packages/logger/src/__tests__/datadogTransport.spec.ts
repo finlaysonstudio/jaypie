@@ -357,6 +357,47 @@ describe("datadogTransport", () => {
       expect(body[0].ddtags).toBe("env:staging");
     });
 
+    it("uses DD_SOURCE over default ddsource", () => {
+      vi.stubEnv("DD_SOURCE", "lambda");
+      vi.stubEnv("DATADOG_LOCAL_FORWARDING", "true");
+      vi.stubEnv("DATADOG_API_KEY", "test-key");
+
+      const transport = getDatadogTransport()!;
+      transport.send("test", "info");
+      transport.flush();
+
+      const body = lastWrittenBody() as any[];
+      expect(body[0].ddsource).toBe("lambda");
+    });
+
+    it("uses PROJECT_SOURCE as fallback for ddsource", () => {
+      vi.stubEnv("DD_SOURCE", "");
+      vi.stubEnv("PROJECT_SOURCE", "docker");
+      vi.stubEnv("DATADOG_LOCAL_FORWARDING", "true");
+      vi.stubEnv("DATADOG_API_KEY", "test-key");
+
+      const transport = getDatadogTransport()!;
+      transport.send("test", "info");
+      transport.flush();
+
+      const body = lastWrittenBody() as any[];
+      expect(body[0].ddsource).toBe("docker");
+    });
+
+    it("defaults ddsource to 'nodejs'", () => {
+      vi.stubEnv("DD_SOURCE", "");
+      vi.stubEnv("PROJECT_SOURCE", "");
+      vi.stubEnv("DATADOG_LOCAL_FORWARDING", "true");
+      vi.stubEnv("DATADOG_API_KEY", "test-key");
+
+      const transport = getDatadogTransport()!;
+      transport.send("test", "info");
+      transport.flush();
+
+      const body = lastWrittenBody() as any[];
+      expect(body[0].ddsource).toBe("nodejs");
+    });
+
     it("uses os.hostname as fallback for hostname", () => {
       vi.stubEnv("DD_HOST", "");
       vi.stubEnv("PROJECT_HOST", "");

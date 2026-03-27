@@ -69,6 +69,7 @@ Defined in `constants.ts` with numeric values for comparison:
 - `DD_SERVICE` / `PROJECT_SERVICE` - Service name tag (default: `unknown`)
 - `DD_ENV` / `PROJECT_ENV` - Environment tag (default: `local`)
 - `DD_HOST` / `PROJECT_HOST` - Hostname tag (default: `os.hostname()`)
+- `DD_SOURCE` / `PROJECT_SOURCE` - Log source tag (default: `nodejs`)
 
 ### Variable Logging
 
