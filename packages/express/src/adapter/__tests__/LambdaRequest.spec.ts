@@ -275,9 +275,7 @@ describe("LambdaRequest", () => {
       });
       const req = createLambdaRequest(event, mockContext);
 
-      expect(
-        (req as unknown as Record<string, boolean>)._body,
-      ).toBe(true);
+      expect((req as unknown as Record<string, boolean>)._body).toBe(true);
     });
 
     it("does not set _body flag when body is empty", () => {
@@ -286,9 +284,7 @@ describe("LambdaRequest", () => {
       });
       const req = createLambdaRequest(event, mockContext);
 
-      expect(
-        (req as unknown as Record<string, boolean>)._body,
-      ).toBeUndefined();
+      expect((req as unknown as Record<string, boolean>)._body).toBeUndefined();
     });
 
     it("exposes rawBody as original body string for webhook signature validation (issue #256)", () => {
