@@ -2,6 +2,7 @@ import { CDK } from "../constants";
 import { describe, expect, it, vi } from "vitest";
 import { Stack, RemovalPolicy, Duration } from "aws-cdk-lib";
 import { Template, Match } from "aws-cdk-lib/assertions";
+import * as dynamodb from "aws-cdk-lib/aws-dynamodb";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import { JaypieQueuedLambda } from "../JaypieQueuedLambda.js";
 import * as iam from "aws-cdk-lib/aws-iam";
@@ -309,6 +310,43 @@ describe("JaypieQueuedLambda", () => {
         },
       });
       vi.unstubAllEnvs();
+    });
+
+    it("passes tables to inner Lambda and sets DYNAMODB_TABLE_NAME (issue #258)", () => {
+      const stack = new Stack();
+      const table = new dynamodb.Table(stack, "TestTable", {
+        partitionKey: { name: "pk", type: dynamodb.AttributeType.STRING },
+      });
+
+      new JaypieQueuedLambda(stack, "TestConstruct", {
+        code: lambda.Code.fromInline("exports.handler = () => {}"),
+        handler: "index.handler",
+        tables: [table],
+      });
+
+      const template = Template.fromStack(stack);
+
+      // Verify DYNAMODB_TABLE_NAME env var is set
+      template.hasResourceProperties("AWS::Lambda::Function", {
+        Environment: {
+          Variables: {
+            CDK_ENV_QUEUE_URL: Match.anyValue(),
+            DYNAMODB_TABLE_NAME: Match.anyValue(),
+          },
+        },
+      });
+
+      // Verify IAM permissions for DynamoDB
+      template.hasResourceProperties("AWS::IAM::Policy", {
+        PolicyDocument: {
+          Statement: Match.arrayWith([
+            Match.objectLike({
+              Action: Match.arrayWith(["dynamodb:PutItem"]),
+              Effect: "Allow",
+            }),
+          ]),
+        },
+      });
     });
 
     it("configures FIFO queue by default", () => {
