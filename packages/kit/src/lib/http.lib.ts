@@ -86,6 +86,7 @@ const HTTP = {
     },
     USER_AGENT: "User-Agent",
     VIA: "Via",
+    WEBHOOK_TOKEN: "X-Webhook-Token",
   },
   METHOD: {
     DELETE: "DELETE",

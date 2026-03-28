@@ -61,6 +61,7 @@ export class LambdaRequest extends Readable {
   public body: unknown;
   public params: Record<string, string> = {};
   public query: Record<string, unknown> = {};
+  public readonly rawBody: string | undefined;
 
   // Jaypie-specific: store Lambda context for getCurrentInvokeUuid
   public readonly _lambdaContext: LambdaContext;
@@ -86,6 +87,7 @@ export class LambdaRequest extends Readable {
     // available for consumers that need it (e.g. MCP transport).
     if (this.bodyBuffer && this.bodyBuffer.length > 0) {
       const text = this.bodyBuffer.toString("utf8");
+      this.rawBody = text;
       try {
         this.body = JSON.parse(text);
       } catch {

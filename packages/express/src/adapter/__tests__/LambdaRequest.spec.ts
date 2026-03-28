@@ -275,9 +275,7 @@ describe("LambdaRequest", () => {
       });
       const req = createLambdaRequest(event, mockContext);
 
-      expect(
-        (req as unknown as Record<string, boolean>)._body,
-      ).toBe(true);
+      expect((req as unknown as Record<string, boolean>)._body).toBe(true);
     });
 
     it("does not set _body flag when body is empty", () => {
@@ -286,9 +284,45 @@ describe("LambdaRequest", () => {
       });
       const req = createLambdaRequest(event, mockContext);
 
-      expect(
-        (req as unknown as Record<string, boolean>)._body,
-      ).toBeUndefined();
+      expect((req as unknown as Record<string, boolean>)._body).toBeUndefined();
+    });
+
+    it("exposes rawBody as original body string for webhook signature validation (issue #256)", () => {
+      const event = createMockEvent({
+        body: '{"name":"John","age":30}',
+      });
+      const req = createLambdaRequest(event, mockContext);
+
+      expect(req.rawBody).toBe('{"name":"John","age":30}');
+    });
+
+    it("exposes rawBody for base64-encoded bodies", () => {
+      const jsonBody = '{"message":"hello"}';
+      const event = createMockEvent({
+        body: Buffer.from(jsonBody).toString("base64"),
+        isBase64Encoded: true,
+      });
+      const req = createLambdaRequest(event, mockContext);
+
+      expect(req.rawBody).toBe('{"message":"hello"}');
+    });
+
+    it("exposes rawBody for non-JSON text bodies", () => {
+      const event = createMockEvent({
+        body: "plain text body",
+      });
+      const req = createLambdaRequest(event, mockContext);
+
+      expect(req.rawBody).toBe("plain text body");
+    });
+
+    it("sets rawBody to undefined when body is empty", () => {
+      const event = createMockEvent({
+        body: undefined,
+      });
+      const req = createLambdaRequest(event, mockContext);
+
+      expect(req.rawBody).toBeUndefined();
     });
 
     it("emits 'end' event for GET requests without body (issue #187)", async () => {
