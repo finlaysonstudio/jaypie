@@ -201,6 +201,17 @@ export default ["packages/*/vitest.config.{ts,js}"];
 
 New packages are automatically included when they have a `vitest.config.ts`.
 
+## CI/CD Build Integration
+
+**CRITICAL**: New subpackages must be buildable in CI/CD. The root `npm run build` runs all workspaces via `--workspaces --if-present`, so any package with a `build` script will be included automatically. However:
+
+1. **Ensure `build` script exists** in the new package's `package.json`
+2. **If the package is a build dependency of other packages** (e.g., CDK stacks reference `code: "../newpackage/dist"`), add it to `build:core-deps` in the root `package.json` so it builds before dependents
+3. **Verify the `dist/` directory is produced** — CDK constructs using `code: "../newpackage/dist"` will fail in CI if the package wasn't built first
+4. **Run `npm run build` from the root** to confirm the new package builds in the correct order
+
+Without this, CI/CD will fail with errors like `"../newpackage/dist" doesn't exist`.
+
 ## Checklist
 
 After creating a subpackage:
@@ -211,6 +222,8 @@ After creating a subpackage:
 4. ✅ Run `npm install` from root to link workspace
 5. ✅ Verify with `npm run build -w packages/<package-name>`
 6. ✅ Verify with `npm run test -w packages/<package-name>`
+7. ✅ Verify `npm run build` from root succeeds (CI/CD order)
+8. ✅ If CDK references `dist/`, add to `build:core-deps` in root `package.json`
 
 ## Next Steps
 

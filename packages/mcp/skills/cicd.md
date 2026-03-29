@@ -127,6 +127,15 @@ Required repository secrets:
 | `NPM_TOKEN` | npm publish authentication |
 | `DATADOG_API_KEY` | Optional: Test tracing |
 
+## New Package Build Order
+
+**CRITICAL**: When adding a new subpackage, ensure it builds correctly in CI/CD:
+
+- The root `npm run build` runs `build:core-deps` first (types, errors, fabric), then all workspaces via `--workspaces --if-present`
+- If a CDK stack references `code: "../newpackage/dist"`, the package **must** be built before `cdk synth`/`cdk deploy`
+- If the new package is a dependency of other packages at build time, add it to `build:core-deps` in the root `package.json`
+- Without this, CI/CD will fail with `"../newpackage/dist" doesn't exist`
+
 ## Workflow Tips
 
 ### Skip Already-Published Versions

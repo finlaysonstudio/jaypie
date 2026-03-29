@@ -47,6 +47,8 @@ new JaypieLambda(this, "Api", {
 
 For ESM bundles, use `.mjs` extension or include `package.json` with `"type": "module"` in dist. See `skill("express")` for full esbuild config.
 
+**CRITICAL**: When referencing `code: "../package/dist"`, the package must be built **before** CDK synth/deploy. In CI/CD, `npm run build` at the root handles this — but new packages must have a `build` script in their `package.json`. If the package is a build-time dependency of others, add it to `build:core-deps` in the root `package.json`. Without this, CI/CD fails with `"../package/dist" doesn't exist`.
+
 ### JaypieQueue
 
 SQS queue with DLQ and Lambda trigger:
