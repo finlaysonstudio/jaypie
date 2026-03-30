@@ -68,8 +68,6 @@ Configure defaults via environment:
 | `DATADOG_API_KEY` or `DD_API_KEY` | API key (required) |
 | `DATADOG_APP_KEY` or `DD_APP_KEY` | Application key (required) |
 | `DD_ENV` | Default environment filter |
-| `DD_SERVICE` | Default service filter |
-| `DD_SOURCE` | Default log source (default: lambda) |
 
 ## Log Search
 

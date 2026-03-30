@@ -291,19 +291,13 @@ export async function validateDatadogCredentials(
  */
 export function buildDatadogQuery(options: DatadogSearchOptions): string {
   const ddEnv = process.env.DD_ENV;
-  const ddService = process.env.DD_SERVICE;
-  const ddSource = process.env.DD_SOURCE;
   const ddQuery = process.env.DD_QUERY;
 
   const queryParts: string[] = [];
 
-  // Add source (parameter > env var > default 'lambda')
-  // Skip default source if the query already contains a source: token
-  const queryHasSource = options.query && /\bsource:/.test(options.query);
-  const effectiveSource =
-    options.source || ddSource || (queryHasSource ? undefined : "lambda");
-  if (effectiveSource) {
-    queryParts.push(`source:${effectiveSource}`);
+  // Add source (parameter only, no env var default)
+  if (options.source) {
+    queryParts.push(`source:${options.source}`);
   }
 
   // Add env (parameter > env var)
@@ -312,10 +306,9 @@ export function buildDatadogQuery(options: DatadogSearchOptions): string {
     queryParts.push(`env:${effectiveEnv}`);
   }
 
-  // Add service (parameter > env var)
-  const effectiveService = options.service || ddService;
-  if (effectiveService) {
-    queryParts.push(`service:${effectiveService}`);
+  // Add service (parameter only, no env var default)
+  if (options.service) {
+    queryParts.push(`service:${options.service}`);
   }
 
   // Add base query from DD_QUERY if available
