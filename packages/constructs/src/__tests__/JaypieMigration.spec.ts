@@ -1,6 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { Stack } from "aws-cdk-lib";
-import { Template } from "aws-cdk-lib/assertions";
+import { Match, Template } from "aws-cdk-lib/assertions";
 import * as dynamodb from "aws-cdk-lib/aws-dynamodb";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 
@@ -45,6 +45,39 @@ describe("JaypieMigration", () => {
 
       // Verify IAM policy exists granting DynamoDB access
       template.hasResource("AWS::IAM::Policy", {});
+    });
+
+    it("passes environment variables to the migration Lambda", () => {
+      const stack = new Stack();
+      new JaypieMigration(stack, "TestMigration", {
+        code: lambda.Code.fromInline("exports.handler = () => {}"),
+        environment: { PROJECT_COMMIT: "abc123" },
+        handler: "index.handler",
+      });
+
+      const template = Template.fromStack(stack);
+      const resources = template.findResources("AWS::Lambda::Function");
+      const lambdaFunctions = Object.values(resources);
+      const migrationLambda = lambdaFunctions.find(
+        (r: any) => r.Properties?.Handler === "index.handler",
+      );
+
+      expect(
+        migrationLambda?.Properties?.Environment?.Variables,
+      ).toHaveProperty("PROJECT_COMMIT", "abc123");
+    });
+
+    it("includes a deploy nonce in custom resource properties to force re-invocation (issue #261)", () => {
+      const stack = new Stack();
+      new JaypieMigration(stack, "TestMigration", {
+        code: lambda.Code.fromInline("exports.handler = () => {}"),
+        handler: "index.handler",
+      });
+
+      const template = Template.fromStack(stack);
+      template.hasResourceProperties("AWS::CloudFormation::CustomResource", {
+        deployNonce: Match.anyValue(),
+      });
     });
 
     it("sets DYNAMODB_TABLE_NAME when one table is provided", () => {

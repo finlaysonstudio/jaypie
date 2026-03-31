@@ -12,6 +12,8 @@ export interface JaypieMigrationProps {
   code: lambda.Code | string;
   /** Constructs that must be created before the migration runs */
   dependencies?: Construct[];
+  /** Environment variables for the migration Lambda */
+  environment?: Record<string, string> | (Record<string, string> | string)[];
   /** Lambda handler entry point */
   handler?: string;
   /** Secrets to make available to the migration Lambda */
@@ -29,6 +31,7 @@ export class JaypieMigration extends Construct {
     const {
       code,
       dependencies = [],
+      environment,
       handler = "index.handler",
       secrets = [],
       tables = [],
@@ -38,6 +41,7 @@ export class JaypieMigration extends Construct {
     this.lambda = new JaypieLambda(this, "MigrationLambda", {
       code,
       description: "DynamoDB migration custom resource",
+      environment,
       handler,
       roleTag: CDK.ROLE.PROCESSING,
       secrets,
@@ -50,8 +54,13 @@ export class JaypieMigration extends Construct {
       onEventHandler: this.lambda,
     });
 
-    // Custom Resource that triggers on every deploy
+    // Custom Resource that triggers on every deploy.
+    // deployNonce forces CloudFormation to re-invoke the custom resource
+    // even when only Lambda code changes (issue #261).
     const resource = new cdk.CustomResource(this, "MigrationResource", {
+      properties: {
+        deployNonce: Date.now().toString(),
+      },
       serviceToken: provider.serviceToken,
     });
 
