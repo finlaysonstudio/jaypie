@@ -1,33 +1,31 @@
 const FIRST_CLASS_PROVIDER = {
+  // https://docs.anthropic.com/en/docs/about-claude/models/overview
   ANTHROPIC: {
-    DEFAULT: "claude-sonnet-4-5" as const,
-    LARGE: "claude-opus-4-5" as const,
-    SMALL: "claude-sonnet-4-5" as const,
+    DEFAULT: "claude-sonnet-4-6" as const,
+    LARGE: "claude-opus-4-6" as const,
+    SMALL: "claude-sonnet-4-6" as const,
     TINY: "claude-haiku-4-5" as const,
   },
+  // https://ai.google.dev/gemini-api/docs/models
   GEMINI: {
-    DEFAULT: "gemini-3-pro-preview" as const,
-    LARGE: "gemini-3-pro-preview" as const,
+    DEFAULT: "gemini-3.1-pro-preview" as const,
+    LARGE: "gemini-3.1-pro-preview" as const,
     SMALL: "gemini-3-flash-preview" as const,
-    TINY: "gemini-3-flash-preview" as const,
+    TINY: "gemini-3.1-flash-lite-preview" as const,
   },
+  // https://developers.openai.com/api/docs/models
   OPENAI: {
-    DEFAULT: "gpt-5.2" as const,
-    LARGE: "gpt-5.2-pro" as const,
-    SMALL: "gpt-5-mini" as const,
-    TINY: "gpt-5-nano" as const,
+    DEFAULT: "gpt-5.4" as const,
+    LARGE: "gpt-5.4" as const,
+    SMALL: "gpt-5.4-mini" as const,
+    TINY: "gpt-5.4-nano" as const,
   },
-  OPENROUTER: {
-    DEFAULT: "z-ai/glm-4.7" as const,
-    LARGE: "z-ai/glm-4.7" as const,
-    SMALL: "z-ai/glm-4.7" as const,
-    TINY: "z-ai/glm-4.7" as const,
-  },
+  // https://docs.x.ai/developers/models
   XAI: {
-    DEFAULT: "grok-4-1-fast-reasoning" as const,
-    LARGE: "grok-4-1-fast-reasoning" as const,
-    SMALL: "grok-3" as const,
-    TINY: "grok-3-mini" as const,
+    DEFAULT: "grok-4.20-0309-reasoning" as const,
+    LARGE: "grok-4.20-0309-reasoning" as const,
+    SMALL: "grok-4.20-0309-non-reasoning" as const,
+    TINY: "grok-4-1-fast-non-reasoning" as const,
   },
 };
 
@@ -91,15 +89,11 @@ export const PROVIDER = {
     NAME: "openai" as const,
   },
   OPENROUTER: {
-    // https://openrouter.ai/models
-    // OpenRouter provides access to hundreds of models from various providers
-    // The model format is: provider/model-name (e.g., "openai/gpt-4", "anthropic/claude-3-opus")
     MODEL: {
-      // Default uses env var OPENROUTER_MODEL if set, otherwise a reasonable default
-      DEFAULT: FIRST_CLASS_PROVIDER.OPENROUTER.DEFAULT,
-      LARGE: FIRST_CLASS_PROVIDER.OPENROUTER.LARGE,
-      SMALL: FIRST_CLASS_PROVIDER.OPENROUTER.SMALL,
-      TINY: FIRST_CLASS_PROVIDER.OPENROUTER.TINY,
+      DEFAULT: `anthropic/${FIRST_CLASS_PROVIDER.ANTHROPIC.DEFAULT}` as const,
+      LARGE: `anthropic/${FIRST_CLASS_PROVIDER.ANTHROPIC.LARGE}` as const,
+      SMALL: `anthropic/${FIRST_CLASS_PROVIDER.ANTHROPIC.SMALL}` as const,
+      TINY: `anthropic/${FIRST_CLASS_PROVIDER.ANTHROPIC.TINY}` as const,
     },
     MODEL_MATCH_WORDS: ["openrouter"] as const,
     NAME: "openrouter" as const,

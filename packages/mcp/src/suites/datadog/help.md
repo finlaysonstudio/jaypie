@@ -27,7 +27,7 @@ All parameters are passed at the top level (no nested objects):
 | `limit` | number | Maximum results to return |
 | `env` | string | Environment filter |
 | `service` | string | Service name filter |
-| `source` | string | Log source filter (default: lambda) |
+| `source` | string | Log source filter |
 | `groupBy` | string | Fields to group by, comma-separated (for log_analytics) |
 | `aggregation` | string | Aggregation type: count, avg, sum, min, max, cardinality |
 | `status` | string | Monitor status filter, comma-separated: Alert, Warn, No Data, OK |
@@ -42,8 +42,6 @@ All parameters are passed at the top level (no nested objects):
 | `DATADOG_API_KEY` or `DD_API_KEY` | Datadog API key |
 | `DATADOG_APP_KEY` or `DD_APP_KEY` | Datadog Application key |
 | `DD_ENV` | Default environment filter |
-| `DD_SERVICE` | Default service filter |
-| `DD_SOURCE` | Default log source (defaults to "lambda") |
 
 ## Examples
 

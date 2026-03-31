@@ -28,8 +28,6 @@ AWS tools use the host's existing credential chain:
 | `DATADOG_API_KEY` or `DD_API_KEY` | Datadog API key |
 | `DATADOG_APP_KEY` or `DD_APP_KEY` | Datadog Application key |
 | `DD_ENV` | Default environment filter |
-| `DD_SERVICE` | Default service filter |
-| `DD_SOURCE` | Default log source (defaults to "lambda") |
 | `DD_QUERY` | Default query terms appended to searches |
 
 ## MCP Tools

@@ -158,6 +158,8 @@ new JaypieLambda(this, "Handler", {
 });
 ```
 
+**Build order**: When using `code: "../package/dist"` instead of `entry`, ensure the package has a `build` script and builds before CDK synth in CI/CD. New packages need to be added to `build:core-deps` in root `package.json` if they're build-time dependencies. See `skill("cicd")` for details.
+
 ## ESM Deployment
 
 Lambda handlers using ESM require Node.js to recognize the module format.

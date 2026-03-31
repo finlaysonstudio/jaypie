@@ -129,7 +129,7 @@ describe("@jaypie/logger", () => {
         logger.trace("Handling Discord interaction", { type: 1 });
 
         expect(debugSpy).toHaveBeenCalledWith(
-          '{"level":"trace","message":"Handling Discord interaction {\\"type\\":1}"}',
+          '{"message":"Handling Discord interaction {\\"type\\":1}","status":"trace"}',
         );
       });
     });

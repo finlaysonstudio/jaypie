@@ -56,24 +56,12 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: ${{ matrix.node-version }}
-      - name: Fresh install (avoid native binding issues)
-        run: |
-          rm -f package-lock.json
-          npm install
+      - name: Install dependencies
+        run: npm install
+      - name: Rebuild native bindings for current platform
+        run: npm rebuild
       - run: npm run build
-      - name: Vitest with Optional Datadog Tracing
-        run: |
-          if [[ -n "${{ secrets.DATADOG_CICD_API_KEY }}" ]]; then
-            echo "Run tests with Datadog tracing"
-            npm install dd-trace --save-dev
-            export DD_CIVISIBILITY_AGENTLESS_ENABLED=true
-            export DD_API_KEY=${{ secrets.DATADOG_CICD_API_KEY }}
-            export DD_SITE=datadoghq.com
-            # Additional steps to test CDK, still using CommonJS :(
-            NODE_OPTIONS='--import dd-trace/register.js -r dd-trace/ci/init' DD_ENV=${{ env.PROJECT_ENV }} DD_SERVICE=${{ env.PROJECT_SERVICE }} npm run test
-          else
-            npm test
-          fi
+      - run: npm test
   test-llm-client:
     name: LLM Client Test (conditional)
     runs-on: ubuntu-latest
