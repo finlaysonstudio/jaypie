@@ -10,7 +10,9 @@
     "workspaces/*"
   ],
   "scripts": {
-    "build": "npm run build:core-deps && npm run build -w 'packages/*' --if-present && npm run build -w 'workspaces/*' --if-present",
+    "build": "npm run build:core-deps && npm run build:packages && npm run build:workspaces",
+    "build:packages": "for dir in packages/*/; do npm run build --if-present -w \"$dir\"; done",
+    "build:workspaces": "for dir in workspaces/*/; do npm run build --if-present -w \"$dir\"; done",
     "build:aws": "npm run build --workspace packages/aws",
     "build:constructs": "npm run build --workspace packages/constructs",
     "build:core": "npm run build --workspace packages/core",
