@@ -32,16 +32,17 @@ new JaypieMigration(this, "SeedData", {
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
 | `code` | `lambda.Code \| string` | *required* | Path to bundled migration code or CDK Code object |
-| `handler` | `string` | `"index.handler"` | Lambda entry point |
-| `tables` | `dynamodb.ITable[]` | `[]` | DynamoDB tables to grant read/write access |
-| `secrets` | `SecretsArrayItem[]` | `[]` | Secrets to make available to the Lambda |
 | `dependencies` | `Construct[]` | `[]` | Constructs that must be created before the migration runs |
+| `environment` | `Record<string, string> \| (Record<string, string> \| string)[]` | - | Environment variables for the migration Lambda |
+| `handler` | `string` | `"index.handler"` | Lambda entry point |
+| `secrets` | `SecretsArrayItem[]` | `[]` | Secrets to make available to the Lambda |
+| `tables` | `dynamodb.ITable[]` | `[]` | DynamoDB tables to grant read/write access |
 
 ## Behavior
 
 - **Timeout**: 5 minutes (vs 30s for API Lambdas) to accommodate long-running migrations
 - **Role**: Tagged as `CDK.ROLE.PROCESSING`
-- **Execution**: Runs on every deploy via CloudFormation custom resource
+- **Execution**: Runs on every deploy via CloudFormation custom resource (uses a deploy nonce to force re-invocation even when only Lambda code changes)
 - **Dependencies**: Use `dependencies` to ensure tables and other resources exist before the migration executes
 
 ## Migration Lambda Handler

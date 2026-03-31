@@ -75,12 +75,9 @@ describe("JaypieMigration", () => {
       });
 
       const template = Template.fromStack(stack);
-      template.hasResourceProperties(
-        "AWS::CloudFormation::CustomResource",
-        {
-          deployNonce: Match.anyValue(),
-        },
-      );
+      template.hasResourceProperties("AWS::CloudFormation::CustomResource", {
+        deployNonce: Match.anyValue(),
+      });
     });
 
     it("sets DYNAMODB_TABLE_NAME when one table is provided", () => {
