@@ -14,7 +14,7 @@
     "build:aws": "npm run build --workspace packages/aws",
     "build:constructs": "npm run build --workspace packages/constructs",
     "build:core": "npm run build --workspace packages/core",
-    "build:core-deps": "npm run build -w packages/types && npm run build -w packages/errors && npm run build -w packages/fabric",
+    "build:core-deps": "npm run build -w packages/types && npm run build -w packages/errors && npm run build -w packages/fabric && npm run build -w packages/constructs",
     "build:datadog": "npm run build --workspace packages/datadog",
     "build:errors": "npm run build --workspace packages/errors",
     "build:express": "npm run build --workspace packages/express",
