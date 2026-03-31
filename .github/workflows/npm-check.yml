@@ -56,8 +56,12 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: ${{ matrix.node-version }}
-      - name: Install dependencies
-        run: npm install
+      - name: Install dependencies (regenerate lock for Linux native bindings)
+        run: |
+          rm -f package-lock.json
+          npm install
+      - name: Rebuild packages (ensure .d.ts files exist before workspace builds)
+        run: npm run build:core-deps
       - run: npm run build
       - name: Vitest with Optional Datadog Tracing
         run: |
