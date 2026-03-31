@@ -175,7 +175,7 @@ Outputs:
 
 ```json
 {
-  "level": "info",
+  "status": "info",
   "message": "Server started",
   "invoke": "abc-123",
   "timestamp": "2024-01-15T10:30:00.000Z"

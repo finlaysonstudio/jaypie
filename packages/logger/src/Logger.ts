@@ -23,8 +23,8 @@ interface LoggerOptions {
 interface LogJson {
   data?: unknown;
   dataType?: string;
-  level: string;
   message: string;
+  status: string;
   var?: string;
   [key: string]: unknown;
 }
@@ -86,8 +86,8 @@ class Logger {
           const message = stringify(...sanitized);
           const parses = parsesTo(message);
           const json: LogJson = {
-            level: logLevel,
             message,
+            status: logLevel,
             ...this.tags,
           };
           if (parses.parses) {
@@ -138,8 +138,8 @@ class Logger {
         const json: LogJson = {
           data: parse(messageVal),
           dataType: typeof messageVal,
-          level: logLevel,
           message: stringify(messageVal),
+          status: logLevel,
           var: messageKey,
           ...this.tags,
         };

@@ -46,7 +46,7 @@ Use `log.var()` for structured key-value logging:
 log.var({ userId: "abc-123" });
 
 // Output:
-// { "level": "trace", "message": "abc-123", "var": "userId", "data": "abc-123", "dataType": "string" }
+// { "status": "trace", "message": "abc-123", "var": "userId", "data": "abc-123", "dataType": "string" }
 ```
 
 Variable logging is available at all levels:

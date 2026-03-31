@@ -184,29 +184,30 @@ describe("datadogTransport", () => {
       expect(body[0].message).toBe("Creating evaluation");
     });
 
-    it("excludes 'level' field from entry (level is in status)", () => {
+    it("excludes 'status' field from entry (status is set by transport)", () => {
       const transport = getDatadogTransport()!;
       transport.send(
         JSON.stringify({
-          level: "trace",
           message: "Creating evaluation",
           project: "garden",
+          status: "trace",
         }),
         "trace",
       );
       transport.flush();
       const body = lastWrittenBody() as any[];
-      expect(body[0]).not.toHaveProperty("level");
+      // status should be the Datadog-mapped value, not the raw logger value
+      expect(body[0].status).toBe("debug");
     });
 
     it("spreads extra JSON fields as top-level attributes", () => {
       const transport = getDatadogTransport()!;
       transport.send(
         JSON.stringify({
-          level: "info",
           message: "User login",
           project: "garden",
           requestId: "abc-123",
+          status: "info",
         }),
         "info",
       );
@@ -226,7 +227,7 @@ describe("datadogTransport", () => {
 
     it("falls back to full JSON string when message field is missing", () => {
       const transport = getDatadogTransport()!;
-      const line = JSON.stringify({ level: "info", data: "some data" });
+      const line = JSON.stringify({ data: "some data", status: "info" });
       transport.send(line, "info");
       transport.flush();
       const body = lastWrittenBody() as any[];
@@ -248,7 +249,7 @@ describe("datadogTransport", () => {
 
     it("sends correct payload structure", () => {
       const transport = getDatadogTransport()!;
-      transport.send('{"level":"info","message":"hello"}', "info");
+      transport.send('{"message":"hello","status":"info"}', "info");
       transport.flush();
 
       expect(request).toHaveBeenCalledWith(
