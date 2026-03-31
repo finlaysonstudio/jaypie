@@ -89,6 +89,12 @@ export const PROVIDER = {
     NAME: "openai" as const,
   },
   OPENROUTER: {
+    MODEL: {
+      DEFAULT: `anthropic/${FIRST_CLASS_PROVIDER.ANTHROPIC.DEFAULT}` as const,
+      LARGE: `anthropic/${FIRST_CLASS_PROVIDER.ANTHROPIC.LARGE}` as const,
+      SMALL: `anthropic/${FIRST_CLASS_PROVIDER.ANTHROPIC.SMALL}` as const,
+      TINY: `anthropic/${FIRST_CLASS_PROVIDER.ANTHROPIC.TINY}` as const,
+    },
     MODEL_MATCH_WORDS: ["openrouter"] as const,
     NAME: "openrouter" as const,
     ROLE: {
