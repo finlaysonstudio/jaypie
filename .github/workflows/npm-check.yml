@@ -61,21 +61,7 @@ jobs:
       - name: Rebuild native bindings for current platform
         run: npm rebuild
       - run: npm run build
-      - name: Vitest with Optional Datadog Tracing
-        run: |
-          if [[ -n "${{ secrets.DATADOG_CICD_API_KEY }}" ]]; then
-            echo "Run tests with Datadog tracing"
-            npm install dd-trace --save-dev
-            export DD_CIVISIBILITY_AGENTLESS_ENABLED=true
-            export DD_API_KEY=${{ secrets.DATADOG_CICD_API_KEY }}
-            export DD_SITE=datadoghq.com
-            # Run eslint tests without dd-trace (unrs-resolver native binding incompatibility)
-            npm test -w packages/eslint || true
-            # Run remaining tests with dd-trace instrumentation, excluding eslint
-            NODE_OPTIONS='--import dd-trace/register.js -r dd-trace/ci/init' DD_ENV=${{ env.PROJECT_ENV }} DD_SERVICE=${{ env.PROJECT_SERVICE }} npx vitest run --exclude 'packages/eslint/**'
-          else
-            npm test
-          fi
+      - run: npm test
   test-llm-client:
     name: LLM Client Test (conditional)
     runs-on: ubuntu-latest
