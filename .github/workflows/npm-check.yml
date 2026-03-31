@@ -56,10 +56,8 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: ${{ matrix.node-version }}
-      - name: Fresh install (avoid native binding issues)
-        run: |
-          rm -f package-lock.json
-          npm install
+      - name: Fresh install
+        run: npm ci
       - run: npm run build
       - name: Vitest with Optional Datadog Tracing
         run: |
