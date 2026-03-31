@@ -1644,7 +1644,9 @@ describe("StreamLoop", () => {
           msg.call_id === "call-fail-1",
       );
       expect(toolResultInHistory).toBeDefined();
-      expect(toolResultInHistory.output).toContain("DynamoDB connection failed");
+      expect(toolResultInHistory.output).toContain(
+        "DynamoDB connection failed",
+      );
     });
   });
 });
