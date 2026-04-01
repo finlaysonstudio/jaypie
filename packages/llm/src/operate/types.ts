@@ -156,6 +156,8 @@ import type { ResponseBuilder } from "./response/ResponseBuilder.js";
  * Internal state of the operate loop
  */
 export interface OperateLoopState {
+  /** Count of consecutive tool errors (resets on success) */
+  consecutiveToolErrors: number;
   /** Current conversation input/messages */
   currentInput: LlmHistory;
   /** Current turn number (0-indexed, incremented at start of each turn) */

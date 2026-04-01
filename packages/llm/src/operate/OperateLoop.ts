@@ -58,6 +58,8 @@ const ERROR = {
   BAD_FUNCTION_CALL: "Bad Function Call",
 };
 
+export const MAX_CONSECUTIVE_TOOL_ERRORS = 6;
+
 //
 //
 // Helpers
@@ -220,6 +222,7 @@ export class OperateLoop {
     }
 
     return {
+      consecutiveToolErrors: 0,
       currentInput: processedInput.history,
       currentTurn: 0,
       formattedFormat,
@@ -382,6 +385,9 @@ export class OperateLoop {
               success: true,
             };
 
+            // Reset consecutive error counter on success
+            state.consecutiveToolErrors = 0;
+
             // Update provider request with tool result
             currentProviderRequest = this.adapter.appendToolResult(
               currentProviderRequest,
@@ -441,6 +447,20 @@ export class OperateLoop {
 
             log.error(`Error executing function call ${toolCall.name}`);
             log.var({ error });
+
+            // Track consecutive errors and stop if threshold reached
+            state.consecutiveToolErrors++;
+            if (state.consecutiveToolErrors >= MAX_CONSECUTIVE_TOOL_ERRORS) {
+              const detail = `Stopped after ${MAX_CONSECUTIVE_TOOL_ERRORS} consecutive tool errors`;
+              log.warn(detail);
+              state.responseBuilder.setError({
+                detail,
+                status: 502,
+                title: ERROR.BAD_FUNCTION_CALL,
+              });
+              state.responseBuilder.incomplete();
+              return false; // Stop loop
+            }
           }
         }
 

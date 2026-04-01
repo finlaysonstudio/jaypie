@@ -2,7 +2,7 @@ import { LlmOperateOptions } from "../types/LlmProvider.interface.js";
 
 // Turn policy constants
 export const MAX_TURNS_ABSOLUTE_LIMIT = 72;
-export const MAX_TURNS_DEFAULT_LIMIT = 12;
+export const MAX_TURNS_DEFAULT_LIMIT = 24;
 
 /**
  * Determines the maximum number of turns based on the provided options
