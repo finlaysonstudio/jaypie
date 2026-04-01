@@ -1,7 +1,7 @@
 import { APEX, queryByAlias } from "@jaypie/dynamodb";
 import { ForbiddenError, UnauthorizedError } from "@jaypie/errors";
 import { log } from "@jaypie/logger";
-import { hashJaypieKey, validateJaypieKey } from "jaypie";
+import { hashJaypieKey, validateJaypieKey } from "@jaypie/kit";
 
 import type { ValidateResult } from "./types";
 
