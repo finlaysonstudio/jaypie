@@ -19,13 +19,13 @@ describe("maxTurnsFromOptions", () => {
   });
 
   describe("Features", () => {
-    it("returns default limit (12) when turns is undefined", () => {
+    it("returns default limit (24) when turns is undefined", () => {
       const options: LlmOperateOptions = {};
       const result = maxTurnsFromOptions(options);
       expect(result).toBe(MAX_TURNS_DEFAULT_LIMIT);
     });
 
-    it("returns default limit (12) when turns is true", () => {
+    it("returns default limit (24) when turns is true", () => {
       const options: LlmOperateOptions = { turns: true };
       const result = maxTurnsFromOptions(options);
       expect(result).toBe(MAX_TURNS_DEFAULT_LIMIT);
@@ -55,7 +55,7 @@ describe("maxTurnsFromOptions", () => {
       expect(result).toBe(MAX_TURNS_ABSOLUTE_LIMIT);
     });
 
-    it("returns default limit (12) when turns is a negative number", () => {
+    it("returns default limit (24) when turns is a negative number", () => {
       const options: LlmOperateOptions = { turns: -5 };
       const result = maxTurnsFromOptions(options);
       expect(result).toBe(MAX_TURNS_DEFAULT_LIMIT);

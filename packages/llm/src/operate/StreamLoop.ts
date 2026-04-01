@@ -2,6 +2,7 @@ import { BadGatewayError, TooManyRequestsError } from "@jaypie/errors";
 import { sleep } from "@jaypie/kit";
 import { JsonObject } from "@jaypie/types";
 
+import { MAX_CONSECUTIVE_TOOL_ERRORS } from "./OperateLoop.js";
 import { isTransientNetworkError } from "./retry/isTransientNetworkError.js";
 import { Toolkit } from "../tools/Toolkit.class.js";
 import {
@@ -46,6 +47,7 @@ export interface StreamLoopConfig {
 }
 
 interface StreamLoopState {
+  consecutiveToolErrors: number;
   currentInput: LlmHistory;
   currentTurn: number;
   formattedFormat?: JsonObject;
@@ -213,6 +215,7 @@ export class StreamLoop {
       : undefined;
 
     return {
+      consecutiveToolErrors: 0,
       currentInput: processedInput.history,
       currentTurn: 0,
       formattedFormat,
@@ -463,6 +466,9 @@ export class StreamLoop {
           toolName: toolCall.name,
         });
 
+        // Reset consecutive error counter on success
+        state.consecutiveToolErrors = 0;
+
         // Yield tool result chunk
         yield {
           type: LlmStreamChunkType.ToolResult,
@@ -519,6 +525,22 @@ export class StreamLoop {
 
         log.error(`Error executing function call ${toolCall.name}`);
         log.var({ error });
+
+        // Track consecutive errors and stop if threshold reached
+        state.consecutiveToolErrors++;
+        if (state.consecutiveToolErrors >= MAX_CONSECUTIVE_TOOL_ERRORS) {
+          const stopDetail = `Stopped after ${MAX_CONSECUTIVE_TOOL_ERRORS} consecutive tool errors`;
+          log.warn(stopDetail);
+          yield {
+            type: LlmStreamChunkType.Error,
+            error: {
+              detail: stopDetail,
+              status: 502,
+              title: ERROR.BAD_FUNCTION_CALL,
+            },
+          };
+          return; // Stop processing tools
+        }
       }
     }
   }
