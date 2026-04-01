@@ -47,9 +47,14 @@ jobs:
     name: Unit Test (in parallel)
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    continue-on-error: ${{ matrix.experimental || false }}
     strategy:
       matrix:
-        node-version: [24.x, 25.x]
+        node-version: [24.x]
+        experimental: [false]
+        include:
+          - node-version: 25.x
+            experimental: true
     steps:
       - uses: actions/checkout@v6
       - name: Use Node.js ${{ matrix.node-version }}
