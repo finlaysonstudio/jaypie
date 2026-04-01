@@ -13,7 +13,7 @@ import "./model";
 // Constants
 //
 
-const GARDEN_KEY_OPTIONS = { issuer: "jaypie" } as const;
+const GARDEN_KEY_OPTIONS = { issuer: "jaypie" };
 
 //
 //
