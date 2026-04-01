@@ -77,7 +77,7 @@ The `.var()` method logs key-value pairs in structured JSON:
 
 ```typescript
 log.debug.var({ userId: "123" });
-// Output: { log: "debug", message: "123", var: "userId", data: "123", dataType: "string" }
+// Output: { message: "123", var: "userId", data: "123", dataType: "string" }
 ```
 
 ### Pipelines

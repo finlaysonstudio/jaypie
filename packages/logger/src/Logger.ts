@@ -24,7 +24,6 @@ interface LogJson {
   data?: unknown;
   dataType?: string;
   message: string;
-  status: string;
   var?: string;
   [key: string]: unknown;
 }
@@ -87,7 +86,6 @@ class Logger {
           const parses = parsesTo(message);
           const json: LogJson = {
             message,
-            status: logLevel,
             ...this.tags,
           };
           if (parses.parses) {
@@ -139,7 +137,6 @@ class Logger {
           data: parse(messageVal),
           dataType: typeof messageVal,
           message: stringify(messageVal),
-          status: logLevel,
           var: messageKey,
           ...this.tags,
         };
