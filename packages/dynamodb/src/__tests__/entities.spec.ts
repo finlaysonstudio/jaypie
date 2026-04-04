@@ -323,6 +323,38 @@ describe("Entity Operations", () => {
     });
   });
 
+  describe("StorableEntity type flexibility", () => {
+    it("accepts state property on entities passed to putEntity", async () => {
+      const entity: StorableEntity = {
+        ...createTestEntity(),
+        state: { active: true, step: "onboarding" },
+      };
+      const result = await putEntity({ entity });
+      expect(result.state).toEqual({ active: true, step: "onboarding" });
+    });
+
+    it("accepts extra properties on entities passed to putEntity", async () => {
+      const entity: StorableEntity = {
+        ...createTestEntity(),
+        customField: "custom-value",
+      };
+      const result = await putEntity({ entity });
+      expect(result.customField).toBe("custom-value");
+    });
+
+    it("accepts partial entity spread for updateEntity", async () => {
+      const existing = createTestEntity();
+      // Simulate a partial update where we spread an existing entity
+      // and only change some fields
+      const entity: StorableEntity = {
+        ...existing,
+        name: "Updated Name",
+      };
+      const result = await updateEntity({ entity });
+      expect(result.name).toBe("Updated Name");
+    });
+  });
+
   describe("Combined archived and deleted state", () => {
     it("deleteEntity uses #archived#deleted suffix when entity is already archived", async () => {
       const archivedEntity = {
