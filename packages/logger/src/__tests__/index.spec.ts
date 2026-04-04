@@ -133,5 +133,140 @@ describe("@jaypie/logger", () => {
         );
       });
     });
+
+    describe("LOG_LEVEL_FIELD", () => {
+      afterEach(() => {
+        vi.restoreAllMocks();
+        delete process.env.LOG_LEVEL_FIELD;
+      });
+
+      it("does not include level field by default", () => {
+        const logger = new Logger({ format: "json", level: "debug" });
+        const spy = vi.spyOn(console, "debug").mockImplementation(() => {});
+        logger.debug("test");
+        const output = JSON.parse(spy.mock.calls[0][0] as string);
+        expect(output.level).toBeUndefined();
+        expect(output.status).toBeUndefined();
+      });
+
+      it("adds 'level' key when levelField is true", () => {
+        const logger = new Logger({
+          format: "json",
+          level: "debug",
+          levelField: true,
+        });
+        const spy = vi.spyOn(console, "debug").mockImplementation(() => {});
+        logger.debug("test");
+        const output = JSON.parse(spy.mock.calls[0][0] as string);
+        expect(output.level).toBe("debug");
+      });
+
+      it("adds custom key when levelField is a string", () => {
+        const logger = new Logger({
+          format: "json",
+          level: "debug",
+          levelField: "status",
+        });
+        const spy = vi.spyOn(console, "debug").mockImplementation(() => {});
+        logger.debug("test");
+        const output = JSON.parse(spy.mock.calls[0][0] as string);
+        expect(output.status).toBe("debug");
+        expect(output.level).toBeUndefined();
+      });
+
+      it("does not add level field when levelField is false", () => {
+        const logger = new Logger({
+          format: "json",
+          level: "debug",
+          levelField: false,
+        });
+        const spy = vi.spyOn(console, "debug").mockImplementation(() => {});
+        logger.debug("test");
+        const output = JSON.parse(spy.mock.calls[0][0] as string);
+        expect(output.level).toBeUndefined();
+      });
+
+      it("reads LOG_LEVEL_FIELD=true from env", () => {
+        process.env.LOG_LEVEL_FIELD = "true";
+        const logger = new Logger({ format: "json", level: "debug" });
+        const spy = vi.spyOn(console, "debug").mockImplementation(() => {});
+        logger.debug("test");
+        const output = JSON.parse(spy.mock.calls[0][0] as string);
+        expect(output.level).toBe("debug");
+      });
+
+      it("reads LOG_LEVEL_FIELD=status from env", () => {
+        process.env.LOG_LEVEL_FIELD = "status";
+        const logger = new Logger({ format: "json", level: "debug" });
+        const spy = vi.spyOn(console, "debug").mockImplementation(() => {});
+        logger.debug("test");
+        const output = JSON.parse(spy.mock.calls[0][0] as string);
+        expect(output.status).toBe("debug");
+      });
+
+      it("reads LOG_LEVEL_FIELD=false from env as disabled", () => {
+        process.env.LOG_LEVEL_FIELD = "false";
+        const logger = new Logger({ format: "json", level: "debug" });
+        const spy = vi.spyOn(console, "debug").mockImplementation(() => {});
+        logger.debug("test");
+        const output = JSON.parse(spy.mock.calls[0][0] as string);
+        expect(output.level).toBeUndefined();
+      });
+
+      it("includes level field in .var() output", () => {
+        const logger = new Logger({
+          format: "json",
+          level: "debug",
+          levelField: "status",
+        });
+        const spy = vi.spyOn(console, "debug").mockImplementation(() => {});
+        logger.debug.var({ count: 42 });
+        const output = JSON.parse(spy.mock.calls[0][0] as string);
+        expect(output.status).toBe("debug");
+        expect(output.var).toBe("count");
+      });
+
+      it("reflects correct level per method", () => {
+        const logger = new Logger({
+          format: "json",
+          level: "trace",
+          levelField: true,
+        });
+        const debugSpy = vi
+          .spyOn(console, "debug")
+          .mockImplementation(() => {});
+        const infoSpy = vi
+          .spyOn(console, "info")
+          .mockImplementation(() => {});
+        const warnSpy = vi
+          .spyOn(console, "warn")
+          .mockImplementation(() => {});
+        const errorSpy = vi
+          .spyOn(console, "error")
+          .mockImplementation(() => {});
+
+        logger.trace("t");
+        logger.debug("d");
+        logger.info("i");
+        logger.warn("w");
+        logger.error("e");
+
+        expect(JSON.parse(debugSpy.mock.calls[0][0] as string).level).toBe(
+          "trace",
+        );
+        expect(JSON.parse(debugSpy.mock.calls[1][0] as string).level).toBe(
+          "debug",
+        );
+        expect(JSON.parse(infoSpy.mock.calls[0][0] as string).level).toBe(
+          "info",
+        );
+        expect(JSON.parse(warnSpy.mock.calls[0][0] as string).level).toBe(
+          "warn",
+        );
+        expect(JSON.parse(errorSpy.mock.calls[0][0] as string).level).toBe(
+          "error",
+        );
+      });
+    });
   });
 });

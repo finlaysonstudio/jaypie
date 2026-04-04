@@ -157,4 +157,10 @@ export interface StorableEntity extends Omit<
   archivedAt?: string;
   /** Soft-delete timestamp */
   deletedAt?: string;
+
+  // Extensible — DynamoDB entities may carry additional fields
+  /** Application-specific state flags */
+  state?: Record<string, unknown>;
+  /** Allow additional properties for downstream entity extensions */
+  [key: string]: unknown;
 }

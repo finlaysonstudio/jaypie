@@ -56,6 +56,7 @@ Defined in `constants.ts` with numeric values for comparison:
 
 - `LOG_LEVEL` - Sets logging threshold
 - `LOG_FORMAT` - Output format (`json` or `text`)
+- `LOG_LEVEL_FIELD` - Include log level in JSON output (`true` adds `level` key, or set to custom key name like `status`; `false`/unset to omit)
 - `LOG_VAR_LEVEL` - Level for `.var()` calls
 - `MODULE_LOGGER` - Enable library loggers (boolean)
 - `MODULE_LOG_LEVEL` - Override level for library loggers

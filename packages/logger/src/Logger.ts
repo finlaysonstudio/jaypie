@@ -16,6 +16,7 @@ type Tags = Record<string, string>;
 interface LoggerOptions {
   format?: LogFormat;
   level?: LogLevel;
+  levelField?: boolean | string;
   tags?: Tags;
   varLevel?: LogLevel;
 }
@@ -33,6 +34,21 @@ type LogMethod = {
   var: (messageObject: unknown, messageValue?: unknown) => void;
 };
 
+function resolveLevelField(
+  value?: boolean | string,
+): false | string {
+  if (value === undefined) {
+    const env = process.env.LOG_LEVEL_FIELD;
+    if (env === undefined || env === "") return false;
+    if (env === "false" || env === "0" || env === "no") return false;
+    if (env === "true" || env === "1" || env === "yes") return "level";
+    return env;
+  }
+  if (value === false) return false;
+  if (value === true) return "level";
+  return value;
+}
+
 class Logger {
   public debug: LogMethod;
   public error: LogMethod;
@@ -43,16 +59,20 @@ class Logger {
   public trace: LogMethod;
   public var: (messageObject: unknown, messageValue?: unknown) => void;
   public warn: LogMethod;
+  private levelField: false | string;
 
   constructor({
     format = (process.env.LOG_FORMAT as LogFormat) || DEFAULT.LEVEL,
     level = process.env.LOG_LEVEL || DEFAULT.LEVEL,
+    levelField,
     tags = {},
     varLevel = process.env.LOG_VAR_LEVEL || DEFAULT.VAR_LEVEL,
   }: LoggerOptions = {}) {
+    this.levelField = resolveLevelField(levelField);
     this.options = {
       format,
       level,
+      levelField: this.levelField || undefined,
       varLevel,
     };
 
@@ -90,6 +110,9 @@ class Logger {
           };
           if (parses.parses) {
             json.data = parses.message;
+          }
+          if (this.levelField) {
+            json[this.levelField] = logLevel;
           }
           out(json, { level: logLevel });
         } else {
@@ -140,6 +163,9 @@ class Logger {
           var: messageKey,
           ...this.tags,
         };
+        if (this.levelField) {
+          json[this.levelField] = logLevel;
+        }
 
         if (LEVEL_VALUES[logLevel] <= LEVEL_VALUES[checkLevel]) {
           out(json, { level: logLevel });

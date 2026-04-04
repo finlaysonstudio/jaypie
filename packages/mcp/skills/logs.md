@@ -72,6 +72,25 @@ LOG_LEVEL=debug npm run dev
 LOG_LEVEL=trace MODULE_LOG_LEVEL=warn npm test
 ```
 
+## Including Level in JSON Output
+
+By default, the log level is not included in JSON output (Lambda determines level from the console method). To include it:
+
+```bash
+LOG_LEVEL_FIELD=true          # Adds "level": "debug" (etc.)
+LOG_LEVEL_FIELD=status        # Adds "status": "debug" (etc.)
+LOG_LEVEL_FIELD=false         # Omit (default)
+```
+
+Or via constructor option:
+
+```typescript
+import { Logger } from "@jaypie/logger";
+
+const logger = new Logger({ format: "json", level: "debug", levelField: "status" });
+logger.info("test"); // { "message": "test", "status": "info" }
+```
+
 ## Lambda Logging
 
 Lambda handlers automatically add context:
