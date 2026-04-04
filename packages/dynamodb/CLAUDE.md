@@ -160,6 +160,10 @@ interface StorableEntity {
   updatedAt: string;
   archivedAt?: string;        // Set by archiveEntity
   deletedAt?: string;         // Set by deleteEntity
+
+  // Extensible
+  state?: Record<string, unknown>;  // Application-specific state flags
+  [key: string]: unknown;           // Additional properties allowed
 }
 
 interface SeedResult {

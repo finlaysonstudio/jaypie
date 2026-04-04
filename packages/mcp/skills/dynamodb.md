@@ -125,6 +125,10 @@ interface StorableEntity {
   updatedAt: string;
   archivedAt?: string;
   deletedAt?: string;
+
+  // Extensible
+  state?: Record<string, unknown>;  // Application-specific state flags
+  [key: string]: unknown;           // Additional properties allowed
 }
 ```
 

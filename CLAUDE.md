@@ -58,6 +58,7 @@
 | `PROJECT_CHAOS` | Chaos engineering mode (none, partial, full) |
 | `NODE_ENV` | Node environment (development, production) |
 | `LOG_LEVEL` | Logging level (trace, debug, info, warn, error) |
+| `LOG_LEVEL_FIELD` | Include level in JSON log output (`true`, custom key name, or `false`) |
 | `CDK_ENV_BUCKET` | AWS S3 bucket name |
 | `CDK_ENV_QUEUE_URL` | AWS SQS queue URL |
 | `CDK_ENV_SNS_ROLE_ARN` | SNS role ARN for notifications |

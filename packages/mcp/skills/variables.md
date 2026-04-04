@@ -37,6 +37,7 @@ log.info("Starting", { env, project: key });
 |----------|-------------|--------|
 | `NODE_ENV` | Node.js environment | development, production, test |
 | `LOG_LEVEL` | Logging verbosity | trace, debug, info, warn, error |
+| `LOG_LEVEL_FIELD` | Include level in JSON output | `true` (adds `level` key), custom string, or `false` (default) |
 
 ### Log Level in Development
 
