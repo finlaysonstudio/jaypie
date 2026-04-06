@@ -47,6 +47,21 @@ export interface JaypieWafConfig {
   logBucket?: boolean | s3.IBucket;
 
   /**
+   * Override actions for specific rules within managed rule groups.
+   * Key is the managed rule group name; value is an array of rule action overrides.
+   * @example
+   * managedRuleOverrides: {
+   *   AWSManagedRulesCommonRuleSet: [
+   *     { name: "SizeRestrictions_BODY", actionToUse: { count: {} } },
+   *   ],
+   * }
+   */
+  managedRuleOverrides?: Record<
+    string,
+    wafv2.CfnWebACL.RuleActionOverrideProperty[]
+  >;
+
+  /**
    * Managed rule group names to apply
    * @default ["AWSManagedRulesCommonRuleSet", "AWSManagedRulesKnownBadInputsRuleSet"]
    */
@@ -511,6 +526,7 @@ export class JaypieDistribution
       } else {
         // Create new WebACL
         const {
+          managedRuleOverrides,
           managedRules = DEFAULT_MANAGED_RULES,
           rateLimitPerIp = DEFAULT_RATE_LIMIT,
         } = wafConfig;
@@ -520,6 +536,7 @@ export class JaypieDistribution
 
         // Add managed rule groups
         for (const ruleName of managedRules) {
+          const ruleActionOverrides = managedRuleOverrides?.[ruleName];
           rules.push({
             name: ruleName,
             priority: priority++,
@@ -528,6 +545,7 @@ export class JaypieDistribution
               managedRuleGroupStatement: {
                 name: ruleName,
                 vendorName: "AWS",
+                ...(ruleActionOverrides && { ruleActionOverrides }),
               },
             },
             visibilityConfig: {
