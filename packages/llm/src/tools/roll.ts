@@ -1,5 +1,5 @@
 import { LlmTool } from "../types/LlmTool.interface.js";
-import { log, random, tryParseNumber } from "../util";
+import { getLogger, random, tryParseNumber } from "../util";
 
 export const roll: LlmTool = {
   description: "Roll one or more dice with a specified number of sides",
@@ -23,6 +23,7 @@ export const roll: LlmTool = {
     rolls: number[];
     total: number;
   } => {
+    const log = getLogger();
     const rng = random();
     const rolls: number[] = [];
     let total = 0;

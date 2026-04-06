@@ -14,7 +14,7 @@ import {
   LlmToolCall,
   LlmToolResult,
 } from "../types/LlmProvider.interface.js";
-import { log, maxTurnsFromOptions } from "../util/index.js";
+import { getLogger, maxTurnsFromOptions } from "../util/index.js";
 import { ProviderAdapter } from "./adapters/ProviderAdapter.interface.js";
 import { HookRunner, hookRunner, LlmHooks } from "./hooks/index.js";
 import { InputProcessor, inputProcessor } from "./input/index.js";
@@ -113,6 +113,7 @@ export class OperateLoop {
     input: string | LlmHistory | LlmInputMessage | LlmOperateInput,
     options: LlmOperateOptions = {},
   ): Promise<LlmOperateResponse> {
+    const log = getLogger();
     // Log what was passed to operate
     log.trace("[operate] Starting operate loop");
     log.var({ "operate.input": input });
@@ -263,6 +264,7 @@ export class OperateLoop {
     context: OperateContext,
     options: LlmOperateOptions,
   ): Promise<boolean> {
+    const log = getLogger();
     // Create error classifier from adapter
     const errorClassifier = createErrorClassifier(this.adapter);
 

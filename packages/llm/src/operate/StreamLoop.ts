@@ -21,7 +21,7 @@ import {
   LlmStreamChunk,
   LlmStreamChunkType,
 } from "../types/LlmStreamChunk.interface.js";
-import { log, maxTurnsFromOptions } from "../util/index.js";
+import { getLogger, maxTurnsFromOptions } from "../util/index.js";
 import { ProviderAdapter } from "./adapters/ProviderAdapter.interface.js";
 import { HookRunner, hookRunner } from "./hooks/index.js";
 import { InputProcessor, inputProcessor } from "./input/index.js";
@@ -99,6 +99,7 @@ export class StreamLoop {
     input: string | LlmHistory | LlmInputMessage | LlmOperateInput,
     options: LlmOperateOptions = {},
   ): AsyncIterable<LlmStreamChunk> {
+    const log = getLogger();
     // Verify adapter supports streaming
     if (!this.adapter.executeStreamRequest) {
       throw new BadGatewayError(
@@ -259,6 +260,7 @@ export class StreamLoop {
     LlmStreamChunk,
     { shouldContinue: boolean; toolCalls?: StandardToolCall[] }
   > {
+    const log = getLogger();
     // Build provider-specific request
     const providerRequest = this.adapter.buildRequest(request);
 
@@ -444,6 +446,7 @@ export class StreamLoop {
     context: OperateContext,
     _options: LlmOperateOptions,
   ): AsyncGenerator<LlmStreamChunk, void> {
+    const log = getLogger();
     for (const toolCall of toolCalls) {
       try {
         // Execute beforeEachTool hook
