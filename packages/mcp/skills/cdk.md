@@ -341,6 +341,18 @@ new JaypieDistribution(this, "Dist", {
   handler,
   waf: { logBucket: myWafBucket },
 });
+
+// Override specific managed rule actions (e.g., allow large request bodies)
+new JaypieDistribution(this, "Dist", {
+  handler,
+  waf: {
+    managedRuleOverrides: {
+      AWSManagedRulesCommonRuleSet: [
+        { name: "SizeRestrictions_BODY", actionToUse: { count: {} } },
+      ],
+    },
+  },
+});
 ```
 
 Cost: $5/month per WebACL + $1/month per rule + $0.60 per million requests. Use `waf: false` to opt out.

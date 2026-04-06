@@ -224,6 +224,18 @@ new JaypieDistribution(this, "Dist", {
   handler,
   waf: { logBucket: false },
 });
+
+// Override specific managed rule actions (e.g., allow large request bodies)
+new JaypieDistribution(this, "Dist", {
+  handler,
+  waf: {
+    managedRuleOverrides: {
+      AWSManagedRulesCommonRuleSet: [
+        { name: "SizeRestrictions_BODY", actionToUse: { count: {} } },
+      ],
+    },
+  },
+});
 ```
 
 ### Streaming Lambda
