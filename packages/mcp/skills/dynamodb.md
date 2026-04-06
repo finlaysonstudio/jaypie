@@ -1,6 +1,6 @@
 ---
 description: DynamoDB runtime package, key design, entity operations, and queries
-related: apikey, aws, cdk, models
+related: apikey, aws, cdk, models, vocabulary
 ---
 
 # DynamoDB Patterns
@@ -220,7 +220,7 @@ All GSIs use `sequence` (Number) as the sort key for chronological ordering.
 | `indexScope` | `{scope}#{model}` | List entities by parent | You need hierarchical queries |
 | `indexAlias` | `{scope}#{model}#{alias}` | Human-friendly slug lookup | You need slug-based lookups |
 | `indexCategory` | `{scope}#{model}#{category}` | Category filtering | You need to filter by category |
-| `indexType` | `{scope}#{model}#{type}` | Type filtering | You need to filter by type |
+| `indexType` | `{scope}#{model}#{type}` | Type filtering | You need to filter by type (note: vocabulary discourages `type` in favor of `category`; `indexType` is retained as a legacy GSI pattern) |
 | `indexXid` | `{scope}#{model}#{xid}` | External ID lookup | You need cross-system ID lookups |
 
 ### Query Functions
