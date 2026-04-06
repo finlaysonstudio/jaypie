@@ -1490,6 +1490,68 @@ describe("JaypieDistribution", () => {
       expect(managedRuleNames).toEqual(["AWSManagedRulesCommonRuleSet"]);
     });
 
+    it("supports managedRuleOverrides to override specific rule actions", () => {
+      const stack = new Stack();
+      const bucket = new s3.Bucket(stack, "TestBucket");
+      const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
+
+      new JaypieDistribution(stack, "TestDistribution", {
+        handler: origin,
+        waf: {
+          managedRuleOverrides: {
+            AWSManagedRulesCommonRuleSet: [
+              {
+                name: "SizeRestrictions_BODY",
+                actionToUse: { count: {} },
+              },
+            ],
+          },
+        },
+      });
+      const template = Template.fromStack(stack);
+
+      template.hasResourceProperties("AWS::WAFv2::WebACL", {
+        Rules: Match.arrayWith([
+          Match.objectLike({
+            Name: "AWSManagedRulesCommonRuleSet",
+            Statement: {
+              ManagedRuleGroupStatement: {
+                Name: "AWSManagedRulesCommonRuleSet",
+                VendorName: "AWS",
+                RuleActionOverrides: [
+                  {
+                    Name: "SizeRestrictions_BODY",
+                    ActionToUse: { Count: {} },
+                  },
+                ],
+              },
+            },
+          }),
+        ]),
+      });
+    });
+
+    it("does not add ruleActionOverrides when managedRuleOverrides is not provided", () => {
+      const stack = new Stack();
+      const bucket = new s3.Bucket(stack, "TestBucket");
+      const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
+
+      new JaypieDistribution(stack, "TestDistribution", {
+        handler: origin,
+      });
+      const template = Template.fromStack(stack);
+
+      const resources = template.findResources("AWS::WAFv2::WebACL");
+      const webAcl = Object.values(resources)[0];
+      const rules = webAcl?.Properties?.Rules || [];
+      const commonRule = rules.find(
+        (r: any) => r.Name === "AWSManagedRulesCommonRuleSet",
+      );
+      expect(
+        commonRule?.Statement?.ManagedRuleGroupStatement?.RuleActionOverrides,
+      ).toBeUndefined();
+    });
+
     it("supports existing WebACL ARN", () => {
       const stack = new Stack();
       const bucket = new s3.Bucket(stack, "TestBucket");
