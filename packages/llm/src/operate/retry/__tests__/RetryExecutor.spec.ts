@@ -28,13 +28,13 @@ vi.mock("@jaypie/errors", () => ({
 }));
 
 vi.mock("../../../util/index.js", () => ({
-  log: {
+  getLogger: () => ({
     debug: vi.fn(),
     error: vi.fn(),
     trace: vi.fn(),
     var: vi.fn(),
     warn: vi.fn(),
-  },
+  }),
 }));
 
 //

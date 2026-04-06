@@ -1,11 +1,12 @@
 import { afterEach, beforeEach, describe, it, expect, vi } from "vitest";
 import { restoreLog, spyLog } from "@jaypie/testkit";
-import { roll } from "../roll.js";
 import * as util from "../../util";
+import { roll } from "../roll.js";
 
-const log = util.log;
+const log = util.getLogger();
 
 beforeEach(async () => {
+  vi.spyOn(util, "getLogger").mockReturnValue(log);
   spyLog(log);
 });
 

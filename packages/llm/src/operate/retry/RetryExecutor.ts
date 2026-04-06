@@ -1,7 +1,7 @@
 import { sleep } from "@jaypie/kit";
 import { BadGatewayError } from "@jaypie/errors";
 
-import { log } from "../../util/index.js";
+import { getLogger } from "../../util/index.js";
 import { isTransientNetworkError } from "./isTransientNetworkError.js";
 import {
   HookRunner,
@@ -72,6 +72,7 @@ export class RetryExecutor {
     operation: ((signal: AbortSignal) => Promise<T>) | (() => Promise<T>),
     options: ExecuteOptions,
   ): Promise<T> {
+    const log = getLogger();
     let attempt = 0;
 
     // Persistent guard against stale socket errors (TypeError: terminated).

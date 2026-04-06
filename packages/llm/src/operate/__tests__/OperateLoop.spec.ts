@@ -548,4 +548,29 @@ describe("OperateLoop", () => {
       );
     });
   });
+
+  // Logger Context
+  describe("Logger Context", () => {
+    it("calls getLogger() at execute time, not module load time", async () => {
+      // Import the mocked logger to inspect calls
+      const { log: mockLog } = await import("@jaypie/logger");
+      const libSpy = mockLog.lib as Mock;
+
+      // Clear any calls from module initialization
+      libSpy.mockClear();
+
+      const loop = new OperateLoop({
+        adapter: mockAdapter,
+        client: mockClient,
+      });
+
+      // lib() should not have been called yet (no module-level log)
+      expect(libSpy).not.toHaveBeenCalled();
+
+      await loop.execute("Hello");
+
+      // lib() should be called during execute() to capture request-scoped tags
+      expect(libSpy).toHaveBeenCalledWith({ lib: "@jaypie/llm" });
+    });
+  });
 });
