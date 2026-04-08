@@ -26,10 +26,10 @@ function tryParseJson(value: string): unknown {
 }
 
 /**
- * Unwrap arrays and objects to get to the scalar value
+ * Unwrap arrays to get to the scalar value
  * - Single-element arrays unwrap to their element
- * - Objects with value property unwrap to that value
- * - Recursively unwraps nested structures
+ * - Objects pass through as-is (handled by individual fabric functions)
+ * - Recursively unwraps nested arrays
  */
 function unwrapToScalar(value: unknown): unknown {
   if (value === undefined || value === null) {
@@ -45,15 +45,6 @@ function unwrapToScalar(value: unknown): unknown {
       return unwrapToScalar(value[0]);
     }
     throw new BadRequestError("Cannot convert multi-value array to scalar");
-  }
-
-  // Unwrap objects with value property
-  if (typeof value === "object") {
-    const obj = value as Record<string, unknown>;
-    if ("value" in obj) {
-      return unwrapToScalar(obj.value);
-    }
-    throw new BadRequestError("Object must have a value attribute");
   }
 
   return value;
@@ -218,6 +209,10 @@ export function fabricString(value: unknown): string | undefined {
       throw new BadRequestError("Cannot convert NaN to String");
     }
     return String(prepared);
+  }
+
+  if (typeof prepared === "object") {
+    return JSON.stringify(prepared);
   }
 
   throw new BadRequestError(`Cannot convert ${typeof prepared} to String`);

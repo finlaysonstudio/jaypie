@@ -71,13 +71,6 @@ describe("resolve", () => {
     });
 
     describe("Unwrapping", () => {
-      it("unwraps object with value property", () => {
-        expect(fabricBoolean({ value: "true" })).toBe(true);
-        expect(fabricBoolean({ value: true })).toBe(true);
-        expect(fabricBoolean({ value: 1 })).toBe(true);
-        expect(fabricBoolean({ value: 0 })).toBe(false);
-      });
-
       it("unwraps single-element array", () => {
         expect(fabricBoolean([true])).toBe(true);
         expect(fabricBoolean(["true"])).toBe(true);
@@ -85,25 +78,10 @@ describe("resolve", () => {
         expect(fabricBoolean([0])).toBe(false);
       });
 
-      it("unwraps nested array with object", () => {
-        expect(fabricBoolean([{ value: "true" }])).toBe(true);
-      });
-
-      it("parses JSON string to object and unwraps", () => {
-        expect(fabricBoolean('{"value":"true"}')).toBe(true);
-        expect(fabricBoolean('{"value":true}')).toBe(true);
-        expect(fabricBoolean('{"value":1}')).toBe(true);
-      });
-
       it("parses JSON string to array and unwraps", () => {
         expect(fabricBoolean('["true"]')).toBe(true);
         expect(fabricBoolean("[true]")).toBe(true);
         expect(fabricBoolean("[1]")).toBe(true);
-      });
-
-      it("parses JSON string with nested structure", () => {
-        expect(fabricBoolean('[{"value":true}]')).toBe(true);
-        expect(fabricBoolean('[{"value":"true"}]')).toBe(true);
       });
 
       it("returns undefined for empty array", () => {
@@ -120,12 +98,17 @@ describe("resolve", () => {
         expect(() => fabricBoolean(NaN)).toThrow(BadRequestError);
       });
 
-      it("throws on object without value property", () => {
+      it("throws on object", () => {
         expect(() => fabricBoolean({ foo: "bar" })).toThrow(BadRequestError);
+        expect(() => fabricBoolean({ value: true })).toThrow(BadRequestError);
       });
 
       it("throws on multi-element array", () => {
         expect(() => fabricBoolean([true, false])).toThrow(BadRequestError);
+      });
+
+      it("throws on JSON string parsed to object", () => {
+        expect(() => fabricBoolean('{"value":"true"}')).toThrow(BadRequestError);
       });
     });
   });
@@ -177,34 +160,15 @@ describe("resolve", () => {
     });
 
     describe("Unwrapping", () => {
-      it("unwraps object with value property", () => {
-        expect(fabricNumber({ value: "42" })).toBe(42);
-        expect(fabricNumber({ value: 42 })).toBe(42);
-        expect(fabricNumber({ value: true })).toBe(1);
-      });
-
       it("unwraps single-element array", () => {
         expect(fabricNumber([42])).toBe(42);
         expect(fabricNumber(["42"])).toBe(42);
         expect(fabricNumber([true])).toBe(1);
       });
 
-      it("unwraps nested array with object", () => {
-        expect(fabricNumber([{ value: 42 }])).toBe(42);
-      });
-
-      it("parses JSON string to object and unwraps", () => {
-        expect(fabricNumber('{"value":"42"}')).toBe(42);
-        expect(fabricNumber('{"value":42}')).toBe(42);
-      });
-
       it("parses JSON string to array and unwraps", () => {
         expect(fabricNumber('["42"]')).toBe(42);
         expect(fabricNumber("[42]")).toBe(42);
-      });
-
-      it("parses JSON string with nested structure", () => {
-        expect(fabricNumber('[{"value":42}]')).toBe(42);
       });
 
       it("returns undefined for empty array", () => {
@@ -221,12 +185,17 @@ describe("resolve", () => {
         expect(() => fabricNumber(NaN)).toThrow(BadRequestError);
       });
 
-      it("throws on object without value property", () => {
+      it("throws on object", () => {
         expect(() => fabricNumber({ foo: "bar" })).toThrow(BadRequestError);
+        expect(() => fabricNumber({ value: 42 })).toThrow(BadRequestError);
       });
 
       it("throws on multi-element array", () => {
         expect(() => fabricNumber([1, 2])).toThrow(BadRequestError);
+      });
+
+      it("throws on JSON string parsed to object", () => {
+        expect(() => fabricNumber('{"value":42}')).toThrow(BadRequestError);
       });
     });
   });
@@ -266,25 +235,10 @@ describe("resolve", () => {
     });
 
     describe("Unwrapping", () => {
-      it("unwraps object with value property", () => {
-        expect(fabricString({ value: "hello" })).toBe("hello");
-        expect(fabricString({ value: 42 })).toBe("42");
-        expect(fabricString({ value: true })).toBe("true");
-      });
-
       it("unwraps single-element array", () => {
         expect(fabricString(["hello"])).toBe("hello");
         expect(fabricString([42])).toBe("42");
         expect(fabricString([true])).toBe("true");
-      });
-
-      it("unwraps nested array with object", () => {
-        expect(fabricString([{ value: "hello" }])).toBe("hello");
-      });
-
-      it("parses JSON string to object and unwraps", () => {
-        expect(fabricString('{"value":"hello"}')).toBe("hello");
-        expect(fabricString('{"value":42}')).toBe("42");
       });
 
       it("parses JSON string to array and unwraps", () => {
@@ -292,22 +246,40 @@ describe("resolve", () => {
         expect(fabricString("[42]")).toBe("42");
       });
 
-      it("parses JSON string with nested structure", () => {
-        expect(fabricString('[{"value":"hello"}]')).toBe("hello");
-      });
-
       it("returns undefined for empty array", () => {
         expect(fabricString([])).toBeUndefined();
+      });
+    });
+
+    describe("Object Handling", () => {
+      it("JSON.stringifies plain objects", () => {
+        expect(fabricString({ content: "hello", level: "warn" })).toBe(
+          '{"content":"hello","level":"warn"}',
+        );
+      });
+
+      it("JSON.stringifies objects without value property", () => {
+        expect(fabricString({ foo: "bar" })).toBe('{"foo":"bar"}');
+      });
+
+      it("JSON.stringifies empty objects", () => {
+        expect(fabricString({})).toBe("{}");
+      });
+
+      it("JSON.stringifies objects with value property (no special unwrapping)", () => {
+        expect(fabricString({ value: "hello" })).toBe('{"value":"hello"}');
+      });
+
+      it("JSON.stringifies parsed JSON objects", () => {
+        expect(fabricString('{"content":"hello"}')).toBe(
+          '{"content":"hello"}',
+        );
       });
     });
 
     describe("Error Cases", () => {
       it("throws on NaN number", () => {
         expect(() => fabricString(NaN)).toThrow(BadRequestError);
-      });
-
-      it("throws on object without value property", () => {
-        expect(() => fabricString({ foo: "bar" })).toThrow(BadRequestError);
       });
 
       it("throws on multi-element array", () => {
