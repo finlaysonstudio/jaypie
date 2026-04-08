@@ -6,7 +6,7 @@ Jaypie modeling framework - provides type conversion and service handler pattern
 
 | Attribute | Value |
 |-----------|-------|
-| Status | Initial development (0.2.x) |
+| Status | Initial development (0.2.3) |
 | Type | Utility library |
 | Dependencies | `@jaypie/errors` |
 | Peer Dependencies | `@jaypie/aws` (optional), `@jaypie/dynamodb` (optional), `@jaypie/lambda` (optional), `@modelcontextprotocol/sdk` (optional), `commander` (optional), `express` (optional) |
@@ -119,11 +119,11 @@ Key behaviors:
 - Invalid conversions throw `BadRequestError`
 - Multi-value arrays cannot convert to scalars (throws `BadRequestError`)
 
-**Unwrapping** (scalar conversions only - `fabricBoolean`, `fabricNumber`, `fabricString`):
-- Objects with `value` property unwrap: `{value: "true"}` → `true`
+**Unwrapping** (scalar conversions only):
 - Single-element arrays unwrap: `[true]` → `true`
-- JSON strings parse and unwrap: `'{"value":"true"}'` → `true`, `'[42]'` → `42`
-- Nested structures unwrap recursively: `[{value: "true"}]` → `true`
+- JSON strings parse to arrays and unwrap: `'[42]'` → `42`
+- `fabricString` JSON.stringifies objects: `{content: "hello"}` → `'{"content":"hello"}'`
+- `fabricBoolean` and `fabricNumber` throw on object input
 
 ### fabricService
 
@@ -544,9 +544,9 @@ The "Fabric" philosophy:
 This means:
 - `"true"` works where `true` is expected
 - `"42"` works where `42` is expected
-- `{value: X}` unwraps for all scalar types (Boolean, Number, String)
 - `[X]` unwraps for all scalar types
-- `'{"value":X}'` and `'[X]'` parse and unwrap for all scalar types
+- `'[X]'` parses and unwraps for all scalar types
+- Objects JSON.stringify when coerced to String
 - JSON strings automatically parse
 - `"1,2,3"` splits into array when target is typed array
 - `"a\tb\tc"` splits on tabs when target is typed array
