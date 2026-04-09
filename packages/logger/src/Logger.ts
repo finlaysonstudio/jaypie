@@ -6,6 +6,7 @@ import {
   LEVEL_VALUES,
   PSEUDO_LEVELS,
 } from "./constants";
+import { filterByType, pipelines } from "./pipelines";
 import { sanitizeAuth } from "./sanitizeAuth";
 import { forceString, out, parse, parsesTo, stringify } from "./utils";
 
@@ -34,9 +35,7 @@ type LogMethod = {
   var: (messageObject: unknown, messageValue?: unknown) => void;
 };
 
-function resolveLevelField(
-  value?: boolean | string,
-): false | string {
+function resolveLevelField(value?: boolean | string): false | string {
   if (value === undefined) {
     const env = process.env.LOG_LEVEL_FIELD;
     if (env === undefined || env === "") return false;
@@ -154,7 +153,14 @@ class Logger {
 
       if (format === FORMAT.JSON) {
         const messageKey = keys[0];
-        const messageVal = msgObj[messageKey];
+        let messageVal = msgObj[messageKey];
+
+        for (const pipeline of pipelines) {
+          if (messageKey === pipeline.key) {
+            messageVal = pipeline.filter(messageVal);
+          }
+        }
+        messageVal = filterByType(messageVal);
 
         const json: LogJson = {
           data: parse(messageVal),
