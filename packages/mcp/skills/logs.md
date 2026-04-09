@@ -63,6 +63,23 @@ log.var({ Processing: {
 
 Log any important, even scalar, data and filter with `var` in Datadog
 
+## Session Management
+
+Handlers automatically call `log.setup()` and `log.teardown()` to bookend each request. On teardown, a report is emitted as `log.info.var({ report })` containing accumulated data and warn/error counts.
+
+```typescript
+// Manual session (handlers do this automatically)
+log.setup({ handler: "myHandler", invoke: "abc-123" });
+
+// Accumulate report data during the request
+log.report({ userId: "456" });
+log.report({ itemCount: 3 });
+
+// Teardown emits the report with warn/error stats
+log.teardown();
+// => { report: { userId: "456", itemCount: 3, log: { warn: false, warns: 0, error: false, errors: 0 } } }
+```
+
 ## Setting Log Level
 
 Via environment variable:
