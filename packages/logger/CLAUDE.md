@@ -96,6 +96,21 @@ Two-tier filtering system in `src/pipelines.ts`:
 - Map-like objects (`Headers`, `URLSearchParams`, `FormData`): converted via `.entries()`
 - Other opaque objects: walks prototype chain to read getters, includes `_type` constructor name
 
+### Session Management
+
+Handlers can bookend a logging session with `setup()` / `teardown()`:
+
+```typescript
+log.setup({ handler: "myHandler", invoke: "abc-123" }); // Tags + starts session
+log.report({ status: "200", path: "/api/test" });        // Accumulate report data
+log.teardown();                                           // Emits report, resets
+```
+
+- `setup(tags?)` starts a session, applies tags, resets counters
+- `teardown()` emits `log.info.var({ report })` with accumulated data + `{ log: { warn, warns, error, errors } }`
+- `report(data)` merges key-value data into the report; warns on duplicate keys
+- Warn and error calls are auto-counted during an active session
+
 ### Tagging
 
 Tags are key-value pairs included in every log output:

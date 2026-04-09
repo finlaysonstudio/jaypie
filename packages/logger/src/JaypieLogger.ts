@@ -36,10 +36,14 @@ class JaypieLogger {
   public var: Logger["var"];
   public warn: Logger["warn"];
 
+  private _errorCount: number = 0;
   private _logger: Logger;
   private _loggers: Logger[];
   private _params: JaypieLoggerOptions;
+  private _report: Record<string, unknown> = {};
+  private _sessionActive: boolean = false;
   private _tags: Record<string, string>;
+  private _warnCount: number = 0;
   private _withLoggers: Record<string, JaypieLogger>;
 
   constructor({
@@ -66,10 +70,14 @@ class JaypieLogger {
     this.debug.var = (messageObject: unknown, messageValue?: unknown) =>
       this._logger.debug.var(messageObject, messageValue);
 
-    this.error = ((...args: any[]) =>
-      this._logger.error(...args)) as Logger["error"];
-    this.error.var = (messageObject: unknown, messageValue?: unknown) =>
+    this.error = ((...args: any[]) => {
+      if (this._sessionActive) this._errorCount++;
+      this._logger.error(...args);
+    }) as Logger["error"];
+    this.error.var = (messageObject: unknown, messageValue?: unknown) => {
+      if (this._sessionActive) this._errorCount++;
       this._logger.error.var(messageObject, messageValue);
+    };
 
     this.fatal = ((...args: any[]) =>
       this._logger.fatal(...args)) as Logger["fatal"];
@@ -86,10 +94,14 @@ class JaypieLogger {
     this.trace.var = (messageObject: unknown, messageValue?: unknown) =>
       this._logger.trace.var(messageObject, messageValue);
 
-    this.warn = ((...args: any[]) =>
-      this._logger.warn(...args)) as Logger["warn"];
-    this.warn.var = (messageObject: unknown, messageValue?: unknown) =>
+    this.warn = ((...args: any[]) => {
+      if (this._sessionActive) this._warnCount++;
+      this._logger.warn(...args);
+    }) as Logger["warn"];
+    this.warn.var = (messageObject: unknown, messageValue?: unknown) => {
+      if (this._sessionActive) this._warnCount++;
       this._logger.warn.var(messageObject, messageValue);
+    };
 
     this.var = (messageObject: unknown, messageValue?: unknown) =>
       this._logger.var(logVar(messageObject, messageValue));
@@ -114,6 +126,12 @@ class JaypieLogger {
     this._loggers = [this._logger];
     this._withLoggers = {};
 
+    // Reset session state
+    this._errorCount = 0;
+    this._report = {};
+    this._sessionActive = false;
+    this._warnCount = 0;
+
     const levels = [
       "debug",
       "error",
@@ -123,12 +141,32 @@ class JaypieLogger {
       "warn",
     ] as const;
     levels.forEach((lvl) => {
-      this[lvl] = ((...args: any[]) => {
-        this._logger[lvl](...args);
-      }) as any;
-      this[lvl].var = (messageObject: unknown, messageValue?: unknown) => {
-        this._logger[lvl].var(messageObject, messageValue);
-      };
+      if (lvl === "error") {
+        this.error = ((...args: any[]) => {
+          if (this._sessionActive) this._errorCount++;
+          this._logger.error(...args);
+        }) as any;
+        this.error.var = (messageObject: unknown, messageValue?: unknown) => {
+          if (this._sessionActive) this._errorCount++;
+          this._logger.error.var(messageObject, messageValue);
+        };
+      } else if (lvl === "warn") {
+        this.warn = ((...args: any[]) => {
+          if (this._sessionActive) this._warnCount++;
+          this._logger.warn(...args);
+        }) as any;
+        this.warn.var = (messageObject: unknown, messageValue?: unknown) => {
+          if (this._sessionActive) this._warnCount++;
+          this._logger.warn.var(messageObject, messageValue);
+        };
+      } else {
+        this[lvl] = ((...args: any[]) => {
+          this._logger[lvl](...args);
+        }) as any;
+        this[lvl].var = (messageObject: unknown, messageValue?: unknown) => {
+          this._logger[lvl].var(messageObject, messageValue);
+        };
+      }
     });
   }
 
@@ -165,11 +203,57 @@ class JaypieLogger {
     return logger;
   }
 
+  public report(data: Record<string, unknown>): void {
+    if (!this._sessionActive) {
+      this.warn("[logger] report() called without active session");
+      return;
+    }
+    for (const key of Object.keys(data)) {
+      if (key in this._report) {
+        this.warn(`[logger] Overwriting report key: ${key}`);
+      }
+    }
+    Object.assign(this._report, data);
+  }
+
+  public setup(tags?: Record<string, unknown>): void {
+    if (this._sessionActive) {
+      this.warn("[logger] setup() called while session already active");
+    }
+    this._errorCount = 0;
+    this._report = {};
+    this._sessionActive = true;
+    this._warnCount = 0;
+    if (tags) {
+      this.tag(tags);
+    }
+  }
+
   public tag(tags: Record<string, unknown>): void {
     for (const logger of this._loggers) {
       logger.tag(tags);
     }
     Object.assign(this._tags, tags);
+  }
+
+  public teardown(): void {
+    if (!this._sessionActive) {
+      return;
+    }
+    const finalReport = {
+      ...this._report,
+      log: {
+        error: this._errorCount > 0,
+        errors: this._errorCount,
+        warn: this._warnCount > 0,
+        warns: this._warnCount,
+      },
+    };
+    this.info.var({ report: finalReport });
+    this._errorCount = 0;
+    this._report = {};
+    this._sessionActive = false;
+    this._warnCount = 0;
   }
 
   public untag(key: unknown): void {

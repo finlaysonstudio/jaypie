@@ -11,7 +11,10 @@ export function mockLogFactory(): LogMock {
     info: vi.fn(),
     init: vi.fn(),
     lib: vi.fn(),
+    report: vi.fn(),
+    setup: vi.fn(),
     tag: vi.fn(),
+    teardown: vi.fn(),
     trace: vi.fn(),
     untag: vi.fn(),
     var: vi.fn(),
@@ -30,6 +33,9 @@ export function mockLogFactory(): LogMock {
   // Have modules return correct objects
   mock.init.mockReturnValue(null);
   mock.lib.mockReturnValue(mock);
+  mock.report.mockReturnValue(null);
+  mock.setup.mockReturnValue(null);
+  mock.teardown.mockReturnValue(null);
   mock.with.mockReturnValue(mock);
 
   // Pin mocks to the module
@@ -40,7 +46,10 @@ export function mockLogFactory(): LogMock {
     info: mock.info,
     init: mock.init,
     lib: mock.lib,
+    report: mock.report,
+    setup: mock.setup,
     tag: mock.tag,
+    teardown: mock.teardown,
     trace: mock.trace,
     untag: mock.untag,
     var: mock.var,
@@ -58,7 +67,10 @@ const LOG_METHOD_NAMES = [
   "info",
   "init",
   "lib",
+  "report",
+  "setup",
   "tag",
+  "teardown",
   "trace",
   "untag",
   "var",

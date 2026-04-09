@@ -56,6 +56,9 @@ interface ExtendedLogger {
     lib?: string;
     tags?: Record<string, unknown>;
   }): ExtendedLogger;
+  report(data: Record<string, unknown>): void;
+  setup(tags?: Record<string, unknown>): void;
+  teardown(): void;
 }
 
 // Exported type aliases for defining handler lifecycle functions
@@ -373,16 +376,6 @@ function expressHandler<T>(
 
     // Update the public logger with the request ID
     const invokeUuid = getCurrentInvokeUuid(req);
-    if (invokeUuid) {
-      logger.tag({ invoke: invokeUuid });
-      logger.tag({ shortInvoke: invokeUuid.slice(0, 8) });
-      // TODO: in theory this is redundant
-      libLogger.tag({ invoke: invokeUuid });
-      libLogger.tag({ shortInvoke: invokeUuid.slice(0, 8) });
-      log.tag({ invoke: invokeUuid });
-      log.tag({ shortInvoke: invokeUuid.slice(0, 8) });
-    }
-
     if (!name) {
       // If handler has a name, use it
       if (handler.name) {
@@ -391,10 +384,15 @@ function expressHandler<T>(
         name = JAYPIE.UNKNOWN;
       }
     }
-    logger.tag({ handler: name });
+    const setupTags: Record<string, string> = { handler: name };
+    if (invokeUuid) {
+      setupTags.invoke = invokeUuid;
+      setupTags.shortInvoke = invokeUuid.slice(0, 8);
+    }
+    logger.setup(setupTags);
     // TODO: in theory this is redundant
-    libLogger.tag({ handler: name });
-    log.tag({ handler: name });
+    libLogger.tag(setupTags);
+    log.tag(setupTags);
 
     libLogger.trace("[jaypie] Express init");
 
@@ -640,27 +638,25 @@ function expressHandler<T>(
       res: summarizeResponse(res, extras),
     });
 
+    // Construct normalized path for reporting and metrics
+    let path = (req.baseUrl || "") + (req.url || "");
+    if (!path.startsWith("/")) {
+      path = "/" + path;
+    }
+    if (path.length > 1 && path.endsWith("/")) {
+      path = path.slice(0, -1);
+    }
+    // Replace UUIDs with :id for better aggregation
+    path = path.replace(
+      /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi,
+      ":id",
+    );
+
+    // Add request data to session report
+    logger.report({ path, status: String(res.statusCode) });
+
     // Submit metric if Datadog is configured
     if (hasDatadogEnv()) {
-      // Construct path from baseUrl and url
-      let path = (req.baseUrl || "") + (req.url || "");
-      // Ensure path starts with /
-      if (!path.startsWith("/")) {
-        path = "/" + path;
-      }
-      // Remove trailing slash unless it's the root path
-      if (path.length > 1 && path.endsWith("/")) {
-        path = path.slice(0, -1);
-      }
-
-      // Replace UUIDs with :id for better aggregation
-      // Matches standard UUID v4 format (8-4-4-4-12 hex characters)
-      path = path.replace(
-        /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi,
-        ":id",
-      );
-
-      // Determine metric name based on environment variables
       let metricPrefix = "project";
       if (process.env.PROJECT_SPONSOR) {
         metricPrefix = process.env.PROJECT_SPONSOR;
@@ -679,7 +675,8 @@ function expressHandler<T>(
       });
     }
 
-    // Clean up the public logger
+    // End log session and clean up
+    logger.teardown();
     logger.untag("handler");
 
     //

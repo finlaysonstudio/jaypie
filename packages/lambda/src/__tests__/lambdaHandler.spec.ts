@@ -168,10 +168,12 @@ describe("Lambda Handler Module", () => {
       // Act
       await handler({}, { awsRequestId: "MOCK_AWS_REQUEST_ID" });
       // Assert
-      expect(log.tag).toHaveBeenCalled();
-      expect(log.tag).toHaveBeenCalledWith({
-        invoke: "MOCK_AWS_REQUEST_ID",
-      });
+      expect(log.setup).toHaveBeenCalled();
+      expect(log.setup).toHaveBeenCalledWith(
+        expect.objectContaining({
+          invoke: "MOCK_AWS_REQUEST_ID",
+        }),
+      );
     });
   });
   describe("Happy Paths", () => {
