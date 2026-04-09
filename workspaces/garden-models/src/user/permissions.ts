@@ -3,10 +3,7 @@
 // Main
 //
 
-function hasPermission(
-  userPermissions: string[],
-  required: string,
-): boolean {
+function hasPermission(userPermissions: string[], required: string): boolean {
   if (userPermissions.includes("*")) return true;
 
   const [namespace] = required.split(":");
