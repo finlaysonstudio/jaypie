@@ -73,7 +73,7 @@ export type JaypieStreamHandlerTeardown = (
 export type JaypieStreamHandlerValidate = (
   req: Request,
   res: Response,
-) => Promise<boolean> | boolean;
+) => Promise<boolean | void> | boolean | void;
 
 export type ExpressStreamHandlerLocals = (
   req: Request,

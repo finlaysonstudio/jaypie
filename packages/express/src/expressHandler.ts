@@ -72,7 +72,7 @@ export type JaypieHandlerTeardown = (
 export type JaypieHandlerValidate = (
   req: Request,
   res: Response,
-) => Promise<boolean> | boolean;
+) => Promise<boolean | void> | boolean | void;
 
 export type ExpressHandlerLocals = (
   req: Request,

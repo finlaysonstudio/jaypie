@@ -904,4 +904,36 @@ describe("Express Handler", () => {
       });
     });
   });
+
+  describe("Type Compatibility", () => {
+    it("Accepts validate functions that return void", () => {
+      // This test verifies the type accepts void-returning validators
+      // (throw on failure, return nothing on success)
+      const voidValidator = (_req: Request, _res: Response): void => {
+        // throw on failure, return nothing on success
+      };
+      const asyncVoidValidator = async (
+        _req: Request,
+        _res: Response,
+      ): Promise<void> => {
+        // throw on failure, return nothing on success
+      };
+      const handler = expressHandler(vi.fn(), {
+        validate: [voidValidator, asyncVoidValidator],
+      });
+      expect(handler).toBeTypeOf("function");
+    });
+
+    it("Accepts validate functions that return boolean", () => {
+      const boolValidator = (_req: Request, _res: Response): boolean => true;
+      const asyncBoolValidator = async (
+        _req: Request,
+        _res: Response,
+      ): Promise<boolean> => true;
+      const handler = expressHandler(vi.fn(), {
+        validate: [boolValidator, asyncBoolValidator],
+      });
+      expect(handler).toBeTypeOf("function");
+    });
+  });
 });
