@@ -23,7 +23,11 @@ import {
   NOTE_MODEL,
   validateApiKey,
 } from "@jaypie/garden-models";
-import type { JournalCategory, JournalEntity, NoteEntity } from "@jaypie/garden-models";
+import type {
+  JournalCategory,
+  JournalEntity,
+  NoteEntity,
+} from "@jaypie/garden-models";
 import { log } from "@jaypie/logger";
 import {
   createMarkdownStore,
@@ -159,7 +163,10 @@ function buildSkillXid(skillAlias: string): string {
   return `skill:${skillAlias}`;
 }
 
-async function findSkillNote(scope: string, skillAlias: string): Promise<NoteEntity | null> {
+async function findSkillNote(
+  scope: string,
+  skillAlias: string,
+): Promise<NoteEntity | null> {
   const xid = buildSkillXid(skillAlias);
   const result = await queryByXid({ model: NOTE_MODEL, scope, xid });
   return (result as NoteEntity) ?? null;
@@ -336,7 +343,8 @@ async function handleJournalRequest(params: {
         throw new BadRequestError("data.content is required for create");
       }
       const entryId = crypto.randomUUID();
-      const category = (params.data.category || JOURNAL_DEFAULT_CATEGORY) as JournalCategory;
+      const category = (params.data.category ||
+        JOURNAL_DEFAULT_CATEGORY) as JournalCategory;
       const alias = params.data.alias || entryId.slice(0, 8);
       const now = new Date().toISOString();
       const entity = {
@@ -382,10 +390,12 @@ async function handleJournalRequest(params: {
         ...existing,
         updatedAt: new Date().toISOString(),
       };
-      if (params.data.content !== undefined) updates.content = params.data.content;
+      if (params.data.content !== undefined)
+        updates.content = params.data.content;
       if (params.data.name !== undefined) updates.name = params.data.name;
       if (params.data.alias !== undefined) updates.alias = params.data.alias;
-      if (params.data.category !== undefined) updates.category = params.data.category;
+      if (params.data.category !== undefined)
+        updates.category = params.data.category;
       await updateEntity({ entity: updates as unknown as JournalEntity });
       log.trace("Journal entry updated", { id: params.id });
       return { updated: params.id };
@@ -401,7 +411,10 @@ async function handleJournalRequest(params: {
     }
 
     case "list": {
-      const limit = Math.min(params.limit || JOURNAL_DEFAULT_LIMIT, JOURNAL_MAX_LIMIT);
+      const limit = Math.min(
+        params.limit || JOURNAL_DEFAULT_LIMIT,
+        JOURNAL_MAX_LIMIT,
+      );
       const startKey = params.cursor
         ? JSON.parse(Buffer.from(params.cursor, "base64url").toString())
         : undefined;
@@ -426,16 +439,19 @@ async function handleJournalRequest(params: {
 
       const entries = (result.items as JournalEntity[]).map((item) => ({
         category: item.category,
-        content: item.content.length > JOURNAL_LIST_CONTENT_TRUNCATE
-          ? item.content.slice(0, JOURNAL_LIST_CONTENT_TRUNCATE) + "..."
-          : item.content,
+        content:
+          item.content.length > JOURNAL_LIST_CONTENT_TRUNCATE
+            ? item.content.slice(0, JOURNAL_LIST_CONTENT_TRUNCATE) + "..."
+            : item.content,
         createdAt: item.createdAt,
         id: item.id,
         name: item.name,
       }));
 
       const cursor = result.lastEvaluatedKey
-        ? Buffer.from(JSON.stringify(result.lastEvaluatedKey)).toString("base64url")
+        ? Buffer.from(JSON.stringify(result.lastEvaluatedKey)).toString(
+            "base64url",
+          )
         : undefined;
 
       return { cursor, entries };
@@ -462,7 +478,10 @@ async function handleJournalRequest(params: {
 
       return {
         noteIndex: toIndex(notes.items as JournalEntity[]),
-        recentSessions: (sessions.items as JournalEntity[]).slice(0, JOURNAL_WAKE_SESSION_LIMIT),
+        recentSessions: (sessions.items as JournalEntity[]).slice(
+          0,
+          JOURNAL_WAKE_SESSION_LIMIT,
+        ),
         reviewIndex: toIndex(reviews.items as JournalEntity[]),
         sessionIndex: toIndex(sessions.items as JournalEntity[]),
       };
@@ -490,25 +509,56 @@ function createGardenMcpServer(): McpServer {
     "journal",
     "Create, read, update, delete, list, or wake journal entries scoped to your garden. Requires a garden-associated API key.",
     {
-      action: z.enum(["create", "read", "update", "delete", "list", "wake"]).describe("Action to perform"),
-      category: z.enum(JOURNAL_CATEGORIES).optional().describe("Filter by category (list only)"),
-      cursor: z.string().optional().describe("Pagination cursor from previous list response"),
-      data: z.object({
-        alias: z.string().optional().describe("Human-friendly slug for lookup"),
-        category: z.enum(JOURNAL_CATEGORIES).optional().describe("Entry category (default: note)"),
-        content: z.string().optional().describe("Journal entry content"),
-        name: z.string().optional().describe("Entry name/title"),
-      }).optional().describe("Data for create/update"),
-      id: z.string().uuid().optional().describe("Required for read/update/delete"),
-      limit: z.number().min(1).max(100).optional().describe("Max entries to return (list only, default 6)"),
+      action: z
+        .enum(["create", "read", "update", "delete", "list", "wake"])
+        .describe("Action to perform"),
+      category: z
+        .enum(JOURNAL_CATEGORIES)
+        .optional()
+        .describe("Filter by category (list only)"),
+      cursor: z
+        .string()
+        .optional()
+        .describe("Pagination cursor from previous list response"),
+      data: z
+        .object({
+          alias: z
+            .string()
+            .optional()
+            .describe("Human-friendly slug for lookup"),
+          category: z
+            .enum(JOURNAL_CATEGORIES)
+            .optional()
+            .describe("Entry category (default: note)"),
+          content: z.string().optional().describe("Journal entry content"),
+          name: z.string().optional().describe("Entry name/title"),
+        })
+        .optional()
+        .describe("Data for create/update"),
+      id: z
+        .string()
+        .uuid()
+        .optional()
+        .describe("Required for read/update/delete"),
+      limit: z
+        .number()
+        .min(1)
+        .max(100)
+        .optional()
+        .describe("Max entries to return (list only, default 6)"),
     },
     async (params) => {
       const result = await handleJournalRequest(params);
       return {
-        content: [{
-          text: typeof result === "string" ? result : JSON.stringify(result, null, 2),
-          type: "text" as const,
-        }],
+        content: [
+          {
+            text:
+              typeof result === "string"
+                ? result
+                : JSON.stringify(result, null, 2),
+            type: "text" as const,
+          },
+        ],
       };
     },
   );
@@ -517,8 +567,18 @@ function createGardenMcpServer(): McpServer {
     "skill",
     "Access Jaypie development documentation. Pass a skill alias (e.g., 'aws', 'tests', 'errors') to get that documentation. Pass 'index' or no argument to list all available skills. Use 'note' to add/update/delete a user note on a skill.",
     {
-      alias: z.string().optional().describe("Skill alias (e.g., 'aws', 'tests'). Omit or use 'index' to list all skills."),
-      note: z.union([z.string(), z.literal(false)]).optional().describe("String to create/update a note on the skill, or false to delete an existing note."),
+      alias: z
+        .string()
+        .optional()
+        .describe(
+          "Skill alias (e.g., 'aws', 'tests'). Omit or use 'index' to list all skills.",
+        ),
+      note: z
+        .union([z.string(), z.literal(false)])
+        .optional()
+        .describe(
+          "String to create/update a note on the skill, or false to delete an existing note.",
+        ),
     },
     async ({ alias, note }) => {
       const text = await handleSkillRequest({ alias, note });
@@ -558,7 +618,8 @@ async function createMcpHandler(): Promise<
   (req: Request, res: Response) => Promise<void>
 > {
   const server = createGardenMcpServer();
-  const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+  const [clientTransport, serverTransport] =
+    InMemoryTransport.createLinkedPair();
 
   await server.connect(serverTransport);
 
