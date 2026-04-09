@@ -5,7 +5,12 @@ import type { StorableEntity } from "@jaypie/dynamodb";
 // Constants
 //
 
-const EDGE_CATEGORIES = ["blocks", "parent", "references", "related"] as const;
+const EDGE_CATEGORIES = [
+  "blocks",
+  "parent",
+  "references",
+  "related",
+] as const;
 
 type EdgeCategory = (typeof EDGE_CATEGORIES)[number];
 

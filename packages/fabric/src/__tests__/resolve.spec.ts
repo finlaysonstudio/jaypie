@@ -108,9 +108,7 @@ describe("resolve", () => {
       });
 
       it("throws on JSON string parsed to object", () => {
-        expect(() => fabricBoolean('{"value":"true"}')).toThrow(
-          BadRequestError,
-        );
+        expect(() => fabricBoolean('{"value":"true"}')).toThrow(BadRequestError);
       });
     });
   });
@@ -273,7 +271,9 @@ describe("resolve", () => {
       });
 
       it("JSON.stringifies parsed JSON objects", () => {
-        expect(fabricString('{"content":"hello"}')).toBe('{"content":"hello"}');
+        expect(fabricString('{"content":"hello"}')).toBe(
+          '{"content":"hello"}',
+        );
       });
     });
 
