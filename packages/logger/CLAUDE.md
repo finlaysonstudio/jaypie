@@ -83,9 +83,18 @@ log.debug.var({ userId: "123" });
 
 ### Pipelines
 
-Special handling for common objects (`src/pipelines.ts`):
-- **Axios responses**: Strips circular references, keeps data/status/headers
-- **Errors**: Extracts message, name, stack, and Jaypie error properties
+Two-tier filtering system in `src/pipelines.ts`:
+
+**Key-based pipelines** (match on var key name):
+- **Axios responses** (key: `"response"`): Strips `config`/`request`, keeps `data`/`status`/`headers`/`statusText`
+
+**Type-based filters** (run on any key, match on value shape via `filterByType`):
+- **Fetch Response**: Extracts `ok`, `status`, `statusText`, `headers`, `url`, `redirected`, `type`
+- **Errors**: Extracts `message`, `name`, `stack`, and Jaypie error properties (`isProjectError`, `title`, `detail`, `status`)
+
+**Generic opaque fallback** (catches any class instance where `JSON.stringify` returns `{}`):
+- Map-like objects (`Headers`, `URLSearchParams`, `FormData`): converted via `.entries()`
+- Other opaque objects: walks prototype chain to read getters, includes `_type` constructor name
 
 ### Tagging
 

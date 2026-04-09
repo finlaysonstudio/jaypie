@@ -35,9 +35,7 @@ type LogMethod = {
   var: (messageObject: unknown, messageValue?: unknown) => void;
 };
 
-function resolveLevelField(
-  value?: boolean | string,
-): false | string {
+function resolveLevelField(value?: boolean | string): false | string {
   if (value === undefined) {
     const env = process.env.LOG_LEVEL_FIELD;
     if (env === undefined || env === "") return false;

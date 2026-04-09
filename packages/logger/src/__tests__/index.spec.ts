@@ -235,12 +235,8 @@ describe("@jaypie/logger", () => {
         const debugSpy = vi
           .spyOn(console, "debug")
           .mockImplementation(() => {});
-        const infoSpy = vi
-          .spyOn(console, "info")
-          .mockImplementation(() => {});
-        const warnSpy = vi
-          .spyOn(console, "warn")
-          .mockImplementation(() => {});
+        const infoSpy = vi.spyOn(console, "info").mockImplementation(() => {});
+        const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
         const errorSpy = vi
           .spyOn(console, "error")
           .mockImplementation(() => {});

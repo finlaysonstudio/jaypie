@@ -156,10 +156,7 @@ function isOpaqueObject(value: unknown): boolean {
     return false;
   }
   // Plain objects are fine
-  if (
-    value.constructor === Object ||
-    value.constructor === undefined
-  ) {
+  if (value.constructor === Object || value.constructor === undefined) {
     return false;
   }
   // If JSON.stringify produces "{}" the object has no own enumerable properties
