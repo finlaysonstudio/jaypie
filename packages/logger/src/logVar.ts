@@ -1,5 +1,5 @@
 import { forceVar } from "./forceVar";
-import { pipelines } from "./pipelines";
+import { filterByType, pipelines } from "./pipelines";
 
 function keyValueToArray(keyValue: Record<string, unknown>): [string, unknown] {
   const key = Object.keys(keyValue)[0];
@@ -14,6 +14,7 @@ export function logVar(key: unknown, value?: unknown): Record<string, unknown> {
       v = pipeline.filter(v);
     }
   }
+  v = filterByType(v);
 
   return { [k]: v };
 }
