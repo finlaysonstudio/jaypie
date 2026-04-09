@@ -889,18 +889,16 @@ describe("Lambda Adapter Integration", () => {
       // is already in memory from the Lambda event. No middleware needed.
       const writtenData: string[] = [];
 
-      vi.mocked(awslambda.HttpResponseStream.from).mockImplementation(
-        () => {
-          const wrapped: ResponseStream = {
-            write: vi.fn((chunk: string) => {
-              writtenData.push(chunk);
-              return true;
-            }),
-            end: vi.fn(),
-          };
-          return wrapped;
-        },
-      );
+      vi.mocked(awslambda.HttpResponseStream.from).mockImplementation(() => {
+        const wrapped: ResponseStream = {
+          write: vi.fn((chunk: string) => {
+            writtenData.push(chunk);
+            return true;
+          }),
+          end: vi.fn(),
+        };
+        return wrapped;
+      });
 
       const app = express();
       // No express.json() — body should still be parsed
@@ -932,18 +930,16 @@ describe("Lambda Adapter Integration", () => {
     it("pre-parses base64-encoded JSON body without middleware (issue #246)", async () => {
       const writtenData: string[] = [];
 
-      vi.mocked(awslambda.HttpResponseStream.from).mockImplementation(
-        () => {
-          const wrapped: ResponseStream = {
-            write: vi.fn((chunk: string) => {
-              writtenData.push(chunk);
-              return true;
-            }),
-            end: vi.fn(),
-          };
-          return wrapped;
-        },
-      );
+      vi.mocked(awslambda.HttpResponseStream.from).mockImplementation(() => {
+        const wrapped: ResponseStream = {
+          write: vi.fn((chunk: string) => {
+            writtenData.push(chunk);
+            return true;
+          }),
+          end: vi.fn(),
+        };
+        return wrapped;
+      });
 
       const app = express();
       app.post("/echo", (req, res) => {
