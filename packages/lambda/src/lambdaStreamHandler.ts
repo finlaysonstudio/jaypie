@@ -97,10 +97,13 @@ interface JaypieError extends Error {
 
 interface JaypieLogger {
   init: () => void;
-  tag: (tags: Record<string, unknown>) => void;
-  untag: (tag: string) => void;
-  lib: (options: Record<string, unknown>) => JaypieLibLogger;
   level: string;
+  lib: (options: Record<string, unknown>) => JaypieLibLogger;
+  report: (data: Record<string, unknown>) => void;
+  setup: (tags?: Record<string, unknown>) => void;
+  tag: (tags: Record<string, unknown>) => void;
+  teardown: () => void;
+  untag: (tag: string) => void;
 }
 
 interface JaypieLibLogger {
@@ -229,16 +232,13 @@ const lambdaStreamHandler = function <TEvent = unknown>(
     // Re-init the logger
     (publicLogger as unknown as JaypieLogger).init();
 
-    // The public logger is also the "root" logger
+    // Set up log session with request tags
+    const setupTags: Record<string, string> = { handler: name };
     if (context.awsRequestId) {
-      (publicLogger as unknown as JaypieLogger).tag({
-        invoke: context.awsRequestId,
-      });
-      (publicLogger as unknown as JaypieLogger).tag({
-        shortInvoke: context.awsRequestId.slice(0, 8),
-      });
+      setupTags.invoke = context.awsRequestId;
+      setupTags.shortInvoke = context.awsRequestId.slice(0, 8);
     }
-    (publicLogger as unknown as JaypieLogger).tag({ handler: name });
+    (publicLogger as unknown as JaypieLogger).setup(setupTags);
 
     // Very low-level, sub-trace details
     const libLogger = (publicLogger as unknown as JaypieLogger).lib({
@@ -331,7 +331,8 @@ const lambdaStreamHandler = function <TEvent = unknown>(
       // Postprocess
       //
 
-      // Clean up the public logger
+      // End log session and clean up
+      (publicLogger as unknown as JaypieLogger).teardown();
       (publicLogger as unknown as JaypieLogger).untag("handler");
     }
   };

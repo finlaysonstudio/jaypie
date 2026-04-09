@@ -57,6 +57,9 @@ interface ExtendedLogger {
     lib?: string;
     tags?: Record<string, unknown>;
   }): ExtendedLogger;
+  report(data: Record<string, unknown>): void;
+  setup(tags?: Record<string, unknown>): void;
+  teardown(): void;
 }
 
 // Exported type aliases for defining handler lifecycle functions
@@ -267,15 +270,6 @@ function expressStreamHandler(
 
     // Update the public logger with the request ID
     const invokeUuid = getCurrentInvokeUuid(req);
-    if (invokeUuid) {
-      logger.tag({ invoke: invokeUuid });
-      logger.tag({ shortInvoke: invokeUuid.slice(0, 8) });
-      libLogger.tag({ invoke: invokeUuid });
-      libLogger.tag({ shortInvoke: invokeUuid.slice(0, 8) });
-      log.tag({ invoke: invokeUuid });
-      log.tag({ shortInvoke: invokeUuid.slice(0, 8) });
-    }
-
     if (!name) {
       if (handler.name) {
         name = handler.name;
@@ -283,9 +277,15 @@ function expressStreamHandler(
         name = JAYPIE.UNKNOWN;
       }
     }
-    logger.tag({ handler: name });
-    libLogger.tag({ handler: name });
-    log.tag({ handler: name });
+    const setupTags: Record<string, string> = { handler: name };
+    if (invokeUuid) {
+      setupTags.invoke = invokeUuid;
+      setupTags.shortInvoke = invokeUuid.slice(0, 8);
+    }
+    logger.setup(setupTags);
+    // TODO: in theory this is redundant
+    libLogger.tag(setupTags);
+    log.tag(setupTags);
 
     libLogger.trace("[jaypie] Express stream init");
 
@@ -414,20 +414,24 @@ function expressStreamHandler(
         res: { statusCode: res.statusCode, streaming: true },
       });
 
+      // Construct normalized path for reporting and metrics
+      let path = (req.baseUrl || "") + (req.url || "");
+      if (!path.startsWith("/")) {
+        path = "/" + path;
+      }
+      if (path.length > 1 && path.endsWith("/")) {
+        path = path.slice(0, -1);
+      }
+      path = path.replace(
+        /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi,
+        ":id",
+      );
+
+      // Add request data to session report
+      logger.report({ path, status: String(res.statusCode) });
+
       // Submit metric if Datadog is configured
       if (hasDatadogEnv()) {
-        let path = (req.baseUrl || "") + (req.url || "");
-        if (!path.startsWith("/")) {
-          path = "/" + path;
-        }
-        if (path.length > 1 && path.endsWith("/")) {
-          path = path.slice(0, -1);
-        }
-        path = path.replace(
-          /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi,
-          ":id",
-        );
-
         let metricPrefix = "project";
         if (process.env.PROJECT_SPONSOR) {
           metricPrefix = process.env.PROJECT_SPONSOR;
@@ -446,7 +450,8 @@ function expressStreamHandler(
         });
       }
 
-      // Clean up the public logger
+      // End log session and clean up
+      logger.teardown();
       logger.untag("handler");
     }
   };
