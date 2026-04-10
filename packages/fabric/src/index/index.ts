@@ -10,6 +10,7 @@
 
 export {
   ARCHIVED_SUFFIX,
+  DEFAULT_INDEXES,
   DEFAULT_SORT_KEY,
   DELETED_SUFFIX,
   type IndexDefinition,

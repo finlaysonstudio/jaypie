@@ -10,6 +10,7 @@ import {
   calculateIndexSuffix,
   calculateScope,
   clearRegistry,
+  DEFAULT_INDEXES,
   DELETED_SUFFIX,
   generateIndexName,
   getAllRegisteredIndexes,
@@ -255,9 +256,9 @@ describe("Model Registry", () => {
   });
 
   describe("getModelIndexes", () => {
-    it("returns empty array for unregistered model", () => {
+    it("returns DEFAULT_INDEXES for unregistered model", () => {
       const indexes = getModelIndexes("unknown");
-      expect(indexes).toEqual([]);
+      expect(indexes).toEqual(DEFAULT_INDEXES);
     });
 
     it("returns custom indexes for registered model", () => {
@@ -270,10 +271,10 @@ describe("Model Registry", () => {
       expect(indexes).toEqual(customIndexes);
     });
 
-    it("returns empty array when model has no custom indexes", () => {
+    it("returns DEFAULT_INDEXES when model has no custom indexes", () => {
       registerModel({ model: "simple" });
       const indexes = getModelIndexes("simple");
-      expect(indexes).toEqual([]);
+      expect(indexes).toEqual(DEFAULT_INDEXES);
     });
   });
 
