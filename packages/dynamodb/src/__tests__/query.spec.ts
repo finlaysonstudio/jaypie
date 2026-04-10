@@ -196,9 +196,26 @@ describe("query", () => {
       );
     });
 
-    it("throws ConfigurationError for unregistered models (no indexes)", async () => {
+    it("falls back to DEFAULT_INDEXES for unregistered models", async () => {
+      // @jaypie/fabric@0.2.4 restores the deprecated DEFAULT_INDEXES fallback
+      // when a model has not been registered. Slated for removal in 0.3.0.
+      await query({ model: "unregistered", scope: "@" });
+
+      expect(mockSend).toHaveBeenCalledOnce();
+      const command = mockSend.mock.calls[0][0];
+      expect(command.input.IndexName).toBe("indexScope");
+      expect(command.input.ExpressionAttributeValues[":pkValue"]).toBe(
+        "@#unregistered",
+      );
+    });
+
+    it("throws ConfigurationError when no index matches filter fields", async () => {
       await expect(
-        query({ model: "unregistered", scope: "@" }),
+        query({
+          model: "unregistered",
+          // No scope and no filter — DEFAULT_INDEXES still require scope
+          filter: { someUnknownField: "value" } as never,
+        }),
       ).rejects.toThrow(ConfigurationError);
     });
   });

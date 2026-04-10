@@ -591,9 +591,9 @@ const message: FabricMessage = {
 When persisting models to DynamoDB, use index utilities to build GSI keys:
 
 ```typescript
-import { APEX, calculateScope, populateIndexKeys, registerModel } from "@jaypie/fabric";
+import { APEX, calculateScope, DEFAULT_INDEXES, populateIndexKeys, registerModel } from "@jaypie/fabric";
 
-// Register model indexes
+// Register custom model indexes (recommended)
 registerModel({
   model: "record",
   indexes: [
@@ -619,15 +619,15 @@ const message = {
   // ...other fields
 };
 
-// Auto-populate GSI keys (uses registered indexes)
-const indexes = [
-  { name: "indexScope", pk: ["scope", "model"], sk: ["sequence"] },
-  { name: "indexAlias", pk: ["scope", "model", "alias"], sk: ["sequence"], sparse: true },
-];
-const indexed = populateIndexKeys(record, indexes);
+// Auto-populate GSI keys
+const indexed = populateIndexKeys(record, DEFAULT_INDEXES);
 // indexed.indexScope = "@#record"
 // indexed.indexAlias = "@#record#2026-12-12"
 ```
+
+> **Deprecated:** `DEFAULT_INDEXES` is restored in 0.2.4 to unblock consumers
+> and is scheduled for removal in 0.3.0. Register model indexes explicitly with
+> `registerModel()` instead.
 
 ## API
 
@@ -655,6 +655,7 @@ const indexed = populateIndexKeys(record, indexes);
 | `populateIndexKeys` | Populate GSI keys on an entity |
 | `buildCompositeKey` | Build composite key from fields |
 | `calculateScope` | Calculate scope |
+| `DEFAULT_INDEXES` | Default GSI definitions (deprecated, removal targeted for 0.3.0) |
 | `APEX` | Root-level marker (`"@"`) |
 | `SEPARATOR` | Composite key separator (`"#"`) |
 | `ARCHIVED_SUFFIX` | Suffix for archived entities |

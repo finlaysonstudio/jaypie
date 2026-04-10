@@ -6,7 +6,7 @@ Jaypie modeling framework - provides type conversion and service handler pattern
 
 | Attribute | Value |
 |-----------|-------|
-| Status | Initial development (0.2.3) |
+| Status | Initial development (0.2.4) |
 | Type | Utility library |
 | Dependencies | `@jaypie/errors` |
 | Peer Dependencies | `@jaypie/aws` (optional), `@jaypie/dynamodb` (optional), `@jaypie/lambda` (optional), `@modelcontextprotocol/sdk` (optional), `commander` (optional), `express` (optional) |
@@ -255,12 +255,13 @@ Located in `src/index/`. Utilities for DynamoDB single-table design patterns:
 | Function | Purpose |
 |----------|---------|
 | `registerModel({ model, indexes })` | Register custom indexes for a model |
-| `getModelIndexes(model)` | Get indexes for a model (custom or empty array) |
+| `getModelIndexes(model)` | Get indexes for a model (custom or `DEFAULT_INDEXES`) |
 | `clearRegistry()` | Clear all registered models (for testing) |
 | `getAllRegisteredIndexes()` | Get all registered custom indexes |
 | `populateIndexKeys(entity, indexes, suffix?)` | Populate GSI keys on an entity |
 | `buildCompositeKey(entity, fields, suffix?)` | Build composite key from entity fields |
 | `calculateScope(parent?)` | Calculate scope |
+| `DEFAULT_INDEXES` | Standard GSI definitions (deprecated, removal targeted for 0.3.0) |
 
 ### Types
 
@@ -389,7 +390,7 @@ export type { ServiceMeta, ServiceSuite, ServiceSuiteConfig } from "./ServiceSui
 export { FabricModel, FabricJob, FabricMessage, Progress } from "./models/base.js";
 
 // Index Utilities
-export { buildCompositeKey, calculateScope, clearRegistry, getAllRegisteredIndexes, getModelIndexes, populateIndexKeys, registerModel } from "./index/index.js";
+export { buildCompositeKey, calculateScope, clearRegistry, DEFAULT_INDEXES, getAllRegisteredIndexes, getModelIndexes, populateIndexKeys, registerModel } from "./index/index.js";
 
 // Constants
 export { APEX, ARCHIVED_SUFFIX, DELETED_SUFFIX, SEPARATOR } from "./constants.js";
