@@ -18,6 +18,15 @@ import {
 export interface JaypieApiGatewayProps extends apiGateway.LambdaRestApiProps {
   certificate?: boolean | acm.ICertificate;
   /**
+   * Force-delete any existing Route53 A record with the same name before
+   * creating the alias record. Useful when migrating from another construct
+   * (e.g., JaypieDistribution) that already owns the same hostname, where the
+   * default CloudFormation create-before-delete ordering would otherwise
+   * collide on the record name.
+   * @default false
+   */
+  deleteExistingRecord?: boolean;
+  /**
    * The domain name for the API Gateway.
    *
    * Supports both string and config object:
@@ -50,6 +59,7 @@ export class JaypieApiGateway extends Construct implements apiGateway.IRestApi {
 
     const {
       certificate = true,
+      deleteExistingRecord = false,
       handler,
       host: propsHost,
       name,
@@ -116,6 +126,7 @@ export class JaypieApiGateway extends Construct implements apiGateway.IRestApi {
       // Ignore the variables we already assigned to other properties
       /* eslint-disable @typescript-eslint/no-unused-vars */
       certificate: _certificate,
+      deleteExistingRecord: _deleteExistingRecord,
       host: _host,
       name: _name,
       roleTag: _roleTag,
@@ -139,6 +150,7 @@ export class JaypieApiGateway extends Construct implements apiGateway.IRestApi {
       Tags.of(this._domainName).add(CDK.TAG.ROLE, roleTag);
 
       const record = new route53.ARecord(this, "AliasRecord", {
+        deleteExisting: deleteExistingRecord,
         recordName: host,
         target: route53.RecordTarget.fromAlias(
           new route53Targets.ApiGatewayDomain(this._domainName),

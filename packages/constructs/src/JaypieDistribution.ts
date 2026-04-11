@@ -102,6 +102,15 @@ export interface JaypieDistributionProps extends Omit<
    */
   defaultBehavior?: cloudfront.BehaviorOptions;
   /**
+   * Force-delete any existing Route53 A and AAAA records with the same name
+   * before creating the alias records. Useful when migrating from another
+   * construct (e.g., JaypieApiGateway) that already owns the same hostname,
+   * where the default CloudFormation create-before-delete ordering would
+   * otherwise collide on the record name.
+   * @default false
+   */
+  deleteExistingRecord?: boolean;
+  /**
    * Log destination configuration for CloudFront access logs
    * - LambdaDestination: Use a specific Lambda destination for S3 notifications
    * - true: Use Datadog forwarder for S3 notifications (default)
@@ -211,6 +220,7 @@ export class JaypieDistribution
     const {
       certificate: certificateProp = true,
       defaultBehavior: propsDefaultBehavior,
+      deleteExistingRecord = false,
       destination: destinationProp = true,
       handler,
       host: propsHost,
@@ -653,6 +663,7 @@ export class JaypieDistribution
     // Create DNS records if we have host and zone
     if (host && hostedZone) {
       const aRecord = new route53.ARecord(this, "AliasRecord", {
+        deleteExisting: deleteExistingRecord,
         recordName: host,
         target: route53.RecordTarget.fromAlias(
           new route53Targets.CloudFrontTarget(this.distribution),
@@ -662,6 +673,7 @@ export class JaypieDistribution
       Tags.of(aRecord).add(CDK.TAG.ROLE, CDK.ROLE.NETWORKING);
 
       const aaaaRecord = new route53.AaaaRecord(this, "AaaaAliasRecord", {
+        deleteExisting: deleteExistingRecord,
         recordName: host,
         target: route53.RecordTarget.fromAlias(
           new route53Targets.CloudFrontTarget(this.distribution),

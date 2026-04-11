@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { Stack } from "aws-cdk-lib";
 import { Template } from "aws-cdk-lib/assertions";
 import * as lambda from "aws-cdk-lib/aws-lambda";
+import * as route53 from "aws-cdk-lib/aws-route53";
 import { JaypieApiGateway } from "../JaypieApiGateway";
 
 describe("JaypieApiGateway", () => {
@@ -87,6 +88,57 @@ describe("JaypieApiGateway", () => {
       expect(
         lambdaProps?.Environment?.Variables?.PROJECT_BASE_URL,
       ).toBeUndefined();
+    });
+
+    it("does not force-delete existing alias record by default", () => {
+      const stack = new Stack(undefined, "TestStack", {
+        env: { account: "123456789012", region: "us-east-1" },
+      });
+      const fn = new lambda.Function(stack, "TestFunction", {
+        code: lambda.Code.fromInline("exports.handler = () => {}"),
+        handler: "index.handler",
+        runtime: lambda.Runtime.NODEJS_20_X,
+      });
+      const zone = route53.HostedZone.fromHostedZoneAttributes(stack, "Zone", {
+        hostedZoneId: "Z123456789",
+        zoneName: "example.com",
+      });
+
+      new JaypieApiGateway(stack, "TestApiGateway", {
+        handler: fn,
+        host: "api.example.com",
+        zone,
+      });
+      const template = Template.fromStack(stack);
+
+      template.resourceCountIs("AWS::Route53::RecordSet", 1);
+      template.resourceCountIs("Custom::DeleteExistingRecordSet", 0);
+    });
+
+    it("force-deletes existing alias record when deleteExistingRecord is true", () => {
+      const stack = new Stack(undefined, "TestStack", {
+        env: { account: "123456789012", region: "us-east-1" },
+      });
+      const fn = new lambda.Function(stack, "TestFunction", {
+        code: lambda.Code.fromInline("exports.handler = () => {}"),
+        handler: "index.handler",
+        runtime: lambda.Runtime.NODEJS_20_X,
+      });
+      const zone = route53.HostedZone.fromHostedZoneAttributes(stack, "Zone", {
+        hostedZoneId: "Z123456789",
+        zoneName: "example.com",
+      });
+
+      new JaypieApiGateway(stack, "TestApiGateway", {
+        handler: fn,
+        host: "api.example.com",
+        zone,
+        deleteExistingRecord: true,
+      });
+      const template = Template.fromStack(stack);
+
+      template.resourceCountIs("AWS::Route53::RecordSet", 1);
+      template.resourceCountIs("Custom::DeleteExistingRecordSet", 1);
     });
 
     it("sets PROJECT_BASE_URL from environment variables", () => {
