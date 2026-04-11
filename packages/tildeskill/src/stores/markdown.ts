@@ -73,13 +73,11 @@ export function createMarkdownStore({
       return readByAlias(normalized);
     },
 
-    async getByNickname(nickname: string): Promise<SkillRecord | null> {
+    async getByNickname(nickname: string): Promise<SkillRecord[]> {
       const normalized = normalizeAlias(nickname);
       const allSkills = await this.list();
-      return (
-        allSkills.find((record) =>
-          record.nicknames?.map(normalizeAlias).includes(normalized),
-        ) ?? null
+      return allSkills.filter((record) =>
+        record.nicknames?.map(normalizeAlias).includes(normalized),
       );
     },
 

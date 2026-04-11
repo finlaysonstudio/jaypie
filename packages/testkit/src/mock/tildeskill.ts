@@ -40,7 +40,7 @@ function createMockStore(): SkillStore {
   return {
     find: createMockResolvedFunction(null),
     get: createMockResolvedFunction(null),
-    getByNickname: createMockResolvedFunction(null),
+    getByNickname: createMockResolvedFunction([] as SkillRecord[]),
     list: createMockResolvedFunction([]),
     put: createMockResolvedFunction({
       alias: "mock",
@@ -50,6 +50,7 @@ function createMockStore(): SkillStore {
   };
 }
 
+export const createLayeredStore = createMockFunction(() => createMockStore());
 export const createMarkdownStore = createMockFunction(() => createMockStore());
 export const createMemoryStore = createMockFunction(
   // eslint-disable-next-line @typescript-eslint/no-unused-vars

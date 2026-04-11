@@ -10,8 +10,10 @@ Skill/vocabulary management with pluggable storage backends for AI assistants an
 ## Overview
 
 This package provides a storage abstraction for skill/vocabulary documents with markdown frontmatter support. It enables:
+
 - Loading skills from markdown files with YAML frontmatter
 - In-memory storage for testing
+- Layered composition of multiple stores with namespace prefixes
 - Consistent alias normalization and validation
 - Filtering by namespace and tags
 - Searching across alias, name, description, content, and tags
@@ -28,25 +30,25 @@ npm install @jaypie/tildeskill
 
 ```typescript
 interface SkillRecord {
-  alias: string;              // Lookup key (normalized lowercase)
-  content: string;            // Markdown body
-  description?: string;       // Brief description from frontmatter
-  includes?: string[];        // Auto-expand these skill aliases on lookup
-  name?: string;              // Display title for the skill
-  nicknames?: string[];       // Alternate lookup keys for getByNickname
-  related?: string[];         // Related skill aliases
-  tags?: string[];            // Categorization tags
+  alias: string; // Lookup key (normalized lowercase)
+  content: string; // Markdown body
+  description?: string; // Brief description from frontmatter
+  includes?: string[]; // Auto-expand these skill aliases on lookup
+  name?: string; // Display title for the skill
+  nicknames?: string[]; // Alternate lookup keys for getByNickname
+  related?: string[]; // Related skill aliases
+  tags?: string[]; // Categorization tags
 }
 
 interface ListFilter {
-  namespace?: string;         // Namespace prefix matching (e.g., "kit:*")
-  tag?: string;               // Filter by tag
+  namespace?: string; // Namespace prefix matching (e.g., "kit:*")
+  tag?: string; // Filter by tag
 }
 
 interface SkillStore {
   find(alias: string): Promise<SkillRecord | null>;
   get(alias: string): Promise<SkillRecord | null>;
-  getByNickname(nickname: string): Promise<SkillRecord | null>;
+  getByNickname(nickname: string): Promise<SkillRecord[]>;
   list(filter?: ListFilter): Promise<SkillRecord[]>;
   put(record: SkillRecord): Promise<SkillRecord>;
   search(term: string): Promise<SkillRecord[]>;
@@ -70,7 +72,7 @@ if (skill) {
 
 // List all skills
 const skills = await store.list();
-skills.forEach(s => console.log(`${s.alias}: ${s.description}`));
+skills.forEach((s) => console.log(`${s.alias}: ${s.description}`));
 ```
 
 ### Memory Store (Testing)
@@ -79,7 +81,7 @@ skills.forEach(s => console.log(`${s.alias}: ${s.description}`));
 import { createMemoryStore } from "@jaypie/tildeskill";
 
 const store = createMemoryStore([
-  { alias: "test", content: "# Test\n\nContent", description: "Test skill" }
+  { alias: "test", content: "# Test\n\nContent", description: "Test skill" },
 ]);
 
 const skill = await store.get("test");
@@ -112,9 +114,39 @@ const cloudSkills = await store.list({ tag: "cloud" });
 // Search across alias, name, description, content, and tags
 const results = await store.search("lambda");
 
-// Lookup by nickname
-const skill = await store.getByNickname("amazon");
+// Lookup by nickname — returns every matching record, so a name like
+// "sparticus" can resolve to multiple skills across layers.
+const matches = await store.getByNickname("amazon");
 ```
+
+## Layered Stores
+
+```typescript
+import { createLayeredStore, createMarkdownStore } from "@jaypie/tildeskill";
+
+// Compose multiple stores with namespace prefixes. Earlier layers win
+// for single-result lookups; aggregate methods merge every layer.
+const layered = createLayeredStore({
+  layers: [
+    { namespace: "local", store: createMarkdownStore({ path: "./my-skills" }) },
+    {
+      namespace: "jaypie",
+      store: createMarkdownStore({ path: "./jaypie-skills" }),
+    },
+  ],
+});
+
+await layered.get("aws"); // → { alias: "local:aws", ... }
+await layered.get("jaypie:aws"); // → { alias: "jaypie:aws", ... }
+await layered.find("skills"); // per-layer plural fallback
+await layered.list(); // prefixed aliases from every layer
+await layered.put({ alias: "local:new", content: "# New" }); // must be qualified
+```
+
+The MCP server itself uses `createLayeredStore` to place `MCP_SKILLS_PATH`
+(the client's local library, namespace `local`) over the bundled Jaypie
+skills (namespace `jaypie`). Set `MCP_BUILTIN_SKILLS_PATH` if a bundler
+needs to relocate the Jaypie base layer.
 
 ## Plural/Singular Fallback
 
@@ -124,26 +156,30 @@ const skill = await store.find("skills"); // resolves skill.md
 // skill.alias is the canonical filename; compare to the input to detect fallback
 
 import { getAlternativeSpellings } from "@jaypie/tildeskill";
-getAlternativeSpellings("skills");  // ["skill"]
+getAlternativeSpellings("skills"); // ["skill"]
 getAlternativeSpellings("indexes"); // ["indexe", "index"]
-getAlternativeSpellings("fish");    // ["fishs", "fishes"]
+getAlternativeSpellings("fish"); // ["fishs", "fishes"]
 ```
 
 ## Validation Utilities
 
 ```typescript
-import { isValidAlias, validateAlias, normalizeAlias } from "@jaypie/tildeskill";
+import {
+  isValidAlias,
+  validateAlias,
+  normalizeAlias,
+} from "@jaypie/tildeskill";
 
 // Check validity
-isValidAlias("my-skill");     // true
-isValidAlias("../../etc");    // false (path traversal)
+isValidAlias("my-skill"); // true
+isValidAlias("../../etc"); // false (path traversal)
 
 // Normalize to lowercase
-normalizeAlias("MY-Skill");   // "my-skill"
+normalizeAlias("MY-Skill"); // "my-skill"
 
 // Validate and normalize (throws on invalid)
-validateAlias("valid");       // returns "valid"
-validateAlias("../bad");      // throws BadRequestError
+validateAlias("valid"); // returns "valid"
+validateAlias("../bad"); // throws BadRequestError
 ```
 
 ## Skill File Format
@@ -159,7 +195,6 @@ nicknames: alt-name, another-alias
 related: alias1, alias2, alias3
 tags: category1, category2
 ---
-
 # Skill Title
 
 Markdown content...

@@ -34,14 +34,15 @@ export function createMemoryStore(initial?: SkillRecord[]): SkillStore {
       return store.get(normalized) ?? null;
     },
 
-    async getByNickname(nickname: string): Promise<SkillRecord | null> {
+    async getByNickname(nickname: string): Promise<SkillRecord[]> {
       const normalized = normalizeAlias(nickname);
+      const matches: SkillRecord[] = [];
       for (const record of store.values()) {
         if (record.nicknames?.map(normalizeAlias).includes(normalized)) {
-          return record;
+          matches.push(record);
         }
       }
-      return null;
+      return matches.sort((a, b) => a.alias.localeCompare(b.alias));
     },
 
     async list(filter?: ListFilter): Promise<SkillRecord[]> {

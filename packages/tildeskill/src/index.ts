@@ -1,5 +1,7 @@
 // Types
 export type {
+  LayeredStoreLayer,
+  LayeredStoreOptions,
   ListFilter,
   MarkdownStoreOptions,
   SkillFrontMatter,
@@ -14,5 +16,6 @@ export { getAlternativeSpellings } from "./core/spellings";
 export { isValidAlias, validateAlias } from "./core/validate";
 
 // Store factories
+export { createLayeredStore } from "./stores/layered";
 export { createMarkdownStore } from "./stores/markdown";
 export { createMemoryStore } from "./stores/memory";

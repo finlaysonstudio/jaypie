@@ -273,7 +273,7 @@ tags:
   });
 
   describe("getByNickname", () => {
-    it("finds skill by nickname", async () => {
+    it("returns a single-element array when one skill matches", async () => {
       await fs.writeFile(
         path.join(tempDir, "aws.md"),
         `---
@@ -284,12 +284,37 @@ nicknames: amazon, cloud
       );
 
       const store = createMarkdownStore({ path: tempDir });
-      const skill = await store.getByNickname("amazon");
+      const results = await store.getByNickname("amazon");
 
-      expect(skill?.alias).toBe("aws");
+      expect(results).toHaveLength(1);
+      expect(results[0].alias).toBe("aws");
     });
 
-    it("returns null when nickname not found", async () => {
+    it("returns all matching skills when several share a nickname", async () => {
+      await fs.writeFile(
+        path.join(tempDir, "crixus.md"),
+        `---
+nicknames: sparticus
+---
+
+# Crixus`,
+      );
+      await fs.writeFile(
+        path.join(tempDir, "spartacus.md"),
+        `---
+nicknames: sparticus
+---
+
+# Spartacus`,
+      );
+
+      const store = createMarkdownStore({ path: tempDir });
+      const results = await store.getByNickname("sparticus");
+
+      expect(results.map((r) => r.alias)).toEqual(["crixus", "spartacus"]);
+    });
+
+    it("returns an empty array when nickname not found", async () => {
       await fs.writeFile(
         path.join(tempDir, "aws.md"),
         `---
@@ -300,9 +325,9 @@ nicknames: amazon
       );
 
       const store = createMarkdownStore({ path: tempDir });
-      const skill = await store.getByNickname("google");
+      const results = await store.getByNickname("google");
 
-      expect(skill).toBeNull();
+      expect(results).toEqual([]);
     });
 
     it("normalizes nickname during lookup", async () => {
@@ -316,9 +341,9 @@ nicknames: amazon
       );
 
       const store = createMarkdownStore({ path: tempDir });
-      const skill = await store.getByNickname("AMAZON");
+      const results = await store.getByNickname("AMAZON");
 
-      expect(skill?.alias).toBe("aws");
+      expect(results[0]?.alias).toBe("aws");
     });
   });
 

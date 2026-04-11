@@ -162,7 +162,7 @@ describe("createMemoryStore", () => {
   });
 
   describe("getByNickname", () => {
-    it("finds skill by nickname", async () => {
+    it("returns a single-element array when one skill matches", async () => {
       const store = createMemoryStore([
         {
           alias: "aws",
@@ -171,17 +171,33 @@ describe("createMemoryStore", () => {
         },
       ]);
 
-      const skill = await store.getByNickname("amazon");
-      expect(skill?.alias).toBe("aws");
+      const results = await store.getByNickname("amazon");
+      expect(results).toHaveLength(1);
+      expect(results[0].alias).toBe("aws");
     });
 
-    it("returns null when nickname not found", async () => {
+    it("returns all matching skills when several share a nickname", async () => {
+      const store = createMemoryStore([
+        { alias: "crixus", content: "# Crixus", nicknames: ["sparticus"] },
+        {
+          alias: "spartacus",
+          content: "# Spartacus",
+          nicknames: ["sparticus"],
+        },
+        { alias: "aws", content: "# AWS", nicknames: ["amazon"] },
+      ]);
+
+      const results = await store.getByNickname("sparticus");
+      expect(results.map((r) => r.alias)).toEqual(["crixus", "spartacus"]);
+    });
+
+    it("returns an empty array when nickname not found", async () => {
       const store = createMemoryStore([
         { alias: "aws", content: "# AWS", nicknames: ["amazon"] },
       ]);
 
-      const skill = await store.getByNickname("google");
-      expect(skill).toBeNull();
+      const results = await store.getByNickname("google");
+      expect(results).toEqual([]);
     });
 
     it("normalizes nickname during lookup", async () => {
@@ -189,15 +205,15 @@ describe("createMemoryStore", () => {
         { alias: "aws", content: "# AWS", nicknames: ["amazon"] },
       ]);
 
-      const skill = await store.getByNickname("AMAZON");
-      expect(skill?.alias).toBe("aws");
+      const results = await store.getByNickname("AMAZON");
+      expect(results[0]?.alias).toBe("aws");
     });
 
-    it("returns null for skill without nicknames", async () => {
+    it("returns an empty array for skill without nicknames", async () => {
       const store = createMemoryStore([{ alias: "aws", content: "# AWS" }]);
 
-      const skill = await store.getByNickname("amazon");
-      expect(skill).toBeNull();
+      const results = await store.getByNickname("amazon");
+      expect(results).toEqual([]);
     });
   });
 

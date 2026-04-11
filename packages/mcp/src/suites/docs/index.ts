@@ -3,8 +3,10 @@
  */
 import { fabricService } from "@jaypie/fabric";
 import {
+  createLayeredStore,
   createMarkdownStore,
   isValidAlias,
+  type LayeredStoreLayer,
   normalizeAlias,
   type SkillRecord,
 } from "@jaypie/tildeskill";
@@ -28,12 +30,41 @@ const __dirname = path.dirname(__filename);
 const RELEASE_NOTES_PATH =
   process.env.MCP_RELEASE_NOTES_PATH ||
   path.join(__dirname, "..", "..", "..", "release-notes");
-const SKILLS_PATH =
-  process.env.MCP_SKILLS_PATH ||
+
+// Bundled Jaypie skills ship inside the @jaypie/mcp package. MCP_BUILTIN_SKILLS_PATH
+// lets bundlers (esbuild, Lambda) relocate them without disabling the built-in layer.
+const BUILTIN_SKILLS_PATH =
+  process.env.MCP_BUILTIN_SKILLS_PATH ||
   path.join(__dirname, "..", "..", "..", "skills");
 
-// Create skill store using tildeskill
-const skillStore = createMarkdownStore({ path: SKILLS_PATH });
+const LOCAL_SKILLS_NAMESPACE = "local";
+const JAYPIE_SKILLS_NAMESPACE = "jaypie";
+const LAYER_SEPARATOR = ":";
+
+// Skill layers resolved in order: a client's MCP_SKILLS_PATH layers on top of
+// the built-in Jaypie skill pack so `skill("aws")` prefers the client's copy
+// while still exposing bundled Jaypie docs under the `jaypie:` namespace.
+const skillLayers: LayeredStoreLayer[] = [];
+const skillLayerPaths = new Map<string, string>();
+
+if (process.env.MCP_SKILLS_PATH) {
+  skillLayers.push({
+    namespace: LOCAL_SKILLS_NAMESPACE,
+    store: createMarkdownStore({ path: process.env.MCP_SKILLS_PATH }),
+  });
+  skillLayerPaths.set(LOCAL_SKILLS_NAMESPACE, process.env.MCP_SKILLS_PATH);
+}
+
+skillLayers.push({
+  namespace: JAYPIE_SKILLS_NAMESPACE,
+  store: createMarkdownStore({ path: BUILTIN_SKILLS_PATH }),
+});
+skillLayerPaths.set(JAYPIE_SKILLS_NAMESPACE, BUILTIN_SKILLS_PATH);
+
+const skillStore = createLayeredStore({
+  layers: skillLayers,
+  separator: LAYER_SEPARATOR,
+});
 
 // =============================================================================
 // HELPER FUNCTIONS
@@ -206,8 +237,10 @@ export const skillService = fabricService({
 
     if (alias === "index") {
       const allSkills = await skillStore.list();
+      // Index entries from every layer hide per-layer "index" records.
       const skills = allSkills.filter(
-        (s: { alias: string }) => s.alias !== "index",
+        (s: { alias: string }) =>
+          s.alias !== "index" && !s.alias.endsWith(`${LAYER_SEPARATOR}index`),
       );
       const skillList = skills.map(formatSkillListItem).join("\n");
 
@@ -222,15 +255,28 @@ export const skillService = fabricService({
       );
     }
 
-    const matchedAlias = skill.alias;
+    // Split the namespaced alias the layered store returned (e.g., "local:aws")
+    // so we can read the raw markdown file from the correct layer directory.
+    const separatorIdx = skill.alias.indexOf(LAYER_SEPARATOR);
+    const layerNamespace =
+      separatorIdx === -1 ? "" : skill.alias.slice(0, separatorIdx);
+    const innerAlias =
+      separatorIdx === -1 ? skill.alias : skill.alias.slice(separatorIdx + 1);
+    const layerPath = skillLayerPaths.get(layerNamespace);
+    if (!layerPath) {
+      // Defensive: layered store returned a layer we don't know the path for.
+      return skill.content;
+    }
 
-    // Return raw file content for non-index skills (preserve frontmatter)
-    const skillPath = path.join(SKILLS_PATH, `${matchedAlias}.md`);
+    const skillPath = path.join(layerPath, `${innerAlias}.md`);
     let content = await fs.readFile(skillPath, "utf-8");
 
-    // If we matched via alternative spelling, add alias to indicate canonical name
-    if (matchedAlias !== alias) {
-      content = addAliasToFrontmatter(content, matchedAlias);
+    // Detect plural/singular fallback so we can annotate the canonical alias.
+    const inputSeparatorIdx = alias.indexOf(LAYER_SEPARATOR);
+    const inputInnerAlias =
+      inputSeparatorIdx === -1 ? alias : alias.slice(inputSeparatorIdx + 1);
+    if (innerAlias !== inputInnerAlias) {
+      content = addAliasToFrontmatter(content, skill.alias);
     }
 
     return content;
