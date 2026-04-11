@@ -5,6 +5,7 @@ import * as acm from "aws-cdk-lib/aws-certificatemanager";
 import * as cloudfront from "aws-cdk-lib/aws-cloudfront";
 import * as origins from "aws-cdk-lib/aws-cloudfront-origins";
 import * as lambda from "aws-cdk-lib/aws-lambda";
+import * as route53 from "aws-cdk-lib/aws-route53";
 import * as s3 from "aws-cdk-lib/aws-s3";
 import { CDK } from "../constants";
 import { JaypieDistribution } from "../JaypieDistribution";
@@ -474,6 +475,51 @@ describe("JaypieDistribution", () => {
       // Certificate is only set when host AND zone are both present
       // Without zone, certificate isn't applied to the distribution
       expect(construct.host).toBe("api.example.com");
+    });
+
+    it("does not force-delete existing alias records by default", () => {
+      const stack = new Stack(undefined, "TestStack", {
+        env: { account: "123456789012", region: "us-east-1" },
+      });
+      const bucket = new s3.Bucket(stack, "TestBucket");
+      const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
+      const zone = route53.HostedZone.fromHostedZoneAttributes(stack, "Zone", {
+        hostedZoneId: "Z123456789",
+        zoneName: "example.com",
+      });
+
+      new JaypieDistribution(stack, "TestDistribution", {
+        handler: origin,
+        host: "api.example.com",
+        zone,
+      });
+      const template = Template.fromStack(stack);
+
+      template.resourceCountIs("AWS::Route53::RecordSet", 2);
+      template.resourceCountIs("Custom::DeleteExistingRecordSet", 0);
+    });
+
+    it("force-deletes existing alias records when deleteExistingRecord is true", () => {
+      const stack = new Stack(undefined, "TestStack", {
+        env: { account: "123456789012", region: "us-east-1" },
+      });
+      const bucket = new s3.Bucket(stack, "TestBucket");
+      const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
+      const zone = route53.HostedZone.fromHostedZoneAttributes(stack, "Zone", {
+        hostedZoneId: "Z123456789",
+        zoneName: "example.com",
+      });
+
+      new JaypieDistribution(stack, "TestDistribution", {
+        handler: origin,
+        host: "api.example.com",
+        zone,
+        deleteExistingRecord: true,
+      });
+      const template = Template.fromStack(stack);
+
+      template.resourceCountIs("AWS::Route53::RecordSet", 2);
+      template.resourceCountIs("Custom::DeleteExistingRecordSet", 2);
     });
 
     it("sets PROJECT_BASE_URL on Lambda function when host is provided", () => {
