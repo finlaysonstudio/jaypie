@@ -123,7 +123,7 @@ jobs:
       - run: npm run build
       - run: npm run typecheck
   test:
-    name: Unit Test (in parallel)
+    name: Unit Test (in parallel) (${{ matrix.node-version }})
     runs-on: ubuntu-latest
     timeout-minutes: 10
     continue-on-error: ${{ matrix.experimental || false }}
