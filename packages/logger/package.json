@@ -1,6 +1,6 @@
 {
   "name": "@jaypie/logger",
-  "version": "1.2.13",
+  "version": "1.2.14",
   "description": "Logger utilities for Jaypie applications",
   "repository": {
     "type": "git",
