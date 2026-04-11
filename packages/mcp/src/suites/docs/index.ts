@@ -166,28 +166,6 @@ function filterReleaseNotesSince(
 // =============================================================================
 
 /**
- * Generate alternative spellings for plural/singular matching
- */
-function getAlternativeSpellings(alias: string): string[] {
-  const alternatives: string[] = [];
-
-  if (alias.endsWith("es")) {
-    // "indexes" -> try "indexe" and "index"
-    alternatives.push(alias.slice(0, -1)); // Remove "s" -> "indexe"
-    alternatives.push(alias.slice(0, -2)); // Remove "es" -> "index"
-  } else if (alias.endsWith("s")) {
-    // "skills" -> try "skill"
-    alternatives.push(alias.slice(0, -1)); // Remove "s" -> "skill"
-  } else {
-    // "fish" -> try "fishs" and "fishes"
-    alternatives.push(alias + "s");
-    alternatives.push(alias + "es");
-  }
-
-  return alternatives;
-}
-
-/**
  * Add alias to frontmatter indicating the canonical skill name
  */
 function addAliasToFrontmatter(content: string, matchedAlias: string): string {
@@ -236,27 +214,15 @@ export const skillService = fabricService({
       return `# Index of Skills\n\n${skillList}`;
     }
 
-    // Try exact match first
-    let skill = await skillStore.get(alias);
-    let matchedAlias = alias;
-
-    // If no exact match, try alternative spellings (plural/singular)
-    if (!skill) {
-      const alternatives = getAlternativeSpellings(alias);
-      for (const alt of alternatives) {
-        skill = await skillStore.get(alt);
-        if (skill) {
-          matchedAlias = alt;
-          break;
-        }
-      }
-    }
+    const skill = await skillStore.find(alias);
 
     if (!skill) {
       throw new Error(
         `Skill "${alias}" not found. Use skill("index") to list available skills.`,
       );
     }
+
+    const matchedAlias = skill.alias;
 
     // Return raw file content for non-index skills (preserve frontmatter)
     const skillPath = path.join(SKILLS_PATH, `${matchedAlias}.md`);

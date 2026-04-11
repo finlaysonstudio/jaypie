@@ -34,6 +34,11 @@ export interface ListFilter {
  * Storage interface for skill records
  */
 export interface SkillStore {
+  /**
+   * Retrieve a skill by alias, trying alternative plural/singular spellings
+   * when an exact match is not found. Returns null if nothing resolves.
+   */
+  find(alias: string): Promise<SkillRecord | null>;
   /** Retrieve a skill by alias, returns null if not found */
   get(alias: string): Promise<SkillRecord | null>;
   /** Retrieve a skill by nickname, returns null if not found */

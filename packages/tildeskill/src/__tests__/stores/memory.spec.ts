@@ -52,6 +52,38 @@ describe("createMemoryStore", () => {
     });
   });
 
+  describe("find", () => {
+    it("returns exact match when present", async () => {
+      const store = createMemoryStore([{ alias: "skill", content: "# Skill" }]);
+      const result = await store.find("skill");
+      expect(result?.alias).toBe("skill");
+    });
+
+    it("falls back to plural alternative spelling", async () => {
+      const store = createMemoryStore([{ alias: "skill", content: "# Skill" }]);
+      const result = await store.find("skills");
+      expect(result?.alias).toBe("skill");
+    });
+
+    it("falls back to singular by stripping es", async () => {
+      const store = createMemoryStore([{ alias: "index", content: "# Index" }]);
+      const result = await store.find("indexes");
+      expect(result?.alias).toBe("index");
+    });
+
+    it("falls back to appended s for singular requests", async () => {
+      const store = createMemoryStore([{ alias: "tests", content: "# Tests" }]);
+      const result = await store.find("test");
+      expect(result?.alias).toBe("tests");
+    });
+
+    it("returns null when no alternative resolves", async () => {
+      const store = createMemoryStore([{ alias: "aws", content: "# AWS" }]);
+      const result = await store.find("lambda");
+      expect(result).toBeNull();
+    });
+  });
+
   describe("list", () => {
     it("returns all skills sorted by alias", async () => {
       const store = createMemoryStore([

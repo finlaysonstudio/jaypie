@@ -11,6 +11,7 @@ This package provides a storage abstraction for skill/vocabulary documents with 
 - Filtering by namespace and tags
 - Searching across alias, name, description, content, and tags
 - Include expansion for composable skills
+- Plural/singular fallback lookup via `find()` and `getAlternativeSpellings()`
 
 ## Directory Structure
 
@@ -59,6 +60,7 @@ interface ListFilter {
 }
 
 interface SkillStore {
+  find(alias: string): Promise<SkillRecord | null>;
   get(alias: string): Promise<SkillRecord | null>;
   getByNickname(nickname: string): Promise<SkillRecord | null>;
   list(filter?: ListFilter): Promise<SkillRecord[]>;
@@ -149,6 +151,22 @@ if (skill) {
 // List all skills
 const skills = await store.list();
 skills.forEach(s => console.log(`${s.alias}: ${s.description}`));
+```
+
+### Plural/Singular Fallback Lookup
+
+```typescript
+// find() tries an exact match, then plural/singular alternatives
+const skill = await store.find("skills"); // resolves skill.md
+if (skill && skill.alias !== "skills") {
+  console.log(`Resolved via fallback to ${skill.alias}`);
+}
+
+// getAlternativeSpellings() returns the candidate list directly
+import { getAlternativeSpellings } from "@jaypie/tildeskill";
+getAlternativeSpellings("skills");  // ["skill"]
+getAlternativeSpellings("indexes"); // ["indexe", "index"]
+getAlternativeSpellings("fish");    // ["fishs", "fishes"]
 ```
 
 ### Lookup by Nickname

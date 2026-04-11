@@ -135,6 +135,42 @@ tags:
     });
   });
 
+  describe("find", () => {
+    it("returns exact match when file exists", async () => {
+      await fs.writeFile(path.join(tempDir, "skill.md"), "# Skill");
+      const store = createMarkdownStore({ path: tempDir });
+      const result = await store.find("skill");
+      expect(result?.alias).toBe("skill");
+    });
+
+    it("falls back to singular when requested with plural", async () => {
+      await fs.writeFile(path.join(tempDir, "skill.md"), "# Skill");
+      const store = createMarkdownStore({ path: tempDir });
+      const result = await store.find("skills");
+      expect(result?.alias).toBe("skill");
+    });
+
+    it("falls back by stripping es", async () => {
+      await fs.writeFile(path.join(tempDir, "index.md"), "# Index");
+      const store = createMarkdownStore({ path: tempDir });
+      const result = await store.find("indexes");
+      expect(result?.alias).toBe("index");
+    });
+
+    it("falls back by appending s", async () => {
+      await fs.writeFile(path.join(tempDir, "tests.md"), "# Tests");
+      const store = createMarkdownStore({ path: tempDir });
+      const result = await store.find("test");
+      expect(result?.alias).toBe("tests");
+    });
+
+    it("returns null when no alternative resolves", async () => {
+      const store = createMarkdownStore({ path: tempDir });
+      const result = await store.find("nonexistent");
+      expect(result).toBeNull();
+    });
+  });
+
   describe("list", () => {
     it("returns all markdown files sorted by alias", async () => {
       await fs.writeFile(path.join(tempDir, "tests.md"), "# Tests");

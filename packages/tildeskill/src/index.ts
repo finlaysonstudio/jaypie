@@ -10,6 +10,7 @@ export type {
 // Core utilities
 export { expandIncludes } from "./core/expandIncludes";
 export { normalizeAlias, parseList } from "./core/normalize";
+export { getAlternativeSpellings } from "./core/spellings";
 export { isValidAlias, validateAlias } from "./core/validate";
 
 // Store factories

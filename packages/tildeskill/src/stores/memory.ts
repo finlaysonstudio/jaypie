@@ -1,6 +1,7 @@
 import type { ListFilter, SkillRecord, SkillStore } from "../types";
 
 import { normalizeAlias } from "../core/normalize";
+import { getAlternativeSpellings } from "../core/spellings";
 
 /**
  * Create an in-memory skill store, useful for testing
@@ -17,6 +18,17 @@ export function createMemoryStore(initial?: SkillRecord[]): SkillStore {
   }
 
   return {
+    async find(alias: string): Promise<SkillRecord | null> {
+      const normalized = normalizeAlias(alias);
+      const exact = store.get(normalized);
+      if (exact) return exact;
+      for (const alt of getAlternativeSpellings(normalized)) {
+        const candidate = store.get(alt);
+        if (candidate) return candidate;
+      }
+      return null;
+    },
+
     async get(alias: string): Promise<SkillRecord | null> {
       const normalized = normalizeAlias(alias);
       return store.get(normalized) ?? null;
