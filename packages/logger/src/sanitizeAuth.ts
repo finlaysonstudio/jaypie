@@ -19,6 +19,12 @@ export function redactAuth(value: unknown): string {
 // Main
 //
 
+const REDACTED_KEYS = new Set([
+  "authorization",
+  "x-service-key",
+  "x-webhook-token",
+]);
+
 export function sanitizeAuth(value: unknown): unknown {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
     return value;
@@ -30,7 +36,7 @@ export function sanitizeAuth(value: unknown): unknown {
   for (const key of Object.keys(obj)) {
     const lower = key.toLowerCase();
 
-    if (lower === "authorization") {
+    if (REDACTED_KEYS.has(lower)) {
       if (!clone) clone = { ...obj };
       clone[key] = redactAuth(obj[key]);
     } else if (lower === "headers") {
@@ -41,14 +47,16 @@ export function sanitizeAuth(value: unknown): unknown {
         !Array.isArray(headers)
       ) {
         const hdrs = headers as Record<string, unknown>;
+        let clonedHeaders: Record<string, unknown> | undefined;
         for (const hKey of Object.keys(hdrs)) {
-          if (hKey.toLowerCase() === "authorization") {
-            if (!clone) clone = { ...obj };
-            const clonedHeaders = { ...hdrs };
+          if (REDACTED_KEYS.has(hKey.toLowerCase())) {
+            if (!clonedHeaders) clonedHeaders = { ...hdrs };
             clonedHeaders[hKey] = redactAuth(hdrs[hKey]);
-            clone[key] = clonedHeaders;
-            break;
           }
+        }
+        if (clonedHeaders) {
+          if (!clone) clone = { ...obj };
+          clone[key] = clonedHeaders;
         }
       }
     }

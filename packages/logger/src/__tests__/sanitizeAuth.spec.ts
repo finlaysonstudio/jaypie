@@ -99,5 +99,58 @@ describe("sanitizeAuth", () => {
       const obj = { headers: { "content-type": "application/json" } };
       expect(sanitizeAuth(obj)).toBe(obj);
     });
+
+    it("redacts top-level X-Service-Key (case-insensitive)", () => {
+      const obj = { "X-Service-Key": "sk-proj-abc1234" };
+      const result = sanitizeAuth(obj) as Record<string, unknown>;
+      expect(result["X-Service-Key"]).toBe("sk_1234");
+    });
+
+    it("redacts top-level X-Webhook-Token (case-insensitive)", () => {
+      const obj = { "x-webhook-token": "sk-proj-abc1234" };
+      const result = sanitizeAuth(obj) as Record<string, unknown>;
+      expect(result["x-webhook-token"]).toBe("sk_1234");
+    });
+
+    it("redacts nested headers X-Service-Key and X-Webhook-Token", () => {
+      const obj = {
+        headers: {
+          "X-Service-Key": "sk-proj-service1234",
+          "X-Webhook-Token": "sk-proj-webhook1234",
+          "content-type": "application/json",
+        },
+      };
+      const result = sanitizeAuth(obj) as Record<
+        string,
+        Record<string, unknown>
+      >;
+      expect(result.headers["X-Service-Key"]).toBe("sk_1234");
+      expect(result.headers["X-Webhook-Token"]).toBe("sk_1234");
+      expect(result.headers["content-type"]).toBe("application/json");
+    });
+
+    it("redacts authorization alongside service key and webhook token in headers", () => {
+      const obj = {
+        headers: {
+          Authorization: "Bearer sk-proj-auth1234",
+          "x-service-key": "Bearer sk-proj-service1234",
+          "X-Webhook-Token": "Bearer sk-proj-webhook1234",
+        },
+      };
+      const result = sanitizeAuth(obj) as Record<
+        string,
+        Record<string, unknown>
+      >;
+      expect(result.headers.Authorization).toBe("sk_1234");
+      expect(result.headers["x-service-key"]).toBe("sk_1234");
+      expect(result.headers["X-Webhook-Token"]).toBe("sk_1234");
+    });
+
+    it("does not mutate nested headers when redacting service key", () => {
+      const headers = { "X-Service-Key": "sk-proj-abc1234" };
+      const obj = { headers };
+      sanitizeAuth(obj);
+      expect(headers["X-Service-Key"]).toBe("sk-proj-abc1234");
+    });
   });
 });
