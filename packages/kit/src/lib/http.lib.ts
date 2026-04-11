@@ -80,6 +80,7 @@ const HTTP = {
       SESSION: "X-Project-Session",
       VERSION: "X-Project-Version",
     },
+    SERVICE_KEY: "X-Service-Key",
     SIGNATURE: {
       ED25519: "X-Signature-Ed25519",
       TIMESTAMP: "X-Signature-Timestamp",
