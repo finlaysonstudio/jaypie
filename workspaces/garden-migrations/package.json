@@ -16,8 +16,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@jaypie/dynamodb": "^0.4.2",
-    "@jaypie/fabric": "^0.2.2",
+    "@jaypie/dynamodb": "*",
+    "@jaypie/fabric": "*",
     "@jaypie/logger": "^1.2.5",
     "jaypie": "^1.2.3"
   },
