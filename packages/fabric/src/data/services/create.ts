@@ -64,20 +64,16 @@ export function createCreateService<T extends FabricModel = FabricModel>(
         };
       }
 
-      // Build the entity
-      const now = new Date().toISOString();
+      // Build the entity; createdAt/updatedAt managed by indexEntity on write
       const entity = {
         ...entityInput,
-        createdAt: now,
         id: crypto.randomUUID(),
         model: alias,
         name: (entityInput.name as string) ?? name,
         scope,
-        sequence: Date.now(),
-        updatedAt: now,
       };
 
-      // Create the entity
+      // indexEntity on the dynamodb side fills createdAt/updatedAt/GSI attrs.
       const created = await putEntity({ entity });
       return created;
     },

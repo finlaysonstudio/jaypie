@@ -199,7 +199,6 @@ async function handleSkillNote({
     model: NOTE_MODEL,
     name: `skill:${alias}`,
     scope,
-    sequence: Date.now(),
     updatedAt: now,
     xid,
   };
@@ -331,7 +330,6 @@ async function handleJournalRequest(params: {
         model: JOURNAL_MODEL,
         name: params.data.name || params.data.content.slice(0, 50),
         scope,
-        sequence: Date.now(),
         updatedAt: now,
       };
       await putEntity({ entity });

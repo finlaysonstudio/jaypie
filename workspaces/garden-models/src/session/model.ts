@@ -1,9 +1,4 @@
-import { type IndexDefinition, registerModel } from "@jaypie/fabric";
-
-//
-//
-// Constants
-//
+import { fabricIndex, type IndexDefinition, registerModel } from "@jaypie/fabric";
 
 const COOKIE_MAX_AGE = 365 * 24 * 60 * 60; // 1 year in seconds
 const COOKIE_NAME = "garden-session";
@@ -11,32 +6,12 @@ const SESSION_MODEL = "session";
 const SESSION_PREFIX = "gs_";
 
 const SESSION_INDEXES: IndexDefinition[] = [
-  {
-    name: "indexAlias",
-    pk: ["scope", "model", "alias"],
-    sk: ["sequence"],
-    sparse: true,
-  },
-  { name: "indexScope", pk: ["scope", "model"], sk: ["sequence"] },
-  {
-    name: "indexXid",
-    pk: ["scope", "model", "xid"],
-    sk: ["sequence"],
-    sparse: true,
-  },
+  fabricIndex(),
+  fabricIndex("alias"),
+  fabricIndex("xid"),
 ];
 
-//
-//
-// Registration
-//
-
 registerModel({ model: SESSION_MODEL, indexes: SESSION_INDEXES });
-
-//
-//
-// Export
-//
 
 export {
   COOKIE_MAX_AGE,

@@ -5,10 +5,11 @@ DynamoDB single-table storage utilities for Jaypie applications.
 ## Overview
 
 This package provides utilities for:
-- **Single-Table Design**: GSI-based access patterns for hierarchical data
-- **Key Builders**: Composite key construction for five GSIs
+- **Single-Table Design**: Model-keyed GSIs with composite sort keys for hierarchical data
+- **Key Builders**: Composite key construction via `buildCompositeKey` (delegates to `@jaypie/fabric`)
 - **Entity Operations**: CRUD operations with soft delete and archive support
 - **Query Utilities**: Named query functions (not gsi1, gsi2, etc.)
+- **Auto Timestamps**: `indexEntity` bumps `updatedAt` on every write and backfills `createdAt`
 - **Seed and Export**: Idempotent seeding and data export for migrations
 - **Client Management**: Singleton DynamoDB Document Client
 
@@ -23,6 +24,7 @@ src/
 ├── index.ts             # Package exports
 ├── keyBuilders.ts       # Key builders (wraps @jaypie/fabric utilities)
 ├── queries.ts           # Query functions for each GSI
+├── query.ts             # Unified query function with auto-detect
 ├── seedExport.ts        # Seed and export utilities
 └── types.ts             # TypeScript interfaces
 ```
@@ -34,42 +36,29 @@ src/
 | Export | Value | Description |
 |--------|-------|-------------|
 | `APEX` | `"@"` | Root-level marker (DynamoDB prohibits empty strings) |
-| `ARCHIVED_SUFFIX` | `"#archived"` | Suffix appended to GSI keys on archive |
-| `DELETED_SUFFIX` | `"#deleted"` | Suffix appended to GSI keys on delete |
-| `INDEX_ALIAS` | `"indexAlias"` | Human-friendly lookup GSI name |
-| `INDEX_CATEGORY` | `"indexCategory"` | Category filtering GSI name |
-| `INDEX_SCOPE` | `"indexScope"` | Hierarchical queries GSI name |
-| `INDEX_TYPE` | `"indexType"` | Type filtering GSI name |
-| `INDEX_XID` | `"indexXid"` | External ID lookup GSI name |
+| `ARCHIVED_SUFFIX` | `"#archived"` | Suffix appended to GSI pk keys on archive |
+| `DELETED_SUFFIX` | `"#deleted"` | Suffix appended to GSI pk keys on delete |
 | `SEPARATOR` | `"#"` | Composite key separator |
 
 ### Key Builders
 
 | Export | Description |
 |--------|-------------|
-| `buildIndexScope(scope, model)` | Returns `"{scope}#{model}"` |
-| `buildIndexAlias(scope, model, alias)` | Returns `"{scope}#{model}#{alias}"` |
-| `buildIndexCategory(scope, model, category)` | Returns `"{scope}#{model}#{category}"` |
-| `buildIndexType(scope, model, type)` | Returns `"{scope}#{model}#{type}"` |
-| `buildIndexXid(scope, model, xid)` | Returns `"{scope}#{model}#{xid}"` |
-
-### Entity Utilities
-
-| Export | Description |
-|--------|-------------|
+| `buildCompositeKey(entity, fields, suffix?)` | Build a composite key from entity fields joined by `SEPARATOR` |
 | `calculateScope(parent?)` | Returns `APEX` if no parent, else `"{parent.model}#{parent.id}"` |
-| `indexEntity(entity, suffix?)` | Auto-populates GSI keys on entity based on present fields, with optional suffix |
+| `indexEntity(entity, suffix?)` | Auto-populate GSI keys, bump `updatedAt`, backfill `createdAt` |
 
 ### Entity Operations
 
 | Export | Description |
 |--------|-------------|
-| `getEntity({ id, model })` | Get a single entity by primary key |
-| `putEntity({ entity })` | Create or replace entity (auto-indexes) |
-| `updateEntity({ entity })` | Update entity (sets `updatedAt`, auto-indexes) |
-| `deleteEntity({ id, model })` | Soft delete (sets `deletedAt`, re-indexes with `#deleted` suffix) |
-| `archiveEntity({ id, model })` | Archive (sets `archivedAt`, re-indexes with `#archived` suffix) |
-| `destroyEntity({ id, model })` | Hard delete (permanently removes) |
+| `getEntity({ id })` | Get a single entity by primary key (id only) |
+| `putEntity({ entity })` | Create or replace entity (auto-indexes, auto-timestamps) |
+| `updateEntity({ entity })` | Update entity (auto-indexes, auto-timestamps) |
+| `deleteEntity({ id })` | Soft delete (sets `deletedAt`, re-indexes with `#deleted` suffix) |
+| `archiveEntity({ id })` | Archive (sets `archivedAt`, re-indexes with `#archived` suffix) |
+| `destroyEntity({ id })` | Hard delete (permanently removes) |
+| `transactWriteEntities({ entities })` | Write multiple entities atomically |
 
 ### Client Functions
 
@@ -83,25 +72,24 @@ src/
 
 ### Query Functions
 
-All query functions use object parameters:
+All query functions use object parameters. `scope` is always optional -- when omitted, queries span all scopes. When provided, queries use `begins_with` on the composite sk to narrow to that scope.
 
 | Export | Parameters | Description |
 |--------|------------|-------------|
-| `queryByScope({ model, scope, ...options })` | Required: model, scope | List entities by parent (hierarchical) |
-| `queryByAlias({ alias, model, scope })` | Required: all | Lookup by human-friendly slug (returns single or null) |
-| `queryByCategory({ model, scope, category, ...options })` | Required: model, scope, category | Filter by category |
-| `queryByType({ model, scope, type, ...options })` | Required: model, scope, type | Filter by type |
-| `queryByXid({ model, scope, xid })` | Required: all | Lookup by external ID (returns single or null) |
+| `queryByScope({ model, scope?, ...options })` | Required: model | List entities by model, optionally narrowed to a scope |
+| `queryByAlias({ alias, model, scope? })` | Required: alias, model | Lookup by human-friendly slug (returns single or null) |
+| `queryByCategory({ model, category, scope?, ...options })` | Required: model, category | Filter by category (throws ConfigurationError if model hasn't registered `fabricIndex("category")`) |
+| `queryByType({ model, type, scope?, ...options })` | Required: model, type | Filter by type (throws ConfigurationError if model hasn't registered `fabricIndex("type")`) |
+| `queryByXid({ model, xid, scope? })` | Required: model, xid | Lookup by external ID (returns single or null) |
+| `query({ model, ...params })` | Unified auto-detect | Routes to the correct query function based on which fields are provided |
 
 ### Seed and Export Functions
-
-Generic utilities for bootstrapping and migrating DynamoDB data:
 
 | Export | Description |
 |--------|-------------|
 | `seedEntityIfNotExists(entity)` | Seed a single entity if it doesn't already exist by alias |
 | `seedEntities(entities, options?)` | Seed multiple entities (idempotent) with optional replace/dryRun |
-| `exportEntities(model, scope, limit?)` | Export entities by model + scope, sorted by sequence ascending |
+| `exportEntities(model, scope, limit?)` | Export entities by model + scope, sorted by `updatedAt` descending |
 | `exportEntitiesToJson(model, scope, pretty?)` | Export as JSON string (default: pretty printed) |
 
 ### Types
@@ -121,9 +109,10 @@ interface ParentReference {
 
 interface BaseQueryOptions {
   archived?: boolean;         // Query archived entities instead of active
-  ascending?: boolean;        // Default: false (most recent first)
+  ascending?: boolean;        // Default: false (most recent first by updatedAt)
   deleted?: boolean;          // Query deleted entities instead of active
   limit?: number;
+  scope?: string;             // Optional scope narrower (begins_with on composite sk)
   startKey?: Record<string, unknown>;  // Pagination cursor
 }
 
@@ -132,44 +121,44 @@ interface QueryResult<T = StorableEntity> {
   lastEvaluatedKey?: Record<string, unknown>;
 }
 
+/**
+ * Primary key is `id` only (no sort key). `model` and `scope` are regular
+ * attributes. GSI attribute values (e.g., `indexModel`, `indexModelAlias`,
+ * `indexModelSk`) are auto-populated by `indexEntity` on every write.
+ *
+ * `updatedAt` is managed by `indexEntity` -- callers never set it.
+ * `createdAt` is backfilled by `indexEntity` if missing.
+ */
 interface StorableEntity {
   // Primary Key
-  model: string;              // Partition key
-  id: string;                 // Sort key (UUID)
+  id: string;                 // Partition key (UUID)
 
   // Required
-  name: string;
+  model: string;              // Entity model name
   scope: string;              // APEX or "{parent.model}#{parent.id}"
-  sequence: number;           // Date.now() for chronological ordering
 
-  // GSI Keys (auto-populated by indexEntity)
-  indexAlias?: string;
-  indexCategory?: string;
-  indexScope?: string;
-  indexType?: string;
-  indexXid?: string;
-
-  // Optional (trigger index population when present)
+  // Optional identity
+  name?: string;
   alias?: string;
   category?: string;
   type?: string;
   xid?: string;
 
-  // Timestamps (ISO 8601)
-  createdAt: string;
-  updatedAt: string;
+  // Timestamps (ISO 8601) -- managed by indexEntity
+  createdAt?: string;         // Backfilled on first write
+  updatedAt?: string;         // Bumped on every write
   archivedAt?: string;        // Set by archiveEntity
   deletedAt?: string;         // Set by deleteEntity
 
   // Extensible
-  state?: Record<string, unknown>;  // Application-specific state flags
-  [key: string]: unknown;           // Additional properties allowed
+  state?: Record<string, unknown>;
+  [key: string]: unknown;     // Additional properties + GSI attributes
 }
 
 interface SeedResult {
-  created: string[];          // Aliases of entities that were created
-  skipped: string[];          // Aliases of entities that were skipped (already exist)
-  errors: Array<{ alias: string; error: string }>;  // Error details
+  created: string[];
+  skipped: string[];
+  errors: Array<{ alias: string; error: string }>;
 }
 
 interface SeedOptions {
@@ -178,29 +167,45 @@ interface SeedOptions {
 }
 
 interface ExportResult<T extends StorableEntity = StorableEntity> {
-  entities: T[];              // Exported entities
-  count: number;              // Number of entities exported
+  entities: T[];
+  count: number;
 }
 ```
 
 ## Single-Table Design
 
-### GSI Schema
-
-All GSIs use `sequence` (number) as the sort key for chronological ordering.
-
-| GSI Name | Partition Key Pattern | Purpose |
-|----------|----------------------|---------|
-| `indexScope` | `{scope}#{model}` | List by parent |
-| `indexAlias` | `{scope}#{model}#{alias}` | Human-friendly lookup |
-| `indexCategory` | `{scope}#{model}#{category}` | Category filter |
-| `indexType` | `{scope}#{model}#{type}` | Type filter |
-| `indexXid` | `{scope}#{model}#{xid}` | External ID lookup |
-
 ### Primary Key
 
-- **Partition Key**: `model` (e.g., "record", "message", "chat")
-- **Sort Key**: `id` (UUID)
+- **Partition Key**: `id` (UUID)
+- No sort key on the base table
+
+### GSI Schema
+
+All GSIs use a composite sort key of `scope#updatedAt` (stored as the `{indexName}Sk` attribute). Ordering is by `updatedAt` within a scope. Queries use `begins_with` on the sk to filter by scope; omitting scope lists across all scopes.
+
+| GSI Name | Partition Key Pattern | Sort Key Attribute | Purpose |
+|----------|----------------------|-------------------|---------|
+| `indexModel` | `{model}` | `indexModelSk` = `{scope}#{updatedAt}` | List by model |
+| `indexModelAlias` | `{model}#{alias}` (sparse) | `indexModelAliasSk` = `{scope}#{updatedAt}` | Human-friendly lookup |
+| `indexModelCategory` | `{model}#{category}` (sparse) | `indexModelCategorySk` = `{scope}#{updatedAt}` | Category filter |
+| `indexModelType` | `{model}#{type}` (sparse) | `indexModelTypeSk` = `{scope}#{updatedAt}` | Type filter |
+| `indexModelXid` | `{model}#{xid}` (sparse) | `indexModelXidSk` = `{scope}#{updatedAt}` | External ID lookup |
+
+GSIs are defined using `fabricIndex()` from `@jaypie/fabric`:
+
+```typescript
+import { fabricIndex, registerModel } from "@jaypie/fabric";
+
+registerModel({
+  model: "record",
+  indexes: [
+    fabricIndex(),           // indexModel: pk=["model"], sk=["scope","updatedAt"]
+    fabricIndex("alias"),    // indexModelAlias: pk=["model","alias"], sparse
+    fabricIndex("category"), // indexModelCategory: pk=["model","category"], sparse
+    fabricIndex("xid"),      // indexModelXid: pk=["model","xid"], sparse
+  ],
+});
+```
 
 ### Scope
 
@@ -211,24 +216,42 @@ The `scope` field enables hierarchical queries:
 
 Example: Messages under a chat have `scope = "chat#abc-123"`
 
+### Suffix Behavior
+
+Archived/deleted suffixes are appended to the GSI **partition key** (pk). This moves the entity into its own partition, excluding it from active queries automatically.
+
+- Active: `indexModel = "record"`
+- Deleted: `indexModel = "record#deleted"`
+- Archived: `indexModel = "record#archived"`
+- Both: `indexModel = "record#archived#deleted"`
+
 ## Usage Examples
 
-### Initialize Client
+### Register Model and Initialize Client
 
 ```typescript
+import { fabricIndex, registerModel } from "@jaypie/fabric";
 import { initClient, APEX, queryByScope } from "@jaypie/dynamodb";
 
+// Register model indexes (must happen before any queries)
+registerModel({
+  model: "record",
+  indexes: [
+    fabricIndex(),           // indexModel
+    fabricIndex("alias"),    // indexModelAlias
+    fabricIndex("category"), // indexModelCategory
+  ],
+});
+
 // Initialize once at app startup
-// In production: uses DYNAMODB_TABLE_NAME and AWS_REGION env vars
 initClient();
 
 // Or with explicit config (for local dev)
 initClient({
-  endpoint: process.env.DYNAMODB_ENDPOINT,  // For local dev only
-  tableName: "my-table",                    // Overrides DYNAMODB_TABLE_NAME
+  endpoint: process.env.DYNAMODB_ENDPOINT,
+  tableName: "my-table",
 });
 
-// Use anywhere
 const { items } = await queryByScope({ model: "record", scope: APEX });
 ```
 
@@ -237,23 +260,23 @@ const { items } = await queryByScope({ model: "record", scope: APEX });
 ```typescript
 import { APEX, putEntity } from "@jaypie/dynamodb";
 
-const now = new Date().toISOString();
+// indexEntity auto-populates: createdAt, updatedAt, and all GSI keys
 const record = await putEntity({
   entity: {
     model: "record",
     id: crypto.randomUUID(),
     name: "Daily Log",
     scope: APEX,
-    sequence: Date.now(),
     alias: "2026-01-07",
     category: "memory",
-    createdAt: now,
-    updatedAt: now,
   },
 });
-// indexScope: "@#record" (auto-populated)
-// indexAlias: "@#record#2026-01-07" (auto-populated)
-// indexCategory: "@#record#memory" (auto-populated)
+// record.updatedAt -> set automatically
+// record.createdAt -> set automatically
+// record.indexModel -> "record"
+// record.indexModelSk -> "@#2026-01-07T..."
+// record.indexModelAlias -> "record#2026-01-07"
+// record.indexModelCategory -> "record#memory"
 ```
 
 ### Hierarchical Entities
@@ -261,7 +284,6 @@ const record = await putEntity({
 ```typescript
 import { calculateScope, putEntity, queryByScope } from "@jaypie/dynamodb";
 
-// Create child entity
 const chat = { model: "chat", id: "abc-123" };
 const messageScope = calculateScope(chat); // "chat#abc-123"
 
@@ -271,15 +293,16 @@ const message = await putEntity({
     id: crypto.randomUUID(),
     name: "Message 1",
     scope: messageScope,
-    sequence: Date.now(),
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
   },
 });
-// indexScope: "chat#abc-123#message" (auto-populated)
+// indexModel -> "message"
+// indexModelSk -> "chat#abc-123#2026-01-07T..."
 
 // Query all messages in chat
 const { items } = await queryByScope({ model: "message", scope: messageScope });
+
+// Query all messages across all scopes
+const { items: allMessages } = await queryByScope({ model: "message" });
 ```
 
 ### Query with Options
@@ -292,7 +315,7 @@ const { items, lastEvaluatedKey } = await queryByCategory({
   scope: APEX,
   category: "memory",
   limit: 10,
-  ascending: true,          // Oldest first
+  ascending: true,          // Oldest first (by updatedAt)
 });
 
 // Pagination
@@ -302,65 +325,52 @@ const nextPage = await queryByCategory({
   category: "memory",
   startKey: lastEvaluatedKey,
 });
+
+// Omit scope to query across all scopes
+const { items: allMemories } = await queryByCategory({
+  model: "record",
+  category: "memory",
+});
 ```
 
 ### Soft Delete and Archive
 
-Deleted and archived entities use GSI-level filtering via index key suffixes. When an entity is soft-deleted or archived, all its GSI keys are re-indexed with a suffix (`#deleted` or `#archived`), removing them from standard queries automatically.
-
 ```typescript
 import {
   APEX,
-  DELETED_SUFFIX,
   archiveEntity,
   deleteEntity,
   destroyEntity,
   getEntity,
-  indexEntity,
-  queryByScope
+  queryByScope,
 } from "@jaypie/dynamodb";
 
-// Soft delete - sets deletedAt, re-indexes with #deleted suffix
-// indexScope changes from "@#record" to "@#record#deleted"
-await deleteEntity({ id: "123", model: "record" });
+// Soft delete - sets deletedAt, re-indexes with #deleted suffix on pk
+// indexModel changes from "record" to "record#deleted"
+await deleteEntity({ id: "123" });
 
-// Archive - sets archivedAt, re-indexes with #archived suffix
-// indexScope changes from "@#record" to "@#record#archived"
-await archiveEntity({ id: "456", model: "record" });
+// Archive - sets archivedAt, re-indexes with #archived suffix on pk
+await archiveEntity({ id: "456" });
 
 // Hard delete - permanently removes from table
-await destroyEntity({ id: "789", model: "record" });
+await destroyEntity({ id: "789" });
 
-// Query deleted entities using the deleted flag
+// Query deleted entities
 const { items: deletedItems } = await queryByScope({
   deleted: true,
   model: "record",
   scope: APEX,
 });
 
-// Query archived entities using the archived flag
+// Query archived entities
 const { items: archivedItems } = await queryByScope({
   archived: true,
   model: "record",
   scope: APEX,
 });
 
-// Query entities that are both archived AND deleted
-const { items: archivedAndDeleted } = await queryByScope({
-  archived: true,
-  deleted: true,
-  model: "record",
-  scope: APEX,
-});
-// Uses combined suffix: #archived#deleted
-
-// Retrieve a specific deleted/archived entity by primary key
-const deletedEntity = await getEntity({ id: "123", model: "record" });
-
-// The indexEntity function accepts an optional suffix parameter for manual indexing
-const entity = { model: "record", scope: "@", id: "123", ... };
-const indexed = indexEntity(entity, DELETED_SUFFIX);
-// indexed.indexScope === "@#record#deleted"
+// Retrieve a specific entity by primary key (works regardless of state)
+const entity = await getEntity({ id: "123" });
 ```
 
 ### Seed and Export
@@ -381,44 +391,24 @@ const created = await seedEntityIfNotExists({
   name: "Main Configuration",
   scope: APEX,
 });
-// Returns true if created, false if already exists
 
 // Seed multiple entities (idempotent)
 const result = await seedEntities([
   { alias: "vocab-en", model: "vocabulary", name: "English", scope: APEX },
   { alias: "vocab-es", model: "vocabulary", name: "Spanish", scope: APEX },
 ]);
-// result.created: ["vocab-en", "vocab-es"] or []
-// result.skipped: entities that already existed
-// result.errors: any entities that failed to seed
-
-// Dry run to preview what would be seeded
-const preview = await seedEntities(
-  [{ alias: "new-item", model: "item", scope: APEX }],
-  { dryRun: true }
-);
-// No entities written, but created/skipped arrays populated
 
 // Replace existing entities
 await seedEntities(
   [{ alias: "config-main", model: "config", name: "Updated Config", scope: APEX }],
-  { replace: true }
+  { replace: true },
 );
 
 // Export all entities of a type
 const { entities, count } = await exportEntities("vocabulary", APEX);
-// entities: array of StorableEntity sorted by sequence ascending
-// count: number of entities
-
-// Export with limit
-const { entities: limited } = await exportEntities("vocabulary", APEX, 10);
 
 // Export as JSON string
 const json = await exportEntitiesToJson("vocabulary", APEX);
-// Pretty printed by default
-
-const compact = await exportEntitiesToJson("vocabulary", APEX, false);
-// Compact JSON
 ```
 
 ## Testing
@@ -452,84 +442,42 @@ npm run format    # Auto-fix lint issues
 
 ## Migration Guide
 
-### Migrating from `class` to `category` (v0.4.0+)
+### Migrating from v0.4.x to v0.5.0
 
-Version 0.4.0 renamed the `class` field to `category` and the `indexClass` GSI to `indexCategory`. If you have existing tables created with an older version, you have two options:
+Version 0.5.0 is a breaking change. **Tables must be recreated** (pre-1.0 breaking change).
 
-#### Option 1: Recreate Table (Recommended for Development)
+#### What Changed
 
-```bash
-# Delete and recreate the local table
-AWS_ACCESS_KEY_ID=local AWS_SECRET_ACCESS_KEY=local \
-  aws dynamodb delete-table --table-name jaypie-local \
-  --endpoint-url http://127.0.0.1:8000
+| Old (0.4.x) | New (0.5.0) |
+|-------------|-------------|
+| Primary key: pk=`model`, sk=`id` | Primary key: pk=`id` only |
+| GSI sort key: `sequence` (number) | GSI sort key: composite `scope#updatedAt` |
+| GSI pk: `{scope}#{model}#{field}` | GSI pk: `{model}#{field}` |
+| GSI names: indexScope, indexAlias, indexCategory, indexType, indexXid | GSI names: indexModel, indexModelAlias, indexModelCategory, indexModelType, indexModelXid |
+| `sequence` field on entity | Removed -- ordering by `updatedAt` |
+| `getEntity({ id, model })` | `getEntity({ id })` |
+| `deleteEntity({ id, model })` | `deleteEntity({ id })` |
+| `archiveEntity({ id, model })` | `archiveEntity({ id })` |
+| `destroyEntity({ id, model })` | `destroyEntity({ id })` |
+| `queryByScope({ model, scope })` -- scope required | `queryByScope({ model })` -- scope optional |
+| Callers set `createdAt`/`updatedAt` | `indexEntity` manages both automatically |
+| `buildIndexScope`, `buildIndexAlias`, etc. | Removed; use `buildCompositeKey` |
+| `INDEX_ALIAS`, `INDEX_CATEGORY`, `INDEX_SCOPE`, `INDEX_TYPE`, `INDEX_XID` constants | Removed |
+| Implicit `DEFAULT_INDEXES` fallback | Must `registerModel()` with `fabricIndex()` before querying |
 
-# Use the MCP createTable tool or run:
-# The createTable MCP tool will create the table with correct GSIs
-```
+#### Steps
 
-#### Option 2: Migrate Existing Table (Production)
-
-For production tables, you need to:
-
-1. **Create the new GSI** (`indexCategory`)
-2. **Backfill data** - copy `class` values to `category` and populate `indexCategory`
-3. **Update application code** to use `category` instead of `class`
-4. **Remove old GSI** (`indexClass`) after migration is complete
-
-```typescript
-// Example migration script
-import { DynamoDBClient, UpdateItemCommand } from "@aws-sdk/client-dynamodb";
-import { ScanCommand } from "@aws-sdk/lib-dynamodb";
-import { buildIndexCategory } from "@jaypie/dynamodb";
-
-async function migrateClassToCategory(tableName: string) {
-  const client = new DynamoDBClient({});
-
-  // Scan for items with 'class' field
-  const scanResult = await client.send(new ScanCommand({
-    TableName: tableName,
-    FilterExpression: "attribute_exists(#cls)",
-    ExpressionAttributeNames: { "#cls": "class" },
-  }));
-
-  for (const item of scanResult.Items ?? []) {
-    if (item.class && !item.category) {
-      // Copy class to category and build indexCategory
-      const indexCategory = buildIndexCategory(
-        item.scope,
-        item.model,
-        item.class
-      );
-
-      await client.send(new UpdateItemCommand({
-        TableName: tableName,
-        Key: { model: { S: item.model }, id: { S: item.id } },
-        UpdateExpression: "SET category = :cat, indexCategory = :idx REMOVE #cls",
-        ExpressionAttributeNames: { "#cls": "class" },
-        ExpressionAttributeValues: {
-          ":cat": { S: item.class },
-          ":idx": { S: indexCategory },
-        },
-      }));
-    }
-  }
-}
-```
-
-#### Field Mapping
-
-| Old (pre-0.4.0) | New (0.4.0+) |
-|-----------------|--------------|
-| `class` | `category` |
-| `indexClass` | `indexCategory` |
-| `INDEX_CLASS` | `INDEX_CATEGORY` |
-| `buildIndexClass()` | `buildIndexCategory()` |
-| `queryByClass()` | `queryByCategory()` |
+1. **Define indexes** using `fabricIndex()` from `@jaypie/fabric` and call `registerModel()` for each model
+2. **Recreate tables** -- the GSI shape and primary key have changed
+3. **Remove** `sequence` from entity creation code
+4. **Remove** `model` param from `getEntity`, `deleteEntity`, `archiveEntity`, `destroyEntity`
+5. **Remove** manual `createdAt`/`updatedAt` assignment -- `indexEntity` handles it
+6. **Replace** `buildIndexScope`/`buildIndexAlias`/etc. with `buildCompositeKey`
+7. **Update** `scope` from required to optional in query call sites (if desired)
 
 ## Dependencies
 
-- `@jaypie/fabric` - Index utilities (`APEX`, `SEPARATOR`, `calculateScope`, `buildCompositeKey`, `populateIndexKeys`)
+- `@jaypie/fabric` - Index utilities (`APEX`, `SEPARATOR`, `calculateScope`, `buildCompositeKey`, `populateIndexKeys`, `fabricIndex`, `registerModel`, `getModelIndexes`, `getGsiAttributeNames`)
 
 ## Peer Dependencies
 

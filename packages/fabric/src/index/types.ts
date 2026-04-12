@@ -2,8 +2,8 @@
  * Index Types for @jaypie/fabric
  *
  * Declarative index definitions for DynamoDB single-table design.
- * Models can specify their own indexes, and dynamodb will create
- * GSIs and auto-detect which index to use for queries.
+ * Models register their own indexes via `registerModel`; DynamoDB creates
+ * GSIs and selects an index for queries.
  */
 
 import type { FabricModel } from "../models/base.js";
@@ -20,17 +20,19 @@ export type IndexField = keyof FabricModel | string;
 /**
  * Single index definition
  *
- * pk fields are combined with SEPARATOR to form the partition key.
- * sk fields are combined with SEPARATOR to form the sort key.
+ * pk fields are combined with SEPARATOR to form the partition key attribute.
+ * sk fields are combined with SEPARATOR to form the sort key attribute when
+ * `sk.length > 1`. When `sk.length === 1`, the single field is used directly
+ * as the GSI sort key.
  */
 export interface IndexDefinition {
   /** Name of the index (auto-generated from pk fields if not provided) */
   name?: string;
   /** Partition key fields - combined with SEPARATOR */
   pk: IndexField[];
-  /** Sort key fields - combined with SEPARATOR (default: ["sequence"]) */
+  /** Sort key fields - combined with SEPARATOR when composite */
   sk?: IndexField[];
-  /** Only create index key when ALL pk fields are present on model */
+  /** Advisory: index key is only written when all pk/sk fields are present */
   sparse?: boolean;
 }
 
@@ -40,57 +42,13 @@ export interface IndexDefinition {
 export interface ModelSchema {
   /** The model name (e.g., "record", "message", "chat") */
   model: string;
-  /** Custom indexes for this model (uses DEFAULT_INDEXES if not specified) */
+  /** Index definitions for this model */
   indexes?: IndexDefinition[];
 }
 
 // =============================================================================
-// Default Indexes
-// =============================================================================
-
-/**
- * Default indexes for the DynamoDB GSI pattern.
- * These are used when a model does not specify custom indexes.
- *
- * @deprecated Restored in 0.2.4 to unblock consumers. Will be removed in
- * 0.3.0 — register model indexes explicitly with `registerModel()` instead.
- */
-export const DEFAULT_INDEXES: IndexDefinition[] = [
-  { name: "indexScope", pk: ["scope", "model"], sk: ["sequence"] },
-  {
-    name: "indexAlias",
-    pk: ["scope", "model", "alias"],
-    sk: ["sequence"],
-    sparse: true,
-  },
-  {
-    name: "indexCategory",
-    pk: ["scope", "model", "category"],
-    sk: ["sequence"],
-    sparse: true,
-  },
-  {
-    name: "indexType",
-    pk: ["scope", "model", "type"],
-    sk: ["sequence"],
-    sparse: true,
-  },
-  {
-    name: "indexXid",
-    pk: ["scope", "model", "xid"],
-    sk: ["sequence"],
-    sparse: true,
-  },
-];
-
-// =============================================================================
 // Constants
 // =============================================================================
-
-/**
- * Default sort key fields when sk is not specified
- */
-export const DEFAULT_SORT_KEY: IndexField[] = ["sequence"];
 
 /**
  * Suffix appended to index keys when model is archived

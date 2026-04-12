@@ -61,7 +61,7 @@ export function createListService<T extends FabricModel = FabricModel>(
         type: Boolean,
         default: false,
         required: false,
-        description: "Sort ascending by sequence",
+        description: "Sort ascending (oldest first)",
       },
       cursor: {
         type: String,

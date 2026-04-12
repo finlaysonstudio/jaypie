@@ -12,11 +12,6 @@ export {
   APEX,
   ARCHIVED_SUFFIX,
   DELETED_SUFFIX,
-  INDEX_ALIAS,
-  INDEX_CATEGORY,
-  INDEX_SCOPE,
-  INDEX_TYPE,
-  INDEX_XID,
   SEPARATOR,
 } from "./constants.js";
 
@@ -34,11 +29,6 @@ export {
 // Key builders and entity utilities
 export {
   buildCompositeKey,
-  buildIndexAlias,
-  buildIndexCategory,
-  buildIndexScope,
-  buildIndexType,
-  buildIndexXid,
   calculateScope,
   indexEntity,
 } from "./keyBuilders.js";

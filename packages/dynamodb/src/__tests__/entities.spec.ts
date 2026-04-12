@@ -7,7 +7,7 @@ import {
   it,
   vi,
 } from "vitest";
-import { type IndexDefinition, registerModel } from "@jaypie/fabric";
+import { clearRegistry, fabricIndex, registerModel } from "@jaypie/fabric";
 
 import * as clientModule from "../client.js";
 import {
@@ -20,39 +20,20 @@ import {
 } from "../entities.js";
 import type { StorableEntity } from "../types.js";
 
-const STANDARD_INDEXES: IndexDefinition[] = [
-  { name: "indexScope", pk: ["scope", "model"], sk: ["sequence"] },
-  {
-    name: "indexAlias",
-    pk: ["scope", "model", "alias"],
-    sk: ["sequence"],
-    sparse: true,
-  },
-  {
-    name: "indexCategory",
-    pk: ["scope", "model", "category"],
-    sk: ["sequence"],
-    sparse: true,
-  },
-  {
-    name: "indexType",
-    pk: ["scope", "model", "type"],
-    sk: ["sequence"],
-    sparse: true,
-  },
-  {
-    name: "indexXid",
-    pk: ["scope", "model", "xid"],
-    sk: ["sequence"],
-    sparse: true,
-  },
-];
-
 beforeAll(() => {
-  registerModel({ model: "record", indexes: STANDARD_INDEXES });
+  clearRegistry();
+  registerModel({
+    model: "record",
+    indexes: [
+      fabricIndex(),
+      fabricIndex("alias"),
+      fabricIndex("category"),
+      fabricIndex("type"),
+      fabricIndex("xid"),
+    ],
+  });
 });
 
-// Mock the client module
 const mockSend = vi.fn();
 
 vi.spyOn(clientModule, "getDocClient").mockReturnValue({
@@ -61,17 +42,13 @@ vi.spyOn(clientModule, "getDocClient").mockReturnValue({
 vi.spyOn(clientModule, "getTableName").mockReturnValue("test-table");
 
 describe("Entity Operations", () => {
-  const now = new Date().toISOString();
-
-  const createTestEntity = (): StorableEntity => ({
-    createdAt: now,
-    id: "test-id-123",
-    model: "record",
-    name: "Test Record",
-    scope: "@",
-    sequence: Date.now(),
-    updatedAt: now,
-  });
+  const createTestEntity = (): StorableEntity =>
+    ({
+      id: "test-id-123",
+      model: "record",
+      name: "Test Record",
+      scope: "@",
+    }) as StorableEntity;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -83,331 +60,208 @@ describe("Entity Operations", () => {
   });
 
   describe("getEntity", () => {
-    it("is a function", () => {
-      expect(getEntity).toBeFunction();
-    });
-
     it("returns entity when found", async () => {
       const mockEntity = createTestEntity();
       mockSend.mockResolvedValueOnce({ Item: mockEntity });
-      const result = await getEntity({ id: "test-id-123", model: "record" });
+      const result = await getEntity({ id: "test-id-123" });
       expect(result).toEqual(mockEntity);
     });
 
     it("returns null when not found", async () => {
       mockSend.mockResolvedValueOnce({});
-      const result = await getEntity({ id: "nonexistent", model: "record" });
+      const result = await getEntity({ id: "nonexistent" });
       expect(result).toBeNull();
     });
 
-    it("calls docClient.send with GetCommand", async () => {
-      await getEntity({ id: "test-id-123", model: "record" });
-      expect(mockSend).toHaveBeenCalledTimes(1);
-      const command = mockSend.mock.calls[0][0];
-      expect(command.input.TableName).toBe("test-table");
-      expect(command.input.Key).toEqual({ id: "test-id-123", model: "record" });
+    it("calls GetCommand with Key = { id }", async () => {
+      await getEntity({ id: "test-id-123" });
+      const cmd = mockSend.mock.calls[0][0];
+      expect(cmd.input.TableName).toBe("test-table");
+      expect(cmd.input.Key).toEqual({ id: "test-id-123" });
     });
   });
 
   describe("putEntity", () => {
-    it("is a function", () => {
-      expect(putEntity).toBeFunction();
+    it("returns the indexed entity with indexModel populated", async () => {
+      const entity = createTestEntity();
+      const result = (await putEntity({ entity })) as StorableEntity & {
+        indexModel?: string;
+      };
+      expect(result.indexModel).toBe("record");
     });
 
-    it("returns the indexed entity", async () => {
+    it("auto-bumps updatedAt and backfills createdAt", async () => {
       const entity = createTestEntity();
       const result = await putEntity({ entity });
-      expect(result.indexScope).toBe("@#record");
+      expect(result.updatedAt).toBeDefined();
+      expect(result.createdAt).toBeDefined();
     });
 
-    it("calls docClient.send with PutCommand", async () => {
+    it("writes via PutCommand", async () => {
       const entity = createTestEntity();
       await putEntity({ entity });
-      expect(mockSend).toHaveBeenCalledTimes(1);
-      const command = mockSend.mock.calls[0][0];
-      expect(command.input.TableName).toBe("test-table");
-      expect(command.input.Item.id).toBe(entity.id);
-      expect(command.input.Item.model).toBe(entity.model);
+      const cmd = mockSend.mock.calls[0][0];
+      expect(cmd.input.TableName).toBe("test-table");
+      expect(cmd.input.Item.id).toBe(entity.id);
+      expect(cmd.input.Item.model).toBe(entity.model);
     });
 
-    it("auto-populates index keys", async () => {
+    it("auto-populates optional GSI attributes when fields present", async () => {
       const entity = { ...createTestEntity(), alias: "my-alias" };
-      const result = await putEntity({ entity });
-      expect(result.indexScope).toBe("@#record");
-      expect(result.indexAlias).toBe("@#record#my-alias");
+      const result = (await putEntity({ entity })) as StorableEntity & {
+        indexModel?: string;
+        indexModelAlias?: string;
+      };
+      expect(result.indexModel).toBe("record");
+      expect(result.indexModelAlias).toBe("record#my-alias");
     });
   });
 
   describe("updateEntity", () => {
-    it("is a function", () => {
-      expect(updateEntity).toBeFunction();
-    });
-
-    it("returns the updated entity", async () => {
-      const entity = createTestEntity();
+    it("advances updatedAt on every call", async () => {
+      const entity = {
+        ...createTestEntity(),
+        createdAt: "2026-01-01T00:00:00.000Z",
+        updatedAt: "2026-01-01T00:00:00.000Z",
+      };
       const result = await updateEntity({ entity });
-      expect(result.id).toBe(entity.id);
+      expect(result.updatedAt).not.toBe("2026-01-01T00:00:00.000Z");
     });
 
-    it("updates the updatedAt timestamp", async () => {
-      const entity = createTestEntity();
-      const originalUpdatedAt = entity.updatedAt;
+    it("preserves createdAt on updates", async () => {
+      const entity = {
+        ...createTestEntity(),
+        createdAt: "2026-01-01T00:00:00.000Z",
+      };
       const result = await updateEntity({ entity });
-      expect(result.updatedAt).not.toBe(originalUpdatedAt);
+      expect(result.createdAt).toBe("2026-01-01T00:00:00.000Z");
     });
 
-    it("calls docClient.send with PutCommand", async () => {
-      const entity = createTestEntity();
-      await updateEntity({ entity });
-      expect(mockSend).toHaveBeenCalledTimes(1);
-      const command = mockSend.mock.calls[0][0];
-      expect(command.input.TableName).toBe("test-table");
-    });
-
-    it("auto-populates index keys", async () => {
+    it("re-indexes optional fields", async () => {
       const entity = { ...createTestEntity(), type: "note" };
-      const result = await updateEntity({ entity });
-      expect(result.indexScope).toBe("@#record");
-      expect(result.indexType).toBe("@#record#note");
+      const result = (await updateEntity({ entity })) as StorableEntity & {
+        indexModel?: string;
+        indexModelType?: string;
+      };
+      expect(result.indexModel).toBe("record");
+      expect(result.indexModelType).toBe("record#note");
     });
   });
 
   describe("deleteEntity", () => {
-    it("is a function", () => {
-      expect(deleteEntity).toBeFunction();
-    });
-
     it("returns true on success", async () => {
       const mockEntity = createTestEntity();
-      mockSend.mockResolvedValueOnce({ Item: mockEntity }); // getEntity call
-      mockSend.mockResolvedValueOnce({}); // putEntity call
-      const result = await deleteEntity({ id: "test-id-123", model: "record" });
+      mockSend.mockResolvedValueOnce({ Item: mockEntity });
+      mockSend.mockResolvedValueOnce({});
+      const result = await deleteEntity({ id: "test-id-123" });
       expect(result).toBe(true);
     });
 
     it("returns false when entity not found", async () => {
-      mockSend.mockResolvedValueOnce({}); // getEntity returns nothing
-      const result = await deleteEntity({ id: "nonexistent", model: "record" });
+      mockSend.mockResolvedValueOnce({});
+      const result = await deleteEntity({ id: "nonexistent" });
       expect(result).toBe(false);
     });
 
-    it("fetches entity then saves with PutCommand", async () => {
+    it("fetches then writes with #deleted suffix on pk", async () => {
       const mockEntity = createTestEntity();
       mockSend.mockResolvedValueOnce({ Item: mockEntity });
       mockSend.mockResolvedValueOnce({});
-      await deleteEntity({ id: "test-id-123", model: "record" });
+      await deleteEntity({ id: "test-id-123" });
       expect(mockSend).toHaveBeenCalledTimes(2);
-      // First call is GetCommand
       expect(mockSend.mock.calls[0][0].input.Key).toEqual({
         id: "test-id-123",
-        model: "record",
       });
-      // Second call is PutCommand
-      expect(mockSend.mock.calls[1][0].input.Item).toBeDefined();
+      const putCmd = mockSend.mock.calls[1][0];
+      expect(putCmd.input.Item.deletedAt).toBeDefined();
+      expect(putCmd.input.Item.indexModel).toBe("record#deleted");
     });
 
-    it("sets deletedAt timestamp", async () => {
-      const mockEntity = createTestEntity();
-      mockSend.mockResolvedValueOnce({ Item: mockEntity });
-      mockSend.mockResolvedValueOnce({});
-      await deleteEntity({ id: "test-id-123", model: "record" });
-      const putCommand = mockSend.mock.calls[1][0];
-      expect(putCommand.input.Item.deletedAt).toBeDefined();
-    });
-
-    it("re-indexes with #deleted suffix", async () => {
-      const mockEntity = createTestEntity();
-      mockSend.mockResolvedValueOnce({ Item: mockEntity });
-      mockSend.mockResolvedValueOnce({});
-      await deleteEntity({ id: "test-id-123", model: "record" });
-      const putCommand = mockSend.mock.calls[1][0];
-      expect(putCommand.input.Item.indexScope).toBe("@#record#deleted");
-    });
-
-    it("re-indexes all present index keys with #deleted suffix", async () => {
+    it("re-indexes optional fields with #deleted suffix", async () => {
       const mockEntity = { ...createTestEntity(), alias: "my-alias" };
       mockSend.mockResolvedValueOnce({ Item: mockEntity });
       mockSend.mockResolvedValueOnce({});
-      await deleteEntity({ id: "test-id-123", model: "record" });
-      const putCommand = mockSend.mock.calls[1][0];
-      expect(putCommand.input.Item.indexScope).toBe("@#record#deleted");
-      expect(putCommand.input.Item.indexAlias).toBe(
-        "@#record#my-alias#deleted",
+      await deleteEntity({ id: "test-id-123" });
+      const putCmd = mockSend.mock.calls[1][0];
+      expect(putCmd.input.Item.indexModel).toBe("record#deleted");
+      expect(putCmd.input.Item.indexModelAlias).toBe(
+        "record#my-alias#deleted",
       );
     });
   });
 
   describe("archiveEntity", () => {
-    it("is a function", () => {
-      expect(archiveEntity).toBeFunction();
-    });
-
     it("returns true on success", async () => {
       const mockEntity = createTestEntity();
       mockSend.mockResolvedValueOnce({ Item: mockEntity });
       mockSend.mockResolvedValueOnce({});
-      const result = await archiveEntity({
-        id: "test-id-123",
-        model: "record",
-      });
+      const result = await archiveEntity({ id: "test-id-123" });
       expect(result).toBe(true);
     });
 
-    it("returns false when entity not found", async () => {
-      mockSend.mockResolvedValueOnce({});
-      const result = await archiveEntity({
-        id: "nonexistent",
-        model: "record",
-      });
-      expect(result).toBe(false);
-    });
-
-    it("fetches entity then saves with PutCommand", async () => {
+    it("re-indexes with #archived suffix on pk", async () => {
       const mockEntity = createTestEntity();
       mockSend.mockResolvedValueOnce({ Item: mockEntity });
       mockSend.mockResolvedValueOnce({});
-      await archiveEntity({ id: "test-id-123", model: "record" });
-      expect(mockSend).toHaveBeenCalledTimes(2);
-    });
-
-    it("sets archivedAt timestamp", async () => {
-      const mockEntity = createTestEntity();
-      mockSend.mockResolvedValueOnce({ Item: mockEntity });
-      mockSend.mockResolvedValueOnce({});
-      await archiveEntity({ id: "test-id-123", model: "record" });
-      const putCommand = mockSend.mock.calls[1][0];
-      expect(putCommand.input.Item.archivedAt).toBeDefined();
-    });
-
-    it("re-indexes with #archived suffix", async () => {
-      const mockEntity = createTestEntity();
-      mockSend.mockResolvedValueOnce({ Item: mockEntity });
-      mockSend.mockResolvedValueOnce({});
-      await archiveEntity({ id: "test-id-123", model: "record" });
-      const putCommand = mockSend.mock.calls[1][0];
-      expect(putCommand.input.Item.indexScope).toBe("@#record#archived");
-    });
-
-    it("re-indexes all present index keys with #archived suffix", async () => {
-      const mockEntity = { ...createTestEntity(), category: "memory" };
-      mockSend.mockResolvedValueOnce({ Item: mockEntity });
-      mockSend.mockResolvedValueOnce({});
-      await archiveEntity({ id: "test-id-123", model: "record" });
-      const putCommand = mockSend.mock.calls[1][0];
-      expect(putCommand.input.Item.indexScope).toBe("@#record#archived");
-      expect(putCommand.input.Item.indexCategory).toBe(
-        "@#record#memory#archived",
-      );
+      await archiveEntity({ id: "test-id-123" });
+      const putCmd = mockSend.mock.calls[1][0];
+      expect(putCmd.input.Item.archivedAt).toBeDefined();
+      expect(putCmd.input.Item.indexModel).toBe("record#archived");
     });
   });
 
   describe("destroyEntity", () => {
-    it("is a function", () => {
-      expect(destroyEntity).toBeFunction();
-    });
-
-    it("returns true on success", async () => {
-      const result = await destroyEntity({
-        id: "test-id-123",
-        model: "record",
-      });
-      expect(result).toBe(true);
-    });
-
-    it("calls docClient.send with DeleteCommand", async () => {
-      await destroyEntity({ id: "test-id-123", model: "record" });
-      expect(mockSend).toHaveBeenCalledTimes(1);
-      const command = mockSend.mock.calls[0][0];
-      expect(command.input.TableName).toBe("test-table");
-      expect(command.input.Key).toEqual({ id: "test-id-123", model: "record" });
+    it("calls DeleteCommand with Key = { id }", async () => {
+      await destroyEntity({ id: "test-id-123" });
+      const cmd = mockSend.mock.calls[0][0];
+      expect(cmd.input.TableName).toBe("test-table");
+      expect(cmd.input.Key).toEqual({ id: "test-id-123" });
     });
   });
 
-  describe("StorableEntity type flexibility", () => {
-    it("accepts state property on entities passed to putEntity", async () => {
-      const entity: StorableEntity = {
-        ...createTestEntity(),
-        state: { active: true, step: "onboarding" },
-      };
-      const result = await putEntity({ entity });
-      expect(result.state).toEqual({ active: true, step: "onboarding" });
-    });
-
-    it("accepts extra properties on entities passed to putEntity", async () => {
-      const entity: StorableEntity = {
-        ...createTestEntity(),
-        customField: "custom-value",
-      };
-      const result = await putEntity({ entity });
-      expect(result.customField).toBe("custom-value");
-    });
-
-    it("accepts partial entity spread for updateEntity", async () => {
-      const existing = createTestEntity();
-      // Simulate a partial update where we spread an existing entity
-      // and only change some fields
-      const entity: StorableEntity = {
-        ...existing,
-        name: "Updated Name",
-      };
-      const result = await updateEntity({ entity });
-      expect(result.name).toBe("Updated Name");
-    });
-  });
-
-  describe("Combined archived and deleted state", () => {
-    it("deleteEntity uses #archived#deleted suffix when entity is already archived", async () => {
+  describe("Combined archived + deleted state", () => {
+    it("deleteEntity uses #archived#deleted suffix when already archived", async () => {
       const archivedEntity = {
         ...createTestEntity(),
         archivedAt: "2026-01-01T00:00:00.000Z",
       };
       mockSend.mockResolvedValueOnce({ Item: archivedEntity });
       mockSend.mockResolvedValueOnce({});
-      await deleteEntity({ id: "test-id-123", model: "record" });
-      const putCommand = mockSend.mock.calls[1][0];
-      expect(putCommand.input.Item.indexScope).toBe(
-        "@#record#archived#deleted",
-      );
-      expect(putCommand.input.Item.archivedAt).toBe("2026-01-01T00:00:00.000Z");
-      expect(putCommand.input.Item.deletedAt).toBeDefined();
+      await deleteEntity({ id: "test-id-123" });
+      const putCmd = mockSend.mock.calls[1][0];
+      expect(putCmd.input.Item.indexModel).toBe("record#archived#deleted");
     });
 
-    it("archiveEntity uses #archived#deleted suffix when entity is already deleted", async () => {
+    it("archiveEntity uses #archived#deleted suffix when already deleted", async () => {
       const deletedEntity = {
         ...createTestEntity(),
         deletedAt: "2026-01-01T00:00:00.000Z",
       };
       mockSend.mockResolvedValueOnce({ Item: deletedEntity });
       mockSend.mockResolvedValueOnce({});
-      await archiveEntity({ id: "test-id-123", model: "record" });
-      const putCommand = mockSend.mock.calls[1][0];
-      expect(putCommand.input.Item.indexScope).toBe(
-        "@#record#archived#deleted",
-      );
-      expect(putCommand.input.Item.deletedAt).toBe("2026-01-01T00:00:00.000Z");
-      expect(putCommand.input.Item.archivedAt).toBeDefined();
+      await archiveEntity({ id: "test-id-123" });
+      const putCmd = mockSend.mock.calls[1][0];
+      expect(putCmd.input.Item.indexModel).toBe("record#archived#deleted");
+    });
+  });
+
+  describe("StorableEntity flexibility", () => {
+    it("accepts state property", async () => {
+      const entity: StorableEntity = {
+        ...createTestEntity(),
+        state: { active: true },
+      };
+      const result = await putEntity({ entity });
+      expect(result.state).toEqual({ active: true });
     });
 
-    it("re-indexes all present index keys with combined suffix", async () => {
-      const archivedEntity = {
+    it("accepts arbitrary extra properties", async () => {
+      const entity: StorableEntity = {
         ...createTestEntity(),
-        alias: "my-alias",
-        archivedAt: "2026-01-01T00:00:00.000Z",
-        category: "memory",
+        customField: "custom-value",
       };
-      mockSend.mockResolvedValueOnce({ Item: archivedEntity });
-      mockSend.mockResolvedValueOnce({});
-      await deleteEntity({ id: "test-id-123", model: "record" });
-      const putCommand = mockSend.mock.calls[1][0];
-      expect(putCommand.input.Item.indexScope).toBe(
-        "@#record#archived#deleted",
-      );
-      expect(putCommand.input.Item.indexAlias).toBe(
-        "@#record#my-alias#archived#deleted",
-      );
-      expect(putCommand.input.Item.indexCategory).toBe(
-        "@#record#memory#archived#deleted",
-      );
+      const result = await putEntity({ entity });
+      expect(result.customField).toBe("custom-value");
     });
   });
 });

@@ -57,7 +57,7 @@ export function createUpdateService<T extends FabricModel = FabricModel>(
         };
       }
 
-      // Build the updated entity
+      // Build the updated entity; updatedAt managed by indexEntity on write
       const entity = {
         ...existing,
         ...entityUpdate,
@@ -66,7 +66,6 @@ export function createUpdateService<T extends FabricModel = FabricModel>(
         id: existing.id,
         model: existing.model,
         scope: existing.scope,
-        sequence: existing.sequence,
       };
 
       // Update the entity

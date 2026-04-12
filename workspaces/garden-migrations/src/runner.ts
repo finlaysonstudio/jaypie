@@ -4,7 +4,7 @@ import {
   transactWriteEntities,
   type StorableEntity,
 } from "@jaypie/dynamodb";
-import { type IndexDefinition, registerModel } from "@jaypie/fabric";
+import { fabricIndex, registerModel } from "@jaypie/fabric";
 import { log } from "@jaypie/logger";
 
 import { migrations } from "./migrations/index.js";
@@ -21,17 +21,10 @@ const MIGRATION_MODEL = "migration";
 // Model Registration
 //
 
-const MIGRATION_INDEXES: IndexDefinition[] = [
-  {
-    name: "indexAlias",
-    pk: ["scope", "model", "alias"],
-    sk: ["sequence"],
-    sparse: true,
-  },
-  { name: "indexScope", pk: ["scope", "model"], sk: ["sequence"] },
-];
-
-registerModel({ model: MIGRATION_MODEL, indexes: MIGRATION_INDEXES });
+registerModel({
+  model: MIGRATION_MODEL,
+  indexes: [fabricIndex(), fabricIndex("alias")],
+});
 
 //
 //
@@ -50,7 +43,6 @@ export interface Migration {
 
 async function runMigrations(): Promise<void> {
   for (const migration of migrations) {
-    // Check if already applied
     const existing = await queryByAlias({
       alias: migration.id,
       model: MIGRATION_MODEL,
@@ -64,24 +56,16 @@ async function runMigrations(): Promise<void> {
       continue;
     }
 
-    // Apply migration
     log.debug("Applying migration", { migrationId: migration.id });
     const entities = await migration.apply();
 
-    // Write migration record + seeded entities atomically
-    const now = new Date().toISOString();
-    const sequence = Date.now();
-
     const migrationRecord: StorableEntity = {
       alias: migration.id,
-      createdAt: now,
       id: migration.id,
       model: MIGRATION_MODEL,
       name: migration.id,
       scope: APEX,
-      sequence,
-      updatedAt: now,
-    };
+    } as StorableEntity;
 
     await transactWriteEntities({
       entities: [...entities, migrationRecord],

@@ -1,32 +1,12 @@
-import { type IndexDefinition, registerModel } from "@jaypie/fabric";
-
-//
-//
-// Constants
-//
+import { fabricIndex, type IndexDefinition, registerModel } from "@jaypie/fabric";
 
 const APIKEY_INDEXES: IndexDefinition[] = [
-  {
-    name: "indexAlias",
-    pk: ["scope", "model", "alias"],
-    sk: ["sequence"],
-    sparse: true,
-  },
-  { name: "indexScope", pk: ["scope", "model"], sk: ["sequence"] },
+  fabricIndex(),
+  fabricIndex("alias"),
 ];
 
 const APIKEY_MODEL = "apikey";
 
-//
-//
-// Registration
-//
-
 registerModel({ model: APIKEY_MODEL, indexes: APIKEY_INDEXES });
-
-//
-//
-// Export
-//
 
 export { APIKEY_INDEXES, APIKEY_MODEL };

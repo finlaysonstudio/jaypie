@@ -206,7 +206,7 @@ export interface FabricDataListOptions {
   limit?: number;
   /** Pagination cursor */
   startKey?: string;
-  /** Sort order (default: descending by sequence) */
+  /** Sort order (default: descending — newest first) */
   ascending?: boolean;
   /** Include archived entities */
   archived?: boolean;

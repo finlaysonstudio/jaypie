@@ -60,16 +60,12 @@ export async function seedEntityIfNotExists<T extends Partial<StorableEntity>>(
     return false;
   }
 
-  // Generate required fields if missing
-  const now = new Date().toISOString();
+  // Generate required fields if missing; indexEntity manages timestamps
   const completeEntity: StorableEntity = {
-    createdAt: entity.createdAt ?? now,
     id: entity.id ?? crypto.randomUUID(),
     model: entity.model,
     name: entity.name ?? entity.alias,
     scope: entity.scope,
-    sequence: entity.sequence ?? Date.now(),
-    updatedAt: entity.updatedAt ?? now,
     ...entity,
   } as StorableEntity;
 
@@ -132,16 +128,12 @@ export async function seedEntities<T extends Partial<StorableEntity>>(
         continue;
       }
 
-      // Generate required fields if missing
-      const now = new Date().toISOString();
+      // Generate required fields if missing; indexEntity manages timestamps
       const completeEntity: StorableEntity = {
-        createdAt: entity.createdAt ?? now,
         id: entity.id ?? crypto.randomUUID(),
         model: entity.model,
         name: entity.name ?? entity.alias ?? "Unnamed",
         scope: entity.scope,
-        sequence: entity.sequence ?? Date.now(),
-        updatedAt: entity.updatedAt ?? now,
         ...entity,
       } as StorableEntity;
 

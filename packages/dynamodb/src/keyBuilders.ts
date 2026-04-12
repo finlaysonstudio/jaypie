@@ -6,85 +6,11 @@ import {
   populateIndexKeys as fabricPopulateIndexKeys,
 } from "@jaypie/fabric";
 
-import { APEX, SEPARATOR } from "./constants.js";
+import { APEX } from "./constants.js";
 import type { ParentReference, StorableEntity } from "./types.js";
 
 // =============================================================================
 // Key Builders
-// =============================================================================
-
-/**
- * Build the indexScope key for hierarchical queries
- * @param scope - The scope (APEX or "{parent.model}#{parent.id}")
- * @param model - The entity model name
- * @returns Composite key: "{scope}#{model}"
- */
-export function buildIndexScope(scope: string, model: string): string {
-  return `${scope}${SEPARATOR}${model}`;
-}
-
-/**
- * Build the indexAlias key for human-friendly lookups
- * @param scope - The scope
- * @param model - The entity model name
- * @param alias - The human-friendly alias
- * @returns Composite key: "{scope}#{model}#{alias}"
- */
-export function buildIndexAlias(
-  scope: string,
-  model: string,
-  alias: string,
-): string {
-  return `${scope}${SEPARATOR}${model}${SEPARATOR}${alias}`;
-}
-
-/**
- * Build the indexCategory key for category filtering
- * @param scope - The scope
- * @param model - The entity model name
- * @param category - The category classification
- * @returns Composite key: "{scope}#{model}#{category}"
- */
-export function buildIndexCategory(
-  scope: string,
-  model: string,
-  category: string,
-): string {
-  return `${scope}${SEPARATOR}${model}${SEPARATOR}${category}`;
-}
-
-/**
- * Build the indexType key for type filtering
- * @param scope - The scope
- * @param model - The entity model name
- * @param type - The type classification
- * @returns Composite key: "{scope}#{model}#{type}"
- */
-export function buildIndexType(
-  scope: string,
-  model: string,
-  type: string,
-): string {
-  return `${scope}${SEPARATOR}${model}${SEPARATOR}${type}`;
-}
-
-/**
- * Build the indexXid key for external ID lookups
- * @param scope - The scope
- * @param model - The entity model name
- * @param xid - The external ID
- * @returns Composite key: "{scope}#{model}#{xid}"
- */
-export function buildIndexXid(
-  scope: string,
-  model: string,
-  xid: string,
-): string {
-  return `${scope}${SEPARATOR}${model}${SEPARATOR}${xid}`;
-}
-
-// =============================================================================
-// New Vocabulary-Based Functions
 // =============================================================================
 
 /**
@@ -116,28 +42,35 @@ export function calculateScope(parent?: ParentReference): string {
 }
 
 /**
- * Auto-populate GSI index keys on an entity
+ * Auto-populate GSI index keys on an entity and advance its write timestamps.
  *
- * Uses the model's registered indexes (from the fabric registry).
+ * - Bumps `updatedAt` to now on every call.
+ * - Backfills `createdAt` to the same now if not already set.
+ * - Populates GSI attributes (pk composite and sk composite when applicable)
+ *   using the indexes registered for the entity's model.
  *
- * - indexScope is always populated from scope + model
- * - indexAlias is populated only when alias is present
- * - indexCategory is populated only when category is present
- * - indexType is populated only when type is present
- * - indexXid is populated only when xid is present
+ * Callers (putEntity, updateEntity, deleteEntity, archiveEntity,
+ * transactWriteEntities) go through this one function so `updatedAt` is
+ * always fresh and never forgotten.
  *
- * @param entity - The entity to populate index keys for
- * @param suffix - Optional suffix to append to all index keys (e.g., "#deleted", "#archived")
- * @returns The entity with populated index keys
+ * @param entity - The entity to index
+ * @param suffix - Optional suffix override (defaults to archived/deleted state)
+ * @returns A new entity with timestamps bumped and index keys populated
  */
 export function indexEntity<T extends StorableEntity>(
   entity: T,
-  suffix: string = "",
+  suffix?: string,
 ): T {
+  const now = new Date().toISOString();
+  const bumped = {
+    ...entity,
+    createdAt: entity.createdAt ?? now,
+    updatedAt: now,
+  } as T;
+
   const indexes = getModelIndexes(entity.model);
-  // Cast through unknown to bridge the type gap between StorableEntity and IndexableModel
   return fabricPopulateIndexKeys(
-    entity as unknown as IndexableModel,
+    bumped as unknown as IndexableModel,
     indexes,
     suffix,
   ) as unknown as T;

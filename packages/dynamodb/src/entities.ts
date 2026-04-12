@@ -34,21 +34,20 @@ function calculateEntitySuffix(entity: {
 }
 
 /**
- * Get a single entity by primary key
+ * Get a single entity by primary key (id)
  */
 export const getEntity = fabricService({
   alias: "getEntity",
-  description: "Get a single entity by primary key",
+  description: "Get a single entity by id",
   input: {
-    id: { type: String, description: "Entity ID (sort key)" },
-    model: { type: String, description: "Entity model (partition key)" },
+    id: { type: String, description: "Entity id (partition key)" },
   },
-  service: async ({ id, model }): Promise<StorableEntity | null> => {
+  service: async ({ id }): Promise<StorableEntity | null> => {
     const docClient = getDocClient();
     const tableName = getTableName();
 
     const command = new GetCommand({
-      Key: { id, model },
+      Key: { id },
       TableName: tableName,
     });
 
@@ -58,11 +57,8 @@ export const getEntity = fabricService({
 });
 
 /**
- * Put (create or replace) an entity
- * Auto-populates GSI index keys via indexEntity
- *
- * Note: This is a regular async function (not fabricService) because it accepts
- * complex StorableEntity objects that can't be coerced by vocabulary's type system.
+ * Put (create or replace) an entity.
+ * `indexEntity` auto-bumps `updatedAt` and backfills `createdAt`.
  */
 export async function putEntity({
   entity,
@@ -72,7 +68,6 @@ export async function putEntity({
   const docClient = getDocClient();
   const tableName = getTableName();
 
-  // Auto-populate index keys
   const indexedEntity = indexEntity(entity);
 
   const command = new PutCommand({
@@ -85,11 +80,8 @@ export async function putEntity({
 }
 
 /**
- * Update an existing entity
- * Auto-populates GSI index keys and sets updatedAt
- *
- * Note: This is a regular async function (not fabricService) because it accepts
- * complex StorableEntity objects that can't be coerced by vocabulary's type system.
+ * Update an existing entity.
+ * `indexEntity` auto-bumps `updatedAt` — callers never set it manually.
  */
 export async function updateEntity({
   entity,
@@ -99,11 +91,7 @@ export async function updateEntity({
   const docClient = getDocClient();
   const tableName = getTableName();
 
-  // Update timestamp and re-index
-  const updatedEntity = indexEntity({
-    ...entity,
-    updatedAt: new Date().toISOString(),
-  });
+  const updatedEntity = indexEntity(entity);
 
   const command = new PutCommand({
     Item: updatedEntity,
@@ -122,29 +110,25 @@ export const deleteEntity = fabricService({
   alias: "deleteEntity",
   description: "Soft delete an entity (sets deletedAt timestamp)",
   input: {
-    id: { type: String, description: "Entity ID (sort key)" },
-    model: { type: String, description: "Entity model (partition key)" },
+    id: { type: String, description: "Entity id" },
   },
-  service: async ({ id, model }): Promise<boolean> => {
+  service: async ({ id }): Promise<boolean> => {
     const docClient = getDocClient();
     const tableName = getTableName();
 
-    // Fetch the current entity
-    const existing = await getEntity({ id, model });
+    const existing = await getEntity({ id });
     if (!existing) {
       return false;
     }
 
     const now = new Date().toISOString();
 
-    // Build updated entity with deletedAt
+    // indexEntity will bump updatedAt again; set deletedAt here.
     const updatedEntity = {
       ...existing,
       deletedAt: now,
-      updatedAt: now,
     };
 
-    // Calculate suffix based on combined state (may already be archived)
     const suffix = calculateEntitySuffix(updatedEntity);
     const deletedEntity = indexEntity(updatedEntity, suffix);
 
@@ -166,29 +150,24 @@ export const archiveEntity = fabricService({
   alias: "archiveEntity",
   description: "Archive an entity (sets archivedAt timestamp)",
   input: {
-    id: { type: String, description: "Entity ID (sort key)" },
-    model: { type: String, description: "Entity model (partition key)" },
+    id: { type: String, description: "Entity id" },
   },
-  service: async ({ id, model }): Promise<boolean> => {
+  service: async ({ id }): Promise<boolean> => {
     const docClient = getDocClient();
     const tableName = getTableName();
 
-    // Fetch the current entity
-    const existing = await getEntity({ id, model });
+    const existing = await getEntity({ id });
     if (!existing) {
       return false;
     }
 
     const now = new Date().toISOString();
 
-    // Build updated entity with archivedAt
     const updatedEntity = {
       ...existing,
       archivedAt: now,
-      updatedAt: now,
     };
 
-    // Calculate suffix based on combined state (may already be deleted)
     const suffix = calculateEntitySuffix(updatedEntity);
     const archivedEntity = indexEntity(updatedEntity, suffix);
 
@@ -210,15 +189,14 @@ export const destroyEntity = fabricService({
   alias: "destroyEntity",
   description: "Hard delete an entity (permanently removes from table)",
   input: {
-    id: { type: String, description: "Entity ID (sort key)" },
-    model: { type: String, description: "Entity model (partition key)" },
+    id: { type: String, description: "Entity id" },
   },
-  service: async ({ id, model }): Promise<boolean> => {
+  service: async ({ id }): Promise<boolean> => {
     const docClient = getDocClient();
     const tableName = getTableName();
 
     const command = new DeleteCommand({
-      Key: { id, model },
+      Key: { id },
       TableName: tableName,
     });
 
