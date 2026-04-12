@@ -51,6 +51,16 @@ function createMockStore(): SkillStore {
 }
 
 export const createLayeredStore = createMockFunction(() => createMockStore());
+export const createSkillService = createMockFunction(() => {
+  const service = createMockResolvedFunction("# Mock Skill Content");
+  (service as unknown as Record<string, unknown>).$fabric = "mock";
+  (service as unknown as Record<string, unknown>).alias = "skill";
+  (service as unknown as Record<string, unknown>).description = "Mock skill service";
+  (service as unknown as Record<string, unknown>).input = {
+    alias: { description: "Skill alias", required: false, type: String },
+  };
+  return service;
+});
 export const createMarkdownStore = createMockFunction(() => createMockStore());
 export const createMemoryStore = createMockFunction(
   // eslint-disable-next-line @typescript-eslint/no-unused-vars

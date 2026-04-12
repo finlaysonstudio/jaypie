@@ -4,6 +4,7 @@ import {
   createLayeredStore,
   createMarkdownStore,
   createMemoryStore,
+  createSkillService,
   getAlternativeSpellings,
   isValidAlias,
   normalizeAlias,
@@ -49,6 +50,14 @@ describe("@jaypie/tildeskill exports", () => {
   it("exports getAlternativeSpellings", () => {
     expect(typeof getAlternativeSpellings).toBe("function");
     expect(getAlternativeSpellings("skills")).toEqual(["skill"]);
+  });
+
+  it("exports createSkillService", () => {
+    expect(typeof createSkillService).toBe("function");
+    const store = createMemoryStore();
+    const service = createSkillService(store);
+    expect(service).toHaveProperty("$fabric");
+    expect(service.alias).toBe("skill");
   });
 
   it("exports createLayeredStore", () => {

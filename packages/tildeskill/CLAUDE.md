@@ -35,6 +35,7 @@ packages/tildeskill/
 │   ├── stores/              # Storage backends
 │   │   ├── markdown.ts      # createMarkdownStore
 │   │   └── memory.ts        # createMemoryStore
+│   ├── service.ts           # createSkillService factory
 │   ├── types.ts             # TypeScript interfaces
 │   └── index.ts             # Main exports
 └── dist/                    # Built output
@@ -101,6 +102,36 @@ const layered = createLayeredStore({
   ],
 });
 ```
+
+### Skill Service Factory
+
+```typescript
+import { createSkillService, createMemoryStore } from "@jaypie/tildeskill";
+
+const store = createMemoryStore([
+  { alias: "aws", content: "# AWS\n\nAWS docs", description: "AWS guide" },
+]);
+
+// Returns a fabricService compatible with MCP and Llm.operate toolkits
+const skillService = createSkillService(store);
+
+// Get skill content
+const content = await skillService({ alias: "aws" });
+
+// List all skills
+const index = await skillService({ alias: "index" });
+// or: await skillService()
+
+// Use with fabricTool for Llm.operate
+import { fabricTool } from "@jaypie/fabric/llm";
+const { tool } = fabricTool({ service: skillService });
+```
+
+Features:
+- Automatic `expandIncludes` on every lookup
+- Plural/singular fallback via `find()` with `<!-- resolved: -->` annotation
+- Index listing filters out `"index"` entries
+- Works with any `SkillStore` (memory, markdown, layered)
 
 ### Include Expansion
 

@@ -87,6 +87,27 @@ const store = createMemoryStore([
 const skill = await store.get("test");
 ```
 
+## Skill Service Factory
+
+```typescript
+import { createSkillService, createMemoryStore } from "@jaypie/tildeskill";
+
+const store = createMemoryStore([
+  { alias: "aws", content: "# AWS docs", description: "AWS guide" },
+]);
+
+// Returns a fabricService — works with MCP, Llm.operate, or direct calls
+const skillService = createSkillService(store);
+
+await skillService({ alias: "aws" }); // → skill content (with expandIncludes)
+await skillService({ alias: "index" }); // → formatted listing
+await skillService(); // → same as "index"
+
+// Use with fabricTool for Llm.operate toolkits
+import { fabricTool } from "@jaypie/fabric/llm";
+const { tool } = fabricTool({ service: skillService });
+```
+
 ## Include Expansion
 
 ```typescript

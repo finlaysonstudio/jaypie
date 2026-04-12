@@ -9,6 +9,9 @@ export type {
   SkillStore,
 } from "./types";
 
+// Service factory
+export { createSkillService } from "./service";
+
 // Core utilities
 export { expandIncludes } from "./core/expandIncludes";
 export { normalizeAlias, parseList } from "./core/normalize";
