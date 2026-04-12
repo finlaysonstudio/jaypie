@@ -24,6 +24,8 @@ npm install @jaypie/tildeskill
 
 | Export | Purpose |
 |--------|---------|
+| `createSkillService` | Fabric service factory for skill lookup |
+| `createLayeredStore` | Compose multiple stores with namespace prefixes |
 | `createMarkdownStore` | File-based store (reads .md files) |
 | `createMemoryStore` | In-memory store (for testing) |
 | `expandIncludes` | Expand included skills into content |
@@ -36,8 +38,10 @@ npm install @jaypie/tildeskill
 | Type | Description |
 |------|-------------|
 | `SkillRecord` | Skill document with alias, content, description, includes, name, nicknames, related, tags |
-| `SkillStore` | Store interface with get, getByNickname, list, put, search methods |
+| `SkillStore` | Store interface with find, get, getByNickname, list, put, search methods |
 | `ListFilter` | Filter options for list (namespace, tag) |
+| `LayeredStoreLayer` | Layer definition with namespace and store |
+| `LayeredStoreOptions` | Options for createLayeredStore |
 
 ## Store Factories
 
@@ -245,51 +249,46 @@ try {
 }
 ```
 
-## Use Cases
+## Skill Service Factory
 
-### MCP Skill Server
-
-The primary use case is serving skill documentation via MCP:
+`createSkillService` wraps a `SkillStore` as a `fabricService`, compatible with MCP servers and `Llm.operate` toolkits:
 
 ```typescript
-import { createMarkdownStore } from "@jaypie/tildeskill";
-import { fabricService } from "@jaypie/fabric";
+import { createSkillService, createMarkdownStore } from "@jaypie/tildeskill";
 
 const store = createMarkdownStore({ path: "./skills" });
+const skillService = createSkillService(store);
 
-const skillService = fabricService({
-  alias: "skill",
-  description: "Get skill documentation",
-  input: {
-    alias: { type: String, required: false },
-  },
-  service: async ({ alias }) => {
-    if (!alias) {
-      const skills = await store.list();
-      return skills.map(s => `${s.alias}: ${s.description}`).join("\n");
-    }
-    const skill = await store.get(alias);
-    return skill?.content ?? `Skill "${alias}" not found`;
-  },
-});
+// Get skill content (with automatic expandIncludes)
+const content = await skillService({ alias: "aws" });
+
+// List all skills
+const index = await skillService({ alias: "index" });
+// or: await skillService()
+
+// Use with fabricTool for Llm.operate
+import { fabricTool } from "@jaypie/fabric/llm";
+const { tool } = fabricTool({ service: skillService });
 ```
 
-### Documentation System
+## Layered Stores
 
-Build a searchable documentation system:
+Compose multiple stores with namespace prefixes. Earlier layers win for single-result lookups:
 
 ```typescript
-import { createMarkdownStore } from "@jaypie/tildeskill";
+import { createLayeredStore, createMarkdownStore } from "@jaypie/tildeskill";
 
-const store = createMarkdownStore({ path: "./docs" });
+const layered = createLayeredStore({
+  layers: [
+    { namespace: "local", store: createMarkdownStore({ path: "./my-skills" }) },
+    { namespace: "jaypie", store: createMarkdownStore({ path: "./jaypie-skills" }) },
+  ],
+});
 
-async function searchDocs(query: string) {
-  const docs = await store.list();
-  return docs.filter(d =>
-    d.content.toLowerCase().includes(query.toLowerCase()) ||
-    d.description?.toLowerCase().includes(query.toLowerCase())
-  );
-}
+await layered.get("aws");          // first layer wins → { alias: "local:aws", ... }
+await layered.get("jaypie:aws");   // targets specific layer
+await layered.find("skills");      // per-layer plural/singular fallback
+await layered.list();              // all layers, prefixed aliases
 ```
 
 ## Related
