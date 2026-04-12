@@ -5,10 +5,8 @@ import { fabricService } from "@jaypie/fabric";
 import {
   createLayeredStore,
   createMarkdownStore,
-  isValidAlias,
+  createSkillService,
   type LayeredStoreLayer,
-  normalizeAlias,
-  type SkillRecord,
 } from "@jaypie/tildeskill";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
@@ -45,21 +43,18 @@ const LAYER_SEPARATOR = ":";
 // the built-in Jaypie skill pack so `skill("aws")` prefers the client's copy
 // while still exposing bundled Jaypie docs under the `jaypie:` namespace.
 const skillLayers: LayeredStoreLayer[] = [];
-const skillLayerPaths = new Map<string, string>();
 
 if (process.env.MCP_SKILLS_PATH) {
   skillLayers.push({
     namespace: LOCAL_SKILLS_NAMESPACE,
     store: createMarkdownStore({ path: process.env.MCP_SKILLS_PATH }),
   });
-  skillLayerPaths.set(LOCAL_SKILLS_NAMESPACE, process.env.MCP_SKILLS_PATH);
 }
 
 skillLayers.push({
   namespace: JAYPIE_SKILLS_NAMESPACE,
   store: createMarkdownStore({ path: BUILTIN_SKILLS_PATH }),
 });
-skillLayerPaths.set(JAYPIE_SKILLS_NAMESPACE, BUILTIN_SKILLS_PATH);
 
 const skillStore = createLayeredStore({
   layers: skillLayers,
@@ -122,14 +117,6 @@ function formatReleaseNoteListItem(note: {
   }
 
   return parts.join(" ");
-}
-
-function formatSkillListItem(skill: SkillRecord): string {
-  const { alias, description } = skill;
-  if (description) {
-    return `* ${alias} - ${description}`;
-  }
-  return `* ${alias}`;
 }
 
 async function getPackageReleaseNotes(packageName: string): Promise<
@@ -196,92 +183,7 @@ function filterReleaseNotesSince(
 // SKILL SERVICE
 // =============================================================================
 
-/**
- * Add alias to frontmatter indicating the canonical skill name
- */
-function addAliasToFrontmatter(content: string, matchedAlias: string): string {
-  if (content.startsWith("---")) {
-    // Find the end of frontmatter
-    const endIndex = content.indexOf("---", 3);
-    if (endIndex !== -1) {
-      // Insert alias before the closing ---
-      const beforeClose = content.slice(0, endIndex);
-      const afterClose = content.slice(endIndex);
-      return `${beforeClose}alias: ${matchedAlias}\n${afterClose}`;
-    }
-  }
-  // No frontmatter exists, create one
-  return `---\nalias: ${matchedAlias}\n---\n\n${content}`;
-}
-
-export const skillService = fabricService({
-  alias: "skill",
-  description:
-    "Access Jaypie development documentation. Pass a skill alias (e.g., 'aws', 'tests', 'errors') to get that documentation. Pass 'index' or no argument to list all available skills.",
-  input: {
-    alias: {
-      description:
-        "Skill alias (e.g., 'aws', 'tests'). Omit or use 'index' to list all skills.",
-      required: false,
-      type: String,
-    },
-  },
-  service: async ({ alias: inputAlias }: { alias?: string }) => {
-    const alias = normalizeAlias(inputAlias || "index");
-
-    if (!isValidAlias(alias)) {
-      throw new Error(
-        `Invalid skill alias "${alias}". Use alphanumeric characters, hyphens, and underscores only.`,
-      );
-    }
-
-    if (alias === "index") {
-      const allSkills = await skillStore.list();
-      // Index entries from every layer hide per-layer "index" records.
-      const skills = allSkills.filter(
-        (s: { alias: string }) =>
-          s.alias !== "index" && !s.alias.endsWith(`${LAYER_SEPARATOR}index`),
-      );
-      const skillList = skills.map(formatSkillListItem).join("\n");
-
-      return `# Index of Skills\n\n${skillList}`;
-    }
-
-    const skill = await skillStore.find(alias);
-
-    if (!skill) {
-      throw new Error(
-        `Skill "${alias}" not found. Use skill("index") to list available skills.`,
-      );
-    }
-
-    // Split the namespaced alias the layered store returned (e.g., "local:aws")
-    // so we can read the raw markdown file from the correct layer directory.
-    const separatorIdx = skill.alias.indexOf(LAYER_SEPARATOR);
-    const layerNamespace =
-      separatorIdx === -1 ? "" : skill.alias.slice(0, separatorIdx);
-    const innerAlias =
-      separatorIdx === -1 ? skill.alias : skill.alias.slice(separatorIdx + 1);
-    const layerPath = skillLayerPaths.get(layerNamespace);
-    if (!layerPath) {
-      // Defensive: layered store returned a layer we don't know the path for.
-      return skill.content;
-    }
-
-    const skillPath = path.join(layerPath, `${innerAlias}.md`);
-    let content = await fs.readFile(skillPath, "utf-8");
-
-    // Detect plural/singular fallback so we can annotate the canonical alias.
-    const inputSeparatorIdx = alias.indexOf(LAYER_SEPARATOR);
-    const inputInnerAlias =
-      inputSeparatorIdx === -1 ? alias : alias.slice(inputSeparatorIdx + 1);
-    if (innerAlias !== inputInnerAlias) {
-      content = addAliasToFrontmatter(content, skill.alias);
-    }
-
-    return content;
-  },
-});
+export const skillService = createSkillService(skillStore);
 
 // =============================================================================
 // VERSION SERVICE
