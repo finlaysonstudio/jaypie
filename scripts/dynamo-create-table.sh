@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Create the local DynamoDB table matching the production GardenDataStack schema
-# PK: model (S), SK: id (S), 5 GSIs with sequence (N) sort key
+# PK: id (S) only, 5 GSIs with composite sort keys (scope#updatedAt)
 
 set -euo pipefail
 
@@ -14,24 +14,26 @@ export AWS_SECRET_ACCESS_KEY=local
 aws dynamodb create-table \
   --table-name "$TABLE" \
   --attribute-definitions \
-    AttributeName=model,AttributeType=S \
     AttributeName=id,AttributeType=S \
-    AttributeName=sequence,AttributeType=N \
-    AttributeName=indexAlias,AttributeType=S \
-    AttributeName=indexCategory,AttributeType=S \
-    AttributeName=indexScope,AttributeType=S \
-    AttributeName=indexType,AttributeType=S \
-    AttributeName=indexXid,AttributeType=S \
+    AttributeName=indexModel,AttributeType=S \
+    AttributeName=indexModelAlias,AttributeType=S \
+    AttributeName=indexModelCategory,AttributeType=S \
+    AttributeName=indexModelSk,AttributeType=S \
+    AttributeName=indexModelAliasSk,AttributeType=S \
+    AttributeName=indexModelCategorySk,AttributeType=S \
+    AttributeName=indexModelType,AttributeType=S \
+    AttributeName=indexModelTypeSk,AttributeType=S \
+    AttributeName=indexModelXid,AttributeType=S \
+    AttributeName=indexModelXidSk,AttributeType=S \
   --key-schema \
-    AttributeName=model,KeyType=HASH \
-    AttributeName=id,KeyType=RANGE \
+    AttributeName=id,KeyType=HASH \
   --billing-mode PAY_PER_REQUEST \
   --global-secondary-indexes \
-    'IndexName=indexAlias,KeySchema=[{AttributeName=indexAlias,KeyType=HASH},{AttributeName=sequence,KeyType=RANGE}],Projection={ProjectionType=ALL}' \
-    'IndexName=indexCategory,KeySchema=[{AttributeName=indexCategory,KeyType=HASH},{AttributeName=sequence,KeyType=RANGE}],Projection={ProjectionType=ALL}' \
-    'IndexName=indexScope,KeySchema=[{AttributeName=indexScope,KeyType=HASH},{AttributeName=sequence,KeyType=RANGE}],Projection={ProjectionType=ALL}' \
-    'IndexName=indexType,KeySchema=[{AttributeName=indexType,KeyType=HASH},{AttributeName=sequence,KeyType=RANGE}],Projection={ProjectionType=ALL}' \
-    'IndexName=indexXid,KeySchema=[{AttributeName=indexXid,KeyType=HASH},{AttributeName=sequence,KeyType=RANGE}],Projection={ProjectionType=ALL}' \
+    'IndexName=indexModel,KeySchema=[{AttributeName=indexModel,KeyType=HASH},{AttributeName=indexModelSk,KeyType=RANGE}],Projection={ProjectionType=ALL}' \
+    'IndexName=indexModelAlias,KeySchema=[{AttributeName=indexModelAlias,KeyType=HASH},{AttributeName=indexModelAliasSk,KeyType=RANGE}],Projection={ProjectionType=ALL}' \
+    'IndexName=indexModelCategory,KeySchema=[{AttributeName=indexModelCategory,KeyType=HASH},{AttributeName=indexModelCategorySk,KeyType=RANGE}],Projection={ProjectionType=ALL}' \
+    'IndexName=indexModelType,KeySchema=[{AttributeName=indexModelType,KeyType=HASH},{AttributeName=indexModelTypeSk,KeyType=RANGE}],Projection={ProjectionType=ALL}' \
+    'IndexName=indexModelXid,KeySchema=[{AttributeName=indexModelXid,KeyType=HASH},{AttributeName=indexModelXidSk,KeyType=RANGE}],Projection={ProjectionType=ALL}' \
   --endpoint-url "$ENDPOINT" \
   --region "$REGION" \
   2>/dev/null || true
