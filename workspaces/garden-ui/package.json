@@ -15,7 +15,7 @@
   "dependencies": {
     "@auth0/nextjs-auth0": "^4.16.0",
     "@jaypie/aws": "^1.2.6",
-    "@jaypie/dynamodb": "*",
+    "@jaypie/dynamodb": "^0.5.0",
     "@jaypie/errors": "^1.2.1",
     "@jaypie/garden-models": "^0.1.0",
     "@jaypie/kit": "^1.2.5",

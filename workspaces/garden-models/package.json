@@ -19,12 +19,12 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@jaypie/dynamodb": "*",
+    "@jaypie/dynamodb": "^0.5.0",
     "@jaypie/errors": "*",
-    "@jaypie/fabric": "*",
-    "@jaypie/kit": "^1.2.6",
-    "@jaypie/logger": "^1.2.5",
-    "jaypie": "^1.2.23"
+    "@jaypie/fabric": "^0.3.0",
+    "@jaypie/kit": "*",
+    "@jaypie/logger": "*",
+    "jaypie": "*"
   },
   "devDependencies": {
     "typescript": "^5.9.3"
