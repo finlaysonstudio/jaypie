@@ -170,23 +170,24 @@ DynamoDB table with Jaypie single-table design patterns.
 
 ```typescript
 import { JaypieDynamoDb } from "@jaypie/constructs";
+import { fabricIndex } from "@jaypie/fabric";
 
 // Basic table (no GSIs by default)
 new JaypieDynamoDb(this, "myApp");
 
-// With custom indexes
+// With indexes using fabricIndex()
 new JaypieDynamoDb(this, "myApp", {
   indexes: [
-    { pk: ["scope", "model"], sk: ["sequence"] },
-    { pk: ["scope", "model", "type"], sparse: true },
+    fabricIndex(),           // indexModel: pk=["model"], sk=["scope","updatedAt"]
+    fabricIndex("alias"),    // indexModelAlias: pk=["model","alias"], sparse
+    fabricIndex("xid"),      // indexModelXid: pk=["model","xid"], sparse
   ],
 });
 ```
 
 Creates table with:
-- Primary key: `model` (PK), `id` (SK)
-- No GSIs by default - use `indexes` prop to add them
-- Define indexes explicitly using `IndexDefinition` from `@jaypie/fabric`
+- Primary key: `id` (PK) — no sort key
+- No GSIs by default — use `indexes` prop with `fabricIndex()` to add them
 
 ## JaypieNextJs
 

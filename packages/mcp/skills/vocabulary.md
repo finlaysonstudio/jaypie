@@ -49,7 +49,7 @@ Arguably composition, identity, instance, and relation would form a more complet
 - name: most common way to clearly reference the entity
 - related: array of id strings, complex "{model}#{id}" strings, or `{ id, model }` objects
 - scope: organizes entities, usually a reference to a parent entity
-- sequence: computed scalar, usually `Date.now()` for chronological ordering
+- sequence: deprecated; ordering now uses `updatedAt` via GSI composite sort key
 - state: mutable data the entity tracks
 - status: canceled, complete, error, pending, processing, queued, sending
 - updatedAt: timestamp
@@ -66,7 +66,7 @@ Arguably composition, identity, instance, and relation would form a more complet
 - key => alias; make api or secret keys explicit in name
 - ou => scope
 - output => state
-- type => category, tags; reserved (exception: `indexType` GSI exists in DynamoDB as a legacy pattern; prefer `category` for new work)
+- type => category, tags; reserved (exception: `indexModelType` GSI exists in DynamoDB as a legacy pattern; prefer `category` for new work)
 
 Avoid words defined elsewhere (services, terminology)
 
