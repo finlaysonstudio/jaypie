@@ -2,8 +2,11 @@ import { BadRequestError } from "@jaypie/errors";
 
 import { normalizeAlias } from "./normalize";
 
-/** Pattern for valid skill aliases: lowercase alphanumeric, hyphens, underscores */
-const VALID_ALIAS_PATTERN = /^[a-z0-9_-]+$/;
+/**
+ * Pattern for valid skill aliases: lowercase alphanumeric, hyphens, underscores,
+ * and colons (as the layered-store namespace separator).
+ */
+const VALID_ALIAS_PATTERN = /^[a-z0-9_:-]+$/;
 
 /**
  * Check if an alias is valid (no path traversal, valid characters)

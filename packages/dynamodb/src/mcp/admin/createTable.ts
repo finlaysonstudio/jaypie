@@ -6,6 +6,7 @@ import {
 import {
   fabricService,
   getAllRegisteredIndexes,
+  getGsiAttributeNames,
   type IndexDefinition,
 } from "@jaypie/fabric";
 
@@ -14,63 +15,30 @@ const DEFAULT_REGION = "us-east-1";
 const DEFAULT_TABLE_NAME = "jaypie-local";
 
 // =============================================================================
-// Index to GSI Conversion
+// Index → GSI Conversion
 // =============================================================================
 
 /**
- * Generate an index name from pk fields (if not provided)
- */
-function generateIndexName(pk: string[]): string {
-  const suffix = pk
-    .map((field) => field.charAt(0).toUpperCase() + field.slice(1))
-    .join("");
-  return `index${suffix}`;
-}
-
-/**
- * Collect all unique indexes from registered models
- */
-function collectAllIndexes(): IndexDefinition[] {
-  const indexMap = new Map<string, IndexDefinition>();
-
-  for (const index of getAllRegisteredIndexes()) {
-    const name = index.name ?? generateIndexName(index.pk as string[]);
-    if (!indexMap.has(name)) {
-      indexMap.set(name, { ...index, name });
-    }
-  }
-
-  return Array.from(indexMap.values());
-}
-
-/**
- * Build attribute definitions from indexes
+ * Build attribute definitions from registered indexes.
+ * Primary key is `id` (STRING) only; GSI pk and composite sk attributes
+ * are all STRING. A single-field sk (e.g., raw `updatedAt`) is also STRING.
  */
 function buildAttributeDefinitions(
   indexes: IndexDefinition[],
 ): Array<{ AttributeName: string; AttributeType: "S" | "N" }> {
   const attrs = new Map<string, "S" | "N">();
 
-  // Primary key attributes
-  attrs.set("model", "S");
+  // Primary key: id only
   attrs.set("id", "S");
-  attrs.set("sequence", "N");
 
-  // GSI attributes (partition keys are always strings)
   for (const index of indexes) {
-    const indexName = index.name ?? generateIndexName(index.pk as string[]);
-    attrs.set(indexName, "S");
-  }
-
-  // Sort keys (sequence is always a number, others would be strings)
-  // Note: Currently all indexes use sequence as SK, so this is mostly future-proofing
-  for (const index of indexes) {
-    const sk = index.sk ?? ["sequence"];
-    for (const skField of sk) {
-      if (!attrs.has(skField as string)) {
-        // Assume string unless it's sequence
-        attrs.set(skField as string, skField === "sequence" ? "N" : "S");
-      }
+    const { pk, sk } = getGsiAttributeNames(index);
+    // All pk attributes are composite strings
+    if (!attrs.has(pk)) attrs.set(pk, "S");
+    if (sk && !attrs.has(sk)) {
+      // Single-field `sequence` remains NUMBER for back-compat callers;
+      // every other sk attribute (composite or not) is STRING.
+      attrs.set(sk, sk === "sequence" ? "N" : "S");
     }
   }
 
@@ -83,7 +51,7 @@ function buildAttributeDefinitions(
 }
 
 /**
- * Build GSI definitions from indexes
+ * Build GSI definitions from registered indexes
  */
 function buildGSIs(indexes: IndexDefinition[]): Array<{
   IndexName: string;
@@ -93,18 +61,17 @@ function buildGSIs(indexes: IndexDefinition[]): Array<{
   const gsiProjection = { ProjectionType: "ALL" as const };
 
   return indexes.map((index) => {
-    const indexName = index.name ?? generateIndexName(index.pk as string[]);
-    const sk = index.sk ?? ["sequence"];
-
-    // For GSIs, the partition key attribute name IS the index name
-    // (e.g., indexOu stores the composite key value "@#record")
+    const { pk, sk } = getGsiAttributeNames(index);
+    const keySchema: Array<{
+      AttributeName: string;
+      KeyType: "HASH" | "RANGE";
+    }> = [{ AttributeName: pk, KeyType: "HASH" }];
+    if (sk) {
+      keySchema.push({ AttributeName: sk, KeyType: "RANGE" });
+    }
     return {
-      IndexName: indexName,
-      KeySchema: [
-        { AttributeName: indexName, KeyType: "HASH" as const },
-        // Use first SK field as the range key attribute
-        { AttributeName: sk[0] as string, KeyType: "RANGE" as const },
-      ],
+      IndexName: pk,
+      KeySchema: keySchema,
       Projection: gsiProjection,
     };
   });
@@ -115,24 +82,21 @@ function buildGSIs(indexes: IndexDefinition[]): Array<{
 // =============================================================================
 
 /**
- * DynamoDB table schema with Jaypie GSI pattern
- *
- * Collects indexes from models registered via registerModel()
+ * DynamoDB table schema with Jaypie GSI pattern.
+ * Primary key is `id` only. GSIs come from models registered via
+ * `registerModel()`, shaped by `fabricIndex()`.
  */
 function createTableParams(
   tableName: string,
   billingMode: "PAY_PER_REQUEST" | "PROVISIONED",
 ) {
-  const allIndexes = collectAllIndexes();
+  const allIndexes = getAllRegisteredIndexes();
 
   return {
     AttributeDefinitions: buildAttributeDefinitions(allIndexes),
     BillingMode: billingMode,
     GlobalSecondaryIndexes: buildGSIs(allIndexes),
-    KeySchema: [
-      { AttributeName: "model", KeyType: "HASH" as const },
-      { AttributeName: "id", KeyType: "RANGE" as const },
-    ],
+    KeySchema: [{ AttributeName: "id", KeyType: "HASH" as const }],
     TableName: tableName,
   };
 }
@@ -175,7 +139,6 @@ export const createTableHandler = fabricService({
     });
 
     try {
-      // Check if table already exists
       await client.send(new DescribeTableCommand({ TableName: tableNameStr }));
       return {
         message: `Table "${tableNameStr}" already exists`,
@@ -188,7 +151,6 @@ export const createTableHandler = fabricService({
       }
     }
 
-    // Create the table
     const tableParams = createTableParams(tableNameStr, billingModeStr);
     await client.send(new CreateTableCommand(tableParams));
 

@@ -4,54 +4,19 @@ import {
   APEX,
   ARCHIVED_SUFFIX,
   DELETED_SUFFIX,
-  INDEX_ALIAS,
-  INDEX_CATEGORY,
-  INDEX_SCOPE,
-  INDEX_TYPE,
-  INDEX_XID,
   SEPARATOR,
 } from "../constants.js";
 
 describe("Constants", () => {
   describe("APEX", () => {
-    it("is a string", () => {
-      expect(APEX).toBeString();
-    });
-
     it("is '@'", () => {
       expect(APEX).toBe("@");
     });
   });
 
   describe("SEPARATOR", () => {
-    it("is a string", () => {
-      expect(SEPARATOR).toBeString();
-    });
-
     it("is '#'", () => {
       expect(SEPARATOR).toBe("#");
-    });
-  });
-
-  describe("GSI index names", () => {
-    it("INDEX_ALIAS is 'indexAlias'", () => {
-      expect(INDEX_ALIAS).toBe("indexAlias");
-    });
-
-    it("INDEX_CATEGORY is 'indexCategory'", () => {
-      expect(INDEX_CATEGORY).toBe("indexCategory");
-    });
-
-    it("INDEX_SCOPE is 'indexScope'", () => {
-      expect(INDEX_SCOPE).toBe("indexScope");
-    });
-
-    it("INDEX_TYPE is 'indexType'", () => {
-      expect(INDEX_TYPE).toBe("indexType");
-    });
-
-    it("INDEX_XID is 'indexXid'", () => {
-      expect(INDEX_XID).toBe("indexXid");
     });
   });
 

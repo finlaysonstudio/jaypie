@@ -65,7 +65,6 @@ async function upsertUser({
     name,
     permissions: DEFAULT_PERMISSIONS,
     scope: APEX,
-    sequence: Date.now(),
     updatedAt: now,
     xid: sub,
   } as UserEntity;

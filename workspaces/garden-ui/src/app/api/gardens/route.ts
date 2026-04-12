@@ -67,7 +67,6 @@ export async function POST(request: Request): Promise<Response> {
       model: GARDEN_MODEL,
       name: gardenName,
       scope: APEX,
-      sequence: Date.now(),
       updatedAt: now,
       xid: auth.sub,
     } as GardenEntity;

@@ -5,70 +5,25 @@ import * as dynamodb from "../index.js";
 describe("@jaypie/dynamodb exports", () => {
   describe("Constants", () => {
     it("exports APEX", () => {
-      expect(dynamodb.APEX).toBeDefined();
       expect(dynamodb.APEX).toBe("@");
     });
 
     it("exports SEPARATOR", () => {
-      expect(dynamodb.SEPARATOR).toBeDefined();
       expect(dynamodb.SEPARATOR).toBe("#");
     });
 
-    it("exports INDEX_ALIAS", () => {
-      expect(dynamodb.INDEX_ALIAS).toBeDefined();
-      expect(dynamodb.INDEX_ALIAS).toBe("indexAlias");
-    });
-
-    it("exports INDEX_CATEGORY", () => {
-      expect(dynamodb.INDEX_CATEGORY).toBeDefined();
-      expect(dynamodb.INDEX_CATEGORY).toBe("indexCategory");
-    });
-
-    it("exports INDEX_SCOPE", () => {
-      expect(dynamodb.INDEX_SCOPE).toBeDefined();
-      expect(dynamodb.INDEX_SCOPE).toBe("indexScope");
-    });
-
-    it("exports INDEX_TYPE", () => {
-      expect(dynamodb.INDEX_TYPE).toBeDefined();
-      expect(dynamodb.INDEX_TYPE).toBe("indexType");
-    });
-
-    it("exports INDEX_XID", () => {
-      expect(dynamodb.INDEX_XID).toBeDefined();
-      expect(dynamodb.INDEX_XID).toBe("indexXid");
-    });
-
     it("exports ARCHIVED_SUFFIX", () => {
-      expect(dynamodb.ARCHIVED_SUFFIX).toBeDefined();
       expect(dynamodb.ARCHIVED_SUFFIX).toBe("#archived");
     });
 
     it("exports DELETED_SUFFIX", () => {
-      expect(dynamodb.DELETED_SUFFIX).toBeDefined();
       expect(dynamodb.DELETED_SUFFIX).toBe("#deleted");
     });
   });
 
   describe("Key Builder Functions", () => {
-    it("exports buildIndexAlias", () => {
-      expect(dynamodb.buildIndexAlias).toBeFunction();
-    });
-
-    it("exports buildIndexCategory", () => {
-      expect(dynamodb.buildIndexCategory).toBeFunction();
-    });
-
-    it("exports buildIndexScope", () => {
-      expect(dynamodb.buildIndexScope).toBeFunction();
-    });
-
-    it("exports buildIndexType", () => {
-      expect(dynamodb.buildIndexType).toBeFunction();
-    });
-
-    it("exports buildIndexXid", () => {
-      expect(dynamodb.buildIndexXid).toBeFunction();
+    it("exports buildCompositeKey", () => {
+      expect(dynamodb.buildCompositeKey).toBeFunction();
     });
 
     it("exports calculateScope", () => {

@@ -1,28 +1,34 @@
 import { QueryCommand } from "@aws-sdk/lib-dynamodb";
-import { fabricService } from "@jaypie/fabric";
+import { ConfigurationError } from "@jaypie/errors";
+import {
+  fabricService,
+  getGsiAttributeNames,
+  getModelIndexes,
+  type IndexDefinition,
+  SEPARATOR,
+} from "@jaypie/fabric";
 
 import { getDocClient, getTableName } from "./client.js";
-import {
-  ARCHIVED_SUFFIX,
-  DELETED_SUFFIX,
-  INDEX_ALIAS,
-  INDEX_CATEGORY,
-  INDEX_SCOPE,
-  INDEX_TYPE,
-  INDEX_XID,
-} from "./constants.js";
-import {
-  buildIndexAlias,
-  buildIndexCategory,
-  buildIndexScope,
-  buildIndexType,
-  buildIndexXid,
-} from "./keyBuilders.js";
-import type { BaseQueryOptions, StorableEntity, QueryResult } from "./types.js";
+import { ARCHIVED_SUFFIX, DELETED_SUFFIX } from "./constants.js";
+import { buildCompositeKey } from "./keyBuilders.js";
+import type {
+  QueryByAliasParams,
+  QueryByCategoryParams,
+  QueryByScopeParams,
+  QueryByTypeParams,
+  QueryByXidParams,
+  QueryResult,
+  StorableEntity,
+} from "./types.js";
+
+// =============================================================================
+// Helpers
+// =============================================================================
 
 /**
- * Calculate the suffix based on archived/deleted flags
- * When both are true, returns combined suffix (archived first, alphabetically)
+ * Calculate the suffix for the GSI partition key based on archived/deleted
+ * flags. Suffix stays on pk so deleted/archived entities are queried as their
+ * own partition (active queries skip them naturally).
  */
 function calculateSuffix({
   archived,
@@ -44,28 +50,72 @@ function calculateSuffix({
 }
 
 /**
- * Execute a GSI query with common options
+ * Find the registered index for a model that matches a given partition-key
+ * shape. The matching index is the first one whose pk equals the expected
+ * fields. Throws ConfigurationError if no match is found.
+ */
+function requireIndex(model: string, pkFields: string[]): IndexDefinition {
+  const indexes = getModelIndexes(model);
+  const match = indexes.find(
+    (index) =>
+      index.pk.length === pkFields.length &&
+      index.pk.every((field, i) => field === pkFields[i]),
+  );
+  if (!match) {
+    throw new ConfigurationError(
+      `Model "${model}" has no index with pk=[${pkFields.join(", ")}]. ` +
+        `Register one with fabricIndex(${
+          pkFields.length > 1 ? `"${pkFields[1]}"` : ""
+        }).`,
+    );
+  }
+  return match;
+}
+
+/**
+ * Execute a GSI query.
+ *
+ * - pk: exact match on the index partition key
+ * - skPrefix: optional begins_with on the index sort key (used when the index
+ *   has a composite sk like [scope, updatedAt])
  */
 async function executeQuery<T extends StorableEntity>(
-  indexName: string,
-  keyValue: string,
-  options: BaseQueryOptions = {},
+  index: IndexDefinition,
+  pkValue: string,
+  options: {
+    ascending?: boolean;
+    limit?: number;
+    skPrefix?: string;
+    startKey?: Record<string, unknown>;
+  } = {},
 ): Promise<QueryResult<T>> {
-  const { ascending = false, limit, startKey } = options;
+  const { ascending = false, limit, skPrefix, startKey } = options;
+  const attrs = getGsiAttributeNames(index);
+  const indexName = attrs.pk;
+
+  const expressionAttributeNames: Record<string, string> = {
+    "#pk": indexName,
+  };
+  const expressionAttributeValues: Record<string, unknown> = {
+    ":pkValue": pkValue,
+  };
+  let keyConditionExpression = "#pk = :pkValue";
+
+  if (skPrefix !== undefined && attrs.sk) {
+    expressionAttributeNames["#sk"] = attrs.sk;
+    expressionAttributeValues[":skPrefix"] = skPrefix;
+    keyConditionExpression += " AND begins_with(#sk, :skPrefix)";
+  }
 
   const docClient = getDocClient();
   const tableName = getTableName();
 
   const command = new QueryCommand({
     ExclusiveStartKey: startKey as Record<string, unknown> | undefined,
-    ExpressionAttributeNames: {
-      "#pk": indexName,
-    },
-    ExpressionAttributeValues: {
-      ":pkValue": keyValue,
-    },
+    ExpressionAttributeNames: expressionAttributeNames,
+    ExpressionAttributeValues: expressionAttributeValues,
     IndexName: indexName,
-    KeyConditionExpression: "#pk = :pkValue",
+    KeyConditionExpression: keyConditionExpression,
     ...(limit && { Limit: limit }),
     ScanIndexForward: ascending,
     TableName: tableName,
@@ -79,20 +129,17 @@ async function executeQuery<T extends StorableEntity>(
   };
 }
 
-/**
- * Query parameters for queryByScope
- */
-interface QueryByScopeParams extends BaseQueryOptions {
-  model: string;
-  scope: string;
+function scopePrefix(scope: string | undefined): string | undefined {
+  return scope === undefined ? undefined : `${scope}${SEPARATOR}`;
 }
 
+// =============================================================================
+// Query Functions
+// =============================================================================
+
 /**
- * Query entities by scope (parent hierarchy)
- * Uses indexScope GSI
- *
- * Note: This is a regular async function (not fabricService) because it accepts
- * complex startKey objects that can't be coerced by vocabulary's type system.
+ * List entities of a model, optionally narrowed to a scope.
+ * Requires the model to register `fabricIndex()` (pk=[model]).
  */
 export async function queryByScope({
   archived = false,
@@ -103,18 +150,20 @@ export async function queryByScope({
   scope,
   startKey,
 }: QueryByScopeParams): Promise<QueryResult<StorableEntity>> {
+  const index = requireIndex(model, ["model"]);
   const suffix = calculateSuffix({ archived, deleted });
-  const keyValue = buildIndexScope(scope, model) + suffix;
-  return executeQuery<StorableEntity>(INDEX_SCOPE, keyValue, {
+  const pkValue = buildCompositeKey({ model }, ["model"], suffix);
+  return executeQuery<StorableEntity>(index, pkValue, {
     ascending,
     limit,
+    skPrefix: scopePrefix(scope),
     startKey,
   });
 }
 
 /**
- * Query a single entity by human-friendly alias
- * Uses indexAlias GSI
+ * Query a single entity by human-friendly alias.
+ * Requires the model to register `fabricIndex("alias")`.
  */
 export const queryByAlias = fabricService({
   alias: "queryByAlias",
@@ -134,7 +183,11 @@ export const queryByAlias = fabricService({
       description: "Query deleted entities instead of active ones",
     },
     model: { type: String, description: "Entity model name" },
-    scope: { type: String, description: "Scope (@ for root)" },
+    scope: {
+      type: String,
+      required: false,
+      description: "Optional scope narrower (begins_with on sk)",
+    },
   },
   service: async ({
     alias,
@@ -147,35 +200,29 @@ export const queryByAlias = fabricService({
     const archivedBool = archived as boolean | undefined;
     const deletedBool = deleted as boolean | undefined;
     const modelStr = model as string;
-    const scopeStr = scope as string;
+    const scopeStr = scope as string | undefined;
 
+    const index = requireIndex(modelStr, ["model", "alias"]);
     const suffix = calculateSuffix({
       archived: archivedBool,
       deleted: deletedBool,
     });
-    const keyValue = buildIndexAlias(scopeStr, modelStr, aliasStr) + suffix;
-    const result = await executeQuery<StorableEntity>(INDEX_ALIAS, keyValue, {
+    const pkValue = buildCompositeKey(
+      { model: modelStr, alias: aliasStr },
+      ["model", "alias"],
+      suffix,
+    );
+    const result = await executeQuery<StorableEntity>(index, pkValue, {
       limit: 1,
+      skPrefix: scopePrefix(scopeStr),
     });
     return result.items[0] ?? null;
   },
 });
 
 /**
- * Query parameters for queryByCategory
- */
-interface QueryByCategoryParams extends BaseQueryOptions {
-  category: string;
-  model: string;
-  scope: string;
-}
-
-/**
- * Query entities by category classification
- * Uses indexCategory GSI
- *
- * Note: This is a regular async function (not fabricService) because it accepts
- * complex startKey objects that can't be coerced by vocabulary's type system.
+ * Query entities by category classification.
+ * Requires the model to register `fabricIndex("category")`.
  */
 export async function queryByCategory({
   archived = false,
@@ -187,30 +234,24 @@ export async function queryByCategory({
   scope,
   startKey,
 }: QueryByCategoryParams): Promise<QueryResult<StorableEntity>> {
+  const index = requireIndex(model, ["model", "category"]);
   const suffix = calculateSuffix({ archived, deleted });
-  const keyValue = buildIndexCategory(scope, model, category) + suffix;
-  return executeQuery<StorableEntity>(INDEX_CATEGORY, keyValue, {
+  const pkValue = buildCompositeKey(
+    { model, category },
+    ["model", "category"],
+    suffix,
+  );
+  return executeQuery<StorableEntity>(index, pkValue, {
     ascending,
     limit,
+    skPrefix: scopePrefix(scope),
     startKey,
   });
 }
 
 /**
- * Query parameters for queryByType
- */
-interface QueryByTypeParams extends BaseQueryOptions {
-  model: string;
-  scope: string;
-  type: string;
-}
-
-/**
- * Query entities by type classification
- * Uses indexType GSI
- *
- * Note: This is a regular async function (not fabricService) because it accepts
- * complex startKey objects that can't be coerced by vocabulary's type system.
+ * Query entities by type classification.
+ * Requires the model to register `fabricIndex("type")`.
  */
 export async function queryByType({
   archived = false,
@@ -222,18 +263,24 @@ export async function queryByType({
   startKey,
   type,
 }: QueryByTypeParams): Promise<QueryResult<StorableEntity>> {
+  const index = requireIndex(model, ["model", "type"]);
   const suffix = calculateSuffix({ archived, deleted });
-  const keyValue = buildIndexType(scope, model, type) + suffix;
-  return executeQuery<StorableEntity>(INDEX_TYPE, keyValue, {
+  const pkValue = buildCompositeKey(
+    { model, type },
+    ["model", "type"],
+    suffix,
+  );
+  return executeQuery<StorableEntity>(index, pkValue, {
     ascending,
     limit,
+    skPrefix: scopePrefix(scope),
     startKey,
   });
 }
 
 /**
- * Query a single entity by external ID
- * Uses indexXid GSI
+ * Query a single entity by external ID.
+ * Requires the model to register `fabricIndex("xid")`.
  */
 export const queryByXid = fabricService({
   alias: "queryByXid",
@@ -252,7 +299,11 @@ export const queryByXid = fabricService({
       description: "Query deleted entities instead of active ones",
     },
     model: { type: String, description: "Entity model name" },
-    scope: { type: String, description: "Scope (@ for root)" },
+    scope: {
+      type: String,
+      required: false,
+      description: "Optional scope narrower (begins_with on sk)",
+    },
     xid: { type: String, description: "External ID" },
   },
   service: async ({
@@ -265,17 +316,26 @@ export const queryByXid = fabricService({
     const archivedBool = archived as boolean | undefined;
     const deletedBool = deleted as boolean | undefined;
     const modelStr = model as string;
-    const scopeStr = scope as string;
+    const scopeStr = scope as string | undefined;
     const xidStr = xid as string;
 
+    const index = requireIndex(modelStr, ["model", "xid"]);
     const suffix = calculateSuffix({
       archived: archivedBool,
       deleted: deletedBool,
     });
-    const keyValue = buildIndexXid(scopeStr, modelStr, xidStr) + suffix;
-    const result = await executeQuery<StorableEntity>(INDEX_XID, keyValue, {
+    const pkValue = buildCompositeKey(
+      { model: modelStr, xid: xidStr },
+      ["model", "xid"],
+      suffix,
+    );
+    const result = await executeQuery<StorableEntity>(index, pkValue, {
       limit: 1,
+      skPrefix: scopePrefix(scopeStr),
     });
     return result.items[0] ?? null;
   },
 });
+
+// Internal exports for the unified query() layer
+export { executeQuery, requireIndex, calculateSuffix, scopePrefix };

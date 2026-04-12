@@ -12,7 +12,7 @@ export interface SkillRecord {
   includes?: string[];
   /** Display title for the skill */
   name?: string;
-  /** Alternate lookup keys for getByNickname */
+  /** Alternate lookup keys for getByNickname (multiple records may share a nickname) */
   nicknames?: string[];
   /** Related skill aliases */
   related?: string[];
@@ -34,10 +34,19 @@ export interface ListFilter {
  * Storage interface for skill records
  */
 export interface SkillStore {
+  /**
+   * Retrieve a skill by alias, trying alternative plural/singular spellings
+   * when an exact match is not found. Returns null if nothing resolves.
+   */
+  find(alias: string): Promise<SkillRecord | null>;
   /** Retrieve a skill by alias, returns null if not found */
   get(alias: string): Promise<SkillRecord | null>;
-  /** Retrieve a skill by nickname, returns null if not found */
-  getByNickname(nickname: string): Promise<SkillRecord | null>;
+  /**
+   * Retrieve all skills whose nicknames include the given value.
+   * Returns an empty array when nothing matches. Multiple records may share
+   * a nickname (e.g., "sparticus" hitting several layers).
+   */
+  getByNickname(nickname: string): Promise<SkillRecord[]>;
   /** List all skills in the store, optionally filtered */
   list(filter?: ListFilter): Promise<SkillRecord[]>;
   /** Store or update a skill record */
@@ -52,6 +61,26 @@ export interface SkillStore {
 export interface MarkdownStoreOptions {
   /** Path to directory containing .md files */
   path: string;
+}
+
+/**
+ * A single layer in a layered skill store
+ */
+export interface LayeredStoreLayer {
+  /** Namespace prefix applied to records surfaced from this layer (e.g., "local", "jaypie") */
+  namespace: string;
+  /** Underlying store that backs this layer */
+  store: SkillStore;
+}
+
+/**
+ * Options for creating a layered skill store
+ */
+export interface LayeredStoreOptions {
+  /** Ordered list of layers; earlier layers win for single-result lookups */
+  layers: LayeredStoreLayer[];
+  /** Separator between namespace and inner alias; defaults to ":" */
+  separator?: string;
 }
 
 /**

@@ -126,14 +126,47 @@ export function calculateIndexSuffix(model: IndexableModel): string {
 }
 
 /**
+ * Get GSI attribute names for an index definition
+ *
+ * Single source of truth for the attribute names that `populateIndexKeys`
+ * writes and that GSI provisioning references.
+ *
+ * - `pk` is always the index name
+ * - `sk` is the single sk field name when `sk.length === 1`, or
+ *   `{indexName}Sk` when `sk.length > 1` (composite sk attribute)
+ */
+export function getGsiAttributeNames(index: IndexDefinition): {
+  pk: string;
+  sk: string | undefined;
+} {
+  const name = index.name ?? generateIndexName(index.pk);
+  let sk: string | undefined;
+  if (index.sk && index.sk.length > 1) {
+    sk = `${name}Sk`;
+  } else if (index.sk && index.sk.length === 1) {
+    sk = String(index.sk[0]);
+  }
+  return { pk: name, sk };
+}
+
+/**
  * Populate index keys on a model based on index definitions
  *
- * Only the partition key composite is stored on the model (e.g., indexOu).
- * The sort key (e.g., sequence) is a regular field that the GSI references directly.
+ * For each index:
+ * - The partition key composite is stored on the model under the index name,
+ *   with the archived/deleted suffix appended (e.g., `indexModel = "record#deleted"`).
+ * - When `sk.length > 1`, a sort key composite is also stored under
+ *   `{indexName}Sk` (no suffix — the suffix lives only on pk).
+ * - When `sk.length <= 1`, no sk attribute is written; the GSI references the
+ *   single sk field (e.g., `updatedAt`, `sequence`) as a plain attribute.
+ *
+ * Sparse behavior: if any pk or sk field is missing, the corresponding
+ * composite is skipped (not written). The `sparse` flag is advisory for
+ * provisioning — this function always behaves sparsely at write time.
  *
  * @param model - Model to populate index keys on
  * @param indexes - Index definitions to use
- * @param suffix - Optional suffix to append to all index keys
+ * @param suffix - Optional suffix override (defaults to archived/deleted state)
  * @returns Model with index keys populated
  */
 export function populateIndexKeys<T extends IndexableModel>(
@@ -145,20 +178,17 @@ export function populateIndexKeys<T extends IndexableModel>(
   const appliedSuffix = suffix ?? calculateIndexSuffix(model);
 
   for (const index of indexes) {
-    const indexName = index.name ?? generateIndexName(index.pk);
-    const pkKey = indexName as keyof T;
+    const { pk: pkKey, sk: skKey } = getGsiAttributeNames(index);
 
-    // For sparse indexes, only populate if all pk fields are present
-    if (index.sparse) {
-      const pkValue = tryBuildCompositeKey(model, index.pk, appliedSuffix);
-      if (pkValue !== undefined) {
-        (result as Record<string, unknown>)[pkKey as string] = pkValue;
-      }
-    } else {
-      // For non-sparse indexes, always try to populate (will throw if fields missing)
-      const pkValue = tryBuildCompositeKey(model, index.pk, appliedSuffix);
-      if (pkValue !== undefined) {
-        (result as Record<string, unknown>)[pkKey as string] = pkValue;
+    const pkValue = tryBuildCompositeKey(model, index.pk, appliedSuffix);
+    if (pkValue !== undefined) {
+      (result as Record<string, unknown>)[pkKey] = pkValue;
+    }
+
+    if (index.sk && index.sk.length > 1 && skKey) {
+      const skValue = tryBuildCompositeKey(model, index.sk);
+      if (skValue !== undefined) {
+        (result as Record<string, unknown>)[skKey] = skValue;
       }
     }
   }

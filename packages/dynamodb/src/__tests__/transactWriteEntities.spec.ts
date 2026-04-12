@@ -7,25 +7,22 @@ import {
   it,
   vi,
 } from "vitest";
-import { type IndexDefinition, registerModel } from "@jaypie/fabric";
+import { clearRegistry, fabricIndex, registerModel } from "@jaypie/fabric";
 
 import * as clientModule from "../client.js";
 import { transactWriteEntities } from "../entities.js";
 import type { StorableEntity } from "../types.js";
 
-const STANDARD_INDEXES: IndexDefinition[] = [
-  { name: "indexScope", pk: ["scope", "model"], sk: ["sequence"] },
-  {
-    name: "indexAlias",
-    pk: ["scope", "model", "alias"],
-    sk: ["sequence"],
-    sparse: true,
-  },
-];
-
 beforeAll(() => {
-  registerModel({ model: "migration", indexes: STANDARD_INDEXES });
-  registerModel({ model: "apikey", indexes: STANDARD_INDEXES });
+  clearRegistry();
+  registerModel({
+    model: "migration",
+    indexes: [fabricIndex(), fabricIndex("alias")],
+  });
+  registerModel({
+    model: "apikey",
+    indexes: [fabricIndex(), fabricIndex("alias")],
+  });
 });
 
 // Mock the client module
@@ -37,8 +34,6 @@ vi.spyOn(clientModule, "getDocClient").mockReturnValue({
 vi.spyOn(clientModule, "getTableName").mockReturnValue("test-table");
 
 describe("transactWriteEntities", () => {
-  const now = new Date().toISOString();
-
   beforeEach(() => {
     vi.clearAllMocks();
     mockSend.mockResolvedValue({});
@@ -56,24 +51,18 @@ describe("transactWriteEntities", () => {
     const entities: StorableEntity[] = [
       {
         alias: "001-test",
-        createdAt: now,
         id: "migration-1",
         model: "migration",
         name: "Test Migration",
         scope: "@",
-        sequence: 1,
-        updatedAt: now,
-      },
+      } as StorableEntity,
       {
         alias: "key-hash",
-        createdAt: now,
         id: "apikey-1",
         model: "apikey",
         name: "Owner Key",
         scope: "@",
-        sequence: 2,
-        updatedAt: now,
-      },
+      } as StorableEntity,
     ];
 
     await transactWriteEntities({ entities });
@@ -82,10 +71,10 @@ describe("transactWriteEntities", () => {
     const command = mockSend.mock.calls[0][0];
     expect(command.input.TransactItems).toHaveLength(2);
 
-    // Verify entities are indexed (have indexScope populated)
     const firstItem = command.input.TransactItems[0].Put.Item;
-    expect(firstItem.indexScope).toBeDefined();
-    expect(firstItem.indexAlias).toBeDefined();
+    expect(firstItem.indexModel).toBe("migration");
+    expect(firstItem.indexModelAlias).toBe("migration#001-test");
+    expect(firstItem.updatedAt).toBeDefined();
     expect(command.input.TransactItems[0].Put.TableName).toBe("test-table");
     expect(command.input.TransactItems[1].Put.TableName).toBe("test-table");
   });
@@ -105,14 +94,11 @@ describe("transactWriteEntities", () => {
       transactWriteEntities({
         entities: [
           {
-            createdAt: now,
             id: "test",
             model: "migration",
             name: "Test",
             scope: "@",
-            sequence: 1,
-            updatedAt: now,
-          },
+          } as StorableEntity,
         ],
       }),
     ).rejects.toThrow("Transaction failed");

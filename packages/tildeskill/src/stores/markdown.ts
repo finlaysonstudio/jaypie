@@ -4,6 +4,7 @@ import * as path from "node:path";
 import matter from "gray-matter";
 
 import { normalizeAlias, parseList } from "../core/normalize";
+import { getAlternativeSpellings } from "../core/spellings";
 import type {
   ListFilter,
   MarkdownStoreOptions,
@@ -46,25 +47,37 @@ async function parseSkillFile(filePath: string): Promise<SkillRecord> {
 export function createMarkdownStore({
   path: storePath,
 }: MarkdownStoreOptions): SkillStore {
-  return {
-    async get(alias: string): Promise<SkillRecord | null> {
-      const normalized = normalizeAlias(alias);
-      const filePath = path.join(storePath, `${normalized}.md`);
+  async function readByAlias(alias: string): Promise<SkillRecord | null> {
+    const filePath = path.join(storePath, `${alias}.md`);
+    try {
+      return await parseSkillFile(filePath);
+    } catch {
+      return null;
+    }
+  }
 
-      try {
-        return await parseSkillFile(filePath);
-      } catch {
-        return null;
+  return {
+    async find(alias: string): Promise<SkillRecord | null> {
+      const normalized = normalizeAlias(alias);
+      const exact = await readByAlias(normalized);
+      if (exact) return exact;
+      for (const alt of getAlternativeSpellings(normalized)) {
+        const candidate = await readByAlias(alt);
+        if (candidate) return candidate;
       }
+      return null;
     },
 
-    async getByNickname(nickname: string): Promise<SkillRecord | null> {
+    async get(alias: string): Promise<SkillRecord | null> {
+      const normalized = normalizeAlias(alias);
+      return readByAlias(normalized);
+    },
+
+    async getByNickname(nickname: string): Promise<SkillRecord[]> {
       const normalized = normalizeAlias(nickname);
       const allSkills = await this.list();
-      return (
-        allSkills.find((record) =>
-          record.nicknames?.map(normalizeAlias).includes(normalized),
-        ) ?? null
+      return allSkills.filter((record) =>
+        record.nicknames?.map(normalizeAlias).includes(normalized),
       );
     },
 

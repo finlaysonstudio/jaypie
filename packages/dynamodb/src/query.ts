@@ -6,13 +6,15 @@
  * removing the need to know which specific GSI to use.
  */
 
-import { QueryCommand } from "@aws-sdk/lib-dynamodb";
 import { ConfigurationError } from "@jaypie/errors";
 import { getModelIndexes, type IndexDefinition } from "@jaypie/fabric";
 
-import { getDocClient, getTableName } from "./client.js";
-import { ARCHIVED_SUFFIX, DELETED_SUFFIX } from "./constants.js";
 import { buildCompositeKey } from "./keyBuilders.js";
+import {
+  calculateSuffix,
+  executeQuery,
+  scopePrefix,
+} from "./queries.js";
 import type { QueryResult, StorableEntity } from "./types.js";
 
 // =============================================================================
@@ -29,132 +31,64 @@ export interface QueryParams<T = StorableEntity> {
   ascending?: boolean;
   /** Whether to query deleted entities instead of active ones */
   deleted?: boolean;
-  /** Filter object with field values to match. Used for index auto-detection. */
+  /**
+   * Filter object with field values to match. Used for index auto-detection
+   * — the picker scores indexes by how many pk fields (after `model`) are
+   * present in this filter.
+   */
   filter?: Partial<T>;
   /** Maximum number of items to return */
   limit?: number;
   /** Model name (required) */
   model: string;
-  /** Scope (APEX or "{parent.model}#{parent.id}") */
+  /**
+   * Optional scope narrower. Applied as `begins_with` on the GSI sort key
+   * (composite scope + updatedAt). Omit to list across all scopes.
+   */
   scope?: string;
   /** Pagination cursor from previous query */
   startKey?: Record<string, unknown>;
 }
 
-/**
- * Score for an index based on filter field matching
- */
-interface IndexScore {
-  index: IndexDefinition;
-  /** Whether all pk fields are present in the filter */
-  pkComplete: boolean;
-  /** Number of pk fields matched */
-  matchedFields: number;
-}
-
 // =============================================================================
-// Helper Functions
+// Index Selection
 // =============================================================================
 
 /**
- * Calculate the suffix based on archived/deleted flags
- */
-function calculateSuffix(archived?: boolean, deleted?: boolean): string {
-  if (archived && deleted) {
-    return ARCHIVED_SUFFIX + DELETED_SUFFIX;
-  }
-  if (archived) {
-    return ARCHIVED_SUFFIX;
-  }
-  if (deleted) {
-    return DELETED_SUFFIX;
-  }
-  return "";
-}
-
-/**
- * Build a combined filter object from params
- */
-function buildFilterObject<T>(params: QueryParams<T>): Record<string, unknown> {
-  const result: Record<string, unknown> = {
-    model: params.model,
-  };
-
-  if (params.scope !== undefined) {
-    result.scope = params.scope;
-  }
-
-  if (params.filter) {
-    Object.assign(result, params.filter);
-  }
-
-  return result;
-}
-
-/**
- * Score an index based on how well it matches the filter fields
- */
-function scoreIndex(
-  index: IndexDefinition,
-  filterFields: Record<string, unknown>,
-): IndexScore {
-  let matchedFields = 0;
-  let pkComplete = true;
-
-  for (const field of index.pk) {
-    if (filterFields[field] !== undefined) {
-      matchedFields++;
-    } else {
-      pkComplete = false;
-    }
-  }
-
-  return {
-    index,
-    matchedFields,
-    pkComplete,
-  };
-}
-
-/**
- * Select the best index for the given filter
+ * Select the best index for the given filter.
  *
- * Scoring criteria:
- * 1. Index must have all pk fields present (pkComplete)
- * 2. Prefer indexes with more matched fields
- * 3. Prefer more specific indexes (more pk fields)
+ * Every model-level index has `model` as its first pk field. The picker
+ * prefers the most specific index whose remaining pk fields are all
+ * satisfied by the filter.
  */
 function selectBestIndex(
   indexes: IndexDefinition[],
-  filterFields: Record<string, unknown>,
+  filter: Record<string, unknown>,
 ): IndexDefinition {
-  const scores = indexes.map((index) => scoreIndex(index, filterFields));
+  // Candidates: indexes whose pk starts with "model" and whose remaining
+  // fields are all present in the filter.
+  const candidates = indexes.filter((index) => {
+    if (index.pk.length === 0 || index.pk[0] !== "model") return false;
+    for (let i = 1; i < index.pk.length; i++) {
+      if (filter[index.pk[i] as string] === undefined) return false;
+    }
+    return true;
+  });
 
-  // Filter to only complete matches
-  const completeMatches = scores.filter((s) => s.pkComplete);
-
-  if (completeMatches.length === 0) {
-    const availableIndexes = indexes
-      .map((i) => i.name ?? `[${i.pk.join(", ")}]`)
+  if (candidates.length === 0) {
+    const available = indexes
+      .map((i) => `[${i.pk.join(", ")}]`)
       .join(", ");
-    const providedFields = Object.keys(filterFields).join(", ");
+    const provided = Object.keys(filter).join(", ") || "(none)";
     throw new ConfigurationError(
-      `No index matches filter fields. ` +
-        `Provided: ${providedFields}. ` +
-        `Available indexes: ${availableIndexes}`,
+      `No index matches filter for model. ` +
+        `Filter fields: ${provided}. Available indexes: ${available}`,
     );
   }
 
-  // Sort by:
-  // 1. More matched fields first (descending)
-  // 2. More pk fields (more specific) first (descending)
-  completeMatches.sort((a, b) => {
-    const fieldDiff = b.matchedFields - a.matchedFields;
-    if (fieldDiff !== 0) return fieldDiff;
-    return b.index.pk.length - a.index.pk.length;
-  });
-
-  return completeMatches[0].index;
+  // Prefer the most specific index (longest pk).
+  candidates.sort((a, b) => b.pk.length - a.pk.length);
+  return candidates[0];
 }
 
 // =============================================================================
@@ -162,30 +96,23 @@ function selectBestIndex(
 // =============================================================================
 
 /**
- * Query entities with automatic index selection
- *
- * The query function automatically selects the best GSI based on
- * the filter fields provided. This removes the need to know which
- * specific query function (queryByOu, queryByAlias, etc.) to use.
+ * Query entities with automatic index selection.
  *
  * @example
- * // Uses indexScope (pk: ["scope", "model"])
- * const allMessages = await query({ model: "message", scope: `chat#${chatId}` });
+ *   // Uses indexModel (pk: ["model"]), optionally narrowed by scope
+ *   const records = await query({ model: "record", scope: "@" });
  *
  * @example
- * // Uses indexAlias (pk: ["scope", "model", "alias"])
- * const byAlias = await query({
- *   model: "record",
- *   scope: "@",
- *   filter: { alias: "my-record" },
- * });
+ *   // Uses indexModelAlias (pk: ["model", "alias"])
+ *   const byAlias = await query({
+ *     model: "record",
+ *     scope: "@",
+ *     filter: { alias: "my-record" },
+ *   });
  *
  * @example
- * // Uses a custom registered index if model has one
- * const byChat = await query({
- *   model: "message",
- *   filter: { chatId: "abc-123" },
- * });
+ *   // Cross-scope listing (no scope narrower)
+ *   const all = await query({ model: "record" });
  */
 export async function query<T extends StorableEntity = StorableEntity>(
   params: QueryParams<T>,
@@ -194,64 +121,33 @@ export async function query<T extends StorableEntity = StorableEntity>(
     archived = false,
     ascending = false,
     deleted = false,
+    filter,
     limit,
     model,
+    scope,
     startKey,
   } = params;
 
-  // Build the combined filter object
-  const filterFields = buildFilterObject(params);
-
-  // Get indexes for this model
   const indexes = getModelIndexes(model);
-
-  // Select the best matching index
+  const filterFields: Record<string, unknown> = {
+    model,
+    ...(filter as Record<string, unknown> | undefined),
+  };
   const selectedIndex = selectBestIndex(indexes, filterFields);
-  const indexName = selectedIndex.name ?? generateIndexName(selectedIndex.pk);
 
-  // Build the partition key value
-  const suffix = calculateSuffix(archived, deleted);
-  const keyValue = buildCompositeKey(
+  const suffix = calculateSuffix({ archived, deleted });
+  const pkValue = buildCompositeKey(
     filterFields as Record<string, unknown> & { model: string },
     selectedIndex.pk as string[],
     suffix,
   );
 
-  // Execute the query
-  const docClient = getDocClient();
-  const tableName = getTableName();
-
-  const command = new QueryCommand({
-    ExclusiveStartKey: startKey as Record<string, unknown> | undefined,
-    ExpressionAttributeNames: {
-      "#pk": indexName,
-    },
-    ExpressionAttributeValues: {
-      ":pkValue": keyValue,
-    },
-    IndexName: indexName,
-    KeyConditionExpression: "#pk = :pkValue",
-    ...(limit && { Limit: limit }),
-    ScanIndexForward: ascending,
-    TableName: tableName,
+  return executeQuery<T>(selectedIndex, pkValue, {
+    ascending,
+    limit,
+    skPrefix: scopePrefix(scope),
+    startKey,
   });
-
-  const response = await docClient.send(command);
-
-  return {
-    items: (response.Items ?? []) as T[],
-    lastEvaluatedKey: response.LastEvaluatedKey,
-  };
-}
-
-/**
- * Generate an index name from pk fields
- */
-function generateIndexName(pk: string[]): string {
-  const suffix = pk
-    .map((field) => field.charAt(0).toUpperCase() + field.slice(1))
-    .join("");
-  return `index${suffix}`;
 }
 
 // Re-export for convenience

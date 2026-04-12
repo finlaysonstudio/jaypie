@@ -91,9 +91,6 @@ export interface FabricModel {
   /** Scope: APEX ("@") or "{parent.model}#{parent.id}" */
   scope?: string;
 
-  /** Timestamp for chronological ordering (Date.now()) */
-  sequence?: number;
-
   // -------------------------------------------------------------------------
   // Content
   // -------------------------------------------------------------------------
@@ -279,7 +276,6 @@ export const FABRIC_MODEL_FIELDS = {
 
   // Storage
   SCOPE: "scope",
-  SEQUENCE: "sequence",
 
   // Time
   ARCHIVED_AT: "archivedAt",

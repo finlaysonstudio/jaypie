@@ -33,17 +33,17 @@ describe("Seed and Export Utilities", () => {
 
   const createTestEntity = (
     overrides: Partial<StorableEntity> = {},
-  ): StorableEntity => ({
-    alias: "test-alias",
-    createdAt: now,
-    id: "test-id-123",
-    model: "record",
-    name: "Test Record",
-    scope: "@",
-    sequence: Date.now(),
-    updatedAt: now,
-    ...overrides,
-  });
+  ): StorableEntity =>
+    ({
+      alias: "test-alias",
+      createdAt: now,
+      id: "test-id-123",
+      model: "record",
+      name: "Test Record",
+      scope: "@",
+      updatedAt: now,
+      ...overrides,
+    }) as StorableEntity;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -122,7 +122,9 @@ describe("Seed and Export Utilities", () => {
       expect(callArg.entity.id.length).toBeGreaterThan(0);
     });
 
-    it("auto-generates createdAt when missing", async () => {
+    it("delegates timestamp management to putEntity (no manual createdAt)", async () => {
+      // createdAt/updatedAt are now managed by indexEntity inside putEntity —
+      // seedEntityIfNotExists no longer sets them.
       vi.mocked(queriesModule.queryByAlias).mockResolvedValueOnce(null);
       vi.mocked(entitiesModule.putEntity).mockResolvedValueOnce(
         createTestEntity(),
@@ -135,7 +137,7 @@ describe("Seed and Export Utilities", () => {
       });
 
       const callArg = vi.mocked(entitiesModule.putEntity).mock.calls[0][0];
-      expect(callArg.entity.createdAt).toBeDefined();
+      expect(callArg.entity.createdAt).toBeUndefined();
     });
 
     it("uses name from alias when name is missing", async () => {
@@ -278,8 +280,8 @@ describe("Seed and Export Utilities", () => {
 
     it("returns all entities", async () => {
       const entities = [
-        createTestEntity({ id: "1", sequence: 1 }),
-        createTestEntity({ id: "2", sequence: 2 }),
+        createTestEntity({ id: "1" }),
+        createTestEntity({ id: "2" }),
       ];
       vi.mocked(queriesModule.queryByScope).mockResolvedValueOnce({
         items: entities,
@@ -293,8 +295,8 @@ describe("Seed and Export Utilities", () => {
     });
 
     it("paginates through all results", async () => {
-      const page1 = [createTestEntity({ id: "1", sequence: 1 })];
-      const page2 = [createTestEntity({ id: "2", sequence: 2 })];
+      const page1 = [createTestEntity({ id: "1" })];
+      const page2 = [createTestEntity({ id: "2" })];
 
       vi.mocked(queriesModule.queryByScope)
         .mockResolvedValueOnce({

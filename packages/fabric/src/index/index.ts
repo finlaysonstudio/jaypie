@@ -10,13 +10,17 @@
 
 export {
   ARCHIVED_SUFFIX,
-  DEFAULT_INDEXES,
-  DEFAULT_SORT_KEY,
   DELETED_SUFFIX,
   type IndexDefinition,
   type IndexField,
   type ModelSchema,
 } from "./types.js";
+
+// =============================================================================
+// Factories
+// =============================================================================
+
+export { fabricIndex } from "./fabricIndex.js";
 
 // =============================================================================
 // Key Builders
@@ -27,6 +31,7 @@ export {
   calculateIndexSuffix,
   calculateScope,
   generateIndexName,
+  getGsiAttributeNames,
   type IndexableModel,
   populateIndexKeys,
   tryBuildCompositeKey,

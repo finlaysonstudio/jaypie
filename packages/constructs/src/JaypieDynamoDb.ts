@@ -3,8 +3,7 @@ import { RemovalPolicy, Tags } from "aws-cdk-lib";
 import * as dynamodb from "aws-cdk-lib/aws-dynamodb";
 
 import {
-  DEFAULT_SORT_KEY,
-  generateIndexName,
+  getGsiAttributeNames,
   type IndexDefinition,
 } from "@jaypie/fabric";
 
@@ -13,47 +12,41 @@ import { isProductionEnv } from "./helpers/isEnv";
 
 //
 //
-// Constants
-//
-
-/** Composite key separator used in GSI partition keys */
-const SEPARATOR = "#";
-
-//
-//
 // Helper Functions
 //
 
 /**
- * Convert IndexDefinition[] from @jaypie/fabric to CDK GlobalSecondaryIndexPropsV2[]
+ * Convert IndexDefinition[] from @jaypie/fabric to CDK GlobalSecondaryIndexPropsV2[].
  *
- * @param indexes - Array of IndexDefinition from @jaypie/fabric
- * @returns Array of CDK GlobalSecondaryIndexPropsV2
+ * Uses `getGsiAttributeNames` as the single source of truth so runtime writes
+ * and CDK provisioning agree on attribute names. Composite sk indexes
+ * (sk.length > 1) get a dedicated STRING `{indexName}Sk` attribute; single-field
+ * sk indexes reference the field directly (STRING in the general case, NUMBER
+ * for the legacy `sequence` name).
  */
 function indexesToGsi(
   indexes: IndexDefinition[],
 ): dynamodb.GlobalSecondaryIndexPropsV2[] {
   return indexes.map((index) => {
-    // Generate index name from pk fields if not provided
-    const indexName = index.name ?? generateIndexName(index.pk);
+    const { pk, sk } = getGsiAttributeNames(index);
 
-    // Sort key defaults to ["sequence"] if not provided
-    const skFields = index.sk ?? DEFAULT_SORT_KEY;
+    let sortKey: dynamodb.Attribute | undefined;
+    if (sk) {
+      if (sk === "sequence") {
+        sortKey = { name: "sequence", type: dynamodb.AttributeType.NUMBER };
+      } else {
+        sortKey = { name: sk, type: dynamodb.AttributeType.STRING };
+      }
+    }
 
     return {
-      indexName,
+      indexName: pk,
       partitionKey: {
-        name: indexName,
+        name: pk,
         type: dynamodb.AttributeType.STRING,
       },
       projectionType: dynamodb.ProjectionType.ALL,
-      sortKey:
-        skFields.length === 1 && skFields[0] === "sequence"
-          ? { name: "sequence", type: dynamodb.AttributeType.NUMBER }
-          : {
-              name: skFields.join(SEPARATOR),
-              type: dynamodb.AttributeType.STRING,
-            },
+      ...(sortKey && { sortKey }),
     };
   });
 }
@@ -70,25 +63,23 @@ export interface JaypieDynamoDbProps extends Omit<
   /**
    * Configure GSIs for the table using @jaypie/fabric IndexDefinition format.
    * - `undefined`: No GSIs (default)
-   * - Array of IndexDefinition: Use the specified indexes
+   * - Array of IndexDefinition: Use the specified indexes (prefer fabricIndex())
    *
    * @example
    * // No GSIs (default)
    * new JaypieDynamoDb(this, "myTable");
    *
    * @example
-   * // With custom indexes
+   * // With fabricIndex-shaped indexes
+   * import { fabricIndex } from "@jaypie/fabric";
    * new JaypieDynamoDb(this, "myTable", {
-   *   indexes: [
-   *     { pk: ["scope", "model"], sk: ["sequence"] },
-   *     { pk: ["scope", "model", "type"], sk: ["sequence"], sparse: true },
-   *   ],
+   *   indexes: [fabricIndex(), fabricIndex("alias"), fabricIndex("xid")],
    * });
    */
   indexes?: IndexDefinition[];
   /**
    * Partition key attribute definition.
-   * @default { name: "model", type: AttributeType.STRING }
+   * @default { name: "id", type: AttributeType.STRING }
    */
   partitionKey?: dynamodb.Attribute;
   /**
@@ -104,8 +95,8 @@ export interface JaypieDynamoDbProps extends Omit<
    */
   service?: string;
   /**
-   * Sort key attribute definition.
-   * @default { name: "id", type: AttributeType.STRING }
+   * Sort key attribute definition. Defaults to `undefined` (no sort key) —
+   * the Jaypie single-table pattern uses `id` as a unique partition key.
    */
   sortKey?: dynamodb.Attribute;
   /**
@@ -123,8 +114,7 @@ export interface JaypieDynamoDbProps extends Omit<
  * DynamoDB table with Jaypie single-table design patterns.
  *
  * Creates a table with:
- * - Partition key: `model` (String)
- * - Sort key: `id` (String)
+ * - Partition key: `id` (String), no sort key
  * - Billing: PAY_PER_REQUEST (on-demand)
  * - Removal policy: RETAIN in production, DESTROY otherwise
  * - No GSIs by default (use `indexes` prop to add them)
@@ -135,13 +125,11 @@ export interface JaypieDynamoDbProps extends Omit<
  * const table = new JaypieDynamoDb(this, "myApp");
  *
  * @example
- * // With explicit table name (overrides CDK-generated name)
+ * // With fabricIndex() for GSIs
+ * import { fabricIndex } from "@jaypie/fabric";
  * const table = new JaypieDynamoDb(this, "MyTable", {
  *   tableName: "custom-table-name",
- *   indexes: [
- *     { pk: ["scope", "model"] },
- *     { pk: ["scope", "model", "type"], sparse: true },
- *   ],
+ *   indexes: [fabricIndex(), fabricIndex("alias"), fabricIndex("xid")],
  * });
  */
 export class JaypieDynamoDb extends Construct implements dynamodb.ITableV2 {
@@ -160,7 +148,7 @@ export class JaypieDynamoDb extends Construct implements dynamodb.ITableV2 {
       billing = dynamodb.Billing.onDemand(),
       indexes,
       partitionKey = {
-        name: "model",
+        name: "id",
         type: dynamodb.AttributeType.STRING,
       },
       project,
@@ -169,7 +157,7 @@ export class JaypieDynamoDb extends Construct implements dynamodb.ITableV2 {
         : RemovalPolicy.DESTROY,
       roleTag = CDK.ROLE.STORAGE,
       service,
-      sortKey = { name: "id", type: dynamodb.AttributeType.STRING },
+      sortKey,
       vendorTag,
       ...restProps
     } = props;
@@ -182,7 +170,7 @@ export class JaypieDynamoDb extends Construct implements dynamodb.ITableV2 {
       globalSecondaryIndexes,
       partitionKey,
       removalPolicy,
-      sortKey,
+      ...(sortKey && { sortKey }),
       ...restProps,
     });
 

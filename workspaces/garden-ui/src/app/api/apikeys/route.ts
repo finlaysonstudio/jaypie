@@ -104,7 +104,6 @@ export async function POST(request: Request): Promise<Response> {
         name: keyName,
         permissions: keyPermissions,
         scope: APEX,
-        sequence: Date.now(),
         updatedAt: now,
         xid: auth.sub,
       } as import("@jaypie/dynamodb").StorableEntity & { garden?: string; permissions: string[] },

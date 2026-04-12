@@ -6,7 +6,7 @@ Jaypie modeling framework - provides type conversion and service handler pattern
 
 | Attribute | Value |
 |-----------|-------|
-| Status | Initial development (0.2.4) |
+| Status | Initial development (0.3.0) |
 | Type | Utility library |
 | Dependencies | `@jaypie/errors` |
 | Peer Dependencies | `@jaypie/aws` (optional), `@jaypie/dynamodb` (optional), `@jaypie/lambda` (optional), `@modelcontextprotocol/sdk` (optional), `commander` (optional), `express` (optional) |
@@ -254,14 +254,21 @@ Located in `src/index/`. Utilities for DynamoDB single-table design patterns:
 
 | Function | Purpose |
 |----------|---------|
-| `registerModel({ model, indexes })` | Register custom indexes for a model |
-| `getModelIndexes(model)` | Get indexes for a model (custom or `DEFAULT_INDEXES`) |
+| `fabricIndex(field?)` | Factory for index definitions. No arg = `indexModel` (pk=["model"]). With field = `indexModel{Field}` (pk=["model", field], sparse). All indexes get sk=["scope","updatedAt"]. |
+| `registerModel({ model, indexes })` | Register index definitions for a model |
+| `getModelIndexes(model)` | Get indexes for a model. Throws `ConfigurationError` if model is not registered. |
+| `getModelSchema(model)` | Get the full model schema or undefined |
+| `getRegisteredModels()` | List all registered model names |
+| `isModelRegistered(model)` | Check if a model is registered |
 | `clearRegistry()` | Clear all registered models (for testing) |
-| `getAllRegisteredIndexes()` | Get all registered custom indexes |
-| `populateIndexKeys(entity, indexes, suffix?)` | Populate GSI keys on an entity |
+| `getAllRegisteredIndexes()` | Get all unique indexes across all registered models |
+| `populateIndexKeys(entity, indexes, suffix?)` | Populate GSI pk attrs on entity. When `sk.length > 1`, also writes a composite sk attr named `{indexName}Sk`. |
+| `getGsiAttributeNames(index)` | Returns `{ pk, sk }` attribute names for an index definition. Single source of truth for GSI provisioning. |
 | `buildCompositeKey(entity, fields, suffix?)` | Build composite key from entity fields |
+| `tryBuildCompositeKey(entity, fields, suffix?)` | Like buildCompositeKey but returns undefined if fields missing |
 | `calculateScope(parent?)` | Calculate scope |
-| `DEFAULT_INDEXES` | Standard GSI definitions (deprecated, removal targeted for 0.3.0) |
+| `calculateIndexSuffix(model)` | Returns suffix string based on archived/deleted state |
+| `generateIndexName(pk)` | Generate an index name from pk fields |
 
 ### Types
 
@@ -356,7 +363,7 @@ Located in `models/base.ts`:
 
 | Type | Description |
 |------|-------------|
-| `FabricModel` | Base type for all models with id, model (required) and optional name, category, type, content |
+| `FabricModel` | Base type for all models with id, model, createdAt, updatedAt (required) and optional name, scope, category, type, content, alias, xid, etc. No `sequence` field. |
 | `FabricModelInput` | Input for creating models (omits auto-generated fields) |
 | `FabricModelUpdate` | Partial input for updating models |
 | `FabricModelFilter` | Filter options for listing models |
@@ -390,14 +397,14 @@ export type { ServiceMeta, ServiceSuite, ServiceSuiteConfig } from "./ServiceSui
 export { FabricModel, FabricJob, FabricMessage, Progress } from "./models/base.js";
 
 // Index Utilities
-export { buildCompositeKey, calculateScope, clearRegistry, DEFAULT_INDEXES, getAllRegisteredIndexes, getModelIndexes, populateIndexKeys, registerModel } from "./index/index.js";
+export { buildCompositeKey, calculateIndexSuffix, calculateScope, clearRegistry, fabricIndex, generateIndexName, getAllRegisteredIndexes, getGsiAttributeNames, getModelIndexes, getModelSchema, getRegisteredModels, isModelRegistered, populateIndexKeys, registerModel, tryBuildCompositeKey } from "./index/index.js";
 
 // Constants
 export { APEX, ARCHIVED_SUFFIX, DELETED_SUFFIX, SEPARATOR } from "./constants.js";
 
 // Types
 export type { ConversionType, InputFieldDefinition, Message, MessageLevel, Service, ServiceConfig, ServiceContext, ServiceFunction, ValidateFunction } from "./types.js";
-export type { IndexableModel, IndexDefinition } from "./index/index.js";
+export type { IndexableModel, IndexDefinition, IndexField, ModelSchema } from "./index/index.js";
 
 // Version
 export const FABRIC_VERSION: string;

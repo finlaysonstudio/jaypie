@@ -23,6 +23,11 @@ describe("isValidAlias", () => {
       expect(isValidAlias("my-skill_123")).toBe(true);
     });
 
+    it("accepts colon-namespaced aliases for layered stores", () => {
+      expect(isValidAlias("local:aws")).toBe(true);
+      expect(isValidAlias("jaypie:my-skill")).toBe(true);
+    });
+
     it("normalizes before validation", () => {
       expect(isValidAlias("AWS")).toBe(true);
       expect(isValidAlias("  skill  ")).toBe(true);

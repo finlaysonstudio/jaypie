@@ -37,6 +37,12 @@ export interface BaseQueryOptions {
   deleted?: boolean;
   /** Maximum number of items to return */
   limit?: number;
+  /**
+   * Optional scope narrower. Passing a scope restricts the query via
+   * `begins_with` on the GSI sort key (scope + updatedAt). Omitting it
+   * lists every entity of the model across scopes.
+   */
+  scope?: string;
   /** Pagination cursor from previous query */
   startKey?: Record<string, unknown>;
 }
@@ -47,24 +53,16 @@ export interface BaseQueryOptions {
 export interface QueryByScopeParams extends BaseQueryOptions {
   /** The entity model name */
   model: string;
-  /** The scope (APEX or "{parent.model}#{parent.id}") */
-  scope: string;
 }
 
 /**
  * Parameters for queryByAlias
  */
-export interface QueryByAliasParams {
+export interface QueryByAliasParams extends BaseQueryOptions {
   /** The human-friendly alias */
   alias: string;
-  /** Query archived entities instead of active ones */
-  archived?: boolean;
-  /** Query deleted entities instead of active ones */
-  deleted?: boolean;
   /** The entity model name */
   model: string;
-  /** The scope */
-  scope: string;
 }
 
 /**
@@ -75,8 +73,6 @@ export interface QueryByCategoryParams extends BaseQueryOptions {
   category: string;
   /** The entity model name */
   model: string;
-  /** The scope */
-  scope: string;
 }
 
 /**
@@ -85,8 +81,6 @@ export interface QueryByCategoryParams extends BaseQueryOptions {
 export interface QueryByTypeParams extends BaseQueryOptions {
   /** The entity model name */
   model: string;
-  /** The scope */
-  scope: string;
   /** The type classification */
   type: string;
 }
@@ -94,15 +88,9 @@ export interface QueryByTypeParams extends BaseQueryOptions {
 /**
  * Parameters for queryByXid
  */
-export interface QueryByXidParams {
-  /** Query archived entities instead of active ones */
-  archived?: boolean;
-  /** Query deleted entities instead of active ones */
-  deleted?: boolean;
+export interface QueryByXidParams extends BaseQueryOptions {
   /** The entity model name */
   model: string;
-  /** The scope */
-  scope: string;
   /** The external ID */
   xid: string;
 }
@@ -118,49 +106,40 @@ export interface QueryResult<T = StorableEntity> {
 }
 
 /**
- * Entity with required fields for DynamoDB storage.
+ * Entity stored in DynamoDB.
  *
- * Extends FabricModel from @jaypie/fabric with:
- * - Required storage fields (id, model, name, scope, sequence)
- * - String timestamps (DynamoDB uses ISO 8601 strings, not Date objects)
- * - GSI index keys (auto-populated by indexEntity)
+ * Primary key is `id` only (no sort key). `model` and `scope` are regular
+ * attributes; GSI attribute values (e.g., `indexModel`, `indexModelAlias`,
+ * `indexModelSk`) are auto-populated by `indexEntity` on every write.
+ *
+ * `createdAt` and `updatedAt` are both ISO 8601 strings. `updatedAt` is
+ * managed by `indexEntity` on every write; callers never set it manually.
  */
 export interface StorableEntity extends Omit<
   FabricModel,
   "archivedAt" | "createdAt" | "deletedAt" | "updatedAt"
 > {
-  // Primary Key
-  /** Partition key (e.g., "record", "message") */
-  model: string;
-  /** Sort key (UUID) */
+  /** Primary key (UUID) */
   id: string;
-
-  // Required fields
+  /** Entity model name (e.g., "record", "message") */
+  model: string;
   /** Human-readable name */
-  name: string;
+  name?: string;
   /** Scope: APEX ("@") or "{parent.model}#{parent.id}" */
   scope: string;
-  /** Timestamp for chronological ordering (Date.now()) */
-  sequence: number;
 
-  // GSI Keys (auto-populated by indexEntity)
-  indexAlias?: string;
-  indexCategory?: string;
-  indexScope?: string;
-  indexType?: string;
-  indexXid?: string;
-
-  // Timestamps (ISO 8601 strings - DynamoDB doesn't store Date objects)
-  createdAt: string;
-  updatedAt: string;
-  /** Archive timestamp (for inactive but preserved records) */
+  /** Creation timestamp (ISO 8601). Backfilled by indexEntity if missing. */
+  createdAt?: string;
+  /** Last-write timestamp (ISO 8601). Managed by indexEntity on every write. */
+  updatedAt?: string;
+  /** Archive timestamp — presence drives #archived suffix on GSI pk */
   archivedAt?: string;
-  /** Soft-delete timestamp */
+  /** Soft-delete timestamp — presence drives #deleted suffix on GSI pk */
   deletedAt?: string;
 
   // Extensible — DynamoDB entities may carry additional fields
   /** Application-specific state flags */
   state?: Record<string, unknown>;
-  /** Allow additional properties for downstream entity extensions */
+  /** Allow additional properties (including dynamically named GSI attrs) */
   [key: string]: unknown;
 }

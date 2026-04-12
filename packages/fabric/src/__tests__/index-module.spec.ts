@@ -10,17 +10,16 @@ import {
   calculateIndexSuffix,
   calculateScope,
   clearRegistry,
-  DEFAULT_INDEXES,
   DELETED_SUFFIX,
   generateIndexName,
   getAllRegisteredIndexes,
+  getGsiAttributeNames,
   getModelIndexes,
   getModelSchema,
   getRegisteredModels,
   isModelRegistered,
   populateIndexKeys,
   registerModel,
-  SEPARATOR,
   tryBuildCompositeKey,
 } from "../index.js";
 import type { IndexDefinition, ModelSchema } from "../index.js";
@@ -216,6 +215,104 @@ describe("populateIndexKeys", () => {
     const result = populateIndexKeys(entity, indexes, "#custom");
     expect(result.indexScope).toBe("@#record#custom");
   });
+
+  it("writes composite sk attribute when sk.length > 1", () => {
+    const entity = {
+      model: "record",
+      scope: "chat#abc-123",
+      updatedAt: "2026-04-11T12:00:00.000Z",
+    };
+    const indexes: IndexDefinition[] = [
+      {
+        name: "indexModel",
+        pk: ["model"],
+        sk: ["scope", "updatedAt"],
+      },
+    ];
+
+    const result = populateIndexKeys(entity, indexes);
+    expect(result.indexModel).toBe("record");
+    expect((result as Record<string, unknown>).indexModelSk).toBe(
+      "chat#abc-123#2026-04-11T12:00:00.000Z",
+    );
+  });
+
+  it("keeps suffix on pk only, not on composite sk", () => {
+    const entity = {
+      model: "record",
+      scope: "@",
+      updatedAt: "2026-04-11T12:00:00.000Z",
+      deletedAt: "2026-04-11T12:00:00.000Z",
+    };
+    const indexes: IndexDefinition[] = [
+      {
+        name: "indexModel",
+        pk: ["model"],
+        sk: ["scope", "updatedAt"],
+      },
+    ];
+
+    const result = populateIndexKeys(entity, indexes);
+    expect(result.indexModel).toBe("record#deleted");
+    expect((result as Record<string, unknown>).indexModelSk).toBe(
+      "@#2026-04-11T12:00:00.000Z",
+    );
+  });
+
+  it("skips sparse composite sk when a field is missing", () => {
+    const entity = {
+      model: "record",
+      scope: "@",
+      // updatedAt missing
+    };
+    const indexes: IndexDefinition[] = [
+      {
+        name: "indexModel",
+        pk: ["model"],
+        sk: ["scope", "updatedAt"],
+      },
+    ];
+
+    const result = populateIndexKeys(entity, indexes);
+    expect(result.indexModel).toBe("record");
+    expect((result as Record<string, unknown>).indexModelSk).toBeUndefined();
+  });
+});
+
+describe("getGsiAttributeNames", () => {
+  it("returns pk=name and sk=single-field name when sk.length === 1", () => {
+    const attrs = getGsiAttributeNames({
+      name: "indexScope",
+      pk: ["scope", "model"],
+      sk: ["sequence"],
+    });
+    expect(attrs).toEqual({ pk: "indexScope", sk: "sequence" });
+  });
+
+  it("returns composite sk attribute name when sk.length > 1", () => {
+    const attrs = getGsiAttributeNames({
+      name: "indexModel",
+      pk: ["model"],
+      sk: ["scope", "updatedAt"],
+    });
+    expect(attrs).toEqual({ pk: "indexModel", sk: "indexModelSk" });
+  });
+
+  it("returns sk=undefined when no sk defined", () => {
+    const attrs = getGsiAttributeNames({
+      name: "indexModel",
+      pk: ["model"],
+    });
+    expect(attrs).toEqual({ pk: "indexModel", sk: undefined });
+  });
+
+  it("derives index name from pk fields when no name given", () => {
+    const attrs = getGsiAttributeNames({
+      pk: ["model", "alias"],
+      sk: ["scope", "updatedAt"],
+    });
+    expect(attrs).toEqual({ pk: "indexModelAlias", sk: "indexModelAliasSk" });
+  });
 });
 
 // =============================================================================
@@ -256,9 +353,10 @@ describe("Model Registry", () => {
   });
 
   describe("getModelIndexes", () => {
-    it("returns DEFAULT_INDEXES for unregistered model", () => {
-      const indexes = getModelIndexes("unknown");
-      expect(indexes).toEqual(DEFAULT_INDEXES);
+    it("throws ConfigurationError for unregistered model", () => {
+      expect(() => getModelIndexes("unknown")).toThrow(
+        /Model "unknown" is not registered/,
+      );
     });
 
     it("returns custom indexes for registered model", () => {
@@ -271,10 +369,10 @@ describe("Model Registry", () => {
       expect(indexes).toEqual(customIndexes);
     });
 
-    it("returns DEFAULT_INDEXES when model has no custom indexes", () => {
+    it("returns empty array when model registered without indexes", () => {
       registerModel({ model: "simple" });
       const indexes = getModelIndexes("simple");
-      expect(indexes).toEqual(DEFAULT_INDEXES);
+      expect(indexes).toEqual([]);
     });
   });
 

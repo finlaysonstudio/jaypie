@@ -18,10 +18,10 @@
   },
   "dependencies": {
     "@codegenie/serverless-express": "^4.17.1",
-    "@jaypie/dynamodb": "^0.4.1",
+    "@jaypie/dynamodb": "^0.5.0",
     "@jaypie/errors": "^1.2.1",
     "@jaypie/garden-models": "^0.1.0",
-    "@jaypie/tildeskill": "^0.2.0",
+    "@jaypie/tildeskill": "^0.3.0",
     "@modelcontextprotocol/sdk": "^1.27.1",
     "express": "^4.22.1",
     "jaypie": "^1.2.23"

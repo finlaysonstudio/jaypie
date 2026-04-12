@@ -2,35 +2,15 @@ import { describe, expect, it, beforeEach, afterEach } from "vitest";
 import { Stack, RemovalPolicy } from "aws-cdk-lib";
 import { Template } from "aws-cdk-lib/assertions";
 import * as dynamodb from "aws-cdk-lib/aws-dynamodb";
-import type { IndexDefinition } from "@jaypie/fabric";
+import { fabricIndex } from "@jaypie/fabric";
 import { JaypieDynamoDb } from "../JaypieDynamoDb.js";
 
-const STANDARD_INDEXES: IndexDefinition[] = [
-  { name: "indexScope", pk: ["scope", "model"], sk: ["sequence"] },
-  {
-    name: "indexAlias",
-    pk: ["scope", "model", "alias"],
-    sk: ["sequence"],
-    sparse: true,
-  },
-  {
-    name: "indexCategory",
-    pk: ["scope", "model", "category"],
-    sk: ["sequence"],
-    sparse: true,
-  },
-  {
-    name: "indexType",
-    pk: ["scope", "model", "type"],
-    sk: ["sequence"],
-    sparse: true,
-  },
-  {
-    name: "indexXid",
-    pk: ["scope", "model", "xid"],
-    sk: ["sequence"],
-    sparse: true,
-  },
+const STANDARD_INDEXES = [
+  fabricIndex(),
+  fabricIndex("alias"),
+  fabricIndex("category"),
+  fabricIndex("type"),
+  fabricIndex("xid"),
 ];
 
 describe("JaypieDynamoDb", () => {
@@ -62,48 +42,40 @@ describe("JaypieDynamoDb", () => {
   });
 
   describe("Default Configuration", () => {
-    it("uses model as partition key by default", () => {
+    it("uses id as partition key by default", () => {
       const stack = new Stack();
-      new JaypieDynamoDb(stack, "TestTable", {
-        tableName: "test-table",
-      });
+      new JaypieDynamoDb(stack, "TestTable", { tableName: "test-table" });
       const template = Template.fromStack(stack);
 
-      // TableV2 creates a GlobalTable in CloudFormation
       const tables = template.findResources("AWS::DynamoDB::GlobalTable");
       const tableResource = Object.values(tables)[0];
       expect(tableResource).toBeDefined();
 
-      // Check key schema
       const keySchema = tableResource?.Properties?.KeySchema;
       expect(keySchema).toContainEqual({
-        AttributeName: "model",
+        AttributeName: "id",
         KeyType: "HASH",
       });
     });
 
-    it("uses id as sort key by default", () => {
+    it("has no sort key by default", () => {
       const stack = new Stack();
-      new JaypieDynamoDb(stack, "TestTable", {
-        tableName: "test-table",
-      });
+      new JaypieDynamoDb(stack, "TestTable", { tableName: "test-table" });
       const template = Template.fromStack(stack);
 
       const tables = template.findResources("AWS::DynamoDB::GlobalTable");
       const tableResource = Object.values(tables)[0];
 
       const keySchema = tableResource?.Properties?.KeySchema;
-      expect(keySchema).toContainEqual({
-        AttributeName: "id",
-        KeyType: "RANGE",
-      });
+      const rangeKey = keySchema?.find(
+        (k: { KeyType: string }) => k.KeyType === "RANGE",
+      );
+      expect(rangeKey).toBeUndefined();
     });
 
     it("uses PAY_PER_REQUEST billing mode by default", () => {
       const stack = new Stack();
-      new JaypieDynamoDb(stack, "TestTable", {
-        tableName: "test-table",
-      });
+      new JaypieDynamoDb(stack, "TestTable", { tableName: "test-table" });
       const template = Template.fromStack(stack);
 
       const tables = template.findResources("AWS::DynamoDB::GlobalTable");
@@ -114,9 +86,7 @@ describe("JaypieDynamoDb", () => {
 
     it("creates no GSIs by default", () => {
       const stack = new Stack();
-      new JaypieDynamoDb(stack, "TestTable", {
-        tableName: "test-table",
-      });
+      new JaypieDynamoDb(stack, "TestTable", { tableName: "test-table" });
       const template = Template.fromStack(stack);
 
       const tables = template.findResources("AWS::DynamoDB::GlobalTable");
@@ -124,9 +94,6 @@ describe("JaypieDynamoDb", () => {
 
       expect(tableResource?.Properties?.GlobalSecondaryIndexes).toBeUndefined();
     });
-
-    // Note: Tag introspection tests removed per CLAUDE.md guidelines
-    // Tags are applied via Tags.of() which is covered by TypeScript compilation
   });
 
   describe("Removal Policy", () => {
@@ -144,9 +111,7 @@ describe("JaypieDynamoDb", () => {
       process.env.PROJECT_ENV = "sandbox";
 
       const stack = new Stack();
-      new JaypieDynamoDb(stack, "TestTable", {
-        tableName: "test-table",
-      });
+      new JaypieDynamoDb(stack, "TestTable", { tableName: "test-table" });
       const template = Template.fromStack(stack);
 
       const tables = template.findResources("AWS::DynamoDB::GlobalTable");
@@ -158,9 +123,7 @@ describe("JaypieDynamoDb", () => {
       process.env.PROJECT_ENV = "production";
 
       const stack = new Stack();
-      new JaypieDynamoDb(stack, "TestTable", {
-        tableName: "test-table",
-      });
+      new JaypieDynamoDb(stack, "TestTable", { tableName: "test-table" });
       const template = Template.fromStack(stack);
 
       const tables = template.findResources("AWS::DynamoDB::GlobalTable");
@@ -185,7 +148,7 @@ describe("JaypieDynamoDb", () => {
   });
 
   describe("GSI Configuration", () => {
-    it("allows creating all default GSIs with STANDARD_INDEXES", () => {
+    it("creates fabricIndex GSIs with model-keyed partition keys", () => {
       const stack = new Stack();
       new JaypieDynamoDb(stack, "TestTable", {
         tableName: "test-table",
@@ -201,11 +164,55 @@ describe("JaypieDynamoDb", () => {
       expect(gsis).toHaveLength(5);
 
       const gsiNames = gsis.map((gsi: { IndexName: string }) => gsi.IndexName);
-      expect(gsiNames).toContain("indexAlias");
-      expect(gsiNames).toContain("indexCategory");
-      expect(gsiNames).toContain("indexScope");
-      expect(gsiNames).toContain("indexType");
-      expect(gsiNames).toContain("indexXid");
+      expect(gsiNames).toContain("indexModel");
+      expect(gsiNames).toContain("indexModelAlias");
+      expect(gsiNames).toContain("indexModelCategory");
+      expect(gsiNames).toContain("indexModelType");
+      expect(gsiNames).toContain("indexModelXid");
+    });
+
+    it("uses composite sk attribute {indexName}Sk for fabricIndex", () => {
+      const stack = new Stack();
+      new JaypieDynamoDb(stack, "TestTable", {
+        tableName: "test-table",
+        indexes: [fabricIndex(), fabricIndex("alias")],
+      });
+      const template = Template.fromStack(stack);
+
+      const tables = template.findResources("AWS::DynamoDB::GlobalTable");
+      const tableResource = Object.values(tables)[0];
+
+      const gsis = tableResource?.Properties?.GlobalSecondaryIndexes;
+      const indexModel = gsis.find(
+        (g: { IndexName: string }) => g.IndexName === "indexModel",
+      );
+      const keySchema = indexModel?.KeySchema;
+      expect(keySchema).toContainEqual({
+        AttributeName: "indexModel",
+        KeyType: "HASH",
+      });
+      expect(keySchema).toContainEqual({
+        AttributeName: "indexModelSk",
+        KeyType: "RANGE",
+      });
+    });
+
+    it("declares composite sk attributes as STRING", () => {
+      const stack = new Stack();
+      new JaypieDynamoDb(stack, "TestTable", {
+        tableName: "test-table",
+        indexes: [fabricIndex()],
+      });
+      const template = Template.fromStack(stack);
+
+      const tables = template.findResources("AWS::DynamoDB::GlobalTable");
+      const tableResource = Object.values(tables)[0];
+
+      const attrs = tableResource?.Properties?.AttributeDefinitions;
+      expect(attrs).toContainEqual({
+        AttributeName: "indexModelSk",
+        AttributeType: "S",
+      });
     });
 
     it("allows disabling GSIs with empty array", () => {
@@ -222,13 +229,11 @@ describe("JaypieDynamoDb", () => {
       expect(tableResource?.Properties?.GlobalSecondaryIndexes).toBeUndefined();
     });
 
-    it("allows selecting specific GSIs from STANDARD_INDEXES", () => {
+    it("allows selecting specific fabricIndex shapes", () => {
       const stack = new Stack();
       new JaypieDynamoDb(stack, "TestTable", {
         tableName: "test-table",
-        indexes: STANDARD_INDEXES.filter(
-          (idx) => idx.name === "indexScope" || idx.name === "indexType",
-        ),
+        indexes: [fabricIndex(), fabricIndex("type")],
       });
       const template = Template.fromStack(stack);
 
@@ -239,19 +244,16 @@ describe("JaypieDynamoDb", () => {
       expect(gsis).toHaveLength(2);
 
       const gsiNames = gsis.map((gsi: { IndexName: string }) => gsi.IndexName);
-      expect(gsiNames).toContain("indexScope");
-      expect(gsiNames).toContain("indexType");
-      expect(gsiNames).not.toContain("indexAlias");
+      expect(gsiNames).toContain("indexModel");
+      expect(gsiNames).toContain("indexModelType");
+      expect(gsiNames).not.toContain("indexModelAlias");
     });
 
-    it("allows custom IndexDefinition format", () => {
+    it("accepts arbitrary field names via fabricIndex", () => {
       const stack = new Stack();
       new JaypieDynamoDb(stack, "TestTable", {
         tableName: "test-table",
-        indexes: [
-          { name: "customIndex", pk: ["scope", "model"], sk: ["sequence"] },
-          { pk: ["scope", "model", "customField"], sk: ["sequence"] },
-        ],
+        indexes: [fabricIndex("taco")],
       });
       const template = Template.fromStack(stack);
 
@@ -259,18 +261,10 @@ describe("JaypieDynamoDb", () => {
       const tableResource = Object.values(tables)[0];
 
       const gsis = tableResource?.Properties?.GlobalSecondaryIndexes;
-      expect(gsis).toHaveLength(2);
-
       const gsiNames = gsis.map((gsi: { IndexName: string }) => gsi.IndexName);
-      expect(gsiNames).toContain("customIndex");
-      // Auto-generated name from pk fields
-      expect(gsiNames).toContain("indexScopeModelCustomField");
+      expect(gsiNames).toContain("indexModelTaco");
     });
   });
-
-  // Note: Tagging tests removed per CLAUDE.md guidelines
-  // "Avoid CDK template introspection in tests"
-  // Tags are applied via Tags.of() which is verified by TypeScript compilation
 
   describe("Custom Configuration", () => {
     it("allows custom partition key", () => {
@@ -294,7 +288,7 @@ describe("JaypieDynamoDb", () => {
       });
     });
 
-    it("allows custom sort key", () => {
+    it("allows an opt-in sort key", () => {
       const stack = new Stack();
       new JaypieDynamoDb(stack, "TestTable", {
         tableName: "test-table",

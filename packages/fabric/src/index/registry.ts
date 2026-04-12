@@ -5,11 +5,9 @@
  * DynamoDB reads from this registry to create GSIs and select indexes for queries.
  */
 
-import {
-  DEFAULT_INDEXES,
-  type IndexDefinition,
-  type ModelSchema,
-} from "./types.js";
+import { ConfigurationError } from "@jaypie/errors";
+
+import { type IndexDefinition, type ModelSchema } from "./types.js";
 
 // =============================================================================
 // Registry
@@ -46,18 +44,18 @@ export function getModelSchema(model: string): ModelSchema | undefined {
 /**
  * Get index definitions for a model
  *
- * Returns the model's custom indexes if registered,
- * otherwise returns DEFAULT_INDEXES.
- *
- * @deprecated The fallback to DEFAULT_INDEXES will be removed in 0.3.0.
- * Register model indexes explicitly with `registerModel()`.
- *
  * @param model - Model name to get indexes for
- * @returns Array of index definitions
+ * @returns Array of index definitions for the model
+ * @throws ConfigurationError if the model is not registered
  */
 export function getModelIndexes(model: string): IndexDefinition[] {
   const schema = MODEL_REGISTRY.get(model);
-  return schema?.indexes ?? DEFAULT_INDEXES;
+  if (!schema) {
+    throw new ConfigurationError(
+      `Model "${model}" is not registered. Call registerModel() before indexing or querying.`,
+    );
+  }
+  return schema.indexes ?? [];
 }
 
 /**

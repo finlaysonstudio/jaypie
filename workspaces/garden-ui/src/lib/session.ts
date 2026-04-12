@@ -45,7 +45,6 @@ async function createSession(): Promise<string> {
     id: randomUUID(),
     model: SESSION_MODEL,
     scope: APEX,
-    sequence: Date.now(),
     updatedAt: now,
   } as SessionEntity;
 

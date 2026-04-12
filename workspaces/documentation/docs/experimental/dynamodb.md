@@ -11,7 +11,7 @@ sidebar_position: 1
 
 ## Overview
 
-`@jaypie/dynamodb` provides single-table DynamoDB utilities with a five-GSI pattern for flexible query access patterns.
+`@jaypie/dynamodb` provides single-table DynamoDB utilities with model-keyed GSIs, hierarchical scoping, and soft delete.
 
 ## Installation
 
@@ -36,9 +36,9 @@ npm install @jaypie/dynamodb
 
 | Function | Purpose |
 |----------|---------|
-| `queryByOu` | Query by organizational unit |
+| `queryByScope` | Query by model, optionally narrowed by scope |
 | `queryByAlias` | Query by alias |
-| `queryByClass` | Query by class |
+| `queryByCategory` | Query by category |
 | `queryByType` | Query by type |
 | `queryByXid` | Query by external ID |
 
@@ -48,7 +48,7 @@ npm install @jaypie/dynamodb
 |----------|---------|
 | `seedEntityIfNotExists` | Seed single entity if not exists |
 | `seedEntities` | Bulk seed with idempotency |
-| `exportEntities` | Export entities by model/ou |
+| `exportEntities` | Export entities by model/scope |
 | `exportEntitiesToJson` | Export as JSON string |
 
 ## StorableEntity Interface
@@ -57,16 +57,23 @@ All entities implement this interface:
 
 ```typescript
 interface StorableEntity {
-  model: string;      // Entity type (e.g., "user", "order")
-  id: string;         // Unique identifier
-  ou: string;         // Organizational unit
-  sequence: number;   // Timestamp for ordering
-  alias?: string;     // Alternative identifier
-  class?: string;     // Classification
-  type?: string;      // Subtype
-  xid?: string;       // External ID
-  deleted?: boolean;  // Soft delete flag
-  archived?: boolean; // Archive flag
+  id: string;           // Primary key (UUID)
+  model: string;        // Entity model name (e.g., "user", "order")
+  scope: string;        // APEX ("@") or "{parent.model}#{parent.id}"
+
+  name?: string;        // Human-readable name
+  alias?: string;       // Human-friendly slug
+  category?: string;    // Category for filtering
+  type?: string;        // Type for filtering
+  xid?: string;         // External ID
+
+  createdAt?: string;   // Backfilled by indexEntity
+  updatedAt?: string;   // Managed by indexEntity on every write
+  archivedAt?: string;  // Set by archiveEntity
+  deletedAt?: string;   // Set by deleteEntity
+
+  state?: Record<string, unknown>;
+  [key: string]: unknown;
 }
 ```
 
@@ -76,32 +83,36 @@ interface StorableEntity {
 
 | Attribute | Type | Description |
 |-----------|------|-------------|
-| `model` | PK | Entity type |
-| `id` | SK | Unique ID |
+| `id` | PK | UUID — sole primary key (no sort key) |
 
 ### GSI Pattern
 
-| GSI | PK | SK | Purpose |
-|-----|----|----|---------|
-| GSI-OU | `ou` | `sequence` | Hierarchical queries |
-| GSI-Alias | `alias` | `model` | Lookup by alias |
-| GSI-Class | `class` | `sequence` | Classification queries |
-| GSI-Type | `type` | `sequence` | Type queries |
-| GSI-XID | `xid` | `model` | External ID lookup |
+GSIs are defined using `fabricIndex()` from `@jaypie/fabric`. All GSIs use a composite sort key of `scope#updatedAt`.
+
+| GSI Name | PK Pattern | SK Attribute | Purpose |
+|----------|-----------|--------------|---------|
+| `indexModel` | `{model}` | `indexModelSk` = `{scope}#{updatedAt}` | List by model |
+| `indexModelAlias` | `{model}#{alias}` (sparse) | `indexModelAliasSk` | Slug lookup |
+| `indexModelCategory` | `{model}#{category}` (sparse) | `indexModelCategorySk` | Category filter |
+| `indexModelType` | `{model}#{type}` (sparse) | `indexModelTypeSk` | Type filter |
+| `indexModelXid` | `{model}#{xid}` (sparse) | `indexModelXidSk` | External ID lookup |
 
 ## Entity Operations
 
 ### Create Entity
 
 ```typescript
-import { putEntity } from "@jaypie/dynamodb";
+import { APEX, putEntity } from "@jaypie/dynamodb";
 
+// indexEntity auto-populates GSI keys, createdAt, updatedAt
 const user = await putEntity({
-  model: "user",
-  id: uuid(),
-  ou: "@",  // Root organizational unit
-  name: "Alice",
-  email: "alice@example.com",
+  entity: {
+    model: "user",
+    id: crypto.randomUUID(),
+    scope: APEX,
+    name: "Alice",
+    email: "alice@example.com",
+  },
 });
 ```
 
@@ -110,10 +121,8 @@ const user = await putEntity({
 ```typescript
 import { getEntity } from "@jaypie/dynamodb";
 
-const user = await getEntity({
-  model: "user",
-  id: "user-123",
-});
+// Primary key is id only
+const user = await getEntity({ id: "user-123" });
 ```
 
 ### Update Entity
@@ -122,11 +131,7 @@ const user = await getEntity({
 import { updateEntity } from "@jaypie/dynamodb";
 
 const updated = await updateEntity({
-  model: "user",
-  id: "user-123",
-  updates: {
-    name: "Alice Smith",
-  },
+  entity: { ...user, name: "Alice Smith" },
 });
 ```
 
@@ -135,11 +140,8 @@ const updated = await updateEntity({
 ```typescript
 import { deleteEntity } from "@jaypie/dynamodb";
 
-await deleteEntity({
-  model: "user",
-  id: "user-123",
-});
-// Sets deleted: true, excluded from queries
+await deleteEntity({ id: "user-123" });
+// Sets deletedAt, re-indexes with #deleted suffix on GSI pk
 ```
 
 ### Hard Delete
@@ -147,31 +149,34 @@ await deleteEntity({
 ```typescript
 import { destroyEntity } from "@jaypie/dynamodb";
 
-await destroyEntity({
-  model: "user",
-  id: "user-123",
-});
+await destroyEntity({ id: "user-123" });
 // Permanently removes entity
 ```
 
 ## Query Patterns
 
-### Query by Organizational Unit
+### Query by Model and Scope
 
 ```typescript
-import { queryByOu } from "@jaypie/dynamodb";
+import { APEX, queryByScope } from "@jaypie/dynamodb";
 
-// Get all entities in root
-const rootEntities = await queryByOu({ ou: "@" });
+// Get all entities of a model at root scope
+const { items } = await queryByScope({ model: "user", scope: APEX });
 
-// Get entities under parent
-const childEntities = await queryByOu({ ou: "user#user-123" });
+// Scope is optional — omit to query across all scopes
+const { items: allUsers } = await queryByScope({ model: "user" });
+
+// Get entities under a parent
+const { items: childEntities } = await queryByScope({
+  model: "order",
+  scope: "user#user-123",
+});
 ```
 
 ### Hierarchical Structure
 
 ```
-@                          # Root OU
+@                          # Root scope (APEX)
 ├── user#alice-123         # User's items
 │   ├── order#order-1
 │   └── order#order-2
@@ -184,23 +189,26 @@ const childEntities = await queryByOu({ ou: "user#user-123" });
 ```typescript
 import { queryByType } from "@jaypie/dynamodb";
 
-const premiumUsers = await queryByType({
-  type: "premium",
+// Requires fabricIndex("type") registered for the model
+const { items } = await queryByType({
   model: "user",
+  type: "premium",
 });
 ```
 
 ### Pagination
 
 ```typescript
-const { items, lastEvaluatedKey } = await queryByOu({
-  ou: "@",
+const { items, lastEvaluatedKey } = await queryByScope({
+  model: "user",
+  scope: APEX,
   limit: 10,
 });
 
 // Next page
-const nextPage = await queryByOu({
-  ou: "@",
+const nextPage = await queryByScope({
+  model: "user",
+  scope: APEX,
   limit: 10,
   startKey: lastEvaluatedKey,
 });
@@ -208,7 +216,7 @@ const nextPage = await queryByOu({
 
 ## Index Entity
 
-Auto-populate GSI attributes:
+Auto-populate GSI attributes and timestamps:
 
 ```typescript
 import { indexEntity } from "@jaypie/dynamodb";
@@ -216,23 +224,31 @@ import { indexEntity } from "@jaypie/dynamodb";
 const entity = {
   model: "user",
   id: "user-123",
+  scope: "@",
   email: "alice@example.com",
   type: "premium",
 };
 
 const indexed = indexEntity(entity);
-// Adds ou, sequence, and GSI keys
+// Sets updatedAt, backfills createdAt, populates indexModel, indexModelSk, etc.
 ```
 
 ## CDK Integration
 
 ```typescript
 import { JaypieDynamoDb } from "@jaypie/constructs";
+import { fabricIndex } from "@jaypie/fabric";
 
-new JaypieDynamoDb(this, "Table", {
-  tableName: "entities",
+// Basic table (no GSIs by default)
+new JaypieDynamoDb(this, "myApp");
+
+// With indexes
+new JaypieDynamoDb(this, "myApp", {
+  indexes: [
+    fabricIndex(),           // indexModel
+    fabricIndex("alias"),    // indexModelAlias (sparse)
+  ],
 });
-// Creates table with 5 GSIs
 ```
 
 ## Seed and Export
@@ -248,14 +264,14 @@ import { APEX, seedEntities, seedEntityIfNotExists } from "@jaypie/dynamodb";
 const created = await seedEntityIfNotExists({
   alias: "config-main",
   model: "config",
-  ou: APEX,
+  scope: APEX,
 });
 // Returns true if created, false if exists
 
 // Bulk seed with idempotency
 const result = await seedEntities([
-  { alias: "en", model: "lang", ou: APEX },
-  { alias: "es", model: "lang", ou: APEX },
+  { alias: "en", model: "lang", scope: APEX },
+  { alias: "es", model: "lang", scope: APEX },
 ]);
 // result.created: ["en", "es"]
 // result.skipped: [] (existing entities)

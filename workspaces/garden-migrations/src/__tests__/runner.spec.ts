@@ -70,7 +70,6 @@ describe("runMigrations", () => {
       model: "migration",
       name: "001-test",
       scope: "@",
-      sequence: 1,
       updatedAt: "",
     });
 
@@ -89,7 +88,6 @@ describe("runMigrations", () => {
       model: "apikey",
       name: "Test Key",
       scope: "@",
-      sequence: 1,
       updatedAt: "",
     };
 

@@ -128,20 +128,6 @@ async function mcpAuthMiddleware(
 // Skill Helpers
 //
 
-function getAlternativeSpellings(alias: string): string[] {
-  const alternatives: string[] = [];
-  if (alias.endsWith("es")) {
-    alternatives.push(alias.slice(0, -1));
-    alternatives.push(alias.slice(0, -2));
-  } else if (alias.endsWith("s")) {
-    alternatives.push(alias.slice(0, -1));
-  } else {
-    alternatives.push(alias + "s");
-    alternatives.push(alias + "es");
-  }
-  return alternatives;
-}
-
 function addAliasToFrontmatter(content: string, matchedAlias: string): string {
   if (content.startsWith("---")) {
     const endIndex = content.indexOf("---", 3);
@@ -213,7 +199,6 @@ async function handleSkillNote({
     model: NOTE_MODEL,
     name: `skill:${alias}`,
     scope,
-    sequence: Date.now(),
     updatedAt: now,
     xid,
   };
@@ -253,19 +238,8 @@ async function handleSkillRequest({
     return `# Index of Skills\n\n${skillList}`;
   }
 
-  let skill = await skillStore.get(normalized);
-  let matchedAlias = normalized;
-
-  if (!skill) {
-    const alternatives = getAlternativeSpellings(normalized);
-    for (const alt of alternatives) {
-      skill = await skillStore.get(alt);
-      if (skill) {
-        matchedAlias = alt;
-        break;
-      }
-    }
-  }
+  const skill = await skillStore.find(normalized);
+  const matchedAlias = skill?.alias ?? normalized;
 
   if (!skill) {
     // No skill found — check for user notes before throwing
@@ -356,7 +330,6 @@ async function handleJournalRequest(params: {
         model: JOURNAL_MODEL,
         name: params.data.name || params.data.content.slice(0, 50),
         scope,
-        sequence: Date.now(),
         updatedAt: now,
       };
       await putEntity({ entity });

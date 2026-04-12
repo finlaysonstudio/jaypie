@@ -11,6 +11,16 @@ export const expandIncludes = createMockFunction(
   async (_store: SkillStore, record: SkillRecord) => record.content,
 );
 export const isValidAlias = createMockReturnedFunction(true);
+export const getAlternativeSpellings = createMockFunction((alias: string) => {
+  const normalized = alias.toLowerCase().trim();
+  if (normalized.endsWith("es")) {
+    return [normalized.slice(0, -1), normalized.slice(0, -2)];
+  }
+  if (normalized.endsWith("s")) {
+    return [normalized.slice(0, -1)];
+  }
+  return [normalized + "s", normalized + "es"];
+});
 export const normalizeAlias = createMockFunction((alias: string) =>
   alias.toLowerCase().trim(),
 );
@@ -28,8 +38,9 @@ export const validateAlias = createMockFunction((alias: string) =>
 // Store factories
 function createMockStore(): SkillStore {
   return {
+    find: createMockResolvedFunction(null),
     get: createMockResolvedFunction(null),
-    getByNickname: createMockResolvedFunction(null),
+    getByNickname: createMockResolvedFunction([] as SkillRecord[]),
     list: createMockResolvedFunction([]),
     put: createMockResolvedFunction({
       alias: "mock",
@@ -39,6 +50,7 @@ function createMockStore(): SkillStore {
   };
 }
 
+export const createLayeredStore = createMockFunction(() => createMockStore());
 export const createMarkdownStore = createMockFunction(() => createMockStore());
 export const createMemoryStore = createMockFunction(
   // eslint-disable-next-line @typescript-eslint/no-unused-vars

@@ -52,6 +52,38 @@ describe("createMemoryStore", () => {
     });
   });
 
+  describe("find", () => {
+    it("returns exact match when present", async () => {
+      const store = createMemoryStore([{ alias: "skill", content: "# Skill" }]);
+      const result = await store.find("skill");
+      expect(result?.alias).toBe("skill");
+    });
+
+    it("falls back to plural alternative spelling", async () => {
+      const store = createMemoryStore([{ alias: "skill", content: "# Skill" }]);
+      const result = await store.find("skills");
+      expect(result?.alias).toBe("skill");
+    });
+
+    it("falls back to singular by stripping es", async () => {
+      const store = createMemoryStore([{ alias: "index", content: "# Index" }]);
+      const result = await store.find("indexes");
+      expect(result?.alias).toBe("index");
+    });
+
+    it("falls back to appended s for singular requests", async () => {
+      const store = createMemoryStore([{ alias: "tests", content: "# Tests" }]);
+      const result = await store.find("test");
+      expect(result?.alias).toBe("tests");
+    });
+
+    it("returns null when no alternative resolves", async () => {
+      const store = createMemoryStore([{ alias: "aws", content: "# AWS" }]);
+      const result = await store.find("lambda");
+      expect(result).toBeNull();
+    });
+  });
+
   describe("list", () => {
     it("returns all skills sorted by alias", async () => {
       const store = createMemoryStore([
@@ -130,7 +162,7 @@ describe("createMemoryStore", () => {
   });
 
   describe("getByNickname", () => {
-    it("finds skill by nickname", async () => {
+    it("returns a single-element array when one skill matches", async () => {
       const store = createMemoryStore([
         {
           alias: "aws",
@@ -139,17 +171,33 @@ describe("createMemoryStore", () => {
         },
       ]);
 
-      const skill = await store.getByNickname("amazon");
-      expect(skill?.alias).toBe("aws");
+      const results = await store.getByNickname("amazon");
+      expect(results).toHaveLength(1);
+      expect(results[0].alias).toBe("aws");
     });
 
-    it("returns null when nickname not found", async () => {
+    it("returns all matching skills when several share a nickname", async () => {
+      const store = createMemoryStore([
+        { alias: "crixus", content: "# Crixus", nicknames: ["sparticus"] },
+        {
+          alias: "spartacus",
+          content: "# Spartacus",
+          nicknames: ["sparticus"],
+        },
+        { alias: "aws", content: "# AWS", nicknames: ["amazon"] },
+      ]);
+
+      const results = await store.getByNickname("sparticus");
+      expect(results.map((r) => r.alias)).toEqual(["crixus", "spartacus"]);
+    });
+
+    it("returns an empty array when nickname not found", async () => {
       const store = createMemoryStore([
         { alias: "aws", content: "# AWS", nicknames: ["amazon"] },
       ]);
 
-      const skill = await store.getByNickname("google");
-      expect(skill).toBeNull();
+      const results = await store.getByNickname("google");
+      expect(results).toEqual([]);
     });
 
     it("normalizes nickname during lookup", async () => {
@@ -157,15 +205,15 @@ describe("createMemoryStore", () => {
         { alias: "aws", content: "# AWS", nicknames: ["amazon"] },
       ]);
 
-      const skill = await store.getByNickname("AMAZON");
-      expect(skill?.alias).toBe("aws");
+      const results = await store.getByNickname("AMAZON");
+      expect(results[0]?.alias).toBe("aws");
     });
 
-    it("returns null for skill without nicknames", async () => {
+    it("returns an empty array for skill without nicknames", async () => {
       const store = createMemoryStore([{ alias: "aws", content: "# AWS" }]);
 
-      const skill = await store.getByNickname("amazon");
-      expect(skill).toBeNull();
+      const results = await store.getByNickname("amazon");
+      expect(results).toEqual([]);
     });
   });
 

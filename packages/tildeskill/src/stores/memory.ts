@@ -1,6 +1,7 @@
 import type { ListFilter, SkillRecord, SkillStore } from "../types";
 
 import { normalizeAlias } from "../core/normalize";
+import { getAlternativeSpellings } from "../core/spellings";
 
 /**
  * Create an in-memory skill store, useful for testing
@@ -17,19 +18,31 @@ export function createMemoryStore(initial?: SkillRecord[]): SkillStore {
   }
 
   return {
+    async find(alias: string): Promise<SkillRecord | null> {
+      const normalized = normalizeAlias(alias);
+      const exact = store.get(normalized);
+      if (exact) return exact;
+      for (const alt of getAlternativeSpellings(normalized)) {
+        const candidate = store.get(alt);
+        if (candidate) return candidate;
+      }
+      return null;
+    },
+
     async get(alias: string): Promise<SkillRecord | null> {
       const normalized = normalizeAlias(alias);
       return store.get(normalized) ?? null;
     },
 
-    async getByNickname(nickname: string): Promise<SkillRecord | null> {
+    async getByNickname(nickname: string): Promise<SkillRecord[]> {
       const normalized = normalizeAlias(nickname);
+      const matches: SkillRecord[] = [];
       for (const record of store.values()) {
         if (record.nicknames?.map(normalizeAlias).includes(normalized)) {
-          return record;
+          matches.push(record);
         }
       }
-      return null;
+      return matches.sort((a, b) => a.alias.localeCompare(b.alias));
     },
 
     async list(filter?: ListFilter): Promise<SkillRecord[]> {
