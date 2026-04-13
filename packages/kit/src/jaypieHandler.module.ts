@@ -124,8 +124,8 @@ const jaypieHandler = (
       } else {
         // otherwise, respond as unhandled
         const err = error as Error;
-        log.fatal("[handler] Caught unhandled error");
-        log.error(`[${err.name}] ${err.message}`);
+        publicLogger.fatal("[handler] Caught unhandled error");
+        publicLogger.error(`[${err.name}] ${err.message}`);
         log.var({
           unhandedError: {
             name: err.name,
@@ -165,8 +165,8 @@ const jaypieHandler = (
       } else {
         // otherwise, respond as unhandled
         const err = error as Error;
-        log.fatal("[handler] Caught unhandled error");
-        log.error(`[${err.name}] ${err.message}`);
+        publicLogger.fatal("[handler] Caught unhandled error");
+        publicLogger.error(`[${err.name}] ${err.message}`);
         log.var({
           unhandedError: {
             name: err.name,

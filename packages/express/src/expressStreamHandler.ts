@@ -428,7 +428,11 @@ function expressStreamHandler(
       );
 
       // Add request data to session report
-      logger.report({ path, status: String(res.statusCode) });
+      logger.report({
+        method: req.method,
+        path,
+        status: String(res.statusCode),
+      });
 
       // Submit metric if Datadog is configured
       if (hasDatadogEnv()) {

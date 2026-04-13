@@ -79,10 +79,14 @@ class JaypieLogger {
       this._logger.error.var(messageObject, messageValue);
     };
 
-    this.fatal = ((...args: any[]) =>
-      this._logger.fatal(...args)) as Logger["fatal"];
-    this.fatal.var = (messageObject: unknown, messageValue?: unknown) =>
+    this.fatal = ((...args: any[]) => {
+      if (this._sessionActive) this._errorCount++;
+      this._logger.fatal(...args);
+    }) as Logger["fatal"];
+    this.fatal.var = (messageObject: unknown, messageValue?: unknown) => {
+      if (this._sessionActive) this._errorCount++;
       this._logger.fatal.var(messageObject, messageValue);
+    };
 
     this.info = ((...args: any[]) =>
       this._logger.info(...args)) as Logger["info"];
@@ -149,6 +153,15 @@ class JaypieLogger {
         this.error.var = (messageObject: unknown, messageValue?: unknown) => {
           if (this._sessionActive) this._errorCount++;
           this._logger.error.var(messageObject, messageValue);
+        };
+      } else if (lvl === "fatal") {
+        this.fatal = ((...args: any[]) => {
+          if (this._sessionActive) this._errorCount++;
+          this._logger.fatal(...args);
+        }) as any;
+        this.fatal.var = (messageObject: unknown, messageValue?: unknown) => {
+          if (this._sessionActive) this._errorCount++;
+          this._logger.fatal.var(messageObject, messageValue);
         };
       } else if (lvl === "warn") {
         this.warn = ((...args: any[]) => {
