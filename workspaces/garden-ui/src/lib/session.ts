@@ -2,7 +2,7 @@ import { createHash, createHmac, randomUUID } from "node:crypto";
 
 import {
   APEX,
-  putEntity,
+  createEntity,
   queryByAlias,
   updateEntity,
 } from "@jaypie/dynamodb";
@@ -48,7 +48,7 @@ async function createSession(): Promise<string> {
     updatedAt: now,
   } as SessionEntity;
 
-  await putEntity({ entity });
+  await createEntity({ entity });
   log.debug("Session created", { hint: token.slice(-4) });
   return token;
 }

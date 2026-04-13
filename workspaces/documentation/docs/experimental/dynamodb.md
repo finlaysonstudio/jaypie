@@ -25,7 +25,7 @@ npm install @jaypie/dynamodb
 
 | Function | Purpose |
 |----------|---------|
-| `putEntity` | Create new entity |
+| `createEntity` | Create new entity (returns `null` if `id` exists) |
 | `getEntity` | Read entity by ID |
 | `updateEntity` | Update entity fields |
 | `deleteEntity` | Soft delete (mark deleted) |
@@ -102,10 +102,10 @@ GSIs are defined using `fabricIndex()` from `@jaypie/fabric`. All GSIs use a com
 ### Create Entity
 
 ```typescript
-import { APEX, putEntity } from "@jaypie/dynamodb";
+import { APEX, createEntity } from "@jaypie/dynamodb";
 
 // indexEntity auto-populates GSI keys, createdAt, updatedAt
-const user = await putEntity({
+const user = await createEntity({
   entity: {
     model: "user",
     id: crypto.randomUUID(),

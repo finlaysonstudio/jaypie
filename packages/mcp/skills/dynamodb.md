@@ -33,7 +33,7 @@ The runtime package provides entity operations, GSI-based queries, key builders,
 import {
   APEX,
   initClient,
-  putEntity,
+  createEntity,
   getEntity,
   deleteEntity,
   queryByScope,
@@ -44,7 +44,7 @@ import {
 Or through the main package:
 
 ```typescript
-import { APEX, initClient, putEntity, queryByScope } from "jaypie";
+import { APEX, initClient, createEntity, queryByScope } from "jaypie";
 ```
 
 ### Client Initialization
@@ -121,10 +121,10 @@ interface StorableEntity {
 ### Entity Operations
 
 ```typescript
-import { APEX, putEntity, getEntity, updateEntity, deleteEntity, archiveEntity, destroyEntity } from "@jaypie/dynamodb";
+import { APEX, createEntity, getEntity, updateEntity, deleteEntity, archiveEntity, destroyEntity } from "@jaypie/dynamodb";
 
 // Create entity — indexEntity auto-populates GSI keys, createdAt, updatedAt
-const record = await putEntity({
+const record = await createEntity({
   entity: {
     model: "record",
     id: crypto.randomUUID(),
@@ -157,7 +157,7 @@ await destroyEntity({ id: "abc-123" });
 
 | Function | Description |
 |----------|-------------|
-| `putEntity({ entity })` | Create or replace (auto-indexes GSI keys, auto-timestamps) |
+| `createEntity({ entity })` | Create entity; returns `null` if `id` exists (conditional `attribute_not_exists(id)`) |
 | `getEntity({ id })` | Get by primary key (id only) |
 | `updateEntity({ entity })` | Update (sets `updatedAt`, re-indexes) |
 | `deleteEntity({ id })` | Soft delete (`deletedAt`, `#deleted` suffix on GSI pk) |
@@ -169,16 +169,16 @@ await destroyEntity({ id: "abc-123" });
 The `scope` field enables parent-child relationships:
 
 ```typescript
-import { APEX, calculateScope, putEntity, queryByScope } from "@jaypie/dynamodb";
+import { APEX, calculateScope, createEntity, queryByScope } from "@jaypie/dynamodb";
 
 // Root-level entity: scope = APEX ("@")
-await putEntity({ entity: { model: "chat", scope: APEX, ... } });
+await createEntity({ entity: { model: "chat", scope: APEX, ... } });
 
 // Child entity: scope = "{parent.model}#{parent.id}"
 const chat = { model: "chat", id: "abc-123" };
 const messageScope = calculateScope(chat); // "chat#abc-123"
 
-await putEntity({
+await createEntity({
   entity: { model: "message", scope: messageScope, ... },
 });
 
@@ -394,7 +394,7 @@ Mock `@jaypie/dynamodb` via testkit. Key builders and `indexEntity` work correct
 import {
   APEX,
   indexEntity,
-  putEntity,
+  createEntity,
   queryByScope,
   seedEntities,
 } from "@jaypie/testkit/mock";

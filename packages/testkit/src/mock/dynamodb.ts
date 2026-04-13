@@ -65,8 +65,8 @@ export const getEntity = createMockFunction<
   (params: { id: string }) => Promise<StorableEntity | null>
 >(async () => null);
 
-export const putEntity = createMockFunction<
-  (params: { entity: StorableEntity }) => Promise<StorableEntity>
+export const createEntity = createMockFunction<
+  (params: { entity: StorableEntity }) => Promise<StorableEntity | null>
 >(async (params: { entity: StorableEntity }) =>
   original.indexEntity(params.entity),
 );

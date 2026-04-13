@@ -57,25 +57,34 @@ export const getEntity = fabricService({
 });
 
 /**
- * Put (create or replace) an entity.
+ * Create an entity. Fails the conditional write if `id` already exists,
+ * returning `null` instead of throwing. Use `updateEntity` to overwrite.
  * `indexEntity` auto-bumps `updatedAt` and backfills `createdAt`.
  */
-export async function putEntity({
+export async function createEntity({
   entity,
 }: {
   entity: StorableEntity;
-}): Promise<StorableEntity> {
+}): Promise<StorableEntity | null> {
   const docClient = getDocClient();
   const tableName = getTableName();
 
   const indexedEntity = indexEntity(entity);
 
   const command = new PutCommand({
+    ConditionExpression: "attribute_not_exists(id)",
     Item: indexedEntity,
     TableName: tableName,
   });
 
-  await docClient.send(command);
+  try {
+    await docClient.send(command);
+  } catch (error) {
+    if ((error as { name?: string })?.name === "ConditionalCheckFailedException") {
+      return null;
+    }
+    throw error;
+  }
   return indexedEntity;
 }
 

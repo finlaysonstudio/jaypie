@@ -18,10 +18,10 @@ export {
 // Entity operations
 export {
   archiveEntity,
+  createEntity,
   deleteEntity,
   destroyEntity,
   getEntity,
-  putEntity,
   transactWriteEntities,
   updateEntity,
 } from "./entities.js";

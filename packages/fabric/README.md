@@ -380,7 +380,7 @@ export const handler = server.handler;
 
 | Operation | HTTP Method | Route | DynamoDB Function |
 |-----------|-------------|-------|-------------------|
-| create | POST | `/{model}` | `putEntity` |
+| create | POST | `/{model}` | `createEntity` |
 | list | GET | `/{model}` | `queryByScope` |
 | read | GET | `/{model}/:id` | `getEntity` |
 | update | POST | `/{model}/:id` | `updateEntity` |
@@ -465,14 +465,14 @@ const services = FabricData({
       alias: "duplicate",
       description: "Create a copy of a record",
       service: async (entity) => {
-        const { putEntity } = await import("@jaypie/dynamodb");
+        const { createEntity } = await import("@jaypie/dynamodb");
         const duplicate = {
           ...entity,
           id: crypto.randomUUID(),
           name: `${entity.name} (Copy)`,
         };
         delete duplicate.alias;
-        return putEntity({ entity: duplicate });
+        return createEntity({ entity: duplicate });
       },
     },
   ],

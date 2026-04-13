@@ -49,7 +49,7 @@ export function calculateScope(parent?: ParentReference): string {
  * - Populates GSI attributes (pk composite and sk composite when applicable)
  *   using the indexes registered for the entity's model.
  *
- * Callers (putEntity, updateEntity, deleteEntity, archiveEntity,
+ * Callers (createEntity, updateEntity, deleteEntity, archiveEntity,
  * transactWriteEntities) go through this one function so `updatedAt` is
  * always fresh and never forgotten.
  *
