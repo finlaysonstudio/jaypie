@@ -1,10 +1,10 @@
 import { loadEnvSecrets } from "@jaypie/aws";
 import {
   calculateScope,
+  createEntity,
   deleteEntity,
   getEntity,
   initClient,
-  putEntity,
   queryByCategory,
   queryByScope,
   queryByXid,
@@ -202,7 +202,7 @@ async function handleSkillNote({
     updatedAt: now,
     xid,
   };
-  await putEntity({ entity });
+  await createEntity({ entity });
   log.trace("Skill note created", { alias, id });
   return { created: id };
 }
@@ -332,7 +332,7 @@ async function handleJournalRequest(params: {
         scope,
         updatedAt: now,
       };
-      await putEntity({ entity });
+      await createEntity({ entity });
       log.trace("Journal entry created", { category, id: entryId });
       return { category, created: entryId, name: entity.name };
     }

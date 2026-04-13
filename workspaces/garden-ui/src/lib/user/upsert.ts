@@ -1,6 +1,6 @@
 import {
   APEX,
-  putEntity,
+  createEntity,
   queryByXid,
   updateEntity,
   type StorableEntity,
@@ -69,7 +69,7 @@ async function upsertUser({
     xid: sub,
   } as UserEntity;
 
-  await putEntity({ entity });
+  await createEntity({ entity });
   log.debug("User created", { email, sub });
   return entity;
 }

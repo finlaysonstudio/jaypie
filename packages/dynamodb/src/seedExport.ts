@@ -1,4 +1,4 @@
-import { putEntity } from "./entities.js";
+import { createEntity, updateEntity } from "./entities.js";
 import { queryByAlias, queryByScope } from "./queries.js";
 import type { StorableEntity } from "./types.js";
 
@@ -69,7 +69,7 @@ export async function seedEntityIfNotExists<T extends Partial<StorableEntity>>(
     ...entity,
   } as StorableEntity;
 
-  await putEntity({ entity: completeEntity });
+  await createEntity({ entity: completeEntity });
   return true;
 }
 
@@ -105,6 +105,7 @@ export async function seedEntities<T extends Partial<StorableEntity>>(
       }
 
       // For entities with alias, check existence
+      let isReplace = false;
       if (entity.alias) {
         const existing = await queryByAlias({
           alias: entity.alias,
@@ -120,6 +121,7 @@ export async function seedEntities<T extends Partial<StorableEntity>>(
         // If replacing, use existing ID to update rather than create new
         if (existing && replace) {
           entity.id = existing.id;
+          isReplace = true;
         }
       }
 
@@ -137,7 +139,11 @@ export async function seedEntities<T extends Partial<StorableEntity>>(
         ...entity,
       } as StorableEntity;
 
-      await putEntity({ entity: completeEntity });
+      if (isReplace) {
+        await updateEntity({ entity: completeEntity });
+      } else {
+        await createEntity({ entity: completeEntity });
+      }
       result.created.push(alias);
     } catch (error) {
       const errorMessage =

@@ -15,7 +15,7 @@ import {
   deleteEntity,
   destroyEntity,
   getEntity,
-  putEntity,
+  createEntity,
   updateEntity,
 } from "../entities.js";
 import type { StorableEntity } from "../types.js";
@@ -81,25 +81,48 @@ describe("Entity Operations", () => {
     });
   });
 
-  describe("putEntity", () => {
+  describe("createEntity", () => {
     it("returns the indexed entity with indexModel populated", async () => {
       const entity = createTestEntity();
-      const result = (await putEntity({ entity })) as StorableEntity & {
+      const result = (await createEntity({ entity })) as StorableEntity & {
         indexModel?: string;
       };
       expect(result.indexModel).toBe("record");
     });
 
+    it("issues PutCommand with attribute_not_exists(id) condition", async () => {
+      await createEntity({ entity: createTestEntity() });
+      const cmd = mockSend.mock.calls[0][0];
+      expect(cmd.input.ConditionExpression).toBe("attribute_not_exists(id)");
+    });
+
+    it("returns null when ConditionalCheckFailedException is thrown", async () => {
+      const err = Object.assign(new Error("conditional check failed"), {
+        name: "ConditionalCheckFailedException",
+      });
+      mockSend.mockRejectedValueOnce(err);
+      const result = await createEntity({ entity: createTestEntity() });
+      expect(result).toBeNull();
+    });
+
+    it("re-throws non-ConditionalCheckFailedException errors", async () => {
+      const err = Object.assign(new Error("boom"), { name: "OtherError" });
+      mockSend.mockRejectedValueOnce(err);
+      await expect(createEntity({ entity: createTestEntity() })).rejects.toThrow(
+        "boom",
+      );
+    });
+
     it("auto-bumps updatedAt and backfills createdAt", async () => {
       const entity = createTestEntity();
-      const result = await putEntity({ entity });
+      const result = await createEntity({ entity });
       expect(result.updatedAt).toBeDefined();
       expect(result.createdAt).toBeDefined();
     });
 
     it("writes via PutCommand", async () => {
       const entity = createTestEntity();
-      await putEntity({ entity });
+      await createEntity({ entity });
       const cmd = mockSend.mock.calls[0][0];
       expect(cmd.input.TableName).toBe("test-table");
       expect(cmd.input.Item.id).toBe(entity.id);
@@ -108,7 +131,7 @@ describe("Entity Operations", () => {
 
     it("auto-populates optional GSI attributes when fields present", async () => {
       const entity = { ...createTestEntity(), alias: "my-alias" };
-      const result = (await putEntity({ entity })) as StorableEntity & {
+      const result = (await createEntity({ entity })) as StorableEntity & {
         indexModel?: string;
         indexModelAlias?: string;
       };
@@ -251,7 +274,7 @@ describe("Entity Operations", () => {
         ...createTestEntity(),
         state: { active: true },
       };
-      const result = await putEntity({ entity });
+      const result = await createEntity({ entity });
       expect(result.state).toEqual({ active: true });
     });
 
@@ -260,7 +283,7 @@ describe("Entity Operations", () => {
         ...createTestEntity(),
         customField: "custom-value",
       };
-      const result = await putEntity({ entity });
+      const result = await createEntity({ entity });
       expect(result.customField).toBe("custom-value");
     });
   });

@@ -38,7 +38,7 @@ export function createCreateService<T extends FabricModel = FabricModel>(
       context?: CreateServiceContext,
     ) => {
       // Dynamically import DynamoDB utilities
-      const { putEntity } = await import("@jaypie/dynamodb");
+      const { createEntity } = await import("@jaypie/dynamodb");
 
       // Calculate scope
       const scopeConfig = globalConfig.scope as
@@ -74,7 +74,7 @@ export function createCreateService<T extends FabricModel = FabricModel>(
       };
 
       // indexEntity on the dynamodb side fills createdAt/updatedAt/GSI attrs.
-      const created = await putEntity({ entity });
+      const created = await createEntity({ entity });
       return created;
     },
   }) as unknown as FabricHttpService;

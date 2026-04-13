@@ -53,8 +53,8 @@ src/
 | Export | Description |
 |--------|-------------|
 | `getEntity({ id })` | Get a single entity by primary key (id only) |
-| `putEntity({ entity })` | Create or replace entity (auto-indexes, auto-timestamps) |
-| `updateEntity({ entity })` | Update entity (auto-indexes, auto-timestamps) |
+| `createEntity({ entity })` | Create entity; returns `null` if `id` already exists (conditional write on `attribute_not_exists(id)`) |
+| `updateEntity({ entity })` | Create or replace entity (auto-indexes, auto-timestamps) |
 | `deleteEntity({ id })` | Soft delete (sets `deletedAt`, re-indexes with `#deleted` suffix) |
 | `archiveEntity({ id })` | Archive (sets `archivedAt`, re-indexes with `#archived` suffix) |
 | `destroyEntity({ id })` | Hard delete (permanently removes) |
@@ -258,10 +258,10 @@ const { items } = await queryByScope({ model: "record", scope: APEX });
 ### Create Entity
 
 ```typescript
-import { APEX, putEntity } from "@jaypie/dynamodb";
+import { APEX, createEntity } from "@jaypie/dynamodb";
 
 // indexEntity auto-populates: createdAt, updatedAt, and all GSI keys
-const record = await putEntity({
+const record = await createEntity({
   entity: {
     model: "record",
     id: crypto.randomUUID(),
@@ -282,12 +282,12 @@ const record = await putEntity({
 ### Hierarchical Entities
 
 ```typescript
-import { calculateScope, putEntity, queryByScope } from "@jaypie/dynamodb";
+import { calculateScope, createEntity, queryByScope } from "@jaypie/dynamodb";
 
 const chat = { model: "chat", id: "abc-123" };
 const messageScope = calculateScope(chat); // "chat#abc-123"
 
-const message = await putEntity({
+const message = await createEntity({
   entity: {
     model: "message",
     id: crypto.randomUUID(),
@@ -421,7 +421,7 @@ import {
   exportEntities,
   exportEntitiesToJson,
   indexEntity,
-  putEntity,
+  createEntity,
   queryByScope,
   seedEntities,
   seedEntityIfNotExists,

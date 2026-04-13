@@ -4,10 +4,10 @@ import { fabricService, type Service } from "@jaypie/fabric";
 
 import {
   archiveEntity,
+  createEntity,
   deleteEntity,
   destroyEntity,
   getEntity,
-  putEntity,
   queryByAlias,
   queryByCategory,
   queryByScope,
@@ -58,13 +58,13 @@ function wrapWithInit(handler: Service<any, any, any>): Service {
 // Note: These wrap the regular async functions to make them work with fabricMcp
 
 /**
- * MCP wrapper for putEntity
+ * MCP wrapper for createEntity
  * Accepts entity JSON directly from LLM
  */
-const mcpPutEntity = fabricService({
-  alias: "dynamodb_put",
+const mcpCreateEntity = fabricService({
+  alias: "dynamodb_create",
   description:
-    "Create or replace an entity in DynamoDB (auto-indexes GSI keys)",
+    "Create an entity in DynamoDB (auto-indexes GSI keys; returns null if id exists)",
   input: {
     // Required entity fields
     id: { type: String, description: "Entity ID (sort key)" },
@@ -100,7 +100,7 @@ const mcpPutEntity = fabricService({
       updatedAt: now,
       xid: input.xid as string | undefined,
     };
-    return putEntity({ entity });
+    return createEntity({ entity });
   },
 });
 
@@ -317,11 +317,11 @@ export function registerDynamoDbTools(
   tools.push("dynamodb_get");
 
   fabricMcp({
-    service: wrapWithInit(mcpPutEntity),
-    name: "dynamodb_put",
+    service: wrapWithInit(mcpCreateEntity),
+    name: "dynamodb_create",
     server,
   });
-  tools.push("dynamodb_put");
+  tools.push("dynamodb_create");
 
   fabricMcp({
     service: wrapWithInit(mcpUpdateEntity),

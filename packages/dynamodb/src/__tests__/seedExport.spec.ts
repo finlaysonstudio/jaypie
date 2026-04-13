@@ -15,7 +15,8 @@ vi.mock("../entities.js", async () => {
   const actual = await vi.importActual("../entities.js");
   return {
     ...actual,
-    putEntity: vi.fn(),
+    createEntity: vi.fn(),
+    updateEntity: vi.fn(),
   };
 });
 
@@ -86,12 +87,12 @@ describe("Seed and Export Utilities", () => {
         scope: "@",
       });
       expect(result).toBe(false);
-      expect(entitiesModule.putEntity).not.toHaveBeenCalled();
+      expect(entitiesModule.createEntity).not.toHaveBeenCalled();
     });
 
     it("creates entity when it does not exist", async () => {
       vi.mocked(queriesModule.queryByAlias).mockResolvedValueOnce(null);
-      vi.mocked(entitiesModule.putEntity).mockResolvedValueOnce(
+      vi.mocked(entitiesModule.createEntity).mockResolvedValueOnce(
         createTestEntity(),
       );
 
@@ -102,12 +103,12 @@ describe("Seed and Export Utilities", () => {
       });
 
       expect(result).toBe(true);
-      expect(entitiesModule.putEntity).toHaveBeenCalledTimes(1);
+      expect(entitiesModule.createEntity).toHaveBeenCalledTimes(1);
     });
 
     it("auto-generates id when missing", async () => {
       vi.mocked(queriesModule.queryByAlias).mockResolvedValueOnce(null);
-      vi.mocked(entitiesModule.putEntity).mockResolvedValueOnce(
+      vi.mocked(entitiesModule.createEntity).mockResolvedValueOnce(
         createTestEntity(),
       );
 
@@ -117,16 +118,16 @@ describe("Seed and Export Utilities", () => {
         scope: "@",
       });
 
-      const callArg = vi.mocked(entitiesModule.putEntity).mock.calls[0][0];
+      const callArg = vi.mocked(entitiesModule.createEntity).mock.calls[0][0];
       expect(callArg.entity.id).toBeDefined();
       expect(callArg.entity.id.length).toBeGreaterThan(0);
     });
 
-    it("delegates timestamp management to putEntity (no manual createdAt)", async () => {
-      // createdAt/updatedAt are now managed by indexEntity inside putEntity —
+    it("delegates timestamp management to createEntity (no manual createdAt)", async () => {
+      // createdAt/updatedAt are now managed by indexEntity inside createEntity —
       // seedEntityIfNotExists no longer sets them.
       vi.mocked(queriesModule.queryByAlias).mockResolvedValueOnce(null);
-      vi.mocked(entitiesModule.putEntity).mockResolvedValueOnce(
+      vi.mocked(entitiesModule.createEntity).mockResolvedValueOnce(
         createTestEntity(),
       );
 
@@ -136,13 +137,13 @@ describe("Seed and Export Utilities", () => {
         scope: "@",
       });
 
-      const callArg = vi.mocked(entitiesModule.putEntity).mock.calls[0][0];
+      const callArg = vi.mocked(entitiesModule.createEntity).mock.calls[0][0];
       expect(callArg.entity.createdAt).toBeUndefined();
     });
 
     it("uses name from alias when name is missing", async () => {
       vi.mocked(queriesModule.queryByAlias).mockResolvedValueOnce(null);
-      vi.mocked(entitiesModule.putEntity).mockResolvedValueOnce(
+      vi.mocked(entitiesModule.createEntity).mockResolvedValueOnce(
         createTestEntity(),
       );
 
@@ -152,7 +153,7 @@ describe("Seed and Export Utilities", () => {
         scope: "@",
       });
 
-      const callArg = vi.mocked(entitiesModule.putEntity).mock.calls[0][0];
+      const callArg = vi.mocked(entitiesModule.createEntity).mock.calls[0][0];
       expect(callArg.entity.name).toBe("my-alias");
     });
   });
@@ -173,7 +174,7 @@ describe("Seed and Export Utilities", () => {
 
     it("creates entities that do not exist", async () => {
       vi.mocked(queriesModule.queryByAlias).mockResolvedValue(null);
-      vi.mocked(entitiesModule.putEntity).mockResolvedValue(createTestEntity());
+      vi.mocked(entitiesModule.createEntity).mockResolvedValue(createTestEntity());
 
       const result = await seedEntities([
         { alias: "entity-1", model: "record", scope: "@" },
@@ -183,14 +184,14 @@ describe("Seed and Export Utilities", () => {
       expect(result.created).toEqual(["entity-1", "entity-2"]);
       expect(result.skipped).toEqual([]);
       expect(result.errors).toEqual([]);
-      expect(entitiesModule.putEntity).toHaveBeenCalledTimes(2);
+      expect(entitiesModule.createEntity).toHaveBeenCalledTimes(2);
     });
 
     it("skips entities that already exist", async () => {
       vi.mocked(queriesModule.queryByAlias)
         .mockResolvedValueOnce(createTestEntity()) // First exists
         .mockResolvedValueOnce(null); // Second doesn't exist
-      vi.mocked(entitiesModule.putEntity).mockResolvedValue(createTestEntity());
+      vi.mocked(entitiesModule.createEntity).mockResolvedValue(createTestEntity());
 
       const result = await seedEntities([
         { alias: "existing", model: "record", scope: "@" },
@@ -199,7 +200,7 @@ describe("Seed and Export Utilities", () => {
 
       expect(result.created).toEqual(["new-one"]);
       expect(result.skipped).toEqual(["existing"]);
-      expect(entitiesModule.putEntity).toHaveBeenCalledTimes(1);
+      expect(entitiesModule.createEntity).toHaveBeenCalledTimes(1);
     });
 
     it("replaces entities when replace option is true", async () => {
@@ -207,7 +208,9 @@ describe("Seed and Export Utilities", () => {
       vi.mocked(queriesModule.queryByAlias).mockResolvedValueOnce(
         existingEntity,
       );
-      vi.mocked(entitiesModule.putEntity).mockResolvedValue(createTestEntity());
+      vi.mocked(entitiesModule.updateEntity).mockResolvedValue(
+        createTestEntity(),
+      );
 
       const result = await seedEntities(
         [{ alias: "existing", model: "record", scope: "@" }],
@@ -216,10 +219,11 @@ describe("Seed and Export Utilities", () => {
 
       expect(result.created).toEqual(["existing"]);
       expect(result.skipped).toEqual([]);
-      expect(entitiesModule.putEntity).toHaveBeenCalledTimes(1);
+      expect(entitiesModule.updateEntity).toHaveBeenCalledTimes(1);
+      expect(entitiesModule.createEntity).not.toHaveBeenCalled();
 
       // Should use the existing ID
-      const callArg = vi.mocked(entitiesModule.putEntity).mock.calls[0][0];
+      const callArg = vi.mocked(entitiesModule.updateEntity).mock.calls[0][0];
       expect(callArg.entity.id).toBe("existing-id");
     });
 
@@ -235,7 +239,7 @@ describe("Seed and Export Utilities", () => {
       );
 
       expect(result.created).toEqual(["entity-1", "entity-2"]);
-      expect(entitiesModule.putEntity).not.toHaveBeenCalled();
+      expect(entitiesModule.createEntity).not.toHaveBeenCalled();
     });
 
     it("records errors for entities missing required fields", async () => {
@@ -251,7 +255,7 @@ describe("Seed and Export Utilities", () => {
 
     it("uses name as alias identifier when alias is missing", async () => {
       vi.mocked(queriesModule.queryByAlias).mockResolvedValue(null);
-      vi.mocked(entitiesModule.putEntity).mockResolvedValue(createTestEntity());
+      vi.mocked(entitiesModule.createEntity).mockResolvedValue(createTestEntity());
 
       const result = await seedEntities([
         { model: "record", name: "Named Entity", scope: "@" },

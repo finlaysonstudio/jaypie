@@ -1,7 +1,7 @@
 import {
   APEX,
+  createEntity,
   initClient,
-  putEntity,
   queryByScope,
   type StorableEntity,
 } from "@jaypie/dynamodb";
@@ -71,7 +71,7 @@ export async function POST(request: Request): Promise<Response> {
       xid: auth.sub,
     } as GardenEntity;
 
-    await putEntity({ entity: entity as unknown as StorableEntity });
+    await createEntity({ entity: entity as unknown as StorableEntity });
 
     log.debug("Garden created", { name: gardenName });
 

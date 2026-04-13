@@ -317,7 +317,7 @@ const server = new FabricHttpServer({
 
 | Operation | HTTP Method | Route | DynamoDB Function |
 |-----------|-------------|-------|-------------------|
-| create | POST | `/{model}` | `putEntity` |
+| create | POST | `/{model}` | `createEntity` |
 | list | GET | `/{model}` | `queryByScope` |
 | read | GET | `/{model}/:id` | `getEntity` |
 | update | POST | `/{model}/:id` | `updateEntity` |

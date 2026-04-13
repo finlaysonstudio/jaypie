@@ -40,8 +40,8 @@ describe("@jaypie/dynamodb exports", () => {
       expect(dynamodb.getEntity).toBeFunction();
     });
 
-    it("exports putEntity", () => {
-      expect(dynamodb.putEntity).toBeFunction();
+    it("exports createEntity", () => {
+      expect(dynamodb.createEntity).toBeFunction();
     });
 
     it("exports updateEntity", () => {

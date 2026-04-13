@@ -1,4 +1,4 @@
-import { APEX, deleteEntity, initClient, putEntity, queryByScope, queryByXid } from "@jaypie/dynamodb";
+import { APEX, createEntity, deleteEntity, initClient, queryByScope, queryByXid } from "@jaypie/dynamodb";
 import { GARDEN_MODEL } from "@jaypie/garden-models";
 import "@jaypie/garden-models"; // Side-effect: registers all models
 import { generateJaypieKey, hashJaypieKey } from "@jaypie/kit";
@@ -93,7 +93,7 @@ export async function POST(request: Request): Promise<Response> {
     const hash = hashJaypieKey(key);
     const now = new Date().toISOString();
 
-    await putEntity({
+    await createEntity({
       entity: {
         alias: hash,
         createdAt: now,

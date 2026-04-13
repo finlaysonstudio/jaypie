@@ -29,7 +29,7 @@ vi.mock("@jaypie/dynamodb", () => ({
   archiveEntity: vi.fn().mockResolvedValue(true),
   deleteEntity: vi.fn().mockResolvedValue(true),
   getEntity: vi.fn().mockResolvedValue(null),
-  putEntity: vi.fn().mockImplementation(async ({ entity }) => ({
+  createEntity: vi.fn().mockImplementation(async ({ entity }) => ({
     ...entity,
     indexScope: "@#record",
   })),
