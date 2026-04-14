@@ -27,7 +27,6 @@ export default [
     ],
     external: [
       "@jaypie/errors",
-      "@jaypie/fabric",
       "aws-cdk-lib",
       "aws-cdk-lib/aws-accessanalyzer",
       "aws-cdk-lib/aws-apigateway",
@@ -84,7 +83,6 @@ export default [
     ],
     external: [
       "@jaypie/errors",
-      "@jaypie/fabric",
       "aws-cdk-lib",
       "aws-cdk-lib/aws-accessanalyzer",
       "aws-cdk-lib/aws-apigateway",
