@@ -276,7 +276,7 @@ const namedTable = new JaypieDynamoDb(this, "myApp", {
   tableName: "my-explicit-table-name",
 });
 
-// With custom indexes using IndexDefinition from @jaypie/fabric
+// With custom indexes using IndexDefinition (owned by @jaypie/constructs)
 const customTable = new JaypieDynamoDb(this, "myApp", {
   indexes: [
     { pk: ["scope", "model"], sk: ["sequence"] },           // indexScopeModel
@@ -286,7 +286,7 @@ const customTable = new JaypieDynamoDb(this, "myApp", {
 });
 ```
 
-Note: `JaypieDynamoDb` uses `IndexDefinition` from `@jaypie/fabric` for GSI configuration, enabling consistent index definitions across CDK and runtime code. Table names default to CDK-generated names for proper namespacing across environments; use the `tableName` prop only when an explicit name is required.
+Note: `JaypieDynamoDb` uses its own `IndexDefinition` type for GSI configuration. The shape matches `@jaypie/fabric`'s `IndexDefinition`, so a single object literal can be shared between CDK provisioning and runtime model code without taking a runtime dependency on pre-1.0 fabric. Table names default to CDK-generated names for proper namespacing across environments; use the `tableName` prop only when an explicit name is required.
 
 ### Next.js Deployment
 

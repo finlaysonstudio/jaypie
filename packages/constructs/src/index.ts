@@ -26,8 +26,8 @@ export {
 } from "./JaypieDistribution";
 export { JaypieDnsRecord, JaypieDnsRecordProps } from "./JaypieDnsRecord";
 export { JaypieDynamoDb, JaypieDynamoDbProps } from "./JaypieDynamoDb";
-// Re-export IndexDefinition type for custom GSI definitions
-export type { IndexDefinition } from "@jaypie/fabric";
+// IndexDefinition type for custom GSI definitions
+export type { IndexDefinition } from "./types/IndexDefinition";
 export { JaypieEnvSecret } from "./JaypieEnvSecret";
 export { JaypieEventsRule, JaypieEventsRuleProps } from "./JaypieEventsRule";
 export { JaypieExpressLambda } from "./JaypieExpressLambda";

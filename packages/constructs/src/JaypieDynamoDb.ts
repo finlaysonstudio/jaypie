@@ -2,13 +2,9 @@ import { Construct } from "constructs";
 import { RemovalPolicy, Tags } from "aws-cdk-lib";
 import * as dynamodb from "aws-cdk-lib/aws-dynamodb";
 
-import {
-  getGsiAttributeNames,
-  type IndexDefinition,
-} from "@jaypie/fabric";
-
 import { CDK } from "./constants";
 import { isProductionEnv } from "./helpers/isEnv";
+import type { IndexDefinition } from "./types/IndexDefinition";
 
 //
 //
@@ -16,13 +12,43 @@ import { isProductionEnv } from "./helpers/isEnv";
 //
 
 /**
- * Convert IndexDefinition[] from @jaypie/fabric to CDK GlobalSecondaryIndexPropsV2[].
+ * Derive GSI attribute names for an index definition.
  *
- * Uses `getGsiAttributeNames` as the single source of truth so runtime writes
- * and CDK provisioning agree on attribute names. Composite sk indexes
- * (sk.length > 1) get a dedicated STRING `{indexName}Sk` attribute; single-field
- * sk indexes reference the field directly (STRING in the general case, NUMBER
- * for the legacy `sequence` name).
+ * Mirrors `@jaypie/fabric`'s `getGsiAttributeNames` so CDK provisioning and
+ * any runtime write path agree on the attribute names. Kept local to avoid
+ * a runtime dependency on the pre-1.0 `@jaypie/fabric` package.
+ *
+ * - `pk` is always the index name (`index.name` or generated from `index.pk`)
+ * - `sk` is the single sk field name when `sk.length === 1`, or
+ *   `{indexName}Sk` when `sk.length > 1` (composite sk attribute)
+ */
+function getGsiAttributeNames(index: IndexDefinition): {
+  pk: string;
+  sk: string | undefined;
+} {
+  const name = index.name ?? generateIndexName(index.pk);
+  let sk: string | undefined;
+  if (index.sk && index.sk.length > 1) {
+    sk = `${name}Sk`;
+  } else if (index.sk && index.sk.length === 1) {
+    sk = index.sk[0];
+  }
+  return { pk: name, sk };
+}
+
+function generateIndexName(pk: string[]): string {
+  const suffix = pk
+    .map((field) => field.charAt(0).toUpperCase() + field.slice(1))
+    .join("");
+  return `index${suffix}`;
+}
+
+/**
+ * Convert IndexDefinition[] to CDK GlobalSecondaryIndexPropsV2[].
+ *
+ * Composite sk indexes (sk.length > 1) get a dedicated STRING `{indexName}Sk`
+ * attribute; single-field sk indexes reference the field directly (STRING in
+ * the general case, NUMBER for the legacy `sequence` name).
  */
 function indexesToGsi(
   indexes: IndexDefinition[],
@@ -61,19 +87,21 @@ export interface JaypieDynamoDbProps extends Omit<
   "globalSecondaryIndexes" | "partitionKey" | "sortKey"
 > {
   /**
-   * Configure GSIs for the table using @jaypie/fabric IndexDefinition format.
+   * Configure GSIs for the table using the IndexDefinition format.
    * - `undefined`: No GSIs (default)
-   * - Array of IndexDefinition: Use the specified indexes (prefer fabricIndex())
+   * - Array of IndexDefinition: Use the specified indexes
    *
    * @example
    * // No GSIs (default)
    * new JaypieDynamoDb(this, "myTable");
    *
    * @example
-   * // With fabricIndex-shaped indexes
-   * import { fabricIndex } from "@jaypie/fabric";
+   * // Inline indexes
    * new JaypieDynamoDb(this, "myTable", {
-   *   indexes: [fabricIndex(), fabricIndex("alias"), fabricIndex("xid")],
+   *   indexes: [
+   *     { name: "indexModel", pk: ["model"], sk: ["scope", "updatedAt"] },
+   *     { name: "indexModelAlias", pk: ["model", "alias"], sk: ["scope", "updatedAt"], sparse: true },
+   *   ],
    * });
    */
   indexes?: IndexDefinition[];
@@ -125,11 +153,13 @@ export interface JaypieDynamoDbProps extends Omit<
  * const table = new JaypieDynamoDb(this, "myApp");
  *
  * @example
- * // With fabricIndex() for GSIs
- * import { fabricIndex } from "@jaypie/fabric";
+ * // With inline IndexDefinition for GSIs
  * const table = new JaypieDynamoDb(this, "MyTable", {
  *   tableName: "custom-table-name",
- *   indexes: [fabricIndex(), fabricIndex("alias"), fabricIndex("xid")],
+ *   indexes: [
+ *     { name: "indexModel", pk: ["model"], sk: ["scope", "updatedAt"] },
+ *     { name: "indexModelAlias", pk: ["model", "alias"], sk: ["scope", "updatedAt"], sparse: true },
+ *   ],
  * });
  */
 export class JaypieDynamoDb extends Construct implements dynamodb.ITableV2 {

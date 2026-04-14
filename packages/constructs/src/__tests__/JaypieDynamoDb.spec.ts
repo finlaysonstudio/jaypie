@@ -2,15 +2,25 @@ import { describe, expect, it, beforeEach, afterEach } from "vitest";
 import { Stack, RemovalPolicy } from "aws-cdk-lib";
 import { Template } from "aws-cdk-lib/assertions";
 import * as dynamodb from "aws-cdk-lib/aws-dynamodb";
-import { fabricIndex } from "@jaypie/fabric";
 import { JaypieDynamoDb } from "../JaypieDynamoDb.js";
+import type { IndexDefinition } from "../types/IndexDefinition.js";
 
-const STANDARD_INDEXES = [
-  fabricIndex(),
-  fabricIndex("alias"),
-  fabricIndex("category"),
-  fabricIndex("type"),
-  fabricIndex("xid"),
+const indexModel = (field?: string): IndexDefinition =>
+  field
+    ? {
+        name: `indexModel${field.charAt(0).toUpperCase()}${field.slice(1)}`,
+        pk: ["model", field],
+        sk: ["scope", "updatedAt"],
+        sparse: true,
+      }
+    : { name: "indexModel", pk: ["model"], sk: ["scope", "updatedAt"] };
+
+const STANDARD_INDEXES: IndexDefinition[] = [
+  indexModel(),
+  indexModel("alias"),
+  indexModel("category"),
+  indexModel("type"),
+  indexModel("xid"),
 ];
 
 describe("JaypieDynamoDb", () => {
@@ -175,7 +185,7 @@ describe("JaypieDynamoDb", () => {
       const stack = new Stack();
       new JaypieDynamoDb(stack, "TestTable", {
         tableName: "test-table",
-        indexes: [fabricIndex(), fabricIndex("alias")],
+        indexes: [indexModel(), indexModel("alias")],
       });
       const template = Template.fromStack(stack);
 
@@ -183,10 +193,10 @@ describe("JaypieDynamoDb", () => {
       const tableResource = Object.values(tables)[0];
 
       const gsis = tableResource?.Properties?.GlobalSecondaryIndexes;
-      const indexModel = gsis.find(
+      const indexModelGsi = gsis.find(
         (g: { IndexName: string }) => g.IndexName === "indexModel",
       );
-      const keySchema = indexModel?.KeySchema;
+      const keySchema = indexModelGsi?.KeySchema;
       expect(keySchema).toContainEqual({
         AttributeName: "indexModel",
         KeyType: "HASH",
@@ -201,7 +211,7 @@ describe("JaypieDynamoDb", () => {
       const stack = new Stack();
       new JaypieDynamoDb(stack, "TestTable", {
         tableName: "test-table",
-        indexes: [fabricIndex()],
+        indexes: [indexModel()],
       });
       const template = Template.fromStack(stack);
 
@@ -233,7 +243,7 @@ describe("JaypieDynamoDb", () => {
       const stack = new Stack();
       new JaypieDynamoDb(stack, "TestTable", {
         tableName: "test-table",
-        indexes: [fabricIndex(), fabricIndex("type")],
+        indexes: [indexModel(), indexModel("type")],
       });
       const template = Template.fromStack(stack);
 
@@ -253,7 +263,7 @@ describe("JaypieDynamoDb", () => {
       const stack = new Stack();
       new JaypieDynamoDb(stack, "TestTable", {
         tableName: "test-table",
-        indexes: [fabricIndex("taco")],
+        indexes: [indexModel("taco")],
       });
       const template = Template.fromStack(stack);
 

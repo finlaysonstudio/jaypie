@@ -1,6 +1,6 @@
 {
   "name": "@jaypie/constructs",
-  "version": "1.2.43",
+  "version": "1.2.44",
   "description": "CDK constructs for Jaypie applications",
   "repository": {
     "type": "git",
@@ -32,7 +32,6 @@
   },
   "dependencies": {
     "@jaypie/errors": "*",
-    "@jaypie/fabric": "*",
     "aws-cdk-lib": "^2.232.1",
     "cdk-nextjs-standalone": "^4.3.2",
     "constructs": "^10.4.3",
