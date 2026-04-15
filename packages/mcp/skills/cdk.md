@@ -318,34 +318,40 @@ new JaypieDistribution(this, "Dist", { handler });
 // Disable WAF entirely
 new JaypieDistribution(this, "Dist", { handler, waf: false });
 
-// Customize rate limit
+// Customize rate limit (name required on any waf config object)
 new JaypieDistribution(this, "Dist", {
   handler,
-  waf: { rateLimitPerIp: 500 },
+  waf: { name: "api", rateLimitPerIp: 500 },
 });
+
+// Multiple distributions in one env — set a unique waf.name on each to
+// avoid WebACL/S3 bucket name collisions between stacks.
+new JaypieDistribution(this, "Api", { handler: api, waf: { name: "api" } });
+new JaypieDistribution(this, "Mcp", { handler: mcp, waf: { name: "mcp" } });
 
 // Use existing WebACL
 new JaypieDistribution(this, "Dist", {
   handler,
-  waf: { webAclArn: "arn:aws:wafv2:..." },
+  waf: { name: "api", webAclArn: "arn:aws:wafv2:..." },
 });
 
 // Disable WAF logging only
 new JaypieDistribution(this, "Dist", {
   handler,
-  waf: { logBucket: false },
+  waf: { name: "api", logBucket: false },
 });
 
 // Bring your own WAF logging bucket
 new JaypieDistribution(this, "Dist", {
   handler,
-  waf: { logBucket: myWafBucket },
+  waf: { name: "api", logBucket: myWafBucket },
 });
 
 // Override specific managed rule actions (e.g., allow large request bodies)
 new JaypieDistribution(this, "Dist", {
   handler,
   waf: {
+    name: "api",
     managedRuleOverrides: {
       AWSManagedRulesCommonRuleSet: [
         { name: "SizeRestrictions_BODY", actionToUse: { count: {} } },
