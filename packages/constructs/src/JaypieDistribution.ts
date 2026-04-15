@@ -32,6 +32,16 @@ const DEFAULT_MANAGED_RULES = [
 
 export interface JaypieWafConfig {
   /**
+   * Unique name for this distribution's WAF resources. Required when passing a
+   * WAF config object. Injected into the WebACL name and WAF log bucket name
+   * so multiple JaypieDistribution instances can coexist in the same
+   * account/env without S3/WAFv2 name collisions.
+   *
+   * Pass `waf: true` (or omit) to retain the legacy, non-namespaced names.
+   */
+  name: string;
+
+  /**
    * Whether WAF is enabled
    * @default true
    */
@@ -584,14 +594,17 @@ export class JaypieDistribution
           },
         });
 
+        const webAclName = wafConfig.name
+          ? constructEnvName(`${wafConfig.name}-WebAcl`)
+          : constructEnvName("WebAcl");
         const webAcl = new wafv2.CfnWebACL(this, "WebAcl", {
           defaultAction: { allow: {} },
-          name: constructEnvName("WebAcl"),
+          name: webAclName,
           rules,
           scope: "CLOUDFRONT",
           visibilityConfig: {
             cloudWatchMetricsEnabled: true,
-            metricName: constructEnvName("WebAcl"),
+            metricName: webAclName,
             sampledRequestsEnabled: true,
           },
         });
@@ -610,11 +623,17 @@ export class JaypieDistribution
       let wafLogBucket: s3.IBucket | undefined;
       if (wafLogBucketProp === true) {
         // Create inline WAF logging bucket with Datadog forwarding
+        const wafLogBucketId = wafConfig.name
+          ? constructEnvName(`${wafConfig.name}-WafLogBucket`)
+          : constructEnvName("WafLogBucket");
+        const wafLogBucketName = wafConfig.name
+          ? `aws-waf-logs-${constructEnvName(`${wafConfig.name}-waf`).toLowerCase()}`
+          : `aws-waf-logs-${constructEnvName("waf").toLowerCase()}`;
         const createdBucket = new s3.Bucket(
           this,
-          constructEnvName("WafLogBucket"),
+          wafLogBucketId,
           {
-            bucketName: `aws-waf-logs-${constructEnvName("waf").toLowerCase()}`,
+            bucketName: wafLogBucketName,
             lifecycleRules: [
               {
                 expiration: Duration.days(90),
@@ -728,7 +747,7 @@ export class JaypieDistribution
 
   private resolveWafConfig(
     wafProp: boolean | JaypieWafConfig,
-  ): JaypieWafConfig | undefined {
+  ): Partial<JaypieWafConfig> | undefined {
     if (wafProp === false) return undefined;
     if (wafProp === true) return {};
     if (wafProp.enabled === false) return undefined;

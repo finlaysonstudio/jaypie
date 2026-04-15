@@ -881,7 +881,7 @@ describe("JaypieDistribution", () => {
         new JaypieDistribution(stack, "TestDistribution", {
           handler: origin,
           logBucket: true,
-          waf: { logBucket: false },
+          waf: { name: "test", logBucket: false },
         });
         const template = Template.fromStack(stack);
 
@@ -1483,7 +1483,7 @@ describe("JaypieDistribution", () => {
 
       const construct = new JaypieDistribution(stack, "TestDistribution", {
         handler: origin,
-        waf: { enabled: false },
+        waf: { name: "test", enabled: false },
       });
       const template = Template.fromStack(stack);
 
@@ -1498,7 +1498,7 @@ describe("JaypieDistribution", () => {
 
       new JaypieDistribution(stack, "TestDistribution", {
         handler: origin,
-        waf: { rateLimitPerIp: 500 },
+        waf: { name: "test", rateLimitPerIp: 500 },
       });
       const template = Template.fromStack(stack);
 
@@ -1523,7 +1523,7 @@ describe("JaypieDistribution", () => {
 
       new JaypieDistribution(stack, "TestDistribution", {
         handler: origin,
-        waf: { managedRules: ["AWSManagedRulesCommonRuleSet"] },
+        waf: { name: "test", managedRules: ["AWSManagedRulesCommonRuleSet"] },
       });
       const template = Template.fromStack(stack);
 
@@ -1544,6 +1544,7 @@ describe("JaypieDistribution", () => {
       new JaypieDistribution(stack, "TestDistribution", {
         handler: origin,
         waf: {
+          name: "test",
           managedRuleOverrides: {
             AWSManagedRulesCommonRuleSet: [
               {
@@ -1606,6 +1607,7 @@ describe("JaypieDistribution", () => {
       const construct = new JaypieDistribution(stack, "TestDistribution", {
         handler: origin,
         waf: {
+          name: "test",
           webAclArn:
             "arn:aws:wafv2:us-east-1:123456789012:global/webacl/my-acl/abc123",
         },
@@ -1664,7 +1666,7 @@ describe("JaypieDistribution", () => {
 
       const construct = new JaypieDistribution(stack, "TestDistribution", {
         handler: origin,
-        waf: { logBucket: false },
+        waf: { name: "test", logBucket: false },
       });
       const template = Template.fromStack(stack);
 
@@ -1682,7 +1684,7 @@ describe("JaypieDistribution", () => {
 
       const construct = new JaypieDistribution(stack, "TestDistribution", {
         handler: origin,
-        waf: { logBucket: wafBucket },
+        waf: { name: "test", logBucket: wafBucket },
       });
       const template = Template.fromStack(stack);
 
@@ -1704,6 +1706,58 @@ describe("JaypieDistribution", () => {
       template.resourceCountIs("AWS::WAFv2::LoggingConfiguration", 0);
     });
 
+    it("namespaces WebACL and log bucket when waf.name is provided", () => {
+      const stack = new Stack();
+      const bucket = new s3.Bucket(stack, "TestBucket");
+      const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
+
+      new JaypieDistribution(stack, "TestDistribution", {
+        handler: origin,
+        waf: { name: "mcp" },
+      });
+      const template = Template.fromStack(stack);
+
+      const acls = template.findResources("AWS::WAFv2::WebACL");
+      const acl = Object.values(acls)[0] as any;
+      expect(acl?.Properties?.Name).toMatch(/-mcp-WebAcl-/);
+
+      const buckets = template.findResources("AWS::S3::Bucket");
+      const wafBucket = Object.values(buckets).find((b: any) =>
+        b.Properties?.BucketName?.startsWith?.("aws-waf-logs-"),
+      ) as any;
+      expect(wafBucket?.Properties?.BucketName).toMatch(/-mcp-waf-/);
+    });
+
+    it("allows two distributions in one stack via distinct waf.name", () => {
+      const stack = new Stack();
+      const bucket = new s3.Bucket(stack, "TestBucket");
+      const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
+
+      new JaypieDistribution(stack, "Api", {
+        handler: origin,
+        waf: { name: "api" },
+      });
+      new JaypieDistribution(stack, "Mcp", {
+        handler: origin,
+        waf: { name: "mcp" },
+      });
+      const template = Template.fromStack(stack);
+
+      template.resourceCountIs("AWS::WAFv2::WebACL", 2);
+      const acls = Object.values(template.findResources("AWS::WAFv2::WebACL"));
+      const names = acls.map((a: any) => a.Properties.Name);
+      expect(new Set(names).size).toBe(2);
+
+      const wafBuckets = Object.values(
+        template.findResources("AWS::S3::Bucket"),
+      )
+        .map((b: any) => b.Properties?.BucketName)
+        .filter(
+          (n: any) => typeof n === "string" && n.startsWith("aws-waf-logs-"),
+        );
+      expect(new Set(wafBuckets).size).toBe(2);
+    });
+
     it("creates logging with external WebACL ARN", () => {
       const stack = new Stack();
       const bucket = new s3.Bucket(stack, "TestBucket");
@@ -1712,6 +1766,7 @@ describe("JaypieDistribution", () => {
       new JaypieDistribution(stack, "TestDistribution", {
         handler: origin,
         waf: {
+          name: "test",
           webAclArn:
             "arn:aws:wafv2:us-east-1:123456789012:global/webacl/my-acl/abc123",
         },
