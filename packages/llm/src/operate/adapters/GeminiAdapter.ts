@@ -16,7 +16,7 @@ import {
   LlmStreamChunk,
   LlmStreamChunkType,
 } from "../../types/LlmStreamChunk.interface.js";
-import { naturalZodSchema } from "../../util/index.js";
+import { jsonSchemaToOpenApi3, naturalZodSchema } from "../../util/index.js";
 import {
   ClassifiedError,
   ErrorCategory,
@@ -132,11 +132,22 @@ export class GeminiAdapter extends BaseProviderAdapter {
     // Gemini doesn't support combining function calling with responseMimeType: 'application/json'
     // When tools are present, structured output is handled via the structured_output tool
     if (request.format && !(request.tools && request.tools.length > 0)) {
-      geminiRequest.config = {
-        ...geminiRequest.config,
-        responseMimeType: "application/json",
-        responseJsonSchema: request.format,
-      };
+      const useJsonSchema =
+        request.providerOptions?.useJsonSchema === true;
+
+      if (useJsonSchema) {
+        geminiRequest.config = {
+          ...geminiRequest.config,
+          responseMimeType: "application/json",
+          responseJsonSchema: request.format,
+        };
+      } else {
+        geminiRequest.config = {
+          ...geminiRequest.config,
+          responseMimeType: "application/json",
+          responseSchema: jsonSchemaToOpenApi3(request.format),
+        };
+      }
     }
 
     // When format is specified with tools, add instruction to use structured_output tool
@@ -224,12 +235,7 @@ export class GeminiAdapter extends BaseProviderAdapter {
       jsonSchema = z.toJSONSchema(zodSchema) as JsonObject;
     }
 
-    // Remove $schema property (Gemini doesn't need it)
-    if (jsonSchema.$schema) {
-      delete jsonSchema.$schema;
-    }
-
-    return jsonSchema;
+    return jsonSchemaToOpenApi3(jsonSchema);
   }
 
   //

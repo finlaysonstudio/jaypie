@@ -128,7 +128,7 @@ describe("GeminiAdapter", () => {
         );
       });
 
-      it("includes format when provided", () => {
+      it("includes format as responseSchema (OpenAPI 3.0) by default", () => {
         const request: OperateRequest = {
           model: PROVIDER.GEMINI.MODEL.SMALL,
           messages: [],
@@ -138,10 +138,55 @@ describe("GeminiAdapter", () => {
         const result = geminiAdapter.buildRequest(request);
 
         expect(result.config?.responseMimeType).toBe("application/json");
+        expect(result.config?.responseSchema).toEqual({
+          type: "object",
+          properties: { name: { type: "string" } },
+        });
+        expect(result.config?.responseJsonSchema).toBeUndefined();
+      });
+
+      it("uses responseJsonSchema when providerOptions.useJsonSchema is true", () => {
+        const request: OperateRequest = {
+          model: PROVIDER.GEMINI.MODEL.SMALL,
+          messages: [],
+          format: { type: "object", properties: { name: { type: "string" } } },
+          providerOptions: { useJsonSchema: true },
+        };
+
+        const result = geminiAdapter.buildRequest(request);
+
+        expect(result.config?.responseMimeType).toBe("application/json");
         expect(result.config?.responseJsonSchema).toEqual({
           type: "object",
           properties: { name: { type: "string" } },
         });
+        expect(result.config?.responseSchema).toBeUndefined();
+      });
+
+      it("strips $schema and additionalProperties from responseSchema", () => {
+        const request: OperateRequest = {
+          model: PROVIDER.GEMINI.MODEL.SMALL,
+          messages: [],
+          format: {
+            $schema: "https://json-schema.org/draft/2020-12/schema",
+            type: "object",
+            properties: { name: { type: "string" } },
+            additionalProperties: false,
+          },
+        };
+
+        const result = geminiAdapter.buildRequest(request);
+
+        expect(result.config?.responseSchema).toEqual({
+          type: "object",
+          properties: { name: { type: "string" } },
+        });
+        expect(
+          (result.config?.responseSchema as any)?.$schema,
+        ).toBeUndefined();
+        expect(
+          (result.config?.responseSchema as any)?.additionalProperties,
+        ).toBeUndefined();
       });
     });
 
