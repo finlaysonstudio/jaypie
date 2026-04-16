@@ -22,6 +22,8 @@ import {
   AddToResourcePolicyResult,
 } from "aws-cdk-lib/aws-iam";
 
+import { ConfigurationError } from "@jaypie/errors";
+
 import { CDK } from "./constants";
 
 // It is a consumer if the environment is ephemeral
@@ -113,6 +115,18 @@ export class JaypieEnvSecret extends Construct implements ISecret {
       exportName = exportEnvName(id);
     } else {
       exportName = cleanName(exportParam);
+    }
+
+    if (
+      !consumer &&
+      envKey &&
+      !process.env[envKey] &&
+      value === undefined &&
+      !generateSecretString
+    ) {
+      throw new ConfigurationError(
+        `JaypieEnvSecret(${id}): envKey "${envKey}" is empty in process.env and no value or generateSecretString was provided`,
+      );
     }
 
     if (consumer) {
