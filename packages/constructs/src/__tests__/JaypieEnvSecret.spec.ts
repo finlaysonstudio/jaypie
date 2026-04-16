@@ -1,3 +1,4 @@
+import { ConfigurationError } from "@jaypie/errors";
 import { expect, it, describe } from "vitest";
 import { RemovalPolicy, Stack } from "aws-cdk-lib";
 import { Template } from "aws-cdk-lib/assertions";
@@ -113,12 +114,14 @@ describe("JaypieSecret", () => {
     });
 
     it("exposes envKey through getter", () => {
+      process.env.TEST_ENV_KEY = "test-value";
       const stack = new Stack();
       const secret = new JaypieEnvSecret(stack, "TestSecret", {
         envKey: "TEST_ENV_KEY",
       });
 
       expect(secret.envKey).toBe("TEST_ENV_KEY");
+      delete process.env.TEST_ENV_KEY;
     });
 
     it("applies RETAIN removal policy when removalPolicy is true", () => {
@@ -158,6 +161,58 @@ describe("JaypieSecret", () => {
         DeletionPolicy: "Retain",
         UpdateReplacePolicy: "Retain",
       });
+    });
+  });
+
+  describe("Error Cases", () => {
+    it("throws ConfigurationError when envKey is set but env var is missing and no value or generateSecretString", () => {
+      delete process.env.MISSING_SECRET;
+      const stack = new Stack();
+      expect(() => {
+        new JaypieEnvSecret(stack, "TestSecret", {
+          envKey: "MISSING_SECRET",
+        });
+      }).toThrow(ConfigurationError);
+    });
+
+    it("throws ConfigurationError when envKey is set but env var is empty string", () => {
+      process.env.EMPTY_SECRET = "";
+      const stack = new Stack();
+      expect(() => {
+        new JaypieEnvSecret(stack, "TestSecret", {
+          envKey: "EMPTY_SECRET",
+        });
+      }).toThrow(ConfigurationError);
+      delete process.env.EMPTY_SECRET;
+    });
+
+    it("does not throw when envKey is missing but value is provided", () => {
+      delete process.env.MISSING_SECRET;
+      const stack = new Stack();
+      expect(() => {
+        new JaypieEnvSecret(stack, "TestSecret", {
+          envKey: "MISSING_SECRET",
+          value: "fallback",
+        });
+      }).not.toThrow();
+    });
+
+    it("does not throw when envKey is missing but generateSecretString is provided", () => {
+      delete process.env.MISSING_SECRET;
+      const stack = new Stack();
+      expect(() => {
+        new JaypieEnvSecret(stack, "TestSecret", {
+          envKey: "MISSING_SECRET",
+          generateSecretString: {},
+        });
+      }).not.toThrow();
+    });
+
+    it("does not throw when no envKey is set (plain secret)", () => {
+      const stack = new Stack();
+      expect(() => {
+        new JaypieEnvSecret(stack, "TestSecret");
+      }).not.toThrow();
     });
   });
 });
