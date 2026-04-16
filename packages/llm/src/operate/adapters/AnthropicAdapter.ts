@@ -129,6 +129,30 @@ const NOT_RETRYABLE_ERROR_NAMES = [
   "PermissionDeniedError",
 ];
 
+// Models known not to accept `temperature`.
+// Patterns (not exact names) so dated variants and future releases are covered
+// without code changes — Anthropic is trending toward removing temperature on
+// newer Claude models.
+const MODELS_WITHOUT_TEMPERATURE: RegExp[] = [
+  /^claude-opus-4-[789]/,
+  /^claude-opus-[5-9]/,
+];
+
+function isTemperatureDeprecationError(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const err = error as {
+    status?: number;
+    message?: string;
+    error?: { message?: string };
+  };
+  const name = (error as Error)?.constructor?.name;
+  if (name !== "BadRequestError" && err.status !== 400) return false;
+  const messages = [err.message, err.error?.message].filter(
+    (m): m is string => typeof m === "string",
+  );
+  return messages.some((m) => m.toLowerCase().includes("temperature"));
+}
+
 //
 //
 // Main
@@ -142,6 +166,23 @@ const NOT_RETRYABLE_ERROR_NAMES = [
 export class AnthropicAdapter extends BaseProviderAdapter {
   readonly name = PROVIDER.ANTHROPIC.NAME;
   readonly defaultModel = PROVIDER.ANTHROPIC.MODEL.DEFAULT;
+
+  // Session-level cache of models observed to reject `temperature` at runtime.
+  // Populated by executeRequest on 400 errors so repeat calls skip the param.
+  private runtimeNoTemperatureModels = new Set<string>();
+
+  rememberModelRejectsTemperature(model: string): void {
+    this.runtimeNoTemperatureModels.add(model);
+  }
+
+  clearRuntimeNoTemperatureModels(): void {
+    this.runtimeNoTemperatureModels.clear();
+  }
+
+  private supportsTemperature(model: string): boolean {
+    if (this.runtimeNoTemperatureModels.has(model)) return false;
+    return !MODELS_WITHOUT_TEMPERATURE.some((pattern) => pattern.test(model));
+  }
 
   //
   // Request Building
@@ -257,6 +298,14 @@ export class AnthropicAdapter extends BaseProviderAdapter {
       anthropicRequest.temperature = request.temperature;
     }
 
+    // Strip temperature for models that don't support it (denylist + runtime cache)
+    if (
+      anthropicRequest.temperature !== undefined &&
+      !this.supportsTemperature(anthropicRequest.model as string)
+    ) {
+      delete anthropicRequest.temperature;
+    }
+
     return anthropicRequest;
   }
 
@@ -328,13 +377,29 @@ export class AnthropicAdapter extends BaseProviderAdapter {
     signal?: AbortSignal,
   ): Promise<Anthropic.Message> {
     const anthropic = client as Anthropic;
+    const anthropicRequest = request as Anthropic.MessageCreateParams;
     try {
       return (await anthropic.messages.create(
-        request as Anthropic.MessageCreateParams,
+        anthropicRequest,
         signal ? { signal } : undefined,
       )) as Anthropic.Message;
     } catch (error) {
       if (signal?.aborted) return undefined as unknown as Anthropic.Message;
+
+      // If the model rejected `temperature`, cache it and retry without the param
+      if (
+        anthropicRequest.temperature !== undefined &&
+        isTemperatureDeprecationError(error)
+      ) {
+        this.rememberModelRejectsTemperature(anthropicRequest.model as string);
+        const retryRequest = { ...anthropicRequest };
+        delete retryRequest.temperature;
+        return (await anthropic.messages.create(
+          retryRequest,
+          signal ? { signal } : undefined,
+        )) as Anthropic.Message;
+      }
+
       throw error;
     }
   }
@@ -345,15 +410,35 @@ export class AnthropicAdapter extends BaseProviderAdapter {
     signal?: AbortSignal,
   ): AsyncIterable<LlmStreamChunk> {
     const anthropic = client as Anthropic;
-    const streamRequest = {
+    let streamRequest = {
       ...(request as Anthropic.MessageCreateParams),
       stream: true,
     } as Anthropic.MessageCreateParamsStreaming;
 
-    const stream = await anthropic.messages.create(
-      streamRequest,
-      signal ? { signal } : undefined,
-    );
+    let stream;
+    try {
+      stream = await anthropic.messages.create(
+        streamRequest,
+        signal ? { signal } : undefined,
+      );
+    } catch (error) {
+      if (
+        streamRequest.temperature !== undefined &&
+        isTemperatureDeprecationError(error)
+      ) {
+        this.rememberModelRejectsTemperature(streamRequest.model as string);
+        streamRequest = {
+          ...streamRequest,
+        } as Anthropic.MessageCreateParamsStreaming;
+        delete streamRequest.temperature;
+        stream = await anthropic.messages.create(
+          streamRequest,
+          signal ? { signal } : undefined,
+        );
+      } else {
+        throw error;
+      }
+    }
 
     // Track current tool call being built
     let currentToolCall: {
