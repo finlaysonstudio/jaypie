@@ -2,6 +2,7 @@ export * from "./determineModelProvider.js";
 export * from "./extractReasoning.js";
 export * from "./formatOperateInput.js";
 export * from "./formatOperateMessage.js";
+export * from "./jsonSchemaToOpenApi3.js";
 export * from "./logger.js";
 export * from "./maxTurnsFromOptions.js";
 export * from "./naturalZodSchema.js";
