@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AnthropicAdapter, anthropicAdapter } from "../AnthropicAdapter.js";
 import { PROVIDER } from "../../../constants.js";
@@ -736,6 +736,133 @@ describe("AnthropicAdapter", () => {
     });
   });
 
+  // Temperature-deprecation retry
+  describe("Temperature deprecation retry", () => {
+    beforeEach(() => {
+      anthropicAdapter.clearRuntimeNoTemperatureModels();
+    });
+
+    it("retries without temperature when Anthropic rejects it with 400", async () => {
+      const { BadRequestError } = await import("@anthropic-ai/sdk");
+      // @ts-expect-error Mock doesn't require constructor args
+      const error = new BadRequestError();
+      (error as unknown as { status: number }).status = 400;
+      error.message =
+        "400 {\"type\":\"error\",\"error\":{\"type\":\"invalid_request_error\",\"message\":\"`temperature` is deprecated for this model.\"}}";
+
+      const successResponse = {
+        content: [{ type: "text", text: "Hi" }],
+        stop_reason: "end_turn",
+        usage: { input_tokens: 1, output_tokens: 1 },
+      };
+      const mockCreate = vi.fn();
+      mockCreate.mockRejectedValueOnce(error as unknown as Error);
+      mockCreate.mockResolvedValueOnce(successResponse);
+      const mockClient = { messages: { create: mockCreate } };
+      const request = {
+        model: "claude-opus-4-7",
+        messages: [{ role: "user", content: "Hello" }],
+        max_tokens: 1024,
+        stream: false,
+        temperature: 0,
+      };
+
+      const result = await anthropicAdapter.executeRequest(mockClient, request);
+
+      expect(result as unknown).toBe(successResponse);
+      expect(mockCreate).toHaveBeenCalledTimes(2);
+      const retryRequest = mockCreate.mock.calls[1][0] as {
+        temperature?: number;
+      };
+      expect(retryRequest.temperature).toBeUndefined();
+    });
+
+    it("caches the model so subsequent buildRequest strips temperature", async () => {
+      const { BadRequestError } = await import("@anthropic-ai/sdk");
+      // @ts-expect-error Mock doesn't require constructor args
+      const error = new BadRequestError();
+      (error as unknown as { status: number }).status = 400;
+      error.message = "`temperature` is deprecated for this model.";
+
+      const mockCreate = vi.fn();
+      mockCreate.mockRejectedValueOnce(error as unknown as Error);
+      mockCreate.mockResolvedValueOnce({
+        content: [{ type: "text", text: "Hi" }],
+        stop_reason: "end_turn",
+        usage: { input_tokens: 1, output_tokens: 1 },
+      });
+      const mockClient = { messages: { create: mockCreate } };
+      await anthropicAdapter.executeRequest(mockClient, {
+        model: "claude-sonnet-9-mystery",
+        messages: [],
+        max_tokens: 1024,
+        stream: false,
+        temperature: 0.5,
+      });
+
+      const result = anthropicAdapter.buildRequest({
+        model: "claude-sonnet-9-mystery",
+        messages: [],
+        temperature: 0.5,
+      });
+
+      expect(result.temperature).toBeUndefined();
+    });
+
+    it("does not retry on 400 unrelated to temperature", async () => {
+      const { BadRequestError } = await import("@anthropic-ai/sdk");
+      // @ts-expect-error Mock doesn't require constructor args
+      const error = new BadRequestError();
+      (error as unknown as { status: number }).status = 400;
+      error.message = "some other bad-request reason";
+
+      const mockCreate = vi.fn();
+      mockCreate.mockRejectedValue(error as unknown as Error);
+      const mockClient = { messages: { create: mockCreate } };
+
+      let thrown: unknown;
+      try {
+        await anthropicAdapter.executeRequest(mockClient, {
+          model: "claude-opus-4-6",
+          messages: [],
+          max_tokens: 1024,
+          stream: false,
+          temperature: 0.2,
+        });
+      } catch (e) {
+        thrown = e;
+      }
+      expect(thrown).toBe(error);
+      expect(mockCreate).toHaveBeenCalledTimes(1);
+    });
+
+    it("does not retry when request has no temperature", async () => {
+      const { BadRequestError } = await import("@anthropic-ai/sdk");
+      // @ts-expect-error Mock doesn't require constructor args
+      const error = new BadRequestError();
+      (error as unknown as { status: number }).status = 400;
+      error.message = "`temperature` is deprecated for this model.";
+
+      const mockCreate = vi.fn();
+      mockCreate.mockRejectedValue(error as unknown as Error);
+      const mockClient = { messages: { create: mockCreate } };
+
+      let thrown: unknown;
+      try {
+        await anthropicAdapter.executeRequest(mockClient, {
+          model: "claude-opus-4-7",
+          messages: [],
+          max_tokens: 1024,
+          stream: false,
+        });
+      } catch (e) {
+        thrown = e;
+      }
+      expect(thrown).toBe(error);
+      expect(mockCreate).toHaveBeenCalledTimes(1);
+    });
+  });
+
   // Specific Scenarios
   describe("Specific Scenarios", () => {
     it("uses default model when not specified", () => {
@@ -789,6 +916,97 @@ describe("AnthropicAdapter", () => {
       const result = anthropicAdapter.buildRequest(request);
 
       expect(result.temperature).toBeUndefined();
+    });
+
+    describe("models that do not support temperature", () => {
+      beforeEach(() => {
+        anthropicAdapter.clearRuntimeNoTemperatureModels();
+      });
+
+      it("strips temperature for claude-opus-4-7", () => {
+        const request: OperateRequest = {
+          model: "claude-opus-4-7",
+          messages: [],
+          temperature: 0,
+        };
+
+        const result = anthropicAdapter.buildRequest(request);
+
+        expect(result.temperature).toBeUndefined();
+      });
+
+      it("strips temperature for dated claude-opus-4-7 variant", () => {
+        const request: OperateRequest = {
+          model: "claude-opus-4-7-20250801",
+          messages: [],
+          temperature: 0.5,
+        };
+
+        const result = anthropicAdapter.buildRequest(request);
+
+        expect(result.temperature).toBeUndefined();
+      });
+
+      it("strips temperature for future claude-opus-5 models", () => {
+        const request: OperateRequest = {
+          model: "claude-opus-5-0",
+          messages: [],
+          temperature: 0.3,
+        };
+
+        const result = anthropicAdapter.buildRequest(request);
+
+        expect(result.temperature).toBeUndefined();
+      });
+
+      it("strips temperature from providerOptions for unsupported models", () => {
+        const request: OperateRequest = {
+          model: "claude-opus-4-8",
+          messages: [],
+          providerOptions: { temperature: 0.4 },
+        };
+
+        const result = anthropicAdapter.buildRequest(request);
+
+        expect(result.temperature).toBeUndefined();
+      });
+
+      it("keeps temperature for claude-opus-4-6 (still supported)", () => {
+        const request: OperateRequest = {
+          model: "claude-opus-4-6",
+          messages: [],
+          temperature: 0.2,
+        };
+
+        const result = anthropicAdapter.buildRequest(request);
+
+        expect(result.temperature).toBe(0.2);
+      });
+
+      it("keeps temperature for claude-sonnet-4-5 (still supported)", () => {
+        const request: OperateRequest = {
+          model: "claude-sonnet-4-5",
+          messages: [],
+          temperature: 0.2,
+        };
+
+        const result = anthropicAdapter.buildRequest(request);
+
+        expect(result.temperature).toBe(0.2);
+      });
+
+      it("strips temperature for models cached at runtime", () => {
+        const adapter = new AnthropicAdapter();
+        adapter.rememberModelRejectsTemperature("claude-sonnet-9-future");
+
+        const result = adapter.buildRequest({
+          model: "claude-sonnet-9-future",
+          messages: [],
+          temperature: 0.7,
+        });
+
+        expect(result.temperature).toBeUndefined();
+      });
     });
 
     it("sets tool_choice to any when structured output tool present", () => {
