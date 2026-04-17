@@ -878,7 +878,7 @@ describe("AnthropicAdapter", () => {
 
     it("sets temperature on request when provided", () => {
       const request: OperateRequest = {
-        model: PROVIDER.ANTHROPIC.MODEL.LARGE,
+        model: PROVIDER.ANTHROPIC.MODEL.DEFAULT,
         messages: [
           {
             content: "Hello",
@@ -896,7 +896,7 @@ describe("AnthropicAdapter", () => {
 
     it("temperature takes precedence over providerOptions", () => {
       const request: OperateRequest = {
-        model: PROVIDER.ANTHROPIC.MODEL.LARGE,
+        model: PROVIDER.ANTHROPIC.MODEL.DEFAULT,
         messages: [],
         providerOptions: { temperature: 0.3 },
         temperature: 0.9,

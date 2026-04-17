@@ -2,7 +2,7 @@ const FIRST_CLASS_PROVIDER = {
   // https://docs.anthropic.com/en/docs/about-claude/models/overview
   ANTHROPIC: {
     DEFAULT: "claude-sonnet-4-6" as const,
-    LARGE: "claude-opus-4-6" as const,
+    LARGE: "claude-opus-4-7" as const,
     SMALL: "claude-sonnet-4-6" as const,
     TINY: "claude-haiku-4-5" as const,
   },
