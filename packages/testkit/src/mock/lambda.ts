@@ -47,9 +47,7 @@ export const lambdaStreamHandler = createMockFunction<
 >((handler, props = {}) => {
   // If handler is an object and options is a function, swap them
   if (typeof handler === "object" && typeof props === "function") {
-    const temp = handler;
     handler = props;
-    props = temp;
   }
   return async (
     event: unknown,
@@ -113,9 +111,7 @@ export const websocketHandler = createMockFunction<
 >((handler, props = {}) => {
   // If handler is an object and options is a function, swap them
   if (typeof handler === "object" && typeof props === "function") {
-    const temp = handler;
     handler = props;
-    props = temp;
   }
   return async (event: unknown, context: unknown = {}, ...extra: unknown[]) => {
     // Create a mock WebSocket context

@@ -83,7 +83,6 @@ export function prepareMessages(
 ): { messages: ChatMessage[]; systemInstruction?: string } {
   const logger = getLogger();
   const messages: ChatMessage[] = [];
-  let systemInstruction: string | undefined;
 
   // Note: Gemini handles system prompts differently via systemInstruction config
   // This function is kept for compatibility but system prompts should be passed
@@ -93,5 +92,5 @@ export function prepareMessages(
   messages.push(userMessage);
   logger.trace(`User message: ${userMessage.content?.length} characters`);
 
-  return { messages, systemInstruction };
+  return { messages, systemInstruction: undefined };
 }

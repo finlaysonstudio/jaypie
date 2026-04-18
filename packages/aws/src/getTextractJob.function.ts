@@ -67,11 +67,11 @@ const getTextractJob = async (
       case JobStatus.IN_PROGRESS:
         log.var({ jobStatus });
         doneFetching = true;
-        break;
+        continue;
       case JobStatus.FAILED:
         log.var({ jobStatus });
         doneFetching = true;
-        break;
+        continue;
       case JobStatus.PARTIAL_SUCCESS:
         log.var({ jobStatus });
         responses.push(response);
@@ -83,7 +83,7 @@ const getTextractJob = async (
         log.warn(`Unknown job status "${jobStatus}"`);
         log.var({ jobStatus });
         doneFetching = true;
-        break;
+        continue;
     }
 
     // If there is no NextToken, we are done

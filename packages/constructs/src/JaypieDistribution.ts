@@ -579,7 +579,7 @@ export class JaypieDistribution
         // Add rate-based rule
         rules.push({
           name: "RateLimitPerIp",
-          priority: priority++,
+          priority,
           action: { block: {} },
           statement: {
             rateBasedStatement: {

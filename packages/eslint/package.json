@@ -1,6 +1,6 @@
 {
   "name": "@jaypie/eslint",
-  "version": "1.2.2",
+  "version": "1.2.3",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/finlaysonstudio/jaypie.git"
@@ -31,20 +31,20 @@
     "typecheck": "echo '[TODO] Convert @jaypie/eslint to TypeScript'"
   },
   "dependencies": {
-    "@eslint/js": "^9.17.0",
-    "@typescript-eslint/eslint-plugin": "^8.18.2",
-    "@typescript-eslint/parser": "^8.18.2",
-    "@vitest/eslint-plugin": "^1.1.7",
-    "eslint-config-prettier": "^10.0.1",
-    "eslint-import-resolver-typescript": "^4.3.4",
-    "eslint-plugin-import-x": "^4.6.1",
-    "eslint-plugin-prettier": "^5.2.1",
+    "@eslint/js": "^10.0.0",
+    "@typescript-eslint/eslint-plugin": "^8.58.2",
+    "@typescript-eslint/parser": "^8.58.2",
+    "@vitest/eslint-plugin": "^1.6.16",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-import-resolver-typescript": "^4.4.4",
+    "eslint-plugin-import-x": "^4.16.2",
+    "eslint-plugin-prettier": "^5.5.5",
     "eslint-plugin-prettier-vue": "^5.0.0",
-    "globals": "^16.0.0",
-    "typescript-eslint": "^8.18.2"
+    "globals": "^17.5.0",
+    "typescript-eslint": "^8.58.2"
   },
   "peerDependencies": {
-    "eslint": "^9.0.0"
+    "eslint": "^9.0.0 || ^10.0.0"
   },
   "publishConfig": {
     "access": "public"
