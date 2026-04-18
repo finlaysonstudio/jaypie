@@ -87,6 +87,10 @@ export const expressHttpCodeHandler = createMockWrappedFunction(
 
 export const cors = createMockWrappedFunction(original.cors as any);
 
+export const fabricApiResponse = createMockWrappedFunction(
+  original.fabricApiResponse as any,
+);
+
 export const getCurrentInvokeUuid = createMockReturnedFunction<
   string | undefined
 >("mock-invoke-uuid-12345678");

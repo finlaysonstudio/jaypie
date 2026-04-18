@@ -237,6 +237,28 @@ new JaypieDistribution(this, "Dist", {
     },
   },
 });
+
+// Scope a managed rule group to (or away from) specific URL patterns
+new JaypieDistribution(this, "Dist", {
+  handler,
+  waf: {
+    name: "api",
+    managedRuleScopeDowns: {
+      AWSManagedRulesCommonRuleSet: {
+        notStatement: {
+          statement: {
+            byteMatchStatement: {
+              fieldToMatch: { uriPath: {} },
+              positionalConstraint: "STARTS_WITH",
+              searchString: "/chat",
+              textTransformations: [{ priority: 0, type: "NONE" }],
+            },
+          },
+        },
+      },
+    },
+  },
+});
 ```
 
 ### Streaming Lambda
