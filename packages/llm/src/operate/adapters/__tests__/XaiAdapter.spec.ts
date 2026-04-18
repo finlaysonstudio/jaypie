@@ -250,6 +250,29 @@ describe("XaiAdapter", () => {
         expect(result.category).toBe(ErrorCategory.Unrecoverable);
         expect(result.shouldRetry).toBe(false);
       });
+
+      it("retries on transient xAI ingest-bytes error (400 with 'failed to ingest inline file bytes')", async () => {
+        const { BadRequestError } = await import("openai");
+        // @ts-expect-error Mock doesn't require constructor args
+        const error = new BadRequestError();
+        error.message = "400 failed to ingest inline file bytes";
+
+        const result = xaiAdapter.classifyError(error);
+
+        expect(result.category).toBe(ErrorCategory.Retryable);
+        expect(result.shouldRetry).toBe(true);
+      });
+
+      it("does not retry on unrelated BadRequestError", async () => {
+        const { BadRequestError } = await import("openai");
+        // @ts-expect-error Mock doesn't require constructor args
+        const error = new BadRequestError();
+        error.message = "400 invalid model";
+
+        const result = xaiAdapter.classifyError(error);
+
+        expect(result.shouldRetry).toBe(false);
+      });
     });
   });
 });
