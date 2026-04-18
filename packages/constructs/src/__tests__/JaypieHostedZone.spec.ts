@@ -224,4 +224,65 @@ describe("JaypieHostedZone", () => {
       expect(zone.dnsRecords).toHaveLength(0);
     });
   });
+
+  // Resource Policy Consolidation (issue #311)
+  describe("Resource Policy Consolidation", () => {
+    it("creates a single AWS::Logs::ResourcePolicy for multiple zones in one stack", () => {
+      app = new App();
+      stack = new Stack(app, "TestStack");
+      new JaypieHostedZone(stack, "ZoneA", { zoneName: "a.example.com" });
+      new JaypieHostedZone(stack, "ZoneB", { zoneName: "b.example.com" });
+      new JaypieHostedZone(stack, "ZoneC", { zoneName: "c.example.com" });
+      template = Template.fromStack(stack);
+
+      template.resourceCountIs("AWS::Logs::ResourcePolicy", 1);
+    });
+
+    it("consolidated policy uses a wildcard covering all /aws/route53 log groups", () => {
+      app = new App();
+      stack = new Stack(app, "TestStack");
+      new JaypieHostedZone(stack, "ZoneA", { zoneName: "a.example.com" });
+      new JaypieHostedZone(stack, "ZoneB", { zoneName: "b.example.com" });
+      template = Template.fromStack(stack);
+
+      const resources = template.findResources("AWS::Logs::ResourcePolicy");
+      const [policy] = Object.values(resources);
+      const serialized = JSON.stringify(policy.Properties.PolicyDocument);
+      expect(serialized).toContain("route53.amazonaws.com");
+      expect(serialized).toContain("logs:PutLogEvents");
+      expect(serialized).toContain("logs:CreateLogStream");
+      expect(serialized).toContain("/aws/route53/*");
+    });
+
+    it("omits the managed policy when queryLoggingPolicy is false", () => {
+      app = new App();
+      stack = new Stack(app, "TestStack");
+      new JaypieHostedZone(stack, "ZoneA", {
+        zoneName: "a.example.com",
+        queryLoggingPolicy: false,
+      });
+      new JaypieHostedZone(stack, "ZoneB", {
+        zoneName: "b.example.com",
+        queryLoggingPolicy: false,
+      });
+      template = Template.fromStack(stack);
+
+      template.resourceCountIs("AWS::Logs::ResourcePolicy", 0);
+    });
+
+    it("still creates the consolidated policy when any zone opts in", () => {
+      app = new App();
+      stack = new Stack(app, "TestStack");
+      new JaypieHostedZone(stack, "ZoneA", {
+        zoneName: "a.example.com",
+        queryLoggingPolicy: false,
+      });
+      new JaypieHostedZone(stack, "ZoneB", {
+        zoneName: "b.example.com",
+      });
+      template = Template.fromStack(stack);
+
+      template.resourceCountIs("AWS::Logs::ResourcePolicy", 1);
+    });
+  });
 });
