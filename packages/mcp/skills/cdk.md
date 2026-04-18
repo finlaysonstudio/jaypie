@@ -359,6 +359,31 @@ new JaypieDistribution(this, "Dist", {
     },
   },
 });
+
+// Scope a managed rule group to (or away from) specific URL patterns
+new JaypieDistribution(this, "Dist", {
+  handler,
+  waf: {
+    name: "api",
+    managedRuleScopeDowns: {
+      // Only run the CommonRuleSet for paths OTHER than /chat — lets /chat
+      // handle large AI-generated request bodies without weakening protection
+      // elsewhere.
+      AWSManagedRulesCommonRuleSet: {
+        notStatement: {
+          statement: {
+            byteMatchStatement: {
+              fieldToMatch: { uriPath: {} },
+              positionalConstraint: "STARTS_WITH",
+              searchString: "/chat",
+              textTransformations: [{ priority: 0, type: "NONE" }],
+            },
+          },
+        },
+      },
+    },
+  },
+});
 ```
 
 Cost: $5/month per WebACL + $1/month per rule + $0.60 per million requests. Use `waf: false` to opt out.
