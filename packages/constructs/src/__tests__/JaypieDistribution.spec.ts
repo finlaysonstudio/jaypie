@@ -1599,6 +1599,133 @@ describe("JaypieDistribution", () => {
       ).toBeUndefined();
     });
 
+    it("supports managedRuleScopeDowns to scope a managed rule group", () => {
+      const stack = new Stack();
+      const bucket = new s3.Bucket(stack, "TestBucket");
+      const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
+
+      new JaypieDistribution(stack, "TestDistribution", {
+        handler: origin,
+        waf: {
+          name: "test",
+          managedRuleScopeDowns: {
+            AWSManagedRulesCommonRuleSet: {
+              notStatement: {
+                statement: {
+                  byteMatchStatement: {
+                    fieldToMatch: { uriPath: {} },
+                    positionalConstraint: "STARTS_WITH",
+                    searchString: "/chat",
+                    textTransformations: [{ priority: 0, type: "NONE" }],
+                  },
+                },
+              },
+            },
+          },
+        },
+      });
+      const template = Template.fromStack(stack);
+
+      template.hasResourceProperties("AWS::WAFv2::WebACL", {
+        Rules: Match.arrayWith([
+          Match.objectLike({
+            Name: "AWSManagedRulesCommonRuleSet",
+            Statement: {
+              ManagedRuleGroupStatement: {
+                Name: "AWSManagedRulesCommonRuleSet",
+                VendorName: "AWS",
+                ScopeDownStatement: {
+                  NotStatement: {
+                    Statement: {
+                      ByteMatchStatement: {
+                        FieldToMatch: { UriPath: {} },
+                        PositionalConstraint: "STARTS_WITH",
+                        SearchString: "/chat",
+                        TextTransformations: [{ Priority: 0, Type: "NONE" }],
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          }),
+        ]),
+      });
+    });
+
+    it("does not add scopeDownStatement when managedRuleScopeDowns is not provided", () => {
+      const stack = new Stack();
+      const bucket = new s3.Bucket(stack, "TestBucket");
+      const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
+
+      new JaypieDistribution(stack, "TestDistribution", {
+        handler: origin,
+      });
+      const template = Template.fromStack(stack);
+
+      const resources = template.findResources("AWS::WAFv2::WebACL");
+      const webAcl = Object.values(resources)[0];
+      const rules = webAcl?.Properties?.Rules || [];
+      const commonRule = rules.find(
+        (r: any) => r.Name === "AWSManagedRulesCommonRuleSet",
+      );
+      expect(
+        commonRule?.Statement?.ManagedRuleGroupStatement?.ScopeDownStatement,
+      ).toBeUndefined();
+    });
+
+    it("combines managedRuleOverrides and managedRuleScopeDowns", () => {
+      const stack = new Stack();
+      const bucket = new s3.Bucket(stack, "TestBucket");
+      const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
+
+      new JaypieDistribution(stack, "TestDistribution", {
+        handler: origin,
+        waf: {
+          name: "test",
+          managedRuleOverrides: {
+            AWSManagedRulesCommonRuleSet: [
+              { name: "SizeRestrictions_BODY", actionToUse: { count: {} } },
+            ],
+          },
+          managedRuleScopeDowns: {
+            AWSManagedRulesCommonRuleSet: {
+              byteMatchStatement: {
+                fieldToMatch: { uriPath: {} },
+                positionalConstraint: "STARTS_WITH",
+                searchString: "/chat",
+                textTransformations: [{ priority: 0, type: "NONE" }],
+              },
+            },
+          },
+        },
+      });
+      const template = Template.fromStack(stack);
+
+      template.hasResourceProperties("AWS::WAFv2::WebACL", {
+        Rules: Match.arrayWith([
+          Match.objectLike({
+            Name: "AWSManagedRulesCommonRuleSet",
+            Statement: {
+              ManagedRuleGroupStatement: {
+                RuleActionOverrides: [
+                  {
+                    Name: "SizeRestrictions_BODY",
+                    ActionToUse: { Count: {} },
+                  },
+                ],
+                ScopeDownStatement: {
+                  ByteMatchStatement: Match.objectLike({
+                    SearchString: "/chat",
+                  }),
+                },
+              },
+            },
+          }),
+        ]),
+      });
+    });
+
     it("supports existing WebACL ARN", () => {
       const stack = new Stack();
       const bucket = new s3.Bucket(stack, "TestBucket");
