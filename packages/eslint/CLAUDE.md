@@ -1,6 +1,6 @@
 # @jaypie/eslint
 
-Opinionated ESLint configuration for Jaypie projects using ESLint 9+ flat config format.
+Opinionated ESLint configuration for Jaypie projects using ESLint 9 or 10 flat config format.
 
 ## Package Overview
 
@@ -100,7 +100,7 @@ npm run test        # Run tests (vitest run)
 
 ## Dependencies
 
-- `eslint` ^9.0.0 (peer)
+- `eslint` ^9.0.0 || ^10.0.0 (peer)
 - `@eslint/js`, `typescript-eslint`, `@typescript-eslint/*`
 - `eslint-plugin-import-x`, `eslint-plugin-prettier`, `eslint-plugin-prettier-vue`
 - `@vitest/eslint-plugin`
