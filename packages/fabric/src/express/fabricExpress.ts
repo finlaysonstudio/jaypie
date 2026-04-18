@@ -1,4 +1,5 @@
 import type { NextFunction, Request, Response } from "express";
+import { expressHandler } from "@jaypie/express";
 
 import { isFabricHttpService } from "../http/fabricHttp.js";
 import type { HttpServiceContext } from "../http/fabricHttp.js";
@@ -203,8 +204,30 @@ export function fabricExpress<
     }
   };
 
+  // Wrap with expressHandler to pick up Jaypie lifecycle (secrets, setup,
+  // teardown, validate, unavailable, locals) and observability. The inner
+  // middleware calls res.json/res.status/res.send directly; expressHandler
+  // captures those as "illegal" calls and replays them after postprocess.
+  const wrapped = expressHandler(
+    middleware as unknown as (req: Request, res: Response) => Promise<void>,
+    {
+      chaos: config.chaos,
+      locals: config.locals,
+      name: config.name ?? service.alias,
+      secrets: config.secrets,
+      setup: config.setup,
+      teardown: config.teardown,
+      unavailable: config.unavailable,
+      validate: config.validate,
+    },
+  ) as unknown as (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) => Promise<void>;
+
   // Attach metadata to middleware
-  const expressMiddleware = middleware as FabricExpressMiddleware;
+  const expressMiddleware = wrapped as FabricExpressMiddleware;
   expressMiddleware.service = service;
   expressMiddleware.path = path;
   expressMiddleware.methods = methods;

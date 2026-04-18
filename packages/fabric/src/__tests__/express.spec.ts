@@ -50,22 +50,40 @@ function createMockRequest(
   };
 }
 
-// Mock Express response
+// Mock Express response — covers surface touched by both fabricExpress and
+// the `expressHandler` wrap (which binds .end/.json/.send/.status and attaches
+// a `finish` listener via .on). The bind() on each spy is replaced to return
+// the original spy, so referential identity survives expressHandler's
+// illegal-call replay (which saves `.bind(res)` and later reassigns).
+function stableSpy(): ReturnType<typeof vi.fn> {
+  const fn = vi.fn();
+  (fn as unknown as { bind: () => typeof fn }).bind = () => fn;
+  return fn;
+}
+
 function createMockResponse(): {
+  end: ReturnType<typeof vi.fn>;
   status: ReturnType<typeof vi.fn>;
   json: ReturnType<typeof vi.fn>;
   send: ReturnType<typeof vi.fn>;
   set: ReturnType<typeof vi.fn>;
+  on: ReturnType<typeof vi.fn>;
+  emit: ReturnType<typeof vi.fn>;
   statusCode: number;
   headersSent: boolean;
+  locals: Record<string, unknown>;
 } {
   const res = {
-    status: vi.fn(),
-    json: vi.fn(),
-    send: vi.fn(),
-    set: vi.fn(),
+    end: stableSpy(),
+    status: stableSpy(),
+    json: stableSpy(),
+    send: stableSpy(),
+    set: stableSpy(),
+    on: vi.fn(),
+    emit: vi.fn(),
     statusCode: 200,
     headersSent: false,
+    locals: {} as Record<string, unknown>,
   };
   // Chain methods
   res.status.mockReturnValue(res);
@@ -439,6 +457,112 @@ describe("Express Adapter", () => {
           expect.objectContaining({ userId: "user-123" }),
           expect.any(Object),
         );
+      });
+    });
+
+    describe("Lifecycle Integration (expressHandler)", () => {
+      it("runs setup functions before the service", async () => {
+        const order: string[] = [];
+        const setup = vi.fn(async () => {
+          order.push("setup");
+        });
+        const serviceFn = vi.fn(() => {
+          order.push("service");
+          return "ok";
+        });
+        const httpService = fabricHttp({
+          alias: "test",
+          service: serviceFn,
+        });
+
+        const middleware = fabricExpress({
+          service: httpService,
+          setup,
+        });
+
+        const req = createMockRequest({ method: "GET" });
+        const res = createMockResponse();
+        const next = vi.fn();
+
+        await middleware(req as never, res as never, next);
+
+        expect(setup).toHaveBeenCalledTimes(1);
+        expect(serviceFn).toHaveBeenCalledTimes(1);
+        expect(order).toEqual(["setup", "service"]);
+      });
+
+      it("runs teardown functions after the service", async () => {
+        const order: string[] = [];
+        const teardown = vi.fn(async () => {
+          order.push("teardown");
+        });
+        const serviceFn = vi.fn(() => {
+          order.push("service");
+          return "ok";
+        });
+        const httpService = fabricHttp({
+          alias: "test",
+          service: serviceFn,
+        });
+
+        const middleware = fabricExpress({
+          service: httpService,
+          teardown,
+        });
+
+        const req = createMockRequest({ method: "GET" });
+        const res = createMockResponse();
+        const next = vi.fn();
+
+        await middleware(req as never, res as never, next);
+
+        expect(teardown).toHaveBeenCalledTimes(1);
+        expect(order).toEqual(["service", "teardown"]);
+      });
+
+      it("returns 503 when unavailable is true (service never runs)", async () => {
+        const serviceFn = vi.fn().mockReturnValue("result");
+        const httpService = fabricHttp({
+          alias: "test",
+          service: serviceFn,
+        });
+
+        const middleware = fabricExpress({
+          service: httpService,
+          unavailable: true,
+        });
+
+        const req = createMockRequest({ method: "GET" });
+        const res = createMockResponse();
+        const next = vi.fn();
+
+        await middleware(req as never, res as never, next);
+
+        expect(serviceFn).not.toHaveBeenCalled();
+        expect(res.status).toHaveBeenCalledWith(503);
+      });
+
+      it("runs validate functions before the service", async () => {
+        const validate = vi.fn(() => true);
+        const serviceFn = vi.fn().mockReturnValue("ok");
+        const httpService = fabricHttp({
+          alias: "test",
+          service: serviceFn,
+        });
+
+        const middleware = fabricExpress({
+          service: httpService,
+          validate: [validate],
+        });
+
+        const req = createMockRequest({ method: "GET" });
+        const res = createMockResponse();
+        const next = vi.fn();
+
+        await middleware(req as never, res as never, next);
+
+        expect(validate).toHaveBeenCalledTimes(1);
+        expect(serviceFn).toHaveBeenCalledTimes(1);
       });
     });
 

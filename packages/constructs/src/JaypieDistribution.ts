@@ -72,6 +72,31 @@ export interface JaypieWafConfig {
   >;
 
   /**
+   * Optional scope-down statements per managed rule group. When supplied,
+   * the managed rule group only evaluates requests that match the
+   * scope-down statement. Key is the managed rule group name; value is a
+   * `CfnWebACL.StatementProperty`.
+   *
+   * @example
+   * // Only run AWSManagedRulesCommonRuleSet for non-/chat paths
+   * managedRuleScopeDowns: {
+   *   AWSManagedRulesCommonRuleSet: {
+   *     notStatement: {
+   *       statement: {
+   *         byteMatchStatement: {
+   *           fieldToMatch: { uriPath: {} },
+   *           positionalConstraint: "STARTS_WITH",
+   *           searchString: "/chat",
+   *           textTransformations: [{ priority: 0, type: "NONE" }],
+   *         },
+   *       },
+   *     },
+   *   },
+   * }
+   */
+  managedRuleScopeDowns?: Record<string, wafv2.CfnWebACL.StatementProperty>;
+
+  /**
    * Managed rule group names to apply
    * @default ["AWSManagedRulesCommonRuleSet", "AWSManagedRulesKnownBadInputsRuleSet"]
    */
@@ -547,6 +572,7 @@ export class JaypieDistribution
         // Create new WebACL
         const {
           managedRuleOverrides,
+          managedRuleScopeDowns,
           managedRules = DEFAULT_MANAGED_RULES,
           rateLimitPerIp = DEFAULT_RATE_LIMIT,
         } = wafConfig;
@@ -557,6 +583,7 @@ export class JaypieDistribution
         // Add managed rule groups
         for (const ruleName of managedRules) {
           const ruleActionOverrides = managedRuleOverrides?.[ruleName];
+          const scopeDownStatement = managedRuleScopeDowns?.[ruleName];
           rules.push({
             name: ruleName,
             priority: priority++,
@@ -566,6 +593,7 @@ export class JaypieDistribution
                 name: ruleName,
                 vendorName: "AWS",
                 ...(ruleActionOverrides && { ruleActionOverrides }),
+                ...(scopeDownStatement && { scopeDownStatement }),
               },
             },
             visibilityConfig: {

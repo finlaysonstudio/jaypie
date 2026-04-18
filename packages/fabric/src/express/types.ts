@@ -10,6 +10,30 @@ import type {
 // #region fabricExpress
 
 /**
+ * Per-request lifecycle function types forwarded to `expressHandler`.
+ * Defined locally to avoid a hard type dependency on `@jaypie/express`.
+ */
+export type FabricExpressSetup = (
+  req: Request,
+  res: Response,
+) => Promise<void> | void;
+
+export type FabricExpressTeardown = (
+  req: Request,
+  res: Response,
+) => Promise<void> | void;
+
+export type FabricExpressValidate = (
+  req: Request,
+  res: Response,
+) => Promise<boolean | void> | boolean | void;
+
+export type FabricExpressLocalsFn = (
+  req: Request,
+  res: Response,
+) => Promise<unknown> | unknown;
+
+/**
  * Configuration for fabricExpress middleware
  */
 export interface FabricExpressConfig<
@@ -23,6 +47,25 @@ export interface FabricExpressConfig<
   path?: string;
   /** HTTP methods to handle (defaults to DEFAULT_HTTP_METHODS) */
   methods?: HttpMethod[];
+
+  // `expressHandler` lifecycle pass-through
+
+  /** Chaos mode identifier forwarded to `expressHandler`. */
+  chaos?: string;
+  /** Per-request locals forwarded to `expressHandler`. */
+  locals?: Record<string, unknown | FabricExpressLocalsFn>;
+  /** Handler name for logging. Defaults to the service alias. */
+  name?: string;
+  /** AWS Secret names to load into `process.env` before the handler runs. */
+  secrets?: string[];
+  /** Pre-handler setup function(s). */
+  setup?: FabricExpressSetup | FabricExpressSetup[];
+  /** Post-handler teardown function(s) — always run. */
+  teardown?: FabricExpressTeardown | FabricExpressTeardown[];
+  /** If true, the handler returns 503 immediately without running. */
+  unavailable?: boolean;
+  /** Validation function(s) run before the handler. */
+  validate?: FabricExpressValidate | FabricExpressValidate[];
 }
 
 /**

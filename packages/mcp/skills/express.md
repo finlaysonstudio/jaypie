@@ -46,14 +46,39 @@ app.get("/api/users", expressHandler(async (req, res) => {
 
 ```typescript
 expressHandler(handler, {
+  fabric: false,     // Wrap return with fabricApiResponse before res.json (default false)
   locals: {},        // Values passed to res.locals
   name: "handler",   // Handler name for logging
+  secrets: [],       // AWS Secrets names to load into process.env
   setup: async (req, res) => {},    // Pre-handler setup
   teardown: async (req, res) => {}, // Post-handler cleanup
   unavailable: false, // Return 503 immediately if true
   validate: async (req, res) => {}, // Validation before handler
 });
 ```
+
+### fabricApiResponse and `{ fabric: true }`
+
+Return plain domain objects and opt into the canonical Jaypie API envelope:
+
+```typescript
+import { expressHandler, fabricApiResponse } from "jaypie";
+
+// Handler option — wraps the return value automatically
+app.get(
+  "/ping",
+  expressHandler(async (req) => ping(req.query), { fabric: true }),
+);
+
+// Standalone helper — same rules as `{ fabric: true }`
+fabricApiResponse({ id: "1" });        // { data: { id: "1" } }
+fabricApiResponse([{ id: "1" }]);      // { data: [{ id: "1" }] }
+fabricApiResponse({ data: {...} });    // passthrough
+fabricApiResponse({ errors: [...] });  // passthrough
+fabricApiResponse(null);               // { data: null }
+```
+
+Wrap rules: only `{ data }` alone or `{ errors }` alone pass through. Anything else (including `{ data, other }`) gets wrapped as `{ data: value }`.
 
 ## Lambda Adapter
 

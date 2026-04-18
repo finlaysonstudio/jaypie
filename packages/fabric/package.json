@@ -1,6 +1,6 @@
 {
   "name": "@jaypie/fabric",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "Jaypie modeling framework with type conversion, service handlers, and adapters",
   "repository": {
     "type": "git",
@@ -75,6 +75,7 @@
     "@jaypie/errors": "*"
   },
   "devDependencies": {
+    "@jaypie/express": "*",
     "@jaypie/testkit": "*",
     "@modelcontextprotocol/sdk": "^1.17.0",
     "@rollup/plugin-typescript": "^12.1.2",
@@ -96,6 +97,7 @@
   "peerDependencies": {
     "@jaypie/aws": "*",
     "@jaypie/dynamodb": "*",
+    "@jaypie/express": "*",
     "@jaypie/lambda": "*",
     "@modelcontextprotocol/sdk": ">=1.0.0",
     "commander": ">=12.0.0",
@@ -107,6 +109,9 @@
       "optional": true
     },
     "@jaypie/dynamodb": {
+      "optional": true
+    },
+    "@jaypie/express": {
       "optional": true
     },
     "@jaypie/lambda": {

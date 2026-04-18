@@ -77,6 +77,37 @@ const tools = [fabricLlmTool(greetService)];
 // Available to LLM as function call
 ```
 
+### Express Middleware
+
+```typescript
+import { fabricHttp } from "@jaypie/fabric/http";
+import { fabricExpress, FabricRouter } from "@jaypie/fabric/express";
+
+// Wrap service with fabricHttp first (HTTP context + default input transform)
+const greetHttp = fabricHttp({ service: greetService });
+
+// Single-route middleware — alias becomes default path ("/greet")
+app.get("/greet", fabricExpress({ service: greetHttp }));
+
+// Lifecycle pass-through (forwarded to expressHandler): secrets, setup,
+// teardown, validate, unavailable, locals, name, chaos
+app.post(
+  "/records",
+  fabricExpress({
+    service: recordsHttp,
+    secrets: ["MONGODB_URI"],
+    setup: async (req) => { /* ... */ },
+  }),
+);
+
+// Multi-service router — alias-derived paths under a prefix
+app.use(FabricRouter({ services: [greetHttp, searchHttp], prefix: "/api" }));
+```
+
+`fabricExpress` wraps the middleware with `expressHandler` internally, so
+per-route lifecycle and observability come along for the ride (parallel to
+`fabricLambda` → `lambdaHandler` and `fabricWebSocket` → `websocketHandler`).
+
 ## Service Suites
 
 Group related services:

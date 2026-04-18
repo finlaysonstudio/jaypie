@@ -23,6 +23,7 @@ export type {
 export { EXPRESS } from "./constants.js";
 export { default as cors } from "./cors.helper.js";
 export type { CorsConfig } from "./cors.helper.js";
+export { default as fabricApiResponse } from "./fabricApiResponse.js";
 export { default as expressHandler } from "./expressHandler.js";
 export type {
   ExpressHandlerLocals,

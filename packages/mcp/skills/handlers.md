@@ -90,6 +90,13 @@ app.get("/api/users", expressHandler(async (req, res) => {
   return { users: [] };
 }));
 
+// Return plain domain objects and let `{ fabric: true }` apply the
+// canonical Jaypie `{ data }` envelope automatically.
+app.get(
+  "/ping",
+  expressHandler(async (req) => ping(req.query), { fabric: true }),
+);
+
 // Convert Express app to Lambda
 export const handler = createLambdaHandler(app);
 ```
