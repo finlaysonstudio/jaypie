@@ -1,6 +1,5 @@
 import { CDK } from "./constants";
 import * as cdk from "aws-cdk-lib";
-import { ServicePrincipal } from "aws-cdk-lib/aws-iam";
 import {
   FilterPattern,
   ILogGroup,
@@ -11,12 +10,9 @@ import { LambdaDestination } from "aws-cdk-lib/aws-logs-destinations";
 import { HostedZone, IHostedZone } from "aws-cdk-lib/aws-route53";
 import { Construct } from "constructs";
 
+import { ensureRoute53QueryLoggingPolicy } from "./helpers/ensureRoute53QueryLoggingPolicy";
 import { resolveDatadogLoggingDestination } from "./helpers/resolveDatadogLoggingDestination";
 import { JaypieDnsRecord, JaypieDnsRecordProps } from "./JaypieDnsRecord";
-
-const SERVICE = {
-  ROUTE53: "route53.amazonaws.com",
-} as const;
 
 /**
  * Check if a string is a valid hostname
@@ -78,6 +74,15 @@ interface JaypieHostedZoneProps {
    * Each record will be created as a JaypieDnsRecord construct
    */
   records?: JaypieHostedZoneRecordProps[];
+  /**
+   * Control the CloudWatch Logs resource policy that grants Route53 permission
+   * to write query logs. Defaults to `true`, which ensures a single
+   * stack-level wildcard policy covering every `/aws/route53/*` log group.
+   * Set to `false` to skip creating a managed policy (useful when an
+   * account-wide policy is provisioned externally).
+   * @default true
+   */
+  queryLoggingPolicy?: boolean;
 }
 
 export class JaypieHostedZone extends Construct {
@@ -144,8 +149,13 @@ export class JaypieHostedZone extends Construct {
       cdk.Tags.of(this.logGroup).add(CDK.TAG.PROJECT, project);
     }
 
-    // Grant Route 53 permissions to write to the log group
-    this.logGroup.grantWrite(new ServicePrincipal(SERVICE.ROUTE53));
+    // Grant Route53 permission to write query logs via a single stack-level
+    // resource policy. Per-zone policies exhaust the CloudWatch Logs
+    // 10-policy-per-region account quota (issue #311).
+    const queryLoggingPolicy = props.queryLoggingPolicy ?? true;
+    if (queryLoggingPolicy) {
+      ensureRoute53QueryLoggingPolicy(this);
+    }
 
     // Add destination based on configuration
     if (destination !== false) {

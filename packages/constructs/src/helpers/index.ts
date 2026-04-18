@@ -13,6 +13,7 @@ export {
   resolveCertificate,
   ResolveCertificateOptions,
 } from "./resolveCertificate";
+export { ensureRoute53QueryLoggingPolicy } from "./ensureRoute53QueryLoggingPolicy";
 export { isEnv, isProductionEnv, isSandboxEnv } from "./isEnv";
 export { isValidHostname } from "./isValidHostname";
 export { isValidSubdomain } from "./isValidSubdomain";
