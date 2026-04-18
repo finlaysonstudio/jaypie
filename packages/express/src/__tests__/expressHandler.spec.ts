@@ -489,6 +489,88 @@ describe("Express Handler", () => {
         expect(mockResSend).toBeCalled();
         expect(mockResSend).toBeCalledWith(12);
       });
+    });
+    describe("fabric option", () => {
+      it("Wraps a plain object return value in { data }", async () => {
+        // Arrange
+        const mockFunction = vi.fn(() => ({ id: "1" }));
+        const handler = expressHandler(mockFunction, { fabric: true });
+        const req: MockRequest = {};
+        const mockResJson = vi.fn();
+        const res: MockResponse = {
+          end: vi.fn(),
+          send: vi.fn(),
+          json: mockResJson,
+          on: vi.fn(),
+          status: vi.fn(() => res) as unknown as ReturnType<typeof vi.fn>,
+        };
+        const next = () => {};
+        // Act
+        await handler(req as Request, res as Response, next);
+        // Assert
+        expect(mockResJson).toHaveBeenCalledTimes(1);
+        expect(mockResJson).toHaveBeenCalledWith({ data: { id: "1" } });
+      });
+      it("Passes already-wrapped { data } through unchanged", async () => {
+        // Arrange
+        const wrapped = { data: { id: "1" } };
+        const mockFunction = vi.fn(() => wrapped);
+        const handler = expressHandler(mockFunction, { fabric: true });
+        const req: MockRequest = {};
+        const mockResJson = vi.fn();
+        const res: MockResponse = {
+          end: vi.fn(),
+          send: vi.fn(),
+          json: mockResJson,
+          on: vi.fn(),
+          status: vi.fn(() => res) as unknown as ReturnType<typeof vi.fn>,
+        };
+        const next = () => {};
+        // Act
+        await handler(req as Request, res as Response, next);
+        // Assert
+        expect(mockResJson).toHaveBeenCalledWith(wrapped);
+      });
+      it("Wraps arrays in { data }", async () => {
+        // Arrange
+        const mockFunction = vi.fn(() => [{ id: "1" }, { id: "2" }]);
+        const handler = expressHandler(mockFunction, { fabric: true });
+        const req: MockRequest = {};
+        const mockResJson = vi.fn();
+        const res: MockResponse = {
+          end: vi.fn(),
+          send: vi.fn(),
+          json: mockResJson,
+          on: vi.fn(),
+          status: vi.fn(() => res) as unknown as ReturnType<typeof vi.fn>,
+        };
+        const next = () => {};
+        // Act
+        await handler(req as Request, res as Response, next);
+        // Assert
+        expect(mockResJson).toHaveBeenCalledWith({
+          data: [{ id: "1" }, { id: "2" }],
+        });
+      });
+      it("Wraps undefined as { data: null }", async () => {
+        // Arrange
+        const mockFunction = vi.fn(() => undefined);
+        const handler = expressHandler(mockFunction, { fabric: true });
+        const req: MockRequest = {};
+        const mockResJson = vi.fn();
+        const res: MockResponse = {
+          end: vi.fn(),
+          send: vi.fn(),
+          json: mockResJson,
+          on: vi.fn(),
+          status: vi.fn(() => res) as unknown as ReturnType<typeof vi.fn>,
+        };
+        const next = () => {};
+        // Act
+        await handler(req as Request, res as Response, next);
+        // Assert
+        expect(mockResJson).toHaveBeenCalledWith({ data: null });
+      });
       it("Will not override res.json() if it was sent", async () => {
         // Arrange
         const mockFunction = vi.fn((req: Request, res: Response) => {

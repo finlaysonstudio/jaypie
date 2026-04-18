@@ -9,6 +9,7 @@ import { JAYPIE_LAMBDA_MOCK } from "./adapter/LambdaResponseBuffered.js";
 import { JAYPIE_LAMBDA_STREAMING } from "./adapter/LambdaResponseStreaming.js";
 import getCurrentInvokeUuid from "./getCurrentInvokeUuid.adapter.js";
 import decorateResponse from "./decorateResponse.helper.js";
+import fabricApiResponse from "./fabricApiResponse.js";
 import summarizeRequest from "./summarizeRequest.helper.js";
 import summarizeResponse from "./summarizeResponse.helper.js";
 
@@ -84,6 +85,13 @@ export type ExpressHandlerLocals = (
 
 export interface ExpressHandlerOptions {
   chaos?: string;
+  /**
+   * When true, the handler's return value is wrapped with
+   * `fabricApiResponse` before `res.json()`. Plain objects become
+   * `{ data: value }`; pre-wrapped `{ data }` or `{ errors }` payloads
+   * pass through unchanged. `null` / `undefined` become `{ data: null }`.
+   */
+  fabric?: boolean;
   locals?: Record<string, unknown | ExpressHandlerLocals>;
   name?: string;
   secrets?: string[];
@@ -306,6 +314,7 @@ function expressHandler<T>(
   //
   let {
     chaos,
+    fabric,
     locals,
     name,
     secrets,
@@ -520,6 +529,13 @@ function expressHandler<T>(
         | T
         | Record<string, unknown>
         | undefined;
+
+      if (fabric) {
+        response = fabricApiResponse(response) as
+          | T
+          | Record<string, unknown>
+          | undefined;
+      }
 
       //
       //
