@@ -112,7 +112,7 @@ const validate: ValidateFunction = (
   //
   const isUndefined = argument === undefined;
   let matchesType = false;
-  let valid = false;
+  let valid;
 
   //
   //

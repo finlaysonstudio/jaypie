@@ -283,13 +283,6 @@ export class GeminiAdapter extends BaseProviderAdapter {
       config: geminiRequest.config as any,
     });
 
-    // Track current function call being built
-    let currentFunctionCall: {
-      id: string;
-      name: string;
-      arguments: Record<string, unknown>;
-    } | null = null;
-
     // Track usage for final chunk
     let inputTokens = 0;
     let outputTokens = 0;
@@ -312,7 +305,7 @@ export class GeminiAdapter extends BaseProviderAdapter {
           // Handle function calls
           if (part.functionCall) {
             const functionCall = part.functionCall as GeminiFunctionCall;
-            currentFunctionCall = {
+            const currentFunctionCall = {
               id: functionCall.id || this.generateCallId(),
               name: functionCall.name || "",
               arguments: functionCall.args || {},
@@ -335,7 +328,6 @@ export class GeminiAdapter extends BaseProviderAdapter {
                 metadata,
               },
             };
-            currentFunctionCall = null;
           }
         }
       }

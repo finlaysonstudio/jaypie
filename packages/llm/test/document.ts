@@ -448,7 +448,7 @@ async function runImageTests(): Promise<{ passed: number; failed: number }> {
     }
   } else {
     for (const provider of providers) {
-      let success = false;
+      let success;
       switch (provider.toLowerCase()) {
         case "anthropic":
           success = await testImageAnthropic();
@@ -516,7 +516,7 @@ async function runPdfTests(): Promise<{ passed: number; failed: number }> {
     }
   } else {
     for (const provider of providers) {
-      let success = false;
+      let success;
       switch (provider.toLowerCase()) {
         case "anthropic":
           success = await testPdfAnthropic();

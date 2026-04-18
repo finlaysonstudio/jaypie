@@ -137,8 +137,10 @@ export const weather: LlmTool = {
       return weatherData;
     } catch (error) {
       if (error instanceof Error) {
+        // eslint-disable-next-line preserve-caught-error -- package targets ES2020; Error `cause` option requires ES2022
         throw new Error(`Weather API error: ${error.message}`);
       }
+      // eslint-disable-next-line preserve-caught-error -- package targets ES2020; Error `cause` option requires ES2022
       throw new Error("Unknown error occurred while fetching weather data");
     }
   },

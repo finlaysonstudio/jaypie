@@ -23,7 +23,7 @@ npm install -D @jaypie/eslint eslint
 
 | Feature | Description |
 |---------|-------------|
-| Flat config | ESLint 9+ flat configuration |
+| Flat config | ESLint 9 or 10 flat configuration |
 | Prettier | Automatic Prettier integration |
 | TypeScript | TypeScript support |
 | Import sorting | Alphabetized imports |
@@ -127,7 +127,7 @@ export default [
 
 ### ESLint version mismatch
 
-Ensure ESLint 9+:
+Ensure ESLint 9 or 10:
 
 ```bash
 npm install -D eslint@latest

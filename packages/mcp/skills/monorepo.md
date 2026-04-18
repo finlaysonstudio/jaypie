@@ -9,7 +9,7 @@ Initialize a new monorepo using Jaypie conventions and utilities.
 
 ## Overview
 
-- ESLint 9+ flat config with @jaypie/eslint
+- ESLint 9 or 10 flat config with @jaypie/eslint
 - NPM with Workspaces ("monorepo")
 - TypeScript with ESM modules
 - Vite for building, Vitest for testing

@@ -55,7 +55,7 @@ project/
     "@jaypie/eslint": "latest",
     "@jaypie/repokit": "latest",
     "@jaypie/testkit": "latest",
-    "eslint": "^9.0.0",
+    "eslint": "^10.0.0",
     "lerna": "^8.0.0",
     "typescript": "^5.0.0",
     "vite": "^5.0.0",

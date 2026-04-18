@@ -266,7 +266,7 @@ async function runTests(): Promise<{ failed: number; passed: number }> {
     }
   } else {
     for (const provider of providers) {
-      let success = false;
+      let success;
       switch (provider.toLowerCase()) {
         case "anthropic":
           success = await testAnthropic();

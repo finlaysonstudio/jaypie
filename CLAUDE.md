@@ -11,7 +11,7 @@
 - npm with workspaces (monorepo)
 - Vitest
 - Rollup with vite-plugin-dts for type declarations
-- ESLint 9 with custom `@jaypie/eslint` config
+- ESLint 9 or 10 with custom `@jaypie/eslint` config
 - Prettier, sort-package-json
 ## Packages
 | Package | Description |
