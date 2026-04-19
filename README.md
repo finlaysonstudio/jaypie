@@ -364,8 +364,10 @@ Manages build-environment secrets, allowing consumer environments (personal envi
 Most Jaypie projects will not need to specify `consumer` or `provider` properties, as the construct will automatically handle the correct behavior based on the environment.
 
 ```typescript
-// Shorthand: if the second parameter is an environment variable key with a non-empty value,
-// it will be used as envKey and the construct id becomes "EnvSecret_${envKey}"
+// Shorthand: when the second parameter is a SCREAMING_SNAKE_CASE string or matches an
+// env var with a non-empty value, it is used as envKey and the construct id becomes
+// "EnvSecret_${envKey}". If the env var is missing and no value/generateSecretString
+// is provided, construction throws ConfigurationError.
 const mongoSecret = new JaypieEnvSecret(this, "MONGODB_URI");
 // Equivalent to: new JaypieEnvSecret(this, "EnvSecret_MONGODB_URI", { envKey: "MONGODB_URI" })
 

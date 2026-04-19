@@ -81,13 +81,17 @@ export class JaypieEnvSecret extends Construct implements ISecret {
     idOrEnvKey: string,
     props?: JaypieEnvSecretProps,
   ) {
-    // Check if idOrEnvKey should be treated as envKey:
-    // - No props provided OR props.envKey is not set
-    // - AND idOrEnvKey exists as a non-empty string in process.env
+    // Shorthand detection: treat idOrEnvKey as envKey when envKey prop is
+    // not set and idOrEnvKey either looks like a SCREAMING_SNAKE_CASE env
+    // var name or is already present in process.env. Convention-based
+    // detection ensures missing env vars still go through envKey validation
+    // instead of silently creating an empty secret.
+    const looksLikeEnvKey = /^[A-Z][A-Z0-9_]*$/.test(idOrEnvKey);
     const treatAsEnvKey =
       (!props || props.envKey === undefined) &&
-      typeof process.env[idOrEnvKey] === "string" &&
-      process.env[idOrEnvKey] !== "";
+      (looksLikeEnvKey ||
+        (typeof process.env[idOrEnvKey] === "string" &&
+          process.env[idOrEnvKey] !== ""));
 
     const id = treatAsEnvKey ? `EnvSecret_${idOrEnvKey}` : idOrEnvKey;
 
