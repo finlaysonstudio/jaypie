@@ -176,13 +176,13 @@ runs:
   using: 'composite'
   steps:
     - name: Setup Node.js
-      uses: actions/setup-node@v4
+      uses: actions/setup-node@v6
       with:
         node-version: ${{ inputs.node-version }}
         cache: 'npm'
 
     - name: Cache node_modules
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: |
           node_modules
@@ -194,7 +194,7 @@ runs:
 
     - name: Cache build outputs
       if: inputs.cache-builds == 'true'
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: |
           packages/*/dist
@@ -282,7 +282,7 @@ runs:
           ${{ inputs.extra-args }}
 
     - name: Upload CDK outputs
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: cdk-outputs
         path: ${{ inputs.working-directory }}/cdk-outputs.json
@@ -302,7 +302,7 @@ jobs:
       id-token: write
       contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - uses: ./.github/actions/setup-environment
         with:
