@@ -681,13 +681,20 @@ const deployRole = new JaypieGitHubDeployRole(this, 'GitHubDeployRole', {
 const deployRole = new JaypieGitHubDeployRole(this, 'GitHubDeployRole', {
   output: 'CustomRoleArnOutput'
 });
+
+// Opt out of default ECR permissions
+const deployRole = new JaypieGitHubDeployRole(this, 'GitHubDeployRole', {
+  ecr: false
+});
 ```
 
 | Property | Type | Required | Description |
 | -------- | ---- | -------- | ----------- |
+| `ecr` | `boolean` | No | Grant ECR auth + push permissions by default (default: true) |
 | `oidcProviderArn` | `string` | No | OIDC provider ARN; defaults to CDK.IMPORT.OIDC_PROVIDER import |
 | `output` | `boolean \| string` | No | Output role ARN: true (default name), string (custom name), false (no output) |
 | `repoRestriction` | `string` | No | Repository restriction pattern; defaults to organization-wide from CDK_ENV_REPO or PROJECT_REPO |
+| `sponsor` | `string` | No | Sponsor prefix for ECR repository scope; defaults to PROJECT_SPONSOR or the org parsed from CDK_ENV_REPO/PROJECT_REPO |
 
 The construct automatically grants permissions for:
 - Assuming roles via OIDC
@@ -695,6 +702,7 @@ The construct automatically grants permissions for:
 - CloudFormation stack operations
 - S3 and Route53 read access
 - Passing roles for CDK deployment
+- ECR auth (`ecr:GetAuthorizationToken` on `*`) and push (`BatchCheckLayerAvailability`, `BatchGetImage`, `CompleteLayerUpload`, `CreateRepository`, `DescribeRepositories`, `InitiateLayerUpload`, `PutImage`, `UploadLayerPart`) scoped to `arn:aws:ecr:*:<account>:repository/<sponsor>-*` — set `ecr: false` to opt out
 
 #### `JaypieHostedZone`
 
