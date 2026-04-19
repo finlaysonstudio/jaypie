@@ -313,6 +313,76 @@ describe("Express handler", () => {
         expect(res.body).toEqual({});
       });
 
+      describe("Session report", () => {
+        it("Reports path, empty query, and content metadata for GET with no body", async () => {
+          const mockFunction = vi.fn(() => ({ ok: true }));
+          const handler = expressHandler(mockFunction, { name: "handler" });
+          const app = express();
+          app.use(handler);
+          await request(app).get("/ping");
+          expect(log.report).toHaveBeenCalledWith(
+            expect.objectContaining({
+              method: "GET",
+              path: "/ping",
+              query: "",
+              contentType: "",
+              contentLength: 0,
+              status: "200",
+            }),
+          );
+        });
+
+        it("Separates query from path and normalizes param order", async () => {
+          const mockFunction = vi.fn(() => ({ ok: true }));
+          const handler = expressHandler(mockFunction, { name: "handler" });
+          const app = express();
+          app.use(handler);
+          await request(app).get("/ping?salutation=Hello&name=World");
+          expect(log.report).toHaveBeenCalledWith(
+            expect.objectContaining({
+              path: "/ping",
+              query: "name=World&salutation=Hello",
+            }),
+          );
+        });
+
+        it("Normalizes query regardless of input param order", async () => {
+          const mockFunction = vi.fn(() => ({ ok: true }));
+          const handler = expressHandler(mockFunction, { name: "handler" });
+          const app = express();
+          app.use(handler);
+          await request(app).get("/ping?name=World&salutation=Hello");
+          expect(log.report).toHaveBeenCalledWith(
+            expect.objectContaining({
+              query: "name=World&salutation=Hello",
+            }),
+          );
+        });
+
+        it("Reports contentType and contentLength for POST body", async () => {
+          const mockFunction = vi.fn(() => ({ ok: true }));
+          const handler = expressHandler(mockFunction, { name: "handler" });
+          const app = express();
+          app.use(express.json());
+          app.use(handler);
+          const body = { hello: "world" };
+          const bodyString = JSON.stringify(body);
+          await request(app)
+            .post("/ping")
+            .set("Content-Type", "application/json")
+            .send(body);
+          expect(log.report).toHaveBeenCalledWith(
+            expect.objectContaining({
+              method: "POST",
+              path: "/ping",
+              query: "",
+              contentType: expect.stringContaining("application/json"),
+              contentLength: bodyString.length,
+            }),
+          );
+        });
+      });
+
       it("OPTIONS request (CORS preflight)", async () => {
         const mockFunction = vi.fn(() => ({ ok: true }));
         const handler = expressHandler(mockFunction, { name: "handler" });

@@ -655,10 +655,14 @@ function expressHandler<T>(
     });
 
     // Construct normalized path for reporting and metrics
-    let path = (req.baseUrl || "") + (req.url || "");
-    if (!path.startsWith("/")) {
-      path = "/" + path;
+    let pathWithQuery = (req.baseUrl || "") + (req.url || "");
+    if (!pathWithQuery.startsWith("/")) {
+      pathWithQuery = "/" + pathWithQuery;
     }
+    const queryIndex = pathWithQuery.indexOf("?");
+    let path =
+      queryIndex >= 0 ? pathWithQuery.slice(0, queryIndex) : pathWithQuery;
+    const rawQuery = queryIndex >= 0 ? pathWithQuery.slice(queryIndex + 1) : "";
     if (path.length > 1 && path.endsWith("/")) {
       path = path.slice(0, -1);
     }
@@ -668,10 +672,27 @@ function expressHandler<T>(
       ":id",
     );
 
+    // Normalize query params (sort alphabetically for stable aggregation)
+    let query = "";
+    if (rawQuery) {
+      const params = new URLSearchParams(rawQuery);
+      params.sort();
+      query = params.toString();
+    }
+
+    // Capture request content metadata
+    const headers = req.headers || {};
+    const contentType = String(headers["content-type"] || "");
+    const contentLengthHeader = headers["content-length"];
+    const contentLength = contentLengthHeader ? Number(contentLengthHeader) : 0;
+
     // Add request data to session report
     logger.report({
       method: req.method,
       path,
+      query,
+      contentType,
+      contentLength,
       status: String(res.statusCode),
     });
 
