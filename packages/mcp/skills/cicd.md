@@ -15,6 +15,21 @@ Jaypie projects use GitHub Actions for continuous integration and deployment.
 | `cicd-deploy` | CDK deployment workflows (sandbox, production) |
 | `cicd-environments` | GitHub Environments configuration |
 
+## Action Versions
+
+GitHub Actions deprecated Node 20 runners on 2025-09-19. Pin third-party actions to majors that natively run on Node 24 to avoid deprecation warnings and the `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24` opt-in.
+
+| Action | Tag |
+|---|---|
+| `actions/checkout` | `v6` |
+| `actions/setup-node` | `v6` |
+| `actions/cache` | `v5` |
+| `actions/upload-artifact` | `v7` |
+| `actions/download-artifact` | `v8` |
+| `aws-actions/configure-aws-credentials` | `v6` |
+
+Refresh this list against the [Node 20 deprecation changelog](https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/) when bumping action versions.
+
 ## Standard Workflows
 
 ### npm-check.yml
@@ -34,8 +49,8 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
           node-version: 24
       - run: npm ci
@@ -44,8 +59,8 @@ jobs:
   typecheck:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
           node-version: 24
       - run: npm ci
@@ -57,8 +72,8 @@ jobs:
       matrix:
         node-version: [22, 24, 25]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
           node-version: ${{ matrix.node-version }}
       - run: npm ci
@@ -87,8 +102,8 @@ jobs:
       contents: read
       id-token: write
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
           node-version: 24
           registry-url: 'https://registry.npmjs.org'

@@ -30,7 +30,7 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: ./.github/actions/setup-node-and-cache
       - uses: ./.github/actions/npm-install-build
         with:
@@ -40,7 +40,7 @@ jobs:
   typecheck:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: ./.github/actions/setup-node-and-cache
       - uses: ./.github/actions/npm-install-build
         with:
@@ -53,7 +53,7 @@ jobs:
       matrix:
         node-version: [22, 24, 25]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: ./.github/actions/setup-node-and-cache
         with:
           node-version: ${{ matrix.node-version }}
@@ -68,7 +68,7 @@ jobs:
       id-token: write
       contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - uses: ./.github/actions/setup-environment
         with:
@@ -112,7 +112,7 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: ./.github/actions/setup-node-and-cache
       - uses: ./.github/actions/npm-install-build
         with:
@@ -122,7 +122,7 @@ jobs:
   typecheck:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: ./.github/actions/setup-node-and-cache
       - uses: ./.github/actions/npm-install-build
         with:
@@ -135,7 +135,7 @@ jobs:
       matrix:
         node-version: [22, 24, 25]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: ./.github/actions/setup-node-and-cache
         with:
           node-version: ${{ matrix.node-version }}
@@ -150,7 +150,7 @@ jobs:
       id-token: write
       contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - uses: ./.github/actions/setup-environment
         with:
@@ -200,7 +200,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
