@@ -11,10 +11,23 @@ import { ConfigurationError } from "@jaypie/errors";
 import { CDK } from "./constants";
 
 export interface JaypieGitHubDeployRoleProps {
+  ecr?: boolean;
   oidcProviderArn?: string;
   output?: boolean | string;
   repoRestriction?: string;
+  sponsor?: string;
 }
+
+const ECR_PUSH_ACTIONS = [
+  "ecr:BatchCheckLayerAvailability",
+  "ecr:BatchGetImage",
+  "ecr:CompleteLayerUpload",
+  "ecr:CreateRepository",
+  "ecr:DescribeRepositories",
+  "ecr:InitiateLayerUpload",
+  "ecr:PutImage",
+  "ecr:UploadLayerPart",
+];
 
 export class JaypieGitHubDeployRole extends Construct {
   private readonly _role: Role;
@@ -27,27 +40,32 @@ export class JaypieGitHubDeployRole extends Construct {
     super(scope, id);
 
     const {
+      ecr = true,
       oidcProviderArn = Fn.importValue(CDK.IMPORT.OIDC_PROVIDER),
       output = true,
       repoRestriction: propsRepoRestriction,
+      sponsor: propsSponsor,
     } = props;
 
     // Extract account ID from the scope
     const accountId = Stack.of(this).account;
 
-    // Resolve repoRestriction from props or environment variables
+    // Resolve repoRestriction and sponsor from props or environment variables
+    const envRepo = process.env.CDK_ENV_REPO || process.env.PROJECT_REPO;
+    const envRepoOrganization = envRepo ? envRepo.split("/")[0] : undefined;
+
     let repoRestriction = propsRepoRestriction;
     if (!repoRestriction) {
-      const envRepo = process.env.CDK_ENV_REPO || process.env.PROJECT_REPO;
-      if (!envRepo) {
+      if (!envRepoOrganization) {
         throw new ConfigurationError(
           "No repoRestriction provided. Set repoRestriction prop, CDK_ENV_REPO, or PROJECT_REPO environment variable",
         );
       }
-      // Extract organization from owner/repo format and create org-wide restriction
-      const organization = envRepo.split("/")[0];
-      repoRestriction = `repo:${organization}/*:*`;
+      repoRestriction = `repo:${envRepoOrganization}/*:*`;
     }
+
+    const sponsor =
+      propsSponsor || process.env.PROJECT_SPONSOR || envRepoOrganization;
 
     // Create the IAM role
     this._role = new Role(this, "GitHubActionsRole", {
@@ -109,6 +127,29 @@ export class JaypieGitHubDeployRole extends Construct {
         ],
       }),
     );
+
+    // Grant ECR auth + push scoped to <sponsor>-* repositories
+    if (ecr) {
+      if (!sponsor) {
+        throw new ConfigurationError(
+          "Cannot grant default ECR permissions without a sponsor. Set sponsor prop, PROJECT_SPONSOR, CDK_ENV_REPO, or PROJECT_REPO, or pass `ecr: false`",
+        );
+      }
+      this._role.addToPolicy(
+        new PolicyStatement({
+          actions: ["ecr:GetAuthorizationToken"],
+          effect: Effect.ALLOW,
+          resources: ["*"],
+        }),
+      );
+      this._role.addToPolicy(
+        new PolicyStatement({
+          actions: ECR_PUSH_ACTIONS,
+          effect: Effect.ALLOW,
+          resources: [`arn:aws:ecr:*:${accountId}:repository/${sponsor}-*`],
+        }),
+      );
+    }
 
     // Export the ARN of the role
     if (output !== false) {
