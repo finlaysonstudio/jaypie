@@ -214,5 +214,23 @@ describe("JaypieSecret", () => {
         new JaypieEnvSecret(stack, "TestSecret");
       }).not.toThrow();
     });
+
+    it("throws ConfigurationError when shorthand env key is missing from process.env", () => {
+      delete process.env.MISSING_SHORTHAND_SECRET;
+      const stack = new Stack();
+      expect(() => {
+        new JaypieEnvSecret(stack, "MISSING_SHORTHAND_SECRET");
+      }).toThrow(ConfigurationError);
+    });
+
+    it("does not throw when shorthand env key is missing but value is provided", () => {
+      delete process.env.MISSING_SHORTHAND_SECRET;
+      const stack = new Stack();
+      expect(() => {
+        new JaypieEnvSecret(stack, "MISSING_SHORTHAND_SECRET", {
+          value: "fallback",
+        });
+      }).not.toThrow();
+    });
   });
 });

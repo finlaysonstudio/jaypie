@@ -34,9 +34,12 @@ new JaypieLambda(this, "Handler", {
 });
 ```
 
-When the construct ID matches an environment variable name, `JaypieEnvSecret` automatically:
-- Uses that env var's value as the secret content
-- Sets `envKey` to the ID for later reference
+When the construct ID is a SCREAMING_SNAKE_CASE string (or matches an environment variable name with a non-empty value), `JaypieEnvSecret` automatically:
+- Treats the ID as the `envKey`
+- Uses the env var's value as the secret content
+- Namespaces the CDK construct id as `EnvSecret_${envKey}`
+
+If the shorthand env var is missing at deploy time and no `value` or `generateSecretString` is provided, construction throws `ConfigurationError`. Supply a `value` or `generateSecretString` when the env var may be absent.
 
 ### CI/CD Setup
 
