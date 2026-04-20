@@ -33,7 +33,7 @@ Complete stack styles, techniques, and traditions.
 `mcp__jaypie__skill(alias: String)`
 
 Contents: index, releasenotes
-Development: apikey, documentation, errors, llm, logs, mocks, monorepo, style, subpackages, tests, tools
+Development: apikey, documentation, errors, llm, logs, mocks, monorepo, repokit, style, subpackages, tests, tools
 Infrastructure: apigateway, aws, cdk, cicd, datadog, dns, dynamodb, express, lambda, migrations, secrets, sqs, streaming, variables, websockets
 Patterns: api, fabric, handlers, models, services, vocabulary
 Recipes: recipe-api-server
