@@ -81,6 +81,7 @@ src/
 - `generateJaypieKey({ checksum, issuer, length, pool, prefix, seed, separator })` - Generate API keys (prefix and checksum optional, seed for deterministic derivation)
 - `validateJaypieKey(key, options)` - Validate key format/checksum (prefix and checksum not required, accepts `_` or `-`)
 - `hashJaypieKey(key, { salt })` - SHA-256/HMAC-SHA256 key hashing (reads `PROJECT_SALT` env)
+- `jaypieApiKeyId(key, { namespace, salt })` - Derive a deterministic UUIDv5 from the hashed key, suitable as a user-facing DynamoDB id
 
 ### Utility Functions
 

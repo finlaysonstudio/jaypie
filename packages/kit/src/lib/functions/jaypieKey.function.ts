@@ -1,6 +1,7 @@
 import { createHash, createHmac, randomBytes } from "node:crypto";
 
 import { log } from "@jaypie/logger";
+import { v5 as uuidv5 } from "uuid";
 
 //
 //
@@ -36,6 +37,11 @@ interface JaypieKeyOptions {
 }
 
 interface HashOptions {
+  salt?: string;
+}
+
+interface ApiKeyIdOptions {
+  namespace: string;
   salt?: string;
 }
 
@@ -105,6 +111,13 @@ function generateJaypieKey({
     result += separator + checksumStr;
   }
   return result;
+}
+
+function jaypieApiKeyId(
+  key: string,
+  { namespace, salt }: ApiKeyIdOptions,
+): string {
+  return uuidv5(hashJaypieKey(key, { salt }), namespace);
 }
 
 function hashJaypieKey(key: string, { salt }: HashOptions = {}): string {
@@ -208,5 +221,5 @@ function validateJaypieKey(
 // Export
 //
 
-export { generateJaypieKey, hashJaypieKey, validateJaypieKey };
-export type { HashOptions, JaypieKeyOptions };
+export { generateJaypieKey, hashJaypieKey, jaypieApiKeyId, validateJaypieKey };
+export type { ApiKeyIdOptions, HashOptions, JaypieKeyOptions };

@@ -1,9 +1,11 @@
 import { createHash, createHmac } from "node:crypto";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { v5 as uuidv5, validate as validateUuid, version as uuidVersion } from "uuid";
 
 import {
   generateJaypieKey,
   hashJaypieKey,
+  jaypieApiKeyId,
   validateJaypieKey,
 } from "../lib/functions/jaypieKey.function.js";
 
@@ -481,6 +483,108 @@ describe("hashJaypieKey", () => {
       const hashNoSalt = hashJaypieKey(key);
       const hashWithSalt = hashJaypieKey(key, { salt: "my-salt" });
       expect(hashNoSalt).not.toBe(hashWithSalt);
+    });
+  });
+});
+
+describe("jaypieApiKeyId", () => {
+  const NAMESPACE = "b85e1a7a-5c7e-4e7b-9b8e-7c3a9d2f4e5b";
+  const originalEnv = process.env.PROJECT_SALT;
+
+  beforeEach(() => {
+    delete process.env.PROJECT_SALT;
+  });
+
+  afterEach(() => {
+    if (originalEnv !== undefined) {
+      process.env.PROJECT_SALT = originalEnv;
+    } else {
+      delete process.env.PROJECT_SALT;
+    }
+    vi.restoreAllMocks();
+  });
+
+  describe("Base Cases", () => {
+    it("is a function", () => {
+      expect(typeof jaypieApiKeyId).toBe("function");
+    });
+  });
+
+  describe("Happy Paths", () => {
+    it("returns a valid v5 UUID", () => {
+      const key = generateJaypieKey();
+      const id = jaypieApiKeyId(key, { namespace: NAMESPACE });
+      expect(validateUuid(id)).toBe(true);
+      expect(uuidVersion(id)).toBe(5);
+    });
+
+    it("is deterministic for the same key and namespace", () => {
+      const key = generateJaypieKey();
+      const id1 = jaypieApiKeyId(key, { namespace: NAMESPACE });
+      const id2 = jaypieApiKeyId(key, { namespace: NAMESPACE });
+      expect(id1).toBe(id2);
+    });
+
+    it("produces different ids for different keys", () => {
+      const key1 = generateJaypieKey();
+      const key2 = generateJaypieKey();
+      const id1 = jaypieApiKeyId(key1, { namespace: NAMESPACE });
+      const id2 = jaypieApiKeyId(key2, { namespace: NAMESPACE });
+      expect(id1).not.toBe(id2);
+    });
+
+    it("produces different ids for different namespaces", () => {
+      const key = generateJaypieKey();
+      const other = "f1e2d3c4-b5a6-4978-8a9b-0c1d2e3f4a5b";
+      const id1 = jaypieApiKeyId(key, { namespace: NAMESPACE });
+      const id2 = jaypieApiKeyId(key, { namespace: other });
+      expect(id1).not.toBe(id2);
+    });
+
+    it("derives id from uuidv5 of the hashed key", () => {
+      const key = "test-key";
+      const salt = "test-salt";
+      const expected = uuidv5(hashJaypieKey(key, { salt }), NAMESPACE);
+      expect(jaypieApiKeyId(key, { namespace: NAMESPACE, salt })).toBe(
+        expected,
+      );
+    });
+  });
+
+  describe("Salt Behavior", () => {
+    it("uses explicit salt when provided", () => {
+      const key = "test-key";
+      const unsalted = jaypieApiKeyId(key, { namespace: NAMESPACE });
+      const salted = jaypieApiKeyId(key, {
+        namespace: NAMESPACE,
+        salt: "my-salt",
+      });
+      expect(unsalted).not.toBe(salted);
+    });
+
+    it("uses PROJECT_SALT when no explicit salt", () => {
+      process.env.PROJECT_SALT = "env-salt";
+      const key = "test-key";
+      const id = jaypieApiKeyId(key, { namespace: NAMESPACE });
+      const expected = uuidv5(
+        hashJaypieKey(key, { salt: "env-salt" }),
+        NAMESPACE,
+      );
+      expect(id).toBe(expected);
+    });
+
+    it("explicit salt overrides PROJECT_SALT", () => {
+      process.env.PROJECT_SALT = "env-salt";
+      const key = "test-key";
+      const id = jaypieApiKeyId(key, {
+        namespace: NAMESPACE,
+        salt: "explicit-salt",
+      });
+      const expected = uuidv5(
+        hashJaypieKey(key, { salt: "explicit-salt" }),
+        NAMESPACE,
+      );
+      expect(id).toBe(expected);
     });
   });
 });
