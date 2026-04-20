@@ -45,6 +45,7 @@ const HTTP = {
       CLOUDFRONT_TABLET: "CloudFront-Is-Tablet-Viewer",
       TRACE_ID: "X-Amzn-Trace-Id",
     },
+    API_KEY: "X-Api-Key",
     AUTHORIZATION: "Authorization",
     CACHE_CONTROL: "Cache-Control",
     CONTENT_TYPE: "Content-Type",

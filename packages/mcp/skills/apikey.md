@@ -5,7 +5,7 @@ related: dynamodb, secrets, style, tests
 
 # API Keys
 
-Jaypie provides three functions for working with API keys: `generateJaypieKey`, `validateJaypieKey`, and `hashJaypieKey`. Available from `jaypie` or `@jaypie/kit`.
+Jaypie provides four functions for working with API keys: `generateJaypieKey`, `validateJaypieKey`, `hashJaypieKey`, and `jaypieApiKeyId`. Available from `jaypie` or `@jaypie/kit`.
 
 ## Generate
 
@@ -144,6 +144,29 @@ Returns a 64-character hex string. Deterministic — same key and salt always pr
 2. `process.env.PROJECT_SALT` environment variable
 3. No salt — plain SHA-256 (logs a warning)
 
+## Derive UUID Id
+
+> **Version note:** `jaypieApiKeyId` requires `jaypie >= 1.2.22` / `@jaypie/kit >= 1.2.8`.
+
+`jaypieApiKeyId(key, { namespace, salt? })` derives a deterministic UUIDv5 from the hashed key. Use this when the id must be surfaced in UIs, API responses, or resource URLs — a 64-char hex hash is not ergonomic, but a UUID is:
+
+```typescript
+import { jaypieApiKeyId } from "jaypie";
+
+const APIKEY_NAMESPACE = "b85e1a7a-5c7e-4e7b-9b8e-7c3a9d2f4e5b";
+
+const id = jaypieApiKeyId(key, { namespace: APIKEY_NAMESPACE });
+// "c4e1b0d2-..."
+```
+
+Properties:
+
+- **Deterministic** — same key + namespace always produces the same id; auth stays `getEntity({ id })`, still no GSI required
+- **One-way** — derives from the hash, so the plaintext key cannot be recovered
+- **Presentable** — a standard UUID, safe to expose externally
+
+Pick a stable namespace UUID per application (a random UUIDv4 is fine) so ids cannot collide across unrelated services.
+
 ## Typical Workflow
 
 1. **Generate** a key and return it to the user (only time plaintext is visible)
@@ -216,14 +239,33 @@ See `~secrets` for the full secrets management pattern.
 
 ## DynamoDB Storage Pattern
 
-Store hashed API keys in DynamoDB for direct lookup without a GSI:
+Store API keys in DynamoDB keyed on a deterministic id derived from the plaintext. Both patterns preserve direct `get-item` lookup (no GSI).
+
+### Preferred: UUIDv5 from hash (id safe to expose)
 
 ```typescript
-// model = "apikey", id = hash — enables direct get-item lookup
+const APIKEY_NAMESPACE = "b85e1a7a-5c7e-4e7b-9b8e-7c3a9d2f4e5b";
+
+// model = "apikey", id = uuidv5(hash, namespace) — standard UUID, safe to surface
+{ model: "apikey", id: jaypieApiKeyId(key, { namespace: APIKEY_NAMESPACE }), ownerId: "user_123", createdAt: "..." }
+```
+
+Use this when the id will appear in API responses, UI, or resource URLs. Auth stays a single `getEntity({ model: "apikey", id: jaypieApiKeyId(presented, { namespace }) })`.
+
+### Alternative: Raw hash id (hidden presentation)
+
+```typescript
+// model = "apikey", id = hash — a 64-char hex string, functional but not ergonomic
 { model: "apikey", id: hashJaypieKey(key), ownerId: "user_123", createdAt: "..." }
 ```
 
-This uses the `JaypieDynamoDb` default key convention (`model`/`id`). See `skill("dynamodb")` for table setup and query patterns.
+Use when presentation does not matter — internal-only tables, throwaway tooling, or when you are already storing a separate public identifier.
+
+Both patterns use the `JaypieDynamoDb` default key convention (`model`/`id`). See `skill("dynamodb")` for table setup and query patterns.
+
+### Why not `xid = hash` with a GSI?
+
+Another common pattern is `{ id: randomUUID(), xid: hashJaypieKey(key) }` with a GSI on `xid`. It works, but every auth lookup becomes a `query` against a GSI instead of a `get-item`, and you pay the per-deploy cost of an extra index. The UUIDv5 derivation sidesteps both by keeping the id deterministic.
 
 ## See Also
 

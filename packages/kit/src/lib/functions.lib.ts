@@ -4,9 +4,11 @@ export { default as formatError } from "./functions/formatError.function.js";
 export {
   generateJaypieKey,
   hashJaypieKey,
+  jaypieApiKeyId,
   validateJaypieKey,
 } from "./functions/jaypieKey.function.js";
 export type {
+  ApiKeyIdOptions,
   HashOptions,
   JaypieKeyOptions,
 } from "./functions/jaypieKey.function.js";
