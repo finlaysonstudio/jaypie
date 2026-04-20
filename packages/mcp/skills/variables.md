@@ -1,6 +1,6 @@
 ---
 description: Environment variables reference
-related: apikey, cdk, datadog, secrets
+related: apikey, cdk, datadog, repokit, secrets
 ---
 
 # Environment Variables
@@ -48,6 +48,21 @@ LOG_LEVEL=trace npm run dev
 # Normal debugging
 LOG_LEVEL=debug npm run dev
 ```
+
+### Loading from `.env` Files
+
+Use `env-cmd` (bundled with `@jaypie/repokit`) to load a dotenv file into a script. The `--` separator is required — without it, `env-cmd` treats the file as rc/JSON config and silently does the wrong thing:
+
+```json
+{
+  "scripts": {
+    "start:dev": "env-cmd -f .env.development -- node server.js",
+    "script:seed": "env-cmd -f .env.local -- tsx scripts/seed.ts"
+  }
+}
+```
+
+See `skill("repokit")` for the full tooling bundle.
 
 ## CDK Infrastructure Variables
 

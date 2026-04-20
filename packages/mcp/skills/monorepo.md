@@ -1,6 +1,6 @@
 ---
 description: Initialize a Jaypie monorepo project
-related: subpackage, cicd, style, tests
+related: subpackage, cicd, repokit, style, tests
 ---
 
 # Jaypie Monorepo Setup
@@ -130,8 +130,10 @@ npm-debug.log*
 Install root dev dependencies:
 
 ```bash
-npm install --save-dev @jaypie/eslint @jaypie/testkit eslint rimraf sort-package-json tsx vite vite-plugin-dts vitest
+npm install --save-dev @jaypie/eslint @jaypie/repokit @jaypie/testkit eslint vite vite-plugin-dts vitest
 ```
+
+`@jaypie/repokit` bundles `dotenv`, `env-cmd`, `rimraf`, `sort-package-json`, and `tsx` at consistent versions. See `skill("repokit")`.
 
 ## Workspace Conventions
 
