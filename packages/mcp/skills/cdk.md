@@ -1,6 +1,6 @@
 ---
 description: CDK constructs and deployment patterns
-related: apikey, aws, cicd, dynamodb, express, lambda, migrations, secrets, streaming, websockets
+related: apikey, aws, cicd, dynamodb, express, lambda, migrations, secrets, streaming, web, websockets
 ---
 
 # CDK Constructs
@@ -422,4 +422,5 @@ new JaypieOrganizationTrail(this, "OrgTrail", {
 - **`skill("secrets")`** - Secret management with JaypieEnvSecret
 - **`skill("streaming")`** - JaypieDistribution and JaypieNextJs streaming configuration
 - **`skill("variables")`** - Environment variables reference
+- **`skill("web")`** - JaypieWebDeploymentBucket and JaypieStaticWebBucket for static sites
 - **`skill("websockets")`** - JaypieWebSocket and JaypieWebSocketTable constructs
