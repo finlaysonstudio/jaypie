@@ -1,6 +1,6 @@
 ---
 description: DNS and domain configuration
-related: cdk, aws
+related: aws, cdk, web
 ---
 
 # DNS Configuration
@@ -135,4 +135,5 @@ openssl s_client -connect app.example.com:443 -servername app.example.com
 ## See Also
 
 - **`skill("cdk")`** - CDK constructs including JaypieDistribution and JaypieNextJs
+- **`skill("web")`** - Static site hosting with JaypieWebDeploymentBucket and JaypieStaticWebBucket
 
