@@ -85,6 +85,82 @@ fab.generate.person();
 - **RARE (2.1%)**: firstName is a surname, lastName is hyphenated
 - **EPIC (0.307%)**: double middle names
 
+### Corpus
+
+Generate deterministic prose for fixtures, snapshots, or seeded benchmarks.
+
+```typescript
+const fab = fabricator("seed");
+
+fab.corpus();              // 108 words of English-ish prose (default)
+fab.corpus(1000);          // 1000 words
+fab.corpus({ wordsPerPeriod: 10 });
+fab.corpus(500, { typoRate: 0.20 });
+```
+
+#### Determinism contract
+
+- Each call **advances** the fabricator's faker state, so successive calls with the same params return different output (`fab.corpus(100) !== fab.corpus(100)`).
+- Replaying from a fresh `fabricator(seed)` reproduces the same sequence.
+- Word count and options are folded into the per-call seed, so different params produce **independent** streams. `corpus(100)` and `corpus(101)` differ across the whole text — not by one word.
+
+#### Custom corpus
+
+Mix domain vocabulary into the output. By default the custom pool blends 50/50 with default English; typo (~6%) and phonotactic invention (~3%) rates stay at their defaults.
+
+```typescript
+fab.corpus(500, { corpus: deployLogText });            // raw text → derived weights
+fab.corpus(500, { words: [["deploy", 5], ["lambda", 2]] });
+
+fab.corpus(500, { corpus: deployLogText, blend: 0.7 }); // tune the mix
+fab.corpus(500, { corpus: deployLogText, replaceDefaults: true }); // pure custom
+```
+
+#### Custom token functions
+
+For non-word-shaped tokens (UUIDs, dollar amounts, IDs), pass `functions`. Each function receives the fabricator and emits one token per draw. Weight is the share of total content tokens taken from the main word stream.
+
+```typescript
+// Shorthand for a single function
+fab.corpus(500, {
+  functions: [({ fab }) => fab.string.uuid(), 0.03],
+});
+
+// Multiple functions
+fab.corpus(500, {
+  functions: [
+    [({ fab }) => fab.string.uuid(), 0.03],
+    [({ fab }) => "$" + fab.finance.amount(), 0.04],
+    [({ fab }) => fab.internet.email(), 0.02],
+  ],
+});
+```
+
+#### Full options
+
+```typescript
+interface CorpusOptions {
+  corpus?: string;                                  // raw text → derive weights
+  words?: ReadonlyArray<readonly [string, number]>; // explicit weights
+  blend?: number;                                   // share given to custom pool, default 0.5
+  replaceDefaults?: boolean;                        // skip default English entirely
+  typos?: ReadonlyArray<readonly [string, number]>; // override typo pool
+  phonotactic?: PhonotacticOptions;                 // tune invented words
+  typoRate?: number;                                // default 0.06
+  phonotacticRate?: number;                         // default 0.03
+  wordsPerPeriod?: number;                          // default 17
+  wordsPerComma?: number;                           // default 22
+  periodsPerBreak?: number;                         // default 5
+  sentences?: boolean;                              // default true
+  chars?: number;                                   // generate by char length instead of word count
+  functions?:                                       // custom token functions
+    | readonly [CorpusTokenFunction, number]
+    | ReadonlyArray<readonly [CorpusTokenFunction, number]>;
+}
+
+type CorpusTokenFunction = (params: { fab: Fabricator }) => string;
+```
+
 ## CHANCE Constants
 
 ```typescript
