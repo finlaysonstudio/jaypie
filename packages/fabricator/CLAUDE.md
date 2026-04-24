@@ -107,6 +107,17 @@ fab.corpus();                                // 108 words
 fab.corpus(1000);                            // 1000 words
 fab.corpus(500, { corpus: domainText });     // mix domain text 50/50 with English defaults
 fab.corpus(500, { replaceDefaults: true, words: [["alpha", 1]] });
+
+fab.corpus(500, {                                       // emit UUIDs as ~3% of tokens
+  functions: [({ fab }) => fab.string.uuid(), 0.03],
+});
+
+fab.corpus(500, {                                       // multiple custom functions
+  functions: [
+    [({ fab }) => fab.string.uuid(), 0.03],
+    [({ fab }) => "$" + fab.finance.amount(), 0.04],
+  ],
+});
 ```
 
 Determinism contract:

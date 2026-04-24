@@ -9,10 +9,26 @@ import { babble } from "./generators/babble.js";
 import type { BabbleOptions } from "./generators/babble.js";
 import type { PhonotacticOptions } from "./generators/phonotactic.js";
 import { ENGLISH_WORDS } from "./data/english-corpus.js";
+import type { Fabricator } from "../Fabricator.js";
 
 const DEFAULT_WORDS = 108;
 const CHARS_PER_WORD_ESTIMATE = 6;
 const SAFETY_PADDING = 1.5;
+
+/**
+ * Function that emits a single token in the corpus stream. Receives the
+ * fabricator that owns the corpus call — useful for things like
+ * `fab.string.uuid()` or `fab.finance.amount()`. Each invocation advances
+ * the fabricator's state, so output remains deterministic.
+ */
+export type CorpusTokenFunction = (params: { fab: Fabricator }) => string;
+
+/**
+ * Function entry as it appears in `CorpusOptions.functions`. The `weight`
+ * is the share of total content tokens taken from the main word stream
+ * (e.g. 0.03 = 3%).
+ */
+export type CorpusFunctionEntry = readonly [CorpusTokenFunction, number];
 
 export interface CorpusOptions {
   /**
@@ -62,6 +78,17 @@ export interface CorpusOptions {
    * `words` argument to corpus() is ignored.
    */
   chars?: number;
+
+  /**
+   * Custom token-producing functions. Each function emits one token per
+   * draw; the weight is the share of total content tokens taken from the
+   * main word stream.
+   *
+   * Two forms accepted:
+   * - Shorthand for a single function: `[fn, 0.03]`
+   * - Multiple functions: `[[fn1, 0.03], [fn2, 0.04]]`
+   */
+  functions?: CorpusFunctionEntry | ReadonlyArray<CorpusFunctionEntry>;
 }
 
 function deriveWordsFromCorpus(
@@ -118,6 +145,17 @@ function buildWordPool(
   return merged;
 }
 
+function normalizeFunctions(
+  input: CorpusOptions["functions"],
+): ReadonlyArray<CorpusFunctionEntry> {
+  if (!input) return [];
+  if (input.length === 0) return [];
+  if (typeof input[0] === "function" && typeof input[1] === "number") {
+    return [input as CorpusFunctionEntry];
+  }
+  return input as ReadonlyArray<CorpusFunctionEntry>;
+}
+
 function countWords(text: string): number {
   const trimmed = text.trim();
   if (!trimmed) return 0;
@@ -146,16 +184,31 @@ function trimToWordCount(text: string, words: number, sentences: boolean) {
 
 /**
  * Generate corpus text. Always deterministic given seed + words + options.
+ *
+ * `fab` is required when `options.functions` is provided — the user-supplied
+ * functions receive it as their context.
  */
 export function corpus(
   seed: string,
   words: number = DEFAULT_WORDS,
   options: CorpusOptions = {},
+  fab?: Fabricator,
 ): string {
   const wordPool = buildWordPool(options);
   if (wordPool.length === 0) {
     throw new Error("corpus: empty word pool");
   }
+
+  const normalizedFunctions = normalizeFunctions(options.functions);
+  if (normalizedFunctions.length > 0 && !fab) {
+    throw new Error(
+      "corpus: functions option requires a fabricator context (call via fab.corpus)",
+    );
+  }
+  const extras = normalizedFunctions.map(([fn, weight]) => ({
+    weight,
+    generate: () => fn({ fab: fab as Fabricator }),
+  }));
 
   const babbleOptions: BabbleOptions = {
     words: wordPool,
@@ -167,6 +220,7 @@ export function corpus(
     wordsPerComma: options.wordsPerComma,
     periodsPerBreak: options.periodsPerBreak,
     sentences: options.sentences,
+    extras: extras.length > 0 ? extras : undefined,
   };
 
   if (typeof options.chars === "number") {

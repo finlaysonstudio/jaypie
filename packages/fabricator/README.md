@@ -129,6 +129,28 @@ fab.corpus(500, { corpus: deployLogText, blend: 0.7 });
 fab.corpus(500, { corpus: deployLogText, replaceDefaults: true });
 ```
 
+#### Custom token functions
+
+For tokens that aren't word-shaped — UUIDs, dollar amounts, IDs — pass `functions`. Each function receives the fabricator and emits one token per draw. The weight is the share of total content tokens taken from the main word stream:
+
+```typescript
+// Single function — shorthand
+fab.corpus(500, {
+  functions: [({ fab }) => fab.string.uuid(), 0.03],
+});
+
+// Multiple functions
+fab.corpus(500, {
+  functions: [
+    [({ fab }) => fab.string.uuid(), 0.03],
+    [({ fab }) => "$" + fab.finance.amount(), 0.04],
+    [({ fab }) => fab.internet.email(), 0.02],
+  ],
+});
+```
+
+Output is still deterministic — function calls advance the fabricator's state in a consistent order across replays.
+
 #### Full options
 
 ```typescript
@@ -146,7 +168,12 @@ interface CorpusOptions {
   periodsPerBreak?: number;                             // default 5
   sentences?: boolean;                                  // default true
   chars?: number;                                       // generate by char length instead of word count
+  functions?:                                           // custom token functions
+    | readonly [CorpusTokenFunction, number]
+    | ReadonlyArray<readonly [CorpusTokenFunction, number]>;
 }
+
+type CorpusTokenFunction = (params: { fab: Fabricator }) => string;
 ```
 
 ### Generate Complex Data

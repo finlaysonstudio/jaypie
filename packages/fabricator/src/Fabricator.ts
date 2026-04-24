@@ -413,7 +413,7 @@ export class Fabricator {
     const optionsKey = JSON.stringify(options);
     const corpusSeed = `${subSeed}:${lengthKey}:${optionsKey}`;
 
-    return corpusGenerator(corpusSeed, words, options);
+    return corpusGenerator(corpusSeed, words, options, this);
   }
 
   /**

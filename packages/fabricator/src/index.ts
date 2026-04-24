@@ -3,8 +3,12 @@
 // Export Fabricator classes and types
 export { Fabricator, type FabricatorOptions } from "./Fabricator.js";
 
-// Export CorpusOptions type for typed option arguments to fab.corpus()
-export type { CorpusOptions } from "./corpus/index.js";
+// Export CorpusOptions and related types for typed option arguments to fab.corpus()
+export type {
+  CorpusFunctionEntry,
+  CorpusOptions,
+  CorpusTokenFunction,
+} from "./corpus/index.js";
 
 // Re-import Fabricator for the function
 import { Fabricator, type FabricatorOptions } from "./Fabricator.js";

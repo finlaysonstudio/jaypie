@@ -199,6 +199,82 @@ describe("Fabricator.corpus", () => {
     });
   });
 
+  describe("functions", () => {
+    const UUID_RE =
+      /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
+
+    it("accepts shorthand [fn, weight] and emits tokens from it", () => {
+      const fab = fabricator("fn-shorthand");
+      const text = fab.corpus(200, {
+        functions: [({ fab }) => fab.string.uuid(), 0.5],
+      });
+      expect(UUID_RE.test(text)).toBe(true);
+    });
+
+    it("accepts the array-of-entries form with multiple functions", () => {
+      const fab = fabricator("fn-array");
+      const text = fab.corpus(200, {
+        functions: [
+          [({ fab }) => fab.string.uuid(), 0.3],
+          [({ fab }) => "$" + fab.number.int({ min: 1, max: 999 }), 0.3],
+        ],
+      });
+      expect(UUID_RE.test(text)).toBe(true);
+      expect(/\$\d+/.test(text)).toBe(true);
+    });
+
+    it("function weight reduces the main word stream proportionally", () => {
+      // With replaceDefaults + a one-word custom pool + a function at 0.5,
+      // roughly half of content tokens should be "alpha" and half should
+      // come from the function. Disable typos and phonotactic to make the
+      // arithmetic clean.
+      const fab = fabricator("fn-weight");
+      const text = fab.corpus(400, {
+        words: [["alpha", 1]],
+        replaceDefaults: true,
+        typoRate: 0,
+        phonotacticRate: 0,
+        functions: [() => "BETA", 0.5],
+      });
+      const tokens = text
+        .replace(/[.,!?;:]/g, "")
+        .trim()
+        .split(/\s+/)
+        .map((t) => t.toLowerCase());
+      const alphas = tokens.filter((t) => t === "alpha").length;
+      const betas = tokens.filter((t) => t === "beta").length;
+      // Expect both well-represented; with rate 0.5 the counts should be
+      // close. Using a generous bound to avoid flakiness on small samples.
+      expect(alphas).toBeGreaterThan(50);
+      expect(betas).toBeGreaterThan(50);
+      expect(alphas + betas).toBe(tokens.length);
+    });
+
+    it("functions receive the fabricator and produce deterministic output", () => {
+      const make = () =>
+        fabricator("fn-deterministic").corpus(80, {
+          functions: [({ fab }) => fab.string.uuid(), 0.2],
+        });
+      expect(make()).toEqual(make());
+    });
+
+    it("rejects when total weight (typo + phono + functions) >= 1", () => {
+      const fab = fabricator("fn-overweight");
+      expect(() =>
+        fab.corpus(100, {
+          typoRate: 0.5,
+          phonotacticRate: 0.4,
+          functions: [() => "x", 0.2],
+        }),
+      ).toThrow();
+    });
+
+    it("rejects negative function weights", () => {
+      const fab = fabricator("fn-negative");
+      expect(() => fab.corpus(100, { functions: [() => "x", -0.1] })).toThrow();
+    });
+  });
+
   describe("validation", () => {
     it("rejects zero or negative word counts", () => {
       const fab = fabricator("invalid-words");

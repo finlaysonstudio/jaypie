@@ -17,7 +17,7 @@
  */
 
 import { toRng } from "../rng.js";
-import type { Seed } from "../rng.js";
+import type { Rng, Seed } from "../rng.js";
 import { phonotacticWord } from "./phonotactic.js";
 import type { PhonotacticOptions } from "./phonotactic.js";
 import { ENGLISH_WORDS } from "../data/english-corpus.js";
@@ -52,9 +52,30 @@ export interface BabbleOptions {
   periodsPerBreak?: number;
   /** Capitalize the first word of each sentence/paragraph (default true). */
   sentences?: boolean;
+  /**
+   * Extra content categories. Each emits one token per draw, drawn from the
+   * supplied generate function. Their weights are subtracted from the main
+   * word stream.
+   */
+  extras?: ReadonlyArray<{
+    weight: number;
+    generate: (rng: Rng) => string;
+  }>;
 }
 
-type Category = "word" | "typo" | "phono" | "period" | "comma" | "break";
+interface ResolvedExtra {
+  weight: number;
+  generate: (rng: Rng) => string;
+}
+
+type Category =
+  | "word"
+  | "typo"
+  | "phono"
+  | "period"
+  | "comma"
+  | "break"
+  | ResolvedExtra;
 
 type Token =
   | { kind: "word"; text: string }
@@ -93,10 +114,24 @@ export function babble(
 
   const typoRate = options.typoRate ?? 0.06;
   const phonoRate = options.phonotacticRate ?? 0.03;
-  if (typoRate < 0 || phonoRate < 0 || typoRate + phonoRate >= 1) {
-    throw new Error("babble: typoRate + phonotacticRate must be in [0, 1)");
+  const extras = options.extras ?? [];
+  let extrasTotal = 0;
+  for (const extra of extras) {
+    if (extra.weight < 0) {
+      throw new Error("babble: extra weights must be >= 0");
+    }
+    extrasTotal += extra.weight;
   }
-  const wordRate = 1 - typoRate - phonoRate;
+  if (
+    typoRate < 0 ||
+    phonoRate < 0 ||
+    typoRate + phonoRate + extrasTotal >= 1
+  ) {
+    throw new Error(
+      "babble: typoRate + phonotacticRate + extras must be in [0, 1)",
+    );
+  }
+  const wordRate = 1 - typoRate - phonoRate - extrasTotal;
 
   const wordsPerPeriod = options.wordsPerPeriod ?? 17;
   const wordsPerComma = options.wordsPerComma ?? 22;
@@ -115,6 +150,9 @@ export function babble(
     ["typo", typos.length > 0 ? typoRate : 0],
     ["phono", phonoRate],
   ];
+  for (const extra of extras) {
+    if (extra.weight > 0) categoryPool.push([extra, extra.weight]);
+  }
   if (Number.isFinite(wordsPerPeriod) && wordsPerPeriod > 0) {
     const totalPeriodWeight = 1 / wordsPerPeriod;
     if (!Number.isFinite(periodsPerBreak)) {
@@ -140,6 +178,16 @@ export function babble(
 
   while (approxLength < length) {
     const category = rng.weighted(categoryPool);
+
+    if (typeof category === "object") {
+      const text = category.generate(rng);
+      if (!text) continue;
+      emitted.push({ kind: "word", text });
+      approxLength += text.length + 1;
+      canPunctuate = true;
+      lastKind = "word";
+      continue;
+    }
 
     if (category === "word") {
       const text = rng.weighted(words);
