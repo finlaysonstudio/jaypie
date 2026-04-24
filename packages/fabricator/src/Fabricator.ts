@@ -5,6 +5,8 @@ import numericSeedArray from "./util/numericSeedArray.js";
 import { random, type RandomFunction } from "./random.js";
 import isUuid from "./util/isUuid.js";
 import { uuidFrom } from "./util/uuidFrom.js";
+import { corpus as corpusGenerator } from "./corpus/index.js";
+import type { CorpusOptions } from "./corpus/index.js";
 
 //
 // Types
@@ -368,6 +370,51 @@ export class Fabricator {
    * Gets the internal random function
    */
   random: RandomFunction = (options?) => this._random(options);
+
+  /**
+   * Generates a deterministic corpus of text. Each call advances the
+   * fabricator's state, so successive calls with the same parameters return
+   * different output. Replaying from a fresh `fabricator(seed)` reproduces
+   * the same sequence.
+   *
+   * Length parameters are folded into the per-call seed, so different word
+   * counts produce independent streams (not truncated variants of one
+   * another).
+   *
+   * Supports the same signature shapes as the `fabricator()` factory:
+   * - `fab.corpus()` — 108 words
+   * - `fab.corpus(words)` — N words
+   * - `fab.corpus(options)` — 108 words with options
+   * - `fab.corpus(words, options)` — N words with options
+   */
+  corpus(): string;
+  corpus(words: number): string;
+  corpus(options: CorpusOptions): string;
+  corpus(words: number, options: CorpusOptions): string;
+  corpus(
+    wordsOrOptions?: number | CorpusOptions,
+    maybeOptions?: CorpusOptions,
+  ): string {
+    let words: number | undefined;
+    let options: CorpusOptions = {};
+
+    if (typeof wordsOrOptions === "number") {
+      words = wordsOrOptions;
+      if (maybeOptions) options = maybeOptions;
+    } else if (wordsOrOptions && typeof wordsOrOptions === "object") {
+      options = wordsOrOptions;
+    }
+
+    const subSeed = this._faker.string.uuid();
+    const lengthKey =
+      typeof options.chars === "number"
+        ? `c${options.chars}`
+        : `w${words ?? 0}`;
+    const optionsKey = JSON.stringify(options);
+    const corpusSeed = `${subSeed}:${lengthKey}:${optionsKey}`;
+
+    return corpusGenerator(corpusSeed, words, options);
+  }
 
   /**
    * Generate namespace for complex data generation methods

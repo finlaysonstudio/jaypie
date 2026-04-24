@@ -16,6 +16,11 @@ src/
 ├── WorldFabricator.ts    # Example nested fabricator for generating worlds/cities
 ├── random.ts             # Seeded random number generation with distribution options
 ├── constants.ts          # CHANCE probability constants, JAYPIE_FABRICATOR_UUID
+├── corpus/
+│   ├── index.ts          # corpus() generator and CorpusOptions (private — vendored from text-gen)
+│   ├── rng.ts            # sfc32 + cyrb128 seeded RNG
+│   ├── data/             # ENGLISH_WORDS (Zipf-weighted), ENGLISH_TYPOS
+│   └── generators/       # babble, phonotactic
 ├── derived/
 │   ├── index.ts          # Derived event exports
 │   ├── types.ts          # DerivedConfig, DerivedRule, DerivedTiming interfaces
@@ -91,6 +96,25 @@ From `@jaypie/fabricator/constants`:
 - `CHANCE.LEGENDARY`: 0.000441 (0.0441%)
 
 These are the "golden numbers" used for probabilistic variations.
+
+### Corpus Generation
+
+`fab.corpus(words?, options?)` generates deterministic prose for fixtures:
+
+```typescript
+const fab = fabricator("seed");
+fab.corpus();                                // 108 words
+fab.corpus(1000);                            // 1000 words
+fab.corpus(500, { corpus: domainText });     // mix domain text 50/50 with English defaults
+fab.corpus(500, { replaceDefaults: true, words: [["alpha", 1]] });
+```
+
+Determinism contract:
+- Each call **advances** the fabricator's faker state, so successive calls with the same parameters return different output (`fab.corpus(100) !== fab.corpus(100)`).
+- Replaying from a fresh `fabricator(seed)` reproduces the same output sequence.
+- The word count and options are folded into the per-call seed before the underlying generator runs, so different parameters produce **independent** streams — `corpus(100)` and `corpus(101)` are not off-by-one variants of each other.
+
+Implementation lives in `src/corpus/` and is vendored (originally from `text-gen`). Internal generators (`babble`, `phonotactic`, `ENGLISH_WORDS`, `ENGLISH_TYPOS`, `Rng`) are **not** exported — only `corpus()` on the Fabricator class and the `CorpusOptions` type.
 
 ### Complex Data Generation
 
@@ -186,6 +210,7 @@ export class DerivedEvaluator<T extends TimestampedEvent> { ... }
 
 // Types
 export type FabricatorOptions;
+export type CorpusOptions;
 export type EventFabricatorOptions<T>;
 export type CreateEventParams;
 export type EventGenerationConfig;
