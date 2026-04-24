@@ -117,6 +117,58 @@ fab.generate.words();        // "swift eagle"
 fab.generate.words(3);       // "swift eagle dance"
 ```
 
+## Corpus Generation
+
+Generate deterministic prose for fixtures, snapshots, or seeded benchmarks.
+
+### Basic Usage
+
+```typescript
+const fab = fabricator("seed");
+
+fab.corpus();              // 108 words of English-ish prose (default)
+fab.corpus(1000);          // 1000 words
+fab.corpus({ wordsPerPeriod: 10 });
+fab.corpus(500, { typoRate: 0.20 });
+```
+
+### Determinism
+
+- Each call advances the fabricator's faker state, so successive calls with the same parameters return different output.
+- Replaying from a fresh `fabricator(seed)` reproduces the same sequence.
+- Word counts and options are folded into the per-call seed, so different parameters produce independent streams — `corpus(100)` and `corpus(101)` differ across the whole text, not by one word.
+
+### Custom Corpus
+
+Mix domain vocabulary into the output. By default the custom pool blends 50/50 with default English; typo and phonotactic invention rates stay at their defaults.
+
+```typescript
+fab.corpus(500, { corpus: deployLogText });
+fab.corpus(500, { words: [["deploy", 5], ["lambda", 2]] });
+fab.corpus(500, { corpus: deployLogText, blend: 0.7 });
+fab.corpus(500, { corpus: deployLogText, replaceDefaults: true });
+```
+
+### Custom Token Functions
+
+For tokens that aren't word-shaped (UUIDs, dollar amounts, IDs), pass `functions`. Each function receives the fabricator and emits one token per draw. The weight is the share of total content tokens taken from the main word stream.
+
+```typescript
+// Single function — shorthand
+fab.corpus(500, {
+  functions: [({ fab }) => fab.string.uuid(), 0.03],
+});
+
+// Multiple functions
+fab.corpus(500, {
+  functions: [
+    [({ fab }) => fab.string.uuid(), 0.03],
+    [({ fab }) => "$" + fab.finance.amount(), 0.04],
+    [({ fab }) => fab.internet.email(), 0.02],
+  ],
+});
+```
+
 ## Person Generation
 
 ### Basic Person
