@@ -657,26 +657,22 @@ export class JaypieDistribution
         const wafLogBucketName = wafConfig.name
           ? `aws-waf-logs-${constructEnvName(`${wafConfig.name}-waf`).toLowerCase()}`
           : `aws-waf-logs-${constructEnvName("waf").toLowerCase()}`;
-        const createdBucket = new s3.Bucket(
-          this,
-          wafLogBucketId,
-          {
-            bucketName: wafLogBucketName,
-            lifecycleRules: [
-              {
-                expiration: Duration.days(90),
-                transitions: [
-                  {
-                    storageClass: s3.StorageClass.INFREQUENT_ACCESS,
-                    transitionAfter: Duration.days(30),
-                  },
-                ],
-              },
-            ],
-            objectOwnership: s3.ObjectOwnership.OBJECT_WRITER,
-            removalPolicy: RemovalPolicy.RETAIN,
-          },
-        );
+        const createdBucket = new s3.Bucket(this, wafLogBucketId, {
+          bucketName: wafLogBucketName,
+          lifecycleRules: [
+            {
+              expiration: Duration.days(90),
+              transitions: [
+                {
+                  storageClass: s3.StorageClass.INFREQUENT_ACCESS,
+                  transitionAfter: Duration.days(30),
+                },
+              ],
+            },
+          ],
+          objectOwnership: s3.ObjectOwnership.OBJECT_WRITER,
+          removalPolicy: RemovalPolicy.RETAIN,
+        });
         Tags.of(createdBucket).add(CDK.TAG.ROLE, CDK.ROLE.MONITORING);
 
         // Add Datadog forwarder notification

@@ -1,6 +1,10 @@
 import { createHash, createHmac } from "node:crypto";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { v5 as uuidv5, validate as validateUuid, version as uuidVersion } from "uuid";
+import {
+  v5 as uuidv5,
+  validate as validateUuid,
+  version as uuidVersion,
+} from "uuid";
 
 import {
   generateJaypieKey,

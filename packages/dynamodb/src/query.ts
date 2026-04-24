@@ -10,11 +10,7 @@ import { ConfigurationError } from "@jaypie/errors";
 import { getModelIndexes, type IndexDefinition } from "@jaypie/fabric";
 
 import { buildCompositeKey } from "./keyBuilders.js";
-import {
-  calculateSuffix,
-  executeQuery,
-  scopePrefix,
-} from "./queries.js";
+import { calculateSuffix, executeQuery, scopePrefix } from "./queries.js";
 import type { QueryResult, StorableEntity } from "./types.js";
 
 // =============================================================================
@@ -76,9 +72,7 @@ function selectBestIndex(
   });
 
   if (candidates.length === 0) {
-    const available = indexes
-      .map((i) => `[${i.pk.join(", ")}]`)
-      .join(", ");
+    const available = indexes.map((i) => `[${i.pk.join(", ")}]`).join(", ");
     const provided = Object.keys(filter).join(", ") || "(none)";
     throw new ConfigurationError(
       `No index matches filter for model. ` +

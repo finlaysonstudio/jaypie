@@ -108,9 +108,9 @@ describe("Entity Operations", () => {
     it("re-throws non-ConditionalCheckFailedException errors", async () => {
       const err = Object.assign(new Error("boom"), { name: "OtherError" });
       mockSend.mockRejectedValueOnce(err);
-      await expect(createEntity({ entity: createTestEntity() })).rejects.toThrow(
-        "boom",
-      );
+      await expect(
+        createEntity({ entity: createTestEntity() }),
+      ).rejects.toThrow("boom");
     });
 
     it("auto-bumps updatedAt and backfills createdAt", async () => {
@@ -207,9 +207,7 @@ describe("Entity Operations", () => {
       await deleteEntity({ id: "test-id-123" });
       const putCmd = mockSend.mock.calls[1][0];
       expect(putCmd.input.Item.indexModel).toBe("record#deleted");
-      expect(putCmd.input.Item.indexModelAlias).toBe(
-        "record#my-alias#deleted",
-      );
+      expect(putCmd.input.Item.indexModelAlias).toBe("record#my-alias#deleted");
     });
   });
 

@@ -86,6 +86,96 @@ const fab = fabricator();
 const words = fab.words();
 ```
 
+### Corpus
+
+Generate deterministic corpus text for fixtures, benchmarks, or seeded prose:
+
+```typescript
+const fab = fabricator("my-seed");
+
+fab.corpus();              // 108 words of English-ish prose
+fab.corpus(1000);          // 1000 words
+fab.corpus({ wordsPerPeriod: 10 });
+fab.corpus(500, { typoRate: 0.20 });
+```
+
+Each call advances the fabricator's state, so successive calls with the same parameters return *different* output. Re-running from a fresh `fabricator("my-seed")` reproduces the same sequence:
+
+```typescript
+const f1 = fabricator("seed");
+const a = f1.corpus(100);
+const b = f1.corpus(100);
+// a !== b
+
+const f2 = fabricator("seed");
+f2.corpus(100) === a;   // true
+f2.corpus(100) === b;   // true
+```
+
+Different parameters produce **independent** streams, not truncated variants — `fabricator("seed").corpus(100)` and `fabricator("seed").corpus(101)` differ across the whole text, not by one word.
+
+#### Custom corpus
+
+Pass `corpus` (raw text) or `words` (explicit weights) to mix domain vocabulary into the output. By default the custom pool is blended **50/50** with the default English pool; typo rate (~6%) and phonotactic invention rate (~3%) stay at their defaults:
+
+```typescript
+fab.corpus(500, { corpus: deployLogText });
+fab.corpus(500, { words: [["deploy", 5], ["pipeline", 3], ["lambda", 2]] });
+
+// Tune the mix
+fab.corpus(500, { corpus: deployLogText, blend: 0.7 });
+
+// Pure custom — drop default English entirely
+fab.corpus(500, { corpus: deployLogText, replaceDefaults: true });
+```
+
+#### Custom token functions
+
+For tokens that aren't word-shaped — UUIDs, dollar amounts, IDs — pass `functions`. Each function receives the fabricator and emits one token per draw. The weight is the share of total content tokens taken from the main word stream:
+
+```typescript
+// Single function — shorthand
+fab.corpus(500, {
+  functions: [({ fab }) => fab.string.uuid(), 0.03],
+});
+
+// Multiple functions
+fab.corpus(500, {
+  functions: [
+    [({ fab }) => fab.string.uuid(), 0.03],
+    [({ fab }) => "$" + fab.finance.amount(), 0.04],
+    [({ fab }) => fab.internet.email(), 0.02],
+  ],
+});
+```
+
+Output is still deterministic — function calls advance the fabricator's state in a consistent order across replays.
+
+#### Full options
+
+```typescript
+interface CorpusOptions {
+  corpus?: string;                                      // raw text → derive weights
+  words?: ReadonlyArray<readonly [string, number]>;     // explicit weights
+  blend?: number;                                       // share given to custom pool, default 0.5
+  replaceDefaults?: boolean;                            // skip default English entirely
+  typos?: ReadonlyArray<readonly [string, number]>;     // override typo pool
+  phonotactic?: PhonotacticOptions;                     // tune invented words
+  typoRate?: number;                                    // default 0.06
+  phonotacticRate?: number;                             // default 0.03
+  wordsPerPeriod?: number;                              // default 17
+  wordsPerComma?: number;                               // default 22
+  periodsPerBreak?: number;                             // default 5
+  sentences?: boolean;                                  // default true
+  chars?: number;                                       // generate by char length instead of word count
+  functions?:                                           // custom token functions
+    | readonly [CorpusTokenFunction, number]
+    | ReadonlyArray<readonly [CorpusTokenFunction, number]>;
+}
+
+type CorpusTokenFunction = (params: { fab: Fabricator }) => string;
+```
+
 ### Generate Complex Data
 
 #### Person
@@ -150,6 +240,7 @@ The Fabricator class wraps faker.js and provides additional functionality:
 - **`faker`**: Direct access to the faker.js instance
 - **`random(options?)`**: Generate random numbers with extensive options
 - **`words()`**: Generate random word combinations
+- **`corpus(words?, options?)`**: Generate deterministic corpus text — see Corpus section above
 - **`generate.person(id?)`**: Generate person data with realistic variations
 - **All faker.js modules**: Direct access to `airline`, `animal`, `color`, `commerce`, `company`, `database`, `datatype`, `date`, `finance`, `git`, `hacker`, `helpers`, `image`, `internet`, `location`, `lorem`, `music`, `number`, `person`, `phone`, `science`, `string`, `system`, `vehicle`, `word`
 

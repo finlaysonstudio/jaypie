@@ -265,11 +265,7 @@ export async function queryByType({
 }: QueryByTypeParams): Promise<QueryResult<StorableEntity>> {
   const index = requireIndex(model, ["model", "type"]);
   const suffix = calculateSuffix({ archived, deleted });
-  const pkValue = buildCompositeKey(
-    { model, type },
-    ["model", "type"],
-    suffix,
-  );
+  const pkValue = buildCompositeKey({ model, type }, ["model", "type"], suffix);
   return executeQuery<StorableEntity>(index, pkValue, {
     ascending,
     limit,

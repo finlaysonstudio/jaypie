@@ -181,9 +181,7 @@ describe("GeminiAdapter", () => {
           type: "object",
           properties: { name: { type: "string" } },
         });
-        expect(
-          (result.config?.responseSchema as any)?.$schema,
-        ).toBeUndefined();
+        expect((result.config?.responseSchema as any)?.$schema).toBeUndefined();
         expect(
           (result.config?.responseSchema as any)?.additionalProperties,
         ).toBeUndefined();

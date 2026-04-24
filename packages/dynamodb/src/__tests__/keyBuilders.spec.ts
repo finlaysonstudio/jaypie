@@ -29,10 +29,10 @@ beforeAll(() => {
 
 describe("buildCompositeKey", () => {
   it("joins entity fields with the separator", () => {
-    const result = buildCompositeKey(
-      { model: "record", alias: "my-alias" },
-      ["model", "alias"],
-    );
+    const result = buildCompositeKey({ model: "record", alias: "my-alias" }, [
+      "model",
+      "alias",
+    ]);
     expect(result).toBe("record#my-alias");
   });
 
@@ -166,9 +166,7 @@ describe("indexEntity", () => {
     };
     expect(result.indexModel).toBe("message");
     expect(result.indexModelAlias).toBe("message#first-message");
-    expect(result.indexModelAliasSk).toBe(
-      `chat#abc-123#${result.updatedAt}`,
-    );
+    expect(result.indexModelAliasSk).toBe(`chat#abc-123#${result.updatedAt}`);
   });
 
   describe("suffix on pk", () => {

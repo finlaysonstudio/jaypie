@@ -748,7 +748,7 @@ describe("AnthropicAdapter", () => {
       const error = new BadRequestError();
       (error as unknown as { status: number }).status = 400;
       error.message =
-        "400 {\"type\":\"error\",\"error\":{\"type\":\"invalid_request_error\",\"message\":\"`temperature` is deprecated for this model.\"}}";
+        '400 {"type":"error","error":{"type":"invalid_request_error","message":"`temperature` is deprecated for this model."}}';
 
       const successResponse = {
         content: [{ type: "text", text: "Hi" }],

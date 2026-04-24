@@ -1,4 +1,8 @@
-import { fabricIndex, type IndexDefinition, registerModel } from "@jaypie/fabric";
+import {
+  fabricIndex,
+  type IndexDefinition,
+  registerModel,
+} from "@jaypie/fabric";
 
 const COOKIE_MAX_AGE = 365 * 24 * 60 * 60; // 1 year in seconds
 const COOKIE_NAME = "garden-session";
