@@ -1,9 +1,10 @@
-import { fabricIndex, type IndexDefinition, registerModel } from "@jaypie/fabric";
+import {
+  fabricIndex,
+  type IndexDefinition,
+  registerModel,
+} from "@jaypie/fabric";
 
-const APIKEY_INDEXES: IndexDefinition[] = [
-  fabricIndex(),
-  fabricIndex("alias"),
-];
+const APIKEY_INDEXES: IndexDefinition[] = [fabricIndex(), fabricIndex("alias")];
 
 const APIKEY_MODEL = "apikey";
 

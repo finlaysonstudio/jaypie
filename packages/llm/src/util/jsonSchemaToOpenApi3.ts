@@ -40,11 +40,7 @@ export function jsonSchemaToOpenApi3(schema: JsonObject): JsonObject {
         convertedProps[propKey] = jsonSchemaToOpenApi3(propValue);
       }
       result[key] = convertedProps;
-    } else if (
-      key === "items" &&
-      typeof value === "object" &&
-      value !== null
-    ) {
+    } else if (key === "items" && typeof value === "object" && value !== null) {
       result[key] = jsonSchemaToOpenApi3(value as JsonObject);
     } else {
       result[key] = value;

@@ -1,4 +1,8 @@
-import { fabricIndex, type IndexDefinition, registerModel } from "@jaypie/fabric";
+import {
+  fabricIndex,
+  type IndexDefinition,
+  registerModel,
+} from "@jaypie/fabric";
 
 const TASK_INDEXES: IndexDefinition[] = [
   fabricIndex(),

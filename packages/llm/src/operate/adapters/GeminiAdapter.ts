@@ -132,8 +132,7 @@ export class GeminiAdapter extends BaseProviderAdapter {
     // Gemini doesn't support combining function calling with responseMimeType: 'application/json'
     // When tools are present, structured output is handled via the structured_output tool
     if (request.format && !(request.tools && request.tools.length > 0)) {
-      const useJsonSchema =
-        request.providerOptions?.useJsonSchema === true;
+      const useJsonSchema = request.providerOptions?.useJsonSchema === true;
 
       if (useJsonSchema) {
         geminiRequest.config = {

@@ -174,7 +174,9 @@ describe("Seed and Export Utilities", () => {
 
     it("creates entities that do not exist", async () => {
       vi.mocked(queriesModule.queryByAlias).mockResolvedValue(null);
-      vi.mocked(entitiesModule.createEntity).mockResolvedValue(createTestEntity());
+      vi.mocked(entitiesModule.createEntity).mockResolvedValue(
+        createTestEntity(),
+      );
 
       const result = await seedEntities([
         { alias: "entity-1", model: "record", scope: "@" },
@@ -191,7 +193,9 @@ describe("Seed and Export Utilities", () => {
       vi.mocked(queriesModule.queryByAlias)
         .mockResolvedValueOnce(createTestEntity()) // First exists
         .mockResolvedValueOnce(null); // Second doesn't exist
-      vi.mocked(entitiesModule.createEntity).mockResolvedValue(createTestEntity());
+      vi.mocked(entitiesModule.createEntity).mockResolvedValue(
+        createTestEntity(),
+      );
 
       const result = await seedEntities([
         { alias: "existing", model: "record", scope: "@" },
@@ -255,7 +259,9 @@ describe("Seed and Export Utilities", () => {
 
     it("uses name as alias identifier when alias is missing", async () => {
       vi.mocked(queriesModule.queryByAlias).mockResolvedValue(null);
-      vi.mocked(entitiesModule.createEntity).mockResolvedValue(createTestEntity());
+      vi.mocked(entitiesModule.createEntity).mockResolvedValue(
+        createTestEntity(),
+      );
 
       const result = await seedEntities([
         { model: "record", name: "Named Entity", scope: "@" },

@@ -80,7 +80,9 @@ export async function createEntity({
   try {
     await docClient.send(command);
   } catch (error) {
-    if ((error as { name?: string })?.name === "ConditionalCheckFailedException") {
+    if (
+      (error as { name?: string })?.name === "ConditionalCheckFailedException"
+    ) {
       return null;
     }
     throw error;

@@ -1,4 +1,12 @@
-import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 import { ConfigurationError } from "@jaypie/errors";
 import { clearRegistry, fabricIndex, registerModel } from "@jaypie/fabric";
 
