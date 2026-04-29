@@ -166,9 +166,12 @@ function tryParseJson(content: unknown): StructuredResult | null {
 
 async function testProvider(provider: string, model: string): Promise<boolean> {
   try {
-    console.log(`\n============ Structured JSON Test: ${provider} (${model})`);
+    const effectiveModel = process.env.APP_MODEL || model;
+    console.log(
+      `\n============ Structured JSON Test: ${provider} (${effectiveModel})`,
+    );
 
-    const llm = new Llm(provider, { model });
+    const llm = new Llm(provider, { model: effectiveModel });
 
     const result = await llm.operate(REQUEST, {
       format: FORMAT,

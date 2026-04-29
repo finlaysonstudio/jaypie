@@ -23,9 +23,16 @@ const REASONING_MODELS = {
 // Test Functions
 //
 
+function inferProvider(model: string): string {
+  if (model.startsWith("claude")) return "anthropic";
+  if (model.startsWith("gemini")) return "gemini";
+  if (model.startsWith("grok")) return "xai";
+  return "openai";
+}
+
 async function testReasoningExtraction(): Promise<boolean> {
-  const provider = "openai";
-  const model = REASONING_MODELS.openai;
+  const model = process.env.APP_MODEL || REASONING_MODELS.openai;
+  const provider = inferProvider(model);
 
   try {
     console.log(
