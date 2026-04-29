@@ -142,6 +142,45 @@ const response = await Llm.operate(input, {
 - `fallbackUsed`: `true` if a fallback provider was used
 - `fallbackAttempts`: Number of providers tried (1 = primary only)
 
+### Structured Outputs
+
+Pass `format` (or `response` for `provider.send`) with a Zod or JSON-Schema definition to receive guaranteed-valid JSON.
+
+```typescript
+import { z } from "zod/v4";
+import Llm from "@jaypie/llm";
+
+const Greeting = z.object({
+  salutation: z.string(),
+  name: z.string(),
+});
+
+const response = await Llm.operate("Greet the world", {
+  model: "claude-opus-4-7",
+  format: Greeting,
+});
+// response.content is parsed JSON: { salutation: "Hello", name: "World" }
+```
+
+**Anthropic notes:**
+- Uses Anthropic's native `output_config.format` field (GA 2025-11; Claude 4.5+). The earlier `output_format` field name is deprecated by the API.
+- Schema constraints not supported by Anthropic's grammar (`minLength`, `maxLength`, `minimum`, `maximum`, `multipleOf`, regex `pattern`, recursive schemas, `additionalProperties: true`) are stripped at request time and folded into the field's `description`. The caller's Zod schema still validates the response, so all original constraints are enforced client-side.
+- `additionalProperties: false` is forced on every object.
+- Streaming structured outputs arrive as `LlmStreamChunkType.Text` deltas — concat to assemble JSON, or use `operate()` to get a parsed object directly.
+- `stop_reason: "refusal"` and `stop_reason: "max_tokens"` are surfaced as text rather than parsed JSON. `provider.send(..., { response })` throws on these; `operate()` surfaces them via `response.content` as a string.
+- A model that rejects `output_config` is cached for the session and transparently retried via the legacy fake-tool emulation. Citations + structured output (a 400 documented as incompatible) and `output_format`-deprecation 400s are **not** retried — those errors propagate so callers can see the real cause.
+
+**OpenRouter notes:**
+- Uses the OpenAI-style native `response_format: { type: "json_schema", json_schema: { name, schema, strict: true } }`. OpenRouter routes to a backend provider; many but not all backends support this — the SDK accepts the field on every model, and unsupported routes 4xx.
+- `additionalProperties: false` is forced on every object (required for `strict: true`).
+- A model that 400/422s on the `response_format` field is cached for the session and transparently retried via the legacy `structured_output` fake-tool emulation. The error message must mention `response_format`/`json_schema`/`structured_output`/`require_parameters` to trigger the fallback — generic 400s propagate.
+- For pre-flight enforcement, callers can pass `providerOptions: { provider: { require_parameters: true } }` to force OpenRouter to error rather than silently drop the field on backends that don't honor it.
+
+**Gemini notes:**
+- Format-only requests use native `responseMimeType: "application/json"` + `responseSchema` (OpenAPI 3.0) by default, or `responseJsonSchema` (standard JSON Schema) when `providerOptions.useJsonSchema: true`.
+- Format **and** tools combined: native `responseJsonSchema` + tools is supported only on Gemini 3 (preview) and is enabled automatically when the model id matches `^gemini-3`. Gemini 2.5 (including thinking) and earlier fall back to the `structured_output` fake-tool emulation with a system-prompt nudge.
+- A Gemini 3 model that 400s the combo is cached for the session and transparently retried via the fake-tool path. The error message must mention `responseJsonSchema`/`responseSchema`/`responseMime`/`function_call`/`tools` to trigger the fallback.
+
 ### With Tools
 
 ```typescript

@@ -163,6 +163,106 @@ describe("GeminiAdapter", () => {
         expect(result.config?.responseSchema).toBeUndefined();
       });
 
+      it("emits responseJsonSchema with tools on Gemini 3 (native combo)", () => {
+        const adapter = new GeminiAdapter();
+        const schema = {
+          type: "object",
+          properties: { name: { type: "string" } },
+        };
+        const request: OperateRequest = {
+          model: "gemini-3.1-pro-preview",
+          messages: [],
+          format: schema,
+          tools: [
+            {
+              name: "search",
+              description: "Search",
+              parameters: { type: "object" },
+            },
+          ],
+        };
+
+        const result = adapter.buildRequest(request);
+
+        expect(result.config?.responseMimeType).toBe("application/json");
+        expect(result.config?.responseJsonSchema).toEqual(schema);
+        expect(result.config?.tools).toHaveLength(1);
+        const declarations = result.config?.tools?.[0].functionDeclarations;
+        expect(declarations).toHaveLength(1);
+        expect(declarations?.[0].name).toBe("search");
+        // No fake structured_output tool, no nudge in systemInstruction
+        expect(declarations?.some((d) => d.name === "structured_output")).toBe(
+          false,
+        );
+        expect(result.config?.systemInstruction).toBeUndefined();
+      });
+
+      it("falls back to fake tool on Gemini 2.5 when format+tools combined", () => {
+        const adapter = new GeminiAdapter();
+        const schema = {
+          type: "object",
+          properties: { name: { type: "string" } },
+        };
+        const request: OperateRequest = {
+          model: "gemini-2.5-flash",
+          messages: [],
+          format: schema,
+          tools: [
+            {
+              name: "search",
+              description: "Search",
+              parameters: { type: "object" },
+            },
+          ],
+        };
+
+        const result = adapter.buildRequest(request);
+
+        // Native fields are NOT set (fake-tool path)
+        expect(result.config?.responseJsonSchema).toBeUndefined();
+        expect(result.config?.responseSchema).toBeUndefined();
+        expect(result.config?.responseMimeType).toBeUndefined();
+        // Fake tool was injected
+        const declarations = result.config?.tools?.[0].functionDeclarations;
+        expect(declarations).toHaveLength(2);
+        expect(declarations?.some((d) => d.name === "structured_output")).toBe(
+          true,
+        );
+        // System instruction nudge added
+        expect(result.config?.systemInstruction).toContain("structured_output");
+      });
+
+      it("uses fake tool when Gemini 3 model is cached as combo-unsupported", () => {
+        const adapter = new GeminiAdapter();
+        adapter.rememberModelRejectsStructuredOutputCombo(
+          "gemini-3.1-pro-preview",
+        );
+        const schema = {
+          type: "object",
+          properties: { name: { type: "string" } },
+        };
+        const request: OperateRequest = {
+          model: "gemini-3.1-pro-preview",
+          messages: [],
+          format: schema,
+          tools: [
+            {
+              name: "search",
+              description: "Search",
+              parameters: { type: "object" },
+            },
+          ],
+        };
+
+        const result = adapter.buildRequest(request);
+
+        expect(result.config?.responseJsonSchema).toBeUndefined();
+        const declarations = result.config?.tools?.[0].functionDeclarations;
+        expect(declarations?.some((d) => d.name === "structured_output")).toBe(
+          true,
+        );
+      });
+
       it("strips $schema and additionalProperties from responseSchema", () => {
         const request: OperateRequest = {
           model: PROVIDER.GEMINI.MODEL.SMALL,
@@ -381,7 +481,10 @@ describe("GeminiAdapter", () => {
         expect(result[0].description).toBe("Test tool");
       });
 
-      it("adds structured output tool when schema provided", () => {
+      it("does not inject a structured_output tool when schema provided", () => {
+        // Native responseJsonSchema/responseSchema replaces the fake-tool
+        // injection. The legacy fake tool is added only by buildRequest as a
+        // fallback when format+tools is combined on a non-Gemini-3 model.
         const toolkit = new Toolkit([
           {
             name: "test",
@@ -398,8 +501,9 @@ describe("GeminiAdapter", () => {
 
         const result = geminiAdapter.formatTools(toolkit, schema);
 
-        expect(result).toHaveLength(2);
-        expect(result[1].name).toBe("structured_output");
+        expect(result).toHaveLength(1);
+        expect(result[0].name).toBe("test");
+        expect(result.some((t) => t.name === "structured_output")).toBe(false);
       });
     });
 
@@ -965,6 +1069,145 @@ describe("GeminiAdapter", () => {
 
       expect(result.contents[0].role).toBe("user");
       expect(result.contents[0].parts?.[0].functionResponse).toBeDefined();
+    });
+  });
+
+  describe("Structured-output combo fallback", () => {
+    it("retries with fake tool when Gemini 3 model rejects native combo", async () => {
+      const adapter = new GeminiAdapter();
+      const schema = {
+        type: "object",
+        properties: { name: { type: "string" } },
+      };
+      const error = Object.assign(
+        new Error("responseJsonSchema is not supported with tools"),
+        { status: 400 },
+      );
+      const successResponse = {
+        candidates: [
+          {
+            content: {
+              role: "model" as const,
+              parts: [
+                {
+                  functionCall: {
+                    name: "structured_output",
+                    args: { name: "Jane" },
+                  },
+                },
+              ],
+            },
+            finishReason: "STOP",
+          },
+        ],
+        usageMetadata: {
+          promptTokenCount: 5,
+          candidatesTokenCount: 5,
+          totalTokenCount: 10,
+        },
+      };
+      const mockGenerateContent = vi
+        .fn()
+        .mockRejectedValueOnce(error)
+        .mockResolvedValueOnce(successResponse);
+      const mockClient = {
+        models: { generateContent: mockGenerateContent },
+      };
+      const request: OperateRequest = {
+        model: "gemini-3.1-pro-preview",
+        messages: [],
+        format: schema,
+        tools: [
+          {
+            name: "search",
+            description: "Search",
+            parameters: { type: "object" },
+          },
+        ],
+      };
+
+      const built = adapter.buildRequest(request);
+      expect(built.config?.responseJsonSchema).toBeDefined();
+
+      const result = await adapter.executeRequest(mockClient, built);
+
+      expect(mockGenerateContent).toHaveBeenCalledTimes(2);
+      const fallbackConfig = mockGenerateContent.mock.calls[1][0].config;
+      expect(fallbackConfig.responseJsonSchema).toBeUndefined();
+      expect(fallbackConfig.responseMimeType).toBeUndefined();
+      const declarations = fallbackConfig.tools?.[0].functionDeclarations;
+      expect(
+        declarations?.some(
+          (d: { name: string }) => d.name === "structured_output",
+        ),
+      ).toBe(true);
+      expect(fallbackConfig.systemInstruction).toContain("structured_output");
+      expect(result).toBe(successResponse);
+    });
+
+    it("caches the model so subsequent calls use the fake tool up-front", () => {
+      const adapter = new GeminiAdapter();
+      adapter.rememberModelRejectsStructuredOutputCombo(
+        "gemini-3.1-pro-preview",
+      );
+      const schema = {
+        type: "object",
+        properties: { name: { type: "string" } },
+      };
+      const request: OperateRequest = {
+        model: "gemini-3.1-pro-preview",
+        messages: [],
+        format: schema,
+        tools: [
+          {
+            name: "search",
+            description: "Search",
+            parameters: { type: "object" },
+          },
+        ],
+      };
+
+      const built = adapter.buildRequest(request);
+
+      expect(built.config?.responseJsonSchema).toBeUndefined();
+      const declarations = built.config?.tools?.[0].functionDeclarations;
+      expect(declarations?.some((d) => d.name === "structured_output")).toBe(
+        true,
+      );
+    });
+
+    it("does not retry on unrelated 400 errors", async () => {
+      const adapter = new GeminiAdapter();
+      const schema = {
+        type: "object",
+        properties: { name: { type: "string" } },
+      };
+      const error = Object.assign(new Error("invalid api key"), {
+        status: 400,
+      });
+      const mockGenerateContent = vi.fn().mockRejectedValue(error);
+      const mockClient = {
+        models: { generateContent: mockGenerateContent },
+      };
+      const request: OperateRequest = {
+        model: "gemini-3.1-pro-preview",
+        messages: [],
+        format: schema,
+        tools: [
+          {
+            name: "search",
+            description: "Search",
+            parameters: { type: "object" },
+          },
+        ],
+      };
+
+      const built = adapter.buildRequest(request);
+
+      await expect(adapter.executeRequest(mockClient, built)).rejects.toThrow(
+        "invalid api key",
+      );
+      expect(mockGenerateContent).toHaveBeenCalledTimes(1);
     });
   });
 });

@@ -183,6 +183,85 @@ describe("OpenRouterAdapter", () => {
         ]);
       });
 
+      it("emits response_format json_schema when format is provided", () => {
+        const adapter = new OpenRouterAdapter();
+        const schema = {
+          type: "object",
+          properties: { name: { type: "string" } },
+        };
+        const request: OperateRequest = {
+          model: PROVIDER.OPENROUTER.MODEL.DEFAULT,
+          messages: [
+            {
+              content: "Hello",
+              role: LlmMessageRole.User,
+              type: LlmMessageType.Message,
+            },
+          ],
+          format: schema,
+        };
+
+        const result = adapter.buildRequest(request);
+
+        expect(result.response_format).toEqual({
+          type: "json_schema",
+          json_schema: {
+            name: "response",
+            schema,
+            strict: true,
+          },
+        });
+        expect(result.tools).toBeUndefined();
+      });
+
+      it("does not emit response_format when format is absent", () => {
+        const request: OperateRequest = {
+          model: PROVIDER.OPENROUTER.MODEL.DEFAULT,
+          messages: [
+            {
+              content: "Hello",
+              role: LlmMessageRole.User,
+              type: LlmMessageType.Message,
+            },
+          ],
+        };
+
+        const result = openRouterAdapter.buildRequest(request);
+
+        expect(result.response_format).toBeUndefined();
+      });
+
+      it("uses legacy structured_output tool when model is cached as unsupported", () => {
+        const adapter = new OpenRouterAdapter();
+        adapter.rememberModelRejectsStructuredOutput(
+          PROVIDER.OPENROUTER.MODEL.DEFAULT,
+        );
+        const schema = {
+          type: "object",
+          properties: { name: { type: "string" } },
+        };
+        const request: OperateRequest = {
+          model: PROVIDER.OPENROUTER.MODEL.DEFAULT,
+          messages: [
+            {
+              content: "Hello",
+              role: LlmMessageRole.User,
+              type: LlmMessageType.Message,
+            },
+          ],
+          format: schema,
+        };
+
+        const result = adapter.buildRequest(request);
+
+        expect(result.response_format).toBeUndefined();
+        expect(result.tools).toBeDefined();
+        expect(
+          result.tools!.some((t) => t.function.name === "structured_output"),
+        ).toBe(true);
+        expect(result.tool_choice).toBe("auto");
+      });
+
       it("handles FunctionCallOutput messages from StreamLoop (issue #165)", () => {
         const request: OperateRequest = {
           model: PROVIDER.OPENROUTER.MODEL.DEFAULT,
@@ -397,7 +476,9 @@ describe("OpenRouterAdapter", () => {
         expect(result[0].description).toBe("Test tool");
       });
 
-      it("adds structured output tool when schema provided", () => {
+      it("does not inject a structured_output tool when schema provided", () => {
+        // Native response_format replaces the fake-tool injection.
+        // The legacy fake tool is only added in buildRequest as a fallback.
         const toolkit = new Toolkit([
           {
             name: "test",
@@ -414,8 +495,9 @@ describe("OpenRouterAdapter", () => {
 
         const result = openRouterAdapter.formatTools(toolkit, schema);
 
-        expect(result).toHaveLength(2);
-        expect(result[1].name).toBe("structured_output");
+        expect(result).toHaveLength(1);
+        expect(result[0].name).toBe("test");
+        expect(result.some((t) => t.name === "structured_output")).toBe(false);
       });
     });
 
@@ -520,50 +602,35 @@ describe("OpenRouterAdapter", () => {
     });
 
     describe("hasStructuredOutput", () => {
-      it("returns true when structured_output tool is used", () => {
+      it("returns true when native annotation is set with parseable JSON content", () => {
         const response = {
           choices: [
             {
               message: {
                 role: "assistant",
-                content: null,
-                toolCalls: [
-                  {
-                    id: "call-123",
-                    type: "function",
-                    function: {
-                      name: "structured_output",
-                      arguments: '{"key":"value"}',
-                    },
-                  },
-                ],
+                content: '{"name":"John"}',
               },
-              finishReason: "toolCalls",
+              finishReason: "stop",
             },
           ],
+          __jaypieStructuredOutput: true,
         };
 
         expect(openRouterAdapter.hasStructuredOutput(response)).toBe(true);
       });
 
-      it("returns false for regular tool use", () => {
+      it("returns false when native annotation is set but content is not JSON", () => {
         const response = {
           choices: [
             {
               message: {
                 role: "assistant",
-                content: null,
-                toolCalls: [
-                  {
-                    id: "call-123",
-                    type: "function",
-                    function: { name: "other_tool", arguments: "{}" },
-                  },
-                ],
+                content: "I cannot comply with that request.",
               },
-              finishReason: "toolCalls",
+              finishReason: "stop",
             },
           ],
+          __jaypieStructuredOutput: true,
         };
 
         expect(openRouterAdapter.hasStructuredOutput(response)).toBe(false);
@@ -584,35 +651,115 @@ describe("OpenRouterAdapter", () => {
 
         expect(openRouterAdapter.hasStructuredOutput(response)).toBe(false);
       });
+
+      describe("Fallback Path", () => {
+        it("returns true when structured_output tool is used", () => {
+          const response = {
+            choices: [
+              {
+                message: {
+                  role: "assistant",
+                  content: null,
+                  toolCalls: [
+                    {
+                      id: "call-123",
+                      type: "function",
+                      function: {
+                        name: "structured_output",
+                        arguments: '{"key":"value"}',
+                      },
+                    },
+                  ],
+                },
+                finishReason: "toolCalls",
+              },
+            ],
+          };
+
+          expect(openRouterAdapter.hasStructuredOutput(response)).toBe(true);
+        });
+
+        it("returns false for regular tool use", () => {
+          const response = {
+            choices: [
+              {
+                message: {
+                  role: "assistant",
+                  content: null,
+                  toolCalls: [
+                    {
+                      id: "call-123",
+                      type: "function",
+                      function: { name: "other_tool", arguments: "{}" },
+                    },
+                  ],
+                },
+                finishReason: "toolCalls",
+              },
+            ],
+          };
+
+          expect(openRouterAdapter.hasStructuredOutput(response)).toBe(false);
+        });
+      });
     });
 
     describe("extractStructuredOutput", () => {
-      it("extracts structured output from response", () => {
+      it("parses message content as JSON when native annotation is set", () => {
         const response = {
           choices: [
             {
               message: {
                 role: "assistant",
-                content: null,
-                toolCalls: [
-                  {
-                    id: "call-123",
-                    type: "function",
-                    function: {
-                      name: "structured_output",
-                      arguments: '{"name":"John","age":30}',
-                    },
-                  },
-                ],
+                content: '{"name":"John","age":30}',
               },
-              finishReason: "toolCalls",
+              finishReason: "stop",
             },
           ],
+          __jaypieStructuredOutput: true,
         };
 
         const result = openRouterAdapter.extractStructuredOutput(response);
 
         expect(result).toEqual({ name: "John", age: 30 });
+      });
+
+      it("returns undefined when native content is not parseable JSON", () => {
+        const response = {
+          choices: [
+            {
+              message: {
+                role: "assistant",
+                content: "not valid json",
+              },
+              finishReason: "stop",
+            },
+          ],
+          __jaypieStructuredOutput: true,
+        };
+
+        const result = openRouterAdapter.extractStructuredOutput(response);
+
+        expect(result).toBeUndefined();
+      });
+
+      it("returns undefined when native content is empty", () => {
+        const response = {
+          choices: [
+            {
+              message: {
+                role: "assistant",
+                content: "",
+              },
+              finishReason: "stop",
+            },
+          ],
+          __jaypieStructuredOutput: true,
+        };
+
+        const result = openRouterAdapter.extractStructuredOutput(response);
+
+        expect(result).toBeUndefined();
       });
 
       it("returns undefined for non-structured responses", () => {
@@ -633,20 +780,96 @@ describe("OpenRouterAdapter", () => {
         expect(result).toBeUndefined();
       });
 
-      it("returns undefined for invalid JSON", () => {
-        const response = {
+      describe("Fallback Path", () => {
+        it("extracts structured output from response", () => {
+          const response = {
+            choices: [
+              {
+                message: {
+                  role: "assistant",
+                  content: null,
+                  toolCalls: [
+                    {
+                      id: "call-123",
+                      type: "function",
+                      function: {
+                        name: "structured_output",
+                        arguments: '{"name":"John","age":30}',
+                      },
+                    },
+                  ],
+                },
+                finishReason: "toolCalls",
+              },
+            ],
+          };
+
+          const result = openRouterAdapter.extractStructuredOutput(response);
+
+          expect(result).toEqual({ name: "John", age: 30 });
+        });
+
+        it("returns undefined for invalid JSON", () => {
+          const response = {
+            choices: [
+              {
+                message: {
+                  role: "assistant",
+                  content: null,
+                  toolCalls: [
+                    {
+                      id: "call-123",
+                      type: "function",
+                      function: {
+                        name: "structured_output",
+                        arguments: "not valid json",
+                      },
+                    },
+                  ],
+                },
+                finishReason: "toolCalls",
+              },
+            ],
+          };
+
+          const result = openRouterAdapter.extractStructuredOutput(response);
+
+          expect(result).toBeUndefined();
+        });
+      });
+    });
+
+    describe("Structured-output fallback", () => {
+      it("retries with fake tool when model rejects native response_format", async () => {
+        const adapter = new OpenRouterAdapter();
+        const schema = {
+          type: "object",
+          properties: { name: { type: "string" } },
+        };
+        const error = Object.assign(
+          new Error("response_format not supported"),
+          {
+            status: 400,
+          },
+        );
+        const successResponse = {
+          id: "resp-1",
+          object: "chat.completion",
+          created: 0,
+          model: PROVIDER.OPENROUTER.MODEL.DEFAULT,
           choices: [
             {
+              index: 0,
               message: {
-                role: "assistant",
+                role: "assistant" as const,
                 content: null,
                 toolCalls: [
                   {
-                    id: "call-123",
-                    type: "function",
+                    id: "call-1",
+                    type: "function" as const,
                     function: {
                       name: "structured_output",
-                      arguments: "not valid json",
+                      arguments: '{"name":"Jane"}',
                     },
                   },
                 ],
@@ -655,10 +878,88 @@ describe("OpenRouterAdapter", () => {
             },
           ],
         };
+        const mockSend = vi
+          .fn()
+          .mockRejectedValueOnce(error)
+          .mockResolvedValueOnce(successResponse);
+        const mockClient = { chat: { send: mockSend } };
+        const request: OperateRequest = {
+          model: PROVIDER.OPENROUTER.MODEL.DEFAULT,
+          messages: [
+            {
+              content: "Hi",
+              role: LlmMessageRole.User,
+              type: LlmMessageType.Message,
+            },
+          ],
+          format: schema,
+        };
 
-        const result = openRouterAdapter.extractStructuredOutput(response);
+        const built = adapter.buildRequest(request);
+        expect(built.response_format).toBeDefined();
 
-        expect(result).toBeUndefined();
+        const result = await adapter.executeRequest(mockClient, built);
+
+        expect(mockSend).toHaveBeenCalledTimes(2);
+        const fallbackCallParams = mockSend.mock.calls[1][0];
+        expect(fallbackCallParams.responseFormat).toBeUndefined();
+        expect(fallbackCallParams.tools).toBeDefined();
+        expect(
+          fallbackCallParams.tools.some(
+            (t: { function: { name: string } }) =>
+              t.function.name === "structured_output",
+          ),
+        ).toBe(true);
+        expect(result).toBe(successResponse);
+      });
+
+      it("caches the model so subsequent calls use the fallback up-front", async () => {
+        const adapter = new OpenRouterAdapter();
+        adapter.rememberModelRejectsStructuredOutput(
+          PROVIDER.OPENROUTER.MODEL.DEFAULT,
+        );
+        const schema = {
+          type: "object",
+          properties: { name: { type: "string" } },
+        };
+        const request: OperateRequest = {
+          model: PROVIDER.OPENROUTER.MODEL.DEFAULT,
+          messages: [],
+          format: schema,
+        };
+
+        const built = adapter.buildRequest(request);
+
+        expect(built.response_format).toBeUndefined();
+        expect(built.tools).toBeDefined();
+        expect(
+          built.tools!.some((t) => t.function.name === "structured_output"),
+        ).toBe(true);
+      });
+
+      it("does not fall back on unrelated 400 errors", async () => {
+        const adapter = new OpenRouterAdapter();
+        const schema = {
+          type: "object",
+          properties: { name: { type: "string" } },
+        };
+        const error = Object.assign(new Error("invalid api key"), {
+          status: 400,
+        });
+        const mockSend = vi.fn().mockRejectedValue(error);
+        const mockClient = { chat: { send: mockSend } };
+        const request: OperateRequest = {
+          model: PROVIDER.OPENROUTER.MODEL.DEFAULT,
+          messages: [],
+          format: schema,
+        };
+
+        const built = adapter.buildRequest(request);
+
+        await expect(adapter.executeRequest(mockClient, built)).rejects.toThrow(
+          "invalid api key",
+        );
+        expect(mockSend).toHaveBeenCalledTimes(1);
       });
     });
 

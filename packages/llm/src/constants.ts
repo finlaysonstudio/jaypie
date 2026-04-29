@@ -16,7 +16,7 @@ const FIRST_CLASS_PROVIDER = {
   // https://developers.openai.com/api/docs/models
   OPENAI: {
     DEFAULT: "gpt-5.4" as const,
-    LARGE: "gpt-5.4" as const,
+    LARGE: "gpt-5.5" as const,
     SMALL: "gpt-5.4-mini" as const,
     TINY: "gpt-5.4-nano" as const,
   },

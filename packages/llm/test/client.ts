@@ -17,8 +17,14 @@ const QUESTION = "Roll five six-sided dice";
 
 async function main(provider: string) {
   try {
-    const model = new Llm(provider as any);
-    console.log(`\n============ Provider: "${provider}"`);
+    const overrideModel = process.env.APP_MODEL;
+    const model = new Llm(
+      provider as any,
+      overrideModel ? { model: overrideModel } : {},
+    );
+    console.log(
+      `\n============ Provider: "${provider}"${overrideModel ? ` (${overrideModel})` : ""}`,
+    );
 
     let toolCalled = false;
     let correctParams = false;

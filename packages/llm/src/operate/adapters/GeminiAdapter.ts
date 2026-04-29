@@ -1,4 +1,5 @@
 import type { GoogleGenAI } from "@google/genai";
+import log from "@jaypie/logger";
 import { JsonObject, NaturalSchema } from "@jaypie/types";
 import { z } from "zod/v4";
 
@@ -45,6 +46,37 @@ import {
 
 const STRUCTURED_OUTPUT_TOOL_NAME = "structured_output";
 
+// Gemini 3 family supports combining tools (function calling) with native
+// structured output via `responseJsonSchema`. Earlier Gemini families
+// (including 2.5 thinking) do not support the combo and fall back to the
+// legacy `structured_output` fake-tool emulation.
+const GEMINI_3_PATTERN = /^gemini-3/;
+
+/**
+ * Detect 4xx errors that indicate the model itself does not support the
+ * `responseJsonSchema` + tools combo. Triggers the runtime fallback to the
+ * fake-tool emulation path. Other 400s propagate.
+ */
+function isStructuredOutputComboUnsupportedError(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const err = error as {
+    status?: number;
+    code?: number;
+    message?: string;
+    error?: { message?: string };
+  };
+  const status = err.status ?? err.code;
+  if (status !== 400) return false;
+  const messages = [err.message, err.error?.message].filter(
+    (m): m is string => typeof m === "string",
+  );
+  return messages.some((m) =>
+    /response[_ ]?json[_ ]?schema|response[_ ]?schema|response[_ ]?mime|function[_ ]?call|tools/i.test(
+      m,
+    ),
+  );
+}
+
 // Gemini uses HTTP status codes for error classification
 // Documented at: https://ai.google.dev/api/rest/v1beta/Status
 const RETRYABLE_STATUS_CODES = [
@@ -78,6 +110,24 @@ const NOT_RETRYABLE_STATUS_CODES = [
 export class GeminiAdapter extends BaseProviderAdapter {
   readonly name = PROVIDER.GEMINI.NAME;
   readonly defaultModel = PROVIDER.GEMINI.MODEL.DEFAULT;
+
+  // Session-level cache of Gemini 3 models observed to reject the native
+  // `responseJsonSchema` + tools combo. When a model is in this set,
+  // buildRequest engages the legacy fake-tool path instead.
+  private runtimeNoStructuredOutputComboModels = new Set<string>();
+
+  rememberModelRejectsStructuredOutputCombo(model: string): void {
+    this.runtimeNoStructuredOutputComboModels.add(model);
+  }
+
+  clearRuntimeNoStructuredOutputComboModels(): void {
+    this.runtimeNoStructuredOutputComboModels.clear();
+  }
+
+  private supportsStructuredOutputCombo(model: string): boolean {
+    if (this.runtimeNoStructuredOutputComboModels.has(model)) return false;
+    return GEMINI_3_PATTERN.test(model);
+  }
 
   //
   // Request Building
@@ -113,14 +163,39 @@ export class GeminiAdapter extends BaseProviderAdapter {
       }
     }
 
-    // Add tools if provided
-    if (request.tools && request.tools.length > 0) {
-      const functionDeclarations: GeminiFunctionDeclaration[] =
-        request.tools.map((tool) => ({
+    const hasUserTools = !!(request.tools && request.tools.length > 0);
+    const useNativeCombo =
+      Boolean(request.format) &&
+      hasUserTools &&
+      this.supportsStructuredOutputCombo(geminiRequest.model);
+
+    // When tools+format are combined and the model does not support the native
+    // combo, inject the legacy `structured_output` fake tool here so the model
+    // is forced to call it before its final answer.
+    const allTools: ProviderToolDefinition[] = request.tools
+      ? [...request.tools]
+      : [];
+    if (request.format && hasUserTools && !useNativeCombo) {
+      log.warn(
+        `[GeminiAdapter] Using legacy structured_output tool fallback for model ${geminiRequest.model}; native responseJsonSchema + tools combo is only available on Gemini 3.`,
+      );
+      allTools.push({
+        name: STRUCTURED_OUTPUT_TOOL_NAME,
+        description:
+          "Output a structured JSON object, " +
+          "use this before your final response to give structured outputs to the user",
+        parameters: request.format,
+      });
+    }
+
+    if (allTools.length > 0) {
+      const functionDeclarations: GeminiFunctionDeclaration[] = allTools.map(
+        (tool) => ({
           name: tool.name,
           description: tool.description,
           parameters: tool.parameters,
-        }));
+        }),
+      );
 
       geminiRequest.config = {
         ...geminiRequest.config,
@@ -128,11 +203,16 @@ export class GeminiAdapter extends BaseProviderAdapter {
       };
     }
 
-    // Add structured output format if provided (but NOT when tools are present)
-    // Gemini doesn't support combining function calling with responseMimeType: 'application/json'
-    // When tools are present, structured output is handled via the structured_output tool
-    if (request.format && !(request.tools && request.tools.length > 0)) {
-      const useJsonSchema = request.providerOptions?.useJsonSchema === true;
+    // Native structured output: send schema as `responseJsonSchema`
+    // (or `responseSchema` for Gemini 2.5+ no-tools path). The legacy
+    // fake-tool emulation only runs when format+tools is combined on a model
+    // that doesn't support the native combo.
+    const wantsNativeStructured =
+      Boolean(request.format) && (!hasUserTools || useNativeCombo);
+
+    if (wantsNativeStructured) {
+      const useJsonSchema =
+        useNativeCombo || request.providerOptions?.useJsonSchema === true;
 
       if (useJsonSchema) {
         geminiRequest.config = {
@@ -144,18 +224,18 @@ export class GeminiAdapter extends BaseProviderAdapter {
         geminiRequest.config = {
           ...geminiRequest.config,
           responseMimeType: "application/json",
-          responseSchema: jsonSchemaToOpenApi3(request.format),
+          responseSchema: jsonSchemaToOpenApi3(request.format!),
         };
       }
     }
 
-    // When format is specified with tools, add instruction to use structured_output tool
-    if (request.format && request.tools && request.tools.length > 0) {
+    // Legacy fake-tool path needs a system-prompt nudge so the model actually
+    // calls the synthetic tool before its final answer.
+    if (request.format && hasUserTools && !useNativeCombo) {
       const structuredOutputInstruction =
         "IMPORTANT: Before providing your final response, you MUST use the structured_output tool " +
         "to output your answer in the required JSON format.";
 
-      // Add to system instruction if it exists, otherwise create one
       const existingSystem = geminiRequest.config?.systemInstruction || "";
       geminiRequest.config = {
         ...geminiRequest.config,
@@ -186,9 +266,14 @@ export class GeminiAdapter extends BaseProviderAdapter {
 
   formatTools(
     toolkit: Toolkit,
-    outputSchema?: JsonObject,
+    // outputSchema is part of the interface contract but Gemini now handles
+    // structured output via `responseJsonSchema`/`responseSchema` (or the
+    // legacy fake-tool injected in buildRequest as a fallback). We no longer
+    // inject a synthetic structured-output tool here.
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _outputSchema?: JsonObject,
   ): ProviderToolDefinition[] {
-    const tools: ProviderToolDefinition[] = toolkit.tools.map((tool) => ({
+    return toolkit.tools.map((tool) => ({
       name: tool.name,
       description: tool.description,
       parameters: {
@@ -196,19 +281,6 @@ export class GeminiAdapter extends BaseProviderAdapter {
         type: "object",
       } as JsonObject,
     }));
-
-    // Add structured output tool if schema is provided
-    if (outputSchema) {
-      tools.push({
-        name: STRUCTURED_OUTPUT_TOOL_NAME,
-        description:
-          "Output a structured JSON object, " +
-          "use this before your final response to give structured outputs to the user",
-        parameters: outputSchema,
-      });
-    }
-
-    return tools;
   }
 
   formatOutputSchema(
@@ -248,6 +320,9 @@ export class GeminiAdapter extends BaseProviderAdapter {
   ): Promise<GeminiRawResponse> {
     const genAI = client as GoogleGenAI;
     const geminiRequest = request as GeminiRequest;
+    const wantsNativeCombo =
+      !!geminiRequest.config?.responseJsonSchema &&
+      !!geminiRequest.config?.tools;
 
     try {
       // Cast config to any to bypass strict type checking between our internal types
@@ -261,8 +336,68 @@ export class GeminiAdapter extends BaseProviderAdapter {
       return response as unknown as GeminiRawResponse;
     } catch (error) {
       if (signal?.aborted) return undefined as unknown as GeminiRawResponse;
+
+      // If the model rejected the native responseJsonSchema + tools combo,
+      // cache it and retry with the legacy fake-tool emulation path.
+      if (wantsNativeCombo && isStructuredOutputComboUnsupportedError(error)) {
+        const model = geminiRequest.model;
+        this.rememberModelRejectsStructuredOutputCombo(model);
+        log.warn(
+          `[GeminiAdapter] Model ${model} rejected native responseJsonSchema + tools combo; falling back to legacy structured_output tool emulation.`,
+        );
+        const fallbackRequest =
+          this.toFallbackStructuredOutputRequest(geminiRequest);
+        const response = await genAI.models.generateContent({
+          model: fallbackRequest.model,
+          contents: fallbackRequest.contents as any,
+          config: fallbackRequest.config as any,
+        });
+        return response as unknown as GeminiRawResponse;
+      }
+
       throw error;
     }
+  }
+
+  /**
+   * Rebuild a Gemini 3 native-combo request without `responseJsonSchema`/
+   * `responseMimeType`, swapping in the legacy fake-tool emulation. Used as
+   * a runtime fallback when a Gemini 3 model rejects the combo.
+   */
+  private toFallbackStructuredOutputRequest(
+    request: GeminiRequest,
+  ): GeminiRequest {
+    if (!request.config?.responseJsonSchema) return request;
+    const schema = request.config.responseJsonSchema as JsonObject;
+    const newConfig: GeminiRequest["config"] = { ...request.config };
+    delete (newConfig as Record<string, unknown>).responseJsonSchema;
+    delete (newConfig as Record<string, unknown>).responseMimeType;
+
+    const fakeTool: GeminiFunctionDeclaration = {
+      name: STRUCTURED_OUTPUT_TOOL_NAME,
+      description:
+        "Output a structured JSON object, " +
+        "use this before your final response to give structured outputs to the user",
+      parameters: schema,
+    };
+    const existingDeclarations =
+      newConfig.tools?.[0]?.functionDeclarations ?? [];
+    newConfig.tools = [
+      { functionDeclarations: [...existingDeclarations, fakeTool] },
+    ];
+
+    const structuredOutputInstruction =
+      "IMPORTANT: Before providing your final response, you MUST use the structured_output tool " +
+      "to output your answer in the required JSON format.";
+    const existingSystem = newConfig.systemInstruction || "";
+    newConfig.systemInstruction = existingSystem
+      ? `${existingSystem}\n\n${structuredOutputInstruction}`
+      : structuredOutputInstruction;
+
+    return {
+      ...request,
+      config: newConfig,
+    };
   }
 
   async *executeStreamRequest(
