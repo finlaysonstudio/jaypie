@@ -71,6 +71,7 @@
     "test:llm:document": "tsx packages/llm/test/document.ts",
     "test:llm:image": "tsx packages/llm/test/image.ts",
     "test:llm:joke": "tsx packages/llm/test/joke.ts",
+    "test:llm:matrix": "tsx packages/llm/test/matrix.ts",
     "test:llm:reasoning": "tsx packages/llm/test/reasoning.ts",
     "test:llm:structured": "tsx packages/llm/test/structured.ts",
     "test:mongoose": "npm run test --workspace packages/mongoose",

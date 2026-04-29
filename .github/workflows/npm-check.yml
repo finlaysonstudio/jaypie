@@ -67,10 +67,10 @@ jobs:
         run: npm rebuild
       - run: npm run build
       - run: npm test
-  test-llm-client:
-    name: LLM Client Test (conditional)
+  test-llm-matrix:
+    name: LLM Capability Matrix (conditional)
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v6
       - uses: dorny/paths-filter@v4
@@ -91,11 +91,10 @@ jobs:
       - name: Build
         if: steps.changes.outputs.llm == 'true'
         run: npm run build
-      - name: Run LLM Client Tests
+      - name: Run LLM Capability Matrix
         if: steps.changes.outputs.llm == 'true'
-        run: LOG_LEVEL=trace npm run test:llm:all
+        run: LOG_LEVEL=warn npm run test:llm:matrix
         env:
-          APP_PROVIDER: anthropic,google,openai,xai
           ANTHROPIC_API_KEY: ${{ secrets.CICD_ANTHROPIC_API_KEY }}
           GEMINI_API_KEY: ${{ secrets.CICD_GEMINI_API_KEY }}
           OPENAI_API_KEY: ${{ secrets.CICD_OPENAI_API_KEY }}
