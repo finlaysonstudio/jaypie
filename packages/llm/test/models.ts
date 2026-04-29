@@ -22,7 +22,8 @@ export type Capability =
   | "structured"
   | "both"
   | "pdf"
-  | "image";
+  | "image"
+  | "temperature";
 
 export type ExpectedOutcome = "ok" | "warn" | "skip" | "fail";
 
@@ -44,6 +45,7 @@ export const CAPABILITIES: readonly Capability[] = [
   "both",
   "pdf",
   "image",
+  "temperature",
 ] as const;
 
 /**
