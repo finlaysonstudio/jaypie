@@ -101,14 +101,36 @@ interface OpenRouterTool {
   };
 }
 
+interface OpenRouterJsonSchemaConfig {
+  name: string;
+  description?: string;
+  schema: JsonObject;
+  strict?: boolean;
+}
+
+type OpenRouterResponseFormat =
+  | { type: "json_schema"; json_schema: OpenRouterJsonSchemaConfig }
+  | { type: "json_object" }
+  | { type: "text" };
+
 interface OpenRouterRequest {
   model: string;
   messages: OpenRouterMessage[];
   tools?: OpenRouterTool[];
   tool_choice?: "auto" | "none" | "required";
-  response_format?: { type: "json_object" | "text" };
+  response_format?: OpenRouterResponseFormat;
   user?: string;
 }
+
+/**
+ * OpenRouter responses we annotate at receive time so downstream stateless
+ * methods (`hasStructuredOutput`, `extractStructuredOutput`) can tell whether
+ * the request asked for native structured output without re-threading the
+ * request.
+ */
+type AnnotatedOpenRouterResponse = OpenRouterResponse & {
+  __jaypieStructuredOutput?: boolean;
+};
 
 //
 //
@@ -116,6 +138,34 @@ interface OpenRouterRequest {
 //
 
 const STRUCTURED_OUTPUT_TOOL_NAME = "structured_output";
+
+const STRUCTURED_OUTPUT_SCHEMA_NAME = "response";
+
+/**
+ * Detect 4xx errors that indicate the model itself does not support
+ * `response_format: json_schema`. Mirrors the Anthropic pattern: we only
+ * trigger the fake-tool fallback when the failure is plausibly a capability
+ * gap, not a generic 400.
+ */
+function isStructuredOutputUnsupportedError(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const err = error as {
+    status?: number;
+    statusCode?: number;
+    message?: string;
+    error?: { message?: string };
+  };
+  const status = err.status ?? err.statusCode;
+  if (status !== 400 && status !== 422) return false;
+  const messages = [err.message, err.error?.message].filter(
+    (m): m is string => typeof m === "string",
+  );
+  return messages.some((m) =>
+    /response_format|json[_ ]schema|structured[_ ]output|require[_ ]parameters/i.test(
+      m,
+    ),
+  );
+}
 
 /**
  * OpenRouter content part types (text only - images/files not supported)
@@ -174,6 +224,32 @@ function convertContentToOpenRouter(
 const RETRYABLE_STATUS_CODES = [408, 500, 502, 503, 524, 529];
 const RATE_LIMIT_STATUS_CODE = 429;
 
+/**
+ * Walk the JSON schema and force `additionalProperties: false` on every
+ * object node. Required by the OpenAI-style json_schema response_format
+ * (which OpenRouter accepts) when `strict: true`.
+ */
+function enforceAdditionalPropertiesFalse(schema: JsonObject): void {
+  const stack: JsonObject[] = [schema];
+  while (stack.length > 0) {
+    const node = stack.pop() as JsonObject;
+    if (node.type === "object") {
+      node.additionalProperties = false;
+    }
+    for (const value of Object.values(node)) {
+      if (Array.isArray(value)) {
+        for (const entry of value) {
+          if (entry && typeof entry === "object" && !Array.isArray(entry)) {
+            stack.push(entry as JsonObject);
+          }
+        }
+      } else if (value && typeof value === "object") {
+        stack.push(value as JsonObject);
+      }
+    }
+  }
+}
+
 //
 //
 // Main
@@ -188,6 +264,23 @@ const RATE_LIMIT_STATUS_CODE = 429;
 export class OpenRouterAdapter extends BaseProviderAdapter {
   readonly name = PROVIDER.OPENROUTER.NAME;
   readonly defaultModel = PROVIDER.OPENROUTER.MODEL.DEFAULT;
+
+  // Session-level cache of models observed to reject native
+  // `response_format: json_schema`. When a model is in this set, buildRequest
+  // engages the legacy fake-tool path instead of native structured output.
+  private runtimeNoStructuredOutputModels = new Set<string>();
+
+  rememberModelRejectsStructuredOutput(model: string): void {
+    this.runtimeNoStructuredOutputModels.add(model);
+  }
+
+  clearRuntimeNoStructuredOutputModels(): void {
+    this.runtimeNoStructuredOutputModels.clear();
+  }
+
+  private supportsStructuredOutput(model: string): boolean {
+    return !this.runtimeNoStructuredOutputModels.has(model);
+  }
 
   //
   // Request Building
@@ -217,8 +310,29 @@ export class OpenRouterAdapter extends BaseProviderAdapter {
       openRouterRequest.user = request.user;
     }
 
-    if (request.tools && request.tools.length > 0) {
-      openRouterRequest.tools = request.tools.map((tool) => ({
+    const useFallbackStructuredOutput =
+      Boolean(request.format) &&
+      !this.supportsStructuredOutput(openRouterRequest.model);
+
+    const allTools: ProviderToolDefinition[] = request.tools
+      ? [...request.tools]
+      : [];
+    if (useFallbackStructuredOutput && request.format) {
+      log.warn(
+        `[OpenRouterAdapter] Using legacy structured_output tool fallback for model ${openRouterRequest.model}; native response_format previously rejected for this model.`,
+      );
+      allTools.push({
+        name: STRUCTURED_OUTPUT_TOOL_NAME,
+        description:
+          "REQUIRED: You MUST call this tool to provide your final response. " +
+          "After gathering all necessary information (including results from other tools), " +
+          "call this tool with the structured data to complete the request.",
+        parameters: request.format,
+      });
+    }
+
+    if (allTools.length > 0) {
+      openRouterRequest.tools = allTools.map((tool) => ({
         type: "function" as const,
         function: {
           name: tool.name,
@@ -230,6 +344,20 @@ export class OpenRouterAdapter extends BaseProviderAdapter {
       // Use "auto" for tool_choice - many OpenRouter models don't support "required"
       // The structured_output tool prompt already emphasizes it must be called
       openRouterRequest.tool_choice = "auto";
+    }
+
+    // Native structured output: send schema as `response_format`. The legacy
+    // tool-emulation path is engaged only as a runtime fallback for models the
+    // API has flagged as not supporting native json_schema.
+    if (request.format && !useFallbackStructuredOutput) {
+      openRouterRequest.response_format = {
+        type: "json_schema",
+        json_schema: {
+          name: STRUCTURED_OUTPUT_SCHEMA_NAME,
+          schema: request.format,
+          strict: true,
+        },
+      };
     }
 
     if (request.providerOptions) {
@@ -247,28 +375,18 @@ export class OpenRouterAdapter extends BaseProviderAdapter {
 
   formatTools(
     toolkit: Toolkit,
-    outputSchema?: JsonObject,
+    // outputSchema is part of the interface contract but OpenRouter now uses
+    // native `response_format` (set in buildRequest), so we no longer inject a
+    // synthetic structured-output tool here. The legacy fake-tool injection
+    // happens in buildRequest only as a runtime fallback.
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _outputSchema?: JsonObject,
   ): ProviderToolDefinition[] {
-    const tools: ProviderToolDefinition[] = toolkit.tools.map((tool) => ({
+    return toolkit.tools.map((tool) => ({
       name: tool.name,
       description: tool.description,
       parameters: tool.parameters as JsonObject,
     }));
-
-    // Add structured output tool if schema is provided
-    // (OpenRouter doesn't have native structured output like OpenAI, so use tool approach)
-    if (outputSchema) {
-      tools.push({
-        name: STRUCTURED_OUTPUT_TOOL_NAME,
-        description:
-          "REQUIRED: You MUST call this tool to provide your final response. " +
-          "After gathering all necessary information (including results from other tools), " +
-          "call this tool with the structured data to complete the request.",
-        parameters: outputSchema,
-      });
-    }
-
-    return tools;
   }
 
   formatOutputSchema(
@@ -299,6 +417,10 @@ export class OpenRouterAdapter extends BaseProviderAdapter {
       delete jsonSchema.$schema;
     }
 
+    // OpenRouter (and most backends behind it) require additionalProperties:
+    // false on every object when using strict json_schema response_format.
+    enforceAdditionalPropertiesFalse(jsonSchema);
+
     return jsonSchema;
   }
 
@@ -313,28 +435,110 @@ export class OpenRouterAdapter extends BaseProviderAdapter {
   ): Promise<OpenRouterResponse> {
     const openRouter = client as OpenRouter;
     const openRouterRequest = request as OpenRouterRequest;
+    const wantsStructuredOutput = Boolean(openRouterRequest.response_format);
 
     try {
-      const response = await openRouter.chat.send(
-        {
-          model: openRouterRequest.model,
-          messages: openRouterRequest.messages as Parameters<
-            typeof openRouter.chat.send
-          >[0]["messages"],
-          tools: openRouterRequest.tools as Parameters<
-            typeof openRouter.chat.send
-          >[0]["tools"],
-          toolChoice: openRouterRequest.tool_choice,
-          user: openRouterRequest.user,
-        },
+      const response = (await openRouter.chat.send(
+        this.toSdkChatParams(openRouterRequest) as Parameters<
+          typeof openRouter.chat.send
+        >[0],
         signal ? { signal } : undefined,
-      );
-
-      return response as unknown as OpenRouterResponse;
+      )) as AnnotatedOpenRouterResponse;
+      if (wantsStructuredOutput) {
+        response.__jaypieStructuredOutput = true;
+      }
+      return response;
     } catch (error) {
       if (signal?.aborted) return undefined as unknown as OpenRouterResponse;
+
+      // If the model rejected `response_format`, cache it and retry with the
+      // legacy fake-tool emulation path.
+      if (wantsStructuredOutput && isStructuredOutputUnsupportedError(error)) {
+        const model = openRouterRequest.model;
+        this.rememberModelRejectsStructuredOutput(model);
+        log.warn(
+          `[OpenRouterAdapter] Model ${model} rejected native response_format; falling back to legacy structured_output tool emulation.`,
+        );
+        const fallbackRequest =
+          this.toFallbackStructuredOutputRequest(openRouterRequest);
+        return (await openRouter.chat.send(
+          this.toSdkChatParams(fallbackRequest) as Parameters<
+            typeof openRouter.chat.send
+          >[0],
+          signal ? { signal } : undefined,
+        )) as OpenRouterResponse;
+      }
+
       throw error;
     }
+  }
+
+  /**
+   * Translate our internal snake_case `OpenRouterRequest` into the SDK's
+   * camelCase shape, forwarding only the fields we care about (the SDK
+   * silently strips unknown fields).
+   */
+  private toSdkChatParams(
+    openRouterRequest: OpenRouterRequest,
+  ): Record<string, unknown> {
+    const params: Record<string, unknown> = {
+      model: openRouterRequest.model,
+      messages: openRouterRequest.messages,
+      tools: openRouterRequest.tools,
+      toolChoice: openRouterRequest.tool_choice,
+      user: openRouterRequest.user,
+    };
+    if (openRouterRequest.response_format) {
+      const format = openRouterRequest.response_format;
+      if (format.type === "json_schema") {
+        params.responseFormat = {
+          type: "json_schema",
+          jsonSchema: format.json_schema,
+        };
+      } else {
+        params.responseFormat = format;
+      }
+    }
+    const temperature = (
+      openRouterRequest as unknown as { temperature?: number }
+    ).temperature;
+    if (temperature !== undefined) {
+      params.temperature = temperature;
+    }
+    return params;
+  }
+
+  /**
+   * Rebuild a structured-output request without `response_format`, swapping in
+   * the legacy fake-tool emulation. Used as a runtime fallback when a model
+   * rejects native json_schema.
+   */
+  private toFallbackStructuredOutputRequest(
+    request: OpenRouterRequest,
+  ): OpenRouterRequest {
+    if (
+      !request.response_format ||
+      request.response_format.type !== "json_schema"
+    ) {
+      return request;
+    }
+    const { response_format, ...rest } = request;
+    const fallbackRequest: OpenRouterRequest = { ...rest };
+    const schema = response_format.json_schema.schema;
+    const fakeTool: OpenRouterTool = {
+      type: "function" as const,
+      function: {
+        name: STRUCTURED_OUTPUT_TOOL_NAME,
+        description:
+          "REQUIRED: You MUST call this tool to provide your final response. " +
+          "After gathering all necessary information (including results from other tools), " +
+          "call this tool with the structured data to complete the request.",
+        parameters: schema,
+      },
+    };
+    fallbackRequest.tools = [...(fallbackRequest.tools ?? []), fakeTool];
+    fallbackRequest.tool_choice = "auto";
+    return fallbackRequest;
   }
 
   async *executeStreamRequest(
@@ -345,22 +549,18 @@ export class OpenRouterAdapter extends BaseProviderAdapter {
     const openRouter = client as OpenRouter;
     const openRouterRequest = request as OpenRouterRequest;
 
-    // Use chat.send with stream: true for streaming responses
-    const stream = await openRouter.chat.send(
-      {
-        model: openRouterRequest.model,
-        messages: openRouterRequest.messages as Parameters<
-          typeof openRouter.chat.send
-        >[0]["messages"],
-        tools: openRouterRequest.tools as Parameters<
-          typeof openRouter.chat.send
-        >[0]["tools"],
-        toolChoice: openRouterRequest.tool_choice,
-        user: openRouterRequest.user,
-        stream: true,
-      },
+    // Use chat.send with stream: true for streaming responses.
+    // Cast the result to AsyncIterable: when stream: true, the SDK returns a
+    // stream we can iterate, but the typed result is the union with the
+    // non-stream response.
+    const streamParams = {
+      ...this.toSdkChatParams(openRouterRequest),
+      stream: true,
+    };
+    const stream = (await openRouter.chat.send(
+      streamParams as Parameters<typeof openRouter.chat.send>[0],
       signal ? { signal } : undefined,
-    );
+    )) as AsyncIterable<unknown>;
 
     // Track current tool call being built
     let currentToolCall: {
@@ -722,7 +922,16 @@ export class OpenRouterAdapter extends BaseProviderAdapter {
   }
 
   override hasStructuredOutput(response: unknown): boolean {
-    const openRouterResponse = response as OpenRouterResponse;
+    const openRouterResponse = response as AnnotatedOpenRouterResponse;
+
+    // Native path: executeRequest annotates the response when we sent
+    // `response_format`, so we can detect intent statelessly.
+    if (openRouterResponse.__jaypieStructuredOutput) {
+      return this.extractStructuredOutput(response) !== undefined;
+    }
+
+    // Fallback path: legacy fake-tool emulation, kept for models that the
+    // runtime has cached as not supporting native `response_format`.
     const choice = openRouterResponse.choices[0];
 
     // SDK returns camelCase (toolCalls)
@@ -737,7 +946,22 @@ export class OpenRouterAdapter extends BaseProviderAdapter {
   }
 
   override extractStructuredOutput(response: unknown): JsonObject | undefined {
-    const openRouterResponse = response as OpenRouterResponse;
+    const openRouterResponse = response as AnnotatedOpenRouterResponse;
+
+    if (openRouterResponse.__jaypieStructuredOutput) {
+      const choice = openRouterResponse.choices[0];
+      const content = choice?.message?.content;
+      if (typeof content !== "string" || content.length === 0) {
+        return undefined;
+      }
+      try {
+        return JSON.parse(content) as JsonObject;
+      } catch {
+        return undefined;
+      }
+    }
+
+    // Fallback path: legacy fake-tool emulation
     const choice = openRouterResponse.choices[0];
 
     // SDK returns camelCase (toolCalls)
