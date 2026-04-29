@@ -437,7 +437,8 @@ describe("AnthropicAdapter", () => {
         expect(result[0].description).toBe("Test tool");
       });
 
-      it("adds structured output tool when schema provided", () => {
+      it("does not inject a structured_output tool when schema provided", () => {
+        // Native output_format replaces the legacy fake-tool injection.
         const toolkit = new Toolkit([
           {
             name: "test",
@@ -454,8 +455,120 @@ describe("AnthropicAdapter", () => {
 
         const result = anthropicAdapter.formatTools(toolkit, schema);
 
-        expect(result).toHaveLength(2);
-        expect(result[1].name).toBe("structured_output");
+        expect(result).toHaveLength(1);
+        expect(result[0].name).toBe("test");
+      });
+    });
+
+    describe("formatOutputSchema", () => {
+      // Inputs use type:"json_schema" so the adapter skips its Zod path
+      // and runs the input through the sanitizer directly.
+      it("forces additionalProperties:false on objects", () => {
+        const result = anthropicAdapter.formatOutputSchema({
+          type: "json_schema",
+          properties: { name: { type: "string" } },
+        });
+
+        expect(result.additionalProperties).toBe(false);
+      });
+
+      it("strips $schema", () => {
+        const result = anthropicAdapter.formatOutputSchema({
+          $schema: "http://json-schema.org/draft-07/schema#",
+          type: "json_schema",
+          properties: {},
+        });
+
+        expect(result.$schema).toBeUndefined();
+      });
+
+      it("moves unsupported numeric constraints into description", () => {
+        const result = anthropicAdapter.formatOutputSchema({
+          type: "json_schema",
+          properties: {
+            age: { type: "number", minimum: 0, maximum: 120 },
+          },
+        });
+
+        const age = (result.properties as { age: { description?: string } })
+          .age;
+        expect(age.description).toContain("minimum: 0");
+        expect(age.description).toContain("maximum: 120");
+        expect((age as Record<string, unknown>).minimum).toBeUndefined();
+        expect((age as Record<string, unknown>).maximum).toBeUndefined();
+      });
+
+      it("moves minLength and maxLength into description", () => {
+        const result = anthropicAdapter.formatOutputSchema({
+          type: "json_schema",
+          properties: {
+            name: { type: "string", minLength: 1, maxLength: 50 },
+          },
+        });
+
+        const name = (result.properties as { name: { description?: string } })
+          .name;
+        expect(name.description).toContain("minLength: 1");
+        expect(name.description).toContain("maxLength: 50");
+        expect((name as Record<string, unknown>).minLength).toBeUndefined();
+        expect((name as Record<string, unknown>).maxLength).toBeUndefined();
+      });
+
+      it("strips unsupported string formats but keeps supported ones", () => {
+        const result = anthropicAdapter.formatOutputSchema({
+          type: "json_schema",
+          properties: {
+            email: { type: "string", format: "email" },
+            ssn: { type: "string", format: "ssn" },
+          },
+        });
+
+        const props = result.properties as {
+          email: { format?: string };
+          ssn: { format?: string; description?: string };
+        };
+        expect(props.email.format).toBe("email");
+        expect(props.ssn.format).toBeUndefined();
+        expect(props.ssn.description).toContain("ssn");
+      });
+
+      it("passes minItems through only when 0 or 1", () => {
+        const result = anthropicAdapter.formatOutputSchema({
+          type: "json_schema",
+          properties: {
+            tags: { type: "array", items: { type: "string" }, minItems: 1 },
+            badItems: {
+              type: "array",
+              items: { type: "string" },
+              minItems: 5,
+            },
+          },
+        });
+
+        const props = result.properties as {
+          tags: { minItems?: number };
+          badItems: { minItems?: number; description?: string };
+        };
+        expect(props.tags.minItems).toBe(1);
+        expect(props.badItems.minItems).toBeUndefined();
+        expect(props.badItems.description).toContain("minItems: 5");
+      });
+
+      it("converts oneOf to anyOf at nested levels", () => {
+        const result = anthropicAdapter.formatOutputSchema({
+          type: "json_schema",
+          properties: {
+            value: {
+              oneOf: [{ type: "string" }, { type: "number" }],
+            },
+          },
+        });
+
+        const value = result.properties as {
+          value: { anyOf?: unknown; oneOf?: unknown };
+        };
+        expect(value.value.anyOf).toBeDefined();
+        expect(value.value.oneOf).toBeUndefined();
       });
     });
 
@@ -504,21 +617,26 @@ describe("AnthropicAdapter", () => {
     });
 
     describe("hasStructuredOutput", () => {
-      it("returns true when structured_output tool is used", () => {
+      it("returns true when native output_format response is annotated", () => {
         const response = {
-          content: [
-            {
-              type: "tool_use",
-              id: "123",
-              name: "structured_output",
-              input: { key: "value" },
-            },
-          ],
-          stop_reason: "tool_use",
+          __jaypieStructuredOutput: true,
+          content: [{ type: "text", text: '{"name":"John"}' }],
+          stop_reason: "end_turn",
           usage: { input_tokens: 10, output_tokens: 20 },
         };
 
         expect(anthropicAdapter.hasStructuredOutput(response)).toBe(true);
+      });
+
+      it("returns false on annotated response with refusal", () => {
+        const response = {
+          __jaypieStructuredOutput: true,
+          content: [{ type: "text", text: "I cannot help with that." }],
+          stop_reason: "refusal",
+          usage: { input_tokens: 10, output_tokens: 20 },
+        };
+
+        expect(anthropicAdapter.hasStructuredOutput(response)).toBe(false);
       });
 
       it("returns false for regular tool use", () => {
@@ -537,26 +655,79 @@ describe("AnthropicAdapter", () => {
 
         expect(anthropicAdapter.hasStructuredOutput(response)).toBe(false);
       });
+
+      describe("Fallback Path", () => {
+        it("returns true when legacy structured_output tool is used", () => {
+          const response = {
+            content: [
+              {
+                type: "tool_use",
+                id: "123",
+                name: "structured_output",
+                input: { key: "value" },
+              },
+            ],
+            stop_reason: "tool_use",
+            usage: { input_tokens: 10, output_tokens: 20 },
+          };
+
+          expect(anthropicAdapter.hasStructuredOutput(response)).toBe(true);
+        });
+      });
     });
 
     describe("extractStructuredOutput", () => {
-      it("extracts structured output from response", () => {
+      it("parses JSON from native output_format text block", () => {
         const response = {
-          content: [
-            {
-              type: "tool_use",
-              id: "123",
-              name: "structured_output",
-              input: { name: "John", age: 30 },
-            },
-          ],
-          stop_reason: "tool_use",
+          __jaypieStructuredOutput: true,
+          content: [{ type: "text", text: '{"name":"John","age":30}' }],
+          stop_reason: "end_turn",
           usage: { input_tokens: 10, output_tokens: 20 },
         };
 
-        const result = anthropicAdapter.extractStructuredOutput(response);
+        expect(anthropicAdapter.extractStructuredOutput(response)).toEqual({
+          name: "John",
+          age: 30,
+        });
+      });
 
-        expect(result).toEqual({ name: "John", age: 30 });
+      it("returns undefined when stop_reason is refusal", () => {
+        const response = {
+          __jaypieStructuredOutput: true,
+          content: [{ type: "text", text: "I cannot help with that." }],
+          stop_reason: "refusal",
+          usage: { input_tokens: 10, output_tokens: 20 },
+        };
+
+        expect(
+          anthropicAdapter.extractStructuredOutput(response),
+        ).toBeUndefined();
+      });
+
+      it("returns undefined when stop_reason is max_tokens", () => {
+        const response = {
+          __jaypieStructuredOutput: true,
+          content: [{ type: "text", text: '{"partial":' }],
+          stop_reason: "max_tokens",
+          usage: { input_tokens: 10, output_tokens: 20 },
+        };
+
+        expect(
+          anthropicAdapter.extractStructuredOutput(response),
+        ).toBeUndefined();
+      });
+
+      it("returns undefined on annotated response with invalid JSON", () => {
+        const response = {
+          __jaypieStructuredOutput: true,
+          content: [{ type: "text", text: "not json" }],
+          stop_reason: "end_turn",
+          usage: { input_tokens: 10, output_tokens: 20 },
+        };
+
+        expect(
+          anthropicAdapter.extractStructuredOutput(response),
+        ).toBeUndefined();
       });
 
       it("returns undefined for non-structured responses", () => {
@@ -569,6 +740,28 @@ describe("AnthropicAdapter", () => {
         const result = anthropicAdapter.extractStructuredOutput(response);
 
         expect(result).toBeUndefined();
+      });
+
+      describe("Fallback Path", () => {
+        it("extracts structured output from legacy tool_use block", () => {
+          const response = {
+            content: [
+              {
+                type: "tool_use",
+                id: "123",
+                name: "structured_output",
+                input: { name: "John", age: 30 },
+              },
+            ],
+            stop_reason: "tool_use",
+            usage: { input_tokens: 10, output_tokens: 20 },
+          };
+
+          expect(anthropicAdapter.extractStructuredOutput(response)).toEqual({
+            name: "John",
+            age: 30,
+          });
+        });
       });
     });
 
@@ -863,6 +1056,178 @@ describe("AnthropicAdapter", () => {
     });
   });
 
+  describe("Structured-output fallback", () => {
+    beforeEach(() => {
+      anthropicAdapter.clearRuntimeNoStructuredOutputModels();
+    });
+
+    it("retries with fake-tool emulation when output_format is rejected", async () => {
+      const { BadRequestError } = await import("@anthropic-ai/sdk");
+      // @ts-expect-error Mock doesn't require constructor args
+      const error = new BadRequestError();
+      (error as unknown as { status: number }).status = 400;
+      error.message =
+        '400 {"type":"error","error":{"type":"invalid_request_error","message":"`output_format` is not supported by this model."}}';
+
+      const successResponse = {
+        content: [
+          {
+            type: "tool_use",
+            id: "abc",
+            name: "structured_output",
+            input: { ok: true },
+          },
+        ],
+        stop_reason: "tool_use",
+        usage: { input_tokens: 1, output_tokens: 1 },
+      };
+      const mockCreate = vi.fn();
+      mockCreate.mockRejectedValueOnce(error as unknown as Error);
+      mockCreate.mockResolvedValueOnce(successResponse);
+      const mockClient = { messages: { create: mockCreate } };
+
+      const request = {
+        model: "claude-old-3",
+        messages: [{ role: "user", content: "Hi" }],
+        max_tokens: 1024,
+        stream: false,
+        output_format: {
+          type: "json_schema",
+          schema: { type: "object", properties: {} },
+        },
+      };
+
+      const result = await anthropicAdapter.executeRequest(mockClient, request);
+
+      expect(result as unknown).toBe(successResponse);
+      expect(mockCreate).toHaveBeenCalledTimes(2);
+
+      const fallbackBody = mockCreate.mock.calls[1][0] as {
+        output_format?: unknown;
+        tools?: { name: string }[];
+        tool_choice?: { type: string };
+      };
+      expect(fallbackBody.output_format).toBeUndefined();
+      expect(
+        fallbackBody.tools?.some((t) => t.name === "structured_output"),
+      ).toBe(true);
+      expect(fallbackBody.tool_choice).toEqual({ type: "any" });
+    });
+
+    it("caches the model so subsequent buildRequest uses fake-tool path", async () => {
+      const { BadRequestError } = await import("@anthropic-ai/sdk");
+      // @ts-expect-error Mock doesn't require constructor args
+      const error = new BadRequestError();
+      (error as unknown as { status: number }).status = 400;
+      error.message = "output_format is not supported";
+
+      const mockCreate = vi.fn();
+      mockCreate.mockRejectedValueOnce(error as unknown as Error);
+      mockCreate.mockResolvedValueOnce({
+        content: [
+          {
+            type: "tool_use",
+            id: "x",
+            name: "structured_output",
+            input: {},
+          },
+        ],
+        stop_reason: "tool_use",
+        usage: { input_tokens: 1, output_tokens: 1 },
+      });
+      const mockClient = { messages: { create: mockCreate } };
+
+      await anthropicAdapter.executeRequest(mockClient, {
+        model: "claude-legacy",
+        messages: [],
+        max_tokens: 1024,
+        stream: false,
+        output_format: {
+          type: "json_schema",
+          schema: { type: "object", properties: {} },
+        },
+      });
+
+      const built = anthropicAdapter.buildRequest({
+        model: "claude-legacy",
+        messages: [],
+        format: { type: "object", properties: {} },
+      });
+
+      const builtTyped = built as unknown as {
+        output_format?: unknown;
+        tools?: { name: string }[];
+        tool_choice?: { type: string };
+      };
+      expect(builtTyped.output_format).toBeUndefined();
+      expect(
+        builtTyped.tools?.some((t) => t.name === "structured_output"),
+      ).toBe(true);
+      expect(builtTyped.tool_choice).toEqual({ type: "any" });
+    });
+
+    it("does not fall back when 400 mentions citations", async () => {
+      const { BadRequestError } = await import("@anthropic-ai/sdk");
+      // @ts-expect-error Mock doesn't require constructor args
+      const error = new BadRequestError();
+      (error as unknown as { status: number }).status = 400;
+      error.message =
+        "output_format is incompatible with citations enabled on this request";
+
+      const mockCreate = vi.fn();
+      mockCreate.mockRejectedValue(error as unknown as Error);
+      const mockClient = { messages: { create: mockCreate } };
+
+      let thrown: unknown;
+      try {
+        await anthropicAdapter.executeRequest(mockClient, {
+          model: "claude-opus-4-7",
+          messages: [],
+          max_tokens: 1024,
+          stream: false,
+          output_format: {
+            type: "json_schema",
+            schema: { type: "object", properties: {} },
+          },
+        });
+      } catch (e) {
+        thrown = e;
+      }
+      expect(thrown).toBe(error);
+      expect(mockCreate).toHaveBeenCalledTimes(1);
+    });
+
+    it("does not fall back when 400 is unrelated to output_format", async () => {
+      const { BadRequestError } = await import("@anthropic-ai/sdk");
+      // @ts-expect-error Mock doesn't require constructor args
+      const error = new BadRequestError();
+      (error as unknown as { status: number }).status = 400;
+      error.message = "some other bad-request reason";
+
+      const mockCreate = vi.fn();
+      mockCreate.mockRejectedValue(error as unknown as Error);
+      const mockClient = { messages: { create: mockCreate } };
+
+      let thrown: unknown;
+      try {
+        await anthropicAdapter.executeRequest(mockClient, {
+          model: "claude-opus-4-7",
+          messages: [],
+          max_tokens: 1024,
+          stream: false,
+          output_format: {
+            type: "json_schema",
+            schema: { type: "object", properties: {} },
+          },
+        });
+      } catch (e) {
+        thrown = e;
+      }
+      expect(thrown).toBe(error);
+      expect(mockCreate).toHaveBeenCalledTimes(1);
+    });
+  });
+
   // Specific Scenarios
   describe("Specific Scenarios", () => {
     it("uses default model when not specified", () => {
@@ -1009,14 +1374,14 @@ describe("AnthropicAdapter", () => {
       });
     });
 
-    it("sets tool_choice to any when structured output tool present", () => {
+    it("uses tool_choice:auto for real tools", () => {
       const request: OperateRequest = {
         model: PROVIDER.ANTHROPIC.MODEL.LARGE,
         messages: [],
         tools: [
           {
-            name: "structured_output",
-            description: "Structured output",
+            name: "search",
+            description: "Search",
             parameters: { type: "object" },
           },
         ],
@@ -1024,7 +1389,51 @@ describe("AnthropicAdapter", () => {
 
       const result = anthropicAdapter.buildRequest(request);
 
-      expect(result.tool_choice).toEqual({ type: "any" });
+      expect(result.tool_choice).toEqual({ type: "auto" });
+    });
+
+    it("emits output_format when format is provided", () => {
+      const request: OperateRequest = {
+        model: PROVIDER.ANTHROPIC.MODEL.LARGE,
+        messages: [],
+        format: {
+          type: "object",
+          properties: { name: { type: "string" } },
+          additionalProperties: false,
+        },
+      };
+
+      const result = anthropicAdapter.buildRequest(request);
+
+      const params = result as unknown as {
+        output_format?: {
+          type: string;
+          schema: { type: string };
+        };
+        tool_choice?: { type: string };
+      };
+      expect(params.output_format).toEqual({
+        type: "json_schema",
+        schema: {
+          type: "object",
+          properties: { name: { type: "string" } },
+          additionalProperties: false,
+        },
+      });
+      // No tool_choice forced when only structured output is requested
+      expect(params.tool_choice).toBeUndefined();
+    });
+
+    it("does not emit output_format when format is absent", () => {
+      const request: OperateRequest = {
+        model: PROVIDER.ANTHROPIC.MODEL.LARGE,
+        messages: [],
+      };
+
+      const result = anthropicAdapter.buildRequest(request);
+
+      const params = result as unknown as { output_format?: unknown };
+      expect(params.output_format).toBeUndefined();
     });
   });
 });

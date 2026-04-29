@@ -138,6 +138,7 @@ describe("AnthropicProvider", () => {
 
     it("throws error when JSON response does not match schema", async () => {
       const mockResponse = {
+        stop_reason: "end_turn",
         content: [
           {
             type: "text",
@@ -170,7 +171,7 @@ describe("AnthropicProvider", () => {
           response: GreetingFormat,
         }),
       ).rejects.toThrowError(
-        "Failed to parse structured response from Anthropic",
+        "JSON response from Anthropic does not match schema",
       );
     });
   });
@@ -242,8 +243,9 @@ describe("AnthropicProvider", () => {
 
   describe("Features", () => {
     describe("Structured Output", () => {
-      it("uses tool calling for structured output", async () => {
+      it("uses native output_format for structured output", async () => {
         const mockResponse = {
+          stop_reason: "end_turn",
           content: [
             {
               type: "text",
@@ -280,21 +282,21 @@ describe("AnthropicProvider", () => {
           name: "World",
         });
 
-        expect(mockCreate).toHaveBeenCalledWith({
-          messages: [
-            { role: PROVIDER.ANTHROPIC.ROLE.USER, content: "Hello, World" },
-          ],
-          model: expect.any(String),
-          max_tokens: PROVIDER.ANTHROPIC.MAX_TOKENS.DEFAULT,
-          system: expect.any(String),
-        });
+        const call = mockCreate.mock.calls[0][0] as {
+          output_format?: { type: string; schema: { type: string } };
+          system?: string;
+        };
+        expect(call.output_format).toBeDefined();
+        expect(call.output_format?.type).toBe("json_schema");
+        expect(call.output_format?.schema.type).toBe("object");
+        // No system stuffed by default; user did not provide one
+        expect(call.system).toBeUndefined();
       });
 
-      it("throws error when tool call result is not found", async () => {
+      it("throws when text block contains invalid JSON", async () => {
         const mockResponse = {
-          content: [
-            { type: "text", text: "Invalid response without tool call" },
-          ],
+          stop_reason: "end_turn",
+          content: [{ type: "text", text: "Invalid response without JSON" }],
         };
 
         const mockCreate = vi.fn().mockResolvedValue(mockResponse);
@@ -320,6 +322,60 @@ describe("AnthropicProvider", () => {
         ).rejects.toThrowError(
           "Failed to parse structured response from Anthropic",
         );
+      });
+
+      it("throws when stop_reason is refusal", async () => {
+        const mockResponse = {
+          stop_reason: "refusal",
+          content: [{ type: "text", text: "I cannot help with that." }],
+        };
+
+        const mockCreate = vi.fn().mockResolvedValue(mockResponse);
+        vi.mocked(Anthropic).mockImplementation(
+          () =>
+            ({
+              messages: {
+                create: mockCreate,
+              },
+            }) as any,
+        );
+
+        const provider = new AnthropicProvider();
+        const GreetingFormat = z.object({
+          salutation: z.string(),
+          name: z.string(),
+        });
+
+        await expect(
+          provider.send("Hello", { response: GreetingFormat }),
+        ).rejects.toThrowError("refusal");
+      });
+
+      it("throws when stop_reason is max_tokens", async () => {
+        const mockResponse = {
+          stop_reason: "max_tokens",
+          content: [{ type: "text", text: '{"partial":' }],
+        };
+
+        const mockCreate = vi.fn().mockResolvedValue(mockResponse);
+        vi.mocked(Anthropic).mockImplementation(
+          () =>
+            ({
+              messages: {
+                create: mockCreate,
+              },
+            }) as any,
+        );
+
+        const provider = new AnthropicProvider();
+        const GreetingFormat = z.object({
+          salutation: z.string(),
+          name: z.string(),
+        });
+
+        await expect(
+          provider.send("Hello", { response: GreetingFormat }),
+        ).rejects.toThrowError("max_tokens");
       });
 
       it("operate returns structured output with history", async () => {

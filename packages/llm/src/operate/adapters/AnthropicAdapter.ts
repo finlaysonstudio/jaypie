@@ -1,4 +1,5 @@
 import type { Anthropic } from "@anthropic-ai/sdk";
+import log from "@jaypie/logger";
 import { JsonObject, NaturalSchema } from "@jaypie/types";
 import { z } from "zod/v4";
 
@@ -36,8 +37,195 @@ import { BaseProviderAdapter } from "./ProviderAdapter.interface.js";
 
 const STRUCTURED_OUTPUT_TOOL_NAME = "structured_output";
 
+/**
+ * Local extension of the SDK's `MessageCreateParams` to carry the legacy
+ * `output_format` field. SDK 0.71 only types `output_format` on the Beta
+ * namespace, but the field is accepted by the GA endpoint per Anthropic's
+ * structured-outputs docs (the deprecated beta header is no longer
+ * required). When the SDK promotes the typed field to the top-level
+ * `MessageCreateParams`, this extension can be removed.
+ */
+type AnthropicRequestParams = Anthropic.MessageCreateParams & {
+  output_format?: {
+    type: "json_schema";
+    schema: JsonObject;
+  };
+};
+
+/**
+ * Anthropic responses we annotate at receive time so downstream stateless
+ * methods (`hasStructuredOutput`, `extractStructuredOutput`) can tell whether
+ * the request asked for structured output without re-threading the request.
+ */
+type AnnotatedAnthropicMessage = Anthropic.Message & {
+  __jaypieStructuredOutput?: boolean;
+};
+
+const STRUCTURED_OUTPUT_NON_PARSE_STOP_REASONS = new Set([
+  "refusal",
+  "max_tokens",
+]);
+
 // Regular expression to parse data URLs: data:mime/type;base64,data
 const DATA_URL_REGEX = /^data:([^;]+);base64,(.+)$/;
+
+// String formats accepted by Anthropic's structured-output grammar compiler.
+// Other formats are stripped (move to description) so the API does not 400.
+const SUPPORTED_STRING_FORMATS = new Set([
+  "date",
+  "date-time",
+  "duration",
+  "email",
+  "hostname",
+  "ipv4",
+  "ipv6",
+  "time",
+  "uri",
+  "uuid",
+]);
+
+// Top-level keywords stripped wholesale before sending: not part of the spec
+// the API enforces and the validator can reject them.
+const STRIPPED_TOP_LEVEL_KEYWORDS = new Set(["$schema", "$id"]);
+
+// Keywords Anthropic's structured-output grammar does not support. They are
+// removed from the schema and appended to `description` so the model still
+// sees the intent.
+const UNSUPPORTED_CONSTRAINT_KEYWORDS = new Set([
+  "exclusiveMaximum",
+  "exclusiveMinimum",
+  "maxItems",
+  "maxLength",
+  "maxProperties",
+  "maximum",
+  "minLength",
+  "minProperties",
+  "minimum",
+  "multipleOf",
+  "pattern",
+  "patternProperties",
+  "uniqueItems",
+]);
+
+/**
+ * Recursively transform a JSON Schema into the strict shape Anthropic's
+ * structured-output grammar accepts: object types must have
+ * `additionalProperties: false`, unsupported numeric/string/array
+ * constraints are appended to `description`, and unsupported string
+ * formats are stripped. Mirrors @anthropic-ai/sdk's `transformJSONSchema`
+ * but inline so we do not take a runtime dependency on the optional
+ * peer SDK.
+ */
+function sanitizeJsonSchemaForAnthropic(
+  schema: JsonObject,
+  isRoot = true,
+): JsonObject {
+  const result: JsonObject = {};
+  const carriedConstraints: string[] = [];
+
+  for (const [key, value] of Object.entries(schema)) {
+    if (isRoot && STRIPPED_TOP_LEVEL_KEYWORDS.has(key)) {
+      continue;
+    }
+
+    if (UNSUPPORTED_CONSTRAINT_KEYWORDS.has(key)) {
+      carriedConstraints.push(`${key}: ${JSON.stringify(value)}`);
+      continue;
+    }
+
+    if (key === "format" && typeof value === "string") {
+      if (SUPPORTED_STRING_FORMATS.has(value)) {
+        result[key] = value;
+      } else {
+        carriedConstraints.push(`format: ${JSON.stringify(value)}`);
+      }
+      continue;
+    }
+
+    if (key === "minItems" && typeof value === "number") {
+      if (value === 0 || value === 1) {
+        result[key] = value;
+      } else {
+        carriedConstraints.push(`minItems: ${value}`);
+      }
+      continue;
+    }
+
+    if (
+      key === "properties" &&
+      value &&
+      typeof value === "object" &&
+      !Array.isArray(value)
+    ) {
+      const transformedProps: JsonObject = {};
+      for (const [propName, propSchema] of Object.entries(
+        value as JsonObject,
+      )) {
+        transformedProps[propName] = isJsonSchema(propSchema)
+          ? sanitizeJsonSchemaForAnthropic(propSchema, false)
+          : propSchema;
+      }
+      result[key] = transformedProps;
+      continue;
+    }
+
+    if (
+      (key === "items" || key === "additionalItems" || key === "contains") &&
+      isJsonSchema(value)
+    ) {
+      result[key] = sanitizeJsonSchemaForAnthropic(value, false);
+      continue;
+    }
+
+    if (
+      (key === "anyOf" || key === "oneOf" || key === "allOf") &&
+      Array.isArray(value)
+    ) {
+      const targetKey = key === "oneOf" ? "anyOf" : key;
+      result[targetKey] = value.map((entry) =>
+        isJsonSchema(entry)
+          ? sanitizeJsonSchemaForAnthropic(entry, false)
+          : entry,
+      );
+      continue;
+    }
+
+    if (key === "$defs" && value && typeof value === "object") {
+      const transformedDefs: JsonObject = {};
+      for (const [defName, defSchema] of Object.entries(value as JsonObject)) {
+        transformedDefs[defName] = isJsonSchema(defSchema)
+          ? sanitizeJsonSchemaForAnthropic(defSchema, false)
+          : defSchema;
+      }
+      result[key] = transformedDefs;
+      continue;
+    }
+
+    if (key === "additionalProperties") {
+      // Always force `false` on objects below; ignore caller-supplied value.
+      continue;
+    }
+
+    result[key] = value;
+  }
+
+  if (result.type === "object") {
+    result.additionalProperties = false;
+  }
+
+  if (carriedConstraints.length > 0) {
+    const existing =
+      typeof result.description === "string" ? result.description : "";
+    const suffix = `{${carriedConstraints.join(", ")}}`;
+    result.description = existing ? `${existing}\n\n${suffix}` : suffix;
+  }
+
+  return result;
+}
+
+function isJsonSchema(value: unknown): value is JsonObject {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
 
 /**
  * Parse a data URL into its components
@@ -153,6 +341,30 @@ function isTemperatureDeprecationError(error: unknown): boolean {
   return messages.some((m) => m.toLowerCase().includes("temperature"));
 }
 
+/**
+ * Detect 400 errors that indicate the model itself does not support
+ * `output_format`. Citations + structured output is also a 400 case but is a
+ * caller error rather than a model-capability gap, so we explicitly skip it
+ * to avoid masking the real problem under a tool-emulation retry.
+ */
+function isStructuredOutputUnsupportedError(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const err = error as {
+    status?: number;
+    message?: string;
+    error?: { message?: string };
+  };
+  const name = (error as Error)?.constructor?.name;
+  if (name !== "BadRequestError" && err.status !== 400) return false;
+  const messages = [err.message, err.error?.message].filter(
+    (m): m is string => typeof m === "string",
+  );
+  if (messages.some((m) => /citation/i.test(m))) return false;
+  return messages.some((m) =>
+    /output_format|output_config|json[_ ]schema|structured/i.test(m),
+  );
+}
+
 //
 //
 // Main
@@ -171,6 +383,11 @@ export class AnthropicAdapter extends BaseProviderAdapter {
   // Populated by executeRequest on 400 errors so repeat calls skip the param.
   private runtimeNoTemperatureModels = new Set<string>();
 
+  // Session-level cache of models observed to reject `output_format`. When a
+  // model is in this set, buildRequest engages the legacy fake-tool path
+  // instead of native structured output.
+  private runtimeNoStructuredOutputModels = new Set<string>();
+
   rememberModelRejectsTemperature(model: string): void {
     this.runtimeNoTemperatureModels.add(model);
   }
@@ -179,16 +396,28 @@ export class AnthropicAdapter extends BaseProviderAdapter {
     this.runtimeNoTemperatureModels.clear();
   }
 
+  rememberModelRejectsStructuredOutput(model: string): void {
+    this.runtimeNoStructuredOutputModels.add(model);
+  }
+
+  clearRuntimeNoStructuredOutputModels(): void {
+    this.runtimeNoStructuredOutputModels.clear();
+  }
+
   private supportsTemperature(model: string): boolean {
     if (this.runtimeNoTemperatureModels.has(model)) return false;
     return !MODELS_WITHOUT_TEMPERATURE.some((pattern) => pattern.test(model));
+  }
+
+  private supportsStructuredOutput(model: string): boolean {
+    return !this.runtimeNoStructuredOutputModels.has(model);
   }
 
   //
   // Request Building
   //
 
-  buildRequest(request: OperateRequest): Anthropic.MessageCreateParams {
+  buildRequest(request: OperateRequest): AnthropicRequestParams {
     // Convert messages to Anthropic format
     // Handle different message types: regular messages, function calls, and function outputs
     const messages: Anthropic.MessageParam[] = [];
@@ -257,7 +486,7 @@ export class AnthropicAdapter extends BaseProviderAdapter {
       }
     }
 
-    const anthropicRequest: Anthropic.MessageCreateParams = {
+    const anthropicRequest: AnthropicRequestParams = {
       model: (request.model ||
         this.defaultModel) as Anthropic.MessageCreateParams["model"],
       messages,
@@ -269,8 +498,28 @@ export class AnthropicAdapter extends BaseProviderAdapter {
       anthropicRequest.system = request.system;
     }
 
-    if (request.tools && request.tools.length > 0) {
-      anthropicRequest.tools = request.tools.map((tool) => ({
+    const useFallbackStructuredOutput =
+      Boolean(request.format) &&
+      !this.supportsStructuredOutput(anthropicRequest.model as string);
+
+    const allTools: ProviderToolDefinition[] = request.tools
+      ? [...request.tools]
+      : [];
+    if (useFallbackStructuredOutput && request.format) {
+      log.warn(
+        `[AnthropicAdapter] Using legacy structured_output tool fallback for model ${anthropicRequest.model as string}; native output_format previously rejected for this model.`,
+      );
+      allTools.push({
+        name: STRUCTURED_OUTPUT_TOOL_NAME,
+        description:
+          "Output a structured JSON object, " +
+          "use this before your final response to give structured outputs to the user",
+        parameters: request.format,
+      });
+    }
+
+    if (allTools.length > 0) {
+      anthropicRequest.tools = allTools.map((tool) => ({
         name: tool.name,
         description: tool.description,
         input_schema: {
@@ -280,12 +529,18 @@ export class AnthropicAdapter extends BaseProviderAdapter {
         type: "custom" as const,
       }));
 
-      // Determine tool choice based on whether structured output is requested
-      const hasStructuredOutput = request.tools.some(
-        (t) => t.name === STRUCTURED_OUTPUT_TOOL_NAME,
-      );
-      anthropicRequest.tool_choice = {
-        type: hasStructuredOutput ? "any" : "auto",
+      anthropicRequest.tool_choice = useFallbackStructuredOutput
+        ? { type: "any" }
+        : { type: "auto" };
+    }
+
+    // Native structured output: send schema as `output_format`. The legacy
+    // tool-emulation path is engaged only as a runtime fallback for models
+    // the API has flagged as not supporting `output_format`.
+    if (request.format && !useFallbackStructuredOutput) {
+      anthropicRequest.output_format = {
+        type: "json_schema",
+        schema: request.format,
       };
     }
 
@@ -311,9 +566,13 @@ export class AnthropicAdapter extends BaseProviderAdapter {
 
   formatTools(
     toolkit: Toolkit,
-    outputSchema?: JsonObject,
+    // outputSchema is part of the interface contract but Anthropic now uses
+    // native `output_format` (set in buildRequest), so we no longer inject a
+    // synthetic structured-output tool here.
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _outputSchema?: JsonObject,
   ): ProviderToolDefinition[] {
-    const tools: ProviderToolDefinition[] = toolkit.tools.map((tool) => ({
+    return toolkit.tools.map((tool) => ({
       name: tool.name,
       description: tool.description,
       parameters: {
@@ -321,19 +580,6 @@ export class AnthropicAdapter extends BaseProviderAdapter {
         type: "object",
       } as JsonObject,
     }));
-
-    // Add structured output tool if schema is provided
-    if (outputSchema) {
-      tools.push({
-        name: STRUCTURED_OUTPUT_TOOL_NAME,
-        description:
-          "Output a structured JSON object, " +
-          "use this before your final response to give structured outputs to the user",
-        parameters: outputSchema,
-      });
-    }
-
-    return tools;
   }
 
   formatOutputSchema(
@@ -359,12 +605,7 @@ export class AnthropicAdapter extends BaseProviderAdapter {
       jsonSchema = z.toJSONSchema(zodSchema) as JsonObject;
     }
 
-    // Remove $schema property (causes issues with validator)
-    if (jsonSchema.$schema) {
-      delete jsonSchema.$schema;
-    }
-
-    return jsonSchema;
+    return sanitizeJsonSchemaForAnthropic(jsonSchema);
   }
 
   //
@@ -377,12 +618,17 @@ export class AnthropicAdapter extends BaseProviderAdapter {
     signal?: AbortSignal,
   ): Promise<Anthropic.Message> {
     const anthropic = client as Anthropic;
-    const anthropicRequest = request as Anthropic.MessageCreateParams;
+    const anthropicRequest = request as AnthropicRequestParams;
+    const wantsStructuredOutput = Boolean(anthropicRequest.output_format);
     try {
-      return (await anthropic.messages.create(
-        anthropicRequest,
+      const response = (await anthropic.messages.create(
+        anthropicRequest as Anthropic.MessageCreateParams,
         signal ? { signal } : undefined,
-      )) as Anthropic.Message;
+      )) as AnnotatedAnthropicMessage;
+      if (wantsStructuredOutput) {
+        response.__jaypieStructuredOutput = true;
+      }
+      return response;
     } catch (error) {
       if (signal?.aborted) return undefined as unknown as Anthropic.Message;
 
@@ -394,8 +640,28 @@ export class AnthropicAdapter extends BaseProviderAdapter {
         this.rememberModelRejectsTemperature(anthropicRequest.model as string);
         const retryRequest = { ...anthropicRequest };
         delete retryRequest.temperature;
+        const response = (await anthropic.messages.create(
+          retryRequest as Anthropic.MessageCreateParams,
+          signal ? { signal } : undefined,
+        )) as AnnotatedAnthropicMessage;
+        if (wantsStructuredOutput) {
+          response.__jaypieStructuredOutput = true;
+        }
+        return response;
+      }
+
+      // If the model rejected `output_format`, cache it and retry with the
+      // legacy fake-tool emulation path.
+      if (wantsStructuredOutput && isStructuredOutputUnsupportedError(error)) {
+        const model = anthropicRequest.model as string;
+        this.rememberModelRejectsStructuredOutput(model);
+        log.warn(
+          `[AnthropicAdapter] Model ${model} rejected native output_format; falling back to legacy structured_output tool emulation.`,
+        );
+        const fallbackRequest =
+          this.toFallbackStructuredOutputRequest(anthropicRequest);
         return (await anthropic.messages.create(
-          retryRequest,
+          fallbackRequest as Anthropic.MessageCreateParams,
           signal ? { signal } : undefined,
         )) as Anthropic.Message;
       }
@@ -404,21 +670,51 @@ export class AnthropicAdapter extends BaseProviderAdapter {
     }
   }
 
+  /**
+   * Rebuild a structured-output request without `output_format`, swapping in
+   * the legacy fake-tool emulation. Used as a runtime fallback when a model
+   * rejects native `output_format`.
+   */
+  private toFallbackStructuredOutputRequest(
+    request: AnthropicRequestParams,
+  ): AnthropicRequestParams {
+    const { output_format, ...rest } = request;
+    if (!output_format) return request;
+    const fallbackRequest: AnthropicRequestParams = { ...rest };
+    const fakeTool = {
+      name: STRUCTURED_OUTPUT_TOOL_NAME,
+      description:
+        "Output a structured JSON object, " +
+        "use this before your final response to give structured outputs to the user",
+      input_schema: {
+        ...output_format.schema,
+        type: "object",
+      } as Anthropic.Messages.Tool.InputSchema,
+      type: "custom" as const,
+    };
+    fallbackRequest.tools = [...(fallbackRequest.tools ?? []), fakeTool];
+    fallbackRequest.tool_choice = { type: "any" };
+    return fallbackRequest;
+  }
+
   async *executeStreamRequest(
     client: unknown,
     request: unknown,
     signal?: AbortSignal,
   ): AsyncIterable<LlmStreamChunk> {
     const anthropic = client as Anthropic;
+    // Preserve `output_format` when passing through to the SDK by typing
+    // through the local extension instead of the upstream
+    // MessageCreateParams shape.
     let streamRequest = {
-      ...(request as Anthropic.MessageCreateParams),
+      ...(request as AnthropicRequestParams),
       stream: true,
-    } as Anthropic.MessageCreateParamsStreaming;
+    } as AnthropicRequestParams & { stream: true };
 
     let stream;
     try {
       stream = await anthropic.messages.create(
-        streamRequest,
+        streamRequest as Anthropic.MessageCreateParamsStreaming,
         signal ? { signal } : undefined,
       );
     } catch (error) {
@@ -429,10 +725,10 @@ export class AnthropicAdapter extends BaseProviderAdapter {
         this.rememberModelRejectsTemperature(streamRequest.model as string);
         streamRequest = {
           ...streamRequest,
-        } as Anthropic.MessageCreateParamsStreaming;
+        };
         delete streamRequest.temperature;
         stream = await anthropic.messages.create(
-          streamRequest,
+          streamRequest as Anthropic.MessageCreateParamsStreaming,
           signal ? { signal } : undefined,
         );
       } else {
@@ -725,9 +1021,16 @@ export class AnthropicAdapter extends BaseProviderAdapter {
   }
 
   override hasStructuredOutput(response: unknown): boolean {
-    const anthropicResponse = response as Anthropic.Message;
+    const anthropicResponse = response as AnnotatedAnthropicMessage;
 
-    // Check if the last content block is a tool_use with structured_output
+    // Native path: executeRequest annotates the response when we sent
+    // `output_format`, so we can detect intent statelessly.
+    if (anthropicResponse.__jaypieStructuredOutput) {
+      return this.extractStructuredOutput(response) !== undefined;
+    }
+
+    // Fallback path: legacy fake-tool emulation, kept for models that the
+    // runtime has cached as not supporting `output_format`.
     const lastBlock =
       anthropicResponse.content[anthropicResponse.content.length - 1];
     return (
@@ -737,8 +1040,35 @@ export class AnthropicAdapter extends BaseProviderAdapter {
   }
 
   override extractStructuredOutput(response: unknown): JsonObject | undefined {
-    const anthropicResponse = response as Anthropic.Message;
+    const anthropicResponse = response as AnnotatedAnthropicMessage;
 
+    if (anthropicResponse.__jaypieStructuredOutput) {
+      // Refusal and truncation are explicit non-JSON outcomes per Anthropic
+      // structured-outputs docs — surface the text upstream instead of
+      // forcing a JSON.parse on what is not JSON.
+      if (
+        anthropicResponse.stop_reason &&
+        STRUCTURED_OUTPUT_NON_PARSE_STOP_REASONS.has(
+          anthropicResponse.stop_reason,
+        )
+      ) {
+        return undefined;
+      }
+
+      const textBlock = anthropicResponse.content.find(
+        (block) => block.type === "text",
+      ) as Anthropic.TextBlock | undefined;
+      if (!textBlock) return undefined;
+
+      try {
+        const parsed = JSON.parse(textBlock.text);
+        return parsed as JsonObject;
+      } catch {
+        return undefined;
+      }
+    }
+
+    // Fallback path: legacy fake-tool emulation
     const lastBlock =
       anthropicResponse.content[anthropicResponse.content.length - 1];
     if (

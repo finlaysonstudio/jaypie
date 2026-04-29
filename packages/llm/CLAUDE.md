@@ -142,6 +142,34 @@ const response = await Llm.operate(input, {
 - `fallbackUsed`: `true` if a fallback provider was used
 - `fallbackAttempts`: Number of providers tried (1 = primary only)
 
+### Structured Outputs
+
+Pass `format` (or `response` for `provider.send`) with a Zod or JSON-Schema definition to receive guaranteed-valid JSON.
+
+```typescript
+import { z } from "zod/v4";
+import Llm from "@jaypie/llm";
+
+const Greeting = z.object({
+  salutation: z.string(),
+  name: z.string(),
+});
+
+const response = await Llm.operate("Greet the world", {
+  model: "claude-opus-4-7",
+  format: Greeting,
+});
+// response.content is parsed JSON: { salutation: "Hello", name: "World" }
+```
+
+**Anthropic notes:**
+- Uses Anthropic's native `output_format` field (GA 2025-11; Claude 4.5+).
+- Schema constraints not supported by Anthropic's grammar (`minLength`, `maxLength`, `minimum`, `maximum`, `multipleOf`, regex `pattern`, recursive schemas, `additionalProperties: true`) are stripped at request time and folded into the field's `description`. The caller's Zod schema still validates the response, so all original constraints are enforced client-side.
+- `additionalProperties: false` is forced on every object.
+- Streaming structured outputs arrive as `LlmStreamChunkType.Text` deltas — concat to assemble JSON, or use `operate()` to get a parsed object directly.
+- `stop_reason: "refusal"` and `stop_reason: "max_tokens"` are surfaced as text rather than parsed JSON. `provider.send(..., { response })` throws on these; `operate()` surfaces them via `response.content` as a string.
+- A model that rejects `output_format` is cached for the session and transparently retried via the legacy fake-tool emulation. Citations + structured output (a 400 documented as incompatible) is **not** retried — the error propagates so callers can see the real cause.
+
 ### With Tools
 
 ```typescript

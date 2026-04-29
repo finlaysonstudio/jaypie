@@ -119,7 +119,8 @@ export async function createTextCompletion(
   return text;
 }
 
-// Structured output completion
+// Structured output completion using Anthropic's native `output_format` field.
+// Returns a JsonObject parsed and validated against the caller's Zod schema.
 export async function createStructuredCompletion(
   client: Anthropic,
   messages: Anthropic.MessageParam[],
@@ -127,66 +128,71 @@ export async function createStructuredCompletion(
   responseSchema: z.ZodType | NaturalSchema,
   systemMessage?: string,
 ): Promise<JsonObject> {
-  log.trace("Using structured output");
+  log.trace("Using native structured output");
 
-  // Get the JSON schema for the response
   const schema =
     responseSchema instanceof z.ZodType
       ? responseSchema
       : naturalZodSchema(responseSchema as NaturalSchema);
 
-  // Set system message with JSON instructions
-  const defaultSystemPrompt =
-    "You will be responding with structured JSON data. " +
-    "Format your entire response as a valid JSON object with the following structure: " +
-    JSON.stringify(z.toJSONSchema(schema));
-
-  const systemPrompt = systemMessage || defaultSystemPrompt;
-
-  try {
-    // Use standard Anthropic API to get response
-    const params: Anthropic.MessageCreateParams = {
-      model,
-      messages,
-      max_tokens: PROVIDER.ANTHROPIC.MAX_TOKENS.DEFAULT,
-      system: systemPrompt,
+  // Type extension: `output_format` is on Beta types in @anthropic-ai/sdk
+  // 0.71 but is accepted by the GA endpoint per Anthropic's docs (the
+  // deprecated beta header is no longer required).
+  type StructuredOutputParams = Anthropic.MessageCreateParams & {
+    output_format?: {
+      type: "json_schema";
+      schema: JsonObject;
     };
+  };
 
-    const response = await client.messages.create(params);
-
-    // Extract text from response
-    const firstContent = response.content[0];
-    const responseText =
-      firstContent && "text" in firstContent ? firstContent.text : "";
-
-    // Find JSON in response
-    const jsonMatch =
-      responseText.match(/```json\s*([\s\S]*?)\s*```/) ||
-      responseText.match(/\{[\s\S]*\}/);
-
-    if (jsonMatch) {
-      try {
-        // Parse the JSON response
-        const jsonStr = jsonMatch[1] || jsonMatch[0];
-        const result = JSON.parse(jsonStr);
-        if (!schema.parse(result)) {
-          throw new Error(
-            `JSON response from Anthropic does not match schema: ${responseText}`,
-          );
-        }
-        log.trace("Received structured response", { result });
-        return result;
-      } catch {
-        throw new Error(
-          `Failed to parse JSON response from Anthropic: ${responseText}`,
-        );
-      }
-    }
-
-    // If we can't extract JSON
-    throw new Error("Failed to parse structured response from Anthropic");
-  } catch (error: unknown) {
-    log.error("Error creating structured completion", { error });
-    throw error;
+  const jsonSchema = z.toJSONSchema(schema) as JsonObject;
+  const params: StructuredOutputParams = {
+    model,
+    messages,
+    max_tokens: PROVIDER.ANTHROPIC.MAX_TOKENS.DEFAULT,
+    output_format: { type: "json_schema", schema: jsonSchema },
+  };
+  if (systemMessage) {
+    params.system = systemMessage;
   }
+
+  const response = (await client.messages.create(
+    params as Anthropic.MessageCreateParams,
+  )) as Anthropic.Message;
+
+  if (response.stop_reason === "refusal") {
+    throw new Error(
+      "Anthropic refused the structured-output request (stop_reason=refusal)",
+    );
+  }
+  if (response.stop_reason === "max_tokens") {
+    throw new Error(
+      "Anthropic structured-output response was truncated (stop_reason=max_tokens); increase max_tokens",
+    );
+  }
+
+  const textBlock = response.content.find(
+    (block): block is Anthropic.TextBlock => block.type === "text",
+  );
+  if (!textBlock) {
+    throw new Error("Failed to parse structured response from Anthropic");
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(textBlock.text);
+  } catch {
+    throw new Error(
+      "Failed to parse structured response from Anthropic: " + textBlock.text,
+    );
+  }
+
+  const validation = schema.safeParse(parsed);
+  if (!validation.success) {
+    throw new Error(
+      `JSON response from Anthropic does not match schema: ${textBlock.text}`,
+    );
+  }
+  log.trace("Received structured response", { result: validation.data });
+  return validation.data as JsonObject;
 }
