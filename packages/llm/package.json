@@ -28,6 +28,7 @@
     "format": "eslint . --fix",
     "lint": "eslint .",
     "test": "vitest run .",
+    "test:matrix": "tsx test/matrix.ts",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit"
   },
