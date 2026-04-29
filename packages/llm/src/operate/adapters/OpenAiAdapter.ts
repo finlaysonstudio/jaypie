@@ -78,6 +78,30 @@ const NOT_RETRYABLE_ERROR_TYPES = [
   UnprocessableEntityError,
 ];
 
+// Models known not to accept `temperature`.
+// Patterns (not exact names) so dated variants and future releases are covered
+// without code changes — OpenAI is removing temperature on newer reasoning
+// models.
+const MODELS_WITHOUT_TEMPERATURE: RegExp[] = [
+  /^gpt-5\.5/, // gpt-5.5 series deprecated temperature
+  /^o\d/, // o-series reasoning models (o1, o3, o4, ...)
+];
+
+function isTemperatureDeprecationError(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  if (
+    !(error instanceof BadRequestError) &&
+    (error as { status?: number }).status !== 400
+  ) {
+    return false;
+  }
+  const messages = [
+    (error as { message?: string }).message,
+    (error as { error?: { message?: string } }).error?.message,
+  ].filter((m): m is string => typeof m === "string");
+  return messages.some((m) => m.toLowerCase().includes("temperature"));
+}
+
 //
 //
 // Main
@@ -91,6 +115,23 @@ const NOT_RETRYABLE_ERROR_TYPES = [
 export class OpenAiAdapter extends BaseProviderAdapter {
   readonly name = PROVIDER.OPENAI.NAME;
   readonly defaultModel = PROVIDER.OPENAI.MODEL.DEFAULT;
+
+  // Session-level cache of models observed to reject `temperature` at runtime.
+  // Populated by executeRequest on 400 errors so repeat calls skip the param.
+  private runtimeNoTemperatureModels = new Set<string>();
+
+  rememberModelRejectsTemperature(model: string): void {
+    this.runtimeNoTemperatureModels.add(model);
+  }
+
+  clearRuntimeNoTemperatureModels(): void {
+    this.runtimeNoTemperatureModels.clear();
+  }
+
+  private supportsTemperature(model: string): boolean {
+    if (this.runtimeNoTemperatureModels.has(model)) return false;
+    return !MODELS_WITHOUT_TEMPERATURE.some((pattern) => pattern.test(model));
+  }
 
   //
   // Request Building
@@ -141,6 +182,14 @@ export class OpenAiAdapter extends BaseProviderAdapter {
     // First-class temperature takes precedence over providerOptions
     if (request.temperature !== undefined) {
       openaiRequest.temperature = request.temperature;
+    }
+
+    // Strip temperature for models that don't support it (denylist + runtime cache)
+    if (
+      openaiRequest.temperature !== undefined &&
+      !this.supportsTemperature(openaiRequest.model as string)
+    ) {
+      delete openaiRequest.temperature;
     }
 
     return openaiRequest;
@@ -212,14 +261,30 @@ export class OpenAiAdapter extends BaseProviderAdapter {
     signal?: AbortSignal,
   ): Promise<unknown> {
     const openai = client as OpenAI;
+    const openaiRequest = request as Record<string, unknown>;
+    type CreateParams = Parameters<typeof openai.responses.create>[0];
     try {
       return await openai.responses.create(
-        // @ts-expect-error OpenAI SDK types don't match our request format exactly
-        request,
+        openaiRequest as CreateParams,
         signal ? { signal } : undefined,
       );
     } catch (error) {
       if (signal?.aborted) return undefined;
+
+      // If the model rejected `temperature`, cache it and retry without the param
+      if (
+        openaiRequest.temperature !== undefined &&
+        isTemperatureDeprecationError(error)
+      ) {
+        this.rememberModelRejectsTemperature(openaiRequest.model as string);
+        const retryRequest = { ...openaiRequest };
+        delete retryRequest.temperature;
+        return await openai.responses.create(
+          retryRequest as CreateParams,
+          signal ? { signal } : undefined,
+        );
+      }
+
       throw error;
     }
   }

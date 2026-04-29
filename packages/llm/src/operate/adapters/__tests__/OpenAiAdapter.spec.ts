@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { OpenAiAdapter, openAiAdapter } from "../OpenAiAdapter.js";
 import { PROVIDER } from "../../../constants.js";
@@ -651,6 +651,142 @@ describe("OpenAiAdapter", () => {
       const result = openAiAdapter.parseResponse(response);
 
       expect(result.content).toBe("Answer");
+    });
+  });
+
+  // Temperature deprecation
+  describe("Temperature deprecation", () => {
+    beforeEach(() => {
+      openAiAdapter.clearRuntimeNoTemperatureModels();
+    });
+
+    it("strips temperature for denylisted models in buildRequest", () => {
+      const request: OperateRequest = {
+        model: "gpt-5.5",
+        messages: [],
+        temperature: 0,
+      };
+
+      const result = openAiAdapter.buildRequest(request) as Record<
+        string,
+        unknown
+      >;
+
+      expect(result.temperature).toBeUndefined();
+    });
+
+    it("retries without temperature when OpenAI rejects it with 400", async () => {
+      const { BadRequestError } = await import("openai");
+      // @ts-expect-error Mock doesn't require constructor args
+      const error = new BadRequestError();
+      (error as unknown as { status: number }).status = 400;
+      error.message =
+        "400 Unsupported parameter: 'temperature' is not supported with this model.";
+
+      const successResponse = {
+        output: [
+          { type: "message", content: [{ type: "output_text", text: "Hi" }] },
+        ],
+        usage: { input_tokens: 1, output_tokens: 1, total_tokens: 2 },
+      };
+      const mockCreate = vi.fn();
+      mockCreate.mockRejectedValueOnce(error as unknown as Error);
+      mockCreate.mockResolvedValueOnce(successResponse);
+      const mockClient = { responses: { create: mockCreate } };
+      const request = {
+        model: "gpt-future-no-temp",
+        input: [],
+        temperature: 0,
+      };
+
+      const result = await openAiAdapter.executeRequest(mockClient, request);
+
+      expect(result as unknown).toBe(successResponse);
+      expect(mockCreate).toHaveBeenCalledTimes(2);
+      const retryRequest = mockCreate.mock.calls[1][0] as {
+        temperature?: number;
+      };
+      expect(retryRequest.temperature).toBeUndefined();
+    });
+
+    it("caches the model so subsequent buildRequest strips temperature", async () => {
+      const { BadRequestError } = await import("openai");
+      // @ts-expect-error Mock doesn't require constructor args
+      const error = new BadRequestError();
+      (error as unknown as { status: number }).status = 400;
+      error.message = "Unsupported parameter: 'temperature' …";
+
+      const mockCreate = vi.fn();
+      mockCreate.mockRejectedValueOnce(error as unknown as Error);
+      mockCreate.mockResolvedValueOnce({
+        output: [
+          { type: "message", content: [{ type: "output_text", text: "Hi" }] },
+        ],
+        usage: { input_tokens: 1, output_tokens: 1, total_tokens: 2 },
+      });
+      const mockClient = { responses: { create: mockCreate } };
+      await openAiAdapter.executeRequest(mockClient, {
+        model: "gpt-mystery",
+        input: [],
+        temperature: 0.5,
+      });
+
+      const result = openAiAdapter.buildRequest({
+        model: "gpt-mystery",
+        messages: [],
+        temperature: 0.5,
+      }) as Record<string, unknown>;
+
+      expect(result.temperature).toBeUndefined();
+    });
+
+    it("does not retry on 400 unrelated to temperature", async () => {
+      const { BadRequestError } = await import("openai");
+      // @ts-expect-error Mock doesn't require constructor args
+      const error = new BadRequestError();
+      (error as unknown as { status: number }).status = 400;
+      error.message = "some other bad-request reason";
+
+      const mockCreate = vi.fn();
+      mockCreate.mockRejectedValue(error as unknown as Error);
+      const mockClient = { responses: { create: mockCreate } };
+
+      let thrown: unknown;
+      try {
+        await openAiAdapter.executeRequest(mockClient, {
+          model: "gpt-5.4",
+          input: [],
+          temperature: 0.2,
+        });
+      } catch (e) {
+        thrown = e;
+      }
+      expect(thrown).toBe(error);
+      expect(mockCreate).toHaveBeenCalledTimes(1);
+    });
+
+    it("does not retry when request has no temperature", async () => {
+      const { BadRequestError } = await import("openai");
+      // @ts-expect-error Mock doesn't require constructor args
+      const error = new BadRequestError();
+      (error as unknown as { status: number }).status = 400;
+      error.message = "'temperature' is not supported with this model.";
+
+      const mockCreate = vi.fn();
+      mockCreate.mockRejectedValue(error as unknown as Error);
+      const mockClient = { responses: { create: mockCreate } };
+
+      let thrown: unknown;
+      try {
+        await openAiAdapter.executeRequest(mockClient, {
+          model: "gpt-5.5",
+          input: [],
+        });
+      } catch (e) {
+        thrown = e;
+      }
+      expect(thrown).toBe(error);
+      expect(mockCreate).toHaveBeenCalledTimes(1);
     });
   });
 });

@@ -232,6 +232,21 @@ async function runImage(llm: Llm): Promise<CapabilityResult> {
   return checkDocStrings(result.content);
 }
 
+async function runTemperature(llm: Llm): Promise<CapabilityResult> {
+  const result = await llm.operate(
+    "Reply with one word: 'pong'. No punctuation.",
+    { temperature: 0, user: USER },
+  );
+  if (result.error) return { ok: false, detail: String(result.error) };
+  if (typeof result.content !== "string" || result.content.length === 0) {
+    return {
+      ok: false,
+      detail: `expected non-empty string, got ${typeof result.content}`,
+    };
+  }
+  return { ok: true };
+}
+
 const RUNNERS: Record<Capability, (llm: Llm) => Promise<CapabilityResult>> = {
   plain: runPlain,
   tools: runTools,
@@ -239,6 +254,7 @@ const RUNNERS: Record<Capability, (llm: Llm) => Promise<CapabilityResult>> = {
   both: runBoth,
   pdf: runPdf,
   image: runImage,
+  temperature: runTemperature,
 };
 
 //
