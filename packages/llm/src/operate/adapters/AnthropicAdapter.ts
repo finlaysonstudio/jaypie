@@ -38,17 +38,19 @@ import { BaseProviderAdapter } from "./ProviderAdapter.interface.js";
 const STRUCTURED_OUTPUT_TOOL_NAME = "structured_output";
 
 /**
- * Local extension of the SDK's `MessageCreateParams` to carry the legacy
- * `output_format` field. SDK 0.71 only types `output_format` on the Beta
- * namespace, but the field is accepted by the GA endpoint per Anthropic's
- * structured-outputs docs (the deprecated beta header is no longer
- * required). When the SDK promotes the typed field to the top-level
- * `MessageCreateParams`, this extension can be removed.
+ * Local extension of the SDK's `MessageCreateParams` to carry
+ * `output_config.format` (Anthropic native structured outputs). The SDK 0.71
+ * shipped with the older `output_format` field which the API has since
+ * deprecated in favor of `output_config.format`. We send the new shape via
+ * an untyped passthrough so callers don't need a newer SDK; remove this
+ * extension once the SDK types `output_config` directly.
  */
 type AnthropicRequestParams = Anthropic.MessageCreateParams & {
-  output_format?: {
-    type: "json_schema";
-    schema: JsonObject;
+  output_config?: {
+    format: {
+      type: "json_schema";
+      schema: JsonObject;
+    };
   };
 };
 
@@ -342,10 +344,13 @@ function isTemperatureDeprecationError(error: unknown): boolean {
 }
 
 /**
- * Detect 400 errors that indicate the model itself does not support
- * `output_format`. Citations + structured output is also a 400 case but is a
- * caller error rather than a model-capability gap, so we explicitly skip it
- * to avoid masking the real problem under a tool-emulation retry.
+ * Detect 400 errors that indicate the model itself does not support native
+ * structured outputs (`output_config.format`). Citations + structured output
+ * is also a 400 case but is a caller error rather than a model-capability
+ * gap, so we explicitly skip it to avoid masking the real problem under a
+ * tool-emulation retry. The deprecated-`output_format` 400 (API renamed the
+ * field) is also explicitly excluded — that's a code-path bug, not a model
+ * gap; it should propagate so we notice and fix it.
  */
 function isStructuredOutputUnsupportedError(error: unknown): boolean {
   if (!error || typeof error !== "object") return false;
@@ -360,8 +365,9 @@ function isStructuredOutputUnsupportedError(error: unknown): boolean {
     (m): m is string => typeof m === "string",
   );
   if (messages.some((m) => /citation/i.test(m))) return false;
+  if (messages.some((m) => /deprecated/i.test(m))) return false;
   return messages.some((m) =>
-    /output_format|output_config|json[_ ]schema|structured/i.test(m),
+    /output_config|output_format|json[_ ]schema|structured/i.test(m),
   );
 }
 
@@ -507,7 +513,7 @@ export class AnthropicAdapter extends BaseProviderAdapter {
       : [];
     if (useFallbackStructuredOutput && request.format) {
       log.warn(
-        `[AnthropicAdapter] Using legacy structured_output tool fallback for model ${anthropicRequest.model as string}; native output_format previously rejected for this model.`,
+        `[AnthropicAdapter] Using legacy structured_output tool fallback for model ${anthropicRequest.model as string}; native output_config previously rejected for this model.`,
       );
       allTools.push({
         name: STRUCTURED_OUTPUT_TOOL_NAME,
@@ -534,13 +540,15 @@ export class AnthropicAdapter extends BaseProviderAdapter {
         : { type: "auto" };
     }
 
-    // Native structured output: send schema as `output_format`. The legacy
-    // tool-emulation path is engaged only as a runtime fallback for models
-    // the API has flagged as not supporting `output_format`.
+    // Native structured output: send schema as `output_config.format`. The
+    // legacy tool-emulation path is engaged only as a runtime fallback for
+    // models the API has flagged as not supporting native structured output.
     if (request.format && !useFallbackStructuredOutput) {
-      anthropicRequest.output_format = {
-        type: "json_schema",
-        schema: request.format,
+      anthropicRequest.output_config = {
+        format: {
+          type: "json_schema",
+          schema: request.format,
+        },
       };
     }
 
@@ -619,7 +627,7 @@ export class AnthropicAdapter extends BaseProviderAdapter {
   ): Promise<Anthropic.Message> {
     const anthropic = client as Anthropic;
     const anthropicRequest = request as AnthropicRequestParams;
-    const wantsStructuredOutput = Boolean(anthropicRequest.output_format);
+    const wantsStructuredOutput = Boolean(anthropicRequest.output_config);
     try {
       const response = (await anthropic.messages.create(
         anthropicRequest as Anthropic.MessageCreateParams,
@@ -650,13 +658,13 @@ export class AnthropicAdapter extends BaseProviderAdapter {
         return response;
       }
 
-      // If the model rejected `output_format`, cache it and retry with the
-      // legacy fake-tool emulation path.
+      // If the model rejected native structured output, cache it and retry
+      // via the legacy fake-tool emulation path.
       if (wantsStructuredOutput && isStructuredOutputUnsupportedError(error)) {
         const model = anthropicRequest.model as string;
         this.rememberModelRejectsStructuredOutput(model);
         log.warn(
-          `[AnthropicAdapter] Model ${model} rejected native output_format; falling back to legacy structured_output tool emulation.`,
+          `[AnthropicAdapter] Model ${model} rejected native output_config; falling back to legacy structured_output tool emulation.`,
         );
         const fallbackRequest =
           this.toFallbackStructuredOutputRequest(anthropicRequest);
@@ -673,13 +681,13 @@ export class AnthropicAdapter extends BaseProviderAdapter {
   /**
    * Rebuild a structured-output request without `output_format`, swapping in
    * the legacy fake-tool emulation. Used as a runtime fallback when a model
-   * rejects native `output_format`.
+   * rejects native `output_config.format`.
    */
   private toFallbackStructuredOutputRequest(
     request: AnthropicRequestParams,
   ): AnthropicRequestParams {
-    const { output_format, ...rest } = request;
-    if (!output_format) return request;
+    const { output_config, ...rest } = request;
+    if (!output_config) return request;
     const fallbackRequest: AnthropicRequestParams = { ...rest };
     const fakeTool = {
       name: STRUCTURED_OUTPUT_TOOL_NAME,
@@ -687,7 +695,7 @@ export class AnthropicAdapter extends BaseProviderAdapter {
         "Output a structured JSON object, " +
         "use this before your final response to give structured outputs to the user",
       input_schema: {
-        ...output_format.schema,
+        ...output_config.format.schema,
         type: "object",
       } as Anthropic.Messages.Tool.InputSchema,
       type: "custom" as const,
@@ -703,7 +711,7 @@ export class AnthropicAdapter extends BaseProviderAdapter {
     signal?: AbortSignal,
   ): AsyncIterable<LlmStreamChunk> {
     const anthropic = client as Anthropic;
-    // Preserve `output_format` when passing through to the SDK by typing
+    // Preserve `output_config` when passing through to the SDK by typing
     // through the local extension instead of the upstream
     // MessageCreateParams shape.
     let streamRequest = {

@@ -119,8 +119,9 @@ export async function createTextCompletion(
   return text;
 }
 
-// Structured output completion using Anthropic's native `output_format` field.
-// Returns a JsonObject parsed and validated against the caller's Zod schema.
+// Structured output completion using Anthropic's native `output_config.format`
+// field. Returns a JsonObject parsed and validated against the caller's
+// Zod schema.
 export async function createStructuredCompletion(
   client: Anthropic,
   messages: Anthropic.MessageParam[],
@@ -135,13 +136,15 @@ export async function createStructuredCompletion(
       ? responseSchema
       : naturalZodSchema(responseSchema as NaturalSchema);
 
-  // Type extension: `output_format` is on Beta types in @anthropic-ai/sdk
-  // 0.71 but is accepted by the GA endpoint per Anthropic's docs (the
-  // deprecated beta header is no longer required).
+  // Type extension: SDK 0.71 doesn't type `output_config` on
+  // `MessageCreateParams`. The GA endpoint accepts the field; the older
+  // `output_format` field is now deprecated.
   type StructuredOutputParams = Anthropic.MessageCreateParams & {
-    output_format?: {
-      type: "json_schema";
-      schema: JsonObject;
+    output_config?: {
+      format: {
+        type: "json_schema";
+        schema: JsonObject;
+      };
     };
   };
 
@@ -150,7 +153,9 @@ export async function createStructuredCompletion(
     model,
     messages,
     max_tokens: PROVIDER.ANTHROPIC.MAX_TOKENS.DEFAULT,
-    output_format: { type: "json_schema", schema: jsonSchema },
+    output_config: {
+      format: { type: "json_schema", schema: jsonSchema },
+    },
   };
   if (systemMessage) {
     params.system = systemMessage;

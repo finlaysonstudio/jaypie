@@ -243,7 +243,7 @@ describe("AnthropicProvider", () => {
 
   describe("Features", () => {
     describe("Structured Output", () => {
-      it("uses native output_format for structured output", async () => {
+      it("uses native output_config.format for structured output", async () => {
         const mockResponse = {
           stop_reason: "end_turn",
           content: [
@@ -283,12 +283,14 @@ describe("AnthropicProvider", () => {
         });
 
         const call = mockCreate.mock.calls[0][0] as {
-          output_format?: { type: string; schema: { type: string } };
+          output_config?: {
+            format: { type: string; schema: { type: string } };
+          };
           system?: string;
         };
-        expect(call.output_format).toBeDefined();
-        expect(call.output_format?.type).toBe("json_schema");
-        expect(call.output_format?.schema.type).toBe("object");
+        expect(call.output_config).toBeDefined();
+        expect(call.output_config?.format.type).toBe("json_schema");
+        expect(call.output_config?.format.schema.type).toBe("object");
         // No system stuffed by default; user did not provide one
         expect(call.system).toBeUndefined();
       });

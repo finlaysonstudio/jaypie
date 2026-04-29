@@ -21,7 +21,8 @@
 // OPENAI_API_KEY, GOOGLE_API_KEY, OPENROUTER_API_KEY, XAI_API_KEY).
 //
 import { config } from "dotenv";
-import { dirname, join } from "path";
+import { existsSync } from "fs";
+import { dirname, join, resolve } from "path";
 import { fileURLToPath } from "url";
 
 import { Llm, LlmOperateInput, toolkit } from "../src/index.js";
@@ -33,9 +34,26 @@ import {
   ModelConfig,
 } from "./models.js";
 
-config();
-
 const __dirname = dirname(fileURLToPath(import.meta.url));
+
+// Walk up from this file to find the nearest .env (handles being invoked via
+// `npm run -w packages/llm`, which sets cwd to the package and would
+// otherwise miss the repo-root .env).
+function loadEnv(): void {
+  let dir = __dirname;
+  for (let i = 0; i < 6; i++) {
+    const candidate = join(dir, ".env");
+    if (existsSync(candidate)) {
+      config({ path: candidate });
+      return;
+    }
+    const parent = resolve(dir, "..");
+    if (parent === dir) break;
+    dir = parent;
+  }
+  config();
+}
+loadEnv();
 const PDF_PATH = join(__dirname, "fixtures/page.pdf");
 const IMAGE_PATH = join(__dirname, "fixtures/page.png");
 const REQUIRED_DOC_STRINGS = [

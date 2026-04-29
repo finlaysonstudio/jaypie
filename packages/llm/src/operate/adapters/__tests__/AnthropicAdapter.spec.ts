@@ -438,7 +438,7 @@ describe("AnthropicAdapter", () => {
       });
 
       it("does not inject a structured_output tool when schema provided", () => {
-        // Native output_format replaces the legacy fake-tool injection.
+        // Native output_config.format replaces the legacy fake-tool injection.
         const toolkit = new Toolkit([
           {
             name: "test",
@@ -617,7 +617,7 @@ describe("AnthropicAdapter", () => {
     });
 
     describe("hasStructuredOutput", () => {
-      it("returns true when native output_format response is annotated", () => {
+      it("returns true when native output_config response is annotated", () => {
         const response = {
           __jaypieStructuredOutput: true,
           content: [{ type: "text", text: '{"name":"John"}' }],
@@ -677,7 +677,7 @@ describe("AnthropicAdapter", () => {
     });
 
     describe("extractStructuredOutput", () => {
-      it("parses JSON from native output_format text block", () => {
+      it("parses JSON from native output_config text block", () => {
         const response = {
           __jaypieStructuredOutput: true,
           content: [{ type: "text", text: '{"name":"John","age":30}' }],
@@ -1061,13 +1061,13 @@ describe("AnthropicAdapter", () => {
       anthropicAdapter.clearRuntimeNoStructuredOutputModels();
     });
 
-    it("retries with fake-tool emulation when output_format is rejected", async () => {
+    it("retries with fake-tool emulation when output_config is rejected", async () => {
       const { BadRequestError } = await import("@anthropic-ai/sdk");
       // @ts-expect-error Mock doesn't require constructor args
       const error = new BadRequestError();
       (error as unknown as { status: number }).status = 400;
       error.message =
-        '400 {"type":"error","error":{"type":"invalid_request_error","message":"`output_format` is not supported by this model."}}';
+        '400 {"type":"error","error":{"type":"invalid_request_error","message":"`output_config` is not supported by this model."}}';
 
       const successResponse = {
         content: [
@@ -1084,16 +1084,20 @@ describe("AnthropicAdapter", () => {
       const mockCreate = vi.fn();
       mockCreate.mockRejectedValueOnce(error as unknown as Error);
       mockCreate.mockResolvedValueOnce(successResponse);
-      const mockClient = { messages: { create: mockCreate } };
+      const mockClient = {
+        messages: { create: mockCreate },
+      };
 
       const request = {
         model: "claude-old-3",
         messages: [{ role: "user", content: "Hi" }],
         max_tokens: 1024,
         stream: false,
-        output_format: {
-          type: "json_schema",
-          schema: { type: "object", properties: {} },
+        output_config: {
+          format: {
+            type: "json_schema",
+            schema: { type: "object", properties: {} },
+          },
         },
       };
 
@@ -1103,11 +1107,11 @@ describe("AnthropicAdapter", () => {
       expect(mockCreate).toHaveBeenCalledTimes(2);
 
       const fallbackBody = mockCreate.mock.calls[1][0] as {
-        output_format?: unknown;
+        output_config?: unknown;
         tools?: { name: string }[];
         tool_choice?: { type: string };
       };
-      expect(fallbackBody.output_format).toBeUndefined();
+      expect(fallbackBody.output_config).toBeUndefined();
       expect(
         fallbackBody.tools?.some((t) => t.name === "structured_output"),
       ).toBe(true);
@@ -1119,7 +1123,7 @@ describe("AnthropicAdapter", () => {
       // @ts-expect-error Mock doesn't require constructor args
       const error = new BadRequestError();
       (error as unknown as { status: number }).status = 400;
-      error.message = "output_format is not supported";
+      error.message = "output_config is not supported";
 
       const mockCreate = vi.fn();
       mockCreate.mockRejectedValueOnce(error as unknown as Error);
@@ -1135,16 +1139,20 @@ describe("AnthropicAdapter", () => {
         stop_reason: "tool_use",
         usage: { input_tokens: 1, output_tokens: 1 },
       });
-      const mockClient = { messages: { create: mockCreate } };
+      const mockClient = {
+        messages: { create: mockCreate },
+      };
 
       await anthropicAdapter.executeRequest(mockClient, {
         model: "claude-legacy",
         messages: [],
         max_tokens: 1024,
         stream: false,
-        output_format: {
-          type: "json_schema",
-          schema: { type: "object", properties: {} },
+        output_config: {
+          format: {
+            type: "json_schema",
+            schema: { type: "object", properties: {} },
+          },
         },
       });
 
@@ -1155,11 +1163,11 @@ describe("AnthropicAdapter", () => {
       });
 
       const builtTyped = built as unknown as {
-        output_format?: unknown;
+        output_config?: unknown;
         tools?: { name: string }[];
         tool_choice?: { type: string };
       };
-      expect(builtTyped.output_format).toBeUndefined();
+      expect(builtTyped.output_config).toBeUndefined();
       expect(
         builtTyped.tools?.some((t) => t.name === "structured_output"),
       ).toBe(true);
@@ -1172,11 +1180,13 @@ describe("AnthropicAdapter", () => {
       const error = new BadRequestError();
       (error as unknown as { status: number }).status = 400;
       error.message =
-        "output_format is incompatible with citations enabled on this request";
+        "output_config is incompatible with citations enabled on this request";
 
       const mockCreate = vi.fn();
       mockCreate.mockRejectedValue(error as unknown as Error);
-      const mockClient = { messages: { create: mockCreate } };
+      const mockClient = {
+        messages: { create: mockCreate },
+      };
 
       let thrown: unknown;
       try {
@@ -1185,9 +1195,11 @@ describe("AnthropicAdapter", () => {
           messages: [],
           max_tokens: 1024,
           stream: false,
-          output_format: {
-            type: "json_schema",
-            schema: { type: "object", properties: {} },
+          output_config: {
+            format: {
+              type: "json_schema",
+              schema: { type: "object", properties: {} },
+            },
           },
         });
       } catch (e) {
@@ -1197,16 +1209,23 @@ describe("AnthropicAdapter", () => {
       expect(mockCreate).toHaveBeenCalledTimes(1);
     });
 
-    it("does not fall back when 400 is unrelated to output_format", async () => {
+    it("does not fall back when 400 says output_format is deprecated", async () => {
+      // The API renamed `output_format` to `output_config.format`. If
+      // adapter code somehow sends the old field, the API returns a 400
+      // mentioning "deprecated" — that's a code-path bug and should
+      // propagate, NOT silently engage the fake-tool fallback.
       const { BadRequestError } = await import("@anthropic-ai/sdk");
       // @ts-expect-error Mock doesn't require constructor args
       const error = new BadRequestError();
       (error as unknown as { status: number }).status = 400;
-      error.message = "some other bad-request reason";
+      error.message =
+        "output_format: This field is deprecated. Use 'output_config.format' instead.";
 
       const mockCreate = vi.fn();
       mockCreate.mockRejectedValue(error as unknown as Error);
-      const mockClient = { messages: { create: mockCreate } };
+      const mockClient = {
+        messages: { create: mockCreate },
+      };
 
       let thrown: unknown;
       try {
@@ -1215,9 +1234,45 @@ describe("AnthropicAdapter", () => {
           messages: [],
           max_tokens: 1024,
           stream: false,
-          output_format: {
-            type: "json_schema",
-            schema: { type: "object", properties: {} },
+          output_config: {
+            format: {
+              type: "json_schema",
+              schema: { type: "object", properties: {} },
+            },
+          },
+        });
+      } catch (e) {
+        thrown = e;
+      }
+      expect(thrown).toBe(error);
+      expect(mockCreate).toHaveBeenCalledTimes(1);
+    });
+
+    it("does not fall back when 400 is unrelated to structured output", async () => {
+      const { BadRequestError } = await import("@anthropic-ai/sdk");
+      // @ts-expect-error Mock doesn't require constructor args
+      const error = new BadRequestError();
+      (error as unknown as { status: number }).status = 400;
+      error.message = "some other bad-request reason";
+
+      const mockCreate = vi.fn();
+      mockCreate.mockRejectedValue(error as unknown as Error);
+      const mockClient = {
+        messages: { create: mockCreate },
+      };
+
+      let thrown: unknown;
+      try {
+        await anthropicAdapter.executeRequest(mockClient, {
+          model: "claude-opus-4-7",
+          messages: [],
+          max_tokens: 1024,
+          stream: false,
+          output_config: {
+            format: {
+              type: "json_schema",
+              schema: { type: "object", properties: {} },
+            },
           },
         });
       } catch (e) {
@@ -1392,7 +1447,7 @@ describe("AnthropicAdapter", () => {
       expect(result.tool_choice).toEqual({ type: "auto" });
     });
 
-    it("emits output_format when format is provided", () => {
+    it("emits output_config.format when format is provided", () => {
       const request: OperateRequest = {
         model: PROVIDER.ANTHROPIC.MODEL.LARGE,
         messages: [],
@@ -1406,25 +1461,26 @@ describe("AnthropicAdapter", () => {
       const result = anthropicAdapter.buildRequest(request);
 
       const params = result as unknown as {
-        output_format?: {
-          type: string;
-          schema: { type: string };
+        output_config?: {
+          format: { type: string; schema: { type: string } };
         };
         tool_choice?: { type: string };
       };
-      expect(params.output_format).toEqual({
-        type: "json_schema",
-        schema: {
-          type: "object",
-          properties: { name: { type: "string" } },
-          additionalProperties: false,
+      expect(params.output_config).toEqual({
+        format: {
+          type: "json_schema",
+          schema: {
+            type: "object",
+            properties: { name: { type: "string" } },
+            additionalProperties: false,
+          },
         },
       });
       // No tool_choice forced when only structured output is requested
       expect(params.tool_choice).toBeUndefined();
     });
 
-    it("does not emit output_format when format is absent", () => {
+    it("does not emit output_config when format is absent", () => {
       const request: OperateRequest = {
         model: PROVIDER.ANTHROPIC.MODEL.LARGE,
         messages: [],
@@ -1432,8 +1488,8 @@ describe("AnthropicAdapter", () => {
 
       const result = anthropicAdapter.buildRequest(request);
 
-      const params = result as unknown as { output_format?: unknown };
-      expect(params.output_format).toBeUndefined();
+      const params = result as unknown as { output_config?: unknown };
+      expect(params.output_config).toBeUndefined();
     });
   });
 });

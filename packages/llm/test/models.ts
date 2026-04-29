@@ -49,37 +49,46 @@ export const CAPABILITIES: readonly Capability[] = [
 /**
  * Default model list. Edit freely. The harness honors APP_MODELS
  * (comma-separated model ids) to override at runtime without editing.
+ *
+ * Includes the major (non-mini/flash/lite) models in the GPT-5, Gemini 3,
+ * and Claude Sonnet 4 / Opus 4 lines, plus every model id referenced by
+ * `src/constants.ts` (smaller variants, xAI Grok line, OpenRouter routes).
+ *
+ * Defaults assume "ok" everywhere; only known limitations are pinned.
+ * After the first run, refine `expect` per cell based on what your account
+ * actually has access to.
  */
 export const MODELS: readonly ModelConfig[] = [
-  // Anthropic
-  {
-    model: "claude-sonnet-4-5",
-    expect: {},
-  },
-  // OpenAI
-  {
-    model: "gpt-4o",
-    expect: {},
-  },
-  // Gemini 2.5 — tools+structured combo falls back to the legacy fake tool
-  {
-    model: "gemini-2.5-flash",
-    expect: { both: "warn" },
-  },
-  // Gemini 3 — supports the native combo
-  {
-    model: "gemini-3.1-pro-preview",
-    expect: {},
-  },
-  // xAI
-  {
-    model: "grok-4",
-    expect: {},
-  },
-  // OpenRouter — file/image uploads not supported by the adapter
-  {
-    model: "openrouter:openai/gpt-4o",
-    label: "openrouter→openai/gpt-4o",
-    expect: { pdf: "skip", image: "skip" },
-  },
+  // ─── Anthropic Sonnet 4 ──────────────────────────────────────────────
+  // Note: Anthropic does not expose bare-name aliases like `claude-sonnet-4`
+  // or `claude-opus-4` — only the dated/versioned ids resolve.
+  { model: "claude-sonnet-4-5" },
+  { model: "claude-sonnet-4-6" }, // constants ANTHROPIC.DEFAULT/SMALL
+
+  // ─── Anthropic Opus 4 ────────────────────────────────────────────────
+  { model: "claude-opus-4-1" },
+  { model: "claude-opus-4-5" },
+  { model: "claude-opus-4-7" }, // constants ANTHROPIC.LARGE
+
+  // ─── Anthropic Haiku 4 ───────────────────────────────────────────────
+  { model: "claude-haiku-4-5" }, // constants ANTHROPIC.TINY
+
+  // ─── OpenAI GPT-5 ────────────────────────────────────────────────────
+  { model: "gpt-5" },
+  { model: "gpt-5.1" },
+  { model: "gpt-5-pro" },
+  { model: "gpt-5.4" }, // constants OPENAI.DEFAULT
+  { model: "gpt-5.4-mini" }, // constants OPENAI.SMALL
+  { model: "gpt-5.4-nano" }, // constants OPENAI.TINY
+  { model: "gpt-5.5" }, // constants OPENAI.LARGE
+
+  // ─── Google Gemini 3 ─────────────────────────────────────────────────
+  { model: "gemini-3.1-pro-preview" }, // constants GEMINI.DEFAULT/LARGE
+  { model: "gemini-3-flash-preview" }, // constants GEMINI.SMALL
+  { model: "gemini-3.1-flash-lite-preview" }, // constants GEMINI.TINY
+
+  // ─── xAI Grok 4 ──────────────────────────────────────────────────────
+  { model: "grok-4.20-0309-reasoning" }, // constants XAI.DEFAULT/LARGE
+  { model: "grok-4.20-0309-non-reasoning" }, // constants XAI.SMALL
+  { model: "grok-4-1-fast-non-reasoning" }, // constants XAI.TINY
 ];
