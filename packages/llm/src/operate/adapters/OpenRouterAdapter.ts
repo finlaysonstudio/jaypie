@@ -167,15 +167,50 @@ function isStructuredOutputUnsupportedError(error: unknown): boolean {
   );
 }
 
-/**
- * OpenRouter content part types (text only - images/files not supported)
- */
-type OpenRouterContentPart = { type: "text"; text: string };
+// OpenRouter routes that don't accept `temperature`. Patterns match the
+// vendor-prefixed route id (e.g. `openai/gpt-5.5`) so dated variants are
+// covered without code changes.
+const MODELS_WITHOUT_TEMPERATURE: RegExp[] = [
+  /^openai\/gpt-5\.5/,
+  /^openai\/o\d/,
+  /^anthropic\/claude-opus-4-[789]/,
+  /^anthropic\/claude-opus-[5-9]/,
+];
+
+function isTemperatureDeprecationError(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const err = error as {
+    status?: number;
+    statusCode?: number;
+    message?: string;
+    error?: { message?: string };
+  };
+  const status = err.status ?? err.statusCode;
+  if (status !== 400) return false;
+  const messages = [err.message, err.error?.message].filter(
+    (m): m is string => typeof m === "string",
+  );
+  return messages.some((m) => m.toLowerCase().includes("temperature"));
+}
 
 /**
- * Convert standardized content items to OpenRouter format
- * Note: OpenRouter does not support native file/image uploads.
- * Images and files are discarded with a warning.
+ * OpenRouter content part types. OpenRouter follows the OpenAI Chat
+ * Completions multimodal schema and forwards `image_url` and `file` parts
+ * to vision/PDF-capable backends. The SDK accepts camelCase fields at the
+ * input boundary (`imageUrl`, `fileData`) and transforms to snake_case on
+ * the wire.
+ */
+type OpenRouterContentPart =
+  | { type: "text"; text: string }
+  | { type: "image_url"; imageUrl: { url: string } }
+  | { type: "file"; file: { filename?: string; fileData: string } };
+
+/**
+ * Convert standardized content items to OpenRouter format. Images become
+ * `image_url` parts and files become `file` parts; both pass through to
+ * OpenRouter which routes to the selected backend. Backends that don't
+ * support the modality 4xx — that's a model-capability mismatch, surfaced
+ * by the call rather than silently dropped here.
  */
 function convertContentToOpenRouter(
   content: string | LlmInputContent[],
@@ -187,24 +222,40 @@ function convertContentToOpenRouter(
   const parts: OpenRouterContentPart[] = [];
 
   for (const item of content) {
-    // Text content - pass through
     if (item.type === LlmMessageType.InputText) {
       parts.push({ type: "text", text: item.text });
       continue;
     }
 
-    // Image content - warn and discard
     if (item.type === LlmMessageType.InputImage) {
-      log.warn("OpenRouter does not support image uploads; image discarded");
+      const url = item.image_url ?? "";
+      if (!url) {
+        log.warn(
+          "OpenRouter image content missing image_url; image discarded",
+        );
+        continue;
+      }
+      parts.push({ type: "image_url", imageUrl: { url } });
       continue;
     }
 
-    // File/Document content - warn and discard
     if (item.type === LlmMessageType.InputFile) {
-      log.warn(
-        { filename: item.filename },
-        "OpenRouter does not support file uploads; file discarded",
-      );
+      const fileData =
+        typeof item.file_data === "string" ? item.file_data : "";
+      if (!fileData) {
+        log.warn(
+          { filename: item.filename },
+          "OpenRouter file content missing file_data; file discarded",
+        );
+        continue;
+      }
+      parts.push({
+        type: "file",
+        file: {
+          filename: item.filename,
+          fileData,
+        },
+      });
       continue;
     }
 
@@ -212,7 +263,7 @@ function convertContentToOpenRouter(
     log.warn({ item }, "Unknown content type for OpenRouter; discarded");
   }
 
-  // If no text parts remain, return empty string to avoid empty array
+  // If no parts remain, return empty string to avoid empty array
   if (parts.length === 0) {
     return "";
   }
@@ -280,6 +331,23 @@ export class OpenRouterAdapter extends BaseProviderAdapter {
 
   private supportsStructuredOutput(model: string): boolean {
     return !this.runtimeNoStructuredOutputModels.has(model);
+  }
+
+  // Session-level cache of routes observed to reject `temperature`. Populated
+  // by executeRequest on 400 errors so repeat calls skip the param.
+  private runtimeNoTemperatureModels = new Set<string>();
+
+  rememberModelRejectsTemperature(model: string): void {
+    this.runtimeNoTemperatureModels.add(model);
+  }
+
+  clearRuntimeNoTemperatureModels(): void {
+    this.runtimeNoTemperatureModels.clear();
+  }
+
+  private supportsTemperature(model: string): boolean {
+    if (this.runtimeNoTemperatureModels.has(model)) return false;
+    return !MODELS_WITHOUT_TEMPERATURE.some((pattern) => pattern.test(model));
   }
 
   //
@@ -370,6 +438,18 @@ export class OpenRouterAdapter extends BaseProviderAdapter {
         request.temperature;
     }
 
+    // Strip temperature for routes that don't support it (denylist + runtime cache)
+    const requestRecord = openRouterRequest as unknown as Record<
+      string,
+      unknown
+    >;
+    if (
+      requestRecord.temperature !== undefined &&
+      !this.supportsTemperature(openRouterRequest.model)
+    ) {
+      delete requestRecord.temperature;
+    }
+
     return openRouterRequest;
   }
 
@@ -404,12 +484,19 @@ export class OpenRouterAdapter extends BaseProviderAdapter {
       jsonSchema = structuredClone(schema) as JsonObject;
       jsonSchema.type = "object"; // Normalize type
     } else {
-      // Convert NaturalSchema to JSON schema through Zod
+      // Convert NaturalSchema to JSON schema through Zod. Re-spread into a
+      // plain object: Zod v4's z.toJSONSchema returns an object that carries
+      // a non-configurable `~standard` Standard-Schema interop marker as a
+      // non-enumerable own property. Anthropic's output_config.format
+      // validation is strict and rejects unknown properties when OpenRouter
+      // forwards the schema, so we drop the marker here. JSON.stringify
+      // already skips it but the OpenRouter SDK enumerates own properties
+      // during serialization.
       const zodSchema =
         schema instanceof z.ZodType
           ? schema
           : naturalZodSchema(schema as NaturalSchema);
-      jsonSchema = z.toJSONSchema(zodSchema) as JsonObject;
+      jsonSchema = { ...(z.toJSONSchema(zodSchema) as JsonObject) };
     }
 
     // Remove $schema property (can cause issues with some providers)
@@ -450,6 +537,31 @@ export class OpenRouterAdapter extends BaseProviderAdapter {
       return response;
     } catch (error) {
       if (signal?.aborted) return undefined as unknown as OpenRouterResponse;
+
+      // If the route rejected `temperature` (e.g., openai/gpt-5.5 forwarding),
+      // cache it and retry without the param.
+      const requestRecord = openRouterRequest as unknown as Record<
+        string,
+        unknown
+      >;
+      if (
+        requestRecord.temperature !== undefined &&
+        isTemperatureDeprecationError(error)
+      ) {
+        this.rememberModelRejectsTemperature(openRouterRequest.model);
+        const retryRequest = { ...openRouterRequest } as OpenRouterRequest;
+        delete (retryRequest as unknown as Record<string, unknown>).temperature;
+        const response = (await openRouter.chat.send(
+          this.toSdkChatParams(retryRequest) as Parameters<
+            typeof openRouter.chat.send
+          >[0],
+          signal ? { signal } : undefined,
+        )) as AnnotatedOpenRouterResponse;
+        if (wantsStructuredOutput) {
+          response.__jaypieStructuredOutput = true;
+        }
+        return response;
+      }
 
       // If the model rejected `response_format`, cache it and retry with the
       // legacy fake-tool emulation path.

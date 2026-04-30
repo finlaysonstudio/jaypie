@@ -28,7 +28,7 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: 24
-          registry-url: 'https://registry.npmjs.org'
+          registry-url: "https://registry.npmjs.org"
       - run: npm ci
       - run: npm run build
       - name: Publish dev packages
@@ -168,7 +168,7 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: 24
-          cache: 'npm'
+          cache: "npm"
       - name: Install dependencies
         run: npm install
       - name: Build
@@ -180,4 +180,27 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.CICD_ANTHROPIC_API_KEY }}
           GEMINI_API_KEY: ${{ secrets.CICD_GEMINI_API_KEY }}
           OPENAI_API_KEY: ${{ secrets.CICD_OPENAI_API_KEY }}
+          XAI_API_KEY: ${{ secrets.CICD_XAI_API_KEY }}
+  test-llm-matrix:
+    name: LLM Capability Matrix
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+      - name: Use Node.js 24
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: "npm"
+      - name: Install dependencies
+        run: npm install
+      - name: Build
+        run: npm run build
+      - name: Run LLM Capability Matrix
+        run: LOG_LEVEL=warn npm run test:llm:matrix
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.CICD_ANTHROPIC_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.CICD_GEMINI_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.CICD_OPENAI_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.CICD_OPENROUTER_API_KEY }}
           XAI_API_KEY: ${{ secrets.CICD_XAI_API_KEY }}

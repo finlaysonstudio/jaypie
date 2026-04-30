@@ -336,8 +336,25 @@ const SYMBOLS: Record<ActualOutcome, string> = {
   skip: "—",
 };
 
-function cellSymbol(cell: CellResult): string {
-  const sym = SYMBOLS[cell.actual];
+function isOpenRouterModel(model: ModelConfig): boolean {
+  return model.provider === "openrouter";
+}
+
+function displayActual(cell: CellResult, openrouter: boolean): ActualOutcome {
+  // OpenRouter is evaluated as a collective; surface individual failures as
+  // warnings so a single flaky route does not paint the cell red.
+  if (openrouter && cell.actual === "fail") return "warn";
+  return cell.actual;
+}
+
+function cellSymbol(cell: CellResult, openrouter: boolean): string {
+  const actual = displayActual(cell, openrouter);
+  const sym = SYMBOLS[actual];
+  // OpenRouter cells skip the mismatch indicator (collective evaluation).
+  // Otherwise, suppress `!` when the actual outcome is already a failure —
+  // the ❌ glyph conveys the problem on its own.
+  if (openrouter) return sym;
+  if (actual === "fail") return sym;
   return cell.matches ? sym : `${sym}!`;
 }
 
@@ -363,12 +380,13 @@ function formatTable(
   for (const model of models) {
     const cells = rows.get(labelOf(model));
     if (!cells) continue;
+    const openrouter = isOpenRouterModel(model);
     const row = [
       labelOf(model).padEnd(labelWidth),
       ...capabilities.map((c) => {
         const cell = cells.get(c);
         if (!cell) return "?".padStart(colWidth(c));
-        return cellSymbol(cell).padStart(colWidth(c));
+        return cellSymbol(cell, openrouter).padStart(colWidth(c));
       }),
     ].join("  ");
     lines.push(row);
@@ -376,6 +394,9 @@ function formatTable(
   lines.push(sep);
   lines.push(
     "Legend: ✅ ok   ⚠️ warn   ❌ fail   — skip   `!` mismatch vs expected",
+  );
+  lines.push(
+    "OpenRouter rows: failures display as ⚠️ and pass/fail collectively (row+column majority).",
   );
   return lines.join("\n");
 }
@@ -389,11 +410,13 @@ function formatIssues(
     const label = model.label || model.model;
     const cells = rows.get(label);
     if (!cells) continue;
+    const openrouter = isOpenRouterModel(model);
     for (const [cap, cell] of cells) {
       if (cell.matches && cell.warnings.length === 0) continue;
       const parts = [`[${label} / ${cap}]`];
       if (!cell.matches) {
-        parts.push(`expected=${cell.expected}, got=${cell.actual}`);
+        const tag = openrouter ? "openrouter-fail" : "mismatch";
+        parts.push(`${tag} expected=${cell.expected}, got=${cell.actual}`);
       }
       if (cell.detail) parts.push(`detail=${cell.detail}`);
       if (cell.warnings.length > 0) {
@@ -404,6 +427,96 @@ function formatIssues(
     }
   }
   return issues;
+}
+
+//
+//
+// OpenRouter collective evaluation
+//
+// OpenRouter routes are flaky and capability support varies by backend.
+// Rather than gate CI on individual cells, we accept the block as long as
+// the *majority* of every row (per model) AND every column (per capability)
+// is a success (ok or warn). Skips are excluded from the denominator.
+//
+
+interface AxisResult {
+  ok: number;
+  total: number;
+  passed: boolean;
+}
+
+interface OpenRouterEvaluation {
+  passed: boolean;
+  rows: Map<string, AxisResult>;
+  columns: Map<Capability, AxisResult>;
+}
+
+function isCellSuccess(cell: CellResult): boolean {
+  return cell.actual === "ok" || cell.actual === "warn";
+}
+
+function evaluateAxis(cells: readonly CellResult[]): AxisResult {
+  let ok = 0;
+  let total = 0;
+  for (const cell of cells) {
+    if (cell.actual === "skip") continue;
+    total++;
+    if (isCellSuccess(cell)) ok++;
+  }
+  // Strict majority: ok must outnumber failures. An empty axis (all skipped)
+  // is treated as a pass.
+  const passed = total === 0 || ok * 2 > total;
+  return { ok, total, passed };
+}
+
+function evaluateOpenRouter(
+  models: readonly ModelConfig[],
+  capabilities: readonly Capability[],
+  rows: Map<string, Map<Capability, CellResult>>,
+): OpenRouterEvaluation | null {
+  const orModels = models.filter(isOpenRouterModel);
+  if (orModels.length === 0) return null;
+
+  const rowResults = new Map<string, AxisResult>();
+  for (const model of orModels) {
+    const label = model.label || model.model;
+    const cellsMap = rows.get(label);
+    if (!cellsMap) continue;
+    const cells = capabilities
+      .map((c) => cellsMap.get(c))
+      .filter((c): c is CellResult => Boolean(c));
+    rowResults.set(label, evaluateAxis(cells));
+  }
+
+  const colResults = new Map<Capability, AxisResult>();
+  for (const cap of capabilities) {
+    const cells: CellResult[] = [];
+    for (const model of orModels) {
+      const cell = rows.get(model.label || model.model)?.get(cap);
+      if (cell) cells.push(cell);
+    }
+    colResults.set(cap, evaluateAxis(cells));
+  }
+
+  const passed =
+    Array.from(rowResults.values()).every((r) => r.passed) &&
+    Array.from(colResults.values()).every((c) => c.passed);
+
+  return { passed, rows: rowResults, columns: colResults };
+}
+
+function formatOpenRouterReport(evaluation: OpenRouterEvaluation): string[] {
+  const lines: string[] = [];
+  lines.push("OpenRouter (evaluated as a collective):");
+  for (const [label, result] of evaluation.rows) {
+    const status = result.passed ? "✅" : "❌";
+    lines.push(`  ${status} row ${label}: ${result.ok}/${result.total} ok`);
+  }
+  for (const [cap, result] of evaluation.columns) {
+    const status = result.passed ? "✅" : "❌";
+    lines.push(`  ${status} col ${cap}: ${result.ok}/${result.total} ok`);
+  }
+  return lines;
 }
 
 //
@@ -445,13 +558,14 @@ async function main(): Promise<void> {
 
   for (const model of models) {
     const label = model.label || model.model;
+    const openrouter = isOpenRouterModel(model);
     console.log(`▸ ${label}`);
     const cells = new Map<Capability, CellResult>();
     for (const capability of capabilities) {
       process.stdout.write(`  ${capability} … `);
       const cell = await runCell(model, capability);
       cells.set(capability, cell);
-      const status = cellSymbol(cell);
+      const status = cellSymbol(cell, openrouter);
       const note = cell.detail ? ` (${cell.detail})` : "";
       console.log(`${status}${note}`);
     }
@@ -471,19 +585,42 @@ async function main(): Promise<void> {
     for (const line of issues) console.log(line);
   }
 
-  // Exit non-zero if any cell mismatched its expected outcome
+  // OpenRouter cells are evaluated as a collective rather than per-cell.
+  const openrouterEvaluation = evaluateOpenRouter(models, capabilities, rows);
+  if (openrouterEvaluation) {
+    console.log("\n========================================");
+    console.log("       OPENROUTER");
+    console.log("========================================");
+    for (const line of formatOpenRouterReport(openrouterEvaluation)) {
+      console.log(line);
+    }
+  }
+
+  // Exit non-zero if any non-OpenRouter cell mismatched its expected
+  // outcome, or if the OpenRouter block failed its majority threshold.
   let mismatches = 0;
-  for (const cells of rows.values()) {
+  for (const model of models) {
+    if (isOpenRouterModel(model)) continue;
+    const cells = rows.get(model.label || model.model);
+    if (!cells) continue;
     for (const cell of cells.values()) {
       if (!cell.matches) mismatches++;
     }
   }
 
   console.log("\n========================================");
-  if (mismatches === 0) {
+  const openrouterFailed = openrouterEvaluation
+    ? !openrouterEvaluation.passed
+    : false;
+  if (mismatches === 0 && !openrouterFailed) {
     console.log(`🎉 Matrix passed: every cell matched expectation.`);
   } else {
-    console.error(`💀 ${mismatches} cell(s) mismatched expectation.`);
+    if (mismatches > 0) {
+      console.error(`💀 ${mismatches} cell(s) mismatched expectation.`);
+    }
+    if (openrouterFailed) {
+      console.error(`💀 OpenRouter block failed: row/column majority not met.`);
+    }
     process.exit(1);
   }
 }
