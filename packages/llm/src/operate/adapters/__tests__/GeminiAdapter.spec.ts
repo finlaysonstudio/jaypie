@@ -529,6 +529,87 @@ describe("GeminiAdapter", () => {
           result: "success",
         });
       });
+
+      it("wraps scalar string outputs in { result } so the protobuf Struct accepts them", () => {
+        // The `time` tool returns an ISO string — JSON.parse keeps it as a
+        // string, but Gemini's function_response.response is a Struct and
+        // gemini-3.1-flash-lite rejects scalars with INVALID_ARGUMENT.
+        const toolCall = {
+          callId: "call-1",
+          name: "time",
+          arguments: "{}",
+          raw: {},
+        };
+        const result = {
+          callId: "call-1",
+          output: '"2026-04-30T16:51:14.420Z"',
+          success: true,
+        };
+
+        const formatted = geminiAdapter.formatToolResult(toolCall, result);
+
+        expect(formatted.functionResponse?.response).toEqual({
+          result: "2026-04-30T16:51:14.420Z",
+        });
+      });
+
+      it("wraps array outputs in { result } so they pass Struct validation", () => {
+        const toolCall = {
+          callId: "call-2",
+          name: "roll",
+          arguments: "{}",
+          raw: {},
+        };
+        const result = {
+          callId: "call-2",
+          output: "[1, 2, 3]",
+          success: true,
+        };
+
+        const formatted = geminiAdapter.formatToolResult(toolCall, result);
+
+        expect(formatted.functionResponse?.response).toEqual({
+          result: [1, 2, 3],
+        });
+      });
+
+      it("wraps numeric outputs in { result }", () => {
+        const toolCall = {
+          callId: "call-3",
+          name: "random",
+          arguments: "{}",
+          raw: {},
+        };
+        const result = {
+          callId: "call-3",
+          output: "42",
+          success: true,
+        };
+
+        const formatted = geminiAdapter.formatToolResult(toolCall, result);
+
+        expect(formatted.functionResponse?.response).toEqual({ result: 42 });
+      });
+
+      it("falls back to { result } when output is not valid JSON", () => {
+        const toolCall = {
+          callId: "call-4",
+          name: "raw",
+          arguments: "{}",
+          raw: {},
+        };
+        const result = {
+          callId: "call-4",
+          output: "plain text",
+          success: true,
+        };
+
+        const formatted = geminiAdapter.formatToolResult(toolCall, result);
+
+        expect(formatted.functionResponse?.response).toEqual({
+          result: "plain text",
+        });
+      });
     });
 
     describe("isComplete", () => {

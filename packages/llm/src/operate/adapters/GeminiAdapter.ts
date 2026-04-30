@@ -573,13 +573,24 @@ export class GeminiAdapter extends BaseProviderAdapter {
     toolCall: StandardToolCall,
     result: StandardToolResult,
   ): GeminiPart {
-    // Gemini expects the response to be the actual result object, not wrapped in "result"
-    // The output from StandardToolResult is JSON-stringified, so we need to parse it
+    // Gemini's `function_response.response` is a protobuf Struct, which only
+    // accepts plain objects. Some models (e.g. gemini-3.1-pro) accept scalar
+    // values silently; gemini-3.1-flash-lite rejects them. Parse the output
+    // and wrap any non-object value (string, number, boolean, array, null)
+    // in `{ result: value }` so every tool result is a valid Struct.
     let responseData: Record<string, unknown>;
     try {
-      responseData = JSON.parse(result.output);
+      const parsed = JSON.parse(result.output);
+      if (
+        parsed !== null &&
+        typeof parsed === "object" &&
+        !Array.isArray(parsed)
+      ) {
+        responseData = parsed as Record<string, unknown>;
+      } else {
+        responseData = { result: parsed };
+      }
     } catch {
-      // If parsing fails, wrap the output as a string result
       responseData = { result: result.output };
     }
 

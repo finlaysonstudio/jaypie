@@ -11,7 +11,7 @@
 //   "ok"   — capability works and produces no warnings
 //   "warn" — capability works but is expected to emit a fallback log.warn
 //            (e.g., gemini-2.5 + tools+structured engages the legacy fake-tool path)
-//   "skip" — capability is not exercised (e.g., OpenRouter cannot upload files)
+//   "skip" — capability is not exercised (e.g., model is text-only)
 //   "fail" — capability is expected to fail outright
 //
 // Any capability not listed in `expect` defaults to "ok".
@@ -93,4 +93,14 @@ export const MODELS: readonly ModelConfig[] = [
   { model: "grok-4.20-0309-reasoning" }, // constants XAI.DEFAULT/LARGE
   { model: "grok-4.20-0309-non-reasoning" }, // constants XAI.SMALL
   { model: "grok-4-1-fast-non-reasoning" }, // constants XAI.TINY
+
+  // ─── OpenRouter routes ───────────────────────────────────────────────
+  // OpenRouter forwards image_url and file content parts to the selected
+  // backend. Models without the relevant modality 4xx, which the harness
+  // surfaces as a fail — refine `expect` per cell after the first run.
+  { model: "anthropic/claude-sonnet-4.6", provider: "openrouter" },
+  { model: "google/gemini-3.1-pro-preview", provider: "openrouter" },
+  { model: "moonshotai/kimi-k2.6", provider: "openrouter" },
+  { model: "openai/gpt-5.5", provider: "openrouter" },
+  { model: "x-ai/grok-4.20", provider: "openrouter" },
 ];
