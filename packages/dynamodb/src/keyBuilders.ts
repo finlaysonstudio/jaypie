@@ -42,10 +42,36 @@ export function calculateScope(parent?: ParentReference): string {
 }
 
 /**
+ * Recursively convert Date instances to ISO 8601 strings.
+ * `@aws-sdk/util-dynamodb` cannot marshall Date instances natively
+ * (`convertClassInstanceToMap` would marshal them to empty maps, losing data).
+ */
+function serializeDates<T>(value: T): T {
+  if (value instanceof Date) {
+    return value.toISOString() as unknown as T;
+  }
+  if (Array.isArray(value)) {
+    return value.map((item) => serializeDates(item)) as unknown as T;
+  }
+  if (value && typeof value === "object") {
+    const result: Record<string, unknown> = {};
+    for (const [key, item] of Object.entries(
+      value as Record<string, unknown>,
+    )) {
+      result[key] = serializeDates(item);
+    }
+    return result as unknown as T;
+  }
+  return value;
+}
+
+/**
  * Auto-populate GSI index keys on an entity and advance its write timestamps.
  *
  * - Bumps `updatedAt` to now on every call.
  * - Backfills `createdAt` to the same now if not already set.
+ * - Serializes any `Date` instances on the entity to ISO 8601 strings so the
+ *   DynamoDB document client can marshall them.
  * - Populates GSI attributes (pk composite and sk composite when applicable)
  *   using the indexes registered for the entity's model.
  *
@@ -62,9 +88,10 @@ export function indexEntity<T extends StorableEntity>(
   suffix?: string,
 ): T {
   const now = new Date().toISOString();
+  const serialized = serializeDates(entity);
   const bumped = {
-    ...entity,
-    createdAt: entity.createdAt ?? now,
+    ...serialized,
+    createdAt: serialized.createdAt ?? now,
     updatedAt: now,
   } as T;
 
