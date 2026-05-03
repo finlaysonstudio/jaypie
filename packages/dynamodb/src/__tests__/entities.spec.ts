@@ -138,6 +138,47 @@ describe("Entity Operations", () => {
       expect(result.indexModel).toBe("record");
       expect(result.indexModelAlias).toBe("record#my-alias");
     });
+
+    it("serializes top-level Date values to ISO strings", async () => {
+      const expiresAt = new Date("2026-05-02T19:45:28.000Z");
+      const entity = {
+        ...createTestEntity(),
+        expiresAt,
+      } as StorableEntity;
+      const result = (await createEntity({ entity })) as StorableEntity & {
+        expiresAt?: unknown;
+      };
+      expect(result.expiresAt).toBe(expiresAt.toISOString());
+      const cmd = mockSend.mock.calls[0][0];
+      expect(cmd.input.Item.expiresAt).toBe(expiresAt.toISOString());
+    });
+
+    it("serializes nested Date values inside state to ISO strings", async () => {
+      const lastUsedAt = new Date("2026-05-02T19:45:28.000Z");
+      const entity = {
+        ...createTestEntity(),
+        state: { lastUsedAt, nested: { when: lastUsedAt } },
+      } as StorableEntity;
+      await createEntity({ entity });
+      const cmd = mockSend.mock.calls[0][0];
+      expect(cmd.input.Item.state.lastUsedAt).toBe(lastUsedAt.toISOString());
+      expect(cmd.input.Item.state.nested.when).toBe(lastUsedAt.toISOString());
+    });
+
+    it("serializes Date values inside arrays to ISO strings", async () => {
+      const a = new Date("2026-05-02T19:45:28.000Z");
+      const b = new Date("2026-05-03T19:45:28.000Z");
+      const entity = {
+        ...createTestEntity(),
+        state: { times: [a, b] },
+      } as StorableEntity;
+      await createEntity({ entity });
+      const cmd = mockSend.mock.calls[0][0];
+      expect(cmd.input.Item.state.times).toEqual([
+        a.toISOString(),
+        b.toISOString(),
+      ]);
+    });
   });
 
   describe("updateEntity", () => {
@@ -168,6 +209,18 @@ describe("Entity Operations", () => {
       };
       expect(result.indexModel).toBe("record");
       expect(result.indexModelType).toBe("record#note");
+    });
+
+    it("serializes Date values to ISO strings", async () => {
+      const expiresAt = new Date("2026-05-02T19:45:28.000Z");
+      const entity = {
+        ...createTestEntity(),
+        expiresAt,
+      } as StorableEntity;
+      const result = (await updateEntity({ entity })) as StorableEntity & {
+        expiresAt?: unknown;
+      };
+      expect(result.expiresAt).toBe(expiresAt.toISOString());
     });
   });
 
