@@ -17,7 +17,7 @@ Before creating an issue:
 1. Draft the issue title and body
 2. Present the draft to the user
 3. Wait for explicit approval ("yes", "submit it", etc.)
-4. Only then use `mcp__github__issue_write` to create the issue
+4. Only then use `gh issue create` to create the issue
 
 ## Issue Format
 

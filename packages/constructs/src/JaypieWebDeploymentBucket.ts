@@ -28,6 +28,7 @@ import { ConfigurationError } from "@jaypie/errors";
 import { CDK } from "./constants";
 import {
   constructEnvName,
+  constructWafLogBucketName,
   envHostname,
   HostConfig,
   isProductionEnv,
@@ -660,9 +661,7 @@ export class JaypieWebDeploymentBucket extends Construct implements s3.IBucket {
           const wafLogBucketId = constructEnvName(
             `${wafConfig.name}-WafLogBucket`,
           );
-          const wafLogBucketName = `aws-waf-logs-${constructEnvName(
-            `${wafConfig.name}-waf`,
-          ).toLowerCase()}`;
+          const wafLogBucketName = constructWafLogBucketName(wafConfig.name);
           const createdBucket = new s3.Bucket(this, wafLogBucketId, {
             bucketName: wafLogBucketName,
             lifecycleRules: [
@@ -706,6 +705,50 @@ export class JaypieWebDeploymentBucket extends Construct implements s3.IBucket {
         }
       }
     }
+  }
+
+  /**
+   * Emit stack-level CfnOutputs with stable, hash-free logical IDs so they can
+   * be read directly from `cdk-outputs.json` without prefix-matching. Skips
+   * outputs whose underlying resource is absent.
+   *
+   * Logical IDs (with optional `prefix`):
+   * - `${prefix}DestinationBucketName`
+   * - `${prefix}DestinationBucketDeployRoleArn` (when a deploy role exists)
+   * - `${prefix}DistributionId` (when a distribution exists)
+   * - `${prefix}CertificateArn` (when a certificate exists)
+   *
+   * @returns map of created outputs keyed by their logical ID
+   */
+  public exportOutputs(
+    options: { prefix?: string; scope?: Construct } = {},
+  ): Record<string, CfnOutput> {
+    const { prefix = "", scope = Stack.of(this) } = options;
+    const outputs: Record<string, CfnOutput> = {};
+
+    const create = (id: string, value: string): CfnOutput => {
+      const logicalId = `${prefix}${id}`;
+      const output = new CfnOutput(scope, `${logicalId}Export`, { value });
+      output.overrideLogicalId(logicalId);
+      outputs[logicalId] = output;
+      return output;
+    };
+
+    create("DestinationBucketName", this.bucket.bucketName);
+
+    if (this.deployRoleArn) {
+      create("DestinationBucketDeployRoleArn", this.deployRoleArn);
+    }
+
+    if (this.distribution) {
+      create("DistributionId", this.distribution.distributionId);
+    }
+
+    if (this.certificate) {
+      create("CertificateArn", this.certificate.certificateArn);
+    }
+
+    return outputs;
   }
 
   private resolveWafConfig(

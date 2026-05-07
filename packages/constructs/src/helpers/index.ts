@@ -2,6 +2,7 @@ export { addDatadogLayers } from "./addDatadogLayers";
 export { constructEnvName } from "./constructEnvName";
 export { constructStackName } from "./constructStackName";
 export { constructTagger } from "./constructTagger";
+export { constructWafLogBucketName } from "./constructWafLogBucketName";
 export { envHostname, HostConfig } from "./envHostname";
 export {
   extendDatadogRole,
