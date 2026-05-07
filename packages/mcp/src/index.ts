@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+/* eslint-disable no-console -- MCP stdio: stderr is the only valid log channel; stdout is reserved for JSON-RPC */
 import { readFileSync, realpathSync } from "node:fs";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
