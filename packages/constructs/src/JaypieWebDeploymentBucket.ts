@@ -28,6 +28,8 @@ import { ConfigurationError } from "@jaypie/errors";
 import { CDK } from "./constants";
 import {
   constructEnvName,
+  envHostname,
+  HostConfig,
   isProductionEnv,
   isValidHostname,
   isValidSubdomain,
@@ -75,10 +77,24 @@ export interface JaypieWebDeploymentBucketProps extends s3.BucketProps {
    */
   destination?: LambdaDestination | boolean;
   /**
-   * The domain name for the website
+   * The domain name for the website.
+   *
+   * Supports both string and config object:
+   * - String: used directly as the domain name (e.g., "app.example.com")
+   * - Object: passed to envHostname() to construct the domain name
+   *   - { subdomain, domain, env, component }
+   *
    * @default mergeDomain(CDK_ENV_WEB_SUBDOMAIN, CDK_ENV_WEB_HOSTED_ZONE || CDK_ENV_HOSTED_ZONE)
+   *
+   * @example
+   * // Direct string
+   * host: "app.example.com"
+   *
+   * @example
+   * // Config object - resolves using envHostname()
+   * host: { subdomain: "app" }
    */
-  host?: string;
+  host?: string | HostConfig;
   /**
    * External log bucket for CloudFront access logs.
    * - IBucket: Use existing bucket directly
@@ -201,8 +217,16 @@ export class JaypieWebDeploymentBucket extends Construct implements s3.IBucket {
     }
 
     // Determine host from props or environment
-    let host: string | undefined = propsHost;
-    if (!host) {
+    let host: string | undefined;
+    if (typeof propsHost === "string") {
+      host = propsHost;
+    } else if (typeof propsHost === "object") {
+      try {
+        host = envHostname(propsHost);
+      } catch {
+        host = undefined;
+      }
+    } else {
       try {
         host =
           process.env.CDK_ENV_WEB_HOST ||

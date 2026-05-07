@@ -257,6 +257,41 @@ describe("JaypieWebDeploymentBucket", () => {
     });
   });
 
+  describe("HostConfig", () => {
+    it("resolves host from a HostConfig object via envHostname", () => {
+      process.env.PROJECT_ENV = "production";
+      const { stack, zone } = makeStack();
+
+      const construct = new JaypieWebDeploymentBucket(stack, "Web", {
+        host: { subdomain: "app", domain: "example.com" },
+        zone,
+      });
+      const template = Template.fromStack(stack);
+      const distribution = findDistribution(template);
+
+      expect(construct.distribution).toBeDefined();
+      expect(distribution.Properties.DistributionConfig.Aliases).toEqual([
+        "app.example.com",
+      ]);
+    });
+
+    it("includes env in non-production HostConfig hosts", () => {
+      process.env.PROJECT_ENV = "sandbox";
+      const { stack, zone } = makeStack();
+
+      new JaypieWebDeploymentBucket(stack, "Web", {
+        host: { subdomain: "app", domain: "example.com" },
+        zone,
+      });
+      const template = Template.fromStack(stack);
+      const distribution = findDistribution(template);
+
+      expect(distribution.Properties.DistributionConfig.Aliases).toEqual([
+        "app.sandbox.example.com",
+      ]);
+    });
+  });
+
   describe("Access Logging", () => {
     it("creates an access log bucket by default", () => {
       const { stack, zone } = makeStack();

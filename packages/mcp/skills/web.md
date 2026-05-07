@@ -35,7 +35,7 @@ new JaypieWebDeploymentBucket(this, "Web", {
 
 | Prop | Type | Default |
 |------|------|---------|
-| `host` | `string` | `mergeDomain(CDK_ENV_WEB_SUBDOMAIN, CDK_ENV_WEB_HOSTED_ZONE \|\| CDK_ENV_HOSTED_ZONE)` |
+| `host` | `string \| HostConfig` | `mergeDomain(CDK_ENV_WEB_SUBDOMAIN, CDK_ENV_WEB_HOSTED_ZONE \|\| CDK_ENV_HOSTED_ZONE)` — `HostConfig` is resolved via `envHostname()` |
 | `zone` | `string \| IHostedZone \| JaypieHostedZone` | `CDK_ENV_WEB_HOSTED_ZONE \|\| CDK_ENV_HOSTED_ZONE` |
 | `certificate` | `boolean \| ICertificate` | `true` (creates via `resolveCertificate`) |
 | `destination` | `LambdaDestination \| boolean` | `true` (Datadog forwarder for access-log bucket notifications) |
