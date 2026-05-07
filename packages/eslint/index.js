@@ -3,6 +3,7 @@ import vitest from "@vitest/eslint-plugin";
 import globals from "globals";
 import tsPlugin from "@typescript-eslint/eslint-plugin";
 import * as tsParser from "@typescript-eslint/parser";
+import { createTypeScriptImportResolver } from "eslint-import-resolver-typescript";
 import { flatConfigs as importxFlatConfigs } from "eslint-plugin-import-x";
 import prettierPlugin from "eslint-plugin-prettier";
 import pluginPrettierVue from "eslint-plugin-prettier-vue";
@@ -23,6 +24,11 @@ export default [
   {
     ...importxFlatConfigs.typescript,
     name: "jaypie:typescriptRecommended",
+    settings: {
+      ...importxFlatConfigs.typescript.settings,
+      "import-x/resolver-next": [createTypeScriptImportResolver()],
+      "import-x/resolver": undefined,
+    },
   },
 
   //
