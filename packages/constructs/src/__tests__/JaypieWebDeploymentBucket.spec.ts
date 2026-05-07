@@ -255,6 +255,33 @@ describe("JaypieWebDeploymentBucket", () => {
         externalArn,
       );
     });
+
+    it("truncates long WAF log bucket names to 63 chars while preserving nonce", () => {
+      process.env.PROJECT_ENV = "development";
+      process.env.PROJECT_KEY = "jaypie";
+      process.env.PROJECT_NONCE = "598eea56";
+      const { stack, zone } = makeStack();
+
+      new JaypieWebDeploymentBucket(stack, "DocumentationBucket", {
+        host: "app.example.com",
+        zone,
+      });
+      const template = Template.fromStack(stack);
+
+      const buckets = template.findResources("AWS::S3::Bucket");
+      const wafLogBucket = Object.values(buckets).find((bucket) => {
+        const name = bucket.Properties?.BucketName;
+        return typeof name === "string" && name.startsWith("aws-waf-logs-");
+      });
+
+      expect(wafLogBucket).toBeDefined();
+      const name = wafLogBucket!.Properties.BucketName as string;
+      expect(name.length).toBeLessThanOrEqual(63);
+      expect(name.startsWith("aws-waf-logs-")).toBe(true);
+      expect(name.endsWith("-598eea56")).toBe(true);
+      expect(name).not.toMatch(/-+$/);
+      expect(name).not.toMatch(/--/);
+    });
   });
 
   describe("HostConfig", () => {
@@ -331,6 +358,76 @@ describe("JaypieWebDeploymentBucket", () => {
       });
 
       expect(construct.logBucket).toBe(externalBucket);
+    });
+  });
+
+  describe("exportOutputs", () => {
+    it("emits stack-level outputs with stable logical IDs", () => {
+      process.env.CDK_ENV_REPO = "owner/repo";
+      const { stack, zone } = makeStack();
+
+      const construct = new JaypieWebDeploymentBucket(stack, "Web", {
+        host: "app.example.com",
+        zone,
+      });
+      construct.exportOutputs();
+
+      const template = Template.fromStack(stack);
+      const outputs = template.findOutputs("*");
+      const ids = Object.keys(outputs);
+
+      expect(ids).toContain("DestinationBucketName");
+      expect(ids).toContain("DestinationBucketDeployRoleArn");
+      expect(ids).toContain("DistributionId");
+      expect(ids).toContain("CertificateArn");
+    });
+
+    it("skips outputs whose underlying resources do not exist", () => {
+      const stack = new Stack();
+      const construct = new JaypieWebDeploymentBucket(stack, "Web");
+      construct.exportOutputs();
+
+      const template = Template.fromStack(stack);
+      const ids = Object.keys(template.findOutputs("*"));
+
+      expect(ids).toContain("DestinationBucketName");
+      expect(ids).not.toContain("DestinationBucketDeployRoleArn");
+      expect(ids).not.toContain("DistributionId");
+      expect(ids).not.toContain("CertificateArn");
+    });
+
+    it("prefixes logical IDs to avoid collisions for multi-instance stacks", () => {
+      process.env.CDK_ENV_REPO = "owner/repo";
+      const { stack, zone } = makeStack();
+
+      const a = new JaypieWebDeploymentBucket(stack, "A", {
+        host: "a.example.com",
+        zone,
+      });
+      const b = new JaypieWebDeploymentBucket(stack, "B", {
+        host: "b.example.com",
+        zone,
+      });
+      a.exportOutputs({ prefix: "A" });
+      b.exportOutputs({ prefix: "B" });
+
+      const template = Template.fromStack(stack);
+      const ids = Object.keys(template.findOutputs("*"));
+
+      expect(ids).toContain("ADestinationBucketName");
+      expect(ids).toContain("BDestinationBucketName");
+      expect(ids).toContain("ADistributionId");
+      expect(ids).toContain("BDistributionId");
+    });
+
+    it("returns the constructed outputs keyed by logical ID", () => {
+      const stack = new Stack();
+      const construct = new JaypieWebDeploymentBucket(stack, "Web");
+
+      const result = construct.exportOutputs();
+
+      expect(result.DestinationBucketName).toBeDefined();
+      expect(result.DestinationBucketDeployRoleArn).toBeUndefined();
     });
   });
 });

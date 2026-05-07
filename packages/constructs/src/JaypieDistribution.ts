@@ -13,6 +13,7 @@ import { Construct } from "constructs";
 import { CDK } from "./constants";
 import {
   constructEnvName,
+  constructWafLogBucketName,
   envHostname,
   HostConfig,
   isValidHostname,
@@ -654,9 +655,7 @@ export class JaypieDistribution
         const wafLogBucketId = wafConfig.name
           ? constructEnvName(`${wafConfig.name}-WafLogBucket`)
           : constructEnvName("WafLogBucket");
-        const wafLogBucketName = wafConfig.name
-          ? `aws-waf-logs-${constructEnvName(`${wafConfig.name}-waf`).toLowerCase()}`
-          : `aws-waf-logs-${constructEnvName("waf").toLowerCase()}`;
+        const wafLogBucketName = constructWafLogBucketName(wafConfig.name);
         const createdBucket = new s3.Bucket(this, wafLogBucketId, {
           bucketName: wafLogBucketName,
           lifecycleRules: [

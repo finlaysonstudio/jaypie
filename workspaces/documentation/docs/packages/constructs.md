@@ -169,6 +169,21 @@ new JaypieWebDeploymentBucket(this, "Web", {
 });
 ```
 
+### Stable Outputs for cdk-outputs.json
+
+Call `exportOutputs()` to emit stack-level `CfnOutput`s with hash-free logical IDs (`DestinationBucketName`, `DestinationBucketDeployRoleArn`, `DistributionId`, `CertificateArn`):
+
+```typescript
+const web = new JaypieWebDeploymentBucket(this, "Web", { host, zone });
+web.exportOutputs();
+
+// Multi-instance stacks: use prefix to avoid collisions
+appWeb.exportOutputs({ prefix: "App" });   // AppDestinationBucketName, ...
+docsWeb.exportOutputs({ prefix: "Docs" }); // DocsDestinationBucketName, ...
+```
+
+Outputs whose underlying resource doesn't exist (e.g., no deploy role, no distribution) are skipped.
+
 ## JaypieDynamoDb
 
 DynamoDB table with Jaypie single-table design patterns.
