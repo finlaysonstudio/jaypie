@@ -121,6 +121,21 @@ Exposed as `CfnOutput`s for workflow consumption:
 | `DistributionId` | CloudFront distribution for `aws cloudfront create-invalidation` |
 | `CertificateArn` | ACM certificate ARN (when a certificate is created) |
 
+By default these outputs live inside the construct, so CDK adds the parent path and a hash suffix (e.g., `WebDestinationBucketNameB89ADFD6`). To get stable, hash-free logical IDs in `cdk-outputs.json`, call `exportOutputs()`:
+
+```typescript
+const web = new JaypieWebDeploymentBucket(this, "Web", { host, zone });
+web.exportOutputs();
+// → DestinationBucketName, DestinationBucketDeployRoleArn, DistributionId, CertificateArn
+```
+
+For stacks with multiple `JaypieWebDeploymentBucket` instances, pass a `prefix` to avoid collisions:
+
+```typescript
+appWeb.exportOutputs({ prefix: "App" });   // AppDestinationBucketName, ...
+docsWeb.exportOutputs({ prefix: "Docs" }); // DocsDestinationBucketName, ...
+```
+
 See `skill("cicd-deploy")` for the workflow pattern that reads these outputs and deploys content.
 
 ## JaypieStaticWebBucket
