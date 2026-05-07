@@ -1,7 +1,7 @@
 import { Construct } from "constructs";
 
 import { CDK } from "./constants";
-import { constructEnvName, envHostname } from "./helpers";
+import { constructEnvName, envHostname, HostConfig } from "./helpers";
 import {
   JaypieWebDeploymentBucket,
   JaypieWebDeploymentBucketProps,
@@ -12,10 +12,11 @@ export interface JaypieStaticWebBucketProps extends Omit<
   "host" | "name" | "roleTag"
 > {
   /**
-   * The domain name for the website
+   * The domain name for the website. Accepts a string or a HostConfig
+   * object resolved via envHostname().
    * @default envHostname({ subdomain: "static" })
    */
-  host?: string;
+  host?: string | HostConfig;
   /**
    * Optional bucket name
    * @default constructEnvName("static")

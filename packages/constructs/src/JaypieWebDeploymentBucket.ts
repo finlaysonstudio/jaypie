@@ -19,20 +19,48 @@ import {
 import * as route53 from "aws-cdk-lib/aws-route53";
 import * as route53Targets from "aws-cdk-lib/aws-route53-targets";
 import * as s3 from "aws-cdk-lib/aws-s3";
+import { LambdaDestination } from "aws-cdk-lib/aws-s3-notifications";
 import * as kms from "aws-cdk-lib/aws-kms";
+import * as wafv2 from "aws-cdk-lib/aws-wafv2";
 import { Construct } from "constructs";
 import { ConfigurationError } from "@jaypie/errors";
 
 import { CDK } from "./constants";
 import {
   constructEnvName,
+  envHostname,
+  HostConfig,
   isProductionEnv,
   isValidHostname,
   isValidSubdomain,
   mergeDomain,
   resolveCertificate,
 } from "./helpers";
+import { resolveDatadogForwarderFunction } from "./helpers/resolveDatadogForwarderFunction";
+import {
+  JaypieWafConfig,
+  SecurityHeadersOverrides,
+} from "./JaypieDistribution";
 import { JaypieHostedZone } from "./JaypieHostedZone";
+
+const DEFAULT_RATE_LIMIT = 2000;
+
+const DEFAULT_MANAGED_RULES = [
+  "AWSManagedRulesCommonRuleSet",
+  "AWSManagedRulesKnownBadInputsRuleSet",
+];
+
+/**
+ * WAF configuration for JaypieWebDeploymentBucket. Same shape as
+ * JaypieDistribution's JaypieWafConfig, but `name` is optional — when omitted,
+ * the construct id is used to namespace the WebACL and WAF log bucket.
+ */
+export type JaypieWebDeploymentBucketWafConfig = Omit<
+  JaypieWafConfig,
+  "name"
+> & {
+  name?: string;
+};
 
 export interface JaypieWebDeploymentBucketProps extends s3.BucketProps {
   /**
@@ -41,19 +69,73 @@ export interface JaypieWebDeploymentBucketProps extends s3.BucketProps {
    */
   certificate?: boolean | acm.ICertificate;
   /**
-   * The domain name for the website
-   * @default mergeDomain(CDK_ENV_WEB_SUBDOMAIN, CDK_ENV_WEB_HOSTED_ZONE || CDK_ENV_HOSTED_ZONE)
+   * Log destination configuration for CloudFront access logs.
+   * - LambdaDestination: Use a specific Lambda destination for S3 notifications
+   * - true: Use Datadog forwarder for S3 notifications (default)
+   * - false: Disable S3 notifications (logging still occurs if logBucket is set)
+   * @default true
    */
-  host?: string;
+  destination?: LambdaDestination | boolean;
+  /**
+   * The domain name for the website.
+   *
+   * Supports both string and config object:
+   * - String: used directly as the domain name (e.g., "app.example.com")
+   * - Object: passed to envHostname() to construct the domain name
+   *   - { subdomain, domain, env, component }
+   *
+   * @default mergeDomain(CDK_ENV_WEB_SUBDOMAIN, CDK_ENV_WEB_HOSTED_ZONE || CDK_ENV_HOSTED_ZONE)
+   *
+   * @example
+   * // Direct string
+   * host: "app.example.com"
+   *
+   * @example
+   * // Config object - resolves using envHostname()
+   * host: { subdomain: "app" }
+   */
+  host?: string | HostConfig;
+  /**
+   * External log bucket for CloudFront access logs.
+   * - IBucket: Use existing bucket directly
+   * - string: Bucket name to import
+   * - { exportName: string }: CloudFormation export name to import
+   * - true: Use account logging bucket (CDK.IMPORT.LOG_BUCKET)
+   * @default undefined (creates new bucket if destination !== false)
+   */
+  logBucket?: s3.IBucket | string | { exportName: string } | true;
   /**
    * Optional bucket name
    */
   name?: string;
   /**
+   * Full override for the response headers policy.
+   * When provided, bypasses all default security header logic.
+   */
+  responseHeadersPolicy?: cloudfront.IResponseHeadersPolicy;
+  /**
    * Role tag for tagging resources
    * @default CDK.ROLE.HOSTING
    */
   roleTag?: string;
+  /**
+   * Security headers configuration.
+   * - true/undefined: apply sensible defaults (HSTS, X-Frame-Options, CSP, etc.)
+   * - false: disable security headers entirely
+   * - SecurityHeadersOverrides object: merge overrides with defaults
+   * @default true
+   */
+  securityHeaders?: boolean | SecurityHeadersOverrides;
+  /**
+   * WAF WebACL configuration for the CloudFront distribution.
+   * - true/undefined: create and attach a WebACL with sensible defaults; the
+   *   construct id is used to namespace the WebACL and WAF log bucket
+   * - false: disable WAF
+   * - JaypieWebDeploymentBucketWafConfig: customize WAF behavior; if `name`
+   *   is omitted the construct id is used
+   * @default true
+   */
+  waf?: boolean | JaypieWebDeploymentBucketWafConfig;
   /**
    * The hosted zone for DNS records
    * @default CDK_ENV_WEB_HOSTED_ZONE || CDK_ENV_HOSTED_ZONE
@@ -78,6 +160,10 @@ export class JaypieWebDeploymentBucket extends Construct implements s3.IBucket {
   public readonly distributionDomainName?: string;
   public readonly certificate?: acm.ICertificate;
   public readonly distribution?: cloudfront.Distribution;
+  public readonly logBucket?: s3.IBucket;
+  public readonly responseHeadersPolicy?: cloudfront.IResponseHeadersPolicy;
+  public readonly wafLogBucket?: s3.IBucket;
+  public readonly webAcl?: wafv2.CfnWebACL;
 
   constructor(
     scope: Construct,
@@ -86,7 +172,21 @@ export class JaypieWebDeploymentBucket extends Construct implements s3.IBucket {
   ) {
     super(scope, id);
 
-    const roleTag = props.roleTag || CDK.ROLE.HOSTING;
+    const {
+      certificate: certificateProp,
+      destination: destinationProp = true,
+      host: propsHost,
+      logBucket: logBucketProp,
+      name: nameProp,
+      responseHeadersPolicy: responseHeadersPolicyProp,
+      roleTag: roleTagProp,
+      securityHeaders: securityHeadersProp,
+      waf: wafProp = true,
+      zone: propsZone,
+      ...bucketProps
+    } = props;
+
+    const roleTag = roleTagProp || CDK.ROLE.HOSTING;
 
     // Environment variable validation
     if (
@@ -117,8 +217,16 @@ export class JaypieWebDeploymentBucket extends Construct implements s3.IBucket {
     }
 
     // Determine host from props or environment
-    let host = props.host;
-    if (!host) {
+    let host: string | undefined;
+    if (typeof propsHost === "string") {
+      host = propsHost;
+    } else if (typeof propsHost === "object") {
+      try {
+        host = envHostname(propsHost);
+      } catch {
+        host = undefined;
+      }
+    } else {
       try {
         host =
           process.env.CDK_ENV_WEB_HOST ||
@@ -139,7 +247,7 @@ export class JaypieWebDeploymentBucket extends Construct implements s3.IBucket {
 
     // Determine zone from props or environment
     const zone =
-      props.zone ||
+      propsZone ||
       process.env.CDK_ENV_WEB_HOSTED_ZONE ||
       process.env.CDK_ENV_HOSTED_ZONE;
 
@@ -148,13 +256,13 @@ export class JaypieWebDeploymentBucket extends Construct implements s3.IBucket {
       accessControl: s3.BucketAccessControl.BUCKET_OWNER_FULL_CONTROL,
       autoDeleteObjects: true,
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ACLS_ONLY,
-      bucketName: props.name || constructEnvName("web"),
+      bucketName: nameProp || constructEnvName("web"),
       publicReadAccess: true,
       removalPolicy: RemovalPolicy.DESTROY,
       versioned: false,
       websiteErrorDocument: "index.html",
       websiteIndexDocument: "index.html",
-      ...props,
+      ...bucketProps,
     });
 
     // Delegate IBucket properties to the bucket
@@ -255,7 +363,7 @@ export class JaypieWebDeploymentBucket extends Construct implements s3.IBucket {
 
       // Use resolveCertificate to create certificate at stack level (enables reuse when swapping constructs)
       this.certificate = resolveCertificate(this, {
-        certificate: props.certificate,
+        certificate: certificateProp,
         domainName: host,
         roleTag,
         zone: hostedZone,
@@ -267,16 +375,155 @@ export class JaypieWebDeploymentBucket extends Construct implements s3.IBucket {
         });
       }
 
+      // Resolve response headers policy for security headers
+      let resolvedResponseHeadersPolicy:
+        | cloudfront.IResponseHeadersPolicy
+        | undefined;
+      if (responseHeadersPolicyProp) {
+        resolvedResponseHeadersPolicy = responseHeadersPolicyProp;
+      } else if (securityHeadersProp !== false) {
+        const overrides =
+          typeof securityHeadersProp === "object" ? securityHeadersProp : {};
+        resolvedResponseHeadersPolicy = new cloudfront.ResponseHeadersPolicy(
+          this,
+          "SecurityHeaders",
+          {
+            customHeadersBehavior: {
+              customHeaders: [
+                {
+                  header: "Cache-Control",
+                  override: true,
+                  value:
+                    "no-store, no-cache, must-revalidate, proxy-revalidate",
+                },
+                {
+                  header: "Cross-Origin-Embedder-Policy",
+                  override: true,
+                  value: "unsafe-none",
+                },
+                {
+                  header: "Cross-Origin-Opener-Policy",
+                  override: true,
+                  value: "same-origin",
+                },
+                {
+                  header: "Cross-Origin-Resource-Policy",
+                  override: true,
+                  value: "same-origin",
+                },
+                {
+                  header: "Permissions-Policy",
+                  override: true,
+                  value:
+                    overrides.permissionsPolicy ??
+                    CDK.SECURITY_HEADERS.PERMISSIONS_POLICY,
+                },
+              ],
+            },
+            removeHeaders: ["Server"],
+            securityHeadersBehavior: {
+              contentSecurityPolicy: {
+                contentSecurityPolicy:
+                  overrides.contentSecurityPolicy ??
+                  CDK.SECURITY_HEADERS.CONTENT_SECURITY_POLICY,
+                override: true,
+              },
+              contentTypeOptions: { override: true },
+              frameOptions: {
+                frameOption:
+                  overrides.frameOption ?? cloudfront.HeadersFrameOption.DENY,
+                override: true,
+              },
+              referrerPolicy: {
+                referrerPolicy:
+                  overrides.referrerPolicy ??
+                  cloudfront.HeadersReferrerPolicy
+                    .STRICT_ORIGIN_WHEN_CROSS_ORIGIN,
+                override: true,
+              },
+              strictTransportSecurity: {
+                accessControlMaxAge: Duration.seconds(
+                  overrides.hstsMaxAge ?? CDK.SECURITY_HEADERS.HSTS_MAX_AGE,
+                ),
+                includeSubdomains: overrides.hstsIncludeSubdomains ?? true,
+                override: true,
+                preload: true,
+              },
+            },
+          },
+        );
+      }
+      this.responseHeadersPolicy = resolvedResponseHeadersPolicy;
+
+      // Resolve or create access log bucket
+      let accessLogBucket: s3.IBucket | undefined;
+      const isExternalLogBucket = logBucketProp !== undefined;
+
+      if (logBucketProp !== undefined) {
+        accessLogBucket = this.resolveLogBucket(logBucketProp);
+      } else if (destinationProp !== false) {
+        const createdBucket = new s3.Bucket(
+          this,
+          constructEnvName("LogBucket"),
+          {
+            autoDeleteObjects: true,
+            lifecycleRules: [
+              {
+                expiration: Duration.days(90),
+                transitions: [
+                  {
+                    storageClass: s3.StorageClass.INFREQUENT_ACCESS,
+                    transitionAfter: Duration.days(30),
+                  },
+                ],
+              },
+            ],
+            objectOwnership: s3.ObjectOwnership.OBJECT_WRITER,
+            removalPolicy: RemovalPolicy.DESTROY,
+          },
+        );
+        Tags.of(createdBucket).add(CDK.TAG.ROLE, CDK.ROLE.STORAGE);
+        accessLogBucket = createdBucket;
+      }
+
+      if (
+        accessLogBucket &&
+        destinationProp !== false &&
+        !isExternalLogBucket
+      ) {
+        const lambdaDestination =
+          destinationProp === true
+            ? new LambdaDestination(resolveDatadogForwarderFunction(this))
+            : destinationProp;
+
+        (accessLogBucket as s3.Bucket).addEventNotification(
+          s3.EventType.OBJECT_CREATED,
+          lambdaDestination,
+        );
+      }
+
+      this.logBucket = accessLogBucket;
+
       // Create CloudFront distribution
       this.distribution = new cloudfront.Distribution(this, "Distribution", {
         defaultBehavior: {
           cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
           origin: new origins.S3StaticWebsiteOrigin(this.bucket),
+          ...(resolvedResponseHeadersPolicy
+            ? { responseHeadersPolicy: resolvedResponseHeadersPolicy }
+            : {}),
           viewerProtocolPolicy:
             cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
         },
         certificate: this.certificate,
         domainNames: [host],
+        ...(accessLogBucket
+          ? {
+              enableLogging: true,
+              logBucket: accessLogBucket,
+              logFilePrefix: "cloudfront-logs/",
+            }
+          : {}),
       });
       Tags.of(this.distribution).add(CDK.TAG.ROLE, roleTag);
 
@@ -289,6 +536,9 @@ export class JaypieWebDeploymentBucket extends Construct implements s3.IBucket {
             viewerProtocolPolicy:
               cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
             cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED,
+            ...(resolvedResponseHeadersPolicy
+              ? { responseHeadersPolicy: resolvedResponseHeadersPolicy }
+              : {}),
           },
         );
       }
@@ -322,7 +572,179 @@ export class JaypieWebDeploymentBucket extends Construct implements s3.IBucket {
           }),
         );
       }
+
+      // Create and attach WAF WebACL
+      let resolvedWebAclArn: string | undefined;
+      const wafConfig = this.resolveWafConfig(wafProp, id);
+      if (wafConfig) {
+        if (wafConfig.webAclArn) {
+          resolvedWebAclArn = wafConfig.webAclArn;
+          this.distribution.attachWebAclId(wafConfig.webAclArn);
+        } else {
+          const {
+            managedRuleOverrides,
+            managedRuleScopeDowns,
+            managedRules = DEFAULT_MANAGED_RULES,
+            rateLimitPerIp = DEFAULT_RATE_LIMIT,
+          } = wafConfig;
+
+          let priority = 0;
+          const rules: wafv2.CfnWebACL.RuleProperty[] = [];
+
+          for (const ruleName of managedRules) {
+            const ruleActionOverrides = managedRuleOverrides?.[ruleName];
+            const scopeDownStatement = managedRuleScopeDowns?.[ruleName];
+            rules.push({
+              name: ruleName,
+              priority: priority++,
+              overrideAction: { none: {} },
+              statement: {
+                managedRuleGroupStatement: {
+                  name: ruleName,
+                  vendorName: "AWS",
+                  ...(ruleActionOverrides && { ruleActionOverrides }),
+                  ...(scopeDownStatement && { scopeDownStatement }),
+                },
+              },
+              visibilityConfig: {
+                cloudWatchMetricsEnabled: true,
+                metricName: ruleName,
+                sampledRequestsEnabled: true,
+              },
+            });
+          }
+
+          rules.push({
+            name: "RateLimitPerIp",
+            priority,
+            action: { block: {} },
+            statement: {
+              rateBasedStatement: {
+                aggregateKeyType: "IP",
+                limit: rateLimitPerIp,
+              },
+            },
+            visibilityConfig: {
+              cloudWatchMetricsEnabled: true,
+              metricName: "RateLimitPerIp",
+              sampledRequestsEnabled: true,
+            },
+          });
+
+          const webAclName = constructEnvName(`${wafConfig.name}-WebAcl`);
+          const webAcl = new wafv2.CfnWebACL(this, "WebAcl", {
+            defaultAction: { allow: {} },
+            name: webAclName,
+            rules,
+            scope: "CLOUDFRONT",
+            visibilityConfig: {
+              cloudWatchMetricsEnabled: true,
+              metricName: webAclName,
+              sampledRequestsEnabled: true,
+            },
+          });
+
+          (this as { webAcl?: wafv2.CfnWebACL }).webAcl = webAcl;
+          resolvedWebAclArn = webAcl.attrArn;
+          this.distribution.attachWebAclId(webAcl.attrArn);
+          Tags.of(webAcl).add(CDK.TAG.ROLE, roleTag);
+        }
+      }
+
+      // Create WAF logging
+      if (resolvedWebAclArn && wafConfig) {
+        const { logBucket: wafLogBucketProp = true } = wafConfig;
+
+        let wafLogBucket: s3.IBucket | undefined;
+        if (wafLogBucketProp === true) {
+          const wafLogBucketId = constructEnvName(
+            `${wafConfig.name}-WafLogBucket`,
+          );
+          const wafLogBucketName = `aws-waf-logs-${constructEnvName(
+            `${wafConfig.name}-waf`,
+          ).toLowerCase()}`;
+          const createdBucket = new s3.Bucket(this, wafLogBucketId, {
+            bucketName: wafLogBucketName,
+            lifecycleRules: [
+              {
+                expiration: Duration.days(90),
+                transitions: [
+                  {
+                    storageClass: s3.StorageClass.INFREQUENT_ACCESS,
+                    transitionAfter: Duration.days(30),
+                  },
+                ],
+              },
+            ],
+            objectOwnership: s3.ObjectOwnership.OBJECT_WRITER,
+            removalPolicy: RemovalPolicy.RETAIN,
+          });
+          Tags.of(createdBucket).add(CDK.TAG.ROLE, CDK.ROLE.MONITORING);
+
+          if (destinationProp !== false) {
+            const lambdaDestination =
+              destinationProp === true
+                ? new LambdaDestination(resolveDatadogForwarderFunction(this))
+                : destinationProp;
+            createdBucket.addEventNotification(
+              s3.EventType.OBJECT_CREATED,
+              lambdaDestination,
+            );
+          }
+
+          wafLogBucket = createdBucket;
+        } else if (typeof wafLogBucketProp === "object") {
+          wafLogBucket = wafLogBucketProp;
+        }
+
+        if (wafLogBucket) {
+          (this as { wafLogBucket?: s3.IBucket }).wafLogBucket = wafLogBucket;
+          new wafv2.CfnLoggingConfiguration(this, "WafLoggingConfig", {
+            logDestinationConfigs: [wafLogBucket.bucketArn],
+            resourceArn: resolvedWebAclArn,
+          });
+        }
+      }
     }
+  }
+
+  private resolveWafConfig(
+    wafProp: boolean | JaypieWebDeploymentBucketWafConfig,
+    defaultName: string,
+  ): JaypieWafConfig | undefined {
+    if (wafProp === false) return undefined;
+    if (wafProp === true) return { name: defaultName };
+    if (wafProp.enabled === false) return undefined;
+    return { ...wafProp, name: wafProp.name || defaultName };
+  }
+
+  private isExportNameObject(value: unknown): value is { exportName: string } {
+    return (
+      typeof value === "object" &&
+      value !== null &&
+      "exportName" in value &&
+      typeof (value as { exportName: string }).exportName === "string"
+    );
+  }
+
+  private resolveLogBucket(
+    logBucketProp: s3.IBucket | string | { exportName: string } | true,
+  ): s3.IBucket {
+    if (logBucketProp === true) {
+      const bucketName = Fn.importValue(CDK.IMPORT.LOG_BUCKET);
+      return s3.Bucket.fromBucketName(this, "ImportedLogBucket", bucketName);
+    }
+
+    if (this.isExportNameObject(logBucketProp)) {
+      const bucketName = Fn.importValue(logBucketProp.exportName);
+      return s3.Bucket.fromBucketName(this, "ImportedLogBucket", bucketName);
+    }
+
+    if (typeof logBucketProp === "string") {
+      return s3.Bucket.fromBucketName(this, "ImportedLogBucket", logBucketProp);
+    }
+
+    return logBucketProp;
   }
 
   // Implement remaining IBucket methods by delegating to the bucket

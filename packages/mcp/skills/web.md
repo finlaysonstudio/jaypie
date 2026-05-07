@@ -35,11 +35,16 @@ new JaypieWebDeploymentBucket(this, "Web", {
 
 | Prop | Type | Default |
 |------|------|---------|
-| `host` | `string` | `mergeDomain(CDK_ENV_WEB_SUBDOMAIN, CDK_ENV_WEB_HOSTED_ZONE \|\| CDK_ENV_HOSTED_ZONE)` |
+| `host` | `string \| HostConfig` | `mergeDomain(CDK_ENV_WEB_SUBDOMAIN, CDK_ENV_WEB_HOSTED_ZONE \|\| CDK_ENV_HOSTED_ZONE)` — `HostConfig` is resolved via `envHostname()` |
 | `zone` | `string \| IHostedZone \| JaypieHostedZone` | `CDK_ENV_WEB_HOSTED_ZONE \|\| CDK_ENV_HOSTED_ZONE` |
 | `certificate` | `boolean \| ICertificate` | `true` (creates via `resolveCertificate`) |
+| `destination` | `LambdaDestination \| boolean` | `true` (Datadog forwarder for access-log bucket notifications) |
+| `logBucket` | `IBucket \| string \| { exportName } \| true` | undefined — creates a new bucket if `destination !== false` |
 | `name` | `string` | `constructEnvName("web")` |
+| `responseHeadersPolicy` | `IResponseHeadersPolicy` | undefined — full override; bypasses default security headers |
 | `roleTag` | `string` | `CDK.ROLE.HOSTING` |
+| `securityHeaders` | `boolean \| SecurityHeadersOverrides` | `true` |
+| `waf` | `boolean \| JaypieWebDeploymentBucketWafConfig` | `true` (WAF name defaults to construct id) |
 
 Also accepts all `s3.BucketProps` — the bucket defaults to `autoDeleteObjects: true`, `publicReadAccess: true`, `websiteIndexDocument: "index.html"`, `websiteErrorDocument: "index.html"` (SPA-friendly).
 
@@ -47,6 +52,52 @@ Also accepts all `s3.BucketProps` — the bucket defaults to `autoDeleteObjects:
 
 - Default behavior: S3 static website origin, `REDIRECT_TO_HTTPS`, `CACHING_DISABLED`.
 - In production (`isProductionEnv()`), a second behavior on `/*` enables `CACHING_OPTIMIZED` — `index.html` stays uncached so SPA deploys are visible immediately; hashed assets get edge cache.
+- Access logs land in a CloudFront log bucket with Datadog forwarding by default. Set `destination: false` to skip notifications, or pass `logBucket: <existing>` to reuse a bucket.
+
+### Security Headers
+
+Same defaults as `JaypieDistribution`: HSTS, X-Frame-Options, CSP, Referrer-Policy, Permissions-Policy, Cross-Origin-* headers, and Server header removal (applied via a `ResponseHeadersPolicy` on the default behavior and the production `/*` behavior). Override the same way:
+
+```typescript
+// Disable
+new JaypieWebDeploymentBucket(this, "Web", { host, zone, securityHeaders: false });
+
+// Override specific headers
+new JaypieWebDeploymentBucket(this, "Web", {
+  host, zone,
+  securityHeaders: {
+    contentSecurityPolicy: "default-src 'self';",
+    frameOption: HeadersFrameOption.SAMEORIGIN,
+  },
+});
+
+// Full custom policy
+new JaypieWebDeploymentBucket(this, "Web", { host, zone, responseHeadersPolicy: myPolicy });
+```
+
+### WAF
+
+Same defaults as `JaypieDistribution` (AWSManagedRulesCommonRuleSet, AWSManagedRulesKnownBadInputsRuleSet, IP rate limit 2000/5min, WAF logging to S3 with Datadog forwarding). The WebACL and WAF log bucket are namespaced with the construct id by default so multiple instances coexist without collision:
+
+```typescript
+// Default — WAF named after construct id ("MyWeb-WebAcl")
+new JaypieWebDeploymentBucket(this, "MyWeb", { host, zone });
+
+// Disable
+new JaypieWebDeploymentBucket(this, "Web", { host, zone, waf: false });
+
+// Custom name + rate limit
+new JaypieWebDeploymentBucket(this, "Web", {
+  host, zone,
+  waf: { name: "static", rateLimitPerIp: 500 },
+});
+
+// Existing WebACL
+new JaypieWebDeploymentBucket(this, "Web", {
+  host, zone,
+  waf: { webAclArn: "arn:aws:wafv2:..." },
+});
+```
 
 ### DNS
 

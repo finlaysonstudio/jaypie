@@ -646,14 +646,12 @@ export class MyStack extends JaypieStack {
 
 #### `JaypieWebDeploymentBucket`
 
-S3 bucket optimized for static website deployment with CloudFront distribution, custom domain support, and automated deployment workflows.
+S3 + CloudFront + ACM + Route53 for static sites, with security headers, WAFv2, and access logging on by default (same override mechanisms as `JaypieDistribution`). Setting `CDK_ENV_REPO` also provisions a scoped GitHub OIDC deploy role.
 
 ```typescript
 const webBucket = new JaypieWebDeploymentBucket(this, "WebSite", {
-  domainName: "www.example.com",
-  certificateArn: "arn:aws:acm:us-east-1:123456789012:certificate/abc123",
-  indexDocument: "index.html",
-  errorDocument: "404.html",
+  host: "www.example.com",
+  zone: "example.com",
 });
 ```
 

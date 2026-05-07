@@ -182,12 +182,17 @@ new JaypieApiGateway(this, "Gateway", {
 
 ### JaypieWebDeploymentBucket
 
-Static site hosting with CloudFront.
+Static site hosting on S3 with CloudFront, ACM, Route53, and (when `CDK_ENV_REPO` is set) a GitHub OIDC deploy role. Ships with security headers, WAFv2, and CloudFront access logging by default — same override mechanisms as `JaypieDistribution`.
 
 ```typescript
 new JaypieWebDeploymentBucket(this, "Web", {
-  source: "../web/dist",
   host: "app.example.com",
+  zone: "example.com",
+});
+
+// HostConfig — resolved via envHostname()
+new JaypieWebDeploymentBucket(this, "Web", {
+  host: { subdomain: "app", domain: "example.com" },
   zone: "example.com",
 });
 ```
