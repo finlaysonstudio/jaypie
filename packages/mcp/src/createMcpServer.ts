@@ -1,3 +1,4 @@
+/* eslint-disable no-console -- MCP stdio: stderr is the only valid log channel; stdout is reserved for JSON-RPC */
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
 import { createMcpServerFromSuite } from "@jaypie/fabric/mcp";

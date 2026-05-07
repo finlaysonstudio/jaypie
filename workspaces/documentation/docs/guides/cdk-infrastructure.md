@@ -33,8 +33,9 @@ packages/cdk/
 
 | Stack | Extends | Purpose |
 |-------|---------|---------|
-| `JaypieAppStack` | `JaypieStack` | Application resources (Lambda, API Gateway) |
-| `JaypieInfrastructureStack` | `JaypieStack` | Shared infrastructure (VPC, databases) |
+| `JaypieStack` | `Stack` (CDK) | Base class — auto-naming, account/region resolution, standard tag set |
+| `JaypieAppStack` | `JaypieStack` | Application resources (Lambda, API Gateway); pre-fills `key: "app"` |
+| `JaypieInfrastructureStack` | `JaypieStack` | Shared infrastructure (VPC, databases); pre-fills `key: "infra"` |
 
 ## Step 1: CDK Entry Point
 

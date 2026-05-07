@@ -96,21 +96,64 @@ workspaces/
 │   └── package.json
 ```
 
-## Environment Configuration
+## Stacks
 
-Use environment-specific configuration:
+### JaypieStack
+
+`JaypieStack` extends CDK's `Stack` and is the recommended base class for every stack in a Jaypie project. Extending it gives you three things automatically:
+
+1. **Stack naming** from environment variables, in the form
+   `cdk-{PROJECT_SPONSOR}-{PROJECT_KEY}-{PROJECT_ENV}-{PROJECT_NONCE}[-{key}]`,
+   so naming stays consistent across sandbox, personal, and production deploys.
+2. **Account & region** resolved from `CDK_DEFAULT_ACCOUNT` / `CDK_DEFAULT_REGION` (overridable via `env`).
+3. **Standard tags** applied to the stack and propagated to every taggable child resource: `env`, `project`, `sponsor`, `nonce`, `commit`, `buildHex`, `buildDate`, `buildTime`, `version`, `service`, `creation`, `role`, `stack`.
 
 ```typescript
-const env = process.env.PROJECT_ENV || "sandbox";
-const nonce = process.env.PROJECT_NONCE || "dev";
+import { Construct } from "constructs";
+import { JaypieStack, JaypieStackProps } from "@jaypie/constructs";
 
-const stack = new ApiStack(app, `api-${env}-${nonce}`, {
-  env: {
-    account: process.env.CDK_DEFAULT_ACCOUNT,
-    region: process.env.CDK_DEFAULT_REGION,
-  },
+export class DataStack extends JaypieStack {
+  constructor(scope: Construct, id: string, props: JaypieStackProps = {}) {
+    super(scope, id, { key: "data", ...props });
+    // ...your resources...
+  }
+}
+```
+
+Props extend `StackProps` with one addition:
+
+| Prop | Description |
+|------|-------------|
+| `key` | Suffix appended to the generated stack name (e.g., `"data"`, `"events"`). Optional. |
+
+If you see `undefined` or `unknown` in a generated stack name or tag, an env var is missing — fix the environment rather than overriding `stackName`.
+
+#### `JaypieAppStack` / `JaypieInfrastructureStack`
+
+Thin convenience subclasses that pre-fill `key`:
+
+- `JaypieAppStack` → `key: "app"` (application workloads — Lambdas, APIs)
+- `JaypieInfrastructureStack` → `key: "infra"` (shared infrastructure — buckets, hosted zones, shared secrets); also tags the stack with `stackSha` from `CDK_ENV_INFRASTRUCTURE_STACK_SHA` when set
+
+Use them when their key fits; extend `JaypieStack` directly for any other category.
+
+## Environment Configuration
+
+`JaypieStack` resolves the AWS account and region from `CDK_DEFAULT_ACCOUNT` / `CDK_DEFAULT_REGION` automatically, so most stacks need no env wiring at the call site:
+
+```typescript
+new ApiStack(app, "ApiStack");
+```
+
+Override per-stack only when you need to deploy outside the default context:
+
+```typescript
+new ApiStack(app, "ApiStack", {
+  env: { account: "123456789012", region: "us-west-2" },
 });
 ```
+
+See `skill("variables")` for the full set of `PROJECT_*` and `CDK_*` environment variables that drive naming and tagging.
 
 ## Resource Naming
 

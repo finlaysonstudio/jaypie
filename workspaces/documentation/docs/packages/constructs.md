@@ -276,9 +276,31 @@ new JaypieLambda(this, "Api", {
 
 ## Stack Classes
 
+### JaypieStack
+
+Base stack for every Jaypie CDK stack. Extending it automatically:
+
+1. **Names the stack** from environment variables: `cdk-{PROJECT_SPONSOR}-{PROJECT_KEY}-{PROJECT_ENV}-{PROJECT_NONCE}[-{key}]`
+2. **Resolves account & region** from `CDK_DEFAULT_ACCOUNT` / `CDK_DEFAULT_REGION` (overridable via `env`)
+3. **Applies standard tags** (`env`, `project`, `sponsor`, `nonce`, `commit`, `buildHex`, `buildDate`, `buildTime`, `version`, `service`, `creation`, `role`, `stack`) and propagates them to every taggable child resource
+
+```typescript
+import { JaypieStack, JaypieStackProps } from "@jaypie/constructs";
+import type { Construct } from "constructs";
+
+export class DataStack extends JaypieStack {
+  constructor(scope: Construct, id: string, props: JaypieStackProps = {}) {
+    super(scope, id, { key: "data", ...props });
+    // ...your resources...
+  }
+}
+```
+
+`JaypieStackProps` extends CDK's `StackProps` with one optional `key` field (suffix for the generated stack name). Most projects use `JaypieAppStack` or `JaypieInfrastructureStack`; extend `JaypieStack` directly only for additional categories.
+
 ### JaypieAppStack
 
-For application resources (Lambda, API Gateway):
+For application resources (Lambda, API Gateway). Pre-fills `key: "app"`:
 
 ```typescript
 import { JaypieAppStack, JaypieLambda } from "@jaypie/constructs";
@@ -298,7 +320,7 @@ export class ApiStack extends JaypieAppStack {
 
 ### JaypieInfrastructureStack
 
-For shared infrastructure:
+For shared infrastructure. Pre-fills `key: "infra"` and tags the stack with `stackSha` from `CDK_ENV_INFRASTRUCTURE_STACK_SHA` when set:
 
 ```typescript
 import { JaypieInfrastructureStack, JaypieEnvSecret } from "@jaypie/constructs";

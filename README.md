@@ -474,16 +474,12 @@ const apiGateway = new JaypieApiGateway(this, "Api", {
 
 #### `JaypieAppStack`
 
-Base application stack with common Jaypie patterns, resource tagging, and cross-stack resource sharing capabilities.
+Application stack — extends `JaypieStack` and pre-fills `key: "app"` so the generated stack name carries the application suffix.
 
 ```typescript
 export class MyAppStack extends JaypieAppStack {
-  constructor(scope: Construct, id: string, props?: JaypieStackProps) {
-    super(scope, id, {
-      ...props,
-      service: "api",
-      project: "myproject",
-    });
+  constructor(scope: Construct, id: string, props: JaypieStackProps = {}) {
+    super(scope, id, props);
 
     // Add your application resources here
   }
@@ -609,16 +605,12 @@ const expressLambda = new JaypieExpressLambda(this, "ApiServer", {
 
 #### `JaypieInfrastructureStack`
 
-Infrastructure stack with common patterns for cross-stack resource sharing and environment-specific configurations.
+Infrastructure stack — extends `JaypieStack` and pre-fills `key: "infra"` for shared infrastructure (VPCs, databases, hosted zones, shared secrets). Also tags the stack with `stackSha` from `CDK_ENV_INFRASTRUCTURE_STACK_SHA` when set.
 
 ```typescript
 export class MyInfrastructureStack extends JaypieInfrastructureStack {
-  constructor(scope: Construct, id: string, props?: JaypieStackProps) {
-    super(scope, id, {
-      ...props,
-      service: "infrastructure",
-      project: "myproject",
-    });
+  constructor(scope: Construct, id: string, props: JaypieStackProps = {}) {
+    super(scope, id, props);
 
     // Add shared infrastructure resources like VPCs, databases, etc.
   }
@@ -627,17 +619,18 @@ export class MyInfrastructureStack extends JaypieInfrastructureStack {
 
 #### `JaypieStack`
 
-Base stack with Jaypie conventions, standardized tagging, and common resource patterns for consistent deployments.
+Base stack class for every Jaypie CDK stack. Automatically:
+
+1. Generates the stack name from `PROJECT_*` env vars: `cdk-{sponsor}-{project}-{env}-{nonce}[-{key}]`
+2. Resolves account & region from `CDK_DEFAULT_ACCOUNT` / `CDK_DEFAULT_REGION` (overridable via `env`)
+3. Applies the standard tag set (`env`, `project`, `sponsor`, `nonce`, `commit`, `buildHex`, `buildDate`, `buildTime`, `version`, `service`, `creation`, `role`, `stack`) and propagates it to taggable children
+
+`JaypieStackProps` extends CDK's `StackProps` with one optional addition: `key`, the suffix appended to the generated stack name. Most projects use `JaypieAppStack` / `JaypieInfrastructureStack` instead; extend `JaypieStack` directly for any other category.
 
 ```typescript
-export class MyStack extends JaypieStack {
-  constructor(scope: Construct, id: string, props?: JaypieStackProps) {
-    super(scope, id, {
-      ...props,
-      service: "worker",
-      project: "myproject",
-      roleTag: "processing",
-    });
+export class MyDataStack extends JaypieStack {
+  constructor(scope: Construct, id: string, props: JaypieStackProps = {}) {
+    super(scope, id, { key: "data", ...props });
 
     // Add your stack resources here
   }
