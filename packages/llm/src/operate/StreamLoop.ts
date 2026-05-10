@@ -3,7 +3,7 @@ import { sleep } from "@jaypie/kit";
 import { JsonObject } from "@jaypie/types";
 
 import { MAX_CONSECUTIVE_TOOL_ERRORS } from "./OperateLoop.js";
-import { isTransientNetworkError } from "./retry/isTransientNetworkError.js";
+import { createStaleRejectionGuard } from "./retry/createStaleRejectionGuard.js";
 import { Toolkit } from "../tools/Toolkit.class.js";
 import {
   LlmHistory,
@@ -278,26 +278,10 @@ export class StreamLoop {
     let attempt = 0;
     let chunksYielded = false;
 
-    // Persistent guard against stale socket errors (TypeError: terminated).
-    // Installed after the first abort and kept alive through subsequent attempts.
-    let staleGuard: ((reason: unknown) => void) | undefined;
-
-    const installGuard = () => {
-      if (staleGuard) return;
-      staleGuard = (reason: unknown) => {
-        if (isTransientNetworkError(reason)) {
-          log.trace("Suppressed stale socket error during retry");
-        }
-      };
-      process.on("unhandledRejection", staleGuard);
-    };
-
-    const removeGuard = () => {
-      if (staleGuard) {
-        process.removeListener("unhandledRejection", staleGuard);
-        staleGuard = undefined;
-      }
-    };
+    // Guard against stale rejections firing after the stream loop has already
+    // caught the originating error: undici socket teardown and twin
+    // upstream-SDK rejections (issue #336).
+    const guard = createStaleRejectionGuard();
 
     try {
       while (true) {
@@ -348,11 +332,10 @@ export class StreamLoop {
           }
           break;
         } catch (error: unknown) {
-          // Abort the previous request to kill lingering socket callbacks
           controller.abort("retry");
 
-          // Install the guard immediately after abort
-          installGuard();
+          guard.recordCaught(error);
+          guard.install();
 
           // If chunks were already yielded, we can't transparently retry
           if (chunksYielded) {
@@ -394,7 +377,7 @@ export class StreamLoop {
         }
       }
     } finally {
-      removeGuard();
+      guard.remove();
     }
 
     // Execute afterEachModelResponse hook
