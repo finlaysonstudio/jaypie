@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { Stack } from "aws-cdk-lib";
 import { Match, Template } from "aws-cdk-lib/assertions";
 import * as dynamodb from "aws-cdk-lib/aws-dynamodb";
@@ -102,6 +102,74 @@ describe("JaypieMigration", () => {
       expect(
         migrationLambda?.Properties?.Environment?.Variables,
       ).toHaveProperty("DYNAMODB_TABLE_NAME");
+    });
+
+    it("grants control-plane DynamoDB perms scoped to passed tables (issue #339)", () => {
+      const stack = new Stack();
+      const table = new dynamodb.Table(stack, "TestTable", {
+        partitionKey: { name: "model", type: dynamodb.AttributeType.STRING },
+        sortKey: { name: "id", type: dynamodb.AttributeType.STRING },
+      });
+
+      new JaypieMigration(stack, "TestMigration", {
+        code: lambda.Code.fromInline("exports.handler = () => {}"),
+        handler: "index.handler",
+        tables: [table],
+      });
+
+      const template = Template.fromStack(stack);
+      const policies = template.findResources("AWS::IAM::Policy");
+      const allActions = new Set<string>();
+      for (const policy of Object.values(policies)) {
+        const statements = (policy as any).Properties?.PolicyDocument
+          ?.Statement as Array<{ Action: unknown }>;
+        for (const statement of statements ?? []) {
+          const actions = Array.isArray(statement.Action)
+            ? statement.Action
+            : [statement.Action];
+          for (const action of actions) {
+            if (typeof action === "string") allActions.add(action);
+          }
+        }
+      }
+      expect(allActions.has("dynamodb:DescribeTable")).toBe(true);
+      expect(allActions.has("dynamodb:UpdateTable")).toBe(true);
+      expect(allActions.has("dynamodb:UpdateTimeToLive")).toBe(true);
+      expect(allActions.has("dynamodb:UpdateContinuousBackups")).toBe(true);
+    });
+
+    it("does not grant DynamoDB perms with star resource (issue #339)", () => {
+      const stack = new Stack();
+      const table = new dynamodb.Table(stack, "TestTable", {
+        partitionKey: { name: "model", type: dynamodb.AttributeType.STRING },
+      });
+
+      new JaypieMigration(stack, "TestMigration", {
+        code: lambda.Code.fromInline("exports.handler = () => {}"),
+        handler: "index.handler",
+        tables: [table],
+      });
+
+      const template = Template.fromStack(stack);
+      const policies = template.findResources("AWS::IAM::Policy");
+      for (const policy of Object.values(policies)) {
+        const statements = (policy as any).Properties?.PolicyDocument
+          ?.Statement as Array<{ Action: unknown; Resource: unknown }>;
+        for (const statement of statements ?? []) {
+          const actions = Array.isArray(statement.Action)
+            ? statement.Action
+            : [statement.Action];
+          const usesDynamoControlPlane = actions.some(
+            (action) =>
+              typeof action === "string" &&
+              (action === "dynamodb:DescribeTable" ||
+                action === "dynamodb:UpdateTable"),
+          );
+          if (usesDynamoControlPlane) {
+            expect(statement.Resource).not.toBe("*");
+          }
+        }
+      }
     });
   });
 });

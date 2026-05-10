@@ -2,10 +2,20 @@ import { Construct } from "constructs";
 import * as cdk from "aws-cdk-lib";
 import * as cr from "aws-cdk-lib/custom-resources";
 import * as dynamodb from "aws-cdk-lib/aws-dynamodb";
+import * as iam from "aws-cdk-lib/aws-iam";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import { CDK } from "./constants";
 import { JaypieLambda } from "./JaypieLambda";
 import type { SecretsArrayItem } from "./helpers/index.js";
+
+const DYNAMODB_CONTROL_PLANE_ACTIONS = [
+  "dynamodb:DescribeContinuousBackups",
+  "dynamodb:DescribeTable",
+  "dynamodb:DescribeTimeToLive",
+  "dynamodb:UpdateContinuousBackups",
+  "dynamodb:UpdateTable",
+  "dynamodb:UpdateTimeToLive",
+];
 
 export interface JaypieMigrationProps {
   /** Path to the bundled migration code (esbuild output directory) */
@@ -48,6 +58,21 @@ export class JaypieMigration extends Construct {
       tables,
       timeout: cdk.Duration.minutes(5),
     });
+
+    // Grant control-plane perms on the passed tables so migrations that
+    // alter table shape (GSIs, TTL, streams, backups) succeed. JaypieLambda
+    // only grants data-plane access via grantReadWriteData. Issue #339.
+    if (tables.length > 0) {
+      this.lambda.addToRolePolicy(
+        new iam.PolicyStatement({
+          actions: DYNAMODB_CONTROL_PLANE_ACTIONS,
+          resources: tables.flatMap((table) => [
+            table.tableArn,
+            `${table.tableArn}/index/*`,
+          ]),
+        }),
+      );
+    }
 
     // Custom Resource provider wrapping the Lambda
     const provider = new cr.Provider(this, "MigrationProvider", {

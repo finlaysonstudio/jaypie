@@ -30,6 +30,25 @@ export const lambdaHandler = createMockFunction<
   };
 });
 
+// Mock implementation of migrationHandler — defaults throw: true so failed
+// migrations propagate to CFN custom resource (issue #339).
+export const migrationHandler = createMockFunction<
+  (handler: HandlerFunction, props?: LambdaOptions) => HandlerFunction
+>((handler, props = {}) => {
+  if (typeof handler === "object" && typeof props === "function") {
+    const temp = handler;
+    handler = props;
+    props = temp;
+  }
+  return async (event: unknown, context: unknown, ...extra: unknown[]) => {
+    return jaypieHandler(handler, { throw: true, ...props })(
+      event,
+      context,
+      ...extra,
+    );
+  };
+});
+
 // Mock stream handler function type
 type StreamHandlerFunction = (
   event: unknown,

@@ -18,6 +18,7 @@ import {
   cors,
   // Lambda
   lambdaHandler,
+  migrationHandler,
 } from "../index.js";
 
 //
@@ -63,6 +64,7 @@ describe("Index", () => {
   describe("Lambda exports", () => {
     it("Exports Lambda functions", () => {
       expect(lambdaHandler).toBeFunction();
+      expect(migrationHandler).toBeFunction();
     });
   });
 });

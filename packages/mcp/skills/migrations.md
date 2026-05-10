@@ -44,16 +44,18 @@ new JaypieMigration(this, "SeedData", {
 - **Role**: Tagged as `CDK.ROLE.PROCESSING`
 - **Execution**: Runs on every deploy via CloudFormation custom resource (uses a deploy nonce to force re-invocation even when only Lambda code changes)
 - **Dependencies**: Use `dependencies` to ensure tables and other resources exist before the migration executes
+- **Permissions**: Tables passed via `tables` get data-plane (`grantReadWriteData`) plus control-plane access (`DescribeTable`, `UpdateTable`, `UpdateTimeToLive`, `UpdateContinuousBackups`) scoped to the table ARN and its indexes — migrations that add GSIs, toggle TTL, or change backups work without extra IAM
 
 ## Migration Lambda Handler
 
-The migration Lambda receives a CloudFormation custom resource event. Return a result to signal success; throw to signal failure and roll back the stack.
+The migration Lambda receives a CloudFormation custom resource event. Use `migrationHandler` so a thrown error fails the CFN custom resource (and the deploy) — `lambdaHandler`'s default `throw: false` returns a success-shaped response on error and CFN reports `CREATE_COMPLETE` even when the migration failed.
 
 ```typescript
 // src/migrations/seed/index.ts
 import { initClient, seedEntities, APEX } from "@jaypie/dynamodb";
+import { migrationHandler } from "jaypie";
 
-export const handler = async (event: any) => {
+export const handler = migrationHandler(async (event) => {
   await initClient();
 
   await seedEntities([
@@ -62,8 +64,10 @@ export const handler = async (event: any) => {
   ]);
 
   return { status: "complete" };
-};
+});
 ```
+
+`migrationHandler` is `lambdaHandler` with `throw: true` defaulted. Pass `{ throw: false }` to opt back into soft-fail behavior.
 
 ## Building Migration Code
 
