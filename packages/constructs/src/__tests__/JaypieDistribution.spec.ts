@@ -1726,6 +1726,344 @@ describe("JaypieDistribution", () => {
       });
     });
 
+    describe("waf.allow path-scoped relaxation (#342)", () => {
+      const findRulesOfName = (template: Template, ruleName: string): any[] => {
+        const resources = template.findResources("AWS::WAFv2::WebACL");
+        const webAcl = Object.values(resources)[0];
+        const rules = (webAcl as any)?.Properties?.Rules || [];
+        return rules.filter((r: any) => {
+          if (r.Name === ruleName) return true;
+          if (
+            typeof r.Name === "string" &&
+            r.Name.startsWith(`${ruleName}-allow-`)
+          )
+            return true;
+          const statementName = r.Statement?.ManagedRuleGroupStatement?.Name;
+          return statementName === ruleName;
+        });
+      };
+
+      it("emits one relaxed rule and one strict rule for a group named in allow", () => {
+        const stack = new Stack();
+        const bucket = new s3.Bucket(stack, "TestBucket");
+        const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
+
+        new JaypieDistribution(stack, "TestDistribution", {
+          handler: origin,
+          waf: {
+            name: "test",
+            allow: [
+              {
+                path: "/hooks/*",
+                AWSManagedRulesCommonRuleSet: ["ExploitablePaths_URIPATH"],
+              },
+            ],
+          },
+        });
+        const template = Template.fromStack(stack);
+        const matched = findRulesOfName(
+          template,
+          "AWSManagedRulesCommonRuleSet",
+        );
+        expect(matched.length).toBe(2);
+      });
+
+      it("relaxed rule uses STARTS_WITH for trailing-star paths and overrides to count", () => {
+        const stack = new Stack();
+        const bucket = new s3.Bucket(stack, "TestBucket");
+        const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
+
+        new JaypieDistribution(stack, "TestDistribution", {
+          handler: origin,
+          waf: {
+            name: "test",
+            allow: [
+              {
+                path: "/hooks/*",
+                AWSManagedRulesCommonRuleSet: ["ExploitablePaths_URIPATH"],
+              },
+            ],
+          },
+        });
+        const template = Template.fromStack(stack);
+
+        template.hasResourceProperties("AWS::WAFv2::WebACL", {
+          Rules: Match.arrayWith([
+            Match.objectLike({
+              Statement: {
+                ManagedRuleGroupStatement: Match.objectLike({
+                  Name: "AWSManagedRulesCommonRuleSet",
+                  RuleActionOverrides: Match.arrayWith([
+                    {
+                      Name: "ExploitablePaths_URIPATH",
+                      ActionToUse: { Count: {} },
+                    },
+                  ]),
+                  ScopeDownStatement: {
+                    ByteMatchStatement: Match.objectLike({
+                      PositionalConstraint: "STARTS_WITH",
+                      SearchString: "/hooks/",
+                    }),
+                  },
+                }),
+              },
+            }),
+          ]),
+        });
+      });
+
+      it("strict rule scope-down is NOT of the relaxed paths", () => {
+        const stack = new Stack();
+        const bucket = new s3.Bucket(stack, "TestBucket");
+        const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
+
+        new JaypieDistribution(stack, "TestDistribution", {
+          handler: origin,
+          waf: {
+            name: "test",
+            allow: [
+              {
+                path: "/hooks/*",
+                AWSManagedRulesCommonRuleSet: ["ExploitablePaths_URIPATH"],
+              },
+            ],
+          },
+        });
+        const template = Template.fromStack(stack);
+        const matched = findRulesOfName(
+          template,
+          "AWSManagedRulesCommonRuleSet",
+        );
+        const strict = matched.find(
+          (r: any) =>
+            !r.Statement?.ManagedRuleGroupStatement?.RuleActionOverrides,
+        );
+        expect(strict).toBeDefined();
+        expect(
+          strict?.Statement?.ManagedRuleGroupStatement?.ScopeDownStatement
+            ?.NotStatement?.Statement?.ByteMatchStatement?.SearchString,
+        ).toBe("/hooks/");
+      });
+
+      it("treats paths without trailing star as EXACTLY", () => {
+        const stack = new Stack();
+        const bucket = new s3.Bucket(stack, "TestBucket");
+        const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
+
+        new JaypieDistribution(stack, "TestDistribution", {
+          handler: origin,
+          waf: {
+            name: "test",
+            allow: [
+              {
+                path: "/exact/path",
+                AWSManagedRulesCommonRuleSet: ["ExploitablePaths_URIPATH"],
+              },
+            ],
+          },
+        });
+        const template = Template.fromStack(stack);
+
+        template.hasResourceProperties("AWS::WAFv2::WebACL", {
+          Rules: Match.arrayWith([
+            Match.objectLike({
+              Statement: {
+                ManagedRuleGroupStatement: Match.objectLike({
+                  Name: "AWSManagedRulesCommonRuleSet",
+                  ScopeDownStatement: {
+                    ByteMatchStatement: Match.objectLike({
+                      PositionalConstraint: "EXACTLY",
+                      SearchString: "/exact/path",
+                    }),
+                  },
+                }),
+              },
+            }),
+          ]),
+        });
+      });
+
+      it("ORs multiple paths in one entry", () => {
+        const stack = new Stack();
+        const bucket = new s3.Bucket(stack, "TestBucket");
+        const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
+
+        new JaypieDistribution(stack, "TestDistribution", {
+          handler: origin,
+          waf: {
+            name: "test",
+            allow: [
+              {
+                path: ["/hooks/*", "/webhooks/*"],
+                AWSManagedRulesCommonRuleSet: "ExploitablePaths_URIPATH",
+              },
+            ],
+          },
+        });
+        const template = Template.fromStack(stack);
+        const matched = findRulesOfName(
+          template,
+          "AWSManagedRulesCommonRuleSet",
+        );
+        const relaxed = matched.find(
+          (r: any) =>
+            r.Statement?.ManagedRuleGroupStatement?.RuleActionOverrides,
+        );
+        const orStatements =
+          relaxed?.Statement?.ManagedRuleGroupStatement?.ScopeDownStatement
+            ?.OrStatement?.Statements;
+        expect(Array.isArray(orStatements)).toBe(true);
+        expect(orStatements.length).toBe(2);
+      });
+
+      it("accepts a bare object (not wrapped in an array)", () => {
+        const stack = new Stack();
+        const bucket = new s3.Bucket(stack, "TestBucket");
+        const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
+
+        new JaypieDistribution(stack, "TestDistribution", {
+          handler: origin,
+          waf: {
+            name: "test",
+            allow: {
+              path: "/hooks/*",
+              AWSManagedRulesCommonRuleSet: "ExploitablePaths_URIPATH",
+            },
+          },
+        });
+        const template = Template.fromStack(stack);
+        const matched = findRulesOfName(
+          template,
+          "AWSManagedRulesCommonRuleSet",
+        );
+        expect(matched.length).toBe(2);
+      });
+
+      it("leaves groups not named in allow with their single-entry shape", () => {
+        const stack = new Stack();
+        const bucket = new s3.Bucket(stack, "TestBucket");
+        const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
+
+        new JaypieDistribution(stack, "TestDistribution", {
+          handler: origin,
+          waf: {
+            name: "test",
+            allow: [
+              {
+                path: "/hooks/*",
+                AWSManagedRulesCommonRuleSet: ["ExploitablePaths_URIPATH"],
+              },
+            ],
+          },
+        });
+        const template = Template.fromStack(stack);
+        const matched = findRulesOfName(
+          template,
+          "AWSManagedRulesKnownBadInputsRuleSet",
+        );
+        expect(matched.length).toBe(1);
+        expect(
+          matched[0]?.Statement?.ManagedRuleGroupStatement?.ScopeDownStatement,
+        ).toBeUndefined();
+      });
+
+      it("composes with managedRuleOverrides — baseline applies to both relaxed and strict", () => {
+        const stack = new Stack();
+        const bucket = new s3.Bucket(stack, "TestBucket");
+        const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
+
+        new JaypieDistribution(stack, "TestDistribution", {
+          handler: origin,
+          waf: {
+            name: "test",
+            managedRuleOverrides: {
+              AWSManagedRulesCommonRuleSet: [
+                { name: "SizeRestrictions_BODY", actionToUse: { count: {} } },
+              ],
+            },
+            allow: [
+              {
+                path: "/hooks/*",
+                AWSManagedRulesCommonRuleSet: ["ExploitablePaths_URIPATH"],
+              },
+            ],
+          },
+        });
+        const template = Template.fromStack(stack);
+        const matched = findRulesOfName(
+          template,
+          "AWSManagedRulesCommonRuleSet",
+        );
+
+        const relaxed = matched.find(
+          (r: any) =>
+            r.Statement?.ManagedRuleGroupStatement?.ScopeDownStatement
+              ?.ByteMatchStatement,
+        );
+        const strict = matched.find(
+          (r: any) =>
+            r.Statement?.ManagedRuleGroupStatement?.ScopeDownStatement
+              ?.NotStatement,
+        );
+
+        const relaxedOverrideNames = (
+          relaxed?.Statement?.ManagedRuleGroupStatement?.RuleActionOverrides ??
+          []
+        ).map((o: any) => o.Name);
+        expect(relaxedOverrideNames).toContain("SizeRestrictions_BODY");
+        expect(relaxedOverrideNames).toContain("ExploitablePaths_URIPATH");
+
+        const strictOverrideNames = (
+          strict?.Statement?.ManagedRuleGroupStatement?.RuleActionOverrides ??
+          []
+        ).map((o: any) => o.Name);
+        expect(strictOverrideNames).toContain("SizeRestrictions_BODY");
+        expect(strictOverrideNames).not.toContain("ExploitablePaths_URIPATH");
+      });
+
+      it("strict NotStatement excludes the union of paths across all entries for a group", () => {
+        const stack = new Stack();
+        const bucket = new s3.Bucket(stack, "TestBucket");
+        const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
+
+        new JaypieDistribution(stack, "TestDistribution", {
+          handler: origin,
+          waf: {
+            name: "test",
+            allow: [
+              {
+                path: "/hooks/*",
+                AWSManagedRulesCommonRuleSet: ["ExploitablePaths_URIPATH"],
+              },
+              {
+                path: "/webhooks/*",
+                AWSManagedRulesCommonRuleSet: ["SizeRestrictions_BODY"],
+              },
+            ],
+          },
+        });
+        const template = Template.fromStack(stack);
+        const matched = findRulesOfName(
+          template,
+          "AWSManagedRulesCommonRuleSet",
+        );
+        const strict = matched.find(
+          (r: any) =>
+            r.Statement?.ManagedRuleGroupStatement?.ScopeDownStatement
+              ?.NotStatement,
+        );
+        const orStatements =
+          strict?.Statement?.ManagedRuleGroupStatement?.ScopeDownStatement
+            ?.NotStatement?.Statement?.OrStatement?.Statements;
+        expect(Array.isArray(orStatements)).toBe(true);
+        const searchStrings = orStatements.map(
+          (s: any) => s.ByteMatchStatement?.SearchString,
+        );
+        expect(searchStrings).toContain("/hooks/");
+        expect(searchStrings).toContain("/webhooks/");
+      });
+    });
+
     it("supports existing WebACL ARN", () => {
       const stack = new Stack();
       const bucket = new s3.Bucket(stack, "TestBucket");
