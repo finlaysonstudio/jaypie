@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { Stack } from "aws-cdk-lib";
+import { Duration, Stack } from "aws-cdk-lib";
 import { Match, Template } from "aws-cdk-lib/assertions";
 import * as dynamodb from "aws-cdk-lib/aws-dynamodb";
 import * as lambda from "aws-cdk-lib/aws-lambda";
@@ -136,6 +136,41 @@ describe("JaypieMigration", () => {
       expect(allActions.has("dynamodb:UpdateTable")).toBe(true);
       expect(allActions.has("dynamodb:UpdateTimeToLive")).toBe(true);
       expect(allActions.has("dynamodb:UpdateContinuousBackups")).toBe(true);
+    });
+
+    it("defaults Lambda timeout to 15 minutes (issue #341)", () => {
+      const stack = new Stack();
+      new JaypieMigration(stack, "TestMigration", {
+        code: lambda.Code.fromInline("exports.handler = () => {}"),
+        handler: "index.handler",
+      });
+
+      const template = Template.fromStack(stack);
+      const resources = template.findResources("AWS::Lambda::Function");
+      const lambdaFunctions = Object.values(resources);
+      const migrationLambda = lambdaFunctions.find(
+        (r: any) => r.Properties?.Handler === "index.handler",
+      );
+
+      expect(migrationLambda?.Properties?.Timeout).toBe(900);
+    });
+
+    it("accepts a custom timeout (issue #341)", () => {
+      const stack = new Stack();
+      new JaypieMigration(stack, "TestMigration", {
+        code: lambda.Code.fromInline("exports.handler = () => {}"),
+        handler: "index.handler",
+        timeout: Duration.minutes(7),
+      });
+
+      const template = Template.fromStack(stack);
+      const resources = template.findResources("AWS::Lambda::Function");
+      const lambdaFunctions = Object.values(resources);
+      const migrationLambda = lambdaFunctions.find(
+        (r: any) => r.Properties?.Handler === "index.handler",
+      );
+
+      expect(migrationLambda?.Properties?.Timeout).toBe(420);
     });
 
     it("does not grant DynamoDB perms with star resource (issue #339)", () => {

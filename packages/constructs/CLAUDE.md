@@ -259,7 +259,28 @@ new JaypieDistribution(this, "Dist", {
     },
   },
 });
+
+// Path-scoped relaxations: flip specific sub-rules to count only on listed paths
+new JaypieDistribution(this, "Dist", {
+  handler,
+  waf: {
+    name: "api",
+    allow: [
+      {
+        path: "/hooks/*", // trailing * → STARTS_WITH; otherwise EXACTLY
+        AWSManagedRulesCommonRuleSet: ["ExploitablePaths_URIPATH"],
+        AWSManagedRulesKnownBadInputsRuleSet: ["CrossSiteScripting_BODY"],
+      },
+    ],
+  },
+});
 ```
+
+`waf.allow` composes with `managedRuleOverrides`: the baseline overrides apply
+to both the relaxed and strict emissions of a group; entries in `allow`
+further relax specific (path × sub-rule) intersections. Groups not named in
+`allow` keep their existing single-rule emission. `path` and each rule-group
+value accept either a single string or an array.
 
 ### Streaming Lambda
 

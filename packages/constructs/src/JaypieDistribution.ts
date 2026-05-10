@@ -31,6 +31,18 @@ const DEFAULT_MANAGED_RULES = [
   "AWSManagedRulesKnownBadInputsRuleSet",
 ];
 
+/**
+ * One entry in a `waf.allow` list. Names one or more URL paths and, for each
+ * managed rule group key, the sub-rule names to flip from `block` to `count`
+ * on that path set. See JaypieWafConfig.allow.
+ */
+export interface JaypieWafAllowEntry {
+  /** URL path or paths. Trailing `*` → STARTS_WITH; otherwise EXACTLY. */
+  path: string | string[];
+  /** Managed-rule-group keys (e.g. AWSManagedRulesCommonRuleSet) → sub-rule names. */
+  [ruleGroupKey: string]: string | string[] | undefined;
+}
+
 export interface JaypieWafConfig {
   /**
    * Unique name for this distribution's WAF resources. Required when passing a
@@ -108,6 +120,27 @@ export interface JaypieWafConfig {
    * @default 2000
    */
   rateLimitPerIp?: number;
+
+  /**
+   * Path-scoped relaxations layered on top of the default managed-rule groups.
+   * Each entry names one or more URL paths and, for each managed rule group
+   * key, the sub-rule names to flip from `block` to `count` on that path set.
+   * Strict default action is preserved on every other path.
+   *
+   * Composes with `managedRuleOverrides`: the baseline override list applies
+   * to both the relaxed and strict emissions of a group; entries in `allow`
+   * additionally relax specific (path × sub-rule) intersections.
+   *
+   * @example
+   * allow: [
+   *   {
+   *     path: "/hooks/*",
+   *     AWSManagedRulesCommonRuleSet: ["ExploitablePaths_URIPATH"],
+   *     AWSManagedRulesKnownBadInputsRuleSet: ["CrossSiteScripting_BODY"],
+   *   },
+   * ]
+   */
+  allow?: JaypieWafAllowEntry | JaypieWafAllowEntry[];
 
   /**
    * Use an existing WebACL ARN instead of creating one
@@ -572,19 +605,135 @@ export class JaypieDistribution
       } else {
         // Create new WebACL
         const {
+          allow,
           managedRuleOverrides,
           managedRuleScopeDowns,
           managedRules = DEFAULT_MANAGED_RULES,
           rateLimitPerIp = DEFAULT_RATE_LIMIT,
         } = wafConfig;
 
+        const allowEntries: JaypieWafAllowEntry[] = allow
+          ? Array.isArray(allow)
+            ? allow
+            : [allow]
+          : [];
+
+        // Group allow entries by managed rule group name
+        type GroupAllowance = { paths: string[]; ruleNames: string[] };
+        const groupAllowances: Record<string, GroupAllowance[]> = {};
+        for (const entry of allowEntries) {
+          const paths = Array.isArray(entry.path) ? entry.path : [entry.path];
+          for (const key of Object.keys(entry)) {
+            if (key === "path") continue;
+            const raw = entry[key];
+            if (raw == null) continue;
+            const ruleNames = Array.isArray(raw) ? raw : [raw];
+            if (!groupAllowances[key]) groupAllowances[key] = [];
+            groupAllowances[key].push({ paths, ruleNames });
+          }
+        }
+
+        const pathToStatement = (
+          path: string,
+        ): wafv2.CfnWebACL.StatementProperty => {
+          const isPrefix = path.endsWith("*");
+          return {
+            byteMatchStatement: {
+              fieldToMatch: { uriPath: {} },
+              positionalConstraint: isPrefix ? "STARTS_WITH" : "EXACTLY",
+              searchString: isPrefix ? path.slice(0, -1) : path,
+              textTransformations: [{ priority: 0, type: "NONE" }],
+            },
+          };
+        };
+
+        const pathsToStatement = (
+          paths: string[],
+        ): wafv2.CfnWebACL.StatementProperty => {
+          if (paths.length === 1) return pathToStatement(paths[0]);
+          return {
+            orStatement: { statements: paths.map(pathToStatement) },
+          };
+        };
+
+        const andScopeDown = (
+          base: wafv2.CfnWebACL.StatementProperty | undefined,
+          extra: wafv2.CfnWebACL.StatementProperty,
+        ): wafv2.CfnWebACL.StatementProperty =>
+          base ? { andStatement: { statements: [base, extra] } } : extra;
+
         let priority = 0;
         const rules: wafv2.CfnWebACL.RuleProperty[] = [];
 
         // Add managed rule groups
         for (const ruleName of managedRules) {
-          const ruleActionOverrides = managedRuleOverrides?.[ruleName];
-          const scopeDownStatement = managedRuleScopeDowns?.[ruleName];
+          const baseOverrides = managedRuleOverrides?.[ruleName];
+          const baseScopeDown = managedRuleScopeDowns?.[ruleName];
+          const allowances = groupAllowances[ruleName];
+
+          if (!allowances || allowances.length === 0) {
+            rules.push({
+              name: ruleName,
+              priority: priority++,
+              overrideAction: { none: {} },
+              statement: {
+                managedRuleGroupStatement: {
+                  name: ruleName,
+                  vendorName: "AWS",
+                  ...(baseOverrides && { ruleActionOverrides: baseOverrides }),
+                  ...(baseScopeDown && { scopeDownStatement: baseScopeDown }),
+                },
+              },
+              visibilityConfig: {
+                cloudWatchMetricsEnabled: true,
+                metricName: ruleName,
+                sampledRequestsEnabled: true,
+              },
+            });
+            continue;
+          }
+
+          // Emit one relaxed rule per allow entry that names this group
+          allowances.forEach(({ paths, ruleNames }, index) => {
+            const entryOverrides: wafv2.CfnWebACL.RuleActionOverrideProperty[] =
+              ruleNames.map((n) => ({
+                name: n,
+                actionToUse: { count: {} },
+              }));
+            const combinedOverrides = [
+              ...(baseOverrides ?? []),
+              ...entryOverrides,
+            ];
+            const relaxedScopeDown = andScopeDown(
+              baseScopeDown,
+              pathsToStatement(paths),
+            );
+            const relaxedName = `${ruleName}-allow-${index}`;
+            rules.push({
+              name: relaxedName,
+              priority: priority++,
+              overrideAction: { none: {} },
+              statement: {
+                managedRuleGroupStatement: {
+                  name: ruleName,
+                  vendorName: "AWS",
+                  ruleActionOverrides: combinedOverrides,
+                  scopeDownStatement: relaxedScopeDown,
+                },
+              },
+              visibilityConfig: {
+                cloudWatchMetricsEnabled: true,
+                metricName: relaxedName,
+                sampledRequestsEnabled: true,
+              },
+            });
+          });
+
+          // Emit one strict rule whose scope-down excludes every relaxed path
+          const allPaths = allowances.flatMap((a) => a.paths);
+          const strictScopeDown = andScopeDown(baseScopeDown, {
+            notStatement: { statement: pathsToStatement(allPaths) },
+          });
           rules.push({
             name: ruleName,
             priority: priority++,
@@ -593,8 +742,8 @@ export class JaypieDistribution
               managedRuleGroupStatement: {
                 name: ruleName,
                 vendorName: "AWS",
-                ...(ruleActionOverrides && { ruleActionOverrides }),
-                ...(scopeDownStatement && { scopeDownStatement }),
+                ...(baseOverrides && { ruleActionOverrides: baseOverrides }),
+                scopeDownStatement: strictScopeDown,
               },
             },
             visibilityConfig: {

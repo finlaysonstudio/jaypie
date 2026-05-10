@@ -2,7 +2,7 @@ import { sleep } from "@jaypie/kit";
 import { BadGatewayError } from "@jaypie/errors";
 
 import { getLogger } from "../../util/index.js";
-import { isTransientNetworkError } from "./isTransientNetworkError.js";
+import { createStaleRejectionGuard } from "./createStaleRejectionGuard.js";
 import {
   HookRunner,
   hookRunner as defaultHookRunner,
@@ -75,28 +75,11 @@ export class RetryExecutor {
     const log = getLogger();
     let attempt = 0;
 
-    // Persistent guard against stale socket errors (TypeError: terminated).
-    // Installed after the first abort and kept alive through subsequent attempts
-    // so that asynchronous undici socket teardown errors that fire between
-    // sleep completion and the next operation's await are caught.
-    let staleGuard: ((reason: unknown) => void) | undefined;
-
-    const installGuard = () => {
-      if (staleGuard) return;
-      staleGuard = (reason: unknown) => {
-        if (isTransientNetworkError(reason)) {
-          log.trace("Suppressed stale socket error during retry");
-        }
-      };
-      process.on("unhandledRejection", staleGuard);
-    };
-
-    const removeGuard = () => {
-      if (staleGuard) {
-        process.removeListener("unhandledRejection", staleGuard);
-        staleGuard = undefined;
-      }
-    };
+    // Guard against stale rejections firing on a subsequent microtask after
+    // the retry layer has already caught the originating error: undici socket
+    // teardown (TypeError: terminated) and twin upstream-SDK rejections
+    // (e.g. issue #336 — OpenRouter SyntaxError siblings).
+    const guard = createStaleRejectionGuard();
 
     try {
       while (true) {
@@ -111,13 +94,10 @@ export class RetryExecutor {
 
           return result;
         } catch (error: unknown) {
-          // Abort the previous request to kill lingering socket callbacks
           controller.abort("retry");
 
-          // Install the guard immediately after abort — stale socket errors
-          // can fire on any subsequent microtask boundary (during hook calls,
-          // sleep, or the next operation attempt)
-          installGuard();
+          guard.recordCaught(error);
+          guard.install();
 
           // Check if we've exhausted retries
           if (!this.policy.shouldRetry(attempt)) {
@@ -176,7 +156,7 @@ export class RetryExecutor {
         }
       }
     } finally {
-      removeGuard();
+      guard.remove();
     }
   }
 }

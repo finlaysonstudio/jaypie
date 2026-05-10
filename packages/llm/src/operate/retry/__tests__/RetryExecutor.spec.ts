@@ -398,6 +398,36 @@ describe("RetryExecutor", () => {
       expect(result).toBe("success");
     });
 
+    it("suppresses sibling rejection of the just-caught error (issue #336)", async () => {
+      // Mirror the OpenRouter scenario: caught error is a SyntaxError, and
+      // the SDK fires a twin rejection of the same shape on a later microtask.
+      const looseExecutor = new RetryExecutor({
+        errorClassifier: {
+          isRetryable: () => true,
+          isKnownError: () => true,
+        },
+        policy: new RetryPolicy({ maxRetries: 3 }),
+      });
+
+      const caught = new SyntaxError("Unexpected end of JSON input");
+      const sibling = new SyntaxError("Unexpected end of JSON input");
+      const siblingPromise = Promise.reject(sibling);
+      siblingPromise.catch(() => {});
+
+      const operation = vi
+        .fn()
+        .mockImplementationOnce(() => Promise.reject(caught))
+        .mockImplementationOnce(() => {
+          process.emit("unhandledRejection", sibling, siblingPromise);
+          return Promise.resolve("success");
+        });
+
+      const result = await looseExecutor.execute(operation, {
+        context: mockContext,
+      });
+      expect(result).toBe("success");
+    });
+
     it("cleans up guard after execute completes successfully", async () => {
       const removeSpy = vi.spyOn(process, "removeListener");
 
