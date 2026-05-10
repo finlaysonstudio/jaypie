@@ -1,5 +1,6 @@
 import lambdaHandler from "./lambdaHandler.js";
 import lambdaStreamHandler from "./lambdaStreamHandler.js";
+import migrationHandler from "./migrationHandler.js";
 import websocketHandler from "./websocketHandler.js";
 
 //
@@ -7,7 +8,12 @@ import websocketHandler from "./websocketHandler.js";
 // Export
 //
 
-export { lambdaHandler, lambdaStreamHandler, websocketHandler };
+export {
+  lambdaHandler,
+  lambdaStreamHandler,
+  migrationHandler,
+  websocketHandler,
+};
 export type {
   LambdaContext,
   LambdaHandlerFunction,

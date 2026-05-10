@@ -1,6 +1,6 @@
 {
   "name": "jaypie",
-  "version": "1.2.45",
+  "version": "1.2.46",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/finlaysonstudio/jaypie.git"
@@ -38,7 +38,7 @@
     "@jaypie/errors": "^1.2.1",
     "@jaypie/express": "^1.2.23",
     "@jaypie/kit": "^1.2.8",
-    "@jaypie/lambda": "^1.2.5",
+    "@jaypie/lambda": "^1.2.6",
     "@jaypie/logger": "^1.2.15"
   },
   "devDependencies": {

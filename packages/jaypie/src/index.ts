@@ -31,7 +31,11 @@ export * from "@jaypie/datadog";
 export * from "@jaypie/express";
 
 // Lambda - explicitly export to avoid type conflicts with @jaypie/express
-export { lambdaHandler, lambdaStreamHandler } from "@jaypie/lambda";
+export {
+  lambdaHandler,
+  lambdaStreamHandler,
+  migrationHandler,
+} from "@jaypie/lambda";
 export type {
   AwsStreamingHandler,
   LambdaHandlerFunction,
