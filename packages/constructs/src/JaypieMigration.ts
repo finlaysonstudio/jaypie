@@ -30,6 +30,8 @@ export interface JaypieMigrationProps {
   secrets?: SecretsArrayItem[];
   /** DynamoDB tables to grant read/write access */
   tables?: dynamodb.ITable[];
+  /** Lambda timeout. Defaults to 15 minutes (Lambda max). */
+  timeout?: cdk.Duration;
 }
 
 export class JaypieMigration extends Construct {
@@ -45,9 +47,9 @@ export class JaypieMigration extends Construct {
       handler = "index.handler",
       secrets = [],
       tables = [],
+      timeout = cdk.Duration.minutes(15),
     } = props;
 
-    // Migration Lambda — 5 minute timeout for long-running migrations
     this.lambda = new JaypieLambda(this, "MigrationLambda", {
       code,
       description: "DynamoDB migration custom resource",
@@ -56,7 +58,7 @@ export class JaypieMigration extends Construct {
       roleTag: CDK.ROLE.PROCESSING,
       secrets,
       tables,
-      timeout: cdk.Duration.minutes(5),
+      timeout,
     });
 
     // Grant control-plane perms on the passed tables so migrations that
