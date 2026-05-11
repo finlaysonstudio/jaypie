@@ -171,7 +171,7 @@ describe("JaypieSecret", () => {
       process.env = { ...originalEnv };
     });
 
-    it("provider shorthand export name uses key, not prefixed construct id", () => {
+    it("provider shorthand export name uses prefixed construct id for backward compatibility", () => {
       process.env.MY_SECRET = "my-value";
       process.env.PROJECT_ENV = CDK.ENV.SANDBOX;
       process.env.PROJECT_KEY = "testproject";
@@ -186,7 +186,7 @@ describe("JaypieSecret", () => {
         .map((o: any) => o.Export.Name);
 
       expect(exportNames.length).toBe(1);
-      expect(exportNames[0]).toBe("env-sandbox-testproject-MYSECRET");
+      expect(exportNames[0]).toBe("env-sandbox-testproject-EnvSecretMYSECRET");
     });
 
     it("consumer:true export name uses sandbox format without relying on PROJECT_ENV=personal", () => {
@@ -199,7 +199,7 @@ describe("JaypieSecret", () => {
       const template = Template.fromStack(stack);
 
       const templateStr = JSON.stringify(template.toJSON());
-      expect(templateStr).toContain("env-sandbox-testproject-MYSECRET");
+      expect(templateStr).toContain("env-sandbox-testproject-EnvSecretMYSECRET");
       expect(templateStr).not.toContain("undefined");
     });
 
