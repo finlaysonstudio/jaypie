@@ -120,7 +120,12 @@ export class JaypieEnvSecret extends Construct implements ISecret {
     let exportName;
 
     if (!exportParam) {
-      exportName = exportEnvName(envKey || id, process.env, consumer);
+      // When shorthand detection is active, use the full construct id (which
+      // includes the "EnvSecret_" prefix) so the export name matches what was
+      // produced by earlier versions of this construct. Using the raw envKey
+      // here produces a shorter name that breaks existing cross-stack imports.
+      const exportSource = treatAsEnvKey ? id : envKey || id;
+      exportName = exportEnvName(exportSource, process.env, consumer);
     } else {
       exportName = cleanName(exportParam);
     }
