@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { describe, expect, it, vi, beforeEach, Mock } from "vitest";
 
 import {
   StreamLoop,
@@ -1281,6 +1281,89 @@ describe("StreamLoop", () => {
             title: "Bad Function Call",
           },
         });
+      });
+
+      it("logs at warn level when tool throws, not error", async () => {
+        const { log: mockLog } = await import("@jaypie/logger");
+        const mockLogger = {
+          debug: vi.fn(),
+          error: vi.fn(),
+          trace: vi.fn(),
+          var: vi.fn(),
+          warn: vi.fn(),
+        };
+        (mockLog.lib as Mock).mockReturnValue(mockLogger);
+
+        const toolkit = new Toolkit([
+          {
+            name: "broken_tool",
+            description: "Throws an error",
+            parameters: { type: "object" },
+            type: "function",
+            call: vi.fn(() => {
+              throw new Error("refused: not in allowlist");
+            }),
+          },
+        ]);
+
+        let callCount = 0;
+        mockAdapter.executeStreamRequest = vi.fn(
+          async function* (): AsyncIterable<LlmStreamChunk> {
+            callCount++;
+            if (callCount === 1) {
+              yield {
+                type: LlmStreamChunkType.ToolCall,
+                toolCall: {
+                  id: "call-1",
+                  name: "broken_tool",
+                  arguments: "{}",
+                },
+              };
+              yield {
+                type: LlmStreamChunkType.Done,
+                usage: [
+                  {
+                    input: 10,
+                    output: 10,
+                    reasoning: 0,
+                    total: 20,
+                    provider: "mock",
+                    model: "mock-model",
+                  },
+                ],
+              };
+            } else {
+              yield { type: LlmStreamChunkType.Text, content: "Recovered" };
+              yield {
+                type: LlmStreamChunkType.Done,
+                usage: [
+                  {
+                    input: 10,
+                    output: 10,
+                    reasoning: 0,
+                    total: 20,
+                    provider: "mock",
+                    model: "mock-model",
+                  },
+                ],
+              };
+            }
+          },
+        );
+
+        const loop = new StreamLoop({
+          adapter: mockAdapter,
+          client: mockClient,
+        });
+
+        await collectChunks(
+          loop.execute("Use broken tool", { tools: toolkit, turns: 3 }),
+        );
+
+        expect(mockLogger.warn).toHaveBeenCalledWith(
+          expect.stringContaining("broken_tool"),
+        );
+        expect(mockLogger.error).not.toHaveBeenCalled();
       });
 
       it("passes through error chunks from adapter", async () => {

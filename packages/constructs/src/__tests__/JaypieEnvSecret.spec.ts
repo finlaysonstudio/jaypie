@@ -1,5 +1,5 @@
 import { ConfigurationError } from "@jaypie/errors";
-import { expect, it, describe } from "vitest";
+import { expect, it, describe, afterEach } from "vitest";
 import { RemovalPolicy, Stack } from "aws-cdk-lib";
 import { Template } from "aws-cdk-lib/assertions";
 import { JaypieEnvSecret } from "../JaypieEnvSecret.js";
@@ -161,6 +161,71 @@ describe("JaypieSecret", () => {
         DeletionPolicy: "Retain",
         UpdateReplacePolicy: "Retain",
       });
+    });
+  });
+
+  describe("Issue #347: Cross-stack export name regression", () => {
+    const originalEnv = { ...process.env };
+
+    afterEach(() => {
+      process.env = { ...originalEnv };
+    });
+
+    it("provider shorthand export name uses key, not prefixed construct id", () => {
+      process.env.MY_SECRET = "my-value";
+      process.env.PROJECT_ENV = CDK.ENV.SANDBOX;
+      process.env.PROJECT_KEY = "testproject";
+
+      const stack = new Stack();
+      new JaypieEnvSecret(stack, "MY_SECRET");
+      const template = Template.fromStack(stack);
+
+      const outputs = template.findOutputs("*");
+      const exportNames = Object.values(outputs)
+        .filter((o: any) => o.Export?.Name)
+        .map((o: any) => o.Export.Name);
+
+      expect(exportNames.length).toBe(1);
+      expect(exportNames[0]).toBe("env-sandbox-testproject-MYSECRET");
+    });
+
+    it("consumer:true export name uses sandbox format without relying on PROJECT_ENV=personal", () => {
+      process.env.MY_SECRET = "my-value";
+      process.env.PROJECT_KEY = "testproject";
+      delete process.env.PROJECT_ENV;
+
+      const stack = new Stack();
+      new JaypieEnvSecret(stack, "MY_SECRET", { consumer: true });
+      const template = Template.fromStack(stack);
+
+      const templateStr = JSON.stringify(template.toJSON());
+      expect(templateStr).toContain("env-sandbox-testproject-MYSECRET");
+      expect(templateStr).not.toContain("undefined");
+    });
+
+    it("provider and consumer produce matching export names", () => {
+      process.env.MY_SECRET = "my-value";
+      process.env.PROJECT_KEY = "testproject";
+
+      const providerStack = new Stack();
+      process.env.PROJECT_ENV = CDK.ENV.SANDBOX;
+      new JaypieEnvSecret(providerStack, "MY_SECRET");
+      const providerTemplate = Template.fromStack(providerStack);
+
+      const outputs = providerTemplate.findOutputs("*");
+      const exportNames = Object.values(outputs)
+        .filter((o: any) => o.Export?.Name)
+        .map((o: any) => o.Export.Name as string);
+      expect(exportNames.length).toBe(1);
+      const providerExportName = exportNames[0];
+
+      const consumerStack = new Stack();
+      delete process.env.PROJECT_ENV;
+      new JaypieEnvSecret(consumerStack, "MY_SECRET", { consumer: true });
+      const consumerTemplate = Template.fromStack(consumerStack);
+
+      const consumerStr = JSON.stringify(consumerTemplate.toJSON());
+      expect(consumerStr).toContain(providerExportName);
     });
   });
 
