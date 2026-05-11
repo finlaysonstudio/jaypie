@@ -29,35 +29,74 @@ describe("migrationHandler", () => {
   });
 
   describe("Behavior", () => {
-    it("Returns the handler result on success", async () => {
-      const handler = migrationHandler(async () => ({ status: "complete" }));
-      const result = await handler({}, {});
-      expect(result).toEqual({ status: "complete" });
-    });
-
-    it("Re-throws unhandled errors so CFN sees a failed custom resource", async () => {
-      const handler = migrationHandler(async () => {
-        throw new Error("AccessDeniedException: dynamodb:DescribeTable");
+    describe("onEventHandler mode (event without Data)", () => {
+      it("Returns PhysicalResourceId immediately without calling the user handler", async () => {
+        const userHandler = vi.fn().mockResolvedValue({ status: "complete" });
+        const handler = migrationHandler(userHandler);
+        const result = await handler({}, {});
+        expect(userHandler).not.toHaveBeenCalled();
+        expect(result).toMatchObject({ PhysicalResourceId: expect.any(String) });
       });
-      await expect(handler({}, {})).rejects.toThrow();
+
+      it("Preserves PhysicalResourceId from event for Update and Delete requests", async () => {
+        const handler = migrationHandler(async () => ({ status: "complete" }));
+        const result = await handler(
+          { RequestType: "Update", PhysicalResourceId: "my-migration-123" },
+          {},
+        );
+        expect(result).toMatchObject({ PhysicalResourceId: "my-migration-123" });
+      });
     });
 
-    it("Allows opting out of throwing by passing throw: false", async () => {
-      const handler = migrationHandler(
-        async () => {
-          throw new Error("boom");
-        },
-        { throw: false },
-      );
-      const result = await handler({}, {});
-      expect(result).toBeDefined();
-    });
+    describe("isCompleteHandler mode (event with Data)", () => {
+      it("Runs the user handler and returns IsComplete: true when no pending flag", async () => {
+        const handler = migrationHandler(async () => ({ status: "complete" }));
+        const result = await handler({ Data: {} }, {});
+        expect(result).toMatchObject({ IsComplete: true });
+      });
 
-    it("Accepts options-first parameter order", async () => {
-      const handler = migrationHandler({ name: "test" }, async () => ({
-        ok: true,
-      }));
-      await expect(handler({}, {})).resolves.toEqual({ ok: true });
+      it("Returns IsComplete: false when handler returns pending: true", async () => {
+        const handler = migrationHandler(
+          async () => ({ status: "in-progress", pending: true }),
+        );
+        const result = await handler({ Data: {} }, {});
+        expect(result).toMatchObject({ IsComplete: false });
+      });
+
+      it("Returns IsComplete: true when handler returns pending: false", async () => {
+        const handler = migrationHandler(
+          async () => ({ status: "complete", pending: false }),
+        );
+        const result = await handler({ Data: {} }, {});
+        expect(result).toMatchObject({ IsComplete: true });
+      });
+
+      it("Re-throws unhandled errors so CFN sees a failed custom resource", async () => {
+        const handler = migrationHandler(async () => {
+          throw new Error("AccessDeniedException: dynamodb:DescribeTable");
+        });
+        await expect(handler({ Data: {} }, {})).rejects.toThrow();
+      });
+
+      it("Allows opting out of throwing by passing throw: false", async () => {
+        const handler = migrationHandler(
+          async () => {
+            throw new Error("boom");
+          },
+          { throw: false },
+        );
+        const result = await handler({ Data: {} }, {});
+        expect(result).toBeDefined();
+      });
+
+      it("Accepts options-first parameter order", async () => {
+        const handler = migrationHandler({ name: "test" }, async () => ({
+          ok: true,
+        }));
+        await expect(handler({ Data: {} }, {})).resolves.toMatchObject({
+          IsComplete: true,
+        });
+      });
     });
   });
 });

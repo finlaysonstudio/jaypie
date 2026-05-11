@@ -26,12 +26,16 @@ export interface JaypieMigrationProps {
   environment?: Record<string, string> | (Record<string, string> | string)[];
   /** Lambda handler entry point */
   handler?: string;
+  /** Polling interval between isCompleteHandler invocations. Default: 60 seconds. */
+  queryInterval?: cdk.Duration;
   /** Secrets to make available to the migration Lambda */
   secrets?: SecretsArrayItem[];
   /** DynamoDB tables to grant read/write access */
   tables?: dynamodb.ITable[];
-  /** Lambda timeout. Defaults to 15 minutes (Lambda max). */
+  /** Lambda timeout per invocation. Defaults to 15 minutes (Lambda max). */
   timeout?: cdk.Duration;
+  /** Maximum total wall time across all isCompleteHandler invocations. Default: 2 hours. */
+  totalTimeout?: cdk.Duration;
 }
 
 export class JaypieMigration extends Construct {
@@ -45,9 +49,11 @@ export class JaypieMigration extends Construct {
       dependencies = [],
       environment,
       handler = "index.handler",
+      queryInterval = cdk.Duration.seconds(60),
       secrets = [],
       tables = [],
       timeout = cdk.Duration.minutes(15),
+      totalTimeout = cdk.Duration.hours(2),
     } = props;
 
     this.lambda = new JaypieLambda(this, "MigrationLambda", {
@@ -76,9 +82,14 @@ export class JaypieMigration extends Construct {
       );
     }
 
-    // Custom Resource provider wrapping the Lambda
+    // cr.Provider with isCompleteHandler enables the waiter pattern: onEventHandler
+    // returns PhysicalResourceId immediately; isCompleteHandler is polled via Step
+    // Functions until migrationHandler returns pending: false (or omits pending).
     const provider = new cr.Provider(this, "MigrationProvider", {
+      isCompleteHandler: this.lambda,
       onEventHandler: this.lambda,
+      queryInterval,
+      totalTimeout,
     });
 
     // Custom Resource that triggers on every deploy.

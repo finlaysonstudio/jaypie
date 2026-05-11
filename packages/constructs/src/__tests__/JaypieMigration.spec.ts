@@ -155,6 +155,38 @@ describe("JaypieMigration", () => {
       expect(migrationLambda?.Properties?.Timeout).toBe(900);
     });
 
+    it("provisions Step Functions state machine for waiter pattern (issue #346)", () => {
+      const stack = new Stack();
+      new JaypieMigration(stack, "TestMigration", {
+        code: lambda.Code.fromInline("exports.handler = () => {}"),
+        handler: "index.handler",
+      });
+      const template = Template.fromStack(stack);
+      template.hasResource("AWS::StepFunctions::StateMachine", {});
+    });
+
+    it("accepts queryInterval prop (issue #346)", () => {
+      const stack = new Stack();
+      expect(() => {
+        new JaypieMigration(stack, "TestMigration", {
+          code: lambda.Code.fromInline("exports.handler = () => {}"),
+          handler: "index.handler",
+          queryInterval: Duration.seconds(30),
+        });
+      }).not.toThrow();
+    });
+
+    it("accepts totalTimeout prop (issue #346)", () => {
+      const stack = new Stack();
+      expect(() => {
+        new JaypieMigration(stack, "TestMigration", {
+          code: lambda.Code.fromInline("exports.handler = () => {}"),
+          handler: "index.handler",
+          totalTimeout: Duration.hours(4),
+        });
+      }).not.toThrow();
+    });
+
     it("accepts a custom timeout (issue #341)", () => {
       const stack = new Stack();
       new JaypieMigration(stack, "TestMigration", {
