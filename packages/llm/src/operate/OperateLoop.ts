@@ -447,7 +447,7 @@ export class OperateLoop {
               toolResultFormatted as LlmInputMessage,
             );
 
-            log.error(`Error executing function call ${toolCall.name}`);
+            log.warn(`Error executing function call ${toolCall.name}`);
             log.var({ error });
 
             // Track consecutive errors and stop if threshold reached

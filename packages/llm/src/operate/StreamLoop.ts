@@ -509,7 +509,7 @@ export class StreamLoop {
           name: toolCall.name,
         } as LlmToolResult & { name: string });
 
-        log.error(`Error executing function call ${toolCall.name}`);
+        log.warn(`Error executing function call ${toolCall.name}`);
         log.var({ error });
 
         // Track consecutive errors and stop if threshold reached

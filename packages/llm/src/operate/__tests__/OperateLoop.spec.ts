@@ -486,6 +486,86 @@ describe("OperateLoop", () => {
 
         expect(beforeToolHook).toHaveBeenCalled();
       });
+
+      it("logs at warn level when tool throws, not error", async () => {
+        const { log: mockLog } = await import("@jaypie/logger");
+        const mockLogger = {
+          debug: vi.fn(),
+          error: vi.fn(),
+          trace: vi.fn(),
+          var: vi.fn(),
+          warn: vi.fn(),
+        };
+        (mockLog.lib as Mock).mockReturnValue(mockLogger);
+
+        let callCount = 0;
+        mockAdapter.parseResponse = vi.fn((response): ParsedResponse => {
+          callCount++;
+          if (callCount === 1) {
+            return {
+              content: undefined,
+              hasToolCalls: true,
+              stopReason: "tool_use",
+              usage: {
+                input: 10,
+                output: 20,
+                reasoning: 0,
+                total: 30,
+                provider: "mock",
+                model: "mock-model",
+              },
+              raw: response,
+            };
+          }
+          return {
+            content: "Done!",
+            hasToolCalls: false,
+            stopReason: "end_turn",
+            usage: {
+              input: 10,
+              output: 20,
+              reasoning: 0,
+              total: 30,
+              provider: "mock",
+              model: "mock-model",
+            },
+            raw: response,
+          };
+        }) as Mock;
+
+        mockAdapter.extractToolCalls = vi.fn((): StandardToolCall[] => [
+          {
+            callId: "call-123",
+            name: "test_tool",
+            arguments: "{}",
+            raw: {},
+          },
+        ]);
+
+        const toolkit = new Toolkit([
+          {
+            name: "test_tool",
+            description: "A test tool",
+            parameters: { type: "object" },
+            type: "function",
+            call: vi.fn(() => {
+              throw new Error("refused: not in allowlist");
+            }),
+          },
+        ]);
+
+        const loop = new OperateLoop({
+          adapter: mockAdapter,
+          client: mockClient,
+        });
+
+        await loop.execute("Call the tool", { tools: toolkit, turns: 3 });
+
+        expect(mockLogger.warn).toHaveBeenCalledWith(
+          expect.stringContaining("test_tool"),
+        );
+        expect(mockLogger.error).not.toHaveBeenCalled();
+      });
     });
 
     describe("Structured Output", () => {
