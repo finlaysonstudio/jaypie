@@ -10,7 +10,7 @@ const FIRST_CLASS_PROVIDER = {
   GEMINI: {
     DEFAULT: "gemini-3.1-pro-preview" as const,
     LARGE: "gemini-3.1-pro-preview" as const,
-    SMALL: "gemini-3-flash-preview" as const,
+    SMALL: "gemini-3.1-flash-lite-preview" as const,
     TINY: "gemini-3.1-flash-lite-preview" as const,
   },
   // https://developers.openai.com/api/docs/models
@@ -22,9 +22,9 @@ const FIRST_CLASS_PROVIDER = {
   },
   // https://docs.x.ai/developers/models
   XAI: {
-    DEFAULT: "grok-4.20-0309-reasoning" as const,
-    LARGE: "grok-4.20-0309-reasoning" as const,
-    SMALL: "grok-4.20-0309-non-reasoning" as const,
+    DEFAULT: "grok-latest" as const,
+    LARGE: "grok-4.3-latest" as const,
+    SMALL: "grok-4-1-fast-reasoning" as const,
     TINY: "grok-4-1-fast-non-reasoning" as const,
   },
 };
