@@ -44,14 +44,18 @@ function cleanName(name: string): string {
   return name.replace(/[^a-zA-Z0-9:-]/g, "");
 }
 
-function exportEnvName(name: string, env = process.env): string {
+function exportEnvName(
+  name: string,
+  env = process.env,
+  consumer = false,
+): string {
   let rawName;
   if (checkEnvIsProvider(env)) {
     rawName = `env-${env.PROJECT_ENV}-${env.PROJECT_KEY}-${name}`;
     // Clean the entire name to only allow alphanumeric, colons, and hyphens
     return cleanName(rawName);
   } else {
-    if (checkEnvIsConsumer(env)) {
+    if (consumer || checkEnvIsConsumer(env)) {
       rawName = `env-${CDK.ENV.SANDBOX}-${env.PROJECT_KEY}-${name}`;
     } else {
       rawName = `env-${env.PROJECT_ENV}-${env.PROJECT_KEY}-${name}`;
@@ -116,7 +120,7 @@ export class JaypieEnvSecret extends Construct implements ISecret {
     let exportName;
 
     if (!exportParam) {
-      exportName = exportEnvName(id);
+      exportName = exportEnvName(envKey || id, process.env, consumer);
     } else {
       exportName = cleanName(exportParam);
     }
