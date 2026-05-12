@@ -46,6 +46,24 @@ describe("migrationHandler", () => {
         );
         expect(result).toMatchObject({ PhysicalResourceId: "my-migration-123" });
       });
+
+      it("Returns Data in response so cr.Provider propagates it to isComplete events", async () => {
+        const handler = migrationHandler(async () => ({ status: "complete" }));
+        const result = await handler({ RequestType: "Create" }, {});
+        expect(result).toMatchObject({ Data: expect.any(Object) });
+      });
+
+      it("Correctly discriminates isComplete when using onEvent response as event (cr.Provider round-trip)", async () => {
+        const userHandler = vi.fn().mockResolvedValue({ status: "complete" });
+        const handler = migrationHandler(userHandler);
+        // Simulate cr.Provider: merge cfnRequest with onEvent result to build isComplete event
+        const onEventResult = (await handler({ RequestType: "Create" }, {})) as Record<string, unknown>;
+        // cr.Provider spreads onEventResult into the isComplete event
+        const isCompleteEvent = { RequestType: "Create", ...onEventResult };
+        const isCompleteResult = await handler(isCompleteEvent, {});
+        expect(userHandler).toHaveBeenCalledTimes(1);
+        expect(isCompleteResult).toMatchObject({ IsComplete: true });
+      });
     });
 
     describe("isCompleteHandler mode (event with Data)", () => {

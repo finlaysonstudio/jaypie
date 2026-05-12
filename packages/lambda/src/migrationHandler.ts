@@ -52,11 +52,14 @@ const migrationHandler = function <TEvent = unknown, TResult = unknown>(
       return { Data: result, IsComplete: !pending };
     }
 
-    // onEventHandler: return PhysicalResourceId immediately; the migration runs
-    // in subsequent isCompleteHandler invocations via the Step Functions waiter.
+    // onEventHandler: return PhysicalResourceId and a Data marker immediately.
+    // cr.Provider only propagates Data to isComplete events when onEvent returned it,
+    // so we must include Data here or the "Data" in cfnEvent discriminator will never
+    // be true on isComplete polls.
     return {
       PhysicalResourceId:
         (cfnEvent?.PhysicalResourceId as string | undefined) ?? "migration",
+      Data: { __migration: true },
     };
   };
 };
