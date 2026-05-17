@@ -19,6 +19,7 @@ on:
         type: choice
         options:
           - all
+          - JaypieCicd
           - JaypieDocumentation
           - JaypieGardenApi
           - JaypieGardenNextjs

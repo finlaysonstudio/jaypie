@@ -160,6 +160,7 @@ jobs:
           fi
   test-llm-client:
     name: LLM Client Test (conditional)
+    environment: sandbox
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -173,16 +174,36 @@ jobs:
         run: npm install
       - name: Build
         run: npm run build
+      - name: Configure AWS credentials (sandbox role)
+        uses: ./.github/actions/configure-aws
+        with:
+          role-arn: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+      - name: Fetch Bedrock test role ARN
+        id: bedrock-role
+        run: |
+          ROLE_ARN=$(aws cloudformation describe-stacks \
+            --stack-name jaypie-cicd \
+            --query "Stacks[0].Outputs[?OutputKey=='BedrockCicdRoleArn'].OutputValue" \
+            --output text)
+          echo "arn=$ROLE_ARN" >> $GITHUB_OUTPUT
+      - name: Assume Bedrock test role
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ steps.bedrock-role.outputs.arn }}
+          role-session-name: BedrockLlmTestSession
+          aws-region: ${{ vars.AWS_REGION }}
       - name: Run LLM Client Tests
         run: npm run test:llm:client
         env:
-          APP_PROVIDER: anthropic,google,openai,xai
+          APP_PROVIDER: anthropic,bedrock,google,openai,xai
           ANTHROPIC_API_KEY: ${{ secrets.CICD_ANTHROPIC_API_KEY }}
           GEMINI_API_KEY: ${{ secrets.CICD_GEMINI_API_KEY }}
           OPENAI_API_KEY: ${{ secrets.CICD_OPENAI_API_KEY }}
           XAI_API_KEY: ${{ secrets.CICD_XAI_API_KEY }}
   test-llm-matrix:
     name: LLM Capability Matrix (${{ matrix.group }})
+    environment: sandbox
     runs-on: ubuntu-latest
     timeout-minutes: 20
     strategy:
@@ -197,6 +218,8 @@ jobs:
             models: "gemini-3.1-pro-preview,gemini-3-flash-preview,gemini-3.1-flash-lite-preview,grok-latest,grok-4.3-latest,grok-4-1-fast-reasoning,grok-4-1-fast-non-reasoning"
           - group: openrouter
             models: "anthropic/claude-sonnet-4.6,google/gemini-3.1-pro-preview,openai/gpt-5.5,x-ai/grok-4.20"
+          - group: bedrock
+            models: "amazon.nova-micro-v1:0,amazon.nova-lite-v1:0,amazon.nova-pro-v1:0,anthropic.claude-3-5-sonnet-20241022-v2:0"
     steps:
       - uses: actions/checkout@v6
       - name: Use Node.js 24
@@ -208,6 +231,28 @@ jobs:
         run: npm install
       - name: Build
         run: npm run build
+      - name: Configure AWS credentials (sandbox role)
+        if: matrix.group == 'bedrock'
+        uses: ./.github/actions/configure-aws
+        with:
+          role-arn: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+      - name: Fetch Bedrock test role ARN
+        if: matrix.group == 'bedrock'
+        id: bedrock-role
+        run: |
+          ROLE_ARN=$(aws cloudformation describe-stacks \
+            --stack-name jaypie-cicd \
+            --query "Stacks[0].Outputs[?OutputKey=='BedrockCicdRoleArn'].OutputValue" \
+            --output text)
+          echo "arn=$ROLE_ARN" >> $GITHUB_OUTPUT
+      - name: Assume Bedrock test role
+        if: matrix.group == 'bedrock'
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ steps.bedrock-role.outputs.arn }}
+          role-session-name: BedrockLlmTestSession
+          aws-region: ${{ vars.AWS_REGION }}
       - name: Run LLM Capability Matrix (${{ matrix.group }})
         run: LOG_LEVEL=warn APP_MODELS="${{ matrix.models }}" npm run test:llm:matrix
         env:
