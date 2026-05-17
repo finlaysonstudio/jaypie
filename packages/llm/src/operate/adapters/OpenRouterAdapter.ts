@@ -230,9 +230,7 @@ function convertContentToOpenRouter(
     if (item.type === LlmMessageType.InputImage) {
       const url = item.image_url ?? "";
       if (!url) {
-        log.warn(
-          "OpenRouter image content missing image_url; image discarded",
-        );
+        log.warn("OpenRouter image content missing image_url; image discarded");
         continue;
       }
       parts.push({ type: "image_url", imageUrl: { url } });
@@ -240,8 +238,7 @@ function convertContentToOpenRouter(
     }
 
     if (item.type === LlmMessageType.InputFile) {
-      const fileData =
-        typeof item.file_data === "string" ? item.file_data : "";
+      const fileData = typeof item.file_data === "string" ? item.file_data : "";
       if (!fileData) {
         log.warn(
           { filename: item.filename },

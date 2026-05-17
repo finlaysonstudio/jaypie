@@ -30,6 +30,26 @@ const FIRST_CLASS_PROVIDER = {
 };
 
 export const PROVIDER = {
+  // https://docs.aws.amazon.com/bedrock/latest/userguide/models-supported.html
+  BEDROCK: {
+    MODEL: {
+      DEFAULT: "amazon.nova-lite-v1:0" as const,
+      LARGE: "amazon.nova-pro-v1:0" as const,
+      SMALL: "amazon.nova-lite-v1:0" as const,
+      TINY: "amazon.nova-micro-v1:0" as const,
+    },
+    MODEL_MATCH_WORDS: [
+      "amazon.nova",
+      "amazon.titan",
+      "anthropic.claude",
+      "cohere.command",
+      "meta.llama",
+      "mistral.mistral",
+      "ai21.",
+    ] as const,
+    NAME: "bedrock" as const,
+    REGION: "AWS_REGION" as const,
+  },
   ANTHROPIC: {
     // https://docs.anthropic.com/en/docs/about-claude/models/overview
     MAX_TOKENS: {
@@ -121,6 +141,7 @@ export const PROVIDER = {
 
 export type LlmProviderName =
   | typeof PROVIDER.ANTHROPIC.NAME
+  | typeof PROVIDER.BEDROCK.NAME
   | typeof PROVIDER.GEMINI.NAME
   | typeof PROVIDER.OPENAI.NAME
   | typeof PROVIDER.OPENROUTER.NAME

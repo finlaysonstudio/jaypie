@@ -45,6 +45,7 @@ export { JaypieToolkit, toolkit, Toolkit, tools } from "./tools/index.js";
 export { extractReasoning } from "./util/extractReasoning.js";
 
 // Providers
+export { BedrockProvider } from "./providers/bedrock/index.js";
 export { GeminiProvider } from "./providers/gemini/index.js";
 export { OpenRouterProvider } from "./providers/openrouter/index.js";
 export { XaiProvider } from "./providers/xai/index.js";
