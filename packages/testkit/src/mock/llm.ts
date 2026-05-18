@@ -116,6 +116,12 @@ export const LlmStreamChunkType = createMockWrappedObject(
 );
 
 // Provider mocks
+export const BedrockProvider = createMockWrappedObject(
+  original.BedrockProvider,
+  {
+    isClass: true,
+  },
+);
 export const GeminiProvider = createMockWrappedObject(original.GeminiProvider, {
   isClass: true,
 });
