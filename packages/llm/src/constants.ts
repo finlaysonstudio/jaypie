@@ -10,8 +10,8 @@ const FIRST_CLASS_PROVIDER = {
   GEMINI: {
     DEFAULT: "gemini-3.1-pro-preview" as const,
     LARGE: "gemini-3.1-pro-preview" as const,
-    SMALL: "gemini-3.1-flash-lite-preview" as const,
-    TINY: "gemini-3.1-flash-lite-preview" as const,
+    SMALL: "gemini-3.5-flash" as const,
+    TINY: "gemini-3.5-flash" as const,
   },
   // https://developers.openai.com/api/docs/models
   OPENAI: {
