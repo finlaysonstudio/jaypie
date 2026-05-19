@@ -1,6 +1,6 @@
-# Jaypie MCP 🐦‍⬛
+# Jaypie Tildeskill 🐦‍⬛
 
-Model Context Protocol server for Jaypie.
+Skill/vocabulary management with pluggable storage backends.
 
 See [jaypie.net](https://jaypie.net) for documentation.
 

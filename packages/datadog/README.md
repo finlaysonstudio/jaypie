@@ -1,17 +1,9 @@
-# Jaypie Datadog 🐦‍⬛🐕
+# Jaypie Datadog 🐦‍⬛
 
-Datadog functions for Jaypie
+Datadog integration utilities for Jaypie applications.
 
-See [Jaypie](https://github.com/finlaysonstudio/jaypie) for usage.
-
-## 📝 Changelog
-
-| Date       | Version | Summary        |
-| ---------- | ------- | -------------- |
-|   5/4/2024 |   1.0.0 | Initial release with `submitMetric` and `submitMetricSet` |
-|   5/4/2024 |   0.1.0 | Initial publish |
-|   5/4/2024 |   0.0.1 | Initial commit |
+See [jaypie.net](https://jaypie.net) for documentation.
 
 ## 📜 License
 
-[MIT License](./LICENSE.txt). Published by Finlayson Studio
+[MIT License](./LICENSE.txt). Published by Finlayson Studio.

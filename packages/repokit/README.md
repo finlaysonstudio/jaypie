@@ -1,6 +1,6 @@
-# Jaypie MCP 🐦‍⬛
+# Jaypie Repokit 🐦‍⬛
 
-Model Context Protocol server for Jaypie.
+Essential development utilities for Jaypie repositories.
 
 See [jaypie.net](https://jaypie.net) for documentation.
 

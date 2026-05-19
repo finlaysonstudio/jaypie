@@ -1,6 +1,6 @@
-# Jaypie MCP 🐦‍⬛
+# Jaypie Constructs 🐦‍⬛
 
-Model Context Protocol server for Jaypie.
+CDK constructs for Jaypie applications.
 
 See [jaypie.net](https://jaypie.net) for documentation.
 

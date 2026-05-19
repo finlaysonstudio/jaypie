@@ -1,6 +1,6 @@
-# Jaypie MCP 🐦‍⬛
+# Jaypie Textract 🐦‍⬛
 
-Model Context Protocol server for Jaypie.
+AWS Textract utilities for Jaypie applications.
 
 See [jaypie.net](https://jaypie.net) for documentation.
 

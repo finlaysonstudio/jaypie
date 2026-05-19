@@ -1,6 +1,6 @@
-# Jaypie MCP 🐦‍⬛
+# Jaypie Magpie 🐦‍⬛
 
-Model Context Protocol server for Jaypie.
+Collection of open source utilities for Jaypie applications.
 
 See [jaypie.net](https://jaypie.net) for documentation.
 

@@ -1,6 +1,6 @@
-# Jaypie MCP 🐦‍⬛
+# Jaypie Logger 🐦‍⬛
 
-Model Context Protocol server for Jaypie.
+Logger utilities for Jaypie applications.
 
 See [jaypie.net](https://jaypie.net) for documentation.
 

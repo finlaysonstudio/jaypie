@@ -1,17 +1,9 @@
-# Jaypie AWS 🐦‍⬛🐒
+# Jaypie AWS 🐦‍⬛
 
-Jaypie access to AWS resources
+AWS SDK utilities (SQS, Secrets Manager, Textract) for Jaypie applications.
 
-See [Jaypie](https://github.com/finlaysonstudio/jaypie) for usage.
-
-## 📝 Changelog
-
-| Date       | Version | Summary        |
-| ---------- | ------- | -------------- |
-|  3/19/2024 |   1.0.0 | First publish with `@jaypie/core@1.0.0` |
-|  3/13/2024 |   0.1.0 | Initial publish |
-|  3/12/2024 |   0.0.1 | Initial commit |
+See [jaypie.net](https://jaypie.net) for documentation.
 
 ## 📜 License
 
-[MIT License](./LICENSE.txt). Published by Finlayson Studio
+[MIT License](./LICENSE.txt). Published by Finlayson Studio.
