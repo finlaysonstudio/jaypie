@@ -340,20 +340,24 @@ function isOpenRouterModel(model: ModelConfig): boolean {
   return model.provider === "openrouter";
 }
 
-function displayActual(cell: CellResult, openrouter: boolean): ActualOutcome {
-  // OpenRouter is evaluated as a collective; surface individual failures as
-  // warnings so a single flaky route does not paint the cell red.
-  if (openrouter && cell.actual === "fail") return "warn";
+function isBedrockModel(model: ModelConfig): boolean {
+  return model.provider === "bedrock" || model.model.startsWith("bedrock:");
+}
+
+function displayActual(cell: CellResult, openrouter: boolean, bedrock: boolean): ActualOutcome {
+  // OpenRouter and Bedrock are evaluated as collectives; surface individual
+  // failures as warnings so a single flaky route does not paint the cell red.
+  if ((openrouter || bedrock) && cell.actual === "fail") return "warn";
   return cell.actual;
 }
 
-function cellSymbol(cell: CellResult, openrouter: boolean): string {
-  const actual = displayActual(cell, openrouter);
+function cellSymbol(cell: CellResult, openrouter: boolean, bedrock: boolean): string {
+  const actual = displayActual(cell, openrouter, bedrock);
   const sym = SYMBOLS[actual];
-  // OpenRouter cells skip the mismatch indicator (collective evaluation).
+  // OpenRouter and Bedrock cells skip the mismatch indicator (collective evaluation).
   // Otherwise, suppress `!` when the actual outcome is already a failure —
   // the ❌ glyph conveys the problem on its own.
-  if (openrouter) return sym;
+  if (openrouter || bedrock) return sym;
   if (actual === "fail") return sym;
   return cell.matches ? sym : `${sym}!`;
 }
@@ -381,12 +385,13 @@ function formatTable(
     const cells = rows.get(labelOf(model));
     if (!cells) continue;
     const openrouter = isOpenRouterModel(model);
+    const bedrock = isBedrockModel(model);
     const row = [
       labelOf(model).padEnd(labelWidth),
       ...capabilities.map((c) => {
         const cell = cells.get(c);
         if (!cell) return "?".padStart(colWidth(c));
-        return cellSymbol(cell, openrouter).padStart(colWidth(c));
+        return cellSymbol(cell, openrouter, bedrock).padStart(colWidth(c));
       }),
     ].join("  ");
     lines.push(row);
@@ -396,7 +401,7 @@ function formatTable(
     "Legend: ✅ ok   ⚠️ warn   ❌ fail   — skip   `!` mismatch vs expected",
   );
   lines.push(
-    "OpenRouter rows: failures display as ⚠️ and pass/fail collectively (row+column majority).",
+    "OpenRouter/Bedrock rows: failures display as ⚠️ and pass/fail collectively (row+column majority).",
   );
   return lines.join("\n");
 }
@@ -411,11 +416,12 @@ function formatIssues(
     const cells = rows.get(label);
     if (!cells) continue;
     const openrouter = isOpenRouterModel(model);
+    const bedrock = isBedrockModel(model);
     for (const [cap, cell] of cells) {
       if (cell.matches && cell.warnings.length === 0) continue;
       const parts = [`[${label} / ${cap}]`];
       if (!cell.matches) {
-        const tag = openrouter ? "openrouter-fail" : "mismatch";
+        const tag = openrouter ? "openrouter-fail" : bedrock ? "bedrock-fail" : "mismatch";
         parts.push(`${tag} expected=${cell.expected}, got=${cell.actual}`);
       }
       if (cell.detail) parts.push(`detail=${cell.detail}`);
@@ -445,11 +451,14 @@ interface AxisResult {
   passed: boolean;
 }
 
-interface OpenRouterEvaluation {
+interface CollectiveEvaluation {
   passed: boolean;
   rows: Map<string, AxisResult>;
   columns: Map<Capability, AxisResult>;
 }
+
+/** @deprecated Use CollectiveEvaluation */
+type OpenRouterEvaluation = CollectiveEvaluation;
 
 function isCellSuccess(cell: CellResult): boolean {
   return cell.actual === "ok" || cell.actual === "warn";
@@ -469,16 +478,17 @@ function evaluateAxis(cells: readonly CellResult[]): AxisResult {
   return { ok, total, passed };
 }
 
-function evaluateOpenRouter(
+function evaluateCollective(
+  filterFn: (m: ModelConfig) => boolean,
   models: readonly ModelConfig[],
   capabilities: readonly Capability[],
   rows: Map<string, Map<Capability, CellResult>>,
-): OpenRouterEvaluation | null {
-  const orModels = models.filter(isOpenRouterModel);
-  if (orModels.length === 0) return null;
+): CollectiveEvaluation | null {
+  const selected = models.filter(filterFn);
+  if (selected.length === 0) return null;
 
   const rowResults = new Map<string, AxisResult>();
-  for (const model of orModels) {
+  for (const model of selected) {
     const label = model.label || model.model;
     const cellsMap = rows.get(label);
     if (!cellsMap) continue;
@@ -491,7 +501,7 @@ function evaluateOpenRouter(
   const colResults = new Map<Capability, AxisResult>();
   for (const cap of capabilities) {
     const cells: CellResult[] = [];
-    for (const model of orModels) {
+    for (const model of selected) {
       const cell = rows.get(model.label || model.model)?.get(cap);
       if (cell) cells.push(cell);
     }
@@ -505,9 +515,39 @@ function evaluateOpenRouter(
   return { passed, rows: rowResults, columns: colResults };
 }
 
-function formatOpenRouterReport(evaluation: OpenRouterEvaluation): string[] {
+function evaluateOpenRouter(
+  models: readonly ModelConfig[],
+  capabilities: readonly Capability[],
+  rows: Map<string, Map<Capability, CellResult>>,
+): CollectiveEvaluation | null {
+  return evaluateCollective(isOpenRouterModel, models, capabilities, rows);
+}
+
+function evaluateBedrock(
+  models: readonly ModelConfig[],
+  capabilities: readonly Capability[],
+  rows: Map<string, Map<Capability, CellResult>>,
+): CollectiveEvaluation | null {
+  return evaluateCollective(isBedrockModel, models, capabilities, rows);
+}
+
+function formatOpenRouterReport(evaluation: CollectiveEvaluation): string[] {
   const lines: string[] = [];
   lines.push("OpenRouter (evaluated as a collective):");
+  for (const [label, result] of evaluation.rows) {
+    const status = result.passed ? "✅" : "❌";
+    lines.push(`  ${status} row ${label}: ${result.ok}/${result.total} ok`);
+  }
+  for (const [cap, result] of evaluation.columns) {
+    const status = result.passed ? "✅" : "❌";
+    lines.push(`  ${status} col ${cap}: ${result.ok}/${result.total} ok`);
+  }
+  return lines;
+}
+
+function formatBedrockReport(evaluation: CollectiveEvaluation): string[] {
+  const lines: string[] = [];
+  lines.push("Bedrock (evaluated as a collective):");
   for (const [label, result] of evaluation.rows) {
     const status = result.passed ? "✅" : "❌";
     lines.push(`  ${status} row ${label}: ${result.ok}/${result.total} ok`);
@@ -559,13 +599,14 @@ async function main(): Promise<void> {
   for (const model of models) {
     const label = model.label || model.model;
     const openrouter = isOpenRouterModel(model);
+    const bedrock = isBedrockModel(model);
     console.log(`▸ ${label}`);
     const cells = new Map<Capability, CellResult>();
     for (const capability of capabilities) {
       process.stdout.write(`  ${capability} … `);
       const cell = await runCell(model, capability);
       cells.set(capability, cell);
-      const status = cellSymbol(cell, openrouter);
+      const status = cellSymbol(cell, openrouter, bedrock);
       const note = cell.detail ? ` (${cell.detail})` : "";
       console.log(`${status}${note}`);
     }
@@ -585,7 +626,7 @@ async function main(): Promise<void> {
     for (const line of issues) console.log(line);
   }
 
-  // OpenRouter cells are evaluated as a collective rather than per-cell.
+  // OpenRouter and Bedrock cells are evaluated as collectives rather than per-cell.
   const openrouterEvaluation = evaluateOpenRouter(models, capabilities, rows);
   if (openrouterEvaluation) {
     console.log("\n========================================");
@@ -596,11 +637,22 @@ async function main(): Promise<void> {
     }
   }
 
-  // Exit non-zero if any non-OpenRouter cell mismatched its expected
-  // outcome, or if the OpenRouter block failed its majority threshold.
+  const bedrockEvaluation = evaluateBedrock(models, capabilities, rows);
+  if (bedrockEvaluation) {
+    console.log("\n========================================");
+    console.log("       BEDROCK");
+    console.log("========================================");
+    for (const line of formatBedrockReport(bedrockEvaluation)) {
+      console.log(line);
+    }
+  }
+
+  // Exit non-zero if any non-OpenRouter, non-Bedrock cell mismatched its
+  // expected outcome, or if the OpenRouter/Bedrock block failed its majority threshold.
   let mismatches = 0;
   for (const model of models) {
     if (isOpenRouterModel(model)) continue;
+    if (isBedrockModel(model)) continue;
     const cells = rows.get(model.label || model.model);
     if (!cells) continue;
     for (const cell of cells.values()) {
@@ -612,7 +664,8 @@ async function main(): Promise<void> {
   const openrouterFailed = openrouterEvaluation
     ? !openrouterEvaluation.passed
     : false;
-  if (mismatches === 0 && !openrouterFailed) {
+  const bedrockFailed = bedrockEvaluation ? !bedrockEvaluation.passed : false;
+  if (mismatches === 0 && !openrouterFailed && !bedrockFailed) {
     console.log(`🎉 Matrix passed: every cell matched expectation.`);
   } else {
     if (mismatches > 0) {
@@ -620,6 +673,9 @@ async function main(): Promise<void> {
     }
     if (openrouterFailed) {
       console.error(`💀 OpenRouter block failed: row/column majority not met.`);
+    }
+    if (bedrockFailed) {
+      console.error(`💀 Bedrock block failed: row/column majority not met.`);
     }
     process.exit(1);
   }

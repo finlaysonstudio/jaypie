@@ -103,4 +103,44 @@ export const MODELS: readonly ModelConfig[] = [
   { model: "moonshotai/kimi-k2.6", provider: "openrouter" },
   { model: "openai/gpt-5.5", provider: "openrouter" },
   { model: "x-ai/grok-4.20", provider: "openrouter" },
+
+  // ─── AWS Bedrock ─────────────────────────────────────────────────────
+  { model: "us.anthropic.claude-opus-4-7", provider: "bedrock" },
+  { model: "us.anthropic.claude-sonnet-4-6", provider: "bedrock" },
+  { model: "us.anthropic.claude-haiku-4-5-20251001-v1:0", provider: "bedrock" },
+  {
+    model: "amazon.nova-pro-v1:0",
+    provider: "bedrock",
+    expect: { structured: "skip" },
+  },
+  {
+    model: "us.amazon.nova-2-lite-v1:0",
+    provider: "bedrock",
+    expect: { both: "skip" },
+  },
+  {
+    model: "amazon.nova-micro-v1:0",
+    provider: "bedrock",
+    expect: { structured: "skip", pdf: "skip", image: "skip" },
+  },
+  {
+    model: "deepseek.v3.2",
+    provider: "bedrock",
+    expect: { both: "skip", pdf: "skip", image: "skip" },
+  },
+  {
+    model: "google.gemma-3-27b-it",
+    provider: "bedrock",
+    expect: { tools: "skip", both: "skip", pdf: "skip" },
+  },
+  {
+    model: "moonshotai.kimi-k2.5",
+    provider: "bedrock",
+    expect: { both: "skip", pdf: "skip" },
+  },
+  {
+    model: "openai.gpt-oss-120b-1:0",
+    provider: "bedrock",
+    expect: { structured: "skip", pdf: "skip", image: "skip" },
+  },
 ];
