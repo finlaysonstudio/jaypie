@@ -97,12 +97,15 @@ jobs:
       - name: Build
         if: steps.changes.outputs.llm == 'true'
         run: npm run build
+      - name: Package build artifact
+        if: steps.changes.outputs.llm == 'true'
+        run: tar -czf llm-dist.tar.gz packages/*/dist
       - name: Upload build artifact
         if: steps.changes.outputs.llm == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: llm-dist
-          path: packages/*/dist/
+          path: llm-dist.tar.gz
           retention-days: 1
   test-llm-matrix:
     name: LLM Capability Matrix (${{ matrix.group }})
@@ -140,7 +143,9 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: llm-dist
-          path: .
+      - name: Extract build artifact
+        if: needs.build-llm.outputs.llm_changed == 'true'
+        run: tar -xzf llm-dist.tar.gz
       - name: Configure AWS credentials (sandbox role)
         if: needs.build-llm.outputs.llm_changed == 'true' && matrix.group == 'bedrock'
         uses: ./.github/actions/configure-aws

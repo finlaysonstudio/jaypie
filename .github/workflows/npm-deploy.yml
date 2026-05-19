@@ -173,11 +173,13 @@ jobs:
         run: npm install
       - name: Build
         run: npm run build
+      - name: Package build artifact
+        run: tar -czf llm-dist.tar.gz packages/*/dist
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
           name: llm-dist
-          path: packages/*/dist/
+          path: llm-dist.tar.gz
           retention-days: 1
   test-llm-client:
     name: LLM Client Test (conditional)
@@ -198,7 +200,8 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: llm-dist
-          path: .
+      - name: Extract build artifact
+        run: tar -xzf llm-dist.tar.gz
       - name: Configure AWS credentials (sandbox role)
         uses: ./.github/actions/configure-aws
         with:
@@ -259,7 +262,8 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: llm-dist
-          path: .
+      - name: Extract build artifact
+        run: tar -xzf llm-dist.tar.gz
       - name: Configure AWS credentials (sandbox role)
         if: matrix.group == 'bedrock'
         uses: ./.github/actions/configure-aws
