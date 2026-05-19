@@ -71,25 +71,12 @@ jobs:
         run: npm rebuild
       - run: npm run build
       - run: npm test
-  test-llm-matrix:
-    name: LLM Capability Matrix (${{ matrix.group }})
-    environment: sandbox
+  build-llm:
+    name: Build (LLM matrix)
     runs-on: ubuntu-latest
-    timeout-minutes: 20
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - group: anthropic
-            models: "claude-sonnet-4-5,claude-sonnet-4-6,claude-opus-4-5,claude-opus-4-6,claude-opus-4-7,claude-haiku-4-5"
-          - group: openai
-            models: "gpt-5,gpt-5.4,gpt-5.4-mini,gpt-5.4-nano,gpt-5.5"
-          - group: gemini-xai
-            models: "gemini-3.1-pro-preview,gemini-3-flash-preview,gemini-3.1-flash-lite-preview,grok-latest,grok-4.3-latest,grok-4-1-fast-reasoning,grok-4-1-fast-non-reasoning"
-          - group: openrouter
-            models: "anthropic/claude-sonnet-4.6,google/gemini-3.1-pro-preview,openai/gpt-5.5,x-ai/grok-4.20"
-          - group: bedrock
-            models: "us.anthropic.claude-opus-4-7,us.anthropic.claude-sonnet-4-6,us.anthropic.claude-haiku-4-5-20251001-v1:0,amazon.nova-pro-v1:0,us.amazon.nova-2-lite-v1:0,amazon.nova-micro-v1:0,deepseek.v3.2,google.gemma-3-27b-it,moonshotai.kimi-k2.5,openai.gpt-oss-120b-1:0"
+    timeout-minutes: 10
+    outputs:
+      llm_changed: ${{ steps.changes.outputs.llm }}
     steps:
       - uses: actions/checkout@v6
       - uses: dorny/paths-filter@v4
@@ -110,14 +97,58 @@ jobs:
       - name: Build
         if: steps.changes.outputs.llm == 'true'
         run: npm run build
+      - name: Upload build artifact
+        if: steps.changes.outputs.llm == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: llm-dist
+          path: packages/*/dist/
+          retention-days: 1
+  test-llm-matrix:
+    name: LLM Capability Matrix (${{ matrix.group }})
+    needs: build-llm
+    environment: sandbox
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - group: anthropic
+            models: "claude-sonnet-4-5,claude-sonnet-4-6,claude-opus-4-5,claude-opus-4-6,claude-opus-4-7,claude-haiku-4-5"
+          - group: openai
+            models: "gpt-5,gpt-5.4,gpt-5.4-mini,gpt-5.4-nano,gpt-5.5"
+          - group: gemini-xai
+            models: "gemini-3.1-pro-preview,gemini-3-flash-preview,gemini-3.1-flash-lite-preview,grok-latest,grok-4.3-latest,grok-4-1-fast-reasoning,grok-4-1-fast-non-reasoning"
+          - group: openrouter
+            models: "anthropic/claude-sonnet-4.6,google/gemini-3.1-pro-preview,openai/gpt-5.5,x-ai/grok-4.20"
+          - group: bedrock
+            models: "us.anthropic.claude-opus-4-7,us.anthropic.claude-sonnet-4-6,us.anthropic.claude-haiku-4-5-20251001-v1:0,amazon.nova-pro-v1:0,us.amazon.nova-2-lite-v1:0,amazon.nova-micro-v1:0,deepseek.v3.2,google.gemma-3-27b-it,moonshotai.kimi-k2.5,openai.gpt-oss-120b-1:0"
+    steps:
+      - uses: actions/checkout@v6
+      - name: Use Node.js 24
+        if: needs.build-llm.outputs.llm_changed == 'true'
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: "npm"
+      - name: Install dependencies
+        if: needs.build-llm.outputs.llm_changed == 'true'
+        run: npm install
+      - name: Download build artifact
+        if: needs.build-llm.outputs.llm_changed == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          name: llm-dist
+          path: .
       - name: Configure AWS credentials (sandbox role)
-        if: steps.changes.outputs.llm == 'true' && matrix.group == 'bedrock'
+        if: needs.build-llm.outputs.llm_changed == 'true' && matrix.group == 'bedrock'
         uses: ./.github/actions/configure-aws
         with:
           role-arn: ${{ vars.AWS_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION }}
       - name: Fetch Bedrock test role ARN
-        if: steps.changes.outputs.llm == 'true' && matrix.group == 'bedrock'
+        if: needs.build-llm.outputs.llm_changed == 'true' && matrix.group == 'bedrock'
         id: bedrock-role
         run: |
           ROLE_ARN=$(aws cloudformation describe-stacks \
@@ -126,14 +157,14 @@ jobs:
             --output text)
           echo "arn=$ROLE_ARN" >> $GITHUB_OUTPUT
       - name: Assume Bedrock test role
-        if: steps.changes.outputs.llm == 'true' && matrix.group == 'bedrock'
+        if: needs.build-llm.outputs.llm_changed == 'true' && matrix.group == 'bedrock'
         uses: aws-actions/configure-aws-credentials@v6
         with:
           role-to-assume: ${{ steps.bedrock-role.outputs.arn }}
           role-session-name: BedrockLlmTestSession
           aws-region: ${{ vars.AWS_REGION }}
       - name: Run LLM Capability Matrix (${{ matrix.group }})
-        if: steps.changes.outputs.llm == 'true'
+        if: needs.build-llm.outputs.llm_changed == 'true'
         run: LOG_LEVEL=warn APP_MODELS="${{ matrix.models }}" npm run test:llm:matrix
         env:
           ANTHROPIC_API_KEY: ${{ secrets.CICD_ANTHROPIC_API_KEY }}
@@ -144,13 +175,18 @@ jobs:
 
   test-llm-matrix-complete:
     name: LLM Capability Matrix (conditional)
-    needs: test-llm-matrix
+    needs: [build-llm, test-llm-matrix]
     runs-on: ubuntu-latest
     if: always()
     steps:
       - name: Check matrix group results
         run: |
+          build="${{ needs.build-llm.result }}"
           result="${{ needs.test-llm-matrix.result }}"
+          if [[ "$build" == "failure" ]]; then
+            echo "LLM build failed"
+            exit 1
+          fi
           if [[ "$result" == "failure" ]]; then
             echo "One or more LLM matrix groups failed"
             exit 1

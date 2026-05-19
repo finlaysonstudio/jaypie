@@ -158,9 +158,8 @@ jobs:
           else
             npm test
           fi
-  test-llm-client:
-    name: LLM Client Test (conditional)
-    environment: sandbox
+  build-llm:
+    name: Build (LLM matrix)
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -174,6 +173,32 @@ jobs:
         run: npm install
       - name: Build
         run: npm run build
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: llm-dist
+          path: packages/*/dist/
+          retention-days: 1
+  test-llm-client:
+    name: LLM Client Test (conditional)
+    needs: build-llm
+    environment: sandbox
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - name: Use Node.js 24
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: "npm"
+      - name: Install dependencies
+        run: npm install
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: llm-dist
+          path: .
       - name: Configure AWS credentials (sandbox role)
         uses: ./.github/actions/configure-aws
         with:
@@ -203,6 +228,7 @@ jobs:
           XAI_API_KEY: ${{ secrets.CICD_XAI_API_KEY }}
   test-llm-matrix:
     name: LLM Capability Matrix (${{ matrix.group }})
+    needs: build-llm
     environment: sandbox
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -229,8 +255,11 @@ jobs:
           cache: "npm"
       - name: Install dependencies
         run: npm install
-      - name: Build
-        run: npm run build
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: llm-dist
+          path: .
       - name: Configure AWS credentials (sandbox role)
         if: matrix.group == 'bedrock'
         uses: ./.github/actions/configure-aws
