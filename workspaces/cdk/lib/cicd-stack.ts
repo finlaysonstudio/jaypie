@@ -37,7 +37,10 @@ export class CicdStack extends Stack {
           "bedrock:InvokeModelWithResponseStream",
         ],
         effect: Effect.ALLOW,
-        resources: ["arn:aws:bedrock:*::foundation-model/*"],
+        resources: [
+          "arn:aws:bedrock:*::foundation-model/*",
+          "arn:aws:bedrock:*:*:inference-profile/*",
+        ],
       }),
     );
 
