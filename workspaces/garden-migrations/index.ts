@@ -34,6 +34,8 @@ export const handler = migrationHandler(
     }
 
     await runMigrations();
+
+    return { PhysicalResourceId: PHYSICAL_RESOURCE_ID };
   },
   {
     name: "garden-migrations",
