@@ -1,15 +1,9 @@
-# Jaypie DynamoDB
+# Jaypie DynamoDB 🐦‍⬛
 
 DynamoDB single-table storage utilities for Jaypie applications.
 
-See [Jaypie](https://github.com/finlaysonstudio/jaypie) for usage.
+See [jaypie.net](https://jaypie.net) for documentation.
 
-## Changelog
+## 📜 License
 
-| Date       | Version | Summary        |
-| ---------- | ------- | -------------- |
-|  1/07/2026 |   0.1.0 | Initial commit |
-
-## License
-
-[MIT License](./LICENSE.txt). Published by Finlayson Studio
+[MIT License](./LICENSE.txt). Published by Finlayson Studio.

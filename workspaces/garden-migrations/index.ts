@@ -1,5 +1,5 @@
 import { initClient } from "@jaypie/dynamodb";
-import { lambdaHandler } from "jaypie";
+import { migrationHandler } from "@jaypie/lambda";
 
 import { runMigrations } from "./src/runner.js";
 
@@ -25,7 +25,7 @@ interface CustomResourceEvent {
 // Handler
 //
 
-export const handler = lambdaHandler(
+export const handler = migrationHandler(
   async (event: CustomResourceEvent) => {
     if (event.RequestType === "Delete") {
       return {
@@ -35,9 +35,7 @@ export const handler = lambdaHandler(
 
     await runMigrations();
 
-    return {
-      PhysicalResourceId: PHYSICAL_RESOURCE_ID,
-    };
+    return { PhysicalResourceId: PHYSICAL_RESOURCE_ID };
   },
   {
     name: "garden-migrations",

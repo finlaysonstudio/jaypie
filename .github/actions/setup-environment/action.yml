@@ -108,7 +108,8 @@ runs:
         # Export all environment variables for CDK
         echo "AWS_REGION=${AWS_REGION}" >> $GITHUB_ENV
         echo "AWS_ROLE_ARN=${AWS_ROLE_ARN}" >> $GITHUB_ENV
-        echo "CDK_DEFAULT_ACCOUNT=${{ github.repository_owner }}" >> $GITHUB_ENV
+        CDK_DEFAULT_ACCOUNT=$(echo "${AWS_ROLE_ARN}" | cut -d: -f5)
+        echo "CDK_DEFAULT_ACCOUNT=${CDK_DEFAULT_ACCOUNT}" >> $GITHUB_ENV
         echo "CDK_DEFAULT_REGION=${AWS_REGION}" >> $GITHUB_ENV
         echo "CDK_ENV_DATADOG_API_KEY_ARN=${DATADOG_API_KEY_ARN}" >> $GITHUB_ENV
         echo "CDK_ENV_HOSTED_ZONE=${HOSTED_ZONE}" >> $GITHUB_ENV

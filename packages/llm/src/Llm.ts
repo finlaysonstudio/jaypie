@@ -16,6 +16,7 @@ import {
 } from "./types/LlmProvider.interface.js";
 import { LlmStreamChunk } from "./types/LlmStreamChunk.interface.js";
 import { AnthropicProvider } from "./providers/anthropic/AnthropicProvider.class.js";
+import { BedrockProvider } from "./providers/bedrock/index.js";
 import { GeminiProvider } from "./providers/gemini/GeminiProvider.class.js";
 import { OpenAiProvider } from "./providers/openai/index.js";
 import { OpenRouterProvider } from "./providers/openrouter/index.js";
@@ -100,6 +101,8 @@ class Llm implements LlmProvider {
           model || PROVIDER.ANTHROPIC.MODEL.DEFAULT,
           { apiKey },
         );
+      case PROVIDER.BEDROCK.NAME:
+        return new BedrockProvider(model || PROVIDER.BEDROCK.MODEL.DEFAULT);
       case PROVIDER.GEMINI.NAME:
         return new GeminiProvider(model || PROVIDER.GEMINI.MODEL.DEFAULT, {
           apiKey,

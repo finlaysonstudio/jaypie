@@ -18,6 +18,7 @@
   "dependencies": {
     "@jaypie/dynamodb": "^0.6.0",
     "@jaypie/fabric": "^0.3.0",
+    "@jaypie/lambda": "^1.2.8",
     "@jaypie/logger": "^1.2.5",
     "jaypie": "^1.2.3"
   },

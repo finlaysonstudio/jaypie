@@ -1,6 +1,6 @@
-# Jaypie MCP 🐦‍⬛
+# Jaypie Errors 🐦‍⬛
 
-Model Context Protocol server for Jaypie.
+Error utilities for Jaypie applications.
 
 See [jaypie.net](https://jaypie.net) for documentation.
 

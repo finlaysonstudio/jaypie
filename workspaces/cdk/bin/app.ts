@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import * as cdk from "aws-cdk-lib";
+import { CicdStack } from "../lib/cicd-stack";
 import { DocumentationStack } from "../lib/documentation-stack";
 import { GardenApiStack } from "../lib/garden-api-stack";
 import { GardenDataStack } from "../lib/garden-data-stack";
@@ -12,6 +13,10 @@ const stacksContext = app.node.tryGetContext("stacks") as string | undefined;
 const selectedStacks = stacksContext?.split(",").map((s) => s.trim()) ?? [];
 const shouldInclude = (stackId: string) =>
   selectedStacks.length === 0 || selectedStacks.includes(stackId);
+
+if (shouldInclude("JaypieCicd")) {
+  new CicdStack(app, "JaypieCicd");
+}
 
 if (shouldInclude("JaypieDocumentation")) {
   new DocumentationStack(app, "JaypieDocumentation");

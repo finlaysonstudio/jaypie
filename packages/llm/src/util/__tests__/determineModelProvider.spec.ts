@@ -341,6 +341,101 @@ describe("determineModelProvider", () => {
       });
     });
 
+    describe("Bedrock Detection", () => {
+      it("Returns default model when provider name 'bedrock' is passed", () => {
+        const result = determineModelProvider(PROVIDER.BEDROCK.NAME);
+        expect(result).toEqual({
+          model: PROVIDER.BEDROCK.MODEL.DEFAULT,
+          provider: PROVIDER.BEDROCK.NAME,
+        });
+      });
+
+      it("Handles bedrock: prefix and strips it", () => {
+        const result = determineModelProvider("bedrock:amazon.nova-pro-v1:0");
+        expect(result).toEqual({
+          model: "amazon.nova-pro-v1:0",
+          provider: PROVIDER.BEDROCK.NAME,
+        });
+      });
+
+      it("bedrock: prefix takes precedence over other match words", () => {
+        const result = determineModelProvider(
+          "bedrock:anthropic.claude-3-5-sonnet-20241022-v2:0",
+        );
+        expect(result).toEqual({
+          model: "anthropic.claude-3-5-sonnet-20241022-v2:0",
+          provider: PROVIDER.BEDROCK.NAME,
+        });
+      });
+
+      it("Identifies Amazon Nova model", () => {
+        const result = determineModelProvider("amazon.nova-pro-v1:0");
+        expect(result).toEqual({
+          model: "amazon.nova-pro-v1:0",
+          provider: PROVIDER.BEDROCK.NAME,
+        });
+      });
+
+      it("Identifies Amazon Nova micro model", () => {
+        const result = determineModelProvider("amazon.nova-micro-v1:0");
+        expect(result).toEqual({
+          model: "amazon.nova-micro-v1:0",
+          provider: PROVIDER.BEDROCK.NAME,
+        });
+      });
+
+      it("Identifies Amazon Titan model", () => {
+        const result = determineModelProvider("amazon.titan-text-express-v1");
+        expect(result).toEqual({
+          model: "amazon.titan-text-express-v1",
+          provider: PROVIDER.BEDROCK.NAME,
+        });
+      });
+
+      it("Identifies Anthropic Claude on Bedrock (dot-prefixed)", () => {
+        const result = determineModelProvider(
+          "anthropic.claude-3-5-sonnet-20241022-v2:0",
+        );
+        expect(result).toEqual({
+          model: "anthropic.claude-3-5-sonnet-20241022-v2:0",
+          provider: PROVIDER.BEDROCK.NAME,
+        });
+      });
+
+      it("Identifies Meta Llama model on Bedrock", () => {
+        const result = determineModelProvider("meta.llama3-8b-instruct-v1:0");
+        expect(result).toEqual({
+          model: "meta.llama3-8b-instruct-v1:0",
+          provider: PROVIDER.BEDROCK.NAME,
+        });
+      });
+
+      it("Identifies Cohere Command model on Bedrock", () => {
+        const result = determineModelProvider("cohere.command-r-plus-v1:0");
+        expect(result).toEqual({
+          model: "cohere.command-r-plus-v1:0",
+          provider: PROVIDER.BEDROCK.NAME,
+        });
+      });
+
+      it("Plain 'anthropic-test-model' still routes to Anthropic direct (no dot)", () => {
+        const result = determineModelProvider("anthropic-test-model");
+        expect(result).toEqual({
+          model: "anthropic-test-model",
+          provider: PROVIDER.ANTHROPIC.NAME,
+        });
+      });
+
+      it("Correctly identifies all Bedrock default models", () => {
+        const bedrockModels = Object.values(PROVIDER.BEDROCK.MODEL);
+        bedrockModels.forEach((model) => {
+          const result = determineModelProvider(model);
+          expect(result.provider).toBe(PROVIDER.BEDROCK.NAME);
+          expect(result.model).toBe(model);
+        });
+      });
+    });
+
     describe("OpenRouter Detection", () => {
       it("Identifies OpenRouter when model contains /", () => {
         const result = determineModelProvider("openai/gpt-4");

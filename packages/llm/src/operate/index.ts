@@ -3,6 +3,8 @@ export {
   AnthropicAdapter,
   anthropicAdapter,
   BaseProviderAdapter,
+  BedrockAdapter,
+  bedrockAdapter,
   GeminiAdapter,
   geminiAdapter,
   OpenAiAdapter,

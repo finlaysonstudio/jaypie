@@ -288,6 +288,9 @@ export class JaypieSsoPermissions extends Construct {
             {
               Effect: "Allow",
               Action: [
+                "bedrock-agent:*",
+                "bedrock-agentcore:*",
+                "bedrock:*",
                 "budgets:*",
                 "ce:*",
                 "cloudformation:*",

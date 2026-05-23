@@ -1,6 +1,6 @@
-# Jaypie MCP 🐦‍⬛
+# Jaypie LLM 🐦‍⬛
 
-Model Context Protocol server for Jaypie.
+Large language model utilities for Jaypie applications.
 
 See [jaypie.net](https://jaypie.net) for documentation.
 

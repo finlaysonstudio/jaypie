@@ -20,7 +20,22 @@ export function determineModelProvider(input?: string): {
     };
   }
 
+  // Check for explicit bedrock: prefix
+  if (input.startsWith("bedrock:")) {
+    const model = input.slice("bedrock:".length);
+    return {
+      model,
+      provider: PROVIDER.BEDROCK.NAME,
+    };
+  }
+
   // Check if input is a provider name
+  if (input === PROVIDER.BEDROCK.NAME) {
+    return {
+      model: PROVIDER.BEDROCK.MODEL.DEFAULT,
+      provider: PROVIDER.BEDROCK.NAME,
+    };
+  }
   if (input === PROVIDER.ANTHROPIC.NAME) {
     return {
       model: PROVIDER.ANTHROPIC.MODEL.DEFAULT,
@@ -111,8 +126,18 @@ export function determineModelProvider(input?: string): {
     };
   }
 
-  // Check Anthropic match words
+  // Check Bedrock match words (before Anthropic — "anthropic.claude-*" is a Bedrock model ID)
   const lowerInput = input.toLowerCase();
+  for (const matchWord of PROVIDER.BEDROCK.MODEL_MATCH_WORDS) {
+    if (lowerInput.includes(matchWord)) {
+      return {
+        model: input,
+        provider: PROVIDER.BEDROCK.NAME,
+      };
+    }
+  }
+
+  // Check Anthropic match words
   for (const matchWord of PROVIDER.ANTHROPIC.MODEL_MATCH_WORDS) {
     if (lowerInput.includes(matchWord)) {
       return {
