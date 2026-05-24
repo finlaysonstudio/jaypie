@@ -15,7 +15,8 @@ Six workflow files. All `deploy-env-*.yml` workflows use concurrency groups (by 
 **Jobs:** `deploy`, `lint`, `test`
 
 - `deploy` has no `needs` — runs immediately with no lint/test gate
-- Deploys stacks: `JaypieDocumentation JaypieGardenData JaypieGardenApi JaypieGardenNextjs`
+- Deploys stacks: `JaypieCicd JaypieDocumentation JaypieGardenData JaypieGardenApi JaypieGardenNextjs`
+- `JaypieCicd` only deploys here — not in development or production workflows
 - Builds docs site (`npm run docs:build`), queries CloudFormation for bucket/role/distribution outputs, assumes `DeployRoleArn`, syncs to S3, invalidates CloudFront
 
 ---
@@ -57,12 +58,12 @@ Six workflow files. All `deploy-env-*.yml` workflows use concurrency groups (by 
 
 **Inputs:**
 - `environment`: choice — `sandbox` / `development` / `production` (default: `sandbox`)
-- `stacks`: choice — `all`, `JaypieCicd`, `JaypieDocumentation`, `JaypieGardenApi`, `JaypieGardenNextjs`, `JaypieGardenData`, `JaypieGardenApi JaypieGardenNextjs`, `JaypieGardenData JaypieGardenApi JaypieGardenNextjs`
+- `stacks`: choice — `all`, `JaypieDocumentation`, `JaypieGardenApi`, `JaypieGardenNextjs`, `JaypieGardenData`, `JaypieGardenApi JaypieGardenNextjs`, `JaypieGardenData JaypieGardenApi JaypieGardenNextjs`
 - `custom_stacks`: free text — overrides `stacks` if provided
 
 `all` resolves to: `JaypieDocumentation JaypieGardenData JaypieGardenApi JaypieGardenNextjs`
 
-`JaypieCicd` is available as an explicit choice but NOT included in `all`.
+`JaypieCicd` is not available here — it deploys automatically with sandbox via `deploy-env-sandbox.yml`.
 
 No docs deployment step (unlike `deploy-env-*.yml`).
 
