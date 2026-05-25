@@ -19,11 +19,32 @@ workspaces/cdk/
 │   ├── garden-data-stack.ts    # Garden shared DynamoDB table
 │   └── garden-nextjs-stack.ts  # Garden UI site
 ├── cdk.json             # CDK configuration
+├── lib/
+│   ├── cicd-stack.ts           # CI/CD IAM roles (bootstrap prerequisite)
 ├── package.json
 └── tsconfig.json
 ```
 
 ## Stacks
+
+### CicdStack ⚠️ Bootstrap Prerequisite
+
+Provisions IAM roles required by GitHub Actions workflows. **Must be deployed before other stacks can run in a new AWS account.**
+
+**Stack ID:** `JaypieCicd`
+
+**Resources Created:**
+- IAM role `jaypie-cicd-bedrock-test` — assumed by GitHub Actions via OIDC for Bedrock integration tests
+  - Permissions: `bedrock:InvokeModel`, `bedrock:InvokeModelWithResponseStream`
+  - Trusted repo: `finlaysonstudio/jaypie`
+- CloudFormation output `jaypie-cicd-bedrock-role-arn` — consumed by CI workflows as `AWS_ROLE_ARN`
+
+**Deployment:**
+- **Not included in `all`** in `deploy-stacks.yml` — must be selected explicitly
+- **Not triggered by any branch/tag push** — manual `workflow_dispatch` only via `deploy-stacks.yml`
+- Re-deploy when adding new IAM roles needed by CI/CD
+
+**Connection to workflows:** `.github/actions/configure-aws` assumes the role ARN stored in the GitHub environment variable `AWS_ROLE_ARN`. The Bedrock test role ARN output from this stack is what gets set as that variable.
 
 ### DocumentationStack
 
@@ -284,7 +305,9 @@ Add to workflow:
    - Use `JaypieGitHubDeployRole` construct or manually create OIDC provider
    - Export the provider ARN as `github-oidc-provider` in CloudFormation
 
-3. **Hosted Zone**: Ensure `jaypie.net` hosted zone exists in Route53
+3. **Deploy `JaypieCicd` stack**: Provisions IAM roles consumed by GitHub Actions workflows (see [CicdStack](#cicdstack--bootstrap-prerequisite)). Must be deployed manually via `deploy-stacks.yml` before other workflows can authenticate with AWS.
+
+4. **Hosted Zone**: Ensure `jaypie.net` hosted zone exists in Route53
 
 ## Troubleshooting
 
