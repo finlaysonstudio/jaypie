@@ -88,6 +88,7 @@ const HTTP = {
     },
     USER_AGENT: "User-Agent",
     VIA: "Via",
+    WEBHOOK_SIGNATURE: "X-Webhook-Signature",
     WEBHOOK_TOKEN: "X-Webhook-Token",
   },
   METHOD: {
