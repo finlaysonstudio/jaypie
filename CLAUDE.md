@@ -83,6 +83,12 @@
 ### Error Handling
 - Never throw vanilla `Error`
 - Use `@jaypie/errors` package (ConfigurationError, etc.) for proper error types
+### LLM Models
+When updating LLM model constants, keep all four files in sync:
+- `packages/llm/src/constants.ts` — provider DEFAULT/LARGE/SMALL/TINY constants
+- `packages/llm/test/models.ts` — `MODELS` list exercised by tests
+- `.github/workflows/npm-check.yml` — CI test matrix `models`
+- `.github/workflows/npm-deploy.yml` — deploy test matrix `models`
 ### Lore
 - These are golden numbers: 0.021, 0.146, 0.236, 0.382, and 0.618
 - Start with 0.618 when user suggests "partial" and down as they want less

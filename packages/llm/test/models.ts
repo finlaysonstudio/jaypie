@@ -65,34 +65,31 @@ export const MODELS: readonly ModelConfig[] = [
   // Note: Anthropic does not expose bare-name aliases like `claude-sonnet-4`
   // or `claude-opus-4` — only the dated/versioned ids resolve.
   { model: "claude-sonnet-4-5" },
-  { model: "claude-sonnet-4-6" }, // constants ANTHROPIC.DEFAULT/SMALL
+  { model: "claude-sonnet-4-6" },
 
   // ─── Anthropic Opus 4 ────────────────────────────────────────────────
-  { model: "claude-opus-4-1" },
-  { model: "claude-opus-4-5" },
-  { model: "claude-opus-4-7" }, // constants ANTHROPIC.LARGE
+  { model: "claude-opus-4-6" },
+  { model: "claude-opus-4-7" },
+  { model: "claude-opus-4-8" },
 
   // ─── Anthropic Haiku 4 ───────────────────────────────────────────────
-  { model: "claude-haiku-4-5" }, // constants ANTHROPIC.TINY
+  { model: "claude-haiku-4-5" },
 
   // ─── OpenAI GPT-5 ────────────────────────────────────────────────────
-  { model: "gpt-5" },
-  { model: "gpt-5.1" },
-  { model: "gpt-5-pro" },
-  { model: "gpt-5.4" }, // constants OPENAI.DEFAULT
-  { model: "gpt-5.4-mini" }, // constants OPENAI.SMALL
-  { model: "gpt-5.4-nano" }, // constants OPENAI.TINY
-  { model: "gpt-5.5" }, // constants OPENAI.LARGE
+  { model: "gpt-5.4" },
+  { model: "gpt-5.4-mini" },
+  { model: "gpt-5.4-nano" },
+  { model: "gpt-5.5" },
 
   // ─── Google Gemini 3 ─────────────────────────────────────────────────
-  { model: "gemini-3.1-pro-preview" }, // constants GEMINI.DEFAULT/LARGE
-  { model: "gemini-3-flash-preview" }, // constants GEMINI.SMALL
-  { model: "gemini-3.1-flash-lite-preview" }, // constants GEMINI.TINY
+  { model: "gemini-3.1-pro-preview" },
+  { model: "gemini-3-flash-preview" },
+  { model: "gemini-3.1-flash-lite-preview" },
 
   // ─── xAI Grok 4 ──────────────────────────────────────────────────────
-  { model: "grok-4.20-0309-reasoning" }, // constants XAI.DEFAULT/LARGE
-  { model: "grok-4.20-0309-non-reasoning" }, // constants XAI.SMALL
-  { model: "grok-4-1-fast-non-reasoning" }, // constants XAI.TINY
+  { model: "grok-4.3-latest" },
+  { model: "grok-4.20-0309-reasoning" },
+  { model: "grok-4.20-0309-non-reasoning" },
 
   // ─── OpenRouter routes ───────────────────────────────────────────────
   // OpenRouter forwards image_url and file content parts to the selected
