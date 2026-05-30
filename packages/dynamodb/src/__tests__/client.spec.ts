@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
+  getClient,
   getDocClient,
   getTableName,
   initClient,
@@ -83,6 +84,22 @@ describe("Client", () => {
       initClient({ tableName: "test-table" });
       expect(() => getDocClient()).not.toThrow();
       expect(getDocClient()).toBeDefined();
+    });
+  });
+
+  describe("getClient", () => {
+    it("is a function", () => {
+      expect(getClient).toBeFunction();
+    });
+
+    it("throws ConfigurationError when not initialized", () => {
+      expect(() => getClient()).toThrow("DynamoDB client not initialized");
+    });
+
+    it("returns the raw client when initialized", () => {
+      initClient({ tableName: "test-table" });
+      expect(() => getClient()).not.toThrow();
+      expect(getClient()).toBeDefined();
     });
   });
 

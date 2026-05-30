@@ -68,10 +68,22 @@ initClient({
 | Function | Description |
 |----------|-------------|
 | `initClient(config?)` | Initialize the DynamoDB client (call once) |
+| `getClient()` | Get the raw client for control-plane ops (CreateTable/DeleteTable) |
 | `getDocClient()` | Get the initialized Document Client |
 | `getTableName()` | Get the configured table name |
 | `isInitialized()` | Check if client is initialized |
 | `resetClient()` | Reset client state (for testing) |
+
+### Scan and Table Administration
+
+Schema-agnostic table operations that honor the `initClient` config (real AWS or local). These are the building blocks for table rebuilds.
+
+| Function | Description |
+|----------|-------------|
+| `scanTable({ tableName?, pageSize? })` | Async generator yielding every raw item via a full `Scan` (paginates internally). Reads any table regardless of GSI shape -- pass the old table during a rebuild. |
+| `countTable({ tableName? })` | Total item count via paginated `COUNT` scan (validation) |
+| `createTable({ tableName?, billingMode?, wait? })` | Create a table with the registered-model GSI schema; waits until `ACTIVE` by default |
+| `destroyTable({ tableName })` | Delete a table; `tableName` required (no default) |
 
 ### Constants
 
@@ -438,6 +450,30 @@ Version 0.5.0 is a breaking change. **Tables must be recreated** (pre-1.0 breaki
 | `buildIndexScope`, `buildIndexAlias`, etc. | Removed; use `buildCompositeKey` |
 | `DEFAULT_INDEXES` implicit fallback | Must `registerModel()` with `fabricIndex()` before querying |
 | Callers set `createdAt`/`updatedAt` | `indexEntity` manages both automatically |
+
+### Rebuilding a table
+
+The 0.5.0 primary-key change cannot be applied in place (DynamoDB cannot alter a primary key). The migration is a one-off, human-in-the-loop cutover to a new physical table, validated before destroying the old one. Run it once per environment, not as a deploy step. (Distinct from `JaypieMigration` in `skill("migrations")`, which runs CDK custom resources on every deploy.)
+
+Cutover (CDK-managed table name, maintenance window):
+
+1. Deploy the new table alongside the old (CDK).
+2. Pause writes so the copy can't go stale.
+3. Run a script: `scanTable({ tableName: OLD })` → transform → `updateEntity` (writes to the new table = the `initClient` singleton).
+4. Validate: `countTable(NEW)` matches `countTable(OLD)`; spot-check records.
+5. Flip `DYNAMODB_TABLE_NAME` (via `CDK_ENV`) to the new table and deploy; resume.
+6. `destroyTable({ tableName: OLD })` later, once confident (it is your rollback until then).
+
+```ts
+initClient({ tableName: NEW });        // singleton → destination
+await createTable({ tableName: NEW }); // new schema, waits ACTIVE
+for await (const item of scanTable({ tableName: OLD })) {
+  const { sequence, pk, sk, ...rest } = item;   // 0.4 → 0.6 transform
+  await updateEntity({ entity: rest });          // re-indexes + re-timestamps
+}
+```
+
+`scanTable` issues a raw `Scan`, so it reads the old table despite its mismatched GSIs; the transform is yours (field semantics are app-specific).
 
 ## See Also
 

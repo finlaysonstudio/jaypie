@@ -16,6 +16,7 @@ const LOCAL_CREDENTIALS = {
 };
 
 // Module-level state
+let client: DynamoDBClient | null = null;
 let docClient: DynamoDBDocumentClient | null = null;
 let tableName: string | null = null;
 
@@ -42,19 +43,34 @@ export function initClient(config: DynamoClientConfig = {}): void {
     config.credentials ??
     (isLocalEndpoint(endpoint) ? LOCAL_CREDENTIALS : undefined);
 
-  const dynamoClient = new DynamoDBClient({
+  client = new DynamoDBClient({
     ...(credentials && { credentials }),
     ...(endpoint && { endpoint }),
     region,
   });
 
-  docClient = DynamoDBDocumentClient.from(dynamoClient, {
+  docClient = DynamoDBDocumentClient.from(client, {
     marshallOptions: {
       removeUndefinedValues: true,
     },
   });
 
   tableName = config.tableName ?? process.env[ENV_DYNAMODB_TABLE_NAME] ?? null;
+}
+
+/**
+ * Get the initialized raw DynamoDB client (control-plane operations).
+ * Use for table-level commands (CreateTable, DeleteTable); use
+ * `getDocClient()` for item operations.
+ * @throws ConfigurationError if client has not been initialized
+ */
+export function getClient(): DynamoDBClient {
+  if (!client) {
+    throw new ConfigurationError(
+      "DynamoDB client not initialized. Call initClient() first.",
+    );
+  }
+  return client;
 }
 
 /**
@@ -94,6 +110,7 @@ export function isInitialized(): boolean {
  * Reset the client state (primarily for testing)
  */
 export function resetClient(): void {
+  client = null;
   docClient = null;
   tableName = null;
 }

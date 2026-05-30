@@ -1,5 +1,6 @@
 // Client initialization
 export {
+  getClient,
   getDocClient,
   getTableName,
   initClient,
@@ -45,6 +46,14 @@ export {
 // Unified query function with auto-detect
 export { query } from "./query.js";
 export type { QueryParams } from "./query.js";
+
+// Table scan utilities (schema-agnostic; migration source reader)
+export { countTable, scanTable } from "./scan.js";
+export type { ScanTableOptions } from "./scan.js";
+
+// Table administration (create/destroy; honors initClient config)
+export { createTable, destroyTable } from "./tables.js";
+export type { CreateTableOptions, CreateTableResult } from "./tables.js";
 
 // Seed and export utilities
 export {

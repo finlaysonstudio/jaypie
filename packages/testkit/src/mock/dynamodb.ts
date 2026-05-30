@@ -1,11 +1,14 @@
 import * as original from "@jaypie/dynamodb";
 import type {
   BaseQueryOptions,
+  CreateTableOptions,
+  CreateTableResult,
   DynamoClientConfig,
   ExportResult,
   ParentReference,
   QueryParams,
   QueryResult,
+  ScanTableOptions,
   SeedOptions,
   SeedResult,
   StorableEntity,
@@ -47,6 +50,10 @@ export const initClient = createMockFunction<
 >(() => {
   // No-op in mock
 });
+
+export const getClient = createMockFunction(() => ({
+  send: createMockResolvedFunction({}),
+}));
 
 export const getDocClient = createMockFunction(() => ({
   send: createMockResolvedFunction({ Items: [] }),
@@ -211,13 +218,43 @@ export const exportEntitiesToJson = createMockFunction<
   (model: string, scope: string, pretty?: boolean) => Promise<string>
 >(async () => "[]");
 
+// Scan utilities — yields nothing by default
+export const scanTable = createMockFunction<
+  (options?: ScanTableOptions) => AsyncGenerator<Record<string, unknown>>
+>(async function* () {
+  // No items in mock
+});
+
+export const countTable = createMockFunction<
+  (options?: ScanTableOptions) => Promise<number>
+>(async () => 0);
+
+// Table administration — no-op success by default
+export const createTable = createMockFunction<
+  (options?: CreateTableOptions) => Promise<CreateTableResult>
+>(async (options) => ({
+  created: true,
+  message: "Table created",
+  tableName: options?.tableName ?? "mock-table",
+}));
+
+export const destroyTable = createMockFunction<
+  (params: { tableName: string }) => Promise<{
+    destroyed: boolean;
+    tableName: string;
+  }>
+>(async ({ tableName }) => ({ destroyed: true, tableName }));
+
 // Re-export types for convenience
 export type {
   BaseQueryOptions,
+  CreateTableOptions,
+  CreateTableResult,
   ExportResult,
   ParentReference,
   QueryParams,
   QueryResult,
+  ScanTableOptions,
   SeedOptions,
   SeedResult,
   StorableEntity,
