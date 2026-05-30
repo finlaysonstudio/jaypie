@@ -51,6 +51,15 @@ npm install @jaypie/dynamodb
 | `exportEntities` | Export entities by model/scope |
 | `exportEntitiesToJson` | Export as JSON string |
 
+### Scan and Table Administration
+
+| Function | Purpose |
+|----------|---------|
+| `scanTable` | Async generator over every raw item (schema-agnostic `Scan`) |
+| `countTable` | Total item count via paginated `COUNT` scan |
+| `createTable` | Create a table with the registered-model GSI schema |
+| `destroyTable` | Delete a table (`tableName` required) |
+
 ## StorableEntity Interface
 
 All entities implement this interface:
@@ -298,13 +307,51 @@ const json = await exportEntitiesToJson("lang", APEX);        // Pretty
 const compact = await exportEntitiesToJson("lang", APEX, false); // Compact
 ```
 
+## Rebuilding a Table
+
+The 0.5.0 primary-key change cannot be applied in place — DynamoDB cannot alter a primary key. Moving a populated 0.4.x table forward is a one-off, validated cutover to a new physical table. Run it once per environment (not on every deploy; that is `JaypieMigration`).
+
+With a CDK-managed table name and a maintenance window:
+
+1. Deploy the new table alongside the old (CDK).
+2. Pause writes so the copy cannot go stale.
+3. Scan the old table, transform each record, write to the new table.
+4. Validate: `countTable` matches on both; spot-check records.
+5. Flip `DYNAMODB_TABLE_NAME` to the new table via CDK deploy; resume.
+6. `destroyTable` the old table later, once confident — it is your rollback until then.
+
+```typescript
+import {
+  countTable,
+  createTable,
+  initClient,
+  scanTable,
+  updateEntity,
+} from "@jaypie/dynamodb";
+
+initClient({ tableName: NEW });        // singleton → destination
+await createTable({ tableName: NEW }); // new schema, waits until ACTIVE
+
+for await (const item of scanTable({ tableName: OLD })) {
+  const { sequence, pk, sk, ...rest } = item; // 0.4 → 0.6 transform
+  await updateEntity({ entity: rest });        // re-indexes + re-timestamps
+}
+
+if ((await countTable({ tableName: OLD })) !== (await countTable())) {
+  throw new Error("Count mismatch — do NOT destroy the old table");
+}
+// Validated. Flip CDK_ENV to NEW, deploy, then later: destroyTable({ tableName: OLD })
+```
+
+`scanTable` issues a raw `Scan`, so it reads the old table despite its mismatched GSIs. The transform is application-specific; `updateEntity` recomputes every GSI key and timestamp on write.
+
 ## MCP Tools
 
 Local development tools via `@jaypie/mcp`:
 
 - `dynamodb_query` - Query entities
 - `dynamodb_get` - Get single entity
-- `dynamodb_put` - Create entity
+- `dynamodb_create` - Create entity
 - `dynamodb_update` - Update entity
 - `dynamodb_delete` - Delete entity
 

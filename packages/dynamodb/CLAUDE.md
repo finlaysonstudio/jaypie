@@ -65,10 +65,22 @@ src/
 | Export | Description |
 |--------|-------------|
 | `initClient(config)` | Initialize the DynamoDB client (call once at startup) |
+| `getClient()` | Get the raw DynamoDB client (control-plane: CreateTable/DeleteTable) |
 | `getDocClient()` | Get the initialized Document Client |
 | `getTableName()` | Get the configured table name |
 | `isInitialized()` | Check if client is initialized |
 | `resetClient()` | Reset client state (for testing) |
+
+### Scan and Table Administration
+
+These power table rebuilds (see [Rebuilding a table](#rebuilding-a-table-04--06)). All honor the `initClient` config, so they target real AWS or local alike.
+
+| Export | Description |
+|--------|-------------|
+| `scanTable({ tableName?, pageSize? })` | Async generator yielding every raw item via a schema-agnostic `Scan` (paginates internally). `tableName` defaults to the initialized table -- pass the **old** table to read it. |
+| `countTable({ tableName? })` | Total item count via a paginated `COUNT` scan (validation) |
+| `createTable({ tableName?, billingMode?, wait? })` | Create a table with the current registered-model GSI schema; waits until `ACTIVE` by default. Returns `{ created, message, tableName }` |
+| `destroyTable({ tableName })` | Delete a table. `tableName` is **required** (no default) -- destroying is intentional |
 
 ### Query Functions
 
@@ -474,6 +486,73 @@ Version 0.5.0 is a breaking change. **Tables must be recreated** (pre-1.0 breaki
 5. **Remove** manual `createdAt`/`updatedAt` assignment -- `indexEntity` handles it
 6. **Replace** `buildIndexScope`/`buildIndexAlias`/etc. with `buildCompositeKey`
 7. **Update** `scope` from required to optional in query call sites (if desired)
+
+### Rebuilding a table (0.4 → 0.6)
+
+The 0.5.0 primary-key change means a table **cannot be migrated in place** -- DynamoDB cannot alter a primary key. The pattern is a one-off, human-in-the-loop cutover to a new physical table, validated before the old one is destroyed. (0.6 adds the `putEntity` → `createEntity`/`updateEntity` rename on top, but no further schema change.)
+
+This is **not** a deploy-step migration. Run it once per environment (local → sandbox → production), watching each step. The package provides the verbs; you provide the transform.
+
+#### Cutover shape (CDK-managed table name, maintenance window)
+
+1. **Deploy the new table** alongside the old one (CDK), with its own name.
+2. **Pause writes** (maintenance window) so the copy can't go stale.
+3. **Run the migration script** below: scan OLD → transform → write NEW, single pass.
+4. **Validate**: `countTable(NEW)` matches `countTable(OLD)`; spot-check a few records.
+5. **Flip** `DYNAMODB_TABLE_NAME` (via `CDK_ENV`) to the new table in a CDK deploy, then resume.
+6. **Destroy the old table** later with `destroyTable({ tableName: OLD })`, once you're confident. It sits untouched as instant rollback until then.
+
+#### Migration script
+
+```ts
+import {
+  createTable,
+  countTable,
+  initClient,
+  scanTable,
+  updateEntity,
+  type StorableEntity,
+} from "@jaypie/dynamodb";
+import { fabricIndex, registerModel } from "@jaypie/fabric";
+
+const OLD = process.env.OLD_TABLE_NAME!;
+const NEW = process.env.DYNAMODB_TABLE_NAME!;
+
+// Register models so createTable builds the 0.6 GSIs
+registerModel({ model: "record", indexes: [fabricIndex(), fabricIndex("alias")] });
+
+// Singleton points at the DESTINATION; scanTable reads the OLD table explicitly
+initClient({ tableName: NEW });
+
+// 0.4 → 0.6 transform: drop `sequence`, strip the old pk/sk attrs.
+// `model` and `scope` survive as plain attributes; indexEntity (inside
+// updateEntity) recomputes every GSI key and the timestamps on write.
+function transform(item: Record<string, unknown>): StorableEntity {
+  const { sequence, pk, sk, ...rest } = item;
+  void sequence;
+  void pk;
+  void sk;
+  return rest as StorableEntity;
+}
+
+await createTable({ tableName: NEW }); // waits until ACTIVE
+
+let migrated = 0;
+for await (const item of scanTable({ tableName: OLD })) {
+  await updateEntity({ entity: transform(item) });
+  migrated += 1;
+}
+
+const sourceCount = await countTable({ tableName: OLD });
+console.log(`Migrated ${migrated} of ${sourceCount} records`);
+if (migrated !== sourceCount) {
+  throw new Error("Count mismatch -- do NOT destroy the old table");
+}
+// Validation passed. Flip CDK_ENV to NEW, deploy, then later:
+//   await destroyTable({ tableName: OLD });
+```
+
+The transform is yours because field semantics are app-specific. `scanTable` issues a raw `Scan`, so it reads the old table regardless of its (now-mismatched) GSI shape; `updateEntity` re-indexes each record into the new schema.
 
 ## Dependencies
 

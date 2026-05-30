@@ -12,11 +12,9 @@ import { getDocClient, getTableName } from "./client.js";
 import { ARCHIVED_SUFFIX, DELETED_SUFFIX } from "./constants.js";
 import { buildCompositeKey } from "./keyBuilders.js";
 import type {
-  QueryByAliasParams,
   QueryByCategoryParams,
   QueryByScopeParams,
   QueryByTypeParams,
-  QueryByXidParams,
   QueryResult,
   StorableEntity,
 } from "./types.js";
