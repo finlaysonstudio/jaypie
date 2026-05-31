@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { ERROR, HTTP } from "../types";
 import { JaypieError } from "../baseErrors";
-import { UnreachableCodeError } from "../index";
+import { ConflictError, UnreachableCodeError } from "../index";
 
 const NAME = "JaypieError";
 
@@ -108,6 +108,17 @@ describe("JSON:API HTTP Error", () => {
     it("Is supported in provided errors", () => {
       const error = new UnreachableCodeError();
       expect(error._type).toBe(ERROR.TYPE.UNREACHABLE_CODE);
+    });
+  });
+
+  describe("ConflictError", () => {
+    it("Is a 409 Conflict", () => {
+      const error = new ConflictError();
+      expect(error.status).toBe(HTTP.CODE.CONFLICT);
+      expect(error.status).toBe(409);
+      expect(error.title).toBe(ERROR.TITLE.CONFLICT);
+      expect(error._type).toBe(ERROR.TYPE.CONFLICT);
+      expect(error.isJaypieError).toBe(true);
     });
   });
 });

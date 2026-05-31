@@ -175,6 +175,27 @@ await destroyEntity({ id: "abc-123" });
 | `deleteEntity({ id })` | Soft delete (`deletedAt`, `#deleted` suffix on GSI pk) |
 | `archiveEntity({ id })` | Archive (`archivedAt`, `#archived` suffix on GSI pk) |
 | `destroyEntity({ id })` | Hard delete (permanent) |
+| `transactWriteEntities({ entities, conditionalCreate?, condition? })` | Write many entities atomically; `conditionalCreate: true` guards every `Put` with `attribute_not_exists(id)` (`condition` for a custom expression), throwing `ConflictError` (409) when a conditional check fails |
+
+### Atomic Conditional Writes
+
+Use `conditionalCreate` to write an entity **and** a uniqueness-sentinel row in a single transaction -- both commit or neither does:
+
+```typescript
+import { ConflictError, transactWriteEntities } from "@jaypie/dynamodb";
+
+try {
+  await transactWriteEntities({
+    conditionalCreate: true, // attribute_not_exists(id) on every Put
+    entities: [organization, aliasLock],
+  });
+} catch (error) {
+  if (error instanceof ConflictError) {
+    // alias already claimed -- map to 409
+  }
+  throw error;
+}
+```
 
 ### Scope and Hierarchy
 

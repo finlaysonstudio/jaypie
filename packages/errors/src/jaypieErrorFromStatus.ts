@@ -2,6 +2,7 @@ import { HTTP, JaypieError } from "./types";
 import {
   BadGatewayError,
   BadRequestError,
+  ConflictError,
   ForbiddenError,
   GatewayTimeoutError,
   GoneError,
@@ -25,6 +26,8 @@ export function jaypieErrorFromStatus(
       return new ForbiddenError(message);
     case HTTP.CODE.NOT_FOUND:
       return new NotFoundError(message);
+    case HTTP.CODE.CONFLICT:
+      return new ConflictError(message);
     case HTTP.CODE.GONE:
       return new GoneError(message);
     case HTTP.CODE.TEAPOT:

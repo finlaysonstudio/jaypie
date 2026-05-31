@@ -58,7 +58,7 @@ src/
 | `deleteEntity({ id })` | Soft delete (sets `deletedAt`, re-indexes with `#deleted` suffix) |
 | `archiveEntity({ id })` | Archive (sets `archivedAt`, re-indexes with `#archived` suffix) |
 | `destroyEntity({ id })` | Hard delete (permanently removes) |
-| `transactWriteEntities({ entities })` | Write multiple entities atomically |
+| `transactWriteEntities({ entities, conditionalCreate?, condition? })` | Write multiple entities atomically; `conditionalCreate: true` guards every `Put` with `attribute_not_exists(id)` (or pass `condition` for a custom ConditionExpression), throwing `ConflictError` (409) when a conditional check fails |
 
 ### Client Functions
 

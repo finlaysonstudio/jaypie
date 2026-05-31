@@ -8,6 +8,7 @@ export const HTTP = {
   CODE: {
     BAD_GATEWAY: 502,
     BAD_REQUEST: 400,
+    CONFLICT: 409,
     FORBIDDEN: 403,
     GATEWAY_TIMEOUT: 504,
     GONE: 410,
@@ -27,6 +28,7 @@ export const ERROR = {
     BAD_REQUEST: "The request was not properly formatted",
     CONFIGURATION_ERROR:
       "The application responding to the request encountered a configuration error",
+    CONFLICT: "The request conflicts with the current state of the resource",
     CORS_ERROR: "The requesting origin is not authorized to this resource",
     FORBIDDEN: "Access to this resource is not authorized",
     GATEWAY_TIMEOUT:
@@ -55,6 +57,7 @@ export const ERROR = {
     BAD_GATEWAY: "Bad Gateway",
     BAD_REQUEST: "Bad Request",
     CONFIGURATION_ERROR: "Internal Configuration Error",
+    CONFLICT: "Conflict",
     CORS_ERROR: "Unauthorized Origin",
     FORBIDDEN: "Forbidden",
     GATEWAY_TIMEOUT: "Gateway Timeout",
@@ -73,6 +76,7 @@ export const ERROR = {
     BAD_GATEWAY: "BAD_GATEWAY",
     BAD_REQUEST: "BAD_REQUEST",
     CONFIGURATION_ERROR: "CONFIGURATION_ERROR",
+    CONFLICT: "CONFLICT",
     CORS_ERROR: "CORS_ERROR",
     FORBIDDEN: "FORBIDDEN",
     GATEWAY_TIMEOUT: "GATEWAY_TIMEOUT",

@@ -29,6 +29,7 @@ throw new ConfigurationError("Missing API key");
 | UnauthorizedError | 401 | Authentication required |
 | ForbiddenError | 403 | Authenticated but not permitted |
 | NotFoundError | 404 | Resource doesn't exist |
+| ConflictError | 409 | Request conflicts with current state (e.g. uniqueness violation) |
 | ConfigurationError | 500 | Missing or invalid config |
 | InternalError | 500 | Unexpected server error |
 

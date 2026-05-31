@@ -38,6 +38,7 @@ describe("errorFromStatusCode", () => {
       expect(jaypieErrorFromStatus(401).title).toBe("Service Unauthorized");
       expect(jaypieErrorFromStatus(403).title).toBe("Forbidden");
       expect(jaypieErrorFromStatus(404).title).toBe("Not Found");
+      expect(jaypieErrorFromStatus(409).title).toBe("Conflict");
       expect(jaypieErrorFromStatus(500).title).toBe(
         "Internal Application Error",
       );
