@@ -28,6 +28,9 @@ export const BadRequestError: typeof errors.BadRequestError = createMockError(
 );
 export const ConfigurationError: typeof errors.ConfigurationError =
   createMockError(errors.ConfigurationError);
+export const ConflictError: typeof errors.ConflictError = createMockError(
+  errors.ConflictError,
+);
 export const CorsError: typeof errors.CorsError = createMockError(
   errors.CorsError,
 );
@@ -114,6 +117,8 @@ export const errorFromStatusCode = createMockFunction<
         return new NotFoundError(message);
       case 405:
         return new MethodNotAllowedError(message);
+      case 409:
+        return new ConflictError(message);
       case 410:
         return new GoneError(message);
       case 418:

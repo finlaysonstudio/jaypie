@@ -16,6 +16,13 @@ export const BadRequestError = createErrorClass(
   ERROR.TYPE.BAD_REQUEST,
 );
 
+export const ConflictError = createErrorClass(
+  ERROR.MESSAGE.CONFLICT,
+  HTTP.CODE.CONFLICT,
+  ERROR.TITLE.CONFLICT,
+  ERROR.TYPE.CONFLICT,
+);
+
 export const ForbiddenError = createErrorClass(
   ERROR.MESSAGE.FORBIDDEN,
   HTTP.CODE.FORBIDDEN,

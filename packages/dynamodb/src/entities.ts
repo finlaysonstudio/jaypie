@@ -4,6 +4,7 @@ import {
   PutCommand,
   TransactWriteCommand,
 } from "@aws-sdk/lib-dynamodb";
+import { ConflictError } from "@jaypie/errors";
 import { fabricService } from "@jaypie/fabric";
 
 import { getDocClient, getTableName } from "./client.js";
@@ -220,23 +221,67 @@ export const destroyEntity = fabricService({
  * Write multiple entities atomically using DynamoDB transactions.
  * Each entity is auto-indexed via indexEntity before writing.
  * All entities are written to the same table in a single transaction.
+ *
+ * Pass `conditionalCreate: true` to guard every Put with
+ * `attribute_not_exists(id)` (the canonical atomic-create / uniqueness-sentinel
+ * pattern), or `condition` to supply your own ConditionExpression applied to
+ * every Put. When a conditional check fails the transaction is cancelled and a
+ * `ConflictError` (409) is thrown so callers can map it to a 4xx.
  */
 export async function transactWriteEntities({
+  condition,
+  conditionalCreate,
   entities,
 }: {
+  condition?: string;
+  conditionalCreate?: boolean;
   entities: StorableEntity[];
 }): Promise<void> {
   const docClient = getDocClient();
   const tableName = getTableName();
 
+  const conditionExpression =
+    condition ?? (conditionalCreate ? "attribute_not_exists(id)" : undefined);
+
   const command = new TransactWriteCommand({
     TransactItems: entities.map((entity) => ({
       Put: {
+        ...(conditionExpression
+          ? { ConditionExpression: conditionExpression }
+          : {}),
         Item: indexEntity(entity),
         TableName: tableName,
       },
     })),
   });
 
-  await docClient.send(command);
+  try {
+    await docClient.send(command);
+  } catch (error) {
+    if (isConditionalCheckCancellation(error)) {
+      throw new ConflictError(
+        "A conditional write in the transaction was rejected because the item already exists",
+      );
+    }
+    throw error;
+  }
+}
+
+/**
+ * True when a DynamoDB transaction was cancelled because at least one item's
+ * ConditionExpression failed (mirrors createEntity's
+ * ConditionalCheckFailedException handling for the multi-item case).
+ */
+function isConditionalCheckCancellation(error: unknown): boolean {
+  const candidate = error as {
+    name?: string;
+    CancellationReasons?: Array<{ Code?: string }>;
+  };
+  return (
+    candidate?.name === "TransactionCanceledException" &&
+    Array.isArray(candidate.CancellationReasons) &&
+    candidate.CancellationReasons.some(
+      (reason) => reason?.Code === "ConditionalCheckFailed",
+    )
+  );
 }

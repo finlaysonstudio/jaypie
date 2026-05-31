@@ -97,7 +97,11 @@ export const destroyEntity = createMockFunction<
 >(async () => true);
 
 export const transactWriteEntities = createMockFunction<
-  (params: { entities: StorableEntity[] }) => Promise<void>
+  (params: {
+    condition?: string;
+    conditionalCreate?: boolean;
+    entities: StorableEntity[];
+  }) => Promise<void>
 >(async () => {
   // No-op in mock
 });

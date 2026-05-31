@@ -103,4 +103,110 @@ describe("transactWriteEntities", () => {
       }),
     ).rejects.toThrow("Transaction failed");
   });
+
+  it("emits no ConditionExpression by default", async () => {
+    await transactWriteEntities({
+      entities: [{ id: "a", model: "migration", scope: "@" } as StorableEntity],
+    });
+
+    const command = mockSend.mock.calls[0][0];
+    expect(
+      command.input.TransactItems[0].Put.ConditionExpression,
+    ).toBeUndefined();
+  });
+
+  describe("conditionalCreate", () => {
+    it("applies attribute_not_exists(id) to every Put", async () => {
+      await transactWriteEntities({
+        conditionalCreate: true,
+        entities: [
+          { id: "a", model: "migration", scope: "@" } as StorableEntity,
+          { id: "b", model: "apikey", scope: "@" } as StorableEntity,
+        ],
+      });
+
+      const command = mockSend.mock.calls[0][0];
+      expect(command.input.TransactItems[0].Put.ConditionExpression).toBe(
+        "attribute_not_exists(id)",
+      );
+      expect(command.input.TransactItems[1].Put.ConditionExpression).toBe(
+        "attribute_not_exists(id)",
+      );
+    });
+  });
+
+  describe("condition", () => {
+    it("applies the given expression to every Put", async () => {
+      await transactWriteEntities({
+        condition: "attribute_not_exists(pk)",
+        entities: [
+          { id: "a", model: "migration", scope: "@" } as StorableEntity,
+        ],
+      });
+
+      const command = mockSend.mock.calls[0][0];
+      expect(command.input.TransactItems[0].Put.ConditionExpression).toBe(
+        "attribute_not_exists(pk)",
+      );
+    });
+
+    it("takes precedence over conditionalCreate", async () => {
+      await transactWriteEntities({
+        condition: "attribute_not_exists(pk)",
+        conditionalCreate: true,
+        entities: [
+          { id: "a", model: "migration", scope: "@" } as StorableEntity,
+        ],
+      });
+
+      const command = mockSend.mock.calls[0][0];
+      expect(command.input.TransactItems[0].Put.ConditionExpression).toBe(
+        "attribute_not_exists(pk)",
+      );
+    });
+  });
+
+  describe("conflict handling", () => {
+    it("throws a ConflictError when a conditional check fails", async () => {
+      const cancelled = Object.assign(
+        new Error("Transaction cancelled, please refer to ..."),
+        {
+          name: "TransactionCanceledException",
+          CancellationReasons: [
+            { Code: "ConditionalCheckFailed", Message: "exists" },
+            { Code: "None" },
+          ],
+        },
+      );
+      mockSend.mockRejectedValue(cancelled);
+
+      await expect(
+        transactWriteEntities({
+          conditionalCreate: true,
+          entities: [
+            { id: "a", model: "migration", scope: "@" } as StorableEntity,
+          ],
+        }),
+      ).rejects.toMatchObject({ isJaypieError: true, status: 409 });
+    });
+
+    it("propagates a cancellation that is not a conditional check failure", async () => {
+      const cancelled = Object.assign(
+        new Error("Transaction cancelled, please refer to ..."),
+        {
+          name: "TransactionCanceledException",
+          CancellationReasons: [{ Code: "ProvisionedThroughputExceeded" }],
+        },
+      );
+      mockSend.mockRejectedValue(cancelled);
+
+      await expect(
+        transactWriteEntities({
+          entities: [
+            { id: "a", model: "migration", scope: "@" } as StorableEntity,
+          ],
+        }),
+      ).rejects.toThrow("Transaction cancelled");
+    });
+  });
 });

@@ -33,6 +33,7 @@ All errors extend `JaypieError` which provides:
 **Standard HTTP Errors:**
 - `BadGatewayError` (502)
 - `BadRequestError` (400)
+- `ConflictError` (409)
 - `ForbiddenError` (403)
 - `GatewayTimeoutError` (504)
 - `GoneError` (410)
