@@ -181,8 +181,11 @@ await destroyEntity({ id: "abc-123" });
 
 Use `conditionalCreate` to write an entity **and** a uniqueness-sentinel row in a single transaction -- both commit or neither does:
 
+`ConflictError` is thrown from `@jaypie/errors` (re-exported by the `jaypie` umbrella); `@jaypie/dynamodb` does not re-export it.
+
 ```typescript
-import { ConflictError, transactWriteEntities } from "@jaypie/dynamodb";
+import { ConflictError } from "jaypie"; // or "@jaypie/errors"
+import { transactWriteEntities } from "@jaypie/dynamodb";
 
 try {
   await transactWriteEntities({
