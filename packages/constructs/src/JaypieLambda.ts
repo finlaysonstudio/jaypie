@@ -79,6 +79,7 @@ export interface JaypieLambdaProps {
    */
   secrets?: SecretsArrayItem[];
   securityGroups?: ec2.ISecurityGroup[];
+  serviceTag?: string;
   timeout?: Duration | number;
   tracing?: lambda.Tracing;
   vendorTag?: string;
@@ -130,6 +131,7 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
       runtimeManagementMode,
       secrets: secretsInput = [],
       securityGroups,
+      serviceTag,
       timeout = Duration.seconds(CDK.DURATION.LAMBDA_WORKER),
       tracing,
       vendorTag,
@@ -277,6 +279,9 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
 
     if (roleTag) {
       Tags.of(this._lambda).add(CDK.TAG.ROLE, roleTag);
+    }
+    if (serviceTag) {
+      Tags.of(this._lambda).add(CDK.TAG.SERVICE, serviceTag);
     }
     if (vendorTag) {
       Tags.of(this._lambda).add(CDK.TAG.VENDOR, vendorTag);
