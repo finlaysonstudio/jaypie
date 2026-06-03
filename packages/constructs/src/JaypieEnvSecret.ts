@@ -1,30 +1,15 @@
 import { Construct } from "constructs";
-import {
-  CfnOutput,
-  Fn,
-  SecretValue,
-  Tags,
-  RemovalPolicy,
-  Stack,
-} from "aws-cdk-lib";
+import { CfnOutput, Fn, RemovalPolicy, SecretValue, Tags } from "aws-cdk-lib";
 import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
-import {
-  ISecret,
-  ISecretAttachmentTarget,
-  RotationSchedule,
-  RotationScheduleOptions,
-} from "aws-cdk-lib/aws-secretsmanager";
-import { IKey } from "aws-cdk-lib/aws-kms";
-import {
-  Grant,
-  IGrantable,
-  PolicyStatement,
-  AddToResourcePolicyResult,
-} from "aws-cdk-lib/aws-iam";
 
 import { ConfigurationError } from "@jaypie/errors";
 
 import { CDK } from "./constants";
+import {
+  BuildSecretContext,
+  JaypieSecret,
+  JaypieSecretProps,
+} from "./JaypieSecret";
 
 // It is a consumer if the environment is ephemeral
 function checkEnvIsConsumer(env = process.env): boolean {
@@ -64,46 +49,33 @@ function exportEnvName(
   return cleanName(rawName);
 }
 
-export interface JaypieEnvSecretProps {
+export interface JaypieEnvSecretProps extends JaypieSecretProps {
   consumer?: boolean;
-  envKey?: string;
   export?: string;
-  generateSecretString?: secretsmanager.SecretStringGenerator;
   provider?: boolean;
-  removalPolicy?: boolean | RemovalPolicy;
-  roleTag?: string;
-  vendorTag?: string;
-  value?: string;
 }
 
-export class JaypieEnvSecret extends Construct implements ISecret {
-  private readonly _envKey?: string;
-  private readonly _secret: secretsmanager.ISecret;
+/**
+ * @deprecated Use {@link JaypieSecret}. JaypieEnvSecret layers an
+ * environment-driven provider/consumer cross-stack pattern on top of
+ * JaypieSecret and will be removed in 2.0.
+ */
+export class JaypieEnvSecret extends JaypieSecret {
+  protected static readonly shorthandPrefix: string = "EnvSecret_";
 
   constructor(
     scope: Construct,
     idOrEnvKey: string,
     props?: JaypieEnvSecretProps,
   ) {
-    // Shorthand detection: treat idOrEnvKey as envKey when envKey prop is
-    // not set and idOrEnvKey either looks like a SCREAMING_SNAKE_CASE env
-    // var name or is already present in process.env. Convention-based
-    // detection ensures missing env vars still go through envKey validation
-    // instead of silently creating an empty secret.
-    const looksLikeEnvKey = /^[A-Z][A-Z0-9_]*$/.test(idOrEnvKey);
-    const treatAsEnvKey =
-      (!props || props.envKey === undefined) &&
-      (looksLikeEnvKey ||
-        (typeof process.env[idOrEnvKey] === "string" &&
-          process.env[idOrEnvKey] !== ""));
+    super(scope, idOrEnvKey, props);
+  }
 
-    const id = treatAsEnvKey ? `EnvSecret_${idOrEnvKey}` : idOrEnvKey;
-
-    super(scope, id);
-
+  protected buildSecret(context: BuildSecretContext): secretsmanager.ISecret {
+    const { envKey, id, treatAsEnvKey } = context;
+    const props = context.props as JaypieEnvSecretProps;
     const {
       consumer = checkEnvIsConsumer(),
-      envKey: envKeyProp,
       export: exportParam,
       generateSecretString,
       provider = checkEnvIsProvider(),
@@ -111,11 +83,7 @@ export class JaypieEnvSecret extends Construct implements ISecret {
       roleTag,
       vendorTag,
       value,
-    } = props || {};
-
-    const envKey = treatAsEnvKey ? idOrEnvKey : envKeyProp;
-
-    this._envKey = envKey;
+    } = props;
 
     let exportName;
 
@@ -144,7 +112,7 @@ export class JaypieEnvSecret extends Construct implements ISecret {
 
     if (consumer) {
       const secretName = Fn.importValue(exportName);
-      this._secret = secretsmanager.Secret.fromSecretNameV2(
+      const secret = secretsmanager.Secret.fromSecretNameV2(
         this,
         id,
         secretName,
@@ -152,134 +120,52 @@ export class JaypieEnvSecret extends Construct implements ISecret {
 
       // Add CfnOutput for consumer secrets
       new CfnOutput(this, `ConsumedName`, {
-        value: this._secret.secretName,
+        value: secret.secretName,
+      });
+
+      return secret;
+    }
+
+    const secretValue =
+      envKey && process.env[envKey] ? process.env[envKey] : value;
+
+    const secret = new secretsmanager.Secret(this, id, {
+      generateSecretString,
+      secretStringValue:
+        !generateSecretString && secretValue
+          ? SecretValue.unsafePlainText(secretValue)
+          : undefined,
+    });
+
+    if (removalPolicy !== undefined) {
+      const policy =
+        typeof removalPolicy === "boolean"
+          ? removalPolicy
+            ? RemovalPolicy.RETAIN
+            : RemovalPolicy.DESTROY
+          : removalPolicy;
+      secret.applyRemovalPolicy(policy);
+    }
+
+    if (roleTag) {
+      Tags.of(secret).add(CDK.TAG.ROLE, roleTag);
+    }
+
+    if (vendorTag) {
+      Tags.of(secret).add(CDK.TAG.VENDOR, vendorTag);
+    }
+
+    if (provider) {
+      new CfnOutput(this, `ProvidedName`, {
+        value: secret.secretName,
+        exportName,
       });
     } else {
-      const secretValue =
-        envKey && process.env[envKey] ? process.env[envKey] : value;
-
-      const secretProps: secretsmanager.SecretProps = {
-        generateSecretString,
-        secretStringValue:
-          !generateSecretString && secretValue
-            ? SecretValue.unsafePlainText(secretValue)
-            : undefined,
-      };
-
-      this._secret = new secretsmanager.Secret(this, id, secretProps);
-
-      if (removalPolicy !== undefined) {
-        const policy =
-          typeof removalPolicy === "boolean"
-            ? removalPolicy
-              ? RemovalPolicy.RETAIN
-              : RemovalPolicy.DESTROY
-            : removalPolicy;
-        this._secret.applyRemovalPolicy(policy);
-      }
-
-      if (roleTag) {
-        Tags.of(this._secret).add(CDK.TAG.ROLE, roleTag);
-      }
-
-      if (vendorTag) {
-        Tags.of(this._secret).add(CDK.TAG.VENDOR, vendorTag);
-      }
-
-      if (provider) {
-        new CfnOutput(this, `ProvidedName`, {
-          value: this._secret.secretName,
-          exportName,
-        });
-      } else {
-        new CfnOutput(this, `CreatedName`, {
-          value: this._secret.secretName,
-        });
-      }
+      new CfnOutput(this, `CreatedName`, {
+        value: secret.secretName,
+      });
     }
-  }
 
-  // IResource implementation
-  public get stack(): Stack {
-    return Stack.of(this);
-  }
-
-  public get env(): { account: string; region: string } {
-    return {
-      account: Stack.of(this).account,
-      region: Stack.of(this).region,
-    };
-  }
-
-  public applyRemovalPolicy(policy: RemovalPolicy): void {
-    this._secret.applyRemovalPolicy(policy);
-  }
-
-  // ISecret implementation
-  public get secretArn(): string {
-    return this._secret.secretArn;
-  }
-
-  public get secretFullArn(): string | undefined {
-    return this._secret.secretFullArn;
-  }
-
-  public get secretName(): string {
-    return this._secret.secretName;
-  }
-
-  public get secretRef(): secretsmanager.SecretReference {
-    return this._secret.secretRef;
-  }
-
-  public get encryptionKey(): IKey | undefined {
-    return this._secret.encryptionKey;
-  }
-
-  public get secretValue(): SecretValue {
-    return this._secret.secretValue;
-  }
-
-  public secretValueFromJson(key: string): SecretValue {
-    return this._secret.secretValueFromJson(key);
-  }
-
-  public grantRead(grantee: IGrantable, versionStages?: string[]): Grant {
-    return this._secret.grantRead(grantee, versionStages);
-  }
-
-  public grantWrite(grantee: IGrantable): Grant {
-    return this._secret.grantWrite(grantee);
-  }
-
-  public addRotationSchedule(
-    id: string,
-    options: RotationScheduleOptions,
-  ): RotationSchedule {
-    return this._secret.addRotationSchedule(id, options);
-  }
-
-  public addToResourcePolicy(
-    statement: PolicyStatement,
-  ): AddToResourcePolicyResult {
-    return this._secret.addToResourcePolicy(statement);
-  }
-
-  public denyAccountRootDelete(): void {
-    this._secret.denyAccountRootDelete();
-  }
-
-  public attach(target: ISecretAttachmentTarget): ISecret {
-    return this._secret.attach(target);
-  }
-
-  public cfnDynamicReferenceKey(
-    options?: Parameters<ISecret["cfnDynamicReferenceKey"]>[0],
-  ): string {
-    return this._secret.cfnDynamicReferenceKey(options);
-  }
-
-  public get envKey(): string | undefined {
-    return this._envKey;
+    return secret;
   }
 }
