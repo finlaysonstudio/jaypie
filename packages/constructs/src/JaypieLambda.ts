@@ -72,8 +72,8 @@ export interface JaypieLambdaProps {
   /**
    * Secrets to make available to the Lambda function.
    *
-   * Supports both JaypieEnvSecret instances and strings:
-   * - JaypieEnvSecret: used directly
+   * Supports both JaypieSecret instances and strings:
+   * - JaypieSecret (including JaypieEnvSecret): used directly
    * - String: creates a JaypieEnvSecret with the string as envKey
    *   (reuses existing secrets within the same scope)
    */
@@ -143,7 +143,7 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
     // Get base environment with defaults
     const environment = jaypieLambdaEnv({ initialEnvironment });
 
-    // Resolve secrets from mixed array (strings and JaypieEnvSecret instances)
+    // Resolve secrets from mixed array (strings and JaypieSecret instances)
     // Use Stack.of(this) to ensure secrets are shared at stack level across all constructs
     const secrets = resolveSecrets(Stack.of(this), secretsInput);
 
@@ -162,7 +162,7 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
       {},
     );
 
-    // Process JaypieEnvSecret array
+    // Process JaypieSecret array
     const jaypieSecretsEnvironment = secrets.reduce<{ [key: string]: string }>(
       (acc, secret) => {
         if (secret.envKey) {
@@ -244,7 +244,7 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
       secret.grantRead(this._lambda);
     });
 
-    // Grant read permissions for JaypieEnvSecrets
+    // Grant read permissions for JaypieSecrets
     secrets.forEach((secret) => {
       secret.grantRead(this._lambda);
     });

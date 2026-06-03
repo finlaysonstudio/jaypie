@@ -54,11 +54,11 @@ function getOrCreateSecret(
 }
 
 /**
- * Resolves secrets input to an array of JaypieEnvSecret instances.
+ * Resolves secrets input to an array of JaypieSecret instances.
  *
- * When an item is already a JaypieEnvSecret, it's passed through as-is.
- * When an item is a string, a JaypieEnvSecret is created (or reused from cache)
- * with the string as the envKey.
+ * When an item is already a JaypieSecret (including a JaypieEnvSecret), it's
+ * passed through as-is. When an item is a string, a JaypieEnvSecret is created
+ * (or reused from cache) with the string as the envKey.
  *
  * Secrets are cached per scope to avoid creating duplicate secrets when
  * multiple constructs in the same scope reference the same secret.
