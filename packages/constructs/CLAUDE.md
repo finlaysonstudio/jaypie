@@ -75,7 +75,8 @@ packages/constructs/
 
 | Construct | Description |
 |-----------|-------------|
-| `JaypieEnvSecret` | Environment-aware secrets (provider/consumer pattern) |
+| `JaypieSecret` | Plain Secrets Manager secret (no provider/consumer pattern) |
+| `JaypieEnvSecret` | Environment-aware secrets (provider/consumer pattern; deprecated, removed in 2.0) |
 | `JaypieDatadogSecret` | Datadog API key secret |
 | `JaypieMongoDbSecret` | MongoDB connection secret |
 | `JaypieOpenAiSecret` | OpenAI API key secret |
@@ -379,6 +380,25 @@ export default config;
 ```
 
 Without this configuration, the Lambda Function URL returns a JSON envelope `{ statusCode, headers, body }` instead of streaming HTML, because Lambda's `RESPONSE_STREAM` invoke mode requires the handler to use `streamifyResponse` (which OpenNext's `aws-lambda-streaming` wrapper provides).
+
+### Plain Secret (no provider/consumer)
+
+`JaypieSecret` always creates a secret in the current stack — it never imports across stacks or emits CloudFormation exports. It reads from `process.env[envKey]`, an explicit `value`, or `generateSecretString`, and supports the same SCREAMING_SNAKE_CASE shorthand as `JaypieEnvSecret`. Accepts `roleTag`/`vendorTag`/`removalPolicy` like `JaypieEnvSecret`.
+
+```typescript
+import { JaypieSecret } from "@jaypie/constructs";
+
+// Reads process.env.MY_API_KEY (throws ConfigurationError if unset)
+new JaypieSecret(this, "MY_API_KEY");
+
+// Explicit value or generated string
+new JaypieSecret(this, "DbPassword", {
+  envKey: "DB_PASSWORD",
+  generateSecretString: { excludePunctuation: true, passwordLength: 32 },
+});
+```
+
+`JaypieEnvSecret` extends `JaypieSecret` and is accepted anywhere a `JaypieSecret` is (including `JaypieLambda` `secrets`). `JaypieEnvSecret` is deprecated and will be removed in 2.0.
 
 ### Provider/Consumer Secrets Pattern
 

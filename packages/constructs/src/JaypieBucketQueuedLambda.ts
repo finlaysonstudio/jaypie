@@ -28,7 +28,13 @@ export class JaypieBucketQueuedLambda
     props.fifo = false; // S3 event notifications are not supported for FIFO queues
     super(scope, id, props);
 
-    const { bucketName, roleTag, vendorTag, bucketOptions = {} } = props;
+    const {
+      bucketName,
+      roleTag,
+      serviceTag,
+      vendorTag,
+      bucketOptions = {},
+    } = props;
 
     // Create S3 Bucket
     this._bucket = new s3.Bucket(this, "Bucket", {
@@ -40,6 +46,9 @@ export class JaypieBucketQueuedLambda
     // Add tags to bucket
     if (roleTag) {
       Tags.of(this._bucket).add(CDK.TAG.ROLE, roleTag);
+    }
+    if (serviceTag) {
+      Tags.of(this._bucket).add(CDK.TAG.SERVICE, serviceTag);
     }
     if (vendorTag) {
       Tags.of(this._bucket).add(CDK.TAG.VENDOR, vendorTag);

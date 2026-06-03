@@ -82,6 +82,27 @@ describe("JaypieLambda", () => {
       });
     });
 
+    it("adds service tag when provided", () => {
+      const stack = new Stack();
+      const construct = new JaypieLambda(stack, "TestConstruct", {
+        code: lambda.Code.fromInline("exports.handler = () => {}"),
+        handler: "index.handler",
+        serviceTag: "TEST_SERVICE",
+      });
+      const template = Template.fromStack(stack);
+
+      expect(construct).toBeDefined();
+
+      const mainFunction = findMainLambdaFunction(template);
+      expect(mainFunction).toBeDefined();
+
+      const tags = mainFunction?.Properties?.Tags || [];
+      expect(tags).toContainEqual({
+        Key: CDK.TAG.SERVICE,
+        Value: "TEST_SERVICE",
+      });
+    });
+
     it("adds both role and vendor tags when provided", () => {
       const stack = new Stack();
       const construct = new JaypieLambda(stack, "TestConstruct", {

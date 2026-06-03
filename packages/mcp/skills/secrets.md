@@ -5,7 +5,30 @@ related: apikey, aws, cdk, variables
 
 # Secret Management
 
-Jaypie uses AWS Secrets Manager for secure credential storage. The `JaypieEnvSecret` construct creates secrets at deploy time from environment variables, and `getEnvSecret` retrieves them at runtime.
+Jaypie uses AWS Secrets Manager for secure credential storage. The `JaypieSecret` and `JaypieEnvSecret` constructs create secrets at deploy time from environment variables, and `getEnvSecret` retrieves them at runtime.
+
+## JaypieSecret vs JaypieEnvSecret
+
+- **`JaypieSecret`** — a plain secret. Always creates a secret in the current stack from `process.env[envKey]`, an explicit `value`, or `generateSecretString`. No cross-stack imports or exports. This is the construct to reach for.
+- **`JaypieEnvSecret`** — extends `JaypieSecret` and adds the environment-driven provider/consumer cross-stack pattern (see [Provider/Consumer Pattern](#providerconsumer-pattern) below). **Deprecated; will be removed in 2.0.**
+
+`JaypieEnvSecret` is a `JaypieSecret`, so it is accepted anywhere a `JaypieSecret` is — including the `secrets` array on `JaypieLambda`. Strings in that array still create env-aware `JaypieEnvSecret` instances.
+
+```typescript
+import { JaypieSecret } from "@jaypie/constructs";
+
+// Reads process.env.MY_API_KEY at deploy time
+// Throws ConfigurationError if unset and no value/generateSecretString given
+new JaypieSecret(this, "MY_API_KEY");
+
+// Generated secret, no env var needed
+new JaypieSecret(this, "DbPassword", {
+  envKey: "DB_PASSWORD",
+  generateSecretString: { excludePunctuation: true, passwordLength: 32 },
+});
+```
+
+Everything below that uses `JaypieEnvSecret` works the same on `JaypieSecret`, except the provider/consumer cross-stack behavior, which is `JaypieEnvSecret`-only.
 
 ## The Pattern
 

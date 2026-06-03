@@ -54,6 +54,7 @@ export {
   JaypieOrganizationTrailProps,
 } from "./JaypieOrganizationTrail";
 export { JaypieQueuedLambda } from "./JaypieQueuedLambda";
+export { JaypieSecret, JaypieSecretProps } from "./JaypieSecret";
 export {
   AccountAssignments,
   JaypieSsoPermissions,

@@ -61,8 +61,8 @@ export interface JaypieNextjsProps {
   /**
    * Secrets to make available to the Next.js application.
    *
-   * Supports both JaypieEnvSecret instances and strings:
-   * - JaypieEnvSecret: used directly
+   * Supports both JaypieSecret instances and strings:
+   * - JaypieSecret (including JaypieEnvSecret): used directly
    * - String: creates a JaypieEnvSecret with the string as envKey
    *   (reuses existing secrets within the same scope)
    */
@@ -111,7 +111,7 @@ export class JaypieNextJs extends Construct {
       : props?.nextjsPath || path.join(process.cwd(), "..", "nextjs");
     const paramsAndSecrets = resolveParamsAndSecrets();
 
-    // Resolve secrets from mixed array (strings and JaypieEnvSecret instances)
+    // Resolve secrets from mixed array (strings and JaypieSecret instances)
     // Use Stack.of(this) to ensure secrets are shared at stack level across all constructs
     const secrets = resolveSecrets(Stack.of(this), props?.secrets);
 
@@ -124,7 +124,7 @@ export class JaypieNextJs extends Construct {
       {},
     );
 
-    // Process JaypieEnvSecret array
+    // Process JaypieSecret array
     const jaypieSecretsEnvironment = secrets.reduce<{ [key: string]: string }>(
       (acc, secret) => {
         if (secret.envKey) {
@@ -214,7 +214,7 @@ export class JaypieNextJs extends Construct {
       secret.grantRead(nextjs.serverFunction.lambdaFunction);
     });
 
-    // Grant read permissions for JaypieEnvSecrets
+    // Grant read permissions for JaypieSecrets
     secrets.forEach((secret) => {
       secret.grantRead(nextjs.serverFunction.lambdaFunction);
     });

@@ -62,6 +62,7 @@ export class JaypieQueuedLambda
       runtimeManagementMode,
       secrets = [],
       securityGroups,
+      serviceTag,
       tables = [],
       timeout = Duration.seconds(CDK.DURATION.LAMBDA_WORKER),
       tracing,
@@ -81,6 +82,9 @@ export class JaypieQueuedLambda
     });
     if (roleTag) {
       Tags.of(this._queue).add(CDK.TAG.ROLE, roleTag);
+    }
+    if (serviceTag) {
+      Tags.of(this._queue).add(CDK.TAG.SERVICE, serviceTag);
     }
     if (vendorTag) {
       Tags.of(this._queue).add(CDK.TAG.VENDOR, vendorTag);
@@ -120,6 +124,7 @@ export class JaypieQueuedLambda
       runtimeManagementMode,
       secrets,
       securityGroups,
+      serviceTag,
       tables,
       timeout,
       tracing,

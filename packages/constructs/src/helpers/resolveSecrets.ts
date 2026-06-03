@@ -1,27 +1,28 @@
 import { Construct } from "constructs";
 
 import { JaypieEnvSecret, JaypieEnvSecretProps } from "../JaypieEnvSecret.js";
+import { JaypieSecret } from "../JaypieSecret.js";
 
 /**
- * Secrets input type that supports both JaypieEnvSecret instances and strings
- * - JaypieEnvSecret: passed through as-is
- * - string: converted to JaypieEnvSecret with the string as envKey
+ * Secrets input type that supports both JaypieSecret instances and strings
+ * - JaypieSecret (including JaypieEnvSecret subclasses): passed through as-is
+ * - string: converted to a JaypieEnvSecret with the string as envKey
  */
-export type SecretsArrayItem = JaypieEnvSecret | string;
+export type SecretsArrayItem = JaypieSecret | string;
 
 /**
  * Cache for secrets by scope to avoid creating duplicates.
  * Uses WeakMap to allow garbage collection when scopes are no longer referenced.
  */
-const secretsByScope = new WeakMap<Construct, Map<string, JaypieEnvSecret>>();
+const secretsByScope = new WeakMap<Construct, Map<string, JaypieSecret>>();
 
 /**
  * Gets or creates the secrets cache for a given scope.
  */
-function getSecretsCache(scope: Construct): Map<string, JaypieEnvSecret> {
+function getSecretsCache(scope: Construct): Map<string, JaypieSecret> {
   let cache = secretsByScope.get(scope);
   if (!cache) {
-    cache = new Map<string, JaypieEnvSecret>();
+    cache = new Map<string, JaypieSecret>();
     secretsByScope.set(scope, cache);
   }
   return cache;
@@ -35,7 +36,7 @@ function getOrCreateSecret(
   scope: Construct,
   envKey: string,
   props?: Omit<JaypieEnvSecretProps, "envKey">,
-): JaypieEnvSecret {
+): JaypieSecret {
   const cache = getSecretsCache(scope);
   const existingSecret = cache.get(envKey);
 
@@ -53,11 +54,11 @@ function getOrCreateSecret(
 }
 
 /**
- * Resolves secrets input to an array of JaypieEnvSecret instances.
+ * Resolves secrets input to an array of JaypieSecret instances.
  *
- * When an item is already a JaypieEnvSecret, it's passed through as-is.
- * When an item is a string, a JaypieEnvSecret is created (or reused from cache)
- * with the string as the envKey.
+ * When an item is already a JaypieSecret (including a JaypieEnvSecret), it's
+ * passed through as-is. When an item is a string, a JaypieEnvSecret is created
+ * (or reused from cache) with the string as the envKey.
  *
  * Secrets are cached per scope to avoid creating duplicate secrets when
  * multiple constructs in the same scope reference the same secret.
@@ -88,7 +89,7 @@ function getOrCreateSecret(
 export function resolveSecrets(
   scope: Construct,
   secrets?: SecretsArrayItem[],
-): JaypieEnvSecret[] {
+): JaypieSecret[] {
   if (!secrets || secrets.length === 0) {
     return [];
   }
@@ -97,7 +98,7 @@ export function resolveSecrets(
     if (typeof item === "string") {
       return getOrCreateSecret(scope, item);
     }
-    // Already a JaypieEnvSecret instance
+    // Already a JaypieSecret (or JaypieEnvSecret) instance
     return item;
   });
 }
