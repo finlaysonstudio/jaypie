@@ -12,6 +12,7 @@ import { Construct } from "constructs";
 
 import { CDK } from "./constants";
 import {
+  assertValidWafRuleNames,
   constructEnvName,
   constructWafLogBucketName,
   envHostname,
@@ -611,6 +612,9 @@ export class JaypieDistribution
           managedRules = DEFAULT_MANAGED_RULES,
           rateLimitPerIp = DEFAULT_RATE_LIMIT,
         } = wafConfig;
+
+        // Fail synth on rule names AWS WAF would silently ignore (#362)
+        assertValidWafRuleNames({ allow, managedRuleOverrides });
 
         const allowEntries: JaypieWafAllowEntry[] = allow
           ? Array.isArray(allow)

@@ -283,6 +283,14 @@ further relax specific (path × sub-rule) intersections. Groups not named in
 `allow` keep their existing single-rule emission. `path` and each rule-group
 value accept either a single string or an array.
 
+**Rule name ≠ label (casing trap):** AWS matches `managedRuleOverrides`/`allow`
+on the exact rule **name**, which differs in casing from the **label** seen in
+WAF logs (label `…:core-rule-set:NoUserAgent_Header` → name `NoUserAgent_HEADER`).
+`assertValidWafRuleNames` (in `helpers/`) validates names against
+`AWS_MANAGED_RULE_GROUPS` at synth and throws `ConfigurationError` listing valid
+names; AWS WAF would otherwise silently ignore an unmatched name and keep
+blocking. Custom (non-AWS) rule groups are not validated.
+
 ### Streaming Lambda
 
 For streaming responses, use `createLambdaStreamHandler` from `@jaypie/express` with `JaypieDistribution`:

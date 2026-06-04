@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { ConfigurationError } from "@jaypie/errors";
 import { Stack } from "aws-cdk-lib";
 import { Match, Template } from "aws-cdk-lib/assertions";
 import * as cloudfront from "aws-cdk-lib/aws-cloudfront";
@@ -254,6 +255,23 @@ describe("JaypieWebDeploymentBucket", () => {
       expect(distribution.Properties.DistributionConfig.WebACLId).toBe(
         externalArn,
       );
+    });
+
+    it("throws ConfigurationError when managedRuleOverrides names an unknown rule (#362)", () => {
+      const { stack, zone } = makeStack();
+      expect(() => {
+        new JaypieWebDeploymentBucket(stack, "Web", {
+          host: "app.example.com",
+          zone,
+          waf: {
+            managedRuleOverrides: {
+              AWSManagedRulesCommonRuleSet: [
+                { name: "NotARealRule", actionToUse: { count: {} } },
+              ],
+            },
+          },
+        });
+      }).toThrow(ConfigurationError);
     });
 
     it("truncates long WAF log bucket names to 63 chars while preserving nonce", () => {

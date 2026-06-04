@@ -36,3 +36,7 @@ export {
   clearSecretsCache,
   clearAllSecretsCaches,
 } from "./resolveSecrets";
+export {
+  assertValidWafRuleNames,
+  AWS_MANAGED_RULE_GROUPS,
+} from "./wafManagedRuleNames";
