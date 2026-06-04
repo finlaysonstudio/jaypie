@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { ConfigurationError } from "@jaypie/errors";
 import { RemovalPolicy, Stack } from "aws-cdk-lib";
 import { Template, Match } from "aws-cdk-lib/assertions";
 import * as acm from "aws-cdk-lib/aws-certificatemanager";
@@ -1755,7 +1756,7 @@ describe("JaypieDistribution", () => {
             allow: [
               {
                 path: "/hooks/*",
-                AWSManagedRulesCommonRuleSet: ["ExploitablePaths_URIPATH"],
+                AWSManagedRulesCommonRuleSet: ["NoUserAgent_HEADER"],
               },
             ],
           },
@@ -1780,7 +1781,7 @@ describe("JaypieDistribution", () => {
             allow: [
               {
                 path: "/hooks/*",
-                AWSManagedRulesCommonRuleSet: ["ExploitablePaths_URIPATH"],
+                AWSManagedRulesCommonRuleSet: ["NoUserAgent_HEADER"],
               },
             ],
           },
@@ -1795,7 +1796,7 @@ describe("JaypieDistribution", () => {
                   Name: "AWSManagedRulesCommonRuleSet",
                   RuleActionOverrides: Match.arrayWith([
                     {
-                      Name: "ExploitablePaths_URIPATH",
+                      Name: "NoUserAgent_HEADER",
                       ActionToUse: { Count: {} },
                     },
                   ]),
@@ -1824,7 +1825,7 @@ describe("JaypieDistribution", () => {
             allow: [
               {
                 path: "/hooks/*",
-                AWSManagedRulesCommonRuleSet: ["ExploitablePaths_URIPATH"],
+                AWSManagedRulesCommonRuleSet: ["NoUserAgent_HEADER"],
               },
             ],
           },
@@ -1857,7 +1858,7 @@ describe("JaypieDistribution", () => {
             allow: [
               {
                 path: "/exact/path",
-                AWSManagedRulesCommonRuleSet: ["ExploitablePaths_URIPATH"],
+                AWSManagedRulesCommonRuleSet: ["NoUserAgent_HEADER"],
               },
             ],
           },
@@ -1895,7 +1896,7 @@ describe("JaypieDistribution", () => {
             allow: [
               {
                 path: ["/hooks/*", "/webhooks/*"],
-                AWSManagedRulesCommonRuleSet: "ExploitablePaths_URIPATH",
+                AWSManagedRulesCommonRuleSet: "NoUserAgent_HEADER",
               },
             ],
           },
@@ -1927,7 +1928,7 @@ describe("JaypieDistribution", () => {
             name: "test",
             allow: {
               path: "/hooks/*",
-              AWSManagedRulesCommonRuleSet: "ExploitablePaths_URIPATH",
+              AWSManagedRulesCommonRuleSet: "NoUserAgent_HEADER",
             },
           },
         });
@@ -1951,7 +1952,7 @@ describe("JaypieDistribution", () => {
             allow: [
               {
                 path: "/hooks/*",
-                AWSManagedRulesCommonRuleSet: ["ExploitablePaths_URIPATH"],
+                AWSManagedRulesCommonRuleSet: ["NoUserAgent_HEADER"],
               },
             ],
           },
@@ -1984,7 +1985,7 @@ describe("JaypieDistribution", () => {
             allow: [
               {
                 path: "/hooks/*",
-                AWSManagedRulesCommonRuleSet: ["ExploitablePaths_URIPATH"],
+                AWSManagedRulesCommonRuleSet: ["NoUserAgent_HEADER"],
               },
             ],
           },
@@ -2011,14 +2012,14 @@ describe("JaypieDistribution", () => {
           []
         ).map((o: any) => o.Name);
         expect(relaxedOverrideNames).toContain("SizeRestrictions_BODY");
-        expect(relaxedOverrideNames).toContain("ExploitablePaths_URIPATH");
+        expect(relaxedOverrideNames).toContain("NoUserAgent_HEADER");
 
         const strictOverrideNames = (
           strict?.Statement?.ManagedRuleGroupStatement?.RuleActionOverrides ??
           []
         ).map((o: any) => o.Name);
         expect(strictOverrideNames).toContain("SizeRestrictions_BODY");
-        expect(strictOverrideNames).not.toContain("ExploitablePaths_URIPATH");
+        expect(strictOverrideNames).not.toContain("NoUserAgent_HEADER");
       });
 
       it("strict NotStatement excludes the union of paths across all entries for a group", () => {
@@ -2033,7 +2034,7 @@ describe("JaypieDistribution", () => {
             allow: [
               {
                 path: "/hooks/*",
-                AWSManagedRulesCommonRuleSet: ["ExploitablePaths_URIPATH"],
+                AWSManagedRulesCommonRuleSet: ["NoUserAgent_HEADER"],
               },
               {
                 path: "/webhooks/*",
@@ -2061,6 +2062,89 @@ describe("JaypieDistribution", () => {
         );
         expect(searchStrings).toContain("/hooks/");
         expect(searchStrings).toContain("/webhooks/");
+      });
+    });
+
+    describe("waf rule-name validation (#362)", () => {
+      const buildWaf = (waf: any) => () => {
+        const stack = new Stack();
+        const bucket = new s3.Bucket(stack, "TestBucket");
+        const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
+        new JaypieDistribution(stack, "TestDistribution", {
+          handler: origin,
+          waf,
+        });
+      };
+
+      it("throws ConfigurationError when allow names an unknown rule", () => {
+        // Mixed-case label casing trap: label is NoUserAgent_Header but the
+        // rule name is NoUserAgent_HEADER
+        expect(
+          buildWaf({
+            name: "test",
+            allow: [
+              {
+                path: "/hooks/*",
+                AWSManagedRulesCommonRuleSet: ["NoUserAgent_Header"],
+              },
+            ],
+          }),
+        ).toThrow(ConfigurationError);
+      });
+
+      it("error message lists the valid rule name", () => {
+        expect(
+          buildWaf({
+            name: "test",
+            allow: [
+              {
+                path: "/hooks/*",
+                AWSManagedRulesCommonRuleSet: ["NoUserAgent_Header"],
+              },
+            ],
+          }),
+        ).toThrow("NoUserAgent_HEADER");
+      });
+
+      it("throws ConfigurationError when managedRuleOverrides names an unknown rule", () => {
+        expect(
+          buildWaf({
+            name: "test",
+            managedRuleOverrides: {
+              AWSManagedRulesCommonRuleSet: [
+                { name: "NotARealRule", actionToUse: { count: {} } },
+              ],
+            },
+          }),
+        ).toThrow(ConfigurationError);
+      });
+
+      it("does not throw for a valid rule name", () => {
+        expect(
+          buildWaf({
+            name: "test",
+            allow: [
+              {
+                path: "/hooks/*",
+                AWSManagedRulesCommonRuleSet: ["NoUserAgent_HEADER"],
+              },
+            ],
+          }),
+        ).not.toThrow();
+      });
+
+      it("does not validate unknown/custom rule groups", () => {
+        expect(
+          buildWaf({
+            name: "test",
+            managedRules: ["MyCompanyCustomRuleGroup"],
+            managedRuleOverrides: {
+              MyCompanyCustomRuleGroup: [
+                { name: "AnythingGoesHere", actionToUse: { count: {} } },
+              ],
+            },
+          }),
+        ).not.toThrow();
       });
     });
 

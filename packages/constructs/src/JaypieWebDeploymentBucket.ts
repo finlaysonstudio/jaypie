@@ -27,6 +27,7 @@ import { ConfigurationError } from "@jaypie/errors";
 
 import { CDK } from "./constants";
 import {
+  assertValidWafRuleNames,
   constructEnvName,
   constructWafLogBucketName,
   envHostname,
@@ -588,6 +589,9 @@ export class JaypieWebDeploymentBucket extends Construct implements s3.IBucket {
             managedRules = DEFAULT_MANAGED_RULES,
             rateLimitPerIp = DEFAULT_RATE_LIMIT,
           } = wafConfig;
+
+          // Fail synth on rule names AWS WAF would silently ignore (#362)
+          assertValidWafRuleNames({ managedRuleOverrides });
 
           let priority = 0;
           const rules: wafv2.CfnWebACL.RuleProperty[] = [];

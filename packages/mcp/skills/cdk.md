@@ -1,6 +1,6 @@
 ---
 description: CDK constructs and deployment patterns
-related: apikey, aws, cicd, dynamodb, express, lambda, migrations, secrets, streaming, web, websockets
+related: apikey, aws, cicd, dynamodb, express, lambda, migrations, secrets, streaming, waf, web, websockets
 ---
 
 # CDK Constructs
@@ -347,89 +347,13 @@ new JaypieDistribution(this, "Dist", {
 
 ## WAF (Web Application Firewall)
 
-`JaypieDistribution` attaches a WAFv2 WebACL by default with:
+`JaypieDistribution` and `JaypieWebDeploymentBucket` attach a WAFv2 WebACL by
+default (CommonRuleSet, KnownBadInputsRuleSet, IP rate limiting, and WAF logging
+to S3 with Datadog forwarding).
 
-- **AWSManagedRulesCommonRuleSet** — OWASP top 10 (SQLi, XSS, etc.)
-- **AWSManagedRulesKnownBadInputsRuleSet** — known bad patterns (Log4j, etc.)
-- **Rate limiting** — 2000 requests per 5 minutes per IP
-- **WAF logging** — S3 bucket with Datadog forwarder notifications
-
-```typescript
-// Default: WAF enabled with logging
-new JaypieDistribution(this, "Dist", { handler });
-
-// Disable WAF entirely
-new JaypieDistribution(this, "Dist", { handler, waf: false });
-
-// Customize rate limit (name required on any waf config object)
-new JaypieDistribution(this, "Dist", {
-  handler,
-  waf: { name: "api", rateLimitPerIp: 500 },
-});
-
-// Multiple distributions in one env — set a unique waf.name on each to
-// avoid WebACL/S3 bucket name collisions between stacks.
-new JaypieDistribution(this, "Api", { handler: api, waf: { name: "api" } });
-new JaypieDistribution(this, "Mcp", { handler: mcp, waf: { name: "mcp" } });
-
-// Use existing WebACL
-new JaypieDistribution(this, "Dist", {
-  handler,
-  waf: { name: "api", webAclArn: "arn:aws:wafv2:..." },
-});
-
-// Disable WAF logging only
-new JaypieDistribution(this, "Dist", {
-  handler,
-  waf: { name: "api", logBucket: false },
-});
-
-// Bring your own WAF logging bucket
-new JaypieDistribution(this, "Dist", {
-  handler,
-  waf: { name: "api", logBucket: myWafBucket },
-});
-
-// Override specific managed rule actions (e.g., allow large request bodies)
-new JaypieDistribution(this, "Dist", {
-  handler,
-  waf: {
-    name: "api",
-    managedRuleOverrides: {
-      AWSManagedRulesCommonRuleSet: [
-        { name: "SizeRestrictions_BODY", actionToUse: { count: {} } },
-      ],
-    },
-  },
-});
-
-// Scope a managed rule group to (or away from) specific URL patterns
-new JaypieDistribution(this, "Dist", {
-  handler,
-  waf: {
-    name: "api",
-    managedRuleScopeDowns: {
-      // Only run the CommonRuleSet for paths OTHER than /chat — lets /chat
-      // handle large AI-generated request bodies without weakening protection
-      // elsewhere.
-      AWSManagedRulesCommonRuleSet: {
-        notStatement: {
-          statement: {
-            byteMatchStatement: {
-              fieldToMatch: { uriPath: {} },
-              positionalConstraint: "STARTS_WITH",
-              searchString: "/chat",
-              textTransformations: [{ priority: 0, type: "NONE" }],
-            },
-          },
-        },
-      },
-    },
-  },
-});
-```
-
-Cost: $5/month per WebACL + $1/month per rule + $0.60 per million requests. Use `waf: false` to opt out.
+See **`skill("waf")`** for configuration: `rateLimitPerIp`, `webAclArn`,
+`logBucket`, `managedRuleOverrides`, `managedRuleScopeDowns`, the `allow`
+path-scoped relaxation prop, and the rule-name ↔ label casing trap.
 
 ## Organization Trail Security Baseline
 
@@ -465,5 +389,6 @@ new JaypieOrganizationTrail(this, "OrgTrail", {
 - **`skill("secrets")`** - Secret management with JaypieEnvSecret
 - **`skill("streaming")`** - JaypieDistribution and JaypieNextJs streaming configuration
 - **`skill("variables")`** - Environment variables reference
+- **`skill("waf")`** - WAF configuration, managed rule overrides, and the `allow` prop
 - **`skill("web")`** - JaypieWebDeploymentBucket and JaypieStaticWebBucket for static sites
 - **`skill("websockets")`** - JaypieWebSocket and JaypieWebSocketTable constructs
