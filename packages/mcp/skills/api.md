@@ -1,11 +1,27 @@
 ---
-description: API response format and conventions
+description: API request and response format and conventions
 related: express, handlers, style
 ---
 
-# API Response Format
+# API Request and Response Format
 
-All API responses follow a consistent envelope format.
+All API requests and responses follow a consistent envelope format.
+
+## Request Envelope
+
+Request bodies follow the same `{ data }` envelope as responses.
+
+```json
+// Single record
+{ "data": { "name": "Example" } }
+
+// Array of records
+{ "data": [{ "name": "First" }, { "name": "Second" }] }
+```
+
+- `{ data: {} }` — single record (object)
+- `{ data: [] }` — array of records (even if zero or one result)
+- No other top-level keys at the root
 
 ## Response Envelope
 
@@ -39,8 +55,9 @@ Every response body is a JSON object with one top-level key:
 
 ### Rules
 
-1. A response contains either `data` or `errors`, never both
-2. Single records use an object: `{ data: {} }`
-3. Multiple records use an array: `{ data: [] }`
-4. Errors always use an array: `{ errors: [] }`
-5. No other top-level keys (no `status`, `message`, `meta` at the root)
+1. Requests and responses both use the `{ data }` envelope
+2. A response contains either `data` or `errors`, never both
+3. Single records use an object: `{ data: {} }`
+4. Multiple records use an array: `{ data: [] }`
+5. Errors always use an array: `{ errors: [] }` (responses only)
+6. No other top-level keys (no `status`, `message`, `meta` at the root)
