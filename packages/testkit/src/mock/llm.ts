@@ -122,9 +122,11 @@ export const BedrockProvider = createMockWrappedObject(
     isClass: true,
   },
 );
-export const GeminiProvider = createMockWrappedObject(original.GeminiProvider, {
+export const GoogleProvider = createMockWrappedObject(original.GoogleProvider, {
   isClass: true,
 });
+/** @deprecated Use GoogleProvider — "Google" is the provider; Gemini is the model family */
+export const GeminiProvider = GoogleProvider;
 export const OpenRouterProvider = createMockWrappedObject(
   original.OpenRouterProvider,
   {

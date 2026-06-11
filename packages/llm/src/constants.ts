@@ -7,11 +7,11 @@ const FIRST_CLASS_PROVIDER = {
     TINY: "claude-haiku-4-5" as const,
   },
   // https://ai.google.dev/gemini-api/docs/models
-  GEMINI: {
+  GOOGLE: {
     DEFAULT: "gemini-3.1-pro-preview" as const,
     LARGE: "gemini-3.1-pro-preview" as const,
     SMALL: "gemini-3.5-flash" as const,
-    TINY: "gemini-3.5-flash" as const,
+    TINY: "gemini-3.1-flash-lite" as const,
   },
   // https://developers.openai.com/api/docs/models
   OPENAI: {
@@ -28,6 +28,41 @@ const FIRST_CLASS_PROVIDER = {
     TINY: "grok-4-1-fast-non-reasoning" as const,
   },
 };
+
+export const MODEL = {
+  // Anthropic
+  OPUS: "claude-opus-4-8",
+  SONNET: "claude-sonnet-4-6",
+  HAIKU: "claude-haiku-4-5",
+  FABLE: "claude-fable-5",
+  MYTHOS: "claude-mythos-5",
+  // Google
+  GEMINI_FLASH: "gemini-3.5-flash",
+  GEMINI_FLASH_LITE: "gemini-3.1-flash-lite",
+  GEMINI_PRO: "gemini-3.1-pro-preview",
+  // OpenAI
+  GPT: "gpt-5.5",
+  GPT_MINI: "gpt-5.5-mini",
+  GPT_NANO: "gpt-5.5-nano",
+  // xAI
+  GROK: "grok-latest",
+};
+
+const GOOGLE_PROVIDER = {
+  // https://ai.google.dev/gemini-api/docs/models
+  MODEL: {
+    DEFAULT: FIRST_CLASS_PROVIDER.GOOGLE.DEFAULT,
+    LARGE: FIRST_CLASS_PROVIDER.GOOGLE.LARGE,
+    SMALL: FIRST_CLASS_PROVIDER.GOOGLE.SMALL,
+    TINY: FIRST_CLASS_PROVIDER.GOOGLE.TINY,
+  },
+  MODEL_MATCH_WORDS: ["gemini", "google"] as const,
+  NAME: "google" as const,
+  ROLE: {
+    MODEL: "model" as const,
+    USER: "user" as const,
+  },
+} as const;
 
 export const PROVIDER = {
   // https://docs.aws.amazon.com/bedrock/latest/userguide/models-supported.html
@@ -82,21 +117,9 @@ export const PROVIDER = {
       SCHEMA_VERSION: "v2" as const,
     },
   },
-  GEMINI: {
-    // https://ai.google.dev/gemini-api/docs/models
-    MODEL: {
-      DEFAULT: FIRST_CLASS_PROVIDER.GEMINI.DEFAULT,
-      LARGE: FIRST_CLASS_PROVIDER.GEMINI.LARGE,
-      SMALL: FIRST_CLASS_PROVIDER.GEMINI.SMALL,
-      TINY: FIRST_CLASS_PROVIDER.GEMINI.TINY,
-    },
-    MODEL_MATCH_WORDS: ["gemini", "google"] as const,
-    NAME: "google" as const,
-    ROLE: {
-      MODEL: "model" as const,
-      USER: "user" as const,
-    },
-  },
+  /** @deprecated Use PROVIDER.GOOGLE — "Google" is the provider; Gemini is the model family */
+  GEMINI: GOOGLE_PROVIDER,
+  GOOGLE: GOOGLE_PROVIDER,
   OPENAI: {
     // https://platform.openai.com/docs/models
     MODEL: {
@@ -142,7 +165,7 @@ export const PROVIDER = {
 export type LlmProviderName =
   | typeof PROVIDER.ANTHROPIC.NAME
   | typeof PROVIDER.BEDROCK.NAME
-  | typeof PROVIDER.GEMINI.NAME
+  | typeof PROVIDER.GOOGLE.NAME
   | typeof PROVIDER.OPENAI.NAME
   | typeof PROVIDER.OPENROUTER.NAME
   | typeof PROVIDER.XAI.NAME;
@@ -162,7 +185,7 @@ export const DEFAULT = {
 export const ALL = {
   BASE: [
     PROVIDER.ANTHROPIC.MODEL.DEFAULT,
-    PROVIDER.GEMINI.MODEL.DEFAULT,
+    PROVIDER.GOOGLE.MODEL.DEFAULT,
     PROVIDER.OPENAI.MODEL.DEFAULT,
     PROVIDER.XAI.MODEL.DEFAULT,
   ],
@@ -172,10 +195,10 @@ export const ALL = {
       PROVIDER.ANTHROPIC.MODEL.LARGE,
       PROVIDER.ANTHROPIC.MODEL.SMALL,
       PROVIDER.ANTHROPIC.MODEL.TINY,
-      PROVIDER.GEMINI.MODEL.DEFAULT,
-      PROVIDER.GEMINI.MODEL.LARGE,
-      PROVIDER.GEMINI.MODEL.SMALL,
-      PROVIDER.GEMINI.MODEL.TINY,
+      PROVIDER.GOOGLE.MODEL.DEFAULT,
+      PROVIDER.GOOGLE.MODEL.LARGE,
+      PROVIDER.GOOGLE.MODEL.SMALL,
+      PROVIDER.GOOGLE.MODEL.TINY,
       PROVIDER.OPENAI.MODEL.DEFAULT,
       PROVIDER.OPENAI.MODEL.LARGE,
       PROVIDER.OPENAI.MODEL.SMALL,
@@ -188,19 +211,19 @@ export const ALL = {
   ],
   LARGE: [
     PROVIDER.ANTHROPIC.MODEL.LARGE,
-    PROVIDER.GEMINI.MODEL.LARGE,
+    PROVIDER.GOOGLE.MODEL.LARGE,
     PROVIDER.OPENAI.MODEL.LARGE,
     PROVIDER.XAI.MODEL.LARGE,
   ],
   SMALL: [
     PROVIDER.ANTHROPIC.MODEL.SMALL,
-    PROVIDER.GEMINI.MODEL.SMALL,
+    PROVIDER.GOOGLE.MODEL.SMALL,
     PROVIDER.OPENAI.MODEL.SMALL,
     PROVIDER.XAI.MODEL.SMALL,
   ],
   TINY: [
     PROVIDER.ANTHROPIC.MODEL.TINY,
-    PROVIDER.GEMINI.MODEL.TINY,
+    PROVIDER.GOOGLE.MODEL.TINY,
     PROVIDER.OPENAI.MODEL.TINY,
     PROVIDER.XAI.MODEL.TINY,
   ],

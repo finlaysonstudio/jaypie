@@ -120,7 +120,7 @@ describe("@jaypie/logger", () => {
         );
       });
 
-      it("joins string and object params in message field (json format)", () => {
+      it("splits trailing object into data field (json format)", () => {
         const logger = new Logger({ format: "json", level: "trace" });
         const debugSpy = vi
           .spyOn(console, "debug")
@@ -128,9 +128,85 @@ describe("@jaypie/logger", () => {
 
         logger.trace("Handling Discord interaction", { type: 1 });
 
-        expect(debugSpy).toHaveBeenCalledWith(
-          '{"message":"Handling Discord interaction {\\"type\\":1}"}',
-        );
+        const output = JSON.parse(debugSpy.mock.calls[0][0] as string);
+        expect(output.message).toBe("Handling Discord interaction");
+        expect(output.data).toEqual({ type: 1 });
+      });
+
+      it("splits trailing object after multiple scalar params (json format)", () => {
+        const logger = new Logger({ format: "json", level: "trace" });
+        const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+        logger.warn("Retrying request", 3, { url: "https://example.com" });
+
+        const output = JSON.parse(warnSpy.mock.calls[0][0] as string);
+        expect(output.message).toBe("Retrying request 3");
+        expect(output.data).toEqual({ url: "https://example.com" });
+      });
+
+      it("splits trailing array into data field (json format)", () => {
+        const logger = new Logger({ format: "json", level: "trace" });
+        const debugSpy = vi
+          .spyOn(console, "debug")
+          .mockImplementation(() => {});
+
+        logger.debug("Queued items", [1, 2, 3]);
+
+        const output = JSON.parse(debugSpy.mock.calls[0][0] as string);
+        expect(output.message).toBe("Queued items");
+        expect(output.data).toEqual([1, 2, 3]);
+      });
+
+      it("joins params when an object is not last (json format)", () => {
+        const logger = new Logger({ format: "json", level: "trace" });
+        const debugSpy = vi
+          .spyOn(console, "debug")
+          .mockImplementation(() => {});
+
+        logger.trace("Start", { id: 123 }, "end");
+
+        const output = JSON.parse(debugSpy.mock.calls[0][0] as string);
+        expect(output.message).toBe('Start {"id":123} end');
+        expect(output.data).toBeUndefined();
+      });
+
+      it("joins params when multiple objects are passed (json format)", () => {
+        const logger = new Logger({ format: "json", level: "trace" });
+        const debugSpy = vi
+          .spyOn(console, "debug")
+          .mockImplementation(() => {});
+
+        logger.trace("Message", { a: 1 }, { b: 2 });
+
+        const output = JSON.parse(debugSpy.mock.calls[0][0] as string);
+        expect(output.message).toBe('Message {"a":1} {"b":2}');
+        expect(output.data).toBeUndefined();
+      });
+
+      it("keeps single object behavior with message and data (json format)", () => {
+        const logger = new Logger({ format: "json", level: "trace" });
+        const debugSpy = vi
+          .spyOn(console, "debug")
+          .mockImplementation(() => {});
+
+        logger.debug({ details: "value" });
+
+        const output = JSON.parse(debugSpy.mock.calls[0][0] as string);
+        expect(output.message).toBe('{"details":"value"}');
+        expect(output.data).toEqual({ details: "value" });
+      });
+
+      it("joins string and object params with space delimiter (json format falls back for unserializable objects)", () => {
+        const logger = new Logger({ format: "json", level: "trace" });
+        const debugSpy = vi
+          .spyOn(console, "debug")
+          .mockImplementation(() => {});
+
+        logger.trace("Caught", new Error("boom"));
+
+        const output = JSON.parse(debugSpy.mock.calls[0][0] as string);
+        expect(output.message).toBe("Caught Error: boom");
+        expect(output.data).toBeUndefined();
       });
     });
 

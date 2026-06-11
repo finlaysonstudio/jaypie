@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { GeminiAdapter, geminiAdapter } from "../GeminiAdapter.js";
+import { GoogleAdapter, googleAdapter } from "../GoogleAdapter.js";
 import { PROVIDER } from "../../../constants.js";
 import { Toolkit } from "../../../tools/Toolkit.class.js";
 import { ErrorCategory, OperateRequest } from "../../types.js";
@@ -30,25 +30,25 @@ vi.mock("zod/v4", () => ({
 // Tests
 //
 
-describe("GeminiAdapter", () => {
+describe("GoogleAdapter", () => {
   // Base Cases
   describe("Base Cases", () => {
-    it("exports GeminiAdapter class", () => {
-      expect(GeminiAdapter).toBeDefined();
-      expect(typeof GeminiAdapter).toBe("function");
+    it("exports GoogleAdapter class", () => {
+      expect(GoogleAdapter).toBeDefined();
+      expect(typeof GoogleAdapter).toBe("function");
     });
 
-    it("exports geminiAdapter singleton", () => {
-      expect(geminiAdapter).toBeDefined();
-      expect(geminiAdapter).toBeInstanceOf(GeminiAdapter);
+    it("exports googleAdapter singleton", () => {
+      expect(googleAdapter).toBeDefined();
+      expect(googleAdapter).toBeInstanceOf(GoogleAdapter);
     });
 
     it("has correct name", () => {
-      expect(geminiAdapter.name).toBe(PROVIDER.GEMINI.NAME);
+      expect(googleAdapter.name).toBe(PROVIDER.GOOGLE.NAME);
     });
 
     it("has correct default model", () => {
-      expect(geminiAdapter.defaultModel).toBe(PROVIDER.GEMINI.MODEL.DEFAULT);
+      expect(googleAdapter.defaultModel).toBe(PROVIDER.GOOGLE.MODEL.DEFAULT);
     });
   });
 
@@ -57,7 +57,7 @@ describe("GeminiAdapter", () => {
     describe("buildRequest", () => {
       it("builds basic request", () => {
         const request: OperateRequest = {
-          model: PROVIDER.GEMINI.MODEL.SMALL,
+          model: PROVIDER.GOOGLE.MODEL.SMALL,
           messages: [
             {
               content: "Hello",
@@ -67,9 +67,9 @@ describe("GeminiAdapter", () => {
           ],
         };
 
-        const result = geminiAdapter.buildRequest(request);
+        const result = googleAdapter.buildRequest(request);
 
-        expect(result.model).toBe(PROVIDER.GEMINI.MODEL.SMALL);
+        expect(result.model).toBe(PROVIDER.GOOGLE.MODEL.SMALL);
         expect(result.contents).toHaveLength(1);
         expect(result.contents[0].role).toBe("user");
         expect(result.contents[0].parts?.[0].text).toBe("Hello");
@@ -77,19 +77,19 @@ describe("GeminiAdapter", () => {
 
       it("includes system instruction when provided", () => {
         const request: OperateRequest = {
-          model: PROVIDER.GEMINI.MODEL.SMALL,
+          model: PROVIDER.GOOGLE.MODEL.SMALL,
           messages: [],
           system: "You are helpful",
         };
 
-        const result = geminiAdapter.buildRequest(request);
+        const result = googleAdapter.buildRequest(request);
 
         expect(result.config?.systemInstruction).toBe("You are helpful");
       });
 
       it("appends instructions to last message", () => {
         const request: OperateRequest = {
-          model: PROVIDER.GEMINI.MODEL.SMALL,
+          model: PROVIDER.GOOGLE.MODEL.SMALL,
           messages: [
             {
               content: "Hello",
@@ -100,7 +100,7 @@ describe("GeminiAdapter", () => {
           instructions: "Be concise",
         };
 
-        const result = geminiAdapter.buildRequest(request);
+        const result = googleAdapter.buildRequest(request);
 
         expect(result.contents[0].parts?.[0].text).toContain("Hello");
         expect(result.contents[0].parts?.[0].text).toContain("Be concise");
@@ -108,7 +108,7 @@ describe("GeminiAdapter", () => {
 
       it("includes tools when provided", () => {
         const request: OperateRequest = {
-          model: PROVIDER.GEMINI.MODEL.SMALL,
+          model: PROVIDER.GOOGLE.MODEL.SMALL,
           messages: [],
           tools: [
             {
@@ -119,7 +119,7 @@ describe("GeminiAdapter", () => {
           ],
         };
 
-        const result = geminiAdapter.buildRequest(request);
+        const result = googleAdapter.buildRequest(request);
 
         expect(result.config?.tools).toHaveLength(1);
         expect(result.config?.tools?.[0].functionDeclarations).toHaveLength(1);
@@ -130,12 +130,12 @@ describe("GeminiAdapter", () => {
 
       it("includes format as responseSchema (OpenAPI 3.0) by default", () => {
         const request: OperateRequest = {
-          model: PROVIDER.GEMINI.MODEL.SMALL,
+          model: PROVIDER.GOOGLE.MODEL.SMALL,
           messages: [],
           format: { type: "object", properties: { name: { type: "string" } } },
         };
 
-        const result = geminiAdapter.buildRequest(request);
+        const result = googleAdapter.buildRequest(request);
 
         expect(result.config?.responseMimeType).toBe("application/json");
         expect(result.config?.responseSchema).toEqual({
@@ -147,13 +147,13 @@ describe("GeminiAdapter", () => {
 
       it("uses responseJsonSchema when providerOptions.useJsonSchema is true", () => {
         const request: OperateRequest = {
-          model: PROVIDER.GEMINI.MODEL.SMALL,
+          model: PROVIDER.GOOGLE.MODEL.SMALL,
           messages: [],
           format: { type: "object", properties: { name: { type: "string" } } },
           providerOptions: { useJsonSchema: true },
         };
 
-        const result = geminiAdapter.buildRequest(request);
+        const result = googleAdapter.buildRequest(request);
 
         expect(result.config?.responseMimeType).toBe("application/json");
         expect(result.config?.responseJsonSchema).toEqual({
@@ -164,7 +164,7 @@ describe("GeminiAdapter", () => {
       });
 
       it("emits responseJsonSchema with tools on Gemini 3 (native combo)", () => {
-        const adapter = new GeminiAdapter();
+        const adapter = new GoogleAdapter();
         const schema = {
           type: "object",
           properties: { name: { type: "string" } },
@@ -198,7 +198,7 @@ describe("GeminiAdapter", () => {
       });
 
       it("falls back to fake tool on Gemini 2.5 when format+tools combined", () => {
-        const adapter = new GeminiAdapter();
+        const adapter = new GoogleAdapter();
         const schema = {
           type: "object",
           properties: { name: { type: "string" } },
@@ -233,7 +233,7 @@ describe("GeminiAdapter", () => {
       });
 
       it("uses fake tool when Gemini 3 model is cached as combo-unsupported", () => {
-        const adapter = new GeminiAdapter();
+        const adapter = new GoogleAdapter();
         adapter.rememberModelRejectsStructuredOutputCombo(
           "gemini-3.1-pro-preview",
         );
@@ -265,7 +265,7 @@ describe("GeminiAdapter", () => {
 
       it("strips $schema and additionalProperties from responseSchema", () => {
         const request: OperateRequest = {
-          model: PROVIDER.GEMINI.MODEL.SMALL,
+          model: PROVIDER.GOOGLE.MODEL.SMALL,
           messages: [],
           format: {
             $schema: "https://json-schema.org/draft/2020-12/schema",
@@ -275,7 +275,7 @@ describe("GeminiAdapter", () => {
           },
         };
 
-        const result = geminiAdapter.buildRequest(request);
+        const result = googleAdapter.buildRequest(request);
 
         expect(result.config?.responseSchema).toEqual({
           type: "object",
@@ -307,7 +307,7 @@ describe("GeminiAdapter", () => {
           },
         };
 
-        const result = geminiAdapter.parseResponse(response);
+        const result = googleAdapter.parseResponse(response);
 
         expect(result.content).toBe("Hello there!");
         expect(result.hasToolCalls).toBe(false);
@@ -339,7 +339,7 @@ describe("GeminiAdapter", () => {
           },
         };
 
-        const result = geminiAdapter.parseResponse(response);
+        const result = googleAdapter.parseResponse(response);
 
         expect(result.hasToolCalls).toBe(true);
       });
@@ -367,7 +367,7 @@ describe("GeminiAdapter", () => {
           ],
         };
 
-        const result = geminiAdapter.extractToolCalls(response);
+        const result = googleAdapter.extractToolCalls(response);
 
         expect(result).toHaveLength(1);
         expect(result[0].name).toBe("test_tool");
@@ -388,7 +388,7 @@ describe("GeminiAdapter", () => {
           ],
         };
 
-        const result = geminiAdapter.extractToolCalls(response);
+        const result = googleAdapter.extractToolCalls(response);
 
         expect(result).toHaveLength(0);
       });
@@ -413,7 +413,7 @@ describe("GeminiAdapter", () => {
           ],
         };
 
-        const result = geminiAdapter.extractToolCalls(response);
+        const result = googleAdapter.extractToolCalls(response);
 
         expect(result).toHaveLength(1);
         expect(result[0].callId).toMatch(/^call_\d+_[a-z0-9]+$/);
@@ -431,25 +431,25 @@ describe("GeminiAdapter", () => {
           },
         };
 
-        const result = geminiAdapter.extractUsage(
+        const result = googleAdapter.extractUsage(
           response,
-          PROVIDER.GEMINI.MODEL.SMALL,
+          PROVIDER.GOOGLE.MODEL.SMALL,
         );
 
         expect(result.input).toBe(100);
         expect(result.output).toBe(200);
         expect(result.total).toBe(300);
         expect(result.reasoning).toBe(50);
-        expect(result.provider).toBe(PROVIDER.GEMINI.NAME);
-        expect(result.model).toBe(PROVIDER.GEMINI.MODEL.SMALL);
+        expect(result.provider).toBe(PROVIDER.GOOGLE.NAME);
+        expect(result.model).toBe(PROVIDER.GOOGLE.MODEL.SMALL);
       });
 
       it("returns zeros when no usage metadata", () => {
         const response = {};
 
-        const result = geminiAdapter.extractUsage(
+        const result = googleAdapter.extractUsage(
           response,
-          PROVIDER.GEMINI.MODEL.SMALL,
+          PROVIDER.GOOGLE.MODEL.SMALL,
         );
 
         expect(result.input).toBe(0);
@@ -474,7 +474,7 @@ describe("GeminiAdapter", () => {
           },
         ]);
 
-        const result = geminiAdapter.formatTools(toolkit);
+        const result = googleAdapter.formatTools(toolkit);
 
         expect(result).toHaveLength(1);
         expect(result[0].name).toBe("test");
@@ -499,7 +499,7 @@ describe("GeminiAdapter", () => {
           properties: { name: { type: "string" } },
         };
 
-        const result = geminiAdapter.formatTools(toolkit, schema);
+        const result = googleAdapter.formatTools(toolkit, schema);
 
         expect(result).toHaveLength(1);
         expect(result[0].name).toBe("test");
@@ -521,7 +521,7 @@ describe("GeminiAdapter", () => {
           success: true,
         };
 
-        const formatted = geminiAdapter.formatToolResult(toolCall, result);
+        const formatted = googleAdapter.formatToolResult(toolCall, result);
 
         expect(formatted.functionResponse?.name).toBe("test_tool");
         // The output is JSON-parsed, so response contains the parsed object
@@ -546,7 +546,7 @@ describe("GeminiAdapter", () => {
           success: true,
         };
 
-        const formatted = geminiAdapter.formatToolResult(toolCall, result);
+        const formatted = googleAdapter.formatToolResult(toolCall, result);
 
         expect(formatted.functionResponse?.response).toEqual({
           result: "2026-04-30T16:51:14.420Z",
@@ -566,7 +566,7 @@ describe("GeminiAdapter", () => {
           success: true,
         };
 
-        const formatted = geminiAdapter.formatToolResult(toolCall, result);
+        const formatted = googleAdapter.formatToolResult(toolCall, result);
 
         expect(formatted.functionResponse?.response).toEqual({
           result: [1, 2, 3],
@@ -586,7 +586,7 @@ describe("GeminiAdapter", () => {
           success: true,
         };
 
-        const formatted = geminiAdapter.formatToolResult(toolCall, result);
+        const formatted = googleAdapter.formatToolResult(toolCall, result);
 
         expect(formatted.functionResponse?.response).toEqual({ result: 42 });
       });
@@ -604,7 +604,7 @@ describe("GeminiAdapter", () => {
           success: true,
         };
 
-        const formatted = geminiAdapter.formatToolResult(toolCall, result);
+        const formatted = googleAdapter.formatToolResult(toolCall, result);
 
         expect(formatted.functionResponse?.response).toEqual({
           result: "plain text",
@@ -626,7 +626,7 @@ describe("GeminiAdapter", () => {
           ],
         };
 
-        expect(geminiAdapter.isComplete(response)).toBe(true);
+        expect(googleAdapter.isComplete(response)).toBe(true);
       });
 
       it("returns false when function calls present", () => {
@@ -649,13 +649,13 @@ describe("GeminiAdapter", () => {
           ],
         };
 
-        expect(geminiAdapter.isComplete(response)).toBe(false);
+        expect(googleAdapter.isComplete(response)).toBe(false);
       });
 
       it("returns true when no candidates", () => {
         const response = {};
 
-        expect(geminiAdapter.isComplete(response)).toBe(true);
+        expect(googleAdapter.isComplete(response)).toBe(true);
       });
     });
 
@@ -680,7 +680,7 @@ describe("GeminiAdapter", () => {
           ],
         };
 
-        expect(geminiAdapter.hasStructuredOutput(response)).toBe(true);
+        expect(googleAdapter.hasStructuredOutput(response)).toBe(true);
       });
 
       it("returns false for regular function calls", () => {
@@ -703,7 +703,7 @@ describe("GeminiAdapter", () => {
           ],
         };
 
-        expect(geminiAdapter.hasStructuredOutput(response)).toBe(false);
+        expect(googleAdapter.hasStructuredOutput(response)).toBe(false);
       });
     });
 
@@ -728,7 +728,7 @@ describe("GeminiAdapter", () => {
           ],
         };
 
-        const result = geminiAdapter.extractStructuredOutput(response);
+        const result = googleAdapter.extractStructuredOutput(response);
 
         expect(result).toEqual({ name: "John", age: 30 });
       });
@@ -746,7 +746,7 @@ describe("GeminiAdapter", () => {
           ],
         };
 
-        const result = geminiAdapter.extractStructuredOutput(response);
+        const result = googleAdapter.extractStructuredOutput(response);
 
         expect(result).toBeUndefined();
       });
@@ -756,7 +756,7 @@ describe("GeminiAdapter", () => {
       it("classifies rate limit error by status code", () => {
         const error = { status: 429, message: "Rate limit exceeded" };
 
-        const result = geminiAdapter.classifyError(error);
+        const result = googleAdapter.classifyError(error);
 
         expect(result.category).toBe(ErrorCategory.RateLimit);
         expect(result.shouldRetry).toBe(false);
@@ -766,7 +766,7 @@ describe("GeminiAdapter", () => {
       it("classifies retryable error by status code", () => {
         const error = { status: 500, message: "Internal server error" };
 
-        const result = geminiAdapter.classifyError(error);
+        const result = googleAdapter.classifyError(error);
 
         expect(result.category).toBe(ErrorCategory.Retryable);
         expect(result.shouldRetry).toBe(true);
@@ -775,7 +775,7 @@ describe("GeminiAdapter", () => {
       it("classifies unrecoverable error by status code", () => {
         const error = { status: 401, message: "Unauthorized" };
 
-        const result = geminiAdapter.classifyError(error);
+        const result = googleAdapter.classifyError(error);
 
         expect(result.category).toBe(ErrorCategory.Unrecoverable);
         expect(result.shouldRetry).toBe(false);
@@ -784,7 +784,7 @@ describe("GeminiAdapter", () => {
       it("classifies rate limit by error message", () => {
         const error = { message: "quota exceeded for this resource" };
 
-        const result = geminiAdapter.classifyError(error);
+        const result = googleAdapter.classifyError(error);
 
         expect(result.category).toBe(ErrorCategory.RateLimit);
         expect(result.shouldRetry).toBe(false);
@@ -793,7 +793,7 @@ describe("GeminiAdapter", () => {
       it("classifies connection error as retryable", () => {
         const error = { message: "ECONNREFUSED" };
 
-        const result = geminiAdapter.classifyError(error);
+        const result = googleAdapter.classifyError(error);
 
         expect(result.category).toBe(ErrorCategory.Retryable);
         expect(result.shouldRetry).toBe(true);
@@ -802,7 +802,7 @@ describe("GeminiAdapter", () => {
       it("classifies unknown error as potentially retryable", () => {
         const error = new Error("Unknown error");
 
-        const result = geminiAdapter.classifyError(error);
+        const result = googleAdapter.classifyError(error);
 
         expect(result.category).toBe(ErrorCategory.Unknown);
         expect(result.shouldRetry).toBe(true);
@@ -830,7 +830,7 @@ describe("GeminiAdapter", () => {
           ],
         };
 
-        const result = geminiAdapter.responseToHistoryItems(response);
+        const result = googleAdapter.responseToHistoryItems(response);
 
         expect(result).toHaveLength(0);
       });
@@ -848,7 +848,7 @@ describe("GeminiAdapter", () => {
           ],
         };
 
-        const result = geminiAdapter.responseToHistoryItems(response);
+        const result = googleAdapter.responseToHistoryItems(response);
 
         expect(result).toHaveLength(1);
         expect(result[0]).toMatchObject({
@@ -874,7 +874,7 @@ describe("GeminiAdapter", () => {
           ],
         };
 
-        const result = geminiAdapter.responseToHistoryItems(response);
+        const result = googleAdapter.responseToHistoryItems(response);
 
         expect(result).toHaveLength(1);
         expect((result[0] as any).content).toBe("Hello!");
@@ -900,7 +900,7 @@ describe("GeminiAdapter", () => {
           contents: [],
         };
 
-        const result = await geminiAdapter.executeRequest(
+        const result = await googleAdapter.executeRequest(
           mockClient,
           request,
           controller.signal,
@@ -924,7 +924,7 @@ describe("GeminiAdapter", () => {
         };
 
         await expect(
-          geminiAdapter.executeRequest(mockClient, request, controller.signal),
+          googleAdapter.executeRequest(mockClient, request, controller.signal),
         ).rejects.toThrow("real error");
       });
     });
@@ -938,14 +938,14 @@ describe("GeminiAdapter", () => {
         messages: [],
       };
 
-      const result = geminiAdapter.buildRequest(request);
+      const result = googleAdapter.buildRequest(request);
 
-      expect(result.model).toBe(PROVIDER.GEMINI.MODEL.DEFAULT);
+      expect(result.model).toBe(PROVIDER.GOOGLE.MODEL.DEFAULT);
     });
 
     it("sets temperature in config when provided", () => {
       const request: OperateRequest = {
-        model: PROVIDER.GEMINI.MODEL.SMALL,
+        model: PROVIDER.GOOGLE.MODEL.SMALL,
         messages: [
           {
             content: "Hello",
@@ -956,20 +956,20 @@ describe("GeminiAdapter", () => {
         temperature: 0.7,
       };
 
-      const result = geminiAdapter.buildRequest(request);
+      const result = googleAdapter.buildRequest(request);
 
       expect(result.config?.temperature).toBe(0.7);
     });
 
     it("temperature takes precedence over providerOptions", () => {
       const request: OperateRequest = {
-        model: PROVIDER.GEMINI.MODEL.SMALL,
+        model: PROVIDER.GOOGLE.MODEL.SMALL,
         messages: [],
         providerOptions: { temperature: 0.3 },
         temperature: 0.9,
       };
 
-      const result = geminiAdapter.buildRequest(request);
+      const result = googleAdapter.buildRequest(request);
 
       expect(result.config?.temperature).toBe(0.9);
     });
@@ -998,7 +998,7 @@ describe("GeminiAdapter", () => {
           },
         };
 
-        const result = geminiAdapter.parseResponse(response, {
+        const result = googleAdapter.parseResponse(response, {
           format: { type: "object" },
         });
 
@@ -1029,7 +1029,7 @@ describe("GeminiAdapter", () => {
           },
         };
 
-        const result = geminiAdapter.parseResponse(response, {
+        const result = googleAdapter.parseResponse(response, {
           format: { type: "object" },
         });
 
@@ -1059,7 +1059,7 @@ describe("GeminiAdapter", () => {
           },
         };
 
-        const result = geminiAdapter.parseResponse(response, {
+        const result = googleAdapter.parseResponse(response, {
           format: { type: "object" },
         });
 
@@ -1069,18 +1069,18 @@ describe("GeminiAdapter", () => {
 
     it("does not set temperature when not provided", () => {
       const request: OperateRequest = {
-        model: PROVIDER.GEMINI.MODEL.SMALL,
+        model: PROVIDER.GOOGLE.MODEL.SMALL,
         messages: [],
       };
 
-      const result = geminiAdapter.buildRequest(request);
+      const result = googleAdapter.buildRequest(request);
 
       expect(result.config?.temperature).toBeUndefined();
     });
 
     it("maps assistant role to model", () => {
       const request: OperateRequest = {
-        model: PROVIDER.GEMINI.MODEL.SMALL,
+        model: PROVIDER.GOOGLE.MODEL.SMALL,
         messages: [
           {
             content: "Previous response",
@@ -1090,14 +1090,14 @@ describe("GeminiAdapter", () => {
         ],
       };
 
-      const result = geminiAdapter.buildRequest(request);
+      const result = googleAdapter.buildRequest(request);
 
       expect(result.contents[0].role).toBe("model");
     });
 
     it("maps system role to user for contents", () => {
       const request: OperateRequest = {
-        model: PROVIDER.GEMINI.MODEL.SMALL,
+        model: PROVIDER.GOOGLE.MODEL.SMALL,
         messages: [
           {
             content: "System message",
@@ -1107,7 +1107,7 @@ describe("GeminiAdapter", () => {
         ],
       };
 
-      const result = geminiAdapter.buildRequest(request);
+      const result = googleAdapter.buildRequest(request);
 
       // System messages in contents become user messages
       // (system instruction should be used via config.systemInstruction)
@@ -1116,7 +1116,7 @@ describe("GeminiAdapter", () => {
 
     it("handles function call history items", () => {
       const request: OperateRequest = {
-        model: PROVIDER.GEMINI.MODEL.SMALL,
+        model: PROVIDER.GOOGLE.MODEL.SMALL,
         messages: [
           {
             type: LlmMessageType.FunctionCall,
@@ -1127,7 +1127,7 @@ describe("GeminiAdapter", () => {
         ],
       };
 
-      const result = geminiAdapter.buildRequest(request);
+      const result = googleAdapter.buildRequest(request);
 
       expect(result.contents[0].role).toBe("model");
       expect(result.contents[0].parts?.[0].functionCall?.name).toBe(
@@ -1137,7 +1137,7 @@ describe("GeminiAdapter", () => {
 
     it("handles function call output history items", () => {
       const request: OperateRequest = {
-        model: PROVIDER.GEMINI.MODEL.SMALL,
+        model: PROVIDER.GOOGLE.MODEL.SMALL,
         messages: [
           {
             type: LlmMessageType.FunctionCallOutput,
@@ -1146,7 +1146,7 @@ describe("GeminiAdapter", () => {
         ],
       };
 
-      const result = geminiAdapter.buildRequest(request);
+      const result = googleAdapter.buildRequest(request);
 
       expect(result.contents[0].role).toBe("user");
       expect(result.contents[0].parts?.[0].functionResponse).toBeDefined();
@@ -1155,7 +1155,7 @@ describe("GeminiAdapter", () => {
 
   describe("Structured-output combo fallback", () => {
     it("retries with fake tool when Gemini 3 model rejects native combo", async () => {
-      const adapter = new GeminiAdapter();
+      const adapter = new GoogleAdapter();
       const schema = {
         type: "object",
         properties: { name: { type: "string" } },
@@ -1227,7 +1227,7 @@ describe("GeminiAdapter", () => {
     });
 
     it("caches the model so subsequent calls use the fake tool up-front", () => {
-      const adapter = new GeminiAdapter();
+      const adapter = new GoogleAdapter();
       adapter.rememberModelRejectsStructuredOutputCombo(
         "gemini-3.1-pro-preview",
       );
@@ -1258,7 +1258,7 @@ describe("GeminiAdapter", () => {
     });
 
     it("does not retry on unrelated 400 errors", async () => {
-      const adapter = new GeminiAdapter();
+      const adapter = new GoogleAdapter();
       const schema = {
         type: "object",
         properties: { name: { type: "string" } },

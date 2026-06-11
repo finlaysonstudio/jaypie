@@ -17,7 +17,7 @@ import {
 import { LlmStreamChunk } from "./types/LlmStreamChunk.interface.js";
 import { AnthropicProvider } from "./providers/anthropic/AnthropicProvider.class.js";
 import { BedrockProvider } from "./providers/bedrock/index.js";
-import { GeminiProvider } from "./providers/gemini/GeminiProvider.class.js";
+import { GoogleProvider } from "./providers/google/GoogleProvider.class.js";
 import { OpenAiProvider } from "./providers/openai/index.js";
 import { OpenRouterProvider } from "./providers/openrouter/index.js";
 import { XaiProvider } from "./providers/xai/index.js";
@@ -39,7 +39,7 @@ class Llm implements LlmProvider {
     // Legacy: accept "gemini" but warn
     if (providerName === "gemini") {
       log.warn(
-        `Provider "gemini" is deprecated, use "${PROVIDER.GEMINI.NAME}" instead`,
+        `Provider "gemini" is deprecated, use "${PROVIDER.GOOGLE.NAME}" instead`,
       );
     }
 
@@ -103,8 +103,8 @@ class Llm implements LlmProvider {
         );
       case PROVIDER.BEDROCK.NAME:
         return new BedrockProvider(model || PROVIDER.BEDROCK.MODEL.DEFAULT);
-      case PROVIDER.GEMINI.NAME:
-        return new GeminiProvider(model || PROVIDER.GEMINI.MODEL.DEFAULT, {
+      case PROVIDER.GOOGLE.NAME:
+        return new GoogleProvider(model || PROVIDER.GOOGLE.MODEL.DEFAULT, {
           apiKey,
         });
       case PROVIDER.OPENAI.NAME:

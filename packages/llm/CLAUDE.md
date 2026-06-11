@@ -4,7 +4,7 @@ LLM provider abstraction for multi-provider support with unified API.
 
 ## Package Overview
 
-`@jaypie/llm` provides a unified interface for interacting with multiple LLM providers (OpenAI, Anthropic, Gemini, OpenRouter, xAI). It supports multi-turn conversations, tool calling, structured output, streaming, and retry logic.
+`@jaypie/llm` provides a unified interface for interacting with multiple LLM providers (OpenAI, Anthropic, Google, OpenRouter, xAI). It supports multi-turn conversations, tool calling, structured output, streaming, and retry logic.
 
 ## Directory Structure
 
@@ -18,7 +18,7 @@ src/
 │   ├── StreamLoop.ts         # Streaming variant
 │   ├── adapters/             # Provider-specific adapters
 │   │   ├── AnthropicAdapter.ts
-│   │   ├── GeminiAdapter.ts
+│   │   ├── GoogleAdapter.ts
 │   │   ├── OpenAiAdapter.ts
 │   │   ├── OpenRouterAdapter.ts
 │   │   ├── XaiAdapter.ts
@@ -38,8 +38,8 @@ src/
 │   ├── anthropic/
 │   │   ├── AnthropicProvider.class.ts
 │   │   └── utils.ts
-│   ├── gemini/
-│   │   ├── GeminiProvider.class.ts
+│   ├── google/
+│   │   ├── GoogleProvider.class.ts
 │   │   └── utils.ts
 │   ├── openai/
 │   │   ├── OpenAiProvider.class.ts
@@ -176,7 +176,7 @@ const response = await Llm.operate("Greet the world", {
 - A model that 400/422s on the `response_format` field is cached for the session and transparently retried via the legacy `structured_output` fake-tool emulation. The error message must mention `response_format`/`json_schema`/`structured_output`/`require_parameters` to trigger the fallback — generic 400s propagate.
 - For pre-flight enforcement, callers can pass `providerOptions: { provider: { require_parameters: true } }` to force OpenRouter to error rather than silently drop the field on backends that don't honor it.
 
-**Gemini notes:**
+**Google notes (Gemini models):**
 - Format-only requests use native `responseMimeType: "application/json"` + `responseSchema` (OpenAPI 3.0) by default, or `responseJsonSchema` (standard JSON Schema) when `providerOptions.useJsonSchema: true`.
 - Format **and** tools combined: native `responseJsonSchema` + tools is supported only on Gemini 3 (preview) and is enabled automatically when the model id matches `^gemini-3`. Gemini 2.5 (including thinking) and earlier fall back to the `structured_output` fake-tool emulation with a system-prompt nudge.
 - A Gemini 3 model that 400s the combo is cached for the session and transparently retried via the fake-tool path. The error message must mention `responseJsonSchema`/`responseSchema`/`responseMime`/`function_call`/`tools` to trigger the fallback.
@@ -273,14 +273,14 @@ Provider SDKs are peer dependencies (optional except for the provider you use):
 
 - `openai` - OpenAI and xAI (required dependency; xAI uses the OpenAI SDK with a custom base URL)
 - `@anthropic-ai/sdk` - Anthropic (peer)
-- `@google/genai` - Gemini (peer)
+- `@google/genai` - Google (peer)
 - `@openrouter/sdk` - OpenRouter (peer)
 
 ## Environment Variables
 
 - `OPENAI_API_KEY` - OpenAI API key
 - `ANTHROPIC_API_KEY` - Anthropic API key
-- `GOOGLE_API_KEY` - Gemini API key
+- `GOOGLE_API_KEY` - Google API key
 - `OPENROUTER_API_KEY` - OpenRouter API key
 - `XAI_API_KEY` - xAI (Grok) API key
 
@@ -315,7 +315,8 @@ export { LlmMessageRole, LlmMessageType, LlmStreamChunkType };
 export { JaypieToolkit, toolkit, Toolkit, tools };
 
 // Providers (for direct use)
-export { GeminiProvider, OpenRouterProvider, XaiProvider };
+export { GoogleProvider, OpenRouterProvider, XaiProvider };
+// GeminiProvider remains as a deprecated alias of GoogleProvider
 ```
 
 ## Used By

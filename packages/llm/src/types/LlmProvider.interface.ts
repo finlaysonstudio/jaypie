@@ -202,7 +202,7 @@ export type LlmHistory = LlmHistoryItem[];
  * Used when the primary provider fails with an unrecoverable error.
  */
 export interface LlmFallbackConfig {
-  /** Provider name (e.g., "openai", "anthropic", "gemini") */
+  /** Provider name (e.g., "openai", "anthropic", "google") */
   provider: string;
   /** Model to use with this provider (optional, uses provider default if not specified) */
   model?: string;

@@ -199,7 +199,9 @@ describe("JaypieSecret", () => {
       const template = Template.fromStack(stack);
 
       const templateStr = JSON.stringify(template.toJSON());
-      expect(templateStr).toContain("env-sandbox-testproject-EnvSecretMYSECRET");
+      expect(templateStr).toContain(
+        "env-sandbox-testproject-EnvSecretMYSECRET",
+      );
       expect(templateStr).not.toContain("undefined");
     });
 

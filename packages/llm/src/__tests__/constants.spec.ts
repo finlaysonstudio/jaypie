@@ -43,4 +43,21 @@ describe("Constants", () => {
       expect(PROVIDER.ANTHROPIC.TOOLS.SCHEMA_VERSION).toBe("v2");
     });
   });
+
+  describe("Google Constants", () => {
+    it("Has model constants", () => {
+      expect(PROVIDER.GOOGLE.MODEL.DEFAULT).toBeString();
+      expect(PROVIDER.GOOGLE.MODEL.LARGE).toBeDefined();
+      expect(PROVIDER.GOOGLE.MODEL.SMALL).toBeDefined();
+      expect(PROVIDER.GOOGLE.MODEL.TINY).toBeDefined();
+    });
+
+    it("Is named google", () => {
+      expect(PROVIDER.GOOGLE.NAME).toBe("google");
+    });
+
+    it("Keeps PROVIDER.GEMINI as a deprecated alias of PROVIDER.GOOGLE", () => {
+      expect(PROVIDER.GEMINI).toBe(PROVIDER.GOOGLE);
+    });
+  });
 });

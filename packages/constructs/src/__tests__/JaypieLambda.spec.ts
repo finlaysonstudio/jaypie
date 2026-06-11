@@ -103,6 +103,39 @@ describe("JaypieLambda", () => {
       });
     });
 
+    it("sets PROJECT_SERVICE environment variable from serviceTag", () => {
+      const stack = new Stack();
+      new JaypieLambda(stack, "TestConstruct", {
+        code: lambda.Code.fromInline("exports.handler = () => {}"),
+        handler: "index.handler",
+        serviceTag: "TEST_SERVICE",
+      });
+      const template = Template.fromStack(stack);
+
+      const mainFunction = findMainLambdaFunction(template);
+      expect(mainFunction).toBeDefined();
+
+      const envVars = mainFunction?.Properties?.Environment?.Variables || {};
+      expect(envVars.PROJECT_SERVICE).toBe("TEST_SERVICE");
+    });
+
+    it("prefers explicit PROJECT_SERVICE environment over serviceTag", () => {
+      const stack = new Stack();
+      new JaypieLambda(stack, "TestConstruct", {
+        code: lambda.Code.fromInline("exports.handler = () => {}"),
+        environment: { PROJECT_SERVICE: "explicit-service" },
+        handler: "index.handler",
+        serviceTag: "TEST_SERVICE",
+      });
+      const template = Template.fromStack(stack);
+
+      const mainFunction = findMainLambdaFunction(template);
+      expect(mainFunction).toBeDefined();
+
+      const envVars = mainFunction?.Properties?.Environment?.Variables || {};
+      expect(envVars.PROJECT_SERVICE).toBe("explicit-service");
+    });
+
     it("adds both role and vendor tags when provided", () => {
       const stack = new Stack();
       const construct = new JaypieLambda(stack, "TestConstruct", {

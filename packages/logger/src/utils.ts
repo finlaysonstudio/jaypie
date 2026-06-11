@@ -67,6 +67,7 @@ export function stringify(...params: unknown[]): string {
   return formatted.join(" ");
 }
 
+/* eslint-disable no-console -- console is the logger's output device */
 export function out(
   line: string | unknown,
   { level = "debug" }: { level?: string } = {},
@@ -116,6 +117,7 @@ export function out(
     // Transport errors must never affect logging
   }
 }
+/* eslint-enable no-console */
 
 export function parse(message: unknown): unknown {
   if (typeof message !== "string") {

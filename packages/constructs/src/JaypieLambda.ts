@@ -143,7 +143,7 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
     const initialEnvironment = resolveEnvironment(environmentInput);
 
     // Get base environment with defaults
-    const environment = jaypieLambdaEnv({ initialEnvironment });
+    const environment = jaypieLambdaEnv({ initialEnvironment, serviceTag });
 
     // Resolve secrets from mixed array (strings and JaypieSecret instances)
     // Use Stack.of(this) to ensure secrets are shared at stack level across all constructs

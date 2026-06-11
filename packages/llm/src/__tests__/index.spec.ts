@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 // Subject
-import { Llm, LLM } from "../index.js";
+import { GeminiProvider, GoogleProvider, Llm, LLM } from "../index.js";
 
 describe("Index", () => {
   it("Exports functions we expect", () => {
@@ -10,5 +10,10 @@ describe("Index", () => {
     expect(LLM.DEFAULT).toBeObject();
     expect(LLM.PROVIDER).toBeObject();
     expect(LLM.PROVIDER.OPENAI).toBeObject();
+  });
+
+  it("Exports GeminiProvider as a deprecated alias of GoogleProvider", () => {
+    expect(GoogleProvider).toBeFunction();
+    expect(GeminiProvider).toBe(GoogleProvider);
   });
 });

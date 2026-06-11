@@ -152,6 +152,39 @@ describe("jaypieLambdaEnv", () => {
     });
   });
 
+  describe("serviceTag", () => {
+    it("should set PROJECT_SERVICE from serviceTag", () => {
+      const result = jaypieLambdaEnv({ serviceTag: "my-service" });
+
+      expect(result.PROJECT_SERVICE).toBe("my-service");
+    });
+
+    it("should let explicit initialEnvironment PROJECT_SERVICE win over serviceTag", () => {
+      const result = jaypieLambdaEnv({
+        initialEnvironment: { PROJECT_SERVICE: "explicit-service" },
+        serviceTag: "my-service",
+      });
+
+      expect(result.PROJECT_SERVICE).toBe("explicit-service");
+    });
+
+    it("should let serviceTag win over process.env.PROJECT_SERVICE", () => {
+      process.env.PROJECT_SERVICE = "env-service";
+
+      const result = jaypieLambdaEnv({ serviceTag: "my-service" });
+
+      expect(result.PROJECT_SERVICE).toBe("my-service");
+    });
+
+    it("should fall back to process.env.PROJECT_SERVICE without serviceTag", () => {
+      process.env.PROJECT_SERVICE = "env-service";
+
+      const result = jaypieLambdaEnv();
+
+      expect(result.PROJECT_SERVICE).toBe("env-service");
+    });
+  });
+
   describe("Specific Scenarios", () => {
     it("should not include process.env variables that are not in defaultEnvVars list", () => {
       process.env.RANDOM_VAR = "should_not_appear";
