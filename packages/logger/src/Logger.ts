@@ -1,11 +1,4 @@
-import {
-  DEFAULT,
-  ERROR,
-  FORMAT,
-  LEVEL,
-  LEVEL_VALUES,
-  PSEUDO_LEVELS,
-} from "./constants";
+import { DEFAULT, ERROR, FORMAT, LEVEL, LEVEL_VALUES } from "./constants";
 import { filterByType, pipelines } from "./pipelines";
 import { sanitizeAuth } from "./sanitizeAuth";
 import { forceString, out, parse, parsesTo, stringify } from "./utils";
@@ -101,8 +94,23 @@ class Logger {
       if (LEVEL_VALUES[logLevel] <= LEVEL_VALUES[checkLevel]) {
         const sanitized = messages.map(sanitizeAuth);
         if (format === FORMAT.JSON) {
-          const message = stringify(...sanitized);
-          const parses = parsesTo(message);
+          let message = stringify(...sanitized);
+          let parses = parsesTo(message);
+          const last = sanitized[sanitized.length - 1];
+          if (
+            sanitized.length > 1 &&
+            typeof last === "object" &&
+            last !== null &&
+            sanitized
+              .slice(0, -1)
+              .every((item) => typeof item !== "object" || item === null)
+          ) {
+            const lastParses = parsesTo(stringify(last));
+            if (lastParses.parses) {
+              message = stringify(...sanitized.slice(0, -1));
+              parses = lastParses;
+            }
+          }
           const json: LogJson = {
             message,
             ...this.tags,

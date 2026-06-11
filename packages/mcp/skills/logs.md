@@ -30,17 +30,19 @@ log.fatal("Fatal error"); // only used internally in jaypie
 
 ## Logging Data
 
-DO NOT use multiple parameters when logging:
-<BAD>
-```typescript
-log.info("Processing", { id: "my-id" });
-```
-</BAD>
+A trailing object becomes the structured `data` field; preceding scalars join into `message`:
 
-Use `log.var` to log single-key objects that parse in Datadog:
+```typescript
+log.warn("Processing failed", { id: "my-id" });
+// => { "message": "Processing failed", "data": { "id": "my-id" } }
+```
+
+This only splits when the object is last and everything before it is scalar. An object mid-call, multiple objects, or a non-serializable object (e.g., `Error`) falls back to space-joined stringification — keep objects last and singular.
+
+Prefer `log.var` to log single-key objects that parse in Datadog:
 <GOOD>
 ```typescript
-log.trace("Processing", { id: "my-id" });
+log.trace("Processing");
 log.var({ id: "my-id" });
 ```
 </GOOD>

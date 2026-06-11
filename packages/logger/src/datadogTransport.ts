@@ -99,8 +99,9 @@ class DatadogLogTransport {
         if (parsed && typeof parsed === "object") {
           if (parsed.message) {
             message = parsed.message;
-            const { message: __, status: _, ...rest } = parsed;
-            extra = rest;
+            extra = { ...parsed };
+            delete extra.message;
+            delete extra.status;
           }
         }
       } catch {

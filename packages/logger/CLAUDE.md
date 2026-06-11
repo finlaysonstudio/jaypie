@@ -72,6 +72,17 @@ Defined in `constants.ts` with numeric values for comparison:
 - `DD_HOST` / `PROJECT_HOST` - Hostname tag (default: `os.hostname()`)
 - `DD_SOURCE` / `PROJECT_SOURCE` - Log source tag (default: `nodejs`)
 
+### Message and Data Splitting
+
+In JSON format, when the final argument is an object (or array) and all preceding arguments are scalars, the object becomes the structured `data` field and the scalars join into `message`:
+
+```typescript
+log.warn("Processing failed", { id: "my-id" });
+// Output: { message: "Processing failed", data: { id: "my-id" } }
+```
+
+Calls with an object mid-argument, multiple objects, or a trailing object that does not serialize to JSON (e.g., `Error`) fall back to space-joined stringification.
+
 ### Variable Logging
 
 The `.var()` method logs key-value pairs in structured JSON:
