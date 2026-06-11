@@ -11,7 +11,7 @@ const FIRST_CLASS_PROVIDER = {
     DEFAULT: "gemini-3.1-pro-preview" as const,
     LARGE: "gemini-3.1-pro-preview" as const,
     SMALL: "gemini-3.5-flash" as const,
-    TINY: "gemini-3.5-flash" as const,
+    TINY: "	gemini-3.1-flash-lite" as const,
   },
   // https://developers.openai.com/api/docs/models
   OPENAI: {
@@ -27,6 +27,25 @@ const FIRST_CLASS_PROVIDER = {
     SMALL: "grok-4-1-fast-reasoning" as const,
     TINY: "grok-4-1-fast-non-reasoning" as const,
   },
+};
+
+export const MODEL = {
+  // Anthropic
+  OPUS: "claude-opus-4-8",
+  SONNET: "claude-sonnet-4-6",
+  HAIKU: "claude-haiku-4-5",
+  FABLE: "claude-fable-5",
+  MYTHOS: "claude-mythos-5",
+  // Google
+  GEMINI_FLASH: "gemini-3.5-flash",
+  GEMINI_FLASH_LITE: "gemini-3.1-flash-lite",
+  GEMINI_PRO: "gemini-3.1-pro-preview",
+  // OpenAI
+  GPT: "gpt-5.5",
+  GPT_MINI: "gpt-5.5-mini",
+  GPT_NANO: "gpt-5.5-nano",
+  // xAI
+  GROK: "grok-latest",
 };
 
 export const PROVIDER = {
