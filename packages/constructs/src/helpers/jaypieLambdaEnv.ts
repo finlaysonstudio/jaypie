@@ -1,11 +1,12 @@
 export interface JaypieLambdaEnvOptions {
   initialEnvironment?: { [key: string]: string };
+  serviceTag?: string;
 }
 
 export function jaypieLambdaEnv(options: JaypieLambdaEnvOptions = {}): {
   [key: string]: string;
 } {
-  const { initialEnvironment = {} } = options;
+  const { initialEnvironment = {}, serviceTag } = options;
 
   // Start with empty environment - we'll only add valid values
   let environment: { [key: string]: string } = {};
@@ -37,6 +38,12 @@ export function jaypieLambdaEnv(options: JaypieLambdaEnvOptions = {}): {
       environment[key] = defaultValue;
     }
   });
+
+  // Apply serviceTag as PROJECT_SERVICE unless explicitly overridden.
+  // Precedence: explicit environment > serviceTag > process.env.PROJECT_SERVICE
+  if (serviceTag && !environment.PROJECT_SERVICE) {
+    environment.PROJECT_SERVICE = serviceTag;
+  }
 
   // Default environment variables from process.env if present
   const defaultEnvVars = [
