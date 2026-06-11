@@ -37,7 +37,7 @@ import {
   GeminiPart,
   GeminiRawResponse,
   GeminiRequest,
-} from "../../providers/gemini/types.js";
+} from "../../providers/google/types.js";
 
 //
 //
@@ -103,13 +103,13 @@ const NOT_RETRYABLE_STATUS_CODES = [
 //
 
 /**
- * GeminiAdapter implements the ProviderAdapter interface for Google's Gemini API.
+ * GoogleAdapter implements the ProviderAdapter interface for Google's Gemini API.
  * It handles request building, response parsing, and error classification
  * specific to Gemini's generateContent API.
  */
-export class GeminiAdapter extends BaseProviderAdapter {
-  readonly name = PROVIDER.GEMINI.NAME;
-  readonly defaultModel = PROVIDER.GEMINI.MODEL.DEFAULT;
+export class GoogleAdapter extends BaseProviderAdapter {
+  readonly name = PROVIDER.GOOGLE.NAME;
+  readonly defaultModel = PROVIDER.GOOGLE.MODEL.DEFAULT;
 
   // Session-level cache of Gemini 3 models observed to reject the native
   // `responseJsonSchema` + tools combo. When a model is in this set,
@@ -177,7 +177,7 @@ export class GeminiAdapter extends BaseProviderAdapter {
       : [];
     if (request.format && hasUserTools && !useNativeCombo) {
       log.warn(
-        `[GeminiAdapter] Using legacy structured_output tool fallback for model ${geminiRequest.model}; native responseJsonSchema + tools combo is only available on Gemini 3.`,
+        `[GoogleAdapter] Using legacy structured_output tool fallback for model ${geminiRequest.model}; native responseJsonSchema + tools combo is only available on Gemini 3.`,
       );
       allTools.push({
         name: STRUCTURED_OUTPUT_TOOL_NAME,
@@ -343,7 +343,7 @@ export class GeminiAdapter extends BaseProviderAdapter {
         const model = geminiRequest.model;
         this.rememberModelRejectsStructuredOutputCombo(model);
         log.warn(
-          `[GeminiAdapter] Model ${model} rejected native responseJsonSchema + tools combo; falling back to legacy structured_output tool emulation.`,
+          `[GoogleAdapter] Model ${model} rejected native responseJsonSchema + tools combo; falling back to legacy structured_output tool emulation.`,
         );
         const fallbackRequest =
           this.toFallbackStructuredOutputRequest(geminiRequest);
@@ -1071,4 +1071,4 @@ export class GeminiAdapter extends BaseProviderAdapter {
 }
 
 // Export singleton instance
-export const geminiAdapter = new GeminiAdapter();
+export const googleAdapter = new GoogleAdapter();

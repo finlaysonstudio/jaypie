@@ -24,8 +24,8 @@ vi.mock("../providers/anthropic/AnthropicProvider.class.js", () => ({
   })),
 }));
 
-vi.mock("../providers/gemini/GeminiProvider.class.js", () => ({
-  GeminiProvider: vi.fn().mockImplementation(() => ({
+vi.mock("../providers/google/GoogleProvider.class.js", () => ({
+  GoogleProvider: vi.fn().mockImplementation(() => ({
     send: vi.fn().mockResolvedValue("Mocked Gemini response"),
     operate: geminiOperateMock,
   })),
@@ -88,6 +88,16 @@ describe("Llm Class", () => {
     expect(llm["_provider"]).toBe(customProvider);
   });
 
+  it("Sets google provider when provided", () => {
+    const llm = new Llm(PROVIDER.GOOGLE.NAME);
+    expect(llm["_provider"]).toBe(PROVIDER.GOOGLE.NAME);
+  });
+
+  it("Accepts legacy gemini provider name as google", () => {
+    const llm = new Llm("gemini");
+    expect(llm["_provider"]).toBe(PROVIDER.GOOGLE.NAME);
+  });
+
   it("Determines provider from model when model is provided", () => {
     const llm = new Llm(undefined, { model: "gpt-4" });
     expect(llm["_provider"]).toBe(PROVIDER.OPENAI.NAME);
@@ -110,7 +120,7 @@ describe("Llm Class", () => {
 
   it("Preserves model when model name is passed as first argument (#213)", () => {
     const llm = new Llm("gemini-3-flash-preview");
-    expect(llm["_provider"]).toBe(PROVIDER.GEMINI.NAME);
+    expect(llm["_provider"]).toBe(PROVIDER.GOOGLE.NAME);
     expect(llm["_options"].model).toBe("gemini-3-flash-preview");
   });
 
@@ -281,7 +291,7 @@ describe("Llm Class", () => {
         const llm = new Llm(PROVIDER.OPENAI.NAME, {
           fallback: [
             { provider: PROVIDER.ANTHROPIC.NAME },
-            { provider: PROVIDER.GEMINI.NAME },
+            { provider: PROVIDER.GOOGLE.NAME },
           ],
         });
 
@@ -301,7 +311,7 @@ describe("Llm Class", () => {
         const llm = new Llm(PROVIDER.OPENAI.NAME, {
           fallback: [
             { provider: PROVIDER.ANTHROPIC.NAME },
-            { provider: PROVIDER.GEMINI.NAME },
+            { provider: PROVIDER.GOOGLE.NAME },
           ],
         });
 
@@ -318,7 +328,7 @@ describe("Llm Class", () => {
         });
 
         const result = await llm.operate("test", {
-          fallback: [{ provider: PROVIDER.GEMINI.NAME }],
+          fallback: [{ provider: PROVIDER.GOOGLE.NAME }],
         });
 
         expect(result.provider).toBe("google");

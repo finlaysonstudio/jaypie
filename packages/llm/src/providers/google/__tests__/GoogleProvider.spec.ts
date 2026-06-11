@@ -1,7 +1,7 @@
 import { getEnvSecret } from "@jaypie/aws";
 import { GoogleGenAI } from "@google/genai";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { GeminiProvider } from "../GeminiProvider.class";
+import { GoogleProvider } from "../GoogleProvider.class";
 import {
   LlmHistoryItem,
   LlmInputMessage,
@@ -33,7 +33,7 @@ vi.mock("@jaypie/aws", async () => {
   return module;
 });
 
-describe("GeminiProvider", () => {
+describe("GoogleProvider", () => {
   beforeEach(() => {
     vi.mocked(GoogleGenAI).mockImplementation(
       () =>
@@ -48,12 +48,12 @@ describe("GeminiProvider", () => {
 
   describe("Base Cases", () => {
     it("is a Class", () => {
-      expect(GeminiProvider).toBeFunction();
+      expect(GoogleProvider).toBeFunction();
     });
 
     it("Works", () => {
-      const provider = new GeminiProvider();
-      expect(provider).toBeInstanceOf(GeminiProvider);
+      const provider = new GoogleProvider();
+      expect(provider).toBeInstanceOf(GoogleProvider);
     });
   });
 
@@ -63,7 +63,7 @@ describe("GeminiProvider", () => {
     });
 
     it("throws ConfigurationError when API key is missing", async () => {
-      const provider = new GeminiProvider();
+      const provider = new GoogleProvider();
       expect(async () => provider.send("test")).toThrowConfigurationError();
     });
   });
@@ -88,7 +88,7 @@ describe("GeminiProvider", () => {
           }) as any,
       );
 
-      const provider = new GeminiProvider();
+      const provider = new GoogleProvider();
       const response = await provider.send("test message");
 
       expect(response).toBe("test response");
@@ -122,7 +122,7 @@ describe("GeminiProvider", () => {
             }) as any,
         );
 
-        const provider = new GeminiProvider();
+        const provider = new GoogleProvider();
         const response = await provider.send("Hello, World", {
           response: { salutation: String, name: String },
         });
@@ -156,7 +156,7 @@ describe("GeminiProvider", () => {
             }) as any,
         );
 
-        const provider = new GeminiProvider();
+        const provider = new GoogleProvider();
         const response = await provider.send("Hello", {
           response: { Decision: String, Summary: String, Confidence: Number },
         });
@@ -180,7 +180,7 @@ describe("GeminiProvider", () => {
             }) as any,
         );
 
-        const provider = new GeminiProvider();
+        const provider = new GoogleProvider();
         const response = await provider.send("Hello", {
           response: { name: String },
         });
@@ -205,7 +205,7 @@ describe("GeminiProvider", () => {
             }) as any,
         );
 
-        const provider = new GeminiProvider();
+        const provider = new GoogleProvider();
         const response = await provider.send("test message", {
           system: "You are a test assistant",
         });
@@ -233,7 +233,7 @@ describe("GeminiProvider", () => {
             }) as any,
         );
 
-        const provider = new GeminiProvider();
+        const provider = new GoogleProvider();
         const response = await provider.send("Hello, {{name}}", {
           data: { name: "World" },
         });
@@ -261,7 +261,7 @@ describe("GeminiProvider", () => {
             }) as any,
         );
 
-        const provider = new GeminiProvider();
+        const provider = new GoogleProvider();
         const response = await provider.send("Hello, {{name}}", {
           data: { name: "World" },
           placeholders: { message: false },
@@ -372,7 +372,7 @@ describe("GeminiProvider", () => {
         .mockResolvedValueOnce(mockOperateResponse1)
         .mockResolvedValueOnce(mockOperateResponse2);
 
-      const provider = new GeminiProvider();
+      const provider = new GoogleProvider();
 
       // First operate call
       await provider.operate("Hello");
@@ -440,7 +440,7 @@ describe("GeminiProvider", () => {
 
       executeMock.mockResolvedValue(mockOperateResponse);
 
-      const provider = new GeminiProvider();
+      const provider = new GoogleProvider();
 
       // Set the conversation history directly for testing
       provider["conversationHistory"] = [
@@ -503,7 +503,7 @@ describe("GeminiProvider", () => {
 
       executeMock.mockResolvedValue(mockOperateResponse);
 
-      const provider = new GeminiProvider();
+      const provider = new GoogleProvider();
 
       await provider.operate("Test message");
 

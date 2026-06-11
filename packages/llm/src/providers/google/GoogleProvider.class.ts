@@ -5,7 +5,7 @@ import {
   createOperateLoop,
   createStreamLoop,
   OperateLoop,
-  geminiAdapter,
+  googleAdapter,
   StreamLoop,
 } from "../../operate/index.js";
 import {
@@ -20,7 +20,7 @@ import {
 import { LlmStreamChunk } from "../../types/LlmStreamChunk.interface.js";
 import { getLogger, initializeClient, prepareMessages } from "./utils.js";
 
-export class GeminiProvider implements LlmProvider {
+export class GoogleProvider implements LlmProvider {
   private model: string;
   private _client?: GoogleGenAI;
   private _operateLoop?: OperateLoop;
@@ -30,7 +30,7 @@ export class GeminiProvider implements LlmProvider {
   private conversationHistory: LlmHistoryItem[] = [];
 
   constructor(
-    model: string = PROVIDER.GEMINI.MODEL.DEFAULT,
+    model: string = PROVIDER.GOOGLE.MODEL.DEFAULT,
     { apiKey }: { apiKey?: string } = {},
   ) {
     this.model = model;
@@ -53,7 +53,7 @@ export class GeminiProvider implements LlmProvider {
 
     const client = await this.getClient();
     this._operateLoop = createOperateLoop({
-      adapter: geminiAdapter,
+      adapter: googleAdapter,
       client,
     });
     return this._operateLoop;
@@ -66,7 +66,7 @@ export class GeminiProvider implements LlmProvider {
 
     const client = await this.getClient();
     this._streamLoop = createStreamLoop({
-      adapter: geminiAdapter,
+      adapter: googleAdapter,
       client,
     });
     return this._streamLoop;

@@ -46,6 +46,8 @@ export { extractReasoning } from "./util/extractReasoning.js";
 
 // Providers
 export { BedrockProvider } from "./providers/bedrock/index.js";
-export { GeminiProvider } from "./providers/gemini/index.js";
+/** @deprecated Use GoogleProvider — "Google" is the provider; Gemini is the model family */
+export { GoogleProvider as GeminiProvider } from "./providers/google/index.js";
+export { GoogleProvider } from "./providers/google/index.js";
 export { OpenRouterProvider } from "./providers/openrouter/index.js";
 export { XaiProvider } from "./providers/xai/index.js";

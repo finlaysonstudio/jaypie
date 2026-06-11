@@ -21,11 +21,13 @@ console.log(response.content); // "4"
 
 | Provider | Match Keywords | Default Model |
 |----------|----------------|---------------|
-| OpenAI | "openai", "gpt", /^o\d/ | gpt-5.2 |
-| Anthropic | "anthropic", "claude", "haiku", "opus", "sonnet" | claude-sonnet-4-5 |
-| Google | "google", "gemini" | gemini-3-pro-preview |
-| OpenRouter | "openrouter" | z-ai/glm-4.7 |
-| xAI | "xai", "grok" | grok-4-1-fast-reasoning |
+| OpenAI | "openai", "gpt", /^o\d/ | gpt-5.4 |
+| Anthropic | "anthropic", "claude", "haiku", "opus", "sonnet" | claude-sonnet-4-6 |
+| Google | "google", "gemini" | gemini-3.1-pro-preview |
+| OpenRouter | "openrouter" | anthropic/claude-sonnet-4-6 |
+| xAI | "xai", "grok" | grok-latest |
+
+The provider name for Gemini models is `"google"` — `"gemini"` is accepted as a deprecated alias.
 
 ```typescript
 // Provider auto-detected from model
@@ -317,7 +319,7 @@ const review2 = await llm.operate(code2);
 
 ```bash
 ANTHROPIC_API_KEY   # Required for Anthropic
-GOOGLE_API_KEY      # Required for Gemini
+GOOGLE_API_KEY      # Required for Google (Gemini models)
 OPENAI_API_KEY      # Required for OpenAI
 OPENROUTER_API_KEY  # Required for OpenRouter
 XAI_API_KEY         # Required for xAI (Grok)

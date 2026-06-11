@@ -83,8 +83,8 @@ export const MODELS: readonly ModelConfig[] = [
 
   // ─── Google Gemini 3 ─────────────────────────────────────────────────
   { model: "gemini-3.1-pro-preview" },
-  { model: "gemini-3-flash-preview" },
-  { model: "gemini-3.1-flash-lite-preview" },
+  { model: "gemini-3.5-flash" },
+  { model: "gemini-3.1-flash-lite" },
 
   // ─── xAI Grok 4 ──────────────────────────────────────────────────────
   { model: "grok-4.3-latest" },

@@ -42,10 +42,10 @@ export function determineModelProvider(input?: string): {
       provider: PROVIDER.ANTHROPIC.NAME,
     };
   }
-  if (input === PROVIDER.GEMINI.NAME || input === "gemini") {
+  if (input === PROVIDER.GOOGLE.NAME || input === "gemini") {
     return {
-      model: PROVIDER.GEMINI.MODEL.DEFAULT,
-      provider: PROVIDER.GEMINI.NAME,
+      model: PROVIDER.GOOGLE.MODEL.DEFAULT,
+      provider: PROVIDER.GOOGLE.NAME,
     };
   }
   if (input === PROVIDER.OPENAI.NAME) {
@@ -78,11 +78,11 @@ export function determineModelProvider(input?: string): {
   }
 
   // Check if input matches a Gemini model exactly
-  for (const [, modelValue] of Object.entries(PROVIDER.GEMINI.MODEL)) {
+  for (const [, modelValue] of Object.entries(PROVIDER.GOOGLE.MODEL)) {
     if (input === modelValue) {
       return {
         model: input,
-        provider: PROVIDER.GEMINI.NAME,
+        provider: PROVIDER.GOOGLE.NAME,
       };
     }
   }
@@ -148,11 +148,11 @@ export function determineModelProvider(input?: string): {
   }
 
   // Check Gemini match words
-  for (const matchWord of PROVIDER.GEMINI.MODEL_MATCH_WORDS) {
+  for (const matchWord of PROVIDER.GOOGLE.MODEL_MATCH_WORDS) {
     if (lowerInput.includes(matchWord)) {
       return {
         model: input,
-        provider: PROVIDER.GEMINI.NAME,
+        provider: PROVIDER.GOOGLE.NAME,
       };
     }
   }
