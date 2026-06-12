@@ -132,7 +132,7 @@ Required by various constructs:
 | `PROJECT_NONCE` | Unique deployment identifier |
 | `PROJECT_COMMIT` | Git commit hash |
 | `PROJECT_VERSION` | Package version |
-| `PROJECT_SERVICE` | Service name (set on Lambdas from the `serviceTag` prop when provided) |
+| `PROJECT_SERVICE` | Service name (passed through to Lambdas from process.env; `serviceTag` prop sets `DD_SERVICE` instead) |
 | `CDK_DEFAULT_ACCOUNT` | AWS account ID |
 | `CDK_DEFAULT_REGION` | AWS region |
 | `CDK_ENV_HOSTED_ZONE` | Default hosted zone domain |

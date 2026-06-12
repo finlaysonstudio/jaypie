@@ -39,10 +39,10 @@ export function jaypieLambdaEnv(options: JaypieLambdaEnvOptions = {}): {
     }
   });
 
-  // Apply serviceTag as PROJECT_SERVICE unless explicitly overridden.
+  // Apply serviceTag as DD_SERVICE unless explicitly overridden.
   // Precedence: explicit environment > serviceTag > process.env.PROJECT_SERVICE
-  if (serviceTag && !environment.PROJECT_SERVICE) {
-    environment.PROJECT_SERVICE = serviceTag;
+  if (serviceTag && !environment.DD_SERVICE) {
+    environment.DD_SERVICE = serviceTag;
   }
 
   // Default environment variables from process.env if present
