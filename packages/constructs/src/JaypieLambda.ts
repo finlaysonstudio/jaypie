@@ -239,7 +239,10 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
           : undefined,
     });
 
-    addDatadogLayers(this._lambda, { datadogApiKeyArn });
+    addDatadogLayers(this._lambda, {
+      datadogApiKeyArn,
+      serviceTag: environment.DD_SERVICE,
+    });
 
     // Grant secret read permissions
     Object.values(envSecrets).forEach((secret) => {

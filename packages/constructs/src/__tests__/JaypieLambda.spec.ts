@@ -103,7 +103,7 @@ describe("JaypieLambda", () => {
       });
     });
 
-    it("sets PROJECT_SERVICE environment variable from serviceTag", () => {
+    it("sets DD_SERVICE environment variable from serviceTag", () => {
       const stack = new Stack();
       new JaypieLambda(stack, "TestConstruct", {
         code: lambda.Code.fromInline("exports.handler = () => {}"),
@@ -116,14 +116,14 @@ describe("JaypieLambda", () => {
       expect(mainFunction).toBeDefined();
 
       const envVars = mainFunction?.Properties?.Environment?.Variables || {};
-      expect(envVars.PROJECT_SERVICE).toBe("TEST_SERVICE");
+      expect(envVars.DD_SERVICE).toBe("TEST_SERVICE");
     });
 
-    it("prefers explicit PROJECT_SERVICE environment over serviceTag", () => {
+    it("prefers explicit DD_SERVICE environment over serviceTag", () => {
       const stack = new Stack();
       new JaypieLambda(stack, "TestConstruct", {
         code: lambda.Code.fromInline("exports.handler = () => {}"),
-        environment: { PROJECT_SERVICE: "explicit-service" },
+        environment: { DD_SERVICE: "explicit-service" },
         handler: "index.handler",
         serviceTag: "TEST_SERVICE",
       });
@@ -133,7 +133,7 @@ describe("JaypieLambda", () => {
       expect(mainFunction).toBeDefined();
 
       const envVars = mainFunction?.Properties?.Environment?.Variables || {};
-      expect(envVars.PROJECT_SERVICE).toBe("explicit-service");
+      expect(envVars.DD_SERVICE).toBe("explicit-service");
     });
 
     it("adds both role and vendor tags when provided", () => {

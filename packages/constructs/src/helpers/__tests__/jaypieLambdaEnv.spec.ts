@@ -153,35 +153,34 @@ describe("jaypieLambdaEnv", () => {
   });
 
   describe("serviceTag", () => {
-    it("should set PROJECT_SERVICE from serviceTag", () => {
+    it("should set DD_SERVICE from serviceTag", () => {
       const result = jaypieLambdaEnv({ serviceTag: "my-service" });
 
-      expect(result.PROJECT_SERVICE).toBe("my-service");
+      expect(result.DD_SERVICE).toBe("my-service");
     });
 
-    it("should let explicit initialEnvironment PROJECT_SERVICE win over serviceTag", () => {
+    it("should let explicit initialEnvironment DD_SERVICE win over serviceTag", () => {
       const result = jaypieLambdaEnv({
-        initialEnvironment: { PROJECT_SERVICE: "explicit-service" },
+        initialEnvironment: { DD_SERVICE: "explicit-service" },
         serviceTag: "my-service",
       });
 
-      expect(result.PROJECT_SERVICE).toBe("explicit-service");
+      expect(result.DD_SERVICE).toBe("explicit-service");
     });
 
-    it("should let serviceTag win over process.env.PROJECT_SERVICE", () => {
+    it("should not set PROJECT_SERVICE from serviceTag", () => {
+      const result = jaypieLambdaEnv({ serviceTag: "my-service" });
+
+      expect(result.PROJECT_SERVICE).toBeUndefined();
+    });
+
+    it("should still pass through process.env.PROJECT_SERVICE", () => {
       process.env.PROJECT_SERVICE = "env-service";
 
       const result = jaypieLambdaEnv({ serviceTag: "my-service" });
 
-      expect(result.PROJECT_SERVICE).toBe("my-service");
-    });
-
-    it("should fall back to process.env.PROJECT_SERVICE without serviceTag", () => {
-      process.env.PROJECT_SERVICE = "env-service";
-
-      const result = jaypieLambdaEnv();
-
       expect(result.PROJECT_SERVICE).toBe("env-service");
+      expect(result.DD_SERVICE).toBe("my-service");
     });
   });
 

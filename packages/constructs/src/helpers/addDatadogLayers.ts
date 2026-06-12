@@ -5,6 +5,7 @@ import { DatadogLambda } from "datadog-cdk-constructs-v2";
 
 export interface AddDatadogLayerOptions {
   datadogApiKeyArn?: string;
+  serviceTag?: string;
 }
 
 export function addDatadogLayers(
@@ -12,6 +13,7 @@ export function addDatadogLayers(
   options: AddDatadogLayerOptions = {},
 ): boolean {
   const datadogApiKeyArn = options?.datadogApiKeyArn;
+  const resolvedService = options?.serviceTag || process.env.PROJECT_SERVICE;
 
   const resolvedDatadogApiKeyArn =
     datadogApiKeyArn ||
@@ -28,13 +30,13 @@ export function addDatadogLayers(
     DD_ENV: process.env.PROJECT_ENV || "",
     DD_PROFILING_ENABLED: "false",
     DD_SERVERLESS_APPSEC_ENABLED: "false",
-    DD_SERVICE: process.env.PROJECT_SERVICE || "",
+    DD_SERVICE: resolvedService || "",
     DD_SITE: CDK.DATADOG.SITE,
     DD_TAGS: `${CDK.TAG.SPONSOR}:${process.env.PROJECT_SPONSOR || ""}`,
     DD_TRACE_OTEL_ENABLED: "false",
   };
 
-  // Add environment variables only if they don't already exist
+  // Apply Datadog environment variables (overwrites existing keys)
   Object.entries(datadogEnvVars).forEach(([key, value]) => {
     lambdaFunction.addEnvironment(key, value);
   });
@@ -50,7 +52,7 @@ export function addDatadogLayers(
     nodeLayerVersion: CDK.DATADOG.LAYER.NODE,
     extensionLayerVersion: CDK.DATADOG.LAYER.EXTENSION,
     env: process.env.PROJECT_ENV,
-    service: process.env.PROJECT_SERVICE,
+    service: resolvedService,
     version: process.env.PROJECT_VERSION,
   });
   datadogLambda.addLambdaFunctions([lambdaFunction]);
