@@ -7,7 +7,7 @@ import {
 import { ConfigurationError } from "@jaypie/errors";
 import { JAYPIE, sleep } from "@jaypie/kit";
 import { log as defaultLogger } from "@jaypie/logger";
-import { StandardRetryStrategy } from "@aws-sdk/middleware-retry";
+import { ConfiguredRetryStrategy } from "@smithy/util-retry";
 
 //
 //
@@ -70,9 +70,9 @@ const sendTextractJob = async ({
 
   const client = new TextractClient({
     region: AWS_REGION,
-    retryStrategy: new StandardRetryStrategy(async () => MAX_RETRIES, {
-      delayDecider: (_, attempt) => Math.min(RETRY_DELAY * 2 ** attempt, 3000),
-    }),
+    retryStrategy: new ConfiguredRetryStrategy(MAX_RETRIES, (attempt) =>
+      Math.min(RETRY_DELAY * 2 ** attempt, 3000),
+    ),
   });
 
   const params: StartDocumentAnalysisCommandInput = {
