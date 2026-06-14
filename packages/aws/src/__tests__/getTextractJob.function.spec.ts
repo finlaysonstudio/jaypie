@@ -36,9 +36,11 @@ vi.mock("@aws-sdk/client-textract", () => ({
     PARTIAL_SUCCESS: "PARTIAL_SUCCESS",
     SUCCEEDED: "SUCCEEDED",
   },
-  TextractClient: vi.fn(() => ({
-    send: mockSend,
-  })),
+  TextractClient: vi.fn(
+    class {
+      send = mockSend;
+    },
+  ),
 }));
 
 afterEach(() => {

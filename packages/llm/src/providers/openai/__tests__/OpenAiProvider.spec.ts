@@ -37,15 +37,14 @@ vi.mock("@jaypie/aws", async () => {
 describe("OpenAiProvider", () => {
   beforeEach(() => {
     vi.mocked(OpenAI).mockImplementation(
-      () =>
-        ({
-          chat: {
-            completions: {
-              create: vi.fn(),
-              parse: vi.fn(),
-            },
+      class {
+        chat = {
+          completions: {
+            create: vi.fn(),
+            parse: vi.fn(),
           },
-        }) as any,
+        };
+      } as any,
     );
     vi.mocked(getEnvSecret).mockResolvedValue("test-key");
   });
@@ -84,14 +83,13 @@ describe("OpenAiProvider", () => {
 
       const mockCreate = vi.fn().mockResolvedValue(mockResponse);
       vi.mocked(OpenAI).mockImplementation(
-        () =>
-          ({
-            chat: {
-              completions: {
-                create: mockCreate,
-              },
+        class {
+          chat = {
+            completions: {
+              create: mockCreate,
             },
-          }) as any,
+          };
+        } as any,
       );
 
       const provider = new OpenAiProvider();
@@ -125,14 +123,13 @@ describe("OpenAiProvider", () => {
 
         const mockParse = vi.fn().mockResolvedValue(mockResponse);
         vi.mocked(OpenAI).mockImplementation(
-          () =>
-            ({
-              chat: {
-                completions: {
-                  parse: mockParse,
-                },
+          class {
+            chat = {
+              completions: {
+                parse: mockParse,
               },
-            }) as any,
+            };
+          } as any,
         );
 
         const provider = new OpenAiProvider();
@@ -170,14 +167,13 @@ describe("OpenAiProvider", () => {
 
         const mockParse = vi.fn().mockResolvedValue(mockResponse);
         vi.mocked(OpenAI).mockImplementation(
-          () =>
-            ({
-              chat: {
-                completions: {
-                  parse: mockParse,
-                },
+          class {
+            chat = {
+              completions: {
+                parse: mockParse,
               },
-            }) as any,
+            };
+          } as any,
         );
 
         const provider = new OpenAiProvider();
@@ -206,14 +202,13 @@ describe("OpenAiProvider", () => {
 
         const mockCreate = vi.fn().mockResolvedValue(mockResponse);
         vi.mocked(OpenAI).mockImplementation(
-          () =>
-            ({
-              chat: {
-                completions: {
-                  create: mockCreate,
-                },
+          class {
+            chat = {
+              completions: {
+                create: mockCreate,
               },
-            }) as any,
+            };
+          } as any,
         );
 
         const provider = new OpenAiProvider();
@@ -238,14 +233,13 @@ describe("OpenAiProvider", () => {
 
         const mockCreate = vi.fn().mockResolvedValue(mockResponse);
         vi.mocked(OpenAI).mockImplementation(
-          () =>
-            ({
-              chat: {
-                completions: {
-                  create: mockCreate,
-                },
+          class {
+            chat = {
+              completions: {
+                create: mockCreate,
               },
-            }) as any,
+            };
+          } as any,
         );
 
         const provider = new OpenAiProvider();
@@ -271,14 +265,13 @@ describe("OpenAiProvider", () => {
 
         const mockCreate = vi.fn().mockResolvedValue(mockResponse);
         vi.mocked(OpenAI).mockImplementation(
-          () =>
-            ({
-              chat: {
-                completions: {
-                  create: mockCreate,
-                },
+          class {
+            chat = {
+              completions: {
+                create: mockCreate,
               },
-            }) as any,
+            };
+          } as any,
         );
 
         const provider = new OpenAiProvider();
@@ -300,14 +293,13 @@ describe("OpenAiProvider", () => {
 
         const mockCreate = vi.fn().mockResolvedValue(mockResponse);
         vi.mocked(OpenAI).mockImplementation(
-          () =>
-            ({
-              chat: {
-                completions: {
-                  create: mockCreate,
-                },
+          class {
+            chat = {
+              completions: {
+                create: mockCreate,
               },
-            }) as any,
+            };
+          } as any,
         );
 
         const provider = new OpenAiProvider();
@@ -330,14 +322,13 @@ describe("OpenAiProvider", () => {
 
         const mockCreate = vi.fn().mockResolvedValue(mockResponse);
         vi.mocked(OpenAI).mockImplementation(
-          () =>
-            ({
-              chat: {
-                completions: {
-                  create: mockCreate,
-                },
+          class {
+            chat = {
+              completions: {
+                create: mockCreate,
               },
-            }) as any,
+            };
+          } as any,
         );
 
         const provider = new OpenAiProvider();

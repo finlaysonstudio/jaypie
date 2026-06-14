@@ -15,7 +15,9 @@ describe("time tool", () => {
     // Mock current date
     const mockDate = new Date("2025-03-20T21:16:05Z");
     const originalDate = global.Date;
-    global.Date = vi.fn(() => mockDate) as unknown as DateConstructor;
+    global.Date = vi.fn(function () {
+      return mockDate;
+    }) as unknown as DateConstructor;
     global.Date.UTC = originalDate.UTC;
     global.Date.parse = originalDate.parse;
     global.Date.now = vi.fn(() => mockDate.getTime());

@@ -30,15 +30,14 @@ vi.mock("@jaypie/aws", async () => {
 describe("XaiProvider", () => {
   beforeEach(() => {
     vi.mocked(OpenAI).mockImplementation(
-      () =>
-        ({
-          chat: {
-            completions: {
-              create: vi.fn(),
-              parse: vi.fn(),
-            },
+      class {
+        chat = {
+          completions: {
+            create: vi.fn(),
+            parse: vi.fn(),
           },
-        }) as any,
+        };
+      } as any,
     );
     vi.mocked(getEnvSecret).mockResolvedValue("test-xai-key");
   });
@@ -87,14 +86,13 @@ describe("XaiProvider", () => {
 
       const mockCreate = vi.fn().mockResolvedValue(mockResponse);
       vi.mocked(OpenAI).mockImplementation(
-        () =>
-          ({
-            chat: {
-              completions: {
-                create: mockCreate,
-              },
+        class {
+          chat = {
+            completions: {
+              create: mockCreate,
             },
-          }) as any,
+          };
+        } as any,
       );
 
       const provider = new XaiProvider();
@@ -108,14 +106,13 @@ describe("XaiProvider", () => {
         choices: [{ message: { content: "response" } }],
       });
       vi.mocked(OpenAI).mockImplementation(
-        () =>
-          ({
-            chat: {
-              completions: {
-                create: mockCreate,
-              },
+        class {
+          chat = {
+            completions: {
+              create: mockCreate,
             },
-          }) as any,
+          };
+        } as any,
       );
 
       const provider = new XaiProvider();
@@ -132,14 +129,13 @@ describe("XaiProvider", () => {
         choices: [{ message: { content: "response" } }],
       });
       vi.mocked(OpenAI).mockImplementation(
-        () =>
-          ({
-            chat: {
-              completions: {
-                create: mockCreate,
-              },
+        class {
+          chat = {
+            completions: {
+              create: mockCreate,
             },
-          }) as any,
+          };
+        } as any,
       );
 
       const provider = new XaiProvider();

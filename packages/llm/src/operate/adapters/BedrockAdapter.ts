@@ -44,7 +44,13 @@ type BedrockContentBlock =
   | { toolUse: { toolUseId: string; name: string; input: JsonObject } }
   | { toolResult: { toolUseId: string; content: Array<{ text: string }> } }
   | { image: { format: string; source: { bytes: Uint8Array } } }
-  | { document: { format: DocumentFormat; name: string; source: { bytes: Uint8Array } } };
+  | {
+      document: {
+        format: DocumentFormat;
+        name: string;
+        source: { bytes: Uint8Array };
+      };
+    };
 
 type BedrockMessage = {
   role: "user" | "assistant";
@@ -105,8 +111,7 @@ function convertContentToBedrock(
     }
 
     if (item.type === LlmMessageType.InputFile) {
-      const fileData =
-        typeof item.file_data === "string" ? item.file_data : "";
+      const fileData = typeof item.file_data === "string" ? item.file_data : "";
       const match = fileData.match(DATA_URL_REGEX);
       if (match) {
         const mimeType = match[1];
@@ -279,10 +284,7 @@ export class BedrockAdapter extends BaseProviderAdapter {
       bedrockRequest.system = [{ text: request.system }];
     }
 
-    if (
-      request.temperature !== undefined &&
-      this.supportsTemperature(model)
-    ) {
+    if (request.temperature !== undefined && this.supportsTemperature(model)) {
       bedrockRequest.inferenceConfig = {
         ...bedrockRequest.inferenceConfig,
         temperature: request.temperature,
@@ -420,7 +422,8 @@ export class BedrockAdapter extends BaseProviderAdapter {
       if (wantsStructuredOutput && isOutputConfigUnsupportedError(error)) {
         const model = bedrockRequest.modelId || this.defaultModel;
         this.rememberModelRejectsOutputConfig(model);
-        const fallbackRequest = this.toFallbackStructuredOutputRequest(bedrockRequest);
+        const fallbackRequest =
+          this.toFallbackStructuredOutputRequest(bedrockRequest);
         return (await bedrockClient.send(
           new ConverseCommand(fallbackRequest as ConverseCommandInput),
           signal ? { abortSignal: signal } : undefined,
@@ -430,13 +433,19 @@ export class BedrockAdapter extends BaseProviderAdapter {
     }
   }
 
-  private toFallbackStructuredOutputRequest(request: BedrockRequest): BedrockRequest {
+  private toFallbackStructuredOutputRequest(
+    request: BedrockRequest,
+  ): BedrockRequest {
     const { outputConfig, ...rest } = request;
     if (!outputConfig?.textFormat?.structure) return request;
     let schema: Record<string, unknown>;
     try {
       schema = JSON.parse(
-        (outputConfig.textFormat.structure as { jsonSchema?: { schema?: string } }).jsonSchema?.schema ?? "{}",
+        (
+          outputConfig.textFormat.structure as {
+            jsonSchema?: { schema?: string };
+          }
+        ).jsonSchema?.schema ?? "{}",
       ) as Record<string, unknown>;
     } catch {
       schema = {};
@@ -454,10 +463,9 @@ export class BedrockAdapter extends BaseProviderAdapter {
     return {
       ...rest,
       toolConfig: {
-        tools: [
-          ...(rest.toolConfig?.tools ?? []),
-          fakeTool,
-        ] as NonNullable<ConverseCommandInput["toolConfig"]>["tools"],
+        tools: [...(rest.toolConfig?.tools ?? []), fakeTool] as NonNullable<
+          ConverseCommandInput["toolConfig"]
+        >["tools"],
       },
     };
   }
@@ -753,8 +761,8 @@ export class BedrockAdapter extends BaseProviderAdapter {
       return this.extractStructuredOutput(response) !== undefined;
     }
     // Fake-tool path: last content block is a structured_output toolUse
-    const content =
-      (bedrockResponse.output?.message?.content ?? []) as BedrockContentBlock[];
+    const content = (bedrockResponse.output?.message?.content ??
+      []) as BedrockContentBlock[];
     const last = content[content.length - 1];
     return (
       !!last &&
@@ -767,8 +775,8 @@ export class BedrockAdapter extends BaseProviderAdapter {
     const bedrockResponse = response as AnnotatedBedrockResponse;
 
     if (bedrockResponse.__jaypieStructuredOutput) {
-      const content =
-        (bedrockResponse.output?.message?.content ?? []) as BedrockContentBlock[];
+      const content = (bedrockResponse.output?.message?.content ??
+        []) as BedrockContentBlock[];
       const textBlock = content.find((b) => "text" in b) as
         | { text: string }
         | undefined;
@@ -777,8 +785,8 @@ export class BedrockAdapter extends BaseProviderAdapter {
     }
 
     // Fake-tool path
-    const content =
-      (bedrockResponse.output?.message?.content ?? []) as BedrockContentBlock[];
+    const content = (bedrockResponse.output?.message?.content ??
+      []) as BedrockContentBlock[];
     const last = content[content.length - 1];
     if (
       last &&

@@ -17,20 +17,22 @@ const mockAddEnvironment = vi.fn();
 const mockNextjsConstructor = vi.fn();
 
 vi.mock("cdk-nextjs-standalone", () => ({
-  Nextjs: vi.fn().mockImplementation((...args) => {
-    mockNextjsConstructor(...args);
-    return {
-      distribution: {
+  Nextjs: vi.fn(
+    class {
+      distribution = {
         distributionDomain: "d123456789.cloudfront.net",
-      },
-      imageOptimizationFunction: {},
-      serverFunction: {
+      };
+      imageOptimizationFunction = {};
+      serverFunction = {
         lambdaFunction: {
           addEnvironment: mockAddEnvironment,
         },
-      },
-    };
-  }),
+      };
+      constructor(...args: unknown[]) {
+        mockNextjsConstructor(...args);
+      }
+    },
+  ),
 }));
 
 import { JaypieNextJs } from "./JaypieNextJs";

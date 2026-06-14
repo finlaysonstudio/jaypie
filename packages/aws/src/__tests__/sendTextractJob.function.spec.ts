@@ -31,9 +31,11 @@ vi.mock("@aws-sdk/client-textract", () => {
       TABLES: "TABLES",
     },
     StartDocumentAnalysisCommand: vi.fn(),
-    TextractClient: vi.fn(() => ({
-      send: mockSend,
-    })),
+    TextractClient: vi.fn(
+      class {
+        send = mockSend;
+      },
+    ),
   };
 });
 

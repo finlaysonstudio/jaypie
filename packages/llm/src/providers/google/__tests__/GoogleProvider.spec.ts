@@ -36,12 +36,11 @@ vi.mock("@jaypie/aws", async () => {
 describe("GoogleProvider", () => {
   beforeEach(() => {
     vi.mocked(GoogleGenAI).mockImplementation(
-      () =>
-        ({
-          models: {
-            generateContent: vi.fn(),
-          },
-        }) as any,
+      class {
+        models = {
+          generateContent: vi.fn(),
+        };
+      } as any,
     );
     vi.mocked(getEnvSecret).mockResolvedValue("test-key");
   });
@@ -80,12 +79,11 @@ describe("GoogleProvider", () => {
 
       const mockGenerateContent = vi.fn().mockResolvedValue(mockResponse);
       vi.mocked(GoogleGenAI).mockImplementation(
-        () =>
-          ({
-            models: {
-              generateContent: mockGenerateContent,
-            },
-          }) as any,
+        class {
+          models = {
+            generateContent: mockGenerateContent,
+          };
+        } as any,
       );
 
       const provider = new GoogleProvider();
@@ -114,12 +112,11 @@ describe("GoogleProvider", () => {
 
         const mockGenerateContent = vi.fn().mockResolvedValue(mockResponse);
         vi.mocked(GoogleGenAI).mockImplementation(
-          () =>
-            ({
-              models: {
-                generateContent: mockGenerateContent,
-              },
-            }) as any,
+          class {
+            models = {
+              generateContent: mockGenerateContent,
+            };
+          } as any,
         );
 
         const provider = new GoogleProvider();
@@ -148,12 +145,11 @@ describe("GoogleProvider", () => {
 
         const mockGenerateContent = vi.fn().mockResolvedValue(mockResponse);
         vi.mocked(GoogleGenAI).mockImplementation(
-          () =>
-            ({
-              models: {
-                generateContent: mockGenerateContent,
-              },
-            }) as any,
+          class {
+            models = {
+              generateContent: mockGenerateContent,
+            };
+          } as any,
         );
 
         const provider = new GoogleProvider();
@@ -172,12 +168,11 @@ describe("GoogleProvider", () => {
 
         const mockGenerateContent = vi.fn().mockResolvedValue(mockResponse);
         vi.mocked(GoogleGenAI).mockImplementation(
-          () =>
-            ({
-              models: {
-                generateContent: mockGenerateContent,
-              },
-            }) as any,
+          class {
+            models = {
+              generateContent: mockGenerateContent,
+            };
+          } as any,
         );
 
         const provider = new GoogleProvider();
@@ -197,12 +192,11 @@ describe("GoogleProvider", () => {
 
         const mockGenerateContent = vi.fn().mockResolvedValue(mockResponse);
         vi.mocked(GoogleGenAI).mockImplementation(
-          () =>
-            ({
-              models: {
-                generateContent: mockGenerateContent,
-              },
-            }) as any,
+          class {
+            models = {
+              generateContent: mockGenerateContent,
+            };
+          } as any,
         );
 
         const provider = new GoogleProvider();
@@ -225,12 +219,11 @@ describe("GoogleProvider", () => {
 
         const mockGenerateContent = vi.fn().mockResolvedValue(mockResponse);
         vi.mocked(GoogleGenAI).mockImplementation(
-          () =>
-            ({
-              models: {
-                generateContent: mockGenerateContent,
-              },
-            }) as any,
+          class {
+            models = {
+              generateContent: mockGenerateContent,
+            };
+          } as any,
         );
 
         const provider = new GoogleProvider();
@@ -253,12 +246,11 @@ describe("GoogleProvider", () => {
 
         const mockGenerateContent = vi.fn().mockResolvedValue(mockResponse);
         vi.mocked(GoogleGenAI).mockImplementation(
-          () =>
-            ({
-              models: {
-                generateContent: mockGenerateContent,
-              },
-            }) as any,
+          class {
+            models = {
+              generateContent: mockGenerateContent,
+            };
+          } as any,
         );
 
         const provider = new GoogleProvider();

@@ -37,9 +37,13 @@ vi.mock("axios", async () => {
 // Mock AWS SDK
 vi.mock("@aws-sdk/client-secrets-manager", () => ({
   GetSecretValueCommand: vi.fn(),
-  SecretsManagerClient: vi.fn(() => ({
-    send: vi.fn(() => Promise.resolve({ SecretString: MOCK.SECRET_RESPONSE })),
-  })),
+  SecretsManagerClient: vi.fn(
+    class {
+      send = vi.fn(() =>
+        Promise.resolve({ SecretString: MOCK.SECRET_RESPONSE }),
+      );
+    },
+  ),
 }));
 
 //
@@ -269,9 +273,11 @@ describe("Get Environment Secret Function", () => {
       env.SECRET_test = "secret1";
 
       // Mock SDK to also fail
-      (SecretsManagerClient as Mock).mockImplementationOnce(() => ({
-        send: vi.fn(() => Promise.reject(new Error("SDK Error"))),
-      }));
+      (SecretsManagerClient as Mock).mockImplementationOnce(
+        class {
+          send = vi.fn(() => Promise.reject(new Error("SDK Error")));
+        },
+      );
 
       await expect(getEnvSecret("test", { env })).rejects.toThrow(
         'Secret fetch failed for "test" via AWS SDK',

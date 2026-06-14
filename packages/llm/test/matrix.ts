@@ -344,14 +344,22 @@ function isBedrockModel(model: ModelConfig): boolean {
   return model.provider === "bedrock" || model.model.startsWith("bedrock:");
 }
 
-function displayActual(cell: CellResult, openrouter: boolean, bedrock: boolean): ActualOutcome {
+function displayActual(
+  cell: CellResult,
+  openrouter: boolean,
+  bedrock: boolean,
+): ActualOutcome {
   // OpenRouter and Bedrock are evaluated as collectives; surface individual
   // failures as warnings so a single flaky route does not paint the cell red.
   if ((openrouter || bedrock) && cell.actual === "fail") return "warn";
   return cell.actual;
 }
 
-function cellSymbol(cell: CellResult, openrouter: boolean, bedrock: boolean): string {
+function cellSymbol(
+  cell: CellResult,
+  openrouter: boolean,
+  bedrock: boolean,
+): string {
   const actual = displayActual(cell, openrouter, bedrock);
   const sym = SYMBOLS[actual];
   // OpenRouter and Bedrock cells skip the mismatch indicator (collective evaluation).
@@ -421,7 +429,11 @@ function formatIssues(
       if (cell.matches && cell.warnings.length === 0) continue;
       const parts = [`[${label} / ${cap}]`];
       if (!cell.matches) {
-        const tag = openrouter ? "openrouter-fail" : bedrock ? "bedrock-fail" : "mismatch";
+        const tag = openrouter
+          ? "openrouter-fail"
+          : bedrock
+            ? "bedrock-fail"
+            : "mismatch";
         parts.push(`${tag} expected=${cell.expected}, got=${cell.actual}`);
       }
       if (cell.detail) parts.push(`detail=${cell.detail}`);

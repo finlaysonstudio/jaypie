@@ -34,7 +34,11 @@ vi.mock("../validateQueueUrl.util.js");
 
 beforeAll(() => {
   (validateQueueUrl as Mock).mockResolvedValue(true);
-  (SQSClient as Mock).mockReturnValue({ send: mockSqsClientSend });
+  (SQSClient as Mock).mockImplementation(
+    class {
+      send = mockSqsClientSend;
+    },
+  );
   mockSqsClientSend.mockResolvedValue({
     MessageId: "MOCK_SQS_RESULT_MESSAGE_ID",
   });

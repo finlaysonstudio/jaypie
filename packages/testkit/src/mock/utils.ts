@@ -71,9 +71,11 @@ function createMockWrappedFunction<T = any>(
   const throws = options.throws ?? false;
   const isClass = options.class ?? false;
 
-  return _createJaypieMock().mockImplementation((...args: unknown[]) => {
+  // Shared behavior for both call and construct: try the real
+  // implementation, fall back (with a warning) when it throws.
+  const invoke = (instantiate: boolean, args: unknown[]) => {
     try {
-      return isClass ? new (fn as any)(...args) : fn(...args);
+      return instantiate ? new (fn as any)(...args) : fn(...args);
     } catch (error) {
       if (throws) {
         throw error;
@@ -100,7 +102,23 @@ function createMockWrappedFunction<T = any>(
 
       return fallback;
     }
-  });
+  };
+
+  // vitest 4 requires a `class`/`function` implementation when the mock is
+  // instantiated with `new`. A plain `function` (not an arrow) can be invoked
+  // either with or without `new`; returning an object replaces the instance in
+  // both cases, so callers receive the wrapped result (or fallback).
+  if (isClass) {
+    return _createJaypieMock().mockImplementation(function (
+      ...args: unknown[]
+    ) {
+      return invoke(true, args);
+    });
+  }
+
+  return _createJaypieMock().mockImplementation((...args: unknown[]) =>
+    invoke(false, args),
+  );
 }
 
 function createMockWrappedObject<T extends Record<string, any>>(
