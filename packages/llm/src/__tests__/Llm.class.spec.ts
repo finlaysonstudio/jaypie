@@ -11,24 +11,30 @@ let geminiOperateMock = vi.fn();
 
 // Mock OpenAiProvider
 vi.mock("../providers/openai/index.js", () => ({
-  OpenAiProvider: vi.fn().mockImplementation(() => ({
-    send: vi.fn().mockResolvedValue("Mocked OpenAI response"),
-    operate: openAiOperateMock,
-  })),
+  OpenAiProvider: vi.fn().mockImplementation(
+    class {
+      send = vi.fn().mockResolvedValue("Mocked OpenAI response");
+      operate = openAiOperateMock;
+    } as any,
+  ),
 }));
 
 vi.mock("../providers/anthropic/AnthropicProvider.class.js", () => ({
-  AnthropicProvider: vi.fn().mockImplementation(() => ({
-    send: vi.fn().mockResolvedValue("Mocked Anthropic response"),
-    operate: anthropicOperateMock,
-  })),
+  AnthropicProvider: vi.fn().mockImplementation(
+    class {
+      send = vi.fn().mockResolvedValue("Mocked Anthropic response");
+      operate = anthropicOperateMock;
+    } as any,
+  ),
 }));
 
 vi.mock("../providers/google/GoogleProvider.class.js", () => ({
-  GoogleProvider: vi.fn().mockImplementation(() => ({
-    send: vi.fn().mockResolvedValue("Mocked Gemini response"),
-    operate: geminiOperateMock,
-  })),
+  GoogleProvider: vi.fn().mockImplementation(
+    class {
+      send = vi.fn().mockResolvedValue("Mocked Gemini response");
+      operate = geminiOperateMock;
+    } as any,
+  ),
 }));
 
 vi.mock("@jaypie/logger", async (importOriginal) => {

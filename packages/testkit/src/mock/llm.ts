@@ -64,15 +64,20 @@ const mockOperate = createMockResolvedFunction({
 });
 const mockSend = createMockResolvedFunction("_MOCK_LLM_RESPONSE");
 export const Llm = Object.assign(
-  vi.fn().mockImplementation((providerName = "_MOCK_LLM_PROVIDER") => ({
-    _provider: providerName,
-    _llm: {
+  // vitest 4 requires a constructable (non-arrow) implementation when the mock
+  // is instantiated with `new`. A plain `function` returning an object replaces
+  // the instance, preserving the previous mock shape.
+  vi.fn().mockImplementation(function (providerName = "_MOCK_LLM_PROVIDER") {
+    return {
+      _provider: providerName,
+      _llm: {
+        operate: mockOperate,
+        send: mockSend,
+      },
       operate: mockOperate,
       send: mockSend,
-    },
-    operate: mockOperate,
-    send: mockSend,
-  })),
+    };
+  }),
   {
     operate: mockOperate,
     send: mockSend,

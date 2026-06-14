@@ -71,7 +71,7 @@ No docs deployment step (unlike `deploy-env-*.yml`).
 
 ## npm-check.yml — NPM Check
 
-**Triggers:** push to `branch/*`, `claude/*`, `codex/*`, `devin/*`, `fix/*`, `feat/*`; tags `check-*`
+**Triggers:** push to `branch/*`, `claude/*`, `codex/*`, `deps/*`, `devin/*`, `fix/*`, `feat/*`; tags `check-*`
 
 **Jobs:**
 

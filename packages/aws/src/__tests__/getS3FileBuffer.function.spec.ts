@@ -23,10 +23,18 @@ const MOCK = {
 const mockSend = vi.fn();
 
 vi.mock("@aws-sdk/client-s3", () => ({
-  GetObjectCommand: vi.fn((params) => params),
-  S3Client: vi.fn(() => ({
-    send: mockSend,
-  })),
+  GetObjectCommand: vi.fn(
+    class {
+      constructor(params: unknown) {
+        Object.assign(this as object, params);
+      }
+    },
+  ),
+  S3Client: vi.fn(
+    class {
+      send = mockSend;
+    },
+  ),
 }));
 
 //

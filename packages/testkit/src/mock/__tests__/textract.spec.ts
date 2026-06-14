@@ -84,7 +84,13 @@ describe("Textract Mock", () => {
   describe("Features", () => {
     it("MarkdownPage can be mocked with custom return value", () => {
       const customReturn = { markdown: "# Custom Markdown" };
-      (MarkdownPage as any).mockReturnValueOnce(customReturn);
+      (MarkdownPage as any).mockImplementationOnce(
+        class {
+          constructor() {
+            return customReturn;
+          }
+        },
+      );
 
       const result = new (MarkdownPage as any)({});
 
@@ -136,7 +142,13 @@ describe("Jaypie Textract", () => {
         invalidPage: true,
       } as unknown as TextractPageAdaptable;
       const mockedResponse = { text: "mocked response" };
-      (MarkdownPage as any).mockReturnValueOnce(mockedResponse);
+      (MarkdownPage as any).mockImplementationOnce(
+        class {
+          constructor() {
+            return mockedResponse;
+          }
+        },
+      );
       const result = new (MarkdownPage as any)(mockPage);
       expect(result).toBe(mockedResponse);
       expect(consoleWarnSpy).not.toHaveBeenCalled();
@@ -144,15 +156,17 @@ describe("Jaypie Textract", () => {
 
     it("Works as expected with mock textract contents", () => {
       // Mock the result directly to ensure test passes reliably
-      (MarkdownPage as any).mockReturnValueOnce({
-        text: `---
+      (MarkdownPage as any).mockImplementationOnce(
+        class {
+          text = `---
 type: page
 id: mock-page-1
 ---
 # Mock Page
 This is a mock Textract document
-For testing purposes only`,
-      });
+For testing purposes only`;
+        },
+      );
       const mockPage = new TextractDocument(JSON.parse(mockTextractContents));
       const result = new (MarkdownPage as any)(mockPage);
       expect(result.text).toBeDefined();
