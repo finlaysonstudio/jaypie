@@ -82,11 +82,6 @@
     "test:webkit": "npm run test --workspace packages/webkit",
     "typecheck": "npm run typecheck --workspaces"
   },
-  "overrides": {
-    "@microsoft/api-extractor": "7.57.7",
-    "fast-xml-parser": "5.5.8",
-    "serialize-javascript": "7.0.4"
-  },
   "devDependencies": {
     "@jaypie/eslint": "*",
     "@jaypie/repokit": "*",
