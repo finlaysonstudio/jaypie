@@ -1,6 +1,6 @@
 {
   "name": "@jaypie/constructs",
-  "version": "1.2.62",
+  "version": "1.2.63",
   "description": "CDK constructs for Jaypie applications",
   "repository": {
     "type": "git",
@@ -35,7 +35,7 @@
     "aws-cdk-lib": "^2.232.1",
     "cdk-nextjs-standalone": "^4.3.2",
     "constructs": "^10.4.3",
-    "datadog-cdk-constructs-v2": "^3.4.0"
+    "datadog-cdk-constructs-v2": "^4.1.0"
   },
   "devDependencies": {
     "@rollup/plugin-typescript": "^12.1.2",
