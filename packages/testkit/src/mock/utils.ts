@@ -1,17 +1,21 @@
 /* eslint-disable no-console */
-import { vi } from "vitest";
-
 import { LlmTool } from "@jaypie/llm";
+import { vi, type Mock } from "vitest";
+
+// vitest 4 types bare `vi.fn()` as Mock<Constructable | Procedure>, which is
+// not directly callable. These factories all produce callable function mocks,
+// so surface them as a callable Mock type.
+type MockFn = Mock<(...args: any[]) => any>;
 
 /**
  * Internal wrapper for vi.fn() that adds _jaypie: true to all mocks
  */
 function _createJaypieMock<T extends (...args: any[]) => any>(
   implementation?: T,
-): ReturnType<typeof vi.fn> {
+): MockFn {
   const mock = vi.fn(implementation);
   Object.defineProperty(mock, "_jaypie", { value: true });
-  return mock;
+  return mock as unknown as MockFn;
 }
 
 /**
@@ -29,7 +33,7 @@ function createMockFunction<T extends (...args: any[]) => any>(
  * Creates a mock function that resolves to a value when awaited
  * Internal utility to create async mock functions
  */
-function createMockResolvedFunction<T>(value: T): ReturnType<typeof vi.fn> {
+function createMockResolvedFunction<T>(value: T): MockFn {
   return _createJaypieMock().mockResolvedValue(value);
 }
 
@@ -37,7 +41,7 @@ function createMockResolvedFunction<T>(value: T): ReturnType<typeof vi.fn> {
  * Creates a mock function that returns a value
  * Internal utility to create mock functions that return a value
  */
-function createMockReturnedFunction<T>(value: T): ReturnType<typeof vi.fn> {
+function createMockReturnedFunction<T>(value: T): MockFn {
   return _createJaypieMock().mockReturnValue(value);
 }
 
@@ -55,7 +59,7 @@ function createMockWrappedFunction<T = any>(
         throws?: boolean;
         class?: boolean;
       } = "_MOCK_WRAPPED_RESULT",
-): ReturnType<typeof vi.fn> {
+): MockFn {
   // Determine if we have a direct fallback or options object
   const options =
     typeof fallbackOrOptions === "object" &&

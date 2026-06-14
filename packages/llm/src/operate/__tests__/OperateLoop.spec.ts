@@ -102,7 +102,7 @@ class MockAdapter extends BaseProviderAdapter {
       raw: response,
     }),
   );
-  extractToolCalls = vi.fn(() => []);
+  extractToolCalls = vi.fn((): StandardToolCall[] => []);
   extractUsage = vi.fn(() => ({
     input: 10,
     output: 20,
