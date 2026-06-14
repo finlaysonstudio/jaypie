@@ -12,7 +12,8 @@
     "rootDir": "./src",
     "types": [
       "vitest/globals",
-      "jest-extended"
+      "jest-extended",
+      "node"
     ]
   },
   "include": [
