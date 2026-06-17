@@ -35,8 +35,8 @@ export const CDK = {
     SITE: "datadoghq.com",
     LAYER: {
       // https://docs.datadoghq.com/meta/latest-lambda-layer-version.json
-      NODE: 131, // 127 on 9/12/2025
-      EXTENSION: 86, // 86 on 9/12/2025
+      NODE: 139, // 139 on 6/17/2026
+      EXTENSION: 97, // 97 on 6/17/2026
     },
   },
   DEFAULT: {
