@@ -290,6 +290,43 @@ Provider SDKs are peer dependencies (optional except for the provider you use):
 
 Keys are resolved via `getEnvSecret` from `@jaypie/aws` (supports AWS Secrets Manager).
 
+## LLM Observability (Datadog)
+
+When `DD_LLMOBS_ENABLED` is set to a truthy value (anything but `false`/`0`),
+`operate()` and `stream()` emit Datadog [LLM Observability](https://docs.datadoghq.com/llm_observability/)
+spans without any code changes:
+
+- An enclosing span per call — `agent` when tools are configured, otherwise `llm`
+- A child `llm` span per model request (annotated with input, output, token metrics)
+- A child `tool` span per tool execution (annotated with args + result)
+
+Behavior:
+
+- **Opt-in** — entirely no-op unless `DD_LLMOBS_ENABLED` is set.
+- **Lazy + bundler-safe** — `dd-trace` is resolved at runtime via a computed
+  module specifier (`src/observability/llmobs.ts`), so esbuild does not bundle
+  it. It is **not** a dependency; absence is a silent no-op. Instrumentation
+  failures never break the underlying LLM call.
+- **Parenting** is AsyncLocalStorage-based: every span attaches to whatever
+  LLMObs span is active when it is created. If a consumer (or an
+  auto-instrumented SDK call) opens an enclosing span — e.g.
+  `llmobs.trace({ kind: "workflow" }, () => Llm.operate(...))` — our spans nest
+  under it. With no enclosing LLMObs span, ours are LLMObs roots. (The Datadog
+  Lambda layer provides APM spans automatically, but not an enclosing *LLMObs*
+  span around an arbitrary handler.)
+- **`operate()`** spans form a full tree: the enclosing span stays active while
+  children run, so model + tool spans nest under it.
+- **`stream()`** emits per-turn `llm` spans and per-call `tool` spans that still
+  attach to any active enclosing span, but within a single stream they are
+  **siblings** (the `tool` span does not nest under the `llm` span). The model
+  span is held open across `yield` boundaries, so it is not the active span when
+  tools run — a limitation of the callback-based `dd-trace` JS SDK +
+  AsyncLocalStorage across async generators.
+
+For esbuild-bundled Lambda handlers, wire the `dd-trace/esbuild` plugin and
+`keepNames: true` so dd-trace's own auto-instrumentation survives bundling; the
+`@jaypie/llm` spans above do not require it.
+
 ## Adding New Providers
 
 See `GUIDE.md` for detailed instructions on adding new LLM providers.
