@@ -1,6 +1,6 @@
 {
   "name": "jaypie",
-  "version": "1.2.51",
+  "version": "1.2.52",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/finlaysonstudio/jaypie.git"
@@ -53,7 +53,7 @@
     "typescript-eslint": "^8.46.1"
   },
   "peerDependencies": {
-    "@jaypie/llm": "^1.2.38",
+    "@jaypie/llm": "^1.2.39",
     "@jaypie/mongoose": "^1.2.2"
   },
   "peerDependenciesMeta": {

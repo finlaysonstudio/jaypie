@@ -42,8 +42,8 @@ export const MODEL = {
   GEMINI_PRO: "gemini-3.1-pro-preview",
   // OpenAI
   GPT: "gpt-5.5",
-  GPT_MINI: "gpt-5.5-mini",
-  GPT_NANO: "gpt-5.5-nano",
+  GPT_MINI: "gpt-5.4-mini",
+  GPT_NANO: "gpt-5.4-nano",
   // xAI
   GROK: "grok-latest",
 };
