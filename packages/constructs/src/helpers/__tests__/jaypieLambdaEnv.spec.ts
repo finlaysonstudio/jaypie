@@ -20,6 +20,8 @@ describe("jaypieLambdaEnv", () => {
     delete process.env.NOT_IN_LIST;
     delete process.env.RANDOM_VAR;
     delete process.env.ANOTHER_VAR;
+    delete process.env.DD_LLMOBS_ENABLED;
+    delete process.env.DD_LLMOBS_ML_APP;
   });
 
   afterEach(() => {
@@ -181,6 +183,88 @@ describe("jaypieLambdaEnv", () => {
 
       expect(result.PROJECT_SERVICE).toBe("env-service");
       expect(result.DD_SERVICE).toBe("my-service");
+    });
+  });
+
+  describe("Datadog LLM Observability", () => {
+    it("should pass through DD_LLMOBS_ENABLED when set", () => {
+      process.env.DD_LLMOBS_ENABLED = "true";
+
+      const result = jaypieLambdaEnv();
+
+      expect(result.DD_LLMOBS_ENABLED).toBe("true");
+    });
+
+    it("should not set DD_LLMOBS_ENABLED when unset", () => {
+      const result = jaypieLambdaEnv();
+
+      expect(result.DD_LLMOBS_ENABLED).toBeUndefined();
+    });
+
+    it("should bring over DD_LLMOBS_ML_APP when set", () => {
+      process.env.DD_LLMOBS_ENABLED = "true";
+      process.env.DD_LLMOBS_ML_APP = "my-app";
+
+      const result = jaypieLambdaEnv();
+
+      expect(result.DD_LLMOBS_ML_APP).toBe("my-app");
+    });
+
+    it("should bring over DD_LLMOBS_ML_APP even when DD_LLMOBS_ENABLED is unset", () => {
+      process.env.DD_LLMOBS_ML_APP = "my-app";
+
+      const result = jaypieLambdaEnv();
+
+      expect(result.DD_LLMOBS_ML_APP).toBe("my-app");
+    });
+
+    it("should not bring over DD_LLMOBS_ML_APP when DD_LLMOBS_ENABLED is 'false'", () => {
+      process.env.DD_LLMOBS_ENABLED = "false";
+      process.env.DD_LLMOBS_ML_APP = "my-app";
+
+      const result = jaypieLambdaEnv();
+
+      expect(result.DD_LLMOBS_ENABLED).toBe("false");
+      expect(result.DD_LLMOBS_ML_APP).toBeUndefined();
+    });
+
+    it("should not bring over DD_LLMOBS_ML_APP when DD_LLMOBS_ENABLED is '0'", () => {
+      process.env.DD_LLMOBS_ENABLED = "0";
+      process.env.DD_LLMOBS_ML_APP = "my-app";
+
+      const result = jaypieLambdaEnv();
+
+      expect(result.DD_LLMOBS_ENABLED).toBe("0");
+      expect(result.DD_LLMOBS_ML_APP).toBeUndefined();
+    });
+
+    it("should suppress process.env DD_LLMOBS_ML_APP when initialEnvironment disables observability", () => {
+      process.env.DD_LLMOBS_ENABLED = "true";
+      process.env.DD_LLMOBS_ML_APP = "env-app";
+
+      const result = jaypieLambdaEnv({
+        initialEnvironment: {
+          DD_LLMOBS_ENABLED: "false",
+        },
+      });
+
+      expect(result.DD_LLMOBS_ENABLED).toBe("false");
+      expect(result.DD_LLMOBS_ML_APP).toBeUndefined();
+    });
+
+    it("should let explicit initialEnvironment win over process.env", () => {
+      process.env.DD_LLMOBS_ENABLED = "true";
+      process.env.DD_LLMOBS_ML_APP = "env-app";
+
+      const result = jaypieLambdaEnv({
+        initialEnvironment: {
+          DD_LLMOBS_ENABLED: "false",
+          DD_LLMOBS_ML_APP: "explicit-app",
+        },
+      });
+
+      expect(result.DD_LLMOBS_ENABLED).toBe("false");
+      expect(result.DD_LLMOBS_ML_APP).toBe("explicit-app");
     });
   });
 

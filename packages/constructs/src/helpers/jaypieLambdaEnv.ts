@@ -68,5 +68,22 @@ export function jaypieLambdaEnv(options: JaypieLambdaEnvOptions = {}): {
     }
   });
 
+  // Datadog LLM Observability: pass through DD_LLMOBS_ENABLED if set, and
+  // DD_LLMOBS_ML_APP unless observability is explicitly disabled. Explicit
+  // initialEnvironment values win over process.env, including for the gate.
+  if (process.env.DD_LLMOBS_ENABLED && !environment.DD_LLMOBS_ENABLED) {
+    environment.DD_LLMOBS_ENABLED = process.env.DD_LLMOBS_ENABLED;
+  }
+  const llmObsDisabled =
+    environment.DD_LLMOBS_ENABLED === "false" ||
+    environment.DD_LLMOBS_ENABLED === "0";
+  if (
+    process.env.DD_LLMOBS_ML_APP &&
+    !llmObsDisabled &&
+    !environment.DD_LLMOBS_ML_APP
+  ) {
+    environment.DD_LLMOBS_ML_APP = process.env.DD_LLMOBS_ML_APP;
+  }
+
   return environment;
 }
