@@ -21,6 +21,12 @@ import {
   LlmStreamChunk,
   LlmStreamChunkType,
 } from "../types/LlmStreamChunk.interface.js";
+import {
+  annotateLlmObs,
+  openLlmObsSpan,
+  usageToLlmObsMetrics,
+  withLlmObsSpan,
+} from "../observability/llmobs.js";
 import { getLogger, maxTurnsFromOptions } from "../util/index.js";
 import { ProviderAdapter } from "./adapters/ProviderAdapter.interface.js";
 import { HookRunner, hookRunner } from "./hooks/index.js";
@@ -132,7 +138,7 @@ export class StreamLoop {
 
       // If we have tool calls, process them
       if (toolCalls && toolCalls.length > 0 && state.toolkit) {
-        yield* this.processToolCalls(toolCalls, state, context, options);
+        yield* this.processToolCalls(toolCalls, state, context);
 
         // Check if we've reached max turns
         if (state.currentTurn >= state.maxTurns) {
@@ -271,6 +277,17 @@ export class StreamLoop {
       providerRequest,
     });
 
+    // Open a manual llm span held open across the streamed turn. Flat (not
+    // nested) because it spans yield boundaries; no-op when llmobs disabled.
+    const llmSpan = openLlmObsSpan({
+      kind: "llm",
+      modelName: options.model ?? this.adapter.defaultModel,
+      modelProvider: this.adapter.name,
+      name: "jaypie.llm.model",
+    });
+    const inputSnapshot = [...state.currentInput];
+    let streamedText = "";
+
     // Collect tool calls from the stream
     const collectedToolCalls: StandardToolCall[] = [];
 
@@ -299,6 +316,7 @@ export class StreamLoop {
             // Pass through text chunks
             if (chunk.type === LlmStreamChunkType.Text) {
               chunksYielded = true;
+              streamedText += chunk.content ?? "";
               yield chunk;
             }
 
@@ -351,6 +369,12 @@ export class StreamLoop {
                 title: "Stream Error",
               },
             };
+            llmSpan?.annotate({
+              inputData: inputSnapshot,
+              metrics: usageToLlmObsMetrics(state.usageItems),
+              outputData: streamedText,
+            });
+            llmSpan?.finish();
             return { shouldContinue: false };
           }
 
@@ -365,6 +389,7 @@ export class StreamLoop {
             log.var({ error });
             const errorMessage =
               error instanceof Error ? error.message : String(error);
+            llmSpan?.finish();
             throw new BadGatewayError(errorMessage);
           }
 
@@ -379,6 +404,14 @@ export class StreamLoop {
     } finally {
       guard.remove();
     }
+
+    // Annotate and finish the streamed llm span (no-op when disabled)
+    llmSpan?.annotate({
+      inputData: inputSnapshot,
+      metrics: usageToLlmObsMetrics(state.usageItems),
+      outputData: streamedText,
+    });
+    llmSpan?.finish();
 
     // Execute afterEachModelResponse hook
     await this.hookRunnerInstance.runAfterModelResponse(context.hooks, {
@@ -427,7 +460,6 @@ export class StreamLoop {
     toolCalls: StandardToolCall[],
     state: StreamLoopState,
     context: OperateContext,
-    _options: LlmOperateOptions,
   ): AsyncGenerator<LlmStreamChunk, void> {
     const log = getLogger();
     for (const toolCall of toolCalls) {
@@ -438,12 +470,23 @@ export class StreamLoop {
           toolName: toolCall.name,
         });
 
-        // Call the tool
+        // Call the tool inside a child tool span (no-op when disabled)
         log.trace(`[stream] Calling tool - ${toolCall.name}`);
-        const result = await state.toolkit!.call({
-          arguments: toolCall.arguments,
-          name: toolCall.name,
-        });
+        const result = await withLlmObsSpan(
+          { kind: "tool", name: toolCall.name },
+          async () => {
+            const result = await state.toolkit!.call({
+              arguments: toolCall.arguments,
+              name: toolCall.name,
+            });
+            annotateLlmObs({
+              inputData: toolCall.arguments,
+              metadata: { tool: toolCall.name },
+              outputData: result,
+            });
+            return result;
+          },
+        );
 
         // Execute afterEachTool hook
         await this.hookRunnerInstance.runAfterTool(context.hooks, {

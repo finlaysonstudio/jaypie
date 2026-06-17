@@ -336,6 +336,28 @@ XAI_API_KEY         # Required for xAI (Grok)
 
 Keys are resolved via `getEnvSecret()` which supports AWS Secrets Manager.
 
+## LLM Observability (Datadog)
+
+Set `DD_LLMOBS_ENABLED` (any truthy value except `false`/`0`) and `operate()`/`stream()` emit Datadog [LLM Observability](https://docs.datadoghq.com/llm_observability/) spans with **no code changes**:
+
+- Enclosing span per call (`agent` when tools are configured, else `llm`)
+- Child `llm` span per model request — annotated with input, output, token metrics
+- Child `tool` span per tool execution — annotated with args + result
+
+```bash
+DD_LLMOBS_ENABLED=true   # opt in; unset = fully no-op
+DD_LLMOBS_ML_APP=my-app  # ML app name (dd-trace standard)
+```
+
+Behavior:
+
+- **Opt-in and lazy** — `dd-trace` is resolved at runtime via a computed module specifier, so it is **bundler-safe** (esbuild will not bundle it) and **not** a dependency. Absence is a silent no-op; instrumentation failures never break the LLM call.
+- **Parenting is AsyncLocalStorage-based** — spans attach to whatever LLMObs span is active when created. Wrapping a call in a consumer span (e.g. `llmobs.trace({ kind: "workflow" }, () => Llm.operate(...))`) nests ours under it. The Datadog Lambda layer provides APM spans automatically, but not an enclosing *LLMObs* span around an arbitrary handler.
+- **`operate()`** spans form a full tree (model + tool nest under the enclosing span).
+- **`stream()`** spans attach to any active enclosing span, but within a single stream the `llm` and `tool` spans are **siblings** — the streamed model span is held open across `yield` boundaries, so it is not the active span when tools run.
+
+For esbuild-bundled Lambda handlers that also want dd-trace auto-instrumentation, wire the `dd-trace/esbuild` plugin with `keepNames: true`; the spans above do not require it.
+
 ## Error Handling
 
 The package auto-retries rate limits and transient errors:

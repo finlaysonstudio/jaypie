@@ -14,6 +14,11 @@ import {
   LlmToolCall,
   LlmToolResult,
 } from "../types/LlmProvider.interface.js";
+import {
+  annotateLlmObs,
+  usageToLlmObsMetrics,
+  withLlmObsSpan,
+} from "../observability/llmobs.js";
 import { getLogger, maxTurnsFromOptions } from "../util/index.js";
 import { ProviderAdapter } from "./adapters/ProviderAdapter.interface.js";
 import { HookRunner, hookRunner, LlmHooks } from "./hooks/index.js";
@@ -122,41 +127,60 @@ export class OperateLoop {
     // Initialize state
     const state = await this.initializeState(input, options);
     const context = this.createContext(options);
+    const modelName = options.model ?? this.adapter.defaultModel;
 
-    // Build initial request
-    let request = this.buildInitialRequest(state, options);
+    // Enclosing LLM Observability span (no-op when DD_LLMOBS_ENABLED is unset).
+    // Child llm/tool spans nest under it via the SDK's active-span context.
+    return withLlmObsSpan(
+      {
+        kind: state.toolkit ? "agent" : "llm",
+        modelName,
+        modelProvider: this.adapter.name,
+        name: "jaypie.llm.operate",
+      },
+      async () => {
+        // Build initial request
+        let request = this.buildInitialRequest(state, options);
 
-    // Multi-turn loop
-    while (state.currentTurn < state.maxTurns) {
-      state.currentTurn++;
+        // Multi-turn loop
+        while (state.currentTurn < state.maxTurns) {
+          state.currentTurn++;
 
-      // Execute one turn with retry logic
-      const shouldContinue = await this.executeOneTurn(
-        request,
-        state,
-        context,
-        options,
-      );
+          // Execute one turn with retry logic
+          const shouldContinue = await this.executeOneTurn(
+            request,
+            state,
+            context,
+            options,
+          );
 
-      if (!shouldContinue) {
-        break;
-      }
+          if (!shouldContinue) {
+            break;
+          }
 
-      // Rebuild request with updated history for next turn
-      request = {
-        format: state.formattedFormat,
-        instructions: options.instructions,
-        messages: state.currentInput,
-        model: options.model ?? this.adapter.defaultModel,
-        providerOptions: options.providerOptions,
-        system: options.system,
-        temperature: options.temperature,
-        tools: state.formattedTools,
-        user: options.user,
-      };
-    }
+          // Rebuild request with updated history for next turn
+          request = {
+            format: state.formattedFormat,
+            instructions: options.instructions,
+            messages: state.currentInput,
+            model: modelName,
+            providerOptions: options.providerOptions,
+            system: options.system,
+            temperature: options.temperature,
+            tools: state.formattedTools,
+            user: options.user,
+          };
+        }
 
-    return state.responseBuilder.build();
+        const response = state.responseBuilder.build();
+        annotateLlmObs({
+          inputData: input,
+          metrics: usageToLlmObsMetrics(response.usage),
+          outputData: response.content,
+        });
+        return response;
+      },
+    );
   }
 
   //
@@ -289,26 +313,47 @@ export class OperateLoop {
       providerRequest,
     });
 
-    // Execute with retry (RetryExecutor handles error hooks and throws appropriate errors)
-    const response = await retryExecutor.execute(
-      (signal) =>
-        this.adapter.executeRequest(this.client, providerRequest, signal),
+    // Execute with retry inside a child llm span (no-op when llmobs disabled).
+    // RetryExecutor handles error hooks and throws appropriate errors.
+    const { parsed, response } = await withLlmObsSpan(
       {
-        context: {
-          input: state.currentInput,
-          options,
-          providerRequest,
-        },
-        hooks: context.hooks as LlmHooks,
+        kind: "llm",
+        modelName: options.model ?? this.adapter.defaultModel,
+        modelProvider: this.adapter.name,
+        name: "jaypie.llm.model",
+      },
+      async () => {
+        const response = await retryExecutor.execute(
+          (signal) =>
+            this.adapter.executeRequest(this.client, providerRequest, signal),
+          {
+            context: {
+              input: state.currentInput,
+              options,
+              providerRequest,
+            },
+            hooks: context.hooks as LlmHooks,
+          },
+        );
+
+        // Log what was returned from the model
+        log.trace("[operate] Model response received");
+        log.var({ "operate.response": response });
+
+        // Parse response
+        const parsed = this.adapter.parseResponse(response, options);
+
+        annotateLlmObs({
+          inputData: state.currentInput,
+          metrics: usageToLlmObsMetrics(
+            parsed.usage ? [parsed.usage] : undefined,
+          ),
+          outputData: parsed.content ?? "",
+        });
+
+        return { parsed, response };
       },
     );
-
-    // Log what was returned from the model
-    log.trace("[operate] Model response received");
-    log.var({ "operate.response": response });
-
-    // Parse response
-    const parsed = this.adapter.parseResponse(response, options);
 
     // Track usage
     if (parsed.usage) {
@@ -366,12 +411,23 @@ export class OperateLoop {
               toolName: toolCall.name,
             });
 
-            // Call the tool
+            // Call the tool inside a child tool span (no-op when disabled)
             log.trace(`[operate] Calling tool - ${toolCall.name}`);
-            const result = await state.toolkit.call({
-              arguments: toolCall.arguments,
-              name: toolCall.name,
-            });
+            const result = await withLlmObsSpan(
+              { kind: "tool", name: toolCall.name },
+              async () => {
+                const result = await state.toolkit!.call({
+                  arguments: toolCall.arguments,
+                  name: toolCall.name,
+                });
+                annotateLlmObs({
+                  inputData: toolCall.arguments,
+                  metadata: { tool: toolCall.name },
+                  outputData: result,
+                });
+                return result;
+              },
+            );
 
             // Execute afterEachTool hook
             await this.hookRunnerInstance.runAfterTool(context.hooks, {
