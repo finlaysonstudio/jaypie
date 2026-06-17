@@ -292,6 +292,10 @@ const handler = new JaypieLambda(this, "Handler", {
 });
 ```
 
+### LLM Observability passthrough
+
+If `DD_LLMOBS_ENABLED` is set at synth time, `JaypieLambda` (and every derivative) forwards it to the Lambda environment. `DD_LLMOBS_ML_APP` is forwarded too — **unless** observability is disabled (`DD_LLMOBS_ENABLED` resolves to `"false"` or `"0"`). Explicit `environment` props win over `process.env`, including the disable gate, so `environment: { DD_LLMOBS_ENABLED: "false" }` suppresses the `DD_LLMOBS_ML_APP` passthrough. This is the deploy-time half of the runtime opt-in documented in `skill("llm")`.
+
 ## JaypieNextJs
 
 Deploy Next.js applications:
