@@ -133,6 +133,15 @@ await llm.operate("What is my name?");
 console.log(llm.history);
 ```
 
+The first constructor argument may be a provider name **or** a model name. When a model name is passed, the provider is auto-detected and the model is retained:
+
+```typescript
+import Llm, { LLM } from "@jaypie/llm";
+
+const llm = new Llm("claude-sonnet-4-6");      // -> anthropic, claude-sonnet-4-6
+const flash = new Llm(LLM.MODEL.GEMINI_FLASH); // -> google, gemini-3.5-flash
+```
+
 ## Toolkit
 
 Collection of tools for function calling.

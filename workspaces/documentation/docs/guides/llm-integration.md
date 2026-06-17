@@ -63,6 +63,12 @@ const response2 = await llm.operate("What is my name?");
 // Maintains conversation history
 ```
 
+The first constructor argument may be a provider name **or** a model name. A model name auto-detects the provider and is retained:
+
+```typescript
+const llm = new Llm("claude-sonnet-4-6"); // -> anthropic, claude-sonnet-4-6
+```
+
 ## Model Selection
 
 ### By Model Name

@@ -104,6 +104,10 @@ const response = await Llm.operate("Hello", { model: "claude-sonnet-4" });
 // Or specify provider explicitly
 const llm = new Llm("openai", { model: "gpt-4o" });
 const result = await llm.operate("What is 2+2?");
+
+// The constructor's first arg may be a provider name OR a model name —
+// a model name auto-detects the provider and is retained
+const claude = new Llm("claude-sonnet-4-6"); // -> anthropic, claude-sonnet-4-6
 ```
 
 ### Fallback Providers
