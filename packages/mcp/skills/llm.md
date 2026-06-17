@@ -315,6 +315,15 @@ const review1 = await llm.operate(code1);
 const review2 = await llm.operate(code2);
 ```
 
+The first constructor argument may be a provider name **or** a model name. When a model name is passed, the provider is auto-detected and the model is retained:
+
+```typescript
+import Llm, { LLM } from "@jaypie/llm";
+
+const llm = new Llm("claude-sonnet-4-6");      // -> anthropic, claude-sonnet-4-6
+const flash = new Llm(LLM.MODEL.GEMINI_FLASH); // -> google, gemini-3.5-flash
+```
+
 ## Environment Variables
 
 ```bash
