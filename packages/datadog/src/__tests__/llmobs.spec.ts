@@ -44,7 +44,10 @@ describe("llmobs", () => {
       expect(() => flushLlmObs()).not.toThrow();
     });
 
-    it("getLlmObs returns null when dd-trace is absent", () => {
+    it("getLlmObs returns null when the SDK is unavailable", () => {
+      // Inject null rather than relying on dd-trace being absent: the traced
+      // deploy job loads dd-trace, so unmocked resolution returns a real SDK.
+      _setLlmObs(null);
       expect(getLlmObs()).toBeNull();
     });
   });
