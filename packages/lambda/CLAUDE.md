@@ -177,7 +177,7 @@ const { lambdaHandler } = original.lambda;
 4. **Validate** - Run validation functions
 4. **Setup** - Run setup functions
 5. **Handler** - Execute main handler logic
-6. **Teardown** - Run teardown functions (always runs)
+6. **Teardown** - Run teardown functions, then auto-flush LLM Obs spans via `flushLlmObs()` — runs after user teardown and always (finally), so spans flush before the Lambda freezes even on throw. No-op unless `DD_LLMOBS_ENABLED`
 7. **Response** - Return result or error body
 
 ## Error Handling

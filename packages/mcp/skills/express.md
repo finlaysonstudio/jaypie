@@ -104,6 +104,10 @@ import { createLambdaStreamHandler } from "@jaypie/express";
 export const handler = createLambdaStreamHandler(app);
 ```
 
+### LLM Observability auto-flush
+
+`createLambdaHandler` and `createLambdaStreamHandler` call `flushLlmObs()` from `@jaypie/datadog` in their `finally` block, so buffered Datadog LLM Obs spans flush before the Lambda freezes — even when the Express app errors. No-op unless `DD_LLMOBS_ENABLED` is truthy; never affects the response. No per-handler flush code is required.
+
 ## Event Format Support
 
 The adapter supports both API Gateway formats:

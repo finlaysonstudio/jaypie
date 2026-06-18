@@ -182,6 +182,22 @@ const result = await Llm.operate("Extract contact info from: John Doe, john@exam
 // result.content = { name: "John Doe", email: "john@example.com", phone: "555-1234" }
 ```
 
+#### Declared arrays always present
+
+A declared `format` is a schema contract. `operate()` guarantees every array field declared in `format` is present in `content` as an array — an empty list surfaces as `[]`, never `undefined` or a dropped key. This holds across providers/models, including those that omit empty array fields, so `content.someArray.length` is always safe without defensive normalization. The backfill recurses into nested objects and arrays of objects.
+
+```typescript
+const res = await Llm.operate(message, {
+  format: {
+    "Merchant Request": String,
+    "Merchant Attachments": [String],
+    "Recommended Actions": [String],
+  },
+});
+// Even when the model returns no recommendations:
+// res.content["Recommended Actions"] === []  (never undefined)
+```
+
 ### Zod Schema
 
 ```typescript
@@ -357,6 +373,28 @@ Behavior:
 - **`stream()`** spans attach to any active enclosing span, but within a single stream the `llm` and `tool` spans are **siblings** — the streamed model span is held open across `yield` boundaries, so it is not the active span when tools run.
 
 For esbuild-bundled Lambda handlers that also want dd-trace auto-instrumentation, wire the `dd-trace/esbuild` plugin with `keepNames: true`; the spans above do not require it.
+
+### Availability
+
+Span emission ships in the **`@jaypie/llm` 1.2.x line** (current `latest`). Note that the `1.3.0` build published to npm predates this feature and contains **no** LLM Obs code — a `^1.2` range resolves to `1.3.0` and silently loses emission. Until a release **above** `1.3.0` ships with the feature, pin to a `latest` 1.2.x that includes it (grep the installed dist for `llmobs` to confirm).
+
+### Flushing on Lambda
+
+On Lambda the runtime freezes the instant the handler resolves, so buffered LLM Obs spans are dropped unless flushed first. Jaypie handler wrappers flush automatically in teardown — no per-handler code:
+
+- `@jaypie/lambda` — `lambdaHandler`, `lambdaStreamHandler`
+- `@jaypie/express` — `createLambdaHandler`, `createLambdaStreamHandler`
+
+Outside those wrappers, flush manually before returning with the bundler-safe `flushLlmObs()` from `@jaypie/datadog`; reach the runtime SDK singleton for manual spans/annotations/`submitEvaluation` via `getLlmObs()`.
+
+```typescript
+import { flushLlmObs, getLlmObs } from "@jaypie/datadog";
+
+getLlmObs()?.trace({ kind: "workflow", name: "my-job" }, async () => {
+  await Llm.operate(input);
+});
+flushLlmObs(); // no-op unless DD_LLMOBS_ENABLED; never throws
+```
 
 ## Error Handling
 

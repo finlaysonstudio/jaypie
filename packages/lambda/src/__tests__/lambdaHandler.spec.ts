@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ConfigurationError } from "@jaypie/errors";
+import { flushLlmObs } from "@jaypie/datadog";
 import { HTTP, jaypieHandler } from "@jaypie/kit";
 import { log } from "@jaypie/logger";
 import { restoreLog, spyLog } from "@jaypie/testkit";
@@ -34,6 +35,15 @@ vi.mock("@jaypie/kit", async () => {
     ),
   };
   return module;
+});
+
+vi.mock("@jaypie/datadog", async () => {
+  const actual = await vi.importActual("@jaypie/datadog");
+  return {
+    ...actual,
+    flushLlmObs: vi.fn(),
+    loadDatadogApiKey: vi.fn(),
+  };
 });
 
 //
@@ -248,6 +258,43 @@ describe("Lambda Handler Module", () => {
         // Act & Assert
         await expect(handler({}, {})).rejects.toThrow();
         expect(log.debug).toHaveBeenCalled();
+      });
+    });
+    describe("LLM Observability", () => {
+      it("flushes LLM Observability spans during teardown", async () => {
+        // Arrange
+        const handler = lambdaHandler(vi.fn());
+        // Act
+        await handler({}, {});
+        // Assert
+        expect(flushLlmObs).toHaveBeenCalledOnce();
+      });
+      it("flushes after user teardown runs", async () => {
+        // Arrange
+        const order: string[] = [];
+        const userTeardown = vi.fn(() => {
+          order.push("user");
+        });
+        (flushLlmObs as ReturnType<typeof vi.fn>).mockImplementation(() => {
+          order.push("flush");
+        });
+        const handler = lambdaHandler(vi.fn(), { teardown: [userTeardown] });
+        // Act
+        await handler({}, {});
+        // Assert
+        expect(userTeardown).toHaveBeenCalled();
+        expect(order).toEqual(["user", "flush"]);
+      });
+      it("flushes even when the handler throws", async () => {
+        // Arrange
+        const mockFunction = vi.fn(() => {
+          throw new Error("boom");
+        });
+        const handler = lambdaHandler(mockFunction);
+        // Act
+        await handler({}, {});
+        // Assert
+        expect(flushLlmObs).toHaveBeenCalledOnce();
       });
     });
   });

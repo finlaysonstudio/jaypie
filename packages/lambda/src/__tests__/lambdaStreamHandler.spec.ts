@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ConfigurationError, BadRequestError } from "@jaypie/errors";
+import { flushLlmObs } from "@jaypie/datadog";
 import { jaypieHandler } from "@jaypie/kit";
 import { log } from "@jaypie/logger";
 import { restoreLog, spyLog } from "@jaypie/testkit";
@@ -32,6 +33,15 @@ vi.mock("@jaypie/kit", async () => {
     ),
   };
   return module;
+});
+
+vi.mock("@jaypie/datadog", async () => {
+  const actual = await vi.importActual("@jaypie/datadog");
+  return {
+    ...actual,
+    flushLlmObs: vi.fn(),
+    loadDatadogApiKey: vi.fn(),
+  };
 });
 
 //
@@ -347,6 +357,28 @@ describe("lambdaStreamHandler", () => {
       expect(responseStream.setContentType).toHaveBeenCalledWith(
         "application/json",
       );
+    });
+  });
+
+  describe("LLM Observability", () => {
+    it("flushes LLM Observability spans during teardown", async () => {
+      const handler = lambdaStreamHandler(async () => {});
+      const responseStream = createMockResponseStream();
+
+      await (handler as unknown as AwsStreamingHandler)({}, responseStream, {});
+
+      expect(flushLlmObs).toHaveBeenCalledOnce();
+    });
+
+    it("flushes even when the handler throws", async () => {
+      const handler = lambdaStreamHandler(async () => {
+        throw new Error("boom");
+      });
+      const responseStream = createMockResponseStream();
+
+      await (handler as unknown as AwsStreamingHandler)({}, responseStream, {});
+
+      expect(flushLlmObs).toHaveBeenCalledOnce();
     });
   });
 });

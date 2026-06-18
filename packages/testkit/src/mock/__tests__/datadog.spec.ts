@@ -1,5 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { submitMetric, submitMetricSet } from "../datadog";
+import {
+  flushLlmObs,
+  getLlmObs,
+  isLlmObsEnabled,
+  submitMetric,
+  submitMetricSet,
+} from "../datadog";
 
 describe("Datadog Mocks", () => {
   beforeEach(() => {
@@ -13,6 +19,21 @@ describe("Datadog Mocks", () => {
 
     it("submitMetricSet is a mock function", () => {
       expect(submitMetricSet).toBeMockFunction();
+    });
+
+    it("flushLlmObs is a mock function returning undefined", () => {
+      expect(flushLlmObs).toBeMockFunction();
+      expect(flushLlmObs()).toBeUndefined();
+    });
+
+    it("getLlmObs is a mock function returning null", () => {
+      expect(getLlmObs).toBeMockFunction();
+      expect(getLlmObs()).toBeNull();
+    });
+
+    it("isLlmObsEnabled is a mock function returning false", () => {
+      expect(isLlmObsEnabled).toBeMockFunction();
+      expect(isLlmObsEnabled()).toBe(false);
     });
   });
 

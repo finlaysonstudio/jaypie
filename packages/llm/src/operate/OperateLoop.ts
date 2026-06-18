@@ -19,7 +19,11 @@ import {
   usageToLlmObsMetrics,
   withLlmObsSpan,
 } from "../observability/llmobs.js";
-import { getLogger, maxTurnsFromOptions } from "../util/index.js";
+import {
+  fillFormatArrays,
+  getLogger,
+  maxTurnsFromOptions,
+} from "../util/index.js";
 import { ProviderAdapter } from "./adapters/ProviderAdapter.interface.js";
 import { HookRunner, hookRunner, LlmHooks } from "./hooks/index.js";
 import { InputProcessor, inputProcessor } from "./input/index.js";
@@ -379,7 +383,9 @@ export class OperateLoop {
     if (this.adapter.hasStructuredOutput(response)) {
       const structuredOutput = this.adapter.extractStructuredOutput(response);
       if (structuredOutput) {
-        state.responseBuilder.setContent(structuredOutput);
+        state.responseBuilder.setContent(
+          this.applyFormatArrayDefaults(structuredOutput, options),
+        );
         state.responseBuilder.complete();
         return false; // Stop loop
       }
@@ -541,7 +547,9 @@ export class OperateLoop {
     }
 
     // No tool calls or no toolkit - we're done
-    state.responseBuilder.setContent(parsed.content);
+    state.responseBuilder.setContent(
+      this.applyFormatArrayDefaults(parsed.content, options),
+    );
     state.responseBuilder.complete();
 
     // Add final history items
@@ -551,6 +559,24 @@ export class OperateLoop {
     }
 
     return false; // Stop loop
+  }
+
+  /**
+   * Backfill declared array fields when a `format` is supplied. A declared
+   * `format` is a schema contract: an empty array field should surface as `[]`
+   * rather than be dropped by a provider/model that omits empty lists.
+   */
+  private applyFormatArrayDefaults(
+    content: string | JsonObject | undefined,
+    options: LlmOperateOptions,
+  ): string | JsonObject | undefined {
+    if (!options.format) {
+      return content;
+    }
+    if (typeof content !== "object" || content === null) {
+      return content;
+    }
+    return fillFormatArrays({ content, format: options.format });
   }
 
   /**

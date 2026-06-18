@@ -11,7 +11,10 @@ Provides functions to submit metrics to Datadog from Jaypie applications. Suppor
 | Export | Type | Description |
 |--------|------|-------------|
 | `DATADOG` | Constant | Environment variable names, metric types, and default site |
+| `flushLlmObs` | Function | Flush buffered LLM Observability spans via the runtime `dd-trace` singleton. No-op unless `DD_LLMOBS_ENABLED`; never throws. Bundler-safe |
+| `getLlmObs` | Function | Lazy, bundler-safe accessor for the runtime `tracer.llmobs` SDK, or `null` when `dd-trace` is unavailable |
 | `hasDatadogEnv` | Function | Returns `true` if any Datadog API key env var is set |
+| `isLlmObsEnabled` | Function | Returns `true` when `DD_LLMOBS_ENABLED` is truthy (anything but `false`/`0`) |
 | `loadDatadogApiKey` | Async Function | When LLM Observability is enabled, resolve `DD_API_KEY_SECRET_ARN` into `DD_API_KEY` |
 | `submitDistribution` | Async Function | Submit distribution metrics (percentiles, histograms) |
 | `submitMetric` | Async Function | Submit a single metric |
@@ -24,6 +27,7 @@ src/
   constants.ts              # DATADOG constant with env vars and metric types
   datadog.client.ts         # HTTP client for Datadog v1/v2 APIs
   hasDatadogEnv.function.ts # Check for API key presence
+  llmobs.ts                 # Bundler-safe flushLlmObs / getLlmObs / isLlmObsEnabled
   loadDatadogApiKey.function.ts # Load DD_API_KEY from secret ARN for LLM Observability
   index.ts                  # Public exports
   objectToKeyValueArray.pipeline.ts  # Convert tag objects to Datadog format
