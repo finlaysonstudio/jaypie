@@ -93,12 +93,17 @@ lambdaHandler({ name: "test" }, myFunction);
 ## Lifecycle Flow
 
 1. **Logger initialization** - Re-init logger, tag with `invoke` and `handler`
-2. **Secrets loading** - If `secrets` provided, load via `loadEnvSecrets`
-3. **Validate** - Run validation functions
-4. **Setup** - Run setup functions
-5. **Handler** - Execute main handler logic
-6. **Teardown** - Run teardown functions (always runs)
-7. **Response** - Return result or error body
+2. **Datadog LLM Observability** - `loadDatadogApiKey()` resolves `DD_API_KEY` from the secret ARN when LLM Obs is enabled (no-op otherwise)
+3. **Secrets loading** - If `secrets` provided, load via `loadEnvSecrets`
+4. **Validate** - Run validation functions
+5. **Setup** - Run setup functions
+6. **Handler** - Execute main handler logic
+7. **Teardown** - Run teardown functions, then auto-flush LLM Obs spans (always runs)
+8. **Response** - Return result or error body
+
+### LLM Observability auto-flush
+
+`lambdaHandler` and `lambdaStreamHandler` append a final teardown step that calls `flushLlmObs()` from `@jaypie/datadog`. It runs **after** user teardown and **always** (jaypieHandler runs teardown in a `finally`), so buffered LLM Obs spans flush before the Lambda freezes even when the handler throws. No-op unless `DD_LLMOBS_ENABLED` is truthy; never affects the response. No per-handler flush code is required.
 
 ## Error Handling
 

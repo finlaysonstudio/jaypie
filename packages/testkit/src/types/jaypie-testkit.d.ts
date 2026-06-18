@@ -36,6 +36,7 @@ export interface LogMock extends Log {
   debug: MockLogMethod;
   error: MockLogMethod;
   fatal: MockLogMethod;
+  flag: Mock;
   info: MockLogMethod;
   init: Mock;
   lib: Mock;
@@ -43,6 +44,7 @@ export interface LogMock extends Log {
     debug: MockLogMethod;
     error: MockLogMethod;
     fatal: MockLogMethod;
+    flag: Mock;
     info: MockLogMethod;
     init: Mock;
     lib: Mock;

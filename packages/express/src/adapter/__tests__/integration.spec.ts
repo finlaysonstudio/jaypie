@@ -1,6 +1,17 @@
 import express from "express";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { flushLlmObs } from "@jaypie/datadog";
+
+vi.mock("@jaypie/datadog", async () => {
+  const actual = await vi.importActual("@jaypie/datadog");
+  return {
+    ...actual,
+    flushLlmObs: vi.fn(),
+    loadDatadogApiKey: vi.fn(),
+  };
+});
+
 import type {
   AwsLambdaGlobal,
   FunctionUrlEvent,
@@ -129,6 +140,30 @@ describe("Lambda Adapter Integration", () => {
       expect(result.statusCode).toBe(200);
       expect(result.headers["content-type"]).toBe("application/json");
       expect(JSON.parse(result.body)).toEqual({ message: "Hello World" });
+    });
+
+    it("flushes LLM Observability spans before returning", async () => {
+      const app = express();
+      app.get("/", (_req, res) => {
+        res.json({ message: "Hello World" });
+      });
+
+      const handler = createLambdaHandler(app);
+      await handler(createMockEvent(), mockContext);
+
+      expect(flushLlmObs).toHaveBeenCalledOnce();
+    });
+
+    it("flushes LLM Observability spans even when the app errors", async () => {
+      const app = express();
+      app.get("/", () => {
+        throw new Error("boom");
+      });
+
+      const handler = createLambdaHandler(app);
+      await handler(createMockEvent(), mockContext);
+
+      expect(flushLlmObs).toHaveBeenCalledOnce();
     });
 
     it("handles POST request with JSON body", async () => {

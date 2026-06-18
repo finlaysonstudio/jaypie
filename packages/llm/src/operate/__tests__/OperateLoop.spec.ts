@@ -15,6 +15,7 @@ import {
 } from "../../types/LlmProvider.interface.js";
 import { ErrorCategory, ParsedResponse, StandardToolCall } from "../types.js";
 import { Toolkit } from "../../tools/Toolkit.class.js";
+import { JsonObject } from "@jaypie/types";
 
 //
 //
@@ -586,6 +587,62 @@ describe("OperateLoop", () => {
         });
 
         expect(result.content).toEqual({ name: "John", age: 30 });
+      });
+
+      it("backfills declared array fields omitted from structured output", async () => {
+        mockAdapter.hasStructuredOutput = vi.fn(() => true);
+        mockAdapter.extractStructuredOutput = vi.fn(() => ({
+          "Merchant Request": "refund",
+        }));
+
+        const loop = new OperateLoop({
+          adapter: mockAdapter,
+          client: mockClient,
+        });
+
+        const result = await loop.execute("Get data", {
+          format: {
+            "Merchant Request": String,
+            "Merchant Attachments": [String],
+            "Recommended Actions": [String],
+          },
+        });
+
+        expect(result.content).toEqual({
+          "Merchant Request": "refund",
+          "Merchant Attachments": [],
+          "Recommended Actions": [],
+        });
+      });
+
+      it("backfills declared array fields omitted from parsed content", async () => {
+        mockAdapter.parseResponse = vi.fn(
+          (response): ParsedResponse => ({
+            content: { name: "Jane" } as JsonObject,
+            hasToolCalls: false,
+            stopReason: "end_turn",
+            usage: {
+              input: 10,
+              output: 20,
+              reasoning: 0,
+              total: 30,
+              provider: "mock",
+              model: "mock-model",
+            },
+            raw: response,
+          }),
+        );
+
+        const loop = new OperateLoop({
+          adapter: mockAdapter,
+          client: mockClient,
+        });
+
+        const result = await loop.execute("Get data", {
+          format: { name: String, tags: [String] },
+        });
+
+        expect(result.content).toEqual({ name: "Jane", tags: [] });
       });
     });
   });

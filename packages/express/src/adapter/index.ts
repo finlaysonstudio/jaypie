@@ -1,5 +1,7 @@
 import type { Application, Request, Response } from "express";
 
+import { flushLlmObs } from "@jaypie/datadog";
+
 import { createLambdaRequest, LambdaRequest } from "./LambdaRequest.js";
 import LambdaResponseBuffered from "./LambdaResponseBuffered.js";
 import LambdaResponseStreaming from "./LambdaResponseStreaming.js";
@@ -155,6 +157,10 @@ export function createLambdaHandler(
     } finally {
       // Clear current invoke context
       clearCurrentInvoke();
+
+      // Flush buffered LLM Observability spans before the Lambda freezes.
+      // No-op unless DD_LLMOBS_ENABLED; never throws.
+      flushLlmObs();
     }
   };
 }
@@ -210,6 +216,10 @@ export function createLambdaStreamHandler(
       } finally {
         // Clear current invoke context
         clearCurrentInvoke();
+
+        // Flush buffered LLM Observability spans before the Lambda freezes.
+        // No-op unless DD_LLMOBS_ENABLED; never throws.
+        flushLlmObs();
       }
     },
   );

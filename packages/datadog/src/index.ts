@@ -5,6 +5,7 @@
 
 export { DATADOG } from "./constants.js";
 export { default as hasDatadogEnv } from "./hasDatadogEnv.function.js";
+export { flushLlmObs, getLlmObs, isLlmObsEnabled } from "./llmobs.js";
 export { default as loadDatadogApiKey } from "./loadDatadogApiKey.function.js";
 export { default as submitDistribution } from "./submitDistribution.adapter.js";
 export { default as submitMetric } from "./submitMetric.adapter.js";

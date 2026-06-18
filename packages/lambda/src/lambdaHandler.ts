@@ -1,5 +1,5 @@
 import { loadEnvSecrets } from "@jaypie/aws";
-import { loadDatadogApiKey } from "@jaypie/datadog";
+import { flushLlmObs, loadDatadogApiKey } from "@jaypie/datadog";
 import { ConfigurationError, UnhandledError } from "@jaypie/errors";
 import { JAYPIE, jaypieHandler } from "@jaypie/kit";
 import { log as publicLogger } from "@jaypie/logger";
@@ -102,6 +102,14 @@ const lambdaHandler = function <TEvent = unknown, TResult = unknown>(
     await loadDatadogApiKey();
   };
   setup = [datadogLlmObsSetup, ...setup];
+
+  // Flush buffered LLM Observability spans before the Lambda freezes. Runs last
+  // (after user teardown) and always — jaypieHandler runs teardown in a finally,
+  // so spans flush even when the handler throws. No-op unless LLM Obs is enabled.
+  const datadogLlmObsTeardown: LifecycleFunction = async () => {
+    flushLlmObs();
+  };
+  teardown = [...(teardown ?? []), datadogLlmObsTeardown];
 
   //
   //

@@ -101,6 +101,30 @@ await datadogEvent({
 });
 ```
 
+### LLM Observability primitives
+
+Bundler-safe access to the runtime `dd-trace` LLM Obs singleton. `dd-trace` is resolved at runtime via a computed module specifier (never bundled), so on Lambda these reach the layer-initialized singleton — a bundled copy would be a different instance whose buffer never ships.
+
+```typescript
+import { flushLlmObs, getLlmObs, isLlmObsEnabled } from "@jaypie/datadog";
+
+isLlmObsEnabled(); // true when DD_LLMOBS_ENABLED is truthy (not "false"/"0")
+
+// Manual span / annotation / submitEvaluation against the runtime SDK
+getLlmObs()?.trace({ kind: "workflow", name: "my-job" }, async () => {
+  /* ... */
+});
+
+// Flush before the Lambda freezes — no-op unless enabled; never throws
+flushLlmObs();
+```
+
+| Export | Description |
+|--------|-------------|
+| `flushLlmObs()` | Flush buffered LLM Obs spans. No-op when `DD_LLMOBS_ENABLED` is falsy or `dd-trace` is absent; wrapped so it never throws. Called automatically in `@jaypie/lambda`/`@jaypie/express` handler teardown. |
+| `getLlmObs()` | Lazy accessor for the runtime `tracer.llmobs` SDK, or `null` when `dd-trace` cannot be resolved. For manual enclosing spans, annotations, and `submitEvaluation`. |
+| `isLlmObsEnabled()` | `true` when `DD_LLMOBS_ENABLED` is truthy. |
+
 ## Unified Service Tagging
 
 Use consistent tags across services:
