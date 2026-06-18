@@ -231,6 +231,65 @@ describe("JaypieSecret", () => {
     });
   });
 
+  describe("Issue #365: Explicit (id, { envKey }) export name regression", () => {
+    const originalEnv = { ...process.env };
+
+    afterEach(() => {
+      process.env = { ...originalEnv };
+    });
+
+    it("provider explicit form derives export name from construct id, not envKey", () => {
+      process.env.AGENTS_INTERNAL_KEY = "agents-value";
+      process.env.PROJECT_ENV = CDK.ENV.SANDBOX;
+      process.env.PROJECT_KEY = "agents";
+
+      const stack = new Stack();
+      new JaypieEnvSecret(stack, "AgentsInternalKey", {
+        envKey: "AGENTS_INTERNAL_KEY",
+      });
+      const template = Template.fromStack(stack);
+
+      const outputs = template.findOutputs("*");
+      const exportNames = Object.values(outputs)
+        .filter((o: any) => o.Export?.Name)
+        .map((o: any) => o.Export.Name as string);
+
+      expect(exportNames.length).toBe(1);
+      expect(exportNames[0]).toBe("env-sandbox-agents-AgentsInternalKey");
+      expect(exportNames[0]).not.toContain("AGENTSINTERNALKEY");
+    });
+
+    it("explicit-form provider and consumer produce matching export names", () => {
+      process.env.AGENTS_INTERNAL_KEY = "agents-value";
+      process.env.PROJECT_KEY = "agents";
+
+      const providerStack = new Stack();
+      process.env.PROJECT_ENV = CDK.ENV.SANDBOX;
+      new JaypieEnvSecret(providerStack, "AgentsInternalKey", {
+        envKey: "AGENTS_INTERNAL_KEY",
+      });
+      const providerTemplate = Template.fromStack(providerStack);
+
+      const outputs = providerTemplate.findOutputs("*");
+      const exportNames = Object.values(outputs)
+        .filter((o: any) => o.Export?.Name)
+        .map((o: any) => o.Export.Name as string);
+      expect(exportNames.length).toBe(1);
+      const providerExportName = exportNames[0];
+
+      const consumerStack = new Stack();
+      delete process.env.PROJECT_ENV;
+      new JaypieEnvSecret(consumerStack, "AgentsInternalKey", {
+        envKey: "AGENTS_INTERNAL_KEY",
+        consumer: true,
+      });
+      const consumerTemplate = Template.fromStack(consumerStack);
+
+      const consumerStr = JSON.stringify(consumerTemplate.toJSON());
+      expect(consumerStr).toContain(providerExportName);
+    });
+  });
+
   describe("Error Cases", () => {
     it("throws ConfigurationError when envKey is set but env var is missing and no value or generateSecretString", () => {
       delete process.env.MISSING_SECRET;
