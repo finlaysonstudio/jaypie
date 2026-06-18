@@ -145,6 +145,7 @@ lambdaHandler({ name: "test" }, myFunction);
 ### Peer Dependencies
 
 - `@jaypie/aws` - For `loadEnvSecrets`
+- `@jaypie/datadog` - For `loadDatadogApiKey`
 - `@jaypie/errors` - For `ConfigurationError`, `UnhandledError`
 - `@jaypie/kit` - For `jaypieHandler`, `JAYPIE` constants
 - `@jaypie/logger` - For structured logging
@@ -171,8 +172,9 @@ const { lambdaHandler } = original.lambda;
 ## Lifecycle Flow
 
 1. **Logger initialization** - Re-init logger, tag with `invoke` and `handler`
-2. **Secrets loading** - If `secrets` provided, load via `loadEnvSecrets`
-3. **Validate** - Run validation functions
+2. **Datadog LLM Observability** - `loadDatadogApiKey()` resolves `DD_API_KEY` from `DD_API_KEY_SECRET_ARN` when LLM Observability is enabled (no-op otherwise)
+3. **Secrets loading** - If `secrets` provided, load via `loadEnvSecrets`
+4. **Validate** - Run validation functions
 4. **Setup** - Run setup functions
 5. **Handler** - Execute main handler logic
 6. **Teardown** - Run teardown functions (always runs)

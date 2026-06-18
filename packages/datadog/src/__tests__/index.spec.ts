@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest";
 // Subject
 import {
   DATADOG,
+  hasDatadogEnv,
+  loadDatadogApiKey,
   submitDistribution,
   submitMetric,
   submitMetricSet,
@@ -18,6 +20,8 @@ describe("Index", () => {
     expect(DATADOG).toBeObject();
   });
   it("Exports functions we expect", () => {
+    expect(hasDatadogEnv).toBeFunction();
+    expect(loadDatadogApiKey).toBeFunction();
     expect(submitDistribution).toBeFunction();
     expect(submitMetric).toBeFunction();
     expect(submitMetricSet).toBeFunction();

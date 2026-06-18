@@ -3,7 +3,12 @@ import { loadEnvSecrets } from "@jaypie/aws";
 import { BadRequestError, UnhandledError } from "@jaypie/errors";
 import { force, getHeaderFrom, HTTP, JAYPIE, jaypieHandler } from "@jaypie/kit";
 import { log as publicLogger } from "@jaypie/logger";
-import { DATADOG, hasDatadogEnv, submitMetric } from "@jaypie/datadog";
+import {
+  DATADOG,
+  hasDatadogEnv,
+  loadDatadogApiKey,
+  submitMetric,
+} from "@jaypie/datadog";
 
 import { JAYPIE_LAMBDA_MOCK } from "./adapter/LambdaResponseBuffered.js";
 import { JAYPIE_LAMBDA_STREAMING } from "./adapter/LambdaResponseStreaming.js";
@@ -464,6 +469,11 @@ function expressHandler<T>(
 
     // Build a request-local setup list to avoid mutating the shared array
     const requestSetup: JaypieHandlerSetup[] = [];
+
+    // Load the Datadog LLM Observability API key into the environment when enabled
+    requestSetup.push(async () => {
+      await loadDatadogApiKey();
+    });
 
     // Load secrets into process.env if configured
     if (secrets && secrets.length > 0) {
