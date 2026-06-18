@@ -12,6 +12,7 @@ Provides functions to submit metrics to Datadog from Jaypie applications. Suppor
 |--------|------|-------------|
 | `DATADOG` | Constant | Environment variable names, metric types, and default site |
 | `hasDatadogEnv` | Function | Returns `true` if any Datadog API key env var is set |
+| `loadDatadogApiKey` | Async Function | When LLM Observability is enabled, resolve `DD_API_KEY_SECRET_ARN` into `DD_API_KEY` |
 | `submitDistribution` | Async Function | Submit distribution metrics (percentiles, histograms) |
 | `submitMetric` | Async Function | Submit a single metric |
 | `submitMetricSet` | Async Function | Submit multiple metrics in one call |
@@ -23,6 +24,7 @@ src/
   constants.ts              # DATADOG constant with env vars and metric types
   datadog.client.ts         # HTTP client for Datadog v1/v2 APIs
   hasDatadogEnv.function.ts # Check for API key presence
+  loadDatadogApiKey.function.ts # Load DD_API_KEY from secret ARN for LLM Observability
   index.ts                  # Public exports
   objectToKeyValueArray.pipeline.ts  # Convert tag objects to Datadog format
   statsd.client.ts          # StatsD client for Lambda extension
@@ -43,8 +45,14 @@ The package reads these environment variables:
 | `SECRET_DATADOG_API_KEY` | AWS Secrets Manager ARN for API key |
 | `DATADOG_API_KEY_ARN` | AWS Secrets Manager ARN (alternate) |
 | `DD_API_KEY_SECRET_ARN` | AWS Secrets Manager ARN (Datadog convention) |
+| `DD_API_KEY` | dd-trace API key (set by `loadDatadogApiKey` for LLM Observability) |
+| `DD_LLMOBS_ENABLED` | Opt-in for LLM Observability (truthy except `false`/`0`) |
 | `DD_SITE` | Datadog site (default: `datadoghq.com`) |
 | `PROJECT_ENV`, `PROJECT_KEY`, `PROJECT_SERVICE`, `PROJECT_SPONSOR`, `PROJECT_VERSION` | Auto-applied as metric tags |
+
+### LLM Observability API Key
+
+`loadDatadogApiKey()` resolves `DD_API_KEY` from `DD_API_KEY_SECRET_ARN` so dd-trace LLM Observability can authenticate. It is a no-op unless all hold: `DD_LLMOBS_ENABLED` is truthy (anything but `false`/`0`), `DD_API_KEY_SECRET_ARN` is set, and neither `DD_API_KEY` nor `DATADOG_API_KEY` is already present. `@jaypie/lambda` and `@jaypie/express` handlers call it automatically before the handler runs.
 
 ### Lambda Extension Detection
 

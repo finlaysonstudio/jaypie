@@ -4,6 +4,7 @@ import {
   loadEnvSecrets,
 } from "@jaypie/aws";
 import type { StreamFormat } from "@jaypie/aws";
+import { loadDatadogApiKey } from "@jaypie/datadog";
 import { ConfigurationError, UnhandledError } from "@jaypie/errors";
 import { JAYPIE, jaypieHandler } from "@jaypie/kit";
 import { log as publicLogger } from "@jaypie/logger";
@@ -198,6 +199,12 @@ const lambdaStreamHandler = function <TEvent = unknown>(
     };
     setup = [secretsSetup, ...setup];
   }
+
+  // Load the Datadog LLM Observability API key into the environment when enabled
+  const datadogLlmObsSetup: LifecycleFunction = async () => {
+    await loadDatadogApiKey();
+  };
+  setup = [datadogLlmObsSetup, ...setup];
 
   //
   //
