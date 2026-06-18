@@ -8,6 +8,7 @@ export function mockLogFactory(): LogMock {
     debug: vi.fn(),
     error: vi.fn(),
     fatal: vi.fn(),
+    flag: vi.fn(),
     info: vi.fn(),
     init: vi.fn(),
     lib: vi.fn(),
@@ -31,6 +32,7 @@ export function mockLogFactory(): LogMock {
   mock.warn.var = mock.var;
 
   // Have modules return correct objects
+  mock.flag.mockReturnValue(mock);
   mock.init.mockReturnValue(null);
   mock.lib.mockReturnValue(mock);
   mock.report.mockReturnValue(null);
@@ -43,6 +45,7 @@ export function mockLogFactory(): LogMock {
     debug: mock.debug,
     error: mock.error,
     fatal: mock.fatal,
+    flag: mock.flag,
     info: mock.info,
     init: mock.init,
     lib: mock.lib,
@@ -64,6 +67,7 @@ const LOG_METHOD_NAMES = [
   "debug",
   "error",
   "fatal",
+  "flag",
   "info",
   "init",
   "lib",

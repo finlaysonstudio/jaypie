@@ -129,6 +129,7 @@ Tags are key-value pairs included in every log output:
 ```typescript
 log.tag({ requestId: "abc-123" });
 log.with({ userId: "456" }).info("User action"); // Creates child logger
+log.flag("beta").info("Behind a flag"); // Child logger tagged { flag: "beta" }; no-op without a string
 ```
 
 ## API Reference
@@ -142,6 +143,7 @@ Factory function returning a `JaypieLogger` instance.
 - `debug/info/warn/error/fatal/trace(...messages)` - Log at level
 - `*.var(keyValue)` - Log variable at level
 - `var(keyValue)` - Log variable at configured var level
+- `flag(flag?)` - Returns a child logger tagged `{ flag }` for a non-empty string; returns the same logger for `undefined`, non-strings, or empty string
 - `init()` - Reset logger state (used between Lambda invocations)
 - `lib({ lib?, level?, tags? })` - Create library logger (silent by default)
 - `tag(tags)` - Add tags to all loggers

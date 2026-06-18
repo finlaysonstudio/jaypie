@@ -67,6 +67,31 @@ describe("@jaypie/logger", () => {
   });
 
   describe("Features", () => {
+    describe("flag", () => {
+      it("returns a child logger tagged with flag for a string", () => {
+        const logger = createLogger();
+        const flagged = logger.flag("alpha");
+        expect(flagged).toBeDefined();
+        expect(flagged).not.toBe(logger);
+        expect(flagged.debug).toBeDefined();
+      });
+
+      it("returns the same logger for undefined", () => {
+        const logger = createLogger();
+        expect(logger.flag(undefined)).toBe(logger);
+      });
+
+      it("returns the same logger for an empty string", () => {
+        const logger = createLogger();
+        expect(logger.flag("")).toBe(logger);
+      });
+
+      it("returns the same logger for a non-string", () => {
+        const logger = createLogger();
+        expect(logger.flag(42 as unknown as string)).toBe(logger);
+      });
+    });
+
     describe("Multi-param logging", () => {
       afterEach(() => {
         vi.restoreAllMocks();

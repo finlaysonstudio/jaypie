@@ -111,6 +111,13 @@ class JaypieLogger {
       this._logger.var(logVar(messageObject, messageValue));
   }
 
+  public flag(flag?: string): JaypieLogger {
+    if (typeof flag !== "string" || flag === "") {
+      return this;
+    }
+    return this.with({ flag });
+  }
+
   public init(): void {
     _resetDatadogTransport();
     for (const logger of this._loggers) {
