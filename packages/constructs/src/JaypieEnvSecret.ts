@@ -72,7 +72,7 @@ export class JaypieEnvSecret extends JaypieSecret {
   }
 
   protected buildSecret(context: BuildSecretContext): secretsmanager.ISecret {
-    const { envKey, id, treatAsEnvKey } = context;
+    const { envKey, id } = context;
     const props = context.props as JaypieEnvSecretProps;
     const {
       consumer = checkEnvIsConsumer(),
@@ -88,11 +88,13 @@ export class JaypieEnvSecret extends JaypieSecret {
     let exportName;
 
     if (!exportParam) {
-      // When shorthand detection is active, use the full construct id (which
-      // includes the "EnvSecret_" prefix) so the export name matches what was
-      // produced by earlier versions of this construct. Using the raw envKey
-      // here produces a shorter name that breaks existing cross-stack imports.
-      const exportSource = treatAsEnvKey ? id : envKey || id;
+      // Always derive the export name from the construct id so the name is
+      // stable across both call forms. For shorthand detection the id carries
+      // the "EnvSecret_" prefix; for the explicit (id, { envKey }) form the id
+      // is the caller's construct id. Deriving from envKey instead would change
+      // the export name for an unchanged explicit-form call site across a
+      // version bump and break existing cross-stack imports (issues #347, #365).
+      const exportSource = id;
       exportName = exportEnvName(exportSource, process.env, consumer);
     } else {
       exportName = cleanName(exportParam);

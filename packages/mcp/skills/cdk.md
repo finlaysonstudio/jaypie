@@ -237,6 +237,27 @@ new JaypieLambda(this, "Handler", {
 
 See `skill("dynamodb")` for table key conventions and query patterns.
 
+## Database Migrations
+
+`JaypieMigration` runs DynamoDB migrations as a CloudFormation custom resource on every `cdk deploy`. It wraps a `JaypieLambda` in a `cr.Provider` and re-fires on the deploy nonce, so newly added migrations run on code-only deploys instead of being skipped:
+
+```typescript
+import { JaypieDynamoDb, JaypieMigration } from "@jaypie/constructs";
+
+const table = new JaypieDynamoDb(this, "myApp");
+
+new JaypieMigration(this, "SeedData", {
+  code: "dist/migrations/seed",
+  handler: "index.handler",
+  tables: [table],
+  dependencies: [table], // Ensures the table exists first
+});
+```
+
+Use `migrationHandler` from `jaypie` in the migration Lambda so errors propagate as CloudFormation failures. Prefer this construct over a hand-rolled `cr.Provider` + `cdk.CustomResource`, which is easy to key on the table name alone and thereby skip the deploy-nonce re-fire.
+
+See `skill("migrations")` for the full props table, behavior, and handler pattern.
+
 ## Lambda with Secrets
 
 Pass secrets as strings (auto-creates `JaypieEnvSecret`) or as construct instances:
@@ -390,6 +411,7 @@ new JaypieOrganizationTrail(this, "OrgTrail", {
 - **`skill("dynamodb")`** - DynamoDB key design and query patterns
 - **`skill("express")`** - Express handler and Lambda adapter
 - **`skill("lambda")`** - Lambda handler wrappers and lifecycle
+- **`skill("migrations")`** - JaypieMigration DynamoDB migration custom resources
 - **`skill("secrets")`** - Secret management with JaypieEnvSecret
 - **`skill("streaming")`** - JaypieDistribution and JaypieNextJs streaming configuration
 - **`skill("variables")`** - Environment variables reference
