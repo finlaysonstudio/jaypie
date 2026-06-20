@@ -81,7 +81,6 @@ src/
 │   ├── lambda.ts       # lambdaHandler
 │   ├── llm.ts          # llm, createMockTool
 │   ├── logger.ts       # Logger mocks
-│   ├── mongoose.ts     # Mongoose mocks
 │   ├── textract.ts     # AWS Textract mocks
 │   └── utils.ts        # Mock factory utilities
 ├── types/              # TypeScript declarations

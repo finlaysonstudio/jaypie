@@ -8,7 +8,6 @@ import * as kit from "./kit";
 import * as lambda from "./lambda";
 import * as llm from "./llm";
 import * as logger from "./logger";
-import * as mongoose from "./mongoose";
 import * as textract from "./textract";
 import * as tildeskill from "./tildeskill";
 
@@ -22,7 +21,6 @@ export * from "./kit";
 export * from "./lambda";
 export * from "./llm";
 export * from "./logger";
-export * from "./mongoose";
 export * from "./textract";
 export * from "./tildeskill";
 
@@ -54,9 +52,6 @@ const mock: Record<string, any> = {
 
   // Logger module
   ...logger,
-
-  // Mongoose module
-  ...mongoose,
 
   // Textract module
   ...textract,

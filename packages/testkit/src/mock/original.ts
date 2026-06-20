@@ -65,8 +65,6 @@ const express =
 const lambda =
   loadPackageOrProxy<typeof import("@jaypie/lambda")>("@jaypie/lambda");
 const llm = loadPackageOrProxy<typeof import("@jaypie/llm")>("@jaypie/llm");
-const mongoose =
-  loadPackageOrProxy<typeof import("@jaypie/mongoose")>("@jaypie/mongoose");
 const textract =
   loadPackageOrProxy<typeof import("@jaypie/textract")>("@jaypie/textract");
 
@@ -79,7 +77,6 @@ export const original = {
   lambda,
   llm,
   logger,
-  mongoose,
   textract,
 };
 
