@@ -53,7 +53,7 @@ export function addDatadogLayers(
     extensionLayerVersion: CDK.DATADOG.LAYER.EXTENSION,
     env: process.env.PROJECT_ENV,
     service: resolvedService,
-    version: process.env.PROJECT_VERSION,
+    version: process.env.DD_VERSION || process.env.PROJECT_VERSION,
   });
   datadogLambda.addLambdaFunctions([lambdaFunction]);
 
