@@ -48,6 +48,7 @@ export function jaypieLambdaEnv(options: JaypieLambdaEnvOptions = {}): {
   // Default environment variables from process.env if present
   const defaultEnvVars = [
     "DATADOG_API_KEY_ARN",
+    "DD_VERSION",
     "LOG_LEVEL",
     "MODULE_LOGGER",
     "MODULE_LOG_LEVEL",

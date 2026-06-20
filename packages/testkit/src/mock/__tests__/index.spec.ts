@@ -35,12 +35,6 @@ describe("Mock Index", () => {
         "toolkit",
         "tools",
 
-        // Mongoose module
-        "connect",
-        "connectFromSecretEnv",
-        "disconnect",
-        "mongoose",
-
         // Textract module
         "MarkdownPage",
         "textractJsonToMarkdown",
@@ -49,6 +43,15 @@ describe("Mock Index", () => {
       for (const exportName of expectedExports) {
         expect(mockExports).toHaveProperty(exportName);
       }
+    });
+
+    it("should not export the deprecated mongoose mock (no @jaypie/mongoose phantom dep)", () => {
+      // Dropped per #385: the umbrella must not pull in deprecated
+      // @jaypie/mongoose, which broke @jaypie/testkit/mock at load time
+      // in projects without mongoose installed.
+      expect(mockExports).not.toHaveProperty("mongoose");
+      expect(mockExports).not.toHaveProperty("connectFromSecretEnv");
+      expect(mockExports).not.toHaveProperty("disconnect");
     });
   });
 

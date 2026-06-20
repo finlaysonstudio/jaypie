@@ -22,10 +22,13 @@ In your test setup file:
 import { vi } from "vitest";
 
 vi.mock("jaypie", async () => {
-  const { mockJaypie } = await import("@jaypie/testkit");
-  return mockJaypie(vi);
+  const testkit = await import("@jaypie/testkit/mock");
+  return testkit;
 });
 ```
+
+`@jaypie/testkit/mock` re-exports a vitest mock for every `jaypie` export as a
+flat namespace, so returning it directly mocks the whole package.
 
 Configure in vitest.config.ts:
 
@@ -43,34 +46,24 @@ export default defineConfig({
 
 ```typescript
 vi.mock("jaypie", async () => {
-  const { mockJaypie } = await import("@jaypie/testkit");
-  return mockJaypie(vi);
+  const testkit = await import("@jaypie/testkit/mock");
+  return testkit;
 });
 
 // Mocked: log, getSecret, sendMessage, etc.
 ```
 
-### Logger
+### Sub-Packages
+
+To mock an individual `@jaypie/*` package, return the relevant mocks from the
+same flat `@jaypie/testkit/mock` namespace:
 
 ```typescript
-vi.mock("@jaypie/logger", async () => {
-  const { mockLogger } = await import("@jaypie/testkit");
-  return mockLogger(vi);
+vi.mock("@jaypie/express", async () => {
+  const testkit = await import("@jaypie/testkit/mock");
+  return { expressHandler: testkit.expressHandler };
 });
 ```
-
-### AWS
-
-```typescript
-vi.mock("@jaypie/aws", async () => {
-  const { mockAws } = await import("@jaypie/testkit");
-  return mockAws(vi);
-});
-```
-
-### Legacy Mocks
-
-For legacy packages, see `skill("legacy")`.
 
 ## Using Mocks in Tests
 
@@ -158,19 +151,19 @@ afterEach(() => {
 
 ## Export Verification
 
-When adding exports to packages, update testkit:
+When adding exports to a Jaypie package, add a matching mock to testkit so the
+auto-mock stays complete:
 
 ```typescript
-// packages/testkit/src/mocks/mockJaypie.ts
-export function mockJaypie(vi) {
-  return {
-    log: mockLog(vi),
-    getSecret: vi.fn().mockResolvedValue("mock"),
-    // Add new exports here
-    newFunction: vi.fn(),
-  };
-}
+// packages/testkit/src/mock/<package>.ts
+import { createMockFunction } from "./utils";
+
+export const newFunction = createMockFunction((x) => x);
 ```
+
+Then re-export it from `src/mock/index.ts` (named export and default object) and
+bump the testkit patch version. Missing mocks surface as failures in testkit's
+`mock/__tests__/index.spec.ts` "all exports from original" check.
 
 ## See Also
 

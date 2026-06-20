@@ -22,6 +22,7 @@ describe("jaypieLambdaEnv", () => {
     delete process.env.ANOTHER_VAR;
     delete process.env.DD_LLMOBS_ENABLED;
     delete process.env.DD_LLMOBS_ML_APP;
+    delete process.env.DD_VERSION;
   });
 
   afterEach(() => {
@@ -183,6 +184,34 @@ describe("jaypieLambdaEnv", () => {
 
       expect(result.PROJECT_SERVICE).toBe("env-service");
       expect(result.DD_SERVICE).toBe("my-service");
+    });
+  });
+
+  describe("Datadog Version", () => {
+    it("should pass through DD_VERSION when set", () => {
+      process.env.DD_VERSION = "1.2.3-abc";
+
+      const result = jaypieLambdaEnv();
+
+      expect(result.DD_VERSION).toBe("1.2.3-abc");
+    });
+
+    it("should not set DD_VERSION when unset", () => {
+      const result = jaypieLambdaEnv();
+
+      expect(result.DD_VERSION).toBeUndefined();
+    });
+
+    it("should not override explicit initialEnvironment DD_VERSION", () => {
+      process.env.DD_VERSION = "from-env";
+
+      const result = jaypieLambdaEnv({
+        initialEnvironment: {
+          DD_VERSION: "explicit",
+        },
+      });
+
+      expect(result.DD_VERSION).toBe("explicit");
     });
   });
 
