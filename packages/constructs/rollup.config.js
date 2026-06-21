@@ -1,4 +1,5 @@
 import typescript from "@rollup/plugin-typescript";
+import { dts } from "rollup-plugin-dts";
 
 // Filter out TS2307 warnings for @jaypie/* packages (external workspace dependencies)
 const onwarn = (warning, defaultHandler) => {
@@ -7,6 +8,47 @@ const onwarn = (warning, defaultHandler) => {
   }
   defaultHandler(warning);
 };
+
+// Shared external list: the runtime is bundled to a single index file and the
+// declarations are bundled to a single index.d.ts, so every dependency must be
+// kept external in both the JS and the .d.ts passes.
+const external = [
+  "@jaypie/errors",
+  "aws-cdk-lib",
+  "aws-cdk-lib/aws-accessanalyzer",
+  "aws-cdk-lib/aws-apigateway",
+  "aws-cdk-lib/aws-apigatewayv2",
+  "aws-cdk-lib/aws-apigatewayv2-integrations",
+  "aws-cdk-lib/aws-certificatemanager",
+  "aws-cdk-lib/aws-cloudfront",
+  "aws-cdk-lib/aws-cloudfront-origins",
+  "aws-cdk-lib/aws-cloudtrail",
+  "aws-cdk-lib/aws-cloudwatch",
+  "aws-cdk-lib/aws-dynamodb",
+  "aws-cdk-lib/aws-events",
+  "aws-cdk-lib/aws-events-targets",
+  "aws-cdk-lib/aws-iam",
+  "aws-cdk-lib/aws-kms",
+  "aws-cdk-lib/aws-lambda",
+  "aws-cdk-lib/aws-lambda-event-sources",
+  "aws-cdk-lib/aws-logs",
+  "aws-cdk-lib/aws-logs-destinations",
+  "aws-cdk-lib/aws-route53",
+  "aws-cdk-lib/aws-route53-targets",
+  "aws-cdk-lib/aws-s3",
+  "aws-cdk-lib/aws-s3-notifications",
+  "aws-cdk-lib/aws-sam",
+  "aws-cdk-lib/aws-secretsmanager",
+  "aws-cdk-lib/aws-sns",
+  "aws-cdk-lib/aws-sqs",
+  "aws-cdk-lib/aws-sso",
+  "aws-cdk-lib/aws-wafv2",
+  "aws-cdk-lib/custom-resources",
+  "cdk-nextjs-standalone",
+  "constructs",
+  "datadog-cdk-constructs-v2",
+  "path",
+];
 
 export default [
   // ES modules version
@@ -25,43 +67,7 @@ export default [
         outDir: "dist/esm",
       }),
     ],
-    external: [
-      "@jaypie/errors",
-      "aws-cdk-lib",
-      "aws-cdk-lib/aws-accessanalyzer",
-      "aws-cdk-lib/aws-apigateway",
-      "aws-cdk-lib/aws-apigatewayv2",
-      "aws-cdk-lib/aws-apigatewayv2-integrations",
-      "aws-cdk-lib/aws-certificatemanager",
-      "aws-cdk-lib/aws-cloudfront",
-      "aws-cdk-lib/aws-cloudfront-origins",
-      "aws-cdk-lib/aws-cloudtrail",
-      "aws-cdk-lib/aws-cloudwatch",
-      "aws-cdk-lib/aws-dynamodb",
-      "aws-cdk-lib/aws-events",
-      "aws-cdk-lib/aws-events-targets",
-      "aws-cdk-lib/aws-iam",
-      "aws-cdk-lib/aws-kms",
-      "aws-cdk-lib/aws-lambda",
-      "aws-cdk-lib/aws-lambda-event-sources",
-      "aws-cdk-lib/aws-logs",
-      "aws-cdk-lib/aws-logs-destinations",
-      "aws-cdk-lib/aws-route53",
-      "aws-cdk-lib/aws-route53-targets",
-      "aws-cdk-lib/aws-s3",
-      "aws-cdk-lib/aws-s3-notifications",
-      "aws-cdk-lib/aws-sam",
-      "aws-cdk-lib/aws-secretsmanager",
-      "aws-cdk-lib/aws-sns",
-      "aws-cdk-lib/aws-sqs",
-      "aws-cdk-lib/aws-sso",
-      "aws-cdk-lib/aws-wafv2",
-      "aws-cdk-lib/custom-resources",
-      "cdk-nextjs-standalone",
-      "constructs",
-      "datadog-cdk-constructs-v2",
-      "path",
-    ],
+    external,
   },
   // CommonJS version
   {
@@ -81,42 +87,30 @@ export default [
         outDir: "dist/cjs",
       }),
     ],
-    external: [
-      "@jaypie/errors",
-      "aws-cdk-lib",
-      "aws-cdk-lib/aws-accessanalyzer",
-      "aws-cdk-lib/aws-apigateway",
-      "aws-cdk-lib/aws-apigatewayv2",
-      "aws-cdk-lib/aws-apigatewayv2-integrations",
-      "aws-cdk-lib/aws-certificatemanager",
-      "aws-cdk-lib/aws-cloudfront",
-      "aws-cdk-lib/aws-cloudfront-origins",
-      "aws-cdk-lib/aws-cloudtrail",
-      "aws-cdk-lib/aws-cloudwatch",
-      "aws-cdk-lib/aws-dynamodb",
-      "aws-cdk-lib/aws-events",
-      "aws-cdk-lib/aws-events-targets",
-      "aws-cdk-lib/aws-iam",
-      "aws-cdk-lib/aws-kms",
-      "aws-cdk-lib/aws-lambda",
-      "aws-cdk-lib/aws-lambda-event-sources",
-      "aws-cdk-lib/aws-logs",
-      "aws-cdk-lib/aws-logs-destinations",
-      "aws-cdk-lib/aws-route53",
-      "aws-cdk-lib/aws-route53-targets",
-      "aws-cdk-lib/aws-s3",
-      "aws-cdk-lib/aws-s3-notifications",
-      "aws-cdk-lib/aws-sam",
-      "aws-cdk-lib/aws-secretsmanager",
-      "aws-cdk-lib/aws-sns",
-      "aws-cdk-lib/aws-sqs",
-      "aws-cdk-lib/aws-sso",
-      "aws-cdk-lib/aws-wafv2",
-      "aws-cdk-lib/custom-resources",
-      "cdk-nextjs-standalone",
-      "constructs",
-      "datadog-cdk-constructs-v2",
-      "path",
-    ],
+    external,
+  },
+  // Type definitions (ESM): bundled to a single declaration file so every
+  // re-export resolves under node16/nodenext module resolution. A per-file
+  // .d.ts tree with extensionless relative specifiers does not resolve in ESM
+  // mode, which silently dropped `export * from "./helpers"` members (#390).
+  {
+    input: "src/index.ts",
+    output: {
+      file: "dist/esm/index.d.ts",
+      format: "es",
+    },
+    plugins: [dts()],
+    external,
+  },
+  // Type definitions (CommonJS): emitted as .d.cts so node16/nodenext flags it
+  // as a CommonJS declaration under the package's "type": "module" setting.
+  {
+    input: "src/index.ts",
+    output: {
+      file: "dist/cjs/index.d.cts",
+      format: "es",
+    },
+    plugins: [dts()],
+    external,
   },
 ];
