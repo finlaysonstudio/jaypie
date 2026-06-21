@@ -29,6 +29,7 @@ export interface ExtendDatadogRoleOptions {
  * If found, creates a custom policy with:
  * - budgets:ViewBudget
  * - logs:DescribeLogGroups
+ * - trustedadvisor:ListRecommendations
  *
  * @param scope - The construct scope
  * @param options - Configuration options
@@ -64,6 +65,11 @@ export function extendDatadogRole(
     // Allow describe log groups
     new PolicyStatement({
       actions: ["logs:DescribeLogGroups"],
+      resources: ["*"],
+    }),
+    // Allow list trusted advisor recommendations
+    new PolicyStatement({
+      actions: ["trustedadvisor:ListRecommendations"],
       resources: ["*"],
     }),
   ];
