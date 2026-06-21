@@ -1,5 +1,5 @@
 import { JAYPIE } from "@jaypie/kit";
-import { log as defaultLog } from "@jaypie/logger";
+import { createLogger, log as defaultLog } from "@jaypie/logger";
 import { ConfigurationError } from "@jaypie/errors";
 import type { BedrockRuntimeClient } from "@aws-sdk/client-bedrock-runtime";
 
@@ -19,7 +19,8 @@ export async function loadSdk(): Promise<
   }
 }
 
-export const getLogger = () => defaultLog.lib({ lib: JAYPIE.LIB.LLM });
+export const getLogger = (): ReturnType<typeof createLogger> =>
+  defaultLog.lib({ lib: JAYPIE.LIB.LLM });
 
 export async function initializeClient({
   region,

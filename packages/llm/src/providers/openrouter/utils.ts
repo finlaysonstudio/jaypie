@@ -1,7 +1,7 @@
 import { getEnvSecret } from "@jaypie/aws";
 import { ConfigurationError } from "@jaypie/errors";
 import { JAYPIE, placeholders as replacePlaceholders } from "@jaypie/kit";
-import { log as defaultLog } from "@jaypie/logger";
+import { createLogger, log as defaultLog } from "@jaypie/logger";
 import type { OpenRouter } from "@openrouter/sdk";
 import { LlmMessageOptions } from "../../types/LlmProvider.interface.js";
 import { PROVIDER } from "../../constants.js";
@@ -22,7 +22,8 @@ export async function loadSdk(): Promise<typeof import("@openrouter/sdk")> {
 }
 
 // Logger
-export const getLogger = () => defaultLog.lib({ lib: JAYPIE.LIB.LLM });
+export const getLogger = (): ReturnType<typeof createLogger> =>
+  defaultLog.lib({ lib: JAYPIE.LIB.LLM });
 
 // Client initialization
 export async function initializeClient({

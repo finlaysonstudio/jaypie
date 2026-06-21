@@ -1,6 +1,6 @@
 {
   "name": "@jaypie/mcp",
-  "version": "0.8.79",
+  "version": "0.8.80",
   "description": "Jaypie MCP",
   "repository": {
     "type": "git",
@@ -11,12 +11,16 @@
   "type": "module",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      }
     },
     "./suite": {
-      "types": "./dist/suite.d.ts",
-      "import": "./dist/suite.js"
+      "import": {
+        "types": "./dist/suite.d.ts",
+        "default": "./dist/suite.js"
+      }
     }
   },
   "main": "dist/index.js",
@@ -39,8 +43,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@jaypie/fabric": "^0.2.4",
-    "@jaypie/tildeskill": "^0.3.1",
+    "@jaypie/fabric": "^0.3.3",
+    "@jaypie/tildeskill": "^0.3.2",
     "@modelcontextprotocol/sdk": "^1.17.0",
     "commander": "^14.0.0",
     "gray-matter": "^4.0.3",
@@ -55,6 +59,7 @@
     "express": "^5.1.0",
     "rollup": "^4.53.3",
     "rollup-plugin-copy": "^3.5.0",
+    "rollup-plugin-dts": "^6.1.1",
     "typescript": "^5.9.3"
   },
   "publishConfig": {

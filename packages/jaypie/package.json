@@ -1,6 +1,6 @@
 {
   "name": "jaypie",
-  "version": "1.2.54",
+  "version": "1.2.55",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/finlaysonstudio/jaypie.git"
@@ -11,9 +11,14 @@
   "type": "module",
   "exports": {
     ".": {
-      "types": "./dist/esm/index.d.ts",
-      "import": "./dist/esm/index.js",
-      "require": "./dist/cjs/index.cjs"
+      "import": {
+        "types": "./dist/esm/index.d.ts",
+        "default": "./dist/esm/index.js"
+      },
+      "require": {
+        "types": "./dist/cjs/index.d.cts",
+        "default": "./dist/cjs/index.cjs"
+      }
     }
   },
   "main": "./dist/cjs/index.cjs",
@@ -32,14 +37,14 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@jaypie/aws": "^1.2.9",
-    "@jaypie/core": "^1.2.2",
-    "@jaypie/datadog": "^1.2.4",
-    "@jaypie/errors": "^1.2.2",
-    "@jaypie/express": "^1.2.25",
-    "@jaypie/kit": "^1.2.9",
-    "@jaypie/lambda": "^1.2.10",
-    "@jaypie/logger": "^1.2.17"
+    "@jaypie/aws": "^1.2.10",
+    "@jaypie/core": "^1.2.3",
+    "@jaypie/datadog": "^1.2.5",
+    "@jaypie/errors": "^1.2.3",
+    "@jaypie/express": "^1.2.26",
+    "@jaypie/kit": "^1.2.10",
+    "@jaypie/lambda": "^1.2.11",
+    "@jaypie/logger": "^1.2.18"
   },
   "devDependencies": {
     "@jaypie/types": "^0.1.7",
@@ -49,6 +54,7 @@
     "@typescript-eslint/parser": "^8.46.1",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.4",
+    "rollup-plugin-dts": "^6.1.1",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.46.1"
   },

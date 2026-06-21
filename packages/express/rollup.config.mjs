@@ -1,4 +1,5 @@
 import autoExternal from "rollup-plugin-auto-external";
+import { dts } from "rollup-plugin-dts";
 import typescript from "@rollup/plugin-typescript";
 
 // Externals not caught by auto-external (peer deps + node: prefixed builtins)
@@ -11,6 +12,11 @@ const onwarn = (warning, defaultHandler) => {
   }
   defaultHandler(warning);
 };
+
+// Bundle declarations: keep every bare specifier external so dts() inlines only
+// our own relative files, producing a single self-contained declaration that
+// resolves under node16/nodenext module resolution.
+const dtsExternal = (id) => !/^[./]/.test(id);
 
 export default [
   // ES modules version
@@ -52,5 +58,20 @@ export default [
         outDir: "dist/cjs",
       }),
     ],
+  },
+  // Type definitions (ESM): bundled to a single self-contained declaration file.
+  {
+    input: "src/index.ts",
+    output: { file: "dist/esm/index.d.ts", format: "es" },
+    plugins: [dts()],
+    external: dtsExternal,
+  },
+  // Type definitions (CommonJS): emitted as .d.cts so node16/nodenext flags it
+  // as a CommonJS declaration under the package's "type": "module" setting.
+  {
+    input: "src/index.ts",
+    output: { file: "dist/cjs/index.d.cts", format: "es" },
+    plugins: [dts()],
+    external: dtsExternal,
   },
 ];
