@@ -83,6 +83,27 @@ const createUser = fabricService({
 
 ## Validation Patterns
 
+Prefer Jaypie's natural schema syntax — it validates and types inline without a schema library. Reach for Zod only when you need refinements the natural form can't express.
+
+### Natural Schema
+
+The fabric `input` object is itself a natural schema: each field declares a `type` (a constructor like `String`/`Number`, or a `const` tuple of allowed values), `required`, and `description`. Input is validated and typed before `service` runs.
+
+```typescript
+const createUser = fabricService({
+  alias: "user_create",
+  input: {
+    email: { type: String, required: true, description: "User email address" },
+    name: { type: String, required: true, description: "User display name" },
+    role: { type: ["user", "admin"] as const, required: false },
+  },
+  service: async ({ email, name, role }) => {
+    // email, name, role are validated and typed here
+    return createUserInDatabase({ email, name, role: role || "user" });
+  },
+});
+```
+
 ### Zod Schemas
 
 ```typescript
