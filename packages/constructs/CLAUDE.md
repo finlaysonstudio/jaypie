@@ -168,6 +168,19 @@ new JaypieDistribution(this, "Distribution", {
 });
 ```
 
+#### Service Attribution
+
+`serviceTag` (parallel to `roleTag`, matching `JaypieLambda`) attributes the distribution to a service. When set, the distribution is tagged with `CDK.TAG.SERVICE` (so metrics carry `service:<value>` instead of `service:N/A`) and the created access-log and WAF-log buckets are tagged with the same value, so the Datadog forwarder attributes their forwarded logs to the service instead of the generic `cloudfront`/source default. Omit to preserve current behavior; external/imported log buckets are not tagged.
+
+```typescript
+new JaypieDistribution(this, "Distribution", {
+  handler: api,
+  host: "api.example.com",
+  zone: "example.com",
+  serviceTag: "chat_mcp",
+});
+```
+
 #### Security Headers
 
 `JaypieDistribution` ships with default security response headers (analogous to `helmet` for Express). Headers are applied via a `ResponseHeadersPolicy` attached to the auto-generated default behavior.
