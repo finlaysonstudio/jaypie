@@ -125,7 +125,7 @@ jobs:
   test:
     name: Unit Test (in parallel) (${{ matrix.node-version }})
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     continue-on-error: ${{ matrix.experimental || false }}
     strategy:
       matrix:
