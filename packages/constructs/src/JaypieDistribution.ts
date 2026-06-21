@@ -253,6 +253,19 @@ export interface JaypieDistributionProps extends Omit<
    */
   roleTag?: string;
   /**
+   * Service tag for attributing this distribution to a service (parallel to
+   * `roleTag`, matching `JaypieLambda`). When set, the distribution is tagged
+   * with `CDK.TAG.SERVICE` (so metrics carry `service:<value>` instead of
+   * `service:N/A`) and the created access-log and WAF-log buckets are tagged
+   * with the same value, so the Datadog forwarder attributes their forwarded
+   * logs to the service instead of the generic `cloudfront`/source default.
+   *
+   * Omit to preserve current behavior (no service tag). Has no effect on
+   * external/imported log buckets, which this construct does not own.
+   * @default undefined (no service tag)
+   */
+  serviceTag?: string;
+  /**
    * WAF WebACL configuration for the CloudFront distribution.
    * - true/undefined: create and attach a WebACL with sensible defaults
    * - false: disable WAF
@@ -299,6 +312,7 @@ export class JaypieDistribution
       responseHeadersPolicy: responseHeadersPolicyProp,
       roleTag = CDK.ROLE.API,
       securityHeaders: securityHeadersProp,
+      serviceTag,
       streaming = false,
       waf: wafProp = true,
       zone: propsZone,
@@ -547,6 +561,9 @@ export class JaypieDistribution
         removalPolicy: RemovalPolicy.DESTROY,
       });
       Tags.of(createdBucket).add(CDK.TAG.ROLE, CDK.ROLE.STORAGE);
+      if (serviceTag) {
+        Tags.of(createdBucket).add(CDK.TAG.SERVICE, serviceTag);
+      }
       logBucket = createdBucket;
     }
 
@@ -589,6 +606,9 @@ export class JaypieDistribution
       },
     );
     Tags.of(this.distribution).add(CDK.TAG.ROLE, roleTag);
+    if (serviceTag) {
+      Tags.of(this.distribution).add(CDK.TAG.SERVICE, serviceTag);
+    }
 
     this.distributionArn = `arn:aws:cloudfront::${Stack.of(this).account}:distribution/${this.distribution.distributionId}`;
     this.distributionDomainName = this.distribution.distributionDomainName;
@@ -826,6 +846,9 @@ export class JaypieDistribution
           removalPolicy: RemovalPolicy.RETAIN,
         });
         Tags.of(createdBucket).add(CDK.TAG.ROLE, CDK.ROLE.MONITORING);
+        if (serviceTag) {
+          Tags.of(createdBucket).add(CDK.TAG.SERVICE, serviceTag);
+        }
 
         // Add Datadog forwarder notification
         if (destinationProp !== false) {

@@ -302,6 +302,87 @@ describe("JaypieDistribution", () => {
       });
     });
 
+    it("adds service tag to distribution when serviceTag provided", () => {
+      const stack = new Stack();
+      const bucket = new s3.Bucket(stack, "TestBucket");
+      const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
+
+      new JaypieDistribution(stack, "TestDistribution", {
+        handler: origin,
+        serviceTag: "chat_mcp",
+      });
+      const template = Template.fromStack(stack);
+
+      const distribution = findDistribution(template);
+      const tags = distribution.Properties.Tags || [];
+      expect(tags).toContainEqual({
+        Key: CDK.TAG.SERVICE,
+        Value: "chat_mcp",
+      });
+    });
+
+    it("adds service tag to the created access-log bucket when serviceTag provided", () => {
+      const stack = new Stack();
+      const bucket = new s3.Bucket(stack, "TestBucket");
+      const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
+
+      new JaypieDistribution(stack, "TestDistribution", {
+        handler: origin,
+        serviceTag: "chat_mcp",
+      });
+      const template = Template.fromStack(stack);
+
+      // The log bucket (storage role) carries the service tag so the Datadog
+      // forwarder attributes CloudFront access logs to the service.
+      template.hasResourceProperties("AWS::S3::Bucket", {
+        Tags: Match.arrayWith([
+          Match.objectLike({ Key: CDK.TAG.ROLE, Value: CDK.ROLE.STORAGE }),
+          Match.objectLike({ Key: CDK.TAG.SERVICE, Value: "chat_mcp" }),
+        ]),
+      });
+
+      expect(template).toBeDefined();
+    });
+
+    it("adds service tag to the created WAF log bucket when serviceTag provided", () => {
+      const stack = new Stack();
+      const bucket = new s3.Bucket(stack, "TestBucket");
+      const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
+
+      new JaypieDistribution(stack, "TestDistribution", {
+        handler: origin,
+        serviceTag: "chat_mcp",
+        waf: { name: "api" },
+      });
+      const template = Template.fromStack(stack);
+
+      template.hasResourceProperties("AWS::S3::Bucket", {
+        Tags: Match.arrayWith([
+          Match.objectLike({ Key: CDK.TAG.ROLE, Value: CDK.ROLE.MONITORING }),
+          Match.objectLike({ Key: CDK.TAG.SERVICE, Value: "chat_mcp" }),
+        ]),
+      });
+
+      expect(template).toBeDefined();
+    });
+
+    it("does not add a service tag when serviceTag is omitted", () => {
+      const stack = new Stack();
+      const bucket = new s3.Bucket(stack, "TestBucket");
+      const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
+
+      new JaypieDistribution(stack, "TestDistribution", {
+        handler: origin,
+      });
+      const template = Template.fromStack(stack);
+
+      const distribution = findDistribution(template);
+      const tags = distribution.Properties.Tags || [];
+      expect(tags).not.toContainEqual(
+        expect.objectContaining({ Key: CDK.TAG.SERVICE }),
+      );
+    });
+
     it("configures streaming for Lambda FunctionUrl", () => {
       const stack = new Stack();
       const fn = new lambda.Function(stack, "TestFunction", {
