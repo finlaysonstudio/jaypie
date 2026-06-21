@@ -1,6 +1,6 @@
 {
   "name": "@jaypie/tildeskill",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "Skill/vocabulary management with pluggable storage backends",
   "repository": {
     "type": "git",
@@ -12,9 +12,14 @@
   "type": "module",
   "exports": {
     ".": {
-      "types": "./dist/esm/index.d.ts",
-      "import": "./dist/esm/index.js",
-      "require": "./dist/cjs/index.cjs"
+      "import": {
+        "types": "./dist/esm/index.d.ts",
+        "default": "./dist/esm/index.js"
+      },
+      "require": {
+        "types": "./dist/cjs/index.d.cts",
+        "default": "./dist/cjs/index.cjs"
+      }
     }
   },
   "main": "./dist/cjs/index.cjs",
@@ -40,6 +45,7 @@
     "@rollup/plugin-typescript": "^12.1.2",
     "@types/node": "^22.13.1",
     "rollup": "^4.12.0",
+    "rollup-plugin-dts": "^6.1.1",
     "typescript": "^5.3.3",
     "vitest": "^4.1.8"
   },

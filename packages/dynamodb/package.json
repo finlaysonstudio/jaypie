@@ -1,6 +1,6 @@
 {
   "name": "@jaypie/dynamodb",
-  "version": "0.6.3",
+  "version": "0.6.4",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/finlaysonstudio/jaypie.git"
@@ -11,16 +11,24 @@
   "type": "module",
   "exports": {
     ".": {
-      "types": "./dist/esm/index.d.ts",
-      "require": "./dist/cjs/index.cjs",
-      "import": "./dist/esm/index.js",
-      "default": "./dist/esm/index.js"
+      "import": {
+        "types": "./dist/esm/index.d.ts",
+        "default": "./dist/esm/index.js"
+      },
+      "require": {
+        "types": "./dist/cjs/index.d.cts",
+        "default": "./dist/cjs/index.cjs"
+      }
     },
     "./mcp": {
-      "types": "./dist/esm/mcp/index.d.ts",
-      "require": "./dist/cjs/mcp/index.cjs",
-      "import": "./dist/esm/mcp/index.js",
-      "default": "./dist/esm/mcp/index.js"
+      "import": {
+        "types": "./dist/esm/mcp/index.d.ts",
+        "default": "./dist/esm/mcp/index.js"
+      },
+      "require": {
+        "types": "./dist/cjs/mcp/index.d.cts",
+        "default": "./dist/cjs/mcp/index.cjs"
+      }
     }
   },
   "main": "./dist/cjs/index.cjs",
@@ -46,6 +54,7 @@
   "devDependencies": {
     "@rollup/plugin-typescript": "^12.1.2",
     "@types/node": "^22.13.1",
+    "rollup-plugin-dts": "^6.1.1",
     "typescript": "^5.3.3"
   },
   "peerDependencies": {

@@ -1,4 +1,43 @@
 import typescript from "@rollup/plugin-typescript";
+import { dts } from "rollup-plugin-dts";
+
+// Bundle declarations: keep every bare specifier external so dts() inlines only
+// our own relative files, producing a single self-contained declaration per
+// entry point that resolves under node16/nodenext module resolution.
+const dtsExternal = (id) => !/^[./]/.test(id);
+
+// Subpath entry points ("" is the package root). Each gets a bundled ESM
+// `index.d.ts` and a CommonJS `index.d.cts`.
+const dtsEntries = [
+  "",
+  "commander",
+  "data",
+  "express",
+  "http",
+  "lambda",
+  "llm",
+  "mcp",
+  "websocket",
+];
+
+const dtsConfigs = dtsEntries.flatMap((sub) => {
+  const dir = sub ? `${sub}/` : "";
+  const input = `src/${dir}index.ts`;
+  return [
+    {
+      input,
+      output: { file: `dist/esm/${dir}index.d.ts`, format: "es" },
+      plugins: [dts()],
+      external: dtsExternal,
+    },
+    {
+      input,
+      output: { file: `dist/cjs/${dir}index.d.cts`, format: "es" },
+      plugins: [dts()],
+      external: dtsExternal,
+    },
+  ];
+});
 
 // Filter out expected warnings:
 // - TS2307: Cannot find module '@jaypie/*' (external workspace dependencies)
@@ -345,4 +384,6 @@ export default [
     ],
     external,
   },
+  // Type definitions: one self-contained bundle per entry point and format.
+  ...dtsConfigs,
 ];

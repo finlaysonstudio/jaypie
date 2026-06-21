@@ -1,7 +1,7 @@
 import { getEnvSecret } from "@jaypie/aws";
 import { ConfigurationError } from "@jaypie/errors";
 import { JAYPIE, placeholders as replacePlaceholders } from "@jaypie/kit";
-import { log as defaultLog, log } from "@jaypie/logger";
+import { createLogger, log as defaultLog, log } from "@jaypie/logger";
 import type Anthropic from "@anthropic-ai/sdk";
 import { PROVIDER } from "../../constants.js";
 import { LlmMessageOptions } from "../../types/LlmProvider.interface.js";
@@ -25,7 +25,8 @@ export async function loadSdk(): Promise<typeof import("@anthropic-ai/sdk")> {
 }
 
 // Logger
-export const getLogger = () => defaultLog.lib({ lib: JAYPIE.LIB.LLM });
+export const getLogger = (): ReturnType<typeof createLogger> =>
+  defaultLog.lib({ lib: JAYPIE.LIB.LLM });
 
 // Client initialization
 export async function initializeClient({

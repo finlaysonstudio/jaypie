@@ -1,6 +1,6 @@
 {
   "name": "@jaypie/logger",
-  "version": "1.2.17",
+  "version": "1.2.18",
   "description": "Logger utilities for Jaypie applications",
   "repository": {
     "type": "git",
@@ -12,9 +12,14 @@
   "type": "module",
   "exports": {
     ".": {
-      "types": "./dist/esm/index.d.ts",
-      "import": "./dist/esm/index.js",
-      "require": "./dist/cjs/index.cjs"
+      "import": {
+        "types": "./dist/esm/index.d.ts",
+        "default": "./dist/esm/index.js"
+      },
+      "require": {
+        "types": "./dist/cjs/index.d.cts",
+        "default": "./dist/cjs/index.cjs"
+      }
     }
   },
   "main": "./dist/cjs/index.cjs",
@@ -39,6 +44,7 @@
     "eslint-config-prettier": "^10.0.1",
     "eslint-plugin-prettier": "^5.2.1",
     "rollup": "^4.12.0",
+    "rollup-plugin-dts": "^6.1.1",
     "typescript": "^5.3.3",
     "typescript-eslint": "^8.18.2",
     "vitest": "^4.1.8"

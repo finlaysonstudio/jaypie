@@ -2,6 +2,12 @@ import { readFileSync } from "node:fs";
 import copy from "rollup-plugin-copy";
 import replace from "@rollup/plugin-replace";
 import typescript from "@rollup/plugin-typescript";
+import { dts } from "rollup-plugin-dts";
+
+// Bundle declarations: keep every bare specifier external so dts() inlines only
+// our own relative files, producing a single self-contained declaration per
+// entry point that resolves under node16/nodenext module resolution.
+const dtsExternal = (id) => !/^[./]/.test(id);
 
 const pkg = JSON.parse(readFileSync("./package.json", "utf-8"));
 const version = pkg.version;
@@ -16,62 +22,77 @@ const onwarn = (warning, defaultHandler) => {
   defaultHandler(warning);
 };
 
-export default {
-  input: [
-    "src/index.ts",
-    "src/suite.ts",
-    "src/suites/datadog/index.ts",
-    "src/suites/docs/index.ts",
-  ],
-  onwarn,
-  output: {
-    dir: "dist",
-    format: "es",
-    preserveModules: true,
-    preserveModulesRoot: "src",
-    sourcemap: true,
-  },
-  plugins: [
-    replace({
-      preventAssignment: true,
-      values: {
-        __BUILD_VERSION__: JSON.stringify(version),
-        __BUILD_COMMIT__: JSON.stringify(commitHash),
-        __BUILD_VERSION_STRING__: JSON.stringify(versionString),
-      },
-    }),
-    typescript({
-      exclude: ["**/__tests__/**/*", "**/*.test.ts"],
-    }),
-    copy({
-      targets: [
-        { src: "src/suites/datadog/help.md", dest: "dist/suites/datadog" },
-        {
-          src: "src/suites/docs/release-notes/help.md",
-          dest: "dist/suites/docs/release-notes",
+export default [
+  {
+    input: [
+      "src/index.ts",
+      "src/suite.ts",
+      "src/suites/datadog/index.ts",
+      "src/suites/docs/index.ts",
+    ],
+    onwarn,
+    output: {
+      dir: "dist",
+      format: "es",
+      preserveModules: true,
+      preserveModulesRoot: "src",
+      sourcemap: true,
+    },
+    plugins: [
+      replace({
+        preventAssignment: true,
+        values: {
+          __BUILD_VERSION__: JSON.stringify(version),
+          __BUILD_COMMIT__: JSON.stringify(commitHash),
+          __BUILD_VERSION_STRING__: JSON.stringify(versionString),
         },
-      ],
-    }),
-  ],
-  external: [
-    "@jaypie/errors",
-    "@jaypie/fabric",
-    "@jaypie/fabric/mcp",
-    "@jaypie/tildeskill",
-    "@modelcontextprotocol/sdk/server/mcp.js",
-    "@modelcontextprotocol/sdk/server/stdio.js",
-    "@modelcontextprotocol/sdk/server/streamableHttp.js",
-    "commander",
-    "gray-matter",
-    "node:child_process",
-    "node:crypto",
-    "node:fs",
-    "node:fs/promises",
-    "node:https",
-    "node:os",
-    "node:path",
-    "node:url",
-    "semver",
-    "zod",
-  ],
-};
+      }),
+      typescript({
+        exclude: ["**/__tests__/**/*", "**/*.test.ts"],
+      }),
+      copy({
+        targets: [
+          { src: "src/suites/datadog/help.md", dest: "dist/suites/datadog" },
+          {
+            src: "src/suites/docs/release-notes/help.md",
+            dest: "dist/suites/docs/release-notes",
+          },
+        ],
+      }),
+    ],
+    external: [
+      "@jaypie/errors",
+      "@jaypie/fabric",
+      "@jaypie/fabric/mcp",
+      "@jaypie/tildeskill",
+      "@modelcontextprotocol/sdk/server/mcp.js",
+      "@modelcontextprotocol/sdk/server/stdio.js",
+      "@modelcontextprotocol/sdk/server/streamableHttp.js",
+      "commander",
+      "gray-matter",
+      "node:child_process",
+      "node:crypto",
+      "node:fs",
+      "node:fs/promises",
+      "node:https",
+      "node:os",
+      "node:path",
+      "node:url",
+      "semver",
+      "zod",
+    ],
+  },
+  // Type definitions (ESM-only package): one self-contained bundle per entry.
+  {
+    input: "src/index.ts",
+    output: { file: "dist/index.d.ts", format: "es" },
+    plugins: [dts()],
+    external: dtsExternal,
+  },
+  {
+    input: "src/suite.ts",
+    output: { file: "dist/suite.d.ts", format: "es" },
+    plugins: [dts()],
+    external: dtsExternal,
+  },
+];

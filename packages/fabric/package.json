@@ -1,6 +1,6 @@
 {
   "name": "@jaypie/fabric",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "description": "Jaypie modeling framework with type conversion, service handlers, and adapters",
   "repository": {
     "type": "git",
@@ -12,49 +12,94 @@
   "type": "module",
   "exports": {
     ".": {
-      "types": "./dist/esm/index.d.ts",
-      "import": "./dist/esm/index.js",
-      "require": "./dist/cjs/index.cjs"
+      "import": {
+        "types": "./dist/esm/index.d.ts",
+        "default": "./dist/esm/index.js"
+      },
+      "require": {
+        "types": "./dist/cjs/index.d.cts",
+        "default": "./dist/cjs/index.cjs"
+      }
     },
     "./commander": {
-      "types": "./dist/esm/commander/index.d.ts",
-      "import": "./dist/esm/commander/index.js",
-      "require": "./dist/cjs/commander/index.cjs"
+      "import": {
+        "types": "./dist/esm/commander/index.d.ts",
+        "default": "./dist/esm/commander/index.js"
+      },
+      "require": {
+        "types": "./dist/cjs/commander/index.d.cts",
+        "default": "./dist/cjs/commander/index.cjs"
+      }
     },
     "./http": {
-      "types": "./dist/esm/http/index.d.ts",
-      "import": "./dist/esm/http/index.js",
-      "require": "./dist/cjs/http/index.cjs"
+      "import": {
+        "types": "./dist/esm/http/index.d.ts",
+        "default": "./dist/esm/http/index.js"
+      },
+      "require": {
+        "types": "./dist/cjs/http/index.d.cts",
+        "default": "./dist/cjs/http/index.cjs"
+      }
     },
     "./lambda": {
-      "types": "./dist/esm/lambda/index.d.ts",
-      "import": "./dist/esm/lambda/index.js",
-      "require": "./dist/cjs/lambda/index.cjs"
+      "import": {
+        "types": "./dist/esm/lambda/index.d.ts",
+        "default": "./dist/esm/lambda/index.js"
+      },
+      "require": {
+        "types": "./dist/cjs/lambda/index.d.cts",
+        "default": "./dist/cjs/lambda/index.cjs"
+      }
     },
     "./llm": {
-      "types": "./dist/esm/llm/index.d.ts",
-      "import": "./dist/esm/llm/index.js",
-      "require": "./dist/cjs/llm/index.cjs"
+      "import": {
+        "types": "./dist/esm/llm/index.d.ts",
+        "default": "./dist/esm/llm/index.js"
+      },
+      "require": {
+        "types": "./dist/cjs/llm/index.d.cts",
+        "default": "./dist/cjs/llm/index.cjs"
+      }
     },
     "./mcp": {
-      "types": "./dist/esm/mcp/index.d.ts",
-      "import": "./dist/esm/mcp/index.js",
-      "require": "./dist/cjs/mcp/index.cjs"
+      "import": {
+        "types": "./dist/esm/mcp/index.d.ts",
+        "default": "./dist/esm/mcp/index.js"
+      },
+      "require": {
+        "types": "./dist/cjs/mcp/index.d.cts",
+        "default": "./dist/cjs/mcp/index.cjs"
+      }
     },
     "./express": {
-      "types": "./dist/esm/express/index.d.ts",
-      "import": "./dist/esm/express/index.js",
-      "require": "./dist/cjs/express/index.cjs"
+      "import": {
+        "types": "./dist/esm/express/index.d.ts",
+        "default": "./dist/esm/express/index.js"
+      },
+      "require": {
+        "types": "./dist/cjs/express/index.d.cts",
+        "default": "./dist/cjs/express/index.cjs"
+      }
     },
     "./data": {
-      "types": "./dist/esm/data/index.d.ts",
-      "import": "./dist/esm/data/index.js",
-      "require": "./dist/cjs/data/index.cjs"
+      "import": {
+        "types": "./dist/esm/data/index.d.ts",
+        "default": "./dist/esm/data/index.js"
+      },
+      "require": {
+        "types": "./dist/cjs/data/index.d.cts",
+        "default": "./dist/cjs/data/index.cjs"
+      }
     },
     "./websocket": {
-      "types": "./dist/esm/websocket/index.d.ts",
-      "import": "./dist/esm/websocket/index.js",
-      "require": "./dist/cjs/websocket/index.cjs"
+      "import": {
+        "types": "./dist/esm/websocket/index.d.ts",
+        "default": "./dist/esm/websocket/index.js"
+      },
+      "require": {
+        "types": "./dist/cjs/websocket/index.d.cts",
+        "default": "./dist/cjs/websocket/index.cjs"
+      }
     }
   },
   "main": "./dist/cjs/index.cjs",
@@ -89,6 +134,7 @@
     "express": "^5.0.1",
     "jest-extended": "^4.0.2",
     "rollup": "^4.12.0",
+    "rollup-plugin-dts": "^6.1.1",
     "typescript": "^5.3.3",
     "typescript-eslint": "^8.18.2",
     "vitest": "^4.1.8"
