@@ -223,32 +223,43 @@ const toolkit = new Toolkit([
 
 ## Structured Output
 
-### JSON Response
+Pass `format` to receive guaranteed-valid JSON. `format` accepts Jaypie's natural schema syntax (preferred), a raw JSON Schema, or a Zod schema.
+
+### Natural Schema
 
 ```typescript
 const response = await Llm.operate(
   "Extract the person's name and age from: 'John is 25 years old'",
   {
-    model: "gpt-4o",
-    responseFormat: {
-      type: "json_schema",
-      json_schema: {
-        name: "person",
-        schema: {
-          type: "object",
-          properties: {
-            name: { type: "string" },
-            age: { type: "number" },
-          },
-        },
-      },
+    model: "gpt-5.1",
+    format: {
+      name: String,
+      age: Number,
     },
   }
 );
 // Returns: { name: "John", age: 25 }
 ```
 
-### Zod Schema Response
+Every array field declared in `format` is guaranteed present in the response as an array — an empty result surfaces as `[]`, never `undefined`.
+
+### JSON Schema
+
+```typescript
+const response = await Llm.operate(prompt, {
+  model: "gpt-5.1",
+  format: {
+    type: "object",
+    properties: {
+      name: { type: "string" },
+      age: { type: "number" },
+    },
+  },
+});
+// Returns: { name: "John", age: 25 }
+```
+
+### Zod Schema
 
 ```typescript
 import { z } from "zod";
@@ -259,8 +270,8 @@ const PersonSchema = z.object({
 });
 
 const response = await Llm.operate(prompt, {
-  model: "gpt-4o",
-  responseSchema: PersonSchema,
+  model: "gpt-5.1",
+  format: PersonSchema,
 });
 // Returns typed object matching PersonSchema
 ```

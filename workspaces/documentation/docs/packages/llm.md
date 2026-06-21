@@ -55,9 +55,9 @@ const response = await Llm.operate("What is 2+2?", {
 | Option | Type | Description |
 |--------|------|-------------|
 | `fallback` | `LlmFallbackConfig[] \| false` | Fallback provider chain |
+| `format` | `NaturalSchema \| JSONSchema \| ZodSchema` | Structured output schema |
 | `maxTokens` | `number` | Maximum response tokens |
 | `model` | `string` | Model identifier |
-| `responseFormat` | `object` | Structured output format |
 | `system` | `string` | System prompt |
 | `temperature` | `number` | Response randomness (0-1) |
 | `tools` | `Toolkit` | Available tools |
@@ -224,32 +224,43 @@ When enabled:
 
 ## Structured Output
 
-### JSON Schema
+Pass `format` to receive guaranteed-valid JSON. `format` accepts Jaypie's natural schema syntax (preferred), a raw JSON Schema, or a Zod schema. (`provider.send` uses `response` for the same purpose.)
+
+### Natural Schema
 
 ```typescript
 const response = await Llm.operate(
   "Extract: 'John is 25 years old'",
   {
-    model: "gpt-4o",
-    responseFormat: {
-      type: "json_schema",
-      json_schema: {
-        name: "person",
-        schema: {
-          type: "object",
-          properties: {
-            name: { type: "string" },
-            age: { type: "number" },
-          },
-        },
-      },
+    model: "gpt-5.1",
+    format: {
+      name: String,
+      age: Number,
     },
   }
 );
 // Returns: { name: "John", age: 25 }
 ```
 
-### Zod Response Schema
+Declared array fields are always present in the response as arrays — an empty result surfaces as `[]`, never `undefined`.
+
+### JSON Schema
+
+```typescript
+const response = await Llm.operate(prompt, {
+  model: "gpt-5.1",
+  format: {
+    type: "object",
+    properties: {
+      name: { type: "string" },
+      age: { type: "number" },
+    },
+  },
+});
+// Returns: { name: "John", age: 25 }
+```
+
+### Zod Schema
 
 ```typescript
 import { z } from "zod";
@@ -260,8 +271,8 @@ const PersonSchema = z.object({
 });
 
 const response = await Llm.operate(prompt, {
-  model: "gpt-4o",
-  responseSchema: PersonSchema,
+  model: "gpt-5.1",
+  format: PersonSchema,
 });
 // Returns typed object
 ```

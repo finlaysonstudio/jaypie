@@ -455,7 +455,7 @@ describe("LLM Integration", () => {
 interface LlmOperateOptions {
   data?: Record<string, any>;           // Placeholder substitution data
   fallback?: LlmFallbackConfig[] | false; // Fallback provider chain
-  format?: JsonObject | ZodType;        // Structured output schema
+  format?: NaturalSchema | JsonObject | ZodType; // Structured output schema (natural syntax preferred)
   history?: LlmHistory;                 // Previous conversation
   hooks?: LlmHooks;                     // Lifecycle callbacks
   instructions?: string;                // Additional instructions
