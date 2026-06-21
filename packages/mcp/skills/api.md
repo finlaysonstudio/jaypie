@@ -60,4 +60,4 @@ Every response body is a JSON object with one top-level key:
 3. Single records use an object: `{ data: {} }`
 4. Multiple records use an array: `{ data: [] }`
 5. Errors always use an array: `{ errors: [] }` (responses only)
-6. No other top-level keys (no `status`, `message`, `meta` at the root)
+6. No other top-level keys (no `status`, `message`, `meta` at the root) except `metadata`
