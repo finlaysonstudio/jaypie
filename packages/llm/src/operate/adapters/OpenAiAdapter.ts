@@ -226,7 +226,16 @@ export class OpenAiAdapter extends BaseProviderAdapter {
         : naturalZodSchema(schema as NaturalSchema);
 
     const responseFormat = zodResponseFormat(zodSchema as any, "response");
-    const jsonSchema = z.toJSONSchema(zodSchema) as Record<string, unknown>;
+    // Re-spread to drop zod v4's non-enumerable `~standard` Standard-Schema
+    // interop marker, then strip `$schema`: OpenAI's strict json_schema subset
+    // does not recognize the draft-2020-12 `$schema` keyword, and shipping it
+    // can leave strict structured-output enforcement silently disabled (the
+    // model then free-forms, omitting required fields and corrupting keys).
+    // Mirrors the OpenRouter adapter's sanitization.
+    const jsonSchema = {
+      ...(z.toJSONSchema(zodSchema) as Record<string, unknown>),
+    };
+    delete jsonSchema.$schema;
 
     // OpenAI requires additionalProperties to be false on all objects
     const checks = [jsonSchema];
