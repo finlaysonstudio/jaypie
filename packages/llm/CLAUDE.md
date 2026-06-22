@@ -374,6 +374,7 @@ npm run typecheck -w packages/llm
 Integration tests in `test/` directory require API keys:
 - `test/client.ts` - Real API calls
 - `test/joke.ts` - Streaming test
+- `test/format.ts` - Multi-word `format` key fidelity (issue #393); run `tsx test/format.ts`, override providers with `APP_PROVIDER=openai,anthropic,...`
 
 ## Commands
 
