@@ -644,6 +644,64 @@ describe("OperateLoop", () => {
 
         expect(result.content).toEqual({ name: "Jane", tags: [] });
       });
+
+      it("repairs quote-wrapped multi-word keys in structured output", async () => {
+        mockAdapter.hasStructuredOutput = vi.fn(() => true);
+        mockAdapter.extractStructuredOutput = vi.fn(() => ({
+          '"Merchant Request"': "refund",
+          Confidence: 5,
+          '"Recommended Actions"': ["call"],
+        }));
+
+        const loop = new OperateLoop({
+          adapter: mockAdapter,
+          client: mockClient,
+        });
+
+        const result = await loop.execute("Get data", {
+          format: {
+            "Merchant Request": String,
+            Confidence: Number,
+            "Recommended Actions": [String],
+          },
+        });
+
+        expect(result.content).toEqual({
+          "Merchant Request": "refund",
+          Confidence: 5,
+          "Recommended Actions": ["call"],
+        });
+      });
+
+      it("repairs quote-wrapped multi-word keys in parsed content", async () => {
+        mockAdapter.parseResponse = vi.fn(
+          (response): ParsedResponse => ({
+            content: { '"Full Name"': "Jane" } as JsonObject,
+            hasToolCalls: false,
+            stopReason: "end_turn",
+            usage: {
+              input: 10,
+              output: 20,
+              reasoning: 0,
+              total: 30,
+              provider: "mock",
+              model: "mock-model",
+            },
+            raw: response,
+          }),
+        );
+
+        const loop = new OperateLoop({
+          adapter: mockAdapter,
+          client: mockClient,
+        });
+
+        const result = await loop.execute("Get data", {
+          format: { "Full Name": String },
+        });
+
+        expect(result.content).toEqual({ "Full Name": "Jane" });
+      });
     });
   });
 
