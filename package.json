@@ -83,6 +83,9 @@
     "typecheck": "npm run typecheck --workspaces"
   },
   "overrides": {
+    "eslint-plugin-import": {
+      "eslint": "$eslint"
+    },
     "sockjs": {
       "uuid": "^11.1.1"
     }
