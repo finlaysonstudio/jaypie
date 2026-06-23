@@ -23,6 +23,7 @@ import {
   fillFormatArrays,
   getLogger,
   maxTurnsFromOptions,
+  repairFormatKeys,
 } from "../util/index.js";
 import { ProviderAdapter } from "./adapters/ProviderAdapter.interface.js";
 import { HookRunner, hookRunner, LlmHooks } from "./hooks/index.js";
@@ -562,9 +563,12 @@ export class OperateLoop {
   }
 
   /**
-   * Backfill declared array fields when a `format` is supplied. A declared
-   * `format` is a schema contract: an empty array field should surface as `[]`
-   * rather than be dropped by a provider/model that omits empty lists.
+   * Reconcile structured output against the declared `format` contract. A
+   * declared `format` is a schema contract: returned keys should match the
+   * declared names exactly and every declared array field should be present.
+   * First repairs keys a provider/model corrupted by wrapping them in literal
+   * double quotes (observed on OpenAI for multi-word keys), then backfills any
+   * declared array field a provider/model omitted, surfacing it as `[]`.
    */
   private applyFormatArrayDefaults(
     content: string | JsonObject | undefined,
@@ -576,7 +580,8 @@ export class OperateLoop {
     if (typeof content !== "object" || content === null) {
       return content;
     }
-    return fillFormatArrays({ content, format: options.format });
+    const repaired = repairFormatKeys({ content, format: options.format });
+    return fillFormatArrays({ content: repaired, format: options.format });
   }
 
   /**
