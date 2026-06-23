@@ -82,6 +82,11 @@
     "test:webkit": "npm run test --workspace packages/webkit",
     "typecheck": "npm run typecheck --workspaces"
   },
+  "overrides": {
+    "sockjs": {
+      "uuid": "^11.1.1"
+    }
+  },
   "devDependencies": {
     "@jaypie/eslint": "*",
     "@jaypie/repokit": "*",
