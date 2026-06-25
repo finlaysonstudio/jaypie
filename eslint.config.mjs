@@ -62,17 +62,6 @@ export default [
 
   //
   //
-  // MCP: Allow gray-matter import
-  //
-  {
-    files: ["packages/mcp/**/*.ts"],
-    rules: {
-      "import-x/no-unresolved": ["error", { ignore: ["gray-matter"] }],
-    },
-  },
-
-  //
-  //
   // Sites: TypeScript/TSX files (allow imports)
   //
   {

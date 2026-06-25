@@ -17,6 +17,11 @@ export { JAYPIE, PROJECT } from "./core.js";
 // Functions
 export * from "./lib/functions.lib.js";
 export { default as cloneDeep } from "./lib/functions/cloneDeep.js";
+export {
+  parseFrontmatter,
+  stringifyFrontmatter,
+} from "./lib/functions/frontmatter.function.js";
+export type { FrontmatterResult } from "./lib/functions/frontmatter.function.js";
 
 // HTTP
 export { default as HTTP } from "./lib/http.lib.js";

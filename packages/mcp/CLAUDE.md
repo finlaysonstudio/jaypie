@@ -177,8 +177,8 @@ npm run format     # eslint --fix
 ## Dependencies
 
 - `@modelcontextprotocol/sdk` - MCP protocol implementation
+- `@jaypie/kit` - YAML frontmatter parsing (`parseFrontmatter`) for release notes
 - `commander` - CLI argument parsing
-- `gray-matter` - YAML frontmatter parsing for skills and release notes
 - `semver` - Version comparison for release notes filtering
 - `rollup-plugin-copy` - Copy help.md files to dist
 

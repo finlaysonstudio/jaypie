@@ -111,7 +111,7 @@ npm run test        # Run tests (vitest run)
 This package is used by the root `/eslint.config.mjs` which:
 1. Spreads the default config as the base
 2. Adds global ignores for documentation and local folders
-3. Overrides for CDK (CommonJS + Jest), MCP (gray-matter import), and documentation packages
+3. Overrides for CDK (CommonJS + Jest) and documentation packages
 
 Example from root config:
 ```javascript

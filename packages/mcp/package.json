@@ -1,6 +1,6 @@
 {
   "name": "@jaypie/mcp",
-  "version": "0.8.81",
+  "version": "0.8.82",
   "description": "Jaypie MCP",
   "repository": {
     "type": "git",
@@ -44,10 +44,10 @@
   },
   "dependencies": {
     "@jaypie/fabric": "^0.3.3",
-    "@jaypie/tildeskill": "^0.3.2",
+    "@jaypie/kit": "^1.2.11",
+    "@jaypie/tildeskill": "^0.3.3",
     "@modelcontextprotocol/sdk": "^1.17.0",
     "commander": "^14.0.0",
-    "gray-matter": "^4.0.3",
     "semver": "^7.7.3",
     "zod": "^4.1.13"
   },

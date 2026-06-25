@@ -31,7 +31,13 @@ export default [
         outDir: "dist/esm",
       }),
     ],
-    external: ["@jaypie/errors", "@jaypie/logger", "node:crypto", "uuid"],
+    external: [
+      "@jaypie/errors",
+      "@jaypie/logger",
+      "js-yaml",
+      "node:crypto",
+      "uuid",
+    ],
   },
   // CommonJS version
   {
@@ -51,7 +57,13 @@ export default [
         outDir: "dist/cjs",
       }),
     ],
-    external: ["@jaypie/errors", "@jaypie/logger", "node:crypto", "uuid"],
+    external: [
+      "@jaypie/errors",
+      "@jaypie/logger",
+      "js-yaml",
+      "node:crypto",
+      "uuid",
+    ],
   },
   // Type definitions (ESM): bundled to a single self-contained declaration file.
   {
