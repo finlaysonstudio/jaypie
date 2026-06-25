@@ -322,4 +322,4 @@ npm run format     # eslint --fix
 ## Dependencies
 
 - `@jaypie/errors` - Error types for validation failures
-- `gray-matter` - YAML frontmatter parsing
+- `@jaypie/kit` - YAML frontmatter parsing (`parseFrontmatter`, `stringifyFrontmatter`)

@@ -82,6 +82,19 @@
     "test:webkit": "npm run test --workspace packages/webkit",
     "typecheck": "npm run typecheck --workspaces"
   },
+  "overrides": {
+    "eslint-plugin-import": {
+      "eslint": "$eslint"
+    },
+    "js-yaml@^4.0.0": "^4.2.0",
+    "next": {
+      "postcss": "^8.5.15"
+    },
+    "serialize-javascript": "^7.0.5",
+    "sockjs": {
+      "uuid": "^11.1.1"
+    }
+  },
   "devDependencies": {
     "@jaypie/eslint": "*",
     "@jaypie/repokit": "*",

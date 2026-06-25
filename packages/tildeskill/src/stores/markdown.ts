@@ -1,7 +1,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 
-import matter from "gray-matter";
+import { parseFrontmatter, stringifyFrontmatter } from "@jaypie/kit";
 
 import { normalizeAlias, parseList } from "../core/normalize";
 import { getAlternativeSpellings } from "../core/spellings";
@@ -21,8 +21,8 @@ async function parseSkillFile(filePath: string): Promise<SkillRecord> {
   const alias = normalizeAlias(path.basename(filePath, ".md"));
 
   if (content.startsWith("---")) {
-    const parsed = matter(content);
-    const frontMatter = parsed.data as SkillFrontMatter;
+    const parsed = parseFrontmatter<SkillFrontMatter>(content);
+    const frontMatter = parsed.data;
     return {
       alias,
       content: parsed.content.trim(),
@@ -139,7 +139,7 @@ export function createMarkdownStore({
       // Build file content
       let fileContent: string;
       if (Object.keys(frontMatter).length > 0) {
-        fileContent = matter.stringify(record.content, frontMatter);
+        fileContent = stringifyFrontmatter(record.content, frontMatter);
       } else {
         fileContent = record.content;
       }

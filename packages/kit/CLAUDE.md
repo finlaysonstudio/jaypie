@@ -6,7 +6,7 @@ Utility functions for Jaypie applications. This is a foundational package provid
 
 **Used by:** `@jaypie/aws`, `@jaypie/core`, `@jaypie/datadog`, `@jaypie/express`, `@jaypie/jaypie`, `@jaypie/lambda`, `@jaypie/llm`, `@jaypie/mongoose`, `@jaypie/testkit`
 
-**Depends on:** `@jaypie/errors`, `@jaypie/logger`, `uuid`
+**Depends on:** `@jaypie/errors`, `@jaypie/logger`, `js-yaml`, `uuid`
 
 ## Directory Structure
 
@@ -92,10 +92,12 @@ src/
 - `getHeaderFrom(headers, key)` - Case-insensitive header lookup
 - `getObjectKeyCaseInsensitive(obj, key)` - Case-insensitive object key lookup
 - `isClass(value)` - Check if value is a class constructor
+- `parseFrontmatter(content)` - Parse YAML frontmatter, returns `{ content, data }`
 - `placeholders(template, values)` - Replace placeholders in strings
 - `resolveValue(value)` - Await value if it's a promise
 - `safeParseFloat(value)` - Safe float parsing
 - `sleep(ms)` - Promise-based delay
+- `stringifyFrontmatter(content, data)` - Serialize body + frontmatter to a string
 - `uuid()` - Generate UUID v4 (re-exported from `uuid`)
 
 ## Usage Patterns

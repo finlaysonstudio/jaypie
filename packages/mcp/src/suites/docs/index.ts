@@ -2,6 +2,7 @@
  * Docs Suite - Documentation services (skill, version, release_notes)
  */
 import { fabricService } from "@jaypie/fabric";
+import { parseFrontmatter } from "@jaypie/kit";
 import {
   createLayeredStore,
   createMarkdownStore,
@@ -11,7 +12,6 @@ import {
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
-import matter from "gray-matter";
 import { gt } from "semver";
 
 // Build-time constants
@@ -82,8 +82,7 @@ async function parseReleaseNoteFile(filePath: string): Promise<{
     const filename = path.basename(filePath, ".md");
 
     if (content.startsWith("---")) {
-      const parsed = matter(content);
-      const frontMatter = parsed.data as ReleaseNoteFrontMatter;
+      const frontMatter = parseFrontmatter<ReleaseNoteFrontMatter>(content).data;
       return {
         date: frontMatter.date,
         filename,
