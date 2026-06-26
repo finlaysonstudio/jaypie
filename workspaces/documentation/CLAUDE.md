@@ -81,7 +81,7 @@ Edit `src/pages/index.tsx` to modify:
 
 ### Sidebar Categories (sidebars.ts)
 
-- Main Packages: aws, core, datadog, errors, express, kit, lambda, llm, logger, mongoose
+- Main Packages: aws, core, datadog, errors, express, kit, lambda, llm, logger
 - Extra Packages: constructs, mcp, textract
 - Utility Packages: eslint, testkit, types
 - Deprecated: cdk

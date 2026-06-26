@@ -97,9 +97,6 @@ Uses `loadEnvSecrets` to load secrets during handler initialization. Also uses `
 ### @jaypie/llm
 Uses `getEnvSecret` to fetch API keys for LLM providers (Anthropic, OpenAI, Gemini, OpenRouter).
 
-### @jaypie/mongoose
-Uses `getSecret` for database connection string retrieval.
-
 ### @jaypie/datadog
 Uses `getSecret` to fetch Datadog API keys.
 

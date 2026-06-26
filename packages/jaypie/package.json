@@ -59,14 +59,10 @@
     "typescript-eslint": "^8.46.1"
   },
   "peerDependencies": {
-    "@jaypie/llm": "^1.2.39",
-    "@jaypie/mongoose": "^1.2.2"
+    "@jaypie/llm": "^1.2.39"
   },
   "peerDependenciesMeta": {
     "@jaypie/llm": {
-      "optional": true
-    },
-    "@jaypie/mongoose": {
       "optional": true
     }
   },

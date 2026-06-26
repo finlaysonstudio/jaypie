@@ -35,7 +35,6 @@ src/
 ## Peer Dependencies (Optional)
 
 - `@jaypie/llm` - LLM provider integrations
-- `@jaypie/mongoose` - MongoDB/Mongoose utilities
 
 ## Local Exports
 

@@ -17,7 +17,6 @@ export default defineConfig({
       "packages/logger",
       "packages/llm",
       "packages/mcp",
-      "packages/mongoose",
       "packages/repokit",
       "packages/testkit",
       "packages/textract",
