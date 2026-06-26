@@ -46,9 +46,9 @@
     "@jaypie/fabric": "^0.3.3",
     "@jaypie/kit": "^1.2.11",
     "@jaypie/tildeskill": "^0.3.3",
-    "@modelcontextprotocol/sdk": "^1.17.0",
+    "@modelcontextprotocol/sdk": "1.27.1",
     "commander": "^14.0.0",
-    "semver": "^7.7.3",
+    "semver": "^7.8.5",
     "zod": "^4.1.13"
   },
   "devDependencies": {
