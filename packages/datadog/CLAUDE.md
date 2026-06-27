@@ -19,6 +19,8 @@ Provides functions to submit metrics to Datadog from Jaypie applications. Suppor
 | `submitDistribution` | Async Function | Submit distribution metrics (percentiles, histograms) |
 | `submitMetric` | Async Function | Submit a single metric |
 | `submitMetricSet` | Async Function | Submit multiple metrics in one call |
+| `tagSpan` | Function | Set tag(s) on the active APM span. `tagSpan(key, value)` or `tagSpan({ ... })`. Caller owns the key namespace; silently no-ops with no active span and never throws |
+| `traceSpan` | Function | Run a callback as a child span (`traceSpan(name, fn)`), active across awaits so the region's duration is measured on its own. Returns `fn`'s result; no-ops to just running `fn` without a tracer |
 
 ## File Structure
 
@@ -31,10 +33,12 @@ src/
   loadDatadogApiKey.function.ts # Load DD_API_KEY from secret ARN for LLM Observability
   index.ts                  # Public exports
   objectToKeyValueArray.pipeline.ts  # Convert tag objects to Datadog format
+  span.ts                   # tagSpan / traceSpan — tag and measure the active APM span
   statsd.client.ts          # StatsD client for Lambda extension
   submitDistribution.adapter.ts     # Distribution metric submission
   submitMetric.adapter.ts           # Single metric submission
   submitMetricSet.adapter.ts        # Batch metric submission
+  tracer.client.ts          # Bundler-safe dd-trace tracer singleton resolver (shared by span helpers)
 ```
 
 ## Usage Patterns
