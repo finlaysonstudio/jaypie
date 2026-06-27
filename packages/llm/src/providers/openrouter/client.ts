@@ -1,13 +1,13 @@
 import { JsonObject } from "@jaypie/types";
 
+import { parseSseStream } from "../../util/sse.js";
+
 //
 //
 // Constants
 //
 
 const OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1";
-
-const SSE_DONE = "[DONE]";
 
 //
 //
@@ -48,44 +48,6 @@ export class OpenRouterHttpError extends Error {
 //
 // Helpers
 //
-
-/**
- * Parse an OpenAI-style Server-Sent Events stream into decoded JSON chunks.
- * Buffers across network reads, dispatches on blank lines, and stops at the
- * `[DONE]` sentinel. Comment lines (`: ...`, used by OpenRouter for keep-alive)
- * are ignored.
- */
-async function* parseSseStream(
-  body: ReadableStream<Uint8Array>,
-): AsyncIterable<JsonObject> {
-  const reader = body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = "";
-
-  try {
-    for (;;) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      buffer += decoder.decode(value, { stream: true });
-
-      let newlineIndex: number;
-      while ((newlineIndex = buffer.indexOf("\n")) !== -1) {
-        const line = buffer.slice(0, newlineIndex).replace(/\r$/, "");
-        buffer = buffer.slice(newlineIndex + 1);
-
-        if (line === "" || line.startsWith(":")) continue;
-        if (!line.startsWith("data:")) continue;
-
-        const data = line.slice("data:".length).trim();
-        if (data === SSE_DONE) return;
-
-        yield JSON.parse(data) as JsonObject;
-      }
-    }
-  } finally {
-    reader.releaseLock();
-  }
-}
 
 /**
  * Normalize the snake_case wire response into the camelCase shape the adapter

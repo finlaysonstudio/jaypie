@@ -1,5 +1,5 @@
 import { JsonObject } from "@jaypie/types";
-import type { GoogleGenAI } from "@google/genai";
+import type { GoogleClient } from "./client.js";
 import { PROVIDER } from "../../constants.js";
 import {
   createOperateLoop,
@@ -22,7 +22,7 @@ import { getLogger, initializeClient, prepareMessages } from "./utils.js";
 
 export class GoogleProvider implements LlmProvider {
   private model: string;
-  private _client?: GoogleGenAI;
+  private _client?: GoogleClient;
   private _operateLoop?: OperateLoop;
   private _streamLoop?: StreamLoop;
   private apiKey?: string;
@@ -37,7 +37,7 @@ export class GoogleProvider implements LlmProvider {
     this.apiKey = apiKey;
   }
 
-  private async getClient(): Promise<GoogleGenAI> {
+  private async getClient(): Promise<GoogleClient> {
     if (this._client) {
       return this._client;
     }

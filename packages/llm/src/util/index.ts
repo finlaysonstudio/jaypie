@@ -9,4 +9,5 @@ export * from "./maxTurnsFromOptions.js";
 export * from "./naturalZodSchema.js";
 export * from "./random.js";
 export * from "./repairFormatKeys.js";
+export * from "./sse.js";
 export * from "./tryParseNumber.js";
