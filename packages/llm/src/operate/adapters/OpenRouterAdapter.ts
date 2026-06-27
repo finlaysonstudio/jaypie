@@ -589,8 +589,9 @@ export class OpenRouterAdapter extends BaseProviderAdapter {
    */
   private toSdkChatParams(
     openRouterRequest: OpenRouterRequest,
+    { stream }: { stream?: boolean } = {},
   ): Record<string, unknown> {
-    const params: Record<string, unknown> = {
+    const chatRequest: Record<string, unknown> = {
       model: openRouterRequest.model,
       messages: openRouterRequest.messages,
       tools: openRouterRequest.tools,
@@ -600,21 +601,25 @@ export class OpenRouterAdapter extends BaseProviderAdapter {
     if (openRouterRequest.response_format) {
       const format = openRouterRequest.response_format;
       if (format.type === "json_schema") {
-        params.responseFormat = {
+        chatRequest.responseFormat = {
           type: "json_schema",
           jsonSchema: format.json_schema,
         };
       } else {
-        params.responseFormat = format;
+        chatRequest.responseFormat = format;
       }
     }
     const temperature = (
       openRouterRequest as unknown as { temperature?: number }
     ).temperature;
     if (temperature !== undefined) {
-      params.temperature = temperature;
+      chatRequest.temperature = temperature;
     }
-    return params;
+    if (stream) {
+      chatRequest.stream = true;
+    }
+    // The SDK (>=0.13) wraps the chat completion payload in `chatRequest`.
+    return { chatRequest };
   }
 
   /**
@@ -662,10 +667,9 @@ export class OpenRouterAdapter extends BaseProviderAdapter {
     // Cast the result to AsyncIterable: when stream: true, the SDK returns a
     // stream we can iterate, but the typed result is the union with the
     // non-stream response.
-    const streamParams = {
-      ...this.toSdkChatParams(openRouterRequest),
+    const streamParams = this.toSdkChatParams(openRouterRequest, {
       stream: true,
-    };
+    });
     const stream = (await openRouter.chat.send(
       streamParams as Parameters<typeof openRouter.chat.send>[0],
       signal ? { signal } : undefined,

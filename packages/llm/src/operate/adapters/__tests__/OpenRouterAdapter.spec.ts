@@ -901,7 +901,7 @@ describe("OpenRouterAdapter", () => {
         const result = await adapter.executeRequest(mockClient, built);
 
         expect(mockSend).toHaveBeenCalledTimes(2);
-        const fallbackCallParams = mockSend.mock.calls[1][0];
+        const fallbackCallParams = mockSend.mock.calls[1][0].chatRequest;
         expect(fallbackCallParams.responseFormat).toBeUndefined();
         expect(fallbackCallParams.tools).toBeDefined();
         expect(

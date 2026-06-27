@@ -84,10 +84,14 @@ export class OpenRouterProvider implements LlmProvider {
     const messages = prepareMessages(message, options);
     const modelToUse = options?.model || this.model;
 
-    // Build the request
+    // Build the request. The SDK (>=0.13) wraps the payload in `chatRequest`.
     const response = await client.chat.send({
-      model: modelToUse,
-      messages: messages as Parameters<typeof client.chat.send>[0]["messages"],
+      chatRequest: {
+        model: modelToUse,
+        messages: messages as Parameters<
+          typeof client.chat.send
+        >[0]["chatRequest"]["messages"],
+      },
     });
 
     const rawContent = response.choices?.[0]?.message?.content;
