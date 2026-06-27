@@ -1,4 +1,5 @@
 import {
+  createMockFunction,
   createMockResolvedFunction,
   createMockReturnedFunction,
   createMockWrappedFunction,
@@ -18,3 +19,8 @@ export const loadDatadogApiKey = createMockResolvedFunction(false);
 export const submitDistribution = createMockResolvedFunction(true);
 export const submitMetric = createMockResolvedFunction(true);
 export const submitMetricSet = createMockResolvedFunction(true);
+// No-op on the active span; the traced region's callback still runs.
+export const tagSpan = createMockReturnedFunction(undefined);
+export const traceSpan = createMockFunction(
+  (_name: string, fn: () => unknown) => fn(),
+);

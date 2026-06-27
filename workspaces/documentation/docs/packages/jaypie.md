@@ -214,9 +214,6 @@ For additional functionality, install optional packages:
 # LLM integration
 npm install @jaypie/llm
 
-# MongoDB connection
-npm install @jaypie/mongoose
-
 # CDK constructs
 npm install @jaypie/constructs
 ```

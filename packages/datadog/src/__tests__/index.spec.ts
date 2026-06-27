@@ -8,6 +8,8 @@ import {
   submitDistribution,
   submitMetric,
   submitMetricSet,
+  tagSpan,
+  traceSpan,
 } from "../index.js";
 
 //
@@ -25,5 +27,7 @@ describe("Index", () => {
     expect(submitDistribution).toBeFunction();
     expect(submitMetric).toBeFunction();
     expect(submitMetricSet).toBeFunction();
+    expect(tagSpan).toBeFunction();
+    expect(traceSpan).toBeFunction();
   });
 });

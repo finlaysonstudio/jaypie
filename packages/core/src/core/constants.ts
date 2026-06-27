@@ -30,7 +30,6 @@ export const JAYPIE = {
     MATCHERS: "@jaypie/matchers",
     MCP: "@jaypie/mcp",
     MOCK: "@jaypie/mock",
-    MONGOOSE: "@jaypie/mongoose",
     TESTKIT: "@jaypie/testkit",
     TEXTTRACT: "@jaypie/textract",
     TYPES: "@jaypie/types",

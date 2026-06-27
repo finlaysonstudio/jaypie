@@ -86,6 +86,9 @@ const HTTP = {
       ED25519: "X-Signature-Ed25519",
       TIMESTAMP: "X-Signature-Timestamp",
     },
+    TEST: {
+      RUN: "X-Test-Run-Id",
+    },
     USER_AGENT: "User-Agent",
     VIA: "Via",
     WEBHOOK_SIGNATURE: "X-Webhook-Signature",

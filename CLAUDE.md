@@ -32,7 +32,6 @@
 | `@jaypie/logger` | Logging utilities |
 | `@jaypie/magpie` | Open source utility collection |
 | `@jaypie/mcp` | Model Context Protocol server |
-| `@jaypie/mongoose` | MongoDB/Mongoose connection utilities |
 | `@jaypie/repokit` | Repository development tools |
 | `@jaypie/testkit` | Testing mocks and utilities |
 | `@jaypie/textract` | AWS Textract utilities |

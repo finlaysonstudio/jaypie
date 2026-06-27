@@ -4,7 +4,7 @@ Utility functions for Jaypie applications. This is a foundational package provid
 
 ## Package Dependencies
 
-**Used by:** `@jaypie/aws`, `@jaypie/core`, `@jaypie/datadog`, `@jaypie/express`, `@jaypie/jaypie`, `@jaypie/lambda`, `@jaypie/llm`, `@jaypie/mongoose`, `@jaypie/testkit`
+**Used by:** `@jaypie/aws`, `@jaypie/core`, `@jaypie/datadog`, `@jaypie/express`, `@jaypie/jaypie`, `@jaypie/lambda`, `@jaypie/llm`, `@jaypie/testkit`
 
 **Depends on:** `@jaypie/errors`, `@jaypie/logger`, `js-yaml`, `uuid`
 

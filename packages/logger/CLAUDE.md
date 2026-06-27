@@ -35,7 +35,6 @@ This package is a dependency of:
 - `@jaypie/kit`
 - `@jaypie/lambda`
 - `@jaypie/llm`
-- `@jaypie/mongoose`
 - `@jaypie/testkit`
 - `@jaypie/textract`
 

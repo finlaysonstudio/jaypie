@@ -12,6 +12,8 @@ import {
   // Datadog
   DATADOG,
   submitMetric,
+  tagSpan,
+  traceSpan,
   // Express
   EXPRESS,
   expressHandler,
@@ -50,6 +52,8 @@ describe("Index", () => {
     it("Exports Datadog constant and functions", () => {
       expect(DATADOG).toBeDefined();
       expect(submitMetric).toBeFunction();
+      expect(tagSpan).toBeFunction();
+      expect(traceSpan).toBeFunction();
     });
   });
 
