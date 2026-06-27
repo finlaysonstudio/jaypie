@@ -19,8 +19,9 @@ The "Fabric Vocabulary" attempts to reserve words for implied uses and encourage
 8. Context: scope in which propositions hold
 9. Model: category bound to a specification of attributes; defines entity identity and structure
 10. Service: responds to event inputs and performs actions that transforms state within context
+11. Composition: services joined so emitted state becomes the next event-input; itself a service
 
-Arguably composition, identity, instance, and relation would form a more complete vocabulary.
+Arguably identity, instance, and relation would form a more complete vocabulary.
 
 ### Further Postulates
 
@@ -108,6 +109,21 @@ Avoid words defined elsewhere (services, terminology)
 - ~Servers~ are transport adapters that consume ~suites~
 - ~Suites~ are collections of services
 
+## Fabric Composition
+
+A composition wires services into a graph; it is itself a service.
+
+- edge: directed link carrying one service's emitted state to the next service's event-input
+- guard: per-edge predicate; whether an edge is eligible to fire; gates, does not choose; optional
+- selector: node function choosing which eligible edge fires
+- entry: where a composition begins
+- terminal: where a composition halts; a state it no longer transforms
+
+### Composition Models
+
+- workflow: a composition that specifies its selector, entry, and terminal
+- agent: a composition that infers its selector, entry, or terminal
+
 ## File Systems and Monorepos
 
 - bin: scripts
@@ -148,7 +164,7 @@ SEPARATOR = "#";
 
 ## Additional Terminology
 
-- debug: logging, 
+- debug: logging, operating checkpoint or abnormal condition
 - error: logging, detected an unrecoverable state and exiting (caught error)
 - fatal: logging, exiting because an unrecoverable state was encountered (uncaught exceptions)
 - info: logging, emits lifecycle start/stop, rarely for essential values (most metrics push directly to Datadog)

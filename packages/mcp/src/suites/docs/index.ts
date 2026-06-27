@@ -82,7 +82,8 @@ async function parseReleaseNoteFile(filePath: string): Promise<{
     const filename = path.basename(filePath, ".md");
 
     if (content.startsWith("---")) {
-      const frontMatter = parseFrontmatter<ReleaseNoteFrontMatter>(content).data;
+      const frontMatter =
+        parseFrontmatter<ReleaseNoteFrontMatter>(content).data;
       return {
         date: frontMatter.date,
         filename,
