@@ -2,9 +2,9 @@ import { getEnvSecret } from "@jaypie/aws";
 import { ConfigurationError } from "@jaypie/errors";
 import { JAYPIE } from "@jaypie/kit";
 import { createLogger, log as defaultLog } from "@jaypie/logger";
-import { OpenAI } from "openai";
 
 import { PROVIDER } from "../../constants.js";
+import { OpenAIClient } from "../openai/client.js";
 
 // Logger
 export const getLogger = (): ReturnType<typeof createLogger> =>
@@ -15,7 +15,7 @@ export async function initializeClient({
   apiKey,
 }: {
   apiKey?: string;
-} = {}): Promise<OpenAI> {
+} = {}): Promise<OpenAIClient> {
   const logger = getLogger();
   const resolvedApiKey = apiKey || (await getEnvSecret(PROVIDER.XAI.API_KEY));
 
@@ -25,7 +25,7 @@ export async function initializeClient({
     );
   }
 
-  const client = new OpenAI({
+  const client = new OpenAIClient({
     apiKey: resolvedApiKey,
     baseURL: PROVIDER.XAI.BASE_URL,
   });

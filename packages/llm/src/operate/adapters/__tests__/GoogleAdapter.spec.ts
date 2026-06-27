@@ -14,10 +14,6 @@ import {
 // Mock
 //
 
-vi.mock("@google/genai", () => ({
-  GoogleGenAI: vi.fn(),
-}));
-
 vi.mock("zod/v4", () => ({
   z: {
     ZodType: class ZodType {},

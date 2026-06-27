@@ -2,27 +2,13 @@ import { getEnvSecret } from "@jaypie/aws";
 import { ConfigurationError } from "@jaypie/errors";
 import { JAYPIE, placeholders as replacePlaceholders } from "@jaypie/kit";
 import { createLogger, log as defaultLog, log } from "@jaypie/logger";
-import type Anthropic from "@anthropic-ai/sdk";
 import { PROVIDER } from "../../constants.js";
 import { LlmMessageOptions } from "../../types/LlmProvider.interface.js";
 import { naturalZodSchema } from "../../util/index.js";
 import { z } from "zod/v4";
 import { JsonObject, NaturalSchema } from "@jaypie/types";
-
-// SDK loader with caching
-let cachedSdk: typeof import("@anthropic-ai/sdk") | null = null;
-
-export async function loadSdk(): Promise<typeof import("@anthropic-ai/sdk")> {
-  if (cachedSdk) return cachedSdk;
-  try {
-    cachedSdk = await import("@anthropic-ai/sdk");
-    return cachedSdk;
-  } catch {
-    throw new ConfigurationError(
-      "@anthropic-ai/sdk is required but not installed. Run: npm install @anthropic-ai/sdk",
-    );
-  }
-}
+import { AnthropicClient } from "./client.js";
+import type { Anthropic } from "./types.js";
 
 // Logger
 export const getLogger = (): ReturnType<typeof createLogger> =>
@@ -33,7 +19,7 @@ export async function initializeClient({
   apiKey,
 }: {
   apiKey?: string;
-} = {}): Promise<Anthropic> {
+} = {}): Promise<AnthropicClient> {
   const logger = getLogger();
   const resolvedApiKey = apiKey || (await getEnvSecret("ANTHROPIC_API_KEY"));
 
@@ -43,8 +29,7 @@ export async function initializeClient({
     );
   }
 
-  const sdk = await loadSdk();
-  const client = new sdk.default({ apiKey: resolvedApiKey });
+  const client = new AnthropicClient({ apiKey: resolvedApiKey });
   logger.trace("Initialized Anthropic client");
   return client;
 }
@@ -91,7 +76,7 @@ export function prepareMessages(
 
 // Basic text completion
 export async function createTextCompletion(
-  client: Anthropic,
+  client: AnthropicClient,
   messages: Anthropic.MessageParam[],
   model: string,
   systemMessage?: string,
@@ -124,7 +109,7 @@ export async function createTextCompletion(
 // field. Returns a JsonObject parsed and validated against the caller's
 // Zod schema.
 export async function createStructuredCompletion(
-  client: Anthropic,
+  client: AnthropicClient,
   messages: Anthropic.MessageParam[],
   model: string,
   responseSchema: z.ZodType | NaturalSchema,

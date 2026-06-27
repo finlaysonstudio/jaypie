@@ -14,10 +14,6 @@ import {
 // Mock
 //
 
-vi.mock("@openrouter/sdk", () => ({
-  OpenRouter: vi.fn(),
-}));
-
 vi.mock("zod/v4", () => ({
   z: {
     ZodType: class ZodType {},
@@ -882,7 +878,7 @@ describe("OpenRouterAdapter", () => {
           .fn()
           .mockRejectedValueOnce(error)
           .mockResolvedValueOnce(successResponse);
-        const mockClient = { chat: { send: mockSend } };
+        const mockClient = { chatCompletion: mockSend };
         const request: OperateRequest = {
           model: PROVIDER.OPENROUTER.MODEL.DEFAULT,
           messages: [
@@ -902,7 +898,7 @@ describe("OpenRouterAdapter", () => {
 
         expect(mockSend).toHaveBeenCalledTimes(2);
         const fallbackCallParams = mockSend.mock.calls[1][0];
-        expect(fallbackCallParams.responseFormat).toBeUndefined();
+        expect(fallbackCallParams.response_format).toBeUndefined();
         expect(fallbackCallParams.tools).toBeDefined();
         expect(
           fallbackCallParams.tools.some(
@@ -947,7 +943,7 @@ describe("OpenRouterAdapter", () => {
           status: 400,
         });
         const mockSend = vi.fn().mockRejectedValue(error);
-        const mockClient = { chat: { send: mockSend } };
+        const mockClient = { chatCompletion: mockSend };
         const request: OperateRequest = {
           model: PROVIDER.OPENROUTER.MODEL.DEFAULT,
           messages: [],
@@ -1095,7 +1091,7 @@ describe("OpenRouterAdapter", () => {
           id: "resp-1",
           choices: [{ message: { role: "assistant", content: "Hi" } }],
         });
-        const mockClient = { chat: { send: mockSend } };
+        const mockClient = { chatCompletion: mockSend };
         const request = {
           model: PROVIDER.OPENROUTER.MODEL.DEFAULT,
           messages: [{ role: "user", content: "Hello" }],
@@ -1118,7 +1114,7 @@ describe("OpenRouterAdapter", () => {
         controller.abort("retry");
 
         const mockSend = vi.fn().mockRejectedValue(new TypeError("terminated"));
-        const mockClient = { chat: { send: mockSend } };
+        const mockClient = { chatCompletion: mockSend };
         const request = {
           model: PROVIDER.OPENROUTER.MODEL.DEFAULT,
           messages: [{ role: "user", content: "Hello" }],
@@ -1137,7 +1133,7 @@ describe("OpenRouterAdapter", () => {
         const controller = new AbortController();
 
         const mockSend = vi.fn().mockRejectedValue(new Error("real error"));
-        const mockClient = { chat: { send: mockSend } };
+        const mockClient = { chatCompletion: mockSend };
         const request = {
           model: PROVIDER.OPENROUTER.MODEL.DEFAULT,
           messages: [{ role: "user", content: "Hello" }],
@@ -1157,7 +1153,7 @@ describe("OpenRouterAdapter", () => {
           id: "resp-1",
           choices: [{ message: { role: "assistant", content: "Hi" } }],
         });
-        const mockClient = { chat: { send: mockSend } };
+        const mockClient = { chatCompletion: mockSend };
         const request = {
           model: PROVIDER.OPENROUTER.MODEL.DEFAULT,
           messages: [{ role: "user", content: "Hello" }],

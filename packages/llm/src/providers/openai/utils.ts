@@ -3,11 +3,11 @@ import { ConfigurationError } from "@jaypie/errors";
 import { JAYPIE, placeholders as replacePlaceholders } from "@jaypie/kit";
 import { createLogger, log as defaultLog } from "@jaypie/logger";
 import { JsonObject, NaturalSchema } from "@jaypie/types";
-import { OpenAI } from "openai";
-import { zodResponseFormat } from "openai/helpers/zod";
 import { z } from "zod/v4";
 import { LlmMessageOptions } from "../../types/LlmProvider.interface.js";
 import { naturalZodSchema } from "../../util";
+import { OpenAIClient } from "./client.js";
+import { zodResponseFormat } from "./responseFormat.js";
 
 // Logger
 export const getLogger = (): ReturnType<typeof createLogger> =>
@@ -18,7 +18,7 @@ export async function initializeClient({
   apiKey,
 }: {
   apiKey?: string;
-} = {}): Promise<OpenAI> {
+} = {}): Promise<OpenAIClient> {
   const logger = getLogger();
   const resolvedApiKey = apiKey || (await getEnvSecret("OPENAI_API_KEY"));
 
@@ -28,7 +28,7 @@ export async function initializeClient({
     );
   }
 
-  const client = new OpenAI({ apiKey: resolvedApiKey });
+  const client = new OpenAIClient({ apiKey: resolvedApiKey });
   logger.trace("Initialized OpenAI client");
   return client;
 }
@@ -91,7 +91,7 @@ export function prepareMessages(
 
 // Completion requests
 export async function createStructuredCompletion(
-  client: OpenAI,
+  client: OpenAIClient,
   {
     messages,
     responseSchema,
@@ -128,20 +128,20 @@ export async function createStructuredCompletion(
     });
     checks.shift();
   }
-  responseFormat.json_schema.schema = jsonSchema;
+  responseFormat.json_schema.schema = jsonSchema as JsonObject;
 
-  const completion = await client.chat.completions.parse({
+  const completion = (await client.chat.completions.parse({
     messages,
     model,
     response_format: responseFormat,
-  });
+  })) as { choices: Array<{ message: { parsed: JsonObject } }> };
 
   logger.var({ assistantReply: completion.choices[0].message.parsed });
   return completion.choices[0].message.parsed;
 }
 
 export async function createTextCompletion(
-  client: OpenAI,
+  client: OpenAIClient,
   {
     messages,
     model,
@@ -153,14 +153,14 @@ export async function createTextCompletion(
   const logger = getLogger();
   logger.trace("Using text output (unstructured)");
 
-  const completion = await client.chat.completions.create({
+  const completion = (await client.chat.completions.create({
     messages,
     model,
-  });
+  })) as { choices?: Array<{ message?: { content?: string } }> };
 
   logger.trace(
-    `Assistant reply: ${completion.choices[0]?.message?.content?.length} characters`,
+    `Assistant reply: ${completion.choices?.[0]?.message?.content?.length} characters`,
   );
 
-  return completion.choices[0]?.message?.content || "";
+  return completion.choices?.[0]?.message?.content || "";
 }

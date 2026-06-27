@@ -14,58 +14,6 @@ import {
 // Mock
 //
 
-vi.mock("@anthropic-ai/sdk", () => ({
-  Anthropic: vi.fn(),
-  APIConnectionError: class APIConnectionError extends Error {
-    constructor(..._args: any[]) {
-      super("Connection error");
-      this.name = "APIConnectionError";
-    }
-  },
-  APIConnectionTimeoutError: class APIConnectionTimeoutError extends Error {
-    constructor(..._args: any[]) {
-      super("Timeout");
-      this.name = "APIConnectionTimeoutError";
-    }
-  },
-  AuthenticationError: class AuthenticationError extends Error {
-    constructor(..._args: any[]) {
-      super("Auth error");
-      this.name = "AuthenticationError";
-    }
-  },
-  BadRequestError: class BadRequestError extends Error {
-    constructor(..._args: any[]) {
-      super("Bad request");
-      this.name = "BadRequestError";
-    }
-  },
-  InternalServerError: class InternalServerError extends Error {
-    constructor(..._args: any[]) {
-      super("Internal error");
-      this.name = "InternalServerError";
-    }
-  },
-  NotFoundError: class NotFoundError extends Error {
-    constructor(..._args: any[]) {
-      super("Not found");
-      this.name = "NotFoundError";
-    }
-  },
-  PermissionDeniedError: class PermissionDeniedError extends Error {
-    constructor(..._args: any[]) {
-      super("Permission denied");
-      this.name = "PermissionDeniedError";
-    }
-  },
-  RateLimitError: class RateLimitError extends Error {
-    constructor(..._args: any[]) {
-      super("Rate limit");
-      this.name = "RateLimitError";
-    }
-  },
-}));
-
 vi.mock("zod/v4", () => ({
   z: {
     ZodType: class ZodType {},
@@ -767,7 +715,8 @@ describe("AnthropicAdapter", () => {
 
     describe("classifyError", () => {
       it("classifies rate limit error", async () => {
-        const { RateLimitError } = await import("@anthropic-ai/sdk");
+        const { RateLimitError } =
+          await import("../../../providers/anthropic/client.js");
         // @ts-expect-error Mock doesn't require constructor args
         const error = new RateLimitError();
 
@@ -778,7 +727,8 @@ describe("AnthropicAdapter", () => {
       });
 
       it("classifies retryable error", async () => {
-        const { InternalServerError } = await import("@anthropic-ai/sdk");
+        const { InternalServerError } =
+          await import("../../../providers/anthropic/client.js");
         // @ts-expect-error Mock doesn't require constructor args
         const error = new InternalServerError();
 
@@ -789,7 +739,8 @@ describe("AnthropicAdapter", () => {
       });
 
       it("classifies unrecoverable error", async () => {
-        const { AuthenticationError } = await import("@anthropic-ai/sdk");
+        const { AuthenticationError } =
+          await import("../../../providers/anthropic/client.js");
         // @ts-expect-error Mock doesn't require constructor args
         const error = new AuthenticationError();
 
@@ -936,7 +887,8 @@ describe("AnthropicAdapter", () => {
     });
 
     it("retries without temperature when Anthropic rejects it with 400", async () => {
-      const { BadRequestError } = await import("@anthropic-ai/sdk");
+      const { BadRequestError } =
+        await import("../../../providers/anthropic/client.js");
       // @ts-expect-error Mock doesn't require constructor args
       const error = new BadRequestError();
       (error as unknown as { status: number }).status = 400;
@@ -971,7 +923,8 @@ describe("AnthropicAdapter", () => {
     });
 
     it("caches the model so subsequent buildRequest strips temperature", async () => {
-      const { BadRequestError } = await import("@anthropic-ai/sdk");
+      const { BadRequestError } =
+        await import("../../../providers/anthropic/client.js");
       // @ts-expect-error Mock doesn't require constructor args
       const error = new BadRequestError();
       (error as unknown as { status: number }).status = 400;
@@ -1003,7 +956,8 @@ describe("AnthropicAdapter", () => {
     });
 
     it("does not retry on 400 unrelated to temperature", async () => {
-      const { BadRequestError } = await import("@anthropic-ai/sdk");
+      const { BadRequestError } =
+        await import("../../../providers/anthropic/client.js");
       // @ts-expect-error Mock doesn't require constructor args
       const error = new BadRequestError();
       (error as unknown as { status: number }).status = 400;
@@ -1030,7 +984,8 @@ describe("AnthropicAdapter", () => {
     });
 
     it("does not retry when request has no temperature", async () => {
-      const { BadRequestError } = await import("@anthropic-ai/sdk");
+      const { BadRequestError } =
+        await import("../../../providers/anthropic/client.js");
       // @ts-expect-error Mock doesn't require constructor args
       const error = new BadRequestError();
       (error as unknown as { status: number }).status = 400;
@@ -1062,7 +1017,8 @@ describe("AnthropicAdapter", () => {
     });
 
     it("retries with fake-tool emulation when output_config is rejected", async () => {
-      const { BadRequestError } = await import("@anthropic-ai/sdk");
+      const { BadRequestError } =
+        await import("../../../providers/anthropic/client.js");
       // @ts-expect-error Mock doesn't require constructor args
       const error = new BadRequestError();
       (error as unknown as { status: number }).status = 400;
@@ -1119,7 +1075,8 @@ describe("AnthropicAdapter", () => {
     });
 
     it("caches the model so subsequent buildRequest uses fake-tool path", async () => {
-      const { BadRequestError } = await import("@anthropic-ai/sdk");
+      const { BadRequestError } =
+        await import("../../../providers/anthropic/client.js");
       // @ts-expect-error Mock doesn't require constructor args
       const error = new BadRequestError();
       (error as unknown as { status: number }).status = 400;
@@ -1175,7 +1132,8 @@ describe("AnthropicAdapter", () => {
     });
 
     it("does not fall back when 400 mentions citations", async () => {
-      const { BadRequestError } = await import("@anthropic-ai/sdk");
+      const { BadRequestError } =
+        await import("../../../providers/anthropic/client.js");
       // @ts-expect-error Mock doesn't require constructor args
       const error = new BadRequestError();
       (error as unknown as { status: number }).status = 400;
@@ -1214,7 +1172,8 @@ describe("AnthropicAdapter", () => {
       // adapter code somehow sends the old field, the API returns a 400
       // mentioning "deprecated" — that's a code-path bug and should
       // propagate, NOT silently engage the fake-tool fallback.
-      const { BadRequestError } = await import("@anthropic-ai/sdk");
+      const { BadRequestError } =
+        await import("../../../providers/anthropic/client.js");
       // @ts-expect-error Mock doesn't require constructor args
       const error = new BadRequestError();
       (error as unknown as { status: number }).status = 400;
@@ -1249,7 +1208,8 @@ describe("AnthropicAdapter", () => {
     });
 
     it("does not fall back when 400 is unrelated to structured output", async () => {
-      const { BadRequestError } = await import("@anthropic-ai/sdk");
+      const { BadRequestError } =
+        await import("../../../providers/anthropic/client.js");
       // @ts-expect-error Mock doesn't require constructor args
       const error = new BadRequestError();
       (error as unknown as { status: number }).status = 400;

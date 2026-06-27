@@ -1,5 +1,5 @@
 import { getEnvSecret } from "@jaypie/aws";
-import { GoogleGenAI } from "@google/genai";
+import { GoogleClient } from "../client.js";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { GoogleProvider } from "../GoogleProvider.class";
 import {
@@ -10,8 +10,8 @@ import {
   LlmResponseStatus,
 } from "../../../types/LlmProvider.interface.js";
 
-// Mock the operate module
-vi.mock("@google/genai");
+// Mock the HTTP client
+vi.mock("../client.js");
 
 // Mock the OperateLoop for conversation history tests
 vi.mock("../../../operate/index.js", async (importOriginal) => {
@@ -35,7 +35,7 @@ vi.mock("@jaypie/aws", async () => {
 
 describe("GoogleProvider", () => {
   beforeEach(() => {
-    vi.mocked(GoogleGenAI).mockImplementation(
+    vi.mocked(GoogleClient).mockImplementation(
       class {
         models = {
           generateContent: vi.fn(),
@@ -78,7 +78,7 @@ describe("GoogleProvider", () => {
       };
 
       const mockGenerateContent = vi.fn().mockResolvedValue(mockResponse);
-      vi.mocked(GoogleGenAI).mockImplementation(
+      vi.mocked(GoogleClient).mockImplementation(
         class {
           models = {
             generateContent: mockGenerateContent,
@@ -111,7 +111,7 @@ describe("GoogleProvider", () => {
         };
 
         const mockGenerateContent = vi.fn().mockResolvedValue(mockResponse);
-        vi.mocked(GoogleGenAI).mockImplementation(
+        vi.mocked(GoogleClient).mockImplementation(
           class {
             models = {
               generateContent: mockGenerateContent,
@@ -144,7 +144,7 @@ describe("GoogleProvider", () => {
         };
 
         const mockGenerateContent = vi.fn().mockResolvedValue(mockResponse);
-        vi.mocked(GoogleGenAI).mockImplementation(
+        vi.mocked(GoogleClient).mockImplementation(
           class {
             models = {
               generateContent: mockGenerateContent,
@@ -167,7 +167,7 @@ describe("GoogleProvider", () => {
         };
 
         const mockGenerateContent = vi.fn().mockResolvedValue(mockResponse);
-        vi.mocked(GoogleGenAI).mockImplementation(
+        vi.mocked(GoogleClient).mockImplementation(
           class {
             models = {
               generateContent: mockGenerateContent,
@@ -191,7 +191,7 @@ describe("GoogleProvider", () => {
         };
 
         const mockGenerateContent = vi.fn().mockResolvedValue(mockResponse);
-        vi.mocked(GoogleGenAI).mockImplementation(
+        vi.mocked(GoogleClient).mockImplementation(
           class {
             models = {
               generateContent: mockGenerateContent,
@@ -218,7 +218,7 @@ describe("GoogleProvider", () => {
         };
 
         const mockGenerateContent = vi.fn().mockResolvedValue(mockResponse);
-        vi.mocked(GoogleGenAI).mockImplementation(
+        vi.mocked(GoogleClient).mockImplementation(
           class {
             models = {
               generateContent: mockGenerateContent,
@@ -245,7 +245,7 @@ describe("GoogleProvider", () => {
         };
 
         const mockGenerateContent = vi.fn().mockResolvedValue(mockResponse);
-        vi.mocked(GoogleGenAI).mockImplementation(
+        vi.mocked(GoogleClient).mockImplementation(
           class {
             models = {
               generateContent: mockGenerateContent,

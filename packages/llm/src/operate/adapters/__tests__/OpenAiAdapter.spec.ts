@@ -14,7 +14,7 @@ import {
 // Mock
 //
 
-vi.mock("openai", () => ({
+vi.mock("../../../providers/openai/client.js", () => ({
   APIConnectionError: class APIConnectionError extends Error {
     constructor(..._args: any[]) {
       super("Connection error");
@@ -63,7 +63,7 @@ vi.mock("openai", () => ({
       this.name = "NotFoundError";
     }
   },
-  OpenAI: vi.fn(),
+  OpenAIClient: vi.fn(),
   PermissionDeniedError: class PermissionDeniedError extends Error {
     constructor(..._args: any[]) {
       super("Permission denied");
@@ -84,7 +84,7 @@ vi.mock("openai", () => ({
   },
 }));
 
-vi.mock("openai/helpers/zod", () => ({
+vi.mock("../../../providers/openai/responseFormat.js", () => ({
   zodResponseFormat: vi.fn(() => ({
     json_schema: {
       name: "response",
@@ -403,7 +403,8 @@ describe("OpenAiAdapter", () => {
 
     describe("classifyError", () => {
       it("classifies rate limit error", async () => {
-        const { RateLimitError } = await import("openai");
+        const { RateLimitError } =
+          await import("../../../providers/openai/client.js");
         // @ts-expect-error Mock doesn't require constructor args
         const error = new RateLimitError();
 
@@ -414,7 +415,8 @@ describe("OpenAiAdapter", () => {
       });
 
       it("classifies retryable error", async () => {
-        const { InternalServerError } = await import("openai");
+        const { InternalServerError } =
+          await import("../../../providers/openai/client.js");
         // @ts-expect-error Mock doesn't require constructor args
         const error = new InternalServerError();
 
@@ -425,7 +427,8 @@ describe("OpenAiAdapter", () => {
       });
 
       it("classifies unrecoverable error", async () => {
-        const { AuthenticationError } = await import("openai");
+        const { AuthenticationError } =
+          await import("../../../providers/openai/client.js");
         // @ts-expect-error Mock doesn't require constructor args
         const error = new AuthenticationError();
 
@@ -676,7 +679,8 @@ describe("OpenAiAdapter", () => {
     });
 
     it("retries without temperature when OpenAI rejects it with 400", async () => {
-      const { BadRequestError } = await import("openai");
+      const { BadRequestError } =
+        await import("../../../providers/openai/client.js");
       // @ts-expect-error Mock doesn't require constructor args
       const error = new BadRequestError();
       (error as unknown as { status: number }).status = 400;
@@ -710,7 +714,8 @@ describe("OpenAiAdapter", () => {
     });
 
     it("caches the model so subsequent buildRequest strips temperature", async () => {
-      const { BadRequestError } = await import("openai");
+      const { BadRequestError } =
+        await import("../../../providers/openai/client.js");
       // @ts-expect-error Mock doesn't require constructor args
       const error = new BadRequestError();
       (error as unknown as { status: number }).status = 400;
@@ -741,7 +746,8 @@ describe("OpenAiAdapter", () => {
     });
 
     it("does not retry on 400 unrelated to temperature", async () => {
-      const { BadRequestError } = await import("openai");
+      const { BadRequestError } =
+        await import("../../../providers/openai/client.js");
       // @ts-expect-error Mock doesn't require constructor args
       const error = new BadRequestError();
       (error as unknown as { status: number }).status = 400;
@@ -766,7 +772,8 @@ describe("OpenAiAdapter", () => {
     });
 
     it("does not retry when request has no temperature", async () => {
-      const { BadRequestError } = await import("openai");
+      const { BadRequestError } =
+        await import("../../../providers/openai/client.js");
       // @ts-expect-error Mock doesn't require constructor args
       const error = new BadRequestError();
       (error as unknown as { status: number }).status = 400;

@@ -1,5 +1,4 @@
-import type { GoogleGenAI } from "@google/genai";
-import log from "@jaypie/logger";
+import { log } from "@jaypie/logger";
 import { JsonObject, NaturalSchema } from "@jaypie/types";
 import { z } from "zod/v4";
 
@@ -28,6 +27,7 @@ import {
   StandardToolResult,
 } from "../types.js";
 import { isTransientNetworkError } from "../retry/isTransientNetworkError.js";
+import { GoogleClient } from "../../providers/google/client.js";
 import { BaseProviderAdapter } from "./ProviderAdapter.interface.js";
 import {
   GeminiContent,
@@ -318,7 +318,7 @@ export class GoogleAdapter extends BaseProviderAdapter {
     request: unknown,
     signal?: AbortSignal,
   ): Promise<GeminiRawResponse> {
-    const genAI = client as GoogleGenAI;
+    const genAI = client as GoogleClient;
     const geminiRequest = request as GeminiRequest;
     const wantsNativeCombo =
       !!geminiRequest.config?.responseJsonSchema &&
@@ -407,7 +407,7 @@ export class GoogleAdapter extends BaseProviderAdapter {
   ): AsyncIterable<LlmStreamChunk> {
     // signal is accepted for interface conformance; Gemini SDK does not natively support it
     void signal;
-    const genAI = client as GoogleGenAI;
+    const genAI = client as GoogleClient;
     const geminiRequest = request as GeminiRequest;
 
     // Use generateContentStream for streaming

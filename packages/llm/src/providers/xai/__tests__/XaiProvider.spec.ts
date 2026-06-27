@@ -1,11 +1,11 @@
 import { getEnvSecret } from "@jaypie/aws";
-import { OpenAI } from "openai";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { XaiProvider } from "../XaiProvider.class";
+import { OpenAIClient } from "../../openai/client.js";
 import { PROVIDER } from "../../../constants.js";
 
-// Mock the operate module
-vi.mock("openai");
+// Mock the OpenAI client
+vi.mock("../../openai/client.js");
 
 // Mock the OperateLoop for conversation history tests
 vi.mock("../../../operate/index.js", async (importOriginal) => {
@@ -29,7 +29,7 @@ vi.mock("@jaypie/aws", async () => {
 
 describe("XaiProvider", () => {
   beforeEach(() => {
-    vi.mocked(OpenAI).mockImplementation(
+    vi.mocked(OpenAIClient).mockImplementation(
       class {
         chat = {
           completions: {
@@ -85,7 +85,7 @@ describe("XaiProvider", () => {
       };
 
       const mockCreate = vi.fn().mockResolvedValue(mockResponse);
-      vi.mocked(OpenAI).mockImplementation(
+      vi.mocked(OpenAIClient).mockImplementation(
         class {
           chat = {
             completions: {
@@ -105,7 +105,7 @@ describe("XaiProvider", () => {
       const mockCreate = vi.fn().mockResolvedValue({
         choices: [{ message: { content: "response" } }],
       });
-      vi.mocked(OpenAI).mockImplementation(
+      vi.mocked(OpenAIClient).mockImplementation(
         class {
           chat = {
             completions: {
@@ -118,7 +118,7 @@ describe("XaiProvider", () => {
       const provider = new XaiProvider();
       await provider.send("test");
 
-      expect(OpenAI).toHaveBeenCalledWith({
+      expect(OpenAIClient).toHaveBeenCalledWith({
         apiKey: "test-xai-key",
         baseURL: PROVIDER.XAI.BASE_URL,
       });
@@ -128,7 +128,7 @@ describe("XaiProvider", () => {
       const mockCreate = vi.fn().mockResolvedValue({
         choices: [{ message: { content: "response" } }],
       });
-      vi.mocked(OpenAI).mockImplementation(
+      vi.mocked(OpenAIClient).mockImplementation(
         class {
           chat = {
             completions: {

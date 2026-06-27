@@ -271,14 +271,28 @@ for await (const chunk of Llm.stream("Tell me a story")) {
 }
 ```
 
-## Provider SDKs
+## Provider Clients
 
-Provider SDKs are peer dependencies (optional except for the provider you use):
+The first-class providers talk to their APIs over `fetch` — no provider SDK is
+installed. Each has a minimal client under `src/providers/<provider>/client.ts`
+that mirrors only the surface the adapters use (request, streaming via SSE, and
+HTTP errors shaped to drive `classifyError`):
 
-- `openai` - OpenAI and xAI (required dependency; xAI uses the OpenAI SDK with a custom base URL)
-- `@anthropic-ai/sdk` - Anthropic (peer)
-- `@google/genai` - Google (peer)
-- `@openrouter/sdk` - OpenRouter (peer)
+- OpenAI — `OpenAIClient` (Responses API for `operate`/`stream`, Chat
+  Completions for `send`)
+- xAI — reuses `OpenAIClient` with `PROVIDER.XAI.BASE_URL` (OpenAI-compatible)
+- Anthropic — `AnthropicClient` (Messages API)
+- Google — `GoogleClient` (Gemini REST)
+- OpenRouter — `OpenRouterClient` (OpenAI-compatible Chat Completions)
+
+Bedrock is the one provider that keeps an SDK: `@aws-sdk/client-bedrock-runtime`
+is an **optional peer dependency**, loaded lazily via dynamic `import()` only
+when the Bedrock provider runs (SigV4 auth + binary eventstream make a hand-
+rolled client impractical). Non-Bedrock consumers never need it installed.
+
+Each provider has env-gated live "hot" tests at
+`src/providers/<provider>/__tests__/client.hot.spec.ts` — they run automatically
+when the matching `*_API_KEY` is set and skip otherwise.
 
 ## Environment Variables
 
