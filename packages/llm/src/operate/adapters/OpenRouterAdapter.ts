@@ -1,6 +1,5 @@
 import { log } from "@jaypie/logger";
 import { JsonObject, NaturalSchema } from "@jaypie/types";
-import type { OpenRouter } from "@openrouter/sdk";
 import { z } from "zod/v4";
 
 import { PROVIDER } from "../../constants.js";
@@ -29,6 +28,7 @@ import {
   StandardToolResult,
 } from "../types.js";
 import { isTransientNetworkError } from "../retry/isTransientNetworkError.js";
+import { OpenRouterClient } from "../../providers/openrouter/client.js";
 import { BaseProviderAdapter } from "./ProviderAdapter.interface.js";
 
 //
@@ -268,7 +268,55 @@ function convertContentToOpenRouter(
   return parts;
 }
 
-// OpenRouter SDK error types based on HTTP status codes
+/**
+ * Convert internal content parts to the OpenAI-compatible wire shape. The
+ * internal representation uses camelCase keys (`imageUrl`, `fileData`) that the
+ * SDK accepted; the REST API wants snake_case (`image_url`, `file_data`).
+ */
+function contentToWire(
+  content: string | OpenRouterContentPart[] | null | undefined,
+): unknown {
+  if (
+    content === null ||
+    content === undefined ||
+    typeof content === "string"
+  ) {
+    return content;
+  }
+  return content.map((part) => {
+    if (part.type === "image_url") {
+      return { type: "image_url", image_url: part.imageUrl };
+    }
+    if (part.type === "file") {
+      return {
+        type: "file",
+        file: { filename: part.file.filename, file_data: part.file.fileData },
+      };
+    }
+    return part;
+  });
+}
+
+/**
+ * Serialize an internal message to the OpenAI-compatible wire shape, mapping
+ * camelCase tool fields (`toolCalls`, `toolCallId`) to snake_case. Tool-call
+ * objects are already wire-shaped (`{ id, type, function: { name, arguments } }`).
+ */
+function messageToWire(message: OpenRouterMessage): Record<string, unknown> {
+  const wire: Record<string, unknown> = { role: message.role };
+  if (message.content !== undefined) {
+    wire.content = contentToWire(message.content);
+  }
+  if (message.toolCalls) {
+    wire.tool_calls = message.toolCalls;
+  }
+  if (message.toolCallId) {
+    wire.tool_call_id = message.toolCallId;
+  }
+  return wire;
+}
+
+// OpenRouter error types based on HTTP status codes
 const RETRYABLE_STATUS_CODES = [408, 500, 502, 503, 524, 529];
 const RATE_LIMIT_STATUS_CODE = 429;
 
@@ -517,17 +565,15 @@ export class OpenRouterAdapter extends BaseProviderAdapter {
     request: unknown,
     signal?: AbortSignal,
   ): Promise<OpenRouterResponse> {
-    const openRouter = client as OpenRouter;
+    const openRouter = client as OpenRouterClient;
     const openRouterRequest = request as OpenRouterRequest;
     const wantsStructuredOutput = Boolean(openRouterRequest.response_format);
 
     try {
-      const response = (await openRouter.chat.send(
-        this.toSdkChatParams(openRouterRequest) as Parameters<
-          typeof openRouter.chat.send
-        >[0],
+      const response = (await openRouter.chatCompletion(
+        this.toWireBody(openRouterRequest),
         signal ? { signal } : undefined,
-      )) as AnnotatedOpenRouterResponse;
+      )) as unknown as AnnotatedOpenRouterResponse;
       if (wantsStructuredOutput) {
         response.__jaypieStructuredOutput = true;
       }
@@ -548,12 +594,10 @@ export class OpenRouterAdapter extends BaseProviderAdapter {
         this.rememberModelRejectsTemperature(openRouterRequest.model);
         const retryRequest = { ...openRouterRequest } as OpenRouterRequest;
         delete (retryRequest as unknown as Record<string, unknown>).temperature;
-        const response = (await openRouter.chat.send(
-          this.toSdkChatParams(retryRequest) as Parameters<
-            typeof openRouter.chat.send
-          >[0],
+        const response = (await openRouter.chatCompletion(
+          this.toWireBody(retryRequest),
           signal ? { signal } : undefined,
-        )) as AnnotatedOpenRouterResponse;
+        )) as unknown as AnnotatedOpenRouterResponse;
         if (wantsStructuredOutput) {
           response.__jaypieStructuredOutput = true;
         }
@@ -570,12 +614,10 @@ export class OpenRouterAdapter extends BaseProviderAdapter {
         );
         const fallbackRequest =
           this.toFallbackStructuredOutputRequest(openRouterRequest);
-        return (await openRouter.chat.send(
-          this.toSdkChatParams(fallbackRequest) as Parameters<
-            typeof openRouter.chat.send
-          >[0],
+        return (await openRouter.chatCompletion(
+          this.toWireBody(fallbackRequest),
           signal ? { signal } : undefined,
-        )) as OpenRouterResponse;
+        )) as unknown as OpenRouterResponse;
       }
 
       throw error;
@@ -587,39 +629,20 @@ export class OpenRouterAdapter extends BaseProviderAdapter {
    * camelCase shape, forwarding only the fields we care about (the SDK
    * silently strips unknown fields).
    */
-  private toSdkChatParams(
+  /**
+   * Serialize the internal request into the OpenAI-compatible wire body for
+   * OpenRouter's Chat Completions endpoint. Top-level fields (model, tools,
+   * tool_choice, response_format, user, temperature, and any providerOptions)
+   * are already wire-shaped (snake_case); only messages carry camelCase tool
+   * fields that must become snake_case on the wire.
+   */
+  private toWireBody(
     openRouterRequest: OpenRouterRequest,
-    { stream }: { stream?: boolean } = {},
   ): Record<string, unknown> {
-    const chatRequest: Record<string, unknown> = {
-      model: openRouterRequest.model,
-      messages: openRouterRequest.messages,
-      tools: openRouterRequest.tools,
-      toolChoice: openRouterRequest.tool_choice,
-      user: openRouterRequest.user,
+    return {
+      ...openRouterRequest,
+      messages: openRouterRequest.messages.map(messageToWire),
     };
-    if (openRouterRequest.response_format) {
-      const format = openRouterRequest.response_format;
-      if (format.type === "json_schema") {
-        chatRequest.responseFormat = {
-          type: "json_schema",
-          jsonSchema: format.json_schema,
-        };
-      } else {
-        chatRequest.responseFormat = format;
-      }
-    }
-    const temperature = (
-      openRouterRequest as unknown as { temperature?: number }
-    ).temperature;
-    if (temperature !== undefined) {
-      chatRequest.temperature = temperature;
-    }
-    if (stream) {
-      chatRequest.stream = true;
-    }
-    // The SDK (>=0.13) wraps the chat completion payload in `chatRequest`.
-    return { chatRequest };
   }
 
   /**
@@ -660,20 +683,15 @@ export class OpenRouterAdapter extends BaseProviderAdapter {
     request: unknown,
     signal?: AbortSignal,
   ): AsyncIterable<LlmStreamChunk> {
-    const openRouter = client as OpenRouter;
+    const openRouter = client as OpenRouterClient;
     const openRouterRequest = request as OpenRouterRequest;
 
-    // Use chat.send with stream: true for streaming responses.
-    // Cast the result to AsyncIterable: when stream: true, the SDK returns a
-    // stream we can iterate, but the typed result is the union with the
-    // non-stream response.
-    const streamParams = this.toSdkChatParams(openRouterRequest, {
-      stream: true,
-    });
-    const stream = (await openRouter.chat.send(
-      streamParams as Parameters<typeof openRouter.chat.send>[0],
+    // streamChatCompletion adds `stream: true` + `stream_options.include_usage`
+    // and yields decoded SSE chunks in OpenAI-compatible (snake_case) shape.
+    const stream = openRouter.streamChatCompletion(
+      this.toWireBody(openRouterRequest),
       signal ? { signal } : undefined,
-    )) as AsyncIterable<unknown>;
+    ) as AsyncIterable<unknown>;
 
     // Track current tool call being built
     let currentToolCall: {

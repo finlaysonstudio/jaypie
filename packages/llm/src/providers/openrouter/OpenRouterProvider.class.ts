@@ -1,5 +1,5 @@
 import { JsonObject } from "@jaypie/types";
-import type { OpenRouter } from "@openrouter/sdk";
+import type { OpenRouterClient } from "./client.js";
 import {
   createOperateLoop,
   createStreamLoop,
@@ -26,7 +26,7 @@ import {
 
 export class OpenRouterProvider implements LlmProvider {
   private model: string;
-  private _client?: OpenRouter;
+  private _client?: OpenRouterClient;
   private _operateLoop?: OperateLoop;
   private _streamLoop?: StreamLoop;
   private apiKey?: string;
@@ -41,7 +41,7 @@ export class OpenRouterProvider implements LlmProvider {
     this.apiKey = apiKey;
   }
 
-  private async getClient(): Promise<OpenRouter> {
+  private async getClient(): Promise<OpenRouterClient> {
     if (this._client) {
       return this._client;
     }
@@ -84,17 +84,16 @@ export class OpenRouterProvider implements LlmProvider {
     const messages = prepareMessages(message, options);
     const modelToUse = options?.model || this.model;
 
-    // Build the request. The SDK (>=0.13) wraps the payload in `chatRequest`.
-    const response = await client.chat.send({
-      chatRequest: {
-        model: modelToUse,
-        messages: messages as Parameters<
-          typeof client.chat.send
-        >[0]["chatRequest"]["messages"],
-      },
+    // OpenAI-compatible Chat Completions body; messages are already wire-shaped.
+    const response = await client.chatCompletion({
+      model: modelToUse,
+      messages,
     });
 
-    const rawContent = response.choices?.[0]?.message?.content;
+    const choices = response.choices as
+      | Array<{ message?: { content?: unknown } }>
+      | undefined;
+    const rawContent = choices?.[0]?.message?.content;
     // Extract text content - content could be string or array of content items
     const content =
       typeof rawContent === "string"

@@ -53,7 +53,6 @@
     "@aws-sdk/client-bedrock-runtime": "^3.1045.0",
     "@google/genai": "^2.10.0",
     "@jaypie/types": "*",
-    "@openrouter/sdk": "^0.13.7",
     "rollup-plugin-dts": "^6.1.1"
   },
   "peerDependencies": {
@@ -61,8 +60,7 @@
     "@aws-sdk/client-bedrock-runtime": "^3.1045.0",
     "@google/genai": "^2.10.0",
     "@jaypie/kit": "*",
-    "@jaypie/logger": "*",
-    "@openrouter/sdk": "^0.13.7"
+    "@jaypie/logger": "*"
   },
   "peerDependenciesMeta": {
     "@anthropic-ai/sdk": {
@@ -72,9 +70,6 @@
       "optional": true
     },
     "@google/genai": {
-      "optional": true
-    },
-    "@openrouter/sdk": {
       "optional": true
     }
   },
