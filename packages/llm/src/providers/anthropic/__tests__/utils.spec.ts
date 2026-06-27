@@ -1,6 +1,6 @@
 import { getEnvSecret } from "@jaypie/aws";
 import { log } from "@jaypie/logger";
-import Anthropic from "@anthropic-ai/sdk";
+import { AnthropicClient } from "../client.js";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { PROVIDER } from "../../../constants.js";
 import {
@@ -52,15 +52,11 @@ vi.mock("@jaypie/logger", () => {
   };
 });
 
-vi.mock("@anthropic-ai/sdk", () => {
-  return {
-    default: vi.fn().mockImplementation(() => ({
-      messages: {
-        create: vi.fn(),
-      },
-    })),
-  };
-});
+vi.mock("../client.js", () => ({
+  AnthropicClient: vi.fn().mockImplementation(() => ({
+    messages: { create: vi.fn() },
+  })),
+}));
 
 describe("Anthropic Utils", () => {
   beforeEach(() => {
@@ -111,7 +107,9 @@ describe("Anthropic Utils", () => {
         vi.mocked(log.lib).mockReturnValue(mockLogger);
 
         await initializeClient({ apiKey: "provided-key" });
-        expect(Anthropic).toHaveBeenCalledWith({ apiKey: "provided-key" });
+        expect(AnthropicClient).toHaveBeenCalledWith({
+          apiKey: "provided-key",
+        });
         expect(mockLogger.trace).toHaveBeenCalledWith(
           "Initialized Anthropic client",
         );
@@ -127,7 +125,9 @@ describe("Anthropic Utils", () => {
         vi.mocked(log.lib).mockReturnValue(mockLogger);
 
         await initializeClient();
-        expect(Anthropic).toHaveBeenCalledWith({ apiKey: "test-api-key" });
+        expect(AnthropicClient).toHaveBeenCalledWith({
+          apiKey: "test-api-key",
+        });
         expect(mockLogger.trace).toHaveBeenCalledWith(
           "Initialized Anthropic client",
         );

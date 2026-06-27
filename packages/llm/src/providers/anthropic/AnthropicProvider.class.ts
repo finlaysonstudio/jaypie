@@ -1,4 +1,4 @@
-import type Anthropic from "@anthropic-ai/sdk";
+import type { AnthropicClient } from "./client.js";
 import { JsonObject } from "@jaypie/types";
 import { PROVIDER } from "../../constants.js";
 import {
@@ -30,7 +30,7 @@ import {
 // Main class implementation
 export class AnthropicProvider implements LlmProvider {
   private model: string;
-  private _client?: Anthropic;
+  private _client?: AnthropicClient;
   private _operateLoop?: OperateLoop;
   private _streamLoop?: StreamLoop;
   private apiKey?: string;
@@ -45,7 +45,7 @@ export class AnthropicProvider implements LlmProvider {
     this.apiKey = apiKey;
   }
 
-  private async getClient(): Promise<Anthropic> {
+  private async getClient(): Promise<AnthropicClient> {
     if (this._client) {
       return this._client;
     }

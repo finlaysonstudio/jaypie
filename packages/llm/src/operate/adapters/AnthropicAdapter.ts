@@ -1,5 +1,4 @@
-import type { Anthropic } from "@anthropic-ai/sdk";
-import log from "@jaypie/logger";
+import { log } from "@jaypie/logger";
 import { JsonObject, NaturalSchema } from "@jaypie/types";
 import { z } from "zod/v4";
 
@@ -28,6 +27,8 @@ import {
   StandardToolResult,
 } from "../types.js";
 import { isTransientNetworkError } from "../retry/isTransientNetworkError.js";
+import { AnthropicClient } from "../../providers/anthropic/client.js";
+import { Anthropic } from "../../providers/anthropic/types.js";
 import { BaseProviderAdapter } from "./ProviderAdapter.interface.js";
 
 //
@@ -625,7 +626,7 @@ export class AnthropicAdapter extends BaseProviderAdapter {
     request: unknown,
     signal?: AbortSignal,
   ): Promise<Anthropic.Message> {
-    const anthropic = client as Anthropic;
+    const anthropic = client as AnthropicClient;
     const anthropicRequest = request as AnthropicRequestParams;
     const wantsStructuredOutput = Boolean(anthropicRequest.output_config);
     try {
@@ -710,7 +711,7 @@ export class AnthropicAdapter extends BaseProviderAdapter {
     request: unknown,
     signal?: AbortSignal,
   ): AsyncIterable<LlmStreamChunk> {
-    const anthropic = client as Anthropic;
+    const anthropic = client as AnthropicClient;
     // Preserve `output_config` when passing through to the SDK by typing
     // through the local extension instead of the upstream
     // MessageCreateParams shape.

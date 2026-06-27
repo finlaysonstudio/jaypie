@@ -1,59 +1,18 @@
 import { getEnvSecret } from "@jaypie/aws";
-import Anthropic from "@anthropic-ai/sdk";
+import { AnthropicClient } from "../client.js";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { z } from "zod/v4";
 import { AnthropicProvider } from "../AnthropicProvider.class.js";
 import { PROVIDER } from "../../../constants.js";
 import {
   LlmMessageType,
-  LlmInputMessage,
-  LlmOutputMessage,
   LlmMessageRole,
   LlmResponseStatus,
 } from "../../../types/LlmProvider.interface.js";
 import { Toolkit } from "../../../tools/Toolkit.class.js";
 
-// Create a mock implementation for Anthropic client
-vi.mock("@anthropic-ai/sdk", () => {
-  // Create mock error classes
-  class APIConnectionError extends Error {
-    name = "APIConnectionError";
-  }
-  class APIConnectionTimeoutError extends Error {
-    name = "APIConnectionTimeoutError";
-  }
-  class AuthenticationError extends Error {
-    name = "AuthenticationError";
-  }
-  class BadRequestError extends Error {
-    name = "BadRequestError";
-  }
-  class InternalServerError extends Error {
-    name = "InternalServerError";
-  }
-  class NotFoundError extends Error {
-    name = "NotFoundError";
-  }
-  class PermissionDeniedError extends Error {
-    name = "PermissionDeniedError";
-  }
-  class RateLimitError extends Error {
-    name = "RateLimitError";
-  }
-
-  return {
-    default: vi.fn(),
-    Anthropic: vi.fn(),
-    APIConnectionError,
-    APIConnectionTimeoutError,
-    AuthenticationError,
-    BadRequestError,
-    InternalServerError,
-    NotFoundError,
-    PermissionDeniedError,
-    RateLimitError,
-  };
-});
+// Mock the HTTP client
+vi.mock("../client.js", () => ({ AnthropicClient: vi.fn() }));
 
 vi.mock("@jaypie/aws", async () => {
   const actual = await vi.importActual("@jaypie/aws");
@@ -90,7 +49,7 @@ describe("AnthropicProvider", () => {
     vi.resetAllMocks();
 
     // Set up the mock response for Anthropic client
-    vi.mocked(Anthropic).mockImplementation(
+    vi.mocked(AnthropicClient).mockImplementation(
       class {
         messages = {
           create: vi.fn(),
@@ -150,7 +109,7 @@ describe("AnthropicProvider", () => {
       };
 
       const mockCreate = vi.fn().mockResolvedValue(mockResponse);
-      vi.mocked(Anthropic).mockImplementation(
+      vi.mocked(AnthropicClient).mockImplementation(
         class {
           messages = {
             create: mockCreate,
@@ -185,7 +144,7 @@ describe("AnthropicProvider", () => {
       };
 
       const mockCreate = vi.fn().mockResolvedValue(mockResponse);
-      vi.mocked(Anthropic).mockImplementation(
+      vi.mocked(AnthropicClient).mockImplementation(
         class {
           messages = {
             create: mockCreate,
@@ -212,7 +171,7 @@ describe("AnthropicProvider", () => {
       };
 
       const mockCreate = vi.fn().mockResolvedValue(mockResponse);
-      vi.mocked(Anthropic).mockImplementation(
+      vi.mocked(AnthropicClient).mockImplementation(
         class {
           messages = {
             create: mockCreate,
@@ -254,7 +213,7 @@ describe("AnthropicProvider", () => {
         };
 
         const mockCreate = vi.fn().mockResolvedValue(mockResponse);
-        vi.mocked(Anthropic).mockImplementation(
+        vi.mocked(AnthropicClient).mockImplementation(
           class {
             messages = {
               create: mockCreate,
@@ -297,7 +256,7 @@ describe("AnthropicProvider", () => {
         };
 
         const mockCreate = vi.fn().mockResolvedValue(mockResponse);
-        vi.mocked(Anthropic).mockImplementation(
+        vi.mocked(AnthropicClient).mockImplementation(
           class {
             messages = {
               create: mockCreate,
@@ -327,7 +286,7 @@ describe("AnthropicProvider", () => {
         };
 
         const mockCreate = vi.fn().mockResolvedValue(mockResponse);
-        vi.mocked(Anthropic).mockImplementation(
+        vi.mocked(AnthropicClient).mockImplementation(
           class {
             messages = {
               create: mockCreate,
@@ -353,7 +312,7 @@ describe("AnthropicProvider", () => {
         };
 
         const mockCreate = vi.fn().mockResolvedValue(mockResponse);
-        vi.mocked(Anthropic).mockImplementation(
+        vi.mocked(AnthropicClient).mockImplementation(
           class {
             messages = {
               create: mockCreate,
@@ -643,7 +602,7 @@ describe("AnthropicProvider", () => {
         };
 
         const mockCreate = vi.fn().mockResolvedValue(mockResponse);
-        vi.mocked(Anthropic).mockImplementation(
+        vi.mocked(AnthropicClient).mockImplementation(
           class {
             messages = {
               create: mockCreate,
@@ -674,7 +633,7 @@ describe("AnthropicProvider", () => {
         };
 
         const mockCreate = vi.fn().mockResolvedValue(mockResponse);
-        vi.mocked(Anthropic).mockImplementation(
+        vi.mocked(AnthropicClient).mockImplementation(
           class {
             messages = {
               create: mockCreate,
@@ -703,7 +662,7 @@ describe("AnthropicProvider", () => {
         };
 
         const mockCreate = vi.fn().mockResolvedValue(mockResponse);
-        vi.mocked(Anthropic).mockImplementation(
+        vi.mocked(AnthropicClient).mockImplementation(
           class {
             messages = {
               create: mockCreate,
@@ -733,7 +692,7 @@ describe("AnthropicProvider", () => {
         };
 
         const mockCreate = vi.fn().mockResolvedValue(mockResponse);
-        vi.mocked(Anthropic).mockImplementation(
+        vi.mocked(AnthropicClient).mockImplementation(
           class {
             messages = {
               create: mockCreate,
