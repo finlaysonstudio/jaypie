@@ -1,7 +1,7 @@
 import { getEnvSecret } from "@jaypie/aws";
-import { OpenAI } from "openai";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { z } from "zod/v4";
+import { OpenAIClient } from "../client.js";
 import { OpenAiProvider } from "../OpenAiProvider.class";
 import {
   LlmHistoryItem,
@@ -12,7 +12,7 @@ import {
 } from "../../../types/LlmProvider.interface.js";
 // Mock the operate module
 vi.mock("../operate.js");
-vi.mock("openai");
+vi.mock("../client.js");
 
 // Mock the OperateLoop for conversation history tests
 vi.mock("../../../operate/index.js", async (importOriginal) => {
@@ -36,7 +36,7 @@ vi.mock("@jaypie/aws", async () => {
 
 describe("OpenAiProvider", () => {
   beforeEach(() => {
-    vi.mocked(OpenAI).mockImplementation(
+    vi.mocked(OpenAIClient).mockImplementation(
       class {
         chat = {
           completions: {
@@ -82,7 +82,7 @@ describe("OpenAiProvider", () => {
       };
 
       const mockCreate = vi.fn().mockResolvedValue(mockResponse);
-      vi.mocked(OpenAI).mockImplementation(
+      vi.mocked(OpenAIClient).mockImplementation(
         class {
           chat = {
             completions: {
@@ -122,7 +122,7 @@ describe("OpenAiProvider", () => {
         };
 
         const mockParse = vi.fn().mockResolvedValue(mockResponse);
-        vi.mocked(OpenAI).mockImplementation(
+        vi.mocked(OpenAIClient).mockImplementation(
           class {
             chat = {
               completions: {
@@ -166,7 +166,7 @@ describe("OpenAiProvider", () => {
         };
 
         const mockParse = vi.fn().mockResolvedValue(mockResponse);
-        vi.mocked(OpenAI).mockImplementation(
+        vi.mocked(OpenAIClient).mockImplementation(
           class {
             chat = {
               completions: {
@@ -201,7 +201,7 @@ describe("OpenAiProvider", () => {
         };
 
         const mockCreate = vi.fn().mockResolvedValue(mockResponse);
-        vi.mocked(OpenAI).mockImplementation(
+        vi.mocked(OpenAIClient).mockImplementation(
           class {
             chat = {
               completions: {
@@ -232,7 +232,7 @@ describe("OpenAiProvider", () => {
         };
 
         const mockCreate = vi.fn().mockResolvedValue(mockResponse);
-        vi.mocked(OpenAI).mockImplementation(
+        vi.mocked(OpenAIClient).mockImplementation(
           class {
             chat = {
               completions: {
@@ -264,7 +264,7 @@ describe("OpenAiProvider", () => {
         };
 
         const mockCreate = vi.fn().mockResolvedValue(mockResponse);
-        vi.mocked(OpenAI).mockImplementation(
+        vi.mocked(OpenAIClient).mockImplementation(
           class {
             chat = {
               completions: {
@@ -292,7 +292,7 @@ describe("OpenAiProvider", () => {
         };
 
         const mockCreate = vi.fn().mockResolvedValue(mockResponse);
-        vi.mocked(OpenAI).mockImplementation(
+        vi.mocked(OpenAIClient).mockImplementation(
           class {
             chat = {
               completions: {
@@ -321,7 +321,7 @@ describe("OpenAiProvider", () => {
         };
 
         const mockCreate = vi.fn().mockResolvedValue(mockResponse);
-        vi.mocked(OpenAI).mockImplementation(
+        vi.mocked(OpenAIClient).mockImplementation(
           class {
             chat = {
               completions: {

@@ -1,6 +1,5 @@
-import { BadRequestError } from "openai";
-
 import { PROVIDER } from "../../constants.js";
+import { BadRequestError } from "../../providers/openai/client.js";
 import { ClassifiedError, ErrorCategory } from "../types.js";
 import { OpenAiAdapter } from "./OpenAiAdapter.js";
 

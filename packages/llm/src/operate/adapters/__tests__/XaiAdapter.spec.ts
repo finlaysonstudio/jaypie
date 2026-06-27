@@ -14,7 +14,7 @@ import {
 // Mock
 //
 
-vi.mock("openai", () => ({
+vi.mock("../../../providers/openai/client.js", () => ({
   APIConnectionError: class APIConnectionError extends Error {
     constructor(..._args: any[]) {
       super("Connection error");
@@ -63,7 +63,7 @@ vi.mock("openai", () => ({
       this.name = "NotFoundError";
     }
   },
-  OpenAI: vi.fn(),
+  OpenAIClient: vi.fn(),
   PermissionDeniedError: class PermissionDeniedError extends Error {
     constructor(..._args: any[]) {
       super("Permission denied");
@@ -84,7 +84,7 @@ vi.mock("openai", () => ({
   },
 }));
 
-vi.mock("openai/helpers/zod", () => ({
+vi.mock("../../../providers/openai/responseFormat.js", () => ({
   zodResponseFormat: vi.fn(() => ({
     json_schema: {
       name: "response",
@@ -219,7 +219,8 @@ describe("XaiAdapter", () => {
   describe("Features", () => {
     describe("classifyError", () => {
       it("classifies rate limit error", async () => {
-        const { RateLimitError } = await import("openai");
+        const { RateLimitError } =
+          await import("../../../providers/openai/client.js");
         // @ts-expect-error Mock doesn't require constructor args
         const error = new RateLimitError();
 
@@ -230,7 +231,8 @@ describe("XaiAdapter", () => {
       });
 
       it("classifies retryable error", async () => {
-        const { InternalServerError } = await import("openai");
+        const { InternalServerError } =
+          await import("../../../providers/openai/client.js");
         // @ts-expect-error Mock doesn't require constructor args
         const error = new InternalServerError();
 
@@ -241,7 +243,8 @@ describe("XaiAdapter", () => {
       });
 
       it("classifies unrecoverable error", async () => {
-        const { AuthenticationError } = await import("openai");
+        const { AuthenticationError } =
+          await import("../../../providers/openai/client.js");
         // @ts-expect-error Mock doesn't require constructor args
         const error = new AuthenticationError();
 
@@ -252,7 +255,8 @@ describe("XaiAdapter", () => {
       });
 
       it("retries on transient xAI ingest-bytes error (400 with 'failed to ingest inline file bytes')", async () => {
-        const { BadRequestError } = await import("openai");
+        const { BadRequestError } =
+          await import("../../../providers/openai/client.js");
         // @ts-expect-error Mock doesn't require constructor args
         const error = new BadRequestError();
         error.message = "400 failed to ingest inline file bytes";
@@ -264,7 +268,8 @@ describe("XaiAdapter", () => {
       });
 
       it("does not retry on unrelated BadRequestError", async () => {
-        const { BadRequestError } = await import("openai");
+        const { BadRequestError } =
+          await import("../../../providers/openai/client.js");
         // @ts-expect-error Mock doesn't require constructor args
         const error = new BadRequestError();
         error.message = "400 invalid model";

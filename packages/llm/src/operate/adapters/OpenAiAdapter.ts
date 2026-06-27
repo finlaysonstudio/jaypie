@@ -1,4 +1,7 @@
 import { JsonObject, NaturalSchema } from "@jaypie/types";
+import { z } from "zod/v4";
+
+import { PROVIDER } from "../../constants.js";
 import {
   APIConnectionError,
   APIConnectionTimeoutError,
@@ -8,15 +11,12 @@ import {
   ConflictError,
   InternalServerError,
   NotFoundError,
-  OpenAI,
+  OpenAIClient,
   PermissionDeniedError,
   RateLimitError,
   UnprocessableEntityError,
-} from "openai";
-import { zodResponseFormat } from "openai/helpers/zod";
-import { z } from "zod/v4";
-
-import { PROVIDER } from "../../constants.js";
+} from "../../providers/openai/client.js";
+import { zodResponseFormat } from "../../providers/openai/responseFormat.js";
 
 // Patterns for OpenAI reasoning models that support extended thinking
 const REASONING_MODEL_PATTERNS = [
@@ -269,12 +269,11 @@ export class OpenAiAdapter extends BaseProviderAdapter {
     request: unknown,
     signal?: AbortSignal,
   ): Promise<unknown> {
-    const openai = client as OpenAI;
+    const openai = client as OpenAIClient;
     const openaiRequest = request as Record<string, unknown>;
-    type CreateParams = Parameters<typeof openai.responses.create>[0];
     try {
       return await openai.responses.create(
-        openaiRequest as CreateParams,
+        openaiRequest,
         signal ? { signal } : undefined,
       );
     } catch (error) {
@@ -289,7 +288,7 @@ export class OpenAiAdapter extends BaseProviderAdapter {
         const retryRequest = { ...openaiRequest };
         delete retryRequest.temperature;
         return await openai.responses.create(
-          retryRequest as CreateParams,
+          retryRequest,
           signal ? { signal } : undefined,
         );
       }
@@ -303,15 +302,15 @@ export class OpenAiAdapter extends BaseProviderAdapter {
     request: unknown,
     signal?: AbortSignal,
   ): AsyncIterable<LlmStreamChunk> {
-    const openai = client as OpenAI;
+    const openai = client as OpenAIClient;
     const baseRequest = request as Record<string, unknown>;
     const streamRequest = {
       ...baseRequest,
-      stream: true,
+      stream: true as const,
     };
 
     const stream = await openai.responses.create(
-      streamRequest as Parameters<typeof openai.responses.create>[0],
+      streamRequest,
       signal ? { signal } : undefined,
     );
 

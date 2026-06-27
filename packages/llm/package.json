@@ -41,7 +41,6 @@
   "dependencies": {
     "@jaypie/aws": "*",
     "@jaypie/errors": "*",
-    "openai": "^6.9.1",
     "openmeteo": "^1.2.1",
     "pdf-lib": "^1.17.1",
     "random": "^5.3.0",

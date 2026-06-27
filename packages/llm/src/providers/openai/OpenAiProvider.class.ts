@@ -1,5 +1,4 @@
 import { JsonObject } from "@jaypie/types";
-import { OpenAI } from "openai";
 import { PROVIDER } from "../../constants.js";
 import {
   createOperateLoop,
@@ -18,6 +17,7 @@ import {
   LlmHistoryItem,
 } from "../../types/LlmProvider.interface.js";
 import { LlmStreamChunk } from "../../types/LlmStreamChunk.interface.js";
+import { OpenAIClient } from "./client.js";
 import {
   createStructuredCompletion,
   createTextCompletion,
@@ -28,7 +28,7 @@ import {
 
 export class OpenAiProvider implements LlmProvider {
   private model: string;
-  private _client?: OpenAI;
+  private _client?: OpenAIClient;
   private _operateLoop?: OperateLoop;
   private _streamLoop?: StreamLoop;
   private apiKey?: string;
@@ -43,7 +43,7 @@ export class OpenAiProvider implements LlmProvider {
     this.apiKey = apiKey;
   }
 
-  private async getClient(): Promise<OpenAI> {
+  private async getClient(): Promise<OpenAIClient> {
     if (this._client) {
       return this._client;
     }
