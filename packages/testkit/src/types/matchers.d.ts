@@ -1,6 +1,5 @@
 // Import and re-export all matcher types
 import { JsonApiError } from "./jaypie-testkit.js";
-import "jest-extended";
 
 // Make sure this is exported so it can be used by consumers
 export interface CustomMatchers<R = unknown> {
@@ -28,8 +27,22 @@ export interface CustomMatchers<R = unknown> {
   toThrowUnauthorizedError(): R;
   toThrowUnavailableError(): R;
 
-  // Include jest-extended matchers
-  // These are already included via jest-extended reference
+  // Absorbed jest-extended matchers
+  toBeArray(): R;
+  toBeArrayOfSize(size: number): R;
+  toBeBoolean(): R;
+  toBeEmpty(): R;
+  toBeFalse(): R;
+  toBeFunction(): R;
+  toBeNumber(): R;
+  toBeObject(): R;
+  toBeString(): R;
+  toBeTrue(): R;
+  toContainAllKeys(keys: string[]): R;
+  toContainKeys(keys: string[]): R;
+  toEndWith(suffix: string): R;
+  toInclude(substring: unknown): R;
+  toStartWith(prefix: string): R;
 }
 
 // Export combined interface that includes both custom matchers and jest-extended matchers

@@ -10,7 +10,7 @@
     "declaration": true,
     "outDir": "./dist",
     "rootDir": "./src",
-    "types": ["vitest/globals", "jest-extended", "node"]
+    "types": ["vitest/globals", "node"]
   },
   "include": ["src/**/*", "src/**/*.d.ts"],
   "exclude": ["node_modules", "dist"]

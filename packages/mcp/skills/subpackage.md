@@ -137,12 +137,14 @@ export default defineConfig({
 
 ```typescript
 import { matchers as jaypieMatchers } from "@jaypie/testkit";
-import * as extendedMatchers from "jest-extended";
 import { expect } from "vitest";
 
-expect.extend(extendedMatchers);
 expect.extend(jaypieMatchers);
 ```
+
+`@jaypie/testkit` matchers include the extended matchers (`toBeArray`,
+`toBeFunction`, `toBeObject`, `toBeString`, `toStartWith`, etc.), so no separate
+`jest-extended` setup is required.
 
 ### src/index.ts
 
@@ -188,7 +190,7 @@ npm install <package-name> --workspace ./packages/<package-name> --save-dev
 Common dev dependencies for subpackages:
 
 ```bash
-npm install jest-extended --workspace ./packages/<package-name> --save-dev
+npm install @jaypie/testkit --workspace ./packages/<package-name> --save-dev
 ```
 
 ## Workspace Configuration

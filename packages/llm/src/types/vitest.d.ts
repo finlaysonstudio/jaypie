@@ -1,13 +1,24 @@
 import "vitest";
-import "jest-extended";
 
 interface CustomMatchers<R = unknown> {
   toBeArray(): R;
-  toBeFunction(): R;
+  toBeArrayOfSize(size: number): R;
+  toBeBoolean(): R;
   toBeClass(): R;
+  toBeEmpty(): R;
+  toBeFalse(): R;
+  toBeFunction(): R;
+  toBeNumber(): R;
   toBeObject(): R;
+  toBeString(): R;
+  toBeTrue(): R;
+  toContainAllKeys(keys: string[]): R;
   toContainEqual(expected: unknown): R;
+  toContainKeys(keys: string[]): R;
+  toEndWith(suffix: string): R;
   toHaveLength(expected: number): R;
+  toInclude(substring: unknown): R;
+  toStartWith(prefix: string): R;
   toThrowConfigurationError(): R;
 }
 

@@ -87,7 +87,7 @@ src/
 ├── constants.ts        # LOG constant
 ├── index.ts            # Main exports
 ├── jsonApiSchema.module.ts
-├── matchers.module.ts  # Combines all matchers + jest-extended
+├── matchers.module.ts  # Combines all matchers (Jaypie custom + absorbed extended)
 ├── mockLog.module.ts   # Log spying utilities
 ├── placeholders.ts     # Template placeholder utility
 └── sqsTestRecords.function.ts
@@ -211,7 +211,6 @@ All mocks are created with `_jaypie: true` property for identification. Mock fac
 
 ## Dependencies
 
-- `jest-extended` - Additional matchers (toBeObject, toBeArray, etc.)
 - `jest-json-schema` - JSON schema validation matcher
 - `vitest` - Test framework (peer dependency)
 - `@jaypie/errors`, `@jaypie/kit`, `@jaypie/logger` - Optional peer dependencies
