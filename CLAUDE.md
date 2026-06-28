@@ -30,7 +30,6 @@
 | `@jaypie/lambda` | AWS Lambda handler utilities |
 | `@jaypie/llm` | LLM provider interface (Anthropic, OpenAI) |
 | `@jaypie/logger` | Logging utilities |
-| `@jaypie/magpie` | Open source utility collection |
 | `@jaypie/mcp` | Model Context Protocol server |
 | `@jaypie/repokit` | Repository development tools |
 | `@jaypie/testkit` | Testing mocks and utilities |

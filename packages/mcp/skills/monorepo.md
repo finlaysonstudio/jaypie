@@ -133,7 +133,7 @@ Install root dev dependencies:
 npm install --save-dev @jaypie/eslint @jaypie/repokit @jaypie/testkit eslint vite vite-plugin-dts vitest
 ```
 
-`@jaypie/repokit` bundles `dotenv`, `env-cmd`, `rimraf`, `sort-package-json`, and `tsx` at consistent versions. See `skill("repokit")`.
+`@jaypie/repokit` bundles `env-cmd`, `rimraf`, `sort-package-json`, and `tsx` at consistent versions. See `skill("repokit")`.
 
 ## Workspace Conventions
 
