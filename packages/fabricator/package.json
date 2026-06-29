@@ -31,7 +31,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@faker-js/faker": "^9.3.0",
+    "@faker-js/faker": "^10.5.0",
     "@jaypie/errors": "*",
     "random": "^5.4.1",
     "uuid": "^14.0.1"
