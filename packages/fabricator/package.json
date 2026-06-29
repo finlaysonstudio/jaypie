@@ -37,7 +37,7 @@
     "uuid": "^14.0.1"
   },
   "devDependencies": {
-    "@types/node": "^24.2.1",
+    "@types/node": "^22.13.1",
     "@types/uuid": "^10.0.0"
   },
   "publishConfig": {
