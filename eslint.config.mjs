@@ -24,21 +24,6 @@ export default [
 
   //
   //
-  // Sites: TypeScript/TSX files (allow imports)
-  //
-  {
-    files: ["workspaces/**/*.ts", "workspaces/**/*.tsx"],
-    rules: {
-      "import-x/default": "off",
-      "import-x/no-unresolved": [
-        "error",
-        { ignore: ["^@theme/", "^@docusaurus/"] },
-      ],
-    },
-  },
-
-  //
-  //
   // Sites: CommonJS
   //
   {

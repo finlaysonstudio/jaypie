@@ -36,30 +36,16 @@ describe("Index", () => {
       );
       expect(hasRecommendedConfig).toBe(true);
     });
-  });
 
-  describe("Issue 333: TypeScript resolver", () => {
-    it("uses resolver-next so interfaceVersion 3 resolvers load", () => {
-      const tsConfig = index.find(
-        (config) => config.name === "jaypie:typescriptRecommended",
+    it("does not register eslint-plugin-import-x or a resolver", () => {
+      // Import correctness is delegated to tsc; no import-x blocks remain.
+      const hasImportX = index.some(
+        (config) =>
+          config.name === "jaypie:importxRecommended" ||
+          config.name === "jaypie:typescriptRecommended" ||
+          config.settings?.["import-x/resolver-next"],
       );
-      expect(tsConfig).toBeDefined();
-      expect(tsConfig.settings).toBeDefined();
-      expect(tsConfig.settings["import-x/resolver-next"]).toBeDefined();
-      expect(Array.isArray(tsConfig.settings["import-x/resolver-next"])).toBe(
-        true,
-      );
-      expect(
-        tsConfig.settings["import-x/resolver-next"].length,
-      ).toBeGreaterThan(0);
-    });
-
-    it("clears the legacy import-x/resolver typescript entry", () => {
-      const tsConfig = index.find(
-        (config) => config.name === "jaypie:typescriptRecommended",
-      );
-      expect(tsConfig).toBeDefined();
-      expect(tsConfig.settings["import-x/resolver"]).toBeUndefined();
+      expect(hasImportX).toBe(false);
     });
   });
 });

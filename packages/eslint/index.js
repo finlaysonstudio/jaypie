@@ -3,8 +3,6 @@ import vitest from "@vitest/eslint-plugin";
 import globals from "globals";
 import tsPlugin from "@typescript-eslint/eslint-plugin";
 import * as tsParser from "@typescript-eslint/parser";
-import { createTypeScriptImportResolver } from "eslint-import-resolver-typescript";
-import { flatConfigs as importxFlatConfigs } from "eslint-plugin-import-x";
 import prettierPlugin from "eslint-plugin-prettier";
 import pluginPrettierVue from "eslint-plugin-prettier-vue";
 
@@ -13,22 +11,13 @@ export default [
   //
   // Configs and Plugins
   //
+  // Module resolution and import correctness are delegated to the TypeScript
+  // compiler (tsc), which is more accurate than a standalone ESLint resolver
+  // (e.g. it follows package "exports" wildcard subpaths that
+  // eslint-import-resolver-typescript cannot). No eslint-plugin-import-x.
   {
     ...js.configs.recommended,
     name: "jaypie:jsRecommended",
-  },
-  {
-    ...importxFlatConfigs.recommended,
-    name: "jaypie:importxRecommended",
-  },
-  {
-    ...importxFlatConfigs.typescript,
-    name: "jaypie:typescriptRecommended",
-    settings: {
-      ...importxFlatConfigs.typescript.settings,
-      "import-x/resolver-next": [createTypeScriptImportResolver()],
-      "import-x/resolver": undefined,
-    },
   },
 
   //
@@ -204,7 +193,6 @@ export default [
       "prettier-vue": pluginPrettierVue,
     },
     rules: {
-      "import-x/extensions": "off",
       "prettier/prettier": "off",
       "prettier-vue/prettier": "warn",
       "vue/html-self-closing": "off",
