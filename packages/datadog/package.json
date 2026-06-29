@@ -38,7 +38,7 @@
   },
   "dependencies": {
     "@jaypie/aws": "*",
-    "hot-shots": "^10.0.0"
+    "hot-shots": "^16.0.0"
   },
   "devDependencies": {
     "@rollup/plugin-typescript": "^12.1.2",
