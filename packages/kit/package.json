@@ -1,6 +1,6 @@
 {
   "name": "@jaypie/kit",
-  "version": "1.2.12",
+  "version": "1.2.13",
   "description": "Utility functions for Jaypie applications",
   "repository": {
     "type": "git",
@@ -40,7 +40,7 @@
     "@jaypie/errors": "*",
     "@jaypie/logger": "*",
     "js-yaml": "^4.2.0",
-    "uuid": "^11.0.5"
+    "uuid": "^14.0.1"
   },
   "devDependencies": {
     "@jaypie/types": "*",

@@ -35,7 +35,7 @@
   },
   "dependencies": {
     "jest-json-schema": "^6.1.0",
-    "uuid": "^11.0.5"
+    "uuid": "^14.0.1"
   },
   "devDependencies": {
     "@jaypie/dynamodb": "*",
