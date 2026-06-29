@@ -44,6 +44,17 @@ describe("parseFrontmatter", () => {
     expect(content).toBe("");
   });
 
+  it("returns empty data for an empty frontmatter block", () => {
+    const { content, data } = parseFrontmatter("---\n---\nBody\n");
+    expect(data).toEqual({});
+    expect(content).toBe("Body\n");
+  });
+
+  it("returns empty data for a comment-only frontmatter block", () => {
+    const { data } = parseFrontmatter("---\n# just a comment\n---\nBody\n");
+    expect(data).toEqual({});
+  });
+
   it("supports a generic frontmatter type", () => {
     const { data } = parseFrontmatter<{ version: string }>(
       "---\nversion: 1.2.3\n---\n",

@@ -39,13 +39,12 @@
   "dependencies": {
     "@jaypie/errors": "*",
     "@jaypie/logger": "*",
-    "js-yaml": "^4.2.0",
+    "js-yaml": "^5.1.0",
     "uuid": "^14.0.1"
   },
   "devDependencies": {
     "@jaypie/types": "*",
     "@rollup/plugin-typescript": "^12.1.2",
-    "@types/js-yaml": "^4.0.9",
     "@types/node": "^22.13.1",
     "@typescript-eslint/eslint-plugin": "^8.18.2",
     "@typescript-eslint/parser": "^8.18.2",

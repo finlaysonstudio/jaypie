@@ -51,7 +51,12 @@ export function parseFrontmatter<T = Record<string, unknown>>(
     closeIndex = afterOpen.length;
   }
   const block = afterOpen.slice(0, closeIndex);
-  const data = (load(block) ?? {}) as T;
+  // js-yaml@5 throws on a documentless block (empty, whitespace, or
+  // comments only) where v4 returned undefined; treat those as no data.
+  const hasDocument = block
+    .split("\n")
+    .some((line) => line.trim() !== "" && !line.trim().startsWith("#"));
+  const data = (hasDocument ? (load(block) ?? {}) : {}) as T;
   let body = afterOpen.slice(closeIndex + CLOSE.length);
   // gray-matter strips the single newline that follows the closing delimiter.
   if (body.charAt(0) === "\r") {
