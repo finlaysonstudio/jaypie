@@ -6,6 +6,15 @@ import * as tsParser from "@typescript-eslint/parser";
 import prettierPlugin from "eslint-plugin-prettier";
 import pluginPrettierVue from "eslint-plugin-prettier-vue";
 
+// Shared no-unused-vars options: honor the `_`-prefix convention for
+// intentional discards and ignore rest siblings (destructuring to omit a key).
+const NO_UNUSED_VARS_OPTIONS = {
+  argsIgnorePattern: "^_",
+  caughtErrorsIgnorePattern: "^_",
+  ignoreRestSiblings: true,
+  varsIgnorePattern: "^_",
+};
+
 export default [
   //
   //
@@ -60,7 +69,7 @@ export default [
       ],
       "no-shadow-restricted-names": "error",
       "no-shadow": "off",
-      "no-unused-vars": "warn",
+      "no-unused-vars": ["warn", NO_UNUSED_VARS_OPTIONS],
       "object-shorthand": ["error", "always"],
     },
   },
@@ -151,7 +160,7 @@ export default [
     rules: {
       ...tsPlugin.configs.recommended.rules,
       "prettier/prettier": "warn",
-      "@typescript-eslint/no-unused-vars": "warn",
+      "@typescript-eslint/no-unused-vars": ["warn", NO_UNUSED_VARS_OPTIONS],
       "@typescript-eslint/no-explicit-any": "off",
     },
   },
