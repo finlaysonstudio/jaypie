@@ -20,6 +20,7 @@ import {
   isJsonSchema,
   jsonSchemaToOpenApi3,
   naturalZodSchema,
+  resolveMaxOutputTokens,
 } from "../../util/index.js";
 import {
   ClassifiedError,
@@ -249,6 +250,19 @@ export class GoogleAdapter extends BaseProviderAdapter {
       };
     }
 
+    // Default output ceiling: Google's own default (8,192) silently
+    // truncates long generations, so resolve to the model maximum (capped
+    // for non-streaming); providerOptions below override
+    const maxOutputTokens = resolveMaxOutputTokens(geminiRequest.model, {
+      stream: request.stream,
+    });
+    if (maxOutputTokens !== undefined) {
+      geminiRequest.config = {
+        ...geminiRequest.config,
+        maxOutputTokens,
+      };
+    }
+
     // Add provider-specific options
     if (request.providerOptions) {
       geminiRequest.config = {
@@ -274,7 +288,7 @@ export class GoogleAdapter extends BaseProviderAdapter {
     // structured output via `responseJsonSchema`/`responseSchema` (or the
     // legacy fake-tool injected in buildRequest as a fallback). We no longer
     // inject a synthetic structured-output tool here.
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
     _outputSchema?: JsonObject,
   ): ProviderToolDefinition[] {
     return toolkit.tools.map((tool) => ({

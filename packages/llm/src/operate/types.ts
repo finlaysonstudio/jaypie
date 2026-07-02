@@ -2,10 +2,8 @@ import { JsonObject } from "@jaypie/types";
 
 import {
   LlmHistory,
-  LlmInputMessage,
   LlmMessageType,
   LlmOperateOptions,
-  LlmResponseStatus,
   LlmUsageItem,
 } from "../types/LlmProvider.interface.js";
 import { Toolkit } from "../tools/Toolkit.class.js";
@@ -93,6 +91,8 @@ export interface OperateRequest {
   format?: JsonObject;
   /** Provider-specific options */
   providerOptions?: JsonObject;
+  /** Whether the request will execute over a streaming transport */
+  stream?: boolean;
   /** Sampling temperature (0-2 for most providers) */
   temperature?: number;
   /** User identifier for tracking */

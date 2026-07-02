@@ -36,7 +36,7 @@ describe("Constants", () => {
     });
 
     it("Has max token constants", () => {
-      expect(PROVIDER.ANTHROPIC.MAX_TOKENS.DEFAULT).toBe(4096);
+      expect(PROVIDER.ANTHROPIC.MAX_TOKENS.DEFAULT).toBe(16384);
     });
 
     it("Has tool constants", () => {

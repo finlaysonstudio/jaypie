@@ -504,7 +504,7 @@ export class OpenRouterAdapter extends BaseProviderAdapter {
     // native `response_format` (set in buildRequest), so we no longer inject a
     // synthetic structured-output tool here. The legacy fake-tool injection
     // happens in buildRequest only as a runtime fallback.
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
     _outputSchema?: JsonObject,
   ): ProviderToolDefinition[] {
     return toolkit.tools.map((tool) => ({

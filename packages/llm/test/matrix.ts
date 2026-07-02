@@ -469,9 +469,6 @@ interface CollectiveEvaluation {
   columns: Map<Capability, AxisResult>;
 }
 
-/** @deprecated Use CollectiveEvaluation */
-type OpenRouterEvaluation = CollectiveEvaluation;
-
 function isCellSuccess(cell: CellResult): boolean {
   return cell.actual === "ok" || cell.actual === "warn";
 }

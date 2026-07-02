@@ -88,7 +88,10 @@ export const PROVIDER = {
   ANTHROPIC: {
     // https://docs.anthropic.com/en/docs/about-claude/models/overview
     MAX_TOKENS: {
-      DEFAULT: 4096 as const,
+      // Non-streaming ceiling: responses above ~16K output tokens risk HTTP
+      // timeouts; streaming requests resolve to the model maximum instead
+      // (see util/maxOutputTokens.ts)
+      DEFAULT: 16384 as const,
     },
     MODEL: {
       DEFAULT: FIRST_CLASS_PROVIDER.ANTHROPIC.DEFAULT,
