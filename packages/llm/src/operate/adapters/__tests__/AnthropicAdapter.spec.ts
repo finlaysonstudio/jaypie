@@ -264,6 +264,68 @@ describe("AnthropicAdapter", () => {
         // Third message: user tool result
         expect(result.messages[2].role).toBe("user");
       });
+
+      describe("max_tokens resolution (issue #402)", () => {
+        it("defaults non-streaming requests to the non-streaming maximum", () => {
+          const request: OperateRequest = {
+            model: "claude-opus-4-8",
+            messages: [],
+          };
+
+          const result = anthropicAdapter.buildRequest(request);
+
+          expect(result.max_tokens).toBe(16384);
+        });
+
+        it("defaults streaming requests to the model maximum output", () => {
+          const request: OperateRequest = {
+            model: "claude-opus-4-8",
+            messages: [],
+            stream: true,
+          };
+
+          const result = anthropicAdapter.buildRequest(request);
+
+          expect(result.max_tokens).toBe(128000);
+        });
+
+        it("resolves streaming Claude Haiku to its lower maximum", () => {
+          const request: OperateRequest = {
+            model: "claude-haiku-4-5",
+            messages: [],
+            stream: true,
+          };
+
+          const result = anthropicAdapter.buildRequest(request);
+
+          expect(result.max_tokens).toBe(64000);
+        });
+
+        it("falls back to the default for unknown models", () => {
+          const request: OperateRequest = {
+            model: "unknown-model",
+            messages: [],
+            stream: true,
+          };
+
+          const result = anthropicAdapter.buildRequest(request);
+
+          expect(result.max_tokens).toBe(PROVIDER.ANTHROPIC.MAX_TOKENS.DEFAULT);
+        });
+
+        it("respects providerOptions max_tokens override", () => {
+          const request: OperateRequest = {
+            model: "claude-opus-4-8",
+            messages: [],
+            providerOptions: { max_tokens: 4096 },
+            stream: true,
+          };
+
+          const result = anthropicAdapter.buildRequest(request);
+
+          expect(result.max_tokens).toBe(4096);
+        });
+      });
     });
 
     describe("parseResponse", () => {

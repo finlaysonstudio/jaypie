@@ -496,6 +496,7 @@ interface LlmOperateOptions {
   hooks?: LlmHooks;                     // Lifecycle callbacks
   instructions?: string;                // Additional instructions
   model?: string;                       // Model override
+  providerOptions?: JsonObject;         // Provider-specific request fields (passthrough)
   system?: string;                      // System prompt
   temperature?: number;                 // Sampling temperature (0-2)
   tools?: LlmTool[] | Toolkit;         // Available tools
@@ -509,6 +510,44 @@ interface LlmFallbackConfig {
   apiKey?: string;    // API key (optional, uses environment variable)
 }
 ```
+
+## Provider Options and Output Limits
+
+`providerOptions` passes provider-specific request fields straight through to
+the underlying API: Anthropic merges them into the Messages request body;
+Google merges them into the generation config.
+
+### Default Output Token Limits
+
+Anthropic and Google requests resolve a default output-token limit from the
+model's documented maximum output, so long generations do not silently
+truncate:
+
+- **Non-streaming** (`operate()`, `send()`): capped at 16,384 tokens —
+  larger non-streaming responses risk HTTP timeouts (stream instead)
+- **Streaming** (`stream()`): the model maximum — e.g., 128,000 for current
+  Claude models (64,000 for Haiku), 65,536 for Gemini 2.5/3.x
+
+Override per call with `providerOptions`:
+
+```typescript
+// Anthropic: max_tokens
+await Llm.operate(input, {
+  model: "claude-sonnet-4-6",
+  providerOptions: { max_tokens: 32000 },
+});
+
+// Google: maxOutputTokens
+await Llm.operate(input, {
+  model: "gemini-3.1-pro-preview",
+  providerOptions: { maxOutputTokens: 32000 },
+});
+```
+
+OpenAI and xAI leave the limit unset (their defaults do not truncate early).
+OpenRouter varies by routed model; pass `max_tokens` via `providerOptions`
+when needed. A truncated response surfaces `stop_reason: "max_tokens"` —
+raise the limit or switch to `stream()`.
 
 ## See Also
 

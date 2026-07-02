@@ -26,6 +26,7 @@ Arguably identity, instance, and relation would form a more complete vocabulary.
 ### Further Postulates
 
 - "Events" trigger "actions"
+- Events open cases; cases fall into scenarios; scenarios prescribe plans; jobs run plans against cases
 
 ## Attribute Definitions
 
@@ -65,6 +66,7 @@ Arguably identity, instance, and relation would form a more complete vocabulary.
 - data => input, state; `data` is a parameter passed for interpolation or response field signaling success
 - jaypie; reserved
 - key => alias; make api or secret keys explicit in name
+- kind => category, tags; same rationale as `type`
 - ou => scope
 - output => state
 - type => category, tags; reserved (exception: `indexModelType` GSI exists in DynamoDB as a legacy pattern; prefer `category` for new work)
@@ -75,6 +77,15 @@ Avoid words defined elsewhere (services, terminology)
 
 - job
 - message
+- plan
+- case
+- scenario
+
+### Model Definitions
+
+- plan: a persisted definition an executor runs; what a job executes. plan : job :: definition : run. A composition projected into data is a plan. Suggested attributes: `alias`, `name`, `description`, `category` (a vocabulary under the model — e.g. composition plans use `workflow` | `agent`), optional `definitionHash` (content hash gating idempotent reseeds), optional `source` (provenance)
+- case: the subject entity a job operates on; long-lived, accretes jobs and messages over time. Jobs reference their case via `job.case` (optional — jobs usually operate on a case; system jobs may not). Neither model requires the other: a case exists before any job runs on it, and a case never stores a job list (query jobs by case)
+- scenario: a named category of cases (see Category in Ontological Grounding). `case.category` holds the scenario alias; the scenario model defines the category itself: `alias`, `name`, `description`, and `plans` (references) — scenarios prescribe which plans respond to them
 
 ### Implied Attributes
 

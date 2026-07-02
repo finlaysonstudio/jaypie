@@ -303,7 +303,7 @@ export abstract class BaseProviderAdapter implements ProviderAdapter {
   /**
    * Default implementation returns false - override for providers with native structured output
    */
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
   hasStructuredOutput(_response: unknown): boolean {
     return false;
   }
@@ -311,7 +311,7 @@ export abstract class BaseProviderAdapter implements ProviderAdapter {
   /**
    * Default implementation returns undefined - override for providers with native structured output
    */
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
   extractStructuredOutput(_response: unknown): JsonObject | undefined {
     return undefined;
   }

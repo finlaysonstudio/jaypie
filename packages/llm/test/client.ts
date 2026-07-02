@@ -1,3 +1,5 @@
+/* eslint-disable no-console */
+// Manual integration script; console output is the interface
 import { config } from "dotenv";
 import { Llm, tools } from "../src/index.js";
 

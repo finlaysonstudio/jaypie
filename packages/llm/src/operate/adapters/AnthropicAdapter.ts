@@ -19,6 +19,7 @@ import {
 import {
   isJsonSchema as isBareJsonSchema,
   naturalZodSchema,
+  resolveMaxOutputTokens,
 } from "../../util/index.js";
 import {
   ClassifiedError,
@@ -496,11 +497,14 @@ export class AnthropicAdapter extends BaseProviderAdapter {
       }
     }
 
+    const model = (request.model ||
+      this.defaultModel) as Anthropic.MessageCreateParams["model"];
     const anthropicRequest: AnthropicRequestParams = {
-      model: (request.model ||
-        this.defaultModel) as Anthropic.MessageCreateParams["model"],
+      model,
       messages,
-      max_tokens: PROVIDER.ANTHROPIC.MAX_TOKENS.DEFAULT,
+      max_tokens:
+        resolveMaxOutputTokens(model as string, { stream: request.stream }) ??
+        PROVIDER.ANTHROPIC.MAX_TOKENS.DEFAULT,
       stream: false,
     };
 
@@ -581,7 +585,7 @@ export class AnthropicAdapter extends BaseProviderAdapter {
     // outputSchema is part of the interface contract but Anthropic now uses
     // native `output_format` (set in buildRequest), so we no longer inject a
     // synthetic structured-output tool here.
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
     _outputSchema?: JsonObject,
   ): ProviderToolDefinition[] {
     return toolkit.tools.map((tool) => ({

@@ -282,6 +282,55 @@ describe("GoogleAdapter", () => {
           (result.config?.responseSchema as any)?.additionalProperties,
         ).toBeUndefined();
       });
+
+      describe("maxOutputTokens resolution (issue #402)", () => {
+        it("defaults non-streaming requests to the non-streaming maximum", () => {
+          const request: OperateRequest = {
+            model: PROVIDER.GOOGLE.MODEL.DEFAULT,
+            messages: [],
+          };
+
+          const result = googleAdapter.buildRequest(request);
+
+          expect(result.config?.maxOutputTokens).toBe(16384);
+        });
+
+        it("defaults streaming requests to the model maximum output", () => {
+          const request: OperateRequest = {
+            model: PROVIDER.GOOGLE.MODEL.DEFAULT,
+            messages: [],
+            stream: true,
+          };
+
+          const result = googleAdapter.buildRequest(request);
+
+          expect(result.config?.maxOutputTokens).toBe(65536);
+        });
+
+        it("leaves maxOutputTokens unset for unknown models", () => {
+          const request: OperateRequest = {
+            model: "unknown-model",
+            messages: [],
+          };
+
+          const result = googleAdapter.buildRequest(request);
+
+          expect(result.config?.maxOutputTokens).toBeUndefined();
+        });
+
+        it("respects providerOptions maxOutputTokens override", () => {
+          const request: OperateRequest = {
+            model: PROVIDER.GOOGLE.MODEL.DEFAULT,
+            messages: [],
+            providerOptions: { maxOutputTokens: 8192 },
+            stream: true,
+          };
+
+          const result = googleAdapter.buildRequest(request);
+
+          expect(result.config?.maxOutputTokens).toBe(8192);
+        });
+      });
     });
 
     describe("parseResponse", () => {

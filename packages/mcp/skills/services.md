@@ -173,9 +173,23 @@ describe("getUser", () => {
 });
 ```
 
+## Parameters vs Context
+
+Plain service functions above take only domain input (`userId`, `input`). Fabric's `ServiceFunction` type adds a second, optional argument:
+
+```typescript
+type ServiceFunction<TInput, TOutput> = (
+  input: TInput,
+  context?: ServiceContext,
+) => TOutput | Promise<TOutput>;
+```
+
+`parameters`/`input` is validated domain input; `context` is the surrounding scope the service runs within — error/fatal callbacks, progress messaging, and (via `fabricHttp`) auth results and raw HTTP request metadata. See `skill("fabric")` and `skill("vocabulary")` (`Context: scope in which propositions hold`) for the full pattern.
+
 ## See Also
 
 - **`skill("fabric")`** - Fabric service pattern for multi-platform deployment
 - **`skill("handlers")`** - Handler lifecycle and integration with services
 - **`skill("models")`** - Data model and type definitions
+- **`skill("vocabulary")`** - Reserved terms including `context` as a Fabric Service Attribute
 

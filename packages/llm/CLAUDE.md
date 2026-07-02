@@ -110,6 +110,24 @@ const result = await llm.operate("What is 2+2?");
 const claude = new Llm("claude-sonnet-4-6"); // -> anthropic, claude-sonnet-4-6
 ```
 
+### Output Token Limits
+
+Anthropic and Google requests resolve a default output-token limit from the
+model's documented maximum output (`src/util/maxOutputTokens.ts`), so long
+generations do not silently truncate:
+
+- **Non-streaming** (`operate()`, `send()`): capped at
+  `PROVIDER.ANTHROPIC.MAX_TOKENS.DEFAULT` (16,384) — larger non-streaming
+  responses risk HTTP timeouts; stream instead
+- **Streaming** (`stream()`): the model maximum — 128,000 for current Claude
+  models (64,000 for Haiku 4.5), 65,536 for Gemini 2.5/3.x
+
+The `stream` flag on `OperateRequest` (set by `StreamLoop`) tells adapters
+which transport the request uses. Callers override per call via
+`providerOptions` (`max_tokens` for Anthropic, `maxOutputTokens` for Google).
+OpenAI, xAI, and OpenRouter leave the limit unset. When adding models, update
+the table in `src/util/maxOutputTokens.ts`.
+
 ### Fallback Providers
 
 Configure a chain of fallback providers that automatically retry failed calls when the primary provider fails with an unrecoverable error.

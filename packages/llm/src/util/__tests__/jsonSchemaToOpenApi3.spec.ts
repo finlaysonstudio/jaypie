@@ -1,4 +1,3 @@
-import { JsonObject } from "@jaypie/types";
 import { describe, expect, it } from "vitest";
 
 import { jsonSchemaToOpenApi3 } from "../jsonSchemaToOpenApi3.js";

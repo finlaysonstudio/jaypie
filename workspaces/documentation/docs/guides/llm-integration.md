@@ -375,10 +375,13 @@ async function askLlm(prompt) {
 
 ### Anthropic
 
+`max_tokens` defaults to the model's maximum output (capped at 16,384 for
+non-streaming requests). Override it through `providerOptions`:
+
 ```typescript
 await Llm.operate(prompt, {
   model: "claude-sonnet-4",
-  maxTokens: 4096,
+  providerOptions: { max_tokens: 32000 },
   temperature: 0.7,
 });
 ```

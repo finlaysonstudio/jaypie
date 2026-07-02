@@ -6,6 +6,7 @@ export * from "./formatOperateMessage.js";
 export * from "./jsonSchema.js";
 export * from "./jsonSchemaToOpenApi3.js";
 export * from "./logger.js";
+export * from "./maxOutputTokens.js";
 export * from "./maxTurnsFromOptions.js";
 export * from "./naturalZodSchema.js";
 export * from "./random.js";
