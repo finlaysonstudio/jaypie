@@ -39,10 +39,7 @@ function expressHeadersToHeaders(req: Request): Headers {
 /**
  * Create HTTP context from Express request
  */
-function createHttpContextFromExpress(
-  req: Request,
-  pathPattern?: string,
-): HttpContext {
+function createHttpContextFromExpress(req: Request): HttpContext {
   const headers = expressHeadersToHeaders(req);
 
   // Build query string from Express query object
@@ -138,14 +135,10 @@ export function fabricExpress<
   const corsConfig = normalizeCorsConfig(service.cors);
 
   // Create the middleware function
-  const middleware = async (
-    req: Request,
-    res: Response,
-    next: NextFunction,
-  ): Promise<void> => {
+  const middleware = async (req: Request, res: Response): Promise<void> => {
     try {
       // Create HTTP context from Express request
-      const httpContext = createHttpContextFromExpress(req, path);
+      const httpContext = createHttpContextFromExpress(req);
 
       // Get request origin for CORS
       const requestOrigin = req.get("origin") ?? null;

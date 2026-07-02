@@ -34,8 +34,9 @@ export function createUpdateService<T extends FabricModel = FabricModel>(
       // Dynamically import DynamoDB utilities
       const { getEntity, updateEntity } = await import("@jaypie/dynamodb");
 
-      const id = input.id as string | undefined;
-      const { id: _id, ...updateData } = input;
+      const { id, ...updateData } = input as {
+        id?: string;
+      } & Record<string, unknown>;
 
       if (!id) {
         throw new BadRequestError("ID is required");
