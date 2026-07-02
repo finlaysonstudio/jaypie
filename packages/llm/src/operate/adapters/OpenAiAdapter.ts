@@ -42,7 +42,7 @@ import {
   LlmStreamChunk,
   LlmStreamChunkType,
 } from "../../types/LlmStreamChunk.interface.js";
-import { naturalZodSchema } from "../../util/index.js";
+import { isJsonSchema, naturalZodSchema } from "../../util/index.js";
 import { OpenAIRawResponse } from "../../providers/openai/types.js";
 import {
   ClassifiedError,
@@ -219,23 +219,36 @@ export class OpenAiAdapter extends BaseProviderAdapter {
       return schema as JsonObject;
     }
 
-    // Convert NaturalSchema to Zod schema if needed
-    const zodSchema =
-      schema instanceof z.ZodType
-        ? schema
-        : naturalZodSchema(schema as NaturalSchema);
+    // Bare JSON Schema node: `{ type: "object", properties: {...} }`
+    // Skip the zod round-trip and use it directly (still needs the
+    // additionalProperties + envelope treatment below).
+    let jsonSchema: Record<string, unknown>;
+    let name = "response";
+    let strict = true;
+    if (isJsonSchema(schema)) {
+      jsonSchema = { ...structuredClone(schema) };
+      delete jsonSchema.$schema;
+    } else {
+      // Convert NaturalSchema to Zod schema if needed
+      const zodSchema =
+        schema instanceof z.ZodType
+          ? schema
+          : naturalZodSchema(schema as NaturalSchema);
 
-    const responseFormat = zodResponseFormat(zodSchema as any, "response");
-    // Re-spread to drop zod v4's non-enumerable `~standard` Standard-Schema
-    // interop marker, then strip `$schema`: OpenAI's strict json_schema subset
-    // does not recognize the draft-2020-12 `$schema` keyword, and shipping it
-    // can leave strict structured-output enforcement silently disabled (the
-    // model then free-forms, omitting required fields and corrupting keys).
-    // Mirrors the OpenRouter adapter's sanitization.
-    const jsonSchema = {
-      ...(z.toJSONSchema(zodSchema) as Record<string, unknown>),
-    };
-    delete jsonSchema.$schema;
+      const responseFormat = zodResponseFormat(zodSchema as any, "response");
+      // Re-spread to drop zod v4's non-enumerable `~standard` Standard-Schema
+      // interop marker, then strip `$schema`: OpenAI's strict json_schema subset
+      // does not recognize the draft-2020-12 `$schema` keyword, and shipping it
+      // can leave strict structured-output enforcement silently disabled (the
+      // model then free-forms, omitting required fields and corrupting keys).
+      // Mirrors the OpenRouter adapter's sanitization.
+      jsonSchema = {
+        ...(z.toJSONSchema(zodSchema) as Record<string, unknown>),
+      };
+      delete jsonSchema.$schema;
+      name = responseFormat.json_schema.name;
+      strict = responseFormat.json_schema.strict as boolean;
+    }
 
     // OpenAI requires additionalProperties to be false on all objects
     const checks = [jsonSchema];
@@ -253,10 +266,10 @@ export class OpenAiAdapter extends BaseProviderAdapter {
     }
 
     return {
-      name: responseFormat.json_schema.name,
+      name,
       schema: jsonSchema as JsonObject,
-      strict: responseFormat.json_schema.strict,
-      type: responseFormat.type,
+      strict,
+      type: "json_schema",
     };
   }
 

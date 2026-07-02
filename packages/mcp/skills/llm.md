@@ -215,6 +215,42 @@ const result = await Llm.operate("Parse: Alice is 30 and likes hiking and readin
 });
 ```
 
+### Bare JSON Schema
+
+`format` also duck-types a bare JSON Schema object node — `{ type: "object", properties: {...} }` — without needing the OpenAI-style `{ type: "json_schema", ... }` envelope. `required` is honored.
+
+```typescript
+const result = await Llm.operate("Analyze this chargeback", {
+  model: "gpt-5.1",
+  format: {
+    type: "object",
+    properties: {
+      code: { type: "string", description: "The chargeback reason code" },
+      cardBrand: { type: "string", description: "Visa, Mastercard, etc." },
+    },
+    required: ["code"],
+  },
+});
+```
+
+### Converting between Natural Schema and JSON Schema
+
+```typescript
+import { jsonSchemaToNaturalSchema, naturalSchemaToJsonSchema } from "@jaypie/llm";
+
+naturalSchemaToJsonSchema({ name: String, age: Number });
+// { type: "object", properties: { name: { type: "string" }, age: { type: "number" } }, required: ["name", "age"] }
+
+jsonSchemaToNaturalSchema({
+  type: "object",
+  properties: { name: { type: "string" } },
+  required: ["name"],
+});
+// { name: String }
+```
+
+`naturalSchemaToJsonSchema` is lossless — Natural Schema is a strict subset of JSON Schema. `jsonSchemaToNaturalSchema` is lossy: JSON Schema constraints, descriptions, defaults, unions, and optionality have no Natural Schema equivalent and are dropped. It never throws; every dropped keyword is logged at `log.debug` with the keyword name and JSON path.
+
 ## Conversation History
 
 Continue conversations across calls:

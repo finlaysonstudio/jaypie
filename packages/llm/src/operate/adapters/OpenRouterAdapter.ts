@@ -17,7 +17,7 @@ import {
   LlmStreamChunk,
   LlmStreamChunkType,
 } from "../../types/LlmStreamChunk.interface.js";
-import { naturalZodSchema } from "../../util/index.js";
+import { isJsonSchema, naturalZodSchema } from "../../util/index.js";
 import {
   ClassifiedError,
   ErrorCategory,
@@ -519,12 +519,14 @@ export class OpenRouterAdapter extends BaseProviderAdapter {
   ): JsonObject {
     let jsonSchema: JsonObject;
 
-    // Check if schema is already a JsonObject with type "json_schema"
+    // Check if schema is already a JsonObject — either the OpenAI-style
+    // `{ type: "json_schema", ... }` envelope or a bare `{ type: "object", properties }` node
     if (
-      typeof schema === "object" &&
-      schema !== null &&
-      !Array.isArray(schema) &&
-      (schema as JsonObject).type === "json_schema"
+      (typeof schema === "object" &&
+        schema !== null &&
+        !Array.isArray(schema) &&
+        (schema as JsonObject).type === "json_schema") ||
+      isJsonSchema(schema)
     ) {
       jsonSchema = structuredClone(schema) as JsonObject;
       jsonSchema.type = "object"; // Normalize type

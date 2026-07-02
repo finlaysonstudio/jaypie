@@ -3,6 +3,7 @@ export * from "./extractReasoning.js";
 export * from "./fillFormatArrays.js";
 export * from "./formatOperateInput.js";
 export * from "./formatOperateMessage.js";
+export * from "./jsonSchema.js";
 export * from "./jsonSchemaToOpenApi3.js";
 export * from "./logger.js";
 export * from "./maxTurnsFromOptions.js";

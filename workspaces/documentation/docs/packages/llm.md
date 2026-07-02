@@ -246,6 +246,8 @@ Declared array fields are always present in the response as arrays — an empty 
 
 ### JSON Schema
 
+Both the OpenAI-style `{ type: "json_schema", ... }` envelope and a bare `{ type: "object", properties: {...} }` node are accepted; `required` is honored.
+
 ```typescript
 const response = await Llm.operate(prompt, {
   model: "gpt-5.1",
@@ -255,9 +257,19 @@ const response = await Llm.operate(prompt, {
       name: { type: "string" },
       age: { type: "number" },
     },
+    required: ["name"],
   },
 });
 // Returns: { name: "John", age: 25 }
+```
+
+Convert between Natural Schema and JSON Schema directly with `naturalSchemaToJsonSchema` (lossless) and `jsonSchemaToNaturalSchema` (lossy — constraints, descriptions, defaults, unions, and optionality have no Natural Schema equivalent and are dropped with a `log.debug` per keyword, never thrown):
+
+```typescript
+import { naturalSchemaToJsonSchema, jsonSchemaToNaturalSchema } from "@jaypie/llm";
+
+naturalSchemaToJsonSchema({ name: String, age: Number });
+// { type: "object", properties: { name: { type: "string" }, age: { type: "number" } }, required: ["name", "age"] }
 ```
 
 ### Zod Schema

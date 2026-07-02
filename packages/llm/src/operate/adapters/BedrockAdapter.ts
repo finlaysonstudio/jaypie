@@ -21,7 +21,7 @@ import {
   LlmStreamChunk,
   LlmStreamChunkType,
 } from "../../types/LlmStreamChunk.interface.js";
-import { naturalZodSchema } from "../../util/index.js";
+import { isJsonSchema, naturalZodSchema } from "../../util/index.js";
 import {
   ClassifiedError,
   ErrorCategory,
@@ -369,6 +369,11 @@ export class BedrockAdapter extends BaseProviderAdapter {
   formatOutputSchema(
     schema: JsonObject | NaturalSchema | z.ZodType,
   ): JsonObject {
+    // Bare JSON Schema node: `{ type: "object", properties: {...} }`
+    if (isJsonSchema(schema)) {
+      return structuredClone(schema);
+    }
+
     const zodSchema =
       schema instanceof z.ZodType
         ? schema
