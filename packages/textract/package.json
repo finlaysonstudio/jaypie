@@ -1,6 +1,6 @@
 {
   "name": "@jaypie/textract",
-  "version": "0.2.5",
+  "version": "0.2.6",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/finlaysonstudio/jaypie.git"
@@ -32,7 +32,8 @@
     "amazon-textract-response-parser": "^0.4.3"
   },
   "devDependencies": {
-    "@jaypie/types": "*"
+    "@jaypie/types": "*",
+    "rollup-plugin-dts": "^6.1.1"
   },
   "publishConfig": {
     "access": "public"

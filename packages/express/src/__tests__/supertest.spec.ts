@@ -115,7 +115,6 @@ describe("Express handler", () => {
         });
         // Set up our mock express app
         const app = express();
-        // eslint-disable-next-line import-x/no-named-as-default-member
         app.use(express.json());
         app.use(handler);
         // Make a request
@@ -269,7 +268,6 @@ describe("Express handler", () => {
         }));
         const handler = expressHandler(mockFunction, { name: "handler" });
         const app = express();
-        // eslint-disable-next-line import-x/no-named-as-default-member
         app.use(express.json());
         app.use(handler);
         const res = await request(app)
@@ -287,7 +285,6 @@ describe("Express handler", () => {
         }));
         const handler = expressHandler(mockFunction, { name: "handler" });
         const app = express();
-        // eslint-disable-next-line import-x/no-named-as-default-member
         app.use(express.json());
         app.use(handler);
         const res = await request(app)

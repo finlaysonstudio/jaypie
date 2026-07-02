@@ -1,5 +1,4 @@
 /// <reference types="vitest" />
-/// <reference types="jest-extended" />
 
 import { JaypieMatchers } from "./matchers.js";
 

@@ -16,7 +16,7 @@ export default [
         outDir: "dist/esm",
       }),
     ],
-    external: ["dotenv", "rimraf", "sort-package-json", "tsx"],
+    external: ["rimraf", "sort-package-json", "tsx"],
   },
   // CommonJS version
   {
@@ -35,6 +35,6 @@ export default [
         outDir: "dist/cjs",
       }),
     ],
-    external: ["dotenv", "rimraf", "sort-package-json", "tsx"],
+    external: ["rimraf", "sort-package-json", "tsx"],
   },
 ];

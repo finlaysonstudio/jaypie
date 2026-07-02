@@ -1,6 +1,6 @@
 {
   "name": "@jaypie/testkit",
-  "version": "1.2.47",
+  "version": "1.2.49",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/finlaysonstudio/jaypie.git"
@@ -34,22 +34,21 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "jest-extended": "^4.0.2",
     "jest-json-schema": "^6.1.0",
-    "uuid": "^11.0.5"
+    "uuid": "^14.0.1"
   },
   "devDependencies": {
     "@jaypie/dynamodb": "*",
     "@jaypie/fabric": "*",
     "@jaypie/tildeskill": "*",
     "@jaypie/types": "*",
-    "@rollup/plugin-commonjs": "^28.0.3",
+    "@rollup/plugin-commonjs": "^29.0.3",
     "@rollup/plugin-json": "^6.1.0",
     "@rollup/plugin-node-resolve": "^16.0.1",
     "@rollup/plugin-typescript": "^12.1.2",
     "@types/express": "^5.0.0",
     "@types/node": "^22.13.1",
-    "@types/supertest": "^6.0.2",
+    "@types/supertest": "^7.2.0",
     "express": "^4.21.2",
     "rollup": "^4.29.1",
     "rollup-plugin-copy": "^3.5.0",

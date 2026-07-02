@@ -148,7 +148,7 @@ const response = await Llm.operate(input, {
 
 ### Structured Outputs
 
-Pass `format` (or `response` for `provider.send`) with a Zod or JSON-Schema definition to receive guaranteed-valid JSON.
+Pass `format` (or `response` for `provider.send`) with a Natural Schema, Zod, or JSON Schema definition to receive guaranteed-valid JSON.
 
 ```typescript
 import { z } from "zod/v4";
@@ -165,6 +165,13 @@ const response = await Llm.operate("Greet the world", {
 });
 // response.content is parsed JSON: { salutation: "Hello", name: "World" }
 ```
+
+`format` accepts three shapes, all converging on JSON Schema before hitting the provider:
+- **Natural Schema** — plain object of type constructors (`{ name: String, age: Number }`), converted via `naturalZodSchema()` → Zod → JSON Schema.
+- **Zod schema** (`instanceof z.ZodType`) — converted directly to JSON Schema.
+- **JSON Schema** — either the OpenAI-style `{ type: "json_schema", ... }` envelope, or a bare `{ type: "object", properties: {...}, required: [...] }` node (duck-typed via `isJsonSchema`, used as-is with `required` honored).
+
+`naturalSchemaToJsonSchema`/`jsonSchemaToNaturalSchema` (exported from `src/util/jsonSchema.ts`) convert between the first and third forms directly. The Natural→JSON direction is lossless; JSON→Natural is lossy (constraints, descriptions, defaults, unions, and optionality have no Natural Schema equivalent) — it never throws, and every dropped keyword is logged at `log.debug` with the keyword name and JSON path.
 
 **Anthropic notes:**
 - Uses Anthropic's native `output_config.format` field (GA 2025-11; Claude 4.5+). The earlier `output_format` field name is deprecated by the API.
@@ -368,6 +375,9 @@ export { LlmMessageRole, LlmMessageType, LlmStreamChunkType };
 
 // Tools
 export { JaypieToolkit, toolkit, Toolkit, tools };
+
+// Utilities
+export { extractReasoning, jsonSchemaToNaturalSchema, naturalSchemaToJsonSchema };
 
 // Providers (for direct use)
 export { GoogleProvider, OpenRouterProvider, XaiProvider };

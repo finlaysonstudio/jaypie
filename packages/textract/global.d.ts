@@ -1,11 +1,26 @@
-import "jest-extended";
+import "vitest";
 
 declare module "vitest" {
   interface Assertion<T = unknown> {
+    toBeArray(): T;
+    toBeArrayOfSize(size: number): T;
+    toBeBoolean(): T;
     toBeCalledAboveTrace(): T;
     toBeCalledWithInitialParams(params: unknown): T;
     toBeClass(): T;
+    toBeEmpty(): T;
+    toBeFalse(): T;
+    toBeFunction(): T;
     toBeJaypieError(): T;
+    toBeNumber(): T;
+    toBeObject(): T;
+    toBeString(): T;
+    toBeTrue(): T;
+    toContainAllKeys(keys: string[]): T;
+    toContainKeys(keys: string[]): T;
+    toEndWith(suffix: string): T;
+    toInclude(substring: unknown): T;
+    toStartWith(prefix: string): T;
     toMatchBase64(): T;
     toMatchJwt(): T;
     toMatchMongoId(): T;

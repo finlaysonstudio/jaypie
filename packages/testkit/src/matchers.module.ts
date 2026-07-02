@@ -1,5 +1,21 @@
-import * as jestExtendedMatchers from "jest-extended";
 import { matchers as jestJsonSchemaMatchers } from "jest-json-schema";
+import {
+  toBeArray,
+  toBeArrayOfSize,
+  toBeBoolean,
+  toBeEmpty,
+  toBeFalse,
+  toBeFunction,
+  toBeNumber,
+  toBeObject,
+  toBeString,
+  toBeTrue,
+  toContainAllKeys,
+  toContainKeys,
+  toEndWith,
+  toInclude,
+  toStartWith,
+} from "./matchers/extended.matcher.js";
 import toBeCalledAboveTrace from "./matchers/toBeCalledAboveTrace.matcher.js";
 import toBeCalledWithInitialParams from "./matchers/toBeCalledWithInitialParams.matcher.js";
 import toBeClass from "./matchers/toBeClass.matcher.js";
@@ -55,8 +71,22 @@ const matchers: Record<string, (...args: any[]) => any> = {
   toThrowUnauthorizedError,
   toThrowUnavailableError,
 
-  // Include all jest-extended matchers
-  ...jestExtendedMatchers,
+  // Absorbed jest-extended matchers (formerly via the jest-extended package)
+  toBeArray,
+  toBeArrayOfSize,
+  toBeBoolean,
+  toBeEmpty,
+  toBeFalse,
+  toBeFunction,
+  toBeNumber,
+  toBeObject,
+  toBeString,
+  toBeTrue,
+  toContainAllKeys,
+  toContainKeys,
+  toEndWith,
+  toInclude,
+  toStartWith,
 };
 
 export default matchers;

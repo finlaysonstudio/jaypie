@@ -43,6 +43,10 @@ export { JaypieToolkit, toolkit, Toolkit, tools } from "./tools/index.js";
 
 // Utilities
 export { extractReasoning } from "./util/extractReasoning.js";
+export {
+  jsonSchemaToNaturalSchema,
+  naturalSchemaToJsonSchema,
+} from "./util/jsonSchema.js";
 
 // Providers
 export { BedrockProvider } from "./providers/bedrock/index.js";

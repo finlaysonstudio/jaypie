@@ -274,9 +274,9 @@ npm run typecheck   # TypeScript type checking
 
 ### Dependencies
 
-- **@faker-js/faker**: ^9.3.0 - Realistic fake data generation
+- **@faker-js/faker**: ^10.5.0 - Realistic fake data generation
 - **random**: ^5.4.1 - Seedable random number generation
-- **uuid**: ^13.0.0 - UUID generation and parsing
+- **uuid**: ^14.0.1 - UUID generation and parsing
 - **@jaypie/errors**: ^1.2.1 - Jaypie error types (ConfigurationError)
 
 ## Error Handling

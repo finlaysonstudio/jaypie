@@ -5,7 +5,7 @@ Essential development utilities bundled for Jaypie repositories. Consolidates co
 ## Package Overview
 
 This package serves as a convenience bundle that:
-1. **Re-exports utilities** for programmatic use (`dotenv`, `rimraf`)
+1. **Re-exports utilities** for programmatic use (`rimraf`)
 2. **Provides CLI tools** as dependencies accessible via `npx` (`env-cmd`, `sort-package-json`, `tsx`)
 
 ## Directory Structure
@@ -13,7 +13,7 @@ This package serves as a convenience bundle that:
 ```
 packages/repokit/
 ├── src/
-│   ├── index.ts              # Re-exports dotenv and rimraf
+│   ├── index.ts              # Re-exports rimraf
 │   └── __tests__/
 │       └── index.spec.ts     # Verifies exports
 ├── dist/                     # Built ESM and CJS outputs
@@ -24,9 +24,6 @@ packages/repokit/
 ## Exports
 
 ```typescript
-// Re-exports all of dotenv
-export * from "dotenv";
-
 // Re-exports rimraf function
 export { rimraf } from "rimraf";
 ```
@@ -34,10 +31,7 @@ export { rimraf } from "rimraf";
 ### Usage
 
 ```typescript
-import { config, rimraf } from "@jaypie/repokit";
-
-// Load environment variables
-config();
+import { rimraf } from "@jaypie/repokit";
 
 // Remove directories cross-platform
 await rimraf("./dist");
@@ -71,7 +65,7 @@ These dependencies are available for use in package.json scripts:
 
 - Uses Rollup with `@rollup/plugin-typescript`
 - Outputs both ESM (`dist/esm/`) and CJS (`dist/cjs/`)
-- External dependencies: `dotenv`, `rimraf`, `sort-package-json`, `tsx`
+- External dependencies: `rimraf`, `sort-package-json`, `tsx`
 
 ## Integration with Monorepo
 
@@ -94,7 +88,7 @@ npm run format     # eslint --fix
 
 ## Why Use Repokit
 
-Instead of installing `dotenv`, `rimraf`, `env-cmd`, `sort-package-json`, and `tsx` individually:
+Instead of installing `rimraf`, `env-cmd`, `sort-package-json`, and `tsx` individually:
 1. **Consistency**: Ensures the same versions across all Jaypie packages
-2. **Simplicity**: One dependency instead of five
+2. **Simplicity**: One dependency instead of four
 3. **Maintenance**: Update one package to update all utilities

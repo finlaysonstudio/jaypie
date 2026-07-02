@@ -1872,13 +1872,9 @@ describe("Commander Adapter", () => {
 
     describe("parse methods", () => {
       it("parse() returns this for chaining", () => {
-        let executed = false;
         const service = fabricService({
           alias: "test",
-          service: () => {
-            executed = true;
-            return "result";
-          },
+          service: () => "result",
         });
 
         const cli = new FabricCommander([service]);

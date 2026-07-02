@@ -1,5 +1,4 @@
 import jaypie from "@jaypie/eslint";
-import jest from "eslint-plugin-jest";
 
 export default [
   //
@@ -21,58 +20,6 @@ export default [
       "workspaces/documentation/build/**",
       "workspaces/garden-ui/**",
     ],
-  },
-
-  //
-  //
-  // CDK: CommonJS and Jest
-  //
-  {
-    files: ["packages/cdk/**/*.js"],
-    languageOptions: {
-      ecmaVersion: "latest",
-      sourceType: "script",
-    },
-    rules: {
-      "no-restricted-syntax": [
-        "error",
-        {
-          selector: "ImportDeclaration",
-          message: "Unexpected import, use require instead.",
-        },
-        {
-          selector: "ExportNamedDeclaration",
-          message: "Unexpected export, use module.exports instead.",
-        },
-        {
-          selector: "ExportDefaultDeclaration",
-          message: "Unexpected export, use module.exports instead.",
-        },
-      ],
-    },
-  },
-  {
-    files: [
-      "packages/cdk/**/*.spec.js",
-      "packages/cdk/**/*.test.js",
-      "packages/cdk/**/__tests__/**/*.js",
-    ],
-    ...jest.configs["flat/recommended"],
-  },
-
-  //
-  //
-  // Sites: TypeScript/TSX files (allow imports)
-  //
-  {
-    files: ["workspaces/**/*.ts", "workspaces/**/*.tsx"],
-    rules: {
-      "import-x/default": "off",
-      "import-x/no-unresolved": [
-        "error",
-        { ignore: ["^@theme/", "^@docusaurus/"] },
-      ],
-    },
   },
 
   //

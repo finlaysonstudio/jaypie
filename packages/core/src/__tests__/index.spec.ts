@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 
 // Subject
-// eslint-disable-next-line import-x/default
 import index, {
   BadGatewayError,
   BadRequestError,

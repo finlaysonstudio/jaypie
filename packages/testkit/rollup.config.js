@@ -36,7 +36,6 @@ const external = [
   "amazon-textract-response-parser",
   "express",
   "fs/promises",
-  "jest-extended",
   "jest-json-schema",
   "module",
   "node:util",

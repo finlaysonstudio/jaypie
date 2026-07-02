@@ -16,9 +16,7 @@ import type {
   ApiGatewayResponse,
   ApiGatewayV1Event,
   ApiGatewayV2Event,
-  AuthorizationConfig,
   CorsHeaders,
-  CorsOption,
   DataResponse,
   ErrorResponse,
   FabricHttpServer as FabricHttpServerType,
@@ -260,12 +258,7 @@ function applyCorsHeaders(
 export function FabricHttpServer(
   config: FabricHttpServerConfig,
 ): FabricHttpServerType {
-  const {
-    services,
-    authorization: serverAuthorization,
-    cors: serverCors = true,
-    prefix,
-  } = config;
+  const { services, cors: serverCors = true, prefix } = config;
 
   // Build routes from services
   const routes: RegisteredRoute[] = [];

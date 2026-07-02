@@ -107,7 +107,6 @@ describe("Express Backend", () => {
       it("POST /", async () => {
         // Setup express to use our route
         const app = express();
-        // eslint-disable-next-line import-x/no-named-as-default-member
         app.use(express.text());
         const route = echoHandler();
         app.use(route);
@@ -123,7 +122,6 @@ describe("Express Backend", () => {
       it("POST / (empty)", async () => {
         // Setup express to use our route
         const app = express();
-        // eslint-disable-next-line import-x/no-named-as-default-member
         app.use(express.json());
         const route = echoHandler();
         app.use(route);
@@ -149,7 +147,6 @@ describe("Express Backend", () => {
       });
       it("PUT /", async () => {
         const app = express();
-        // eslint-disable-next-line import-x/no-named-as-default-member
         app.use(express.json());
         const route = echoHandler();
         app.use(route);
@@ -162,7 +159,6 @@ describe("Express Backend", () => {
       });
       it("PATCH /", async () => {
         const app = express();
-        // eslint-disable-next-line import-x/no-named-as-default-member
         app.use(express.json());
         const route = echoHandler();
         app.use(route);

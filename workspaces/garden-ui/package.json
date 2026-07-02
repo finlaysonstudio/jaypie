@@ -20,13 +20,13 @@
     "@jaypie/garden-models": "^0.1.0",
     "@jaypie/kit": "^1.2.5",
     "@jaypie/logger": "^1.2.5",
-    "lucide-react": "^0.562.0",
+    "lucide-react": "^1.21.0",
     "next": "^16.1.6",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"
   },
   "devDependencies": {
-    "@types/node": "^22.10.7",
+    "@types/node": "^22.13.1",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "eslint": "^10.0.0",

@@ -1,6 +1,6 @@
 {
   "name": "@jaypie/fabricator",
-  "version": "0.3.2",
+  "version": "0.4.0",
   "private": false,
   "repository": {
     "type": "git",
@@ -31,13 +31,13 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@faker-js/faker": "^9.3.0",
+    "@faker-js/faker": "^10.5.0",
     "@jaypie/errors": "*",
     "random": "^5.4.1",
-    "uuid": "^13.0.0"
+    "uuid": "^14.0.1"
   },
   "devDependencies": {
-    "@types/node": "^24.2.1",
+    "@types/node": "^22.13.1",
     "@types/uuid": "^10.0.0"
   },
   "publishConfig": {
