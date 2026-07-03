@@ -8,6 +8,11 @@ import {
 
 const DEFAULT_ZONE = "jaypie.net";
 
+// Starlight ships inline scripts (theme init) and Pagefind search compiles
+// WebAssembly at runtime; brand fonts load from Google Fonts.
+const DOCUMENTATION_CONTENT_SECURITY_POLICY =
+  "default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https:; frame-ancestors 'none'; base-uri 'self'; form-action 'self';";
+
 export interface DocumentationStackProps {
   /**
    * Override the default host for the documentation site
@@ -37,6 +42,9 @@ export class DocumentationStack extends JaypieAppStack {
 
     const bucketProps: JaypieStaticWebBucketProps = {
       host,
+      securityHeaders: {
+        contentSecurityPolicy: DOCUMENTATION_CONTENT_SECURITY_POLICY,
+      },
       zone,
     };
 
