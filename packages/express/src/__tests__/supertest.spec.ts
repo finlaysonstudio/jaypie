@@ -14,7 +14,9 @@ import { restoreLog, spyLog } from "@jaypie/testkit";
 import express from "express";
 import request from "supertest";
 
+import { EXPRESS } from "../constants.js";
 import getCurrentInvokeUuid from "../getCurrentInvokeUuid.adapter.js";
+import { notFoundRoute } from "../routes.js";
 
 // Subject
 import expressHandler from "../expressHandler.js";
@@ -394,7 +396,7 @@ describe("Express handler", () => {
           res.setHeader("Access-Control-Allow-Headers", "Content-Type");
           next();
         });
-        app.options("*", (_req, res) => {
+        app.options(EXPRESS.PATH.ANY, (_req, res) => {
           res.status(HTTP.CODE.NO_CONTENT).end();
         });
         app.use(handler);
@@ -405,6 +407,20 @@ describe("Express handler", () => {
         expect(res.status).toEqual(HTTP.CODE.NO_CONTENT);
         expect(res.headers["access-control-allow-origin"]).toEqual("*");
         expect(res.headers["access-control-allow-methods"]).toContain("POST");
+      });
+    });
+    describe("Catch-all routes", () => {
+      it("EXPRESS.PATH.ANY matches unrouted paths", async () => {
+        const app = express();
+        app.get(
+          "/exists",
+          expressHandler(() => ({ ok: true })),
+        );
+        app.all(EXPRESS.PATH.ANY, notFoundRoute);
+        const found = await request(app).get("/exists");
+        expect(found.status).toEqual(HTTP.CODE.OK);
+        const missing = await request(app).get("/does/not/exist");
+        expect(missing.status).toEqual(HTTP.CODE.NOT_FOUND);
       });
     });
   });

@@ -1,5 +1,5 @@
 import type { Response } from "express";
-import { HTTP, JAYPIE } from "@jaypie/kit";
+import { HTTP } from "@jaypie/kit";
 import {
   afterEach,
   beforeEach,

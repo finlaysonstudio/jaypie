@@ -81,6 +81,9 @@
     "typecheck": "npm run typecheck --workspaces"
   },
   "overrides": {
+    "@microsoft/api-documenter": {
+      "js-yaml": "^4.3.0"
+    },
     "eslint-plugin-import": {
       "eslint": "$eslint"
     },
@@ -90,6 +93,9 @@
     "serialize-javascript": "^7.0.5",
     "sockjs": {
       "uuid": "^14.0.1"
+    },
+    "yaml-language-server": {
+      "yaml": "^2.9.0"
     }
   },
   "devDependencies": {

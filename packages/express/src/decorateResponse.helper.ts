@@ -29,41 +29,6 @@ interface ExtendedResponse extends Response {
 //
 
 /**
- * Safely get a header value from response.
- * Handles both Express Response and Lambda adapter responses.
- * Defensive against dd-trace instrumentation issues.
- */
-function safeGetHeader(
-  res: ExtendedResponse,
-  name: string,
-): string | undefined {
-  try {
-    // Try internal method first (completely bypasses dd-trace)
-    if (typeof res._internalGetHeader === "function") {
-      return res._internalGetHeader(name);
-    }
-    // Fall back to _headers Map access (Lambda adapter, avoids dd-trace)
-    if (res._headers instanceof Map) {
-      const value = res._headers.get(name.toLowerCase());
-      return value ? String(value) : undefined;
-    }
-    // Fall back to getHeader (more standard than get)
-    if (typeof res.getHeader === "function") {
-      const value = res.getHeader(name);
-      return value ? String(value) : undefined;
-    }
-    // Last resort: try get
-    if (typeof res.get === "function") {
-      const value = res.get(name);
-      return value ? String(value) : undefined;
-    }
-  } catch {
-    // Silently fail - caller will handle missing value
-  }
-  return undefined;
-}
-
-/**
  * Safely set a header value on response.
  * Handles both Express Response and Lambda adapter responses.
  * Defensive against dd-trace instrumentation issues.

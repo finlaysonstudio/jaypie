@@ -436,7 +436,6 @@ describe("Lambda Adapter Integration", () => {
           _err: Error,
           _req: express.Request,
           res: express.Response,
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
           _next: express.NextFunction,
         ) => {
           res.status(500).json({ error: "Internal Error" });
@@ -576,6 +575,7 @@ describe("Lambda Adapter Integration", () => {
       expect(getCurrentInvoke()).toBeNull();
     });
 
+    // eslint-disable-next-line vitest/expect-expect -- completing without timeout is the assertion
     it("handles CORS OPTIONS preflight requests without hanging", async () => {
       const app = express();
       app.use(cors({ origin: "https://example.com" }));

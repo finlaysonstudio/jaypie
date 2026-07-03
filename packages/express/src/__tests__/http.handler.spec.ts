@@ -1,4 +1,4 @@
-import { HTTP, JAYPIE } from "@jaypie/kit";
+import { HTTP } from "@jaypie/kit";
 import { log } from "@jaypie/logger";
 import { jsonApiErrorSchema, restoreLog, spyLog } from "@jaypie/testkit";
 import express from "express";

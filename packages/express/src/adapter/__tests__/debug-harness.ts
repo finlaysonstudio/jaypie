@@ -1,3 +1,4 @@
+/* eslint-disable no-console -- debug harness prints to stdout by design */
 /**
  * Debug harness for testing Lambda adapter locally.
  * Run with: npx tsx src/adapter/__tests__/debug-harness.ts
