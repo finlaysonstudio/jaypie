@@ -5,8 +5,7 @@ node_modules
 build
 
 # Generated files
-.docusaurus
-.cache-loader
+.astro
 
 # Misc
 .DS_Store

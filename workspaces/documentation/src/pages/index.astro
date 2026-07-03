@@ -1,0 +1,859 @@
+---
+const title = "Jaypie is TypeScript AWS/CDK + Datadog Application Patterns";
+const description =
+  "Complete-stack approach to multi-environment cloud applications. Aligns infrastructure, execution, and observability.";
+
+const capabilities = [
+  {
+    description:
+      "JaypieLambda, JaypieDistribution, and more CDK constructs for AWS infrastructure with consistent patterns.",
+    title: "Serverless CDK Constructs",
+  },
+  {
+    description:
+      "Lambda layers, log forwarding, and metrics submission configured automatically via constructs.",
+    title: "Datadog Instrumentation",
+  },
+  {
+    description:
+      "Handler lifecycle, secrets management, error handling, and logging patterns for production applications.",
+    title: "Industrial Application Patterns",
+  },
+  {
+    description:
+      "@jaypie/testkit provides mock factories for all packages. Custom matchers: toThrowJaypieError, toMatchUuid, toBeClass.",
+    title: "Complete Mock Coverage",
+  },
+];
+
+const packageGroups = [
+  {
+    packages: [
+      {
+        href: "/docs/packages/jaypie/",
+        name: "jaypie",
+        purpose:
+          "Main package: re-exports express, lambda, errors, kit, logger",
+      },
+      {
+        href: "/docs/api/datadog/",
+        name: "@jaypie/datadog",
+        purpose: "Datadog integration utilities",
+      },
+      {
+        href: "/docs/packages/errors/",
+        name: "@jaypie/errors",
+        purpose: "JSON:API error classes",
+      },
+      {
+        href: "/docs/packages/express/",
+        name: "@jaypie/express",
+        purpose: "Express handler wrapper",
+      },
+      {
+        href: "/docs/packages/kit/",
+        name: "@jaypie/kit",
+        purpose: "Utilities: force, uuid, sleep",
+      },
+      {
+        href: "/docs/packages/lambda/",
+        name: "@jaypie/lambda",
+        purpose: "Lambda handler wrapper",
+      },
+    ],
+    title: "1.2 Main",
+  },
+  {
+    packages: [
+      {
+        href: "/docs/packages/constructs/",
+        name: "@jaypie/constructs",
+        purpose: "CDK constructs",
+      },
+      {
+        href: "/docs/packages/eslint/",
+        name: "@jaypie/eslint",
+        purpose: "ESLint configuration",
+      },
+      {
+        href: "/docs/packages/llm/",
+        name: "@jaypie/llm",
+        purpose: "LLM provider abstraction",
+      },
+      {
+        href: "/docs/packages/repokit/",
+        name: "@jaypie/repokit",
+        purpose: "Repository tooling",
+      },
+      {
+        href: "/docs/packages/testkit/",
+        name: "@jaypie/testkit",
+        purpose: "Mocks and matchers",
+      },
+    ],
+    title: "1.2 Library",
+  },
+  {
+    packages: [
+      {
+        href: "/docs/experimental/dynamodb/",
+        name: "@jaypie/dynamodb",
+        purpose: "DynamoDB single-table patterns",
+      },
+      {
+        href: "/docs/experimental/fabric/",
+        name: "@jaypie/fabric",
+        purpose: "Data fabric utilities",
+      },
+      {
+        href: "/docs/experimental/fabricator/",
+        name: "@jaypie/fabricator",
+        purpose: "Test data generation",
+      },
+      {
+        href: "/docs/experimental/mcp/",
+        name: "@jaypie/mcp",
+        purpose: "Model Context Protocol server",
+      },
+      {
+        href: "/docs/experimental/textract/",
+        name: "@jaypie/textract",
+        purpose: "AWS Textract utilities",
+      },
+    ],
+    title: "0.x Experimental",
+  },
+];
+
+const patterns = [
+  {
+    code: `import { JaypieLambda } from "@jaypie/constructs";
+
+new JaypieLambda(this, "Handler", {
+  entry: "src/handler.ts",
+  secrets: ["MONGODB_URI"],
+});`,
+    title: "CDK",
+  },
+  {
+    code: `import { expressHandler } from "jaypie";
+
+export default expressHandler(async (req, res) => {
+  return { message: "Hello, World!" };
+});`,
+    title: "Express",
+  },
+  {
+    code: `import { matchers, mockLogFactory } from "@jaypie/testkit";
+
+expect.extend(matchers);
+vi.mock("jaypie", mockLogFactory);`,
+    title: "Test",
+  },
+  {
+    code: `# npm-check.yml
+- run: npm run lint
+- run: npm run typecheck
+- run: npm run test
+- run: npm run build`,
+    title: "CI/CD",
+  },
+];
+---
+
+<html lang="en">
+  <head>
+    <script is:inline>const t=localStorage.getItem("starlight-theme");document.documentElement.dataset.theme=t==="light"||t==="dark"?t:window.matchMedia("(prefers-color-scheme: light)").matches?"light":"dark";</script>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="icon" href="/img/favicon.ico" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://jaypie.net" />
+    <meta
+      property="og:image"
+      content="https://jaypie.net/img/jaypie-social-card.jpg"
+    />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta
+      name="twitter:image"
+      content="https://jaypie.net/img/jaypie-social-card.jpg"
+    />
+  </head>
+  <body>
+    <main class="main">
+      <section class="hero">
+        <div class="hero-background">
+          <div class="hero-orb-1"></div>
+          <div class="hero-orb-2"></div>
+        </div>
+        <div class="hero-content">
+          <p class="hero-eyebrow">AWS/CDK · Datadog · TypeScript</p>
+          <h1 class="hero-title">Jaypie</h1>
+          <p class="hero-subtitle">
+            <span class="nowrap">Complete-stack approach to</span>{" "}
+            <span class="nowrap">multi-environment cloud applications.</span>
+            {" "}
+            <span class="nowrap">
+              Aligns infrastructure, execution, and observability.
+            </span>
+          </p>
+          <div class="hero-actions">
+            <a class="primary-button" href="/docs/">Documentation</a>
+            <a class="secondary-button" href="/docs/packages/jaypie/">
+              Packages
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <section class="capabilities">
+        <div class="capabilities-inner">
+          <div class="capabilities-header">
+            <h2 class="section-title">What Jaypie Provides</h2>
+          </div>
+          <div class="capabilities-grid">
+            {
+              capabilities.map((capability) => (
+                <div class="capability">
+                  <h3 class="capability-title">{capability.title}</h3>
+                  <p class="capability-description">{capability.description}</p>
+                </div>
+              ))
+            }
+          </div>
+        </div>
+      </section>
+
+      <section class="packages">
+        <div class="packages-inner">
+          <div class="packages-header">
+            <h2 class="section-title">Packages</h2>
+          </div>
+          <div class="package-tables">
+            {
+              packageGroups.map((group) => (
+                <div class="package-table">
+                  <h3 class="package-table-title">{group.title}</h3>
+                  <div class="package-table-rows">
+                    {group.packages.map((pkg) => (
+                      <a class="package-row" href={pkg.href}>
+                        <span class="package-row-name">{pkg.name}</span>
+                        <span class="package-row-purpose">{pkg.purpose}</span>
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              ))
+            }
+          </div>
+        </div>
+      </section>
+
+      <section class="patterns">
+        <div class="patterns-inner">
+          <div class="patterns-header">
+            <h2 class="section-title">Complete Stack</h2>
+          </div>
+          <div class="patterns-grid">
+            {
+              patterns.map((pattern) => (
+                <div class="pattern-block">
+                  <h3 class="pattern-title">{pattern.title}</h3>
+                  <pre class="pattern-code"><code>{pattern.code}</code></pre>
+                </div>
+              ))
+            }
+          </div>
+        </div>
+      </section>
+
+      <section class="philosophy">
+        <div class="philosophy-inner">
+          <p class="footer-text">
+            TypeScript · Node.js 22-25 · AWS Lambda · Express.js · Vitest
+          </p>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>
+
+<style is:global>
+  @import url("https://fonts.googleapis.com/css2?family=Faculty+Glyphic&family=Inter:wght@400;500;600&family=Noto+Sans+Mono:wght@400;500&family=Noto+Sans:wght@400;500;600&family=Noto+Serif:ital,wght@0,400;0,500;1,400&display=swap");
+
+  /* ============================================
+     DESIGN TOKENS
+     Dark is the default look; light overrides
+     key off :root[data-theme="light"].
+     ============================================ */
+
+  :root,
+  :root[data-theme="dark"] {
+    --jp-font-brand: "Faculty Glyphic", Georgia, serif;
+    --jp-font-heading: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+    --jp-font-body: "Noto Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+    --jp-font-mono: "Noto Sans Mono", "SF Mono", Consolas, monospace;
+
+    /* Dark palette (warm neutrals + amber accent) */
+    --jp-accent: #d4b888; /* amber-300 */
+    --jp-background: #0c0b0b; /* warm-950 */
+    --jp-button-text: #161514; /* warm-900 */
+    --jp-orb-1: radial-gradient(
+      circle at center,
+      rgba(212, 184, 136, 0.06) 0%,
+      rgba(212, 184, 136, 0.01) 40%,
+      transparent 70%
+    );
+    --jp-orb-2: radial-gradient(
+      circle at center,
+      rgba(212, 184, 136, 0.04) 0%,
+      rgba(212, 184, 136, 0.01) 50%,
+      transparent 70%
+    );
+    --jp-primary-shadow-hover: 0 8px 32px rgba(212, 184, 136, 0.2);
+    --jp-row-border: #282726; /* warm-800 */
+    --jp-secondary-border: #565250; /* warm-600 */
+    --jp-surface: #161514; /* warm-900 */
+    --jp-text: #d8d5d3; /* warm-200 */
+    --jp-text-secondary: #9a9592; /* warm-400 */
+    color-scheme: dark;
+  }
+
+  :root[data-theme="light"] {
+    --jp-accent: #96703a; /* amber-500 */
+    --jp-background: #f8f6f5; /* warm-50 */
+    --jp-button-text: #161514; /* warm-900 */
+    --jp-orb-1: radial-gradient(
+      circle at center,
+      rgba(212, 184, 136, 0.08) 0%,
+      rgba(212, 184, 136, 0.02) 40%,
+      transparent 70%
+    );
+    --jp-orb-2: radial-gradient(
+      circle at center,
+      rgba(212, 184, 136, 0.06) 0%,
+      rgba(212, 184, 136, 0.01) 50%,
+      transparent 70%
+    );
+    --jp-primary-shadow-hover: 0 8px 24px rgba(212, 184, 136, 0.25);
+    --jp-row-border: #d8d5d3; /* warm-200 */
+    --jp-secondary-border: #9a9592; /* warm-400 */
+    --jp-surface: #edebea; /* warm-100 */
+    --jp-text: #282726; /* warm-800 */
+    --jp-text-secondary: #565250; /* warm-600 */
+    color-scheme: light;
+  }
+
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background: var(--jp-background);
+    color: var(--jp-text);
+    font-family: var(--jp-font-body);
+    margin: 0;
+    -moz-osx-font-smoothing: grayscale;
+    -webkit-font-smoothing: antialiased;
+  }
+</style>
+
+<style>
+  /* ============================================
+     JAYPIE HOMEPAGE
+     Aesthetic: Warm, minimal, soft, luxury-adjacent
+     ============================================ */
+
+  .main {
+    overflow-x: hidden;
+  }
+
+  .nowrap {
+    white-space: nowrap;
+  }
+
+  /* ============================================
+     HERO SECTION
+     ============================================ */
+
+  .hero {
+    position: relative;
+    min-height: 85vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6rem 2rem;
+  }
+
+  .hero-background {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+  }
+
+  /* Subtle ambient orbs - soft, warm glow */
+  .hero-orb-1 {
+    position: absolute;
+    width: 600px;
+    height: 600px;
+    border-radius: 50%;
+    background: var(--jp-orb-1);
+    top: -200px;
+    right: -100px;
+    animation: float 20s ease-in-out infinite;
+  }
+
+  .hero-orb-2 {
+    position: absolute;
+    width: 500px;
+    height: 500px;
+    border-radius: 50%;
+    background: var(--jp-orb-2);
+    bottom: -150px;
+    left: -100px;
+    animation: float 25s ease-in-out infinite reverse;
+  }
+
+  @keyframes float {
+    0%,
+    100% {
+      transform: translate(0, 0) scale(1);
+    }
+    50% {
+      transform: translate(30px, -20px) scale(1.05);
+    }
+  }
+
+  .hero-content {
+    position: relative;
+    max-width: 720px;
+    text-align: center;
+    z-index: 1;
+  }
+
+  .hero-eyebrow {
+    font-family: var(--jp-font-heading);
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--jp-accent);
+    margin: 0 0 1.5rem;
+    opacity: 0;
+    animation: fade-up 0.8s ease-out 0.1s forwards;
+  }
+
+  .hero-title {
+    font-family: var(--jp-font-brand);
+    font-size: clamp(3rem, 9vw, 5rem);
+    font-weight: 400;
+    letter-spacing: -0.03em;
+    line-height: 1;
+    margin: 0 0 1.5rem;
+    color: var(--jp-text);
+    opacity: 0;
+    animation: fade-up 0.8s ease-out 0.2s forwards;
+  }
+
+  .hero-subtitle {
+    font-family: var(--jp-font-heading);
+    font-size: 0.95rem;
+    font-weight: 400;
+    line-height: 1.6;
+    color: var(--jp-text-secondary);
+    margin: 0 auto 3rem;
+    max-width: 540px;
+    opacity: 0;
+    animation: fade-up 0.8s ease-out 0.3s forwards;
+  }
+
+  .hero-actions {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+    opacity: 0;
+    animation: fade-up 0.8s ease-out 0.4s forwards;
+  }
+
+  @keyframes fade-up {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Buttons */
+  .primary-button {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.875rem 2rem;
+    font-family: var(--jp-font-heading);
+    font-size: 0.85rem;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    text-decoration: none;
+    color: var(--jp-button-text);
+    background: var(--jp-accent);
+    border-radius: 0.5rem;
+    transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+  }
+
+  .primary-button:hover {
+    background: #e8d5b5; /* amber-200 */
+    transform: translateY(-2px);
+    box-shadow: var(--jp-primary-shadow-hover);
+    text-decoration: none;
+    color: var(--jp-button-text);
+  }
+
+  .secondary-button {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.875rem 2rem;
+    font-family: var(--jp-font-heading);
+    font-size: 0.85rem;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    text-decoration: none;
+    color: var(--jp-text);
+    background: transparent;
+    border: 1px solid var(--jp-secondary-border);
+    border-radius: 0.5rem;
+    transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+  }
+
+  .secondary-button:hover {
+    border-color: var(--jp-accent);
+    background: rgba(212, 184, 136, 0.08);
+    text-decoration: none;
+    color: var(--jp-text);
+  }
+
+  /* ============================================
+     CAPABILITIES SECTION
+     ============================================ */
+
+  .capabilities {
+    padding: 8rem 2rem;
+    background: var(--jp-surface);
+  }
+
+  .capabilities-inner {
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  .capabilities-header {
+    text-align: center;
+    margin-bottom: 4rem;
+  }
+
+  .section-title {
+    font-family: var(--jp-font-heading);
+    font-size: 2rem;
+    font-weight: 400;
+    letter-spacing: -0.025em;
+    margin: 0 0 1rem;
+    color: var(--jp-text);
+  }
+
+  .capabilities-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 3rem 4rem;
+  }
+
+  @media (max-width: 768px) {
+    .capabilities-grid {
+      grid-template-columns: 1fr;
+      gap: 2.5rem;
+    }
+  }
+
+  .capability {
+    padding: 0;
+  }
+
+  .capability-title {
+    font-family: var(--jp-font-heading);
+    font-size: 1.2rem;
+    font-weight: 400;
+    letter-spacing: -0.01em;
+    margin: 0 0 0.75rem;
+    color: var(--jp-text);
+    position: relative;
+    padding-left: 1.25rem;
+  }
+
+  .capability-title::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0.35em;
+    width: 6px;
+    height: 6px;
+    background: var(--jp-accent);
+    border-radius: 50%;
+  }
+
+  .capability-description {
+    font-family: var(--jp-font-body);
+    font-size: 0.9rem;
+    font-weight: 400;
+    line-height: 1.7;
+    color: var(--jp-text-secondary);
+    margin: 0;
+    padding-left: 1.25rem;
+  }
+
+  /* ============================================
+     PACKAGES SECTION
+     ============================================ */
+
+  .packages {
+    padding: 8rem 2rem;
+    background: var(--jp-surface);
+  }
+
+  .packages-inner {
+    max-width: 1000px;
+    margin: 0 auto;
+  }
+
+  .packages-header {
+    text-align: center;
+    margin-bottom: 4rem;
+  }
+
+  .package-tables {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 3rem;
+  }
+
+  @media (max-width: 900px) {
+    .package-tables {
+      grid-template-columns: 1fr;
+      gap: 2rem;
+    }
+  }
+
+  .package-table {
+    background: var(--jp-background);
+    border-radius: 0.5rem;
+    padding: 1.5rem;
+  }
+
+  .package-table-title {
+    font-family: var(--jp-font-heading);
+    font-size: 1.1rem;
+    font-weight: 400;
+    margin: 0 0 0.5rem;
+    color: var(--jp-text);
+  }
+
+  .package-table-rows {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .package-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 1rem;
+    padding: 0.6rem 0;
+    text-decoration: none;
+    border-bottom: 1px solid var(--jp-row-border);
+    transition: all 150ms ease;
+    cursor: pointer;
+  }
+
+  .package-row:last-child {
+    border-bottom: none;
+  }
+
+  .package-row:hover {
+    text-decoration: none;
+  }
+
+  .package-row:hover .package-row-name {
+    color: var(--jp-accent);
+  }
+
+  .package-row-name {
+    font-family: var(--jp-font-mono);
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--jp-text);
+    white-space: nowrap;
+    transition: color 150ms ease;
+  }
+
+  .package-row-purpose {
+    font-family: var(--jp-font-body);
+    font-size: 0.85rem;
+    color: var(--jp-text-secondary);
+    text-align: right;
+  }
+
+  /* ============================================
+     PATTERNS SECTION
+     ============================================ */
+
+  .patterns {
+    padding: 8rem 2rem;
+    background: var(--jp-background);
+  }
+
+  .patterns-inner {
+    max-width: 1000px;
+    margin: 0 auto;
+  }
+
+  .patterns-header {
+    text-align: center;
+    margin-bottom: 3rem;
+  }
+
+  .patterns-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+  }
+
+  @media (max-width: 768px) {
+    .patterns-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .pattern-block {
+    background: var(--jp-surface);
+    border-radius: 0.5rem;
+    padding: 1.5rem;
+  }
+
+  .pattern-title {
+    font-family: var(--jp-font-heading);
+    font-size: 0.95rem;
+    font-weight: 400;
+    margin: 0 0 1rem;
+    color: var(--jp-text);
+  }
+
+  .pattern-code {
+    margin: 0;
+    padding: 1rem;
+    background: var(--jp-background);
+    border-radius: 0.375rem;
+    overflow-x: auto;
+  }
+
+  .pattern-code code {
+    font-family: var(--jp-font-mono);
+    font-size: 0.8rem;
+    line-height: 1.6;
+    color: var(--jp-text);
+    background: transparent;
+    padding: 0;
+    white-space: pre;
+  }
+
+  /* ============================================
+     FOOTER STRIP
+     ============================================ */
+
+  .philosophy {
+    padding: 8rem 2rem;
+    background: var(--jp-background);
+  }
+
+  .philosophy-inner {
+    max-width: 800px;
+    margin: 0 auto;
+    text-align: center;
+  }
+
+  .footer-text {
+    font-family: var(--jp-font-heading);
+    font-size: 0.95rem;
+    font-weight: 400;
+    color: var(--jp-text-secondary);
+    margin: 0;
+    letter-spacing: 0.02em;
+  }
+
+  /* ============================================
+     RESPONSIVE REFINEMENTS
+     ============================================ */
+
+  @media (max-width: 768px) {
+    .hero {
+      min-height: 70vh;
+      padding: 4rem 1.5rem;
+    }
+
+    .hero-subtitle {
+      font-size: 1.1rem;
+    }
+
+    .capabilities,
+    .packages,
+    .philosophy,
+    .patterns {
+      padding: 5rem 1.5rem;
+    }
+
+    .section-title {
+      font-size: 2rem;
+    }
+  }
+
+  /* ============================================
+     REDUCED MOTION
+     ============================================ */
+
+  @media (prefers-reduced-motion: reduce) {
+    .hero-orb-1,
+    .hero-orb-2 {
+      animation: none;
+    }
+
+    .hero-eyebrow,
+    .hero-title,
+    .hero-subtitle,
+    .hero-actions {
+      animation: none;
+      opacity: 1;
+    }
+
+    .primary-button:hover {
+      transform: none;
+    }
+  }
+</style>

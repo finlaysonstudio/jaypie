@@ -1,0 +1,204 @@
+/**
+ * Jaypie Documentation
+ * Aesthetic: Warm, minimal, soft, luxury-adjacent
+ * Dark mode default with light mode option
+ */
+
+/* Google Fonts - Nostrus Typography System */
+@import url("https://fonts.googleapis.com/css2?family=Faculty+Glyphic&family=Inter:wght@400;500;600&family=Noto+Sans+Mono:wght@400;500&family=Noto+Sans:wght@400;500;600&family=Noto+Serif:ital,wght@0,400;0,500;1,400&display=swap");
+
+/* ============================================
+   DESIGN TOKENS
+   ============================================ */
+
+:root {
+  /* Typography - Nostrus Font System */
+  --jp-font-brand: "Faculty Glyphic", Georgia, serif;
+  --jp-font-heading: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+  --jp-font-body: "Noto Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+  --jp-font-mono: "Noto Sans Mono", "SF Mono", Consolas, monospace;
+
+  /* Amber Accent Scale (Nostrus palette) */
+  --jp-amber-50: #faf6ee;
+  --jp-amber-100: #f4ebda;
+  --jp-amber-200: #e8d5b5;
+  --jp-amber-300: #d4b888;
+  --jp-amber-400: #b89456;
+  --jp-amber-500: #96703a;
+  --jp-amber-600: #78582e;
+  --jp-amber-700: #5c4324;
+  --jp-amber-800: #42301a;
+  --jp-amber-900: #261c10;
+
+  /* Warm Neutrals (Boar palette) */
+  --jp-warm-50: #f8f6f5;
+  --jp-warm-100: #edebea;
+  --jp-warm-200: #d8d5d3;
+  --jp-warm-300: #bfbbb8;
+  --jp-warm-400: #9a9592;
+  --jp-warm-500: #706b68;
+  --jp-warm-600: #565250;
+  --jp-warm-700: #403d3b;
+  --jp-warm-800: #282726;
+  --jp-warm-900: #161514;
+  --jp-warm-950: #0c0b0b;
+
+  /* Bird/Logo Colors */
+  --jp-bird-dark: #2d2926;
+  --jp-bird-brown: #4a433b;
+
+  /* Starlight fonts */
+  --sl-font: var(--jp-font-body);
+  --sl-font-mono: var(--jp-font-mono);
+}
+
+/* ============================================
+   DARK MODE (Default/Primary)
+   ============================================ */
+
+:root {
+  --sl-color-accent-low: var(--jp-amber-800);
+  --sl-color-accent: var(--jp-amber-400);
+  --sl-color-accent-high: var(--jp-amber-200);
+  --sl-color-white: var(--jp-warm-50);
+  --sl-color-gray-1: var(--jp-warm-100);
+  --sl-color-gray-2: var(--jp-warm-200);
+  --sl-color-gray-3: var(--jp-warm-400);
+  --sl-color-gray-4: var(--jp-warm-500);
+  --sl-color-gray-5: var(--jp-warm-700);
+  --sl-color-gray-6: var(--jp-warm-800);
+  --sl-color-black: var(--jp-warm-950);
+  --sl-color-text-accent: var(--jp-amber-300);
+}
+
+/* ============================================
+   LIGHT MODE (Secondary)
+   ============================================ */
+
+:root[data-theme="light"] {
+  --sl-color-accent-low: var(--jp-amber-100);
+  --sl-color-accent: var(--jp-amber-500);
+  --sl-color-accent-high: var(--jp-amber-800);
+  --sl-color-white: var(--jp-warm-900);
+  --sl-color-gray-1: var(--jp-warm-800);
+  --sl-color-gray-2: var(--jp-warm-700);
+  --sl-color-gray-3: var(--jp-warm-500);
+  --sl-color-gray-4: var(--jp-warm-400);
+  --sl-color-gray-5: var(--jp-warm-200);
+  --sl-color-gray-6: var(--jp-warm-100);
+  --sl-color-gray-7: var(--jp-warm-50);
+  --sl-color-black: var(--jp-warm-50);
+  --sl-color-text-accent: var(--jp-bird-brown);
+}
+
+/* ============================================
+   GLOBAL STYLES
+   ============================================ */
+
+html {
+  font-feature-settings:
+    "kern" 1,
+    "liga" 1,
+    "calt" 1;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  letter-spacing: 0.01em;
+}
+
+/* Typography refinements */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--jp-font-heading);
+  font-weight: 500;
+  letter-spacing: -0.025em;
+  line-height: 1.15;
+}
+
+h1 {
+  font-weight: 400;
+}
+
+/* Site title uses the brand font */
+.site-title {
+  color: var(--sl-color-white);
+  font-family: var(--jp-font-brand);
+  font-size: 1.25rem;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+}
+
+/* Refined paragraph spacing */
+.sl-markdown-content p {
+  line-height: 1.7;
+}
+
+/* Sidebar - system font, quiet links */
+.sidebar-content {
+  font-family: var(--jp-font-heading);
+}
+
+.sidebar-content summary .group-label span,
+.sidebar-content > ul > li > a {
+  font-size: 0.85rem;
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.sidebar-content ul ul a {
+  font-size: 0.9rem;
+  font-weight: 400;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+/* Package names in subnav - use mono font */
+.sidebar-content ul ul a[href*="/docs/packages/"],
+.sidebar-content ul ul a[href*="/docs/experimental/"] {
+  font-family: var(--jp-font-mono);
+  font-size: 0.85rem;
+}
+
+/* Blockquotes - elegant styling */
+.sl-markdown-content blockquote {
+  background: var(--sl-color-gray-6);
+  border-left: none;
+  border-radius: 0.5rem;
+  font-style: italic;
+  margin: 2.5rem 0;
+  padding: 1.5rem 2.5rem;
+  position: relative;
+}
+
+.sl-markdown-content blockquote::before {
+  background: var(--sl-color-accent);
+  border-radius: 3px;
+  bottom: 0;
+  content: "";
+  left: 0;
+  position: absolute;
+  top: 0;
+  width: 3px;
+}
+
+/* Tables - minimal */
+.sl-markdown-content table th {
+  font-family: var(--jp-font-heading);
+  font-size: 0.85rem;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+/* Selection styling */
+::selection {
+  background: var(--jp-amber-300);
+  color: var(--jp-warm-900);
+}
