@@ -15,6 +15,7 @@ packages/constructs/
 │   │   ├── index.ts
 │   │   ├── addDatadogLayers.ts
 │   │   ├── constructEnvName.ts
+│   │   ├── constructName.ts
 │   │   ├── constructStackName.ts
 │   │   ├── constructTagger.ts
 │   │   ├── envHostname.ts
@@ -457,7 +458,8 @@ new JaypieApiGateway(this, "Api", { handler: lambda, certificate: cert });
 |----------|-------------|
 | `constructStackName(key?)` | Generate stack name from env vars |
 | `constructTagger(construct)` | Apply standard tags to construct |
-| `constructEnvName(name)` | Generate environment-prefixed name |
+| `constructEnvName(name)` | Generate environment-prefixed name (no sponsor segment) |
+| `constructName(name, opts?)` | Generate sponsor-first name: `{sponsor}-{env}-{key}-{name}-{nonce}`; honors `PROJECT_SPONSOR`, accepts `{ sponsor, env, key, nonce }` overrides |
 | `envHostname()` | Get hostname from environment (supports `CDK_ENV_PERSONAL` as leading prefix) |
 | `isEnv(env)` / `isProductionEnv()` / `isSandboxEnv()` | Environment checks |
 | `isValidHostname(str)` / `isValidSubdomain(str)` | Validation helpers |
