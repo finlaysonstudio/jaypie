@@ -1,0 +1,109 @@
+---
+import Default from "@astrojs/starlight/components/Footer.astro";
+
+const COLUMNS = [
+  {
+    items: [
+      { label: "Introduction", to: "/docs/" },
+      { label: "Core Concepts", to: "/docs/core/handler-lifecycle/" },
+      { label: "How-To Guides", to: "/docs/guides/express-lambda/" },
+      { label: "Architecture", to: "/docs/architecture/project-structure/" },
+    ],
+    title: "Docs",
+  },
+  {
+    items: [
+      { label: "Packages", to: "/docs/packages/jaypie/" },
+      { label: "Experimental", to: "/docs/experimental/dynamodb/" },
+      { label: "Criticisms", to: "/docs/criticisms/" },
+    ],
+    title: "Reference",
+  },
+  {
+    items: [
+      { label: "Contributing", to: "/docs/contributing/development-process/" },
+      { label: "GitHub", to: "https://github.com/finlaysonstudio/jaypie" },
+      { label: "Publisher", to: "/docs/publisher/" },
+    ],
+    title: "Development",
+  },
+];
+
+const COPYRIGHT =
+  "Published by Finlayson Studio. Released under the MIT License. Created with Astro Starlight. Available on GitHub.";
+---
+
+<Default><slot /></Default>
+<footer class="jp-footer">
+  <div class="jp-footer-columns">
+    {
+      COLUMNS.map((column) => (
+        <div class="jp-footer-column">
+          <div class="jp-footer-title">{column.title}</div>
+          <ul>
+            {column.items.map((item) => (
+              <li>
+                <a href={item.to}>{item.label}</a>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))
+    }
+  </div>
+  <div class="jp-footer-copyright">{COPYRIGHT}</div>
+</footer>
+
+<style>
+  .jp-footer {
+    border-top: 1px solid var(--sl-color-gray-6);
+    margin-top: 4rem;
+    padding-top: 2.5rem;
+  }
+
+  .jp-footer-columns {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2.5rem;
+  }
+
+  .jp-footer-column {
+    flex: 1;
+    min-width: 10rem;
+  }
+
+  .jp-footer-title {
+    color: var(--sl-color-gray-3);
+    font-size: 0.85rem;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    margin-bottom: 1rem;
+    text-transform: uppercase;
+  }
+
+  .jp-footer-column ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .jp-footer-column a {
+    color: var(--sl-color-gray-3);
+    font-size: 0.9rem;
+    line-height: 2;
+    text-decoration: none;
+    transition: color 150ms ease;
+  }
+
+  .jp-footer-column a:hover {
+    color: var(--sl-color-text-accent);
+  }
+
+  .jp-footer-copyright {
+    color: var(--sl-color-gray-4);
+    font-size: 0.8rem;
+    margin-top: 2.5rem;
+    padding-bottom: 1rem;
+    text-align: center;
+  }
+</style>

@@ -16,7 +16,7 @@ export default [
       "**/prompts/templates/**",
       "LOCAL/**",
       "packages/express/docker/**",
-      "workspaces/documentation/.docusaurus/**",
+      "workspaces/documentation/.astro/**",
       "workspaces/documentation/build/**",
       "workspaces/garden-ui/**",
     ],
