@@ -1,5 +1,6 @@
 export { addDatadogLayers } from "./addDatadogLayers";
 export { constructEnvName } from "./constructEnvName";
+export { constructName } from "./constructName";
 export { constructStackName } from "./constructStackName";
 export { constructTagger } from "./constructTagger";
 export { constructWafLogBucketName } from "./constructWafLogBucketName";
