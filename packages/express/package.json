@@ -1,6 +1,6 @@
 {
   "name": "@jaypie/express",
-  "version": "1.2.26",
+  "version": "1.2.27",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/finlaysonstudio/jaypie.git"
@@ -57,14 +57,20 @@
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.0",
     "@types/node": "^22.13.1",
-    "express": "^4.21.2",
+    "express": "^5.1.0",
     "rollup-plugin-dts": "^6.1.1",
     "typescript": "^5.3.3"
   },
   "peerDependencies": {
     "@jaypie/aws": "*",
     "@jaypie/kit": "*",
-    "@jaypie/logger": "*"
+    "@jaypie/logger": "*",
+    "express": ">=4.0.0"
+  },
+  "peerDependenciesMeta": {
+    "express": {
+      "optional": true
+    }
   },
   "publishConfig": {
     "access": "public"

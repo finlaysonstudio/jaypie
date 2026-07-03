@@ -398,7 +398,7 @@ describe("LambdaResponseStreaming", () => {
 
       res.end();
 
-      await finishPromise;
+      await expect(finishPromise).resolves.toBeUndefined();
     });
   });
 

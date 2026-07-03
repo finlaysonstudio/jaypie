@@ -650,6 +650,7 @@ function expressHandler<T>(
               "Error: Stack trace",
               `Error: ${errorMessage}`,
             );
+      // eslint-disable-next-line no-console -- raw stack must reach CloudWatch even if the logger is broken
       console.error("Express response error stack trace:", errorStack);
       log.fatal(
         `Express encountered an error while sending the response: ${errorMessage}`,

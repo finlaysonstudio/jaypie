@@ -133,7 +133,7 @@ describe("Express Backend", () => {
         // Check the values
         expect(res.body.req.url).toEqual("/");
         expect(res.body.req.method).toEqual("POST");
-        expect(res.body.req.body).toEqual({}); // it converts empty body to an empty object
+        expect(res.body.req.body).toBeUndefined(); // Express 5 json() leaves empty bodies undefined; Express 4 set {}
       });
       it("DELETE /resource/123", async () => {
         const app = express();

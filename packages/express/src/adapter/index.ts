@@ -130,9 +130,11 @@ export function createLambdaHandler(
 
       return result;
     } catch (error) {
-      // Log any unhandled errors
+      // console, not log: must reach CloudWatch even if the logger itself is broken
+      // eslint-disable-next-line no-console
       console.error("[createLambdaHandler] Unhandled error:", error);
       if (error instanceof Error) {
+        // eslint-disable-next-line no-console
         console.error("[createLambdaHandler] Stack:", error.stack);
       }
 
