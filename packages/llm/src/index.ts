@@ -16,11 +16,15 @@ export type {
   LlmOperateOptions,
   LlmOperateResponse,
   LlmOptions,
+  LlmProgressCallback,
+  LlmProgressEvent,
+  LlmProgressToolCall,
   LlmProvider,
 } from "./types/LlmProvider.interface.js";
 export {
   LlmMessageRole,
   LlmMessageType,
+  LlmProgressEventType,
 } from "./types/LlmProvider.interface.js";
 export {
   isLlmOperateInput,

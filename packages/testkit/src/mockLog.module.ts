@@ -5,6 +5,7 @@ import { LogMock } from "./types/jaypie-testkit";
 export function mockLogFactory(): LogMock {
   // Create skeleton of mock objects
   const mock = {
+    config: vi.fn(),
     debug: vi.fn(),
     error: vi.fn(),
     fatal: vi.fn(),
@@ -32,6 +33,7 @@ export function mockLogFactory(): LogMock {
   mock.warn.var = mock.var;
 
   // Have modules return correct objects
+  mock.config.mockReturnValue(null);
   mock.flag.mockReturnValue(mock);
   mock.init.mockReturnValue(null);
   mock.lib.mockReturnValue(mock);
@@ -42,6 +44,7 @@ export function mockLogFactory(): LogMock {
 
   // Pin mocks to the module
   mock.mock = {
+    config: mock.config,
     debug: mock.debug,
     error: mock.error,
     fatal: mock.fatal,
@@ -64,6 +67,7 @@ export function mockLogFactory(): LogMock {
 }
 
 const LOG_METHOD_NAMES = [
+  "config",
   "debug",
   "error",
   "fatal",

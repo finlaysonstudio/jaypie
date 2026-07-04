@@ -316,6 +316,39 @@ const response = await Llm.operate(input, {
 });
 ```
 
+## Progress Events
+
+For progress reporting (UI updates, websockets, queue notifications), prefer `onProgress` over wiring individual hooks. It receives lightweight, serializable events as the loop runs:
+
+```typescript
+import { LlmProgressEventType } from "@jaypie/llm";
+
+const response = await Llm.operate(input, {
+  model: "gpt-5.1",
+  tools: toolkit,
+  onProgress: (event) => {
+    // event.type: start, model_request, model_response,
+    //             tool_call, tool_result, tool_error, retry, done
+    websocket.send(JSON.stringify(event));
+  },
+});
+```
+
+Fields carried by each event (`turn` is 1-indexed):
+
+| Event | Fields |
+|-------|--------|
+| `start` | `model`, `provider`, `maxTurns` |
+| `model_request` | `turn`, `model` |
+| `model_response` | `turn`, `content` (text, if any), `toolCalls` (`[{ name, arguments }]`, if any), `usage` (this turn) |
+| `tool_call` | `turn`, `tool: { name, arguments }` — fires before the tool runs; `arguments` is the JSON string |
+| `tool_result` | `turn`, `tool: { name }` — the result value is deliberately omitted (it can be arbitrarily large); use the `afterEachTool` hook to receive it |
+| `tool_error` | `turn`, `tool: { name }`, `error` (message string) |
+| `retry` | `turn`, `error` (message string) |
+| `done` | `turn` (total turns used), `content` (final text or structured output), `usage` (cumulative) |
+
+Errors thrown by the callback are logged and never interrupt the loop. Hooks remain the right choice when you need the full provider request/response payloads. `stream()` communicates progress through its chunks; `onProgress` applies to `operate()`.
+
 ## Fallback Providers
 
 Configure a chain of fallback providers that automatically retry failed calls when the primary provider fails:

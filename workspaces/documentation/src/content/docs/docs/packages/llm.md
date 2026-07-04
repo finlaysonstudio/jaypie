@@ -320,26 +320,70 @@ const response = await Llm.operate("Describe this", {
 
 ## Hooks
 
-Lifecycle callbacks for logging and metrics.
+Lifecycle callbacks with full provider request/response payloads.
 
 ```typescript
 const response = await Llm.operate(prompt, {
   model: "claude-sonnet-4",
   hooks: {
-    beforeCall: (params) => {
-      log.trace("[llm] calling");
-      log.var({ model: params.model });
+    beforeEachModelRequest: ({ providerRequest }) => {
+      log.trace("[llm] calling model");
     },
-    afterCall: (response) => {
-      log.trace("[llm] complete");
-      log.var({ tokens: response.usage?.totalTokens });
+    afterEachModelResponse: ({ content, usage }) => {
+      log.trace("[llm] response received");
+      log.var({ tokens: usage[usage.length - 1]?.total });
     },
-    onError: (error) => {
-      log.error("[llm] failed");
+    beforeEachTool: ({ toolName, args }) => {
+      log.trace(`[llm] calling ${toolName}`);
+    },
+    afterEachTool: ({ result, toolName }) => {
+      log.trace(`[llm] ${toolName} returned`);
+    },
+    onToolError: ({ error, toolName }) => {
+      log.warn(`[llm] ${toolName} failed`);
+      log.var({ error: error.message });
+    },
+    onRetryableModelError: ({ error }) => {
+      log.warn("[llm] model call failed, retrying");
+    },
+    onUnrecoverableModelError: ({ error }) => {
+      log.error("[llm] model call failed");
+      log.var({ error });
     },
   },
 });
 ```
+
+## Progress Events
+
+For progress reporting (UI updates, websockets, queue notifications), prefer a single `onProgress` callback over wiring individual hooks. It receives lightweight, serializable events as the operate loop runs:
+
+```typescript
+const response = await Llm.operate(prompt, {
+  model: "claude-sonnet-4",
+  tools: toolkit,
+  onProgress: (event) => {
+    // event.type: start, model_request, model_response,
+    //             tool_call, tool_result, tool_error, retry, done
+    websocket.send(JSON.stringify(event));
+  },
+});
+```
+
+Fields carried by each event (`turn` is 1-indexed):
+
+| Event | Fields |
+|-------|--------|
+| `start` | `model`, `provider`, `maxTurns` |
+| `model_request` | `turn`, `model` |
+| `model_response` | `turn`, `content` (text, if any), `toolCalls` (`[{ name, arguments }]`, if any), `usage` (this turn) |
+| `tool_call` | `turn`, `tool: { name, arguments }` — fires before the tool runs; `arguments` is the JSON string |
+| `tool_result` | `turn`, `tool: { name }` — the result value is deliberately omitted (it can be arbitrarily large); use the `afterEachTool` hook to receive it |
+| `tool_error` | `turn`, `tool: { name }`, `error` (message string) |
+| `retry` | `turn`, `error` (message string) |
+| `done` | `turn` (total turns used), `content` (final text or structured output), `usage` (cumulative) |
+
+Errors thrown by the callback are logged and never interrupt the loop. `stream()` communicates progress through its chunks; `onProgress` applies to `operate()`.
 
 ## Express Integration
 

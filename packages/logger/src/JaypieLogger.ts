@@ -1,10 +1,11 @@
 import Logger from "./Logger";
 import { DEFAULT, FORMAT, LEVEL } from "./constants";
 import { _resetDatadogTransport } from "./datadogTransport";
+import { SerializationLimitOptions } from "./limits";
 import { logTags } from "./logTags";
 import { logVar } from "./logVar";
 
-interface JaypieLoggerOptions {
+interface JaypieLoggerOptions extends SerializationLimitOptions {
   level?: string;
   tags?: Record<string, string>;
 }
@@ -48,9 +49,12 @@ class JaypieLogger {
 
   constructor({
     level = process.env.LOG_LEVEL,
+    maxDepth,
+    maxEntryBytes,
+    maxStringLength,
     tags = {},
   }: JaypieLoggerOptions = {}) {
-    this._params = { level, tags };
+    this._params = { level, maxDepth, maxEntryBytes, maxStringLength, tags };
     this._loggers = [];
     this._tags = {};
     this._withLoggers = {};
@@ -61,6 +65,9 @@ class JaypieLogger {
     this._logger = new Logger({
       format: FORMAT.JSON,
       level: this.level,
+      maxDepth,
+      maxEntryBytes,
+      maxStringLength,
       tags: this._tags,
     });
     this._loggers = [this._logger];
@@ -111,6 +118,30 @@ class JaypieLogger {
       this._logger.var(logVar(messageObject, messageValue));
   }
 
+  /**
+   * Update serialization limits at runtime for this logger and all loggers
+   * derived from it (lib, with, flag). Pass a number to set a limit,
+   * `false` to disable one; omitted keys are unchanged. Persists across
+   * init().
+   */
+  public config(options: SerializationLimitOptions = {}): void {
+    if (options.maxDepth !== undefined) {
+      this._params.maxDepth = options.maxDepth;
+    }
+    if (options.maxEntryBytes !== undefined) {
+      this._params.maxEntryBytes = options.maxEntryBytes;
+    }
+    if (options.maxStringLength !== undefined) {
+      this._params.maxStringLength = options.maxStringLength;
+    }
+    for (const logger of this._loggers) {
+      logger.config(options);
+    }
+    for (const key of Object.keys(this._withLoggers)) {
+      this._withLoggers[key].config(options);
+    }
+  }
+
   public flag(flag?: string): JaypieLogger {
     if (typeof flag !== "string" || flag === "") {
       return this;
@@ -132,6 +163,9 @@ class JaypieLogger {
     this._logger = new Logger({
       format: FORMAT.JSON,
       level: this.level,
+      maxDepth: this._params.maxDepth,
+      maxEntryBytes: this._params.maxEntryBytes,
+      maxStringLength: this._params.maxStringLength,
       tags: this._tags,
     });
     this._loggers = [this._logger];
@@ -217,6 +251,9 @@ class JaypieLogger {
         }
         return LEVEL.SILENT;
       })(),
+      maxDepth: this._params.maxDepth,
+      maxEntryBytes: this._params.maxEntryBytes,
+      maxStringLength: this._params.maxStringLength,
       tags: newTags,
     });
     this._loggers.push(logger._logger);
@@ -305,6 +342,9 @@ class JaypieLogger {
     }
     const logger = new JaypieLogger({
       level: this.level,
+      maxDepth: this._params.maxDepth,
+      maxEntryBytes: this._params.maxEntryBytes,
+      maxStringLength: this._params.maxStringLength,
       tags: { ...this._tags },
     });
     logger._logger = this._logger.with(key, value);

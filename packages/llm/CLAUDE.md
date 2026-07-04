@@ -229,6 +229,53 @@ const response = await Llm.operate("What's the weather in NYC?", {
 });
 ```
 
+### Progress Events
+
+`operate()` accepts an `onProgress` callback that receives lightweight,
+serializable events as the loop runs — suitable for forwarding directly to
+websockets, queues, or UI updates:
+
+```typescript
+import Llm, { LlmProgressEventType } from "@jaypie/llm";
+
+const response = await Llm.operate(input, {
+  tools: toolkit,
+  onProgress: (event) => {
+    // event.type: start, model_request, model_response,
+    //             tool_call, tool_result, tool_error, retry, done
+    websocket.send(JSON.stringify(event));
+  },
+});
+```
+
+Fields carried by each event (`turn` is 1-indexed):
+
+| Event | Fields |
+|-------|--------|
+| `start` | `model`, `provider`, `maxTurns` |
+| `model_request` | `turn`, `model` |
+| `model_response` | `turn`, `content` (text, if any), `toolCalls` (`[{ name, arguments }]`, if any), `usage` (this turn) |
+| `tool_call` | `turn`, `tool: { name, arguments }` — before the tool runs; `arguments` is the JSON string |
+| `tool_result` | `turn`, `tool: { name }` — result value deliberately omitted; use `afterEachTool` to receive it |
+| `tool_error` | `turn`, `tool: { name }`, `error` (message string) |
+| `retry` | `turn`, `error` (message string) |
+| `done` | `turn` (total turns used), `content` (final), `usage` (cumulative) |
+
+Errors thrown by the callback are logged at warn and never interrupt the
+loop. The `hooks` option remains the right choice when the full provider
+request/response payloads are needed. `stream()` communicates progress
+through its chunks; `onProgress` applies to `operate()`.
+
+### Operate Logging
+
+The operate loop logs `operate.input`, `operate.options`, `operate.request`,
+and `operate.response` vars at **trace**. Request and response vars are
+draconian subsets — the request logs `{ model, turn, messages, latest }` and
+the response logs only the text content or the requested tool calls. Full
+provider payloads are never logged; use `hooks`
+(`beforeEachModelRequest` / `afterEachModelResponse`) or LLM Observability
+to capture them.
+
 ### Streaming with Automatic Tool Execution
 
 The `stream()` method provides real-time streaming while **automatically executing tools** - combining the responsiveness of streaming with the full tool-calling lifecycle of `operate()`.

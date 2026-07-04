@@ -1,4 +1,13 @@
 import { DEFAULT, ERROR, FORMAT, LEVEL, LEVEL_VALUES } from "./constants";
+import {
+  applyValueLimits,
+  enforceEntryLimit,
+  hasValueLimits,
+  resolveSerializationLimits,
+  SerializationLimitOptions,
+  SerializationLimits,
+  truncateToBudget,
+} from "./limits";
 import { filterByType, pipelines } from "./pipelines";
 import { sanitizeAuth } from "./sanitizeAuth";
 import { forceString, out, parse, parsesTo, stringify } from "./utils";
@@ -7,7 +16,7 @@ type LogLevel = string;
 type LogFormat = "json" | "text";
 type Tags = Record<string, string>;
 
-interface LoggerOptions {
+interface LoggerOptions extends SerializationLimitOptions {
   format?: LogFormat;
   level?: LogLevel;
   levelField?: boolean | string;
@@ -52,19 +61,33 @@ class Logger {
   public var: (messageObject: unknown, messageValue?: unknown) => void;
   public warn: LogMethod;
   private levelField: false | string;
+  private limits: SerializationLimits;
 
   constructor({
     format = (process.env.LOG_FORMAT as LogFormat) || DEFAULT.LEVEL,
     level = process.env.LOG_LEVEL || DEFAULT.LEVEL,
     levelField,
+    maxDepth,
+    maxEntryBytes,
+    maxStringLength,
     tags = {},
     varLevel = process.env.LOG_VAR_LEVEL || DEFAULT.VAR_LEVEL,
   }: LoggerOptions = {}) {
     this.levelField = resolveLevelField(levelField);
+    this.limits = resolveSerializationLimits({
+      maxDepth,
+      maxEntryBytes,
+      maxStringLength,
+    });
     this.options = {
       format,
       level,
       levelField: this.levelField || undefined,
+      // Pin resolved limits (false = explicitly off) so child loggers
+      // created via with() inherit this config instead of re-resolving
+      maxDepth: this.limits.maxDepth ?? false,
+      maxEntryBytes: this.limits.maxEntryBytes ?? false,
+      maxStringLength: this.limits.maxStringLength ?? false,
       varLevel,
     };
 
@@ -92,10 +115,18 @@ class Logger {
   ): LogMethod {
     const logFn = (...messages: unknown[]): void => {
       if (LEVEL_VALUES[logLevel] <= LEVEL_VALUES[checkLevel]) {
-        const sanitized = messages.map(sanitizeAuth);
+        let sanitized = messages.map(sanitizeAuth);
+        if (hasValueLimits(this.limits)) {
+          sanitized = sanitized.map((item) =>
+            applyValueLimits(item, this.limits),
+          );
+        }
         if (format === FORMAT.JSON) {
           let message = stringify(...sanitized);
           let parses = parsesTo(message);
+          // When data comes from the full message they mirror each other;
+          // entry-limit truncation must keep them in sync
+          let syncMessageToData = parses.parses;
           const last = sanitized[sanitized.length - 1];
           if (
             sanitized.length > 1 &&
@@ -109,6 +140,7 @@ class Logger {
             if (lastParses.parses) {
               message = stringify(...sanitized.slice(0, -1));
               parses = lastParses;
+              syncMessageToData = false;
             }
           }
           const json: LogJson = {
@@ -121,9 +153,19 @@ class Logger {
           if (this.levelField) {
             json[this.levelField] = logLevel;
           }
-          out(json, { level: logLevel });
+          let entry: LogJson = json;
+          if (this.limits.maxEntryBytes !== undefined) {
+            entry = enforceEntryLimit(json, {
+              maxEntryBytes: this.limits.maxEntryBytes,
+              syncMessageToData,
+            }) as LogJson;
+          }
+          out(entry, { level: logLevel });
         } else {
-          const message = stringify(...sanitized);
+          let message = stringify(...sanitized);
+          if (this.limits.maxEntryBytes !== undefined) {
+            message = truncateToBudget(message, this.limits.maxEntryBytes);
+          }
           out(message, { level: logLevel });
         }
       }
@@ -169,6 +211,9 @@ class Logger {
           }
         }
         messageVal = filterByType(messageVal);
+        if (hasValueLimits(this.limits)) {
+          messageVal = applyValueLimits(messageVal, this.limits);
+        }
 
         const json: LogJson = {
           data: parse(messageVal),
@@ -182,7 +227,14 @@ class Logger {
         }
 
         if (LEVEL_VALUES[logLevel] <= LEVEL_VALUES[checkLevel]) {
-          out(json, { level: logLevel });
+          let entry: LogJson = json;
+          if (this.limits.maxEntryBytes !== undefined) {
+            entry = enforceEntryLimit(json, {
+              maxEntryBytes: this.limits.maxEntryBytes,
+              syncMessageToData: true,
+            }) as LogJson;
+          }
+          out(entry, { level: logLevel });
         }
       } else {
         return logFn(msgObj);
@@ -190,6 +242,23 @@ class Logger {
     };
 
     return logFn as LogMethod;
+  }
+
+  /**
+   * Update serialization limits at runtime. Pass a number to set a limit,
+   * `false` to disable one; omitted keys are unchanged.
+   */
+  public config(options: SerializationLimitOptions = {}): void {
+    this.limits = resolveSerializationLimits({
+      maxDepth: options.maxDepth ?? this.limits.maxDepth ?? false,
+      maxEntryBytes:
+        options.maxEntryBytes ?? this.limits.maxEntryBytes ?? false,
+      maxStringLength:
+        options.maxStringLength ?? this.limits.maxStringLength ?? false,
+    });
+    this.options.maxDepth = this.limits.maxDepth ?? false;
+    this.options.maxEntryBytes = this.limits.maxEntryBytes ?? false;
+    this.options.maxStringLength = this.limits.maxStringLength ?? false;
   }
 
   public tag(key: unknown, value?: unknown): void {

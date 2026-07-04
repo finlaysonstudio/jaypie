@@ -1,7 +1,16 @@
 export const DEFAULT = {
   LEVEL: "debug",
+  // CloudWatch Logs caps events at 256KB and fronts Datadog in Lambda;
+  // Datadog's own per-log cap is 1MB. Truncate deliberately below both.
+  MAX_ENTRY_BYTES: 262144,
   VAR_LEVEL: "debug",
 };
+
+export const LIMIT_ENV = {
+  MAX_DEPTH: "LOG_MAX_DEPTH",
+  MAX_ENTRY_BYTES: "LOG_MAX_ENTRY_BYTES",
+  MAX_STRING: "LOG_MAX_STRING",
+} as const;
 
 export const ERROR_PREFIX = "[logger]";
 

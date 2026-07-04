@@ -113,6 +113,12 @@ export const LlmMessageRole = createMockWrappedObject(original.LlmMessageRole, {
 export const LlmMessageType = createMockWrappedObject(original.LlmMessageType, {
   isClass: true,
 });
+export const LlmProgressEventType = createMockWrappedObject(
+  original.LlmProgressEventType,
+  {
+    isClass: true,
+  },
+);
 export const LlmStreamChunkType = createMockWrappedObject(
   original.LlmStreamChunkType,
   {

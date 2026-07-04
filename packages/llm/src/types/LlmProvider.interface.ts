@@ -221,6 +221,57 @@ export interface LlmMessageOptions {
   system?: string;
 }
 
+// Progress
+
+export enum LlmProgressEventType {
+  Done = "done",
+  ModelRequest = "model_request",
+  ModelResponse = "model_response",
+  Retry = "retry",
+  Start = "start",
+  ToolCall = "tool_call",
+  ToolError = "tool_error",
+  ToolResult = "tool_result",
+}
+
+export interface LlmProgressToolCall {
+  /** JSON string of arguments (tool_call events only) */
+  arguments?: string;
+  /** Tool name */
+  name: string;
+}
+
+/**
+ * Lightweight, serializable progress event emitted by the operate loop.
+ * Suitable for forwarding directly to websockets, queues, or UI updates.
+ */
+export interface LlmProgressEvent {
+  /** Text or structured content (model_response, done) */
+  content?: string | JsonObject;
+  /** Error message (tool_error, retry) */
+  error?: string;
+  /** Maximum turns allowed for the loop (start) */
+  maxTurns?: number;
+  /** Model handling the request (start, model_request) */
+  model?: string;
+  /** Provider name (start) */
+  provider?: string;
+  /** The tool involved (tool_call, tool_result, tool_error) */
+  tool?: LlmProgressToolCall;
+  /** Tools the model requested (model_response) */
+  toolCalls?: LlmProgressToolCall[];
+  /** Current turn, 1-indexed */
+  turn?: number;
+  /** Event type */
+  type: LlmProgressEventType;
+  /** Usage: this turn for model_response, cumulative for done */
+  usage?: LlmUsage;
+}
+
+export type LlmProgressCallback = (
+  event: LlmProgressEvent,
+) => unknown | Promise<unknown>;
+
 export interface LlmOperateOptions {
   data?: NaturalMap;
   explain?: boolean;
@@ -303,6 +354,13 @@ export interface LlmOperateOptions {
   };
   instructions?: string;
   model?: string;
+  /**
+   * Receives lightweight progress events as the operate loop runs:
+   * start, model_request, model_response, tool_call, tool_result,
+   * tool_error, retry, done. Errors thrown by the callback are logged
+   * and never interrupt the loop.
+   */
+  onProgress?: LlmProgressCallback;
   placeholders?: {
     input?: boolean;
     instructions?: boolean;
