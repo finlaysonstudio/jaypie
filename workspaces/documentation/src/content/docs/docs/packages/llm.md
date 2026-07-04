@@ -370,7 +370,18 @@ const response = await Llm.operate(prompt, {
 });
 ```
 
-Event fields (all optional except `type`): `content` (text or structured output on `model_response`/`done`), `error` (`tool_error`/`retry`), `maxTurns`/`model`/`provider` (`start`), `tool` (`{ name, arguments }`), `toolCalls` (tools requested on `model_response`), `turn` (1-indexed), `usage` (per-turn on `model_response`, cumulative on `done`).
+Fields carried by each event (`turn` is 1-indexed):
+
+| Event | Fields |
+|-------|--------|
+| `start` | `model`, `provider`, `maxTurns` |
+| `model_request` | `turn`, `model` |
+| `model_response` | `turn`, `content` (text, if any), `toolCalls` (`[{ name, arguments }]`, if any), `usage` (this turn) |
+| `tool_call` | `turn`, `tool: { name, arguments }` — fires before the tool runs; `arguments` is the JSON string |
+| `tool_result` | `turn`, `tool: { name }` — the result value is deliberately omitted (it can be arbitrarily large); use the `afterEachTool` hook to receive it |
+| `tool_error` | `turn`, `tool: { name }`, `error` (message string) |
+| `retry` | `turn`, `error` (message string) |
+| `done` | `turn` (total turns used), `content` (final text or structured output), `usage` (cumulative) |
 
 Errors thrown by the callback are logged and never interrupt the loop. `stream()` communicates progress through its chunks; `onProgress` applies to `operate()`.
 

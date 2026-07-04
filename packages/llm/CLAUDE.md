@@ -248,11 +248,18 @@ const response = await Llm.operate(input, {
 });
 ```
 
-Event fields (all optional except `type`): `content` (`model_response`,
-`done`), `error` (`tool_error`, `retry`), `maxTurns`/`model`/`provider`
-(`start`), `tool` (`{ name, arguments }`), `toolCalls` (`model_response`),
-`turn` (1-indexed), `usage` (per-turn on `model_response`, cumulative on
-`done`).
+Fields carried by each event (`turn` is 1-indexed):
+
+| Event | Fields |
+|-------|--------|
+| `start` | `model`, `provider`, `maxTurns` |
+| `model_request` | `turn`, `model` |
+| `model_response` | `turn`, `content` (text, if any), `toolCalls` (`[{ name, arguments }]`, if any), `usage` (this turn) |
+| `tool_call` | `turn`, `tool: { name, arguments }` — before the tool runs; `arguments` is the JSON string |
+| `tool_result` | `turn`, `tool: { name }` — result value deliberately omitted; use `afterEachTool` to receive it |
+| `tool_error` | `turn`, `tool: { name }`, `error` (message string) |
+| `retry` | `turn`, `error` (message string) |
+| `done` | `turn` (total turns used), `content` (final), `usage` (cumulative) |
 
 Errors thrown by the callback are logged at warn and never interrupt the
 loop. The `hooks` option remains the right choice when the full provider
