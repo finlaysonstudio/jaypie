@@ -64,6 +64,5 @@ export const createSkillService = createMockFunction(() => {
 });
 export const createMarkdownStore = createMockFunction(() => createMockStore());
 export const createMemoryStore = createMockFunction(
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   (_initial?: SkillRecord[]) => createMockStore(),
 );

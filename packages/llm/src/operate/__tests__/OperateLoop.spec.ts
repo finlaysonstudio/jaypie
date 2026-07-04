@@ -11,6 +11,8 @@ import {
   LlmMessageRole,
   LlmMessageType,
   LlmOperateOptions,
+  LlmProgressEvent,
+  LlmProgressEventType,
   LlmResponseStatus,
 } from "../../types/LlmProvider.interface.js";
 import { ErrorCategory, ParsedResponse, StandardToolCall } from "../types.js";
@@ -38,7 +40,7 @@ vi.mock("@jaypie/logger", () => ({
     lib: vi.fn(() => ({
       debug: vi.fn(),
       error: vi.fn(),
-      trace: vi.fn(),
+      trace: Object.assign(vi.fn(), { var: vi.fn() }),
       var: vi.fn(),
       warn: vi.fn(),
     })),
@@ -493,7 +495,7 @@ describe("OperateLoop", () => {
         const mockLogger = {
           debug: vi.fn(),
           error: vi.fn(),
-          trace: vi.fn(),
+          trace: Object.assign(vi.fn(), { var: vi.fn() }),
           var: vi.fn(),
           warn: vi.fn(),
         };
@@ -566,6 +568,196 @@ describe("OperateLoop", () => {
           expect.stringContaining("test_tool"),
         );
         expect(mockLogger.error).not.toHaveBeenCalled();
+      });
+    });
+
+    describe("Progress", () => {
+      it("emits start, model_request, model_response, and done events in order", async () => {
+        const events: LlmProgressEvent[] = [];
+        const loop = new OperateLoop({
+          adapter: mockAdapter,
+          client: mockClient,
+        });
+
+        const result = await loop.execute("Hello", {
+          onProgress: (event) => {
+            events.push(event);
+          },
+        });
+
+        expect(result.status).toBe(LlmResponseStatus.Completed);
+        expect(events.map(({ type }) => type)).toEqual([
+          LlmProgressEventType.Start,
+          LlmProgressEventType.ModelRequest,
+          LlmProgressEventType.ModelResponse,
+          LlmProgressEventType.Done,
+        ]);
+        expect(events[0].model).toBe("mock-model");
+        expect(events[0].provider).toBe("mock");
+        expect(events[events.length - 1].content).toBe("Hello!");
+        expect(events[events.length - 1].usage).toHaveLength(1);
+      });
+
+      it("emits tool_call and tool_result events", async () => {
+        let callCount = 0;
+        mockAdapter.parseResponse = vi.fn((response): ParsedResponse => {
+          callCount++;
+          if (callCount === 1) {
+            return {
+              content: undefined,
+              hasToolCalls: true,
+              stopReason: "tool_use",
+              usage: {
+                input: 10,
+                output: 20,
+                reasoning: 0,
+                total: 30,
+                provider: "mock",
+                model: "mock-model",
+              },
+              raw: response,
+            };
+          }
+          return {
+            content: "Done!",
+            hasToolCalls: false,
+            stopReason: "end_turn",
+            usage: {
+              input: 10,
+              output: 20,
+              reasoning: 0,
+              total: 30,
+              provider: "mock",
+              model: "mock-model",
+            },
+            raw: response,
+          };
+        }) as Mock;
+        mockAdapter.extractToolCalls = vi.fn((): StandardToolCall[] => [
+          {
+            callId: "call-1",
+            name: "test_tool",
+            arguments: "{}",
+            raw: {},
+          },
+        ]);
+        const toolkit = new Toolkit([
+          {
+            name: "test_tool",
+            description: "A test tool",
+            parameters: { type: "object" },
+            type: "function",
+            call: vi.fn(() => "tool result"),
+          },
+        ]);
+
+        const events: LlmProgressEvent[] = [];
+        const loop = new OperateLoop({
+          adapter: mockAdapter,
+          client: mockClient,
+        });
+
+        await loop.execute("Call the tool", {
+          onProgress: (event) => {
+            events.push(event);
+          },
+          tools: toolkit,
+          turns: 3,
+        });
+
+        const toolCallEvent = events.find(
+          ({ type }) => type === LlmProgressEventType.ToolCall,
+        );
+        expect(toolCallEvent?.tool).toEqual({
+          arguments: "{}",
+          name: "test_tool",
+        });
+        const toolResultEvent = events.find(
+          ({ type }) => type === LlmProgressEventType.ToolResult,
+        );
+        expect(toolResultEvent?.tool?.name).toBe("test_tool");
+        const modelResponseEvent = events.find(
+          ({ type }) => type === LlmProgressEventType.ModelResponse,
+        );
+        expect(modelResponseEvent?.toolCalls).toEqual([
+          { arguments: "{}", name: "test_tool" },
+        ]);
+      });
+
+      it("emits tool_error when a tool throws", async () => {
+        let callCount = 0;
+        mockAdapter.parseResponse = vi.fn((response): ParsedResponse => {
+          callCount++;
+          return {
+            content: callCount === 1 ? undefined : "Done!",
+            hasToolCalls: callCount === 1,
+            stopReason: callCount === 1 ? "tool_use" : "end_turn",
+            usage: {
+              input: 10,
+              output: 20,
+              reasoning: 0,
+              total: 30,
+              provider: "mock",
+              model: "mock-model",
+            },
+            raw: response,
+          };
+        }) as Mock;
+        mockAdapter.extractToolCalls = vi.fn((): StandardToolCall[] => [
+          {
+            callId: "call-1",
+            name: "test_tool",
+            arguments: "{}",
+            raw: {},
+          },
+        ]);
+        const toolkit = new Toolkit([
+          {
+            name: "test_tool",
+            description: "A test tool",
+            parameters: { type: "object" },
+            type: "function",
+            call: vi.fn(() => {
+              throw new Error("boom");
+            }),
+          },
+        ]);
+
+        const events: LlmProgressEvent[] = [];
+        const loop = new OperateLoop({
+          adapter: mockAdapter,
+          client: mockClient,
+        });
+
+        await loop.execute("Call the tool", {
+          onProgress: (event) => {
+            events.push(event);
+          },
+          tools: toolkit,
+          turns: 3,
+        });
+
+        const toolErrorEvent = events.find(
+          ({ type }) => type === LlmProgressEventType.ToolError,
+        );
+        expect(toolErrorEvent?.error).toBe("boom");
+        expect(toolErrorEvent?.tool?.name).toBe("test_tool");
+      });
+
+      it("does not interrupt the loop when onProgress throws", async () => {
+        const loop = new OperateLoop({
+          adapter: mockAdapter,
+          client: mockClient,
+        });
+
+        const result = await loop.execute("Hello", {
+          onProgress: () => {
+            throw new Error("Progress failure");
+          },
+        });
+
+        expect(result.status).toBe(LlmResponseStatus.Completed);
+        expect(result.content).toBe("Hello!");
       });
     });
 

@@ -4,6 +4,7 @@ import { JsonObject } from "@jaypie/types";
 import { Toolkit } from "../tools/Toolkit.class.js";
 import {
   LlmHistory,
+  LlmHistoryItem,
   LlmInputMessage,
   LlmMessageRole,
   LlmMessageType,
@@ -11,6 +12,7 @@ import {
   LlmOperateOptions,
   LlmOperateResponse,
   LlmOutputMessage,
+  LlmProgressEventType,
   LlmToolCall,
   LlmToolResult,
 } from "../types/LlmProvider.interface.js";
@@ -28,6 +30,7 @@ import {
 import { ProviderAdapter } from "./adapters/ProviderAdapter.interface.js";
 import { HookRunner, hookRunner, LlmHooks } from "./hooks/index.js";
 import { InputProcessor, inputProcessor } from "./input/index.js";
+import { emitProgress } from "./progress/index.js";
 import {
   createResponseBuilder,
   ResponseBuilderConfig,
@@ -126,13 +129,23 @@ export class OperateLoop {
     const log = getLogger();
     // Log what was passed to operate
     log.trace("[operate] Starting operate loop");
-    log.var({ "operate.input": input });
-    log.var({ "operate.options": options });
+    log.trace.var({ "operate.input": input });
+    log.trace.var({ "operate.options": options });
 
     // Initialize state
     const state = await this.initializeState(input, options);
     const context = this.createContext(options);
     const modelName = options.model ?? this.adapter.defaultModel;
+
+    await emitProgress({
+      event: {
+        maxTurns: state.maxTurns,
+        model: modelName,
+        provider: this.adapter.name,
+        type: LlmProgressEventType.Start,
+      },
+      onProgress: options.onProgress,
+    });
 
     // Enclosing LLM Observability span (no-op when DD_LLMOBS_ENABLED is unset).
     // Child llm/tool spans nest under it via the SDK's active-span context.
@@ -182,6 +195,15 @@ export class OperateLoop {
           inputData: input,
           metrics: usageToLlmObsMetrics(response.usage),
           outputData: response.content,
+        });
+        await emitProgress({
+          event: {
+            content: response.content,
+            turn: state.currentTurn,
+            type: LlmProgressEventType.Done,
+            usage: response.usage,
+          },
+          onProgress: options.onProgress,
         });
         return response;
       },
@@ -307,9 +329,28 @@ export class OperateLoop {
     // Build provider-specific request
     const providerRequest = this.adapter.buildRequest(request);
 
-    // Log what was passed to the model
+    // Log a draconian subset of the request; the full payload is available
+    // via the beforeEachModelRequest hook
     log.trace("[operate] Calling model");
-    log.var({ "operate.request": providerRequest });
+    log.trace.var({
+      "operate.request": {
+        latest: this.summarizeHistoryItem(
+          request.messages[request.messages.length - 1],
+        ),
+        messages: request.messages.length,
+        model: request.model,
+        turn: state.currentTurn,
+      },
+    });
+
+    await emitProgress({
+      event: {
+        model: request.model,
+        turn: state.currentTurn,
+        type: LlmProgressEventType.ModelRequest,
+      },
+      onProgress: options.onProgress,
+    });
 
     // Execute beforeEachModelRequest hook
     await this.hookRunnerInstance.runBeforeModelRequest(context.hooks, {
@@ -318,9 +359,31 @@ export class OperateLoop {
       providerRequest,
     });
 
+    // Emit retry progress alongside the caller's onRetryableModelError hook
+    const hooks = context.hooks as LlmHooks;
+    const hooksWithProgress: LlmHooks = options.onProgress
+      ? {
+          ...hooks,
+          onRetryableModelError: async (retryContext) => {
+            await emitProgress({
+              event: {
+                error:
+                  retryContext.error instanceof Error
+                    ? retryContext.error.message
+                    : String(retryContext.error),
+                turn: state.currentTurn,
+                type: LlmProgressEventType.Retry,
+              },
+              onProgress: options.onProgress,
+            });
+            return hooks?.onRetryableModelError?.(retryContext);
+          },
+        }
+      : hooks;
+
     // Execute with retry inside a child llm span (no-op when llmobs disabled).
     // RetryExecutor handles error hooks and throws appropriate errors.
-    const { parsed, response } = await withLlmObsSpan(
+    const { parsed, response, toolCalls } = await withLlmObsSpan(
       {
         kind: "llm",
         modelName: options.model ?? this.adapter.defaultModel,
@@ -337,16 +400,28 @@ export class OperateLoop {
               options,
               providerRequest,
             },
-            hooks: context.hooks as LlmHooks,
+            hooks: hooksWithProgress,
           },
         );
 
-        // Log what was returned from the model
-        log.trace("[operate] Model response received");
-        log.var({ "operate.response": response });
-
         // Parse response
         const parsed = this.adapter.parseResponse(response, options);
+        const toolCalls = parsed.hasToolCalls
+          ? this.adapter.extractToolCalls(response)
+          : [];
+
+        // Log only the text or tool calls; the full payload is available
+        // via the afterEachModelResponse hook
+        log.trace("[operate] Model response received");
+        log.trace.var({
+          "operate.response":
+            toolCalls.length > 0
+              ? toolCalls.map(({ arguments: args, name }) => ({
+                  arguments: args,
+                  name,
+                }))
+              : parsed.content,
+        });
 
         annotateLlmObs({
           inputData: state.currentInput,
@@ -356,9 +431,23 @@ export class OperateLoop {
           outputData: parsed.content ?? "",
         });
 
-        return { parsed, response };
+        return { parsed, response, toolCalls };
       },
     );
+
+    await emitProgress({
+      event: {
+        content: parsed.content,
+        toolCalls: toolCalls.map(({ arguments: args, name }) => ({
+          arguments: args,
+          name,
+        })),
+        turn: state.currentTurn,
+        type: LlmProgressEventType.ModelResponse,
+        usage: parsed.usage ? [parsed.usage] : undefined,
+      },
+      onProgress: options.onProgress,
+    });
 
     // Track usage
     if (parsed.usage) {
@@ -394,8 +483,6 @@ export class OperateLoop {
 
     // Handle tool calls
     if (parsed.hasToolCalls) {
-      const toolCalls = this.adapter.extractToolCalls(response);
-
       if (toolCalls.length > 0 && state.toolkit && state.maxTurns > 1) {
         // Track updated provider request for tool results
         let currentProviderRequest = providerRequest;
@@ -412,6 +499,15 @@ export class OperateLoop {
         // Process each tool call
         for (const toolCall of toolCalls) {
           try {
+            await emitProgress({
+              event: {
+                tool: { arguments: toolCall.arguments, name: toolCall.name },
+                turn: state.currentTurn,
+                type: LlmProgressEventType.ToolCall,
+              },
+              onProgress: options.onProgress,
+            });
+
             // Execute beforeEachTool hook
             await this.hookRunnerInstance.runBeforeTool(context.hooks, {
               args: toolCall.arguments,
@@ -435,6 +531,15 @@ export class OperateLoop {
                 return result;
               },
             );
+
+            await emitProgress({
+              event: {
+                tool: { name: toolCall.name },
+                turn: state.currentTurn,
+                type: LlmProgressEventType.ToolResult,
+              },
+              onProgress: options.onProgress,
+            });
 
             // Execute afterEachTool hook
             await this.hookRunnerInstance.runAfterTool(context.hooks, {
@@ -472,6 +577,16 @@ export class OperateLoop {
               toolResultFormatted as LlmInputMessage,
             );
           } catch (error) {
+            await emitProgress({
+              event: {
+                error: (error as Error).message,
+                tool: { name: toolCall.name },
+                turn: state.currentTurn,
+                type: LlmProgressEventType.ToolError,
+              },
+              onProgress: options.onProgress,
+            });
+
             // Execute onToolError hook
             await this.hookRunnerInstance.runOnToolError(context.hooks, {
               args: toolCall.arguments,
@@ -560,6 +675,21 @@ export class OperateLoop {
     }
 
     return false; // Stop loop
+  }
+
+  /**
+   * Draconian summary of a history item for trace logging: string message
+   * content is kept; everything else is reduced to its type.
+   */
+  private summarizeHistoryItem(item?: LlmHistoryItem): unknown {
+    if (!item) {
+      return undefined;
+    }
+    const record = item as unknown as Record<string, unknown>;
+    if (typeof record.content === "string") {
+      return { content: record.content, role: record.role };
+    }
+    return { type: record.type ?? "message" };
   }
 
   /**

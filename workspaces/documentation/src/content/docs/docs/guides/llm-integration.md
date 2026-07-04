@@ -332,25 +332,59 @@ const response = await Llm.operate(
 
 ### Lifecycle Hooks
 
+Seven hooks fire through the operate loop, each receiving the full provider request/response payloads:
+
 ```typescript
 const response = await Llm.operate(prompt, {
   model: "claude-sonnet-4",
   hooks: {
-    beforeCall: (params) => {
+    beforeEachModelRequest: ({ providerRequest }) => {
       log.trace("[llm] calling model");
-      log.var({ model: params.model });
     },
-    afterCall: (response) => {
+    afterEachModelResponse: ({ content, usage }) => {
       log.trace("[llm] response received");
-      log.var({ tokens: response.usage?.totalTokens });
+      log.var({ tokens: usage[usage.length - 1]?.total });
     },
-    onError: (error) => {
-      log.error("[llm] call failed");
+    beforeEachTool: ({ toolName, args }) => {
+      log.trace(`[llm] calling ${toolName}`);
+    },
+    afterEachTool: ({ result, toolName }) => {
+      log.trace(`[llm] ${toolName} returned`);
+    },
+    onToolError: ({ error, toolName }) => {
+      log.warn(`[llm] ${toolName} failed`);
       log.var({ error: error.message });
+    },
+    onRetryableModelError: ({ error }) => {
+      log.warn("[llm] model call failed, retrying");
+    },
+    onUnrecoverableModelError: ({ error }) => {
+      log.error("[llm] model call failed");
+      log.var({ error });
     },
   },
 });
 ```
+
+### Progress Events
+
+For progress reporting (UI updates, websockets, queue notifications), prefer a single `onProgress` callback over wiring individual hooks. It receives lightweight, serializable events as the operate loop runs:
+
+```typescript
+const response = await Llm.operate(prompt, {
+  model: "claude-sonnet-4",
+  tools: toolkit,
+  onProgress: (event) => {
+    // event.type: start, model_request, model_response,
+    //             tool_call, tool_result, tool_error, retry, done
+    websocket.send(JSON.stringify(event));
+  },
+});
+```
+
+Event fields (all optional except `type`): `content` (text or structured output on `model_response`/`done`), `error` (`tool_error`/`retry`), `maxTurns`/`model`/`provider` (`start`), `tool` (`{ name, arguments }`), `toolCalls` (tools requested on `model_response`), `turn` (1-indexed), `usage` (per-turn on `model_response`, cumulative on `done`).
+
+Errors thrown by the callback are logged and never interrupt the loop. `stream()` communicates progress through its chunks; `onProgress` applies to `operate()`.
 
 ## Error Handling
 
