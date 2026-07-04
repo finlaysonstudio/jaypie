@@ -158,10 +158,34 @@ Handles top-level `authorization` keys and nested `headers.authorization`. Origi
 |----------|--------|---------|
 | `LOG_LEVEL` | trace, debug, info, warn, error, fatal | info |
 | `LOG_FORMAT` | json, text | json |
+| `LOG_MAX_ENTRY_BYTES` | bytes; `false` disables | 262144 (256KB) |
+| `LOG_MAX_STRING` | characters; `false` disables | off |
+| `LOG_MAX_DEPTH` | levels; `false` disables | off |
 
 ```bash
 LOG_LEVEL=debug npm start
 ```
+
+## Serialization Limits
+
+Entries are capped at 256KB by default — the CloudWatch Logs event limit that fronts Datadog in Lambda. Oversized entries truncate the top-level attributes of `data` largest-first, each keeping a 72-character preview plus a visible marker:
+
+```
+data:application/pdf;base64,JVBERi0xLjcK… [truncated 612,340 chars]
+```
+
+Two more limits are available, off by default: `maxStringLength` (truncate each string field beyond N characters) and `maxDepth` (replace objects nested beyond N levels with `[Object]` / `[Array(n)]`).
+
+Override at runtime with `log.config()` — it propagates to derived loggers and persists across `init()`:
+
+```typescript
+import { log } from "jaypie";
+
+log.config({ maxStringLength: 1024 });
+log.config({ maxEntryBytes: false }); // false disables a limit
+```
+
+Limits apply at serialization time only; the logged object is never mutated.
 
 ## JSON Output
 
