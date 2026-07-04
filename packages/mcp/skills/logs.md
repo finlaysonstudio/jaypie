@@ -110,6 +110,39 @@ const logger = new Logger({ format: "json", level: "debug", levelField: "status"
 logger.info("test"); // { "message": "test", "status": "info" }
 ```
 
+## Serialization Limits
+
+Entries are capped at 256KB by default (`maxEntryBytes: 262144` — the CloudWatch Logs event limit that fronts Datadog in Lambda). Oversized entries truncate the top-level attributes of `data` largest-first, each keeping a 72-character preview plus a visible marker:
+
+```
+data:application/pdf;base64,JVBERi0xLjcK… [truncated 612,340 chars]
+```
+
+Two more limits are available, off by default:
+
+- `maxStringLength` — truncate each string field beyond N characters
+- `maxDepth` — replace objects/arrays nested beyond N levels with `[Object]` / `[Array(n)]`
+
+Configure via env vars (`0`/`false` disables a limit):
+
+```bash
+LOG_MAX_ENTRY_BYTES=1048576   # Raise entry cap to 1MB (Datadog direct)
+LOG_MAX_ENTRY_BYTES=false     # Unlimited entries
+LOG_MAX_STRING=16384          # Truncate strings beyond 16KB
+LOG_MAX_DEPTH=8               # Collapse nesting beyond 8 levels
+```
+
+Or at runtime with `log.config()` — propagates to derived loggers (`lib`, `with`, `flag`) and persists across `init()`:
+
+```typescript
+import { log } from "jaypie";
+
+log.config({ maxStringLength: 1024 });
+log.config({ maxEntryBytes: false }); // false disables a limit
+```
+
+Limits apply at serialization time only — the caller's object is never mutated.
+
 ## Lambda Logging
 
 Lambda handlers automatically add context:

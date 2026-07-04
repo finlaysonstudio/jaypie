@@ -57,6 +57,9 @@ Defined in `constants.ts` with numeric values for comparison:
 - `LOG_FORMAT` - Output format (`json` or `text`)
 - `LOG_LEVEL_FIELD` - Include log level in JSON output (`true` adds `level` key, or set to custom key name like `status`; `false`/unset to omit)
 - `LOG_VAR_LEVEL` - Level for `.var()` calls
+- `LOG_MAX_ENTRY_BYTES` - Cap on the serialized entry (default 262144 = 256KB, the CloudWatch event limit; `0`/`false` disables)
+- `LOG_MAX_STRING` - Truncate each string field beyond N characters (default off)
+- `LOG_MAX_DEPTH` - Replace objects/arrays nested beyond N levels with `[Object]`/`[Array(n)]` (default off)
 - `MODULE_LOGGER` - Enable library loggers (boolean)
 - `MODULE_LOG_LEVEL` - Override level for library loggers
 - `PROJECT_*` - Auto-tagged: COMMIT, ENV, KEY, SERVICE, SPONSOR, VERSION
@@ -121,6 +124,27 @@ log.teardown();                                           // Emits report, reset
 - `report(data)` merges key-value data into the report; warns on duplicate keys
 - Warn and error calls are auto-counted during an active session
 
+### Serialization Limits
+
+Entries are capped at 256KB by default (`maxEntryBytes: 262144` — the
+CloudWatch Logs event limit that fronts Datadog in Lambda; Datadog's own
+per-log cap is 1MB). Oversized entries truncate the top-level attributes of
+`data` largest-first, each keeping a 72-character preview plus a visible
+marker (`… [truncated 612,340 chars]`); only if every attribute is truncated
+and the entry is still oversized does `data` collapse to `[truncated N
+bytes]`. Two more limits are off by default: `maxStringLength` (truncate
+each string field beyond N chars) and `maxDepth` (replace nesting beyond N
+levels with `[Object]`/`[Array(n)]`).
+
+Resolution order: constructor options (`new Logger({ maxEntryBytes })`),
+then env vars (`LOG_MAX_ENTRY_BYTES`, `LOG_MAX_STRING`, `LOG_MAX_DEPTH`),
+then defaults. Pass `false` (or env `0`/`false`/`none`/`off`) to disable a
+limit. `log.config({ maxStringLength: 1024 })` overrides at runtime,
+propagates to derived loggers (`lib`, `with`, `flag`), and persists across
+`init()`. Limits apply at serialization time only — the caller's object is
+never mutated; class instances (Error, Date) are not traversed. See
+`src/limits.ts`.
+
 ### Tagging
 
 Tags are key-value pairs included in every log output:
@@ -139,6 +163,7 @@ Factory function returning a `JaypieLogger` instance.
 
 ### JaypieLogger Methods
 
+- `config({ maxDepth?, maxEntryBytes?, maxStringLength? })` - Update serialization limits at runtime (number sets, `false` disables, omitted unchanged)
 - `debug/info/warn/error/fatal/trace(...messages)` - Log at level
 - `*.var(keyValue)` - Log variable at level
 - `var(keyValue)` - Log variable at configured var level

@@ -19,6 +19,7 @@ export {
   redactAuth,
   sanitizeAuth,
 };
+export type { SerializationLimitOptions, SerializationLimits } from "./limits";
 
 export const log = createLogger();
 
