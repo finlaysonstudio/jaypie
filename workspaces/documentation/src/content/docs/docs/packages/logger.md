@@ -38,6 +38,9 @@ npm install @jaypie/logger
 | `log.tag()` | Add context to all logs |
 | `log.with()` | Create child logger |
 | `log.init()` | Reset logger state |
+| `log.setup()` | Start a report session |
+| `log.report()` | Accumulate session report data |
+| `log.teardown()` | Emit session report, end session |
 
 ## Basic Usage
 
@@ -126,6 +129,25 @@ log.init();
 ```
 
 Handlers call `log.init()` automatically.
+
+## Session Management
+
+Handlers automatically call `log.setup()` and `log.teardown()` to bookend each request. On teardown, a report is emitted as `log.info.var({ report })` containing accumulated data and warn/error counts.
+
+```typescript
+// Manual session (handlers do this automatically)
+log.setup({ handler: "myHandler", invoke: "abc-123" });
+
+// Accumulate report data during the request
+log.report({ userId: "456" });
+log.report({ itemCount: 3 });
+
+// Teardown emits the report with warn/error stats
+log.teardown();
+// => { report: { userId: "456", itemCount: 3, log: { warn: false, warns: 0, error: false, errors: 0 } } }
+```
+
+`log.report()` only accumulates data while a session is active; calling it outside a session logs a warning and is a no-op. Warn and error calls made during the session are counted automatically and included in the final report.
 
 ## Function Prefix Convention
 

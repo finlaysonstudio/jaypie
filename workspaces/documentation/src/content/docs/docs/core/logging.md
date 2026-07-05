@@ -214,6 +214,25 @@ For manual initialization:
 log.init(); // Clears tags, resets state
 ```
 
+## Session Management
+
+Handlers automatically call `log.setup()` and `log.teardown()` to bookend each request. On teardown, a report is emitted as `log.info.var({ report })` containing accumulated data and warn/error counts.
+
+```typescript
+// Manual session (handlers do this automatically)
+log.setup({ handler: "myHandler", invoke: "abc-123" });
+
+// Accumulate report data during the request
+log.report({ userId: "456" });
+log.report({ itemCount: 3 });
+
+// Teardown emits the report with warn/error stats
+log.teardown();
+// => { report: { userId: "456", itemCount: 3, log: { warn: false, warns: 0, error: false, errors: 0 } } }
+```
+
+`log.report()` only accumulates data while a session is active (after `setup()`, before `teardown()`); calling it outside a session logs a warning and is a no-op. Warn and error calls made during the session are counted automatically and included in the final report.
+
 ## Environment Configuration
 
 | Variable | Values | Default |
