@@ -1,9 +1,15 @@
 /* eslint-disable no-console */
 // Manual integration script; console output is the interface
 import { config } from "dotenv";
-import { Llm, tools } from "../src/index.js";
+import { Llm, LLM, tools } from "../src/index.js";
 
 config();
+
+// Providers whose default model flakes on tools+format; pin to a model the
+// capability matrix proves reliable at "both" (nova-lite is not; nova-pro is)
+const PROVIDER_MODEL: Record<string, string> = {
+  bedrock: LLM.PROVIDER.BEDROCK.MODEL.LARGE,
+};
 
 const EXPECTED = {
   TOOL: "roll",
@@ -19,7 +25,7 @@ const QUESTION = "Roll five six-sided dice";
 
 async function main(provider: string) {
   try {
-    const overrideModel = process.env.APP_MODEL;
+    const overrideModel = process.env.APP_MODEL ?? PROVIDER_MODEL[provider];
     const model = new Llm(
       provider as any,
       overrideModel ? { model: overrideModel } : {},
