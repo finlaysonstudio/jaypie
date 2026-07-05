@@ -11,18 +11,15 @@ How to deploy CDK infrastructure and application content to AWS.
 
 | Environment | Hostnames | AWS Account |
 |-------------|-----------|-------------|
-| sandbox | `sandbox.jaypie.net`, `garden-api.sandbox.jaypie.net`, `garden.sandbox.jaypie.net` | Finlayson Studio Sandbox (562880556342) |
-| development | `development.jaypie.net`, `garden-api.development.jaypie.net`, `garden.development.jaypie.net` | Finlayson Studio Development (211125635435) |
-| production | `jaypie.net`, `garden-api.jaypie.net`, `garden.jaypie.net` | Finlayson Studio Development (211125635435) |
+| sandbox | `sandbox.jaypie.net` | Finlayson Studio Sandbox (562880556342) |
+| development | `development.jaypie.net` | Finlayson Studio Development (211125635435) |
+| production | `jaypie.net` | Finlayson Studio Development (211125635435) |
 
 ## Stacks
 
 | Stack ID | Description |
 |----------|-------------|
 | `JaypieDocumentation` | Documentation site (S3 + CloudFront) |
-| `JaypieGardenData` | Shared DynamoDB table |
-| `JaypieGardenApi` | Garden streaming API (Express Lambda) |
-| `JaypieGardenNextjs` | Garden Next.js frontend |
 
 ## Remote Deploy (Preferred)
 
@@ -55,8 +52,7 @@ Use the **Deploy Stacks (Manual)** workflow via GitHub Actions UI or CLI:
 gh workflow run deploy-stacks.yml -f environment=sandbox -f stacks=all
 
 # Deploy specific stack(s)
-gh workflow run deploy-stacks.yml -f environment=sandbox -f stacks="JaypieGardenData"
-gh workflow run deploy-stacks.yml -f environment=sandbox -f stacks="JaypieGardenData JaypieGardenApi JaypieGardenNextjs"
+gh workflow run deploy-stacks.yml -f environment=sandbox -f stacks="JaypieDocumentation"
 
 # Deploy to production
 gh workflow run deploy-stacks.yml -f environment=production -f stacks=all
@@ -93,13 +89,11 @@ Local deploys go to **sandbox only**. Requires AWS SSO login and `.env` configur
 ```bash
 # Deploy individual stacks (sandbox only)
 npm run deploy:documentation:sandbox
-npm run deploy:garden-api:sandbox
-npm run deploy:garden-ui:sandbox
 ```
 
 ### Manual CDK Deploy
 
-For stacks without scripts (e.g., `JaypieGardenData`) or custom scenarios:
+For stacks without scripts or custom scenarios:
 
 ```bash
 # Set environment
@@ -117,7 +111,7 @@ export PROJECT_VERSION=$(node -p "require('./package.json').version")
 # Build and deploy
 npm run build
 cd workspaces/cdk
-npx cdk deploy JaypieGardenData --profile $AWS_PROFILE --require-approval never -c stacks=JaypieGardenData
+npx cdk deploy JaypieDocumentation --profile $AWS_PROFILE --require-approval never -c stacks=JaypieDocumentation
 ```
 
 ### Environment Variables Reference
@@ -157,9 +151,7 @@ gh run view <run-id> --log-failed
 Use `mcp__jaypie__aws` with the appropriate profile:
 
 ```
-aws("cloudformation_describe_stack", { stackName: "JaypieGardenData", profile: "Developer-562880556342" })
-aws("dynamodb_describe_table", { tableName: "<table-name>", profile: "Developer-562880556342" })
-aws("lambda_list_functions", { functionNamePrefix: "garden", profile: "Developer-562880556342" })
+aws("cloudformation_describe_stack", { stackName: "JaypieDocumentation", profile: "Developer-562880556342" })
 ```
 
 ### CloudFormation Stack Naming
@@ -168,7 +160,7 @@ Deployed stacks follow this pattern:
 ```
 cdk-${PROJECT_SPONSOR}-${PROJECT_KEY}-${PROJECT_ENV}-${PROJECT_NONCE}-${resource}
 ```
-Example: `cdk-finlaysonstudio-jaypie-sandbox-local-garden-data`
+Example: `cdk-finlaysonstudio-jaypie-sandbox-local-documentation`
 
 ## After Deploying
 
@@ -197,6 +189,3 @@ The stack hasn't been deployed yet. Deploy it via GitHub Actions or locally.
 
 ### "undefined" in Stack Name
 A required environment variable is missing. Check all `PROJECT_*` and `CDK_*` variables.
-
-### Cross-Stack Dependencies
-`JaypieGardenData` must be deployed before `JaypieGardenApi` or `JaypieGardenNextjs` if they consume the shared table. Deploy data stack first, then consumer stacks.
