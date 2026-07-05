@@ -20,11 +20,6 @@ on:
         options:
           - all
           - JaypieDocumentation
-          - JaypieGardenApi
-          - JaypieGardenNextjs
-          - JaypieGardenData
-          - JaypieGardenApi JaypieGardenNextjs
-          - JaypieGardenData JaypieGardenApi JaypieGardenNextjs
       custom_stacks:
         description: 'Custom stack list (overrides above if provided)'
         required: false
@@ -51,7 +46,7 @@ jobs:
           if [ -n "${{ github.event.inputs.custom_stacks }}" ]; then
             STACKS="${{ github.event.inputs.custom_stacks }}"
           elif [ "${{ github.event.inputs.stacks }}" == "all" ]; then
-            STACKS="JaypieDocumentation JaypieGardenData JaypieGardenApi JaypieGardenNextjs"
+            STACKS="JaypieDocumentation"
           else
             STACKS="${{ github.event.inputs.stacks }}"
           fi

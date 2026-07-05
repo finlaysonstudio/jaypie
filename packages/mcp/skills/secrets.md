@@ -245,7 +245,7 @@ No special workflow steps are needed for generated secrets. The CDK deploy step 
 - name: Deploy CDK Stacks
   uses: ./.github/actions/cdk-deploy
   with:
-    stack-name: JaypieGardenApi
+    stack-name: JaypieAppStack
 ```
 
 On the first deploy, CloudFormation generates the seed. On subsequent deploys, the seed is preserved. The workflow never needs to generate, store, or pass the seed value.

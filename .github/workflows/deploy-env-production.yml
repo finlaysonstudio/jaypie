@@ -68,7 +68,7 @@ jobs:
         uses: ./.github/actions/cdk-deploy
         with:
           cdk-package-path: workspaces/cdk
-          stack-name: JaypieDocumentation JaypieGardenData JaypieGardenApi JaypieGardenNextjs
+          stack-name: JaypieDocumentation
         env:
           AUTH0_CLIENT_ID: ${{ vars.AUTH0_CLIENT_ID }}
           AUTH0_CLIENT_SECRET: ${{ secrets.AUTH0_CLIENT_SECRET }}

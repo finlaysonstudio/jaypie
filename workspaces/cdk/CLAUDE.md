@@ -14,10 +14,7 @@ workspaces/cdk/
 │   └── app.ts           # CDK app entry point
 ├── lib/
 │   ├── index.ts         # Package exports
-│   ├── documentation-stack.ts  # Documentation site stack
-│   ├── garden-api-stack.ts     # Garden API (streaming Lambda)
-│   ├── garden-data-stack.ts    # Garden shared DynamoDB table
-│   └── garden-nextjs-stack.ts  # Garden UI site
+│   └── documentation-stack.ts  # Documentation site stack
 ├── cdk.json             # CDK configuration
 ├── lib/
 │   ├── cicd-stack.ts           # CI/CD IAM roles (bootstrap prerequisite)
@@ -70,54 +67,6 @@ This is handled automatically by `envHostname()` from `@jaypie/constructs`, whic
 - `CDK_DEFAULT_ACCOUNT` - AWS account ID
 - `CDK_DEFAULT_REGION` - AWS region
 - `CDK_ENV_REPO` - GitHub repository for deploy role (e.g., "finlaysonstudio/jaypie")
-
-### GardenDataStack
-
-Shared DynamoDB table for Garden stacks. Uses `JaypieDynamoDb` with default indexes from `@jaypie/fabric`.
-
-**Resources Created:**
-- DynamoDB table (PAY_PER_REQUEST billing)
-- Default partition key: `model` (String)
-- Default sort key: `id` (String)
-
-**Stack ID:** `JaypieGardenData`
-
-**Cross-Stack Usage:**
-The table is passed as a prop to `GardenApiStack` and `GardenNextjsStack`. CDK handles cross-stack references automatically. When a single table is provided, consumer stacks receive:
-- IAM read/write permissions on the table
-- `DYNAMODB_TABLE_NAME` environment variable set to the table name
-
-### GardenApiStack
-
-Deploys the Garden streaming API. Uses `JaypieExpressLambda` with `JaypieDistribution` (streaming: true).
-
-**Hostname:**
-- **production**: `garden-api.jaypie.net`
-- **sandbox**: `garden-api.sandbox.jaypie.net`
-
-**Resources Created:**
-- Lambda function (Express app with streaming support)
-- Lambda Function URL with RESPONSE_STREAM invoke mode
-- CloudFront distribution with SSL
-- Route53 DNS records
-
-**Stack ID:** `JaypieGardenApi`
-
-### GardenNextjsStack
-
-Deploys the Garden Next.js site. Uses `JaypieNextJs` (cdk-nextjs-standalone).
-
-**Hostname:**
-- **production**: `garden.jaypie.net`
-- **sandbox**: `garden.sandbox.jaypie.net`
-
-**Resources Created:**
-- S3 bucket for static assets
-- Lambda function for server-side rendering
-- CloudFront distribution with SSL
-- Route53 DNS records
-
-**Stack ID:** `JaypieGardenNextjs`
 
 ## Commands
 
@@ -204,7 +153,6 @@ Use `workflow_dispatch` to manually deploy specific stacks to any environment:
 4. Select stacks to deploy:
    - `all` - All stacks
    - Individual stack names
-   - Common combinations (e.g., `JaypieGardenData JaypieGardenApi JaypieGardenNextjs`)
 5. Or provide a custom stack list in the text field
 
 #### Stack Content Deployments
@@ -222,10 +170,6 @@ No manual GitHub variable configuration is needed for documentation deployment -
 The separate `deploy-stack-documentation.yml` workflow can be used for:
 - Manual deployment via `workflow_dispatch` to any environment
 - Deploying documentation-only changes (without CDK changes) on `feat/*` or `sandbox/*` branches
-
-**Note:** Garden stacks don't need separate content workflows:
-- `JaypieGardenNextjs` uses `cdk-nextjs-standalone` which deploys assets during CDK
-- `JaypieGardenApi` is a Lambda with code bundled in CDK deploy
 
 ### Concurrency
 
