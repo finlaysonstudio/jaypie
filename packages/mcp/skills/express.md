@@ -162,6 +162,24 @@ The Lambda adapter provides Express-compatible request properties:
 | `req._lambdaContext` | Original Lambda context |
 | `req._lambdaEvent` | Original Lambda event |
 
+## Session Report
+
+`expressHandler` and `expressStreamHandler` automatically call `log.report()` with request metadata before the session's `log.teardown()` (see `skill("logs")`):
+
+```typescript
+{
+  method: "GET",
+  path: "/workflows/:id/messages", // UUID segments normalized to :id
+  query: "limit=10",
+  contentType: "",
+  contentLength: 0,
+  status: "200",
+  parameters: { id: "123e4567-e89b-12d3-a456-426614174000" }, // req.params, only when non-empty
+}
+```
+
+`parameters` mirrors Express's `req.params` so the original route parameter values survive path normalization for aggregation.
+
 ## CDK Integration
 
 Deploy with `@jaypie/constructs`:
