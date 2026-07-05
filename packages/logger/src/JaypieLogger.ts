@@ -27,7 +27,7 @@ function envBoolean(
   );
 }
 
-class JaypieLogger {
+export class JaypieLogger {
   public debug: Logger["debug"];
   public error: Logger["error"];
   public fatal: Logger["fatal"];
@@ -260,6 +260,11 @@ class JaypieLogger {
     return logger;
   }
 
+  /**
+   * Merge data into the current session's report. Requires an active
+   * session (started via setup()); logs a warning and is a no-op otherwise.
+   * Warns when overwriting an existing key. Emitted by teardown().
+   */
   public report(data: Record<string, unknown>): void {
     if (!this._sessionActive) {
       this.warn("[logger] report() called without active session");
@@ -273,6 +278,11 @@ class JaypieLogger {
     Object.assign(this._report, data);
   }
 
+  /**
+   * Start a report session: resets warn/error counters and accumulated
+   * report data, applies optional tags. Pair with teardown() to bookend a
+   * request. Handlers call this automatically.
+   */
   public setup(tags?: Record<string, unknown>): void {
     if (this._sessionActive) {
       this.warn("[logger] setup() called while session already active");
@@ -293,6 +303,12 @@ class JaypieLogger {
     Object.assign(this._tags, tags);
   }
 
+  /**
+   * End the current report session: emits log.info.var({ report }) with
+   * accumulated report() data plus { log: { warn, warns, error, errors } }
+   * counts, then resets session state. No-op if no session is active.
+   * Handlers call this automatically.
+   */
   public teardown(): void {
     if (!this._sessionActive) {
       return;

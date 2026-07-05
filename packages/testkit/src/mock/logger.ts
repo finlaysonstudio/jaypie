@@ -3,6 +3,7 @@ import { vi } from "vitest";
 import { createMockWrappedFunction } from "./utils";
 import {
   FORMAT,
+  JaypieLogger,
   LEVEL,
   Logger,
   createLogger as originalCreateLogger,
@@ -22,6 +23,6 @@ export const _resetDatadogTransport = vi.fn();
 export const getDatadogTransport = vi.fn().mockReturnValue(null);
 export const isDatadogForwardingEnabled = vi.fn().mockReturnValue(false);
 
-export { FORMAT, LEVEL, Logger, redactAuth, sanitizeAuth };
+export { FORMAT, JaypieLogger, LEVEL, Logger, redactAuth, sanitizeAuth };
 
 export default mockLog;

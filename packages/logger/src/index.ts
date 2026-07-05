@@ -20,6 +20,7 @@ export {
   sanitizeAuth,
 };
 export type { SerializationLimitOptions, SerializationLimits } from "./limits";
+export { JaypieLogger } from "./JaypieLogger";
 
 export const log = createLogger();
 

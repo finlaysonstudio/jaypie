@@ -698,14 +698,18 @@ function expressHandler<T>(
     const contentLength = contentLengthHeader ? Number(contentLengthHeader) : 0;
 
     // Add request data to session report
-    logger.report({
+    const reportData: Record<string, unknown> = {
       method: req.method,
       path,
       query,
       contentType,
       contentLength,
       status: String(res.statusCode),
-    });
+    };
+    if (req.params && Object.keys(req.params).length > 0) {
+      reportData.parameters = { ...req.params };
+    }
+    logger.report(reportData);
 
     // Submit metric if Datadog is configured
     if (hasDatadogEnv()) {

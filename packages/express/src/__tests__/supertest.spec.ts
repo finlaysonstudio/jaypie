@@ -358,6 +358,34 @@ describe("Express handler", () => {
           );
         });
 
+        it("Reports route parameters when the route defines them", async () => {
+          const mockFunction = vi.fn(() => ({ ok: true }));
+          const handler = expressHandler(mockFunction, { name: "handler" });
+          const app = express();
+          app.get("/workflows/:id/messages", handler);
+          const id = "123e4567-e89b-12d3-a456-426614174000";
+          await request(app).get(`/workflows/${id}/messages`);
+          expect(log.report).toHaveBeenCalledWith(
+            expect.objectContaining({
+              path: "/workflows/:id/messages",
+              parameters: { id },
+            }),
+          );
+        });
+
+        it("Omits parameters when the route defines none", async () => {
+          const mockFunction = vi.fn(() => ({ ok: true }));
+          const handler = expressHandler(mockFunction, { name: "handler" });
+          const app = express();
+          app.use(handler);
+          await request(app).get("/ping");
+          expect(log.report).toHaveBeenCalledWith(
+            expect.not.objectContaining({
+              parameters: expect.anything(),
+            }),
+          );
+        });
+
         it("Reports contentType and contentLength for POST body", async () => {
           const mockFunction = vi.fn(() => ({ ok: true }));
           const handler = expressHandler(mockFunction, { name: "handler" });
