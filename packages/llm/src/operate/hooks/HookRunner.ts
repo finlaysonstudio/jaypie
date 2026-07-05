@@ -30,11 +30,13 @@ export interface AfterModelResponseContext {
 
 export interface BeforeToolContext {
   args: string;
+  message?: string;
   toolName: string;
 }
 
 export interface AfterToolContext {
   args: string;
+  message?: string;
   result: unknown;
   toolName: string;
 }
@@ -42,6 +44,7 @@ export interface AfterToolContext {
 export interface ToolErrorContext {
   args: string;
   error: Error;
+  message?: string;
   toolName: string;
 }
 

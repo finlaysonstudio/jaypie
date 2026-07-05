@@ -229,6 +229,12 @@ const response = await Llm.operate("What's the weather in NYC?", {
 });
 ```
 
+Tools may define `message` — a human-readable status line (static string or
+function of the parsed args). The operate/stream loops resolve it once per
+call via `Toolkit.resolveMessage()` and surface it in the Toolkit `log`
+option, the `beforeEachTool`/`afterEachTool`/`onToolError` hooks (as
+`message`), and the `tool_call` progress event (as `tool.message`).
+
 ### Progress Events
 
 `operate()` accepts an `onProgress` callback that receives lightweight,
@@ -255,7 +261,7 @@ Fields carried by each event (`turn` is 1-indexed):
 | `start` | `model`, `provider`, `maxTurns` |
 | `model_request` | `turn`, `model` |
 | `model_response` | `turn`, `content` (text, if any), `toolCalls` (`[{ name, arguments }]`, if any), `usage` (this turn) |
-| `tool_call` | `turn`, `tool: { name, arguments }` — before the tool runs; `arguments` is the JSON string |
+| `tool_call` | `turn`, `tool: { name, arguments, message }` — before the tool runs; `arguments` is the JSON string; `message` is the resolved `LlmTool.message`, when the tool defines one |
 | `tool_result` | `turn`, `tool: { name }` — result value deliberately omitted; use `afterEachTool` to receive it |
 | `tool_error` | `turn`, `tool: { name }`, `error` (message string) |
 | `retry` | `turn`, `error` (message string) |

@@ -237,6 +237,8 @@ export enum LlmProgressEventType {
 export interface LlmProgressToolCall {
   /** JSON string of arguments (tool_call events only) */
   arguments?: string;
+  /** Resolved `LlmTool.message`, when the tool defines one (tool_call events only) */
+  message?: string;
   /** Tool name */
   name: string;
 }
@@ -299,10 +301,13 @@ export interface LlmOperateOptions {
       result,
       toolName,
       args,
+      message,
     }: {
       result: unknown;
       toolName: string;
       args: string;
+      /** Resolved `LlmTool.message`, when the tool defines one */
+      message?: string;
     }) => unknown | Promise<unknown>;
     beforeEachModelRequest?: ({
       input,
@@ -316,9 +321,12 @@ export interface LlmOperateOptions {
     beforeEachTool?: ({
       toolName,
       args,
+      message,
     }: {
       toolName: string;
       args: string;
+      /** Resolved `LlmTool.message`, when the tool defines one */
+      message?: string;
     }) => unknown | Promise<unknown>;
     onRetryableModelError?: ({
       input,
@@ -335,10 +343,13 @@ export interface LlmOperateOptions {
       error,
       toolName,
       args,
+      message,
     }: {
       error: Error;
       toolName: string;
       args: string;
+      /** Resolved `LlmTool.message`, when the tool defines one */
+      message?: string;
     }) => unknown | Promise<unknown>;
     onUnrecoverableModelError?: ({
       input,

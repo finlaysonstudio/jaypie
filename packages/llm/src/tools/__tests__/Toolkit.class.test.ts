@@ -322,6 +322,101 @@ describe("Toolkit", () => {
         { name: "testTool", args: { testParam: "value" } },
       );
     });
+
+    it("should not re-resolve tool.message when call receives a pre-resolved message", async () => {
+      const messageFn = vi.fn().mockReturnValue("Resolved elsewhere");
+      const toolWithMessage: LlmTool = {
+        ...mockTool,
+        message: messageFn,
+      };
+      const customLogFn = vi.fn();
+      const toolkit = new Toolkit([toolWithMessage], { log: customLogFn });
+      const args = JSON.stringify({ testParam: "value" });
+
+      await toolkit.call({
+        arguments: args,
+        message: "Pre-resolved message",
+        name: "testTool",
+      });
+
+      expect(messageFn).not.toHaveBeenCalled();
+      expect(customLogFn).toHaveBeenCalledWith("Pre-resolved message", {
+        name: "testTool",
+        args: { testParam: "value" },
+      });
+    });
+  });
+
+  describe("resolveMessage", () => {
+    it("resolves a string message", async () => {
+      const toolkit = new Toolkit([{ ...mockTool, message: "Static message" }]);
+      const message = await toolkit.resolveMessage({
+        arguments: "{}",
+        name: "testTool",
+      });
+      expect(message).toBe("Static message");
+    });
+
+    it("resolves a function message with parsed args and context", async () => {
+      const messageFn = vi
+        .fn()
+        .mockImplementation(({ testParam }) => `Working on ${testParam}`);
+      const toolkit = new Toolkit([{ ...mockTool, message: messageFn }]);
+      const message = await toolkit.resolveMessage({
+        arguments: JSON.stringify({ testParam: "value" }),
+        name: "testTool",
+      });
+      expect(message).toBe("Working on value");
+      expect(messageFn).toHaveBeenCalledWith(
+        { testParam: "value" },
+        { name: "testTool" },
+      );
+    });
+
+    it("awaits a function message returning a promise", async () => {
+      const toolkit = new Toolkit([
+        { ...mockTool, message: vi.fn().mockResolvedValue("Async message") },
+      ]);
+      const message = await toolkit.resolveMessage({
+        arguments: "{}",
+        name: "testTool",
+      });
+      expect(message).toBe("Async message");
+    });
+
+    it("returns undefined when the tool has no message", async () => {
+      const toolkit = new Toolkit([mockTool]);
+      const message = await toolkit.resolveMessage({
+        arguments: "{}",
+        name: "testTool",
+      });
+      expect(message).toBeUndefined();
+    });
+
+    it("returns undefined when the tool is not found", async () => {
+      const toolkit = new Toolkit([mockTool]);
+      const message = await toolkit.resolveMessage({
+        arguments: "{}",
+        name: "missingTool",
+      });
+      expect(message).toBeUndefined();
+    });
+
+    it("returns undefined when the message function throws", async () => {
+      const toolkit = new Toolkit([
+        {
+          ...mockTool,
+          message: vi.fn().mockImplementation(() => {
+            throw new Error("Sorpresa!");
+          }),
+        },
+      ]);
+      const message = await toolkit.resolveMessage({
+        arguments: "{}",
+        name: "testTool",
+      });
+      expect(message).toBeUndefined();
+    });
   });
 
   describe("extend", () => {

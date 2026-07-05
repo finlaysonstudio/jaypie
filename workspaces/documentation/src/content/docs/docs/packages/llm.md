@@ -333,13 +333,14 @@ const response = await Llm.operate(prompt, {
       log.trace("[llm] response received");
       log.var({ tokens: usage[usage.length - 1]?.total });
     },
-    beforeEachTool: ({ toolName, args }) => {
-      log.trace(`[llm] calling ${toolName}`);
+    beforeEachTool: ({ toolName, args, message }) => {
+      // message is the tool's resolved LlmTool.message, when defined
+      log.trace(message ?? `[llm] calling ${toolName}`);
     },
-    afterEachTool: ({ result, toolName }) => {
+    afterEachTool: ({ result, toolName, message }) => {
       log.trace(`[llm] ${toolName} returned`);
     },
-    onToolError: ({ error, toolName }) => {
+    onToolError: ({ error, toolName, message }) => {
       log.warn(`[llm] ${toolName} failed`);
       log.var({ error: error.message });
     },
@@ -377,7 +378,7 @@ Fields carried by each event (`turn` is 1-indexed):
 | `start` | `model`, `provider`, `maxTurns` |
 | `model_request` | `turn`, `model` |
 | `model_response` | `turn`, `content` (text, if any), `toolCalls` (`[{ name, arguments }]`, if any), `usage` (this turn) |
-| `tool_call` | `turn`, `tool: { name, arguments }` — fires before the tool runs; `arguments` is the JSON string |
+| `tool_call` | `turn`, `tool: { name, arguments, message }` — fires before the tool runs; `arguments` is the JSON string; `message` is the resolved `LlmTool.message`, when the tool defines one |
 | `tool_result` | `turn`, `tool: { name }` — the result value is deliberately omitted (it can be arbitrarily large); use the `afterEachTool` hook to receive it |
 | `tool_error` | `turn`, `tool: { name }`, `error` (message string) |
 | `retry` | `turn`, `error` (message string) |
