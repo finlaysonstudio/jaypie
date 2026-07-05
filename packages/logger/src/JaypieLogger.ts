@@ -27,7 +27,7 @@ function envBoolean(
   );
 }
 
-class JaypieLogger {
+export class JaypieLogger {
   public debug: Logger["debug"];
   public error: Logger["error"];
   public fatal: Logger["fatal"];
