@@ -166,6 +166,30 @@ When enabled:
 - The explanation is stripped before the tool executes (tools receive clean arguments)
 - Useful for debugging and understanding LLM decision-making
 
+### Tool Messages
+
+Tools may define a `message` — a human-readable status line for the call, either a static string or a function of the parsed arguments:
+
+```typescript
+const toolkit = new Toolkit([
+  {
+    name: "get_weather",
+    description: "Get current weather for a city",
+    type: "function",
+    parameters: { type: "object", properties: { city: { type: "string" } } },
+    call: async ({ city }) => ({ temp: 72 }),
+    message: ({ city }) => `Checking weather in ${city}`,
+  },
+]);
+```
+
+The resolved message surfaces in three places during `operate()`/`stream()`:
+- The Toolkit's `log` option: `new Toolkit(tools, { log: (message, { name, args }) => ... })`
+- The `beforeEachTool`, `afterEachTool`, and `onToolError` hooks as `message`
+- The `tool_call` progress event as `tool.message` (`operate()` only)
+
+Resolve one directly with `toolkit.resolveMessage({ name, arguments })` — returns the resolved string, or `undefined` when the tool is missing or defines no message; it never throws.
+
 ## Structured Output
 
 ### Natural Schema
@@ -303,18 +327,20 @@ const response = await Llm.operate(input, {
     afterEachModelResponse: ({ content, usage }) => {
       console.log(`Tokens: ${usage.total}`);
     },
-    beforeEachTool: ({ toolName, args }) => {
-      console.log(`Calling ${toolName} with`, args);
+    beforeEachTool: ({ toolName, args, message }) => {
+      console.log(message ?? `Calling ${toolName} with ${args}`);
     },
-    afterEachTool: ({ result, toolName }) => {
+    afterEachTool: ({ result, toolName, message }) => {
       console.log(`${toolName} returned:`, result);
     },
-    onToolError: ({ error, toolName }) => {
+    onToolError: ({ error, toolName, message }) => {
       console.error(`${toolName} failed:`, error);
     },
   },
 });
 ```
+
+The tool hooks receive `message` — the tool's resolved `LlmTool.message`, when the tool defines one (see Tool Messages).
 
 ## Progress Events
 
@@ -341,7 +367,7 @@ Fields carried by each event (`turn` is 1-indexed):
 | `start` | `model`, `provider`, `maxTurns` |
 | `model_request` | `turn`, `model` |
 | `model_response` | `turn`, `content` (text, if any), `toolCalls` (`[{ name, arguments }]`, if any), `usage` (this turn) |
-| `tool_call` | `turn`, `tool: { name, arguments }` — fires before the tool runs; `arguments` is the JSON string |
+| `tool_call` | `turn`, `tool: { name, arguments, message }` — fires before the tool runs; `arguments` is the JSON string; `message` is the resolved `LlmTool.message`, when the tool defines one |
 | `tool_result` | `turn`, `tool: { name }` — the result value is deliberately omitted (it can be arbitrarily large); use the `afterEachTool` hook to receive it |
 | `tool_error` | `turn`, `tool: { name }`, `error` (message string) |
 | `retry` | `turn`, `error` (message string) |

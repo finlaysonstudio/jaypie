@@ -498,10 +498,19 @@ export class OperateLoop {
 
         // Process each tool call
         for (const toolCall of toolCalls) {
+          // Resolved once per call; never throws (undefined when tool has no message)
+          const toolMessage = await state.toolkit!.resolveMessage({
+            arguments: toolCall.arguments,
+            name: toolCall.name,
+          });
           try {
             await emitProgress({
               event: {
-                tool: { arguments: toolCall.arguments, name: toolCall.name },
+                tool: {
+                  arguments: toolCall.arguments,
+                  message: toolMessage,
+                  name: toolCall.name,
+                },
                 turn: state.currentTurn,
                 type: LlmProgressEventType.ToolCall,
               },
@@ -511,6 +520,7 @@ export class OperateLoop {
             // Execute beforeEachTool hook
             await this.hookRunnerInstance.runBeforeTool(context.hooks, {
               args: toolCall.arguments,
+              message: toolMessage,
               toolName: toolCall.name,
             });
 
@@ -521,6 +531,7 @@ export class OperateLoop {
               async () => {
                 const result = await state.toolkit!.call({
                   arguments: toolCall.arguments,
+                  message: toolMessage,
                   name: toolCall.name,
                 });
                 annotateLlmObs({
@@ -544,6 +555,7 @@ export class OperateLoop {
             // Execute afterEachTool hook
             await this.hookRunnerInstance.runAfterTool(context.hooks, {
               args: toolCall.arguments,
+              message: toolMessage,
               result,
               toolName: toolCall.name,
             });
@@ -591,6 +603,7 @@ export class OperateLoop {
             await this.hookRunnerInstance.runOnToolError(context.hooks, {
               args: toolCall.arguments,
               error: error as Error,
+              message: toolMessage,
               toolName: toolCall.name,
             });
 

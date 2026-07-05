@@ -490,6 +490,95 @@ describe("OperateLoop", () => {
         expect(beforeToolHook).toHaveBeenCalled();
       });
 
+      it("passes resolved tool message to beforeEachTool and afterEachTool hooks", async () => {
+        const beforeToolHook = vi.fn();
+        const afterToolHook = vi.fn();
+
+        let callCount = 0;
+        mockAdapter.parseResponse = vi.fn((response): ParsedResponse => {
+          callCount++;
+          if (callCount === 1) {
+            return {
+              content: undefined,
+              hasToolCalls: true,
+              stopReason: "tool_use",
+              usage: {
+                input: 10,
+                output: 20,
+                reasoning: 0,
+                total: 30,
+                provider: "mock",
+                model: "mock-model",
+              },
+              raw: response,
+            };
+          }
+          return {
+            content: "Done!",
+            hasToolCalls: false,
+            stopReason: "end_turn",
+            usage: {
+              input: 10,
+              output: 20,
+              reasoning: 0,
+              total: 30,
+              provider: "mock",
+              model: "mock-model",
+            },
+            raw: response,
+          };
+        }) as Mock;
+
+        mockAdapter.extractToolCalls = vi.fn((): StandardToolCall[] => [
+          {
+            callId: "call-123",
+            name: "test_tool",
+            arguments: JSON.stringify({ city: "NYC" }),
+            raw: {},
+          },
+        ]);
+
+        const toolkit = new Toolkit([
+          {
+            name: "test_tool",
+            description: "A test tool",
+            parameters: { type: "object" },
+            type: "function",
+            call: vi.fn(() => "result"),
+            message: ({ city }: { city?: string } = {}) =>
+              `Checking weather in ${city}`,
+          },
+        ]);
+
+        const loop = new OperateLoop({
+          adapter: mockAdapter,
+          client: mockClient,
+        });
+
+        await loop.execute("Call tool", {
+          tools: toolkit,
+          turns: 3,
+          hooks: {
+            afterEachTool: afterToolHook,
+            beforeEachTool: beforeToolHook,
+          },
+        });
+
+        expect(beforeToolHook).toHaveBeenCalledWith(
+          expect.objectContaining({
+            message: "Checking weather in NYC",
+            toolName: "test_tool",
+          }),
+        );
+        expect(afterToolHook).toHaveBeenCalledWith(
+          expect.objectContaining({
+            message: "Checking weather in NYC",
+            result: "result",
+            toolName: "test_tool",
+          }),
+        );
+      });
+
       it("logs at warn level when tool throws, not error", async () => {
         const { log: mockLog } = await import("@jaypie/logger");
         const mockLogger = {
@@ -648,6 +737,7 @@ describe("OperateLoop", () => {
             parameters: { type: "object" },
             type: "function",
             call: vi.fn(() => "tool result"),
+            message: "Running the test tool",
           },
         ]);
 
@@ -670,6 +760,7 @@ describe("OperateLoop", () => {
         );
         expect(toolCallEvent?.tool).toEqual({
           arguments: "{}",
+          message: "Running the test tool",
           name: "test_tool",
         });
         const toolResultEvent = events.find(

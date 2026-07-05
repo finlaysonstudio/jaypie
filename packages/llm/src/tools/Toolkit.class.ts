@@ -72,12 +72,7 @@ export class Toolkit {
     });
   }
 
-  async call({ name, arguments: args }: { name: string; arguments: string }) {
-    const tool = this._tools.find((t) => t.name === name);
-    if (!tool) {
-      throw new Error(`Tool '${name}' not found`);
-    }
-
+  private parseArgs(args: string) {
     let parsedArgs;
     try {
       parsedArgs = JSON.parse(args);
@@ -87,6 +82,59 @@ export class Toolkit {
     } catch {
       parsedArgs = args;
     }
+    return parsedArgs;
+  }
+
+  /**
+   * Resolve a tool's `message` (static string or function of args) without
+   * calling the tool. Returns undefined when the tool is missing or defines
+   * no message. Never throws; resolution errors log at warn.
+   */
+  async resolveMessage({
+    name,
+    arguments: args,
+  }: {
+    name: string;
+    arguments: string;
+  }): Promise<string | undefined> {
+    const tool = this._tools.find((t) => t.name === name);
+    if (!tool || !tool.message) {
+      return undefined;
+    }
+
+    try {
+      if (typeof tool.message === "string") {
+        return tool.message;
+      }
+      const parsedArgs = this.parseArgs(args);
+      if (typeof tool.message === "function") {
+        return await resolveValue(tool.message(parsedArgs, { name }));
+      }
+      log.warn("[Toolkit] Tool provided unknown message type");
+      return String(tool.message);
+    } catch (error) {
+      log.warn("[Toolkit] Caught error resolving tool message");
+      log.var({ error });
+      return undefined;
+    }
+  }
+
+  async call({
+    name,
+    arguments: args,
+    message: resolvedMessage,
+  }: {
+    name: string;
+    arguments: string;
+    /** Pre-resolved tool message; skips re-resolving `tool.message` for logging */
+    message?: string;
+  }) {
+    const tool = this._tools.find((t) => t.name === name);
+    if (!tool) {
+      throw new Error(`Tool '${name}' not found`);
+    }
+
+    const parsedArgs = this.parseArgs(args);
 
     if (this.log !== false) {
       try {
@@ -94,28 +142,15 @@ export class Toolkit {
           name,
           args: parsedArgs,
         };
-        let message: string;
 
         if (this.explain) {
           context.explanation = parsedArgs.__Explanation;
         }
 
-        if (tool.message) {
-          if (typeof tool.message === "string") {
-            log.trace("[Toolkit] Tool provided string message");
-            message = tool.message;
-          } else if (typeof tool.message === "function") {
-            log.trace("[Toolkit] Tool provided function message");
-            log.trace("[Toolkit] Resolving message result");
-            message = await resolveValue(tool.message(parsedArgs, { name }));
-          } else {
-            log.warn("[Toolkit] Tool provided unknown message type");
-            message = String(tool.message);
-          }
-        } else {
-          log.trace("[Toolkit] Log tool call with default message");
-          message = `${tool.name}:${JSON.stringify(parsedArgs)}`;
-        }
+        const message =
+          resolvedMessage ??
+          (await this.resolveMessage({ arguments: args, name })) ??
+          `${tool.name}:${JSON.stringify(parsedArgs)}`;
 
         if (typeof this.log === "function") {
           log.trace("[Toolkit] Log tool call with custom logger");

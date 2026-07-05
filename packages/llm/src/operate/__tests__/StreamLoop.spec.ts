@@ -1113,6 +1113,91 @@ describe("StreamLoop", () => {
         );
       });
 
+      it("passes resolved tool message to beforeEachTool and afterEachTool hooks", async () => {
+        const beforeToolHook = vi.fn();
+        const afterToolHook = vi.fn();
+        const toolkit = new Toolkit([
+          {
+            name: "test_tool",
+            description: "Test",
+            parameters: { type: "object" },
+            type: "function",
+            call: vi.fn(() => "result"),
+            message: "Streaming tool message",
+          },
+        ]);
+
+        let callCount = 0;
+        mockAdapter.executeStreamRequest = vi.fn(
+          async function* (): AsyncIterable<LlmStreamChunk> {
+            callCount++;
+            if (callCount === 1) {
+              yield {
+                type: LlmStreamChunkType.ToolCall,
+                toolCall: { id: "call-1", name: "test_tool", arguments: "{}" },
+              };
+              yield {
+                type: LlmStreamChunkType.Done,
+                usage: [
+                  {
+                    input: 10,
+                    output: 10,
+                    reasoning: 0,
+                    total: 20,
+                    provider: "mock",
+                    model: "mock-model",
+                  },
+                ],
+              };
+            } else {
+              yield { type: LlmStreamChunkType.Text, content: "Done" };
+              yield {
+                type: LlmStreamChunkType.Done,
+                usage: [
+                  {
+                    input: 10,
+                    output: 10,
+                    reasoning: 0,
+                    total: 20,
+                    provider: "mock",
+                    model: "mock-model",
+                  },
+                ],
+              };
+            }
+          },
+        );
+
+        const loop = new StreamLoop({
+          adapter: mockAdapter,
+          client: mockClient,
+        });
+
+        await collectChunks(
+          loop.execute("Call tool", {
+            tools: toolkit,
+            turns: 3,
+            hooks: {
+              afterEachTool: afterToolHook,
+              beforeEachTool: beforeToolHook,
+            },
+          }),
+        );
+
+        expect(beforeToolHook).toHaveBeenCalledWith(
+          expect.objectContaining({
+            message: "Streaming tool message",
+            toolName: "test_tool",
+          }),
+        );
+        expect(afterToolHook).toHaveBeenCalledWith(
+          expect.objectContaining({
+            message: "Streaming tool message",
+            toolName: "test_tool",
+          }),
+        );
+      });
+
       it("calls onToolError hook when tool throws", async () => {
         const onToolErrorHook = vi.fn();
         const toolError = new Error("Tool failed!");
