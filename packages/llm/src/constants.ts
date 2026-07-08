@@ -23,7 +23,7 @@ const FIRST_CLASS_PROVIDER = {
   // https://docs.x.ai/developers/models
   XAI: {
     DEFAULT: "grok-latest" as const,
-    LARGE: "grok-4.3-latest" as const,
+    LARGE: "grok-latest" as const,
     SMALL: "grok-4-1-fast-reasoning" as const,
     TINY: "grok-4-1-fast-non-reasoning" as const,
   },
@@ -31,10 +31,10 @@ const FIRST_CLASS_PROVIDER = {
 
 export const MODEL = {
   // Anthropic
-  OPUS: "claude-opus-4-8",
-  SONNET: "claude-sonnet-4-6",
-  HAIKU: "claude-haiku-4-5",
   FABLE: "claude-fable-5",
+  OPUS: "claude-opus-4-8",
+  SONNET: "claude-sonnet-5",
+  HAIKU: "claude-haiku-4-5",
   MYTHOS: "claude-mythos-5",
   // Google
   GEMINI_FLASH: "gemini-3.5-flash",
