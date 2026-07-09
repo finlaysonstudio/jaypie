@@ -233,6 +233,16 @@ log.teardown();
 
 `log.report()` only accumulates data while a session is active (after `setup()`, before `teardown()`); calling it outside a session logs a warning and is a no-op. Warn and error calls made during the session are counted automatically and included in the final report.
 
+`log.report()` warns when a key is written twice. Use `log.tally()` for data written repeatedly — keys combine instead: numbers sum, strings collect into an array of strings, booleans AND, and objects merge recursively. Outside an active session `log.tally()` silently no-ops, so libraries can tally unconditionally.
+
+```typescript
+log.tally({ llm: { operates: 1, turns: 2 } });
+log.tally({ llm: { operates: 1, turns: 3 } });
+// => teardown report includes { llm: { operates: 2, turns: 5 } }
+```
+
+Inside a handler, `@jaypie/llm` tallies an `llm` key automatically — `operate()` and `stream()` report turns, tool calls, and usage by model with no code changes.
+
 ## Environment Configuration
 
 | Variable | Values | Default |

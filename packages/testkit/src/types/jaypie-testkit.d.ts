@@ -53,6 +53,7 @@ export interface LogMock extends Log {
     report: Mock;
     setup: Mock;
     tag: Mock;
+    tally: Mock;
     teardown: Mock;
     trace: MockLogMethod;
     untag: Mock;
@@ -63,6 +64,7 @@ export interface LogMock extends Log {
   report: Mock;
   setup: Mock;
   tag: Mock;
+  tally: Mock;
   teardown: Mock;
   trace: MockLogMethod;
   untag: Mock;
@@ -85,16 +87,10 @@ export interface JaypieHandlerOptions {
 }
 
 export type JaypieHandlerParameter<T = unknown> =
-  | JaypieHandlerOptions
-  | GenericFunction<T>;
+  JaypieHandlerOptions | GenericFunction<T>;
 
 export type JsonValue =
-  | { [key: string]: JsonValue }
-  | boolean
-  | JsonValue[]
-  | null
-  | number
-  | string;
+  { [key: string]: JsonValue } | boolean | JsonValue[] | null | number | string;
 export type JsonObject = { [key: string]: JsonValue };
 export type JsonArray = Array<JsonObject>;
 export type JsonReturn = JsonObject | JsonArray;
@@ -115,8 +111,7 @@ export interface ExpressHandlerOptions extends JaypieHandlerOptions {
   locals?: Record<string, GenericFunction | unknown>;
 }
 export type ExpressHandlerParameter =
-  | ExpressHandlerOptions
-  | ExpressHandlerFunction;
+  ExpressHandlerOptions | ExpressHandlerFunction;
 
 export type JaypieHandlerFunction = GenericFunction | ExpressHandlerFunction;
 

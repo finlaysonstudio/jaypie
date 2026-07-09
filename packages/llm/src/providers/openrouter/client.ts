@@ -84,8 +84,7 @@ function normalizeResponse(json: JsonObject): JsonObject {
     }
     if (usage.totalTokens === undefined) usage.totalTokens = usage.total_tokens;
     const details = usage.completion_tokens_details as
-      | { reasoning_tokens?: number }
-      | undefined;
+      { reasoning_tokens?: number } | undefined;
     if (
       details?.reasoning_tokens !== undefined &&
       !usage.completionTokensDetails

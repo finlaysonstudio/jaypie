@@ -82,6 +82,16 @@ log.teardown();
 // => { report: { userId: "456", itemCount: 3, log: { warn: false, warns: 0, error: false, errors: 0 } } }
 ```
 
+`log.report()` warns when a key is written twice. Use `log.tally()` for data written repeatedly — keys combine instead: numbers sum, strings collect into an array of strings, booleans AND, and objects merge recursively.
+
+```typescript
+log.tally({ llm: { operates: 1, turns: 2 } });
+log.tally({ llm: { operates: 1, turns: 3 } });
+// => teardown report includes { llm: { operates: 2, turns: 5 } }
+```
+
+Outside an active session `tally()` silently no-ops, so libraries can tally unconditionally. `@jaypie/llm` tallies an `llm` key (turns, tool calls, usage by model) automatically.
+
 ## Setting Log Level
 
 Via environment variable:

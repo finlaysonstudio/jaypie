@@ -783,8 +783,7 @@ export class BedrockAdapter extends BaseProviderAdapter {
       const content = (bedrockResponse.output?.message?.content ??
         []) as BedrockContentBlock[];
       const textBlock = content.find((b) => "text" in b) as
-        | { text: string }
-        | undefined;
+        { text: string } | undefined;
       if (!textBlock) return undefined;
       return extractJson(textBlock.text);
     }
@@ -823,8 +822,7 @@ export class BedrockAdapter extends BaseProviderAdapter {
 
     const content = message.content as BedrockContentBlock[];
     const textBlock = content.find((block) => "text" in block) as
-      | { text: string }
-      | undefined;
+      { text: string } | undefined;
 
     return textBlock?.text;
   }

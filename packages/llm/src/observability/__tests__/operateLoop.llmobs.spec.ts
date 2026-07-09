@@ -112,15 +112,13 @@ class ToolThenTextAdapter extends BaseProviderAdapter {
     type: "tool_result",
   }));
   appendToolResult = vi.fn((request) => request);
-  responseToHistoryItems = vi.fn(
-    (): LlmHistory => [
-      {
-        content: "Done",
-        role: LlmMessageRole.Assistant,
-        type: LlmMessageType.Message,
-      },
-    ],
-  );
+  responseToHistoryItems = vi.fn((): LlmHistory => [
+    {
+      content: "Done",
+      role: LlmMessageRole.Assistant,
+      type: LlmMessageType.Message,
+    },
+  ]);
   extractUsage = vi.fn(() => ({
     input: 0,
     model: "mock-model",
@@ -196,20 +194,18 @@ describe("OperateLoop LLM Observability", () => {
 
     // Adapter that completes on the first turn (no tools)
     const adapter = new ToolThenTextAdapter();
-    adapter.parseResponse = vi.fn(
-      (): ParsedResponse => ({
-        content: "Hi",
-        hasToolCalls: false,
-        raw: {},
-        usage: {
-          input: 1,
-          output: 2,
-          provider: "mock",
-          reasoning: 0,
-          total: 3,
-        },
-      }),
-    );
+    adapter.parseResponse = vi.fn((): ParsedResponse => ({
+      content: "Hi",
+      hasToolCalls: false,
+      raw: {},
+      usage: {
+        input: 1,
+        output: 2,
+        provider: "mock",
+        reasoning: 0,
+        total: 3,
+      },
+    }));
 
     const loop = new OperateLoop({ adapter, client: {} });
     await loop.execute("Hello");

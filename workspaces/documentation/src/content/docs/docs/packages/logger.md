@@ -40,6 +40,7 @@ npm install @jaypie/logger
 | `log.init()` | Reset logger state |
 | `log.setup()` | Start a report session |
 | `log.report()` | Accumulate session report data |
+| `log.tally()` | Accumulate combining report data (numbers sum) |
 | `log.teardown()` | Emit session report, end session |
 
 ## Basic Usage
@@ -148,6 +149,16 @@ log.teardown();
 ```
 
 `log.report()` only accumulates data while a session is active; calling it outside a session logs a warning and is a no-op. Warn and error calls made during the session are counted automatically and included in the final report.
+
+`log.report()` warns when a key is written twice. Use `log.tally()` for data written repeatedly — keys combine instead: numbers sum, strings collect into an array of strings, booleans AND, and objects merge recursively.
+
+```typescript
+log.tally({ llm: { operates: 1, turns: 2 } });
+log.tally({ llm: { operates: 1, turns: 3 } });
+// => teardown report includes { llm: { operates: 2, turns: 5 } }
+```
+
+Outside an active session `log.tally()` silently no-ops, so libraries can tally unconditionally. `@jaypie/llm` uses this to report an `llm` key (turns, tool calls, usage by model) automatically.
 
 ## Function Prefix Convention
 

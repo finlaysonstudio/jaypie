@@ -17,13 +17,7 @@
 // Any capability not listed in `expect` defaults to "ok".
 
 export type Capability =
-  | "plain"
-  | "tools"
-  | "structured"
-  | "both"
-  | "pdf"
-  | "image"
-  | "temperature";
+  "plain" | "tools" | "structured" | "both" | "pdf" | "image" | "temperature";
 
 export type ExpectedOutcome = "ok" | "warn" | "skip" | "fail";
 

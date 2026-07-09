@@ -4,6 +4,7 @@ import { _resetDatadogTransport } from "./datadogTransport";
 import { SerializationLimitOptions } from "./limits";
 import { logTags } from "./logTags";
 import { logVar } from "./logVar";
+import { tallyMerge } from "./tallyMerge";
 
 interface JaypieLoggerOptions extends SerializationLimitOptions {
   level?: string;
@@ -44,6 +45,7 @@ export class JaypieLogger {
   private _report: Record<string, unknown> = {};
   private _sessionActive: boolean = false;
   private _tags: Record<string, string>;
+  private _tally: Record<string, unknown> = {};
   private _warnCount: number = 0;
   private _withLoggers: Record<string, JaypieLogger>;
 
@@ -175,6 +177,7 @@ export class JaypieLogger {
     this._errorCount = 0;
     this._report = {};
     this._sessionActive = false;
+    this._tally = {};
     this._warnCount = 0;
 
     const levels = [
@@ -290,6 +293,7 @@ export class JaypieLogger {
     this._errorCount = 0;
     this._report = {};
     this._sessionActive = true;
+    this._tally = {};
     this._warnCount = 0;
     if (tags) {
       this.tag(tags);
@@ -304,17 +308,38 @@ export class JaypieLogger {
   }
 
   /**
+   * Merge data into the current session's tally. Unlike report(), repeated
+   * keys combine: numbers sum, strings collect into an array of strings,
+   * booleans AND, and objects merge recursively. Requires an active session
+   * (started via setup()); silently no-ops otherwise. Folded into the
+   * report emitted by teardown().
+   */
+  public tally(data: Record<string, unknown>): void {
+    if (!this._sessionActive) {
+      this.trace("[logger] tally() called without active session");
+      return;
+    }
+    this._tally = tallyMerge({
+      existing: this._tally,
+      incoming: data,
+    }) as Record<string, unknown>;
+  }
+
+  /**
    * End the current report session: emits log.info.var({ report }) with
-   * accumulated report() data plus { log: { warn, warns, error, errors } }
-   * counts, then resets session state. No-op if no session is active.
-   * Handlers call this automatically.
+   * accumulated report() and tally() data plus
+   * { log: { warn, warns, error, errors } } counts, then resets session
+   * state. No-op if no session is active. Handlers call this automatically.
    */
   public teardown(): void {
     if (!this._sessionActive) {
       return;
     }
     const finalReport = {
-      ...this._report,
+      ...(tallyMerge({
+        existing: this._report,
+        incoming: this._tally,
+      }) as Record<string, unknown>),
       log: {
         error: this._errorCount > 0,
         errors: this._errorCount,
@@ -326,6 +351,7 @@ export class JaypieLogger {
     this._errorCount = 0;
     this._report = {};
     this._sessionActive = false;
+    this._tally = {};
     this._warnCount = 0;
   }
 

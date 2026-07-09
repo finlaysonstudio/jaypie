@@ -32,9 +32,7 @@ function isErrorConstructor(value: unknown): value is ErrorConstructor {
 const toThrowJaypieError = async (
   received: ReceivedFunction,
   expected?:
-    | JaypieErrorInstance
-    | (() => JaypieErrorInstance)
-    | ErrorConstructor,
+    JaypieErrorInstance | (() => JaypieErrorInstance) | ErrorConstructor,
 ): Promise<MatcherResult> => {
   const isAsync =
     received.constructor.name === "AsyncFunction" ||

@@ -424,6 +424,26 @@ export const handler = awslambda.streamifyResponse(
 );
 ```
 
+## Report Totals
+
+Inside a Jaypie handler, `operate()` and `stream()` tally totals onto the logger's report session automatically. The report emitted at teardown includes an `llm` key with no code changes:
+
+```json
+{
+  "llm": {
+    "operates": 2,
+    "toolCalls": 3,
+    "tools": { "get_weather": 2, "roll": 1 },
+    "turns": 5,
+    "usage": {
+      "anthropic:claude-sonnet-4-6": { "input": 1840, "output": 912, "reasoning": 0, "total": 2752 }
+    }
+  }
+}
+```
+
+Repeated calls in one request combine (numbers sum). `usage` is keyed `provider:model`, so fallback providers appear as separate keys. Outside a handler session the tally is a silent no-op.
+
 ## Error Handling
 
 ```typescript

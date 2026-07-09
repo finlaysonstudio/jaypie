@@ -27,7 +27,7 @@ import {
   usageToLlmObsMetrics,
   withLlmObsSpan,
 } from "../observability/llmobs.js";
-import { getLogger, maxTurnsFromOptions } from "../util/index.js";
+import { getLogger, maxTurnsFromOptions, tallyOperate } from "../util/index.js";
 import { ProviderAdapter } from "./adapters/ProviderAdapter.interface.js";
 import { HookRunner, hookRunner } from "./hooks/index.js";
 import { InputProcessor, inputProcessor } from "./input/index.js";
@@ -59,6 +59,7 @@ interface StreamLoopState {
   formattedFormat?: JsonObject;
   formattedTools?: ProviderToolDefinition[];
   maxTurns: number;
+  toolCallNames: string[];
   toolkit?: Toolkit;
   usageItems: LlmUsageItem[];
 }
@@ -175,6 +176,11 @@ export class StreamLoop {
     }
 
     // Emit final done chunk with accumulated usage
+    tallyOperate({
+      toolCallNames: state.toolCallNames,
+      turns: state.currentTurn,
+      usage: state.usageItems,
+    });
     yield {
       type: LlmStreamChunkType.Done,
       usage: state.usageItems,
@@ -229,6 +235,7 @@ export class StreamLoop {
       formattedFormat,
       formattedTools,
       maxTurns,
+      toolCallNames: [],
       toolkit,
       usageItems: [],
     };
@@ -431,8 +438,7 @@ export class StreamLoop {
       for (const toolCall of collectedToolCalls) {
         // Extract provider-specific metadata from the stream chunk
         const metadata = (toolCall.raw as Record<string, unknown>)?.metadata as
-          | Record<string, unknown>
-          | undefined;
+          Record<string, unknown> | undefined;
 
         const historyItem: Record<string, unknown> = {
           type: LlmMessageType.FunctionCall,
@@ -465,6 +471,7 @@ export class StreamLoop {
   ): AsyncGenerator<LlmStreamChunk, void> {
     const log = getLogger();
     for (const toolCall of toolCalls) {
+      state.toolCallNames.push(toolCall.name);
       // Resolved once per call; never throws (undefined when tool has no message)
       const toolMessage = await state.toolkit!.resolveMessage({
         arguments: toolCall.arguments,

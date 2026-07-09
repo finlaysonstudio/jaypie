@@ -185,9 +185,7 @@ async function runBoth(llm: Llm): Promise<CapabilityResult> {
   if (result.error) return { ok: false, detail: String(result.error) };
   if (!toolCalled) return { ok: false, detail: "roll tool was not called" };
   const content = result.content as
-    | { values?: unknown; total?: unknown }
-    | string
-    | undefined;
+    { values?: unknown; total?: unknown } | string | undefined;
   if (!content || typeof content !== "object") {
     return { ok: false, detail: `expected object, got ${typeof content}` };
   }

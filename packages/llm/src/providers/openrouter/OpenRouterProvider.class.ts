@@ -91,8 +91,7 @@ export class OpenRouterProvider implements LlmProvider {
     });
 
     const choices = response.choices as
-      | Array<{ message?: { content?: unknown } }>
-      | undefined;
+      Array<{ message?: { content?: unknown } }> | undefined;
     const rawContent = choices?.[0]?.message?.content;
     // Extract text content - content could be string or array of content items
     const content =

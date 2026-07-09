@@ -1,5 +1,7 @@
 import { describe, expect, it, vi, beforeEach, Mock } from "vitest";
 
+import { log } from "@jaypie/logger";
+
 import {
   StreamLoop,
   createStreamLoop,
@@ -45,6 +47,7 @@ vi.mock("@jaypie/logger", () => ({
       var: vi.fn(),
       warn: vi.fn(),
     })),
+    tally: vi.fn(),
   },
 }));
 
@@ -112,22 +115,20 @@ class MockStreamAdapter extends BaseProviderAdapter {
     },
   );
 
-  parseResponse = vi.fn(
-    (response): ParsedResponse => ({
-      content: "Hello!",
-      hasToolCalls: false,
-      stopReason: "end_turn",
-      usage: {
-        input: 10,
-        output: 20,
-        reasoning: 0,
-        total: 30,
-        provider: "mock",
-        model: "mock-model",
-      },
-      raw: response,
-    }),
-  );
+  parseResponse = vi.fn((response): ParsedResponse => ({
+    content: "Hello!",
+    hasToolCalls: false,
+    stopReason: "end_turn",
+    usage: {
+      input: 10,
+      output: 20,
+      reasoning: 0,
+      total: 30,
+      provider: "mock",
+      model: "mock-model",
+    },
+    raw: response,
+  }));
   extractToolCalls = vi.fn(() => []);
   extractUsage = vi.fn(() => ({
     input: 10,
@@ -143,15 +144,13 @@ class MockStreamAdapter extends BaseProviderAdapter {
     content: result.output,
   }));
   appendToolResult = vi.fn((request) => request);
-  responseToHistoryItems = vi.fn(
-    (): LlmHistory => [
-      {
-        content: "Hello!",
-        role: LlmMessageRole.Assistant,
-        type: LlmMessageType.Message,
-      },
-    ],
-  );
+  responseToHistoryItems = vi.fn((): LlmHistory => [
+    {
+      content: "Hello!",
+      role: LlmMessageRole.Assistant,
+      type: LlmMessageType.Message,
+    },
+  ]);
   classifyError = vi.fn(() => ({
     error: new Error("Test"),
     category: ErrorCategory.Unknown,
@@ -264,6 +263,31 @@ describe("StreamLoop", () => {
         (c) => c.type === LlmStreamChunkType.Done,
       ) as { type: LlmStreamChunkType.Done; usage: unknown[] };
       expect(doneChunk.usage).toHaveLength(1);
+    });
+
+    it("tallies turns and usage on completion", async () => {
+      const loop = new StreamLoop({
+        adapter: mockAdapter,
+        client: mockClient,
+      });
+
+      await collectChunks(loop.execute("Hello"));
+
+      expect(log.tally).toHaveBeenCalledWith({
+        llm: {
+          operates: 1,
+          toolCalls: 0,
+          turns: 1,
+          usage: {
+            "mock:mock-model": {
+              input: 10,
+              output: 20,
+              reasoning: 0,
+              total: 30,
+            },
+          },
+        },
+      });
     });
 
     it("processes string input", async () => {

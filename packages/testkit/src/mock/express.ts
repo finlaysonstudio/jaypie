@@ -130,8 +130,7 @@ export type ExpressStreamHandlerFunction = (
 ) => Promise<void>;
 
 type ExpressStreamHandlerParameter =
-  | ExpressStreamHandlerFunction
-  | ExpressStreamHandlerOptions;
+  ExpressStreamHandlerFunction | ExpressStreamHandlerOptions;
 
 export const expressStreamHandler = createMockFunction<
   (

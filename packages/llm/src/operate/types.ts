@@ -170,6 +170,8 @@ export interface OperateLoopState {
   maxTurns: number;
   /** Response builder instance */
   responseBuilder: ResponseBuilder;
+  /** Names of tool calls executed across all turns (report tally) */
+  toolCallNames: string[];
   /** The toolkit for tool calls */
   toolkit?: Toolkit;
 }

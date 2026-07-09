@@ -447,6 +447,29 @@ XAI_API_KEY         # Required for xAI (Grok)
 
 Keys are resolved via `getEnvSecret()` which supports AWS Secrets Manager.
 
+## Report Totals
+
+Inside a Jaypie handler (`expressHandler`, `lambdaHandler`, and stream variants), `operate()` and `stream()` tally totals onto the logger's report session via `log.tally()` (requires `@jaypie/llm` >= 1.3.9 and `@jaypie/logger` >= 1.2.21). The report emitted at teardown includes an `llm` key with no code changes:
+
+```json
+{
+  "llm": {
+    "operates": 2,
+    "toolCalls": 3,
+    "tools": { "get_weather": 2, "roll": 1 },
+    "turns": 5,
+    "usage": {
+      "anthropic:claude-sonnet-4-6": { "input": 1840, "output": 912, "reasoning": 0, "total": 2752 }
+    }
+  }
+}
+```
+
+- `operates` counts loop executions; repeated calls sum every number
+- `usage` is keyed `provider:model` — fallback providers appear as separate keys
+- `tools` appears only when tools were called
+- Outside a handler session the tally is a silent no-op
+
 ## LLM Observability (Datadog)
 
 Set `DD_LLMOBS_ENABLED` (any truthy value except `false`/`0`) and `operate()`/`stream()` emit Datadog [LLM Observability](https://docs.datadoghq.com/llm_observability/) spans with **no code changes**:

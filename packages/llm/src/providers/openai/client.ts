@@ -221,8 +221,7 @@ export class OpenAIClient {
     // the SDK by JSON-parsing the assistant content into `message.parsed`.
     if (parse) {
       const choices = json.choices as
-        | Array<Record<string, unknown>>
-        | undefined;
+        Array<Record<string, unknown>> | undefined;
       if (Array.isArray(choices)) {
         for (const choice of choices) {
           const message = choice.message as Record<string, unknown> | undefined;

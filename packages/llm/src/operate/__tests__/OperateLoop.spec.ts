@@ -1,5 +1,7 @@
 import { describe, expect, it, vi, beforeEach, Mock } from "vitest";
 
+import { log } from "@jaypie/logger";
+
 import {
   OperateLoop,
   createOperateLoop,
@@ -44,6 +46,7 @@ vi.mock("@jaypie/logger", () => ({
       var: vi.fn(),
       warn: vi.fn(),
     })),
+    tally: vi.fn(),
   },
 }));
 
@@ -89,22 +92,20 @@ class MockAdapter extends BaseProviderAdapter {
       usage: { input_tokens: 10, output_tokens: 20 },
     }),
   );
-  parseResponse = vi.fn(
-    (response): ParsedResponse => ({
-      content: "Hello!",
-      hasToolCalls: false,
-      stopReason: "end_turn",
-      usage: {
-        input: 10,
-        output: 20,
-        reasoning: 0,
-        total: 30,
-        provider: "mock",
-        model: "mock-model",
-      },
-      raw: response,
-    }),
-  );
+  parseResponse = vi.fn((response): ParsedResponse => ({
+    content: "Hello!",
+    hasToolCalls: false,
+    stopReason: "end_turn",
+    usage: {
+      input: 10,
+      output: 20,
+      reasoning: 0,
+      total: 30,
+      provider: "mock",
+      model: "mock-model",
+    },
+    raw: response,
+  }));
   extractToolCalls = vi.fn((): StandardToolCall[] => []);
   extractUsage = vi.fn(() => ({
     input: 10,
@@ -120,15 +121,13 @@ class MockAdapter extends BaseProviderAdapter {
     content: result.output,
   }));
   appendToolResult = vi.fn((request) => request);
-  responseToHistoryItems = vi.fn(
-    (): LlmHistory => [
-      {
-        content: "Hello!",
-        role: LlmMessageRole.Assistant,
-        type: LlmMessageType.Message,
-      },
-    ],
-  );
+  responseToHistoryItems = vi.fn((): LlmHistory => [
+    {
+      content: "Hello!",
+      role: LlmMessageRole.Assistant,
+      type: LlmMessageType.Message,
+    },
+  ]);
   classifyError = vi.fn(() => ({
     error: new Error("Test"),
     category: ErrorCategory.Unknown,
@@ -329,22 +328,20 @@ describe("OperateLoop", () => {
 
       it("respects turns limit", async () => {
         // Always return tool calls
-        mockAdapter.parseResponse = vi.fn(
-          (response): ParsedResponse => ({
-            content: undefined,
-            hasToolCalls: true,
-            stopReason: "tool_use",
-            usage: {
-              input: 10,
-              output: 20,
-              reasoning: 0,
-              total: 30,
-              provider: "mock",
-              model: "mock-model",
-            },
-            raw: response,
-          }),
-        );
+        mockAdapter.parseResponse = vi.fn((response): ParsedResponse => ({
+          content: undefined,
+          hasToolCalls: true,
+          stopReason: "tool_use",
+          usage: {
+            input: 10,
+            output: 20,
+            reasoning: 0,
+            total: 30,
+            provider: "mock",
+            model: "mock-model",
+          },
+          raw: response,
+        }));
 
         mockAdapter.extractToolCalls = vi.fn((): StandardToolCall[] => [
           {
@@ -378,6 +375,96 @@ describe("OperateLoop", () => {
         expect(result.status).toBe(LlmResponseStatus.Incomplete);
         expect(result.error).toBeDefined();
         expect(result.error?.title).toBe("Too Many Requests");
+      });
+    });
+
+    describe("Report Tally", () => {
+      it("tallies turns and usage on completion", async () => {
+        const loop = new OperateLoop({
+          adapter: mockAdapter,
+          client: mockClient,
+        });
+
+        await loop.execute("Hello");
+
+        expect(log.tally).toHaveBeenCalledWith({
+          llm: {
+            operates: 1,
+            toolCalls: 0,
+            turns: 1,
+            usage: {
+              "mock:mock-model": {
+                input: 10,
+                output: 20,
+                reasoning: 0,
+                total: 30,
+              },
+            },
+          },
+        });
+      });
+
+      it("tallies tool calls across turns", async () => {
+        const toolkit = new Toolkit([
+          {
+            name: "test_tool",
+            description: "A test tool",
+            parameters: { type: "object" },
+            type: "function",
+            call: vi.fn(() => "tool result"),
+          },
+        ]);
+
+        let callCount = 0;
+        mockAdapter.parseResponse = vi.fn((response): ParsedResponse => {
+          callCount++;
+          return {
+            content: callCount === 1 ? undefined : "Done!",
+            hasToolCalls: callCount === 1,
+            stopReason: callCount === 1 ? "tool_use" : "end_turn",
+            usage: {
+              input: 10,
+              output: 20,
+              reasoning: 0,
+              total: 30,
+              provider: "mock",
+              model: "mock-model",
+            },
+            raw: response,
+          };
+        }) as Mock;
+        mockAdapter.extractToolCalls = vi.fn((): StandardToolCall[] => [
+          {
+            callId: "call-123",
+            name: "test_tool",
+            arguments: "{}",
+            raw: {},
+          },
+        ]);
+
+        const loop = new OperateLoop({
+          adapter: mockAdapter,
+          client: mockClient,
+        });
+
+        await loop.execute("Call the tool", { tools: toolkit, turns: 3 });
+
+        expect(log.tally).toHaveBeenCalledWith({
+          llm: {
+            operates: 1,
+            toolCalls: 1,
+            tools: { test_tool: 1 },
+            turns: 2,
+            usage: {
+              "mock:mock-model": {
+                input: 20,
+                output: 40,
+                reasoning: 0,
+                total: 60,
+              },
+            },
+          },
+        });
       });
     });
 
@@ -899,22 +986,20 @@ describe("OperateLoop", () => {
       });
 
       it("backfills declared array fields omitted from parsed content", async () => {
-        mockAdapter.parseResponse = vi.fn(
-          (response): ParsedResponse => ({
-            content: { name: "Jane" } as JsonObject,
-            hasToolCalls: false,
-            stopReason: "end_turn",
-            usage: {
-              input: 10,
-              output: 20,
-              reasoning: 0,
-              total: 30,
-              provider: "mock",
-              model: "mock-model",
-            },
-            raw: response,
-          }),
-        );
+        mockAdapter.parseResponse = vi.fn((response): ParsedResponse => ({
+          content: { name: "Jane" } as JsonObject,
+          hasToolCalls: false,
+          stopReason: "end_turn",
+          usage: {
+            input: 10,
+            output: 20,
+            reasoning: 0,
+            total: 30,
+            provider: "mock",
+            model: "mock-model",
+          },
+          raw: response,
+        }));
 
         const loop = new OperateLoop({
           adapter: mockAdapter,
@@ -957,22 +1042,20 @@ describe("OperateLoop", () => {
       });
 
       it("repairs quote-wrapped multi-word keys in parsed content", async () => {
-        mockAdapter.parseResponse = vi.fn(
-          (response): ParsedResponse => ({
-            content: { '"Full Name"': "Jane" } as JsonObject,
-            hasToolCalls: false,
-            stopReason: "end_turn",
-            usage: {
-              input: 10,
-              output: 20,
-              reasoning: 0,
-              total: 30,
-              provider: "mock",
-              model: "mock-model",
-            },
-            raw: response,
-          }),
-        );
+        mockAdapter.parseResponse = vi.fn((response): ParsedResponse => ({
+          content: { '"Full Name"': "Jane" } as JsonObject,
+          hasToolCalls: false,
+          stopReason: "end_turn",
+          usage: {
+            input: 10,
+            output: 20,
+            reasoning: 0,
+            total: 30,
+            provider: "mock",
+            model: "mock-model",
+          },
+          raw: response,
+        }));
 
         const loop = new OperateLoop({
           adapter: mockAdapter,
