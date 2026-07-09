@@ -282,6 +282,17 @@ provider payloads are never logged; use `hooks`
 (`beforeEachModelRequest` / `afterEachModelResponse`) or LLM Observability
 to capture them.
 
+### Report Tally
+
+On completion, `operate()` and `stream()` tally loop totals onto the root
+logger's report session via `log.tally()` (`src/util/tallyOperate.ts`).
+Inside a Jaypie handler, the report emitted at teardown includes an `llm`
+key: `{ operates, toolCalls, tools?, turns, usage? }`, where `usage` is
+keyed `provider:model` and sums `input`/`output`/`reasoning`/`total` and
+`tools` is a per-tool-name count (present only when tools were called).
+Repeated calls in one request combine (numbers sum). Outside an active
+session the tally is a silent no-op.
+
 ### Streaming with Automatic Tool Execution
 
 The `stream()` method provides real-time streaming while **automatically executing tools** - combining the responsiveness of streaming with the full tool-calling lifecycle of `operate()`.

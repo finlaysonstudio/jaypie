@@ -209,12 +209,7 @@ export const datadogService = fabricService({
           ? [
               {
                 aggregation: params.aggregation as
-                  | "count"
-                  | "avg"
-                  | "sum"
-                  | "min"
-                  | "max"
-                  | "cardinality",
+                  "count" | "avg" | "sum" | "min" | "max" | "cardinality",
                 metric: params.metric,
               },
             ]
@@ -239,8 +234,7 @@ export const datadogService = fabricService({
 
       case "monitors": {
         const statusArray = parseArray(params.status) as
-          | ("Alert" | "Warn" | "No Data" | "OK")[]
-          | undefined;
+          ("Alert" | "Warn" | "No Data" | "OK")[] | undefined;
         const result = await listDatadogMonitors(
           credentials,
           {

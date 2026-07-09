@@ -63,8 +63,7 @@ export function createStaleRejectionGuard(): StaleRejectionGuard {
   const log = getLogger();
   const caughtErrors = new Set<unknown>();
   let listener:
-    | ((reason: unknown, promise: Promise<unknown>) => void)
-    | undefined;
+    ((reason: unknown, promise: Promise<unknown>) => void) | undefined;
 
   return {
     install() {

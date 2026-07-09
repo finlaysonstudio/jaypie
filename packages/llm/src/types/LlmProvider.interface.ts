@@ -67,9 +67,7 @@ export interface LlmInputContentText {
 }
 
 export type LlmInputContent =
-  | LlmInputContentFile
-  | LlmInputContentImage
-  | LlmInputContentText;
+  LlmInputContentFile | LlmInputContentImage | LlmInputContentText;
 
 /**
  * Represents the "Input message object" in the "input item list"
@@ -116,9 +114,7 @@ export interface LlmOperateInputImage {
  * Can be a string (text), file object, or image object.
  */
 export type LlmOperateInputContent =
-  | string
-  | LlmOperateInputFile
-  | LlmOperateInputImage;
+  string | LlmOperateInputFile | LlmOperateInputImage;
 
 /**
  * Simplified input format for operate() that supports automatic file resolution.
@@ -190,10 +186,7 @@ interface LlmItemReference {
 // Options
 
 export type LlmHistoryItem =
-  | LlmInputMessage
-  | LlmItemReference
-  | LlmOutputItem
-  | LlmToolResult;
+  LlmInputMessage | LlmItemReference | LlmOutputItem | LlmToolResult;
 
 export type LlmHistory = LlmHistoryItem[];
 

@@ -49,9 +49,7 @@ export class InputProcessor {
   ): Promise<ProcessedInput> {
     // Handle LlmOperateInput by resolving files first
     let resolvedInput: string | LlmHistory | LlmInputMessage = input as
-      | string
-      | LlmHistory
-      | LlmInputMessage;
+      string | LlmHistory | LlmInputMessage;
     if (isLlmOperateInput(input)) {
       resolvedInput = await resolveOperateInput(input);
     }

@@ -13,13 +13,7 @@ import { getLogger } from "../util/index.js";
  * @see https://docs.datadoghq.com/llm_observability/setup/sdk/nodejs/
  */
 export type LlmObsSpanKind =
-  | "agent"
-  | "embedding"
-  | "llm"
-  | "retrieval"
-  | "task"
-  | "tool"
-  | "workflow";
+  "agent" | "embedding" | "llm" | "retrieval" | "task" | "tool" | "workflow";
 
 export interface LlmObsSpanOptions {
   kind: LlmObsSpanKind;

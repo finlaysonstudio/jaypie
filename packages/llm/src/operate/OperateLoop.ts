@@ -26,6 +26,7 @@ import {
   getLogger,
   maxTurnsFromOptions,
   repairFormatKeys,
+  tallyOperate,
 } from "../util/index.js";
 import { ProviderAdapter } from "./adapters/ProviderAdapter.interface.js";
 import { HookRunner, hookRunner, LlmHooks } from "./hooks/index.js";
@@ -196,6 +197,11 @@ export class OperateLoop {
           metrics: usageToLlmObsMetrics(response.usage),
           outputData: response.content,
         });
+        tallyOperate({
+          toolCallNames: state.toolCallNames,
+          turns: state.currentTurn,
+          usage: response.usage,
+        });
         await emitProgress({
           event: {
             content: response.content,
@@ -281,6 +287,7 @@ export class OperateLoop {
       formattedTools,
       maxTurns,
       responseBuilder,
+      toolCallNames: [],
       toolkit,
     };
   }
@@ -498,6 +505,7 @@ export class OperateLoop {
 
         // Process each tool call
         for (const toolCall of toolCalls) {
+          state.toolCallNames.push(toolCall.name);
           // Resolved once per call; never throws (undefined when tool has no message)
           const toolMessage = await state.toolkit!.resolveMessage({
             arguments: toolCall.arguments,

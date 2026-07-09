@@ -16,6 +16,7 @@ export function mockLogFactory(): LogMock {
     report: vi.fn(),
     setup: vi.fn(),
     tag: vi.fn(),
+    tally: vi.fn(),
     teardown: vi.fn(),
     trace: vi.fn(),
     untag: vi.fn(),
@@ -39,6 +40,7 @@ export function mockLogFactory(): LogMock {
   mock.lib.mockReturnValue(mock);
   mock.report.mockReturnValue(null);
   mock.setup.mockReturnValue(null);
+  mock.tally.mockReturnValue(null);
   mock.teardown.mockReturnValue(null);
   mock.with.mockReturnValue(mock);
 
@@ -55,6 +57,7 @@ export function mockLogFactory(): LogMock {
     report: mock.report,
     setup: mock.setup,
     tag: mock.tag,
+    tally: mock.tally,
     teardown: mock.teardown,
     trace: mock.trace,
     untag: mock.untag,
@@ -78,6 +81,7 @@ const LOG_METHOD_NAMES = [
   "report",
   "setup",
   "tag",
+  "tally",
   "teardown",
   "trace",
   "untag",

@@ -104,8 +104,7 @@ function convertNode(schema: JsonObject, path: string): NaturalSchema {
     }
     case "object": {
       const properties = schema.properties as
-        | Record<string, JsonObject>
-        | undefined;
+        Record<string, JsonObject> | undefined;
       if (!properties || Object.keys(properties).length === 0) {
         return Object;
       }
