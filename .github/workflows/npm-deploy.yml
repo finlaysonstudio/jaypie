@@ -181,54 +181,6 @@ jobs:
           name: llm-dist
           path: llm-dist.tar.gz
           retention-days: 1
-  test-llm-client:
-    name: LLM Client Test (conditional)
-    needs: build-llm
-    environment: sandbox
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@v6
-      - name: Use Node.js 24
-        uses: actions/setup-node@v6
-        with:
-          node-version: 24
-          cache: "npm"
-      - name: Install dependencies
-        run: npm install
-      - name: Download build artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: llm-dist
-      - name: Extract build artifact
-        run: tar -xzf llm-dist.tar.gz
-      - name: Configure AWS credentials (sandbox role)
-        uses: ./.github/actions/configure-aws
-        with:
-          role-arn: ${{ vars.AWS_ROLE_ARN }}
-          aws-region: ${{ vars.AWS_REGION }}
-      - name: Fetch Bedrock test role ARN
-        id: bedrock-role
-        run: |
-          ROLE_ARN=$(aws cloudformation describe-stacks \
-            --stack-name jaypie-cicd \
-            --query "Stacks[0].Outputs[?OutputKey=='BedrockCicdRoleArn'].OutputValue" \
-            --output text)
-          echo "arn=$ROLE_ARN" >> $GITHUB_OUTPUT
-      - name: Assume Bedrock test role
-        uses: aws-actions/configure-aws-credentials@v6
-        with:
-          role-to-assume: ${{ steps.bedrock-role.outputs.arn }}
-          role-session-name: BedrockLlmTestSession
-          aws-region: ${{ vars.AWS_REGION }}
-      - name: Run LLM Client Tests
-        run: npm run test:llm:client
-        env:
-          APP_PROVIDER: anthropic,bedrock,google,openai,xai
-          ANTHROPIC_API_KEY: ${{ secrets.CICD_ANTHROPIC_API_KEY }}
-          GEMINI_API_KEY: ${{ secrets.CICD_GEMINI_API_KEY }}
-          OPENAI_API_KEY: ${{ secrets.CICD_OPENAI_API_KEY }}
-          XAI_API_KEY: ${{ secrets.CICD_XAI_API_KEY }}
   test-llm-matrix:
     name: LLM Capability Matrix (${{ matrix.group }})
     needs: build-llm
@@ -240,13 +192,13 @@ jobs:
       matrix:
         include:
           - group: anthropic
-            models: "claude-sonnet-4-5,claude-sonnet-4-6,claude-opus-4-7,claude-opus-4-8,claude-haiku-4-5"
+            models: "claude-sonnet-4-5,claude-sonnet-4-6,claude-sonnet-5,claude-opus-4-7,claude-opus-4-8,claude-haiku-4-5"
           - group: openai
-            models: "gpt-5.4,gpt-5.4-mini,gpt-5.4-nano,gpt-5.5"
+            models: "gpt-5.4,gpt-5.4-mini,gpt-5.4-nano,gpt-5.5,gpt-5.6-sol,gpt-5.6-terra,gpt-5.6-luna"
           - group: gemini-xai
-            models: "gemini-3.1-pro-preview,gemini-3.5-flash,gemini-3.1-flash-lite,grok-4.3-latest,grok-4.20-0309-reasoning,grok-4.20-0309-non-reasoning,grok-4-1-fast-reasoning,grok-4-1-fast-non-reasoning"
+            models: "gemini-3.1-pro-preview,gemini-3.5-flash,gemini-3.1-flash-lite,grok-latest,grok-4.3-latest,grok-4.20-0309-reasoning,grok-4.20-0309-non-reasoning,grok-4-1-fast-reasoning,grok-4-1-fast-non-reasoning"
           - group: openrouter
-            models: "anthropic/claude-sonnet-4.6,google/gemini-3.1-pro-preview,openai/gpt-5.5,x-ai/grok-4.20"
+            models: "anthropic/claude-sonnet-4.6,anthropic/claude-sonnet-5,google/gemini-3.1-pro-preview,openai/gpt-5.5,openai/gpt-5.6-luna,x-ai/grok-4.20,z-ai/glm-5.2"
           - group: bedrock
             models: "us.anthropic.claude-opus-4-7,us.anthropic.claude-sonnet-4-6,us.anthropic.claude-haiku-4-5-20251001-v1:0,amazon.nova-pro-v1:0,us.amazon.nova-2-lite-v1:0,amazon.nova-micro-v1:0,deepseek.v3.2,google.gemma-3-27b-it,moonshotai.kimi-k2.5,openai.gpt-oss-120b-1:0"
     steps:

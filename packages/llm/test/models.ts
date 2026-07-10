@@ -60,6 +60,7 @@ export const MODELS: readonly ModelConfig[] = [
   // or `claude-opus-4` — only the dated/versioned ids resolve.
   { model: "claude-sonnet-4-5" },
   { model: "claude-sonnet-4-6" },
+  { model: "claude-sonnet-5" },
 
   // ─── Anthropic Opus 4 ────────────────────────────────────────────────
   { model: "claude-opus-4-6" },
@@ -74,6 +75,9 @@ export const MODELS: readonly ModelConfig[] = [
   { model: "gpt-5.4-mini" },
   { model: "gpt-5.4-nano" },
   { model: "gpt-5.5" },
+  { model: "gpt-5.6-sol" },
+  { model: "gpt-5.6-terra" },
+  { model: "gpt-5.6-luna" },
 
   // ─── Google Gemini 3 ─────────────────────────────────────────────────
   { model: "gemini-3.1-pro-preview" },
@@ -81,6 +85,7 @@ export const MODELS: readonly ModelConfig[] = [
   { model: "gemini-3.1-flash-lite" },
 
   // ─── xAI Grok 4 ──────────────────────────────────────────────────────
+  { model: "grok-latest" },
   { model: "grok-4.3-latest" },
   { model: "grok-4.20-0309-reasoning" },
   { model: "grok-4.20-0309-non-reasoning" },
@@ -90,10 +95,13 @@ export const MODELS: readonly ModelConfig[] = [
   // backend. Models without the relevant modality 4xx, which the harness
   // surfaces as a fail — refine `expect` per cell after the first run.
   { model: "anthropic/claude-sonnet-4.6", provider: "openrouter" },
+  { model: "anthropic/claude-sonnet-5", provider: "openrouter" },
   { model: "google/gemini-3.1-pro-preview", provider: "openrouter" },
   { model: "moonshotai/kimi-k2.6", provider: "openrouter" },
   { model: "openai/gpt-5.5", provider: "openrouter" },
+  { model: "openai/gpt-5.6-luna", provider: "openrouter" },
   { model: "x-ai/grok-4.20", provider: "openrouter" },
+  { model: "z-ai/glm-5.2", provider: "openrouter" },
 
   // ─── AWS Bedrock ─────────────────────────────────────────────────────
   { model: "us.anthropic.claude-opus-4-7", provider: "bedrock" },
