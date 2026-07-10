@@ -44,9 +44,7 @@ describe("OpenRouterAdapter", () => {
     });
 
     it("has correct default model", () => {
-      expect(openRouterAdapter.defaultModel).toBe(
-        PROVIDER.OPENROUTER.MODEL.DEFAULT,
-      );
+      expect(openRouterAdapter.defaultModel).toBe(PROVIDER.OPENROUTER.DEFAULT);
     });
   });
 
@@ -55,7 +53,7 @@ describe("OpenRouterAdapter", () => {
     describe("buildRequest", () => {
       it("builds basic request", () => {
         const request: OperateRequest = {
-          model: PROVIDER.OPENROUTER.MODEL.DEFAULT,
+          model: PROVIDER.OPENROUTER.DEFAULT,
           messages: [
             {
               content: "Hello",
@@ -67,13 +65,13 @@ describe("OpenRouterAdapter", () => {
 
         const result = openRouterAdapter.buildRequest(request);
 
-        expect(result.model).toBe(PROVIDER.OPENROUTER.MODEL.DEFAULT);
+        expect(result.model).toBe(PROVIDER.OPENROUTER.DEFAULT);
         expect(result.messages).toHaveLength(1);
       });
 
       it("includes system message when provided", () => {
         const request: OperateRequest = {
-          model: PROVIDER.OPENROUTER.MODEL.DEFAULT,
+          model: PROVIDER.OPENROUTER.DEFAULT,
           messages: [
             {
               content: "Hello",
@@ -92,7 +90,7 @@ describe("OpenRouterAdapter", () => {
 
       it("appends instructions to last message", () => {
         const request: OperateRequest = {
-          model: PROVIDER.OPENROUTER.MODEL.DEFAULT,
+          model: PROVIDER.OPENROUTER.DEFAULT,
           messages: [
             {
               content: "Hello",
@@ -111,7 +109,7 @@ describe("OpenRouterAdapter", () => {
 
       it("includes tools when provided", () => {
         const request: OperateRequest = {
-          model: PROVIDER.OPENROUTER.MODEL.DEFAULT,
+          model: PROVIDER.OPENROUTER.DEFAULT,
           messages: [],
           tools: [
             {
@@ -132,7 +130,7 @@ describe("OpenRouterAdapter", () => {
 
       it("includes user when provided", () => {
         const request: OperateRequest = {
-          model: PROVIDER.OPENROUTER.MODEL.DEFAULT,
+          model: PROVIDER.OPENROUTER.DEFAULT,
           messages: [],
           user: "user-123",
         };
@@ -144,7 +142,7 @@ describe("OpenRouterAdapter", () => {
 
       it("handles FunctionCall messages from StreamLoop (issue #165)", () => {
         const request: OperateRequest = {
-          model: PROVIDER.OPENROUTER.MODEL.DEFAULT,
+          model: PROVIDER.OPENROUTER.DEFAULT,
           messages: [
             {
               role: LlmMessageRole.User,
@@ -186,7 +184,7 @@ describe("OpenRouterAdapter", () => {
           properties: { name: { type: "string" } },
         };
         const request: OperateRequest = {
-          model: PROVIDER.OPENROUTER.MODEL.DEFAULT,
+          model: PROVIDER.OPENROUTER.DEFAULT,
           messages: [
             {
               content: "Hello",
@@ -212,7 +210,7 @@ describe("OpenRouterAdapter", () => {
 
       it("does not emit response_format when format is absent", () => {
         const request: OperateRequest = {
-          model: PROVIDER.OPENROUTER.MODEL.DEFAULT,
+          model: PROVIDER.OPENROUTER.DEFAULT,
           messages: [
             {
               content: "Hello",
@@ -230,14 +228,14 @@ describe("OpenRouterAdapter", () => {
       it("uses legacy structured_output tool when model is cached as unsupported", () => {
         const adapter = new OpenRouterAdapter();
         adapter.rememberModelRejectsStructuredOutput(
-          PROVIDER.OPENROUTER.MODEL.DEFAULT,
+          PROVIDER.OPENROUTER.DEFAULT,
         );
         const schema = {
           type: "object",
           properties: { name: { type: "string" } },
         };
         const request: OperateRequest = {
-          model: PROVIDER.OPENROUTER.MODEL.DEFAULT,
+          model: PROVIDER.OPENROUTER.DEFAULT,
           messages: [
             {
               content: "Hello",
@@ -260,7 +258,7 @@ describe("OpenRouterAdapter", () => {
 
       it("handles FunctionCallOutput messages from StreamLoop (issue #165)", () => {
         const request: OperateRequest = {
-          model: PROVIDER.OPENROUTER.MODEL.DEFAULT,
+          model: PROVIDER.OPENROUTER.DEFAULT,
           messages: [
             {
               role: LlmMessageRole.User,
@@ -297,7 +295,7 @@ describe("OpenRouterAdapter", () => {
       it("parses response with text content", () => {
         const response = {
           id: "resp-123",
-          model: PROVIDER.OPENROUTER.MODEL.DEFAULT,
+          model: PROVIDER.OPENROUTER.DEFAULT,
           choices: [
             {
               index: 0,
@@ -325,7 +323,7 @@ describe("OpenRouterAdapter", () => {
       it("detects tool use", () => {
         const response = {
           id: "resp-123",
-          model: PROVIDER.OPENROUTER.MODEL.DEFAULT,
+          model: PROVIDER.OPENROUTER.DEFAULT,
           choices: [
             {
               index: 0,
@@ -360,7 +358,7 @@ describe("OpenRouterAdapter", () => {
       it("extracts tool calls from response", () => {
         const response = {
           id: "resp-123",
-          model: PROVIDER.OPENROUTER.MODEL.DEFAULT,
+          model: PROVIDER.OPENROUTER.DEFAULT,
           choices: [
             {
               index: 0,
@@ -394,7 +392,7 @@ describe("OpenRouterAdapter", () => {
       it("returns empty array when no tool calls", () => {
         const response = {
           id: "resp-123",
-          model: PROVIDER.OPENROUTER.MODEL.DEFAULT,
+          model: PROVIDER.OPENROUTER.DEFAULT,
           choices: [
             {
               index: 0,
@@ -425,7 +423,7 @@ describe("OpenRouterAdapter", () => {
 
         const result = openRouterAdapter.extractUsage(
           response,
-          PROVIDER.OPENROUTER.MODEL.DEFAULT,
+          PROVIDER.OPENROUTER.DEFAULT,
         );
 
         expect(result.input).toBe(100);
@@ -433,7 +431,7 @@ describe("OpenRouterAdapter", () => {
         expect(result.total).toBe(300);
         expect(result.reasoning).toBe(0);
         expect(result.provider).toBe(PROVIDER.OPENROUTER.NAME);
-        expect(result.model).toBe(PROVIDER.OPENROUTER.MODEL.DEFAULT);
+        expect(result.model).toBe(PROVIDER.OPENROUTER.DEFAULT);
       });
 
       it("returns zeros when usage is missing", () => {
@@ -441,7 +439,7 @@ describe("OpenRouterAdapter", () => {
 
         const result = openRouterAdapter.extractUsage(
           response,
-          PROVIDER.OPENROUTER.MODEL.DEFAULT,
+          PROVIDER.OPENROUTER.DEFAULT,
         );
 
         expect(result.input).toBe(0);
@@ -522,7 +520,7 @@ describe("OpenRouterAdapter", () => {
     describe("appendToolResult", () => {
       it("appends assistant message and tool result", () => {
         const request = {
-          model: PROVIDER.OPENROUTER.MODEL.DEFAULT,
+          model: PROVIDER.OPENROUTER.DEFAULT,
           messages: [{ role: "user", content: "Hello" }],
         };
         const toolCall = {
@@ -852,7 +850,7 @@ describe("OpenRouterAdapter", () => {
           id: "resp-1",
           object: "chat.completion",
           created: 0,
-          model: PROVIDER.OPENROUTER.MODEL.DEFAULT,
+          model: PROVIDER.OPENROUTER.DEFAULT,
           choices: [
             {
               index: 0,
@@ -880,7 +878,7 @@ describe("OpenRouterAdapter", () => {
           .mockResolvedValueOnce(successResponse);
         const mockClient = { chatCompletion: mockSend };
         const request: OperateRequest = {
-          model: PROVIDER.OPENROUTER.MODEL.DEFAULT,
+          model: PROVIDER.OPENROUTER.DEFAULT,
           messages: [
             {
               content: "Hi",
@@ -912,14 +910,14 @@ describe("OpenRouterAdapter", () => {
       it("caches the model so subsequent calls use the fallback up-front", async () => {
         const adapter = new OpenRouterAdapter();
         adapter.rememberModelRejectsStructuredOutput(
-          PROVIDER.OPENROUTER.MODEL.DEFAULT,
+          PROVIDER.OPENROUTER.DEFAULT,
         );
         const schema = {
           type: "object",
           properties: { name: { type: "string" } },
         };
         const request: OperateRequest = {
-          model: PROVIDER.OPENROUTER.MODEL.DEFAULT,
+          model: PROVIDER.OPENROUTER.DEFAULT,
           messages: [],
           format: schema,
         };
@@ -945,7 +943,7 @@ describe("OpenRouterAdapter", () => {
         const mockSend = vi.fn().mockRejectedValue(error);
         const mockClient = { chatCompletion: mockSend };
         const request: OperateRequest = {
-          model: PROVIDER.OPENROUTER.MODEL.DEFAULT,
+          model: PROVIDER.OPENROUTER.DEFAULT,
           messages: [],
           format: schema,
         };
@@ -1093,7 +1091,7 @@ describe("OpenRouterAdapter", () => {
         });
         const mockClient = { chatCompletion: mockSend };
         const request = {
-          model: PROVIDER.OPENROUTER.MODEL.DEFAULT,
+          model: PROVIDER.OPENROUTER.DEFAULT,
           messages: [{ role: "user", content: "Hello" }],
         };
         const controller = new AbortController();
@@ -1116,7 +1114,7 @@ describe("OpenRouterAdapter", () => {
         const mockSend = vi.fn().mockRejectedValue(new TypeError("terminated"));
         const mockClient = { chatCompletion: mockSend };
         const request = {
-          model: PROVIDER.OPENROUTER.MODEL.DEFAULT,
+          model: PROVIDER.OPENROUTER.DEFAULT,
           messages: [{ role: "user", content: "Hello" }],
         };
 
@@ -1135,7 +1133,7 @@ describe("OpenRouterAdapter", () => {
         const mockSend = vi.fn().mockRejectedValue(new Error("real error"));
         const mockClient = { chatCompletion: mockSend };
         const request = {
-          model: PROVIDER.OPENROUTER.MODEL.DEFAULT,
+          model: PROVIDER.OPENROUTER.DEFAULT,
           messages: [{ role: "user", content: "Hello" }],
         };
 
@@ -1155,7 +1153,7 @@ describe("OpenRouterAdapter", () => {
         });
         const mockClient = { chatCompletion: mockSend };
         const request = {
-          model: PROVIDER.OPENROUTER.MODEL.DEFAULT,
+          model: PROVIDER.OPENROUTER.DEFAULT,
           messages: [{ role: "user", content: "Hello" }],
         };
 
@@ -1178,12 +1176,12 @@ describe("OpenRouterAdapter", () => {
 
       const result = openRouterAdapter.buildRequest(request);
 
-      expect(result.model).toBe(PROVIDER.OPENROUTER.MODEL.DEFAULT);
+      expect(result.model).toBe(PROVIDER.OPENROUTER.DEFAULT);
     });
 
     it("sets temperature on request when provided", () => {
       const request: OperateRequest = {
-        model: PROVIDER.OPENROUTER.MODEL.DEFAULT,
+        model: PROVIDER.OPENROUTER.DEFAULT,
         messages: [
           {
             content: "Hello",
@@ -1203,7 +1201,7 @@ describe("OpenRouterAdapter", () => {
 
     it("temperature takes precedence over providerOptions", () => {
       const request: OperateRequest = {
-        model: PROVIDER.OPENROUTER.MODEL.DEFAULT,
+        model: PROVIDER.OPENROUTER.DEFAULT,
         messages: [],
         providerOptions: { temperature: 0.3 },
         temperature: 0.9,
@@ -1218,7 +1216,7 @@ describe("OpenRouterAdapter", () => {
 
     it("does not set temperature when not provided", () => {
       const request: OperateRequest = {
-        model: PROVIDER.OPENROUTER.MODEL.DEFAULT,
+        model: PROVIDER.OPENROUTER.DEFAULT,
         messages: [],
       };
 
@@ -1231,7 +1229,7 @@ describe("OpenRouterAdapter", () => {
 
     it("sets tool_choice to auto (many OpenRouter models don't support required)", () => {
       const request: OperateRequest = {
-        model: PROVIDER.OPENROUTER.MODEL.DEFAULT,
+        model: PROVIDER.OPENROUTER.DEFAULT,
         messages: [],
         tools: [
           {
@@ -1282,7 +1280,7 @@ describe("OpenRouterAdapter", () => {
 
     it("converts messages with different roles correctly", () => {
       const request: OperateRequest = {
-        model: PROVIDER.OPENROUTER.MODEL.DEFAULT,
+        model: PROVIDER.OPENROUTER.DEFAULT,
         messages: [
           {
             content: "System prompt",

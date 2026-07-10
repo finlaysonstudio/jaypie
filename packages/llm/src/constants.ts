@@ -1,34 +1,3 @@
-const FIRST_CLASS_PROVIDER = {
-  // https://docs.anthropic.com/en/docs/about-claude/models/overview
-  ANTHROPIC: {
-    DEFAULT: "claude-sonnet-4-6" as const,
-    LARGE: "claude-opus-4-8" as const,
-    SMALL: "claude-sonnet-4-6" as const,
-    TINY: "claude-haiku-4-5" as const,
-  },
-  // https://ai.google.dev/gemini-api/docs/models
-  GOOGLE: {
-    DEFAULT: "gemini-3.1-pro-preview" as const,
-    LARGE: "gemini-3.1-pro-preview" as const,
-    SMALL: "gemini-3.5-flash" as const,
-    TINY: "gemini-3.1-flash-lite" as const,
-  },
-  // https://developers.openai.com/api/docs/models
-  OPENAI: {
-    DEFAULT: "gpt-5.4" as const,
-    LARGE: "gpt-5.5" as const,
-    SMALL: "gpt-5.4-mini" as const,
-    TINY: "gpt-5.4-nano" as const,
-  },
-  // https://docs.x.ai/developers/models
-  XAI: {
-    DEFAULT: "grok-latest" as const,
-    LARGE: "grok-latest" as const,
-    SMALL: "grok-4-1-fast-reasoning" as const,
-    TINY: "grok-4-1-fast-non-reasoning" as const,
-  },
-};
-
 /**
  * Provider-neutral reasoning-effort levels — a five-point relative scale that
  * deliberately borrows no provider's vocabulary. Each adapter translates these
@@ -60,20 +29,34 @@ export const MODEL = {
   GEMINI_FLASH_LITE: "gemini-3.1-flash-lite",
   GEMINI_PRO: "gemini-3.1-pro-preview",
   // OpenAI
+  SOL: "gpt-5.6-sol",
+  TERRA: "gpt-5.6-terra",
+  LUNA: "gpt-5.6-luna",
+  /** @deprecated use MODEL.SOL (gpt-5.6-sol) */
   GPT: "gpt-5.5",
+  /** @deprecated use MODEL.TERRA (gpt-5.6-terra) */
   GPT_MINI: "gpt-5.4-mini",
+  /** @deprecated use MODEL.LUNA (gpt-5.6-luna) */
   GPT_NANO: "gpt-5.4-nano",
   // xAI
   GROK: "grok-latest",
+  // OpenRouter (provider-prefixed routes; traversed by the OpenRouter hot test)
+  OPENROUTER: {
+    GLM: "z-ai/glm-5.2",
+    LUNA: "openai/gpt-5.6-luna",
+    SONNET: "anthropic/claude-sonnet-5",
+  },
 };
 
 const GOOGLE_PROVIDER = {
   // https://ai.google.dev/gemini-api/docs/models
+  DEFAULT: MODEL.GEMINI_FLASH,
+  /** @deprecated Size tiers are retired in 2.0. Use PROVIDER.GOOGLE.DEFAULT, or pick a specific model from MODEL.*. */
   MODEL: {
-    DEFAULT: FIRST_CLASS_PROVIDER.GOOGLE.DEFAULT,
-    LARGE: FIRST_CLASS_PROVIDER.GOOGLE.LARGE,
-    SMALL: FIRST_CLASS_PROVIDER.GOOGLE.SMALL,
-    TINY: FIRST_CLASS_PROVIDER.GOOGLE.TINY,
+    DEFAULT: "gemini-3.1-pro-preview",
+    LARGE: "gemini-3.1-pro-preview",
+    SMALL: "gemini-3.5-flash",
+    TINY: "gemini-3.1-flash-lite",
   },
   MODEL_MATCH_WORDS: ["gemini", "google"] as const,
   NAME: "google" as const,
@@ -86,6 +69,9 @@ const GOOGLE_PROVIDER = {
 export const PROVIDER = {
   // https://docs.aws.amazon.com/bedrock/latest/userguide/models-supported.html
   BEDROCK: {
+    // Bedrock has no MODEL.* catalog entry yet; keep the literal default id.
+    DEFAULT: "amazon.nova-lite-v1:0" as const,
+    /** @deprecated Size tiers are retired in 2.0. Use PROVIDER.BEDROCK.DEFAULT. */
     MODEL: {
       DEFAULT: "amazon.nova-lite-v1:0" as const,
       LARGE: "amazon.nova-pro-v1:0" as const,
@@ -106,22 +92,26 @@ export const PROVIDER = {
   },
   ANTHROPIC: {
     // https://docs.anthropic.com/en/docs/about-claude/models/overview
+    DEFAULT: MODEL.SONNET,
     MAX_TOKENS: {
       // Non-streaming ceiling: responses above ~16K output tokens risk HTTP
       // timeouts; streaming requests resolve to the model maximum instead
       // (see util/maxOutputTokens.ts)
       DEFAULT: 16384 as const,
     },
+    /** @deprecated Size tiers are retired in 2.0. Use PROVIDER.ANTHROPIC.DEFAULT, or pick a specific model from MODEL.*. */
     MODEL: {
-      DEFAULT: FIRST_CLASS_PROVIDER.ANTHROPIC.DEFAULT,
-      LARGE: FIRST_CLASS_PROVIDER.ANTHROPIC.LARGE,
-      SMALL: FIRST_CLASS_PROVIDER.ANTHROPIC.SMALL,
-      TINY: FIRST_CLASS_PROVIDER.ANTHROPIC.TINY,
+      DEFAULT: "claude-sonnet-4-6",
+      LARGE: "claude-opus-4-8",
+      SMALL: "claude-sonnet-4-6",
+      TINY: "claude-haiku-4-5",
     },
     MODEL_MATCH_WORDS: [
       "anthropic",
       "claude",
+      "fable",
       "haiku",
+      "mythos",
       "opus",
       "sonnet",
     ] as const,
@@ -144,21 +134,25 @@ export const PROVIDER = {
   GOOGLE: GOOGLE_PROVIDER,
   OPENAI: {
     // https://platform.openai.com/docs/models
+    DEFAULT: MODEL.SOL,
+    /** @deprecated Size tiers are retired in 2.0. Use PROVIDER.OPENAI.DEFAULT, or pick a specific model from MODEL.*. */
     MODEL: {
-      DEFAULT: FIRST_CLASS_PROVIDER.OPENAI.DEFAULT,
-      LARGE: FIRST_CLASS_PROVIDER.OPENAI.LARGE,
-      SMALL: FIRST_CLASS_PROVIDER.OPENAI.SMALL,
-      TINY: FIRST_CLASS_PROVIDER.OPENAI.TINY,
+      DEFAULT: "gpt-5.4",
+      LARGE: "gpt-5.5",
+      SMALL: "gpt-5.4-mini",
+      TINY: "gpt-5.4-nano",
     },
-    MODEL_MATCH_WORDS: ["openai", "gpt", /^o\d/],
+    MODEL_MATCH_WORDS: ["gpt", "luna", "openai", "sol", "terra", /^o\d/],
     NAME: "openai" as const,
   },
   OPENROUTER: {
+    DEFAULT: MODEL.OPENROUTER.SONNET,
+    /** @deprecated Size tiers are retired in 2.0. Use PROVIDER.OPENROUTER.DEFAULT, or pick a specific route from MODEL.OPENROUTER.*. */
     MODEL: {
-      DEFAULT: `anthropic/${FIRST_CLASS_PROVIDER.ANTHROPIC.DEFAULT}` as const,
-      LARGE: `anthropic/${FIRST_CLASS_PROVIDER.ANTHROPIC.LARGE}` as const,
-      SMALL: `anthropic/${FIRST_CLASS_PROVIDER.ANTHROPIC.SMALL}` as const,
-      TINY: `anthropic/${FIRST_CLASS_PROVIDER.ANTHROPIC.TINY}` as const,
+      DEFAULT: "anthropic/claude-sonnet-4-6" as const,
+      LARGE: "anthropic/claude-opus-4-8" as const,
+      SMALL: "anthropic/claude-sonnet-4-6" as const,
+      TINY: "anthropic/claude-haiku-4-5" as const,
     },
     MODEL_MATCH_WORDS: ["openrouter"] as const,
     NAME: "openrouter" as const,
@@ -173,11 +167,13 @@ export const PROVIDER = {
     // https://docs.x.ai/docs/models
     API_KEY: "XAI_API_KEY" as const,
     BASE_URL: "https://api.x.ai/v1" as const,
+    DEFAULT: MODEL.GROK,
+    /** @deprecated Size tiers are retired in 2.0. Use PROVIDER.XAI.DEFAULT, or pick a specific model from MODEL.*. */
     MODEL: {
-      DEFAULT: FIRST_CLASS_PROVIDER.XAI.DEFAULT,
-      LARGE: FIRST_CLASS_PROVIDER.XAI.LARGE,
-      SMALL: FIRST_CLASS_PROVIDER.XAI.SMALL,
-      TINY: FIRST_CLASS_PROVIDER.XAI.TINY,
+      DEFAULT: "grok-latest",
+      LARGE: "grok-latest",
+      SMALL: "grok-4-1-fast-reasoning",
+      TINY: "grok-4-1-fast-non-reasoning",
     },
     MODEL_MATCH_WORDS: ["grok", "xai"] as const,
     NAME: "xai" as const,
@@ -194,6 +190,7 @@ export type LlmProviderName =
 
 // Last: Defaults
 export const DEFAULT = {
+  /** @deprecated Size tiers are retired in 2.0. Use DEFAULT.PROVIDER.DEFAULT, or pick a specific model from MODEL.*. */
   MODEL: {
     BASE: PROVIDER.OPENAI.MODEL.DEFAULT,
     LARGE: PROVIDER.OPENAI.MODEL.LARGE,
@@ -203,6 +200,10 @@ export const DEFAULT = {
   PROVIDER: PROVIDER.OPENAI,
 } as const;
 
+/**
+ * @deprecated Size-tier catalogs are retired in 2.0. Pick specific models from
+ * MODEL.* (grouped by provider via MODEL_MATCH_WORDS / determineModelProvider).
+ */
 // Only include "first class" models, not OpenRouter or other proxy services
 export const ALL = {
   BASE: [

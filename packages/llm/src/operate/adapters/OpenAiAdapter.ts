@@ -120,7 +120,7 @@ function isTemperatureDeprecationError(error: unknown): boolean {
  */
 export class OpenAiAdapter extends BaseProviderAdapter {
   readonly name = PROVIDER.OPENAI.NAME;
-  readonly defaultModel = PROVIDER.OPENAI.MODEL.DEFAULT;
+  readonly defaultModel = PROVIDER.OPENAI.DEFAULT;
 
   // Session-level cache of models observed to reject `temperature` at runtime.
   // Populated by executeRequest on 400 errors so repeat calls skip the param.

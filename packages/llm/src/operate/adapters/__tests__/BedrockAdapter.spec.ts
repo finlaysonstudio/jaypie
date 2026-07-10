@@ -65,7 +65,7 @@ const mockToolUseResponse = {
 
 const baseRequest: OperateRequest = {
   messages: [{ role: LlmMessageRole.User, content: "Hello" }],
-  model: PROVIDER.BEDROCK.MODEL.DEFAULT,
+  model: PROVIDER.BEDROCK.DEFAULT,
 };
 
 //
@@ -92,7 +92,7 @@ describe("BedrockAdapter", () => {
     });
 
     it("Has correct default model", () => {
-      expect(adapter.defaultModel).toBe(PROVIDER.BEDROCK.MODEL.DEFAULT);
+      expect(adapter.defaultModel).toBe(PROVIDER.BEDROCK.DEFAULT);
     });
   });
 
@@ -103,7 +103,7 @@ describe("BedrockAdapter", () => {
         messages: Array<{ role: string; content: Array<{ text: string }> }>;
       };
 
-      expect(result.modelId).toBe(PROVIDER.BEDROCK.MODEL.DEFAULT);
+      expect(result.modelId).toBe(PROVIDER.BEDROCK.DEFAULT);
       expect(result.messages).toHaveLength(1);
       expect(result.messages[0].role).toBe("user");
       expect(result.messages[0].content[0].text).toBe("Hello");
@@ -288,7 +288,7 @@ describe("BedrockAdapter", () => {
     it("Extracts token counts from response", () => {
       const usage = adapter.extractUsage(
         mockConverseResponse,
-        PROVIDER.BEDROCK.MODEL.DEFAULT,
+        PROVIDER.BEDROCK.DEFAULT,
       );
 
       expect(usage.input).toBe(10);
@@ -300,7 +300,7 @@ describe("BedrockAdapter", () => {
     it("Handles missing usage gracefully", () => {
       const usage = adapter.extractUsage(
         { output: { message: { content: [] } }, stopReason: "end_turn" },
-        PROVIDER.BEDROCK.MODEL.DEFAULT,
+        PROVIDER.BEDROCK.DEFAULT,
       );
 
       expect(usage.input).toBe(0);
@@ -336,7 +336,7 @@ describe("BedrockAdapter", () => {
   describe("appendToolResult", () => {
     it("Appends assistant toolUse and user toolResult messages", () => {
       const request = {
-        modelId: PROVIDER.BEDROCK.MODEL.DEFAULT,
+        modelId: PROVIDER.BEDROCK.DEFAULT,
         messages: [{ role: "user", content: [{ text: "Hello" }] }],
       };
       const toolCall = {

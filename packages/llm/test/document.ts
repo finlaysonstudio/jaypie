@@ -24,11 +24,11 @@ const REQUIRED_STRINGS = ["mock page", "intentionally blank", "mit license"];
 
 // Models to test for each provider
 const MODELS = {
-  anthropic: LLM.PROVIDER.ANTHROPIC.MODEL.LARGE,
-  gemini: LLM.PROVIDER.GOOGLE.MODEL.LARGE,
-  openai: LLM.PROVIDER.OPENAI.MODEL.LARGE,
-  openrouter: LLM.PROVIDER.OPENROUTER.MODEL.DEFAULT,
-  xai: LLM.PROVIDER.XAI.MODEL.LARGE,
+  anthropic: LLM.MODEL.OPUS,
+  gemini: LLM.MODEL.GEMINI_PRO,
+  openai: LLM.MODEL.SOL,
+  openrouter: LLM.MODEL.OPENROUTER.SONNET,
+  xai: LLM.MODEL.GROK,
 } as const;
 
 //

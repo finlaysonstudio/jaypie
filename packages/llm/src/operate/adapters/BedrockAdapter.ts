@@ -185,7 +185,7 @@ function extractJson(text: string): JsonObject | undefined {
 
 export class BedrockAdapter extends BaseProviderAdapter {
   readonly name = PROVIDER.BEDROCK.NAME;
-  readonly defaultModel = PROVIDER.BEDROCK.MODEL.DEFAULT;
+  readonly defaultModel = PROVIDER.BEDROCK.DEFAULT;
 
   private _modelsFallbackToStructuredOutputTool = new Set<string>();
   private _modelsWithoutTemperature = new Set<string>();

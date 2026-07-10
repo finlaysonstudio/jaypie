@@ -30,7 +30,7 @@ export class BedrockProvider implements LlmProvider {
   private conversationHistory: LlmHistoryItem[] = [];
 
   constructor(
-    model: string = PROVIDER.BEDROCK.MODEL.DEFAULT,
+    model: string = PROVIDER.BEDROCK.DEFAULT,
     { region }: { region?: string } = {},
   ) {
     this.model = model;

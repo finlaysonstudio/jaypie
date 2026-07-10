@@ -8,7 +8,7 @@ config();
 // Providers whose default model flakes on tools+format; pin to a model the
 // capability matrix proves reliable at "both" (nova-lite is not; nova-pro is)
 const PROVIDER_MODEL: Record<string, string> = {
-  bedrock: LLM.PROVIDER.BEDROCK.MODEL.LARGE,
+  bedrock: LLM.PROVIDER.BEDROCK.DEFAULT,
 };
 
 const EXPECTED = {

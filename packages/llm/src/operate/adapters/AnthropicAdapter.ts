@@ -405,7 +405,7 @@ function isStructuredOutputUnsupportedError(error: unknown): boolean {
  */
 export class AnthropicAdapter extends BaseProviderAdapter {
   readonly name = PROVIDER.ANTHROPIC.NAME;
-  readonly defaultModel = PROVIDER.ANTHROPIC.MODEL.DEFAULT;
+  readonly defaultModel = PROVIDER.ANTHROPIC.DEFAULT;
 
   // Session-level cache of models observed to reject `temperature` at runtime.
   // Populated by executeRequest on 400 errors so repeat calls skip the param.

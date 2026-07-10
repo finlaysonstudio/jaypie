@@ -361,7 +361,7 @@ function enforceAdditionalPropertiesFalse(schema: JsonObject): void {
  */
 export class OpenRouterAdapter extends BaseProviderAdapter {
   readonly name = PROVIDER.OPENROUTER.NAME;
-  readonly defaultModel = PROVIDER.OPENROUTER.MODEL.DEFAULT;
+  readonly defaultModel = PROVIDER.OPENROUTER.DEFAULT;
 
   // Session-level cache of models observed to reject native
   // `response_format: json_schema`. When a model is in this set, buildRequest

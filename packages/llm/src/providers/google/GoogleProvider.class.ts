@@ -30,7 +30,7 @@ export class GoogleProvider implements LlmProvider {
   private conversationHistory: LlmHistoryItem[] = [];
 
   constructor(
-    model: string = PROVIDER.GOOGLE.MODEL.DEFAULT,
+    model: string = PROVIDER.GOOGLE.DEFAULT,
     { apiKey }: { apiKey?: string } = {},
   ) {
     this.model = model;

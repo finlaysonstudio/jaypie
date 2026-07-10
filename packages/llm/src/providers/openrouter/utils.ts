@@ -32,7 +32,7 @@ export async function initializeClient({
 
 // Get default model from environment or constants
 export function getDefaultModel(): string {
-  return process.env.OPENROUTER_MODEL || PROVIDER.OPENROUTER.MODEL.DEFAULT;
+  return process.env.OPENROUTER_MODEL || PROVIDER.OPENROUTER.DEFAULT;
 }
 
 // Message formatting

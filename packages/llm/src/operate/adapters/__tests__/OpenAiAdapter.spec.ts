@@ -124,7 +124,7 @@ describe("OpenAiAdapter", () => {
     });
 
     it("has correct default model", () => {
-      expect(openAiAdapter.defaultModel).toBe(PROVIDER.OPENAI.MODEL.DEFAULT);
+      expect(openAiAdapter.defaultModel).toBe(PROVIDER.OPENAI.DEFAULT);
     });
   });
 
@@ -535,12 +535,12 @@ describe("OpenAiAdapter", () => {
         unknown
       >;
 
-      expect(result.model).toBe(PROVIDER.OPENAI.MODEL.DEFAULT);
+      expect(result.model).toBe(PROVIDER.OPENAI.DEFAULT);
     });
 
     it("sets temperature on request when provided", () => {
       const request: OperateRequest = {
-        model: PROVIDER.OPENAI.MODEL.DEFAULT,
+        model: PROVIDER.OPENAI.DEFAULT,
         messages: [
           {
             content: "Hello",
@@ -561,7 +561,7 @@ describe("OpenAiAdapter", () => {
 
     it("temperature takes precedence over providerOptions", () => {
       const request: OperateRequest = {
-        model: PROVIDER.OPENAI.MODEL.DEFAULT,
+        model: PROVIDER.OPENAI.DEFAULT,
         messages: [],
         providerOptions: { temperature: 0.3 },
         temperature: 0.9,
@@ -577,7 +577,7 @@ describe("OpenAiAdapter", () => {
 
     it("does not set temperature when not provided", () => {
       const request: OperateRequest = {
-        model: PROVIDER.OPENAI.MODEL.DEFAULT,
+        model: PROVIDER.OPENAI.DEFAULT,
         messages: [],
       };
 

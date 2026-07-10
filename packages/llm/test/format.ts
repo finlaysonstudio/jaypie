@@ -33,11 +33,11 @@ const EXPECTED_KEYS = Object.keys(FORMAT).sort();
 
 // Models to test for each provider (smallest of each, like structured.ts)
 const MODELS = {
-  anthropic: LLM.PROVIDER.ANTHROPIC.MODEL.SMALL,
-  google: LLM.PROVIDER.GOOGLE.MODEL.SMALL,
-  openai: LLM.PROVIDER.OPENAI.MODEL.SMALL,
-  openrouter: LLM.PROVIDER.OPENROUTER.MODEL.SMALL,
-  xai: LLM.PROVIDER.XAI.MODEL.SMALL,
+  anthropic: LLM.MODEL.HAIKU,
+  google: LLM.MODEL.GEMINI_FLASH,
+  openai: LLM.MODEL.TERRA,
+  openrouter: LLM.MODEL.OPENROUTER.GLM,
+  xai: LLM.MODEL.GROK,
 } as const;
 
 //

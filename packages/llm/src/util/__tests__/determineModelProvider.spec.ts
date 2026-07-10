@@ -31,7 +31,7 @@ describe("determineModelProvider", () => {
     it("Returns default provider and model when input is undefined", () => {
       const result = determineModelProvider(undefined);
       expect(result).toEqual({
-        model: DEFAULT.PROVIDER.MODEL.DEFAULT,
+        model: DEFAULT.PROVIDER.DEFAULT,
         provider: DEFAULT.PROVIDER.NAME,
       });
     });
@@ -39,7 +39,7 @@ describe("determineModelProvider", () => {
     it("Returns default provider and model when input is empty string", () => {
       const result = determineModelProvider("");
       expect(result).toEqual({
-        model: DEFAULT.PROVIDER.MODEL.DEFAULT,
+        model: DEFAULT.PROVIDER.DEFAULT,
         provider: DEFAULT.PROVIDER.NAME,
       });
     });
@@ -147,7 +147,7 @@ describe("determineModelProvider", () => {
     it("Returns default model when provider name 'anthropic' is passed", () => {
       const result = determineModelProvider(PROVIDER.ANTHROPIC.NAME);
       expect(result).toEqual({
-        model: PROVIDER.ANTHROPIC.MODEL.DEFAULT,
+        model: PROVIDER.ANTHROPIC.DEFAULT,
         provider: PROVIDER.ANTHROPIC.NAME,
       });
     });
@@ -155,7 +155,7 @@ describe("determineModelProvider", () => {
     it("Returns default model when provider name 'openai' is passed", () => {
       const result = determineModelProvider(PROVIDER.OPENAI.NAME);
       expect(result).toEqual({
-        model: PROVIDER.OPENAI.MODEL.DEFAULT,
+        model: PROVIDER.OPENAI.DEFAULT,
         provider: PROVIDER.OPENAI.NAME,
       });
     });
@@ -225,6 +225,22 @@ describe("determineModelProvider", () => {
         });
       });
 
+      it("Identifies Anthropic provider when input contains 'fable'", () => {
+        const result = determineModelProvider("fable-custom");
+        expect(result).toEqual({
+          model: "fable-custom",
+          provider: PROVIDER.ANTHROPIC.NAME,
+        });
+      });
+
+      it("Identifies Anthropic provider when input contains 'mythos'", () => {
+        const result = determineModelProvider("mythos-custom");
+        expect(result).toEqual({
+          model: "mythos-custom",
+          provider: PROVIDER.ANTHROPIC.NAME,
+        });
+      });
+
       it("Identifies OpenAI provider when input contains 'openai'", () => {
         const result = determineModelProvider("openai-custom");
         expect(result).toEqual({
@@ -257,6 +273,30 @@ describe("determineModelProvider", () => {
         });
       });
 
+      it("Identifies OpenAI provider when input contains 'sol'", () => {
+        const result = determineModelProvider("sol-custom");
+        expect(result).toEqual({
+          model: "sol-custom",
+          provider: PROVIDER.OPENAI.NAME,
+        });
+      });
+
+      it("Identifies OpenAI provider when input contains 'terra'", () => {
+        const result = determineModelProvider("terra-custom");
+        expect(result).toEqual({
+          model: "terra-custom",
+          provider: PROVIDER.OPENAI.NAME,
+        });
+      });
+
+      it("Identifies OpenAI provider when input contains 'luna'", () => {
+        const result = determineModelProvider("luna-custom");
+        expect(result).toEqual({
+          model: "luna-custom",
+          provider: PROVIDER.OPENAI.NAME,
+        });
+      });
+
       it("Match words are case insensitive", () => {
         const result = determineModelProvider("CLAUDE-CUSTOM");
         expect(result).toEqual({
@@ -278,7 +318,7 @@ describe("determineModelProvider", () => {
       it("Returns default model when provider name 'xai' is passed", () => {
         const result = determineModelProvider(PROVIDER.XAI.NAME);
         expect(result).toEqual({
-          model: PROVIDER.XAI.MODEL.DEFAULT,
+          model: PROVIDER.XAI.DEFAULT,
           provider: PROVIDER.XAI.NAME,
         });
       });
@@ -345,7 +385,7 @@ describe("determineModelProvider", () => {
       it("Returns default model when provider name 'bedrock' is passed", () => {
         const result = determineModelProvider(PROVIDER.BEDROCK.NAME);
         expect(result).toEqual({
-          model: PROVIDER.BEDROCK.MODEL.DEFAULT,
+          model: PROVIDER.BEDROCK.DEFAULT,
           provider: PROVIDER.BEDROCK.NAME,
         });
       });

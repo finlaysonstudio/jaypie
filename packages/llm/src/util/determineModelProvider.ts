@@ -6,7 +6,7 @@ export function determineModelProvider(input?: string): {
 } {
   if (!input) {
     return {
-      model: DEFAULT.PROVIDER.MODEL.DEFAULT,
+      model: DEFAULT.PROVIDER.DEFAULT,
       provider: DEFAULT.PROVIDER.NAME,
     };
   }
@@ -32,90 +32,43 @@ export function determineModelProvider(input?: string): {
   // Check if input is a provider name
   if (input === PROVIDER.BEDROCK.NAME) {
     return {
-      model: PROVIDER.BEDROCK.MODEL.DEFAULT,
+      model: PROVIDER.BEDROCK.DEFAULT,
       provider: PROVIDER.BEDROCK.NAME,
     };
   }
   if (input === PROVIDER.ANTHROPIC.NAME) {
     return {
-      model: PROVIDER.ANTHROPIC.MODEL.DEFAULT,
+      model: PROVIDER.ANTHROPIC.DEFAULT,
       provider: PROVIDER.ANTHROPIC.NAME,
     };
   }
   if (input === PROVIDER.GOOGLE.NAME || input === "gemini") {
     return {
-      model: PROVIDER.GOOGLE.MODEL.DEFAULT,
+      model: PROVIDER.GOOGLE.DEFAULT,
       provider: PROVIDER.GOOGLE.NAME,
     };
   }
   if (input === PROVIDER.OPENAI.NAME) {
     return {
-      model: PROVIDER.OPENAI.MODEL.DEFAULT,
+      model: PROVIDER.OPENAI.DEFAULT,
       provider: PROVIDER.OPENAI.NAME,
     };
   }
   if (input === PROVIDER.OPENROUTER.NAME) {
     return {
-      model: PROVIDER.OPENROUTER.MODEL.DEFAULT,
+      model: PROVIDER.OPENROUTER.DEFAULT,
       provider: PROVIDER.OPENROUTER.NAME,
     };
   }
   if (input === PROVIDER.XAI.NAME) {
     return {
-      model: PROVIDER.XAI.MODEL.DEFAULT,
+      model: PROVIDER.XAI.DEFAULT,
       provider: PROVIDER.XAI.NAME,
     };
   }
 
-  // Check if input matches an Anthropic model exactly
-  for (const [, modelValue] of Object.entries(PROVIDER.ANTHROPIC.MODEL)) {
-    if (input === modelValue) {
-      return {
-        model: input,
-        provider: PROVIDER.ANTHROPIC.NAME,
-      };
-    }
-  }
-
-  // Check if input matches a Gemini model exactly
-  for (const [, modelValue] of Object.entries(PROVIDER.GOOGLE.MODEL)) {
-    if (input === modelValue) {
-      return {
-        model: input,
-        provider: PROVIDER.GOOGLE.NAME,
-      };
-    }
-  }
-
-  // Check if input matches an OpenAI model exactly
-  for (const [, modelValue] of Object.entries(PROVIDER.OPENAI.MODEL)) {
-    if (input === modelValue) {
-      return {
-        model: input,
-        provider: PROVIDER.OPENAI.NAME,
-      };
-    }
-  }
-
-  // Check if input matches an OpenRouter model exactly
-  for (const [, modelValue] of Object.entries(PROVIDER.OPENROUTER.MODEL)) {
-    if (input === modelValue) {
-      return {
-        model: input,
-        provider: PROVIDER.OPENROUTER.NAME,
-      };
-    }
-  }
-
-  // Check if input matches an xAI model exactly
-  for (const [, modelValue] of Object.entries(PROVIDER.XAI.MODEL)) {
-    if (input === modelValue) {
-      return {
-        model: input,
-        provider: PROVIDER.XAI.NAME,
-      };
-    }
-  }
+  // Exact model ids are classified by the "/" rule and MODEL_MATCH_WORDS below,
+  // so no per-provider id catalog is consulted here.
 
   // Assume OpenRouter for models containing "/" (e.g., "openai/gpt-4", "anthropic/claude-3-opus")
   // This check must come before match words so that "openai/gpt-4" is not matched by "openai" keyword

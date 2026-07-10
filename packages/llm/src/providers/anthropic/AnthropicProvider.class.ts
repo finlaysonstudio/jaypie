@@ -38,7 +38,7 @@ export class AnthropicProvider implements LlmProvider {
   private conversationHistory: LlmHistoryItem[] = [];
 
   constructor(
-    model: string = PROVIDER.ANTHROPIC.MODEL.DEFAULT,
+    model: string = PROVIDER.ANTHROPIC.DEFAULT,
     { apiKey }: { apiKey?: string } = {},
   ) {
     this.model = model;

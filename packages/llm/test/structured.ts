@@ -18,11 +18,11 @@ const REQUEST =
 
 // Models to test for each provider
 const MODELS = {
-  anthropic: LLM.PROVIDER.ANTHROPIC.MODEL.SMALL,
-  gemini: LLM.PROVIDER.GOOGLE.MODEL.SMALL,
-  openai: LLM.PROVIDER.OPENAI.MODEL.SMALL,
-  openrouter: LLM.PROVIDER.OPENROUTER.MODEL.SMALL,
-  xai: LLM.PROVIDER.XAI.MODEL.SMALL,
+  anthropic: LLM.MODEL.HAIKU,
+  gemini: LLM.MODEL.GEMINI_FLASH,
+  openai: LLM.MODEL.TERRA,
+  openrouter: LLM.MODEL.OPENROUTER.GLM,
+  xai: LLM.MODEL.GROK,
 } as const;
 
 // Natural schema format for structured output

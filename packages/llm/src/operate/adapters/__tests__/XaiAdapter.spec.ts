@@ -128,7 +128,7 @@ describe("XaiAdapter", () => {
     });
 
     it("has correct default model", () => {
-      expect(xaiAdapter.defaultModel).toBe(PROVIDER.XAI.MODEL.DEFAULT);
+      expect(xaiAdapter.defaultModel).toBe(PROVIDER.XAI.DEFAULT);
     });
   });
 
@@ -137,7 +137,7 @@ describe("XaiAdapter", () => {
     describe("buildRequest", () => {
       it("builds basic request with xAI model", () => {
         const request: OperateRequest = {
-          model: PROVIDER.XAI.MODEL.DEFAULT,
+          model: PROVIDER.XAI.DEFAULT,
           messages: [
             {
               content: "Hello",
@@ -152,7 +152,7 @@ describe("XaiAdapter", () => {
           unknown
         >;
 
-        expect(result.model).toBe(PROVIDER.XAI.MODEL.DEFAULT);
+        expect(result.model).toBe(PROVIDER.XAI.DEFAULT);
         expect(result.input).toEqual(request.messages);
       });
 
@@ -167,7 +167,7 @@ describe("XaiAdapter", () => {
           unknown
         >;
 
-        expect(result.model).toBe(PROVIDER.XAI.MODEL.DEFAULT);
+        expect(result.model).toBe(PROVIDER.XAI.DEFAULT);
       });
     });
 
@@ -204,13 +204,10 @@ describe("XaiAdapter", () => {
           },
         };
 
-        const result = xaiAdapter.extractUsage(
-          response,
-          PROVIDER.XAI.MODEL.DEFAULT,
-        );
+        const result = xaiAdapter.extractUsage(response, PROVIDER.XAI.DEFAULT);
 
         expect(result.provider).toBe(PROVIDER.XAI.NAME);
-        expect(result.model).toBe(PROVIDER.XAI.MODEL.DEFAULT);
+        expect(result.model).toBe(PROVIDER.XAI.DEFAULT);
       });
     });
   });

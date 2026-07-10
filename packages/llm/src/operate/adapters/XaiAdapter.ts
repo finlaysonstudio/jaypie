@@ -34,8 +34,7 @@ function isTransientIngestError(error: unknown): boolean {
 export class XaiAdapter extends OpenAiAdapter {
   // @ts-expect-error Narrowing override: xAI name differs from parent's literal "openai"
   readonly name = PROVIDER.XAI.NAME;
-  // @ts-expect-error Narrowing override: xAI default model differs from parent's literal
-  readonly defaultModel = PROVIDER.XAI.MODEL.DEFAULT;
+  readonly defaultModel = PROVIDER.XAI.DEFAULT;
 
   /**
    * Grok gates reasoning effort by model, not by the OpenAI `gpt-*`/`o*`

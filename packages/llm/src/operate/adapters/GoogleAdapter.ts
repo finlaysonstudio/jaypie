@@ -125,7 +125,7 @@ const NOT_RETRYABLE_STATUS_CODES = [
  */
 export class GoogleAdapter extends BaseProviderAdapter {
   readonly name = PROVIDER.GOOGLE.NAME;
-  readonly defaultModel = PROVIDER.GOOGLE.MODEL.DEFAULT;
+  readonly defaultModel = PROVIDER.GOOGLE.DEFAULT;
 
   // Session-level cache of Gemini 3 models observed to reject the native
   // `responseJsonSchema` + tools combo. When a model is in this set,
