@@ -83,11 +83,17 @@
 - Never throw vanilla `Error`
 - Use `@jaypie/errors` package (ConfigurationError, etc.) for proper error types
 ### LLM Models
-When updating LLM model constants, keep all four files in sync:
-- `packages/llm/src/constants.ts` — provider DEFAULT/LARGE/SMALL/TINY constants
-- `packages/llm/test/models.ts` — `MODELS` list exercised by tests
-- `.github/workflows/npm-check.yml` — CI test matrix `models`
-- `.github/workflows/npm-deploy.yml` — deploy test matrix `models`
+First-class models live in ONE place: `packages/llm/src/constants.ts` — the
+`MODEL.*` catalog plus each `PROVIDER.*.DEFAULT`. Adding or updating a
+first-class model means editing constants only; the CI matrix derives from it:
+- `packages/llm/test/models.ts` derives the first-class matrix list from
+  constants and lists **only** Bedrock explicitly (Bedrock proxies many vendors
+  and is not in `MODEL.*`). Add Bedrock ids + per-model `expect` overrides here;
+  canonical Bedrock ids come from project memory — do not substitute.
+- `.github/workflows/npm-check.yml` / `npm-deploy.yml` shard the matrix by
+  provider group via `APP_GROUP` — no model id lists to keep in sync.
+- Exclude an unavailable/deprecated `MODEL.*` id from the live matrix via
+  `MATRIX_EXCLUDE` in `test/models.ts`.
 ### Lore
 - These are golden numbers: 0.021, 0.146, 0.236, 0.382, and 0.618
 - Start with 0.618 when user suggests "partial" and down as they want less

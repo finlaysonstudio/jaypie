@@ -1,9 +1,10 @@
 //
 // Model matrix configuration for `test/matrix.ts`.
 //
-// Edit this list with the models you actually want to verify. Each row is one
-// model id; the optional `provider` field is only needed when the model id is
-// ambiguous (e.g., when sending an OpenAI-named model through OpenRouter).
+// First-class models are DERIVED from `src/constants.ts` (the MODEL.* catalog
+// plus each PROVIDER.*.DEFAULT), so adding a promoted model only means editing
+// constants — no duplication here or in the CI workflow. Only Bedrock is listed
+// explicitly (Bedrock proxies many vendors and is not in MODEL.*).
 //
 // `expect` documents the *expected* outcome per capability. The harness
 // compares actual outcomes to these and flags mismatches:
@@ -15,6 +16,9 @@
 //   "fail" — capability is expected to fail outright
 //
 // Any capability not listed in `expect` defaults to "ok".
+
+import { MODEL, PROVIDER } from "../src/constants.js";
+import { determineModelProvider } from "../src/util/determineModelProvider.js";
 
 export type Capability =
   "plain" | "tools" | "structured" | "both" | "pdf" | "image" | "temperature";
@@ -42,68 +46,47 @@ export const CAPABILITIES: readonly Capability[] = [
   "temperature",
 ] as const;
 
-/**
- * Default model list. Edit freely. The harness honors APP_MODELS
- * (comma-separated model ids) to override at runtime without editing.
- *
- * Includes the major (non-mini/flash/lite) models in the GPT-5, Gemini 3,
- * and Claude Sonnet 4 / Opus 4 lines, plus every model id referenced by
- * `src/constants.ts` (smaller variants, xAI Grok line, OpenRouter routes).
- *
- * Defaults assume "ok" everywhere; only known limitations are pinned.
- * After the first run, refine `expect` per cell based on what your account
- * actually has access to.
- */
-export const MODELS: readonly ModelConfig[] = [
-  // ─── Anthropic Sonnet 4 ──────────────────────────────────────────────
-  // Note: Anthropic does not expose bare-name aliases like `claude-sonnet-4`
-  // or `claude-opus-4` — only the dated/versioned ids resolve.
-  { model: "claude-sonnet-4-5" },
-  { model: "claude-sonnet-4-6" },
-  { model: "claude-sonnet-5" },
+// MODEL.* ids the live matrix skips: unavailable, or deprecated aliases
+// superseded by a first-class name.
+const MATRIX_EXCLUDE = new Set<string>([
+  MODEL.MYTHOS,
+  MODEL.GPT,
+  MODEL.GPT_MINI,
+  MODEL.GPT_NANO,
+]);
 
-  // ─── Anthropic Opus 4 ────────────────────────────────────────────────
-  { model: "claude-opus-4-6" },
-  { model: "claude-opus-4-7" },
-  { model: "claude-opus-4-8" },
+// Flatten MODEL.* (including nested subtrees like OPENROUTER) into ids.
+function catalogIds(node: unknown = MODEL, out: string[] = []): string[] {
+  if (typeof node === "string") out.push(node);
+  else if (node && typeof node === "object")
+    for (const value of Object.values(node)) catalogIds(value, out);
+  return out;
+}
 
-  // ─── Anthropic Haiku 4 ───────────────────────────────────────────────
-  { model: "claude-haiku-4-5" },
+// First-class models under test = the promoted MODEL.* catalog plus each
+// provider's resolved default, deduped, minus the exclude set. Provider is
+// resolved from the id so the matrix shards correctly by group (APP_GROUP).
+const FIRST_CLASS_MODELS: ModelConfig[] = [
+  ...new Set([
+    ...catalogIds(),
+    PROVIDER.ANTHROPIC.DEFAULT,
+    PROVIDER.GOOGLE.DEFAULT,
+    PROVIDER.OPENAI.DEFAULT,
+    PROVIDER.OPENROUTER.DEFAULT,
+    PROVIDER.XAI.DEFAULT,
+  ]),
+]
+  .filter((model) => !MATRIX_EXCLUDE.has(model))
+  .map((model) => {
+    const provider = determineModelProvider(model).provider;
+    return provider ? { model, provider } : { model };
+  });
 
-  // ─── OpenAI GPT-5 ────────────────────────────────────────────────────
-  { model: "gpt-5.4" },
-  { model: "gpt-5.4-mini" },
-  { model: "gpt-5.4-nano" },
-  { model: "gpt-5.5" },
-  { model: "gpt-5.6-sol" },
-  { model: "gpt-5.6-terra" },
-  { model: "gpt-5.6-luna" },
-
-  // ─── Google Gemini 3 ─────────────────────────────────────────────────
-  { model: "gemini-3.1-pro-preview" },
-  { model: "gemini-3.5-flash" },
-  { model: "gemini-3.1-flash-lite" },
-
-  // ─── xAI Grok 4 ──────────────────────────────────────────────────────
-  { model: "grok-latest" },
-  { model: "grok-4.3-latest" },
-  { model: "grok-4.20-0309-reasoning" },
-  { model: "grok-4.20-0309-non-reasoning" },
-
-  // ─── OpenRouter routes ───────────────────────────────────────────────
-  // OpenRouter forwards image_url and file content parts to the selected
-  // backend. Models without the relevant modality 4xx, which the harness
-  // surfaces as a fail — refine `expect` per cell after the first run.
-  { model: "anthropic/claude-sonnet-4.6", provider: "openrouter" },
-  { model: "anthropic/claude-sonnet-5", provider: "openrouter" },
-  { model: "google/gemini-3.1-pro-preview", provider: "openrouter" },
-  { model: "moonshotai/kimi-k2.6", provider: "openrouter" },
-  { model: "openai/gpt-5.5", provider: "openrouter" },
-  { model: "openai/gpt-5.6-luna", provider: "openrouter" },
-  { model: "x-ai/grok-4.20", provider: "openrouter" },
-  { model: "z-ai/glm-5.2", provider: "openrouter" },
-
-  // ─── AWS Bedrock ─────────────────────────────────────────────────────
+// Bedrock (and Bedrock-hosted third-party) models are not in MODEL.* — Bedrock
+// proxies many vendors. Canonical ids provided by the user; do not substitute.
+// `us.` prefix is required for the Anthropic models and nova-2-lite (inference
+// profile; on-demand not supported).
+const BEDROCK_MODELS: ModelConfig[] = [
   { model: "us.anthropic.claude-opus-4-7", provider: "bedrock" },
   { model: "us.anthropic.claude-sonnet-4-6", provider: "bedrock" },
   { model: "us.anthropic.claude-haiku-4-5-20251001-v1:0", provider: "bedrock" },
@@ -142,4 +125,14 @@ export const MODELS: readonly ModelConfig[] = [
     provider: "bedrock",
     expect: { structured: "skip", pdf: "skip", image: "skip" },
   },
+];
+
+/**
+ * Full matrix model list. The harness honors APP_MODELS (comma-separated ids)
+ * to override, or APP_GROUP (comma-separated provider names) to shard by
+ * provider. Defaults assume "ok" everywhere; only known limitations are pinned.
+ */
+export const MODELS: readonly ModelConfig[] = [
+  ...FIRST_CLASS_MODELS,
+  ...BEDROCK_MODELS,
 ];

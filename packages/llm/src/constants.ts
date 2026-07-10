@@ -70,7 +70,8 @@ export const PROVIDER = {
   // https://docs.aws.amazon.com/bedrock/latest/userguide/models-supported.html
   BEDROCK: {
     // Bedrock has no MODEL.* catalog entry yet; keep the literal default id.
-    DEFAULT: "amazon.nova-lite-v1:0" as const,
+    // nova-pro is the Amazon-native model that reliably does tools+structured.
+    DEFAULT: "amazon.nova-pro-v1:0" as const,
     /** @deprecated Size tiers are retired in 2.0. Use PROVIDER.BEDROCK.DEFAULT. */
     MODEL: {
       DEFAULT: "amazon.nova-lite-v1:0" as const,
