@@ -44,6 +44,7 @@ Arguably identity, instance, and relation would form a more complete vocabulary.
 - image: tbd, likely urls and references
 - input: request parameters
 - label: shortened, accepted version of name
+- level: severity of a log emission (trace, debug, info, warn, error, fatal); a property of an emission, never a lifecycle `status`
 - links: usually http references
 - message/s: string/s or message object/s
 - metadata: usually immutable, what the entity is
@@ -53,7 +54,7 @@ Arguably identity, instance, and relation would form a more complete vocabulary.
 - scope: organizes entities, usually a reference to a parent entity
 - sequence: deprecated; ordering now uses `updatedAt` via GSI composite sort key
 - state: mutable data the entity tracks
-- status: canceled, complete, error, pending, processing, queued, sending
+- status: the entity's position in its model's lifecycle; the value vocabulary is declared by the model. The default job/message vocabulary is `canceled, complete, error, pending, processing, queued, sending`. Every model that uses `status` should declare its vocabulary rather than reuse words across unrelated models — a job's `error` and a log line's `error` are different predicates. The reservation is the declaration requirement, not the values (cf. `category`)
 - updatedAt: timestamp
 - value: computed scalar the entity evaluates to
 - xid: convenient machine lookup string modeled as an external identifier; possibly but not guaranteed to be unique with model and scope
@@ -174,6 +175,8 @@ SEPARATOR = "#";
 ```
 
 ## Additional Terminology
+
+The six log levels are **severity**, never `status`. Severity is a property of an emission; `status` is a position in a lifecycle. Because `error` appears in both vocabularies the collision is easy to make — reserve `level` (see Attribute Definitions) for severity and keep it distinct from `status`.
 
 - debug: logging, operating checkpoint or abnormal condition
 - error: logging, detected an unrecoverable state and exiting (caught error)

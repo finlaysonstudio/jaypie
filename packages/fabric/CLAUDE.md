@@ -255,11 +255,14 @@ Located in `src/index/`. Utilities for DynamoDB single-table design patterns:
 | Function | Purpose |
 |----------|---------|
 | `fabricIndex(field?)` | Factory for index definitions. No arg = `indexModel` (pk=["model"]). With field = `indexModel{Field}` (pk=["model", field], sparse). All indexes get sk=["scope","updatedAt"]. |
-| `registerModel({ model, indexes })` | Register index definitions for a model |
+| `registerModel({ model, indexes, status })` | Register index definitions and an optional `status` vocabulary for a model. Throws `ConfigurationError` if `status` is not a non-empty array of non-empty strings. |
 | `getModelIndexes(model)` | Get indexes for a model. Throws `ConfigurationError` if model is not registered. |
 | `getModelSchema(model)` | Get the full model schema or undefined |
+| `getModelStatus(model)` | Get the model's declared `status` vocabulary, or undefined when unregistered / free-string |
 | `getRegisteredModels()` | List all registered model names |
 | `isModelRegistered(model)` | Check if a model is registered |
+| `isModelStatus(model, value)` | True when the model declares no vocabulary (any string) or `value` is declared |
+| `assertModelStatus(model, status)` | Throws `BadRequestError` when the model declares a vocabulary and `status` is not in it; no-op otherwise |
 | `clearRegistry()` | Clear all registered models (for testing) |
 | `getAllRegisteredIndexes()` | Get all unique indexes across all registered models |
 | `populateIndexKeys(entity, indexes, suffix?)` | Populate GSI pk attrs on entity. When `sk.length > 1`, also writes a composite sk attr named `{indexName}Sk`. |
@@ -397,7 +400,7 @@ export type { ServiceMeta, ServiceSuite, ServiceSuiteConfig } from "./ServiceSui
 export { FabricModel, FabricJob, FabricMessage, Progress } from "./models/base.js";
 
 // Index Utilities
-export { buildCompositeKey, calculateIndexSuffix, calculateScope, clearRegistry, fabricIndex, generateIndexName, getAllRegisteredIndexes, getGsiAttributeNames, getModelIndexes, getModelSchema, getRegisteredModels, isModelRegistered, populateIndexKeys, registerModel, tryBuildCompositeKey } from "./index/index.js";
+export { assertModelStatus, buildCompositeKey, calculateIndexSuffix, calculateScope, clearRegistry, fabricIndex, generateIndexName, getAllRegisteredIndexes, getGsiAttributeNames, getModelIndexes, getModelSchema, getModelStatus, getRegisteredModels, isModelRegistered, isModelStatus, populateIndexKeys, registerModel, tryBuildCompositeKey } from "./index/index.js";
 
 // Constants
 export { APEX, ARCHIVED_SUFFIX, DELETED_SUFFIX, SEPARATOR } from "./constants.js";

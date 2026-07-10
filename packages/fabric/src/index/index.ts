@@ -42,11 +42,14 @@ export {
 // =============================================================================
 
 export {
+  assertModelStatus,
   clearRegistry,
   getAllRegisteredIndexes,
   getModelIndexes,
   getModelSchema,
+  getModelStatus,
   getRegisteredModels,
   isModelRegistered,
+  isModelStatus,
   registerModel,
 } from "./registry.js";

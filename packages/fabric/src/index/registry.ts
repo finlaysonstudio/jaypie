@@ -5,7 +5,7 @@
  * DynamoDB reads from this registry to create GSIs and select indexes for queries.
  */
 
-import { ConfigurationError } from "@jaypie/errors";
+import { BadRequestError, ConfigurationError } from "@jaypie/errors";
 
 import { type IndexDefinition, type ModelSchema } from "./types.js";
 
@@ -25,9 +25,22 @@ const MODEL_REGISTRY = new Map<string, ModelSchema>();
 /**
  * Register a model schema with its index definitions
  *
- * @param schema - Model schema with model name and optional indexes
+ * @param schema - Model schema with model name and optional indexes/status
  */
 export function registerModel(schema: ModelSchema): void {
+  if (schema.status !== undefined) {
+    if (
+      !Array.isArray(schema.status) ||
+      schema.status.length === 0 ||
+      !schema.status.every(
+        (value) => typeof value === "string" && value.length > 0,
+      )
+    ) {
+      throw new ConfigurationError(
+        `Model "${schema.model}" declared an invalid status vocabulary. Provide a non-empty array of non-empty strings.`,
+      );
+    }
+  }
   MODEL_REGISTRY.set(schema.model, schema);
 }
 
@@ -65,6 +78,55 @@ export function getModelIndexes(model: string): IndexDefinition[] {
  */
 export function getRegisteredModels(): string[] {
   return Array.from(MODEL_REGISTRY.keys());
+}
+
+/**
+ * Get the declared `status` vocabulary for a model
+ *
+ * @param model - Model name to look up
+ * @returns The declared status vocabulary, or undefined when the model is
+ *   unregistered or declares no vocabulary (status is a free string)
+ */
+export function getModelStatus(model: string): string[] | undefined {
+  return MODEL_REGISTRY.get(model)?.status;
+}
+
+/**
+ * Check whether a value conforms to a model's declared `status` vocabulary
+ *
+ * A model that declares no vocabulary (unregistered or `status` omitted) treats
+ * `status` as a free string, so any string value is valid.
+ *
+ * @param model - Model name to validate against
+ * @param value - The status value to check
+ * @returns true when the model declares no vocabulary, or the value is declared
+ */
+export function isModelStatus(model: string, value: unknown): boolean {
+  const vocabulary = getModelStatus(model);
+  if (vocabulary === undefined) {
+    return typeof value === "string";
+  }
+  return typeof value === "string" && vocabulary.includes(value);
+}
+
+/**
+ * Assert a value conforms to a model's declared `status` vocabulary
+ *
+ * @param model - Model name to validate against
+ * @param status - The status value to check
+ * @throws BadRequestError when the model declares a vocabulary and the value
+ *   is not in it
+ */
+export function assertModelStatus(model: string, status: unknown): void {
+  const vocabulary = getModelStatus(model);
+  if (vocabulary === undefined) {
+    return;
+  }
+  if (typeof status !== "string" || !vocabulary.includes(status)) {
+    throw new BadRequestError(
+      `Status "${String(status)}" is not in the declared vocabulary for model "${model}": ${vocabulary.join(", ")}.`,
+    );
+  }
 }
 
 /**

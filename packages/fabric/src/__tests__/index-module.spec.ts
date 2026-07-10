@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import {
   APEX,
   ARCHIVED_SUFFIX,
+  assertModelStatus,
   buildCompositeKey,
   calculateIndexSuffix,
   calculateScope,
@@ -16,8 +17,10 @@ import {
   getGsiAttributeNames,
   getModelIndexes,
   getModelSchema,
+  getModelStatus,
   getRegisteredModels,
   isModelRegistered,
+  isModelStatus,
   populateIndexKeys,
   registerModel,
   tryBuildCompositeKey,
@@ -447,6 +450,94 @@ describe("Model Registry", () => {
       clearRegistry();
 
       expect(getRegisteredModels()).toEqual([]);
+    });
+  });
+
+  describe("status vocabulary", () => {
+    describe("registerModel", () => {
+      it("stores a declared status vocabulary", () => {
+        registerModel({
+          model: "belief",
+          status: ["active", "suspended", "superseded", "retracted"],
+        });
+        expect(getModelStatus("belief")).toEqual([
+          "active",
+          "suspended",
+          "superseded",
+          "retracted",
+        ]);
+      });
+
+      it("throws ConfigurationError for an empty vocabulary", () => {
+        expect(() => registerModel({ model: "belief", status: [] })).toThrow(
+          /invalid status vocabulary/,
+        );
+      });
+
+      it("throws ConfigurationError for non-string values", () => {
+        expect(() =>
+          // @ts-expect-error - exercising runtime validation
+          registerModel({ model: "belief", status: ["active", 1] }),
+        ).toThrow(/invalid status vocabulary/);
+      });
+
+      it("throws ConfigurationError for empty-string values", () => {
+        expect(() =>
+          registerModel({ model: "belief", status: ["active", ""] }),
+        ).toThrow(/invalid status vocabulary/);
+      });
+    });
+
+    describe("getModelStatus", () => {
+      it("returns undefined for an unregistered model", () => {
+        expect(getModelStatus("unknown")).toBeUndefined();
+      });
+
+      it("returns undefined when no vocabulary declared", () => {
+        registerModel({ model: "record" });
+        expect(getModelStatus("record")).toBeUndefined();
+      });
+    });
+
+    describe("isModelStatus", () => {
+      it("returns true for any string when no vocabulary declared", () => {
+        registerModel({ model: "record" });
+        expect(isModelStatus("record", "banana")).toBe(true);
+      });
+
+      it("returns false for a non-string value when no vocabulary declared", () => {
+        registerModel({ model: "record" });
+        expect(isModelStatus("record", 42)).toBe(false);
+      });
+
+      it("returns true for a declared value", () => {
+        registerModel({ model: "belief", status: ["active", "retracted"] });
+        expect(isModelStatus("belief", "active")).toBe(true);
+      });
+
+      it("returns false for an undeclared value", () => {
+        registerModel({ model: "belief", status: ["active", "retracted"] });
+        expect(isModelStatus("belief", "banana")).toBe(false);
+      });
+    });
+
+    describe("assertModelStatus", () => {
+      it("does not throw when no vocabulary declared", () => {
+        registerModel({ model: "record" });
+        expect(() => assertModelStatus("record", "banana")).not.toThrow();
+      });
+
+      it("does not throw for a declared value", () => {
+        registerModel({ model: "belief", status: ["active", "retracted"] });
+        expect(() => assertModelStatus("belief", "active")).not.toThrow();
+      });
+
+      it("throws BadRequestError for an undeclared value", () => {
+        registerModel({ model: "belief", status: ["active", "retracted"] });
+        expect(() => assertModelStatus("belief", "banana")).toThrow(
+          /not in the declared vocabulary for model "belief"/,
+        );
+      });
     });
   });
 });
