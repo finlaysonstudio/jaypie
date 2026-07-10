@@ -19,15 +19,22 @@ console.log(response.content); // "4"
 
 ## Providers and Models
 
-| Provider | Match Keywords | Default Model |
+| Provider | Match Keywords | Default Model (`PROVIDER.*.DEFAULT`) |
 |----------|----------------|---------------|
-| OpenAI | "openai", "gpt", /^o\d/ | gpt-5.4 |
-| Anthropic | "anthropic", "claude", "haiku", "opus", "sonnet" | claude-sonnet-4-6 |
-| Google | "google", "gemini" | gemini-3.1-pro-preview |
-| OpenRouter | "openrouter" | anthropic/claude-sonnet-4-6 |
+| OpenAI | "openai", "gpt", "sol", "terra", "luna", /^o\d/ | gpt-5.6-sol |
+| Anthropic | "anthropic", "claude", "fable", "haiku", "mythos", "opus", "sonnet" | claude-sonnet-5 |
+| Google | "google", "gemini" | gemini-3.5-flash |
+| OpenRouter | "openrouter" | anthropic/claude-sonnet-5 |
 | xAI | "xai", "grok" | grok-latest |
+| Bedrock | "amazon.nova", "anthropic.claude", "meta.llama", … | amazon.nova-pro-v1:0 |
 
 The provider name for Gemini models is `"google"` — `"gemini"` is accepted as a deprecated alias.
+
+### Model Constants
+
+- **`PROVIDER.<name>.DEFAULT`** — the single default model per provider (above), used when no `model` is given.
+- **`LLM.MODEL.*`** — the named model catalog (e.g. `MODEL.SONNET`, `MODEL.SOL`, `MODEL.GEMINI_FLASH`, `MODEL.GROK`), plus `MODEL.OPENROUTER.*` for provider-prefixed routes (`GLM`, `LUNA`, `SONNET`). Pick specific models from here.
+- **Deprecated:** the size-tier map `PROVIDER.<name>.MODEL.{DEFAULT,LARGE,SMALL,TINY}`, the `DEFAULT.MODEL` bundle, and `ALL` are `@deprecated` and retired in 2.0 — use `PROVIDER.*.DEFAULT` for defaults and `MODEL.*` for named models.
 
 ```typescript
 // Provider auto-detected from model
