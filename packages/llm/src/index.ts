@@ -1,5 +1,6 @@
 export { default as Llm } from "./Llm.js";
 export * as LLM from "./constants.js";
+export type { LlmEffort } from "./constants.js";
 export type {
   LlmFallbackConfig,
   LlmHistory,

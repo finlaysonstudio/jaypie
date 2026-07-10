@@ -1,5 +1,6 @@
-import { PROVIDER } from "../../constants.js";
+import { type LlmEffort, PROVIDER } from "../../constants.js";
 import { BadRequestError } from "../../providers/openai/client.js";
+import { type LlmEffortMapping, toXaiEffort } from "../../util/effort.js";
 import { ClassifiedError, ErrorCategory } from "../types.js";
 import { OpenAiAdapter } from "./OpenAiAdapter.js";
 
@@ -35,6 +36,21 @@ export class XaiAdapter extends OpenAiAdapter {
   readonly name = PROVIDER.XAI.NAME;
   // @ts-expect-error Narrowing override: xAI default model differs from parent's literal
   readonly defaultModel = PROVIDER.XAI.MODEL.DEFAULT;
+
+  /**
+   * Grok gates reasoning effort by model, not by the OpenAI `gpt-*`/`o*`
+   * patterns. Only explicit `*-reasoning` models accept `reasoning_effort`;
+   * bare grok-4 reasons implicitly and rejects it, so we stay conservative and
+   * only opt in models whose name advertises reasoning.
+   */
+  protected supportsReasoningEffort(model: string): boolean {
+    if (/non-reasoning/.test(model)) return false;
+    return /reasoning/.test(model);
+  }
+
+  protected mapReasoningEffort(effort: LlmEffort): LlmEffortMapping {
+    return toXaiEffort(effort);
+  }
 
   classifyError(error: unknown): ClassifiedError {
     if (isTransientIngestError(error)) {

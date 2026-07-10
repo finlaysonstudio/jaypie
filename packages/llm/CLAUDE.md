@@ -110,6 +110,29 @@ const result = await llm.operate("What is 2+2?");
 const claude = new Llm("claude-sonnet-4-6"); // -> anthropic, claude-sonnet-4-6
 ```
 
+### Reasoning Effort
+
+The `effort` option (`lowest | low | medium | high | highest`, exported as
+`LLM.EFFORT` / type `LlmEffort`) is a provider-neutral reasoning control — a
+five-point relative scale (only the anchored `medium` borrows a provider word).
+Each adapter's `buildRequest` translates it to the provider's native knob via
+`src/util/effort.ts` (OpenAI/Grok `reasoning.effort`, Anthropic
+`output_config.effort`, Gemini 3 `thinkingLevel`, Gemini 2.5 `thinkingBudget`,
+OpenRouter `reasoning.effort`), spreading the scale across the provider's range.
+It is threaded through `OperateRequest` by both loops and is gated per provider
+so unsupported models silently ignore it. Omitting `effort` leaves the provider
+default untouched, so it is safe across a fallback chain. Bedrock is not yet
+wired. First-class `effort` wins over a raw `providerOptions.reasoning`.
+
+Each mapper returns `{ value, papered }`. `papered` is `true` when the neutral
+level had no distinct native rung and was collapsed or clamped onto a neighbor
+(e.g. `highest` → Grok `high`, or `highest` → OpenAI `high` on a model that
+predates `xhigh`); adapters `log.debug` those so a papered-over request is on
+the record. OpenAI availability is version-gated: `xhigh` (`highest`) only for
+gpt-5.2+, `minimal` (`lowest`) only for gpt-5.4+ (its history is non-monotonic —
+present on 5/5.1, dropped at 5.2, back on the current line); outside those
+windows the end clamps to `high`/`low`.
+
 ### Output Token Limits
 
 Anthropic and Google requests resolve a default output-token limit from the

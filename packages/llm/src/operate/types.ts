@@ -1,5 +1,7 @@
 import { JsonObject } from "@jaypie/types";
 
+import { type LlmEffort } from "../constants.js";
+
 import {
   LlmHistory,
   LlmMessageType,
@@ -89,6 +91,8 @@ export interface OperateRequest {
   tools?: ProviderToolDefinition[];
   /** Structured output format */
   format?: JsonObject;
+  /** Normalized reasoning effort; adapters translate to provider-native control */
+  effort?: LlmEffort;
   /** Provider-specific options */
   providerOptions?: JsonObject;
   /** Whether the request will execute over a streaming transport */

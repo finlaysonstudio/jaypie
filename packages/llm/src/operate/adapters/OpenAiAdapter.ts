@@ -1,7 +1,13 @@
+import { log } from "@jaypie/logger";
 import { JsonObject, NaturalSchema } from "@jaypie/types";
 import { z } from "zod/v4";
 
-import { PROVIDER } from "../../constants.js";
+import { type LlmEffort, PROVIDER } from "../../constants.js";
+import {
+  type LlmEffortMapping,
+  paperedEffortMessage,
+  toOpenAiEffort,
+} from "../../util/effort.js";
 import {
   APIConnectionError,
   APIConnectionTimeoutError,
@@ -133,6 +139,19 @@ export class OpenAiAdapter extends BaseProviderAdapter {
     return !MODELS_WITHOUT_TEMPERATURE.some((pattern) => pattern.test(model));
   }
 
+  /** Whether `reasoning.effort` may be sent for this model. Overridden by xAI. */
+  protected supportsReasoningEffort(model: string): boolean {
+    return isReasoningModel(model);
+  }
+
+  /** Translate a normalized effort to this provider's `reasoning.effort` value. */
+  protected mapReasoningEffort(
+    effort: LlmEffort,
+    model: string,
+  ): LlmEffortMapping {
+    return toOpenAiEffort(effort, { model });
+  }
+
   //
   // Request Building
   //
@@ -177,6 +196,28 @@ export class OpenAiAdapter extends BaseProviderAdapter {
 
     if (request.providerOptions) {
       Object.assign(openaiRequest, request.providerOptions);
+    }
+
+    // Normalized reasoning effort -> reasoning.effort (merged so the
+    // summary:auto above survives). First-class effort wins over providerOptions.
+    if (request.effort && this.supportsReasoningEffort(model)) {
+      const mapping = this.mapReasoningEffort(request.effort, model);
+      if (mapping.papered) {
+        log.debug(
+          paperedEffortMessage({
+            model,
+            provider: this.name,
+            requested: request.effort,
+            value: mapping.value,
+          }),
+        );
+      }
+      const existingReasoning =
+        (openaiRequest.reasoning as Record<string, unknown> | undefined) ?? {};
+      openaiRequest.reasoning = {
+        ...existingReasoning,
+        effort: mapping.value,
+      };
     }
 
     // First-class temperature takes precedence over providerOptions

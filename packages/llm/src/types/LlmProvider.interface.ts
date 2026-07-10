@@ -6,6 +6,7 @@ import {
   NaturalSchema,
 } from "@jaypie/types";
 import { z } from "zod/v4";
+import { type LlmEffort } from "../constants.js";
 import { LlmTool } from "./LlmTool.interface.js";
 import { LlmStreamChunk } from "./LlmStreamChunk.interface.js";
 import { Toolkit } from "../tools/Toolkit.class.js";
@@ -269,6 +270,14 @@ export type LlmProgressCallback = (
 
 export interface LlmOperateOptions {
   data?: NaturalMap;
+  /**
+   * Provider-neutral reasoning effort (lowest | low | medium | high | highest).
+   * Each provider translates it to its native control, spreading the scale
+   * across the provider's range; omitting it leaves the provider default
+   * untouched, so it is safe across a fallback chain. Providers without
+   * reasoning control ignore it.
+   */
+  effort?: LlmEffort;
   explain?: boolean;
   /** Chain of fallback providers to try if primary fails. Set to false to disable instance-level fallback. */
   fallback?: LlmFallbackConfig[] | false;

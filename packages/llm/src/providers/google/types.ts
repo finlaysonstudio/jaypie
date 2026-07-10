@@ -96,6 +96,11 @@ export interface GeminiGenerateContentConfig {
   responseMimeType?: string;
   responseJsonSchema?: JsonObject;
   responseSchema?: JsonObject;
+  thinkingConfig?: {
+    thinkingLevel?: string;
+    thinkingBudget?: number;
+    includeThoughts?: boolean;
+  };
   temperature?: number;
   topP?: number;
   topK?: number;

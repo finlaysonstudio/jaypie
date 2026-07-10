@@ -29,6 +29,25 @@ const FIRST_CLASS_PROVIDER = {
   },
 };
 
+/**
+ * Provider-neutral reasoning-effort levels — a five-point relative scale that
+ * deliberately borrows no provider's vocabulary. Each adapter translates these
+ * to its provider's native control (OpenAI `reasoning.effort`, Anthropic
+ * `output_config.effort`, Gemini `thinkingLevel`/`thinkingBudget`, Grok
+ * `reasoning_effort`, OpenRouter `reasoning.effort`), spreading the scale across
+ * the provider's available range. Omitting `effort` leaves the provider default
+ * untouched, so it is safe to set across a fallback chain.
+ */
+export const EFFORT = {
+  LOWEST: "lowest",
+  LOW: "low",
+  MEDIUM: "medium",
+  HIGH: "high",
+  HIGHEST: "highest",
+} as const;
+
+export type LlmEffort = (typeof EFFORT)[keyof typeof EFFORT];
+
 export const MODEL = {
   // Anthropic
   FABLE: "claude-fable-5",
