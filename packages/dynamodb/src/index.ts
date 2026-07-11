@@ -24,6 +24,7 @@ export {
   destroyEntity,
   getEntity,
   transactWriteEntities,
+  transitionEntity,
   updateEntity,
 } from "./entities.js";
 

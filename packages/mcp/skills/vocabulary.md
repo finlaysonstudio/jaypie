@@ -44,7 +44,7 @@ Arguably identity, instance, and relation would form a more complete vocabulary.
 - image: tbd, likely urls and references
 - input: request parameters
 - label: shortened, accepted version of name
-- level: severity of a log emission (trace, debug, info, warn, error, fatal); a property of an emission, never a lifecycle `status`
+- level: severity of a log emission (trace, debug, info, warn, error, fatal); a property of an emission, distinct from a lifecycle `status` though Datadog serializes it under the `status` field (see logs skill)
 - links: usually http references
 - message/s: string/s or message object/s
 - metadata: usually immutable, what the entity is
@@ -176,7 +176,7 @@ SEPARATOR = "#";
 
 ## Additional Terminology
 
-The six log levels are **severity**, never `status`. Severity is a property of an emission; `status` is a position in a lifecycle. Because `error` appears in both vocabularies the collision is easy to make — reserve `level` (see Attribute Definitions) for severity and keep it distinct from `status`.
+The six log levels are **severity**. Severity is a property of an emission; a lifecycle `status` is a position in a model's declared vocabulary. They are distinct concepts that share the word `error`, so keep them straight — but the *word* `status` is not off-limits for severity. Jaypie names the property `level`; Datadog reserves the field name `status` for log severity and cannot be reconfigured, so serialized logs legitimately emit severity as `status` (`LOG_LEVEL_FIELD=status`, see logs skill). Reserve the caution for the concepts, not the term.
 
 - debug: logging, operating checkpoint or abnormal condition
 - error: logging, detected an unrecoverable state and exiting (caught error)

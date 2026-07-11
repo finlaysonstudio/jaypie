@@ -59,6 +59,10 @@ describe("@jaypie/dynamodb exports", () => {
     it("exports destroyEntity", () => {
       expect(dynamodb.destroyEntity).toBeFunction();
     });
+
+    it("exports transitionEntity", () => {
+      expect(dynamodb.transitionEntity).toBeFunction();
+    });
   });
 
   describe("Client Functions", () => {

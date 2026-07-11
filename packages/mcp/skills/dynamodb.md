@@ -157,6 +157,17 @@ const item = await getEntity({ id: "abc-123" });
 // Update — sets updatedAt, re-indexes
 await updateEntity({ entity: { ...item, name: "Updated Name" } });
 
+// Conditional update — write-time guard; throws ConflictError if it fails
+await updateEntity({
+  entity: { ...item, status: "complete" },
+  condition: "#status = :from",
+  names: { "#status": "status" },
+  values: { ":from": "running" },
+});
+
+// Status transition — reads, guards on `from`, writes; ConflictError on a race
+await transitionEntity({ id: "abc-123", from: "running", set: { status: "complete" } });
+
 // Soft delete — sets deletedAt, re-indexes with #deleted suffix on pk
 await deleteEntity({ id: "abc-123" });
 
@@ -171,17 +182,27 @@ await destroyEntity({ id: "abc-123" });
 |----------|-------------|
 | `createEntity({ entity })` | Create entity; returns `null` if `id` exists (conditional `attribute_not_exists(id)`) |
 | `getEntity({ id })` | Get by primary key (id only) |
-| `updateEntity({ entity })` | Update (sets `updatedAt`, re-indexes) |
+| `updateEntity({ entity, condition?, names?, values? })` | Update (sets `updatedAt`, re-indexes). Pass `condition` (a ConditionExpression, with `names`/`values` bindings) to guard the write; throws `ConflictError` (409) and leaves the item unchanged when the condition fails |
+| `transitionEntity({ id, from?, set })` | Conditionally update by status: reads the entity, merges `set`, writes guarded by `#status = from`; throws `ConflictError` (409) on a race, `NotFoundError` (404) when absent. Validates `from`/`set.status` against the model's `status` vocabulary |
 | `deleteEntity({ id })` | Soft delete (`deletedAt`, `#deleted` suffix on GSI pk) |
 | `archiveEntity({ id })` | Archive (`archivedAt`, `#archived` suffix on GSI pk) |
 | `destroyEntity({ id })` | Hard delete (permanent) |
 | `transactWriteEntities({ entities, conditionalCreate?, condition? })` | Write many entities atomically; `conditionalCreate: true` guards every `Put` with `attribute_not_exists(id)` (`condition` for a custom expression), throwing `ConflictError` (409) when a conditional check fails |
 
-### Atomic Conditional Writes
+### Conditional Writes
 
-Use `conditionalCreate` to write an entity **and** a uniqueness-sentinel row in a single transaction -- both commit or neither does:
+Conditional writes enforce read-check-then-write invariants **at write time**, closing the race a read-then-put opens. Three surfaces, in ascending ergonomics:
+
+- `createEntity` — `attribute_not_exists(id)` (returns `null` on conflict).
+- `updateEntity({ condition })` — the general single-item primitive.
+- `transitionEntity({ from })` — the status-transition guardrail.
+- `transactWriteEntities({ conditionalCreate | condition })` — the multi-item case.
 
 `ConflictError` is thrown from `@jaypie/errors` (re-exported by the `jaypie` umbrella); `@jaypie/dynamodb` does not re-export it.
+
+#### Atomic multi-item create
+
+Use `conditionalCreate` to write an entity **and** a uniqueness-sentinel row in a single transaction -- both commit or neither does:
 
 ```typescript
 import { ConflictError } from "jaypie"; // or "@jaypie/errors"
@@ -199,6 +220,32 @@ try {
   throw error;
 }
 ```
+
+#### Sticky-terminal status transition
+
+Terminal statuses (`complete`/`error`/`canceled`/`expired`) must be sticky: once terminal, no later transition may move the run. `transitionEntity` enforces that at write time -- the write commits only when the persisted status still equals `from`, so a concurrent resume/complete/cancel racing inside the read→put window fails closed:
+
+```typescript
+import { ConflictError } from "jaypie";
+import { transitionEntity } from "@jaypie/dynamodb";
+
+try {
+  // Resume commits only if the run is still "running"; if another writer
+  // already moved it to "canceled", this throws ConflictError, no write.
+  await transitionEntity({
+    id: runId,
+    from: "running",
+    set: { status: "complete", completedAt: new Date().toISOString() },
+  });
+} catch (error) {
+  if (error instanceof ConflictError) {
+    // the run left "running" underneath us -- terminal is sticky, drop the write
+  }
+  throw error;
+}
+```
+
+`from`/`set.status` are validated against the model's registered `status` vocabulary (see `skill("vocabulary")`); a value outside it throws `BadRequestError`. For predicates beyond a single-value `from` equality (e.g. "any non-terminal status"), reach for `updateEntity({ condition })` with your own ConditionExpression.
 
 ### Scope and Hierarchy
 

@@ -4,8 +4,8 @@ import {
   PutCommand,
   TransactWriteCommand,
 } from "@aws-sdk/lib-dynamodb";
-import { ConflictError } from "@jaypie/errors";
-import { fabricService } from "@jaypie/fabric";
+import { ConflictError, NotFoundError } from "@jaypie/errors";
+import { assertModelStatus, fabricService } from "@jaypie/fabric";
 
 import { getDocClient, getTableName } from "./client.js";
 import { ARCHIVED_SUFFIX, DELETED_SUFFIX } from "./constants.js";
@@ -94,11 +94,24 @@ export async function createEntity({
 /**
  * Update an existing entity.
  * `indexEntity` auto-bumps `updatedAt` — callers never set it manually.
+ *
+ * Pass `condition` to guard the write with a DynamoDB ConditionExpression
+ * (mirroring `transactWriteEntities`), supplying `names`/`values` for any
+ * `#name`/`:value` placeholders. When the condition fails the item is left
+ * unchanged and a `ConflictError` (409) is thrown, giving write-time
+ * enforcement of read-check-then-write invariants. Without `condition` the
+ * write is an unconditional overwrite (last write wins).
  */
 export async function updateEntity({
+  condition,
   entity,
+  names,
+  values,
 }: {
+  condition?: string;
   entity: StorableEntity;
+  names?: Record<string, string>;
+  values?: Record<string, unknown>;
 }): Promise<StorableEntity> {
   const docClient = getDocClient();
   const tableName = getTableName();
@@ -108,11 +121,106 @@ export async function updateEntity({
   const command = new PutCommand({
     Item: updatedEntity,
     TableName: tableName,
+    ...(condition
+      ? {
+          ConditionExpression: condition,
+          ...(names ? { ExpressionAttributeNames: names } : {}),
+          ...(values ? { ExpressionAttributeValues: values } : {}),
+        }
+      : {}),
   });
 
-  await docClient.send(command);
+  try {
+    await docClient.send(command);
+  } catch (error) {
+    if (
+      (error as { name?: string })?.name === "ConditionalCheckFailedException"
+    ) {
+      throw new ConflictError(
+        "The conditional update was rejected because the persisted state no longer matches the condition",
+      );
+    }
+    throw error;
+  }
   return updatedEntity;
 }
+
+const STATUS_FIELD = "status";
+
+/**
+ * Conditionally transition an entity's status, failing closed on a race.
+ *
+ * Reads the entity, merges `set`, and writes it back guarded by a
+ * ConditionExpression so the write commits only when the persisted `status`
+ * still equals `from`. If another writer moved the status inside the window the
+ * write is rejected and a `ConflictError` (409) is thrown, leaving the item
+ * unchanged — write-time enforcement of sticky lifecycle terminals and other
+ * status invariants. Omit `from` to guard only that the entity still exists.
+ *
+ * `from` and any `set.status` are validated against the model's registered
+ * `status` vocabulary (a no-op for free-string models). Throws `NotFoundError`
+ * (404) when the entity does not exist.
+ */
+export const transitionEntity = fabricService({
+  alias: "transitionEntity",
+  description:
+    "Conditionally update an entity only when its persisted status matches `from`, throwing ConflictError on a race",
+  input: {
+    id: {
+      type: String,
+      required: true,
+      description: "Entity id (partition key)",
+    },
+    from: {
+      type: String,
+      required: false,
+      description:
+        "Expected current status; the write is rejected if the persisted status differs",
+    },
+    set: {
+      type: Object,
+      required: true,
+      description: "Fields to merge into the entity (typically the new status)",
+    },
+  },
+  service: async ({
+    from,
+    id,
+    set,
+  }: {
+    from?: string;
+    id: string;
+    set: Record<string, unknown>;
+  }): Promise<StorableEntity> => {
+    const existing = await getEntity({ id });
+    if (!existing) {
+      throw new NotFoundError(`Entity ${id} not found`);
+    }
+
+    if (from !== undefined) {
+      assertModelStatus(existing.model, from);
+    }
+    if (typeof set[STATUS_FIELD] === "string") {
+      assertModelStatus(existing.model, set[STATUS_FIELD]);
+    }
+
+    const merged = { ...existing, ...set, id: existing.id } as StorableEntity;
+
+    if (from === undefined) {
+      return updateEntity({
+        condition: "attribute_exists(id)",
+        entity: merged,
+      });
+    }
+
+    return updateEntity({
+      condition: "attribute_exists(id) AND #status = :from",
+      entity: merged,
+      names: { "#status": STATUS_FIELD },
+      values: { ":from": from },
+    });
+  },
+});
 
 /**
  * Soft delete an entity by setting deletedAt timestamp
