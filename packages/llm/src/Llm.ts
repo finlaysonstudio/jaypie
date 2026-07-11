@@ -97,29 +97,25 @@ class Llm implements LlmProvider {
 
     switch (providerName) {
       case PROVIDER.ANTHROPIC.NAME:
-        return new AnthropicProvider(
-          model || PROVIDER.ANTHROPIC.MODEL.DEFAULT,
-          { apiKey },
-        );
+        return new AnthropicProvider(model || PROVIDER.ANTHROPIC.DEFAULT, {
+          apiKey,
+        });
       case PROVIDER.BEDROCK.NAME:
-        return new BedrockProvider(model || PROVIDER.BEDROCK.MODEL.DEFAULT);
+        return new BedrockProvider(model || PROVIDER.BEDROCK.DEFAULT);
       case PROVIDER.GOOGLE.NAME:
-        return new GoogleProvider(model || PROVIDER.GOOGLE.MODEL.DEFAULT, {
+        return new GoogleProvider(model || PROVIDER.GOOGLE.DEFAULT, {
           apiKey,
         });
       case PROVIDER.OPENAI.NAME:
-        return new OpenAiProvider(model || PROVIDER.OPENAI.MODEL.DEFAULT, {
+        return new OpenAiProvider(model || PROVIDER.OPENAI.DEFAULT, {
           apiKey,
         });
       case PROVIDER.OPENROUTER.NAME:
-        return new OpenRouterProvider(
-          model || PROVIDER.OPENROUTER.MODEL.DEFAULT,
-          {
-            apiKey,
-          },
-        );
+        return new OpenRouterProvider(model || PROVIDER.OPENROUTER.DEFAULT, {
+          apiKey,
+        });
       case PROVIDER.XAI.NAME:
-        return new XaiProvider(model || PROVIDER.XAI.MODEL.DEFAULT, {
+        return new XaiProvider(model || PROVIDER.XAI.DEFAULT, {
           apiKey,
         });
       default:

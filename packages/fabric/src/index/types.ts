@@ -44,6 +44,12 @@ export interface ModelSchema {
   model: string;
   /** Index definitions for this model */
   indexes?: IndexDefinition[];
+  /**
+   * Declared `status` vocabulary for this model. When present, `status` values
+   * on entities of this model are validated against this list. When absent,
+   * `status` is a free string. See the `status` axis in skill("vocabulary").
+   */
+  status?: string[];
 }
 
 // =============================================================================

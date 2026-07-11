@@ -44,9 +44,7 @@ describe("AnthropicAdapter", () => {
     });
 
     it("has correct default model", () => {
-      expect(anthropicAdapter.defaultModel).toBe(
-        PROVIDER.ANTHROPIC.MODEL.DEFAULT,
-      );
+      expect(anthropicAdapter.defaultModel).toBe(PROVIDER.ANTHROPIC.DEFAULT);
     });
   });
 
@@ -1315,12 +1313,12 @@ describe("AnthropicAdapter", () => {
 
       const result = anthropicAdapter.buildRequest(request);
 
-      expect(result.model).toBe(PROVIDER.ANTHROPIC.MODEL.DEFAULT);
+      expect(result.model).toBe(PROVIDER.ANTHROPIC.DEFAULT);
     });
 
     it("sets temperature on request when provided", () => {
       const request: OperateRequest = {
-        model: PROVIDER.ANTHROPIC.MODEL.DEFAULT,
+        model: PROVIDER.ANTHROPIC.DEFAULT,
         messages: [
           {
             content: "Hello",
@@ -1338,7 +1336,7 @@ describe("AnthropicAdapter", () => {
 
     it("temperature takes precedence over providerOptions", () => {
       const request: OperateRequest = {
-        model: PROVIDER.ANTHROPIC.MODEL.DEFAULT,
+        model: PROVIDER.ANTHROPIC.DEFAULT,
         messages: [],
         providerOptions: { temperature: 0.3 },
         temperature: 0.9,

@@ -36,7 +36,7 @@ export class OpenAiProvider implements LlmProvider {
   private conversationHistory: LlmHistoryItem[] = [];
 
   constructor(
-    model: string = PROVIDER.OPENAI.MODEL.DEFAULT,
+    model: string = PROVIDER.OPENAI.DEFAULT,
     { apiKey }: { apiKey?: string } = {},
   ) {
     this.model = model;

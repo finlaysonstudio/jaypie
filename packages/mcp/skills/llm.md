@@ -19,15 +19,22 @@ console.log(response.content); // "4"
 
 ## Providers and Models
 
-| Provider | Match Keywords | Default Model |
+| Provider | Match Keywords | Default Model (`PROVIDER.*.DEFAULT`) |
 |----------|----------------|---------------|
-| OpenAI | "openai", "gpt", /^o\d/ | gpt-5.4 |
-| Anthropic | "anthropic", "claude", "haiku", "opus", "sonnet" | claude-sonnet-4-6 |
-| Google | "google", "gemini" | gemini-3.1-pro-preview |
-| OpenRouter | "openrouter" | anthropic/claude-sonnet-4-6 |
+| OpenAI | "openai", "gpt", "sol", "terra", "luna", /^o\d/ | gpt-5.6-sol |
+| Anthropic | "anthropic", "claude", "fable", "haiku", "mythos", "opus", "sonnet" | claude-sonnet-5 |
+| Google | "google", "gemini" | gemini-3.5-flash |
+| OpenRouter | "openrouter" | anthropic/claude-sonnet-5 |
 | xAI | "xai", "grok" | grok-latest |
+| Bedrock | "amazon.nova", "anthropic.claude", "meta.llama", … | amazon.nova-pro-v1:0 |
 
 The provider name for Gemini models is `"google"` — `"gemini"` is accepted as a deprecated alias.
+
+### Model Constants
+
+- **`PROVIDER.<name>.DEFAULT`** — the single default model per provider (above), used when no `model` is given.
+- **`LLM.MODEL.*`** — the named model catalog (e.g. `MODEL.SONNET`, `MODEL.SOL`, `MODEL.GEMINI_FLASH`, `MODEL.GROK`), plus `MODEL.OPENROUTER.*` for provider-prefixed routes (`GLM`, `LUNA`, `SONNET`). Pick specific models from here.
+- **Deprecated:** the size-tier map `PROVIDER.<name>.MODEL.{DEFAULT,LARGE,SMALL,TINY}`, the `DEFAULT.MODEL` bundle, and `ALL` are `@deprecated` and retired in 2.0 — use `PROVIDER.*.DEFAULT` for defaults and `MODEL.*` for named models.
 
 ```typescript
 // Provider auto-detected from model
@@ -572,6 +579,7 @@ describe("LLM Integration", () => {
 ```typescript
 interface LlmOperateOptions {
   data?: Record<string, any>;           // Placeholder substitution data
+  effort?: LlmEffort;                   // Provider-neutral reasoning effort (lowest|low|medium|high|highest)
   fallback?: LlmFallbackConfig[] | false; // Fallback provider chain
   format?: NaturalSchema | JsonObject | ZodType; // Structured output schema (natural syntax preferred)
   history?: LlmHistory;                 // Previous conversation
@@ -592,6 +600,63 @@ interface LlmFallbackConfig {
   apiKey?: string;    // API key (optional, uses environment variable)
 }
 ```
+
+## Reasoning Effort
+
+`effort` is a provider-neutral reasoning control — a five-point relative scale
+(`lowest | low | medium | high | highest`, exported as `LLM.EFFORT`) where only
+the anchored `medium` borrows a provider word. Each adapter translates it to the
+provider's native knob, spreading the scale across that provider's available
+range, so one value works across providers and fallback chains. Omitting
+`effort` leaves the provider default untouched — it is **safe to set regardless
+of which model handles the call**.
+
+```typescript
+import Llm, { LLM } from "@jaypie/llm";
+
+await Llm.operate("Solve this step by step", {
+  model: "gpt-5.1",
+  effort: "high",          // or LLM.EFFORT.HIGH
+});
+```
+
+Per-provider translation (`medium`/`high` stay aligned across providers; ends
+collapse where a provider has fewer rungs):
+
+| `effort`  | OpenAI `reasoning.effort` | Anthropic `output_config.effort` | Gemini 3 `thinkingLevel` | Gemini 2.5 `thinkingBudget` | Grok `reasoning_effort` | OpenRouter `reasoning.effort` |
+|-----------|---------------------------|----------------------------------|--------------------------|-----------------------------|-------------------------|-------------------------------|
+| `lowest`  | minimal | low    | MINIMAL | 512   | low    | minimal |
+| `low`     | low     | low    | LOW     | 4096  | low    | low     |
+| `medium`  | medium  | medium | MEDIUM  | 8192  | medium | medium  |
+| `high`    | high    | high   | HIGH    | 16384 | high   | high    |
+| `highest` | xhigh   | max    | HIGH    | 24576 | high   | xhigh   |
+
+When a neutral level has no distinct native rung and collapses onto a neighbor
+(e.g. `highest` → Grok `high`), the adapter logs it at `log.debug` for the
+record. OpenAI's extremes are also version-gated: `xhigh` (`highest`) applies
+only to gpt-5.2+ and `minimal` (`lowest`) only to gpt-5.4+ (its history is
+non-monotonic); older gpt-5 / o-series clamp the end to `high`/`low`.
+
+Gating (effort is silently ignored where reasoning is unavailable, never
+erroring):
+
+- **OpenAI** — only reasoning models (`gpt-5+`, `o`-series); merges with the
+  auto `reasoning.summary`. `xhigh` requires gpt-5.2+, `minimal` requires
+  gpt-5.4+ (else clamped).
+- **Anthropic** — only Claude 4.5+ / 5 models (`output_config.effort`); merges
+  alongside a structured-output `format` config.
+- **Google** — `thinkingLevel` for Gemini 3.x, `thinkingBudget` for Gemini 2.5;
+  other models get nothing.
+- **xAI** — only models whose name advertises reasoning (e.g.
+  `grok-4-1-fast-reasoning`); bare `grok-latest` and `*-non-reasoning` are
+  skipped.
+- **OpenRouter** — always forwarded; OpenRouter maps to the routed model's
+  nearest supported level.
+- **Bedrock** — not yet wired; `effort` is ignored.
+
+First-class `effort` takes precedence over a raw `providerOptions.reasoning`
+(same convention as `temperature`). For control the neutral scale doesn't
+express (an exact token budget, OpenAI `none`), use `providerOptions` directly.
 
 ## Provider Options and Output Limits
 

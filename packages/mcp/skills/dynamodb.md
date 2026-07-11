@@ -255,6 +255,18 @@ registerModel({
 });
 ```
 
+A model may also declare an optional `status` vocabulary. `status` is a per-model axis (see skill("vocabulary")); declaring the vocabulary lets `isModelStatus(model, value)` / `assertModelStatus(model, status)` validate against it. Models that omit `status` keep free-string behavior.
+
+```typescript
+registerModel({
+  model: "belief",
+  indexes: [fabricIndex()],
+  status: ["active", "suspended", "superseded", "retracted"],
+});
+
+assertModelStatus("belief", "banana"); // throws BadRequestError
+```
+
 ### Query Functions
 
 All queries return `{ items, lastEvaluatedKey }` and support pagination. `scope` is always optional — when omitted, queries span all scopes. `queryByCategory` and `queryByType` throw `ConfigurationError` if the model has not registered the corresponding `fabricIndex()`.

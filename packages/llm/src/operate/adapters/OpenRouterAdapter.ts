@@ -3,6 +3,7 @@ import { JsonObject, NaturalSchema } from "@jaypie/types";
 import { z } from "zod/v4";
 
 import { PROVIDER } from "../../constants.js";
+import { toOpenRouterEffort } from "../../util/effort.js";
 import { Toolkit } from "../../tools/Toolkit.class.js";
 import {
   LlmHistory,
@@ -119,6 +120,7 @@ interface OpenRouterRequest {
   tools?: OpenRouterTool[];
   tool_choice?: "auto" | "none" | "required";
   response_format?: OpenRouterResponseFormat;
+  reasoning?: { effort?: string; max_tokens?: number };
   user?: string;
 }
 
@@ -359,7 +361,7 @@ function enforceAdditionalPropertiesFalse(schema: JsonObject): void {
  */
 export class OpenRouterAdapter extends BaseProviderAdapter {
   readonly name = PROVIDER.OPENROUTER.NAME;
-  readonly defaultModel = PROVIDER.OPENROUTER.MODEL.DEFAULT;
+  readonly defaultModel = PROVIDER.OPENROUTER.DEFAULT;
 
   // Session-level cache of models observed to reject native
   // `response_format: json_schema`. When a model is in this set, buildRequest
@@ -475,6 +477,16 @@ export class OpenRouterAdapter extends BaseProviderAdapter {
 
     if (request.providerOptions) {
       Object.assign(openRouterRequest, request.providerOptions);
+    }
+
+    // Normalized reasoning effort -> reasoning.effort. OpenRouter accepts the
+    // full ladder and maps to the routed provider's nearest supported level.
+    // First-class effort wins over providerOptions.
+    if (request.effort) {
+      openRouterRequest.reasoning = {
+        ...openRouterRequest.reasoning,
+        effort: toOpenRouterEffort(request.effort).value,
+      };
     }
 
     // First-class temperature takes precedence over providerOptions

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 // Subject
-import { DEFAULT, PROVIDER } from "../constants.js";
+import { DEFAULT, MODEL, PROVIDER } from "../constants.js";
 
 describe("Constants", () => {
   it("Exports constants we expect", () => {
@@ -58,6 +58,30 @@ describe("Constants", () => {
 
     it("Keeps PROVIDER.GEMINI as a deprecated alias of PROVIDER.GOOGLE", () => {
       expect(PROVIDER.GEMINI).toBe(PROVIDER.GOOGLE);
+    });
+  });
+
+  describe("MODEL Constants", () => {
+    it("Exposes an OpenRouter subtree of provider-prefixed routes", () => {
+      expect(MODEL.OPENROUTER).toBeObject();
+      expect(MODEL.OPENROUTER.GLM).toBe("z-ai/glm-5.2");
+      expect(MODEL.OPENROUTER.LUNA).toBe("openai/gpt-5.6-luna");
+      expect(MODEL.OPENROUTER.SONNET).toBe("anthropic/claude-sonnet-5");
+    });
+  });
+
+  describe("Provider DEFAULT (replaces the deprecated tier map)", () => {
+    it("Exposes a single default model per provider, drawn from MODEL.*", () => {
+      expect(PROVIDER.ANTHROPIC.DEFAULT).toBe(MODEL.SONNET);
+      expect(PROVIDER.GOOGLE.DEFAULT).toBe(MODEL.GEMINI_FLASH);
+      expect(PROVIDER.OPENAI.DEFAULT).toBe(MODEL.SOL);
+      expect(PROVIDER.OPENROUTER.DEFAULT).toBe(MODEL.OPENROUTER.SONNET);
+      expect(PROVIDER.XAI.DEFAULT).toBe(MODEL.GROK);
+      expect(PROVIDER.BEDROCK.DEFAULT).toBeString();
+    });
+
+    it("Points the library base default at OpenAI's default", () => {
+      expect(DEFAULT.PROVIDER.DEFAULT).toBe(PROVIDER.OPENAI.DEFAULT);
     });
   });
 });

@@ -3,6 +3,7 @@ import { JsonObject, NaturalSchema } from "@jaypie/types";
 import { z } from "zod/v4";
 
 import { PROVIDER } from "../../constants.js";
+import { paperedEffortMessage, toAnthropicEffort } from "../../util/effort.js";
 import { Toolkit } from "../../tools/Toolkit.class.js";
 import {
   LlmHistory,
@@ -52,12 +53,28 @@ const STRUCTURED_OUTPUT_TOOL_NAME = "structured_output";
  */
 type AnthropicRequestParams = Anthropic.MessageCreateParams & {
   output_config?: {
-    format: {
+    effort?: string;
+    format?: {
       type: "json_schema";
       schema: JsonObject;
     };
   };
 };
+
+/**
+ * Whether `output_config.effort` may be sent for this model. Anthropic added
+ * the effort control on the Claude 4.5 line and up (the 5 family); older models
+ * reject it. Parsing major/minor avoids matching a minor "5" in legacy ids
+ * like `claude-3-5-sonnet`.
+ */
+function supportsAnthropicEffort(model: string): boolean {
+  const match = model.match(/claude-[a-z]+-(\d+)(?:-(\d+))?/);
+  if (!match) return false;
+  const major = Number(match[1]);
+  const minor = match[2] !== undefined ? Number(match[2]) : 0;
+  if (major >= 5) return true;
+  return major === 4 && minor >= 5;
+}
 
 /**
  * Anthropic responses we annotate at receive time so downstream stateless
@@ -388,7 +405,7 @@ function isStructuredOutputUnsupportedError(error: unknown): boolean {
  */
 export class AnthropicAdapter extends BaseProviderAdapter {
   readonly name = PROVIDER.ANTHROPIC.NAME;
-  readonly defaultModel = PROVIDER.ANTHROPIC.MODEL.DEFAULT;
+  readonly defaultModel = PROVIDER.ANTHROPIC.DEFAULT;
 
   // Session-level cache of models observed to reject `temperature` at runtime.
   // Populated by executeRequest on 400 errors so repeat calls skip the param.
@@ -564,6 +581,29 @@ export class AnthropicAdapter extends BaseProviderAdapter {
       Object.assign(anthropicRequest, request.providerOptions);
     }
 
+    // Normalized reasoning effort -> output_config.effort (merged so a format
+    // config above survives). First-class effort wins over providerOptions.
+    if (
+      request.effort &&
+      supportsAnthropicEffort(anthropicRequest.model as string)
+    ) {
+      const mapping = toAnthropicEffort(request.effort);
+      if (mapping.papered) {
+        log.debug(
+          paperedEffortMessage({
+            model: anthropicRequest.model as string,
+            provider: this.name,
+            requested: request.effort,
+            value: mapping.value,
+          }),
+        );
+      }
+      anthropicRequest.output_config = {
+        ...anthropicRequest.output_config,
+        effort: mapping.value,
+      };
+    }
+
     // First-class temperature takes precedence over providerOptions
     if (request.temperature !== undefined) {
       anthropicRequest.temperature = request.temperature;
@@ -697,8 +737,12 @@ export class AnthropicAdapter extends BaseProviderAdapter {
     request: AnthropicRequestParams,
   ): AnthropicRequestParams {
     const { output_config, ...rest } = request;
-    if (!output_config) return request;
+    if (!output_config?.format) return request;
     const fallbackRequest: AnthropicRequestParams = { ...rest };
+    // Preserve an effort setting; only the structured-output format falls back.
+    if (output_config.effort) {
+      fallbackRequest.output_config = { effort: output_config.effort };
+    }
     const fakeTool = {
       name: STRUCTURED_OUTPUT_TOOL_NAME,
       description:

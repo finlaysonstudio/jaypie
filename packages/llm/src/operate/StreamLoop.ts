@@ -159,6 +159,7 @@ export class StreamLoop {
 
         // Rebuild request with updated history for next turn
         request = {
+          effort: options.effort,
           format: state.formattedFormat,
           instructions: options.instructions,
           messages: state.currentInput,
@@ -253,6 +254,7 @@ export class StreamLoop {
     options: LlmOperateOptions,
   ): OperateRequest {
     return {
+      effort: options.effort,
       format: state.formattedFormat,
       instructions: options.instructions,
       messages: state.currentInput,

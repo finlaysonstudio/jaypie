@@ -44,7 +44,7 @@ describe("GoogleAdapter", () => {
     });
 
     it("has correct default model", () => {
-      expect(googleAdapter.defaultModel).toBe(PROVIDER.GOOGLE.MODEL.DEFAULT);
+      expect(googleAdapter.defaultModel).toBe(PROVIDER.GOOGLE.DEFAULT);
     });
   });
 
@@ -286,7 +286,7 @@ describe("GoogleAdapter", () => {
       describe("maxOutputTokens resolution (issue #402)", () => {
         it("defaults non-streaming requests to the non-streaming maximum", () => {
           const request: OperateRequest = {
-            model: PROVIDER.GOOGLE.MODEL.DEFAULT,
+            model: PROVIDER.GOOGLE.DEFAULT,
             messages: [],
           };
 
@@ -297,7 +297,7 @@ describe("GoogleAdapter", () => {
 
         it("defaults streaming requests to the model maximum output", () => {
           const request: OperateRequest = {
-            model: PROVIDER.GOOGLE.MODEL.DEFAULT,
+            model: PROVIDER.GOOGLE.DEFAULT,
             messages: [],
             stream: true,
           };
@@ -320,7 +320,7 @@ describe("GoogleAdapter", () => {
 
         it("respects providerOptions maxOutputTokens override", () => {
           const request: OperateRequest = {
-            model: PROVIDER.GOOGLE.MODEL.DEFAULT,
+            model: PROVIDER.GOOGLE.DEFAULT,
             messages: [],
             providerOptions: { maxOutputTokens: 8192 },
             stream: true,
@@ -985,7 +985,7 @@ describe("GoogleAdapter", () => {
 
       const result = googleAdapter.buildRequest(request);
 
-      expect(result.model).toBe(PROVIDER.GOOGLE.MODEL.DEFAULT);
+      expect(result.model).toBe(PROVIDER.GOOGLE.DEFAULT);
     });
 
     it("sets temperature in config when provided", () => {

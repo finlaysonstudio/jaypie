@@ -22,6 +22,10 @@ export interface User {
 }
 ```
 
+### Identifiers
+
+Use a UUID (v4 by convention) for `id`. The convention is a recommendation, not a constraint: `id` is typed `string` and neither fabric nor the storage layer enforces the format, so externally supplied or legacy identifiers remain valid. See `id` in `skill("vocabulary")` — "uuid, usually v4 but unrestricted."
+
 ### Input/Output Types
 
 Separate types for different operations:
@@ -196,6 +200,7 @@ export interface PaginatedResponse<T> {
 3. **Use const assertions** - `as const` for literal types
 4. **Document fields** - Add JSDoc comments for complex types
 5. **Prefer interfaces** - Use `interface` over `type` for objects
+6. **UUID ids by convention** - Use a v4 UUID for `id`; type it `string` and do not enforce the format
 
 ## See Also
 

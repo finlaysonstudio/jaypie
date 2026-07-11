@@ -7,11 +7,13 @@
 // Usage:
 //   npm run test:matrix -w packages/llm
 //   LOG_LEVEL=warn npm run test:matrix -w packages/llm   # quiet trace/debug
-//   APP_MODELS=claude-sonnet-4-5,gpt-4o npm run test:matrix -w packages/llm
+//   APP_MODELS=claude-sonnet-5,gpt-5.6-sol npm run test:matrix -w packages/llm
+//   APP_GROUP=anthropic npm run test:matrix -w packages/llm
 //   APP_CAPABILITIES=plain,tools npm run test:matrix -w packages/llm
 //
 // Env:
-//   APP_MODELS       comma-separated override for the configured model list
+//   APP_MODELS       comma-separated id override for the model list
+//   APP_GROUP        comma-separated provider names to shard by (e.g. google,xai)
 //   APP_CAPABILITIES comma-separated subset of capabilities to run
 //   APP_USER         user tag forwarded to provider calls
 //   LOG_LEVEL        set to "warn" or higher to silence Jaypie trace/debug
@@ -26,6 +28,7 @@ import { dirname, join, resolve } from "path";
 import { fileURLToPath } from "url";
 
 import { Llm, LlmOperateInput, toolkit } from "../src/index.js";
+import { determineModelProvider } from "../src/util/determineModelProvider.js";
 import {
   CAPABILITIES,
   Capability,
@@ -572,16 +575,33 @@ function formatBedrockReport(evaluation: CollectiveEvaluation): string[] {
 //
 
 function selectModels(): readonly ModelConfig[] {
-  const env = process.env.APP_MODELS;
-  if (!env) return MODELS;
-  const ids = env
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean);
-  return ids.map((id) => {
-    const existing = MODELS.find((m) => m.model === id);
-    return existing ?? { model: id, expect: {} };
-  });
+  // Explicit id override wins.
+  const modelsEnv = process.env.APP_MODELS;
+  if (modelsEnv) {
+    const ids = modelsEnv
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    return ids.map((id) => {
+      const existing = MODELS.find((m) => m.model === id);
+      return existing ?? { model: id, expect: {} };
+    });
+  }
+  // Otherwise shard by provider group (CI passes APP_GROUP per matrix cell).
+  const groupEnv = process.env.APP_GROUP;
+  if (groupEnv) {
+    const groups = new Set(
+      groupEnv
+        .split(",")
+        .map((s) => s.trim().toLowerCase())
+        .filter(Boolean),
+    );
+    return MODELS.filter((m) => {
+      const provider = m.provider ?? determineModelProvider(m.model).provider;
+      return provider ? groups.has(provider) : false;
+    });
+  }
+  return MODELS;
 }
 
 function selectCapabilities(): readonly Capability[] {

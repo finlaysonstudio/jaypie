@@ -179,6 +179,7 @@ export class OperateLoop {
 
           // Rebuild request with updated history for next turn
           request = {
+            effort: options.effort,
             format: state.formattedFormat,
             instructions: options.instructions,
             messages: state.currentInput,
@@ -304,6 +305,7 @@ export class OperateLoop {
     options: LlmOperateOptions,
   ): OperateRequest {
     return {
+      effort: options.effort,
       format: state.formattedFormat,
       instructions: options.instructions,
       messages: state.currentInput,

@@ -97,7 +97,7 @@ Requires `JaypieCicd` stack deployed.
 
 **Triggers:** push to `main`; tags `deploy-*`, `dev-*`, `rc-*`
 
-**Jobs:** `lint`, `typecheck`, `test`, `deploy`, `build-llm`, `test-llm-client`, `test-llm-matrix`
+**Jobs:** `lint`, `typecheck`, `test`, `deploy`, `build-llm`, `test-llm-matrix`
 
 `deploy` runs independently (no `needs`). Iterates `packages/*/`, skips private packages and already-published versions.
 
@@ -108,9 +108,7 @@ Requires `JaypieCicd` stack deployed.
 
 **test job:** optionally wraps `npm test` with Datadog tracing when `DATADOG_CICD_API_KEY` is set.
 
-**test-llm-client:** always runs (no path filter), uses sandbox environment, Bedrock two-step role assumption.
-
-**test-llm-matrix:** always runs (no path filter), same matrix groups as npm-check, Bedrock two-step role assumption for `bedrock` group.
+**test-llm-matrix:** always runs (no path filter), same matrix groups as npm-check, Bedrock two-step role assumption for `bedrock` group. Owns live-model coverage (the former `test-llm-client` job was retired — its tools+structured "both" scenario is a subset of the matrix's `both` capability, and the matrix now includes each provider's default model).
 
 **Bedrock two-step role assumption** (same pattern as npm-check):
 1. `configure-aws` with `vars.AWS_ROLE_ARN` (sandbox environment)

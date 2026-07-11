@@ -56,6 +56,7 @@ export type { ResolvedNameModel } from "./helpers/index.js";
 // Index (DynamoDB index definitions and key builders)
 export {
   ARCHIVED_SUFFIX,
+  assertModelStatus,
   buildCompositeKey,
   calculateIndexSuffix,
   calculateScope,
@@ -67,8 +68,10 @@ export {
   getGsiAttributeNames,
   getModelIndexes,
   getModelSchema,
+  getModelStatus,
   getRegisteredModels,
   isModelRegistered,
+  isModelStatus,
   populateIndexKeys,
   registerModel,
   tryBuildCompositeKey,

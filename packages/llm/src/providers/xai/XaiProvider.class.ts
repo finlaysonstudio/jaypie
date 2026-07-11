@@ -36,7 +36,7 @@ export class XaiProvider implements LlmProvider {
   private conversationHistory: LlmHistoryItem[] = [];
 
   constructor(
-    model: string = PROVIDER.XAI.MODEL.DEFAULT,
+    model: string = PROVIDER.XAI.DEFAULT,
     { apiKey }: { apiKey?: string } = {},
   ) {
     this.model = model;

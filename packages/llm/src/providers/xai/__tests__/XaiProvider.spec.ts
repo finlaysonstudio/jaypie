@@ -54,7 +54,7 @@ describe("XaiProvider", () => {
 
     it("defaults to xAI default model", () => {
       const provider = new XaiProvider();
-      expect(provider["model"]).toBe(PROVIDER.XAI.MODEL.DEFAULT);
+      expect(provider["model"]).toBe(PROVIDER.XAI.DEFAULT);
     });
 
     it("accepts a custom model", () => {

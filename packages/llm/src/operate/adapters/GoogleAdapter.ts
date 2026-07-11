@@ -3,6 +3,11 @@ import { JsonObject, NaturalSchema } from "@jaypie/types";
 import { z } from "zod/v4";
 
 import { PROVIDER } from "../../constants.js";
+import {
+  paperedEffortMessage,
+  toGeminiThinkingBudget,
+  toGeminiThinkingLevel,
+} from "../../util/effort.js";
 import { Toolkit } from "../../tools/Toolkit.class.js";
 import {
   LlmHistory,
@@ -56,6 +61,12 @@ const STRUCTURED_OUTPUT_TOOL_NAME = "structured_output";
 // (including 2.5 thinking) do not support the combo and fall back to the
 // legacy `structured_output` fake-tool emulation.
 const GEMINI_3_PATTERN = /^gemini-3/;
+
+// Reasoning-effort control differs by generation: Gemini 3.x takes the
+// `thinkingLevel` enum, Gemini 2.5 takes an integer `thinkingBudget`. Sending
+// the wrong one errors, and models outside these families have no thinking
+// control, so effort is only applied when one of these matches.
+const GEMINI_25_PATTERN = /^gemini-2\.5/;
 
 /**
  * Detect 4xx errors that indicate the model itself does not support the
@@ -114,7 +125,7 @@ const NOT_RETRYABLE_STATUS_CODES = [
  */
 export class GoogleAdapter extends BaseProviderAdapter {
   readonly name = PROVIDER.GOOGLE.NAME;
-  readonly defaultModel = PROVIDER.GOOGLE.MODEL.DEFAULT;
+  readonly defaultModel = PROVIDER.GOOGLE.DEFAULT;
 
   // Session-level cache of Gemini 3 models observed to reject the native
   // `responseJsonSchema` + tools combo. When a model is in this set,
@@ -269,6 +280,45 @@ export class GoogleAdapter extends BaseProviderAdapter {
         ...geminiRequest.config,
         ...request.providerOptions,
       };
+    }
+
+    // Normalized reasoning effort -> thinkingConfig. Gemini 3.x uses the
+    // thinkingLevel enum; 2.5 uses an integer thinkingBudget. Merged so a
+    // providerOptions.thinkingConfig survives; first-class effort wins.
+    if (request.effort) {
+      const model = geminiRequest.model;
+      let thinkingConfig:
+        { thinkingLevel?: string; thinkingBudget?: number } | undefined;
+      let papered = false;
+      let value: string | number | undefined;
+      if (GEMINI_3_PATTERN.test(model)) {
+        const mapping = toGeminiThinkingLevel(request.effort);
+        ({ papered, value } = mapping);
+        thinkingConfig = { thinkingLevel: mapping.value };
+      } else if (GEMINI_25_PATTERN.test(model)) {
+        const mapping = toGeminiThinkingBudget(request.effort);
+        ({ papered, value } = mapping);
+        thinkingConfig = { thinkingBudget: mapping.value };
+      }
+      if (thinkingConfig) {
+        if (papered) {
+          log.debug(
+            paperedEffortMessage({
+              model,
+              provider: this.name,
+              requested: request.effort,
+              value: value!,
+            }),
+          );
+        }
+        geminiRequest.config = {
+          ...geminiRequest.config,
+          thinkingConfig: {
+            ...geminiRequest.config?.thinkingConfig,
+            ...thinkingConfig,
+          },
+        };
+      }
     }
 
     // First-class temperature takes precedence over providerOptions

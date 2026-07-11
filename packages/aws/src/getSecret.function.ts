@@ -112,10 +112,10 @@ async function getSecret(name: string): Promise<string | undefined> {
             axiosError.response.status >= 400 &&
             axiosError.response.status < 500
           ) {
-            logger.error(
+            logger.debug(
               `[@jaypie/aws] Client error from Secrets Extension (${axiosError.response?.status})`,
             );
-            logger.error({
+            logger.debug({
               secretExtensionError: {
                 message: axiosError.message,
                 responseData: axiosError.response?.data,
@@ -143,7 +143,7 @@ async function getSecret(name: string): Promise<string | undefined> {
     const axiosError = error as AxiosError;
 
     // All extension errors fall through to AWS SDK fallback
-    logger.warn(
+    logger.debug(
       "[@jaypie/aws] Secrets Extension failed after retries, falling back to AWS SDK",
     );
     logger.debug({
