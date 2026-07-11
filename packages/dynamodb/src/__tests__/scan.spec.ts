@@ -51,7 +51,7 @@ describe("Scan Utilities", () => {
 
     it("defaults to the initialized table name", async () => {
       send.mockResolvedValueOnce({ Items: [] });
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
       for await (const _ of scanTable()) {
         // drain
       }
@@ -61,7 +61,7 @@ describe("Scan Utilities", () => {
 
     it("scans an explicit table name", async () => {
       send.mockResolvedValueOnce({ Items: [] });
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
       for await (const _ of scanTable({ tableName: "old-table" })) {
         // drain
       }

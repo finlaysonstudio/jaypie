@@ -16,6 +16,7 @@ import {
   destroyEntity,
   getEntity,
   createEntity,
+  transitionEntity,
   updateEntity,
 } from "../entities.js";
 import type { StorableEntity } from "../types.js";
@@ -31,6 +32,11 @@ beforeAll(() => {
       fabricIndex("type"),
       fabricIndex("xid"),
     ],
+  });
+  registerModel({
+    model: "job",
+    indexes: [fabricIndex()],
+    status: ["running", "complete", "error", "canceled", "expired"],
   });
 });
 
@@ -221,6 +227,138 @@ describe("Entity Operations", () => {
         expiresAt?: unknown;
       };
       expect(result.expiresAt).toBe(expiresAt.toISOString());
+    });
+
+    it("emits no ConditionExpression by default", async () => {
+      await updateEntity({ entity: createTestEntity() });
+      const command = mockSend.mock.calls[0][0];
+      expect(command.input.ConditionExpression).toBeUndefined();
+    });
+
+    it("passes condition, names, and values through to the Put", async () => {
+      await updateEntity({
+        condition: "#status = :from",
+        entity: createTestEntity(),
+        names: { "#status": "status" },
+        values: { ":from": "running" },
+      });
+      const command = mockSend.mock.calls[0][0];
+      expect(command.input.ConditionExpression).toBe("#status = :from");
+      expect(command.input.ExpressionAttributeNames).toEqual({
+        "#status": "status",
+      });
+      expect(command.input.ExpressionAttributeValues).toEqual({
+        ":from": "running",
+      });
+    });
+
+    it("throws a ConflictError when the condition fails", async () => {
+      mockSend.mockRejectedValue(
+        Object.assign(new Error("The conditional request failed"), {
+          name: "ConditionalCheckFailedException",
+        }),
+      );
+      await expect(
+        updateEntity({
+          condition: "attribute_exists(id)",
+          entity: createTestEntity(),
+        }),
+      ).rejects.toMatchObject({ isJaypieError: true, status: 409 });
+    });
+
+    it("propagates errors that are not conditional-check failures", async () => {
+      mockSend.mockRejectedValue(new Error("Throughput exceeded"));
+      await expect(
+        updateEntity({
+          condition: "attribute_exists(id)",
+          entity: createTestEntity(),
+        }),
+      ).rejects.toThrow("Throughput exceeded");
+    });
+  });
+
+  describe("transitionEntity", () => {
+    const runningJob = (): StorableEntity =>
+      ({
+        id: "job-1",
+        model: "job",
+        scope: "@",
+        status: "running",
+      }) as StorableEntity;
+
+    it("guards the write on the current status and merges set", async () => {
+      mockSend.mockResolvedValue({ Item: runningJob() });
+
+      await transitionEntity({
+        from: "running",
+        id: "job-1",
+        set: { status: "complete" },
+      });
+
+      // First send is the GetCommand, second is the conditional PutCommand
+      const put = mockSend.mock.calls[1][0];
+      expect(put.input.ConditionExpression).toBe(
+        "attribute_exists(id) AND #status = :from",
+      );
+      expect(put.input.ExpressionAttributeNames).toEqual({
+        "#status": "status",
+      });
+      expect(put.input.ExpressionAttributeValues).toEqual({
+        ":from": "running",
+      });
+      expect(put.input.Item.status).toBe("complete");
+    });
+
+    it("guards only existence when from is omitted", async () => {
+      mockSend.mockResolvedValue({ Item: runningJob() });
+
+      await transitionEntity({ id: "job-1", set: { status: "complete" } });
+
+      const put = mockSend.mock.calls[1][0];
+      expect(put.input.ConditionExpression).toBe("attribute_exists(id)");
+      expect(put.input.ExpressionAttributeNames).toBeUndefined();
+    });
+
+    it("throws NotFoundError when the entity does not exist", async () => {
+      mockSend.mockResolvedValue({});
+
+      await expect(
+        transitionEntity({
+          from: "running",
+          id: "missing",
+          set: { status: "complete" },
+        }),
+      ).rejects.toMatchObject({ isJaypieError: true, status: 404 });
+    });
+
+    it("throws ConflictError when another writer moved the status", async () => {
+      mockSend
+        .mockResolvedValueOnce({ Item: runningJob() })
+        .mockRejectedValueOnce(
+          Object.assign(new Error("The conditional request failed"), {
+            name: "ConditionalCheckFailedException",
+          }),
+        );
+
+      await expect(
+        transitionEntity({
+          from: "running",
+          id: "job-1",
+          set: { status: "complete" },
+        }),
+      ).rejects.toMatchObject({ isJaypieError: true, status: 409 });
+    });
+
+    it("rejects a status outside the model vocabulary", async () => {
+      mockSend.mockResolvedValue({ Item: runningJob() });
+
+      await expect(
+        transitionEntity({
+          from: "running",
+          id: "job-1",
+          set: { status: "banana" },
+        }),
+      ).rejects.toMatchObject({ isJaypieError: true, status: 400 });
     });
   });
 

@@ -79,9 +79,24 @@ export const createEntity = createMockFunction<
 );
 
 export const updateEntity = createMockFunction<
-  (params: { entity: StorableEntity }) => Promise<StorableEntity>
->(async (params: { entity: StorableEntity }) =>
-  original.indexEntity(params.entity),
+  (params: {
+    condition?: string;
+    entity: StorableEntity;
+    names?: Record<string, string>;
+    values?: Record<string, unknown>;
+  }) => Promise<StorableEntity>
+>(async (params) => original.indexEntity(params.entity));
+
+// Defaults to a successful transition. Simulate a conditional-check failure by
+// overriding: `vi.mocked(transitionEntity).mockRejectedValueOnce(new ConflictError())`.
+export const transitionEntity = createMockFunction<
+  (params: {
+    from?: string;
+    id: string;
+    set: Record<string, unknown>;
+  }) => Promise<StorableEntity>
+>(async ({ id, set }) =>
+  original.indexEntity({ id, ...set } as StorableEntity),
 );
 
 export const deleteEntity = createMockFunction<

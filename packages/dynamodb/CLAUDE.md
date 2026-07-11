@@ -54,7 +54,8 @@ src/
 |--------|-------------|
 | `getEntity({ id })` | Get a single entity by primary key (id only) |
 | `createEntity({ entity })` | Create entity; returns `null` if `id` already exists (conditional write on `attribute_not_exists(id)`) |
-| `updateEntity({ entity })` | Create or replace entity (auto-indexes, auto-timestamps) |
+| `updateEntity({ entity, condition?, names?, values? })` | Create or replace entity (auto-indexes, auto-timestamps). Optional `condition` (a ConditionExpression with `names`/`values` bindings) guards the write; throws `ConflictError` (409) and leaves the item unchanged when the condition fails |
+| `transitionEntity({ id, from?, set })` | Conditionally update by status: reads the entity, merges `set`, writes guarded by `#status = from`; throws `ConflictError` (409) on a race and `NotFoundError` (404) when absent. Validates `from`/`set.status` against the model's `status` vocabulary |
 | `deleteEntity({ id })` | Soft delete (sets `deletedAt`, re-indexes with `#deleted` suffix) |
 | `archiveEntity({ id })` | Archive (sets `archivedAt`, re-indexes with `#archived` suffix) |
 | `destroyEntity({ id })` | Hard delete (permanently removes) |
