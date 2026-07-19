@@ -120,11 +120,7 @@ Utilize these MCP when provided. When they are unavailable but would be useful, 
   - Use documented mock patterns in `@jaypie/testkit`
 ### Development Notes (memories)
 - Whenever a new export is added to a package, make sure to update the exports of packages/testkit or tests will fail
-- After any functionality changes, check @packages/mcp/prompts and update relevant documentation
-- Add release notes to `packages/mcp/release-notes/<package>/<version>.md` for version bumps with frontmatter (version, date, summary)
-- Updating mcp or testkit requires bumping the package version (patch)
-- NEVER update major or minor versions without explicit instructions. Even if a new feature is added, only use patch.
-- Do not bump a package twice in a branch. Versions are only published when merged into main. Check the current version on NPM when unsure
+- After any functionality changes, check `packages/mcp/skills/` and update relevant documentation
+- **Versioning and publishing policy lives in [VERSIONING.md](VERSIONING.md)** — patch-only, one bump per branch, when to bump `jaypie` and subpackages, release notes, and publish mechanics
 - Avoid default exports
-- Do not preserve backwards compatibility in unreleased changes or pre-1.0 packages
 - Question the user if a feature is requested that is near-identical to something that already exists
