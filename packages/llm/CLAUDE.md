@@ -373,6 +373,24 @@ loop. The `hooks` option remains the right choice when the full provider
 request/response payloads are needed. `stream()` communicates progress
 through its chunks; `onProgress` applies to `operate()`.
 
+### Exchange Capture
+
+`operate()` accepts `onExchange`, fired once per settlement (success or
+failure) with a fully serializable `LlmExchangeEnvelope`: `request` (raw
+pre-interpolation input, data, placeholders, system, instructions, model,
+format as JSON Schema, tool names, turns, temperature, effort,
+providerOptions, user), `response` (content, historyDelta, per-call usage +
+`usageTotals` keyed `provider:model`, reasoning, status, error, stopReason),
+`resolution` (served provider/model, fallbackUsed, fallbackAttempts,
+retries), `timing`, and provider response `ids`. Callback errors are logged
+and never interrupt the call. The loop assembles the envelope
+(`src/operate/exchange/`), attaches it as `response.exchange` (or onto a
+thrown error), and the `Llm` facade stamps `resolution` and fires the
+callback exactly once per `operate()`. Setting `LLM_EXCHANGE_ENABLED` also
+persists each envelope via `@jaypie/dynamodb`'s `storeExchange`
+(`src/observability/exchangeStore.ts`, same lazy bundler-safe pattern as
+LLMObs; silent no-op when the optional peer is absent).
+
 ### Operate Logging
 
 The operate loop logs `operate.input`, `operate.options`, `operate.request`,
@@ -497,6 +515,7 @@ when the matching `*_API_KEY` is set and skip otherwise.
 - `FIREWORKS_API_KEY` - Fireworks API key
 - `OPENROUTER_API_KEY` - OpenRouter API key
 - `XAI_API_KEY` - xAI (Grok) API key
+- `LLM_EXCHANGE_ENABLED` - Persist each `operate()` call as an `exchange` entity via `@jaypie/dynamodb` `storeExchange` (optional peer, lazily resolved; silent no-op when absent)
 
 Keys are resolved via `getEnvSecret` from `@jaypie/aws` (supports AWS Secrets Manager).
 

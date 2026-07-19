@@ -206,6 +206,14 @@ export const query = createMockFunction<
   lastEvaluatedKey: undefined,
 }));
 
+// Exchange persistence — resolves the mapped entity without writing
+export const storeExchange = createMockFunction<
+  (
+    envelope: Record<string, unknown>,
+    options?: { exchange?: string; scope?: string },
+  ) => Promise<StorableEntity | null>
+>(async () => null);
+
 // Seed and export utilities
 export const seedEntityIfNotExists = createMockFunction<
   <T extends Partial<StorableEntity>>(entity: T) => Promise<boolean>

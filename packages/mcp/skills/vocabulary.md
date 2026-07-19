@@ -44,6 +44,7 @@ Arguably identity, instance, and relation would form a more complete vocabulary.
 - image: tbd, likely urls and references
 - input: request parameters
 - label: shortened, accepted version of name
+- llm: served LLM model id (e.g., "claude-sonnet-5"); used because `model` is reserved for the entity type
 - level: severity of a log emission (trace, debug, info, warn, error, fatal); a property of an emission, distinct from a lifecycle `status` though Datadog serializes it under the `status` field (see logs skill)
 - links: usually http references
 - message/s: string/s or message object/s
@@ -81,11 +82,13 @@ Avoid words defined elsewhere (services, terminology)
 - plan
 - case
 - scenario
+- exchange
 
 ### Model Definitions
 
 - plan: a persisted definition an executor runs; what a job executes. plan : job :: definition : run. A composition projected into data is a plan. Suggested attributes: `alias`, `name`, `description`, `category` (a vocabulary under the model — e.g. composition plans use `workflow` | `agent`), optional `definitionHash` (content hash gating idempotent reseeds), optional `source` (provenance)
 - case: the subject entity a job operates on; long-lived, accretes jobs and messages over time. Jobs reference their case via `job.case` (optional — jobs usually operate on a case; system jobs may not). Neither model requires the other: a case exists before any job runs on it, and a case never stores a job list (query jobs by case)
+- exchange: an event entity representing one LLM `operate()` call. Attributes use reserved words: `input` (request), `content` (response text), `data` (interpolation parameters — the vocabulary's sanctioned use of the word), `xid` (provider response id), `llm` (served model id), declared `status` vocabulary `completed | incomplete | in_progress` aligned with operate settlement. Turn chains reference the parent exchange (an `exchange` attribute) and store input deltas only — never the resent history; tool loops are the history delta within one exchange, not separate entities. Canonical registration ships upstream: `registerExchangeModel()` / `EXCHANGE_MODEL` in `@jaypie/fabric`
 - scenario: a named category of cases (see Category in Ontological Grounding). `case.category` holds the scenario alias; the scenario model defines the category itself: `alias`, `name`, `description`, and `plans` (references) — scenarios prescribe which plans respond to them
 
 ### Implied Attributes

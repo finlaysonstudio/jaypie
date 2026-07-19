@@ -24,6 +24,15 @@ export type {
   FabricProgress,
 } from "./models/base.js";
 
+// FabricExchange (canonical exchange model: one LLM operate() call)
+export {
+  EXCHANGE_MODEL,
+  EXCHANGE_MODEL_NAME,
+  EXCHANGE_STATUS,
+  registerExchangeModel,
+} from "./models/exchange.js";
+export type { ExchangeStatus, FabricExchange } from "./models/exchange.js";
+
 // Constants
 export { APEX, FABRIC_VERSION, SEPARATOR, SYSTEM_MODELS } from "./constants.js";
 export type { SystemModel } from "./constants.js";

@@ -188,6 +188,10 @@ export interface OperateLoopState {
   currentTurn: number;
   /** Formatted output schema for structured output */
   formattedFormat?: JsonObject;
+  /** Stop reason from the most recent model response */
+  lastStopReason?: string;
+  /** Model-request retries across all turns (exchange envelope) */
+  retries: number;
   /** Formatted tools for the provider */
   formattedTools?: ProviderToolDefinition[];
   /** Maximum allowed turns */

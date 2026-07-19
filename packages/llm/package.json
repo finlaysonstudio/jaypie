@@ -1,6 +1,6 @@
 {
   "name": "@jaypie/llm",
-  "version": "1.3.13",
+  "version": "1.3.14",
   "description": "Large language model utilities",
   "repository": {
     "type": "git",
@@ -55,11 +55,15 @@
   },
   "peerDependencies": {
     "@aws-sdk/client-bedrock-runtime": "^3.1045.0",
+    "@jaypie/dynamodb": "*",
     "@jaypie/kit": "*",
     "@jaypie/logger": "*"
   },
   "peerDependenciesMeta": {
     "@aws-sdk/client-bedrock-runtime": {
+      "optional": true
+    },
+    "@jaypie/dynamodb": {
       "optional": true
     }
   },

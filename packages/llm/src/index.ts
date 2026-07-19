@@ -2,6 +2,12 @@ export { default as Llm } from "./Llm.js";
 export * as LLM from "./constants.js";
 export type { LlmEffort } from "./constants.js";
 export type {
+  LlmExchangeCallback,
+  LlmExchangeEnvelope,
+  LlmExchangeRequest,
+  LlmExchangeResolution,
+  LlmExchangeResponse,
+  LlmExchangeTiming,
   LlmFallbackConfig,
   LlmHistory,
   LlmInputContent,

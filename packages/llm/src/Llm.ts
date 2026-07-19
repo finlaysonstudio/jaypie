@@ -4,7 +4,11 @@ import log from "@jaypie/logger";
 import { DEFAULT, LlmProviderName, PROVIDER } from "./constants.js";
 import { determineModelProvider } from "./util/determineModelProvider.js";
 import { resolveModelChain } from "./util/resolveModelChain.js";
+import { emitExchange } from "./operate/exchange/index.js";
+import { persistExchange } from "./observability/exchangeStore.js";
 import {
+  LlmExchangeCallback,
+  LlmExchangeEnvelope,
   LlmFallbackConfig,
   LlmHistory,
   LlmInputMessage,
@@ -216,12 +220,17 @@ class Llm implements LlmProvider {
     attempts++;
     try {
       const response = await this._llm.operate(input, optionsWithoutFallback);
-      return {
+      const settled = {
         ...response,
         fallbackAttempts: attempts,
         fallbackUsed: false,
         provider: response.provider || this._provider,
       };
+      await this.settleExchange({
+        onExchange: resolvedOptions.onExchange,
+        response: settled,
+      });
+      return settled;
     } catch (error) {
       lastError = error as Error;
       log.warn(`Provider ${this._provider} failed`, {
@@ -230,21 +239,33 @@ class Llm implements LlmProvider {
       });
     }
 
-    // Try fallback providers
+    // Try fallback providers. The fallback instance's underlying provider is
+    // called directly so the nested facade does not settle the exchange —
+    // exactly one settlement per operate() happens here.
     for (const fallbackConfig of fallbackChain) {
       attempts++;
       try {
         const fallbackInstance = this.createFallbackInstance(fallbackConfig);
-        const response = await fallbackInstance.operate(
+        if (!fallbackInstance._llm.operate) {
+          throw new NotImplementedError(
+            `Provider ${fallbackConfig.provider} does not support operate method`,
+          );
+        }
+        const response = await fallbackInstance._llm.operate(
           input,
           optionsWithoutFallback,
         );
-        return {
+        const settled = {
           ...response,
           fallbackAttempts: attempts,
           fallbackUsed: true,
           provider: response.provider || fallbackConfig.provider,
         };
+        await this.settleExchange({
+          onExchange: resolvedOptions.onExchange,
+          response: settled,
+        });
+        return settled;
       } catch (error) {
         lastError = error as Error;
         log.warn(`Fallback provider ${fallbackConfig.provider} failed`, {
@@ -254,8 +275,50 @@ class Llm implements LlmProvider {
       }
     }
 
-    // All providers failed, throw the last error
+    // All providers failed: settle the exchange from the envelope the loop
+    // attached to the last error, then throw
+    const failureEnvelope = (lastError as { exchange?: LlmExchangeEnvelope })
+      ?.exchange;
+    if (failureEnvelope) {
+      failureEnvelope.resolution = {
+        ...failureEnvelope.resolution,
+        fallbackAttempts: attempts,
+        fallbackUsed: attempts > 1,
+      };
+      await emitExchange({
+        envelope: failureEnvelope,
+        onExchange: resolvedOptions.onExchange,
+      });
+      await persistExchange(failureEnvelope);
+    }
     throw lastError;
+  }
+
+  /**
+   * Stamp fallback resolution onto the envelope the operate loop attached to
+   * the response and deliver it to the caller's onExchange. Fires once per
+   * operate() settlement; callback errors are logged and never thrown.
+   */
+  private async settleExchange({
+    onExchange,
+    response,
+  }: {
+    onExchange?: LlmExchangeCallback;
+    response: LlmOperateResponse;
+  }): Promise<void> {
+    const envelope = response.exchange;
+    if (!envelope) {
+      return;
+    }
+    envelope.resolution = {
+      ...envelope.resolution,
+      fallbackAttempts: response.fallbackAttempts,
+      fallbackUsed: response.fallbackUsed,
+      model: response.model,
+      provider: response.provider,
+    };
+    await emitExchange({ envelope, onExchange });
+    await persistExchange(envelope);
   }
 
   async *stream(

@@ -70,8 +70,7 @@ export interface FabricDataOperationConfig<
  * Simplified operation config - boolean to enable/disable or full config
  */
 export type FabricDataOperationOption<T extends FabricModel = FabricModel> =
-  | FabricDataOperationConfig<T>
-  | boolean;
+  FabricDataOperationConfig<T> | boolean;
 
 // #endregion
 

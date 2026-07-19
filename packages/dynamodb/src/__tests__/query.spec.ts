@@ -20,11 +20,15 @@ vi.mock("@aws-sdk/lib-dynamodb", () => ({
       send: mockSend,
     })),
   },
-  QueryCommand: vi.fn((params) => ({ input: params })),
+  QueryCommand: vi.fn(function QueryCommand(params) {
+    return { input: params };
+  }),
 }));
 
 vi.mock("@aws-sdk/client-dynamodb", () => ({
-  DynamoDBClient: vi.fn(() => ({})),
+  DynamoDBClient: vi.fn(function DynamoDBClient() {
+    return {};
+  }),
 }));
 
 // =============================================================================

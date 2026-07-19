@@ -3,6 +3,7 @@ import { JsonObject } from "@jaypie/types";
 
 import { Toolkit } from "../tools/Toolkit.class.js";
 import {
+  LlmExchangeEnvelope,
   LlmHistory,
   LlmHistoryItem,
   LlmInputMessage,
@@ -13,6 +14,7 @@ import {
   LlmOperateResponse,
   LlmOutputMessage,
   LlmProgressEventType,
+  LlmResponseStatus,
   LlmToolCall,
   LlmToolResult,
 } from "../types/LlmProvider.interface.js";
@@ -29,6 +31,10 @@ import {
   tallyOperate,
 } from "../util/index.js";
 import { ProviderAdapter } from "./adapters/ProviderAdapter.interface.js";
+import {
+  buildExchangeEnvelope,
+  isExchangeRequested,
+} from "./exchange/index.js";
 import { HookRunner, hookRunner, LlmHooks } from "./hooks/index.js";
 import { InputProcessor, inputProcessor } from "./input/index.js";
 import { emitProgress } from "./progress/index.js";
@@ -159,10 +165,15 @@ export class OperateLoop {
     log.trace.var({ "operate.input": input });
     log.trace.var({ "operate.options": options });
 
+    const startedAt = new Date().toISOString();
+    const startMs = Date.now();
+
     // Initialize state
     const state = await this.initializeState(input, options);
     const context = this.createContext(options);
     const modelName = options.model ?? this.adapter.defaultModel;
+    const exchangeRequested = isExchangeRequested(options);
+    const initialHistoryLength = state.responseBuilder.getHistory().length;
 
     await emitProgress({
       event: {
@@ -176,72 +187,120 @@ export class OperateLoop {
 
     // Enclosing LLM Observability span (no-op when DD_LLMOBS_ENABLED is unset).
     // Child llm/tool spans nest under it via the SDK's active-span context.
-    return withLlmObsSpan(
-      {
-        kind: state.toolkit ? "agent" : "llm",
-        modelName,
-        modelProvider: this.adapter.name,
-        name: "jaypie.llm.operate",
-      },
-      async () => {
-        // Build initial request
-        let request = this.buildInitialRequest(state, options);
+    try {
+      return await withLlmObsSpan(
+        {
+          kind: state.toolkit ? "agent" : "llm",
+          modelName,
+          modelProvider: this.adapter.name,
+          name: "jaypie.llm.operate",
+        },
+        async () => {
+          // Build initial request
+          let request = this.buildInitialRequest(state, options);
 
-        // Multi-turn loop
-        while (state.currentTurn < state.maxTurns) {
-          state.currentTurn++;
+          // Multi-turn loop
+          while (state.currentTurn < state.maxTurns) {
+            state.currentTurn++;
 
-          // Execute one turn with retry logic
-          const shouldContinue = await this.executeOneTurn(
-            request,
-            state,
-            context,
-            options,
-          );
+            // Execute one turn with retry logic
+            const shouldContinue = await this.executeOneTurn(
+              request,
+              state,
+              context,
+              options,
+            );
 
-          if (!shouldContinue) {
-            break;
+            if (!shouldContinue) {
+              break;
+            }
+
+            // Rebuild request with updated history for next turn
+            request = {
+              effort: options.effort,
+              format: state.formattedFormat,
+              instructions: options.instructions,
+              messages: state.currentInput,
+              model: modelName,
+              providerOptions: options.providerOptions,
+              structuredOutputRetry: state.structuredOutputRetry,
+              system: options.system,
+              temperature: options.temperature,
+              tools: state.formattedTools,
+              user: options.user,
+            };
           }
 
-          // Rebuild request with updated history for next turn
-          request = {
-            effort: options.effort,
-            format: state.formattedFormat,
-            instructions: options.instructions,
-            messages: state.currentInput,
-            model: modelName,
-            providerOptions: options.providerOptions,
-            structuredOutputRetry: state.structuredOutputRetry,
-            system: options.system,
-            temperature: options.temperature,
-            tools: state.formattedTools,
-            user: options.user,
+          const response = state.responseBuilder.build();
+          if (exchangeRequested) {
+            response.exchange = buildExchangeEnvelope({
+              duration: Date.now() - startMs,
+              initialHistoryLength,
+              input,
+              options,
+              response,
+              startedAt,
+              state,
+            });
+          }
+          annotateLlmObs({
+            inputData: input,
+            metrics: usageToLlmObsMetrics(response.usage),
+            outputData: response.content,
+          });
+          tallyOperate({
+            toolCallNames: state.toolCallNames,
+            turns: state.currentTurn,
+            usage: response.usage,
+          });
+          await emitProgress({
+            event: {
+              content: response.content,
+              turn: state.currentTurn,
+              type: LlmProgressEventType.Done,
+              usage: response.usage,
+            },
+            onProgress: options.onProgress,
+          });
+          return response;
+        },
+      );
+    } catch (error) {
+      // A hard failure (retry budget exhausted, unrecoverable) still settles
+      // the exchange: attach the envelope to the thrown error so the facade
+      // can emit it before rethrowing to the caller.
+      if (exchangeRequested) {
+        const response = state.responseBuilder.build();
+        if (!response.error) {
+          const thrown = error as {
+            detail?: string;
+            message?: string;
+            status?: number | string;
+            title?: string;
+            name?: string;
+          };
+          response.error = {
+            detail: thrown.detail ?? thrown.message,
+            status: thrown.status ?? 500,
+            title: thrown.title ?? thrown.name ?? "Error",
           };
         }
-
-        const response = state.responseBuilder.build();
-        annotateLlmObs({
-          inputData: input,
-          metrics: usageToLlmObsMetrics(response.usage),
-          outputData: response.content,
-        });
-        tallyOperate({
-          toolCallNames: state.toolCallNames,
-          turns: state.currentTurn,
-          usage: response.usage,
-        });
-        await emitProgress({
-          event: {
-            content: response.content,
-            turn: state.currentTurn,
-            type: LlmProgressEventType.Done,
-            usage: response.usage,
-          },
-          onProgress: options.onProgress,
-        });
-        return response;
-      },
-    );
+        if (response.status === LlmResponseStatus.InProgress) {
+          response.status = LlmResponseStatus.Incomplete;
+        }
+        (error as { exchange?: LlmExchangeEnvelope }).exchange =
+          buildExchangeEnvelope({
+            duration: Date.now() - startMs,
+            initialHistoryLength,
+            input,
+            options,
+            response,
+            startedAt,
+            state,
+          });
+      }
+      throw error;
+    }
   }
 
   //
@@ -315,6 +374,7 @@ export class OperateLoop {
       formattedTools,
       maxTurns,
       responseBuilder,
+      retries: 0,
       toolCallNames: [],
       toolkit,
     };
@@ -395,27 +455,27 @@ export class OperateLoop {
       providerRequest,
     });
 
-    // Emit retry progress alongside the caller's onRetryableModelError hook
+    // Count retries for the exchange envelope and emit retry progress
+    // alongside the caller's onRetryableModelError hook
     const hooks = context.hooks as LlmHooks;
-    const hooksWithProgress: LlmHooks = options.onProgress
-      ? {
-          ...hooks,
-          onRetryableModelError: async (retryContext) => {
-            await emitProgress({
-              event: {
-                error:
-                  retryContext.error instanceof Error
-                    ? retryContext.error.message
-                    : String(retryContext.error),
-                turn: state.currentTurn,
-                type: LlmProgressEventType.Retry,
-              },
-              onProgress: options.onProgress,
-            });
-            return hooks?.onRetryableModelError?.(retryContext);
+    const hooksWithProgress: LlmHooks = {
+      ...hooks,
+      onRetryableModelError: async (retryContext) => {
+        state.retries++;
+        await emitProgress({
+          event: {
+            error:
+              retryContext.error instanceof Error
+                ? retryContext.error.message
+                : String(retryContext.error),
+            turn: state.currentTurn,
+            type: LlmProgressEventType.Retry,
           },
-        }
-      : hooks;
+          onProgress: options.onProgress,
+        });
+        return hooks?.onRetryableModelError?.(retryContext);
+      },
+    };
 
     // Execute with retry inside a child llm span (no-op when llmobs disabled).
     // RetryExecutor handles error hooks and throws appropriate errors.
@@ -490,6 +550,11 @@ export class OperateLoop {
     // Track usage
     if (parsed.usage) {
       state.responseBuilder.addUsage(parsed.usage);
+    }
+
+    // Track stop reason for the exchange envelope
+    if (parsed.stopReason) {
+      state.lastStopReason = parsed.stopReason;
     }
 
     // Add raw response

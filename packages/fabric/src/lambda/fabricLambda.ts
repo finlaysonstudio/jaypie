@@ -153,7 +153,7 @@ export function fabricLambda<TResult = unknown>(
   // Create the inner Lambda handler logic (context param required for lambdaHandler signature)
   const innerHandler = async (
     event: unknown,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
     _context?: LambdaContext,
   ): Promise<TResult | TResult[]> => {
     // Extract messages from SQS/SNS event wrapper
