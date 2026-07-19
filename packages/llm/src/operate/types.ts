@@ -99,6 +99,13 @@ export interface OperateRequest {
   stream?: boolean;
   /** Sampling temperature (0-2 for most providers) */
   temperature?: number;
+  /**
+   * Set by OperateLoop on a corrective turn after a format request came back
+   * as prose. Adapters that support the retry (see
+   * `ProviderAdapter.supportsStructuredOutputRetry`) should offer only the
+   * structured-output mechanism on this turn.
+   */
+  structuredOutputRetry?: boolean;
   /** User identifier for tracking */
   user?: string;
 }
@@ -173,6 +180,8 @@ import type { ResponseBuilder } from "./response/ResponseBuilder.js";
 export interface OperateLoopState {
   /** Count of consecutive tool errors (resets on success) */
   consecutiveToolErrors: number;
+  /** Set when the loop has taken a corrective structured-output turn */
+  structuredOutputRetry?: boolean;
   /** Current conversation input/messages */
   currentInput: LlmHistory;
   /** Current turn number (0-indexed, incremented at start of each turn) */

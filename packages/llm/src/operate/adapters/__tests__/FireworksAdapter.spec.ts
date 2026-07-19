@@ -329,6 +329,41 @@ describe("FireworksAdapter", () => {
         expect(warn).toHaveBeenCalled();
         vi.restoreAllMocks();
       });
+
+      it("offers only the structured_output tool on a corrective retry turn", () => {
+        vi.spyOn(log, "warn").mockImplementation(() => {});
+        const adapter = new FireworksAdapter();
+        const schema = {
+          type: "object",
+          properties: { name: { type: "string" } },
+        };
+        const request: OperateRequest = {
+          model: PROVIDER.FIREWORKS.DEFAULT,
+          messages: [
+            {
+              content: "Hello",
+              role: LlmMessageRole.User,
+              type: LlmMessageType.Message,
+            },
+          ],
+          format: schema,
+          structuredOutputRetry: true,
+          tools: [
+            {
+              name: "roll",
+              description: "Roll dice",
+              parameters: { type: "object" },
+            },
+          ],
+        };
+
+        const result = adapter.buildRequest(request);
+
+        expect(result.response_format).toBeUndefined();
+        expect(result.tools).toHaveLength(1);
+        expect(result.tools![0].function.name).toBe("structured_output");
+        vi.restoreAllMocks();
+      });
     });
 
     describe("parseResponse", () => {

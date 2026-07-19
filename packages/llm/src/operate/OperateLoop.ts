@@ -93,6 +93,31 @@ function createErrorClassifier(adapter: ProviderAdapter): ErrorClassifier {
   };
 }
 
+/**
+ * Attempt to read a prose response as the structured payload itself: parse the
+ * text (stripping a Markdown code fence if present) and return the object, or
+ * undefined when the text is not a JSON object.
+ */
+function tryParseJsonObject(text: string): JsonObject | undefined {
+  let candidate = text.trim();
+  const fence = candidate.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/);
+  if (fence) {
+    candidate = fence[1].trim();
+  }
+  if (!candidate.startsWith("{")) {
+    return undefined;
+  }
+  try {
+    const parsed = JSON.parse(candidate);
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      return parsed as JsonObject;
+    }
+  } catch {
+    // Not JSON; caller falls through to the corrective-turn path.
+  }
+  return undefined;
+}
+
 //
 //
 // Main
@@ -186,6 +211,7 @@ export class OperateLoop {
             messages: state.currentInput,
             model: modelName,
             providerOptions: options.providerOptions,
+            structuredOutputRetry: state.structuredOutputRetry,
             system: options.system,
             temperature: options.temperature,
             tools: state.formattedTools,
@@ -685,6 +711,51 @@ export class OperateLoop {
         }
 
         return true; // Continue to next turn
+      }
+    }
+
+    // Format contract enforcement: the loop is about to complete but the
+    // model answered with prose instead of structured output.
+    if (state.formattedFormat && typeof parsed.content === "string") {
+      // First salvage attempt: the text may be the JSON itself (with or
+      // without a code fence).
+      const salvaged = tryParseJsonObject(parsed.content);
+      if (salvaged) {
+        state.responseBuilder.setContent(
+          this.applyFormatArrayDefaults(salvaged, options),
+        );
+        state.responseBuilder.complete();
+        for (const item of this.adapter.responseToHistoryItems(parsed.raw)) {
+          state.responseBuilder.appendToHistory(item);
+        }
+        return false; // Stop loop
+      }
+
+      // Corrective turn: for adapters whose structured output rides a tool
+      // emulation, take another turn offering only the structured_output tool
+      // and demand it be called. Bounded by maxTurns.
+      if (
+        this.adapter.supportsStructuredOutputRetry &&
+        state.currentTurn < state.maxTurns
+      ) {
+        log.warn(
+          `[operate] Model returned text despite format on turn ${state.currentTurn}; retrying with structured_output tool only`,
+        );
+        for (const item of this.adapter.responseToHistoryItems(parsed.raw)) {
+          state.currentInput.push(item);
+          state.responseBuilder.appendToHistory(item);
+        }
+        const corrective: LlmInputMessage = {
+          content:
+            "You must provide your final answer by calling the structured_output tool " +
+            "with arguments matching the required schema. Do not respond with text.",
+          role: LlmMessageRole.User,
+          type: LlmMessageType.Message,
+        };
+        state.currentInput.push(corrective);
+        state.responseBuilder.appendToHistory(corrective);
+        state.structuredOutputRetry = true;
+        return true; // Continue to corrective turn
       }
     }
 

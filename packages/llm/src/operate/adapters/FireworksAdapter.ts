@@ -328,6 +328,11 @@ export class FireworksAdapter extends BaseProviderAdapter {
   readonly name = PROVIDER.FIREWORKS.NAME;
   readonly defaultModel = PROVIDER.FIREWORKS.DEFAULT;
 
+  // Structured output with tools rides the structured_output tool emulation
+  // (Fireworks rejects response_format + tools), and emulation compliance is
+  // a model decision — opt in to OperateLoop's corrective retry turn.
+  override readonly supportsStructuredOutputRetry = true;
+
   // Session-level cache of models observed to reject native
   // `response_format: json_schema`. When a model is in this set, buildRequest
   // engages the legacy fake-tool path instead of native structured output.
@@ -399,9 +404,11 @@ export class FireworksAdapter extends BaseProviderAdapter {
       (hasCallerTools ||
         !this.supportsStructuredOutput(fireworksRequest.model));
 
-    const allTools: ProviderToolDefinition[] = request.tools
-      ? [...request.tools]
-      : [];
+    // On a corrective retry turn (the model answered a format request with
+    // prose), offer only the structured_output tool so the demanded call is
+    // the sole option.
+    const allTools: ProviderToolDefinition[] =
+      request.tools && !request.structuredOutputRetry ? [...request.tools] : [];
     if (useFallbackStructuredOutput && request.format) {
       log.warn(
         hasCallerTools

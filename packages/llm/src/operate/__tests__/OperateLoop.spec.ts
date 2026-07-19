@@ -1142,4 +1142,126 @@ describe("OperateLoop", () => {
       expect(libSpy).toHaveBeenCalledWith({ lib: "@jaypie/llm" });
     });
   });
+
+  // Structured output contract enforcement
+  describe("Format Contract Enforcement", () => {
+    const format = {
+      type: "object",
+      properties: { total: { type: "number" } },
+    } as JsonObject;
+
+    it("salvages prose that is itself JSON", async () => {
+      mockAdapter.parseResponse.mockReturnValueOnce({
+        content: '{"total": 21}',
+        hasToolCalls: false,
+        stopReason: "end_turn",
+        raw: {},
+      } as ParsedResponse);
+      const loop = new OperateLoop({
+        adapter: mockAdapter,
+        client: mockClient,
+      });
+
+      const response = await loop.execute("Roll dice", { format });
+
+      expect(response.content).toEqual({ total: 21 });
+      expect(mockAdapter.executeRequest).toHaveBeenCalledTimes(1);
+    });
+
+    it("salvages fenced JSON", async () => {
+      mockAdapter.parseResponse.mockReturnValueOnce({
+        content: '```json\n{"total": 21}\n```',
+        hasToolCalls: false,
+        stopReason: "end_turn",
+        raw: {},
+      } as ParsedResponse);
+      const loop = new OperateLoop({
+        adapter: mockAdapter,
+        client: mockClient,
+      });
+
+      const response = await loop.execute("Roll dice", { format });
+
+      expect(response.content).toEqual({ total: 21 });
+    });
+
+    it("takes a corrective turn when the adapter supports structured output retry", async () => {
+      Object.defineProperty(mockAdapter, "supportsStructuredOutputRetry", {
+        value: true,
+      });
+      mockAdapter.parseResponse
+        .mockReturnValueOnce({
+          content: "You rolled a total of 21!",
+          hasToolCalls: false,
+          stopReason: "end_turn",
+          raw: {},
+        } as ParsedResponse)
+        .mockReturnValueOnce({
+          content: undefined,
+          hasToolCalls: true,
+          stopReason: "tool_calls",
+          raw: {},
+        } as ParsedResponse);
+      mockAdapter.hasStructuredOutput = vi
+        .fn()
+        .mockReturnValueOnce(false)
+        .mockReturnValue(true);
+      mockAdapter.extractStructuredOutput = vi.fn(() => ({ total: 21 }));
+      const loop = new OperateLoop({
+        adapter: mockAdapter,
+        client: mockClient,
+      });
+
+      const response = await loop.execute("Roll dice", { format, turns: 3 });
+
+      expect(response.content).toEqual({ total: 21 });
+      expect(mockAdapter.executeRequest).toHaveBeenCalledTimes(2);
+      // The corrective request is flagged so adapters can restrict tools
+      const secondBuild = mockAdapter.buildRequest.mock.calls[1][0];
+      expect(secondBuild.structuredOutputRetry).toBe(true);
+      // Corrective user message was appended to the conversation
+      const lastMessage = secondBuild.messages[secondBuild.messages.length - 1];
+      expect(lastMessage.role).toBe(LlmMessageRole.User);
+      expect(lastMessage.content).toContain("structured_output");
+    });
+
+    it("returns prose unchanged when the adapter does not support retry", async () => {
+      mockAdapter.parseResponse.mockReturnValueOnce({
+        content: "You rolled a total of 21!",
+        hasToolCalls: false,
+        stopReason: "end_turn",
+        raw: {},
+      } as ParsedResponse);
+      const loop = new OperateLoop({
+        adapter: mockAdapter,
+        client: mockClient,
+      });
+
+      const response = await loop.execute("Roll dice", { format, turns: 3 });
+
+      expect(response.content).toBe("You rolled a total of 21!");
+      expect(mockAdapter.executeRequest).toHaveBeenCalledTimes(1);
+    });
+
+    it("stops retrying at the turn budget", async () => {
+      Object.defineProperty(mockAdapter, "supportsStructuredOutputRetry", {
+        value: true,
+      });
+      mockAdapter.parseResponse.mockReturnValue({
+        content: "Still prose.",
+        hasToolCalls: false,
+        stopReason: "end_turn",
+        raw: {},
+      } as ParsedResponse);
+      const loop = new OperateLoop({
+        adapter: mockAdapter,
+        client: mockClient,
+      });
+
+      const response = await loop.execute("Roll dice", { format, turns: 2 });
+
+      expect(response.content).toBe("Still prose.");
+      expect(mockAdapter.executeRequest).toHaveBeenCalledTimes(2);
+    });
+  });
 });

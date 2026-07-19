@@ -655,7 +655,10 @@ erroring):
 - **OpenRouter** — always forwarded; OpenRouter maps to the routed model's
   nearest supported level.
 - **Fireworks** — always forwarded (`reasoning_effort`); the API accepts it on
-  every model and no-ops where unsupported.
+  every model and no-ops where unsupported. Structured output combined with
+  tools uses a tool emulation (the API rejects the pair); the operate loop
+  enforces the format contract with a corrective retry turn when a model
+  answers in prose.
 - **Bedrock** — not yet wired; `effort` is ignored.
 
 First-class `effort` takes precedence over a raw `providerOptions.reasoning`
