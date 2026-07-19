@@ -20,6 +20,15 @@ export function determineModelProvider(input?: string): {
     };
   }
 
+  // Check for explicit fireworks: prefix
+  if (input.startsWith("fireworks:")) {
+    const model = input.slice("fireworks:".length);
+    return {
+      model,
+      provider: PROVIDER.FIREWORKS.NAME,
+    };
+  }
+
   // Check for explicit bedrock: prefix
   if (input.startsWith("bedrock:")) {
     const model = input.slice("bedrock:".length);
@@ -34,6 +43,12 @@ export function determineModelProvider(input?: string): {
     return {
       model: PROVIDER.BEDROCK.DEFAULT,
       provider: PROVIDER.BEDROCK.NAME,
+    };
+  }
+  if (input === PROVIDER.FIREWORKS.NAME) {
+    return {
+      model: PROVIDER.FIREWORKS.DEFAULT,
+      provider: PROVIDER.FIREWORKS.NAME,
     };
   }
   if (input === PROVIDER.ANTHROPIC.NAME) {
@@ -69,6 +84,19 @@ export function determineModelProvider(input?: string): {
 
   // Exact model ids are classified by the "/" rule and MODEL_MATCH_WORDS below,
   // so no per-provider id catalog is consulted here.
+
+  // Check Fireworks match words before the "/" rule — Fireworks ids contain
+  // "/" (e.g., "accounts/fireworks/models/glm-5p2") and would otherwise route
+  // to OpenRouter
+  const lowerInputEarly = input.toLowerCase();
+  for (const matchWord of PROVIDER.FIREWORKS.MODEL_MATCH_WORDS) {
+    if (lowerInputEarly.includes(matchWord)) {
+      return {
+        model: input,
+        provider: PROVIDER.FIREWORKS.NAME,
+      };
+    }
+  }
 
   // Assume OpenRouter for models containing "/" (e.g., "openai/gpt-4", "anthropic/claude-3-opus")
   // This check must come before match words so that "openai/gpt-4" is not matched by "openai" keyword

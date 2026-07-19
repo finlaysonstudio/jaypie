@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { DEFAULT, PROVIDER } from "../../constants";
+import { DEFAULT, MODEL, PROVIDER } from "../../constants";
 import { determineModelProvider } from "../determineModelProvider";
 
 describe("determineModelProvider", () => {
@@ -471,6 +471,43 @@ describe("determineModelProvider", () => {
         bedrockModels.forEach((model) => {
           const result = determineModelProvider(model);
           expect(result.provider).toBe(PROVIDER.BEDROCK.NAME);
+          expect(result.model).toBe(model);
+        });
+      });
+    });
+
+    describe("Fireworks Detection", () => {
+      it("Returns default model when provider name 'fireworks' is passed", () => {
+        const result = determineModelProvider(PROVIDER.FIREWORKS.NAME);
+        expect(result).toEqual({
+          model: PROVIDER.FIREWORKS.DEFAULT,
+          provider: PROVIDER.FIREWORKS.NAME,
+        });
+      });
+
+      it("Identifies Fireworks ids containing 'fireworks' despite the slash", () => {
+        const result = determineModelProvider(
+          "accounts/fireworks/models/glm-5p2",
+        );
+        expect(result).toEqual({
+          model: "accounts/fireworks/models/glm-5p2",
+          provider: PROVIDER.FIREWORKS.NAME,
+        });
+      });
+
+      it("Handles fireworks: prefix and strips it", () => {
+        const result = determineModelProvider("fireworks:some/model");
+        expect(result).toEqual({
+          model: "some/model",
+          provider: PROVIDER.FIREWORKS.NAME,
+        });
+      });
+
+      it("Correctly identifies all Fireworks models", () => {
+        const fireworksModels = Object.values(MODEL.FIREWORKS);
+        fireworksModels.forEach((model) => {
+          const result = determineModelProvider(model);
+          expect(result.provider).toBe(PROVIDER.FIREWORKS.NAME);
           expect(result.model).toBe(model);
         });
       });

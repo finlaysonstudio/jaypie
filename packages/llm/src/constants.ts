@@ -24,6 +24,14 @@ export const MODEL = {
   SONNET: "claude-sonnet-5",
   HAIKU: "claude-haiku-4-5",
   MYTHOS: "claude-mythos-5",
+  // Fireworks (serverless open models; ids provided by operator)
+  FIREWORKS: {
+    DEEPSEEK: "accounts/fireworks/models/deepseek-v4-pro",
+    GLM: "accounts/fireworks/models/glm-5p2",
+    KIMI: "accounts/fireworks/models/kimi-k2p7-code",
+    MINIMAX: "accounts/fireworks/models/minimax-m2p7",
+    QWEN: "accounts/fireworks/models/qwen3p7-plus",
+  },
   // Google
   GEMINI_FLASH: "gemini-3.5-flash",
   GEMINI_FLASH_LITE: "gemini-3.1-flash-lite",
@@ -130,6 +138,14 @@ export const PROVIDER = {
       SCHEMA_VERSION: "v2" as const,
     },
   },
+  FIREWORKS: {
+    // https://docs.fireworks.ai/
+    API_KEY: "FIREWORKS_API_KEY" as const,
+    BASE_URL: "https://api.fireworks.ai/inference/v1" as const,
+    DEFAULT: MODEL.FIREWORKS.GLM,
+    MODEL_MATCH_WORDS: ["fireworks"] as const,
+    NAME: "fireworks" as const,
+  },
   /** @deprecated Use PROVIDER.GOOGLE — "Google" is the provider; Gemini is the model family */
   GEMINI: GOOGLE_PROVIDER,
   GOOGLE: GOOGLE_PROVIDER,
@@ -184,6 +200,7 @@ export const PROVIDER = {
 export type LlmProviderName =
   | typeof PROVIDER.ANTHROPIC.NAME
   | typeof PROVIDER.BEDROCK.NAME
+  | typeof PROVIDER.FIREWORKS.NAME
   | typeof PROVIDER.GOOGLE.NAME
   | typeof PROVIDER.OPENAI.NAME
   | typeof PROVIDER.OPENROUTER.NAME

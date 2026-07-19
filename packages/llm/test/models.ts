@@ -63,6 +63,22 @@ function catalogIds(node: unknown = MODEL, out: string[] = []): string[] {
   return out;
 }
 
+// Per-model expected-outcome overrides for first-class models. Fireworks has
+// no file/PDF input support (documents cannot be delivered as data: URIs) and
+// only some catalog models are vision-capable (verified live 2026-07-19).
+// Fireworks also rejects response_format combined with tools, so `both`
+// engages the structured_output tool emulation and logs a warn.
+const MATRIX_EXPECT: Record<
+  string,
+  Partial<Record<Capability, ExpectedOutcome>>
+> = {
+  [MODEL.FIREWORKS.DEEPSEEK]: { both: "warn", pdf: "skip", image: "skip" },
+  [MODEL.FIREWORKS.GLM]: { both: "warn", pdf: "skip", image: "skip" },
+  [MODEL.FIREWORKS.KIMI]: { both: "warn", pdf: "skip" },
+  [MODEL.FIREWORKS.MINIMAX]: { both: "warn", pdf: "skip", image: "skip" },
+  [MODEL.FIREWORKS.QWEN]: { both: "warn", pdf: "skip" },
+};
+
 // First-class models under test = the promoted MODEL.* catalog plus each
 // provider's resolved default, deduped, minus the exclude set. Provider is
 // resolved from the id so the matrix shards correctly by group (APP_GROUP).
@@ -70,6 +86,7 @@ const FIRST_CLASS_MODELS: ModelConfig[] = [
   ...new Set([
     ...catalogIds(),
     PROVIDER.ANTHROPIC.DEFAULT,
+    PROVIDER.FIREWORKS.DEFAULT,
     PROVIDER.GOOGLE.DEFAULT,
     PROVIDER.OPENAI.DEFAULT,
     PROVIDER.OPENROUTER.DEFAULT,
@@ -79,7 +96,12 @@ const FIRST_CLASS_MODELS: ModelConfig[] = [
   .filter((model) => !MATRIX_EXCLUDE.has(model))
   .map((model) => {
     const provider = determineModelProvider(model).provider;
-    return provider ? { model, provider } : { model };
+    const expect = MATRIX_EXPECT[model];
+    return {
+      model,
+      ...(provider ? { provider } : {}),
+      ...(expect ? { expect } : {}),
+    };
   });
 
 // Bedrock (and Bedrock-hosted third-party) models are not in MODEL.* — Bedrock

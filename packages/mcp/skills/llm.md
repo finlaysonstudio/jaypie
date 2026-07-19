@@ -24,6 +24,7 @@ console.log(response.content); // "4"
 | OpenAI | "openai", "gpt", "sol", "terra", "luna", /^o\d/ | gpt-5.6-sol |
 | Anthropic | "anthropic", "claude", "fable", "haiku", "mythos", "opus", "sonnet" | claude-sonnet-5 |
 | Google | "google", "gemini" | gemini-3.5-flash |
+| Fireworks | "fireworks" (also matched inside ids like `accounts/fireworks/models/...`) | accounts/fireworks/models/glm-5p2 |
 | OpenRouter | "openrouter" | anthropic/claude-sonnet-5 |
 | xAI | "xai", "grok" | grok-latest |
 | Bedrock | "amazon.nova", "anthropic.claude", "meta.llama", … | amazon.nova-pro-v1:0 |
@@ -33,7 +34,7 @@ The provider name for Gemini models is `"google"` — `"gemini"` is accepted as 
 ### Model Constants
 
 - **`PROVIDER.<name>.DEFAULT`** — the single default model per provider (above), used when no `model` is given.
-- **`LLM.MODEL.*`** — the named model catalog (e.g. `MODEL.SONNET`, `MODEL.SOL`, `MODEL.GEMINI_FLASH`, `MODEL.GROK`), plus `MODEL.OPENROUTER.*` for provider-prefixed routes (`GLM`, `LUNA`, `SONNET`). Pick specific models from here.
+- **`LLM.MODEL.*`** — the named model catalog (e.g. `MODEL.SONNET`, `MODEL.SOL`, `MODEL.GEMINI_FLASH`, `MODEL.GROK`), plus `MODEL.OPENROUTER.*` for provider-prefixed routes (`GLM`, `LUNA`, `SONNET`) and `MODEL.FIREWORKS.*` for Fireworks serverless models (`DEEPSEEK`, `GLM`, `KIMI`, `MINIMAX`, `QWEN`). Pick specific models from here.
 - **Deprecated:** the size-tier map `PROVIDER.<name>.MODEL.{DEFAULT,LARGE,SMALL,TINY}`, the `DEFAULT.MODEL` bundle, and `ALL` are `@deprecated` and retired in 2.0 — use `PROVIDER.*.DEFAULT` for defaults and `MODEL.*` for named models.
 
 ```typescript
@@ -446,6 +447,7 @@ const flash = new Llm(LLM.MODEL.GEMINI_FLASH); // -> google, gemini-3.5-flash
 
 ```bash
 ANTHROPIC_API_KEY   # Required for Anthropic
+FIREWORKS_API_KEY   # Required for Fireworks
 GOOGLE_API_KEY      # Required for Google (Gemini models)
 OPENAI_API_KEY      # Required for OpenAI
 OPENROUTER_API_KEY  # Required for OpenRouter
@@ -623,13 +625,13 @@ await Llm.operate("Solve this step by step", {
 Per-provider translation (`medium`/`high` stay aligned across providers; ends
 collapse where a provider has fewer rungs):
 
-| `effort`  | OpenAI `reasoning.effort` | Anthropic `output_config.effort` | Gemini 3 `thinkingLevel` | Gemini 2.5 `thinkingBudget` | Grok `reasoning_effort` | OpenRouter `reasoning.effort` |
-|-----------|---------------------------|----------------------------------|--------------------------|-----------------------------|-------------------------|-------------------------------|
-| `lowest`  | minimal | low    | MINIMAL | 512   | low    | minimal |
-| `low`     | low     | low    | LOW     | 4096  | low    | low     |
-| `medium`  | medium  | medium | MEDIUM  | 8192  | medium | medium  |
-| `high`    | high    | high   | HIGH    | 16384 | high   | high    |
-| `highest` | xhigh   | max    | HIGH    | 24576 | high   | xhigh   |
+| `effort`  | OpenAI `reasoning.effort` | Anthropic `output_config.effort` | Gemini 3 `thinkingLevel` | Gemini 2.5 `thinkingBudget` | Grok `reasoning_effort` | OpenRouter `reasoning.effort` | Fireworks `reasoning_effort` |
+|-----------|---------------------------|----------------------------------|--------------------------|-----------------------------|-------------------------|-------------------------------|------------------------------|
+| `lowest`  | minimal | low    | MINIMAL | 512   | low    | minimal | low    |
+| `low`     | low     | low    | LOW     | 4096  | low    | low     | low    |
+| `medium`  | medium  | medium | MEDIUM  | 8192  | medium | medium  | medium |
+| `high`    | high    | high   | HIGH    | 16384 | high   | high    | high   |
+| `highest` | xhigh   | max    | HIGH    | 24576 | high   | xhigh   | high   |
 
 When a neutral level has no distinct native rung and collapses onto a neighbor
 (e.g. `highest` → Grok `high`), the adapter logs it at `log.debug` for the
@@ -652,6 +654,8 @@ erroring):
   skipped.
 - **OpenRouter** — always forwarded; OpenRouter maps to the routed model's
   nearest supported level.
+- **Fireworks** — always forwarded (`reasoning_effort`); the API accepts it on
+  every model and no-ops where unsupported.
 - **Bedrock** — not yet wired; `effort` is ignored.
 
 First-class `effort` takes precedence over a raw `providerOptions.reasoning`

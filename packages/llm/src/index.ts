@@ -67,6 +67,7 @@ export {
 
 // Providers
 export { BedrockProvider } from "./providers/bedrock/index.js";
+export { FireworksProvider } from "./providers/fireworks/index.js";
 /** @deprecated Use GoogleProvider — "Google" is the provider; Gemini is the model family */
 export { GoogleProvider as GeminiProvider } from "./providers/google/index.js";
 export { GoogleProvider } from "./providers/google/index.js";

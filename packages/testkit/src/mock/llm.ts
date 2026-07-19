@@ -133,6 +133,12 @@ export const BedrockProvider = createMockWrappedObject(
     isClass: true,
   },
 );
+export const FireworksProvider = createMockWrappedObject(
+  original.FireworksProvider,
+  {
+    isClass: true,
+  },
+);
 export const GoogleProvider = createMockWrappedObject(original.GoogleProvider, {
   isClass: true,
 });

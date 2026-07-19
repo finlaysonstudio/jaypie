@@ -20,6 +20,7 @@ src/
 │   │   ├── AnthropicAdapter.ts
 │   │   ├── GoogleAdapter.ts
 │   │   ├── OpenAiAdapter.ts
+│   │   ├── FireworksAdapter.ts
 │   │   ├── OpenRouterAdapter.ts
 │   │   ├── XaiAdapter.ts
 │   │   └── ProviderAdapter.interface.ts
@@ -43,6 +44,9 @@ src/
 │   │   └── utils.ts
 │   ├── openai/
 │   │   ├── OpenAiProvider.class.ts
+│   │   └── utils.ts
+│   ├── fireworks/
+│   │   ├── FireworksProvider.class.ts
 │   │   └── utils.ts
 │   ├── openrouter/
 │   │   ├── OpenRouterProvider.class.ts
@@ -118,7 +122,8 @@ five-point relative scale (only the anchored `medium` borrows a provider word).
 Each adapter's `buildRequest` translates it to the provider's native knob via
 `src/util/effort.ts` (OpenAI/Grok `reasoning.effort`, Anthropic
 `output_config.effort`, Gemini 3 `thinkingLevel`, Gemini 2.5 `thinkingBudget`,
-OpenRouter `reasoning.effort`), spreading the scale across the provider's range.
+OpenRouter `reasoning.effort`, Fireworks `reasoning_effort`), spreading the
+scale across the provider's range.
 It is threaded through `OperateRequest` by both loops and is gated per provider
 so unsupported models silently ignore it. Omitting `effort` leaves the provider
 default untouched, so it is safe across a fallback chain. Bedrock is not yet
@@ -288,6 +293,11 @@ const response = await Llm.operate("Greet the world", {
 - Streaming structured outputs arrive as `LlmStreamChunkType.Text` deltas — concat to assemble JSON, or use `operate()` to get a parsed object directly.
 - `stop_reason: "refusal"` and `stop_reason: "max_tokens"` are surfaced as text rather than parsed JSON. `provider.send(..., { response })` throws on these; `operate()` surfaces them via `response.content` as a string.
 - A model that rejects `output_config` is cached for the session and transparently retried via the legacy fake-tool emulation. Citations + structured output (a 400 documented as incompatible) and `output_format`-deprecation 400s are **not** retried — those errors propagate so callers can see the real cause.
+
+**Fireworks notes:**
+- Uses the OpenAI-style native `response_format: { type: "json_schema", ... }` for format-only requests.
+- Format **and** tools combined is rejected by the API ("You cannot specify response format and function call at the same time"), so those requests preemptively use the `structured_output` fake-tool emulation (logged at warn) — same approach as Gemini 2.5.
+- A model that 400/422s on `response_format` alone is cached for the session and retried via the emulation path.
 
 **OpenRouter notes:**
 - Uses the OpenAI-style native `response_format: { type: "json_schema", json_schema: { name, schema, strict: true } }`. OpenRouter routes to a backend provider; many but not all backends support this — the SDK accepts the field on every model, and unsupported routes 4xx.
@@ -462,6 +472,11 @@ HTTP errors shaped to drive `classifyError`):
 - xAI — reuses `OpenAIClient` with `PROVIDER.XAI.BASE_URL` (OpenAI-compatible)
 - Anthropic — `AnthropicClient` (Messages API)
 - Google — `GoogleClient` (Gemini REST)
+- Fireworks — `FireworksClient` (OpenAI-compatible Chat Completions). Images
+  are `image_url` parts (vision models only; non-vision models 4xx). File/PDF
+  inputs are warned and discarded — Fireworks has no `file` part and rejects
+  document `data:` URIs ("Unsupported URL scheme 'data'"; Document Inlining's
+  `#transform=inline` did not engage in live testing 2026-07-19)
 - OpenRouter — `OpenRouterClient` (OpenAI-compatible Chat Completions)
 
 Bedrock is the one provider that keeps an SDK: `@aws-sdk/client-bedrock-runtime`
@@ -478,6 +493,7 @@ when the matching `*_API_KEY` is set and skip otherwise.
 - `OPENAI_API_KEY` - OpenAI API key
 - `ANTHROPIC_API_KEY` - Anthropic API key
 - `GOOGLE_API_KEY` - Google API key
+- `FIREWORKS_API_KEY` - Fireworks API key
 - `OPENROUTER_API_KEY` - OpenRouter API key
 - `XAI_API_KEY` - xAI (Grok) API key
 
@@ -552,7 +568,7 @@ export { JaypieToolkit, toolkit, Toolkit, tools };
 export { extractReasoning, jsonSchemaToNaturalSchema, naturalSchemaToJsonSchema };
 
 // Providers (for direct use)
-export { GoogleProvider, OpenRouterProvider, XaiProvider };
+export { FireworksProvider, GoogleProvider, OpenRouterProvider, XaiProvider };
 // GeminiProvider remains as a deprecated alias of GoogleProvider
 ```
 
