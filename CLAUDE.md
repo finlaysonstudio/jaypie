@@ -69,9 +69,9 @@
 | `OPENAI_API_KEY` | OpenAI API key for LLM |
 | `AWS_SESSION_TOKEN` | AWS session token (set by Lambda runtime) |
 ## Commands and Skills
-- `.claude/skills/build/SKILL.md` for build, CI/CD, and publishing
+- [VERSIONING.md](VERSIONING.md) for versioning and npm publishing
 - `.claude/skills/test/SKILL.md` for testing commands and patterns
-- `.claude/skills/green/SKILL.md` for completion criteria
+- `.claude/skills/green/SKILL.md` for build/typecheck/test/format commands and completion criteria
 ## Guidelines
 ### Actions
 - Do not commit changes or push without explicit user request

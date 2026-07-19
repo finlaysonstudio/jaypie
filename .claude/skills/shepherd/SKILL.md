@@ -9,7 +9,11 @@ Guide the merge-to-main process.
 
 ## Prepare
 
-Follow `/prepare` if this command did not immediately follow prepare.
+Before pushing, prepare the release:
+
+1. **Commit** current changes.
+2. **Version** edited packages per [VERSIONING.md](../../../VERSIONING.md) — patch-only, sync `packages/jaypie/package.json` dependency ranges, then `npm i --package-lock-only`.
+3. **Documentation and skills** — update anything impacted: top-level `README.md` and `CLAUDE.md`, package-level `CLAUDE.md`, `packages/mcp/skills/`, `packages/mcp/release-notes/` (for version bumps), and `workspaces/documentation/docs/`.
 
 ## Clean NPM Check
 
