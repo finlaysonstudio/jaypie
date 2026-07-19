@@ -84,6 +84,7 @@ export const MAX_CONSECUTIVE_TOOL_ERRORS = 6;
  */
 function createErrorClassifier(adapter: ProviderAdapter): ErrorClassifier {
   return {
+    classify: (error: unknown) => adapter.classifyError(error),
     isRetryable: (error: unknown) => adapter.isRetryableError(error),
     isKnownError: (error: unknown) => {
       const classified = adapter.classifyError(error);
@@ -406,7 +407,9 @@ export class OperateLoop {
           {
             context: {
               input: state.currentInput,
+              model: options.model ?? this.adapter.defaultModel,
               options,
+              provider: this.adapter.name,
               providerRequest,
             },
             hooks: hooksWithProgress,

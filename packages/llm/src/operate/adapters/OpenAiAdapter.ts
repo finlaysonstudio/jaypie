@@ -60,6 +60,7 @@ import {
   StandardToolResult,
 } from "../types.js";
 import { isTransientNetworkError } from "../retry/isTransientNetworkError.js";
+import { classifyProviderError } from "../../util/classifyProviderError.js";
 import { BaseProviderAdapter } from "./ProviderAdapter.interface.js";
 
 //
@@ -601,6 +602,11 @@ export class OpenAiAdapter extends BaseProviderAdapter {
   //
 
   classifyError(error: unknown): ClassifiedError {
+    // Shared first pass: retryable structured-output timeouts (#422),
+    // quota exhaustion, and billing failures classify the same across providers.
+    const shared = classifyProviderError(error);
+    if (shared) return shared;
+
     // Check for rate limit error
     if (error instanceof RateLimitError) {
       return {

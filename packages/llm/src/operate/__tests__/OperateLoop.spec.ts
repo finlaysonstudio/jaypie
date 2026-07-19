@@ -51,6 +51,14 @@ vi.mock("@jaypie/logger", () => ({
 }));
 
 vi.mock("@jaypie/errors", () => ({
+  JaypieError: class JaypieError extends Error {
+    isJaypieError = true;
+    status = 500;
+    title = "Internal Error";
+    constructor(message = "Internal Error") {
+      super(message);
+    }
+  },
   BadGatewayError: class BadGatewayError extends Error {
     status = 502;
     title = "Bad Gateway";

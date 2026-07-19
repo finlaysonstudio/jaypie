@@ -3,6 +3,7 @@ import { sleep } from "@jaypie/kit";
 import { JsonObject } from "@jaypie/types";
 
 import { MAX_CONSECUTIVE_TOOL_ERRORS } from "./OperateLoop.js";
+import { toLlmError } from "../errors/toLlmError.js";
 import { createStaleRejectionGuard } from "./retry/createStaleRejectionGuard.js";
 import { Toolkit } from "../tools/Toolkit.class.js";
 import {
@@ -398,10 +399,11 @@ export class StreamLoop {
               `Stream request failed after ${this.retryPolicy.maxRetries} retries`,
             );
             log.var({ error });
-            const errorMessage =
-              error instanceof Error ? error.message : String(error);
             llmSpan?.finish();
-            throw new BadGatewayError(errorMessage);
+            throw toLlmError(this.adapter.classifyError(error), {
+              model: options.model ?? this.adapter.defaultModel,
+              provider: this.adapter.name,
+            });
           }
 
           const delay = this.retryPolicy.getDelayForAttempt(attempt);

@@ -380,4 +380,88 @@ describe("Llm Class", () => {
       });
     });
   });
+
+  describe("model array (fallback chain sugar)", () => {
+    it("sets provider from the first model in the array", () => {
+      const llm = new Llm(undefined, {
+        model: ["gpt-4", "claude-3-opus"],
+      });
+      expect(llm["_provider"]).toBe(PROVIDER.OPENAI.NAME);
+      expect(llm["_options"].model).toBe("gpt-4");
+    });
+
+    it("derives a fallback chain from later models with auto-detected providers", () => {
+      const llm = new Llm(undefined, {
+        model: ["gpt-4", "claude-3-opus", "gemini-2.0-flash"],
+      });
+      expect(llm["_fallbackConfig"]).toEqual([
+        { model: "claude-3-opus", provider: PROVIDER.ANTHROPIC.NAME },
+        { model: "gemini-2.0-flash", provider: PROVIDER.GOOGLE.NAME },
+      ]);
+    });
+
+    it("uses the primary model when it succeeds", async () => {
+      const llm = new Llm(undefined, {
+        model: ["gpt-4", "claude-3-opus"],
+      });
+      const result = await llm.operate("test");
+      expect(result.content).toBe("Mocked OpenAI operate response");
+      expect(result.fallbackUsed).toBe(false);
+      expect(anthropicOperateMock).not.toHaveBeenCalled();
+    });
+
+    it("falls through the array in order when earlier models fail", async () => {
+      openAiOperateMock.mockRejectedValue(new Error("OpenAI failed"));
+      anthropicOperateMock.mockRejectedValue(new Error("Anthropic failed"));
+
+      const llm = new Llm(undefined, {
+        model: ["gpt-4", "claude-3-opus", "gemini-2.0-flash"],
+      });
+      const result = await llm.operate("test");
+      expect(result.content).toBe("Mocked Gemini operate response");
+      expect(result.fallbackUsed).toBe(true);
+      expect(result.fallbackAttempts).toBe(3);
+      expect(result.provider).toBe("google");
+    });
+
+    it("appends explicit fallback after the array-derived chain", async () => {
+      openAiOperateMock.mockRejectedValue(new Error("OpenAI failed"));
+      anthropicOperateMock.mockRejectedValue(new Error("Anthropic failed"));
+
+      const llm = new Llm(undefined, {
+        model: ["gpt-4", "claude-3-opus"],
+        fallback: [{ provider: PROVIDER.GOOGLE.NAME }],
+      });
+      const result = await llm.operate("test");
+      expect(result.provider).toBe("google");
+      expect(result.fallbackAttempts).toBe(3);
+    });
+
+    it("throws ConfigurationError for an empty array", () => {
+      expect(() => {
+        new Llm(undefined, { model: [] });
+      }).toThrowError("model array must contain at least one model name");
+    });
+
+    it("works through the static operate method", async () => {
+      openAiOperateMock.mockRejectedValue(new Error("Primary failed"));
+
+      const result = await Llm.operate("test", {
+        model: ["gpt-4", "claude-3-opus"],
+      });
+      expect(result.content).toBe("Mocked Anthropic operate response");
+      expect(result.fallbackUsed).toBe(true);
+    });
+
+    it("supports a per-call model array on operate", async () => {
+      openAiOperateMock.mockRejectedValue(new Error("Primary failed"));
+
+      const llm = new Llm(PROVIDER.OPENAI.NAME);
+      const result = await llm.operate("test", {
+        model: ["gpt-4", "claude-3-opus"],
+      });
+      expect(result.content).toBe("Mocked Anthropic operate response");
+      expect(result.fallbackUsed).toBe(true);
+    });
+  });
 });

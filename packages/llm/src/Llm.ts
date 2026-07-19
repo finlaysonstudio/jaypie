@@ -3,11 +3,13 @@ import { ConfigurationError, NotImplementedError } from "@jaypie/errors";
 import log from "@jaypie/logger";
 import { DEFAULT, LlmProviderName, PROVIDER } from "./constants.js";
 import { determineModelProvider } from "./util/determineModelProvider.js";
+import { resolveModelChain } from "./util/resolveModelChain.js";
 import {
   LlmFallbackConfig,
   LlmHistory,
   LlmInputMessage,
   LlmMessageOptions,
+  LlmModelOption,
   LlmOperateInput,
   LlmOperateOptions,
   LlmOperateResponse,
@@ -30,9 +32,17 @@ class Llm implements LlmProvider {
 
   constructor(
     providerName: LlmProviderName | string = DEFAULT.PROVIDER.NAME,
-    options: LlmOptions = {},
+    options: Omit<LlmOptions, "model"> & { model?: LlmModelOption } = {},
   ) {
-    const { fallback, model } = options;
+    const { fallback: fallbackOption, model: modelOption } = options;
+    // A `model` array is sugar for a preference-ordered fallback chain:
+    // index 0 is primary, the rest become fallback entries (provider
+    // auto-detected). Any explicit `fallback` is appended after the chain.
+    const { fallback: modelFallback, model } = resolveModelChain(modelOption);
+    const fallback =
+      modelFallback.length || fallbackOption
+        ? [...modelFallback, ...(fallbackOption ?? [])]
+        : undefined;
     let finalProvider = providerName;
     let finalModel = model;
 
@@ -125,9 +135,14 @@ class Llm implements LlmProvider {
 
   async send(
     message: string,
-    options?: LlmMessageOptions,
+    options?: Omit<LlmMessageOptions, "model"> & { model?: LlmModelOption },
   ): Promise<string | JsonObject> {
-    return this._llm.send(message, options);
+    if (options && Array.isArray(options.model)) {
+      // `send` has no fallback machinery; use the primary model only
+      const { model } = resolveModelChain(options.model);
+      return this._llm.send(message, { ...options, model });
+    }
+    return this._llm.send(message, options as LlmMessageOptions | undefined);
   }
 
   /**
@@ -162,7 +177,7 @@ class Llm implements LlmProvider {
 
   async operate(
     input: string | LlmHistory | LlmInputMessage | LlmOperateInput,
-    options: LlmOperateOptions = {},
+    options: Omit<LlmOperateOptions, "model"> & { model?: LlmModelOption } = {},
   ): Promise<LlmOperateResponse> {
     if (!this._llm.operate) {
       throw new NotImplementedError(
@@ -170,8 +185,24 @@ class Llm implements LlmProvider {
       );
     }
 
-    const fallbackChain = this.resolveFallbackChain(options);
-    const optionsWithoutFallback = { ...options, fallback: false as const };
+    // A per-call `model` array becomes primary + a derived fallback chain
+    // prepended to any resolved chain.
+    const { fallback: modelFallback, model: perCallModel } = resolveModelChain(
+      options.model,
+    );
+    const resolvedOptions: LlmOperateOptions = {
+      ...options,
+      model: perCallModel,
+    };
+
+    const fallbackChain = [
+      ...modelFallback,
+      ...this.resolveFallbackChain(resolvedOptions),
+    ];
+    const optionsWithoutFallback = {
+      ...resolvedOptions,
+      fallback: false as const,
+    };
 
     let lastError: Error | undefined;
     let attempts = 0;
@@ -224,51 +255,62 @@ class Llm implements LlmProvider {
 
   async *stream(
     input: string | LlmHistory | LlmInputMessage | LlmOperateInput,
-    options: LlmOperateOptions = {},
+    options: Omit<LlmOperateOptions, "model"> & { model?: LlmModelOption } = {},
   ): AsyncIterable<LlmStreamChunk> {
     if (!this._llm.stream) {
       throw new NotImplementedError(
         `Provider ${this._provider} does not support stream method`,
       );
     }
-    yield* this._llm.stream(input, options);
+    // `stream` has no instance-level fallback machinery; an array model uses
+    // the primary and ignores the rest.
+    const { model } = resolveModelChain(options.model);
+    const streamOptions: LlmOperateOptions = { ...options, model };
+    yield* this._llm.stream(input, streamOptions);
   }
 
   static async send(
     message: string,
-    options?: LlmMessageOptions & {
+    options?: Omit<LlmMessageOptions, "model"> & {
       llm?: LlmProviderName;
       apiKey?: string;
-      model?: string;
+      model?: string | string[];
     },
   ): Promise<string | JsonObject> {
     const { llm, apiKey, model, ...messageOptions } = options || {};
-    const instance = new Llm(llm, { apiKey, model });
+    // A `model` array derives a fallback chain; `send` has no fallback
+    // machinery, so the primary model is used and the chain is ignored.
+    const { model: primaryModel } = resolveModelChain(model);
+    const instance = new Llm(llm, { apiKey, model: primaryModel });
     return instance.send(message, messageOptions);
   }
 
   static async operate(
     input: string | LlmHistory | LlmInputMessage | LlmOperateInput,
-    options?: LlmOperateOptions & {
+    options?: Omit<LlmOperateOptions, "model"> & {
       apiKey?: string;
       fallback?: LlmFallbackConfig[] | false;
       llm?: LlmProviderName;
-      model?: string;
+      model?: string | string[];
     },
   ): Promise<LlmOperateResponse> {
     const { apiKey, fallback, llm, model, ...operateOptions } = options || {};
 
-    let finalLlm = llm;
-    let finalModel = model;
+    // A `model` array becomes primary + derived fallback chain
+    const { fallback: modelFallback, model: primaryModel } =
+      resolveModelChain(model);
 
-    if (!llm && model) {
-      const determined = determineModelProvider(model);
+    let finalLlm = llm;
+    let finalModel = primaryModel;
+
+    if (!llm && primaryModel) {
+      const determined = determineModelProvider(primaryModel);
       if (determined.provider) {
         finalLlm = determined.provider as LlmProviderName;
       }
-    } else if (llm && model) {
+    } else if (llm && primaryModel) {
       // When both llm and model are provided, check if they conflict
-      const determined = determineModelProvider(model);
+      const determined = determineModelProvider(primaryModel);
       if (determined.provider && determined.provider !== llm) {
         // Don't pass the conflicting model to the constructor
         finalModel = undefined;
@@ -276,7 +318,11 @@ class Llm implements LlmProvider {
     }
 
     // Resolve fallback for static method: pass to instance if array, pass to operate options if false
-    const instanceFallback = Array.isArray(fallback) ? fallback : undefined;
+    const explicitFallback = Array.isArray(fallback) ? fallback : [];
+    const instanceFallback =
+      modelFallback.length || explicitFallback.length
+        ? [...modelFallback, ...explicitFallback]
+        : undefined;
     const operateFallback = fallback === false ? false : undefined;
 
     const instance = new Llm(finalLlm, {
@@ -292,32 +338,40 @@ class Llm implements LlmProvider {
 
   static stream(
     input: string | LlmHistory | LlmInputMessage | LlmOperateInput,
-    options?: LlmOperateOptions & {
+    options?: Omit<LlmOperateOptions, "model"> & {
       llm?: LlmProviderName;
       apiKey?: string;
-      model?: string;
+      model?: string | string[];
     },
   ): AsyncIterable<LlmStreamChunk> {
     const { llm, apiKey, model, ...streamOptions } = options || {};
 
-    let finalLlm = llm;
-    let finalModel = model;
+    // A `model` array becomes primary + derived fallback chain
+    const { fallback: modelFallback, model: primaryModel } =
+      resolveModelChain(model);
 
-    if (!llm && model) {
-      const determined = determineModelProvider(model);
+    let finalLlm = llm;
+    let finalModel = primaryModel;
+
+    if (!llm && primaryModel) {
+      const determined = determineModelProvider(primaryModel);
       if (determined.provider) {
         finalLlm = determined.provider as LlmProviderName;
       }
-    } else if (llm && model) {
+    } else if (llm && primaryModel) {
       // When both llm and model are provided, check if they conflict
-      const determined = determineModelProvider(model);
+      const determined = determineModelProvider(primaryModel);
       if (determined.provider && determined.provider !== llm) {
         // Don't pass the conflicting model to the constructor
         finalModel = undefined;
       }
     }
 
-    const instance = new Llm(finalLlm, { apiKey, model: finalModel });
+    const instance = new Llm(finalLlm, {
+      apiKey,
+      fallback: modelFallback.length ? modelFallback : undefined,
+      model: finalModel,
+    });
     return instance.stream(input, streamOptions);
   }
 }

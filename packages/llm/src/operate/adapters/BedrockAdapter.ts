@@ -32,6 +32,7 @@ import {
   StandardToolResult,
 } from "../types.js";
 import { isTransientNetworkError } from "../retry/isTransientNetworkError.js";
+import { classifyProviderError } from "../../util/classifyProviderError.js";
 import { BaseProviderAdapter } from "./ProviderAdapter.interface.js";
 
 //
@@ -698,6 +699,11 @@ export class BedrockAdapter extends BaseProviderAdapter {
   //
 
   classifyError(error: unknown): ClassifiedError {
+    // Shared first pass: retryable structured-output timeouts (#422),
+    // quota exhaustion, and billing failures classify the same across providers.
+    const shared = classifyProviderError(error);
+    if (shared) return shared;
+
     const errorName = (error as Error)?.constructor?.name;
     const errorMessage = (error as Error)?.message ?? "";
 
