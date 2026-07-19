@@ -298,6 +298,7 @@ const response = await Llm.operate("Greet the world", {
 - Uses the OpenAI-style native `response_format: { type: "json_schema", ... }` for format-only requests.
 - Format **and** tools combined is rejected by the API ("You cannot specify response format and function call at the same time"), so those requests preemptively use the `structured_output` fake-tool emulation (logged at warn) — same approach as Gemini 2.5.
 - A model that 400/422s on `response_format` alone is cached for the session and retried via the emulation path.
+- Emulation compliance is enforced by the operate loop: when a format request completes as prose, the loop first tries to parse the text as JSON (fence-stripped), then takes a corrective turn offering **only** the `structured_output` tool (`OperateRequest.structuredOutputRetry`), looping within the `turns` budget. Adapters opt in via `supportsStructuredOutputRetry`; Fireworks is currently the only one.
 
 **OpenRouter notes:**
 - Uses the OpenAI-style native `response_format: { type: "json_schema", json_schema: { name, schema, strict: true } }`. OpenRouter routes to a backend provider; many but not all backends support this — the SDK accepts the field on every model, and unsupported routes 4xx.

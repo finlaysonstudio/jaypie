@@ -44,6 +44,13 @@ export interface ProviderAdapter {
    */
   readonly defaultModel: string;
 
+  /**
+   * Whether OperateLoop may take a corrective turn when a `format` request
+   * completes with prose instead of structured output (tool-emulation
+   * providers opt in).
+   */
+  readonly supportsStructuredOutputRetry?: boolean;
+
   //
   // Request Building
   //
@@ -283,6 +290,14 @@ export abstract class BaseProviderAdapter implements ProviderAdapter {
   abstract responseToHistoryItems(response: unknown): LlmHistory;
   abstract classifyError(error: unknown): ClassifiedError;
   abstract isComplete(response: unknown): boolean;
+
+  /**
+   * Whether OperateLoop may take a corrective turn when a `format` request
+   * completes with prose instead of structured output. Providers whose
+   * structured output rides a tool emulation (where compliance is a model
+   * decision) opt in; native grammar-constrained providers do not need it.
+   */
+  readonly supportsStructuredOutputRetry: boolean = false;
 
   /**
    * Default implementation checks if error is retryable via classifyError
