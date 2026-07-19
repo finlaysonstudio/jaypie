@@ -52,6 +52,14 @@ vi.mock("@jaypie/logger", () => ({
 }));
 
 vi.mock("@jaypie/errors", () => ({
+  JaypieError: class JaypieError extends Error {
+    isJaypieError = true;
+    status = 500;
+    title = "Internal Error";
+    constructor(message = "Internal Error") {
+      super(message);
+    }
+  },
   BadGatewayError: class BadGatewayError extends Error {
     status = 502;
     title = "Bad Gateway";
@@ -1703,7 +1711,7 @@ describe("StreamLoop", () => {
       });
 
       await expect(collectChunks(loop.execute("Hello"))).rejects.toThrow(
-        "Bad Gateway",
+        "persistent failure",
       );
 
       // Should have attempted 3 times (initial + 2 retries)
@@ -1731,7 +1739,7 @@ describe("StreamLoop", () => {
       });
 
       await expect(collectChunks(loop.execute("Hello"))).rejects.toThrow(
-        "Bad Gateway",
+        "authentication failed",
       );
 
       // Should have only attempted once

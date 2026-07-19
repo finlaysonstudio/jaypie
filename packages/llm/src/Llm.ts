@@ -32,7 +32,7 @@ class Llm implements LlmProvider {
 
   constructor(
     providerName: LlmProviderName | string = DEFAULT.PROVIDER.NAME,
-    options: LlmOptions & { model?: LlmModelOption } = {},
+    options: Omit<LlmOptions, "model"> & { model?: LlmModelOption } = {},
   ) {
     const { fallback: fallbackOption, model: modelOption } = options;
     // A `model` array is sugar for a preference-ordered fallback chain:
@@ -135,7 +135,7 @@ class Llm implements LlmProvider {
 
   async send(
     message: string,
-    options?: LlmMessageOptions & { model?: LlmModelOption },
+    options?: Omit<LlmMessageOptions, "model"> & { model?: LlmModelOption },
   ): Promise<string | JsonObject> {
     if (options && Array.isArray(options.model)) {
       // `send` has no fallback machinery; use the primary model only
@@ -177,7 +177,7 @@ class Llm implements LlmProvider {
 
   async operate(
     input: string | LlmHistory | LlmInputMessage | LlmOperateInput,
-    options: LlmOperateOptions & { model?: LlmModelOption } = {},
+    options: Omit<LlmOperateOptions, "model"> & { model?: LlmModelOption } = {},
   ): Promise<LlmOperateResponse> {
     if (!this._llm.operate) {
       throw new NotImplementedError(
@@ -255,7 +255,7 @@ class Llm implements LlmProvider {
 
   async *stream(
     input: string | LlmHistory | LlmInputMessage | LlmOperateInput,
-    options: LlmOperateOptions & { model?: LlmModelOption } = {},
+    options: Omit<LlmOperateOptions, "model"> & { model?: LlmModelOption } = {},
   ): AsyncIterable<LlmStreamChunk> {
     if (!this._llm.stream) {
       throw new NotImplementedError(
@@ -271,7 +271,7 @@ class Llm implements LlmProvider {
 
   static async send(
     message: string,
-    options?: LlmMessageOptions & {
+    options?: Omit<LlmMessageOptions, "model"> & {
       llm?: LlmProviderName;
       apiKey?: string;
       model?: string | string[];
@@ -287,7 +287,7 @@ class Llm implements LlmProvider {
 
   static async operate(
     input: string | LlmHistory | LlmInputMessage | LlmOperateInput,
-    options?: LlmOperateOptions & {
+    options?: Omit<LlmOperateOptions, "model"> & {
       apiKey?: string;
       fallback?: LlmFallbackConfig[] | false;
       llm?: LlmProviderName;
@@ -338,7 +338,7 @@ class Llm implements LlmProvider {
 
   static stream(
     input: string | LlmHistory | LlmInputMessage | LlmOperateInput,
-    options?: LlmOperateOptions & {
+    options?: Omit<LlmOperateOptions, "model"> & {
       llm?: LlmProviderName;
       apiKey?: string;
       model?: string | string[];

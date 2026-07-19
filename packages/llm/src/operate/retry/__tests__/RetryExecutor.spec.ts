@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { RetryExecutor, ErrorClassifier } from "../RetryExecutor.js";
 import { RetryPolicy } from "../RetryPolicy.js";
+import { ErrorCategory } from "../../types.js";
 
 //
 //
@@ -23,6 +24,13 @@ vi.mock("@jaypie/errors", () => ({
     constructor(message = "Bad Gateway") {
       super(message);
       this.name = "BadGatewayError";
+    }
+  },
+  JaypieError: class JaypieError extends Error {
+    isJaypieError = true;
+    constructor(message = "Internal Error") {
+      super(message);
+      this.name = "JaypieError";
     }
   },
 }));
@@ -57,6 +65,14 @@ class NonRetryableError extends Error {
 }
 
 const createTestErrorClassifier = (): ErrorClassifier => ({
+  classify: (error: unknown) => ({
+    category:
+      error instanceof RetryableError
+        ? ErrorCategory.Retryable
+        : ErrorCategory.Unrecoverable,
+    error,
+    shouldRetry: error instanceof RetryableError,
+  }),
   isRetryable: (error: unknown) => error instanceof RetryableError,
   isKnownError: (error: unknown) =>
     error instanceof RetryableError || error instanceof NonRetryableError,
@@ -150,7 +166,7 @@ describe("RetryExecutor", () => {
       vi.clearAllMocks();
     });
 
-    it("throws BadGatewayError on non-retryable error", async () => {
+    it("throws a typed terminal error on non-retryable error", async () => {
       const operation = vi.fn().mockRejectedValue(new NonRetryableError());
 
       await expect(
@@ -160,7 +176,7 @@ describe("RetryExecutor", () => {
       expect(operation).toHaveBeenCalledTimes(1);
     });
 
-    it("throws BadGatewayError after exhausting retries", async () => {
+    it("throws a typed terminal error after exhausting retries", async () => {
       const operation = vi.fn().mockRejectedValue(new RetryableError());
 
       await expect(
@@ -403,6 +419,11 @@ describe("RetryExecutor", () => {
       // the SDK fires a twin rejection of the same shape on a later microtask.
       const looseExecutor = new RetryExecutor({
         errorClassifier: {
+          classify: (error: unknown) => ({
+            category: ErrorCategory.Retryable,
+            error,
+            shouldRetry: true,
+          }),
           isRetryable: () => true,
           isKnownError: () => true,
         },

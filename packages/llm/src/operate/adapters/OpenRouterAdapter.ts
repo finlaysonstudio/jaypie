@@ -29,6 +29,7 @@ import {
   StandardToolResult,
 } from "../types.js";
 import { isTransientNetworkError } from "../retry/isTransientNetworkError.js";
+import { classifyProviderError } from "../../util/classifyProviderError.js";
 import { OpenRouterClient } from "../../providers/openrouter/client.js";
 import { BaseProviderAdapter } from "./ProviderAdapter.interface.js";
 
@@ -984,6 +985,11 @@ export class OpenRouterAdapter extends BaseProviderAdapter {
   //
 
   classifyError(error: unknown): ClassifiedError {
+    // Shared first pass: retryable structured-output timeouts (#422),
+    // quota exhaustion, and billing failures classify the same across providers.
+    const shared = classifyProviderError(error);
+    if (shared) return shared;
+
     // Check if error has a status code (HTTP error)
     const errorWithStatus = error as { status?: number; statusCode?: number };
     const statusCode = errorWithStatus.status || errorWithStatus.statusCode;

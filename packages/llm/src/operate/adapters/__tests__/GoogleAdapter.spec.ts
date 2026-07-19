@@ -798,6 +798,19 @@ describe("GoogleAdapter", () => {
     });
 
     describe("classifyError", () => {
+      it("classifies a daily-quota 429 as terminal quota, not rate limit", () => {
+        const error = {
+          status: 429,
+          message:
+            "You exceeded your current quota. Quota exceeded for metric: generativelanguage.googleapis.com/generate_requests_per_model_per_day",
+        };
+
+        const result = googleAdapter.classifyError(error);
+
+        expect(result.category).toBe(ErrorCategory.Quota);
+        expect(result.shouldRetry).toBe(false);
+      });
+
       it("classifies rate limit error by status code", () => {
         const error = { status: 429, message: "Rate limit exceeded" };
 
@@ -826,8 +839,17 @@ describe("GoogleAdapter", () => {
         expect(result.shouldRetry).toBe(false);
       });
 
-      it("classifies rate limit by error message", () => {
+      it("classifies quota-exceeded messages as terminal quota", () => {
         const error = { message: "quota exceeded for this resource" };
+
+        const result = googleAdapter.classifyError(error);
+
+        expect(result.category).toBe(ErrorCategory.Quota);
+        expect(result.shouldRetry).toBe(false);
+      });
+
+      it("classifies a plain rate-limit message via status handling", () => {
+        const error = { status: 429, message: "rate limit reached" };
 
         const result = googleAdapter.classifyError(error);
 

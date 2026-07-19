@@ -47,6 +47,17 @@ export { LlmStreamChunkType } from "./types/LlmStreamChunk.interface.js";
 
 export { JaypieToolkit, toolkit, Toolkit, tools } from "./tools/index.js";
 
+// Errors
+export {
+  LlmError,
+  LlmQuotaError,
+  LlmRateLimitError,
+  LlmTransientError,
+  LlmUnrecoverableError,
+} from "./errors/LlmError.js";
+export type { LlmErrorOptions } from "./errors/LlmError.js";
+export { ErrorCategory } from "./operate/types.js";
+
 // Utilities
 export { extractReasoning } from "./util/extractReasoning.js";
 export {

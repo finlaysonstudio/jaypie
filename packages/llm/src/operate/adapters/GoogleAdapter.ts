@@ -37,6 +37,7 @@ import {
   StandardToolResult,
 } from "../types.js";
 import { isTransientNetworkError } from "../retry/isTransientNetworkError.js";
+import { classifyProviderError } from "../../util/classifyProviderError.js";
 import { GoogleClient } from "../../providers/google/client.js";
 import { BaseProviderAdapter } from "./ProviderAdapter.interface.js";
 import {
@@ -759,6 +760,11 @@ export class GoogleAdapter extends BaseProviderAdapter {
   //
 
   classifyError(error: unknown): ClassifiedError {
+    // Shared first pass: retryable structured-output timeouts (#422),
+    // quota exhaustion, and billing failures classify the same across providers.
+    const shared = classifyProviderError(error);
+    if (shared) return shared;
+
     const geminiError = error as GeminiErrorInfo;
 
     // Extract status code from error

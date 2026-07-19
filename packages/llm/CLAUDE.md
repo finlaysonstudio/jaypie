@@ -187,6 +187,44 @@ const response = await Llm.operate(input, {
 - `fallbackUsed`: `true` if a fallback provider was used
 - `fallbackAttempts`: Number of providers tried (1 = primary only)
 
+### Error Handling
+
+When a request cannot be completed, `operate()`/`stream()` throw a normalized,
+provider-agnostic `LlmError` (extends `JaypieError`) instead of a bare gateway
+error. Consumers catch a stable type regardless of which provider failed; the
+original provider error is preserved on `.cause`, and `.provider`/`.model` name
+the failed call.
+
+| Class | `category` | `status` | When |
+|-------|-----------|----------|------|
+| `LlmRateLimitError` | `rate_limit` | 429 | Short-term rate limit; carries `retryAfterMs` |
+| `LlmQuotaError` | `quota` | 402 | Quota exhausted or insufficient funds; `reason: "quota" \| "billing"` |
+| `LlmUnrecoverableError` | `unrecoverable` | 502 | Bad request / auth / not found |
+| `LlmTransientError` | `retryable` | 504 | A transient/unknown error survived the retry budget |
+
+```typescript
+import { Llm, LlmQuotaError, LlmRateLimitError } from "@jaypie/llm";
+
+try {
+  await Llm.operate(input, { model: "claude-sonnet-5" });
+} catch (error) {
+  if (error instanceof LlmQuotaError) {
+    // terminal: exhausted quota or unbillable account (error.reason)
+  } else if (error instanceof LlmRateLimitError) {
+    // back off error.retryAfterMs and retry
+  }
+}
+```
+
+Classification lives in each provider adapter's `classifyError`, which first
+consults the shared `classifyProviderError` pass so that cross-provider
+conditions agree: retryable structured-output compile timeouts (e.g. Anthropic
+`Grammar compilation timed out.`, issue #422), exhausted quota, and billing
+failures classify the same everywhere. A daily-quota `429` is classified as
+`Quota` (terminal), not `RateLimit`. Rate-limit and quota errors are **not**
+auto-retried within the request budget; they throw immediately as typed errors
+so the caller decides.
+
 **Model array sugar:**
 
 `model` (constructor, static/instance `operate`/`send`/`stream`, and per-call

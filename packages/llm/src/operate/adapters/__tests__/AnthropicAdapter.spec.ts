@@ -774,6 +774,23 @@ describe("AnthropicAdapter", () => {
     });
 
     describe("classifyError", () => {
+      it("classifies grammar-compilation timeout as retryable (#422)", () => {
+        const result = anthropicAdapter.classifyError(
+          new Error("Grammar compilation timed out."),
+        );
+        expect(result.category).toBe(ErrorCategory.Retryable);
+        expect(result.shouldRetry).toBe(true);
+      });
+
+      it("classifies a credit-balance failure as terminal quota (billing)", () => {
+        const result = anthropicAdapter.classifyError(
+          new Error("Your credit balance is too low to access the API"),
+        );
+        expect(result.category).toBe(ErrorCategory.Quota);
+        expect(result.reason).toBe("billing");
+        expect(result.shouldRetry).toBe(false);
+      });
+
       it("classifies rate limit error", async () => {
         const { RateLimitError } =
           await import("../../../providers/anthropic/client.js");

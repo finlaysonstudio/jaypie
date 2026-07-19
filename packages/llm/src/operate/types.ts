@@ -126,8 +126,14 @@ export interface ProviderToolDefinition {
 export enum ErrorCategory {
   /** Error is transient and can be retried */
   Retryable = "retryable",
-  /** Error is due to rate limiting */
+  /** Error is due to short-term rate limiting (retry after a delay) */
   RateLimit = "rate_limit",
+  /**
+   * Provider quota is exhausted or the account cannot be billed
+   * (insufficient funds, daily quota, plan limit). Terminal and actionable —
+   * retrying within the request budget will not help.
+   */
+  Quota = "quota",
   /** Error cannot be recovered from */
   Unrecoverable = "unrecoverable",
   /** Error type is unknown */
@@ -146,6 +152,11 @@ export interface ClassifiedError {
   shouldRetry: boolean;
   /** Suggested delay before retry (if applicable) */
   suggestedDelayMs?: number;
+  /**
+   * For {@link ErrorCategory.Quota}, distinguishes an exhausted usage quota
+   * from an account that cannot be billed (insufficient funds).
+   */
+  reason?: "quota" | "billing";
 }
 
 //

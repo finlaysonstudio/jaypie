@@ -1,5 +1,4 @@
 import { sleep } from "@jaypie/kit";
-import { BadGatewayError } from "@jaypie/errors";
 
 import { getLogger } from "../../util/index.js";
 import { createStaleRejectionGuard } from "./createStaleRejectionGuard.js";
@@ -9,6 +8,8 @@ import {
   LlmHooks,
 } from "../hooks/HookRunner.js";
 import { RetryPolicy, defaultRetryPolicy } from "./RetryPolicy.js";
+import { ClassifiedError } from "../types.js";
+import { toLlmError } from "../../errors/toLlmError.js";
 
 //
 //
@@ -19,11 +20,17 @@ export interface RetryContext {
   input: unknown;
   options?: unknown;
   providerRequest: unknown;
+  /** Provider name, carried onto the thrown LlmError */
+  provider?: string;
+  /** Model in use, carried onto the thrown LlmError */
+  model?: string;
 }
 
 export interface ErrorClassifier {
   isRetryable(error: unknown): boolean;
   isKnownError(error: unknown): boolean;
+  /** Full classification, used to throw a typed LlmError on terminal failure */
+  classify(error: unknown): ClassifiedError;
 }
 
 export interface RetryExecutorConfig {
@@ -55,6 +62,19 @@ export class RetryExecutor {
     this.policy = config.policy ?? defaultRetryPolicy;
     this.hookRunner = config.hookRunner ?? defaultHookRunner;
     this.errorClassifier = config.errorClassifier;
+  }
+
+  /**
+   * Build the typed, provider-agnostic error thrown when a request cannot be
+   * completed — classified (rate limit / quota / unrecoverable / transient)
+   * and carrying the provider, model, and original error as `cause`.
+   */
+  private toTerminalError(error: unknown, context: RetryContext) {
+    const classified = this.errorClassifier.classify(error);
+    return toLlmError(classified, {
+      model: context.model,
+      provider: context.provider,
+    });
   }
 
   /**
@@ -113,9 +133,7 @@ export class RetryExecutor {
               error,
             });
 
-            const errorMessage =
-              error instanceof Error ? error.message : String(error);
-            throw new BadGatewayError(errorMessage);
+            throw this.toTerminalError(error, options.context);
           }
 
           // Check if error is not retryable
@@ -130,9 +148,7 @@ export class RetryExecutor {
               error,
             });
 
-            const errorMessage =
-              error instanceof Error ? error.message : String(error);
-            throw new BadGatewayError(errorMessage);
+            throw this.toTerminalError(error, options.context);
           }
 
           // Warn if this is an unknown error type
