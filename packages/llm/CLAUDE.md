@@ -294,6 +294,11 @@ const response = await Llm.operate("Greet the world", {
 - `stop_reason: "refusal"` and `stop_reason: "max_tokens"` are surfaced as text rather than parsed JSON. `provider.send(..., { response })` throws on these; `operate()` surfaces them via `response.content` as a string.
 - A model that rejects `output_config` is cached for the session and transparently retried via the legacy fake-tool emulation. Citations + structured output (a 400 documented as incompatible) and `output_format`-deprecation 400s are **not** retried — those errors propagate so callers can see the real cause.
 
+**Fireworks notes:**
+- Uses the OpenAI-style native `response_format: { type: "json_schema", ... }` for format-only requests.
+- Format **and** tools combined is rejected by the API ("You cannot specify response format and function call at the same time"), so those requests preemptively use the `structured_output` fake-tool emulation (logged at warn) — same approach as Gemini 2.5.
+- A model that 400/422s on `response_format` alone is cached for the session and retried via the emulation path.
+
 **OpenRouter notes:**
 - Uses the OpenAI-style native `response_format: { type: "json_schema", json_schema: { name, schema, strict: true } }`. OpenRouter routes to a backend provider; many but not all backends support this — the SDK accepts the field on every model, and unsupported routes 4xx.
 - `additionalProperties: false` is forced on every object (required for `strict: true`).

@@ -292,6 +292,43 @@ describe("FireworksAdapter", () => {
         ).toBe(true);
         expect(result.tool_choice).toBe("auto");
       });
+
+      it("uses structured_output tool emulation when format and tools are combined", () => {
+        const warn = vi.spyOn(log, "warn").mockImplementation(() => {});
+        const adapter = new FireworksAdapter();
+        const schema = {
+          type: "object",
+          properties: { name: { type: "string" } },
+        };
+        const request: OperateRequest = {
+          model: PROVIDER.FIREWORKS.DEFAULT,
+          messages: [
+            {
+              content: "Hello",
+              role: LlmMessageRole.User,
+              type: LlmMessageType.Message,
+            },
+          ],
+          format: schema,
+          tools: [
+            {
+              name: "roll",
+              description: "Roll dice",
+              parameters: { type: "object" },
+            },
+          ],
+        };
+
+        const result = adapter.buildRequest(request);
+
+        // Fireworks rejects response_format combined with tools
+        expect(result.response_format).toBeUndefined();
+        expect(result.tools).toHaveLength(2);
+        expect(result.tools![0].function.name).toBe("roll");
+        expect(result.tools![1].function.name).toBe("structured_output");
+        expect(warn).toHaveBeenCalled();
+        vi.restoreAllMocks();
+      });
     });
 
     describe("parseResponse", () => {

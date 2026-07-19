@@ -160,7 +160,7 @@ function isStructuredOutputUnsupportedError(error: unknown): boolean {
     (m): m is string => typeof m === "string",
   );
   return messages.some((m) =>
-    /response_format|json[_ ]schema|structured[_ ]output/i.test(m),
+    /response[_ ]format|json[_ ]schema|structured[_ ]output/i.test(m),
   );
 }
 
@@ -389,16 +389,24 @@ export class FireworksAdapter extends BaseProviderAdapter {
       fireworksRequest.user = request.user;
     }
 
+    // Fireworks rejects `response_format` combined with `tools` ("You cannot
+    // specify response format and function call at the same time"), so a
+    // request with both preemptively uses the structured_output tool
+    // emulation — same approach as Gemini 2.5.
+    const hasCallerTools = Boolean(request.tools?.length);
     const useFallbackStructuredOutput =
       Boolean(request.format) &&
-      !this.supportsStructuredOutput(fireworksRequest.model);
+      (hasCallerTools ||
+        !this.supportsStructuredOutput(fireworksRequest.model));
 
     const allTools: ProviderToolDefinition[] = request.tools
       ? [...request.tools]
       : [];
     if (useFallbackStructuredOutput && request.format) {
       log.warn(
-        `[FireworksAdapter] Using legacy structured_output tool fallback for model ${fireworksRequest.model}; native response_format previously rejected for this model.`,
+        hasCallerTools
+          ? `[FireworksAdapter] Fireworks does not support response_format combined with tools; using structured_output tool emulation for model ${fireworksRequest.model}.`
+          : `[FireworksAdapter] Using legacy structured_output tool fallback for model ${fireworksRequest.model}; native response_format previously rejected for this model.`,
       );
       allTools.push({
         name: STRUCTURED_OUTPUT_TOOL_NAME,

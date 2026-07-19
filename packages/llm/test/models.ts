@@ -66,15 +66,17 @@ function catalogIds(node: unknown = MODEL, out: string[] = []): string[] {
 // Per-model expected-outcome overrides for first-class models. Fireworks has
 // no file/PDF input support (documents cannot be delivered as data: URIs) and
 // only some catalog models are vision-capable (verified live 2026-07-19).
+// Fireworks also rejects response_format combined with tools, so `both`
+// engages the structured_output tool emulation and logs a warn.
 const MATRIX_EXPECT: Record<
   string,
   Partial<Record<Capability, ExpectedOutcome>>
 > = {
-  [MODEL.FIREWORKS.DEEPSEEK]: { pdf: "skip", image: "skip" },
-  [MODEL.FIREWORKS.GLM]: { pdf: "skip", image: "skip" },
-  [MODEL.FIREWORKS.KIMI]: { pdf: "skip" },
-  [MODEL.FIREWORKS.MINIMAX]: { pdf: "skip", image: "skip" },
-  [MODEL.FIREWORKS.QWEN]: { pdf: "skip" },
+  [MODEL.FIREWORKS.DEEPSEEK]: { both: "warn", pdf: "skip", image: "skip" },
+  [MODEL.FIREWORKS.GLM]: { both: "warn", pdf: "skip", image: "skip" },
+  [MODEL.FIREWORKS.KIMI]: { both: "warn", pdf: "skip" },
+  [MODEL.FIREWORKS.MINIMAX]: { both: "warn", pdf: "skip", image: "skip" },
+  [MODEL.FIREWORKS.QWEN]: { both: "warn", pdf: "skip" },
 };
 
 // First-class models under test = the promoted MODEL.* catalog plus each
