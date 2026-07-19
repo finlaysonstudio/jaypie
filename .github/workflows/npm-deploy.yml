@@ -197,6 +197,8 @@ jobs:
             providers: "openai"
           - group: gemini-xai
             providers: "google,xai"
+          - group: fireworks
+            providers: "fireworks"
           - group: openrouter
             providers: "openrouter"
           - group: bedrock
@@ -244,5 +246,6 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.CICD_ANTHROPIC_API_KEY }}
           GEMINI_API_KEY: ${{ secrets.CICD_GEMINI_API_KEY }}
           OPENAI_API_KEY: ${{ secrets.CICD_OPENAI_API_KEY }}
+          FIREWORKS_API_KEY: ${{ secrets.CICD_FIREWORKS_API_KEY }}
           OPENROUTER_API_KEY: ${{ secrets.CICD_OPENROUTER_API_KEY }}
           XAI_API_KEY: ${{ secrets.CICD_XAI_API_KEY }}

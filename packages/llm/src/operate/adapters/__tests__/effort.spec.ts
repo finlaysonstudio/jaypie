@@ -9,6 +9,7 @@ import {
 } from "../../../types/LlmProvider.interface.js";
 import {
   toAnthropicEffort,
+  toFireworksEffort,
   toGeminiThinkingBudget,
   toGeminiThinkingLevel,
   toOpenAiEffort,
@@ -146,6 +147,29 @@ describe("effort mapping util", () => {
       expect(value).toBeLessThanOrEqual(24576);
       expect(value).toBeGreaterThanOrEqual(512);
     }
+  });
+
+  it("Fireworks collapses ends onto low..high", () => {
+    expect(toFireworksEffort(EFFORT.LOWEST)).toEqual({
+      papered: true,
+      value: "low",
+    });
+    expect(toFireworksEffort(EFFORT.LOW)).toEqual({
+      papered: false,
+      value: "low",
+    });
+    expect(toFireworksEffort(EFFORT.MEDIUM)).toEqual({
+      papered: false,
+      value: "medium",
+    });
+    expect(toFireworksEffort(EFFORT.HIGH)).toEqual({
+      papered: false,
+      value: "high",
+    });
+    expect(toFireworksEffort(EFFORT.HIGHEST)).toEqual({
+      papered: true,
+      value: "high",
+    });
   });
 
   it("OpenRouter spans minimal..xhigh without papering", () => {

@@ -159,6 +159,21 @@ export function toGeminiThinkingBudget(
   return { papered: false, value: GEMINI_THINKING_BUDGET[effort] };
 }
 
+// Fireworks `reasoning_effort` — low | medium | high. Accepted on every model
+// (the API no-ops where unsupported). No sub-low or top rung, so `lowest`
+// collapses onto `low` and `highest` onto `high`.
+const FIREWORKS_EFFORT: Record<LlmEffort, LlmEffortMapping> = {
+  [EFFORT.LOWEST]: { papered: true, value: "low" },
+  [EFFORT.LOW]: { papered: false, value: "low" },
+  [EFFORT.MEDIUM]: { papered: false, value: "medium" },
+  [EFFORT.HIGH]: { papered: false, value: "high" },
+  [EFFORT.HIGHEST]: { papered: true, value: "high" },
+};
+
+export function toFireworksEffort(effort: LlmEffort): LlmEffortMapping {
+  return FIREWORKS_EFFORT[effort];
+}
+
 // OpenRouter `reasoning.effort` — accepts the full minimal..xhigh ladder and
 // maps to the routed provider's nearest supported level itself, so nothing is
 // papered here.

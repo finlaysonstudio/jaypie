@@ -19,6 +19,7 @@ import {
 import { LlmStreamChunk } from "./types/LlmStreamChunk.interface.js";
 import { AnthropicProvider } from "./providers/anthropic/AnthropicProvider.class.js";
 import { BedrockProvider } from "./providers/bedrock/index.js";
+import { FireworksProvider } from "./providers/fireworks/index.js";
 import { GoogleProvider } from "./providers/google/GoogleProvider.class.js";
 import { OpenAiProvider } from "./providers/openai/index.js";
 import { OpenRouterProvider } from "./providers/openrouter/index.js";
@@ -112,6 +113,10 @@ class Llm implements LlmProvider {
         });
       case PROVIDER.BEDROCK.NAME:
         return new BedrockProvider(model || PROVIDER.BEDROCK.DEFAULT);
+      case PROVIDER.FIREWORKS.NAME:
+        return new FireworksProvider(model || PROVIDER.FIREWORKS.DEFAULT, {
+          apiKey,
+        });
       case PROVIDER.GOOGLE.NAME:
         return new GoogleProvider(model || PROVIDER.GOOGLE.DEFAULT, {
           apiKey,

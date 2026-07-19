@@ -5,6 +5,8 @@ export {
   BaseProviderAdapter,
   BedrockAdapter,
   bedrockAdapter,
+  FireworksAdapter,
+  fireworksAdapter,
   GoogleAdapter,
   googleAdapter,
   OpenAiAdapter,
