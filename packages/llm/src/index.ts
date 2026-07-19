@@ -10,6 +10,7 @@ export type {
   LlmInputContentText,
   LlmInputMessage,
   LlmMessageOptions,
+  LlmModelOption,
   LlmOperateInput,
   LlmOperateInputContent,
   LlmOperateInputFile,

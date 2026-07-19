@@ -387,6 +387,16 @@ export interface LlmOperateOptions {
   user?: string;
 }
 
+/**
+ * A single model name, or a preference-ordered array of model names.
+ * An array is interpreted as a fallback chain: index 0 is primary, later
+ * entries are tried in order when earlier ones fail (provider auto-detected
+ * per entry). Accepted by the `Llm` constructor and static/instance
+ * `operate`/`send`/`stream` methods; normalized to a scalar model plus a
+ * derived fallback chain before reaching providers.
+ */
+export type LlmModelOption = string | string[];
+
 export interface LlmOptions {
   apiKey?: string;
   /** Chain of fallback providers to try if primary fails */

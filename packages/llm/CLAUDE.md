@@ -187,6 +187,35 @@ const response = await Llm.operate(input, {
 - `fallbackUsed`: `true` if a fallback provider was used
 - `fallbackAttempts`: Number of providers tried (1 = primary only)
 
+**Model array sugar:**
+
+`model` (constructor, static/instance `operate`/`send`/`stream`, and per-call
+`operate` options) accepts a preference-ordered `string[]`. Index `0` is the
+primary; each later entry becomes a fallback with its provider auto-detected via
+`determineModelProvider` (exactly as the constructor's first argument does). Any
+explicit `fallback` is appended after the array-derived chain. An empty array
+throws `ConfigurationError`. `send` has no fallback machinery, so it uses the
+primary and ignores the rest.
+
+```typescript
+// Preference-ordered chain (provider auto-detected per entry)
+await Llm.operate(input, {
+  model: [LLM.MODEL.GEMINI_FLASH, LLM.MODEL.SONNET, LLM.MODEL.LUNA],
+});
+
+// Equivalent verbose form
+await Llm.operate(input, {
+  model: LLM.MODEL.GEMINI_FLASH,
+  fallback: [
+    { provider: "anthropic", model: LLM.MODEL.SONNET },
+    { provider: "openai", model: LLM.MODEL.LUNA },
+  ],
+});
+```
+
+The verbose `fallback` form remains for advanced needs (per-entry `apiKey`, or an
+explicit provider override that disagrees with the model name).
+
 ### Structured Outputs
 
 Pass `format` (or `response` for `provider.send`) with a Natural Schema, Zod, or JSON Schema definition to receive guaranteed-valid JSON.
