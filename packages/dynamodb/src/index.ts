@@ -56,6 +56,13 @@ export type { ScanTableOptions } from "./scan.js";
 export { createTable, destroyTable } from "./tables.js";
 export type { CreateTableOptions, CreateTableResult } from "./tables.js";
 
+// Exchange persistence (default persister for @jaypie/llm onExchange)
+export { storeExchange } from "./storeExchange.js";
+export type {
+  StoreExchangeEnvelope,
+  StoreExchangeOptions,
+} from "./storeExchange.js";
+
 // Seed and export utilities
 export {
   exportEntities,

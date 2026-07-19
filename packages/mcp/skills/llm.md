@@ -383,6 +383,36 @@ Fields carried by each event (`turn` is 1-indexed):
 
 Errors thrown by the callback are logged and never interrupt the loop. Hooks remain the right choice when you need the full provider request/response payloads. `stream()` communicates progress through its chunks; `onProgress` applies to `operate()`.
 
+## Exchange Capture
+
+For a durable record of each `operate()` call (replay, labeling pipelines, cost accounting, dataset export), `onExchange` fires once per settlement (success or failure) with a fully serializable envelope:
+
+```typescript
+const response = await Llm.operate(input, {
+  model: "claude-sonnet-5",
+  onExchange: (envelope) => {
+    // envelope.request  — raw pre-interpolation input, data, placeholders,
+    //                     system, instructions, model, format (JSON Schema),
+    //                     tool names, turns, temperature, effort,
+    //                     providerOptions, user
+    // envelope.response — content, historyDelta (turns this call added),
+    //                     usage (per model call) + usageTotals (keyed
+    //                     provider:model), reasoning, status, error, stopReason
+    // envelope.resolution — served provider/model, fallbackUsed,
+    //                     fallbackAttempts, retries
+    // envelope.timing   — startedAt, duration
+    // envelope.ids      — provider response id(s) per model turn
+    queue.send(JSON.stringify(envelope));
+  },
+});
+```
+
+Callback errors are logged and never interrupt the call. The envelope contains no functions. When exchange capture is active, `response.exchange` carries the same envelope.
+
+### Default Persistence
+
+Set `LLM_EXCHANGE_ENABLED` (truthy, except `false`/`0`) and every `operate()` call persists as an `exchange` entity via `storeExchange` from `@jaypie/dynamodb` (optional peer dependency, resolved lazily and bundler-safe; silent no-op when absent). Requires `initClient()` to have run — warns, never throws, when uninitialized. Consumers with custom needs use the raw `onExchange` hook instead. See `skill("vocabulary")` for the exchange model and `skill("dynamodb")` for `storeExchange`.
+
 ## Fallback Providers
 
 Configure a chain of fallback providers that automatically retry failed calls when the primary provider fails:

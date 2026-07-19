@@ -43,8 +43,7 @@ export type AuthorizationFunction<TAuth = unknown> = (
  * Authorization configuration - either a function or false for public endpoints
  */
 export type AuthorizationConfig<TAuth = unknown> =
-  | AuthorizationFunction<TAuth>
-  | false;
+  AuthorizationFunction<TAuth> | false;
 
 // #endregion
 
@@ -124,8 +123,7 @@ export interface FabricHttpConfig<
 > extends Omit<ServiceConfig<TInput, TOutput>, "service"> {
   /** Pre-built fabricService or inline service function */
   service?:
-    | Service<TInput, TOutput>
-    | ServiceConfig<TInput, TOutput>["service"];
+    Service<TInput, TOutput> | ServiceConfig<TInput, TOutput>["service"];
 
   /** Transform HTTP context to service input (defaults to body + query merge) */
   http?: HttpTransformFunction<TInput>;
@@ -166,12 +164,7 @@ export interface FabricHttpService<
  * Supported HTTP methods
  */
 export type HttpMethod =
-  | "GET"
-  | "POST"
-  | "PUT"
-  | "DELETE"
-  | "PATCH"
-  | "OPTIONS";
+  "GET" | "POST" | "PUT" | "DELETE" | "PATCH" | "OPTIONS";
 
 /**
  * Default HTTP methods for fabric services
@@ -350,8 +343,7 @@ export interface FabricHttpServerRoute<
  * Service entry - either a FabricHttpService or a route config
  */
 export type FabricHttpServerServiceEntry =
-  | FabricHttpService
-  | FabricHttpServerRoute;
+  FabricHttpService | FabricHttpServerRoute;
 
 /**
  * Configuration for FabricHttpServer

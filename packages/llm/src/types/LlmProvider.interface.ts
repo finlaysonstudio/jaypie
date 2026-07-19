@@ -40,7 +40,7 @@ export enum LlmResponseStatus {
 
 // Errors
 
-interface LlmError {
+export interface LlmError {
   detail?: string;
   status: number | string;
   title: string;
@@ -268,6 +268,91 @@ export type LlmProgressCallback = (
   event: LlmProgressEvent,
 ) => unknown | Promise<unknown>;
 
+// Exchange
+
+/**
+ * Serializable snapshot of the request side of one operate() call.
+ * `input` is the raw, pre-interpolation input with multimodal parts preserved.
+ */
+export interface LlmExchangeRequest {
+  data?: NaturalMap;
+  effort?: LlmEffort;
+  explain?: boolean;
+  /** Format normalized to JSON Schema (Zod/Natural already rendered) */
+  format?: JsonObject;
+  input: string | LlmHistory | LlmInputMessage | LlmOperateInput;
+  instructions?: string;
+  /** Requested model (pre-fallback) */
+  model?: string;
+  placeholders?: {
+    input?: boolean;
+    instructions?: boolean;
+    system?: boolean;
+  };
+  providerOptions?: JsonObject;
+  system?: string;
+  temperature?: number;
+  /** Names of tools offered to the model */
+  tools?: string[];
+  turns?: boolean | number;
+  user?: string;
+}
+
+/**
+ * Serializable snapshot of the response side of one operate() call.
+ */
+export interface LlmExchangeResponse {
+  content?: string | JsonObject;
+  error?: LlmError;
+  /** Turns this call added to history (tool calls/results included); never the resent history */
+  historyDelta: LlmHistory;
+  reasoning?: string[];
+  status: LlmResponseStatus;
+  stopReason?: string;
+  /** Per-model-call usage items (provider/model on each item) */
+  usage: LlmUsage;
+  /** Cumulative usage keyed `provider:model` */
+  usageTotals?: Record<string, LlmUsageItem>;
+}
+
+/**
+ * How the call was actually served after fallback and retry resolution.
+ */
+export interface LlmExchangeResolution {
+  fallbackAttempts?: number;
+  fallbackUsed?: boolean;
+  /** Served model */
+  model?: string;
+  /** Served provider */
+  provider?: string;
+  /** Model-request retries within the served attempt */
+  retries?: number;
+}
+
+export interface LlmExchangeTiming {
+  /** Milliseconds from start to settlement */
+  duration: number;
+  /** ISO 8601 */
+  startedAt: string;
+}
+
+/**
+ * One serializable request/response envelope per operate() settlement
+ * (success or failure). Contains no functions.
+ */
+export interface LlmExchangeEnvelope {
+  /** Provider response id(s) per model turn, when available */
+  ids?: string[];
+  request: LlmExchangeRequest;
+  resolution: LlmExchangeResolution;
+  response: LlmExchangeResponse;
+  timing: LlmExchangeTiming;
+}
+
+export type LlmExchangeCallback = (
+  envelope: LlmExchangeEnvelope,
+) => unknown | Promise<unknown>;
+
 export interface LlmOperateOptions {
   data?: NaturalMap;
   /**
@@ -368,6 +453,12 @@ export interface LlmOperateOptions {
   instructions?: string;
   model?: string;
   /**
+   * Fires once per operate() settlement (success or failure) with a fully
+   * serializable request/response envelope. Errors thrown by the callback
+   * are logged and never interrupt the call.
+   */
+  onExchange?: LlmExchangeCallback;
+  /**
    * Receives lightweight progress events as the operate loop runs:
    * start, model_request, model_response, tool_call, tool_result,
    * tool_error, retry, done. Errors thrown by the callback are logged
@@ -420,6 +511,11 @@ export type LlmUsage = LlmUsageItem[];
 export interface LlmOperateResponse {
   content?: string | JsonObject;
   error?: LlmError;
+  /**
+   * Serializable exchange envelope for this call. Present only when
+   * `onExchange` was passed or exchange persistence is enabled.
+   */
+  exchange?: LlmExchangeEnvelope;
   /** Number of providers attempted (1 = primary only, >1 = fallback(s) used) */
   fallbackAttempts?: number;
   /** Whether a fallback provider was used instead of the primary */

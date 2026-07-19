@@ -65,6 +65,7 @@
 | `CDK_ENV_DATADOG_API_KEY_ARN` | Datadog API key ARN in Secrets Manager |
 | `SECRET_MONGODB_URI` | MongoDB URI secret name |
 | `MONGODB_URI` | Direct MongoDB connection URI |
+| `LLM_EXCHANGE_ENABLED` | Persist each LLM operate() call as an `exchange` entity via @jaypie/dynamodb |
 | `ANTHROPIC_API_KEY` | Anthropic API key for LLM |
 | `OPENAI_API_KEY` | OpenAI API key for LLM |
 | `AWS_SESSION_TOKEN` | AWS session token (set by Lambda runtime) |

@@ -11,7 +11,9 @@ import {
 
 // Mock AWS SDK
 vi.mock("@aws-sdk/client-dynamodb", () => ({
-  DynamoDBClient: vi.fn().mockImplementation(() => ({})),
+  DynamoDBClient: vi.fn(function DynamoDBClient() {
+    return {};
+  }),
 }));
 
 vi.mock("@aws-sdk/lib-dynamodb", () => ({

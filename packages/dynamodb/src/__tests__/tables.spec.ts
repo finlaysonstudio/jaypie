@@ -6,9 +6,15 @@ import { createTable, destroyTable } from "../tables.js";
 const send = vi.fn();
 
 vi.mock("@aws-sdk/client-dynamodb", () => ({
-  CreateTableCommand: vi.fn().mockImplementation((input) => ({ input })),
-  DeleteTableCommand: vi.fn().mockImplementation((input) => ({ input })),
-  DescribeTableCommand: vi.fn().mockImplementation((input) => ({ input })),
+  CreateTableCommand: vi.fn(function CreateTableCommand(input) {
+    return { input };
+  }),
+  DeleteTableCommand: vi.fn(function DeleteTableCommand(input) {
+    return { input };
+  }),
+  DescribeTableCommand: vi.fn(function DescribeTableCommand(input) {
+    return { input };
+  }),
   waitUntilTableExists: vi.fn().mockResolvedValue({ state: "SUCCESS" }),
 }));
 

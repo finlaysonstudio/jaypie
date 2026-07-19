@@ -464,4 +464,76 @@ describe("Llm Class", () => {
       expect(result.fallbackUsed).toBe(true);
     });
   });
+
+  describe("Exchange Settlement", () => {
+    const mockEnvelope = () => ({
+      request: { input: "test" },
+      resolution: {},
+      response: { historyDelta: [], status: "completed", usage: [] },
+      timing: { duration: 1, startedAt: "2026-01-01T00:00:00.000Z" },
+    });
+
+    it("fires onExchange once with fallback resolution stamped", async () => {
+      openAiOperateMock.mockResolvedValue({
+        content: "ok",
+        exchange: mockEnvelope(),
+        model: "gpt-4",
+        provider: "openai",
+      });
+      const onExchange = vi.fn();
+      const llm = new Llm(PROVIDER.OPENAI.NAME);
+      await llm.operate("test", { onExchange });
+      expect(onExchange).toHaveBeenCalledOnce();
+      const envelope = onExchange.mock.calls[0][0];
+      expect(envelope.resolution.fallbackAttempts).toBe(1);
+      expect(envelope.resolution.fallbackUsed).toBe(false);
+      expect(envelope.resolution.provider).toBe("openai");
+      expect(envelope.resolution.model).toBe("gpt-4");
+    });
+
+    it("fires onExchange once on the fallback path", async () => {
+      openAiOperateMock.mockRejectedValue(new Error("Primary failed"));
+      anthropicOperateMock.mockResolvedValue({
+        content: "ok",
+        exchange: mockEnvelope(),
+        model: "claude-3-opus",
+        provider: "anthropic",
+      });
+      const onExchange = vi.fn();
+      const llm = new Llm(PROVIDER.OPENAI.NAME, {
+        fallback: [{ provider: "anthropic", model: "claude-3-opus" }],
+      });
+      await llm.operate("test", { onExchange });
+      expect(onExchange).toHaveBeenCalledOnce();
+      const envelope = onExchange.mock.calls[0][0];
+      expect(envelope.resolution.fallbackAttempts).toBe(2);
+      expect(envelope.resolution.fallbackUsed).toBe(true);
+      expect(envelope.resolution.provider).toBe("anthropic");
+    });
+
+    it("fires onExchange on total failure before throwing", async () => {
+      const failure = new Error("Primary failed") as Error & {
+        exchange?: unknown;
+      };
+      failure.exchange = mockEnvelope();
+      openAiOperateMock.mockRejectedValue(failure);
+      const onExchange = vi.fn();
+      const llm = new Llm(PROVIDER.OPENAI.NAME);
+      await expect(llm.operate("test", { onExchange })).rejects.toThrow(
+        "Primary failed",
+      );
+      expect(onExchange).toHaveBeenCalledOnce();
+      const envelope = onExchange.mock.calls[0][0];
+      expect(envelope.resolution.fallbackAttempts).toBe(1);
+      expect(envelope.resolution.fallbackUsed).toBe(false);
+    });
+
+    it("does not fire onExchange when the response has no envelope", async () => {
+      openAiOperateMock.mockResolvedValue({ content: "ok" });
+      const onExchange = vi.fn();
+      const llm = new Llm(PROVIDER.OPENAI.NAME);
+      await llm.operate("test", { onExchange });
+      expect(onExchange).not.toHaveBeenCalled();
+    });
+  });
 });

@@ -91,12 +91,7 @@ export function FabricRouter(config: FabricRouterConfig): FabricExpressRouter {
     // Register all methods for this path
     for (const method of middleware.methods) {
       const lowerMethod = method.toLowerCase() as
-        | "get"
-        | "post"
-        | "put"
-        | "delete"
-        | "patch"
-        | "options";
+        "get" | "post" | "put" | "delete" | "patch" | "options";
 
       // Express router methods
       if (lowerMethod === "options") {

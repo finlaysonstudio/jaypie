@@ -93,9 +93,7 @@ export function createListService<T extends FabricModel = FabricModel>(
 
       // Calculate scope
       const scopeConfig = globalConfig.scope as
-        | ScopeFunction
-        | string
-        | undefined;
+        ScopeFunction | string | undefined;
       const httpContext = context?.http;
       const scope = httpContext
         ? await calculateScopeFromConfig(scopeConfig, httpContext)
