@@ -477,3 +477,108 @@ describe("Entity Operations", () => {
     });
   });
 });
+
+describe("TTL", () => {
+  const NOW_MS = Date.parse("2026-07-20T00:00:00.000Z");
+  const NOW_SECONDS = Math.floor(NOW_MS / 1000);
+  const DAY = 60 * 60 * 24;
+
+  const sessionEntity = (): StorableEntity =>
+    ({ id: "s-1", model: "session", scope: "@" }) as StorableEntity;
+
+  beforeAll(() => {
+    registerModel({
+      model: "session",
+      indexes: [fabricIndex()],
+      ttl: "30 days",
+    });
+    registerModel({ model: "note", indexes: [fabricIndex()] });
+  });
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockSend.mockResolvedValue({});
+    vi.useFakeTimers();
+    vi.setSystemTime(NOW_MS);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("createEntity applies the model's default ttl", async () => {
+    const result = (await createEntity({
+      entity: sessionEntity(),
+    })) as StorableEntity;
+    expect(result.ttl).toBe(NOW_SECONDS + DAY * 30);
+  });
+
+  it("createEntity does not set ttl for a model without a default", async () => {
+    const result = (await createEntity({
+      entity: { id: "n-1", model: "note", scope: "@" } as StorableEntity,
+    })) as StorableEntity;
+    expect(result.ttl).toBeUndefined();
+  });
+
+  it("per-call ttl overrides the model default (duration)", async () => {
+    const result = (await createEntity({
+      entity: sessionEntity(),
+      ttl: "1 day",
+    })) as StorableEntity;
+    expect(result.ttl).toBe(NOW_SECONDS + DAY);
+  });
+
+  it("per-call ttl accepts an ISO date and an epoch number", async () => {
+    const iso = "2026-08-01T00:00:00.000Z";
+    const isoResult = (await createEntity({
+      entity: sessionEntity(),
+      ttl: iso,
+    })) as StorableEntity;
+    expect(isoResult.ttl).toBe(Math.floor(Date.parse(iso) / 1000));
+
+    const epoch = NOW_SECONDS + 500;
+    const epochResult = (await createEntity({
+      entity: sessionEntity(),
+      ttl: epoch,
+    })) as StorableEntity;
+    expect(epochResult.ttl).toBe(epoch);
+  });
+
+  it("ttl: false opts out of the model default", async () => {
+    const result = (await createEntity({
+      entity: sessionEntity(),
+      ttl: false,
+    })) as StorableEntity;
+    expect(result.ttl).toBeUndefined();
+  });
+
+  it("preserves an existing ttl already on the entity", async () => {
+    const existing = NOW_SECONDS + 999;
+    const result = (await createEntity({
+      entity: { ...sessionEntity(), ttl: existing } as StorableEntity,
+    })) as StorableEntity;
+    expect(result.ttl).toBe(existing);
+  });
+
+  it("updateEntity does not apply the model default", async () => {
+    mockSend.mockResolvedValue({});
+    const result = await updateEntity({ entity: sessionEntity() });
+    expect((result as StorableEntity).ttl).toBeUndefined();
+  });
+
+  it("updateEntity honors a per-call ttl", async () => {
+    const result = await updateEntity({
+      entity: sessionEntity(),
+      ttl: "1 day",
+    });
+    expect((result as StorableEntity).ttl).toBe(NOW_SECONDS + DAY);
+  });
+
+  it("updateEntity ttl: false clears an existing ttl", async () => {
+    const result = await updateEntity({
+      entity: { ...sessionEntity(), ttl: NOW_SECONDS + 5 } as StorableEntity,
+      ttl: false,
+    });
+    expect((result as StorableEntity).ttl).toBeUndefined();
+  });
+});

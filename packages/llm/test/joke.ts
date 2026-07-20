@@ -37,6 +37,7 @@ async function main(provider?: string, model?: string) {
 
     const llm = new Llm(provider, { model });
     const result = await llm.operate("Tell me a joke about a {{subject}}", {
+      cache: false,
       data: {
         subject: "pirate",
         rating: "PG",

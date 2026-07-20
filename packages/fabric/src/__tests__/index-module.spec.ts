@@ -540,4 +540,35 @@ describe("Model Registry", () => {
       });
     });
   });
+
+  describe("ttl default", () => {
+    it("stores a declared ttl on the schema", () => {
+      registerModel({ model: "session", ttl: "30 days" });
+      expect(getModelSchema("session")?.ttl).toBe("30 days");
+    });
+
+    it("accepts a numeric epoch ttl", () => {
+      registerModel({ model: "session", ttl: 1893456000 });
+      expect(getModelSchema("session")?.ttl).toBe(1893456000);
+    });
+
+    it("throws ConfigurationError for an empty-string ttl", () => {
+      expect(() => registerModel({ model: "session", ttl: "" })).toThrow(
+        /invalid ttl/,
+      );
+    });
+
+    it("throws ConfigurationError for a non-finite ttl", () => {
+      expect(() =>
+        registerModel({ model: "session", ttl: Number.NaN }),
+      ).toThrow(/invalid ttl/);
+    });
+
+    it("throws ConfigurationError for a non-number, non-string ttl", () => {
+      expect(() =>
+        // @ts-expect-error - exercising runtime validation
+        registerModel({ model: "session", ttl: {} }),
+      ).toThrow(/invalid ttl/);
+    });
+  });
 });

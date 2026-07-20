@@ -255,7 +255,7 @@ Located in `src/index/`. Utilities for DynamoDB single-table design patterns:
 | Function | Purpose |
 |----------|---------|
 | `fabricIndex(field?)` | Factory for index definitions. No arg = `indexModel` (pk=["model"]). With field = `indexModel{Field}` (pk=["model", field], sparse). All indexes get sk=["scope","updatedAt"]. |
-| `registerModel({ model, indexes, status })` | Register index definitions and an optional `status` vocabulary for a model. Throws `ConfigurationError` if `status` is not a non-empty array of non-empty strings. |
+| `registerModel({ model, indexes, status, ttl })` | Register index definitions, an optional `status` vocabulary, and an optional default `ttl` (`number \| string`) for a model. Throws `ConfigurationError` for an invalid `status` vocabulary or an invalid `ttl`. |
 | `getModelIndexes(model)` | Get indexes for a model. Throws `ConfigurationError` if model is not registered. |
 | `getModelSchema(model)` | Get the full model schema or undefined |
 | `getModelStatus(model)` | Get the model's declared `status` vocabulary, or undefined when unregistered / free-string |

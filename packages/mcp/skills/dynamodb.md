@@ -368,6 +368,37 @@ const nextPage = await queryByScope({
 
 `storeExchange(envelope, { exchange?, scope? })` persists an `@jaypie/llm` exchange envelope (see `skill("llm")`) as an `exchange` entity. It registers the canonical exchange model (`registerExchangeModel()` from `@jaypie/fabric`), maps envelope fields onto reserved attributes (`input`, `content`, `data`, `llm`, `status`, `xid`), and owns 400KB item-limit safety (drops the history delta, then truncates long fields, marking `metadata.truncated`). It warns and returns `null` — never throws — when `initClient()` has not run or the write fails. `@jaypie/llm` calls it automatically when `LLM_EXCHANGE_ENABLED` is set; pass `exchange` (parent id) for turn chains and `scope` to nest under a parent entity.
 
+### TTL (Time to Live)
+
+DynamoDB expires items whose TTL attribute holds a past Unix epoch **in seconds**. Jaypie writes that attribute (`ttl` by default) and the `JaypieDynamoDb` construct enables TTL on it by default.
+
+`resolveTtl(input)` converts a TTL to epoch seconds and is the seam that avoids the seconds/milliseconds footgun. It accepts:
+
+- a `number` — a future epoch **in seconds**, used as-is
+- a duration string — `"1 day"`, `"4 weeks"`, `"1 month"` (31 days), `"1 year"` (366 days); resolved against now
+- a standard ISO 8601 date string — e.g. `"2026-08-01T00:00:00.000Z"`
+
+Unparseable input throws `BadRequestError`. A resolved value that is not in the future is still returned but logged at `error` (a past TTL usually signals a bug; DynamoDB expires the item on its next sweep).
+
+Set a **model default** with `registerModel({ model, ttl })`, or a **per-call** TTL on `createEntity`/`updateEntity`:
+
+```typescript
+import { fabricIndex, registerModel } from "@jaypie/fabric";
+import { createEntity, updateEntity } from "@jaypie/dynamodb";
+
+registerModel({ model: "session", indexes: [fabricIndex()], ttl: "30 days" });
+
+await createEntity({ entity: { model: "session", id, scope: APEX } });       // ttl = now + 30 days
+await createEntity({ entity, ttl: "1 hour" });                                // per-call duration
+await createEntity({ entity, ttl: "2026-08-01T00:00:00.000Z" });             // ISO date
+await createEntity({ entity, ttl: 1893456000 });                             // epoch seconds
+await createEntity({ entity, ttl: false });                                   // opt out of the model default
+```
+
+Precedence: `ttl: false` clears any TTL; an explicit `ttl` wins; an existing `ttl` on the entity is preserved; otherwise `createEntity` applies the model default. `updateEntity` accepts a per-call `ttl`/`false` but **never** applies the model default, so re-saving an item does not silently slide its expiry.
+
+Expiry is best-effort (typically within 48h) and requires TTL enabled on the table (default via `JaypieDynamoDb`). Expired-but-not-yet-swept items still appear in reads and queries — filter on `ttl` if you need strict expiry. The construct's `timeToLiveAttribute` and the runtime attribute (`DEFAULT_TTL_ATTRIBUTE`, `"ttl"`) must match; both default to `ttl`. Renaming one without the other silently disables expiry.
+
 ### Seed and Export
 
 Idempotent seeding for bootstrapping data and export for migrations:

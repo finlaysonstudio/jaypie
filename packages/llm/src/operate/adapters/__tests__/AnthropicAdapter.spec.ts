@@ -75,6 +75,7 @@ describe("AnthropicAdapter", () => {
 
       it("includes system when provided", () => {
         const request: OperateRequest = {
+          cache: false,
           model: PROVIDER.ANTHROPIC.MODEL.LARGE,
           messages: [],
           system: "You are helpful",
@@ -101,6 +102,7 @@ describe("AnthropicAdapter", () => {
               type: LlmMessageType.Message,
             },
           ],
+          cache: false,
           system: "You are a helpful assistant",
         };
 

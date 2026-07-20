@@ -44,6 +44,14 @@ export function tallyOperate({
       usageByModel[key].output += item.output;
       usageByModel[key].reasoning += item.reasoning;
       usageByModel[key].total += item.total;
+      if (item.cacheRead !== undefined) {
+        usageByModel[key].cacheRead =
+          (usageByModel[key].cacheRead ?? 0) + item.cacheRead;
+      }
+      if (item.cacheWrite !== undefined) {
+        usageByModel[key].cacheWrite =
+          (usageByModel[key].cacheWrite ?? 0) + item.cacheWrite;
+      }
     }
     llm.usage = usageByModel;
   }

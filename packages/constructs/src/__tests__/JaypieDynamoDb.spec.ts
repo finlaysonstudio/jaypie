@@ -346,4 +346,42 @@ describe("JaypieDynamoDb", () => {
       expect(construct.table).toBeInstanceOf(dynamodb.TableV2);
     });
   });
+
+  describe("TTL", () => {
+    const ttlSpec = (props: Record<string, unknown> = {}) => {
+      const stack = new Stack();
+      new JaypieDynamoDb(stack, "TestTable", {
+        tableName: "test-table",
+        ...props,
+      });
+      const template = Template.fromStack(stack);
+      const tables = template.findResources("AWS::DynamoDB::GlobalTable");
+      const table = Object.values(tables)[0] as {
+        Properties?: {
+          TimeToLiveSpecification?: {
+            AttributeName?: string;
+            Enabled?: boolean;
+          };
+        };
+      };
+      return table.Properties?.TimeToLiveSpecification;
+    };
+
+    it('enables TTL on "ttl" by default', () => {
+      expect(ttlSpec()).toEqual({ AttributeName: "ttl", Enabled: true });
+    });
+
+    it("disables TTL when timeToLiveAttribute is false", () => {
+      const spec = ttlSpec({ timeToLiveAttribute: false });
+      // Either omitted or explicitly disabled
+      expect(spec?.Enabled ?? false).toBe(false);
+    });
+
+    it("uses a custom attribute name when provided", () => {
+      expect(ttlSpec({ timeToLiveAttribute: "expiresAt" })).toEqual({
+        AttributeName: "expiresAt",
+        Enabled: true,
+      });
+    });
+  });
 });

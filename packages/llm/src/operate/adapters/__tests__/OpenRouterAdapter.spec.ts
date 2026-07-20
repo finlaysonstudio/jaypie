@@ -71,6 +71,7 @@ describe("OpenRouterAdapter", () => {
 
       it("includes system message when provided", () => {
         const request: OperateRequest = {
+          cache: false,
           model: PROVIDER.OPENROUTER.DEFAULT,
           messages: [
             {

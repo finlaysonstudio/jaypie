@@ -48,7 +48,12 @@ import {
   LlmStreamChunk,
   LlmStreamChunkType,
 } from "../../types/LlmStreamChunk.interface.js";
-import { isJsonSchema, naturalZodSchema } from "../../util/index.js";
+import {
+  isJsonSchema,
+  naturalZodSchema,
+  promptCacheKey,
+  resolveCache,
+} from "../../util/index.js";
 import { OpenAIRawResponse } from "../../providers/openai/types.js";
 import {
   ClassifiedError,
@@ -145,6 +150,14 @@ export class OpenAiAdapter extends BaseProviderAdapter {
     return isReasoningModel(model);
   }
 
+  /**
+   * Whether to emit `prompt_cache_key` (OpenAI Responses API). Overridable by
+   * OpenAI-compatible subclasses whose backend rejects the field.
+   */
+  protected supportsPromptCacheKey(): boolean {
+    return true;
+  }
+
   /** Translate a normalized effort to this provider's `reasoning.effort` value. */
   protected mapReasoningEffort(
     effort: LlmEffort,
@@ -193,6 +206,21 @@ export class OpenAiAdapter extends BaseProviderAdapter {
       openaiRequest.reasoning = {
         summary: "auto",
       };
+    }
+
+    // OpenAI prompt caching is automatic (prefix-based). Setting a stable
+    // prompt_cache_key routes repeat traffic to the same cache across
+    // instances. Keyed on the stable prefix only (system + instructions +
+    // tools + model), never the volatile user turn.
+    if (this.supportsPromptCacheKey() && resolveCache(request.cache).enabled) {
+      openaiRequest.prompt_cache_key = promptCacheKey(
+        JSON.stringify([
+          model,
+          request.system ?? "",
+          request.instructions ?? "",
+          request.tools ?? [],
+        ]),
+      );
     }
 
     if (request.providerOptions) {
@@ -528,12 +556,15 @@ export class OpenAiAdapter extends BaseProviderAdapter {
       };
     }
 
+    const cachedTokens =
+      openaiResponse.usage.input_tokens_details?.cached_tokens;
     return {
       input: openaiResponse.usage.input_tokens || 0,
       output: openaiResponse.usage.output_tokens || 0,
       reasoning:
         openaiResponse.usage.output_tokens_details?.reasoning_tokens || 0,
       total: openaiResponse.usage.total_tokens || 0,
+      ...(cachedTokens !== undefined ? { cacheRead: cachedTokens } : {}),
       provider: this.name,
       model,
     };

@@ -5,12 +5,67 @@ import {
   TransactWriteCommand,
 } from "@aws-sdk/lib-dynamodb";
 import { ConflictError, NotFoundError } from "@jaypie/errors";
-import { assertModelStatus, fabricService } from "@jaypie/fabric";
+import {
+  assertModelStatus,
+  fabricService,
+  getModelSchema,
+} from "@jaypie/fabric";
 
 import { getDocClient, getTableName } from "./client.js";
-import { ARCHIVED_SUFFIX, DELETED_SUFFIX } from "./constants.js";
+import {
+  ARCHIVED_SUFFIX,
+  DEFAULT_TTL_ATTRIBUTE,
+  DELETED_SUFFIX,
+} from "./constants.js";
 import { indexEntity } from "./keyBuilders.js";
+import { resolveTtl, type TtlInput } from "./ttl.js";
 import type { StorableEntity } from "./types.js";
+
+/**
+ * Apply TTL precedence to an entity before indexing, writing or clearing the
+ * `ttl` attribute (Unix epoch seconds).
+ *
+ * - `ttl: false` — remove any TTL (opt out of a model default).
+ * - `ttl` provided — resolve and set it (overrides everything).
+ * - entity already carries a TTL — preserve it.
+ * - otherwise, when `useModelDefault`, apply the model's registered `ttl`.
+ *
+ * `useModelDefault` is true for creates (expiry is set at creation) and false
+ * for updates, so re-saving an item never silently slides its expiry.
+ */
+function prepareTtl(
+  entity: StorableEntity,
+  ttl: TtlInput | false | undefined,
+  { useModelDefault }: { useModelDefault: boolean },
+): StorableEntity {
+  const attribute = DEFAULT_TTL_ATTRIBUTE;
+
+  if (ttl === false) {
+    if (entity[attribute] === undefined) {
+      return entity;
+    }
+    const next = { ...entity };
+    delete next[attribute];
+    return next;
+  }
+
+  if (ttl !== undefined) {
+    return { ...entity, [attribute]: resolveTtl(ttl) };
+  }
+
+  if (entity[attribute] !== undefined) {
+    return entity;
+  }
+
+  if (useModelDefault) {
+    const modelTtl = getModelSchema(entity.model)?.ttl;
+    if (modelTtl !== undefined) {
+      return { ...entity, [attribute]: resolveTtl(modelTtl) };
+    }
+  }
+
+  return entity;
+}
 
 /**
  * Calculate suffix based on entity's archived/deleted state
@@ -64,13 +119,17 @@ export const getEntity = fabricService({
  */
 export async function createEntity({
   entity,
+  ttl,
 }: {
   entity: StorableEntity;
+  ttl?: TtlInput | false;
 }): Promise<StorableEntity | null> {
   const docClient = getDocClient();
   const tableName = getTableName();
 
-  const indexedEntity = indexEntity(entity);
+  const indexedEntity = indexEntity(
+    prepareTtl(entity, ttl, { useModelDefault: true }),
+  );
 
   const command = new PutCommand({
     ConditionExpression: "attribute_not_exists(id)",
@@ -106,17 +165,21 @@ export async function updateEntity({
   condition,
   entity,
   names,
+  ttl,
   values,
 }: {
   condition?: string;
   entity: StorableEntity;
   names?: Record<string, string>;
+  ttl?: TtlInput | false;
   values?: Record<string, unknown>;
 }): Promise<StorableEntity> {
   const docClient = getDocClient();
   const tableName = getTableName();
 
-  const updatedEntity = indexEntity(entity);
+  const updatedEntity = indexEntity(
+    prepareTtl(entity, ttl, { useModelDefault: false }),
+  );
 
   const command = new PutCommand({
     Item: updatedEntity,

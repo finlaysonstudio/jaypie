@@ -275,6 +275,7 @@ export type LlmProgressCallback = (
  * `input` is the raw, pre-interpolation input with multimodal parts preserved.
  */
 export interface LlmExchangeRequest {
+  cache?: LlmCache;
   data?: NaturalMap;
   effort?: LlmEffort;
   explain?: boolean;
@@ -353,7 +354,22 @@ export type LlmExchangeCallback = (
   envelope: LlmExchangeEnvelope,
 ) => unknown | Promise<unknown>;
 
+/**
+ * Prompt-caching control for operate()/stream().
+ * - `true` / omitted → caching enabled at the default `"5m"` TTL
+ * - `false` / `0` → caching disabled
+ * - `"5m"` / `"1h"` → enabled at that TTL (TTL honored by Anthropic/OpenRouter;
+ *   other providers ignore it and cache with their own defaults)
+ */
+export type LlmCache = boolean | 0 | "5m" | "1h";
+
 export interface LlmOperateOptions {
+  /**
+   * Prompt caching for the stable request prefix (system prompt + tools).
+   * Enabled by default; pass `false`/`0` to opt out, or `"5m"`/`"1h"` to set
+   * the TTL. See {@link LlmCache}.
+   */
+  cache?: LlmCache;
   data?: NaturalMap;
   /**
    * Provider-neutral reasoning effort (lowest | low | medium | high | highest).
@@ -502,6 +518,10 @@ export interface LlmUsageItem {
   output: number;
   reasoning: number;
   total: number;
+  /** Prompt-cache tokens served from cache this call (billed at ~0.1x input) */
+  cacheRead?: number;
+  /** Prompt-cache tokens written to cache this call (billed at ~1.25x input) */
+  cacheWrite?: number;
   provider?: string;
   model?: string;
 }

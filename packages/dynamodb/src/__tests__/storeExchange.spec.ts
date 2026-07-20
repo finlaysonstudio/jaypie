@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { log } from "@jaypie/logger";
 
 import { storeExchange } from "../storeExchange.js";
 import { isInitialized } from "../client.js";
@@ -12,12 +13,13 @@ vi.mock("../entities.js", () => ({
   createEntity: vi.fn(async ({ entity }) => entity),
 }));
 
-vi.mock("@jaypie/logger", () => ({
-  default: {
+vi.mock("@jaypie/logger", () => {
+  const log = {
     var: vi.fn(),
     warn: vi.fn(),
-  },
-}));
+  };
+  return { default: log, log };
+});
 
 const envelope = () => ({
   ids: ["resp_1", "resp_2"],
@@ -66,6 +68,11 @@ describe("storeExchange", () => {
       const result = await storeExchange(envelope());
       expect(result).toBeNull();
       expect(createEntity).not.toHaveBeenCalled();
+      // #429 regression: the named logger import must resolve so warn does not
+      // throw on the uninitialized path.
+      expect(log.warn).toHaveBeenCalledWith(
+        expect.stringContaining("not initialized"),
+      );
     });
 
     it("returns null instead of throwing when the write fails", async () => {

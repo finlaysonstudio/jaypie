@@ -1,6 +1,6 @@
 {
   "name": "@jaypie/dynamodb",
-  "version": "0.6.8",
+  "version": "0.6.9",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/finlaysonstudio/jaypie.git"

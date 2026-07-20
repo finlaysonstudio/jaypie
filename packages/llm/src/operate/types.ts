@@ -3,6 +3,7 @@ import { JsonObject } from "@jaypie/types";
 import { type LlmEffort } from "../constants.js";
 
 import {
+  LlmCache,
   LlmHistory,
   LlmMessageType,
   LlmOperateOptions,
@@ -95,6 +96,11 @@ export interface OperateRequest {
   effort?: LlmEffort;
   /** Provider-specific options */
   providerOptions?: JsonObject;
+  /**
+   * Prompt-caching control for the stable prefix (system + tools). `true`/
+   * omitted = enabled@5m, `false`/`0` = disabled, `"5m"`/`"1h"` = enabled@ttl.
+   */
+  cache?: LlmCache;
   /** Whether the request will execute over a streaming transport */
   stream?: boolean;
   /** Sampling temperature (0-2 for most providers) */

@@ -1,6 +1,3 @@
-import { createRequire } from "module";
-import { pathToFileURL } from "url";
-
 import { LlmExchangeEnvelope } from "../types/LlmProvider.interface.js";
 import { getLogger } from "../util/index.js";
 import { isExchangeStoreEnabled } from "../operate/exchange/emitExchange.js";
@@ -31,14 +28,14 @@ const MODULE = {
 // Helpers
 //
 
-// CJS/ESM compatible require - handles bundling to CJS where import.meta.url
-// becomes undefined (mirrors observability/llmobs.ts).
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore - __filename exists in CJS context when ESM is bundled to CJS
-const requireModule =
-  typeof __filename !== "undefined"
-    ? createRequire(pathToFileURL(__filename).href)
-    : createRequire(import.meta.url);
+// Native dynamic import that neither rollup nor tsc rewrites to require(), so
+// a CJS-bundled build still loads @jaypie/dynamodb's ESM entry and shares the
+// host's initialized module instance. A require()-based resolution would load
+// the CJS build, whose module-level client state is separate from the ESM
+// instance an ESM host initializes (dual-package hazard, issue #429).
+const dynamicImport = new Function("s", "return import(s)") as (
+  s: string,
+) => Promise<Record<string, unknown>>;
 
 let resolved = false;
 let cachedSdk: ExchangeStoreSdk | null = null;
@@ -48,14 +45,14 @@ let injectedSdk: ExchangeStoreSdk | null = null;
  * Lazily resolve @jaypie/dynamodb's storeExchange. Returns null (and never
  * throws) when the peer is absent. Cached after the first attempt.
  */
-function resolveExchangeStore(): ExchangeStoreSdk | null {
+async function resolveExchangeStore(): Promise<ExchangeStoreSdk | null> {
   if (resolved) {
     return cachedSdk;
   }
   resolved = true;
   try {
-    const dynamodb = requireModule(MODULE.JAYPIE_DYNAMODB);
-    const sdk = dynamodb?.default ?? dynamodb;
+    const dynamodb = await dynamicImport(MODULE.JAYPIE_DYNAMODB);
+    const sdk = (dynamodb?.default ?? dynamodb) as Partial<ExchangeStoreSdk>;
     if (sdk && typeof sdk.storeExchange === "function") {
       cachedSdk = sdk as ExchangeStoreSdk;
     }
@@ -97,7 +94,7 @@ export async function persistExchange(
   if (!isExchangeStoreEnabled()) {
     return;
   }
-  const sdk = injectedSdk ?? resolveExchangeStore();
+  const sdk = injectedSdk ?? (await resolveExchangeStore());
   if (!sdk) {
     return;
   }

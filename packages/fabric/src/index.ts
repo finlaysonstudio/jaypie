@@ -34,7 +34,13 @@ export {
 export type { ExchangeStatus, FabricExchange } from "./models/exchange.js";
 
 // Constants
-export { APEX, FABRIC_VERSION, SEPARATOR, SYSTEM_MODELS } from "./constants.js";
+export {
+  APEX,
+  DEFAULT_TTL_ATTRIBUTE,
+  FABRIC_VERSION,
+  SEPARATOR,
+  SYSTEM_MODELS,
+} from "./constants.js";
 export type { SystemModel } from "./constants.js";
 
 // Fabric functions (type resolution)

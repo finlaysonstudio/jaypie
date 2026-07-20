@@ -23,9 +23,21 @@ export const ROLE_MAP: Record<LlmMessageRole, string> = {
 
 /* eslint-disable @typescript-eslint/no-namespace */
 export namespace Anthropic {
+  export interface CacheControlEphemeral {
+    type: "ephemeral";
+    ttl?: "5m" | "1h";
+  }
+
   export interface TextBlock {
     type: "text";
     text: string;
+  }
+
+  /** Top-level `system` block form that can carry a cache breakpoint */
+  export interface SystemTextBlockParam {
+    type: "text";
+    text: string;
+    cache_control?: CacheControlEphemeral;
   }
 
   export interface ToolUseBlock {
@@ -90,19 +102,22 @@ export namespace Anthropic {
     description?: string;
     input_schema: Messages.Tool.InputSchema;
     type?: "custom";
+    cache_control?: CacheControlEphemeral;
   }
 
   export interface Usage {
     input_tokens: number;
     output_tokens: number;
     thinking_tokens?: number;
+    cache_read_input_tokens?: number;
+    cache_creation_input_tokens?: number;
   }
 
   export interface MessageCreateParams {
     model: string;
     messages: MessageParam[];
     max_tokens: number;
-    system?: string;
+    system?: string | SystemTextBlockParam[];
     tools?: Tool[];
     tool_choice?: { type: "auto" | "any" | "tool"; name?: string };
     temperature?: number;

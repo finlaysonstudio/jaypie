@@ -610,6 +610,7 @@ describe("LLM Integration", () => {
 
 ```typescript
 interface LlmOperateOptions {
+  cache?: boolean | 0 | "5m" | "1h";    // Prompt caching (default on @5m; false/0 disables)
   data?: Record<string, any>;           // Placeholder substitution data
   effort?: LlmEffort;                   // Provider-neutral reasoning effort (lowest|low|medium|high|highest)
   fallback?: LlmFallbackConfig[] | false; // Fallback provider chain
@@ -694,6 +695,30 @@ erroring):
 First-class `effort` takes precedence over a raw `providerOptions.reasoning`
 (same convention as `temperature`). For control the neutral scale doesn't
 express (an exact token budget, OpenAI `none`), use `providerOptions` directly.
+
+## Prompt Caching
+
+The stable request prefix (system prompt + tool list) is cached **by default**,
+so repeating the same system prompt across calls and across every turn of a
+tool-calling loop is billed at the provider's cache-read rate (~0.1x input)
+after the first write. Control with the scalar `cache` option:
+
+```typescript
+await Llm.operate(input, { system: SYSTEM });             // cached @ 5m (default)
+await Llm.operate(input, { system: SYSTEM, cache: "1h" }); // cached @ 1h
+await Llm.operate(input, { system: SYSTEM, cache: false }); // opt out
+```
+
+`true`/omitted = enabled @5m; `false`/`0` = disabled; `"5m"`/`"1h"` = that TTL.
+
+Per provider: Anthropic `cache_control` on system + last tool; Bedrock
+`cachePoint` blocks (model-gated, auto-denylisted and retried without on a 400;
+5m only); OpenAI/xAI automatic caching + a stable `prompt_cache_key`; OpenRouter
+`cache_control` on the system message (forwarded to Anthropic/Gemini backends);
+Google implicit caching only (Gemini 2.5+). TTL applies to Anthropic/OpenRouter;
+others use provider defaults. Sub-threshold prefixes silently no-op. Cache
+tokens surface as `cacheRead`/`cacheWrite` on usage, in the exchange envelope
+`usageTotals`, and in the report tally.
 
 ## Provider Options and Output Limits
 

@@ -355,6 +355,8 @@ const customTable = new JaypieDynamoDb(this, "myApp", {
 
 Note: `JaypieDynamoDb` uses its own `IndexDefinition` type for GSI configuration. The shape matches `@jaypie/fabric`'s `IndexDefinition`, so a single object literal can be shared between CDK provisioning and runtime model code without taking a runtime dependency on pre-1.0 fabric. Table names default to CDK-generated names for proper namespacing across environments; use the `tableName` prop only when an explicit name is required.
 
+TTL is enabled on the `ttl` attribute by default (matching `@jaypie/dynamodb`'s `DEFAULT_TTL_ATTRIBUTE`). Pass `timeToLiveAttribute: "<name>"` to use a different attribute, or `timeToLiveAttribute: false` to disable TTL. The construct attribute name and the runtime write attribute must match, or expiry silently never fires.
+
 ### Next.js Deployment
 
 ```typescript

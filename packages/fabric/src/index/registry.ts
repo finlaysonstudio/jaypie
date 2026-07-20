@@ -41,6 +41,16 @@ export function registerModel(schema: ModelSchema): void {
       );
     }
   }
+  if (schema.ttl !== undefined) {
+    const validTtl =
+      (typeof schema.ttl === "number" && Number.isFinite(schema.ttl)) ||
+      (typeof schema.ttl === "string" && schema.ttl.trim().length > 0);
+    if (!validTtl) {
+      throw new ConfigurationError(
+        `Model "${schema.model}" declared an invalid ttl. Provide a finite epoch-seconds number, a duration string, or an ISO 8601 date string.`,
+      );
+    }
+  }
   MODEL_REGISTRY.set(schema.model, schema);
 }
 

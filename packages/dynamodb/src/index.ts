@@ -12,9 +12,14 @@ export {
 export {
   APEX,
   ARCHIVED_SUFFIX,
+  DEFAULT_TTL_ATTRIBUTE,
   DELETED_SUFFIX,
   SEPARATOR,
 } from "./constants.js";
+
+// TTL resolution
+export { resolveTtl } from "./ttl.js";
+export type { TtlInput } from "./ttl.js";
 
 // Entity operations
 export {
