@@ -156,6 +156,44 @@ which transport the request uses. Callers override per call via
 OpenAI, xAI, and OpenRouter leave the limit unset. When adding models, update
 the table in `src/util/maxOutputTokens.ts`.
 
+### Prompt Caching
+
+`operate()` and `stream()` cache the stable request prefix (the system prompt
+and the tool list) **by default**, so re-sending the same system prompt across
+calls — and across every turn of a tool-calling loop — is billed at the
+provider's cache-read rate (~0.1x input) after the first write.
+
+Control it with the scalar `cache` option (`LlmCache = boolean | 0 | "5m" | "1h"`):
+
+```typescript
+await Llm.operate(input, { system: SYSTEM });            // cached @ 5m (default)
+await Llm.operate(input, { system: SYSTEM, cache: "1h" }); // cached @ 1h
+await Llm.operate(input, { system: SYSTEM, cache: false }); // opt out
+```
+
+- `true` / omitted → enabled at the default `"5m"` TTL
+- `false` / `0` → disabled
+- `"5m"` / `"1h"` → enabled at that TTL
+
+Threaded via `OperateRequest.cache`; each adapter's `buildRequest` resolves it
+with `resolveCache` (`src/util/cacheControl.ts`) and applies the provider-native
+mechanism:
+
+| Provider | Mechanism | TTL |
+|----------|-----------|-----|
+| Anthropic | `cache_control: {type:"ephemeral"}` on the system block + last tool | 5m / 1h |
+| Bedrock | `cachePoint` blocks after `system` and `toolConfig.tools`; model-gated (unsupported models are denylisted after a 400 and the request transparently retried without cachePoints) | 5m only |
+| OpenAI / xAI | automatic server-side caching + a stable `prompt_cache_key` derived from the prefix | provider default |
+| OpenRouter | `cache_control` breakpoint on the system message (forwarded to Anthropic/Gemini backends, ignored by others) | 5m / 1h |
+| Google | **implicit** context caching only (automatic on Gemini 2.5+); explicit `cachedContent` is not wired — pass `providerOptions.cachedContent` to manage it yourself | provider default |
+
+Below a provider's minimum cacheable prefix, annotations silently no-op. Cache
+tokens are surfaced on `LlmUsageItem` as `cacheRead` / `cacheWrite`, flow into
+the exchange envelope `usageTotals`, and appear in the handler report tally.
+
+The cached prefix must stay byte-identical to hit — keep the system prompt
+static (no interpolated timestamps/IDs), which callers already do.
+
 ### Fallback Providers
 
 Configure a chain of fallback providers that automatically retry failed calls when the primary provider fails with an unrecoverable error.

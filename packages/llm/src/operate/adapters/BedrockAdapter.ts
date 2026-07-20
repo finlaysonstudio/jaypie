@@ -21,7 +21,11 @@ import {
   LlmStreamChunk,
   LlmStreamChunkType,
 } from "../../types/LlmStreamChunk.interface.js";
-import { isJsonSchema, naturalZodSchema } from "../../util/index.js";
+import {
+  isJsonSchema,
+  naturalZodSchema,
+  resolveCache,
+} from "../../util/index.js";
 import {
   ClassifiedError,
   ErrorCategory,
@@ -158,6 +162,17 @@ function isTemperatureDeprecationError(error: unknown): boolean {
   return /temperature.*deprecated|deprecated.*temperature/i.test(msg);
 }
 
+function isCachePointUnsupportedError(error: unknown): boolean {
+  const name = (error as Error)?.constructor?.name ?? "";
+  const msg = (error as Error)?.message ?? "";
+  // A model that cannot cache rejects the cachePoint block with a
+  // ValidationException naming caching / cachePoint.
+  return (
+    /ValidationException|invalid|not support/i.test(name + " " + msg) &&
+    /cachePoint|cache_point|prompt caching|caching/i.test(msg)
+  );
+}
+
 function extractJson(text: string): JsonObject | undefined {
   // Try direct parse first
   try {
@@ -190,6 +205,15 @@ export class BedrockAdapter extends BaseProviderAdapter {
 
   private _modelsFallbackToStructuredOutputTool = new Set<string>();
   private _modelsWithoutTemperature = new Set<string>();
+  private _modelsWithoutCachePoint = new Set<string>();
+
+  private rememberModelRejectsCachePoint(model: string): void {
+    this._modelsWithoutCachePoint.add(model);
+  }
+
+  private supportsCachePoint(model: string): boolean {
+    return !this._modelsWithoutCachePoint.has(model);
+  }
 
   private rememberModelRejectsOutputConfig(model: string): void {
     this._modelsFallbackToStructuredOutputTool.add(model);
@@ -349,11 +373,62 @@ export class BedrockAdapter extends BaseProviderAdapter {
       }
     }
 
+    // Prompt caching via Converse cachePoint blocks (5-min default TTL; the
+    // `ttl` option does not apply). Gated per model — cachePoint 400s on
+    // unsupported models, which executeRequest catches and denylists.
+    if (resolveCache(request.cache).enabled && this.supportsCachePoint(model)) {
+      const cachePoint = { cachePoint: { type: "default" as const } };
+      if (bedrockRequest.system && bedrockRequest.system.length > 0) {
+        bedrockRequest.system = [
+          ...bedrockRequest.system,
+          cachePoint,
+        ] as BedrockRequest["system"];
+      }
+      if (bedrockRequest.toolConfig?.tools?.length) {
+        bedrockRequest.toolConfig = {
+          ...bedrockRequest.toolConfig,
+          tools: [
+            ...bedrockRequest.toolConfig.tools,
+            cachePoint,
+          ] as NonNullable<ConverseCommandInput["toolConfig"]>["tools"],
+        };
+      }
+    }
+
     if (request.providerOptions) {
       Object.assign(bedrockRequest, request.providerOptions);
     }
 
     return bedrockRequest;
+  }
+
+  /** Remove any cachePoint blocks so the request can be retried unsupported. */
+  private stripCachePoints(request: BedrockRequest): BedrockRequest {
+    const stripped: BedrockRequest = { ...request };
+    if (stripped.system) {
+      stripped.system = stripped.system.filter(
+        (block) => !("cachePoint" in block),
+      ) as BedrockRequest["system"];
+    }
+    if (stripped.toolConfig?.tools) {
+      stripped.toolConfig = {
+        ...stripped.toolConfig,
+        tools: stripped.toolConfig.tools.filter(
+          (tool) => !("cachePoint" in tool),
+        ) as NonNullable<ConverseCommandInput["toolConfig"]>["tools"],
+      };
+    }
+    return stripped;
+  }
+
+  private requestHasCachePoints(request: BedrockRequest): boolean {
+    const inSystem = (request.system ?? []).some(
+      (block) => "cachePoint" in block,
+    );
+    const inTools = (request.toolConfig?.tools ?? []).some(
+      (tool) => "cachePoint" in tool,
+    );
+    return inSystem || inTools;
   }
 
   formatTools(toolkit: Toolkit): ProviderToolDefinition[] {
@@ -434,6 +509,22 @@ export class BedrockAdapter extends BaseProviderAdapter {
           new ConverseCommand(fallbackRequest as ConverseCommandInput),
           signal ? { abortSignal: signal } : undefined,
         )) as AnnotatedBedrockResponse;
+      }
+
+      if (
+        this.requestHasCachePoints(bedrockRequest) &&
+        isCachePointUnsupportedError(error)
+      ) {
+        this.rememberModelRejectsCachePoint(
+          bedrockRequest.modelId || this.defaultModel,
+        );
+        const retryRequest = this.stripCachePoints(bedrockRequest);
+        const response = (await bedrockClient.send(
+          new ConverseCommand(retryRequest as ConverseCommandInput),
+          signal ? { abortSignal: signal } : undefined,
+        )) as AnnotatedBedrockResponse;
+        if (wantsStructuredOutput) response.__jaypieStructuredOutput = true;
+        return response;
       }
       throw error;
     }
@@ -615,7 +706,15 @@ export class BedrockAdapter extends BaseProviderAdapter {
 
   extractUsage(response: unknown, model: string): LlmUsageItem {
     const bedrockResponse = response as ConverseCommandOutput;
-    const usage = bedrockResponse.usage;
+    const usage = bedrockResponse.usage as
+      | {
+          inputTokens?: number;
+          outputTokens?: number;
+          totalTokens?: number;
+          cacheReadInputTokens?: number;
+          cacheWriteInputTokens?: number;
+        }
+      | undefined;
 
     return {
       input: usage?.inputTokens ?? 0,
@@ -624,6 +723,12 @@ export class BedrockAdapter extends BaseProviderAdapter {
       total:
         usage?.totalTokens ??
         (usage?.inputTokens ?? 0) + (usage?.outputTokens ?? 0),
+      ...(usage?.cacheReadInputTokens !== undefined
+        ? { cacheRead: usage.cacheReadInputTokens }
+        : {}),
+      ...(usage?.cacheWriteInputTokens !== undefined
+        ? { cacheWrite: usage.cacheWriteInputTokens }
+        : {}),
       provider: this.name,
       model,
     };

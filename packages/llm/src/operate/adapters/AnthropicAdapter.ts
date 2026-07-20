@@ -20,6 +20,7 @@ import {
 import {
   isJsonSchema as isBareJsonSchema,
   naturalZodSchema,
+  resolveCache,
   resolveMaxOutputTokens,
 } from "../../util/index.js";
 import {
@@ -526,8 +527,21 @@ export class AnthropicAdapter extends BaseProviderAdapter {
       stream: false,
     };
 
+    const cache = resolveCache(request.cache);
+    const cacheControl: Anthropic.CacheControlEphemeral | undefined =
+      cache.enabled
+        ? {
+            type: "ephemeral",
+            ...(cache.ttl === "1h" ? { ttl: "1h" as const } : {}),
+          }
+        : undefined;
+
     if (request.system) {
-      anthropicRequest.system = request.system;
+      // A cache breakpoint on the system block caches tools+system together
+      // (render order is tools -> system -> messages).
+      anthropicRequest.system = cacheControl
+        ? [{ type: "text", text: request.system, cache_control: cacheControl }]
+        : request.system;
     }
 
     const useFallbackStructuredOutput =
@@ -551,7 +565,7 @@ export class AnthropicAdapter extends BaseProviderAdapter {
     }
 
     if (allTools.length > 0) {
-      anthropicRequest.tools = allTools.map((tool) => ({
+      anthropicRequest.tools = allTools.map((tool, index) => ({
         name: tool.name,
         description: tool.description,
         input_schema: {
@@ -559,6 +573,11 @@ export class AnthropicAdapter extends BaseProviderAdapter {
           type: "object",
         } as Anthropic.Messages.Tool.InputSchema,
         type: "custom" as const,
+        // Breakpoint on the last tool caches the tool list (which renders
+        // before system) when there is no system prompt to anchor it.
+        ...(cacheControl && index === allTools.length - 1
+          ? { cache_control: cacheControl }
+          : {}),
       }));
 
       anthropicRequest.tool_choice = useFallbackStructuredOutput
@@ -932,6 +951,8 @@ export class AnthropicAdapter extends BaseProviderAdapter {
       input_tokens: number;
       output_tokens: number;
       thinking_tokens?: number;
+      cache_read_input_tokens?: number;
+      cache_creation_input_tokens?: number;
     };
 
     return {
@@ -939,6 +960,12 @@ export class AnthropicAdapter extends BaseProviderAdapter {
       output: usage.output_tokens,
       reasoning: usage.thinking_tokens || 0,
       total: usage.input_tokens + usage.output_tokens,
+      ...(usage.cache_read_input_tokens !== undefined
+        ? { cacheRead: usage.cache_read_input_tokens }
+        : {}),
+      ...(usage.cache_creation_input_tokens !== undefined
+        ? { cacheWrite: usage.cache_creation_input_tokens }
+        : {}),
       provider: this.name,
       model,
     };

@@ -112,6 +112,7 @@ describe("BedrockAdapter", () => {
     it("Includes system prompt when provided", () => {
       const result = adapter.buildRequest({
         ...baseRequest,
+        cache: false,
         system: "You are helpful.",
       }) as { system: Array<{ text: string }> };
 
@@ -199,6 +200,7 @@ describe("BedrockAdapter", () => {
     it("Includes toolConfig when tools are provided", () => {
       const result = adapter.buildRequest({
         ...baseRequest,
+        cache: false,
         tools: [
           {
             name: "get_weather",

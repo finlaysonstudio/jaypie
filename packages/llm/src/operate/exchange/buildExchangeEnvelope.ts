@@ -37,6 +37,12 @@ function sumUsageByProviderModel(
     totals[key].output += item.output;
     totals[key].reasoning += item.reasoning;
     totals[key].total += item.total;
+    if (item.cacheRead !== undefined) {
+      totals[key].cacheRead = (totals[key].cacheRead ?? 0) + item.cacheRead;
+    }
+    if (item.cacheWrite !== undefined) {
+      totals[key].cacheWrite = (totals[key].cacheWrite ?? 0) + item.cacheWrite;
+    }
   }
   return totals;
 }
@@ -83,6 +89,7 @@ export function buildExchangeEnvelope({
   return {
     ids: extractResponseIds(response.responses),
     request: {
+      cache: options.cache,
       data: options.data,
       effort: options.effort,
       explain: options.explain,

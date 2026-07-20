@@ -18,7 +18,11 @@ import {
   LlmStreamChunk,
   LlmStreamChunkType,
 } from "../../types/LlmStreamChunk.interface.js";
-import { isJsonSchema, naturalZodSchema } from "../../util/index.js";
+import {
+  isJsonSchema,
+  naturalZodSchema,
+  resolveCache,
+} from "../../util/index.js";
 import {
   ClassifiedError,
   ErrorCategory,
@@ -82,6 +86,14 @@ interface OpenRouterUsage {
   // Reasoning tokens (some models like z-ai/glm include this)
   completionTokensDetails?: {
     reasoningTokens?: number;
+  };
+  // Cache-read tokens forwarded from Anthropic/Gemini backends
+  promptTokensDetails?: {
+    cachedTokens?: number;
+    cached_tokens?: number;
+  };
+  prompt_tokens_details?: {
+    cached_tokens?: number;
   };
 }
 
@@ -204,7 +216,11 @@ function isTemperatureDeprecationError(error: unknown): boolean {
  * the wire.
  */
 type OpenRouterContentPart =
-  | { type: "text"; text: string }
+  | {
+      type: "text";
+      text: string;
+      cache_control?: { type: "ephemeral"; ttl?: "5m" | "1h" };
+    }
   | { type: "image_url"; imageUrl: { url: string } }
   | { type: "file"; file: { filename?: string; fileData: string } };
 
@@ -404,9 +420,16 @@ export class OpenRouterAdapter extends BaseProviderAdapter {
 
   buildRequest(request: OperateRequest): OpenRouterRequest {
     // Convert messages to OpenRouter format (OpenAI-compatible)
+    const cache = resolveCache(request.cache);
     const messages: OpenRouterMessage[] = this.convertMessagesToOpenRouter(
       request.messages,
       request.system,
+      cache.enabled
+        ? {
+            type: "ephemeral",
+            ...(cache.ttl === "1h" ? { ttl: "1h" as const } : {}),
+          }
+        : undefined,
     );
 
     // Append instructions to last message if provided
@@ -896,11 +919,16 @@ export class OpenRouterAdapter extends BaseProviderAdapter {
 
     // SDK returns camelCase, but support snake_case as fallback
     const usage = openRouterResponse.usage;
+    const cachedTokens =
+      usage.promptTokensDetails?.cachedTokens ??
+      usage.promptTokensDetails?.cached_tokens ??
+      usage.prompt_tokens_details?.cached_tokens;
     return {
       input: usage.promptTokens || usage.prompt_tokens || 0,
       output: usage.completionTokens || usage.completion_tokens || 0,
       reasoning: usage.completionTokensDetails?.reasoningTokens || 0,
       total: usage.totalTokens || usage.total_tokens || 0,
+      ...(cachedTokens !== undefined ? { cacheRead: cachedTokens } : {}),
       provider: this.name,
       model,
     };
@@ -1158,14 +1186,19 @@ export class OpenRouterAdapter extends BaseProviderAdapter {
   private convertMessagesToOpenRouter(
     messages: LlmHistory,
     system?: string,
+    cacheControl?: { type: "ephemeral"; ttl?: "5m" | "1h" },
   ): OpenRouterMessage[] {
     const openRouterMessages: OpenRouterMessage[] = [];
 
-    // Add system message if provided
+    // Add system message if provided. A cache_control breakpoint on the system
+    // content is forwarded by OpenRouter to Anthropic/Gemini backends (and
+    // ignored by others), caching the stable system prefix.
     if (system) {
       openRouterMessages.push({
         role: "system",
-        content: system,
+        content: cacheControl
+          ? [{ type: "text", text: system, cache_control: cacheControl }]
+          : system,
       });
     }
 

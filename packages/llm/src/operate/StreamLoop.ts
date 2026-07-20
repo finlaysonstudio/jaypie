@@ -255,6 +255,7 @@ export class StreamLoop {
     options: LlmOperateOptions,
   ): OperateRequest {
     return {
+      cache: options.cache,
       effort: options.effort,
       format: state.formattedFormat,
       instructions: options.instructions,
