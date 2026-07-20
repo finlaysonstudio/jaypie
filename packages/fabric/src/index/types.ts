@@ -50,6 +50,13 @@ export interface ModelSchema {
    * `status` is a free string. See the `status` axis in skill("vocabulary").
    */
   status?: string[];
+  /**
+   * Default TTL for new entities of this model. Applied by `createEntity` when
+   * the item does not already carry a TTL and the call does not override it.
+   * Accepts a future epoch-seconds `number`, a duration string (e.g. "30 days"),
+   * or an ISO 8601 date string; `@jaypie/dynamodb`'s `resolveTtl` interprets it.
+   */
+  ttl?: number | string;
 }
 
 // =============================================================================

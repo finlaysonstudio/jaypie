@@ -9,6 +9,9 @@
 /** Root organizational unit */
 export const APEX = "@";
 
+/** Default DynamoDB attribute name holding an item's TTL (epoch seconds) */
+export const DEFAULT_TTL_ATTRIBUTE = "ttl";
+
 /** Fabric version - used to identify pre-instantiated Services */
 export const FABRIC_VERSION = "0.1.0";
 

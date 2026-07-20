@@ -12,6 +12,7 @@ import type {
   SeedOptions,
   SeedResult,
   StorableEntity,
+  TtlInput,
 } from "@jaypie/dynamodb";
 import type { IndexableModel } from "@jaypie/fabric";
 
@@ -20,8 +21,30 @@ import { createMockFunction, createMockResolvedFunction } from "./utils";
 // Re-export constants (no need to mock, just pass through)
 export const APEX = original.APEX;
 export const ARCHIVED_SUFFIX = original.ARCHIVED_SUFFIX;
+export const DEFAULT_TTL_ATTRIBUTE = original.DEFAULT_TTL_ATTRIBUTE;
 export const DELETED_SUFFIX = original.DELETED_SUFFIX;
 export const SEPARATOR = original.SEPARATOR;
+
+// TTL resolution — delegate to the real implementation
+export const resolveTtl = createMockFunction<(input: TtlInput) => number>(
+  (input) => original.resolveTtl(input),
+);
+
+/** Apply an explicit per-call TTL to an entity for the create/update mocks. */
+function applyMockTtl(
+  entity: StorableEntity,
+  ttl: TtlInput | false | undefined,
+): StorableEntity {
+  if (ttl === false) {
+    const next = { ...entity };
+    delete next[DEFAULT_TTL_ATTRIBUTE];
+    return next;
+  }
+  if (ttl !== undefined) {
+    return { ...entity, [DEFAULT_TTL_ATTRIBUTE]: original.resolveTtl(ttl) };
+  }
+  return entity;
+}
 
 // Key builder functions — delegate to real implementations
 export const buildCompositeKey = createMockFunction<
@@ -73,9 +96,12 @@ export const getEntity = createMockFunction<
 >(async () => null);
 
 export const createEntity = createMockFunction<
-  (params: { entity: StorableEntity }) => Promise<StorableEntity | null>
->(async (params: { entity: StorableEntity }) =>
-  original.indexEntity(params.entity),
+  (params: {
+    entity: StorableEntity;
+    ttl?: TtlInput | false;
+  }) => Promise<StorableEntity | null>
+>(async (params) =>
+  original.indexEntity(applyMockTtl(params.entity, params.ttl)),
 );
 
 export const updateEntity = createMockFunction<
@@ -83,9 +109,12 @@ export const updateEntity = createMockFunction<
     condition?: string;
     entity: StorableEntity;
     names?: Record<string, string>;
+    ttl?: TtlInput | false;
     values?: Record<string, unknown>;
   }) => Promise<StorableEntity>
->(async (params) => original.indexEntity(params.entity));
+>(async (params) =>
+  original.indexEntity(applyMockTtl(params.entity, params.ttl)),
+);
 
 // Defaults to a successful transition. Simulate a conditional-check failure by
 // overriding: `vi.mocked(transitionEntity).mockRejectedValueOnce(new ConflictError())`.

@@ -6,6 +6,13 @@ import { CDK } from "./constants";
 import { isProductionEnv } from "./helpers/isEnv";
 import type { IndexDefinition } from "./types/IndexDefinition";
 
+/**
+ * Default DynamoDB attribute holding an item's TTL (epoch seconds). Must match
+ * `@jaypie/dynamodb`'s `DEFAULT_TTL_ATTRIBUTE`; declared locally to avoid a
+ * runtime dependency on the pre-1.0 runtime package.
+ */
+const DEFAULT_TTL_ATTRIBUTE = "ttl";
+
 //
 //
 // Helper Functions
@@ -84,7 +91,7 @@ function indexesToGsi(
 
 export interface JaypieDynamoDbProps extends Omit<
   dynamodb.TablePropsV2,
-  "globalSecondaryIndexes" | "partitionKey" | "sortKey"
+  "globalSecondaryIndexes" | "partitionKey" | "sortKey" | "timeToLiveAttribute"
 > {
   /**
    * Configure GSIs for the table using the IndexDefinition format.
@@ -127,6 +134,13 @@ export interface JaypieDynamoDbProps extends Omit<
    * the Jaypie single-table pattern uses `id` as a unique partition key.
    */
   sortKey?: dynamodb.Attribute;
+  /**
+   * DynamoDB TTL attribute name. TTL is enabled by default on the `ttl`
+   * attribute (matching `@jaypie/dynamodb`). Pass a string to use a different
+   * attribute name, or `false` to disable TTL entirely.
+   * @default "ttl"
+   */
+  timeToLiveAttribute?: string | false;
   /**
    * Optional vendor tag for the table
    */
@@ -188,6 +202,7 @@ export class JaypieDynamoDb extends Construct implements dynamodb.ITableV2 {
       roleTag = CDK.ROLE.STORAGE,
       service,
       sortKey,
+      timeToLiveAttribute = DEFAULT_TTL_ATTRIBUTE,
       vendorTag,
       ...restProps
     } = props;
@@ -195,12 +210,19 @@ export class JaypieDynamoDb extends Construct implements dynamodb.ITableV2 {
     // Convert IndexDefinition[] to CDK GSI props
     const globalSecondaryIndexes = indexes ? indexesToGsi(indexes) : undefined;
 
+    // TTL on by default ("ttl"); `false` disables it, a string overrides it.
+    const resolvedTtlAttribute =
+      timeToLiveAttribute === false ? undefined : timeToLiveAttribute;
+
     this._table = new dynamodb.TableV2(this, "Table", {
       billing,
       globalSecondaryIndexes,
       partitionKey,
       removalPolicy,
       ...(sortKey && { sortKey }),
+      ...(resolvedTtlAttribute
+        ? { timeToLiveAttribute: resolvedTtlAttribute }
+        : {}),
       ...restProps,
     });
 

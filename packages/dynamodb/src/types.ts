@@ -137,6 +137,14 @@ export interface StorableEntity extends Omit<
   /** Soft-delete timestamp — presence drives #deleted suffix on GSI pk */
   deletedAt?: string;
 
+  /**
+   * DynamoDB TTL: Unix epoch **seconds** at which the item expires. Numeric,
+   * distinct from the ISO 8601 string timestamps above. Set from a model
+   * default or per-call `ttl` on createEntity/updateEntity; expiry is
+   * best-effort (typically within 48h) and requires TTL enabled on the table.
+   */
+  ttl?: number;
+
   // Extensible — DynamoDB entities may carry additional fields
   /** Application-specific state flags */
   state?: Record<string, unknown>;

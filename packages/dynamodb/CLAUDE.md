@@ -39,6 +39,7 @@ src/
 | `ARCHIVED_SUFFIX` | `"#archived"` | Suffix appended to GSI pk keys on archive |
 | `DELETED_SUFFIX` | `"#deleted"` | Suffix appended to GSI pk keys on delete |
 | `SEPARATOR` | `"#"` | Composite key separator |
+| `DEFAULT_TTL_ATTRIBUTE` | `"ttl"` | Attribute holding an item's TTL (epoch seconds) |
 
 ### Key Builders
 
@@ -53,8 +54,9 @@ src/
 | Export | Description |
 |--------|-------------|
 | `getEntity({ id })` | Get a single entity by primary key (id only) |
-| `createEntity({ entity })` | Create entity; returns `null` if `id` already exists (conditional write on `attribute_not_exists(id)`) |
-| `updateEntity({ entity, condition?, names?, values? })` | Create or replace entity (auto-indexes, auto-timestamps). Optional `condition` (a ConditionExpression with `names`/`values` bindings) guards the write; throws `ConflictError` (409) and leaves the item unchanged when the condition fails |
+| `createEntity({ entity, ttl? })` | Create entity; returns `null` if `id` already exists (conditional write on `attribute_not_exists(id)`). Optional `ttl` (`TtlInput \| false`) sets/clears the TTL; without it the model's registered default applies |
+| `updateEntity({ entity, condition?, names?, ttl?, values? })` | Create or replace entity (auto-indexes, auto-timestamps). Optional `condition` (a ConditionExpression with `names`/`values` bindings) guards the write; throws `ConflictError` (409) and leaves the item unchanged when the condition fails. Optional `ttl` (`TtlInput \| false`) sets/clears the TTL; the model default is **not** applied on update |
+| `resolveTtl(input)` | Resolve a `TtlInput` (future epoch-seconds `number`, duration string like `"30 days"`, or ISO 8601 date) to epoch seconds. Throws `BadRequestError` on unparseable input; logs at `error` when the result is not in the future |
 | `transitionEntity({ id, from?, set })` | Conditionally update by status: reads the entity, merges `set`, writes guarded by `#status = from`; throws `ConflictError` (409) on a race and `NotFoundError` (404) when absent. Validates `from`/`set.status` against the model's `status` vocabulary |
 | `deleteEntity({ id })` | Soft delete (sets `deletedAt`, re-indexes with `#deleted` suffix) |
 | `archiveEntity({ id })` | Archive (sets `archivedAt`, re-indexes with `#archived` suffix) |
