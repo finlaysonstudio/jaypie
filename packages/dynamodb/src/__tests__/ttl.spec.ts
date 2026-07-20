@@ -1,4 +1,4 @@
-import log from "@jaypie/logger";
+import { log } from "@jaypie/logger";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { resolveTtl } from "../ttl.js";

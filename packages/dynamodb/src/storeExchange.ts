@@ -1,5 +1,5 @@
 import { APEX, registerExchangeModel } from "@jaypie/fabric";
-import log from "@jaypie/logger";
+import { log } from "@jaypie/logger";
 
 import { isInitialized } from "./client.js";
 import { createEntity } from "./entities.js";

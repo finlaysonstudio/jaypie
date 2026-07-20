@@ -1,5 +1,5 @@
 import { BadRequestError } from "@jaypie/errors";
-import log from "@jaypie/logger";
+import { log } from "@jaypie/logger";
 
 /**
  * Accepted TTL inputs:
