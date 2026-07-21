@@ -162,14 +162,19 @@ function isTemperatureDeprecationError(error: unknown): boolean {
   return /temperature.*deprecated|deprecated.*temperature/i.test(msg);
 }
 
-function isCachePointUnsupportedError(error: unknown): boolean {
+/** Exported for tests; not part of the package's public surface. */
+export function isCachePointUnsupportedError(error: unknown): boolean {
   const name = (error as Error)?.constructor?.name ?? "";
   const msg = (error as Error)?.message ?? "";
   // A model that cannot cache rejects the cachePoint block with a
-  // ValidationException naming caching / cachePoint.
+  // ValidationException naming caching / cachePoint. Bedrock words this as
+  // "You invoked an unsupported model or your request did not allow prompt
+  // caching" — "unsupported" is one word, so it must be matched separately
+  // from "not support".
   return (
-    /ValidationException|invalid|not support/i.test(name + " " + msg) &&
-    /cachePoint|cache_point|prompt caching|caching/i.test(msg)
+    /ValidationException|invalid|not support|unsupported/i.test(
+      name + " " + msg,
+    ) && /cachePoint|cache_point|prompt caching|caching/i.test(msg)
   );
 }
 

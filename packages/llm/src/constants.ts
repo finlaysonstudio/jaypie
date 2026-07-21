@@ -33,8 +33,8 @@ export const MODEL = {
     QWEN: "accounts/fireworks/models/qwen3p7-plus",
   },
   // Google
-  GEMINI_FLASH: "gemini-3.5-flash",
-  GEMINI_FLASH_LITE: "gemini-3.1-flash-lite",
+  GEMINI_FLASH: "gemini-3.6-flash",
+  GEMINI_FLASH_LITE: "gemini-3.5-flash-lite",
   GEMINI_PRO: "gemini-3.1-pro-preview",
   // OpenAI
   SOL: "gpt-5.6-sol",
@@ -54,6 +54,203 @@ export const MODEL = {
     LUNA: "openai/gpt-5.6-luna",
     SONNET: "anthropic/claude-sonnet-5",
   },
+};
+
+/** Price of one million tokens, in US dollars. */
+export interface LlmModelCost {
+  /**
+   * Cache-read (cached input) tokens. Omitted when the provider does not price
+   * cache reads separately from uncached input.
+   */
+  cachedInputRead?: number;
+  /**
+   * Cache-write tokens. A scalar when the rate does not vary by TTL; keyed by
+   * the same `"5m"` / `"1h"` literals as `LlmCache` when it does, so a cost
+   * calculation reads the TTL straight off `OperateRequest.cache`. Omitted
+   * means cache writes bill at the `input` rate.
+   */
+  cachedInputWrite?: number | { "1h": number; "5m": number };
+  /** Uncached input tokens. */
+  input: number;
+  /** Output tokens. */
+  output: number;
+  /**
+   * Reasoning tokens, when billed at a rate other than `output`. Omitted means
+   * reasoning bills as output, which is true of every provider listed here.
+   */
+  reasoning?: number;
+}
+
+/**
+ * Standard list price per million tokens, keyed by literal model id (verified
+ * 2026-07-21). Keys are string literals rather than `MODEL.*` references so a
+ * model retired from the catalog keeps its price here: historic ids stay
+ * priceable after they leave `MODEL.*`, which is what makes replaying old
+ * usage records possible.
+ *
+ * Caveats the numbers cannot carry:
+ * - **Standard rate only.** Introductory, batch, flex, priority, fast-mode, and
+ *   data-residency rates are excluded. Sonnet 5 is listed at its standard
+ *   $3/$15, not the introductory rate.
+ * - **Cache writes are Anthropic-only.** Fireworks writes bill at the input
+ *   rate. OpenAI and xAI discount reads automatically and publish no write
+ *   premium. Google charges nothing to write an implicit cache; explicit
+ *   caching bills storage per hour, a unit this table does not carry (and one
+ *   `@jaypie/llm` does not wire).
+ * - **Short-context tier.** Long-prompt surcharges are not modeled: Gemini 3.1
+ *   Pro doubles above 200K, Grok doubles at 200K, GPT-5.5 is 2x in / 1.5x out
+ *   above 272K.
+ * - **Text rates.** Gemini prices audio input higher than text/image/video.
+ * - **Proxies are deliberately absent.** Bedrock (`PROVIDER.BEDROCK.*`) and
+ *   OpenRouter (`MODEL.OPENROUTER.*`) resell many vendors and price per backend
+ *   route, so no single rate is correct for a proxy id. Price those against the
+ *   backend model, or against the proxy's own published rate.
+ *
+ * Unlisted ids return `undefined` — callers must handle a miss.
+ */
+export const COST: Record<string, LlmModelCost> = {
+  // Anthropic — https://platform.claude.com/docs/en/about-claude/pricing
+  "claude-3-5-haiku-20241022": {
+    cachedInputRead: 0.08,
+    cachedInputWrite: { "1h": 1.6, "5m": 1.0 },
+    input: 0.8,
+    output: 4.0,
+  },
+  "claude-fable-5": {
+    cachedInputRead: 1.0,
+    cachedInputWrite: { "1h": 20.0, "5m": 12.5 },
+    input: 10.0,
+    output: 50.0,
+  },
+  "claude-haiku-4-5": {
+    cachedInputRead: 0.1,
+    cachedInputWrite: { "1h": 2.0, "5m": 1.25 },
+    input: 1.0,
+    output: 5.0,
+  },
+  "claude-mythos-5": {
+    cachedInputRead: 1.0,
+    cachedInputWrite: { "1h": 20.0, "5m": 12.5 },
+    input: 10.0,
+    output: 50.0,
+  },
+  "claude-opus-4-1": {
+    cachedInputRead: 1.5,
+    cachedInputWrite: { "1h": 30.0, "5m": 18.75 },
+    input: 15.0,
+    output: 75.0,
+  },
+  "claude-opus-4-5": {
+    cachedInputRead: 0.5,
+    cachedInputWrite: { "1h": 10.0, "5m": 6.25 },
+    input: 5.0,
+    output: 25.0,
+  },
+  "claude-opus-4-6": {
+    cachedInputRead: 0.5,
+    cachedInputWrite: { "1h": 10.0, "5m": 6.25 },
+    input: 5.0,
+    output: 25.0,
+  },
+  "claude-opus-4-7": {
+    cachedInputRead: 0.5,
+    cachedInputWrite: { "1h": 10.0, "5m": 6.25 },
+    input: 5.0,
+    output: 25.0,
+  },
+  "claude-opus-4-8": {
+    cachedInputRead: 0.5,
+    cachedInputWrite: { "1h": 10.0, "5m": 6.25 },
+    input: 5.0,
+    output: 25.0,
+  },
+  "claude-sonnet-4-20250514": {
+    cachedInputRead: 0.3,
+    cachedInputWrite: { "1h": 6.0, "5m": 3.75 },
+    input: 3.0,
+    output: 15.0,
+  },
+  "claude-sonnet-4-5": {
+    cachedInputRead: 0.3,
+    cachedInputWrite: { "1h": 6.0, "5m": 3.75 },
+    input: 3.0,
+    output: 15.0,
+  },
+  "claude-sonnet-4-6": {
+    cachedInputRead: 0.3,
+    cachedInputWrite: { "1h": 6.0, "5m": 3.75 },
+    input: 3.0,
+    output: 15.0,
+  },
+  "claude-sonnet-5": {
+    cachedInputRead: 0.3,
+    cachedInputWrite: { "1h": 6.0, "5m": 3.75 },
+    input: 3.0,
+    output: 15.0,
+  },
+  // Fireworks — https://docs.fireworks.ai/serverless/pricing
+  "accounts/fireworks/models/deepseek-v4-pro": {
+    cachedInputRead: 0.145,
+    input: 1.74,
+    output: 3.48,
+  },
+  "accounts/fireworks/models/glm-5p2": {
+    cachedInputRead: 0.14,
+    input: 1.4,
+    output: 4.4,
+  },
+  "accounts/fireworks/models/kimi-k2p7-code": {
+    cachedInputRead: 0.19,
+    input: 0.95,
+    output: 4.0,
+  },
+  "accounts/fireworks/models/minimax-m2p7": {
+    cachedInputRead: 0.06,
+    input: 0.3,
+    output: 1.2,
+  },
+  "accounts/fireworks/models/qwen3p7-plus": {
+    cachedInputRead: 0.08,
+    input: 0.4,
+    output: 1.6,
+  },
+  // Google — https://ai.google.dev/gemini-api/docs/pricing
+  "gemini-2.5-flash": { cachedInputRead: 0.03, input: 0.3, output: 2.5 },
+  "gemini-3.1-flash-lite": {
+    cachedInputRead: 0.025,
+    input: 0.25,
+    output: 1.5,
+  },
+  "gemini-3.1-flash-lite-preview": {
+    cachedInputRead: 0.025,
+    input: 0.25,
+    output: 1.5,
+  },
+  "gemini-3.1-pro-preview": { cachedInputRead: 0.2, input: 2.0, output: 12.0 },
+  "gemini-3.5-flash": { cachedInputRead: 0.15, input: 1.5, output: 9.0 },
+  // Flash-Lite 3.5 has no separate cache-read rate on the standard tier
+  "gemini-3.5-flash-lite": { input: 0.3, output: 2.5 },
+  "gemini-3.6-flash": { cachedInputRead: 0.15, input: 1.5, output: 7.5 },
+  // OpenAI — https://developers.openai.com/api/docs/pricing
+  "gpt-5.4": { cachedInputRead: 0.25, input: 2.5, output: 15.0 },
+  "gpt-5.4-mini": { cachedInputRead: 0.075, input: 0.75, output: 4.5 },
+  "gpt-5.4-nano": { cachedInputRead: 0.02, input: 0.2, output: 1.25 },
+  "gpt-5.5": { cachedInputRead: 0.5, input: 5.0, output: 30.0 },
+  "gpt-5.6-luna": { cachedInputRead: 0.1, input: 1.0, output: 6.0 },
+  "gpt-5.6-sol": { cachedInputRead: 0.5, input: 5.0, output: 30.0 },
+  "gpt-5.6-terra": { cachedInputRead: 0.25, input: 2.5, output: 15.0 },
+  // xAI — https://docs.x.ai/docs/models ("grok-latest" aliases grok-4.3-latest)
+  "grok-4-1-fast-non-reasoning": {
+    cachedInputRead: 0.05,
+    input: 0.2,
+    output: 0.5,
+  },
+  "grok-4-1-fast-reasoning": {
+    cachedInputRead: 0.05,
+    input: 0.2,
+    output: 0.5,
+  },
+  "grok-latest": { cachedInputRead: 0.2, input: 1.25, output: 2.5 },
 };
 
 const GOOGLE_PROVIDER = {

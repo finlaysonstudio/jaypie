@@ -1,7 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { anthropicAdapter } from "../AnthropicAdapter.js";
-import { bedrockAdapter } from "../BedrockAdapter.js";
+import {
+  bedrockAdapter,
+  isCachePointUnsupportedError,
+} from "../BedrockAdapter.js";
 import { openAiAdapter } from "../OpenAiAdapter.js";
 import { openRouterAdapter } from "../OpenRouterAdapter.js";
 import { PROVIDER } from "../../../constants.js";
@@ -99,6 +102,40 @@ describe("Prompt caching — Bedrock", () => {
     };
     expect(result.system.at(-1)).toHaveProperty("cachePoint");
     expect(result.toolConfig.tools.at(-1)).toHaveProperty("cachePoint");
+  });
+
+  describe("isCachePointUnsupportedError", () => {
+    it("Detects the wording Bedrock actually returns", () => {
+      // Live wording observed in CI. "unsupported" is one word, so a
+      // /not support/ pattern alone misses it and the no-cachePoint retry
+      // never fires, failing the call instead of degrading gracefully.
+      expect(
+        isCachePointUnsupportedError(
+          new Error(
+            "You invoked an unsupported model or your request did not allow prompt caching. See the documentation for more information.",
+          ),
+        ),
+      ).toBeTrue();
+    });
+
+    it("Detects a ValidationException naming cachePoint", () => {
+      const error = new Error("Invalid cachePoint block for this model");
+      error.name = "ValidationException";
+      expect(isCachePointUnsupportedError(error)).toBeTrue();
+    });
+
+    it("Ignores errors unrelated to caching", () => {
+      expect(
+        isCachePointUnsupportedError(
+          new Error("You invoked an unsupported model"),
+        ),
+      ).toBeFalse();
+      expect(
+        isCachePointUnsupportedError(
+          new Error("ThrottlingException: slow down"),
+        ),
+      ).toBeFalse();
+    });
   });
 
   it("Omits cachePoint when cache is false", () => {
