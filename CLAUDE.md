@@ -84,20 +84,25 @@
 - Never throw vanilla `Error`
 - Use `@jaypie/errors` package (ConfigurationError, etc.) for proper error types
 ### LLM Models
-First-class models live in ONE place: `packages/llm/src/constants.ts` — the
-`MODEL.*` catalog plus each `PROVIDER.*.DEFAULT`. Adding or updating a
-first-class model means editing constants only; the CI matrix derives from it:
-- `packages/llm/test/models.ts` derives the first-class matrix list from
-  constants and lists **only** Bedrock explicitly (Bedrock proxies many vendors
-  and is not in `MODEL.*`). Add Bedrock ids + per-model `expect` overrides here;
-  canonical Bedrock ids come from project memory — do not substitute.
+Every model id lives in ONE place: `packages/llm/src/constants.ts` — the
+`MODEL.*` catalog (including the `BEDROCK` and `OPENROUTER` gateway subtrees)
+plus each `PROVIDER.*.DEFAULT`. Adding, updating, or retiring a model means
+editing constants only; nothing else carries a model id:
+- `packages/llm/test/models.ts` derives the whole live matrix from constants and
+  holds **no ids** — only `MATRIX_EXCLUDE` (catalog ids the live matrix skips)
+  and `MATRIX_EXPECT` (per-model capability expectations). Canonical Bedrock and
+  Fireworks ids come from project memory — do not substitute.
 - `.github/workflows/npm-check.yml` / `npm-deploy.yml` shard the matrix by
   provider group via `APP_GROUP` — no model id lists to keep in sync.
-- Exclude an unavailable/deprecated `MODEL.*` id from the live matrix via
-  `MATRIX_EXCLUDE` in `test/models.ts`.
+- A new id must resolve through `determineModelProvider` (add a
+  `MODEL_MATCH_WORDS` entry when it does not) or the matrix cannot shard it; a
+  constants test fails on any catalog id with no provider.
 - `COST` in the same file prices models by **literal id** (not `MODEL.*`), so
   retired models keep their price. Adding a first-class model means adding a
   `COST` entry too; removing one means leaving its `COST` entry in place.
+  Gateway routes (`MODEL.BEDROCK.*`, `MODEL.OPENROUTER.*`) are deliberately
+  unpriced — they resell another vendor per route. Amazon's own Nova models are
+  first-class and priced.
 ### Lore
 - These are golden numbers: 0.021, 0.146, 0.236, 0.382, and 0.618
 - Start with 0.618 when user suggests "partial" and down as they want less
