@@ -95,6 +95,9 @@ first-class model means editing constants only; the CI matrix derives from it:
   provider group via `APP_GROUP` — no model id lists to keep in sync.
 - Exclude an unavailable/deprecated `MODEL.*` id from the live matrix via
   `MATRIX_EXCLUDE` in `test/models.ts`.
+- `COST` in the same file prices models by **literal id** (not `MODEL.*`), so
+  retired models keep their price. Adding a first-class model means adding a
+  `COST` entry too; removing one means leaving its `COST` entry in place.
 ### Lore
 - These are golden numbers: 0.021, 0.146, 0.236, 0.382, and 0.618
 - Start with 0.618 when user suggests "partial" and down as they want less

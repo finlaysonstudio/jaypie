@@ -194,6 +194,33 @@ the exchange envelope `usageTotals`, and appear in the handler report tally.
 The cached prefix must stay byte-identical to hit — keep the system prompt
 static (no interpolated timestamps/IDs), which callers already do.
 
+### Model Pricing
+
+`LLM.COST` (`src/constants.ts`, type `LlmModelCost`) maps a **literal model id**
+to its standard list price per million tokens. Keys are string literals rather
+than `MODEL.*` references so a model retired from the catalog keeps its price
+and historic usage records stay replayable.
+
+```typescript
+import { LLM, type LlmModelCost } from "@jaypie/llm";
+
+const rate: LlmModelCost | undefined = LLM.COST[response.model];
+```
+
+Fields line up with `LlmUsageItem`: `input`, `output`, `cachedInputRead`
+(`usage.cacheRead`), and `cachedInputWrite` (`usage.cacheWrite`). Writes are a
+scalar when TTL-invariant, or keyed `{ "5m", "1h" }` using the same literals as
+`LlmCache` so a calculation reads the TTL straight off `OperateRequest.cache`;
+omitting the field means writes bill at `input`. Only Anthropic publishes a
+write premium today. `reasoning` exists for providers that bill reasoning apart
+from output and is unset everywhere.
+
+Rates are the standard short-context text tier — introductory, batch, flex,
+priority, fast-mode, and data-residency pricing are excluded, as are long-prompt
+surcharges. Bedrock and `MODEL.OPENROUTER.*` are deliberately absent: both
+resell many vendors and price per backend route. Unlisted ids return
+`undefined`; callers must handle a miss.
+
 ### Fallback Providers
 
 Configure a chain of fallback providers that automatically retry failed calls when the primary provider fails with an unrecoverable error.

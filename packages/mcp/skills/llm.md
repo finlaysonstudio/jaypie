@@ -37,6 +37,27 @@ The provider name for Gemini models is `"google"` — `"gemini"` is accepted as 
 - **`LLM.MODEL.*`** — the named model catalog (e.g. `MODEL.SONNET`, `MODEL.SOL`, `MODEL.GEMINI_FLASH`, `MODEL.GROK`), plus `MODEL.OPENROUTER.*` for provider-prefixed routes (`GLM`, `LUNA`, `SONNET`) and `MODEL.FIREWORKS.*` for Fireworks serverless models (`DEEPSEEK`, `GLM`, `KIMI`, `MINIMAX`, `QWEN`). Pick specific models from here.
 - **Deprecated:** the size-tier map `PROVIDER.<name>.MODEL.{DEFAULT,LARGE,SMALL,TINY}`, the `DEFAULT.MODEL` bundle, and `ALL` are `@deprecated` and retired in 2.0 — use `PROVIDER.*.DEFAULT` for defaults and `MODEL.*` for named models.
 
+### Model Pricing
+
+`LLM.COST` maps a literal model id to its standard list price per **million** tokens (`LlmModelCost`). Keys are string literals, not `MODEL.*` references, so a model retired from the catalog keeps its price and historic usage stays replayable.
+
+```typescript
+import { LLM, type LlmModelCost } from "@jaypie/llm";
+
+const rate: LlmModelCost | undefined = LLM.COST[response.model];
+const dollars = rate ? (usage.input * rate.input + usage.output * rate.output) / 1e6 : 0;
+```
+
+| Field | Meaning |
+|-------|---------|
+| `input` | Uncached input tokens |
+| `output` | Output tokens |
+| `cachedInputRead` | Cache-read (hit) tokens. Omitted when the provider does not price reads separately |
+| `cachedInputWrite` | Cache-write tokens. Scalar when TTL-invariant, or keyed `{ "5m", "1h" }` matching `LlmCache`. Omitted means writes bill at `input` (currently populated for Anthropic only) |
+| `reasoning` | Reasoning tokens when billed apart from `output`. Unset everywhere today |
+
+Rates are the standard short-context text tier. Introductory, batch, flex, priority, fast-mode, and data-residency pricing are excluded, as are long-prompt surcharges (Gemini 3.1 Pro above 200K, Grok at 200K, GPT-5.5 above 272K). Bedrock and `MODEL.OPENROUTER.*` are deliberately absent: both resell many vendors and price per backend route, so price those against the backend model. Unlisted ids return `undefined` — always handle a miss.
+
 ```typescript
 // Provider auto-detected from model
 await Llm.operate(input, { model: "gpt-5.1" });      // OpenAI
