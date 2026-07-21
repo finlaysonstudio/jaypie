@@ -33,8 +33,8 @@ export const MODEL = {
     QWEN: "accounts/fireworks/models/qwen3p7-plus",
   },
   // Google
-  GEMINI_FLASH: "gemini-3.5-flash",
-  GEMINI_FLASH_LITE: "gemini-3.1-flash-lite",
+  GEMINI_FLASH: "gemini-3.6-flash",
+  GEMINI_FLASH_LITE: "gemini-3.5-flash-lite",
   GEMINI_PRO: "gemini-3.1-pro-preview",
   // OpenAI
   SOL: "gpt-5.6-sol",
