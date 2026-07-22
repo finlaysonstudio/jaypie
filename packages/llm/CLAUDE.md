@@ -217,8 +217,11 @@ from output and is unset everywhere.
 
 Rates are the standard short-context text tier — introductory, batch, flex,
 priority, fast-mode, and data-residency pricing are excluded, as are long-prompt
-surcharges. Bedrock and `MODEL.OPENROUTER.*` are deliberately absent: both
-resell many vendors and price per backend route. Unlisted ids return
+surcharges. Amazon's Nova models (`MODEL.NOVA_PRO`, `MODEL.NOVA_LITE`) are
+priced at the standard US on-demand rate from the AWS Price List API, where a
+cache write is a published `0`. Gateway routes are deliberately absent:
+`MODEL.OPENROUTER.*`, and any Bedrock id reselling a third-party model, cost per
+route and per region, so no single rate is correct. Unlisted ids return
 `undefined`; callers must handle a miss.
 
 ### Fallback Providers

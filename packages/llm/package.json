@@ -1,6 +1,6 @@
 {
   "name": "@jaypie/llm",
-  "version": "1.3.16",
+  "version": "1.3.17",
   "description": "Large language model utilities",
   "repository": {
     "type": "git",
@@ -34,7 +34,7 @@
     "lint": "eslint .",
     "test": "vitest run .",
     "test:matrix": "tsx test/matrix.ts",
-    "test:matrix:bedrock": "APP_MODELS=\"us.anthropic.claude-opus-4-7,us.anthropic.claude-sonnet-4-6,us.anthropic.claude-haiku-4-5-20251001-v1:0,amazon.nova-pro-v1:0,us.amazon.nova-2-lite-v1:0,amazon.nova-micro-v1:0,deepseek.v3.2,google.gemma-3-27b-it,moonshotai.kimi-k2.5,openai.gpt-oss-120b-1:0\" tsx test/matrix.ts",
+    "test:matrix:bedrock": "APP_GROUP=bedrock tsx test/matrix.ts",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit"
   },

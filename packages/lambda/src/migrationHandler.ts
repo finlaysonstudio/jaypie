@@ -43,7 +43,11 @@ const migrationHandler = function <TEvent = unknown, TResult = unknown>(
 
     // isCompleteHandler: CDK cr.Provider passes the Data from onEventHandler in event.
     // Run the migration and map the pending flag to CFN's IsComplete protocol.
-    if (cfnEvent !== null && typeof cfnEvent === "object" && "Data" in cfnEvent) {
+    if (
+      cfnEvent !== null &&
+      typeof cfnEvent === "object" &&
+      "Data" in cfnEvent
+    ) {
       const result = await innerHandler(event, context);
       const pending =
         result !== null &&

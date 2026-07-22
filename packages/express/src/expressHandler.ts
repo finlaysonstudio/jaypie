@@ -536,15 +536,11 @@ function expressHandler<T>(
       //
 
       response = (await jaypieFunction(req, res, ...params)) as
-        | T
-        | Record<string, unknown>
-        | undefined;
+        T | Record<string, unknown> | undefined;
 
       if (fabric) {
         response = fabricApiResponse(response) as
-          | T
-          | Record<string, unknown>
-          | undefined;
+          T | Record<string, unknown> | undefined;
       }
 
       //

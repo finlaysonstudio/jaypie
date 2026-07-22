@@ -4,12 +4,7 @@ import { TYPE } from "./constants.js";
 import { TextractItem } from "./types.js";
 
 type TextractInput =
-  | string
-  | TextractItem
-  | TextractDocument
-  | TextractItem[]
-  | null
-  | undefined;
+  string | TextractItem | TextractDocument | TextractItem[] | null | undefined;
 
 //
 //

@@ -93,7 +93,7 @@ required.number = (value: unknown): boolean => required(value, Number);
 required.object = (value: unknown): boolean => required(value, Object);
 required.positive = (value: unknown): boolean =>
   required(value, Number, { positive: true });
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+
 required.string = (value: unknown, _defaultValue = ""): boolean =>
   required(value, String);
 

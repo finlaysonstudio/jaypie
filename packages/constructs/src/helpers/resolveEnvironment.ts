@@ -9,8 +9,7 @@ export type EnvironmentArrayItem = string | { [key: string]: string };
  * Environment type that supports both legacy object syntax and new array syntax
  */
 export type EnvironmentInput =
-  | { [key: string]: string }
-  | EnvironmentArrayItem[];
+  { [key: string]: string } | EnvironmentArrayItem[];
 
 /**
  * Resolves environment input to a plain object.

@@ -124,7 +124,7 @@ export class JaypieApiGateway extends Construct implements apiGateway.IRestApi {
     const {
       // * `...lambdaRestApiProps` cannot be moved to the first const destructuring because it needs to exclude the custom properties first.
       // Ignore the variables we already assigned to other properties
-      /* eslint-disable @typescript-eslint/no-unused-vars */
+
       certificate: _certificate,
       deleteExistingRecord: _deleteExistingRecord,
       host: _host,
@@ -132,7 +132,7 @@ export class JaypieApiGateway extends Construct implements apiGateway.IRestApi {
       roleTag: _roleTag,
       zone: _zone,
       handler: _handler,
-      /* eslint-enable @typescript-eslint/no-unused-vars */
+
       ...lambdaRestApiProps
     } = props;
 

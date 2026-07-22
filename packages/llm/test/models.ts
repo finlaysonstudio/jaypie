@@ -1,10 +1,13 @@
 //
 // Model matrix configuration for `test/matrix.ts`.
 //
-// First-class models are DERIVED from `src/constants.ts` (the MODEL.* catalog
-// plus each PROVIDER.*.DEFAULT), so adding a promoted model only means editing
-// constants — no duplication here or in the CI workflow. Only Bedrock is listed
-// explicitly (Bedrock proxies many vendors and is not in MODEL.*).
+// The model list is DERIVED from `src/constants.ts` (the MODEL.* catalog,
+// including the BEDROCK and OPENROUTER subtrees, plus each PROVIDER.*.DEFAULT),
+// so adding a model to the matrix only means editing constants — this file
+// holds no model ids, and neither does the CI workflow. What lives here is
+// test-only knowledge: which catalog ids the live matrix skips
+// (`MATRIX_EXCLUDE`) and which capabilities a model is known not to support
+// (`MATRIX_EXPECT`).
 //
 // `expect` documents the *expected* outcome per capability. The harness
 // compares actual outcomes to these and flags mismatches:
@@ -55,7 +58,7 @@ const MATRIX_EXCLUDE = new Set<string>([
   MODEL.GPT_NANO,
 ]);
 
-// Flatten MODEL.* (including nested subtrees like OPENROUTER) into ids.
+// Flatten MODEL.* (including the BEDROCK and OPENROUTER subtrees) into ids.
 function catalogIds(node: unknown = MODEL, out: string[] = []): string[] {
   if (typeof node === "string") out.push(node);
   else if (node && typeof node === "object")
@@ -63,29 +66,33 @@ function catalogIds(node: unknown = MODEL, out: string[] = []): string[] {
   return out;
 }
 
-// Per-model expected-outcome overrides for first-class models. Fireworks has
-// no file/PDF input support (documents cannot be delivered as data: URIs) and
-// only some catalog models are vision-capable (verified live 2026-07-19).
-// Fireworks also rejects response_format combined with tools, so `both`
-// engages the structured_output tool emulation and logs a warn.
+// Per-model expected-outcome overrides. Fireworks has no file/PDF input
+// support (documents cannot be delivered as data: URIs) and only some catalog
+// models are vision-capable (verified live 2026-07-19). Fireworks also rejects
+// response_format combined with tools, so `both` engages the structured_output
+// tool emulation and logs a warn on every Fireworks model.
 const MATRIX_EXPECT: Record<
   string,
   Partial<Record<Capability, ExpectedOutcome>>
 > = {
   [MODEL.FIREWORKS.DEEPSEEK]: { both: "warn", pdf: "skip", image: "skip" },
   [MODEL.FIREWORKS.GLM]: { both: "warn", pdf: "skip", image: "skip" },
+  [MODEL.FIREWORKS.GPT_OSS]: { both: "warn", pdf: "skip", image: "skip" },
   [MODEL.FIREWORKS.KIMI]: { both: "warn", pdf: "skip" },
   [MODEL.FIREWORKS.MINIMAX]: { both: "warn", pdf: "skip", image: "skip" },
   [MODEL.FIREWORKS.QWEN]: { both: "warn", pdf: "skip" },
+  [MODEL.NOVA_LITE]: { both: "skip" },
+  [MODEL.NOVA_PRO]: { structured: "skip" },
 };
 
-// First-class models under test = the promoted MODEL.* catalog plus each
-// provider's resolved default, deduped, minus the exclude set. Provider is
-// resolved from the id so the matrix shards correctly by group (APP_GROUP).
-const FIRST_CLASS_MODELS: ModelConfig[] = [
+// Models under test = the whole MODEL.* catalog plus each provider's resolved
+// default, deduped, minus the exclude set. Provider is resolved from the id so
+// the matrix shards correctly by group (APP_GROUP).
+const MATRIX_MODELS: ModelConfig[] = [
   ...new Set([
     ...catalogIds(),
     PROVIDER.ANTHROPIC.DEFAULT,
+    PROVIDER.BEDROCK.DEFAULT,
     PROVIDER.FIREWORKS.DEFAULT,
     PROVIDER.GOOGLE.DEFAULT,
     PROVIDER.OPENAI.DEFAULT,
@@ -104,57 +111,9 @@ const FIRST_CLASS_MODELS: ModelConfig[] = [
     };
   });
 
-// Bedrock (and Bedrock-hosted third-party) models are not in MODEL.* — Bedrock
-// proxies many vendors. Canonical ids provided by the user; do not substitute.
-// `us.` prefix is required for the Anthropic models and nova-2-lite (inference
-// profile; on-demand not supported).
-const BEDROCK_MODELS: ModelConfig[] = [
-  { model: "us.anthropic.claude-opus-4-7", provider: "bedrock" },
-  { model: "us.anthropic.claude-sonnet-4-6", provider: "bedrock" },
-  { model: "us.anthropic.claude-haiku-4-5-20251001-v1:0", provider: "bedrock" },
-  {
-    model: "amazon.nova-pro-v1:0",
-    provider: "bedrock",
-    expect: { structured: "skip" },
-  },
-  {
-    model: "us.amazon.nova-2-lite-v1:0",
-    provider: "bedrock",
-    expect: { both: "skip" },
-  },
-  {
-    model: "amazon.nova-micro-v1:0",
-    provider: "bedrock",
-    expect: { structured: "skip", pdf: "skip", image: "skip" },
-  },
-  {
-    model: "deepseek.v3.2",
-    provider: "bedrock",
-    expect: { both: "skip", pdf: "skip", image: "skip" },
-  },
-  {
-    model: "google.gemma-3-27b-it",
-    provider: "bedrock",
-    expect: { tools: "skip", both: "skip", pdf: "skip" },
-  },
-  {
-    model: "moonshotai.kimi-k2.5",
-    provider: "bedrock",
-    expect: { both: "skip", pdf: "skip" },
-  },
-  {
-    model: "openai.gpt-oss-120b-1:0",
-    provider: "bedrock",
-    expect: { structured: "skip", pdf: "skip", image: "skip" },
-  },
-];
-
 /**
  * Full matrix model list. The harness honors APP_MODELS (comma-separated ids)
  * to override, or APP_GROUP (comma-separated provider names) to shard by
  * provider. Defaults assume "ok" everywhere; only known limitations are pinned.
  */
-export const MODELS: readonly ModelConfig[] = [
-  ...FIRST_CLASS_MODELS,
-  ...BEDROCK_MODELS,
-];
+export const MODELS: readonly ModelConfig[] = MATRIX_MODELS;

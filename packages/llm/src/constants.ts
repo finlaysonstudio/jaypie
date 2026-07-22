@@ -18,6 +18,11 @@ export const EFFORT = {
 export type LlmEffort = (typeof EFFORT)[keyof typeof EFFORT];
 
 export const MODEL = {
+  // Amazon (Nova; the only first-class models served over Bedrock. Bedrock also
+  // resells other vendors, but those routes are not catalogued — reach them by
+  // passing the literal id, which determineModelProvider resolves to bedrock.)
+  NOVA_LITE: "us.amazon.nova-2-lite-v1:0",
+  NOVA_PRO: "amazon.nova-pro-v1:0",
   // Anthropic
   FABLE: "claude-fable-5",
   OPUS: "claude-opus-4-8",
@@ -28,6 +33,7 @@ export const MODEL = {
   FIREWORKS: {
     DEEPSEEK: "accounts/fireworks/models/deepseek-v4-pro",
     GLM: "accounts/fireworks/models/glm-5p2",
+    GPT_OSS: "accounts/fireworks/models/gpt-oss-120b",
     KIMI: "accounts/fireworks/models/kimi-k2p7-code",
     MINIMAX: "accounts/fireworks/models/minimax-m2p7",
     QWEN: "accounts/fireworks/models/qwen3p7-plus",
@@ -64,10 +70,11 @@ export interface LlmModelCost {
    */
   cachedInputRead?: number;
   /**
-   * Cache-write tokens. A scalar when the rate does not vary by TTL; keyed by
-   * the same `"5m"` / `"1h"` literals as `LlmCache` when it does, so a cost
-   * calculation reads the TTL straight off `OperateRequest.cache`. Omitted
-   * means cache writes bill at the `input` rate.
+   * Cache-write tokens. A scalar when the rate does not vary by TTL (`0` where
+   * the provider publishes a free write); keyed by the same `"5m"` / `"1h"`
+   * literals as `LlmCache` when it does, so a cost calculation reads the TTL
+   * straight off `OperateRequest.cache`. Omitted means cache writes bill at the
+   * `input` rate.
    */
   cachedInputWrite?: number | { "1h": number; "5m": number };
   /** Uncached input tokens. */
@@ -92,23 +99,51 @@ export interface LlmModelCost {
  * - **Standard rate only.** Introductory, batch, flex, priority, fast-mode, and
  *   data-residency rates are excluded. Sonnet 5 is listed at its standard
  *   $3/$15, not the introductory rate.
- * - **Cache writes are Anthropic-only.** Fireworks writes bill at the input
- *   rate. OpenAI and xAI discount reads automatically and publish no write
- *   premium. Google charges nothing to write an implicit cache; explicit
- *   caching bills storage per hour, a unit this table does not carry (and one
- *   `@jaypie/llm` does not wire).
+ * - **Cache writes are Anthropic-only.** Bedrock publishes a literal $0 write
+ *   for Amazon's own models, recorded here as `cachedInputWrite: 0`. Fireworks
+ *   writes bill at the input rate. OpenAI and xAI discount reads automatically
+ *   and publish no write premium. Google charges nothing to write an implicit
+ *   cache; explicit caching bills storage per hour, a unit this table does not
+ *   carry (and one `@jaypie/llm` does not wire).
  * - **Short-context tier.** Long-prompt surcharges are not modeled: Gemini 3.1
  *   Pro doubles above 200K, Grok doubles at 200K, GPT-5.5 is 2x in / 1.5x out
  *   above 272K.
  * - **Text rates.** Gemini prices audio input higher than text/image/video.
- * - **Proxies are deliberately absent.** Bedrock (`PROVIDER.BEDROCK.*`) and
- *   OpenRouter (`MODEL.OPENROUTER.*`) resell many vendors and price per backend
- *   route, so no single rate is correct for a proxy id. Price those against the
- *   backend model, or against the proxy's own published rate.
+ * - **Proxy routes are deliberately absent.** `MODEL.OPENROUTER.*`, and any
+ *   uncatalogued Bedrock id reselling a third-party model, are another vendor's
+ *   model behind a gateway, priced per route and per region, so no single rate
+ *   here would be correct. Price those against the backend model, or against
+ *   the gateway's own published rate. Amazon's own Nova models are first-class,
+ *   not proxies, and are priced below at the standard US on-demand rate (`us.`
+ *   geo profile for Nova 2 Lite; the `global.` profile is cheaper and is not
+ *   modeled).
  *
  * Unlisted ids return `undefined` — callers must handle a miss.
  */
 export const COST: Record<string, LlmModelCost> = {
+  // Amazon — AWS Price List API, AmazonBedrock/us-east-1 (published 2026-07-20;
+  // us-west-2 identical). https://aws.amazon.com/bedrock/pricing/ renders its
+  // tables in JavaScript, so the Price List offer file is the citable source.
+  // Nova 2 Lite is quoted at the `us.` geo rate this catalog's id bills against;
+  // the `global.` profile is $0.30/$2.50 and is not modeled.
+  "amazon.nova-lite-v1:0": {
+    cachedInputRead: 0.015,
+    cachedInputWrite: 0,
+    input: 0.06,
+    output: 0.24,
+  },
+  "amazon.nova-pro-v1:0": {
+    cachedInputRead: 0.2,
+    cachedInputWrite: 0,
+    input: 0.8,
+    output: 3.2,
+  },
+  "us.amazon.nova-2-lite-v1:0": {
+    cachedInputRead: 0.0825,
+    cachedInputWrite: 0,
+    input: 0.33,
+    output: 2.75,
+  },
   // Anthropic — https://platform.claude.com/docs/en/about-claude/pricing
   "claude-3-5-haiku-20241022": {
     cachedInputRead: 0.08,
@@ -199,6 +234,11 @@ export const COST: Record<string, LlmModelCost> = {
     input: 1.4,
     output: 4.4,
   },
+  "accounts/fireworks/models/gpt-oss-120b": {
+    cachedInputRead: 0.015,
+    input: 0.15,
+    output: 0.6,
+  },
   "accounts/fireworks/models/kimi-k2p7-code": {
     cachedInputRead: 0.19,
     input: 0.95,
@@ -208,6 +248,14 @@ export const COST: Record<string, LlmModelCost> = {
     cachedInputRead: 0.06,
     input: 0.3,
     output: 1.2,
+  },
+  // Retired from MODEL.* on 2026-07-21: its structured output is
+  // nondeterministic (clean JSON, prose, or an empty array from the same
+  // request). Priced here so historic usage stays replayable.
+  "accounts/fireworks/models/nemotron-3-ultra-nvfp4": {
+    cachedInputRead: 0.12,
+    input: 0.6,
+    output: 2.4,
   },
   "accounts/fireworks/models/qwen3p7-plus": {
     cachedInputRead: 0.08,
@@ -274,24 +322,28 @@ const GOOGLE_PROVIDER = {
 export const PROVIDER = {
   // https://docs.aws.amazon.com/bedrock/latest/userguide/models-supported.html
   BEDROCK: {
-    // Bedrock has no MODEL.* catalog entry yet; keep the literal default id.
     // nova-pro is the Amazon-native model that reliably does tools+structured.
-    DEFAULT: "amazon.nova-pro-v1:0" as const,
-    /** @deprecated Size tiers are retired in 2.0. Use PROVIDER.BEDROCK.DEFAULT. */
+    DEFAULT: MODEL.NOVA_PRO,
+    /** @deprecated Size tiers are retired in 2.0. Use PROVIDER.BEDROCK.DEFAULT, or pick a specific model from MODEL.NOVA_*. */
     MODEL: {
-      DEFAULT: "amazon.nova-lite-v1:0" as const,
-      LARGE: "amazon.nova-pro-v1:0" as const,
-      SMALL: "amazon.nova-lite-v1:0" as const,
-      TINY: "amazon.nova-micro-v1:0" as const,
+      DEFAULT: MODEL.NOVA_LITE,
+      LARGE: MODEL.NOVA_PRO,
+      SMALL: MODEL.NOVA_LITE,
+      TINY: MODEL.NOVA_LITE,
     },
     MODEL_MATCH_WORDS: [
+      "ai21.",
       "amazon.nova",
       "amazon.titan",
       "anthropic.claude",
       "cohere.command",
+      "deepseek.",
+      "google.gemma",
       "meta.llama",
       "mistral.mistral",
-      "ai21.",
+      "moonshotai.",
+      "openai.gpt-oss",
+      "qwen.",
     ] as const,
     NAME: "bedrock" as const,
     REGION: "AWS_REGION" as const,

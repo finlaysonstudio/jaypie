@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 
+import { determineModelProvider } from "../util/determineModelProvider.js";
+
 // Subject
 import { COST, DEFAULT, MODEL, PROVIDER } from "../constants.js";
 
@@ -68,6 +70,28 @@ describe("Constants", () => {
       expect(MODEL.OPENROUTER.LUNA).toBe("openai/gpt-5.6-luna");
       expect(MODEL.OPENROUTER.SONNET).toBe("anthropic/claude-sonnet-5");
     });
+
+    it("Exposes Amazon's Nova models as first-class ids", () => {
+      expect(MODEL.NOVA_PRO).toBe("amazon.nova-pro-v1:0");
+      expect(MODEL.NOVA_LITE).toBe("us.amazon.nova-2-lite-v1:0");
+    });
+
+    it("Catalogs Nova as the only Bedrock-served models", () => {
+      for (const model of [MODEL.NOVA_LITE, MODEL.NOVA_PRO]) {
+        expect(determineModelProvider(model).provider).toBe(
+          PROVIDER.BEDROCK.NAME,
+        );
+      }
+    });
+
+    it("Resolves every catalog id to a provider", () => {
+      const unresolved = Object.values(MODEL)
+        .flatMap((value) =>
+          typeof value === "string" ? [value] : Object.values(value),
+        )
+        .filter((model) => !determineModelProvider(model).provider);
+      expect(unresolved).toBeEmpty();
+    });
   });
 
   describe("Provider DEFAULT (replaces the deprecated tier map)", () => {
@@ -86,29 +110,40 @@ describe("Constants", () => {
   });
 
   describe("COST", () => {
-    // MODEL.OPENROUTER.* routes are proxies priced per backend, so they are
-    // deliberately absent from COST (as is Bedrock, which has no MODEL entry)
+    // MODEL.OPENROUTER.* routes are another vendor's model resold per backend,
+    // so they are deliberately absent from COST. Amazon's own Nova models are
+    // first-class and priced.
+    const proxyRoutes: string[] = [...Object.values(MODEL.OPENROUTER)];
     const firstClassModels = Object.values(MODEL)
       .flatMap((value) =>
         typeof value === "string" ? [value] : Object.values(value),
       )
-      .filter((model) => !Object.values(MODEL.OPENROUTER).includes(model));
+      .filter((model) => !proxyRoutes.includes(model));
 
     it("Prices every first-class model in MODEL.*", () => {
       const unpriced = firstClassModels.filter((model) => !COST[model]);
       expect(unpriced).toBeEmpty();
     });
 
+    it("Prices the Bedrock default, an Amazon-native model", () => {
+      expect(PROVIDER.BEDROCK.DEFAULT).toBe(MODEL.NOVA_PRO);
+      expect(COST[PROVIDER.BEDROCK.DEFAULT]).toBeObject();
+    });
+
     it("Omits proxy routes that price per backend", () => {
-      for (const route of Object.values(MODEL.OPENROUTER)) {
+      for (const route of proxyRoutes) {
         expect(COST[route]).toBeUndefined();
       }
-      expect(COST[PROVIDER.BEDROCK.DEFAULT]).toBeUndefined();
     });
 
     it("Retains prices for historic models absent from MODEL.*", () => {
-      expect(firstClassModels).not.toContain("claude-opus-4-6");
-      expect(COST["claude-opus-4-6"]).toBeObject();
+      for (const historic of [
+        "accounts/fireworks/models/nemotron-3-ultra-nvfp4",
+        "claude-opus-4-6",
+      ]) {
+        expect(firstClassModels).not.toContain(historic);
+        expect(COST[historic]).toBeObject();
+      }
     });
 
     it("Quotes positive dollars per million with output above input", () => {
@@ -129,7 +164,8 @@ describe("Constants", () => {
         }
         const write = cost.cachedInputWrite;
         if (typeof write === "number") {
-          if (!(write >= cost.input)) {
+          // Either free (Bedrock publishes a literal $0) or a premium on input
+          if (!(write === 0 || write >= cost.input)) {
             violations.push(`${model}: cache write below input`);
           }
         } else if (write) {

@@ -52,11 +52,7 @@ export interface JaypieDnsRecordProps {
 
 export class JaypieDnsRecord extends Construct {
   public readonly record:
-    | ARecord
-    | CnameRecord
-    | MxRecord
-    | NsRecord
-    | TxtRecord;
+    ARecord | CnameRecord | MxRecord | NsRecord | TxtRecord;
 
   constructor(scope: Construct, id: string, props: JaypieDnsRecordProps) {
     super(scope, id);

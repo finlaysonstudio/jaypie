@@ -83,7 +83,7 @@ optional.number = (value: unknown): boolean => optional(value, Number);
 optional.object = (value: unknown): boolean => optional(value, Object);
 optional.positive = (value: unknown): boolean =>
   optional(value, Number, { positive: true });
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+
 optional.string = (value: unknown, _defaultValue = ""): boolean =>
   optional(value, String);
 

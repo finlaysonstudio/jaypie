@@ -23,18 +23,19 @@ console.log(response.content); // "4"
 |----------|----------------|---------------|
 | OpenAI | "openai", "gpt", "sol", "terra", "luna", /^o\d/ | gpt-5.6-sol |
 | Anthropic | "anthropic", "claude", "fable", "haiku", "mythos", "opus", "sonnet" | claude-sonnet-5 |
-| Google | "google", "gemini" | gemini-3.5-flash |
+| Google | "google", "gemini" | gemini-3.6-flash |
 | Fireworks | "fireworks" (also matched inside ids like `accounts/fireworks/models/...`) | accounts/fireworks/models/glm-5p2 |
 | OpenRouter | "openrouter" | anthropic/claude-sonnet-5 |
 | xAI | "xai", "grok" | grok-latest |
-| Bedrock | "amazon.nova", "anthropic.claude", "meta.llama", … | amazon.nova-pro-v1:0 |
+| Bedrock | "amazon.nova", "anthropic.claude", "meta.llama", "deepseek.", "google.gemma", "moonshotai.", "openai.gpt-oss", … | amazon.nova-pro-v1:0 |
 
 The provider name for Gemini models is `"google"` — `"gemini"` is accepted as a deprecated alias.
 
 ### Model Constants
 
 - **`PROVIDER.<name>.DEFAULT`** — the single default model per provider (above), used when no `model` is given.
-- **`LLM.MODEL.*`** — the named model catalog (e.g. `MODEL.SONNET`, `MODEL.SOL`, `MODEL.GEMINI_FLASH`, `MODEL.GROK`), plus `MODEL.OPENROUTER.*` for provider-prefixed routes (`GLM`, `LUNA`, `SONNET`) and `MODEL.FIREWORKS.*` for Fireworks serverless models (`DEEPSEEK`, `GLM`, `KIMI`, `MINIMAX`, `QWEN`). Pick specific models from here.
+- **`LLM.MODEL.*`** — the named model catalog (e.g. `MODEL.SONNET`, `MODEL.SOL`, `MODEL.GEMINI_FLASH`, `MODEL.GROK`, `MODEL.NOVA_PRO`, `MODEL.NOVA_LITE`), plus `MODEL.FIREWORKS.*` for Fireworks serverless models (`DEEPSEEK`, `GLM`, `GPT_OSS`, `KIMI`, `MINIMAX`, `QWEN`) and `MODEL.OPENROUTER.*` for provider-prefixed routes (`GLM`, `LUNA`, `SONNET`). Pick specific models from here. Amazon's Nova models are first-class ids served over Bedrock; Bedrock's third-party routes are not catalogued — pass the literal id (e.g. `us.anthropic.claude-sonnet-4-6`) and `determineModelProvider` resolves it to `bedrock`.
+- The catalog is the **single source of truth for CI coverage**: `packages/llm/test/models.ts` derives the live capability matrix from `MODEL.*` plus each `PROVIDER.*.DEFAULT`, and the workflow shards it by provider. Adding a model to `MODEL.*` puts it under test; no id list exists anywhere else.
 - **Deprecated:** the size-tier map `PROVIDER.<name>.MODEL.{DEFAULT,LARGE,SMALL,TINY}`, the `DEFAULT.MODEL` bundle, and `ALL` are `@deprecated` and retired in 2.0 — use `PROVIDER.*.DEFAULT` for defaults and `MODEL.*` for named models.
 
 ### Model Pricing
@@ -53,10 +54,10 @@ const dollars = rate ? (usage.input * rate.input + usage.output * rate.output) /
 | `input` | Uncached input tokens |
 | `output` | Output tokens |
 | `cachedInputRead` | Cache-read (hit) tokens. Omitted when the provider does not price reads separately |
-| `cachedInputWrite` | Cache-write tokens. Scalar when TTL-invariant, or keyed `{ "5m", "1h" }` matching `LlmCache`. Omitted means writes bill at `input` (currently populated for Anthropic only) |
+| `cachedInputWrite` | Cache-write tokens. Scalar when TTL-invariant (`0` where the provider publishes a free write, as Bedrock does for Nova), or keyed `{ "5m", "1h" }` matching `LlmCache`. Omitted means writes bill at `input` (a TTL-keyed premium is Anthropic-only) |
 | `reasoning` | Reasoning tokens when billed apart from `output`. Unset everywhere today |
 
-Rates are the standard short-context text tier. Introductory, batch, flex, priority, fast-mode, and data-residency pricing are excluded, as are long-prompt surcharges (Gemini 3.1 Pro above 200K, Grok at 200K, GPT-5.5 above 272K). Bedrock and `MODEL.OPENROUTER.*` are deliberately absent: both resell many vendors and price per backend route, so price those against the backend model. Unlisted ids return `undefined` — always handle a miss.
+Rates are the standard short-context text tier. Introductory, batch, flex, priority, fast-mode, and data-residency pricing are excluded, as are long-prompt surcharges (Gemini 3.1 Pro above 200K, Grok at 200K, GPT-5.5 above 272K). Amazon's Nova models are priced at the standard US on-demand rate (`us.` geo profile for Nova 2 Lite; the cheaper `global.` profile is not modeled). **Gateway routes are deliberately unpriced**: `MODEL.OPENROUTER.*`, and any Bedrock id reselling a third-party model, cost per route and per region, so `COST` returns `undefined` for them — price those against the backend model or the gateway's own published rate. Unlisted ids return `undefined` — always handle a miss.
 
 ```typescript
 // Provider auto-detected from model
@@ -491,7 +492,7 @@ The first constructor argument may be a provider name **or** a model name. When 
 import Llm, { LLM } from "@jaypie/llm";
 
 const llm = new Llm("claude-sonnet-4-6");      // -> anthropic, claude-sonnet-4-6
-const flash = new Llm(LLM.MODEL.GEMINI_FLASH); // -> google, gemini-3.5-flash
+const flash = new Llm(LLM.MODEL.GEMINI_FLASH); // -> google, gemini-3.6-flash
 ```
 
 ## Environment Variables

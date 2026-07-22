@@ -35,7 +35,9 @@ describe("migrationHandler", () => {
         const handler = migrationHandler(userHandler);
         const result = await handler({}, {});
         expect(userHandler).not.toHaveBeenCalled();
-        expect(result).toMatchObject({ PhysicalResourceId: expect.any(String) });
+        expect(result).toMatchObject({
+          PhysicalResourceId: expect.any(String),
+        });
       });
 
       it("Preserves PhysicalResourceId from event for Update and Delete requests", async () => {
@@ -44,7 +46,9 @@ describe("migrationHandler", () => {
           { RequestType: "Update", PhysicalResourceId: "my-migration-123" },
           {},
         );
-        expect(result).toMatchObject({ PhysicalResourceId: "my-migration-123" });
+        expect(result).toMatchObject({
+          PhysicalResourceId: "my-migration-123",
+        });
       });
 
       it("Returns Data in response so cr.Provider propagates it to isComplete events", async () => {
@@ -57,7 +61,10 @@ describe("migrationHandler", () => {
         const userHandler = vi.fn().mockResolvedValue({ status: "complete" });
         const handler = migrationHandler(userHandler);
         // Simulate cr.Provider: merge cfnRequest with onEvent result to build isComplete event
-        const onEventResult = (await handler({ RequestType: "Create" }, {})) as Record<string, unknown>;
+        const onEventResult = (await handler(
+          { RequestType: "Create" },
+          {},
+        )) as Record<string, unknown>;
         // cr.Provider spreads onEventResult into the isComplete event
         const isCompleteEvent = { RequestType: "Create", ...onEventResult };
         const isCompleteResult = await handler(isCompleteEvent, {});
@@ -74,17 +81,19 @@ describe("migrationHandler", () => {
       });
 
       it("Returns IsComplete: false when handler returns pending: true", async () => {
-        const handler = migrationHandler(
-          async () => ({ status: "in-progress", pending: true }),
-        );
+        const handler = migrationHandler(async () => ({
+          status: "in-progress",
+          pending: true,
+        }));
         const result = await handler({ Data: {} }, {});
         expect(result).toMatchObject({ IsComplete: false });
       });
 
       it("Returns IsComplete: true when handler returns pending: false", async () => {
-        const handler = migrationHandler(
-          async () => ({ status: "complete", pending: false }),
-        );
+        const handler = migrationHandler(async () => ({
+          status: "complete",
+          pending: false,
+        }));
         const result = await handler({ Data: {} }, {});
         expect(result).toMatchObject({ IsComplete: true });
       });

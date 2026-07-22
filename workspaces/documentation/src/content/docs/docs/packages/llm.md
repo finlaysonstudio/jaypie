@@ -138,7 +138,7 @@ The first constructor argument may be a provider name **or** a model name. When 
 import Llm, { LLM } from "@jaypie/llm";
 
 const llm = new Llm("claude-sonnet-4-6");      // -> anthropic, claude-sonnet-4-6
-const flash = new Llm(LLM.MODEL.GEMINI_FLASH); // -> google, gemini-3.5-flash
+const flash = new Llm(LLM.MODEL.GEMINI_FLASH); // -> google, gemini-3.6-flash
 ```
 
 ## Toolkit
