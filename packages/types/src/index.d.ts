@@ -5,9 +5,7 @@ export type ScalarValue = boolean | null | number | string | undefined;
 export type NaturalMap = { [key: string]: ScalarValue };
 
 export type JsonValue =
-  | { [key: string]: JsonValue }
-  | JsonValue[]
-  | ScalarValue;
+  { [key: string]: JsonValue } | JsonValue[] | ScalarValue;
 
 export type JsonObject = { [key: string]: JsonValue };
 export type JsonArray = Array<JsonArray | JsonValue | JsonObject>;

@@ -160,7 +160,7 @@ describe("iterateDaysInYear", () => {
     it("returns done after all days", () => {
       const gen = iterateDaysInYear(2025);
       // Consume all days
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
       for (const _ of gen) {
         // consume
       }

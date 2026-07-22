@@ -69,13 +69,7 @@ interface ResolvedExtra {
 }
 
 type Category =
-  | "word"
-  | "typo"
-  | "phono"
-  | "period"
-  | "comma"
-  | "break"
-  | ResolvedExtra;
+  "word" | "typo" | "phono" | "period" | "comma" | "break" | ResolvedExtra;
 
 type Token =
   | { kind: "word"; text: string }

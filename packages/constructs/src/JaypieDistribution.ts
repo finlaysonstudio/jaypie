@@ -417,8 +417,7 @@ export class JaypieDistribution
 
     // Resolve response headers policy for security headers
     let resolvedResponseHeadersPolicy:
-      | cloudfront.IResponseHeadersPolicy
-      | undefined;
+      cloudfront.IResponseHeadersPolicy | undefined;
     if (responseHeadersPolicyProp) {
       resolvedResponseHeadersPolicy = responseHeadersPolicyProp;
     } else if (securityHeadersProp !== false) {

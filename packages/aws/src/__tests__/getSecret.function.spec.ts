@@ -38,7 +38,9 @@ vi.mock("@aws-sdk/client-secrets-manager", () => ({
   GetSecretValueCommand: vi.fn(),
   SecretsManagerClient: vi.fn(
     class {
-      send = vi.fn(() => Promise.resolve({ SecretString: MOCK.SECRET_RESPONSE }));
+      send = vi.fn(() =>
+        Promise.resolve({ SecretString: MOCK.SECRET_RESPONSE }),
+      );
     },
   ),
 }));

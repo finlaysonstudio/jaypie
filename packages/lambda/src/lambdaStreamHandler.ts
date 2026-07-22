@@ -167,8 +167,7 @@ function getErrorBody(error: JaypieError | Error): Record<string, unknown> {
 const lambdaStreamHandler = function <TEvent = unknown>(
   handler: LambdaStreamHandlerFunction<TEvent> | LambdaStreamHandlerOptions,
   options:
-    | LambdaStreamHandlerOptions
-    | LambdaStreamHandlerFunction<TEvent> = {},
+    LambdaStreamHandlerOptions | LambdaStreamHandlerFunction<TEvent> = {},
 ): LambdaHandler<TEvent> {
   // If handler is an object and options is a function, swap them
   if (typeof handler === "object" && typeof options === "function") {
