@@ -166,22 +166,25 @@ provider's cache-read rate (~0.1x input) after the first write.
 Control it with the scalar `cache` option (`LlmCache = boolean | 0 | "5m" | "1h"`):
 
 ```typescript
-await Llm.operate(input, { system: SYSTEM });            // cached @ 5m (default)
-await Llm.operate(input, { system: SYSTEM, cache: "1h" }); // cached @ 1h
+await Llm.operate(input, { system: SYSTEM });            // cached (1h on Anthropic, else 5m)
+await Llm.operate(input, { system: SYSTEM, cache: "5m" }); // cached @ 5m
 await Llm.operate(input, { system: SYSTEM, cache: false }); // opt out
 ```
 
-- `true` / omitted → enabled at the default `"5m"` TTL
+- `true` / omitted → enabled at the adapter's default TTL: `"1h"` on Anthropic,
+  `"5m"` everywhere else
 - `false` / `0` → disabled
 - `"5m"` / `"1h"` → enabled at that TTL
 
 Threaded via `OperateRequest.cache`; each adapter's `buildRequest` resolves it
 with `resolveCache` (`src/util/cacheControl.ts`) and applies the provider-native
-mechanism:
+mechanism. Anthropic passes `defaultTtl: CACHE_TTL_ANTHROPIC_DEFAULT` (`"1h"`):
+its 1h write costs 2x input against 1.25x for 5m, but reads stay at ~0.1x, so
+the hour pays for itself after ~three reads and survives the gaps between turns.
 
 | Provider | Mechanism | TTL |
 |----------|-----------|-----|
-| Anthropic | `cache_control: {type:"ephemeral"}` on the system block + last tool | 5m / 1h |
+| Anthropic | `cache_control: {type:"ephemeral"}` on the system block + last tool | 5m / **1h default** |
 | Bedrock | `cachePoint` blocks after `system` and `toolConfig.tools`; model-gated (unsupported models are denylisted after a 400 and the request transparently retried without cachePoints) | 5m only |
 | OpenAI / xAI | automatic server-side caching + a stable `prompt_cache_key` derived from the prefix | provider default |
 | OpenRouter | `cache_control` breakpoint on the system message (forwarded to Anthropic/Gemini backends, ignored by others) | 5m / 1h |

@@ -356,7 +356,8 @@ export type LlmExchangeCallback = (
 
 /**
  * Prompt-caching control for operate()/stream().
- * - `true` / omitted → caching enabled at the default `"5m"` TTL
+ * - `true` / omitted → caching enabled at the adapter's default TTL: `"1h"` on
+ *   Anthropic, `"5m"` everywhere else
  * - `false` / `0` → caching disabled
  * - `"5m"` / `"1h"` → enabled at that TTL (TTL honored by Anthropic/OpenRouter;
  *   other providers ignore it and cache with their own defaults)

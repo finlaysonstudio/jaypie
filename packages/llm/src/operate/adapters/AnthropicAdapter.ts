@@ -18,6 +18,7 @@ import {
   LlmStreamChunkType,
 } from "../../types/LlmStreamChunk.interface.js";
 import {
+  CACHE_TTL_ANTHROPIC_DEFAULT,
   isJsonSchema as isBareJsonSchema,
   naturalZodSchema,
   resolveCache,
@@ -527,7 +528,9 @@ export class AnthropicAdapter extends BaseProviderAdapter {
       stream: false,
     };
 
-    const cache = resolveCache(request.cache);
+    const cache = resolveCache(request.cache, {
+      defaultTtl: CACHE_TTL_ANTHROPIC_DEFAULT,
+    });
     const cacheControl: Anthropic.CacheControlEphemeral | undefined =
       cache.enabled
         ? {

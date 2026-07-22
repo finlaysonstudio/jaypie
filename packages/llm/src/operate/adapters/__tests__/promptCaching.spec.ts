@@ -30,7 +30,7 @@ const tools = [
 //
 
 describe("Prompt caching — Anthropic", () => {
-  it("Marks system + last tool with cache_control by default", () => {
+  it("Marks system + last tool with cache_control at 1h by default", () => {
     const request: OperateRequest = {
       model: PROVIDER.ANTHROPIC.MODEL.LARGE,
       messages: [],
@@ -40,11 +40,23 @@ describe("Prompt caching — Anthropic", () => {
     const result = anthropicAdapter.buildRequest(request);
     expect(Array.isArray(result.system)).toBe(true);
     const system = result.system as Array<{ cache_control?: unknown }>;
-    expect(system[0].cache_control).toEqual({ type: "ephemeral" });
+    expect(system[0].cache_control).toEqual({ type: "ephemeral", ttl: "1h" });
     const built = result.tools as Array<{ cache_control?: unknown }>;
     expect(built[built.length - 1].cache_control).toEqual({
       type: "ephemeral",
+      ttl: "1h",
     });
+  });
+
+  it("Applies the 5m TTL when requested", () => {
+    const result = anthropicAdapter.buildRequest({
+      cache: "5m",
+      model: PROVIDER.ANTHROPIC.MODEL.LARGE,
+      messages: [],
+      system: "You are helpful",
+    });
+    const system = result.system as Array<{ cache_control?: unknown }>;
+    expect(system[0].cache_control).toEqual({ type: "ephemeral" });
   });
 
   it("Applies the 1h TTL when requested", () => {

@@ -31,6 +31,22 @@ describe("resolveCache", () => {
     expect(resolveCache("5m")).toEqual({ enabled: true, ttl: "5m" });
     expect(resolveCache("1h")).toEqual({ enabled: true, ttl: "1h" });
   });
+
+  it("Honors an overridden default TTL", () => {
+    expect(resolveCache(undefined, { defaultTtl: "1h" })).toEqual({
+      enabled: true,
+      ttl: "1h",
+    });
+    expect(resolveCache(true, { defaultTtl: "1h" })).toEqual({
+      enabled: true,
+      ttl: "1h",
+    });
+    expect(resolveCache("5m", { defaultTtl: "1h" })).toEqual({
+      enabled: true,
+      ttl: "5m",
+    });
+    expect(resolveCache(false, { defaultTtl: "1h" }).enabled).toBe(false);
+  });
 });
 
 describe("promptCacheKey", () => {

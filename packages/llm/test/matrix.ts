@@ -123,12 +123,42 @@ interface CapabilityResult {
   detail?: string;
 }
 
+/**
+ * Render an error as a single readable line. `operate()` resolves failures to
+ * an `LlmError` object (`{ status, title, detail }`), which `String()` renders
+ * as "[object Object]" — useless in CI, where the log is the only record of a
+ * live-provider failure. Falls back to `Error.message`, then JSON, then
+ * `String()`.
+ */
+function describeError(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  if (error && typeof error === "object") {
+    const { detail, status, title } = error as {
+      detail?: string;
+      status?: number | string;
+      title?: string;
+    };
+    if (title || status !== undefined) {
+      const head = status === undefined ? title : `${title} (${status})`;
+      return detail ? `${head}: ${detail}` : String(head);
+    }
+    try {
+      return JSON.stringify(error);
+    } catch {
+      // Circular or otherwise unserializable — name the keys rather than
+      // falling back to String() and printing "[object Object]" again.
+      return `unserializable object with keys: ${Object.keys(error).join(", ")}`;
+    }
+  }
+  return String(error);
+}
+
 async function runPlain(llm: Llm): Promise<CapabilityResult> {
   const result = await llm.operate(
     "Reply with one word: 'pong'. No punctuation.",
     { user: USER },
   );
-  if (result.error) return { ok: false, detail: String(result.error) };
+  if (result.error) return { ok: false, detail: describeError(result.error) };
   if (typeof result.content !== "string" || result.content.length === 0) {
     return {
       ok: false,
@@ -149,7 +179,7 @@ async function runTools(llm: Llm): Promise<CapabilityResult> {
       },
     },
   });
-  if (result.error) return { ok: false, detail: String(result.error) };
+  if (result.error) return { ok: false, detail: describeError(result.error) };
   if (!toolCalled) return { ok: false, detail: "roll tool was not called" };
   return { ok: true };
 }
@@ -159,7 +189,7 @@ async function runStructured(llm: Llm): Promise<CapabilityResult> {
     format: { colors: [String] },
     user: USER,
   });
-  if (result.error) return { ok: false, detail: String(result.error) };
+  if (result.error) return { ok: false, detail: describeError(result.error) };
   const content = result.content as { colors?: unknown } | string | undefined;
   if (!content || typeof content !== "object") {
     return { ok: false, detail: `expected object, got ${typeof content}` };
@@ -185,7 +215,7 @@ async function runBoth(llm: Llm): Promise<CapabilityResult> {
       },
     },
   );
-  if (result.error) return { ok: false, detail: String(result.error) };
+  if (result.error) return { ok: false, detail: describeError(result.error) };
   if (!toolCalled) return { ok: false, detail: "roll tool was not called" };
   const content = result.content as
     { values?: unknown; total?: unknown } | string | undefined;
@@ -219,7 +249,7 @@ async function runPdf(llm: Llm): Promise<CapabilityResult> {
     { file: PDF_PATH },
   ];
   const result = await llm.operate(input, { user: USER });
-  if (result.error) return { ok: false, detail: String(result.error) };
+  if (result.error) return { ok: false, detail: describeError(result.error) };
   return checkDocStrings(result.content);
 }
 
@@ -229,7 +259,7 @@ async function runImage(llm: Llm): Promise<CapabilityResult> {
     { image: IMAGE_PATH },
   ];
   const result = await llm.operate(input, { user: USER });
-  if (result.error) return { ok: false, detail: String(result.error) };
+  if (result.error) return { ok: false, detail: describeError(result.error) };
   return checkDocStrings(result.content);
 }
 
@@ -238,7 +268,7 @@ async function runTemperature(llm: Llm): Promise<CapabilityResult> {
     "Reply with one word: 'pong'. No punctuation.",
     { temperature: 0, user: USER },
   );
-  if (result.error) return { ok: false, detail: String(result.error) };
+  if (result.error) return { ok: false, detail: describeError(result.error) };
   if (typeof result.content !== "string" || result.content.length === 0) {
     return {
       ok: false,
@@ -299,7 +329,7 @@ async function runCell(
   } catch (error) {
     outcome = {
       ok: false,
-      detail: error instanceof Error ? error.message : String(error),
+      detail: describeError(error),
     };
   }
 
