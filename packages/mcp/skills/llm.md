@@ -632,7 +632,7 @@ describe("LLM Integration", () => {
 
 ```typescript
 interface LlmOperateOptions {
-  cache?: boolean | 0 | "5m" | "1h";    // Prompt caching (default on @5m; false/0 disables)
+  cache?: boolean | 0 | "5m" | "1h";    // Prompt caching (default on: 1h Anthropic, 5m elsewhere; false/0 disables)
   data?: Record<string, any>;           // Placeholder substitution data
   effort?: LlmEffort;                   // Provider-neutral reasoning effort (lowest|low|medium|high|highest)
   fallback?: LlmFallbackConfig[] | false; // Fallback provider chain
@@ -726,12 +726,13 @@ tool-calling loop is billed at the provider's cache-read rate (~0.1x input)
 after the first write. Control with the scalar `cache` option:
 
 ```typescript
-await Llm.operate(input, { system: SYSTEM });             // cached @ 5m (default)
-await Llm.operate(input, { system: SYSTEM, cache: "1h" }); // cached @ 1h
+await Llm.operate(input, { system: SYSTEM });             // cached (1h Anthropic, else 5m)
+await Llm.operate(input, { system: SYSTEM, cache: "5m" }); // cached @ 5m
 await Llm.operate(input, { system: SYSTEM, cache: false }); // opt out
 ```
 
-`true`/omitted = enabled @5m; `false`/`0` = disabled; `"5m"`/`"1h"` = that TTL.
+`true`/omitted = enabled at the adapter default (`"1h"` on Anthropic, `"5m"`
+elsewhere); `false`/`0` = disabled; `"5m"`/`"1h"` = that TTL.
 
 Per provider: Anthropic `cache_control` on system + last tool; Bedrock
 `cachePoint` blocks (model-gated, auto-denylisted and retried without on a 400;
