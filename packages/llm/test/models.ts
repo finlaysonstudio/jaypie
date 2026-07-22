@@ -80,18 +80,6 @@ const MATRIX_EXPECT: Record<
   [MODEL.FIREWORKS.GPT_OSS]: { both: "warn", pdf: "skip", image: "skip" },
   [MODEL.FIREWORKS.KIMI]: { both: "warn", pdf: "skip" },
   [MODEL.FIREWORKS.MINIMAX]: { both: "warn", pdf: "skip", image: "skip" },
-  // Nemotron's format-only output is nondeterministic: across six live runs on
-  // 2026-07-21 the same request produced clean JSON twice, prose that the
-  // operate loop's structured_output corrective turn recovered twice, and an
-  // empty `colors` array that failed outright twice. No fixed expectation holds,
-  // so `structured` is not exercised. `both` warns consistently (the Fireworks
-  // response_format + tools emulation) and is pinned.
-  [MODEL.FIREWORKS.NEMOTRON]: {
-    both: "warn",
-    image: "skip",
-    pdf: "skip",
-    structured: "skip",
-  },
   [MODEL.FIREWORKS.QWEN]: { both: "warn", pdf: "skip" },
   [MODEL.NOVA_LITE]: { both: "skip" },
   [MODEL.NOVA_PRO]: { structured: "skip" },

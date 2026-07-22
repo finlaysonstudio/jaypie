@@ -137,8 +137,13 @@ describe("Constants", () => {
     });
 
     it("Retains prices for historic models absent from MODEL.*", () => {
-      expect(firstClassModels).not.toContain("claude-opus-4-6");
-      expect(COST["claude-opus-4-6"]).toBeObject();
+      for (const historic of [
+        "accounts/fireworks/models/nemotron-3-ultra-nvfp4",
+        "claude-opus-4-6",
+      ]) {
+        expect(firstClassModels).not.toContain(historic);
+        expect(COST[historic]).toBeObject();
+      }
     });
 
     it("Quotes positive dollars per million with output above input", () => {

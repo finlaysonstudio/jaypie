@@ -36,7 +36,6 @@ export const MODEL = {
     GPT_OSS: "accounts/fireworks/models/gpt-oss-120b",
     KIMI: "accounts/fireworks/models/kimi-k2p7-code",
     MINIMAX: "accounts/fireworks/models/minimax-m2p7",
-    NEMOTRON: "accounts/fireworks/models/nemotron-3-ultra-nvfp4",
     QWEN: "accounts/fireworks/models/qwen3p7-plus",
   },
   // Google
@@ -250,6 +249,9 @@ export const COST: Record<string, LlmModelCost> = {
     input: 0.3,
     output: 1.2,
   },
+  // Retired from MODEL.* on 2026-07-21: its structured output is
+  // nondeterministic (clean JSON, prose, or an empty array from the same
+  // request). Priced here so historic usage stays replayable.
   "accounts/fireworks/models/nemotron-3-ultra-nvfp4": {
     cachedInputRead: 0.12,
     input: 0.6,
