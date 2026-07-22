@@ -76,10 +76,9 @@ describe("Constants", () => {
       expect(MODEL.NOVA_LITE).toBe("us.amazon.nova-2-lite-v1:0");
     });
 
-    it("Exposes a Bedrock subtree of third-party hosted routes", () => {
-      expect(MODEL.BEDROCK).toBeObject();
-      for (const route of Object.values(MODEL.BEDROCK)) {
-        expect(determineModelProvider(route).provider).toBe(
+    it("Catalogs Nova as the only Bedrock-served models", () => {
+      for (const model of [MODEL.NOVA_LITE, MODEL.NOVA_PRO]) {
+        expect(determineModelProvider(model).provider).toBe(
           PROVIDER.BEDROCK.NAME,
         );
       }
@@ -111,13 +110,10 @@ describe("Constants", () => {
   });
 
   describe("COST", () => {
-    // MODEL.OPENROUTER.* and MODEL.BEDROCK.* are proxy routes to another
-    // vendor's model, priced per backend, so they are deliberately absent from
-    // COST. Amazon's own Nova models are first-class and priced.
-    const proxyRoutes: string[] = [
-      ...Object.values(MODEL.BEDROCK),
-      ...Object.values(MODEL.OPENROUTER),
-    ];
+    // MODEL.OPENROUTER.* routes are another vendor's model resold per backend,
+    // so they are deliberately absent from COST. Amazon's own Nova models are
+    // first-class and priced.
+    const proxyRoutes: string[] = [...Object.values(MODEL.OPENROUTER)];
     const firstClassModels = Object.values(MODEL)
       .flatMap((value) =>
         typeof value === "string" ? [value] : Object.values(value),

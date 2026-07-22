@@ -70,20 +70,28 @@ function catalogIds(node: unknown = MODEL, out: string[] = []): string[] {
 // support (documents cannot be delivered as data: URIs) and only some catalog
 // models are vision-capable (verified live 2026-07-19). Fireworks also rejects
 // response_format combined with tools, so `both` engages the structured_output
-// tool emulation and logs a warn. Bedrock-hosted models vary by vendor: several
-// do not implement structured output or document/image input at all.
+// tool emulation and logs a warn on every Fireworks model.
 const MATRIX_EXPECT: Record<
   string,
   Partial<Record<Capability, ExpectedOutcome>>
 > = {
-  [MODEL.BEDROCK.DEEPSEEK]: { both: "skip", pdf: "skip", image: "skip" },
-  [MODEL.BEDROCK.GEMMA]: { tools: "skip", both: "skip", pdf: "skip" },
-  [MODEL.BEDROCK.GPT_OSS]: { structured: "skip", pdf: "skip", image: "skip" },
-  [MODEL.BEDROCK.KIMI]: { both: "skip", pdf: "skip" },
   [MODEL.FIREWORKS.DEEPSEEK]: { both: "warn", pdf: "skip", image: "skip" },
   [MODEL.FIREWORKS.GLM]: { both: "warn", pdf: "skip", image: "skip" },
+  [MODEL.FIREWORKS.GPT_OSS]: { both: "warn", pdf: "skip", image: "skip" },
   [MODEL.FIREWORKS.KIMI]: { both: "warn", pdf: "skip" },
   [MODEL.FIREWORKS.MINIMAX]: { both: "warn", pdf: "skip", image: "skip" },
+  // Nemotron's format-only output is nondeterministic: across six live runs on
+  // 2026-07-21 the same request produced clean JSON twice, prose that the
+  // operate loop's structured_output corrective turn recovered twice, and an
+  // empty `colors` array that failed outright twice. No fixed expectation holds,
+  // so `structured` is not exercised. `both` warns consistently (the Fireworks
+  // response_format + tools emulation) and is pinned.
+  [MODEL.FIREWORKS.NEMOTRON]: {
+    both: "warn",
+    image: "skip",
+    pdf: "skip",
+    structured: "skip",
+  },
   [MODEL.FIREWORKS.QWEN]: { both: "warn", pdf: "skip" },
   [MODEL.NOVA_LITE]: { both: "skip" },
   [MODEL.NOVA_PRO]: { structured: "skip" },

@@ -220,7 +220,7 @@ priority, fast-mode, and data-residency pricing are excluded, as are long-prompt
 surcharges. Amazon's Nova models (`MODEL.NOVA_PRO`, `MODEL.NOVA_LITE`) are
 priced at the standard US on-demand rate from the AWS Price List API, where a
 cache write is a published `0`. Gateway routes are deliberately absent:
-`MODEL.BEDROCK.*` and `MODEL.OPENROUTER.*` resell another vendor's model per
+`MODEL.OPENROUTER.*`, and any Bedrock id reselling a third-party model, cost per
 route and per region, so no single rate is correct. Unlisted ids return
 `undefined`; callers must handle a miss.
 

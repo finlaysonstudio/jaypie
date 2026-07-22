@@ -18,7 +18,9 @@ export const EFFORT = {
 export type LlmEffort = (typeof EFFORT)[keyof typeof EFFORT];
 
 export const MODEL = {
-  // Amazon (Nova; first-class models served over Bedrock)
+  // Amazon (Nova; the only first-class models served over Bedrock. Bedrock also
+  // resells other vendors, but those routes are not catalogued — reach them by
+  // passing the literal id, which determineModelProvider resolves to bedrock.)
   NOVA_LITE: "us.amazon.nova-2-lite-v1:0",
   NOVA_PRO: "amazon.nova-pro-v1:0",
   // Anthropic
@@ -27,24 +29,14 @@ export const MODEL = {
   SONNET: "claude-sonnet-5",
   HAIKU: "claude-haiku-4-5",
   MYTHOS: "claude-mythos-5",
-  // Bedrock (third-party models hosted on Bedrock; ids provided by operator).
-  // Amazon's own models are first-class above. `us.` marks an inference profile,
-  // required where on-demand is not offered.
-  BEDROCK: {
-    CLAUDE_HAIKU: "us.anthropic.claude-haiku-4-5-20251001-v1:0",
-    CLAUDE_OPUS: "us.anthropic.claude-opus-4-7",
-    CLAUDE_SONNET: "us.anthropic.claude-sonnet-4-6",
-    DEEPSEEK: "deepseek.v3.2",
-    GEMMA: "google.gemma-3-27b-it",
-    GPT_OSS: "openai.gpt-oss-120b-1:0",
-    KIMI: "moonshotai.kimi-k2.5",
-  },
   // Fireworks (serverless open models; ids provided by operator)
   FIREWORKS: {
     DEEPSEEK: "accounts/fireworks/models/deepseek-v4-pro",
     GLM: "accounts/fireworks/models/glm-5p2",
+    GPT_OSS: "accounts/fireworks/models/gpt-oss-120b",
     KIMI: "accounts/fireworks/models/kimi-k2p7-code",
     MINIMAX: "accounts/fireworks/models/minimax-m2p7",
+    NEMOTRON: "accounts/fireworks/models/nemotron-3-ultra-nvfp4",
     QWEN: "accounts/fireworks/models/qwen3p7-plus",
   },
   // Google
@@ -118,13 +110,14 @@ export interface LlmModelCost {
  *   Pro doubles above 200K, Grok doubles at 200K, GPT-5.5 is 2x in / 1.5x out
  *   above 272K.
  * - **Text rates.** Gemini prices audio input higher than text/image/video.
- * - **Proxy routes are deliberately absent.** `MODEL.BEDROCK.*` and
- *   `MODEL.OPENROUTER.*` are another vendor's model resold through a gateway,
- *   priced per route and per region, so no single rate here would be correct.
- *   Price those against the backend model, or against the gateway's own
- *   published rate. Amazon's own Nova models are first-class, not proxies, and
- *   are priced below at the standard US on-demand rate (`us.` geo profile for
- *   Nova 2 Lite; the `global.` profile is cheaper and is not modeled).
+ * - **Proxy routes are deliberately absent.** `MODEL.OPENROUTER.*`, and any
+ *   uncatalogued Bedrock id reselling a third-party model, are another vendor's
+ *   model behind a gateway, priced per route and per region, so no single rate
+ *   here would be correct. Price those against the backend model, or against
+ *   the gateway's own published rate. Amazon's own Nova models are first-class,
+ *   not proxies, and are priced below at the standard US on-demand rate (`us.`
+ *   geo profile for Nova 2 Lite; the `global.` profile is cheaper and is not
+ *   modeled).
  *
  * Unlisted ids return `undefined` — callers must handle a miss.
  */
@@ -242,6 +235,11 @@ export const COST: Record<string, LlmModelCost> = {
     input: 1.4,
     output: 4.4,
   },
+  "accounts/fireworks/models/gpt-oss-120b": {
+    cachedInputRead: 0.015,
+    input: 0.15,
+    output: 0.6,
+  },
   "accounts/fireworks/models/kimi-k2p7-code": {
     cachedInputRead: 0.19,
     input: 0.95,
@@ -251,6 +249,11 @@ export const COST: Record<string, LlmModelCost> = {
     cachedInputRead: 0.06,
     input: 0.3,
     output: 1.2,
+  },
+  "accounts/fireworks/models/nemotron-3-ultra-nvfp4": {
+    cachedInputRead: 0.12,
+    input: 0.6,
+    output: 2.4,
   },
   "accounts/fireworks/models/qwen3p7-plus": {
     cachedInputRead: 0.08,
@@ -319,7 +322,7 @@ export const PROVIDER = {
   BEDROCK: {
     // nova-pro is the Amazon-native model that reliably does tools+structured.
     DEFAULT: MODEL.NOVA_PRO,
-    /** @deprecated Size tiers are retired in 2.0. Use PROVIDER.BEDROCK.DEFAULT, or pick a specific model from MODEL.NOVA_* / MODEL.BEDROCK.*. */
+    /** @deprecated Size tiers are retired in 2.0. Use PROVIDER.BEDROCK.DEFAULT, or pick a specific model from MODEL.NOVA_*. */
     MODEL: {
       DEFAULT: MODEL.NOVA_LITE,
       LARGE: MODEL.NOVA_PRO,

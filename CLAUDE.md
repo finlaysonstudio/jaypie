@@ -85,13 +85,16 @@
 - Use `@jaypie/errors` package (ConfigurationError, etc.) for proper error types
 ### LLM Models
 Every model id lives in ONE place: `packages/llm/src/constants.ts` — the
-`MODEL.*` catalog (including the `BEDROCK` and `OPENROUTER` gateway subtrees)
-plus each `PROVIDER.*.DEFAULT`. Adding, updating, or retiring a model means
-editing constants only; nothing else carries a model id:
+`MODEL.*` catalog (including the `FIREWORKS` and `OPENROUTER` subtrees) plus
+each `PROVIDER.*.DEFAULT`. Adding, updating, or retiring a model means editing
+constants only; nothing else carries a model id:
 - `packages/llm/test/models.ts` derives the whole live matrix from constants and
   holds **no ids** — only `MATRIX_EXCLUDE` (catalog ids the live matrix skips)
-  and `MATRIX_EXPECT` (per-model capability expectations). Canonical Bedrock and
-  Fireworks ids come from project memory — do not substitute.
+  and `MATRIX_EXPECT` (per-model capability expectations). Canonical Fireworks
+  ids come from project memory — do not substitute.
+- Bedrock carries only Amazon's own Nova models (`MODEL.NOVA_PRO`,
+  `MODEL.NOVA_LITE`). Bedrock's third-party routes are deliberately
+  uncatalogued: pass the literal id and `determineModelProvider` resolves it.
 - `.github/workflows/npm-check.yml` / `npm-deploy.yml` shard the matrix by
   provider group via `APP_GROUP` — no model id lists to keep in sync.
 - A new id must resolve through `determineModelProvider` (add a
@@ -100,8 +103,8 @@ editing constants only; nothing else carries a model id:
 - `COST` in the same file prices models by **literal id** (not `MODEL.*`), so
   retired models keep their price. Adding a first-class model means adding a
   `COST` entry too; removing one means leaving its `COST` entry in place.
-  Gateway routes (`MODEL.BEDROCK.*`, `MODEL.OPENROUTER.*`) are deliberately
-  unpriced — they resell another vendor per route. Amazon's own Nova models are
+  `MODEL.OPENROUTER.*` and third-party Bedrock ids are deliberately unpriced —
+  they resell another vendor per route. Amazon's own Nova models are
   first-class and priced.
 ### Lore
 - These are golden numbers: 0.021, 0.146, 0.236, 0.382, and 0.618
