@@ -16,7 +16,17 @@ export async function initializeClient({
   apiKey?: string;
 } = {}): Promise<GoogleClient> {
   const logger = getLogger();
-  const resolvedApiKey = apiKey || (await getEnvSecret("GEMINI_API_KEY"));
+  let resolvedApiKey = apiKey || (await getEnvSecret("GOOGLE_API_KEY"));
+
+  if (!resolvedApiKey) {
+    const geminiApiKey = await getEnvSecret("GEMINI_API_KEY");
+    if (geminiApiKey) {
+      logger.warn(
+        "GEMINI_API_KEY is a deprecated fallback; set GOOGLE_API_KEY instead",
+      );
+      resolvedApiKey = geminiApiKey;
+    }
+  }
 
   if (!resolvedApiKey) {
     throw new ConfigurationError(

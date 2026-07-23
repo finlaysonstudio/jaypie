@@ -507,6 +507,8 @@ XAI_API_KEY         # Required for xAI (Grok)
 ```
 
 Keys are resolved via `getEnvSecret()` which supports AWS Secrets Manager.
+Google also accepts the deprecated `GEMINI_API_KEY` as a fallback (a `log.warn`
+fires); prefer `GOOGLE_API_KEY`.
 
 ## Report Totals
 
