@@ -8,13 +8,14 @@ import { GoogleProvider } from "../GoogleProvider.class.js";
 //
 // Hot tests
 //
-// Live tests against the real Gemini API. Skipped unless GEMINI_API_KEY is
-// set, so CI stays green and `npm test` runs them automatically with a key.
+// Live tests against the real Gemini API. Skipped unless GOOGLE_API_KEY (or the
+// deprecated GEMINI_API_KEY) is set, so CI stays green and `npm test` runs them
+// automatically with a key.
 //
-//   GEMINI_API_KEY=... npm run test -w packages/llm
+//   GOOGLE_API_KEY=... npm run test -w packages/llm
 //
 
-const apiKey = process.env.GEMINI_API_KEY;
+const apiKey = process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY;
 const TIMEOUT = 60_000;
 
 describe.skipIf(!apiKey)("GoogleClient (hot)", () => {

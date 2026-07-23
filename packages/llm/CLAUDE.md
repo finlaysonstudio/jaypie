@@ -582,7 +582,7 @@ when the matching `*_API_KEY` is set and skip otherwise.
 
 - `OPENAI_API_KEY` - OpenAI API key
 - `ANTHROPIC_API_KEY` - Anthropic API key
-- `GOOGLE_API_KEY` - Google API key
+- `GOOGLE_API_KEY` - Google API key (`GEMINI_API_KEY` is a deprecated fallback; a `log.warn` fires when it is used)
 - `FIREWORKS_API_KEY` - Fireworks API key
 - `OPENROUTER_API_KEY` - OpenRouter API key
 - `XAI_API_KEY` - xAI (Grok) API key
