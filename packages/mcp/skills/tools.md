@@ -127,7 +127,7 @@ const toolkit = new Toolkit([
 ]);
 
 const response = await Llm.operate("Find all pending orders", {
-  model: "claude-sonnet-4",
+  model: "claude-sonnet-5",
   tools: toolkit,
   turns: 3,
 });

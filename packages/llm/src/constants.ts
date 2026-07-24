@@ -25,7 +25,7 @@ export const MODEL = {
   NOVA_PRO: "amazon.nova-pro-v1:0",
   // Anthropic
   FABLE: "claude-fable-5",
-  OPUS: "claude-opus-4-8",
+  OPUS: "claude-opus-5",
   SONNET: "claude-sonnet-5",
   HAIKU: "claude-haiku-4-5",
   MYTHOS: "claude-mythos-5",
@@ -199,6 +199,12 @@ export const COST: Record<string, LlmModelCost> = {
     input: 5.0,
     output: 25.0,
   },
+  "claude-opus-5": {
+    cachedInputRead: 0.5,
+    cachedInputWrite: { "1h": 10.0, "5m": 6.25 },
+    input: 5.0,
+    output: 25.0,
+  },
   "claude-sonnet-4-20250514": {
     cachedInputRead: 0.3,
     cachedInputWrite: { "1h": 6.0, "5m": 3.75 },
@@ -304,7 +310,7 @@ export const COST: Record<string, LlmModelCost> = {
 const GOOGLE_PROVIDER = {
   // https://ai.google.dev/gemini-api/docs/models
   DEFAULT: MODEL.GEMINI_FLASH,
-  /** @deprecated Size tiers are retired in 2.0. Use PROVIDER.GOOGLE.DEFAULT, or pick a specific model from MODEL.*. */
+  /** @deprecated Size tiers are retired in 2.0 and these values are frozen; repointing a tier at a newer model only prolongs its use. Use PROVIDER.GOOGLE.DEFAULT, or pick a specific model from MODEL.*. */
   MODEL: {
     DEFAULT: "gemini-3.1-pro-preview",
     LARGE: "gemini-3.1-pro-preview",
@@ -324,7 +330,7 @@ export const PROVIDER = {
   BEDROCK: {
     // nova-pro is the Amazon-native model that reliably does tools+structured.
     DEFAULT: MODEL.NOVA_PRO,
-    /** @deprecated Size tiers are retired in 2.0. Use PROVIDER.BEDROCK.DEFAULT, or pick a specific model from MODEL.NOVA_*. */
+    /** @deprecated Size tiers are retired in 2.0 and these values are frozen; repointing a tier at a newer model only prolongs its use. Use PROVIDER.BEDROCK.DEFAULT, or pick a specific model from MODEL.NOVA_*. */
     MODEL: {
       DEFAULT: MODEL.NOVA_LITE,
       LARGE: MODEL.NOVA_PRO,
@@ -357,7 +363,7 @@ export const PROVIDER = {
       // (see util/maxOutputTokens.ts)
       DEFAULT: 16384 as const,
     },
-    /** @deprecated Size tiers are retired in 2.0. Use PROVIDER.ANTHROPIC.DEFAULT, or pick a specific model from MODEL.*. */
+    /** @deprecated Size tiers are retired in 2.0 and these values are frozen; repointing a tier at a newer model only prolongs its use. Use PROVIDER.ANTHROPIC.DEFAULT, or pick a specific model from MODEL.*. */
     MODEL: {
       DEFAULT: "claude-sonnet-4-6",
       LARGE: "claude-opus-4-8",
@@ -401,7 +407,7 @@ export const PROVIDER = {
   OPENAI: {
     // https://platform.openai.com/docs/models
     DEFAULT: MODEL.SOL,
-    /** @deprecated Size tiers are retired in 2.0. Use PROVIDER.OPENAI.DEFAULT, or pick a specific model from MODEL.*. */
+    /** @deprecated Size tiers are retired in 2.0 and these values are frozen; repointing a tier at a newer model only prolongs its use. Use PROVIDER.OPENAI.DEFAULT, or pick a specific model from MODEL.*. */
     MODEL: {
       DEFAULT: "gpt-5.4",
       LARGE: "gpt-5.5",
@@ -413,7 +419,7 @@ export const PROVIDER = {
   },
   OPENROUTER: {
     DEFAULT: MODEL.OPENROUTER.SONNET,
-    /** @deprecated Size tiers are retired in 2.0. Use PROVIDER.OPENROUTER.DEFAULT, or pick a specific route from MODEL.OPENROUTER.*. */
+    /** @deprecated Size tiers are retired in 2.0 and these values are frozen; repointing a tier at a newer model only prolongs its use. Use PROVIDER.OPENROUTER.DEFAULT, or pick a specific route from MODEL.OPENROUTER.*. */
     MODEL: {
       DEFAULT: "anthropic/claude-sonnet-4-6" as const,
       LARGE: "anthropic/claude-opus-4-8" as const,
@@ -434,7 +440,7 @@ export const PROVIDER = {
     API_KEY: "XAI_API_KEY" as const,
     BASE_URL: "https://api.x.ai/v1" as const,
     DEFAULT: MODEL.GROK,
-    /** @deprecated Size tiers are retired in 2.0. Use PROVIDER.XAI.DEFAULT, or pick a specific model from MODEL.*. */
+    /** @deprecated Size tiers are retired in 2.0 and these values are frozen; repointing a tier at a newer model only prolongs its use. Use PROVIDER.XAI.DEFAULT, or pick a specific model from MODEL.*. */
     MODEL: {
       DEFAULT: "grok-latest",
       LARGE: "grok-latest",
@@ -457,7 +463,7 @@ export type LlmProviderName =
 
 // Last: Defaults
 export const DEFAULT = {
-  /** @deprecated Size tiers are retired in 2.0. Use DEFAULT.PROVIDER.DEFAULT, or pick a specific model from MODEL.*. */
+  /** @deprecated Size tiers are retired in 2.0 and these values are frozen; repointing a tier at a newer model only prolongs its use. Use DEFAULT.PROVIDER.DEFAULT, or pick a specific model from MODEL.*. */
   MODEL: {
     BASE: PROVIDER.OPENAI.MODEL.DEFAULT,
     LARGE: PROVIDER.OPENAI.MODEL.LARGE,

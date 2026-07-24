@@ -209,7 +209,7 @@ import { mcp__jaypie__llm_debug_call } from "@jaypie/mcp";
 const response = await mcp__jaypie__llm_debug_call({
   provider: "anthropic",
   message: "Test message",
-  model: "claude-sonnet-4",
+  model: "claude-sonnet-5",
 });
 ```
 

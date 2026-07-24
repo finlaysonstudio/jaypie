@@ -13,7 +13,7 @@ Unified interface for calling LLM providers with multi-turn conversations, tool 
 import Llm from "@jaypie/llm";
 
 // Auto-detect provider from model name
-const response = await Llm.operate("What is 2+2?", { model: "claude-sonnet-4" });
+const response = await Llm.operate("What is 2+2?", { model: "claude-sonnet-5" });
 console.log(response.content); // "4"
 ```
 
@@ -62,7 +62,7 @@ Rates are the standard short-context text tier. Introductory, batch, flex, prior
 ```typescript
 // Provider auto-detected from model
 await Llm.operate(input, { model: "gpt-5.1" });      // OpenAI
-await Llm.operate(input, { model: "claude-opus-4" }); // Anthropic
+await Llm.operate(input, { model: "claude-opus-5" }); // Anthropic
 await Llm.operate(input, { model: "gemini-3" });     // Google
 ```
 
@@ -94,7 +94,7 @@ For single-shot text completions:
 
 ```typescript
 const response = await Llm.send("Explain REST APIs", {
-  model: "claude-sonnet-4",
+  model: "claude-sonnet-5",
   system: "You are a technical writer",
 });
 ```
@@ -327,7 +327,7 @@ const response = await Llm.operate([
   { file: "report.pdf", bucket: "my-bucket" },
   { image: "chart.png" },
 ], {
-  model: "claude-sonnet-4",
+  model: "claude-sonnet-5",
 });
 ```
 
@@ -442,7 +442,7 @@ Configure a chain of fallback providers that automatically retry failed calls wh
 ```typescript
 // Instance-level configuration
 const llm = new Llm("anthropic", {
-  model: "claude-sonnet-4",
+  model: "claude-sonnet-5",
   fallback: [
     { provider: "openai", model: "gpt-4o" },
     { provider: "google", model: "gemini-2.0-flash" },
@@ -459,7 +459,7 @@ const response = await llm.operate(input, { fallback: false });
 
 // Static method with fallback
 const response = await Llm.operate(input, {
-  model: "claude-sonnet-4",
+  model: "claude-sonnet-5",
   fallback: [{ provider: "openai", model: "gpt-4o" }],
 });
 ```
@@ -478,7 +478,7 @@ For repeated calls with same configuration:
 
 ```typescript
 const llm = new Llm("anthropic", {
-  model: "claude-sonnet-4",
+  model: "claude-sonnet-5",
   system: "You are a code reviewer",
 });
 

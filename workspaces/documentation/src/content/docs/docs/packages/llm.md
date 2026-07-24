@@ -29,7 +29,7 @@ npm install @jaypie/llm
 
 | Provider | Models | Env Variable |
 |----------|--------|--------------|
-| `anthropic` | claude-sonnet-4, claude-opus-4, claude-haiku | `ANTHROPIC_API_KEY` |
+| `anthropic` | claude-sonnet-5, claude-opus-5, claude-haiku-4-5 | `ANTHROPIC_API_KEY` |
 | `fireworks` | glm, deepseek, kimi, minimax, qwen | `FIREWORKS_API_KEY` |
 | `google` | gemini-2.0-flash, gemini-1.5-pro | `GOOGLE_API_KEY` |
 | `openai` | gpt-4o, gpt-4o-mini, o1-mini, o3-mini | `OPENAI_API_KEY` |
@@ -44,7 +44,7 @@ Static method for single prompt/response.
 import Llm from "@jaypie/llm";
 
 const response = await Llm.operate("What is 2+2?", {
-  model: "claude-sonnet-4",
+  model: "claude-sonnet-5",
 });
 // Returns: "4"
 ```
@@ -82,7 +82,7 @@ import Llm from "@jaypie/llm";
 
 // Instance-level configuration
 const llm = new Llm("anthropic", {
-  model: "claude-sonnet-4",
+  model: "claude-sonnet-5",
   fallback: [
     { provider: "openai", model: "gpt-4o" },
     { provider: "google", model: "gemini-2.0-flash" },
@@ -99,7 +99,7 @@ const response = await llm.operate(input, { fallback: false });
 
 // Static method with fallback
 const response = await Llm.operate(input, {
-  model: "claude-sonnet-4",
+  model: "claude-sonnet-5",
   fallback: [{ provider: "openai", model: "gpt-4o" }],
 });
 ```
@@ -120,7 +120,7 @@ For multi-turn conversations with history:
 import Llm from "@jaypie/llm";
 
 const llm = new Llm("anthropic", {
-  model: "claude-sonnet-4",
+  model: "claude-sonnet-5",
   system: "You are a helpful assistant.",
 });
 
@@ -166,7 +166,7 @@ const toolkit = new Toolkit([
 ]);
 
 const response = await Llm.operate("What's the weather in NYC?", {
-  model: "claude-sonnet-4",
+  model: "claude-sonnet-5",
   tools: toolkit,
 });
 ```
@@ -294,7 +294,7 @@ const response = await Llm.operate(prompt, {
 
 ```typescript
 const response = await Llm.operate("What's in this image?", {
-  model: "claude-sonnet-4",
+  model: "claude-sonnet-5",
   files: [
     {
       type: "image",
@@ -325,7 +325,7 @@ Lifecycle callbacks with full provider request/response payloads.
 
 ```typescript
 const response = await Llm.operate(prompt, {
-  model: "claude-sonnet-4",
+  model: "claude-sonnet-5",
   hooks: {
     beforeEachModelRequest: ({ providerRequest }) => {
       log.trace("[llm] calling model");
@@ -362,7 +362,7 @@ For progress reporting (UI updates, websockets, queue notifications), prefer a s
 
 ```typescript
 const response = await Llm.operate(prompt, {
-  model: "claude-sonnet-4",
+  model: "claude-sonnet-5",
   tools: toolkit,
   onProgress: (event) => {
     // event.type: start, model_request, model_response,
@@ -397,7 +397,7 @@ export default expressStreamHandler(async (req, res, context) => {
   const stream = createExpressStream(context);
 
   for await (const chunk of Llm.stream(req.body.prompt, {
-    model: "claude-sonnet-4",
+    model: "claude-sonnet-5",
   })) {
     stream.write(chunk.content || "");
   }
@@ -453,7 +453,7 @@ import Llm from "@jaypie/llm";
 
 async function askLlm(prompt) {
   try {
-    return await Llm.operate(prompt, { model: "claude-sonnet-4" });
+    return await Llm.operate(prompt, { model: "claude-sonnet-5" });
   } catch (error) {
     log.error("[askLlm] failed");
     log.var({ error: error.message });
