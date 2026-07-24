@@ -18,7 +18,7 @@ The `Llm` class handles provider-specific implementations while exposing a consi
 
 | Provider | Models | Env Variable |
 |----------|--------|--------------|
-| Anthropic | claude-sonnet-4, claude-opus-4, claude-haiku | `ANTHROPIC_API_KEY` |
+| Anthropic | claude-sonnet-5, claude-opus-5, claude-haiku-4-5 | `ANTHROPIC_API_KEY` |
 | Fireworks | glm, deepseek, kimi, minimax, qwen | `FIREWORKS_API_KEY` |
 | Google | gemini-2.0-flash, gemini-1.5-pro | `GOOGLE_API_KEY` |
 | OpenAI | gpt-4o, gpt-4o-mini, o1-mini, o3-mini | `OPENAI_API_KEY` |
@@ -42,7 +42,7 @@ import Llm from "@jaypie/llm";
 
 // Provider auto-detected from model
 const response = await Llm.operate("What is 2+2?", {
-  model: "claude-sonnet-4",
+  model: "claude-sonnet-5",
 });
 console.log(response); // "4"
 ```
@@ -53,7 +53,7 @@ console.log(response); // "4"
 import Llm from "@jaypie/llm";
 
 const llm = new Llm("anthropic", {
-  model: "claude-sonnet-4",
+  model: "claude-sonnet-5",
   system: "You are a helpful assistant.",
 });
 
@@ -74,9 +74,9 @@ const llm = new Llm("claude-sonnet-4-6"); // -> anthropic, claude-sonnet-4-6
 
 ```typescript
 // Anthropic models
-await Llm.operate(prompt, { model: "claude-sonnet-4" });
-await Llm.operate(prompt, { model: "claude-opus-4" });
-await Llm.operate(prompt, { model: "claude-haiku" });
+await Llm.operate(prompt, { model: "claude-sonnet-5" });
+await Llm.operate(prompt, { model: "claude-opus-5" });
+await Llm.operate(prompt, { model: "claude-haiku-4-5" });
 
 // OpenAI models
 await Llm.operate(prompt, { model: "gpt-4o" });
@@ -167,7 +167,7 @@ const toolkit = new Toolkit([
 ]);
 
 const response = await Llm.operate("What's the weather in NYC?", {
-  model: "claude-sonnet-4",
+  model: "claude-sonnet-5",
   tools: toolkit,
 });
 ```
@@ -279,7 +279,7 @@ const response = await Llm.operate(prompt, {
 
 ```typescript
 const llm = new Llm("anthropic", {
-  model: "claude-sonnet-4",
+  model: "claude-sonnet-5",
   system: "You are a math tutor.",
 });
 
@@ -300,7 +300,7 @@ console.log(llm.history);
 const response = await Llm.operate(
   "What's in this image?",
   {
-    model: "claude-sonnet-4",
+    model: "claude-sonnet-5",
     files: [
       {
         type: "image",
@@ -337,7 +337,7 @@ Seven hooks fire through the operate loop, each receiving the full provider requ
 
 ```typescript
 const response = await Llm.operate(prompt, {
-  model: "claude-sonnet-4",
+  model: "claude-sonnet-5",
   hooks: {
     beforeEachModelRequest: ({ providerRequest }) => {
       log.trace("[llm] calling model");
@@ -374,7 +374,7 @@ For progress reporting (UI updates, websockets, queue notifications), prefer a s
 
 ```typescript
 const response = await Llm.operate(prompt, {
-  model: "claude-sonnet-4",
+  model: "claude-sonnet-5",
   tools: toolkit,
   onProgress: (event) => {
     // event.type: start, model_request, model_response,
@@ -407,7 +407,7 @@ import Llm from "@jaypie/llm";
 
 async function askLlm(prompt) {
   try {
-    return await Llm.operate(prompt, { model: "claude-sonnet-4" });
+    return await Llm.operate(prompt, { model: "claude-sonnet-5" });
   } catch (error) {
     log.error("[askLlm] LLM call failed");
     log.var({ error: error.message });
@@ -425,7 +425,7 @@ non-streaming requests). Override it through `providerOptions`:
 
 ```typescript
 await Llm.operate(prompt, {
-  model: "claude-sonnet-4",
+  model: "claude-sonnet-5",
   providerOptions: { max_tokens: 32000 },
   temperature: 0.7,
 });

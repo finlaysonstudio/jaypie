@@ -103,7 +103,7 @@ Provider Class → OperateLoop → ProviderAdapter → Provider API
 import Llm from "@jaypie/llm";
 
 // Auto-detect provider from model
-const response = await Llm.operate("Hello", { model: "claude-sonnet-4" });
+const response = await Llm.operate("Hello", { model: "claude-sonnet-5" });
 
 // Or specify provider explicitly
 const llm = new Llm("openai", { model: "gpt-4o" });
@@ -236,7 +236,7 @@ import Llm from "@jaypie/llm";
 
 // Instance-level fallback configuration
 const llm = new Llm("anthropic", {
-  model: "claude-sonnet-4",
+  model: "claude-sonnet-5",
   fallback: [
     { provider: "openai", model: "gpt-4o" },
     { provider: "google", model: "gemini-2.0-flash" },
@@ -253,7 +253,7 @@ const response = await llm.operate(input, { fallback: false });
 
 // Static method with fallback
 const response = await Llm.operate(input, {
-  model: "claude-sonnet-4",
+  model: "claude-sonnet-5",
   fallback: [{ provider: "openai", model: "gpt-4o" }],
 });
 ```

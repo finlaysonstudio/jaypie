@@ -66,7 +66,7 @@ placeholders("{{known}} and {{unknown}}", { known: "yes" });
 import Llm from "@jaypie/llm";
 
 const response = await Llm.operate("Summarize {{topic}}", {
-  model: "claude-sonnet-4",
+  model: "claude-sonnet-5",
   data: { topic: "climate change" },
   system: "You are an expert on {{topic}}",
   instructions: "Focus on {{aspect}}",

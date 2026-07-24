@@ -96,7 +96,7 @@ The same reasoning applies to the deprecated `MODEL.GPT*` aliases and the `ALL` 
 
 ## Release
 
-Follow [VERSIONING.md](../VERSIONING.md): patch only, one bump per branch.
+Follow [VERSIONING.md](../../../VERSIONING.md): patch only, one bump per branch.
 
 1. Bump `packages/llm/package.json`.
 2. Add `packages/mcp/release-notes/llm/<version>.md` with frontmatter `version`, `date`, `summary`, then `## Changes` and `## Testing`.
@@ -111,8 +111,8 @@ Update `packages/mcp/skills/llm.md` only when its provider table or catalog bull
 Run ~green against `packages/llm`. Then confirm the resolution path end to end:
 
 ```bash
-node -e 'import("./packages/llm/dist/index.js").then(m => {
-  console.log(m.MODEL.OPUS, m.COST[m.MODEL.OPUS]);
+node -e 'import("./packages/llm/dist/esm/index.js").then(m => {
+  console.log(m.LLM.MODEL.OPUS, m.LLM.COST[m.LLM.MODEL.OPUS]);
 })'
 ```
 
@@ -122,12 +122,12 @@ With a provider key present, exercise the seven capability cells against the liv
 APP_MODELS=<model-id> npm run test:llm:matrix
 ```
 
-## Promotion
+## Publishing this skill
 
-This document lives in the gitignored `var/` scratch directory. Promoting it to a first-class skill means moving it to `packages/mcp/skills/new-model-release.md` and hand-editing three curated listings, which are not generated:
+This skill is repository-local. Publishing it to the MCP server, so consumers reach it through `mcp__jaypie__skill("new-model-release")`, means copying it to `packages/mcp/skills/new-model-release.md` with `description` / `related` frontmatter in place of `name` / `description`, then hand-editing three curated listings, which are not generated:
 
 - `packages/mcp/skills/skills.md` — the Categories table
 - `packages/mcp/skills/development.md` — the `## Skills` alias table
 - `packages/mcp/skills/agents.md` — the category lists in the AGENTS.md snippet
 
-Then bump and rebuild `@jaypie/mcp`.
+Then bump `@jaypie/mcp`. A rebuild is not required for the skills to resolve: the store reads `packages/mcp/skills/` from the package root, not from `dist/`.

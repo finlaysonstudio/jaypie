@@ -242,7 +242,7 @@ new JaypieApiGateway(this, "Gateway", {
 import Llm from "@jaypie/llm";
 
 const response = await Llm.operate("What is 2+2?", {
-  model: "claude-sonnet-4",
+  model: "claude-sonnet-5",
 });
 
 // Streaming

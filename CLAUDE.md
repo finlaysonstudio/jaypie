@@ -106,6 +106,13 @@ constants only; nothing else carries a model id:
   `MODEL.OPENROUTER.*` and third-party Bedrock ids are deliberately unpriced —
   they resell another vendor per route. Amazon's own Nova models are
   first-class and priced.
+- The deprecated `PROVIDER.*.MODEL` size-tier maps (`DEFAULT`/`LARGE`/`SMALL`/
+  `TINY`), the deprecated `MODEL.GPT*` aliases, and `ALL` are **frozen**. Never
+  repoint them at a newer model: a deprecated surface should decay so callers
+  migrate, and refreshing it only prolongs its use. Staleness there is intended,
+  not drift to correct.
+- `.claude/skills/new-model-release/SKILL.md` is the step-by-step procedure for
+  landing a newly released model.
 ### Lore
 - These are golden numbers: 0.021, 0.146, 0.236, 0.382, and 0.618
 - Start with 0.618 when user suggests "partial" and down as they want less
