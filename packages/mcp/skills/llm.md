@@ -252,6 +252,17 @@ const res = await Llm.operate(message, {
 // res.content["Recommended Actions"] === []  (never undefined)
 ```
 
+#### Format contract enforcement
+
+A `format` request that completes as prose does not reach the caller as a
+string. The operate loop first parses the text as JSON, stripping a Markdown
+code fence — this runs for every provider. If that fails, adapters that opt in
+(`supportsStructuredOutputRetry`: **Fireworks** and **Google**) take a
+corrective turn offering only the `structured_output` tool and demanding it be
+called, bounded by the `turns` budget. That turn withholds the caller's own
+tools and does not send the schema natively, leaving one unambiguous way to
+answer.
+
 ### Zod Schema
 
 ```typescript

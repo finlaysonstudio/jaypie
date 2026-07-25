@@ -128,6 +128,13 @@ export class GoogleAdapter extends BaseProviderAdapter {
   readonly name = PROVIDER.GOOGLE.NAME;
   readonly defaultModel = PROVIDER.GOOGLE.DEFAULT;
 
+  // Gemini can answer a format request with prose — on the legacy path because
+  // structured output rides the structured_output tool emulation, and on the
+  // native path because compliance is still a model decision. Opt in to
+  // OperateLoop's corrective retry turn so a prose answer is re-asked rather
+  // than returned to the caller as a string.
+  override readonly supportsStructuredOutputRetry = true;
+
   // Session-level cache of Gemini 3 models observed to reject the native
   // `responseJsonSchema` + tools combo. When a model is in this set,
   // buildRequest engages the legacy fake-tool path instead.
@@ -180,7 +187,14 @@ export class GoogleAdapter extends BaseProviderAdapter {
       }
     }
 
-    const hasUserTools = !!(request.tools && request.tools.length > 0);
+    // On a corrective retry turn (the model answered a format request with
+    // prose), offer only the structured_output tool so the demanded call is the
+    // sole option — the caller's own tools are withheld for this turn.
+    const isStructuredOutputRetry = Boolean(
+      request.structuredOutputRetry && request.format,
+    );
+    const hasUserTools =
+      !isStructuredOutputRetry && !!(request.tools && request.tools.length > 0);
     const useNativeCombo =
       Boolean(request.format) &&
       hasUserTools &&
@@ -189,20 +203,23 @@ export class GoogleAdapter extends BaseProviderAdapter {
     // When tools+format are combined and the model does not support the native
     // combo, inject the legacy `structured_output` fake tool here so the model
     // is forced to call it before its final answer.
-    const allTools: ProviderToolDefinition[] = request.tools
-      ? [...request.tools]
-      : [];
-    if (request.format && hasUserTools && !useNativeCombo) {
-      log.warn(
-        `[GoogleAdapter] Using legacy structured_output tool fallback for model ${geminiRequest.model}; native responseJsonSchema + tools combo is only available on Gemini 3.`,
-      );
-      allTools.push({
-        name: STRUCTURED_OUTPUT_TOOL_NAME,
-        description:
-          "Output a structured JSON object, " +
-          "use this before your final response to give structured outputs to the user",
-        parameters: request.format,
-      });
+    const allTools: ProviderToolDefinition[] =
+      request.tools && !isStructuredOutputRetry ? [...request.tools] : [];
+    if (request.format && (isStructuredOutputRetry || !useNativeCombo)) {
+      if (hasUserTools) {
+        log.warn(
+          `[GoogleAdapter] Using legacy structured_output tool fallback for model ${geminiRequest.model}; native responseJsonSchema + tools combo is only available on Gemini 3.`,
+        );
+      }
+      if (isStructuredOutputRetry || hasUserTools) {
+        allTools.push({
+          name: STRUCTURED_OUTPUT_TOOL_NAME,
+          description:
+            "Output a structured JSON object, " +
+            "use this before your final response to give structured outputs to the user",
+          parameters: request.format,
+        });
+      }
     }
 
     if (allTools.length > 0) {
@@ -224,8 +241,13 @@ export class GoogleAdapter extends BaseProviderAdapter {
     // (or `responseSchema` for Gemini 2.5+ no-tools path). The legacy
     // fake-tool emulation only runs when format+tools is combined on a model
     // that doesn't support the native combo.
+    // A corrective retry turn is deliberately tool-only: the loop's corrective
+    // message demands a structured_output call, so sending the schema natively
+    // as well would give the model two contradictory ways to answer.
     const wantsNativeStructured =
-      Boolean(request.format) && (!hasUserTools || useNativeCombo);
+      Boolean(request.format) &&
+      !isStructuredOutputRetry &&
+      (!hasUserTools || useNativeCombo);
 
     if (wantsNativeStructured) {
       const useJsonSchema =

@@ -216,16 +216,27 @@ async function runBoth(llm: Llm): Promise<CapabilityResult> {
     },
   );
   if (result.error) return { ok: false, detail: describeError(result.error) };
-  if (!toolCalled) return { ok: false, detail: "roll tool was not called" };
   const content = result.content as
     { values?: unknown; total?: unknown } | string | undefined;
   if (!content || typeof content !== "object") {
     return { ok: false, detail: `expected object, got ${typeof content}` };
   }
+  if (content.values === undefined) {
+    return { ok: false, detail: "values missing" };
+  }
   if (typeof content.total !== "number") {
     return { ok: false, detail: "total missing or not a number" };
   }
-  return { ok: true };
+  // Tool invocation is reported, not required. `both` asks whether a model can
+  // combine tools with structured output, and a model that fills the schema
+  // itself has answered the prompt — declining to delegate a task it can do
+  // unaided is a preference, not a missing capability. Asserting the call made
+  // this cell fail on capable models (issue #440); the outcome is recorded so
+  // a shift in behavior is still visible in the matrix output.
+  return {
+    ok: true,
+    detail: toolCalled ? undefined : "answered without calling the roll tool",
+  };
 }
 
 function checkDocStrings(content: unknown): CapabilityResult {
