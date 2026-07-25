@@ -7,6 +7,12 @@ related: dynamodb, fabric, models, services
 
 The "Fabric Vocabulary" attempts to reserve words for implied uses and encourages use of reserved words for conforming uses. It also discourages the use of some words, especially `type`.
 
+## Reservation Hygiene
+
+A reserved word is **magnetic but not automatically bound**: it names a canonical predicate that conforming uses are drawn toward, but likeness or proximity does not conscript an entity into it. A message-like thing is the `message` model only if it takes on message's predicate; otherwise the resemblance is incidental.
+
+The **re-earn test** audits reservations: if a reserved term were absent, would the concept re-derive from the ontology today? Three outcomes: it returns **as-is** (the term is sound — define it if undefined), it returns **broadened or narrowed** (redefine it), or it **does not return** (cut it). A reserved-but-undefined term is debt; the test services it. A term may be undefined by *oversight* (its meaning is pinned elsewhere) or by *genuine ambiguity* — the test distinguishes the two.
+
 ## Ontological Grounding
 
 1. Entity: something that is and we wish to represent
@@ -71,25 +77,30 @@ Arguably identity, instance, and relation would form a more complete vocabulary.
 - kind => category, tags; same rationale as `type`
 - ou => scope
 - output => state
+- thread => session, scope; a thread is a session at chat-grain, organized by `scope`. Never a model or attribute name: it collides with platform thread-channel types and reads like an entity. Use `conversation` only as an informal word for the collection (messages sharing a `scope`), never as a model
 - type => category, tags; reserved (exception: `indexModelType` GSI exists in DynamoDB as a legacy pattern; prefer `category` for new work)
 
 Avoid words defined elsewhere (services, terminology)
 
 ## Fabric Models
 
+- case
+- exchange
 - job
 - message
 - plan
-- case
 - scenario
-- exchange
+- session
 
 ### Model Definitions
 
-- plan: a persisted definition an executor runs; what a job executes. plan : job :: definition : run. A composition projected into data is a plan. Suggested attributes: `alias`, `name`, `description`, `category` (a vocabulary under the model — e.g. composition plans use `workflow` | `agent`), optional `definitionHash` (content hash gating idempotent reseeds), optional `source` (provenance)
-- case: the subject entity a job operates on; long-lived, accretes jobs and messages over time. Jobs reference their case via `job.case` (optional — jobs usually operate on a case; system jobs may not). Neither model requires the other: a case exists before any job runs on it, and a case never stores a job list (query jobs by case)
+- case: the subject entity a job operates on; long-lived, accretes jobs and messages over time. Jobs reference their case via `job.case` (optional — jobs usually operate on a case; system jobs may not). Neither model requires the other: a case exists before any job runs on it, and a case never stores a job list (query jobs by case). `case` (subject of work) and `session` (span of engagement) are distinct axes that cross rather than nest: one session may touch several cases; one case accretes across many sessions
 - exchange: an event entity representing one LLM `operate()` call. Attributes use reserved words: `input` (request), `content` (response text), `data` (interpolation parameters — the vocabulary's sanctioned use of the word), `xid` (provider response id), `llm` (served model id), declared `status` vocabulary `completed | incomplete | in_progress` aligned with operate settlement. Turn chains reference the parent exchange (an `exchange` attribute) and store input deltas only — never the resent history; tool loops are the history delta within one exchange, not separate entities. Canonical registration ships upstream: `registerExchangeModel()` / `EXCHANGE_MODEL` in `@jaypie/fabric`
+- job: a run of a plan — the executing or executed instance a plan defines. References its `plan` and, optionally, the `case` it operates on. Declares the default run lifecycle `status` vocabulary (`canceled, complete, error, pending, processing, queued, sending`)
+- message: an emitted unit of directed content — the emission genus covering inter-actor, workflow, and diagnostic (log) messages. `content` holds the text; `category` selects the species **and** its disposition vocabulary; `scope` is optional — a threadless emission (a log) has none, a threaded emission (a chat line) references its parent. Disposition is category-selected: an **operational** message carries `status` with a category-dependent enum (a *transmission* message, actor↔actor, uses a delivery lifecycle `queued | sending | complete`; a *workflow* message, service↔service, uses a coordination lifecycle — the enum is declared per category, not fixed across the model); a **diagnostic** message carries `level` (severity `trace … fatal`) for a message reporting on itself or the system. The reservation is a vocabulary claim, not a storage commitment: a diagnostic message need not persist as an entity. Severity living on `level` rather than `status` is a version detail, not ontology — the observability layer reserves `status` for severity and Jaypie 1 yields to it (see Additional Terminology and the logs skill); the invariant is that a message's disposition vocabulary is category-selected. Distinct from `event` (ground #6, "an entity that happens"): an event is an occurrence that *triggers* and need carry neither content nor a recipient; a message always carries both and is not intrinsically a stimulus. The same utterance may be a `message` (content in a thread), give rise to an `event` (a trigger), and be answered by an `exchange` (the model turn) — different predicates on one utterance, not one primitive doing three jobs
+- plan: a persisted definition an executor runs; what a job executes. plan : job :: definition : run. A composition projected into data is a plan. Suggested attributes: `alias`, `name`, `description`, `category` (a vocabulary under the model — e.g. composition plans use `workflow` | `agent`), optional `definitionHash` (content hash gating idempotent reseeds), optional `source` (provenance)
 - scenario: a named category of cases (see Category in Ontological Grounding). `case.category` holds the scenario alias; the scenario model defines the category itself: `alias`, `name`, `description`, and `plans` (references) — scenarios prescribe which plans respond to them
+- session: a bounded, resumable scope of coherence over a span, within which events, jobs, and messages cohere and share context and memory — the reified form of Context (ground #8). Nests recursively via `scope` (a session may scope another session), so a finer-grained dialogue thread is a leaf session rather than a separate model. Declares its own `status` vocabulary, not the job lifecycle: `active` (engagement in progress — a turn in flight or a participant present), `idle` (alive and resumable, no in-flight turn; the resting state that makes "resumable" real), `closed` (ended and no longer resumable; sticky terminal). Transitions: *(birth)* → `active` when born of an activity (a first message), or → `idle` when pre-opened empty (a thread created before anyone speaks); `active → idle` when the in-flight turn settles and nothing is queued; `idle → active` on new input (the resume path); `idle → closed` when the resumability deadline lapses or on an explicit end (the terminate path); `active → closed` on an explicit end mid-turn (rare). No `canceled` and no `error` state — a session is a *scope*, not a *task*: cancellation is a *reason* a session reached `closed` (recorded as metadata, `reason: ended | canceled | expired`), and a scope does not error — errors belong to the jobs and exchanges *within* a session, which holds failed turns and remains a valid, open scope; unrecoverable backing context is a `closed` (reason `expired`/`error`), not a live `error` state. A conversation is a collection (ground #2), not a model — messages sharing a `scope`; promote it to a model (ground #9) only if it earns identity that survives zero members or state irreducible to its members. The empty thread's pre-message identity belongs to its `scope` target — a session — not to a separate entity: a chat thread is a session at chat-grain; platform thread-isms (native thread id, parent channel, archived flag) are `xid` / references / `status`, not a new identity
 
 ### Implied Attributes
 
