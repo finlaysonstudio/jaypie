@@ -381,6 +381,7 @@ const response = await Llm.operate("Greet the world", {
 - Format-only requests use native `responseMimeType: "application/json"` + `responseSchema` (OpenAPI 3.0) by default, or `responseJsonSchema` (standard JSON Schema) when `providerOptions.useJsonSchema: true`.
 - Format **and** tools combined: native `responseJsonSchema` + tools is supported only on Gemini 3 (preview) and is enabled automatically when the model id matches `^gemini-3`. Gemini 2.5 (including thinking) and earlier fall back to the `structured_output` fake-tool emulation with a system-prompt nudge.
 - A Gemini 3 model that 400s the combo is cached for the session and transparently retried via the fake-tool path. The error message must mention `responseJsonSchema`/`responseSchema`/`responseMime`/`function_call`/`tools` to trigger the fallback.
+- Compliance is enforced by the operate loop the same way Fireworks is: a `format` request that completes as prose is first parsed as JSON (fence-stripped), then re-asked on a corrective turn offering **only** the `structured_output` tool (`supportsStructuredOutputRetry`). That turn withholds the caller's tools and does not send the schema natively, so the demanded call is the sole way to answer.
 
 ### With Tools
 

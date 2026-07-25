@@ -1324,6 +1324,89 @@ describe("GoogleAdapter", () => {
       );
     });
 
+    describe("Corrective structured-output retry turn (issue #440)", () => {
+      it("opts in to the corrective retry", () => {
+        const adapter = new GoogleAdapter();
+        expect(adapter.supportsStructuredOutputRetry).toBe(true);
+      });
+
+      it("offers only the structured_output tool and withholds caller tools", () => {
+        const adapter = new GoogleAdapter();
+        const schema = {
+          type: "object",
+          properties: { name: { type: "string" } },
+        };
+        const request: OperateRequest = {
+          model: "gemini-3.6-flash",
+          messages: [],
+          format: schema,
+          structuredOutputRetry: true,
+          tools: [
+            {
+              name: "roll",
+              description: "Roll dice",
+              parameters: { type: "object" },
+            },
+          ],
+        };
+
+        const built = adapter.buildRequest(request);
+
+        const declarations = built.config?.tools?.[0].functionDeclarations;
+        expect(declarations).toHaveLength(1);
+        expect(declarations?.[0].name).toBe("structured_output");
+        expect(declarations?.[0].parameters).toBe(schema);
+      });
+
+      it("does not also send the schema natively on a retry turn", () => {
+        const adapter = new GoogleAdapter();
+        const schema = {
+          type: "object",
+          properties: { name: { type: "string" } },
+        };
+        const request: OperateRequest = {
+          model: "gemini-3.6-flash",
+          messages: [],
+          format: schema,
+          structuredOutputRetry: true,
+        };
+
+        const built = adapter.buildRequest(request);
+
+        expect(built.config?.responseJsonSchema).toBeUndefined();
+        expect(built.config?.responseSchema).toBeUndefined();
+        const declarations = built.config?.tools?.[0].functionDeclarations;
+        expect(declarations?.[0].name).toBe("structured_output");
+      });
+
+      it("leaves the ordinary Gemini 3 native combo untouched", () => {
+        const adapter = new GoogleAdapter();
+        const schema = {
+          type: "object",
+          properties: { name: { type: "string" } },
+        };
+        const request: OperateRequest = {
+          model: "gemini-3.6-flash",
+          messages: [],
+          format: schema,
+          tools: [
+            {
+              name: "roll",
+              description: "Roll dice",
+              parameters: { type: "object" },
+            },
+          ],
+        };
+
+        const built = adapter.buildRequest(request);
+
+        expect(built.config?.responseJsonSchema).toBe(schema);
+        const declarations = built.config?.tools?.[0].functionDeclarations;
+        expect(declarations).toHaveLength(1);
+        expect(declarations?.[0].name).toBe("roll");
+      });
+    });
+
     it("does not retry on unrelated 400 errors", async () => {
       const adapter = new GoogleAdapter();
       const schema = {
