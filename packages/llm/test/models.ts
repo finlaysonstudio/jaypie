@@ -80,6 +80,12 @@ const MATRIX_EXPECT: Record<
   [MODEL.FIREWORKS.GPT_OSS]: { both: "warn", pdf: "skip", image: "skip" },
   [MODEL.FIREWORKS.KIMI]: { both: "warn", pdf: "skip" },
   [MODEL.FIREWORKS.MINIMAX]: { both: "warn", pdf: "skip", image: "skip" },
+  // QWEN `structured` is pinned "ok" on evidence, not omission: it failed once
+  // in three samples (2026-07), then passed 10 for 10 on resample (2026-07-25,
+  // issue #438) — 12 of 13 overall, so the miss reads as flake. Schema
+  // adherence is loose even when passing (observed ["R","Y","B"] and
+  // ["Red","","Blue"]); the cell only asserts a non-empty array, so degraded
+  // content still counts as ok. A second failure means reopening #438.
   [MODEL.FIREWORKS.QWEN]: { both: "warn", pdf: "skip" },
   [MODEL.NOVA_LITE]: { both: "skip" },
   [MODEL.NOVA_PRO]: { structured: "skip" },
