@@ -3,6 +3,7 @@ import {
   formatStreamError,
   getContentTypeForFormat,
   loadEnvSecrets,
+  loadEnvVariables,
 } from "@jaypie/aws";
 import type { StreamFormat } from "@jaypie/aws";
 import { BadRequestError, UnhandledError } from "@jaypie/errors";
@@ -238,6 +239,10 @@ function expressStreamHandler(
   // Setup
   //
 
+  // Start the variables fetch at cold start; request setup awaits the cached
+  // promise. No-op without the pointer.
+  void loadEnvVariables().catch(() => {});
+
   let jaypieFunction: ReturnType<typeof jaypieHandler>;
 
   return async (
@@ -315,6 +320,12 @@ function expressStreamHandler(
 
     // Build a request-local setup list to avoid mutating the shared array
     const requestSetup: JaypieStreamHandlerSetup[] = [];
+
+    // Hydrate non-secret variables before secrets so both can be configured
+    // from the bundle. No-op without the pointer.
+    requestSetup.push(async () => {
+      await loadEnvVariables();
+    });
 
     // Load secrets into process.env if configured
     if (secrets && secrets.length > 0) {

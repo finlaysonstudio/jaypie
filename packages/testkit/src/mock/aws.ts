@@ -27,6 +27,10 @@ export const getEnvSecret = createMockFunction<
 
 export const loadEnvSecrets = createMockResolvedFunction(undefined);
 
+export const loadEnvVariables = createMockResolvedFunction(false);
+
+export const clearEnvVariablesCache = createMockFunction<() => void>(() => {});
+
 export const getSingletonMessage = createMockWrappedFunction(
   original.getSingletonMessage,
   { value: "_MOCK_SINGLETON_MESSAGE_" },

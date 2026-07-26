@@ -6,7 +6,7 @@ import * as iam from "aws-cdk-lib/aws-iam";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import { CDK } from "./constants";
 import { JaypieLambda } from "./JaypieLambda";
-import type { SecretsArrayItem } from "./helpers/index.js";
+import type { EnvironmentInput, SecretsArrayItem } from "./helpers/index.js";
 
 const DYNAMODB_CONTROL_PLANE_ACTIONS = [
   "dynamodb:DescribeContinuousBackups",
@@ -36,6 +36,8 @@ export interface JaypieMigrationProps {
   timeout?: cdk.Duration;
   /** Maximum total wall time across all isCompleteHandler invocations. Default: 2 hours. */
   totalTimeout?: cdk.Duration;
+  /** Non-secret values stored in a parameter and hydrated into process.env */
+  variables?: EnvironmentInput;
 }
 
 export class JaypieMigration extends Construct {
@@ -54,6 +56,7 @@ export class JaypieMigration extends Construct {
       tables = [],
       timeout = cdk.Duration.minutes(15),
       totalTimeout = cdk.Duration.hours(2),
+      variables,
     } = props;
 
     this.lambda = new JaypieLambda(this, "MigrationLambda", {
@@ -65,6 +68,7 @@ export class JaypieMigration extends Construct {
       secrets,
       tables,
       timeout,
+      variables,
     });
 
     // Grant control-plane perms on the passed tables so migrations that

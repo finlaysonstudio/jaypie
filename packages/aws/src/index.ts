@@ -3,6 +3,10 @@ export { default as getMessages } from "./getMessages.function.js";
 export { default as getS3FileBuffer } from "./getS3FileBuffer.function.js";
 export { default as getSecret } from "./getSecret.function.js";
 export { default as loadEnvSecrets } from "./loadEnvSecrets.function.js";
+export {
+  default as loadEnvVariables,
+  clearEnvVariablesCache,
+} from "./loadEnvVariables.function.js";
 export { default as getSingletonMessage } from "./getSingletonMessage.function.js";
 export { default as getTextractJob } from "./getTextractJob.function.js";
 export { default as sendBatchMessages } from "./sendBatchMessages.function.js";

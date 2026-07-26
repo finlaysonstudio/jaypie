@@ -2,6 +2,7 @@ import {
   formatStreamError,
   getContentTypeForFormat,
   loadEnvSecrets,
+  loadEnvVariables,
 } from "@jaypie/aws";
 import type { StreamFormat } from "@jaypie/aws";
 import { flushLlmObs, loadDatadogApiKey } from "@jaypie/datadog";
@@ -204,6 +205,16 @@ const lambdaStreamHandler = function <TEvent = unknown>(
     await loadDatadogApiKey();
   };
   setup = [datadogLlmObsSetup, ...setup];
+
+  // Hydrate non-secret variables first so everything after, including Datadog
+  // and secrets, can be configured from the bundle. No-op without the pointer.
+  const variablesSetup: LifecycleFunction = async () => {
+    await loadEnvVariables();
+  };
+  setup = [variablesSetup, ...setup];
+
+  // Start the fetch at cold start; the setup above awaits the cached promise
+  void loadEnvVariables().catch(() => {});
 
   // Flush buffered LLM Observability spans before the Lambda freezes. Runs last
   // (after user teardown) and always — jaypieHandler runs teardown in a finally,

@@ -16,6 +16,7 @@ packages/constructs/
 │   │   ├── addDatadogLayers.ts
 │   │   ├── constructEnvName.ts
 │   │   ├── constructName.ts
+│   │   ├── constructParameterName.ts
 │   │   ├── constructStackName.ts
 │   │   ├── constructTagger.ts
 │   │   ├── envHostname.ts
@@ -119,6 +120,7 @@ The `CDK` constant provides standardized values:
 - `CDK.ROLE.*` - Resource role tags (api, deploy, storage, processing, etc.)
 - `CDK.SERVICE.*` - Service tags
 - `CDK.TAG.*` - Tag key names
+- `CDK.VARIABLES.*` - Non-secret variables bundle (`ENV` pointer name, `PARAMETER` suffix)
 - `CDK.VENDOR.*` - Third-party vendor tags
 
 ## Environment Variables
@@ -424,6 +426,31 @@ new JaypieSecret(this, "DbPassword", {
 
 `JaypieEnvSecret` extends `JaypieSecret` and is accepted anywhere a `JaypieSecret` is (including `JaypieLambda` `secrets`). `JaypieEnvSecret` is deprecated and will be removed in 2.0.
 
+### Lambda with Non-Secret Variables
+
+Lambda caps all environment variables at 4KB combined. `variables` stores
+non-secret values in an SSM parameter instead; the handler lifecycle hydrates
+them into `process.env` at cold start, so application code reads
+`process.env.X` with no resolver function.
+
+```typescript
+new JaypieLambda(this, "Handler", {
+  code: "dist",
+  handler: "index.handler",
+  variables: {
+    APP_ASSET_BUCKET: bucket.bucketName,
+    APP_JOB_QUEUE_URL: queue.queueUrl,
+  },
+});
+```
+
+Accepts the same shapes as `environment` (object, array of `process.env` keys,
+or a mixed array). The parameter is named
+`/{PROJECT_ENV}/{PROJECT_KEY}/{PROJECT_NONCE}/{path within stack}/variables`
+and uses intelligent tiering, allowing up to 8KB. Only the
+`CDK_ENV_VARIABLES` pointer occupies the Lambda environment. Secrets belong in
+`secrets`; the runtime refuses `SECRET_` prefixed keys from the bundle.
+
 ### Provider/Consumer Secrets Pattern
 
 ```typescript
@@ -462,6 +489,7 @@ new JaypieApiGateway(this, "Api", { handler: lambda, certificate: cert });
 | `constructTagger(construct)` | Apply standard tags to construct |
 | `constructEnvName(name)` | Generate environment-prefixed name (no sponsor segment) |
 | `constructName(name, opts?)` | Generate sponsor-first name: `{sponsor}-{env}-{key}-{name}-{nonce}`; honors `PROJECT_SPONSOR`, accepts `{ sponsor, env, key, nonce }` overrides |
+| `constructParameterName(scope, opts?)` | Generate SSM path `/{env}/{key}/{nonce}/{path within stack}[/{name}]` |
 | `envHostname()` | Get hostname from environment (supports `CDK_ENV_PERSONAL` as leading prefix) |
 | `isEnv(env)` / `isProductionEnv()` / `isSandboxEnv()` | Environment checks |
 | `isValidHostname(str)` / `isValidSubdomain(str)` | Validation helpers |

@@ -7,9 +7,11 @@ import * as iam from "aws-cdk-lib/aws-iam";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import * as logs from "aws-cdk-lib/aws-logs";
 import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
+import * as ssm from "aws-cdk-lib/aws-ssm";
 import { CDK } from "./constants";
 import {
   addDatadogLayers,
+  constructParameterName,
   EnvironmentInput,
   jaypieLambdaEnv,
   resolveEnvironment,
@@ -82,6 +84,22 @@ export interface JaypieLambdaProps {
   serviceTag?: string;
   timeout?: Duration | number;
   tracing?: lambda.Tracing;
+  /**
+   * Non-secret values made available to the handler as `process.env` reads,
+   * stored in an SSM parameter instead of the Lambda environment so they do
+   * not consume the 4KB environment budget.
+   *
+   * Accepts the same shapes as `environment`:
+   * - Object: `{ KEY: "value" }` - used directly
+   * - Array: `["KEY1", { KEY2: "value" }]`
+   *   - Strings: lookup value from process.env
+   *   - Objects: merge key-value pairs directly
+   *
+   * The handler lifecycle hydrates these at cold start. Real environment
+   * variables win; the bundle only fills keys that are absent. Secrets belong
+   * in `secrets`, never here.
+   */
+  variables?: EnvironmentInput;
   vendorTag?: string;
   vpc?: ec2.IVpc;
   vpcSubnets?: ec2.SubnetSelection;
@@ -91,6 +109,7 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
   private readonly _lambda: lambda.Function;
   private readonly _provisioned?: lambda.Alias;
   private readonly _reference: lambda.IFunction;
+  private readonly _variables?: ssm.IStringParameter;
 
   constructor(scope: Construct, id: string, props: JaypieLambdaProps) {
     super(scope, id);
@@ -134,6 +153,7 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
       serviceTag,
       timeout = Duration.seconds(CDK.DURATION.LAMBDA_WORKER),
       tracing,
+      variables: variablesInput,
       vendorTag,
       vpc,
       vpcSubnets,
@@ -178,6 +198,24 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
       {},
     );
 
+    // Store non-secret variables in a parameter rather than the 4KB Lambda
+    // environment. The handler lifecycle hydrates them into process.env.
+    const variables = resolveEnvironment(variablesInput);
+    let variablesEnvironment: { [key: string]: string } = {};
+    if (Object.keys(variables).length > 0) {
+      // Use the literal name, not parameter.parameterName: the latter resolves
+      // to a Ref, and the runtime needs the path to read
+      const parameterName = constructParameterName(this, {
+        name: CDK.VARIABLES.PARAMETER,
+      });
+      this._variables = new ssm.StringParameter(this, "Variables", {
+        parameterName,
+        stringValue: Stack.of(this).toJsonString(variables),
+        tier: ssm.ParameterTier.INTELLIGENT_TIERING,
+      });
+      variablesEnvironment = { [CDK.VARIABLES.ENV]: parameterName };
+    }
+
     // Add ParamsAndSecrets layer if configured
     const resolvedParamsAndSecrets = resolveParamsAndSecrets({
       paramsAndSecrets,
@@ -204,6 +242,7 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
       description,
       environment: {
         ...environment,
+        ...variablesEnvironment,
         ...secretsEnvironment,
         ...jaypieSecretsEnvironment,
       },
@@ -253,6 +292,9 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
     secrets.forEach((secret) => {
       secret.grantRead(this._lambda);
     });
+
+    // Grant read permission for the variables parameter
+    this._variables?.grantRead(this._lambda);
 
     // Grant read/write permissions for DynamoDB tables
     tables.forEach((table) => {
@@ -306,6 +348,11 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
 
   public get reference(): lambda.IFunction {
     return this._reference;
+  }
+
+  /** The parameter holding the `variables` bundle, when one was created */
+  public get variables(): ssm.IStringParameter | undefined {
+    return this._variables;
   }
 
   // IFunction implementation

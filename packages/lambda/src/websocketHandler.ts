@@ -1,6 +1,7 @@
 import {
   broadcastToConnections,
   loadEnvSecrets,
+  loadEnvVariables,
   sendToConnection,
 } from "@jaypie/aws";
 import { ConfigurationError, UnhandledError } from "@jaypie/errors";
@@ -147,6 +148,16 @@ const websocketHandler = function <TResult = WebSocketResponse>(
     };
     setup = [secretsSetup, ...setup];
   }
+
+  // Hydrate non-secret variables before secrets so both can be configured from
+  // the bundle. No-op without the pointer.
+  const variablesSetup: LifecycleFunction = async () => {
+    await loadEnvVariables();
+  };
+  setup = [variablesSetup, ...setup];
+
+  // Start the fetch at cold start; the setup above awaits the cached promise
+  void loadEnvVariables().catch(() => {});
 
   //
   //
