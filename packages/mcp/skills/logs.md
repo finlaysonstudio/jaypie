@@ -1,6 +1,6 @@
 ---
 description: Logging patterns and conventions
-related: debugging, datadog, variables
+related: debugging, datadog, variables, vocabulary
 ---
 
 # Logging Patterns
@@ -106,10 +106,12 @@ LOG_LEVEL=trace MODULE_LOG_LEVEL=warn npm test
 By default, the log level is not included in JSON output (Lambda determines level from the console method). To include it:
 
 ```bash
+LOG_LEVEL_FIELD=status        # Adds "status": "debug" (etc.) — preferred
 LOG_LEVEL_FIELD=true          # Adds "level": "debug" (etc.)
-LOG_LEVEL_FIELD=status        # Adds "status": "debug" (etc.)
 LOG_LEVEL_FIELD=false         # Omit (default)
 ```
+
+Prefer `status` as the field name: Datadog reserves `status` for log severity and cannot be reconfigured, and the Fabric vocabulary follows — severity is a `status` vocabulary, and `level` is not a reserved attribute (see `skill("vocabulary")`).
 
 Or via constructor option:
 
@@ -182,3 +184,4 @@ Logs will include the `env`, `invoke`, and `handler` name. For example:
 - **`skill("datadog")`** - Datadog integration and log forwarding
 - **`skill("handlers")`** - Handler lifecycle with automatic log context
 - **`skill("variables")`** - LOG_LEVEL and other environment variables
+- **`skill("vocabulary")`** - Severity as a `status` vocabulary; reserved attribute names
