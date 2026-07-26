@@ -75,6 +75,7 @@ See `skill("repokit")` for the full tooling bundle.
 | `CDK_ENV_DATADOG_API_KEY_ARN` | Datadog API key ARN |
 | `CDK_ENV_TABLE` | DynamoDB table name |
 | `CDK_ENV_PERSONAL` | Personal environment flag (triggers consumer mode for secrets) |
+| `CDK_ENV_VARIABLES` | Parameter path holding the `variables` bundle; set by JaypieLambda |
 | `DYNAMODB_TABLE_NAME` | Auto-set by JaypieLambda when exactly 1 table is passed |
 
 ### Passing to Lambda
@@ -89,6 +90,51 @@ const handler = new JaypieLambda(this, "Handler", {
   },
 });
 ```
+
+## Non-Secret Variables Beyond the 4KB Limit
+
+Lambda caps all environment variables at 4KB combined. The `variables` prop
+stores values in an SSM parameter instead and the handler lifecycle hydrates
+them into `process.env` at cold start. Application code reads `process.env.X`
+as usual; no resolver function is involved.
+
+```typescript
+new JaypieLambda(this, "Handler", {
+  code: "dist",
+  handler: "index.handler",
+  variables: {
+    APP_ASSET_BUCKET: bucket.bucketName,
+    APP_JOB_QUEUE_URL: queue.queueUrl,
+  },
+});
+```
+
+`variables` accepts the same shapes as `environment`:
+
+```typescript
+variables: { APP_TENANT: "acme" }                     // object
+variables: ["APP_TENANT"]                             // value from process.env
+variables: ["APP_TENANT", { APP_BUCKET: "bucket" }]   // mixed array
+```
+
+Only the pointer (`CDK_ENV_VARIABLES`) occupies the Lambda environment, so the
+bundle itself costs nothing against the 4KB budget.
+
+### Rules
+
+| Rule | Behavior |
+|------|----------|
+| Environment wins | A real environment variable is never overwritten by the bundle |
+| Non-secret only | Keys prefixed `SECRET_` are refused; use `secrets` instead |
+| Cold-start fetch | Fetched once per execution context, then reused |
+| Handler scope | Values are present inside the handler, not at module import time |
+
+Reading a hydrated value at module scope (`const q = process.env.APP_JOB_QUEUE_URL`
+at the top of a file) returns `undefined`, because imports run before the
+handler lifecycle. Read inside the function that uses it.
+
+The bundle is stored in a Parameter Store parameter using intelligent tiering,
+which allows up to 8KB.
 
 ## Secret Variables
 

@@ -31,6 +31,9 @@ import {
 | `getEnvSecret(name, { env? })` | Preferred: Fetch secret using env var patterns |
 | `loadEnvSecrets(...names)` | Load multiple secrets into `process.env` |
 | `getSecret(name)` | Internal: Direct fetch by AWS secret name |
+| **Variables** | |
+| `loadEnvVariables()` | Hydrate the non-secret `variables` bundle into `process.env` |
+| `clearEnvVariablesCache()` | Discard the cached bundle so the next call refetches |
 | **SQS Messaging** | |
 | `sendMessage(body, { queueUrl?, ... })` | Send single message to SQS |
 | `sendBatchMessages({ messages, queueUrl?, ... })` | Send multiple messages (batched in groups of 10) |
@@ -79,6 +82,26 @@ await loadEnvSecrets("ANTHROPIC_API_KEY", "OPENAI_API_KEY");
 
 // Now available as process.env.ANTHROPIC_API_KEY, etc.
 ```
+
+### loadEnvVariables
+
+The non-secret twin of `loadEnvSecrets`. Every Jaypie handler calls it during
+the lifecycle, so application code rarely calls it directly. It no-ops unless
+`CDK_ENV_VARIABLES` is set, which `JaypieLambda` does when the `variables` prop
+is used.
+
+```typescript
+import { loadEnvVariables } from "@jaypie/aws";
+
+await loadEnvVariables();
+
+// Bundle keys are now in process.env
+```
+
+Real environment variables always win; the bundle only fills absent keys. Keys
+prefixed `SECRET_` are refused. The fetch happens once per execution context.
+
+See `skill("variables")` for the CDK side.
 
 ### getSecret (Internal Use)
 

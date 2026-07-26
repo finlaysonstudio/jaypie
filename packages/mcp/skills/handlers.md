@@ -13,12 +13,18 @@ All Jaypie handlers follow this execution flow:
 
 1. **Logger initialization** - Re-init logger with invocation context
 2. **Unavailable check** - Return 503 immediately if `unavailable: true`
-3. **Secrets loading** - Load AWS secrets into `process.env` (if configured)
-4. **Validation** - Run validation functions
-5. **Setup** - Run pre-handler functions
-6. **Handler** - Execute main logic
-7. **Teardown** - Run cleanup functions (always executes)
-8. **Response** - Return result or formatted error
+3. **Variables hydration** - Load the non-secret `variables` bundle into `process.env` (automatic; no option)
+4. **Secrets loading** - Load AWS secrets into `process.env` (if configured)
+5. **Validation** - Run validation functions
+6. **Setup** - Run pre-handler functions
+7. **Handler** - Execute main logic
+8. **Teardown** - Run cleanup functions (always executes)
+9. **Response** - Return result or formatted error
+
+Variables hydration requires no handler option. It runs whenever `JaypieLambda`
+set the `CDK_ENV_VARIABLES` pointer and no-ops otherwise. Because it runs in the
+lifecycle, hydrated values are readable inside the handler but not at module
+import time. See `skill("variables")`.
 
 ## Common Options
 

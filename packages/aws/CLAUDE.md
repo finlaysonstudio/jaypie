@@ -23,6 +23,7 @@ src/
 ├── getSingletonMessage.function.ts  # Get exactly one message or throw
 ├── getTextractJob.function.ts  # Get Textract job results
 ├── loadEnvSecrets.function.ts  # Batch load secrets to process.env
+├── loadEnvVariables.function.ts # Hydrate non-secret config bundle to process.env
 ├── sendBatchMessages.function.ts   # Send multiple SQS messages
 ├── sendMessage.function.ts     # Send single SQS message
 ├── sendTextractJob.function.ts # Start Textract job
@@ -39,6 +40,19 @@ src/
 | `getSecret(name)` | Fetch secret directly by AWS secret name |
 | `getEnvSecret(name, { env? })` | Fetch secret using env var patterns (`SECRET_X`, `X_SECRET`, or `X`) |
 | `loadEnvSecrets(...names)` | Load multiple secrets and set in `process.env` |
+
+### Variables
+
+| Export | Description |
+|--------|-------------|
+| `loadEnvVariables({ env? })` | Hydrate the non-secret bundle named by `CDK_ENV_VARIABLES` into `process.env` |
+| `clearEnvVariablesCache()` | Discard the cached bundle so the next call refetches |
+
+The bundle is written by the `variables` prop on `JaypieLambda`. Real
+environment variables win; the bundle fills only absent keys. `SECRET_`
+prefixed keys are refused. Fetched once per execution context via the
+Parameters and Secrets extension, falling back to the SSM SDK. An `s3://`
+pointer is also accepted.
 
 ### SQS Messaging
 
@@ -108,6 +122,7 @@ Re-exports all `@jaypie/aws` exports.
 | Variable | Description |
 |----------|-------------|
 | `AWS_SESSION_TOKEN` | Required for secrets access |
+| `CDK_ENV_VARIABLES` | Parameter path (or `s3://` URI) holding the non-secret variables bundle |
 | `CDK_ENV_QUEUE_URL` | Default SQS queue URL |
 | `PROJECT_KEY` | Used for FIFO queue message group ID |
 | `PARAMETERS_SECRETS_EXTENSION_HTTP_PORT` | Lambda layer port (default: 2773) |

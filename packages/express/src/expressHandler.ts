@@ -1,5 +1,5 @@
 import type { Request, Response } from "express";
-import { loadEnvSecrets } from "@jaypie/aws";
+import { loadEnvSecrets, loadEnvVariables } from "@jaypie/aws";
 import { BadRequestError, UnhandledError } from "@jaypie/errors";
 import { force, getHeaderFrom, HTTP, JAYPIE, jaypieHandler } from "@jaypie/kit";
 import { log as publicLogger } from "@jaypie/logger";
@@ -355,6 +355,10 @@ function expressHandler<T>(
   // Setup
   //
 
+  // Start the variables fetch at cold start; request setup awaits the cached
+  // promise. No-op without the pointer.
+  void loadEnvVariables().catch(() => {});
+
   let jaypieFunction: ReturnType<typeof jaypieHandler>;
 
   return async (
@@ -469,6 +473,12 @@ function expressHandler<T>(
 
     // Build a request-local setup list to avoid mutating the shared array
     const requestSetup: JaypieHandlerSetup[] = [];
+
+    // Hydrate non-secret variables first so everything after, including Datadog
+    // and secrets, can be configured from the bundle. No-op without the pointer.
+    requestSetup.push(async () => {
+      await loadEnvVariables();
+    });
 
     // Load the Datadog LLM Observability API key into the environment when enabled
     requestSetup.push(async () => {

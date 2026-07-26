@@ -147,6 +147,10 @@ export const CDK = {
   TARGET_TYPE: {
     AWS_ACCOUNT: "AWS_ACCOUNT",
   },
+  VARIABLES: {
+    ENV: "CDK_ENV_VARIABLES",
+    PARAMETER: "variables",
+  },
   VENDOR: {
     ANTHROPIC: "anthropic",
     AUTH0: "auth0",

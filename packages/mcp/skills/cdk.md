@@ -299,6 +299,21 @@ bucket.grantReadWrite(handler);
 queue.grantSendMessages(handler);
 ```
 
+Lambda caps environment variables at 4KB combined. Use `variables` for
+non-secret values that would crowd that budget; they go to a Parameter Store
+parameter and the handler lifecycle hydrates them into `process.env`:
+
+```typescript
+new JaypieLambda(this, "Handler", {
+  variables: {
+    APP_ASSET_BUCKET: bucket.bucketName,
+    APP_JOB_QUEUE_URL: queue.queueUrl,
+  },
+});
+```
+
+Only the pointer occupies the Lambda environment. See `skill("variables")`.
+
 ## Datadog Integration
 
 Enable Datadog tracing:
