@@ -123,6 +123,7 @@ Avoid words defined elsewhere (services, terminology)
 - message
 - mock
 - parameters
+- readOnly
 - serializer
 - service
 - setup

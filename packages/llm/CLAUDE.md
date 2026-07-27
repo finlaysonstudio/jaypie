@@ -408,6 +408,25 @@ call via `Toolkit.resolveMessage()` and surface it in the Toolkit `log`
 option, the `beforeEachTool`/`afterEachTool`/`onToolError` hooks (as
 `message`), and the `tool_call` progress event (as `tool.message`).
 
+Tools may also declare `readOnly: true` (mirroring MCP's `readOnlyHint`) to
+state they carry no side effects. `Toolkit.filter()` derives a new Toolkit from
+that annotation, so a verification or critique pass can re-run `operate()`
+against the read set without repeating side effects:
+
+```typescript
+const verification = toolkit.filter({ readOnly: true });  // annotated only
+const effectful = toolkit.filter({ readOnly: false });    // the complement
+const custom = toolkit.filter((tool) => tool.name.startsWith("search_"));
+```
+
+Tools are side-effecting unless annotated, so new tools stay excluded from the
+read set by default. The derived Toolkit shares the same tool implementations
+and inherits `explain`/`log`; extending either toolkit leaves the other
+unchanged. `readOnly` is stripped from `Toolkit.tools`, so it never reaches a
+provider payload. The built-in tools (`random`, `roll`, `time`, `weather`) are
+annotated read-only, and `fabricService({ readOnly: true })` propagates through
+`fabricTool`.
+
 ### Progress Events
 
 `operate()` accepts an `onProgress` callback that receives lightweight,

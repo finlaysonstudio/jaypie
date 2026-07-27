@@ -2,8 +2,6 @@ import { Construct } from "constructs";
 import { CfnOutput, Fn, RemovalPolicy, SecretValue, Tags } from "aws-cdk-lib";
 import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
 
-import { ConfigurationError } from "@jaypie/errors";
-
 import { CDK } from "./constants";
 import {
   BuildSecretContext,
@@ -61,6 +59,7 @@ export interface JaypieEnvSecretProps extends JaypieSecretProps {
  * JaypieSecret and will be removed in 2.0.
  */
 export class JaypieEnvSecret extends JaypieSecret {
+  protected static readonly className: string = "JaypieEnvSecret";
   protected static readonly shorthandPrefix: string = "EnvSecret_";
 
   constructor(
@@ -100,18 +99,6 @@ export class JaypieEnvSecret extends JaypieSecret {
       exportName = cleanName(exportParam);
     }
 
-    if (
-      !consumer &&
-      envKey &&
-      !process.env[envKey] &&
-      value === undefined &&
-      !generateSecretString
-    ) {
-      throw new ConfigurationError(
-        `JaypieEnvSecret(${id}): envKey "${envKey}" is empty in process.env and no value or generateSecretString was provided`,
-      );
-    }
-
     if (consumer) {
       const secretName = Fn.importValue(exportName);
       const secret = secretsmanager.Secret.fromSecretNameV2(
@@ -130,6 +117,8 @@ export class JaypieEnvSecret extends JaypieSecret {
 
     const secretValue =
       envKey && process.env[envKey] ? process.env[envKey] : value;
+
+    this.assertSecretValue(context, secretValue);
 
     const secret = new secretsmanager.Secret(this, id, {
       generateSecretString,

@@ -267,17 +267,16 @@ export default config;
 
 Without this, the Lambda returns a JSON envelope instead of streamed HTML because Lambda's `RESPONSE_STREAM` invoke mode requires the OpenNext streaming wrapper.
 
-## JaypieEnvSecret
+## JaypieSecret
 
-Secret reference for Lambda injection. Supports `removalPolicy` as `boolean` (`true` = RETAIN, `false` = DESTROY) or CDK `RemovalPolicy`.
+Secret reference for Lambda injection. Reads `process.env[envKey]`, an explicit `value`, or `generateSecretString`. Supports `removalPolicy` as `boolean` (`true` = RETAIN, `false` = DESTROY) or CDK `RemovalPolicy`.
 
 ```typescript
-import { JaypieEnvSecret, JaypieLambda } from "@jaypie/constructs";
+import { JaypieSecret, JaypieLambda } from "@jaypie/constructs";
 import { isProductionEnv } from "@jaypie/kit";
 
-const mongoSecret = new JaypieEnvSecret(this, "MongoSecret", {
-  secretName: "prod/mongodb-uri",
-  envName: "MONGODB_URI",
+const mongoSecret = new JaypieSecret(this, "MongoSecret", {
+  envKey: "MONGODB_URI",
   removalPolicy: isProductionEnv(),
 });
 
@@ -285,6 +284,32 @@ new JaypieLambda(this, "Api", {
   secrets: [mongoSecret],
 });
 // Lambda has SECRET_MONGODB_URI env var
+```
+
+A SCREAMING_SNAKE_CASE construct id is shorthand for the `envKey`, so `new JaypieSecret(this, "MONGODB_URI")` is equivalent to the call above.
+
+### Empty Secret Guard
+
+Synth throws `ConfigurationError` whenever a declared secret source produces no secret string, so a blank credential never defers to runtime. A source is declared by `envKey` or by passing a `value` key, and an empty string counts as empty.
+
+```typescript
+new JaypieSecret(this, "ApiKey", { value: process.env.MISSING }); // throws
+new JaypieSecret(this, "ApiKey", { envKey: "MISSING" });          // throws
+new JaypieSecret(this, "Placeholder");                            // empty secret
+```
+
+## JaypieEnvSecret
+
+Extends `JaypieSecret` with an environment-driven provider/consumer pattern for sharing secrets across stacks. Accepted anywhere a `JaypieSecret` is. Deprecated; removed in 2.0. The empty secret guard applies, except in consumer environments, where the secret is imported rather than created.
+
+```typescript
+import { JaypieEnvSecret } from "@jaypie/constructs";
+
+// Sandbox stack provides the secret
+new JaypieEnvSecret(this, "MONGODB_URI", { provider: true });
+
+// Personal build consumes it
+new JaypieEnvSecret(this, "MONGODB_URI");
 ```
 
 ## Stack Classes

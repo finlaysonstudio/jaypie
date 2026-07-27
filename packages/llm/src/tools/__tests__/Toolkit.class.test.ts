@@ -637,5 +637,89 @@ describe("Toolkit", () => {
       const props = params.properties as JsonObject;
       expect(props.__Explanation).toBeDefined();
     });
+
+    it("omits readOnly from the provider-facing tool definition", () => {
+      const toolkit = new Toolkit([{ ...mockTool, readOnly: true }]);
+
+      expect(toolkit.tools[0]).not.toHaveProperty("readOnly");
+    });
+  });
+
+  describe("filter", () => {
+    const readTool: LlmTool = {
+      ...mockTool,
+      name: "readTool",
+      readOnly: true,
+    };
+    const writeTool: LlmTool = { ...mockTool, name: "writeTool" };
+
+    it("returns only read-only tools", () => {
+      const toolkit = new Toolkit([readTool, writeTool]);
+      const filtered = toolkit.filter({ readOnly: true });
+
+      expect(filtered).toBeInstanceOf(Toolkit);
+      expect(filtered.tools.map((tool) => tool.name)).toEqual(["readTool"]);
+    });
+
+    it("returns the complement when readOnly is false", () => {
+      const toolkit = new Toolkit([readTool, writeTool]);
+      const filtered = toolkit.filter({ readOnly: false });
+
+      expect(filtered.tools.map((tool) => tool.name)).toEqual(["writeTool"]);
+    });
+
+    it("excludes unannotated tools from the read-only set", () => {
+      const toolkit = new Toolkit([
+        { ...mockTool, name: "explicitFalse", readOnly: false },
+        writeTool,
+      ]);
+
+      expect(toolkit.filter({ readOnly: true }).tools).toBeArrayOfSize(0);
+    });
+
+    it("accepts a predicate function", () => {
+      const toolkit = new Toolkit([readTool, writeTool]);
+      const filtered = toolkit.filter((tool) => tool.name === "writeTool");
+
+      expect(filtered.tools.map((tool) => tool.name)).toEqual(["writeTool"]);
+    });
+
+    it("returns all tools when no criteria are provided", () => {
+      const toolkit = new Toolkit([readTool, writeTool]);
+
+      expect(toolkit.filter().tools).toBeArrayOfSize(2);
+    });
+
+    it("preserves toolkit options", () => {
+      const toolkit = new Toolkit([readTool], { explain: true, log: false });
+      const filtered = toolkit.filter({ readOnly: true });
+
+      const params = filtered.tools[0].parameters as JsonObject;
+      const props = params.properties as JsonObject;
+      expect(props.__Explanation).toBeDefined();
+    });
+
+    it("does not mutate the source toolkit", async () => {
+      const toolkit = new Toolkit([readTool, writeTool]);
+      const filtered = toolkit.filter({ readOnly: true });
+      filtered.extend([{ ...mockTool, name: "addedTool", readOnly: true }]);
+
+      expect(toolkit.tools).toBeArrayOfSize(2);
+      await expect(
+        toolkit.call({ name: "addedTool", arguments: "{}" }),
+      ).rejects.toThrow("Tool 'addedTool' not found");
+    });
+
+    it("calls through to the original tool implementation", async () => {
+      const call = vi.fn().mockResolvedValue("read-result");
+      const toolkit = new Toolkit([{ ...readTool, call }, writeTool]);
+
+      const result = await toolkit
+        .filter({ readOnly: true })
+        .call({ name: "readTool", arguments: '{"testParam":"a"}' });
+
+      expect(call).toHaveBeenCalledWith({ testParam: "a" });
+      expect(result).toBe("read-result");
+    });
   });
 });

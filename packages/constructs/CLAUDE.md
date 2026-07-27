@@ -426,6 +426,8 @@ new JaypieSecret(this, "DbPassword", {
 
 `JaypieEnvSecret` extends `JaypieSecret` and is accepted anywhere a `JaypieSecret` is (including `JaypieLambda` `secrets`). `JaypieEnvSecret` is deprecated and will be removed in 2.0.
 
+Synth throws `ConfigurationError` whenever a declared secret source produces no secret string, so a blank credential never defers to runtime. A source is declared by `envKey` or by passing a `value` key, and an empty string counts as empty — `{ value: process.env.MISSING }` fails at synth. A construct with no declared source still creates an empty secret, preserving the placeholder pattern. `JaypieEnvSecret` skips the guard in consumer environments, where the secret is imported.
+
 ### Lambda with Non-Secret Variables
 
 Lambda caps all environment variables at 4KB combined. `variables` stores

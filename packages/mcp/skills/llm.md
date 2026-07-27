@@ -169,9 +169,9 @@ const toolkit = new JaypieToolkit();
 ### Fabric Services as Tools
 
 ```typescript
-import { fabricLlmTool } from "@jaypie/fabric";
+import { fabricTool } from "@jaypie/fabric/llm";
 
-const greetTool = fabricLlmTool(greetService);
+const { tool: greetTool } = fabricTool({ service: greetService });
 const toolkit = new Toolkit([greetTool]);
 ```
 
@@ -219,6 +219,27 @@ The resolved message surfaces in three places during `operate()`/`stream()`:
 - The `tool_call` progress event as `tool.message` (`operate()` only)
 
 Resolve one directly with `toolkit.resolveMessage({ name, arguments })` — returns the resolved string, or `undefined` when the tool is missing or defines no message; it never throws.
+
+### Read-Only Tools
+
+Tools may declare `readOnly: true` (mirroring MCP's `readOnlyHint`) to state they carry no side effects. `toolkit.filter()` derives a new Toolkit from the annotation, so a verification or critique pass can re-run `operate()` against facts without repeating side effects:
+
+```typescript
+const toolkit = new Toolkit([
+  { name: "search_docs", readOnly: true, /* ... */ },
+  { name: "post_message", /* ... */ },
+]);
+
+const verification = toolkit.filter({ readOnly: true }); // search_docs only
+const effectful = toolkit.filter({ readOnly: false });   // post_message only
+const custom = toolkit.filter((tool) => tool.name.startsWith("search_"));
+```
+
+- A tool is side-effecting unless annotated, so new tools stay excluded from the read-only set by default
+- The derived Toolkit shares the same tool implementations and inherits `explain`/`log`; extending either toolkit leaves the other unchanged
+- `readOnly` never reaches the provider payload
+- The built-in tools (`random`, `roll`, `time`, `weather`) are annotated read-only
+- `fabricService({ readOnly: true })` propagates through `fabricTool` to the tool; `fabricTool({ readOnly })` overrides the service
 
 ## Structured Output
 

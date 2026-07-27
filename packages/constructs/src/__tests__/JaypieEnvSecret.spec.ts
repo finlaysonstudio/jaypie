@@ -359,4 +359,45 @@ describe("JaypieSecret", () => {
       }).not.toThrow();
     });
   });
+
+  describe("Issue #447: value form silently synthesizes a blank secret", () => {
+    it("throws ConfigurationError when value is explicitly undefined", () => {
+      delete process.env.MISSING_SECRET;
+      const stack = new Stack();
+      expect(() => {
+        new JaypieEnvSecret(stack, "GoogleApiKey", {
+          provider: true,
+          value: process.env.MISSING_SECRET,
+        });
+      }).toThrow(ConfigurationError);
+    });
+
+    it("throws ConfigurationError when value is an empty string", () => {
+      process.env.EMPTY_SECRET = "";
+      const stack = new Stack();
+      expect(() => {
+        new JaypieEnvSecret(stack, "GoogleApiKey", {
+          value: process.env.EMPTY_SECRET,
+        });
+      }).toThrow(ConfigurationError);
+      delete process.env.EMPTY_SECRET;
+    });
+
+    it("does not throw when consumer imports the secret", () => {
+      const stack = new Stack();
+      expect(() => {
+        new JaypieEnvSecret(stack, "GoogleApiKey", {
+          consumer: true,
+          value: undefined,
+        });
+      }).not.toThrow();
+    });
+
+    it("does not throw when no source is declared", () => {
+      const stack = new Stack();
+      expect(() => {
+        new JaypieEnvSecret(stack, "Placeholder", { provider: true });
+      }).not.toThrow();
+    });
+  });
 });

@@ -53,6 +53,11 @@ export type {
 export { LlmStreamChunkType } from "./types/LlmStreamChunk.interface.js";
 
 export { JaypieToolkit, toolkit, Toolkit, tools } from "./tools/index.js";
+export type {
+  ToolkitFilter,
+  ToolkitFilterCriteria,
+  ToolkitOptions,
+} from "./tools/Toolkit.class.js";
 
 // Errors
 export {

@@ -179,6 +179,7 @@ const response = await Llm.operate("What's the weather in NYC?", {
 | `description` | `string` | What the tool does |
 | `parameters` | `JSONSchema \| ZodSchema` | Input schema |
 | `call` | `Function` | Implementation function |
+| `readOnly` | `boolean` | Declares the tool free of side effects |
 
 ### Zod Schema
 
@@ -199,6 +200,27 @@ const toolkit = new Toolkit([
   },
 ]);
 ```
+
+### Read-Only Tools
+
+Tools may declare `readOnly: true` (mirroring MCP's `readOnlyHint`) to state they carry no side effects. `filter` derives a new Toolkit from the annotation, so a verification or critique pass can check facts without repeating side effects.
+
+```typescript
+const toolkit = new Toolkit([
+  { name: "search_docs", readOnly: true, /* ... */ },
+  { name: "post_message", /* ... */ },
+]);
+
+const verification = toolkit.filter({ readOnly: true }); // search_docs only
+const effectful = toolkit.filter({ readOnly: false });   // post_message only
+const custom = toolkit.filter((tool) => tool.name.startsWith("search_"));
+```
+
+- Tools are side-effecting unless annotated, so new tools stay excluded from the read set by default
+- The derived Toolkit shares the same tool implementations and inherits `explain` and `log`; extending either toolkit leaves the other unchanged
+- `readOnly` never reaches the provider payload
+- The built-in tools (`random`, `roll`, `time`, `weather`) are annotated read-only
+- `fabricService({ readOnly: true })` propagates through `fabricTool` to the tool
 
 ### Explain Mode
 

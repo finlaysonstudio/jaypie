@@ -349,6 +349,20 @@ const llm = new Llm({ toolkit });
 const response = await llm.ask("What's the weather in Tokyo?");
 ```
 
+### Read-Only Tools
+
+Declare `readOnly: true` on a service with no side effects. The annotation reaches `LlmTool.readOnly`, so `toolkit.filter({ readOnly: true })` derives a toolkit safe for verification passes. `fabricTool({ readOnly })` overrides the service.
+
+```typescript
+const searchHandler = fabricService({
+  alias: "search_docs",
+  description: "Search the documentation",
+  input: { query: { type: String } },
+  readOnly: true,
+  service: async ({ query }) => findDocuments(query),
+});
+```
+
 ### Type Mapping
 
 | Fabric Type | JSON Schema |

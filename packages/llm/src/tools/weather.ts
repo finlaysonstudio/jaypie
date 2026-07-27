@@ -39,6 +39,7 @@ export const weather: LlmTool = {
     },
     required: ["latitude", "location", "longitude"],
   },
+  readOnly: true,
   type: "function",
   call: async ({
     latitude = 42.051554533384866,
