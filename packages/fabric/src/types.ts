@@ -139,6 +139,11 @@ export interface ServiceConfig<
   alias?: string;
   description?: string;
   input?: Record<string, InputFieldDefinition>;
+  /**
+   * Declares the service free of side effects. Adapters surface it as a
+   * transport-native annotation (`LlmTool.readOnly` via `fabricTool`).
+   */
+  readOnly?: boolean;
   /** Runs after service - can transform output */
   serializer?: SerializerFunction<TInput, TOutput, TSerializedOutput>;
   service?: ServiceFunction<TInput, TOutput>;

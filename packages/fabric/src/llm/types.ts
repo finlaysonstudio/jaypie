@@ -49,6 +49,8 @@ export interface FabricToolConfig {
   onFatal?: OnFatalCallback;
   /** Callback for receiving messages from service */
   onMessage?: OnMessageCallback;
+  /** Declares the tool free of side effects (defaults to service.readOnly) */
+  readOnly?: boolean;
   /** The service - either a pre-instantiated Service or an inline function */
   service: Service | ServiceFunction<Record<string, unknown>, unknown>;
 }
@@ -67,6 +69,8 @@ export interface LlmTool {
       ) => Promise<string> | string);
   name: string;
   parameters: Record<string, unknown>;
+  /** Declares the tool free of side effects (mirrors MCP's readOnlyHint) */
+  readOnly?: boolean;
   type: "function" | string;
 }
 

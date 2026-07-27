@@ -37,7 +37,7 @@ Define once, use as LLM tool, MCP tool, Lambda handler, or CLI command:
 
 ```typescript
 import { fabricService } from "@jaypie/fabric";
-import { fabricLlmTool } from "@jaypie/fabric";
+import { fabricTool } from "@jaypie/fabric/llm";
 import { Toolkit } from "@jaypie/llm";
 
 const orderService = fabricService({
@@ -50,13 +50,14 @@ const orderService = fabricService({
       description: "Order ID to look up",
     },
   },
+  readOnly: true,
   service: async ({ orderId }) => {
     return getOrder(orderId);
   },
 });
 
 // As LLM tool
-const toolkit = new Toolkit([fabricLlmTool(orderService)]);
+const toolkit = new Toolkit([fabricTool({ service: orderService }).tool]);
 
 // As MCP tool
 fabricMcp({ service: orderService, server });
@@ -118,12 +119,12 @@ export const listOrdersService = fabricService({
 
 ```typescript
 import Llm, { Toolkit } from "@jaypie/llm";
-import { fabricLlmTool } from "@jaypie/fabric";
+import { fabricTool } from "@jaypie/fabric/llm";
 import { getOrderService, listOrdersService } from "./tools/order.js";
 
 const toolkit = new Toolkit([
-  fabricLlmTool(getOrderService),
-  fabricLlmTool(listOrdersService),
+  fabricTool({ service: getOrderService }).tool,
+  fabricTool({ service: listOrdersService }).tool,
 ]);
 
 const response = await Llm.operate("Find all pending orders", {

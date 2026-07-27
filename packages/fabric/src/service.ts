@@ -343,6 +343,7 @@ export function fabricService<
   if (config.description !== undefined)
     typedHandler.description = config.description;
   if (config.input !== undefined) typedHandler.input = config.input;
+  if (config.readOnly !== undefined) typedHandler.readOnly = config.readOnly;
   if (config.serializer !== undefined)
     typedHandler.serializer = config.serializer;
   if (config.service !== undefined) typedHandler.service = config.service;

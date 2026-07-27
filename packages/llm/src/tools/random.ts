@@ -51,6 +51,7 @@ export const random: LlmTool = {
     },
     required: [],
   },
+  readOnly: true,
   type: "function",
   call: (options) => {
     const rng = randomUtil();

@@ -18,6 +18,7 @@ export const roll: LlmTool = {
     },
     required: ["number", "sides"],
   },
+  readOnly: true,
   type: "function",
   call: ({ number = 1, sides = 6 } = {}): {
     rolls: number[];

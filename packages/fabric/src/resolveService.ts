@@ -22,6 +22,8 @@ export interface ResolveServiceConfig<
   description?: string;
   /** Input field definitions */
   input?: Record<string, InputFieldDefinition>;
+  /** Declares the service free of side effects */
+  readOnly?: boolean;
   /** Serializer function - runs after service */
   serializer?: SerializerFunction<TInput, TOutput, TSerializedOutput>;
   /** The service - either a pre-instantiated Service or an inline function */
@@ -72,7 +74,7 @@ export function resolveService<
 >(
   config: ResolveServiceConfig<TInput, TOutput, TSerializedOutput>,
 ): Service<TInput, TOutput, TSerializedOutput> {
-  const { alias, description, input, serializer, service } = config;
+  const { alias, description, input, readOnly, serializer, service } = config;
 
   if (isService<TInput, TOutput, TSerializedOutput>(service)) {
     // Service is pre-instantiated - config fields act as overrides
@@ -81,6 +83,7 @@ export function resolveService<
       alias: alias ?? service.alias,
       description: description ?? service.description,
       input: input ?? service.input,
+      readOnly: readOnly ?? service.readOnly,
       serializer: serializer ?? service.serializer,
       service: service.service,
     });
@@ -91,6 +94,7 @@ export function resolveService<
     alias,
     description,
     input,
+    readOnly,
     serializer,
     service,
   });

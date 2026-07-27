@@ -71,10 +71,24 @@ const server = FabricMcpServer({
 ### LLM Tool
 
 ```typescript
-import { fabricLlmTool } from "@jaypie/fabric";
+import { fabricTool } from "@jaypie/fabric/llm";
 
-const tools = [fabricLlmTool(greetService)];
+const { tool } = fabricTool({ service: greetService });
+const tools = [tool];
 // Available to LLM as function call
+```
+
+Declare `readOnly: true` on a service (or on the `fabricTool` config) when it
+has no side effects. The annotation reaches `LlmTool.readOnly`, so
+`toolkit.filter({ readOnly: true })` derives a toolkit safe for verification
+passes. See `skill("llm")`.
+
+```typescript
+const searchService = fabricService({
+  alias: "search",
+  readOnly: true,
+  service: ({ query }) => findDocuments(query),
+});
 ```
 
 ### Express Middleware

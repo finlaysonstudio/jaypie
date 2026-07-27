@@ -142,6 +142,7 @@ const handler = fabricService({
       validate: (v) => v > 0, // Optional: function, RegExp, or array
     },
   },
+  readOnly: true,             // Optional: declares the service free of side effects
   service: (input, context) => input.fieldName * 2,
   serializer: ({ input, output }, context) => {
     // Runs after service - can transform output
@@ -455,6 +456,11 @@ export { fabricTool } from "./fabricTool.js";
 export { inputToJsonSchema } from "./inputToJsonSchema.js";
 export type { FabricToolConfig, FabricToolResult, LlmTool, OnCompleteCallback, OnErrorCallback, OnFatalCallback, OnMessageCallback } from "./types.js";
 ```
+
+`fabricTool` carries `readOnly` onto the tool: `fabricService({ readOnly: true })`
+propagates through, and `fabricTool({ readOnly })` overrides the service. The
+annotation drives `Toolkit.filter({ readOnly: true })` in `@jaypie/llm`, which
+derives a side-effect-free toolkit for verification passes.
 
 ### WebSocket Export (`@jaypie/fabric/websocket`)
 

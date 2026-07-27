@@ -23,6 +23,17 @@ export interface ToolkitOptions {
   log?: boolean | LogFunction;
 }
 
+export interface ToolkitFilterCriteria {
+  /**
+   * `true` keeps only tools annotated `readOnly: true`; `false` keeps the
+   * complement, every tool not annotated read-only.
+   */
+  readOnly?: boolean;
+}
+
+export type ToolkitFilter =
+  ToolkitFilterCriteria | ((tool: LlmTool) => boolean);
+
 export class Toolkit {
   private readonly _tools: LlmTool[];
   private readonly _options: ToolkitOptions;
@@ -41,6 +52,7 @@ export class Toolkit {
       const toolCopy: any = { ...tool };
       delete toolCopy.call;
       delete toolCopy.message;
+      delete toolCopy.readOnly;
 
       // Convert Zod schema to JSON Schema if needed
       if (toolCopy.parameters instanceof z.ZodType) {
@@ -167,6 +179,31 @@ export class Toolkit {
     }
 
     return await resolveValue(tool.call(parsedArgs));
+  }
+
+  /**
+   * Derive a new Toolkit from a subset of these tools. The tools themselves are
+   * shared, so the derived toolkit calls the same implementations; extending
+   * either toolkit leaves the other unchanged.
+   *
+   * @example
+   * ```typescript
+   * // Verification pass: check facts without repeating side effects
+   * const verification = toolkit.filter({ readOnly: true });
+   * ```
+   */
+  filter(criteria: ToolkitFilter = {}): Toolkit {
+    const predicate =
+      typeof criteria === "function"
+        ? criteria
+        : (tool: LlmTool): boolean =>
+            criteria.readOnly === undefined ||
+            (tool.readOnly === true) === criteria.readOnly;
+
+    return new Toolkit(this._tools.filter(predicate), {
+      explain: this.explain,
+      log: this.log,
+    });
   }
 
   extend(

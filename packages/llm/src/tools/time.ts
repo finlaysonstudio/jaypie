@@ -15,6 +15,7 @@ export const time: LlmTool = {
     },
     required: [],
   },
+  readOnly: true,
   type: "function",
   call: ({ date } = {}) => {
     if (typeof date === "number" || typeof date === "string") {

@@ -55,6 +55,7 @@ export function fabricTool(config: FabricToolConfig): FabricToolResult {
     onError,
     onFatal,
     onMessage,
+    readOnly,
     service: serviceOrFunction,
   } = config;
 
@@ -63,6 +64,7 @@ export function fabricTool(config: FabricToolConfig): FabricToolResult {
     alias,
     description,
     input,
+    readOnly,
     service: serviceOrFunction,
   });
 
@@ -151,6 +153,11 @@ export function fabricTool(config: FabricToolConfig): FabricToolResult {
   // Add message if provided
   if (message !== undefined) {
     tool.message = message;
+  }
+
+  // Annotate side-effect-free tools so verification passes can filter for them
+  if (service.readOnly !== undefined) {
+    tool.readOnly = service.readOnly;
   }
 
   return { tool };

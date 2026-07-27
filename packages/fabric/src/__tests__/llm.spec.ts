@@ -840,5 +840,62 @@ describe("LLM Adapter", () => {
         expect(originalService.description).toBe("Foo service");
       });
     });
+
+    describe("readOnly annotation", () => {
+      it("omits readOnly when the service does not declare it", () => {
+        const { tool } = fabricTool({
+          alias: "write",
+          service: () => "done",
+        });
+
+        expect(tool).not.toHaveProperty("readOnly");
+      });
+
+      it("passes readOnly through from the service config", () => {
+        const service = fabricService({
+          alias: "lookup",
+          readOnly: true,
+          service: () => "result",
+        });
+
+        expect(service.readOnly).toBe(true);
+        expect(fabricTool({ service }).tool.readOnly).toBe(true);
+      });
+
+      it("preserves readOnly when overrides rebuild the service", () => {
+        const service = fabricService({
+          alias: "lookup",
+          readOnly: true,
+          service: () => "result",
+        });
+
+        const { tool } = fabricTool({ alias: "renamed", service });
+
+        expect(tool.name).toBe("renamed");
+        expect(tool.readOnly).toBe(true);
+      });
+
+      it("accepts readOnly directly on the tool config", () => {
+        const { tool } = fabricTool({
+          alias: "lookup",
+          readOnly: true,
+          service: () => "result",
+        });
+
+        expect(tool.readOnly).toBe(true);
+      });
+
+      it("allows the tool config to override the service annotation", () => {
+        const service = fabricService({
+          alias: "lookup",
+          readOnly: true,
+          service: () => "result",
+        });
+
+        expect(fabricTool({ readOnly: false, service }).tool.readOnly).toBe(
+          false,
+        );
+      });
+    });
   });
 });
