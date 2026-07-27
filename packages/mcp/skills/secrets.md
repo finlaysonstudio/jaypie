@@ -64,6 +64,18 @@ When the construct ID is a SCREAMING_SNAKE_CASE string (or matches an environmen
 
 If the shorthand env var is missing at deploy time and no `value` or `generateSecretString` is provided, construction throws `ConfigurationError`. Supply a `value` or `generateSecretString` when the env var may be absent.
 
+### Empty Secret Guard
+
+Synth fails fast whenever a declared secret source produces no secret string, so a blank credential never reaches runtime. A source is declared by `envKey` or by passing a `value` key, and an empty string counts as empty:
+
+```typescript
+new JaypieSecret(this, "ApiKey", { value: process.env.MISSING }); // throws ConfigurationError
+new JaypieSecret(this, "ApiKey", { envKey: "MISSING" });          // throws ConfigurationError
+new JaypieSecret(this, "Placeholder");                            // allowed: empty secret, no source declared
+```
+
+`JaypieEnvSecret` applies the same guard, except in consumer environments, where the secret is imported rather than created.
+
 ### CI/CD Setup
 
 Set secrets as environment variables in your deployment pipeline:

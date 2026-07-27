@@ -41,6 +41,7 @@ const external = [
   "aws-cdk-lib/aws-secretsmanager",
   "aws-cdk-lib/aws-sns",
   "aws-cdk-lib/aws-sqs",
+  "aws-cdk-lib/aws-ssm",
   "aws-cdk-lib/aws-sso",
   "aws-cdk-lib/aws-wafv2",
   "aws-cdk-lib/custom-resources",

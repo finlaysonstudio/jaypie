@@ -45,6 +45,10 @@ export class JaypieSecret extends Construct implements ISecret {
   // Subclasses override this to preserve their own naming conventions.
   protected static readonly shorthandPrefix: string = "Secret_";
 
+  // Class name used in configuration error messages. Subclasses override so
+  // the message names the construct the caller wrote.
+  protected static readonly className: string = "JaypieSecret";
+
   protected readonly _envKey?: string;
   protected readonly _secret: secretsmanager.ISecret;
 
@@ -78,6 +82,39 @@ export class JaypieSecret extends Construct implements ISecret {
   }
 
   /**
+   * Fails fast when a declared secret source produced no secret string, so a
+   * blank credential surfaces at synth instead of at runtime. A source is
+   * declared by `envKey` or by the props carrying a `value` key: passing
+   * `value: process.env.MISSING` is a declaration even though it resolves to
+   * undefined. Constructs with no declared source create an empty secret as
+   * before (issue #447).
+   */
+  protected assertSecretValue(
+    context: BuildSecretContext,
+    secretValue?: string,
+  ): void {
+    const { envKey, id, props } = context;
+
+    if (secretValue || props.generateSecretString) {
+      return;
+    }
+
+    const label = (this.constructor as typeof JaypieSecret).className;
+
+    if (envKey) {
+      throw new ConfigurationError(
+        `${label}(${id}): envKey "${envKey}" is empty in process.env and no value or generateSecretString was provided`,
+      );
+    }
+
+    if (Object.prototype.hasOwnProperty.call(props, "value")) {
+      throw new ConfigurationError(
+        `${label}(${id}): value is empty and no envKey or generateSecretString was provided`,
+      );
+    }
+  }
+
+  /**
    * Builds the underlying secret. The base implementation always creates a new
    * Secrets Manager secret from an envKey value, an explicit value, or a
    * generated string. Subclasses may override to import an existing secret or
@@ -88,19 +125,10 @@ export class JaypieSecret extends Construct implements ISecret {
     const { generateSecretString, removalPolicy, roleTag, vendorTag, value } =
       props;
 
-    if (
-      envKey &&
-      !process.env[envKey] &&
-      value === undefined &&
-      !generateSecretString
-    ) {
-      throw new ConfigurationError(
-        `JaypieSecret(${id}): envKey "${envKey}" is empty in process.env and no value or generateSecretString was provided`,
-      );
-    }
-
     const secretValue =
       envKey && process.env[envKey] ? process.env[envKey] : value;
+
+    this.assertSecretValue(context, secretValue);
 
     const secret = new secretsmanager.Secret(this, id, {
       generateSecretString,
