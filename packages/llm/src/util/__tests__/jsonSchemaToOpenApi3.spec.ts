@@ -99,6 +99,105 @@ describe("jsonSchemaToOpenApi3", () => {
     expect(pages.items.required).toEqual(["pageNumber", "extractedText"]);
   });
 
+  it("recursively converts anyOf branches", () => {
+    const result = jsonSchemaToOpenApi3({
+      type: "object",
+      properties: {
+        totals: {
+          anyOf: [
+            {
+              type: "object",
+              properties: { amount: { type: "number" } },
+              required: ["amount"],
+              additionalProperties: false,
+            },
+            { type: "null" },
+          ],
+        },
+      },
+      required: ["totals"],
+      additionalProperties: false,
+    });
+
+    const totals = (result.properties as any).totals;
+    expect(totals.anyOf[0].additionalProperties).toBeUndefined();
+    expect(totals.anyOf[0].type).toBe("object");
+    expect(totals.anyOf[0].required).toEqual(["amount"]);
+    expect(totals.anyOf[1]).toEqual({ type: "null" });
+  });
+
+  it("recursively converts oneOf branches", () => {
+    const result = jsonSchemaToOpenApi3({
+      oneOf: [
+        {
+          type: "object",
+          properties: { kind: { type: "string" } },
+          additionalProperties: false,
+        },
+        { type: "null" },
+      ],
+    });
+
+    expect((result.oneOf as any)[0].additionalProperties).toBeUndefined();
+    expect((result.oneOf as any)[0].type).toBe("object");
+  });
+
+  it("recursively converts allOf branches", () => {
+    const result = jsonSchemaToOpenApi3({
+      allOf: [
+        {
+          type: "object",
+          properties: { kind: { type: "string" } },
+          additionalProperties: false,
+        },
+      ],
+    });
+
+    expect((result.allOf as any)[0].additionalProperties).toBeUndefined();
+    expect((result.allOf as any)[0].type).toBe("object");
+  });
+
+  it("recursively converts nested combinator branches", () => {
+    const result = jsonSchemaToOpenApi3({
+      type: "object",
+      properties: {
+        entries: {
+          anyOf: [
+            {
+              type: "array",
+              items: {
+                anyOf: [
+                  {
+                    type: "object",
+                    properties: { id: { type: "string" } },
+                    additionalProperties: false,
+                  },
+                  { type: "null" },
+                ],
+              },
+            },
+            { type: "null" },
+          ],
+        },
+      },
+      additionalProperties: false,
+    });
+
+    const entries = (result.properties as any).entries;
+    expect(
+      entries.anyOf[0].items.anyOf[0].additionalProperties,
+    ).toBeUndefined();
+    expect(entries.anyOf[0].items.anyOf[0].type).toBe("object");
+  });
+
+  it("leaves non-schema combinator entries as-is", () => {
+    const result = jsonSchemaToOpenApi3({
+      anyOf: ["not-a-schema", 42, null],
+    });
+
+    expect(result.anyOf).toEqual(["not-a-schema", 42, null]);
+  });
+
   it("preserves required, type, enum, description", () => {
     const result = jsonSchemaToOpenApi3({
       type: "object",
