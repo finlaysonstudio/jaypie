@@ -283,6 +283,54 @@ describe("GoogleAdapter", () => {
         ).toBeUndefined();
       });
 
+      it("strips additionalProperties inside anyOf branches (issue #450)", () => {
+        const request: OperateRequest = {
+          model: PROVIDER.GOOGLE.MODEL.SMALL,
+          messages: [],
+          format: {
+            $schema: "https://json-schema.org/draft/2020-12/schema",
+            type: "object",
+            properties: {
+              totals: {
+                anyOf: [
+                  {
+                    type: "object",
+                    properties: { amount: { type: "number" } },
+                    required: ["amount"],
+                    additionalProperties: false,
+                  },
+                  { type: "null" },
+                ],
+              },
+            },
+            required: ["totals"],
+            additionalProperties: false,
+          },
+        };
+
+        const result = googleAdapter.buildRequest(request);
+
+        expect(result.config?.responseSchema).toEqual({
+          type: "object",
+          properties: {
+            totals: {
+              anyOf: [
+                {
+                  type: "object",
+                  properties: { amount: { type: "number" } },
+                  required: ["amount"],
+                },
+                { type: "null" },
+              ],
+            },
+          },
+          required: ["totals"],
+        });
+        expect(JSON.stringify(result.config?.responseSchema)).not.toContain(
+          "additionalProperties",
+        );
+      });
+
       describe("maxOutputTokens resolution (issue #402)", () => {
         it("defaults non-streaming requests to the non-streaming maximum", () => {
           const request: OperateRequest = {

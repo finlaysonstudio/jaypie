@@ -7,6 +7,10 @@ import { JsonObject } from "@jaypie/types";
  *
  * Strips: $schema, additionalProperties, $defs, $ref (inlines where possible), const
  * Preserves: type, properties, required, items, enum, description, nullable
+ *
+ * Recurses through properties, items, and the anyOf/oneOf/allOf combinator
+ * branches Zod emits for `.nullable()` and unions, so stripped keywords do not
+ * leak inside a branch.
  */
 export function jsonSchemaToOpenApi3(schema: JsonObject): JsonObject {
   if (typeof schema !== "object" || schema === null || Array.isArray(schema)) {
@@ -42,6 +46,15 @@ export function jsonSchemaToOpenApi3(schema: JsonObject): JsonObject {
       result[key] = convertedProps;
     } else if (key === "items" && typeof value === "object" && value !== null) {
       result[key] = jsonSchemaToOpenApi3(value as JsonObject);
+    } else if (
+      (key === "anyOf" || key === "oneOf" || key === "allOf") &&
+      Array.isArray(value)
+    ) {
+      result[key] = value.map((entry) =>
+        typeof entry === "object" && entry !== null && !Array.isArray(entry)
+          ? jsonSchemaToOpenApi3(entry as JsonObject)
+          : entry,
+      );
     } else {
       result[key] = value;
     }
