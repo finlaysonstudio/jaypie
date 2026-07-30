@@ -80,7 +80,21 @@ if (isJaypieError(error)) {
 
 // Create error from HTTP status code
 const error = jaypieErrorFromStatus(404, "User not found");
+
+// Omit the message for the generic strings of that status
+jaypieErrorFromStatus(500).detail;
+// "An unexpected error occurred and the request was unable to complete"
 ```
+
+`jaypieErrorFromStatus` covers every status carried by an error class in this
+package (400, 401, 403, 404, 405, 409, 410, 418, 429, 500, 502, 503, 504). An
+unmapped 4xx falls to `BadRequestError`; anything else falls to `InternalError`.
+
+`@jaypie/kit`'s handler uses the no-message form to scrub a caught error's
+`detail` and `title`, and only substitutes within the same status class, so an
+unmapped 4xx keeps its own status while carrying the bad request strings. Add a
+case when adding an error class with a new status, or that status answers with
+`BadRequestError`'s wording.
 
 ## Use in Other Packages
 
@@ -101,3 +115,6 @@ This package is foundational and used throughout the monorepo:
 - Use `isJaypieError()` to check before accessing Jaypie-specific properties
 - Prefer specific error types over generic `InternalError`
 - Custom messages are optional; defaults are user-friendly
+- A custom message is for the logs, not the caller. Handlers scrub `detail` and
+  `title` to the generic strings for the status before the error reaches a
+  response body

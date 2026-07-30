@@ -2,12 +2,14 @@ import { JAYPIE, log as publicLogger } from "./core.js";
 
 import {
   BadRequestError,
+  jaypieErrorFromStatus,
   UnavailableError,
   UnhandledError,
 } from "@jaypie/errors";
 
 import { envBoolean } from "./lib/functions.lib.js";
 import invokeChaos from "./lib/functions/invokeChaos.function.js";
+import HTTP from "./lib/http.lib.js";
 
 //
 //
@@ -28,7 +30,20 @@ interface JaypieHandlerOptions {
 }
 
 interface JaypieError extends Error {
+  detail?: string;
   isProjectError?: boolean;
+  status?: number;
+  title?: string;
+}
+
+//
+//
+// Helpers
+//
+
+// The leading digit of an HTTP status: 4 for client errors, 5 for server errors
+function errorClass(status: number): number {
+  return Math.floor(status / 100);
 }
 
 //
@@ -78,6 +93,43 @@ const jaypieHandler = (
     lib: JAYPIE.LIB.KIT,
   });
 
+  // Report a caught Jaypie error, then scrub it.
+  //
+  // Level follows status: 500-class is an infrastructure or application fault
+  // and logs at error so monitors filtering on error status see the outage;
+  // 4xx is a caller mistake and logs at warn.
+  //
+  // The error's own `detail` and `title` are logged and then replaced with the
+  // generic strings for its status, so whatever the application passed to the
+  // error constructor never reaches a response body. `message` and `stack` are
+  // left intact for logs and for handlers configured to rethrow.
+  const reportJaypieError = (error: JaypieError, message: string): void => {
+    const { detail, status, title } = error;
+
+    if (typeof status === "number" && status >= HTTP.CODE.INTERNAL_ERROR) {
+      log.error(message);
+    } else if (typeof status === "number" && status >= HTTP.CODE.BAD_REQUEST) {
+      log.warn(message);
+    } else {
+      log.debug(message);
+    }
+    log.var({ jaypieError: { detail, status, title } });
+
+    if (typeof status !== "number") {
+      return;
+    }
+    const generic = jaypieErrorFromStatus(status);
+    // An unmapped status resolves to the generic for its class: a 4xx to
+    // BadRequestError, anything else to InternalError. Scrub only when the
+    // substitute belongs to the same class, so a status outside 4xx/5xx is not
+    // described as an application fault
+    if (errorClass(generic.status) !== errorClass(status)) {
+      return;
+    }
+    error.detail = generic.detail;
+    error.title = generic.title;
+  };
+
   libLogger.trace("[jaypie] Handler init");
   return async (...args: unknown[]): Promise<unknown> => {
     libLogger.trace("[jaypie] Handler execution");
@@ -119,7 +171,10 @@ const jaypieHandler = (
     } catch (error) {
       // Log and re-throw
       if ((error as JaypieError).isProjectError) {
-        log.debug("[handler] Caught Jaypie error");
+        reportJaypieError(
+          error as JaypieError,
+          "[handler] Caught Jaypie error",
+        );
         throw error;
       } else {
         // otherwise, respond as unhandled
@@ -160,7 +215,10 @@ const jaypieHandler = (
     } catch (error) {
       // Log and re-throw
       if ((error as JaypieError).isProjectError) {
-        log.debug("[handler] Caught Jaypie error");
+        reportJaypieError(
+          error as JaypieError,
+          "[handler] Caught Jaypie error",
+        );
         throw error;
       } else {
         // otherwise, respond as unhandled
@@ -186,7 +244,10 @@ const jaypieHandler = (
               await teardownFunction(...args);
             } catch (error) {
               if ((error as JaypieError).isProjectError) {
-                log.debug("[handler] Teardown error");
+                reportJaypieError(
+                  error as JaypieError,
+                  "[handler] Teardown error",
+                );
               } else {
                 log.error("[handler] Unhandled teardown error");
                 log.var({ unhandedError: (error as Error).message });
