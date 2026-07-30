@@ -64,6 +64,7 @@ export default [
       "@jaypie/errors",
       "@jaypie/fabric",
       "@jaypie/fabric/mcp",
+      "@jaypie/kit",
       "@jaypie/tildeskill",
       "@modelcontextprotocol/sdk/server/mcp.js",
       "@modelcontextprotocol/sdk/server/stdio.js",

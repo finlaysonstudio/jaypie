@@ -2,7 +2,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { spyLog, restoreLog } from "@jaypie/testkit";
 
 import { log } from "../core.js";
-import { InternalError } from "@jaypie/errors";
+import {
+  BadRequestError,
+  ConfigurationError,
+  InternalError,
+  JaypieError,
+  NotFoundError,
+} from "@jaypie/errors";
 import HTTP from "../lib/http.lib.js";
 
 // Subject
@@ -89,7 +95,39 @@ describe("Jaypie Handler Module", () => {
       expect(log.error).not.toHaveBeenCalled();
       expect(log.fatal).not.toHaveBeenCalled();
     });
-    it("Logs debug if a Jaypie error is caught", async () => {
+    it("Logs warn if a 4xx Jaypie error is caught", async () => {
+      // Arrange
+      const handler = jaypieHandler(() => {
+        throw new BadRequestError("Sorpresa!");
+      });
+      // Act
+      try {
+        await handler();
+      } catch {
+        // Assert
+        expect(log.warn).toHaveBeenCalledTimes(1);
+        expect(log.debug).not.toHaveBeenCalled();
+        expect(log.error).not.toHaveBeenCalled();
+      }
+      expect.assertions(3);
+    });
+    it("Logs error if a 500-class Jaypie error is caught", async () => {
+      // Arrange
+      const handler = jaypieHandler(() => {
+        throw new ConfigurationError("Sorpresa!");
+      });
+      // Act
+      try {
+        await handler();
+      } catch {
+        // Assert
+        expect(log.error).toHaveBeenCalledTimes(1);
+        expect(log.debug).not.toHaveBeenCalled();
+        expect(log.warn).not.toHaveBeenCalled();
+      }
+      expect.assertions(3);
+    });
+    it("Logs the error detail, status, and title of a 500-class Jaypie error", async () => {
       // Arrange
       const handler = jaypieHandler(() => {
         throw new InternalError("Sorpresa!");
@@ -99,7 +137,204 @@ describe("Jaypie Handler Module", () => {
         await handler();
       } catch {
         // Assert
-        expect(log.debug).toHaveBeenCalledTimes(1);
+        expect(log.var).toHaveBeenCalledWith({
+          jaypieError: {
+            detail: "Sorpresa!",
+            status: HTTP.CODE.INTERNAL_ERROR,
+            title: expect.any(String),
+          },
+        });
+      }
+      expect.assertions(1);
+    });
+    it("Logs the error detail, status, and title of a 4xx Jaypie error", async () => {
+      // Arrange
+      const handler = jaypieHandler(() => {
+        throw new NotFoundError("User 12345 not found");
+      });
+      // Act
+      try {
+        await handler();
+      } catch {
+        // Assert
+        expect(log.var).toHaveBeenCalledWith({
+          jaypieError: {
+            detail: "User 12345 not found",
+            status: HTTP.CODE.NOT_FOUND,
+            title: "Not Found",
+          },
+        });
+      }
+      expect.assertions(1);
+    });
+    it("Logs error if a 500-class Jaypie error is caught during validate", async () => {
+      // Arrange
+      const handler = jaypieHandler(() => {}, {
+        validate: [
+          () => {
+            throw new ConfigurationError("Sorpresa!");
+          },
+        ],
+      });
+      // Act
+      try {
+        await handler();
+      } catch {
+        // Assert
+        expect(log.error).toHaveBeenCalledTimes(1);
+        expect(log.debug).not.toHaveBeenCalled();
+      }
+      expect.assertions(2);
+    });
+    it("Logs error if a 500-class Jaypie error is caught during teardown", async () => {
+      // Arrange
+      const handler = jaypieHandler(() => {}, {
+        teardown: [
+          () => {
+            throw new ConfigurationError("Sorpresa!");
+          },
+        ],
+      });
+      // Act
+      await handler();
+      // Assert
+      expect(log.error).toHaveBeenCalledTimes(1);
+      expect(log.debug).not.toHaveBeenCalled();
+    });
+    it("Replaces the detail and title of a caught Jaypie error with the generic strings for its status", async () => {
+      // Arrange
+      const handler = jaypieHandler(() => {
+        throw new ConfigurationError("Fabric model chat is not registered");
+      });
+      // Act
+      try {
+        await handler();
+      } catch (error) {
+        // Assert
+        const jaypieError = error as InstanceType<typeof ConfigurationError>;
+        expect(jaypieError.detail).toBe(
+          "An unexpected error occurred and the request was unable to complete",
+        );
+        expect(jaypieError.title).toBe("Internal Application Error");
+        expect(jaypieError.body()).toEqual({
+          errors: [
+            {
+              detail:
+                "An unexpected error occurred and the request was unable to complete",
+              status: HTTP.CODE.INTERNAL_ERROR,
+              title: "Internal Application Error",
+            },
+          ],
+        });
+      }
+      expect.assertions(3);
+    });
+    it("Replaces the detail and title of a caught 4xx Jaypie error", async () => {
+      // Arrange
+      const handler = jaypieHandler(() => {
+        throw new NotFoundError("User 12345 not found");
+      });
+      // Act
+      try {
+        await handler();
+      } catch (error) {
+        // Assert
+        const jaypieError = error as InstanceType<typeof NotFoundError>;
+        expect(jaypieError.detail).toBe("The requested resource was not found");
+        expect(jaypieError.title).toBe("Not Found");
+      }
+      expect.assertions(2);
+    });
+    it("Scrubs an unmapped 4xx to the bad request strings, keeping its status", async () => {
+      // Arrange
+      const handler = jaypieHandler(() => {
+        throw new JaypieError("Field ssn failed validation", {
+          status: 422,
+          title: "Unprocessable Entity",
+        });
+      });
+      // Act
+      try {
+        await handler();
+      } catch (error) {
+        // Assert
+        const jaypieError = error as JaypieError;
+        expect(jaypieError.status).toBe(422);
+        expect(jaypieError.detail).toBe(
+          "The request was not properly formatted",
+        );
+        expect(jaypieError.title).toBe("Bad Request");
+      }
+      expect.assertions(3);
+    });
+    it("Logs warn for an unmapped 4xx", async () => {
+      // Arrange
+      const handler = jaypieHandler(() => {
+        throw new JaypieError("Field ssn failed validation", { status: 422 });
+      });
+      // Act
+      try {
+        await handler();
+      } catch {
+        // Assert
+        expect(log.warn).toHaveBeenCalledTimes(1);
+        expect(log.error).not.toHaveBeenCalled();
+      }
+      expect.assertions(2);
+    });
+    it("Does not scrub a status outside 4xx and 5xx", async () => {
+      // Arrange
+      const handler = jaypieHandler(() => {
+        throw new JaypieError("Moved along", {
+          status: 302,
+          title: "Found",
+        });
+      });
+      // Act
+      try {
+        await handler();
+      } catch (error) {
+        // Assert
+        const jaypieError = error as JaypieError;
+        expect(jaypieError.detail).toBe("Moved along");
+        expect(jaypieError.title).toBe("Found");
+      }
+      expect.assertions(2);
+    });
+    it("Preserves the status, message, and stack of a scrubbed error", async () => {
+      // Arrange
+      const handler = jaypieHandler(() => {
+        throw new ConfigurationError("Fabric model chat is not registered");
+      });
+      // Act
+      try {
+        await handler();
+      } catch (error) {
+        // Assert
+        const jaypieError = error as InstanceType<typeof ConfigurationError>;
+        expect(jaypieError.status).toBe(HTTP.CODE.INTERNAL_ERROR);
+        expect(jaypieError.message).toBe("Fabric model chat is not registered");
+        expect(jaypieError.stack).toBeString();
+      }
+      expect.assertions(3);
+    });
+    it("Scrubs an error caught during validate", async () => {
+      // Arrange
+      const handler = jaypieHandler(() => {}, {
+        validate: [
+          () => {
+            throw new NotFoundError("Account 999 does not exist");
+          },
+        ],
+      });
+      // Act
+      try {
+        await handler();
+      } catch (error) {
+        // Assert
+        expect((error as InstanceType<typeof NotFoundError>).detail).toBe(
+          "The requested resource was not found",
+        );
       }
       expect.assertions(1);
     });

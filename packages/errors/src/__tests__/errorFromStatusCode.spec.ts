@@ -38,11 +38,38 @@ describe("errorFromStatusCode", () => {
       expect(jaypieErrorFromStatus(401).title).toBe("Service Unauthorized");
       expect(jaypieErrorFromStatus(403).title).toBe("Forbidden");
       expect(jaypieErrorFromStatus(404).title).toBe("Not Found");
+      expect(jaypieErrorFromStatus(405).title).toBe("Method Not Allowed");
       expect(jaypieErrorFromStatus(409).title).toBe("Conflict");
+      expect(jaypieErrorFromStatus(429).title).toBe("Too Many Requests");
       expect(jaypieErrorFromStatus(500).title).toBe(
         "Internal Application Error",
       );
       expect(jaypieErrorFromStatus(503).title).toBe("Service Unavailable");
+    });
+
+    it("preserves the status of every error class it maps", () => {
+      for (const status of [
+        400, 401, 403, 404, 405, 409, 410, 418, 429, 500, 502, 503, 504,
+      ]) {
+        expect(jaypieErrorFromStatus(status).status).toBe(status);
+      }
+    });
+
+    it("falls to BadRequestError for an unmapped 4xx", () => {
+      // An unmapped 4xx described as an InternalError would blame the
+      // application for a caller error
+      for (const status of [402, 406, 412, 415, 422, 451, 499]) {
+        const error = jaypieErrorFromStatus(status);
+        expect(error.status).toBe(400);
+        expect(error.title).toBe("Bad Request");
+        expect(error.detail).toBe("The request was not properly formatted");
+      }
+    });
+
+    it("falls to InternalError outside 4xx", () => {
+      for (const status of [200, 302, 501, 505, 999]) {
+        expect(jaypieErrorFromStatus(status).status).toBe(500);
+      }
     });
   });
 });

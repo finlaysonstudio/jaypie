@@ -154,9 +154,12 @@ fabricMcp({ service: greetService, server });
 
 All handlers catch errors and format responses:
 
-- **Jaypie errors** (`isProjectError: true`): Return error body, log at debug level
+- **Jaypie errors under 500** (`isProjectError: true`): Return error body, log at warn level
+- **Jaypie errors 500 and above**: Return error body, log at error level
 - **Unhandled errors**: Wrap in `UnhandledError`, log at fatal level
 - **With `throw: true`**: Re-throw instead of formatting (for custom handling)
+
+Every caught Jaypie error is logged as `log.var({ jaypieError: { detail, status, title } })` and then scrubbed: `detail` and `title` are replaced with the generic strings for the status, so a constructor message never reaches a response body. Do not use an error message to tell the caller anything — see `skill("logs")`.
 
 ```typescript
 import { NotFoundError, BadRequestError } from "jaypie";

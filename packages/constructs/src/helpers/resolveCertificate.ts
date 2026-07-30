@@ -18,6 +18,11 @@ export interface ResolveCertificateOptions {
   name?: string;
   /** Role tag for tagging (defaults to CDK.ROLE.API) */
   roleTag?: string;
+  /**
+   * Additional domain names the certificate must cover. Only used when
+   * certificate is true. Entries equal to `domainName` are ignored.
+   */
+  subjectAlternativeNames?: string[];
   /** Hosted zone for DNS validation (required if certificate is true) */
   zone: route53.IHostedZone;
 }
@@ -67,6 +72,7 @@ export function resolveCertificate(
     domainName,
     name = "Certificate",
     roleTag = CDK.ROLE.API,
+    subjectAlternativeNames = [],
     zone,
   } = options;
 
@@ -101,8 +107,22 @@ export function resolveCertificate(
     certificateCache.set(stack, stackCache);
   }
 
-  // Return cached certificate if one exists for this domain
-  const cached = stackCache.get(domainName);
+  // Alternative names beyond the primary domain, deduplicated and stable-ordered
+  const alternativeNames = subjectAlternativeNames.filter(
+    (alternativeName, index) =>
+      alternativeName !== domainName &&
+      subjectAlternativeNames.indexOf(alternativeName) === index,
+  );
+
+  // Cache key covers the full name set: two callers wanting the same primary
+  // domain with different alternative names need different certificates. The
+  // construct ID stays keyed on the primary domain only, so a caller adding
+  // alternative names updates the existing certificate resource rather than
+  // orphaning it — and two conflicting name sets collide loudly at synth.
+  const cacheKey = [domainName, ...alternativeNames].join(",");
+
+  // Return cached certificate if one exists for this name set
+  const cached = stackCache.get(cacheKey);
   if (cached) {
     return cached;
   }
@@ -113,12 +133,15 @@ export function resolveCertificate(
   const sanitizedDomain = sanitizeDomainForId(domainName);
   const cert = new acm.Certificate(stack, `${name}-${sanitizedDomain}`, {
     domainName,
+    ...(alternativeNames.length > 0
+      ? { subjectAlternativeNames: alternativeNames }
+      : {}),
     validation: acm.CertificateValidation.fromDns(zone),
   });
   Tags.of(cert).add(CDK.TAG.ROLE, roleTag);
 
   // Cache for future requests
-  stackCache.set(domainName, cert);
+  stackCache.set(cacheKey, cert);
 
   return cert;
 }

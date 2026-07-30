@@ -148,6 +148,66 @@ new JaypieApiGateway(this, "Gateway", {
 | `host` | `string` | Custom domain hostname |
 | `zone` | `string` | Route53 hosted zone |
 
+## JaypieDistribution
+
+CloudFront distribution over a Lambda Function URL or any origin, with ACM
+certificate, Route53 records, security headers, WAFv2, and access logging by
+default.
+
+```typescript
+import { JaypieDistribution, JaypieExpressLambda } from "@jaypie/constructs";
+
+const api = new JaypieExpressLambda(this, "Api", {
+  code: "../api/dist",
+  handler: "handler.handler",
+});
+
+new JaypieDistribution(this, "Distribution", {
+  handler: api,
+  host: "api.example.com",
+  zone: "example.com",
+});
+```
+
+### Multiple Hosts
+
+`host` accepts an array. The first entry is primary: it supplies
+`PROJECT_BASE_URL` and the certificate's `domainName`, and the rest become
+subject alternative names. Every entry gets an A and AAAA record, which serves a
+zero-downtime hostname cutover.
+
+```typescript
+new JaypieDistribution(this, "Distribution", {
+  handler: api,
+  host: ["api0.example.com", "api.example.com"],
+  zone: "example.com",
+  deleteExistingRecord: ["api.example.com"],
+});
+```
+
+`deleteExistingRecord` force-deletes a conflicting Route53 record before the
+alias is created. It accepts `true` (every host), a hostname, or an array of
+hostnames.
+
+:::caution
+With several hosts, name the hosts being reclaimed from another owner rather than
+passing `true`. `true` also force-deletes records this construct already owns,
+and CloudFormation does not recreate an otherwise-unchanged record, leaving that
+hostname dark until the next deploy that touches it.
+:::
+
+### Options
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `handler` | `IOrigin` \| `IFunctionUrl` \| `IFunction` | Origin; an `IFunction` gets a Function URL |
+| `host` | `string` \| `HostConfig` \| array of either | Domain name or names; first entry is primary |
+| `zone` | `string` \| `IHostedZone` | Route53 hosted zone |
+| `deleteExistingRecord` | `boolean` \| `string` \| `string[]` | Force-delete conflicting records |
+| `streaming` | `boolean` | Lambda response streaming |
+| `waf` | `boolean` \| `JaypieWafConfig` | WAFv2 WebACL (default enabled) |
+| `securityHeaders` | `boolean` \| overrides | Security response headers (default enabled) |
+
 ## JaypieWebDeploymentBucket
 
 Static site on S3 fronted by CloudFront, ACM, and Route53. Ships with default security headers, WAFv2, and CloudFront access logging — same override mechanisms as `JaypieDistribution` (`securityHeaders`, `responseHeadersPolicy`, `waf`, `logBucket`, `destination`). When `CDK_ENV_REPO` is set, also provisions a scoped GitHub OIDC deploy role with `cloudfront:CreateInvalidation` on the distribution.

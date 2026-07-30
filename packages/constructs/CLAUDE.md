@@ -171,6 +171,21 @@ new JaypieDistribution(this, "Distribution", {
 });
 ```
 
+#### Multiple Hosts
+
+`host` accepts a string, a `HostConfig`, or an array of either. The first entry is primary: it supplies `PROJECT_BASE_URL`, the certificate's `domainName`, and the un-suffixed DNS record construct IDs. Remaining entries become certificate subject alternative names. Every entry lands in `domainNames` and gets its own A and AAAA record. Duplicates collapse. `construct.hosts` exposes the resolved list; `construct.host` stays the primary.
+
+```typescript
+new JaypieDistribution(this, "Distribution", {
+  handler: api,
+  host: ["api0.example.com", "api.example.com"],
+  zone: "example.com",
+  deleteExistingRecord: ["api.example.com"], // reclaim only this name
+});
+```
+
+`deleteExistingRecord` accepts `true` (every host), a hostname, or an array of hostnames. With several hosts, name the hosts being reclaimed from another owner: `true` also force-deletes records this construct already owns, and CloudFormation does not recreate an otherwise-unchanged record, leaving that hostname dark until the next deploy that touches it.
+
 #### Service Attribution
 
 `serviceTag` (parallel to `roleTag`, matching `JaypieLambda`) attributes the distribution to a service. When set, the distribution is tagged with `CDK.TAG.SERVICE` (so metrics carry `service:<value>` instead of `service:N/A`) and the created access-log and WAF-log buckets are tagged with the same value, so the Datadog forwarder attributes their forwarded logs to the service instead of the generic `cloudfront`/source default. Omit to preserve current behavior; external/imported log buckets are not tagged.

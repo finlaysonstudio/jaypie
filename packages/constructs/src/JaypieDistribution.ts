@@ -33,6 +33,13 @@ const DEFAULT_MANAGED_RULES = [
 ];
 
 /**
+ * Reduces a hostname to characters legal in a CDK construct ID.
+ */
+function sanitizeHostForId(host: string): string {
+  return host.replace(/\./g, "-").replace(/[^a-zA-Z0-9-]/g, "");
+}
+
+/**
  * One entry in a `waf.allow` list. Names one or more URL paths and, for each
  * managed rule group key, the sub-rule names to flip from `block` to `count`
  * on that path set. See JaypieWafConfig.allow.
@@ -177,9 +184,23 @@ export interface JaypieDistributionProps extends Omit<
    * construct (e.g., JaypieApiGateway) that already owns the same hostname,
    * where the default CloudFormation create-before-delete ordering would
    * otherwise collide on the record name.
+   *
+   * - `true`: force-delete for every host
+   * - hostname or array of hostnames: force-delete only those hosts
+   *
+   * Naming hosts matters when serving several: pointing this at a host whose
+   * record this construct already owns deletes the live record without
+   * recreating it, because CloudFormation sees no change to the record itself.
+   * Name only the hosts being reclaimed from another owner.
+   *
    * @default false
+   *
+   * @example
+   * // Reclaim api. from an API Gateway custom domain while api0. keeps serving
+   * host: ["api0.example.com", "api.example.com"],
+   * deleteExistingRecord: ["api.example.com"],
    */
-  deleteExistingRecord?: boolean;
+  deleteExistingRecord?: boolean | string | string[];
   /**
    * Log destination configuration for CloudFront access logs
    * - LambdaDestination: Use a specific Lambda destination for S3 notifications
@@ -203,12 +224,16 @@ export interface JaypieDistributionProps extends Omit<
    */
   handler?: cloudfront.IOrigin | lambda.IFunctionUrl | lambda.IFunction;
   /**
-   * The domain name for the distribution.
+   * The domain name or names for the distribution.
    *
-   * Supports both string and config object:
+   * Supports string, config object, or an array of either:
    * - String: used directly as the domain name (e.g., "api.example.com")
    * - Object: passed to envHostname() to construct the domain name
    *   - { subdomain, domain, env, component }
+   * - Array: every entry is served by the distribution. The first entry is
+   *   primary: it supplies `PROJECT_BASE_URL` and the certificate's
+   *   `domainName`, with the rest becoming subject alternative names. Every
+   *   entry gets an A and AAAA record.
    *
    * @default mergeDomain(CDK_ENV_API_SUBDOMAIN, CDK_ENV_API_HOSTED_ZONE || CDK_ENV_HOSTED_ZONE)
    *
@@ -219,8 +244,12 @@ export interface JaypieDistributionProps extends Omit<
    * @example
    * // Config object - resolves using envHostname()
    * host: { subdomain: "api" }
+   *
+   * @example
+   * // Multiple hosts for a zero-downtime domain cutover
+   * host: ["api0.example.com", "api.example.com"]
    */
-  host?: string | HostConfig;
+  host?: string | HostConfig | Array<string | HostConfig>;
   /**
    * Enable response streaming for Lambda Function URLs.
    * Use with createLambdaStreamHandler for SSE/streaming responses.
@@ -291,7 +320,10 @@ export class JaypieDistribution
   public readonly distributionId: string;
   public readonly domainName: string;
   public readonly functionUrl?: lambda.FunctionUrl;
+  /** The primary host, equal to `hosts[0]` */
   public readonly host?: string;
+  /** Every host served by the distribution; empty when no host resolves */
+  public readonly hosts: string[];
   public readonly logBucket?: s3.IBucket;
   public readonly responseHeadersPolicy?: cloudfront.IResponseHeadersPolicy;
   public readonly wafLogBucket?: s3.IBucket;
@@ -341,39 +373,57 @@ export class JaypieDistribution
       throw new Error("CDK_ENV_HOSTED_ZONE is not a valid hostname");
     }
 
-    // Determine host from props or environment
-    let host: string | undefined;
-    if (typeof propsHost === "string") {
-      host = propsHost;
-    } else if (typeof propsHost === "object") {
-      // Resolve host from HostConfig using envHostname()
-      try {
-        host = envHostname(propsHost);
-      } catch {
-        host = undefined;
+    // Determine hosts from props or environment
+    // The first entry is primary: PROJECT_BASE_URL, certificate domainName,
+    // and the un-suffixed DNS record construct IDs all come from it
+    const hosts: string[] = [];
+    if (propsHost !== undefined) {
+      const hostEntries = Array.isArray(propsHost) ? propsHost : [propsHost];
+      for (const entry of hostEntries) {
+        let resolved: string | undefined;
+        if (typeof entry === "string") {
+          resolved = entry;
+        } else if (typeof entry === "object" && entry !== null) {
+          // Resolve host from HostConfig using envHostname()
+          try {
+            resolved = envHostname(entry);
+          } catch {
+            resolved = undefined;
+          }
+        }
+        if (resolved && !hosts.includes(resolved)) {
+          hosts.push(resolved);
+        }
       }
     } else {
       try {
         if (process.env.CDK_ENV_API_HOST_NAME) {
-          host = process.env.CDK_ENV_API_HOST_NAME;
+          hosts.push(process.env.CDK_ENV_API_HOST_NAME);
         } else if (process.env.CDK_ENV_API_SUBDOMAIN) {
-          host = mergeDomain(
-            process.env.CDK_ENV_API_SUBDOMAIN,
-            process.env.CDK_ENV_API_HOSTED_ZONE ||
-              process.env.CDK_ENV_HOSTED_ZONE ||
-              "",
+          hosts.push(
+            mergeDomain(
+              process.env.CDK_ENV_API_SUBDOMAIN,
+              process.env.CDK_ENV_API_HOSTED_ZONE ||
+                process.env.CDK_ENV_HOSTED_ZONE ||
+                "",
+            ),
           );
         }
       } catch {
-        host = undefined;
+        // No host from environment
       }
     }
 
-    if (host && !isValidHostname(host)) {
-      throw new Error("Host is not a valid hostname");
+    for (const candidate of hosts) {
+      if (!isValidHostname(candidate)) {
+        throw new Error("Host is not a valid hostname");
+      }
     }
 
+    const host = hosts[0];
+
     this.host = host;
+    this.hosts = hosts;
 
     // Determine zone from props or environment
     const zone = propsZone || process.env.CDK_ENV_HOSTED_ZONE;
@@ -528,6 +578,7 @@ export class JaypieDistribution
         certificate: certificateProp,
         domainName: host,
         roleTag,
+        subjectAlternativeNames: hosts.slice(1),
         zone: hostedZone,
       });
 
@@ -591,7 +642,7 @@ export class JaypieDistribution
         ...(host && certificateToUse
           ? {
               certificate: certificateToUse,
-              domainNames: [host],
+              domainNames: hosts,
             }
           : {}),
         ...(logBucket
@@ -877,27 +928,47 @@ export class JaypieDistribution
       }
     }
 
-    // Create DNS records if we have host and zone
-    if (host && hostedZone) {
-      const aRecord = new route53.ARecord(this, "AliasRecord", {
-        deleteExisting: deleteExistingRecord,
-        recordName: host,
-        target: route53.RecordTarget.fromAlias(
-          new route53Targets.CloudFrontTarget(this.distribution),
-        ),
-        zone: hostedZone,
-      });
-      Tags.of(aRecord).add(CDK.TAG.ROLE, CDK.ROLE.NETWORKING);
+    // Create DNS records if we have hosts and zone
+    // The primary host keeps the un-suffixed construct IDs so adding a second
+    // host does not replace records an existing deployment already owns
+    if (hostedZone) {
+      const deleteExistingHosts =
+        typeof deleteExistingRecord === "string"
+          ? [deleteExistingRecord]
+          : Array.isArray(deleteExistingRecord)
+            ? deleteExistingRecord
+            : undefined;
 
-      const aaaaRecord = new route53.AaaaRecord(this, "AaaaAliasRecord", {
-        deleteExisting: deleteExistingRecord,
-        recordName: host,
-        target: route53.RecordTarget.fromAlias(
-          new route53Targets.CloudFrontTarget(this.distribution),
-        ),
-        zone: hostedZone,
+      hosts.forEach((recordHost, index) => {
+        const suffix = index === 0 ? "" : `-${sanitizeHostForId(recordHost)}`;
+        const deleteExisting = deleteExistingHosts
+          ? deleteExistingHosts.includes(recordHost)
+          : deleteExistingRecord === true;
+
+        const aRecord = new route53.ARecord(this, `AliasRecord${suffix}`, {
+          deleteExisting,
+          recordName: recordHost,
+          target: route53.RecordTarget.fromAlias(
+            new route53Targets.CloudFrontTarget(this.distribution),
+          ),
+          zone: hostedZone,
+        });
+        Tags.of(aRecord).add(CDK.TAG.ROLE, CDK.ROLE.NETWORKING);
+
+        const aaaaRecord = new route53.AaaaRecord(
+          this,
+          `AaaaAliasRecord${suffix}`,
+          {
+            deleteExisting,
+            recordName: recordHost,
+            target: route53.RecordTarget.fromAlias(
+              new route53Targets.CloudFrontTarget(this.distribution),
+            ),
+            zone: hostedZone,
+          },
+        );
+        Tags.of(aaaaRecord).add(CDK.TAG.ROLE, CDK.ROLE.NETWORKING);
       });
-      Tags.of(aaaaRecord).add(CDK.TAG.ROLE, CDK.ROLE.NETWORKING);
     }
   }
 
