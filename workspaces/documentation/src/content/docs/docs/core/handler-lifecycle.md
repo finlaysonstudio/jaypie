@@ -117,6 +117,31 @@ Handler return values are automatically converted to HTTP responses:
 | `false` | 204 | No content |
 | Thrown error | Error status | JSON:API error |
 
+## Caught Errors
+
+A caught Jaypie error is logged by status and then scrubbed:
+
+| Error | Log level | Response `detail` and `title` |
+|-------|-----------|-------------------------------|
+| 4xx (`BadRequestError`, `NotFoundError`, …) | `log.warn` | Generic strings for the status |
+| 500-class (`ConfigurationError`, `InternalError`, …) | `log.error` | Generic strings for the status |
+| Non-Jaypie error | `log.fatal` | `UnhandledError` |
+
+Either way the handler emits `log.var({ jaypieError: { detail, status, title } })`
+carrying the error as thrown, then replaces `detail` and `title` with the generic
+strings for the status. `status`, `message`, and `stack` are untouched.
+
+```typescript
+throw new ConfigurationError("Fabric model chat is not registered");
+// logs the detail, responds with:
+// { errors: [{ status: 500, title: "Internal Application Error",
+//   detail: "An unexpected error occurred and the request was unable to complete" }] }
+```
+
+An error message never reaches the caller, including on 4xx. A status with no
+error class of its own takes the generic for its class: an unmapped 4xx (422,
+451, …) keeps its own status and carries the bad request strings.
+
 ## Usage Examples
 
 ### Express Handler

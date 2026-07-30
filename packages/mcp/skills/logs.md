@@ -65,6 +65,33 @@ log.var({ Processing: {
 
 Log any important, even scalar, data and filter with `var` in Datadog
 
+## Caught Jaypie Errors
+
+The handler lifecycle picks the level from the error's status, so an outage is visible to monitors filtering on error status without the application logging anything itself:
+
+- **4xx** (`BadRequestError`, `NotFoundError`, …) → `log.warn("[handler] Caught Jaypie error")`
+- **500-class** (`ConfigurationError`, `InternalError`, `BadGatewayError`, `GatewayTimeoutError`, `UnavailableError`, …) → `log.error("[handler] Caught Jaypie error")`
+
+Either way the handler emits `log.var({ jaypieError: { detail, status, title } })` carrying the error as thrown. The same applies to errors thrown during `validate` and `teardown`. Non-Jaypie errors remain `log.fatal` plus `log.error`.
+
+### Detail is logged, then scrubbed
+
+After logging, the handler replaces the error's `detail` and `title` with the generic strings for its status. The message an application passes to an error constructor reaches the logs and never reaches a response body.
+
+```typescript
+throw new ConfigurationError("Fabric model chat is not registered");
+// log.error("[handler] Caught Jaypie error")
+// log.var({ jaypieError: { detail: "Fabric model chat is not registered", status: 500, title: "Internal Configuration Error" } })
+// response: { errors: [{ status: 500, title: "Internal Application Error",
+//   detail: "An unexpected error occurred and the request was unable to complete" }] }
+```
+
+This applies to 4xx as well, so `NotFoundError("User 12345 not found")` answers `"The requested resource was not found"`. Do not use the error message to communicate with the caller. Return a normal response body when the caller needs specifics.
+
+`status`, `message`, and `stack` are untouched, so logs and handlers configured with `throw: true` still see the original.
+
+A status with no error class of its own falls to the generic for its class: an unmapped 4xx (422, 451, …) answers the bad request strings while keeping its own status, and 500-class falls to internal error. A status outside 4xx and 5xx has no correct substitute and is logged without scrubbing.
+
 ## Session Management
 
 Handlers automatically call `log.setup()` and `log.teardown()` to bookend each request. On teardown, a report is emitted as `log.info.var({ report })` containing accumulated data and warn/error counts.

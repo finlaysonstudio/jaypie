@@ -81,6 +81,14 @@ Returns:
 }
 ```
 
+:::caution
+A handler scrubs the error before it reaches the response. The message passed to
+the constructor is logged, then `detail` and `title` are replaced with the
+generic strings for the status, so the same error thrown inside a handler answers
+`"The requested resource was not found"`. See
+[Handler Lifecycle](/docs/core/handler-lifecycle/).
+:::
+
 ### Type Guard
 
 Use `isJaypieError` to safely check error type:
@@ -185,6 +193,10 @@ log.error("Database query failed");
 log.var({ error: dbError.message });
 throw InternalError();
 ```
+
+Handlers enforce this: an error message reaches the logs, never a response body.
+An error message is therefore not a way to tell the caller anything. Return a
+normal response body when the caller needs specifics.
 
 ## Testing Errors
 

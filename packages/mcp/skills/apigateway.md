@@ -166,7 +166,7 @@ new JaypieDistribution(this, "Dist", {
 });
 ```
 
-You only need `deleteExistingRecord` on the deploy that performs the swap. Drop it back to the default (`false`) on the next change.
+You only need `deleteExistingRecord` on the deploy that performs the swap. Drop it back to the default (`false`) on the next change. On `JaypieDistribution` it also accepts a hostname or array of hostnames, which is required when the distribution serves several hosts — see "Zero-Downtime Hostname Reclaim" below.
 
 If you need to skip the prop entirely (older Jaypie, or you'd rather not run a custom resource), the alternative is a two-phase deploy:
 
@@ -174,6 +174,34 @@ If you need to skip the prop entirely (older Jaypie, or you'd rather not run a c
 2. Deploy 2: add `JaypieDistribution` with the target `host` — new record created
 
 This costs a brief downtime window between deploys; the cert is preserved across both because it's at stack scope.
+
+### Zero-Downtime Hostname Reclaim (multiple hosts)
+
+`deleteExistingRecord` closes the gap on a same-name swap, but reclaiming a hostname from a *regional* API Gateway custom domain is different: the gateway holds the name as its own regional endpoint, not as a CloudFront alternate domain name. Serve both names from the distribution during the cutover by passing an array to `host`. The first entry is primary (`PROJECT_BASE_URL`, certificate `domainName`, un-suffixed record construct IDs); the rest become certificate subject alternative names, and every entry gets an A and AAAA record.
+
+```typescript
+// Deploy 1 — distribution serves both names, reclaiming api. from the gateway
+new JaypieDistribution(this, "Dist", {
+  handler,
+  host: ["api0.example.com", "api.example.com"],
+  zone: "example.com",
+  deleteExistingRecord: ["api.example.com"], // only the reclaimed name
+});
+
+// Deploy 2 — gateway removed, api0. dropped
+new JaypieDistribution(this, "Dist", {
+  handler,
+  host: "api.example.com",
+  zone: "example.com",
+});
+```
+
+Between the deploys both hostnames resolve to CloudFront, so callers migrate at their own pace.
+
+Two things to plan for:
+
+- **Name the reclaimed host, never pass `true`.** `deleteExistingRecord: true` applies to every host. Pointing it at `api0.` — a record this construct already owns — deletes the live record while CloudFormation sees no change to the record resource and so never recreates it, taking `api0.` down until the next deploy that touches it.
+- **Promoting a secondary host to primary replaces the certificate.** The certificate's logical ID derives from the primary host, so deploy 2 above provisions a new ACM cert and re-validates DNS. Keeping the original primary avoids the replacement; pay the cost when the old name is finally retired.
 
 ### Key Differences to Plan For
 

@@ -349,6 +349,22 @@ new JaypieNextJs(this, "App", {
 
 **Streaming Note:** When `streaming: true`, also create `open-next.config.ts` in your Next.js app with `wrapper: "aws-lambda-streaming"`. See `skill("streaming")` for details.
 
+## Multiple Hosts
+
+`JaypieDistribution` serves any number of hostnames. Pass an array to `host`; the first entry is primary and supplies `PROJECT_BASE_URL`, the certificate's `domainName`, and the un-suffixed DNS record construct IDs. The rest become certificate subject alternative names. Every entry gets its own A and AAAA record, and all appear in `domainNames`.
+
+```typescript
+new JaypieDistribution(this, "Dist", {
+  handler,
+  host: ["api0.example.com", "api.example.com"],
+  zone: "example.com",
+});
+```
+
+Entries accept the same shapes as a scalar `host` (string or `HostConfig`), duplicates collapse, and `construct.hosts` exposes the resolved list (`construct.host` stays the primary). Adding a host to an existing deployment leaves the primary's records and certificate logical IDs untouched; the certificate resource gains the new name as a SAN, which ACM performs as a replacement.
+
+The main use is a zero-downtime hostname cutover, where `deleteExistingRecord` must name the reclaimed host rather than being set to `true` — see `skill("apigateway")`.
+
 ## Security Headers
 
 `JaypieDistribution` ships with default security response headers via a `ResponseHeadersPolicy` (analogous to `helmet` for Express):
