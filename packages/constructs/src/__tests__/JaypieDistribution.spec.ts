@@ -2410,4 +2410,283 @@ describe("JaypieDistribution", () => {
       });
     });
   });
+
+  describe("Multiple Hosts", () => {
+    function stackWithZone() {
+      const stack = new Stack(undefined, "TestStack", {
+        env: { account: "123456789012", region: "us-east-1" },
+      });
+      const zone = route53.HostedZone.fromHostedZoneAttributes(stack, "Zone", {
+        hostedZoneId: "Z123456789",
+        zoneName: "example.com",
+      });
+      const bucket = new s3.Bucket(stack, "TestBucket");
+      const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
+      return { origin, stack, zone };
+    }
+
+    it("exposes the first host as primary and all hosts on hosts", () => {
+      const { origin, stack, zone } = stackWithZone();
+
+      const construct = new JaypieDistribution(stack, "TestDistribution", {
+        handler: origin,
+        host: ["api0.example.com", "api.example.com"],
+        zone,
+      });
+
+      expect(construct.host).toBe("api0.example.com");
+      expect(construct.hosts).toEqual(["api0.example.com", "api.example.com"]);
+    });
+
+    it("lists every host in the distribution aliases", () => {
+      const { origin, stack, zone } = stackWithZone();
+
+      new JaypieDistribution(stack, "TestDistribution", {
+        handler: origin,
+        host: ["api0.example.com", "api.example.com"],
+        zone,
+      });
+      const template = Template.fromStack(stack);
+
+      const distribution = findDistribution(template);
+      expect(distribution.Properties.DistributionConfig.Aliases).toEqual([
+        "api0.example.com",
+        "api.example.com",
+      ]);
+    });
+
+    it("covers secondary hosts with certificate subject alternative names", () => {
+      const { origin, stack, zone } = stackWithZone();
+
+      new JaypieDistribution(stack, "TestDistribution", {
+        handler: origin,
+        host: ["api0.example.com", "api.example.com"],
+        zone,
+      });
+      const template = Template.fromStack(stack);
+
+      template.hasResourceProperties("AWS::CertificateManager::Certificate", {
+        DomainName: "api0.example.com",
+        SubjectAlternativeNames: ["api.example.com"],
+      });
+    });
+
+    it("creates an A and AAAA record for every host", () => {
+      const { origin, stack, zone } = stackWithZone();
+
+      new JaypieDistribution(stack, "TestDistribution", {
+        handler: origin,
+        host: ["api0.example.com", "api.example.com"],
+        zone,
+      });
+      const template = Template.fromStack(stack);
+
+      template.resourceCountIs("AWS::Route53::RecordSet", 4);
+      template.hasResourceProperties("AWS::Route53::RecordSet", {
+        Name: "api0.example.com.",
+        Type: "A",
+      });
+      template.hasResourceProperties("AWS::Route53::RecordSet", {
+        Name: "api.example.com.",
+        Type: "A",
+      });
+      template.hasResourceProperties("AWS::Route53::RecordSet", {
+        Name: "api0.example.com.",
+        Type: "AAAA",
+      });
+      template.hasResourceProperties("AWS::Route53::RecordSet", {
+        Name: "api.example.com.",
+        Type: "AAAA",
+      });
+    });
+
+    it("keeps the primary host record logical ids stable across the array form", () => {
+      const single = new Stack(undefined, "TestStack", {
+        env: { account: "123456789012", region: "us-east-1" },
+      });
+      const singleZone = route53.HostedZone.fromHostedZoneAttributes(
+        single,
+        "Zone",
+        { hostedZoneId: "Z123456789", zoneName: "example.com" },
+      );
+      const singleBucket = new s3.Bucket(single, "TestBucket");
+      new JaypieDistribution(single, "TestDistribution", {
+        handler: origins.S3BucketOrigin.withOriginAccessControl(singleBucket),
+        host: "api0.example.com",
+        zone: singleZone,
+      });
+      const singleIds = Object.keys(
+        Template.fromStack(single).findResources("AWS::Route53::RecordSet"),
+      );
+
+      const { origin, stack, zone } = stackWithZone();
+      new JaypieDistribution(stack, "TestDistribution", {
+        handler: origin,
+        host: ["api0.example.com", "api.example.com"],
+        zone,
+      });
+      const multipleIds = Object.keys(
+        Template.fromStack(stack).findResources("AWS::Route53::RecordSet"),
+      );
+
+      for (const id of singleIds) {
+        expect(multipleIds).toContain(id);
+      }
+    });
+
+    it("sets PROJECT_BASE_URL from the primary host", () => {
+      const stack = new Stack();
+      const fn = new lambda.Function(stack, "TestFunction", {
+        code: lambda.Code.fromInline("exports.handler = () => {}"),
+        handler: "index.handler",
+        runtime: lambda.Runtime.NODEJS_20_X,
+      });
+
+      new JaypieDistribution(stack, "TestDistribution", {
+        handler: fn,
+        host: ["api0.example.com", "api.example.com"],
+      });
+      const template = Template.fromStack(stack);
+
+      template.hasResourceProperties("AWS::Lambda::Function", {
+        Environment: {
+          Variables: {
+            PROJECT_BASE_URL: "https://api0.example.com",
+          },
+        },
+      });
+    });
+
+    it("resolves HostConfig entries in the array", () => {
+      delete process.env.CDK_ENV_PERSONAL;
+      delete process.env.CDK_ENV_SUBDOMAIN;
+      process.env.PROJECT_ENV = "sandbox";
+
+      const { origin, stack, zone } = stackWithZone();
+
+      const construct = new JaypieDistribution(stack, "TestDistribution", {
+        handler: origin,
+        host: ["api0.example.com", { domain: "example.com", subdomain: "api" }],
+        zone,
+      });
+
+      expect(construct.hosts).toEqual([
+        "api0.example.com",
+        "api.sandbox.example.com",
+      ]);
+    });
+
+    it("throws when a host in the array is not a valid hostname", () => {
+      const { origin, stack, zone } = stackWithZone();
+
+      expect(() => {
+        new JaypieDistribution(stack, "TestDistribution", {
+          handler: origin,
+          host: ["api0.example.com", "invalid hostname with spaces"],
+          zone,
+        });
+      }).toThrow("Host is not a valid hostname");
+    });
+
+    it("deduplicates repeated hosts", () => {
+      const { origin, stack, zone } = stackWithZone();
+
+      const construct = new JaypieDistribution(stack, "TestDistribution", {
+        handler: origin,
+        host: ["api0.example.com", "api0.example.com"],
+        zone,
+      });
+      const template = Template.fromStack(stack);
+
+      expect(construct.hosts).toEqual(["api0.example.com"]);
+      template.resourceCountIs("AWS::Route53::RecordSet", 2);
+    });
+
+    it("force-deletes existing records for every host when deleteExistingRecord is true", () => {
+      const { origin, stack, zone } = stackWithZone();
+
+      new JaypieDistribution(stack, "TestDistribution", {
+        deleteExistingRecord: true,
+        handler: origin,
+        host: ["api0.example.com", "api.example.com"],
+        zone,
+      });
+      const template = Template.fromStack(stack);
+
+      template.resourceCountIs("Custom::DeleteExistingRecordSet", 4);
+    });
+
+    it("force-deletes existing records for only the named host", () => {
+      const { origin, stack, zone } = stackWithZone();
+
+      new JaypieDistribution(stack, "TestDistribution", {
+        deleteExistingRecord: ["api.example.com"],
+        handler: origin,
+        host: ["api0.example.com", "api.example.com"],
+        zone,
+      });
+      const template = Template.fromStack(stack);
+
+      template.resourceCountIs("AWS::Route53::RecordSet", 4);
+      template.resourceCountIs("Custom::DeleteExistingRecordSet", 2);
+      const deletions = Object.values(
+        template.findResources("Custom::DeleteExistingRecordSet"),
+      );
+      for (const deletion of deletions) {
+        expect(deletion.Properties.RecordName).toBe("api.example.com.");
+      }
+    });
+
+    it("accepts a single hostname string for deleteExistingRecord", () => {
+      const { origin, stack, zone } = stackWithZone();
+
+      new JaypieDistribution(stack, "TestDistribution", {
+        deleteExistingRecord: "api.example.com",
+        handler: origin,
+        host: ["api0.example.com", "api.example.com"],
+        zone,
+      });
+      const template = Template.fromStack(stack);
+
+      template.resourceCountIs("Custom::DeleteExistingRecordSet", 2);
+    });
+
+    it("force-deletes nothing when deleteExistingRecord names no served host", () => {
+      const { origin, stack, zone } = stackWithZone();
+
+      new JaypieDistribution(stack, "TestDistribution", {
+        deleteExistingRecord: ["other.example.com"],
+        handler: origin,
+        host: ["api0.example.com", "api.example.com"],
+        zone,
+      });
+      const template = Template.fromStack(stack);
+
+      template.resourceCountIs("Custom::DeleteExistingRecordSet", 0);
+    });
+
+    it("exposes hosts as a single-entry array for a scalar host", () => {
+      const { origin, stack, zone } = stackWithZone();
+
+      const construct = new JaypieDistribution(stack, "TestDistribution", {
+        handler: origin,
+        host: "api.example.com",
+        zone,
+      });
+
+      expect(construct.hosts).toEqual(["api.example.com"]);
+    });
+
+    it("exposes hosts as an empty array when no host resolves", () => {
+      const stack = new Stack();
+      const bucket = new s3.Bucket(stack, "TestBucket");
+      const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
+
+      const construct = new JaypieDistribution(stack, "TestDistribution", {
+        handler: origin,
+      });
+
+      expect(construct.hosts).toEqual([]);
+    });
+  });
 });
