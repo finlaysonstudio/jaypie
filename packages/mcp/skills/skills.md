@@ -17,7 +17,7 @@ Look up skills by alias: `mcp__jaypie__skill(alias)`
 |----------|--------|
 | contents | index, releasenotes |
 | development | apikey, documentation, errors, llm, logs, mdaml, mocks, monorepo, repokit, style, subpackages, tests, tools |
-| infrastructure | apigateway, aws, cdk, cicd, datadog, dns, dynamodb, express, lambda, migrations, ports, secrets, sqs, streaming, variables, waf, web, websockets |
+| infrastructure | apigateway, aws, cdk, cicd, datadog, dns, dynamodb, email, express, lambda, migrations, ports, secrets, sqs, streaming, variables, waf, web, websockets |
 | patterns | api, fabric, handlers, models, repository, services, vocabulary |
 | recipes | recipe-api-server |
 | meta | issues, jaypie, mcp, skills |

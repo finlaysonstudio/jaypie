@@ -39,6 +39,8 @@ const external = [
   "aws-cdk-lib/aws-s3-notifications",
   "aws-cdk-lib/aws-sam",
   "aws-cdk-lib/aws-secretsmanager",
+  "aws-cdk-lib/aws-ses",
+  "aws-cdk-lib/aws-ses-actions",
   "aws-cdk-lib/aws-sns",
   "aws-cdk-lib/aws-sqs",
   "aws-cdk-lib/aws-ssm",

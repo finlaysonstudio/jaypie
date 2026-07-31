@@ -44,37 +44,87 @@ const messages = getMessages(event); // Returns array of parsed bodies
 const message = getSingletonMessage(event);
 ```
 
-## CDK: JaypieQueue
+## CDK: JaypieQueuedLambda
 
-SQS queue with DLQ and Lambda trigger:
+Queue and worker Lambda in one construct. FIFO by default; the queue URL is
+injected as `CDK_ENV_QUEUE_URL` and the Lambda is granted send and consume.
 
 ```typescript
-import { JaypieQueue } from "@jaypie/constructs";
+import { JaypieQueuedLambda } from "@jaypie/constructs";
 
-const queue = new JaypieQueue(this, "ProcessQueue", {
-  visibilityTimeout: Duration.seconds(60),
-  retentionPeriod: Duration.days(7),
+const worker = new JaypieQueuedLambda(this, "ProcessWorker", {
+  code: "../api/dist",
+  handler: "process.handler",
+  batchSize: 1,
+  visibilityTimeout: Duration.seconds(360),
 });
-
-// Connect to Lambda
-queue.addEventSource(handler);
 ```
 
-### Wiring Queue URL to Lambda
+`JaypieBucketQueuedLambda` extends it with an S3 bucket whose `OBJECT_CREATED`
+notifications feed the queue (standard, not FIFO — S3 cannot notify a FIFO
+queue).
+
+### Dead-Letter Queue
+
+Without a redrive policy a poison message retries until retention lapses, which
+pushes consumers into swallowing per-record errors in-handler. That conflates
+"this record is bad" with "this record failed transiently", and the transient
+case then drops silently. `dlq` adds the dead-letter queue and redrive policy:
 
 ```typescript
-import { JaypieLambda, JaypieQueue } from "@jaypie/constructs";
+new JaypieQueuedLambda(this, "Worker", { code: "dist", dlq: true }); // maxReceiveCount 3
+new JaypieQueuedLambda(this, "Worker", { code: "dist", dlq: 5 });    // maxReceiveCount 5
+new JaypieQueuedLambda(this, "Worker", {
+  code: "dist",
+  dlq: { maxReceiveCount: 3, retentionPeriod: Duration.days(14) },
+});
+```
 
-const queue = new JaypieQueue(this, "ProcessQueue");
+| Value | Meaning |
+|-------|---------|
+| `true` | Create a DLQ with `maxReceiveCount` 3 and 14-day retention |
+| number | Shorthand for `{ maxReceiveCount }` |
+| object | `maxReceiveCount`, `retentionPeriod`, or an existing `queue` |
 
-const handler = new JaypieLambda(this, "Handler", {
-  entry: "src/handler.ts",
-  environment: {
-    CDK_ENV_QUEUE_URL: queue.queueUrl,
-  },
+The DLQ matches the source queue's `fifo` setting; SQS rejects a redrive policy
+across the FIFO boundary. An existing `queue` must match too.
+
+Alarm on it. A dead-letter queue nobody watches is a place messages go to be
+ignored:
+
+```typescript
+new cloudwatch.Alarm(this, "WorkerDlqDepth", {
+  metric: worker.dlq!.metricApproximateNumberOfMessagesVisible(),
+  threshold: 1,
+  evaluationPeriods: 1,
+});
+```
+
+**Naming trap**: `dlq` governs the *queue feeding the Lambda*. The separate
+`deadLetterQueue` prop, inherited from `JaypieLambdaProps`, is the Lambda's
+*asynchronous-invocation* DLQ and does nothing for SQS event-source failures.
+
+`maxReceiveCount` guidance: pick a number that expires before the work does.
+Discord interaction tokens expire in 15 minutes, so 3-5 fits; unlimited
+redelivery burns invocations for nothing.
+
+### Wiring Queue URL to a Separate Lambda
+
+```typescript
+import { JaypieLambda, JaypieQueuedLambda } from "@jaypie/constructs";
+
+const worker = new JaypieQueuedLambda(this, "ProcessWorker", {
+  code: "../api/dist",
+  handler: "process.handler",
 });
 
-queue.grantSendMessages(handler);
+const api = new JaypieLambda(this, "Api", {
+  code: "../api/dist",
+  handler: "index.handler",
+  environment: { CDK_ENV_QUEUE_URL: worker.queueUrl },
+});
+
+worker.grantSendMessages(api);
 ```
 
 ### Resource Naming

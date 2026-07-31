@@ -9,16 +9,75 @@ import * as cloudwatch from "aws-cdk-lib/aws-cloudwatch";
 import * as kms from "aws-cdk-lib/aws-kms";
 import { JaypieLambda, JaypieLambdaProps } from "./JaypieLambda.js";
 
+/**
+ * Redrive configuration for the construct's SQS queue.
+ *
+ * Distinct from `deadLetterQueue` on `JaypieLambdaProps`, which configures the
+ * Lambda's asynchronous-invocation DLQ. This one governs the queue feeding the
+ * Lambda: after `maxReceiveCount` failed receives, SQS moves the message to the
+ * dead-letter queue instead of redelivering it until retention lapses.
+ */
+export interface JaypieQueueDlqProps {
+  /**
+   * Receives after which SQS moves a message to the dead-letter queue.
+   * @default CDK.SQS.DLQ.MAX_RECEIVE_COUNT (3)
+   */
+  maxReceiveCount?: number;
+  /**
+   * Use an existing queue instead of creating one. Its `fifo` setting must
+   * match the source queue; SQS rejects a mismatched redrive policy.
+   */
+  queue?: sqs.IQueue;
+  /**
+   * How long the dead-letter queue holds messages.
+   * @default CDK.SQS.DLQ.RETENTION_DAYS (14 days, the SQS maximum)
+   */
+  retentionPeriod?: Duration | number;
+}
+
 export interface JaypieQueuedLambdaProps extends JaypieLambdaProps {
   batchSize?: number;
+  /**
+   * Add a dead-letter queue and redrive policy to the construct's queue.
+   *
+   * - `true` creates a DLQ with `CDK.SQS.DLQ` defaults
+   * - a number is shorthand for `{ maxReceiveCount }`
+   * - an object configures the DLQ, optionally supplying an existing `queue`
+   *
+   * Without this, a poison message retries until retention lapses. The DLQ is
+   * exposed as `.dlq` so consumers can alarm on its depth; a dead-letter queue
+   * nobody watches is a place messages go to be ignored.
+   *
+   * @default undefined (no redrive policy)
+   */
+  dlq?: boolean | number | JaypieQueueDlqProps;
   fifo?: boolean;
   visibilityTimeout?: Duration | number;
+}
+
+function asDuration(
+  value: Duration | number | undefined,
+  fallback: Duration,
+): Duration {
+  if (value === undefined) return fallback;
+  return typeof value === "number" ? Duration.seconds(value) : value;
+}
+
+function resolveDlqProps(
+  dlq: boolean | number | JaypieQueueDlqProps | undefined,
+): JaypieQueueDlqProps | undefined {
+  if (dlq === undefined || dlq === false) return undefined;
+  if (dlq === true) return {};
+  if (typeof dlq === "number") return { maxReceiveCount: dlq };
+  return dlq;
 }
 
 export class JaypieQueuedLambda
   extends Construct
   implements lambda.IFunction, sqs.IQueue
 {
+  private readonly _dlq?: sqs.IQueue;
+  private readonly _ownedDlq?: sqs.Queue;
   private readonly _queue: sqs.Queue;
   private readonly _lambdaConstruct: JaypieLambda;
 
@@ -36,6 +95,7 @@ export class JaypieQueuedLambda
       deadLetterQueueEnabled,
       deadLetterTopic,
       description,
+      dlq,
       environment = {},
       envSecrets = {},
       ephemeralStorageSize,
@@ -73,23 +133,55 @@ export class JaypieQueuedLambda
       vpcSubnets,
     } = props;
 
+    const tagQueue = (queue: sqs.IQueue) => {
+      if (roleTag) {
+        Tags.of(queue).add(CDK.TAG.ROLE, roleTag);
+      }
+      if (serviceTag) {
+        Tags.of(queue).add(CDK.TAG.SERVICE, serviceTag);
+      }
+      if (vendorTag) {
+        Tags.of(queue).add(CDK.TAG.VENDOR, vendorTag);
+      }
+    };
+
+    // Resolve the optional dead-letter queue before the source queue, which
+    // references it in its redrive policy
+    const dlqProps = resolveDlqProps(dlq);
+    if (dlqProps) {
+      if (dlqProps.queue) {
+        this._dlq = dlqProps.queue;
+      } else {
+        // A FIFO queue cannot redrive to a standard queue, or the reverse
+        const dlqQueue = new sqs.Queue(this, "DeadLetterQueue", {
+          fifo,
+          retentionPeriod: asDuration(
+            dlqProps.retentionPeriod,
+            Duration.days(CDK.SQS.DLQ.RETENTION_DAYS),
+          ),
+        });
+        tagQueue(dlqQueue);
+        this._dlq = dlqQueue;
+        this._ownedDlq = dlqQueue;
+      }
+    }
+
     // Create SQS Queue
     this._queue = new sqs.Queue(this, "Queue", {
+      ...(this._dlq && {
+        deadLetterQueue: {
+          maxReceiveCount:
+            dlqProps?.maxReceiveCount ?? CDK.SQS.DLQ.MAX_RECEIVE_COUNT,
+          queue: this._dlq,
+        },
+      }),
       fifo,
-      visibilityTimeout:
-        typeof visibilityTimeout === "number"
-          ? Duration.seconds(visibilityTimeout)
-          : visibilityTimeout,
+      visibilityTimeout: asDuration(
+        visibilityTimeout,
+        Duration.seconds(CDK.DURATION.LAMBDA_WORKER),
+      ),
     });
-    if (roleTag) {
-      Tags.of(this._queue).add(CDK.TAG.ROLE, roleTag);
-    }
-    if (serviceTag) {
-      Tags.of(this._queue).add(CDK.TAG.SERVICE, serviceTag);
-    }
-    if (vendorTag) {
-      Tags.of(this._queue).add(CDK.TAG.VENDOR, vendorTag);
-    }
+    tagQueue(this._queue);
 
     // Create Lambda with JaypieLambda
     this._lambdaConstruct = new JaypieLambda(this, "Function", {
@@ -153,6 +245,14 @@ export class JaypieQueuedLambda
   }
 
   // Public accessors
+  /**
+   * The dead-letter queue receiving messages past `maxReceiveCount`, when
+   * `dlq` was configured. Alarm on its depth.
+   */
+  public get dlq(): sqs.IQueue | undefined {
+    return this._dlq;
+  }
+
   public get queue(): sqs.Queue {
     return this._queue;
   }
@@ -314,6 +414,8 @@ export class JaypieQueuedLambda
   public applyRemovalPolicy(policy: RemovalPolicy): void {
     this._lambdaConstruct.applyRemovalPolicy(policy);
     this._queue.applyRemovalPolicy(policy);
+    // Imported dead-letter queues are owned by another stack
+    this._ownedDlq?.applyRemovalPolicy(policy);
   }
 
   // IQueue implementation

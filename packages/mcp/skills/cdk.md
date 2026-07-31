@@ -49,34 +49,59 @@ For ESM bundles, use `.mjs` extension or include `package.json` with `"type": "m
 
 **CRITICAL**: When referencing `code: "../package/dist"`, the package must be built **before** CDK synth/deploy. In CI/CD, `npm run build` at the root handles this — but new packages must have a `build` script in their `package.json`. If the package is a build-time dependency of others, add it to `build:core-deps` in the root `package.json`. Without this, CI/CD fails with `"../package/dist" doesn't exist`.
 
-### JaypieQueue
+### JaypieQueuedLambda
 
-SQS queue with DLQ and Lambda trigger:
+SQS queue plus worker Lambda, wired together. FIFO by default. Opt into a
+dead-letter queue with `dlq`:
 
 ```typescript
-import { JaypieQueue } from "@jaypie/constructs";
+import { JaypieQueuedLambda } from "@jaypie/constructs";
 
-const queue = new JaypieQueue(this, "ProcessQueue", {
-  visibilityTimeout: Duration.seconds(60),
-  retentionPeriod: Duration.days(7),
+const worker = new JaypieQueuedLambda(this, "ProcessWorker", {
+  code: "../api/dist",
+  handler: "process.handler",
+  dlq: { maxReceiveCount: 3 },
+  visibilityTimeout: Duration.seconds(360),
 });
-
-// Connect to Lambda
-queue.addEventSource(handler);
 ```
 
-### JaypieBucket
+See `skill("sqs")` for redrive semantics and the `deadLetterQueue` naming trap.
 
-S3 bucket with encryption and lifecycle rules:
+### JaypieBucketQueuedLambda
+
+`JaypieQueuedLambda` plus an S3 bucket whose `OBJECT_CREATED` notifications feed
+the queue. The queue is standard, not FIFO — S3 cannot notify a FIFO queue.
 
 ```typescript
-import { JaypieBucket } from "@jaypie/constructs";
+import { JaypieBucketQueuedLambda } from "@jaypie/constructs";
 
-const bucket = new JaypieBucket(this, "AssetsBucket", {
-  encryption: BucketEncryption.S3_MANAGED,
-  lifecycleRules: [
-    { expiration: Duration.days(90), prefix: "temp/" }
-  ],
+const worker = new JaypieBucketQueuedLambda(this, "IngestWorker", {
+  code: "../api/dist",
+  handler: "ingest.handler",
+  bucketOptions: {
+    lifecycleRules: [{ expiration: Duration.days(365) }],
+  },
+});
+```
+
+`worker.bucket` is the real `s3.Bucket`. The construct itself implements
+`IBucket` by delegation, which is enough for grants but **not** for CDK code
+that reaches for the bucket's `Policy` child — hand those the unwrapped
+`worker.bucket`.
+
+### JaypieSesIntake
+
+SES inbound email receiving: domain identity, DKIM and MX records, a receipt
+rule set writing raw MIME to S3, and rule-set activation. See `skill("email")`.
+
+```typescript
+import { JaypieSesIntake } from "@jaypie/constructs";
+
+new JaypieSesIntake(this, "Intake", {
+  code: "../api/dist",
+  handler: "email.handler",
+  tables: [table],
+  zone: "example.com",
 });
 ```
 

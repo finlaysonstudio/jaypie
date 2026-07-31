@@ -111,10 +111,12 @@ Content...
 When adding new skills:
 1. Create `skills/<alias>.md` with lowercase alphanumeric alias (hyphens/underscores allowed)
 2. Add frontmatter with `description` and optionally `related` (comma-separated aliases)
-3. Run `npm run build -w packages/mcp` to copy skills to dist
-4. Skills are then available via `skill(alias)`
+3. Skills are immediately available via `skill(alias)` — no rebuild needed
 
-**Important**: Always rebuild after editing skills or release notes - files are copied to `dist/` during build.
+Skills and release notes are read from the **package root**, not `dist/`. The
+docs suite resolves `../../../skills` from `dist/suites/docs/`, and `files` in
+`package.json` ships both directories alongside `dist`. Only the per-suite
+`help.md` files are copied into `dist` by rollup.
 
 **Important**: Keep the skill category listings in sync across `skills/skills.md`, `skills/agents.md`, and the root `CLAUDE.md` Skills section. When adding or removing a skill alias, update all three.
 
@@ -148,8 +150,7 @@ summary: Consolidate 26 tools into 6 unified router-style tools
 When adding release notes:
 1. Create `release-notes/<package>/<version>.md` for each version bump
 2. Add frontmatter with `version`, `date`, and `summary`
-3. Run `npm run build -w packages/mcp` to include new notes
-4. Notes are then available via `release_notes("list")` and `release_notes("read", ...)`
+3. Notes are immediately available via `release_notes("list")` and `release_notes("read", ...)` — no rebuild needed
 
 ## Environment Variables
 

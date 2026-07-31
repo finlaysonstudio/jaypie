@@ -57,7 +57,7 @@ packages/constructs/
 |-----------|-------------|
 | `JaypieLambda` | Full-featured Lambda with Datadog, secrets, VPC support |
 | `JaypieExpressLambda` | Lambda optimized for Express APIs (30s timeout, API role) |
-| `JaypieQueuedLambda` | Lambda with SQS queue integration (FIFO by default) |
+| `JaypieQueuedLambda` | Lambda with SQS queue integration (FIFO by default, optional DLQ) |
 | `JaypieBucketQueuedLambda` | Lambda triggered by S3 bucket events via queue |
 
 ### Networking & Distribution
@@ -100,6 +100,7 @@ packages/constructs/
 | Construct | Description |
 |-----------|-------------|
 | `JaypieEventsRule` | EventBridge rule |
+| `JaypieSesIntake` | SES inbound email receiving (identity, DKIM, MX, receipt rules) |
 | `JaypieGitHubDeployRole` | GitHub Actions OIDC deploy role |
 | `JaypieNextJs` | Next.js deployment (uses cdk-nextjs-standalone) |
 | `JaypieOrganizationTrail` | CloudTrail for AWS Organizations |
@@ -119,6 +120,8 @@ The `CDK` constant provides standardized values:
 - `CDK.LAMBDA.*` - Lambda defaults (LOG_RETENTION: 90, MEMORY_SIZE: 1024)
 - `CDK.ROLE.*` - Resource role tags (api, deploy, storage, processing, etc.)
 - `CDK.SERVICE.*` - Service tags
+- `CDK.SES.*` - SES intake defaults (DKIM record count/TTL, object key prefix)
+- `CDK.SQS.DLQ.*` - Dead-letter queue defaults (MAX_RECEIVE_COUNT: 3, RETENTION_DAYS: 14)
 - `CDK.TAG.*` - Tag key names
 - `CDK.VARIABLES.*` - Non-secret variables bundle (`ENV` pointer name, `PARAMETER` suffix)
 - `CDK.VENDOR.*` - Third-party vendor tags
@@ -157,6 +160,75 @@ new JaypieLambda(this, "MyLambda", {
   environment: ["NODE_ENV", { DEBUG: "true" }], // Mixed array syntax
 });
 ```
+
+### Queued Lambda with a Dead-Letter Queue
+
+`JaypieQueuedLambda` creates its queue without a redrive policy by default, so a
+poison message retries until retention lapses. `dlq` adds the dead-letter queue
+and redrive policy; `JaypieBucketQueuedLambda` inherits it.
+
+```typescript
+new JaypieQueuedLambda(this, "Worker", { code: "dist", dlq: true }); // maxReceiveCount 3
+new JaypieQueuedLambda(this, "Worker", { code: "dist", dlq: 5 });    // maxReceiveCount 5
+new JaypieQueuedLambda(this, "Worker", {
+  code: "dist",
+  dlq: { maxReceiveCount: 3, retentionPeriod: Duration.days(14) },
+});
+```
+
+`true` uses `CDK.SQS.DLQ` defaults (3 receives, 14-day retention); a number is
+shorthand for `maxReceiveCount`; the object form also accepts an existing
+`queue`. The DLQ matches the source queue's `fifo` setting — SQS rejects a
+redrive policy across the FIFO boundary. Exposed as `.dlq` so consumers can
+alarm on its depth; a dead-letter queue nobody watches is a place messages go to
+be ignored.
+
+`dlq` is distinct from the inherited `deadLetterQueue` prop, which configures
+the Lambda's asynchronous-invocation DLQ and does nothing for SQS event-source
+failures.
+
+### SES Inbound Email
+
+`JaypieSesIntake` packages domain identity, DKIM CNAMEs, MX, a receipt rule set
+writing raw MIME to S3, and rule-set activation.
+
+```typescript
+import { JaypieSesIntake } from "@jaypie/constructs";
+
+// Owns the worker
+new JaypieSesIntake(this, "Intake", {
+  code: "../api/dist",
+  handler: "email.handler",
+  tables: [table],
+  zone: "example.com",
+});
+
+// Attaches to an existing worker
+const worker = new JaypieBucketQueuedLambda(this, "EmailWorker", { ... });
+new JaypieSesIntake(this, "Intake", { bucket: worker, zone: "example.com" });
+```
+
+Encoded specifics, each of which is a silent failure otherwise:
+
+- `Identity.domain(subdomain)` creates no DNS records, and
+  `Identity.publicHostedZone(zone)` verifies the apex instead of the subdomain.
+  The construct creates the three DKIM CNAMEs itself via `CfnRecordSet` (the L2
+  record's name qualification cannot handle the identity's unresolved tokens;
+  the same pattern CDK's `EasyDkim.bind` uses). Those CNAMEs resolving IS SESv2
+  identity verification — no TXT record is involved.
+- `sesActions.S3` must receive the real `s3.Bucket`, not the
+  `JaypieBucketQueuedLambda` wrapper. The action locates the bucket's `Policy`
+  child to attach the `ses.amazonaws.com` + `aws:SourceAccount` grant and the
+  CloudFormation ordering; handed the wrapper it degrades to a warning with no
+  policy and no dependency. `bucket` is unwrapped internally.
+- CloudFormation has no rule-set activation resource, so activation runs through
+  an `AwsCustomResource` whose `onDelete` deactivates. It has to: SES refuses to
+  delete an active rule set. That means tearing the stack down disables SES
+  receiving account/region-wide.
+- One active receipt rule set per account/region. Gate instantiation to one
+  environment per account.
+- SES sandbox mode restricts sending only; receiving needs no production-access
+  request.
 
 ### CloudFront Distribution
 
