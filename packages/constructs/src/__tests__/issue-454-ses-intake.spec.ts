@@ -16,12 +16,27 @@ import { JaypieSesIntake } from "../JaypieSesIntake.js";
 const CODE = lambda.Code.fromInline("exports.handler = () => {}");
 const HOST = "intake.example.com";
 
+// Every input envHostname reads, so the derived host does not depend on
+// whatever the ambient environment happens to set (CI sets PROJECT_ENV)
+const HOSTNAME_ENV_KEYS = [
+  "CDK_ENV_DOMAIN",
+  "CDK_ENV_HOSTED_ZONE",
+  "CDK_ENV_PERSONAL",
+  "CDK_ENV_SUBDOMAIN",
+  "PROJECT_ENV",
+] as const;
+
 describe("issue 454: JaypieSesIntake", () => {
   let app: App;
   let stack: Stack;
   let zone: HostedZone;
+  let priorEnv: Record<string, string | undefined>;
 
   beforeEach(() => {
+    priorEnv = Object.fromEntries(
+      HOSTNAME_ENV_KEYS.map((key) => [key, process.env[key]]),
+    );
+    HOSTNAME_ENV_KEYS.forEach((key) => delete process.env[key]);
     process.env.CDK_ENV_HOSTED_ZONE = "example.com";
     app = new App();
     stack = new Stack(app, "TestStack", {
@@ -31,7 +46,14 @@ describe("issue 454: JaypieSesIntake", () => {
   });
 
   afterEach(() => {
-    delete process.env.CDK_ENV_HOSTED_ZONE;
+    HOSTNAME_ENV_KEYS.forEach((key) => {
+      const value = priorEnv[key];
+      if (value === undefined) {
+        delete process.env[key];
+      } else {
+        process.env[key] = value;
+      }
+    });
   });
 
   describe("Base Cases", () => {
@@ -314,6 +336,26 @@ describe("issue 454: JaypieSesIntake", () => {
     });
 
     it("derives the host from the environment when omitted", () => {
+      const construct = new JaypieSesIntake(stack, "Intake", {
+        code: CODE,
+        zone,
+      });
+
+      expect(construct.host).toBe("intake.example.com");
+    });
+
+    it("includes the environment tier in the derived host", () => {
+      process.env.PROJECT_ENV = CDK.ENV.SANDBOX;
+      const construct = new JaypieSesIntake(stack, "Intake", {
+        code: CODE,
+        zone,
+      });
+
+      expect(construct.host).toBe("intake.sandbox.example.com");
+    });
+
+    it("drops the environment tier in production", () => {
+      process.env.PROJECT_ENV = CDK.ENV.PRODUCTION;
       const construct = new JaypieSesIntake(stack, "Intake", {
         code: CODE,
         zone,
