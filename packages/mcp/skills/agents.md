@@ -34,7 +34,7 @@ Complete stack styles, techniques, and traditions.
 
 Contents: index, releasenotes
 Development: apikey, documentation, errors, llm, logs, mdaml, mocks, monorepo, repokit, style, subpackages, tests, tools
-Infrastructure: apigateway, aws, cdk, cicd, datadog, dns, dynamodb, express, lambda, migrations, ports, secrets, sqs, streaming, variables, waf, web, websockets
+Infrastructure: apigateway, aws, cdk, cicd, datadog, dns, dynamodb, email, express, lambda, migrations, ports, secrets, sqs, streaming, variables, waf, web, websockets
 Patterns: api, fabric, handlers, models, repository, services, vocabulary
 Recipes: recipe-api-server
 Meta: issues, jaypie, mcp, skills

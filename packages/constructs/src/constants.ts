@@ -91,6 +91,7 @@ export const CDK = {
   },
   PRINCIPAL: {
     ROUTE53: "route53.amazonaws.com",
+    SES: "ses.amazonaws.com",
   },
   PRINCIPAL_TYPE: {
     GROUP: "GROUP",
@@ -117,6 +118,17 @@ export const CDK = {
     STORAGE: "storage",
     TOY: "toy",
   },
+  SES: {
+    DKIM: {
+      RECORD_COUNT: 3,
+      TTL: 1800, // 30 minutes; DKIM CNAMEs change only on identity replacement
+    },
+    INTAKE: {
+      COMPONENT: "intake",
+      OBJECT_KEY_PREFIX: "inbound/",
+    },
+    SMTP_HOSTNAME_PREFIX: "inbound-smtp",
+  },
   SERVICE: {
     DATADOG: "datadog",
     INFRASTRUCTURE: "infrastructure",
@@ -124,6 +136,12 @@ export const CDK = {
     NONE: "none",
     SSO: "sso",
     TRACE: "trace",
+  },
+  SQS: {
+    DLQ: {
+      MAX_RECEIVE_COUNT: 3,
+      RETENTION_DAYS: 14, // SQS maximum; a DLQ should outlive the source queue
+    },
   },
   TAG: {
     BUILD_DATE: "buildDate",

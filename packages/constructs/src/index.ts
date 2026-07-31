@@ -7,7 +7,10 @@ export {
 } from "./JaypieAccountLoggingBucket";
 export { JaypieApiGateway, JaypieApiGatewayProps } from "./JaypieApiGateway";
 export { JaypieAppStack } from "./JaypieAppStack";
-export { JaypieBucketQueuedLambda } from "./JaypieBucketQueuedLambda";
+export {
+  JaypieBucketQueuedLambda,
+  JaypieBucketQueuedLambdaProps,
+} from "./JaypieBucketQueuedLambda";
 export { JaypieCertificate, JaypieCertificateProps } from "./JaypieCertificate";
 export {
   JaypieDatadogBucket,
@@ -53,8 +56,13 @@ export {
   JaypieOrganizationTrail,
   JaypieOrganizationTrailProps,
 } from "./JaypieOrganizationTrail";
-export { JaypieQueuedLambda } from "./JaypieQueuedLambda";
+export {
+  JaypieQueueDlqProps,
+  JaypieQueuedLambda,
+  JaypieQueuedLambdaProps,
+} from "./JaypieQueuedLambda";
 export { JaypieSecret, JaypieSecretProps } from "./JaypieSecret";
+export { JaypieSesIntake, JaypieSesIntakeProps } from "./JaypieSesIntake";
 export {
   AccountAssignments,
   JaypieSsoPermissions,
