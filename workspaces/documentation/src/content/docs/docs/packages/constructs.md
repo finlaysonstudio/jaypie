@@ -151,8 +151,8 @@ new JaypieApiGateway(this, "Gateway", {
 ## JaypieDistribution
 
 CloudFront distribution over a Lambda Function URL or any origin, with ACM
-certificate, Route53 records, security headers, WAFv2, and access logging by
-default.
+certificate, Route53 records, security headers, and access logging by default.
+WAFv2 is opt-in via `waf: true`.
 
 ```typescript
 import { JaypieDistribution, JaypieExpressLambda } from "@jaypie/constructs";
@@ -205,12 +205,12 @@ hostname dark until the next deploy that touches it.
 | `zone` | `string` \| `IHostedZone` | Route53 hosted zone |
 | `deleteExistingRecord` | `boolean` \| `string` \| `string[]` | Force-delete conflicting records |
 | `streaming` | `boolean` | Lambda response streaming |
-| `waf` | `boolean` \| `JaypieWafConfig` | WAFv2 WebACL (default enabled) |
+| `waf` | `boolean` \| `JaypieWafConfig` | WAFv2 WebACL (default disabled) |
 | `securityHeaders` | `boolean` \| overrides | Security response headers (default enabled) |
 
 ## JaypieWebDeploymentBucket
 
-Static site on S3 fronted by CloudFront, ACM, and Route53. Ships with default security headers, WAFv2, and CloudFront access logging — same override mechanisms as `JaypieDistribution` (`securityHeaders`, `responseHeadersPolicy`, `waf`, `logBucket`, `destination`). When `CDK_ENV_REPO` is set, also provisions a scoped GitHub OIDC deploy role with `cloudfront:CreateInvalidation` on the distribution.
+Static site on S3 fronted by CloudFront, ACM, and Route53. Ships with default security headers and CloudFront access logging, and opt-in WAFv2 — same override mechanisms as `JaypieDistribution` (`securityHeaders`, `responseHeadersPolicy`, `waf`, `logBucket`, `destination`). When `CDK_ENV_REPO` is set, also provisions a scoped GitHub OIDC deploy role with `cloudfront:CreateInvalidation` on the distribution.
 
 ```typescript
 import { JaypieWebDeploymentBucket } from "@jaypie/constructs";

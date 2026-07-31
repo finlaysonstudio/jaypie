@@ -59,7 +59,7 @@ describe("JaypieWebDeploymentBucket", () => {
       template.resourceCountIs("AWS::WAFv2::WebACL", 0);
     });
 
-    it("creates distribution, headers, log bucket, and WAF with host+zone", () => {
+    it("creates distribution, headers, and log bucket with host+zone", () => {
       const { stack, zone } = makeStack();
 
       const construct = new JaypieWebDeploymentBucket(stack, "Web", {
@@ -71,11 +71,28 @@ describe("JaypieWebDeploymentBucket", () => {
       expect(construct.distribution).toBeDefined();
       expect(construct.responseHeadersPolicy).toBeDefined();
       expect(construct.logBucket).toBeDefined();
-      expect(construct.webAcl).toBeDefined();
-      expect(construct.wafLogBucket).toBeDefined();
+      expect(construct.webAcl).toBeUndefined();
+      expect(construct.wafLogBucket).toBeUndefined();
 
       template.hasResource("AWS::CloudFront::Distribution", {});
       template.hasResource("AWS::CloudFront::ResponseHeadersPolicy", {});
+      template.resourceCountIs("AWS::WAFv2::WebACL", 0);
+      template.resourceCountIs("AWS::WAFv2::LoggingConfiguration", 0);
+    });
+
+    it("creates WAF with host+zone and waf: true", () => {
+      const { stack, zone } = makeStack();
+
+      const construct = new JaypieWebDeploymentBucket(stack, "Web", {
+        host: "app.example.com",
+        waf: true,
+        zone,
+      });
+      const template = Template.fromStack(stack);
+
+      expect(construct.webAcl).toBeDefined();
+      expect(construct.wafLogBucket).toBeDefined();
+
       template.hasResource("AWS::WAFv2::WebACL", {});
       template.hasResource("AWS::WAFv2::LoggingConfiguration", {});
     });
@@ -168,11 +185,12 @@ describe("JaypieWebDeploymentBucket", () => {
   });
 
   describe("WAF", () => {
-    it("creates a WebACL named after the construct id by default", () => {
+    it("creates a WebACL named after the construct id with waf: true", () => {
       const { stack, zone } = makeStack();
 
       new JaypieWebDeploymentBucket(stack, "MyWeb", {
         host: "app.example.com",
+        waf: true,
         zone,
       });
       const template = Template.fromStack(stack);
@@ -182,6 +200,19 @@ describe("JaypieWebDeploymentBucket", () => {
           Name: Match.stringLikeRegexp("MyWeb-WebAcl"),
         }),
       ).not.toThrow();
+    });
+
+    it("creates no WebACL by default", () => {
+      const { stack, zone } = makeStack();
+
+      const construct = new JaypieWebDeploymentBucket(stack, "Web", {
+        host: "app.example.com",
+        zone,
+      });
+      const template = Template.fromStack(stack);
+
+      expect(construct.webAcl).toBeUndefined();
+      template.resourceCountIs("AWS::WAFv2::WebACL", 0);
     });
 
     it("disables WAF when waf is false", () => {
@@ -282,6 +313,7 @@ describe("JaypieWebDeploymentBucket", () => {
 
       new JaypieWebDeploymentBucket(stack, "DocumentationBucket", {
         host: "app.example.com",
+        waf: true,
         zone,
       });
       const template = Template.fromStack(stack);
@@ -348,8 +380,8 @@ describe("JaypieWebDeploymentBucket", () => {
       const template = Template.fromStack(stack);
 
       expect(construct.logBucket).toBeDefined();
-      // DestinationBucket + access LogBucket + WafLogBucket
-      template.resourceCountIs("AWS::S3::Bucket", 3);
+      // DestinationBucket + access LogBucket
+      template.resourceCountIs("AWS::S3::Bucket", 2);
     });
 
     it("skips creating an access log bucket when destination is false", () => {

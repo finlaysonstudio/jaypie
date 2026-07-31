@@ -302,14 +302,14 @@ new JaypieDistribution(this, "Dist", {
 
 #### WAF (Web Application Firewall)
 
-`JaypieDistribution` attaches a WAFv2 WebACL by default with AWSManagedRulesCommonRuleSet, AWSManagedRulesKnownBadInputsRuleSet, IP rate limiting (2000/5min), and WAF logging to S3 with Datadog forwarding.
+`JaypieDistribution` attaches a WAFv2 WebACL when `waf` is set. WAF is off by default; `waf: true` enables AWSManagedRulesCommonRuleSet, AWSManagedRulesKnownBadInputsRuleSet, IP rate limiting (2000/5min), and WAF logging to S3 with Datadog forwarding. `JaypieWebDeploymentBucket` follows the same default.
 
 ```typescript
-// Default: WAF enabled with logging
+// Default: no WAF
 new JaypieDistribution(this, "Dist", { handler });
 
-// Disable WAF
-new JaypieDistribution(this, "Dist", { handler, waf: false });
+// Enable WAF with logging
+new JaypieDistribution(this, "Dist", { handler, waf: true });
 
 // Customize
 new JaypieDistribution(this, "Dist", {

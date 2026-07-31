@@ -130,12 +130,12 @@ export interface JaypieWebDeploymentBucketProps extends s3.BucketProps {
   securityHeaders?: boolean | SecurityHeadersOverrides;
   /**
    * WAF WebACL configuration for the CloudFront distribution.
-   * - true/undefined: create and attach a WebACL with sensible defaults; the
-   *   construct id is used to namespace the WebACL and WAF log bucket
-   * - false: disable WAF
+   * - true: create and attach a WebACL with sensible defaults; the construct
+   *   id is used to namespace the WebACL and WAF log bucket
+   * - false/undefined: disable WAF
    * - JaypieWebDeploymentBucketWafConfig: customize WAF behavior; if `name`
    *   is omitted the construct id is used
-   * @default true
+   * @default false
    */
   waf?: boolean | JaypieWebDeploymentBucketWafConfig;
   /**
@@ -183,7 +183,7 @@ export class JaypieWebDeploymentBucket extends Construct implements s3.IBucket {
       responseHeadersPolicy: responseHeadersPolicyProp,
       roleTag: roleTagProp,
       securityHeaders: securityHeadersProp,
-      waf: wafProp = true,
+      waf: wafProp = false,
       zone: propsZone,
       ...bucketProps
     } = props;

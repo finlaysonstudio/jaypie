@@ -95,7 +95,7 @@ If neither resolves, no custom domain, certificate, or DNS record is created and
 
 `JaypieDistribution` is the preferred front door for new Jaypie APIs. It fronts the Lambda with CloudFront + Lambda Function URLs instead of API Gateway, and ships with capabilities `JaypieApiGateway` lacks:
 
-- **WAFv2 WebACL** (managed rules + IP rate limiting + logging) by default — see `skill("cdk")`
+- **WAFv2 WebACL** (managed rules + IP rate limiting + logging) via `waf: true` — see `skill("cdk")`
 - **Security response headers** (HSTS, CSP, X-Frame-Options, etc.) by default
 - **Response streaming** via `streaming: true` (requires Lambda Function URL, not API Gateway) — see `skill("streaming")`
 - **CloudFront access logs** with Datadog forwarding
@@ -211,7 +211,7 @@ Two things to plan for:
 | Host env fallback | `CDK_ENV_API_HOST_NAME` → `CDK_ENV_API_SUBDOMAIN`+`CDK_ENV_API_HOSTED_ZONE` | Same, plus falls back to `CDK_ENV_HOSTED_ZONE` |
 | Zone env fallback | `CDK_ENV_API_HOSTED_ZONE` | `CDK_ENV_HOSTED_ZONE` |
 | DNS | A record only | A + AAAA records |
-| WAF | Not built in | Enabled by default (`waf: false` to disable) |
+| WAF | Not built in | Opt-in (`waf: true` to enable) |
 | Security headers | Not built in | Enabled by default (`securityHeaders: false` to disable) |
 | Streaming | Not supported | `streaming: true` |
 | Request timeout | API Gateway 29s hard cap | CloudFront `originReadTimeout` up to 120s |
@@ -221,9 +221,9 @@ Two things to plan for:
 
 ### Gotchas
 
-- **Lambda permissions** — `LambdaRestApi` auto-grants invoke from API Gateway; `JaypieDistribution` creates a Function URL with `authType: NONE`, so the WAF is your front-line auth/rate-limiter. Keep `waf` enabled unless you have a replacement.
+- **Lambda permissions** — `LambdaRestApi` auto-grants invoke from API Gateway; `JaypieDistribution` creates a Function URL with `authType: NONE`, so nothing rate-limits the origin unless the app does. Set `waf: true` when the API needs a front-line rate limiter.
 - **DNS record collision** — see "DNS Records" above. Set `deleteExistingRecord: true` on the new construct (or do a two-phase deploy) or the swap fails on Route53.
-- **Large request bodies** — the default `AWSManagedRulesCommonRuleSet` blocks bodies over 8KB. If your API accepts larger payloads, override `SizeRestrictions_BODY` — see `skill("cdk")` WAF section.
+- **Large request bodies** — with WAF enabled, `AWSManagedRulesCommonRuleSet` blocks bodies over 8KB. If your API accepts larger payloads, override `SizeRestrictions_BODY` — see `skill("cdk")` WAF section.
 - **`LambdaRestApiProps`-only features** — usage plans, API keys, request validators, and stage variables have no CloudFront equivalent. Keep `JaypieApiGateway` if you rely on them, or move that logic into the Lambda.
 - **CORS** — `defaultCorsPreflightOptions` on API Gateway is replaced by handling CORS in the Express app (see `skill("cors")`).
 

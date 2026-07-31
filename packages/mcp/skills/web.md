@@ -44,7 +44,7 @@ new JaypieWebDeploymentBucket(this, "Web", {
 | `responseHeadersPolicy` | `IResponseHeadersPolicy` | undefined — full override; bypasses default security headers |
 | `roleTag` | `string` | `CDK.ROLE.HOSTING` |
 | `securityHeaders` | `boolean \| SecurityHeadersOverrides` | `true` |
-| `waf` | `boolean \| JaypieWebDeploymentBucketWafConfig` | `true` (WAF name defaults to construct id) |
+| `waf` | `boolean \| JaypieWebDeploymentBucketWafConfig` | `false` (when enabled, WAF name defaults to construct id) |
 
 Also accepts all `s3.BucketProps` — the bucket defaults to `autoDeleteObjects: true`, `publicReadAccess: true`, `websiteIndexDocument: "index.html"`, `websiteErrorDocument: "index.html"` (SPA-friendly).
 
@@ -77,14 +77,14 @@ new JaypieWebDeploymentBucket(this, "Web", { host, zone, responseHeadersPolicy: 
 
 ### WAF
 
-Same defaults as `JaypieDistribution` (AWSManagedRulesCommonRuleSet, AWSManagedRulesKnownBadInputsRuleSet, IP rate limit 2000/5min, WAF logging to S3 with Datadog forwarding). The WebACL and WAF log bucket are namespaced with the construct id by default so multiple instances coexist without collision:
+Off by default, matching `JaypieDistribution`. When enabled it uses the same settings (AWSManagedRulesCommonRuleSet, AWSManagedRulesKnownBadInputsRuleSet, IP rate limit 2000/5min, WAF logging to S3 with Datadog forwarding). The WebACL and WAF log bucket are namespaced with the construct id so multiple instances coexist without collision:
 
 ```typescript
-// Default — WAF named after construct id ("MyWeb-WebAcl")
-new JaypieWebDeploymentBucket(this, "MyWeb", { host, zone });
+// Default — no WAF
+new JaypieWebDeploymentBucket(this, "Web", { host, zone });
 
-// Disable
-new JaypieWebDeploymentBucket(this, "Web", { host, zone, waf: false });
+// Enable — WAF named after construct id ("MyWeb-WebAcl")
+new JaypieWebDeploymentBucket(this, "MyWeb", { host, zone, waf: true });
 
 // Custom name + rate limit
 new JaypieWebDeploymentBucket(this, "Web", {
@@ -177,7 +177,7 @@ See `skill("variables")` for the `PROJECT_ENV` / `CDK_ENV_*` variables involved.
 
 ## JaypieDistribution (dynamic origins)
 
-For CloudFront in front of an Express Lambda, Function URL, or custom origin — not a static S3 site — reach for `JaypieDistribution`. It ships with ACM, Route53 alias, WAF, and security headers by default.
+For CloudFront in front of an Express Lambda, Function URL, or custom origin — not a static S3 site — reach for `JaypieDistribution`. It ships with ACM, Route53 alias, and security headers by default; WAF is opt-in via `waf: true`.
 
 ```typescript
 import { JaypieDistribution, JaypieExpressLambda } from "@jaypie/constructs";

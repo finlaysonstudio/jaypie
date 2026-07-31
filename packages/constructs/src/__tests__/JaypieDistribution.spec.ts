@@ -736,8 +736,8 @@ describe("JaypieDistribution", () => {
       const template = Template.fromStack(stack);
 
       expect(construct.logBucket).toBeDefined();
-      // Should have three S3 buckets: the origin bucket, the CF log bucket, and the WAF log bucket
-      template.resourceCountIs("AWS::S3::Bucket", 3);
+      // Should have two S3 buckets: the origin bucket and the CF log bucket
+      template.resourceCountIs("AWS::S3::Bucket", 2);
     });
 
     it("configures distribution with logging enabled", () => {
@@ -818,8 +818,8 @@ describe("JaypieDistribution", () => {
       const template = Template.fromStack(stack);
 
       expect(construct.logBucket).toBeUndefined();
-      // Should have the origin bucket and the WAF log bucket, no CF log bucket
-      template.resourceCountIs("AWS::S3::Bucket", 2);
+      // Should have only the origin bucket, no CF log bucket
+      template.resourceCountIs("AWS::S3::Bucket", 1);
 
       const distribution = findDistribution(template);
       expect(
@@ -866,8 +866,8 @@ describe("JaypieDistribution", () => {
         });
         const template = Template.fromStack(stack);
 
-        // Should have origin bucket + WAF log bucket (CF log bucket is imported)
-        template.resourceCountIs("AWS::S3::Bucket", 2);
+        // Should have only the origin bucket (CF log bucket is imported)
+        template.resourceCountIs("AWS::S3::Bucket", 1);
 
         // logBucket should be set
         expect(construct.logBucket).toBeDefined();
@@ -890,8 +890,8 @@ describe("JaypieDistribution", () => {
         });
         const template = Template.fromStack(stack);
 
-        // Origin bucket + WAF log bucket (CF log bucket imported by name)
-        template.resourceCountIs("AWS::S3::Bucket", 2);
+        // Origin bucket only (CF log bucket imported by name)
+        template.resourceCountIs("AWS::S3::Bucket", 1);
 
         // logBucket should be set
         expect(construct.logBucket).toBeDefined();
@@ -914,8 +914,8 @@ describe("JaypieDistribution", () => {
         });
         const template = Template.fromStack(stack);
 
-        // Origin bucket + WAF log bucket (CF log bucket imported by export)
-        template.resourceCountIs("AWS::S3::Bucket", 2);
+        // Origin bucket only (CF log bucket imported by export)
+        template.resourceCountIs("AWS::S3::Bucket", 1);
 
         // logBucket should be set
         expect(construct.logBucket).toBeDefined();
@@ -942,8 +942,8 @@ describe("JaypieDistribution", () => {
         });
         const template = Template.fromStack(stack);
 
-        // Should have three buckets: origin, external log bucket, and WAF log bucket
-        template.resourceCountIs("AWS::S3::Bucket", 3);
+        // Should have two buckets: origin and external log bucket
+        template.resourceCountIs("AWS::S3::Bucket", 2);
 
         // logBucket should be the external bucket
         expect(construct.logBucket).toBe(externalLogBucket);
@@ -987,8 +987,8 @@ describe("JaypieDistribution", () => {
         });
         const template = Template.fromStack(stack);
 
-        // Origin bucket + WAF log bucket (CF log bucket imported, no new CF log bucket)
-        template.resourceCountIs("AWS::S3::Bucket", 2);
+        // Origin bucket only (CF log bucket imported, no new CF log bucket)
+        template.resourceCountIs("AWS::S3::Bucket", 1);
 
         // logBucket should still be set (external bucket)
         expect(construct.logBucket).toBeDefined();
@@ -1431,13 +1431,28 @@ describe("JaypieDistribution", () => {
   });
 
   describe("WAF", () => {
-    it("creates a WebACL by default", () => {
+    it("creates no WebACL by default", () => {
       const stack = new Stack();
       const bucket = new s3.Bucket(stack, "TestBucket");
       const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
 
       const construct = new JaypieDistribution(stack, "TestDistribution", {
         handler: origin,
+      });
+      const template = Template.fromStack(stack);
+
+      expect(construct.webAcl).toBeUndefined();
+      template.resourceCountIs("AWS::WAFv2::WebACL", 0);
+    });
+
+    it("creates a WebACL with waf: true", () => {
+      const stack = new Stack();
+      const bucket = new s3.Bucket(stack, "TestBucket");
+      const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
+
+      const construct = new JaypieDistribution(stack, "TestDistribution", {
+        handler: origin,
+        waf: true,
       });
       const template = Template.fromStack(stack);
 
@@ -1452,6 +1467,7 @@ describe("JaypieDistribution", () => {
 
       new JaypieDistribution(stack, "TestDistribution", {
         handler: origin,
+        waf: true,
       });
       const template = Template.fromStack(stack);
 
@@ -1466,6 +1482,7 @@ describe("JaypieDistribution", () => {
 
       new JaypieDistribution(stack, "TestDistribution", {
         handler: origin,
+        waf: true,
       });
       const template = Template.fromStack(stack);
 
@@ -1491,6 +1508,7 @@ describe("JaypieDistribution", () => {
 
       new JaypieDistribution(stack, "TestDistribution", {
         handler: origin,
+        waf: true,
       });
       const template = Template.fromStack(stack);
 
@@ -1510,6 +1528,7 @@ describe("JaypieDistribution", () => {
 
       new JaypieDistribution(stack, "TestDistribution", {
         handler: origin,
+        waf: true,
       });
       const template = Template.fromStack(stack);
 
@@ -1535,6 +1554,7 @@ describe("JaypieDistribution", () => {
 
       new JaypieDistribution(stack, "TestDistribution", {
         handler: origin,
+        waf: true,
       });
       const template = Template.fromStack(stack);
 
@@ -2257,7 +2277,22 @@ describe("JaypieDistribution", () => {
   });
 
   describe("WAF Logging", () => {
-    it("creates WAF logging bucket and config by default", () => {
+    it("creates WAF logging bucket and config when WAF is enabled", () => {
+      const stack = new Stack();
+      const bucket = new s3.Bucket(stack, "TestBucket");
+      const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
+
+      const construct = new JaypieDistribution(stack, "TestDistribution", {
+        handler: origin,
+        waf: true,
+      });
+      const template = Template.fromStack(stack);
+
+      expect(construct.wafLogBucket).toBeDefined();
+      template.resourceCountIs("AWS::WAFv2::LoggingConfiguration", 1);
+    });
+
+    it("creates no WAF logging bucket when WAF is disabled by default", () => {
       const stack = new Stack();
       const bucket = new s3.Bucket(stack, "TestBucket");
       const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
@@ -2267,8 +2302,8 @@ describe("JaypieDistribution", () => {
       });
       const template = Template.fromStack(stack);
 
-      expect(construct.wafLogBucket).toBeDefined();
-      template.resourceCountIs("AWS::WAFv2::LoggingConfiguration", 1);
+      expect(construct.wafLogBucket).toBeUndefined();
+      template.resourceCountIs("AWS::WAFv2::LoggingConfiguration", 0);
     });
 
     it("creates bucket with aws-waf-logs- prefix", () => {
@@ -2278,6 +2313,7 @@ describe("JaypieDistribution", () => {
 
       new JaypieDistribution(stack, "TestDistribution", {
         handler: origin,
+        waf: true,
       });
       const template = Template.fromStack(stack);
 
