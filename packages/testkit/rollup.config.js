@@ -65,7 +65,14 @@ export default [
         outDir: "./dist", // Ensure this matches the output directory
       }),
       copy({
-        targets: [{ src: "src/mockTextract.json", dest: "dist" }],
+        targets: [
+          { src: "src/mockTextract.json", dest: "dist" },
+          // Matcher augmentation for `vitest`. rollup-plugin-dts drops
+          // `declare module` blocks, so these ship verbatim and are pulled in
+          // by the reference banner on each bundled .d.ts entry.
+          { src: "src/types/matchers.d.ts", dest: "dist/types" },
+          { src: "src/types/vitest.d.ts", dest: "dist/types" },
+        ],
       }),
     ],
   },
@@ -96,6 +103,7 @@ export default [
   {
     input: "src/index.ts",
     output: {
+      banner: '/// <reference path="./types/vitest.d.ts" />',
       file: "dist/index.d.ts",
       format: "es",
     },
@@ -106,6 +114,7 @@ export default [
   {
     input: "src/mock/index.ts",
     output: {
+      banner: '/// <reference path="../types/vitest.d.ts" />',
       file: "dist/mock/index.d.ts",
       format: "es",
     },

@@ -136,7 +136,7 @@ appWeb.exportOutputs({ prefix: "App" });   // AppDestinationBucketName, ...
 docsWeb.exportOutputs({ prefix: "Docs" }); // DocsDestinationBucketName, ...
 ```
 
-See `skill("cicd-deploy")` for the workflow pattern that reads these outputs and deploys content.
+See `skill("cicd-actions")` for the `web-deploy` composite action that reads these outputs and deploys content, and `skill("cicd-deploy")` for where it sits in the workflow.
 
 ## JaypieStaticWebBucket
 
@@ -232,7 +232,7 @@ A typical `feat/*` branch deploy:
 2. Workflow reads `DestinationBucketName`, `DestinationBucketDeployRoleArn`, and `DistributionId` from stack outputs.
 3. Workflow assumes the deploy role, runs `aws s3 sync ./dist s3://$BUCKET`, then invalidates `/*` on the distribution.
 
-See `skill("cicd-deploy")` for the reusable action pattern.
+Steps 2 and 3 are the `web-deploy` composite action in `skill("cicd-actions")`. `skill("cicd-deploy")` shows it running immediately after `cdk-deploy`.
 
 ## Stack Example
 
@@ -264,6 +264,7 @@ export class DocumentationStack extends JaypieAppStack {
 ## See Also
 
 - **`skill("cdk")`** — core constructs, `JaypieDistribution` WAF and security headers, `JaypieNextJs`
+- **`skill("cicd-actions")`** — the `web-deploy` action that syncs assets and invalidates the distribution
 - **`skill("cicd-deploy")`** — workflows that consume `DestinationBucketName` / `DeployRoleArn` / `DistributionId`
 - **`skill("dns")`** — hosted zones, ACM certificates, DNS debugging
 - **`skill("secrets")`** — `JaypieEnvSecret` provider/consumer pattern

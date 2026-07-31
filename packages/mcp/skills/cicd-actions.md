@@ -20,7 +20,9 @@ Jaypie projects use composite actions to share common workflow steps. Place thes
 │   │   └── action.yml
 │   ├── npm-install-build/
 │   │   └── action.yml
-│   └── cdk-deploy/
+│   ├── cdk-deploy/
+│   │   └── action.yml
+│   └── web-deploy/
 │       └── action.yml
 └── workflows/
     ├── deploy-sandbox.yml
@@ -42,6 +44,9 @@ inputs:
     default: 'sandbox'
   project-key:
     description: 'Project identifier'
+    required: true
+  project-sponsor:
+    description: 'Sponsor segment of the generated stack name'
     required: true
   project-nonce:
     description: 'Unique resource identifier'
@@ -82,8 +87,10 @@ runs:
         echo "project-env=${PROJECT_ENV}" >> $GITHUB_OUTPUT
         echo "PROJECT_ENV=${PROJECT_ENV}" >> $GITHUB_ENV
 
-        # Resolve PROJECT_KEY
+        # Resolve PROJECT_KEY and PROJECT_SPONSOR
+        # Both feed the generated stack name; an empty value yields "undefined"
         echo "PROJECT_KEY=${{ inputs.project-key }}" >> $GITHUB_ENV
+        echo "PROJECT_SPONSOR=${{ inputs.project-sponsor }}" >> $GITHUB_ENV
 
         # Resolve PROJECT_NONCE (default: branch name or 'prod')
         NONCE="${{ inputs.project-nonce }}"
@@ -121,6 +128,8 @@ runs:
         echo "project-chaos=${CHAOS}" >> $GITHUB_OUTPUT
         echo "PROJECT_CHAOS=${CHAOS}" >> $GITHUB_ENV
 ```
+
+`project-sponsor` is `required: true` on purpose. `PROJECT_SPONSOR` is the first segment of the generated stack name (`cdk-{PROJECT_SPONSOR}-{PROJECT_KEY}-{PROJECT_ENV}-{PROJECT_NONCE}`), and an optional input with an empty default deploys `cdk-undefined-...` silently. A stack name is immutable, so correcting it later means a stack replacement. See `skill("cdk")` for stack naming and `skill("variables")` for the full variable reference.
 
 ## configure-aws/action.yml
 
@@ -288,6 +297,149 @@ runs:
         path: ${{ inputs.working-directory }}/cdk-outputs.json
         if-no-files-found: ignore
 ```
+
+## web-deploy/action.yml
+
+Ships built web assets to a `JaypieWebDeploymentBucket` and invalidates CloudFront. This is the second half of the deployment model in `skill("web")`: CDK provisions the bucket, distribution, and deploy role, and this action moves the content. Jaypie deliberately avoids `s3deploy.BucketDeployment`, so a project that does not run this step has a bucket with nothing in it.
+
+Run it immediately after `cdk-deploy`, which writes the `cdk-outputs.json` this action reads.
+
+```yaml
+name: 'Web Deploy'
+description: 'Sync built web assets to the S3 deployment bucket and invalidate CloudFront'
+
+inputs:
+  outputs-file:
+    description: 'Path to cdk-outputs.json produced by cdk deploy'
+    required: false
+    default: 'workspaces/cdk/cdk-outputs.json'
+  prefix:
+    description: 'Output name prefix when exportOutputs({ prefix }) was used (e.g., "App")'
+    required: false
+    default: ''
+  source:
+    description: 'Directory of built assets to sync'
+    required: false
+    default: 'workspaces/web/dist'
+  region:
+    description: 'AWS region'
+    required: false
+    default: 'us-east-1'
+  role-session-name:
+    description: 'Session name for the deploy role'
+    required: false
+    default: 'github-actions-web-deploy'
+  immutable-cache-control:
+    description: 'Cache-Control applied to fingerprinted assets'
+    required: false
+    default: 'public, max-age=31536000, immutable'
+  document-cache-control:
+    description: 'Cache-Control applied to HTML documents'
+    required: false
+    default: 'public, max-age=0, must-revalidate'
+  invalidation-paths:
+    description: 'Space-separated CloudFront invalidation paths'
+    required: false
+    default: '/*'
+
+outputs:
+  bucket:
+    description: 'Destination bucket name'
+    value: ${{ steps.resolve.outputs.bucket }}
+  distribution-id:
+    description: 'CloudFront distribution id'
+    value: ${{ steps.resolve.outputs.distribution-id }}
+  invalidation-id:
+    description: 'CloudFront invalidation id'
+    value: ${{ steps.invalidate.outputs.invalidation-id }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Resolve stack outputs
+      id: resolve
+      shell: bash
+      run: |
+        set -euo pipefail
+        FILE="${{ inputs.outputs-file }}"
+        PREFIX="${{ inputs.prefix }}"
+        if [ ! -f "$FILE" ]; then
+          echo "::error::CDK outputs file not found: $FILE"
+          exit 1
+        fi
+
+        read_output() {
+          jq -re --arg key "${PREFIX}$1" \
+            'to_entries | map(.value) | add | .[$key] // empty' "$FILE"
+        }
+
+        BUCKET="$(read_output DestinationBucketName)" || {
+          echo "::error::${PREFIX}DestinationBucketName missing from $FILE (did the stack call exportOutputs()?)"
+          exit 1
+        }
+        ROLE_ARN="$(read_output DestinationBucketDeployRoleArn)" || {
+          echo "::error::${PREFIX}DestinationBucketDeployRoleArn missing from $FILE (is CDK_ENV_REPO set at synth time?)"
+          exit 1
+        }
+        DISTRIBUTION_ID="$(read_output DistributionId)" || DISTRIBUTION_ID=""
+
+        echo "bucket=${BUCKET}" >> $GITHUB_OUTPUT
+        echo "role-arn=${ROLE_ARN}" >> $GITHUB_OUTPUT
+        echo "distribution-id=${DISTRIBUTION_ID}" >> $GITHUB_OUTPUT
+
+    - name: Assume deploy role
+      uses: aws-actions/configure-aws-credentials@v6
+      with:
+        role-to-assume: ${{ steps.resolve.outputs.role-arn }}
+        aws-region: ${{ inputs.region }}
+        role-session-name: ${{ inputs.role-session-name }}
+
+    - name: Sync assets
+      shell: bash
+      run: |
+        set -euo pipefail
+        SOURCE="${{ inputs.source }}"
+        BUCKET="${{ steps.resolve.outputs.bucket }}"
+        if [ ! -d "$SOURCE" ]; then
+          echo "::error::Source directory not found: $SOURCE"
+          exit 1
+        fi
+
+        # Fingerprinted assets first so documents never reference missing files
+        aws s3 sync "$SOURCE" "s3://${BUCKET}" \
+          --delete \
+          --exclude "*.html" --exclude "*.json" --exclude "*.xml" --exclude "*.txt" \
+          --cache-control "${{ inputs.immutable-cache-control }}"
+
+        # Documents last, revalidated on every request
+        aws s3 sync "$SOURCE" "s3://${BUCKET}" \
+          --delete \
+          --exclude "*" \
+          --include "*.html" --include "*.json" --include "*.xml" --include "*.txt" \
+          --cache-control "${{ inputs.document-cache-control }}"
+
+    - name: Invalidate CloudFront
+      id: invalidate
+      if: steps.resolve.outputs.distribution-id != ''
+      shell: bash
+      run: |
+        set -euo pipefail
+        INVALIDATION_ID="$(aws cloudfront create-invalidation \
+          --distribution-id "${{ steps.resolve.outputs.distribution-id }}" \
+          --paths ${{ inputs.invalidation-paths }} \
+          --query 'Invalidation.Id' \
+          --output text)"
+        echo "invalidation-id=${INVALIDATION_ID}" >> $GITHUB_OUTPUT
+```
+
+Notes:
+
+- The `jq` expression is stack-name agnostic. `cdk-outputs.json` is keyed by the resolved stack name, so the expression flattens one level and reads the flat key. No workflow needs to know the generated stack name.
+- `jq -re` exits nonzero on a missing key, which drives the explicit error messages.
+- `prefix` covers stacks with more than one bucket, matching `exportOutputs({ prefix })`.
+- Both sync passes use `--delete`. `--delete` respects the same include/exclude filters, so the asset pass does not remove documents and the document pass does not remove assets.
+- Assets upload before documents so a freshly published document never references an asset that has not landed.
+- The deploy job needs `permissions: id-token: write`. This action performs a fresh OIDC exchange rather than chaining from the `configure-aws` credentials, which matches the trust policy the construct writes.
 
 ## Using Composite Actions
 

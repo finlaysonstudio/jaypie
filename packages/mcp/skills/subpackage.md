@@ -84,9 +84,15 @@ packages/<package-name>/
     "forceConsistentCasingInFileNames": true
   },
   "exclude": ["node_modules", "dist"],
-  "include": ["src/**/*"]
+  "include": ["src/**/*", "vitest.setup.ts"]
 }
 ```
+
+`vitest.setup.ts` is in `include` on purpose. It is the file that imports
+`@jaypie/testkit`, which is what brings the matcher augmentation for `vitest`
+into the program. Leave it out and specs that call `toBeFunction()` without
+importing the package themselves pass `npm run test` and fail `npm run
+typecheck` with `TS2339: Property 'toBeFunction' does not exist`.
 
 ### vite.config.ts
 
@@ -146,6 +152,12 @@ expect.extend(jaypieMatchers);
 `toBeFunction`, `toBeObject`, `toBeString`, `toStartWith`, etc.), so no separate
 `jest-extended` setup is required.
 
+The package ships the matching `vitest` type augmentation, so importing
+`@jaypie/testkit` anywhere in the TypeScript program types every matcher.
+Keep `vitest.setup.ts` inside the tsconfig `include` shown above; the
+augmentation is only in scope for files compiled alongside an import of the
+package. Requires `@jaypie/testkit` 1.2.60 or later.
+
 ### src/index.ts
 
 ```typescript
@@ -195,10 +207,16 @@ npm install @jaypie/testkit --workspace ./packages/<package-name> --save-dev
 
 ## Workspace Configuration
 
-The root `vitest.workspace.ts` uses a glob pattern that auto-discovers packages:
+The root `vitest.config.ts` declares `test.projects` with a glob pattern that auto-discovers packages:
 
 ```typescript
-export default ["packages/*/vitest.config.{ts,js}"];
+import { defineConfig } from "vitest/config";
+
+export default defineConfig({
+  test: {
+    projects: ["packages/*/vitest.config.{ts,js}"],
+  },
+});
 ```
 
 New packages are automatically included when they have a `vitest.config.ts`.

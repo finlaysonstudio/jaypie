@@ -105,6 +105,19 @@ import { matchers } from "@jaypie/testkit";
 expect.extend(matchers);
 ```
 
+The matcher signatures augment the `vitest` module, so this import also types
+every matcher. TypeScript applies the augmentation program-wide, meaning a spec
+that calls `toBeFunction()` without importing the package still typechecks as
+long as the setup file is inside the consuming tsconfig `include`.
+
+The augmentation lives in `src/types/vitest.d.ts` and `src/types/matchers.d.ts`.
+`rollup-plugin-dts` drops `declare module` blocks, so `rollup.config.js` copies
+both files to `dist/types` verbatim and puts a `/// <reference path>` banner on
+each bundled `.d.ts` entry. Keep those two files self-contained: they must not
+import from sibling declarations that do not ship. `src/__tests__/publishedTypes.spec.ts`
+runs `tsc` against the fixture in `test/consumer` to hold this contract, and
+requires a build first.
+
 Or use the provided setup file:
 
 ```typescript
