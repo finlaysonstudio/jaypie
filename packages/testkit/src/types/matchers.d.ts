@@ -1,5 +1,5 @@
-// Import and re-export all matcher types
-import { JsonApiError } from "./jaypie-testkit.js";
+// This file ships to dist/types and is referenced by dist/index.d.ts, so it
+// must stay self-contained. Do not import from sibling declarations.
 
 // Make sure this is exported so it can be used by consumers
 export interface CustomMatchers<R = unknown> {
@@ -22,7 +22,9 @@ export interface CustomMatchers<R = unknown> {
   toThrowForbiddenError(): R;
   toThrowGatewayTimeoutError(): R;
   toThrowInternalError(): R;
-  toThrowJaypieError(expected?: JsonApiError): R;
+  toThrowJaypieError(expected?: {
+    errors: Array<{ detail?: string; status: number; title: string }>;
+  }): R;
   toThrowNotFoundError(): R;
   toThrowUnauthorizedError(): R;
   toThrowUnavailableError(): R;

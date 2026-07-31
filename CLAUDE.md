@@ -51,6 +51,7 @@
 | `PROJECT_ENV` | Environment identifier (local, meta, production) |
 | `PROJECT_KEY` | Project identifier for logging |
 | `PROJECT_NONCE` | Unique identifier for resources |
+| `PROJECT_SPONSOR` | Sponsor segment of the generated stack name |
 | `PROJECT_CHAOS` | Chaos engineering mode (none, partial, full) |
 | `NODE_ENV` | Node environment (development, production) |
 | `LOG_LEVEL` | Logging level (trace, debug, info, warn, error) |

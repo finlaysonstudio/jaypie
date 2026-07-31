@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "esModuleInterop": true,
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "noEmit": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "target": "ES2020",
+    "types": []
+  },
+  "include": ["consumer.ts", "indirect.ts", "setup.ts"]
+}

@@ -1,6 +1,6 @@
 ---
 description: CDK deployment workflows for sandbox and production
-related: cicd, cicd-actions, cicd-environments, cdk
+related: cicd, cicd-actions, cicd-environments, cdk, web
 ---
 
 # CDK Deployment Workflows
@@ -73,6 +73,7 @@ jobs:
       - uses: ./.github/actions/setup-environment
         with:
           project-key: my-project
+          project-sponsor: ${{ vars.PROJECT_SPONSOR }}
           project-env: sandbox
 
       - uses: ./.github/actions/configure-aws
@@ -87,6 +88,11 @@ jobs:
       - uses: ./.github/actions/cdk-deploy
         with:
           stack-name: '*-sandbox-*'
+
+      # Only when the stack has a JaypieWebDeploymentBucket
+      - uses: ./.github/actions/web-deploy
+        with:
+          region: ${{ vars.AWS_REGION || 'us-east-1' }}
 ```
 
 ## deploy-production.yml
@@ -155,6 +161,7 @@ jobs:
       - uses: ./.github/actions/setup-environment
         with:
           project-key: my-project
+          project-sponsor: ${{ vars.PROJECT_SPONSOR }}
           project-env: production
 
       - uses: ./.github/actions/configure-aws
@@ -169,6 +176,11 @@ jobs:
       - uses: ./.github/actions/cdk-deploy
         with:
           stack-name: '*-production-*'
+
+      # Only when the stack has a JaypieWebDeploymentBucket
+      - uses: ./.github/actions/web-deploy
+        with:
+          region: ${{ vars.AWS_REGION || 'us-east-1' }}
 ```
 
 ## version.yml
@@ -242,6 +254,22 @@ jobs:
           git commit -m "chore: bump versions (${{ github.event.inputs.version_type }})"
           git push
 ```
+
+## Web Content Deployment
+
+CDK provisions a `JaypieWebDeploymentBucket`; it does not fill it. Jaypie avoids `s3deploy.BucketDeployment`, so shipping content is a workflow step:
+
+1. `cdk-deploy` deploys the bucket, distribution, and deploy role, and writes `workspaces/cdk/cdk-outputs.json`.
+2. `web-deploy` reads `DestinationBucketName`, `DestinationBucketDeployRoleArn`, and `DistributionId` from that file.
+3. `web-deploy` assumes the deploy role, syncs the built assets, and invalidates the distribution.
+
+Requirements:
+
+- The stack calls `exportOutputs()` on the bucket, so the outputs have stable, hash-free logical IDs.
+- `CDK_ENV_REPO` is set at synth time, or the construct emits no deploy role.
+- The deploy job declares `permissions: id-token: write`.
+
+See `skill("cicd-actions")` for the `web-deploy` action body and `skill("web")` for the construct.
 
 ## Environment-Specific Stack Naming
 

@@ -84,11 +84,19 @@ export default [
 }
 ```
 
-### vitest.workspace.ts
+### vitest.config.ts
 
 ```typescript
-export default ["packages/*/vitest.config.{ts,js}"];
+import { defineConfig } from "vitest/config";
+
+export default defineConfig({
+  test: {
+    projects: ["packages/*/vitest.config.{ts,js}"],
+  },
+});
 ```
+
+Vitest 3 deprecated `vitest.workspace.ts` and Vitest 4 removed it. A root workspace file is silently ignored on current Vitest; declare projects with `test.projects` instead.
 
 ### .gitignore
 
