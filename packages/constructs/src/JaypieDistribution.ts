@@ -58,7 +58,7 @@ export interface JaypieWafConfig {
    * so multiple JaypieDistribution instances can coexist in the same
    * account/env without S3/WAFv2 name collisions.
    *
-   * Pass `waf: true` (or omit) to retain the legacy, non-namespaced names.
+   * Pass `waf: true` to retain the legacy, non-namespaced names.
    */
   name: string;
 
@@ -296,10 +296,10 @@ export interface JaypieDistributionProps extends Omit<
   serviceTag?: string;
   /**
    * WAF WebACL configuration for the CloudFront distribution.
-   * - true/undefined: create and attach a WebACL with sensible defaults
-   * - false: disable WAF
+   * - true: create and attach a WebACL with sensible defaults
+   * - false/undefined: disable WAF
    * - JaypieWafConfig: customize WAF behavior
-   * @default true
+   * @default false
    */
   waf?: boolean | JaypieWafConfig;
   /**
@@ -346,7 +346,7 @@ export class JaypieDistribution
       securityHeaders: securityHeadersProp,
       serviceTag,
       streaming = false,
-      waf: wafProp = true,
+      waf: wafProp = false,
       zone: propsZone,
       ...distributionProps
     } = props;

@@ -5,8 +5,8 @@ related: aws, cdk, web
 
 # WAF (Web Application Firewall)
 
-`JaypieDistribution` (and `JaypieWebDeploymentBucket`) attach a WAFv2 WebACL by
-default with:
+`JaypieDistribution` (and `JaypieWebDeploymentBucket`) attach a WAFv2 WebACL
+when `waf` is set. WAF is **off by default**; `waf: true` enables it with:
 
 - **AWSManagedRulesCommonRuleSet** — OWASP top 10 (SQLi, XSS, etc.)
 - **AWSManagedRulesKnownBadInputsRuleSet** — known bad patterns (Log4j, etc.)
@@ -14,11 +14,11 @@ default with:
 - **WAF logging** — S3 bucket with Datadog forwarder notifications
 
 ```typescript
-// Default: WAF enabled with logging
+// Default: no WAF
 new JaypieDistribution(this, "Dist", { handler });
 
-// Disable WAF entirely
-new JaypieDistribution(this, "Dist", { handler, waf: false });
+// Enable WAF with logging
+new JaypieDistribution(this, "Dist", { handler, waf: true });
 
 // Customize rate limit (name required on any waf config object)
 new JaypieDistribution(this, "Dist", {
@@ -50,8 +50,8 @@ new JaypieDistribution(this, "Dist", {
 });
 ```
 
-Cost: $5/month per WebACL + $1/month per rule + $0.60 per million requests. Use
-`waf: false` to opt out.
+Cost: $5/month per WebACL + $1/month per rule + $0.60 per million requests. That
+cost is why WAF is opt-in; set `waf: true` (or a config object) to opt in.
 
 ## Override specific managed rule actions
 
