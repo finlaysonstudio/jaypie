@@ -65,14 +65,19 @@ src/
   - `setup[]` - Pre-handler lifecycle functions
   - `teardown[]` - Post-handler cleanup (always runs)
   - `chaos` - Chaos engineering mode (from `PROJECT_CHAOS` env)
+  - `scrub` - Error scrubbing, `boolean | { client?: boolean, server?: boolean }`,
+    defaults to `{ client: false, server: true }`
 
   Caught Jaypie errors log by status: 4xx at warn, 500 and above at error, both
-  with `log.var({ jaypieError: { detail, status, title } })`. The error's
-  `detail` and `title` are then replaced with the generic strings for its status
-  so a constructor message never reaches a response body; `status`, `message`,
-  and `stack` are untouched. An unmapped 4xx status takes the bad request
-  strings and keeps its own status; a status outside 4xx and 5xx is not scrubbed.
-  Non-Jaypie errors log at fatal and become `UnhandledError`.
+  with `log.var({ jaypieError: { detail, status, title } })`. A 500-class error
+  then has its `detail` and `title` replaced with the generic strings for its
+  status, so a constructor message describing application internals never
+  reaches a response body. 4xx keeps its detail as thrown, since a client error
+  is only actionable when it says what to correct. `scrub` overrides either
+  class; `status`, `message`, and `stack` are untouched either way. A scrubbed
+  unmapped 4xx status takes the bad request strings and keeps its own status; a
+  status outside 4xx and 5xx is never scrubbed. Non-Jaypie errors log at fatal
+  and become `UnhandledError`.
 
 ### Type Coercion
 

@@ -92,9 +92,10 @@ unmapped 4xx falls to `BadRequestError`; anything else falls to `InternalError`.
 
 `@jaypie/kit`'s handler uses the no-message form to scrub a caught error's
 `detail` and `title`, and only substitutes within the same status class, so an
-unmapped 4xx keeps its own status while carrying the bad request strings. Add a
-case when adding an error class with a new status, or that status answers with
-`BadRequestError`'s wording.
+unmapped 4xx keeps its own status while carrying the bad request strings. The
+handler scrubs 500-class by default and 4xx only when configured with `scrub`.
+Add a case when adding an error class with a new status, or that status answers
+with `BadRequestError`'s wording.
 
 ## Use in Other Packages
 
@@ -115,6 +116,8 @@ This package is foundational and used throughout the monorepo:
 - Use `isJaypieError()` to check before accessing Jaypie-specific properties
 - Prefer specific error types over generic `InternalError`
 - Custom messages are optional; defaults are user-friendly
-- A custom message is for the logs, not the caller. Handlers scrub `detail` and
-  `title` to the generic strings for the status before the error reaches a
-  response body
+- A 4xx custom message is for the caller: it reaches the response body, so say
+  what to correct
+- A 500-class custom message is for the logs, not the caller. Handlers scrub
+  `detail` and `title` to the generic strings for the status before a 500-class
+  error reaches a response body

@@ -24,10 +24,22 @@ export interface ServiceMeta {
   description: string;
   /** Category for grouping (e.g., "record", "aws", "docs") */
   category: string;
+  /** Cross-cutting classifiers orthogonal to category (e.g., "long", "privileged") */
+  tags: string[];
   /** Input parameter definitions */
   inputs: ServiceInput[];
   /** Whether the service can be executed with no inputs */
   executable?: boolean;
+}
+
+/**
+ * Registration metadata for a service
+ */
+export interface RegisterServiceOptions {
+  /** Category for grouping; a service belongs to exactly one */
+  category: string;
+  /** Cross-cutting classifiers; a service may carry any number */
+  tags?: string[];
 }
 
 /**
@@ -40,6 +52,8 @@ export interface ServiceSuite {
   version: string;
   /** Available categories */
   categories: string[];
+  /** Available tags */
+  tags: string[];
   /** All registered services */
   services: ServiceMeta[];
 
@@ -47,13 +61,17 @@ export interface ServiceSuite {
   getService(name: string): ServiceMeta | undefined;
   /** Get services by category */
   getServicesByCategory(category: string): ServiceMeta[];
+  /** Get services carrying a tag */
+  getServicesByTag(tag: string): ServiceMeta[];
+  /** Get services matching a predicate over their metadata */
+  filterServices(predicate: (meta: ServiceMeta) => boolean): ServiceMeta[];
 
   /** Execute a service by name */
   execute(name: string, inputs: Record<string, unknown>): Promise<unknown>;
 
   /** Register a fabricService into the suite */
 
-  register(service: Service<any, any>, options: { category: string }): void;
+  register(service: Service<any, any>, options: RegisterServiceOptions): void;
 
   /** Get all registered service functions (for transport adapters like FabricMcpServer) */
 
@@ -198,6 +216,7 @@ export function createServiceSuite(
     }
   >();
   const categorySet = new Set<string>();
+  const tagSet = new Set<string>();
 
   const suite: ServiceSuite = {
     name,
@@ -205,6 +224,10 @@ export function createServiceSuite(
 
     get categories(): string[] {
       return Array.from(categorySet).sort();
+    },
+
+    get tags(): string[] {
+      return Array.from(tagSet).sort();
     },
 
     get services(): ServiceMeta[] {
@@ -221,6 +244,18 @@ export function createServiceSuite(
         .map((entry) => entry.meta);
     },
 
+    getServicesByTag(tag: string): ServiceMeta[] {
+      return Array.from(serviceRegistry.values())
+        .filter((entry) => entry.meta.tags.includes(tag))
+        .map((entry) => entry.meta);
+    },
+
+    filterServices(predicate: (meta: ServiceMeta) => boolean): ServiceMeta[] {
+      return Array.from(serviceRegistry.values())
+        .map((entry) => entry.meta)
+        .filter(predicate);
+    },
+
     async execute(
       serviceName: string,
       inputs: Record<string, unknown>,
@@ -234,24 +269,32 @@ export function createServiceSuite(
       return entry.service(inputs);
     },
 
-    register(service: Service<any, any>, options: { category: string }): void {
-      const { category } = options;
+    register(
+      service: Service<any, any>,
+      options: RegisterServiceOptions,
+    ): void {
+      const { category, tags: requestedTags } = options;
       const serviceName = service.alias;
       if (!serviceName) {
         throw new Error("Service must have an alias to be registered");
       }
 
+      const tags = Array.from(new Set(requestedTags ?? []));
       const inputs = extractInputs(service.input);
       const meta: ServiceMeta = {
         name: serviceName,
         description: service.description || "",
         category,
+        tags,
         inputs,
         executable: !hasRequiredInputs(inputs),
       };
 
       serviceRegistry.set(serviceName, { service, meta });
       categorySet.add(category);
+      for (const tag of tags) {
+        tagSet.add(tag);
+      }
     },
 
     getServiceFunctions(): Service<any, any>[] {

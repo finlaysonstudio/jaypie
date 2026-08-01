@@ -6,6 +6,7 @@ import {
 } from "@jaypie/aws";
 import { ConfigurationError, UnhandledError } from "@jaypie/errors";
 import { JAYPIE, jaypieHandler } from "@jaypie/kit";
+import type { ScrubOption } from "@jaypie/kit";
 import { log as publicLogger } from "@jaypie/logger";
 
 //
@@ -73,6 +74,7 @@ export interface WebSocketHandlerOptions {
   logEvent?: boolean;
   logResponse?: boolean;
   name?: string;
+  scrub?: ScrubOption;
   secrets?: string[];
   setup?: LifecycleFunction[];
   teardown?: LifecycleFunction[];
@@ -136,6 +138,7 @@ const websocketHandler = function <TResult = WebSocketResponse>(
     logEvent = true,
     logResponse = true,
     name,
+    scrub,
     secrets,
     setup = [],
     teardown,
@@ -286,6 +289,7 @@ const websocketHandler = function <TResult = WebSocketResponse>(
       {
         chaos,
         name,
+        scrub,
         setup,
         teardown,
         unavailable,

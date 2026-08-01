@@ -3,6 +3,7 @@
 import type {
   InputFieldDefinition,
   Message,
+  ScrubOption,
   Service,
   ServiceFunction,
 } from "../types.js";
@@ -44,6 +45,8 @@ export interface FabricLambdaOptions {
   onFatal?: OnFatalCallback;
   /** Callback for receiving messages from service during execution */
   onMessage?: OnMessageCallback;
+  /** Scrub error detail and title: 5xx only by default */
+  scrub?: ScrubOption;
   /** AWS secrets to load into process.env */
   secrets?: string[];
   /** Functions to run before handler */

@@ -2,6 +2,7 @@ import type { Request, Response } from "express";
 import { loadEnvSecrets, loadEnvVariables } from "@jaypie/aws";
 import { BadRequestError, UnhandledError } from "@jaypie/errors";
 import { force, getHeaderFrom, HTTP, JAYPIE, jaypieHandler } from "@jaypie/kit";
+import type { ScrubOption } from "@jaypie/kit";
 import { log as publicLogger } from "@jaypie/logger";
 import {
   DATADOG,
@@ -99,6 +100,7 @@ export interface ExpressHandlerOptions {
   fabric?: boolean;
   locals?: Record<string, unknown | ExpressHandlerLocals>;
   name?: string;
+  scrub?: ScrubOption;
   secrets?: string[];
   setup?: JaypieHandlerSetup[] | JaypieHandlerSetup;
   teardown?: JaypieHandlerTeardown[] | JaypieHandlerTeardown;
@@ -322,6 +324,7 @@ function expressHandler<T>(
     fabric,
     locals,
     name,
+    scrub,
     secrets,
     setup = [],
     teardown = [],
@@ -531,6 +534,7 @@ function expressHandler<T>(
         {
           chaos,
           name,
+          scrub,
           setup: requestSetup,
           teardown,
           unavailable,

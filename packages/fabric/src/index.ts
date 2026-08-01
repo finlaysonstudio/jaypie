@@ -137,6 +137,7 @@ export type { ResolveServiceConfig } from "./resolveService.js";
 export { createServiceSuite } from "./ServiceSuite.js";
 export type {
   CreateServiceSuiteConfig,
+  RegisterServiceOptions,
   ServiceInput,
   ServiceMeta,
   ServiceSuite,
@@ -158,6 +159,7 @@ export type {
   RegExpType,
   ScalarType,
   SerializerFunction,
+  ScrubOption,
   Service,
   ServiceConfig,
   ServiceContext,
