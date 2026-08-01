@@ -33,6 +33,7 @@ All handlers accept these options:
 | Option | Type | Description |
 |--------|------|-------------|
 | `name` | `string` | Handler name for logging |
+| `scrub` | `boolean \| { client?: boolean, server?: boolean }` | Replace caught error `detail` and `title` with the generic strings for the status. Defaults to `{ client: false, server: true }` |
 | `setup` | `Function[]` | Pre-handler functions |
 | `teardown` | `Function[]` | Cleanup functions (always run) |
 | `unavailable` | `boolean` | Return 503 immediately |
@@ -159,7 +160,7 @@ All handlers catch errors and format responses:
 - **Unhandled errors**: Wrap in `UnhandledError`, log at fatal level
 - **With `throw: true`**: Re-throw instead of formatting (for custom handling)
 
-Every caught Jaypie error is logged as `log.var({ jaypieError: { detail, status, title } })` and then scrubbed: `detail` and `title` are replaced with the generic strings for the status, so a constructor message never reaches a response body. Do not use an error message to tell the caller anything — see `skill("logs")`.
+Every caught Jaypie error is logged as `log.var({ jaypieError: { detail, status, title } })`. A 500-class error is then scrubbed: `detail` and `title` are replaced with the generic strings for the status, so a constructor message describing application internals never reaches a response body. 4xx keeps the detail as thrown, since a client error is only actionable when it says what to correct. The `scrub` option overrides either class: `scrub: true` scrubs both, `scrub: false` scrubs neither, `scrub: { client: true }` or `scrub: { server: false }` sets one class — see `skill("logs")`.
 
 ```typescript
 import { NotFoundError, BadRequestError } from "jaypie";

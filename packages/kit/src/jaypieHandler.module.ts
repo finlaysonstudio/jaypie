@@ -20,9 +20,17 @@ type AsyncHandler = (...args: unknown[]) => Promise<unknown>;
 type ValidatorFunction = (...args: unknown[]) => unknown | Promise<unknown>;
 type LifecycleFunction = (...args: unknown[]) => void | Promise<void>;
 
-interface JaypieHandlerOptions {
+export interface ScrubOptions {
+  client?: boolean;
+  server?: boolean;
+}
+
+export type ScrubOption = boolean | ScrubOptions;
+
+export interface JaypieHandlerOptions {
   chaos?: string;
   name?: string;
+  scrub?: ScrubOption;
   setup?: LifecycleFunction[];
   teardown?: LifecycleFunction[];
   unavailable?: boolean;
@@ -46,6 +54,23 @@ function errorClass(status: number): number {
   return Math.floor(status / 100);
 }
 
+// 4xx describes what the caller can correct, so its detail is the response;
+// 5xx describes application internals and belongs only in logs
+const SCRUB_DEFAULT: Required<ScrubOptions> = {
+  client: false,
+  server: true,
+};
+
+function resolveScrub(scrub: ScrubOption): Required<ScrubOptions> {
+  if (typeof scrub === "boolean") {
+    return { client: scrub, server: scrub };
+  }
+  return {
+    client: scrub.client ?? SCRUB_DEFAULT.client,
+    server: scrub.server ?? SCRUB_DEFAULT.server,
+  };
+}
+
 //
 //
 // Main
@@ -56,6 +81,7 @@ const jaypieHandler = (
   {
     chaos = process.env.PROJECT_CHAOS || "none",
     name = undefined,
+    scrub = SCRUB_DEFAULT,
     setup = [],
     teardown = [],
     unavailable = envBoolean("PROJECT_UNAVAILABLE", { defaultValue: false }) ??
@@ -93,16 +119,21 @@ const jaypieHandler = (
     lib: JAYPIE.LIB.KIT,
   });
 
+  const scrubErrors = resolveScrub(scrub);
+
   // Report a caught Jaypie error, then scrub it.
   //
   // Level follows status: 500-class is an infrastructure or application fault
   // and logs at error so monitors filtering on error status see the outage;
   // 4xx is a caller mistake and logs at warn.
   //
-  // The error's own `detail` and `title` are logged and then replaced with the
-  // generic strings for its status, so whatever the application passed to the
-  // error constructor never reaches a response body. `message` and `stack` are
-  // left intact for logs and for handlers configured to rethrow.
+  // The error as thrown is always logged. Scrubbing replaces `detail` and
+  // `title` with the generic strings for the status, so whatever the
+  // application passed to the error constructor never reaches a response body.
+  // 5xx is scrubbed by default and 4xx is not, since a client error is only
+  // actionable when it says what to correct; `scrub` overrides either class.
+  // `message` and `stack` are left intact for logs and for handlers configured
+  // to rethrow.
   const reportJaypieError = (error: JaypieError, message: string): void => {
     const { detail, status, title } = error;
 
@@ -116,6 +147,17 @@ const jaypieHandler = (
     log.var({ jaypieError: { detail, status, title } });
 
     if (typeof status !== "number") {
+      return;
+    }
+    if (status >= HTTP.CODE.INTERNAL_ERROR) {
+      if (!scrubErrors.server) {
+        return;
+      }
+    } else if (status >= HTTP.CODE.BAD_REQUEST) {
+      if (!scrubErrors.client) {
+        return;
+      }
+    } else {
       return;
     }
     const generic = jaypieErrorFromStatus(status);

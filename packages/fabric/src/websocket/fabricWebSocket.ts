@@ -14,6 +14,7 @@ import { resolveService } from "../resolveService.js";
 import type {
   InputFieldDefinition,
   Message,
+  ScrubOption,
   Service,
   ServiceContext,
   ServiceFunction,
@@ -92,6 +93,8 @@ export interface FabricWebSocketOptions {
   onFatal?: OnFatalCallback;
   /** Callback for receiving messages from service during execution */
   onMessage?: OnMessageCallback;
+  /** Scrub error detail and title: 5xx only by default */
+  scrub?: ScrubOption;
   /** AWS secrets to load into process.env */
   secrets?: string[];
   /** Functions to run before handler */
@@ -337,6 +340,7 @@ export function fabricWebSocket(
   return websocketHandler(innerHandler, {
     chaos: opts.chaos,
     name,
+    scrub: opts.scrub,
     secrets: opts.secrets,
     setup: opts.setup,
     teardown: opts.teardown,

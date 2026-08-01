@@ -229,7 +229,7 @@ describe("Jaypie Handler Module", () => {
       }
       expect.assertions(3);
     });
-    it("Replaces the detail and title of a caught 4xx Jaypie error", async () => {
+    it("Preserves the detail and title of a caught 4xx Jaypie error", async () => {
       // Arrange
       const handler = jaypieHandler(() => {
         throw new NotFoundError("User 12345 not found");
@@ -240,12 +240,12 @@ describe("Jaypie Handler Module", () => {
       } catch (error) {
         // Assert
         const jaypieError = error as InstanceType<typeof NotFoundError>;
-        expect(jaypieError.detail).toBe("The requested resource was not found");
+        expect(jaypieError.detail).toBe("User 12345 not found");
         expect(jaypieError.title).toBe("Not Found");
       }
       expect.assertions(2);
     });
-    it("Scrubs an unmapped 4xx to the bad request strings, keeping its status", async () => {
+    it("Preserves the detail of an unmapped 4xx", async () => {
       // Arrange
       const handler = jaypieHandler(() => {
         throw new JaypieError("Field ssn failed validation", {
@@ -260,10 +260,8 @@ describe("Jaypie Handler Module", () => {
         // Assert
         const jaypieError = error as JaypieError;
         expect(jaypieError.status).toBe(422);
-        expect(jaypieError.detail).toBe(
-          "The request was not properly formatted",
-        );
-        expect(jaypieError.title).toBe("Bad Request");
+        expect(jaypieError.detail).toBe("Field ssn failed validation");
+        expect(jaypieError.title).toBe("Unprocessable Entity");
       }
       expect.assertions(3);
     });
@@ -321,6 +319,7 @@ describe("Jaypie Handler Module", () => {
     it("Scrubs an error caught during validate", async () => {
       // Arrange
       const handler = jaypieHandler(() => {}, {
+        scrub: true,
         validate: [
           () => {
             throw new NotFoundError("Account 999 does not exist");
@@ -337,6 +336,146 @@ describe("Jaypie Handler Module", () => {
         );
       }
       expect.assertions(1);
+    });
+    describe("Scrub option", () => {
+      it("Scrubs a 4xx when scrub is true", async () => {
+        // Arrange
+        const handler = jaypieHandler(
+          () => {
+            throw new NotFoundError("User 12345 not found");
+          },
+          { scrub: true },
+        );
+        // Act
+        try {
+          await handler();
+        } catch (error) {
+          // Assert
+          const jaypieError = error as InstanceType<typeof NotFoundError>;
+          expect(jaypieError.detail).toBe(
+            "The requested resource was not found",
+          );
+          expect(jaypieError.title).toBe("Not Found");
+        }
+        expect.assertions(2);
+      });
+      it("Scrubs a 4xx when scrub.client is true", async () => {
+        // Arrange
+        const handler = jaypieHandler(
+          () => {
+            throw new NotFoundError("User 12345 not found");
+          },
+          { scrub: { client: true } },
+        );
+        // Act
+        try {
+          await handler();
+        } catch (error) {
+          // Assert
+          expect((error as InstanceType<typeof NotFoundError>).detail).toBe(
+            "The requested resource was not found",
+          );
+        }
+        expect.assertions(1);
+      });
+      it("Preserves a 5xx when scrub is false", async () => {
+        // Arrange
+        const handler = jaypieHandler(
+          () => {
+            throw new ConfigurationError("Fabric model chat is not registered");
+          },
+          { scrub: false },
+        );
+        // Act
+        try {
+          await handler();
+        } catch (error) {
+          // Assert
+          const jaypieError = error as InstanceType<typeof ConfigurationError>;
+          expect(jaypieError.detail).toBe(
+            "Fabric model chat is not registered",
+          );
+          expect(jaypieError.title).toBe("Internal Configuration Error");
+        }
+        expect.assertions(2);
+      });
+      it("Preserves a 5xx when scrub.server is false", async () => {
+        // Arrange
+        const handler = jaypieHandler(
+          () => {
+            throw new ConfigurationError("Fabric model chat is not registered");
+          },
+          { scrub: { server: false } },
+        );
+        // Act
+        try {
+          await handler();
+        } catch (error) {
+          // Assert
+          expect(
+            (error as InstanceType<typeof ConfigurationError>).detail,
+          ).toBe("Fabric model chat is not registered");
+        }
+        expect.assertions(1);
+      });
+      it("Scrubs a 5xx but not a 4xx when scrub.client is false", async () => {
+        // Arrange
+        const clientHandler = jaypieHandler(
+          () => {
+            throw new NotFoundError("User 12345 not found");
+          },
+          { scrub: { client: false } },
+        );
+        const serverHandler = jaypieHandler(
+          () => {
+            throw new ConfigurationError("Fabric model chat is not registered");
+          },
+          { scrub: { client: false } },
+        );
+        // Act
+        try {
+          await clientHandler();
+        } catch (error) {
+          // Assert
+          expect((error as InstanceType<typeof NotFoundError>).detail).toBe(
+            "User 12345 not found",
+          );
+        }
+        try {
+          await serverHandler();
+        } catch (error) {
+          // Assert
+          expect(
+            (error as InstanceType<typeof ConfigurationError>).detail,
+          ).toBe(
+            "An unexpected error occurred and the request was unable to complete",
+          );
+        }
+        expect.assertions(2);
+      });
+      it("Still logs the error as thrown when scrub is true", async () => {
+        // Arrange
+        const handler = jaypieHandler(
+          () => {
+            throw new NotFoundError("User 12345 not found");
+          },
+          { scrub: true },
+        );
+        // Act
+        try {
+          await handler();
+        } catch {
+          // Assert
+          expect(log.var).toHaveBeenCalledWith({
+            jaypieError: {
+              detail: "User 12345 not found",
+              status: HTTP.CODE.NOT_FOUND,
+              title: "Not Found",
+            },
+          });
+        }
+        expect.assertions(1);
+      });
     });
     it("Logs fatal if a non-Jaypie error is caught", async () => {
       // Arrange

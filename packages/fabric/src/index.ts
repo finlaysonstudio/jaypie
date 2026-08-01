@@ -158,6 +158,7 @@ export type {
   RegExpType,
   ScalarType,
   SerializerFunction,
+  ScrubOption,
   Service,
   ServiceConfig,
   ServiceContext,

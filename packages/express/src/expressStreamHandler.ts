@@ -8,6 +8,7 @@ import {
 import type { StreamFormat } from "@jaypie/aws";
 import { BadRequestError, UnhandledError } from "@jaypie/errors";
 import { force, getHeaderFrom, JAYPIE, jaypieHandler } from "@jaypie/kit";
+import type { ScrubOption } from "@jaypie/kit";
 import { log as publicLogger } from "@jaypie/logger";
 import { DATADOG, hasDatadogEnv, submitMetric } from "@jaypie/datadog";
 
@@ -90,6 +91,7 @@ export interface ExpressStreamHandlerOptions {
   format?: StreamFormat;
   locals?: Record<string, unknown | ExpressStreamHandlerLocals>;
   name?: string;
+  scrub?: ScrubOption;
   secrets?: string[];
   setup?: JaypieStreamHandlerSetup[] | JaypieStreamHandlerSetup;
   teardown?: JaypieStreamHandlerTeardown[] | JaypieStreamHandlerTeardown;
@@ -206,6 +208,7 @@ function expressStreamHandler(
     contentType = getContentTypeForFormat(format),
     locals,
     name,
+    scrub,
     secrets,
     setup = [],
     teardown = [],
@@ -367,6 +370,7 @@ function expressStreamHandler(
         {
           chaos,
           name,
+          scrub,
           setup: requestSetup,
           teardown,
           unavailable,

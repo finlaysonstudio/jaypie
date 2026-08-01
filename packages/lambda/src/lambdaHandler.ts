@@ -2,6 +2,7 @@ import { loadEnvSecrets, loadEnvVariables } from "@jaypie/aws";
 import { flushLlmObs, loadDatadogApiKey } from "@jaypie/datadog";
 import { ConfigurationError, UnhandledError } from "@jaypie/errors";
 import { JAYPIE, jaypieHandler } from "@jaypie/kit";
+import type { ScrubOption } from "@jaypie/kit";
 import { log as publicLogger } from "@jaypie/logger";
 
 //
@@ -22,6 +23,7 @@ export interface LambdaHandlerOptions {
   logEvent?: boolean;
   logResponse?: boolean;
   name?: string;
+  scrub?: ScrubOption;
   secrets?: string[];
   setup?: LifecycleFunction[];
   teardown?: LifecycleFunction[];
@@ -84,6 +86,7 @@ const lambdaHandler = function <TEvent = unknown, TResult = unknown>(
     logEvent = true,
     logResponse = true,
     name,
+    scrub,
     secrets,
     setup = [],
     teardown,
@@ -187,6 +190,7 @@ const lambdaHandler = function <TEvent = unknown, TResult = unknown>(
       {
         chaos,
         name,
+        scrub,
         setup,
         teardown,
         unavailable,

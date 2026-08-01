@@ -41,7 +41,7 @@ src/
 |--------|-------------|
 | `LambdaContext` | AWS Lambda context with optional `awsRequestId` |
 | `LambdaHandlerFunction` | Standard handler function signature |
-| `LambdaHandlerOptions` | Options for standard handler (chaos, logEvent, logResponse, name, secrets, setup, teardown, throw, unavailable, validate) |
+| `LambdaHandlerOptions` | Options for standard handler (chaos, logEvent, logResponse, name, scrub, secrets, setup, teardown, throw, unavailable, validate) |
 | `LambdaStreamContext` | Streaming Lambda context |
 | `LambdaStreamHandlerOptions` | Options for streaming handler (adds `contentType`, `format`) |
 | `StreamHandlerContext` | Extended context with `responseStream` |
@@ -135,6 +135,7 @@ lambdaHandler({ name: "test" }, myFunction);
 | `logEvent` | `boolean` | `true` | Log the incoming event at info |
 | `logResponse` | `boolean` | `true` | Log the response at info (standard and websocket only) |
 | `name` | `string` | function name | Handler name for logging |
+| `scrub` | `boolean \| { client?, server? }` | `{ client: false, server: true }` | Replace caught error `detail` and `title` with the generic strings for the status |
 | `secrets` | `string[]` | `[]` | AWS secrets to load into `process.env` |
 | `setup` | `Function[]` | `[]` | Functions to run before handler |
 | `teardown` | `Function[]` | `[]` | Functions to run after handler (always runs) |

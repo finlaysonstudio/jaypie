@@ -8,6 +8,7 @@ import type { StreamFormat } from "@jaypie/aws";
 import { flushLlmObs, loadDatadogApiKey } from "@jaypie/datadog";
 import { ConfigurationError, UnhandledError } from "@jaypie/errors";
 import { JAYPIE, jaypieHandler } from "@jaypie/kit";
+import type { ScrubOption } from "@jaypie/kit";
 import { log as publicLogger } from "@jaypie/logger";
 
 //
@@ -66,6 +67,7 @@ export interface LambdaStreamHandlerOptions {
   format?: StreamFormat;
   logEvent?: boolean;
   name?: string;
+  scrub?: ScrubOption;
   secrets?: string[];
   setup?: LifecycleFunction[];
   teardown?: LifecycleFunction[];
@@ -185,6 +187,7 @@ const lambdaStreamHandler = function <TEvent = unknown>(
     contentType = getContentTypeForFormat(format),
     logEvent = true,
     name,
+    scrub,
     secrets,
     setup = [],
     teardown,
@@ -306,6 +309,7 @@ const lambdaStreamHandler = function <TEvent = unknown>(
       {
         chaos,
         name,
+        scrub,
         setup,
         teardown,
         unavailable,

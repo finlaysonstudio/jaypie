@@ -16,6 +16,21 @@ export interface Message {
   level?: MessageLevel;
 }
 
+// Handler Types - Lifecycle options forwarded to the wrapping handler
+
+/**
+ * Error scrub configuration forwarded to `jaypieHandler`. Replaces `detail`
+ * and `title` with the generic strings for the status. 5xx is scrubbed by
+ * default and 4xx is not. Structurally matches `ScrubOption` in `@jaypie/kit`,
+ * defined locally to avoid a hard type dependency.
+ */
+export type ScrubOption =
+  | boolean
+  | {
+      client?: boolean;
+      server?: boolean;
+    };
+
 // Supported scalar types
 export type ScalarType =
   | typeof Boolean

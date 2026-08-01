@@ -74,9 +74,9 @@ The handler lifecycle picks the level from the error's status, so an outage is v
 
 Either way the handler emits `log.var({ jaypieError: { detail, status, title } })` carrying the error as thrown. The same applies to errors thrown during `validate` and `teardown`. Non-Jaypie errors remain `log.fatal` plus `log.error`.
 
-### Detail is logged, then scrubbed
+### 5xx detail is logged, then scrubbed
 
-After logging, the handler replaces the error's `detail` and `title` with the generic strings for its status. The message an application passes to an error constructor reaches the logs and never reaches a response body.
+After logging a 500-class error, the handler replaces its `detail` and `title` with the generic strings for the status. The message an application passes to a 500-class error constructor reaches the logs and never reaches a response body.
 
 ```typescript
 throw new ConfigurationError("Fabric model chat is not registered");
@@ -86,11 +86,24 @@ throw new ConfigurationError("Fabric model chat is not registered");
 //   detail: "An unexpected error occurred and the request was unable to complete" }] }
 ```
 
-This applies to 4xx as well, so `NotFoundError("User 12345 not found")` answers `"The requested resource was not found"`. Do not use the error message to communicate with the caller. Return a normal response body when the caller needs specifics.
+4xx is not scrubbed. A client error is only actionable when it says what to correct, so `NotFoundError("User 12345 not found")` answers with that detail. Write 4xx messages for the caller and 5xx messages for the logs.
 
 `status`, `message`, and `stack` are untouched, so logs and handlers configured with `throw: true` still see the original.
 
-A status with no error class of its own falls to the generic for its class: an unmapped 4xx (422, 451, …) answers the bad request strings while keeping its own status, and 500-class falls to internal error. A status outside 4xx and 5xx has no correct substitute and is logged without scrubbing.
+### The `scrub` option
+
+Every handler accepts `scrub` to override the default of `{ client: false, server: true }`:
+
+```typescript
+expressHandler(handler, { scrub: true });              // scrub 4xx and 5xx
+expressHandler(handler, { scrub: false });             // scrub neither
+expressHandler(handler, { scrub: { client: true } });  // scrub 4xx as well
+expressHandler(handler, { scrub: { server: false } }); // return 5xx detail
+```
+
+Scrubbing never changes what is logged: `log.var({ jaypieError })` always carries the error as thrown.
+
+A scrubbed status with no error class of its own falls to the generic for its class: an unmapped 4xx (422, 451, …) answers the bad request strings while keeping its own status, and 500-class falls to internal error. A status outside 4xx and 5xx has no correct substitute and is never scrubbed.
 
 ## Session Management
 

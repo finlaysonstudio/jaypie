@@ -6,6 +6,7 @@ import type {
   FabricHttpService,
   HttpMethod,
 } from "../http/types.js";
+import type { ScrubOption } from "../types.js";
 
 // #region fabricExpress
 
@@ -56,6 +57,8 @@ export interface FabricExpressConfig<
   locals?: Record<string, unknown | FabricExpressLocalsFn>;
   /** Handler name for logging. Defaults to the service alias. */
   name?: string;
+  /** Scrub error detail and title. 5xx only by default. */
+  scrub?: ScrubOption;
   /** AWS Secret names to load into `process.env` before the handler runs. */
   secrets?: string[];
   /** Pre-handler setup function(s). */

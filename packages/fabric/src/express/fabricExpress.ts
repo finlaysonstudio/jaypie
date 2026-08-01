@@ -207,6 +207,7 @@ export function fabricExpress<
       chaos: config.chaos,
       locals: config.locals,
       name: config.name ?? service.alias,
+      scrub: config.scrub,
       secrets: config.secrets,
       setup: config.setup,
       teardown: config.teardown,

@@ -197,6 +197,7 @@ export function fabricLambda<TResult = unknown>(
   return lambdaHandler(innerHandler, {
     chaos: opts.chaos,
     name,
+    scrub: opts.scrub,
     secrets: opts.secrets,
     setup: opts.setup,
     teardown: opts.teardown,
