@@ -19,6 +19,8 @@ type LifecycleFunction = (...args: unknown[]) => void | Promise<void>;
 
 export interface LambdaHandlerOptions {
   chaos?: string;
+  logEvent?: boolean;
+  logResponse?: boolean;
   name?: string;
   secrets?: string[];
   setup?: LifecycleFunction[];
@@ -79,6 +81,8 @@ const lambdaHandler = function <TEvent = unknown, TResult = unknown>(
   const opts = options as LambdaHandlerOptions;
   let {
     chaos,
+    logEvent = true,
+    logResponse = true,
     name,
     secrets,
     setup = [],
@@ -194,7 +198,9 @@ const lambdaHandler = function <TEvent = unknown, TResult = unknown>(
 
     try {
       libLogger.trace("[jaypie] Lambda execution");
-      log.info.var({ event });
+      if (logEvent) {
+        log.info.var({ event });
+      }
 
       //
       //
@@ -233,7 +239,9 @@ const lambdaHandler = function <TEvent = unknown, TResult = unknown>(
     //
 
     // Log response
-    log.info.var({ response });
+    if (logResponse) {
+      log.info.var({ response });
+    }
 
     // End log session and clean up
     (publicLogger as unknown as JaypieLogger).teardown();

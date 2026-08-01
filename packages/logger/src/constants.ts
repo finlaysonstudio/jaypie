@@ -12,6 +12,11 @@ export const LIMIT_ENV = {
   MAX_STRING: "LOG_MAX_STRING",
 } as const;
 
+export const REDACT_ENV = {
+  KEYS: "LOG_REDACT_KEYS",
+  REDACT: "LOG_REDACT",
+} as const;
+
 export const ERROR_PREFIX = "[logger]";
 
 export const ERROR = {

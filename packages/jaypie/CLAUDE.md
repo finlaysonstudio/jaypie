@@ -30,7 +30,7 @@ src/
 | `@jaypie/express` | `EXPRESS`, `expressHandler`, `cors` |
 | `@jaypie/kit` | Core utilities (`uuid`, `JAYPIE`, `PROJECT`, etc.) |
 | `@jaypie/lambda` | `lambdaHandler` |
-| `@jaypie/logger` | `log` |
+| `@jaypie/logger` | `isSecret`, `log`, `secret` |
 
 ## Peer Dependencies (Optional)
 

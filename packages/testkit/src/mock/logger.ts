@@ -7,8 +7,12 @@ import {
   LEVEL,
   Logger,
   createLogger as originalCreateLogger,
+  createRedactor,
+  isSecret,
+  looksSecret,
   redactAuth,
   sanitizeAuth,
+  secret,
 } from "@jaypie/logger";
 import { mockLogFactory } from "../mockLog.module.js";
 
@@ -23,6 +27,17 @@ export const _resetDatadogTransport = vi.fn();
 export const getDatadogTransport = vi.fn().mockReturnValue(null);
 export const isDatadogForwardingEnabled = vi.fn().mockReturnValue(false);
 
-export { FORMAT, JaypieLogger, LEVEL, Logger, redactAuth, sanitizeAuth };
+export {
+  FORMAT,
+  JaypieLogger,
+  LEVEL,
+  Logger,
+  createRedactor,
+  isSecret,
+  looksSecret,
+  redactAuth,
+  sanitizeAuth,
+  secret,
+};
 
 export default mockLog;

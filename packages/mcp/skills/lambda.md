@@ -70,6 +70,8 @@ export const nljsonHandler = lambdaStreamHandler(myHandler, { format: "nljson" }
 | `chaos` | `string` | - | Chaos testing mode |
 | `contentType` | `string` | Based on format | Content type (streaming only) |
 | `format` | `"sse"` \| `"nljson"` | `"sse"` | Stream format (streaming only) |
+| `logEvent` | `boolean` | `true` | Log the incoming event at info |
+| `logResponse` | `boolean` | `true` | Log the response at info (standard and websocket only) |
 | `name` | `string` | function name | Handler name for logging |
 | `secrets` | `string[]` | `[]` | AWS secrets to load into `process.env` |
 | `setup` | `Function[]` | `[]` | Functions to run before handler |

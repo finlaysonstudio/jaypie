@@ -59,6 +59,8 @@
 | `LOG_MAX_ENTRY_BYTES` | Cap serialized log entries (default 256KB; `false` disables) |
 | `LOG_MAX_STRING` | Truncate string fields beyond N characters (default off) |
 | `LOG_MAX_DEPTH` | Collapse objects nested beyond N levels (default off) |
+| `LOG_REDACT` | Set `false` to disable log redaction (default on) |
+| `LOG_REDACT_KEYS` | Comma-separated field names added to the redaction denylist |
 | `CDK_ENV_BUCKET` | AWS S3 bucket name |
 | `CDK_ENV_QUEUE_URL` | AWS SQS queue URL |
 | `CDK_ENV_SNS_ROLE_ARN` | SNS role ARN for notifications |

@@ -64,6 +64,7 @@ export interface LambdaStreamHandlerOptions {
   chaos?: string;
   contentType?: string;
   format?: StreamFormat;
+  logEvent?: boolean;
   name?: string;
   secrets?: string[];
   setup?: LifecycleFunction[];
@@ -182,6 +183,7 @@ const lambdaStreamHandler = function <TEvent = unknown>(
   let {
     chaos,
     contentType = getContentTypeForFormat(format),
+    logEvent = true,
     name,
     secrets,
     setup = [],
@@ -313,7 +315,9 @@ const lambdaStreamHandler = function <TEvent = unknown>(
 
     try {
       libLogger.trace("[jaypie] Lambda stream execution");
-      log.info.var({ event });
+      if (logEvent) {
+        log.info.var({ event });
+      }
 
       //
       //

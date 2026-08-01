@@ -19,7 +19,7 @@ export { ERROR } from "./error.constant.js";
 export * from "@jaypie/kit";
 
 // Logger
-export { log } from "@jaypie/logger";
+export { isSecret, log, secret } from "@jaypie/logger";
 
 // AWS
 export * from "@jaypie/aws";

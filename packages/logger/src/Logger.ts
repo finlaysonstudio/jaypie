@@ -9,14 +9,14 @@ import {
   truncateToBudget,
 } from "./limits";
 import { filterByType, pipelines } from "./pipelines";
-import { sanitizeAuth } from "./sanitizeAuth";
+import { createRedactor, RedactionOptions, Redactor } from "./redact";
 import { forceString, out, parse, parsesTo, stringify } from "./utils";
 
 type LogLevel = string;
 type LogFormat = "json" | "text";
 type Tags = Record<string, string>;
 
-interface LoggerOptions extends SerializationLimitOptions {
+interface LoggerOptions extends SerializationLimitOptions, RedactionOptions {
   format?: LogFormat;
   level?: LogLevel;
   levelField?: boolean | string;
@@ -62,6 +62,7 @@ class Logger {
   public warn: LogMethod;
   private levelField: false | string;
   private limits: SerializationLimits;
+  private redactor: Redactor;
 
   constructor({
     format = (process.env.LOG_FORMAT as LogFormat) || DEFAULT.LEVEL,
@@ -70,6 +71,8 @@ class Logger {
     maxDepth,
     maxEntryBytes,
     maxStringLength,
+    redact,
+    redactKeys,
     tags = {},
     varLevel = process.env.LOG_VAR_LEVEL || DEFAULT.VAR_LEVEL,
   }: LoggerOptions = {}) {
@@ -79,6 +82,7 @@ class Logger {
       maxEntryBytes,
       maxStringLength,
     });
+    this.redactor = createRedactor({ redact, redactKeys });
     this.options = {
       format,
       level,
@@ -88,6 +92,8 @@ class Logger {
       maxDepth: this.limits.maxDepth ?? false,
       maxEntryBytes: this.limits.maxEntryBytes ?? false,
       maxStringLength: this.limits.maxStringLength ?? false,
+      redact,
+      redactKeys,
       varLevel,
     };
 
@@ -115,7 +121,7 @@ class Logger {
   ): LogMethod {
     const logFn = (...messages: unknown[]): void => {
       if (LEVEL_VALUES[logLevel] <= LEVEL_VALUES[checkLevel]) {
-        let sanitized = messages.map(sanitizeAuth);
+        let sanitized = messages.map((item) => this.redactor(item));
         if (hasValueLimits(this.limits)) {
           sanitized = sanitized.map((item) =>
             applyValueLimits(item, this.limits),
@@ -187,7 +193,7 @@ class Logger {
           return logFn(messageObject);
         }
       } else {
-        msgObj = sanitizeAuth(messageObject) as Record<string, unknown>;
+        msgObj = messageObject as Record<string, unknown>;
       }
 
       const keys = Object.keys(msgObj);
@@ -211,6 +217,9 @@ class Logger {
           }
         }
         messageVal = filterByType(messageVal);
+        // Redact after the filters so values they surface (extracted
+        // headers, opaque objects) are inspected too
+        messageVal = this.redactor(messageVal, { key: messageKey });
         if (hasValueLimits(this.limits)) {
           messageVal = applyValueLimits(messageVal, this.limits);
         }
@@ -245,10 +254,12 @@ class Logger {
   }
 
   /**
-   * Update serialization limits at runtime. Pass a number to set a limit,
-   * `false` to disable one; omitted keys are unchanged.
+   * Update serialization limits and redaction at runtime. Pass a number to
+   * set a limit, `false` to disable one; omitted keys are unchanged.
    */
-  public config(options: SerializationLimitOptions = {}): void {
+  public config(
+    options: SerializationLimitOptions & RedactionOptions = {},
+  ): void {
     this.limits = resolveSerializationLimits({
       maxDepth: options.maxDepth ?? this.limits.maxDepth ?? false,
       maxEntryBytes:
@@ -259,6 +270,16 @@ class Logger {
     this.options.maxDepth = this.limits.maxDepth ?? false;
     this.options.maxEntryBytes = this.limits.maxEntryBytes ?? false;
     this.options.maxStringLength = this.limits.maxStringLength ?? false;
+    if (options.redact !== undefined || options.redactKeys !== undefined) {
+      if (options.redact !== undefined) this.options.redact = options.redact;
+      if (options.redactKeys !== undefined) {
+        this.options.redactKeys = options.redactKeys;
+      }
+      this.redactor = createRedactor({
+        redact: this.options.redact,
+        redactKeys: this.options.redactKeys,
+      });
+    }
   }
 
   public tag(key: unknown, value?: unknown): void {

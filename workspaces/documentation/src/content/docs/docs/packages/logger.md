@@ -176,14 +176,30 @@ async function processOrder(orderId) {
 }
 ```
 
-## Auth Sanitization
+## Redaction
 
-Authorization headers are automatically redacted before logging to prevent credential leaks:
+Every logged value is scrubbed before serialization to prevent credential leaks. Three layers apply, in order:
 
-- `sk-*` tokens → `sk_<last 4 chars>`
-- Other values → `md5_<last 4 chars of hash>`
+1. **Name denylist.** Field names match case-insensitively, ignoring `_`/`-`/spaces. Credential-shaped names (`password`, `apiKey`, `authorization`, `clientSecret`, …) render as `sk_<last4>` or `md5_<last4>`; bank identifiers (`accountNumber`, `routingNumber`, `iban`, `ssn`, `taxId`) render as `…<last4>`; card numbers (`cardNumber`, `pan`, …) render as `<bin>…<last4>`; `cvv`/`pin`/`otp`/`securityCode` render fully as `redacted`. Values too short for a partial reveal render fully as `redacted`.
+2. **Value heuristics.** Strings matching known credential shapes (`sk-…`, `AKIA…`, `ghp_…`, `xox?-…`, `whsec_…`, JWTs) redact regardless of field name. Ambiguous names (`key`, `token`, `auth`, `credential`) redact only when the value looks like a secret (16-512 characters, no whitespace, not a path, not a UUID).
+3. **`secret()` brand.** Wrap a value with `secret()` to force redaction wherever it is logged, independent of name or shape:
 
-Handles top-level `authorization` keys and nested `headers.authorization`. Original objects are never mutated.
+```typescript
+import { log, secret, isSecret } from "jaypie";
+
+log.var({ apiKey: secret(rawKey) }); // always redacted in logs
+JSON.stringify({ apiKey: secret(rawKey) }); // unredacted — secret() only affects logging
+isSecret(rawKey); // false; isSecret(secret(rawKey)) // true
+```
+
+Handles nested objects and arrays (not just top-level keys), and never mutates the original object.
+
+Disable redaction entirely with `LOG_REDACT=false`, or add field names to the denylist with `LOG_REDACT_KEYS` (comma-separated). Both are also configurable at runtime:
+
+```typescript
+log.config({ redactKeys: ["internalToken"] });
+log.config({ redact: false }); // disable, including secret() handling
+```
 
 ## Configuration
 
@@ -194,6 +210,8 @@ Handles top-level `authorization` keys and nested `headers.authorization`. Origi
 | `LOG_MAX_ENTRY_BYTES` | bytes; `false` disables | 262144 (256KB) |
 | `LOG_MAX_STRING` | characters; `false` disables | off |
 | `LOG_MAX_DEPTH` | levels; `false` disables | off |
+| `LOG_REDACT` | `false`/`0`/`none`/`off` disables | on |
+| `LOG_REDACT_KEYS` | comma-separated field names added to the denylist | - |
 
 ```bash
 LOG_LEVEL=debug npm start

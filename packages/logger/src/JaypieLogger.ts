@@ -4,12 +4,16 @@ import { _resetDatadogTransport } from "./datadogTransport";
 import { SerializationLimitOptions } from "./limits";
 import { logTags } from "./logTags";
 import { logVar } from "./logVar";
+import { RedactionOptions } from "./redact";
 import { tallyMerge } from "./tallyMerge";
 
-interface JaypieLoggerOptions extends SerializationLimitOptions {
+interface JaypieLoggerOptions
+  extends SerializationLimitOptions, RedactionOptions {
   level?: string;
   tags?: Record<string, string>;
 }
+
+type JaypieLoggerConfigOptions = SerializationLimitOptions & RedactionOptions;
 
 function envBoolean(
   key: string,
@@ -54,9 +58,19 @@ export class JaypieLogger {
     maxDepth,
     maxEntryBytes,
     maxStringLength,
+    redact,
+    redactKeys,
     tags = {},
   }: JaypieLoggerOptions = {}) {
-    this._params = { level, maxDepth, maxEntryBytes, maxStringLength, tags };
+    this._params = {
+      level,
+      maxDepth,
+      maxEntryBytes,
+      maxStringLength,
+      redact,
+      redactKeys,
+      tags,
+    };
     this._loggers = [];
     this._tags = {};
     this._withLoggers = {};
@@ -70,6 +84,8 @@ export class JaypieLogger {
       maxDepth,
       maxEntryBytes,
       maxStringLength,
+      redact,
+      redactKeys,
       tags: this._tags,
     });
     this._loggers = [this._logger];
@@ -121,12 +137,12 @@ export class JaypieLogger {
   }
 
   /**
-   * Update serialization limits at runtime for this logger and all loggers
-   * derived from it (lib, with, flag). Pass a number to set a limit,
-   * `false` to disable one; omitted keys are unchanged. Persists across
-   * init().
+   * Update serialization limits and redaction at runtime for this logger
+   * and all loggers derived from it (lib, with, flag). Pass a number to
+   * set a limit, `false` to disable one; omitted keys are unchanged.
+   * Persists across init().
    */
-  public config(options: SerializationLimitOptions = {}): void {
+  public config(options: JaypieLoggerConfigOptions = {}): void {
     if (options.maxDepth !== undefined) {
       this._params.maxDepth = options.maxDepth;
     }
@@ -135,6 +151,12 @@ export class JaypieLogger {
     }
     if (options.maxStringLength !== undefined) {
       this._params.maxStringLength = options.maxStringLength;
+    }
+    if (options.redact !== undefined) {
+      this._params.redact = options.redact;
+    }
+    if (options.redactKeys !== undefined) {
+      this._params.redactKeys = options.redactKeys;
     }
     for (const logger of this._loggers) {
       logger.config(options);
@@ -168,6 +190,8 @@ export class JaypieLogger {
       maxDepth: this._params.maxDepth,
       maxEntryBytes: this._params.maxEntryBytes,
       maxStringLength: this._params.maxStringLength,
+      redact: this._params.redact,
+      redactKeys: this._params.redactKeys,
       tags: this._tags,
     });
     this._loggers = [this._logger];
@@ -257,6 +281,8 @@ export class JaypieLogger {
       maxDepth: this._params.maxDepth,
       maxEntryBytes: this._params.maxEntryBytes,
       maxStringLength: this._params.maxStringLength,
+      redact: this._params.redact,
+      redactKeys: this._params.redactKeys,
       tags: newTags,
     });
     this._loggers.push(logger._logger);
@@ -387,6 +413,8 @@ export class JaypieLogger {
       maxDepth: this._params.maxDepth,
       maxEntryBytes: this._params.maxEntryBytes,
       maxStringLength: this._params.maxStringLength,
+      redact: this._params.redact,
+      redactKeys: this._params.redactKeys,
       tags: { ...this._tags },
     });
     logger._logger = this._logger.with(key, value);
