@@ -191,13 +191,16 @@ const greetService = fabricService({
   service: ({ name }) => `Hello, ${name}!`,
 });
 
-suite.register(greetService, { category: "utils" });
+suite.register(greetService, { category: "utils", tags: ["immediate", "public"] });
 
 // Access metadata
 suite.services;              // ServiceMeta[] - metadata for all services
 suite.categories;            // string[] - registered categories
+suite.tags;                  // string[] - registered tags
 suite.getService("greet");   // ServiceMeta | undefined
 suite.getServicesByCategory("utils"); // ServiceMeta[]
+suite.getServicesByTag("immediate");  // ServiceMeta[]
+suite.filterServices((meta) => !meta.tags.includes("long")); // ServiceMeta[]
 
 // Execute services
 await suite.execute("greet", { name: "World" }); // "Hello, World!"
@@ -211,10 +214,12 @@ suite.getServiceFunction("greet"); // Service | undefined
 
 | Method | Returns | Description |
 |--------|---------|-------------|
-| `register(service, { category })` | void | Register a fabricService with a category |
+| `register(service, { category, tags })` | void | Register a fabricService with a category and optional tags |
 | `execute(name, inputs)` | Promise | Execute a service by name |
 | `getService(name)` | ServiceMeta | Get service metadata by name |
 | `getServicesByCategory(category)` | ServiceMeta[] | Get all services in a category |
+| `getServicesByTag(tag)` | ServiceMeta[] | Get all services carrying a tag |
+| `filterServices(predicate)` | ServiceMeta[] | Get all services whose metadata matches a predicate |
 | `getServiceFunctions()` | Service[] | Get all service functions (for transport adapters) |
 | `getServiceFunction(name)` | Service | Get a specific service function |
 
@@ -395,7 +400,7 @@ export { fabricService } from "./service.js";
 
 // ServiceSuite
 export { createServiceSuite } from "./ServiceSuite.js";
-export type { ServiceMeta, ServiceSuite, ServiceSuiteConfig } from "./ServiceSuite.js";
+export type { CreateServiceSuiteConfig, RegisterServiceOptions, ServiceInput, ServiceMeta, ServiceSuite } from "./ServiceSuite.js";
 
 // Models
 export { FabricModel, FabricJob, FabricMessage, Progress } from "./models/base.js";

@@ -272,4 +272,185 @@ describe("ServiceSuite", () => {
       expect(services).toEqual([]);
     });
   });
+
+  describe("tags", () => {
+    it("should default to an empty array when no tags are registered", () => {
+      const suite = createServiceSuite({
+        name: "test-suite",
+        version: "1.0.0",
+      });
+      const service = fabricService({
+        alias: "service-a",
+        service: () => "a",
+      });
+
+      suite.register(service, { category: "utils" });
+
+      expect(suite.services[0].tags).toEqual([]);
+      expect(suite.tags).toEqual([]);
+    });
+
+    it("should register tags alongside a category", () => {
+      const suite = createServiceSuite({
+        name: "test-suite",
+        version: "1.0.0",
+      });
+      const service = fabricService({
+        alias: "service-a",
+        service: () => "a",
+      });
+
+      suite.register(service, {
+        category: "utils",
+        tags: ["long", "privileged"],
+      });
+
+      expect(suite.getService("service-a")?.tags).toEqual([
+        "long",
+        "privileged",
+      ]);
+      expect(suite.services[0].category).toBe("utils");
+    });
+
+    it("should expose sorted unique tags across the suite", () => {
+      const suite = createServiceSuite({
+        name: "test-suite",
+        version: "1.0.0",
+      });
+
+      suite.register(
+        fabricService({ alias: "service-a", service: () => "a" }),
+        {
+          category: "utils",
+          tags: ["short", "public"],
+        },
+      );
+      suite.register(
+        fabricService({ alias: "service-b", service: () => "b" }),
+        {
+          category: "math",
+          tags: ["short", "private"],
+        },
+      );
+
+      expect(suite.tags).toEqual(["private", "public", "short"]);
+    });
+
+    it("should deduplicate tags on a single service", () => {
+      const suite = createServiceSuite({
+        name: "test-suite",
+        version: "1.0.0",
+      });
+
+      suite.register(
+        fabricService({ alias: "service-a", service: () => "a" }),
+        {
+          category: "utils",
+          tags: ["long", "long"],
+        },
+      );
+
+      expect(suite.getService("service-a")?.tags).toEqual(["long"]);
+    });
+  });
+
+  describe("getServicesByTag", () => {
+    it("should return services carrying the tag across categories", () => {
+      const suite = createServiceSuite({
+        name: "test-suite",
+        version: "1.0.0",
+      });
+
+      suite.register(
+        fabricService({ alias: "service-a", service: () => "a" }),
+        {
+          category: "utils",
+          tags: ["immediate", "public"],
+        },
+      );
+      suite.register(
+        fabricService({ alias: "service-b", service: () => "b" }),
+        {
+          category: "math",
+          tags: ["immediate", "privileged"],
+        },
+      );
+      suite.register(
+        fabricService({ alias: "service-c", service: () => "c" }),
+        {
+          category: "math",
+          tags: ["long"],
+        },
+      );
+
+      expect(suite.getServicesByTag("immediate").map((s) => s.name)).toEqual([
+        "service-a",
+        "service-b",
+      ]);
+      expect(suite.getServicesByTag("long").map((s) => s.name)).toEqual([
+        "service-c",
+      ]);
+    });
+
+    it("should return empty array for unknown tag", () => {
+      const suite = createServiceSuite({
+        name: "test-suite",
+        version: "1.0.0",
+      });
+
+      suite.register(
+        fabricService({ alias: "service-a", service: () => "a" }),
+        {
+          category: "utils",
+        },
+      );
+
+      expect(suite.getServicesByTag("unknown")).toEqual([]);
+    });
+  });
+
+  describe("filterServices", () => {
+    it("should return services matching a predicate", () => {
+      const suite = createServiceSuite({
+        name: "test-suite",
+        version: "1.0.0",
+      });
+
+      suite.register(
+        fabricService({ alias: "service-a", service: () => "a" }),
+        {
+          category: "utils",
+          tags: ["short", "public"],
+        },
+      );
+      suite.register(
+        fabricService({ alias: "service-b", service: () => "b" }),
+        {
+          category: "utils",
+          tags: ["long", "public"],
+        },
+      );
+
+      const mounted = suite.filterServices(
+        (meta) => meta.tags.includes("public") && !meta.tags.includes("long"),
+      );
+      expect(mounted.map((s) => s.name)).toEqual(["service-a"]);
+    });
+
+    it("should return empty array when nothing matches", () => {
+      const suite = createServiceSuite({
+        name: "test-suite",
+        version: "1.0.0",
+      });
+
+      suite.register(
+        fabricService({ alias: "service-a", service: () => "a" }),
+        {
+          category: "utils",
+        },
+      );
+
+      expect(suite.filterServices(() => false)).toEqual([]);
+    });
+  });
 });

@@ -148,14 +148,35 @@ const suite = createServiceSuite({
   version: "1.0.0",
 });
 
-suite.register(userService, { category: "users" });
-suite.register(userListService, { category: "users" });
+suite.register(userService, { category: "users", tags: ["immediate"] });
+suite.register(userListService, { category: "users", tags: ["long"] });
 
 // Access services
 suite.services;                    // ServiceMeta[] - metadata for listing
 suite.getServiceFunctions();       // Service[] - actual functions
 suite.execute("user_get", { id }); // Direct execution
 ```
+
+### Categories and Tags
+
+`category` groups a service; a service has exactly one. `tags` classify across
+categories; a service may carry any number. Transport surfaces curate their
+mounted set from suite metadata rather than a hand-maintained list:
+
+```typescript
+suite.categories;                  // string[] - every registered category, sorted
+suite.tags;                        // string[] - every registered tag, sorted
+suite.getServicesByCategory("users");
+suite.getServicesByTag("immediate");
+
+// A 2-minute Express surface mounts only what fits its ceiling
+const mounted = suite.filterServices(
+  (meta) => !meta.tags.includes("long") && !meta.tags.includes("local"),
+);
+```
+
+`ServiceMeta.tags` is always an array, empty when a service registers without
+tags. Duplicate tags collapse on registration.
 
 ### Suite to MCP Server
 
