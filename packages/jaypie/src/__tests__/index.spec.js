@@ -21,6 +21,10 @@ import {
   // Lambda
   lambdaHandler,
   migrationHandler,
+  // Logger
+  isSecret,
+  log,
+  secret,
 } from "../index.js";
 
 //
@@ -69,6 +73,14 @@ describe("Index", () => {
     it("Exports Lambda functions", () => {
       expect(lambdaHandler).toBeFunction();
       expect(migrationHandler).toBeFunction();
+    });
+  });
+
+  describe("Logger exports", () => {
+    it("Exports log and secret functions", () => {
+      expect(log).toBeDefined();
+      expect(isSecret).toBeFunction();
+      expect(secret).toBeFunction();
     });
   });
 });

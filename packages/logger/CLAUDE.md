@@ -12,15 +12,17 @@ This package provides two logger implementations:
 
 ```
 src/
-├── index.ts              # Exports: log (default), Logger, JaypieLogger, createLogger, FORMAT, LEVEL, isDatadogForwardingEnabled, _resetDatadogTransport
+├── index.ts              # Exports: log (default), Logger, JaypieLogger, createLogger, FORMAT, LEVEL, isDatadogForwardingEnabled, _resetDatadogTransport, createRedactor, isSecret, looksSecret, redactAuth, sanitizeAuth, secret
 ├── Logger.ts             # Core Logger class with level methods and .var() support
 ├── JaypieLogger.ts       # Wrapper with init(), lib(), tag(), with() methods
-├── constants.ts          # FORMAT, LEVEL, LEVEL_VALUES, DEFAULT, DATADOG_TRANSPORT configuration
+├── constants.ts          # FORMAT, LEVEL, LEVEL_VALUES, DEFAULT, DATADOG_TRANSPORT, REDACT_ENV configuration
 ├── datadogTransport.ts   # Opt-in HTTP transport for shipping logs to Datadog Logs API
 ├── forceVar.ts           # Normalizes key/value pairs for .var() logging
 ├── logTags.ts            # Extracts PROJECT_* environment variables as tags
 ├── logVar.ts             # Applies pipelines to logged variables
 ├── pipelines.ts          # Filters for axios responses and errors
+├── redact.ts             # Recursive redaction: name denylist with renders, value heuristics, secret() brand, pluggable hook
+├── sanitizeAuth.ts       # Compatibility shim re-exporting from redact.ts
 ├── tallyMerge.ts         # Combine tally values (numbers sum, strings collect, booleans AND)
 └── utils.ts              # stringify, forceString, out, parse utilities
 ```
@@ -61,6 +63,8 @@ Defined in `constants.ts` with numeric values for comparison:
 - `LOG_MAX_ENTRY_BYTES` - Cap on the serialized entry (default 262144 = 256KB, the CloudWatch event limit; `0`/`false` disables)
 - `LOG_MAX_STRING` - Truncate each string field beyond N characters (default off)
 - `LOG_MAX_DEPTH` - Replace objects/arrays nested beyond N levels with `[Object]`/`[Array(n)]` (default off)
+- `LOG_REDACT` - Set to `false`/`0`/`none`/`off` to disable all redaction (default on)
+- `LOG_REDACT_KEYS` - Comma-separated field names added to the redaction denylist
 - `MODULE_LOGGER` - Enable library loggers (boolean)
 - `MODULE_LOG_LEVEL` - Override level for library loggers
 - `PROJECT_*` - Auto-tagged: COMMIT, ENV, KEY, SERVICE, SPONSOR, VERSION
@@ -148,6 +152,42 @@ propagates to derived loggers (`lib`, `with`, `flag`), and persists across
 never mutated; class instances (Error, Date) are not traversed. See
 `src/limits.ts`.
 
+### Redaction
+
+Every logged value is scrubbed before serialization. The walk recurses
+through plain objects and arrays (budgeted at depth 32 and 25,000 nodes),
+clones on write, and collapses cycles to `[Circular]`. Three layers, see
+`src/redact.ts`:
+
+1. **Name denylist with per-entry renders.** Names match case-insensitively
+   ignoring `_`/`-`/spaces. Credentials (`password`, `apiKey`,
+   `authorization`, `clientSecret`, …) render `sk_<last4>`/`md5_<last4>`
+   via `redactAuth`; bank identifiers (`accountNumber`, `routingNumber`,
+   `iban`, `ssn`, `taxId`) render `…<last4>`; card numbers (`cardNumber`,
+   `pan`, …) render `<bin>…<last4>`; `cvv`/`pin`/`otp`/`securityCode`
+   render the literal `redacted` with no partial reveal. Values too short
+   for a partial reveal render fully as `redacted`.
+2. **Value heuristics.** Strings matching known credential shapes
+   (`sk_…`+digit, `AKIA…`, `ghp_…`, `xox?-…`, `whsec_…`, JWTs) redact
+   under any field name. Ambiguous names (`key`, `token`, `auth`,
+   `credential`) redact only when `looksSecret` passes: 16-512 chars, no
+   whitespace, not pathy, not a UUID, mixed case with digits and at least
+   two low-frequency letters (j, k, q, v, x, z).
+3. **`secret()` brand.** `secret(value)` marks a value at creation with
+   `Symbol.for("jaypie.secret")`. The logger renders it via `redactAuth`
+   wherever it lands; `JSON.stringify` still yields the true value via
+   `toJSON` so the real consumer is unaffected. `isSecret()` checks the
+   brand.
+
+Configuration resolves constructor options, then env vars, then defaults:
+`redactKeys: string[]` (or `LOG_REDACT_KEYS`) adds denylist names;
+`redact: (value, { key, path }) => unknown` runs ahead of built-in rules
+on every node (return `undefined` to defer); `redact: false` (or
+`LOG_REDACT=false`) disables scrubbing entirely, including `secret()`
+handling. `log.config({ redactKeys, redact })` updates at runtime,
+propagates to derived loggers, and persists across `init()`.
+`sanitizeAuth` remains as the standalone default-rules entry point.
+
 ### Tagging
 
 Tags are key-value pairs included in every log output:
@@ -166,7 +206,7 @@ Factory function returning a `JaypieLogger` instance.
 
 ### JaypieLogger Methods
 
-- `config({ maxDepth?, maxEntryBytes?, maxStringLength? })` - Update serialization limits at runtime (number sets, `false` disables, omitted unchanged)
+- `config({ maxDepth?, maxEntryBytes?, maxStringLength?, redact?, redactKeys? })` - Update serialization limits and redaction at runtime (number sets, `false` disables, omitted unchanged)
 - `debug/info/warn/error/fatal/trace(...messages)` - Log at level
 - `*.var(keyValue)` - Log variable at level
 - `var(keyValue)` - Log variable at configured var level

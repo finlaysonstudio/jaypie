@@ -298,4 +298,41 @@ describe("Lambda Handler Module", () => {
       });
     });
   });
+  describe("Log Options", () => {
+    const varCalls = () =>
+      (log.info.var as ReturnType<typeof vi.fn>).mock.calls.map(
+        (call) => call[0] as Record<string, unknown>,
+      );
+    it("logs event and response by default", async () => {
+      // Arrange
+      const handler = lambdaHandler(async () => ({ ok: true }));
+      // Act
+      await handler({ input: 12 }, {});
+      // Assert
+      expect(varCalls()).toContainEqual({ event: { input: 12 } });
+      expect(varCalls()).toContainEqual({ response: { ok: true } });
+    });
+    it("suppresses the event log with logEvent false", async () => {
+      // Arrange
+      const handler = lambdaHandler(async () => ({ ok: true }), {
+        logEvent: false,
+      });
+      // Act
+      await handler({ input: 12 }, {});
+      // Assert
+      expect(varCalls().some((call) => "event" in call)).toBe(false);
+      expect(varCalls()).toContainEqual({ response: { ok: true } });
+    });
+    it("suppresses the response log with logResponse false", async () => {
+      // Arrange
+      const handler = lambdaHandler(async () => ({ ok: true }), {
+        logResponse: false,
+      });
+      // Act
+      await handler({ input: 12 }, {});
+      // Assert
+      expect(varCalls()).toContainEqual({ event: { input: 12 } });
+      expect(varCalls().some((call) => "response" in call)).toBe(false);
+    });
+  });
 });

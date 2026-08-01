@@ -70,6 +70,8 @@ type ValidatorFunction = (...args: unknown[]) => unknown | Promise<unknown>;
 
 export interface WebSocketHandlerOptions {
   chaos?: string;
+  logEvent?: boolean;
+  logResponse?: boolean;
   name?: string;
   secrets?: string[];
   setup?: LifecycleFunction[];
@@ -131,6 +133,8 @@ const websocketHandler = function <TResult = WebSocketResponse>(
   const opts = options as WebSocketHandlerOptions;
   let {
     chaos,
+    logEvent = true,
+    logResponse = true,
     name,
     secrets,
     setup = [],
@@ -293,7 +297,9 @@ const websocketHandler = function <TResult = WebSocketResponse>(
 
     try {
       libLogger.trace("[jaypie] WebSocket execution");
-      log.info.var({ routeKey, connectionId, body: body?.slice(0, 200) });
+      if (logEvent) {
+        log.info.var({ routeKey, connectionId, body: body?.slice(0, 200) });
+      }
 
       //
       //
@@ -343,7 +349,9 @@ const websocketHandler = function <TResult = WebSocketResponse>(
     //
 
     // Log response
-    log.info.var({ response });
+    if (logResponse) {
+      log.info.var({ response });
+    }
 
     // Clean up the public logger
     (publicLogger as unknown as JaypieLogger).untag("handler");

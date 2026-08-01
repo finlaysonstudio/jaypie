@@ -6,7 +6,14 @@ import {
   getDatadogTransport,
   isDatadogForwardingEnabled,
 } from "./datadogTransport";
-import { redactAuth, sanitizeAuth } from "./sanitizeAuth";
+import {
+  createRedactor,
+  isSecret,
+  looksSecret,
+  redactAuth,
+  sanitizeAuth,
+  secret,
+} from "./redact";
 
 export {
   FORMAT,
@@ -14,12 +21,22 @@ export {
   Logger,
   _resetDatadogTransport,
   createLogger,
+  createRedactor,
   getDatadogTransport,
   isDatadogForwardingEnabled,
+  isSecret,
+  looksSecret,
   redactAuth,
   sanitizeAuth,
+  secret,
 };
 export type { SerializationLimitOptions, SerializationLimits } from "./limits";
+export type {
+  RedactContext,
+  RedactHook,
+  RedactionOptions,
+  Redactor,
+} from "./redact";
 export { JaypieLogger } from "./JaypieLogger";
 
 export const log = createLogger();

@@ -70,6 +70,8 @@ export const handler = lambdaHandler(
 | Option | Type | Description |
 |--------|------|-------------|
 | `name` | `string` | Handler name for logging |
+| `logEvent` | `boolean` | Log the incoming event at info (default `true`) |
+| `logResponse` | `boolean` | Log the response at info (default `true`) |
 | `secrets` | `string[]` | Secrets to load from AWS Secrets Manager |
 | `validate` | `Function[]` | Validation functions |
 | `setup` | `Function[]` | Setup functions |

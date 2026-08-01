@@ -182,6 +182,58 @@ log.config({ maxEntryBytes: false }); // false disables a limit
 
 Limits apply at serialization time only — the caller's object is never mutated.
 
+## Redaction
+
+Sensitive values are scrubbed before serialization. Redaction recurses through nested objects and arrays (budgeted at depth 32 and 25,000 nodes) and never mutates the caller's object. Three layers:
+
+### 1. Field names
+
+Names match case-insensitively ignoring `_`, `-`, and spaces (`routing_number` ≡ `routingNumber`). Each name has a render:
+
+| Names | Render |
+|-------|--------|
+| `authorization`, `password`, `apiKey`, `clientSecret`, `accessToken`, `refreshToken`, `privateKey`, `sessionToken`, … | `sk_<last4>` for sk-prefixed values, `md5_<last4>` otherwise |
+| `accountNumber`, `routingNumber`, `iban`, `ssn`, `socialSecurityNumber`, `taxId` | Last four: `…6789` |
+| `cardNumber`, `creditCardNumber`, `pan`, `ccNumber` | BIN and last four: `411111…1111` |
+| `cvv`, `cvc`, `pin`, `otp`, `securityCode`, `mfaCode` | `redacted` — never any part of the value |
+
+Values too short for a partial reveal render fully as `redacted`.
+
+### 2. Value shapes
+
+Strings matching known credential shapes (`sk_live_…`, `AKIA…`, `ghp_…`, `xoxb-…`, JWTs) redact under any field name. Ambiguous names (`key`, `token`, `auth`, `credential`) redact only when the value looks like a credential (mixed case with digits and low-frequency letters), so S3 keys, UUIDs, DynamoDB keys, and file paths pass through.
+
+### 3. Marking values with `secret()`
+
+Mark a value sensitive at the point of creation. Every log renders it redacted regardless of the field name it lands under, while `JSON.stringify` still yields the true value for the real consumer:
+
+```typescript
+import { secret } from "jaypie";
+
+findings.push({ field: "apiKey", key: secret(plaintext) });
+// log output: { "key": "md5_ab12" }
+// JSON.stringify(response): { "key": "<plaintext>" }
+```
+
+### Configuration
+
+```bash
+LOG_REDACT_KEYS=memberId,internalNote   # Add names to the denylist
+LOG_REDACT=false                        # Disable all scrubbing (local debugging)
+```
+
+Or at runtime with `log.config()` — propagates to derived loggers and persists across `init()`:
+
+```typescript
+log.config({ redactKeys: ["memberId"] });
+log.config({
+  redact: (value, { key, path }) =>
+    path === "event.body.email" ? "redacted-email" : undefined,
+});
+```
+
+The `redact` hook runs ahead of built-in rules on every node; return a replacement value or `undefined` to defer.
+
 ## Lambda Logging
 
 Lambda handlers automatically add context:
@@ -204,6 +256,15 @@ Logs will include the `env`, `invoke`, and `handler` name. For example:
   "invoke": "uuid",
   "handler": "exampleHandler"
 }
+```
+
+Handlers log the incoming event and outgoing response at `info`. Handlers that receive or return sensitive values can opt out:
+
+```typescript
+export const handler = lambdaHandler(mintApiKey, {
+  logResponse: false, // response carries a one-time secret
+});
+// logEvent: false suppresses the event log the same way
 ```
 
 ## See Also

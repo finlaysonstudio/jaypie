@@ -28,7 +28,7 @@ npm install jaypie
 | `@jaypie/express` | `expressHandler`, `expressStreamHandler`, `cors` |
 | `@jaypie/kit` | `force`, `uuid`, `sleep`, `cloneDeep`, environment checks |
 | `@jaypie/lambda` | `lambdaHandler`, `lambdaStreamHandler` |
-| `@jaypie/logger` | `log` |
+| `@jaypie/logger` | `log`, `isSecret`, `secret` |
 
 ## Exports
 
