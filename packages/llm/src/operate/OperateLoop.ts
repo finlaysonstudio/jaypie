@@ -500,6 +500,7 @@ export class OperateLoop {
               providerRequest,
             },
             hooks: hooksWithProgress,
+            signal: options.signal,
           },
         );
 
@@ -918,6 +919,7 @@ export class OperateLoop {
       const response = await this.adapter.executeRequest(
         this.client,
         providerRequest,
+        options.signal,
       );
       const parsed = this.adapter.parseResponse(response, options);
       if (parsed.usage) {

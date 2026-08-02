@@ -1,3 +1,5 @@
+import { JsonObject } from "@jaypie/types";
+
 import {
   LlmExchangeEnvelope,
   LlmHistory,
@@ -7,7 +9,18 @@ import {
   LlmOperateResponse,
   LlmUsageItem,
 } from "../../types/LlmProvider.interface.js";
-import { OperateLoopState } from "../types.js";
+import { ProviderToolDefinition } from "../types.js";
+
+/**
+ * The loop state the envelope reads. Narrowed to the fields both the operate
+ * and stream loops carry, so either can settle an exchange.
+ */
+export interface ExchangeLoopState {
+  formattedFormat?: JsonObject;
+  formattedTools?: ProviderToolDefinition[];
+  lastStopReason?: string;
+  retries?: number;
+}
 
 //
 //
@@ -64,9 +77,10 @@ function extractResponseIds(responses: unknown[]): string[] | undefined {
 //
 
 /**
- * Assemble the serializable exchange envelope for one operate() settlement.
- * The `resolution` block is stamped by the Llm facade, which is the layer
- * that knows fallback outcome; the loop fills provider/model best-effort.
+ * Assemble the serializable exchange envelope for one settlement. For
+ * `operate()` the `resolution` block is stamped by the Llm facade, which is the
+ * layer that knows fallback outcome; the loop fills provider/model best-effort.
+ * `stream()` has no fallback, so StreamLoop stamps its own.
  */
 export function buildExchangeEnvelope({
   duration,
@@ -83,7 +97,7 @@ export function buildExchangeEnvelope({
   options: LlmOperateOptions;
   response: LlmOperateResponse;
   startedAt: string;
-  state: OperateLoopState;
+  state: ExchangeLoopState;
 }): LlmExchangeEnvelope {
   const historyDelta = response.history.slice(initialHistoryLength);
   return {

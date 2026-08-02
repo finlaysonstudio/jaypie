@@ -7,13 +7,16 @@ import { toLlmError } from "../errors/toLlmError.js";
 import { createStaleRejectionGuard } from "./retry/createStaleRejectionGuard.js";
 import { Toolkit } from "../tools/Toolkit.class.js";
 import {
+  LlmError,
   LlmHistory,
   LlmInputMessage,
   LlmMessageRole,
   LlmMessageType,
   LlmOperateInput,
   LlmOperateOptions,
+  LlmOperateResponse,
   LlmOutputMessage,
+  LlmResponseStatus,
   LlmToolCall,
   LlmToolResult,
   LlmUsageItem,
@@ -28,7 +31,15 @@ import {
   usageToLlmObsMetrics,
   withLlmObsSpan,
 } from "../observability/llmobs.js";
+import { combineAbortSignals } from "../util/abortSignal.js";
+import { toAbortError } from "../errors/toAbortError.js";
 import { getLogger, maxTurnsFromOptions, tallyOperate } from "../util/index.js";
+import { persistExchange } from "../observability/exchangeStore.js";
+import {
+  buildExchangeEnvelope,
+  emitExchange,
+  isExchangeRequested,
+} from "./exchange/index.js";
 import { ProviderAdapter } from "./adapters/ProviderAdapter.interface.js";
 import { HookRunner, hookRunner } from "./hooks/index.js";
 import { InputProcessor, inputProcessor } from "./input/index.js";
@@ -57,9 +68,22 @@ interface StreamLoopState {
   consecutiveToolErrors: number;
   currentInput: LlmHistory;
   currentTurn: number;
+  /**
+   * Turns this stream added, in order, for the exchange envelope. Kept apart
+   * from `currentInput` because the streamed assistant text is recorded here
+   * but never resent to the provider.
+   */
+  deltaHistory: LlmHistory;
+  /** Populated when the stream terminates on an error */
+  error?: LlmError;
+  /** Text of the most recent streamed turn — the final answer */
+  finalText: string;
   formattedFormat?: JsonObject;
   formattedTools?: ProviderToolDefinition[];
   maxTurns: number;
+  /** Model-request retries across all turns (exchange envelope) */
+  retries: number;
+  status: LlmResponseStatus;
   toolCallNames: string[];
   toolkit?: Toolkit;
   usageItems: LlmUsageItem[];
@@ -115,78 +139,117 @@ export class StreamLoop {
       );
     }
 
+    const startedAt = new Date().toISOString();
+    const startMs = Date.now();
+
     // Initialize state
     const state = await this.initializeState(input, options);
     const context = this.createContext(options);
+    const exchangeRequested = isExchangeRequested(options);
 
-    // Build initial request
-    let request = this.buildInitialRequest(state, options);
+    // Settlement runs from `finally` so an abandoned generator — which closes
+    // through the same path — still records the turn it consumed.
+    try {
+      // Build initial request
+      let request = this.buildInitialRequest(state, options);
 
-    // Multi-turn loop
-    while (state.currentTurn < state.maxTurns) {
-      state.currentTurn++;
+      // Multi-turn loop
+      while (state.currentTurn < state.maxTurns) {
+        state.currentTurn++;
 
-      // Execute one streaming turn
-      const { shouldContinue, toolCalls } = yield* this.executeOneStreamingTurn(
-        request,
-        state,
-        context,
-        options,
-      );
+        // Execute one streaming turn
+        const { shouldContinue, toolCalls } =
+          yield* this.executeOneStreamingTurn(request, state, context, options);
 
-      if (!shouldContinue) {
-        break;
-      }
-
-      // If we have tool calls, process them
-      if (toolCalls && toolCalls.length > 0 && state.toolkit) {
-        yield* this.processToolCalls(toolCalls, state, context);
-
-        // Check if we've reached max turns
-        if (state.currentTurn >= state.maxTurns) {
-          const error = new TooManyRequestsError();
-          const detail = `Model requested function call but exceeded ${state.maxTurns} turns`;
-          log.warn(detail);
-          yield {
-            type: LlmStreamChunkType.Error,
-            error: {
-              detail,
-              status: error.status,
-              title: error.title,
-            },
-          };
+        if (!shouldContinue) {
           break;
         }
 
-        // Rebuild request with updated history for next turn
-        request = {
-          effort: options.effort,
-          format: state.formattedFormat,
-          instructions: options.instructions,
-          messages: state.currentInput,
-          model: options.model ?? this.adapter.defaultModel,
-          providerOptions: options.providerOptions,
-          stream: true,
-          system: options.system,
-          temperature: options.temperature,
-          tools: state.formattedTools,
-          user: options.user,
-        };
-      } else {
-        break;
-      }
-    }
+        // If we have tool calls, process them
+        if (toolCalls && toolCalls.length > 0 && state.toolkit) {
+          yield* this.processToolCalls(toolCalls, state, context);
 
-    // Emit final done chunk with accumulated usage
-    tallyOperate({
-      toolCallNames: state.toolCallNames,
-      turns: state.currentTurn,
-      usage: state.usageItems,
-    });
-    yield {
-      type: LlmStreamChunkType.Done,
-      usage: state.usageItems,
-    };
+          // Check if we've reached max turns
+          if (state.currentTurn >= state.maxTurns) {
+            const error = new TooManyRequestsError();
+            const detail = `Model requested function call but exceeded ${state.maxTurns} turns`;
+            log.warn(detail);
+            state.error = {
+              detail,
+              status: error.status,
+              title: error.title,
+            };
+            yield {
+              type: LlmStreamChunkType.Error,
+              error: state.error,
+            };
+            break;
+          }
+
+          // Rebuild request with updated history for next turn
+          request = {
+            effort: options.effort,
+            format: state.formattedFormat,
+            instructions: options.instructions,
+            messages: state.currentInput,
+            model: options.model ?? this.adapter.defaultModel,
+            providerOptions: options.providerOptions,
+            stream: true,
+            system: options.system,
+            temperature: options.temperature,
+            tools: state.formattedTools,
+            user: options.user,
+          };
+        } else {
+          break;
+        }
+      }
+
+      state.status = state.error
+        ? LlmResponseStatus.Incomplete
+        : LlmResponseStatus.Completed;
+
+      // Emit final done chunk with accumulated usage
+      tallyOperate({
+        toolCallNames: state.toolCallNames,
+        turns: state.currentTurn,
+        usage: state.usageItems,
+      });
+      yield {
+        type: LlmStreamChunkType.Done,
+        usage: state.usageItems,
+      };
+    } catch (error) {
+      state.status = LlmResponseStatus.Incomplete;
+      if (!state.error) {
+        const thrown = error as {
+          detail?: string;
+          message?: string;
+          status?: number | string;
+          title?: string;
+          name?: string;
+        };
+        state.error = {
+          detail: thrown.detail ?? thrown.message,
+          status: thrown.status ?? 500,
+          title: thrown.title ?? thrown.name ?? "Error",
+        };
+      }
+      throw error;
+    } finally {
+      // A generator abandoned mid-stream never reaches the completed branch
+      if (state.status === LlmResponseStatus.InProgress) {
+        state.status = LlmResponseStatus.Incomplete;
+      }
+      await this.settleExchange({
+        duration: Date.now() - startMs,
+        exchangeRequested,
+        input,
+        options,
+        state,
+        startedAt,
+      });
+    }
   }
 
   //
@@ -234,13 +297,111 @@ export class StreamLoop {
       consecutiveToolErrors: 0,
       currentInput: processedInput.history,
       currentTurn: 0,
+      deltaHistory: [],
+      finalText: "",
       formattedFormat,
       formattedTools,
       maxTurns,
+      retries: 0,
+      status: LlmResponseStatus.InProgress,
       toolCallNames: [],
       toolkit,
       usageItems: [],
     };
+  }
+
+  /**
+   * Assemble and deliver the exchange envelope for one stream() settlement:
+   * normal termination, error, or a consumer that stopped reading. `stream()`
+   * has no fallback chain, so the loop stamps `resolution` itself rather than
+   * leaving it to the facade.
+   */
+  private async settleExchange({
+    duration,
+    exchangeRequested,
+    input,
+    options,
+    startedAt,
+    state,
+  }: {
+    duration: number;
+    exchangeRequested: boolean;
+    input: string | LlmHistory | LlmInputMessage | LlmOperateInput;
+    options: LlmOperateOptions;
+    startedAt: string;
+    state: StreamLoopState;
+  }): Promise<void> {
+    if (!exchangeRequested) {
+      return;
+    }
+    const response: LlmOperateResponse = {
+      content: state.finalText || undefined,
+      error: state.error,
+      // The delta is the whole history the envelope reports, so nothing is
+      // sliced off the front
+      history: state.deltaHistory,
+      model: options.model ?? this.adapter.defaultModel,
+      output: [],
+      provider: this.adapter.name,
+      reasoning: [],
+      responses: [],
+      status: state.status,
+      usage: state.usageItems,
+    };
+    const envelope = buildExchangeEnvelope({
+      duration,
+      initialHistoryLength: 0,
+      input,
+      options,
+      response,
+      startedAt,
+      state,
+    });
+    envelope.resolution = {
+      ...envelope.resolution,
+      fallbackAttempts: 1,
+      fallbackUsed: false,
+    };
+    await emitExchange({ envelope, onExchange: options.onExchange });
+    await persistExchange(envelope);
+  }
+
+  /**
+   * Serializable error body for a caller-initiated abort. `stream()` reports a
+   * cancellation as an error chunk rather than a rejection, so the consumer
+   * still receives the terminating `done` chunk.
+   */
+  private abortErrorBody(
+    options: LlmOperateOptions,
+    cause?: unknown,
+  ): LlmError {
+    const error = toAbortError({
+      cause,
+      model: options.model ?? this.adapter.defaultModel,
+      provider: this.adapter.name,
+      signal: options.signal,
+    });
+    return {
+      detail: error.message,
+      status: error.status,
+      title: error.title,
+    };
+  }
+
+  /**
+   * Record a turn's streamed text for the exchange envelope. The text is kept
+   * out of `currentInput` so the history resent to the provider is unchanged.
+   */
+  private recordStreamedText(state: StreamLoopState, text: string): void {
+    if (!text) {
+      return;
+    }
+    state.finalText = text;
+    state.deltaHistory.push({
+      content: text,
+      role: LlmMessageRole.Assistant,
+      type: LlmMessageType.Message,
+    } as LlmOutputMessage);
   }
 
   private createContext(options: LlmOperateOptions): OperateContext {
@@ -313,16 +474,40 @@ export class StreamLoop {
     // upstream-SDK rejections (issue #336).
     const guard = createStaleRejectionGuard();
 
+    // Held outside the retry loop so teardown — an abandoned generator closing
+    // through `finally` — can abort whatever request is in flight
+    let activeController: AbortController | undefined;
+
     try {
       while (true) {
+        // Aborted before the request went out — including before the first
+        // attempt — reads the same to the consumer as aborting mid-stream
+        if (options.signal?.aborted) {
+          log.debug("Stream aborted by caller");
+          this.recordStreamedText(state, streamedText);
+          state.error = this.abortErrorBody(options);
+          yield {
+            type: LlmStreamChunkType.Error,
+            error: state.error,
+          };
+          llmSpan?.annotate({
+            inputData: inputSnapshot,
+            metrics: usageToLlmObsMetrics(state.usageItems),
+            outputData: streamedText,
+          });
+          llmSpan?.finish();
+          return { shouldContinue: false };
+        }
+
         const controller = new AbortController();
+        activeController = controller;
 
         try {
           // Execute streaming request
           const streamGenerator = this.adapter.executeStreamRequest!(
             this.client,
             providerRequest,
-            controller.signal,
+            combineAbortSignals({ controller, signal: options.signal }),
           );
 
           for await (const chunk of streamGenerator) {
@@ -368,19 +553,40 @@ export class StreamLoop {
           guard.recordCaught(error);
           guard.install();
 
+          // The caller cancelled: report the abort rather than the provider
+          // error it manifested as, and never retry it
+          if (options.signal?.aborted) {
+            log.debug("Stream aborted by caller");
+            this.recordStreamedText(state, streamedText);
+            state.error = this.abortErrorBody(options, error);
+            yield {
+              type: LlmStreamChunkType.Error,
+              error: state.error,
+            };
+            llmSpan?.annotate({
+              inputData: inputSnapshot,
+              metrics: usageToLlmObsMetrics(state.usageItems),
+              outputData: streamedText,
+            });
+            llmSpan?.finish();
+            return { shouldContinue: false };
+          }
+
           // If chunks were already yielded, we can't transparently retry
           if (chunksYielded) {
             const errorMessage =
               error instanceof Error ? error.message : String(error);
             log.error("Stream failed after partial data was delivered");
             log.var({ error });
+            this.recordStreamedText(state, streamedText);
+            state.error = {
+              detail: errorMessage,
+              status: 502,
+              title: "Stream Error",
+            };
             yield {
               type: LlmStreamChunkType.Error,
-              error: {
-                detail: errorMessage,
-                status: 502,
-                title: "Stream Error",
-              },
+              error: state.error,
             };
             llmSpan?.annotate({
               inputData: inputSnapshot,
@@ -413,10 +619,14 @@ export class StreamLoop {
 
           await sleep(delay);
           attempt++;
+          state.retries++;
         }
       }
     } finally {
       guard.remove();
+      // Abandoning the generator closes it through here: stop the upstream
+      // request instead of leaving it to run to completion
+      activeController?.abort("teardown");
     }
 
     // Annotate and finish the streamed llm span (no-op when disabled)
@@ -426,6 +636,8 @@ export class StreamLoop {
       outputData: streamedText,
     });
     llmSpan?.finish();
+
+    this.recordStreamedText(state, streamedText);
 
     // Execute afterEachModelResponse hook
     await this.hookRunnerInstance.runAfterModelResponse(context.hooks, {
@@ -461,6 +673,7 @@ export class StreamLoop {
         }
 
         state.currentInput.push(historyItem as unknown as LlmToolCall);
+        state.deltaHistory.push(historyItem as unknown as LlmToolCall);
       }
 
       return { shouldContinue: true, toolCalls: collectedToolCalls };
@@ -531,12 +744,14 @@ export class StreamLoop {
         };
 
         // Add tool result to history
-        state.currentInput.push({
+        const resultItem = {
           type: LlmMessageType.FunctionCallOutput,
           output: JSON.stringify(result),
           call_id: toolCall.callId,
           name: toolCall.name,
-        } as LlmToolResult & { name: string });
+        } as LlmToolResult & { name: string };
+        state.currentInput.push(resultItem);
+        state.deltaHistory.push(resultItem);
       } catch (error) {
         // Execute onToolError hook
         await this.hookRunnerInstance.runOnToolError(context.hooks, {
@@ -568,12 +783,14 @@ export class StreamLoop {
         const errorOutput = JSON.stringify({
           error: (error as Error).message || "Tool execution failed",
         });
-        state.currentInput.push({
+        const errorItem = {
           type: LlmMessageType.FunctionCallOutput,
           output: errorOutput,
           call_id: toolCall.callId,
           name: toolCall.name,
-        } as LlmToolResult & { name: string });
+        } as LlmToolResult & { name: string };
+        state.currentInput.push(errorItem);
+        state.deltaHistory.push(errorItem);
 
         log.warn(`Error executing function call ${toolCall.name}`);
         log.var({ error });

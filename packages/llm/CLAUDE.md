@@ -285,6 +285,7 @@ the failed call.
 
 | Class | `category` | `status` | When |
 |-------|-----------|----------|------|
+| `LlmAbortError` | `aborted` | 499 | The caller's `signal` aborted the request; never retried |
 | `LlmRateLimitError` | `rate_limit` | 429 | Short-term rate limit; carries `retryAfterMs` |
 | `LlmQuotaError` | `quota` | 402 | Quota exhausted or insufficient funds; `reason: "quota" \| "billing"` |
 | `LlmUnrecoverableError` | `unrecoverable` | 502 | Bad request / auth / not found |
@@ -489,23 +490,54 @@ loop. The `hooks` option remains the right choice when the full provider
 request/response payloads are needed. `stream()` communicates progress
 through its chunks; `onProgress` applies to `operate()`.
 
+### Cancellation
+
+`operate()` and `stream()` accept a caller-owned `signal: AbortSignal`
+(`LlmOperateOptions.signal`). The loops link it into the per-attempt controller
+they already create (`src/util/abortSignal.ts`), so it reaches the provider
+request every adapter already forwards a signal to.
+
+- A caller abort is terminal and never retried. `operate()` rejects with
+  `LlmAbortError`; `stream()` yields an error chunk carrying the same
+  status/title, then its final `done` chunk, so a consumer's `for await` ends
+  normally rather than throwing.
+- An already-aborted signal fails before the first request goes out.
+- `StreamLoop`'s retry `finally` aborts the active controller on teardown, so
+  abandoning the generator (`break`, `return`, consumer throw) stops the
+  upstream request whether or not a `signal` was passed.
+- The exchange envelope still settles on an abort, with `status: "incomplete"`
+  and whatever usage and history accumulated.
+
 ### Exchange Capture
 
-`operate()` accepts `onExchange`, fired once per settlement (success or
-failure) with a fully serializable `LlmExchangeEnvelope`: `request` (raw
+`operate()` and `stream()` accept `onExchange`, fired once per settlement
+(success or failure) with a fully serializable `LlmExchangeEnvelope`: `request` (raw
 pre-interpolation input, data, placeholders, system, instructions, model,
 format as JSON Schema, tool names, turns, temperature, effort,
 providerOptions, user), `response` (content, historyDelta, per-call usage +
 `usageTotals` keyed `provider:model`, reasoning, status, error, stopReason),
 `resolution` (served provider/model, fallbackUsed, fallbackAttempts,
 retries), `timing`, and provider response `ids`. Callback errors are logged
-and never interrupt the call. The loop assembles the envelope
-(`src/operate/exchange/`), attaches it as `response.exchange` (or onto a
-thrown error), and the `Llm` facade stamps `resolution` and fires the
-callback exactly once per `operate()`. Setting `LLM_EXCHANGE_ENABLED` also
+and never interrupt the call. For `operate()`, `OperateLoop` assembles the
+envelope (`src/operate/exchange/`), attaches it as `response.exchange` (or onto
+a thrown error), and the `Llm` facade stamps `resolution` and fires the
+callback exactly once per call. Setting `LLM_EXCHANGE_ENABLED` also
 persists each envelope via `@jaypie/dynamodb`'s `storeExchange`
 (`src/observability/exchangeStore.ts`, same lazy bundler-safe pattern as
 LLMObs; silent no-op when the optional peer is absent).
+
+`stream()` settles from `StreamLoop` rather than the facade: every provider's
+`stream()` delegates to the loop, and a stream has no fallback chain for the
+facade to resolve, so the loop stamps `fallbackUsed: false` /
+`fallbackAttempts: 1` itself. Settlement runs from a `finally`, which an
+abandoned generator closes through, so a consumer that stops reading still
+records the turn it consumed (`status: "incomplete"`). A generator has no
+response object, so `onExchange` and the store are the whole surface — there is
+no `response.exchange`. `historyDelta` is assembled from a parallel
+`deltaHistory` that carries the streamed assistant text as well as tool calls
+and results; that text stays out of `currentInput`, leaving the history resent
+to the provider unchanged. `stopReason` and `ids` are unset — the streamed
+transport does not surface them.
 
 ### Operate Logging
 
@@ -645,7 +677,7 @@ when the matching `*_API_KEY` is set and skip otherwise.
 - `MISTRAL_API_KEY` - Mistral API key
 - `OPENROUTER_API_KEY` - OpenRouter API key
 - `XAI_API_KEY` - xAI (Grok) API key
-- `LLM_EXCHANGE_ENABLED` - Persist each `operate()` call as an `exchange` entity via `@jaypie/dynamodb` `storeExchange` (optional peer, lazily resolved; silent no-op when absent)
+- `LLM_EXCHANGE_ENABLED` - Persist each `operate()` and `stream()` call as an `exchange` entity via `@jaypie/dynamodb` `storeExchange` (optional peer, lazily resolved; silent no-op when absent)
 
 Keys are resolved via `getEnvSecret` from `@jaypie/aws` (supports AWS Secrets Manager).
 

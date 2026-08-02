@@ -1,4 +1,5 @@
 export { buildExchangeEnvelope } from "./buildExchangeEnvelope.js";
+export type { ExchangeLoopState } from "./buildExchangeEnvelope.js";
 export {
   emitExchange,
   isExchangeRequested,

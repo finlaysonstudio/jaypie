@@ -137,6 +137,8 @@ export interface ProviderToolDefinition {
  * Categories of errors for retry logic
  */
 export enum ErrorCategory {
+  /** The caller aborted the request through its own AbortSignal */
+  Aborted = "aborted",
   /** Error is transient and can be retried */
   Retryable = "retryable",
   /** Error is due to short-term rate limiting (retry after a delay) */

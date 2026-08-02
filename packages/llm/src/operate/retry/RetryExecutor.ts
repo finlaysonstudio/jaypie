@@ -1,6 +1,8 @@
 import { sleep } from "@jaypie/kit";
 
+import { combineAbortSignals } from "../../util/abortSignal.js";
 import { getLogger } from "../../util/index.js";
+import { toAbortError } from "../../errors/toAbortError.js";
 import { createStaleRejectionGuard } from "./createStaleRejectionGuard.js";
 import {
   HookRunner,
@@ -42,6 +44,8 @@ export interface RetryExecutorConfig {
 export interface ExecuteOptions {
   context: RetryContext;
   hooks?: LlmHooks;
+  /** Caller-owned cancellation; linked into every attempt's signal */
+  signal?: AbortSignal;
 }
 
 //
@@ -78,13 +82,27 @@ export class RetryExecutor {
   }
 
   /**
+   * Build the error thrown when the caller's own signal aborts the request.
+   */
+  private toCallerAbortError(error: unknown, options: ExecuteOptions) {
+    return toAbortError({
+      cause: error,
+      model: options.context.model,
+      provider: options.context.provider,
+      signal: options.signal,
+    });
+  }
+
+  /**
    * Execute an operation with retry logic.
-   * Each attempt receives an AbortSignal. On failure, the signal is aborted
-   * before sleeping — this kills lingering socket callbacks from the previous
-   * request and prevents stale async errors from escaping the retry loop.
+   * Each attempt receives an AbortSignal, the caller's `signal` linked into it
+   * when one was passed. On failure, the attempt's controller is aborted before
+   * sleeping — this kills lingering socket callbacks from the previous request
+   * and prevents stale async errors from escaping the retry loop. A caller
+   * abort is terminal: it throws {@link LlmAbortError} without retrying.
    *
    * @param operation - The async operation to execute (receives AbortSignal)
-   * @param options - Execution options including context and hooks
+   * @param options - Execution options including context, hooks, and signal
    * @returns The result of the operation
    * @throws BadGatewayError if all retries are exhausted or error is not retryable
    */
@@ -103,10 +121,18 @@ export class RetryExecutor {
 
     try {
       while (true) {
+        // A caller abort is terminal, whether it arrived before the first
+        // attempt or during a backoff sleep
+        if (options.signal?.aborted) {
+          throw this.toCallerAbortError(undefined, options);
+        }
+
         const controller = new AbortController();
 
         try {
-          const result = await operation(controller.signal);
+          const result = await operation(
+            combineAbortSignals({ controller, signal: options.signal }),
+          );
 
           if (attempt > 0) {
             log.debug(`API call succeeded after ${attempt} retries`);
@@ -118,6 +144,13 @@ export class RetryExecutor {
 
           guard.recordCaught(error);
           guard.install();
+
+          // The caller cancelled: report the abort, not the provider error it
+          // manifested as, and do not retry
+          if (options.signal?.aborted) {
+            log.debug("API call aborted by caller");
+            throw this.toCallerAbortError(error, options);
+          }
 
           // Check if we've exhausted retries
           if (!this.policy.shouldRetry(attempt)) {

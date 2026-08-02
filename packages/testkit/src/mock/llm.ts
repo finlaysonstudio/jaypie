@@ -162,6 +162,7 @@ export const XaiProvider = createMockWrappedObject(original.XaiProvider, {
 
 // Type guards and utilities - re-export from original (these are pure functions)
 export const ErrorCategory = original.ErrorCategory;
+export const LlmAbortError = original.LlmAbortError;
 export const LlmError = original.LlmError;
 export const LlmQuotaError = original.LlmQuotaError;
 export const LlmRateLimitError = original.LlmRateLimitError;

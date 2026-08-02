@@ -488,6 +488,14 @@ export interface LlmOperateOptions {
     system?: boolean;
   };
   providerOptions?: JsonObject;
+  /**
+   * Caller-owned cancellation. Aborting it cancels the in-flight provider
+   * request and settles the call: `operate()` rejects with `LlmAbortError`
+   * and `stream()` yields a matching error chunk. A caller abort is never
+   * retried. Abandoning a `stream()` generator aborts the upstream request
+   * as well, with or without this option.
+   */
+  signal?: AbortSignal;
   system?: string;
   temperature?: number;
   tools?: LlmTool[] | Toolkit;

@@ -61,6 +61,7 @@ export type {
 
 // Errors
 export {
+  LlmAbortError,
   LlmError,
   LlmQuotaError,
   LlmRateLimitError,

@@ -442,7 +442,7 @@ Errors thrown by the callback are logged and never interrupt the loop. Hooks rem
 
 ## Exchange Capture
 
-For a durable record of each `operate()` call (replay, labeling pipelines, cost accounting, dataset export), `onExchange` fires once per settlement (success or failure) with a fully serializable envelope:
+For a durable record of each `operate()` or `stream()` call (replay, labeling pipelines, cost accounting, dataset export), `onExchange` fires once per settlement (success or failure) with a fully serializable envelope:
 
 ```typescript
 const response = await Llm.operate(input, {
@@ -464,11 +464,41 @@ const response = await Llm.operate(input, {
 });
 ```
 
-Callback errors are logged and never interrupt the call. The envelope contains no functions. When exchange capture is active, `response.exchange` carries the same envelope.
+Callback errors are logged and never interrupt the call. The envelope contains no functions. When exchange capture is active, `operate()` also carries the same envelope on `response.exchange`.
+
+### Streamed Exchanges
+
+`stream()` settles an envelope too, from the stream loop rather than the facade. A generator has no response object, so the callback and the store are the whole surface — there is no `response.exchange`.
+
+- Settles once the stream terminates: normally, on error, or when the consumer stops reading. An abandoned generator still records what it consumed, with `status: "incomplete"`.
+- `historyDelta` carries the streamed assistant text alongside the turn's tool calls and results. The text is recorded for the envelope only; the history resent to the provider is unchanged.
+- `resolution` reports `fallbackUsed: false` and `fallbackAttempts: 1` — `stream()` has no fallback chain.
+- `stopReason` is unset and `ids` are absent; the streamed transport does not surface them.
 
 ### Default Persistence
 
-Set `LLM_EXCHANGE_ENABLED` (truthy, except `false`/`0`) and every `operate()` call persists as an `exchange` entity via `storeExchange` from `@jaypie/dynamodb` (optional peer dependency, resolved lazily and bundler-safe; silent no-op when absent). Requires `initClient()` to have run — warns, never throws, when uninitialized. Consumers with custom needs use the raw `onExchange` hook instead. See `skill("vocabulary")` for the exchange model and `skill("dynamodb")` for `storeExchange`.
+Set `LLM_EXCHANGE_ENABLED` (truthy, except `false`/`0`) and every `operate()` and `stream()` call persists as an `exchange` entity via `storeExchange` from `@jaypie/dynamodb` (optional peer dependency, resolved lazily and bundler-safe; silent no-op when absent). Requires `initClient()` to have run — warns, never throws, when uninitialized. Consumers with custom needs use the raw `onExchange` hook instead. See `skill("vocabulary")` for the exchange model and `skill("dynamodb")` for `storeExchange`.
+
+## Cancellation
+
+`operate()` and `stream()` accept a caller-owned `signal`. Aborting it cancels the in-flight provider request instead of paying for tokens nobody will read:
+
+```typescript
+const controller = new AbortController();
+request.on("close", () => controller.abort("client disconnected"));
+
+for await (const chunk of Llm.stream(input, {
+  model: "claude-sonnet-5",
+  signal: controller.signal,
+})) {
+  response.write(chunk.content);
+}
+```
+
+- A caller abort is terminal and is never retried. `operate()` rejects with `LlmAbortError` (`category: "aborted"`, status 499); `stream()` yields an error chunk with the same status, then its final `done` chunk.
+- An already-aborted signal fails before the first request goes out.
+- Abandoning a `stream()` generator (`break`, `return`, or a thrown error in the consumer) aborts the upstream request on teardown, with or without a `signal`.
+- The exchange envelope still settles on an abort, carrying the partial usage and history with `status: "incomplete"`.
 
 ## Fallback Providers
 
