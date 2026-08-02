@@ -94,6 +94,32 @@ function isObjectType(type: ConversionType): boolean {
 }
 
 /**
+ * Convert a string to an array
+ * - JSON array strings parse to that array
+ * - Comma or tab separated strings split into entries
+ * - Anything else becomes a single-element array
+ */
+function stringToArray(value: string): unknown[] {
+  // Try to parse as JSON first
+  try {
+    const parsed = JSON.parse(value);
+    if (Array.isArray(parsed)) {
+      return parsed;
+    }
+  } catch {
+    // Not JSON, check for comma or tab separated
+    if (value.includes(",")) {
+      return value.split(",").map((s) => s.trim());
+    }
+    if (value.includes("\t")) {
+      return value.split("\t").map((s) => s.trim());
+    }
+  }
+  // Single value becomes array
+  return [value];
+}
+
+/**
  * Convert a single value based on its target type
  */
 function convertValue(value: unknown, type: ConversionType): unknown {
@@ -148,26 +174,15 @@ function convertValue(value: unknown, type: ConversionType): unknown {
   // Array types - handle variadic options
   if (isArrayType(type)) {
     if (Array.isArray(value)) {
+      // Commander wraps every array option in an array, so a lone string
+      // element is the raw argument and may itself express the whole array
+      if (value.length === 1 && typeof value[0] === "string") {
+        return stringToArray(value[0]);
+      }
       return value;
     }
     if (typeof value === "string") {
-      // Try to parse as JSON first
-      try {
-        const parsed = JSON.parse(value);
-        if (Array.isArray(parsed)) {
-          return parsed;
-        }
-      } catch {
-        // Not JSON, check for comma or tab separated
-        if (value.includes(",")) {
-          return value.split(",").map((s) => s.trim());
-        }
-        if (value.includes("\t")) {
-          return value.split("\t").map((s) => s.trim());
-        }
-      }
-      // Single value becomes array
-      return [value];
+      return stringToArray(value);
     }
     return [value];
   }

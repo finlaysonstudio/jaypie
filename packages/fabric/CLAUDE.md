@@ -108,7 +108,7 @@ Located in `resolve.ts`. Handle flexible type conversion with predictable behavi
 | `fabricBoolean` | Convert to boolean (`"true"` -> `true`, positive numbers -> `true`) |
 | `fabricNumber` | Convert to number (`"true"` -> `1`, booleans -> `0`/`1`) |
 | `fabricString` | Convert to string (booleans -> `"true"`/`"false"`) |
-| `fabricArray` | Wrap non-arrays in array |
+| `fabricArray` | Wrap non-arrays in array (raw; `fabric(value, Array)` parses first) |
 | `resolveFromArray` | Extract single-element array to scalar |
 | `fabricObject` | Pass through objects; wrap scalars/arrays in `{ value: ... }` |
 | `resolveFromObject` | Extract `.value` if present; pass through otherwise |
@@ -245,6 +245,19 @@ fabric([1, 0], [Boolean])        // → [true, false]
 fabric([1, 2], [Object])         // → [{ value: 1 }, { value: 2 }]
 fabric([1, "a", true], [])       // → [1, "a", true] (untyped, no element conversion)
 ```
+
+`Array` and `"array"` are the untyped array declaration and behave exactly as
+`[]` does. They parse JSON array strings and split delimited strings, with no
+element conversion:
+
+```typescript
+fabric('[{"role":"user"}]', Array) // → [{ role: "user" }]
+fabric("a,b,c", Array)             // → ["a", "b", "c"]
+fabric("solo", Array)              // → ["solo"]
+```
+
+`fabricArray` remains the raw wrapper and does no parsing. Call `fabric` to get
+the parsing behavior.
 
 **String Splitting**: Strings with commas or tabs are automatically split before conversion:
 
@@ -570,7 +583,7 @@ This means:
 - `'[X]'` parses and unwraps for all scalar types
 - Objects JSON.stringify when coerced to String
 - JSON strings automatically parse
-- `"1,2,3"` splits into array when target is typed array
+- `"1,2,3"` splits into array when target is any array type
 - `"a\tb\tc"` splits on tabs when target is typed array
 - `["a", "b"]` as type means validated string (must be "a" or "b")
 - `/regex/` as type means string validated against pattern (bare RegExp)

@@ -453,6 +453,24 @@ describe("resolve", () => {
       expect(fabric([1, 2], Array)).toEqual([1, 2]);
     });
 
+    it("parses a JSON array string to Array", () => {
+      expect(fabric('["a","b"]', Array)).toEqual(["a", "b"]);
+      expect(fabric('[{"role":"user"}]', "array")).toEqual([{ role: "user" }]);
+      expect(fabric("[]", Array)).toEqual([]);
+    });
+
+    it("splits a delimited string to Array", () => {
+      expect(fabric("a,b,c", Array)).toEqual(["a", "b", "c"]);
+      expect(fabric("a\tb", Array)).toEqual(["a", "b"]);
+    });
+
+    it("matches the untyped typed-array declaration", () => {
+      const values = ['["a","b"]', "a,b", "solo", 42, ["a", "b"]];
+      for (const value of values) {
+        expect(fabric(value, Array)).toEqual(fabric(value, []));
+      }
+    });
+
     it("converts to Object", () => {
       expect(fabric(42, Object)).toEqual({ value: 42 });
       expect(fabric(42, "object")).toEqual({ value: 42 });

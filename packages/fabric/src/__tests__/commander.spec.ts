@@ -774,6 +774,116 @@ describe("Commander Adapter", () => {
       expect(capturedInput).toEqual({ count: 42, verbose: true });
     });
 
+    describe("Array inputs", () => {
+      // Commander declares every array option variadic, so the raw argument
+      // arrives wrapped in an array (Issue #475)
+      function arrayService(type: InputFieldDefinition["type"]): {
+        captured: () => unknown;
+        handler: ReturnType<typeof fabricService>;
+      } {
+        let capturedInput: unknown;
+        const handler = fabricService({
+          alias: "test",
+          input: {
+            items: { type },
+          },
+          service: (input) => {
+            capturedInput = input;
+            return input;
+          },
+        });
+        return { captured: () => capturedInput, handler };
+      }
+
+      it("parses a JSON array string on an untyped Array input", async () => {
+        const { captured, handler } = arrayService(Array);
+        fabricCommand({ program, service: handler });
+
+        await program.parseAsync([
+          "node",
+          "test",
+          "test",
+          "--items",
+          '[{"role":"user","content":"hi"}]',
+        ]);
+
+        expect(captured()).toEqual({
+          items: [{ role: "user", content: "hi" }],
+        });
+      });
+
+      it("parses a JSON array string on a [] input", async () => {
+        const { captured, handler } = arrayService([]);
+        fabricCommand({ program, service: handler });
+
+        await program.parseAsync([
+          "node",
+          "test",
+          "test",
+          "--items",
+          '[{"role":"user"}]',
+        ]);
+
+        expect(captured()).toEqual({ items: [{ role: "user" }] });
+      });
+
+      it("parses a multi-element JSON array string on a [String] input", async () => {
+        const { captured, handler } = arrayService([String]);
+        fabricCommand({ program, service: handler });
+
+        await program.parseAsync([
+          "node",
+          "test",
+          "test",
+          "--items",
+          '["a","b"]',
+        ]);
+
+        expect(captured()).toEqual({ items: ["a", "b"] });
+      });
+
+      it("splits a comma-separated string on an untyped Array input", async () => {
+        const { captured, handler } = arrayService(Array);
+        fabricCommand({ program, service: handler });
+
+        await program.parseAsync([
+          "node",
+          "test",
+          "test",
+          "--items",
+          "self:*,admin:read",
+        ]);
+
+        expect(captured()).toEqual({ items: ["self:*", "admin:read"] });
+      });
+
+      it("keeps multiple variadic values as separate entries", async () => {
+        const { captured, handler } = arrayService(Array);
+        fabricCommand({ program, service: handler });
+
+        await program.parseAsync([
+          "node",
+          "test",
+          "test",
+          "--items",
+          "a",
+          "b",
+          "c",
+        ]);
+
+        expect(captured()).toEqual({ items: ["a", "b", "c"] });
+      });
+
+      it("wraps a lone plain string in a single-element array", async () => {
+        const { captured, handler } = arrayService(Array);
+        fabricCommand({ program, service: handler });
+
+        await program.parseAsync(["node", "test", "test", "--items", "solo"]);
+
+        expect(captured()).toEqual({ items: ["solo"] });
+      });
+    });
+
     it("handles boolean flags with --no- prefix", () => {
       const handler = fabricService({
         alias: "test",
