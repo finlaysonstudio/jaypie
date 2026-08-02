@@ -98,6 +98,7 @@ describe("Constants", () => {
     it("Exposes a single default model per provider, drawn from MODEL.*", () => {
       expect(PROVIDER.ANTHROPIC.DEFAULT).toBe(MODEL.SONNET);
       expect(PROVIDER.GOOGLE.DEFAULT).toBe(MODEL.GEMINI_FLASH);
+      expect(PROVIDER.MISTRAL.DEFAULT).toBe(MODEL.MISTRAL_LARGE);
       expect(PROVIDER.OPENAI.DEFAULT).toBe(MODEL.SOL);
       expect(PROVIDER.OPENROUTER.DEFAULT).toBe(MODEL.OPENROUTER.SONNET);
       expect(PROVIDER.XAI.DEFAULT).toBe(MODEL.GROK);
@@ -114,11 +115,18 @@ describe("Constants", () => {
     // so they are deliberately absent from COST. Amazon's own Nova models are
     // first-class and priced.
     const proxyRoutes: string[] = [...Object.values(MODEL.OPENROUTER)];
+    // Models billed by a unit LlmModelCost cannot express. Mistral's OCR
+    // models price per page ($4/1000), not per million tokens, so they carry
+    // no COST entry.
+    const perPageModels: string[] = [MODEL.MISTRAL_OCR];
     const firstClassModels = Object.values(MODEL)
       .flatMap((value) =>
         typeof value === "string" ? [value] : Object.values(value),
       )
-      .filter((model) => !proxyRoutes.includes(model));
+      .filter(
+        (model) =>
+          !proxyRoutes.includes(model) && !perPageModels.includes(model),
+      );
 
     it("Prices every first-class model in MODEL.*", () => {
       const unpriced = firstClassModels.filter((model) => !COST[model]);
@@ -133,6 +141,12 @@ describe("Constants", () => {
     it("Omits proxy routes that price per backend", () => {
       for (const route of proxyRoutes) {
         expect(COST[route]).toBeUndefined();
+      }
+    });
+
+    it("Omits models billed per page rather than per token", () => {
+      for (const model of perPageModels) {
+        expect(COST[model]).toBeUndefined();
       }
     });
 

@@ -56,6 +56,9 @@ const MATRIX_EXCLUDE = new Set<string>([
   MODEL.GPT,
   MODEL.GPT_MINI,
   MODEL.GPT_NANO,
+  // Document extraction over POST /v1/ocr, not chat completions — every
+  // capability cell would fail by construction.
+  MODEL.MISTRAL_OCR,
 ]);
 
 // Flatten MODEL.* (including the BEDROCK and OPENROUTER subtrees) into ids.
@@ -101,6 +104,7 @@ const MATRIX_MODELS: ModelConfig[] = [
     PROVIDER.BEDROCK.DEFAULT,
     PROVIDER.FIREWORKS.DEFAULT,
     PROVIDER.GOOGLE.DEFAULT,
+    PROVIDER.MISTRAL.DEFAULT,
     PROVIDER.OPENAI.DEFAULT,
     PROVIDER.OPENROUTER.DEFAULT,
     PROVIDER.XAI.DEFAULT,

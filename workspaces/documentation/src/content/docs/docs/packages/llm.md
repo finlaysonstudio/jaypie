@@ -7,7 +7,7 @@ title: "@jaypie/llm"
 
 ## Overview
 
-`@jaypie/llm` provides a unified interface for calling Anthropic, Fireworks, Google, OpenAI, OpenRouter, and xAI models with consistent API patterns.
+`@jaypie/llm` provides a unified interface for calling Anthropic, Fireworks, Google, Mistral, OpenAI, OpenRouter, and xAI models with consistent API patterns.
 
 ## Installation
 
@@ -32,6 +32,7 @@ npm install @jaypie/llm
 | `anthropic` | claude-sonnet-5, claude-opus-5, claude-haiku-4-5 | `ANTHROPIC_API_KEY` |
 | `fireworks` | glm, deepseek, kimi, minimax, qwen | `FIREWORKS_API_KEY` |
 | `google` | gemini-2.0-flash, gemini-1.5-pro | `GOOGLE_API_KEY` |
+| `mistral` | mistral-large-2512, mistral-medium-3-5, mistral-small-2603 | `MISTRAL_API_KEY` |
 | `openai` | gpt-4o, gpt-4o-mini, o1-mini, o3-mini | `OPENAI_API_KEY` |
 | `openrouter` | Various | `OPENROUTER_API_KEY` |
 | `xai` | grok-4-1-fast-reasoning, grok-3, grok-3-mini | `XAI_API_KEY` |

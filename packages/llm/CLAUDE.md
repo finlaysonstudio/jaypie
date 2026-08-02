@@ -587,6 +587,19 @@ HTTP errors shaped to drive `classifyError`):
   inputs are warned and discarded — Fireworks has no `file` part and rejects
   document `data:` URIs ("Unsupported URL scheme 'data'"; Document Inlining's
   `#transform=inline` did not engage in live testing 2026-07-19)
+- Mistral — `MistralClient` (OpenAI-compatible Chat Completions, plus
+  `POST /v1/ocr`). Images are `image_url` parts; **files are carried**, as
+  Mistral's own `document_url` part accepts the base64 `data:` URI
+  `resolveOperateInput` already produces. Two divergences from its
+  OpenAI-compatible siblings, both verified live 2026-08-01:
+  - **Unknown request fields are rejected with a 422 `extra_forbidden`.**
+    Mistral has no `user` field and names the seed `random_seed`, so the
+    adapter never sends `user` and `providerOptions` is not a free-form
+    passthrough — values must belong to Mistral's own schema.
+  - **The error `message` is polymorphic** — a string on model-level errors,
+    an object (`{ detail: [{ loc, msg }] }`) on schema validation. The client
+    renders the object form as `body.field: message` rather than
+    `[object Object]`.
 - OpenRouter — `OpenRouterClient` (OpenAI-compatible Chat Completions)
 
 Bedrock is the one provider that keeps an SDK: `@aws-sdk/client-bedrock-runtime`
@@ -604,6 +617,7 @@ when the matching `*_API_KEY` is set and skip otherwise.
 - `ANTHROPIC_API_KEY` - Anthropic API key
 - `GOOGLE_API_KEY` - Google API key (`GEMINI_API_KEY` is a deprecated fallback; a `log.warn` fires when it is used)
 - `FIREWORKS_API_KEY` - Fireworks API key
+- `MISTRAL_API_KEY` - Mistral API key
 - `OPENROUTER_API_KEY` - OpenRouter API key
 - `XAI_API_KEY` - xAI (Grok) API key
 - `LLM_EXCHANGE_ENABLED` - Persist each `operate()` call as an `exchange` entity via `@jaypie/dynamodb` `storeExchange` (optional peer, lazily resolved; silent no-op when absent)
@@ -679,7 +693,13 @@ export { JaypieToolkit, toolkit, Toolkit, tools };
 export { extractReasoning, jsonSchemaToNaturalSchema, naturalSchemaToJsonSchema };
 
 // Providers (for direct use)
-export { FireworksProvider, GoogleProvider, OpenRouterProvider, XaiProvider };
+export {
+  FireworksProvider,
+  GoogleProvider,
+  MistralProvider,
+  OpenRouterProvider,
+  XaiProvider,
+};
 // GeminiProvider remains as a deprecated alias of GoogleProvider
 ```
 

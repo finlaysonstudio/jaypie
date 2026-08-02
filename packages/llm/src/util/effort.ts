@@ -188,3 +188,21 @@ const OPENROUTER_EFFORT: Record<LlmEffort, string> = {
 export function toOpenRouterEffort(effort: LlmEffort): LlmEffortMapping {
   return { papered: false, value: OPENROUTER_EFFORT[effort] };
 }
+
+// Mistral `reasoning_effort` — the request schema advertises
+// none | minimal | low | medium | high | xhigh | max, but per-model validation
+// is far tighter: every model that reasons at all accepts only `none` and
+// `high` (verified live 2026-08-01), so the neutral scale collapses to a
+// binary. Only the explicit floor disables reasoning outright; everything from
+// `low` up asks for it.
+const MISTRAL_EFFORT: Record<LlmEffort, LlmEffortMapping> = {
+  [EFFORT.LOWEST]: { papered: true, value: "none" },
+  [EFFORT.LOW]: { papered: true, value: "high" },
+  [EFFORT.MEDIUM]: { papered: true, value: "high" },
+  [EFFORT.HIGH]: { papered: false, value: "high" },
+  [EFFORT.HIGHEST]: { papered: true, value: "high" },
+};
+
+export function toMistralEffort(effort: LlmEffort): LlmEffortMapping {
+  return MISTRAL_EFFORT[effort];
+}

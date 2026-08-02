@@ -513,6 +513,80 @@ describe("determineModelProvider", () => {
       });
     });
 
+    describe("Mistral Detection", () => {
+      it("Returns default model when provider name 'mistral' is passed", () => {
+        const result = determineModelProvider(PROVIDER.MISTRAL.NAME);
+        expect(result).toEqual({
+          model: PROVIDER.MISTRAL.DEFAULT,
+          provider: PROVIDER.MISTRAL.NAME,
+        });
+      });
+
+      it("Handles mistral: prefix and strips it", () => {
+        const result = determineModelProvider("mistral:mistral-large-2512");
+        expect(result).toEqual({
+          model: "mistral-large-2512",
+          provider: PROVIDER.MISTRAL.NAME,
+        });
+      });
+
+      it("Correctly identifies every catalogued Mistral model", () => {
+        const mistralModels = [
+          MODEL.MISTRAL_LARGE,
+          MODEL.MISTRAL_MEDIUM,
+          MODEL.MISTRAL_OCR,
+          MODEL.MISTRAL_SMALL,
+        ];
+        mistralModels.forEach((model) => {
+          const result = determineModelProvider(model);
+          expect(result.provider).toBe(PROVIDER.MISTRAL.NAME);
+          expect(result.model).toBe(model);
+        });
+      });
+
+      it("Identifies family names that do not contain 'mistral'", () => {
+        // "ministral" is m-i-n-i-s-t-r-a-l; codestral/devstral/pixtral/voxtral
+        // share only the "-tral" suffix, so each needs its own match word
+        for (const model of [
+          "codestral-2508",
+          "devstral-2512",
+          "magistral-small-latest",
+          "ministral-14b-2512",
+          "pixtral-large-latest",
+          "voxtral-small-2507",
+        ]) {
+          expect(determineModelProvider(model).provider).toBe(
+            PROVIDER.MISTRAL.NAME,
+          );
+        }
+      });
+
+      it("Leaves Bedrock-hosted Mistral ids on Bedrock", () => {
+        // PROVIDER.BEDROCK.MODEL_MATCH_WORDS carries "mistral.mistral", and
+        // the Bedrock loop runs first, so these must not be captured
+        for (const model of [
+          "mistral.mistral-large-2407-v1:0",
+          "mistral.mistral-7b-instruct-v0:2",
+        ]) {
+          expect(determineModelProvider(model).provider).toBe(
+            PROVIDER.BEDROCK.NAME,
+          );
+        }
+      });
+
+      it("Leaves slash-prefixed Mistral routes on OpenRouter", () => {
+        // The "/" rule runs before the Mistral match words
+        for (const model of [
+          "mistralai/mistral-large",
+          "mistralai/codestral-2508",
+        ]) {
+          expect(determineModelProvider(model).provider).toBe(
+            PROVIDER.OPENROUTER.NAME,
+          );
+        }
+      });
+    });
+
     describe("OpenRouter Detection", () => {
       it("Identifies OpenRouter when model contains /", () => {
         const result = determineModelProvider("openai/gpt-4");

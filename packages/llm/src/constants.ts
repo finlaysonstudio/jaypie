@@ -42,6 +42,13 @@ export const MODEL = {
   GEMINI_FLASH: "gemini-3.6-flash",
   GEMINI_FLASH_LITE: "gemini-3.5-flash-lite",
   GEMINI_PRO: "gemini-3.1-pro-preview",
+  // Mistral
+  MISTRAL_LARGE: "mistral-large-2512",
+  MISTRAL_MEDIUM: "mistral-medium-3-5",
+  // Document extraction over POST /v1/ocr, not chat completions. Priced per
+  // page, so it carries no COST entry and is excluded from the chat matrix.
+  MISTRAL_OCR: "mistral-ocr-4-0",
+  MISTRAL_SMALL: "mistral-small-2603",
   // OpenAI
   SOL: "gpt-5.6-sol",
   TERRA: "gpt-5.6-terra",
@@ -305,6 +312,15 @@ export const COST: Record<string, LlmModelCost> = {
     output: 0.5,
   },
   "grok-latest": { cachedInputRead: 0.2, input: 1.25, output: 2.5 },
+  // Mistral — https://docs.mistral.ai/models/overview
+  // Cached prompt tokens bill at 10% of the standard input rate. Note the
+  // marketing FAQ at mistral.ai/pricing still quotes $2/$6 for "Mistral
+  // Large" — that is stale copy describing Large 2; the model cards govern.
+  // mistral-ocr-4-0 is deliberately unpriced: it bills per page ($4/1000,
+  // $5/1000 annotated), which LlmModelCost cannot express.
+  "mistral-large-2512": { cachedInputRead: 0.05, input: 0.5, output: 1.5 },
+  "mistral-medium-3-5": { cachedInputRead: 0.15, input: 1.5, output: 7.5 },
+  "mistral-small-2603": { cachedInputRead: 0.015, input: 0.15, output: 0.6 },
 };
 
 const GOOGLE_PROVIDER = {
@@ -404,6 +420,26 @@ export const PROVIDER = {
   /** @deprecated Use PROVIDER.GOOGLE — "Google" is the provider; Gemini is the model family */
   GEMINI: GOOGLE_PROVIDER,
   GOOGLE: GOOGLE_PROVIDER,
+  MISTRAL: {
+    // https://docs.mistral.ai/models/overview
+    API_KEY: "MISTRAL_API_KEY" as const,
+    BASE_URL: "https://api.mistral.ai/v1" as const,
+    DEFAULT: MODEL.MISTRAL_LARGE,
+    // Most Mistral family names do not contain the substring "mistral" —
+    // "ministral" is m-i-n-i-s-t-r-a-l, and codestral/devstral/pixtral/voxtral
+    // share only the "-tral" suffix — so each family needs its own word.
+    MODEL_MATCH_WORDS: [
+      "codestral",
+      "devstral",
+      "magistral",
+      "ministral",
+      "mistral",
+      "pixtral",
+      "voxtral",
+    ] as const,
+    NAME: "mistral" as const,
+    OCR: MODEL.MISTRAL_OCR,
+  },
   OPENAI: {
     // https://platform.openai.com/docs/models
     DEFAULT: MODEL.SOL,
@@ -457,6 +493,7 @@ export type LlmProviderName =
   | typeof PROVIDER.BEDROCK.NAME
   | typeof PROVIDER.FIREWORKS.NAME
   | typeof PROVIDER.GOOGLE.NAME
+  | typeof PROVIDER.MISTRAL.NAME
   | typeof PROVIDER.OPENAI.NAME
   | typeof PROVIDER.OPENROUTER.NAME
   | typeof PROVIDER.XAI.NAME;

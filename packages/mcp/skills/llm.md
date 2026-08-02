@@ -25,16 +25,19 @@ console.log(response.content); // "4"
 | Anthropic | "anthropic", "claude", "fable", "haiku", "mythos", "opus", "sonnet" | claude-sonnet-5 |
 | Google | "google", "gemini" | gemini-3.6-flash |
 | Fireworks | "fireworks" (also matched inside ids like `accounts/fireworks/models/...`) | accounts/fireworks/models/glm-5p2 |
+| Mistral | "mistral", "ministral", "codestral", "devstral", "magistral", "pixtral", "voxtral" | mistral-large-2512 |
 | OpenRouter | "openrouter" | anthropic/claude-sonnet-5 |
 | xAI | "xai", "grok" | grok-latest |
 | Bedrock | "amazon.nova", "anthropic.claude", "meta.llama", "deepseek.", "google.gemma", "moonshotai.", "openai.gpt-oss", … | amazon.nova-pro-v1:0 |
 
 The provider name for Gemini models is `"google"` — `"gemini"` is accepted as a deprecated alias.
 
+Mistral's family names mostly do not contain the substring "mistral" (`ministral` is m-i-n-i-s-t-r-a-l; `codestral`/`devstral`/`pixtral`/`voxtral` share only the `-tral` suffix), so each family carries its own match word. Bedrock-hosted `mistral.mistral-*` ids still resolve to `bedrock`, and `mistralai/*` routes still resolve to `openrouter`; use the `mistral:` prefix to force the direct API.
+
 ### Model Constants
 
 - **`PROVIDER.<name>.DEFAULT`** — the single default model per provider (above), used when no `model` is given.
-- **`LLM.MODEL.*`** — the named model catalog (e.g. `MODEL.SONNET`, `MODEL.SOL`, `MODEL.GEMINI_FLASH`, `MODEL.GROK`, `MODEL.NOVA_PRO`, `MODEL.NOVA_LITE`), plus `MODEL.FIREWORKS.*` for Fireworks serverless models (`DEEPSEEK`, `GLM`, `GPT_OSS`, `KIMI`, `MINIMAX`, `QWEN`) and `MODEL.OPENROUTER.*` for provider-prefixed routes (`GLM`, `LUNA`, `SONNET`). Pick specific models from here. Amazon's Nova models are first-class ids served over Bedrock; Bedrock's third-party routes are not catalogued — pass the literal id (e.g. `us.anthropic.claude-sonnet-4-6`) and `determineModelProvider` resolves it to `bedrock`.
+- **`LLM.MODEL.*`** — the named model catalog (e.g. `MODEL.SONNET`, `MODEL.SOL`, `MODEL.GEMINI_FLASH`, `MODEL.GROK`, `MODEL.MISTRAL_LARGE`, `MODEL.MISTRAL_MEDIUM`, `MODEL.MISTRAL_SMALL`, `MODEL.NOVA_PRO`, `MODEL.NOVA_LITE`), plus `MODEL.FIREWORKS.*` for Fireworks serverless models (`DEEPSEEK`, `GLM`, `GPT_OSS`, `KIMI`, `MINIMAX`, `QWEN`) and `MODEL.OPENROUTER.*` for provider-prefixed routes (`GLM`, `LUNA`, `SONNET`). Pick specific models from here. Amazon's Nova models are first-class ids served over Bedrock; Bedrock's third-party routes are not catalogued — pass the literal id (e.g. `us.anthropic.claude-sonnet-4-6`) and `determineModelProvider` resolves it to `bedrock`.
 - The catalog is the **single source of truth for CI coverage**: `packages/llm/test/models.ts` derives the live capability matrix from `MODEL.*` plus each `PROVIDER.*.DEFAULT`, and the workflow shards it by provider. Adding a model to `MODEL.*` puts it under test; no id list exists anywhere else.
 - **Deprecated:** the size-tier map `PROVIDER.<name>.MODEL.{DEFAULT,LARGE,SMALL,TINY}`, the `DEFAULT.MODEL` bundle, and `ALL` are `@deprecated` and retired in 2.0 — use `PROVIDER.*.DEFAULT` for defaults and `MODEL.*` for named models.
 
@@ -533,6 +536,7 @@ const flash = new Llm(LLM.MODEL.GEMINI_FLASH); // -> google, gemini-3.6-flash
 ANTHROPIC_API_KEY   # Required for Anthropic
 FIREWORKS_API_KEY   # Required for Fireworks
 GOOGLE_API_KEY      # Required for Google (Gemini models)
+MISTRAL_API_KEY     # Required for Mistral
 OPENAI_API_KEY      # Required for OpenAI
 OPENROUTER_API_KEY  # Required for OpenRouter
 XAI_API_KEY         # Required for xAI (Grok)
@@ -712,13 +716,13 @@ await Llm.operate("Solve this step by step", {
 Per-provider translation (`medium`/`high` stay aligned across providers; ends
 collapse where a provider has fewer rungs):
 
-| `effort`  | OpenAI `reasoning.effort` | Anthropic `output_config.effort` | Gemini 3 `thinkingLevel` | Gemini 2.5 `thinkingBudget` | Grok `reasoning_effort` | OpenRouter `reasoning.effort` | Fireworks `reasoning_effort` |
-|-----------|---------------------------|----------------------------------|--------------------------|-----------------------------|-------------------------|-------------------------------|------------------------------|
-| `lowest`  | minimal | low    | MINIMAL | 512   | low    | minimal | low    |
-| `low`     | low     | low    | LOW     | 4096  | low    | low     | low    |
-| `medium`  | medium  | medium | MEDIUM  | 8192  | medium | medium  | medium |
-| `high`    | high    | high   | HIGH    | 16384 | high   | high    | high   |
-| `highest` | xhigh   | max    | HIGH    | 24576 | high   | xhigh   | high   |
+| `effort`  | OpenAI `reasoning.effort` | Anthropic `output_config.effort` | Gemini 3 `thinkingLevel` | Gemini 2.5 `thinkingBudget` | Grok `reasoning_effort` | OpenRouter `reasoning.effort` | Fireworks `reasoning_effort` | Mistral `reasoning_effort` |
+|-----------|---------------------------|----------------------------------|--------------------------|-----------------------------|-------------------------|-------------------------------|------------------------------|----------------------------|
+| `lowest`  | minimal | low    | MINIMAL | 512   | low    | minimal | low    | none |
+| `low`     | low     | low    | LOW     | 4096  | low    | low     | low    | high |
+| `medium`  | medium  | medium | MEDIUM  | 8192  | medium | medium  | medium | high |
+| `high`    | high    | high   | HIGH    | 16384 | high   | high    | high   | high |
+| `highest` | xhigh   | max    | HIGH    | 24576 | high   | xhigh   | high   | high |
 
 When a neutral level has no distinct native rung and collapses onto a neighbor
 (e.g. `highest` → Grok `high`), the adapter logs it at `log.debug` for the
@@ -746,6 +750,12 @@ erroring):
   tools uses a tool emulation (the API rejects the pair); the operate loop
   enforces the format contract with a corrective retry turn when a model
   answers in prose.
+- **Mistral** — only models that reason accept the field, and they accept only
+  `none` and `high`, so the neutral scale collapses to a binary: `lowest` maps
+  to `none`, everything else to `high`. Mistral Large 3 rejects the field
+  outright and is skipped; a model that rejects it at runtime is cached and the
+  request transparently retried without it. Structured output combines with
+  tools natively — no emulation.
 - **Bedrock** — not yet wired; `effort` is ignored.
 
 First-class `effort` takes precedence over a raw `providerOptions.reasoning`

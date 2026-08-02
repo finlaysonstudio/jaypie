@@ -142,6 +142,12 @@ export const FireworksProvider = createMockWrappedObject(
 export const GoogleProvider = createMockWrappedObject(original.GoogleProvider, {
   isClass: true,
 });
+export const MistralProvider = createMockWrappedObject(
+  original.MistralProvider,
+  {
+    isClass: true,
+  },
+);
 /** @deprecated Use GoogleProvider — "Google" is the provider; Gemini is the model family */
 export const GeminiProvider = GoogleProvider;
 export const OpenRouterProvider = createMockWrappedObject(

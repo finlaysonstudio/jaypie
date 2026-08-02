@@ -10,6 +10,7 @@ import {
 import {
   toAnthropicEffort,
   toFireworksEffort,
+  toMistralEffort,
   toGeminiThinkingBudget,
   toGeminiThinkingLevel,
   toOpenAiEffort,
@@ -167,6 +168,31 @@ describe("effort mapping util", () => {
       value: "high",
     });
     expect(toFireworksEffort(EFFORT.HIGHEST)).toEqual({
+      papered: true,
+      value: "high",
+    });
+  });
+
+  it("Mistral collapses to a none/high binary", () => {
+    // Every reasoning-capable Mistral model accepts only `none` and `high`,
+    // so only the floor and the exact `high` rung land unpapered
+    expect(toMistralEffort(EFFORT.LOWEST)).toEqual({
+      papered: true,
+      value: "none",
+    });
+    expect(toMistralEffort(EFFORT.LOW)).toEqual({
+      papered: true,
+      value: "high",
+    });
+    expect(toMistralEffort(EFFORT.MEDIUM)).toEqual({
+      papered: true,
+      value: "high",
+    });
+    expect(toMistralEffort(EFFORT.HIGH)).toEqual({
+      papered: false,
+      value: "high",
+    });
+    expect(toMistralEffort(EFFORT.HIGHEST)).toEqual({
       papered: true,
       value: "high",
     });
