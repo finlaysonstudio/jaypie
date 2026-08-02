@@ -41,7 +41,7 @@
     "@jaypie/core": "^1.2.4",
     "@jaypie/datadog": "^1.2.6",
     "@jaypie/errors": "^1.2.4",
-    "@jaypie/express": "^1.2.31",
+    "@jaypie/express": "^1.2.32",
     "@jaypie/kit": "^1.2.15",
     "@jaypie/lambda": "^1.2.14",
     "@jaypie/logger": "^1.2.22"

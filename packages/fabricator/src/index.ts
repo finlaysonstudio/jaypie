@@ -1,5 +1,3 @@
-/* eslint-disable no-redeclare */
-
 // Export Fabricator classes and types
 export { Fabricator, type FabricatorOptions } from "./Fabricator.js";
 

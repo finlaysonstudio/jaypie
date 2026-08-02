@@ -162,6 +162,9 @@ export default [
       "prettier/prettier": "warn",
       "@typescript-eslint/no-unused-vars": ["warn", NO_UNUSED_VARS_OPTIONS],
       "@typescript-eslint/no-explicit-any": "off",
+      // Core no-redeclare does not understand function overload signatures and
+      // reports every one after the first. tsc rejects a genuine redeclaration.
+      "no-redeclare": "off",
     },
   },
 
