@@ -325,6 +325,55 @@ describe("Llm Class", () => {
       });
     });
 
+    describe("rate limit waits", () => {
+      // Reaching for another provider beats sleeping out a rate limit, so
+      // every attempt with somewhere left to go is told not to wait
+      it("disables the wait on every attempt but the last", async () => {
+        openAiOperateMock.mockRejectedValue(new Error("OpenAI failed"));
+        anthropicOperateMock.mockRejectedValue(new Error("Anthropic failed"));
+
+        const llm = new Llm(PROVIDER.OPENAI.NAME, {
+          fallback: [
+            { provider: PROVIDER.ANTHROPIC.NAME },
+            { provider: PROVIDER.GOOGLE.NAME },
+          ],
+        });
+
+        await llm.operate("test");
+
+        expect(openAiOperateMock.mock.calls[0][1]).toMatchObject({
+          retry: { rateLimit: false },
+        });
+        expect(anthropicOperateMock.mock.calls[0][1]).toMatchObject({
+          retry: { rateLimit: false },
+        });
+        // The last provider has nowhere left to go, so it keeps the wait
+        expect(geminiOperateMock.mock.calls[0][1].retry).toBeUndefined();
+      });
+
+      it("leaves the wait in place when no fallback is configured", async () => {
+        const llm = new Llm(PROVIDER.OPENAI.NAME);
+
+        await llm.operate("test");
+
+        expect(openAiOperateMock.mock.calls[0][1].retry).toBeUndefined();
+      });
+
+      it("honors an explicit retry option over the fallback default", async () => {
+        openAiOperateMock.mockRejectedValue(new Error("OpenAI failed"));
+
+        const llm = new Llm(PROVIDER.OPENAI.NAME, {
+          fallback: [{ provider: PROVIDER.ANTHROPIC.NAME }],
+        });
+
+        await llm.operate("test", { retry: { rateLimit: true } });
+
+        expect(openAiOperateMock.mock.calls[0][1]).toMatchObject({
+          retry: { rateLimit: true },
+        });
+      });
+    });
+
     describe("per-call override", () => {
       it("overrides instance config with per-call fallback", async () => {
         openAiOperateMock.mockRejectedValue(new Error("Primary failed"));

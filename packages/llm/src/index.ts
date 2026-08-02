@@ -80,6 +80,13 @@ export {
 export type { LlmErrorOptions } from "./errors/LlmError.js";
 export { ErrorCategory } from "./operate/types.js";
 
+// Retry
+export { RetryPolicy } from "./operate/retry/index.js";
+export type {
+  LlmRetryOptions,
+  RetryPolicyConfig,
+} from "./operate/retry/index.js";
+
 // Exchange persistence
 export { useExchangeStore } from "./observability/exchangeStore.js";
 export type {

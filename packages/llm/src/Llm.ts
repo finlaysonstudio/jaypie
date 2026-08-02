@@ -228,13 +228,22 @@ class Llm implements LlmProvider {
       fallback: false as const,
     };
 
+    // Reaching for another provider beats waiting out a rate limit, so every
+    // attempt with somewhere left to go fails fast instead of sleeping. The
+    // final attempt keeps the wait: there is no cheaper remedy left. An
+    // explicit `retry` option from the caller wins over both.
+    const eagerOptions =
+      fallbackChain.length > 0 && resolvedOptions.retry === undefined
+        ? { ...optionsWithoutFallback, retry: { rateLimit: false as const } }
+        : optionsWithoutFallback;
+
     let lastError: Error | undefined;
     let attempts = 0;
 
     // Try primary provider first
     attempts++;
     try {
-      const response = await this._llm.operate(input, optionsWithoutFallback);
+      const response = await this._llm.operate(input, eagerOptions);
       const settled = {
         ...response,
         fallbackAttempts: attempts,
@@ -257,7 +266,7 @@ class Llm implements LlmProvider {
     // Try fallback providers. The fallback instance's underlying provider is
     // called directly so the nested facade does not settle the exchange —
     // exactly one settlement per operate() happens here.
-    for (const fallbackConfig of fallbackChain) {
+    for (const [index, fallbackConfig] of fallbackChain.entries()) {
       attempts++;
       try {
         const fallbackInstance = this.createFallbackInstance(fallbackConfig);
@@ -266,9 +275,10 @@ class Llm implements LlmProvider {
             `Provider ${fallbackConfig.provider} does not support operate method`,
           );
         }
+        const isLastAttempt = index === fallbackChain.length - 1;
         const response = await fallbackInstance._llm.operate(
           input,
-          optionsWithoutFallback,
+          isLastAttempt ? optionsWithoutFallback : eagerOptions,
         );
         const settled = {
           ...response,

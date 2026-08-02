@@ -3,9 +3,11 @@
 //
 // Mistral enforces a requests-per-second ceiling that varies by tier and by
 // model, and it returns a bare 429 with no Retry-After header, so a run that
-// outpaces the ceiling fails on rate limiting rather than on capability. The
-// matrix cannot solve that by retrying: `operate()` classifies 429 as a
-// terminal LlmRateLimitError and does not retry it within the request budget.
+// outpaces the ceiling spends its time on rate limiting rather than on
+// capability. `operate()` now waits and retries a 429 within its rate-limit
+// budget, but a wait is a minute of wall clock per occurrence: pacing keeps the
+// run under the ceiling, and the backoff catches what pacing cannot see (a
+// token-per-minute ceiling is invisible to request-count pacing).
 //
 // Pacing is enforced per model request rather than per cell, because one cell
 // is a multi-turn loop that can issue many requests. Adapters call the

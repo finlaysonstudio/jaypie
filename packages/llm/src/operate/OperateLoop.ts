@@ -52,6 +52,7 @@ import {
 import {
   defaultRetryPolicy,
   ErrorClassifier,
+  resolveRetryPolicy,
   RetryExecutor,
   RetryPolicy,
 } from "./retry/index.js";
@@ -593,7 +594,10 @@ export class OperateLoop {
     const retryExecutor = new RetryExecutor({
       errorClassifier,
       hookRunner: this.hookRunnerInstance,
-      policy: this.retryPolicy,
+      policy: resolveRetryPolicy({
+        policy: this.retryPolicy,
+        retry: options.retry,
+      }),
     });
 
     // Build provider-specific request

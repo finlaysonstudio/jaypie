@@ -179,6 +179,7 @@ export const isLlmOperateInputFile = original.isLlmOperateInputFile;
 export const isLlmOperateInputImage = original.isLlmOperateInputImage;
 export const jsonSchemaToNaturalSchema = original.jsonSchemaToNaturalSchema;
 export const naturalSchemaToJsonSchema = original.naturalSchemaToJsonSchema;
+export const RetryPolicy = original.RetryPolicy;
 
 // Tool collections
 export const toolkit = new original.JaypieToolkit([

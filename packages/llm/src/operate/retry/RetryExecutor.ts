@@ -1,5 +1,4 @@
-import { sleep } from "@jaypie/kit";
-
+import { abortableSleep } from "../../util/abortableSleep.js";
 import { combineAbortSignals } from "../../util/abortSignal.js";
 import { getLogger } from "../../util/index.js";
 import { toAbortError } from "../../errors/toAbortError.js";
@@ -10,7 +9,7 @@ import {
   LlmHooks,
 } from "../hooks/HookRunner.js";
 import { RetryPolicy, defaultRetryPolicy } from "./RetryPolicy.js";
-import { ClassifiedError } from "../types.js";
+import { ClassifiedError, ErrorCategory } from "../types.js";
 import { toLlmError } from "../../errors/toLlmError.js";
 
 //
@@ -112,6 +111,7 @@ export class RetryExecutor {
   ): Promise<T> {
     const log = getLogger();
     let attempt = 0;
+    let rateLimitAttempt = 0;
 
     // Guard against stale rejections firing on a subsequent microtask after
     // the retry layer has already caught the originating error: undici socket
@@ -150,6 +150,52 @@ export class RetryExecutor {
           if (options.signal?.aborted) {
             log.debug("API call aborted by caller");
             throw this.toCallerAbortError(error, options);
+          }
+
+          // A rate limit clears on wall-clock time. It draws on its own budget
+          // so throttling never consumes the transient-error retries, and it
+          // waits the provider's suggested delay rather than a backoff ramp.
+          // Quota is a sibling category and stays terminal: waiting does not
+          // refill an exhausted plan.
+          const classified = this.errorClassifier.classify(error);
+          if (classified.category === ErrorCategory.RateLimit) {
+            if (!this.policy.shouldRetryRateLimit(rateLimitAttempt)) {
+              log.error(
+                `API call rate limited after ${this.policy.rateLimitRetries} retries`,
+              );
+              log.var({ error });
+
+              await this.hookRunner.runOnUnrecoverableError(options.hooks, {
+                input: options.context.input as never,
+                options: options.context.options as never,
+                providerRequest: options.context.providerRequest,
+                error,
+              });
+
+              throw this.toTerminalError(error, options.context);
+            }
+
+            const rateLimitDelay = this.policy.getRateLimitDelay({
+              attempt: rateLimitAttempt,
+              suggestedDelayMs: classified.suggestedDelayMs,
+            });
+            log.warn(
+              `API call rate limited. Retrying in ${rateLimitDelay}ms...`,
+            );
+
+            await this.hookRunner.runOnRetryableError(options.hooks, {
+              input: options.context.input as never,
+              options: options.context.options as never,
+              providerRequest: options.context.providerRequest,
+              error,
+            });
+
+            await abortableSleep({
+              ms: rateLimitDelay,
+              signal: options.signal,
+            });
+            rateLimitAttempt++;
+            continue;
           }
 
           // Check if we've exhausted retries
@@ -200,7 +246,7 @@ export class RetryExecutor {
             error,
           });
 
-          await sleep(delay);
+          await abortableSleep({ ms: delay, signal: options.signal });
           attempt++;
         }
       }

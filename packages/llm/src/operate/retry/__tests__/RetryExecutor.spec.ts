@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { RetryExecutor, ErrorClassifier } from "../RetryExecutor.js";
 import { RetryPolicy } from "../RetryPolicy.js";
 import { ErrorCategory } from "../../types.js";
+import { abortableSleep } from "../../../util/abortableSleep.js";
 
 //
 //
@@ -33,6 +34,10 @@ vi.mock("@jaypie/errors", () => ({
       this.name = "JaypieError";
     }
   },
+}));
+
+vi.mock("../../../util/abortableSleep.js", () => ({
+  abortableSleep: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock("../../../util/index.js", () => ({
@@ -587,6 +592,159 @@ describe("RetryExecutor", () => {
 
       // Initial attempt + 1 retry
       expect(operation).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  // Rate Limits
+  describe("Rate Limits", () => {
+    const mockContext = {
+      input: "test",
+      model: "test-model",
+      options: {},
+      provider: "test-provider",
+      providerRequest: {},
+    };
+
+    const rateLimitClassifier = (): ErrorClassifier => ({
+      classify: (error: unknown) => ({
+        category: ErrorCategory.RateLimit,
+        error,
+        shouldRetry: false,
+        suggestedDelayMs: 60000,
+      }),
+      // The adapters report a rate limit as non-retryable; the executor's own
+      // budget is what grants the retry
+      isRetryable: () => false,
+      isKnownError: () => true,
+    });
+
+    afterEach(() => {
+      vi.clearAllMocks();
+    });
+
+    it("retries a rate-limited request and returns the eventual result", async () => {
+      const executor = new RetryExecutor({
+        errorClassifier: rateLimitClassifier(),
+      });
+      const operation = vi
+        .fn()
+        .mockRejectedValueOnce(new Error("Rate limit exceeded"))
+        .mockResolvedValue("success");
+
+      const result = await executor.execute(operation, {
+        context: mockContext,
+      });
+
+      expect(result).toBe("success");
+      expect(operation).toHaveBeenCalledTimes(2);
+    });
+
+    it("waits the provider's suggested delay", async () => {
+      const executor = new RetryExecutor({
+        errorClassifier: rateLimitClassifier(),
+      });
+      const operation = vi
+        .fn()
+        .mockRejectedValueOnce(new Error("Rate limit exceeded"))
+        .mockResolvedValue("success");
+
+      await executor.execute(operation, { context: mockContext });
+
+      expect(abortableSleep).toHaveBeenCalledWith(
+        expect.objectContaining({ ms: 60000 }),
+      );
+    });
+
+    it("throws once the rate limit budget is exhausted", async () => {
+      const executor = new RetryExecutor({
+        errorClassifier: rateLimitClassifier(),
+        policy: new RetryPolicy({ rateLimitRetries: 2 }),
+      });
+      const operation = vi
+        .fn()
+        .mockRejectedValue(new Error("Rate limit exceeded"));
+
+      await expect(
+        executor.execute(operation, { context: mockContext }),
+      ).rejects.toThrow();
+
+      // Initial attempt + 2 rate limit retries
+      expect(operation).toHaveBeenCalledTimes(3);
+    });
+
+    it("does not spend the transient retry budget", async () => {
+      // One transient retry available, two rate limit retries. A rate limit
+      // must not consume the transient budget, so all three calls happen.
+      const executor = new RetryExecutor({
+        errorClassifier: rateLimitClassifier(),
+        policy: new RetryPolicy({ maxRetries: 1, rateLimitRetries: 2 }),
+      });
+      const operation = vi
+        .fn()
+        .mockRejectedValue(new Error("Rate limit exceeded"));
+
+      await expect(
+        executor.execute(operation, { context: mockContext }),
+      ).rejects.toThrow();
+
+      expect(operation).toHaveBeenCalledTimes(3);
+    });
+
+    it("does not retry when the budget is zero", async () => {
+      const executor = new RetryExecutor({
+        errorClassifier: rateLimitClassifier(),
+        policy: new RetryPolicy({ rateLimitRetries: 0 }),
+      });
+      const operation = vi
+        .fn()
+        .mockRejectedValue(new Error("Rate limit exceeded"));
+
+      await expect(
+        executor.execute(operation, { context: mockContext }),
+      ).rejects.toThrow();
+
+      expect(operation).toHaveBeenCalledTimes(1);
+    });
+
+    it("never retries a quota error", async () => {
+      const executor = new RetryExecutor({
+        errorClassifier: {
+          classify: (error: unknown) => ({
+            category: ErrorCategory.Quota,
+            error,
+            shouldRetry: false,
+          }),
+          isRetryable: () => false,
+          isKnownError: () => true,
+        },
+      });
+      const operation = vi.fn().mockRejectedValue(new Error("Quota exceeded"));
+
+      await expect(
+        executor.execute(operation, { context: mockContext }),
+      ).rejects.toThrow();
+
+      expect(operation).toHaveBeenCalledTimes(1);
+    });
+
+    it("stops when the caller aborts during the wait", async () => {
+      const controller = new AbortController();
+      const executor = new RetryExecutor({
+        errorClassifier: rateLimitClassifier(),
+      });
+      const operation = vi.fn().mockImplementation(async () => {
+        controller.abort();
+        throw new Error("Rate limit exceeded");
+      });
+
+      await expect(
+        executor.execute(operation, {
+          context: mockContext,
+          signal: controller.signal,
+        }),
+      ).rejects.toThrow();
+
+      expect(operation).toHaveBeenCalledTimes(1);
     });
   });
 });
