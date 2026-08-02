@@ -135,7 +135,7 @@ export class MistralProvider implements LlmProvider {
   }
 
   async operate(
-    input: string | LlmHistory | LlmInputMessage,
+    input?: string | LlmHistory | LlmInputMessage,
     options: LlmOperateOptions = {},
   ): Promise<LlmOperateResponse> {
     const operateLoop = await this.getOperateLoop();
@@ -160,7 +160,7 @@ export class MistralProvider implements LlmProvider {
   }
 
   async *stream(
-    input: string | LlmHistory | LlmInputMessage,
+    input?: string | LlmHistory | LlmInputMessage,
     options: LlmOperateOptions = {},
   ): AsyncIterable<LlmStreamChunk> {
     const streamLoop = await this.getStreamLoop();

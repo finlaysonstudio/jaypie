@@ -5,6 +5,8 @@ export { inputToJsonSchema } from "./inputToJsonSchema.js";
 export type {
   FabricToolConfig,
   FabricToolResult,
+  LlmCallableTool,
+  LlmExternalTool,
   LlmTool,
   OnCompleteCallback,
   OnErrorCallback,

@@ -29,6 +29,15 @@ const TRUNCATED_MARKER = "[truncated]";
  */
 export interface StoreExchangeEnvelope {
   ids?: string[];
+  /** Resume payload when the loop parked at external tool calls */
+  pending?: {
+    calls?: unknown[];
+    consecutiveToolErrors?: number;
+    history?: unknown[];
+    initialHistoryLength?: number;
+    turn?: number;
+    [key: string]: unknown;
+  };
   request?: {
     data?: Record<string, unknown>;
     input?: unknown;
@@ -153,12 +162,16 @@ export async function storeExchange(
         ...(response?.historyDelta?.length && {
           historyDelta: response.historyDelta,
         }),
+        ...(envelope.pending && { pending: envelope.pending }),
         ...(response?.reasoning?.length && { reasoning: response.reasoning }),
       },
     };
 
     // 400KB item-limit safety: drop the largest payloads first, then
-    // truncate long fields, marking each drop in metadata.truncated
+    // truncate long fields, marking each drop in metadata.truncated.
+    // `pending` is the resume payload and survives everything else — a
+    // truncated resume payload is useless — dropping only as a last resort
+    // so the record itself still writes.
     if (byteSize(entity) > MAX_ITEM_BYTES) {
       const truncated: string[] = [];
       const state = entity.state as Record<string, unknown>;
@@ -176,6 +189,10 @@ export async function storeExchange(
       ) {
         entity.content = entity.content.slice(0, 1024) + TRUNCATED_MARKER;
         truncated.push("content");
+      }
+      if (byteSize(entity) > MAX_ITEM_BYTES && state.pending) {
+        delete state.pending;
+        truncated.push("pending");
       }
       (entity.metadata as Record<string, unknown>).truncated = truncated;
       log.warn("[storeExchange] Exchange exceeded item size budget; truncated");

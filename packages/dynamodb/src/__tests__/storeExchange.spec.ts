@@ -139,5 +139,47 @@ describe("storeExchange", () => {
       ).toBeUndefined();
       expect((result!.content as string).endsWith("[truncated]")).toBe(true);
     });
+
+    it("persists a parked exchange's pending block under state", async () => {
+      const parked = envelope() as ReturnType<typeof envelope> & {
+        pending: Record<string, unknown>;
+      };
+      parked.response.status = "in_progress";
+      parked.pending = {
+        calls: [{ arguments: "{}", name: "open_card", xid: "call-1" }],
+        consecutiveToolErrors: 0,
+        history: [{ content: "Hello", role: "user" }],
+        initialHistoryLength: 1,
+        turn: 1,
+      };
+      const result = await storeExchange(parked);
+      expect(result!.status).toBe("in_progress");
+      const state = result!.state as Record<string, unknown>;
+      expect(state.pending).toEqual(parked.pending);
+    });
+
+    it("keeps pending ahead of historyDelta when truncating", async () => {
+      const parked = envelope() as ReturnType<typeof envelope> & {
+        pending: Record<string, unknown>;
+      };
+      parked.response.status = "in_progress";
+      parked.response.historyDelta = [
+        { content: "x".repeat(400 * 1024), role: "assistant" },
+      ];
+      parked.pending = {
+        calls: [{ arguments: "{}", name: "open_card", xid: "call-1" }],
+        consecutiveToolErrors: 0,
+        history: [{ content: "Hello", role: "user" }],
+        initialHistoryLength: 1,
+        turn: 1,
+      };
+      const result = await storeExchange(parked);
+      const metadata = result!.metadata as Record<string, unknown>;
+      const state = result!.state as Record<string, unknown>;
+      expect(metadata.truncated).toContain("historyDelta");
+      expect(metadata.truncated).not.toContain("pending");
+      expect(state.historyDelta).toBeUndefined();
+      expect(state.pending).toEqual(parked.pending);
+    });
   });
 });

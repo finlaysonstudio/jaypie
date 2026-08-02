@@ -1,9 +1,14 @@
-import { BadGatewayError, TooManyRequestsError } from "@jaypie/errors";
+import {
+  BadGatewayError,
+  BadRequestError,
+  TooManyRequestsError,
+} from "@jaypie/errors";
 import { JsonObject } from "@jaypie/types";
 
 import { Toolkit } from "../tools/Toolkit.class.js";
 import {
   LlmExchangeEnvelope,
+  LlmExchangePending,
   LlmHistory,
   LlmHistoryItem,
   LlmInputMessage,
@@ -15,6 +20,7 @@ import {
   LlmOutputMessage,
   LlmProgressEventType,
   LlmResponseStatus,
+  LlmResumeOption,
   LlmToolCall,
   LlmToolResult,
 } from "../types/LlmProvider.interface.js";
@@ -38,6 +44,7 @@ import {
 import { HookRunner, hookRunner, LlmHooks } from "./hooks/index.js";
 import { InputProcessor, inputProcessor } from "./input/index.js";
 import { emitProgress } from "./progress/index.js";
+import { resolveResume } from "./resume/index.js";
 import {
   createResponseBuilder,
   ResponseBuilderConfig,
@@ -52,6 +59,7 @@ import {
   OperateContext,
   OperateLoopState,
   OperateRequest,
+  PendingToolCall,
   ProviderToolDefinition,
   StandardToolResult,
 } from "./types.js";
@@ -156,7 +164,7 @@ export class OperateLoop {
    * Execute the operate loop for multi-turn conversations with tool calling.
    */
   async execute(
-    input: string | LlmHistory | LlmInputMessage | LlmOperateInput,
+    input?: string | LlmHistory | LlmInputMessage | LlmOperateInput,
     options: LlmOperateOptions = {},
   ): Promise<LlmOperateResponse> {
     const log = getLogger();
@@ -165,15 +173,42 @@ export class OperateLoop {
     log.trace.var({ "operate.input": input });
     log.trace.var({ "operate.options": options });
 
-    const startedAt = new Date().toISOString();
+    const resume = options.resume;
+    if (resume) {
+      const inputEmpty =
+        input === undefined ||
+        input === null ||
+        input === "" ||
+        (Array.isArray(input) && input.length === 0);
+      if (!inputEmpty) {
+        throw new BadRequestError(
+          "Cannot resume with input; the conversation travels inside the envelope",
+        );
+      }
+    } else if (input === undefined || input === null) {
+      throw new BadRequestError(
+        "Input is required unless resuming a parked exchange",
+      );
+    }
+
+    // A parked wait is not counted: the resumed segment keeps the original
+    // startedAt and accumulates only active loop time onto duration.
+    const startedAt =
+      resume?.exchange.timing.startedAt ?? new Date().toISOString();
+    const previousDuration = resume?.exchange.timing.duration ?? 0;
     const startMs = Date.now();
 
     // Initialize state
-    const state = await this.initializeState(input, options);
+    const state = resume
+      ? this.resumeState(resume, options)
+      : await this.initializeState(input!, options);
     const context = this.createContext(options);
     const modelName = options.model ?? this.adapter.defaultModel;
     const exchangeRequested = isExchangeRequested(options);
-    const initialHistoryLength = state.responseBuilder.getHistory().length;
+    const initialHistoryLength =
+      state.exchangeInitialHistoryLength ??
+      state.responseBuilder.getHistory().length;
+    const envelopeInput = resume ? resume.exchange.request.input : input!;
 
     await emitProgress({
       event: {
@@ -184,6 +219,52 @@ export class OperateLoop {
       },
       onProgress: options.onProgress,
     });
+
+    // Continuity for progress consumers: the supplied external results arrive
+    // as tool_result events before the loop re-enters the model.
+    if (resume) {
+      for (const result of resume.results) {
+        const call = resume.exchange.pending?.calls.find(
+          (pendingCall) => pendingCall.xid === result.xid,
+        );
+        await emitProgress({
+          event: {
+            tool: { name: call?.name ?? "", xid: result.xid },
+            turn: state.currentTurn,
+            type: LlmProgressEventType.ToolResult,
+          },
+          onProgress: options.onProgress,
+        });
+      }
+    }
+
+    // A resumed exchange settles without a model call when the supplied
+    // results already exhaust a budget the in-loop paths enforce.
+    let preSettled = false;
+    if (resume) {
+      if (state.consecutiveToolErrors >= MAX_CONSECUTIVE_TOOL_ERRORS) {
+        const detail = `Stopped after ${MAX_CONSECUTIVE_TOOL_ERRORS} consecutive tool errors`;
+        log.warn(detail);
+        state.responseBuilder.setError({
+          detail,
+          status: 502,
+          title: ERROR.BAD_FUNCTION_CALL,
+        });
+        state.responseBuilder.incomplete();
+        preSettled = true;
+      } else if (state.currentTurn >= state.maxTurns) {
+        const error = new TooManyRequestsError();
+        const detail = `Model requested function call but exceeded ${state.maxTurns} turns`;
+        log.warn(detail);
+        state.responseBuilder.setError({
+          detail,
+          status: error.status,
+          title: error.title,
+        });
+        state.responseBuilder.incomplete();
+        preSettled = true;
+      }
+    }
 
     // Enclosing LLM Observability span (no-op when DD_LLMOBS_ENABLED is unset).
     // Child llm/tool spans nest under it via the SDK's active-span context.
@@ -196,72 +277,103 @@ export class OperateLoop {
           name: "jaypie.llm.operate",
         },
         async () => {
-          // Build initial request
-          let request = this.buildInitialRequest(state, options);
+          if (!preSettled) {
+            // Build initial request
+            let request = this.buildInitialRequest(state, options);
 
-          // Multi-turn loop
-          while (state.currentTurn < state.maxTurns) {
-            state.currentTurn++;
+            // Multi-turn loop
+            while (state.currentTurn < state.maxTurns) {
+              state.currentTurn++;
 
-            // Execute one turn with retry logic
-            const shouldContinue = await this.executeOneTurn(
-              request,
-              state,
-              context,
-              options,
-            );
+              // Execute one turn with retry logic
+              const shouldContinue = await this.executeOneTurn(
+                request,
+                state,
+                context,
+                options,
+              );
 
-            if (!shouldContinue) {
-              break;
+              if (!shouldContinue) {
+                break;
+              }
+
+              // Rebuild request with updated history for next turn
+              request = {
+                effort: options.effort,
+                format: state.formattedFormat,
+                instructions: options.instructions,
+                messages: state.currentInput,
+                model: modelName,
+                providerOptions: options.providerOptions,
+                structuredOutputRetry: state.structuredOutputRetry,
+                system: options.system,
+                temperature: options.temperature,
+                tools: state.formattedTools,
+                user: options.user,
+              };
             }
-
-            // Rebuild request with updated history for next turn
-            request = {
-              effort: options.effort,
-              format: state.formattedFormat,
-              instructions: options.instructions,
-              messages: state.currentInput,
-              model: modelName,
-              providerOptions: options.providerOptions,
-              structuredOutputRetry: state.structuredOutputRetry,
-              system: options.system,
-              temperature: options.temperature,
-              tools: state.formattedTools,
-              user: options.user,
-            };
           }
 
           const response = state.responseBuilder.build();
-          if (exchangeRequested) {
-            response.exchange = buildExchangeEnvelope({
-              duration: Date.now() - startMs,
+
+          // Park: the loop suspended at external tool calls. The response
+          // stays in_progress and the envelope (built unconditionally — it
+          // is the resume payload) carries everything resume needs.
+          let pendingBlock: LlmExchangePending | undefined;
+          if (state.pending && state.pending.length > 0) {
+            response.pending = state.pending.map(
+              ({ arguments: args, callId, message, name, raw }) => ({
+                arguments: args,
+                ...(message !== undefined ? { message } : {}),
+                name,
+                ...(raw !== undefined ? { raw } : {}),
+                xid: callId,
+              }),
+            );
+            pendingBlock = {
+              calls: response.pending,
+              consecutiveToolErrors: state.consecutiveToolErrors,
+              history: [...response.history],
               initialHistoryLength,
-              input,
+              turn: state.currentTurn,
+            };
+          }
+
+          if (exchangeRequested || pendingBlock) {
+            response.exchange = buildExchangeEnvelope({
+              duration: previousDuration + Date.now() - startMs,
+              initialHistoryLength,
+              input: envelopeInput,
               options,
+              pending: pendingBlock,
               response,
               startedAt,
               state,
             });
           }
           annotateLlmObs({
-            inputData: input,
+            inputData: envelopeInput,
             metrics: usageToLlmObsMetrics(response.usage),
             outputData: response.content,
           });
+          // Tally only this invocation's segment; a resume seeds usage and
+          // turns from the parked envelope and must not double-count them.
           tallyOperate({
             toolCallNames: state.toolCallNames,
-            turns: state.currentTurn,
-            usage: response.usage,
+            turns: state.currentTurn - (state.resumedFromTurn ?? 0),
+            usage: response.usage.slice(state.initialUsageCount ?? 0),
           });
-          await emitProgress({
-            event: {
-              content: response.content,
-              turn: state.currentTurn,
-              type: LlmProgressEventType.Done,
-              usage: response.usage,
-            },
-            onProgress: options.onProgress,
-          });
+          if (!pendingBlock) {
+            await emitProgress({
+              event: {
+                content: response.content,
+                turn: state.currentTurn,
+                type: LlmProgressEventType.Done,
+                usage: response.usage,
+              },
+              onProgress: options.onProgress,
+            });
+          }
           return response;
         },
       );
@@ -290,9 +402,9 @@ export class OperateLoop {
         }
         (error as { exchange?: LlmExchangeEnvelope }).exchange =
           buildExchangeEnvelope({
-            duration: Date.now() - startMs,
+            duration: previousDuration + Date.now() - startMs,
             initialHistoryLength,
-            input,
+            input: envelopeInput,
             options,
             response,
             startedAt,
@@ -330,6 +442,33 @@ export class OperateLoop {
     // Set initial history
     responseBuilder.setHistory([...processedInput.history]);
 
+    const { formattedFormat, formattedTools, toolkit } =
+      this.buildTooling(options);
+
+    return {
+      consecutiveToolErrors: 0,
+      currentInput: processedInput.history,
+      currentTurn: 0,
+      formattedFormat,
+      formattedTools,
+      maxTurns,
+      responseBuilder,
+      retries: 0,
+      toolCallNames: [],
+      toolkit,
+    };
+  }
+
+  /**
+   * Resolve the toolkit and format/tool projections from options. Shared by
+   * fresh initialization and resume — tools are code, so the caller supplies
+   * them on every segment.
+   */
+  private buildTooling(options: LlmOperateOptions): {
+    formattedFormat?: JsonObject;
+    formattedTools?: ProviderToolDefinition[];
+    toolkit?: Toolkit;
+  } {
     // Get toolkit
     let toolkit: Toolkit | undefined;
     if (options.tools) {
@@ -366,15 +505,49 @@ export class OperateLoop {
       }
     }
 
+    return { formattedFormat, formattedTools, toolkit };
+  }
+
+  /**
+   * Rebuild loop state from a parked exchange envelope plus the outstanding
+   * tool results. The pending history is provider-neutral; every adapter's
+   * buildRequest reconstitutes its native request from it, so no
+   * provider-shaped state needs to survive the suspension.
+   */
+  private resumeState(
+    resume: LlmResumeOption,
+    options: LlmOperateOptions,
+  ): OperateLoopState {
+    const { consecutiveToolErrors, history, pending } = resolveResume({
+      adapterName: this.adapter.name,
+      model: options.model,
+      resume,
+    });
+    const { exchange } = resume;
+
+    const { formattedFormat, formattedTools, toolkit } =
+      this.buildTooling(options);
+
+    const responseBuilder = createResponseBuilder({
+      model: options.model ?? this.adapter.defaultModel,
+      provider: this.adapter.name,
+    });
+    responseBuilder.setHistory(history);
+    responseBuilder.setUsage([...(exchange.response.usage ?? [])]);
+    responseBuilder.setReasoning([...(exchange.response.reasoning ?? [])]);
+
     return {
-      consecutiveToolErrors: 0,
-      currentInput: processedInput.history,
-      currentTurn: 0,
+      consecutiveToolErrors,
+      currentInput: history,
+      currentTurn: pending.turn ?? 0,
+      exchangeInitialHistoryLength: pending.initialHistoryLength ?? 0,
       formattedFormat,
       formattedTools,
-      maxTurns,
+      initialUsageCount: exchange.response.usage?.length ?? 0,
+      maxTurns: maxTurnsFromOptions(options),
       responseBuilder,
-      retries: 0,
+      resumedFromTurn: pending.turn ?? 0,
+      retries: exchange.resolution?.retries ?? 0,
       toolCallNames: [],
       toolkit,
     };
@@ -601,14 +774,61 @@ export class OperateLoop {
           responseItems,
         );
 
+        // Record every requested call in history as a provider-neutral
+        // function_call item (the shape StreamLoop uses). Each adapter's
+        // buildRequest converts these back to its native format, which is
+        // what makes the recorded history re-entrant on resume.
+        for (const toolCall of toolCalls) {
+          const raw = toolCall.raw as Record<string, unknown> | undefined;
+          const functionCallItem: Record<string, unknown> = {
+            arguments: toolCall.arguments,
+            call_id: toolCall.callId,
+            // Use provider item ID if available (e.g., OpenAI fc_... prefix),
+            // otherwise fall back to callId
+            id: (raw?.id as string) || toolCall.callId,
+            name: toolCall.name,
+            type: LlmMessageType.FunctionCall,
+          };
+          // Preserve provider-specific fields (e.g., Gemini thoughtSignature)
+          if (raw?.thoughtSignature) {
+            functionCallItem.thoughtSignature = raw.thoughtSignature;
+          }
+          state.responseBuilder.appendToHistory(
+            functionCallItem as unknown as LlmToolCall,
+          );
+        }
+
+        // External tool calls are not executed here: they collect for a park
+        // and the loop suspends after this turn's internal calls finish.
+        const pendingCalls: PendingToolCall[] = [];
+
         // Process each tool call
         for (const toolCall of toolCalls) {
-          state.toolCallNames.push(toolCall.name);
           // Resolved once per call; never throws (undefined when tool has no message)
           const toolMessage = await state.toolkit!.resolveMessage({
             arguments: toolCall.arguments,
             name: toolCall.name,
           });
+
+          if (state.toolkit!.isExternal(toolCall.name)) {
+            await emitProgress({
+              event: {
+                tool: {
+                  arguments: toolCall.arguments,
+                  message: toolMessage,
+                  name: toolCall.name,
+                  xid: toolCall.callId,
+                },
+                turn: state.currentTurn,
+                type: LlmProgressEventType.ToolPending,
+              },
+              onProgress: options.onProgress,
+            });
+            pendingCalls.push({ ...toolCall, message: toolMessage });
+            continue;
+          }
+
+          state.toolCallNames.push(toolCall.name);
           try {
             await emitProgress({
               event: {
@@ -686,14 +906,13 @@ export class OperateLoop {
             // Sync state from updated request
             this.syncInputFromRequest(state, currentProviderRequest);
 
-            // Add tool result to history
-            const toolResultFormatted = this.adapter.formatToolResult(
-              toolCall,
-              formattedResult,
-            );
-            state.responseBuilder.appendToHistory(
-              toolResultFormatted as LlmInputMessage,
-            );
+            // Add tool result to history in the provider-neutral shape
+            state.responseBuilder.appendToHistory({
+              call_id: toolCall.callId,
+              name: toolCall.name,
+              output: formattedResult.output,
+              type: LlmMessageType.FunctionCallOutput,
+            } as LlmToolResult & { name: string });
           } catch (error) {
             await emitProgress({
               event: {
@@ -736,13 +955,12 @@ export class OperateLoop {
               success: false,
               error: (error as Error).message,
             };
-            const toolResultFormatted = this.adapter.formatToolResult(
-              toolCall,
-              errorResult,
-            );
-            state.responseBuilder.appendToHistory(
-              toolResultFormatted as LlmInputMessage,
-            );
+            state.responseBuilder.appendToHistory({
+              call_id: toolCall.callId,
+              name: toolCall.name,
+              output: errorResult.output,
+              type: LlmMessageType.FunctionCallOutput,
+            } as LlmToolResult & { name: string });
 
             log.warn(`Error executing function call ${toolCall.name}`);
             log.var({ error });
@@ -761,6 +979,14 @@ export class OperateLoop {
               return false; // Stop loop
             }
           }
+        }
+
+        // Park: one or more external tool calls are outstanding. Status
+        // stays in_progress and the max-turns check is deliberately skipped —
+        // the caller may raise `turns` on resume.
+        if (pendingCalls.length > 0) {
+          state.pending = pendingCalls;
+          return false; // Stop loop
         }
 
         // Check if we've reached max turns

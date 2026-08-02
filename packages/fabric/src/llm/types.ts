@@ -49,6 +49,12 @@ export interface FabricToolConfig {
   onFatal?: OnFatalCallback;
   /** Callback for receiving messages from service */
   onMessage?: OnMessageCallback;
+  /**
+   * Declares execution owned by the caller: the tool definition travels to
+   * the provider, but the service is never invoked here — the operate loop
+   * parks when the model calls it, and the caller resumes with the result.
+   */
+  external?: boolean;
   /** Declares the tool free of side effects (defaults to service.readOnly) */
   readOnly?: boolean;
   /** The service - either a pre-instantiated Service or an inline function */
@@ -58,8 +64,7 @@ export interface FabricToolConfig {
 /**
  * LLM tool interface (compatible with @jaypie/llm Toolkit)
  */
-export interface LlmTool {
-  call: (args?: Record<string, unknown>) => Promise<unknown> | unknown;
+interface LlmToolBase {
   description: string;
   message?:
     | string
@@ -73,6 +78,20 @@ export interface LlmTool {
   readOnly?: boolean;
   type: "function" | string;
 }
+
+/** A tool executed in-process by the toolkit */
+export interface LlmCallableTool extends LlmToolBase {
+  call: (args?: Record<string, unknown>) => Promise<unknown> | unknown;
+  external?: false;
+}
+
+/** A tool whose execution is owned by the caller; the operate loop parks */
+export interface LlmExternalTool extends LlmToolBase {
+  call?: never;
+  external: true;
+}
+
+export type LlmTool = LlmCallableTool | LlmExternalTool;
 
 /**
  * Result of fabricating an LLM tool

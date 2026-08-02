@@ -244,6 +244,51 @@ const custom = toolkit.filter((tool) => tool.name.startsWith("search_"));
 - The built-in tools (`random`, `roll`, `time`, `weather`) are annotated read-only
 - `fabricService({ readOnly: true })` propagates through `fabricTool` to the tool; `fabricTool({ readOnly })` overrides the service
 
+### External (Client-Side) Tools and Suspend/Resume
+
+A tool may declare `external: true` (and no `call`) to state its execution is owned by the caller — a browser tab, a device, a queue worker, a human. The definition travels to the provider; when the model calls it, the loop **parks** instead of executing:
+
+```typescript
+const toolkit = new Toolkit([
+  {
+    name: "open_card",
+    description: "Open a card in the canvas",
+    parameters: { type: "object", properties: { card: { type: "string" } } },
+    external: true, // no call — the loop parks when the model calls this
+  },
+]);
+
+const parked = await Llm.operate("Open the jobs card", { tools: toolkit });
+// parked.status === "in_progress"
+// parked.pending → [{ name, arguments, xid, ... }] — dispatch these to the client
+// parked.exchange → serializable envelope; envelope.pending is the resume payload
+```
+
+The parked envelope is always attached (even without `onExchange`) — it **is** the resume payload and survives `JSON.stringify` across any process boundary. Resume by passing it back with one result per outstanding call, correlated on `xid` (the provider tool-call id):
+
+```typescript
+const done = await Llm.operate(undefined, {
+  resume: {
+    exchange: parked.exchange,
+    results: [{ xid: parked.pending[0].xid, output: { opened: true } }],
+  },
+  tools: toolkit, // tools are code; re-supply them each segment
+});
+```
+
+- Results must cover the pending calls exactly — report a failure as `{ xid, error: "..." }` rather than omitting it; anything else is `BadRequestError`
+- The model defaults to the served model from the envelope and the fallback chain is skipped (call ids and history are provider-bound); resuming on a different provider is `BadRequestError`
+- Turn budget carries across the suspension (the wait consumes zero turns); pass a larger `turns` on resume to extend it
+- Usage and `historyDelta` on the final settlement span the whole exchange — treat a later settlement of the same exchange as a replacement, not an addition
+- `timing.duration` accumulates active loop time only; the parked wait is not counted
+- Progress emits `tool_pending` (with `xid`) instead of `tool_call`; the `beforeEachTool`/`afterEachTool` hooks do not fire for external calls; no `done` event fires on a park
+- `stream()` parks the same way: a `tool_pending` chunk, then the final `done` chunk; the parked envelope arrives via `onExchange` (or the exchange store) — a stream has no response object
+- Fire-and-forget is the degenerate case: dispatch `pending` to the client and never resume
+- With `LLM_EXCHANGE_ENABLED`, the parked exchange persists at status `in_progress` with the resume payload under `state.pending`
+- `fabricTool({ service, external: true })` emits a call-less external tool from a fabric service definition
+
+**Long-running in-process tools** remain fully supported: `Toolkit.call` awaits the tool's promise directly with no library timeout — a `call` implemented as a round trip is bounded only by the host. Retries apply to model requests only, never tool execution; the turn budget counts model turns, not wall time; the caller's `AbortSignal` does not reach `Toolkit.call`. Prefer `external: true` when the wait must survive the process (e.g., a Lambda cannot hold the invocation open).
+
 ## Structured Output
 
 ### Natural Schema

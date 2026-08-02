@@ -1,8 +1,8 @@
-import { LlmTool } from "../types/LlmTool.interface.js";
+import { LlmCallableTool } from "../types/LlmTool.interface.js";
 import { fetchWeatherApi } from "openmeteo";
 import { JsonObject } from "@jaypie/types";
 
-export const weather: LlmTool = {
+export const weather: LlmCallableTool = {
   description: "Get current weather and forecast data for a specific location",
   name: "weather",
   parameters: {

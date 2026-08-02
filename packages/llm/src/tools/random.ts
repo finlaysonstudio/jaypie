@@ -1,7 +1,7 @@
-import { LlmTool } from "../types/LlmTool.interface.js";
+import { LlmCallableTool } from "../types/LlmTool.interface.js";
 import { random as randomUtil } from "../util/random.js";
 
-export const random: LlmTool = {
+export const random: LlmCallableTool = {
   description:
     "Generate a random number with optional distribution, precision, range, and seeding",
 

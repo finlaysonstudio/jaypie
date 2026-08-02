@@ -1,4 +1,8 @@
-import { BadGatewayError, TooManyRequestsError } from "@jaypie/errors";
+import {
+  BadGatewayError,
+  BadRequestError,
+  TooManyRequestsError,
+} from "@jaypie/errors";
 import { sleep } from "@jaypie/kit";
 import { JsonObject } from "@jaypie/types";
 
@@ -8,6 +12,7 @@ import { createStaleRejectionGuard } from "./retry/createStaleRejectionGuard.js"
 import { Toolkit } from "../tools/Toolkit.class.js";
 import {
   LlmError,
+  LlmExchangePending,
   LlmHistory,
   LlmInputMessage,
   LlmMessageRole,
@@ -17,6 +22,7 @@ import {
   LlmOperateResponse,
   LlmOutputMessage,
   LlmResponseStatus,
+  LlmResumeOption,
   LlmToolCall,
   LlmToolResult,
   LlmUsageItem,
@@ -43,10 +49,12 @@ import {
 import { ProviderAdapter } from "./adapters/ProviderAdapter.interface.js";
 import { HookRunner, hookRunner } from "./hooks/index.js";
 import { InputProcessor, inputProcessor } from "./input/index.js";
+import { resolveResume } from "./resume/index.js";
 import { defaultRetryPolicy, RetryPolicy } from "./retry/index.js";
 import {
   OperateContext,
   OperateRequest,
+  PendingToolCall,
   ProviderToolDefinition,
   StandardToolCall,
 } from "./types.js";
@@ -80,7 +88,13 @@ interface StreamLoopState {
   finalText: string;
   formattedFormat?: JsonObject;
   formattedTools?: ProviderToolDefinition[];
+  /** Usage entries seeded from a resumed envelope (excluded from the tally) */
+  initialUsageCount?: number;
   maxTurns: number;
+  /** External tool calls the stream parked on this segment */
+  pending?: PendingToolCall[];
+  /** Turn count seeded from a resumed envelope (excluded from the tally) */
+  resumedFromTurn?: number;
   /** Model-request retries across all turns (exchange envelope) */
   retries: number;
   status: LlmResponseStatus;
@@ -128,7 +142,7 @@ export class StreamLoop {
    * Yields stream chunks as they become available.
    */
   async *execute(
-    input: string | LlmHistory | LlmInputMessage | LlmOperateInput,
+    input?: string | LlmHistory | LlmInputMessage | LlmOperateInput,
     options: LlmOperateOptions = {},
   ): AsyncIterable<LlmStreamChunk> {
     const log = getLogger();
@@ -139,81 +153,150 @@ export class StreamLoop {
       );
     }
 
-    const startedAt = new Date().toISOString();
+    const resume = options.resume;
+    if (resume) {
+      const inputEmpty =
+        input === undefined ||
+        input === null ||
+        input === "" ||
+        (Array.isArray(input) && input.length === 0);
+      if (!inputEmpty) {
+        throw new BadRequestError(
+          "Cannot resume with input; the conversation travels inside the envelope",
+        );
+      }
+    } else if (input === undefined || input === null) {
+      throw new BadRequestError(
+        "Input is required unless resuming a parked exchange",
+      );
+    }
+
+    // A parked wait is not counted: the resumed segment keeps the original
+    // startedAt and accumulates only active loop time onto duration.
+    const startedAt =
+      resume?.exchange.timing.startedAt ?? new Date().toISOString();
+    const previousDuration = resume?.exchange.timing.duration ?? 0;
     const startMs = Date.now();
 
     // Initialize state
-    const state = await this.initializeState(input, options);
+    const state = resume
+      ? this.resumeState(resume, options)
+      : await this.initializeState(input!, options);
     const context = this.createContext(options);
     const exchangeRequested = isExchangeRequested(options);
+    const envelopeInput = resume ? resume.exchange.request.input : input!;
 
     // Settlement runs from `finally` so an abandoned generator — which closes
     // through the same path — still records the turn it consumed.
     try {
-      // Build initial request
-      let request = this.buildInitialRequest(state, options);
+      // A resumed exchange settles without a model call when the supplied
+      // results already exhaust a budget the in-loop paths enforce.
+      if (
+        resume &&
+        state.consecutiveToolErrors >= MAX_CONSECUTIVE_TOOL_ERRORS
+      ) {
+        const detail = `Stopped after ${MAX_CONSECUTIVE_TOOL_ERRORS} consecutive tool errors`;
+        log.warn(detail);
+        state.error = {
+          detail,
+          status: 502,
+          title: ERROR.BAD_FUNCTION_CALL,
+        };
+        yield { type: LlmStreamChunkType.Error, error: state.error };
+      } else if (resume && state.currentTurn >= state.maxTurns) {
+        const error = new TooManyRequestsError();
+        const detail = `Model requested function call but exceeded ${state.maxTurns} turns`;
+        log.warn(detail);
+        state.error = {
+          detail,
+          status: error.status,
+          title: error.title,
+        };
+        yield { type: LlmStreamChunkType.Error, error: state.error };
+      } else {
+        // Build initial request
+        let request = this.buildInitialRequest(state, options);
 
-      // Multi-turn loop
-      while (state.currentTurn < state.maxTurns) {
-        state.currentTurn++;
+        // Multi-turn loop
+        while (state.currentTurn < state.maxTurns) {
+          state.currentTurn++;
 
-        // Execute one streaming turn
-        const { shouldContinue, toolCalls } =
-          yield* this.executeOneStreamingTurn(request, state, context, options);
+          // Execute one streaming turn
+          const { shouldContinue, toolCalls } =
+            yield* this.executeOneStreamingTurn(
+              request,
+              state,
+              context,
+              options,
+            );
 
-        if (!shouldContinue) {
-          break;
-        }
-
-        // If we have tool calls, process them
-        if (toolCalls && toolCalls.length > 0 && state.toolkit) {
-          yield* this.processToolCalls(toolCalls, state, context);
-
-          // Check if we've reached max turns
-          if (state.currentTurn >= state.maxTurns) {
-            const error = new TooManyRequestsError();
-            const detail = `Model requested function call but exceeded ${state.maxTurns} turns`;
-            log.warn(detail);
-            state.error = {
-              detail,
-              status: error.status,
-              title: error.title,
-            };
-            yield {
-              type: LlmStreamChunkType.Error,
-              error: state.error,
-            };
+          if (!shouldContinue) {
             break;
           }
 
-          // Rebuild request with updated history for next turn
-          request = {
-            effort: options.effort,
-            format: state.formattedFormat,
-            instructions: options.instructions,
-            messages: state.currentInput,
-            model: options.model ?? this.adapter.defaultModel,
-            providerOptions: options.providerOptions,
-            stream: true,
-            system: options.system,
-            temperature: options.temperature,
-            tools: state.formattedTools,
-            user: options.user,
-          };
-        } else {
-          break;
+          // If we have tool calls, process them
+          if (toolCalls && toolCalls.length > 0 && state.toolkit) {
+            yield* this.processToolCalls(toolCalls, state, context);
+
+            // Park: one or more external tool calls are outstanding. Status
+            // stays in_progress and the max-turns check is deliberately
+            // skipped — the caller may raise `turns` on resume.
+            if (state.pending && state.pending.length > 0) {
+              break;
+            }
+
+            // Check if we've reached max turns
+            if (state.currentTurn >= state.maxTurns) {
+              const error = new TooManyRequestsError();
+              const detail = `Model requested function call but exceeded ${state.maxTurns} turns`;
+              log.warn(detail);
+              state.error = {
+                detail,
+                status: error.status,
+                title: error.title,
+              };
+              yield {
+                type: LlmStreamChunkType.Error,
+                error: state.error,
+              };
+              break;
+            }
+
+            // Rebuild request with updated history for next turn
+            request = {
+              effort: options.effort,
+              format: state.formattedFormat,
+              instructions: options.instructions,
+              messages: state.currentInput,
+              model: options.model ?? this.adapter.defaultModel,
+              providerOptions: options.providerOptions,
+              stream: true,
+              system: options.system,
+              temperature: options.temperature,
+              tools: state.formattedTools,
+              user: options.user,
+            };
+          } else {
+            break;
+          }
         }
       }
 
-      state.status = state.error
-        ? LlmResponseStatus.Incomplete
-        : LlmResponseStatus.Completed;
+      // A park stays in_progress; anything else settles
+      state.status =
+        state.pending && state.pending.length > 0
+          ? LlmResponseStatus.InProgress
+          : state.error
+            ? LlmResponseStatus.Incomplete
+            : LlmResponseStatus.Completed;
 
-      // Emit final done chunk with accumulated usage
+      // Emit final done chunk with accumulated usage. Tally only this
+      // invocation's segment; a resume seeds usage and turns from the parked
+      // envelope and must not double-count them.
       tallyOperate({
         toolCallNames: state.toolCallNames,
-        turns: state.currentTurn,
-        usage: state.usageItems,
+        turns: state.currentTurn - (state.resumedFromTurn ?? 0),
+        usage: state.usageItems.slice(state.initialUsageCount ?? 0),
       });
       yield {
         type: LlmStreamChunkType.Done,
@@ -237,14 +320,18 @@ export class StreamLoop {
       }
       throw error;
     } finally {
-      // A generator abandoned mid-stream never reaches the completed branch
-      if (state.status === LlmResponseStatus.InProgress) {
+      // A generator abandoned mid-stream never reaches the completed branch.
+      // A park is deliberately in_progress and is not coerced.
+      if (
+        state.status === LlmResponseStatus.InProgress &&
+        !(state.pending && state.pending.length > 0)
+      ) {
         state.status = LlmResponseStatus.Incomplete;
       }
       await this.settleExchange({
-        duration: Date.now() - startMs,
+        duration: previousDuration + Date.now() - startMs,
         exchangeRequested,
-        input,
+        input: envelopeInput,
         options,
         state,
         startedAt,
@@ -269,6 +356,36 @@ export class StreamLoop {
     // Determine max turns
     const maxTurns = maxTurnsFromOptions(options);
 
+    const { formattedFormat, formattedTools, toolkit } =
+      this.buildTooling(options);
+
+    return {
+      consecutiveToolErrors: 0,
+      currentInput: processedInput.history,
+      currentTurn: 0,
+      deltaHistory: [],
+      finalText: "",
+      formattedFormat,
+      formattedTools,
+      maxTurns,
+      retries: 0,
+      status: LlmResponseStatus.InProgress,
+      toolCallNames: [],
+      toolkit,
+      usageItems: [],
+    };
+  }
+
+  /**
+   * Resolve the toolkit and format/tool projections from options. Shared by
+   * fresh initialization and resume — tools are code, so the caller supplies
+   * them on every segment.
+   */
+  private buildTooling(options: LlmOperateOptions): {
+    formattedFormat?: JsonObject;
+    formattedTools?: ProviderToolDefinition[];
+    toolkit?: Toolkit;
+  } {
     // Get toolkit
     let toolkit: Toolkit | undefined;
     if (options.tools) {
@@ -293,20 +410,48 @@ export class StreamLoop {
       ? this.adapter.formatTools(toolkit, formattedFormat)
       : undefined;
 
+    return { formattedFormat, formattedTools, toolkit };
+  }
+
+  /**
+   * Rebuild loop state from a parked exchange envelope plus the outstanding
+   * tool results. The pending history is provider-neutral — the same shape
+   * this loop already resends every turn — so buildRequest reconstitutes the
+   * provider request from it directly.
+   */
+  private resumeState(
+    resume: LlmResumeOption,
+    options: LlmOperateOptions,
+  ): StreamLoopState {
+    const { consecutiveToolErrors, history, pending, resultItems } =
+      resolveResume({
+        adapterName: this.adapter.name,
+        model: options.model,
+        resume,
+      });
+    const { exchange } = resume;
+
+    const { formattedFormat, formattedTools, toolkit } =
+      this.buildTooling(options);
+
     return {
-      consecutiveToolErrors: 0,
-      currentInput: processedInput.history,
-      currentTurn: 0,
-      deltaHistory: [],
+      consecutiveToolErrors,
+      currentInput: history,
+      currentTurn: pending.turn ?? 0,
+      // The parked segment's delta plus the supplied results, so this
+      // settlement's historyDelta spans the whole exchange
+      deltaHistory: [...(exchange.response.historyDelta ?? []), ...resultItems],
       finalText: "",
       formattedFormat,
       formattedTools,
-      maxTurns,
-      retries: 0,
+      initialUsageCount: exchange.response.usage?.length ?? 0,
+      maxTurns: maxTurnsFromOptions(options),
+      resumedFromTurn: pending.turn ?? 0,
+      retries: exchange.resolution?.retries ?? 0,
       status: LlmResponseStatus.InProgress,
       toolCallNames: [],
       toolkit,
-      usageItems: [],
+      usageItems: [...(exchange.response.usage ?? [])],
     };
   }
 
@@ -331,7 +476,29 @@ export class StreamLoop {
     startedAt: string;
     state: StreamLoopState;
   }): Promise<void> {
-    if (!exchangeRequested) {
+    // Park: the envelope is the resume payload, so it is built and delivered
+    // unconditionally when external tool calls are outstanding. The pending
+    // history is the full re-entrant input; the delta stays the report of
+    // what this exchange added.
+    const pendingBlock: LlmExchangePending | undefined =
+      state.pending && state.pending.length > 0
+        ? {
+            calls: state.pending.map(
+              ({ arguments: args, callId, message, name, raw }) => ({
+                arguments: args,
+                ...(message !== undefined ? { message } : {}),
+                name,
+                ...(raw !== undefined ? { raw } : {}),
+                xid: callId,
+              }),
+            ),
+            consecutiveToolErrors: state.consecutiveToolErrors,
+            history: [...state.currentInput],
+            initialHistoryLength: 0,
+            turn: state.currentTurn,
+          }
+        : undefined;
+    if (!exchangeRequested && !pendingBlock) {
       return;
     }
     const response: LlmOperateResponse = {
@@ -353,6 +520,7 @@ export class StreamLoop {
       initialHistoryLength: 0,
       input,
       options,
+      pending: pendingBlock,
       response,
       startedAt,
       state,
@@ -689,12 +857,29 @@ export class StreamLoop {
   ): AsyncGenerator<LlmStreamChunk, void> {
     const log = getLogger();
     for (const toolCall of toolCalls) {
-      state.toolCallNames.push(toolCall.name);
       // Resolved once per call; never throws (undefined when tool has no message)
       const toolMessage = await state.toolkit!.resolveMessage({
         arguments: toolCall.arguments,
         name: toolCall.name,
       });
+
+      // External tool calls are not executed here: they collect for a park
+      // and the stream suspends after this turn's internal calls finish.
+      if (state.toolkit!.isExternal(toolCall.name)) {
+        yield {
+          type: LlmStreamChunkType.ToolPending,
+          toolPending: {
+            arguments: toolCall.arguments,
+            ...(toolMessage !== undefined ? { message: toolMessage } : {}),
+            name: toolCall.name,
+            xid: toolCall.callId,
+          },
+        };
+        (state.pending ??= []).push({ ...toolCall, message: toolMessage });
+        continue;
+      }
+
+      state.toolCallNames.push(toolCall.name);
       try {
         // Execute beforeEachTool hook
         await this.hookRunnerInstance.runBeforeTool(context.hooks, {

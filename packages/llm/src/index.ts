@@ -5,6 +5,8 @@ export type {
   LlmCache,
   LlmExchangeCallback,
   LlmExchangeEnvelope,
+  LlmExchangePending,
+  LlmExchangePendingCall,
   LlmExchangeRequest,
   LlmExchangeResolution,
   LlmExchangeResponse,
@@ -29,6 +31,8 @@ export type {
   LlmProgressEvent,
   LlmProgressToolCall,
   LlmProvider,
+  LlmResumeOption,
+  LlmToolResultInput,
 } from "./types/LlmProvider.interface.js";
 export {
   LlmMessageRole,
@@ -41,13 +45,18 @@ export {
   isLlmOperateInputFile,
   isLlmOperateInputImage,
 } from "./types/LlmOperateInput.guards.js";
-export type { LlmTool } from "./types/LlmTool.interface.js";
+export type {
+  LlmCallableTool,
+  LlmExternalTool,
+  LlmTool,
+} from "./types/LlmTool.interface.js";
 export type {
   LlmStreamChunk,
   LlmStreamChunkDone,
   LlmStreamChunkError,
   LlmStreamChunkText,
   LlmStreamChunkToolCall,
+  LlmStreamChunkToolPending,
   LlmStreamChunkToolResult,
 } from "./types/LlmStreamChunk.interface.js";
 export { LlmStreamChunkType } from "./types/LlmStreamChunk.interface.js";

@@ -453,6 +453,83 @@ provider payload. The built-in tools (`random`, `roll`, `time`, `weather`) are
 annotated read-only, and `fabricService({ readOnly: true })` propagates through
 `fabricTool`.
 
+### External (Client-Side) Tools and Suspend/Resume
+
+A tool may declare `external: true` (type `LlmExternalTool`, no `call`) to
+state its execution is owned by the caller — a browser tab, a device, a queue
+worker, a human. The definition travels to the provider; when the model calls
+it, the loop **parks** instead of executing: internal tools in the same turn
+run as usual, then `operate()` returns normally with `status: "in_progress"`,
+the outstanding calls on `response.pending`, and the exchange envelope
+attached unconditionally — the envelope (with its `pending` block) **is** the
+resume payload and survives `JSON.stringify` across any process boundary.
+
+```typescript
+const toolkit = new Toolkit([
+  {
+    name: "open_card",
+    description: "Open a card in the canvas",
+    parameters: { type: "object", properties: { card: { type: "string" } } },
+    external: true, // no call — the loop parks
+  },
+]);
+
+const parked = await Llm.operate("Open the jobs card", { tools: toolkit });
+// parked.status === "in_progress"; dispatch parked.pending to the client
+
+// ...later, in another process:
+const done = await Llm.operate(undefined, {
+  resume: {
+    exchange: parked.exchange!,
+    results: [{ xid: parked.pending![0].xid, output: { opened: true } }],
+  },
+  tools: toolkit, // tools are code; re-supply them each segment
+});
+```
+
+Contract:
+
+- Outstanding calls correlate on `xid` — the provider's tool-call id, an
+  external identifier. Results must cover the pending calls exactly; report a
+  failure as `{ xid, error }` rather than omitting it (no provider accepts a
+  partial tool-result turn). Violations throw `BadRequestError`.
+- On resume the model defaults to the envelope's served model and the fallback
+  chain is skipped: call ids and history are provider-bound. Resuming on a
+  different provider throws `BadRequestError`.
+- The turn budget carries across the suspension; the wait consumes zero turns.
+  A resume parked at the budget settles `incomplete` unless `turns` is raised.
+- Usage, `historyDelta`, and `timing` on the final settlement span the whole
+  exchange (the parked settlement is superseded — a replacement, not an
+  addition). `timing.duration` counts active loop time only. The handler
+  report tally counts each segment once.
+- Progress emits `tool_pending` (with `xid`) instead of `tool_call`; the
+  `beforeEachTool`/`afterEachTool` hooks do not fire for external calls; no
+  `done` event fires on a park. Consecutive parks compose.
+- `stream()` parks the same way: a `tool_pending` chunk, then the final `done`
+  chunk; the parked envelope arrives via `onExchange` or the exchange store —
+  a generator has no response object. `stream()` accepts the same `resume`
+  option.
+- With `LLM_EXCHANGE_ENABLED`, the parked exchange persists at status
+  `in_progress` (already in the fabric `exchange` vocabulary) with the resume
+  payload under `state.pending`.
+- Fire-and-forget is the degenerate case: dispatch `pending` and never resume.
+- `fabricTool({ service, external: true })` emits a call-less external tool
+  from a fabric service definition.
+
+Long-running **in-process** tools remain fully supported and need no parking:
+`Toolkit.call` awaits the tool's promise directly with no library timeout, so
+a `call` implemented as a round trip is bounded only by the host. Retries
+apply to model requests only, never tool execution; the caller's
+`AbortSignal` does not reach `Toolkit.call`. Prefer `external: true` when the
+wait must survive the process (a Lambda cannot hold an invocation open for a
+human).
+
+Tool turns are recorded in history as provider-neutral `function_call` /
+`function_call_output` items for every provider (the shape `stream()` and
+OpenAI always used); each adapter's `buildRequest` converts them back to its
+native format. This is what makes recorded history — and therefore the parked
+envelope — re-entrant.
+
 ### Progress Events
 
 `operate()` accepts an `onProgress` callback that receives lightweight,
@@ -465,8 +542,8 @@ import Llm, { LlmProgressEventType } from "@jaypie/llm";
 const response = await Llm.operate(input, {
   tools: toolkit,
   onProgress: (event) => {
-    // event.type: start, model_request, model_response,
-    //             tool_call, tool_result, tool_error, retry, done
+    // event.type: start, model_request, model_response, tool_call,
+    //             tool_pending, tool_result, tool_error, retry, done
     websocket.send(JSON.stringify(event));
   },
 });
@@ -480,6 +557,7 @@ Fields carried by each event (`turn` is 1-indexed):
 | `model_request` | `turn`, `model` |
 | `model_response` | `turn`, `content` (text, if any), `toolCalls` (`[{ name, arguments }]`, if any), `usage` (this turn) |
 | `tool_call` | `turn`, `tool: { name, arguments, message }` — before the tool runs; `arguments` is the JSON string; `message` is the resolved `LlmTool.message`, when the tool defines one |
+| `tool_pending` | `turn`, `tool: { name, arguments, message, xid }` — the model called an external tool; the loop parks instead of executing |
 | `tool_result` | `turn`, `tool: { name }` — result value deliberately omitted; use `afterEachTool` to receive it |
 | `tool_error` | `turn`, `tool: { name }`, `error` (message string) |
 | `retry` | `turn`, `error` (message string) |
@@ -641,6 +719,7 @@ for await (const chunk of Llm.stream("What's the weather in NYC?", { tools: tool
 |------|-------------|
 | `text` | Streamed text content |
 | `tool_call` | LLM requested a tool (informational) |
+| `tool_pending` | LLM called an external tool; the stream parks after this chunk |
 | `tool_result` | Tool execution completed |
 | `done` | Stream finished with usage stats |
 | `error` | Error occurred |

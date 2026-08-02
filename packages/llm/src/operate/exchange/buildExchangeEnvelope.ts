@@ -2,6 +2,7 @@ import { JsonObject } from "@jaypie/types";
 
 import {
   LlmExchangeEnvelope,
+  LlmExchangePending,
   LlmHistory,
   LlmInputMessage,
   LlmOperateInput,
@@ -87,6 +88,7 @@ export function buildExchangeEnvelope({
   initialHistoryLength,
   input,
   options,
+  pending,
   response,
   startedAt,
   state,
@@ -95,6 +97,8 @@ export function buildExchangeEnvelope({
   initialHistoryLength: number;
   input: string | LlmHistory | LlmInputMessage | LlmOperateInput;
   options: LlmOperateOptions;
+  /** Resume payload when the loop parked at external tool calls */
+  pending?: LlmExchangePending;
   response: LlmOperateResponse;
   startedAt: string;
   state: ExchangeLoopState;
@@ -102,6 +106,7 @@ export function buildExchangeEnvelope({
   const historyDelta = response.history.slice(initialHistoryLength);
   return {
     ids: extractResponseIds(response.responses),
+    ...(pending ? { pending } : {}),
     request: {
       cache: options.cache,
       data: options.data,

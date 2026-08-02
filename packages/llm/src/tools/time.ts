@@ -1,6 +1,6 @@
-import { LlmTool } from "../types/LlmTool.interface.js";
+import { LlmCallableTool } from "../types/LlmTool.interface.js";
 
-export const time: LlmTool = {
+export const time: LlmCallableTool = {
   description:
     "Returns the provided date as an ISO UTC string or the current time if no date provided.",
   name: "time",
