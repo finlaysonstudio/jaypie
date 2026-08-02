@@ -1,5 +1,5 @@
 /* eslint-disable no-console */
-import { LlmTool } from "@jaypie/llm";
+import { LlmCallableTool, LlmExternalTool, LlmTool } from "@jaypie/llm";
 import { vi, type Mock } from "vitest";
 
 // vitest 4 types bare `vi.fn()` as Mock<Constructable | Procedure>, which is
@@ -214,24 +214,47 @@ class MockNotFoundError extends Error {
   }
 }
 
+/** Options that ask for an external tool: execution owned by the caller */
+type MockExternalToolOptions = Partial<LlmExternalTool> & { external: true };
+
 /**
  * Creates a mock LlmTool for testing purposes
  * @param nameOrCallOrOptions - Name (string), call function, or full options object
  * @param callOrOptions - Call function or options object (when first param is string)
- * @returns Mock LlmTool object
+ * @returns Mock LlmTool object; `external: true` produces a call-less tool
  */
+function createMockTool(
+  name: string,
+  options: MockExternalToolOptions,
+): LlmExternalTool;
+function createMockTool(options: MockExternalToolOptions): LlmExternalTool;
+function createMockTool(
+  nameOrCallOrOptions?:
+    string | ((...args: any[]) => any) | Partial<LlmCallableTool>,
+  callOrOptions?: ((...args: any[]) => any) | Partial<LlmCallableTool>,
+): LlmCallableTool;
 function createMockTool(
   nameOrCallOrOptions?: string | ((...args: any[]) => any) | Partial<LlmTool>,
   callOrOptions?: ((...args: any[]) => any) | Partial<LlmTool>,
 ): LlmTool {
   // Default options
-  const defaults: LlmTool = {
+  const defaults: LlmCallableTool = {
     name: "mockTool",
     description: "Mock tool for testing",
     parameters: {},
     type: "function",
     call: createMockResolvedFunction({ result: "MOCK_TOOL" }),
     message: "MOCK_TOOL_MESSAGE",
+  };
+
+  // An external tool is executed by the caller, so it carries no call
+  const merge = (overrides: Partial<LlmTool>, name?: string): LlmTool => {
+    const merged = { ...defaults, ...overrides, ...(name && { name }) };
+    if (merged.external !== true) {
+      return merged as LlmCallableTool;
+    }
+    const { call: _call, ...external } = merged;
+    return { ...external, external: true } as LlmExternalTool;
   };
 
   // Handle different parameter combinations
@@ -248,11 +271,7 @@ function createMockTool(
       };
     } else if (callOrOptions && typeof callOrOptions === "object") {
       // Second parameter is options object
-      return {
-        ...defaults,
-        name,
-        ...callOrOptions,
-      };
+      return merge(callOrOptions, name);
     } else {
       // Only name provided
       return {
@@ -268,10 +287,7 @@ function createMockTool(
     };
   } else if (nameOrCallOrOptions && typeof nameOrCallOrOptions === "object") {
     // First parameter is options object
-    return {
-      ...defaults,
-      ...nameOrCallOrOptions,
-    };
+    return merge(nameOrCallOrOptions);
   } else {
     // No parameters or invalid parameters
     return defaults;
