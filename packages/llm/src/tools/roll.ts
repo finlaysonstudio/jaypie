@@ -1,7 +1,7 @@
-import { LlmTool } from "../types/LlmTool.interface.js";
+import { LlmCallableTool } from "../types/LlmTool.interface.js";
 import { getLogger, random, tryParseNumber } from "../util";
 
-export const roll: LlmTool = {
+export const roll: LlmCallableTool = {
   description: "Roll one or more dice with a specified number of sides",
   name: "roll",
   parameters: {

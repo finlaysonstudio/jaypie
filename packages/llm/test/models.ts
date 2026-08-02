@@ -56,6 +56,9 @@ const MATRIX_EXCLUDE = new Set<string>([
   MODEL.GPT,
   MODEL.GPT_MINI,
   MODEL.GPT_NANO,
+  // Document extraction over POST /v1/ocr, not chat completions — every
+  // capability cell would fail by construction.
+  MODEL.MISTRAL.OCR,
 ]);
 
 // Flatten MODEL.* (including the BEDROCK and OPENROUTER subtrees) into ids.
@@ -70,7 +73,8 @@ function catalogIds(node: unknown = MODEL, out: string[] = []): string[] {
 // support (documents cannot be delivered as data: URIs) and only some catalog
 // models are vision-capable (verified live 2026-07-19). Fireworks also rejects
 // response_format combined with tools, so `both` engages the structured_output
-// tool emulation and logs a warn on every Fireworks model.
+// tool emulation and logs a warn on every Fireworks model. Mistral accepts the
+// pair natively, but one model still needs the corrective turn — see below.
 const MATRIX_EXPECT: Record<
   string,
   Partial<Record<Capability, ExpectedOutcome>>
@@ -78,8 +82,18 @@ const MATRIX_EXPECT: Record<
   [MODEL.FIREWORKS.DEEPSEEK]: { both: "warn", pdf: "skip", image: "skip" },
   [MODEL.FIREWORKS.GLM]: { both: "warn", pdf: "skip", image: "skip" },
   [MODEL.FIREWORKS.GPT_OSS]: { both: "warn", pdf: "skip", image: "skip" },
+  // INKLING and KIMI both advertise supports_image_input (Fireworks models API,
+  // 2026-08-02), so neither skips the image cell.
+  [MODEL.FIREWORKS.INKLING]: { both: "warn", pdf: "skip" },
   [MODEL.FIREWORKS.KIMI]: { both: "warn", pdf: "skip" },
   [MODEL.FIREWORKS.MINIMAX]: { both: "warn", pdf: "skip", image: "skip" },
+  // NEMOTRON returned to the catalog on 2026-08-02 after being retired
+  // 2026-07-21 for nondeterministic structured output (clean JSON, prose, or an
+  // empty array from the same request). `structured` is left "ok" on evidence,
+  // not omission: 6 for 6 on resample (2026-08-02). Should it regress, prefer
+  // pinning `structured: "warn"` over removing the model again, and record the
+  // sample count here. It advertises no image input.
+  [MODEL.FIREWORKS.NEMOTRON]: { both: "warn", pdf: "skip", image: "skip" },
   // QWEN `structured` is pinned "ok" on evidence, not omission: it failed once
   // in three samples (2026-07), then passed 10 for 10 on resample (2026-07-25,
   // issue #438) — 12 of 13 overall, so the miss reads as flake. Schema
@@ -87,6 +101,18 @@ const MATRIX_EXPECT: Record<
   // ["Red","","Blue"]); the cell only asserts a non-empty array, so degraded
   // content still counts as ok. A second failure means reopening #438.
   [MODEL.FIREWORKS.QWEN]: { both: "warn", pdf: "skip" },
+  // Grok 4.5 reads the fixture PDF in 2 of 9 live samples (2026-08-02). The
+  // other seven answered "I'll extract the text from the PDF using the
+  // available tools" — narrating a tool call in a cell that configures no
+  // tools — and returned none of the document's text. The capability is
+  // present but not dependable, so the cell is skipped rather than pinned to
+  // an outcome that would flake either way. Grok 4.3 passed the same cell 2
+  // for 2, so this is a regression in 4.5, not a fixture problem. Every other
+  // Grok 4.5 cell passes, `both` included. Resample before removing the skip.
+  [MODEL.GROK]: { pdf: "skip" },
+  // Mistral sends response_format and tools together natively. mistral-medium
+  // could not do so reliably and is no longer cataloged — see the note in
+  // constants.ts. Large and Small are expected to answer every cell cleanly.
   [MODEL.NOVA_LITE]: { both: "skip" },
   [MODEL.NOVA_PRO]: { structured: "skip" },
 };
@@ -101,6 +127,7 @@ const MATRIX_MODELS: ModelConfig[] = [
     PROVIDER.BEDROCK.DEFAULT,
     PROVIDER.FIREWORKS.DEFAULT,
     PROVIDER.GOOGLE.DEFAULT,
+    PROVIDER.MISTRAL.DEFAULT,
     PROVIDER.OPENAI.DEFAULT,
     PROVIDER.OPENROUTER.DEFAULT,
     PROVIDER.XAI.DEFAULT,

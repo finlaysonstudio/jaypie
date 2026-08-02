@@ -10,11 +10,14 @@
 //   APP_MODELS=claude-sonnet-5,gpt-5.6-sol npm run test:matrix -w packages/llm
 //   APP_GROUP=anthropic npm run test:matrix -w packages/llm
 //   APP_CAPABILITIES=plain,tools npm run test:matrix -w packages/llm
+//   APP_FORCE=1 APP_MODELS=mistral-medium-3-5 APP_CAPABILITIES=both npm run test:matrix -w packages/llm
 //
 // Env:
 //   APP_MODELS       comma-separated id override for the model list
 //   APP_GROUP        comma-separated provider names to shard by (e.g. google,xai)
 //   APP_CAPABILITIES comma-separated subset of capabilities to run
+//   APP_FORCE        run cells expected to "skip" and report what they do
+//   APP_RPS          requests/second ceiling, overriding test/rateLimit.ts
 //   APP_USER         user tag forwarded to provider calls
 //   LOG_LEVEL        set to "warn" or higher to silence Jaypie trace/debug
 //
@@ -29,6 +32,7 @@ import { fileURLToPath } from "url";
 
 import { Llm, LlmOperateInput, toolkit } from "../src/index.js";
 import { determineModelProvider } from "../src/util/determineModelProvider.js";
+import { RateLimiter, requestsPerSecondFor } from "./rateLimit.js";
 import {
   CAPABILITIES,
   Capability,
@@ -65,6 +69,9 @@ const REQUIRED_DOC_STRINGS = [
   "mit license",
 ];
 const USER = process.env.APP_USER || "[matrix] Jaypie User";
+// Debugging knob: run cells MATRIX_EXPECT pins to "skip" instead of returning
+// early, so a skipped cell can be observed without editing models.ts.
+const FORCE = /^(1|true|yes)$/i.test(process.env.APP_FORCE ?? "");
 
 //
 //
@@ -311,6 +318,51 @@ function expectedFor(
   return model.expect?.[capability] ?? "ok";
 }
 
+// Limiters are per model and outlive the cell. A limiter scoped to one cell
+// would let each cell's first request fire immediately, so the boundary
+// between two cells would be unspaced no matter the configured rate — which
+// is exactly how a paced run still collected `Rate limit exceeded` on the
+// three cells that followed a long multi-turn one.
+const LIMITERS = new Map<string, RateLimiter>();
+
+function limiterFor(model: ModelConfig): RateLimiter | undefined {
+  const requestsPerSecond = requestsPerSecondFor({
+    model: model.model,
+    provider: model.provider,
+  });
+  if (requestsPerSecond <= 0) return undefined;
+  const existing = LIMITERS.get(model.model);
+  if (existing) return existing;
+  const limiter = new RateLimiter({ requestsPerSecond });
+  LIMITERS.set(model.model, limiter);
+  return limiter;
+}
+
+/**
+ * Wrap an Llm so every model request it issues waits on the model's rate
+ * limiter first. Shadowing `operate` on the instance keeps the seven capability
+ * runners unchanged and covers multi-turn loops, where one cell issues many
+ * requests.
+ */
+function paced(llm: Llm, model: ModelConfig): Llm {
+  const limiter = limiterFor(model);
+  if (!limiter) return llm;
+
+  const operate = llm.operate.bind(llm);
+  llm.operate = (async (input, options = {}) =>
+    operate(input, {
+      ...options,
+      hooks: {
+        ...options.hooks,
+        beforeEachModelRequest: async (context) => {
+          await limiter.acquire();
+          return options.hooks?.beforeEachModelRequest?.(context);
+        },
+      },
+    })) as typeof llm.operate;
+  return llm;
+}
+
 function classifyActual(
   capability: CapabilityResult,
   warnings: string[],
@@ -326,11 +378,11 @@ async function runCell(
 ): Promise<CellResult> {
   const expected = expectedFor(model, capability);
 
-  if (expected === "skip") {
+  if (expected === "skip" && !FORCE) {
     return { actual: "skip", expected, matches: true, warnings: [] };
   }
 
-  const llm = new Llm(model.provider, { model: model.model });
+  const llm = paced(new Llm(model.provider, { model: model.model }), model);
   let outcome: CapabilityResult;
   let warnings: string[] = [];
   try {
@@ -345,7 +397,11 @@ async function runCell(
   }
 
   const actual = classifyActual(outcome, warnings);
-  const matches = matchesExpected(actual, expected);
+  // A forced skip cell has no expectation to meet — the point is to observe
+  // what it does, so whatever happened counts as a match and the run still
+  // exits zero.
+  const matches =
+    expected === "skip" ? true : matchesExpected(actual, expected);
   return {
     actual,
     expected,

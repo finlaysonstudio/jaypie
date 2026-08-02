@@ -5,7 +5,11 @@ import { DEFAULT, LlmProviderName, PROVIDER } from "./constants.js";
 import { determineModelProvider } from "./util/determineModelProvider.js";
 import { resolveModelChain } from "./util/resolveModelChain.js";
 import { emitExchange } from "./operate/exchange/index.js";
-import { persistExchange } from "./observability/exchangeStore.js";
+import {
+  ExchangeStore,
+  persistExchange,
+  useExchangeStore,
+} from "./observability/exchangeStore.js";
 import {
   LlmExchangeCallback,
   LlmExchangeEnvelope,
@@ -25,6 +29,7 @@ import { AnthropicProvider } from "./providers/anthropic/AnthropicProvider.class
 import { BedrockProvider } from "./providers/bedrock/index.js";
 import { FireworksProvider } from "./providers/fireworks/index.js";
 import { GoogleProvider } from "./providers/google/GoogleProvider.class.js";
+import { MistralProvider } from "./providers/mistral/index.js";
 import { OpenAiProvider } from "./providers/openai/index.js";
 import { OpenRouterProvider } from "./providers/openrouter/index.js";
 import { XaiProvider } from "./providers/xai/index.js";
@@ -125,6 +130,10 @@ class Llm implements LlmProvider {
         return new GoogleProvider(model || PROVIDER.GOOGLE.DEFAULT, {
           apiKey,
         });
+      case PROVIDER.MISTRAL.NAME:
+        return new MistralProvider(model || PROVIDER.MISTRAL.DEFAULT, {
+          apiKey,
+        });
       case PROVIDER.OPENAI.NAME:
         return new OpenAiProvider(model || PROVIDER.OPENAI.DEFAULT, {
           apiKey,
@@ -185,7 +194,7 @@ class Llm implements LlmProvider {
   }
 
   async operate(
-    input: string | LlmHistory | LlmInputMessage | LlmOperateInput,
+    input?: string | LlmHistory | LlmInputMessage | LlmOperateInput,
     options: Omit<LlmOperateOptions, "model"> & { model?: LlmModelOption } = {},
   ): Promise<LlmOperateResponse> {
     if (!this._llm.operate) {
@@ -204,10 +213,16 @@ class Llm implements LlmProvider {
       model: perCallModel,
     };
 
-    const fallbackChain = [
-      ...modelFallback,
-      ...this.resolveFallbackChain(resolvedOptions),
-    ];
+    // A resumed exchange defaults to the model that served the parked
+    // segment and never falls back: call ids and history are provider-bound.
+    const resume = resolvedOptions.resume;
+    if (resume && !resolvedOptions.model) {
+      resolvedOptions.model = resume.exchange?.resolution?.model;
+    }
+
+    const fallbackChain = resume
+      ? []
+      : [...modelFallback, ...this.resolveFallbackChain(resolvedOptions)];
     const optionsWithoutFallback = {
       ...resolvedOptions,
       fallback: false as const,
@@ -322,7 +337,7 @@ class Llm implements LlmProvider {
   }
 
   async *stream(
-    input: string | LlmHistory | LlmInputMessage | LlmOperateInput,
+    input?: string | LlmHistory | LlmInputMessage | LlmOperateInput,
     options: Omit<LlmOperateOptions, "model"> & { model?: LlmModelOption } = {},
   ): AsyncIterable<LlmStreamChunk> {
     if (!this._llm.stream) {
@@ -334,7 +349,19 @@ class Llm implements LlmProvider {
     // the primary and ignores the rest.
     const { model } = resolveModelChain(options.model);
     const streamOptions: LlmOperateOptions = { ...options, model };
+    // A resumed exchange defaults to the model that served the parked segment
+    if (streamOptions.resume && !streamOptions.model) {
+      streamOptions.model = streamOptions.resume.exchange?.resolution?.model;
+    }
     yield* this._llm.stream(input, streamOptions);
+  }
+
+  /**
+   * Register the @jaypie/dynamodb instance exchange persistence should use.
+   * Call once at bootstrap, beside `initClient()`; see `useExchangeStore`.
+   */
+  static useExchangeStore(store: ExchangeStore | null): void {
+    useExchangeStore(store);
   }
 
   static async send(
@@ -354,7 +381,7 @@ class Llm implements LlmProvider {
   }
 
   static async operate(
-    input: string | LlmHistory | LlmInputMessage | LlmOperateInput,
+    input?: string | LlmHistory | LlmInputMessage | LlmOperateInput,
     options?: Omit<LlmOperateOptions, "model"> & {
       apiKey?: string;
       fallback?: LlmFallbackConfig[] | false;
@@ -362,7 +389,16 @@ class Llm implements LlmProvider {
       model?: string | string[];
     },
   ): Promise<LlmOperateResponse> {
-    const { apiKey, fallback, llm, model, ...operateOptions } = options || {};
+    // A resumed exchange with no explicit model resolves its provider from
+    // the model that served the parked segment.
+    const resumeModel = options?.resume?.exchange?.resolution?.model;
+    const {
+      apiKey,
+      fallback,
+      llm,
+      model = resumeModel,
+      ...operateOptions
+    } = options || {};
 
     // A `model` array becomes primary + derived fallback chain
     const { fallback: modelFallback, model: primaryModel } =
@@ -405,14 +441,22 @@ class Llm implements LlmProvider {
   }
 
   static stream(
-    input: string | LlmHistory | LlmInputMessage | LlmOperateInput,
+    input?: string | LlmHistory | LlmInputMessage | LlmOperateInput,
     options?: Omit<LlmOperateOptions, "model"> & {
       llm?: LlmProviderName;
       apiKey?: string;
       model?: string | string[];
     },
   ): AsyncIterable<LlmStreamChunk> {
-    const { llm, apiKey, model, ...streamOptions } = options || {};
+    // A resumed exchange with no explicit model resolves its provider from
+    // the model that served the parked segment.
+    const resumeModel = options?.resume?.exchange?.resolution?.model;
+    const {
+      llm,
+      apiKey,
+      model = resumeModel,
+      ...streamOptions
+    } = options || {};
 
     // A `model` array becomes primary + derived fallback chain
     const { fallback: modelFallback, model: primaryModel } =

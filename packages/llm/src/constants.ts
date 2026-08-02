@@ -34,14 +34,30 @@ export const MODEL = {
     DEEPSEEK: "accounts/fireworks/models/deepseek-v4-pro",
     GLM: "accounts/fireworks/models/glm-5p2",
     GPT_OSS: "accounts/fireworks/models/gpt-oss-120b",
-    KIMI: "accounts/fireworks/models/kimi-k2p7-code",
+    INKLING: "accounts/fireworks/models/inkling",
+    KIMI: "accounts/fireworks/models/kimi-k3",
     MINIMAX: "accounts/fireworks/models/minimax-m2p7",
+    NEMOTRON: "accounts/fireworks/models/nemotron-3-ultra-nvfp4",
     QWEN: "accounts/fireworks/models/qwen3p7-plus",
   },
   // Google
   GEMINI_FLASH: "gemini-3.6-flash",
   GEMINI_FLASH_LITE: "gemini-3.5-flash-lite",
   GEMINI_PRO: "gemini-3.1-pro-preview",
+  // Mistral
+  MISTRAL: {
+    LARGE: "mistral-large-latest", // mistral-large-2512
+    // Medium is deliberately absent. mistral-medium-3-5 will not converge when
+    // tools and response_format are combined — it re-calls the tool instead of
+    // answering from the result, and has been observed emitting concatenated
+    // JSON as the tool *name* and hanging a request to a headers timeout.
+    // Structured output with tools is a baseline expectation of operate(), so
+    // the model is not cataloged. Its COST entry is retained per policy.
+    // Document extraction over POST /v1/ocr, not chat completions. Priced per
+    // page, so it carries no COST entry and is excluded from the chat matrix.
+    OCR: "mistral-ocr-4-0",
+    SMALL: "mistral-small-latest", // mistral-small-2603
+  },
   // OpenAI
   SOL: "gpt-5.6-sol",
   TERRA: "gpt-5.6-terra",
@@ -53,7 +69,14 @@ export const MODEL = {
   /** @deprecated use MODEL.LUNA (gpt-5.6-luna) */
   GPT_NANO: "gpt-5.4-nano",
   // xAI
-  GROK: "grok-latest",
+  // Pinned to a literal version rather than the `grok-latest` alias. COST is
+  // keyed by literal id, so an alias xAI repoints would leave the catalog
+  // priced for a model it no longer names. That is not hypothetical here:
+  // `grok-latest` resolved to `grok-4.3` on 2026-08-02 (verified against the
+  // API, which echoes the resolved id) at $1.25/$2.50, while Grok 4.5 bills
+  // $2.00/$6.00. The day xAI moves the alias, an unpinned catalog understates
+  // output cost by 140% with nothing to signal it.
+  GROK: "grok-4.5",
   // OpenRouter (provider-prefixed routes; traversed by the OpenRouter hot test)
   OPENROUTER: {
     GLM: "z-ai/glm-5.2",
@@ -245,19 +268,31 @@ export const COST: Record<string, LlmModelCost> = {
     input: 0.15,
     output: 0.6,
   },
+  "accounts/fireworks/models/inkling": {
+    cachedInputRead: 0.17,
+    input: 1.0,
+    output: 4.05,
+  },
+  // Superseded by kimi-k3 on 2026-08-02; priced here so historic usage stays
+  // replayable.
   "accounts/fireworks/models/kimi-k2p7-code": {
     cachedInputRead: 0.19,
     input: 0.95,
     output: 4.0,
+  },
+  "accounts/fireworks/models/kimi-k3": {
+    cachedInputRead: 0.3,
+    input: 3.0,
+    output: 15.0,
   },
   "accounts/fireworks/models/minimax-m2p7": {
     cachedInputRead: 0.06,
     input: 0.3,
     output: 1.2,
   },
-  // Retired from MODEL.* on 2026-07-21: its structured output is
-  // nondeterministic (clean JSON, prose, or an empty array from the same
-  // request). Priced here so historic usage stays replayable.
+  // Returned to MODEL.* on 2026-08-02. It was retired 2026-07-21 for
+  // nondeterministic structured output (clean JSON, prose, or an empty array
+  // from the same request); watch the `structured` matrix cell.
   "accounts/fireworks/models/nemotron-3-ultra-nvfp4": {
     cachedInputRead: 0.12,
     input: 0.6,
@@ -293,7 +328,18 @@ export const COST: Record<string, LlmModelCost> = {
   "gpt-5.6-luna": { cachedInputRead: 0.1, input: 1.0, output: 6.0 },
   "gpt-5.6-sol": { cachedInputRead: 0.5, input: 5.0, output: 30.0 },
   "gpt-5.6-terra": { cachedInputRead: 0.25, input: 2.5, output: 15.0 },
-  // xAI — https://docs.x.ai/docs/models ("grok-latest" aliases grok-4.3-latest)
+  // xAI — https://docs.x.ai/docs/models
+  // Rates are the sub-200K tier; xAI doubles every figure at or above 200K
+  // input tokens, which is the long-prompt surcharge COST excludes by policy.
+  // Ids verified against GET /v1/models (2026-08-02). Release order is
+  // 4.1 < 4.20 < 4.3 < 4.5: "4.20" is 4.2.0 with the patch segment kept, not
+  // minor version twenty. Read as semver it looks newer than 4.3, and both a
+  // string sort and a numeric sort of the minor segment put it there. It is
+  // not. Do not "fix" the ordering of these keys.
+  // The grok-4-1-fast pair is retired — absent from both the models endpoint
+  // and the pricing table — and keeps its entry so usage stays replayable.
+  // grok-imagine-* are image and video models, priced per asset rather than
+  // per token, which LlmModelCost cannot express; they are deliberately absent.
   "grok-4-1-fast-non-reasoning": {
     cachedInputRead: 0.05,
     input: 0.2,
@@ -304,7 +350,44 @@ export const COST: Record<string, LlmModelCost> = {
     input: 0.2,
     output: 0.5,
   },
-  "grok-latest": { cachedInputRead: 0.2, input: 1.25, output: 2.5 },
+  "grok-4.20-0309-non-reasoning": {
+    cachedInputRead: 0.2,
+    input: 1.25,
+    output: 2.5,
+  },
+  "grok-4.20-0309-reasoning": {
+    cachedInputRead: 0.2,
+    input: 1.25,
+    output: 2.5,
+  },
+  "grok-4.20-multi-agent-0309": {
+    cachedInputRead: 0.2,
+    input: 1.25,
+    output: 2.5,
+  },
+  "grok-4.3": { cachedInputRead: 0.2, input: 1.25, output: 2.5 },
+  "grok-4.5": { cachedInputRead: 0.3, input: 2.0, output: 6.0 },
+  "grok-build-0.1": { cachedInputRead: 0.2, input: 1.0, output: 2.0 },
+  // Mistral — https://docs.mistral.ai/models/overview
+  // Cached prompt tokens bill at 10% of the standard input rate. Note the
+  // marketing FAQ at mistral.ai/pricing still quotes $2/$6 for "Mistral
+  // Large" — that is stale copy describing Large 2; the model cards govern.
+  // mistral-ocr-4-0 is deliberately unpriced: it bills per page ($4/1000,
+  // $5/1000 annotated), which LlmModelCost cannot express.
+  // Keys are dated ids only. `MODEL.MISTRAL.*` names `-latest` aliases, so a
+  // lookup on `COST[MODEL.MISTRAL.LARGE]` misses by design: an alias has no
+  // stable price, and an entry under one would quietly go stale the moment
+  // Mistral repointed it. Resolve the alias to the id the API echoes on the
+  // response and price that. Callers must handle a miss regardless.
+  //
+  // Medium is **priced but not exported**. It is absent from MODEL.MISTRAL
+  // because it cannot combine tools with structured output reliably, but a
+  // caller can still pass the id directly and usage records reference it.
+  // Pricing a model is not endorsing it; COST answers "what did this cost",
+  // not "what should be used".
+  "mistral-large-2512": { cachedInputRead: 0.05, input: 0.5, output: 1.5 },
+  "mistral-medium-3-5": { cachedInputRead: 0.15, input: 1.5, output: 7.5 },
+  "mistral-small-2603": { cachedInputRead: 0.015, input: 0.15, output: 0.6 },
 };
 
 const GOOGLE_PROVIDER = {
@@ -404,6 +487,26 @@ export const PROVIDER = {
   /** @deprecated Use PROVIDER.GOOGLE — "Google" is the provider; Gemini is the model family */
   GEMINI: GOOGLE_PROVIDER,
   GOOGLE: GOOGLE_PROVIDER,
+  MISTRAL: {
+    // https://docs.mistral.ai/models/overview
+    API_KEY: "MISTRAL_API_KEY" as const,
+    BASE_URL: "https://api.mistral.ai/v1" as const,
+    DEFAULT: MODEL.MISTRAL.LARGE,
+    // Most Mistral family names do not contain the substring "mistral" —
+    // "ministral" is m-i-n-i-s-t-r-a-l, and codestral/devstral/pixtral/voxtral
+    // share only the "-tral" suffix — so each family needs its own word.
+    MODEL_MATCH_WORDS: [
+      "codestral",
+      "devstral",
+      "magistral",
+      "ministral",
+      "mistral",
+      "pixtral",
+      "voxtral",
+    ] as const,
+    NAME: "mistral" as const,
+    OCR: MODEL.MISTRAL.OCR,
+  },
   OPENAI: {
     // https://platform.openai.com/docs/models
     DEFAULT: MODEL.SOL,
@@ -457,6 +560,7 @@ export type LlmProviderName =
   | typeof PROVIDER.BEDROCK.NAME
   | typeof PROVIDER.FIREWORKS.NAME
   | typeof PROVIDER.GOOGLE.NAME
+  | typeof PROVIDER.MISTRAL.NAME
   | typeof PROVIDER.OPENAI.NAME
   | typeof PROVIDER.OPENROUTER.NAME
   | typeof PROVIDER.XAI.NAME;

@@ -1,6 +1,6 @@
 {
   "name": "jaypie",
-  "version": "1.2.76",
+  "version": "1.2.77",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/finlaysonstudio/jaypie.git"
@@ -41,7 +41,7 @@
     "@jaypie/core": "^1.2.4",
     "@jaypie/datadog": "^1.2.6",
     "@jaypie/errors": "^1.2.4",
-    "@jaypie/express": "^1.2.31",
+    "@jaypie/express": "^1.2.32",
     "@jaypie/kit": "^1.2.15",
     "@jaypie/lambda": "^1.2.14",
     "@jaypie/logger": "^1.2.22"
@@ -59,7 +59,7 @@
     "typescript-eslint": "^8.46.1"
   },
   "peerDependencies": {
-    "@jaypie/llm": "^1.3.23"
+    "@jaypie/llm": "^1.3.24"
   },
   "peerDependenciesMeta": {
     "@jaypie/llm": {

@@ -169,7 +169,6 @@ function getErrorBody(error: JaypieError | Error): Record<string, unknown> {
  * - Connection: keep-alive
  * - X-Accel-Buffering: no (disables nginx buffering)
  */
-/* eslint-disable no-redeclare */
 function expressStreamHandler(
   handler: ExpressStreamHandler,
   options?: ExpressStreamHandlerOptions,
@@ -182,7 +181,6 @@ function expressStreamHandler(
   handlerOrOptions: ExpressStreamHandler | ExpressStreamHandlerOptions,
   optionsOrHandler?: ExpressStreamHandlerOptions | ExpressStreamHandler,
 ): ExpressStreamHandler {
-  /* eslint-enable no-redeclare */
   let handler: ExpressStreamHandler;
   let options: ExpressStreamHandlerOptions;
 

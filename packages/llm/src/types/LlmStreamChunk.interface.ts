@@ -10,6 +10,7 @@ export enum LlmStreamChunkType {
   Error = "error",
   Text = "text",
   ToolCall = "tool_call",
+  ToolPending = "tool_pending",
   ToolResult = "tool_result",
 }
 
@@ -26,6 +27,23 @@ export interface LlmStreamChunkToolCall {
     arguments: string;
     /** Provider-specific metadata preserved through tool-call roundtrip */
     metadata?: Record<string, unknown>;
+  };
+}
+
+/**
+ * The model called an external tool; the stream parks after yielding this
+ * chunk (and its final `done` chunk). Correlate the result on `xid` and
+ * resume via the `resume` option.
+ */
+export interface LlmStreamChunkToolPending {
+  type: LlmStreamChunkType.ToolPending;
+  toolPending: {
+    arguments: string;
+    /** Resolved `LlmTool.message`, when the tool defines one */
+    message?: string;
+    name: string;
+    /** Provider tool-call id — the external identifier results are correlated on */
+    xid: string;
   };
 }
 
@@ -57,4 +75,5 @@ export type LlmStreamChunk =
   | LlmStreamChunkError
   | LlmStreamChunkText
   | LlmStreamChunkToolCall
+  | LlmStreamChunkToolPending
   | LlmStreamChunkToolResult;

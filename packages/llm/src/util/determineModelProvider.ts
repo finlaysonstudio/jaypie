@@ -29,6 +29,16 @@ export function determineModelProvider(input?: string): {
     };
   }
 
+  // Check for explicit mistral: prefix — the escape hatch for forcing the
+  // direct API over Bedrock, which also serves "mistral.mistral-*" ids
+  if (input.startsWith("mistral:")) {
+    const model = input.slice("mistral:".length);
+    return {
+      model,
+      provider: PROVIDER.MISTRAL.NAME,
+    };
+  }
+
   // Check for explicit bedrock: prefix
   if (input.startsWith("bedrock:")) {
     const model = input.slice("bedrock:".length);
@@ -61,6 +71,12 @@ export function determineModelProvider(input?: string): {
     return {
       model: PROVIDER.GOOGLE.DEFAULT,
       provider: PROVIDER.GOOGLE.NAME,
+    };
+  }
+  if (input === PROVIDER.MISTRAL.NAME) {
+    return {
+      model: PROVIDER.MISTRAL.DEFAULT,
+      provider: PROVIDER.MISTRAL.NAME,
     };
   }
   if (input === PROVIDER.OPENAI.NAME) {
@@ -114,6 +130,18 @@ export function determineModelProvider(input?: string): {
       return {
         model: input,
         provider: PROVIDER.BEDROCK.NAME,
+      };
+    }
+  }
+
+  // Check Mistral match words (after Bedrock — "mistral.mistral-*" is a
+  // Bedrock model ID, and after the "/" rule above so "mistralai/mistral-large"
+  // stays an OpenRouter route)
+  for (const matchWord of PROVIDER.MISTRAL.MODEL_MATCH_WORDS) {
+    if (lowerInput.includes(matchWord)) {
+      return {
+        model: input,
+        provider: PROVIDER.MISTRAL.NAME,
       };
     }
   }

@@ -153,8 +153,13 @@ generations do not silently truncate:
 The `stream` flag on `OperateRequest` (set by `StreamLoop`) tells adapters
 which transport the request uses. Callers override per call via
 `providerOptions` (`max_tokens` for Anthropic, `maxOutputTokens` for Google).
-OpenAI, xAI, and OpenRouter leave the limit unset. When adding models, update
-the table in `src/util/maxOutputTokens.ts`.
+OpenAI, xAI, and OpenRouter leave the limit unset. **Mistral is capped**
+(32,768 model max, 16,384 non-streaming) even though it publishes no low
+ceiling: a Mistral model can degenerate into restating its answer when
+`format` and tools are combined, and uncapped that ran a single live matrix
+cell for 7m57s against under 1.5s for every other cell (observed on
+`mistral-medium-3-5`, since removed). When adding models, update the table in
+`src/util/maxOutputTokens.ts`.
 
 ### Prompt Caching
 
@@ -203,6 +208,13 @@ static (no interpolated timestamps/IDs), which callers already do.
 to its standard list price per million tokens. Keys are string literals rather
 than `MODEL.*` references so a model retired from the catalog keeps its price
 and historic usage records stay replayable.
+
+**Provider aliases are never priced.** A `-latest` id has no stable rate: the
+provider repoints it whenever it likes, and an entry under the alias would keep
+returning the old price with nothing to signal the move. `MODEL.MISTRAL.*` names
+aliases, so `COST[MODEL.MISTRAL.LARGE]` returns `undefined` by design — resolve
+the alias to the id the API echoes on the response and price that. A constants
+test asserts every `-latest` id in the catalog is absent from `COST`.
 
 ```typescript
 import { LLM, type LlmModelCost } from "@jaypie/llm";
@@ -273,6 +285,7 @@ the failed call.
 
 | Class | `category` | `status` | When |
 |-------|-----------|----------|------|
+| `LlmAbortError` | `aborted` | 499 | The caller's `signal` aborted the request; never retried |
 | `LlmRateLimitError` | `rate_limit` | 429 | Short-term rate limit; carries `retryAfterMs` |
 | `LlmQuotaError` | `quota` | 402 | Quota exhausted or insufficient funds; `reason: "quota" \| "billing"` |
 | `LlmUnrecoverableError` | `unrecoverable` | 502 | Bad request / auth / not found |
@@ -383,6 +396,19 @@ const response = await Llm.operate("Greet the world", {
 - A Gemini 3 model that 400s the combo is cached for the session and transparently retried via the fake-tool path. The error message must mention `responseJsonSchema`/`responseSchema`/`responseMime`/`function_call`/`tools` to trigger the fallback.
 - Compliance is enforced by the operate loop the same way Fireworks is: a `format` request that completes as prose is first parsed as JSON (fence-stripped), then re-asked on a corrective turn offering **only** the `structured_output` tool (`supportsStructuredOutputRetry`). That turn withholds the caller's tools and does not send the schema natively, so the demanded call is the sole way to answer.
 
+**Fresh-context conversion (`supportsStructuredOutputConversion`).** An
+alternative to the corrective turn, tried first when an adapter opts in
+(Mistral today). Instead of re-asking inside the conversation, the loop makes
+one context-free call whose only job is to transcribe the prose into the
+schema — no history, no tools, no system prompt. Prefer it where re-asking in
+context makes things worse: a model that has degenerated into restating its
+answer keeps doing so while that text is in its context, and re-deriving lets
+it substitute values it never produced (observed: a tool rolled 5,2,4,3,5
+totalling 19; the corrective turn answered 4,1,6,2,5 totalling 18). A call that
+only sees the text cannot invent. Falls through to the corrective turn when the
+conversion yields nothing, and never replaces the original outcome with its own
+error. Usage is tallied onto the response.
+
 ### With Tools
 
 ```typescript
@@ -427,6 +453,83 @@ provider payload. The built-in tools (`random`, `roll`, `time`, `weather`) are
 annotated read-only, and `fabricService({ readOnly: true })` propagates through
 `fabricTool`.
 
+### External (Client-Side) Tools and Suspend/Resume
+
+A tool may declare `external: true` (type `LlmExternalTool`, no `call`) to
+state its execution is owned by the caller — a browser tab, a device, a queue
+worker, a human. The definition travels to the provider; when the model calls
+it, the loop **parks** instead of executing: internal tools in the same turn
+run as usual, then `operate()` returns normally with `status: "in_progress"`,
+the outstanding calls on `response.pending`, and the exchange envelope
+attached unconditionally — the envelope (with its `pending` block) **is** the
+resume payload and survives `JSON.stringify` across any process boundary.
+
+```typescript
+const toolkit = new Toolkit([
+  {
+    name: "open_card",
+    description: "Open a card in the canvas",
+    parameters: { type: "object", properties: { card: { type: "string" } } },
+    external: true, // no call — the loop parks
+  },
+]);
+
+const parked = await Llm.operate("Open the jobs card", { tools: toolkit });
+// parked.status === "in_progress"; dispatch parked.pending to the client
+
+// ...later, in another process:
+const done = await Llm.operate(undefined, {
+  resume: {
+    exchange: parked.exchange!,
+    results: [{ xid: parked.pending![0].xid, output: { opened: true } }],
+  },
+  tools: toolkit, // tools are code; re-supply them each segment
+});
+```
+
+Contract:
+
+- Outstanding calls correlate on `xid` — the provider's tool-call id, an
+  external identifier. Results must cover the pending calls exactly; report a
+  failure as `{ xid, error }` rather than omitting it (no provider accepts a
+  partial tool-result turn). Violations throw `BadRequestError`.
+- On resume the model defaults to the envelope's served model and the fallback
+  chain is skipped: call ids and history are provider-bound. Resuming on a
+  different provider throws `BadRequestError`.
+- The turn budget carries across the suspension; the wait consumes zero turns.
+  A resume parked at the budget settles `incomplete` unless `turns` is raised.
+- Usage, `historyDelta`, and `timing` on the final settlement span the whole
+  exchange (the parked settlement is superseded — a replacement, not an
+  addition). `timing.duration` counts active loop time only. The handler
+  report tally counts each segment once.
+- Progress emits `tool_pending` (with `xid`) instead of `tool_call`; the
+  `beforeEachTool`/`afterEachTool` hooks do not fire for external calls; no
+  `done` event fires on a park. Consecutive parks compose.
+- `stream()` parks the same way: a `tool_pending` chunk, then the final `done`
+  chunk; the parked envelope arrives via `onExchange` or the exchange store —
+  a generator has no response object. `stream()` accepts the same `resume`
+  option.
+- With `LLM_EXCHANGE_ENABLED`, the parked exchange persists at status
+  `in_progress` (already in the fabric `exchange` vocabulary) with the resume
+  payload under `state.pending`.
+- Fire-and-forget is the degenerate case: dispatch `pending` and never resume.
+- `fabricTool({ service, external: true })` emits a call-less external tool
+  from a fabric service definition.
+
+Long-running **in-process** tools remain fully supported and need no parking:
+`Toolkit.call` awaits the tool's promise directly with no library timeout, so
+a `call` implemented as a round trip is bounded only by the host. Retries
+apply to model requests only, never tool execution; the caller's
+`AbortSignal` does not reach `Toolkit.call`. Prefer `external: true` when the
+wait must survive the process (a Lambda cannot hold an invocation open for a
+human).
+
+Tool turns are recorded in history as provider-neutral `function_call` /
+`function_call_output` items for every provider (the shape `stream()` and
+OpenAI always used); each adapter's `buildRequest` converts them back to its
+native format. This is what makes recorded history — and therefore the parked
+envelope — re-entrant.
+
 ### Progress Events
 
 `operate()` accepts an `onProgress` callback that receives lightweight,
@@ -439,8 +542,8 @@ import Llm, { LlmProgressEventType } from "@jaypie/llm";
 const response = await Llm.operate(input, {
   tools: toolkit,
   onProgress: (event) => {
-    // event.type: start, model_request, model_response,
-    //             tool_call, tool_result, tool_error, retry, done
+    // event.type: start, model_request, model_response, tool_call,
+    //             tool_pending, tool_result, tool_error, retry, done
     websocket.send(JSON.stringify(event));
   },
 });
@@ -454,6 +557,7 @@ Fields carried by each event (`turn` is 1-indexed):
 | `model_request` | `turn`, `model` |
 | `model_response` | `turn`, `content` (text, if any), `toolCalls` (`[{ name, arguments }]`, if any), `usage` (this turn) |
 | `tool_call` | `turn`, `tool: { name, arguments, message }` — before the tool runs; `arguments` is the JSON string; `message` is the resolved `LlmTool.message`, when the tool defines one |
+| `tool_pending` | `turn`, `tool: { name, arguments, message, xid }` — the model called an external tool; the loop parks instead of executing |
 | `tool_result` | `turn`, `tool: { name }` — result value deliberately omitted; use `afterEachTool` to receive it |
 | `tool_error` | `turn`, `tool: { name }`, `error` (message string) |
 | `retry` | `turn`, `error` (message string) |
@@ -464,23 +568,81 @@ loop. The `hooks` option remains the right choice when the full provider
 request/response payloads are needed. `stream()` communicates progress
 through its chunks; `onProgress` applies to `operate()`.
 
+### Cancellation
+
+`operate()` and `stream()` accept a caller-owned `signal: AbortSignal`
+(`LlmOperateOptions.signal`). The loops link it into the per-attempt controller
+they already create (`src/util/abortSignal.ts`), so it reaches the provider
+request every adapter already forwards a signal to.
+
+- A caller abort is terminal and never retried. `operate()` rejects with
+  `LlmAbortError`; `stream()` yields an error chunk carrying the same
+  status/title, then its final `done` chunk, so a consumer's `for await` ends
+  normally rather than throwing.
+- An already-aborted signal fails before the first request goes out.
+- `StreamLoop`'s retry `finally` aborts the active controller on teardown, so
+  abandoning the generator (`break`, `return`, consumer throw) stops the
+  upstream request whether or not a `signal` was passed.
+- The exchange envelope still settles on an abort, with `status: "incomplete"`
+  and whatever usage and history accumulated.
+
 ### Exchange Capture
 
-`operate()` accepts `onExchange`, fired once per settlement (success or
-failure) with a fully serializable `LlmExchangeEnvelope`: `request` (raw
+`operate()` and `stream()` accept `onExchange`, fired once per settlement
+(success or failure) with a fully serializable `LlmExchangeEnvelope`: `request` (raw
 pre-interpolation input, data, placeholders, system, instructions, model,
 format as JSON Schema, tool names, turns, temperature, effort,
 providerOptions, user), `response` (content, historyDelta, per-call usage +
 `usageTotals` keyed `provider:model`, reasoning, status, error, stopReason),
 `resolution` (served provider/model, fallbackUsed, fallbackAttempts,
 retries), `timing`, and provider response `ids`. Callback errors are logged
-and never interrupt the call. The loop assembles the envelope
-(`src/operate/exchange/`), attaches it as `response.exchange` (or onto a
-thrown error), and the `Llm` facade stamps `resolution` and fires the
-callback exactly once per `operate()`. Setting `LLM_EXCHANGE_ENABLED` also
+and never interrupt the call. For `operate()`, `OperateLoop` assembles the
+envelope (`src/operate/exchange/`), attaches it as `response.exchange` (or onto
+a thrown error), and the `Llm` facade stamps `resolution` and fires the
+callback exactly once per call. Setting `LLM_EXCHANGE_ENABLED` also
 persists each envelope via `@jaypie/dynamodb`'s `storeExchange`
 (`src/observability/exchangeStore.ts`, same lazy bundler-safe pattern as
 LLMObs; silent no-op when the optional peer is absent).
+
+`stream()` settles from `StreamLoop` rather than the facade: every provider's
+`stream()` delegates to the loop, and a stream has no fallback chain for the
+facade to resolve, so the loop stamps `fallbackUsed: false` /
+`fallbackAttempts: 1` itself. Settlement runs from a `finally`, which an
+abandoned generator closes through, so a consumer that stops reading still
+records the turn it consumed (`status: "incomplete"`). A generator has no
+response object, so `onExchange` and the store are the whole surface — there is
+no `response.exchange`. `historyDelta` is assembled from a parallel
+`deltaHistory` that carries the streamed assistant text as well as tool calls
+and results; that text stays out of `currentInput`, leaving the history resent
+to the provider unchanged. `stopReason` and `ids` are unset — the streamed
+transport does not surface them.
+
+#### Registering the store instance
+
+`useExchangeStore` (also `Llm.useExchangeStore`) names the `@jaypie/dynamodb`
+instance persistence should use, bypassing the dynamic import:
+
+```typescript
+import * as dynamodb from "@jaypie/dynamodb";
+import { Llm } from "@jaypie/llm";
+
+dynamodb.initClient();
+Llm.useExchangeStore(dynamodb);
+```
+
+It accepts the module namespace, a namespace wrapping the surface under
+`default`, a bare `storeExchange` function, or `null` to clear the
+registration. A value carrying no `storeExchange` throws `ConfigurationError`,
+so a misregistration is loud at bootstrap rather than silently dropping every
+exchange. Resolution order is registered → dynamic import.
+
+The import resolves from `node_modules`, which is a *different copy* than the
+one a host holds when its `@jaypie/dynamodb` is bundler-managed — a Next.js
+server bundle, for instance. That copy is the initialized one; the imported one
+is not, and every exchange is dropped with `[storeExchange] DynamoDB client is
+not initialized` (issue #474). The dynamic import stays the default because it
+is right whenever both copies are the same file (issue #429); registration
+covers the case where they cannot be.
 
 ### Operate Logging
 
@@ -557,6 +719,7 @@ for await (const chunk of Llm.stream("What's the weather in NYC?", { tools: tool
 |------|-------------|
 | `text` | Streamed text content |
 | `tool_call` | LLM requested a tool (informational) |
+| `tool_pending` | LLM called an external tool; the stream parks after this chunk |
 | `tool_result` | Tool execution completed |
 | `done` | Stream finished with usage stats |
 | `error` | Error occurred |
@@ -587,6 +750,19 @@ HTTP errors shaped to drive `classifyError`):
   inputs are warned and discarded — Fireworks has no `file` part and rejects
   document `data:` URIs ("Unsupported URL scheme 'data'"; Document Inlining's
   `#transform=inline` did not engage in live testing 2026-07-19)
+- Mistral — `MistralClient` (OpenAI-compatible Chat Completions, plus
+  `POST /v1/ocr`). Images are `image_url` parts; **files are carried**, as
+  Mistral's own `document_url` part accepts the base64 `data:` URI
+  `resolveOperateInput` already produces. Two divergences from its
+  OpenAI-compatible siblings, both verified live 2026-08-01:
+  - **Unknown request fields are rejected with a 422 `extra_forbidden`.**
+    Mistral has no `user` field and names the seed `random_seed`, so the
+    adapter never sends `user` and `providerOptions` is not a free-form
+    passthrough — values must belong to Mistral's own schema.
+  - **The error `message` is polymorphic** — a string on model-level errors,
+    an object (`{ detail: [{ loc, msg }] }`) on schema validation. The client
+    renders the object form as `body.field: message` rather than
+    `[object Object]`.
 - OpenRouter — `OpenRouterClient` (OpenAI-compatible Chat Completions)
 
 Bedrock is the one provider that keeps an SDK: `@aws-sdk/client-bedrock-runtime`
@@ -604,9 +780,10 @@ when the matching `*_API_KEY` is set and skip otherwise.
 - `ANTHROPIC_API_KEY` - Anthropic API key
 - `GOOGLE_API_KEY` - Google API key (`GEMINI_API_KEY` is a deprecated fallback; a `log.warn` fires when it is used)
 - `FIREWORKS_API_KEY` - Fireworks API key
+- `MISTRAL_API_KEY` - Mistral API key
 - `OPENROUTER_API_KEY` - OpenRouter API key
 - `XAI_API_KEY` - xAI (Grok) API key
-- `LLM_EXCHANGE_ENABLED` - Persist each `operate()` call as an `exchange` entity via `@jaypie/dynamodb` `storeExchange` (optional peer, lazily resolved; silent no-op when absent)
+- `LLM_EXCHANGE_ENABLED` - Persist each `operate()` and `stream()` call as an `exchange` entity via `@jaypie/dynamodb` `storeExchange` (optional peer, lazily resolved; silent no-op when absent)
 
 Keys are resolved via `getEnvSecret` from `@jaypie/aws` (supports AWS Secrets Manager).
 
@@ -675,11 +852,21 @@ export { LlmMessageRole, LlmMessageType, LlmStreamChunkType };
 // Tools
 export { JaypieToolkit, toolkit, Toolkit, tools };
 
+// Exchange persistence
+export { useExchangeStore };
+export type { ExchangeStore, ExchangeStoreFunction };
+
 // Utilities
 export { extractReasoning, jsonSchemaToNaturalSchema, naturalSchemaToJsonSchema };
 
 // Providers (for direct use)
-export { FireworksProvider, GoogleProvider, OpenRouterProvider, XaiProvider };
+export {
+  FireworksProvider,
+  GoogleProvider,
+  MistralProvider,
+  OpenRouterProvider,
+  XaiProvider,
+};
 // GeminiProvider remains as a deprecated alias of GoogleProvider
 ```
 
@@ -698,6 +885,24 @@ Integration tests in `test/` directory require API keys:
 - `test/client.ts` - Real API calls
 - `test/joke.ts` - Streaming test
 - `test/format.ts` - Multi-word `format` key fidelity (issue #393); run `tsx test/format.ts`, override providers with `APP_PROVIDER=openai,anthropic,...`
+
+### Live Capability Matrix
+
+`npm run test:matrix -w packages/llm` runs every catalog model through every
+capability against the real API. It loads the repo-root `.env` itself. Env
+knobs: `APP_MODELS`, `APP_GROUP`, `APP_CAPABILITIES`, `APP_USER`, `APP_FORCE`
+(run cells pinned to `skip` and report what they do), `APP_RPS`.
+
+**Request pacing** (`test/rateLimit.ts`) exists because Mistral enforces a
+requests-per-second ceiling that varies by tier and by model, and returns a
+bare 429 with no `Retry-After`. `operate()` classifies rate limits as terminal
+and does not retry them, so an unpaced run fails on throttling rather than on
+capability. Pacing is applied per **model request** via the
+`beforeEachModelRequest` hook, not per cell — one cell is a multi-turn loop
+issuing many requests. Limiters are keyed by model and outlive the cell;
+scoping one to a cell lets each cell's first request fire unspaced, which is
+its own source of spurious `Rate limit exceeded` cells. Current rates: Mistral
+Large 0.07 req/s, the rest of the Mistral catalog 0.83 req/s.
 
 ## Commands
 

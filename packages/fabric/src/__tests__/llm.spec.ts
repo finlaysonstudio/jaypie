@@ -309,6 +309,51 @@ describe("LLM Adapter", () => {
       expect(tool.type).toBe("function");
     });
 
+    it("emits a call-less external tool when external is true", () => {
+      let serviceCalls = 0;
+      const service = () => {
+        serviceCalls++;
+        return "never runs";
+      };
+      const handler = fabricService({
+        alias: "open_card",
+        description: "Open a card in the canvas",
+        input: {
+          card: { type: String },
+        },
+        service,
+      });
+
+      const { tool } = fabricTool({ external: true, service: handler });
+
+      expect(tool.external).toBe(true);
+      expect(tool.call).toBeUndefined();
+      expect(tool.name).toBe("open_card");
+      expect(tool.description).toBe("Open a card in the canvas");
+      expect(
+        (tool.parameters as { properties: Record<string, unknown> }).properties,
+      ).toHaveProperty("card");
+      expect(serviceCalls).toBe(0);
+    });
+
+    it("carries message and readOnly onto an external tool", () => {
+      const handler = fabricService({
+        alias: "read_canvas",
+        readOnly: true,
+        service: () => "never runs",
+      });
+
+      const { tool } = fabricTool({
+        external: true,
+        message: "Reading the canvas",
+        service: handler,
+      });
+
+      expect(tool.external).toBe(true);
+      expect(tool.message).toBe("Reading the canvas");
+      expect(tool.readOnly).toBe(true);
+    });
+
     it("converts handler input to JSON Schema parameters", () => {
       const handler = fabricService({
         alias: "greet",

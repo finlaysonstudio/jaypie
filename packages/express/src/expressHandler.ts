@@ -286,7 +286,6 @@ function safeSend(res: Response, statusCode: number, body?: string): void {
 // Main
 //
 
-/* eslint-disable no-redeclare */
 function expressHandler<T>(
   handler: ExpressHandler<T>,
   options?: ExpressHandlerOptions,
@@ -299,7 +298,6 @@ function expressHandler<T>(
   handlerOrOptions: ExpressHandler<T> | ExpressHandlerOptions,
   optionsOrHandler?: ExpressHandlerOptions | ExpressHandler<T>,
 ): ExpressHandler<T> {
-  /* eslint-enable no-redeclare */
   let handler: ExpressHandler<T>;
   let options: ExpressHandlerOptions;
 

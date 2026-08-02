@@ -25,22 +25,25 @@ console.log(response.content); // "4"
 | Anthropic | "anthropic", "claude", "fable", "haiku", "mythos", "opus", "sonnet" | claude-sonnet-5 |
 | Google | "google", "gemini" | gemini-3.6-flash |
 | Fireworks | "fireworks" (also matched inside ids like `accounts/fireworks/models/...`) | accounts/fireworks/models/glm-5p2 |
+| Mistral | "mistral", "ministral", "codestral", "devstral", "magistral", "pixtral", "voxtral" | mistral-large-latest |
 | OpenRouter | "openrouter" | anthropic/claude-sonnet-5 |
-| xAI | "xai", "grok" | grok-latest |
+| xAI | "xai", "grok" | grok-4.5 |
 | Bedrock | "amazon.nova", "anthropic.claude", "meta.llama", "deepseek.", "google.gemma", "moonshotai.", "openai.gpt-oss", … | amazon.nova-pro-v1:0 |
 
 The provider name for Gemini models is `"google"` — `"gemini"` is accepted as a deprecated alias.
 
+Mistral's family names mostly do not contain the substring "mistral" (`ministral` is m-i-n-i-s-t-r-a-l; `codestral`/`devstral`/`pixtral`/`voxtral` share only the `-tral` suffix), so each family carries its own match word. Bedrock-hosted `mistral.mistral-*` ids still resolve to `bedrock`, and `mistralai/*` routes still resolve to `openrouter`; use the `mistral:` prefix to force the direct API.
+
 ### Model Constants
 
 - **`PROVIDER.<name>.DEFAULT`** — the single default model per provider (above), used when no `model` is given.
-- **`LLM.MODEL.*`** — the named model catalog (e.g. `MODEL.SONNET`, `MODEL.SOL`, `MODEL.GEMINI_FLASH`, `MODEL.GROK`, `MODEL.NOVA_PRO`, `MODEL.NOVA_LITE`), plus `MODEL.FIREWORKS.*` for Fireworks serverless models (`DEEPSEEK`, `GLM`, `GPT_OSS`, `KIMI`, `MINIMAX`, `QWEN`) and `MODEL.OPENROUTER.*` for provider-prefixed routes (`GLM`, `LUNA`, `SONNET`). Pick specific models from here. Amazon's Nova models are first-class ids served over Bedrock; Bedrock's third-party routes are not catalogued — pass the literal id (e.g. `us.anthropic.claude-sonnet-4-6`) and `determineModelProvider` resolves it to `bedrock`.
+- **`LLM.MODEL.*`** — the named model catalog (e.g. `MODEL.SONNET`, `MODEL.SOL`, `MODEL.GEMINI_FLASH`, `MODEL.GROK`, `MODEL.NOVA_PRO`, `MODEL.NOVA_LITE`), plus three nested subtrees: `MODEL.FIREWORKS.*` for Fireworks serverless models (`DEEPSEEK`, `GLM`, `GPT_OSS`, `INKLING`, `KIMI`, `MINIMAX`, `NEMOTRON`, `QWEN`), `MODEL.MISTRAL.*` (`LARGE`, `OCR`, `SMALL`), and `MODEL.OPENROUTER.*` for provider-prefixed routes (`GLM`, `LUNA`, `SONNET`). Pick specific models from here. `MODEL.MISTRAL.OCR` serves `POST /v1/ocr` rather than chat completions: it is priced per page, carries no `COST` entry, and is reached through `MistralProvider.ocr()`. Amazon's Nova models are first-class ids served over Bedrock; Bedrock's third-party routes are not catalogued — pass the literal id (e.g. `us.anthropic.claude-sonnet-4-6`) and `determineModelProvider` resolves it to `bedrock`.
 - The catalog is the **single source of truth for CI coverage**: `packages/llm/test/models.ts` derives the live capability matrix from `MODEL.*` plus each `PROVIDER.*.DEFAULT`, and the workflow shards it by provider. Adding a model to `MODEL.*` puts it under test; no id list exists anywhere else.
 - **Deprecated:** the size-tier map `PROVIDER.<name>.MODEL.{DEFAULT,LARGE,SMALL,TINY}`, the `DEFAULT.MODEL` bundle, and `ALL` are `@deprecated` and retired in 2.0 — use `PROVIDER.*.DEFAULT` for defaults and `MODEL.*` for named models.
 
 ### Model Pricing
 
-`LLM.COST` maps a literal model id to its standard list price per **million** tokens (`LlmModelCost`). Keys are string literals, not `MODEL.*` references, so a model retired from the catalog keeps its price and historic usage stays replayable.
+`LLM.COST` maps a literal model id to its standard list price per **million** tokens (`LlmModelCost`). Keys are string literals, not `MODEL.*` references, so a model retired from the catalog keeps its price and historic usage stays replayable. **Provider aliases are never priced.** A `-latest` id has no stable rate — the provider can repoint it at any time, and an entry under the alias would keep returning the old price with nothing to signal the move. `MODEL.MISTRAL.*` names aliases, so `COST[MODEL.MISTRAL.LARGE]` returns `undefined` by design: resolve the alias to the id the API echoes on the response (`response.model`) and price that.
 
 ```typescript
 import { LLM, type LlmModelCost } from "@jaypie/llm";
@@ -241,6 +244,51 @@ const custom = toolkit.filter((tool) => tool.name.startsWith("search_"));
 - The built-in tools (`random`, `roll`, `time`, `weather`) are annotated read-only
 - `fabricService({ readOnly: true })` propagates through `fabricTool` to the tool; `fabricTool({ readOnly })` overrides the service
 
+### External (Client-Side) Tools and Suspend/Resume
+
+A tool may declare `external: true` (and no `call`) to state its execution is owned by the caller — a browser tab, a device, a queue worker, a human. The definition travels to the provider; when the model calls it, the loop **parks** instead of executing:
+
+```typescript
+const toolkit = new Toolkit([
+  {
+    name: "open_card",
+    description: "Open a card in the canvas",
+    parameters: { type: "object", properties: { card: { type: "string" } } },
+    external: true, // no call — the loop parks when the model calls this
+  },
+]);
+
+const parked = await Llm.operate("Open the jobs card", { tools: toolkit });
+// parked.status === "in_progress"
+// parked.pending → [{ name, arguments, xid, ... }] — dispatch these to the client
+// parked.exchange → serializable envelope; envelope.pending is the resume payload
+```
+
+The parked envelope is always attached (even without `onExchange`) — it **is** the resume payload and survives `JSON.stringify` across any process boundary. Resume by passing it back with one result per outstanding call, correlated on `xid` (the provider tool-call id):
+
+```typescript
+const done = await Llm.operate(undefined, {
+  resume: {
+    exchange: parked.exchange,
+    results: [{ xid: parked.pending[0].xid, output: { opened: true } }],
+  },
+  tools: toolkit, // tools are code; re-supply them each segment
+});
+```
+
+- Results must cover the pending calls exactly — report a failure as `{ xid, error: "..." }` rather than omitting it; anything else is `BadRequestError`
+- The model defaults to the served model from the envelope and the fallback chain is skipped (call ids and history are provider-bound); resuming on a different provider is `BadRequestError`
+- Turn budget carries across the suspension (the wait consumes zero turns); pass a larger `turns` on resume to extend it
+- Usage and `historyDelta` on the final settlement span the whole exchange — treat a later settlement of the same exchange as a replacement, not an addition
+- `timing.duration` accumulates active loop time only; the parked wait is not counted
+- Progress emits `tool_pending` (with `xid`) instead of `tool_call`; the `beforeEachTool`/`afterEachTool` hooks do not fire for external calls; no `done` event fires on a park
+- `stream()` parks the same way: a `tool_pending` chunk, then the final `done` chunk; the parked envelope arrives via `onExchange` (or the exchange store) — a stream has no response object
+- Fire-and-forget is the degenerate case: dispatch `pending` to the client and never resume
+- With `LLM_EXCHANGE_ENABLED`, the parked exchange persists at status `in_progress` with the resume payload under `state.pending`
+- `fabricTool({ service, external: true })` emits a call-less external tool from a fabric service definition
+
+**Long-running in-process tools** remain fully supported: `Toolkit.call` awaits the tool's promise directly with no library timeout — a `call` implemented as a round trip is bounded only by the host. Retries apply to model requests only, never tool execution; the turn budget counts model turns, not wall time; the caller's `AbortSignal` does not reach `Toolkit.call`. Prefer `external: true` when the wait must survive the process (e.g., a Lambda cannot hold the invocation open).
+
 ## Structured Output
 
 ### Natural Schema
@@ -439,7 +487,7 @@ Errors thrown by the callback are logged and never interrupt the loop. Hooks rem
 
 ## Exchange Capture
 
-For a durable record of each `operate()` call (replay, labeling pipelines, cost accounting, dataset export), `onExchange` fires once per settlement (success or failure) with a fully serializable envelope:
+For a durable record of each `operate()` or `stream()` call (replay, labeling pipelines, cost accounting, dataset export), `onExchange` fires once per settlement (success or failure) with a fully serializable envelope:
 
 ```typescript
 const response = await Llm.operate(input, {
@@ -461,11 +509,58 @@ const response = await Llm.operate(input, {
 });
 ```
 
-Callback errors are logged and never interrupt the call. The envelope contains no functions. When exchange capture is active, `response.exchange` carries the same envelope.
+Callback errors are logged and never interrupt the call. The envelope contains no functions. When exchange capture is active, `operate()` also carries the same envelope on `response.exchange`.
+
+### Streamed Exchanges
+
+`stream()` settles an envelope too, from the stream loop rather than the facade. A generator has no response object, so the callback and the store are the whole surface — there is no `response.exchange`.
+
+- Settles once the stream terminates: normally, on error, or when the consumer stops reading. An abandoned generator still records what it consumed, with `status: "incomplete"`.
+- `historyDelta` carries the streamed assistant text alongside the turn's tool calls and results. The text is recorded for the envelope only; the history resent to the provider is unchanged.
+- `resolution` reports `fallbackUsed: false` and `fallbackAttempts: 1` — `stream()` has no fallback chain.
+- `stopReason` is unset and `ids` are absent; the streamed transport does not surface them.
 
 ### Default Persistence
 
-Set `LLM_EXCHANGE_ENABLED` (truthy, except `false`/`0`) and every `operate()` call persists as an `exchange` entity via `storeExchange` from `@jaypie/dynamodb` (optional peer dependency, resolved lazily and bundler-safe; silent no-op when absent). Requires `initClient()` to have run — warns, never throws, when uninitialized. Consumers with custom needs use the raw `onExchange` hook instead. See `skill("vocabulary")` for the exchange model and `skill("dynamodb")` for `storeExchange`.
+Set `LLM_EXCHANGE_ENABLED` (truthy, except `false`/`0`) and every `operate()` and `stream()` call persists as an `exchange` entity via `storeExchange` from `@jaypie/dynamodb` (optional peer dependency, resolved lazily and bundler-safe; silent no-op when absent). Requires `initClient()` to have run — warns, never throws, when uninitialized. Consumers with custom needs use the raw `onExchange` hook instead. See `skill("vocabulary")` for the exchange model and `skill("dynamodb")` for `storeExchange`.
+
+### Registering the Store
+
+The lazy resolution loads `@jaypie/dynamodb` from `node_modules`. When the host's copy is bundler-managed instead — a Next.js server bundle, for example — that is a *second* instance: the host initialized its copy, the loaded one is uninitialized, and every exchange is dropped with `[storeExchange] DynamoDB client is not initialized`. Register the instance at bootstrap to name which copy to use:
+
+```typescript
+import * as dynamodb from "@jaypie/dynamodb";
+import { Llm } from "@jaypie/llm";
+
+dynamodb.initClient();
+Llm.useExchangeStore(dynamodb);
+```
+
+- Accepts the module namespace, a bare `storeExchange` function, or `null` to clear the registration.
+- A value with no `storeExchange` throws `ConfigurationError` — a misregistration fails at bootstrap rather than silently.
+- Resolution order is registered → lazy import, so nothing changes for hosts that load the peer from `node_modules`.
+- Also exported standalone as `useExchangeStore` from `@jaypie/llm`.
+
+## Cancellation
+
+`operate()` and `stream()` accept a caller-owned `signal`. Aborting it cancels the in-flight provider request instead of paying for tokens nobody will read:
+
+```typescript
+const controller = new AbortController();
+request.on("close", () => controller.abort("client disconnected"));
+
+for await (const chunk of Llm.stream(input, {
+  model: "claude-sonnet-5",
+  signal: controller.signal,
+})) {
+  response.write(chunk.content);
+}
+```
+
+- A caller abort is terminal and is never retried. `operate()` rejects with `LlmAbortError` (`category: "aborted"`, status 499); `stream()` yields an error chunk with the same status, then its final `done` chunk.
+- An already-aborted signal fails before the first request goes out.
+- Abandoning a `stream()` generator (`break`, `return`, or a thrown error in the consumer) aborts the upstream request on teardown, with or without a `signal`.
+- The exchange envelope still settles on an abort, carrying the partial usage and history with `status: "incomplete"`.
 
 ## Fallback Providers
 
@@ -533,6 +628,7 @@ const flash = new Llm(LLM.MODEL.GEMINI_FLASH); // -> google, gemini-3.6-flash
 ANTHROPIC_API_KEY   # Required for Anthropic
 FIREWORKS_API_KEY   # Required for Fireworks
 GOOGLE_API_KEY      # Required for Google (Gemini models)
+MISTRAL_API_KEY     # Required for Mistral
 OPENAI_API_KEY      # Required for OpenAI
 OPENROUTER_API_KEY  # Required for OpenRouter
 XAI_API_KEY         # Required for xAI (Grok)
@@ -712,13 +808,13 @@ await Llm.operate("Solve this step by step", {
 Per-provider translation (`medium`/`high` stay aligned across providers; ends
 collapse where a provider has fewer rungs):
 
-| `effort`  | OpenAI `reasoning.effort` | Anthropic `output_config.effort` | Gemini 3 `thinkingLevel` | Gemini 2.5 `thinkingBudget` | Grok `reasoning_effort` | OpenRouter `reasoning.effort` | Fireworks `reasoning_effort` |
-|-----------|---------------------------|----------------------------------|--------------------------|-----------------------------|-------------------------|-------------------------------|------------------------------|
-| `lowest`  | minimal | low    | MINIMAL | 512   | low    | minimal | low    |
-| `low`     | low     | low    | LOW     | 4096  | low    | low     | low    |
-| `medium`  | medium  | medium | MEDIUM  | 8192  | medium | medium  | medium |
-| `high`    | high    | high   | HIGH    | 16384 | high   | high    | high   |
-| `highest` | xhigh   | max    | HIGH    | 24576 | high   | xhigh   | high   |
+| `effort`  | OpenAI `reasoning.effort` | Anthropic `output_config.effort` | Gemini 3 `thinkingLevel` | Gemini 2.5 `thinkingBudget` | Grok `reasoning_effort` | OpenRouter `reasoning.effort` | Fireworks `reasoning_effort` | Mistral `reasoning_effort` |
+|-----------|---------------------------|----------------------------------|--------------------------|-----------------------------|-------------------------|-------------------------------|------------------------------|----------------------------|
+| `lowest`  | minimal | low    | MINIMAL | 512   | low    | minimal | low    | none |
+| `low`     | low     | low    | LOW     | 4096  | low    | low     | low    | high |
+| `medium`  | medium  | medium | MEDIUM  | 8192  | medium | medium  | medium | high |
+| `high`    | high    | high   | HIGH    | 16384 | high   | high    | high   | high |
+| `highest` | xhigh   | max    | HIGH    | 24576 | high   | xhigh   | high   | high |
 
 When a neutral level has no distinct native rung and collapses onto a neighbor
 (e.g. `highest` → Grok `high`), the adapter logs it at `log.debug` for the
@@ -737,7 +833,7 @@ erroring):
 - **Google** — `thinkingLevel` for Gemini 3.x, `thinkingBudget` for Gemini 2.5;
   other models get nothing.
 - **xAI** — only models whose name advertises reasoning (e.g.
-  `grok-4-1-fast-reasoning`); bare `grok-latest` and `*-non-reasoning` are
+  `grok-4-1-fast-reasoning`); bare `grok-4.5` and `*-non-reasoning` are
   skipped.
 - **OpenRouter** — always forwarded; OpenRouter maps to the routed model's
   nearest supported level.
@@ -746,6 +842,12 @@ erroring):
   tools uses a tool emulation (the API rejects the pair); the operate loop
   enforces the format contract with a corrective retry turn when a model
   answers in prose.
+- **Mistral** — only models that reason accept the field, and they accept only
+  `none` and `high`, so the neutral scale collapses to a binary: `lowest` maps
+  to `none`, everything else to `high`. Mistral Large 3 rejects the field
+  outright and is skipped; a model that rejects it at runtime is cached and the
+  request transparently retried without it. Structured output combines with
+  tools natively — no emulation.
 - **Bedrock** — not yet wired; `effort` is ignored.
 
 First-class `effort` takes precedence over a raw `providerOptions.reasoning`
@@ -811,6 +913,10 @@ await Llm.operate(input, {
 ```
 
 OpenAI and xAI leave the limit unset (their defaults do not truncate early).
+Mistral is capped (32,768 streaming / 16,384 non-streaming) despite publishing
+no low ceiling: a Mistral model can degenerate into restating its answer when
+`format` and tools are combined, and an uncapped completion turns that into a
+multi-minute request. Override with `providerOptions: { max_tokens }`.
 OpenRouter varies by routed model; pass `max_tokens` via `providerOptions`
 when needed. A truncated response surfaces `stop_reason: "max_tokens"` —
 raise the limit or switch to `stream()`.

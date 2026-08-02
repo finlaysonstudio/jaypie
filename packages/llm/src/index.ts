@@ -5,6 +5,8 @@ export type {
   LlmCache,
   LlmExchangeCallback,
   LlmExchangeEnvelope,
+  LlmExchangePending,
+  LlmExchangePendingCall,
   LlmExchangeRequest,
   LlmExchangeResolution,
   LlmExchangeResponse,
@@ -29,6 +31,8 @@ export type {
   LlmProgressEvent,
   LlmProgressToolCall,
   LlmProvider,
+  LlmResumeOption,
+  LlmToolResultInput,
 } from "./types/LlmProvider.interface.js";
 export {
   LlmMessageRole,
@@ -41,13 +45,18 @@ export {
   isLlmOperateInputFile,
   isLlmOperateInputImage,
 } from "./types/LlmOperateInput.guards.js";
-export type { LlmTool } from "./types/LlmTool.interface.js";
+export type {
+  LlmCallableTool,
+  LlmExternalTool,
+  LlmTool,
+} from "./types/LlmTool.interface.js";
 export type {
   LlmStreamChunk,
   LlmStreamChunkDone,
   LlmStreamChunkError,
   LlmStreamChunkText,
   LlmStreamChunkToolCall,
+  LlmStreamChunkToolPending,
   LlmStreamChunkToolResult,
 } from "./types/LlmStreamChunk.interface.js";
 export { LlmStreamChunkType } from "./types/LlmStreamChunk.interface.js";
@@ -61,6 +70,7 @@ export type {
 
 // Errors
 export {
+  LlmAbortError,
   LlmError,
   LlmQuotaError,
   LlmRateLimitError,
@@ -69,6 +79,13 @@ export {
 } from "./errors/LlmError.js";
 export type { LlmErrorOptions } from "./errors/LlmError.js";
 export { ErrorCategory } from "./operate/types.js";
+
+// Exchange persistence
+export { useExchangeStore } from "./observability/exchangeStore.js";
+export type {
+  ExchangeStore,
+  ExchangeStoreFunction,
+} from "./observability/exchangeStore.js";
 
 // Utilities
 export { extractReasoning } from "./util/extractReasoning.js";
@@ -83,5 +100,11 @@ export { FireworksProvider } from "./providers/fireworks/index.js";
 /** @deprecated Use GoogleProvider — "Google" is the provider; Gemini is the model family */
 export { GoogleProvider as GeminiProvider } from "./providers/google/index.js";
 export { GoogleProvider } from "./providers/google/index.js";
+export { MistralProvider } from "./providers/mistral/index.js";
+export type {
+  MistralOcrPage,
+  MistralOcrResponse,
+  OcrRequest,
+} from "./providers/mistral/index.js";
 export { OpenRouterProvider } from "./providers/openrouter/index.js";
 export { XaiProvider } from "./providers/xai/index.js";

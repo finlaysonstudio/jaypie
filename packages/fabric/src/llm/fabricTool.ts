@@ -48,6 +48,7 @@ export function fabricTool(config: FabricToolConfig): FabricToolResult {
     alias,
     description,
     exclude,
+    external,
     input,
     message,
     name,
@@ -76,6 +77,26 @@ export function fabricTool(config: FabricToolConfig): FabricToolResult {
 
   // Convert input definitions to JSON Schema
   const parameters = inputToJsonSchema(service.input, { exclude });
+
+  // External: the definition travels, execution happens elsewhere. The
+  // service is never invoked — no call is created, and the operate loop
+  // parks when the model calls this tool.
+  if (external === true) {
+    const externalTool: LlmTool = {
+      description: toolDescription,
+      external: true,
+      name: toolName,
+      parameters,
+      type: "function",
+    };
+    if (message !== undefined) {
+      externalTool.message = message;
+    }
+    if (service.readOnly !== undefined) {
+      externalTool.readOnly = service.readOnly;
+    }
+    return { tool: externalTool };
+  }
 
   // Create context callbacks that wrap with error swallowing
   const sendMessage = onMessage

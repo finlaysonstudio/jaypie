@@ -51,6 +51,18 @@ describe("Toolkit", () => {
     call: vi.fn(),
   };
 
+  // External tool: execution owned by the caller, no call
+  const externalTool: LlmTool = {
+    name: "externalTool",
+    description: "An externally executed tool",
+    type: "function",
+    parameters: {
+      type: "object",
+      properties: {},
+    },
+    external: true,
+  };
+
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -107,9 +119,35 @@ describe("Toolkit", () => {
         "__Explanation",
       );
     });
+
+    it("should strip the external marker from the provider payload", () => {
+      const toolkit = new Toolkit([externalTool]);
+      expect(toolkit.tools[0]).not.toHaveProperty("external");
+      expect(toolkit.tools[0]).not.toHaveProperty("call");
+    });
+  });
+
+  describe("isExternal", () => {
+    it("returns true for external tools", () => {
+      const toolkit = new Toolkit([externalTool, mockTool]);
+      expect(toolkit.isExternal("externalTool")).toBe(true);
+    });
+
+    it("returns false for callable tools and unknown names", () => {
+      const toolkit = new Toolkit([externalTool, mockTool]);
+      expect(toolkit.isExternal("testTool")).toBe(false);
+      expect(toolkit.isExternal("unknown")).toBe(false);
+    });
   });
 
   describe("call", () => {
+    it("should throw ConfigurationError for an external tool", async () => {
+      const toolkit = new Toolkit([externalTool]);
+      await expect(
+        toolkit.call({ name: "externalTool", arguments: "{}" }),
+      ).rejects.toThrow("externally executed");
+    });
+
     it("should call the tool with string arguments", async () => {
       const toolkit = new Toolkit([mockTool]);
       const args = JSON.stringify({ testParam: "value" });

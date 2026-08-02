@@ -63,6 +63,9 @@ const mockOperate = createMockResolvedFunction({
   ],
 });
 const mockSend = createMockResolvedFunction("_MOCK_LLM_RESPONSE");
+// Host bootstrap registers the exchange store beside initClient(); mocked so
+// that call is inert and assertable rather than reaching the real module state
+export const useExchangeStore = createMockReturnedFunction(undefined);
 export const Llm = Object.assign(
   // vitest 4 requires a constructable (non-arrow) implementation when the mock
   // is instantiated with `new`. A plain `function` returning an object replaces
@@ -81,6 +84,7 @@ export const Llm = Object.assign(
   {
     operate: mockOperate,
     send: mockSend,
+    useExchangeStore,
   },
 );
 
@@ -142,6 +146,12 @@ export const FireworksProvider = createMockWrappedObject(
 export const GoogleProvider = createMockWrappedObject(original.GoogleProvider, {
   isClass: true,
 });
+export const MistralProvider = createMockWrappedObject(
+  original.MistralProvider,
+  {
+    isClass: true,
+  },
+);
 /** @deprecated Use GoogleProvider — "Google" is the provider; Gemini is the model family */
 export const GeminiProvider = GoogleProvider;
 export const OpenRouterProvider = createMockWrappedObject(
@@ -156,6 +166,7 @@ export const XaiProvider = createMockWrappedObject(original.XaiProvider, {
 
 // Type guards and utilities - re-export from original (these are pure functions)
 export const ErrorCategory = original.ErrorCategory;
+export const LlmAbortError = original.LlmAbortError;
 export const LlmError = original.LlmError;
 export const LlmQuotaError = original.LlmQuotaError;
 export const LlmRateLimitError = original.LlmRateLimitError;

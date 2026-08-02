@@ -1225,6 +1225,117 @@ describe("OperateLoop", () => {
       expect(lastMessage.content).toContain("structured_output");
     });
 
+    it("converts prose in a fresh context when the adapter supports conversion", async () => {
+      Object.defineProperty(mockAdapter, "supportsStructuredOutputConversion", {
+        value: true,
+      });
+      mockAdapter.parseResponse
+        .mockReturnValueOnce({
+          content: "You rolled 5, 2, 4, 3, 5 for a total of 19!",
+          hasToolCalls: false,
+          stopReason: "end_turn",
+          raw: {},
+        } as ParsedResponse)
+        .mockReturnValueOnce({
+          content: '{"total":19}',
+          hasToolCalls: false,
+          stopReason: "end_turn",
+          raw: {},
+        } as ParsedResponse);
+      const loop = new OperateLoop({
+        adapter: mockAdapter,
+        client: mockClient,
+      });
+
+      const response = await loop.execute("Roll dice", { format, turns: 3 });
+
+      expect(response.content).toEqual({ total: 19 });
+      expect(mockAdapter.executeRequest).toHaveBeenCalledTimes(2);
+
+      // The conversion call carries no conversation, no tools, and no system
+      // prompt — only the instruction and the prose to transcribe
+      const conversionBuild = mockAdapter.buildRequest.mock.calls[1][0];
+      expect(conversionBuild.messages).toHaveLength(1);
+      expect(conversionBuild.tools).toBeUndefined();
+      expect(conversionBuild.system).toBeUndefined();
+      expect(conversionBuild.structuredOutputRetry).toBeUndefined();
+      expect(conversionBuild.messages[0].content).toContain(
+        "You rolled 5, 2, 4, 3, 5 for a total of 19!",
+      );
+      expect(conversionBuild.messages[0].content).toContain("Do not add");
+    });
+
+    it("falls through to the corrective turn when conversion fails", async () => {
+      Object.defineProperty(mockAdapter, "supportsStructuredOutputConversion", {
+        value: true,
+      });
+      Object.defineProperty(mockAdapter, "supportsStructuredOutputRetry", {
+        value: true,
+      });
+      mockAdapter.parseResponse
+        .mockReturnValueOnce({
+          content: "You rolled a total of 21!",
+          hasToolCalls: false,
+          stopReason: "end_turn",
+          raw: {},
+        } as ParsedResponse)
+        // Conversion answers with prose too, so it yields nothing
+        .mockReturnValueOnce({
+          content: "still not json",
+          hasToolCalls: false,
+          stopReason: "end_turn",
+          raw: {},
+        } as ParsedResponse)
+        .mockReturnValueOnce({
+          content: undefined,
+          hasToolCalls: true,
+          stopReason: "tool_calls",
+          raw: {},
+        } as ParsedResponse);
+      // The conversion call goes through parseResponse only, so just the first
+      // turn reports no structured output before the corrective turn succeeds
+      mockAdapter.hasStructuredOutput = vi
+        .fn()
+        .mockReturnValueOnce(false)
+        .mockReturnValue(true);
+      mockAdapter.extractStructuredOutput = vi.fn(() => ({ total: 21 }));
+      const loop = new OperateLoop({
+        adapter: mockAdapter,
+        client: mockClient,
+      });
+
+      const response = await loop.execute("Roll dice", { format, turns: 3 });
+
+      expect(response.content).toEqual({ total: 21 });
+      expect(mockAdapter.executeRequest).toHaveBeenCalledTimes(3);
+    });
+
+    it("falls through when the conversion call throws", async () => {
+      Object.defineProperty(mockAdapter, "supportsStructuredOutputConversion", {
+        value: true,
+      });
+      mockAdapter.parseResponse.mockReturnValueOnce({
+        content: "You rolled a total of 21!",
+        hasToolCalls: false,
+        stopReason: "end_turn",
+        raw: {},
+      } as ParsedResponse);
+      mockAdapter.executeRequest
+        .mockResolvedValueOnce(
+          {} as Awaited<ReturnType<typeof mockAdapter.executeRequest>>,
+        )
+        .mockRejectedValueOnce(new Error("conversion exploded"));
+      const loop = new OperateLoop({
+        adapter: mockAdapter,
+        client: mockClient,
+      });
+
+      const response = await loop.execute("Roll dice", { format, turns: 3 });
+
+      // The original prose survives; the salvage failure does not replace it
+      expect(response.content).toBe("You rolled a total of 21!");
+    });
+
     it("returns prose unchanged when the adapter does not support retry", async () => {
       mockAdapter.parseResponse.mockReturnValueOnce({
         content: "You rolled a total of 21!",

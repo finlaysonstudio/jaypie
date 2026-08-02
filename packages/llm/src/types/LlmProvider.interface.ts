@@ -225,16 +225,19 @@ export enum LlmProgressEventType {
   Start = "start",
   ToolCall = "tool_call",
   ToolError = "tool_error",
+  ToolPending = "tool_pending",
   ToolResult = "tool_result",
 }
 
 export interface LlmProgressToolCall {
-  /** JSON string of arguments (tool_call events only) */
+  /** JSON string of arguments (tool_call and tool_pending events only) */
   arguments?: string;
-  /** Resolved `LlmTool.message`, when the tool defines one (tool_call events only) */
+  /** Resolved `LlmTool.message`, when the tool defines one (tool_call and tool_pending events only) */
   message?: string;
   /** Tool name */
   name: string;
+  /** Provider tool-call id — correlate the external result on this (tool_pending events only) */
+  xid?: string;
 }
 
 /**
@@ -331,10 +334,42 @@ export interface LlmExchangeResolution {
 }
 
 export interface LlmExchangeTiming {
-  /** Milliseconds from start to settlement */
+  /** Milliseconds of active loop time — a parked wait is not counted */
   duration: number;
   /** ISO 8601 */
   startedAt: string;
+}
+
+/**
+ * One outstanding external tool call on a parked exchange.
+ */
+export interface LlmExchangePendingCall {
+  /** JSON string of arguments */
+  arguments: string;
+  /** Resolved `LlmTool.message`, when the tool defines one */
+  message?: string;
+  name: string;
+  /** Provider-native tool-call object; preserved for fidelity, JSON-serializable */
+  raw?: unknown;
+  /** Provider tool-call id — the external identifier results are correlated on */
+  xid: string;
+}
+
+/**
+ * Resume payload carried by a parked exchange envelope. Present only when
+ * the loop suspended at one or more external tool calls; the envelope with
+ * this block is everything `resume` needs to continue the turn later,
+ * across process boundaries.
+ */
+export interface LlmExchangePending {
+  calls: LlmExchangePendingCall[];
+  consecutiveToolErrors: number;
+  /** Full processed provider-neutral history at park, including the function_call items for `calls` */
+  history: LlmHistory;
+  /** Where this exchange's delta began, so the final settlement's historyDelta spans the whole exchange */
+  initialHistoryLength: number;
+  /** Turns consumed so far; counts against the resumed budget */
+  turn: number;
 }
 
 /**
@@ -344,10 +379,34 @@ export interface LlmExchangeTiming {
 export interface LlmExchangeEnvelope {
   /** Provider response id(s) per model turn, when available */
   ids?: string[];
+  /** Present when the exchange is parked at external tool calls */
+  pending?: LlmExchangePending;
   request: LlmExchangeRequest;
   resolution: LlmExchangeResolution;
   response: LlmExchangeResponse;
   timing: LlmExchangeTiming;
+}
+
+/**
+ * The result of one external tool call, supplied on resume and correlated
+ * on `xid`. Set `error` to report the call failed; it is formatted like the
+ * loop's own error tool_result.
+ */
+export interface LlmToolResultInput {
+  error?: string;
+  output?: AnyValue;
+  xid: string;
+}
+
+/**
+ * Resume a parked exchange: pass the parked envelope back with one result
+ * per outstanding call. Results must cover the pending calls exactly — no
+ * provider accepts a partial tool-result turn; report a missing outcome as
+ * an `error` result instead.
+ */
+export interface LlmResumeOption {
+  exchange: LlmExchangeEnvelope;
+  results: LlmToolResultInput[];
 }
 
 export type LlmExchangeCallback = (
@@ -488,6 +547,22 @@ export interface LlmOperateOptions {
     system?: boolean;
   };
   providerOptions?: JsonObject;
+  /**
+   * Resume a parked exchange (one suspended at external tool calls) with
+   * the outstanding results. The input argument must be omitted — the
+   * conversation travels inside the envelope. The model defaults to the
+   * envelope's served model and the fallback chain is skipped: call ids
+   * and history are provider-bound.
+   */
+  resume?: LlmResumeOption;
+  /**
+   * Caller-owned cancellation. Aborting it cancels the in-flight provider
+   * request and settles the call: `operate()` rejects with `LlmAbortError`
+   * and `stream()` yields a matching error chunk. A caller abort is never
+   * retried. Abandoning a `stream()` generator aborts the upstream request
+   * as well, with or without this option.
+   */
+  signal?: AbortSignal;
   system?: string;
   temperature?: number;
   tools?: LlmTool[] | Toolkit;
@@ -544,6 +619,11 @@ export interface LlmOperateResponse {
   history: LlmHistory;
   model?: string;
   output: LlmOutput;
+  /**
+   * Outstanding external tool calls when the loop parked
+   * (`status: "in_progress"`). Mirrors `exchange.pending.calls`.
+   */
+  pending?: LlmExchangePendingCall[];
   /** Which provider actually handled the request */
   provider?: string;
   reasoning: string[];
@@ -556,7 +636,7 @@ export interface LlmOperateResponse {
 
 export interface LlmProvider {
   operate?(
-    input: string | LlmHistory | LlmInputMessage | LlmOperateInput,
+    input?: string | LlmHistory | LlmInputMessage | LlmOperateInput,
     options?: LlmOperateOptions,
   ): Promise<LlmOperateResponse>;
   send(
@@ -564,7 +644,7 @@ export interface LlmProvider {
     options?: LlmMessageOptions,
   ): Promise<string | JsonObject>;
   stream?(
-    input: string | LlmHistory | LlmInputMessage | LlmOperateInput,
+    input?: string | LlmHistory | LlmInputMessage | LlmOperateInput,
     options?: LlmOperateOptions,
   ): AsyncIterable<LlmStreamChunk>;
 }

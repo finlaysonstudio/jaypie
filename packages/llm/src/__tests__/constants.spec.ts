@@ -64,6 +64,20 @@ describe("Constants", () => {
   });
 
   describe("MODEL Constants", () => {
+    it("Exposes a Mistral subtree", () => {
+      expect(MODEL.MISTRAL).toBeObject();
+      expect(MODEL.MISTRAL.LARGE).toBe("mistral-large-latest");
+      expect(MODEL.MISTRAL.OCR).toBe("mistral-ocr-4-0");
+      expect(MODEL.MISTRAL.SMALL).toBe("mistral-small-latest");
+    });
+
+    it("Does not catalog mistral-medium", () => {
+      // Removed for failing to combine tools with structured output; see the
+      // note in constants.ts. Its COST entry is retained deliberately.
+      expect(Object.keys(MODEL.MISTRAL)).not.toContain("MEDIUM");
+      expect(COST["mistral-medium-3-5"]).toBeObject();
+    });
+
     it("Exposes an OpenRouter subtree of provider-prefixed routes", () => {
       expect(MODEL.OPENROUTER).toBeObject();
       expect(MODEL.OPENROUTER.GLM).toBe("z-ai/glm-5.2");
@@ -98,6 +112,7 @@ describe("Constants", () => {
     it("Exposes a single default model per provider, drawn from MODEL.*", () => {
       expect(PROVIDER.ANTHROPIC.DEFAULT).toBe(MODEL.SONNET);
       expect(PROVIDER.GOOGLE.DEFAULT).toBe(MODEL.GEMINI_FLASH);
+      expect(PROVIDER.MISTRAL.DEFAULT).toBe(MODEL.MISTRAL.LARGE);
       expect(PROVIDER.OPENAI.DEFAULT).toBe(MODEL.SOL);
       expect(PROVIDER.OPENROUTER.DEFAULT).toBe(MODEL.OPENROUTER.SONNET);
       expect(PROVIDER.XAI.DEFAULT).toBe(MODEL.GROK);
@@ -114,15 +129,34 @@ describe("Constants", () => {
     // so they are deliberately absent from COST. Amazon's own Nova models are
     // first-class and priced.
     const proxyRoutes: string[] = [...Object.values(MODEL.OPENROUTER)];
-    const firstClassModels = Object.values(MODEL)
-      .flatMap((value) =>
-        typeof value === "string" ? [value] : Object.values(value),
-      )
-      .filter((model) => !proxyRoutes.includes(model));
+    // Models billed by a unit LlmModelCost cannot express. Mistral's OCR
+    // models price per page ($4/1000), not per million tokens, so they carry
+    // no COST entry.
+    const perPageModels: string[] = [MODEL.MISTRAL.OCR];
+    const catalogIds = Object.values(MODEL).flatMap((value) =>
+      typeof value === "string" ? [value] : Object.values(value),
+    );
+    // A `-latest` id is a provider alias, not a model. It has no stable price:
+    // the provider can repoint it at any time, and an entry under the alias
+    // would keep returning the old rate with nothing to signal the move.
+    // Resolve it to the id the API echoes on the response and price that.
+    const aliasModels = catalogIds.filter((model) => model.endsWith("-latest"));
+    const firstClassModels = catalogIds.filter(
+      (model) =>
+        !proxyRoutes.includes(model) &&
+        !perPageModels.includes(model) &&
+        !aliasModels.includes(model),
+    );
 
     it("Prices every first-class model in MODEL.*", () => {
       const unpriced = firstClassModels.filter((model) => !COST[model]);
       expect(unpriced).toBeEmpty();
+    });
+
+    it("Omits provider aliases, which have no stable price", () => {
+      for (const alias of aliasModels) {
+        expect(COST[alias]).toBeUndefined();
+      }
     });
 
     it("Prices the Bedrock default, an Amazon-native model", () => {
@@ -136,9 +170,15 @@ describe("Constants", () => {
       }
     });
 
+    it("Omits models billed per page rather than per token", () => {
+      for (const model of perPageModels) {
+        expect(COST[model]).toBeUndefined();
+      }
+    });
+
     it("Retains prices for historic models absent from MODEL.*", () => {
       for (const historic of [
-        "accounts/fireworks/models/nemotron-3-ultra-nvfp4",
+        "accounts/fireworks/models/kimi-k2p7-code",
         "claude-opus-4-6",
       ]) {
         expect(firstClassModels).not.toContain(historic);

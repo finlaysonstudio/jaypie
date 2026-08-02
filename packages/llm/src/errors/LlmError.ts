@@ -19,6 +19,15 @@ export interface LlmErrorOptions {
 
 //
 //
+// Constants
+//
+
+const ABORT_MESSAGE = "Request aborted by caller";
+const ABORT_STATUS = 499;
+const ABORT_TITLE = "Client Closed Request";
+
+//
+//
 // Base
 //
 
@@ -62,6 +71,22 @@ export class LlmError extends JaypieError {
 //
 // Subclasses
 //
+
+/**
+ * The caller aborted the request through the `signal` option. Terminal and
+ * never retried: the request stopped because the caller asked it to, not
+ * because the provider failed.
+ */
+export class LlmAbortError extends LlmError {
+  constructor(message: string = ABORT_MESSAGE, options: LlmErrorOptions = {}) {
+    super(message, ErrorCategory.Aborted, {
+      status: ABORT_STATUS,
+      title: ABORT_TITLE,
+      ...options,
+    });
+    this.name = "LlmAbortError";
+  }
+}
 
 /**
  * Short-term rate limiting (per-minute 429). Terminal within the request

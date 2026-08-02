@@ -31,6 +31,14 @@ export interface StandardToolCall {
 }
 
 /**
+ * An external tool call collected for a park, with its resolved message
+ */
+export interface PendingToolCall extends StandardToolCall {
+  /** Resolved `LlmTool.message`, when the tool defines one */
+  message?: string;
+}
+
+/**
  * Standardized tool result to send back to the provider
  */
 export interface StandardToolResult {
@@ -137,6 +145,8 @@ export interface ProviderToolDefinition {
  * Categories of errors for retry logic
  */
 export enum ErrorCategory {
+  /** The caller aborted the request through its own AbortSignal */
+  Aborted = "aborted",
   /** Error is transient and can be retried */
   Retryable = "retryable",
   /** Error is due to short-term rate limiting (retry after a delay) */
@@ -192,8 +202,19 @@ export interface OperateLoopState {
   currentInput: LlmHistory;
   /** Current turn number (0-indexed, incremented at start of each turn) */
   currentTurn: number;
+  /**
+   * Where the exchange's history delta began. Carried across a resume so the
+   * final settlement's historyDelta spans the whole exchange, not one segment.
+   */
+  exchangeInitialHistoryLength?: number;
   /** Formatted output schema for structured output */
   formattedFormat?: JsonObject;
+  /** Usage entries seeded from a resumed envelope (excluded from the tally) */
+  initialUsageCount?: number;
+  /** External tool calls the loop parked on this segment */
+  pending?: PendingToolCall[];
+  /** Turn count seeded from a resumed envelope (excluded from the tally) */
+  resumedFromTurn?: number;
   /** Stop reason from the most recent model response */
   lastStopReason?: string;
   /** Model-request retries across all turns (exchange envelope) */

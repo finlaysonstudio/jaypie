@@ -1,3 +1,4 @@
+import { ConfigurationError } from "@jaypie/errors";
 import { JAYPIE, resolveValue } from "@jaypie/kit";
 import { log as jaypieLog } from "@jaypie/logger";
 import { JsonObject } from "@jaypie/types";
@@ -51,6 +52,7 @@ export class Toolkit {
     return this._tools.map((tool) => {
       const toolCopy: any = { ...tool };
       delete toolCopy.call;
+      delete toolCopy.external;
       delete toolCopy.message;
       delete toolCopy.readOnly;
 
@@ -82,6 +84,16 @@ export class Toolkit {
 
       return toolCopy;
     });
+  }
+
+  /**
+   * Whether the named tool declares `external: true` — execution owned by
+   * the caller, so the operate loop parks instead of calling it. Unknown
+   * names return false.
+   */
+  isExternal(name: string): boolean {
+    const tool = this._tools.find((t) => t.name === name);
+    return tool?.external === true;
   }
 
   private parseArgs(args: string) {
@@ -144,6 +156,11 @@ export class Toolkit {
     const tool = this._tools.find((t) => t.name === name);
     if (!tool) {
       throw new Error(`Tool '${name}' not found`);
+    }
+    if (tool.external === true) {
+      throw new ConfigurationError(
+        `Tool '${name}' is externally executed and cannot be called by the toolkit`,
+      );
     }
 
     const parsedArgs = this.parseArgs(args);

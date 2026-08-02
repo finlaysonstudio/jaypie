@@ -1,5 +1,8 @@
+import { JsonObject } from "@jaypie/types";
+
 import {
   LlmExchangeEnvelope,
+  LlmExchangePending,
   LlmHistory,
   LlmInputMessage,
   LlmOperateInput,
@@ -7,7 +10,18 @@ import {
   LlmOperateResponse,
   LlmUsageItem,
 } from "../../types/LlmProvider.interface.js";
-import { OperateLoopState } from "../types.js";
+import { ProviderToolDefinition } from "../types.js";
+
+/**
+ * The loop state the envelope reads. Narrowed to the fields both the operate
+ * and stream loops carry, so either can settle an exchange.
+ */
+export interface ExchangeLoopState {
+  formattedFormat?: JsonObject;
+  formattedTools?: ProviderToolDefinition[];
+  lastStopReason?: string;
+  retries?: number;
+}
 
 //
 //
@@ -64,15 +78,17 @@ function extractResponseIds(responses: unknown[]): string[] | undefined {
 //
 
 /**
- * Assemble the serializable exchange envelope for one operate() settlement.
- * The `resolution` block is stamped by the Llm facade, which is the layer
- * that knows fallback outcome; the loop fills provider/model best-effort.
+ * Assemble the serializable exchange envelope for one settlement. For
+ * `operate()` the `resolution` block is stamped by the Llm facade, which is the
+ * layer that knows fallback outcome; the loop fills provider/model best-effort.
+ * `stream()` has no fallback, so StreamLoop stamps its own.
  */
 export function buildExchangeEnvelope({
   duration,
   initialHistoryLength,
   input,
   options,
+  pending,
   response,
   startedAt,
   state,
@@ -81,13 +97,16 @@ export function buildExchangeEnvelope({
   initialHistoryLength: number;
   input: string | LlmHistory | LlmInputMessage | LlmOperateInput;
   options: LlmOperateOptions;
+  /** Resume payload when the loop parked at external tool calls */
+  pending?: LlmExchangePending;
   response: LlmOperateResponse;
   startedAt: string;
-  state: OperateLoopState;
+  state: ExchangeLoopState;
 }): LlmExchangeEnvelope {
   const historyDelta = response.history.slice(initialHistoryLength);
   return {
     ids: extractResponseIds(response.responses),
+    ...(pending ? { pending } : {}),
     request: {
       cache: options.cache,
       data: options.data,

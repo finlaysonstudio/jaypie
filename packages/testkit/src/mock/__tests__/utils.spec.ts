@@ -550,6 +550,23 @@ describe("Mock Utils", () => {
           );
         }
       });
+
+      it("should produce a call-less tool when external is true", () => {
+        const tool = createMockTool({ external: true, name: "externalTool" });
+
+        expect(tool.external).toBe(true);
+        expect(tool).not.toHaveProperty("call");
+        expect(tool.name).toBe("externalTool");
+        expect(tool.description).toBe("Mock tool for testing");
+      });
+
+      it("should produce a call-less tool from name and external options", () => {
+        const tool = createMockTool("externalTool", { external: true });
+
+        expect(tool.external).toBe(true);
+        expect(tool).not.toHaveProperty("call");
+        expect(tool.name).toBe("externalTool");
+      });
     });
 
     describe("Specific Scenarios", () => {
