@@ -821,6 +821,10 @@ await Llm.operate(input, {
 ```
 
 OpenAI and xAI leave the limit unset (their defaults do not truncate early).
+Mistral is capped (32,768 streaming / 16,384 non-streaming) despite publishing
+no low ceiling: `mistral-medium-3-5` can degenerate into restating its answer
+when `format` and tools are combined, and an uncapped completion turns that
+into a multi-minute request. Override with `providerOptions: { max_tokens }`.
 OpenRouter varies by routed model; pass `max_tokens` via `providerOptions`
 when needed. A truncated response surfaces `stop_reason: "max_tokens"` —
 raise the limit or switch to `stream()`.

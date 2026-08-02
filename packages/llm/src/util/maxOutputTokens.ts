@@ -24,6 +24,14 @@ const MODEL_MAX_OUTPUT_TOKENS: { pattern: RegExp; tokens: number }[] = [
   // Google — https://ai.google.dev/gemini-api/docs/models
   { pattern: /gemini-(2\.5|3)/, tokens: 65_536 },
   { pattern: /gemini/, tokens: 8_192 },
+  // Mistral — https://docs.mistral.ai/models/overview
+  // Listed not because Mistral publishes a low ceiling (context is 256K) but
+  // because an unbounded completion is a real latency hazard here: with
+  // response_format and tools together, mistral-medium-3-5 can degenerate into
+  // restating its answer, and one uncapped `both` cell ran 7m57s in CI
+  // (2026-08-02) against under 1.5s for every other cell. Capping the
+  // non-streaming default bounds that tail; streaming still resolves higher.
+  { pattern: /^(ministral|mistral)/, tokens: 32_768 },
 ];
 
 //

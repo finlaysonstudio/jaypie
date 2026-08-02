@@ -153,8 +153,12 @@ generations do not silently truncate:
 The `stream` flag on `OperateRequest` (set by `StreamLoop`) tells adapters
 which transport the request uses. Callers override per call via
 `providerOptions` (`max_tokens` for Anthropic, `maxOutputTokens` for Google).
-OpenAI, xAI, and OpenRouter leave the limit unset. When adding models, update
-the table in `src/util/maxOutputTokens.ts`.
+OpenAI, xAI, and OpenRouter leave the limit unset. **Mistral is capped**
+(32,768 model max, 16,384 non-streaming) even though it publishes no low
+ceiling: `mistral-medium-3-5` degenerates into restating its answer when
+`format` and tools are combined, and uncapped that ran a single live matrix
+cell for 7m57s against under 1.5s for every other cell. When adding models,
+update the table in `src/util/maxOutputTokens.ts`.
 
 ### Prompt Caching
 

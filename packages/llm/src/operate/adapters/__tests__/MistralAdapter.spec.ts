@@ -255,6 +255,27 @@ describe("MistralAdapter", () => {
         ).toBe(0.3);
       });
 
+      it("caps non-streaming output tokens", () => {
+        // An uncapped completion is a latency hazard: medium-3-5 degenerates
+        // into restating its answer when format and tools are combined
+        const request = adapter.buildRequest(baseRequest());
+        expect(request.max_tokens).toBe(16384);
+      });
+
+      it("allows a higher cap when streaming", () => {
+        const request = adapter.buildRequest(
+          baseRequest({ stream: true } as Partial<OperateRequest>),
+        );
+        expect(request.max_tokens).toBe(32768);
+      });
+
+      it("lets providerOptions override the cap", () => {
+        const request = adapter.buildRequest(
+          baseRequest({ providerOptions: { max_tokens: 100 } }),
+        );
+        expect(request.max_tokens).toBe(100);
+      });
+
       it("merges providerOptions", () => {
         const request = adapter.buildRequest(
           baseRequest({ providerOptions: { random_seed: 42 } }),

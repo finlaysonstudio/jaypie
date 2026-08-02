@@ -107,10 +107,17 @@ const MATRIX_EXPECT: Record<
   [MODEL.FIREWORKS.QWEN]: { both: "warn", pdf: "skip" },
   // Mistral sends response_format and tools together natively, and Large 3 and
   // Small 4 answer cleanly. Medium 3.5 does not: after a tool result it
-  // repeats the same JSON object several times as prose instead of returning
-  // one (observed 2026-08-02). The operate loop's corrective structured_output
-  // turn recovers a valid object, so the cell succeeds while logging a warn.
-  [MODEL.MISTRAL.MEDIUM]: { both: "warn" },
+  // degenerates into restating its answer, and the outcome is not stable
+  // enough to pin. All three landed on the same build (2026-08-02):
+  //   fail — 502 Bad Function Call, the repeated objects emitted as a tool
+  //          *name*, then 15 retries with exponential backoff
+  //   warn — the corrective structured_output turn recovers a valid object
+  //   ok   — a clean object, no warning at all
+  // Pinning any one value makes the shard flaky, so the cell is skipped. It
+  // was also the latency outlier: 7m57s in CI against under 1.5s for every
+  // other cell, which is what `max_tokens` now bounds (see MistralAdapter).
+  // The other six cells still cover this model.
+  [MODEL.MISTRAL.MEDIUM]: { both: "skip" },
   [MODEL.NOVA_LITE]: { both: "skip" },
   [MODEL.NOVA_PRO]: { structured: "skip" },
 };

@@ -5,6 +5,7 @@ import { z } from "zod/v4";
 import { PROVIDER } from "../../constants.js";
 import { promptCacheKey, resolveCache } from "../../util/cacheControl.js";
 import { paperedEffortMessage, toMistralEffort } from "../../util/effort.js";
+import { resolveMaxOutputTokens } from "../../util/maxOutputTokens.js";
 import { Toolkit } from "../../tools/Toolkit.class.js";
 import {
   LlmHistory,
@@ -146,6 +147,7 @@ interface MistralRequest {
   response_format?: MistralResponseFormat;
   reasoning_effort?: string;
   prompt_cache_key?: string;
+  max_tokens?: number;
 }
 
 /**
@@ -570,6 +572,18 @@ export class MistralAdapter extends BaseProviderAdapter {
           request.tools ?? [],
         ]),
       );
+    }
+
+    // Bound the completion. Mistral publishes no low output ceiling, but an
+    // uncapped generation is a real latency hazard: with response_format and
+    // tools together, mistral-medium-3-5 can degenerate into restating its
+    // answer until it stops on its own. Callers override via
+    // providerOptions.max_tokens, which is applied below.
+    const maxTokens = resolveMaxOutputTokens(mistralRequest.model, {
+      stream: request.stream,
+    });
+    if (maxTokens !== undefined) {
+      mistralRequest.max_tokens = maxTokens;
     }
 
     // Caller passthrough. Mistral rejects unknown fields with a 422, so this
