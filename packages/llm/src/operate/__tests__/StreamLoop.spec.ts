@@ -1745,6 +1745,117 @@ describe("StreamLoop", () => {
       // Should have only attempted once
       expect(mockAdapter.executeStreamRequest).toHaveBeenCalledTimes(1);
     });
+
+    describe("Rate Limits", () => {
+      function rateLimitAdapter(failures: number): void {
+        let callCount = 0;
+        mockAdapter.executeStreamRequest = vi.fn(
+          async function* (): AsyncIterable<LlmStreamChunk> {
+            callCount++;
+            if (callCount <= failures) {
+              throw new Error("Rate limit exceeded");
+            }
+            yield { type: LlmStreamChunkType.Text, content: "Success" };
+            yield {
+              type: LlmStreamChunkType.Done,
+              usage: [
+                {
+                  input: 10,
+                  output: 5,
+                  reasoning: 0,
+                  total: 15,
+                  provider: "mock",
+                  model: "mock-model",
+                },
+              ],
+            };
+          },
+        );
+
+        // Adapters report a rate limit as non-retryable; the loop's own
+        // budget is what grants the retry
+        mockAdapter.classifyError = vi.fn(() => ({
+          error: new Error("Rate limit exceeded"),
+          category: ErrorCategory.RateLimit,
+          shouldRetry: false,
+          suggestedDelayMs: 1,
+        }));
+        mockAdapter.isRetryableError = vi.fn(() => false);
+      }
+
+      it("waits and retries a rate-limited stream", async () => {
+        rateLimitAdapter(1);
+
+        const loop = new StreamLoop({
+          adapter: mockAdapter,
+          client: mockClient,
+          retryPolicy: new RetryPolicy({ rateLimitMaxDelayMs: 1 }),
+        });
+
+        const chunks = await collectChunks(loop.execute("Hello"));
+
+        expect(mockAdapter.executeStreamRequest).toHaveBeenCalledTimes(2);
+        const textChunks = chunks.filter(
+          (c) => c.type === LlmStreamChunkType.Text,
+        );
+        expect(textChunks[0]).toMatchObject({ content: "Success" });
+      });
+
+      it("throws once the rate limit budget is exhausted", async () => {
+        rateLimitAdapter(Infinity);
+
+        const loop = new StreamLoop({
+          adapter: mockAdapter,
+          client: mockClient,
+          retryPolicy: new RetryPolicy({
+            rateLimitMaxDelayMs: 1,
+            rateLimitRetries: 2,
+          }),
+        });
+
+        await expect(collectChunks(loop.execute("Hello"))).rejects.toThrow(
+          "Rate limit exceeded",
+        );
+
+        // Initial attempt + 2 rate limit retries
+        expect(mockAdapter.executeStreamRequest).toHaveBeenCalledTimes(3);
+      });
+
+      it("honors retry rateLimit false", async () => {
+        rateLimitAdapter(Infinity);
+
+        const loop = new StreamLoop({
+          adapter: mockAdapter,
+          client: mockClient,
+        });
+
+        await expect(
+          collectChunks(loop.execute("Hello", { retry: { rateLimit: false } })),
+        ).rejects.toThrow("Rate limit exceeded");
+
+        expect(mockAdapter.executeStreamRequest).toHaveBeenCalledTimes(1);
+      });
+
+      it("does not spend the transient retry budget", async () => {
+        rateLimitAdapter(Infinity);
+
+        const loop = new StreamLoop({
+          adapter: mockAdapter,
+          client: mockClient,
+          retryPolicy: new RetryPolicy({
+            maxRetries: 1,
+            rateLimitMaxDelayMs: 1,
+            rateLimitRetries: 2,
+          }),
+        });
+
+        await expect(collectChunks(loop.execute("Hello"))).rejects.toThrow(
+          "Rate limit exceeded",
+        );
+
+        expect(mockAdapter.executeStreamRequest).toHaveBeenCalledTimes(3);
+      });
+    });
   });
 
   describe("Tool Error Handling (Issue #242)", () => {

@@ -7,6 +7,7 @@ import {
 } from "@jaypie/types";
 import { z } from "zod/v4";
 import { type LlmEffort } from "../constants.js";
+import { type LlmRetryOptions } from "../operate/retry/RetryPolicy.js";
 import { LlmTool } from "./LlmTool.interface.js";
 import { LlmStreamChunk } from "./LlmStreamChunk.interface.js";
 import { Toolkit } from "../tools/Toolkit.class.js";
@@ -555,6 +556,15 @@ export interface LlmOperateOptions {
    * and history are provider-bound.
    */
   resume?: LlmResumeOption;
+  /**
+   * Retry controls. A rate-limited request waits and retries by default
+   * (`{ rateLimit: true }`), drawing on a budget separate from the
+   * transient-error retries. Pass `{ rateLimit: false }` to restore the
+   * terminal behavior where a 429 throws `LlmRateLimitError` immediately, or
+   * `{ rateLimit: { maxRetries, maxDelayMs } }` to tune the budget. Quota
+   * errors are never retried: waiting does not refill an exhausted plan.
+   */
+  retry?: LlmRetryOptions;
   /**
    * Caller-owned cancellation. Aborting it cancels the in-flight provider
    * request and settles the call: `operate()` rejects with `LlmAbortError`

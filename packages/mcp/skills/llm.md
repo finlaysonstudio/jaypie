@@ -720,6 +720,23 @@ try {
 }
 ```
 
+Rate limits and transient errors draw on **separate budgets**, so throttling
+never spends the retries reserved for a flaky connection. A 429 waits the
+provider's suggested delay (60s today) up to twice, capped at 90s per wait;
+a transient error follows the usual exponential backoff. Quota errors are
+never retried — waiting does not refill an exhausted plan.
+
+```typescript
+await Llm.operate(input, { retry: { rateLimit: false } }); // throw at once
+await Llm.operate(input, {
+  retry: { rateLimit: { maxDelayMs: 30_000, maxRetries: 1 } },
+});
+```
+
+A configured fallback chain wins over waiting: moving to the next provider is
+faster than sleeping, so only the final entry in the chain keeps its rate-limit
+budget. Waits are interruptible by the caller's `signal`.
+
 ## Testing Pattern
 
 ```typescript

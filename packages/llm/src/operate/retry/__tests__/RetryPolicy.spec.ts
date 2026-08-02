@@ -5,8 +5,12 @@ import {
   DEFAULT_INITIAL_DELAY_MS,
   DEFAULT_MAX_DELAY_MS,
   DEFAULT_MAX_RETRIES,
+  DEFAULT_RATE_LIMIT_DELAY_MS,
+  DEFAULT_RATE_LIMIT_MAX_DELAY_MS,
+  DEFAULT_RATE_LIMIT_RETRIES,
   defaultRetryPolicy,
   MAX_RETRIES_ABSOLUTE_LIMIT,
+  resolveRetryPolicy,
   RetryPolicy,
 } from "../RetryPolicy.js";
 
@@ -155,6 +159,93 @@ describe("RetryPolicy", () => {
       expect(policy.maxDelayMs).toBe(DEFAULT_MAX_DELAY_MS);
       expect(policy.backoffFactor).toBe(DEFAULT_BACKOFF_FACTOR);
       expect(policy.maxRetries).toBe(10);
+    });
+  });
+
+  describe("Rate Limit Budget", () => {
+    it("defaults to a small dedicated budget", () => {
+      expect(defaultRetryPolicy.rateLimitRetries).toBe(
+        DEFAULT_RATE_LIMIT_RETRIES,
+      );
+      expect(defaultRetryPolicy.rateLimitMaxDelayMs).toBe(
+        DEFAULT_RATE_LIMIT_MAX_DELAY_MS,
+      );
+    });
+
+    it("counts rate limit attempts against their own budget", () => {
+      const policy = new RetryPolicy({ maxRetries: 6, rateLimitRetries: 2 });
+
+      expect(policy.shouldRetryRateLimit(0)).toBe(true);
+      expect(policy.shouldRetryRateLimit(1)).toBe(true);
+      expect(policy.shouldRetryRateLimit(2)).toBe(false);
+    });
+
+    it("never accepts a negative budget", () => {
+      expect(new RetryPolicy({ rateLimitRetries: -5 }).rateLimitRetries).toBe(
+        0,
+      );
+    });
+
+    it("prefers the provider's suggested delay", () => {
+      expect(
+        defaultRetryPolicy.getRateLimitDelay({ suggestedDelayMs: 30000 }),
+      ).toBe(30000);
+    });
+
+    it("caps the suggested delay", () => {
+      expect(
+        defaultRetryPolicy.getRateLimitDelay({ suggestedDelayMs: 600000 }),
+      ).toBe(DEFAULT_RATE_LIMIT_MAX_DELAY_MS);
+    });
+
+    it("falls back to a growing delay from a one-minute floor", () => {
+      expect(defaultRetryPolicy.getRateLimitDelay()).toBe(
+        DEFAULT_RATE_LIMIT_DELAY_MS,
+      );
+      expect(defaultRetryPolicy.getRateLimitDelay({ attempt: 1 })).toBe(
+        DEFAULT_RATE_LIMIT_MAX_DELAY_MS,
+      );
+    });
+  });
+
+  describe("resolveRetryPolicy", () => {
+    it("returns the policy unchanged when no option is given", () => {
+      const policy = new RetryPolicy({ maxRetries: 3 });
+
+      expect(resolveRetryPolicy({ policy })).toBe(policy);
+      expect(resolveRetryPolicy({ policy, retry: {} })).toBe(policy);
+    });
+
+    it("disables the budget with rateLimit false", () => {
+      const resolved = resolveRetryPolicy({ retry: { rateLimit: false } });
+
+      expect(resolved.rateLimitRetries).toBe(0);
+    });
+
+    it("keeps the budget with rateLimit true", () => {
+      const resolved = resolveRetryPolicy({ retry: { rateLimit: true } });
+
+      expect(resolved.rateLimitRetries).toBe(DEFAULT_RATE_LIMIT_RETRIES);
+    });
+
+    it("tunes the budget from an object", () => {
+      const resolved = resolveRetryPolicy({
+        retry: { rateLimit: { maxDelayMs: 5000, maxRetries: 4 } },
+      });
+
+      expect(resolved.rateLimitRetries).toBe(4);
+      expect(resolved.rateLimitMaxDelayMs).toBe(5000);
+    });
+
+    it("preserves the transient budget when overriding rate limits", () => {
+      const policy = new RetryPolicy({ backoffFactor: 3, maxRetries: 5 });
+      const resolved = resolveRetryPolicy({
+        policy,
+        retry: { rateLimit: false },
+      });
+
+      expect(resolved.maxRetries).toBe(5);
+      expect(resolved.backoffFactor).toBe(3);
     });
   });
 });

@@ -286,7 +286,7 @@ the failed call.
 | Class | `category` | `status` | When |
 |-------|-----------|----------|------|
 | `LlmAbortError` | `aborted` | 499 | The caller's `signal` aborted the request; never retried |
-| `LlmRateLimitError` | `rate_limit` | 429 | Short-term rate limit; carries `retryAfterMs` |
+| `LlmRateLimitError` | `rate_limit` | 429 | Short-term rate limit survived the rate-limit retry budget; carries `retryAfterMs` |
 | `LlmQuotaError` | `quota` | 402 | Quota exhausted or insufficient funds; `reason: "quota" \| "billing"` |
 | `LlmUnrecoverableError` | `unrecoverable` | 502 | Bad request / auth / not found |
 | `LlmTransientError` | `retryable` | 504 | A transient/unknown error survived the retry budget |
@@ -300,7 +300,8 @@ try {
   if (error instanceof LlmQuotaError) {
     // terminal: exhausted quota or unbillable account (error.reason)
   } else if (error instanceof LlmRateLimitError) {
-    // back off error.retryAfterMs and retry
+    // the wait already happened and did not clear; error.retryAfterMs
+    // reports what was waited
   }
 }
 ```
@@ -310,9 +311,41 @@ consults the shared `classifyProviderError` pass so that cross-provider
 conditions agree: retryable structured-output compile timeouts (e.g. Anthropic
 `Grammar compilation timed out.`, issue #422), exhausted quota, and billing
 failures classify the same everywhere. A daily-quota `429` is classified as
-`Quota` (terminal), not `RateLimit`. Rate-limit and quota errors are **not**
-auto-retried within the request budget; they throw immediately as typed errors
-so the caller decides.
+`Quota` (terminal), not `RateLimit`. Quota errors are never retried: waiting
+does not refill an exhausted plan.
+
+### Rate Limit Backoff
+
+A rate-limited request waits and retries by default. The wait draws on a budget
+**separate from the transient-error retries**, so throttling never spends the
+retries reserved for a flaky socket, and a transient failure never eats the
+allowance for a 429.
+
+| Knob | Default | Meaning |
+|------|---------|---------|
+| `rateLimitRetries` | 2 | Attempts granted to a rate-limited request; 0 disables |
+| `rateLimitMaxDelayMs` | 90,000 | Ceiling on a single wait |
+
+The wait itself is the provider's `suggestedDelayMs` (every adapter reports
+60,000 today) when there is one, otherwise it grows from a one-minute floor by
+the policy's backoff factor. Either way it is capped. Waits are interruptible:
+a caller `signal` that aborts mid-wait ends the call immediately rather than
+holding the request for the remaining minute.
+
+```typescript
+await Llm.operate(input, { model: "mistral-large-latest" }); // waits and retries
+
+await Llm.operate(input, { retry: { rateLimit: false } });   // throws at once
+await Llm.operate(input, {
+  retry: { rateLimit: { maxDelayMs: 30_000, maxRetries: 1 } },
+});
+```
+
+**A configured fallback chain wins over waiting.** Reaching for another
+provider is strictly faster than sleeping a minute, so the facade tells every
+attempt that has somewhere left to go not to wait; only the final entry in the
+chain keeps its budget. An explicit `retry` option from the caller overrides
+that and applies to every attempt.
 
 **Model array sugar:**
 
@@ -895,14 +928,20 @@ knobs: `APP_MODELS`, `APP_GROUP`, `APP_CAPABILITIES`, `APP_USER`, `APP_FORCE`
 
 **Request pacing** (`test/rateLimit.ts`) exists because Mistral enforces a
 requests-per-second ceiling that varies by tier and by model, and returns a
-bare 429 with no `Retry-After`. `operate()` classifies rate limits as terminal
-and does not retry them, so an unpaced run fails on throttling rather than on
-capability. Pacing is applied per **model request** via the
+bare 429 with no `Retry-After`. Pacing keeps the run under that ceiling rather
+than relying on recovery. Pacing is applied per **model request** via the
 `beforeEachModelRequest` hook, not per cell — one cell is a multi-turn loop
 issuing many requests. Limiters are keyed by model and outlive the cell;
 scoping one to a cell lets each cell's first request fire unspaced, which is
 its own source of spurious `Rate limit exceeded` cells. Current rates: Mistral
 Large 0.07 req/s, the rest of the Mistral catalog 0.83 req/s.
+
+Pacing is not sufficient on its own: a paced run still lost a
+`mistral-large-latest / pdf` cell to `Rate limit exceeded` while spacing
+correctly at 14.3s, which points at a token-per-minute ceiling that
+request-count pacing cannot see. The matrix now also inherits the library's
+rate-limit backoff, so a 429 that slips past pacing waits and retries instead
+of failing the cell.
 
 ## Commands
 

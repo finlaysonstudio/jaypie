@@ -3,7 +3,6 @@ import {
   BadRequestError,
   TooManyRequestsError,
 } from "@jaypie/errors";
-import { sleep } from "@jaypie/kit";
 import { JsonObject } from "@jaypie/types";
 
 import { MAX_CONSECUTIVE_TOOL_ERRORS } from "./OperateLoop.js";
@@ -37,6 +36,7 @@ import {
   usageToLlmObsMetrics,
   withLlmObsSpan,
 } from "../observability/llmobs.js";
+import { abortableSleep } from "../util/abortableSleep.js";
 import { combineAbortSignals } from "../util/abortSignal.js";
 import { toAbortError } from "../errors/toAbortError.js";
 import { getLogger, maxTurnsFromOptions, tallyOperate } from "../util/index.js";
@@ -50,8 +50,13 @@ import { ProviderAdapter } from "./adapters/ProviderAdapter.interface.js";
 import { HookRunner, hookRunner } from "./hooks/index.js";
 import { InputProcessor, inputProcessor } from "./input/index.js";
 import { resolveResume } from "./resume/index.js";
-import { defaultRetryPolicy, RetryPolicy } from "./retry/index.js";
 import {
+  defaultRetryPolicy,
+  resolveRetryPolicy,
+  RetryPolicy,
+} from "./retry/index.js";
+import {
+  ErrorCategory,
   OperateContext,
   OperateRequest,
   PendingToolCall,
@@ -634,7 +639,12 @@ export class StreamLoop {
     const collectedToolCalls: StandardToolCall[] = [];
 
     // Retry loop for connection-level failures
+    const policy = resolveRetryPolicy({
+      policy: this.retryPolicy,
+      retry: options.retry,
+    });
     let attempt = 0;
+    let rateLimitAttempt = 0;
     let chunksYielded = false;
 
     // Guard against stale rejections firing after the stream loop has already
@@ -765,27 +775,62 @@ export class StreamLoop {
             return { shouldContinue: false };
           }
 
+          // A rate limit draws on its own budget and waits the provider's
+          // suggested delay. Nothing has been yielded at this point, so the
+          // wait is invisible to the consumer.
+          const classified = this.adapter.classifyError(error);
+          if (classified.category === ErrorCategory.RateLimit) {
+            if (!policy.shouldRetryRateLimit(rateLimitAttempt)) {
+              log.error(
+                `Stream request rate limited after ${policy.rateLimitRetries} retries`,
+              );
+              log.var({ error });
+              llmSpan?.finish();
+              throw toLlmError(classified, {
+                model: options.model ?? this.adapter.defaultModel,
+                provider: this.adapter.name,
+              });
+            }
+
+            const rateLimitDelay = policy.getRateLimitDelay({
+              attempt: rateLimitAttempt,
+              suggestedDelayMs: classified.suggestedDelayMs,
+            });
+            log.warn(
+              `Stream request rate limited. Retrying in ${rateLimitDelay}ms...`,
+            );
+            log.var({ error });
+
+            await abortableSleep({
+              ms: rateLimitDelay,
+              signal: options.signal,
+            });
+            rateLimitAttempt++;
+            state.retries++;
+            continue;
+          }
+
           // Check if we've exhausted retries or error is not retryable
           if (
-            !this.retryPolicy.shouldRetry(attempt) ||
+            !policy.shouldRetry(attempt) ||
             !this.adapter.isRetryableError(error)
           ) {
             log.error(
-              `Stream request failed after ${this.retryPolicy.maxRetries} retries`,
+              `Stream request failed after ${policy.maxRetries} retries`,
             );
             log.var({ error });
             llmSpan?.finish();
-            throw toLlmError(this.adapter.classifyError(error), {
+            throw toLlmError(classified, {
               model: options.model ?? this.adapter.defaultModel,
               provider: this.adapter.name,
             });
           }
 
-          const delay = this.retryPolicy.getDelayForAttempt(attempt);
+          const delay = policy.getDelayForAttempt(attempt);
           log.warn(`Stream request failed. Retrying in ${delay}ms...`);
           log.var({ error });
 
-          await sleep(delay);
+          await abortableSleep({ ms: delay, signal: options.signal });
           attempt++;
           state.retries++;
         }
