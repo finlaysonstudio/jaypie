@@ -73,7 +73,8 @@ function catalogIds(node: unknown = MODEL, out: string[] = []): string[] {
 // support (documents cannot be delivered as data: URIs) and only some catalog
 // models are vision-capable (verified live 2026-07-19). Fireworks also rejects
 // response_format combined with tools, so `both` engages the structured_output
-// tool emulation and logs a warn on every Fireworks model.
+// tool emulation and logs a warn on every Fireworks model. Mistral accepts the
+// pair natively, but one model still needs the corrective turn — see below.
 const MATRIX_EXPECT: Record<
   string,
   Partial<Record<Capability, ExpectedOutcome>>
@@ -90,6 +91,12 @@ const MATRIX_EXPECT: Record<
   // ["Red","","Blue"]); the cell only asserts a non-empty array, so degraded
   // content still counts as ok. A second failure means reopening #438.
   [MODEL.FIREWORKS.QWEN]: { both: "warn", pdf: "skip" },
+  // Mistral sends response_format and tools together natively, and Large 3 and
+  // Small 4 answer cleanly. Medium 3.5 does not: after a tool result it
+  // repeats the same JSON object several times as prose instead of returning
+  // one (observed 2026-08-02). The operate loop's corrective structured_output
+  // turn recovers a valid object, so the cell succeeds while logging a warn.
+  [MODEL.MISTRAL_MEDIUM]: { both: "warn" },
   [MODEL.NOVA_LITE]: { both: "skip" },
   [MODEL.NOVA_PRO]: { structured: "skip" },
 };
