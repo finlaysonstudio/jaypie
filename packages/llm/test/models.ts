@@ -58,7 +58,11 @@ const MATRIX_EXCLUDE = new Set<string>([
   MODEL.GPT_NANO,
   // Document extraction over POST /v1/ocr, not chat completions — every
   // capability cell would fail by construction.
-  MODEL.MISTRAL_OCR,
+  MODEL.MISTRAL.OCR,
+  // Mistral Large 3 is held out of the live matrix by request. It is also
+  // PROVIDER.MISTRAL.DEFAULT, so the Mistral default ships without live
+  // capability coverage — Medium 3.5 and Small 4 carry the shard.
+  MODEL.MISTRAL.LARGE,
 ]);
 
 // Flatten MODEL.* (including the BEDROCK and OPENROUTER subtrees) into ids.
@@ -82,8 +86,18 @@ const MATRIX_EXPECT: Record<
   [MODEL.FIREWORKS.DEEPSEEK]: { both: "warn", pdf: "skip", image: "skip" },
   [MODEL.FIREWORKS.GLM]: { both: "warn", pdf: "skip", image: "skip" },
   [MODEL.FIREWORKS.GPT_OSS]: { both: "warn", pdf: "skip", image: "skip" },
+  // INKLING and KIMI both advertise supports_image_input (Fireworks models API,
+  // 2026-08-02), so neither skips the image cell.
+  [MODEL.FIREWORKS.INKLING]: { both: "warn", pdf: "skip" },
   [MODEL.FIREWORKS.KIMI]: { both: "warn", pdf: "skip" },
   [MODEL.FIREWORKS.MINIMAX]: { both: "warn", pdf: "skip", image: "skip" },
+  // NEMOTRON returned to the catalog on 2026-08-02 after being retired
+  // 2026-07-21 for nondeterministic structured output (clean JSON, prose, or an
+  // empty array from the same request). `structured` is left "ok" on evidence,
+  // not omission: 6 for 6 on resample (2026-08-02). Should it regress, prefer
+  // pinning `structured: "warn"` over removing the model again, and record the
+  // sample count here. It advertises no image input.
+  [MODEL.FIREWORKS.NEMOTRON]: { both: "warn", pdf: "skip", image: "skip" },
   // QWEN `structured` is pinned "ok" on evidence, not omission: it failed once
   // in three samples (2026-07), then passed 10 for 10 on resample (2026-07-25,
   // issue #438) — 12 of 13 overall, so the miss reads as flake. Schema
@@ -96,7 +110,7 @@ const MATRIX_EXPECT: Record<
   // repeats the same JSON object several times as prose instead of returning
   // one (observed 2026-08-02). The operate loop's corrective structured_output
   // turn recovers a valid object, so the cell succeeds while logging a warn.
-  [MODEL.MISTRAL_MEDIUM]: { both: "warn" },
+  [MODEL.MISTRAL.MEDIUM]: { both: "warn" },
   [MODEL.NOVA_LITE]: { both: "skip" },
   [MODEL.NOVA_PRO]: { structured: "skip" },
 };

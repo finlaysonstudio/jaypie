@@ -64,6 +64,14 @@ describe("Constants", () => {
   });
 
   describe("MODEL Constants", () => {
+    it("Exposes a Mistral subtree", () => {
+      expect(MODEL.MISTRAL).toBeObject();
+      expect(MODEL.MISTRAL.LARGE).toBe("mistral-large-2512");
+      expect(MODEL.MISTRAL.MEDIUM).toBe("mistral-medium-3-5");
+      expect(MODEL.MISTRAL.OCR).toBe("mistral-ocr-4-0");
+      expect(MODEL.MISTRAL.SMALL).toBe("mistral-small-2603");
+    });
+
     it("Exposes an OpenRouter subtree of provider-prefixed routes", () => {
       expect(MODEL.OPENROUTER).toBeObject();
       expect(MODEL.OPENROUTER.GLM).toBe("z-ai/glm-5.2");
@@ -98,7 +106,7 @@ describe("Constants", () => {
     it("Exposes a single default model per provider, drawn from MODEL.*", () => {
       expect(PROVIDER.ANTHROPIC.DEFAULT).toBe(MODEL.SONNET);
       expect(PROVIDER.GOOGLE.DEFAULT).toBe(MODEL.GEMINI_FLASH);
-      expect(PROVIDER.MISTRAL.DEFAULT).toBe(MODEL.MISTRAL_LARGE);
+      expect(PROVIDER.MISTRAL.DEFAULT).toBe(MODEL.MISTRAL.LARGE);
       expect(PROVIDER.OPENAI.DEFAULT).toBe(MODEL.SOL);
       expect(PROVIDER.OPENROUTER.DEFAULT).toBe(MODEL.OPENROUTER.SONNET);
       expect(PROVIDER.XAI.DEFAULT).toBe(MODEL.GROK);
@@ -118,7 +126,7 @@ describe("Constants", () => {
     // Models billed by a unit LlmModelCost cannot express. Mistral's OCR
     // models price per page ($4/1000), not per million tokens, so they carry
     // no COST entry.
-    const perPageModels: string[] = [MODEL.MISTRAL_OCR];
+    const perPageModels: string[] = [MODEL.MISTRAL.OCR];
     const firstClassModels = Object.values(MODEL)
       .flatMap((value) =>
         typeof value === "string" ? [value] : Object.values(value),
@@ -152,7 +160,7 @@ describe("Constants", () => {
 
     it("Retains prices for historic models absent from MODEL.*", () => {
       for (const historic of [
-        "accounts/fireworks/models/nemotron-3-ultra-nvfp4",
+        "accounts/fireworks/models/kimi-k2p7-code",
         "claude-opus-4-6",
       ]) {
         expect(firstClassModels).not.toContain(historic);

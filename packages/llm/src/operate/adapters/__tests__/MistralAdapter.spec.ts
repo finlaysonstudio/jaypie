@@ -25,7 +25,7 @@ function baseRequest(overrides: Partial<OperateRequest> = {}): OperateRequest {
         type: LlmMessageType.Message,
       },
     ] as unknown as LlmHistory,
-    model: MODEL.MISTRAL_LARGE,
+    model: MODEL.MISTRAL.LARGE,
     ...overrides,
   } as OperateRequest;
 }
@@ -35,7 +35,7 @@ function textResponse(content: unknown, extra: Record<string, unknown> = {}) {
     id: "id",
     object: "chat.completion",
     created: 0,
-    model: MODEL.MISTRAL_LARGE,
+    model: MODEL.MISTRAL.LARGE,
     choices: [
       {
         index: 0,
@@ -52,7 +52,7 @@ function toolCallResponse(name = "get_weather") {
     id: "id",
     object: "chat.completion",
     created: 0,
-    model: MODEL.MISTRAL_LARGE,
+    model: MODEL.MISTRAL.LARGE,
     choices: [
       {
         index: 0,
@@ -166,7 +166,7 @@ describe("MistralAdapter", () => {
     describe("buildRequest", () => {
       it("builds a minimal chat completions body", () => {
         const request = adapter.buildRequest(baseRequest());
-        expect(request.model).toBe(MODEL.MISTRAL_LARGE);
+        expect(request.model).toBe(MODEL.MISTRAL.LARGE);
         expect(request.messages).toHaveLength(1);
         expect(request.messages[0]).toMatchObject({ role: "user" });
       });
@@ -294,14 +294,14 @@ describe("MistralAdapter", () => {
     describe("Effort", () => {
       it("maps high to Mistral's high without papering", () => {
         const request = adapter.buildRequest(
-          baseRequest({ effort: EFFORT.HIGH, model: MODEL.MISTRAL_SMALL }),
+          baseRequest({ effort: EFFORT.HIGH, model: MODEL.MISTRAL.SMALL }),
         );
         expect(request.reasoning_effort).toBe("high");
       });
 
       it("maps the floor to none", () => {
         const request = adapter.buildRequest(
-          baseRequest({ effort: EFFORT.LOWEST, model: MODEL.MISTRAL_SMALL }),
+          baseRequest({ effort: EFFORT.LOWEST, model: MODEL.MISTRAL.SMALL }),
         );
         expect(request.reasoning_effort).toBe("none");
       });
@@ -309,7 +309,7 @@ describe("MistralAdapter", () => {
       it("collapses the middle rungs onto high", () => {
         for (const effort of [EFFORT.LOW, EFFORT.MEDIUM, EFFORT.HIGHEST]) {
           const request = adapter.buildRequest(
-            baseRequest({ effort, model: MODEL.MISTRAL_MEDIUM }),
+            baseRequest({ effort, model: MODEL.MISTRAL.MEDIUM }),
           );
           expect(request.reasoning_effort).toBe("high");
         }
@@ -318,15 +318,15 @@ describe("MistralAdapter", () => {
       it("omits effort for models that do not reason", () => {
         // Large 3 answers "reasoning_effort is not enabled for this model"
         const request = adapter.buildRequest(
-          baseRequest({ effort: EFFORT.HIGH, model: MODEL.MISTRAL_LARGE }),
+          baseRequest({ effort: EFFORT.HIGH, model: MODEL.MISTRAL.LARGE }),
         );
         expect(request.reasoning_effort).toBeUndefined();
       });
 
       it("omits effort once a model is cached as rejecting it", () => {
-        adapter.rememberModelRejectsReasoningEffort(MODEL.MISTRAL_SMALL);
+        adapter.rememberModelRejectsReasoningEffort(MODEL.MISTRAL.SMALL);
         const request = adapter.buildRequest(
-          baseRequest({ effort: EFFORT.HIGH, model: MODEL.MISTRAL_SMALL }),
+          baseRequest({ effort: EFFORT.HIGH, model: MODEL.MISTRAL.SMALL }),
         );
         expect(request.reasoning_effort).toBeUndefined();
         adapter.clearRuntimeNoReasoningEffortModels();
@@ -449,14 +449,14 @@ describe("MistralAdapter", () => {
               total_tokens: 14,
             },
           }),
-          MODEL.MISTRAL_LARGE,
+          MODEL.MISTRAL.LARGE,
         );
         expect(usage).toMatchObject({
           input: 10,
           output: 4,
           total: 14,
           provider: PROVIDER.MISTRAL.NAME,
-          model: MODEL.MISTRAL_LARGE,
+          model: MODEL.MISTRAL.LARGE,
         });
       });
 
@@ -470,7 +470,7 @@ describe("MistralAdapter", () => {
               prompt_tokens_details: { cached_tokens: 64 },
             },
           }),
-          MODEL.MISTRAL_LARGE,
+          MODEL.MISTRAL.LARGE,
         );
         expect(usage.cacheRead).toBe(64);
       });
@@ -478,7 +478,7 @@ describe("MistralAdapter", () => {
       it("returns zeros when usage is absent", () => {
         const usage = adapter.extractUsage(
           textResponse("hi"),
-          MODEL.MISTRAL_LARGE,
+          MODEL.MISTRAL.LARGE,
         );
         expect(usage).toMatchObject({ input: 0, output: 0, total: 0 });
       });
@@ -598,7 +598,7 @@ describe("MistralAdapter", () => {
       });
 
       it("engages emulation for a model cached as rejecting response_format", () => {
-        adapter.rememberModelRejectsStructuredOutput(MODEL.MISTRAL_LARGE);
+        adapter.rememberModelRejectsStructuredOutput(MODEL.MISTRAL.LARGE);
         const request = adapter.buildRequest(
           baseRequest({ format: { type: "object", properties: {} } }),
         );
@@ -682,7 +682,7 @@ describe("MistralAdapter", () => {
         const client = { chatCompletion };
 
         const request = adapter.buildRequest(
-          baseRequest({ effort: EFFORT.HIGH, model: MODEL.MISTRAL_SMALL }),
+          baseRequest({ effort: EFFORT.HIGH, model: MODEL.MISTRAL.SMALL }),
         );
         const response = await adapter.executeRequest(client, request);
 

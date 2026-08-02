@@ -53,8 +53,8 @@ describe("MistralProvider", () => {
     });
 
     it("accepts a custom model", () => {
-      const provider = new MistralProvider(MODEL.MISTRAL_SMALL);
-      expect(provider["model"]).toBe(MODEL.MISTRAL_SMALL);
+      const provider = new MistralProvider(MODEL.MISTRAL.SMALL);
+      expect(provider["model"]).toBe(MODEL.MISTRAL.SMALL);
     });
   });
 
@@ -222,7 +222,7 @@ describe("MistralProvider", () => {
     describe("OCR", () => {
       it("joins page markdown and preserves the raw response", async () => {
         const raw = {
-          model: MODEL.MISTRAL_OCR,
+          model: MODEL.MISTRAL.OCR,
           pages: [
             { index: 0, markdown: "# Page One", blocks: [{ type: "title" }] },
             { index: 1, markdown: "Page two body" },
@@ -245,7 +245,7 @@ describe("MistralProvider", () => {
 
         expect(result.markdown).toBe("# Page One\n\nPage two body");
         expect(result.pages).toHaveLength(2);
-        expect(result.model).toBe(MODEL.MISTRAL_OCR);
+        expect(result.model).toBe(MODEL.MISTRAL.OCR);
         expect(result.raw).toBe(raw);
       });
 

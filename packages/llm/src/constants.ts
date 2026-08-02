@@ -34,8 +34,10 @@ export const MODEL = {
     DEEPSEEK: "accounts/fireworks/models/deepseek-v4-pro",
     GLM: "accounts/fireworks/models/glm-5p2",
     GPT_OSS: "accounts/fireworks/models/gpt-oss-120b",
-    KIMI: "accounts/fireworks/models/kimi-k2p7-code",
+    INKLING: "accounts/fireworks/models/inkling",
+    KIMI: "accounts/fireworks/models/kimi-k3",
     MINIMAX: "accounts/fireworks/models/minimax-m2p7",
+    NEMOTRON: "accounts/fireworks/models/nemotron-3-ultra-nvfp4",
     QWEN: "accounts/fireworks/models/qwen3p7-plus",
   },
   // Google
@@ -43,12 +45,14 @@ export const MODEL = {
   GEMINI_FLASH_LITE: "gemini-3.5-flash-lite",
   GEMINI_PRO: "gemini-3.1-pro-preview",
   // Mistral
-  MISTRAL_LARGE: "mistral-large-2512",
-  MISTRAL_MEDIUM: "mistral-medium-3-5",
-  // Document extraction over POST /v1/ocr, not chat completions. Priced per
-  // page, so it carries no COST entry and is excluded from the chat matrix.
-  MISTRAL_OCR: "mistral-ocr-4-0",
-  MISTRAL_SMALL: "mistral-small-2603",
+  MISTRAL: {
+    LARGE: "mistral-large-2512",
+    MEDIUM: "mistral-medium-3-5",
+    // Document extraction over POST /v1/ocr, not chat completions. Priced per
+    // page, so it carries no COST entry and is excluded from the chat matrix.
+    OCR: "mistral-ocr-4-0",
+    SMALL: "mistral-small-2603",
+  },
   // OpenAI
   SOL: "gpt-5.6-sol",
   TERRA: "gpt-5.6-terra",
@@ -252,19 +256,31 @@ export const COST: Record<string, LlmModelCost> = {
     input: 0.15,
     output: 0.6,
   },
+  "accounts/fireworks/models/inkling": {
+    cachedInputRead: 0.17,
+    input: 1.0,
+    output: 4.05,
+  },
+  // Superseded by kimi-k3 on 2026-08-02; priced here so historic usage stays
+  // replayable.
   "accounts/fireworks/models/kimi-k2p7-code": {
     cachedInputRead: 0.19,
     input: 0.95,
     output: 4.0,
+  },
+  "accounts/fireworks/models/kimi-k3": {
+    cachedInputRead: 0.3,
+    input: 3.0,
+    output: 15.0,
   },
   "accounts/fireworks/models/minimax-m2p7": {
     cachedInputRead: 0.06,
     input: 0.3,
     output: 1.2,
   },
-  // Retired from MODEL.* on 2026-07-21: its structured output is
-  // nondeterministic (clean JSON, prose, or an empty array from the same
-  // request). Priced here so historic usage stays replayable.
+  // Returned to MODEL.* on 2026-08-02. It was retired 2026-07-21 for
+  // nondeterministic structured output (clean JSON, prose, or an empty array
+  // from the same request); watch the `structured` matrix cell.
   "accounts/fireworks/models/nemotron-3-ultra-nvfp4": {
     cachedInputRead: 0.12,
     input: 0.6,
@@ -424,7 +440,7 @@ export const PROVIDER = {
     // https://docs.mistral.ai/models/overview
     API_KEY: "MISTRAL_API_KEY" as const,
     BASE_URL: "https://api.mistral.ai/v1" as const,
-    DEFAULT: MODEL.MISTRAL_LARGE,
+    DEFAULT: MODEL.MISTRAL.LARGE,
     // Most Mistral family names do not contain the substring "mistral" —
     // "ministral" is m-i-n-i-s-t-r-a-l, and codestral/devstral/pixtral/voxtral
     // share only the "-tral" suffix — so each family needs its own word.
@@ -438,7 +454,7 @@ export const PROVIDER = {
       "voxtral",
     ] as const,
     NAME: "mistral" as const,
-    OCR: MODEL.MISTRAL_OCR,
+    OCR: MODEL.MISTRAL.OCR,
   },
   OPENAI: {
     // https://platform.openai.com/docs/models

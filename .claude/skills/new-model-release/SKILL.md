@@ -17,7 +17,7 @@ Every model id lives in exactly one file: `packages/llm/src/constants.ts`.
 | `COST` | Prices by **literal id**, never by `MODEL.*` reference. |
 | `PROVIDER.*.DEFAULT` | The provider's default model, referenced as `MODEL.*`. |
 
-`MODEL` is flat for first-class providers. Anthropic, Google, OpenAI, and xAI ids are top-level keys; only `FIREWORKS` and `OPENROUTER` are nested subtrees.
+`MODEL` is flat for first-class providers. Anthropic, Google, OpenAI, and xAI ids are top-level keys; `FIREWORKS`, `MISTRAL`, and `OPENROUTER` are nested subtrees.
 
 The catalog is the single source of CI truth. `packages/llm/test/models.ts` derives the live capability matrix from `MODEL.*` plus each `PROVIDER.*.DEFAULT`, and the workflows shard that matrix by provider group. No id list exists anywhere else.
 
