@@ -66,10 +66,16 @@ describe("Constants", () => {
   describe("MODEL Constants", () => {
     it("Exposes a Mistral subtree", () => {
       expect(MODEL.MISTRAL).toBeObject();
-      expect(MODEL.MISTRAL.LARGE).toBe("mistral-large-2512");
-      expect(MODEL.MISTRAL.MEDIUM).toBe("mistral-medium-3-5");
+      expect(MODEL.MISTRAL.LARGE).toBe("mistral-large-latest");
       expect(MODEL.MISTRAL.OCR).toBe("mistral-ocr-4-0");
-      expect(MODEL.MISTRAL.SMALL).toBe("mistral-small-2603");
+      expect(MODEL.MISTRAL.SMALL).toBe("mistral-small-latest");
+    });
+
+    it("Does not catalog mistral-medium", () => {
+      // Removed for failing to combine tools with structured output; see the
+      // note in constants.ts. Its COST entry is retained deliberately.
+      expect(Object.keys(MODEL.MISTRAL)).not.toContain("MEDIUM");
+      expect(COST["mistral-medium-3-5"]).toBeObject();
     });
 
     it("Exposes an OpenRouter subtree of provider-prefixed routes", () => {
@@ -127,18 +133,30 @@ describe("Constants", () => {
     // models price per page ($4/1000), not per million tokens, so they carry
     // no COST entry.
     const perPageModels: string[] = [MODEL.MISTRAL.OCR];
-    const firstClassModels = Object.values(MODEL)
-      .flatMap((value) =>
-        typeof value === "string" ? [value] : Object.values(value),
-      )
-      .filter(
-        (model) =>
-          !proxyRoutes.includes(model) && !perPageModels.includes(model),
-      );
+    const catalogIds = Object.values(MODEL).flatMap((value) =>
+      typeof value === "string" ? [value] : Object.values(value),
+    );
+    // A `-latest` id is a provider alias, not a model. It has no stable price:
+    // the provider can repoint it at any time, and an entry under the alias
+    // would keep returning the old rate with nothing to signal the move.
+    // Resolve it to the id the API echoes on the response and price that.
+    const aliasModels = catalogIds.filter((model) => model.endsWith("-latest"));
+    const firstClassModels = catalogIds.filter(
+      (model) =>
+        !proxyRoutes.includes(model) &&
+        !perPageModels.includes(model) &&
+        !aliasModels.includes(model),
+    );
 
     it("Prices every first-class model in MODEL.*", () => {
       const unpriced = firstClassModels.filter((model) => !COST[model]);
       expect(unpriced).toBeEmpty();
+    });
+
+    it("Omits provider aliases, which have no stable price", () => {
+      for (const alias of aliasModels) {
+        expect(COST[alias]).toBeUndefined();
+      }
     });
 
     it("Prices the Bedrock default, an Amazon-native model", () => {

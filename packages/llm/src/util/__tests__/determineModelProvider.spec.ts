@@ -533,7 +533,6 @@ describe("determineModelProvider", () => {
       it("Correctly identifies every catalogued Mistral model", () => {
         const mistralModels = [
           MODEL.MISTRAL.LARGE,
-          MODEL.MISTRAL.MEDIUM,
           MODEL.MISTRAL.OCR,
           MODEL.MISTRAL.SMALL,
         ];

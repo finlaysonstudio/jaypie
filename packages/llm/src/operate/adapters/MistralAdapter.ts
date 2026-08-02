@@ -450,11 +450,11 @@ export class MistralAdapter extends BaseProviderAdapter {
   // string to the caller.
   override readonly supportsStructuredOutputRetry = true;
 
-  // Prefer a fresh, context-free conversion over the corrective turn.
-  // mistral-medium-3-5 degenerates into restating its answer when
-  // response_format and tools are combined, and re-asking inside that
-  // conversation both perpetuates the degeneration and lets the model
-  // substitute values the tools never returned (observed: a tool rolled
+  // Prefer a fresh, context-free conversion over the corrective turn. A
+  // Mistral model that has degenerated into restating its answer keeps doing
+  // so while that text is in its context, and re-asking in conversation also
+  // lets it substitute values the tools never returned (observed on
+  // mistral-medium-3-5, since removed from the catalog: a tool rolled
   // 5,2,4,3,5 totalling 19 and the corrective turn answered 4,1,6,2,5
   // totalling 18). A call that only sees the text cannot do either.
   override readonly supportsStructuredOutputConversion = true;
@@ -585,8 +585,8 @@ export class MistralAdapter extends BaseProviderAdapter {
 
     // Bound the completion. Mistral publishes no low output ceiling, but an
     // uncapped generation is a real latency hazard: with response_format and
-    // tools together, mistral-medium-3-5 can degenerate into restating its
-    // answer until it stops on its own. Callers override via
+    // tools together a Mistral model can degenerate into restating its answer
+    // until it stops on its own. Callers override via
     // providerOptions.max_tokens, which is applied below.
     const maxTokens = resolveMaxOutputTokens(mistralRequest.model, {
       stream: request.stream,

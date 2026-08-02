@@ -25,9 +25,9 @@ console.log(response.content); // "4"
 | Anthropic | "anthropic", "claude", "fable", "haiku", "mythos", "opus", "sonnet" | claude-sonnet-5 |
 | Google | "google", "gemini" | gemini-3.6-flash |
 | Fireworks | "fireworks" (also matched inside ids like `accounts/fireworks/models/...`) | accounts/fireworks/models/glm-5p2 |
-| Mistral | "mistral", "ministral", "codestral", "devstral", "magistral", "pixtral", "voxtral" | mistral-large-2512 |
+| Mistral | "mistral", "ministral", "codestral", "devstral", "magistral", "pixtral", "voxtral" | mistral-large-latest |
 | OpenRouter | "openrouter" | anthropic/claude-sonnet-5 |
-| xAI | "xai", "grok" | grok-latest |
+| xAI | "xai", "grok" | grok-4.5 |
 | Bedrock | "amazon.nova", "anthropic.claude", "meta.llama", "deepseek.", "google.gemma", "moonshotai.", "openai.gpt-oss", … | amazon.nova-pro-v1:0 |
 
 The provider name for Gemini models is `"google"` — `"gemini"` is accepted as a deprecated alias.
@@ -37,13 +37,13 @@ Mistral's family names mostly do not contain the substring "mistral" (`ministral
 ### Model Constants
 
 - **`PROVIDER.<name>.DEFAULT`** — the single default model per provider (above), used when no `model` is given.
-- **`LLM.MODEL.*`** — the named model catalog (e.g. `MODEL.SONNET`, `MODEL.SOL`, `MODEL.GEMINI_FLASH`, `MODEL.GROK`, `MODEL.NOVA_PRO`, `MODEL.NOVA_LITE`), plus three nested subtrees: `MODEL.FIREWORKS.*` for Fireworks serverless models (`DEEPSEEK`, `GLM`, `GPT_OSS`, `INKLING`, `KIMI`, `MINIMAX`, `NEMOTRON`, `QWEN`), `MODEL.MISTRAL.*` (`LARGE`, `MEDIUM`, `OCR`, `SMALL`), and `MODEL.OPENROUTER.*` for provider-prefixed routes (`GLM`, `LUNA`, `SONNET`). Pick specific models from here. `MODEL.MISTRAL.OCR` serves `POST /v1/ocr` rather than chat completions: it is priced per page, carries no `COST` entry, and is reached through `MistralProvider.ocr()`. Amazon's Nova models are first-class ids served over Bedrock; Bedrock's third-party routes are not catalogued — pass the literal id (e.g. `us.anthropic.claude-sonnet-4-6`) and `determineModelProvider` resolves it to `bedrock`.
+- **`LLM.MODEL.*`** — the named model catalog (e.g. `MODEL.SONNET`, `MODEL.SOL`, `MODEL.GEMINI_FLASH`, `MODEL.GROK`, `MODEL.NOVA_PRO`, `MODEL.NOVA_LITE`), plus three nested subtrees: `MODEL.FIREWORKS.*` for Fireworks serverless models (`DEEPSEEK`, `GLM`, `GPT_OSS`, `INKLING`, `KIMI`, `MINIMAX`, `NEMOTRON`, `QWEN`), `MODEL.MISTRAL.*` (`LARGE`, `OCR`, `SMALL`), and `MODEL.OPENROUTER.*` for provider-prefixed routes (`GLM`, `LUNA`, `SONNET`). Pick specific models from here. `MODEL.MISTRAL.OCR` serves `POST /v1/ocr` rather than chat completions: it is priced per page, carries no `COST` entry, and is reached through `MistralProvider.ocr()`. Amazon's Nova models are first-class ids served over Bedrock; Bedrock's third-party routes are not catalogued — pass the literal id (e.g. `us.anthropic.claude-sonnet-4-6`) and `determineModelProvider` resolves it to `bedrock`.
 - The catalog is the **single source of truth for CI coverage**: `packages/llm/test/models.ts` derives the live capability matrix from `MODEL.*` plus each `PROVIDER.*.DEFAULT`, and the workflow shards it by provider. Adding a model to `MODEL.*` puts it under test; no id list exists anywhere else.
 - **Deprecated:** the size-tier map `PROVIDER.<name>.MODEL.{DEFAULT,LARGE,SMALL,TINY}`, the `DEFAULT.MODEL` bundle, and `ALL` are `@deprecated` and retired in 2.0 — use `PROVIDER.*.DEFAULT` for defaults and `MODEL.*` for named models.
 
 ### Model Pricing
 
-`LLM.COST` maps a literal model id to its standard list price per **million** tokens (`LlmModelCost`). Keys are string literals, not `MODEL.*` references, so a model retired from the catalog keeps its price and historic usage stays replayable.
+`LLM.COST` maps a literal model id to its standard list price per **million** tokens (`LlmModelCost`). Keys are string literals, not `MODEL.*` references, so a model retired from the catalog keeps its price and historic usage stays replayable. **Provider aliases are never priced.** A `-latest` id has no stable rate — the provider can repoint it at any time, and an entry under the alias would keep returning the old price with nothing to signal the move. `MODEL.MISTRAL.*` names aliases, so `COST[MODEL.MISTRAL.LARGE]` returns `undefined` by design: resolve the alias to the id the API echoes on the response (`response.model`) and price that.
 
 ```typescript
 import { LLM, type LlmModelCost } from "@jaypie/llm";
@@ -741,7 +741,7 @@ erroring):
 - **Google** — `thinkingLevel` for Gemini 3.x, `thinkingBudget` for Gemini 2.5;
   other models get nothing.
 - **xAI** — only models whose name advertises reasoning (e.g.
-  `grok-4-1-fast-reasoning`); bare `grok-latest` and `*-non-reasoning` are
+  `grok-4-1-fast-reasoning`); bare `grok-4.5` and `*-non-reasoning` are
   skipped.
 - **OpenRouter** — always forwarded; OpenRouter maps to the routed model's
   nearest supported level.
@@ -822,9 +822,9 @@ await Llm.operate(input, {
 
 OpenAI and xAI leave the limit unset (their defaults do not truncate early).
 Mistral is capped (32,768 streaming / 16,384 non-streaming) despite publishing
-no low ceiling: `mistral-medium-3-5` can degenerate into restating its answer
-when `format` and tools are combined, and an uncapped completion turns that
-into a multi-minute request. Override with `providerOptions: { max_tokens }`.
+no low ceiling: a Mistral model can degenerate into restating its answer when
+`format` and tools are combined, and an uncapped completion turns that into a
+multi-minute request. Override with `providerOptions: { max_tokens }`.
 OpenRouter varies by routed model; pass `max_tokens` via `providerOptions`
 when needed. A truncated response surfaces `stop_reason: "max_tokens"` —
 raise the limit or switch to `stream()`.

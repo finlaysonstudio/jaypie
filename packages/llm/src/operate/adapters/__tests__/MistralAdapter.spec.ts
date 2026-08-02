@@ -330,7 +330,7 @@ describe("MistralAdapter", () => {
       it("collapses the middle rungs onto high", () => {
         for (const effort of [EFFORT.LOW, EFFORT.MEDIUM, EFFORT.HIGHEST]) {
           const request = adapter.buildRequest(
-            baseRequest({ effort, model: MODEL.MISTRAL.MEDIUM }),
+            baseRequest({ effort, model: MODEL.MISTRAL.SMALL }),
           );
           expect(request.reasoning_effort).toBe("high");
         }

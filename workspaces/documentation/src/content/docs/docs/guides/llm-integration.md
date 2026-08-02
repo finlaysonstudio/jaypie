@@ -21,10 +21,10 @@ The `Llm` class handles provider-specific implementations while exposing a consi
 | Anthropic | claude-sonnet-5, claude-opus-5, claude-haiku-4-5 | `ANTHROPIC_API_KEY` |
 | Fireworks | glm, deepseek, kimi, minimax, qwen | `FIREWORKS_API_KEY` |
 | Google | gemini-2.0-flash, gemini-1.5-pro | `GOOGLE_API_KEY` |
-| Mistral | mistral-large-2512, mistral-medium-3-5, mistral-small-2603 | `MISTRAL_API_KEY` |
+| Mistral | mistral-large-latest, mistral-small-latest, mistral-ocr-4-0 | `MISTRAL_API_KEY` |
 | OpenAI | gpt-4o, gpt-4o-mini, o1-mini, o3-mini | `OPENAI_API_KEY` |
 | OpenRouter | Any supported model | `OPENROUTER_API_KEY` |
-| xAI | grok-4-1-fast-reasoning, grok-3, grok-3-mini | `XAI_API_KEY` |
+| xAI | grok-4.5, grok-4-1-fast-reasoning, grok-4-1-fast-non-reasoning | `XAI_API_KEY` |
 
 ### Core Methods
 

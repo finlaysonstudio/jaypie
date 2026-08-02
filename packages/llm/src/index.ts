@@ -84,5 +84,10 @@ export { FireworksProvider } from "./providers/fireworks/index.js";
 export { GoogleProvider as GeminiProvider } from "./providers/google/index.js";
 export { GoogleProvider } from "./providers/google/index.js";
 export { MistralProvider } from "./providers/mistral/index.js";
+export type {
+  MistralOcrPage,
+  MistralOcrResponse,
+  OcrRequest,
+} from "./providers/mistral/index.js";
 export { OpenRouterProvider } from "./providers/openrouter/index.js";
 export { XaiProvider } from "./providers/xai/index.js";

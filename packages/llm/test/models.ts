@@ -59,10 +59,6 @@ const MATRIX_EXCLUDE = new Set<string>([
   // Document extraction over POST /v1/ocr, not chat completions — every
   // capability cell would fail by construction.
   MODEL.MISTRAL.OCR,
-  // Mistral Large 3 is held out of the live matrix by request. It is also
-  // PROVIDER.MISTRAL.DEFAULT, so the Mistral default ships without live
-  // capability coverage — Medium 3.5 and Small 4 carry the shard.
-  MODEL.MISTRAL.LARGE,
 ]);
 
 // Flatten MODEL.* (including the BEDROCK and OPENROUTER subtrees) into ids.
@@ -105,27 +101,18 @@ const MATRIX_EXPECT: Record<
   // ["Red","","Blue"]); the cell only asserts a non-empty array, so degraded
   // content still counts as ok. A second failure means reopening #438.
   [MODEL.FIREWORKS.QWEN]: { both: "warn", pdf: "skip" },
-  // Mistral sends response_format and tools together natively, and Large 3 and
-  // Small 4 answer cleanly. Medium 3.5 does not, and the cell is skipped
-  // because the model — not the adapter — is the problem.
-  //
-  // Given tools and response_format together it does not converge promptly:
-  // instead of answering from the tool result it calls `roll` again, turn
-  // after turn (observed 5 tool calls across 6 turns), sometimes exhausting
-  // the budget outright. Observed outcomes on one build (2026-08-02): a clean
-  // pass, a corrective/conversion warn, a 502 Bad Function Call with repeated
-  // JSON objects emitted as the tool *name*, and an outright failure. No
-  // expectation is stable across those.
-  //
-  // The loop's fresh-context conversion does reach this cell and often
-  // rescues it — once the tool-call loop finally answers in prose, the
-  // conversion transcribes it and the cell passes as a warn. It is not
-  // sufficient on its own: some runs still exhaust the turn budget first.
-  //
-  // Latency is the other reason to skip: 7m57s in CI and 257-330s per local
-  // run, against under 1.5s for every other cell. The model's other six cells
-  // still run.
-  [MODEL.MISTRAL.MEDIUM]: { both: "skip" },
+  // Grok 4.5 reads the fixture PDF in 2 of 9 live samples (2026-08-02). The
+  // other seven answered "I'll extract the text from the PDF using the
+  // available tools" — narrating a tool call in a cell that configures no
+  // tools — and returned none of the document's text. The capability is
+  // present but not dependable, so the cell is skipped rather than pinned to
+  // an outcome that would flake either way. Grok 4.3 passed the same cell 2
+  // for 2, so this is a regression in 4.5, not a fixture problem. Every other
+  // Grok 4.5 cell passes, `both` included. Resample before removing the skip.
+  [MODEL.GROK]: { pdf: "skip" },
+  // Mistral sends response_format and tools together natively. mistral-medium
+  // could not do so reliably and is no longer cataloged — see the note in
+  // constants.ts. Large and Small are expected to answer every cell cleanly.
   [MODEL.NOVA_LITE]: { both: "skip" },
   [MODEL.NOVA_PRO]: { structured: "skip" },
 };

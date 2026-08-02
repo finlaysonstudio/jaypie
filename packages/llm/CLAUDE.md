@@ -155,10 +155,11 @@ which transport the request uses. Callers override per call via
 `providerOptions` (`max_tokens` for Anthropic, `maxOutputTokens` for Google).
 OpenAI, xAI, and OpenRouter leave the limit unset. **Mistral is capped**
 (32,768 model max, 16,384 non-streaming) even though it publishes no low
-ceiling: `mistral-medium-3-5` degenerates into restating its answer when
+ceiling: a Mistral model can degenerate into restating its answer when
 `format` and tools are combined, and uncapped that ran a single live matrix
-cell for 7m57s against under 1.5s for every other cell. When adding models,
-update the table in `src/util/maxOutputTokens.ts`.
+cell for 7m57s against under 1.5s for every other cell (observed on
+`mistral-medium-3-5`, since removed). When adding models, update the table in
+`src/util/maxOutputTokens.ts`.
 
 ### Prompt Caching
 
@@ -207,6 +208,13 @@ static (no interpolated timestamps/IDs), which callers already do.
 to its standard list price per million tokens. Keys are string literals rather
 than `MODEL.*` references so a model retired from the catalog keeps its price
 and historic usage records stay replayable.
+
+**Provider aliases are never priced.** A `-latest` id has no stable rate: the
+provider repoints it whenever it likes, and an entry under the alias would keep
+returning the old price with nothing to signal the move. `MODEL.MISTRAL.*` names
+aliases, so `COST[MODEL.MISTRAL.LARGE]` returns `undefined` by design — resolve
+the alias to the id the API echoes on the response and price that. A constants
+test asserts every `-latest` id in the catalog is absent from `COST`.
 
 ```typescript
 import { LLM, type LlmModelCost } from "@jaypie/llm";
@@ -735,6 +743,24 @@ Integration tests in `test/` directory require API keys:
 - `test/client.ts` - Real API calls
 - `test/joke.ts` - Streaming test
 - `test/format.ts` - Multi-word `format` key fidelity (issue #393); run `tsx test/format.ts`, override providers with `APP_PROVIDER=openai,anthropic,...`
+
+### Live Capability Matrix
+
+`npm run test:matrix -w packages/llm` runs every catalog model through every
+capability against the real API. It loads the repo-root `.env` itself. Env
+knobs: `APP_MODELS`, `APP_GROUP`, `APP_CAPABILITIES`, `APP_USER`, `APP_FORCE`
+(run cells pinned to `skip` and report what they do), `APP_RPS`.
+
+**Request pacing** (`test/rateLimit.ts`) exists because Mistral enforces a
+requests-per-second ceiling that varies by tier and by model, and returns a
+bare 429 with no `Retry-After`. `operate()` classifies rate limits as terminal
+and does not retry them, so an unpaced run fails on throttling rather than on
+capability. Pacing is applied per **model request** via the
+`beforeEachModelRequest` hook, not per cell — one cell is a multi-turn loop
+issuing many requests. Limiters are keyed by model and outlive the cell;
+scoping one to a cell lets each cell's first request fire unspaced, which is
+its own source of spurious `Rate limit exceeded` cells. Current rates: Mistral
+Large 0.07 req/s, the rest of the Mistral catalog 0.83 req/s.
 
 ## Commands
 
