@@ -63,6 +63,9 @@ const mockOperate = createMockResolvedFunction({
   ],
 });
 const mockSend = createMockResolvedFunction("_MOCK_LLM_RESPONSE");
+// Host bootstrap registers the exchange store beside initClient(); mocked so
+// that call is inert and assertable rather than reaching the real module state
+export const useExchangeStore = createMockReturnedFunction(undefined);
 export const Llm = Object.assign(
   // vitest 4 requires a constructable (non-arrow) implementation when the mock
   // is instantiated with `new`. A plain `function` returning an object replaces
@@ -81,6 +84,7 @@ export const Llm = Object.assign(
   {
     operate: mockOperate,
     send: mockSend,
+    useExchangeStore,
   },
 );
 

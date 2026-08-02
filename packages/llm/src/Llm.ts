@@ -5,7 +5,11 @@ import { DEFAULT, LlmProviderName, PROVIDER } from "./constants.js";
 import { determineModelProvider } from "./util/determineModelProvider.js";
 import { resolveModelChain } from "./util/resolveModelChain.js";
 import { emitExchange } from "./operate/exchange/index.js";
-import { persistExchange } from "./observability/exchangeStore.js";
+import {
+  ExchangeStore,
+  persistExchange,
+  useExchangeStore,
+} from "./observability/exchangeStore.js";
 import {
   LlmExchangeCallback,
   LlmExchangeEnvelope,
@@ -340,6 +344,14 @@ class Llm implements LlmProvider {
     const { model } = resolveModelChain(options.model);
     const streamOptions: LlmOperateOptions = { ...options, model };
     yield* this._llm.stream(input, streamOptions);
+  }
+
+  /**
+   * Register the @jaypie/dynamodb instance exchange persistence should use.
+   * Call once at bootstrap, beside `initClient()`; see `useExchangeStore`.
+   */
+  static useExchangeStore(store: ExchangeStore | null): void {
+    useExchangeStore(store);
   }
 
   static async send(

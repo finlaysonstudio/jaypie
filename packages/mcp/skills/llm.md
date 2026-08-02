@@ -479,6 +479,23 @@ Callback errors are logged and never interrupt the call. The envelope contains n
 
 Set `LLM_EXCHANGE_ENABLED` (truthy, except `false`/`0`) and every `operate()` and `stream()` call persists as an `exchange` entity via `storeExchange` from `@jaypie/dynamodb` (optional peer dependency, resolved lazily and bundler-safe; silent no-op when absent). Requires `initClient()` to have run — warns, never throws, when uninitialized. Consumers with custom needs use the raw `onExchange` hook instead. See `skill("vocabulary")` for the exchange model and `skill("dynamodb")` for `storeExchange`.
 
+### Registering the Store
+
+The lazy resolution loads `@jaypie/dynamodb` from `node_modules`. When the host's copy is bundler-managed instead — a Next.js server bundle, for example — that is a *second* instance: the host initialized its copy, the loaded one is uninitialized, and every exchange is dropped with `[storeExchange] DynamoDB client is not initialized`. Register the instance at bootstrap to name which copy to use:
+
+```typescript
+import * as dynamodb from "@jaypie/dynamodb";
+import { Llm } from "@jaypie/llm";
+
+dynamodb.initClient();
+Llm.useExchangeStore(dynamodb);
+```
+
+- Accepts the module namespace, a bare `storeExchange` function, or `null` to clear the registration.
+- A value with no `storeExchange` throws `ConfigurationError` — a misregistration fails at bootstrap rather than silently.
+- Resolution order is registered → lazy import, so nothing changes for hosts that load the peer from `node_modules`.
+- Also exported standalone as `useExchangeStore` from `@jaypie/llm`.
+
 ## Cancellation
 
 `operate()` and `stream()` accept a caller-owned `signal`. Aborting it cancels the in-flight provider request instead of paying for tokens nobody will read:

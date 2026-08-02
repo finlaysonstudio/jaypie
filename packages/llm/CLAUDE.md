@@ -539,6 +539,33 @@ and results; that text stays out of `currentInput`, leaving the history resent
 to the provider unchanged. `stopReason` and `ids` are unset — the streamed
 transport does not surface them.
 
+#### Registering the store instance
+
+`useExchangeStore` (also `Llm.useExchangeStore`) names the `@jaypie/dynamodb`
+instance persistence should use, bypassing the dynamic import:
+
+```typescript
+import * as dynamodb from "@jaypie/dynamodb";
+import { Llm } from "@jaypie/llm";
+
+dynamodb.initClient();
+Llm.useExchangeStore(dynamodb);
+```
+
+It accepts the module namespace, a namespace wrapping the surface under
+`default`, a bare `storeExchange` function, or `null` to clear the
+registration. A value carrying no `storeExchange` throws `ConfigurationError`,
+so a misregistration is loud at bootstrap rather than silently dropping every
+exchange. Resolution order is registered → dynamic import.
+
+The import resolves from `node_modules`, which is a *different copy* than the
+one a host holds when its `@jaypie/dynamodb` is bundler-managed — a Next.js
+server bundle, for instance. That copy is the initialized one; the imported one
+is not, and every exchange is dropped with `[storeExchange] DynamoDB client is
+not initialized` (issue #474). The dynamic import stays the default because it
+is right whenever both copies are the same file (issue #429); registration
+covers the case where they cannot be.
+
 ### Operate Logging
 
 The operate loop logs `operate.input`, `operate.options`, `operate.request`,
@@ -745,6 +772,10 @@ export { LlmMessageRole, LlmMessageType, LlmStreamChunkType };
 
 // Tools
 export { JaypieToolkit, toolkit, Toolkit, tools };
+
+// Exchange persistence
+export { useExchangeStore };
+export type { ExchangeStore, ExchangeStoreFunction };
 
 // Utilities
 export { extractReasoning, jsonSchemaToNaturalSchema, naturalSchemaToJsonSchema };

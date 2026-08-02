@@ -71,6 +71,13 @@ export {
 export type { LlmErrorOptions } from "./errors/LlmError.js";
 export { ErrorCategory } from "./operate/types.js";
 
+// Exchange persistence
+export { useExchangeStore } from "./observability/exchangeStore.js";
+export type {
+  ExchangeStore,
+  ExchangeStoreFunction,
+} from "./observability/exchangeStore.js";
+
 // Utilities
 export { extractReasoning } from "./util/extractReasoning.js";
 export {
