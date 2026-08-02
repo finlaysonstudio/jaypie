@@ -476,7 +476,9 @@ export function fabric(value: unknown, type: ConversionType): unknown {
 
   switch (normalizedType) {
     case "array":
-      return fabricArray(value);
+      // Array is the untyped array declaration; it behaves as [] does,
+      // parsing JSON array strings and splitting delimited strings
+      return fabricTypedArray(value, undefined);
     case "boolean":
       return fabricBoolean(value);
     case "number":

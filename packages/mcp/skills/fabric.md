@@ -51,6 +51,19 @@ program.addCommand(fabricCommand(greetService));
 // $ cli greet --name World
 ```
 
+Array inputs are variadic and accept three forms. `type: Array` and `type: []`
+behave identically; a typed array such as `[String]` additionally converts each
+element.
+
+```bash
+cli chat --messages '[{"role":"user","content":"hi"}]'  # JSON array string
+cli grant --permissions 'self:*,admin:read'             # comma or tab delimited
+cli tag --labels alpha beta gamma                       # separate arguments
+```
+
+A lone argument that is neither JSON nor delimited becomes a single-element
+array. Objects inside an array input are only reachable through the JSON form.
+
 ### MCP Tool
 
 ```typescript
