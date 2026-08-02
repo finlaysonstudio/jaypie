@@ -50,6 +50,19 @@ export interface ProviderAdapter {
    * providers opt in).
    */
   readonly supportsStructuredOutputRetry?: boolean;
+  /**
+   * Whether a format request that came back as prose should be salvaged by a
+   * fresh, context-free conversion call ("convert this text to JSON") instead
+   * of a corrective turn inside the same conversation.
+   *
+   * Prefer this where re-asking in context makes things worse. A model that
+   * has already degenerated into restating its answer tends to keep doing so
+   * when the degenerate text is still in its context, and re-deriving the
+   * answer lets it substitute values it never produced. A context-free call
+   * can only transcribe the text it is handed, so it is both more reliable and
+   * more faithful. Tried before `supportsStructuredOutputRetry`.
+   */
+  readonly supportsStructuredOutputConversion?: boolean;
 
   //
   // Request Building
@@ -298,6 +311,8 @@ export abstract class BaseProviderAdapter implements ProviderAdapter {
    * decision) opt in; native grammar-constrained providers do not need it.
    */
   readonly supportsStructuredOutputRetry: boolean = false;
+
+  readonly supportsStructuredOutputConversion: boolean = false;
 
   /**
    * Default implementation checks if error is retryable via classifyError

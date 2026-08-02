@@ -387,6 +387,19 @@ const response = await Llm.operate("Greet the world", {
 - A Gemini 3 model that 400s the combo is cached for the session and transparently retried via the fake-tool path. The error message must mention `responseJsonSchema`/`responseSchema`/`responseMime`/`function_call`/`tools` to trigger the fallback.
 - Compliance is enforced by the operate loop the same way Fireworks is: a `format` request that completes as prose is first parsed as JSON (fence-stripped), then re-asked on a corrective turn offering **only** the `structured_output` tool (`supportsStructuredOutputRetry`). That turn withholds the caller's tools and does not send the schema natively, so the demanded call is the sole way to answer.
 
+**Fresh-context conversion (`supportsStructuredOutputConversion`).** An
+alternative to the corrective turn, tried first when an adapter opts in
+(Mistral today). Instead of re-asking inside the conversation, the loop makes
+one context-free call whose only job is to transcribe the prose into the
+schema — no history, no tools, no system prompt. Prefer it where re-asking in
+context makes things worse: a model that has degenerated into restating its
+answer keeps doing so while that text is in its context, and re-deriving lets
+it substitute values it never produced (observed: a tool rolled 5,2,4,3,5
+totalling 19; the corrective turn answered 4,1,6,2,5 totalling 18). A call that
+only sees the text cannot invent. Falls through to the corrective turn when the
+conversion yields nothing, and never replaces the original outcome with its own
+error. Usage is tallied onto the response.
+
 ### With Tools
 
 ```typescript

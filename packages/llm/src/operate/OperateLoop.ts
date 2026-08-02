@@ -780,6 +780,8 @@ export class OperateLoop {
       }
     }
 
+    // (see convertToStructuredOutput below)
+
     // Format contract enforcement: the loop is about to complete but the
     // model answered with prose instead of structured output.
     if (state.formattedFormat && typeof parsed.content === "string") {
@@ -795,6 +797,37 @@ export class OperateLoop {
           state.responseBuilder.appendToHistory(item);
         }
         return false; // Stop loop
+      }
+
+      // Context-free conversion: hand the prose to a fresh call that does
+      // nothing but transcribe it into the schema. Preferred over the
+      // corrective turn below where re-asking in context makes things worse —
+      // a model that has degenerated keeps degenerating while the degenerate
+      // text is in its context, and re-deriving lets it substitute values it
+      // never produced. This call cannot invent, because it only sees the text.
+      if (this.adapter.supportsStructuredOutputConversion) {
+        log.warn(
+          `[operate] Model returned text despite format on turn ${state.currentTurn}; converting it in a fresh context`,
+        );
+        const converted = await this.convertToStructuredOutput({
+          format: state.formattedFormat,
+          options,
+          state,
+          text: parsed.content,
+        });
+        if (converted) {
+          state.responseBuilder.setContent(
+            this.applyFormatArrayDefaults(converted, options),
+          );
+          state.responseBuilder.complete();
+          for (const item of this.adapter.responseToHistoryItems(parsed.raw)) {
+            state.responseBuilder.appendToHistory(item);
+          }
+          return false; // Stop loop
+        }
+        log.warn(
+          "[operate] Fresh-context conversion did not yield structured output",
+        );
       }
 
       // Corrective turn: for adapters whose structured output rides a tool
@@ -838,6 +871,72 @@ export class OperateLoop {
     }
 
     return false; // Stop loop
+  }
+
+  /**
+   * Convert prose into the requested schema with a fresh, context-free model
+   * call. The conversation is deliberately not replayed: the call sees only
+   * the instruction and the text, so it cannot carry the degeneration forward
+   * and cannot substitute values the text does not contain.
+   *
+   * Returns undefined when the conversion itself fails, leaving the caller to
+   * fall through to its next strategy. Usage is tallied onto the response, so
+   * the extra call still shows up in cost accounting.
+   */
+  private async convertToStructuredOutput({
+    format,
+    options,
+    state,
+    text,
+  }: {
+    format: JsonObject;
+    options: LlmOperateOptions;
+    state: OperateLoopState;
+    text: string;
+  }): Promise<JsonObject | undefined> {
+    const log = getLogger();
+    const conversionRequest: OperateRequest = {
+      format,
+      // Only the instruction and the text — no system prompt, no tools, no
+      // history, no instructions.
+      messages: [
+        {
+          content:
+            "Convert the following into JSON matching the required schema. " +
+            "Use only values that appear in the text. Do not add, invent, or " +
+            "recompute anything.\n\n---\n" +
+            text,
+          role: LlmMessageRole.User,
+          type: LlmMessageType.Message,
+        },
+      ] as unknown as LlmHistory,
+      model: options.model ?? this.adapter.defaultModel,
+    };
+
+    try {
+      const providerRequest = this.adapter.buildRequest(conversionRequest);
+      const response = await this.adapter.executeRequest(
+        this.client,
+        providerRequest,
+      );
+      const parsed = this.adapter.parseResponse(response, options);
+      if (parsed.usage) {
+        state.responseBuilder.addUsage(parsed.usage);
+      }
+      if (typeof parsed.content === "string") {
+        return tryParseJsonObject(parsed.content);
+      }
+      return parsed.content as JsonObject | undefined;
+    } catch (error) {
+      // A failed salvage is not a failed call — fall through to the next
+      // strategy rather than replacing the original outcome with this error.
+      log.warn(
+        `[operate] Fresh-context conversion failed: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+      return undefined;
+    }
   }
 
   /**

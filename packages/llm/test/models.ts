@@ -106,17 +106,21 @@ const MATRIX_EXPECT: Record<
   // content still counts as ok. A second failure means reopening #438.
   [MODEL.FIREWORKS.QWEN]: { both: "warn", pdf: "skip" },
   // Mistral sends response_format and tools together natively, and Large 3 and
-  // Small 4 answer cleanly. Medium 3.5 does not: after a tool result it
-  // degenerates into restating its answer, and the outcome is not stable
-  // enough to pin. All three landed on the same build (2026-08-02):
-  //   fail — 502 Bad Function Call, the repeated objects emitted as a tool
-  //          *name*, then 15 retries with exponential backoff
-  //   warn — the corrective structured_output turn recovers a valid object
-  //   ok   — a clean object, no warning at all
-  // Pinning any one value makes the shard flaky, so the cell is skipped. It
-  // was also the latency outlier: 7m57s in CI against under 1.5s for every
-  // other cell, which is what `max_tokens` now bounds (see MistralAdapter).
-  // The other six cells still cover this model.
+  // Small 4 answer cleanly. Medium 3.5 does not, and the cell is skipped
+  // because the model — not the adapter — is the problem.
+  //
+  // Given tools and response_format together it will not converge: instead of
+  // answering from the tool result it calls `roll` again, turn after turn,
+  // until the turn budget is exhausted. Observed outcomes on one build
+  // (2026-08-02): a tool-call loop to max turns, a 502 Bad Function Call with
+  // repeated JSON objects emitted as the tool *name*, a corrective-turn warn,
+  // and a clean pass. No expectation is stable across those.
+  //
+  // It is also the latency outlier — 7m57s in CI, and 257-330s per local run,
+  // against under 1.5s for every other cell. Note the loop's fresh-context
+  // conversion does NOT rescue this: that path only runs when a format request
+  // completes as prose, and here the loop exits through the tool-call branch.
+  // The model's other six cells still run.
   [MODEL.MISTRAL.MEDIUM]: { both: "skip" },
   [MODEL.NOVA_LITE]: { both: "skip" },
   [MODEL.NOVA_PRO]: { structured: "skip" },

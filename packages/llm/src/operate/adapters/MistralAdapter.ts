@@ -450,6 +450,15 @@ export class MistralAdapter extends BaseProviderAdapter {
   // string to the caller.
   override readonly supportsStructuredOutputRetry = true;
 
+  // Prefer a fresh, context-free conversion over the corrective turn.
+  // mistral-medium-3-5 degenerates into restating its answer when
+  // response_format and tools are combined, and re-asking inside that
+  // conversation both perpetuates the degeneration and lets the model
+  // substitute values the tools never returned (observed: a tool rolled
+  // 5,2,4,3,5 totalling 19 and the corrective turn answered 4,1,6,2,5
+  // totalling 18). A call that only sees the text cannot do either.
+  override readonly supportsStructuredOutputConversion = true;
+
   // Session-level cache of models observed to reject native
   // `response_format: json_schema`.
   private runtimeNoStructuredOutputModels = new Set<string>();
