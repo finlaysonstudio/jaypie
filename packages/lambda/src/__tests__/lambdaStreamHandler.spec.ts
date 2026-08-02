@@ -360,6 +360,40 @@ describe("lambdaStreamHandler", () => {
     });
   });
 
+  describe("Log Options", () => {
+    const varCalls = () =>
+      (log.info.var as ReturnType<typeof vi.fn>).mock.calls.map(
+        (call) => call[0] as Record<string, unknown>,
+      );
+    it("logs the event by default", async () => {
+      // Arrange
+      const handler = lambdaStreamHandler(async () => {});
+      const responseStream = createMockResponseStream();
+      // Act
+      await (handler as unknown as AwsStreamingHandler)(
+        { input: 12 },
+        responseStream,
+        {},
+      );
+      // Assert
+      expect(varCalls()).toContainEqual({ event: { input: 12 } });
+    });
+
+    it("suppresses the event log with logEvent false", async () => {
+      // Arrange
+      const handler = lambdaStreamHandler(async () => {}, { logEvent: false });
+      const responseStream = createMockResponseStream();
+      // Act
+      await (handler as unknown as AwsStreamingHandler)(
+        { input: 12 },
+        responseStream,
+        {},
+      );
+      // Assert
+      expect(varCalls().some((call) => "event" in call)).toBe(false);
+    });
+  });
+
   describe("LLM Observability", () => {
     it("flushes LLM Observability spans during teardown", async () => {
       const handler = lambdaStreamHandler(async () => {});

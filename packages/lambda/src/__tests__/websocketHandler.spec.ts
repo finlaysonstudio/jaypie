@@ -470,4 +470,53 @@ describe("WebSocket Handler Module", () => {
       });
     });
   });
+
+  describe("Log Options", () => {
+    const varCalls = () =>
+      (log.info.var as ReturnType<typeof vi.fn>).mock.calls.map(
+        (call) => call[0] as Record<string, unknown>,
+      );
+    it("Logs event and response by default", async () => {
+      // Arrange
+      const handler = websocketHandler(async () => ({ statusCode: 200 }));
+      const event = createMockWebSocketEvent({ body: "hello" });
+      // Act
+      await handler(event, {});
+      // Assert
+      expect(varCalls()).toContainEqual({
+        body: "hello",
+        connectionId: MOCK_CONNECTION_ID,
+        routeKey: "$default",
+      });
+      expect(varCalls()).toContainEqual({ response: { statusCode: 200 } });
+    });
+    it("Suppresses the event log with logEvent false", async () => {
+      // Arrange
+      const handler = websocketHandler(async () => ({ statusCode: 200 }), {
+        logEvent: false,
+      });
+      const event = createMockWebSocketEvent({ body: "hello" });
+      // Act
+      await handler(event, {});
+      // Assert
+      expect(varCalls().some((call) => "routeKey" in call)).toBe(false);
+      expect(varCalls()).toContainEqual({ response: { statusCode: 200 } });
+    });
+    it("Suppresses the response log with logResponse false", async () => {
+      // Arrange
+      const handler = websocketHandler(async () => ({ statusCode: 200 }), {
+        logResponse: false,
+      });
+      const event = createMockWebSocketEvent({ body: "hello" });
+      // Act
+      await handler(event, {});
+      // Assert
+      expect(varCalls()).toContainEqual({
+        body: "hello",
+        connectionId: MOCK_CONNECTION_ID,
+        routeKey: "$default",
+      });
+      expect(varCalls().some((call) => "response" in call)).toBe(false);
+    });
+  });
 });
