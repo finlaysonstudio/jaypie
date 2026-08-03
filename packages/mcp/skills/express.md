@@ -104,6 +104,20 @@ import { createLambdaStreamHandler } from "@jaypie/express";
 export const handler = createLambdaStreamHandler(app);
 ```
 
+### Cookies
+
+Both adapters emit every `Set-Cookie` value separately, so cookie-session auth (multiple cookies per response, chunked session cookies) works unchanged:
+
+```typescript
+app.get("/callback", (req, res) => {
+  res.cookie("appSession", token, { path: "/" });
+  res.clearCookie("auth_verification", { path: "/" });
+  res.json({ ok: true });
+});
+```
+
+`createLambdaHandler` returns them in `cookies` on the v2 response payload. `createLambdaStreamHandler` passes them as `metadata.cookies` in the response-streaming prelude. Neither folds them into a single comma-separated `set-cookie` header, which would be unparseable because expiry dates contain commas.
+
 ### LLM Observability auto-flush
 
 `createLambdaHandler` and `createLambdaStreamHandler` call `flushLlmObs()` from `@jaypie/datadog` in their `finally` block, so buffered Datadog LLM Obs spans flush before the Lambda freezes — even when the Express app errors. No-op unless `DD_LLMOBS_ENABLED` is truthy; never affects the response. No per-handler flush code is required.

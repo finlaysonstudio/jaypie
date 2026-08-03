@@ -449,6 +449,61 @@ describe("LambdaResponseStreaming", () => {
     });
   });
 
+  describe("cookie handling", () => {
+    it("setHeader() preserves array values without folding", () => {
+      const res = new LambdaResponseStreaming(mockResponseStream);
+      res.setHeader("set-cookie", ["a=1; Path=/", "b=2; Path=/"]);
+
+      expect(res.getHeader("set-cookie")).toEqual([
+        "a=1; Path=/",
+        "b=2; Path=/",
+      ]);
+    });
+
+    it("passes Set-Cookie values as metadata.cookies", () => {
+      const res = new LambdaResponseStreaming(mockResponseStream);
+      res.setHeader("set-cookie", [
+        "appSession=abc; Path=/",
+        "auth_verification=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT",
+      ]);
+      res.flushHeaders();
+
+      expect(awslambda.HttpResponseStream.from).toHaveBeenCalledWith(
+        mockResponseStream,
+        expect.objectContaining({
+          cookies: [
+            "appSession=abc; Path=/",
+            "auth_verification=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT",
+          ],
+        }),
+      );
+    });
+
+    it("excludes set-cookie from metadata.headers", () => {
+      const res = new LambdaResponseStreaming(mockResponseStream);
+      res.setHeader("content-type", "text/html");
+      res.setHeader("set-cookie", "session=abc");
+      res.flushHeaders();
+
+      const metadata = vi.mocked(awslambda.HttpResponseStream.from).mock
+        .calls[0][1];
+
+      expect(metadata.headers["set-cookie"]).toBeUndefined();
+      expect(metadata.cookies).toEqual(["session=abc"]);
+    });
+
+    it("omits cookies when no Set-Cookie present", () => {
+      const res = new LambdaResponseStreaming(mockResponseStream);
+      res.setHeader("content-type", "text/html");
+      res.flushHeaders();
+
+      const metadata = vi.mocked(awslambda.HttpResponseStream.from).mock
+        .calls[0][1];
+
+      expect(metadata.cookies).toBeUndefined();
+    });
+  });
+
   describe("ignored operations after headers sent", () => {
     it("ignores setHeader after flush", () => {
       const res = new LambdaResponseStreaming(mockResponseStream);

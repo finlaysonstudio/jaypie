@@ -495,6 +495,22 @@ describe("Lambda Adapter Integration", () => {
 
       expect(result.cookies).toEqual(["session=xyz789; Path=/"]);
     });
+
+    it("handles multiple res.cookie() calls in response", async () => {
+      const app = express();
+      app.get("/", (_req, res) => {
+        res.cookie("appSession", "abc", { path: "/" });
+        res.clearCookie("auth_verification", { path: "/" });
+        res.json({ ok: true });
+      });
+
+      const handler = createLambdaHandler(app);
+      const result = await handler(createMockEvent(), mockContext);
+
+      expect(result.cookies).toHaveLength(2);
+      expect(result.cookies![0]).toMatch(/^appSession=abc/);
+      expect(result.cookies![1]).toMatch(/^auth_verification=/);
+    });
   });
 
   describe("createLambdaStreamHandler", () => {
@@ -543,6 +559,26 @@ describe("Lambda Adapter Integration", () => {
       await handler(createMockEvent(), mockContext);
 
       expect(mockWrappedStream.end).toHaveBeenCalled();
+    });
+
+    it("emits multiple res.cookie() calls as metadata.cookies", async () => {
+      const app = express();
+      app.get("/", (_req, res) => {
+        res.cookie("appSession", "abc", { path: "/" });
+        res.clearCookie("auth_verification", { path: "/" });
+        res.json({ ok: true });
+      });
+
+      const handler = createLambdaStreamHandler(app);
+      await handler(createMockEvent(), mockContext);
+
+      const metadata = vi.mocked(awslambda.HttpResponseStream.from).mock
+        .calls[0][1];
+
+      expect(metadata.headers["set-cookie"]).toBeUndefined();
+      expect(metadata.cookies).toHaveLength(2);
+      expect(metadata.cookies![0]).toMatch(/^appSession=abc/);
+      expect(metadata.cookies![1]).toMatch(/^auth_verification=/);
     });
 
     it("sets Lambda context for getCurrentInvoke", async () => {
