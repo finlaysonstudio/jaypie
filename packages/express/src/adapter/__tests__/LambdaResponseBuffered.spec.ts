@@ -437,5 +437,41 @@ describe("LambdaResponseBuffered", () => {
 
       expect(result.cookies).toBeUndefined();
     });
+
+    it("setHeader() preserves array values without folding", () => {
+      const res = new LambdaResponseBuffered();
+      res.setHeader("set-cookie", ["a=1; Path=/", "b=2; Path=/"]);
+
+      expect(res.getHeader("set-cookie")).toEqual([
+        "a=1; Path=/",
+        "b=2; Path=/",
+      ]);
+    });
+
+    it("emits each Set-Cookie separately when set as an array", async () => {
+      const res = new LambdaResponseBuffered();
+      res.setHeader("set-cookie", [
+        "appSession=abc; Path=/",
+        "auth_verification=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT",
+      ]);
+      res.end();
+
+      const result = await res.getResult();
+
+      expect(result.cookies).toEqual([
+        "appSession=abc; Path=/",
+        "auth_verification=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT",
+      ]);
+    });
+
+    it("set() preserves array values without folding", async () => {
+      const res = new LambdaResponseBuffered();
+      res.set("Set-Cookie", ["a=1", "b=2"]);
+      res.end();
+
+      const result = await res.getResult();
+
+      expect(result.cookies).toEqual(["a=1", "b=2"]);
+    });
   });
 });

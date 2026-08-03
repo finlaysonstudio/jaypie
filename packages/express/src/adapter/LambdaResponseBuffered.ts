@@ -2,6 +2,7 @@ import type { OutgoingHttpHeaders } from "node:http";
 import { ServerResponse } from "node:http";
 import { Writable } from "node:stream";
 
+import { normalizeHeaderValue, splitCookieHeaders } from "./headers.helper.js";
 import type { LambdaResponse } from "./types.js";
 
 //
@@ -165,7 +166,8 @@ export class LambdaResponseBuffered extends Writable {
       return this;
     }
     const lowerName = name.toLowerCase();
-    this._headers.set(lowerName, String(value));
+    const normalized = normalizeHeaderValue(value);
+    this._headers.set(lowerName, normalized);
     // Sync with kOutHeaders for dd-trace compatibility
     // Node stores as { 'header-name': ['Header-Name', value] }
     if (kOutHeaders) {
@@ -173,7 +175,7 @@ export class LambdaResponseBuffered extends Writable {
         this as unknown as Record<symbol, Record<string, unknown>>
       )[kOutHeaders];
       if (outHeaders) {
-        outHeaders[lowerName] = [name, String(value)];
+        outHeaders[lowerName] = [name, normalized];
       }
     }
     return this;
@@ -280,7 +282,7 @@ export class LambdaResponseBuffered extends Writable {
       // Use direct _headers access to bypass dd-trace interception
       for (const [key, value] of Object.entries(headersToSet)) {
         if (value !== undefined) {
-          this._headers.set(key.toLowerCase(), String(value));
+          this._headers.set(key.toLowerCase(), normalizeHeaderValue(value));
         }
       }
     }
@@ -313,7 +315,7 @@ export class LambdaResponseBuffered extends Writable {
    */
   set(name: string, value: number | string | string[]): this {
     if (!this._headersSent) {
-      this._headers.set(name.toLowerCase(), String(value));
+      this._headers.set(name.toLowerCase(), normalizeHeaderValue(value));
     }
     return this;
   }
@@ -396,22 +398,8 @@ export class LambdaResponseBuffered extends Writable {
     // Determine if response should be base64 encoded
     const isBase64Encoded = this.isBinaryContentType(contentType);
 
-    // Build headers object
-    const headers: Record<string, string> = {};
-    const cookies: string[] = [];
-
-    for (const [key, value] of this._headers) {
-      if (key === "set-cookie") {
-        // Collect Set-Cookie headers for v2 response format
-        if (Array.isArray(value)) {
-          cookies.push(...value);
-        } else {
-          cookies.push(value);
-        }
-      } else {
-        headers[key] = Array.isArray(value) ? value.join(", ") : String(value);
-      }
-    }
+    // Build headers object, carrying Set-Cookie out-of-band (v2 format)
+    const { cookies, headers } = splitCookieHeaders(this._headers);
 
     const result: LambdaResponse = {
       body: isBase64Encoded ? body.toString("base64") : body.toString("utf8"),

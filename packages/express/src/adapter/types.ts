@@ -119,6 +119,7 @@ export interface ResponseStream {
 }
 
 export interface HttpResponseStreamMetadata {
+  cookies?: string[];
   headers: Record<string, string>;
   statusCode: number;
 }

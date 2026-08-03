@@ -2,6 +2,7 @@ import type { OutgoingHttpHeaders } from "node:http";
 import { ServerResponse } from "node:http";
 import { Writable } from "node:stream";
 
+import { normalizeHeaderValue, splitCookieHeaders } from "./headers.helper.js";
 import type {
   AwsLambdaGlobal,
   HttpResponseStreamMetadata,
@@ -164,7 +165,8 @@ export class LambdaResponseStreaming extends Writable {
       return this;
     }
     const lowerName = name.toLowerCase();
-    this._headers.set(lowerName, String(value));
+    const normalized = normalizeHeaderValue(value);
+    this._headers.set(lowerName, normalized);
     // Sync with kOutHeaders for dd-trace compatibility
     // Node stores as { 'header-name': ['Header-Name', value] }
     if (kOutHeaders) {
@@ -172,7 +174,7 @@ export class LambdaResponseStreaming extends Writable {
         this as unknown as Record<symbol, Record<string, unknown>>
       )[kOutHeaders];
       if (outHeaders) {
-        outHeaders[lowerName] = [name, String(value)];
+        outHeaders[lowerName] = [name, normalized];
       }
     }
     return this;
@@ -287,7 +289,7 @@ export class LambdaResponseStreaming extends Writable {
       // Use direct _headers access to bypass dd-trace interception
       for (const [key, value] of Object.entries(headersToSet)) {
         if (value !== undefined) {
-          this._headers.set(key.toLowerCase(), String(value));
+          this._headers.set(key.toLowerCase(), normalizeHeaderValue(value));
         }
       }
     }
@@ -305,10 +307,8 @@ export class LambdaResponseStreaming extends Writable {
       return;
     }
 
-    const headers: Record<string, string> = {};
-    for (const [key, value] of this._headers) {
-      headers[key] = Array.isArray(value) ? value.join(", ") : String(value);
-    }
+    // Set-Cookie travels in metadata.cookies, never folded into headers
+    const { cookies, headers } = splitCookieHeaders(this._headers);
 
     // Lambda streaming requires body content for metadata to be transmitted.
     // Convert 204 No Content to 200 OK with empty JSON body as workaround.
@@ -325,6 +325,11 @@ export class LambdaResponseStreaming extends Writable {
       headers,
       statusCode,
     };
+
+    // Only include cookies if present (v2 format)
+    if (cookies.length > 0) {
+      metadata.cookies = cookies;
+    }
 
     // Create wrapped stream with metadata
     this._wrappedStream = awslambda.HttpResponseStream.from(
@@ -361,7 +366,7 @@ export class LambdaResponseStreaming extends Writable {
    */
   set(name: string, value: number | string | string[]): this {
     if (!this._headersSent) {
-      this._headers.set(name.toLowerCase(), String(value));
+      this._headers.set(name.toLowerCase(), normalizeHeaderValue(value));
     }
     return this;
   }
