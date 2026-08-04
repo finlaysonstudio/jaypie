@@ -1,3 +1,5 @@
+import type { ServerResponse } from "node:http";
+import onHeaders from "on-headers";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { AwsLambdaGlobal, ResponseStream } from "../types.js";
@@ -28,6 +30,19 @@ vi.stubGlobal("awslambda", {
 
 // Import after mocking
 import LambdaResponseStreaming from "../LambdaResponseStreaming.js";
+
+//
+//
+// Helpers
+//
+
+// on-headers is typed against ServerResponse; the adapter duck-types it
+const listenForHeaders = (
+  res: LambdaResponseStreaming,
+  listener: () => void,
+): void => {
+  onHeaders(res as unknown as ServerResponse, listener);
+};
 
 //
 //
@@ -501,6 +516,89 @@ describe("LambdaResponseStreaming", () => {
         .calls[0][1];
 
       expect(metadata.cookies).toBeUndefined();
+    });
+  });
+
+  describe("implicit writeHead", () => {
+    it("fires on-headers listeners when end() commits headers", async () => {
+      const res = new LambdaResponseStreaming(mockResponseStream);
+      listenForHeaders(res, () => {
+        res.setHeader("x-on-headers-fired", "yes");
+        res.setHeader("set-cookie", ["appSession=deferred; Path=/"]);
+      });
+      res.statusCode = 302;
+      res.setHeader("location", "/");
+      await new Promise<void>((resolve) => res.end(resolve));
+
+      const metadata = vi.mocked(awslambda.HttpResponseStream.from).mock
+        .calls[0][1];
+
+      expect(metadata.statusCode).toBe(302);
+      expect(metadata.headers["x-on-headers-fired"]).toBe("yes");
+      expect(metadata.cookies).toEqual(["appSession=deferred; Path=/"]);
+    });
+
+    it("fires on-headers listeners before the first body write", () => {
+      const res = new LambdaResponseStreaming(mockResponseStream);
+      listenForHeaders(res, () => {
+        res.setHeader("x-on-headers-fired", "yes");
+      });
+      res.write("hello");
+
+      const metadata = vi.mocked(awslambda.HttpResponseStream.from).mock
+        .calls[0][1];
+
+      expect(metadata.headers["x-on-headers-fired"]).toBe("yes");
+    });
+
+    it("fires on-headers listeners when flushHeaders() commits headers", () => {
+      const res = new LambdaResponseStreaming(mockResponseStream);
+      let fired = false;
+      listenForHeaders(res, () => {
+        fired = true;
+      });
+      res.flushHeaders();
+
+      expect(fired).toBe(true);
+      expect(res.headersSent).toBe(true);
+    });
+
+    it("fires on-headers listeners only once", () => {
+      const res = new LambdaResponseStreaming(mockResponseStream);
+      let count = 0;
+      listenForHeaders(res, () => {
+        count += 1;
+      });
+      res.write("a");
+      res.flushHeaders();
+      res.write("b");
+
+      expect(count).toBe(1);
+    });
+
+    it("uses a status code the listener changes", () => {
+      const res = new LambdaResponseStreaming(mockResponseStream);
+      listenForHeaders(res, () => {
+        res.statusCode = 418;
+      });
+      res.flushHeaders();
+
+      const metadata = vi.mocked(awslambda.HttpResponseStream.from).mock
+        .calls[0][1];
+
+      expect(metadata.statusCode).toBe(418);
+    });
+
+    it("_implicitHeader() commits headers", () => {
+      const res = new LambdaResponseStreaming(mockResponseStream);
+      let fired = false;
+      listenForHeaders(res, () => {
+        fired = true;
+      });
+      res._implicitHeader();
+
+      expect(fired).toBe(true);
+      expect(res.headersSent).toBe(true);
     });
   });
 

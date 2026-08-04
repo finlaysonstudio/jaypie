@@ -118,6 +118,19 @@ app.get("/callback", (req, res) => {
 
 `createLambdaHandler` returns them in `cookies` on the v2 response payload. `createLambdaStreamHandler` passes them as `metadata.cookies` in the response-streaming prelude. Neither folds them into a single comma-separated `set-cookie` header, which would be unparseable because expiry dates contain commas.
 
+### Deferred headers (`on-headers`)
+
+Both adapters commit headers through `writeHead`, resolved at call time, so `on-headers` listeners fire exactly once before the first body byte:
+
+```typescript
+app.get("/callback", (req, res) => {
+  onHeaders(res, () => res.cookie("appSession", token, { path: "/" }));
+  res.redirect("/");
+});
+```
+
+Libraries that defer header or cookie writes this way work unchanged: `express-openid-connect` (session cookie), `express-session`, `morgan`, `compression`. `res.flushHeaders()` and `res._implicitHeader()` both route through the same path.
+
 ### LLM Observability auto-flush
 
 `createLambdaHandler` and `createLambdaStreamHandler` call `flushLlmObs()` from `@jaypie/datadog` in their `finally` block, so buffered Datadog LLM Obs spans flush before the Lambda freezes — even when the Express app errors. No-op unless `DD_LLMOBS_ENABLED` is truthy; never affects the response. No per-handler flush code is required.
