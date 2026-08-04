@@ -67,9 +67,9 @@ Log any important, even scalar, data and filter with `var` in Datadog
 
 ## Caught Jaypie Errors
 
-The handler lifecycle picks the level from the error's status, so an outage is visible to monitors filtering on error status without the application logging anything itself:
+The handler lifecycle picks the level from the error's status, so an outage is visible to monitors filtering on error status without the application logging anything itself. A 4xx is part of normal operation and stays at debug, so client mistakes do not raise the warn count:
 
-- **4xx** (`BadRequestError`, `NotFoundError`, …) → `log.warn("[handler] Caught Jaypie error")`
+- **4xx** (`BadRequestError`, `NotFoundError`, …) → `log.debug("[handler] Caught Jaypie error")`
 - **500-class** (`ConfigurationError`, `InternalError`, `BadGatewayError`, `GatewayTimeoutError`, `UnavailableError`, …) → `log.error("[handler] Caught Jaypie error")`
 
 Either way the handler emits `log.var({ jaypieError: { detail, status, title } })` carrying the error as thrown. The same applies to errors thrown during `validate` and `teardown`. Non-Jaypie errors remain `log.fatal` plus `log.error`.

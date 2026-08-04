@@ -44,7 +44,7 @@ describe("Issue 452: expressHandler error log level", () => {
     expect(log.error).toHaveBeenCalled();
   });
 
-  it("Does not log error when the handler throws a 4xx Jaypie error", async () => {
+  it("Does not log error or warn when the handler throws a 4xx Jaypie error", async () => {
     const app = express();
     app.use(
       expressHandler(() => {
@@ -56,5 +56,6 @@ describe("Issue 452: expressHandler error log level", () => {
 
     expect(res.status).toBe(404);
     expect(log.error).not.toHaveBeenCalled();
+    expect(log.warn).not.toHaveBeenCalled();
   });
 });

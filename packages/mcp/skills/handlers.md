@@ -155,7 +155,7 @@ fabricMcp({ service: greetService, server });
 
 All handlers catch errors and format responses:
 
-- **Jaypie errors under 500** (`isProjectError: true`): Return error body, log at warn level
+- **Jaypie errors under 500** (`isProjectError: true`): Return error body, log at debug level
 - **Jaypie errors 500 and above**: Return error body, log at error level
 - **Unhandled errors**: Wrap in `UnhandledError`, log at fatal level
 - **With `throw: true`**: Re-throw instead of formatting (for custom handling)

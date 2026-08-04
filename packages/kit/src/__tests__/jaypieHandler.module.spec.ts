@@ -95,7 +95,7 @@ describe("Jaypie Handler Module", () => {
       expect(log.error).not.toHaveBeenCalled();
       expect(log.fatal).not.toHaveBeenCalled();
     });
-    it("Logs warn if a 4xx Jaypie error is caught", async () => {
+    it("Logs debug if a 4xx Jaypie error is caught", async () => {
       // Arrange
       const handler = jaypieHandler(() => {
         throw new BadRequestError("Sorpresa!");
@@ -105,9 +105,9 @@ describe("Jaypie Handler Module", () => {
         await handler();
       } catch {
         // Assert
-        expect(log.warn).toHaveBeenCalledTimes(1);
-        expect(log.debug).not.toHaveBeenCalled();
+        expect(log.debug).toHaveBeenCalledTimes(1);
         expect(log.error).not.toHaveBeenCalled();
+        expect(log.warn).not.toHaveBeenCalled();
       }
       expect.assertions(3);
     });
@@ -265,7 +265,7 @@ describe("Jaypie Handler Module", () => {
       }
       expect.assertions(3);
     });
-    it("Logs warn for an unmapped 4xx", async () => {
+    it("Logs debug for an unmapped 4xx", async () => {
       // Arrange
       const handler = jaypieHandler(() => {
         throw new JaypieError("Field ssn failed validation", { status: 422 });
@@ -275,10 +275,11 @@ describe("Jaypie Handler Module", () => {
         await handler();
       } catch {
         // Assert
-        expect(log.warn).toHaveBeenCalledTimes(1);
+        expect(log.debug).toHaveBeenCalledTimes(1);
         expect(log.error).not.toHaveBeenCalled();
+        expect(log.warn).not.toHaveBeenCalled();
       }
-      expect.assertions(2);
+      expect.assertions(3);
     });
     it("Does not scrub a status outside 4xx and 5xx", async () => {
       // Arrange
