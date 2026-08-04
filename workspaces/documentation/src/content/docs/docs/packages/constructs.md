@@ -247,6 +247,38 @@ const web = new JaypieWebDeploymentBucket(this, "Web", { host, zone });
 web.distribution!.addBehavior("/app/*", new origins.FunctionUrlOrigin(api.functionUrl));
 ```
 
+Pass `defaultBehavior` to override the default behavior. It merges over the construct's values rather than replacing them, so an override names only what it changes and the S3 website origin stays wired up:
+
+```typescript
+new JaypieWebDeploymentBucket(this, "Web", {
+  host, zone,
+  defaultBehavior: {
+    functionAssociations: [
+      { eventType: cloudfront.FunctionEventType.VIEWER_REQUEST, function: myFunction },
+    ],
+  },
+});
+```
+
+### Single-Page App
+
+A single-page app has one `index.html`, so a deep link like `/jobs` has no S3 key behind it. The website error document renders the shell correctly but the response carries a **404** status — invisible to a human, wrong for crawlers, uptime checks, and any client branching on `res.ok`.
+
+`spa: true` attaches a viewer-request CloudFront Function that rewrites any URI whose last segment has no file extension to `/index.html`, so S3 serves the real index key and returns 200:
+
+```typescript
+new JaypieWebDeploymentBucket(this, "App", {
+  component: "app",
+  host: appHost,
+  spa: true,
+  zone,
+});
+```
+
+The function is scoped to the default behavior, so paths registered with `addBehavior` keep their genuine 404s. This is why a distribution-wide `errorResponses` mapping is the wrong tool when a Lambda surface shares the distribution: it would rewrite those 404s into 200s serving the app shell.
+
+Combining `spa: true` with a caller-supplied viewer-request association throws `ConfigurationError` at synth, since CloudFront permits one function per event type. Other event types compose, with the rewrite appended last.
+
 ### Stable Outputs for cdk-outputs.json
 
 Call `exportOutputs()` to emit stack-level `CfnOutput`s with hash-free logical IDs (`DestinationBucketName`, `DestinationBucketDeployRoleArn`, `DistributionId`, `CertificateArn`):

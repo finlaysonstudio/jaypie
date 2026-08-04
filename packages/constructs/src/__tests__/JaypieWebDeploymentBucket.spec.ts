@@ -240,6 +240,259 @@ describe("JaypieWebDeploymentBucket", () => {
     });
   });
 
+  describe("Default Behavior Override", () => {
+    it("attaches functionAssociations to the default behavior", () => {
+      const { stack, zone } = makeStack();
+      const rewrite = new cloudfront.Function(stack, "Rewrite", {
+        code: cloudfront.FunctionCode.fromInline(
+          "function handler(event) { return event.request; }",
+        ),
+      });
+
+      new JaypieWebDeploymentBucket(stack, "Web", {
+        defaultBehavior: {
+          functionAssociations: [
+            {
+              eventType: cloudfront.FunctionEventType.VIEWER_REQUEST,
+              function: rewrite,
+            },
+          ],
+        },
+        host: "app.example.com",
+        zone,
+      });
+      const template = Template.fromStack(stack);
+      const config = findDistribution(template).Properties.DistributionConfig;
+
+      expect(config.DefaultCacheBehavior.FunctionAssociations).toEqual([
+        {
+          EventType: "viewer-request",
+          FunctionARN: {
+            "Fn::GetAtt": [expect.any(String), "FunctionARN"],
+          },
+        },
+      ]);
+      expect(config.CacheBehaviors).toBeUndefined();
+    });
+
+    it("keeps construct defaults the override does not name", () => {
+      process.env.PROJECT_ENV = "production";
+      const { stack, zone } = makeStack();
+
+      new JaypieWebDeploymentBucket(stack, "Web", {
+        defaultBehavior: {
+          allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
+        },
+        host: "app.example.com",
+        zone,
+      });
+      const template = Template.fromStack(stack);
+      const config = findDistribution(template).Properties.DistributionConfig;
+
+      expect(config.DefaultCacheBehavior.CachePolicyId).toBe(
+        cloudfront.CachePolicy.CACHING_OPTIMIZED.cachePolicyId,
+      );
+      expect(config.DefaultCacheBehavior.ResponseHeadersPolicyId).toBeDefined();
+      expect(config.DefaultCacheBehavior.AllowedMethods).toEqual(
+        cloudfront.AllowedMethods.ALLOW_ALL.methods,
+      );
+    });
+
+    it("lets the override win over a construct default", () => {
+      process.env.PROJECT_ENV = "production";
+      const { stack, zone } = makeStack();
+
+      new JaypieWebDeploymentBucket(stack, "Web", {
+        defaultBehavior: {
+          cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
+        },
+        host: "app.example.com",
+        zone,
+      });
+      const template = Template.fromStack(stack);
+      const config = findDistribution(template).Properties.DistributionConfig;
+
+      expect(config.DefaultCacheBehavior.CachePolicyId).toBe(
+        cloudfront.CachePolicy.CACHING_DISABLED.cachePolicyId,
+      );
+    });
+
+    it("accepts an origin override", () => {
+      const { stack, zone } = makeStack();
+
+      new JaypieWebDeploymentBucket(stack, "Web", {
+        defaultBehavior: {
+          origin: new origins.HttpOrigin("origin.example.com"),
+        },
+        host: "app.example.com",
+        zone,
+      });
+      const template = Template.fromStack(stack);
+      const config = findDistribution(template).Properties.DistributionConfig;
+
+      const domains = (config.Origins as Array<{ DomainName: unknown }>).map(
+        (origin) => origin.DomainName,
+      );
+      expect(domains).toEqual(["origin.example.com"]);
+    });
+  });
+
+  describe("SPA", () => {
+    it("creates no CloudFront Function by default", () => {
+      const { stack, zone } = makeStack();
+
+      const construct = new JaypieWebDeploymentBucket(stack, "Web", {
+        host: "app.example.com",
+        zone,
+      });
+      const template = Template.fromStack(stack);
+
+      expect(construct.spaFunction).toBeUndefined();
+      template.resourceCountIs("AWS::CloudFront::Function", 0);
+    });
+
+    it("attaches a viewer-request rewrite to the default behavior", () => {
+      const { stack, zone } = makeStack();
+
+      const construct = new JaypieWebDeploymentBucket(stack, "Web", {
+        host: "app.example.com",
+        spa: true,
+        zone,
+      });
+      const template = Template.fromStack(stack);
+      const config = findDistribution(template).Properties.DistributionConfig;
+
+      expect(construct.spaFunction).toBeDefined();
+      template.resourceCountIs("AWS::CloudFront::Function", 1);
+      expect(config.DefaultCacheBehavior.FunctionAssociations).toEqual([
+        {
+          EventType: "viewer-request",
+          FunctionARN: {
+            "Fn::GetAtt": [expect.any(String), "FunctionARN"],
+          },
+        },
+      ]);
+      expect(config.CacheBehaviors).toBeUndefined();
+    });
+
+    it("names the function from component", () => {
+      process.env.PROJECT_ENV = "sandbox";
+      process.env.PROJECT_KEY = "cloudagent";
+      process.env.PROJECT_NONCE = "ckujet";
+      const { stack, zone } = makeStack();
+
+      new JaypieWebDeploymentBucket(stack, "App", {
+        component: "app",
+        host: "app.example.com",
+        spa: true,
+        zone,
+      });
+      const template = Template.fromStack(stack);
+
+      expect(() =>
+        template.hasResourceProperties("AWS::CloudFront::Function", {
+          Name: "sandbox-cloudagent-app-spa-ckujet",
+        }),
+      ).not.toThrow();
+    });
+
+    it("rewrites extensionless paths to index.html", () => {
+      const { stack, zone } = makeStack();
+
+      new JaypieWebDeploymentBucket(stack, "Web", {
+        host: "app.example.com",
+        spa: true,
+        zone,
+      });
+      const template = Template.fromStack(stack);
+      const functions = template.findResources("AWS::CloudFront::Function");
+      const code = Object.values(functions)[0].Properties.FunctionCode;
+
+      const handler = new Function(`${code}; return handler;`)();
+      const rewrite = (uri: string) =>
+        handler({ request: { uri } }).uri as string;
+
+      expect(rewrite("/")).toBe("/index.html");
+      expect(rewrite("/jobs")).toBe("/index.html");
+      expect(rewrite("/jobs/")).toBe("/index.html");
+      expect(rewrite("/jobs/42")).toBe("/index.html");
+      expect(rewrite("/assets/index-a1b2c3.js")).toBe(
+        "/assets/index-a1b2c3.js",
+      );
+      expect(rewrite("/favicon.ico")).toBe("/favicon.ico");
+      expect(rewrite("/index.html")).toBe("/index.html");
+    });
+
+    it("appends the rewrite after caller functionAssociations", () => {
+      const { stack, zone } = makeStack();
+      const custom = new cloudfront.Function(stack, "Custom", {
+        code: cloudfront.FunctionCode.fromInline(
+          "function handler(event) { return event.response; }",
+        ),
+      });
+
+      new JaypieWebDeploymentBucket(stack, "Web", {
+        defaultBehavior: {
+          functionAssociations: [
+            {
+              eventType: cloudfront.FunctionEventType.VIEWER_RESPONSE,
+              function: custom,
+            },
+          ],
+        },
+        host: "app.example.com",
+        spa: true,
+        zone,
+      });
+      const template = Template.fromStack(stack);
+      const config = findDistribution(template).Properties.DistributionConfig;
+
+      const eventTypes = (
+        config.DefaultCacheBehavior.FunctionAssociations as Array<{
+          EventType: string;
+        }>
+      ).map((association) => association.EventType);
+      expect(eventTypes).toEqual(["viewer-response", "viewer-request"]);
+    });
+
+    it("throws when the caller already associates a viewer-request function", () => {
+      const { stack, zone } = makeStack();
+      const custom = new cloudfront.Function(stack, "Custom", {
+        code: cloudfront.FunctionCode.fromInline(
+          "function handler(event) { return event.request; }",
+        ),
+      });
+
+      expect(() => {
+        new JaypieWebDeploymentBucket(stack, "Web", {
+          defaultBehavior: {
+            functionAssociations: [
+              {
+                eventType: cloudfront.FunctionEventType.VIEWER_REQUEST,
+                function: custom,
+              },
+            ],
+          },
+          host: "app.example.com",
+          spa: true,
+          zone,
+        });
+      }).toThrow(ConfigurationError);
+    });
+
+    it("creates no function without a distribution", () => {
+      const stack = new Stack();
+
+      const construct = new JaypieWebDeploymentBucket(stack, "Web", {
+        spa: true,
+      });
+      const template = Template.fromStack(stack);
+
+      expect(construct.spaFunction).toBeUndefined();
+      template.resourceCountIs("AWS::CloudFront::Function", 0);
+    });
+  });
+
   describe("Security Headers", () => {
     it("attaches default ResponseHeadersPolicy to default behavior", () => {
       const { stack, zone } = makeStack();
