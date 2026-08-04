@@ -79,6 +79,7 @@ export class LambdaResponseBuffered extends Writable {
     this.getHeaders = this.getHeaders.bind(this);
     this.getHeaderNames = this.getHeaderNames.bind(this);
     this.writeHead = this.writeHead.bind(this);
+    this._implicitHeader = this._implicitHeader.bind(this);
     this.get = this.get.bind(this);
     this.set = this.set.bind(this);
     this.status = this.status.bind(this);
@@ -264,6 +265,10 @@ export class LambdaResponseBuffered extends Writable {
     statusMessageOrHeaders?: OutgoingHttpHeaders | string,
     headers?: OutgoingHttpHeaders,
   ): this {
+    if (this._headersSent) {
+      return this;
+    }
+
     this.statusCode = statusCode;
 
     let headersToSet: OutgoingHttpHeaders | undefined;
@@ -289,6 +294,18 @@ export class LambdaResponseBuffered extends Writable {
 
     this._headersSent = true;
     return this;
+  }
+
+  /**
+   * Node's implicit-header hook, called before the first body byte commits.
+   * Routes through this.writeHead resolved at call time so wrappers installed
+   * mid-request (on-headers, and through it express-session, morgan,
+   * compression, express-openid-connect) run their listeners.
+   */
+  _implicitHeader(): void {
+    if (!this._headersSent) {
+      this.writeHead(this.statusCode);
+    }
   }
 
   get headersSent(): boolean {
@@ -373,12 +390,14 @@ export class LambdaResponseBuffered extends Writable {
     const buffer = Buffer.isBuffer(chunk)
       ? chunk
       : Buffer.from(chunk, encoding);
+    this._implicitHeader();
     this._chunks.push(buffer);
     this._headersSent = true;
     callback();
   }
 
   _final(callback: (error?: Error | null) => void): void {
+    this._implicitHeader();
     this._ended = true;
     if (this._resolve) {
       this._resolve(this.buildResult());

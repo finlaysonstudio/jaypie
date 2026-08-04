@@ -1,4 +1,5 @@
 import express from "express";
+import onHeaders from "on-headers";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { flushLlmObs } from "@jaypie/datadog";
@@ -511,6 +512,29 @@ describe("Lambda Adapter Integration", () => {
       expect(result.cookies![0]).toMatch(/^appSession=abc/);
       expect(result.cookies![1]).toMatch(/^auth_verification=/);
     });
+
+    it("delivers headers and cookies written by on-headers listeners", async () => {
+      const app = express();
+      app.get("/", (_req, res) => {
+        onHeaders(res, () => {
+          res.setHeader("x-on-headers-fired", "yes");
+          res.cookie("appSession", "deferred", { path: "/" });
+        });
+        res.cookie("inline", "value", { path: "/" });
+        res.status(302);
+        res.setHeader("location", "/");
+        res.end();
+      });
+
+      const handler = createLambdaHandler(app);
+      const result = await handler(createMockEvent(), mockContext);
+
+      expect(result.statusCode).toBe(302);
+      expect(result.headers["x-on-headers-fired"]).toBe("yes");
+      expect(result.cookies).toHaveLength(2);
+      expect(result.cookies![0]).toMatch(/^inline=value/);
+      expect(result.cookies![1]).toMatch(/^appSession=deferred/);
+    });
   });
 
   describe("createLambdaStreamHandler", () => {
@@ -579,6 +603,32 @@ describe("Lambda Adapter Integration", () => {
       expect(metadata.cookies).toHaveLength(2);
       expect(metadata.cookies![0]).toMatch(/^appSession=abc/);
       expect(metadata.cookies![1]).toMatch(/^auth_verification=/);
+    });
+
+    it("delivers headers and cookies written by on-headers listeners", async () => {
+      const app = express();
+      app.get("/", (_req, res) => {
+        onHeaders(res, () => {
+          res.setHeader("x-on-headers-fired", "yes");
+          res.cookie("appSession", "deferred", { path: "/" });
+        });
+        res.cookie("inline", "value", { path: "/" });
+        res.status(302);
+        res.setHeader("location", "/");
+        res.end();
+      });
+
+      const handler = createLambdaStreamHandler(app);
+      await handler(createMockEvent(), mockContext);
+
+      const metadata = vi.mocked(awslambda.HttpResponseStream.from).mock
+        .calls[0][1];
+
+      expect(metadata.statusCode).toBe(302);
+      expect(metadata.headers["x-on-headers-fired"]).toBe("yes");
+      expect(metadata.cookies).toHaveLength(2);
+      expect(metadata.cookies![0]).toMatch(/^inline=value/);
+      expect(metadata.cookies![1]).toMatch(/^appSession=deferred/);
     });
 
     it("sets Lambda context for getCurrentInvoke", async () => {

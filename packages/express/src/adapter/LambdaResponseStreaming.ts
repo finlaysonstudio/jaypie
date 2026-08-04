@@ -96,6 +96,8 @@ export class LambdaResponseStreaming extends Writable {
     this.getHeaderNames = this.getHeaderNames.bind(this);
     this.writeHead = this.writeHead.bind(this);
     this.flushHeaders = this.flushHeaders.bind(this);
+    this._implicitHeader = this._implicitHeader.bind(this);
+    this._commitHeaders = this._commitHeaders.bind(this);
     this.get = this.get.bind(this);
     this.set = this.set.bind(this);
     this.status = this.status.bind(this);
@@ -294,8 +296,20 @@ export class LambdaResponseStreaming extends Writable {
       }
     }
 
-    this.flushHeaders();
+    this._commitHeaders();
     return this;
+  }
+
+  /**
+   * Node's implicit-header hook, called before the first body byte commits.
+   * Routes through this.writeHead resolved at call time so wrappers installed
+   * mid-request (on-headers, and through it express-session, morgan,
+   * compression, express-openid-connect) run their listeners.
+   */
+  _implicitHeader(): void {
+    if (!this._headersSent) {
+      this.writeHead(this.statusCode);
+    }
   }
 
   get headersSent(): boolean {
@@ -303,6 +317,10 @@ export class LambdaResponseStreaming extends Writable {
   }
 
   flushHeaders(): void {
+    this._implicitHeader();
+  }
+
+  private _commitHeaders(): void {
     if (this._headersSent) {
       return;
     }
@@ -429,7 +447,7 @@ export class LambdaResponseStreaming extends Writable {
       // Buffer writes until headers are sent
       this._pendingWrites.push({ callback: () => callback(), chunk: buffer });
       // Auto-flush headers on first write
-      this.flushHeaders();
+      this._implicitHeader();
     } else {
       this._wrappedStream!.write(buffer);
       callback();
@@ -437,9 +455,7 @@ export class LambdaResponseStreaming extends Writable {
   }
 
   _final(callback: (error?: Error | null) => void): void {
-    if (!this._headersSent) {
-      this.flushHeaders();
-    }
+    this._implicitHeader();
 
     // For converted 204 responses, write empty JSON body
     // Lambda streaming requires body content for metadata to be transmitted

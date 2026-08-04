@@ -1,6 +1,21 @@
+import type { ServerResponse } from "node:http";
+import onHeaders from "on-headers";
 import { describe, expect, it } from "vitest";
 
 import LambdaResponseBuffered from "../LambdaResponseBuffered.js";
+
+//
+//
+// Helpers
+//
+
+// on-headers is typed against ServerResponse; the adapter duck-types it
+const listenForHeaders = (
+  res: LambdaResponseBuffered,
+  listener: () => void,
+): void => {
+  onHeaders(res as unknown as ServerResponse, listener);
+};
 
 //
 //
@@ -472,6 +487,93 @@ describe("LambdaResponseBuffered", () => {
       const result = await res.getResult();
 
       expect(result.cookies).toEqual(["a=1", "b=2"]);
+    });
+  });
+
+  describe("implicit writeHead", () => {
+    it("fires on-headers listeners when end() commits headers", async () => {
+      const res = new LambdaResponseBuffered();
+      listenForHeaders(res, () => {
+        res.setHeader("x-on-headers-fired", "yes");
+        res.setHeader("set-cookie", ["appSession=deferred; Path=/"]);
+      });
+      res.statusCode = 302;
+      res.setHeader("location", "/");
+      res.end();
+
+      const result = await res.getResult();
+
+      expect(result.statusCode).toBe(302);
+      expect(result.headers["x-on-headers-fired"]).toBe("yes");
+      expect(result.cookies).toEqual(["appSession=deferred; Path=/"]);
+    });
+
+    it("fires on-headers listeners before the first body write", async () => {
+      const res = new LambdaResponseBuffered();
+      listenForHeaders(res, () => {
+        res.setHeader("x-on-headers-fired", "yes");
+      });
+      res.write("hello");
+      res.end();
+
+      const result = await res.getResult();
+
+      expect(result.body).toBe("hello");
+      expect(result.headers["x-on-headers-fired"]).toBe("yes");
+    });
+
+    it("fires on-headers listeners only once", async () => {
+      const res = new LambdaResponseBuffered();
+      let count = 0;
+      listenForHeaders(res, () => {
+        count += 1;
+      });
+      res.write("a");
+      res.write("b");
+      res.end("c");
+
+      await res.getResult();
+
+      expect(count).toBe(1);
+    });
+
+    it("uses a status code the listener changes", async () => {
+      const res = new LambdaResponseBuffered();
+      listenForHeaders(res, () => {
+        res.statusCode = 418;
+      });
+      res.end();
+
+      const result = await res.getResult();
+
+      expect(result.statusCode).toBe(418);
+    });
+
+    it("does not fire on-headers listeners twice after explicit writeHead()", async () => {
+      const res = new LambdaResponseBuffered();
+      let count = 0;
+      listenForHeaders(res, () => {
+        count += 1;
+      });
+      res.writeHead(201, { "content-type": "application/json" });
+      res.end("{}");
+
+      const result = await res.getResult();
+
+      expect(count).toBe(1);
+      expect(result.statusCode).toBe(201);
+    });
+
+    it("_implicitHeader() commits headers", () => {
+      const res = new LambdaResponseBuffered();
+      let fired = false;
+      listenForHeaders(res, () => {
+        fired = true;
+      });
+      res._implicitHeader();
+
+      expect(fired).toBe(true);
+      expect(res.headersSent).toBe(true);
     });
   });
 });
