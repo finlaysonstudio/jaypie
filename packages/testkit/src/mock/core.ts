@@ -147,7 +147,7 @@ export const formatError = createMockWrappedFunction(
 );
 
 export const generateJaypieKey = createMockReturnedFunction(
-  `sk_MOCK00000000000000000000000000_abcd`,
+  `sk_MOCK00000000000000000000000000_abcde`,
 );
 
 export const hashJaypieKey = createMockReturnedFunction("0".repeat(64));

@@ -1,4 +1,5 @@
 import { createHash, createHmac } from "node:crypto";
+import { UnauthorizedError } from "@jaypie/errors";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   v5 as uuidv5,
@@ -20,6 +21,36 @@ import {
 
 const BASE62 = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 
+// Minted by the pre-five-character-checksum algorithm. These are the keys the
+// change must never invalidate
+const LEGACY_KEY = {
+  RANDOM: "sk_5G64GGdYP667E79odzffiDaFBzjf2fX6_ALFL",
+  SEEDED: "sk_jaypie_64yXBCCYcEKz9rEk039KwFMPy6wx2whJ_orLJ",
+  SEEDED_NO_ISSUER: "sk_64yXBCCYcEKz9rEk039KwFMPy6wx2whJ_orLJ",
+} as const;
+const LEGACY_SEED = "legacy-seed";
+
+//
+//
+// Mock environment
+//
+
+// Key shape follows PROJECT_ENV, which CI sets. Every test states the
+// environment it expects rather than inheriting the runner's
+const ORIGINAL_PROJECT_ENV = process.env.PROJECT_ENV;
+
+beforeEach(() => {
+  delete process.env.PROJECT_ENV;
+});
+
+afterEach(() => {
+  if (ORIGINAL_PROJECT_ENV === undefined) {
+    delete process.env.PROJECT_ENV;
+  } else {
+    process.env.PROJECT_ENV = ORIGINAL_PROJECT_ENV;
+  }
+});
+
 //
 //
 // Tests
@@ -40,15 +71,15 @@ describe("generateJaypieKey", () => {
   describe("Happy Paths", () => {
     it("generates a key with default format", () => {
       const key = generateJaypieKey();
-      // sk_ + 32 body + _ + 4 checksum = 40 chars
-      expect(key.length).toBe(40);
+      // sk_ + 32 body + _ + 5 checksum = 41 chars
+      expect(key.length).toBe(41);
       expect(key.startsWith("sk_")).toBe(true);
     });
 
     it("generates a key with issuer", () => {
       const key = generateJaypieKey({ issuer: "jaypie" });
-      // sk_jaypie_ + 32 body + _ + 4 checksum = 47 chars
-      expect(key.length).toBe(47);
+      // sk_jaypie_ + 32 body + _ + 5 checksum = 48 chars
+      expect(key.length).toBe(48);
       expect(key.startsWith("sk_jaypie_")).toBe(true);
     });
 
@@ -81,14 +112,14 @@ describe("generateJaypieKey", () => {
 
     it("uses custom length", () => {
       const key = generateJaypieKey({ length: 16 });
-      // sk_ + 16 body + _ + 4 checksum = 24 chars
-      expect(key.length).toBe(24);
+      // sk_ + 16 body + _ + 5 checksum = 25 chars
+      expect(key.length).toBe(25);
     });
 
-    it("uses custom checksum length", () => {
+    it("ignores a requested checksum length", () => {
       const key = generateJaypieKey({ checksum: 6 });
-      // sk_ + 32 body + _ + 6 checksum = 42 chars
-      expect(key.length).toBe(42);
+      // Checksum length is not configurable — sk_ + 32 body + _ + 5 checksum
+      expect(key.length).toBe(41);
     });
 
     it("uses custom pool", () => {
@@ -167,8 +198,8 @@ describe("generateJaypieKey", () => {
   describe("Optional Prefix", () => {
     it("generates without prefix when prefix is empty", () => {
       const key = generateJaypieKey({ prefix: "" });
-      // 32 body + _ + 4 checksum = 37 chars
-      expect(key.length).toBe(37);
+      // 32 body + _ + 5 checksum = 38 chars
+      expect(key.length).toBe(38);
       // Should not start with a separator
       const base62Set = new Set(BASE62);
       expect(base62Set.has(key[0])).toBe(true);
@@ -176,8 +207,8 @@ describe("generateJaypieKey", () => {
 
     it("generates with only issuer when prefix is empty", () => {
       const key = generateJaypieKey({ prefix: "", issuer: "jaypie" });
-      // jaypie_ + 32 body + _ + 4 checksum = 44 chars
-      expect(key.length).toBe(44);
+      // jaypie_ + 32 body + _ + 5 checksum = 45 chars
+      expect(key.length).toBe(45);
       expect(key.startsWith("jaypie_")).toBe(true);
     });
   });
@@ -391,6 +422,311 @@ describe("validateJaypieKey", () => {
     it("validates body only (no prefix, no checksum)", () => {
       const key = generateJaypieKey({ prefix: "", checksum: 0 });
       expect(validateJaypieKey(key)).toBe(true);
+    });
+  });
+});
+
+describe("Environment Segment", () => {
+  const originalEnv = process.env.PROJECT_ENV;
+
+  beforeEach(() => {
+    delete process.env.PROJECT_ENV;
+  });
+
+  afterEach(() => {
+    if (originalEnv !== undefined) {
+      process.env.PROJECT_ENV = originalEnv;
+    } else {
+      delete process.env.PROJECT_ENV;
+    }
+  });
+
+  describe("Happy Paths", () => {
+    it("places the environment between the issuer and the body", () => {
+      process.env.PROJECT_ENV = "sandbox";
+      const key = generateJaypieKey({ issuer: "jaypie" });
+      expect(key.startsWith("sk_jaypie_sandbox_")).toBe(true);
+      // sk_jaypie_sandbox_ + 32 body + _ + 5 checksum = 56 chars
+      expect(key.length).toBe(56);
+    });
+
+    it("defaults the environment to PROJECT_ENV", () => {
+      process.env.PROJECT_ENV = "local";
+      expect(generateJaypieKey().startsWith("sk_local_")).toBe(true);
+    });
+
+    it("uses an explicit environment over PROJECT_ENV", () => {
+      process.env.PROJECT_ENV = "local";
+      const key = generateJaypieKey({ environment: "sandbox" });
+      expect(key.startsWith("sk_sandbox_")).toBe(true);
+    });
+
+    it("validates a key carrying an environment", () => {
+      process.env.PROJECT_ENV = "sandbox";
+      const key = generateJaypieKey({ issuer: "jaypie" });
+      expect(validateJaypieKey(key, { issuer: "jaypie" })).toBe(true);
+    });
+
+    it("validates a key carrying an environment without an issuer", () => {
+      process.env.PROJECT_ENV = "sandbox";
+      const key = generateJaypieKey();
+      expect(validateJaypieKey(key)).toBe(true);
+    });
+
+    it("does not require an environment outside production", () => {
+      process.env.PROJECT_ENV = "sandbox";
+      const key = generateJaypieKey({ environment: false, issuer: "jaypie" });
+      expect(validateJaypieKey(key, { issuer: "jaypie" })).toBe(true);
+    });
+
+    it("accepts a key from another non-production environment", () => {
+      process.env.PROJECT_ENV = "sandbox";
+      const key = generateJaypieKey({ environment: "local", issuer: "jaypie" });
+      expect(validateJaypieKey(key, { issuer: "jaypie" })).toBe(true);
+    });
+
+    it("strips separators from the environment", () => {
+      process.env.PROJECT_ENV = "pr-123";
+      const key = generateJaypieKey({ issuer: "jaypie" });
+      expect(key.startsWith("sk_jaypie_pr123_")).toBe(true);
+      expect(validateJaypieKey(key, { issuer: "jaypie" })).toBe(true);
+    });
+  });
+
+  describe("Features", () => {
+    it("omits the environment in production", () => {
+      process.env.PROJECT_ENV = "production";
+      const key = generateJaypieKey({ issuer: "jaypie" });
+      // sk_jaypie_ + 32 body + _ + 5 checksum = 48 chars
+      expect(key.length).toBe(48);
+      expect(validateJaypieKey(key, { issuer: "jaypie" })).toBe(true);
+    });
+
+    it("omits the environment when false", () => {
+      process.env.PROJECT_ENV = "sandbox";
+      expect(generateJaypieKey({ environment: false }).length).toBe(41);
+    });
+
+    it("omits the environment when null", () => {
+      process.env.PROJECT_ENV = "sandbox";
+      expect(generateJaypieKey({ environment: null }).length).toBe(41);
+    });
+
+    it("omits the environment when PROJECT_ENV is unset", () => {
+      expect(generateJaypieKey().length).toBe(41);
+    });
+  });
+
+  describe("Error Conditions", () => {
+    it("throws when a non-production key is validated in production", () => {
+      const key = generateJaypieKey({
+        environment: "sandbox",
+        issuer: "jaypie",
+      });
+      process.env.PROJECT_ENV = "production";
+      expect(() => validateJaypieKey(key, { issuer: "jaypie" })).toThrowError(
+        "The provided key matches a non-production environment",
+      );
+    });
+
+    it("throws UnauthorizedError, not a generic error", () => {
+      const key = generateJaypieKey({
+        environment: "sandbox",
+        issuer: "jaypie",
+      });
+      process.env.PROJECT_ENV = "production";
+      let caught;
+      try {
+        validateJaypieKey(key, { issuer: "jaypie" });
+      } catch (error) {
+        caught = error;
+      }
+      expect(caught).toBeInstanceOf(UnauthorizedError);
+    });
+
+    it("does not throw for a malformed key in production", () => {
+      process.env.PROJECT_ENV = "production";
+      expect(
+        validateJaypieKey("sk_jaypie_sandbox_nope", { issuer: "jaypie" }),
+      ).toBe(false);
+    });
+
+    it("does not throw when the environment is validated without an issuer", () => {
+      const key = generateJaypieKey({ environment: "sandbox" });
+      process.env.PROJECT_ENV = "production";
+      expect(validateJaypieKey(key)).toBe(false);
+    });
+  });
+});
+
+describe("Legacy Compatibility", () => {
+  describe("Happy Paths", () => {
+    it("validates a legacy random key", () => {
+      expect(validateJaypieKey(LEGACY_KEY.RANDOM)).toBe(true);
+    });
+
+    it("validates a legacy key with an issuer", () => {
+      expect(validateJaypieKey(LEGACY_KEY.SEEDED, { issuer: "jaypie" })).toBe(
+        true,
+      );
+    });
+
+    it("validates a legacy seeded key without an issuer", () => {
+      expect(validateJaypieKey(LEGACY_KEY.SEEDED_NO_ISSUER)).toBe(true);
+    });
+
+    it("validates a legacy key in production", () => {
+      const originalEnv = process.env.PROJECT_ENV;
+      process.env.PROJECT_ENV = "production";
+      try {
+        expect(validateJaypieKey(LEGACY_KEY.SEEDED, { issuer: "jaypie" })).toBe(
+          true,
+        );
+      } finally {
+        if (originalEnv === undefined) {
+          delete process.env.PROJECT_ENV;
+        } else {
+          process.env.PROJECT_ENV = originalEnv;
+        }
+      }
+    });
+  });
+
+  describe("Features", () => {
+    it("reproduces a legacy seeded key with version 1", () => {
+      const key = generateJaypieKey({
+        issuer: "jaypie",
+        seed: LEGACY_SEED,
+        version: 1,
+      });
+      expect(key).toBe(LEGACY_KEY.SEEDED);
+    });
+
+    it("reproduces a legacy seeded key without an issuer with version 1", () => {
+      const key = generateJaypieKey({ seed: LEGACY_SEED, version: 1 });
+      expect(key).toBe(LEGACY_KEY.SEEDED_NO_ISSUER);
+    });
+
+    it("emits a four-character checksum with version 1", () => {
+      expect(generateJaypieKey({ version: 1 }).length).toBe(40);
+    });
+
+    it("omits the environment with version 1", () => {
+      const originalEnv = process.env.PROJECT_ENV;
+      process.env.PROJECT_ENV = "sandbox";
+      try {
+        expect(generateJaypieKey({ version: 1 }).length).toBe(40);
+      } finally {
+        if (originalEnv === undefined) {
+          delete process.env.PROJECT_ENV;
+        } else {
+          process.env.PROJECT_ENV = originalEnv;
+        }
+      }
+    });
+
+    it("derives a different key from the same seed at version 2", () => {
+      const legacy = generateJaypieKey({ seed: LEGACY_SEED, version: 1 });
+      const current = generateJaypieKey({ seed: LEGACY_SEED });
+      expect(current).not.toBe(legacy);
+      expect(validateJaypieKey(current)).toBe(true);
+    });
+  });
+});
+
+describe("Checksum", () => {
+  // Swap the first adjacent pair of distinct characters
+  function transpose(body: string): string {
+    for (let i = 0; i < body.length - 1; i++) {
+      if (body[i] !== body[i + 1]) {
+        return body.slice(0, i) + body[i + 1] + body[i] + body.slice(i + 2);
+      }
+    }
+    throw new Error("body has no distinct adjacent pair");
+  }
+
+  describe("Features", () => {
+    it("emits five characters", () => {
+      const key = generateJaypieKey({ prefix: "" });
+      expect(key.slice(-6)).toMatch(/^_[0-9A-Za-z]{5}$/);
+    });
+
+    it("catches a transposed pair in the body", () => {
+      const [body, checksum] = generateJaypieKey({ prefix: "" }).split("_");
+      const swapped = transpose(body);
+      expect(swapped).not.toBe(body);
+      expect(validateJaypieKey(`${body}_${checksum}`)).toBe(true);
+      expect(validateJaypieKey(`${swapped}_${checksum}`)).toBe(false);
+    });
+
+    it("documents that the legacy checksum missed a transposed pair", () => {
+      const [body, checksum] = generateJaypieKey({
+        prefix: "",
+        version: 1,
+      }).split("_");
+      const swapped = transpose(body);
+      expect(checksum.length).toBe(4);
+      expect(validateJaypieKey(`${swapped}_${checksum}`)).toBe(true);
+    });
+  });
+});
+
+describe("Seeded Derivation", () => {
+  describe("Features", () => {
+    it("derives a body longer than one digest", () => {
+      const key = generateJaypieKey({
+        length: 64,
+        prefix: "",
+        seed: "long-body",
+      });
+      const body = key.slice(0, 64);
+      expect(body.length).toBe(64);
+      expect(body.includes("undefined")).toBe(false);
+      const base62Set = new Set(BASE62);
+      for (const char of body) {
+        expect(base62Set.has(char)).toBe(true);
+      }
+    });
+
+    it("stays deterministic at the longer length", () => {
+      const options = { length: 64, prefix: "", seed: "long-body" };
+      expect(generateJaypieKey(options)).toBe(generateJaypieKey(options));
+    });
+
+    it("validates the longer key", () => {
+      const key = generateJaypieKey({
+        length: 64,
+        prefix: "",
+        seed: "long-body",
+      });
+      expect(validateJaypieKey(key, { length: 64, prefix: "" })).toBe(true);
+    });
+  });
+});
+
+describe("Body Distribution", () => {
+  describe("Features", () => {
+    it("does not favor the characters modulo bias would favor", () => {
+      // 256 % 62 leaves the first eight pool characters doubly reachable under
+      // a plain modulo. Rejection sampling removes the skew
+      const counts = new Map<string, number>();
+      for (let i = 0; i < 200; i++) {
+        for (const char of generateJaypieKey({ checksum: false, prefix: "" })) {
+          counts.set(char, (counts.get(char) ?? 0) + 1);
+        }
+      }
+      const biased = BASE62.slice(0, 8);
+      let biasedTotal = 0;
+      let total = 0;
+      for (const [char, count] of counts) {
+        total += count;
+        if (biased.includes(char)) biasedTotal += count;
+      }
+      const share = biasedTotal / total;
+      const expected = biased.length / BASE62.length;
+      // A modulo-biased body puts roughly 12.5% of characters in this set
+      expect(share).toBeGreaterThan(expected * 0.75);
+      expect(share).toBeLessThan(expected * 1.25);
     });
   });
 });

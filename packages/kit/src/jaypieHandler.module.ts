@@ -125,7 +125,7 @@ const jaypieHandler = (
   //
   // Level follows status: 500-class is an infrastructure or application fault
   // and logs at error so monitors filtering on error status see the outage;
-  // 4xx is a caller mistake and logs at warn.
+  // 4xx is a caller mistake, part of normal operation, and logs at debug.
   //
   // The error as thrown is always logged. Scrubbing replaces `detail` and
   // `title` with the generic strings for the status, so whatever the
@@ -139,8 +139,6 @@ const jaypieHandler = (
 
     if (typeof status === "number" && status >= HTTP.CODE.INTERNAL_ERROR) {
       log.error(message);
-    } else if (typeof status === "number" && status >= HTTP.CODE.BAD_REQUEST) {
-      log.warn(message);
     } else {
       log.debug(message);
     }

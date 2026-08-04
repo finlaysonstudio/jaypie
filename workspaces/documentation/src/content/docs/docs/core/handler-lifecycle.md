@@ -123,13 +123,14 @@ A caught Jaypie error is logged by status and then scrubbed:
 
 | Error | Log level | Response `detail` and `title` |
 |-------|-----------|-------------------------------|
-| 4xx (`BadRequestError`, `NotFoundError`, …) | `log.warn` | Generic strings for the status |
+| 4xx (`BadRequestError`, `NotFoundError`, …) | `log.debug` | Detail as thrown, unless `scrub` |
 | 500-class (`ConfigurationError`, `InternalError`, …) | `log.error` | Generic strings for the status |
 | Non-Jaypie error | `log.fatal` | `UnhandledError` |
 
 Either way the handler emits `log.var({ jaypieError: { detail, status, title } })`
-carrying the error as thrown, then replaces `detail` and `title` with the generic
-strings for the status. `status`, `message`, and `stack` are untouched.
+carrying the error as thrown, then replaces `detail` and `title` of a 500-class
+error with the generic strings for the status. `status`, `message`, and `stack`
+are untouched.
 
 ```typescript
 throw new ConfigurationError("Fabric model chat is not registered");

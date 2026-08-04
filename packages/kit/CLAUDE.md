@@ -68,7 +68,7 @@ src/
   - `scrub` - Error scrubbing, `boolean | { client?: boolean, server?: boolean }`,
     defaults to `{ client: false, server: true }`
 
-  Caught Jaypie errors log by status: 4xx at warn, 500 and above at error, both
+  Caught Jaypie errors log by status: 4xx at debug, 500 and above at error, both
   with `log.var({ jaypieError: { detail, status, title } })`. A 500-class error
   then has its `detail` and `title` replaced with the generic strings for its
   status, so a constructor message describing application internals never
@@ -91,8 +91,13 @@ src/
 
 ### API Key Functions
 
-- `generateJaypieKey({ checksum, issuer, length, pool, prefix, seed, separator })` - Generate API keys (prefix and checksum optional, seed for deterministic derivation)
-- `validateJaypieKey(key, options)` - Validate key format/checksum (prefix and checksum not required, accepts `_` or `-`)
+- `generateJaypieKey({ checksum, environment, issuer, length, pool, prefix, seed, separator, version })` - Generate API keys (prefix, environment, and checksum optional, seed for deterministic derivation)
+  - `environment` defaults to `PROJECT_ENV` and sits between issuer and body, omitted in production or when `false`
+  - `checksum` is truthiness only and emits five characters from a position-weighted rolling hash; `version: 1` reproduces a pre-1.2.16 key with the four-character sum
+  - Random bodies use rejection sampling; seeded bodies read HMAC blocks in counter mode under a versioned message
+- `validateJaypieKey(key, options)` - Validate key format/checksum (prefix, environment, and checksum not required, accepts `_` or `-`)
+  - Accepts a four-character legacy checksum or the five-character current one, so no existing key was invalidated
+  - Throws `UnauthorizedError` when a key carrying an environment is validated in production with an `issuer`
 - `hashJaypieKey(key, { salt })` - SHA-256/HMAC-SHA256 key hashing (reads `PROJECT_SALT` env)
 - `jaypieApiKeyId(key, { namespace, salt })` - Derive a deterministic UUIDv5 from the hashed key, suitable as a user-facing DynamoDB id
 
