@@ -122,6 +122,17 @@ describe("generateJaypieKey", () => {
       expect(key.length).toBe(41);
     });
 
+    it("spreads checksums across the five-character space", () => {
+      const checksums = new Set<string>();
+      for (let i = 0; i < 2000; i++) {
+        checksums.add(generateJaypieKey().split("_").pop()!);
+      }
+      // Five base62 characters is 62^5 values. A checksum whose characters all
+      // derive from one residue collapses to 62 no matter how many are minted,
+      // which is a ~1.6% chance any given tamper validates
+      expect(checksums.size).toBeGreaterThan(1000);
+    });
+
     it("uses custom pool", () => {
       const hexPool = "0123456789abcdef";
       const key = generateJaypieKey({ pool: hexPool });
@@ -362,11 +373,41 @@ describe("validateJaypieKey", () => {
     });
 
     it("returns false for tampered body", () => {
-      const key = generateJaypieKey();
+      // Seeded so the assertion is deterministic. A checksum rejects a tamper
+      // with high probability, not certainty, and a random key turns this into
+      // a dice roll that fails a fraction of CI runs
+      const key = generateJaypieKey({ seed: "tamper-seed" });
       // Replace a character in the body to break checksum
       const chars = key.split("");
       chars[5] = chars[5] === "A" ? "B" : "A";
       expect(validateJaypieKey(chars.join(""))).toBe(false);
+    });
+
+    it("rejects a single-character tamper at every body position", () => {
+      const key = generateJaypieKey({ seed: "tamper-sweep-seed" });
+      const [prefix, body, checksum] = key.split("_");
+
+      for (let i = 0; i < body.length; i++) {
+        const swapped = body[i] === "A" ? "B" : "A";
+        const tampered = body.slice(0, i) + swapped + body.slice(i + 1);
+        expect(validateJaypieKey([prefix, tampered, checksum].join("_"))).toBe(
+          false,
+        );
+      }
+    });
+
+    it("rejects a transposed pair at every adjacent body position", () => {
+      const key = generateJaypieKey({ seed: "transpose-seed" });
+      const [prefix, body, checksum] = key.split("_");
+
+      for (let i = 0; i < body.length - 1; i++) {
+        if (body[i] === body[i + 1]) continue;
+        const tampered =
+          body.slice(0, i) + body[i + 1] + body[i] + body.slice(i + 2);
+        expect(validateJaypieKey([prefix, tampered, checksum].join("_"))).toBe(
+          false,
+        );
+      }
     });
 
     it("returns false for invalid characters", () => {

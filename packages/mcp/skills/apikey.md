@@ -193,6 +193,14 @@ The last one is the only caller-visible break: a bootstrap key derived from `PRO
 
 The five-character checksum exists because the original summed character codes, which is order-insensitive: transposing two characters produced the same checksum. The rolling hash weights position, so a transposed pair is caught.
 
+### Five-character checksums minted by 1.2.16 no longer validate
+
+`@jaypie/kit` 1.2.16 derived all five characters from the same `hash % 62`. Because `(hash * prime + offset) % 62` depends only on `hash % 62`, the checksum took **62 distinct values** regardless of its length — about 6 bits, not the ~30 the five characters imply. Roughly one tampered key in 15 still validated, measured at 6.9% for a single-character body edit.
+
+1.2.17 makes each character a positional digit of the hash in base 62, so the five carry the full 62^5 space (~29.8 bits). Measured over 500,000 single-character tampers: zero validated.
+
+The fix changes the checksum for a given body, so a five-character key minted by 1.2.16 fails validation under 1.2.17. Four-character legacy keys are untouched and still validate. Mint replacements for any five-character keys issued against 1.2.16; that version was hours old and not in production when this landed.
+
 ## Hash
 
 Store hashed keys instead of plaintext. Uses HMAC-SHA256 when salted, SHA-256 otherwise:

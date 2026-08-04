@@ -115,6 +115,14 @@ function legacyChecksum(
 // Polynomial rolling hash, so the checksum depends on character order and a
 // transposed pair no longer sums to the same value. Five characters, which is
 // also how validation tells this checksum from the legacy four.
+//
+// Each character is one positional digit of the hash in base `pool.length`, so
+// the five together carry log2(pool.length^5) bits — about 30 for base62.
+// Deriving every character from the same `hash % pool.length` instead, as
+// 1.2.16 did, collapses the whole checksum to `pool.length` distinct values
+// however long it is, because `(hash * p + o) % n` depends only on `hash % n`.
+// That left ~6 bits: a tampered body kept validating about 1 time in 62 on
+// average, measured at 6.9% for a single-character edit.
 function currentChecksum(body: string, pool: string): string {
   let hash = 0;
   for (let i = 0; i < body.length; i++) {
@@ -122,11 +130,8 @@ function currentChecksum(body: string, pool: string): string {
   }
   let result = "";
   for (let i = 0; i < CHECKSUM_LENGTH.VERSION_2; i++) {
-    result +=
-      pool[
-        (hash * PRIMES[i % PRIMES.length] + OFFSETS[i % OFFSETS.length]) %
-          pool.length
-      ];
+    result += pool[hash % pool.length];
+    hash = Math.floor(hash / pool.length);
   }
   return result;
 }
