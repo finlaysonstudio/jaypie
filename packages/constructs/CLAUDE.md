@@ -394,6 +394,25 @@ WAF logs (label `…:core-rule-set:NoUserAgent_Header` → name `NoUserAgent_HEA
 names; AWS WAF would otherwise silently ignore an unmatched name and keep
 blocking. Custom (non-AWS) rule groups are not validated.
 
+### Static Site Bucket
+
+`JaypieWebDeploymentBucket` names its bucket `constructEnvName(component)`, with
+`component` defaulting to the literal `"web"` — independent of the construct id
+and of `host`. A second instance in the same account and region collides on
+`<env>-<key>-web-<nonce>` and fails change-set validation, so it needs a
+`component` (or an explicit `name`). Changing either renames the bucket, which
+replaces it.
+
+```typescript
+new JaypieWebDeploymentBucket(this, "Web", { host: webHost, zone });
+new JaypieWebDeploymentBucket(this, "App", { component: "app", host: appHost, zone });
+```
+
+Production edge caching rides on the default behavior (`CACHING_OPTIMIZED`;
+`CACHING_DISABLED` elsewhere). The construct adds no `/*` behavior, which would
+rank ahead of anything added later and shadow it — paths registered with
+`distribution.addBehavior("/app/*", origin)` match in every environment.
+
 ### Streaming Lambda
 
 For streaming responses, use `createLambdaStreamHandler` from `@jaypie/express` with `JaypieDistribution`:

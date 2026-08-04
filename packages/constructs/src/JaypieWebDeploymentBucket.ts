@@ -71,6 +71,17 @@ export interface JaypieWebDeploymentBucketProps extends s3.BucketProps {
    */
   certificate?: boolean | acm.ICertificate;
   /**
+   * Name component for the default bucket name, as
+   * `constructEnvName(component)`.
+   *
+   * Set this when a second instance shares the account and region: the default
+   * `"web"` collides. Ignored when `name` is provided, and independent of
+   * `host` — changing it renames (and so replaces) the bucket.
+   *
+   * @default "web"
+   */
+  component?: string;
+  /**
    * Log destination configuration for CloudFront access logs.
    * - LambdaDestination: Use a specific Lambda destination for S3 notifications
    * - true: Use Datadog forwarder for S3 notifications (default)
@@ -176,6 +187,7 @@ export class JaypieWebDeploymentBucket extends Construct implements s3.IBucket {
 
     const {
       certificate: certificateProp,
+      component: componentProp = "web",
       destination: destinationProp = true,
       host: propsHost,
       logBucket: logBucketProp,
@@ -258,7 +270,7 @@ export class JaypieWebDeploymentBucket extends Construct implements s3.IBucket {
       accessControl: s3.BucketAccessControl.BUCKET_OWNER_FULL_CONTROL,
       autoDeleteObjects: true,
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ACLS_ONLY,
-      bucketName: nameProp || constructEnvName("web"),
+      bucketName: nameProp || constructEnvName(componentProp),
       publicReadAccess: true,
       removalPolicy: RemovalPolicy.DESTROY,
       versioned: false,
@@ -505,10 +517,14 @@ export class JaypieWebDeploymentBucket extends Construct implements s3.IBucket {
 
       this.logBucket = accessLogBucket;
 
-      // Create CloudFront distribution
+      // Create CloudFront distribution. Production caches at the edge; the
+      // policy rides on the default behavior rather than a `/*` behavior so
+      // paths registered later with addBehavior still match (#479).
       this.distribution = new cloudfront.Distribution(this, "Distribution", {
         defaultBehavior: {
-          cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
+          cachePolicy: isProductionEnv()
+            ? cloudfront.CachePolicy.CACHING_OPTIMIZED
+            : cloudfront.CachePolicy.CACHING_DISABLED,
           origin: new origins.S3StaticWebsiteOrigin(this.bucket),
           ...(resolvedResponseHeadersPolicy
             ? { responseHeadersPolicy: resolvedResponseHeadersPolicy }
@@ -527,22 +543,6 @@ export class JaypieWebDeploymentBucket extends Construct implements s3.IBucket {
           : {}),
       });
       Tags.of(this.distribution).add(CDK.TAG.ROLE, roleTag);
-
-      // If this is production, enable caching on everything but index.html
-      if (isProductionEnv()) {
-        this.distribution.addBehavior(
-          "/*",
-          new origins.S3StaticWebsiteOrigin(this.bucket),
-          {
-            viewerProtocolPolicy:
-              cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
-            cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED,
-            ...(resolvedResponseHeadersPolicy
-              ? { responseHeadersPolicy: resolvedResponseHeadersPolicy }
-              : {}),
-          },
-        );
-      }
 
       // Create DNS record
       const record = new route53.ARecord(this, "AliasRecord", {
