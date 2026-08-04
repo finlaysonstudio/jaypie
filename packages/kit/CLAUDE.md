@@ -93,7 +93,8 @@ src/
 
 - `generateJaypieKey({ checksum, environment, issuer, length, pool, prefix, seed, separator, version })` - Generate API keys (prefix, environment, and checksum optional, seed for deterministic derivation)
   - `environment` defaults to `PROJECT_ENV` and sits between issuer and body, omitted in production or when `false`
-  - `checksum` is truthiness only and emits five characters from a position-weighted rolling hash; `version: 1` reproduces a pre-1.2.16 key with the four-character sum
+  - `checksum` is truthiness only and emits five characters from a position-weighted rolling hash, each character a positional digit of the hash in base `pool.length` so the five span `pool.length^5` (~29.8 bits for base62); `version: 1` reproduces a pre-1.2.16 key with the four-character sum
+  - Deriving every character from the same `hash % pool.length` collapses the checksum to `pool.length` values however long it is, since `(hash * p + o) % n` depends only on `hash % n`. That shipped in 1.2.16 and let ~6.9% of tampered keys validate; 1.2.17 fixes it and invalidates five-character keys minted by 1.2.16
   - Random bodies use rejection sampling; seeded bodies read HMAC blocks in counter mode under a versioned message
 - `validateJaypieKey(key, options)` - Validate key format/checksum (prefix, environment, and checksum not required, accepts `_` or `-`)
   - Accepts a four-character legacy checksum or the five-character current one, so no existing key was invalidated
