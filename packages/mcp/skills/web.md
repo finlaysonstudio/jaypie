@@ -39,15 +39,17 @@ new JaypieWebDeploymentBucket(this, "Web", {
 | `zone` | `string \| IHostedZone \| JaypieHostedZone` | `CDK_ENV_WEB_HOSTED_ZONE \|\| CDK_ENV_HOSTED_ZONE` |
 | `certificate` | `boolean \| ICertificate` | `true` (creates via `resolveCertificate`) |
 | `component` | `string` | `"web"` — name component for the default bucket name |
+| `defaultBehavior` | `Partial<BehaviorOptions>` | undefined — merged over the construct's default behavior; keys given win |
 | `destination` | `LambdaDestination \| boolean` | `true` (Datadog forwarder for access-log bucket notifications) |
 | `logBucket` | `IBucket \| string \| { exportName } \| true` | undefined — creates a new bucket if `destination !== false` |
 | `name` | `string` | `constructEnvName(component)` |
 | `responseHeadersPolicy` | `IResponseHeadersPolicy` | undefined — full override; bypasses default security headers |
 | `roleTag` | `string` | `CDK.ROLE.HOSTING` |
 | `securityHeaders` | `boolean \| SecurityHeadersOverrides` | `true` |
+| `spa` | `boolean` | `false` — viewer-request rewrite of extension-less URIs to `/index.html` |
 | `waf` | `boolean \| JaypieWebDeploymentBucketWafConfig` | `false` (when enabled, WAF name defaults to construct id) |
 
-Also accepts all `s3.BucketProps` — the bucket defaults to `autoDeleteObjects: true`, `publicReadAccess: true`, `websiteIndexDocument: "index.html"`, `websiteErrorDocument: "index.html"` (SPA-friendly).
+Also accepts all `s3.BucketProps` — the bucket defaults to `autoDeleteObjects: true`, `publicReadAccess: true`, `websiteIndexDocument: "index.html"`, `websiteErrorDocument: "index.html"` — which renders an SPA deep link but answers 404; see [Single-Page App](#single-page-app).
 
 ### Bucket Name
 
@@ -70,6 +72,40 @@ Changing `component` or `name` on a deployed stack renames the bucket, which rep
 const web = new JaypieWebDeploymentBucket(this, "Web", { host, zone });
 web.distribution!.addBehavior("/app/*", new origins.FunctionUrlOrigin(api.functionUrl));
 ```
+
+`defaultBehavior` merges over those defaults instead of replacing them, so an override names only what it changes and the S3 website origin stays wired up. Keys the override omits keep the construct's value; an explicit `undefined` is ignored rather than erasing a default.
+
+```typescript
+new JaypieWebDeploymentBucket(this, "Web", {
+  host, zone,
+  defaultBehavior: {
+    allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
+    functionAssociations: [
+      { eventType: cloudfront.FunctionEventType.VIEWER_REQUEST, function: myFunction },
+    ],
+  },
+});
+```
+
+### Single-Page App
+
+An SPA has one `index.html`, so a deep link like `/jobs` has no S3 key behind it. The website error document renders the shell correctly but answers **404** — invisible to a human, wrong for crawlers, uptime checks pointed at a deep link, and any client branching on `res.ok`.
+
+`spa: true` attaches a viewer-request CloudFront Function that rewrites any URI whose last segment has no file extension to `/index.html`, so S3 serves the real index key and returns 200.
+
+```typescript
+new JaypieWebDeploymentBucket(this, "App", {
+  component: "app",
+  host: appHost,
+  spa: true,
+  zone,
+});
+```
+
+- Scoped to the **default behavior** only. Paths registered with `addBehavior("/app/*", ...)` never reach the function, so a Lambda surface sharing the distribution keeps its genuine 404s. This is why a distribution-wide `errorResponses` 404→`/index.html` mapping is the wrong tool on a shared distribution: it would rewrite those into 200s serving the app shell.
+- The function is named `constructEnvName("<component>-spa")`, so `component` disambiguates two instances in one account exactly as it does the bucket name.
+- Exposed as `.spaFunction`. No distribution (no `host`/`zone`) means no function.
+- Combining `spa: true` with a caller-supplied **viewer-request** association throws `ConfigurationError` at synth; CloudFront permits one function per event type. Other event types (for example viewer-response) compose, with the rewrite appended last.
 
 ### Security Headers
 

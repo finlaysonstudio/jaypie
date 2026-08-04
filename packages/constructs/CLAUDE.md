@@ -413,6 +413,26 @@ Production edge caching rides on the default behavior (`CACHING_OPTIMIZED`;
 rank ahead of anything added later and shadow it — paths registered with
 `distribution.addBehavior("/app/*", origin)` match in every environment.
 
+`defaultBehavior?: Partial<cloudfront.BehaviorOptions>` merges over that
+computed behavior (caller keys win; explicit `undefined` is ignored). Merge
+rather than replace, unlike `JaypieDistribution`, because the S3 website origin
+is created internally — a full replacement would force the caller to rebuild it.
+
+`spa: true` attaches a viewer-request CloudFront Function rewriting
+extension-less URIs to `/index.html`, exposed as `.spaFunction` and named
+`constructEnvName("<component>-spa")`. It exists because the bucket's
+`websiteErrorDocument` renders an SPA deep link but answers 404 — correct HTML,
+wrong status for crawlers, uptime checks, and `res.ok` branching. It rides the
+default behavior, so a Lambda surface sharing the distribution via `addBehavior`
+keeps its genuine 404s; a distribution-wide `errorResponses` 404→`/index.html`
+mapping cannot make that distinction. `spa` plus a caller-supplied
+viewer-request association throws `ConfigurationError` at synth, since
+CloudFront permits one function per event type.
+
+```typescript
+new JaypieWebDeploymentBucket(this, "App", { component: "app", host, spa: true, zone });
+```
+
 ### Streaming Lambda
 
 For streaming responses, use `createLambdaStreamHandler` from `@jaypie/express` with `JaypieDistribution`:

@@ -53,6 +53,33 @@ const DEFAULT_MANAGED_RULES = [
 ];
 
 /**
+ * Drop explicitly-undefined keys so an override object never erases a
+ * construct default it did not mean to set.
+ */
+function omitUndefined<T extends object>(value: T | undefined): Partial<T> {
+  if (!value) return {};
+  return Object.fromEntries(
+    Object.entries(value).filter(([, entry]) => entry !== undefined),
+  ) as Partial<T>;
+}
+
+/**
+ * Viewer-request rewrite for a single-page app: any URI whose last segment
+ * carries no file extension is a client route, so serve the shell from its
+ * real key. The website error document renders the same HTML but answers 404,
+ * which breaks crawlers, uptime checks, and any client branching on `res.ok`.
+ */
+const SPA_REWRITE_CODE = `function handler(event) {
+  var request = event.request;
+  var uri = request.uri;
+  var segment = uri.substring(uri.lastIndexOf("/") + 1);
+  if (segment.indexOf(".") === -1) {
+    request.uri = "/index.html";
+  }
+  return request;
+}`;
+
+/**
  * WAF configuration for JaypieWebDeploymentBucket. Same shape as
  * JaypieDistribution's JaypieWafConfig, but `name` is optional — when omitted,
  * the construct id is used to namespace the WebACL and WAF log bucket.
@@ -81,6 +108,23 @@ export interface JaypieWebDeploymentBucketProps extends s3.BucketProps {
    * @default "web"
    */
   component?: string;
+  /**
+   * Overrides merged over the distribution's default behavior. Keys given here
+   * win; keys omitted keep the construct's defaults (S3 website origin,
+   * environment-aware cache policy, response headers policy, HTTPS redirect).
+   *
+   * The default behavior is the right scope for a single-page app rewrite: a
+   * function attached here never sees paths registered later with
+   * `distribution.addBehavior(...)`, so their genuine 404s stay 404s.
+   *
+   * @example
+   * defaultBehavior: {
+   *   functionAssociations: [
+   *     { eventType: cloudfront.FunctionEventType.VIEWER_REQUEST, function: fn },
+   *   ],
+   * }
+   */
+  defaultBehavior?: Partial<cloudfront.BehaviorOptions>;
   /**
    * Log destination configuration for CloudFront access logs.
    * - LambdaDestination: Use a specific Lambda destination for S3 notifications
@@ -140,6 +184,22 @@ export interface JaypieWebDeploymentBucketProps extends s3.BucketProps {
    */
   securityHeaders?: boolean | SecurityHeadersOverrides;
   /**
+   * Serve the bucket as a single-page app. Creates a viewer-request CloudFront
+   * Function on the default behavior that rewrites extension-less URIs to
+   * `/index.html`, so a deep link answers 200 from the real index key instead
+   * of 404 from the website error document.
+   *
+   * Scoped to the default behavior, so paths registered with
+   * `distribution.addBehavior(...)` keep their own 404s. Requires a
+   * distribution: without `host` and `zone` no function is created.
+   *
+   * Throws when `defaultBehavior.functionAssociations` already carries a
+   * viewer-request function, which CloudFront permits only one of.
+   *
+   * @default false
+   */
+  spa?: boolean;
+  /**
    * WAF WebACL configuration for the CloudFront distribution.
    * - true: create and attach a WebACL with sensible defaults; the construct
    *   id is used to namespace the WebACL and WAF log bucket
@@ -175,6 +235,7 @@ export class JaypieWebDeploymentBucket extends Construct implements s3.IBucket {
   public readonly distribution?: cloudfront.Distribution;
   public readonly logBucket?: s3.IBucket;
   public readonly responseHeadersPolicy?: cloudfront.IResponseHeadersPolicy;
+  public readonly spaFunction?: cloudfront.Function;
   public readonly wafLogBucket?: s3.IBucket;
   public readonly webAcl?: wafv2.CfnWebACL;
 
@@ -188,6 +249,7 @@ export class JaypieWebDeploymentBucket extends Construct implements s3.IBucket {
     const {
       certificate: certificateProp,
       component: componentProp = "web",
+      defaultBehavior: defaultBehaviorProp,
       destination: destinationProp = true,
       host: propsHost,
       logBucket: logBucketProp,
@@ -195,6 +257,7 @@ export class JaypieWebDeploymentBucket extends Construct implements s3.IBucket {
       responseHeadersPolicy: responseHeadersPolicyProp,
       roleTag: roleTagProp,
       securityHeaders: securityHeadersProp,
+      spa: spaProp = false,
       waf: wafProp = false,
       zone: propsZone,
       ...bucketProps
@@ -517,6 +580,44 @@ export class JaypieWebDeploymentBucket extends Construct implements s3.IBucket {
 
       this.logBucket = accessLogBucket;
 
+      // Resolve function associations. The SPA rewrite appends to whatever the
+      // caller supplied; CloudFront allows one function per event type, so a
+      // caller-supplied viewer-request function is a synth-time conflict rather
+      // than a deploy-time rejection.
+      const callerFunctionAssociations =
+        defaultBehaviorProp?.functionAssociations ?? [];
+      let functionAssociations = callerFunctionAssociations;
+
+      if (spaProp) {
+        if (
+          callerFunctionAssociations.some(
+            (association) =>
+              association.eventType ===
+              cloudfront.FunctionEventType.VIEWER_REQUEST,
+          )
+        ) {
+          throw new ConfigurationError(
+            "spa cannot be combined with a viewer-request function in defaultBehavior.functionAssociations",
+          );
+        }
+
+        const spaFunction = new cloudfront.Function(this, "SpaRewrite", {
+          code: cloudfront.FunctionCode.fromInline(SPA_REWRITE_CODE),
+          comment: "Rewrite single-page app routes to /index.html",
+          functionName: constructEnvName(`${componentProp}-spa`),
+          runtime: cloudfront.FunctionRuntime.JS_2_0,
+        });
+        this.spaFunction = spaFunction;
+
+        functionAssociations = [
+          ...callerFunctionAssociations,
+          {
+            eventType: cloudfront.FunctionEventType.VIEWER_REQUEST,
+            function: spaFunction,
+          },
+        ];
+      }
+
       // Create CloudFront distribution. Production caches at the edge; the
       // policy rides on the default behavior rather than a `/*` behavior so
       // paths registered later with addBehavior still match (#479).
@@ -531,6 +632,8 @@ export class JaypieWebDeploymentBucket extends Construct implements s3.IBucket {
             : {}),
           viewerProtocolPolicy:
             cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+          ...omitUndefined(defaultBehaviorProp),
+          ...(functionAssociations.length ? { functionAssociations } : {}),
         },
         certificate: this.certificate,
         domainNames: [host],
