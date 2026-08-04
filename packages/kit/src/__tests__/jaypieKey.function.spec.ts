@@ -32,6 +32,27 @@ const LEGACY_SEED = "legacy-seed";
 
 //
 //
+// Mock environment
+//
+
+// Key shape follows PROJECT_ENV, which CI sets. Every test states the
+// environment it expects rather than inheriting the runner's
+const ORIGINAL_PROJECT_ENV = process.env.PROJECT_ENV;
+
+beforeEach(() => {
+  delete process.env.PROJECT_ENV;
+});
+
+afterEach(() => {
+  if (ORIGINAL_PROJECT_ENV === undefined) {
+    delete process.env.PROJECT_ENV;
+  } else {
+    process.env.PROJECT_ENV = ORIGINAL_PROJECT_ENV;
+  }
+});
+
+//
+//
 // Tests
 //
 
