@@ -13,8 +13,8 @@ Jaypie provides four functions for working with API keys: `generateJaypieKey`, `
 import { generateJaypieKey } from "jaypie";
 
 const key = generateJaypieKey();
-// "sk_A1b2C3d4E5f6G7h8I9j0K1l2M3n4O5p6_Xq7R"
-//  ^^ prefix    ^^ 32-char base62 body   ^^ 4-char checksum
+// "sk_A1b2C3d4E5f6G7h8I9j0K1l2M3n4O5p6_Xq7Rt"
+//  ^^ prefix    ^^ 32-char base62 body   ^^ 5-char checksum
 ```
 
 ### With Issuer
@@ -23,23 +23,43 @@ Use `issuer` to namespace keys by application or service. Prefer explicit naming
 
 ```typescript
 const key = generateJaypieKey({ issuer: "jaypie" });
-// "sk_jaypie_A1b2C3d4E5f6G7h8I9j0K1l2M3n4O5p6_Xq7R"
+// "sk_jaypie_A1b2C3d4E5f6G7h8I9j0K1l2M3n4O5p6_Xq7Rt"
 ```
+
+### With Environment
+
+> **Version note:** `environment` requires `jaypie >= 1.2.80` / `@jaypie/kit >= 1.2.16`.
+
+A key minted outside production carries the environment between the issuer and the body, so a key is recognizable on sight as non-production:
+
+```typescript
+// PROJECT_ENV=sandbox
+generateJaypieKey({ issuer: "jaypie" });
+// "sk_jaypie_sandbox_A1b2C3d4E5f6G7h8I9j0K1l2M3n4O5p6_Xq7Rt"
+
+// PROJECT_ENV=production
+generateJaypieKey({ issuer: "jaypie" });
+// "sk_jaypie_A1b2C3d4E5f6G7h8I9j0K1l2M3n4O5p6_Xq7Rt"
+```
+
+The segment defaults to `PROJECT_ENV` and is omitted in production, when `PROJECT_ENV` is unset, and when `environment` is `false` or `null`. Characters outside `0-9A-Za-z` are stripped, so an environment such as `pr-123` becomes `pr123` and cannot read as two segments.
 
 ### Without Prefix or Checksum
 
-Prefix and checksum are optional. Pass `prefix: ""` or `checksum: 0` to omit:
+Prefix and checksum are optional. Pass `prefix: ""` or `checksum: false` to omit:
 
 ```typescript
 generateJaypieKey({ prefix: "" });
-// "A1b2C3d4E5f6G7h8I9j0K1l2M3n4O5p6_Xq7R"
+// "A1b2C3d4E5f6G7h8I9j0K1l2M3n4O5p6_Xq7Rt"
 
-generateJaypieKey({ prefix: "", checksum: 0 });
+generateJaypieKey({ prefix: "", checksum: false });
 // "A1b2C3d4E5f6G7h8I9j0K1l2M3n4O5p6"
 
 generateJaypieKey({ prefix: "", issuer: "jaypie" });
-// "jaypie_A1b2C3d4E5f6G7h8I9j0K1l2M3n4O5p6_Xq7R"
+// "jaypie_A1b2C3d4E5f6G7h8I9j0K1l2M3n4O5p6_Xq7Rt"
 ```
+
+Checksum length is not configurable. `checksum` is read for truthiness only and always emits five characters.
 
 ### With Seed
 
@@ -62,19 +82,30 @@ generateJaypieKey({ seed: "my-seed", issuer: "beta" });
 
 This is useful for bootstrapping an initial owner key from a shared secret without requiring database access.
 
+Derivation reads bytes in counter mode, so `length` above 32 keeps deriving real bytes instead of running off the end of a single digest, and the counter message carries a version tag so a version 2 derivation can never collide with a version 1 digest for the same seed and issuer.
+
+A key derived from a seed before `@jaypie/kit` 1.2.16 is reproduced with `version: 1`:
+
+```typescript
+generateJaypieKey({ seed: process.env.PROJECT_ADMIN_SEED, issuer: "jaypie", version: 1 });
+// Byte-for-byte the key the old algorithm derived
+```
+
 ### Options
 
 | Option | Default | Description |
 |--------|---------|-------------|
-| `checksum` | `4` | Checksum character count (0 to omit) |
+| `checksum` | `true` | Emit the five-character checksum (`false` to omit) |
+| `environment` | `PROJECT_ENV` | Segment between issuer and body (`false` to omit) |
 | `issuer` | (none) | Namespace segment after prefix |
 | `length` | `32` | Random body length |
 | `pool` | base62 (`0-9A-Za-z`) | Character pool for body |
 | `prefix` | `"sk"` | Key prefix (`""` to omit) |
 | `seed` | (none) | Derive key deterministically via HMAC-SHA256 |
 | `separator` | `"_"` | Delimiter between segments |
+| `version` | `2` | `1` reproduces a key minted before the five-character checksum |
 
-All options are optional. Zero-param call produces `sk_<32 base62>_<4 checksum>`.
+All options are optional. Zero-param call produces `sk_<environment>_<32 base62>_<5 checksum>`, dropping the environment segment in production.
 
 ### Valid Formats
 
@@ -82,11 +113,12 @@ All of the following are valid key formats:
 
 | Format | Example |
 |--------|---------|
-| `sk_issuer_body_checksum` | `sk_jaypie_A1b2...p6_Xq7R` |
-| `sk_issuer_bodychecksum` | `sk_jaypie_A1b2...p6Xq7R` |
-| `sk_body_checksum` | `sk_A1b2...p6_Xq7R` |
-| `issuer_bodychecksum` | `jaypie_A1b2...p6Xq7R` |
-| `body_checksum` | `A1b2...p6_Xq7R` |
+| `sk_issuer_environment_body_checksum` | `sk_jaypie_sandbox_A1b2...p6_Xq7Rt` |
+| `sk_issuer_body_checksum` | `sk_jaypie_A1b2...p6_Xq7Rt` |
+| `sk_issuer_bodychecksum` | `sk_jaypie_A1b2...p6Xq7Rt` |
+| `sk_body_checksum` | `sk_A1b2...p6_Xq7Rt` |
+| `issuer_bodychecksum` | `jaypie_A1b2...p6Xq7Rt` |
+| `body_checksum` | `A1b2...p6_Xq7Rt` |
 | `body` | `A1b2...p6` |
 
 Both `_` and `-` are accepted as separators in prefix matter.
@@ -114,13 +146,52 @@ validateJaypieKey(bare);  // true — prefix is not required
 Keys without checksum validate with default options:
 
 ```typescript
-const noCheck = generateJaypieKey({ checksum: 0 });
+const noCheck = generateJaypieKey({ checksum: false });
 validateJaypieKey(noCheck);  // true — checksum is not required
 ```
 
 Checksum separator is also optional — `body_checksum` and `bodychecksum` both validate.
 
 Validation does **not** check revocation or authorization — only structural validity.
+
+### Environment
+
+The environment segment is never required. Outside production a key validates with or without it, whatever environment it names:
+
+```typescript
+// PROJECT_ENV=sandbox
+validateJaypieKey("sk_jaypie_sandbox_A1b2...p6_Xq7Rt", { issuer: "jaypie" });  // true
+validateJaypieKey("sk_jaypie_local_A1b2...p6_Xq7Rt", { issuer: "jaypie" });    // true
+validateJaypieKey("sk_jaypie_A1b2...p6_Xq7Rt", { issuer: "jaypie" });          // true
+```
+
+In production a key carrying an environment segment throws `UnauthorizedError`:
+
+```typescript
+// PROJECT_ENV=production
+validateJaypieKey("sk_jaypie_sandbox_A1b2...p6_Xq7Rt", { issuer: "jaypie" });
+// throws UnauthorizedError("The provided key matches a non-production environment")
+```
+
+The throw requires `issuer`. Without it, an extra segment is indistinguishable from an issuer, so it validates only when it matches the environment being validated against and returns `false` otherwise. Pass `issuer` wherever the production rejection matters.
+
+Production is `isProductionEnv()`: `PROJECT_ENV=production` or `PROJECT_PRODUCTION=true`.
+
+## Compatibility
+
+Every key minted before `@jaypie/kit` 1.2.16 still validates. Validation reads the checksum length and dispatches: four characters to the original order-insensitive sum, five to the current algorithm. Nothing was invalidated and there is no transition window.
+
+Three things changed for keys minted going forward:
+
+| Change | Effect on existing keys |
+|--------|------------------------|
+| Checksum is five characters from a rolling hash | None. Four-character checksums still validate |
+| Random bodies use rejection sampling | None. Validation never inspected how bytes were drawn |
+| Seeded derivation is versioned and reads in counter mode | Re-derivation needs `version: 1` to reproduce the old key |
+
+The last one is the only caller-visible break: a bootstrap key derived from `PROJECT_ADMIN_SEED` is re-derived at comparison time, and the default derivation is now version 2. Pass `version: 1` at that call site, or mint a version 2 key and store its hash.
+
+The five-character checksum exists because the original summed character codes, which is order-insensitive: transposing two characters produced the same checksum. The rolling hash weights position, so a transposed pair is caught.
 
 ## Hash
 
@@ -200,7 +271,7 @@ Mocked in `@jaypie/testkit`:
 import { generateJaypieKey, hashJaypieKey, validateJaypieKey } from "@jaypie/testkit/mock";
 ```
 
-- `generateJaypieKey` returns `"sk_MOCK00000000000000000000000000_abcd"`
+- `generateJaypieKey` returns `"sk_MOCK00000000000000000000000000_abcde"`
 - `hashJaypieKey` returns `"0".repeat(64)` (64 zeroes)
 - `validateJaypieKey` returns `true`
 

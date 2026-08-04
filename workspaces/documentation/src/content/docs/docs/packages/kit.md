@@ -189,22 +189,35 @@ Generate API keys with base62 body and optional checksum:
 import { generateJaypieKey } from "jaypie";
 
 const key = generateJaypieKey();
-// "sk_<32 base62 chars>_<4 char checksum>"
+// "sk_<32 base62 chars>_<5 char checksum>"
 
 const custom = generateJaypieKey({
   issuer: "jaypie",
   prefix: "pk",
   length: 16,
 });
-// "pk_jaypie_<16 base62 chars>_<4 char checksum>"
+// "pk_jaypie_<16 base62 chars>_<5 char checksum>"
 ```
 
-Prefix and checksum are optional:
+Outside production the key carries the environment between the issuer and the body:
 
 ```typescript
-generateJaypieKey({ prefix: "" });           // "<body>_<checksum>"
-generateJaypieKey({ checksum: 0 });          // "sk_<body>"
-generateJaypieKey({ prefix: "", checksum: 0 }); // "<body>"
+// PROJECT_ENV=sandbox
+generateJaypieKey({ issuer: "jaypie" });
+// "sk_jaypie_sandbox_<body>_<checksum>"
+
+// PROJECT_ENV=production
+generateJaypieKey({ issuer: "jaypie" });
+// "sk_jaypie_<body>_<checksum>"
+```
+
+Prefix, environment, and checksum are optional:
+
+```typescript
+generateJaypieKey({ prefix: "" });                  // "<body>_<checksum>"
+generateJaypieKey({ checksum: false });             // "sk_<body>"
+generateJaypieKey({ environment: false });          // no environment segment
+generateJaypieKey({ prefix: "", checksum: false }); // "<body>"
 ```
 
 Derive a deterministic key from a seed:
@@ -216,17 +229,23 @@ const key = generateJaypieKey({ seed: process.env.PROJECT_ADMIN_SEED, issuer: "j
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `checksum` | `number` | `4` | Checksum character count (0 to omit) |
+| `checksum` | `boolean` | `true` | Emit the five-character checksum (`false` to omit) |
+| `environment` | `string \| false` | `PROJECT_ENV` | Segment between issuer and body, omitted in production |
 | `issuer` | `string` | `undefined` | Namespace segment after prefix |
 | `length` | `number` | `32` | Random body character length |
 | `pool` | `string` | base62 | Character pool |
 | `prefix` | `string` | `"sk"` | Key prefix (`""` to omit) |
 | `seed` | `string` | `undefined` | Derive key deterministically via HMAC-SHA256 |
 | `separator` | `string` | `"_"` | Delimiter between segments |
+| `version` | `1 \| 2` | `2` | `1` reproduces a key minted before the five-character checksum |
+
+:::note
+Keys minted before `@jaypie/kit` 1.2.16 carry a four-character checksum and still validate. Only re-deriving a seeded key needs `version: 1`.
+:::
 
 ### validateJaypieKey
 
-Validate key format and checksum. Prefix and checksum are **not required** — keys without them are still valid. Both `_` and `-` are accepted as separators:
+Validate key format and checksum. Prefix, environment, and checksum are **not required** — keys without them are still valid. Both `_` and `-` are accepted as separators:
 
 ```typescript
 import { validateJaypieKey } from "jaypie";
@@ -235,6 +254,8 @@ validateJaypieKey(key);                          // true
 validateJaypieKey(key, { issuer: "jaypie" });     // true (if generated with issuer)
 validateJaypieKey("tampered" + key);              // false
 ```
+
+In production, a key carrying an environment segment throws `UnauthorizedError` with the message "The provided key matches a non-production environment". The throw requires `issuer`, since an unclaimed segment is otherwise indistinguishable from an issuer.
 
 ### hashJaypieKey
 
