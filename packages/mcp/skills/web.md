@@ -38,9 +38,10 @@ new JaypieWebDeploymentBucket(this, "Web", {
 | `host` | `string \| HostConfig` | `mergeDomain(CDK_ENV_WEB_SUBDOMAIN, CDK_ENV_WEB_HOSTED_ZONE \|\| CDK_ENV_HOSTED_ZONE)` — `HostConfig` is resolved via `envHostname()` |
 | `zone` | `string \| IHostedZone \| JaypieHostedZone` | `CDK_ENV_WEB_HOSTED_ZONE \|\| CDK_ENV_HOSTED_ZONE` |
 | `certificate` | `boolean \| ICertificate` | `true` (creates via `resolveCertificate`) |
+| `component` | `string` | `"web"` — name component for the default bucket name |
 | `destination` | `LambdaDestination \| boolean` | `true` (Datadog forwarder for access-log bucket notifications) |
 | `logBucket` | `IBucket \| string \| { exportName } \| true` | undefined — creates a new bucket if `destination !== false` |
-| `name` | `string` | `constructEnvName("web")` |
+| `name` | `string` | `constructEnvName(component)` |
 | `responseHeadersPolicy` | `IResponseHeadersPolicy` | undefined — full override; bypasses default security headers |
 | `roleTag` | `string` | `CDK.ROLE.HOSTING` |
 | `securityHeaders` | `boolean \| SecurityHeadersOverrides` | `true` |
@@ -48,15 +49,31 @@ new JaypieWebDeploymentBucket(this, "Web", {
 
 Also accepts all `s3.BucketProps` — the bucket defaults to `autoDeleteObjects: true`, `publicReadAccess: true`, `websiteIndexDocument: "index.html"`, `websiteErrorDocument: "index.html"` (SPA-friendly).
 
+### Bucket Name
+
+The bucket name defaults to `constructEnvName(component)`, and `component` defaults to `"web"` — a literal, independent of the construct id and of `host`. Two instances in one account and region therefore collide on `<env>-<key>-web-<nonce>` and the second stack fails change-set validation with `already exists`. Give the second instance a `component` (or a full `name`):
+
+```typescript
+new JaypieWebDeploymentBucket(this, "Web", { host: webHost, zone });
+new JaypieWebDeploymentBucket(this, "App", { component: "app", host: appHost, zone });
+```
+
+Changing `component` or `name` on a deployed stack renames the bucket, which replaces it. `JaypieStaticWebBucket` sets its own default name (`constructEnvName("static")`) and does not collide.
+
 ### CloudFront
 
-- Default behavior: S3 static website origin, `REDIRECT_TO_HTTPS`, `CACHING_DISABLED`.
-- In production (`isProductionEnv()`), a second behavior on `/*` enables `CACHING_OPTIMIZED` — `index.html` stays uncached so SPA deploys are visible immediately; hashed assets get edge cache.
+- Default behavior: S3 static website origin, `REDIRECT_TO_HTTPS`. `CACHING_DISABLED` outside production; `CACHING_OPTIMIZED` in production (`isProductionEnv()`), so hashed assets get edge cache. The response headers policy sets `Cache-Control: no-store` so browsers still revalidate.
+- No `/*` behavior is created. Paths registered afterward with `distribution.addBehavior("/app/*", origin)` are evaluated ahead of the default behavior and match in every environment — a static site and a Lambda surface can share one distribution.
 - Access logs land in a CloudFront log bucket with Datadog forwarding by default. Set `destination: false` to skip notifications, or pass `logBucket: <existing>` to reuse a bucket.
+
+```typescript
+const web = new JaypieWebDeploymentBucket(this, "Web", { host, zone });
+web.distribution!.addBehavior("/app/*", new origins.FunctionUrlOrigin(api.functionUrl));
+```
 
 ### Security Headers
 
-Same defaults as `JaypieDistribution`: HSTS, X-Frame-Options, CSP, Referrer-Policy, Permissions-Policy, Cross-Origin-* headers, and Server header removal (applied via a `ResponseHeadersPolicy` on the default behavior and the production `/*` behavior). Override the same way:
+Same defaults as `JaypieDistribution`: HSTS, X-Frame-Options, CSP, Referrer-Policy, Permissions-Policy, Cross-Origin-* headers, and Server header removal (applied via a `ResponseHeadersPolicy` on the default behavior). Override the same way:
 
 ```typescript
 // Disable

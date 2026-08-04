@@ -3,9 +3,16 @@ import { ConfigurationError } from "@jaypie/errors";
 import { Stack } from "aws-cdk-lib";
 import { Match, Template } from "aws-cdk-lib/assertions";
 import * as cloudfront from "aws-cdk-lib/aws-cloudfront";
+import * as origins from "aws-cdk-lib/aws-cloudfront-origins";
 import * as route53 from "aws-cdk-lib/aws-route53";
 import * as s3 from "aws-cdk-lib/aws-s3";
 import { JaypieWebDeploymentBucket } from "../JaypieWebDeploymentBucket";
+
+function findBucketNames(template: Template) {
+  return Object.values(template.findResources("AWS::S3::Bucket")).map(
+    (bucket) => bucket.Properties?.BucketName,
+  );
+}
 
 function findDistribution(template: Template) {
   const resources = template.findResources("AWS::CloudFront::Distribution");
@@ -95,6 +102,141 @@ describe("JaypieWebDeploymentBucket", () => {
 
       template.hasResource("AWS::WAFv2::WebACL", {});
       template.hasResource("AWS::WAFv2::LoggingConfiguration", {});
+    });
+  });
+
+  describe("Bucket Name", () => {
+    it("defaults to the web component", () => {
+      process.env.PROJECT_ENV = "sandbox";
+      process.env.PROJECT_KEY = "cloudagent";
+      process.env.PROJECT_NONCE = "ckujet";
+      const stack = new Stack();
+
+      new JaypieWebDeploymentBucket(stack, "Web");
+      const template = Template.fromStack(stack);
+
+      expect(findBucketNames(template)).toEqual([
+        "sandbox-cloudagent-web-ckujet",
+      ]);
+    });
+
+    it("names the bucket from component", () => {
+      process.env.PROJECT_ENV = "sandbox";
+      process.env.PROJECT_KEY = "cloudagent";
+      process.env.PROJECT_NONCE = "ckujet";
+      const stack = new Stack();
+
+      new JaypieWebDeploymentBucket(stack, "App", { component: "app" });
+      const template = Template.fromStack(stack);
+
+      expect(findBucketNames(template)).toEqual([
+        "sandbox-cloudagent-app-ckujet",
+      ]);
+    });
+
+    it("gives two instances distinct names when component is set", () => {
+      process.env.PROJECT_ENV = "sandbox";
+      process.env.PROJECT_KEY = "cloudagent";
+      process.env.PROJECT_NONCE = "ckujet";
+      const stack = new Stack();
+
+      new JaypieWebDeploymentBucket(stack, "Web");
+      new JaypieWebDeploymentBucket(stack, "App", { component: "app" });
+      const template = Template.fromStack(stack);
+
+      expect(findBucketNames(template)).toEqual([
+        "sandbox-cloudagent-web-ckujet",
+        "sandbox-cloudagent-app-ckujet",
+      ]);
+    });
+
+    it("honors an explicit name over component", () => {
+      process.env.PROJECT_ENV = "sandbox";
+      process.env.PROJECT_KEY = "cloudagent";
+      process.env.PROJECT_NONCE = "ckujet";
+      const stack = new Stack();
+
+      new JaypieWebDeploymentBucket(stack, "App", {
+        component: "app",
+        name: "explicit-name",
+      });
+      const template = Template.fromStack(stack);
+
+      expect(findBucketNames(template)).toEqual(["explicit-name"]);
+    });
+
+    it("ignores host.component for the bucket name", () => {
+      process.env.PROJECT_ENV = "sandbox";
+      process.env.PROJECT_KEY = "cloudagent";
+      process.env.PROJECT_NONCE = "ckujet";
+      const { stack, zone } = makeStack();
+
+      new JaypieWebDeploymentBucket(stack, "Surface", {
+        host: { component: "app", domain: "example.com" },
+        zone,
+      });
+      const template = Template.fromStack(stack);
+
+      expect(findBucketNames(template)).toContain(
+        "sandbox-cloudagent-web-ckujet",
+      );
+    });
+  });
+
+  describe("Cache Behaviors", () => {
+    it("caches at the edge in production without a catch-all behavior", () => {
+      process.env.PROJECT_ENV = "production";
+      const { stack, zone } = makeStack();
+
+      new JaypieWebDeploymentBucket(stack, "Web", {
+        host: "app.example.com",
+        zone,
+      });
+      const template = Template.fromStack(stack);
+      const config = findDistribution(template).Properties.DistributionConfig;
+
+      expect(config.DefaultCacheBehavior.CachePolicyId).toBe(
+        cloudfront.CachePolicy.CACHING_OPTIMIZED.cachePolicyId,
+      );
+      expect(config.CacheBehaviors).toBeUndefined();
+    });
+
+    it("disables caching outside production", () => {
+      process.env.PROJECT_ENV = "sandbox";
+      const { stack, zone } = makeStack();
+
+      new JaypieWebDeploymentBucket(stack, "Web", {
+        host: "app.example.com",
+        zone,
+      });
+      const template = Template.fromStack(stack);
+      const config = findDistribution(template).Properties.DistributionConfig;
+
+      expect(config.DefaultCacheBehavior.CachePolicyId).toBe(
+        cloudfront.CachePolicy.CACHING_DISABLED.cachePolicyId,
+      );
+      expect(config.CacheBehaviors).toBeUndefined();
+    });
+
+    it("keeps behaviors added after construction reachable in production", () => {
+      process.env.PROJECT_ENV = "production";
+      const { stack, zone } = makeStack();
+
+      const construct = new JaypieWebDeploymentBucket(stack, "Web", {
+        host: "app.example.com",
+        zone,
+      });
+      construct.distribution!.addBehavior(
+        "/app/*",
+        new origins.HttpOrigin("origin.example.com"),
+      );
+      const template = Template.fromStack(stack);
+      const config = findDistribution(template).Properties.DistributionConfig;
+
+      const patterns = (
+        config.CacheBehaviors as Array<{ PathPattern: string }>
+      ).map((behavior) => behavior.PathPattern);
+      expect(patterns).toEqual(["/app/*"]);
     });
   });
 

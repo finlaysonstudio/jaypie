@@ -227,6 +227,26 @@ new JaypieWebDeploymentBucket(this, "Web", {
 });
 ```
 
+### Bucket Naming
+
+The bucket name defaults to `constructEnvName(component)`, and `component` defaults to `"web"` — independent of the construct id and of `host`. Two instances in one account and region collide on `<env>-<key>-web-<nonce>`, so give the second one a `component` (or an explicit `name`):
+
+```typescript
+new JaypieWebDeploymentBucket(this, "Web", { host: webHost, zone });
+new JaypieWebDeploymentBucket(this, "App", { component: "app", host: appHost, zone });
+```
+
+Changing `component` or `name` on a deployed stack renames the bucket, which replaces it.
+
+### Additional Behaviors
+
+The default behavior serves the S3 static website origin, with `CACHING_OPTIMIZED` in production and `CACHING_DISABLED` elsewhere. No `/*` behavior is created, so paths registered afterward are evaluated ahead of the default and a static site can share a distribution with a Lambda surface:
+
+```typescript
+const web = new JaypieWebDeploymentBucket(this, "Web", { host, zone });
+web.distribution!.addBehavior("/app/*", new origins.FunctionUrlOrigin(api.functionUrl));
+```
+
 ### Stable Outputs for cdk-outputs.json
 
 Call `exportOutputs()` to emit stack-level `CfnOutput`s with hash-free logical IDs (`DestinationBucketName`, `DestinationBucketDeployRoleArn`, `DistributionId`, `CertificateArn`):
