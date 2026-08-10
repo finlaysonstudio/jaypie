@@ -827,7 +827,7 @@ export class StreamLoop {
           }
 
           const delay = policy.getDelayForAttempt(attempt);
-          log.warn(`Stream request failed. Retrying in ${delay}ms...`);
+          log.debug(`Stream request failed. Retrying in ${delay}ms...`);
           log.var({ error });
 
           await abortableSleep({ ms: delay, signal: options.signal });

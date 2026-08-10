@@ -207,7 +207,7 @@ export class GoogleAdapter extends BaseProviderAdapter {
       request.tools && !isStructuredOutputRetry ? [...request.tools] : [];
     if (request.format && (isStructuredOutputRetry || !useNativeCombo)) {
       if (hasUserTools) {
-        log.warn(
+        log.debug(
           `[GoogleAdapter] Using legacy structured_output tool fallback for model ${geminiRequest.model}; native responseJsonSchema + tools combo is only available on Gemini 3.`,
         );
       }

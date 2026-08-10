@@ -237,7 +237,7 @@ export class RetryExecutor {
           }
 
           const delay = this.policy.getDelayForAttempt(attempt);
-          log.warn(`API call failed. Retrying in ${delay}ms...`);
+          log.debug(`API call failed. Retrying in ${delay}ms...`);
 
           await this.hookRunner.runOnRetryableError(options.hooks, {
             input: options.context.input as never,

@@ -413,7 +413,7 @@ const response = await Llm.operate("Greet the world", {
 
 **Fireworks notes:**
 - Uses the OpenAI-style native `response_format: { type: "json_schema", ... }` for format-only requests.
-- Format **and** tools combined is rejected by the API ("You cannot specify response format and function call at the same time"), so those requests preemptively use the `structured_output` fake-tool emulation (logged at warn) — same approach as Gemini 2.5.
+- Format **and** tools combined is rejected by the API ("You cannot specify response format and function call at the same time"), so those requests preemptively use the `structured_output` fake-tool emulation (logged at debug) — same approach as Gemini 2.5.
 - A model that 400/422s on `response_format` alone is cached for the session and retried via the emulation path.
 - Emulation compliance is enforced by the operate loop: when a format request completes as prose, the loop first tries to parse the text as JSON (fence-stripped), then takes a corrective turn offering **only** the `structured_output` tool (`OperateRequest.structuredOutputRetry`), looping within the `turns` budget. Adapters opt in via `supportsStructuredOutputRetry`; Fireworks is currently the only one.
 
@@ -686,6 +686,14 @@ the response logs only the text content or the requested tool calls. Full
 provider payloads are never logged; use `hooks`
 (`beforeEachModelRequest` / `afterEachModelResponse`) or LLM Observability
 to capture them.
+
+**Level policy.** `warn` means the call is running but not as expected —
+content discarded, a provider rejecting a native field, a rate-limit wait, a
+tool erroring, a loop stopped on its turn or tool-error budget. A path that
+recovers and delivers the requested result logs at **debug**: transient-error
+retries, and the per-call notice that an adapter is serving `format` through
+`structured_output` emulation. The one-time rejection that demoted a model to
+emulation stays at `warn`; the emulated calls that follow do not.
 
 ### Report Tally
 

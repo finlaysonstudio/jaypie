@@ -13,8 +13,10 @@
 // compares actual outcomes to these and flags mismatches:
 //
 //   "ok"   — capability works and produces no warnings
-//   "warn" — capability works but is expected to emit a fallback log.warn
-//            (e.g., gemini-2.5 + tools+structured engages the legacy fake-tool path)
+//   "warn" — capability works but is expected to emit a log.warn (e.g., an
+//            adapter discarding content the provider cannot accept). A
+//            structured_output emulation path is not one: it settles correctly
+//            and logs at debug, so those cells expect "ok"
 //   "skip" — capability is not exercised (e.g., model is text-only)
 //   "fail" — capability is expected to fail outright
 //
@@ -73,34 +75,35 @@ function catalogIds(node: unknown = MODEL, out: string[] = []): string[] {
 // support (documents cannot be delivered as data: URIs) and only some catalog
 // models are vision-capable (verified live 2026-07-19). Fireworks also rejects
 // response_format combined with tools, so `both` engages the structured_output
-// tool emulation and logs a warn on every Fireworks model. Mistral accepts the
-// pair natively, but one model still needs the corrective turn — see below.
+// tool emulation on every Fireworks model — that path settles correctly and
+// logs at debug, so those cells expect "ok". Mistral accepts the pair
+// natively, but one model still needs the corrective turn — see below.
 const MATRIX_EXPECT: Record<
   string,
   Partial<Record<Capability, ExpectedOutcome>>
 > = {
-  [MODEL.FIREWORKS.DEEPSEEK]: { both: "warn", pdf: "skip", image: "skip" },
-  [MODEL.FIREWORKS.GLM]: { both: "warn", pdf: "skip", image: "skip" },
-  [MODEL.FIREWORKS.GPT_OSS]: { both: "warn", pdf: "skip", image: "skip" },
+  [MODEL.FIREWORKS.DEEPSEEK]: { pdf: "skip", image: "skip" },
+  [MODEL.FIREWORKS.GLM]: { pdf: "skip", image: "skip" },
+  [MODEL.FIREWORKS.GPT_OSS]: { pdf: "skip", image: "skip" },
   // INKLING and KIMI both advertise supports_image_input (Fireworks models API,
   // 2026-08-02), so neither skips the image cell.
-  [MODEL.FIREWORKS.INKLING]: { both: "warn", pdf: "skip" },
-  [MODEL.FIREWORKS.KIMI]: { both: "warn", pdf: "skip" },
-  [MODEL.FIREWORKS.MINIMAX]: { both: "warn", pdf: "skip", image: "skip" },
+  [MODEL.FIREWORKS.INKLING]: { pdf: "skip" },
+  [MODEL.FIREWORKS.KIMI]: { pdf: "skip" },
+  [MODEL.FIREWORKS.MINIMAX]: { pdf: "skip", image: "skip" },
   // NEMOTRON returned to the catalog on 2026-08-02 after being retired
   // 2026-07-21 for nondeterministic structured output (clean JSON, prose, or an
   // empty array from the same request). `structured` is left "ok" on evidence,
   // not omission: 6 for 6 on resample (2026-08-02). Should it regress, prefer
   // pinning `structured: "warn"` over removing the model again, and record the
   // sample count here. It advertises no image input.
-  [MODEL.FIREWORKS.NEMOTRON]: { both: "warn", pdf: "skip", image: "skip" },
+  [MODEL.FIREWORKS.NEMOTRON]: { pdf: "skip", image: "skip" },
   // QWEN `structured` is pinned "ok" on evidence, not omission: it failed once
   // in three samples (2026-07), then passed 10 for 10 on resample (2026-07-25,
   // issue #438) — 12 of 13 overall, so the miss reads as flake. Schema
   // adherence is loose even when passing (observed ["R","Y","B"] and
   // ["Red","","Blue"]); the cell only asserts a non-empty array, so degraded
   // content still counts as ok. A second failure means reopening #438.
-  [MODEL.FIREWORKS.QWEN]: { both: "warn", pdf: "skip" },
+  [MODEL.FIREWORKS.QWEN]: { pdf: "skip" },
   // Grok 4.5 reads the fixture PDF in 2 of 9 live samples (2026-08-02). The
   // other seven answered "I'll extract the text from the PDF using the
   // available tools" — narrating a tool call in a cell that configures no

@@ -555,7 +555,7 @@ export class AnthropicAdapter extends BaseProviderAdapter {
       ? [...request.tools]
       : [];
     if (useFallbackStructuredOutput && request.format) {
-      log.warn(
+      log.debug(
         `[AnthropicAdapter] Using legacy structured_output tool fallback for model ${anthropicRequest.model as string}; native output_config previously rejected for this model.`,
       );
       allTools.push({

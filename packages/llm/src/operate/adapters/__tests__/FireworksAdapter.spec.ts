@@ -294,7 +294,7 @@ describe("FireworksAdapter", () => {
       });
 
       it("uses structured_output tool emulation when format and tools are combined", () => {
-        const warn = vi.spyOn(log, "warn").mockImplementation(() => {});
+        const debug = vi.spyOn(log, "debug").mockImplementation(() => {});
         const adapter = new FireworksAdapter();
         const schema = {
           type: "object",
@@ -326,12 +326,12 @@ describe("FireworksAdapter", () => {
         expect(result.tools).toHaveLength(2);
         expect(result.tools![0].function.name).toBe("roll");
         expect(result.tools![1].function.name).toBe("structured_output");
-        expect(warn).toHaveBeenCalled();
+        expect(debug).toHaveBeenCalled();
         vi.restoreAllMocks();
       });
 
       it("offers only the structured_output tool on a corrective retry turn", () => {
-        vi.spyOn(log, "warn").mockImplementation(() => {});
+        vi.spyOn(log, "debug").mockImplementation(() => {});
         const adapter = new FireworksAdapter();
         const schema = {
           type: "object",
