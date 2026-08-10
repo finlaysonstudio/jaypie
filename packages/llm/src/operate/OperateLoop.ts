@@ -1037,7 +1037,7 @@ export class OperateLoop {
       // text is in its context, and re-deriving lets it substitute values it
       // never produced. This call cannot invent, because it only sees the text.
       if (this.adapter.supportsStructuredOutputConversion) {
-        log.warn(
+        log.debug(
           `[operate] Model returned text despite format on turn ${state.currentTurn}; converting it in a fresh context`,
         );
         const converted = await this.convertToStructuredOutput({
@@ -1068,7 +1068,7 @@ export class OperateLoop {
         this.adapter.supportsStructuredOutputRetry &&
         state.currentTurn < state.maxTurns
       ) {
-        log.warn(
+        log.debug(
           `[operate] Model returned text despite format on turn ${state.currentTurn}; retrying with structured_output tool only`,
         );
         for (const item of this.adapter.responseToHistoryItems(parsed.raw)) {
