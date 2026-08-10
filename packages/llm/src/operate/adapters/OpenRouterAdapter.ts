@@ -457,7 +457,7 @@ export class OpenRouterAdapter extends BaseProviderAdapter {
       ? [...request.tools]
       : [];
     if (useFallbackStructuredOutput && request.format) {
-      log.warn(
+      log.debug(
         `[OpenRouterAdapter] Using legacy structured_output tool fallback for model ${openRouterRequest.model}; native response_format previously rejected for this model.`,
       );
       allTools.push({

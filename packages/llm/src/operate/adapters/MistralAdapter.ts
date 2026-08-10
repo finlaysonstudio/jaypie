@@ -532,7 +532,7 @@ export class MistralAdapter extends BaseProviderAdapter {
     const allTools: ProviderToolDefinition[] =
       request.tools && !request.structuredOutputRetry ? [...request.tools] : [];
     if (useFallbackStructuredOutput && request.format) {
-      log.warn(
+      log.debug(
         `[MistralAdapter] Using structured_output tool fallback for model ${mistralRequest.model}; native response_format previously rejected for this model.`,
       );
       allTools.push({

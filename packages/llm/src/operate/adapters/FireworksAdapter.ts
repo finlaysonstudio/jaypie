@@ -410,7 +410,7 @@ export class FireworksAdapter extends BaseProviderAdapter {
     const allTools: ProviderToolDefinition[] =
       request.tools && !request.structuredOutputRetry ? [...request.tools] : [];
     if (useFallbackStructuredOutput && request.format) {
-      log.warn(
+      log.debug(
         hasCallerTools
           ? `[FireworksAdapter] Fireworks does not support response_format combined with tools; using structured_output tool emulation for model ${fireworksRequest.model}.`
           : `[FireworksAdapter] Using legacy structured_output tool fallback for model ${fireworksRequest.model}; native response_format previously rejected for this model.`,
