@@ -1,14 +1,11 @@
 import typescript from "@rollup/plugin-typescript";
 import { dts } from "rollup-plugin-dts";
 
-// Bundle declarations: keep every bare specifier external so dts() inlines only
-// our own relative files, producing a single self-contained declaration per
-// entry point that resolves under node16/nodenext module resolution.
-const dtsExternal = (id) => !/^[./]/.test(id);
-
-// Subpath entry points ("" is the package root). Each gets a bundled ESM
-// `index.d.ts` and a CommonJS `index.d.cts`.
-const dtsEntries = [
+// Subpath entry points ("" is the package root). Every entry ships an ESM and
+// a CommonJS bundle plus a bundled declaration per format, and every one of
+// them is derived from this list — an entry added here reaches `dist` in all
+// four shapes, which hand-written per-entry configs did not guarantee.
+const entries = [
   "",
   "commander",
   "data",
@@ -20,44 +17,16 @@ const dtsEntries = [
   "websocket",
 ];
 
-const dtsConfigs = dtsEntries.flatMap((sub) => {
-  const dir = sub ? `${sub}/` : "";
-  const input = `src/${dir}index.ts`;
-  return [
-    {
-      input,
-      output: { file: `dist/esm/${dir}index.d.ts`, format: "es" },
-      plugins: [dts()],
-      external: dtsExternal,
-    },
-    {
-      input,
-      output: { file: `dist/cjs/${dir}index.d.cts`, format: "es" },
-      plugins: [dts()],
-      external: dtsExternal,
-    },
-  ];
-});
-
-// Filter out expected warnings:
-// - TS2307: Cannot find module '@jaypie/*' (external workspace dependencies)
-// - TS5055: Cannot write file because it would overwrite input file (declaration files from previous build)
-const onwarn = (warning, defaultHandler) => {
-  if (warning.plugin === "typescript") {
-    if (warning.message.includes("@jaypie/")) {
-      return;
-    }
-    if (warning.message.includes("TS5055")) {
-      return;
-    }
-  }
-  defaultHandler(warning);
-};
+// Bundle declarations: keep every bare specifier external so dts() inlines only
+// our own relative files, producing a single self-contained declaration per
+// entry point that resolves under node16/nodenext module resolution.
+const dtsExternal = (id) => !/^[./]/.test(id);
 
 const external = [
   "@jaypie/aws",
   "@jaypie/dynamodb",
   "@jaypie/errors",
+  "@jaypie/express",
   "@jaypie/lambda",
   "@modelcontextprotocol/sdk/server/mcp.js",
   "commander",
@@ -65,325 +34,84 @@ const external = [
   "zod",
 ];
 
-export default [
-  // ES modules version - main
+// Filter out expected warnings:
+// - TS2307: Cannot find module '@jaypie/*' (external workspace dependencies)
+const onwarn = (warning, defaultHandler) => {
+  if (warning.plugin === "typescript" && warning.message.includes("@jaypie/")) {
+    return;
+  }
+  defaultHandler(warning);
+};
+
+const entryPath = (sub) => (sub ? `${sub}/index` : "index");
+const sourcePath = (sub) => `src/${sub ? `${sub}/` : ""}index.ts`;
+
+const input = Object.fromEntries(
+  entries.map((sub) => [entryPath(sub), sourcePath(sub)]),
+);
+
+// One multi-entry build per format. A single pass shares one TypeScript
+// program across every subpath, so code reachable from two entries is emitted
+// once as a shared chunk instead of being duplicated into each subpath
+// directory. Building each entry as its own config instead stood up a
+// TypeScript program per config and retained every one of them for the life of
+// the process, which exhausted the default V8 heap. The two formats stay
+// separate configs because @rollup/plugin-typescript requires the compiler's
+// `outDir` to sit inside the output `dir`.
+const jsConfigs = [
   {
-    input: "src/index.ts",
+    input,
     output: {
+      chunkFileNames: "chunks/[name]-[hash].js",
       dir: "dist/esm",
+      entryFileNames: "[name].js",
       format: "es",
       sourcemap: true,
     },
     onwarn,
     plugins: [
       typescript({
-        tsconfig: "./tsconfig.json",
-        declaration: true,
+        declaration: false,
         outDir: "dist/esm",
-      }),
-    ],
-    external,
-  },
-  // ES modules version - commander
-  // NOTE: declaration: false because main build generates correct .d.ts files
-  {
-    input: "src/commander/index.ts",
-    output: {
-      dir: "dist/esm/commander",
-      format: "es",
-      sourcemap: true,
-    },
-    onwarn,
-    plugins: [
-      typescript({
         tsconfig: "./tsconfig.json",
-        declaration: false,
-        outDir: "dist/esm/commander",
       }),
     ],
     external,
   },
-  // CommonJS version - main
   {
-    input: "src/index.ts",
+    input,
     output: {
+      chunkFileNames: "chunks/[name]-[hash].cjs",
       dir: "dist/cjs",
+      entryFileNames: "[name].cjs",
+      exports: "named",
       format: "cjs",
       sourcemap: true,
-      exports: "named",
-      entryFileNames: "[name].cjs",
     },
     onwarn,
     plugins: [
       typescript({
-        tsconfig: "./tsconfig.json",
-        declaration: true,
+        declaration: false,
         outDir: "dist/cjs",
-      }),
-    ],
-    external,
-  },
-  // CommonJS version - commander
-  // NOTE: declaration: false because main build generates correct .d.ts files
-  {
-    input: "src/commander/index.ts",
-    output: {
-      dir: "dist/cjs/commander",
-      format: "cjs",
-      sourcemap: true,
-      exports: "named",
-      entryFileNames: "[name].cjs",
-    },
-    onwarn,
-    plugins: [
-      typescript({
         tsconfig: "./tsconfig.json",
-        declaration: false,
-        outDir: "dist/cjs/commander",
       }),
     ],
     external,
   },
-  // ES modules version - http
-  // NOTE: declaration: false because main build generates correct .d.ts files
-  {
-    input: "src/http/index.ts",
-    output: {
-      dir: "dist/esm/http",
-      format: "es",
-      sourcemap: true,
-    },
-    onwarn,
-    plugins: [
-      typescript({
-        tsconfig: "./tsconfig.json",
-        declaration: false,
-        outDir: "dist/esm/http",
-      }),
-    ],
-    external,
-  },
-  // CommonJS version - http
-  // NOTE: declaration: false because main build generates correct .d.ts files
-  {
-    input: "src/http/index.ts",
-    output: {
-      dir: "dist/cjs/http",
-      format: "cjs",
-      sourcemap: true,
-      exports: "named",
-      entryFileNames: "[name].cjs",
-    },
-    onwarn,
-    plugins: [
-      typescript({
-        tsconfig: "./tsconfig.json",
-        declaration: false,
-        outDir: "dist/cjs/http",
-      }),
-    ],
-    external,
-  },
-  // ES modules version - lambda
-  // NOTE: declaration: false because main build generates correct .d.ts files
-  {
-    input: "src/lambda/index.ts",
-    output: {
-      dir: "dist/esm/lambda",
-      format: "es",
-      sourcemap: true,
-    },
-    onwarn,
-    plugins: [
-      typescript({
-        tsconfig: "./tsconfig.json",
-        declaration: false,
-        outDir: "dist/esm/lambda",
-      }),
-    ],
-    external,
-  },
-  // CommonJS version - lambda
-  // NOTE: declaration: false because main build generates correct .d.ts files
-  {
-    input: "src/lambda/index.ts",
-    output: {
-      dir: "dist/cjs/lambda",
-      format: "cjs",
-      sourcemap: true,
-      exports: "named",
-      entryFileNames: "[name].cjs",
-    },
-    onwarn,
-    plugins: [
-      typescript({
-        tsconfig: "./tsconfig.json",
-        declaration: false,
-        outDir: "dist/cjs/lambda",
-      }),
-    ],
-    external,
-  },
-  // ES modules version - llm
-  // NOTE: declaration: false because main build generates correct .d.ts files
-  {
-    input: "src/llm/index.ts",
-    output: {
-      dir: "dist/esm/llm",
-      format: "es",
-      sourcemap: true,
-    },
-    onwarn,
-    plugins: [
-      typescript({
-        tsconfig: "./tsconfig.json",
-        declaration: false,
-        outDir: "dist/esm/llm",
-      }),
-    ],
-    external,
-  },
-  // CommonJS version - llm
-  // NOTE: declaration: false because main build generates correct .d.ts files
-  {
-    input: "src/llm/index.ts",
-    output: {
-      dir: "dist/cjs/llm",
-      format: "cjs",
-      sourcemap: true,
-      exports: "named",
-      entryFileNames: "[name].cjs",
-    },
-    onwarn,
-    plugins: [
-      typescript({
-        tsconfig: "./tsconfig.json",
-        declaration: false,
-        outDir: "dist/cjs/llm",
-      }),
-    ],
-    external,
-  },
-  // ES modules version - mcp
-  // NOTE: declaration: false because main build generates correct .d.ts files
-  {
-    input: "src/mcp/index.ts",
-    output: {
-      dir: "dist/esm/mcp",
-      format: "es",
-      sourcemap: true,
-    },
-    onwarn,
-    plugins: [
-      typescript({
-        tsconfig: "./tsconfig.json",
-        declaration: false,
-        outDir: "dist/esm/mcp",
-      }),
-    ],
-    external,
-  },
-  // CommonJS version - mcp
-  // NOTE: declaration: false because main build generates correct .d.ts files
-  {
-    input: "src/mcp/index.ts",
-    output: {
-      dir: "dist/cjs/mcp",
-      format: "cjs",
-      sourcemap: true,
-      exports: "named",
-      entryFileNames: "[name].cjs",
-    },
-    onwarn,
-    plugins: [
-      typescript({
-        tsconfig: "./tsconfig.json",
-        declaration: false,
-        outDir: "dist/cjs/mcp",
-      }),
-    ],
-    external,
-  },
-  // ES modules version - express
-  // NOTE: declaration: false because main build generates correct .d.ts files
-  {
-    input: "src/express/index.ts",
-    output: {
-      dir: "dist/esm/express",
-      format: "es",
-      sourcemap: true,
-    },
-    onwarn,
-    plugins: [
-      typescript({
-        tsconfig: "./tsconfig.json",
-        declaration: false,
-        outDir: "dist/esm/express",
-      }),
-    ],
-    external,
-  },
-  // CommonJS version - express
-  // NOTE: declaration: false because main build generates correct .d.ts files
-  {
-    input: "src/express/index.ts",
-    output: {
-      dir: "dist/cjs/express",
-      format: "cjs",
-      sourcemap: true,
-      exports: "named",
-      entryFileNames: "[name].cjs",
-    },
-    onwarn,
-    plugins: [
-      typescript({
-        tsconfig: "./tsconfig.json",
-        declaration: false,
-        outDir: "dist/cjs/express",
-      }),
-    ],
-    external,
-  },
-  // ES modules version - data
-  // NOTE: declaration: false because main build generates correct .d.ts files
-  {
-    input: "src/data/index.ts",
-    output: {
-      dir: "dist/esm/data",
-      format: "es",
-      sourcemap: true,
-    },
-    onwarn,
-    plugins: [
-      typescript({
-        tsconfig: "./tsconfig.json",
-        declaration: false,
-        outDir: "dist/esm/data",
-      }),
-    ],
-    external,
-  },
-  // CommonJS version - data
-  // NOTE: declaration: false because main build generates correct .d.ts files
-  {
-    input: "src/data/index.ts",
-    output: {
-      dir: "dist/cjs/data",
-      format: "cjs",
-      sourcemap: true,
-      exports: "named",
-      entryFileNames: "[name].cjs",
-    },
-    onwarn,
-    plugins: [
-      typescript({
-        tsconfig: "./tsconfig.json",
-        declaration: false,
-        outDir: "dist/cjs/data",
-      }),
-    ],
-    external,
-  },
-  // Type definitions: one self-contained bundle per entry point and format.
-  ...dtsConfigs,
 ];
+
+// Type definitions: one self-contained bundle per entry point, written to both
+// format directories. dts() inlines every relative import, so the ESM and
+// CommonJS declarations are byte-identical and one build serves both.
+// rollup-plugin-dts owns declarations outright, so the JS build emits none.
+const dtsConfigs = entries.map((sub) => ({
+  input: sourcePath(sub),
+  output: [
+    { file: `dist/esm/${entryPath(sub)}.d.ts`, format: "es" },
+    { file: `dist/cjs/${entryPath(sub)}.d.cts`, format: "es" },
+  ],
+  plugins: [dts()],
+  external: dtsExternal,
+}));
+
+export default [...jsConfigs, ...dtsConfigs];

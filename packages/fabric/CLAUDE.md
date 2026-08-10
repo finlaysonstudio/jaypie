@@ -561,6 +561,27 @@ export { DEFAULT_HTTP_METHODS, HttpStreamEventType } from "./types.js";
 | `IndexableEntity` | `IndexableModel` |
 | `VOCABULARY_VERSION` | `FABRIC_VERSION` |
 
+## Build
+
+`rollup.config.js` derives every output from a single `entries` list (the nine
+subpaths in the `exports` map). Each entry gets an ESM bundle, a CommonJS
+bundle, and one declaration bundle written to both format directories.
+
+- **Adding a subpath means adding it to `entries` and to `exports`, nothing
+  else.** The previous config repeated a config pair per entry by hand, and
+  `websocket` reached `dtsEntries` without ever getting a JS config — it
+  shipped declarations with no `index.js`, so `@jaypie/fabric/websocket` threw
+  `ERR_MODULE_NOT_FOUND` at runtime.
+- The JS builds are multi-entry, so one TypeScript program covers all nine
+  entries per format and shared code is emitted once under `dist/<format>/chunks/`
+  rather than duplicated into each subpath directory.
+- `rollup-plugin-dts` owns declarations outright (the JS builds pass
+  `declaration: false`). Its output inlines every relative import, so the `.d.ts`
+  and `.d.cts` are byte-identical and one build writes both.
+- Config count matters for memory: 34 configs each stood up their own retained
+  TypeScript program and exhausted the default V8 heap on an 8 GB machine.
+  Eleven configs peak near 700 MB.
+
 ## Development Commands
 
 ```bash
