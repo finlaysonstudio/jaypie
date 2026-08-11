@@ -1,12 +1,17 @@
-import { JaypieError } from "./baseErrors";
+import { CauseOptions, JaypieError } from "./baseErrors";
 
-type ErrorConstructor = new (message?: string) => JaypieError;
+type ErrorConstructor = new (
+  message?: string,
+  options?: CauseOptions,
+) => JaypieError;
+
+type ErrorArguments = ConstructorParameters<ErrorConstructor>;
 
 const proxyClassAsFunction = {
   apply: (
     target: ErrorConstructor,
     _thisArgument: unknown,
-    argumentsList: Array<string | undefined>,
+    argumentsList: ErrorArguments,
   ) => new target(...argumentsList),
 };
 
@@ -17,9 +22,10 @@ export function createErrorClass(
   type: string,
 ): ErrorConstructor {
   return new Proxy(
+    // Status and title identify the class, so only `cause` is accepted here
     class extends JaypieError {
-      constructor(message = defaultMessage) {
-        super(message, { status, title }, { _type: type });
+      constructor(message = defaultMessage, options: CauseOptions = {}) {
+        super(message, { ...options, status, title }, { _type: type });
       }
     },
     proxyClassAsFunction,

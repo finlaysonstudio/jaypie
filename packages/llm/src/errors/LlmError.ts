@@ -43,7 +43,6 @@ export class LlmError extends JaypieError {
   readonly provider?: string;
   readonly model?: string;
   readonly retryAfterMs?: number;
-  readonly cause?: unknown;
 
   constructor(
     message: string,
@@ -57,13 +56,12 @@ export class LlmError extends JaypieError {
       cause,
     }: LlmErrorOptions & { status?: number; title?: string } = {},
   ) {
-    super(message, { status, title }, { _type: "LlmError" });
+    super(message, { cause, status, title }, { _type: "LlmError" });
     this.name = "LlmError";
     this.category = category;
     this.provider = provider;
     this.model = model;
     this.retryAfterMs = retryAfterMs;
-    this.cause = cause;
   }
 }
 

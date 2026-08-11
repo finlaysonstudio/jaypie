@@ -86,21 +86,29 @@ if (!user.hasRole("admin")) {
 }
 ```
 
-## Error Context
+## Error Cause
 
-Add context to errors for debugging:
+Pass the caught error as `cause` when rethrowing so the chain survives:
 
 ```typescript
-import { NotFoundError } from "jaypie";
+import { ConfigurationError } from "jaypie";
 
-throw new NotFoundError("User not found", {
-  context: {
-    userId,
-    requestId: req.id,
-    searchedTables: ["users", "legacy_users"],
-  },
-});
+try {
+  await getSecret(name);
+} catch (error) {
+  throw new ConfigurationError("Could not get or parse secret", {
+    cause: error,
+  });
+}
 ```
+
+`cause` is the second argument to every Jaypie error class and reaches
+`error.cause` unchanged, so classification that walks a cause chain sees through
+the Jaypie wrapper. An error constructed without the option has no `cause`
+property, matching native `Error`.
+
+The base `JaypieError` takes `status` and `title` alongside `cause`; the named
+classes take `cause` only, because status and title identify the class.
 
 ## Error Handling in Handlers
 
@@ -132,11 +140,11 @@ it("throws NotFoundError when user missing", async () => {
     .toThrow(NotFoundError);
 });
 
-it("includes context in error", async () => {
+it("preserves the underlying error", async () => {
   try {
     await getUser("invalid-id");
   } catch (error) {
-    expect(error.context.userId).toBe("invalid-id");
+    expect(error.cause).toBeInstanceOf(DatabaseError);
   }
 });
 ```

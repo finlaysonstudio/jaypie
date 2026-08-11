@@ -112,6 +112,9 @@ export interface JaypieErrorResponseBody extends JsonApiErrorResponse {
 }
 
 export interface JaypieError extends Error, JaypieErrorJson {
+  // Declared here so consumers targeting a lib older than ES2022 can still read
+  // the chained error
+  cause?: unknown;
   isProjectError: boolean;
   isJaypieError: boolean;
   body: () => JaypieErrorResponseBody;

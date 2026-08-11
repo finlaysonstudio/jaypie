@@ -6,7 +6,11 @@ import {
   JaypieErrorResponseBody,
   JaypieErrorJson,
 } from "./types";
-interface ErrorOptions {
+export interface CauseOptions {
+  cause?: unknown;
+}
+
+export interface ErrorOptions extends CauseOptions {
   title?: string;
   status?: number;
 }
@@ -16,6 +20,10 @@ interface InternalOptions {
 }
 
 export class JaypieError extends Error implements IJaypieError {
+  // `declare` because the target lib predates `Error.cause`; assigning it
+  // conditionally below keeps native semantics, where an error built without
+  // the option has no `cause` property at all
+  declare cause?: unknown;
   title: string;
   detail: string;
   status: number;
@@ -27,13 +35,17 @@ export class JaypieError extends Error implements IJaypieError {
 
   constructor(
     message: string = ERROR.MESSAGE.INTERNAL_ERROR,
-    {
-      status = HTTP.CODE.INTERNAL_ERROR,
-      title = ERROR.TITLE.INTERNAL_ERROR,
-    }: ErrorOptions = {},
+    options: ErrorOptions = {},
     { _type = ERROR.TYPE.UNKNOWN_TYPE }: InternalOptions = {},
   ) {
+    const {
+      status = HTTP.CODE.INTERNAL_ERROR,
+      title = ERROR.TITLE.INTERNAL_ERROR,
+    } = options;
     super(message);
+    if ("cause" in options) {
+      this.cause = options.cause;
+    }
     this.title = title;
     this.detail = message;
     this.status = status;
