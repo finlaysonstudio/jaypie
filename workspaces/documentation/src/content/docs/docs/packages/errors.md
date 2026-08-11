@@ -62,16 +62,40 @@ throw BadRequestError("Missing required field");
 throw new BadRequestError("Missing required field");
 ```
 
+### Preserving the Cause
+
+Every error class takes `cause` as its second argument:
+
+```typescript
+import { ConfigurationError } from "jaypie";
+
+try {
+  await getSecret(name);
+} catch (error) {
+  throw new ConfigurationError("Could not get or parse secret", {
+    cause: error,
+  });
+}
+```
+
+The base `JaypieError` takes `status` and `title` alongside `cause`. The named
+classes take `cause` only, because status and title identify the class.
+
 ### Error Properties
 
 ```typescript
 const error = NotFoundError("User not found");
 
-error.status;     // 404
-error.name;       // "NotFoundError"
-error.message;    // "User not found"
-error.isJaypie;   // true
+error.status;         // 404
+error.title;          // "Not Found"
+error.name;           // "JaypieError"
+error.message;        // "User not found"
+error.detail;         // "User not found"
+error.isJaypieError;  // true
 ```
+
+Every Jaypie error carries the name `JaypieError`. Use `isJaypieError(error)`
+or `error.status` to discriminate, not `error.name`.
 
 ### JSON:API Body
 

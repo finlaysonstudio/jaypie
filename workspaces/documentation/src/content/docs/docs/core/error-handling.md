@@ -46,17 +46,42 @@ throw BadRequestError("Missing required field");
 throw new BadRequestError("Missing required field");
 ```
 
+### Preserving the Cause
+
+Pass the caught error as `cause` when rethrowing:
+
+```typescript
+import { ConfigurationError } from "jaypie";
+
+try {
+  await getSecret(name);
+} catch (error) {
+  throw new ConfigurationError("Could not get or parse secret", {
+    cause: error,
+  });
+}
+```
+
+`cause` reaches `error.cause` unchanged, so classification that walks a cause
+chain sees through the Jaypie wrapper. An error constructed without the option
+has no `cause` property, matching native `Error`.
+
 ### Error Properties
 
 ```typescript
 const error = BadRequestError("Invalid email format");
 
-error.status;     // 400
-error.name;       // "BadRequestError"
-error.message;    // "Invalid email format"
-error.isJaypie;   // true
-error.body();     // JSON:API formatted error object
+error.status;         // 400
+error.title;          // "Bad Request"
+error.name;           // "JaypieError"
+error.message;        // "Invalid email format"
+error.detail;         // "Invalid email format"
+error.isJaypieError;  // true
+error.body();         // JSON:API formatted error object
 ```
+
+Every Jaypie error carries the name `JaypieError`. Use `isJaypieError(error)`
+or `error.status` to discriminate, not `error.name`.
 
 ### JSON:API Format
 
