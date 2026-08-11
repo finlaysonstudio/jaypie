@@ -150,7 +150,7 @@ const SUBSCRIPTION_DERIVED: DerivedConfig<Transaction> = {
   rules: [
     {
       condition: (parent) => parent.type === "subscription-start",
-      createDerived: ({ parent, seed, timestamp, index }) => ({
+      createDerived: ({ parent, seed, timestamp }) => ({
         amount: parent.amount,
         id: seed,
         parentId: parent.id,
@@ -388,36 +388,38 @@ describe("Transaction Derived Events POC", () => {
 
   describe("Chargeback Chains", () => {
     it("chargebacks can spawn representments which can spawn second chargebacks", () => {
-      // Use a large sample to increase likelihood of seeing the chain
+      // The seed fixes the outcome, so a sample known to hold the full chain
+      // beats a large sample drawn in the hope of one
       const fab = new PurchaseFabricator({
-        annualCount: 1000,
+        annualCount: 100,
         derived: BASIC_TRANSACTION_DERIVED,
-        seed: "chargeback-chain",
+        seed: "second-chargeback",
       });
       const events = fab.events({ year: 2025 });
+      const byId = new Map(events.map((event) => [event.id, event]));
+      const parentOf = (event: Transaction) =>
+        event.parentId ? byId.get(event.parentId) : undefined;
 
       const chargebacks = events.filter((e) => e.type === "chargeback");
       const representments = events.filter((e) => e.type === "representment");
 
-      // With 1000 purchases at 2.1% chargeback rate, we should see ~20 chargebacks
-      // 70% of those should have representments (~14)
-      // This test just verifies the structure works
-      if (chargebacks.length > 0) {
-        // Some chargebacks should have spawned representments
-        // (probabilistic, so we just check structure)
-        expect(chargebacks.every((c) => c.amount < 0)).toBe(true);
-      }
+      expect(chargebacks.length).toBeGreaterThan(0);
+      expect(representments.length).toBeGreaterThan(0);
 
-      if (representments.length > 0) {
-        // Representments should have positive amounts (re-charging)
-        expect(representments.every((r) => r.amount > 0)).toBe(true);
+      // Chargebacks reverse the charge, representments re-charge it
+      expect(chargebacks.every((c) => c.amount < 0)).toBe(true);
+      expect(representments.every((r) => r.amount > 0)).toBe(true);
 
-        // Each representment should reference a chargeback
-        representments.forEach((rep) => {
-          const parent = events.find((e) => e.id === rep.parentId);
-          expect(parent?.type).toBe("chargeback");
-        });
-      }
+      // Every representment answers a chargeback
+      representments.forEach((rep) => {
+        expect(parentOf(rep)?.type).toBe("chargeback");
+      });
+
+      // At least one representment drew a second chargeback
+      const secondChargebacks = chargebacks.filter(
+        (c) => parentOf(c)?.type === "representment",
+      );
+      expect(secondChargebacks.length).toBeGreaterThan(0);
     });
   });
 
@@ -444,7 +446,6 @@ describe("Transaction Derived Events POC", () => {
       });
       const events = fab.events({ year: 2025 });
 
-      const starts = events.filter((e) => e.type === "subscription-start");
       const renewals = events.filter((e) => e.type === "subscription-renewal");
 
       if (renewals.length >= 2) {
@@ -504,49 +505,54 @@ describe("Transaction Derived Events POC", () => {
     });
 
     it("tracks chain depth correctly", () => {
+      // The seed fixes the outcome, so this sample is known to reach depth 3
       const fab = new PurchaseFabricator({
-        annualCount: 1000,
+        annualCount: 100,
         derived: BASIC_TRANSACTION_DERIVED,
-        seed: "depth-tracking",
+        seed: "depth-chain",
       });
       const eventsWithMeta = fab.eventsWithMeta({ year: 2025 });
+      const byId = new Map(eventsWithMeta.map((e) => [e.event.id, e.event]));
+      const parentType = ({ event }: (typeof eventsWithMeta)[number]) =>
+        event.parentId ? byId.get(event.parentId)?.type : undefined;
 
-      // Purchases are depth 0
+      // Depth is derived from the chain, so each group is selected by type and
+      // parent rather than by the depth under test
       const purchases = eventsWithMeta.filter(
         (e) => e.event.type === "purchase",
       );
-      expect(purchases.every((p) => p.depth === 0)).toBe(true);
-
-      // Voids, refunds, chargebacks are depth 1
       const depth1 = eventsWithMeta.filter(
-        (e) =>
-          e.event.type === "void" ||
-          e.event.type === "refund" ||
-          (e.event.type === "chargeback" && e.depth === 1),
+        (e) => e.event.type === "void" || e.event.type === "refund",
       );
-      depth1.forEach((e) => {
-        expect(e.depth).toBe(1);
-      });
-
-      // Representments are depth 2
+      const chargebacks = eventsWithMeta.filter(
+        (e) => e.event.type === "chargeback" && parentType(e) === "purchase",
+      );
       const representments = eventsWithMeta.filter(
         (e) => e.event.type === "representment",
       );
-      representments.forEach((e) => {
-        expect(e.depth).toBe(2);
-      });
-
-      // Second chargebacks are depth 3
       const secondChargebacks = eventsWithMeta.filter(
-        (e) => e.event.type === "chargeback" && e.depth === 3,
+        (e) =>
+          e.event.type === "chargeback" && parentType(e) === "representment",
       );
-      secondChargebacks.forEach((e) => {
-        expect(e.depth).toBe(3);
-      });
+
+      expect(purchases.length).toBe(100);
+      expect(depth1.length).toBeGreaterThan(0);
+      expect(chargebacks.length).toBeGreaterThan(0);
+      expect(representments.length).toBeGreaterThan(0);
+      expect(secondChargebacks.length).toBeGreaterThan(0);
+
+      expect(purchases.every((e) => e.depth === 0)).toBe(true);
+      expect(depth1.every((e) => e.depth === 1)).toBe(true);
+      expect(chargebacks.every((e) => e.depth === 1)).toBe(true);
+      expect(representments.every((e) => e.depth === 2)).toBe(true);
+      expect(secondChargebacks.every((e) => e.depth === 3)).toBe(true);
     });
   });
 
   describe("Statistics", () => {
+    // Reporting the observed rates is the point of this test: the sample is
+    // large so the rate assertions below have something to bound
+    /* eslint-disable no-console */
     it("logs transaction statistics for analysis", () => {
       const fab = new PurchaseFabricator({
         annualCount: 1000,
@@ -590,5 +596,6 @@ describe("Transaction Derived Events POC", () => {
       expect(stats.refunds).toBeGreaterThan(50);
       expect(stats.refunds).toBeLessThan(200); // Should be around 100
     });
+    /* eslint-enable no-console */
   });
 });
