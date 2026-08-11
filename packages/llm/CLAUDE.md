@@ -281,7 +281,8 @@ When a request cannot be completed, `operate()`/`stream()` throw a normalized,
 provider-agnostic `LlmError` (extends `JaypieError`) instead of a bare gateway
 error. Consumers catch a stable type regardless of which provider failed; the
 original provider error is preserved on `.cause`, and `.provider`/`.model` name
-the failed call.
+the failed call. `.cause` comes from `JaypieError` (`@jaypie/errors` 1.2.5 and
+later); `LlmError` passes the option through and declares no field of its own.
 
 | Class | `category` | `status` | When |
 |-------|-----------|----------|------|

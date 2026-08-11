@@ -23,10 +23,38 @@ All errors extend `JaypieError` which provides:
 - `status`: HTTP status code
 - `title`: Human-readable error title
 - `detail`: Error message (same as `message`)
+- `cause`: The chained error, present only when the option was passed
 - `isJaypieError`: Always `true` for identification
 - `isProjectError`: Legacy alias for `isJaypieError`
 - `json()`: Returns JSON:API error object
 - `body()`: Returns JSON:API error response body
+
+Every error carries the name `JaypieError`, not the class name. Discriminate
+with `isJaypieError()`, `status`, or `_type`.
+
+### Cause
+
+Every class takes `cause` in its options argument and forwards it to
+`error.cause` unchanged, so a rethrow preserves the chain:
+
+```typescript
+try {
+  await getSecret(name);
+} catch (error) {
+  throw new ConfigurationError("Could not get or parse secret", {
+    cause: error,
+  });
+}
+```
+
+The base `JaypieError` takes `cause` alongside `status` and `title`. The classes
+built by `createErrorClass` take `cause` only, because status and title identify
+the class. Assignment is conditional on the option being present, matching
+native `Error`, where an error built without it has no `cause` property; the
+`errors.spec` and `issue-492` suites both depend on that distinction.
+
+`cause` is typed on the class and on the `JaypieError` interface because this
+package targets a lib older than ES2022, where `Error` declares no `cause`.
 
 ### Available Errors
 
