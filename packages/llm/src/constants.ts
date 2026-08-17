@@ -37,7 +37,14 @@ export const MODEL = {
     INKLING: "accounts/fireworks/models/inkling",
     KIMI: "accounts/fireworks/models/kimi-k3",
     MINIMAX: "accounts/fireworks/models/minimax-m2p7",
-    MUSE_GLIMMER: "accounts/fireworks/models/muse-glimmer-30b",
+    // Muse Glimmer is deliberately absent. muse-glimmer-30b ignores the native
+    // response_format and answers a format request in prose, then writes the
+    // corrective turn's tool call as *text*
+    // (`structured_output(colors=["Red", "Yellow", "Blue"])`) rather than
+    // emitting a real call, so the loop burns its whole turn budget and settles
+    // with nothing usable — 0 for 6 live (2026-08-17). Structured output is a
+    // baseline expectation of operate(), so the model is not cataloged. Its
+    // COST entry is retained per policy.
     NEMOTRON: "accounts/fireworks/models/nemotron-3-ultra-nvfp4",
     QWEN: "accounts/fireworks/models/qwen3p7-plus",
   },
@@ -295,6 +302,8 @@ export const COST: Record<string, LlmModelCost> = {
     input: 0.3,
     output: 1.2,
   },
+  // Never cataloged; priced so a caller passing the literal id can still cost
+  // it. See the note in MODEL.FIREWORKS for why it is absent.
   "accounts/fireworks/models/muse-glimmer-30b": {
     cachedInputRead: 0.04,
     input: 0.35,
