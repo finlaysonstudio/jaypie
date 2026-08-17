@@ -27,25 +27,29 @@ npm install @jaypie/llm
 
 ### Providers
 
+Models are listed as `LLM.MODEL.*` names rather than ids. The alias is stable
+across releases; the id behind it moves whenever the provider ships a successor.
+
 | Provider | Models | Env Variable |
 |----------|--------|--------------|
-| `anthropic` | claude-sonnet-5, claude-opus-5, claude-haiku-4-5 | `ANTHROPIC_API_KEY` |
-| `fireworks` | glm, deepseek, kimi, minimax, qwen | `FIREWORKS_API_KEY` |
-| `google` | gemini-2.0-flash, gemini-1.5-pro | `GOOGLE_API_KEY` |
-| `mistral` | mistral-large-latest, mistral-small-latest, mistral-ocr-4-0 | `MISTRAL_API_KEY` |
-| `openai` | gpt-4o, gpt-4o-mini, o1-mini, o3-mini | `OPENAI_API_KEY` |
-| `openrouter` | Various | `OPENROUTER_API_KEY` |
-| `xai` | grok-4.5, grok-4-1-fast-reasoning, grok-4-1-fast-non-reasoning | `XAI_API_KEY` |
+| `anthropic` | `MODEL.SONNET`, `MODEL.OPUS`, `MODEL.HAIKU`, `MODEL.FABLE` | `ANTHROPIC_API_KEY` |
+| `bedrock` | `MODEL.NOVA_PRO`, `MODEL.NOVA_LITE` | (AWS credentials) |
+| `fireworks` | `MODEL.FIREWORKS.*` (`DEEPSEEK`, `GLM`, `GPT_OSS`, `INKLING`, `KIMI`, `MINIMAX`, `NEMOTRON`, `QWEN`) | `FIREWORKS_API_KEY` |
+| `google` | `MODEL.GEMINI_FLASH`, `MODEL.GEMINI_FLASH_LITE`, `MODEL.GEMINI_PRO` | `GOOGLE_API_KEY` |
+| `mistral` | `MODEL.MISTRAL.*` (`LARGE`, `SMALL`, `OCR`) | `MISTRAL_API_KEY` |
+| `openai` | `MODEL.SOL`, `MODEL.LUNA`, `MODEL.TERRA` | `OPENAI_API_KEY` |
+| `openrouter` | `MODEL.OPENROUTER.*` (`GLM`, `LUNA`, `SONNET`) | `OPENROUTER_API_KEY` |
+| `xai` | `MODEL.GROK` | `XAI_API_KEY` |
 
 ## Llm.operate
 
 Static method for single prompt/response.
 
 ```typescript
-import Llm from "@jaypie/llm";
+import Llm, { LLM } from "@jaypie/llm";
 
 const response = await Llm.operate("What is 2+2?", {
-  model: "claude-sonnet-5",
+  model: LLM.MODEL.SONNET,
 });
 // Returns: "4"
 ```
@@ -79,20 +83,20 @@ for await (const chunk of Llm.stream("Tell me a story")) {
 Configure a chain of fallback providers that automatically retry failed calls when the primary provider fails.
 
 ```typescript
-import Llm from "@jaypie/llm";
+import Llm, { LLM } from "@jaypie/llm";
 
 // Instance-level configuration
 const llm = new Llm("anthropic", {
-  model: "claude-sonnet-5",
+  model: LLM.MODEL.SONNET,
   fallback: [
-    { provider: "openai", model: "gpt-4o" },
-    { provider: "google", model: "gemini-2.0-flash" },
+    { provider: "openai", model: LLM.MODEL.SOL },
+    { provider: "google", model: LLM.MODEL.GEMINI_FLASH },
   ],
 });
 
 // Per-call override
 const response = await llm.operate(input, {
-  fallback: [{ provider: "openai", model: "gpt-4o" }],
+  fallback: [{ provider: "openai", model: LLM.MODEL.SOL }],
 });
 
 // Disable fallback for specific call
@@ -100,8 +104,8 @@ const response = await llm.operate(input, { fallback: false });
 
 // Static method with fallback
 const response = await Llm.operate(input, {
-  model: "claude-sonnet-5",
-  fallback: [{ provider: "openai", model: "gpt-4o" }],
+  model: LLM.MODEL.SONNET,
+  fallback: [{ provider: "openai", model: LLM.MODEL.SOL }],
 });
 ```
 
@@ -118,10 +122,10 @@ const response = await Llm.operate(input, {
 For multi-turn conversations with history:
 
 ```typescript
-import Llm from "@jaypie/llm";
+import Llm, { LLM } from "@jaypie/llm";
 
 const llm = new Llm("anthropic", {
-  model: "claude-sonnet-5",
+  model: LLM.MODEL.SONNET,
   system: "You are a helpful assistant.",
 });
 
@@ -138,8 +142,8 @@ The first constructor argument may be a provider name **or** a model name. When 
 ```typescript
 import Llm, { LLM } from "@jaypie/llm";
 
-const llm = new Llm("claude-sonnet-4-6");      // -> anthropic, claude-sonnet-4-6
-const flash = new Llm(LLM.MODEL.GEMINI_FLASH); // -> google, gemini-3.6-flash
+const llm = new Llm("claude-sonnet-4-6");      // -> anthropic, retained verbatim
+const flash = new Llm(LLM.MODEL.GEMINI_FLASH); // -> google, whatever the alias names
 ```
 
 ## Toolkit
@@ -147,7 +151,7 @@ const flash = new Llm(LLM.MODEL.GEMINI_FLASH); // -> google, gemini-3.6-flash
 Collection of tools for function calling.
 
 ```typescript
-import Llm, { Toolkit } from "@jaypie/llm";
+import Llm, { LLM, Toolkit } from "@jaypie/llm";
 
 const toolkit = new Toolkit([
   {
@@ -167,7 +171,7 @@ const toolkit = new Toolkit([
 ]);
 
 const response = await Llm.operate("What's the weather in NYC?", {
-  model: "claude-sonnet-5",
+  model: LLM.MODEL.SONNET,
   tools: toolkit,
 });
 ```
@@ -233,7 +237,7 @@ const toolkit = new Toolkit([myTool], { explain: true });
 
 // Or via operate options
 const response = await Llm.operate("What's the weather?", {
-  model: "gpt-5.1",
+  model: LLM.MODEL.SOL,
   tools: myTools,
   explain: true,
 });
@@ -254,7 +258,7 @@ Pass `format` to receive guaranteed-valid JSON. `format` accepts Jaypie's natura
 const response = await Llm.operate(
   "Extract: 'John is 25 years old'",
   {
-    model: "gpt-5.1",
+    model: LLM.MODEL.SOL,
     format: {
       name: String,
       age: Number,
@@ -272,7 +276,7 @@ Both the OpenAI-style `{ type: "json_schema", ... }` envelope and a bare `{ type
 
 ```typescript
 const response = await Llm.operate(prompt, {
-  model: "gpt-5.1",
+  model: LLM.MODEL.SOL,
   format: {
     type: "object",
     properties: {
@@ -305,7 +309,7 @@ const PersonSchema = z.object({
 });
 
 const response = await Llm.operate(prompt, {
-  model: "gpt-5.1",
+  model: LLM.MODEL.SOL,
   format: PersonSchema,
 });
 // Returns typed object
@@ -317,7 +321,7 @@ const response = await Llm.operate(prompt, {
 
 ```typescript
 const response = await Llm.operate("What's in this image?", {
-  model: "claude-sonnet-5",
+  model: LLM.MODEL.SONNET,
   files: [
     {
       type: "image",
@@ -332,7 +336,7 @@ const response = await Llm.operate("What's in this image?", {
 
 ```typescript
 const response = await Llm.operate("Describe this", {
-  model: "gpt-4o",
+  model: LLM.MODEL.SOL,
   files: [
     {
       type: "image",
@@ -348,7 +352,7 @@ Lifecycle callbacks with full provider request/response payloads.
 
 ```typescript
 const response = await Llm.operate(prompt, {
-  model: "claude-sonnet-5",
+  model: LLM.MODEL.SONNET,
   hooks: {
     beforeEachModelRequest: ({ providerRequest }) => {
       log.trace("[llm] calling model");
@@ -385,7 +389,7 @@ For progress reporting (UI updates, websockets, queue notifications), prefer a s
 
 ```typescript
 const response = await Llm.operate(prompt, {
-  model: "claude-sonnet-5",
+  model: LLM.MODEL.SONNET,
   tools: toolkit,
   onProgress: (event) => {
     // event.type: start, model_request, model_response,
@@ -414,13 +418,13 @@ Errors thrown by the callback are logged and never interrupt the loop. `stream()
 
 ```typescript
 import { expressStreamHandler, createExpressStream } from "jaypie";
-import Llm from "@jaypie/llm";
+import Llm, { LLM } from "@jaypie/llm";
 
 export default expressStreamHandler(async (req, res, context) => {
   const stream = createExpressStream(context);
 
   for await (const chunk of Llm.stream(req.body.prompt, {
-    model: "claude-sonnet-5",
+    model: LLM.MODEL.SONNET,
   })) {
     stream.write(chunk.content || "");
   }
@@ -472,11 +476,11 @@ Repeated calls in one request combine (numbers sum). `usage` is keyed `provider:
 
 ```typescript
 import { BadGatewayError, log } from "jaypie";
-import Llm from "@jaypie/llm";
+import Llm, { LLM } from "@jaypie/llm";
 
 async function askLlm(prompt) {
   try {
-    return await Llm.operate(prompt, { model: "claude-sonnet-5" });
+    return await Llm.operate(prompt, { model: LLM.MODEL.SONNET });
   } catch (error) {
     log.error("[askLlm] failed");
     log.var({ error: error.message });

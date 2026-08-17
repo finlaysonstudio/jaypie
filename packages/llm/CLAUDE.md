@@ -100,13 +100,13 @@ Provider Class → OperateLoop → ProviderAdapter → Provider API
 ### Basic Usage
 
 ```typescript
-import Llm from "@jaypie/llm";
+import Llm, { LLM } from "@jaypie/llm";
 
 // Auto-detect provider from model
-const response = await Llm.operate("Hello", { model: "claude-sonnet-5" });
+const response = await Llm.operate("Hello", { model: LLM.MODEL.SONNET });
 
 // Or specify provider explicitly
-const llm = new Llm("openai", { model: "gpt-4o" });
+const llm = new Llm("openai", { model: LLM.MODEL.SOL });
 const result = await llm.operate("What is 2+2?");
 
 // The constructor's first arg may be a provider name OR a model name —
@@ -202,6 +202,31 @@ the exchange envelope `usageTotals`, and appear in the handler report tally.
 The cached prefix must stay byte-identical to hit — keep the system prompt
 static (no interpolated timestamps/IDs), which callers already do.
 
+### Model Ids in Prose
+
+Every id lives in `src/constants.ts` and nowhere else. Prose that repeats one
+goes stale the day the alias is repointed, and nothing fails to announce it —
+the documentation simply becomes wrong. Default to naming the `LLM.MODEL.*`
+alias instead. That covers this file, `packages/mcp/skills/llm.md`, and the
+`jaypie.net` pages under `workspaces/documentation/`.
+
+A literal id earns its place only where the id **is** the subject, because an
+alias would hide the thing being explained:
+
+| Keep the literal | Why |
+|------------------|-----|
+| Provider keyword matching (`"gpt"`, `"claude"`, `"gemini"`) | The match runs against the id's characters; an alias shows nothing |
+| `COST` keys and the alias-pricing rule | `COST` is keyed by literal id by design, aliases deliberately unpriced |
+| Version-gated behavior (`xhigh` needs gpt-5.2+, `thinkingLevel` needs `^gemini-3`) | The version boundary is the rule |
+| A documented per-model defect or exclusion (`mistral-medium-3-5`, `muse-glimmer-30b`) | The note is about that exact model and outlives its catalog membership |
+| Live-matrix evidence (sample counts against a specific id) | Evidence is only meaningful attached to what was measured |
+| A constructor argument demonstrating that a raw string works | The point is that any string resolves, cataloged or not |
+
+Everything else — filler in an example, a "current models" column, a comment
+echoing what an alias resolves to — takes the alias. When an example needs a
+model only incidentally, `LLM.MODEL.SONNET` and `LLM.MODEL.SOL` are the house
+choices.
+
 ### Model Pricing
 
 `LLM.COST` (`src/constants.ts`, type `LlmModelCost`) maps a **literal model id**
@@ -244,20 +269,20 @@ route and per region, so no single rate is correct. Unlisted ids return
 Configure a chain of fallback providers that automatically retry failed calls when the primary provider fails with an unrecoverable error.
 
 ```typescript
-import Llm from "@jaypie/llm";
+import Llm, { LLM } from "@jaypie/llm";
 
 // Instance-level fallback configuration
 const llm = new Llm("anthropic", {
-  model: "claude-sonnet-5",
+  model: LLM.MODEL.SONNET,
   fallback: [
-    { provider: "openai", model: "gpt-4o" },
-    { provider: "google", model: "gemini-2.0-flash" },
+    { provider: "openai", model: LLM.MODEL.SOL },
+    { provider: "google", model: LLM.MODEL.GEMINI_FLASH },
   ],
 });
 
 // Per-call override
 const response = await llm.operate(input, {
-  fallback: [{ provider: "openai", model: "gpt-4o" }],
+  fallback: [{ provider: "openai", model: LLM.MODEL.SOL }],
 });
 
 // Disable fallback for specific call
@@ -265,8 +290,8 @@ const response = await llm.operate(input, { fallback: false });
 
 // Static method with fallback
 const response = await Llm.operate(input, {
-  model: "claude-sonnet-5",
-  fallback: [{ provider: "openai", model: "gpt-4o" }],
+  model: LLM.MODEL.SONNET,
+  fallback: [{ provider: "openai", model: LLM.MODEL.SOL }],
 });
 ```
 
@@ -293,10 +318,10 @@ later); `LlmError` passes the option through and declares no field of its own.
 | `LlmTransientError` | `retryable` | 504 | A transient/unknown error survived the retry budget |
 
 ```typescript
-import { Llm, LlmQuotaError, LlmRateLimitError } from "@jaypie/llm";
+import { Llm, LLM, LlmQuotaError, LlmRateLimitError } from "@jaypie/llm";
 
 try {
-  await Llm.operate(input, { model: "claude-sonnet-5" });
+  await Llm.operate(input, { model: LLM.MODEL.SONNET });
 } catch (error) {
   if (error instanceof LlmQuotaError) {
     // terminal: exhausted quota or unbillable account (error.reason)
@@ -383,7 +408,7 @@ Pass `format` (or `response` for `provider.send`) with a Natural Schema, Zod, or
 
 ```typescript
 import { z } from "zod/v4";
-import Llm from "@jaypie/llm";
+import Llm, { LLM } from "@jaypie/llm";
 
 const Greeting = z.object({
   salutation: z.string(),
@@ -391,7 +416,7 @@ const Greeting = z.object({
 });
 
 const response = await Llm.operate("Greet the world", {
-  model: "claude-opus-4-7",
+  model: LLM.MODEL.OPUS,
   format: Greeting,
 });
 // response.content is parsed JSON: { salutation: "Hello", name: "World" }

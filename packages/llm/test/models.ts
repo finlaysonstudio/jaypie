@@ -104,15 +104,13 @@ const MATRIX_EXPECT: Record<
   // ["Red","","Blue"]); the cell only asserts a non-empty array, so degraded
   // content still counts as ok. A second failure means reopening #438.
   [MODEL.FIREWORKS.QWEN]: { pdf: "skip" },
-  // Grok 4.5 reads the fixture PDF in 2 of 9 live samples (2026-08-02). The
-  // other seven answered "I'll extract the text from the PDF using the
-  // available tools" — narrating a tool call in a cell that configures no
-  // tools — and returned none of the document's text. The capability is
-  // present but not dependable, so the cell is skipped rather than pinned to
-  // an outcome that would flake either way. Grok 4.3 passed the same cell 2
-  // for 2, so this is a regression in 4.5, not a fixture problem. Every other
-  // Grok 4.5 cell passes, `both` included. Resample before removing the skip.
-  [MODEL.GROK]: { pdf: "skip" },
+  // MODEL.GROK carried `pdf: "skip"` while the alias named Grok 4.5, which read
+  // the fixture PDF in only 2 of 9 live samples (2026-08-02) — the other seven
+  // narrated a tool call in a cell that configures no tools and returned none
+  // of the document's text. Grok 4.6 reads it 9 for 9 (2026-08-17), so the skip
+  // is gone and every Grok cell is expected to pass. Grok 4.3 also passed 2 for
+  // 2, which makes 4.5 the outlier rather than the fixture.
+  //
   // Mistral sends response_format and tools together natively. mistral-medium
   // could not do so reliably and is no longer cataloged — see the note in
   // constants.ts. Large and Small are expected to answer every cell cleanly.

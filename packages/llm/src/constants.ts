@@ -37,11 +37,19 @@ export const MODEL = {
     INKLING: "accounts/fireworks/models/inkling",
     KIMI: "accounts/fireworks/models/kimi-k3",
     MINIMAX: "accounts/fireworks/models/minimax-m2p7",
+    // Muse Glimmer is deliberately absent. muse-glimmer-30b ignores the native
+    // response_format and answers a format request in prose, then writes the
+    // corrective turn's tool call as *text*
+    // (`structured_output(colors=["Red", "Yellow", "Blue"])`) rather than
+    // emitting a real call, so the loop burns its whole turn budget and settles
+    // with nothing usable — 0 for 6 live (2026-08-17). Structured output is a
+    // baseline expectation of operate(), so the model is not cataloged. Its
+    // COST entry is retained per policy.
     NEMOTRON: "accounts/fireworks/models/nemotron-3-ultra-nvfp4",
     QWEN: "accounts/fireworks/models/qwen3p7-plus",
   },
   // Google
-  GEMINI_FLASH: "gemini-3.6-flash",
+  GEMINI_FLASH: "gemini-3.7-flash",
   GEMINI_FLASH_LITE: "gemini-3.5-flash-lite",
   GEMINI_PRO: "gemini-3.1-pro-preview",
   // Mistral
@@ -76,7 +84,7 @@ export const MODEL = {
   // API, which echoes the resolved id) at $1.25/$2.50, while Grok 4.5 bills
   // $2.00/$6.00. The day xAI moves the alias, an unpinned catalog understates
   // output cost by 140% with nothing to signal it.
-  GROK: "grok-4.5",
+  GROK: "grok-4.6",
   // OpenRouter (provider-prefixed routes; traversed by the OpenRouter hot test)
   OPENROUTER: {
     GLM: "z-ai/glm-5.2",
@@ -113,15 +121,16 @@ export interface LlmModelCost {
 
 /**
  * Standard list price per million tokens, keyed by literal model id (verified
- * 2026-07-21). Keys are string literals rather than `MODEL.*` references so a
+ * 2026-08-17). Keys are string literals rather than `MODEL.*` references so a
  * model retired from the catalog keeps its price here: historic ids stay
  * priceable after they leave `MODEL.*`, which is what makes replaying old
  * usage records possible.
  *
  * Caveats the numbers cannot carry:
  * - **Standard rate only.** Introductory, batch, flex, priority, fast-mode, and
- *   data-residency rates are excluded. Sonnet 5 is listed at its standard
- *   $3/$15, not the introductory rate.
+ *   data-residency rates are excluded. An introductory rate that a provider
+ *   later adopts as its standard price is no longer introductory and is listed:
+ *   Sonnet 5's launch rate is now its standard rate.
  * - **Cache writes are Anthropic-only.** Bedrock publishes a literal $0 write
  *   for Amazon's own models, recorded here as `cachedInputWrite: 0`. Fireworks
  *   writes bill at the input rate. OpenAI and xAI discount reads automatically
@@ -246,11 +255,14 @@ export const COST: Record<string, LlmModelCost> = {
     input: 3.0,
     output: 15.0,
   },
+  // Sonnet 5 launched at $2/$10 as an introductory rate through 2026-08-31.
+  // Anthropic has since made that the standard price and cancelled the
+  // scheduled increase to $3/$15, so these are standard rates, not launch ones.
   "claude-sonnet-5": {
-    cachedInputRead: 0.3,
-    cachedInputWrite: { "1h": 6.0, "5m": 3.75 },
-    input: 3.0,
-    output: 15.0,
+    cachedInputRead: 0.2,
+    cachedInputWrite: { "1h": 4.0, "5m": 2.5 },
+    input: 2.0,
+    output: 10.0,
   },
   // Fireworks — https://docs.fireworks.ai/serverless/pricing
   "accounts/fireworks/models/deepseek-v4-pro": {
@@ -290,6 +302,13 @@ export const COST: Record<string, LlmModelCost> = {
     input: 0.3,
     output: 1.2,
   },
+  // Never cataloged; priced so a caller passing the literal id can still cost
+  // it. See the note in MODEL.FIREWORKS for why it is absent.
+  "accounts/fireworks/models/muse-glimmer-30b": {
+    cachedInputRead: 0.04,
+    input: 0.35,
+    output: 1.5,
+  },
   // Returned to MODEL.* on 2026-08-02. It was retired 2026-07-21 for
   // nondeterministic structured output (clean JSON, prose, or an empty array
   // from the same request); watch the `structured` matrix cell.
@@ -320,14 +339,19 @@ export const COST: Record<string, LlmModelCost> = {
   // Flash-Lite 3.5 has no separate cache-read rate on the standard tier
   "gemini-3.5-flash-lite": { input: 0.3, output: 2.5 },
   "gemini-3.6-flash": { cachedInputRead: 0.15, input: 1.5, output: 7.5 },
+  // Flash 3.6 and 3.7 both carry an introductory rate that runs through
+  // 2026-12-31. These are the standard rates that take over on 2027-01-01.
+  "gemini-3.7-flash": { cachedInputRead: 0.15, input: 1.5, output: 7.5 },
   // OpenAI — https://developers.openai.com/api/docs/pricing
   "gpt-5.4": { cachedInputRead: 0.25, input: 2.5, output: 15.0 },
   "gpt-5.4-mini": { cachedInputRead: 0.075, input: 0.75, output: 4.5 },
   "gpt-5.4-nano": { cachedInputRead: 0.02, input: 0.2, output: 1.25 },
   "gpt-5.5": { cachedInputRead: 0.5, input: 5.0, output: 30.0 },
-  "gpt-5.6-luna": { cachedInputRead: 0.1, input: 1.0, output: 6.0 },
+  // Luna and Terra were repriced downward after their launch rates ($1/$6 and
+  // $2.50/$15, the figures this table carried through 2026-07-21).
+  "gpt-5.6-luna": { cachedInputRead: 0.02, input: 0.2, output: 1.2 },
   "gpt-5.6-sol": { cachedInputRead: 0.5, input: 5.0, output: 30.0 },
-  "gpt-5.6-terra": { cachedInputRead: 0.25, input: 2.5, output: 15.0 },
+  "gpt-5.6-terra": { cachedInputRead: 0.2, input: 2.0, output: 12.0 },
   // xAI — https://docs.x.ai/docs/models
   // Rates are the sub-200K tier; xAI doubles every figure at or above 200K
   // input tokens, which is the long-prompt surcharge COST excludes by policy.
@@ -367,6 +391,7 @@ export const COST: Record<string, LlmModelCost> = {
   },
   "grok-4.3": { cachedInputRead: 0.2, input: 1.25, output: 2.5 },
   "grok-4.5": { cachedInputRead: 0.3, input: 2.0, output: 6.0 },
+  "grok-4.6": { cachedInputRead: 0.5, input: 2.0, output: 6.0 },
   "grok-build-0.1": { cachedInputRead: 0.2, input: 1.0, output: 2.0 },
   // Mistral — https://docs.mistral.ai/models/overview
   // Cached prompt tokens bill at 10% of the standard input rate. Note the

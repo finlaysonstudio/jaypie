@@ -17,18 +17,29 @@ const response = await Llm.operate("What is 2+2?", { model: "claude-sonnet-5" })
 console.log(response.content); // "4"
 ```
 
+Examples below name models as `LLM.MODEL.*` (`import Llm, { LLM } from
+"@jaypie/llm"`) rather than as literal ids. The alias is the stable reference;
+`constants.ts` is the only place an id lives, so a doc that repeats one goes
+stale the day the alias is repointed. Literal ids appear here only where the id
+itself is the subject: provider keyword matching, `COST` keys, and a documented
+per-model behavior.
+
 ## Providers and Models
+
+Each `PROVIDER.*.DEFAULT` is itself a `MODEL.*` reference, so this table names
+the alias rather than the id it currently resolves to. Read the id off
+`constants.ts`, which is the only place any id lives.
 
 | Provider | Match Keywords | Default Model (`PROVIDER.*.DEFAULT`) |
 |----------|----------------|---------------|
-| OpenAI | "openai", "gpt", "sol", "terra", "luna", /^o\d/ | gpt-5.6-sol |
-| Anthropic | "anthropic", "claude", "fable", "haiku", "mythos", "opus", "sonnet" | claude-sonnet-5 |
-| Google | "google", "gemini" | gemini-3.6-flash |
-| Fireworks | "fireworks" (also matched inside ids like `accounts/fireworks/models/...`) | accounts/fireworks/models/glm-5p2 |
-| Mistral | "mistral", "ministral", "codestral", "devstral", "magistral", "pixtral", "voxtral" | mistral-large-latest |
-| OpenRouter | "openrouter" | anthropic/claude-sonnet-5 |
-| xAI | "xai", "grok" | grok-4.5 |
-| Bedrock | "amazon.nova", "anthropic.claude", "meta.llama", "deepseek.", "google.gemma", "moonshotai.", "openai.gpt-oss", … | amazon.nova-pro-v1:0 |
+| OpenAI | "openai", "gpt", "sol", "terra", "luna", /^o\d/ | `MODEL.SOL` |
+| Anthropic | "anthropic", "claude", "fable", "haiku", "mythos", "opus", "sonnet" | `MODEL.SONNET` |
+| Google | "google", "gemini" | `MODEL.GEMINI_FLASH` |
+| Fireworks | "fireworks" (also matched inside ids like `accounts/fireworks/models/...`) | `MODEL.FIREWORKS.GLM` |
+| Mistral | "mistral", "ministral", "codestral", "devstral", "magistral", "pixtral", "voxtral" | `MODEL.MISTRAL.LARGE` |
+| OpenRouter | "openrouter" | `MODEL.OPENROUTER.SONNET` |
+| xAI | "xai", "grok" | `MODEL.GROK` |
+| Bedrock | "amazon.nova", "anthropic.claude", "meta.llama", "deepseek.", "google.gemma", "moonshotai.", "openai.gpt-oss", … | `MODEL.NOVA_PRO` |
 
 The provider name for Gemini models is `"google"` — `"gemini"` is accepted as a deprecated alias.
 
@@ -63,10 +74,11 @@ const dollars = rate ? (usage.input * rate.input + usage.output * rate.output) /
 Rates are the standard short-context text tier. Introductory, batch, flex, priority, fast-mode, and data-residency pricing are excluded, as are long-prompt surcharges (Gemini 3.1 Pro above 200K, Grok at 200K, GPT-5.5 above 272K). Amazon's Nova models are priced at the standard US on-demand rate (`us.` geo profile for Nova 2 Lite; the cheaper `global.` profile is not modeled). **Gateway routes are deliberately unpriced**: `MODEL.OPENROUTER.*`, and any Bedrock id reselling a third-party model, cost per route and per region, so `COST` returns `undefined` for them — price those against the backend model or the gateway's own published rate. Unlisted ids return `undefined` — always handle a miss.
 
 ```typescript
-// Provider auto-detected from model
-await Llm.operate(input, { model: "gpt-5.1" });      // OpenAI
-await Llm.operate(input, { model: "claude-opus-5" }); // Anthropic
-await Llm.operate(input, { model: "gemini-3" });     // Google
+// Provider auto-detected from the model string. Literal ids here on purpose:
+// the match is on a keyword inside the id, which an alias would hide.
+await Llm.operate(input, { model: "gpt-5.6-sol" });    // "gpt"    -> OpenAI
+await Llm.operate(input, { model: "claude-opus-5" });  // "claude" -> Anthropic
+await Llm.operate(input, { model: "gemini-3.7-flash" }); // "gemini" -> Google
 ```
 
 ## Core Methods
@@ -77,7 +89,7 @@ The primary method for complex interactions:
 
 ```typescript
 const response = await Llm.operate(input, {
-  model: "gpt-5.1",
+  model: LLM.MODEL.SOL,
   system: "You are a helpful assistant",
   tools: toolkit,
   turns: 5, // Allow up to 5 conversation turns
@@ -97,7 +109,7 @@ For single-shot text completions:
 
 ```typescript
 const response = await Llm.send("Explain REST APIs", {
-  model: "claude-sonnet-5",
+  model: LLM.MODEL.SONNET,
   system: "You are a technical writer",
 });
 ```
@@ -107,7 +119,7 @@ const response = await Llm.send("Explain REST APIs", {
 For real-time output:
 
 ```typescript
-for await (const chunk of Llm.stream("Tell me a story", { model: "gpt-5.1" })) {
+for await (const chunk of Llm.stream("Tell me a story", { model: LLM.MODEL.SOL })) {
   switch (chunk.type) {
     case "text":
       process.stdout.write(chunk.content);
@@ -149,7 +161,7 @@ const toolkit = new Toolkit([
 ]);
 
 const response = await Llm.operate("What's the weather in NYC?", {
-  model: "gpt-5.1",
+  model: LLM.MODEL.SOL,
   tools: toolkit,
 });
 ```
@@ -161,7 +173,7 @@ import Llm, { tools, JaypieToolkit } from "@jaypie/llm";
 
 // Use individual tools
 const response = await Llm.operate("Roll 2d6", {
-  model: "gpt-5.1",
+  model: LLM.MODEL.SOL,
   tools,  // Includes: random, roll, time, weather
 });
 
@@ -188,7 +200,7 @@ const toolkit = new Toolkit([myTool], { explain: true });
 
 // Or via operate options
 const response = await Llm.operate("What's the weather?", {
-  model: "gpt-5.1",
+  model: LLM.MODEL.SOL,
   tools: myTools,
   explain: true,
 });
@@ -295,7 +307,7 @@ const done = await Llm.operate(undefined, {
 
 ```typescript
 const result = await Llm.operate("Extract contact info from: John Doe, john@example.com, 555-1234", {
-  model: "gpt-5.1",
+  model: LLM.MODEL.SOL,
   format: {
     name: String,
     email: String,
@@ -344,7 +356,7 @@ const PersonSchema = z.object({
 });
 
 const result = await Llm.operate("Parse: Alice is 30 and likes hiking and reading", {
-  model: "gpt-5.1",
+  model: LLM.MODEL.SOL,
   format: PersonSchema,
 });
 ```
@@ -355,7 +367,7 @@ const result = await Llm.operate("Parse: Alice is 30 and likes hiking and readin
 
 ```typescript
 const result = await Llm.operate("Analyze this chargeback", {
-  model: "gpt-5.1",
+  model: LLM.MODEL.SOL,
   format: {
     type: "object",
     properties: {
@@ -390,10 +402,10 @@ jsonSchemaToNaturalSchema({
 Continue conversations across calls:
 
 ```typescript
-const first = await Llm.operate("My name is Alice", { model: "gpt-5.1" });
+const first = await Llm.operate("My name is Alice", { model: LLM.MODEL.SOL });
 
 const second = await Llm.operate("What's my name?", {
-  model: "gpt-5.1",
+  model: LLM.MODEL.SOL,
   history: first.history,
 });
 // second.content = "Your name is Alice"
@@ -407,7 +419,7 @@ const response = await Llm.operate([
   { file: "report.pdf", bucket: "my-bucket" },
   { image: "chart.png" },
 ], {
-  model: "claude-sonnet-5",
+  model: LLM.MODEL.SONNET,
 });
 ```
 
@@ -417,7 +429,7 @@ Substitute data into prompts:
 
 ```typescript
 const response = await Llm.operate("Summarize the article about {{topic}}", {
-  model: "gpt-5.1",
+  model: LLM.MODEL.SOL,
   data: { topic: "climate change" },
   placeholders: { input: true },
 });
@@ -429,7 +441,7 @@ Monitor and react to LLM operations:
 
 ```typescript
 const response = await Llm.operate(input, {
-  model: "gpt-5.1",
+  model: LLM.MODEL.SOL,
   hooks: {
     beforeEachModelRequest: ({ providerRequest }) => {
       console.log("Sending request...");
@@ -460,7 +472,7 @@ For progress reporting (UI updates, websockets, queue notifications), prefer `on
 import { LlmProgressEventType } from "@jaypie/llm";
 
 const response = await Llm.operate(input, {
-  model: "gpt-5.1",
+  model: LLM.MODEL.SOL,
   tools: toolkit,
   onProgress: (event) => {
     // event.type: start, model_request, model_response,
@@ -491,7 +503,7 @@ For a durable record of each `operate()` or `stream()` call (replay, labeling pi
 
 ```typescript
 const response = await Llm.operate(input, {
-  model: "claude-sonnet-5",
+  model: LLM.MODEL.SONNET,
   onExchange: (envelope) => {
     // envelope.request  — raw pre-interpolation input, data, placeholders,
     //                     system, instructions, model, format (JSON Schema),
@@ -550,7 +562,7 @@ const controller = new AbortController();
 request.on("close", () => controller.abort("client disconnected"));
 
 for await (const chunk of Llm.stream(input, {
-  model: "claude-sonnet-5",
+  model: LLM.MODEL.SONNET,
   signal: controller.signal,
 })) {
   response.write(chunk.content);
@@ -569,16 +581,16 @@ Configure a chain of fallback providers that automatically retry failed calls wh
 ```typescript
 // Instance-level configuration
 const llm = new Llm("anthropic", {
-  model: "claude-sonnet-5",
+  model: LLM.MODEL.SONNET,
   fallback: [
-    { provider: "openai", model: "gpt-4o" },
-    { provider: "google", model: "gemini-2.0-flash" },
+    { provider: "openai", model: LLM.MODEL.SOL },
+    { provider: "google", model: LLM.MODEL.GEMINI_FLASH },
   ],
 });
 
 // Per-call override
 const response = await llm.operate(input, {
-  fallback: [{ provider: "openai", model: "gpt-4o" }],
+  fallback: [{ provider: "openai", model: LLM.MODEL.SOL }],
 });
 
 // Disable fallback for specific call
@@ -586,8 +598,8 @@ const response = await llm.operate(input, { fallback: false });
 
 // Static method with fallback
 const response = await Llm.operate(input, {
-  model: "claude-sonnet-5",
-  fallback: [{ provider: "openai", model: "gpt-4o" }],
+  model: LLM.MODEL.SONNET,
+  fallback: [{ provider: "openai", model: LLM.MODEL.SOL }],
 });
 ```
 
@@ -605,7 +617,7 @@ For repeated calls with same configuration:
 
 ```typescript
 const llm = new Llm("anthropic", {
-  model: "claude-sonnet-5",
+  model: LLM.MODEL.SONNET,
   system: "You are a code reviewer",
 });
 
@@ -618,8 +630,8 @@ The first constructor argument may be a provider name **or** a model name. When 
 ```typescript
 import Llm, { LLM } from "@jaypie/llm";
 
-const llm = new Llm("claude-sonnet-4-6");      // -> anthropic, claude-sonnet-4-6
-const flash = new Llm(LLM.MODEL.GEMINI_FLASH); // -> google, gemini-3.6-flash
+const llm = new Llm("claude-sonnet-4-6");      // -> anthropic, retained verbatim
+const flash = new Llm(LLM.MODEL.GEMINI_FLASH); // -> google, whatever the alias names
 ```
 
 ## Environment Variables
@@ -711,7 +723,7 @@ The package auto-retries rate limits and transient errors:
 
 ```typescript
 try {
-  const response = await Llm.operate(input, { model: "gpt-5.1" });
+  const response = await Llm.operate(input, { model: LLM.MODEL.SOL });
   if (response.status !== "completed") {
     console.log("Incomplete:", response.error);
   }
@@ -755,7 +767,7 @@ describe("LLM Integration", () => {
 
     const toolkit = new Toolkit([mockTool]);
     const response = await Llm.operate("Calculate 6*7", {
-      model: "gpt-5.1",
+      model: LLM.MODEL.SOL,
       tools: toolkit,
     });
 
@@ -817,7 +829,7 @@ of which model handles the call**.
 import Llm, { LLM } from "@jaypie/llm";
 
 await Llm.operate("Solve this step by step", {
-  model: "gpt-5.1",
+  model: LLM.MODEL.SOL,
   effort: "high",          // or LLM.EFFORT.HIGH
 });
 ```
@@ -849,9 +861,8 @@ erroring):
   alongside a structured-output `format` config.
 - **Google** — `thinkingLevel` for Gemini 3.x, `thinkingBudget` for Gemini 2.5;
   other models get nothing.
-- **xAI** — only models whose name advertises reasoning (e.g.
-  `grok-4-1-fast-reasoning`); bare `grok-4.5` and `*-non-reasoning` are
-  skipped.
+- **xAI** — only models whose name advertises reasoning (a `*-reasoning`
+  suffix); a bare version name and `*-non-reasoning` are skipped.
 - **OpenRouter** — always forwarded; OpenRouter maps to the routed model's
   nearest supported level.
 - **Fireworks** — always forwarded (`reasoning_effort`); the API accepts it on
@@ -918,13 +929,13 @@ Override per call with `providerOptions`:
 ```typescript
 // Anthropic: max_tokens
 await Llm.operate(input, {
-  model: "claude-sonnet-4-6",
+  model: LLM.MODEL.SONNET,
   providerOptions: { max_tokens: 32000 },
 });
 
 // Google: maxOutputTokens
 await Llm.operate(input, {
-  model: "gemini-3.1-pro-preview",
+  model: LLM.MODEL.GEMINI_PRO,
   providerOptions: { maxOutputTokens: 32000 },
 });
 ```
