@@ -104,7 +104,7 @@ packages/constructs/
 | `JaypieGitHubDeployRole` | GitHub Actions OIDC deploy role |
 | `JaypieNextJs` | Next.js deployment (uses cdk-nextjs-standalone) |
 | `JaypieOrganizationTrail` | CloudTrail for AWS Organizations |
-| `JaypieSsoPermissions` | AWS SSO permission sets |
+| `JaypieSsoPermissions` | AWS SSO permission sets (Administrator, Agent, Analyst, Developer) |
 | `JaypieSsoSyncApplication` | SSO sync application |
 
 ## Constants (CDK Object)
@@ -432,6 +432,36 @@ CloudFront permits one function per event type.
 ```typescript
 new JaypieWebDeploymentBucket(this, "App", { component: "app", host, spa: true, zone });
 ```
+
+### SSO Permission Sets
+
+`JaypieSsoPermissions` creates four permission sets and assigns them to Workspace groups by account.
+
+| Set | Session | Reach |
+|-----|---------|-------|
+| `Administrator` | 1h | `AdministratorAccess` |
+| `Developer` | 4h | `job-function/SystemAdministrator` plus `service:*` across the Jaypie services |
+| `Agent` | 8h | `ReadOnlyAccess` plus data-plane and operational writes, with deletion and identity change denied |
+| `Analyst` | 12h | `ReadOnlyAccess` |
+
+`Agent` exists for automated operators. It reads everything Analyst reads, writes items, objects, and messages, invokes and configures Lambdas, runs ECS tasks and Step Functions executions, and reads secret values. It cannot delete stacks or resources, change identity, or assume another role.
+
+```typescript
+new JaypieSsoPermissions(this, "PermissionSets", {
+  agentGroupId: "c4d8a1b2-3e4f-5a6b-7c8d-9e0f1a2b3c4d",
+  agentAccountAssignments: { "211125635435": ["Agent"] },
+});
+```
+
+Encoded specifics:
+
+- IAM wildcards apply only inside an action name, after a literal service prefix, so `"*:Delete*"` cannot be written. Every destructive action is enumerated in the `AgentDenyDestructive` statement, and a new service added to the Allow list needs its deletions added there by hand.
+- Item-level deletes stay allowed (`s3:DeleteObject`, `dynamodb:DeleteItem`, `sqs:DeleteMessage`); the calls that empty a store in one shot are denied (`s3:PutLifecycleConfiguration`, `s3:DeleteObjectVersion`, `dynamodb:UpdateTimeToLive`, `sqs:PurgeQueue`).
+- Resource-policy writes are denied across every service. Granting a principal outside the boundary is an identity change under another name.
+- CloudFormation is read-only. `UpdateStack` deletes and replaces resources as readily as `DeleteStack`, and deploys run in CI.
+- `sts:AssumeRole` is denied, which also blocks assuming the CDK bootstrap roles from an Agent session.
+- `lambda:UpdateFunctionConfiguration` plus `iam:PassRole` is the residual escalation path: repoint a function at a stronger role, then invoke it. `AgentDenyPrivilegedPassRole` blocks the SSO, organization, and CDK execution roles. Any other role Lambda may assume is still reachable, so scope `iam:PassRole` further if that matters.
+- `secretsmanager:GetSecretValue` is the one grant above Analyst's read surface. `ReadOnlyAccess` does not include it.
 
 ### Streaming Lambda
 

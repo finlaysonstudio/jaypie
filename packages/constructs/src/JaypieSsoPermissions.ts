@@ -33,6 +33,12 @@ export interface JaypieSsoPermissionsProps {
   administratorGroupId?: string;
 
   /**
+   * Google Workspace group GUID for agents
+   * Example: "c4d8a1b2-3e4f-5a6b-7c8d-9e0f1a2b3c4d"
+   */
+  agentGroupId?: string;
+
+  /**
    * Google Workspace group GUID for analysts
    * Example: "2488f4e8-d061-708e-abe1-c315f0e30005"
    */
@@ -54,6 +60,16 @@ export interface JaypieSsoPermissionsProps {
    * }
    */
   administratorAccountAssignments?: AccountAssignments;
+
+  /**
+   * Account assignments for agent group
+   * Maps account IDs to arrays of permission set names
+   * Example:
+   * {
+   *   "211125635435": ["Agent"],
+   * }
+   */
+  agentAccountAssignments?: AccountAssignments;
 
   /**
    * Account assignments for analyst group
@@ -86,11 +102,15 @@ export interface JaypieSsoPermissionsProps {
  * const permissionSets = new JaypieSsoPermissions(this, "PermissionSets", {
  *   iamIdentityCenterArn: "arn:aws:sso:::instance/...",
  *   administratorGroupId: "b4c8b438-4031-7000-782d-5046945fb956",
+ *   agentGroupId: "c4d8a1b2-3e4f-5a6b-7c8d-9e0f1a2b3c4d",
  *   analystGroupId: "2488f4e8-d061-708e-abe1-c315f0e30005",
  *   developerGroupId: "b438a4f8-e0e1-707c-c6e8-21841daf9ad1",
  *   administratorAccountAssignments: {
  *     "211125635435": ["Administrator", "Analyst", "Developer"],
  *     "381492033431": ["Administrator", "Analyst"],
+ *   },
+ *   agentAccountAssignments: {
+ *     "211125635435": ["Agent"],
  *   },
  *   analystAccountAssignments: {
  *     "211125635435": ["Analyst", "Developer"],
@@ -104,6 +124,7 @@ export interface JaypieSsoPermissionsProps {
  */
 export class JaypieSsoPermissions extends Construct {
   public readonly administratorPermissionSet?: CfnPermissionSet;
+  public readonly agentPermissionSet?: CfnPermissionSet;
   public readonly analystPermissionSet?: CfnPermissionSet;
   public readonly developerPermissionSet?: CfnPermissionSet;
 
@@ -113,9 +134,11 @@ export class JaypieSsoPermissions extends Construct {
     const {
       iamIdentityCenterArn: iamIdentityCenterArnProp,
       administratorGroupId,
+      agentGroupId,
       analystGroupId,
       developerGroupId,
       administratorAccountAssignments,
+      agentAccountAssignments,
       analystAccountAssignments,
       developerAccountAssignments,
     } = props;
@@ -180,6 +203,303 @@ export class JaypieSsoPermissions extends Construct {
         ],
       },
     );
+
+    // Agent sits between Analyst and Developer: every Analyst read, plus the
+    // data-plane and operational writes an automated agent needs, minus
+    // deletion and identity change. IAM cannot express "every write except
+    // deletes" — wildcards apply only inside an action name, after a literal
+    // service prefix — so the destructive actions are enumerated as Deny.
+    this.agentPermissionSet = new CfnPermissionSet(this, "AgentPermissionSet", {
+      // Required
+      instanceArn: iamIdentityCenterArn,
+      name: "Agent",
+
+      // Optional
+      description:
+        "Read access with data-plane and operational writes; no deletion, no identity change",
+      inlinePolicy: {
+        Version: "2012-10-17",
+        Statement: [
+          {
+            Sid: "AgentWrite",
+            Effect: "Allow",
+            Action: [
+              "bedrock-agentcore:Invoke*",
+              "bedrock:ApplyGuardrail",
+              "bedrock:Converse*",
+              "bedrock:Invoke*",
+              "bedrock:Retrieve*",
+              "cloudwatch:PutMetricData",
+              "dynamodb:BatchGet*",
+              "dynamodb:BatchWrite*",
+              "dynamodb:ConditionCheckItem",
+              "dynamodb:DeleteItem",
+              "dynamodb:ExecuteStatement",
+              "dynamodb:ExecuteTransaction",
+              "dynamodb:GetItem",
+              "dynamodb:PartiQL*",
+              "dynamodb:PutItem",
+              "dynamodb:Query",
+              "dynamodb:Scan",
+              "dynamodb:TagResource",
+              "dynamodb:UpdateItem",
+              "ecr:BatchCheckLayerAvailability",
+              "ecr:BatchGetImage",
+              "ecr:CompleteLayerUpload",
+              "ecr:GetAuthorizationToken",
+              "ecr:GetDownloadUrlForLayer",
+              "ecr:InitiateLayerUpload",
+              "ecr:PutImage",
+              "ecr:TagResource",
+              "ecr:UploadLayerPart",
+              "ecs:RegisterTaskDefinition",
+              "ecs:RunTask",
+              "ecs:StartTask",
+              "ecs:StopTask",
+              "ecs:TagResource",
+              "ecs:UpdateService",
+              "iam:Get*",
+              "iam:List*",
+              "iam:PassRole",
+              "lambda:CreateEventSourceMapping",
+              "lambda:Invoke*",
+              "lambda:PublishVersion",
+              "lambda:PutFunctionConcurrency",
+              "lambda:TagResource",
+              "lambda:UpdateAlias",
+              "lambda:UpdateEventSourceMapping",
+              "lambda:UpdateFunctionCode",
+              "lambda:UpdateFunctionConfiguration",
+              "logs:CreateLogGroup",
+              "logs:CreateLogStream",
+              "logs:FilterLogEvents",
+              "logs:PutLogEvents",
+              "logs:PutRetentionPolicy",
+              "logs:StartQuery",
+              "logs:StopQuery",
+              "logs:TagResource",
+              "pipes:StartPipe",
+              "pipes:StopPipe",
+              "pipes:TagResource",
+              "s3:AbortMultipartUpload",
+              "s3:DeleteObject",
+              "s3:DeleteObjectTagging",
+              "s3:PutObject",
+              "s3:PutObjectTagging",
+              "s3:RestoreObject",
+              "secretsmanager:GetSecretValue",
+              "sns:Publish",
+              "sns:TagResource",
+              "sqs:ChangeMessageVisibility*",
+              "sqs:DeleteMessage*",
+              "sqs:ReceiveMessage",
+              "sqs:SendMessage*",
+              "sqs:TagQueue",
+              "ssm:AddTagsToResource",
+              "ssm:GetParameter*",
+              "ssm:PutParameter",
+              "states:SendTask*",
+              "states:StartExecution",
+              "states:StartSyncExecution",
+              "states:StopExecution",
+              "states:TagResource",
+              "tag:*",
+              "uxc:*",
+              "xray:*",
+            ],
+            Resource: "*",
+          },
+          {
+            // Deletion, mass-expiry, and resource-policy writes. Item-level
+            // deletes stay allowed above; the vectors denied here empty a store
+            // in one call (lifecycle rules, TTL, queue purge, version delete)
+            // or hand access to a principal outside this boundary.
+            Sid: "AgentDenyDestructive",
+            Effect: "Deny",
+            Action: [
+              "backup:Delete*",
+              "backup:Stop*",
+              "bedrock-agent:Delete*",
+              "bedrock-agentcore:Delete*",
+              "bedrock:Delete*",
+              "cloudformation:Cancel*",
+              "cloudformation:Continue*",
+              "cloudformation:Create*",
+              "cloudformation:Delete*",
+              "cloudformation:Execute*",
+              "cloudformation:Import*",
+              "cloudformation:Rollback*",
+              "cloudformation:Set*",
+              "cloudformation:Stop*",
+              "cloudformation:Update*",
+              "cloudtrail:Delete*",
+              "cloudtrail:Put*",
+              "cloudtrail:Stop*",
+              "cloudtrail:Update*",
+              "cloudwatch:Delete*",
+              "cloudwatch:DisableAlarmActions",
+              "config:Delete*",
+              "config:Stop*",
+              "dynamodb:DeleteBackup",
+              "dynamodb:DeleteResourcePolicy",
+              "dynamodb:DeleteTable",
+              "dynamodb:DisableKinesisStreamingDestination",
+              "dynamodb:PutResourcePolicy",
+              "dynamodb:UpdateContinuousBackups",
+              "dynamodb:UpdateTimeToLive",
+              "ec2:Authorize*",
+              "ec2:Delete*",
+              "ec2:Release*",
+              "ec2:Revoke*",
+              "ec2:Terminate*",
+              "ecr:BatchDeleteImage",
+              "ecr:Delete*",
+              "ecr:PutLifecyclePolicy",
+              "ecr:SetRepositoryPolicy",
+              "ecs:Delete*",
+              "ecs:Deregister*",
+              "guardduty:Delete*",
+              "guardduty:Disable*",
+              "guardduty:Update*",
+              "kms:Delete*",
+              "kms:DisableKey",
+              "kms:PutKeyPolicy",
+              "kms:ScheduleKeyDeletion",
+              "lambda:AddPermission",
+              "lambda:CreateFunctionUrlConfig",
+              "lambda:Delete*",
+              "lambda:RemovePermission",
+              "logs:Delete*",
+              "logs:PutResourcePolicy",
+              "route53:Change*",
+              "route53:Delete*",
+              "s3:BypassGovernanceRetention",
+              "s3:DeleteBucket*",
+              "s3:DeleteObjectVersion*",
+              "s3:PutAccountPublicAccessBlock",
+              "s3:PutBucketAcl",
+              "s3:PutBucketPolicy",
+              "s3:PutBucketPublicAccessBlock",
+              "s3:PutBucketVersioning",
+              "s3:PutLifecycleConfiguration",
+              "s3:PutObjectAcl",
+              "s3:PutObjectVersionAcl",
+              "secretsmanager:Delete*",
+              "secretsmanager:PutResourcePolicy",
+              "secretsmanager:RemoveRegionsFromReplication",
+              "securityhub:Delete*",
+              "securityhub:Disable*",
+              "securityhub:Update*",
+              "sns:AddPermission",
+              "sns:Delete*",
+              "sns:RemovePermission",
+              "sns:SetTopicAttributes",
+              "sns:Unsubscribe",
+              "sqs:AddPermission",
+              "sqs:DeleteQueue",
+              "sqs:PurgeQueue",
+              "sqs:RemovePermission",
+              "sqs:SetQueueAttributes",
+              "ssm:Delete*",
+              "ssm:Deregister*",
+              "states:Delete*",
+            ],
+            Resource: "*",
+          },
+          {
+            // Identity stays fixed. sts:AssumeRole is denied so the boundary
+            // cannot be stepped out of by assuming a role that lacks it,
+            // including the CDK bootstrap roles — deploys run in CI.
+            Sid: "AgentDenyIdentity",
+            Effect: "Deny",
+            Action: [
+              "account:Delete*",
+              "account:Disable*",
+              "account:Enable*",
+              "account:Put*",
+              "iam:Add*",
+              "iam:Attach*",
+              "iam:Change*",
+              "iam:Create*",
+              "iam:Deactivate*",
+              "iam:Delete*",
+              "iam:Detach*",
+              "iam:Enable*",
+              "iam:Put*",
+              "iam:Remove*",
+              "iam:Reset*",
+              "iam:Set*",
+              "iam:Tag*",
+              "iam:Untag*",
+              "iam:Update*",
+              "iam:Upload*",
+              "identitystore:Create*",
+              "identitystore:Delete*",
+              "identitystore:Update*",
+              "organizations:Attach*",
+              "organizations:Close*",
+              "organizations:Create*",
+              "organizations:Delete*",
+              "organizations:Detach*",
+              "organizations:Disable*",
+              "organizations:Enable*",
+              "organizations:Invite*",
+              "organizations:Leave*",
+              "organizations:Move*",
+              "organizations:Put*",
+              "organizations:Remove*",
+              "organizations:Update*",
+              "sso-directory:Create*",
+              "sso-directory:Delete*",
+              "sso-directory:Update*",
+              "sso:Associate*",
+              "sso:Create*",
+              "sso:Delete*",
+              "sso:Disassociate*",
+              "sso:Provision*",
+              "sso:Put*",
+              "sso:Update*",
+              "sts:AssumeRole",
+            ],
+            Resource: "*",
+          },
+          {
+            // lambda:UpdateFunctionConfiguration plus iam:PassRole would let a
+            // function be repointed at a more privileged role and invoked.
+            // These roles are the ones that would make that an escalation.
+            Sid: "AgentDenyPrivilegedPassRole",
+            Effect: "Deny",
+            Action: ["iam:PassRole"],
+            Resource: [
+              "arn:aws:iam::*:role/OrganizationAccountAccessRole",
+              "arn:aws:iam::*:role/aws-reserved/sso.amazonaws.com/*",
+              "arn:aws:iam::*:role/cdk-*-cfn-exec-role-*",
+              "arn:aws:iam::*:role/cdk-*-deploy-role-*",
+            ],
+          },
+        ],
+      },
+      managedPolicies: [
+        ManagedPolicy.fromAwsManagedPolicyName("AmazonQDeveloperAccess")
+          .managedPolicyArn,
+        ManagedPolicy.fromAwsManagedPolicyName(
+          "AWSManagementConsoleBasicUserAccess",
+        ).managedPolicyArn,
+        ManagedPolicy.fromAwsManagedPolicyName("ReadOnlyAccess")
+          .managedPolicyArn,
+      ],
+      sessionDuration: Duration.hours(8).toIsoString(),
+      tags: [
+        {
+          key: CDK.TAG.SERVICE,
+          value: CDK.SERVICE.SSO,
+        },
+        {
+          key: CDK.TAG.ROLE,
+          value: CDK.ROLE.SECURITY,
+        },
+      ],
+    });
 
     this.analystPermissionSet = new CfnPermissionSet(
       this,
@@ -355,6 +675,10 @@ export class JaypieSsoPermissions extends Construct {
         arn: this.administratorPermissionSet.attrPermissionSetArn,
         label: "Administrator",
       },
+      Agent: {
+        arn: this.agentPermissionSet.attrPermissionSetArn,
+        label: "Agent",
+      },
       Analyst: {
         arn: this.analystPermissionSet.attrPermissionSetArn,
         label: "Analyst",
@@ -411,6 +735,7 @@ export class JaypieSsoPermissions extends Construct {
 
     // Create assignments for each group
     createAssignments(administratorGroupId, administratorAccountAssignments);
+    createAssignments(agentGroupId, agentAccountAssignments);
     createAssignments(analystGroupId, analystAccountAssignments);
     createAssignments(developerGroupId, developerAccountAssignments);
   }

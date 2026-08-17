@@ -39,7 +39,7 @@ describe("JaypieSsoPermissions", () => {
       const template = Template.fromStack(stack);
 
       expect(permissionSets).toBeDefined();
-      template.resourceCountIs("AWS::SSO::PermissionSet", 3);
+      template.resourceCountIs("AWS::SSO::PermissionSet", 4);
       template.resourceCountIs("AWS::SSO::Assignment", 0);
     });
 
@@ -52,11 +52,15 @@ describe("JaypieSsoPermissions", () => {
           iamIdentityCenterArn:
             "arn:aws:sso:::instance/ssoins-1234567890abcdef",
           administratorGroupId: "b4c8b438-4031-7000-782d-5046945fb956",
+          agentGroupId: "c4d8a1b2-3e4f-5a6b-7c8d-9e0f1a2b3c4d",
           analystGroupId: "2488f4e8-d061-708e-abe1-c315f0e30005",
           developerGroupId: "b438a4f8-e0e1-707c-c6e8-21841daf9ad1",
           administratorAccountAssignments: {
             "211125635435": ["Administrator", "Analyst", "Developer"],
             "381492033431": ["Administrator", "Analyst"],
+          },
+          agentAccountAssignments: {
+            "211125635435": ["Agent"],
           },
           analystAccountAssignments: {
             "211125635435": ["Analyst", "Developer"],
@@ -74,14 +78,15 @@ describe("JaypieSsoPermissions", () => {
       expect(permissionSets).toBeDefined();
 
       // Verify permission sets were created
-      template.resourceCountIs("AWS::SSO::PermissionSet", 3);
+      template.resourceCountIs("AWS::SSO::PermissionSet", 4);
 
       // Verify assignments were created
       // ADMINISTRATORS group: 3 + 2 = 5 assignments
+      // AGENTS group: 1 assignment
       // ANALYSTS group: 2 + 0 = 2 assignments
       // DEVELOPERS group: 2 + 0 = 2 assignments
-      // Total: 9 assignments
-      template.resourceCountIs("AWS::SSO::Assignment", 9);
+      // Total: 10 assignments
+      template.resourceCountIs("AWS::SSO::Assignment", 10);
     });
   });
 
@@ -103,7 +108,7 @@ describe("JaypieSsoPermissions", () => {
   });
 
   describe("Features", () => {
-    it("creates three permission sets with correct properties", () => {
+    it("creates four permission sets with correct properties", () => {
       const stack = new Stack();
       const permissionSets = new JaypieSsoPermissions(
         stack,
@@ -124,6 +129,15 @@ describe("JaypieSsoPermissions", () => {
         InstanceArn: "arn:aws:sso:::instance/ssoins-1234567890abcdef",
         Name: "Administrator",
         SessionDuration: "PT1H",
+      });
+
+      // Verify Agent permission set
+      template.hasResourceProperties("AWS::SSO::PermissionSet", {
+        Description:
+          "Read access with data-plane and operational writes; no deletion, no identity change",
+        InstanceArn: "arn:aws:sso:::instance/ssoins-1234567890abcdef",
+        Name: "Agent",
+        SessionDuration: "PT8H",
       });
 
       // Verify Analyst permission set
@@ -333,6 +347,104 @@ describe("JaypieSsoPermissions", () => {
     });
   });
 
+  describe("Agent Permission Set", () => {
+    const agentStatements = () => {
+      const stack = new Stack();
+      new JaypieSsoPermissions(stack, "TestPermissionSets", {
+        iamIdentityCenterArn: "arn:aws:sso:::instance/ssoins-1234567890abcdef",
+      });
+      const permissionSets = Template.fromStack(stack).findResources(
+        "AWS::SSO::PermissionSet",
+      );
+      const agent = Object.values(permissionSets).find(
+        (resource) => resource.Properties.Name === "Agent",
+      );
+      return {
+        managedPolicies: agent!.Properties.ManagedPolicies as unknown[],
+        statements: agent!.Properties.InlinePolicy.Statement as Array<{
+          Action: string[];
+          Effect: string;
+          Sid: string;
+        }>,
+      };
+    };
+
+    const actionsFor = (sid: string) => {
+      const { statements } = agentStatements();
+      return statements.find((statement) => statement.Sid === sid)!.Action;
+    };
+
+    it("allows the data-plane and operational writes agents need", () => {
+      const allowed = actionsFor("AgentWrite");
+      expect(allowed).toContain("dynamodb:PutItem");
+      expect(allowed).toContain("dynamodb:DeleteItem");
+      expect(allowed).toContain("lambda:Invoke*");
+      expect(allowed).toContain("lambda:UpdateFunctionConfiguration");
+      expect(allowed).toContain("s3:DeleteObject");
+      expect(allowed).toContain("s3:PutObject");
+      expect(allowed).toContain("secretsmanager:GetSecretValue");
+      expect(allowed).toContain("sqs:ReceiveMessage");
+      expect(allowed).toContain("sqs:SendMessage*");
+    });
+
+    it("denies deletion of stacks and resources", () => {
+      const denied = actionsFor("AgentDenyDestructive");
+      expect(denied).toContain("cloudformation:Delete*");
+      expect(denied).toContain("cloudformation:Update*");
+      expect(denied).toContain("dynamodb:DeleteTable");
+      expect(denied).toContain("lambda:Delete*");
+      expect(denied).toContain("s3:DeleteBucket*");
+      expect(denied).toContain("sqs:DeleteQueue");
+    });
+
+    it("denies the mass-expiry paths that empty a store without a delete call", () => {
+      const denied = actionsFor("AgentDenyDestructive");
+      expect(denied).toContain("dynamodb:UpdateTimeToLive");
+      expect(denied).toContain("s3:DeleteObjectVersion*");
+      expect(denied).toContain("s3:PutLifecycleConfiguration");
+      expect(denied).toContain("sqs:PurgeQueue");
+    });
+
+    it("denies resource policy writes that grant access outside the boundary", () => {
+      const denied = actionsFor("AgentDenyDestructive");
+      expect(denied).toContain("lambda:AddPermission");
+      expect(denied).toContain("s3:PutBucketPolicy");
+      expect(denied).toContain("secretsmanager:PutResourcePolicy");
+      expect(denied).toContain("sqs:AddPermission");
+    });
+
+    it("denies identity change and role assumption", () => {
+      const denied = actionsFor("AgentDenyIdentity");
+      expect(denied).toContain("iam:Create*");
+      expect(denied).toContain("iam:Attach*");
+      expect(denied).toContain("organizations:Update*");
+      expect(denied).toContain("sso:Create*");
+      expect(denied).toContain("sts:AssumeRole");
+    });
+
+    it("passes roles except the privileged ones", () => {
+      const { statements } = agentStatements();
+      const allowed = statements.find(
+        (statement) => statement.Sid === "AgentWrite",
+      )!;
+      const denied = statements.find(
+        (statement) => statement.Sid === "AgentDenyPrivilegedPassRole",
+      ) as unknown as { Action: string[]; Resource: string[] };
+      expect(allowed.Action).toContain("iam:PassRole");
+      expect(denied.Action).toEqual(["iam:PassRole"]);
+      expect(denied.Resource).toContain(
+        "arn:aws:iam::*:role/aws-reserved/sso.amazonaws.com/*",
+      );
+    });
+
+    it("does not carry the SystemAdministrator managed policy", () => {
+      // ARNs render as Fn::Join intrinsics, so compare the serialized form
+      const managedPolicies = JSON.stringify(agentStatements().managedPolicies);
+      expect(managedPolicies).not.toContain("SystemAdministrator");
+      expect(managedPolicies).toContain("ReadOnlyAccess");
+    });
+  });
+
   describe("Specific Scenarios", () => {
     it("handles complex multi-group multi-account configuration", () => {
       const stack = new Stack();
@@ -387,6 +499,7 @@ describe("JaypieSsoPermissions", () => {
 
       // Verify we can access permission sets
       expect(permissionSets.administratorPermissionSet).toBeDefined();
+      expect(permissionSets.agentPermissionSet).toBeDefined();
       expect(permissionSets.analystPermissionSet).toBeDefined();
       expect(permissionSets.developerPermissionSet).toBeDefined();
     });
@@ -401,6 +514,7 @@ describe("JaypieSsoPermissions", () => {
 
       // Verify permission sets are undefined
       expect(permissionSets.administratorPermissionSet).toBeUndefined();
+      expect(permissionSets.agentPermissionSet).toBeUndefined();
       expect(permissionSets.analystPermissionSet).toBeUndefined();
       expect(permissionSets.developerPermissionSet).toBeUndefined();
     });
