@@ -179,22 +179,35 @@ app.use(cors());
 ```typescript
 app.use(cors({
   origin: ["https://example.com", "https://app.example.com"],
-  credentials: true,
+  overrides: { credentials: true },
 }));
 ```
 
-### Environment Variable
+`origin` accepts a string, a `RegExp`, or an array of either. Strings match by
+hostname and allow subdomains; expressions are tested against the full request
+origin. Standard `cors` options pass through `overrides`.
 
-Set allowed origins via environment variable:
+```typescript
+app.use(cors({ origin: /^http:\/\/localhost:\d+$/ }));
+```
+
+### Environment Variables
+
+Allowed origins come from `BASE_URL` and `PROJECT_BASE_URL`:
 
 ```bash
-CORS_ORIGIN=https://example.com,https://app.example.com
+BASE_URL=https://api.example.com
+PROJECT_BASE_URL=https://example.com
 ```
 
 ```typescript
 app.use(cors());
-// Reads from CORS_ORIGIN automatically
+// Allows https://api.example.com and https://example.com, plus their subdomains
 ```
+
+In `PROJECT_ENV=local` or `PROJECT_ENV=sandbox` (or with
+`PROJECT_SANDBOX_MODE=true`), `http://localhost` and `http://localhost:<port>`
+are allowed as well.
 
 ## Response Headers
 
