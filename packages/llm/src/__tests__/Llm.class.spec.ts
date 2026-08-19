@@ -139,7 +139,7 @@ describe("Llm Class", () => {
   it("Throws ConfigurationError for unsupported provider", () => {
     expect(() => {
       new Llm("unsupported-provider" as any);
-    }).toThrowError("Unsupported provider: unsupported-provider");
+    }).toThrowError("Unable to determine provider from: unsupported-provider");
   });
 
   describe("send", () => {

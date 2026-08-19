@@ -1,6 +1,6 @@
 import type { Request, Response, NextFunction } from "express";
 import { CorsError } from "@jaypie/errors";
-import { envBoolean, force } from "@jaypie/kit";
+import { envBoolean, force, isLocalEnv } from "@jaypie/kit";
 import expressCors from "cors";
 
 //
@@ -17,8 +17,10 @@ const SANDBOX_ENV = "sandbox";
 // Types
 //
 
+export type CorsOrigin = string | RegExp | Array<string | RegExp>;
+
 export interface CorsConfig {
-  origin?: string | string[];
+  origin?: CorsOrigin;
   overrides?: Record<string, unknown>;
 }
 
@@ -70,7 +72,7 @@ const isOriginAllowed = (requestOrigin: string, allowed: string): boolean => {
 };
 
 export const dynamicOriginCallbackHandler = (
-  origin?: string | string[],
+  origin?: CorsOrigin,
 ): ((requestOrigin: string | undefined, callback: CorsCallback) => void) => {
   return (requestOrigin: string | undefined, callback: CorsCallback) => {
     // Handle wildcard origin
@@ -95,12 +97,13 @@ export const dynamicOriginCallbackHandler = (
       );
     }
     if (origin) {
-      const additionalOrigins = force.array<string>(origin);
+      const additionalOrigins = force.array<string | RegExp>(origin);
       allowedOrigins.push(...additionalOrigins);
     }
 
-    // Add localhost origins in sandbox
+    // Add localhost origins in local and sandbox environments
     if (
+      isLocalEnv() ||
       process.env.PROJECT_ENV === SANDBOX_ENV ||
       envBoolean("PROJECT_SANDBOX_MODE")
     ) {

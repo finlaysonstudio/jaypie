@@ -94,6 +94,31 @@ describe("Cors Helper", () => {
         originHandler(origin, callback);
         expect(callback).toHaveBeenCalledWith(null, true);
       });
+      it("allows requests that match a RegExp origin", () => {
+        const originHandler = dynamicOriginCallbackHandler(
+          /^http:\/\/localhost:\d+$/,
+        );
+        const callback = vi.fn();
+        originHandler("http://localhost:5173", callback);
+        expect(callback).toHaveBeenCalledWith(null, true);
+      });
+      it("rejects requests that do not match a RegExp origin", () => {
+        const originHandler = dynamicOriginCallbackHandler(
+          /^http:\/\/localhost:\d+$/,
+        );
+        const callback = vi.fn();
+        originHandler("https://evil.com", callback);
+        expect(callback).not.toHaveBeenCalledWith(null, true);
+      });
+      it("allows requests that match a mixed string and RegExp array", () => {
+        const originHandler = dynamicOriginCallbackHandler([
+          "https://api.example.com",
+          /^http:\/\/localhost:\d+$/,
+        ]);
+        const callback = vi.fn();
+        originHandler("http://localhost:3000", callback);
+        expect(callback).toHaveBeenCalledWith(null, true);
+      });
 
       describe("Subdomain Matching", () => {
         it("allows subdomain when base domain is allowed", () => {
