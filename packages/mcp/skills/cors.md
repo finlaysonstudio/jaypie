@@ -114,10 +114,21 @@ app.use(cors());
 ### Jaypie `cors` Options
 
 ```typescript
+type CorsOrigin = string | RegExp | Array<string | RegExp>;
+
 interface CorsConfig {
-  origin?: string | string[];  // Additional allowed origins
+  origin?: CorsOrigin;  // Additional allowed origins
   overrides?: Record<string, unknown>;  // Pass-through to express/cors
 }
+```
+
+String origins match by hostname, including subdomains. `RegExp` origins are tested against the full request origin:
+
+```typescript
+app.use(cors({ origin: /^https:\/\/[a-z0-9-]+\.example\.com$/ }));
+
+// Mixed strings and expressions
+app.use(cors({ origin: ["https://example.com", /^http:\/\/localhost:\d+$/] }));
 ```
 
 ### Standard `cors` Options (via `overrides`)

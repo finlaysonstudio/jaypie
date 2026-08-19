@@ -17,8 +17,10 @@ const SANDBOX_ENV = "sandbox";
 // Types
 //
 
+export type CorsOrigin = string | RegExp | Array<string | RegExp>;
+
 export interface CorsConfig {
-  origin?: string | string[];
+  origin?: CorsOrigin;
   overrides?: Record<string, unknown>;
 }
 
@@ -70,7 +72,7 @@ const isOriginAllowed = (requestOrigin: string, allowed: string): boolean => {
 };
 
 export const dynamicOriginCallbackHandler = (
-  origin?: string | string[],
+  origin?: CorsOrigin,
 ): ((requestOrigin: string | undefined, callback: CorsCallback) => void) => {
   return (requestOrigin: string | undefined, callback: CorsCallback) => {
     // Handle wildcard origin
@@ -95,7 +97,7 @@ export const dynamicOriginCallbackHandler = (
       );
     }
     if (origin) {
-      const additionalOrigins = force.array<string>(origin);
+      const additionalOrigins = force.array<string | RegExp>(origin);
       allowedOrigins.push(...additionalOrigins);
     }
 
