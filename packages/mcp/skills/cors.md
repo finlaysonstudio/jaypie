@@ -38,7 +38,7 @@ When called with no arguments, `cors()` allows origins based on environment vari
 | Origin matches `BASE_URL` env var | ✅ Yes |
 | Origin matches `PROJECT_BASE_URL` env var | ✅ Yes |
 | Origin is subdomain of allowed origin | ✅ Yes |
-| `PROJECT_ENV=sandbox` and origin is `localhost[:port]` | ✅ Yes |
+| `PROJECT_ENV=local` or `PROJECT_ENV=sandbox` and origin is `localhost[:port]` | ✅ Yes |
 | Any other cross-origin request | ❌ Rejected |
 
 ### Subdomain Matching
@@ -57,7 +57,7 @@ app.use(cors({ origin: "example.com" }));  // Same as https://example.com
 
 This is secure because it uses proper hostname extraction and suffix matching with a dot separator—domains like `notexample.com` or `fakeexample.com` are correctly rejected.
 
-**Important:** With no environment variables set and not in sandbox mode, `cors()` rejects all cross-origin browser requests. This is secure by default—you must explicitly configure allowed origins.
+**Important:** With no environment variables set and not in a local or sandbox environment, `cors()` rejects all cross-origin browser requests. This is secure by default—you must explicitly configure allowed origins.
 
 ```typescript
 // Example: Production environment
@@ -68,8 +68,8 @@ app.use(cors());
 // Allows: https://api.example.com, https://example.com
 // Rejects: all other origins
 
-// Example: Sandbox/development
-// PROJECT_ENV=sandbox
+// Example: Local/sandbox development
+// PROJECT_ENV=local (or PROJECT_ENV=sandbox)
 
 app.use(cors());
 // Allows: http://localhost, http://localhost:3000, http://localhost:5173, etc.
@@ -85,7 +85,7 @@ app.use(cors());
 | **Origin Validation** | Static or manual callback | Dynamic environment-aware callback |
 | **Subdomain Matching** | Manual implementation | Automatic (subdomains of allowed origins permitted) |
 | **Environment URLs** | Not supported | Reads `BASE_URL`, `PROJECT_BASE_URL` |
-| **Sandbox Mode** | Manual localhost config | Auto-allows localhost in sandbox |
+| **Local and Sandbox Mode** | Manual localhost config | Auto-allows localhost in local and sandbox |
 | **Error Response** | Generic CORS error | Returns `CorsError` with JSON body |
 | **No-Origin Requests** | Configurable | Always allowed (mobile apps, curl) |
 | **Protocol Prefix** | Required in config | Optional (defaults to `https://`) |
@@ -97,7 +97,7 @@ app.use(cors());
    - `PROJECT_BASE_URL` - Automatically added to allowed origins
    - Protocol auto-added if missing (defaults to `https://`)
 
-2. **Sandbox Mode** (when `PROJECT_ENV=sandbox` or `PROJECT_SANDBOX_MODE=true`)
+2. **Local and Sandbox Mode** (when `PROJECT_ENV=local`, `PROJECT_ENV=sandbox`, or `PROJECT_SANDBOX_MODE=true`)
    - `http://localhost` is automatically allowed
    - `http://localhost:*` (any port) is automatically allowed
 
@@ -218,7 +218,7 @@ Jaypie's `cors` uses a dynamic origin callback that checks origins in this order
 2. **No Origin** - Allow requests without Origin header (mobile, curl, etc.)
 3. **Environment URLs** - Check `BASE_URL` and `PROJECT_BASE_URL`
 4. **Configured Origins** - Check origins passed to `cors({ origin: [...] })`
-5. **Sandbox Localhost** - In sandbox mode, allow localhost with any port
+5. **Local and Sandbox Localhost** - In local or sandbox environments, allow localhost with any port
 
 For each allowed origin, the validation checks:
 - **Exact hostname match** - `example.com` matches `https://example.com`
@@ -232,7 +232,7 @@ const isAllowed =
   isOriginAllowed(requestOrigin, process.env.BASE_URL) ||
   isOriginAllowed(requestOrigin, process.env.PROJECT_BASE_URL) ||
   configuredOrigins.some(o => isOriginAllowed(requestOrigin, o)) ||
-  (isSandbox && requestOrigin.match(/^http:\/\/localhost(:\d+)?$/));
+  ((isLocal || isSandbox) && requestOrigin.match(/^http:\/\/localhost(:\d+)?$/));
 
 // Where isOriginAllowed checks for exact match OR subdomain match
 // e.g., "app.example.com".endsWith(".example.com") → true
@@ -281,8 +281,8 @@ app.use(cors({
       return callback(null, true);
     }
 
-    // Sandbox localhost
-    if (process.env.PROJECT_ENV === "sandbox" &&
+    // Local and sandbox localhost
+    if (["local", "sandbox"].includes(process.env.PROJECT_ENV) &&
         origin.match(/^http:\/\/localhost(:\d+)?$/)) {
       return callback(null, true);
     }
@@ -314,7 +314,7 @@ app.use(cors({
 |----------|-------------|
 | `BASE_URL` | Automatically added to allowed origins |
 | `PROJECT_BASE_URL` | Automatically added to allowed origins |
-| `PROJECT_ENV` | Set to `sandbox` to enable localhost access |
+| `PROJECT_ENV` | Set to `local` or `sandbox` to enable localhost access |
 | `PROJECT_SANDBOX_MODE` | Set to `true` to enable localhost access |
 
 ## Lambda Streaming Compatibility

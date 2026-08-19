@@ -16,6 +16,8 @@ beforeEach(() => {
   vi.clearAllMocks();
   delete process.env.BASE_URL;
   delete process.env.PROJECT_BASE_URL;
+  delete process.env.PROJECT_ENV;
+  delete process.env.PROJECT_SANDBOX_MODE;
 });
 
 //
@@ -113,6 +115,36 @@ describe("corsHelper with supertest", () => {
     const response = await request(route)
       .get("/")
       .set("Origin", "http://localhost")
+      .expect("Content-Type", /json/)
+      .expect(HTTP.CODE.OK)
+      .expect({ message: "Hello" });
+    expect(response.statusCode).toEqual(HTTP.CODE.OK);
+    expect(response.body.message).toEqual("Hello");
+  });
+  it("allows localhost if env is local", async () => {
+    process.env.PROJECT_ENV = "local";
+    const route = express();
+    route.get("/", corsHelper(), (req: Request, res: Response) => {
+      res.json({ message: "Hello" });
+    });
+    const response = await request(route)
+      .get("/")
+      .set("Origin", "http://localhost")
+      .expect("Content-Type", /json/)
+      .expect(HTTP.CODE.OK)
+      .expect({ message: "Hello" });
+    expect(response.statusCode).toEqual(HTTP.CODE.OK);
+    expect(response.body.message).toEqual("Hello");
+  });
+  it("allows a localhost port if env is local", async () => {
+    process.env.PROJECT_ENV = "local";
+    const route = express();
+    route.post("/", corsHelper(), (req: Request, res: Response) => {
+      res.json({ message: "Hello" });
+    });
+    const response = await request(route)
+      .post("/")
+      .set("Origin", "http://localhost:3000")
       .expect("Content-Type", /json/)
       .expect(HTTP.CODE.OK)
       .expect({ message: "Hello" });

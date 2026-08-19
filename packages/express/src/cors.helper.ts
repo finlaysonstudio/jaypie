@@ -1,6 +1,6 @@
 import type { Request, Response, NextFunction } from "express";
 import { CorsError } from "@jaypie/errors";
-import { envBoolean, force } from "@jaypie/kit";
+import { envBoolean, force, isLocalEnv } from "@jaypie/kit";
 import expressCors from "cors";
 
 //
@@ -99,8 +99,9 @@ export const dynamicOriginCallbackHandler = (
       allowedOrigins.push(...additionalOrigins);
     }
 
-    // Add localhost origins in sandbox
+    // Add localhost origins in local and sandbox environments
     if (
+      isLocalEnv() ||
       process.env.PROJECT_ENV === SANDBOX_ENV ||
       envBoolean("PROJECT_SANDBOX_MODE")
     ) {
