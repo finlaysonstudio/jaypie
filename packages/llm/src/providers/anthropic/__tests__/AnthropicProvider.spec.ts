@@ -95,6 +95,7 @@ describe("AnthropicProvider", () => {
     });
 
     it("throws error when JSON response does not match schema", async () => {
+      vi.mocked(getEnvSecret).mockResolvedValue("test-api-key");
       const mockResponse = {
         stop_reason: "end_turn",
         content: [

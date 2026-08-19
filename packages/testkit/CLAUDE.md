@@ -70,7 +70,6 @@ src/
 │   ├── toBeJaypieError.matcher.ts
 │   ├── toBeMockFunction.matcher.ts
 │   ├── toMatch.matcher.ts      # UUID, JWT, Base64, MongoId matchers
-│   ├── toThrowError.matcher.ts
 │   └── toThrowJaypieError.matcher.ts
 ├── mock/                # Mock implementations
 │   ├── aws.ts          # getMessages, getSecret, sendMessage, textractDocument
