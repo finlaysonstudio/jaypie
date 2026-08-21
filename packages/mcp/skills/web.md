@@ -70,7 +70,7 @@ Changing `component` or `name` on a deployed stack renames the bucket, which rep
 
 ```typescript
 const web = new JaypieWebDeploymentBucket(this, "Web", { host, zone });
-web.distribution!.addBehavior("/app/*", new origins.FunctionUrlOrigin(api.functionUrl));
+web.distribution.addBehavior("/app/*", new origins.FunctionUrlOrigin(api.functionUrl));
 ```
 
 `defaultBehavior` merges over those defaults instead of replacing them, so an override names only what it changes and the S3 website origin stays wired up. Keys the override omits keep the construct's value; an explicit `undefined` is ignored rather than erasing a default.
@@ -104,7 +104,7 @@ new JaypieWebDeploymentBucket(this, "App", {
 
 - Scoped to the **default behavior** only. Paths registered with `addBehavior("/app/*", ...)` never reach the function, so a Lambda surface sharing the distribution keeps its genuine 404s. This is why a distribution-wide `errorResponses` 404→`/index.html` mapping is the wrong tool on a shared distribution: it would rewrite those into 200s serving the app shell.
 - The function is named `constructEnvName("<component>-spa")`, so `component` disambiguates two instances in one account exactly as it does the bucket name.
-- Exposed as `.spaFunction`. No distribution (no `host`/`zone`) means no function.
+- Exposed as `.spaFunction`. Works without `host` and `zone`, so a deep link resolves on the CloudFront default domain before DNS is wired.
 - Combining `spa: true` with a caller-supplied **viewer-request** association throws `ConfigurationError` at synth; CloudFront permits one function per event type. Other event types (for example viewer-response) compose, with the rewrite appended last.
 
 ### Security Headers
@@ -154,7 +154,18 @@ new JaypieWebDeploymentBucket(this, "Web", {
 
 ### DNS
 
-Creates an A record alias to the distribution. Tags the record with `CDK.ROLE.NETWORKING`.
+Creates an A record alias to the distribution when both a `host` and a `zone` resolve. Tags the record with `CDK.ROLE.NETWORKING`.
+
+#### Without a Hosted Zone
+
+The distribution is unconditional. With no `host` or no `zone`, the construct still creates the distribution, the response headers policy, the access log bucket, the SPA function, the WebACL, the `DistributionId` output, and the deploy role's `cloudfront:CreateInvalidation` grant. It skips only the certificate and the alias record, so the distribution serves on its `d….cloudfront.net` domain with no `Aliases` entry.
+
+```typescript
+// Pre-DNS sandbox: reachable immediately at construct.distributionDomainName
+const web = new JaypieWebDeploymentBucket(this, "Web", { spa: true });
+```
+
+`distribution` and `distributionDomainName` are therefore always defined. Publish `distributionDomainName` to SSM or read `DistributionId` from `cdk-outputs.json` and a downstream build resolves the app URL from the stack instead of a hand-set GitHub variable. Adding `host` and `zone` later adds the certificate and the alias record without replacing the distribution.
 
 ### Deploy Role (OIDC)
 

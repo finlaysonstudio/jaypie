@@ -8,10 +8,12 @@ import * as route53 from "aws-cdk-lib/aws-route53";
 import * as s3 from "aws-cdk-lib/aws-s3";
 import { JaypieWebDeploymentBucket } from "../JaypieWebDeploymentBucket";
 
+// Named buckets only. The distribution's access log bucket takes a
+// CDK-generated name, so it has no BucketName to assert on.
 function findBucketNames(template: Template) {
-  return Object.values(template.findResources("AWS::S3::Bucket")).map(
-    (bucket) => bucket.Properties?.BucketName,
-  );
+  return Object.values(template.findResources("AWS::S3::Bucket"))
+    .map((bucket) => bucket.Properties?.BucketName)
+    .filter((name) => name !== undefined);
 }
 
 function findDistribution(template: Template) {
@@ -50,19 +52,19 @@ describe("JaypieWebDeploymentBucket", () => {
       expect(JaypieWebDeploymentBucket).toBeFunction();
     });
 
-    it("creates only an S3 bucket without host/zone", () => {
+    it("creates a bucket and a distribution without host/zone", () => {
       const stack = new Stack();
 
       const construct = new JaypieWebDeploymentBucket(stack, "Web");
       const template = Template.fromStack(stack);
 
       expect(construct.bucket).toBeDefined();
-      expect(construct.distribution).toBeUndefined();
-      expect(construct.responseHeadersPolicy).toBeUndefined();
+      expect(construct.distribution).toBeDefined();
+      expect(construct.responseHeadersPolicy).toBeDefined();
+      expect(construct.certificate).toBeUndefined();
       expect(construct.webAcl).toBeUndefined();
-      expect(construct.logBucket).toBeUndefined();
       template.hasResource("AWS::S3::Bucket", {});
-      template.resourceCountIs("AWS::CloudFront::Distribution", 0);
+      template.resourceCountIs("AWS::CloudFront::Distribution", 1);
       template.resourceCountIs("AWS::WAFv2::WebACL", 0);
     });
 
@@ -102,6 +104,89 @@ describe("JaypieWebDeploymentBucket", () => {
 
       template.hasResource("AWS::WAFv2::WebACL", {});
       template.hasResource("AWS::WAFv2::LoggingConfiguration", {});
+    });
+  });
+
+  describe("Zoneless Distribution", () => {
+    it("serves on the CloudFront default domain with no aliases (#500)", () => {
+      const stack = new Stack();
+
+      const construct = new JaypieWebDeploymentBucket(stack, "Web");
+      const template = Template.fromStack(stack);
+
+      expect(construct.distribution).toBeDefined();
+      expect(construct.distributionDomainName).toBeDefined();
+      expect(construct.certificate).toBeUndefined();
+
+      const config = findDistribution(template)?.Properties?.DistributionConfig;
+      expect(config?.Aliases).toBeUndefined();
+      expect(config?.ViewerCertificate?.AcmCertificateArn).toBeUndefined();
+      template.resourceCountIs("AWS::CertificateManager::Certificate", 0);
+      template.resourceCountIs("AWS::Route53::RecordSet", 0);
+    });
+
+    it("creates no alias record when host resolves without a zone (#500)", () => {
+      const stack = new Stack();
+
+      const construct = new JaypieWebDeploymentBucket(stack, "Web", {
+        host: "app.example.com",
+      });
+      const template = Template.fromStack(stack);
+
+      expect(construct.distribution).toBeDefined();
+      expect(construct.certificate).toBeUndefined();
+      expect(
+        findDistribution(template)?.Properties?.DistributionConfig?.Aliases,
+      ).toBeUndefined();
+      template.resourceCountIs("AWS::Route53::RecordSet", 0);
+    });
+
+    it("grants the deploy role invalidation without host/zone (#500)", () => {
+      process.env.CDK_ENV_REPO = "owner/repo";
+      const stack = new Stack();
+
+      const construct = new JaypieWebDeploymentBucket(stack, "Web");
+      const template = Template.fromStack(stack);
+
+      expect(construct.deployRoleArn).toBeDefined();
+      template.hasResourceProperties("AWS::IAM::Policy", {
+        PolicyDocument: {
+          Statement: Match.arrayWith([
+            Match.objectLike({ Action: "cloudfront:CreateInvalidation" }),
+          ]),
+        },
+      });
+    });
+
+    it("attaches a WebACL without host/zone (#500)", () => {
+      const stack = new Stack();
+
+      const construct = new JaypieWebDeploymentBucket(stack, "Web", {
+        waf: true,
+      });
+      const template = Template.fromStack(stack);
+
+      expect(construct.webAcl).toBeDefined();
+      template.hasResource("AWS::WAFv2::WebACL", {});
+    });
+
+    it("keeps the certificate and alias record with host+zone", () => {
+      const { stack, zone } = makeStack();
+
+      const construct = new JaypieWebDeploymentBucket(stack, "Web", {
+        host: "app.example.com",
+        zone,
+      });
+      const template = Template.fromStack(stack);
+
+      expect(construct.certificate).toBeDefined();
+      expect(
+        findDistribution(template)?.Properties?.DistributionConfig?.Aliases,
+      ).toEqual(["app.example.com"]);
+      template.hasResourceProperties("AWS::Route53::RecordSet", {
+        Name: "app.example.com.",
+        Type: "A",
+      });
     });
   });
 
@@ -480,7 +565,7 @@ describe("JaypieWebDeploymentBucket", () => {
       }).toThrow(ConfigurationError);
     });
 
-    it("creates no function without a distribution", () => {
+    it("creates the rewrite function without host/zone (#500)", () => {
       const stack = new Stack();
 
       const construct = new JaypieWebDeploymentBucket(stack, "Web", {
@@ -488,8 +573,12 @@ describe("JaypieWebDeploymentBucket", () => {
       });
       const template = Template.fromStack(stack);
 
-      expect(construct.spaFunction).toBeUndefined();
-      template.resourceCountIs("AWS::CloudFront::Function", 0);
+      expect(construct.spaFunction).toBeDefined();
+      template.resourceCountIs("AWS::CloudFront::Function", 1);
+      expect(
+        findDistribution(template)?.Properties?.DistributionConfig
+          ?.DefaultCacheBehavior?.FunctionAssociations,
+      ).toHaveLength(1);
     });
   });
 
@@ -836,8 +925,8 @@ describe("JaypieWebDeploymentBucket", () => {
       const ids = Object.keys(template.findOutputs("*"));
 
       expect(ids).toContain("DestinationBucketName");
+      expect(ids).toContain("DistributionId");
       expect(ids).not.toContain("DestinationBucketDeployRoleArn");
-      expect(ids).not.toContain("DistributionId");
       expect(ids).not.toContain("CertificateArn");
     });
 

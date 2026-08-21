@@ -244,7 +244,7 @@ The default behavior serves the S3 static website origin, with `CACHING_OPTIMIZE
 
 ```typescript
 const web = new JaypieWebDeploymentBucket(this, "Web", { host, zone });
-web.distribution!.addBehavior("/app/*", new origins.FunctionUrlOrigin(api.functionUrl));
+web.distribution.addBehavior("/app/*", new origins.FunctionUrlOrigin(api.functionUrl));
 ```
 
 Pass `defaultBehavior` to override the default behavior. It merges over the construct's values rather than replacing them, so an override names only what it changes and the S3 website origin stays wired up:
@@ -279,6 +279,17 @@ The function is scoped to the default behavior, so paths registered with `addBeh
 
 Combining `spa: true` with a caller-supplied viewer-request association throws `ConfigurationError` at synth, since CloudFront permits one function per event type. Other event types compose, with the rewrite appended last.
 
+### Deploying Without a Hosted Zone
+
+The distribution is unconditional. With no `host` or no `zone`, the construct skips only the certificate and the Route53 alias record; the distribution, response headers policy, access log bucket, SPA function, WebACL, `DistributionId` output, and the deploy role's invalidation grant are all still created. The site serves on the CloudFront default domain:
+
+```typescript
+const web = new JaypieWebDeploymentBucket(this, "Web", { spa: true });
+web.distributionDomainName; // d111111abcdef8.cloudfront.net
+```
+
+`distribution` and `distributionDomainName` are always defined, so a sandbox deployed before its hosted zone exists is reachable, and a downstream build can resolve the URL from the stack. Adding `host` and `zone` later adds the certificate and alias record without replacing the distribution.
+
 ### Stable Outputs for cdk-outputs.json
 
 Call `exportOutputs()` to emit stack-level `CfnOutput`s with hash-free logical IDs (`DestinationBucketName`, `DestinationBucketDeployRoleArn`, `DistributionId`, `CertificateArn`):
@@ -292,7 +303,7 @@ appWeb.exportOutputs({ prefix: "App" });   // AppDestinationBucketName, ...
 docsWeb.exportOutputs({ prefix: "Docs" }); // DocsDestinationBucketName, ...
 ```
 
-Outputs whose underlying resource doesn't exist (e.g., no deploy role, no distribution) are skipped.
+Outputs whose underlying resource doesn't exist (e.g., no deploy role, no certificate) are skipped.
 
 ## JaypieDynamoDb
 
