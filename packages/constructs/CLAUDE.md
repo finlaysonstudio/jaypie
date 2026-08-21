@@ -433,6 +433,19 @@ CloudFront permits one function per event type.
 new JaypieWebDeploymentBucket(this, "App", { component: "app", host, spa: true, zone });
 ```
 
+The distribution is unconditional. Without a `host` and `zone` the construct
+skips the certificate and the Route53 alias record and creates everything else,
+so the site serves on the CloudFront default domain. `distribution` and
+`distributionDomainName` are always defined, which is what makes a pre-DNS
+sandbox reachable and lets a downstream build resolve the URL from the stack
+instead of a hand-set variable. Adding `host` and `zone` later adds the
+certificate and the record without replacing the distribution.
+
+```typescript
+const web = new JaypieWebDeploymentBucket(this, "Web", { spa: true });
+web.distributionDomainName; // d111111abcdef8.cloudfront.net
+```
+
 ### SSO Permission Sets
 
 `JaypieSsoPermissions` creates four permission sets and assigns them to Workspace groups by account.
