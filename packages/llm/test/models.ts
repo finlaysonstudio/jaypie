@@ -9,6 +9,10 @@
 // (`MATRIX_EXCLUDE`) and which capabilities a model is known not to support
 // (`MATRIX_EXPECT`).
 //
+// Bedrock, Fireworks, and OpenRouter models are judged as collectives by
+// `matrix.ts` — their expectations still drive the grid and the issue list, but
+// the run fails on a lost row or column majority rather than on any one cell.
+//
 // `expect` documents the *expected* outcome per capability. The harness
 // compares actual outcomes to these and flags mismatches:
 //
@@ -92,10 +96,15 @@ const MATRIX_EXPECT: Record<
   [MODEL.FIREWORKS.MINIMAX]: { pdf: "skip", image: "skip" },
   // NEMOTRON returned to the catalog on 2026-08-02 after being retired
   // 2026-07-21 for nondeterministic structured output (clean JSON, prose, or an
-  // empty array from the same request). `structured` is left "ok" on evidence,
-  // not omission: 6 for 6 on resample (2026-08-02). Should it regress, prefer
-  // pinning `structured: "warn"` over removing the model again, and record the
-  // sample count here. It advertises no image input.
+  // empty array from the same request). The nondeterminism persists: 6 for 6 on
+  // resample (2026-08-02) and 8 for 8 again (2026-08-21), yet CI lost the cell
+  // to "colors array missing or empty" on both 2026-08-19 and 2026-08-21. No
+  // single expectation is right for a cell that answers differently to the same
+  // request, so `structured` stays "ok" — the outcome the model reaches on the
+  // large majority of samples — and the Fireworks collective in `matrix.ts`
+  // absorbs the miss. One flaky cell no longer fails the run; a NEMOTRON row or
+  // a `structured` column that goes red across the Fireworks block still does.
+  // It advertises no image input.
   [MODEL.FIREWORKS.NEMOTRON]: { pdf: "skip", image: "skip" },
   // QWEN `structured` is pinned "ok" on evidence, not omission: it failed once
   // in three samples (2026-07), then passed 10 for 10 on resample (2026-07-25,

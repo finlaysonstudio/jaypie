@@ -3,7 +3,7 @@ import { JsonObject, NaturalSchema } from "@jaypie/types";
 import { z } from "zod/v4";
 
 import { PROVIDER } from "../../constants.js";
-import { paperedEffortMessage, toFireworksEffort } from "../../util/effort.js";
+import { logPaperedEffort, toFireworksEffort } from "../../util/effort.js";
 import { Toolkit } from "../../tools/Toolkit.class.js";
 import {
   LlmHistory,
@@ -463,16 +463,12 @@ export class FireworksAdapter extends BaseProviderAdapter {
     // gating. First-class effort wins over providerOptions.
     if (request.effort) {
       const mapping = toFireworksEffort(request.effort);
-      if (mapping.papered) {
-        log.debug(
-          paperedEffortMessage({
-            model: fireworksRequest.model,
-            provider: this.name,
-            requested: request.effort,
-            value: mapping.value,
-          }),
-        );
-      }
+      logPaperedEffort({
+        mapping,
+        model: fireworksRequest.model,
+        provider: this.name,
+        requested: request.effort,
+      });
       fireworksRequest.reasoning_effort = mapping.value as string;
     }
 

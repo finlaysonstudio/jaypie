@@ -583,8 +583,9 @@ describe("FireworksAdapter", () => {
         ).toBeUndefined();
       });
 
-      it("papers highest onto high and logs at debug", () => {
+      it("papers highest onto high without logging", () => {
         const debug = vi.spyOn(log, "debug").mockImplementation(() => {});
+        const trace = vi.spyOn(log, "trace").mockImplementation(() => {});
         const result = fireworksAdapter.buildRequest({
           model: PROVIDER.FIREWORKS.DEFAULT,
           messages: [],
@@ -592,8 +593,8 @@ describe("FireworksAdapter", () => {
         } as OperateRequest);
 
         expect(result.reasoning_effort).toBe("high");
-        expect(debug).toHaveBeenCalledTimes(1);
-        expect(debug.mock.calls[0][0]).toContain("highest");
+        expect(debug).not.toHaveBeenCalled();
+        expect(trace).not.toHaveBeenCalled();
         vi.restoreAllMocks();
       });
 

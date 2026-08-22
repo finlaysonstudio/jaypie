@@ -1,3 +1,5 @@
+import { log } from "@jaypie/logger";
+
 import { EFFORT, type LlmEffort } from "../constants.js";
 
 /**
@@ -6,10 +8,17 @@ import { EFFORT, type LlmEffort } from "../constants.js";
  */
 export interface LlmEffortMapping<T extends string | number = string> {
   /**
+   * True when the papering follows from the provider's native scale alone
+   * (e.g. Grok has no rung above `high`, so `highest` always lands on `high`).
+   * A known outcome tells the caller nothing it could act on, so it is never
+   * logged. Absent means the papering depends on the specific model, which is
+   * logged at trace. Only meaningful alongside `papered`.
+   */
+  known?: boolean;
+  /**
    * True when the requested neutral level had no distinct native rung and was
    * collapsed or clamped onto a neighbor (e.g. `highest` -> Grok `high`, or
-   * `highest` -> OpenAI `high` on a model predating `xhigh`). Adapters log
-   * these at debug so a papered-over request stays on the record.
+   * `highest` -> OpenAI `high` on a model predating `xhigh`).
    */
   papered: boolean;
   /** Native effort value for the target provider. */
@@ -28,19 +37,26 @@ export interface LlmEffortMapping<T extends string | number = string> {
  * across providers and fallback chains.
  */
 
-/** Consistent debug message for a papered-over effort level. */
-export function paperedEffortMessage({
+/**
+ * Record a papered-over effort level. Papering that is `known` from the
+ * provider's scale stays silent; model-dependent papering logs at debug so the
+ * substitution stands out on the record.
+ */
+export function logPaperedEffort({
+  mapping,
   model,
   provider,
   requested,
-  value,
 }: {
+  mapping: LlmEffortMapping<string | number>;
   model: string;
   provider: string;
   requested: LlmEffort;
-  value: string | number;
-}): string {
-  return `[llm] effort '${requested}' has no distinct tier on ${provider} model '${model}'; using '${value}'`;
+}): void {
+  if (!mapping.papered || mapping.known) return;
+  log.debug(
+    `[llm] effort '${requested}' has no distinct tier on ${provider} model '${model}'; using '${mapping.value}'`,
+  );
 }
 
 // OpenAI Responses API `reasoning.effort`.
@@ -103,11 +119,11 @@ export function toOpenAiEffort(
 // xAI Grok `reasoning_effort` — low | medium | high. No sub-low or top rung, so
 // `lowest` collapses onto `low` and `highest` onto `high`.
 const XAI_EFFORT: Record<LlmEffort, LlmEffortMapping> = {
-  [EFFORT.LOWEST]: { papered: true, value: "low" },
+  [EFFORT.LOWEST]: { known: true, papered: true, value: "low" },
   [EFFORT.LOW]: { papered: false, value: "low" },
   [EFFORT.MEDIUM]: { papered: false, value: "medium" },
   [EFFORT.HIGH]: { papered: false, value: "high" },
-  [EFFORT.HIGHEST]: { papered: true, value: "high" },
+  [EFFORT.HIGHEST]: { known: true, papered: true, value: "high" },
 };
 
 export function toXaiEffort(effort: LlmEffort): LlmEffortMapping {
@@ -117,7 +133,7 @@ export function toXaiEffort(effort: LlmEffort): LlmEffortMapping {
 // Anthropic `output_config.effort` — low | medium | high | xhigh | max. No
 // sub-low rung, so `lowest` collapses onto `low`; `highest` reaches `max`.
 const ANTHROPIC_EFFORT: Record<LlmEffort, LlmEffortMapping> = {
-  [EFFORT.LOWEST]: { papered: true, value: "low" },
+  [EFFORT.LOWEST]: { known: true, papered: true, value: "low" },
   [EFFORT.LOW]: { papered: false, value: "low" },
   [EFFORT.MEDIUM]: { papered: false, value: "medium" },
   [EFFORT.HIGH]: { papered: false, value: "high" },
@@ -135,7 +151,7 @@ const GEMINI_THINKING_LEVEL: Record<LlmEffort, LlmEffortMapping> = {
   [EFFORT.LOW]: { papered: false, value: "LOW" },
   [EFFORT.MEDIUM]: { papered: false, value: "MEDIUM" },
   [EFFORT.HIGH]: { papered: false, value: "HIGH" },
-  [EFFORT.HIGHEST]: { papered: true, value: "HIGH" },
+  [EFFORT.HIGHEST]: { known: true, papered: true, value: "HIGH" },
 };
 
 export function toGeminiThinkingLevel(effort: LlmEffort): LlmEffortMapping {
@@ -163,11 +179,11 @@ export function toGeminiThinkingBudget(
 // (the API no-ops where unsupported). No sub-low or top rung, so `lowest`
 // collapses onto `low` and `highest` onto `high`.
 const FIREWORKS_EFFORT: Record<LlmEffort, LlmEffortMapping> = {
-  [EFFORT.LOWEST]: { papered: true, value: "low" },
+  [EFFORT.LOWEST]: { known: true, papered: true, value: "low" },
   [EFFORT.LOW]: { papered: false, value: "low" },
   [EFFORT.MEDIUM]: { papered: false, value: "medium" },
   [EFFORT.HIGH]: { papered: false, value: "high" },
-  [EFFORT.HIGHEST]: { papered: true, value: "high" },
+  [EFFORT.HIGHEST]: { known: true, papered: true, value: "high" },
 };
 
 export function toFireworksEffort(effort: LlmEffort): LlmEffortMapping {
@@ -196,11 +212,11 @@ export function toOpenRouterEffort(effort: LlmEffort): LlmEffortMapping {
 // binary. Only the explicit floor disables reasoning outright; everything from
 // `low` up asks for it.
 const MISTRAL_EFFORT: Record<LlmEffort, LlmEffortMapping> = {
-  [EFFORT.LOWEST]: { papered: true, value: "none" },
-  [EFFORT.LOW]: { papered: true, value: "high" },
-  [EFFORT.MEDIUM]: { papered: true, value: "high" },
+  [EFFORT.LOWEST]: { known: true, papered: true, value: "none" },
+  [EFFORT.LOW]: { known: true, papered: true, value: "high" },
+  [EFFORT.MEDIUM]: { known: true, papered: true, value: "high" },
   [EFFORT.HIGH]: { papered: false, value: "high" },
-  [EFFORT.HIGHEST]: { papered: true, value: "high" },
+  [EFFORT.HIGHEST]: { known: true, papered: true, value: "high" },
 };
 
 export function toMistralEffort(effort: LlmEffort): LlmEffortMapping {

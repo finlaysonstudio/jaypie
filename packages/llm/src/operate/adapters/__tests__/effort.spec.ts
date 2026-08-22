@@ -109,9 +109,14 @@ describe("effort mapping util", () => {
   });
 
   it("xAI collapses ends onto low..high", () => {
-    expect(toXaiEffort(EFFORT.LOWEST)).toEqual({ papered: true, value: "low" });
+    expect(toXaiEffort(EFFORT.LOWEST)).toEqual({
+      known: true,
+      papered: true,
+      value: "low",
+    });
     expect(toXaiEffort(EFFORT.MEDIUM).value).toBe("medium");
     expect(toXaiEffort(EFFORT.HIGHEST)).toEqual({
+      known: true,
       papered: true,
       value: "high",
     });
@@ -119,6 +124,7 @@ describe("effort mapping util", () => {
 
   it("Anthropic collapses lowest to low and reaches max", () => {
     expect(toAnthropicEffort(EFFORT.LOWEST)).toEqual({
+      known: true,
       papered: true,
       value: "low",
     });
@@ -134,6 +140,7 @@ describe("effort mapping util", () => {
     expect(toGeminiThinkingLevel(EFFORT.LOWEST).value).toBe("MINIMAL");
     expect(toGeminiThinkingLevel(EFFORT.MEDIUM).value).toBe("MEDIUM");
     expect(toGeminiThinkingLevel(EFFORT.HIGHEST)).toEqual({
+      known: true,
       papered: true,
       value: "HIGH",
     });
@@ -152,6 +159,7 @@ describe("effort mapping util", () => {
 
   it("Fireworks collapses ends onto low..high", () => {
     expect(toFireworksEffort(EFFORT.LOWEST)).toEqual({
+      known: true,
       papered: true,
       value: "low",
     });
@@ -168,6 +176,7 @@ describe("effort mapping util", () => {
       value: "high",
     });
     expect(toFireworksEffort(EFFORT.HIGHEST)).toEqual({
+      known: true,
       papered: true,
       value: "high",
     });
@@ -177,14 +186,17 @@ describe("effort mapping util", () => {
     // Every reasoning-capable Mistral model accepts only `none` and `high`,
     // so only the floor and the exact `high` rung land unpapered
     expect(toMistralEffort(EFFORT.LOWEST)).toEqual({
+      known: true,
       papered: true,
       value: "none",
     });
     expect(toMistralEffort(EFFORT.LOW)).toEqual({
+      known: true,
       papered: true,
       value: "high",
     });
     expect(toMistralEffort(EFFORT.MEDIUM)).toEqual({
+      known: true,
       papered: true,
       value: "high",
     });
@@ -193,6 +205,7 @@ describe("effort mapping util", () => {
       value: "high",
     });
     expect(toMistralEffort(EFFORT.HIGHEST)).toEqual({
+      known: true,
       papered: true,
       value: "high",
     });
@@ -269,22 +282,34 @@ describe("papered effort logging", () => {
     vi.restoreAllMocks();
   });
 
-  it("logs at debug when a level is papered over", () => {
+  it("logs at debug when the papering depends on the model", () => {
     const debug = vi.spyOn(log, "debug").mockImplementation(() => {});
-    xaiAdapter.buildRequest(
-      requestFor("grok-4-1-fast-reasoning", { effort: EFFORT.HIGHEST }),
+    openAiAdapter.buildRequest(
+      requestFor("gpt-5.1", { effort: EFFORT.HIGHEST }),
     );
     expect(debug).toHaveBeenCalledTimes(1);
     expect(debug.mock.calls[0][0]).toContain("highest");
     expect(debug.mock.calls[0][0]).toContain("high");
   });
 
+  it("stays quiet when the papering is known from the provider scale", () => {
+    const debug = vi.spyOn(log, "debug").mockImplementation(() => {});
+    const trace = vi.spyOn(log, "trace").mockImplementation(() => {});
+    xaiAdapter.buildRequest(
+      requestFor("grok-4-1-fast-reasoning", { effort: EFFORT.HIGHEST }),
+    );
+    expect(debug).not.toHaveBeenCalled();
+    expect(trace).not.toHaveBeenCalled();
+  });
+
   it("stays quiet when a level maps to a distinct tier", () => {
     const debug = vi.spyOn(log, "debug").mockImplementation(() => {});
+    const trace = vi.spyOn(log, "trace").mockImplementation(() => {});
     openAiAdapter.buildRequest(
       requestFor("gpt-5.5", { effort: EFFORT.HIGHEST }),
     );
     expect(debug).not.toHaveBeenCalled();
+    expect(trace).not.toHaveBeenCalled();
   });
 });
 

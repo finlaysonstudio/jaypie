@@ -2,7 +2,9 @@
 //
 // Smoke-test matrix: runs each model in `models.ts` through every capability
 // (plain, tools, structured, both, pdf, image) and prints a grid of
-// outcomes. Non-zero exit when any cell mismatches its expected outcome.
+// outcomes. Non-zero exit when a cell mismatches its expected outcome, or
+// when a collective provider block (see COLLECTIVES) loses a row or column
+// majority.
 //
 // Usage:
 //   npm run test:matrix -w packages/llm
@@ -32,7 +34,14 @@ import { fileURLToPath } from "url";
 
 import { Llm, LlmOperateInput, toolkit } from "../src/index.js";
 import { determineModelProvider } from "../src/util/determineModelProvider.js";
-import { RateLimiter, requestsPerSecondFor } from "./rateLimit.js";
+import {
+  ActualOutcome,
+  CellResult,
+  COLLECTIVES,
+  collectiveFor,
+  evaluateCollective,
+  formatCollectiveReport,
+} from "./collective.js";
 import {
   CAPABILITIES,
   Capability,
@@ -40,6 +49,7 @@ import {
   MODELS,
   ModelConfig,
 } from "./models.js";
+import { RateLimiter, requestsPerSecondFor } from "./rateLimit.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -72,21 +82,6 @@ const USER = process.env.APP_USER || "[matrix] Jaypie User";
 // Debugging knob: run cells MATRIX_EXPECT pins to "skip" instead of returning
 // early, so a skipped cell can be observed without editing models.ts.
 const FORCE = /^(1|true|yes)$/i.test(process.env.APP_FORCE ?? "");
-
-//
-//
-// Outcome types
-//
-
-type ActualOutcome = "ok" | "warn" | "skip" | "fail";
-
-interface CellResult {
-  actual: ActualOutcome;
-  expected: ExpectedOutcome;
-  matches: boolean;
-  warnings: string[];
-  detail?: string;
-}
 
 //
 //
@@ -434,36 +429,20 @@ const SYMBOLS: Record<ActualOutcome, string> = {
   skip: "—",
 };
 
-function isOpenRouterModel(model: ModelConfig): boolean {
-  return model.provider === "openrouter";
-}
-
-function isBedrockModel(model: ModelConfig): boolean {
-  return model.provider === "bedrock" || model.model.startsWith("bedrock:");
-}
-
-function displayActual(
-  cell: CellResult,
-  openrouter: boolean,
-  bedrock: boolean,
-): ActualOutcome {
-  // OpenRouter and Bedrock are evaluated as collectives; surface individual
-  // failures as warnings so a single flaky route does not paint the cell red.
-  if ((openrouter || bedrock) && cell.actual === "fail") return "warn";
+function displayActual(cell: CellResult, collective: boolean): ActualOutcome {
+  // Surface an individual failure inside a collective as a warning so one
+  // flaky cell does not paint the block red.
+  if (collective && cell.actual === "fail") return "warn";
   return cell.actual;
 }
 
-function cellSymbol(
-  cell: CellResult,
-  openrouter: boolean,
-  bedrock: boolean,
-): string {
-  const actual = displayActual(cell, openrouter, bedrock);
+function cellSymbol(cell: CellResult, collective: boolean): string {
+  const actual = displayActual(cell, collective);
   const sym = SYMBOLS[actual];
-  // OpenRouter and Bedrock cells skip the mismatch indicator (collective evaluation).
-  // Otherwise, suppress `!` when the actual outcome is already a failure —
-  // the ❌ glyph conveys the problem on its own.
-  if (openrouter || bedrock) return sym;
+  // Collective cells skip the mismatch indicator — the block's row and column
+  // majorities carry the verdict. Otherwise, suppress `!` when the actual
+  // outcome is already a failure: the ❌ glyph conveys the problem on its own.
+  if (collective) return sym;
   if (actual === "fail") return sym;
   return cell.matches ? sym : `${sym}!`;
 }
@@ -490,14 +469,13 @@ function formatTable(
   for (const model of models) {
     const cells = rows.get(labelOf(model));
     if (!cells) continue;
-    const openrouter = isOpenRouterModel(model);
-    const bedrock = isBedrockModel(model);
+    const collective = Boolean(collectiveFor(model));
     const row = [
       labelOf(model).padEnd(labelWidth),
       ...capabilities.map((c) => {
         const cell = cells.get(c);
         if (!cell) return "?".padStart(colWidth(c));
-        return cellSymbol(cell, openrouter, bedrock).padStart(colWidth(c));
+        return cellSymbol(cell, collective).padStart(colWidth(c));
       }),
     ].join("  ");
     lines.push(row);
@@ -507,7 +485,8 @@ function formatTable(
     "Legend: ✅ ok   ⚠️ warn   ❌ fail   — skip   `!` mismatch vs expected",
   );
   lines.push(
-    "OpenRouter/Bedrock rows: failures display as ⚠️ and pass/fail collectively (row+column majority).",
+    `Collective rows (${COLLECTIVES.map((b) => b.name).join(", ")}): failures ` +
+      "display as ⚠️ and pass/fail as a block (row+column majority).",
   );
   return lines.join("\n");
 }
@@ -521,17 +500,14 @@ function formatIssues(
     const label = model.label || model.model;
     const cells = rows.get(label);
     if (!cells) continue;
-    const openrouter = isOpenRouterModel(model);
-    const bedrock = isBedrockModel(model);
+    const collective = collectiveFor(model);
     for (const [cap, cell] of cells) {
       if (cell.matches && cell.warnings.length === 0) continue;
       const parts = [`[${label} / ${cap}]`];
       if (!cell.matches) {
-        const tag = openrouter
-          ? "openrouter-fail"
-          : bedrock
-            ? "bedrock-fail"
-            : "mismatch";
+        const tag = collective
+          ? `${collective.name.toLowerCase()}-fail`
+          : "mismatch";
         parts.push(`${tag} expected=${cell.expected}, got=${cell.actual}`);
       }
       if (cell.detail) parts.push(`detail=${cell.detail}`);
@@ -543,127 +519,6 @@ function formatIssues(
     }
   }
   return issues;
-}
-
-//
-//
-// OpenRouter collective evaluation
-//
-// OpenRouter routes are flaky and capability support varies by backend.
-// Rather than gate CI on individual cells, we accept the block as long as
-// the *majority* of every row (per model) AND every column (per capability)
-// is a success (ok or warn). Skips are excluded from the denominator.
-//
-
-interface AxisResult {
-  ok: number;
-  total: number;
-  passed: boolean;
-}
-
-interface CollectiveEvaluation {
-  passed: boolean;
-  rows: Map<string, AxisResult>;
-  columns: Map<Capability, AxisResult>;
-}
-
-function isCellSuccess(cell: CellResult): boolean {
-  return cell.actual === "ok" || cell.actual === "warn";
-}
-
-function evaluateAxis(cells: readonly CellResult[]): AxisResult {
-  let ok = 0;
-  let total = 0;
-  for (const cell of cells) {
-    if (cell.actual === "skip") continue;
-    total++;
-    if (isCellSuccess(cell)) ok++;
-  }
-  // Strict majority: ok must outnumber failures. An empty axis (all skipped)
-  // is treated as a pass.
-  const passed = total === 0 || ok * 2 > total;
-  return { ok, total, passed };
-}
-
-function evaluateCollective(
-  filterFn: (m: ModelConfig) => boolean,
-  models: readonly ModelConfig[],
-  capabilities: readonly Capability[],
-  rows: Map<string, Map<Capability, CellResult>>,
-): CollectiveEvaluation | null {
-  const selected = models.filter(filterFn);
-  if (selected.length === 0) return null;
-
-  const rowResults = new Map<string, AxisResult>();
-  for (const model of selected) {
-    const label = model.label || model.model;
-    const cellsMap = rows.get(label);
-    if (!cellsMap) continue;
-    const cells = capabilities
-      .map((c) => cellsMap.get(c))
-      .filter((c): c is CellResult => Boolean(c));
-    rowResults.set(label, evaluateAxis(cells));
-  }
-
-  const colResults = new Map<Capability, AxisResult>();
-  for (const cap of capabilities) {
-    const cells: CellResult[] = [];
-    for (const model of selected) {
-      const cell = rows.get(model.label || model.model)?.get(cap);
-      if (cell) cells.push(cell);
-    }
-    colResults.set(cap, evaluateAxis(cells));
-  }
-
-  const passed =
-    Array.from(rowResults.values()).every((r) => r.passed) &&
-    Array.from(colResults.values()).every((c) => c.passed);
-
-  return { passed, rows: rowResults, columns: colResults };
-}
-
-function evaluateOpenRouter(
-  models: readonly ModelConfig[],
-  capabilities: readonly Capability[],
-  rows: Map<string, Map<Capability, CellResult>>,
-): CollectiveEvaluation | null {
-  return evaluateCollective(isOpenRouterModel, models, capabilities, rows);
-}
-
-function evaluateBedrock(
-  models: readonly ModelConfig[],
-  capabilities: readonly Capability[],
-  rows: Map<string, Map<Capability, CellResult>>,
-): CollectiveEvaluation | null {
-  return evaluateCollective(isBedrockModel, models, capabilities, rows);
-}
-
-function formatOpenRouterReport(evaluation: CollectiveEvaluation): string[] {
-  const lines: string[] = [];
-  lines.push("OpenRouter (evaluated as a collective):");
-  for (const [label, result] of evaluation.rows) {
-    const status = result.passed ? "✅" : "❌";
-    lines.push(`  ${status} row ${label}: ${result.ok}/${result.total} ok`);
-  }
-  for (const [cap, result] of evaluation.columns) {
-    const status = result.passed ? "✅" : "❌";
-    lines.push(`  ${status} col ${cap}: ${result.ok}/${result.total} ok`);
-  }
-  return lines;
-}
-
-function formatBedrockReport(evaluation: CollectiveEvaluation): string[] {
-  const lines: string[] = [];
-  lines.push("Bedrock (evaluated as a collective):");
-  for (const [label, result] of evaluation.rows) {
-    const status = result.passed ? "✅" : "❌";
-    lines.push(`  ${status} row ${label}: ${result.ok}/${result.total} ok`);
-  }
-  for (const [cap, result] of evaluation.columns) {
-    const status = result.passed ? "✅" : "❌";
-    lines.push(`  ${status} col ${cap}: ${result.ok}/${result.total} ok`);
-  }
-  return lines;
 }
 
 //
@@ -722,15 +577,14 @@ async function main(): Promise<void> {
 
   for (const model of models) {
     const label = model.label || model.model;
-    const openrouter = isOpenRouterModel(model);
-    const bedrock = isBedrockModel(model);
+    const collective = Boolean(collectiveFor(model));
     console.log(`▸ ${label}`);
     const cells = new Map<Capability, CellResult>();
     for (const capability of capabilities) {
       process.stdout.write(`  ${capability} … `);
       const cell = await runCell(model, capability);
       cells.set(capability, cell);
-      const status = cellSymbol(cell, openrouter, bedrock);
+      const status = cellSymbol(cell, collective);
       const note = cell.detail ? ` (${cell.detail})` : "";
       console.log(`${status}${note}`);
     }
@@ -750,33 +604,30 @@ async function main(): Promise<void> {
     for (const line of issues) console.log(line);
   }
 
-  // OpenRouter and Bedrock cells are evaluated as collectives rather than per-cell.
-  const openrouterEvaluation = evaluateOpenRouter(models, capabilities, rows);
-  if (openrouterEvaluation) {
+  // Collective blocks are judged as a whole rather than cell by cell.
+  const failedBlocks: string[] = [];
+  for (const block of COLLECTIVES) {
+    const evaluation = evaluateCollective(
+      block.matches,
+      models,
+      capabilities,
+      rows,
+    );
+    if (!evaluation) continue;
     console.log("\n========================================");
-    console.log("       OPENROUTER");
+    console.log(`       ${block.name.toUpperCase()}`);
     console.log("========================================");
-    for (const line of formatOpenRouterReport(openrouterEvaluation)) {
+    for (const line of formatCollectiveReport(block.name, evaluation)) {
       console.log(line);
     }
+    if (!evaluation.passed) failedBlocks.push(block.name);
   }
 
-  const bedrockEvaluation = evaluateBedrock(models, capabilities, rows);
-  if (bedrockEvaluation) {
-    console.log("\n========================================");
-    console.log("       BEDROCK");
-    console.log("========================================");
-    for (const line of formatBedrockReport(bedrockEvaluation)) {
-      console.log(line);
-    }
-  }
-
-  // Exit non-zero if any non-OpenRouter, non-Bedrock cell mismatched its
-  // expected outcome, or if the OpenRouter/Bedrock block failed its majority threshold.
+  // Exit non-zero if a cell outside every collective mismatched its expected
+  // outcome, or if a collective block failed its majority threshold.
   let mismatches = 0;
   for (const model of models) {
-    if (isOpenRouterModel(model)) continue;
-    if (isBedrockModel(model)) continue;
+    if (collectiveFor(model)) continue;
     const cells = rows.get(model.label || model.model);
     if (!cells) continue;
     for (const cell of cells.values()) {
@@ -785,21 +636,16 @@ async function main(): Promise<void> {
   }
 
   console.log("\n========================================");
-  const openrouterFailed = openrouterEvaluation
-    ? !openrouterEvaluation.passed
-    : false;
-  const bedrockFailed = bedrockEvaluation ? !bedrockEvaluation.passed : false;
-  if (mismatches === 0 && !openrouterFailed && !bedrockFailed) {
-    console.log(`🎉 Matrix passed: every cell matched expectation.`);
+  if (mismatches === 0 && failedBlocks.length === 0) {
+    console.log(
+      `🎉 Matrix passed: expectations met, collectives held their majority.`,
+    );
   } else {
     if (mismatches > 0) {
       console.error(`💀 ${mismatches} cell(s) mismatched expectation.`);
     }
-    if (openrouterFailed) {
-      console.error(`💀 OpenRouter block failed: row/column majority not met.`);
-    }
-    if (bedrockFailed) {
-      console.error(`💀 Bedrock block failed: row/column majority not met.`);
+    for (const name of failedBlocks) {
+      console.error(`💀 ${name} block failed: row/column majority not met.`);
     }
     process.exit(1);
   }

@@ -4,7 +4,7 @@ import { z } from "zod/v4";
 
 import { PROVIDER } from "../../constants.js";
 import { promptCacheKey, resolveCache } from "../../util/cacheControl.js";
-import { paperedEffortMessage, toMistralEffort } from "../../util/effort.js";
+import { logPaperedEffort, toMistralEffort } from "../../util/effort.js";
 import { resolveMaxOutputTokens } from "../../util/maxOutputTokens.js";
 import { Toolkit } from "../../tools/Toolkit.class.js";
 import {
@@ -606,16 +606,12 @@ export class MistralAdapter extends BaseProviderAdapter {
     // First-class effort wins over providerOptions.
     if (request.effort && this.supportsReasoningEffort(mistralRequest.model)) {
       const mapping = toMistralEffort(request.effort);
-      if (mapping.papered) {
-        log.debug(
-          paperedEffortMessage({
-            model: mistralRequest.model,
-            provider: this.name,
-            requested: request.effort,
-            value: mapping.value,
-          }),
-        );
-      }
+      logPaperedEffort({
+        mapping,
+        model: mistralRequest.model,
+        provider: this.name,
+        requested: request.effort,
+      });
       mistralRequest.reasoning_effort = mapping.value as string;
     }
 
