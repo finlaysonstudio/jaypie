@@ -846,8 +846,12 @@ collapse where a provider has fewer rungs):
 | `highest` | xhigh   | max    | HIGH    | 24576 | high   | xhigh   | high   | high |
 
 When a neutral level has no distinct native rung and collapses onto a neighbor
-(e.g. `highest` → Grok `high`), the adapter logs it at `log.debug` for the
-record. OpenAI's extremes are also version-gated: `xhigh` (`highest`) applies
+it is "papered over." Papering that follows from the provider's native scale
+alone (Grok, Fireworks, and Gemini 3.x `highest`; Mistral's none/high binary;
+Anthropic `lowest`) is the only possible outcome for that provider and is not
+logged. Papering that depends on the specific model, such as OpenAI clamping
+`highest` on a model predating `xhigh`, logs at `log.debug`. OpenAI's extremes
+are also version-gated: `xhigh` (`highest`) applies
 only to gpt-5.2+ and `minimal` (`lowest`) only to gpt-5.4+ (its history is
 non-monotonic); older gpt-5 / o-series clamp the end to `high`/`low`.
 

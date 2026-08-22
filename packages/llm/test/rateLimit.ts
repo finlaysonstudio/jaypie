@@ -89,13 +89,14 @@ export function requestsPerSecondFor({
   provider,
 }: {
   model: string;
-  provider: string;
+  // A ModelConfig carries no provider when the id resolves one on its own.
+  provider?: string;
 }): number {
   const override = Number(process.env.APP_RPS);
   if (Number.isFinite(override) && override > 0) return override;
   return (
     MODEL_REQUESTS_PER_SECOND[model] ??
-    PROVIDER_REQUESTS_PER_SECOND[provider] ??
+    (provider ? PROVIDER_REQUESTS_PER_SECOND[provider] : undefined) ??
     0
   );
 }

@@ -3,7 +3,7 @@ import { JsonObject, NaturalSchema } from "@jaypie/types";
 import { z } from "zod/v4";
 
 import { PROVIDER } from "../../constants.js";
-import { paperedEffortMessage, toAnthropicEffort } from "../../util/effort.js";
+import { logPaperedEffort, toAnthropicEffort } from "../../util/effort.js";
 import { Toolkit } from "../../tools/Toolkit.class.js";
 import {
   LlmHistory,
@@ -611,16 +611,12 @@ export class AnthropicAdapter extends BaseProviderAdapter {
       supportsAnthropicEffort(anthropicRequest.model as string)
     ) {
       const mapping = toAnthropicEffort(request.effort);
-      if (mapping.papered) {
-        log.debug(
-          paperedEffortMessage({
-            model: anthropicRequest.model as string,
-            provider: this.name,
-            requested: request.effort,
-            value: mapping.value,
-          }),
-        );
-      }
+      logPaperedEffort({
+        mapping,
+        model: anthropicRequest.model as string,
+        provider: this.name,
+        requested: request.effort,
+      });
       anthropicRequest.output_config = {
         ...anthropicRequest.output_config,
         effort: mapping.value,

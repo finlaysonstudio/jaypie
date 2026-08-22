@@ -1,11 +1,10 @@
-import { log } from "@jaypie/logger";
 import { JsonObject, NaturalSchema } from "@jaypie/types";
 import { z } from "zod/v4";
 
 import { type LlmEffort, PROVIDER } from "../../constants.js";
 import {
   type LlmEffortMapping,
-  paperedEffortMessage,
+  logPaperedEffort,
   toOpenAiEffort,
 } from "../../util/effort.js";
 import {
@@ -231,16 +230,12 @@ export class OpenAiAdapter extends BaseProviderAdapter {
     // summary:auto above survives). First-class effort wins over providerOptions.
     if (request.effort && this.supportsReasoningEffort(model)) {
       const mapping = this.mapReasoningEffort(request.effort, model);
-      if (mapping.papered) {
-        log.debug(
-          paperedEffortMessage({
-            model,
-            provider: this.name,
-            requested: request.effort,
-            value: mapping.value,
-          }),
-        );
-      }
+      logPaperedEffort({
+        mapping,
+        model,
+        provider: this.name,
+        requested: request.effort,
+      });
       const existingReasoning =
         (openaiRequest.reasoning as Record<string, unknown> | undefined) ?? {};
       openaiRequest.reasoning = {

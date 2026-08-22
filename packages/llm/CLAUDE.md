@@ -129,12 +129,14 @@ so unsupported models silently ignore it. Omitting `effort` leaves the provider
 default untouched, so it is safe across a fallback chain. Bedrock is not yet
 wired. First-class `effort` wins over a raw `providerOptions.reasoning`.
 
-Each mapper returns `{ value, papered }`. `papered` is `true` when the neutral
-level had no distinct native rung and was collapsed or clamped onto a neighbor
-(e.g. `highest` → Grok `high`, or `highest` → OpenAI `high` on a model that
-predates `xhigh`); adapters `log.debug` those so a papered-over request is on
-the record. OpenAI availability is version-gated: `xhigh` (`highest`) only for
-gpt-5.2+, `minimal` (`lowest`) only for gpt-5.4+ (its history is non-monotonic —
+Each mapper returns `{ value, papered, known? }`. `papered` is `true` when the
+neutral level had no distinct native rung and was collapsed or clamped onto a
+neighbor (e.g. `highest` → Grok `high`, or `highest` → OpenAI `high` on a model
+that predates `xhigh`). `known` marks papering that follows from the provider's
+scale alone, which is always the outcome for that provider and is therefore
+never logged. `logPaperedEffort` logs the rest at debug, where the substitution
+depends on the specific model. OpenAI availability is version-gated: `xhigh`
+(`highest`) only for gpt-5.2+, `minimal` (`lowest`) only for gpt-5.4+ (its history is non-monotonic —
 present on 5/5.1, dropped at 5.2, back on the current line); outside those
 windows the end clamps to `high`/`low`.
 
@@ -171,7 +173,7 @@ provider's cache-read rate (~0.1x input) after the first write.
 Control it with the scalar `cache` option (`LlmCache = boolean | 0 | "5m" | "1h"`):
 
 ```typescript
-await Llm.operate(input, { system: SYSTEM });            // cached (1h on Anthropic, else 5m)
+await Llm.operate(input, { system: SYSTEM }); // cached (1h on Anthropic, else 5m)
 await Llm.operate(input, { system: SYSTEM, cache: "5m" }); // cached @ 5m
 await Llm.operate(input, { system: SYSTEM, cache: false }); // opt out
 ```
@@ -187,13 +189,13 @@ mechanism. Anthropic passes `defaultTtl: CACHE_TTL_ANTHROPIC_DEFAULT` (`"1h"`):
 its 1h write costs 2x input against 1.25x for 5m, but reads stay at ~0.1x, so
 the hour pays for itself after ~three reads and survives the gaps between turns.
 
-| Provider | Mechanism | TTL |
-|----------|-----------|-----|
-| Anthropic | `cache_control: {type:"ephemeral"}` on the system block + last tool | 5m / **1h default** |
-| Bedrock | `cachePoint` blocks after `system` and `toolConfig.tools`; model-gated (unsupported models are denylisted after a 400 and the request transparently retried without cachePoints) | 5m only |
-| OpenAI / xAI | automatic server-side caching + a stable `prompt_cache_key` derived from the prefix | provider default |
-| OpenRouter | `cache_control` breakpoint on the system message (forwarded to Anthropic/Gemini backends, ignored by others) | 5m / 1h |
-| Google | **implicit** context caching only (automatic on Gemini 2.5+); explicit `cachedContent` is not wired — pass `providerOptions.cachedContent` to manage it yourself | provider default |
+| Provider     | Mechanism                                                                                                                                                                        | TTL                 |
+| ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- |
+| Anthropic    | `cache_control: {type:"ephemeral"}` on the system block + last tool                                                                                                              | 5m / **1h default** |
+| Bedrock      | `cachePoint` blocks after `system` and `toolConfig.tools`; model-gated (unsupported models are denylisted after a 400 and the request transparently retried without cachePoints) | 5m only             |
+| OpenAI / xAI | automatic server-side caching + a stable `prompt_cache_key` derived from the prefix                                                                                              | provider default    |
+| OpenRouter   | `cache_control` breakpoint on the system message (forwarded to Anthropic/Gemini backends, ignored by others)                                                                     | 5m / 1h             |
+| Google       | **implicit** context caching only (automatic on Gemini 2.5+); explicit `cachedContent` is not wired — pass `providerOptions.cachedContent` to manage it yourself                 | provider default    |
 
 Below a provider's minimum cacheable prefix, annotations silently no-op. Cache
 tokens are surfaced on `LlmUsageItem` as `cacheRead` / `cacheWrite`, flow into
@@ -213,14 +215,14 @@ alias instead. That covers this file, `packages/mcp/skills/llm.md`, and the
 A literal id earns its place only where the id **is** the subject, because an
 alias would hide the thing being explained:
 
-| Keep the literal | Why |
-|------------------|-----|
-| Provider keyword matching (`"gpt"`, `"claude"`, `"gemini"`) | The match runs against the id's characters; an alias shows nothing |
-| `COST` keys and the alias-pricing rule | `COST` is keyed by literal id by design, aliases deliberately unpriced |
-| Version-gated behavior (`xhigh` needs gpt-5.2+, `thinkingLevel` needs `^gemini-3`) | The version boundary is the rule |
+| Keep the literal                                                                      | Why                                                                    |
+| ------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| Provider keyword matching (`"gpt"`, `"claude"`, `"gemini"`)                           | The match runs against the id's characters; an alias shows nothing     |
+| `COST` keys and the alias-pricing rule                                                | `COST` is keyed by literal id by design, aliases deliberately unpriced |
+| Version-gated behavior (`xhigh` needs gpt-5.2+, `thinkingLevel` needs `^gemini-3`)    | The version boundary is the rule                                       |
 | A documented per-model defect or exclusion (`mistral-medium-3-5`, `muse-glimmer-30b`) | The note is about that exact model and outlives its catalog membership |
-| Live-matrix evidence (sample counts against a specific id) | Evidence is only meaningful attached to what was measured |
-| A constructor argument demonstrating that a raw string works | The point is that any string resolves, cataloged or not |
+| Live-matrix evidence (sample counts against a specific id)                            | Evidence is only meaningful attached to what was measured              |
+| A constructor argument demonstrating that a raw string works                          | The point is that any string resolves, cataloged or not                |
 
 Everything else — filler in an example, a "current models" column, a comment
 echoing what an alias resolves to — takes the alias. When an example needs a
@@ -296,6 +298,7 @@ const response = await Llm.operate(input, {
 ```
 
 **Response metadata:**
+
 - `provider`: Which provider actually handled the request
 - `fallbackUsed`: `true` if a fallback provider was used
 - `fallbackAttempts`: Number of providers tried (1 = primary only)
@@ -309,13 +312,13 @@ original provider error is preserved on `.cause`, and `.provider`/`.model` name
 the failed call. `.cause` comes from `JaypieError` (`@jaypie/errors` 1.2.5 and
 later); `LlmError` passes the option through and declares no field of its own.
 
-| Class | `category` | `status` | When |
-|-------|-----------|----------|------|
-| `LlmAbortError` | `aborted` | 499 | The caller's `signal` aborted the request; never retried |
-| `LlmRateLimitError` | `rate_limit` | 429 | Short-term rate limit survived the rate-limit retry budget; carries `retryAfterMs` |
-| `LlmQuotaError` | `quota` | 402 | Quota exhausted or insufficient funds; `reason: "quota" \| "billing"` |
-| `LlmUnrecoverableError` | `unrecoverable` | 502 | Bad request / auth / not found |
-| `LlmTransientError` | `retryable` | 504 | A transient/unknown error survived the retry budget |
+| Class                   | `category`      | `status` | When                                                                               |
+| ----------------------- | --------------- | -------- | ---------------------------------------------------------------------------------- |
+| `LlmAbortError`         | `aborted`       | 499      | The caller's `signal` aborted the request; never retried                           |
+| `LlmRateLimitError`     | `rate_limit`    | 429      | Short-term rate limit survived the rate-limit retry budget; carries `retryAfterMs` |
+| `LlmQuotaError`         | `quota`         | 402      | Quota exhausted or insufficient funds; `reason: "quota" \| "billing"`              |
+| `LlmUnrecoverableError` | `unrecoverable` | 502      | Bad request / auth / not found                                                     |
+| `LlmTransientError`     | `retryable`     | 504      | A transient/unknown error survived the retry budget                                |
 
 ```typescript
 import { Llm, LLM, LlmQuotaError, LlmRateLimitError } from "@jaypie/llm";
@@ -347,10 +350,10 @@ A rate-limited request waits and retries by default. The wait draws on a budget
 retries reserved for a flaky socket, and a transient failure never eats the
 allowance for a 429.
 
-| Knob | Default | Meaning |
-|------|---------|---------|
-| `rateLimitRetries` | 2 | Attempts granted to a rate-limited request; 0 disables |
-| `rateLimitMaxDelayMs` | 90,000 | Ceiling on a single wait |
+| Knob                  | Default | Meaning                                                |
+| --------------------- | ------- | ------------------------------------------------------ |
+| `rateLimitRetries`    | 2       | Attempts granted to a rate-limited request; 0 disables |
+| `rateLimitMaxDelayMs` | 90,000  | Ceiling on a single wait                               |
 
 The wait itself is the provider's `suggestedDelayMs` (every adapter reports
 60,000 today) when there is one, otherwise it grows from a one-minute floor by
@@ -361,7 +364,7 @@ holding the request for the remaining minute.
 ```typescript
 await Llm.operate(input, { model: "mistral-large-latest" }); // waits and retries
 
-await Llm.operate(input, { retry: { rateLimit: false } });   // throws at once
+await Llm.operate(input, { retry: { rateLimit: false } }); // throws at once
 await Llm.operate(input, {
   retry: { rateLimit: { maxDelayMs: 30_000, maxRetries: 1 } },
 });
@@ -423,6 +426,7 @@ const response = await Llm.operate("Greet the world", {
 ```
 
 `format` accepts three shapes, all converging on JSON Schema before hitting the provider:
+
 - **Natural Schema** — plain object of type constructors (`{ name: String, age: Number }`), converted via `naturalZodSchema()` → Zod → JSON Schema.
 - **Zod schema** (`instanceof z.ZodType`) — converted directly to JSON Schema.
 - **JSON Schema** — either the OpenAI-style `{ type: "json_schema", ... }` envelope, or a bare `{ type: "object", properties: {...}, required: [...] }` node (duck-typed via `isJsonSchema`, used as-is with `required` honored).
@@ -430,6 +434,7 @@ const response = await Llm.operate("Greet the world", {
 `naturalSchemaToJsonSchema`/`jsonSchemaToNaturalSchema` (exported from `src/util/jsonSchema.ts`) convert between the first and third forms directly. The Natural→JSON direction is lossless; JSON→Natural is lossy (constraints, descriptions, defaults, unions, and optionality have no Natural Schema equivalent) — it never throws, and every dropped keyword is logged at `log.debug` with the keyword name and JSON path.
 
 **Anthropic notes:**
+
 - Uses Anthropic's native `output_config.format` field (GA 2025-11; Claude 4.5+). The earlier `output_format` field name is deprecated by the API.
 - Schema constraints not supported by Anthropic's grammar (`minLength`, `maxLength`, `minimum`, `maximum`, `multipleOf`, regex `pattern`, recursive schemas, `additionalProperties: true`) are stripped at request time and folded into the field's `description`. The caller's Zod schema still validates the response, so all original constraints are enforced client-side.
 - `additionalProperties: false` is forced on every object.
@@ -438,18 +443,21 @@ const response = await Llm.operate("Greet the world", {
 - A model that rejects `output_config` is cached for the session and transparently retried via the legacy fake-tool emulation. Citations + structured output (a 400 documented as incompatible) and `output_format`-deprecation 400s are **not** retried — those errors propagate so callers can see the real cause.
 
 **Fireworks notes:**
+
 - Uses the OpenAI-style native `response_format: { type: "json_schema", ... }` for format-only requests.
 - Format **and** tools combined is rejected by the API ("You cannot specify response format and function call at the same time"), so those requests preemptively use the `structured_output` fake-tool emulation (logged at debug) — same approach as Gemini 2.5.
 - A model that 400/422s on `response_format` alone is cached for the session and retried via the emulation path.
 - Emulation compliance is enforced by the operate loop: when a format request completes as prose, the loop first tries to parse the text as JSON (fence-stripped), then takes a corrective turn offering **only** the `structured_output` tool (`OperateRequest.structuredOutputRetry`), looping within the `turns` budget. Adapters opt in via `supportsStructuredOutputRetry`; Fireworks is currently the only one.
 
 **OpenRouter notes:**
+
 - Uses the OpenAI-style native `response_format: { type: "json_schema", json_schema: { name, schema, strict: true } }`. OpenRouter routes to a backend provider; many but not all backends support this — the SDK accepts the field on every model, and unsupported routes 4xx.
 - `additionalProperties: false` is forced on every object (required for `strict: true`).
 - A model that 400/422s on the `response_format` field is cached for the session and transparently retried via the legacy `structured_output` fake-tool emulation. The error message must mention `response_format`/`json_schema`/`structured_output`/`require_parameters` to trigger the fallback — generic 400s propagate.
 - For pre-flight enforcement, callers can pass `providerOptions: { provider: { require_parameters: true } }` to force OpenRouter to error rather than silently drop the field on backends that don't honor it.
 
 **Google notes (Gemini models):**
+
 - Format-only requests use native `responseMimeType: "application/json"` + `responseSchema` (OpenAPI 3.0) by default, or `responseJsonSchema` (standard JSON Schema) when `providerOptions.useJsonSchema: true`.
 - Format **and** tools combined: native `responseJsonSchema` + tools is supported only on Gemini 3 (preview) and is enabled automatically when the model id matches `^gemini-3`. Gemini 2.5 (including thinking) and earlier fall back to the `structured_output` fake-tool emulation with a system-prompt nudge.
 - A Gemini 3 model that 400s the combo is cached for the session and transparently retried via the fake-tool path. The error message must mention `responseJsonSchema`/`responseSchema`/`responseMime`/`function_call`/`tools` to trigger the fallback.
@@ -499,8 +507,8 @@ that annotation, so a verification or critique pass can re-run `operate()`
 against the read set without repeating side effects:
 
 ```typescript
-const verification = toolkit.filter({ readOnly: true });  // annotated only
-const effectful = toolkit.filter({ readOnly: false });    // the complement
+const verification = toolkit.filter({ readOnly: true }); // annotated only
+const effectful = toolkit.filter({ readOnly: false }); // the complement
 const custom = toolkit.filter((tool) => tool.name.startsWith("search_"));
 ```
 
@@ -610,17 +618,17 @@ const response = await Llm.operate(input, {
 
 Fields carried by each event (`turn` is 1-indexed):
 
-| Event | Fields |
-|-------|--------|
-| `start` | `model`, `provider`, `maxTurns` |
-| `model_request` | `turn`, `model` |
-| `model_response` | `turn`, `content` (text, if any), `toolCalls` (`[{ name, arguments }]`, if any), `usage` (this turn) |
-| `tool_call` | `turn`, `tool: { name, arguments, message }` — before the tool runs; `arguments` is the JSON string; `message` is the resolved `LlmTool.message`, when the tool defines one |
-| `tool_pending` | `turn`, `tool: { name, arguments, message, xid }` — the model called an external tool; the loop parks instead of executing |
-| `tool_result` | `turn`, `tool: { name }` — result value deliberately omitted; use `afterEachTool` to receive it |
-| `tool_error` | `turn`, `tool: { name }`, `error` (message string) |
-| `retry` | `turn`, `error` (message string) |
-| `done` | `turn` (total turns used), `content` (final), `usage` (cumulative) |
+| Event            | Fields                                                                                                                                                                      |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `start`          | `model`, `provider`, `maxTurns`                                                                                                                                             |
+| `model_request`  | `turn`, `model`                                                                                                                                                             |
+| `model_response` | `turn`, `content` (text, if any), `toolCalls` (`[{ name, arguments }]`, if any), `usage` (this turn)                                                                        |
+| `tool_call`      | `turn`, `tool: { name, arguments, message }` — before the tool runs; `arguments` is the JSON string; `message` is the resolved `LlmTool.message`, when the tool defines one |
+| `tool_pending`   | `turn`, `tool: { name, arguments, message, xid }` — the model called an external tool; the loop parks instead of executing                                                  |
+| `tool_result`    | `turn`, `tool: { name }` — result value deliberately omitted; use `afterEachTool` to receive it                                                                             |
+| `tool_error`     | `turn`, `tool: { name }`, `error` (message string)                                                                                                                          |
+| `retry`          | `turn`, `error` (message string)                                                                                                                                            |
+| `done`           | `turn` (total turns used), `content` (final), `usage` (cumulative)                                                                                                          |
 
 Errors thrown by the callback are logged at warn and never interrupt the
 loop. The `hooks` option remains the right choice when the full provider
@@ -695,7 +703,7 @@ registration. A value carrying no `storeExchange` throws `ConfigurationError`,
 so a misregistration is loud at bootstrap rather than silently dropping every
 exchange. Resolution order is registered → dynamic import.
 
-The import resolves from `node_modules`, which is a *different copy* than the
+The import resolves from `node_modules`, which is a _different copy_ than the
 one a host holds when its `@jaypie/dynamodb` is bundler-managed — a Next.js
 server bundle, for instance. That copy is the initialized one; the imported one
 is not, and every exchange is dropped with `[storeExchange] DynamoDB client is
@@ -749,7 +757,9 @@ const toolkit = new Toolkit([
 ]);
 
 // Stream with tools - tools are executed automatically
-for await (const chunk of Llm.stream("What's the weather in NYC?", { tools: toolkit })) {
+for await (const chunk of Llm.stream("What's the weather in NYC?", {
+  tools: toolkit,
+})) {
   switch (chunk.type) {
     case LlmStreamChunkType.Text:
       // Real-time text as tokens arrive
@@ -765,7 +775,9 @@ for await (const chunk of Llm.stream("What's the weather in NYC?", { tools: tool
       break;
     case LlmStreamChunkType.Done:
       // Stream complete, usage available
-      console.log(`\n[Tokens: ${chunk.usage.reduce((sum, u) => sum + u.total, 0)}]`);
+      console.log(
+        `\n[Tokens: ${chunk.usage.reduce((sum, u) => sum + u.total, 0)}]`,
+      );
       break;
     case LlmStreamChunkType.Error:
       console.error(`Error: ${chunk.error.title}`);
@@ -775,6 +787,7 @@ for await (const chunk of Llm.stream("What's the weather in NYC?", { tools: tool
 ```
 
 **Key behaviors:**
+
 - Text chunks stream in real-time as tokens are generated
 - When the LLM requests a tool, `stream()` executes it automatically
 - Tool results are fed back to the LLM and streaming continues
@@ -782,16 +795,18 @@ for await (const chunk of Llm.stream("What's the weather in NYC?", { tools: tool
 - All lifecycle hooks (`beforeEachTool`, `afterEachTool`, etc.) are supported
 
 **Stream chunk types:**
-| Type | Description |
-|------|-------------|
-| `text` | Streamed text content |
-| `tool_call` | LLM requested a tool (informational) |
+
+| Type           | Description                                                    |
+| -------------- | -------------------------------------------------------------- |
+| `text`         | Streamed text content                                          |
+| `tool_call`    | LLM requested a tool (informational)                           |
 | `tool_pending` | LLM called an external tool; the stream parks after this chunk |
-| `tool_result` | Tool execution completed |
-| `done` | Stream finished with usage stats |
-| `error` | Error occurred |
+| `tool_result`  | Tool execution completed                                       |
+| `done`         | Stream finished with usage stats                               |
+| `error`        | Error occurred                                                 |
 
 **Simple streaming (no tools):**
+
 ```typescript
 for await (const chunk of Llm.stream("Tell me a story")) {
   if (chunk.type === LlmStreamChunkType.Text) {
@@ -876,7 +891,7 @@ Behavior:
   auto-instrumented SDK call) opens an enclosing span — e.g.
   `llmobs.trace({ kind: "workflow" }, () => Llm.operate(...))` — our spans nest
   under it. With no enclosing LLMObs span, ours are LLMObs roots. (The Datadog
-  Lambda layer provides APM spans automatically, but not an enclosing *LLMObs*
+  Lambda layer provides APM spans automatically, but not an enclosing _LLMObs_
   span around an arbitrary handler.)
 - **`operate()`** spans form a full tree: the enclosing span stays active while
   children run, so model + tool spans nest under it.
@@ -924,7 +939,11 @@ export { useExchangeStore };
 export type { ExchangeStore, ExchangeStoreFunction };
 
 // Utilities
-export { extractReasoning, jsonSchemaToNaturalSchema, naturalSchemaToJsonSchema };
+export {
+  extractReasoning,
+  jsonSchemaToNaturalSchema,
+  naturalSchemaToJsonSchema,
+};
 
 // Providers (for direct use)
 export {
@@ -949,6 +968,7 @@ npm run typecheck -w packages/llm
 ```
 
 Integration tests in `test/` directory require API keys:
+
 - `test/client.ts` - Real API calls
 - `test/joke.ts` - Streaming test
 - `test/format.ts` - Multi-word `format` key fidelity (issue #393); run `tsx test/format.ts`, override providers with `APP_PROVIDER=openai,anthropic,...`
@@ -959,6 +979,20 @@ Integration tests in `test/` directory require API keys:
 capability against the real API. It loads the repo-root `.env` itself. Env
 knobs: `APP_MODELS`, `APP_GROUP`, `APP_CAPABILITIES`, `APP_USER`, `APP_FORCE`
 (run cells pinned to `skip` and report what they do), `APP_RPS`.
+
+**Collective evaluation** (`test/collective.ts`) governs how a run passes.
+Most models are judged cell by cell against `MATRIX_EXPECT`. Bedrock,
+Fireworks, and OpenRouter are judged as blocks: a block passes when the
+majority of every row (one model across every capability) and every column
+(one capability across every model in the block) succeeds, with skipped cells
+excluded from the denominator. The reason differs by provider — OpenRouter
+picks the backend it routes to, Bedrock resells third-party models, Fireworks
+serves open models whose structured output varies run to run — but the
+consequence is the same: one red cell is as likely to be a flake as a defect,
+while a whole row or column going red is a defect either way. A failure inside
+a block still prints in the ISSUES list and displays as ⚠️ in the grid; it just
+does not fail the run on its own. `test/__tests__/collective.spec.ts` covers
+the majority rule without touching a provider.
 
 **Request pacing** (`test/rateLimit.ts`) exists because Mistral enforces a
 requests-per-second ceiling that varies by tier and by model, and returns a

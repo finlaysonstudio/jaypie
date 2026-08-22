@@ -4,7 +4,8 @@ import { z } from "zod/v4";
 
 import { PROVIDER } from "../../constants.js";
 import {
-  paperedEffortMessage,
+  type LlmEffortMapping,
+  logPaperedEffort,
   toGeminiThinkingBudget,
   toGeminiThinkingLevel,
 } from "../../util/effort.js";
@@ -312,28 +313,21 @@ export class GoogleAdapter extends BaseProviderAdapter {
       const model = geminiRequest.model;
       let thinkingConfig:
         { thinkingLevel?: string; thinkingBudget?: number } | undefined;
-      let papered = false;
-      let value: string | number | undefined;
+      let mapping: LlmEffortMapping<string | number> | undefined;
       if (GEMINI_3_PATTERN.test(model)) {
-        const mapping = toGeminiThinkingLevel(request.effort);
-        ({ papered, value } = mapping);
-        thinkingConfig = { thinkingLevel: mapping.value };
+        mapping = toGeminiThinkingLevel(request.effort);
+        thinkingConfig = { thinkingLevel: mapping.value as string };
       } else if (GEMINI_25_PATTERN.test(model)) {
-        const mapping = toGeminiThinkingBudget(request.effort);
-        ({ papered, value } = mapping);
-        thinkingConfig = { thinkingBudget: mapping.value };
+        mapping = toGeminiThinkingBudget(request.effort);
+        thinkingConfig = { thinkingBudget: mapping.value as number };
       }
-      if (thinkingConfig) {
-        if (papered) {
-          log.debug(
-            paperedEffortMessage({
-              model,
-              provider: this.name,
-              requested: request.effort,
-              value: value!,
-            }),
-          );
-        }
+      if (thinkingConfig && mapping) {
+        logPaperedEffort({
+          mapping,
+          model,
+          provider: this.name,
+          requested: request.effort,
+        });
         geminiRequest.config = {
           ...geminiRequest.config,
           thinkingConfig: {
