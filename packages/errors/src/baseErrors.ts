@@ -6,6 +6,8 @@ import {
   JaypieErrorResponseBody,
   JaypieErrorJson,
 } from "./types";
+import { isJaypieError } from "./isJaypieError";
+
 export interface CauseOptions {
   cause?: unknown;
 }
@@ -20,6 +22,19 @@ interface InternalOptions {
 }
 
 export class JaypieError extends Error implements IJaypieError {
+  // The package publishes an ESM build and a CommonJS build, and a repository
+  // mixing both formats loads both. Each build owns its own class object, so
+  // prototype identity cannot answer `instanceof` across the boundary. Match on
+  // the structural marker instead, which also holds when two copies of the
+  // package are installed. A subclass keeps ordinary prototype semantics so
+  // callers can still distinguish their own errors from these.
+  static [Symbol.hasInstance](instance: unknown): boolean {
+    if (this !== JaypieError) {
+      return Function.prototype[Symbol.hasInstance].call(this, instance);
+    }
+    return isJaypieError(instance);
+  }
+
   // `declare` because the target lib predates `Error.cause`; assigning it
   // conditionally below keeps native semantics, where an error built without
   // the option has no `cause` property at all

@@ -110,6 +110,38 @@ property, matching native `Error`.
 The base `JaypieError` takes `status` and `title` alongside `cause`; the named
 classes take `cause` only, because status and title identify the class.
 
+## Checking Error Types
+
+Use `instanceof`. It holds across the ESM and CommonJS builds and across
+duplicate installs, because the classes match on structural markers rather than
+prototype identity:
+
+```typescript
+import { NotFoundError } from "jaypie";
+
+try {
+  await getUser(id);
+} catch (error) {
+  if (error instanceof NotFoundError) {
+    return null;
+  }
+  throw error;
+}
+```
+
+Class identity does not hold across module formats. Never compare constructors:
+
+```typescript
+// BAD - false when the error crossed an ESM/CommonJS boundary
+if (error.constructor === NotFoundError) { ... }
+
+// GOOD
+if (error instanceof NotFoundError) { ... }
+```
+
+`isJaypieError(error)` answers whether a value is any Jaypie error, and
+`error instanceof JaypieError` answers the same question.
+
 ## Error Handling in Handlers
 
 Jaypie handlers automatically catch and format errors:
