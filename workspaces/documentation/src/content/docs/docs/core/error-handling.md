@@ -80,8 +80,8 @@ error.isJaypieError;  // true
 error.body();         // JSON:API formatted error object
 ```
 
-Every Jaypie error carries the name `JaypieError`. Use `isJaypieError(error)`
-or `error.status` to discriminate, not `error.name`.
+Every Jaypie error carries the name `JaypieError`. Use `instanceof`,
+`isJaypieError(error)`, or `error.status` to discriminate, not `error.name`.
 
 ### JSON:API Format
 
@@ -113,6 +113,28 @@ generic strings for the status, so the same error thrown inside a handler answer
 `"The requested resource was not found"`. See
 [Handler Lifecycle](/docs/core/handler-lifecycle/).
 :::
+
+### Checking Error Types
+
+`instanceof` identifies a specific error class:
+
+```typescript
+import { NotFoundError } from "jaypie";
+
+try {
+  await getUser(id);
+} catch (error) {
+  if (error instanceof NotFoundError) {
+    return null;
+  }
+  throw error;
+}
+```
+
+The check holds across the ESM and CommonJS builds, so an error raised inside a
+CommonJS package matches in an ESM package, and it holds when two copies of
+`@jaypie/errors` are installed. Class identity does not: compare with
+`instanceof`, never `error.constructor === NotFoundError`.
 
 ### Type Guard
 

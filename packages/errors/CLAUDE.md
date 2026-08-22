@@ -30,7 +30,28 @@ All errors extend `JaypieError` which provides:
 - `body()`: Returns JSON:API error response body
 
 Every error carries the name `JaypieError`, not the class name. Discriminate
-with `isJaypieError()`, `status`, or `_type`.
+with `instanceof`, `isJaypieError()`, `status`, or `_type`.
+
+### Cross-Format instanceof
+
+The package publishes an ESM build and a CommonJS build, and a repository mixing
+both formats loads both. Each build evaluates `errors.ts` for itself, so each
+owns a distinct class object and prototype identity cannot answer `instanceof`
+across the boundary. `JaypieError` and every class built by `createErrorClass`
+therefore define `static [Symbol.hasInstance]`, matching on `isJaypieError()`
+plus `_type` rather than the prototype chain. The same match holds when two
+copies of the package are installed, which collapsing the export conditions
+would not.
+
+The receiver is checked first: when `this` is a consumer subclass rather than
+the class itself, the check delegates to `Function.prototype[Symbol.hasInstance]`
+so ordinary prototype semantics survive and `new BadRequestError() instanceof
+CustomError` stays false. `createErrorClass` compares against both the generated
+class and its proxy, because `instanceof` passes the proxy as the receiver.
+
+Class identity is unaffected and still differs per format. Compare with
+`instanceof`, never `constructor === `. The `issue-502` suite reproduces the
+duplication by re-evaluating the module and guards every case.
 
 ### Cause
 
