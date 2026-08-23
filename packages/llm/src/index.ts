@@ -38,6 +38,7 @@ export {
   LlmMessageRole,
   LlmMessageType,
   LlmProgressEventType,
+  LlmResponseErrorReason,
 } from "./types/LlmProvider.interface.js";
 export {
   isLlmOperateInput,

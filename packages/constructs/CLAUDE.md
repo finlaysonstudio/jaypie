@@ -21,6 +21,7 @@ packages/constructs/
 │   │   ├── constructTagger.ts
 │   │   ├── envHostname.ts
 │   │   ├── extendDatadogRole.ts
+│   │   ├── githubOidcSubjects.ts
 │   │   ├── isEnv.ts
 │   │   ├── isValidHostname.ts
 │   │   ├── isValidSubdomain.ts
@@ -476,6 +477,42 @@ Encoded specifics:
 - `lambda:UpdateFunctionConfiguration` plus `iam:PassRole` is the residual escalation path: repoint a function at a stronger role, then invoke it. `AgentDenyPrivilegedPassRole` blocks the SSO, organization, and CDK execution roles. Any other role Lambda may assume is still reachable, so scope `iam:PassRole` further if that matters.
 - `secretsmanager:GetSecretValue` is the one grant above Analyst's read surface. `ReadOnlyAccess` does not include it.
 
+### GitHub Actions Deploy Roles
+
+`JaypieGitHubDeployRole` and the deploy role inside `JaypieWebDeploymentBucket`
+trust **two** GitHub OIDC `sub` patterns, because GitHub issues newer
+repositories an id-embedded subject:
+
+    repo:acme@162184378/widget@1339091097:environment:sandbox
+
+Older repositories still present the plain `repo:<org>/<repo>:*` form, and a
+repo-level subject template does not remove the ids, so a policy matching only
+the plain form fails with `Not authorized to perform
+sts:AssumeRoleWithWebIdentity`. The derived default emits both, wildcarding the
+ids it does not know; a GitHub name cannot contain `@`, so `acme@*` matches that
+organization alone.
+
+```typescript
+// Default: repo:acme/*:* and repo:acme@*/*:* (from CDK_ENV_REPO=acme/widget)
+new JaypieGitHubDeployRole(this, "GitHubDeployRole");
+
+// Pin the organization id (prop, CDK_ENV_REPO_ORGANIZATION_ID, or
+// PROJECT_REPO_ORGANIZATION_ID): repo:acme/*:* and repo:acme@162184378/*:*
+new JaypieGitHubDeployRole(this, "GitHubDeployRole", {
+  organizationId: "162184378",
+});
+
+// Full override: a string, or an array trusting any one pattern
+new JaypieGitHubDeployRole(this, "GitHubDeployRole", {
+  repoRestriction: ["repo:acme/*:*", "repo:acme@162184378/*:*"],
+});
+```
+
+`JaypieWebDeploymentBucket` takes the same `organizationId` and
+`repoRestriction` props, scoped to `CDK_ENV_REPO`'s repository rather than the
+whole organization. `repoRestriction` also creates the deploy role when
+`CDK_ENV_REPO` is unset.
+
 ### Streaming Lambda
 
 For streaming responses, use `createLambdaStreamHandler` from `@jaypie/express` with `JaypieDistribution`:
@@ -662,6 +699,7 @@ new JaypieApiGateway(this, "Api", { handler: lambda, certificate: cert });
 | `constructName(name, opts?)` | Generate sponsor-first name: `{sponsor}-{env}-{key}-{name}-{nonce}`; honors `PROJECT_SPONSOR`, accepts `{ sponsor, env, key, nonce }` overrides |
 | `constructParameterName(scope, opts?)` | Generate SSM path `/{env}/{key}/{nonce}/{path within stack}[/{name}]` |
 | `envHostname()` | Get hostname from environment (supports `CDK_ENV_PERSONAL` as leading prefix) |
+| `githubOidcSubjects(opts)` | GitHub OIDC `sub` patterns (plain and id-embedded) for a repository or organization |
 | `isEnv(env)` / `isProductionEnv()` / `isSandboxEnv()` | Environment checks |
 | `isValidHostname(str)` / `isValidSubdomain(str)` | Validation helpers |
 | `mergeDomain(subdomain, zone)` | Combine subdomain and zone |

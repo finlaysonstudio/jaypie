@@ -305,6 +305,32 @@ docsWeb.exportOutputs({ prefix: "Docs" }); // DocsDestinationBucketName, ...
 
 Outputs whose underlying resource doesn't exist (e.g., no deploy role, no certificate) are skipped.
 
+### GitHub OIDC Deploy Role Trust
+
+The deploy role trusts **two** GitHub OIDC `sub` patterns. GitHub issues newer repositories an id-embedded subject (`repo:acme@162184378/widget@1339091097:environment:sandbox`) while older repositories still present the plain `repo:<org>/<repo>:*` form. A repo-level subject template does not remove the ids, so a trust policy matching only the plain form fails with `Not authorized to perform sts:AssumeRoleWithWebIdentity`. The derived default emits both, wildcarding the ids it does not know.
+
+```typescript
+// Default from CDK_ENV_REPO=acme/widget:
+// repo:acme/widget:* and repo:acme@*/widget@*:*
+new JaypieWebDeploymentBucket(this, "Web", { host, zone });
+
+// Pin the organization id (prop, CDK_ENV_REPO_ORGANIZATION_ID, or
+// PROJECT_REPO_ORGANIZATION_ID)
+new JaypieWebDeploymentBucket(this, "Web", {
+  host, zone,
+  organizationId: "162184378",
+});
+
+// Full override: a string, or an array trusting any one pattern.
+// Also creates the deploy role when CDK_ENV_REPO is unset.
+new JaypieWebDeploymentBucket(this, "Web", {
+  host, zone,
+  repoRestriction: ["repo:acme/widget:*", "repo:acme@162184378/widget@*:*"],
+});
+```
+
+`JaypieGitHubDeployRole` takes the same `organizationId` and `repoRestriction` props, scoped to the whole organization rather than one repository. The `githubOidcSubjects()` helper builds the pair directly.
+
 ## JaypieDynamoDb
 
 DynamoDB table with Jaypie single-table design patterns.

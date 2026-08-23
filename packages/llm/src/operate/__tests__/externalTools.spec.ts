@@ -15,6 +15,7 @@ import {
   LlmMessageType,
   LlmProgressEvent,
   LlmProgressEventType,
+  LlmResponseErrorReason,
   LlmResponseStatus,
 } from "../../types/LlmProvider.interface.js";
 import { LlmTool } from "../../types/LlmTool.interface.js";
@@ -418,6 +419,7 @@ describe("External Tools and Suspend/Resume (Issue #473)", () => {
       // Assert — settles without a model call
       expect(result.status).toBe(LlmResponseStatus.Incomplete);
       expect(result.error?.title).toBe("Bad Function Call");
+      expect(result.error?.reason).toBe(LlmResponseErrorReason.ToolErrors);
       expect(adapter.executeRequest).not.toHaveBeenCalled();
     });
 
@@ -438,6 +440,7 @@ describe("External Tools and Suspend/Resume (Issue #473)", () => {
       // Assert
       expect(result.status).toBe(LlmResponseStatus.Incomplete);
       expect(result.error?.status).toBe(429);
+      expect(result.error?.reason).toBe(LlmResponseErrorReason.MaxTurns);
       expect(adapter.executeRequest).not.toHaveBeenCalled();
     });
 

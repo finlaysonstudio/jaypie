@@ -749,6 +749,27 @@ A configured fallback chain wins over waiting: moving to the next provider is
 faster than sleeping, so only the final entry in the chain keeps its rate-limit
 budget. Waits are interruptible by the caller's `signal`.
 
+### Loop Stops
+
+The loop settles `status: "incomplete"` with an error of its own when a policy
+budget runs out. Those errors carry `error.reason` (`LlmResponseErrorReason`)
+because status alone cannot identify them: an exhausted turn budget is a 429,
+exactly like a provider rate limit.
+
+| `reason` | Status | Meaning |
+|----------|--------|---------|
+| `max_turns` | 429 | The model asked for another tool call after `turns` ran out. Nothing failed; the run did not converge. |
+| `tool_errors` | 502 | Tool execution failed six times in a row and the loop stopped. |
+
+```typescript
+import { LlmResponseErrorReason } from "@jaypie/llm";
+
+const response = await Llm.operate(input, { tools: toolkit, turns: 12 });
+if (response.error?.reason === LlmResponseErrorReason.MaxTurns) {
+  // Retry with a larger budget rather than reporting a capability failure
+}
+```
+
 ## Testing Pattern
 
 ```typescript

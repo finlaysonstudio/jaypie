@@ -123,6 +123,12 @@ export const LlmProgressEventType = createMockWrappedObject(
     isClass: true,
   },
 );
+export const LlmResponseErrorReason = createMockWrappedObject(
+  original.LlmResponseErrorReason,
+  {
+    isClass: true,
+  },
+);
 export const LlmStreamChunkType = createMockWrappedObject(
   original.LlmStreamChunkType,
   {

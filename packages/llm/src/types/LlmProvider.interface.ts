@@ -41,8 +41,21 @@ export enum LlmResponseStatus {
 
 // Errors
 
+/**
+ * Why the operate/stream loop settled a response with an error of its own
+ * rather than relaying a provider failure. Present only on loop policy stops,
+ * so a caller can tell an exhausted turn budget (`MaxTurns`, which shares
+ * status 429 with a genuine provider rate limit) from a provider that refused
+ * the request.
+ */
+export enum LlmResponseErrorReason {
+  MaxTurns = "max_turns",
+  ToolErrors = "tool_errors",
+}
+
 export interface LlmError {
   detail?: string;
+  reason?: LlmResponseErrorReason;
   status: number | string;
   title: string;
 }

@@ -17,6 +17,10 @@ export {
   ResolveCertificateOptions,
 } from "./resolveCertificate";
 export { ensureRoute53QueryLoggingPolicy } from "./ensureRoute53QueryLoggingPolicy";
+export {
+  githubOidcSubjects,
+  GitHubOidcSubjectsOptions,
+} from "./githubOidcSubjects";
 export { isEnv, isProductionEnv, isSandboxEnv } from "./isEnv";
 export { isValidHostname } from "./isValidHostname";
 export { isValidSubdomain } from "./isValidSubdomain";

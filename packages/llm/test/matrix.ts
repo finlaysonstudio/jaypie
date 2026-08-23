@@ -32,7 +32,12 @@ import { existsSync } from "fs";
 import { dirname, join, resolve } from "path";
 import { fileURLToPath } from "url";
 
-import { Llm, LlmOperateInput, toolkit } from "../src/index.js";
+import {
+  Llm,
+  LlmOperateInput,
+  LlmResponseErrorReason,
+  toolkit,
+} from "../src/index.js";
 import { determineModelProvider } from "../src/util/determineModelProvider.js";
 import {
   ActualOutcome,
@@ -120,9 +125,15 @@ async function captureWarnings<T>(
 // the matrix runner fills those in based on per-model expectations.
 //
 
-interface CapabilityResult {
+export interface CapabilityResult {
   ok: boolean;
   detail?: string;
+  /**
+   * The run ended without demonstrating anything about the capability, so the
+   * cell carries no verdict to compare against its expectation. Reported as a
+   * warning and excluded from the mismatch count. See `errorResult`.
+   */
+  inconclusive?: boolean;
 }
 
 /**
@@ -155,12 +166,38 @@ function describeError(error: unknown): string {
   return String(error);
 }
 
+/**
+ * Turn an `operate()` error into a failed cell, marking the outcomes that say
+ * nothing about the capability.
+ *
+ * An exhausted turn budget is the case in hand (issue #505): a model that keeps
+ * calling tools until `turns` runs out has not shown it lacks the capability,
+ * it has shown that this run did not converge. The outcome is nondeterministic
+ * — the same cell passed and failed twelve minutes apart — so failing the run
+ * on it reports a flake as a defect. The detail still reaches the ISSUES block,
+ * so a model that stops converging stays visible.
+ *
+ * `status` alone cannot make the call: a provider rate limit is also 429. The
+ * discriminator is `LlmResponseErrorReason.MaxTurns`, set by the operate loop.
+ */
+export function errorResult(error: unknown): CapabilityResult {
+  const reason =
+    error && typeof error === "object"
+      ? (error as { reason?: string }).reason
+      : undefined;
+  return {
+    ok: false,
+    detail: describeError(error),
+    inconclusive: reason === LlmResponseErrorReason.MaxTurns,
+  };
+}
+
 async function runPlain(llm: Llm): Promise<CapabilityResult> {
   const result = await llm.operate(
     "Reply with one word: 'pong'. No punctuation.",
     { user: USER },
   );
-  if (result.error) return { ok: false, detail: describeError(result.error) };
+  if (result.error) return errorResult(result.error);
   if (typeof result.content !== "string" || result.content.length === 0) {
     return {
       ok: false,
@@ -181,7 +218,7 @@ async function runTools(llm: Llm): Promise<CapabilityResult> {
       },
     },
   });
-  if (result.error) return { ok: false, detail: describeError(result.error) };
+  if (result.error) return errorResult(result.error);
   if (!toolCalled) return { ok: false, detail: "roll tool was not called" };
   return { ok: true };
 }
@@ -191,7 +228,7 @@ async function runStructured(llm: Llm): Promise<CapabilityResult> {
     format: { colors: [String] },
     user: USER,
   });
-  if (result.error) return { ok: false, detail: describeError(result.error) };
+  if (result.error) return errorResult(result.error);
   const content = result.content as { colors?: unknown } | string | undefined;
   if (!content || typeof content !== "object") {
     return { ok: false, detail: `expected object, got ${typeof content}` };
@@ -217,7 +254,7 @@ async function runBoth(llm: Llm): Promise<CapabilityResult> {
       },
     },
   );
-  if (result.error) return { ok: false, detail: describeError(result.error) };
+  if (result.error) return errorResult(result.error);
   const content = result.content as
     { values?: unknown; total?: unknown } | string | undefined;
   if (!content || typeof content !== "object") {
@@ -262,7 +299,7 @@ async function runPdf(llm: Llm): Promise<CapabilityResult> {
     { file: PDF_PATH },
   ];
   const result = await llm.operate(input, { user: USER });
-  if (result.error) return { ok: false, detail: describeError(result.error) };
+  if (result.error) return errorResult(result.error);
   return checkDocStrings(result.content);
 }
 
@@ -272,7 +309,7 @@ async function runImage(llm: Llm): Promise<CapabilityResult> {
     { image: IMAGE_PATH },
   ];
   const result = await llm.operate(input, { user: USER });
-  if (result.error) return { ok: false, detail: describeError(result.error) };
+  if (result.error) return errorResult(result.error);
   return checkDocStrings(result.content);
 }
 
@@ -281,7 +318,7 @@ async function runTemperature(llm: Llm): Promise<CapabilityResult> {
     "Reply with one word: 'pong'. No punctuation.",
     { temperature: 0, user: USER },
   );
-  if (result.error) return { ok: false, detail: describeError(result.error) };
+  if (result.error) return errorResult(result.error);
   if (typeof result.content !== "string" || result.content.length === 0) {
     return {
       ok: false,
@@ -358,11 +395,11 @@ function paced(llm: Llm, model: ModelConfig): Llm {
   return llm;
 }
 
-function classifyActual(
+export function classifyActual(
   capability: CapabilityResult,
   warnings: string[],
 ): ActualOutcome {
-  if (!capability.ok) return "fail";
+  if (!capability.ok) return capability.inconclusive ? "warn" : "fail";
   if (warnings.length > 0) return "warn";
   return "ok";
 }
@@ -385,18 +422,18 @@ async function runCell(
     outcome = captured.result;
     warnings = captured.warnings;
   } catch (error) {
-    outcome = {
-      ok: false,
-      detail: describeError(error),
-    };
+    outcome = errorResult(error);
   }
 
   const actual = classifyActual(outcome, warnings);
   // A forced skip cell has no expectation to meet — the point is to observe
   // what it does, so whatever happened counts as a match and the run still
-  // exits zero.
+  // exits zero. An inconclusive cell is the same case for a different reason:
+  // the run produced no verdict to compare.
   const matches =
-    expected === "skip" ? true : matchesExpected(actual, expected);
+    expected === "skip" || outcome.inconclusive
+      ? true
+      : matchesExpected(actual, expected);
   return {
     actual,
     expected,
@@ -406,7 +443,7 @@ async function runCell(
   };
 }
 
-function matchesExpected(
+export function matchesExpected(
   actual: ActualOutcome,
   expected: ExpectedOutcome,
 ): boolean {
