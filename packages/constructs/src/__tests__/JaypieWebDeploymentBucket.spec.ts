@@ -40,8 +40,25 @@ describe("JaypieWebDeploymentBucket", () => {
     delete process.env.CDK_ENV_WEB_HOSTED_ZONE;
     delete process.env.CDK_ENV_WEB_SUBDOMAIN;
     delete process.env.CDK_ENV_REPO;
+    delete process.env.CDK_ENV_REPO_ORGANIZATION_ID;
     delete process.env.PROJECT_ENV;
+    delete process.env.PROJECT_REPO_ORGANIZATION_ID;
   });
+
+  function trustedSubjects(stack: Stack): string | string[] {
+    const roles = Template.fromStack(stack).findResources("AWS::IAM::Role", {
+      Properties: {
+        AssumeRolePolicyDocument: {
+          Statement: Match.arrayWith([
+            Match.objectLike({ Action: "sts:AssumeRoleWithWebIdentity" }),
+          ]),
+        },
+      },
+    });
+    const [role] = Object.values(roles);
+    return role.Properties.AssumeRolePolicyDocument.Statement[0].Condition
+      .StringLike["token.actions.githubusercontent.com:sub"];
+  }
 
   afterEach(() => {
     process.env = { ...originalEnv };
@@ -962,6 +979,75 @@ describe("JaypieWebDeploymentBucket", () => {
 
       expect(result.DestinationBucketName).toBeDefined();
       expect(result.DestinationBucketDeployRoleArn).toBeUndefined();
+    });
+  });
+
+  describe("Deploy role trust policy", () => {
+    describe("Happy Paths", () => {
+      it("trusts both the plain and id-embedded repository subjects", () => {
+        process.env.CDK_ENV_REPO = "acme/widget";
+        const stack = new Stack();
+
+        new JaypieWebDeploymentBucket(stack, "Web");
+
+        expect(trustedSubjects(stack)).toEqual([
+          "repo:acme/widget:*",
+          "repo:acme@*/widget@*:*",
+        ]);
+      });
+    });
+
+    describe("Features", () => {
+      it("pins the organization id from the organizationId prop", () => {
+        process.env.CDK_ENV_REPO = "acme/widget";
+        const stack = new Stack();
+
+        new JaypieWebDeploymentBucket(stack, "Web", {
+          organizationId: "162184378",
+        });
+
+        expect(trustedSubjects(stack)).toEqual([
+          "repo:acme/widget:*",
+          "repo:acme@162184378/widget@*:*",
+        ]);
+      });
+
+      it("pins the organization id from CDK_ENV_REPO_ORGANIZATION_ID", () => {
+        process.env.CDK_ENV_REPO = "acme/widget";
+        process.env.CDK_ENV_REPO_ORGANIZATION_ID = "162184378";
+        const stack = new Stack();
+
+        new JaypieWebDeploymentBucket(stack, "Web");
+
+        expect(trustedSubjects(stack)).toEqual([
+          "repo:acme/widget:*",
+          "repo:acme@162184378/widget@*:*",
+        ]);
+      });
+
+      it("accepts a repoRestriction override", () => {
+        const stack = new Stack();
+
+        const construct = new JaypieWebDeploymentBucket(stack, "Web", {
+          repoRestriction: "repo:acme/widget:*",
+        });
+
+        expect(construct.deployRoleArn).toBeDefined();
+        expect(trustedSubjects(stack)).toBe("repo:acme/widget:*");
+      });
+
+      it("accepts an array of restrictions", () => {
+        const stack = new Stack();
+
+        new JaypieWebDeploymentBucket(stack, "Web", {
+          repoRestriction: ["repo:acme/widget:*", "repo:acme@1/widget@2:*"],
+        });
+
+        expect(trustedSubjects(stack)).toEqual([
+          "repo:acme/widget:*",
+          "repo:acme@1/widget@2:*",
+        ]);
+      });
     });
   });
 });

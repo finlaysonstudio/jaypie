@@ -31,6 +31,7 @@ import {
   constructEnvName,
   constructWafLogBucketName,
   envHostname,
+  githubOidcSubjects,
   HostConfig,
   isProductionEnv,
   isValidHostname,
@@ -166,6 +167,22 @@ export interface JaypieWebDeploymentBucketProps extends s3.BucketProps {
    */
   name?: string;
   /**
+   * Numeric GitHub organization id, pinning the id-embedded subject pattern
+   * the deploy role's trust policy would otherwise wildcard. Ignored when
+   * `repoRestriction` is provided.
+   *
+   * @default CDK_ENV_REPO_ORGANIZATION_ID || PROJECT_REPO_ORGANIZATION_ID
+   */
+  organizationId?: string;
+  /**
+   * Trusted GitHub OIDC `sub` patterns for the deploy role. An array trusts
+   * any one of them. Providing this creates the deploy role even when
+   * CDK_ENV_REPO is unset.
+   *
+   * @default both patterns from `githubOidcSubjects` for CDK_ENV_REPO
+   */
+  repoRestriction?: string | string[];
+  /**
    * Full override for the response headers policy.
    * When provided, bypasses all default security header logic.
    */
@@ -253,6 +270,8 @@ export class JaypieWebDeploymentBucket extends Construct implements s3.IBucket {
       host: propsHost,
       logBucket: logBucketProp,
       name: nameProp,
+      organizationId: organizationIdProp,
+      repoRestriction: repoRestrictionProp,
       responseHeadersPolicy: responseHeadersPolicyProp,
       roleTag: roleTagProp,
       securityHeaders: securityHeadersProp,
@@ -356,20 +375,31 @@ export class JaypieWebDeploymentBucket extends Construct implements s3.IBucket {
 
     Tags.of(this.bucket).add(CDK.TAG.ROLE, roleTag);
 
-    // Create deployment role if repository is configured
-    let repo: string | undefined;
-    if (process.env.CDK_ENV_REPO) {
-      repo = `repo:${process.env.CDK_ENV_REPO}:*`;
+    // Create deployment role if repository is configured. GitHub issues newer
+    // repositories an id-embedded subject
+    // (`repo:<org>@<org-id>/<repo>@<repo-id>:*`) while older ones still present
+    // the plain form, so the derived default trusts both.
+    let repoRestriction = repoRestrictionProp;
+    if (!repoRestriction && process.env.CDK_ENV_REPO) {
+      const [organization, repository] = process.env.CDK_ENV_REPO.split("/");
+      repoRestriction = githubOidcSubjects({
+        organization,
+        organizationId:
+          organizationIdProp ||
+          process.env.CDK_ENV_REPO_ORGANIZATION_ID ||
+          process.env.PROJECT_REPO_ORGANIZATION_ID,
+        repository,
+      });
     }
 
     let bucketDeployRole: Role | undefined;
-    if (repo) {
+    if (repoRestriction) {
       bucketDeployRole = new Role(this, "DestinationBucketDeployRole", {
         assumedBy: new FederatedPrincipal(
           Fn.importValue(CDK.IMPORT.OIDC_PROVIDER),
           {
             StringLike: {
-              "token.actions.githubusercontent.com:sub": repo,
+              "token.actions.githubusercontent.com:sub": repoRestriction,
             },
           },
           "sts:AssumeRoleWithWebIdentity",

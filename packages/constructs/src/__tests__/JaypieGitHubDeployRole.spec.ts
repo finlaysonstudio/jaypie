@@ -11,9 +11,18 @@ describe("JaypieGitHubDeployRole", () => {
 
   beforeEach(() => {
     delete process.env.CDK_ENV_REPO;
+    delete process.env.CDK_ENV_REPO_ORGANIZATION_ID;
     delete process.env.PROJECT_REPO;
+    delete process.env.PROJECT_REPO_ORGANIZATION_ID;
     delete process.env.PROJECT_SPONSOR;
   });
+
+  function trustedSubjects(stack: Stack): string | string[] {
+    const roles = Template.fromStack(stack).findResources("AWS::IAM::Role");
+    const [role] = Object.values(roles);
+    return role.Properties.AssumeRolePolicyDocument.Statement[0].Condition
+      .StringLike["token.actions.githubusercontent.com:sub"];
+  }
 
   afterEach(() => {
     process.env = { ...originalEnv };
@@ -164,6 +173,86 @@ describe("JaypieGitHubDeployRole", () => {
           : typeof s.Action === "string" && s.Action.startsWith("ecr:"),
       );
       expect(ecrStatements).toHaveLength(0);
+    });
+  });
+
+  describe("Repository restriction", () => {
+    describe("Happy Paths", () => {
+      it("trusts both the plain and id-embedded organization subjects", () => {
+        process.env.CDK_ENV_REPO = "acme/widget";
+        const stack = new Stack();
+        new JaypieGitHubDeployRole(stack, "Role", {
+          oidcProviderArn: OIDC_ARN,
+        });
+        expect(trustedSubjects(stack)).toEqual([
+          "repo:acme/*:*",
+          "repo:acme@*/*:*",
+        ]);
+      });
+    });
+
+    describe("Features", () => {
+      it("accepts an array of restrictions", () => {
+        const stack = new Stack();
+        new JaypieGitHubDeployRole(stack, "Role", {
+          oidcProviderArn: OIDC_ARN,
+          repoRestriction: ["repo:acme/*:*", "repo:acme@162184378/*:*"],
+          sponsor: "acme",
+        });
+        expect(trustedSubjects(stack)).toEqual([
+          "repo:acme/*:*",
+          "repo:acme@162184378/*:*",
+        ]);
+      });
+
+      it("pins the organization id from the organizationId prop", () => {
+        process.env.CDK_ENV_REPO = "acme/widget";
+        const stack = new Stack();
+        new JaypieGitHubDeployRole(stack, "Role", {
+          oidcProviderArn: OIDC_ARN,
+          organizationId: "162184378",
+        });
+        expect(trustedSubjects(stack)).toEqual([
+          "repo:acme/*:*",
+          "repo:acme@162184378/*:*",
+        ]);
+      });
+
+      it("pins the organization id from CDK_ENV_REPO_ORGANIZATION_ID", () => {
+        process.env.CDK_ENV_REPO = "acme/widget";
+        process.env.CDK_ENV_REPO_ORGANIZATION_ID = "162184378";
+        const stack = new Stack();
+        new JaypieGitHubDeployRole(stack, "Role", {
+          oidcProviderArn: OIDC_ARN,
+        });
+        expect(trustedSubjects(stack)).toEqual([
+          "repo:acme/*:*",
+          "repo:acme@162184378/*:*",
+        ]);
+      });
+
+      it("pins the organization id from PROJECT_REPO_ORGANIZATION_ID", () => {
+        process.env.PROJECT_REPO = "acme/widget";
+        process.env.PROJECT_REPO_ORGANIZATION_ID = "162184378";
+        const stack = new Stack();
+        new JaypieGitHubDeployRole(stack, "Role", {
+          oidcProviderArn: OIDC_ARN,
+        });
+        expect(trustedSubjects(stack)).toEqual([
+          "repo:acme/*:*",
+          "repo:acme@162184378/*:*",
+        ]);
+      });
+
+      it("keeps a single string restriction as given", () => {
+        const stack = new Stack();
+        new JaypieGitHubDeployRole(stack, "Role", {
+          oidcProviderArn: OIDC_ARN,
+          repoRestriction: "repo:acme/*:*",
+          sponsor: "acme",
+        });
+        expect(trustedSubjects(stack)).toBe("repo:acme/*:*");
+      });
     });
   });
 });

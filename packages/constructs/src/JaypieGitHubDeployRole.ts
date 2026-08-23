@@ -9,12 +9,27 @@ import { Construct } from "constructs";
 import { ConfigurationError } from "@jaypie/errors";
 
 import { CDK } from "./constants";
+import { githubOidcSubjects } from "./helpers";
 
 export interface JaypieGitHubDeployRoleProps {
   ecr?: boolean;
   oidcProviderArn?: string;
+  /**
+   * Numeric GitHub organization id, pinning the id-embedded subject pattern
+   * the derived default would otherwise wildcard. Ignored when
+   * `repoRestriction` is provided.
+   *
+   * @default CDK_ENV_REPO_ORGANIZATION_ID || PROJECT_REPO_ORGANIZATION_ID
+   */
+  organizationId?: string;
   output?: boolean | string;
-  repoRestriction?: string;
+  /**
+   * Trusted GitHub OIDC `sub` patterns. An array trusts any one of them.
+   *
+   * @default both patterns from `githubOidcSubjects` for the organization in
+   * CDK_ENV_REPO || PROJECT_REPO
+   */
+  repoRestriction?: string | string[];
   sponsor?: string;
 }
 
@@ -42,6 +57,7 @@ export class JaypieGitHubDeployRole extends Construct {
     const {
       ecr = true,
       oidcProviderArn = Fn.importValue(CDK.IMPORT.OIDC_PROVIDER),
+      organizationId: propsOrganizationId,
       output = true,
       repoRestriction: propsRepoRestriction,
       sponsor: propsSponsor,
@@ -54,6 +70,9 @@ export class JaypieGitHubDeployRole extends Construct {
     const envRepo = process.env.CDK_ENV_REPO || process.env.PROJECT_REPO;
     const envRepoOrganization = envRepo ? envRepo.split("/")[0] : undefined;
 
+    // GitHub issues newer repositories an id-embedded subject
+    // (`repo:<org>@<org-id>/<repo>@<repo-id>:*`) while older ones still present
+    // the plain form, so the default trusts both.
     let repoRestriction = propsRepoRestriction;
     if (!repoRestriction) {
       if (!envRepoOrganization) {
@@ -61,7 +80,13 @@ export class JaypieGitHubDeployRole extends Construct {
           "No repoRestriction provided. Set repoRestriction prop, CDK_ENV_REPO, or PROJECT_REPO environment variable",
         );
       }
-      repoRestriction = `repo:${envRepoOrganization}/*:*`;
+      repoRestriction = githubOidcSubjects({
+        organization: envRepoOrganization,
+        organizationId:
+          propsOrganizationId ||
+          process.env.CDK_ENV_REPO_ORGANIZATION_ID ||
+          process.env.PROJECT_REPO_ORGANIZATION_ID,
+      });
     }
 
     const sponsor =

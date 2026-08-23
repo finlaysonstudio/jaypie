@@ -86,13 +86,30 @@ Create an IAM role with this trust policy to allow GitHub Actions:
           "token.actions.githubusercontent.com:aud": "sts.amazonaws.com"
         },
         "StringLike": {
-          "token.actions.githubusercontent.com:sub": "repo:org/repo:*"
+          "token.actions.githubusercontent.com:sub": [
+            "repo:org/repo:*",
+            "repo:org@<org-id>/repo@<repo-id>:*"
+          ]
         }
       }
     }
   ]
 }
 ```
+
+GitHub issues newer repositories an **id-embedded subject** carrying the
+numeric organization and repository ids
+(`repo:acme@162184378/widget@1339091097:environment:sandbox`); older
+repositories still present the plain form, and a repo-level subject template
+does not remove the ids. Trust both patterns, or a repository created after the
+change fails with `Not authorized to perform sts:AssumeRoleWithWebIdentity`. An
+unknown id may be wildcarded (`repo:acme@*/*:*`) — GitHub names cannot contain
+`@`, so it matches that organization alone.
+
+`JaypieGitHubDeployRole` and `JaypieWebDeploymentBucket` emit both patterns by
+default. Pin the organization id with the `organizationId` prop or
+`CDK_ENV_REPO_ORGANIZATION_ID`; override the whole condition with
+`repoRestriction` (a string or an array).
 
 ### Role Permissions
 
@@ -140,6 +157,8 @@ Variables are resolved in order:
 - Missing `id-token: write` permission
 - Incorrect `AWS_ROLE_ARN`
 - Role trust policy not configured for repository
+- Trust policy matches only the plain `repo:<org>/<repo>:*` subject while the
+  repository presents the id-embedded form (see AWS OIDC Role Setup)
 
 **Fix:** Verify OIDC role trust policy matches repository and permissions include `id-token: write`.
 
