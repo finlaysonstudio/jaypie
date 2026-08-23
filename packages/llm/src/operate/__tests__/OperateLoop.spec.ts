@@ -15,6 +15,7 @@ import {
   LlmOperateOptions,
   LlmProgressEvent,
   LlmProgressEventType,
+  LlmResponseErrorReason,
   LlmResponseStatus,
 } from "../../types/LlmProvider.interface.js";
 import { ErrorCategory, ParsedResponse, StandardToolCall } from "../types.js";
@@ -383,6 +384,7 @@ describe("OperateLoop", () => {
         expect(result.status).toBe(LlmResponseStatus.Incomplete);
         expect(result.error).toBeDefined();
         expect(result.error?.title).toBe("Too Many Requests");
+        expect(result.error?.reason).toBe(LlmResponseErrorReason.MaxTurns);
       });
     });
 

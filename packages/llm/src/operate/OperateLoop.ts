@@ -1,8 +1,4 @@
-import {
-  BadGatewayError,
-  BadRequestError,
-  TooManyRequestsError,
-} from "@jaypie/errors";
+import { BadGatewayError, BadRequestError } from "@jaypie/errors";
 import { JsonObject } from "@jaypie/types";
 
 import { Toolkit } from "../tools/Toolkit.class.js";
@@ -42,6 +38,7 @@ import {
   isExchangeRequested,
 } from "./exchange/index.js";
 import { HookRunner, hookRunner, LlmHooks } from "./hooks/index.js";
+import { ERROR, maxTurnsStop, toolErrorsStop } from "./loopStop.js";
 import { InputProcessor, inputProcessor } from "./input/index.js";
 import { emitProgress } from "./progress/index.js";
 import { resolveResume } from "./resume/index.js";
@@ -82,10 +79,6 @@ export interface OperateLoopConfig {
 //
 // Constants
 //
-
-const ERROR = {
-  BAD_FUNCTION_CALL: "Bad Function Call",
-};
 
 export const MAX_CONSECUTIVE_TOOL_ERRORS = 6;
 
@@ -244,24 +237,15 @@ export class OperateLoop {
     let preSettled = false;
     if (resume) {
       if (state.consecutiveToolErrors >= MAX_CONSECUTIVE_TOOL_ERRORS) {
-        const detail = `Stopped after ${MAX_CONSECUTIVE_TOOL_ERRORS} consecutive tool errors`;
-        log.warn(detail);
-        state.responseBuilder.setError({
-          detail,
-          status: 502,
-          title: ERROR.BAD_FUNCTION_CALL,
-        });
+        const stop = toolErrorsStop(MAX_CONSECUTIVE_TOOL_ERRORS);
+        log.warn(stop.detail);
+        state.responseBuilder.setError(stop);
         state.responseBuilder.incomplete();
         preSettled = true;
       } else if (state.currentTurn >= state.maxTurns) {
-        const error = new TooManyRequestsError();
-        const detail = `Model requested function call but exceeded ${state.maxTurns} turns`;
-        log.warn(detail);
-        state.responseBuilder.setError({
-          detail,
-          status: error.status,
-          title: error.title,
-        });
+        const stop = maxTurnsStop(state.maxTurns);
+        log.warn(stop.detail);
+        state.responseBuilder.setError(stop);
         state.responseBuilder.incomplete();
         preSettled = true;
       }
@@ -972,13 +956,9 @@ export class OperateLoop {
             // Track consecutive errors and stop if threshold reached
             state.consecutiveToolErrors++;
             if (state.consecutiveToolErrors >= MAX_CONSECUTIVE_TOOL_ERRORS) {
-              const detail = `Stopped after ${MAX_CONSECUTIVE_TOOL_ERRORS} consecutive tool errors`;
-              log.warn(detail);
-              state.responseBuilder.setError({
-                detail,
-                status: 502,
-                title: ERROR.BAD_FUNCTION_CALL,
-              });
+              const stop = toolErrorsStop(MAX_CONSECUTIVE_TOOL_ERRORS);
+              log.warn(stop.detail);
+              state.responseBuilder.setError(stop);
               state.responseBuilder.incomplete();
               return false; // Stop loop
             }
@@ -995,14 +975,9 @@ export class OperateLoop {
 
         // Check if we've reached max turns
         if (state.currentTurn >= state.maxTurns) {
-          const error = new TooManyRequestsError();
-          const detail = `Model requested function call but exceeded ${state.maxTurns} turns`;
-          log.warn(detail);
-          state.responseBuilder.setError({
-            detail,
-            status: error.status,
-            title: error.title,
-          });
+          const stop = maxTurnsStop(state.maxTurns);
+          log.warn(stop.detail);
+          state.responseBuilder.setError(stop);
           state.responseBuilder.incomplete();
           return false; // Stop loop
         }

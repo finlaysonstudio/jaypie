@@ -13,6 +13,7 @@ import {
   LlmMessageRole,
   LlmMessageType,
   LlmOperateOptions,
+  LlmResponseErrorReason,
 } from "../../types/LlmProvider.interface.js";
 import {
   LlmStreamChunk,
@@ -949,6 +950,7 @@ describe("StreamLoop", () => {
         expect(errorChunks[0]).toMatchObject({
           type: LlmStreamChunkType.Error,
           error: {
+            reason: LlmResponseErrorReason.MaxTurns,
             title: "Too Many Requests",
           },
         });

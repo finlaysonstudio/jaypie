@@ -335,6 +335,17 @@ try {
 }
 ```
 
+**Loop stops** are different: the loop settles `status: "incomplete"` with an
+error it built itself when a policy budget runs out (`src/operate/loopStop.ts`,
+used by both loops in-loop and on resume). Those errors carry
+`error.reason` (`LlmResponseErrorReason`), because status alone cannot identify
+them: `max_turns` is a 429, exactly like a provider rate limit. `max_turns`
+means the model asked for another tool call after `turns` ran out — nothing
+failed, the run did not converge — and `tool_errors` means tool execution failed
+`MAX_CONSECUTIVE_TOOL_ERRORS` times in a row. The live matrix uses the
+discriminator to report an exhausted budget as inconclusive rather than as a
+missing capability (issue #505).
+
 Classification lives in each provider adapter's `classifyError`, which first
 consults the shared `classifyProviderError` pass so that cross-provider
 conditions agree: retryable structured-output compile timeouts (e.g. Anthropic
@@ -929,7 +940,12 @@ export type {
 };
 
 // Enums
-export { LlmMessageRole, LlmMessageType, LlmStreamChunkType };
+export {
+  LlmMessageRole,
+  LlmMessageType,
+  LlmResponseErrorReason,
+  LlmStreamChunkType,
+};
 
 // Tools
 export { JaypieToolkit, toolkit, Toolkit, tools };
@@ -993,6 +1009,15 @@ while a whole row or column going red is a defect either way. A failure inside
 a block still prints in the ISSUES list and displays as ⚠️ in the grid; it just
 does not fail the run on its own. `test/__tests__/collective.spec.ts` covers
 the majority rule without touching a provider.
+
+**Inconclusive cells.** A cell whose `operate()` call ends in
+`LlmResponseErrorReason.MaxTurns` demonstrated nothing about the capability, so
+it reports ⚠️ and is excluded from the mismatch count instead of failing the
+run. The outcome is nondeterministic — the same `both` cell passed on a PR run
+and failed on the merge run twelve minutes later — so failing on it reports a
+flake as a defect. The detail still prints in the ISSUES block, so a model that
+stops converging stays visible. `test/__tests__/matrix.spec.ts` covers the
+classification without touching a provider.
 
 **Request pacing** (`test/rateLimit.ts`) exists because Mistral enforces a
 requests-per-second ceiling that varies by tier and by model, and returns a

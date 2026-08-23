@@ -1,10 +1,7 @@
-import {
-  BadGatewayError,
-  BadRequestError,
-  TooManyRequestsError,
-} from "@jaypie/errors";
+import { BadGatewayError, BadRequestError } from "@jaypie/errors";
 import { JsonObject } from "@jaypie/types";
 
+import { ERROR, maxTurnsStop, toolErrorsStop } from "./loopStop.js";
 import { MAX_CONSECUTIVE_TOOL_ERRORS } from "./OperateLoop.js";
 import { toLlmError } from "../errors/toLlmError.js";
 import { createStaleRejectionGuard } from "./retry/createStaleRejectionGuard.js";
@@ -113,10 +110,6 @@ interface StreamLoopState {
 // Constants
 //
 
-const ERROR = {
-  BAD_FUNCTION_CALL: "Bad Function Call",
-};
-
 //
 //
 // Main
@@ -200,23 +193,12 @@ export class StreamLoop {
         resume &&
         state.consecutiveToolErrors >= MAX_CONSECUTIVE_TOOL_ERRORS
       ) {
-        const detail = `Stopped after ${MAX_CONSECUTIVE_TOOL_ERRORS} consecutive tool errors`;
-        log.warn(detail);
-        state.error = {
-          detail,
-          status: 502,
-          title: ERROR.BAD_FUNCTION_CALL,
-        };
+        state.error = toolErrorsStop(MAX_CONSECUTIVE_TOOL_ERRORS);
+        log.warn(state.error.detail);
         yield { type: LlmStreamChunkType.Error, error: state.error };
       } else if (resume && state.currentTurn >= state.maxTurns) {
-        const error = new TooManyRequestsError();
-        const detail = `Model requested function call but exceeded ${state.maxTurns} turns`;
-        log.warn(detail);
-        state.error = {
-          detail,
-          status: error.status,
-          title: error.title,
-        };
+        state.error = maxTurnsStop(state.maxTurns);
+        log.warn(state.error.detail);
         yield { type: LlmStreamChunkType.Error, error: state.error };
       } else {
         // Build initial request
@@ -252,14 +234,8 @@ export class StreamLoop {
 
             // Check if we've reached max turns
             if (state.currentTurn >= state.maxTurns) {
-              const error = new TooManyRequestsError();
-              const detail = `Model requested function call but exceeded ${state.maxTurns} turns`;
-              log.warn(detail);
-              state.error = {
-                detail,
-                status: error.status,
-                title: error.title,
-              };
+              state.error = maxTurnsStop(state.maxTurns);
+              log.warn(state.error.detail);
               yield {
                 type: LlmStreamChunkType.Error,
                 error: state.error,
@@ -1028,15 +1004,11 @@ export class StreamLoop {
         // Track consecutive errors and stop if threshold reached
         state.consecutiveToolErrors++;
         if (state.consecutiveToolErrors >= MAX_CONSECUTIVE_TOOL_ERRORS) {
-          const stopDetail = `Stopped after ${MAX_CONSECUTIVE_TOOL_ERRORS} consecutive tool errors`;
-          log.warn(stopDetail);
+          const stop = toolErrorsStop(MAX_CONSECUTIVE_TOOL_ERRORS);
+          log.warn(stop.detail);
           yield {
             type: LlmStreamChunkType.Error,
-            error: {
-              detail: stopDetail,
-              status: 502,
-              title: ERROR.BAD_FUNCTION_CALL,
-            },
+            error: stop,
           };
           return; // Stop processing tools
         }
