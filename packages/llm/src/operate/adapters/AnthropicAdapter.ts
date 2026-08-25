@@ -696,7 +696,13 @@ export class AnthropicAdapter extends BaseProviderAdapter {
   ): Promise<Anthropic.Message> {
     const anthropic = client as AnthropicClient;
     const anthropicRequest = request as AnthropicRequestParams;
-    const wantsStructuredOutput = Boolean(anthropicRequest.output_config);
+    // Only a `format` marks the native structured-output path. `output_config`
+    // also carries `effort`, and the legacy fake-tool fallback keeps that
+    // effort setting, so testing the whole object would mis-annotate a
+    // tool-emulation response as native (#508).
+    const wantsStructuredOutput = Boolean(
+      anthropicRequest.output_config?.format,
+    );
     try {
       const response = (await anthropic.messages.create(
         anthropicRequest as Anthropic.MessageCreateParams,
@@ -1118,7 +1124,7 @@ export class AnthropicAdapter extends BaseProviderAdapter {
     const anthropicResponse = response as AnnotatedAnthropicMessage;
 
     // Native path: executeRequest annotates the response when we sent
-    // `output_format`, so we can detect intent statelessly.
+    // `output_config.format`, so we can detect intent statelessly.
     if (anthropicResponse.__jaypieStructuredOutput) {
       return this.extractStructuredOutput(response) !== undefined;
     }
@@ -1152,14 +1158,16 @@ export class AnthropicAdapter extends BaseProviderAdapter {
       const textBlock = anthropicResponse.content.find(
         (block) => block.type === "text",
       ) as Anthropic.TextBlock | undefined;
-      if (!textBlock) return undefined;
 
-      try {
-        const parsed = JSON.parse(textBlock.text);
-        return parsed as JsonObject;
-      } catch {
-        return undefined;
+      if (textBlock) {
+        try {
+          return JSON.parse(textBlock.text) as JsonObject;
+        } catch {
+          return undefined;
+        }
       }
+      // No text block: the answer may still ride a `structured_output` tool
+      // call, so fall through to the emulation read rather than dropping it.
     }
 
     // Fallback path: legacy fake-tool emulation

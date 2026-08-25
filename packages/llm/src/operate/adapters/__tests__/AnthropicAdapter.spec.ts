@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AnthropicAdapter, anthropicAdapter } from "../AnthropicAdapter.js";
-import { PROVIDER } from "../../../constants.js";
+import { EFFORT, PROVIDER } from "../../../constants.js";
 import { Toolkit } from "../../../tools/Toolkit.class.js";
 import { ErrorCategory, OperateRequest } from "../../types.js";
 import {
@@ -1208,6 +1208,88 @@ describe("AnthropicAdapter", () => {
         builtTyped.tools?.some((t) => t.name === "structured_output"),
       ).toBe(true);
       expect(builtTyped.tool_choice).toEqual({ type: "any" });
+    });
+
+    it("returns the tool call as content on the cached fallback path with effort (issue #508)", async () => {
+      const { BadRequestError } =
+        await import("../../../providers/anthropic/client.js");
+      // @ts-expect-error Mock doesn't require constructor args
+      const error = new BadRequestError();
+      (error as unknown as { status: number }).status = 400;
+      error.message = "output_config is not supported by this model";
+
+      const toolResponse = {
+        content: [
+          {
+            type: "tool_use",
+            id: "x",
+            name: "structured_output",
+            input: { answer: 42 },
+          },
+        ],
+        model: "claude-sonnet-5",
+        stop_reason: "tool_use",
+        usage: { input_tokens: 1, output_tokens: 1 },
+      };
+
+      const mockCreate = vi.fn();
+      mockCreate.mockRejectedValueOnce(error as unknown as Error);
+      mockCreate.mockResolvedValueOnce({ ...toolResponse });
+      mockCreate.mockResolvedValueOnce({ ...toolResponse });
+      const mockClient = { messages: { create: mockCreate } };
+
+      const operateRequest = {
+        effort: EFFORT.LOW,
+        format: { type: "object", properties: {} },
+        messages: [],
+        model: "claude-sonnet-5",
+      } as unknown as OperateRequest;
+
+      // First call: native output_config is rejected, fake-tool retry answers
+      const first = await anthropicAdapter.executeRequest(
+        mockClient,
+        anthropicAdapter.buildRequest(operateRequest),
+      );
+      expect(anthropicAdapter.parseResponse(first).content).toEqual({
+        answer: 42,
+      });
+
+      // Second call: buildRequest now uses the cached fake-tool path
+      const secondRequest = anthropicAdapter.buildRequest(operateRequest);
+      const second = await anthropicAdapter.executeRequest(
+        mockClient,
+        secondRequest,
+      );
+      expect(anthropicAdapter.hasStructuredOutput(second)).toBe(true);
+      expect(anthropicAdapter.parseResponse(second).content).toEqual({
+        answer: 42,
+      });
+    });
+
+    it("does not treat an effort-only request as structured output", async () => {
+      const mockCreate = vi.fn().mockResolvedValue({
+        content: [{ type: "text", text: '{"looks":"like json"}' }],
+        model: "claude-sonnet-5",
+        stop_reason: "end_turn",
+        usage: { input_tokens: 1, output_tokens: 1 },
+      });
+      const mockClient = { messages: { create: mockCreate } };
+
+      const request = anthropicAdapter.buildRequest({
+        effort: EFFORT.LOW,
+        messages: [],
+        model: "claude-sonnet-5",
+      } as unknown as OperateRequest);
+
+      const response = await anthropicAdapter.executeRequest(
+        mockClient,
+        request,
+      );
+
+      expect(anthropicAdapter.hasStructuredOutput(response)).toBe(false);
+      expect(anthropicAdapter.parseResponse(response).content).toBe(
+        '{"looks":"like json"}',
+      );
     });
 
     it("does not fall back when 400 mentions citations", async () => {
