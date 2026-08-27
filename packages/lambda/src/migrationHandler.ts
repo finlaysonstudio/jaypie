@@ -6,6 +6,11 @@ import lambdaHandler, {
 
 type MigrationResult<T = unknown> = T & { pending?: boolean };
 
+const MIGRATION_PHYSICAL_RESOURCE_ID = "migration";
+
+const isPlainObject = (value: unknown): value is Record<string, unknown> =>
+  value !== null && typeof value === "object" && !Array.isArray(value);
+
 // Defaults to throw: true so a failed migration fails the CFN custom resource
 // (and therefore the deploy) instead of being swallowed and reported COMPLETE.
 //
@@ -39,21 +44,44 @@ const migrationHandler = function <TEvent = unknown, TResult = unknown>(
     event: TEvent = {} as TEvent,
     context: LambdaContext = {},
   ): Promise<unknown> => {
-    const cfnEvent = event as Record<string, unknown>;
+    const cfnEvent: Record<string, unknown> = isPlainObject(event) ? event : {};
+    const physicalResourceId =
+      (cfnEvent.PhysicalResourceId as string | undefined) ??
+      MIGRATION_PHYSICAL_RESOURCE_ID;
+    const isComplete = "Data" in cfnEvent;
+
+    // Delete: never run migrations. The resource being migrated is usually
+    // torn down in the same operation, so the work is wasted at best and, when
+    // it fails, strands the stack in ROLLBACK_FAILED (issue #510).
+    if (cfnEvent.RequestType === "Delete") {
+      return isComplete
+        ? { IsComplete: true }
+        : {
+            Data: { __migration: true },
+            PhysicalResourceId: physicalResourceId,
+          };
+    }
 
     // isCompleteHandler: CDK cr.Provider passes the Data from onEventHandler in event.
     // Run the migration and map the pending flag to CFN's IsComplete protocol.
-    if (
-      cfnEvent !== null &&
-      typeof cfnEvent === "object" &&
-      "Data" in cfnEvent
-    ) {
+    if (isComplete) {
       const result = await innerHandler(event, context);
       const pending =
-        result !== null &&
-        typeof result === "object" &&
+        isPlainObject(result) &&
         Boolean((result as MigrationResult<unknown>).pending);
-      return { Data: result, IsComplete: !pending };
+
+      // The cr.Provider framework throws
+      // `"Data" is not allowed if "IsComplete" is "False"` when a pending poll
+      // carries any Data keys, so pending responses are IsComplete only.
+      if (pending) {
+        return { IsComplete: false };
+      }
+
+      // CloudFormation only accepts a Data map; a scalar or array result would
+      // be rejected on submit, so it is reported as complete without Data.
+      return isPlainObject(result)
+        ? { Data: result, IsComplete: true }
+        : { IsComplete: true };
     }
 
     // onEventHandler: return PhysicalResourceId and a Data marker immediately.
@@ -61,9 +89,8 @@ const migrationHandler = function <TEvent = unknown, TResult = unknown>(
     // so we must include Data here or the "Data" in cfnEvent discriminator will never
     // be true on isComplete polls.
     return {
-      PhysicalResourceId:
-        (cfnEvent?.PhysicalResourceId as string | undefined) ?? "migration",
       Data: { __migration: true },
+      PhysicalResourceId: physicalResourceId,
     };
   };
 };

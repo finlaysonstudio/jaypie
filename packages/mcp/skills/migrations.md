@@ -45,7 +45,7 @@ new JaypieMigration(this, "SeedData", {
 
 - **Timeout**: 15 minutes per invocation (Lambda max); `totalTimeout` controls the end-to-end ceiling across all polling invocations (default 2 hours)
 - **Role**: Tagged as `CDK.ROLE.PROCESSING`
-- **Execution**: Uses `cr.Provider` with both `onEventHandler` and `isCompleteHandler` pointing to the same Lambda. The `onEventHandler` returns `PhysicalResourceId` immediately; the migration code runs in `isCompleteHandler` invocations, which are polled by Step Functions until `IsComplete: true`.
+- **Execution**: Uses `cr.Provider` with both `onEventHandler` and `isCompleteHandler` pointing to the same Lambda. The `onEventHandler` returns `PhysicalResourceId` immediately; the migration code runs in `isCompleteHandler` invocations, which are polled by Step Functions until `IsComplete: true`. `Delete` requests skip the migration entirely.
 - **Dependencies**: Use `dependencies` to ensure tables and other resources exist before the migration executes
 - **Permissions**: Tables passed via `tables` get data-plane (`grantReadWriteData`) plus control-plane access (`DescribeTable`, `UpdateTable`, `UpdateTimeToLive`, `UpdateContinuousBackups`) scoped to the table ARN and its indexes — migrations that add GSIs, toggle TTL, or change backups work without extra IAM
 
@@ -85,7 +85,20 @@ export const handler = migrationHandler(async (event) => {
 
 `migrationHandler` maps the `pending` flag onto CFN's `IsComplete` protocol:
 - `pending: true` → `{ IsComplete: false }` — waiter re-invokes after `queryInterval`
-- `pending: false` or omitted → `{ IsComplete: true }` — deploy proceeds
+- `pending: false` or omitted → `{ IsComplete: true, Data: result }` — deploy proceeds
+
+Pending responses carry no `Data`. The `cr.Provider` framework rejects
+`Data` alongside `IsComplete: false` with `"Data" is not allowed if "IsComplete" is "False"`,
+which fails the custom resource on the first pending poll. On completion the handler
+result is returned as `Data` only when it is a plain object; scalar and array results
+are reported complete without `Data` because CloudFormation accepts a map only.
+
+### Delete requests
+
+`migrationHandler` short-circuits `RequestType: "Delete"` without invoking the migration
+code. The resource being migrated is usually torn down in the same operation, so running
+migrations against it is wasted work, and a failure there strands the stack in
+`ROLLBACK_FAILED`.
 
 ## Building Migration Code
 
