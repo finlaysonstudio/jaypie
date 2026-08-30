@@ -1,5 +1,16 @@
+import { createRequire } from "node:module";
+
 import typescript from "@rollup/plugin-typescript";
 import { dts } from "rollup-plugin-dts";
+
+// Derive externals from package.json so a new dependency cannot drift out of
+// the list and get bundled (or warn as unresolved) on the next build.
+const pkg = createRequire(import.meta.url)("./package.json");
+const external = [
+  ...Object.keys(pkg.dependencies ?? {}),
+  ...Object.keys(pkg.peerDependencies ?? {}),
+  /^node:/,
+];
 
 // Bundle declarations: keep every bare specifier external so dts() inlines only
 // our own relative files, producing a single self-contained declaration that
@@ -31,12 +42,7 @@ export default [
         outDir: "dist/esm",
       }),
     ],
-    external: [
-      "@jaypie/errors",
-      "gray-matter",
-      "node:fs/promises",
-      "node:path",
-    ],
+    external,
   },
   // CommonJS version
   {
@@ -56,12 +62,7 @@ export default [
         outDir: "dist/cjs",
       }),
     ],
-    external: [
-      "@jaypie/errors",
-      "gray-matter",
-      "node:fs/promises",
-      "node:path",
-    ],
+    external,
   },
   // Type definitions (ESM): bundled to a single self-contained declaration file.
   {

@@ -1,5 +1,3 @@
-import { log } from "@jaypie/logger";
-
 //
 //
 // Export
@@ -7,6 +5,3 @@ import { log } from "@jaypie/logger";
 
 // Core
 export { JAYPIE, PROJECT } from "./core/constants.js";
-
-// Logger
-export { log };
