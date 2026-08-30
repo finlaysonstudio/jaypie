@@ -247,6 +247,22 @@ log.config({
 
 The `redact` hook runs ahead of built-in rules on every node; return a replacement value or `undefined` to defer.
 
+### Request headers
+
+`expressHandler` redacts request headers from its own list, not from
+`redactKeys`. `EXPRESS.HEADER.SENSITIVE` (`authorization`, `cookie`,
+`set-cookie`) always applies; a route adds to it per handler:
+
+```typescript
+expressHandler(handleWebhook, {
+  logBody: false,
+  sensitiveHeaders: ["x-hub-signature-256"],
+});
+```
+
+Reach for this on inbound webhook routes, where the provider signature header
+and the payload both belong out of the log. See ~express.
+
 ## Lambda Logging
 
 Lambda handlers automatically add context:

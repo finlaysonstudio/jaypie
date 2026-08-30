@@ -1,16 +1,18 @@
 # @jaypie/datadog
 
-Datadog metrics submission for Jaypie applications.
+Datadog metrics submission and observability queries for Jaypie applications.
 
 ## Purpose
 
-Provides functions to submit metrics to Datadog from Jaypie applications. Supports both direct API submission and StatsD via the Datadog Lambda extension.
+Provides functions to submit metrics to Datadog from Jaypie applications, plus a fabric service that reads logs, monitors, synthetics, metrics, and RUM back out. Metric submission supports both direct API submission and StatsD via the Datadog Lambda extension.
 
 ## Exports
 
 | Export | Type | Description |
 |--------|------|-------------|
 | `DATADOG` | Constant | Environment variable names, metric types, and default site |
+| `DATADOG_HELP` | Constant | Help text the service returns when called with no command |
+| `datadogService` | Fabric Service | Unified Datadog query service: `logs`, `log_analytics`, `monitors`, `synthetics`, `metrics`, `rum`, `validate` |
 | `flushLlmObs` | Function | Flush buffered LLM Observability spans via the runtime `dd-trace` singleton. No-op unless `DD_LLMOBS_ENABLED`; never throws. Bundler-safe |
 | `getLlmObs` | Function | Lazy, bundler-safe accessor for the runtime `tracer.llmobs` SDK, or `null` when `dd-trace` is unavailable |
 | `hasDatadogEnv` | Function | Returns `true` if any Datadog API key env var is set |
@@ -27,12 +29,16 @@ Provides functions to submit metrics to Datadog from Jaypie applications. Suppor
 ```
 src/
   constants.ts              # DATADOG constant with env vars and metric types
-  datadog.client.ts         # HTTP client for Datadog v1/v2 APIs
+  datadog.client.ts         # HTTP client for Datadog metric submission
+  datadog.service.ts        # datadogService — fabric service command router
+  datadogApi.client.ts      # HTTP client for the Datadog query APIs
+  datadogHelp.constant.ts   # DATADOG_HELP text returned by the service
   hasDatadogEnv.function.ts # Check for API key presence
   llmobs.ts                 # Bundler-safe flushLlmObs / getLlmObs / isLlmObsEnabled
   loadDatadogApiKey.function.ts # Load DD_API_KEY from secret ARN for LLM Observability
   index.ts                  # Public exports
   objectToKeyValueArray.pipeline.ts  # Convert tag objects to Datadog format
+  resolveDatadogKeys.function.ts     # API and application key resolution
   span.ts                   # tagSpan / traceSpan — tag and measure the active APM span
   statsd.client.ts          # StatsD client for Lambda extension
   submitDistribution.adapter.ts     # Distribution metric submission
@@ -50,6 +56,8 @@ The package reads these environment variables:
 | Variable | Purpose |
 |----------|---------|
 | `DATADOG_API_KEY` | Direct API key |
+| `DATADOG_API_KEY_SECRET` | Secrets Manager reference resolved by `getEnvSecret` |
+| `DATADOG_APP_KEY` / `DATADOG_APPLICATION_KEY` / `DD_APP_KEY` / `DD_APPLICATION_KEY` | Application key, required by the query service |
 | `SECRET_DATADOG_API_KEY` | AWS Secrets Manager ARN for API key |
 | `DATADOG_API_KEY_ARN` | AWS Secrets Manager ARN (alternate) |
 | `DD_API_KEY_SECRET_ARN` | AWS Secrets Manager ARN (Datadog convention) |
@@ -76,7 +84,9 @@ When `AWS_LAMBDA_FUNCTION_NAME` and `DD_API_KEY_SECRET_ARN` are both set, metric
 
 | Package | Purpose |
 |---------|---------|
-| `@jaypie/aws` | `getSecret()` for resolving API key from Secrets Manager |
+| `@jaypie/aws` | `getSecret()` and `getEnvSecret()` for resolving keys from Secrets Manager |
+| `@jaypie/errors` | Jaypie error types thrown by the service |
+| `@jaypie/fabric` | `fabricService()` for the query service |
 | `hot-shots` | StatsD client for Lambda extension |
 
 ## Peer Dependencies
@@ -101,5 +111,46 @@ import { submitMetric } from "@jaypie/testkit";
 
 // submitMetric, submitMetricSet, submitDistribution resolve to true
 // hasDatadogEnv returns false
-// DATADOG constant is passed through unchanged
+// DATADOG and DATADOG_HELP constants are passed through unchanged
+// datadogService is passed through, not stubbed
 ```
+
+## Key Resolution
+
+`resolveDatadogApiKey` and `resolveDatadogAppKey` in
+`resolveDatadogKeys.function.ts` own every key lookup. They are internal; the
+adapters and the query client both go through them. Order for the API key:
+
+1. An explicit `apiSecret`, resolved with `getSecret`
+2. `SECRET_DATADOG_API_KEY`, `DATADOG_API_KEY_ARN`, or `DD_API_KEY_SECRET_ARN`,
+   resolved with `getSecret`
+3. An explicit `apiKey`
+4. `getEnvSecret("DATADOG_API_KEY")`, then `getEnvSecret("DD_API_KEY")`
+
+`getEnvSecret` reads a `SECRET_<NAME>` or `<NAME>_SECRET` reference from Secrets
+Manager and falls back to the plain variable, so a deferred secret never has to
+be written into `process.env` first.
+
+The legacy `*_ARN` variables stay on `getSecret` deliberately: `getEnvSecret`
+requires `AWS_SESSION_TOKEN` before it will read a secret reference, so routing
+them through it would break a consumer resolving keys outside Lambda with
+ambient credentials.
+
+## Query Service
+
+`datadogService` is a fabric service. It registers with an LLM toolkit through
+`fabricTool({ service: datadogService })` or with an MCP server through
+`suite.register(datadogService)`.
+
+```typescript
+import { datadogService } from "@jaypie/datadog";
+
+await datadogService({ command: "logs", query: "status:error", from: "now-1h" });
+```
+
+Error contract: faults the caller can act on throw a Jaypie error, because
+neither `fabricTool()` nor `fabricMcp()` converts a throw into a result. A
+missing key is a `ConfigurationError`; a bad command or a missing required
+parameter is a `BadRequestError`. An unsuccessful Datadog response is not a
+throw: the result carries `success: false` and a status-specific `error` string,
+so a model reading the tool output can explain the failure and move on.

@@ -9,9 +9,9 @@
  * - release_notes: Package release notes
  */
 
+import { datadogService } from "@jaypie/datadog";
 import { createServiceSuite } from "@jaypie/fabric";
 
-import { datadogService } from "./suites/datadog/index.js";
 import {
   releaseNotesService,
   skillService,

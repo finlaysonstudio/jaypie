@@ -18,14 +18,6 @@ packages/mcp/
 │   ├── suite.ts              # ServiceSuite registration (simplified)
 │   ├── mcpExpressHandler.ts  # Express middleware for HTTP transport
 │   └── suites/               # Modular suite implementations
-│       ├── datadog/
-│       │   ├── index.ts      # Unified datadog service
-│       │   ├── help.md       # Datadog help documentation
-│       │   └── datadog.ts    # Datadog API functions
-│       ├── llm/
-│       │   ├── index.ts      # Unified llm service
-│       │   ├── help.md       # LLM help documentation
-│       │   └── llm.ts        # LLM functions
 │       └── docs/
 │           ├── index.ts      # skill, version, release_notes services
 │           └── release-notes/
@@ -60,6 +52,10 @@ The MCP server provides 4 unified router-style tools:
   - `release_notes("read", { package: "mcp", version: "0.5.0" })` - Read specific note
 
 ### Datadog Tool (requires DATADOG_API_KEY and DATADOG_APP_KEY)
+
+Defined in `@jaypie/datadog` as `datadogService` and registered here. Adding a
+command or changing its behavior means editing that package, not this one.
+
 - **`datadog`** - Access Datadog observability data
   - `datadog()` or `datadog("help")` - Show help
   - `datadog("logs", { query: "status:error" })` - Search logs
@@ -178,6 +174,8 @@ npm run format     # eslint --fix
 ## Dependencies
 
 - `@modelcontextprotocol/sdk` - MCP protocol implementation
+- `@jaypie/datadog` - `datadogService`, the Datadog observability tool
+- `@jaypie/errors` - Jaypie error types thrown by the suites
 - `@jaypie/kit` - YAML frontmatter parsing (`parseFrontmatter`) for release notes
 - `commander` - CLI argument parsing
 - `semver` - Version comparison for release notes filtering
@@ -189,15 +187,22 @@ The MCP server uses `@jaypie/fabric`'s ServiceSuite pattern with modular organiz
 
 ```
 suite.ts (simplified registration)
+    ├── @jaypie/datadog   → datadogService (6 commands)
     └── suites/
-        ├── datadog/index.ts  → datadogService (6 commands)
-        └── docs/index.ts     → skillService, versionService, releaseNotesService
+        └── docs/index.ts → skillService, versionService, releaseNotesService
 ```
 
-Each suite directory contains:
+Services may live in this package or in the package that owns the domain. A
+domain package exporting a `fabricService` is registered directly, so a consumer
+who wants the capability as an LLM tool does not take the MCP suite and its
+skill files as a dependency.
+
+Each local suite directory contains:
 - `index.ts` - Unified service with command router
 - `help.md` - Documentation returned when command is omitted
 - `<domain>.ts` - Implementation functions (for testability)
+
+Suites throw Jaypie errors from `@jaypie/errors`, never a vanilla `Error`.
 
 This architecture enables:
 - **Progressive disclosure** - Tools return help when no command is provided

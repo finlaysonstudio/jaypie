@@ -90,9 +90,18 @@ export interface ExpressStreamHandlerOptions {
   contentType?: string;
   format?: StreamFormat;
   locals?: Record<string, unknown | ExpressStreamHandlerLocals>;
+  /**
+   * Include the request body in the request log. Default true.
+   */
+  logBody?: boolean;
   name?: string;
   scrub?: ScrubOption;
   secrets?: string[];
+  /**
+   * Header names redacted from the request log in addition to
+   * `EXPRESS.HEADER.SENSITIVE`. Matching is case-insensitive.
+   */
+  sensitiveHeaders?: string[];
   setup?: JaypieStreamHandlerSetup[] | JaypieStreamHandlerSetup;
   teardown?: JaypieStreamHandlerTeardown[] | JaypieStreamHandlerTeardown;
   unavailable?: boolean;
@@ -205,9 +214,11 @@ function expressStreamHandler(
     chaos,
     contentType = getContentTypeForFormat(format),
     locals,
+    logBody,
     name,
     scrub,
     secrets,
+    sensitiveHeaders,
     setup = [],
     teardown = [],
     unavailable,
@@ -361,7 +372,9 @@ function expressStreamHandler(
     }
 
     try {
-      log.info.var({ req: summarizeRequest(req) });
+      log.info.var({
+        req: summarizeRequest(req, { logBody, sensitiveHeaders }),
+      });
 
       jaypieFunction = jaypieHandler(
         handler as unknown as (...args: unknown[]) => Promise<unknown>,

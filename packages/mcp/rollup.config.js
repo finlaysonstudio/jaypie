@@ -24,12 +24,7 @@ const onwarn = (warning, defaultHandler) => {
 
 export default [
   {
-    input: [
-      "src/index.ts",
-      "src/suite.ts",
-      "src/suites/datadog/index.ts",
-      "src/suites/docs/index.ts",
-    ],
+    input: ["src/index.ts", "src/suite.ts", "src/suites/docs/index.ts"],
     onwarn,
     output: {
       dir: "dist",
@@ -52,7 +47,6 @@ export default [
       }),
       copy({
         targets: [
-          { src: "src/suites/datadog/help.md", dest: "dist/suites/datadog" },
           {
             src: "src/suites/docs/release-notes/help.md",
             dest: "dist/suites/docs/release-notes",
@@ -61,6 +55,7 @@ export default [
       }),
     ],
     external: [
+      "@jaypie/datadog",
       "@jaypie/errors",
       "@jaypie/fabric",
       "@jaypie/fabric/mcp",

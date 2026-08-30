@@ -1,12 +1,7 @@
 import type { Request } from "express";
 import { redactAuth } from "@jaypie/logger";
 
-//
-//
-// Constants
-//
-
-const SENSITIVE_HEADERS = new Set(["authorization", "cookie", "set-cookie"]);
+import { EXPRESS } from "./constants.js";
 
 //
 //
@@ -15,11 +10,24 @@ const SENSITIVE_HEADERS = new Set(["authorization", "cookie", "set-cookie"]);
 
 export interface RequestSummary {
   baseUrl: string;
-  body: unknown;
+  body?: unknown;
   headers: Record<string, string | string[] | undefined>;
   method: string;
   query: Request["query"];
   url: string;
+}
+
+export interface SummarizeRequestOptions {
+  /**
+   * Include the request body. Set false for a route that receives a
+   * third-party payload the log should not carry.
+   */
+  logBody?: boolean;
+  /**
+   * Header names redacted in addition to `EXPRESS.HEADER.SENSITIVE`.
+   * Matching is case-insensitive.
+   */
+  sensitiveHeaders?: string[];
 }
 
 //
@@ -27,31 +35,40 @@ export interface RequestSummary {
 // Function Definition
 //
 
-function summarizeRequest(req: Request): RequestSummary {
-  // If body is a buffer, convert it to a string
-  let { body } = req;
-  if (Buffer.isBuffer(body)) {
-    body = body.toString();
-  }
-
-  // Redact sensitive headers
+function summarizeRequest(
+  req: Request,
+  { logBody = true, sensitiveHeaders = [] }: SummarizeRequestOptions = {},
+): RequestSummary {
+  // Redact sensitive headers; the option adds to the defaults
+  const redacted = new Set(
+    [...EXPRESS.HEADER.SENSITIVE, ...sensitiveHeaders].map((header) =>
+      header.toLowerCase(),
+    ),
+  );
   const headers: Record<string, string | string[] | undefined> = {
     ...req.headers,
   };
   for (const key of Object.keys(headers)) {
-    if (SENSITIVE_HEADERS.has(key.toLowerCase())) {
+    if (redacted.has(key.toLowerCase())) {
       headers[key] = redactAuth(headers[key]);
     }
   }
 
-  return {
+  const summary: RequestSummary = {
     baseUrl: req.baseUrl,
-    body,
     headers,
     method: req.method,
     query: req.query,
     url: req.url,
   };
+
+  if (logBody) {
+    // If body is a buffer, convert it to a string
+    const { body } = req;
+    summary.body = Buffer.isBuffer(body) ? body.toString() : body;
+  }
+
+  return summary;
 }
 
 //

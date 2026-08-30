@@ -99,9 +99,18 @@ export interface ExpressHandlerOptions {
    */
   fabric?: boolean;
   locals?: Record<string, unknown | ExpressHandlerLocals>;
+  /**
+   * Include the request body in the request log. Default true.
+   */
+  logBody?: boolean;
   name?: string;
   scrub?: ScrubOption;
   secrets?: string[];
+  /**
+   * Header names redacted from the request log in addition to
+   * `EXPRESS.HEADER.SENSITIVE`. Matching is case-insensitive.
+   */
+  sensitiveHeaders?: string[];
   setup?: JaypieHandlerSetup[] | JaypieHandlerSetup;
   teardown?: JaypieHandlerTeardown[] | JaypieHandlerTeardown;
   unavailable?: boolean;
@@ -321,9 +330,11 @@ function expressHandler<T>(
     chaos,
     fabric,
     locals,
+    logBody,
     name,
     scrub,
     secrets,
+    sensitiveHeaders,
     setup = [],
     teardown = [],
     unavailable,
@@ -523,7 +534,9 @@ function expressHandler<T>(
     let status: number = HTTP.CODE.OK;
 
     try {
-      log.info.var({ req: summarizeRequest(req) });
+      log.info.var({
+        req: summarizeRequest(req, { logBody, sensitiveHeaders }),
+      });
 
       // Initialize after logging is set up
 

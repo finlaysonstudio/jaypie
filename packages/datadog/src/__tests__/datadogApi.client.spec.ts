@@ -1,6 +1,41 @@
-import { describe, expect, it } from "vitest";
+import { getEnvSecret, getSecret } from "@jaypie/aws";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { Mock } from "vitest";
 
-import { buildDatadogQuery } from "../suites/datadog/datadog.js";
+import { DATADOG } from "../constants.js";
+import {
+  buildDatadogQuery,
+  getDatadogCredentials,
+  validateDatadogSetup,
+} from "../datadogApi.client.js";
+
+//
+//
+// Mock modules
+//
+
+vi.mock("@jaypie/aws");
+
+const KEY_ENV = Object.values(DATADOG.ENV);
+
+function clearKeyEnv(): void {
+  for (const name of KEY_ENV) {
+    delete process.env[name];
+    delete process.env[`SECRET_${name}`];
+    delete process.env[`${name}_SECRET`];
+  }
+}
+
+beforeEach(() => {
+  clearKeyEnv();
+  (getSecret as Mock).mockResolvedValue("MOCK_SECRET_VALUE");
+  (getEnvSecret as Mock).mockResolvedValue(undefined);
+});
+
+afterEach(() => {
+  clearKeyEnv();
+  vi.clearAllMocks();
+});
 
 describe("Datadog Query Building", () => {
   describe("buildDatadogQuery", () => {
@@ -122,6 +157,69 @@ describe("Datadog Query Building", () => {
       expect(parsed.filter.query).toContain(
         '@lambda.arn:"arn:aws:lambda:us-east-1:794038240169:function:test"',
       );
+    });
+  });
+});
+
+describe("Datadog Credentials", () => {
+  describe("getDatadogCredentials", () => {
+    it("Resolves both keys through getEnvSecret", async () => {
+      (getEnvSecret as Mock).mockImplementation(async (name: string) => {
+        if (name === DATADOG.ENV.DATADOG_API_KEY) return "MOCK_API_KEY";
+        if (name === DATADOG.ENV.DATADOG_APP_KEY) return "MOCK_APP_KEY";
+        return undefined;
+      });
+      await expect(getDatadogCredentials()).resolves.toEqual({
+        apiKey: "MOCK_API_KEY",
+        appKey: "MOCK_APP_KEY",
+      });
+    });
+    it("Returns null when the application key is missing", async () => {
+      (getEnvSecret as Mock).mockImplementation(async (name: string) =>
+        name === DATADOG.ENV.DATADOG_API_KEY ? "MOCK_API_KEY" : undefined,
+      );
+      await expect(getDatadogCredentials()).resolves.toBeNull();
+    });
+    it("Returns null when nothing is configured", async () => {
+      await expect(getDatadogCredentials()).resolves.toBeNull();
+    });
+    it("Resolves an API key held as a Secrets Manager reference", async () => {
+      process.env[DATADOG.ENV.SECRET_DATADOG_API_KEY] = "MOCK_API_KEY_ARN";
+      (getEnvSecret as Mock).mockImplementation(async (name: string) =>
+        name === DATADOG.ENV.DATADOG_APP_KEY ? "MOCK_APP_KEY" : undefined,
+      );
+      await expect(getDatadogCredentials()).resolves.toEqual({
+        apiKey: "MOCK_SECRET_VALUE",
+        appKey: "MOCK_APP_KEY",
+      });
+      expect(getSecret).toHaveBeenCalledWith("MOCK_API_KEY_ARN");
+    });
+  });
+
+  describe("validateDatadogSetup", () => {
+    it("Reports the plain variables", () => {
+      process.env[DATADOG.ENV.DATADOG_API_KEY] = "MOCK_API_KEY";
+      process.env[DATADOG.ENV.DD_APP_KEY] = "MOCK_APP_KEY";
+      const result = validateDatadogSetup();
+      expect(result.success).toBeTrue();
+      expect(result.apiKey.source).toBe(DATADOG.ENV.DATADOG_API_KEY);
+      expect(result.appKey.source).toBe(DATADOG.ENV.DD_APP_KEY);
+    });
+    it("Counts a secret reference as present", () => {
+      process.env[`SECRET_${DATADOG.ENV.DATADOG_APP_KEY}`] = "MOCK_APP_KEY_ARN";
+      process.env[DATADOG.ENV.DATADOG_API_KEY] = "MOCK_API_KEY";
+      const result = validateDatadogSetup();
+      expect(result.success).toBeTrue();
+      expect(result.appKey.present).toBeTrue();
+      expect(result.appKey.source).toBe(
+        `SECRET_${DATADOG.ENV.DATADOG_APP_KEY}`,
+      );
+    });
+    it("Reports both keys missing when nothing is set", () => {
+      const result = validateDatadogSetup();
+      expect(result.success).toBeFalse();
+      expect(result.apiKey.source).toBeNull();
+      expect(result.appKey.source).toBeNull();
     });
   });
 });

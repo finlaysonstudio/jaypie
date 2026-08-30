@@ -1,7 +1,13 @@
 /**
  * Datadog API integration module
  */
-import * as https from "node:https";
+import * as https from "https";
+
+import { DATADOG } from "./constants.js";
+import {
+  resolveDatadogApiKey,
+  resolveDatadogAppKey,
+} from "./resolveDatadogKeys.function.js";
 
 export interface DatadogCredentials {
   apiKey: string;
@@ -196,16 +202,49 @@ const nullLogger: Logger = {
   error: () => {},
 };
 
+const API_KEY_ENV = [
+  DATADOG.ENV.SECRET_DATADOG_API_KEY,
+  DATADOG.ENV.DATADOG_API_KEY_ARN,
+  DATADOG.ENV.DD_API_KEY_SECRET_ARN,
+  DATADOG.ENV.DATADOG_API_KEY,
+  DATADOG.ENV.DD_API_KEY,
+];
+
+const APP_KEY_ENV = [
+  DATADOG.ENV.DATADOG_APP_KEY,
+  DATADOG.ENV.DATADOG_APPLICATION_KEY,
+  DATADOG.ENV.DD_APP_KEY,
+  DATADOG.ENV.DD_APPLICATION_KEY,
+];
+
 /**
- * Get Datadog credentials from environment variables
+ * Report which environment variable supplies a key.
+ *
+ * A `SECRET_<NAME>` or `<NAME>_SECRET` reference counts as present, because
+ * `getEnvSecret` resolves it at call time. Reporting only the plain variable
+ * would say a key is missing while every query succeeds.
  */
-export function getDatadogCredentials(): DatadogCredentials | null {
-  const apiKey = process.env.DATADOG_API_KEY || process.env.DD_API_KEY;
-  const appKey =
-    process.env.DATADOG_APP_KEY ||
-    process.env.DATADOG_APPLICATION_KEY ||
-    process.env.DD_APP_KEY ||
-    process.env.DD_APPLICATION_KEY;
+function findKeySource(names: string[]): string | null {
+  for (const name of names) {
+    if (process.env[`SECRET_${name}`]) return `SECRET_${name}`;
+    if (process.env[`${name}_SECRET`]) return `${name}_SECRET`;
+    if (process.env[name]) return name;
+  }
+  return null;
+}
+
+/**
+ * Get Datadog credentials.
+ *
+ * Resolution runs through `getEnvSecret`, so a Secrets Manager reference is
+ * fetched at call time and a plain environment variable still works. Nothing
+ * has to be written into `process.env` by the caller first.
+ */
+export async function getDatadogCredentials(): Promise<DatadogCredentials | null> {
+  const [apiKey, appKey] = await Promise.all([
+    resolveDatadogApiKey(),
+    resolveDatadogAppKey(),
+  ]);
 
   if (!apiKey || !appKey) {
     return null;
@@ -218,21 +257,8 @@ export function getDatadogCredentials(): DatadogCredentials | null {
  * Validate Datadog setup without making API calls
  */
 export function validateDatadogSetup(): DatadogValidationResult {
-  const apiKeySource = process.env.DATADOG_API_KEY
-    ? "DATADOG_API_KEY"
-    : process.env.DD_API_KEY
-      ? "DD_API_KEY"
-      : null;
-
-  const appKeySource = process.env.DATADOG_APP_KEY
-    ? "DATADOG_APP_KEY"
-    : process.env.DATADOG_APPLICATION_KEY
-      ? "DATADOG_APPLICATION_KEY"
-      : process.env.DD_APP_KEY
-        ? "DD_APP_KEY"
-        : process.env.DD_APPLICATION_KEY
-          ? "DD_APPLICATION_KEY"
-          : null;
+  const apiKeySource = findKeySource(API_KEY_ENV);
+  const appKeySource = findKeySource(APP_KEY_ENV);
 
   return {
     apiKey: { present: apiKeySource !== null, source: apiKeySource },

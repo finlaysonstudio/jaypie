@@ -83,23 +83,67 @@ if (isDatadogForwardingEnabled()) {
 
 ## @jaypie/datadog Package
 
-The `@jaypie/datadog` package provides utilities:
+The `@jaypie/datadog` package submits metrics and queries observability data.
 
 ```typescript
-import { datadogMetric, datadogEvent } from "@jaypie/datadog";
+import { submitMetric, submitMetricSet } from "@jaypie/datadog";
 
-// Send custom metric
-await datadogMetric("checkout.completed", 1, {
-  tags: ["env:production", "service:checkout"],
+// Send one metric
+await submitMetric({
+  name: "checkout.completed",
+  value: 1,
+  tags: { service: "checkout" },
 });
 
-// Send event
-await datadogEvent({
-  title: "Deployment completed",
-  text: "Version 1.2.3 deployed to production",
-  tags: ["env:production"],
+// Send several in one call
+await submitMetricSet({
+  metrics: [
+    { name: "checkout.completed", value: 1 },
+    { name: "checkout.duration", value: 428 },
+  ],
 });
 ```
+
+`PROJECT_ENV`, `PROJECT_KEY`, `PROJECT_SERVICE`, `PROJECT_SPONSOR`, and
+`PROJECT_VERSION` are applied as tags automatically. On Lambda with the Datadog
+extension the submission goes over StatsD instead of the HTTP API.
+
+### Query service
+
+`datadogService` is a fabric service exporting the same commands as the MCP
+`datadog` tool. Register it wherever a tool registry is wanted, without taking
+`@jaypie/mcp` as a dependency:
+
+```typescript
+import { datadogService } from "@jaypie/datadog";
+import { fabricTool } from "@jaypie/fabric/llm";
+
+const tools = [fabricTool({ service: datadogService })];
+
+// Or call it directly
+await datadogService({ command: "logs", query: "status:error", from: "now-1h" });
+```
+
+Commands: `logs`, `log_analytics`, `monitors`, `synthetics`, `metrics`, `rum`,
+`validate`. Called with no command it returns its own help.
+
+A missing key throws `ConfigurationError`; a bad command or a missing required
+parameter throws `BadRequestError`. An unsuccessful Datadog response is **not** a
+throw: the result carries `success: false` and a status-specific `error` string,
+so an agent can read a 403 and explain it rather than losing the call to an
+exception.
+
+### Key resolution
+
+Both keys resolve at call time through `getEnvSecret`, so a Secrets Manager
+reference never has to be written into `process.env` first.
+
+| Variable | Purpose |
+|----------|---------|
+| `DATADOG_API_KEY` / `DD_API_KEY` | Plain API key |
+| `SECRET_DATADOG_API_KEY` / `DATADOG_API_KEY_ARN` / `DD_API_KEY_SECRET_ARN` | Secrets Manager ARN, resolved with `getSecret` |
+| `DATADOG_API_KEY_SECRET` | Secrets Manager reference, resolved with `getEnvSecret` |
+| `DATADOG_APP_KEY` / `DATADOG_APPLICATION_KEY` / `DD_APP_KEY` / `DD_APPLICATION_KEY` | Application key, required by the query service |
 
 ### LLM Observability primitives
 

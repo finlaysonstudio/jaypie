@@ -7,6 +7,10 @@ related: datadog, mcp, debugging, logs
 
 Datadog observability provided by the Jaypie MCP server.
 
+The service itself lives in `@jaypie/datadog` as `datadogService`. Anything
+described here is available outside the MCP server by importing that package;
+see ~datadog.
+
 ## Usage
 
 All parameters are passed at the top level (flat structure):
@@ -55,9 +59,20 @@ datadog({ command: "validate" })
 ```
 
 Returns:
-- `apiKey` - { present: boolean, source: "DATADOG_API_KEY" | "DD_API_KEY" | null }
-- `appKey` - { present: boolean, source: "DATADOG_APP_KEY" | "DATADOG_APPLICATION_KEY" | "DD_APP_KEY" | "DD_APPLICATION_KEY" | null }
+- `apiKey` - { present: boolean, source: string | null }
+- `appKey` - { present: boolean, source: string | null }
 - `success` - true if both keys are present
+
+`source` names the variable that supplies the key. A `SECRET_<NAME>` or
+`<NAME>_SECRET` reference counts as present and is reported under that name,
+because it resolves at call time.
+
+## Errors
+
+A missing key throws `ConfigurationError`. An unknown command or a missing
+required parameter throws `BadRequestError`. An unsuccessful Datadog response is
+not a throw: the result carries `success: false` and an `error` string naming the
+cause, so a 403 or a rate limit is readable rather than fatal.
 
 ## Environment Variables
 
@@ -68,6 +83,11 @@ Configure defaults via environment:
 | `DATADOG_API_KEY` or `DD_API_KEY` | API key (required) |
 | `DATADOG_APP_KEY` or `DD_APP_KEY` | Application key (required) |
 | `DD_ENV` | Default environment filter |
+
+Either key may be held in Secrets Manager instead. `SECRET_DATADOG_API_KEY`,
+`DATADOG_API_KEY_ARN`, and `DD_API_KEY_SECRET_ARN` take an ARN; any key name
+also accepts a `SECRET_<NAME>` or `<NAME>_SECRET` reference. Resolution happens
+on the call, so nothing has to be loaded into the environment first.
 
 ## Log Search
 
