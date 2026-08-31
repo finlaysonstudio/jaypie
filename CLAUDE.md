@@ -20,7 +20,7 @@
 | `@jaypie/aws` | AWS SDK utilities (SQS, Secrets Manager, Textract) |
 | `@jaypie/constructs` | CDK constructs for AWS infrastructure |
 | `@jaypie/core` | Core utilities (deprecated, migrating to kit) |
-| `@jaypie/datadog` | Datadog integration utilities |
+| `@jaypie/datadog` | Datadog metrics, observability queries, and the `datadogService` tool |
 | `@jaypie/errors` | Error types (ConfigurationError, etc.) |
 | `@jaypie/eslint` | Opinionated ESLint configuration |
 | `@jaypie/express` | Express.js handler utilities |

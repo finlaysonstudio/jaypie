@@ -1,10 +1,10 @@
-import { getSecret } from "@jaypie/aws";
 import { force } from "@jaypie/kit";
 import { log } from "@jaypie/logger";
 
 import { DATADOG } from "./constants.js";
 import { createDatadogClient } from "./datadog.client.js";
 import objectToKeyValueArrayPipeline from "./objectToKeyValueArray.pipeline.js";
+import { resolveDatadogApiKey } from "./resolveDatadogKeys.function.js";
 import getStatsDClient, { isLambdaWithExtension } from "./statsd.client.js";
 
 //
@@ -35,10 +35,8 @@ interface SubmitMetricStatsDOptions {
 //
 
 const submitMetric = async ({
-  apiKey = process.env[DATADOG.ENV.DATADOG_API_KEY],
-  apiSecret = process.env[DATADOG.ENV.SECRET_DATADOG_API_KEY] ||
-    process.env[DATADOG.ENV.DATADOG_API_KEY_ARN] ||
-    process.env[DATADOG.ENV.DD_API_KEY_SECRET_ARN],
+  apiKey,
+  apiSecret,
   name,
   type = DATADOG.METRIC.TYPE.UNKNOWN,
   value,
@@ -57,10 +55,6 @@ const submitMetric = async ({
     // Validate
     //
 
-    if (!apiKey && !apiSecret) {
-      log.warn("DATADOG_API_KEY was not provided");
-      return false;
-    }
     if (!name) {
       log.warn("Metric name was not provided");
       return false;
@@ -78,10 +72,7 @@ const submitMetric = async ({
     // Setup
     //
 
-    let resolvedApiKey = apiKey;
-    if (apiSecret) {
-      resolvedApiKey = await getSecret(apiSecret);
-    }
+    const resolvedApiKey = await resolveDatadogApiKey({ apiKey, apiSecret });
 
     if (!resolvedApiKey) {
       log.warn("DATADOG_API_KEY could not be resolved");

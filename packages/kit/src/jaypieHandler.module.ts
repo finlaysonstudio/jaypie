@@ -1,4 +1,6 @@
-import { JAYPIE, log as publicLogger } from "./core.js";
+import { log as publicLogger } from "@jaypie/logger";
+
+import { JAYPIE } from "./core.js";
 
 import {
   BadRequestError,

@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest";
 // Subject
 import {
   DATADOG,
+  DATADOG_HELP,
+  datadogService,
   hasDatadogEnv,
   loadDatadogApiKey,
   submitDistribution,
@@ -20,6 +22,11 @@ import {
 describe("Index", () => {
   it("Exports constants we expect", () => {
     expect(DATADOG).toBeObject();
+    expect(DATADOG_HELP).toBeString();
+  });
+  it("Exports the Datadog fabric service", () => {
+    expect(datadogService).toBeFunction();
+    expect(datadogService.alias).toBe("datadog");
   });
   it("Exports functions we expect", () => {
     expect(hasDatadogEnv).toBeFunction();

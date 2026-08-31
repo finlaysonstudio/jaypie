@@ -34,6 +34,9 @@ export default [
     ],
     external: [
       "@anthropic-ai/sdk",
+      // Optional peer, loaded through a dynamic import so a consumer without
+      // Bedrock never installs the SDK. External keeps that import intact.
+      "@aws-sdk/client-bedrock-runtime",
       "@google/genai",
       "@jaypie/aws",
       "@jaypie/errors",
@@ -74,6 +77,9 @@ export default [
     ],
     external: [
       "@anthropic-ai/sdk",
+      // Optional peer, loaded through a dynamic import so a consumer without
+      // Bedrock never installs the SDK. External keeps that import intact.
+      "@aws-sdk/client-bedrock-runtime",
       "@google/genai",
       "@jaypie/aws",
       "@jaypie/errors",

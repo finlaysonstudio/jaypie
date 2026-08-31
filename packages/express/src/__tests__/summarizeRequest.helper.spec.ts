@@ -122,4 +122,74 @@ describe("Summarize Request Helper", () => {
     // Make sure the buffer is unmodified
     expect(buffer).toEqual(Buffer.from("MOCK_BODY"));
   });
+  describe("Options", () => {
+    const mockRequest = (
+      headers: Record<string, string>,
+      body: unknown = "MOCK_BODY",
+    ) =>
+      ({
+        baseUrl: "",
+        body,
+        headers,
+        method: "POST",
+        query: {},
+        url: "/",
+      }) as unknown as Request;
+
+    it("Redacts headers named in sensitiveHeaders", () => {
+      const result = summarizeRequest(
+        mockRequest({
+          "x-hub-signature-256": "sha256=deadbeef",
+          "x-request-id": "MOCK_REQUEST_ID",
+        }),
+        { sensitiveHeaders: ["x-hub-signature-256"] },
+      );
+      expect(result.headers["x-hub-signature-256"]).not.toBe("sha256=deadbeef");
+      expect(result.headers["x-request-id"]).toBe("MOCK_REQUEST_ID");
+    });
+
+    it("Matches sensitiveHeaders without regard to case", () => {
+      const result = summarizeRequest(
+        mockRequest({ "x-slack-signature": "v0=abcdef" }),
+        { sensitiveHeaders: ["X-Slack-Signature"] },
+      );
+      expect(result.headers["x-slack-signature"]).not.toBe("v0=abcdef");
+    });
+
+    it("Adds to the defaults rather than replacing them", () => {
+      const result = summarizeRequest(
+        mockRequest({
+          authorization: "Bearer sk-proj-abc1234",
+          "x-hub-signature-256": "sha256=deadbeef",
+        }),
+        { sensitiveHeaders: ["x-hub-signature-256"] },
+      );
+      expect(result.headers.authorization).toBe("sk_1234");
+      expect(result.headers["x-hub-signature-256"]).not.toBe("sha256=deadbeef");
+    });
+
+    it("Omits the body when logBody is false", () => {
+      const result = summarizeRequest(mockRequest({ host: "localhost" }), {
+        logBody: false,
+      });
+      expect(result).not.toHaveProperty("body");
+      expect(result.headers.host).toBe("localhost");
+    });
+
+    it("Includes the body when logBody is true", () => {
+      const result = summarizeRequest(mockRequest({ host: "localhost" }), {
+        logBody: true,
+      });
+      expect(result.body).toBe("MOCK_BODY");
+    });
+
+    it("Does not read the body when logBody is false", () => {
+      const buffer = Buffer.from("MOCK_BODY");
+      const result = summarizeRequest(mockRequest({}, buffer), {
+        logBody: false,
+      });
+      expect(result).not.toHaveProperty("body");
+      expect(buffer).toEqual(Buffer.from("MOCK_BODY"));
+    });
+  });
 });

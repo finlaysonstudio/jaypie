@@ -35,7 +35,7 @@ src/
 │   ├── functions.lib.ts  # Re-exports from functions/
 │   └── http.lib.ts       # HTTP constants (codes, headers, methods)
 ├── types/               # TypeScript type definitions
-├── core.ts              # Re-exports JAYPIE, PROJECT, and logger
+├── core.ts              # Re-exports JAYPIE and PROJECT
 ├── index.ts             # Main entry point
 ├── isLocalEnv.ts        # Check if running locally
 ├── isNodeTestEnv.ts     # Check if NODE_ENV === "test"

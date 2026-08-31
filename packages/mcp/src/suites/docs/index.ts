@@ -1,6 +1,7 @@
 /**
  * Docs Suite - Documentation services (skill, version, release_notes)
  */
+import { BadRequestError } from "@jaypie/errors";
 import { fabricService } from "@jaypie/fabric";
 import { parseFrontmatter } from "@jaypie/kit";
 import {
@@ -275,8 +276,8 @@ export const releaseNotesService = fabricService({
       }
 
       case "read": {
-        if (!p.package) throw new Error("package is required");
-        if (!p.version) throw new Error("version is required");
+        if (!p.package) throw new BadRequestError("package is required");
+        if (!p.version) throw new BadRequestError("version is required");
         const filePath = path.join(
           RELEASE_NOTES_PATH,
           p.package,
@@ -286,7 +287,7 @@ export const releaseNotesService = fabricService({
       }
 
       default:
-        throw new Error(
+        throw new BadRequestError(
           `Unknown command: ${command}. Use release_notes() for help.`,
         );
     }

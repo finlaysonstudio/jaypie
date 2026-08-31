@@ -44,6 +44,27 @@ The `expressHandler` extends the base handler lifecycle with an additional `loca
 4. **Handler** - Business logic
 5. **Teardown** - Cleanup (always runs)
 
+### Request Logging
+
+Every request is logged in summary form. Two options control what the summary
+carries, and both apply to `expressStreamHandler` as well:
+
+```javascript
+app.post(
+  "/webhook/github",
+  expressHandler(handleWebhook, {
+    logBody: false,
+    sensitiveHeaders: ["x-hub-signature-256"],
+  }),
+);
+```
+
+`sensitiveHeaders` adds to the always-redacted defaults
+(`EXPRESS.HEADER.SENSITIVE`: `authorization`, `cookie`, `set-cookie`) and matches
+without regard to case. `logBody: false` omits the body, for a route whose
+payload is third-party data the log should not carry. Without either option the
+handler logs exactly what it always has.
+
 ### CORS Support
 
 Built-in CORS configuration for Express applications.

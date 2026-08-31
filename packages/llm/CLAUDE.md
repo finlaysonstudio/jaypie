@@ -994,7 +994,8 @@ Integration tests in `test/` directory require API keys:
 `npm run test:matrix -w packages/llm` runs every catalog model through every
 capability against the real API. It loads the repo-root `.env` itself. Env
 knobs: `APP_MODELS`, `APP_GROUP`, `APP_CAPABILITIES`, `APP_USER`, `APP_FORCE`
-(run cells pinned to `skip` and report what they do), `APP_RPS`.
+(run cells pinned to `skip` and report what they do), `APP_RPS`, `APP_TIMEOUT`
+(seconds a single cell may run before it is abandoned, default 180).
 
 **Collective evaluation** (`test/collective.ts`) governs how a run passes.
 Most models are judged cell by cell against `MATRIX_EXPECT`. Bedrock,
@@ -1019,6 +1020,20 @@ flake as a defect. The detail still prints in the ISSUES block, so a model that
 stops converging stays visible. `test/__tests__/matrix.spec.ts` covers the
 classification without touching a provider.
 
+**Cell deadline.** Every cell is bounded by `CELL_TIMEOUT_MS` (180 seconds,
+`APP_TIMEOUT` to override). A provider request carries no client-side deadline
+of its own, so before this a single unanswered call consumed the whole run: a
+Fireworks group spent its full 20-minute CI budget inside its first cell and
+printed no grid at all. A cell that runs out its deadline is inconclusive by
+the rule above — an unanswered request is an absence of evidence, not evidence
+the capability is missing — so it reports ⚠️ with `no response within 180s` and
+does not fail the run. The abandoned request keeps running; there is no
+cancellation to reach through `operate()`, so the deadline bounds how long the
+matrix waits, not how long the provider takes.
+
+An inconclusive or force-run cell prints in ISSUES tagged `unverified`, since a
+cell excused from the mismatch count would otherwise leave no summary line.
+
 **Request pacing** (`test/rateLimit.ts`) exists because Mistral enforces a
 requests-per-second ceiling that varies by tier and by model, and returns a
 bare 429 with no `Retry-After`. Pacing keeps the run under that ceiling rather
@@ -1028,6 +1043,23 @@ issuing many requests. Limiters are keyed by model and outlive the cell;
 scoping one to a cell lets each cell's first request fire unspaced, which is
 its own source of spurious `Rate limit exceeded` cells. Current rates: Mistral
 Large 0.07 req/s, the rest of the Mistral catalog 0.83 req/s.
+
+**`deepseek-v4-pro` and `minimax-m2p7` are excluded from the live matrix** as of
+2026-08-31. Both passed every cell on 2026-08-23 and 2026-08-25. Fireworks now
+answers `minimax-m2p7` with "Model not found, inaccessible, and/or not
+deployed" on every capability, and `deepseek-v4-pro` never responds at all —
+five cells at the 180-second deadline, 15 of the job's 20 available minutes.
+The six remaining Fireworks models pass. Both stay cataloged and priced, and
+their `MATRIX_EXPECT` entries stay in place for when they serve again. Confirm
+the ids against the Fireworks account before removing the exclusion.
+
+**`mistral-large-latest` is excluded from the live matrix** as of 2026-08-30:
+the CI Mistral key answers every capability with "This model is not available
+in your subscription tier", so all seven cells fail on an entitlement rather
+than on the model, while `mistral-small-latest` passes all seven on the same
+key. It stays cataloged in `constants.ts` and priced in `COST`. Restoring the
+tier, or retiring the id, means removing its `MATRIX_EXCLUDE` line in
+`test/models.ts`.
 
 Pacing is not sufficient on its own: a paced run still lost a
 `mistral-large-latest / pdf` cell to `Rate limit exceeded` while spacing

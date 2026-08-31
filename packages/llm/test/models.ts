@@ -65,6 +65,21 @@ const MATRIX_EXCLUDE = new Set<string>([
   // Document extraction over POST /v1/ocr, not chat completions — every
   // capability cell would fail by construction.
   MODEL.MISTRAL.OCR,
+  // Temporary. As of 2026-08-30 the CI Mistral key answers every capability
+  // with "This model is not available in your subscription tier", so all seven
+  // cells fail on an entitlement, not on the model. mistral-small-latest passes
+  // all seven on the same key. Restore the tier or drop the id from the catalog
+  // and remove this line; it stays cataloged and priced meanwhile.
+  MODEL.MISTRAL.LARGE,
+  // Temporary. Both passed every cell on 2026-08-23 and 2026-08-25 and answer
+  // nothing usable as of 2026-08-31: MINIMAX returns "Model not found,
+  // inaccessible, and/or not deployed" on every capability, and DEEPSEEK never
+  // responds — five cells at the 180s cell deadline, 15 of the CI job's 20
+  // available minutes. Fireworks withdrew or renamed them; the six remaining
+  // Fireworks models pass. Both stay cataloged and priced. Confirm the ids
+  // against the Fireworks account and remove these lines when they serve again.
+  MODEL.FIREWORKS.DEEPSEEK,
+  MODEL.FIREWORKS.MINIMAX,
 ]);
 
 // Flatten MODEL.* (including the BEDROCK and OPENROUTER subtrees) into ids.

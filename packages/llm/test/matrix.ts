@@ -20,6 +20,7 @@
 //   APP_CAPABILITIES comma-separated subset of capabilities to run
 //   APP_FORCE        run cells expected to "skip" and report what they do
 //   APP_RPS          requests/second ceiling, overriding test/rateLimit.ts
+//   APP_TIMEOUT      seconds a single cell may run before it is abandoned (180)
 //   APP_USER         user tag forwarded to provider calls
 //   LOG_LEVEL        set to "warn" or higher to silence Jaypie trace/debug
 //
@@ -87,6 +88,18 @@ const USER = process.env.APP_USER || "[matrix] Jaypie User";
 // Debugging knob: run cells MATRIX_EXPECT pins to "skip" instead of returning
 // early, so a skipped cell can be observed without editing models.ts.
 const FORCE = /^(1|true|yes)$/i.test(process.env.APP_FORCE ?? "");
+// Per-cell deadline. A provider request that never answers has no client-side
+// deadline of its own, so one stalled call would consume the whole run and the
+// grid would print nothing at all — which is how a Fireworks group burned its
+// full 20-minute CI budget on its first cell with zero results. Bounding each
+// cell keeps the rest of the grid observable.
+const MILLISECONDS_PER_SECOND = 1000;
+const DEFAULT_CELL_TIMEOUT_SECONDS = 180;
+const CELL_TIMEOUT_SECONDS =
+  Number(process.env.APP_TIMEOUT) > 0
+    ? Number(process.env.APP_TIMEOUT)
+    : DEFAULT_CELL_TIMEOUT_SECONDS;
+const CELL_TIMEOUT_MS = CELL_TIMEOUT_SECONDS * MILLISECONDS_PER_SECOND;
 
 //
 //
@@ -130,7 +143,8 @@ export interface CapabilityResult {
   detail?: string;
   /**
    * The run ended without demonstrating anything about the capability, so the
-   * cell carries no verdict to compare against its expectation. Reported as a
+   * cell carries no verdict to compare against its expectation — an exhausted
+   * turn budget, or a request that outlived the cell deadline. Reported as a
    * warning and excluded from the mismatch count. See `errorResult`.
    */
   inconclusive?: boolean;
@@ -166,9 +180,49 @@ function describeError(error: unknown): string {
   return String(error);
 }
 
+/** Raised when a cell exceeds CELL_TIMEOUT_MS. See `withCellTimeout`. */
+export class CellTimeoutError extends Error {
+  constructor(seconds: number) {
+    super(`no response within ${seconds}s`);
+    this.name = "CellTimeoutError";
+  }
+}
+
+/**
+ * Reject with a `CellTimeoutError` if `promise` has not settled within
+ * CELL_TIMEOUT_MS.
+ *
+ * The abandoned request keeps running — there is no cancellation to reach
+ * through `operate()` — so this bounds how long the matrix waits, not how long
+ * the provider takes. That is the point: the run moves to the next cell and the
+ * process exits when `main()` finishes, orphaned socket and all.
+ */
+export async function withCellTimeout<T>(promise: Promise<T>): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<never>((_resolve, reject) => {
+        timer = setTimeout(
+          () => reject(new CellTimeoutError(CELL_TIMEOUT_SECONDS)),
+          CELL_TIMEOUT_MS,
+        );
+      }),
+    ]);
+  } finally {
+    // Without this the pending timer holds the event loop open for the rest of
+    // the budget after a cell that answered in time.
+    clearTimeout(timer);
+  }
+}
+
 /**
  * Turn an `operate()` error into a failed cell, marking the outcomes that say
  * nothing about the capability.
+ *
+ * A cell that ran out its deadline is one such outcome: an unanswered request
+ * is an absence of evidence, not evidence the capability is missing, so it is
+ * reported and excluded from the mismatch count rather than failing the run.
  *
  * An exhausted turn budget is the case in hand (issue #505): a model that keeps
  * calling tools until `turns` runs out has not shown it lacks the capability,
@@ -181,6 +235,9 @@ function describeError(error: unknown): string {
  * discriminator is `LlmResponseErrorReason.MaxTurns`, set by the operate loop.
  */
 export function errorResult(error: unknown): CapabilityResult {
+  if (error instanceof CellTimeoutError) {
+    return { ok: false, detail: error.message, inconclusive: true };
+  }
   const reason =
     error && typeof error === "object"
       ? (error as { reason?: string }).reason
@@ -418,7 +475,9 @@ async function runCell(
   let outcome: CapabilityResult;
   let warnings: string[] = [];
   try {
-    const captured = await captureWarnings(() => RUNNERS[capability](llm));
+    const captured = await captureWarnings(() =>
+      withCellTimeout(RUNNERS[capability](llm)),
+    );
     outcome = captured.result;
     warnings = captured.warnings;
   } catch (error) {
@@ -539,13 +598,19 @@ function formatIssues(
     if (!cells) continue;
     const collective = collectiveFor(model);
     for (const [cap, cell] of cells) {
-      if (cell.matches && cell.warnings.length === 0) continue;
+      const excused = cell.matches && cell.actual !== cell.expected;
+      if (cell.matches && !excused && cell.warnings.length === 0) continue;
       const parts = [`[${label} / ${cap}]`];
       if (!cell.matches) {
         const tag = collective
           ? `${collective.name.toLowerCase()}-fail`
           : "mismatch";
         parts.push(`${tag} expected=${cell.expected}, got=${cell.actual}`);
+      } else if (excused) {
+        // The cell missed its expectation but was not counted against the run:
+        // a forced skip, or a run that produced no verdict (turn budget, cell
+        // deadline). Silence would bury a provider that answered nothing.
+        parts.push(`unverified expected=${cell.expected}, got=${cell.actual}`);
       }
       if (cell.detail) parts.push(`detail=${cell.detail}`);
       if (cell.warnings.length > 0) {

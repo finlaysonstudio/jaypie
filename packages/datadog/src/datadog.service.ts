@@ -1,10 +1,19 @@
 /**
- * Datadog Suite - Unified Datadog observability access
+ * Datadog Service - Unified Datadog observability access
+ *
+ * A fabric service, so it registers directly with an LLM toolkit through
+ * `fabricTool()` or with an MCP server through `suite.register()`.
+ *
+ * Error contract: faults the caller can act on throw a Jaypie error, because
+ * neither `fabricTool()` nor `fabricMcp()` converts a throw into a result.
+ * A missing key is a `ConfigurationError`; a bad command or a missing required
+ * parameter is a `BadRequestError`. An unsuccessful Datadog response is not a
+ * throw: the result carries `success: false` and a status-specific `error`
+ * string, so a model reading the tool output can explain the failure and move
+ * on rather than losing the call to an exception.
  */
+import { BadRequestError, ConfigurationError } from "@jaypie/errors";
 import { fabricService } from "@jaypie/fabric";
-import * as fs from "node:fs/promises";
-import * as path from "node:path";
-import { fileURLToPath } from "node:url";
 
 import {
   aggregateDatadogLogs,
@@ -16,19 +25,14 @@ import {
   searchDatadogLogs,
   searchDatadogRum,
   validateDatadogSetup,
-} from "./datadog.js";
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+} from "./datadogApi.client.js";
+import { DATADOG_HELP } from "./datadogHelp.constant.js";
 
 // Silent logger for direct execution
 const log = {
   error: () => {},
   info: () => {},
 };
-
-async function getHelp(): Promise<string> {
-  return fs.readFile(path.join(__dirname, "help.md"), "utf-8");
-}
 
 // Flattened input type for the unified Datadog service
 interface DatadogInput {
@@ -158,12 +162,12 @@ export const datadogService = fabricService({
     const { command } = params;
 
     if (!command || command === "help") {
-      return getHelp();
+      return DATADOG_HELP;
     }
 
-    const credentials = getDatadogCredentials();
+    const credentials = await getDatadogCredentials();
     if (!credentials) {
-      throw new Error(
+      throw new ConfigurationError(
         "Datadog credentials not found. Set DATADOG_API_KEY and DATADOG_APP_KEY.",
       );
     }
@@ -180,7 +184,7 @@ export const datadogService = fabricService({
       }
 
       case "logs": {
-        const result = await searchDatadogLogs(
+        return searchDatadogLogs(
           credentials,
           {
             env: params.env,
@@ -194,14 +198,12 @@ export const datadogService = fabricService({
           },
           log,
         );
-        if (!result.success) throw new Error(result.error);
-        return result;
       }
 
       case "log_analytics": {
         const groupByArray = parseArray(params.groupBy);
         if (!groupByArray || groupByArray.length === 0) {
-          throw new Error(
+          throw new BadRequestError(
             "groupBy is required (comma-separated field names, e.g., service,status)",
           );
         }
@@ -214,7 +216,7 @@ export const datadogService = fabricService({
               },
             ]
           : [{ aggregation: "count" as const }];
-        const result = await aggregateDatadogLogs(
+        return aggregateDatadogLogs(
           credentials,
           {
             compute,
@@ -228,14 +230,12 @@ export const datadogService = fabricService({
           },
           log,
         );
-        if (!result.success) throw new Error(result.error);
-        return result;
       }
 
       case "monitors": {
         const statusArray = parseArray(params.status) as
           ("Alert" | "Warn" | "No Data" | "OK")[] | undefined;
-        const result = await listDatadogMonitors(
+        return listDatadogMonitors(
           credentials,
           {
             monitorTags: parseArray(params.monitorTags),
@@ -245,21 +245,13 @@ export const datadogService = fabricService({
           },
           log,
         );
-        if (!result.success) throw new Error(result.error);
-        return result;
       }
 
       case "synthetics": {
         if (params.testId) {
-          const result = await getDatadogSyntheticResults(
-            credentials,
-            params.testId,
-            log,
-          );
-          if (!result.success) throw new Error(result.error);
-          return result;
+          return getDatadogSyntheticResults(credentials, params.testId, log);
         }
-        const result = await listDatadogSynthetics(
+        return listDatadogSynthetics(
           credentials,
           {
             tags: parseArray(params.tags),
@@ -267,12 +259,11 @@ export const datadogService = fabricService({
           },
           log,
         );
-        if (!result.success) throw new Error(result.error);
-        return result;
       }
 
       case "metrics": {
-        if (!params.query) throw new Error("query is required for metrics");
+        if (!params.query)
+          throw new BadRequestError("query is required for metrics");
         const now = Math.floor(Date.now() / 1000);
         const fromStr = params.from || "1h";
         let fromTs: number;
@@ -292,17 +283,15 @@ export const datadogService = fabricService({
         }
         const toStr = params.to || "now";
         const toTs = toStr === "now" ? now : parseInt(toStr, 10);
-        const result = await queryDatadogMetrics(
+        return queryDatadogMetrics(
           credentials,
           { from: fromTs, query: params.query, to: toTs },
           log,
         );
-        if (!result.success) throw new Error(result.error);
-        return result;
       }
 
       case "rum": {
-        const result = await searchDatadogRum(
+        return searchDatadogRum(
           credentials,
           {
             from: params.from,
@@ -312,15 +301,15 @@ export const datadogService = fabricService({
           },
           log,
         );
-        if (!result.success) throw new Error(result.error);
-        return result;
       }
 
       default:
-        throw new Error(`Unknown command: ${command}. Use datadog() for help.`);
+        throw new BadRequestError(
+          `Unknown command: ${command}. Use datadog() for help.`,
+        );
     }
   },
 });
 
-// Re-export types and functions for testing
-export * from "./datadog.js";
+// Re-export types and functions
+export * from "./datadogApi.client.js";

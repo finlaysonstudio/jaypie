@@ -23,8 +23,40 @@ Submit custom metrics to Datadog:
 ```javascript
 import { submitMetric } from "@jaypie/datadog";
 
-await submitMetric("custom.metric", 42, { tags: ["env:production"] });
+await submitMetric({
+  name: "custom.metric",
+  value: 42,
+  tags: { env: "production" },
+});
 ```
+
+The API key resolves at call time. A plain `DATADOG_API_KEY` works; so does a
+Secrets Manager reference (`SECRET_DATADOG_API_KEY`, `DATADOG_API_KEY_ARN`,
+`DD_API_KEY_SECRET_ARN`, or `DATADOG_API_KEY_SECRET`), which is fetched on the
+call rather than loaded into the environment beforehand.
+
+### Observability Queries
+
+`datadogService` reads logs, monitors, synthetics, metrics, and RUM events back
+out of Datadog. It is a fabric service, so it registers with an LLM toolkit or an
+MCP server directly:
+
+```javascript
+import { datadogService } from "@jaypie/datadog";
+import { fabricTool } from "@jaypie/fabric/llm";
+
+const tools = [fabricTool({ service: datadogService })];
+
+await datadogService({ command: "logs", query: "status:error", from: "now-1h" });
+```
+
+Commands are `logs`, `log_analytics`, `monitors`, `synthetics`, `metrics`,
+`rum`, and `validate`. Calling it with no command returns its help. Querying
+requires an application key (`DATADOG_APP_KEY`) alongside the API key.
+
+An unsuccessful Datadog response comes back as data — `success: false` with an
+`error` describing the cause — rather than as a thrown exception, so a model
+holding the tool can report the failure and continue.
 
 ### Observability
 

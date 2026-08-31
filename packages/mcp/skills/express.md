@@ -48,14 +48,41 @@ app.get("/api/users", expressHandler(async (req, res) => {
 expressHandler(handler, {
   fabric: false,     // Wrap return with fabricApiResponse before res.json (default false)
   locals: {},        // Values passed to res.locals
+  logBody: true,     // Include the request body in the request log
   name: "handler",   // Handler name for logging
+  scrub: true,       // Withhold error detail from the client, the log, or both
   secrets: [],       // AWS Secrets names to load into process.env
+  sensitiveHeaders: [], // Header names redacted in addition to the defaults
   setup: async (req, res) => {},    // Pre-handler setup
   teardown: async (req, res) => {}, // Post-handler cleanup
   unavailable: false, // Return 503 immediately if true
   validate: async (req, res) => {}, // Validation before handler
 });
 ```
+
+### Request Logging
+
+`expressHandler` logs a summary of every request. Two options control what that
+summary carries; both also apply to `expressStreamHandler`.
+
+```typescript
+app.post(
+  "/webhook/github",
+  expressHandler(handleGitHubWebhook, {
+    logBody: false,
+    sensitiveHeaders: ["x-hub-signature-256"],
+  }),
+);
+```
+
+- `sensitiveHeaders` is **additive**. `EXPRESS.HEADER.SENSITIVE`
+  (`authorization`, `cookie`, `set-cookie`) is always redacted; these names are
+  redacted as well. Matching is case-insensitive.
+- `logBody: false` omits the body entirely, for a route whose payload is
+  third-party data the log should not carry.
+
+Reach for these on inbound webhook routes, where the provider sends a signature
+header and a body neither of which belongs in the log.
 
 ### fabricApiResponse and `{ fabric: true }`
 
@@ -165,13 +192,17 @@ app.use(cors({ origin: ["https://a.com", "https://b.com"] }));
 ## EXPRESS Constants
 
 ```typescript
-import { EXPRESS } from "jaypie";
+import { EXPRESS } from "@jaypie/express";
 
-EXPRESS.HEADER.POWERED_BY    // "x-powered-by" (removed by decorateResponse)
-EXPRESS.HEADER.PROJECT_KEY   // "x-project-key"
-EXPRESS.HEADER.REQUEST_ID    // "x-request-id"
-EXPRESS.PROJECT.EXPRESS      // "@jaypie/express"
+EXPRESS.HEADER.SENSITIVE  // ["authorization", "cookie", "set-cookie"]
+EXPRESS.PATH.ANY          // RegExp matching every path in Express 4 and 5
+EXPRESS.PATH.ID           // "/:id"
+EXPRESS.PATH.ROOT         // RegExp matching the root path
 ```
+
+Header *names* live on `HTTP.HEADER` in `@jaypie/kit`
+(`HTTP.HEADER.POWERED_BY`, `HTTP.HEADER.PROJECT_KEY`,
+`HTTP.HEADER.REQUEST_ID`), not on `EXPRESS`.
 
 ## Request Properties
 

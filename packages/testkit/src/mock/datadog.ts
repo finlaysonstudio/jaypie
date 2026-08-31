@@ -8,6 +8,10 @@ import {
 import * as original from "@jaypie/datadog";
 
 export const DATADOG = original.DATADOG;
+export const DATADOG_HELP = original.DATADOG_HELP;
+// The fabric service is passed through: its command router is the behavior
+// under test whenever a consumer registers it as a tool.
+export const datadogService = original.datadogService;
 export const flushLlmObs = createMockReturnedFunction(undefined);
 export const getLlmObs = createMockReturnedFunction(null);
 export const hasDatadogEnv = createMockWrappedFunction(

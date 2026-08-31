@@ -4,6 +4,26 @@
 //
 
 export { DATADOG } from "./constants.js";
+export { datadogService } from "./datadog.service.js";
+export type {
+  DatadogAnalyticsBucket,
+  DatadogAnalyticsResult,
+  DatadogCredentials,
+  DatadogLogEntry,
+  DatadogMetricSeries,
+  DatadogMetricsResult,
+  DatadogMonitor,
+  DatadogMonitorsResult,
+  DatadogRumEvent,
+  DatadogRumResult,
+  DatadogSearchResult,
+  DatadogSyntheticResult,
+  DatadogSyntheticResultsResult,
+  DatadogSyntheticTest,
+  DatadogSyntheticsResult,
+  DatadogValidationResult,
+} from "./datadogApi.client.js";
+export { DATADOG_HELP } from "./datadogHelp.constant.js";
 export { default as hasDatadogEnv } from "./hasDatadogEnv.function.js";
 export { flushLlmObs, getLlmObs, isLlmObsEnabled } from "./llmobs.js";
 export { default as loadDatadogApiKey } from "./loadDatadogApiKey.function.js";
