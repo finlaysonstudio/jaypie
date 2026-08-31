@@ -1,7 +1,13 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { LlmResponseErrorReason } from "../../src/index.js";
-import { classifyActual, errorResult, matchesExpected } from "../matrix.js";
+import {
+  CellTimeoutError,
+  classifyActual,
+  errorResult,
+  matchesExpected,
+  withCellTimeout,
+} from "../matrix.js";
 
 //
 //
@@ -20,6 +26,10 @@ const RATE_LIMIT_ERROR = {
   status: 429,
   title: "Too Many Requests",
 };
+
+// The documented default cell deadline, asserted here so a change to it is a
+// deliberate edit rather than a silent one.
+const DEFAULT_CELL_TIMEOUT_MS = 180_000;
 
 describe("Matrix classification", () => {
   describe("Base Cases", () => {
@@ -57,6 +67,36 @@ describe("Matrix classification", () => {
         expect(outcome.detail).toBe(
           "Too Many Requests (429): Model requested function call but exceeded 24 turns",
         );
+      });
+    });
+
+    describe("A cell is bounded by a deadline", () => {
+      it("resolves a cell that answers in time", async () => {
+        await expect(withCellTimeout(Promise.resolve("done"))).resolves.toBe(
+          "done",
+        );
+      });
+
+      it("abandons a cell that never answers", async () => {
+        vi.useFakeTimers();
+        try {
+          const cell = withCellTimeout(new Promise(() => {}));
+          const settled = vi.fn();
+          cell.catch(settled);
+          await vi.advanceTimersByTimeAsync(DEFAULT_CELL_TIMEOUT_MS - 1);
+          expect(settled).not.toHaveBeenCalled();
+          await vi.advanceTimersByTimeAsync(1);
+          await expect(cell).rejects.toBeInstanceOf(CellTimeoutError);
+        } finally {
+          vi.useRealTimers();
+        }
+      });
+
+      it("classifies an abandoned cell as inconclusive, not a failure", () => {
+        const outcome = errorResult(new CellTimeoutError(180));
+        expect(outcome.inconclusive).toBe(true);
+        expect(outcome.detail).toBe("no response within 180s");
+        expect(classifyActual(outcome, [])).toBe("warn");
       });
     });
   });

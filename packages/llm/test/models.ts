@@ -65,6 +65,12 @@ const MATRIX_EXCLUDE = new Set<string>([
   // Document extraction over POST /v1/ocr, not chat completions — every
   // capability cell would fail by construction.
   MODEL.MISTRAL.OCR,
+  // Temporary. As of 2026-08-30 the CI Mistral key answers every capability
+  // with "This model is not available in your subscription tier", so all seven
+  // cells fail on an entitlement, not on the model. mistral-small-latest passes
+  // all seven on the same key. Restore the tier or drop the id from the catalog
+  // and remove this line; it stays cataloged and priced meanwhile.
+  MODEL.MISTRAL.LARGE,
 ]);
 
 // Flatten MODEL.* (including the BEDROCK and OPENROUTER subtrees) into ids.
