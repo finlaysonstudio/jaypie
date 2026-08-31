@@ -1044,6 +1044,15 @@ scoping one to a cell lets each cell's first request fire unspaced, which is
 its own source of spurious `Rate limit exceeded` cells. Current rates: Mistral
 Large 0.07 req/s, the rest of the Mistral catalog 0.83 req/s.
 
+**`deepseek-v4-pro` and `minimax-m2p7` are excluded from the live matrix** as of
+2026-08-31. Both passed every cell on 2026-08-23 and 2026-08-25. Fireworks now
+answers `minimax-m2p7` with "Model not found, inaccessible, and/or not
+deployed" on every capability, and `deepseek-v4-pro` never responds at all —
+five cells at the 180-second deadline, 15 of the job's 20 available minutes.
+The six remaining Fireworks models pass. Both stay cataloged and priced, and
+their `MATRIX_EXPECT` entries stay in place for when they serve again. Confirm
+the ids against the Fireworks account before removing the exclusion.
+
 **`mistral-large-latest` is excluded from the live matrix** as of 2026-08-30:
 the CI Mistral key answers every capability with "This model is not available
 in your subscription tier", so all seven cells fail on an entitlement rather
