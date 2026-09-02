@@ -78,7 +78,7 @@ Rates are the standard short-context text tier. Introductory, batch, flex, prior
 // the match is on a keyword inside the id, which an alias would hide.
 await Llm.operate(input, { model: "gpt-5.6-sol" });    // "gpt"    -> OpenAI
 await Llm.operate(input, { model: "claude-opus-5" });  // "claude" -> Anthropic
-await Llm.operate(input, { model: "gemini-3.7-flash" }); // "gemini" -> Google
+await Llm.operate(input, { model: "gemini-3.8-flash" }); // "gemini" -> Google
 ```
 
 ## Core Methods
