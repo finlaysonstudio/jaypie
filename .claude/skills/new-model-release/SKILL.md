@@ -121,13 +121,3 @@ With a provider key present, exercise the seven capability cells against the liv
 ```bash
 APP_MODELS=<model-id> npm run test:llm:matrix
 ```
-
-## Publishing this skill
-
-This skill is repository-local. Publishing it to the MCP server, so consumers reach it through `mcp__jaypie__skill("new-model-release")`, means copying it to `packages/mcp/skills/new-model-release.md` with `description` / `related` frontmatter in place of `name` / `description`, then hand-editing three curated listings, which are not generated:
-
-- `packages/mcp/skills/skills.md` — the Categories table
-- `packages/mcp/skills/development.md` — the `## Skills` alias table
-- `packages/mcp/skills/agents.md` — the category lists in the AGENTS.md snippet
-
-Then bump `@jaypie/mcp`. A rebuild is not required for the skills to resolve: the store reads `packages/mcp/skills/` from the package root, not from `dist/`.
