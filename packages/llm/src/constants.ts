@@ -24,7 +24,7 @@ export const MODEL = {
   NOVA_LITE: "us.amazon.nova-2-lite-v1:0",
   NOVA_PRO: "amazon.nova-pro-v1:0",
   // Anthropic
-  FABLE: "claude-fable-5",
+  FABLE: "claude-fable-5-1",
   OPUS: "claude-opus-5",
   SONNET: "claude-sonnet-5",
   HAIKU: "claude-haiku-4-5",
@@ -185,6 +185,14 @@ export const COST: Record<string, LlmModelCost> = {
   },
   "claude-fable-5": {
     cachedInputRead: 1.0,
+    cachedInputWrite: { "1h": 20.0, "5m": 12.5 },
+    input: 10.0,
+    output: 50.0,
+  },
+  // Fable 5.1 keeps Fable 5's $10/$50 and cache-write rates but reads cache at
+  // $0.25/MTok — 0.025x input, a quarter of Fable 5's rate.
+  "claude-fable-5-1": {
+    cachedInputRead: 0.25,
     cachedInputWrite: { "1h": 20.0, "5m": 12.5 },
     input: 10.0,
     output: 50.0,
