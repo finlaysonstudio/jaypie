@@ -1376,6 +1376,19 @@ describe("FireworksAdapter", () => {
         expect(result.shouldRetry).toBe(false);
       });
 
+      it("classifies a floating point NaN generation failure as retryable", () => {
+        const error = {
+          status: 400,
+          message:
+            "Floating point NaN (not-a-number) is detected in generation. It's likely a model issue leading to overflow. Please contact Fireworks if it's a Fireworks-hosted model or check your model weights if it's a custom model.",
+        };
+
+        const result = fireworksAdapter.classifyError(error);
+
+        expect(result.category).toBe(ErrorCategory.Retryable);
+        expect(result.shouldRetry).toBe(true);
+      });
+
       it("classifies retryable error by status code", () => {
         const error = { status: 500, message: "Internal server error" };
 
