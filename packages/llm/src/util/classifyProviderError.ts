@@ -6,11 +6,15 @@ import { ClassifiedError, ErrorCategory } from "../operate/types.js";
 //
 
 /**
- * Transient structured-output compile failures. The provider caches the
- * compiled grammar after a successful compile, so an immediate retry of the
- * identical request typically succeeds (issue #422).
+ * Transient generation failures worth an immediate retry:
+ * - Structured-output compile failures. The provider caches the compiled
+ *   grammar after a successful compile, so an immediate retry of the
+ *   identical request typically succeeds (issue #422).
+ * - Fireworks numerical overflow ("Floating point NaN ... is detected in
+ *   generation"), a sampling-time fault that does not reproduce reliably.
  */
 const RETRYABLE_MESSAGE_PATTERNS = [
+  "floating point nan",
   "grammar compilation timed out",
   "grammar compilation timeout",
 ] as const;

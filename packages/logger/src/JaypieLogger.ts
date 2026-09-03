@@ -292,7 +292,7 @@ export class JaypieLogger {
   /**
    * Merge data into the current session's report. Requires an active
    * session (started via setup()); logs a warning and is a no-op otherwise.
-   * Warns when overwriting an existing key. Emitted by teardown().
+   * Logs at debug when overwriting an existing key. Emitted by teardown().
    */
   public report(data: Record<string, unknown>): void {
     if (!this._sessionActive) {
@@ -301,7 +301,7 @@ export class JaypieLogger {
     }
     for (const key of Object.keys(data)) {
       if (key in this._report) {
-        this.warn(`[logger] Overwriting report key: ${key}`);
+        this.debug(`[logger] Overwriting report key: ${key}`);
       }
     }
     Object.assign(this._report, data);

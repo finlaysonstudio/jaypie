@@ -349,8 +349,10 @@ missing capability (issue #505).
 Classification lives in each provider adapter's `classifyError`, which first
 consults the shared `classifyProviderError` pass so that cross-provider
 conditions agree: retryable structured-output compile timeouts (e.g. Anthropic
-`Grammar compilation timed out.`, issue #422), exhausted quota, and billing
-failures classify the same everywhere. A daily-quota `429` is classified as
+`Grammar compilation timed out.`, issue #422), retryable numerical overflow
+(e.g. Fireworks `Floating point NaN (not-a-number) is detected in
+generation.`), exhausted quota, and billing failures classify the same
+everywhere. A daily-quota `429` is classified as
 `Quota` (terminal), not `RateLimit`. Quota errors are never retried: waiting
 does not refill an exhausted plan.
 

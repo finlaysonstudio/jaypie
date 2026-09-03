@@ -31,6 +31,18 @@ describe("classifyProviderError", () => {
     });
   });
 
+  it("classifies a Fireworks floating point NaN as retryable", () => {
+    const result = classifyProviderError(
+      new Error(
+        "Floating point NaN (not-a-number) is detected in generation. It's likely a model issue leading to overflow. Please contact Fireworks if it's a Fireworks-hosted model or check your model weights if it's a custom model.",
+      ),
+    );
+    expect(result).toMatchObject({
+      category: ErrorCategory.Retryable,
+      shouldRetry: true,
+    });
+  });
+
   it("classifies exhausted quota as terminal quota", () => {
     const result = classifyProviderError(
       new Error(
