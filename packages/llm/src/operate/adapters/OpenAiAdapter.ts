@@ -150,6 +150,16 @@ export class OpenAiAdapter extends BaseProviderAdapter {
   }
 
   /**
+   * Whether to request `reasoning.summary: "auto"` for this model so reasoning
+   * text can be extracted from the response. OpenAI gates this on its own
+   * `gpt-5+` / o-series patterns; OpenAI-compatible subclasses whose reasoning
+   * models carry other names override it.
+   */
+  protected supportsReasoningSummary(model: string): boolean {
+    return isReasoningModel(model);
+  }
+
+  /**
    * Whether to emit `prompt_cache_key` (OpenAI Responses API). Overridable by
    * OpenAI-compatible subclasses whose backend rejects the field.
    */
@@ -201,7 +211,7 @@ export class OpenAiAdapter extends BaseProviderAdapter {
 
     // Enable reasoning summary for reasoning models (o1, o3, etc.)
     // This allows us to extract reasoning text from the response
-    if (isReasoningModel(model)) {
+    if (this.supportsReasoningSummary(model)) {
       openaiRequest.reasoning = {
         summary: "auto",
       };

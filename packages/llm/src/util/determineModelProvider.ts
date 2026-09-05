@@ -39,6 +39,17 @@ export function determineModelProvider(input?: string): {
     };
   }
 
+  // Check for explicit meta: prefix — "meta" is not a match word (it would
+  // capture Bedrock's "meta.llama-*" and OpenRouter's "meta-llama/*"), so the
+  // prefix is the way to force the Meta Model API for an id without "muse"
+  if (input.startsWith("meta:")) {
+    const model = input.slice("meta:".length);
+    return {
+      model,
+      provider: PROVIDER.META.NAME,
+    };
+  }
+
   // Check for explicit bedrock: prefix
   if (input.startsWith("bedrock:")) {
     const model = input.slice("bedrock:".length);
@@ -71,6 +82,12 @@ export function determineModelProvider(input?: string): {
     return {
       model: PROVIDER.GOOGLE.DEFAULT,
       provider: PROVIDER.GOOGLE.NAME,
+    };
+  }
+  if (input === PROVIDER.META.NAME) {
+    return {
+      model: PROVIDER.META.DEFAULT,
+      provider: PROVIDER.META.NAME,
     };
   }
   if (input === PROVIDER.MISTRAL.NAME) {
@@ -142,6 +159,18 @@ export function determineModelProvider(input?: string): {
       return {
         model: input,
         provider: PROVIDER.MISTRAL.NAME,
+      };
+    }
+  }
+
+  // Check Meta match words (after Bedrock and the "/" rule — "meta.llama-*"
+  // is a Bedrock id and "meta-llama/*" an OpenRouter route, which is why
+  // "muse" rather than "meta" is the match word)
+  for (const matchWord of PROVIDER.META.MODEL_MATCH_WORDS) {
+    if (lowerInput.includes(matchWord)) {
+      return {
+        model: input,
+        provider: PROVIDER.META.NAME,
       };
     }
   }

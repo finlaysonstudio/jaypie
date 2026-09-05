@@ -108,6 +108,7 @@ export { FireworksProvider } from "./providers/fireworks/index.js";
 /** @deprecated Use GoogleProvider — "Google" is the provider; Gemini is the model family */
 export { GoogleProvider as GeminiProvider } from "./providers/google/index.js";
 export { GoogleProvider } from "./providers/google/index.js";
+export { MetaProvider } from "./providers/meta/index.js";
 export { MistralProvider } from "./providers/mistral/index.js";
 export type {
   MistralOcrPage,

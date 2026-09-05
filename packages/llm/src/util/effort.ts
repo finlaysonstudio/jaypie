@@ -215,6 +215,35 @@ export function toOpenRouterEffort(effort: LlmEffort): LlmEffortMapping {
   return { papered: false, value: OPENROUTER_EFFORT[effort] };
 }
 
+// Meta Model API `reasoning.effort` — minimal | low | medium | high | xhigh |
+// max. `none` is rejected (Muse Spark always reasons) and is never emitted.
+// `max` is limited to the Standard-tier `muse-spark-1.3`; every other id
+// (older releases and every `-contributor` id) tops out at `xhigh`, so
+// `highest` there is model-dependent papering and logs at debug.
+const META_EFFORT: Record<LlmEffort, string> = {
+  [EFFORT.LOWEST]: "minimal",
+  [EFFORT.LOW]: "low",
+  [EFFORT.MEDIUM]: "medium",
+  [EFFORT.HIGH]: "high",
+  [EFFORT.HIGHEST]: "xhigh",
+};
+
+const META_MAX_EFFORT_MODELS = [/^muse-spark-1\.3$/] as const;
+
+export function toMetaEffort(
+  effort: LlmEffort,
+  { model }: { model: string },
+): LlmEffortMapping {
+  const native = META_EFFORT[effort];
+  if (native === "xhigh") {
+    if (META_MAX_EFFORT_MODELS.some((pattern) => pattern.test(model))) {
+      return { papered: false, value: "max" };
+    }
+    return { papered: true, value: "xhigh" };
+  }
+  return { papered: false, value: native };
+}
+
 // Mistral `reasoning_effort` — the request schema advertises
 // none | minimal | low | medium | high | xhigh | max, but per-model validation
 // is far tighter: every model that reasons at all accepts only `none` and
