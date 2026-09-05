@@ -1053,6 +1053,16 @@ does not fail the run. The abandoned request keeps running; there is no
 cancellation to reach through `operate()`, so the deadline bounds how long the
 matrix waits, not how long the provider takes.
 
+**Provider refusal.** A response that settles with `stopReason: "refusal"` is
+inconclusive by the same rule: the provider's classifier ended the response,
+not the model's capability, and the same cell answers on the next call. The
+`claude-opus-5` pdf cell refused on five of seven CI runs across two branches
+(2026-09-05) and answered on every local run of the same fixture, including
+after the CI key was rotated. The stop reason only reaches the result on the
+exchange envelope, so the matrix requests one on every call (`observed`) and
+`earlyResult` reads it. The cell reports ⚠️ with the stop reason in ISSUES,
+so a model that keeps refusing stays visible.
+
 An inconclusive or force-run cell prints in ISSUES tagged `unverified`, since a
 cell excused from the mismatch count would otherwise leave no summary line.
 
