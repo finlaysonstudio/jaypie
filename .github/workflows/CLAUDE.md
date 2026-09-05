@@ -81,7 +81,7 @@ No docs deployment step (unlike `deploy-env-*.yml`).
 | `typecheck` | `continue-on-error: true` |
 | `test` | Node 24 (stable) + 25 (experimental, `continue-on-error: true`) |
 | `build-llm` | Detects changes to `packages/llm/**` via `dorny/paths-filter`; builds and uploads artifact |
-| `test-llm-matrix` | Only runs when `packages/llm/**` changed; matrix: `anthropic`, `openai`, `gemini-xai`, `fireworks`, `openrouter`, `bedrock`. Mistral is deliberately absent — see below |
+| `test-llm-matrix` | Only runs when `packages/llm/**` changed; matrix: `anthropic`, `openai`, `gemini-xai`, `meta`, `fireworks`, `openrouter`, `bedrock`. Mistral is deliberately absent — see below |
 | `test-llm-matrix-complete` | Aggregator job — fails if any matrix group failed |
 
 **Mistral is not exercised in CI.** The provider's availability does not hold
