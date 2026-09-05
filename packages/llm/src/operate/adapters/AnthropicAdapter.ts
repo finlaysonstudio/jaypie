@@ -1200,6 +1200,18 @@ export class AnthropicAdapter extends BaseProviderAdapter {
       (block) => block.type === "text",
     ) as Anthropic.TextBlock | undefined;
 
+    // A turn that is neither tool use nor text carries nothing this adapter can
+    // return. Returning undefined on its own leaves the caller with "expected a
+    // string, got undefined" and no way to tell a refusal from a thinking-only
+    // turn or a truncated one, so name what the response actually held. The
+    // call still settles: the content is genuinely absent, not an error.
+    if (!textBlock && response.stop_reason !== "tool_use") {
+      const blocks = response.content.map((block) => block.type).join(", ");
+      log.warn(
+        `[AnthropicAdapter] Response carried no text block; stop_reason '${response.stop_reason ?? "none"}', blocks [${blocks || "none"}]`,
+      );
+    }
+
     return textBlock?.text;
   }
 }
