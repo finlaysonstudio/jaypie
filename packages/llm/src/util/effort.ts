@@ -60,13 +60,17 @@ export function logPaperedEffort({
 }
 
 // OpenAI Responses API `reasoning.effort`.
-// Full ladder: minimal | low | medium | high | xhigh (plus `none`). Availability
-// is not uniform across the gpt-5 line:
+// Full ladder: minimal | low | medium | high | xhigh | max (plus `none`).
+// Availability is not uniform across the line:
 //   - `xhigh` was introduced at gpt-5.2 and has been continuous since, so it is
 //     safe for our gpt-5.4 default and everything newer.
 //   - `minimal` shipped on gpt-5/5.1, was dropped at gpt-5.2, and returned on
-//     the current line; because that history is non-monotonic we only trust it
-//     from gpt-5.4 (our default floor) onward.
+//     the gpt-5.4 line; because that history is non-monotonic we only trust it
+//     from gpt-5.4 (our default floor) through gpt-5. gpt-6 drops it again: the
+//     gpt-6-astra model page lists low | medium | high | xhigh | max
+//     (verified 2026-09-04).
+//   - `max` sits above `xhigh` from gpt-6 onward, so `highest` reaches a real
+//     top rung there instead of stopping at `xhigh`.
 // Outside those windows (older gpt-5, o-series) the extreme rung is clamped and
 // the mapping reports `papered: true`.
 const OPENAI_EFFORT: Record<LlmEffort, string> = {
@@ -105,13 +109,19 @@ export function toOpenAiEffort(
 ): LlmEffortMapping {
   const native = OPENAI_EFFORT[effort];
   const version = openAiGptVersion(model);
-  // `minimal` only from gpt-5.4 (non-monotonic history; absent on o-series)
-  if (native === "minimal" && !atLeast(version, 5, 4)) {
+  // `minimal` only from gpt-5.4 through the gpt-5 line (non-monotonic history;
+  // absent on o-series, dropped again at gpt-6)
+  if (
+    native === "minimal" &&
+    (!atLeast(version, 5, 4) || atLeast(version, 6, 0))
+  ) {
     return { papered: true, value: "low" };
   }
-  // `xhigh` from gpt-5.2 onward (absent on older gpt-5 and o-series)
-  if (native === "xhigh" && !atLeast(version, 5, 2)) {
-    return { papered: true, value: "high" };
+  // `max` from gpt-6 onward; `xhigh` from gpt-5.2 onward (absent on older
+  // gpt-5 and o-series)
+  if (native === "xhigh") {
+    if (atLeast(version, 6, 0)) return { papered: false, value: "max" };
+    if (!atLeast(version, 5, 2)) return { papered: true, value: "high" };
   }
   return { papered: false, value: native };
 }
