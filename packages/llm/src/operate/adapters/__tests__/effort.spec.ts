@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { log } from "@jaypie/logger";
 
-import { EFFORT } from "../../../constants.js";
+import { EFFORT, MODEL } from "../../../constants.js";
 import {
   LlmMessageRole,
   LlmMessageType,
@@ -103,6 +103,21 @@ describe("effort mapping util", () => {
       value: "low",
     });
     expect(toOpenAiEffort(EFFORT.LOWEST, { model: "o3" })).toEqual({
+      papered: true,
+      value: "low",
+    });
+  });
+
+  it("OpenAI reaches max and drops minimal on gpt-6", () => {
+    const model = MODEL.ASTRA;
+    expect(toOpenAiEffort(EFFORT.HIGHEST, { model })).toEqual({
+      papered: false,
+      value: "max",
+    });
+    expect(toOpenAiEffort(EFFORT.HIGH, { model }).value).toBe("high");
+    expect(toOpenAiEffort(EFFORT.MEDIUM, { model }).value).toBe("medium");
+    expect(toOpenAiEffort(EFFORT.LOW, { model }).value).toBe("low");
+    expect(toOpenAiEffort(EFFORT.LOWEST, { model })).toEqual({
       papered: true,
       value: "low",
     });

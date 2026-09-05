@@ -136,9 +136,10 @@ that predates `xhigh`). `known` marks papering that follows from the provider's
 scale alone, which is always the outcome for that provider and is therefore
 never logged. `logPaperedEffort` logs the rest at debug, where the substitution
 depends on the specific model. OpenAI availability is version-gated: `xhigh`
-(`highest`) only for gpt-5.2+, `minimal` (`lowest`) only for gpt-5.4+ (its history is non-monotonic —
-present on 5/5.1, dropped at 5.2, back on the current line); outside those
-windows the end clamps to `high`/`low`.
+(`highest`) only for gpt-5.2+, `minimal` (`lowest`) only for gpt-5.4 through
+gpt-5 (its history is non-monotonic — present on 5/5.1, dropped at 5.2, back on
+the gpt-5.4 line, gone again at gpt-6); outside those windows the end clamps to
+`high`/`low`. gpt-6 adds `max` above `xhigh`, so `highest` reaches `max` there.
 
 ### Output Token Limits
 

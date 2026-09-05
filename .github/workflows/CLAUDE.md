@@ -81,8 +81,16 @@ No docs deployment step (unlike `deploy-env-*.yml`).
 | `typecheck` | `continue-on-error: true` |
 | `test` | Node 24 (stable) + 25 (experimental, `continue-on-error: true`) |
 | `build-llm` | Detects changes to `packages/llm/**` via `dorny/paths-filter`; builds and uploads artifact |
-| `test-llm-matrix` | Only runs when `packages/llm/**` changed; matrix: `anthropic`, `openai`, `gemini-xai`, `openrouter`, `bedrock` |
+| `test-llm-matrix` | Only runs when `packages/llm/**` changed; matrix: `anthropic`, `openai`, `gemini-xai`, `fireworks`, `openrouter`, `bedrock`. Mistral is deliberately absent — see below |
 | `test-llm-matrix-complete` | Aggregator job — fails if any matrix group failed |
+
+**Mistral is not exercised in CI.** The provider's availability does not hold
+up to a per-push run: the shard has failed on a `Rate limit exceeded` 429
+across all seven cells, and before that on `This model is not available in your
+subscription tier`, neither of which says anything about the code under test.
+The group is removed from both workflows and `MISTRAL_API_KEY` is no longer
+passed. Mistral models stay cataloged, priced, and adapter-tested; reach the
+live cells on demand with `APP_GROUP=mistral npm run test:llm:matrix`.
 
 **Bedrock two-step role assumption** (matrix group `bedrock`):
 1. `configure-aws` with `vars.AWS_ROLE_ARN` (sandbox environment)

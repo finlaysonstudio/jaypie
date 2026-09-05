@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { log } from "@jaypie/logger";
+
 import { AnthropicAdapter, anthropicAdapter } from "../AnthropicAdapter.js";
 import { EFFORT, PROVIDER } from "../../../constants.js";
 import { Toolkit } from "../../../tools/Toolkit.class.js";
@@ -345,6 +347,50 @@ describe("AnthropicAdapter", () => {
         expect(result.content).toBe("Hello there!");
         expect(result.hasToolCalls).toBe(false);
         expect(result.stopReason).toBe("end_turn");
+      });
+
+      it("warns naming stop_reason and blocks when no text block is present", () => {
+        const warn = vi.spyOn(log, "warn").mockImplementation(() => {});
+        const response = {
+          content: [{ type: "thinking", thinking: "..." }],
+          stop_reason: "max_tokens",
+          model: PROVIDER.ANTHROPIC.MODEL.LARGE,
+          usage: {
+            input_tokens: 10,
+            output_tokens: 20,
+          },
+        };
+
+        const result = anthropicAdapter.parseResponse(response);
+
+        expect(result.content).toBeUndefined();
+        expect(warn).toHaveBeenCalledWith(
+          expect.stringContaining("no text block"),
+        );
+        expect(warn).toHaveBeenCalledWith(
+          expect.stringContaining("max_tokens"),
+        );
+        expect(warn).toHaveBeenCalledWith(expect.stringContaining("thinking"));
+      });
+
+      it("stays quiet when a tool use turn carries no text block", () => {
+        const warn = vi.spyOn(log, "warn").mockImplementation(() => {});
+        warn.mockClear();
+        const response = {
+          content: [
+            { type: "tool_use", id: "tool-123", name: "test", input: {} },
+          ],
+          stop_reason: "tool_use",
+          model: PROVIDER.ANTHROPIC.MODEL.LARGE,
+          usage: {
+            input_tokens: 10,
+            output_tokens: 20,
+          },
+        };
+
+        anthropicAdapter.parseResponse(response);
+
+        expect(warn).not.toHaveBeenCalled();
       });
 
       it("detects tool use", () => {

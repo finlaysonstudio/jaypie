@@ -67,6 +67,7 @@ export const MODEL = {
     SMALL: "mistral-small-latest", // mistral-small-2603
   },
   // OpenAI
+  ASTRA: "gpt-6-astra",
   SOL: "gpt-5.6-sol",
   TERRA: "gpt-5.6-terra",
   LUNA: "gpt-5.6-luna",
@@ -361,6 +362,10 @@ export const COST: Record<string, LlmModelCost> = {
   "gpt-5.6-luna": { cachedInputRead: 0.02, input: 0.2, output: 1.2 },
   "gpt-5.6-sol": { cachedInputRead: 0.5, input: 5.0, output: 30.0 },
   "gpt-5.6-terra": { cachedInputRead: 0.2, input: 2.0, output: 12.0 },
+  // Sol's standard rate is the $5/$30 above; the $4/$20 on the pricing page
+  // runs through 2026-11-21 and is excluded as promotional. Astra launched at
+  // its standard rate.
+  "gpt-6-astra": { cachedInputRead: 1.0, input: 10.0, output: 50.0 },
   // xAI — https://docs.x.ai/docs/models
   // Rates are the sub-200K tier; xAI doubles every figure at or above 200K
   // input tokens, which is the long-prompt surcharge COST excludes by policy.
@@ -551,7 +556,15 @@ export const PROVIDER = {
       SMALL: "gpt-5.4-mini",
       TINY: "gpt-5.4-nano",
     },
-    MODEL_MATCH_WORDS: ["gpt", "luna", "openai", "sol", "terra", /^o\d/],
+    MODEL_MATCH_WORDS: [
+      "astra",
+      "gpt",
+      "luna",
+      "openai",
+      "sol",
+      "terra",
+      /^o\d/,
+    ],
     NAME: "openai" as const,
   },
   OPENROUTER: {

@@ -32,7 +32,7 @@ the alias rather than the id it currently resolves to. Read the id off
 
 | Provider | Match Keywords | Default Model (`PROVIDER.*.DEFAULT`) |
 |----------|----------------|---------------|
-| OpenAI | "openai", "gpt", "sol", "terra", "luna", /^o\d/ | `MODEL.SOL` |
+| OpenAI | "openai", "gpt", "astra", "sol", "terra", "luna", /^o\d/ | `MODEL.SOL` |
 | Anthropic | "anthropic", "claude", "fable", "haiku", "mythos", "opus", "sonnet" | `MODEL.SONNET` |
 | Google | "google", "gemini" | `MODEL.GEMINI_FLASH` |
 | Fireworks | "fireworks" (also matched inside ids like `accounts/fireworks/models/...`) | `MODEL.FIREWORKS.GLM` |
@@ -48,7 +48,7 @@ Mistral's family names mostly do not contain the substring "mistral" (`ministral
 ### Model Constants
 
 - **`PROVIDER.<name>.DEFAULT`** — the single default model per provider (above), used when no `model` is given.
-- **`LLM.MODEL.*`** — the named model catalog (e.g. `MODEL.SONNET`, `MODEL.SOL`, `MODEL.GEMINI_FLASH`, `MODEL.GROK`, `MODEL.NOVA_PRO`, `MODEL.NOVA_LITE`), plus three nested subtrees: `MODEL.FIREWORKS.*` for Fireworks serverless models (`DEEPSEEK`, `GLM`, `GPT_OSS`, `INKLING`, `KIMI`, `MINIMAX`, `NEMOTRON`, `QWEN`), `MODEL.MISTRAL.*` (`LARGE`, `OCR`, `SMALL`), and `MODEL.OPENROUTER.*` for provider-prefixed routes (`GLM`, `LUNA`, `SONNET`). Pick specific models from here. `MODEL.MISTRAL.OCR` serves `POST /v1/ocr` rather than chat completions: it is priced per page, carries no `COST` entry, and is reached through `MistralProvider.ocr()`. Amazon's Nova models are first-class ids served over Bedrock; Bedrock's third-party routes are not catalogued — pass the literal id (e.g. `us.anthropic.claude-sonnet-4-6`) and `determineModelProvider` resolves it to `bedrock`.
+- **`LLM.MODEL.*`** — the named model catalog (e.g. `MODEL.SONNET`, `MODEL.ASTRA`, `MODEL.SOL`, `MODEL.GEMINI_FLASH`, `MODEL.GROK`, `MODEL.NOVA_PRO`, `MODEL.NOVA_LITE`), plus three nested subtrees: `MODEL.FIREWORKS.*` for Fireworks serverless models (`DEEPSEEK`, `GLM`, `GPT_OSS`, `INKLING`, `KIMI`, `MINIMAX`, `NEMOTRON`, `QWEN`), `MODEL.MISTRAL.*` (`LARGE`, `OCR`, `SMALL`), and `MODEL.OPENROUTER.*` for provider-prefixed routes (`GLM`, `LUNA`, `SONNET`). Pick specific models from here. `MODEL.MISTRAL.OCR` serves `POST /v1/ocr` rather than chat completions: it is priced per page, carries no `COST` entry, and is reached through `MistralProvider.ocr()`. Amazon's Nova models are first-class ids served over Bedrock; Bedrock's third-party routes are not catalogued — pass the literal id (e.g. `us.anthropic.claude-sonnet-4-6`) and `determineModelProvider` resolves it to `bedrock`.
 - The catalog is the **single source of truth for CI coverage**: `packages/llm/test/models.ts` derives the live capability matrix from `MODEL.*` plus each `PROVIDER.*.DEFAULT`, and the workflow shards it by provider. Adding a model to `MODEL.*` puts it under test; no id list exists anywhere else.
 - **Deprecated:** the size-tier map `PROVIDER.<name>.MODEL.{DEFAULT,LARGE,SMALL,TINY}`, the `DEFAULT.MODEL` bundle, and `ALL` are `@deprecated` and retired in 2.0 — use `PROVIDER.*.DEFAULT` for defaults and `MODEL.*` for named models.
 
@@ -873,15 +873,17 @@ Anthropic `lowest`) is the only possible outcome for that provider and is not
 logged. Papering that depends on the specific model, such as OpenAI clamping
 `highest` on a model predating `xhigh`, logs at `log.debug`. OpenAI's extremes
 are also version-gated: `xhigh` (`highest`) applies
-only to gpt-5.2+ and `minimal` (`lowest`) only to gpt-5.4+ (its history is
-non-monotonic); older gpt-5 / o-series clamp the end to `high`/`low`.
+only to gpt-5.2+ and `minimal` (`lowest`) only to gpt-5.4 through gpt-5 (its
+history is non-monotonic and gpt-6 drops it again); older gpt-5 / o-series
+clamp the end to `high`/`low`. From gpt-6 onward `highest` reaches `max`, the
+rung above `xhigh`, and `lowest` clamps to `low`.
 
 Gating (effort is silently ignored where reasoning is unavailable, never
 erroring):
 
 - **OpenAI** — only reasoning models (`gpt-5+`, `o`-series); merges with the
   auto `reasoning.summary`. `xhigh` requires gpt-5.2+, `minimal` requires
-  gpt-5.4+ (else clamped).
+  gpt-5.4 through gpt-5, and gpt-6+ takes `max` for `highest` (else clamped).
 - **Anthropic** — only Claude 4.5+ / 5 models (`output_config.effort`); merges
   alongside a structured-output `format` config.
 - **Google** — `thinkingLevel` for Gemini 3.x, `thinkingBudget` for Gemini 2.5;

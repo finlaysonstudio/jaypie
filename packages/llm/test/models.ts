@@ -65,11 +65,12 @@ const MATRIX_EXCLUDE = new Set<string>([
   // Document extraction over POST /v1/ocr, not chat completions — every
   // capability cell would fail by construction.
   MODEL.MISTRAL.OCR,
-  // Temporary. As of 2026-08-30 the CI Mistral key answers every capability
-  // with "This model is not available in your subscription tier", so all seven
-  // cells fail on an entitlement, not on the model. mistral-small-latest passes
-  // all seven on the same key. Restore the tier or drop the id from the catalog
-  // and remove this line; it stays cataloged and priced meanwhile.
+  // Temporary. As of 2026-08-30 the Mistral key answers every capability with
+  // "This model is not available in your subscription tier", so all seven cells
+  // fail on an entitlement, not on the model. mistral-small-latest reaches the
+  // API on the same key. Restore the tier or drop the id from the catalog and
+  // remove this line; it stays cataloged and priced meanwhile. This only
+  // affects on-demand runs now — CI no longer shards Mistral.
   MODEL.MISTRAL.LARGE,
   // Temporary. Both passed every cell on 2026-08-23 and 2026-08-25 and answer
   // nothing usable as of 2026-08-31: MINIMAX returns "Model not found,
@@ -145,6 +146,11 @@ const MATRIX_EXPECT: Record<
 // Models under test = the whole MODEL.* catalog plus each provider's resolved
 // default, deduped, minus the exclude set. Provider is resolved from the id so
 // the matrix shards correctly by group (APP_GROUP).
+//
+// Mistral models stay in this list but no longer run in CI: the workflows drop
+// the `mistral` shard because the provider's availability does not survive a
+// per-push run (a 429 across all seven cells on 2026-09-05, an entitlement
+// refusal before that). Run them on demand with APP_GROUP=mistral.
 const MATRIX_MODELS: ModelConfig[] = [
   ...new Set([
     ...catalogIds(),
