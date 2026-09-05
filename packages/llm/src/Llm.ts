@@ -29,6 +29,7 @@ import { AnthropicProvider } from "./providers/anthropic/AnthropicProvider.class
 import { BedrockProvider } from "./providers/bedrock/index.js";
 import { FireworksProvider } from "./providers/fireworks/index.js";
 import { GoogleProvider } from "./providers/google/GoogleProvider.class.js";
+import { MetaProvider } from "./providers/meta/index.js";
 import { MistralProvider } from "./providers/mistral/index.js";
 import { OpenAiProvider } from "./providers/openai/index.js";
 import { OpenRouterProvider } from "./providers/openrouter/index.js";
@@ -128,6 +129,10 @@ class Llm implements LlmProvider {
         });
       case PROVIDER.GOOGLE.NAME:
         return new GoogleProvider(model || PROVIDER.GOOGLE.DEFAULT, {
+          apiKey,
+        });
+      case PROVIDER.META.NAME:
+        return new MetaProvider(model || PROVIDER.META.DEFAULT, {
           apiKey,
         });
       case PROVIDER.MISTRAL.NAME:

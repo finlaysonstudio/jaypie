@@ -9,6 +9,8 @@ export {
   fireworksAdapter,
   GoogleAdapter,
   googleAdapter,
+  MetaAdapter,
+  metaAdapter,
   MistralAdapter,
   mistralAdapter,
   OpenAiAdapter,

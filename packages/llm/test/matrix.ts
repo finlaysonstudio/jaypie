@@ -36,6 +36,7 @@ import { fileURLToPath } from "url";
 import {
   Llm,
   LlmOperateInput,
+  LlmOperateResponse,
   LlmResponseErrorReason,
   toolkit,
 } from "../src/index.js";
@@ -144,8 +145,9 @@ export interface CapabilityResult {
   /**
    * The run ended without demonstrating anything about the capability, so the
    * cell carries no verdict to compare against its expectation — an exhausted
-   * turn budget, or a request that outlived the cell deadline. Reported as a
-   * warning and excluded from the mismatch count. See `errorResult`.
+   * turn budget, a request that outlived the cell deadline, or a provider
+   * refusal. Reported as a warning and excluded from the mismatch count. See
+   * `errorResult` and `earlyResult`.
    */
   inconclusive?: boolean;
 }
@@ -194,8 +196,10 @@ export class CellTimeoutError extends Error {
  *
  * The abandoned request keeps running — there is no cancellation to reach
  * through `operate()` — so this bounds how long the matrix waits, not how long
- * the provider takes. That is the point: the run moves to the next cell and the
- * process exits when `main()` finishes, orphaned socket and all.
+ * the provider takes. That is the point: the run moves to the next cell and
+ * `main()` exits the process explicitly when the grid is done, because an
+ * orphaned request inside a retry loop (backoff timers plus an open socket)
+ * would otherwise hold the event loop open long after the verdict printed.
  */
 export async function withCellTimeout<T>(promise: Promise<T>): Promise<T> {
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -249,12 +253,42 @@ export function errorResult(error: unknown): CapabilityResult {
   };
 }
 
+/** Anthropic `stop_reason` when a streaming classifier ends the response. */
+const REFUSAL_STOP_REASON = "refusal";
+
+/**
+ * Settle a cell early when the response carries no verdict.
+ *
+ * An error settles through `errorResult`. A provider refusal is the third
+ * outcome that says nothing about the capability: the classifier, not the
+ * model, ended the response, and the same cell answers on the next call (the
+ * `claude-opus-5` pdf cell refused on five of seven CI runs and answered on
+ * every local one). The stop reason only reaches the result on the exchange
+ * envelope, which `observed` requests for every cell. The detail still reaches
+ * the ISSUES block, so a model that keeps refusing stays visible.
+ */
+export function earlyResult(
+  result: LlmOperateResponse,
+): CapabilityResult | undefined {
+  if (result.error) return errorResult(result.error);
+  const stopReason = result.exchange?.response.stopReason;
+  if (stopReason === REFUSAL_STOP_REASON) {
+    return {
+      ok: false,
+      detail: `provider refused (stop reason '${stopReason}')`,
+      inconclusive: true,
+    };
+  }
+  return undefined;
+}
+
 async function runPlain(llm: Llm): Promise<CapabilityResult> {
   const result = await llm.operate(
     "Reply with one word: 'pong'. No punctuation.",
     { user: USER },
   );
-  if (result.error) return errorResult(result.error);
+  const early = earlyResult(result);
+  if (early) return early;
   if (typeof result.content !== "string" || result.content.length === 0) {
     return {
       ok: false,
@@ -275,7 +309,8 @@ async function runTools(llm: Llm): Promise<CapabilityResult> {
       },
     },
   });
-  if (result.error) return errorResult(result.error);
+  const early = earlyResult(result);
+  if (early) return early;
   if (!toolCalled) return { ok: false, detail: "roll tool was not called" };
   return { ok: true };
 }
@@ -285,7 +320,8 @@ async function runStructured(llm: Llm): Promise<CapabilityResult> {
     format: { colors: [String] },
     user: USER,
   });
-  if (result.error) return errorResult(result.error);
+  const early = earlyResult(result);
+  if (early) return early;
   const content = result.content as { colors?: unknown } | string | undefined;
   if (!content || typeof content !== "object") {
     return { ok: false, detail: `expected object, got ${typeof content}` };
@@ -311,7 +347,8 @@ async function runBoth(llm: Llm): Promise<CapabilityResult> {
       },
     },
   );
-  if (result.error) return errorResult(result.error);
+  const early = earlyResult(result);
+  if (early) return early;
   const content = result.content as
     { values?: unknown; total?: unknown } | string | undefined;
   if (!content || typeof content !== "object") {
@@ -356,7 +393,8 @@ async function runPdf(llm: Llm): Promise<CapabilityResult> {
     { file: PDF_PATH },
   ];
   const result = await llm.operate(input, { user: USER });
-  if (result.error) return errorResult(result.error);
+  const early = earlyResult(result);
+  if (early) return early;
   return checkDocStrings(result.content);
 }
 
@@ -366,7 +404,8 @@ async function runImage(llm: Llm): Promise<CapabilityResult> {
     { image: IMAGE_PATH },
   ];
   const result = await llm.operate(input, { user: USER });
-  if (result.error) return errorResult(result.error);
+  const early = earlyResult(result);
+  if (early) return early;
   return checkDocStrings(result.content);
 }
 
@@ -375,7 +414,8 @@ async function runTemperature(llm: Llm): Promise<CapabilityResult> {
     "Reply with one word: 'pong'. No punctuation.",
     { temperature: 0, user: USER },
   );
-  if (result.error) return errorResult(result.error);
+  const early = earlyResult(result);
+  if (early) return early;
   if (typeof result.content !== "string" || result.content.length === 0) {
     return {
       ok: false,
@@ -433,6 +473,21 @@ function limiterFor(model: ModelConfig): RateLimiter | undefined {
  * runners unchanged and covers multi-turn loops, where one cell issues many
  * requests.
  */
+/**
+ * Request the exchange envelope on every call so `earlyResult` can read the
+ * stop reason. The callback itself has nothing to do; asking is what attaches
+ * the envelope to the result.
+ */
+function observed(llm: Llm): Llm {
+  const operate = llm.operate.bind(llm);
+  llm.operate = (async (input, options = {}) =>
+    operate(input, {
+      onExchange: () => undefined,
+      ...options,
+    })) as typeof llm.operate;
+  return llm;
+}
+
 function paced(llm: Llm, model: ModelConfig): Llm {
   const limiter = limiterFor(model);
   if (!limiter) return llm;
@@ -471,7 +526,10 @@ async function runCell(
     return { actual: "skip", expected, matches: true, warnings: [] };
   }
 
-  const llm = paced(new Llm(model.provider, { model: model.model }), model);
+  const llm = paced(
+    observed(new Llm(model.provider, { model: model.model })),
+    model,
+  );
   let outcome: CapabilityResult;
   let warnings: string[] = [];
   try {
@@ -742,6 +800,9 @@ async function main(): Promise<void> {
     console.log(
       `🎉 Matrix passed: expectations met, collectives held their majority.`,
     );
+    // An abandoned cell (see `withCellTimeout`) may still be retrying; do not
+    // let it keep the process alive after the verdict.
+    process.exit(0);
   } else {
     if (mismatches > 0) {
       console.error(`💀 ${mismatches} cell(s) mismatched expectation.`);

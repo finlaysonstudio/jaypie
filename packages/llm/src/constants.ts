@@ -52,6 +52,12 @@ export const MODEL = {
   GEMINI_FLASH: "gemini-3.8-flash",
   GEMINI_FLASH_LITE: "gemini-3.5-flash-lite",
   GEMINI_PRO: "gemini-3.1-pro-preview",
+  // Meta (Model API; https://dev.meta.ai/docs/models)
+  MUSE_SPARK: "muse-spark-1.3",
+  // Contributor tier: prompts and completions may train Meta models, so this
+  // is an explicit opt-in and never PROVIDER.META.DEFAULT. 100 RPM, and
+  // reasoning.effort `max` is not available (it clamps to `xhigh`).
+  MUSE_SPARK_CONTRIBUTOR: "muse-spark-1.3-contributor",
   // Mistral
   MISTRAL: {
     LARGE: "mistral-large-latest", // mistral-large-2512
@@ -134,8 +140,8 @@ export interface LlmModelCost {
  *   Sonnet 5's launch rate is now its standard rate.
  * - **Cache writes are Anthropic-only.** Bedrock publishes a literal $0 write
  *   for Amazon's own models, recorded here as `cachedInputWrite: 0`. Fireworks
- *   writes bill at the input rate. OpenAI and xAI discount reads automatically
- *   and publish no write premium. Google charges nothing to write an implicit
+ *   writes bill at the input rate. Meta, OpenAI, and xAI discount reads
+ *   automatically and publish no write premium. Google charges nothing to write an implicit
  *   cache; explicit caching bills storage per hour, a unit this table does not
  *   carry (and one `@jaypie/llm` does not wire).
  * - **Short-context tier.** Long-prompt surcharges are not modeled: Gemini 3.1
@@ -407,6 +413,28 @@ export const COST: Record<string, LlmModelCost> = {
   "grok-4.5": { cachedInputRead: 0.3, input: 2.0, output: 6.0 },
   "grok-4.6": { cachedInputRead: 0.5, input: 2.0, output: 6.0 },
   "grok-build-0.1": { cachedInputRead: 0.2, input: 1.0, output: 2.0 },
+  // Meta — https://dev.meta.ai/docs/pricing-rate-limits
+  // Every Muse Spark id serves a 1,048,576-token context. Reasoning tokens
+  // bill as output. The `-contributor` ids are the same models at a discount
+  // in exchange for data use: prompts and completions may train Meta models.
+  // `reasoning.effort: "max"` is accepted only on muse-spark-1.3 (Standard);
+  // every other id tops out at `xhigh`. Muse Image ($0.01/image) and Muse
+  // Voice Transcribe ($0.18/hour) bill by units LlmModelCost cannot express and
+  // are unpriced. Muse Glimmer is open-weight and not served by this API; the
+  // Fireworks-hosted `muse-glimmer-30b` above is unrelated to these rows.
+  "muse-spark-1.1": { cachedInputRead: 0.15, input: 1.25, output: 4.25 },
+  "muse-spark-1.2": { cachedInputRead: 0.15, input: 1.25, output: 4.25 },
+  "muse-spark-1.2-contributor": {
+    cachedInputRead: 0.002,
+    input: 0.1,
+    output: 0.2,
+  },
+  "muse-spark-1.3": { cachedInputRead: 0.15, input: 1.25, output: 4.25 },
+  "muse-spark-1.3-contributor": {
+    cachedInputRead: 0.002,
+    input: 0.1,
+    output: 0.2,
+  },
   // Mistral — https://docs.mistral.ai/models/overview
   // Cached prompt tokens bill at 10% of the standard input rate. Note the
   // marketing FAQ at mistral.ai/pricing still quotes $2/$6 for "Mistral
@@ -526,6 +554,19 @@ export const PROVIDER = {
   /** @deprecated Use PROVIDER.GOOGLE — "Google" is the provider; Gemini is the model family */
   GEMINI: GOOGLE_PROVIDER,
   GOOGLE: GOOGLE_PROVIDER,
+  META: {
+    // https://dev.meta.ai/docs/models
+    API_KEY: "META_API_KEY" as const,
+    // The name Meta's docs and SDK examples use; read when META_API_KEY is unset
+    API_KEY_FALLBACK: "MODEL_API_KEY" as const,
+    BASE_URL: "https://api.meta.ai/v1" as const,
+    DEFAULT: MODEL.MUSE_SPARK,
+    // "meta" is deliberately not a match word: `meta.llama-*` is a Bedrock id
+    // and `meta-llama/*` an OpenRouter route. The bare provider name and the
+    // `meta:` prefix are handled explicitly in determineModelProvider.
+    MODEL_MATCH_WORDS: ["muse"] as const,
+    NAME: "meta" as const,
+  },
   MISTRAL: {
     // https://docs.mistral.ai/models/overview
     API_KEY: "MISTRAL_API_KEY" as const,
@@ -607,6 +648,7 @@ export type LlmProviderName =
   | typeof PROVIDER.BEDROCK.NAME
   | typeof PROVIDER.FIREWORKS.NAME
   | typeof PROVIDER.GOOGLE.NAME
+  | typeof PROVIDER.META.NAME
   | typeof PROVIDER.MISTRAL.NAME
   | typeof PROVIDER.OPENAI.NAME
   | typeof PROVIDER.OPENROUTER.NAME

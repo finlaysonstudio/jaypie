@@ -124,6 +124,8 @@ jobs:
             providers: "openai"
           - group: gemini-xai
             providers: "google,xai"
+          - group: meta
+            providers: "meta"
           - group: fireworks
             providers: "fireworks"
           - group: openrouter
@@ -181,6 +183,7 @@ jobs:
           FIREWORKS_API_KEY: ${{ secrets.CICD_FIREWORKS_API_KEY }}
           OPENROUTER_API_KEY: ${{ secrets.CICD_OPENROUTER_API_KEY }}
           XAI_API_KEY: ${{ secrets.CICD_XAI_API_KEY }}
+          META_API_KEY: ${{ secrets.CICD_META_API_KEY }}
 
   test-llm-matrix-complete:
     name: LLM Capability Matrix (conditional)

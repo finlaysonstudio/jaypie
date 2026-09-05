@@ -152,6 +152,9 @@ export const FireworksProvider = createMockWrappedObject(
 export const GoogleProvider = createMockWrappedObject(original.GoogleProvider, {
   isClass: true,
 });
+export const MetaProvider = createMockWrappedObject(original.MetaProvider, {
+  isClass: true,
+});
 export const MistralProvider = createMockWrappedObject(
   original.MistralProvider,
   {

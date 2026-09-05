@@ -10,6 +10,7 @@ import {
 import {
   toAnthropicEffort,
   toFireworksEffort,
+  toMetaEffort,
   toMistralEffort,
   toGeminiThinkingBudget,
   toGeminiThinkingLevel,
@@ -20,6 +21,7 @@ import {
 import { OperateRequest } from "../../types.js";
 import { anthropicAdapter } from "../AnthropicAdapter.js";
 import { googleAdapter } from "../GoogleAdapter.js";
+import { metaAdapter } from "../MetaAdapter.js";
 import { openAiAdapter } from "../OpenAiAdapter.js";
 import { openRouterAdapter } from "../OpenRouterAdapter.js";
 import { xaiAdapter } from "../XaiAdapter.js";
@@ -135,6 +137,41 @@ describe("effort mapping util", () => {
       papered: true,
       value: "high",
     });
+  });
+
+  it("Meta walks minimal..xhigh and reaches max only on muse-spark-1.3", () => {
+    const standard = { model: MODEL.MUSE_SPARK };
+    expect(toMetaEffort(EFFORT.LOWEST, standard)).toEqual({
+      papered: false,
+      value: "minimal",
+    });
+    expect(toMetaEffort(EFFORT.LOW, standard).value).toBe("low");
+    expect(toMetaEffort(EFFORT.MEDIUM, standard).value).toBe("medium");
+    expect(toMetaEffort(EFFORT.HIGH, standard).value).toBe("high");
+    expect(toMetaEffort(EFFORT.HIGHEST, standard)).toEqual({
+      papered: false,
+      value: "max",
+    });
+    // Contributor tier and older releases top out at xhigh
+    for (const model of [
+      MODEL.MUSE_SPARK_CONTRIBUTOR,
+      "muse-spark-1.2",
+      "muse-spark-1.1",
+    ]) {
+      expect(toMetaEffort(EFFORT.HIGHEST, { model })).toEqual({
+        papered: true,
+        value: "xhigh",
+      });
+      expect(toMetaEffort(EFFORT.LOWEST, { model }).value).toBe("minimal");
+    }
+  });
+
+  it("Meta never emits none", () => {
+    for (const effort of Object.values(EFFORT)) {
+      expect(toMetaEffort(effort, { model: MODEL.MUSE_SPARK }).value).not.toBe(
+        "none",
+      );
+    }
   });
 
   it("Anthropic collapses lowest to low and reaches max", () => {
@@ -348,6 +385,38 @@ describe("XaiAdapter effort", () => {
       requestFor("grok-latest", { effort: EFFORT.HIGH }),
     ) as Record<string, unknown>;
     expect(result.reasoning).toBeUndefined();
+  });
+});
+
+describe("MetaAdapter effort", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("sets reasoning.effort alongside the summary on Muse Spark", () => {
+    const result = metaAdapter.buildRequest(
+      requestFor(MODEL.MUSE_SPARK, { effort: EFFORT.HIGHEST }),
+    ) as Record<string, unknown>;
+    expect(result.reasoning).toEqual({ effort: "max", summary: "auto" });
+  });
+
+  it("logs at debug when highest clamps to xhigh on the contributor id", () => {
+    const debug = vi.spyOn(log, "debug").mockImplementation(() => {});
+    const result = metaAdapter.buildRequest(
+      requestFor(MODEL.MUSE_SPARK_CONTRIBUTOR, { effort: EFFORT.HIGHEST }),
+    ) as Record<string, unknown>;
+    expect((result.reasoning as Record<string, unknown>).effort).toBe("xhigh");
+    expect(debug).toHaveBeenCalledTimes(1);
+    expect(debug.mock.calls[0][0]).toContain("highest");
+    expect(debug.mock.calls[0][0]).toContain("xhigh");
+  });
+
+  it("stays quiet when the level maps to a distinct rung", () => {
+    const debug = vi.spyOn(log, "debug").mockImplementation(() => {});
+    metaAdapter.buildRequest(
+      requestFor(MODEL.MUSE_SPARK_CONTRIBUTOR, { effort: EFFORT.HIGH }),
+    );
+    expect(debug).not.toHaveBeenCalled();
   });
 });
 

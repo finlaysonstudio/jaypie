@@ -476,6 +476,73 @@ describe("determineModelProvider", () => {
       });
     });
 
+    describe("Meta Detection", () => {
+      it("Returns default model when provider name 'meta' is passed", () => {
+        const result = determineModelProvider(PROVIDER.META.NAME);
+        expect(result).toEqual({
+          model: PROVIDER.META.DEFAULT,
+          provider: PROVIDER.META.NAME,
+        });
+      });
+
+      it("Handles meta: prefix and strips it", () => {
+        const result = determineModelProvider("meta:some-future-id");
+        expect(result).toEqual({
+          model: "some-future-id",
+          provider: PROVIDER.META.NAME,
+        });
+      });
+
+      it("Identifies every cataloged Meta id", () => {
+        for (const model of [MODEL.MUSE_SPARK, MODEL.MUSE_SPARK_CONTRIBUTOR]) {
+          const result = determineModelProvider(model);
+          expect(result).toEqual({ model, provider: PROVIDER.META.NAME });
+        }
+      });
+
+      it("Identifies priced-only Muse Spark releases", () => {
+        for (const model of [
+          "muse-spark-1.1",
+          "muse-spark-1.2",
+          "muse-spark-1.2-contributor",
+        ]) {
+          expect(determineModelProvider(model).provider).toBe(
+            PROVIDER.META.NAME,
+          );
+        }
+      });
+
+      it("Identifies the wider Muse family on 'muse'", () => {
+        for (const model of ["muse-image-1.0", "muse-voice-transcribe-1.0"]) {
+          expect(determineModelProvider(model).provider).toBe(
+            PROVIDER.META.NAME,
+          );
+        }
+      });
+
+      it("Leaves 'meta.llama-*' on Bedrock", () => {
+        const result = determineModelProvider("meta.llama3-8b-instruct-v1:0");
+        expect(result.provider).toBe(PROVIDER.BEDROCK.NAME);
+      });
+
+      it("Leaves 'meta-llama/*' on OpenRouter", () => {
+        const result = determineModelProvider("meta-llama/llama-4-maverick");
+        expect(result.provider).toBe(PROVIDER.OPENROUTER.NAME);
+      });
+
+      it("Leaves the Fireworks-hosted Muse Glimmer on Fireworks", () => {
+        const result = determineModelProvider(
+          "accounts/fireworks/models/muse-glimmer-30b",
+        );
+        expect(result.provider).toBe(PROVIDER.FIREWORKS.NAME);
+      });
+
+      it("Does not treat a bare 'meta' substring as a match word", () => {
+        expect(PROVIDER.META.MODEL_MATCH_WORDS).not.toContain("meta");
+        expect(determineModelProvider("metamorphic").provider).toBeUndefined();
+      });
+    });
+
     describe("Fireworks Detection", () => {
       it("Returns default model when provider name 'fireworks' is passed", () => {
         const result = determineModelProvider(PROVIDER.FIREWORKS.NAME);

@@ -7,7 +7,7 @@ title: "@jaypie/llm"
 
 ## Overview
 
-`@jaypie/llm` provides a unified interface for calling Anthropic, Fireworks, Google, Mistral, OpenAI, OpenRouter, and xAI models with consistent API patterns.
+`@jaypie/llm` provides a unified interface for calling Anthropic, Fireworks, Google, Meta, Mistral, OpenAI, OpenRouter, and xAI models with consistent API patterns.
 
 ## Installation
 
@@ -36,6 +36,7 @@ across releases; the id behind it moves whenever the provider ships a successor.
 | `bedrock` | `MODEL.NOVA_PRO`, `MODEL.NOVA_LITE` | (AWS credentials) |
 | `fireworks` | `MODEL.FIREWORKS.*` (`DEEPSEEK`, `GLM`, `GPT_OSS`, `INKLING`, `KIMI`, `MINIMAX`, `NEMOTRON`, `QWEN`) | `FIREWORKS_API_KEY` |
 | `google` | `MODEL.GEMINI_FLASH`, `MODEL.GEMINI_FLASH_LITE`, `MODEL.GEMINI_PRO` | `GOOGLE_API_KEY` |
+| `meta` | `MODEL.MUSE_SPARK`, `MODEL.MUSE_SPARK_CONTRIBUTOR` | `META_API_KEY` (or `MODEL_API_KEY`) |
 | `mistral` | `MODEL.MISTRAL.*` (`LARGE`, `SMALL`, `OCR`) | `MISTRAL_API_KEY` |
 | `openai` | `MODEL.ASTRA`, `MODEL.SOL`, `MODEL.LUNA`, `MODEL.TERRA` | `OPENAI_API_KEY` |
 | `openrouter` | `MODEL.OPENROUTER.*` (`GLM`, `LUNA`, `SONNET`) | `OPENROUTER_API_KEY` |

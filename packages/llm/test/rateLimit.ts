@@ -65,6 +65,9 @@ export class RateLimiter {
  *
  * Mistral's published per-model ceilings on the current tier: Large is far
  * more restricted than the smaller models.
+ *
+ * Meta's Contributor tier is 100 RPM (Standard is 3,000 and needs no entry);
+ * 1.5 RPS keeps the same headroom under the ceiling the Mistral entries keep.
  */
 const MODEL_REQUESTS_PER_SECOND: Record<string, number> = {
   "mistral-large-2512": 0.07,
@@ -74,6 +77,7 @@ const MODEL_REQUESTS_PER_SECOND: Record<string, number> = {
   "mistral-ocr-4-0": 0.83,
   "mistral-small-2603": 0.83,
   "mistral-small-latest": 0.83,
+  "muse-spark-1.3-contributor": 1.5,
 };
 
 const PROVIDER_REQUESTS_PER_SECOND: Record<string, number> = {

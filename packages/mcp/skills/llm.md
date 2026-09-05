@@ -39,16 +39,20 @@ the alias rather than the id it currently resolves to. Read the id off
 | Mistral | "mistral", "ministral", "codestral", "devstral", "magistral", "pixtral", "voxtral" | `MODEL.MISTRAL.LARGE` |
 | OpenRouter | "openrouter" | `MODEL.OPENROUTER.SONNET` |
 | xAI | "xai", "grok" | `MODEL.GROK` |
+| Meta | "muse" (plus the exact name `meta` and a `meta:` prefix) | `MODEL.MUSE_SPARK` |
 | Bedrock | "amazon.nova", "anthropic.claude", "meta.llama", "deepseek.", "google.gemma", "moonshotai.", "openai.gpt-oss", … | `MODEL.NOVA_PRO` |
 
 The provider name for Gemini models is `"google"` — `"gemini"` is accepted as a deprecated alias.
 
 Mistral's family names mostly do not contain the substring "mistral" (`ministral` is m-i-n-i-s-t-r-a-l; `codestral`/`devstral`/`pixtral`/`voxtral` share only the `-tral` suffix), so each family carries its own match word. Bedrock-hosted `mistral.mistral-*` ids still resolve to `bedrock`, and `mistralai/*` routes still resolve to `openrouter`; use the `mistral:` prefix to force the direct API.
 
+"meta" is deliberately not a Meta match word: `meta.llama-*` is a Bedrock id and `meta-llama/*` an OpenRouter route. Muse Spark ids resolve on "muse"; use the `meta:` prefix to force the Meta Model API for any other id.
+
 ### Model Constants
 
 - **`PROVIDER.<name>.DEFAULT`** — the single default model per provider (above), used when no `model` is given.
-- **`LLM.MODEL.*`** — the named model catalog (e.g. `MODEL.SONNET`, `MODEL.ASTRA`, `MODEL.SOL`, `MODEL.GEMINI_FLASH`, `MODEL.GROK`, `MODEL.NOVA_PRO`, `MODEL.NOVA_LITE`), plus three nested subtrees: `MODEL.FIREWORKS.*` for Fireworks serverless models (`DEEPSEEK`, `GLM`, `GPT_OSS`, `INKLING`, `KIMI`, `MINIMAX`, `NEMOTRON`, `QWEN`), `MODEL.MISTRAL.*` (`LARGE`, `OCR`, `SMALL`), and `MODEL.OPENROUTER.*` for provider-prefixed routes (`GLM`, `LUNA`, `SONNET`). Pick specific models from here. `MODEL.MISTRAL.OCR` serves `POST /v1/ocr` rather than chat completions: it is priced per page, carries no `COST` entry, and is reached through `MistralProvider.ocr()`. Amazon's Nova models are first-class ids served over Bedrock; Bedrock's third-party routes are not catalogued — pass the literal id (e.g. `us.anthropic.claude-sonnet-4-6`) and `determineModelProvider` resolves it to `bedrock`.
+- **`LLM.MODEL.*`** — the named model catalog (e.g. `MODEL.SONNET`, `MODEL.ASTRA`, `MODEL.SOL`, `MODEL.GEMINI_FLASH`, `MODEL.GROK`, `MODEL.MUSE_SPARK`, `MODEL.MUSE_SPARK_CONTRIBUTOR`, `MODEL.NOVA_PRO`, `MODEL.NOVA_LITE`), plus three nested subtrees: `MODEL.FIREWORKS.*` for Fireworks serverless models (`DEEPSEEK`, `GLM`, `GPT_OSS`, `INKLING`, `KIMI`, `MINIMAX`, `NEMOTRON`, `QWEN`), `MODEL.MISTRAL.*` (`LARGE`, `OCR`, `SMALL`), and `MODEL.OPENROUTER.*` for provider-prefixed routes (`GLM`, `LUNA`, `SONNET`). Pick specific models from here. `MODEL.MISTRAL.OCR` serves `POST /v1/ocr` rather than chat completions: it is priced per page, carries no `COST` entry, and is reached through `MistralProvider.ocr()`. Amazon's Nova models are first-class ids served over Bedrock; Bedrock's third-party routes are not catalogued — pass the literal id (e.g. `us.anthropic.claude-sonnet-4-6`) and `determineModelProvider` resolves it to `bedrock`.
+- `MODEL.MUSE_SPARK` and `MODEL.MUSE_SPARK_CONTRIBUTOR` are the same Meta model at two tiers. The contributor tier is roughly a tenth of the price because prompts and completions may train Meta models; it is limited to 100 RPM and does not accept `reasoning.effort: "max"`. It is an explicit opt-in: `PROVIDER.META.DEFAULT` is `MODEL.MUSE_SPARK`.
 - The catalog is the **single source of truth for CI coverage**: `packages/llm/test/models.ts` derives the live capability matrix from `MODEL.*` plus each `PROVIDER.*.DEFAULT`, and the workflow shards it by provider. Adding a model to `MODEL.*` puts it under test; no id list exists anywhere else.
 - **Deprecated:** the size-tier map `PROVIDER.<name>.MODEL.{DEFAULT,LARGE,SMALL,TINY}`, the `DEFAULT.MODEL` bundle, and `ALL` are `@deprecated` and retired in 2.0 — use `PROVIDER.*.DEFAULT` for defaults and `MODEL.*` for named models.
 
@@ -644,6 +648,7 @@ MISTRAL_API_KEY     # Required for Mistral
 OPENAI_API_KEY      # Required for OpenAI
 OPENROUTER_API_KEY  # Required for OpenRouter
 XAI_API_KEY         # Required for xAI (Grok)
+META_API_KEY        # Required for Meta (Muse Spark); MODEL_API_KEY is read as a fallback
 ```
 
 Keys are resolved via `getEnvSecret()` which supports AWS Secrets Manager.
@@ -858,13 +863,13 @@ await Llm.operate("Solve this step by step", {
 Per-provider translation (`medium`/`high` stay aligned across providers; ends
 collapse where a provider has fewer rungs):
 
-| `effort`  | OpenAI `reasoning.effort` | Anthropic `output_config.effort` | Gemini 3 `thinkingLevel` | Gemini 2.5 `thinkingBudget` | Grok `reasoning_effort` | OpenRouter `reasoning.effort` | Fireworks `reasoning_effort` | Mistral `reasoning_effort` |
-|-----------|---------------------------|----------------------------------|--------------------------|-----------------------------|-------------------------|-------------------------------|------------------------------|----------------------------|
-| `lowest`  | minimal | low    | MINIMAL | 512   | low    | minimal | low    | none |
-| `low`     | low     | low    | LOW     | 4096  | low    | low     | low    | high |
-| `medium`  | medium  | medium | MEDIUM  | 8192  | medium | medium  | medium | high |
-| `high`    | high    | high   | HIGH    | 16384 | high   | high    | high   | high |
-| `highest` | xhigh   | max    | HIGH    | 24576 | high   | xhigh   | high   | high |
+| `effort`  | OpenAI `reasoning.effort` | Anthropic `output_config.effort` | Gemini 3 `thinkingLevel` | Gemini 2.5 `thinkingBudget` | Grok `reasoning_effort` | Meta `reasoning.effort` | OpenRouter `reasoning.effort` | Fireworks `reasoning_effort` | Mistral `reasoning_effort` |
+|-----------|---------------------------|----------------------------------|--------------------------|-----------------------------|-------------------------|-------------------------|-------------------------------|------------------------------|----------------------------|
+| `lowest`  | minimal | low    | MINIMAL | 512   | low    | minimal | minimal | low    | none |
+| `low`     | low     | low    | LOW     | 4096  | low    | low     | low     | low    | high |
+| `medium`  | medium  | medium | MEDIUM  | 8192  | medium | medium  | medium  | medium | high |
+| `high`    | high    | high   | HIGH    | 16384 | high   | high    | high    | high   | high |
+| `highest` | xhigh   | max    | HIGH    | 24576 | high   | max     | xhigh   | high   | high |
 
 When a neutral level has no distinct native rung and collapses onto a neighbor
 it is "papered over." Papering that follows from the provider's native scale
@@ -890,6 +895,10 @@ erroring):
   other models get nothing.
 - **xAI** — only models whose name advertises reasoning (a `*-reasoning`
   suffix); a bare version name and `*-non-reasoning` are skipped.
+- **Meta** — every `muse-spark` id; merges with the auto `reasoning.summary`.
+  `max` is limited to the Standard-tier `muse-spark-1.3`, so `highest` on the
+  contributor id or an older release clamps to `xhigh` (logged at debug).
+  Muse Spark always reasons: `none` is rejected by the API and never emitted.
 - **OpenRouter** — always forwarded; OpenRouter maps to the routed model's
   nearest supported level.
 - **Fireworks** — always forwarded (`reasoning_effort`); the API accepts it on
@@ -927,7 +936,7 @@ elsewhere); `false`/`0` = disabled; `"5m"`/`"1h"` = that TTL.
 
 Per provider: Anthropic `cache_control` on system + last tool; Bedrock
 `cachePoint` blocks (model-gated, auto-denylisted and retried without on a 400;
-5m only); OpenAI/xAI automatic caching + a stable `prompt_cache_key`; OpenRouter
+5m only); OpenAI/xAI/Meta automatic caching + a stable `prompt_cache_key`; OpenRouter
 `cache_control` on the system message (forwarded to Anthropic/Gemini backends);
 Google implicit caching only (Gemini 2.5+). TTL applies to Anthropic/OpenRouter;
 others use provider defaults. Sub-threshold prefixes silently no-op. Cache
@@ -967,7 +976,7 @@ await Llm.operate(input, {
 });
 ```
 
-OpenAI and xAI leave the limit unset (their defaults do not truncate early).
+OpenAI, xAI, and Meta leave the limit unset (their defaults do not truncate early).
 Mistral is capped (32,768 streaming / 16,384 non-streaming) despite publishing
 no low ceiling: a Mistral model can degenerate into restating its answer when
 `format` and tools are combined, and an uncapped completion turns that into a
