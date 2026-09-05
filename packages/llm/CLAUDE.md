@@ -4,7 +4,7 @@ LLM provider abstraction for multi-provider support with unified API.
 
 ## Package Overview
 
-`@jaypie/llm` provides a unified interface for interacting with multiple LLM providers (OpenAI, Anthropic, Google, OpenRouter, xAI). It supports multi-turn conversations, tool calling, structured output, streaming, and retry logic.
+`@jaypie/llm` provides a unified interface for interacting with multiple LLM providers (OpenAI, Anthropic, Google, Meta, OpenRouter, xAI). It supports multi-turn conversations, tool calling, structured output, streaming, and retry logic.
 
 ## Directory Structure
 
@@ -22,6 +22,7 @@ src/
 │   │   ├── OpenAiAdapter.ts
 │   │   ├── FireworksAdapter.ts
 │   │   ├── OpenRouterAdapter.ts
+│   │   ├── MetaAdapter.ts
 │   │   ├── XaiAdapter.ts
 │   │   └── ProviderAdapter.interface.ts
 │   ├── hooks/                # Lifecycle hooks
@@ -50,6 +51,9 @@ src/
 │   │   └── utils.ts
 │   ├── openrouter/
 │   │   ├── OpenRouterProvider.class.ts
+│   │   └── utils.ts
+│   ├── meta/
+│   │   ├── MetaProvider.class.ts
 │   │   └── utils.ts
 │   └── xai/
 │       ├── XaiProvider.class.ts
@@ -120,7 +124,7 @@ The `effort` option (`lowest | low | medium | high | highest`, exported as
 `LLM.EFFORT` / type `LlmEffort`) is a provider-neutral reasoning control — a
 five-point relative scale (only the anchored `medium` borrows a provider word).
 Each adapter's `buildRequest` translates it to the provider's native knob via
-`src/util/effort.ts` (OpenAI/Grok `reasoning.effort`, Anthropic
+`src/util/effort.ts` (OpenAI/Grok/Meta `reasoning.effort`, Anthropic
 `output_config.effort`, Gemini 3 `thinkingLevel`, Gemini 2.5 `thinkingBudget`,
 OpenRouter `reasoning.effort`, Fireworks `reasoning_effort`), spreading the
 scale across the provider's range.
@@ -140,6 +144,10 @@ depends on the specific model. OpenAI availability is version-gated: `xhigh`
 gpt-5 (its history is non-monotonic — present on 5/5.1, dropped at 5.2, back on
 the gpt-5.4 line, gone again at gpt-6); outside those windows the end clamps to
 `high`/`low`. gpt-6 adds `max` above `xhigh`, so `highest` reaches `max` there.
+Meta walks the full `minimal..xhigh` ladder on every Muse Spark id; `max` is
+limited to the Standard-tier `muse-spark-1.3`, so `highest` on the contributor
+id or an older release clamps to `xhigh` and logs at debug. Muse Spark always
+reasons: `none` is rejected by the API and never emitted.
 
 ### Output Token Limits
 
@@ -156,7 +164,7 @@ generations do not silently truncate:
 The `stream` flag on `OperateRequest` (set by `StreamLoop`) tells adapters
 which transport the request uses. Callers override per call via
 `providerOptions` (`max_tokens` for Anthropic, `maxOutputTokens` for Google).
-OpenAI, xAI, and OpenRouter leave the limit unset. **Mistral is capped**
+OpenAI, xAI, Meta, and OpenRouter leave the limit unset. **Mistral is capped**
 (32,768 model max, 16,384 non-streaming) even though it publishes no low
 ceiling: a Mistral model can degenerate into restating its answer when
 `format` and tools are combined, and uncapped that ran a single live matrix
@@ -195,6 +203,7 @@ the hour pays for itself after ~three reads and survives the gaps between turns.
 | Anthropic    | `cache_control: {type:"ephemeral"}` on the system block + last tool                                                                                                              | 5m / **1h default** |
 | Bedrock      | `cachePoint` blocks after `system` and `toolConfig.tools`; model-gated (unsupported models are denylisted after a 400 and the request transparently retried without cachePoints) | 5m only             |
 | OpenAI / xAI | automatic server-side caching + a stable `prompt_cache_key` derived from the prefix                                                                                              | provider default    |
+| Meta         | automatic prefix caching + the same `prompt_cache_key`; reads surface as `cached_tokens`                                                                                         | provider default    |
 | OpenRouter   | `cache_control` breakpoint on the system message (forwarded to Anthropic/Gemini backends, ignored by others)                                                                     | 5m / 1h             |
 | Google       | **implicit** context caching only (automatic on Gemini 2.5+); explicit `cachedContent` is not wired — pass `providerOptions.cachedContent` to manage it yourself                 | provider default    |
 
@@ -839,6 +848,14 @@ HTTP errors shaped to drive `classifyError`):
 - OpenAI — `OpenAIClient` (Responses API for `operate`/`stream`, Chat
   Completions for `send`)
 - xAI — reuses `OpenAIClient` with `PROVIDER.XAI.BASE_URL` (OpenAI-compatible)
+- Meta — reuses `OpenAIClient` with `PROVIDER.META.BASE_URL`. The Model API
+  serves the Responses protocol (typed `input` items, `reasoning` items,
+  `function_call` / `function_call_output`, `text.format`, `prompt_cache_key`,
+  `input_file` data URIs), so `MetaAdapter` extends `OpenAiAdapter` the way
+  `XaiAdapter` does. Divergences: `user` is renamed `safety_identifier`
+  (Meta deprecates `user`); reasoning is gated on the `muse-spark` name rather
+  than OpenAI's `gpt-5+` / o-series patterns; a 402 is a terminal billing
+  failure. `tool_choice` accepts only `"auto"`, which the adapter never sends.
 - Anthropic — `AnthropicClient` (Messages API)
 - Google — `GoogleClient` (Gemini REST)
 - Fireworks — `FireworksClient` (OpenAI-compatible Chat Completions). Images
@@ -879,6 +896,7 @@ when the matching `*_API_KEY` is set and skip otherwise.
 - `MISTRAL_API_KEY` - Mistral API key
 - `OPENROUTER_API_KEY` - OpenRouter API key
 - `XAI_API_KEY` - xAI (Grok) API key
+- `META_API_KEY` - Meta Model API key (`MODEL_API_KEY`, the name Meta's own docs use, is read as a fallback)
 - `LLM_EXCHANGE_ENABLED` - Persist each `operate()` and `stream()` call as an `exchange` entity via `@jaypie/dynamodb` `storeExchange` (optional peer, lazily resolved; silent no-op when absent)
 
 Keys are resolved via `getEnvSecret` from `@jaypie/aws` (supports AWS Secrets Manager).
@@ -968,6 +986,7 @@ export {
 export {
   FireworksProvider,
   GoogleProvider,
+  MetaProvider,
   MistralProvider,
   OpenRouterProvider,
   XaiProvider,
