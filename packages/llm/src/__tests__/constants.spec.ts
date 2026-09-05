@@ -78,6 +78,25 @@ describe("Constants", () => {
       expect(COST["mistral-medium-3-5"]).toBeObject();
     });
 
+    it("Catalogs both Muse Spark tiers", () => {
+      expect(MODEL.MUSE_SPARK).toBe("muse-spark-1.3");
+      expect(MODEL.MUSE_SPARK_CONTRIBUTOR).toBe("muse-spark-1.3-contributor");
+    });
+
+    it("Prices the earlier Muse Spark releases without cataloging them", () => {
+      const catalog = Object.values(MODEL).flatMap((value) =>
+        typeof value === "string" ? [value] : Object.values(value),
+      );
+      for (const historic of [
+        "muse-spark-1.1",
+        "muse-spark-1.2",
+        "muse-spark-1.2-contributor",
+      ]) {
+        expect(catalog).not.toContain(historic);
+        expect(COST[historic]).toBeObject();
+      }
+    });
+
     it("Exposes an OpenRouter subtree of provider-prefixed routes", () => {
       expect(MODEL.OPENROUTER).toBeObject();
       expect(MODEL.OPENROUTER.GLM).toBe("z-ai/glm-5.2");
@@ -112,11 +131,23 @@ describe("Constants", () => {
     it("Exposes a single default model per provider, drawn from MODEL.*", () => {
       expect(PROVIDER.ANTHROPIC.DEFAULT).toBe(MODEL.SONNET);
       expect(PROVIDER.GOOGLE.DEFAULT).toBe(MODEL.GEMINI_FLASH);
+      expect(PROVIDER.META.DEFAULT).toBe(MODEL.MUSE_SPARK);
       expect(PROVIDER.MISTRAL.DEFAULT).toBe(MODEL.MISTRAL.LARGE);
       expect(PROVIDER.OPENAI.DEFAULT).toBe(MODEL.SOL);
       expect(PROVIDER.OPENROUTER.DEFAULT).toBe(MODEL.OPENROUTER.SONNET);
       expect(PROVIDER.XAI.DEFAULT).toBe(MODEL.GROK);
       expect(PROVIDER.BEDROCK.DEFAULT).toBeString();
+    });
+
+    it("Never defaults Meta to the contributor tier", () => {
+      // Contributor prompts and completions may train Meta models: opt-in only
+      expect(PROVIDER.META.DEFAULT).not.toBe(MODEL.MUSE_SPARK_CONTRIBUTOR);
+      expect(PROVIDER.META.DEFAULT).not.toMatch(/contributor/);
+    });
+
+    it("Names the Meta key and its documented fallback", () => {
+      expect(PROVIDER.META.API_KEY).toBe("META_API_KEY");
+      expect(PROVIDER.META.API_KEY_FALLBACK).toBe("MODEL_API_KEY");
     });
 
     it("Points the library base default at OpenAI's default", () => {
@@ -183,6 +214,18 @@ describe("Constants", () => {
       ]) {
         expect(firstClassModels).not.toContain(historic);
         expect(COST[historic]).toBeObject();
+      }
+    });
+
+    it("Prices every Muse Spark id with a cache-read discount", () => {
+      const museSpark = Object.keys(COST).filter((id) =>
+        id.startsWith("muse-spark-"),
+      );
+      expect(museSpark).toHaveLength(5);
+      for (const id of museSpark) {
+        expect(COST[id].cachedInputRead).toBeNumber();
+        expect(COST[id].cachedInputWrite).toBeUndefined();
+        expect(COST[id].reasoning).toBeUndefined();
       }
     });
 

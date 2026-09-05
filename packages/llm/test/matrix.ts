@@ -194,8 +194,10 @@ export class CellTimeoutError extends Error {
  *
  * The abandoned request keeps running — there is no cancellation to reach
  * through `operate()` — so this bounds how long the matrix waits, not how long
- * the provider takes. That is the point: the run moves to the next cell and the
- * process exits when `main()` finishes, orphaned socket and all.
+ * the provider takes. That is the point: the run moves to the next cell and
+ * `main()` exits the process explicitly when the grid is done, because an
+ * orphaned request inside a retry loop (backoff timers plus an open socket)
+ * would otherwise hold the event loop open long after the verdict printed.
  */
 export async function withCellTimeout<T>(promise: Promise<T>): Promise<T> {
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -742,6 +744,9 @@ async function main(): Promise<void> {
     console.log(
       `🎉 Matrix passed: expectations met, collectives held their majority.`,
     );
+    // An abandoned cell (see `withCellTimeout`) may still be retrying; do not
+    // let it keep the process alive after the verdict.
+    process.exit(0);
   } else {
     if (mismatches > 0) {
       console.error(`💀 ${mismatches} cell(s) mismatched expectation.`);
