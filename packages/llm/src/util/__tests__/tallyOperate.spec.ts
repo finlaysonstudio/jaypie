@@ -11,9 +11,12 @@ import { tallyOperate } from "../tallyOperate.js";
 
 vi.mock("@jaypie/logger", () => ({
   log: {
+    sessionActive: true,
     tally: vi.fn(),
   },
 }));
+
+const mockLog = log as unknown as { sessionActive?: boolean };
 
 //
 //
@@ -23,6 +26,7 @@ vi.mock("@jaypie/logger", () => ({
 describe("tallyOperate", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockLog.sessionActive = true;
   });
 
   describe("Base Cases", () => {
@@ -119,6 +123,22 @@ describe("tallyOperate", () => {
           turns: 1,
           usage: { unknown: { input: 1, output: 2, reasoning: 0, total: 3 } },
         },
+      });
+    });
+  });
+
+  describe("Specific Scenarios", () => {
+    it("does not tally outside an active logger session", () => {
+      mockLog.sessionActive = false;
+      tallyOperate({ turns: 1 });
+      expect(log.tally).not.toHaveBeenCalled();
+    });
+
+    it("tallies when the logger predates sessionActive", () => {
+      delete mockLog.sessionActive;
+      tallyOperate({ turns: 1 });
+      expect(log.tally).toHaveBeenCalledWith({
+        llm: { operates: 1, toolCalls: 0, turns: 1 },
       });
     });
   });

@@ -129,6 +129,7 @@ log.teardown();                                           // Emits report, reset
 - `teardown()` emits `log.info.var({ report })` with accumulated data + `{ log: { warn, warns, error, errors } }`
 - `report(data)` merges key-value data into the report; warns on duplicate keys
 - `tally(data)` merges combining data into the report: numbers sum, strings collect into an array of strings, booleans AND, objects merge recursively (`src/tallyMerge.ts`); silently no-ops without an active session so libraries can tally unconditionally (`@jaypie/llm` tallies an `llm` key automatically)
+- `sessionActive` is a read-only boolean, true between `setup()` and `teardown()`; libraries guard optional `report()`/`tally()` calls with it (compare against `false`, since an older logger reports `undefined`)
 - Warn and error calls are auto-counted during an active session
 
 ### Serialization Limits
@@ -214,6 +215,7 @@ Factory function returning a `JaypieLogger` instance.
 - `init()` - Reset logger state (used between Lambda invocations)
 - `lib({ lib?, level?, tags? })` - Create library logger (silent by default)
 - `tag(tags)` - Add tags to all loggers
+- `sessionActive` - Read-only boolean, true between `setup()` and `teardown()`
 - `tally(data)` - Merge combining data into the session report (numbers sum, strings collect, booleans AND)
 - `untag(key)` - Remove tags
 - `with(key, value)` - Create child logger with additional tag

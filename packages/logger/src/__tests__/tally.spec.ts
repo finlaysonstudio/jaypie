@@ -33,6 +33,35 @@ describe("tally", () => {
     });
   });
 
+  describe("sessionActive", () => {
+    it("is false before setup", () => {
+      const logger = createLogger();
+      expect(logger.sessionActive).toBe(false);
+    });
+
+    it("is true during a session", () => {
+      const logger = createLogger();
+      logger.setup();
+      expect(logger.sessionActive).toBe(true);
+    });
+
+    it("is false after teardown", () => {
+      const logger = createLogger();
+      vi.spyOn(console, "info").mockImplementation(() => {});
+      logger.setup();
+      logger.teardown();
+      expect(logger.sessionActive).toBe(false);
+    });
+
+    it("is read-only", () => {
+      const logger = createLogger();
+      expect(() => {
+        (logger as unknown as { sessionActive: boolean }).sessionActive = true;
+      }).toThrow();
+      expect(logger.sessionActive).toBe(false);
+    });
+  });
+
   describe("tallyMerge", () => {
     it("sums numbers", () => {
       expect(tallyMerge({ existing: 2, incoming: 3 })).toBe(5);

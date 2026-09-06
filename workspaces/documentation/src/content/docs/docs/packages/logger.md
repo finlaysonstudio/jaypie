@@ -40,6 +40,7 @@ npm install @jaypie/logger
 | `log.init()` | Reset logger state |
 | `log.setup()` | Start a report session |
 | `log.report()` | Accumulate session report data |
+| `log.sessionActive` | Whether a report session is open |
 | `log.tally()` | Accumulate combining report data (numbers sum) |
 | `log.teardown()` | Emit session report, end session |
 
@@ -159,6 +160,16 @@ log.tally({ llm: { operates: 1, turns: 3 } });
 ```
 
 Outside an active session `log.tally()` silently no-ops, so libraries can tally unconditionally. `@jaypie/llm` uses this to report an `llm` key (turns, tool calls, usage by model) automatically.
+
+`log.sessionActive` reports whether a session is open, so a library can skip assembling a payload nothing will collect:
+
+```typescript
+if (log.sessionActive !== false) {
+  log.tally({ llm: { operates: 1, turns: 2 } });
+}
+```
+
+Compare against `false` rather than testing truthiness: an older logger without the accessor reports `undefined`, and the tally should still be attempted there.
 
 ## Function Prefix Convention
 

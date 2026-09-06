@@ -14,6 +14,7 @@ export function mockLogFactory(): LogMock {
     init: vi.fn(),
     lib: vi.fn(),
     report: vi.fn(),
+    sessionActive: true,
     setup: vi.fn(),
     tag: vi.fn(),
     tally: vi.fn(),
@@ -23,7 +24,7 @@ export function mockLogFactory(): LogMock {
     var: vi.fn(),
     warn: vi.fn(),
     with: vi.fn(),
-  } as LogMock;
+  } as unknown as LogMock;
 
   // Fill out nested mocks
   mock.debug.var = mock.var;

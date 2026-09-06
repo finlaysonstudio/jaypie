@@ -676,7 +676,7 @@ Inside a Jaypie handler (`expressHandler`, `lambdaHandler`, and stream variants)
 - `operates` counts loop executions; repeated calls sum every number
 - `usage` is keyed `provider:model` — fallback providers appear as separate keys
 - `tools` appears only when tools were called
-- Outside a handler session the tally is a silent no-op
+- Outside a handler session the tally is skipped entirely (guarded on `log.sessionActive`), so a CLI or script calling `operate()` directly emits nothing
 
 ## LLM Observability (Datadog)
 
