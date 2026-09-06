@@ -62,6 +62,7 @@ export interface LogMock extends Log {
     with: Mock;
   };
   report: Mock;
+  sessionActive: boolean;
   setup: Mock;
   tag: Mock;
   tally: Mock;

@@ -308,6 +308,15 @@ export class JaypieLogger {
   }
 
   /**
+   * True between setup() and teardown(). Callers guard optional report()
+   * and tally() calls with this so libraries used outside a handler skip
+   * the attempt entirely.
+   */
+  public get sessionActive(): boolean {
+    return this._sessionActive;
+  }
+
+  /**
    * Start a report session: resets warn/error counters and accumulated
    * report data, applies optional tags. Pair with teardown() to bookend a
    * request. Handlers call this automatically.

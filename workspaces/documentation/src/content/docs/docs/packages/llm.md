@@ -471,7 +471,7 @@ Inside a Jaypie handler, `operate()` and `stream()` tally totals onto the logger
 }
 ```
 
-Repeated calls in one request combine (numbers sum). `usage` is keyed `provider:model`, so fallback providers appear as separate keys. Outside a handler session the tally is a silent no-op.
+Repeated calls in one request combine (numbers sum). `usage` is keyed `provider:model`, so fallback providers appear as separate keys. Outside a handler session the tally is skipped entirely (guarded on `log.sessionActive`), so a CLI or script calling `operate()` directly emits nothing.
 
 ## Error Handling
 

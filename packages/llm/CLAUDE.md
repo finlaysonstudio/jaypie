@@ -761,7 +761,9 @@ key: `{ operates, toolCalls, tools?, turns, usage? }`, where `usage` is
 keyed `provider:model` and sums `input`/`output`/`reasoning`/`total` and
 `tools` is a per-tool-name count (present only when tools were called).
 Repeated calls in one request combine (numbers sum). Outside an active
-session the tally is a silent no-op.
+session the tally is skipped entirely: `tallyOperate` guards on
+`log.sessionActive`, so a CLI or script calling `operate()` directly builds
+no payload and the logger emits nothing.
 
 ### Streaming with Automatic Tool Execution
 

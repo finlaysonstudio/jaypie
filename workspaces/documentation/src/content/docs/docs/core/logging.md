@@ -241,6 +241,8 @@ log.tally({ llm: { operates: 1, turns: 3 } });
 // => teardown report includes { llm: { operates: 2, turns: 5 } }
 ```
 
+`log.sessionActive` reports whether a session is open. Libraries guard optional tally work with `log.sessionActive !== false`, which keeps the guard correct against an older logger that predates the accessor.
+
 Inside a handler, `@jaypie/llm` tallies an `llm` key automatically — `operate()` and `stream()` report turns, tool calls, and usage by model with no code changes.
 
 ## Environment Configuration

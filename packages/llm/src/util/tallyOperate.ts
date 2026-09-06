@@ -14,7 +14,7 @@ interface TallyOperateOptions {
  * Tally loop totals onto the root logger's report session so handlers
  * (express, lambda) include llm activity in the report emitted at teardown.
  * Silently no-ops outside an active session or when the logger predates
- * tally support.
+ * tally or sessionActive support.
  */
 export function tallyOperate({
   toolCallNames = [],
@@ -22,6 +22,7 @@ export function tallyOperate({
   usage = [],
 }: TallyOperateOptions): void {
   if (typeof log.tally !== "function") return;
+  if (log.sessionActive === false) return;
   const llm: Record<string, unknown> = {
     operates: 1,
     toolCalls: toolCallNames.length,

@@ -132,6 +132,16 @@ log.tally({ llm: { operates: 1, turns: 3 } });
 
 Outside an active session `tally()` silently no-ops, so libraries can tally unconditionally. `@jaypie/llm` tallies an `llm` key (turns, tool calls, usage by model) automatically.
 
+`log.sessionActive` reports whether a session is open. A library that assembles a tally payload guards on it, skipping the work when nothing will collect the result:
+
+```typescript
+if (log.sessionActive !== false) {
+  log.tally({ llm: { operates: 1, turns: 2 } });
+}
+```
+
+Compare against `false` rather than testing truthiness: an older logger without the accessor reports `undefined`, and the tally should still be attempted there.
+
 ## Setting Log Level
 
 Via environment variable:
