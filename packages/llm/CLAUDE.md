@@ -1078,14 +1078,18 @@ scoping one to a cell lets each cell's first request fire unspaced, which is
 its own source of spurious `Rate limit exceeded` cells. Current rates: Mistral
 Large 0.07 req/s, the rest of the Mistral catalog 0.83 req/s.
 
-**`deepseek-v4-pro` and `minimax-m2p7` are excluded from the live matrix** as of
-2026-08-31. Both passed every cell on 2026-08-23 and 2026-08-25. Fireworks now
-answers `minimax-m2p7` with "Model not found, inaccessible, and/or not
-deployed" on every capability, and `deepseek-v4-pro` never responds at all —
-five cells at the 180-second deadline, 15 of the job's 20 available minutes.
-The six remaining Fireworks models pass. Both stay cataloged and priced, and
-their `MATRIX_EXPECT` entries stay in place for when they serve again. Confirm
-the ids against the Fireworks account before removing the exclusion.
+**`minimax-m2p7` is excluded from the live matrix** as of 2026-08-31. It passed
+every cell on 2026-08-23 and 2026-08-25, and Fireworks now answers it with
+"Model not found, inaccessible, and/or not deployed" on every capability. It
+stays cataloged and priced, and its `MATRIX_EXPECT` entry stays in place for
+when it serves again. Confirm the id against the Fireworks account before
+removing the exclusion.
+
+`deepseek-v4-pro` was excluded alongside it (it never responded, burning five
+cells at the 180-second deadline). The cause was a rename: the operator
+confirmed the id as `accounts/fireworks/models/deepseek-v4-pro-0813` on
+2026-09-07, so `MODEL.FIREWORKS.DEEPSEEK` carries the dated id and runs the
+matrix again. The retired id keeps its `COST` entry per policy.
 
 **`mistral-large-latest` is excluded from the live matrix** as of 2026-08-30:
 the CI Mistral key answers every capability with "This model is not available

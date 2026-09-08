@@ -31,7 +31,7 @@ export const MODEL = {
   MYTHOS: "claude-mythos-5",
   // Fireworks (serverless open models; ids provided by operator)
   FIREWORKS: {
-    DEEPSEEK: "accounts/fireworks/models/deepseek-v4-pro",
+    DEEPSEEK: "accounts/fireworks/models/deepseek-v4-pro-0813",
     GLM: "accounts/fireworks/models/glm-5p2",
     GPT_OSS: "accounts/fireworks/models/gpt-oss-120b",
     INKLING: "accounts/fireworks/models/inkling",
@@ -280,10 +280,16 @@ export const COST: Record<string, LlmModelCost> = {
     output: 10.0,
   },
   // Fireworks — https://docs.fireworks.ai/serverless/pricing
+  // Retired catalog id; priced per policy so historical tallies still resolve.
   "accounts/fireworks/models/deepseek-v4-pro": {
     cachedInputRead: 0.145,
     input: 1.74,
     output: 3.48,
+  },
+  "accounts/fireworks/models/deepseek-v4-pro-0813": {
+    cachedInputRead: 0.044,
+    input: 1.32,
+    output: 3.96,
   },
   "accounts/fireworks/models/glm-5p2": {
     cachedInputRead: 0.14,

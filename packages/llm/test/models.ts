@@ -72,14 +72,12 @@ const MATRIX_EXCLUDE = new Set<string>([
   // remove this line; it stays cataloged and priced meanwhile. This only
   // affects on-demand runs now — CI no longer shards Mistral.
   MODEL.MISTRAL.LARGE,
-  // Temporary. Both passed every cell on 2026-08-23 and 2026-08-25 and answer
-  // nothing usable as of 2026-08-31: MINIMAX returns "Model not found,
-  // inaccessible, and/or not deployed" on every capability, and DEEPSEEK never
-  // responds — five cells at the 180s cell deadline, 15 of the CI job's 20
-  // available minutes. Fireworks withdrew or renamed them; the six remaining
-  // Fireworks models pass. Both stay cataloged and priced. Confirm the ids
-  // against the Fireworks account and remove these lines when they serve again.
-  MODEL.FIREWORKS.DEEPSEEK,
+  // Temporary. MINIMAX passed every cell on 2026-08-23 and 2026-08-25 and
+  // answers "Model not found, inaccessible, and/or not deployed" on every
+  // capability as of 2026-08-31. It stays cataloged and priced. Confirm the id
+  // against the Fireworks account and remove this line when it serves again.
+  // DEEPSEEK was excluded alongside it; the operator confirmed the id had been
+  // renamed to deepseek-v4-pro-0813 (2026-09-07), so it runs the matrix again.
   MODEL.FIREWORKS.MINIMAX,
 ]);
 
