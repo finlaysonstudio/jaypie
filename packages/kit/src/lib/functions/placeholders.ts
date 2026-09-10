@@ -46,7 +46,12 @@ function get(
   // For each item in the path, dig into the object
   for (let i = 0; i < pathArray.length; i++) {
     // If the item isn't found, return the default (or null)
-    if (!(current as Record<string, unknown>)[pathArray[i]]) return def;
+    if (
+      !current ||
+      typeof current !== "object" ||
+      !(pathArray[i] in (current as object))
+    )
+      return def;
 
     // Otherwise, update the current  value
     current = (current as Record<string, unknown>)[pathArray[i]];
@@ -82,8 +87,8 @@ function placeholders(
     // Get the value
     const val = get(data, match.trim());
 
-    // Replace
-    if (!val) return `{{${match}}}`;
+    // Replace, keeping the handlebar only for absent values
+    if (val === undefined) return `{{${match}}}`;
     return String(val);
   });
 
