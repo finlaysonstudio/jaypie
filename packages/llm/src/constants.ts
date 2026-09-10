@@ -36,7 +36,7 @@ export const MODEL = {
     GPT_OSS: "accounts/fireworks/models/gpt-oss-120b",
     INKLING: "accounts/fireworks/models/inkling",
     KIMI: "accounts/fireworks/models/kimi-k3",
-    MINIMAX: "accounts/fireworks/models/minimax-m2p7",
+    MINIMAX: "accounts/fireworks/models/minimax-m3",
     // Muse Glimmer is deliberately absent. muse-glimmer-30b ignores the native
     // response_format and answers a format request in prose, then writes the
     // corrective turn's tool call as *text*
@@ -46,7 +46,7 @@ export const MODEL = {
     // baseline expectation of operate(), so the model is not cataloged. Its
     // COST entry is retained per policy.
     NEMOTRON: "accounts/fireworks/models/nemotron-3-ultra-nvfp4",
-    QWEN: "accounts/fireworks/models/qwen3p7-plus",
+    QWEN: "accounts/fireworks/models/qwen3p8-max",
   },
   // Google
   GEMINI_FLASH: "gemini-3.8-flash",
@@ -318,7 +318,14 @@ export const COST: Record<string, LlmModelCost> = {
     input: 3.0,
     output: 15.0,
   },
+  // Withdrawn from serverless 2026-08-27, superseded by minimax-m3; priced per
+  // policy so historical tallies still resolve.
   "accounts/fireworks/models/minimax-m2p7": {
+    cachedInputRead: 0.06,
+    input: 0.3,
+    output: 1.2,
+  },
+  "accounts/fireworks/models/minimax-m3": {
     cachedInputRead: 0.06,
     input: 0.3,
     output: 1.2,
@@ -338,10 +345,17 @@ export const COST: Record<string, LlmModelCost> = {
     input: 0.6,
     output: 2.4,
   },
+  // Withdrawn from serverless 2026-09-10, superseded by qwen3p8-max; priced per
+  // policy so historical tallies still resolve.
   "accounts/fireworks/models/qwen3p7-plus": {
     cachedInputRead: 0.08,
     input: 0.4,
     output: 1.6,
+  },
+  "accounts/fireworks/models/qwen3p8-max": {
+    cachedInputRead: 0.25,
+    input: 2.0,
+    output: 6.0,
   },
   // Google — https://ai.google.dev/gemini-api/docs/pricing
   "gemini-2.5-flash": { cachedInputRead: 0.03, input: 0.3, output: 2.5 },

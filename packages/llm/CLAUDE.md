@@ -1078,18 +1078,25 @@ scoping one to a cell lets each cell's first request fire unspaced, which is
 its own source of spurious `Rate limit exceeded` cells. Current rates: Mistral
 Large 0.07 req/s, the rest of the Mistral catalog 0.83 req/s.
 
-**`minimax-m2p7` is excluded from the live matrix** as of 2026-08-31. It passed
-every cell on 2026-08-23 and 2026-08-25, and Fireworks now answers it with
-"Model not found, inaccessible, and/or not deployed" on every capability. It
-stays cataloged and priced, and its `MATRIX_EXPECT` entry stays in place for
-when it serves again. Confirm the id against the Fireworks account before
-removing the exclusion.
+**Fireworks withdraws serverless models without notice.** `minimax-m2p7`
+began answering "Model not found, inaccessible, and/or not deployed" on every
+capability on 2026-08-31 (deprecated 2026-08-27), and `qwen3p7-plus` did the
+same on 2026-09-10 with no announcement. Fireworks' `/inference/v1/models` list
+still carried both; the account API (`GET /v1/accounts/fireworks/models`)
+showed `supportsServerless: false`. The operator confirmed the successors on
+2026-09-10: `MODEL.FIREWORKS.MINIMAX` is `accounts/fireworks/models/minimax-m3`
+and `MODEL.FIREWORKS.QWEN` is `accounts/fireworks/models/qwen3p8-max`, so both
+run the matrix. The retired ids keep their `COST` entries per policy. When a
+Fireworks row fails every cell with that message, check `supportsServerless`
+on the account API and ask the operator for the replacement id rather than
+excluding the model indefinitely.
 
-`deepseek-v4-pro` was excluded alongside it (it never responded, burning five
-cells at the 180-second deadline). The cause was a rename: the operator
-confirmed the id as `accounts/fireworks/models/deepseek-v4-pro-0813` on
-2026-09-07, so `MODEL.FIREWORKS.DEEPSEEK` carries the dated id and runs the
-matrix again. The retired id keeps its `COST` entry per policy.
+`deepseek-v4-pro` was excluded alongside `minimax-m2p7` on 2026-08-31 (it never
+responded, burning five cells at the 180-second deadline). The cause was a
+rename: the operator confirmed the id as
+`accounts/fireworks/models/deepseek-v4-pro-0813` on 2026-09-07, so
+`MODEL.FIREWORKS.DEEPSEEK` carries the dated id and runs the matrix again. The
+retired id keeps its `COST` entry per policy.
 
 **`mistral-large-latest` is excluded from the live matrix** as of 2026-08-30:
 the CI Mistral key answers every capability with "This model is not available
