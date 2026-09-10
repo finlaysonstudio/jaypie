@@ -65,7 +65,9 @@ Markdown follows the ~mdaml guidelines of nested headings, an optional descripti
   - `VOICE`
 - `LICENSE`
 - `ROADMAP`
+  - `CHARTER`
   - `GOAL`
+  - `PLAN`
   - `TIMELINE`
   - `TODO`
   - `VISION`

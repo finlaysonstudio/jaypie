@@ -72,13 +72,6 @@ const MATRIX_EXCLUDE = new Set<string>([
   // remove this line; it stays cataloged and priced meanwhile. This only
   // affects on-demand runs now — CI no longer shards Mistral.
   MODEL.MISTRAL.LARGE,
-  // Temporary. MINIMAX passed every cell on 2026-08-23 and 2026-08-25 and
-  // answers "Model not found, inaccessible, and/or not deployed" on every
-  // capability as of 2026-08-31. It stays cataloged and priced. Confirm the id
-  // against the Fireworks account and remove this line when it serves again.
-  // DEEPSEEK was excluded alongside it; the operator confirmed the id had been
-  // renamed to deepseek-v4-pro-0813 (2026-09-07), so it runs the matrix again.
-  MODEL.FIREWORKS.MINIMAX,
 ]);
 
 // Flatten MODEL.* (including the BEDROCK and OPENROUTER subtrees) into ids.
@@ -107,6 +100,7 @@ const MATRIX_EXPECT: Record<
   // 2026-08-02), so neither skips the image cell.
   [MODEL.FIREWORKS.INKLING]: { pdf: "skip" },
   [MODEL.FIREWORKS.KIMI]: { pdf: "skip" },
+  // minimax-m3 advertises no image input (Fireworks models API, 2026-09-10).
   [MODEL.FIREWORKS.MINIMAX]: { pdf: "skip", image: "skip" },
   // NEMOTRON returned to the catalog on 2026-08-02 after being retired
   // 2026-07-21 for nondeterministic structured output (clean JSON, prose, or an
@@ -120,12 +114,10 @@ const MATRIX_EXPECT: Record<
   // a `structured` column that goes red across the Fireworks block still does.
   // It advertises no image input.
   [MODEL.FIREWORKS.NEMOTRON]: { pdf: "skip", image: "skip" },
-  // QWEN `structured` is pinned "ok" on evidence, not omission: it failed once
-  // in three samples (2026-07), then passed 10 for 10 on resample (2026-07-25,
-  // issue #438) — 12 of 13 overall, so the miss reads as flake. Schema
-  // adherence is loose even when passing (observed ["R","Y","B"] and
-  // ["Red","","Blue"]); the cell only asserts a non-empty array, so degraded
-  // content still counts as ok. A second failure means reopening #438.
+  // QWEN names qwen3p8-max as of 2026-09-10, the day Fireworks withdrew
+  // qwen3p7-plus from serverless. It advertises image input, so only pdf
+  // skips. The `structured` evidence from issue #438 (12 of 13 samples) was
+  // measured against qwen3p7-plus and does not carry over to the new model.
   [MODEL.FIREWORKS.QWEN]: { pdf: "skip" },
   // MODEL.GROK carried `pdf: "skip"` while the alias named Grok 4.5, which read
   // the fixture PDF in only 2 of 9 live samples (2026-08-02) — the other seven
