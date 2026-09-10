@@ -30,7 +30,8 @@ function placeholders(
 - Dot notation: `{{user.name}}`
 - Bracket notation: `{{items[0].city}}`
 - Whitespace trimmed: `{{ name }}` resolves same as `{{name}}`
-- Unmatched keys remain: `{{missing}}` passes through unchanged
+- Unmatched keys remain: `{{missing}}` passes through unchanged, spacing intact
+- Only `undefined` counts as missing: `""`, `0`, `false`, and `null` render via `String()`
 
 ## Examples
 
@@ -56,6 +57,10 @@ placeholders(() => `Generated at {{time}}`, { time: "12:00" });
 // Missing keys pass through
 placeholders("{{known}} and {{unknown}}", { known: "yes" });
 // "yes and {{unknown}}"
+
+// Falsy values render
+placeholders("a={{ x }} b={{ n }}", { x: "", n: 0 });
+// "a= b=0"
 ```
 
 ## LLM Integration

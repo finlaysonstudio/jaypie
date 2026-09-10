@@ -88,7 +88,6 @@ src/
 ├── jsonApiSchema.module.ts
 ├── matchers.module.ts  # Combines all matchers (Jaypie custom + absorbed extended)
 ├── mockLog.module.ts   # Log spying utilities
-├── placeholders.ts     # Template placeholder utility
 └── sqsTestRecords.function.ts
 ```
 
