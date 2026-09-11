@@ -222,9 +222,15 @@ All mocks are created with `_jaypie: true` property for identification. Mock fac
 
 ## Dependencies
 
+- `@jaypie/errors` - Error classes used by the `toThrow*Error` matchers in the root entry
 - `jest-json-schema` - JSON schema validation matcher
 - `vitest` - Test framework (peer dependency)
-- `@jaypie/errors`, `@jaypie/kit`, `@jaypie/logger` - Optional peer dependencies
+- `@jaypie/dynamodb`, `@jaypie/kit`, `@jaypie/logger` - Optional peer dependencies used by the `./mock` entry
+
+Every package the root entry (`dist/index.js`) imports at runtime must be a
+`dependency` or a required peer, since `~subpackage` and `~monorepo` install
+`@jaypie/testkit` alone. `src/__tests__/publishedImports.spec.ts` holds this
+contract and requires a build first.
 
 ## Adding New Mocks
 
