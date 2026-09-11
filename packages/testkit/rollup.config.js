@@ -99,6 +99,28 @@ export default [
     ],
   },
 
+  // Setup file bundle (`test.setupFiles: ["@jaypie/testkit/testSetup"]`)
+  {
+    external,
+    input: "src/testSetup.ts",
+    onwarn,
+    output: {
+      file: "dist/testSetup.js",
+      format: "es",
+      sourcemap: true,
+    },
+    plugins: [
+      nodeResolve(),
+      commonjs(),
+      json(),
+      typescript({
+        exclude: ["**/__tests__/**/*", "**/*.test.ts", "**/*.spec.ts"],
+        tsconfig: "./tsconfig.json",
+        outDir: "./dist", // Ensure this matches the output directory
+      }),
+    ],
+  },
+
   // Type definitions for main package
   {
     input: "src/index.ts",

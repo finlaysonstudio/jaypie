@@ -6,7 +6,7 @@ import {
   createMockWrappedObject,
 } from "./utils";
 
-import * as original from "@jaypie/llm";
+import { llm as original } from "./original";
 
 export const LLM = original.LLM;
 
@@ -190,12 +190,11 @@ export const jsonSchemaToNaturalSchema = original.jsonSchemaToNaturalSchema;
 export const naturalSchemaToJsonSchema = original.naturalSchemaToJsonSchema;
 export const RetryPolicy = original.RetryPolicy;
 
-// Tool collections
-export const toolkit = new original.JaypieToolkit([
-  random,
-  roll,
-  time,
-  weather,
-]);
+// Tool collections (undefined when @jaypie/llm is not installed)
+export const toolkit = (
+  original.JaypieToolkit
+    ? new original.JaypieToolkit([random, roll, time, weather])
+    : undefined
+) as InstanceType<typeof original.JaypieToolkit>;
 
-export const tools = toolkit.tools;
+export const tools = toolkit?.tools;

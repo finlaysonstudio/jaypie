@@ -7,7 +7,7 @@ import {
 } from "./utils";
 import { BadRequestError, UnhandledError } from "@jaypie/errors";
 import { force, jaypieHandler } from "./core";
-import * as original from "@jaypie/express";
+import { express as original } from "./original";
 
 // Constants for mock values
 const TAG = "EXPRESS";

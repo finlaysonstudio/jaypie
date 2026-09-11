@@ -1,7 +1,27 @@
 import { describe, it, expect } from "vitest";
+import * as aws from "@jaypie/aws";
+import * as datadog from "@jaypie/datadog";
+import * as errors from "@jaypie/errors";
+import * as express from "@jaypie/express";
+import * as kit from "@jaypie/kit";
+import * as lambda from "@jaypie/lambda";
+import * as llm from "@jaypie/llm";
+import * as logger from "@jaypie/logger";
+import * as textract from "@jaypie/textract";
 import mockDefault, * as mockExports from "..";
 
-import { original } from "../original";
+// Packages whose exports the mock entry stands in for
+const original = {
+  aws,
+  datadog,
+  errors,
+  express,
+  kit,
+  lambda,
+  llm,
+  logger,
+  textract,
+};
 
 describe("Mock Index", () => {
   // Base Cases
@@ -68,11 +88,8 @@ describe("Mock Index", () => {
       const originalExportKeys = [];
       for (const lib of Object.keys(original)) {
         const libModule = original[lib as keyof typeof original];
-        // Skip if module is a proxy (package not installed)
-        if (libModule && typeof libModule === "object") {
-          for (const exportName of Object.keys(libModule)) {
-            originalExportKeys.push(exportName);
-          }
+        for (const exportName of Object.keys(libModule)) {
+          originalExportKeys.push(exportName);
         }
       }
       const uniqueOriginalKeys = [...new Set(originalExportKeys)].filter(
@@ -84,7 +101,6 @@ describe("Mock Index", () => {
       );
       mockExportKeys.sort();
       // Mock should have at least all the exports from original
-      // (mock may have more due to explicit exports from packages that use lazy loading)
       for (const key of uniqueOriginalKeys) {
         expect(mockExportKeys).toContain(key);
       }

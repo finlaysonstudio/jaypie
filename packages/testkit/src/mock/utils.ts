@@ -75,9 +75,30 @@ function createMockWrappedFunction<T = any>(
   const throws = options.throws ?? false;
   const isClass = options.class ?? false;
 
+  const resolveFallback = (args: unknown[]) => {
+    // If fallback is a function, call it
+    if (typeof fallback === "function") {
+      try {
+        return fallback(...args);
+      } catch (fallbackError) {
+        console.warn(
+          `[@jaypie/testkit] Fallback function failed: ${fallbackError instanceof Error ? fallbackError.message : fallbackError}`,
+        );
+        return "_MOCK_WRAPPED_RESULT";
+      }
+    }
+
+    return fallback;
+  };
+
   // Shared behavior for both call and construct: try the real
   // implementation, fall back (with a warning) when it throws.
   const invoke = (instantiate: boolean, args: unknown[]) => {
+    // An optional package that is not installed leaves nothing to call
+    if (typeof fn !== "function") {
+      return resolveFallback(args);
+    }
+
     try {
       return instantiate ? new (fn as any)(...args) : fn(...args);
     } catch (error) {
@@ -92,19 +113,7 @@ function createMockWrappedFunction<T = any>(
         console.warn(`[@jaypie/testkit] ${error.message}`);
       }
 
-      // If fallback is a function, call it
-      if (typeof fallback === "function") {
-        try {
-          return fallback(...args);
-        } catch (fallbackError) {
-          console.warn(
-            `[@jaypie/testkit] Fallback function failed: ${fallbackError instanceof Error ? fallbackError.message : fallbackError}`,
-          );
-          return "_MOCK_WRAPPED_RESULT";
-        }
-      }
-
-      return fallback;
+      return resolveFallback(args);
     }
   };
 
@@ -135,6 +144,11 @@ function createMockWrappedObject<T extends Record<string, any>>(
         class?: boolean;
       } = "_MOCK_WRAPPED_RESULT",
 ): T {
+  // An optional package that is not installed leaves nothing to wrap
+  if (object === undefined || object === null) {
+    return object;
+  }
+
   let returnMock: Record<string, any> = {};
 
   // Extract values with defaults for the top-level call
