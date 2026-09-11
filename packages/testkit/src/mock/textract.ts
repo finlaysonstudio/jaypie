@@ -2,10 +2,9 @@ import { readFile } from "fs/promises";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
 import { beforeAll } from "vitest";
-import { TextractDocument } from "amazon-textract-response-parser";
 import type { TextractPageAdaptable } from "@jaypie/textract";
 import { createMockWrappedFunction, createMockWrappedObject } from "./utils";
-import * as original from "@jaypie/textract";
+import { textract as original, textractResponseParser } from "./original";
 
 // Constants for mock values
 const TAG = "TEXTRACT";
@@ -27,7 +26,9 @@ beforeAll(async () => {
 export const MarkdownPage = createMockWrappedObject(original.MarkdownPage, {
   class: true,
   fallback: () => {
-    const mockDocument = new TextractDocument(JSON.parse(mockTextractContents));
+    const mockDocument = new textractResponseParser.TextractDocument(
+      JSON.parse(mockTextractContents),
+    );
     // Double type assertion needed to bridge incompatible types
     return new original.MarkdownPage(
       mockDocument.pageNumber(1) as unknown as TextractPageAdaptable,

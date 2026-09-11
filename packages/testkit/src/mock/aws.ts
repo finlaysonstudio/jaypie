@@ -1,4 +1,4 @@
-import * as original from "@jaypie/aws";
+import { aws as original } from "./original";
 import {
   createMockFunction,
   createMockResolvedFunction,

@@ -1,83 +1,53 @@
-import { createRequire } from "module";
-import { pathToFileURL } from "url";
+// Packages the mocks wrap that a consumer may not install. Each loads once via
+// a top-level dynamic import. A package that is not installed resolves to an
+// empty module, so wrapped mocks fall back to their canned values and
+// pass-through exports are undefined instead of failing to load. Types assume
+// the package is present.
 
-import { ConfigurationError } from "@jaypie/errors";
+const MODULE_NOT_FOUND_CODES = ["ERR_MODULE_NOT_FOUND", "MODULE_NOT_FOUND"];
 
-// CJS/ESM compatible require - handles bundling to CJS where import.meta.url becomes undefined
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore - __filename exists in CJS context when ESM is bundled to CJS
-const require =
-  typeof __filename !== "undefined"
-    ? createRequire(pathToFileURL(__filename).href)
-    : createRequire(import.meta.url);
-
-// Cache for loaded packages
-const packageCache = new Map<string, unknown>();
-
-// Try to load a package, return null if not installed
-function tryLoadPackage<T>(packageName: string): T | null {
-  if (packageCache.has(packageName)) {
-    return packageCache.get(packageName) as T;
+function isMissingPackage({
+  error,
+  packageName,
+}: {
+  error: unknown;
+  packageName: string;
+}): boolean {
+  if (!(error instanceof Error)) {
+    return false;
   }
-
-  try {
-    // eslint-disable-next-line no-restricted-syntax
-    const pkg = require(packageName) as T;
-    packageCache.set(packageName, pkg);
-    return pkg;
-  } catch {
-    return null;
-  }
-}
-
-// Create a proxy that throws helpful error when accessing properties of uninstalled package
-function createMissingPackageProxy(packageName: string): unknown {
-  return new Proxy(
-    {},
-    {
-      get(_, prop) {
-        throw new ConfigurationError(
-          `Cannot mock ${packageName}.${String(prop)} - ${packageName} is not installed. ` +
-            `Run: npm install ${packageName}`,
-        );
-      },
-    },
+  const { code } = error as Error & { code?: string };
+  return (
+    MODULE_NOT_FOUND_CODES.includes(code ?? "") &&
+    error.message.includes(`'${packageName}'`)
   );
 }
 
-// Load package or return proxy that throws errors
-function loadPackageOrProxy<T>(packageName: string): T {
-  return (tryLoadPackage<T>(packageName) ??
-    createMissingPackageProxy(packageName)) as T;
+export async function importOptional<T>(packageName: string): Promise<T> {
+  try {
+    return (await import(/* @vite-ignore */ packageName)) as T;
+  } catch (error) {
+    // Only the package itself being absent is tolerated. A missing transitive
+    // dependency or an error thrown while loading still surfaces.
+    if (isMissingPackage({ error, packageName })) {
+      return {} as T;
+    }
+    throw error;
+  }
 }
 
-// Core packages - always required
-import * as errors from "@jaypie/errors";
-import * as kit from "@jaypie/kit";
-import * as logger from "@jaypie/logger";
-
-// Optional packages - lazy loaded with validation
-const aws = loadPackageOrProxy<typeof import("@jaypie/aws")>("@jaypie/aws");
-const datadog =
-  loadPackageOrProxy<typeof import("@jaypie/datadog")>("@jaypie/datadog");
-const express =
-  loadPackageOrProxy<typeof import("@jaypie/express")>("@jaypie/express");
-const lambda =
-  loadPackageOrProxy<typeof import("@jaypie/lambda")>("@jaypie/lambda");
-const llm = loadPackageOrProxy<typeof import("@jaypie/llm")>("@jaypie/llm");
-const textract =
-  loadPackageOrProxy<typeof import("@jaypie/textract")>("@jaypie/textract");
-
-export const original = {
-  aws,
-  datadog,
-  errors,
-  express,
-  kit,
-  lambda,
-  llm,
-  logger,
-  textract,
-};
-
-export default original;
+export const aws =
+  await importOptional<typeof import("@jaypie/aws")>("@jaypie/aws");
+export const datadog =
+  await importOptional<typeof import("@jaypie/datadog")>("@jaypie/datadog");
+export const dynamodb =
+  await importOptional<typeof import("@jaypie/dynamodb")>("@jaypie/dynamodb");
+export const express =
+  await importOptional<typeof import("@jaypie/express")>("@jaypie/express");
+export const llm =
+  await importOptional<typeof import("@jaypie/llm")>("@jaypie/llm");
+export const textract =
+  await importOptional<typeof import("@jaypie/textract")>("@jaypie/textract");
+export const textractResponseParser = await importOptional<
+  typeof import("amazon-textract-response-parser")
+>("amazon-textract-response-parser");

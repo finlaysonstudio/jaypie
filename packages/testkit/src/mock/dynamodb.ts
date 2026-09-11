@@ -1,4 +1,3 @@
-import * as original from "@jaypie/dynamodb";
 import type {
   BaseQueryOptions,
   CreateTableOptions,
@@ -16,6 +15,7 @@ import type {
 } from "@jaypie/dynamodb";
 import type { IndexableModel } from "@jaypie/fabric";
 
+import { dynamodb as original } from "./original";
 import { createMockFunction, createMockResolvedFunction } from "./utils";
 
 // Re-export constants (no need to mock, just pass through)

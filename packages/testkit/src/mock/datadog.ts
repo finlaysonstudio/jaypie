@@ -5,7 +5,7 @@ import {
   createMockWrappedFunction,
 } from "./utils";
 
-import * as original from "@jaypie/datadog";
+import { datadog as original } from "./original";
 
 export const DATADOG = original.DATADOG;
 export const DATADOG_HELP = original.DATADOG_HELP;

@@ -80,6 +80,7 @@ src/
 │   ├── lambda.ts       # lambdaHandler
 │   ├── llm.ts          # llm, createMockTool
 │   ├── logger.ts       # Logger mocks
+│   ├── original.ts     # importOptional loads the optional peers the mocks wrap
 │   ├── textract.ts     # AWS Textract mocks
 │   └── utils.ts        # Mock factory utilities
 ├── types/              # TypeScript declarations
@@ -126,6 +127,9 @@ export default defineConfig({
   },
 });
 ```
+
+`src/testSetup.ts` builds to `dist/testSetup.js` and is also this package's own
+setup file. Requires `@jaypie/testkit` 1.2.72 or later.
 
 ### Mocking Jaypie Modules
 
@@ -222,15 +226,23 @@ All mocks are created with `_jaypie: true` property for identification. Mock fac
 
 ## Dependencies
 
-- `@jaypie/errors` - Error classes used by the `toThrow*Error` matchers in the root entry
+- `@jaypie/errors`, `@jaypie/kit`, `@jaypie/logger` - Core packages the matchers and core mocks need
 - `jest-json-schema` - JSON schema validation matcher
 - `vitest` - Test framework (peer dependency)
-- `@jaypie/dynamodb`, `@jaypie/kit`, `@jaypie/logger` - Optional peer dependencies used by the `./mock` entry
+- `@jaypie/aws`, `@jaypie/datadog`, `@jaypie/dynamodb`, `@jaypie/express`, `@jaypie/llm`, `@jaypie/textract`, `amazon-textract-response-parser` - Optional peer dependencies the `./mock` entry wraps
 
-Every package the root entry (`dist/index.js`) imports at runtime must be a
-`dependency` or a required peer, since `~subpackage` and `~monorepo` install
-`@jaypie/testkit` alone. `src/__tests__/publishedImports.spec.ts` holds this
-contract and requires a build first.
+`~subpackage` and `~monorepo` install `@jaypie/testkit` alone, so every
+published entry must load without the optional peers:
+
+- A static import in any published entry must be a `dependency` or a required peer
+- The `./mock` entry loads optional peers only through `importOptional` in
+  `src/mock/original.ts`. An absent package resolves to an empty module:
+  wrapped mocks return their fallback and pass-through exports are `undefined`
+- Guard any load-time use of an optional export (e.g. `new original.JaypieToolkit`)
+
+`src/__tests__/publishedImports.spec.ts` holds the import contract and requires
+a build first. `src/mock/__tests__/absent.spec.ts` loads the mock entry with
+every optional peer absent.
 
 ## Adding New Mocks
 
