@@ -24,7 +24,12 @@ const onwarn = (warning, defaultHandler) => {
 
 export default [
   {
-    input: ["src/index.ts", "src/suite.ts", "src/suites/docs/index.ts"],
+    input: [
+      "src/http/index.ts",
+      "src/index.ts",
+      "src/suite.ts",
+      "src/suites/docs/index.ts",
+    ],
     onwarn,
     output: {
       dir: "dist",
@@ -57,9 +62,12 @@ export default [
     external: [
       "@jaypie/datadog",
       "@jaypie/errors",
+      "@jaypie/express",
       "@jaypie/fabric",
+      "@jaypie/fabric/llm",
       "@jaypie/fabric/mcp",
       "@jaypie/kit",
+      "@jaypie/logger",
       "@jaypie/tildeskill",
       "@modelcontextprotocol/sdk/server/mcp.js",
       "@modelcontextprotocol/sdk/server/stdio.js",
@@ -82,6 +90,12 @@ export default [
   {
     input: "src/index.ts",
     output: { file: "dist/index.d.ts", format: "es" },
+    plugins: [dts()],
+    external: dtsExternal,
+  },
+  {
+    input: "src/http/index.ts",
+    output: { file: "dist/http/index.d.ts", format: "es" },
     plugins: [dts()],
     external: dtsExternal,
   },

@@ -353,3 +353,4 @@ new JaypieLambda(this, "Api", {
 ## See Also
 
 - **`skill("streaming")`** - Full guide to `expressStreamHandler` and `createLambdaStreamHandler`
+- **`skill("mcp")`** - `mcpHttpHandler` serves a `ServiceSuite` as MCP streamable HTTP from an Express route

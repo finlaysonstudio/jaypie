@@ -47,6 +47,23 @@ describe("createMcpServer", () => {
       expect(server).toBeDefined();
     });
 
+    it("Narrows tools to the services allowlist", () => {
+      const server = createMcpServer({
+        services: ["skill", "version"],
+      }) as unknown as { tools: { name: string }[] };
+      expect(server.tools.map((tool) => tool.name)).toEqual([
+        "skill",
+        "version",
+      ]);
+    });
+
+    it("Registers every tool when services is omitted", () => {
+      const server = createMcpServer() as unknown as {
+        tools: { name: string }[];
+      };
+      expect(server.tools.map((tool) => tool.name)).toContain("datadog");
+    });
+
     it("Registers datadog_logs tool", () => {
       const server = createMcpServer();
       // The server object doesn't expose registered tools directly,

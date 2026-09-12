@@ -223,6 +223,12 @@ suite.getServiceFunction("greet"); // Service | undefined
 | `getServiceFunctions()` | Service[] | Get all service functions (for transport adapters) |
 | `getServiceFunction(name)` | Service | Get a specific service function |
 
+`selectServiceFunctions(suite, { services })` returns the suite's service
+functions narrowed to an alias allowlist, in registration order. Omitting
+`services` selects all; `[]` selects none; unknown aliases are ignored. Every
+transport that exposes a suite (`createMcpServerFromSuite`, `@jaypie/mcp`'s
+`mcpHttpHandler`) selects through it.
+
 **Integration with Transport Adapters**:
 
 ServiceSuites connect to transport adapters via `getServiceFunctions()`:
@@ -232,6 +238,9 @@ import { createMcpServerFromSuite } from "@jaypie/fabric/mcp";
 
 const server = createMcpServerFromSuite(suite);
 // All suite services are now registered as MCP tools
+
+const docs = createMcpServerFromSuite(suite, { services: ["greet"] });
+// Only allowlisted services are registered
 ```
 
 ### Typed Arrays
@@ -412,8 +421,8 @@ export * as llm from "./llm/index.js";
 export { fabricService } from "./service.js";
 
 // ServiceSuite
-export { createServiceSuite } from "./ServiceSuite.js";
-export type { CreateServiceSuiteConfig, RegisterServiceOptions, ServiceInput, ServiceMeta, ServiceSuite } from "./ServiceSuite.js";
+export { createServiceSuite, selectServiceFunctions } from "./ServiceSuite.js";
+export type { CreateServiceSuiteConfig, RegisterServiceOptions, SelectServiceFunctionsOptions, ServiceInput, ServiceMeta, ServiceSuite } from "./ServiceSuite.js";
 
 // Models
 export { FabricModel, FabricJob, FabricMessage, Progress } from "./models/base.js";

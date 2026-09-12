@@ -4,9 +4,10 @@ MCP (Model Context Protocol) server for Jaypie development. Provides tools for A
 
 ## Package Overview
 
-This package serves two purposes:
+This package serves three purposes:
 1. **CLI Tool**: Run as `npx jaypie-mcp` for stdio-based MCP server
-2. **Express Handler**: Integrate MCP via HTTP with `mcpExpressHandler`
+2. **Express Handler**: Integrate MCP via HTTP with `mcpExpressHandler` (SDK transport, sessions)
+3. **Streamable HTTP Handler**: Serve any `ServiceSuite` from a Jaypie Lambda with `mcpHttpHandler` from `@jaypie/mcp/http` (no SDK)
 
 ## Directory Structure
 
@@ -17,6 +18,11 @@ packages/mcp/
 │   ├── createMcpServer.ts    # MCP server factory using ServiceSuite
 │   ├── suite.ts              # ServiceSuite registration (simplified)
 │   ├── mcpExpressHandler.ts  # Express middleware for HTTP transport
+│   ├── http/                 # @jaypie/mcp/http entry; never imports the SDK
+│   │   ├── index.ts          # Exports mcpHttpHandler, handleMcpRpc, handleMcpRpcBody
+│   │   ├── mcpHttpHandler.ts # Accept negotiation, JSON via expressHandler, SSE via expressStreamHandler, 405
+│   │   ├── rpc.ts            # JSON-RPC methods, batching, error codes
+│   │   └── tools.ts          # Tool selection via selectServiceFunctions
 │   └── suites/               # Modular suite implementations
 │       └── docs/
 │           ├── index.ts      # skill, version, release_notes services
@@ -32,7 +38,29 @@ packages/mcp/
 ```typescript
 import { createMcpServer, mcpExpressHandler } from "@jaypie/mcp";
 import type { CreateMcpServerOptions, McpExpressHandlerOptions } from "@jaypie/mcp";
+
+// Loads @jaypie/express, never @modelcontextprotocol/sdk
+import {
+  handleMcpRpc,
+  handleMcpRpcBody,
+  JSON_RPC_ERROR,
+  MCP_PROTOCOL_VERSION,
+  MCP_SUPPORTED_PROTOCOL_VERSIONS,
+  mcpHttpHandler,
+} from "@jaypie/mcp/http";
+import type {
+  JsonRpcId,
+  JsonRpcRequest,
+  JsonRpcResponse,
+  McpHttpHandler,
+  McpHttpHandlerOptions,
+  McpRpcOptions,
+} from "@jaypie/mcp/http";
 ```
+
+The `.` entry imports the SDK at load (stdio CLI). Keep `src/http/` free of
+SDK imports and of static imports of `suite.ts`: the default suite loads with a
+dynamic import only when no `suite` option is passed.
 
 ## MCP Tools (4 Unified Tools)
 
@@ -88,6 +116,25 @@ import { createMcpServer } from "@jaypie/mcp";
 
 const server = createMcpServer({ version: "1.0.0", verbose: true });
 ```
+
+### Streamable HTTP on Lambda (no SDK)
+```typescript
+import express from "express";
+import { createLambdaStreamHandler } from "@jaypie/express";
+import { mcpHttpHandler } from "@jaypie/mcp/http";
+
+const app = express();
+app.use(express.json());
+app.all("/mcp", mcpHttpHandler({ services: ["skill", "version"] }));
+
+export const handler = createLambdaStreamHandler(app);
+```
+
+### Filtering Tools
+`createMcpServer`, `mcpExpressHandler`, and `mcpHttpHandler` accept
+`services?: string[]`, an allowlist of service aliases passed to
+`selectServiceFunctions` in `@jaypie/fabric` (the same selection
+`createMcpServerFromSuite` applies). Omit to expose all; `[]` exposes none.
 
 ## Skills Directory
 
@@ -176,6 +223,9 @@ npm run format     # eslint --fix
 - `@modelcontextprotocol/sdk` - MCP protocol implementation
 - `@jaypie/datadog` - `datadogService`, the Datadog observability tool
 - `@jaypie/errors` - Jaypie error types thrown by the suites
+- `@jaypie/fabric` - `ServiceSuite`, `selectServiceFunctions`, `inputToJsonSchema`
+- `@jaypie/express` (optional peer) - `expressHandler` / `expressStreamHandler` for `@jaypie/mcp/http`
+- `@jaypie/logger` (optional peer) - Logging for `@jaypie/mcp/http`
 - `@jaypie/kit` - YAML frontmatter parsing (`parseFrontmatter`) for release notes
 - `commander` - CLI argument parsing
 - `semver` - Version comparison for release notes filtering

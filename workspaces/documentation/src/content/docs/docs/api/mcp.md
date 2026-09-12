@@ -9,6 +9,7 @@ Model Context Protocol (MCP) server for Jaypie development. Provides tools for A
 `@jaypie/mcp` provides a complete MCP server that can be used via:
 - **CLI**: Run as `npx jaypie-mcp` for stdio-based MCP server
 - **Express Handler**: Integrate MCP via HTTP with `mcpExpressHandler`
+- **Streamable HTTP Handler**: Serve any fabric `ServiceSuite` from a Jaypie Lambda with `mcpHttpHandler` from `@jaypie/mcp/http`, without `@modelcontextprotocol/sdk`
 
 ## Installation
 
@@ -42,6 +43,30 @@ app.use("/mcp", await mcpExpressHandler({ version: "1.0.0" }));
 import { createMcpServer } from "@jaypie/mcp";
 
 const server = createMcpServer({ version: "1.0.0", verbose: true });
+```
+
+### Streamable HTTP on Lambda (no SDK)
+
+```typescript
+import express from "express";
+import { createLambdaStreamHandler } from "@jaypie/express";
+import { mcpHttpHandler } from "@jaypie/mcp/http";
+
+const app = express();
+app.use(express.json());
+app.all("/mcp", mcpHttpHandler({ services: ["skill", "version"] }));
+
+export const handler = createLambdaStreamHandler(app);
+```
+
+The handler answers one JSON body, or server-sent events when `Accept` prefers `text/event-stream`. Notifications answer 202 with no body; GET and DELETE answer 405. Pass `suite` to serve any `ServiceSuite`, and `secrets`, `setup`, or `validate` to run the Jaypie handler lifecycle. Deploy behind a Function URL with `RESPONSE_STREAM` invoke mode for streaming, or use `createLambdaHandler` for buffered JSON.
+
+### Filtering Tools
+
+`createMcpServer`, `mcpExpressHandler`, `mcpHttpHandler`, and `createMcpServerFromSuite` (from `@jaypie/fabric/mcp`) accept `services`, an allowlist of tool names:
+
+```typescript
+const server = createMcpServer({ services: ["skill", "version"] });
 ```
 
 ## MCP Tools
@@ -129,6 +154,9 @@ Either key may be held in Secrets Manager. `SECRET_DATADOG_API_KEY`, `DATADOG_AP
 ```typescript
 import { createMcpServer, mcpExpressHandler } from "@jaypie/mcp";
 import type { CreateMcpServerOptions, McpExpressHandlerOptions } from "@jaypie/mcp";
+
+import { handleMcpRpc, handleMcpRpcBody, mcpHttpHandler } from "@jaypie/mcp/http";
+import type { McpHttpHandlerOptions, McpRpcOptions } from "@jaypie/mcp/http";
 ```
 
 ## Related Packages

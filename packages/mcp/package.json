@@ -16,6 +16,12 @@
         "default": "./dist/index.js"
       }
     },
+    "./http": {
+      "import": {
+        "types": "./dist/http/index.d.ts",
+        "default": "./dist/http/index.js"
+      }
+    },
     "./suite": {
       "import": {
         "types": "./dist/suite.d.ts",
@@ -54,6 +60,8 @@
     "zod": "^4.1.13"
   },
   "devDependencies": {
+    "@jaypie/express": "^1.2.36",
+    "@jaypie/logger": "^1.2.24",
     "@rollup/plugin-replace": "^6.0.3",
     "@rollup/plugin-typescript": "^12.3.0",
     "@types/express": "^5.0.3",
@@ -63,6 +71,22 @@
     "rollup-plugin-copy": "^3.5.0",
     "rollup-plugin-dts": "^6.1.1",
     "typescript": "^5.9.3"
+  },
+  "peerDependencies": {
+    "@jaypie/express": "^1.2.36",
+    "@jaypie/logger": "^1.2.24",
+    "express": ">=4.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@jaypie/express": {
+      "optional": true
+    },
+    "@jaypie/logger": {
+      "optional": true
+    },
+    "express": {
+      "optional": true
+    }
   },
   "publishConfig": {
     "access": "public"
