@@ -304,7 +304,7 @@ export interface JaypieDistributionProps extends Omit<
   waf?: boolean | JaypieWafConfig;
   /**
    * The hosted zone for DNS records
-   * @default CDK_ENV_HOSTED_ZONE
+   * @default CDK_ENV_API_HOSTED_ZONE || CDK_ENV_HOSTED_ZONE
    */
   zone?: string | route53.IHostedZone;
 }
@@ -425,8 +425,12 @@ export class JaypieDistribution
     this.host = host;
     this.hosts = hosts;
 
-    // Determine zone from props or environment
-    const zone = propsZone || process.env.CDK_ENV_HOSTED_ZONE;
+    // Determine zone from props or environment, matching the host fallback
+    // Jaypie 2 consolidates on CDK_ENV_HOSTED_ZONE alone
+    const zone =
+      propsZone ||
+      process.env.CDK_ENV_API_HOSTED_ZONE ||
+      process.env.CDK_ENV_HOSTED_ZONE;
 
     // Resolve the origin from handler
     // Check order matters: IFunctionUrl before IOrigin (FunctionUrl also has bind method)
