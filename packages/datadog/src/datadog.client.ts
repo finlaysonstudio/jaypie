@@ -1,3 +1,4 @@
+import { BadGatewayError } from "@jaypie/errors";
 import { request } from "https";
 import { deflateSync } from "zlib";
 
@@ -104,23 +105,27 @@ const makeRequest = <T>(
             resolve({ status: "ok" } as T);
           }
         } else {
+          const fallbackMessage = `HTTP ${res.statusCode}: ${data}`;
           try {
             const errorData = JSON.parse(data);
             reject(
-              new Error(
-                errorData.errors?.join(", ") ||
-                  `HTTP ${res.statusCode}: ${data}`,
+              new BadGatewayError(
+                errorData.errors?.join(", ") || fallbackMessage,
               ),
             );
           } catch {
-            reject(new Error(`HTTP ${res.statusCode}: ${data}`));
+            reject(new BadGatewayError(fallbackMessage));
           }
         }
       });
     });
 
     req.on("error", (error) => {
-      reject(error);
+      reject(
+        new BadGatewayError(`Connection error: ${error.message}`, {
+          cause: error,
+        }),
+      );
     });
 
     req.write(payload);

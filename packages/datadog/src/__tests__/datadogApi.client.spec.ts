@@ -1,8 +1,11 @@
 import { getEnvSecret, getSecret } from "@jaypie/aws";
+import { EventEmitter } from "events";
+import { request } from "https";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Mock } from "vitest";
 
 import { DATADOG } from "../constants.js";
+import { datadogService } from "../datadog.service.js";
 import {
   buildDatadogQuery,
   getDatadogCredentials,
@@ -15,6 +18,30 @@ import {
 //
 
 vi.mock("@jaypie/aws");
+vi.mock("https", () => ({ request: vi.fn() }));
+
+function mockHttpsResponse({
+  body,
+  statusCode,
+}: {
+  body: string;
+  statusCode: number;
+}): void {
+  (request as unknown as Mock).mockImplementation(
+    (_options: unknown, callback: (res: EventEmitter) => void) => {
+      const req = Object.assign(new EventEmitter(), {
+        end: () => {
+          const res = Object.assign(new EventEmitter(), { statusCode });
+          callback(res);
+          res.emit("data", Buffer.from(body));
+          res.emit("end");
+        },
+        write: vi.fn(),
+      });
+      return req;
+    },
+  );
+}
 
 const KEY_ENV = Object.values(DATADOG.ENV);
 
@@ -221,5 +248,37 @@ describe("Datadog Credentials", () => {
       expect(result.apiKey.source).toBeNull();
       expect(result.appKey.source).toBeNull();
     });
+  });
+});
+
+describe("Datadog API Failures", () => {
+  beforeEach(() => {
+    (getEnvSecret as Mock).mockImplementation(async (name: string) => {
+      if (name === DATADOG.ENV.DATADOG_API_KEY) return "MOCK_API_KEY";
+      if (name === DATADOG.ENV.DATADOG_APP_KEY) return "MOCK_APP_KEY";
+      return undefined;
+    });
+  });
+
+  it("Returns a 403 as data with a readable error rather than throwing", async () => {
+    mockHttpsResponse({ body: '{"errors":["Forbidden"]}', statusCode: 403 });
+    const result = (await datadogService({
+      command: "logs",
+      query: "status:error",
+    })) as { error?: string; success: boolean };
+    expect(request).toHaveBeenCalledTimes(1);
+    expect(result.success).toBeFalse();
+    expect(result.error).toMatch(/Access denied/);
+    expect(result.error).toMatch(/logs_read/);
+  });
+
+  it("Returns a 403 from log_analytics as data", async () => {
+    mockHttpsResponse({ body: '{"errors":["Forbidden"]}', statusCode: 403 });
+    const result = (await datadogService({
+      command: "log_analytics",
+      groupBy: "service",
+    })) as { error?: string; success: boolean };
+    expect(result.success).toBeFalse();
+    expect(result.error).toBeString();
   });
 });
