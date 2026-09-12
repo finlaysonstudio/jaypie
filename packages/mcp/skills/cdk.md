@@ -23,8 +23,8 @@ Lambda function with Datadog tracing, logging, and error handling:
 import { JaypieLambda } from "@jaypie/constructs";
 
 const handler = new JaypieLambda(this, "ApiHandler", {
-  entry: "src/handler.ts",
-  handler: "handler",
+  code: "../api/dist",
+  handler: "index.handler",
   environment: {
     PROJECT_ENV: "production",
     PROJECT_KEY: "my-api",
@@ -36,7 +36,7 @@ const handler = new JaypieLambda(this, "ApiHandler", {
 
 #### Pre-built Code
 
-When using `code` instead of `entry` for pre-built bundles:
+`code` accepts a pre-built bundle directory (or a `lambda.Code`); `handler` is `<file>.<export>` within it:
 
 ```typescript
 new JaypieLambda(this, "Api", {
@@ -222,8 +222,8 @@ import { JaypieDynamoDb, JaypieLambda } from "@jaypie/constructs";
 const table = new JaypieDynamoDb(this, "myApp");
 
 const handler = new JaypieLambda(this, "ApiHandler", {
-  entry: "src/handler.ts",
-  handler: "handler",
+  code: "../api/dist",
+  handler: "index.handler",
   tables: [table],
 });
 ```

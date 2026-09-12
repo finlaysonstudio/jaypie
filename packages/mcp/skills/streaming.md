@@ -82,7 +82,8 @@ export const handler = lambdaStreamHandler(async (event, context) => {
 import { JaypieLambda, JaypieDistribution } from "@jaypie/constructs";
 
 const streamingLambda = new JaypieLambda(this, "Stream", {
-  entry: "src/stream.ts",
+  code: "../api/dist",
+  handler: "index.handler",
 });
 
 new JaypieDistribution(this, "Api", {

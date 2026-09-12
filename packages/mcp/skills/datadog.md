@@ -19,7 +19,8 @@ Enable Datadog tracing in CDK:
 import { JaypieLambda } from "@jaypie/constructs";
 
 const handler = new JaypieLambda(this, "Handler", {
-  entry: "src/handler.ts",
+  code: "../api/dist",
+  handler: "index.handler",
   datadogApiKeyArn: process.env.CDK_ENV_DATADOG_API_KEY_ARN,
   environment: {
     DD_ENV: "production",

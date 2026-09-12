@@ -130,7 +130,8 @@ const patterns = [
     code: `import { JaypieLambda } from "@jaypie/constructs";
 
 new JaypieLambda(this, "Handler", {
-  entry: "src/handler.ts",
+  code: "../api/dist",
+  handler: "index.handler",
   secrets: ["MONGODB_URI"],
 });`,
     title: "CDK",

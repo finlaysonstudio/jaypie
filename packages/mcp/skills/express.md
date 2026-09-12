@@ -246,8 +246,8 @@ Deploy with `@jaypie/constructs`:
 import { JaypieLambda } from "@jaypie/constructs";
 
 new JaypieLambda(this, "Api", {
-  entry: "src/lambda.ts",
-  handler: "handler",
+  code: "../api/dist",
+  handler: "index.handler",
   environment: {
     PROJECT_ENV: "production",
   },
