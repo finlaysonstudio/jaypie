@@ -5,7 +5,7 @@ related: apikey, aws, cdk, models, vocabulary
 
 # DynamoDB Patterns
 
-Jaypie provides `@jaypie/dynamodb` for single-table DynamoDB with entity operations, GSI-based queries, hierarchical scoping, and soft delete. Access through the main `jaypie` package or directly.
+Jaypie provides `@jaypie/dynamodb` for single-table DynamoDB with entity operations, GSI-based queries, hierarchical scoping, and soft delete. Import it directly; the `jaypie` umbrella package does not re-export it.
 
 ## Key Design
 
@@ -39,12 +39,6 @@ import {
   queryByScope,
   queryByCategory,
 } from "@jaypie/dynamodb";
-```
-
-Or through the main package:
-
-```typescript
-import { APEX, initClient, createEntity, queryByScope } from "jaypie";
 ```
 
 ### Client Initialization
