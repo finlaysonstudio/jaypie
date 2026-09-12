@@ -27,6 +27,14 @@ import expressHandler from "../expressHandler.js";
 //
 
 vi.mock("../getCurrentInvokeUuid.adapter.js");
+// Isolate from ambient Datadog keys (e.g., DD_API_KEY in CI) that enable metrics
+vi.mock("@jaypie/datadog", async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  return {
+    ...actual,
+    hasDatadogEnv: vi.fn(() => false),
+  };
+});
 
 beforeEach(() => {
   (
