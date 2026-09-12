@@ -284,7 +284,7 @@ Located in `src/index/`. Utilities for DynamoDB single-table design patterns:
 | `assertModelStatus(model, status)` | Throws `BadRequestError` when the model declares a vocabulary and `status` is not in it; no-op otherwise |
 | `clearRegistry()` | Clear all registered models (for testing) |
 | `getAllRegisteredIndexes()` | Get all unique indexes across all registered models |
-| `populateIndexKeys(entity, indexes, suffix?)` | Populate GSI pk attrs on entity. When `sk.length > 1`, also writes a composite sk attr named `{indexName}Sk`. |
+| `populateIndexKeys(entity, indexes, suffix?)` | Populate GSI pk attrs on entity. When `sk.length > 1`, also writes a composite sk attr named `{indexName}Sk`. When a source field is missing, removes the pk attr (and its composite sk attr) so stale keys do not persist. |
 | `getGsiAttributeNames(index)` | Returns `{ pk, sk }` attribute names for an index definition. Single source of truth for GSI provisioning. |
 | `buildCompositeKey(entity, fields, suffix?)` | Build composite key from entity fields |
 | `tryBuildCompositeKey(entity, fields, suffix?)` | Like buildCompositeKey but returns undefined if fields missing |

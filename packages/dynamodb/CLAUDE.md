@@ -206,6 +206,8 @@ All GSIs use a composite sort key of `scope#updatedAt` (stored as the `{indexNam
 | `indexModelType` | `{model}#{type}` (sparse) | `indexModelTypeSk` = `{scope}#{updatedAt}` | Type filter |
 | `indexModelXid` | `{model}#{xid}` (sparse) | `indexModelXidSk` = `{scope}#{updatedAt}` | External ID lookup |
 
+`indexEntity` removes a sparse index key and its `{indexName}Sk` attribute when the source field is absent, so deleting the field and calling `updateEntity` takes the row out of the index.
+
 GSIs are defined using `fabricIndex()` from `@jaypie/fabric`:
 
 ```typescript

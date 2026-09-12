@@ -135,6 +135,39 @@ describe("indexEntity", () => {
     expect(result.indexModelAlias).toBeUndefined();
   });
 
+  it("omits the composite sk of a sparse index whose pk field is missing", () => {
+    const entity = createBaseEntity();
+    const result = indexEntity(entity) as StorableEntity & {
+      indexModelAliasSk?: string;
+    };
+    expect(result.indexModelAliasSk).toBeUndefined();
+  });
+
+  it("drops a stale sparse index key after its source field is removed", () => {
+    const withCategory = indexEntity({
+      ...createBaseEntity(),
+      category: "person@example.com",
+    }) as StorableEntity & {
+      indexModelCategory?: string;
+      indexModelCategorySk?: string;
+    };
+    expect(withCategory.indexModelCategory).toBe("record#person@example.com");
+    expect(withCategory.indexModelCategorySk).toBeDefined();
+
+    const next = { ...withCategory } as Record<string, unknown>;
+    delete next.category;
+    const result = indexEntity(next as StorableEntity) as Record<
+      string,
+      unknown
+    >;
+
+    expect(result.category).toBeUndefined();
+    expect("indexModelCategory" in result).toBe(false);
+    expect("indexModelCategorySk" in result).toBe(false);
+    expect(result.indexModel).toBe("record");
+    expect(result.indexModelSk).toBe(`@#${result.updatedAt}`);
+  });
+
   it("populates indexModelCategory, Type, Xid when fields present", () => {
     const entity = {
       ...createBaseEntity(),

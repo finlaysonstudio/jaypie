@@ -282,6 +282,8 @@ All GSIs use a composite sort key of `scope#updatedAt` (stored as `{indexName}Sk
 | `indexModelType` | `{model}#{type}` (sparse) | `indexModelTypeSk` = `{scope}#{updatedAt}` | Type filtering | You need to filter by type |
 | `indexModelXid` | `{model}#{xid}` (sparse) | `indexModelXidSk` = `{scope}#{updatedAt}` | External ID lookup | You need cross-system ID lookups |
 
+Sparse indexes are entered and exited by their source field. Every write re-indexes the entity: when a source field (e.g., `category`) is absent, the index key (`indexModelCategory`) and its sort key (`indexModelCategorySk`) are removed from the item, so deleting the field and calling `updateEntity` takes the row out of the index.
+
 ```typescript
 import { fabricIndex, registerModel } from "@jaypie/fabric";
 
