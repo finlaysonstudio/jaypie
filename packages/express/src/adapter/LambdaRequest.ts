@@ -49,6 +49,11 @@ export class LambdaRequest extends Readable {
   public readonly httpVersionMajor: number = 1;
   public readonly httpVersionMinor: number = 1;
   public complete: boolean = false;
+  // Flat [name, value, name, value] list; header-reading libraries such as
+  // @hono/node-server (used by the MCP SDK transport) iterate this directly
+  public readonly rawHeaders: string[];
+  public readonly rawTrailers: string[] = [];
+  public readonly trailers: Record<string, string> = {};
 
   // Socket mock for Express compatibility
   public readonly socket: MockSocket;
@@ -79,6 +84,7 @@ export class LambdaRequest extends Readable {
     this.originalUrl = options.url;
     this.path = options.url.split("?")[0];
     this.headers = this.normalizeHeaders(options.headers);
+    this.rawHeaders = buildRawHeaders(this.headers);
     this.bodyBuffer = options.body ?? null;
 
     // Pre-parse body: try JSON first, fall back to string.
@@ -185,6 +191,22 @@ export class LambdaRequest extends Readable {
 //
 // Helper Functions
 //
+
+/**
+ * Build Node's flat `rawHeaders` list from normalized headers.
+ * Multi-value headers produce one name/value pair per value.
+ */
+function buildRawHeaders(headers: IncomingHttpHeaders): string[] {
+  const rawHeaders: string[] = [];
+  for (const [name, value] of Object.entries(headers)) {
+    if (value === undefined) continue;
+    const values = Array.isArray(value) ? value : [value];
+    for (const item of values) {
+      rawHeaders.push(name, String(item));
+    }
+  }
+  return rawHeaders;
+}
 
 /**
  * Normalize bracket notation in query parameter key.
@@ -334,6 +356,14 @@ export function createLambdaRequest(
     throw new Error(
       "Unsupported Lambda event format. Expected Function URL, HTTP API v2, or REST API v1 event.",
     );
+  }
+
+  // Fall back to the request domain when the event omits the host header;
+  // Web Standard Request conversion (e.g. @hono/node-server) requires a host
+  const hasHost = Object.keys(headers).some((k) => k.toLowerCase() === "host");
+  const domainName = event.requestContext.domainName;
+  if (!hasHost && domainName) {
+    headers.host = domainName;
   }
 
   // Decode body if present

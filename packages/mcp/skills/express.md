@@ -174,6 +174,17 @@ app.get("/callback", (req, res) => {
 
 Libraries that defer header or cookie writes this way work unchanged: `express-openid-connect` (session cookie), `express-session`, `morgan`, `compression`. `res.flushHeaders()` and `res._implicitHeader()` both route through the same path.
 
+### Node request contract (`rawHeaders`)
+
+The adapter request exposes `rawHeaders` as Node's flat `[name, value, name, value]` list, built from the same lowercased event headers as `req.headers` (multi-value headers repeat the name once per value), plus `rawTrailers: []` and `trailers: {}`. When the event carries no `host` header, `host` falls back to `requestContext.domainName` (v1 and v2) in both `headers` and `rawHeaders`. Libraries that convert a Node request into a Web Standard `Request` read these directly, so `@hono/node-server` and the MCP SDK `StreamableHTTPServerTransport` work under both adapters:
+
+```typescript
+import { mcpExpressHandler } from "@jaypie/mcp";
+
+app.use("/mcp", await mcpExpressHandler({ enableSessions: false }));
+export const handler = createLambdaHandler(app);
+```
+
 ### LLM Observability auto-flush
 
 `createLambdaHandler` and `createLambdaStreamHandler` call `flushLlmObs()` from `@jaypie/datadog` in their `finally` block, so buffered Datadog LLM Obs spans flush before the Lambda freezes — even when the Express app errors. No-op unless `DD_LLMOBS_ENABLED` is truthy; never affects the response. No per-handler flush code is required.

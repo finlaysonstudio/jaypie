@@ -129,6 +129,132 @@ describe("LambdaRequest", () => {
       expect(req.headers["x-custom-header"]).toBe("custom-value");
     });
 
+    it("exposes rawHeaders as a flat name/value list (issue #532)", () => {
+      const event = createMockEvent({
+        headers: {
+          "Content-Type": "application/json",
+          host: "abc123.lambda-url.us-east-1.on.aws",
+        },
+      });
+      const req = createLambdaRequest(event, mockContext);
+
+      expect(req.rawHeaders).toEqual([
+        "content-type",
+        "application/json",
+        "host",
+        "abc123.lambda-url.us-east-1.on.aws",
+      ]);
+    });
+
+    it("includes derived headers in rawHeaders (issue #532)", () => {
+      const event = createMockEvent({
+        body: '{"a":1}',
+        cookies: ["session=abc123"],
+        headers: { host: "example.com" },
+      });
+      const req = createLambdaRequest(event, mockContext);
+
+      expect(req.rawHeaders).toEqual([
+        "host",
+        "example.com",
+        "cookie",
+        "session=abc123",
+        "content-length",
+        "7",
+      ]);
+    });
+
+    it("repeats multi-value headers in rawHeaders (issue #532)", () => {
+      const req = new LambdaRequest({
+        headers: {
+          host: "example.com",
+          "X-Forwarded-For": ["1.1.1.1", "2.2.2.2"],
+        } as unknown as Record<string, string>,
+        lambdaContext: mockContext,
+        lambdaEvent: createMockEvent(),
+        method: "GET",
+        protocol: "https",
+        remoteAddress: "127.0.0.1",
+        url: "/",
+      });
+
+      expect(req.rawHeaders).toEqual([
+        "host",
+        "example.com",
+        "x-forwarded-for",
+        "1.1.1.1",
+        "x-forwarded-for",
+        "2.2.2.2",
+      ]);
+    });
+
+    it("exposes rawHeaders for API Gateway v1 events (issue #532)", () => {
+      const event = createMockV1Event();
+      const req = createLambdaRequest(event, mockContext);
+
+      expect(req.rawHeaders).toEqual([
+        "content-type",
+        "application/json",
+        "host",
+        "api.example.com",
+        "user-agent",
+        "test-agent",
+      ]);
+    });
+
+    it("falls back to requestContext.domainName for missing host (issue #532)", () => {
+      const event = createMockEvent({
+        headers: { "content-type": "application/json" },
+      });
+      const req = createLambdaRequest(event, mockContext);
+
+      expect(req.headers.host).toBe("abc123.lambda-url.us-east-1.on.aws");
+      expect(req.rawHeaders).toEqual([
+        "content-type",
+        "application/json",
+        "host",
+        "abc123.lambda-url.us-east-1.on.aws",
+      ]);
+    });
+
+    it("falls back to requestContext.domainName for v1 events (issue #532)", () => {
+      const event = createMockV1Event({
+        headers: { "content-type": "application/json" },
+      });
+      const req = createLambdaRequest(event, mockContext);
+
+      expect(req.headers.host).toBe("api.example.com");
+      expect(req.rawHeaders).toContain("api.example.com");
+    });
+
+    it("keeps an existing host header over domainName (issue #532)", () => {
+      const event = createMockV1Event();
+      const req = createLambdaRequest(event, mockContext);
+
+      expect(req.headers.host).toBe("api.example.com");
+      expect(req.rawHeaders.filter((item) => item === "host")).toHaveLength(1);
+    });
+
+    it("leaves host unset without header or domainName (issue #532)", () => {
+      const baseEvent = createMockV1Event();
+      const event = createMockV1Event({
+        headers: { "content-type": "application/json" },
+        requestContext: { ...baseEvent.requestContext, domainName: undefined },
+      });
+      const req = createLambdaRequest(event, mockContext);
+
+      expect(req.headers.host).toBeUndefined();
+      expect(req.rawHeaders).not.toContain("host");
+    });
+
+    it("exposes empty rawTrailers and trailers (issue #532)", () => {
+      const event = createMockEvent();
+      const req = createLambdaRequest(event, mockContext);
+
+      expect(req.rawTrailers).toEqual([]);
+      expect(req.trailers).toEqual({});
+    });
+
     it("normalizes cookies array to Cookie header", () => {
       const event = createMockEvent({
         cookies: ["session=abc123", "user=john"],
