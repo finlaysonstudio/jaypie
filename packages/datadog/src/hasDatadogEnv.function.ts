@@ -1,15 +1,21 @@
+import {
+  DATADOG_API_KEY_ENV,
+  findDatadogKeySource,
+} from "./resolveDatadogKeys.function.js";
+
 //
 //
 // Function
 //
 
-import { DATADOG } from "./constants.js";
-
+/**
+ * True when any variable that can supply the Datadog API key is set.
+ *
+ * Detection covers every source `resolveDatadogApiKey` accepts, including
+ * `DD_API_KEY` and the `SECRET_<NAME>` / `<NAME>_SECRET` references that
+ * `getEnvSecret` resolves, so a key held only in Secrets Manager still enables
+ * metric submission. Nothing is resolved here.
+ */
 export default function hasDatadogEnv(): boolean {
-  return !!(
-    process.env[DATADOG.ENV.DATADOG_API_KEY] ||
-    process.env[DATADOG.ENV.SECRET_DATADOG_API_KEY] ||
-    process.env[DATADOG.ENV.DATADOG_API_KEY_ARN] ||
-    process.env[DATADOG.ENV.DD_API_KEY_SECRET_ARN]
-  );
+  return findDatadogKeySource(DATADOG_API_KEY_ENV) !== null;
 }

@@ -3,8 +3,10 @@
  */
 import * as https from "https";
 
-import { DATADOG } from "./constants.js";
 import {
+  DATADOG_API_KEY_ENV,
+  DATADOG_APP_KEY_ENV,
+  findDatadogKeySource,
   resolveDatadogApiKey,
   resolveDatadogAppKey,
 } from "./resolveDatadogKeys.function.js";
@@ -202,37 +204,6 @@ const nullLogger: Logger = {
   error: () => {},
 };
 
-const API_KEY_ENV = [
-  DATADOG.ENV.SECRET_DATADOG_API_KEY,
-  DATADOG.ENV.DATADOG_API_KEY_ARN,
-  DATADOG.ENV.DD_API_KEY_SECRET_ARN,
-  DATADOG.ENV.DATADOG_API_KEY,
-  DATADOG.ENV.DD_API_KEY,
-];
-
-const APP_KEY_ENV = [
-  DATADOG.ENV.DATADOG_APP_KEY,
-  DATADOG.ENV.DATADOG_APPLICATION_KEY,
-  DATADOG.ENV.DD_APP_KEY,
-  DATADOG.ENV.DD_APPLICATION_KEY,
-];
-
-/**
- * Report which environment variable supplies a key.
- *
- * A `SECRET_<NAME>` or `<NAME>_SECRET` reference counts as present, because
- * `getEnvSecret` resolves it at call time. Reporting only the plain variable
- * would say a key is missing while every query succeeds.
- */
-function findKeySource(names: string[]): string | null {
-  for (const name of names) {
-    if (process.env[`SECRET_${name}`]) return `SECRET_${name}`;
-    if (process.env[`${name}_SECRET`]) return `${name}_SECRET`;
-    if (process.env[name]) return name;
-  }
-  return null;
-}
-
 /**
  * Get Datadog credentials.
  *
@@ -257,8 +228,8 @@ export async function getDatadogCredentials(): Promise<DatadogCredentials | null
  * Validate Datadog setup without making API calls
  */
 export function validateDatadogSetup(): DatadogValidationResult {
-  const apiKeySource = findKeySource(API_KEY_ENV);
-  const appKeySource = findKeySource(APP_KEY_ENV);
+  const apiKeySource = findDatadogKeySource(DATADOG_API_KEY_ENV);
+  const appKeySource = findDatadogKeySource(DATADOG_APP_KEY_ENV);
 
   return {
     apiKey: { present: apiKeySource !== null, source: apiKeySource },
