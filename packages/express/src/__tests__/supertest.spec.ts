@@ -238,6 +238,23 @@ describe("Express handler", () => {
         expect(res.status).toEqual(HTTP.CODE.NO_CONTENT);
         expect(res.headers["content-type"]).toBeUndefined();
       });
+      it("Returning no content after an explicit status", async () => {
+        const mockFunction = vi.fn((_req: unknown, res: express.Response) => {
+          res.status(HTTP.CODE.ACCEPTED);
+          return undefined;
+        });
+        const handler = expressHandler(mockFunction, {
+          name: "handler",
+        });
+        const app = express();
+        app.use(handler);
+        // Make a request
+        const res = await request(app).post("/");
+        expect(res.status).toEqual(HTTP.CODE.ACCEPTED);
+        expect(res.text).toEqual("");
+        expect(res.headers["content-type"]).toBeUndefined();
+        expect(log.warn).not.toBeCalled();
+      });
       it("Returning created", async () => {
         const mockFunction = vi.fn(() => true);
         const handler = expressHandler(mockFunction, {

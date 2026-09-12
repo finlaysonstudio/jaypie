@@ -647,6 +647,61 @@ describe("Express Handler", () => {
         expect(mockResStatus).toHaveBeenCalledTimes(1);
         expect(mockResStatus).toHaveBeenCalledWith(404);
       });
+      it("Sends an explicit res.status() with no body when the response is undefined", async () => {
+        // Arrange
+        const mockFunction = vi.fn((req: Request, res: Response) => {
+          res.status(HTTP.CODE.ACCEPTED);
+          return undefined;
+        });
+        const handler = expressHandler(mockFunction);
+        const req: MockRequest = {};
+        const mockResEnd = vi.fn();
+        const mockResJson = vi.fn();
+        const mockResSend = vi.fn();
+        const mockResStatus = vi.fn(() => res);
+        const res: MockResponse = {
+          end: mockResEnd,
+          json: mockResJson,
+          on: vi.fn(),
+          send: mockResSend,
+          status: mockResStatus as unknown as ReturnType<typeof vi.fn>,
+        };
+        const next = () => {};
+        // Act
+        await handler(req as Request, res as Response, next);
+        // Assert
+        expect(mockResEnd).not.toHaveBeenCalled();
+        expect(mockResJson).not.toHaveBeenCalled();
+        expect(mockResSend).toHaveBeenCalledTimes(1);
+        expect(mockResSend).toHaveBeenCalledWith();
+        expect(mockResStatus).not.toHaveBeenCalledWith(HTTP.CODE.NO_CONTENT);
+        expect(mockResStatus).toHaveBeenLastCalledWith(HTTP.CODE.ACCEPTED);
+      });
+      it("Sends an explicit res.status() with no body when the response is null", async () => {
+        // Arrange
+        const mockFunction = vi.fn((req: Request, res: Response) => {
+          res.status(HTTP.CODE.ACCEPTED);
+          return null;
+        });
+        const handler = expressHandler(mockFunction);
+        const req: MockRequest = {};
+        const mockResSend = vi.fn();
+        const mockResStatus = vi.fn(() => res);
+        const res: MockResponse = {
+          end: vi.fn(),
+          json: vi.fn(),
+          on: vi.fn(),
+          send: mockResSend,
+          status: mockResStatus as unknown as ReturnType<typeof vi.fn>,
+        };
+        const next = () => {};
+        // Act
+        await handler(req as Request, res as Response, next);
+        // Assert
+        expect(mockResSend).toHaveBeenCalledWith();
+        expect(mockResStatus).not.toHaveBeenCalledWith(HTTP.CODE.NO_CONTENT);
+        expect(mockResStatus).toHaveBeenLastCalledWith(HTTP.CODE.ACCEPTED);
+      });
     });
     describe("Locals", () => {
       it("Sets values in res.locals by running functions during setup", async () => {

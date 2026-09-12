@@ -111,8 +111,9 @@ export function mcpHttpHandler(
       }
       const answer = await handleMcpRpcBody(req.body, rpcOptions);
       if (answer === null) {
-        // Streamable HTTP requires 202 with no body for notifications
-        res.status(HTTP_ACCEPTED).end();
+        // Streamable HTTP requires 202 with no body for notifications;
+        // expressHandler sends an explicit status with no body on empty return
+        res.status(HTTP_ACCEPTED);
         return undefined;
       }
       return answer;

@@ -636,6 +636,9 @@ function expressHandler<T>(
           } else {
             safeSend(res, status, response as unknown as string);
           }
+        } else if (originalRes.statusSent) {
+          // No response with an explicit res.status(): send it with no body
+          safeSend(res, status);
         } else {
           // No response
           safeSend(res, HTTP.CODE.NO_CONTENT);

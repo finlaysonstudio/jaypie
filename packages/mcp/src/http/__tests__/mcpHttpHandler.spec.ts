@@ -3,6 +3,8 @@ import type { AddressInfo } from "node:net";
 
 import { UnauthorizedError } from "@jaypie/errors";
 import { createServiceSuite, fabricService } from "@jaypie/fabric";
+import { log } from "@jaypie/logger";
+import { restoreLog, spyLog } from "@jaypie/testkit";
 import express from "express";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
@@ -135,6 +137,21 @@ describe("mcpHttpHandler", () => {
       });
       expect(response.status).toBe(202);
       expect(await response.text()).toBe("");
+    });
+
+    it("answers a notification without a response warning", async () => {
+      spyLog(log);
+      try {
+        const response = await post("/mcp", {
+          jsonrpc: "2.0",
+          method: "notifications/initialized",
+        });
+        expect(response.status).toBe(202);
+        expect(await response.text()).toBe("");
+        expect(log.warn).not.toHaveBeenCalled();
+      } finally {
+        restoreLog(log);
+      }
     });
 
     it("answers a batch as an array", async () => {

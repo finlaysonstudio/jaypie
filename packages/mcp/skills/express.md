@@ -60,6 +60,32 @@ expressHandler(handler, {
 });
 ```
 
+### Response Rules
+
+The return value becomes the response. Do not call `res.end()`, `res.json()`, or `res.send()` inside the handler; `expressHandler` logs a warning ("Illegal call to res.end()") and replays the call.
+
+| Return | Response |
+|--------|----------|
+| Object or JSON string | JSON body with the status (200 unless `res.status()` was called) |
+| Non-JSON string | Text body with the status |
+| `true` | 201, no body |
+| No body (`undefined`, `null`, other falsy) | 204, no body |
+| No body after `res.status(code)` | `code`, no body |
+
+Set an explicit status and return nothing to answer with a bodiless non-204 status, such as 202 for MCP notifications:
+
+```typescript
+app.post("/mcp", expressHandler(async (req, res) => {
+  if (isNotification(req.body)) {
+    res.status(202);
+    return; // 202 with no body, no warning
+  }
+  return answer(req.body);
+}));
+```
+
+`expressStreamHandler` flushes headers before the handler runs, so a status set inside a stream handler does not reach the client.
+
 ### Request Logging
 
 `expressHandler` logs a summary of every request. Two options control what that
