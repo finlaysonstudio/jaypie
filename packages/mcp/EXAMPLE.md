@@ -22,7 +22,7 @@ const app = express();
 app.use(express.json());
 
 // Mount MCP server at /mcp endpoint
-app.use("/mcp", mcpExpressHandler({
+app.use("/mcp", await mcpExpressHandler({
   version: "1.0.0",
   enableSessions: true,
 }));
@@ -38,7 +38,7 @@ app.listen(PORT, () => {
 ### Stateful Mode (Default)
 
 ```typescript
-app.use("/mcp", mcpExpressHandler({
+app.use("/mcp", await mcpExpressHandler({
   version: "1.0.0",
   enableSessions: true, // Default
 }));
@@ -52,7 +52,7 @@ In stateful mode:
 ### Stateless Mode
 
 ```typescript
-app.use("/mcp", mcpExpressHandler({
+app.use("/mcp", await mcpExpressHandler({
   version: "1.0.0",
   enableSessions: false,
 }));
@@ -68,7 +68,7 @@ In stateless mode:
 ```typescript
 import { randomUUID } from "crypto";
 
-app.use("/mcp", mcpExpressHandler({
+app.use("/mcp", await mcpExpressHandler({
   version: "1.0.0",
   sessionIdGenerator: () => randomUUID(),
 }));
@@ -79,7 +79,7 @@ app.use("/mcp", mcpExpressHandler({
 By default, the server uses Server-Sent Events (SSE) for streaming responses. You can enable simple JSON responses instead:
 
 ```typescript
-app.use("/mcp", mcpExpressHandler({
+app.use("/mcp", await mcpExpressHandler({
   version: "1.0.0",
   enableJsonResponse: true,
 }));
@@ -101,13 +101,13 @@ app.get("/health", (req, res) => {
 });
 
 // MCP server endpoint (stateful)
-app.use("/mcp", mcpExpressHandler({
+app.use("/mcp", await mcpExpressHandler({
   version: "1.0.0",
   enableSessions: true,
 }));
 
 // Alternative MCP endpoint (stateless for serverless)
-app.use("/mcp-stateless", mcpExpressHandler({
+app.use("/mcp-stateless", await mcpExpressHandler({
   version: "1.0.0",
   enableSessions: false,
   enableJsonResponse: true,
@@ -123,20 +123,66 @@ app.listen(PORT, () => {
 
 ## Available Tools
 
-The Jaypie MCP server provides the following tools out of the box:
+The Jaypie MCP server registers four router-style tools. Each tool returns help when called without a command.
 
-### `list_prompts`
+| Tool | Description |
+|------|-------------|
+| `skill` | Access Jaypie skill documentation |
+| `version` | Print the `@jaypie/mcp` version and build hash |
+| `release_notes` | Browse package release notes |
+| `datadog` | Query Datadog logs, monitors, metrics, synthetics, and RUM |
 
-Returns a bulleted list of all .md files in the prompts directory with their descriptions and requirements.
+### `skill`
+
+**Parameters:**
+- `alias` (string, optional): Skill alias (e.g., `tests`). Omit or pass `index` to list all skills.
+
+```
+skill()                 # List all skills
+skill("jaypie")         # Jaypie overview
+skill("tests")          # Testing patterns
+```
+
+### `version`
 
 **Parameters:** None
 
-### `read_prompt`
-
-Returns the contents of a specified prompt file.
+### `release_notes`
 
 **Parameters:**
-- `filename` (string, required): The name of the prompt file to read (e.g., example_prompt.md)
+- `command` (string, optional): `list` or `read`. Omit for help.
+- `input` (object, optional): Command parameters
+
+| Command | Description | Parameters |
+|---------|-------------|------------|
+| `list` | List release notes | `package`, `since_version` (both optional) |
+| `read` | Read one release note | `package`, `version` (both required) |
+
+```
+release_notes("list", { package: "mcp" })
+release_notes("read", { package: "mcp", version: "0.5.0" })
+```
+
+### `datadog`
+
+Requires `DATADOG_API_KEY` (or `DD_API_KEY`) and `DATADOG_APP_KEY` (or `DD_APP_KEY`).
+
+| Command | Description |
+|---------|-------------|
+| `logs` | Search log entries |
+| `log_analytics` | Aggregate logs with groupBy |
+| `monitors` | List and check monitors |
+| `synthetics` | List synthetic tests or get results for one test |
+| `metrics` | Query timeseries metrics |
+| `rum` | Search RUM events |
+| `validate` | Check Datadog key configuration without calling the API |
+
+```
+datadog("logs", { query: "status:error", from: "now-1h" })
+datadog("monitors", { status: "Alert,Warn" })
+```
+
+See the `mcp-datadog` skill (`skill("mcp-datadog")`) for every parameter.
 
 ## Transport Comparison
 
@@ -168,7 +214,7 @@ The new HTTP transport is ideal when:
 For serverless environments (AWS Lambda, Vercel, etc.), use stateless mode:
 
 ```typescript
-export const handler = mcpExpressHandler({
+export const handler = await mcpExpressHandler({
   version: "1.0.0",
   enableSessions: false,
   enableJsonResponse: true,
@@ -180,7 +226,7 @@ export const handler = mcpExpressHandler({
 For long-running server processes, stateful mode works well:
 
 ```typescript
-app.use("/mcp", mcpExpressHandler({
+app.use("/mcp", await mcpExpressHandler({
   version: "1.0.0",
   enableSessions: true,
 }));
@@ -198,7 +244,7 @@ Example with authentication:
 ```typescript
 import { authenticateUser } from "./auth.js";
 
-app.use("/mcp", authenticateUser, mcpExpressHandler({
+app.use("/mcp", authenticateUser, await mcpExpressHandler({
   version: "1.0.0",
 }));
 ```
@@ -217,7 +263,7 @@ npm install @jaypie/mcp express
 Make sure to use `express.json()` middleware before the MCP handler:
 ```typescript
 app.use(express.json());
-app.use("/mcp", mcpExpressHandler());
+app.use("/mcp", await mcpExpressHandler());
 ```
 
 ### TypeScript errors
