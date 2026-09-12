@@ -131,6 +131,22 @@ import { createLambdaStreamHandler } from "@jaypie/express";
 export const handler = createLambdaStreamHandler(app);
 ```
 
+`createLambdaStreamHandler` wraps with `awslambda.streamifyResponse` only when the Lambda runtime global exists. Elsewhere (unit tests, local servers) it returns the unwrapped `(event, responseStream, context)` handler, so importing the streaming entry point never throws. Without `awslambda.HttpResponseStream`, the body writes straight to the provided stream with no status/headers prelude.
+
+### Options
+
+Both factories accept an optional second argument:
+
+| Option | Default | Effect |
+|--------|---------|--------|
+| `name` | `"createLambdaHandler"` / `"createLambdaStreamHandler"` | Label on unhandled adapter error output (`[name] Unhandled error:`) |
+
+```typescript
+export const handler = createLambdaStreamHandler(app, { name: "streamApi" });
+```
+
+Lifecycle options such as `format`, `secrets`, `setup`, and `validate` belong on each route's `expressHandler` / `expressStreamHandler`, not the adapter.
+
 ### Cookies
 
 Both adapters emit every `Set-Cookie` value separately, so cookie-session auth (multiple cookies per response, chunked session cookies) works unchanged:

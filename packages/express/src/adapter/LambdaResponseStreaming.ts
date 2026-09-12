@@ -32,7 +32,7 @@ const kOutHeaders = Object.getOwnPropertySymbols(ServerResponse.prototype).find(
 // Declare awslambda global (provided by Lambda runtime)
 //
 
-declare const awslambda: AwsLambdaGlobal;
+declare const awslambda: AwsLambdaGlobal | undefined;
 
 //
 //
@@ -349,11 +349,12 @@ export class LambdaResponseStreaming extends Writable {
       metadata.cookies = cookies;
     }
 
-    // Create wrapped stream with metadata
-    this._wrappedStream = awslambda.HttpResponseStream.from(
-      this._responseStream,
-      metadata,
-    );
+    // Create wrapped stream with metadata. Outside the Lambda runtime there is
+    // no HttpResponseStream, so write directly to the provided stream.
+    this._wrappedStream =
+      typeof awslambda !== "undefined" && awslambda?.HttpResponseStream
+        ? awslambda.HttpResponseStream.from(this._responseStream, metadata)
+        : this._responseStream;
     this._headersSent = true;
 
     // Flush pending writes
