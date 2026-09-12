@@ -134,10 +134,11 @@ export { resolveService } from "./resolveService.js";
 export type { ResolveServiceConfig } from "./resolveService.js";
 
 // ServiceSuite
-export { createServiceSuite } from "./ServiceSuite.js";
+export { createServiceSuite, selectServiceFunctions } from "./ServiceSuite.js";
 export type {
   CreateServiceSuiteConfig,
   RegisterServiceOptions,
+  SelectServiceFunctionsOptions,
   ServiceInput,
   ServiceMeta,
   ServiceSuite,

@@ -5,7 +5,7 @@ related: apikey, aws, cdk, models, vocabulary
 
 # DynamoDB Patterns
 
-Jaypie provides `@jaypie/dynamodb` for single-table DynamoDB with entity operations, GSI-based queries, hierarchical scoping, and soft delete. Access through the main `jaypie` package or directly.
+Jaypie provides `@jaypie/dynamodb` for single-table DynamoDB with entity operations, GSI-based queries, hierarchical scoping, and soft delete. Import it directly; the `jaypie` umbrella package does not re-export it.
 
 ## Key Design
 
@@ -39,12 +39,6 @@ import {
   queryByScope,
   queryByCategory,
 } from "@jaypie/dynamodb";
-```
-
-Or through the main package:
-
-```typescript
-import { APEX, initClient, createEntity, queryByScope } from "jaypie";
 ```
 
 ### Client Initialization
@@ -287,6 +281,8 @@ All GSIs use a composite sort key of `scope#updatedAt` (stored as `{indexName}Sk
 | `indexModelCategory` | `{model}#{category}` (sparse) | `indexModelCategorySk` = `{scope}#{updatedAt}` | Category filtering | You need to filter by category |
 | `indexModelType` | `{model}#{type}` (sparse) | `indexModelTypeSk` = `{scope}#{updatedAt}` | Type filtering | You need to filter by type |
 | `indexModelXid` | `{model}#{xid}` (sparse) | `indexModelXidSk` = `{scope}#{updatedAt}` | External ID lookup | You need cross-system ID lookups |
+
+Sparse indexes are entered and exited by their source field. Every write re-indexes the entity: when a source field (e.g., `category`) is absent, the index key (`indexModelCategory`) and its sort key (`indexModelCategorySk`) are removed from the item, so deleting the field and calling `updateEntity` takes the row out of the index.
 
 ```typescript
 import { fabricIndex, registerModel } from "@jaypie/fabric";

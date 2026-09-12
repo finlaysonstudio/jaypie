@@ -91,6 +91,37 @@ export interface CreateServiceSuiteConfig {
 }
 
 /**
+ * Options for selecting service functions from a suite
+ */
+export interface SelectServiceFunctionsOptions {
+  /**
+   * Allowlist of service aliases. Omit to select every service; an empty
+   * array selects none. Aliases the suite does not register are ignored.
+   */
+  services?: string[];
+}
+
+/**
+ * Select service functions from a suite, narrowed by an alias allowlist
+ *
+ * Shared by every transport that exposes a suite (MCP server, MCP streamable
+ * HTTP) so each narrows tools the same way. Registration order is preserved.
+ */
+export function selectServiceFunctions(
+  suite: ServiceSuite,
+  { services }: SelectServiceFunctionsOptions = {},
+): Service<any, any>[] {
+  const functions = suite.getServiceFunctions();
+  if (services === undefined) {
+    return functions;
+  }
+  const allowed = new Set(services);
+  return functions.filter(
+    (service) => service.alias !== undefined && allowed.has(service.alias),
+  );
+}
+
+/**
  * Derive type string from InputFieldDefinition.type
  */
 function deriveTypeString(type: InputFieldDefinition["type"]): string {

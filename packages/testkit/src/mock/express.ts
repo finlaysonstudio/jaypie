@@ -1,5 +1,9 @@
 /* eslint-disable @typescript-eslint/no-unsafe-function-type */
 
+import type {
+  ExpressHandlerOptions as OriginalExpressHandlerOptions,
+  ExpressStreamHandlerOptions as OriginalExpressStreamHandlerOptions,
+} from "@jaypie/express";
 import {
   createMockFunction,
   createMockReturnedFunction,
@@ -104,24 +108,28 @@ export interface ExpressHandlerFunction {
   (req: any, res: any, ...extra: any[]): Promise<any> | any;
 }
 
-export interface ExpressHandlerOptions {
+// Option types derive from @jaypie/express so new options stay in sync.
+// Lifecycle fields stay loose: the mock mutates setup and calls locals.
+type MockLifecycleOptionKeys = "locals" | "setup" | "teardown" | "validate";
+
+interface MockLifecycleOptions {
   locals?: Record<string, any>;
   setup?: any[] | Function;
   teardown?: any[] | Function;
-  unavailable?: boolean;
   validate?: any[] | Function;
 }
+
+export interface ExpressHandlerOptions
+  extends
+    Omit<OriginalExpressHandlerOptions, MockLifecycleOptionKeys>,
+    MockLifecycleOptions {}
 
 type ExpressHandlerParameter = ExpressHandlerFunction | ExpressHandlerOptions;
 
-export interface ExpressStreamHandlerOptions {
-  locals?: Record<string, any>;
-  setup?: any[] | Function;
-  teardown?: any[] | Function;
-  unavailable?: boolean;
-  validate?: any[] | Function;
-  contentType?: string;
-}
+export interface ExpressStreamHandlerOptions
+  extends
+    Omit<OriginalExpressStreamHandlerOptions, MockLifecycleOptionKeys>,
+    MockLifecycleOptions {}
 
 export type ExpressStreamHandlerFunction = (
   req: any,

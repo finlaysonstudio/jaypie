@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { createServiceSuite, fabricService } from "../index.js";
+import {
+  createServiceSuite,
+  fabricService,
+  selectServiceFunctions,
+} from "../index.js";
 
 describe("ServiceSuite", () => {
   describe("createServiceSuite", () => {
@@ -451,6 +455,51 @@ describe("ServiceSuite", () => {
       );
 
       expect(suite.filterServices(() => false)).toEqual([]);
+    });
+  });
+
+  describe("selectServiceFunctions", () => {
+    function buildSuite() {
+      const suite = createServiceSuite({
+        name: "test-suite",
+        version: "1.0.0",
+      });
+      for (const alias of ["alpha", "beta", "gamma"]) {
+        suite.register(fabricService({ alias, service: () => alias }), {
+          category: "letters",
+        });
+      }
+      return suite;
+    }
+
+    it("selects every service when no allowlist is given", () => {
+      const suite = buildSuite();
+      expect(selectServiceFunctions(suite).map((s) => s.alias)).toEqual([
+        "alpha",
+        "beta",
+        "gamma",
+      ]);
+    });
+
+    it("selects only allowlisted services in registration order", () => {
+      const suite = buildSuite();
+      const selected = selectServiceFunctions(suite, {
+        services: ["gamma", "alpha"],
+      });
+      expect(selected.map((s) => s.alias)).toEqual(["alpha", "gamma"]);
+    });
+
+    it("selects none for an empty allowlist", () => {
+      const suite = buildSuite();
+      expect(selectServiceFunctions(suite, { services: [] })).toEqual([]);
+    });
+
+    it("ignores aliases the suite does not register", () => {
+      const suite = buildSuite();
+      const selected = selectServiceFunctions(suite, {
+        services: ["beta", "missing"],
+      });
+      expect(selected.map((s) => s.alias)).toEqual(["beta"]);
     });
   });
 });

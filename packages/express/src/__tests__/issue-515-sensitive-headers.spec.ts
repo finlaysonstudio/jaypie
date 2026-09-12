@@ -8,6 +8,7 @@ import { EXPRESS } from "../constants.js";
 
 // Subject
 import expressHandler from "../expressHandler.js";
+import expressStreamHandler from "../expressStreamHandler.js";
 
 //
 //
@@ -136,6 +137,54 @@ describe("Issue 515: expressHandler sensitive headers and body scrubbing", () =>
       const logged = loggedRequest();
       expect(logged.body).toEqual({ hello: "world" });
       expect(logged.headers["x-request-id"]).toBe("MOCK_REQUEST_ID");
+    });
+  });
+
+  describe("expressStreamHandler", () => {
+    it("Applies logBody and sensitiveHeaders to the request log", async () => {
+      const app = express();
+      app.use(express.json());
+      app.use(
+        expressStreamHandler(
+          async (_req, res) => {
+            res.write("data: ok\n\n");
+          },
+          {
+            logBody: false,
+            sensitiveHeaders: ["X-Hub-Signature-256"],
+          },
+        ),
+      );
+
+      await request(app)
+        .post("/")
+        .set("authorization", "Bearer sk-proj-abc1234")
+        .set("x-hub-signature-256", "sha256=deadbeefdeadbeef")
+        .set("x-request-id", "MOCK_REQUEST_ID")
+        .send({ secret: "third-party-payload" });
+
+      const logged = loggedRequest();
+      expect(logged).not.toHaveProperty("body");
+      expect(logged.headers.authorization).not.toBe("Bearer sk-proj-abc1234");
+      expect(logged.headers["x-hub-signature-256"]).not.toBe(
+        "sha256=deadbeefdeadbeef",
+      );
+      expect(logged.headers["x-request-id"]).toBe("MOCK_REQUEST_ID");
+    });
+
+    it("Logs the body by default", async () => {
+      const app = express();
+      app.use(express.json());
+      app.use(
+        expressStreamHandler(async (_req, res) => {
+          res.write("data: ok\n\n");
+        }),
+      );
+
+      await request(app).post("/").send({ hello: "world" });
+
+      const logged = loggedRequest();
+      expect(logged.body).toEqual({ hello: "world" });
     });
   });
 });

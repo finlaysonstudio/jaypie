@@ -19,7 +19,8 @@ Enable Datadog tracing in CDK:
 import { JaypieLambda } from "@jaypie/constructs";
 
 const handler = new JaypieLambda(this, "Handler", {
-  entry: "src/handler.ts",
+  code: "../api/dist",
+  handler: "index.handler",
   datadogApiKeyArn: process.env.CDK_ENV_DATADOG_API_KEY_ARN,
   environment: {
     DD_ENV: "production",
@@ -142,8 +143,20 @@ reference never has to be written into `process.env` first.
 |----------|---------|
 | `DATADOG_API_KEY` / `DD_API_KEY` | Plain API key |
 | `SECRET_DATADOG_API_KEY` / `DATADOG_API_KEY_ARN` / `DD_API_KEY_SECRET_ARN` | Secrets Manager ARN, resolved with `getSecret` |
-| `DATADOG_API_KEY_SECRET` | Secrets Manager reference, resolved with `getEnvSecret` |
+| `DATADOG_API_KEY_SECRET` / `SECRET_DD_API_KEY` / `DD_API_KEY_SECRET` | Secrets Manager reference, resolved with `getEnvSecret` |
 | `DATADOG_APP_KEY` / `DATADOG_APPLICATION_KEY` / `DD_APP_KEY` / `DD_APPLICATION_KEY` | Application key, required by the query service |
+
+Each application key name also accepts a `SECRET_<NAME>` or `<NAME>_SECRET`
+reference. Precedence for the API key: an explicit `apiSecret`, then the ARN
+variables, then an explicit `apiKey`, then `DATADOG_API_KEY` and `DD_API_KEY`
+through `getEnvSecret`. The ARN variables stay on `getSecret` because
+`getEnvSecret` reads a secret reference only when `AWS_SESSION_TOKEN` is set.
+
+`hasDatadogEnv()` recognizes every one of these API key sources, references
+included, without resolving them. `expressHandler` gates its response metric on
+it, so a key held only in Secrets Manager still reports. On Lambda,
+`JaypieLambda` maps `datadogApiKeyArn`, `DATADOG_API_KEY_ARN`, or `CDK_ENV_DATADOG_API_KEY_ARN` to
+`DD_API_KEY_SECRET_ARN`.
 
 ### LLM Observability primitives
 

@@ -51,7 +51,7 @@ The test handler (`handler.mjs`) implements a common server pattern:
 
 ### Why Real-Time Streaming Doesn't Work Locally
 
-The `createLambdaStreamHandler` uses `awslambda.streamifyResponse()` which only exists in the real AWS Lambda runtime. The Docker Runtime Interface Emulator (RIE) doesn't include this global.
+The `createLambdaStreamHandler` wraps with `awslambda.streamifyResponse()` only in the real AWS Lambda runtime; elsewhere it returns the unwrapped `(event, responseStream, context)` handler. The Docker Runtime Interface Emulator (RIE) doesn't include this global.
 
 **What works locally:**
 - The `/stream` endpoint demonstrates `res.write()` and `res.end()` working correctly

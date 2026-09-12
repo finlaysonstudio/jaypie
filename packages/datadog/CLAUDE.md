@@ -15,7 +15,7 @@ Provides functions to submit metrics to Datadog from Jaypie applications, plus a
 | `datadogService` | Fabric Service | Unified Datadog query service: `logs`, `log_analytics`, `monitors`, `synthetics`, `metrics`, `rum`, `validate` |
 | `flushLlmObs` | Function | Flush buffered LLM Observability spans via the runtime `dd-trace` singleton. No-op unless `DD_LLMOBS_ENABLED`; never throws. Bundler-safe |
 | `getLlmObs` | Function | Lazy, bundler-safe accessor for the runtime `tracer.llmobs` SDK, or `null` when `dd-trace` is unavailable |
-| `hasDatadogEnv` | Function | Returns `true` if any Datadog API key env var is set |
+| `hasDatadogEnv` | Function | Returns `true` if any variable that can supply the Datadog API key is set, including `SECRET_<NAME>` / `<NAME>_SECRET` references. Nothing is resolved |
 | `isLlmObsEnabled` | Function | Returns `true` when `DD_LLMOBS_ENABLED` is truthy (anything but `false`/`0`) |
 | `loadDatadogApiKey` | Async Function | When LLM Observability is enabled, resolve `DD_API_KEY_SECRET_ARN` into `DD_API_KEY` |
 | `submitDistribution` | Async Function | Submit distribution metrics (percentiles, histograms) |
@@ -135,6 +135,12 @@ The legacy `*_ARN` variables stay on `getSecret` deliberately: `getEnvSecret`
 requires `AWS_SESSION_TOKEN` before it will read a secret reference, so routing
 them through it would break a consumer resolving keys outside Lambda with
 ambient credentials.
+
+Detection shares the same name lists. `findDatadogKeySource` (internal, with
+`DATADOG_API_KEY_ENV` and `DATADOG_APP_KEY_ENV`) backs both `hasDatadogEnv` and
+`validateDatadogSetup`, and counts a `SECRET_<NAME>` or `<NAME>_SECRET`
+reference as present without resolving it. A key held only in Secrets Manager
+therefore still enables the `expressHandler` response metric.
 
 ## Query Service
 

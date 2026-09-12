@@ -14,6 +14,7 @@ Jaypie provides response streaming for real-time data delivery. Three handler pa
 | `lambdaStreamHandler` | `@jaypie/lambda` | Pure Lambda Function URL streaming |
 | `expressStreamHandler` | `@jaypie/express` | Express routes with SSE |
 | `createLambdaStreamHandler` | `@jaypie/express` | Express app on Lambda with streaming |
+| `mcpHttpHandler` | `@jaypie/mcp/http` | MCP streamable HTTP (JSON or SSE) over a `ServiceSuite`; see `skill("mcp")` |
 
 ## Stream Formats
 
@@ -82,7 +83,8 @@ export const handler = lambdaStreamHandler(async (event, context) => {
 import { JaypieLambda, JaypieDistribution } from "@jaypie/constructs";
 
 const streamingLambda = new JaypieLambda(this, "Stream", {
-  entry: "src/stream.ts",
+  code: "../api/dist",
+  handler: "index.handler",
 });
 
 new JaypieDistribution(this, "Api", {

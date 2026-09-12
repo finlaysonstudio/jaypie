@@ -31,7 +31,7 @@ summary: One-line description of the change
 ---
 ```
 
-Rebuild `@jaypie/mcp` after editing release notes so files are copied to `dist/`.
+Release notes ship from the package root (`files: ["release-notes"]`) and are read at runtime from there; no rebuild is needed after editing them.
 
 ## Publishing mechanics
 

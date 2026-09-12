@@ -160,9 +160,13 @@ export function getGsiAttributeNames(index: IndexDefinition): {
  * - When `sk.length <= 1`, no sk attribute is written; the GSI references the
  *   single sk field (e.g., `updatedAt`, `sequence`) as a plain attribute.
  *
- * Sparse behavior: if any pk or sk field is missing, the corresponding
- * composite is skipped (not written). The `sparse` flag is advisory for
- * provisioning — this function always behaves sparsely at write time.
+ * Sparse behavior: if any pk field is missing, the pk attribute and its
+ * composite sk attribute are removed from the result; if any composite sk
+ * field is missing, the composite sk attribute is removed. Removal clears
+ * stale keys carried in from a previous write (e.g., a stored entity whose
+ * `category` was deleted), so a re-indexed entity leaves the sparse index.
+ * The `sparse` flag is advisory for provisioning — this function always
+ * behaves sparsely at write time.
  *
  * @param model - Model to populate index keys on
  * @param indexes - Index definitions to use
@@ -174,26 +178,34 @@ export function populateIndexKeys<T extends IndexableModel>(
   indexes: IndexDefinition[],
   suffix?: string,
 ): T {
-  const result = { ...model };
+  const result = { ...model } as Record<string, unknown>;
   const appliedSuffix = suffix ?? calculateIndexSuffix(model);
 
   for (const index of indexes) {
     const { pk: pkKey, sk: skKey } = getGsiAttributeNames(index);
+    const hasCompositeSk = Boolean(index.sk && index.sk.length > 1 && skKey);
 
     const pkValue = tryBuildCompositeKey(model, index.pk, appliedSuffix);
-    if (pkValue !== undefined) {
-      (result as Record<string, unknown>)[pkKey] = pkValue;
+    if (pkValue === undefined) {
+      delete result[pkKey];
+      if (hasCompositeSk) {
+        delete result[skKey as string];
+      }
+      continue;
     }
+    result[pkKey] = pkValue;
 
-    if (index.sk && index.sk.length > 1 && skKey) {
-      const skValue = tryBuildCompositeKey(model, index.sk);
-      if (skValue !== undefined) {
-        (result as Record<string, unknown>)[skKey] = skValue;
+    if (hasCompositeSk) {
+      const skValue = tryBuildCompositeKey(model, index.sk as IndexField[]);
+      if (skValue === undefined) {
+        delete result[skKey as string];
+      } else {
+        result[skKey as string] = skValue;
       }
     }
   }
 
-  return result;
+  return result as T;
 }
 
 /**

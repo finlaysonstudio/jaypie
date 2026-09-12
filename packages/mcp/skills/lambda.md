@@ -159,13 +159,13 @@ Deploy with `@jaypie/constructs`:
 import { JaypieLambda } from "@jaypie/constructs";
 
 new JaypieLambda(this, "Handler", {
-  entry: "src/handler.ts",
-  handler: "handler",
+  code: "../api/dist",
+  handler: "index.handler",
   secrets: ["MY_SECRET"],
 });
 ```
 
-**Build order**: When using `code: "../package/dist"` instead of `entry`, ensure the package has a `build` script and builds before CDK synth in CI/CD. New packages need to be added to `build:core-deps` in root `package.json` if they're build-time dependencies. See `skill("cicd")` for details.
+**Build order**: When using `code: "../package/dist"`, ensure the package has a `build` script and builds before CDK synth in CI/CD. New packages need to be added to `build:core-deps` in root `package.json` if they're build-time dependencies. See `skill("cicd")` for details.
 
 ## ESM Deployment
 

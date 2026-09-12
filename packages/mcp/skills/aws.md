@@ -235,7 +235,8 @@ Lambda functions automatically receive credentials via IAM role. Use CDK to gran
 import { JaypieLambda } from "@jaypie/constructs";
 
 const handler = new JaypieLambda(this, "Handler", {
-  entry: "src/handler.ts",
+  code: "../api/dist",
+  handler: "index.handler",
 });
 
 // Grant S3 access

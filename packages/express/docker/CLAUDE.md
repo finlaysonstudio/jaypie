@@ -75,7 +75,7 @@ The `handler.mjs` implements:
 
 ### Why Real-Time Streaming Doesn't Work Locally
 
-The `createLambdaStreamHandler` uses `awslambda.streamifyResponse()` which only exists in the real AWS Lambda runtime. The Runtime Interface Emulator (RIE) in Docker doesn't include this global.
+The `createLambdaStreamHandler` wraps with `awslambda.streamifyResponse()` only in the real AWS Lambda runtime; elsewhere it returns the unwrapped `(event, responseStream, context)` handler. The Runtime Interface Emulator (RIE) in Docker doesn't include this global.
 
 **What works locally:**
 - The `/stream` endpoint demonstrates `res.write()` and `res.end()` working correctly
@@ -159,6 +159,6 @@ new JaypieDistribution(this, "Distribution", {
 
 ## Limitations
 
-- `createLambdaStreamHandler` requires the `awslambda` global (AWS Lambda runtime only)
+- `createLambdaStreamHandler` streams in real time only with the `awslambda` global (AWS Lambda runtime); without it the factory returns the unwrapped handler
 - Only buffered responses work locally
 - SAM Local's API Gateway simulation is lightweight, not full-featured

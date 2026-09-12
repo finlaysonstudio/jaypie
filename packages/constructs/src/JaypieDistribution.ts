@@ -235,7 +235,7 @@ export interface JaypieDistributionProps extends Omit<
    *   `domainName`, with the rest becoming subject alternative names. Every
    *   entry gets an A and AAAA record.
    *
-   * @default mergeDomain(CDK_ENV_API_SUBDOMAIN, CDK_ENV_API_HOSTED_ZONE || CDK_ENV_HOSTED_ZONE)
+   * @default CDK_ENV_API_HOST_NAME || mergeDomain(CDK_ENV_API_SUBDOMAIN, CDK_ENV_API_HOSTED_ZONE || CDK_ENV_HOSTED_ZONE)
    *
    * @example
    * // Direct string
@@ -278,7 +278,7 @@ export interface JaypieDistributionProps extends Omit<
   securityHeaders?: boolean | SecurityHeadersOverrides;
   /**
    * Role tag for tagging resources
-   * @default CDK.ROLE.HOSTING
+   * @default CDK.ROLE.API
    */
   roleTag?: string;
   /**
@@ -304,7 +304,7 @@ export interface JaypieDistributionProps extends Omit<
   waf?: boolean | JaypieWafConfig;
   /**
    * The hosted zone for DNS records
-   * @default CDK_ENV_API_HOSTED_ZONE || CDK_ENV_HOSTED_ZONE
+   * @default CDK_ENV_HOSTED_ZONE
    */
   zone?: string | route53.IHostedZone;
 }

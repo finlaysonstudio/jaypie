@@ -6,6 +6,11 @@ import { createMcpServerFromSuite } from "@jaypie/fabric/mcp";
 import { suite } from "./suite.js";
 
 export interface CreateMcpServerOptions {
+  /**
+   * Allowlist of tool names (service aliases) to expose. Omit to expose every
+   * tool; an empty array exposes none.
+   */
+  services?: string[];
   version?: string;
   verbose?: boolean;
 }
@@ -28,7 +33,7 @@ export function createMcpServer(
   const config: CreateMcpServerOptions =
     typeof options === "string" ? { version: options } : options;
 
-  const { version = "0.0.0", verbose = false } = config;
+  const { services, version = "0.0.0", verbose = false } = config;
 
   if (verbose) {
     console.error("[jaypie-mcp] Creating MCP server instance from suite");
@@ -36,12 +41,13 @@ export function createMcpServer(
 
   const server = createMcpServerFromSuite(suite, {
     name: suite.name,
+    services,
     version,
   });
 
   if (verbose) {
     console.error(
-      `[jaypie-mcp] Registered ${suite.services.length} tools from suite`,
+      `[jaypie-mcp] Registered ${server.tools.length} tools from suite`,
     );
     console.error(`[jaypie-mcp] Categories: ${suite.categories.join(", ")}`);
   }

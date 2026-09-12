@@ -3,7 +3,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
 import { isService } from "../service.js";
-import type { ServiceSuite } from "../ServiceSuite.js";
+import { selectServiceFunctions, type ServiceSuite } from "../ServiceSuite.js";
 import type { Service, ServiceFunction } from "../types.js";
 import { fabricMcp } from "./fabricMcp.js";
 import type {
@@ -203,6 +203,11 @@ export interface CreateMcpServerFromSuiteConfig {
   onFatal?: OnFatalCallback;
   /** Server-level message callback applied to all tools */
   onMessage?: OnMessageCallback;
+  /**
+   * Allowlist of service aliases to register as tools. Omit to register every
+   * suite service; an empty array registers none.
+   */
+  services?: string[];
   /** Override the server version (defaults to suite.version) */
   version?: string;
 }
@@ -223,6 +228,9 @@ export interface CreateMcpServerFromSuiteConfig {
  *
  * const server = createMcpServerFromSuite(suite);
  * // server is ready to handle MCP protocol requests
+ *
+ * // Expose only some services
+ * const docs = createMcpServerFromSuite(suite, { services: ["skill"] });
  * ```
  */
 export function createMcpServerFromSuite(
@@ -235,6 +243,7 @@ export function createMcpServerFromSuite(
     onError,
     onFatal,
     onMessage,
+    services,
     version = suite.version,
   } = config;
 
@@ -244,7 +253,7 @@ export function createMcpServerFromSuite(
     onError,
     onFatal,
     onMessage,
-    services: suite.getServiceFunctions(),
+    services: selectServiceFunctions(suite, { services }),
     version,
   });
 }

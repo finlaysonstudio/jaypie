@@ -223,6 +223,12 @@ suite.getServiceFunction("greet"); // Service | undefined
 | `getServiceFunctions()` | Service[] | Get all service functions (for transport adapters) |
 | `getServiceFunction(name)` | Service | Get a specific service function |
 
+`selectServiceFunctions(suite, { services })` returns the suite's service
+functions narrowed to an alias allowlist, in registration order. Omitting
+`services` selects all; `[]` selects none; unknown aliases are ignored. Every
+transport that exposes a suite (`createMcpServerFromSuite`, `@jaypie/mcp`'s
+`mcpHttpHandler`) selects through it.
+
 **Integration with Transport Adapters**:
 
 ServiceSuites connect to transport adapters via `getServiceFunctions()`:
@@ -232,6 +238,9 @@ import { createMcpServerFromSuite } from "@jaypie/fabric/mcp";
 
 const server = createMcpServerFromSuite(suite);
 // All suite services are now registered as MCP tools
+
+const docs = createMcpServerFromSuite(suite, { services: ["greet"] });
+// Only allowlisted services are registered
 ```
 
 ### Typed Arrays
@@ -284,7 +293,7 @@ Located in `src/index/`. Utilities for DynamoDB single-table design patterns:
 | `assertModelStatus(model, status)` | Throws `BadRequestError` when the model declares a vocabulary and `status` is not in it; no-op otherwise |
 | `clearRegistry()` | Clear all registered models (for testing) |
 | `getAllRegisteredIndexes()` | Get all unique indexes across all registered models |
-| `populateIndexKeys(entity, indexes, suffix?)` | Populate GSI pk attrs on entity. When `sk.length > 1`, also writes a composite sk attr named `{indexName}Sk`. |
+| `populateIndexKeys(entity, indexes, suffix?)` | Populate GSI pk attrs on entity. When `sk.length > 1`, also writes a composite sk attr named `{indexName}Sk`. When a source field is missing, removes the pk attr (and its composite sk attr) so stale keys do not persist. |
 | `getGsiAttributeNames(index)` | Returns `{ pk, sk }` attribute names for an index definition. Single source of truth for GSI provisioning. |
 | `buildCompositeKey(entity, fields, suffix?)` | Build composite key from entity fields |
 | `tryBuildCompositeKey(entity, fields, suffix?)` | Like buildCompositeKey but returns undefined if fields missing |
@@ -412,8 +421,8 @@ export * as llm from "./llm/index.js";
 export { fabricService } from "./service.js";
 
 // ServiceSuite
-export { createServiceSuite } from "./ServiceSuite.js";
-export type { CreateServiceSuiteConfig, RegisterServiceOptions, ServiceInput, ServiceMeta, ServiceSuite } from "./ServiceSuite.js";
+export { createServiceSuite, selectServiceFunctions } from "./ServiceSuite.js";
+export type { CreateServiceSuiteConfig, RegisterServiceOptions, SelectServiceFunctionsOptions, ServiceInput, ServiceMeta, ServiceSuite } from "./ServiceSuite.js";
 
 // Models
 export { FabricModel, FabricJob, FabricMessage, Progress } from "./models/base.js";

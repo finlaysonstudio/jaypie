@@ -60,6 +60,32 @@ expressHandler(handler, {
 });
 ```
 
+### Response Rules
+
+The return value becomes the response. Do not call `res.end()`, `res.json()`, or `res.send()` inside the handler; `expressHandler` logs a warning ("Illegal call to res.end()") and replays the call.
+
+| Return | Response |
+|--------|----------|
+| Object or JSON string | JSON body with the status (200 unless `res.status()` was called) |
+| Non-JSON string | Text body with the status |
+| `true` | 201, no body |
+| No body (`undefined`, `null`, other falsy) | 204, no body |
+| No body after `res.status(code)` | `code`, no body |
+
+Set an explicit status and return nothing to answer with a bodiless non-204 status, such as 202 for MCP notifications:
+
+```typescript
+app.post("/mcp", expressHandler(async (req, res) => {
+  if (isNotification(req.body)) {
+    res.status(202);
+    return; // 202 with no body, no warning
+  }
+  return answer(req.body);
+}));
+```
+
+`expressStreamHandler` flushes headers before the handler runs, so a status set inside a stream handler does not reach the client.
+
 ### Request Logging
 
 `expressHandler` logs a summary of every request. Two options control what that
@@ -131,6 +157,22 @@ import { createLambdaStreamHandler } from "@jaypie/express";
 export const handler = createLambdaStreamHandler(app);
 ```
 
+`createLambdaStreamHandler` wraps with `awslambda.streamifyResponse` only when the Lambda runtime global exists. Elsewhere (unit tests, local servers) it returns the unwrapped `(event, responseStream, context)` handler, so importing the streaming entry point never throws. Without `awslambda.HttpResponseStream`, the body writes straight to the provided stream with no status/headers prelude.
+
+### Options
+
+Both factories accept an optional second argument:
+
+| Option | Default | Effect |
+|--------|---------|--------|
+| `name` | `"createLambdaHandler"` / `"createLambdaStreamHandler"` | Label on unhandled adapter error output (`[name] Unhandled error:`) |
+
+```typescript
+export const handler = createLambdaStreamHandler(app, { name: "streamApi" });
+```
+
+Lifecycle options such as `format`, `secrets`, `setup`, and `validate` belong on each route's `expressHandler` / `expressStreamHandler`, not the adapter.
+
 ### Cookies
 
 Both adapters emit every `Set-Cookie` value separately, so cookie-session auth (multiple cookies per response, chunked session cookies) works unchanged:
@@ -157,6 +199,17 @@ app.get("/callback", (req, res) => {
 ```
 
 Libraries that defer header or cookie writes this way work unchanged: `express-openid-connect` (session cookie), `express-session`, `morgan`, `compression`. `res.flushHeaders()` and `res._implicitHeader()` both route through the same path.
+
+### Node request contract (`rawHeaders`)
+
+The adapter request exposes `rawHeaders` as Node's flat `[name, value, name, value]` list, built from the same lowercased event headers as `req.headers` (multi-value headers repeat the name once per value), plus `rawTrailers: []` and `trailers: {}`. When the event carries no `host` header, `host` falls back to `requestContext.domainName` (v1 and v2) in both `headers` and `rawHeaders`. Libraries that convert a Node request into a Web Standard `Request` read these directly, so `@hono/node-server` and the MCP SDK `StreamableHTTPServerTransport` work under both adapters:
+
+```typescript
+import { mcpExpressHandler } from "@jaypie/mcp";
+
+app.use("/mcp", await mcpExpressHandler({ enableSessions: false }));
+export const handler = createLambdaHandler(app);
+```
 
 ### LLM Observability auto-flush
 
@@ -246,8 +299,8 @@ Deploy with `@jaypie/constructs`:
 import { JaypieLambda } from "@jaypie/constructs";
 
 new JaypieLambda(this, "Api", {
-  entry: "src/lambda.ts",
-  handler: "handler",
+  code: "../api/dist",
+  handler: "index.handler",
   environment: {
     PROJECT_ENV: "production",
   },
@@ -326,3 +379,4 @@ new JaypieLambda(this, "Api", {
 ## See Also
 
 - **`skill("streaming")`** - Full guide to `expressStreamHandler` and `createLambdaStreamHandler`
+- **`skill("mcp")`** - `mcpHttpHandler` serves a `ServiceSuite` as MCP streamable HTTP from an Express route

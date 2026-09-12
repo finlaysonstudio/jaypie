@@ -1,6 +1,6 @@
 {
   "name": "@jaypie/express",
-  "version": "1.2.36",
+  "version": "1.2.37",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/finlaysonstudio/jaypie.git"
@@ -53,6 +53,7 @@
     "cors": "^2.8.5"
   },
   "devDependencies": {
+    "@hono/node-server": "^1.19.14",
     "@rollup/plugin-typescript": "^12.1.2",
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.0",

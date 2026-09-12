@@ -280,6 +280,104 @@ describe("populateIndexKeys", () => {
     expect(result.indexModel).toBe("record");
     expect((result as Record<string, unknown>).indexModelSk).toBeUndefined();
   });
+
+  it("does not write composite sk when a pk field is missing", () => {
+    const entity = {
+      model: "record",
+      scope: "@",
+      updatedAt: "2026-04-11T12:00:00.000Z",
+    };
+    const indexes: IndexDefinition[] = [
+      {
+        name: "indexModelCategory",
+        pk: ["model", "category"],
+        sk: ["scope", "updatedAt"],
+      },
+    ];
+
+    const result = populateIndexKeys(entity, indexes) as Record<
+      string,
+      unknown
+    >;
+    expect(result.indexModelCategory).toBeUndefined();
+    expect(result.indexModelCategorySk).toBeUndefined();
+  });
+
+  it("removes stale pk and composite sk when a pk field is removed", () => {
+    const entity = {
+      indexModel: "record",
+      indexModelCategory: "record#person@example.com",
+      indexModelCategorySk: "@#2026-04-11T12:00:00.000Z",
+      indexModelSk: "@#2026-04-11T12:00:00.000Z",
+      model: "record",
+      scope: "@",
+      updatedAt: "2026-04-12T12:00:00.000Z",
+    };
+    const indexes: IndexDefinition[] = [
+      { name: "indexModel", pk: ["model"], sk: ["scope", "updatedAt"] },
+      {
+        name: "indexModelCategory",
+        pk: ["model", "category"],
+        sk: ["scope", "updatedAt"],
+      },
+    ];
+
+    const result = populateIndexKeys(entity, indexes) as Record<
+      string,
+      unknown
+    >;
+    expect(result.indexModel).toBe("record");
+    expect(result.indexModelSk).toBe("@#2026-04-12T12:00:00.000Z");
+    expect("indexModelCategory" in result).toBe(false);
+    expect("indexModelCategorySk" in result).toBe(false);
+  });
+
+  it("removes stale composite sk when an sk field is removed", () => {
+    const entity = {
+      indexModel: "record",
+      indexModelSk: "@#2026-04-11T12:00:00.000Z",
+      model: "record",
+      scope: "@",
+    };
+    const indexes: IndexDefinition[] = [
+      { name: "indexModel", pk: ["model"], sk: ["scope", "updatedAt"] },
+    ];
+
+    const result = populateIndexKeys(entity, indexes) as Record<
+      string,
+      unknown
+    >;
+    expect(result.indexModel).toBe("record");
+    expect("indexModelSk" in result).toBe(false);
+  });
+
+  it("leaves single-field sk attributes untouched", () => {
+    const entity = {
+      model: "record",
+      sequence: 12345,
+    };
+    const indexes: IndexDefinition[] = [
+      { name: "indexAlias", pk: ["model", "alias"], sk: ["sequence"] },
+    ];
+
+    const result = populateIndexKeys(entity, indexes);
+    expect(result.indexAlias).toBeUndefined();
+    expect(result.sequence).toBe(12345);
+  });
+
+  it("does not mutate the input model", () => {
+    const entity = {
+      indexModelCategory: "record#stale",
+      model: "record",
+      scope: "@",
+    };
+    const indexes: IndexDefinition[] = [
+      { name: "indexModelCategory", pk: ["model", "category"] },
+    ];
+
+    populateIndexKeys(entity, indexes);
+    expect(entity.indexModelCategory).toBe("record#stale");
+  });
 });
 
 describe("getGsiAttributeNames", () => {

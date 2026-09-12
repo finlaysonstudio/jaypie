@@ -18,6 +18,14 @@ import type {
 
 //
 //
+// Constants
+//
+
+const DEFAULT_HANDLER_NAME = "createLambdaHandler";
+const DEFAULT_STREAM_HANDLER_NAME = "createLambdaStreamHandler";
+
+//
+//
 // Declare awslambda global (provided by Lambda runtime)
 // This may be undefined in non-Lambda environments
 //
@@ -64,6 +72,19 @@ function clearCurrentInvoke(): void {
 //
 
 /**
+ * Log an unhandled adapter error with the handler name as its label.
+ * Uses console, not log: must reach CloudWatch even if the logger itself is broken
+ */
+function logUnhandledError(error: unknown, { name }: { name: string }): void {
+  // eslint-disable-next-line no-console
+  console.error(`[${name}] Unhandled error:`, error);
+  if (error instanceof Error) {
+    // eslint-disable-next-line no-console
+    console.error(`[${name}] Stack:`, error.stack);
+  }
+}
+
+/**
  * Run Express app with mock request/response.
  * Returns a promise that resolves when the response is complete.
  */
@@ -102,10 +123,13 @@ function runExpressApp(
  *
  * export const handler = createLambdaHandler(app);
  * ```
+ *
+ * Options:
+ * - `name` labels unhandled error output (default "createLambdaHandler")
  */
 export function createLambdaHandler(
   app: Application,
-  _options?: CreateLambdaHandlerOptions,
+  { name = DEFAULT_HANDLER_NAME }: CreateLambdaHandlerOptions = {},
 ): LambdaHandler {
   return async (
     event: LambdaEvent,
@@ -130,13 +154,7 @@ export function createLambdaHandler(
 
       return result;
     } catch (error) {
-      // console, not log: must reach CloudWatch even if the logger itself is broken
-      // eslint-disable-next-line no-console
-      console.error("[createLambdaHandler] Unhandled error:", error);
-      if (error instanceof Error) {
-        // eslint-disable-next-line no-console
-        console.error("[createLambdaHandler] Stack:", error.stack);
-      }
+      logUnhandledError(error, { name });
 
       // Return a proper error response instead of throwing
       return {
@@ -176,6 +194,10 @@ export function createLambdaHandler(
  * Create a Lambda handler that streams the Express response.
  * Uses awslambda.streamifyResponse() for Lambda response streaming.
  *
+ * Outside the Lambda runtime (no `awslambda` global) the unwrapped
+ * `(event, responseStream, context)` handler is returned instead, so importing
+ * a module that calls this factory does not throw in tests or local servers.
+ *
  * @example
  * ```typescript
  * import express from "express";
@@ -190,41 +212,51 @@ export function createLambdaHandler(
  *
  * export const handler = createLambdaStreamHandler(app);
  * ```
+ *
+ * Options:
+ * - `name` labels unhandled error output (default "createLambdaStreamHandler")
  */
 export function createLambdaStreamHandler(
   app: Application,
-  _options?: CreateLambdaHandlerOptions,
+  { name = DEFAULT_STREAM_HANDLER_NAME }: CreateLambdaHandlerOptions = {},
 ): LambdaStreamHandler {
-  // Wrap with awslambda.streamifyResponse for Lambda streaming
-  // @ts-expect-error awslambda is a Lambda runtime global
-  return awslambda.streamifyResponse(
-    async (
-      event: LambdaEvent,
-      responseStream: ResponseStream,
-      context: LambdaContext,
-    ): Promise<void> => {
-      try {
-        // Set current invoke for getCurrentInvokeUuid
-        setCurrentInvoke(event, context);
+  const innerHandler = async (
+    event: LambdaEvent,
+    responseStream: ResponseStream,
+    context: LambdaContext,
+  ): Promise<void> => {
+    try {
+      // Set current invoke for getCurrentInvokeUuid
+      setCurrentInvoke(event, context);
 
-        // Create mock request from Lambda event
-        const req = createLambdaRequest(event, context);
+      // Create mock request from Lambda event
+      const req = createLambdaRequest(event, context);
 
-        // Create streaming response that pipes to Lambda responseStream
-        const res = new LambdaResponseStreaming(responseStream);
+      // Create streaming response that pipes to Lambda responseStream
+      const res = new LambdaResponseStreaming(responseStream);
 
-        // Run Express app
-        await runExpressApp(app, req, res);
-      } finally {
-        // Clear current invoke context
-        clearCurrentInvoke();
+      // Run Express app
+      await runExpressApp(app, req, res);
+    } catch (error) {
+      logUnhandledError(error, { name });
+      throw error;
+    } finally {
+      // Clear current invoke context
+      clearCurrentInvoke();
 
-        // Flush buffered LLM Observability spans before the Lambda freezes.
-        // No-op unless DD_LLMOBS_ENABLED; never throws.
-        flushLlmObs();
-      }
-    },
-  );
+      // Flush buffered LLM Observability spans before the Lambda freezes.
+      // No-op unless DD_LLMOBS_ENABLED; never throws.
+      flushLlmObs();
+    }
+  };
+
+  // Wrap with awslambda.streamifyResponse when running in the Lambda runtime
+  if (typeof awslambda !== "undefined" && awslambda?.streamifyResponse) {
+    return awslambda.streamifyResponse<LambdaEvent>(innerHandler);
+  }
+
+  // Outside Lambda, return the unwrapped handler so callers can pass a stream
+  return innerHandler as unknown as LambdaStreamHandler;
 }
 
 //

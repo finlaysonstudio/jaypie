@@ -537,6 +537,60 @@ describe("Lambda Adapter Integration", () => {
     });
   });
 
+  describe("@hono/node-server request listener (issue #532)", () => {
+    it("converts LambdaRequest to a Web Request under createLambdaHandler", async () => {
+      // The MCP SDK StreamableHTTPServerTransport wraps this listener, which
+      // reads incoming.rawHeaders to build the Web Standard Request
+      const { getRequestListener } = await import("@hono/node-server");
+      const listener = getRequestListener(
+        async (request: Request) =>
+          Response.json({
+            accept: request.headers.get("accept"),
+            body: await request.json(),
+            method: request.method,
+            url: request.url,
+          }),
+        { overrideGlobalObjects: false },
+      );
+
+      const app = express();
+      app.use("/mcp", (req, res) => {
+        void listener(req, res);
+      });
+
+      const handler = createLambdaHandler(app);
+      const event = createMockEvent({
+        body: JSON.stringify({ jsonrpc: "2.0", method: "initialize" }),
+        headers: {
+          accept: "application/json, text/event-stream",
+          "content-type": "application/json",
+          host: "test.lambda-url.us-east-1.on.aws",
+        },
+        rawPath: "/mcp",
+        requestContext: {
+          ...createMockEvent().requestContext,
+          http: {
+            method: "POST",
+            path: "/mcp",
+            protocol: "HTTP/1.1",
+            sourceIp: "127.0.0.1",
+            userAgent: "test",
+          },
+        },
+      });
+      const result = await handler(event, mockContext);
+
+      expect(result.statusCode).toBe(200);
+      expect(JSON.parse(result.body)).toEqual({
+        accept: "application/json, text/event-stream",
+        body: { jsonrpc: "2.0", method: "initialize" },
+        method: "POST",
+        // Express strips the "/mcp" mount path from req.url
+        url: "http://test.lambda-url.us-east-1.on.aws/",
+      });
+    });
+  });
+
   describe("createLambdaStreamHandler", () => {
     it("wraps with awslambda.streamifyResponse", () => {
       const app = express();

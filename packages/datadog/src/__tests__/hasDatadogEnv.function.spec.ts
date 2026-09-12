@@ -4,6 +4,27 @@ import hasDatadogEnv from "../hasDatadogEnv.function.js";
 
 //
 //
+// Constants
+//
+
+const KEY_ENV = [
+  DATADOG.ENV.DATADOG_API_KEY,
+  DATADOG.ENV.DATADOG_API_KEY_ARN,
+  DATADOG.ENV.DD_API_KEY,
+  DATADOG.ENV.DD_API_KEY_SECRET_ARN,
+  DATADOG.ENV.SECRET_DATADOG_API_KEY,
+];
+
+function clearKeyEnv(): void {
+  for (const name of KEY_ENV) {
+    delete process.env[name];
+    delete process.env[`SECRET_${name}`];
+    delete process.env[`${name}_SECRET`];
+  }
+}
+
+//
+//
 // Tests
 //
 
@@ -12,6 +33,7 @@ describe("hasDatadogEnv", () => {
 
   beforeEach(() => {
     originalEnv = { ...process.env };
+    clearKeyEnv();
   });
 
   afterEach(() => {
@@ -27,11 +49,6 @@ describe("hasDatadogEnv", () => {
     });
 
     it("returns false when no Datadog env vars are set", () => {
-      delete process.env[DATADOG.ENV.DATADOG_API_KEY];
-      delete process.env[DATADOG.ENV.SECRET_DATADOG_API_KEY];
-      delete process.env[DATADOG.ENV.DATADOG_API_KEY_ARN];
-      delete process.env[DATADOG.ENV.DD_API_KEY_SECRET_ARN];
-
       expect(hasDatadogEnv()).toBe(false);
     });
   });
@@ -41,27 +58,24 @@ describe("hasDatadogEnv", () => {
   //
   describe("Happy Paths", () => {
     it("returns true when DATADOG_API_KEY is set", () => {
-      delete process.env[DATADOG.ENV.SECRET_DATADOG_API_KEY];
-      delete process.env[DATADOG.ENV.DATADOG_API_KEY_ARN];
-      delete process.env[DATADOG.ENV.DD_API_KEY_SECRET_ARN];
       process.env[DATADOG.ENV.DATADOG_API_KEY] = "test-api-key";
 
       expect(hasDatadogEnv()).toBe(true);
     });
 
+    it("returns true when DD_API_KEY is set", () => {
+      process.env[DATADOG.ENV.DD_API_KEY] = "test-api-key";
+
+      expect(hasDatadogEnv()).toBe(true);
+    });
+
     it("returns true when SECRET_DATADOG_API_KEY is set", () => {
-      delete process.env[DATADOG.ENV.DATADOG_API_KEY];
-      delete process.env[DATADOG.ENV.DATADOG_API_KEY_ARN];
-      delete process.env[DATADOG.ENV.DD_API_KEY_SECRET_ARN];
       process.env[DATADOG.ENV.SECRET_DATADOG_API_KEY] = "secret-test-api-key";
 
       expect(hasDatadogEnv()).toBe(true);
     });
 
     it("returns true when DATADOG_API_KEY_ARN is set", () => {
-      delete process.env[DATADOG.ENV.DATADOG_API_KEY];
-      delete process.env[DATADOG.ENV.SECRET_DATADOG_API_KEY];
-      delete process.env[DATADOG.ENV.DD_API_KEY_SECRET_ARN];
       process.env[DATADOG.ENV.DATADOG_API_KEY_ARN] =
         "arn:aws:secretsmanager:us-east-1:123456789012:secret:test";
 
@@ -69,9 +83,6 @@ describe("hasDatadogEnv", () => {
     });
 
     it("returns true when DD_API_KEY_SECRET_ARN is set", () => {
-      delete process.env[DATADOG.ENV.DATADOG_API_KEY];
-      delete process.env[DATADOG.ENV.SECRET_DATADOG_API_KEY];
-      delete process.env[DATADOG.ENV.DATADOG_API_KEY_ARN];
       process.env[DATADOG.ENV.DD_API_KEY_SECRET_ARN] =
         "arn:aws:secretsmanager:us-east-1:123456789012:secret:dd-test";
 
@@ -91,14 +102,34 @@ describe("hasDatadogEnv", () => {
   });
 
   //
+  // Features
+  //
+  describe("Features", () => {
+    it.each([
+      "DATADOG_API_KEY_SECRET",
+      "DD_API_KEY_SECRET",
+      "SECRET_DD_API_KEY",
+    ])("returns true for the getEnvSecret reference %s", (name) => {
+      process.env[name] = "datadog-api-key-secret-name";
+
+      expect(hasDatadogEnv()).toBe(true);
+    });
+  });
+
+  //
   // Specific Scenarios
   //
   describe("Specific Scenarios", () => {
     it("returns false when env vars are empty strings", () => {
-      process.env[DATADOG.ENV.DATADOG_API_KEY] = "";
-      process.env[DATADOG.ENV.SECRET_DATADOG_API_KEY] = "";
-      process.env[DATADOG.ENV.DATADOG_API_KEY_ARN] = "";
-      process.env[DATADOG.ENV.DD_API_KEY_SECRET_ARN] = "";
+      for (const name of KEY_ENV) {
+        process.env[name] = "";
+      }
+
+      expect(hasDatadogEnv()).toBe(false);
+    });
+
+    it("ignores application key variables", () => {
+      process.env[DATADOG.ENV.DATADOG_APP_KEY] = "test-app-key";
 
       expect(hasDatadogEnv()).toBe(false);
     });

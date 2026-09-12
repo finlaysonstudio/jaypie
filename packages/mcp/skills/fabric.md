@@ -200,10 +200,23 @@ import { createMcpServerFromSuite } from "@jaypie/fabric/mcp";
 
 const server = createMcpServerFromSuite(suite, {
   name: "users-api",    // Optional override
+  services: ["greet"],  // Optional allowlist of service aliases
   version: "1.0.0",
 });
-// All suite services now available as MCP tools
+// Allowlisted suite services now available as MCP tools
 ```
+
+`services` narrows the tools; omit it to register every service. The same
+selection is available to any transport:
+
+```typescript
+import { selectServiceFunctions } from "@jaypie/fabric";
+
+const tools = selectServiceFunctions(suite, { services: ["greet"] });
+```
+
+To serve a suite as MCP streamable HTTP from Lambda without the MCP SDK, use
+`mcpHttpHandler` from `@jaypie/mcp/http` (see `skill("mcp")`).
 
 ## Input Validation
 

@@ -20,6 +20,11 @@ export interface McpExpressHandlerOptions {
    */
   enableSessions?: boolean;
   /**
+   * Allowlist of tool names (service aliases) to expose. Omit to expose every
+   * tool
+   */
+  services?: string[];
+  /**
    * Custom session ID generator function
    */
   sessionIdGenerator?: () => string;
@@ -63,9 +68,10 @@ export async function mcpExpressHandler(
     enableSessions = true,
     sessionIdGenerator = () => randomUUID(),
     enableJsonResponse = false,
+    services,
   } = options;
 
-  const server = createMcpServer(version);
+  const server = createMcpServer({ services, version });
 
   const transport = new StreamableHTTPServerTransport({
     sessionIdGenerator: enableSessions ? sessionIdGenerator : undefined,

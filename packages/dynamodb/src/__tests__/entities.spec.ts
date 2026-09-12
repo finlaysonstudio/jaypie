@@ -217,6 +217,26 @@ describe("Entity Operations", () => {
       expect(result.indexModelType).toBe("record#note");
     });
 
+    it("removes a stale sparse index key from the Put when its source field is removed", async () => {
+      const stored = {
+        ...createTestEntity(),
+        createdAt: "2026-01-01T00:00:00.000Z",
+        indexModel: "record",
+        indexModelCategory: "record#person@example.com",
+        indexModelCategorySk: "@#2026-01-01T00:00:00.000Z",
+        indexModelSk: "@#2026-01-01T00:00:00.000Z",
+        updatedAt: "2026-01-01T00:00:00.000Z",
+      } as StorableEntity;
+
+      await updateEntity({ entity: stored });
+      const command = mockSend.mock.calls[0][0];
+      const item = command.input.Item as Record<string, unknown>;
+      expect(item.indexModel).toBe("record");
+      expect(item).not.toHaveProperty("category");
+      expect(item).not.toHaveProperty("indexModelCategory");
+      expect(item).not.toHaveProperty("indexModelCategorySk");
+    });
+
     it("serializes Date values to ISO strings", async () => {
       const expiresAt = new Date("2026-05-02T19:45:28.000Z");
       const entity = {

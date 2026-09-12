@@ -4,6 +4,32 @@ import { DATADOG } from "./constants.js";
 
 //
 //
+// Constants
+//
+
+/**
+ * Every variable that can supply the Datadog API key, in resolution order.
+ * Each name also counts through its `SECRET_<NAME>` and `<NAME>_SECRET`
+ * references (see `findDatadogKeySource`).
+ */
+export const DATADOG_API_KEY_ENV = [
+  DATADOG.ENV.SECRET_DATADOG_API_KEY,
+  DATADOG.ENV.DATADOG_API_KEY_ARN,
+  DATADOG.ENV.DD_API_KEY_SECRET_ARN,
+  DATADOG.ENV.DATADOG_API_KEY,
+  DATADOG.ENV.DD_API_KEY,
+];
+
+/** Every variable that can supply the Datadog application key. */
+export const DATADOG_APP_KEY_ENV = [
+  DATADOG.ENV.DATADOG_APP_KEY,
+  DATADOG.ENV.DATADOG_APPLICATION_KEY,
+  DATADOG.ENV.DD_APP_KEY,
+  DATADOG.ENV.DD_APPLICATION_KEY,
+];
+
+//
+//
 // Types
 //
 
@@ -30,6 +56,22 @@ async function firstEnvSecret(names: string[]): Promise<string | undefined> {
     if (value) return value;
   }
   return undefined;
+}
+
+/**
+ * Report which environment variable supplies a key, without resolving it.
+ *
+ * A `SECRET_<NAME>` or `<NAME>_SECRET` reference counts as present, because
+ * `getEnvSecret` resolves it at call time. Reporting only the plain variable
+ * would say a key is missing while every call succeeds.
+ */
+export function findDatadogKeySource(names: string[]): string | null {
+  for (const name of names) {
+    if (process.env[`SECRET_${name}`]) return `SECRET_${name}`;
+    if (process.env[`${name}_SECRET`]) return `${name}_SECRET`;
+    if (process.env[name]) return name;
+  }
+  return null;
 }
 
 //

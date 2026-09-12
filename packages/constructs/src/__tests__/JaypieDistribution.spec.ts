@@ -282,7 +282,7 @@ describe("JaypieDistribution", () => {
       });
     });
 
-    it("uses default HOSTING role tag", () => {
+    it("uses default API role tag", () => {
       const stack = new Stack();
       const bucket = new s3.Bucket(stack, "TestBucket");
       const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);

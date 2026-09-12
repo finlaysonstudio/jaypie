@@ -1328,6 +1328,32 @@ describe("MCP Adapter", () => {
       expect(isFabricMcpServer(server)).toBe(true);
     });
 
+    it("registers only allowlisted services when services is given", () => {
+      const suite = createServiceSuite({ name: "test", version: "1.0.0" });
+      for (const alias of ["keep", "drop", "also-keep"]) {
+        suite.register(fabricService({ alias, service: () => alias }), {
+          category: "utils",
+        });
+      }
+
+      const server = createMcpServerFromSuite(suite, {
+        services: ["keep", "also-keep", "unregistered"],
+      });
+
+      expect(server.tools.map((t) => t.name)).toEqual(["keep", "also-keep"]);
+    });
+
+    it("registers no tools for an empty services allowlist", () => {
+      const suite = createServiceSuite({ name: "test", version: "1.0.0" });
+      suite.register(fabricService({ alias: "only", service: () => "1" }), {
+        category: "utils",
+      });
+
+      const server = createMcpServerFromSuite(suite, { services: [] });
+
+      expect(server.tools).toHaveLength(0);
+    });
+
     it("accepts callback options", () => {
       const suite = createServiceSuite({ name: "test", version: "1.0.0" });
       const completedValues: unknown[] = [];
