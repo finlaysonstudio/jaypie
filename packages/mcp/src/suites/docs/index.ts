@@ -10,10 +10,14 @@ import {
   createSkillService,
   type LayeredStoreLayer,
 } from "@jaypie/tildeskill";
+import { existsSync, readdirSync, type Dirent } from "node:fs";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 import { gt } from "semver";
+
+import { getMcpAssetPaths, MCP_ASSET_DIRECTORY } from "../../assets.js";
+import { RELEASE_NOTES_HELP } from "./help.js";
 
 // Build-time constants
 declare const __BUILD_VERSION_STRING__: string;
@@ -22,19 +26,124 @@ const BUILD_VERSION_STRING =
     ? __BUILD_VERSION_STRING__
     : "@jaypie/mcp@0.0.0";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-// From dist/suites/docs/, go up 3 levels to package root where skills/ and release-notes/ live
-// Environment variables allow overriding paths when bundled (e.g., esbuild Lambda)
-const RELEASE_NOTES_PATH =
-  process.env.MCP_RELEASE_NOTES_PATH ||
-  path.join(__dirname, "..", "..", "..", "release-notes");
+// =============================================================================
+// ASSET PATHS
+// =============================================================================
+
+const ENV_BUILTIN_SKILLS_PATH = "MCP_BUILTIN_SKILLS_PATH";
+const ENV_RELEASE_NOTES_PATH = "MCP_RELEASE_NOTES_PATH";
+const MARKDOWN_EXTENSION = ".md";
+const WARNING_PREFIX = "[@jaypie/mcp]";
+
+// A bundler (esbuild) collapses every module into one file, so this module's
+// directory is the bundle directory rather than dist/suites/docs/
+const MODULE_DIRECTORY = path.dirname(fileURLToPath(import.meta.url));
+const PACKAGE_ASSET_PATHS = getMcpAssetPaths();
+
+/**
+ * An explicit environment path wins outright. Otherwise the package copy wins,
+ * then a copy beside the bundle. Returns the package path when neither exists.
+ */
+function resolveAssetDirectory({
+  bundled,
+  envPath,
+  packaged,
+}: {
+  bundled: string;
+  envPath?: string;
+  packaged: string;
+}): string {
+  if (envPath) return envPath;
+  return (
+    [packaged, bundled].find((candidate) => existsSync(candidate)) ?? packaged
+  );
+}
+
+function hasEntries({
+  directory,
+  isEntry,
+}: {
+  directory: string;
+  isEntry: (entry: Dirent) => boolean;
+}): boolean {
+  try {
+    return readdirSync(directory, { withFileTypes: true }).some(isEntry);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Warn once, on first use, when an asset directory is missing or empty. Waiting
+ * for first use keeps servers that never call the service quiet.
+ */
+function createAssetCheck({
+  directory,
+  envName,
+  isEntry,
+  name,
+}: {
+  directory: string;
+  envName: string;
+  isEntry: (entry: Dirent) => boolean;
+  name: string;
+}): () => void {
+  let checked = false;
+  return () => {
+    if (checked) return;
+    checked = true;
+    if (hasEntries({ directory, isEntry })) return;
+    // stderr keeps the stdio transport's stdout clean and still reaches CloudWatch
+    // eslint-disable-next-line no-console
+    console.warn(
+      `${WARNING_PREFIX} No ${name} found in "${directory}". Copy the ${name} directory from getMcpAssetPaths() in @jaypie/mcp/assets beside the bundle or set ${envName}.`,
+    );
+  };
+}
+
+/** Run `check` before any property of `target` is read */
+function withAssetCheck<T extends object>({
+  check,
+  target,
+}: {
+  check: () => void;
+  target: T;
+}): T {
+  return new Proxy(target, {
+    get(object, property, receiver) {
+      check();
+      return Reflect.get(object, property, receiver);
+    },
+  });
+}
+
+const RELEASE_NOTES_PATH = resolveAssetDirectory({
+  bundled: path.join(MODULE_DIRECTORY, MCP_ASSET_DIRECTORY.RELEASE_NOTES),
+  envPath: process.env[ENV_RELEASE_NOTES_PATH],
+  packaged: PACKAGE_ASSET_PATHS.releaseNotes,
+});
 
 // Bundled Jaypie skills ship inside the @jaypie/mcp package. MCP_BUILTIN_SKILLS_PATH
-// lets bundlers (esbuild, Lambda) relocate them without disabling the built-in layer.
-const BUILTIN_SKILLS_PATH =
-  process.env.MCP_BUILTIN_SKILLS_PATH ||
-  path.join(__dirname, "..", "..", "..", "skills");
+// relocates them without disabling the built-in layer.
+const BUILTIN_SKILLS_PATH = resolveAssetDirectory({
+  bundled: path.join(MODULE_DIRECTORY, MCP_ASSET_DIRECTORY.SKILLS),
+  envPath: process.env[ENV_BUILTIN_SKILLS_PATH],
+  packaged: PACKAGE_ASSET_PATHS.skills,
+});
+
+const checkReleaseNoteAssets = createAssetCheck({
+  directory: RELEASE_NOTES_PATH,
+  envName: ENV_RELEASE_NOTES_PATH,
+  isEntry: (entry) => entry.isDirectory(),
+  name: MCP_ASSET_DIRECTORY.RELEASE_NOTES,
+});
+
+const checkSkillAssets = createAssetCheck({
+  directory: BUILTIN_SKILLS_PATH,
+  envName: ENV_BUILTIN_SKILLS_PATH,
+  isEntry: (entry) => entry.isFile() && entry.name.endsWith(MARKDOWN_EXTENSION),
+  name: MCP_ASSET_DIRECTORY.SKILLS,
+});
 
 const LOCAL_SKILLS_NAMESPACE = "local";
 const JAYPIE_SKILLS_NAMESPACE = "jaypie";
@@ -54,7 +163,10 @@ if (process.env.MCP_SKILLS_PATH) {
 
 skillLayers.push({
   namespace: JAYPIE_SKILLS_NAMESPACE,
-  store: createMarkdownStore({ path: BUILTIN_SKILLS_PATH }),
+  store: withAssetCheck({
+    check: checkSkillAssets,
+    target: createMarkdownStore({ path: BUILTIN_SKILLS_PATH }),
+  }),
 });
 
 const skillStore = createLayeredStore({
@@ -201,10 +313,6 @@ export const versionService = fabricService({
 // RELEASE NOTES SERVICE
 // =============================================================================
 
-async function getReleaseNotesHelp(): Promise<string> {
-  return fs.readFile(path.join(__dirname, "release-notes", "help.md"), "utf-8");
-}
-
 interface ReleaseNotesInput {
   package?: string;
   since_version?: string;
@@ -235,9 +343,10 @@ export const releaseNotesService = fabricService({
     input?: ReleaseNotesInput;
   }) => {
     if (!command || command === "help") {
-      return getReleaseNotesHelp();
+      return RELEASE_NOTES_HELP;
     }
 
+    checkReleaseNoteAssets();
     const p = params || {};
 
     switch (command) {
