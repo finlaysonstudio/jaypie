@@ -1,6 +1,6 @@
 ---
 description: GitHub Environments configuration for CDK deployments
-related: cicd, cicd-actions, cicd-deploy, variables
+related: cicd, cicd-actions, cicd-deploy, github, variables
 ---
 
 # GitHub Environments Configuration
