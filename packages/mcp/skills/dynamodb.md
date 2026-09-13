@@ -474,6 +474,16 @@ const table = new JaypieDynamoDb(this, "myApp", {
 
 Wire tables to Lambda using the `tables` prop — see `skill("cdk")` for details.
 
+### Keep Table Properties Stable
+
+Once a migration creates a GSI through `UpdateTable`, every CloudFormation update to the table fails:
+
+```
+Invalid AttributeDefinitions Expected the following attributes to be present: [indexModel, ...]
+```
+
+CloudFormation sends only the key attributes the template declares, and DynamoDB rejects a request that omits attributes existing indexes reference. Table properties, tags included, must stay the same across deploys. Jaypie keeps per-build tags (`buildDate`, `buildHex`, `buildTime`, `commit`, `version`, `stackSha`) off `AWS::DynamoDB::GlobalTable` and `AWS::DynamoDB::Table` for this reason. Change a migration-owned table through migrations, or declare its indexes in CDK.
+
 ## Local Development
 
 Use docker-compose for local DynamoDB. The `@jaypie/dynamodb` MCP tool can generate a `docker-compose.yml` with custom ports.

@@ -48,6 +48,7 @@ new JaypieMigration(this, "SeedData", {
 - **Execution**: Uses `cr.Provider` with both `onEventHandler` and `isCompleteHandler` pointing to the same Lambda. The `onEventHandler` returns `PhysicalResourceId` immediately; the migration code runs in `isCompleteHandler` invocations, which are polled by Step Functions until `IsComplete: true`. `Delete` requests skip the migration entirely.
 - **Dependencies**: Use `dependencies` to ensure tables and other resources exist before the migration executes
 - **Permissions**: Tables passed via `tables` get data-plane (`grantReadWriteData`), `Query` and `Scan` on `${tableArn}/index/*`, plus control-plane access (`DescribeTable`, `UpdateTable`, `UpdateTimeToLive`, `UpdateContinuousBackups`) scoped to the table ARN and its indexes — migrations that add GSIs, toggle TTL, or change backups work without extra IAM, and later migrations can query the GSIs earlier ones created
+- **Migration-owned indexes**: after a migration creates a GSI, any CloudFormation update to the table fails with `Invalid AttributeDefinitions`. Keep table props and tags stable across deploys; per-build tags already skip tables (see `skill("dynamodb")`). Stacks deployed before `@jaypie/constructs` 1.2.85 carry build tags on the table, and removing them is itself a failing table update: recover by recreating the table or declaring its indexes in CDK
 
 ## Migration Lambda Handler
 
