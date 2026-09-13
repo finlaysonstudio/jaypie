@@ -209,7 +209,7 @@ Two things to plan for:
 |---------|------------------|-------------------|
 | Origin | API Gateway REST | CloudFront → Function URL |
 | Host env fallback | `CDK_ENV_API_HOST_NAME` → `CDK_ENV_API_SUBDOMAIN`+`CDK_ENV_API_HOSTED_ZONE` | Same, plus falls back to `CDK_ENV_HOSTED_ZONE` |
-| Zone env fallback | `CDK_ENV_API_HOSTED_ZONE` | `CDK_ENV_HOSTED_ZONE` |
+| Zone env fallback | `CDK_ENV_API_HOSTED_ZONE` | `CDK_ENV_API_HOSTED_ZONE` → `CDK_ENV_HOSTED_ZONE` |
 | DNS | A record only | A + AAAA records |
 | WAF | Not built in | Opt-in (`waf: true` to enable) |
 | Security headers | Not built in | Enabled by default (`securityHeaders: false` to disable) |

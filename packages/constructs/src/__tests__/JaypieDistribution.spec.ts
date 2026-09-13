@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { ConfigurationError } from "@jaypie/errors";
-import { RemovalPolicy, Stack } from "aws-cdk-lib";
+import { App, RemovalPolicy, Stack } from "aws-cdk-lib";
 import { Template, Match } from "aws-cdk-lib/assertions";
 import * as acm from "aws-cdk-lib/aws-certificatemanager";
 import * as cloudfront from "aws-cdk-lib/aws-cloudfront";
@@ -16,6 +16,14 @@ function findDistribution(template: Template) {
   const resources = template.findResources("AWS::CloudFront::Distribution");
   const distributions = Object.values(resources);
   return distributions[0];
+}
+
+// Helper function to list hosted zone domains requested via context lookup
+function lookedUpZones(app: App): string[] {
+  const missing = app.synth().manifest.missing ?? [];
+  return missing
+    .filter((entry) => entry.provider === "hosted-zone")
+    .map((entry) => (entry.props as { domainName: string }).domainName);
 }
 
 // Helper function to find Lambda FunctionUrl in the template
@@ -557,6 +565,64 @@ describe("JaypieDistribution", () => {
       // Certificate is only set when host AND zone are both present
       // Without zone, certificate isn't applied to the distribution
       expect(construct.host).toBe("api.example.com");
+    });
+
+    it("resolves zone from CDK_ENV_API_HOSTED_ZONE", () => {
+      process.env.CDK_ENV_API_SUBDOMAIN = "api";
+      process.env.CDK_ENV_API_HOSTED_ZONE = "api-zone.example.com";
+
+      const app = new App();
+      const stack = new Stack(app, "TestStack", {
+        env: { account: "123456789012", region: "us-east-1" },
+      });
+      const bucket = new s3.Bucket(stack, "TestBucket");
+      const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
+
+      const construct = new JaypieDistribution(stack, "TestDistribution", {
+        handler: origin,
+      });
+      const template = Template.fromStack(stack);
+
+      expect(construct.host).toBe("api.api-zone.example.com");
+      expect(construct.certificate).toBeDefined();
+      template.resourceCountIs("AWS::Route53::RecordSet", 2);
+      expect(lookedUpZones(app)).toEqual(["api-zone.example.com"]);
+    });
+
+    it("prefers CDK_ENV_API_HOSTED_ZONE over CDK_ENV_HOSTED_ZONE for zone", () => {
+      process.env.CDK_ENV_API_SUBDOMAIN = "api";
+      process.env.CDK_ENV_API_HOSTED_ZONE = "api-zone.example.com";
+      process.env.CDK_ENV_HOSTED_ZONE = "example.com";
+
+      const app = new App();
+      const stack = new Stack(app, "TestStack", {
+        env: { account: "123456789012", region: "us-east-1" },
+      });
+      const bucket = new s3.Bucket(stack, "TestBucket");
+      const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
+
+      const construct = new JaypieDistribution(stack, "TestDistribution", {
+        handler: origin,
+      });
+
+      expect(construct.host).toBe("api.api-zone.example.com");
+      expect(lookedUpZones(app)).toEqual(["api-zone.example.com"]);
+    });
+
+    it("resolves zone from CDK_ENV_HOSTED_ZONE when CDK_ENV_API_HOSTED_ZONE is unset", () => {
+      process.env.CDK_ENV_API_SUBDOMAIN = "api";
+      process.env.CDK_ENV_HOSTED_ZONE = "example.com";
+
+      const app = new App();
+      const stack = new Stack(app, "TestStack", {
+        env: { account: "123456789012", region: "us-east-1" },
+      });
+      const bucket = new s3.Bucket(stack, "TestBucket");
+      const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
+
+      new JaypieDistribution(stack, "TestDistribution", { handler: origin });
+
+      expect(lookedUpZones(app)).toEqual(["example.com"]);
     });
 
     it("does not force-delete existing alias records by default", () => {
