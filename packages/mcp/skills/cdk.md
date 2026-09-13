@@ -232,8 +232,10 @@ const handler = new JaypieLambda(this, "ApiHandler", {
 
 | Tables Count | Permissions | Environment |
 |-------------|-------------|-------------|
-| 1 table | `grantReadWriteData()` | `DYNAMODB_TABLE_NAME` set automatically |
-| 2+ tables | `grantReadWriteData()` for each | No auto env var — set `CDK_ENV_TABLE` manually |
+| 1 table | `grantReadWriteData()` plus `Query`/`Scan` on `index/*` | `DYNAMODB_TABLE_NAME` set automatically |
+| 2+ tables | `grantReadWriteData()` plus `Query`/`Scan` on `index/*` for each | No auto env var — set `CDK_ENV_TABLE` manually |
+
+CDK grants index ARNs only for indexes declared in CDK. The explicit `index/*` grant covers GSIs created by migrations (`UpdateTable`) and indexes on imported tables.
 
 Single table example — at runtime, use `process.env.DYNAMODB_TABLE_NAME`:
 

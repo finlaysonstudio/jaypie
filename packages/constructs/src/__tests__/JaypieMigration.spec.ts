@@ -4,6 +4,7 @@ import { Match, Template } from "aws-cdk-lib/assertions";
 import * as dynamodb from "aws-cdk-lib/aws-dynamodb";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 
+import { JaypieDynamoDb } from "../JaypieDynamoDb.js";
 import { JaypieMigration } from "../JaypieMigration.js";
 
 describe("JaypieMigration", () => {
@@ -24,6 +25,7 @@ describe("JaypieMigration", () => {
       template.hasResource("AWS::Lambda::Function", {});
       // Should create a Custom Resource
       template.hasResource("AWS::CloudFormation::CustomResource", {});
+      expect(template).toBeDefined();
     });
   });
 
@@ -45,6 +47,7 @@ describe("JaypieMigration", () => {
 
       // Verify IAM policy exists granting DynamoDB access
       template.hasResource("AWS::IAM::Policy", {});
+      expect(template).toBeDefined();
     });
 
     it("passes environment variables to the migration Lambda", () => {
@@ -78,6 +81,7 @@ describe("JaypieMigration", () => {
       template.hasResourceProperties("AWS::CloudFormation::CustomResource", {
         deployNonce: Match.anyValue(),
       });
+      expect(template).toBeDefined();
     });
 
     it("sets DYNAMODB_TABLE_NAME when one table is provided", () => {
@@ -138,6 +142,38 @@ describe("JaypieMigration", () => {
       expect(allActions.has("dynamodb:UpdateContinuousBackups")).toBe(true);
     });
 
+    it("grants Query and Scan on indexes of tables that declare none (issue #546)", () => {
+      const stack = new Stack();
+      const table = new JaypieDynamoDb(stack, "TestTable");
+
+      new JaypieMigration(stack, "TestMigration", {
+        code: lambda.Code.fromInline("exports.handler = () => {}"),
+        handler: "index.handler",
+        tables: [table],
+      });
+
+      const template = Template.fromStack(stack);
+      const policies = template.findResources("AWS::IAM::Policy");
+      const indexActions = new Set<string>();
+      for (const policy of Object.values(policies)) {
+        const statements = (policy as any).Properties?.PolicyDocument
+          ?.Statement as Array<{ Action: unknown; Resource: unknown }>;
+        for (const statement of statements ?? []) {
+          if (!JSON.stringify(statement.Resource).includes("/index/*")) {
+            continue;
+          }
+          const actions = Array.isArray(statement.Action)
+            ? statement.Action
+            : [statement.Action];
+          for (const action of actions) {
+            if (typeof action === "string") indexActions.add(action);
+          }
+        }
+      }
+      expect(indexActions.has("dynamodb:Query")).toBe(true);
+      expect(indexActions.has("dynamodb:Scan")).toBe(true);
+    });
+
     it("defaults Lambda timeout to 15 minutes (issue #341)", () => {
       const stack = new Stack();
       new JaypieMigration(stack, "TestMigration", {
@@ -163,6 +199,7 @@ describe("JaypieMigration", () => {
       });
       const template = Template.fromStack(stack);
       template.hasResource("AWS::StepFunctions::StateMachine", {});
+      expect(template).toBeDefined();
     });
 
     it("accepts queryInterval prop (issue #346)", () => {
