@@ -272,6 +272,8 @@ GSIs are defined using `fabricIndex()` from `@jaypie/fabric`. **Do not create al
 
 **Important:** DynamoDB allows only **one GSI to be added per deployment**. If you need multiple GSIs, add them sequentially across separate deploys. For production tables, the AWS CLI is often better suited for adding GSIs than CDK (which may try to replace the table).
 
+**Grants:** CDK adds `${tableArn}/index/*` to grants only for indexes declared in CDK. GSIs created by migrations or the CLI are invisible to CDK, so a role needs `Query` and `Scan` on the index ARN explicitly. `JaypieLambda` and `JaypieMigration` grant this for every table in `tables`; hand-rolled roles must add it.
+
 All GSIs use a composite sort key of `scope#updatedAt` (stored as `{indexName}Sk`). Queries use `begins_with` on the sk to filter by scope; omitting scope lists across all scopes.
 
 | GSI Name | Partition Key Pattern | Sort Key | Purpose | Add When |

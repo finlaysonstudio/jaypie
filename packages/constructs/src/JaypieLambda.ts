@@ -20,6 +20,8 @@ import {
   SecretsArrayItem,
 } from "./helpers/index.js";
 
+const DYNAMODB_INDEX_ACTIONS = ["dynamodb:Query", "dynamodb:Scan"];
+
 export interface JaypieLambdaProps {
   allowAllOutbound?: boolean;
   allowPublicSubnet?: boolean;
@@ -300,6 +302,18 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
     tables.forEach((table) => {
       table.grantReadWriteData(this._lambda);
     });
+
+    // CDK grants index ARNs only for indexes declared in CDK. Migrations and
+    // imports own indexes CDK never sees, so grant Query and Scan on every
+    // table's indexes. Issue #546.
+    if (tables.length > 0) {
+      this._lambda.addToRolePolicy(
+        new iam.PolicyStatement({
+          actions: DYNAMODB_INDEX_ACTIONS,
+          resources: tables.map((table) => `${table.tableArn}/index/*`),
+        }),
+      );
+    }
 
     // Add table name to environment if there's exactly one table
     if (tables.length === 1) {

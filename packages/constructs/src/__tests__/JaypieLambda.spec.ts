@@ -2,7 +2,9 @@ import { CDK } from "../constants";
 import { describe, expect, it, beforeEach, afterEach } from "vitest";
 import { Stack, RemovalPolicy, Duration } from "aws-cdk-lib";
 import { Template, Match } from "aws-cdk-lib/assertions";
+import * as dynamodb from "aws-cdk-lib/aws-dynamodb";
 import * as lambda from "aws-cdk-lib/aws-lambda";
+import { JaypieDynamoDb } from "../JaypieDynamoDb.js";
 import { JaypieLambda } from "../JaypieLambda.js";
 import * as iam from "aws-cdk-lib/aws-iam";
 import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
@@ -962,6 +964,46 @@ describe("JaypieLambda", () => {
 
       // Test assertions to satisfy linter
       expect(template).toBeDefined();
+    });
+
+    it.each([
+      [
+        "a construct table with no declared indexes",
+        (stack: Stack) => new JaypieDynamoDb(stack, "TestTable"),
+      ],
+      [
+        "an imported table",
+        (stack: Stack) =>
+          dynamodb.Table.fromTableName(stack, "TestTable", "test-table"),
+      ],
+    ])("grants Query and Scan on indexes of %s (issue #546)", (_, create) => {
+      const stack = new Stack();
+      new JaypieLambda(stack, "TestConstruct", {
+        code: lambda.Code.fromInline("exports.handler = () => {}"),
+        handler: "index.handler",
+        tables: [create(stack)],
+      });
+
+      const template = Template.fromStack(stack);
+      const policies = template.findResources("AWS::IAM::Policy");
+      const indexActions = new Set<string>();
+      for (const policy of Object.values(policies)) {
+        const statements = (policy as any).Properties?.PolicyDocument
+          ?.Statement as Array<{ Action: unknown; Resource: unknown }>;
+        for (const statement of statements ?? []) {
+          if (!JSON.stringify(statement.Resource).includes("/index/*")) {
+            continue;
+          }
+          const actions = Array.isArray(statement.Action)
+            ? statement.Action
+            : [statement.Action];
+          for (const action of actions) {
+            if (typeof action === "string") indexActions.add(action);
+          }
+        }
+      }
+      expect(indexActions.has("dynamodb:Query")).toBe(true);
+      expect(indexActions.has("dynamodb:Scan")).toBe(true);
     });
 
     it("applies removal policy to lambda", () => {
