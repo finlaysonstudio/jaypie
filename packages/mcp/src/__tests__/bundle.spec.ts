@@ -58,6 +58,8 @@ interface BundleOutput {
 
 async function runBundle(directory: string): Promise<BundleOutput> {
   const env = { ...process.env };
+  // CI preloads dd-trace through NODE_OPTIONS, which cannot resolve beside the bundle
+  delete env.NODE_OPTIONS;
   for (const variable of MCP_PATH_VARIABLES) {
     delete env[variable];
   }
