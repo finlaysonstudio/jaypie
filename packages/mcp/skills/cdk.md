@@ -131,7 +131,7 @@ workspaces/
    `cdk-{PROJECT_SPONSOR}-{PROJECT_KEY}-{PROJECT_ENV}-{PROJECT_NONCE}[-{key}]`,
    so naming stays consistent across sandbox, personal, and production deploys.
 2. **Account & region** resolved from `CDK_DEFAULT_ACCOUNT` / `CDK_DEFAULT_REGION` (overridable via `env`).
-3. **Standard tags** applied to the stack and propagated to every taggable child resource: `env`, `project`, `sponsor`, `nonce`, `commit`, `buildHex`, `buildDate`, `buildTime`, `version`, `service`, `creation`, `role`, `stack`.
+3. **Standard tags** applied to the stack and propagated to every taggable child resource: `env`, `project`, `sponsor`, `nonce`, `commit`, `buildHex`, `buildDate`, `buildTime`, `version`, `service`, `creation`, `role`, `stack`. Per-build tags (`buildDate`, `buildHex`, `buildTime`, `commit`, `version`, and `JaypieInfrastructureStack`'s `stackSha`) skip `AWS::DynamoDB::GlobalTable` and `AWS::DynamoDB::Table` so tables stay unchanged across deploys (see `skill("migrations")`).
 
 ```typescript
 import { Construct } from "constructs";

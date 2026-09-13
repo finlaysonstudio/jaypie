@@ -565,6 +565,8 @@ Note: `JaypieDynamoDb` uses its own `IndexDefinition` type for GSI configuration
 
 `JaypieLambda` `tables` (and `JaypieMigration`, which wraps it) grants `grantReadWriteData` plus `dynamodb:Query` and `dynamodb:Scan` on `${tableArn}/index/*`. CDK adds index ARNs to grants only for indexes declared in CDK, so the explicit grant covers GSIs created by migrations through `UpdateTable` and indexes on imported tables (#546).
 
+`constructTagger` adds per-build tags (`buildDate`, `buildHex`, `buildTime`, `commit`, `version`) with `excludeResourceTypes` for `AWS::DynamoDB::GlobalTable` and `AWS::DynamoDB::Table`; `JaypieInfrastructureStack` does the same for `stackSha`. A table whose GSIs a migration created rejects every CloudFormation update, so per-build tags would fail every deploy after the first (#548).
+
 TTL is enabled on the `ttl` attribute by default (matching `@jaypie/dynamodb`'s `DEFAULT_TTL_ATTRIBUTE`). Pass `timeToLiveAttribute: "<name>"` to use a different attribute, or `timeToLiveAttribute: false` to disable TTL. The construct attribute name and the runtime write attribute must match, or expiry silently never fires.
 
 ### Next.js Deployment
