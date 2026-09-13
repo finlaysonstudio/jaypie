@@ -1,5 +1,4 @@
 import { readFileSync } from "node:fs";
-import copy from "rollup-plugin-copy";
 import replace from "@rollup/plugin-replace";
 import typescript from "@rollup/plugin-typescript";
 import { dts } from "rollup-plugin-dts";
@@ -25,6 +24,7 @@ const onwarn = (warning, defaultHandler) => {
 export default [
   {
     input: [
+      "src/assets.ts",
       "src/http/index.ts",
       "src/index.ts",
       "src/suite.ts",
@@ -49,14 +49,6 @@ export default [
       }),
       typescript({
         exclude: ["**/__tests__/**/*", "**/*.test.ts"],
-      }),
-      copy({
-        targets: [
-          {
-            src: "src/suites/docs/release-notes/help.md",
-            dest: "dist/suites/docs/release-notes",
-          },
-        ],
       }),
     ],
     external: [
@@ -87,6 +79,12 @@ export default [
     ],
   },
   // Type definitions (ESM-only package): one self-contained bundle per entry.
+  {
+    input: "src/assets.ts",
+    output: { file: "dist/assets.d.ts", format: "es" },
+    plugins: [dts()],
+    external: dtsExternal,
+  },
   {
     input: "src/index.ts",
     output: { file: "dist/index.d.ts", format: "es" },

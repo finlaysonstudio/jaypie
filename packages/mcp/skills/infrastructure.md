@@ -1,6 +1,6 @@
 ---
 description: AWS, CDK, CI/CD, and observability
-related: aws, cdk, cicd, cicd-actions, cicd-deploy, cicd-environments, datadog, dns, dynamodb, email, secrets, variables, web, websockets
+related: aws, cdk, cicd, cicd-actions, cicd-deploy, cicd-environments, datadog, dns, dynamodb, email, github, secrets, variables, web, websockets
 ---
 
 # Infrastructure
@@ -21,6 +21,7 @@ Cloud infrastructure and deployment patterns.
 | `dns` | DNS and domain configuration |
 | `dynamodb` | DynamoDB patterns and queries |
 | `email` | SES inbound email receiving |
+| `github` | GitHub rulesets, environments, and layered secrets and variables |
 | `migrations` | DynamoDB migration custom resources |
 | `secrets` | AWS Secrets Manager |
 | `variables` | Environment variables reference |

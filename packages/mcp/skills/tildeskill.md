@@ -166,8 +166,9 @@ await layered.put({ alias: "local:new", content: "# New" }); // must be qualifie
 
 The MCP server itself uses `createLayeredStore` to place `MCP_SKILLS_PATH`
 (the client's local library, namespace `local`) over the bundled Jaypie
-skills (namespace `jaypie`). Set `MCP_BUILTIN_SKILLS_PATH` if a bundler
-needs to relocate the Jaypie base layer.
+skills (namespace `jaypie`). A bundled build finds the Jaypie base layer in
+`skills/` beside the bundle, or at `MCP_BUILTIN_SKILLS_PATH`; see
+`skill("mcp")` for the copy step.
 
 ## Plural/Singular Fallback
 

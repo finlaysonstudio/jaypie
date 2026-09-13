@@ -14,6 +14,7 @@ This package serves three purposes:
 ```
 packages/mcp/
 ├── src/
+│   ├── assets.ts             # @jaypie/mcp/assets entry: getMcpAssetPaths for build scripts
 │   ├── index.ts              # CLI entrypoint, exports createMcpServer and mcpExpressHandler
 │   ├── createMcpServer.ts    # MCP server factory using ServiceSuite
 │   ├── suite.ts              # ServiceSuite registration (simplified)
@@ -25,9 +26,8 @@ packages/mcp/
 │   │   └── tools.ts          # Tool selection via selectServiceFunctions
 │   └── suites/               # Modular suite implementations
 │       └── docs/
-│           ├── index.ts      # skill, version, release_notes services
-│           └── release-notes/
-│               └── help.md   # Release notes help
+│           ├── help.ts       # Release notes help, inlined so bundles ship no file
+│           └── index.ts      # skill, version, release_notes services; asset path resolution
 ├── skills/                   # Markdown skill files served via skill tool
 ├── release-notes/            # Version history organized by package
 └── dist/                     # Built output
@@ -38,6 +38,10 @@ packages/mcp/
 ```typescript
 import { createMcpServer, mcpExpressHandler } from "@jaypie/mcp";
 import type { CreateMcpServerOptions, McpExpressHandlerOptions } from "@jaypie/mcp";
+
+// Build scripts only: absolute skills/ and release-notes/ paths to copy beside a bundle
+import { getMcpAssetPaths, MCP_ASSET_DIRECTORY } from "@jaypie/mcp/assets";
+import type { McpAssetPaths } from "@jaypie/mcp/assets";
 
 // Loads @jaypie/express, never @modelcontextprotocol/sdk
 import {

@@ -337,12 +337,12 @@ await build({
     ...builtinModules.map(m => `node:${m}`),
   ],
   banner: {
-    js: `import { createRequire } from "module";
-import { fileURLToPath } from "url";
-import { dirname } from "path";
-const require = createRequire(import.meta.url);
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);`,
+    js: `import { createRequire as __bannerCreateRequire } from "node:module";
+import { fileURLToPath as __bannerFileURLToPath } from "node:url";
+import { dirname as __bannerDirname } from "node:path";
+const require = __bannerCreateRequire(import.meta.url);
+const __filename = __bannerFileURLToPath(import.meta.url);
+const __dirname = __bannerDirname(__filename);`,
   },
 });
 ```
@@ -364,6 +364,8 @@ Node.js always treats `.mjs` files as ESM, regardless of `package.json`. No need
 ### Why createRequire banner?
 
 Some dependencies use `require()` even when bundled. The banner provides CommonJS shims for `require`, `__filename`, and `__dirname`.
+
+Alias every banner import. esbuild hoists bundled imports such as `import { fileURLToPath } from "node:url"` into the same top-level scope as the banner, and a shared name fails at load with `Identifier 'fileURLToPath' has already been declared`.
 
 ### CDK Integration
 

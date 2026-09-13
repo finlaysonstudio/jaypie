@@ -104,6 +104,36 @@ Methods: `initialize` (echoes a supported `protocolVersion`, else `2025-06-18`),
 - The endpoint is stateless: no sessions, no `Mcp-Session-Id`, no server-initiated GET stream. Every POST stands alone, which suits Lambda.
 - Put authentication in `setup` or `validate` so it runs for both JSON and SSE requests.
 
+#### Bundling
+
+A bundler (esbuild) inlines the code but not the markdown that `skill` and `release_notes` read. Without that markdown, `skill("index")` answers only its heading, and the first `skill` or `release_notes` call logs a `[@jaypie/mcp]` warning to stderr naming the missing directory.
+
+Copy both directories beside the bundle at build time. `getMcpAssetPaths` from `@jaypie/mcp/assets` returns their absolute paths in the installed package and loads nothing else.
+
+```javascript
+// esbuild.config.mjs (build options from skill("express"))
+import { cpSync } from "node:fs";
+import { join } from "node:path";
+import { build } from "esbuild";
+import { getMcpAssetPaths, MCP_ASSET_DIRECTORY } from "@jaypie/mcp/assets";
+
+const OUT_DIR = "dist";
+
+await build({ bundle: true, format: "esm", outfile: join(OUT_DIR, "index.mjs"), platform: "node" });
+
+const assets = getMcpAssetPaths();
+cpSync(assets.releaseNotes, join(OUT_DIR, MCP_ASSET_DIRECTORY.RELEASE_NOTES), { recursive: true });
+cpSync(assets.skills, join(OUT_DIR, MCP_ASSET_DIRECTORY.SKILLS), { recursive: true });
+```
+
+Each directory resolves to the first match: its environment variable, the installed package, then the directory beside the bundle.
+
+| Variable | Description |
+|----------|-------------|
+| `MCP_BUILTIN_SKILLS_PATH` | Jaypie skills directory (namespace `jaypie`) |
+| `MCP_RELEASE_NOTES_PATH` | Release notes directory |
+| `MCP_SKILLS_PATH` | Client skills directory layered over the Jaypie skills (namespace `local`) |
+
 ### SDK Transport (`mcpExpressHandler`)
 
 `mcpExpressHandler` from `@jaypie/mcp` wraps the SDK's `StreamableHTTPServerTransport` with optional sessions. It suits a long-running Express server, not Lambda.
