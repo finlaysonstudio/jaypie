@@ -2,6 +2,7 @@ import { describe, expect, it, beforeEach, afterEach } from "vitest";
 import { Stack, RemovalPolicy } from "aws-cdk-lib";
 import { Template } from "aws-cdk-lib/assertions";
 import * as dynamodb from "aws-cdk-lib/aws-dynamodb";
+import { fabricIndex, getGsiAttributeNames } from "@jaypie/fabric";
 import { JaypieDynamoDb } from "../JaypieDynamoDb.js";
 import type { IndexDefinition } from "../types/IndexDefinition.js";
 
@@ -179,6 +180,67 @@ describe("JaypieDynamoDb", () => {
       expect(gsiNames).toContain("indexModelCategory");
       expect(gsiNames).toContain("indexModelType");
       expect(gsiNames).toContain("indexModelXid");
+    });
+
+    it("sorts GSIs by index name regardless of declaration order (issue #552)", () => {
+      const stack = new Stack();
+      const construct = new JaypieDynamoDb(stack, "TestTable", {
+        tableName: "test-table",
+        indexes: [indexModel("xid"), indexModel(), indexModel("alias")],
+      });
+      const template = Template.fromStack(stack);
+
+      const tables = template.findResources("AWS::DynamoDB::GlobalTable");
+      const tableResource = Object.values(tables)[0];
+      const gsiNames = tableResource?.Properties?.GlobalSecondaryIndexes.map(
+        (gsi: { IndexName: string }) => gsi.IndexName,
+      );
+
+      const expected = ["indexModel", "indexModelAlias", "indexModelXid"];
+      expect(gsiNames).toEqual(expected);
+      expect(construct.indexes.map((index) => index.name)).toEqual(expected);
+    });
+
+    it("exposes an empty indexes list when none are declared (issue #552)", () => {
+      const stack = new Stack();
+      const construct = new JaypieDynamoDb(stack, "TestTable");
+      expect(construct.indexes).toEqual([]);
+    });
+
+    it("matches @jaypie/fabric GSI attribute names (issue #552)", () => {
+      const indexes = [
+        fabricIndex(),
+        fabricIndex("alias"),
+        { name: "indexScopeSequence", pk: ["scope"], sk: ["sequence"] },
+      ];
+      const stack = new Stack();
+      new JaypieDynamoDb(stack, "TestTable", {
+        indexes,
+        tableName: "test-table",
+      });
+      const template = Template.fromStack(stack);
+
+      const tables = template.findResources("AWS::DynamoDB::GlobalTable");
+      const tableResource = Object.values(tables)[0];
+      const attrs = tableResource?.Properties?.AttributeDefinitions;
+      const gsis = tableResource?.Properties?.GlobalSecondaryIndexes;
+
+      for (const index of indexes) {
+        const { pk, sk } = getGsiAttributeNames(index);
+        const gsi = gsis.find((g: { IndexName: string }) => g.IndexName === pk);
+        expect(gsi?.KeySchema).toContainEqual({
+          AttributeName: pk,
+          KeyType: "HASH",
+        });
+        expect(gsi?.KeySchema).toContainEqual({
+          AttributeName: sk,
+          KeyType: "RANGE",
+        });
+      }
+      expect(attrs).toContainEqual({
+        AttributeName: "sequence",
+        AttributeType: "N",
+      });
     });
 
     it("uses composite sk attribute {indexName}Sk for fabricIndex", () => {

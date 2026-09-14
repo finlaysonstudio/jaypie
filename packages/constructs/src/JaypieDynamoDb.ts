@@ -84,6 +84,16 @@ function indexesToGsi(
   });
 }
 
+/**
+ * Sort indexes by resolved name so the synthesized template does not depend
+ * on declaration or model registration order.
+ */
+function sortIndexes(indexes: IndexDefinition[]): IndexDefinition[] {
+  return [...indexes].sort((a, b) =>
+    getGsiAttributeNames(a).pk.localeCompare(getGsiAttributeNames(b).pk),
+  );
+}
+
 //
 //
 // Types
@@ -94,7 +104,10 @@ export interface JaypieDynamoDbProps extends Omit<
   "globalSecondaryIndexes" | "partitionKey" | "sortKey" | "timeToLiveAttribute"
 > {
   /**
-   * Configure GSIs for the table using the IndexDefinition format.
+   * Configure GSIs for the table using the IndexDefinition format. CDK owns
+   * indexes: declare every registered `fabricIndex()` here, for example with
+   * `getAllRegisteredIndexes()` from `@jaypie/fabric`. Indexes are sorted by
+   * name.
    * - `undefined`: No GSIs (default)
    * - Array of IndexDefinition: Use the specified indexes
    *
@@ -177,6 +190,7 @@ export interface JaypieDynamoDbProps extends Omit<
  * });
  */
 export class JaypieDynamoDb extends Construct implements dynamodb.ITableV2 {
+  private readonly _indexes: IndexDefinition[];
   private readonly _table: dynamodb.TableV2;
 
   constructor(scope: Construct, id: string, props: JaypieDynamoDbProps = {}) {
@@ -207,8 +221,11 @@ export class JaypieDynamoDb extends Construct implements dynamodb.ITableV2 {
       ...restProps
     } = props;
 
-    // Convert IndexDefinition[] to CDK GSI props
-    const globalSecondaryIndexes = indexes ? indexesToGsi(indexes) : undefined;
+    // Convert IndexDefinition[] to CDK GSI props, sorted by index name
+    this._indexes = indexes ? sortIndexes(indexes) : [];
+    const globalSecondaryIndexes = indexes
+      ? indexesToGsi(this._indexes)
+      : undefined;
 
     // TTL on by default ("ttl"); `false` disables it, a string overrides it.
     const resolvedTtlAttribute =
@@ -243,6 +260,13 @@ export class JaypieDynamoDb extends Construct implements dynamodb.ITableV2 {
   //
   // Public accessors
   //
+
+  /**
+   * Indexes declared on the table, sorted by index name
+   */
+  public get indexes(): IndexDefinition[] {
+    return this._indexes;
+  }
 
   /**
    * The underlying DynamoDB TableV2 construct

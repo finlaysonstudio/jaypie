@@ -47,26 +47,38 @@ new JaypieMigration(this, "SeedData", {
 - **Role**: Tagged as `CDK.ROLE.PROCESSING`
 - **Execution**: Uses `cr.Provider` with both `onEventHandler` and `isCompleteHandler` pointing to the same Lambda. The `onEventHandler` returns `PhysicalResourceId` immediately; the migration code runs in `isCompleteHandler` invocations, which are polled by Step Functions until `IsComplete: true`. `Delete` requests skip the migration entirely.
 - **Dependencies**: Use `dependencies` to ensure tables and other resources exist before the migration executes
-- **Permissions**: Tables passed via `tables` get data-plane (`grantReadWriteData`), `Query` and `Scan` on `${tableArn}/index/*`, plus control-plane access (`DescribeTable`, `UpdateTable`, `UpdateTimeToLive`, `UpdateContinuousBackups`) scoped to the table ARN and its indexes — migrations that add GSIs, toggle TTL, or change backups work without extra IAM, and later migrations can query the GSIs earlier ones created
-- **Migration-owned indexes**: after a migration creates a GSI, any CloudFormation update to the table fails with `Invalid AttributeDefinitions`. Keep table props and tags stable across deploys; per-build tags already skip tables (see `skill("dynamodb")`). Stacks deployed before `@jaypie/constructs` 1.2.85 carry build tags on the table, and removing them is itself a failing table update: recover by recreating the table or declaring its indexes in CDK
+- **Permissions**: Tables passed via `tables` get data-plane (`grantReadWriteData`), `Query` and `Scan` on `${tableArn}/index/*`, plus `DescribeTable`, `DescribeTimeToLive`, and `DescribeContinuousBackups` scoped to the table ARN and its indexes. Migrations read and write data. They do not change table shape
+- **Indexes**: CDK owns indexes, TTL, and backups. Declare every registered `fabricIndex()` in `JaypieDynamoDb` `indexes` (see `skill("dynamodb")`). A GSI created outside CDK blocks every later CloudFormation update to the table, so `JaypieMigration` grants no `UpdateTable`. Synth warns (`@jaypie/constructs:migrationTableWithoutIndexes`) when a `JaypieDynamoDb` in `tables` declares no indexes; acknowledge it for tables that need none
 
 ## Migration Lambda Handler
 
 Use `migrationHandler` from `jaypie` so errors propagate as CFN failures and the waiter protocol is handled automatically.
 
+Keep the seed in its own module so the local table script runs the same seed (see Local Development in `skill("dynamodb")`):
+
 ```typescript
-// src/migrations/seed/index.ts
-import { initClient, seedEntities, APEX } from "@jaypie/dynamodb";
-import { migrationHandler } from "jaypie";
+// src/migrations/seed/seed.ts
+import { APEX, seedEntities } from "@jaypie/dynamodb";
 
-export const handler = migrationHandler(async (event) => {
-  await initClient();
-
-  await seedEntities([
+export async function seed() {
+  return seedEntities([
     { alias: "config-main", model: "config", name: "Main Config", scope: APEX },
     { alias: "vocab-en", model: "vocabulary", name: "English", scope: APEX },
   ]);
+}
+```
 
+```typescript
+// src/migrations/seed/index.ts
+import "@project/models"; // registers models; indexEntity requires them
+import { initClient } from "@jaypie/dynamodb";
+import { migrationHandler } from "jaypie";
+
+import { seed } from "./seed.js";
+
+export const handler = migrationHandler(async () => {
+  await initClient();
+  await seed();
   return { status: "complete" };
 });
 ```

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { Duration, Stack } from "aws-cdk-lib";
-import { Match, Template } from "aws-cdk-lib/assertions";
+import { Annotations, Match, Template } from "aws-cdk-lib/assertions";
 import * as dynamodb from "aws-cdk-lib/aws-dynamodb";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 
@@ -108,7 +108,7 @@ describe("JaypieMigration", () => {
       ).toHaveProperty("DYNAMODB_TABLE_NAME");
     });
 
-    it("grants control-plane DynamoDB perms scoped to passed tables (issue #339)", () => {
+    it("grants describe-only control-plane DynamoDB perms to passed tables (issues #339, #552)", () => {
       const stack = new Stack();
       const table = new dynamodb.Table(stack, "TestTable", {
         partitionKey: { name: "model", type: dynamodb.AttributeType.STRING },
@@ -136,10 +136,50 @@ describe("JaypieMigration", () => {
           }
         }
       }
+      expect(allActions.has("dynamodb:DescribeContinuousBackups")).toBe(true);
       expect(allActions.has("dynamodb:DescribeTable")).toBe(true);
-      expect(allActions.has("dynamodb:UpdateTable")).toBe(true);
-      expect(allActions.has("dynamodb:UpdateTimeToLive")).toBe(true);
-      expect(allActions.has("dynamodb:UpdateContinuousBackups")).toBe(true);
+      expect(allActions.has("dynamodb:DescribeTimeToLive")).toBe(true);
+      expect(allActions.has("dynamodb:UpdateContinuousBackups")).toBe(false);
+      expect(allActions.has("dynamodb:UpdateTable")).toBe(false);
+      expect(allActions.has("dynamodb:UpdateTimeToLive")).toBe(false);
+    });
+
+    it("warns when a JaypieDynamoDb table declares no indexes (issue #552)", () => {
+      const stack = new Stack();
+      const table = new JaypieDynamoDb(stack, "TestTable");
+
+      new JaypieMigration(stack, "TestMigration", {
+        code: lambda.Code.fromInline("exports.handler = () => {}"),
+        handler: "index.handler",
+        tables: [table],
+      });
+
+      const warnings = Annotations.fromStack(stack).findWarning(
+        "*",
+        Match.stringLikeRegexp("declares no indexes"),
+      );
+      expect(warnings).toHaveLength(1);
+    });
+
+    it("does not warn when a JaypieDynamoDb table declares indexes (issue #552)", () => {
+      const stack = new Stack();
+      const table = new JaypieDynamoDb(stack, "TestTable", {
+        indexes: [
+          { name: "indexModel", pk: ["model"], sk: ["scope", "updatedAt"] },
+        ],
+      });
+
+      new JaypieMigration(stack, "TestMigration", {
+        code: lambda.Code.fromInline("exports.handler = () => {}"),
+        handler: "index.handler",
+        tables: [table],
+      });
+
+      const warnings = Annotations.fromStack(stack).findWarning(
+        "*",
+        Match.stringLikeRegexp("declares no indexes"),
+      );
+      expect(warnings).toHaveLength(0);
     });
 
     it("grants Query and Scan on indexes of tables that declare none (issue #546)", () => {
@@ -266,8 +306,7 @@ describe("JaypieMigration", () => {
           const usesDynamoControlPlane = actions.some(
             (action) =>
               typeof action === "string" &&
-              (action === "dynamodb:DescribeTable" ||
-                action === "dynamodb:UpdateTable"),
+              action.startsWith("dynamodb:Describe"),
           );
           if (usesDynamoControlPlane) {
             expect(statement.Resource).not.toBe("*");
