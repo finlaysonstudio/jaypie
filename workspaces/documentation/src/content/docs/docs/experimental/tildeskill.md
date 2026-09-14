@@ -332,6 +332,8 @@ const content = await skillService({ alias: "aws" });
 const index = await skillService({ alias: "index" });
 // or: await skillService()
 
+// Invalid aliases throw BadRequestError; missing skills throw NotFoundError
+
 // Use with fabricTool for Llm.operate
 import { fabricTool } from "@jaypie/fabric/llm";
 const { tool } = fabricTool({ service: skillService });

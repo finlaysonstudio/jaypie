@@ -207,6 +207,7 @@ Features:
 - Automatic `expandIncludes` on every lookup
 - Plural/singular fallback via `find()` with `<!-- resolved: -->` annotation
 - Index listing filters out `"index"` entries
+- Throws `BadRequestError` for an invalid alias and `NotFoundError` for a missing skill
 - Works with any `SkillStore` (dynamodb, layered, markdown, memory)
 
 ### Include Expansion

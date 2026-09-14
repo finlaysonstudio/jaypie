@@ -166,6 +166,8 @@ const skillService = createSkillService(store);
 await skillService({ alias: "aws" }); // → skill content (with expandIncludes)
 await skillService({ alias: "index" }); // → formatted listing
 await skillService(); // → same as "index"
+await skillService({ alias: "missing" }); // throws NotFoundError
+await skillService({ alias: "../bad" }); // throws BadRequestError
 
 // Use with fabricTool for Llm.operate toolkits
 import { fabricTool } from "@jaypie/fabric/llm";
