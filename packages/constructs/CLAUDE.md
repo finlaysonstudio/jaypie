@@ -563,9 +563,9 @@ const customTable = new JaypieDynamoDb(this, "myApp", {
 
 Note: `JaypieDynamoDb` uses its own `IndexDefinition` type for GSI configuration. The shape matches `@jaypie/fabric`'s `IndexDefinition`, so a single object literal can be shared between CDK provisioning and runtime model code without taking a runtime dependency on pre-1.0 fabric. Table names default to CDK-generated names for proper namespacing across environments; use the `tableName` prop only when an explicit name is required.
 
-`JaypieLambda` `tables` (and `JaypieMigration`, which wraps it) grants `grantReadWriteData` plus `dynamodb:Query` and `dynamodb:Scan` on `${tableArn}/index/*`. CDK adds index ARNs to grants only for indexes declared in CDK, so the explicit grant covers GSIs created by migrations through `UpdateTable` and indexes on imported tables (#546).
+`JaypieLambda` `tables` (and `JaypieMigration`, which wraps it) grants `grantReadWriteData` plus `dynamodb:Query` and `dynamodb:Scan` on `${tableArn}/index/*`. CDK adds index ARNs to grants only for indexes declared in CDK, so the explicit grant covers indexes on imported tables (#546).
 
-`constructTagger` adds per-build tags (`buildDate`, `buildHex`, `buildTime`, `commit`, `version`) with `excludeResourceTypes` for `AWS::DynamoDB::GlobalTable` and `AWS::DynamoDB::Table`; `JaypieInfrastructureStack` does the same for `stackSha`. A table whose GSIs a migration created rejects every CloudFormation update, so per-build tags would fail every deploy after the first (#548).
+CDK owns indexes (#552). `JaypieDynamoDb` sorts `indexes` by resolved name so `indexes: getAllRegisteredIndexes()` synthesizes the same template regardless of registry order, and exposes the sorted list as `indexes`. `JaypieMigration` grants only `DescribeTable`, `DescribeTimeToLive`, and `DescribeContinuousBackups`, and warns at synth (`@jaypie/constructs:migrationTableWithoutIndexes`) when a `JaypieDynamoDb` in `tables` declares no indexes. A GSI created outside the template blocks every later CloudFormation update to the table, so per-build tags from `constructTagger` and `stackSha` apply to tables like any other resource.
 
 TTL is enabled on the `ttl` attribute by default (matching `@jaypie/dynamodb`'s `DEFAULT_TTL_ATTRIBUTE`). Pass `timeToLiveAttribute: "<name>"` to use a different attribute, or `timeToLiveAttribute: false` to disable TTL. The construct attribute name and the runtime write attribute must match, or expiry silently never fires.
 
@@ -636,7 +636,11 @@ new JaypieSecret(this, "DbPassword", {
 
 `JaypieEnvSecret` extends `JaypieSecret` and is accepted anywhere a `JaypieSecret` is (including `JaypieLambda` `secrets`). `JaypieEnvSecret` is deprecated and will be removed in 2.0.
 
-Synth throws `ConfigurationError` whenever a declared secret source produces no secret string, so a blank credential never defers to runtime. A source is declared by `envKey` or by passing a `value` key, and an empty string counts as empty — `{ value: process.env.MISSING }` fails at synth. A construct with no declared source still creates an empty secret, preserving the placeholder pattern. `JaypieEnvSecret` skips the guard in consumer environments, where the secret is imported.
+Synth throws `ConfigurationError` whenever a declared secret source produces no secret string, so a blank credential never defers to runtime. A source is declared by `envKey` or by passing a `value` key, and an empty string counts as empty — `{ value: process.env.MISSING }` fails at synth. A construct with no declared source still creates a secret with a CDK-generated value, preserving the placeholder pattern. `JaypieEnvSecret` skips the guard in consumer environments, where the secret is imported.
+
+`external: true` creates an empty secret: no `SecretString`, and the `GenerateSecretString` CDK adds by default is removed with a property deletion override. The value never enters the template, assets bucket, `cdk.out`, or `cdk diff`. `envKey` still names the runtime variable but is never read. A `CfnOutput` (`ExternalArn`) described by the `envKey` (or id) carries the ARN for a CI `put-secret-value` step. Combining with `value` or `generateSecretString` throws. `createSecret` holds the shared create path for `JaypieSecret` and `JaypieEnvSecret` (#551).
+
+`JaypieSsoSyncApplication` accepts `googleCredentialsSecret` and `scimEndpointAccessTokenSecret` together and deploys SSOSync as "App only". It creates value secrets for admin email, SCIM URL, region, and identity store ID, and passes six complete ARNs in `CrossStackConfig` in the order SSOSync reads them: credentials, admin email, SCIM URL, SCIM token, region, identity store ID. A secret without `secretFullArn` throws. The literal path stays and warns `@jaypie/constructs:ssoSyncLiteralCredentials`. The SSOSync 2.3.3 `CrossApp` rule checks `App` rather than `App only`, so the SAR template does not validate these parameters (#551).
 
 ### Lambda with Non-Secret Variables
 

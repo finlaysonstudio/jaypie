@@ -131,7 +131,7 @@ workspaces/
    `cdk-{PROJECT_SPONSOR}-{PROJECT_KEY}-{PROJECT_ENV}-{PROJECT_NONCE}[-{key}]`,
    so naming stays consistent across sandbox, personal, and production deploys.
 2. **Account & region** resolved from `CDK_DEFAULT_ACCOUNT` / `CDK_DEFAULT_REGION` (overridable via `env`).
-3. **Standard tags** applied to the stack and propagated to every taggable child resource: `env`, `project`, `sponsor`, `nonce`, `commit`, `buildHex`, `buildDate`, `buildTime`, `version`, `service`, `creation`, `role`, `stack`. Per-build tags (`buildDate`, `buildHex`, `buildTime`, `commit`, `version`, and `JaypieInfrastructureStack`'s `stackSha`) skip `AWS::DynamoDB::GlobalTable` and `AWS::DynamoDB::Table` so tables stay unchanged across deploys (see `skill("migrations")`).
+3. **Standard tags** applied to the stack and propagated to every taggable child resource: `env`, `project`, `sponsor`, `nonce`, `commit`, `buildHex`, `buildDate`, `buildTime`, `version`, `service`, `creation`, `role`, `stack`. Per-build tags update every table on every deploy, so a table must declare its indexes in CDK (see `skill("dynamodb")`).
 
 ```typescript
 import { Construct } from "constructs";
@@ -235,7 +235,7 @@ const handler = new JaypieLambda(this, "ApiHandler", {
 | 1 table | `grantReadWriteData()` plus `Query`/`Scan` on `index/*` | `DYNAMODB_TABLE_NAME` set automatically |
 | 2+ tables | `grantReadWriteData()` plus `Query`/`Scan` on `index/*` for each | No auto env var — set `CDK_ENV_TABLE` manually |
 
-CDK grants index ARNs only for indexes declared in CDK. The explicit `index/*` grant covers GSIs created by migrations (`UpdateTable`) and indexes on imported tables.
+The explicit `index/*` grant also covers indexes on imported tables, which CDK does not know about.
 
 Single table example — at runtime, use `process.env.DYNAMODB_TABLE_NAME`:
 

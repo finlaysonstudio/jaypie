@@ -1,6 +1,6 @@
 {
   "name": "@jaypie/constructs",
-  "version": "1.2.85",
+  "version": "1.2.86",
   "description": "CDK constructs for Jaypie applications",
   "repository": {
     "type": "git",
@@ -43,6 +43,7 @@
     "datadog-cdk-constructs-v2": "^4.1.0"
   },
   "devDependencies": {
+    "@jaypie/fabric": "^0.3.12",
     "@rollup/plugin-typescript": "^12.1.2",
     "@types/node": "^22.13.1",
     "@typescript-eslint/eslint-plugin": "^8.18.2",

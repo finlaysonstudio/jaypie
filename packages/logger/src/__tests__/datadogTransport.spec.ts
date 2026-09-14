@@ -42,6 +42,9 @@ describe("datadogTransport", () => {
   beforeEach(() => {
     _resetDatadogTransport();
     vi.unstubAllEnvs();
+    // Ambient shell credentials must not leak into forwarding checks
+    vi.stubEnv("DATADOG_API_KEY", undefined);
+    vi.stubEnv("DATADOG_LOCAL_FORWARDING", undefined);
     mockReqs.length = 0;
     vi.mocked(request).mockClear();
   });

@@ -270,9 +270,9 @@ const { items: chats } = await queryByScope({ model: "chat", scope: APEX });
 
 GSIs are defined using `fabricIndex()` from `@jaypie/fabric`. **Do not create all GSIs upfront** — start with zero and add only what your access patterns require. The most common first GSI is `indexModel` for listing entities by model.
 
-**Important:** DynamoDB allows only **one GSI to be added per deployment**. If you need multiple GSIs, add them sequentially across separate deploys. For production tables, the AWS CLI is often better suited for adding GSIs than CDK (which may try to replace the table).
+**Indexes belong in CDK.** Declare every registered `fabricIndex()` in `JaypieDynamoDb` `indexes` (see [Share Indexes Between CDK and Runtime](#share-indexes-between-cdk-and-runtime)). A new table is created with all declared GSIs in one deploy. DynamoDB adds only **one GSI per update** to an existing table, so add indexes to a deployed table one per deploy.
 
-**Grants:** CDK adds `${tableArn}/index/*` to grants only for indexes declared in CDK. GSIs created by migrations or the CLI are invisible to CDK, so a role needs `Query` and `Scan` on the index ARN explicitly. `JaypieLambda` and `JaypieMigration` grant this for every table in `tables`; hand-rolled roles must add it.
+**Grants:** `JaypieLambda` and `JaypieMigration` grant `Query` and `Scan` on `${tableArn}/index/*` for every table in `tables`, which also covers indexes on imported tables. Hand-rolled roles must add it.
 
 All GSIs use a composite sort key of `scope#updatedAt` (stored as `{indexName}Sk`). Queries use `begins_with` on the sk to filter by scope; omitting scope lists across all scopes.
 
@@ -474,19 +474,67 @@ const table = new JaypieDynamoDb(this, "myApp", {
 
 Wire tables to Lambda using the `tables` prop — see `skill("cdk")` for details.
 
-### Keep Table Properties Stable
+### Share Indexes Between CDK and Runtime
 
-Once a migration creates a GSI through `UpdateTable`, every CloudFormation update to the table fails:
+The model registry is the single source of indexes. Register models in a module that both the CDK workspace and the runtime import, then pass the registry to the construct:
+
+```typescript
+// packages/models/src/index.ts
+import { fabricIndex, registerModel } from "@jaypie/fabric";
+
+registerModel({ model: "record", indexes: [fabricIndex(), fabricIndex("alias")] });
+registerModel({ model: "session", indexes: [fabricIndex()], ttl: "30 days" });
+```
+
+```typescript
+// workspaces/cdk/lib/data-stack.ts
+import "@project/models"; // registers models
+import { JaypieDynamoDb } from "@jaypie/constructs";
+import { getAllRegisteredIndexes } from "@jaypie/fabric";
+
+const table = new JaypieDynamoDb(this, "myApp", {
+  indexes: getAllRegisteredIndexes(),
+});
+```
+
+`JaypieDynamoDb` sorts indexes by name, so import order does not change the template. The registry is module state: the CDK workspace and the models module must resolve the same `@jaypie/fabric` copy, or `getAllRegisteredIndexes()` returns an empty list.
+
+### Indexes Created Outside CDK
+
+A GSI created through `UpdateTable` (a migration, the console, or the CLI) blocks every later CloudFormation update to the table:
 
 ```
 Invalid AttributeDefinitions Expected the following attributes to be present: [indexModel, ...]
 ```
 
-CloudFormation sends only the key attributes the template declares, and DynamoDB rejects a request that omits attributes existing indexes reference. Table properties, tags included, must stay the same across deploys. Jaypie keeps per-build tags (`buildDate`, `buildHex`, `buildTime`, `commit`, `version`, `stackSha`) off `AWS::DynamoDB::GlobalTable` and `AWS::DynamoDB::Table` for this reason. Change a migration-owned table through migrations, or declare its indexes in CDK.
+CloudFormation sends only the attributes the template declares, and DynamoDB rejects a request that omits attributes an existing index references. Tag, TTL, point-in-time recovery, and billing changes all fail. `JaypieMigration` grants no `UpdateTable` for this reason.
+
+CloudFormation cannot adopt an existing GSI. Recover by declaring the indexes in `JaypieDynamoDb` and recreating the table. Outside production, delete and redeploy the stack. In production, deploy a new CDK-declared table beside the old one, copy items with `scanTable` and `updateEntity` (see [Migration: v0.4.x to v0.5.0](#migration-v04x-to-v050)), and switch `tables` to the new table.
 
 ## Local Development
 
 Use docker-compose for local DynamoDB. The `@jaypie/dynamodb` MCP tool can generate a `docker-compose.yml` with custom ports.
+
+`createTable()` builds the table with every registered GSI, the same indexes CDK declares. Import the models module, create the table, then run the seed the deployed migration runs (see `skill("migrations")`):
+
+```typescript
+// scripts/dynamo-create-table.ts
+import "@project/models"; // registers models
+import { createTable, initClient } from "@jaypie/dynamodb";
+
+import { seed } from "../packages/api/src/migrations/seed/seed.js";
+
+initClient({
+  credentials: { accessKeyId: "local", secretAccessKey: "local" },
+  endpoint: "http://127.0.0.1:9060",
+  tableName: "jaypie-local",
+});
+
+await createTable();
+await seed();
+```
+
+`createTable()` leaves an existing table unchanged and adds no indexes to it. After registering a new index, run `npm run dynamo:remove && npm run dynamo:init` to rebuild the local table.
 
 ### Suggested package.json Scripts
 
@@ -494,7 +542,7 @@ Use docker-compose for local DynamoDB. The `@jaypie/dynamodb` MCP tool can gener
 {
   "scripts": {
     "dynamo:init": "docker compose up -d && npm run dynamo:create-table",
-    "dynamo:create-table": "AWS_ACCESS_KEY_ID=local AWS_SECRET_ACCESS_KEY=local aws dynamodb create-table --table-name jaypie-local --attribute-definitions AttributeName=id,AttributeType=S --key-schema AttributeName=id,KeyType=HASH --billing-mode PAY_PER_REQUEST --endpoint-url http://127.0.0.1:9060 2>/dev/null || true",
+    "dynamo:create-table": "tsx scripts/dynamo-create-table.ts",
     "dynamo:remove": "docker compose down -v",
     "dynamo:start": "docker compose up -d",
     "dynamo:stop": "docker compose down"

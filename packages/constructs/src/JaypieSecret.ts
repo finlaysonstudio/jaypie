@@ -1,5 +1,11 @@
 import { Construct } from "constructs";
-import { RemovalPolicy, SecretValue, Stack, Tags } from "aws-cdk-lib";
+import {
+  CfnOutput,
+  RemovalPolicy,
+  SecretValue,
+  Stack,
+  Tags,
+} from "aws-cdk-lib";
 import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
 import {
   ISecret,
@@ -19,8 +25,28 @@ import { ConfigurationError } from "@jaypie/errors";
 
 import { CDK } from "./constants";
 
+//
+//
+// Constants
+//
+
+const GENERATE_SECRET_STRING_PROPERTY = "GenerateSecretString";
+
+//
+//
+// Types
+//
+
 export interface JaypieSecretProps {
   envKey?: string;
+  /**
+   * Create the secret without a value so the value never enters the template.
+   * The value is set outside CloudFormation (e.g. `aws secretsmanager
+   * put-secret-value` in CI). `envKey` still names the runtime variable but is
+   * never read at synth. Cannot be combined with `value` or
+   * `generateSecretString` (issue #551).
+   */
+  external?: boolean;
   generateSecretString?: secretsmanager.SecretStringGenerator;
   removalPolicy?: boolean | RemovalPolicy;
   roleTag?: string;
@@ -116,27 +142,57 @@ export class JaypieSecret extends Construct implements ISecret {
 
   /**
    * Builds the underlying secret. The base implementation always creates a new
-   * Secrets Manager secret from an envKey value, an explicit value, or a
-   * generated string. Subclasses may override to import an existing secret or
-   * emit cross-stack outputs.
+   * Secrets Manager secret. Subclasses may override to import an existing
+   * secret or emit cross-stack outputs.
    */
   protected buildSecret(context: BuildSecretContext): secretsmanager.ISecret {
+    return this.createSecret(context);
+  }
+
+  /**
+   * Creates a Secrets Manager secret in this stack from an external value
+   * (none in the template), an envKey value, an explicit value, or a generated
+   * string, then applies the removal policy and tags.
+   */
+  protected createSecret(context: BuildSecretContext): secretsmanager.Secret {
     const { envKey, id, props } = context;
-    const { generateSecretString, removalPolicy, roleTag, vendorTag, value } =
-      props;
-
-    const secretValue =
-      envKey && process.env[envKey] ? process.env[envKey] : value;
-
-    this.assertSecretValue(context, secretValue);
-
-    const secret = new secretsmanager.Secret(this, id, {
+    const {
+      external,
       generateSecretString,
-      secretStringValue:
-        !generateSecretString && secretValue
-          ? SecretValue.unsafePlainText(secretValue)
-          : undefined,
-    });
+      removalPolicy,
+      roleTag,
+      vendorTag,
+      value,
+    } = props;
+
+    let secret: secretsmanager.Secret;
+
+    if (external) {
+      this.assertExternalSecret(context);
+      secret = new secretsmanager.Secret(this, id);
+      // CDK generates a random value when none is given. An external secret
+      // is created empty so CloudFormation never writes over the real value.
+      (
+        secret.node.defaultChild as secretsmanager.CfnSecret
+      ).addPropertyDeletionOverride(GENERATE_SECRET_STRING_PROPERTY);
+      new CfnOutput(this, "ExternalArn", {
+        description: envKey ?? id,
+        value: secret.secretArn,
+      });
+    } else {
+      const secretValue =
+        envKey && process.env[envKey] ? process.env[envKey] : value;
+
+      this.assertSecretValue(context, secretValue);
+
+      secret = new secretsmanager.Secret(this, id, {
+        generateSecretString,
+        secretStringValue:
+          !generateSecretString && secretValue
+            ? SecretValue.unsafePlainText(secretValue)
+            : undefined,
+      });
+    }
 
     if (removalPolicy !== undefined) {
       const policy =
@@ -157,6 +213,27 @@ export class JaypieSecret extends Construct implements ISecret {
     }
 
     return secret;
+  }
+
+  /**
+   * An external secret takes its value from outside CloudFormation, so a
+   * template source alongside it is a contradiction (issue #551).
+   */
+  protected assertExternalSecret(context: BuildSecretContext): void {
+    const { id, props } = context;
+    const label = (this.constructor as typeof JaypieSecret).className;
+
+    if (props.generateSecretString) {
+      throw new ConfigurationError(
+        `${label}(${id}): external cannot be combined with generateSecretString`,
+      );
+    }
+
+    if (props.value !== undefined) {
+      throw new ConfigurationError(
+        `${label}(${id}): external cannot be combined with value`,
+      );
+    }
   }
 
   // IResource implementation

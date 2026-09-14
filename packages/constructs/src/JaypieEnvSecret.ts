@@ -1,5 +1,5 @@
 import { Construct } from "constructs";
-import { CfnOutput, Fn, RemovalPolicy, SecretValue, Tags } from "aws-cdk-lib";
+import { CfnOutput, Fn } from "aws-cdk-lib";
 import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
 
 import { CDK } from "./constants";
@@ -71,17 +71,12 @@ export class JaypieEnvSecret extends JaypieSecret {
   }
 
   protected buildSecret(context: BuildSecretContext): secretsmanager.ISecret {
-    const { envKey, id } = context;
+    const { id } = context;
     const props = context.props as JaypieEnvSecretProps;
     const {
       consumer = checkEnvIsConsumer(),
       export: exportParam,
-      generateSecretString,
       provider = checkEnvIsProvider(),
-      removalPolicy,
-      roleTag,
-      vendorTag,
-      value,
     } = props;
 
     let exportName;
@@ -115,36 +110,7 @@ export class JaypieEnvSecret extends JaypieSecret {
       return secret;
     }
 
-    const secretValue =
-      envKey && process.env[envKey] ? process.env[envKey] : value;
-
-    this.assertSecretValue(context, secretValue);
-
-    const secret = new secretsmanager.Secret(this, id, {
-      generateSecretString,
-      secretStringValue:
-        !generateSecretString && secretValue
-          ? SecretValue.unsafePlainText(secretValue)
-          : undefined,
-    });
-
-    if (removalPolicy !== undefined) {
-      const policy =
-        typeof removalPolicy === "boolean"
-          ? removalPolicy
-            ? RemovalPolicy.RETAIN
-            : RemovalPolicy.DESTROY
-          : removalPolicy;
-      secret.applyRemovalPolicy(policy);
-    }
-
-    if (roleTag) {
-      Tags.of(secret).add(CDK.TAG.ROLE, roleTag);
-    }
-
-    if (vendorTag) {
-      Tags.of(secret).add(CDK.TAG.VENDOR, vendorTag);
-    }
+    const secret = this.createSecret(context);
 
     if (provider) {
       new CfnOutput(this, `ProvidedName`, {

@@ -5,17 +5,18 @@ import * as dynamodb from "aws-cdk-lib/aws-dynamodb";
 import * as iam from "aws-cdk-lib/aws-iam";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import { CDK } from "./constants";
+import { JaypieDynamoDb } from "./JaypieDynamoDb";
 import { JaypieLambda } from "./JaypieLambda";
 import type { EnvironmentInput, SecretsArrayItem } from "./helpers/index.js";
 
-const DYNAMODB_CONTROL_PLANE_ACTIONS = [
+const DYNAMODB_DESCRIBE_ACTIONS = [
   "dynamodb:DescribeContinuousBackups",
   "dynamodb:DescribeTable",
   "dynamodb:DescribeTimeToLive",
-  "dynamodb:UpdateContinuousBackups",
-  "dynamodb:UpdateTable",
-  "dynamodb:UpdateTimeToLive",
 ];
+
+const WARNING_TABLE_WITHOUT_INDEXES =
+  "@jaypie/constructs:migrationTableWithoutIndexes";
 
 export interface JaypieMigrationProps {
   /** Path to the bundled migration code (esbuild output directory) */
@@ -71,19 +72,28 @@ export class JaypieMigration extends Construct {
       variables,
     });
 
-    // Grant control-plane perms on the passed tables so migrations that
-    // alter table shape (GSIs, TTL, streams, backups) succeed. JaypieLambda
-    // only grants data-plane access via grantReadWriteData. Issue #339.
+    // Grant describe perms so migrations can inspect table shape. CDK owns
+    // indexes, TTL, and backups: an index a migration creates blocks every later
+    // CloudFormation update to the table, so no Update* actions (#339, #552).
     if (tables.length > 0) {
       this.lambda.addToRolePolicy(
         new iam.PolicyStatement({
-          actions: DYNAMODB_CONTROL_PLANE_ACTIONS,
+          actions: DYNAMODB_DESCRIBE_ACTIONS,
           resources: tables.flatMap((table) => [
             table.tableArn,
             `${table.tableArn}/index/*`,
           ]),
         }),
       );
+    }
+
+    for (const table of tables) {
+      if (table instanceof JaypieDynamoDb && table.indexes.length === 0) {
+        cdk.Annotations.of(this).addWarningV2(
+          WARNING_TABLE_WITHOUT_INDEXES,
+          `JaypieDynamoDb "${table.node.path}" declares no indexes. Declare every registered fabricIndex() in JaypieDynamoDb indexes; migrations cannot create indexes. See skill("dynamodb").`,
+        );
+      }
     }
 
     // cr.Provider with isCompleteHandler enables the waiter pattern: onEventHandler

@@ -71,7 +71,7 @@ Synth fails fast whenever a declared secret source produces no secret string, so
 ```typescript
 new JaypieSecret(this, "ApiKey", { value: process.env.MISSING }); // throws ConfigurationError
 new JaypieSecret(this, "ApiKey", { envKey: "MISSING" });          // throws ConfigurationError
-new JaypieSecret(this, "Placeholder");                            // allowed: empty secret, no source declared
+new JaypieSecret(this, "Placeholder");                            // allowed: CDK generates a random value
 ```
 
 `JaypieEnvSecret` applies the same guard, except in consumer environments, where the secret is imported rather than created.
@@ -90,6 +90,8 @@ jobs:
     steps:
       - run: npx cdk deploy
 ```
+
+An env-sourced value is written into the synthesized template. Copies persist in the deployed stack template, the CDK assets bucket, `cdk.out`, and `cdk diff` output. Use [External Secrets](#external-secrets) for credentials that must stay out of those places.
 
 ## Runtime: Retrieving Secrets
 
@@ -201,6 +203,66 @@ new JaypieEnvSecret(this, "AdminSeed", {
 ```
 
 With `excludePunctuation: true` and `includeSpace: false`, the generated value contains only base62 characters.
+
+## External Secrets
+
+`external: true` creates an empty secret (no `SecretString` or `GenerateSecretString`), so the value never enters the template, the assets bucket, `cdk.out`, or `cdk diff`. CI sets the value after deploy. `envKey` still names the runtime variable (`SECRET_ANTHROPIC_API_KEY`) but is never read at synth. Combining `external` with `value` or `generateSecretString` throws `ConfigurationError`.
+
+```typescript
+const anthropicSecret = new JaypieSecret(this, "ANTHROPIC_API_KEY", {
+  external: true,
+});
+
+new JaypieLambda(this, "Handler", {
+  code: "dist/lambda",
+  handler: "index.handler",
+  secrets: [anthropicSecret],
+});
+```
+
+The construct outputs the secret ARN with the `envKey` (or construct id) as the output description. Set the value in a step after `cdk deploy`, and keep the value out of the deploy step's environment:
+
+```yaml
+- name: Set external secrets
+  env:
+    ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+    STACK_NAME: my-stack
+  run: |
+    ARN=$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" \
+      --query "Stacks[0].Outputs[?Description=='ANTHROPIC_API_KEY'].OutputValue" \
+      --output text)
+    printf '%s' "$ANTHROPIC_API_KEY" > "$RUNNER_TEMP/secret"
+    aws secretsmanager put-secret-value --secret-id "$ARN" \
+      --secret-string "file://$RUNNER_TEMP/secret" > /dev/null
+    rm -f "$RUNNER_TEMP/secret"
+```
+
+- A new external secret has no value until the step runs; `getEnvSecret` fails until then.
+- CloudFormation never writes the value, so a hand-rotated secret is not overwritten by a later deploy.
+- Switching an existing secret to `external` removes `SecretString` from the template. Run the value step in the same workflow.
+- Each `put-secret-value` creates a secret version. Compare with `get-secret-value` first to skip unchanged writes.
+- In `JaypieEnvSecret` consumer environments the secret is imported; set the value on the provider stack.
+
+### SSOSync Credentials
+
+`JaypieSsoSyncApplication` writes `googleCredentials` and `scimEndpointAccessToken` into the template and warns at synth (`@jaypie/constructs:ssoSyncLiteralCredentials`). Pass secrets instead:
+
+```typescript
+new JaypieSsoSyncApplication(this, "SsoSync", {
+  googleCredentialsSecret: new JaypieSecret(this, "SsoSyncGoogleCredentials", {
+    external: true,
+  }),
+  scimEndpointAccessTokenSecret: new JaypieSecret(this, "SsoSyncScimToken", {
+    external: true,
+  }),
+});
+```
+
+- The application deploys SSOSync as "App only". The construct creates secrets for the admin email, SCIM endpoint URL, region, and identity store ID (still read from `CDK_ENV_SSOSYNC_*`), then passes all six ARNs in `CrossStackConfig`.
+- Both secret props are required together, and neither combines with the literal props.
+- Secrets need a complete ARN: created in the stack or imported with `Secret.fromSecretCompleteArn`. SSOSync reads them with the AWS managed key.
+- Switching an existing application from "App + secrets" deletes the SAR-created `SSOSync*` secrets. Sync fails until CI writes the new secret values. Do not name new secrets `SSOSync*`.
+- SSOSync accepts secret ARNs in `us`, `us-gov`, `ap`, `ca`, `cn`, `eu`, and `sa` regions only.
 
 ## Seeds and API Keys in Workflows
 
