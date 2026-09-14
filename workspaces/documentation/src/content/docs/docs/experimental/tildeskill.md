@@ -286,9 +286,11 @@ const layered = createLayeredStore({
 
 await layered.get("aws");          // first layer wins → { alias: "local:aws", ... }
 await layered.get("jaypie:aws");   // targets specific layer
-await layered.find("skills");      // per-layer plural/singular fallback
+await layered.find("skills");      // exact alias in any layer, then fallback
 await layered.list();              // all layers, prefixed aliases
 ```
+
+`find` checks every layer for an exact alias before it tries plural/singular fallback in any layer. With `local:test` and `jaypie:tests`, `find("tests")` returns `jaypie:tests`. Namespace-qualified aliases search only their own layer.
 
 ## Related
 

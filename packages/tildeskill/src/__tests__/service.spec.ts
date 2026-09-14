@@ -189,5 +189,24 @@ describe("createSkillService", () => {
       const result = await service({ alias: "jaypie:aws" });
       expect(result).toBe("# Jaypie AWS");
     });
+
+    it("prefers an exact alias in a later layer over a fallback in an earlier layer", async () => {
+      const studio = createMemoryStore([
+        { alias: "test", content: "# Studio Test" },
+      ]);
+      const jaypie = createMemoryStore([
+        { alias: "tests", content: "# Jaypie Tests" },
+      ]);
+      const layered = createLayeredStore({
+        layers: [
+          { namespace: "studio", store: studio },
+          { namespace: "jaypie", store: jaypie },
+        ],
+      });
+      const service = createSkillService(layered);
+
+      const result = await service({ alias: "tests" });
+      expect(result).toBe("# Jaypie Tests");
+    });
   });
 });

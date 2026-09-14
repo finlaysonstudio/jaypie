@@ -103,7 +103,62 @@ describe("createLayeredStore", () => {
       expect(hit?.alias).toBe("jaypie:skill");
     });
 
-    it("prefers earlier layers even when fallback would match later", async () => {
+    it("prefers an exact match in a later layer over a fallback in an earlier layer", async () => {
+      const studio = createMemoryStore([{ alias: "test", content: "studio" }]);
+      const jaypie = createMemoryStore([{ alias: "tests", content: "jaypie" }]);
+      const store = createLayeredStore({
+        layers: [
+          { namespace: "studio", store: studio },
+          { namespace: "jaypie", store: jaypie },
+        ],
+      });
+
+      const hit = await store.find("tests");
+      expect(hit?.alias).toBe("jaypie:tests");
+      expect(hit?.content).toBe("jaypie");
+
+      const singular = await store.find("test");
+      expect(singular?.alias).toBe("studio:test");
+    });
+
+    it("prefers an exact match in an earlier layer over a later layer", async () => {
+      const local = createMemoryStore([
+        { alias: "tests", content: "# local tests" },
+      ]);
+      const jaypie = createMemoryStore([
+        { alias: "test", content: "# jaypie test" },
+        { alias: "tests", content: "# jaypie tests" },
+      ]);
+      const store = createLayeredStore({
+        layers: [
+          { namespace: "local", store: local },
+          { namespace: "jaypie", store: jaypie },
+        ],
+      });
+
+      const hit = await store.find("tests");
+      expect(hit?.alias).toBe("local:tests");
+    });
+
+    it("prefers an earlier layer fallback when no layer has an exact match", async () => {
+      const local = createMemoryStore([
+        { alias: "test", content: "# local test" },
+      ]);
+      const jaypie = createMemoryStore([
+        { alias: "test", content: "# jaypie test" },
+      ]);
+      const store = createLayeredStore({
+        layers: [
+          { namespace: "local", store: local },
+          { namespace: "jaypie", store: jaypie },
+        ],
+      });
+
+      const hit = await store.find("tests");
+      expect(hit?.alias).toBe("local:test");
+    });
+
+    it("keeps namespace-qualified aliases scoped to their layer with fallback", async () => {
       const local = createMemoryStore([
         { alias: "tests", content: "# local tests" },
       ]);
@@ -117,8 +172,23 @@ describe("createLayeredStore", () => {
         ],
       });
 
-      const hit = await store.find("test");
-      expect(hit?.alias).toBe("local:tests");
+      const hit = await store.find("jaypie:tests");
+      expect(hit?.alias).toBe("jaypie:test");
+
+      const localHit = await store.find("local:test");
+      expect(localHit?.alias).toBe("local:tests");
+
+      expect(await store.find("local:missing")).toBeNull();
+    });
+
+    it("returns null when no layer matches exactly or by fallback", async () => {
+      const store = createLayeredStore({
+        layers: [
+          { namespace: "local", store: createMemoryStore() },
+          { namespace: "jaypie", store: createMemoryStore() },
+        ],
+      });
+      expect(await store.find("missing")).toBeNull();
     });
   });
 

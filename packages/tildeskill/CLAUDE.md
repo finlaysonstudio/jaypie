@@ -222,8 +222,10 @@ const hit = await layered.get("aws"); // { alias: "local:aws", ... }
 // Namespace-qualified alias targets a specific layer directly.
 const jaypieAws = await layered.get("jaypie:aws");
 
-// find() uses per-layer plural/singular fallback.
-const skill = await layered.find("skills"); // resolves "local:skill" etc.
+// find() checks every layer for an exact alias first, then walks every layer
+// again with plural/singular fallback. An exact "jaypie:skills" beats a
+// fallback "local:skill".
+const skill = await layered.find("skills");
 
 // list() merges every layer with namespaced aliases.
 await layered.list(); // [{ alias: "jaypie:aws", ... }, { alias: "local:aws", ... }]

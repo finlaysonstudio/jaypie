@@ -159,10 +159,15 @@ const layered = createLayeredStore({
 
 await layered.get("aws"); // → { alias: "local:aws", ... }
 await layered.get("jaypie:aws"); // → { alias: "jaypie:aws", ... }
-await layered.find("skills"); // per-layer plural fallback
+await layered.find("skills"); // exact alias in any layer, then fallback
 await layered.list(); // prefixed aliases from every layer
 await layered.put({ alias: "local:new", content: "# New" }); // must be qualified
 ```
+
+`find` checks every layer for an exact alias before it tries plural/singular
+fallback in any layer. With `local:test` and `jaypie:tests`, `find("tests")`
+returns `jaypie:tests`, so a local skill cannot shadow a Jaypie skill under a
+different spelling. Namespace-qualified aliases search only their own layer.
 
 The MCP server itself uses `createLayeredStore` to place `MCP_SKILLS_PATH`
 (the client's local library, namespace `local`) over the bundled Jaypie
