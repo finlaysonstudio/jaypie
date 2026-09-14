@@ -27,10 +27,14 @@ skill("tests")          # Testing patterns
 
 ```
 release_notes()                                    # Show help
-release_notes("list")                              # List all release notes
+release_notes("list")                              # First page of all release notes
+release_notes("list", { limit: 20 })               # Smaller page (default 50, maximum 200)
 release_notes("list", { package: "mcp" })          # Filter by package
+release_notes("list", { cursor: "..." })           # Next page, from the footer
 release_notes("read", { package: "mcp", version: "0.5.0" })  # Read specific note
 ```
+
+`list` sorts by package ascending, then version descending. When more notes exist, the last line reads `Next page: release_notes("list", { cursor: "..." })`. The cursor carries `package`, `since_version`, and `limit`, so that call alone continues the listing.
 
 ## Datadog Tool
 

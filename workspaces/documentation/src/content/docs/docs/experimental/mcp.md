@@ -81,13 +81,16 @@ Set `MCP_SKILLS_PATH` to layer a directory of local skills over the built-in Jay
 
 | Command | Description | Parameters |
 |---------|-------------|------------|
-| `list` | List release notes | `package`, `since_version` (both optional) |
+| `list` | List release notes, one page at a time | `package`, `since_version`, `limit`, `cursor` (all optional) |
 | `read` | Read one release note | `package`, `version` (both required) |
 
 ```
 release_notes("list", { package: "jaypie", since_version: "1.2.0" })
+release_notes("list", { cursor: "..." })
 release_notes("read", { package: "mcp", version: "0.5.0" })
 ```
+
+`list` returns 50 notes per page by default (`limit`, maximum 200), sorted by package ascending, then version descending. A `Next page` footer with a `cursor` appears when more notes exist.
 
 ## Datadog
 

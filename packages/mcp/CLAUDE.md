@@ -84,8 +84,10 @@ The MCP server provides 4 unified router-style tools:
 
 - **`release_notes`** - Browse package release notes
   - `release_notes()` or `release_notes("help")` - Show help
-  - `release_notes("list")` - List all release notes
+  - `release_notes("list")` - First page of release notes (package ascending, then version descending)
+  - `release_notes("list", { limit: 20 })` - Page size (default 50, maximum 200)
   - `release_notes("list", { package: "mcp" })` - Filter by package
+  - `release_notes("list", { cursor: "..." })` - Next page; the `Next page` footer prints this call only when more notes exist. The cursor carries `package`, `since_version`, and `limit`
   - `release_notes("read", { package: "mcp", version: "0.5.0" })` - Read specific note
 
 ### Datadog Tool (requires DATADOG_API_KEY and DATADOG_APP_KEY)
