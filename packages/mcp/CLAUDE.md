@@ -166,9 +166,10 @@ When adding new skills:
 3. Skills are immediately available via `skill(alias)` — no rebuild needed
 
 Skills and release notes are read from the **package root**, not `dist/`. The
-docs suite resolves `../../../skills` from `dist/suites/docs/`, and `files` in
-`package.json` ships both directories alongside `dist`. Only the per-suite
-`help.md` files are copied into `dist` by rollup.
+docs suite resolves both directories with `getMcpAssetPaths()` from
+`src/assets.ts`, and `files` in `package.json` ships both alongside `dist`.
+Rollup copies no files into `dist`. Suite help text is a string constant in
+`help.ts`, inlined into the build.
 
 **Important**: Keep the skill category listings in sync across `skills/skills.md`, `skills/agents.md`, and the root `CLAUDE.md` Skills section. When adding or removing a skill alias, update all three.
 
@@ -215,7 +216,7 @@ When adding release notes:
 
 ## Build Configuration
 
-Uses Rollup with TypeScript. Help markdown files are copied to dist via `rollup-plugin-copy`.
+Uses Rollup with TypeScript (`@rollup/plugin-typescript`), `@rollup/plugin-replace` for the build-time version constants, and `rollup-plugin-dts` for one declaration bundle per entry point. No files are copied into `dist`.
 
 ## Commands
 
@@ -237,8 +238,7 @@ npm run format     # eslint --fix
 - `@jaypie/logger` (optional peer) - Logging for `@jaypie/mcp/http`
 - `@jaypie/kit` - YAML frontmatter parsing (`parseFrontmatter`) for release notes
 - `commander` - CLI argument parsing
-- `semver` - Version comparison for release notes filtering
-- `rollup-plugin-copy` - Copy help.md files to dist
+- `semver` - Version comparison for release notes filtering and ordering
 
 ## Architecture
 
@@ -258,7 +258,7 @@ skill files as a dependency.
 
 Each local suite directory contains:
 - `index.ts` - Unified service with command router
-- `help.md` - Documentation returned when command is omitted
+- `help.ts` - Documentation string returned when command is omitted
 - `<domain>.ts` - Implementation functions (for testability)
 
 Suites throw Jaypie errors from `@jaypie/errors`, never a vanilla `Error`.
