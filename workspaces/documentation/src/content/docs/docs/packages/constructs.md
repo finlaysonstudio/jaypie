@@ -481,6 +481,8 @@ Base stack for every Jaypie CDK stack. Extending it automatically:
 2. **Resolves account & region** from `CDK_DEFAULT_ACCOUNT` / `CDK_DEFAULT_REGION` (overridable via `env`)
 3. **Applies standard tags** (`env`, `project`, `sponsor`, `nonce`, `commit`, `buildHex`, `buildDate`, `buildTime`, `version`, `service`, `creation`, `role`, `stack`) and propagates them to every taggable child resource
 
+When `CDK_DEFAULT_ACCOUNT` is set and `PROJECT_NONCE` is unset or not lowercase hex of six or more characters, synth warns `@jaypie/constructs:projectNonceFormat`. Generate the nonce once per environment with `openssl rand -hex 4`.
+
 ```typescript
 import { JaypieStack, JaypieStackProps } from "@jaypie/constructs";
 import type { Construct } from "constructs";

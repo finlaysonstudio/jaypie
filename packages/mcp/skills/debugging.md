@@ -39,10 +39,14 @@ If you see `undefined` in a CDK stack name, a required variable is missing:
 // BAD: undefined if PROJECT_NONCE not set
 const stackName = `api-${process.env.PROJECT_NONCE}`;
 
-// GOOD: Provide default
+// BAD: a word default repeats across projects and accounts
 const nonce = process.env.PROJECT_NONCE || "dev";
-const stackName = `api-${nonce}`;
+
+// GOOD: JaypieStack names the stack from PROJECT_* variables
+new JaypieAppStack(app, "AppStack");
 ```
+
+Set the missing variable on the GitHub environment rather than adding a default (see `skill("cicd-environments")`).
 
 ### "unknown" in Logs
 

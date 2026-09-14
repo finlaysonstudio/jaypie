@@ -21,7 +21,7 @@ Inputs mirror GitHub Settings scopes (org, repo, env):
 - `aws-role-arn`
 - `datadog-api-key-arn`
 - `project-env` (default: `sandbox`)
-- `project-nonce` (random 8-char hex if not set)
+- `project-nonce` (required, no default; the step fails when empty)
 
 ## Derived Values
 

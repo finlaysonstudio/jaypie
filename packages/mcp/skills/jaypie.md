@@ -66,7 +66,7 @@ project/
 |----------|---------|
 | `PROJECT_ENV` | Environment: local, sandbox, production |
 | `PROJECT_KEY` | Project identifier for logging |
-| `PROJECT_NONCE` | Unique resource identifier |
+| `PROJECT_NONCE` | 8 lowercase hex characters, unique per environment |
 | `LOG_LEVEL` | Log level: trace, debug, info, warn, error |
 
 ### Error Handling

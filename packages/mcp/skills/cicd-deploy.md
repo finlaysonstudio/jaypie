@@ -75,6 +75,7 @@ jobs:
           project-key: my-project
           project-sponsor: ${{ vars.PROJECT_SPONSOR }}
           project-env: sandbox
+          project-nonce: ${{ vars.PROJECT_NONCE }}
 
       - uses: ./.github/actions/configure-aws
         with:
@@ -163,6 +164,7 @@ jobs:
           project-key: my-project
           project-sponsor: ${{ vars.PROJECT_SPONSOR }}
           project-env: production
+          project-nonce: ${{ vars.PROJECT_NONCE }}
 
       - uses: ./.github/actions/configure-aws
         with:
@@ -271,27 +273,28 @@ Requirements:
 
 See `skill("cicd-actions")` for the `web-deploy` action body and `skill("web")` for the construct.
 
-## Environment-Specific Stack Naming
+## Stack Naming
 
-Use consistent stack naming with environment and nonce:
+`JaypieStack` names every stack `cdk-{PROJECT_SPONSOR}-{PROJECT_KEY}-{PROJECT_ENV}-{PROJECT_NONCE}[-{key}]` and resolves the account and region (see `skill("cdk")`). Do not compose stack names in `app.ts`:
 
 ```typescript
 // workspaces/cdk/src/app.ts
-const env = process.env.PROJECT_ENV || "sandbox";
-const nonce = process.env.PROJECT_NONCE || "dev";
+import { App } from "aws-cdk-lib";
+import { JaypieAppStack } from "@jaypie/constructs";
 
-new ApiStack(app, `api-${env}-${nonce}`, {
-  env: {
-    account: process.env.CDK_DEFAULT_ACCOUNT,
-    region: process.env.CDK_DEFAULT_REGION,
-  },
-});
+const app = new App();
+new JaypieAppStack(app, "AppStack");
 ```
 
-This produces stack names like:
-- `api-sandbox-feat-new-feature`
-- `api-sandbox-main`
-- `api-production-prod`
+With `PROJECT_NONCE` set per environment (see `skill("cicd-environments")`), this produces:
+- `cdk-finlaysonstudio-my-project-sandbox-3f9c21ab-app`
+- `cdk-finlaysonstudio-my-project-production-ba342b91-app`
+
+The `cdk-deploy` globs `*-sandbox-*` and `*-production-*` match these names.
+
+### One Install per Environment
+
+The nonce belongs to the environment, so every branch that deploys to sandbox updates the same stacks. A project serving fixed hostnames (`api.sandbox.example.com`) holds one install per environment, because CloudFront aliases and Route53 records collide. Override `project-nonce` with a new hex value only for an intentional clean install beside an existing one. Stack and bucket names cannot be renamed, so recovering from a wrong nonce means that new install and a teardown of the old one.
 
 ## Deployment Flow
 
